@@ -1,0 +1,73 @@
+- sticky_header = (local_assigns[:sticky].nil? || local_assigns[:sticky]) ? true : nil
+= content_tag :div, id: "page-header-inner", class: (sticky_header ? "sticky" : ""), data: { sticky: sticky_header, "sticky-on": "medium", "margin-top": "0" } do
+  .grid-container
+    / - if local_assigns[:has_scrolled_section]
+    /   #scrolled-section
+    .grid-x.grid-margin-x.grid-padding-x.align-top
+      .cell.auto
+        h1
+          => title
+          - if !local_assigns[:count].nil?
+            span.badge = count
+          - if !local_assigns[:secondary].nil?
+            br
+            small
+              = secondary
+
+        - if breadcrumb_trail.count > 1  #do not change count to size - fails with nil
+          #breadcrumbs
+            nav
+              ul.breadcrumbs
+                - breadcrumb_trail do |name, url, current|
+                  li(class="#{current ? 'selected' : ''}")
+                    - if current
+                      = name
+                    - else
+                      = link_to name, url
+
+      .cell.small-12.medium-shrink.header-links.hide-for-small-only
+        .actions
+          - if local_assigns[:links] or local_assigns[:form_actions] or local_assigns[:menu]
+            .actions-wrapper
+              .show-for-large(style="display: inline")
+                - if local_assigns[:links]
+                  - links.each do |link|
+                    => link
+
+                - if local_assigns[:menu]
+                  - menu_key = SecureRandom.uuid
+                  a.hollow.small.secondary.button(data-toggle="#{menu_key}-menu")
+                    = button_label_with_icon("Actions", "arrow_down_1")
+                  .dropdown-pane.dropdown-pane--menu(id="#{menu_key}-menu" data-dropdown data-close-on-click="true" data-position="bottom" data-alignment="right")
+                    = menu
+
+              - if local_assigns[:form_actions]
+                - if local_assigns[:cancel_path]
+                  = link_to "Cancel",
+                            cancel_path,
+                            class: "small light-gray hollow button"
+                - if !local_assigns[:disable_save_callback]
+                  =< button_tag "Save",
+                                class: "small button",
+                                type: "submit",
+                                data: { \
+                                  behavior: 'submit-form',
+                                }
+                - if local_assigns[:disable_save_callback]
+                  =< button_tag "Save",
+                                class: "small button save-action",
+                                type: "submit"
+
+      - if local_assigns[:links] or local_assigns[:menu]
+        .cell.small-12
+          .links.hide-for-large
+            - if local_assigns[:links]
+              - links.each do |link|
+                => link
+
+            - if local_assigns[:menu]
+              - menu_key = SecureRandom.uuid
+              a.hollow.small.button(data-toggle="#{menu_key}-menu")
+                = button_label_with_icon("Actions", "arrow_down_1")
+              .dropdown-pane.dropdown-pane--menu(id="#{menu_key}-menu" data-dropdown data-close-on-click="true" data-position="bottom" data-alignment="right")
+                = menu

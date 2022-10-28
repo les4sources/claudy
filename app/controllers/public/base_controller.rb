@@ -1,0 +1,3 @@
+class Public::BaseController
+
+end

@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  booking: one
+  room: one
+  from_date: 2022-10-28
+  to_date: 2022-10-28
+
+two:
+  booking: two
+  room: two
+  from_date: 2022-10-28
+  to_date: 2022-10-28

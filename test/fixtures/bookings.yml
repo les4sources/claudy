@@ -1,0 +1,35 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  firstname: MyString
+  lastname: MyString
+  phone: MyString
+  email: MyString
+  from_date: 2022-10-28
+  to_date: 2022-10-28
+  status: MyString
+  adults: 1
+  children: 1
+  price: 1
+  payment_status: MyString
+  payment_method: MyString
+  bedsheets: false
+  towels: false
+  notes: MyText
+
+two:
+  firstname: MyString
+  lastname: MyString
+  phone: MyString
+  email: MyString
+  from_date: 2022-10-28
+  to_date: 2022-10-28
+  status: MyString
+  adults: 1
+  children: 1
+  price: 1
+  payment_status: MyString
+  payment_method: MyString
+  bedsheets: false
+  towels: false
+  notes: MyText

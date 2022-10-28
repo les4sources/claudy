@@ -1,0 +1,6 @@
+- content_for :page_header do
+  = render "layouts/app/page_header",
+           title: "Réservations",
+           links: [ \
+             link_to(button_label_with_icon("Nouvelle réservation", "add_circle"), new_booking_path, class: "small hollow button") \
+           ]
