@@ -1,7 +1,17 @@
 @charset 'utf-8';
 
-@import 'settings';
+@import './colors';
+@import './foundation_settings';
 @import '../../../node_modules/foundation-sites/scss/foundation';
+
+@import './layout';
+
+// @import '../../../node_modules/pickadate/lib/compressed/picker';
+// @import '../../../node_modules/pickadate/lib/compressed/picker.date';
+// @import '../../../node_modules/pickadate/lib/compressed/picker.time';
+
+@import './vendor/pickadate-classic--no-touch';
+@import './vendor/pickadate-default--touch';
 
 // Global styles
 @include foundation-global-styles;
@@ -60,4 +70,20 @@
 @include foundation-visibility-classes;
 // @include foundation-prototype-classes;
 
-@import 'app/page_header';
+@import 'components/callout';
+@import 'components/datepicker';
+@import 'components/form';
+@import 'components/icon';
+@import 'components/label';
+@import 'components/page_header';
+@import 'components/spacer';
+@import 'components/top_bar';
+
+@include claudy-callout;
+@include claudy-datepicker;
+@include claudy-form;
+@include claudy-icon;
+@include claudy-label;
+@include claudy-page-header;
+@include claudy-spacer;
+@include claudy-top-bar;

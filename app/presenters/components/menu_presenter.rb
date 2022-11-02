@@ -1,7 +1,7 @@
 class Components::MenuPresenter < PresenterBase
   attr_reader :active_primary, :active_secondary, :active_tertiary,
     :primary_secondary_items, :object, :controller_name, :action_name,
-    :view_context
+    :view_context, :user
 
   def initialize(
     view_context: nil,
@@ -10,9 +10,11 @@ class Components::MenuPresenter < PresenterBase
     active_tertiary: nil,
     object: nil,
     controller_name: nil,
-    action_name: nil
+    action_name: nil,
+    user: nil
   )
     @view_context         = view_context
+    @user                 = user
 
     @active_primary       = active_primary
     @active_secondary     = active_secondary
@@ -26,30 +28,40 @@ class Components::MenuPresenter < PresenterBase
     @primary_right_items  = primary_right_items
     @secondary_items      = secondary_items
     @tertiary_items       = tertiary_items
+    @actions_items        = actions_items
+  end
+
+  def has_actions_items?
+    actions_items&.any? and
+    actions_items.collect { |i| i.fetch(:condition, true) }.include?(true)
   end
 
   def render_primary_left_menu(options = {})
-    render_menu_items(@primary_left_items, "primary", options)
+    render_menu_items(@primary_left_items, 'primary', options)
   end
 
   def render_primary_right_menu(options = {})
-    render_menu_items(@primary_right_items, "primary", options)
+    render_menu_items(@primary_right_items, 'primary', options)
   end
 
   def render_secondary_menu(options = {})
-    render_menu_items(@secondary_items, "secondary", options)
+    render_menu_items(@secondary_items, 'secondary', options)
   end
 
   def render_tertiary_menu(options = {})
-    render_menu_items(@tertiary_items, "tertiary", options)
+    render_menu_items(@tertiary_items, 'tertiary', options)
+  end
+
+  def render_actions_menu(options = {})
+    render_menu_items(@actions_items, 'actions', options)
   end
 
   def render_menu_items(menu_items, level, options = {})
     if menu_items.present?
-      ul_options = { class: ["menu", options[:class]] }
+      ul_options = { class: ['menu', options[:class]] }
       if options[:dropdown]
-        ul_options[:class] << "dropdown"
-        ul_options[:"data-dropdown-menu"] = ""
+        ul_options[:class] << 'dropdown'
+        ul_options[:"data-dropdown-menu"] = ''
       end
       content_tag(:ul, ul_options) do
         menu_items
@@ -71,11 +83,11 @@ class Components::MenuPresenter < PresenterBase
       if menu_item[:children]
         buffer << render_menu_items(menu_item[:children], level)
       end
-      if menu_item.fetch(:active, false) and level == "primary"
+      if menu_item.fetch(:active, false) and level == 'primary'
         buffer << render_menu_items(
           @secondary_items,
-          "secondary",
-          class: "nested vertical"
+          'secondary',
+          class: 'nested vertical'
         )
       end
       buffer
@@ -93,8 +105,7 @@ class Components::MenuPresenter < PresenterBase
   def menu_item_css(menu_item, _index)
     css = []
 
-    css << "active" if menu_item[:active]
-    css << "hide-for-small-only" if menu_item[:hide_for_small]
+    css << 'active' if menu_item[:active]
     css << menu_item[:class]
 
     css.reject(&:blank?).presence
@@ -103,52 +114,60 @@ class Components::MenuPresenter < PresenterBase
   def primary_left_items
     [
       {
-        body: "Claudy",
+        # body: ::ApplicationController.helpers.image_tag('claudy.svg', alt: 'Claudy'),
+        body: "CLAUDY",
         url: root_path,
-        class: "menu-text show-for-large"
+        class: 'menu-text show-for-large'
       },
       {
         body: "Réservations",
         url: bookings_path,
-        active: @active_primary == "bookings"
+        active: @active_primary == 'bookings'
       },
       {
         body: "Hébergements",
         url: lodgings_path,
-        active: @active_primary == "lodgings"
+        active: @active_primary == 'lodgings'
       }
     ]
   end
 
   def primary_right_items
-    []
+    [
+      # {
+      #   body: 'Log out',
+      #   url: destroy_user_session_path,
+      #   html_options: { method: :delete }
+      # }
+    ]
   end
 
   def secondary_items
     case @active_primary
-    when "lodgings"
-      lodgings_menu_items
+    when 'foo'
+      foo_menu_items
     end
   end
 
   def tertiary_items
-    nil
+    case @active_secondary
+    when 'foo'
+      foo_menu_items
+    end
+  end
+
+  def actions_items
+    menu_items_method_name = "#{controller_name}_#{action_name}_menu_items"
+    if self.respond_to?(menu_items_method_name.to_sym, true)
+      self.method(menu_items_method_name.to_sym).call
+    else
+      []
+    end
   end
 
   private
 
-  def lodgings_menu_items
-    [
-      {
-        body: "Hébergements de groupes",
-        url: lodgings_path,
-        active: @active_secondary == "lodgings"
-      },
-      {
-        body: "Chambres",
-        url: rooms_path,
-        active: @active_secondary == "rooms"
-      }
-    ]
+  def foo_menu_items
+    []
   end
 end

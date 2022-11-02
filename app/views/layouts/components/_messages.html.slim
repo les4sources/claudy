@@ -10,8 +10,6 @@
               == message
       - elsif !msg.nil?
           div(class="#{name.to_s == "notice" ? "success" : name.to_s == "info" ? "info" : "alert"} callout")
-            / button.close-button(aria-label="Dismiss alert" type="button" data-close)
-            /   span(aria-hidden="true") &times;
             = content_tag :div, id: "flash_#{name}" do
               - if name.to_s == "notice"
                 i.fa.fa-fw.fa-check-circle
