@@ -35,19 +35,6 @@ SimpleForm.setup do |config|
     end
   end
 
-  config.wrappers :foundation_pickadate, tag: 'div', class: 'field' do |b|
-    b.use :html5
-    b.optional :pattern
-    b.use :placeholder
-    b.wrapper tag: :label, error_class: 'is-invalid-label' do |ba|
-      ba.use :label_text, wrap_with: { tag: :span, class: "label-text" }
-      ba.use :hint,  wrap_with: { tag: :p, class: "help-text" }
-      ba.use :input
-      ba.use :error, wrap_with: { tag: :span, class: "form-error animated fadeInDown" }
-    end
-    b.wrapper tag: :div, class: "pickadate-container" do; end
-  end
-
   config.wrappers :foundation_append, tag: 'div', class: 'field' do |b|
     b.use :html5
     b.optional :pattern

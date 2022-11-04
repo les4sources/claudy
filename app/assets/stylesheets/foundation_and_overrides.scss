@@ -6,13 +6,6 @@
 
 @import './layout';
 
-// @import '../../../node_modules/pickadate/lib/compressed/picker';
-// @import '../../../node_modules/pickadate/lib/compressed/picker.date';
-// @import '../../../node_modules/pickadate/lib/compressed/picker.time';
-
-@import './vendor/pickadate-classic--no-touch';
-@import './vendor/pickadate-default--touch';
-
 // Global styles
 @include foundation-global-styles;
 @include foundation-forms;

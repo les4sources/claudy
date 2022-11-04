@@ -1,1 +1,21 @@
-= @lodgings.first.name
+- content_for :page_header do
+  = render 'layouts/components/page_header',
+           title: "Hébergements",
+           count: @lodgings.count,
+           links: [ \
+             link_to( \
+               "Ajouter un hébergement",
+               new_lodging_path,
+               class: "primary button show-for-large" \
+             ) \
+           ]
+
+table
+  thead
+    tr
+      th Nom
+  tbody
+    - @lodgings.each do |lodging|
+      tr
+        td
+          = link_to lodging.name, lodging_path(lodging)

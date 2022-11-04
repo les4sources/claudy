@@ -1,0 +1,107 @@
+= section_heading heading: "Informations personnelles",
+                  spacing: false
+
+.grid-x.grid-padding-x
+  .cell.small-6
+    = f.input :firstname,
+              label: "Prénom",
+              placeholder: "Prénom"
+  .cell.small-6
+    = f.input :lastname,
+              label: "Nom",
+              placeholder: "Nom"
+  .cell.small-6
+    = f.input :phone,
+              label: "Numéro de téléphone",
+              placeholder: "Numéro de téléphone"
+  .cell.small-6
+    = f.input :email,
+              label: "Adresse email",
+              placeholder: "Adresse email"
+
+= section_heading heading: "Réservation",
+                  spacing: false
+
+.grid-x.grid-padding-x
+  .cell.small-12.medium-6
+    = f.input :from_date,
+              as: :date,
+              html5: true,
+              label: "Du *",
+              required: true,
+              error: "Veuillez renseigner une date"
+  .cell.small-12.medium-6
+    = f.input :to_date,
+              as: :date,
+              html5: true,
+              label: "Au *",
+              required: true,
+              error: "Veuillez renseigner une date"
+
+= f.input :adults,
+          label: "Nombre d'adultes",
+          placeholder: "Adultes"
+
+= f.input :children,
+          label: "Nombre d'enfants",
+          placeholder: "Enfants"
+
+= f.simple_fields_for :reservation do |fr|
+  = f.input :room_ids,
+            as: :check_boxes,
+            label: "Chambre(s)",
+            wrapper: :foundation_radio_buttons,
+            collection: Room.all.order(:level).collect { |r| [r.name_with_level, r.id] }
+
+= f.input :bedsheets,
+          as: :boolean,
+          wrapper: :foundation_checkbox,
+          label: "Draps à fournir",
+          required: false
+
+= f.input :towels,
+          as: :boolean,
+          wrapper: :foundation_checkbox,
+          label: "Essuies à fournir",
+          required: false
+
+= f.input :status,
+          label: "Statut *",
+          collection: [["À confirmer", "pending"], ["Confirmée", "confirmed"]],
+          required: true
+
+= section_heading heading: "Paiement",
+                  spacing: false
+
+= f.input :price,
+          wrapper: :foundation_append,
+          required: true,
+          pattern: "number",
+          error: "Veuillez renseigner le prix",
+          label: "Prix de la réservation" do
+  = content_tag :span,
+                "€",
+                class: "input-group-label"
+  = f.input_field :price,
+                  class: "input-group-field",
+                  pattern: "number",
+                  required: true,
+                  value: (f.object.new_record? && f.object.firstname.nil? && f.object.price == 0.0 ? "" : f.object.price)
+
+= f.input :payment_status,
+          label: "Statut du paiement *",
+          collection: [["Non payée", "unpaid"], ["Payée partiellement", "partially_paid"], ["Payée", "paid"]],
+          required: true
+
+= f.input :payment_method,
+          label: "Moyen de paiement",
+          collection: [["En liquide", "cash"], ["Virement bancaire", "bank_transfer"]]
+
+= section_heading heading: "Notes",
+                  spacing: false
+
+= f.input :notes,
+          as: :text,
+          input_html: { rows: 3 },
+          label: 'Notes',
+          placeholder: 'Notes éventuelles concernant cette réservation'

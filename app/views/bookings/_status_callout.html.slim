@@ -1,0 +1,9 @@
+- if booking.pending?
+  .warning.callout
+    strong Cette réservation est en attente de confirmation.
+- elsif booking.canceled?
+  .alert.callout
+    strong Cette réservation est annulée.
+- elsif booking.confirmed?
+  .success.callout
+    strong Cette réservation est confirmée.

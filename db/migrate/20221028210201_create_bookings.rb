@@ -10,7 +10,6 @@ class CreateBookings < ActiveRecord::Migration[7.0]
       t.string :status
       t.integer :adults
       t.integer :children
-      t.integer :price_cents
       t.string :payment_status
       t.string :payment_method
       t.boolean :bedsheets
@@ -19,5 +18,7 @@ class CreateBookings < ActiveRecord::Migration[7.0]
 
       t.timestamps
     end
+
+    add_monetize :bookings, :price, amount: { null: true, default: nil }, currency: { present: false }
   end
 end

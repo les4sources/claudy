@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_10_28_210243) do
+ActiveRecord::Schema[7.0].define(version: 2022_11_04_174349) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -24,7 +24,6 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_28_210243) do
     t.string "status"
     t.integer "adults"
     t.integer "children"
-    t.integer "price_cents"
     t.string "payment_status"
     t.string "payment_method"
     t.boolean "bedsheets"
@@ -32,6 +31,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_28_210243) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "price_cents"
   end
 
   create_table "lodging_rooms", force: :cascade do |t|
@@ -66,6 +66,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_10_28_210243) do
     t.text "description"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "level"
   end
 
   add_foreign_key "lodging_rooms", "lodgings"

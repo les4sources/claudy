@@ -48,10 +48,14 @@ gem "bootsnap", require: false
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 # gem "image_processing", "~> 1.2"
 
+gem "annotate"
 gem "awesome_print"
 gem "cssbundling-rails"
+gem "draper"
 gem "loaf"
 gem "money-rails", "~>1.12"
+gem "sentry-ruby"
+gem "sentry-rails"
 gem "simple_calendar"
 gem "simple_form"
 gem "slim"

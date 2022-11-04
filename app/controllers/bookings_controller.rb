@@ -1,27 +1,26 @@
 class BookingsController < ApplicationController
   def index
-    @bookings = Booking.all
+    @bookings = BookingDecorator.decorate_collection(Booking.all)
   end
 
   def show
-    @booking = Booking.find_by!(id: params[:id])
+    @booking = Booking.find_by!(id: params[:id]).decorate
   end
 
   def new
     @booking = Booking.new
+    @lodgings = Lodging.all
   end
 
   def create
-    @booking = Booking.new(booking_params)
-
-    respond_to do |format|
-      if @booking.save
-        format.html { redirect_to @booking, notice: "La réservation a été enregistrée." }
-        format.json { render :show, status: :created, location: @booking }
-      else
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @booking.errors, status: :unprocessable_entity }
-      end
+    service = Bookings::CreateService.new
+    if service.run(params)
+      redirect_to service.booking,
+                  notice: "Merci, la réservation a été enregistrée."
+    else
+      @booking = service.booking
+      set_error_flash(service.booking, service.error_message)
+      render :new
     end
   end
 
@@ -45,10 +44,9 @@ class BookingsController < ApplicationController
   def destroy
     @booking = Booking.find_by!(id: params[:id])
     @booking.destroy
-    respond_to do |format|
-      format.html { redirect_to bookings_url, status: :see_other, notice: "La réservation a été supprimée." }
-      format.json { head :no_content }
-    end
+    redirect_to bookings_url,
+                status: :see_other,
+                notice: "La réservation a été supprimée."
   end
 
   private
@@ -71,7 +69,8 @@ class BookingsController < ApplicationController
         :payment_method,
         :bedsheets,
         :towels,
-        :notes
+        :notes,
+        room_ids: []
       )
   end
 
