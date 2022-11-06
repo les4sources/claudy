@@ -1,4 +1,4 @@
-class LodgingsController < ApplicationController
+class LodgingsController < BaseController
   def index
     @lodgings = Lodging.all
   end

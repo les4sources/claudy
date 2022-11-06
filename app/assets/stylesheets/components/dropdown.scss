@@ -1,0 +1,129 @@
+@mixin claudy-dropdown {
+  .top-bar-dropdown,
+  .dropdown--for-grid {
+    box-shadow: $input-shadow-focus;
+    z-index: 11;
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: -10px;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 10px 10px 10px;
+      border-color: transparent transparent #FFF transparent;
+      z-index: 9999;
+    }
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: -11px;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 10px 10px 10px;
+      border-color: transparent transparent $medium-gray transparent;
+      z-index: 9998;
+    }
+
+    &[data-alignment="center"] {
+      &::before,
+      &::after {
+        left: calc(50% - 10px);
+      }
+    }
+
+    &[data-alignment="right"] {
+      &::before,
+      &::after {
+        right: 30px;
+      }
+    }
+
+    svg {
+      stroke: $color-pink;
+      fill: $color-pink;
+    }
+
+    &#support-dropdown {
+      svg {
+        height: 6rem;
+      }
+    }
+  }
+
+  #page-header {
+    .dropdown {
+      padding-left: 1rem;
+      padding-right: 1rem;
+
+      &::after {
+        // hide arrow
+        display: none;
+      }
+    }
+  }
+
+  .dropdown-pane-container {
+    position: relative;
+
+    .dropdown-pane {
+      width: 100%;
+    }
+  }
+
+  .dropdown-pane {
+    &.dt-button-collection {
+      &:after,
+      &:before {
+        left: 12%;
+      }
+    }
+
+    &.item {
+      border-color: $color-light-blue;
+      box-shadow: $card-shadow;
+
+      @include breakpoint(small only) {
+        max-width: calc(100% - 2.5rem);
+      }
+
+      .h5 {
+        a {
+          border-bottom: 1px solid $color-light-gray;
+        }
+
+        > small {
+          color: $color-dark-gray;
+        }
+      }
+
+      .button-group {
+        &:empty {
+          margin: 0;
+        }
+      }
+
+      ul {
+        &.list {
+          font-weight: $global-weight-bold;
+        }
+
+        &.item-menu {
+          margin-bottom: 0;
+          font-size: $small-font-size;
+
+          li {
+            &.divider {
+              list-style: none;
+              margin: .5rem 0;
+              border-top: 1px solid $color-medium-gray;
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -6,9 +6,9 @@ Rails.application.routes.draw do
   resources :rooms
 
   namespace :public do
-    resources :bookings, only: [:new, :create]
+    resources :bookings, only: [:new, :create, :show]
   end
 
   # Defines the root path route ("/")
-  root "bookings#index"
+  root "pages#calendar"
 end

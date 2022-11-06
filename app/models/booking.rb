@@ -16,6 +16,10 @@ class Booking < ApplicationRecord
     status == "confirmed"
   end
 
+  def name
+    "#{firstname} #{lastname}"
+  end
+
   def pending?
     status == "pending"
   end

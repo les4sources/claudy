@@ -1,4 +1,4 @@
-class BookingsController < ApplicationController
+class BookingsController < BaseController
   def index
     @bookings = BookingDecorator.decorate_collection(Booking.all)
   end

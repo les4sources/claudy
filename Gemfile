@@ -50,13 +50,14 @@ gem "bootsnap", require: false
 
 gem "annotate"
 gem "awesome_print"
+gem "by_star"
 gem "cssbundling-rails"
 gem "draper"
 gem "loaf"
 gem "money-rails", "~>1.12"
 gem "sentry-ruby"
 gem "sentry-rails"
-gem "simple_calendar"
+gem "simple_calendar", "~> 2.4"
 gem "simple_form"
 gem "slim"
 

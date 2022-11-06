@@ -115,9 +115,9 @@ class Components::MenuPresenter < PresenterBase
     [
       {
         # body: ::ApplicationController.helpers.image_tag('claudy.svg', alt: 'Claudy'),
-        body: "CLAUDY",
+        body: "Tableau de bord",
         url: root_path,
-        class: 'menu-text show-for-large'
+        active: @active_primary == 'dashboard'
       },
       {
         body: "Réservations",

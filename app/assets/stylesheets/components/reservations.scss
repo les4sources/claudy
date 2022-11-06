@@ -1,0 +1,166 @@
+@mixin claudy-reservations {
+  .reservations.list {
+    .day-actions {
+      .inline-icon {
+        &:hover,
+        &:focus {
+          cursor: pointer;
+        }
+      }
+    }
+  }
+
+  .reservation {
+    color: $black;
+
+    &__border {
+      width: .5rem;
+      height: 100%;
+      border-radius: .5rem;
+
+      &--tiny {
+        width: 4px;
+        border-radius: 4px;
+      }
+    }
+
+    .reservation-list-item-cell {
+      margin-right: .5rem;
+    }
+
+    .reservation-color-square {
+      display: inline-block;
+      margin-right: .25rem;
+      width: .5rem;
+      height: .5rem;
+      border-radius: 100%;
+    }
+
+    &__content {
+      line-height: 1.2rem;
+    }
+
+    .reservations-count-label,
+    .reservation-status-icon {
+      margin-right: .25rem;
+      margin-bottom: .25rem;
+      padding: .175rem .375rem;
+      font-size: $small-font-size;
+      border-radius: $global-radius;
+      border: 1px solid;
+      vertical-align: text-bottom; // fix scrollbar issue on safari
+    }
+
+    .reservations-count-label {
+      display: inline-block;
+      border-color: $color-bright-pink;
+      color: darken($color-bright-pink, 15%);
+    }
+
+    .reservation-now-label {
+      display: none;
+    }
+
+    .reservation-status-icon {
+      display: inline-block;
+      border-color: $color-secondary;
+      color: darken($color-secondary, 15%);
+
+      &.future {
+        color: $white;
+        border: none;
+        background: $color-secondary;
+
+        &.future--no-reservation {
+          color: darken($color-secondary, 15%);
+          border: 1px dashed $color-secondary;
+          background: $white;
+        }
+      }
+
+      &.past {
+        border-color: $color-success;
+        color: darken($color-success, 15%);
+      }
+
+      &.no-attendance {
+        border-color: $color-dark-gray;
+        color: $color-dark-gray;
+        background: $white;
+        border-style: dashed;
+      }
+
+      &.cancelled {
+        border-color: $color-alert;
+        color: $color-alert;
+      }
+
+      &.full {
+        background: $color-success;
+        border: 1px solid red;
+      }
+
+      &--online {
+        border: none;
+        background: $color-pink;
+        color: $white;
+      }
+
+      &.overbooked {
+        background: $color-bright-pink;
+      }
+
+      &.full,
+      &.overbooked {
+        border: none;
+        color: $white;
+        font-weight: $global-weight-bold;
+        text-align: center;
+        text-transform: uppercase;
+      }
+    }
+
+    .reservation-waitlist-label {
+      background: $color-bright-pink;
+      border: none;
+      color: $white;
+      font-weight: normal;
+
+      .inline-icon {
+        height: .8rem;
+      }
+    }
+
+    .reservation-time {
+      color: $color-dark-gray;
+    }
+
+    .reservation-name {
+      font-weight: $global-weight-bold;
+
+      a {
+        color: $black;
+
+        &:hover,
+        &:focus {
+          color: $color-primary;
+        }
+      }
+    }
+
+    .reservation-instructor {
+      font-size: $small-font-size;
+    }
+
+    .reservations-count,
+    .on-waitlist {
+      color: $color-dark-gray;
+    }
+  }
+
+  .reservation--now {
+    .reservation-now-label {
+      display: inline-block;
+    }
+  }
+}

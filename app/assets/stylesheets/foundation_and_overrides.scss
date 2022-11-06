@@ -63,20 +63,24 @@
 @include foundation-visibility-classes;
 // @include foundation-prototype-classes;
 
+@import 'components/calendar';
 @import 'components/callout';
-@import 'components/datepicker';
+@import 'components/dropdown';
 @import 'components/form';
 @import 'components/icon';
 @import 'components/label';
 @import 'components/page_header';
+@import 'components/reservations';
 @import 'components/spacer';
 @import 'components/top_bar';
 
+@include claudy-calendar;
 @include claudy-callout;
-@include claudy-datepicker;
+@include claudy-dropdown;
 @include claudy-form;
 @include claudy-icon;
 @include claudy-label;
 @include claudy-page-header;
+@include claudy-reservations;
 @include claudy-spacer;
 @include claudy-top-bar;

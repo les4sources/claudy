@@ -1,0 +1,134 @@
+@mixin claudy-calendar {
+  .calendar {
+    &.dashboard {
+      border-bottom: 1px solid $color-light-gray;
+
+      @include breakpoint(small only) {
+        border-bottom: 0;
+      }
+
+      .weekdays {
+        .cell {
+          padding: .5rem;
+        }
+      }
+
+      .past-weeks-toggler {
+        border: 1px solid $color-light-gray;
+        border-bottom: none;
+        text-align: center;
+        padding: $global-padding;
+
+        @include breakpoint(small only) {
+          margin-bottom: $global-margin;
+          padding: 0;
+          border: none;
+          text-align: left;
+        }
+      }
+
+      .cell {
+
+        &.day {
+          padding: .5rem;
+          border: 1px solid $color-light-gray;
+          border-width: 1px 0 0 1px;
+          overflow: visible;
+
+          &:last-child {
+            border-right-width: 1px;
+          }
+
+          @include breakpoint(small only) {
+            margin-bottom: $global-margin;
+            border: 0;
+            // border-left: 3px solid $color-light-gray;
+          }
+
+          .date {
+            position: relative;
+            margin-bottom: 1rem;
+
+            .date__day {
+              color: $color-dark-gray;
+            }
+
+            .date__label {
+              display: inline-block;
+              margin-right: .25rem;
+            }
+
+            .date__weekday {
+              color: $color-dark-gray;
+              font-size: $small-font-size;
+            }
+          }
+
+          &.current-month {
+            .date {
+              .date__day {
+                color: $body-font-color;
+              }
+            }
+          }
+
+          &.today {
+            background-color: lighten($color-purple, 50%);
+
+            .date {
+              .date__day:not(.date__day--long) {
+                display: inline-block;
+                border-radius: $global-radius;
+                margin-right: .25rem;
+                color: $white;
+                background: $color-purple;
+                width: 2rem;
+                text-align: center;
+              }
+            }
+          }
+
+          .instance,
+          .notice {
+            margin: 0 -.5rem .5rem;
+            margin-left: calc(-.5rem - 2px);
+          }
+
+          .reservation {
+            font-size: $small-font-size;
+
+            &.hover,
+            &:hover,
+            &:focus {
+              background: $color-light-blue;
+              cursor: pointer;
+            }
+
+            .reservation-status-icon {
+              font-size: inherit;
+
+              &.full,
+              &.overbooked {
+                margin-top: .25rem;
+              }
+            }
+          }
+
+          .instance__content,
+          .notice__content {
+            padding: 0 .25rem .5rem;
+            padding-left: calc(.25rem + 2px);
+          }
+
+          &.past {
+            background-color: $color-extra-light-gray;
+          }
+        }
+
+        .dropdown-pane {
+          z-index: 1005;
+        }
+      }
+    }
+  }
+}

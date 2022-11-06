@@ -1,0 +1,54 @@
+div(data-controller="calendar" data-calendar-current="#{@date.beginning_of_month == Date.today.beginning_of_month}")
+  .dashboard.calendar
+    - current_month = date_range.first.month
+
+    - date_range.each_slice(7).with_index do |weekdays, index|
+      - if index == 0
+        .weekdays.hide-for-small-only
+          .grid-x
+            - weekdays.each do |day|
+              .cell.auto
+                span.help-text
+                  = l(day, format: "%A")
+
+        - if @date.month == Date.today.month && @date.beginning_of_week >= @date.beginning_of_month
+          .past-weeks-toggler(data-target="calendar.pastWeeksToggler")
+            = link_to "Afficher les semaines précédentes",
+                      "#",
+                      class: "small hollow secondary small-only-expanded button no-margin-bottom",
+                      data: { \
+                        action: "calendar#showPastWeeks" \
+                      }
+
+      .week(data-target="calendar.week" data-past-week="#{weekdays.first < Date.today && !weekdays.include?(Date.today)}" data-first-weekday="#{weekdays.first}" data-beginning-of-week="#{Date.today.beginning_of_week}")
+        .grid-x
+          - weekdays.each do |day|
+            - if current_month != day.month
+              .cell.small-12.show-for-small-only
+                = section_heading heading: l(day, format: "%B"),
+                                  spacing: :spacer
+            .cell.small-12.medium-auto.day(data-target="calendar.day" class="#{day.month == Date.today.month ? "current-month" : nil} #{day == Date.today ? "today" : nil} #{day < Date.today ? "past" : nil}")
+              .grid-x
+                .cell.auto
+                  .date
+                    .show-for-small-only
+                      span.date__day.date__day--long => l(day, format: :long)
+                      - if day == Date.today
+                        span.purple.label.date__label TODAY
+                      br
+                      span.date__weekday = l(day, format: "%A")
+                    .hide-for-small-only
+                      span.date__day = l(day, format: "%e")
+                      - if current_month != day.month
+                        - current_month = day.month
+                        span.date__month =< l(day, format: "%b")
+                / - if day >= Date.today
+                  .cell.shrink
+                    .day-actions
+                      span
+                        / = link_to "#", class: "", data: { toggle: "day-#{day}-menu" } do
+                        i.fa.fa-fw.fa-ellipsis-h(data-toggle="day-#{day}-menu")
+                        .item.dropdown-pane(id="day-#{day}-menu" data-dropdown data-close-on-click="true" data-position="bottom" data-alignment="right")
+                          = render "pages/day_dropdown", date: day
+
+              - passed_block.call day, sorted_events.fetch(day, [])

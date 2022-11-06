@@ -1,0 +1,20 @@
+.multiple-links
+  => button_to_previous_month(current_date)
+
+  a.small.hollow.secondary.button.hide-for-small-only(data-toggle="months-dropdown") &hellip;
+
+  #months-dropdown.dropdown-pane.small.dropdown-pane--menu.dropdown-pane--arrowed(data-dropdown data-close-on-click="true" data-v-offset="8" data-position="bottom" data-alignment="center")
+    ul.vertical.menu.text-center
+      - (-5..-1).each do |i|
+        - link_date = current_date + i.months
+        li
+          = link_to params.permit(:date).merge(date: link_date) do
+            = l(link_date, format: "%B %Y")
+      li.divider
+      - (1..5).each do |i|
+        - link_date = current_date + i.months
+        li
+          = link_to params.permit(:date).merge(date: link_date) do
+            = l(link_date, format: "%B %Y")
+
+  =< button_to_next_month(current_date)
