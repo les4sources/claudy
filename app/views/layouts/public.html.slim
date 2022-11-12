@@ -1,0 +1,21 @@
+doctype html
+html(lang="fr")
+  head
+    meta(charset="utf-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1")
+    title Claudy
+    meta(name="robots" value="noindex,nofollow")
+    = csrf_meta_tags
+    = csp_meta_tag
+    = stylesheet_link_tag "public", "data-turbo-track": "reload"
+    = javascript_importmap_tags
+  body
+    .grid-container
+      .grid-x.grid-margin-x.grid-padding-x
+        .cell.auto
+          - if content_for?(:page_header)
+            section#page-header(data-sticky-container)
+              = yield :page_header
+
+          = render 'layouts/public/components/messages'
+          = yield

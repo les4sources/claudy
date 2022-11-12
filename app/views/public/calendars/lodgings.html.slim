@@ -1,0 +1,11 @@
+= SimpleCalendar::PublicLodgingsCalendar.new(self, { \
+    today: @date \
+  }).render do |date|
+  - if date >= Date.today
+    - @lodgings.each do |lodging|
+      .lodging
+        - if lodging.available_on?(date)
+          => lodging.name
+          | ✔
+        - else
+          .lodging--unavailable = lodging.name

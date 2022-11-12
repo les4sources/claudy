@@ -14,8 +14,11 @@ table
   thead
     tr
       th Nom
+      th Chambres
   tbody
     - @lodgings.each do |lodging|
       tr
         td
           = link_to lodging.name, lodging_path(lodging)
+        td
+          = lodging.rooms.pluck(:name).join(", ")

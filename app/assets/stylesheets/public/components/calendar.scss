@@ -1,0 +1,120 @@
+.calendar {
+  margin: 1rem 0;
+  border-bottom: 1px solid $color-light-gray;
+
+  @include breakpoint(small only) {
+    border-bottom: 0;
+  }
+
+  .weekdays {
+    .cell {
+      padding: 0 .5rem .5rem;
+    }
+  }
+
+  .week {
+    @include breakpoint(small only) {
+      margin-bottom: 1rem;
+      border-left: 3px solid $color-light-gray;
+    }
+  }
+
+  .cell {
+    &.day {
+      padding: .5rem;
+      border: 1px solid $color-light-gray;
+      border-width: 1px 0 0 1px;
+      overflow: visible;
+
+      &:last-child {
+        border-right-width: 1px;
+      }
+
+      @include breakpoint(small only) {
+        margin-bottom: 0;
+        border: 0;
+        // border-left: 3px solid $color-light-gray;
+      }
+
+      .date {
+        position: relative;
+        margin-bottom: 1rem;
+
+        .date__day {
+          color: $color-dark-gray;
+        }
+
+        .date__month {
+          font-weight: $global-weight-bold;
+        }
+
+        .date__label {
+          display: inline-block;
+          margin-right: .25rem;
+        }
+
+        .date__weekday {
+          color: $color-dark-gray;
+          font-size: $small-font-size;
+        }
+      }
+
+      &.current-month {
+        .date {
+          .date__day {
+            color: $body-font-color;
+          }
+        }
+      }
+
+      &.today {
+        background-color: lighten($color-purple, 50%);
+
+        .date {
+          .date__day:not(.date__day--long) {
+            display: inline-block;
+            border-radius: $global-radius;
+            margin-right: .25rem;
+            color: $white;
+            background: $color-purple;
+            width: 2rem;
+            text-align: center;
+          }
+        }
+      }
+
+      .lodging {
+        font-size: $small-font-size;
+
+        &--unavailable {
+          color: $color-medium-gray;
+          text-decoration: line-through;
+        }
+      }
+
+      .lodging__content,
+      .notice__content {
+        padding: 0 .25rem .5rem;
+        padding-left: calc(.25rem + 2px);
+      }
+
+      &.past {
+        background-color: $color-extra-light-gray;
+
+        @include breakpoint(small only) {
+          display: none;
+        }
+
+        .date {
+          .date__day {
+            color: $color-medium-gray;
+          }
+        }
+      }
+    }
+
+    .dropdown-pane {
+      z-index: 1005;
+    }
+  }
+}

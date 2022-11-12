@@ -1,0 +1,33 @@
+.public.calendar
+  - current_month = date_range.first.month
+
+  - date_range.each_slice(7).with_index do |weekdays, index|
+    - if index == 0
+      .weekdays.hide-for-small-only
+        .grid-x
+          - weekdays.each do |day|
+            .cell.auto
+              = l(day, format: "%A")
+
+    .week
+      .grid-x
+        - weekdays.each do |day|
+          .cell.small-12.medium-auto.day(class="#{day.month == Date.today.month ? "current-month" : nil} #{day == Date.today ? "today" : nil} #{day < Date.today ? "past" : nil}")
+            .grid-x
+              .cell.auto
+                .date
+                  .show-for-small-only
+                    span.date__day.date__day--long => l(day, format: :long)
+                    - if day == Date.today
+                      span.purple.label.date__label AUJOURD'HUI
+                    div.date__weekday = l(day, format: "%A")
+                  .hide-for-small-only
+                    - if day.day == 1
+                      span.date__day 1er
+                    - else
+                      span.date__day = l(day, format: "%e")
+                    - if current_month != day.month || day == Date.today
+                      - current_month = day.month
+                      span.date__month =< l(day, format: "%B")
+
+            - passed_block.call day, sorted_events.fetch(day, [])

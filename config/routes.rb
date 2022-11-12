@@ -7,6 +7,7 @@ Rails.application.routes.draw do
 
   namespace :public do
     resources :bookings, only: [:new, :create, :show]
+    get "calendrier-hebergements", to: "calendars#lodgings"
   end
 
   # Defines the root path route ("/")
