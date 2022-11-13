@@ -95,8 +95,6 @@ GEM
     childprocess (4.1.0)
     concurrent-ruby (1.1.10)
     crass (1.0.6)
-    cssbundling-rails (1.1.1)
-      railties (>= 6.0.0)
     dartsass-rails (0.4.0)
       railties (>= 6.0.0)
     debug (1.6.3)
@@ -267,7 +265,6 @@ DEPENDENCIES
   by_star
   byebug
   capybara
-  cssbundling-rails
   dartsass-rails (~> 0.4.0)
   debug
   draper

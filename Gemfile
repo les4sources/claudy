@@ -51,7 +51,7 @@ gem "bootsnap", require: false
 gem "annotate"
 gem "awesome_print"
 gem "by_star"
-gem "cssbundling-rails"
+# gem "cssbundling-rails"
 gem "dartsass-rails", "~> 0.4.0"
 gem "draper"
 gem "loaf"
