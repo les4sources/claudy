@@ -3,7 +3,7 @@
 // Settings
 @import './colors';
 @import './foundation_settings';
-@import '../../../node_modules/foundation-sites/scss/foundation';
+@import './foundation/scss/foundation';
 
 // Global styles
 @include foundation-global-styles;
