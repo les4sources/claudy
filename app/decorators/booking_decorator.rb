@@ -1,8 +1,30 @@
 class BookingDecorator < ApplicationDecorator
   delegate_all
 
+  def children
+    (object.children || 0) > 0 ? object.children : "aucun"
+  end
+
+  def bedsheets
+    object.bedsheets? ? "OUI" : "non"
+  end
+
+  def email
+    object.email.present? ? mail_to(object.email) : "-"
+  end
+
   def from_date
     l(object.from_date, format: :short)
+  end
+
+  def label_bedsheets
+    return if !object.bedsheets?
+    h.content_tag(:span, "draps", class: "secondary label")
+  end
+
+  def label_towels
+    return if !object.towels?
+    h.content_tag(:span, "essuies", class: "secondary label")
   end
 
   def name
@@ -29,6 +51,10 @@ class BookingDecorator < ApplicationDecorator
     end
   end
 
+  def phone
+    object.phone.present? ? object.phone : "-"
+  end
+
   def status
     case object.status
     when "canceled"
@@ -44,5 +70,9 @@ class BookingDecorator < ApplicationDecorator
 
   def to_date
     l(object.to_date, format: :short)
+  end
+
+  def towels
+    object.towels? ? "OUI" : "non"
   end
 end

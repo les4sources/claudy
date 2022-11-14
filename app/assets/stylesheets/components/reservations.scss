@@ -87,51 +87,15 @@
         color: darken($color-success, 15%);
       }
 
-      &.no-attendance {
-        border-color: $color-dark-gray;
-        color: $color-dark-gray;
-        background: $white;
-        border-style: dashed;
-      }
-
       &.cancelled {
         border-color: $color-alert;
         color: $color-alert;
-      }
-
-      &.full {
-        background: $color-success;
-        border: 1px solid red;
       }
 
       &--online {
         border: none;
         background: $color-pink;
         color: $white;
-      }
-
-      &.overbooked {
-        background: $color-bright-pink;
-      }
-
-      &.full,
-      &.overbooked {
-        border: none;
-        color: $white;
-        font-weight: $global-weight-bold;
-        text-align: center;
-        text-transform: uppercase;
-      }
-    }
-
-    .reservation-waitlist-label {
-      background: $color-bright-pink;
-      border: none;
-      color: $white;
-      font-weight: normal;
-
-      .inline-icon {
-        height: .8rem;
       }
     }
 
@@ -152,11 +116,6 @@
           color: $color-primary;
         }
       }
-    }
-
-    .reservations-count,
-    .on-waitlist {
-      color: $color-dark-gray;
     }
   }
 

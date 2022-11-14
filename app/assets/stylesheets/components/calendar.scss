@@ -14,7 +14,7 @@
       }
 
       .past-weeks-toggler {
-        border: 1px solid $color-light-gray;
+        border: 1px solid $color-medium-gray;
         border-bottom: none;
         text-align: center;
         padding: $global-padding;
@@ -88,7 +88,8 @@
           }
 
           .event,
-          .notice {
+          .notice,
+          .reservation {
             margin: 0 -.5rem .5rem;
             margin-left: calc(-.5rem - 2px);
           }
@@ -100,7 +101,7 @@
             &.hover,
             &:hover,
             &:focus {
-              background: $color-light-blue;
+              background: $color-extra-light-gray;
               cursor: pointer;
             }
 
@@ -115,8 +116,9 @@
           }
 
           .event__content,
-          .notice__content {
-            padding: 0 .25rem .5rem;
+          .notice__content,
+          .reservation__content {
+            padding: .25rem .25rem .5rem;
             padding-left: calc(.25rem + 2px);
           }
 

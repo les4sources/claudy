@@ -1,6 +1,13 @@
+body {
+  background: blue;
+}
+
 .footer {
   padding-top: 1rem;
   border-top: 1px solid $light-gray;
   color: $dark-gray;
   font-size: $small-font-size;
 }
+
+.no-margin-top { margin-top: 0 !important; }
+.no-margin-bottom { margin-bottom: 0 !important; }

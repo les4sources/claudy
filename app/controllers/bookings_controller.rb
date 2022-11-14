@@ -5,6 +5,7 @@ class BookingsController < BaseController
 
   def show
     @booking = Booking.find_by!(id: params[:id]).decorate
+    @reservations_by_date = @booking.reservations.decorate.to_a.group_by { |r| r.date }
   end
 
   def new

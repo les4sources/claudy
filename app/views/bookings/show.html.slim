@@ -1,14 +1,9 @@
 - content_for :page_header do
   = render 'layouts/components/page_header',
            title: @booking.name,
+           secondary: "Du #{@booking.from_date} au #{@booking.to_date}",
            links: [ \
-             link_to( \
-               "Supprimer",
-               booking_path(@booking),
-               method: :delete,
-               data: { confirm: "Etes-vous certain de vouloir supprimer cette réservation?" },
-               class: 'secondary button' \
-             ),
+             delete_link(@booking.object),
              link_to( \
                "Mettre à jour",
                edit_booking_path(@booking),
@@ -16,45 +11,35 @@
              ) \
            ]
 
-= render "bookings/status_callout", booking: @booking
-
-= info_header("Chambres réservées")
-
-table
-  thead
-    tr
-      th Chambre
-      th Du
-      th Au
-  tbody
-    - @booking.reservations.decorate.each do |reservation|
-      tr
-        td = reservation.room.name
-        td = reservation.date
-        td = reservation.date
-
 .grid-x.grid-padding-x
   .cell.small-12.medium-9.large-8
     = info_header("Informations personnelles")
 
-    = info_line("Nom") do
-      = @booking.name
+    .grid-x.grid-padding-x
+      .cell.small-4
+        = info_line("Nom") do
+          = @booking.name
+      .cell.small-4
+        = info_line("Téléphone") do
+          = @booking.phone
+      .cell.small-4
+        = info_line("Email") do
+          = mail_to @booking.email
 
-    = info_line("Téléphone") do
-      = @booking.phone
+    = info_header("Chambres réservées")
 
-    = info_line("Email") do
-      = mail_to @booking.email
+    table
+      thead
+        tr
+          th Date
+          th Chambres
+      tbody
+        - @reservations_by_date.each do |date, reservations|
+          tr
+            td(style="width: 10rem") = date
+            td = reservations.collect { |r| r.room.name }.join(", ")
 
     = info_header("Réservation")
-
-    .grid-x.grid-padding-x
-      .cell.small-6
-        = info_line("Du") do
-          = @booking.from_date
-      .cell.small-6
-        = info_line("Au") do
-          = @booking.to_date
 
     = info_line("Adultes") do
       = @booking.adults
@@ -62,13 +47,17 @@ table
     = info_line("Enfants") do
       = @booking.children
 
-    = info_line("Draps à fournir") do
-      = @booking.bedsheets
-
-    = info_line("Essuies à fournir") do
-      = @booking.towels
+    .grid-x.grid-padding-x
+      .cell.small-4
+        = info_line("Draps à fournir") do
+          = @booking.bedsheets
+      .cell.small-4
+        = info_line("Essuies à fournir") do
+          = @booking.towels
 
   .cell.small-12.medium-3.large-4
+    = render "bookings/status_callout", booking: @booking
+
     = info_header("Paiement")
 
     = info_line("Prix à payer") do

@@ -1,6 +1,6 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
-           title: l(@date, format: :month_year),
+           title: l(@date, format: :month_year).capitalize,
            links: [ \
              render("pages/calendar/months_dropdown", current_date: @date) \
            ]
@@ -42,19 +42,15 @@
           .cell.auto
             .reservation__content
               .grid-x
-                / .cell.auto
-                  .reservation-time
-                    => class_details_presenter.class_time
-                .cell.shrink
-                  .spacer__width--dot5
-                  = ellipsis_for("reservation-#{reservation.id}-menu")
-              .grid-x
                 .cell.auto
                   .reservation-room-name
                     = link_to reservation.room.name,
                               booking_path(reservation.booking)
                   small.reservation-name
                     = reservation.booking.name
+                .cell.shrink
+                  .spacer__width--dot5
+                  = ellipsis_for("reservation-#{reservation.id}-menu")
               / .grid-x
                 .cell.auto
                   .instance-instructor
