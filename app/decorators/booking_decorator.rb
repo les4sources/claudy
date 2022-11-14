@@ -10,7 +10,7 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def email
-    object.email.present? ? mail_to(object.email) : "-"
+    object.email.present? ? h.mail_to(object.email) : "-"
   end
 
   def from_date
