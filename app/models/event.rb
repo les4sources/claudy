@@ -9,4 +9,6 @@ class Event < ApplicationRecord
             presence: { message: "Veuillez spécifier une date de fin" }
 
   attr_accessor :starts_at_date, :starts_at_time, :ends_at_date, :ends_at_time
+
+  by_star_field :starts_at, :ends_at
 end

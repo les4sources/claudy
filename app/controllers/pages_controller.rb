@@ -1,10 +1,16 @@
 class PagesController < BaseController
   def calendar
     set_dates
-    @events = Event.all
+    events = Event.all
       .includes(:event_category)
-      .between_times(@first, @last, field: :starts_at)
-    @grouped_events = @events.to_a.group_by { |e| e.starts_at.to_date }
+      .between_times(@first, @last)
+    @grouped_events = {}
+    events.each do |event|
+      (event.starts_at.to_date..event.ends_at.to_date).each do |date|
+        @grouped_events[date] ||= []
+        @grouped_events[date] << event
+      end
+    end
     @reservations = Reservation.all
       .includes(:booking)
       .between_times(@first, @last, field: :date)

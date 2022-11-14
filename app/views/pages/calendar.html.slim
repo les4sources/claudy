@@ -20,16 +20,15 @@
             .event__content
               .grid-x
                 .cell.auto
-                  .event-time
-                    => l(event.starts_at, format: :only_time)
-                .cell.shrink
-                  .spacer__width--dot5
-                  = ellipsis_for("event-#{event.id}-menu")
-              .grid-x
-                .cell.auto
+                  - if event.starts_at.hour > 0
+                    .event-time
+                      => l(event.starts_at, format: :only_time)
                   .event-name
                     = link_to event.name,
                               event_path(event)
+                .cell.shrink
+                  .spacer__width--dot5
+                  = ellipsis_for("event-#{event.id}-menu")
 
   - if @upcoming_by_date[date]
     - @upcoming_by_date[date].sort_by {|r| [r.start_time, r.booking.lastname] }.each do |reservation|
