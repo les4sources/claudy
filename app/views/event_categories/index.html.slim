@@ -1,0 +1,21 @@
+- content_for :page_header do
+  = render 'layouts/components/page_header',
+           title: "Catégories d'événements",
+           count: @event_categories.size,
+           links: [ \
+             link_to( \
+               'Ajouter une catégorie',
+               new_event_category_path,
+               class: 'primary button show-for-large' \
+             ) \
+           ]
+
+table
+  thead
+    tr
+      th Nom
+  tbody
+    - @event_categories.each do |event_category|
+      tr
+        td
+          = link_to(event_category.name, event_category_path(event_category))

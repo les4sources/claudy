@@ -128,6 +128,11 @@ class Components::MenuPresenter < PresenterBase
         body: "Hébergements",
         url: lodgings_path,
         active: @active_primary == 'lodgings'
+      },
+      {
+        body: "Événements",
+        url: events_path,
+        active: @active_primary == 'events'
       }
     ]
   end
@@ -144,8 +149,8 @@ class Components::MenuPresenter < PresenterBase
 
   def secondary_items
     case @active_primary
-    when 'foo'
-      foo_menu_items
+    when "events"
+      events_menu_items
     end
   end
 
@@ -166,6 +171,21 @@ class Components::MenuPresenter < PresenterBase
   end
 
   private
+
+  def events_menu_items
+    [
+      {
+        body: "Événements",
+        url: events_path,
+        active: @active_secondary == "events"
+      },
+      {
+        body: "Catégories d'événements",
+        url: event_categories_path,
+        active: @active_secondary == "event_categories"
+      }
+    ]
+  end
 
   def foo_menu_items
     []

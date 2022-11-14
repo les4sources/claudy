@@ -19,6 +19,13 @@ export default class extends Controller {
     })
   }
 
+  redirectToEvent(e) {
+    // don't redirect when opening the event dropdown
+    if ($(e.target).closest('.inline-icon').data('toggle') == undefined) {
+      document.location = $(e.target).closest('.event').data('event-path')
+    }
+  }
+
   redirectToBooking(e) {
     // don't redirect when opening the reservation dropdown
     if ($(e.target).closest('.inline-icon').data('toggle') == undefined) {

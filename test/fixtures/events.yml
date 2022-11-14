@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  name: MyString
+  event_category: one
+  starts_at: 2022-11-14 17:59:39
+  ends_at: 2022-11-14 17:59:39
+
+two:
+  name: MyString
+  event_category: two
+  starts_at: 2022-11-14 17:59:39
+  ends_at: 2022-11-14 17:59:39

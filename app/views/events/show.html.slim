@@ -1,0 +1,28 @@
+- content_for :page_header do
+  = render 'layouts/components/page_header',
+           title: @event.name,
+           links: [ \
+             link_to( \
+               'Mettre à jour',
+               edit_event_path(@event),
+               class: 'secondary button' \
+             ),
+             delete_link(@event) \
+           ].compact
+
+.grid-x.grid-padding-x
+  .cell.auto
+    p
+      strong Catégorie
+      br
+      = link_to(@event.event_category.name, event_category_path(@event.event_category))
+
+    p
+      strong Du
+      br
+      = l(@event.starts_at, format: :long)
+
+    p
+      strong Au
+      br
+      = l(@event.ends_at, format: :long)

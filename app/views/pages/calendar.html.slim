@@ -8,6 +8,29 @@
 = SimpleCalendar::DashboardCalendar.new(self, { \
     today: @date \
   }).render do |date|
+  - if @grouped_events[date]
+    - @grouped_events[date].sort_by {|e| [e.starts_at, e.event_category_id] }.each do |event|
+      .item.dropdown-pane(id="event-#{event.id}-menu" data-dropdown data-close-on-click="true" data-position="bottom" data-alignment="right")
+        = render "pages/calendar/event_dropdown", event: event
+      .event.event-calendar-item(data-event-path="#{event_path(event)}" data-action="click->calendar#redirectToEvent")
+        .grid-x
+          .cell.shrink
+            .event__border.event__border--tiny(style="background-color: #{event.event_category.color}")
+          .cell.auto
+            .event__content
+              .grid-x
+                .cell.auto
+                  .event-time
+                    => l(event.starts_at, format: :only_time)
+                .cell.shrink
+                  .spacer__width--dot5
+                  = ellipsis_for("event-#{event.id}-menu")
+              .grid-x
+                .cell.auto
+                  .event-name
+                    = link_to event.name,
+                              event_path(event)
+
   - if @upcoming_by_date[date]
     - @upcoming_by_date[date].sort_by {|r| [r.start_time, r.booking.lastname] }.each do |reservation|
       .item.dropdown-pane(id="reservation-#{reservation.id}-menu" data-dropdown data-close-on-click="true" data-position="bottom" data-alignment="right")

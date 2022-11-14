@@ -25,7 +25,7 @@
 
       ul {
         display: none;
-        background: $color-dark-blue;
+        background: $color-dark-gray;
       }
 
       &.menu-text {
@@ -44,7 +44,7 @@
 
       &.active {
         a {
-          color: $black;
+          color: $white;
           font-weight: $global-weight-bold;
         }
       }

@@ -1,0 +1,18 @@
+- content_for :page_header do
+  = render 'layouts/components/page_header',
+           title: @event_category.name,
+           links: [ \
+             link_to( \
+               'Mettre à jour',
+               edit_event_category_path(@event_category),
+               class: 'secondary button' \
+             ),
+             delete_link(@event_category) \
+           ].compact
+
+.grid-x.grid-padding-x
+  .cell.auto
+    p
+      strong Couleur
+      br
+      = @event_category.color

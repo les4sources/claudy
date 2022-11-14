@@ -1,0 +1,58 @@
+= f.input :name,
+          label: 'Nom *',
+          required: true,
+          placeholder: "Nom de l'événement"
+
+= f.input :event_category_id,
+          as: :select,
+          label: "Catégorie",
+          collection: EventCategory.all.order(:name),
+          prompt: "Sélectionnez une catégorie"
+
+= callout :info,
+          content: "Toute la journée: ne spécifiez que la date et ne précisez aucune heure",
+          tiny: true
+
+.grid-x.grid-padding-x
+  .cell.small-8.medium-8.large-6
+    = f.input :starts_at_date,
+              as: :date,
+              html5: true,
+              label: "Commence le *",
+              required: true,
+              error: "Veuillez spécifier une date",
+              input_html: { \
+                value: (f.object.starts_at.present? ? l(f.object.starts_at.to_date, format: :long) : nil) \
+              }
+  .cell.small-4.medium-4.large-3
+    = f.input :starts_at_time,
+              label: "À quelle heure?",
+              as: :time,
+              html5: true,
+              required: true,
+              error: "Veuillez indiquer une heure",
+              input_html: { \
+                value: (f.object.starts_at.present? ? l(f.object.starts_at.to_time, format: :twenty_four_hour) : nil) \
+              }
+
+.grid-x.grid-padding-x
+  .cell.small-8.medium-8.large-6
+    = f.input :ends_at_date,
+              as: :date,
+              html5: true,
+              label: "Termine le *",
+              required: true,
+              error: "Veuillez spécifier une date",
+              input_html: { \
+                value: (f.object.ends_at.present? ? l(f.object.ends_at.to_date, format: :long) : nil) \
+              }
+  .cell.small-4.medium-4.large-3
+    = f.input :ends_at_time,
+              label: "What time?",
+              as: :time,
+              html5: true,
+              required: true,
+              error: "Veuillez indiquer une heure",
+              input_html: { \
+                value: (f.object.ends_at.present? ? l(f.object.ends_at.to_time, format: :twenty_four_hour) : nil) \
+              }

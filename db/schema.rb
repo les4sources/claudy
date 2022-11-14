@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_11_05_190507) do
+ActiveRecord::Schema[7.0].define(version: 2022_11_14_165936) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -32,6 +32,23 @@ ActiveRecord::Schema[7.0].define(version: 2022_11_05_190507) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "price_cents"
+  end
+
+  create_table "event_categories", force: :cascade do |t|
+    t.string "name"
+    t.string "color"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "events", force: :cascade do |t|
+    t.string "name"
+    t.bigint "event_category_id", null: false
+    t.datetime "starts_at"
+    t.datetime "ends_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["event_category_id"], name: "index_events_on_event_category_id"
   end
 
   create_table "lodging_rooms", force: :cascade do |t|
@@ -68,6 +85,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_11_05_190507) do
     t.integer "level"
   end
 
+  add_foreign_key "events", "event_categories"
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"
   add_foreign_key "reservations", "bookings"
