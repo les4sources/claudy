@@ -11,4 +11,4 @@ Rails.application.config.assets.version = "1.0"
 # folder are already added.
 # Rails.application.config.assets.precompile += %w( admin.js admin.css )
 
-Rails.application.config.assets.precompile += %w( public.css foundation-sites.js jquery.js  )
+Rails.application.config.assets.precompile += %w( public.css public.js foundation-sites.js jquery.js  )

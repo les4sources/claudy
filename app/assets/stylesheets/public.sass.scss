@@ -5,6 +5,8 @@
 @import './foundation_settings';
 @import './foundation/scss/foundation';
 
+@import './public/layout';
+
 // Global styles
 @include foundation-global-styles;
 @include foundation-forms;

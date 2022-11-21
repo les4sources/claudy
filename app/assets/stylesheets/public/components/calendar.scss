@@ -38,7 +38,7 @@
 
       .date {
         position: relative;
-        margin-bottom: 1rem;
+        margin-bottom: .5rem;
 
         .date__day {
           color: $color-dark-gray;
@@ -84,11 +84,20 @@
       }
 
       .lodging {
+        margin-top: .5rem;
         font-size: $small-font-size;
+
+        &--available {
+          font-weight: $global-weight-bold;
+        }
 
         &--unavailable {
           color: $color-medium-gray;
           text-decoration: line-through;
+        }
+
+        &__summary {
+          color: $color-dark-gray;
         }
       }
 

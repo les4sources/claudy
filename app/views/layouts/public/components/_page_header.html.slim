@@ -1,0 +1,22 @@
+.mb-4.md:flex.md:items-center.md:justify-between.md:space-x-5
+  .flex.items-start.space-x-5
+    - if !local_assigns[:icon].nil?
+      .flex-shrink-0
+        .relative
+          svg.w-16.h-16.text-indigo-600 fill="none" stroke="currentColor" stroke-width="1.5" viewbox=("0 0 24 24") xmlns="http://www.w3.org/2000/svg"
+            = render "layouts/public/icons/#{icon}"
+          / img.h-16.w-16.rounded-full alt="" src="https://images.unsplash.com/photo-1463453091185-61582044d556?ixlib=rb-=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=8&w=1024&h=1024&q=80" /
+    /!
+      | Use vertical padding to simulate center alignment when both lines of text are one line,
+      | but preserve the same layout if the text wraps without making the image jump around.
+    div class="pt-1.5"
+      h1.text-2xl.font-bold.text-gray-900 = title
+      - if !local_assigns[:secondary].nil?
+        p.text-sm.font-medium.text-gray-500
+          = secondary
+
+  - if local_assigns[:links]
+    .justify-stretch.mt-6.flex.flex-col-reverse.space-y-4.space-y-reverse.sm:flex-row-reverse.sm:justify-end.sm:space-y-0.sm:space-x-3.sm:space-x-reverse.md:mt-0.md:flex-row.md:space-x-3
+      - if local_assigns[:links]
+        - links.each do |link|
+          = link

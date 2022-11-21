@@ -1,11 +1,34 @@
+- content_for :page_header do
+  = render "layouts/public/components/page_header",
+           title: "Hébergements type gîte",
+           secondary: "Les 4 Sources à Yvoir",
+           icon: "calendar_days",
+           links: [ \
+             link_to("Demande de réservation", new_public_booking_path, class: "btn-page-header") \
+           ]
+
 = SimpleCalendar::PublicLodgingsCalendar.new(self, { \
     today: @date \
   }).render do |date|
-  - if date >= Date.today
-    - @lodgings.each do |lodging|
-      .lodging
+  - if date >= Date.tomorrow
+    ol.mt-2.space-y-2
+      - @lodgings.each do |lodging|
+        li
+          a.group.flex href="#"
+          - if lodging.available_on?(date)
+            .rounded-md.bg-green-100.px-2.py-1.text-xs.font-medium.text-green-800
+              div = lodging.name
+              .opacity-70 = lodging.summary
+          - else
+            .rounded-md.bg-red-100.px-2.py-1.text-xs.font-medium.text-red-800
+              .line-through = lodging.name
+              .opacity-70 = lodging.summary
+      / .lodging
         - if lodging.available_on?(date)
-          => lodging.name
-          | ✔
+          .lodging--available #{lodging.name} ✔
+          .lodging__summary = lodging.summary
         - else
           .lodging--unavailable = lodging.name
+          .lodging__summary = lodging.summary
+
+= link_to("Demande de réservation", new_public_booking_path, class: "mt-4 btn-action")

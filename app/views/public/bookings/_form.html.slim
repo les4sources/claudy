@@ -1,0 +1,78 @@
+= section_heading heading: "Mes informations personnelles",
+                  spacing: false
+
+.grid-x.grid-padding-x
+  .cell.small-6
+    = f.input :firstname,
+              label: "Mon prénom",
+              placeholder: "Mon prénom"
+  .cell.small-6
+    = f.input :lastname,
+              label: "Mon nom",
+              placeholder: "Mon nom"
+  .cell.small-6
+    = f.input :phone,
+              label: "Mon numéro de téléphone",
+              placeholder: "Mon numéro de téléphone"
+  .cell.small-6
+    = f.input :email,
+              label: "Mon adresse email",
+              placeholder: "Mon adresse email"
+
+= section_heading heading: "Ma réservation",
+                  spacing: false
+
+= f.simple_fields_for :reservation do |fr|
+  = f.input :room_ids,
+            as: :check_boxes,
+            label: "Hébergement",
+            wrapper: :foundation_radio_buttons,
+            collection: Lodging.all.collect { |l| [l.name, l.id] }
+
+.grid-x.grid-padding-x
+  .cell.small-12.medium-6
+    = f.input :from_date,
+              as: :date,
+              html5: true,
+              label: "Du *",
+              required: true,
+              error: "Veuillez renseigner une date"
+  .cell.small-12.medium-6
+    = f.input :to_date,
+              as: :date,
+              html5: true,
+              label: "Au *",
+              required: true,
+              error: "Veuillez renseigner une date"
+
+.grid-x.grid-padding-x
+  .cell.small-4
+    = f.input :adults,
+              label: "Nombre d'adultes",
+              placeholder: "Adultes"
+  .cell.small-4
+    = f.input :children,
+              label: "Nombre d'enfants",
+              placeholder: "Enfants"
+
+= section_heading heading: "Paiement",
+                  spacing: false
+
+= f.input :price,
+          wrapper: :foundation_append,
+          required: true,
+          pattern: "number",
+          error: "Veuillez renseigner le prix",
+          label: "Prix de la réservation" do
+  = content_tag :span,
+                "€",
+                class: "input-group-label"
+  = f.input_field :price,
+                  class: "input-group-field",
+                  pattern: "number",
+                  required: true,
+                  value: (f.object.new_record? && f.object.firstname.nil? && f.object.price == 0.0 ? "" : f.object.price)
+
+= f.input :payment_method,
+          label: "Moyen de paiement",
+          collection: [["Je paierai en liquide", "cash"], ["Je fais un virement bancaire", "bank_transfer"]]

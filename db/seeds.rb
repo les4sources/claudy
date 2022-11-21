@@ -6,9 +6,9 @@
 #   movies = Movie.create([{ name: "Star Wars" }, { name: "Lord of the Rings" }])
 #   Character.create(name: "Luke", movie: movies.first)
 
-lodging_8 = Lodging.create(name: "4 à 8 personnes")
-lodging_16 = Lodging.create(name: "9 à 16 personnes")
-lodging_25 = Lodging.create(name: "17 à 25 personnes")
+lodging_8 = Lodging.create(name: "La Chevêche", summary: "4 à 8 personnes")
+lodging_16 = Lodging.create(name: "La Hulotte", summary: "9 à 16 personnes")
+lodging_25 = Lodging.create(name: "Le Grand-Duc", summary: "17 à 25 personnes")
 
 room_romarin = Room.create(name: "Romarin", level: 0)
 room_balsamine = Room.create(name: "Balsamine", level: 0)

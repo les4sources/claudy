@@ -26,7 +26,7 @@ class PagesController < BaseController
     @date = params[:date] ? Date.parse(params[:date]) : Date.today
     @first = @date.beginning_of_month.beginning_of_day - 7.days
     @last = @date.end_of_month.end_of_day + 7.days
-    @dates = (@date.beginning_of_month..@date.end_of_month).map(&:to_date)
+    # @dates = (@date.beginning_of_month..@date.end_of_month).map(&:to_date)
   end
 
   def set_presenters
