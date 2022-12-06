@@ -1,108 +1,153 @@
-= section_heading_tw heading: "Mes informations personnelles"
+p
+  |
+    Complétez ce formulaire pour nous envoyer une demande de réservation. Nous
+    prendrons contact avec vous dès réception de votre demande.
 
-.space-y-6.sm:space-y-5
-  = f.group do
-    .columns-2
-      = f.text_field :firstname,
-                label: "Mon prénom",
-                placeholder: "Mon prénom"
+.border-l-8.border-indigo-200.pl-6.-ml-8
+  = section_heading_tw heading: "Mes informations personnelles"
 
-      = f.text_field :lastname,
-                label: "Mon nom",
-                placeholder: "Mon nom"
+  .space-y-6.sm:space-y-5
+    = f.group do
+      .columns-2.gap-8
+        = f.text_field :firstname,
+                  label: "Mon prénom"
 
-    = f.text_field :phone,
-              label: "Mon numéro de téléphone",
-              placeholder: "Mon numéro de téléphone"
+        = f.text_field :lastname,
+                  label: "Mon nom"
 
-    = f.text_field :email,
-              label: "Mon adresse email",
-              placeholder: "Mon adresse email"
+      = f.text_field :phone,
+                     label: "Mon numéro de téléphone",
+                     class: "md:w-1/2 lg:w-1/3"
 
-= section_heading_tw heading: "Ma réservation"
+      = f.text_field :email,
+                     label: "Mon adresse email",
+                     class: "md:w-2/3 lg:w-1/2"
 
-.space-y-6.sm:space-y-5
-  = f.simple_fields_for :reservation do |fr|
-    = f.label :room_ids, "Hébergement"
-    = f.collection_radio_buttons :room_ids, Lodging.all, :id, :form_label do |radio_button|
-      .flex.items-center
-        = radio_button.radio_button(data: { action: 'change->element#click' })
-        = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+.border-l-8.border-teal-200.pl-6.-ml-8
+  .flex.w-full.space-x-4
+    .grow
+      = section_heading_tw heading: "Ma réservation"
+    .shrink
+      = link_to "Afficher le calendrier", "#", class: "btn-section  text-sm py-2"
 
-    .columns-2
-      = f.date_field :from_date,
-                html5: true,
-                label: "Du *",
-                required: true,
-                error: "Veuillez renseigner une date"
-      = f.date_field :to_date,
-                html5: true,
-                label: "Au *",
-                required: true,
-                error: "Veuillez renseigner une date"
+  .space-y-6.sm:space-y-5
+    = f.simple_fields_for :reservation do |fr|
+      = f.label :room_ids, "Hébergement"
+      = f.collection_radio_buttons :room_ids, Lodging.all, :id, :form_label do |radio_button|
+        .flex.items-center
+          = radio_button.radio_button(data: { action: 'change->element#click' })
+          = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
-    .columns-2
-      = f.text_field :adults,
-                label: "Nombre d'adultes",
-                placeholder: "Adultes"
-      = f.text_field :children,
-                label: "Nombre d'enfants",
-                placeholder: "Enfants"
+      .columns-2
+        = f.date_field :from_date,
+                  html5: true,
+                  label: "Du *",
+                  required: true,
+                  error: "Veuillez renseigner une date"
+        = f.date_field :to_date,
+                  html5: true,
+                  label: "Au *",
+                  required: true,
+                  error: "Veuillez renseigner une date"
 
-    = f.text_field :estimated_arrival,
-                   label: "Heure d'arrivée estimée",
-                   hint: "Laissez vide si vous ne savez pas encore nous préciser l'heure",
-                   class: "sm:lg-2/3 md:lg-1/2 lg:w-1/4"
+      .columns-2
+        = f.number_field :adults,
+                         label: "Nombre d'adultes",
+                         class: "w-24",
+                         min: 0
 
-= section_heading_tw heading: "Paiement"
+        = f.number_field :children,
+                         label: "Nombre d'enfants",
+                         class: "w-24",
+                         min: 0
 
-.space-y-6.sm:space-y-5
-  div
-    = f.label :rate_preference,
-              "Votre préférence pour le tarif à appliquer"
-    = f.collection_select :rate_preference,
-                          [["Solidaire", "supportive"], ["Neutre", "neutral"], ["Soutien", "backing"]],
-                          :last, :first,
-                          prompt: true,
-                          class: "w-full md:w-1/2"
+      = f.text_field :estimated_arrival,
+                     label: "Heure d'arrivée estimée",
+                     hint: "Laissez vide si vous ne savez pas encore nous préciser l'heure",
+                     class: "sm:lg-2/3 md:lg-1/2 lg:w-1/4"
 
-  = f.text_field :price,
-            required: true,
-            pattern: "number",
-            error: "Veuillez renseigner le prix",
-            label: "Prix de la réservation" do
-    = content_tag :span,
-                  "€",
-                  class: "input-group-label"
-    = f.text_field :price,
-                    class: "input-group-field",
-                    pattern: "number",
-                    required: true,
-                    value: (f.object.new_record? && f.object.firstname.nil? && f.object.price == 0.0 ? "" : f.object.price)
+.border-l-8.border-orange-200.pl-6.-ml-8
+  = section_heading_tw heading: "Paiement"
 
-  div
-    = f.label :payment_method,
-              "Votre moyen de paiement"
-    = f.collection_select :payment_method,
-                          [["Je paierai en liquide", "cash"], ["Je fais un virement bancaire", "bank_transfer"]],
-                          :last, :first,
-                          prompt: true,
-                          class: "w-full md:w-1/2"
+  .space-y-6.sm:space-y-5
+    / div
+      = f.label :rate_preference,
+                "Votre préférence pour le tarif à appliquer"
+      = f.collection_select :rate_preference,
+                            [["Solidaire", "supportive"], ["Neutre", "neutral"], ["Soutien", "backing"]],
+                            :last, :first,
+                            prompt: true,
+                            class: "w-full md:w-1/2"
 
-  = f.check_input :invoice_wanted,
-                  label: "J'ai besoin d'une facture 🧾",
-                  message: "Notre comptabilité vous fournira une facture si nécessaire"
+    p Nous proposons 3 tarifs à nos giteurs. Quel est le tarif qui vous convient le mieux?
 
-= section_heading_tw heading: "Options"
+    <div class="mt-24 space-y-12 lg:grid lg:grid-cols-3 lg:gap-x-4 lg:space-y-0">
+      <div class="relative flex flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm hover:bg-indigo-100 hover:cursor-pointer">
+        <div class="flex-1">
+          <h3 class="text-xl font-serif text-gray-900">Solidaire</h3>
+          <p class="mt-4 flex flex-col items-baseline text-gray-900">
+            <span class="text-4xl tracking-tight">25€</span>
+            <span class="ml-1 text-xl font-semibold">/nuit/personne</span>
+          </p>
+          <p class="mt-6 text-sm text-gray-500">Tarif permettant à des structures et personnes disposant de moyens plus limités de pouvoir accéder à nos espaces pour séjourner ou organiser une activité chez nous.</p>
+        </div>
 
-= f.check_input :option_bread,
-                label: "Je suis intéressé d'avoir du pain à mon arrivée 🍞",
-                message: "Les boulangères des 4 Sources prendront contact avec vous"
+        <a href="#" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 mt-8 block w-full py-2 px-6 border border-transparent rounded-md text-center font-medium">Sélectionner</a>
+      </div>
 
-= f.check_input :option_babysitting,
-                label: "Je suis intéressé par du babysitting 👼",
-                message: "Les ados des 4 Sources prendront contact avec vous"
+      <div class="relative flex flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm hover:bg-indigo-100 hover:cursor-pointer">
+        <div class="flex-1">
+          <h3 class="text-xl font-serif text-gray-900">Neutre</h3>
 
-= f.check_input :option_discgolf,
-                label: "Je suis intéressé par une séance d'initiation au disc-golf 🥏",
-                message: "Notre initiateur disc-golf prendra contact avec vous"
+          <p class="mt-4 flex flex-col items-baseline text-gray-900">
+            <span class="text-4xl tracking-tight">35€</span>
+            <span class="ml-1 text-xl font-semibold">/nuit/personne</span>
+          </p>
+          <p class="mt-6 text-sm text-gray-500">Tarif de « base » permettant de faire fonctionner le projet et la gestion du domaine, sans contribuer au développement.</p>
+        </div>
+
+        <a href="#" class="bg-indigo-500 text-white hover:bg-indigo-600 mt-8 block w-full py-2 px-6 border border-transparent rounded-md text-center font-medium">Sélectionner</a>
+      </div>
+
+      <div class="relative flex flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm hover:bg-indigo-100 hover:cursor-pointer">
+        <div class="flex-1">
+          <h3 class="text-xl font-serif text-gray-900">Soutien</h3>
+          <p class="mt-4 flex flex-col items-baseline text-gray-900">
+            <span class="text-4xl tracking-tight">45€</span>
+            <span class="ml-1 text-xl font-semibold">/nuit/personne</span>
+          </p>
+          <p class="mt-6 text-sm text-gray-500">Tarif permettant d’apporter un soutien financier au déploiement du projet et au maintien d’une formule solidaire.</p>
+        </div>
+
+        <a href="#" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 mt-8 block w-full py-2 px-6 border border-transparent rounded-md text-center font-medium">Sélectionner</a>
+      </div>
+    </div>
+
+    div
+      = f.label :payment_method,
+                "Votre moyen de paiement"
+      = f.collection_select_field :payment_method,
+                                  [["Je paierai en liquide", "cash"], ["Je fais un virement bancaire", "bank_transfer"]],
+                                  :last, :first,
+                                  { prompt: true },
+                                  { class: "md:w-2/3 lg:w-1/2" }
+
+    = f.check_input :invoice_wanted,
+                    label: "J'ai besoin d'une facture 🧾",
+                    message: "Notre comptabilité vous fournira une facture si nécessaire"
+
+.border-l-8.border-green-200.pl-6.-ml-8
+  = section_heading_tw heading: "Options"
+
+  .space-y-4
+    = f.check_input :option_bread,
+                    label: "Je suis intéressé d'avoir du pain à mon arrivée 🍞",
+                    message: "Les boulangères des 4 Sources prendront contact avec vous"
+
+    = f.check_input :option_babysitting,
+                    label: "Je suis intéressé par du babysitting 👼",
+                    message: "Les ados des 4 Sources prendront contact avec vous"
+
+    = f.check_input :option_discgolf,
+                    label: "Je suis intéressé par une séance d'initiation au disc-golf 🥏",
+                    message: "Notre initiateur disc-golf prendra contact avec vous"

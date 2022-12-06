@@ -1,6 +1,6 @@
 - content_for :page_header do
   = render 'layouts/public/components/page_header',
-           title: "Ma demande de réservation"
+           title: "Réserver un hébergement de type gîte"
 
 = form_with model: @booking,
             url: public_bookings_path,
@@ -9,5 +9,5 @@
     .space-y-6.sm:space-y-5
       = render "form", f: f
 
-      = f.actions do
-        = f.submit "Envoyer ma demande"
+  = f.actions do
+    = f.submit "Envoyer ma demande"

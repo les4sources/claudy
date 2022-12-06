@@ -57,16 +57,27 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
   end
 
   def text_field(method, options = {}) # rubocop:disable Style/OptionHash
-    default_options = { class: input_html_classes(method) }
-    default_options[:class] << (options[:maxlength] ? 'w-20' : 'w-full')
-    merged_options = default_options.merge(options)
+    # default_options = { class: input_html_classes(method) }
+    # default_options[:class] << (options[:maxlength] ? 'w-20' : 'w-full')
+    # merged_options = default_options.merge(options)
+    merged_options = arguments_with_updated_default_class(
+      input_html_classes(method), **options
+    )
+    hint = options.fetch(:hint, errors(method))
+    error = options.fetch(:error, any_errors?(method))
 
     tag.div class: 'form-control' do
       label(method, class: 'label mb-1') do
         tag.span(label_text(method, merged_options), class: 'label-text')
-      end + super(method, merged_options) + errors(method)
+      end + super(method, merged_options) + hint_message(hint, error)
+      # end + super(method, merged_options) + hint_message(hint, error) + errors(method)
     end
   end
+
+  def number_field(name, *args, &block)
+     args[0].merge!({ type: 'number' }) if args.any?
+     text_field(name, *args, &block)
+   end
 
   def password_field(method, options = {}) # rubocop:disable Style/OptionHash
     default_options = { class: input_html_classes(method) }
@@ -92,12 +103,19 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
     end
   end
 
+  def collection_select_field(name, collection, value_method, text_method, options = {}, html_options = {})
+    html_options = arguments_with_updated_default_class(
+      "mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm", **html_options
+    )
+    collection_select(name, collection, value_method, text_method, options, html_options)
+  end
+
   def select(method, choices = nil, options = {}, html_options = {}, &block)
     super(
       method,
       choices,
       options,
-      html_options.reverse_merge(class: "mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm #{html_options[:class]}"),
+      html_options,
       &block
     )
   end
