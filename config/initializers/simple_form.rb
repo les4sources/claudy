@@ -45,8 +45,17 @@ SimpleForm.setup do |config|
     b.use :error, wrap_with: { tag: :span, class: "error form-error" }
   end
 
+  config.wrappers :plain do |b|
+    b.use :label
+    b.wrapper :input_wrapper, tag: :div do |component|
+      component.use :input
+    end
+    b.use :hint,  wrap_with: { tag: :p }
+    b.use :error, wrap_with: { tag: :p }
+  end
+
   # The default wrapper to be used by the FormBuilder.
-  config.default_wrapper = :foundation
+  config.default_wrapper = :plain
 
   # Define the way to render check boxes / radio buttons with labels.
   # Defaults to :nested for bootstrap config.
@@ -121,11 +130,11 @@ SimpleForm.setup do |config|
   # Custom wrappers for input types. This should be a hash containing an input
   # type as key and the wrapper that will be used for all inputs with specified type.
   # config.wrapper_mappings = { :string => :prepend }
-  config.wrapper_mappings = {
-    check_boxes: :foundation_checkbox,
-    radio_buttons: :foundation_radio_buttons,
-    text: :foundation_wysiwyg
-  }
+  # config.wrapper_mappings = {
+  #   check_boxes: :foundation_checkbox,
+  #   radio_buttons: :foundation_radio_buttons,
+  #   text: :foundation_wysiwyg
+  # }
 
   # Default priority for time_zone inputs.
   # config.time_zone_priority = nil

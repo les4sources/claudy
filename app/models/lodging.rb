@@ -12,4 +12,8 @@ class Lodging < ApplicationRecord
         booking: { status: "confirmed" }
       ).none?
   end
+
+  def form_label
+    "#{name} (#{summary})"
+  end
 end

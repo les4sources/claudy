@@ -3,15 +3,18 @@ const defaultTheme = require('tailwindcss/defaultTheme')
 module.exports = {
   content: [
     './public/*.html',
-    './app/helpers/**/*.rb',
-    './app/javascript/**/*.js',
-    './app/views/**/*.{erb,haml,html,slim}',
-    './app/views/**/*.html.slim'
+    './app/**/*.{html.erb,html.slim,rb}',
+    './app/javascript/**/*.js'
+    // './app/helpers/**/*.rb',
+    // './app/javascript/**/*.js',
+    // './app/simple_form/builders/**/*.rb',
+    // './app/views/**/*.{erb,haml,html,slim}',
+    // './app/views/**/*.html.slim'
   ],
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter var', ...defaultTheme.fontFamily.sans],
+        sans: ['Inter var', ...defaultTheme.fontFamily.sans]
       },
     },
   },

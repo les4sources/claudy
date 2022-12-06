@@ -6,7 +6,7 @@ class Booking < ApplicationRecord
 
   default_scope -> { order(from_date: :desc) }
 
-  attr_accessor :room_ids
+  attr_accessor :room_ids, :invoice_wanted
 
   def canceled?
     status == "canceled"

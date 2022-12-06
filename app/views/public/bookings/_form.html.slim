@@ -1,78 +1,108 @@
-= section_heading heading: "Mes informations personnelles",
-                  spacing: false
+= section_heading_tw heading: "Mes informations personnelles"
 
-.grid-x.grid-padding-x
-  .cell.small-6
-    = f.input :firstname,
-              label: "Mon prénom",
-              placeholder: "Mon prénom"
-  .cell.small-6
-    = f.input :lastname,
-              label: "Mon nom",
-              placeholder: "Mon nom"
-  .cell.small-6
-    = f.input :phone,
+.space-y-6.sm:space-y-5
+  = f.group do
+    .columns-2
+      = f.text_field :firstname,
+                label: "Mon prénom",
+                placeholder: "Mon prénom"
+
+      = f.text_field :lastname,
+                label: "Mon nom",
+                placeholder: "Mon nom"
+
+    = f.text_field :phone,
               label: "Mon numéro de téléphone",
               placeholder: "Mon numéro de téléphone"
-  .cell.small-6
-    = f.input :email,
+
+    = f.text_field :email,
               label: "Mon adresse email",
               placeholder: "Mon adresse email"
 
-= section_heading heading: "Ma réservation",
-                  spacing: false
+= section_heading_tw heading: "Ma réservation"
 
-= f.simple_fields_for :reservation do |fr|
-  = f.input :room_ids,
-            as: :check_boxes,
-            label: "Hébergement",
-            wrapper: :foundation_radio_buttons,
-            collection: Lodging.all.collect { |l| [l.name, l.id] }
+.space-y-6.sm:space-y-5
+  = f.simple_fields_for :reservation do |fr|
+    = f.label :room_ids, "Hébergement"
+    = f.collection_radio_buttons :room_ids, Lodging.all, :id, :form_label do |radio_button|
+      .flex.items-center
+        = radio_button.radio_button(data: { action: 'change->element#click' })
+        = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
-.grid-x.grid-padding-x
-  .cell.small-12.medium-6
-    = f.input :from_date,
-              as: :date,
-              html5: true,
-              label: "Du *",
-              required: true,
-              error: "Veuillez renseigner une date"
-  .cell.small-12.medium-6
-    = f.input :to_date,
-              as: :date,
-              html5: true,
-              label: "Au *",
-              required: true,
-              error: "Veuillez renseigner une date"
+    .columns-2
+      = f.date_field :from_date,
+                html5: true,
+                label: "Du *",
+                required: true,
+                error: "Veuillez renseigner une date"
+      = f.date_field :to_date,
+                html5: true,
+                label: "Au *",
+                required: true,
+                error: "Veuillez renseigner une date"
 
-.grid-x.grid-padding-x
-  .cell.small-4
-    = f.input :adults,
-              label: "Nombre d'adultes",
-              placeholder: "Adultes"
-  .cell.small-4
-    = f.input :children,
-              label: "Nombre d'enfants",
-              placeholder: "Enfants"
+    .columns-2
+      = f.text_field :adults,
+                label: "Nombre d'adultes",
+                placeholder: "Adultes"
+      = f.text_field :children,
+                label: "Nombre d'enfants",
+                placeholder: "Enfants"
 
-= section_heading heading: "Paiement",
-                  spacing: false
+    = f.text_field :estimated_arrival,
+                   label: "Heure d'arrivée estimée",
+                   hint: "Laissez vide si vous ne savez pas encore nous préciser l'heure",
+                   class: "sm:lg-2/3 md:lg-1/2 lg:w-1/4"
 
-= f.input :price,
-          wrapper: :foundation_append,
-          required: true,
-          pattern: "number",
-          error: "Veuillez renseigner le prix",
-          label: "Prix de la réservation" do
-  = content_tag :span,
-                "€",
-                class: "input-group-label"
-  = f.input_field :price,
-                  class: "input-group-field",
-                  pattern: "number",
-                  required: true,
-                  value: (f.object.new_record? && f.object.firstname.nil? && f.object.price == 0.0 ? "" : f.object.price)
+= section_heading_tw heading: "Paiement"
 
-= f.input :payment_method,
-          label: "Moyen de paiement",
-          collection: [["Je paierai en liquide", "cash"], ["Je fais un virement bancaire", "bank_transfer"]]
+.space-y-6.sm:space-y-5
+  div
+    = f.label :rate_preference,
+              "Votre préférence pour le tarif à appliquer"
+    = f.collection_select :rate_preference,
+                          [["Solidaire", "supportive"], ["Neutre", "neutral"], ["Soutien", "backing"]],
+                          :last, :first,
+                          prompt: true,
+                          class: "w-full md:w-1/2"
+
+  = f.text_field :price,
+            required: true,
+            pattern: "number",
+            error: "Veuillez renseigner le prix",
+            label: "Prix de la réservation" do
+    = content_tag :span,
+                  "€",
+                  class: "input-group-label"
+    = f.text_field :price,
+                    class: "input-group-field",
+                    pattern: "number",
+                    required: true,
+                    value: (f.object.new_record? && f.object.firstname.nil? && f.object.price == 0.0 ? "" : f.object.price)
+
+  div
+    = f.label :payment_method,
+              "Votre moyen de paiement"
+    = f.collection_select :payment_method,
+                          [["Je paierai en liquide", "cash"], ["Je fais un virement bancaire", "bank_transfer"]],
+                          :last, :first,
+                          prompt: true,
+                          class: "w-full md:w-1/2"
+
+  = f.check_input :invoice_wanted,
+                  label: "J'ai besoin d'une facture 🧾",
+                  message: "Notre comptabilité vous fournira une facture si nécessaire"
+
+= section_heading_tw heading: "Options"
+
+= f.check_input :option_bread,
+                label: "Je suis intéressé d'avoir du pain à mon arrivée 🍞",
+                message: "Les boulangères des 4 Sources prendront contact avec vous"
+
+= f.check_input :option_babysitting,
+                label: "Je suis intéressé par du babysitting 👼",
+                message: "Les ados des 4 Sources prendront contact avec vous"
+
+= f.check_input :option_discgolf,
+                label: "Je suis intéressé par une séance d'initiation au disc-golf 🥏",
+                message: "Notre initiateur disc-golf prendra contact avec vous"

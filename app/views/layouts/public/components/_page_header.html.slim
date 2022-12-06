@@ -10,7 +10,7 @@
       | Use vertical padding to simulate center alignment when both lines of text are one line,
       | but preserve the same layout if the text wraps without making the image jump around.
     div class="pt-1.5"
-      h1.text-2xl.font-bold.text-gray-900 = title
+      h1.text-3xl.font-normal.font-serif.text-gray-900 = title
       - if !local_assigns[:secondary].nil?
         p.text-sm.font-medium.text-gray-500
           = secondary

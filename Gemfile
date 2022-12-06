@@ -63,10 +63,17 @@ gem "simple_form"
 gem "slim"
 gem "tailwindcss-rails"
 
+# A native development UI for ViewComponent (https://github.com/ViewComponent/lookbook)
+gem "lookbook"
+
+# A framework for building reusable, testable & encapsulated view components in Ruby on Rails. (https://viewcomponent.org)
+gem "view_component"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "byebug"
   gem "debug", platforms: %i[ mri mingw x64_mingw ]
+  gem "rspec-rails", "~> 6.0.0"
 end
 
 group :development do

@@ -20,5 +20,7 @@ module Claudy
     # config.eager_load_paths << Rails.root.join("extras")
 
     config.i18n.default_locale = :fr
+
+    config.view_component.preview_paths << "#{Rails.root}/spec/components/previews"
   end
 end

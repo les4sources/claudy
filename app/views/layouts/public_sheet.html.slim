@@ -7,18 +7,14 @@ html(lang="fr")
     meta(name="robots" value="noindex,nofollow")
     = csrf_meta_tags
     = csp_meta_tag
-    = stylesheet_link_tag "public", "data-turbo-track": "reload"
     = stylesheet_link_tag "tailwind", "inter-font", "data-turbo-track": "reload"
     = javascript_importmap_tags
-  body.body--sheet
-    .grid-container
-      .grid-x.grid-margin-x.grid-padding-x
-        .cell.small-12.medium-10.large-8.medium-offset-1.large-offset-2
-          .sheet
-            - if content_for?(:page_header)
-              .spacer-1
-              section#page-header(data-sticky-container)
-                = yield :page_header
+  body.bg-orange-100
+    .container.mx-auto.sm:px-6.lg:px-8
+      .grid.justify-items-center
+        .p-8.shadow-2xl.rounded-lg.bg-white.lg:m-8.lg:w-2/3
+          - if content_for?(:page_header)
+            = yield :page_header
 
-            = render 'layouts/public/components/messages'
-            = yield
+          = render "layouts/public/components/messages"
+          = yield

@@ -125,6 +125,19 @@ module UiHelper
     end
   end
 
+  def section_heading_tw(heading:, extra: nil, spacing: :hr, count: nil, icon: nil, span_id:nil)
+    out = ActiveSupport::SafeBuffer.new
+    out << content_tag(:div, class: "mb-4") do
+      out2 = ActiveSupport::SafeBuffer.new
+      out2 << content_tag(:h3, heading, class: "text-lg font-medium leading-6 text-gray-900")
+      if extra
+        out2 << content_tag(p, extra, class: "mt-1 text-sm text-gray-500")
+      end
+      out2
+    end
+    out.html_safe
+  end
+
   def section_heading(heading:, extra: nil, spacing: :hr, count: nil, icon: nil, span_id:nil)
     out = ActiveSupport::SafeBuffer.new
     if spacing == :hr
