@@ -15,7 +15,7 @@ Rails.application.configure do
 
       policy.connect_src :self,
                          # Allow @vite/client to hot reload CSS changes
-                         "wss://#{ViteRuby.config.host}"
+                         "ws://#{ViteRuby.config.host}"
 
       policy.style_src :self,
                        # Allow @vite/client to hot reload style changes

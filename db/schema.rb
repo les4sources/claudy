@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_12_06_172033) do
+ActiveRecord::Schema[7.0].define(version: 2022_12_07_210951) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -39,6 +39,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_12_06_172033) do
     t.boolean "option_partyhall"
     t.boolean "option_bread"
     t.text "comments"
+    t.string "tier"
+    t.bigint "lodging_id"
+    t.index ["lodging_id"], name: "index_bookings_on_lodging_id"
   end
 
   create_table "event_categories", force: :cascade do |t|
@@ -93,6 +96,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_12_06_172033) do
     t.integer "level"
   end
 
+  add_foreign_key "bookings", "lodgings"
   add_foreign_key "events", "event_categories"
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"

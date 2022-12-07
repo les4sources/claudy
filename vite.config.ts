@@ -17,7 +17,7 @@ export default defineConfig({
   server: {
     hmr: {
       host: 'vite.claudy.test',
-      clientPort: 443,
+      clientPort: 80,
     },
   },
 })

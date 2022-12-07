@@ -8,6 +8,8 @@ class Booking < ApplicationRecord
 
   attr_accessor :room_ids, :invoice_wanted
 
+  validates :lodging_id, presence: true
+
   def canceled?
     status == "canceled"
   end

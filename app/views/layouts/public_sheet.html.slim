@@ -3,7 +3,10 @@ html(lang="fr")
   head
     meta(charset="utf-8")
     meta(name="viewport" content="width=device-width, initial-scale=1")
-    title Claudy
+    title
+      - if content_for?(:meta_title)
+        = yield :meta_title
+      | &nbsp;| Les 4 Sources
     meta(name="robots" value="noindex,nofollow")
     = csrf_meta_tags
     = csp_meta_tag

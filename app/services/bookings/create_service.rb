@@ -41,6 +41,7 @@ module Bookings
           :lastname,
           :phone,
           :email,
+          :estimated_arrival,
           :from_date,
           :to_date,
           :status,
@@ -49,10 +50,16 @@ module Bookings
           :price,
           :payment_status,
           :payment_method,
+          :invoice_wanted,
           :bedsheets,
           :towels,
           :notes,
-          room_ids: []
+          :tier,
+          :option_bread,
+          :option_babysitting,
+          :option_discgolf,
+          :lodging_id,
+          room_ids: [],
         )
     end
   end

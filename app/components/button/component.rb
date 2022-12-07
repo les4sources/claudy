@@ -44,6 +44,17 @@ class Button::Component < ViewComponent::Base
   end
 
   def btn_class
+    case style
+    when :primary
+      btn_primary_class
+    when :secondary
+      btn_secondary_class
+    when :hollow
+      btn_hollow_class
+    end
+  end
+
+  def btn_primary_class
     %w[
       inline-flex
       items-center
@@ -56,17 +67,6 @@ class Button::Component < ViewComponent::Base
       focus:ring-offset-2
       focus:ring-indigo-500
       transition
-    ] +
-      case style
-      when :primary
-        btn_primary_class
-      when :secondary
-        btn_secondary_class
-      end
-  end
-
-  def btn_primary_class
-    %w[
       text-white
       bg-indigo-600
       hover:bg-indigo-700
@@ -77,7 +77,49 @@ class Button::Component < ViewComponent::Base
   end
 
   def btn_secondary_class
-    %w[hover:scale-125]
+    %w[
+      inline-flex
+      items-center
+      rounded-md
+      border
+      border-transparent
+      bg-indigo-600
+      px-4
+      py-2
+      text-sm
+      font-medium
+      text-white
+      shadow-sm
+      hover:bg-indigo-700
+      focus:outline-none
+      focus:ring-2
+      focus:ring-indigo-500
+      focus:ring-offset-2
+      transition
+      hover:scale-105
+    ]
+  end
+
+  def btn_hollow_class
+    %w[
+      inline-flex
+      items-center
+      rounded-md
+      border
+      border-gray-300
+      bg-white
+      px-4
+      py-2
+      text-sm
+      font-medium
+      text-gray-700
+      shadow-sm
+      hover:bg-gray-50
+      focus:outline-none
+      focus:ring-2
+      focus:ring-indigo-500
+      focus:ring-offset-2
+    ]
   end
 
   def icon_name

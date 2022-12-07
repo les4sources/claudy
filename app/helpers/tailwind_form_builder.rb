@@ -47,6 +47,11 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
     )
   end
 
+  def email_field(name, *args, &block)
+    args[0].merge!({ type: 'email' }) if args.any?
+    text_field(name, *args, &block)
+  end
+
   def label(attribute_name, *args, &block)
     options = args.extract_options!.dup
 
@@ -75,9 +80,9 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
   end
 
   def number_field(name, *args, &block)
-     args[0].merge!({ type: 'number' }) if args.any?
-     text_field(name, *args, &block)
-   end
+    args[0].merge!({ type: 'number' }) if args.any?
+    text_field(name, *args, &block)
+  end
 
   def password_field(method, options = {}) # rubocop:disable Style/OptionHash
     default_options = { class: input_html_classes(method) }
@@ -118,6 +123,11 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
       html_options,
       &block
     )
+  end
+
+  def text_area(name, *args, &block)
+    args[0].merge!({ class: 'block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm' }) if args.any?
+    super(name, *args, &block)
   end
 
   # def radio_buttons(method, options = {})
@@ -202,7 +212,7 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
   end
 
   def input_html_classes(method)
-    ['block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm rounded-md', ('border-red-300 text-red-900 placeholder-red-300 focus:border-red-500 focus:outline-none focus:ring-red-500' if object.errors[method].present?)]
+    ['block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm rounded-md', ('border-red-300 text-red-900 placeholder-red-300 focus:border-red-500 focus:outline-none focus:ring-red-500' if object.errors[method].present?)].join
   end
 
   def label_text(method, options)

@@ -1,10 +1,11 @@
+- content_for :meta_title, "Réserver un hébergement de type gîte"
 - content_for :page_header do
   = render 'layouts/public/components/page_header',
            title: "Réserver un hébergement de type gîte"
 
 = form_with model: @booking,
             url: public_bookings_path,
-            data: { controller: "public-booking-form" } do |f|
+            data: { controller: "tier-pricing-selector" } do |f|
   .space-y-8.divide-y.divide-gray-200.sm:space-y-5
     .space-y-6.sm:space-y-5
       = render "form", f: f

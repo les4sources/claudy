@@ -97,8 +97,6 @@ GEM
     crass (1.0.6)
     css_parser (1.12.0)
       addressable
-    dartsass-rails (0.4.0)
-      railties (>= 6.0.0)
     debug (1.6.3)
       irb (>= 1.3.6)
       reline (>= 0.3.1)
@@ -319,7 +317,6 @@ DEPENDENCIES
   by_star
   byebug
   capybara
-  dartsass-rails (~> 0.4.0)
   debug
   draper
   importmap-rails
