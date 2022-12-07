@@ -11,6 +11,16 @@ class Public::CalendarsController < Public::BaseController
     @upcoming_by_date = @reservations.to_a.group_by { |r| r.date }
   end
 
+  def lodgings_modal
+    set_dates
+    @lodgings = Lodging.all
+    @reservations = Reservation.all
+      .includes(:booking)
+      .between_times(@first, @last, field: :date)
+    # group bookings by day
+    @upcoming_by_date = @reservations.to_a.group_by { |r| r.date }
+  end
+
   private
 
   def set_dates

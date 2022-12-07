@@ -9,7 +9,7 @@ html(lang="fr")
     = csp_meta_tag
     = stylesheet_link_tag "tailwind", "inter-font", "data-turbo-track": "reload"
     = javascript_importmap_tags
-  body.bg-orange-100
+  body.bg-gradient-to-tl.from-red-400.to-fuchsia-600
     .container.mx-auto.sm:px-6.lg:px-8
       .grid.justify-items-center
         .p-8.shadow-2xl.rounded-lg.bg-white.lg:m-8.lg:w-3/4
@@ -18,3 +18,4 @@ html(lang="fr")
 
           = render "layouts/public/components/messages"
           = yield
+    = turbo_frame_tag "modal", target: "_top"

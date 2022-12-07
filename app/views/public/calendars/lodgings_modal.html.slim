@@ -1,0 +1,24 @@
+= turbo_frame_tag "modal" do
+  = SimpleCalendar::PublicLodgingsCalendar.new(self, { \
+      today: @date \
+    }).render do |date|
+    - if date >= Date.tomorrow
+      ol.mt-2.space-y-2
+        - @lodgings.each do |lodging|
+          li
+            a.group.flex href="#"
+            - if lodging.available_on?(date)
+              .rounded-md.bg-green-100.px-2.py-1.text-xs.font-medium.text-green-800
+                div = lodging.name
+                .opacity-70 = lodging.summary
+            - else
+              .rounded-md.bg-red-100.px-2.py-1.text-xs.font-medium.text-red-800
+                .line-through = lodging.name
+                .opacity-70 = lodging.summary
+        / .lodging
+          - if lodging.available_on?(date)
+            .lodging--available #{lodging.name} ✔
+            .lodging__summary = lodging.summary
+          - else
+            .lodging--unavailable = lodging.name
+            .lodging__summary = lodging.summary

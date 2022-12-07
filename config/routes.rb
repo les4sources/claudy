@@ -14,6 +14,7 @@ Rails.application.routes.draw do
   namespace :public do
     resources :bookings, only: [:new, :create, :show]
     get "calendrier-hebergements", to: "calendars#lodgings"
+    get "calendar-lodgings-modal", to: "calendars#lodgings_modal"
   end
 
   # Defines the root path route ("/")

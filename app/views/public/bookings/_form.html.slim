@@ -30,12 +30,21 @@ p
     .shrink
       = link_to "Afficher le calendrier", "#", class: "btn-section  text-sm py-2"
 
+      = render Button::Component.new path: public_calendar_lodgings_modal_path,
+                                     icon: "plus",
+                                     title: "Afficher le calendrier",
+                                     type: :button,
+                                     options: { \
+                                       method: :get,
+                                       data: { turbo_frame: "modal" } \
+                                     }
+
   .space-y-6.sm:space-y-5
     = f.simple_fields_for :reservation do |fr|
       = f.label :room_ids, "Hébergement"
       = f.collection_radio_buttons :room_ids, Lodging.all, :id, :form_label do |radio_button|
         .flex.items-center
-          = radio_button.radio_button(data: { action: 'change->element#click' })
+          = radio_button.radio_button
           = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
       .columns-2
