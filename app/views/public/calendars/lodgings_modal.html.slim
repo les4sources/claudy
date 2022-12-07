@@ -1,4 +1,4 @@
-= turbo_frame_tag "modal" do
+= render TurboModal::Component.new(title: "Calendrier des disponibilités") do
   = SimpleCalendar::PublicLodgingsCalendar.new(self, { \
       today: @date \
     }).render do |date|

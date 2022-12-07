@@ -28,12 +28,12 @@ p
     .grow
       = section_heading_tw heading: "Ma réservation"
     .shrink
-      = link_to "Afficher le calendrier", "#", class: "btn-section  text-sm py-2"
+      / = link_to "Afficher le calendrier", "#", class: "btn-section  text-sm py-2"
 
       = render Button::Component.new path: public_calendar_lodgings_modal_path,
                                      icon: "plus",
                                      title: "Afficher le calendrier",
-                                     type: :button,
+                                     type: :link,
                                      options: { \
                                        method: :get,
                                        data: { turbo_frame: "modal" } \

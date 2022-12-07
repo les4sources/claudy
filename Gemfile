@@ -7,7 +7,7 @@ ruby "3.1.2"
 gem "rails", "~> 7.0.4"
 
 # The original asset pipeline for Rails [https://github.com/rails/sprockets-rails]
-gem "sprockets-rails"
+# gem "sprockets-rails"
 
 # Use postgresql as the database for Active Record
 gem "pg", "~> 1.1"
@@ -61,13 +61,16 @@ gem "sentry-rails"
 gem "simple_calendar", "~> 2.4"
 gem "simple_form"
 gem "slim"
-gem "tailwindcss-rails"
+# gem "tailwindcss-rails"
 
 # A native development UI for ViewComponent (https://github.com/ViewComponent/lookbook)
 gem "lookbook"
 
 # A framework for building reusable, testable & encapsulated view components in Ruby on Rails. (https://viewcomponent.org)
 gem "view_component"
+
+# Use Vite in Rails and bring joy to your JavaScript experience (https://github.com/ElMassimo/vite_ruby)
+gem "vite_rails"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
