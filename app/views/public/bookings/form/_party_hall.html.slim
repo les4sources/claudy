@@ -1,0 +1,12 @@
+.hidden(data-booking-target="partyHallSection")
+  .grid.grid-cols-3.gap-4.mb-4
+    .border-r-8.border-indigo-300.pr-4.text-right
+      = section_heading_tw heading: "Salle des 4 Sources"
+
+    .col-span-2.space-y-6.sm:space-y-5
+      p #{link_to("Notre grande salle", "https://www.les4sources.be/nos-salles-et-espaces-exterieurs", onclick: "window.open(this.href); return false;")} est disponible en option pour les giteurs du Grand-Duc.
+
+      = f.check_input :option_partyhall,
+                      label: "Je suis intéressé d'également louer la salle des 4 Sources"
+
+  hr

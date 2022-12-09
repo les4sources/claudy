@@ -6,7 +6,9 @@ class Booking < ApplicationRecord
 
   default_scope -> { order(from_date: :desc) }
 
-  attr_accessor :room_ids, :invoice_wanted
+  attr_accessor :invoice_wanted
+  attr_accessor :room_ids
+  attr_accessor :booking_type # lodging || rooms
 
   validates :lodging_id, presence: true
 

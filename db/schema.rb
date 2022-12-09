@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_12_07_210951) do
+ActiveRecord::Schema[7.0].define(version: 2022_12_09_092004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -41,6 +41,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_12_07_210951) do
     t.text "comments"
     t.string "tier"
     t.bigint "lodging_id"
+    t.boolean "option_discgolf"
     t.index ["lodging_id"], name: "index_bookings_on_lodging_id"
   end
 
@@ -76,6 +77,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_12_07_210951) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "summary"
+    t.integer "price_night_cents", default: 0, null: false
+    t.integer "price_weekend_cents", default: 0, null: false
+    t.boolean "party_hall_availability"
   end
 
   create_table "reservations", force: :cascade do |t|

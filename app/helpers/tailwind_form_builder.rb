@@ -35,6 +35,18 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
     end
   end
 
+  def collection_check_boxes(method, collection, value_method, text_method, options = {}, html_options = {}, &block)
+    super(
+      method,
+      collection,
+      value_method,
+      text_method,
+      options,
+      html_options,
+      &block
+    )
+  end
+
   def collection_radio_buttons(method, collection, value_method, text_method, options = {}, html_options = {}, &block)
     super(
       method,
@@ -98,7 +110,8 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
 
   def date_field(method, options = {}) # rubocop:disable Style/OptionHash
     default_options = { class: input_html_classes(method) }
-    default_options[:class] << 'w-full'
+    default_options[:class]['w-full'] = 'w-48'
+    default_options[:class]['text-sm'] = 'text-lg'
     merged_options = default_options.merge(options)
 
     tag.div class: 'form-control' do

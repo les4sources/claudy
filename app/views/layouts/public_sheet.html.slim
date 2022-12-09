@@ -10,17 +10,28 @@ html(lang="fr")
     meta(name="robots" value="noindex,nofollow")
     = csrf_meta_tags
     = csp_meta_tag
-    / = stylesheet_link_tag "tailwind", "inter-font", "data-turbo-track": "reload"
-    / = javascript_importmap_tags
     = vite_client_tag
     = vite_javascript_tag "application", "data-turbo-track": "reload"
   body.bg-gradient-to-tl.from-red-400.to-fuchsia-600
     = turbo_frame_tag "modal", target: "_top"
     .container.mx-auto.sm:px-6.lg:px-8
       .grid.justify-items-center
-        .p-8.shadow-2xl.rounded-lg.bg-white.lg:m-8.lg:w-3/4
+        .p-8.pb-16.shadow-2xl.rounded-lg.bg-white.lg:m-8.lg:w-3/4
           - if content_for?(:page_header)
             = yield :page_header
 
           = render "layouts/public/components/messages"
           = yield
+
+    .relative
+      svg.editorial[xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewbox="0 24 150 28 " preserveaspectratio="none"]
+        defs
+          path#gentle-wave[d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z"]
+        g.parallax1
+          use[xlink:href="#gentle-wave" x="50" y="3" fill="#f461c1"]
+        g.parallax2
+          use[xlink:href="#gentle-wave" x="50" y="0" fill="#4579e2"]
+        g.parallax3
+          use[xlink:href="#gentle-wave" x="50" y="9" fill="#3461c1"]
+        g.parallax4
+          use[xlink:href="#gentle-wave" x="50" y="6" fill="lightblue"]

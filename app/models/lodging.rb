@@ -2,6 +2,9 @@ class Lodging < ApplicationRecord
   has_many :lodging_rooms
   has_many :rooms, through: :lodging_rooms
 
+  monetize :price_night_cents
+  monetize :price_weekend_cents
+
   def available_on?(date)
     # none of the lodging rooms has a confirmed reservation
     Reservation

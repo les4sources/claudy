@@ -8,7 +8,7 @@
 
 lodging_8 = Lodging.create(name: "La Chevêche", summary: "4 à 8 personnes")
 lodging_16 = Lodging.create(name: "La Hulotte", summary: "9 à 16 personnes")
-lodging_25 = Lodging.create(name: "Le Grand-Duc", summary: "17 à 25 personnes")
+lodging_25 = Lodging.create(name: "Le Grand-Duc", summary: "17 à 25 personnes", party_hall_availability: true)
 
 room_romarin = Room.create(name: "Romarin", level: 0)
 room_balsamine = Room.create(name: "Balsamine", level: 0)

@@ -5,6 +5,7 @@ export default class extends Controller {
   static targets = [
     'adultsInput',
     'button',
+    'card',
     'childrenInput',
     'fromDateInput',
     'notice',
@@ -15,26 +16,23 @@ export default class extends Controller {
   ]
 
   connect() {
-    console.log('Controller: tier-pricing-selector', moment)
+    console.log('Controller: tier-pricing-selector')
   }
 
   setTier(e) {
     this.tierInputTarget.value = e.params.tierName
+    this.setSelectedCardStyle(e.currentTarget)
     this.setTierButton(e.currentTarget.querySelector('.tier-pricing-button'))
     this.setPrice(e.params.amount)
   }
 
-  setTierButton(activeButton) {
-    this.buttonTargets.forEach((el, i) => {
-      el.classList.replace('bg-indigo-500', 'bg-indigo-50')
-      el.classList.replace('text-white', 'text-indigo-700')
-      el.classList.replace('hover:bg-indigo-600', 'hover:bg-indigo-100')
-      el.innerHTML = 'Sélectionner'
+  setSelectedCardStyle(activeCard) {
+    this.cardTargets.forEach((el) => {
+      el.classList.replace('bg-indigo-100', 'bg-white')
+      el.classList.replace('border-gray-500', 'border-gray-200')
     })
-    activeButton.classList.replace('bg-indigo-50', 'bg-indigo-500')
-    activeButton.classList.replace('text-indigo-700', 'text-white')
-    activeButton.classList.replace('hover:bg-indigo-100', 'hover:bg-indigo-600')
-    activeButton.innerHTML = 'Sélectionné'
+    activeCard.classList.replace('bg-white', 'bg-indigo-100')
+    activeCard.classList.replace('border-gray-200', 'border-gray-500')
   }
 
   setPrice(tierPrice) {
@@ -53,5 +51,18 @@ export default class extends Controller {
       const amount = nights * tierPrice * (adults + children)
       this.priceTarget.innerHTML = amount + ' €'
     }
+  }
+
+  setTierButton(activeButton) {
+    this.buttonTargets.forEach((el, i) => {
+      el.classList.replace('bg-indigo-500', 'bg-indigo-50')
+      el.classList.replace('text-white', 'text-indigo-700')
+      el.classList.replace('hover:bg-indigo-600', 'hover:bg-indigo-100')
+      el.innerHTML = 'Sélectionner'
+    })
+    activeButton.classList.replace('bg-indigo-50', 'bg-indigo-500')
+    activeButton.classList.replace('text-indigo-700', 'text-white')
+    activeButton.classList.replace('hover:bg-indigo-100', 'hover:bg-indigo-600')
+    activeButton.innerHTML = 'Sélectionné'
   }
 }
