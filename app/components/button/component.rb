@@ -65,11 +65,11 @@ class Button::Component < ViewComponent::Base
       focus:outline-none
       focus:ring-2
       focus:ring-offset-2
-      focus:ring-indigo-500
+      focus:ring-green-500
       transition
       text-white
-      bg-indigo-600
-      hover:bg-indigo-700
+      bg-green-600
+      hover:bg-green-700
       shadow-sm
       px-3
       hover:scale-105

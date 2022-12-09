@@ -2,14 +2,18 @@ class Public::BookingsController < Public::BaseController
   layout "public_sheet"
 
   def new
-    @booking = Booking.new
+    @booking = Booking.new(
+      booking_type: "lodging",
+      adults: 0,
+      children: 0
+    )
   end
 
   def create
-    service = Bookings::CreateService.new
+    service = Public::Bookings::CreateService.new
     if service.run(params)
       redirect_to service.booking,
-                  notice: "Merci, votre demande de réservation a été enregistrée. Nous vous recontactons dans les 48 heures."
+                  notice: "Merci, votre demande de réservation a été enregistrée. Vous allez recevoir un email de confirmation et nous vous recontactons dans les 48 heures."
     else
       @booking = service.booking
       set_error_flash(service.booking, service.error_message)

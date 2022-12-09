@@ -1,6 +1,7 @@
 class Booking < ApplicationRecord
   has_many :reservations, dependent: :destroy
   has_many :rooms, through: :reservations
+  belongs_to :lodging
 
   monetize :price_cents, allow_nil: true
 
@@ -10,7 +11,15 @@ class Booking < ApplicationRecord
   attr_accessor :room_ids
   attr_accessor :booking_type # lodging || rooms
 
-  validates :lodging_id, presence: true
+  validates :firstname,       presence: true
+  validates :lastname,        presence: true
+  validates :email,           presence: true
+  validates :from_date,       presence: true
+  validates :to_date,         presence: true
+  validates :adults,          presence: true
+  validates :children,        presence: true
+  validates :payment_method,  presence: true
+  # validates :lodging_id,  presence: true
 
   def canceled?
     status == "canceled"

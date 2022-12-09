@@ -6,7 +6,7 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
   end
 
   def actions(&)
-    tag.div class: 'mt-10 flex justify-between', &
+    tag.div class: 'mt-10 flex justify-end space-x-4 text-right', &
   end
 
   def submit(title)

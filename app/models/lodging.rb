@@ -1,6 +1,7 @@
 class Lodging < ApplicationRecord
   has_many :lodging_rooms
   has_many :rooms, through: :lodging_rooms
+  has_many :bookings
 
   monetize :price_night_cents
   monetize :price_weekend_cents

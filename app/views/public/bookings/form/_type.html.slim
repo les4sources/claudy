@@ -6,7 +6,7 @@
                                    icon: "calendar",
                                    title: "Afficher le calendrier",
                                    type: :link,
-                                   style: :hollow,
+                                   style: :secondary,
                                    options: { \
                                      method: :get,
                                      data: { turbo_frame: "modal" } \
@@ -30,7 +30,14 @@
           = f.label :lodging_id, "Sélectionnez votre hébergement *"
           = f.collection_radio_buttons :lodging_id, Lodging.all, :id, :form_label, required: true do |radio_button|
             .flex.items-center
-              = radio_button.radio_button(data: { "action": "booking#togglePartyHallSection", "booking-party-hall-availability-param": radio_button.object.party_hall_availability })
+              = radio_button.radio_button( \
+                  data: { \
+                    "action": "booking#selectLodging",
+                    "booking-target": "lodgingRadioButton",
+                    "booking-price-night-param": radio_button.object.price_night_cents,
+                    "booking-price-weekend-param": radio_button.object.price_weekend_cents,
+                    "booking-party-hall-availability-param": radio_button.object.party_hall_availability \
+                  })
               = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
       / Rooms
