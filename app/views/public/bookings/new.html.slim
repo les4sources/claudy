@@ -8,13 +8,6 @@
             data: { controller: "booking" } do |f|
   .space-y-8.divide-y.divide-gray-200.sm:space-y-5
     .space-y-6.sm:space-y-5
-      = flash[:error]
-      p
-        | Firstname
-        =< @booking.firstname
-      - if !@booking.valid?
-        = @booking.errors.messages
-
       = render "form", f: f
 
   = f.actions do

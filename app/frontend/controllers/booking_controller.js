@@ -28,7 +28,6 @@ export default class extends Controller {
 
   initialize() {
     console.log('Controller: booking')
-    this.toggleTierPricing()
   }
 
   // calculate booking price

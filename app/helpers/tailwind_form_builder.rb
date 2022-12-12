@@ -26,7 +26,7 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
 
     @template.content_tag(:div, class: 'relative flex items-start', id: "field-#{name}") do
       @template.concat(@template.content_tag(:div, { class: 'flex h-5 items-center' }) do
-        @template.concat(check_box(name, {class: 'h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500' + (error ? ' invalid-input' : '') }.merge(options)))
+        @template.concat(check_box(name, {class: 'h-4 w-4 rounded border-gray-500 text-indigo-600 focus:ring-indigo-500' + (error ? ' invalid-input' : '') }.merge(options)))
       end)
       @template.concat(@template.content_tag(:div, { class: 'ml-3 text-sm' }) do
         @template.concat(label(name, label_text(name, options), { class: 'font-medium text-gray-900' }))
@@ -123,7 +123,7 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
 
   def collection_select_field(name, collection, value_method, text_method, options = {}, html_options = {})
     html_options = arguments_with_updated_default_class(
-      "mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm", **html_options
+      "mt-1 block w-full rounded-md border-gray-500 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm", **html_options
     )
     collection_select(name, collection, value_method, text_method, options, html_options)
   end
@@ -139,7 +139,7 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
   end
 
   def text_area(name, *args, &block)
-    args[0].merge!({ class: 'block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm' }) if args.any?
+    args[0].merge!({ class: 'block w-full rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm' }) if args.any?
     super(name, *args, &block)
   end
 
@@ -225,7 +225,7 @@ class TailwindFormBuilder < ActionView::Helpers::FormBuilder
   end
 
   def input_html_classes(method)
-    ['block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm rounded-md', ('border-red-300 text-red-900 placeholder-red-300 focus:border-red-500 focus:outline-none focus:ring-red-500' if object.errors[method].present?)].join
+    ['block w-full rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm rounded-md', ('border-red-300 text-red-900 placeholder-red-300 focus:border-red-500 focus:outline-none focus:ring-red-500' if object.errors[method].present?)].join
   end
 
   def label_text(method, options)

@@ -28,6 +28,9 @@ console.log('Vite ⚡️ Rails')
 import '@hotwired/turbo-rails';
 // import.meta.globEager('../channels/**/*_channel.js');
 
+import 'flowbite';
+import 'flowbite/src/flowbite.turbo.js';
+
 import '../utils/setupStimulus';
 
 import '../stylesheets/application.css';

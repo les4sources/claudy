@@ -19,6 +19,7 @@ module Bookings
 
     def run!(params = {})
       @booking.attributes = booking_params(params)
+      @booking.generate_token
       @booking.room_ids.compact_blank.each do |room_id|
         (@booking.from_date..@booking.to_date).each do |date|
           @booking.reservations.build(

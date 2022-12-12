@@ -3,14 +3,8 @@
     - flash.each do |name, msg|
       - if msg.class == Array
         - msg.compact.each do |message|
-          div(class="#{name.to_s == "notice" ? "success" : name.to_s == "info" ? "info" : "alert"} callout")
-            = content_tag :div, id: "flash_#{name}" do
-              - if name.to_s == "notice"
-                i.fa.fa-fw.fa-check-circle
-              == message
+          div(role="alert" class="#{name.to_s == "notice" ? "text-green-700 bg-green-100 dark:bg-green-200 dark:text-green-800" : name.to_s == "info" ? "text-blue-700 bg-blue-100 dark:bg-blue-200 dark:text-blue-800" : "text-red-700 bg-red-100 dark:bg-red-200 dark:text-red-800"} p-4 mb-4 text-sm rounded-lg")
+            == message
       - elsif !msg.nil?
-          div(class="#{name.to_s == "notice" ? "success" : name.to_s == "info" ? "info" : "alert"} callout")
-            = content_tag :div, id: "flash_#{name}" do
-              - if name.to_s == "notice"
-                i.fa.fa-fw.fa-check-circle
-              == msg
+        div(role="alert" class="#{name.to_s == "notice" ? "text-green-700 bg-green-100 dark:bg-green-200 dark:text-green-800" : name.to_s == "info" ? "text-blue-700 bg-blue-100 dark:bg-blue-200 dark:text-blue-800" : "text-red-700 bg-red-100 dark:bg-red-200 dark:text-red-800"} p-4 mb-4 text-sm rounded-lg")
+          == msg

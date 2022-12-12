@@ -11,15 +11,22 @@ class Booking < ApplicationRecord
   attr_accessor :room_ids
   attr_accessor :booking_type # lodging || rooms
 
-  validates :firstname,       presence: true
-  validates :lastname,        presence: true
-  validates :email,           presence: true
-  validates :from_date,       presence: true
-  validates :to_date,         presence: true
-  validates :adults,          presence: true
-  validates :children,        presence: true
-  validates :payment_method,  presence: true
-  # validates :lodging_id,  presence: true
+  validates_presence_of :firstname,
+                        message: "Veuillez préciser votre prénom"
+  validates_presence_of :lastname,
+                        message: "Veuillez préciser votre nom"
+  validates_presence_of :email,
+                        message: "Veuillez préciser votre adresse email"
+  validates_presence_of :from_date,
+                        message: "Veuillez préciser votre date d'arrivée"
+  validates_presence_of :to_date,
+                        message: "Veuillez préciser votre date de départ"
+  validates_presence_of :adults,
+                        message: "Veuillez préciser le nombre d'adultes"
+  validates_presence_of :children,
+                        message: "Veuillez préciser le nombre d'enfants"
+  validates_presence_of :payment_method,
+                        message: "Veuillez spécifier votre moyen de paiement"
 
   def canceled?
     status == "canceled"
@@ -27,6 +34,15 @@ class Booking < ApplicationRecord
 
   def confirmed?
     status == "confirmed"
+  end
+
+  def generate_token
+    validity = Proc.new { |token| Booking.where(token: token).first.nil? }
+    begin
+      token = SecureRandom.hex(8)[0, 8]
+      token = token.encode("UTF-8")
+    end while validity[token] == false
+    token
   end
 
   def name

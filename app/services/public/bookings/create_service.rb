@@ -20,35 +20,25 @@ module Public
 
       def run!(params = {})
         @booking.attributes = booking_params(params)
+        @booking.generate_token
         return false if !@booking.valid?
-        puts @booking.inspect
         case @booking.booking_type
         when "lodging"
-          set_lodging
-          check_lodging_availability # error should stop the process
-          set_price
-          if @booking.valid?
-            book_lodging
-          else
-            return false
-          end
+          rooms = @booking.lodging.rooms
         when "rooms"
-          check_rooms_availability
-          set_price
-          if @booking.valid?
-            book_rooms
-          else
-            return false
-          end
+          rooms = Room.where(id: @booking.room_ids.compact_blank)
         else
-          @booking.errors.add(
-            :base,
+          set_error_message(
             "Le type de réservation n'a pas pu être défini correctement.
             Veuillez ré-essayer ou nous contacter par email: reservation@les4sources.be."
           )
         end
-        # TODO create reservations for lodging rooms
-        @booking.save!
+        if check_availability(rooms)
+          set_price
+          build_reservations
+          @booking.save!
+        end
+        raise error_message if !error.nil?
         true
       end
 
@@ -82,8 +72,8 @@ module Public
           )
       end
 
-      def book_lodging
-        @booking.lodging.rooms.each do |room|
+      def build_reservations(rooms)
+        rooms.each do |room|
           (@booking.from_date..@booking.to_date).each do |date|
             @booking.reservations.build(
               room: room,
@@ -93,31 +83,13 @@ module Public
         end
       end
 
-      def book_rooms
-        @booking.room_ids.compact_blank.each do |room_id|
-          (@booking.from_date..@booking.to_date).each do |date|
-            @booking.reservations.build(
-              room_id: room_id,
-              date: date
-            )
+      def check_availability(rooms)
+        rooms.each do |room|
+          if room.reservations.where(date: (@booking.from_date)..(@booking.to_date))
+            set_error_message("Cet hébergement n'est pas disponible à cette date. Pourriez-vous vérifier sur le calendrier?")
+            return false
           end
         end
-      end
-
-      def check_lodging_availability
-        # TODO check availability
-        set_error_message("Cet hébergement n'est pas disponible à cette date. Pourriez-vous vérifier sur le calendrier?")
-        # @booking.errors.add(:base, )
-      end
-
-      def check_rooms_availability
-        # TODO check availability
-        set_error_message("Cet hébergement n'est pas disponible à cette date. Pourriez-vous vérifier sur le calendrier?")
-        # @booking.errors.add(:base, "Cet hébergement n'est pas disponible à cette date. Pourriez-vous vérifier sur le calendrier?")
-      end
-
-      def set_lodging
-        @booking.lodging = Lodging.find(@booking.lodging_id)
       end
 
       def set_price

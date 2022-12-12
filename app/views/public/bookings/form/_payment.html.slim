@@ -86,8 +86,8 @@
       = f.collection_select_field :payment_method,
                                   [["Je paierai en liquide", "cash"], ["Je fais un virement bancaire", "bank_transfer"]],
                                   :last, :first,
-                                  { prompt: true, required: true },
-                                  { class: "md:w-2/3 lg:w-1/2" }
+                                  { prompt: true },
+                                  { required: true,   class: "md:w-2/3 lg:w-1/2" }
 
     = f.check_input :invoice_wanted,
                     label: "J'ai besoin d'une facture 🧾",

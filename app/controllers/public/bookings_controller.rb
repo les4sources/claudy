@@ -10,14 +10,14 @@ class Public::BookingsController < Public::BaseController
   end
 
   def create
-    service = Public::Bookings::CreateService.new
-    if service.run(params)
-      redirect_to service.booking,
-                  notice: "Merci, votre demande de réservation a été enregistrée. Vous allez recevoir un email de confirmation et nous vous recontactons dans les 48 heures."
+    @service = Public::Bookings::CreateService.new
+    if @service.run(params)
+      redirect_to "/public/reservation/#{@service.booking.token}",
+                  notice: "Merci, votre demande de réservation est enregistrée. Vous allez recevoir un email de confirmation de notre part et nous vous recontactons très prochainement."
     else
-      @booking = service.booking
-      set_error_flash(service.booking, service.error_message)
-      render :new
+      @booking = @service.booking
+      set_error_flash(@service.booking, @service.error_message)
+      render :new, status: :unprocessable_entity
     end
   end
 

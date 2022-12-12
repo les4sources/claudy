@@ -4,7 +4,8 @@ module.exports = {
   content: [
     './public/*.html',
     './app/**/*.{html.erb,html.slim,rb,js}',
-    './app/javascript/**/*.js'
+    './app/javascript/**/*.js',
+    './node_modules/flowbite/**/*.js'
     // './app/javascript/**/*.js',
     // './app/simple_form/builders/**/*.rb',
     // './app/views/**/*.{erb,haml,html,slim}',
@@ -21,5 +22,6 @@ module.exports = {
     require('@tailwindcss/forms'),
     require('@tailwindcss/aspect-ratio'),
     require('@tailwindcss/typography'),
+    require('flowbite/plugin')
   ]
 }
