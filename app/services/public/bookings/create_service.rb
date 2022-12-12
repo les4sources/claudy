@@ -84,6 +84,8 @@ module Public
       end
 
       def check_availability(rooms)
+        set_error_message("dummy dummy foo foo")
+        return false
         rooms.each do |room|
           if room.reservations.where(date: (@booking.from_date)..(@booking.to_date))
             set_error_message("Cet hébergement n'est pas disponible à cette date. Pourriez-vous vérifier sur le calendrier?")

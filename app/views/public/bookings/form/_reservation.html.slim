@@ -1,9 +1,9 @@
-.grid.grid-cols-3.gap-4
-  .border-r-8.border-indigo-500.pr-4.text-right
+.border-l-8.border-indigo-500.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-500.md:pr-4.md:text-right
     = section_heading_tw heading: "Ma réservation"
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
-    .flex.space-x-6
+    .space-y-6.md:space-y-0.md:flex.md:space-x-6
       = f.date_field :from_date,
                      html5: true,
                      label: "Du *",
@@ -37,6 +37,6 @@
     = f.text_field :estimated_arrival,
                    label: "Heure d'arrivée estimée",
                    hint: "Laissez vide si vous ne savez pas encore nous préciser votre heure d'arrivée",
-                   class: "sm:lg-2/3 md:lg-1/2 lg:w-1/4"
+                   class: "w-1/2 md:w-1/2 lg:w-1/4"
 
 hr

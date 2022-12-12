@@ -16,7 +16,7 @@ html(lang="fr")
     = turbo_frame_tag "modal", target: "_top"
     .container.mx-auto.sm:px-6.lg:px-8
       .grid.justify-items-center
-        .p-8.pb-16.shadow-2xl.rounded-lg.bg-white.lg:m-8.lg:w-3/4
+        .p-4.pb-16.bg-white.md:p-8.md:pb-16.md:shadow-2xl.md:rounded-lg.md:m-8.lg:w-3/4
           - if content_for?(:page_header)
             = yield :page_header
 

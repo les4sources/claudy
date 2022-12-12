@@ -18,6 +18,7 @@ export default class extends Controller {
     'priceCalculationNotice',
     'priceDiv',
     'pricePreview',
+    'roomsTab',
     'shownPriceInput',
     'tierButton',
     'tierCard',
@@ -28,24 +29,44 @@ export default class extends Controller {
 
   initialize() {
     console.log('Controller: booking')
+    // initialize form
+    if (this.bookingTypeFieldTarget.value == 'lodging') {
+      // hide tier pricing
+      this.toggleTierPricing()
+      this.setPrice()
+      // toggle 'party hall' section if Grand-Duc checked
+      const selectedLodging = this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0]
+      if (selectedLodging !== undefined) {
+        this.togglePartyHallSection(selectedLodging.dataset.bookingPartyHallAvailabilityParam)
+      }
+    } else {
+      this.roomsTabTarget.click()
+      if (this.tierInputTarget.value) {
+        this.setTier()
+      }
+    }
   }
 
   // calculate booking price
   calculateAmount(nights) {
     const adults = parseInt(this.adultsInputTarget.value) || 0
     const children = parseInt(this.childrenInputTarget.value) || 0
-    if (this.bookingTypeFieldTarget.value == 'lodging') {
-      const nightPrice = this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0].dataset.bookingPriceNightParam
-      return nights * nightPrice
-    } else {
-      const tierPrice = document.querySelector('.selected-tier').dataset.bookingTierAmountParam
-      return nights * tierPrice * (adults + children)
+    try {
+      if (this.bookingTypeFieldTarget.value == 'lodging') {
+        const nightPrice = this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0].dataset.bookingPriceNightParam
+        return nights * nightPrice
+      } else {
+        const tierPrice = document.querySelector('.selected-tier').dataset.bookingTierAmountParam
+        return nights * tierPrice * (adults + children)
+      }
+    } catch {
+      return -1
     }
   }
 
   // user checks one of the lodgings options
   selectLodging(e) {
-    this.togglePartyHallSection(e)
+    this.togglePartyHallSection(e.params.partyHallAvailability)
     this.setPrice()
   }
 
@@ -77,8 +98,10 @@ export default class extends Controller {
       } else {
         console.log('All good, we can preview the price')
         const amount = this.calculateAmount(nights)
-        this.setInputValue(this.shownPriceInputTarget, amount)
-        this.showPricePreview(amount)
+        if (amount >= 0) {
+          this.setInputValue(this.shownPriceInputTarget, amount)
+          this.showPricePreview(amount)
+        }
       }
     }
   }
@@ -95,9 +118,11 @@ export default class extends Controller {
   }
 
   setTier(e) {
-    this.setInputValue(this.tierInputTarget, e.params.tierName)
-    this.setSelectedTierCardStyle(e.currentTarget)
-    this.setTierButton(e.currentTarget.querySelector('.tier-pricing-button'))
+    const tierName = (e === undefined) ? this.tierInputTarget.value : e.params.tierName
+    this.setInputValue(this.tierInputTarget, tierName)
+    const selectedTierCard = (e === undefined) ? document.querySelector('[data-booking-tier-name-param="' + tierName + '"]') : e.currentTarget
+    this.setSelectedTierCardStyle(selectedTierCard)
+    this.setTierButton(selectedTierCard.querySelector('.tier-pricing-button'))
     this.setPrice()
   }
 

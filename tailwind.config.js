@@ -4,7 +4,13 @@ module.exports = {
   content: [
     './public/*.html',
     './app/**/*.{html.erb,html.slim,rb,js}',
-    './app/javascript/**/*.js',
+    './app/calendars/**/*.{html.erb,html.slim,rb,js}',
+    './app/components/**/*.{html.erb,html.slim,rb,js}',
+    './app/decorators/**/*.{html.erb,html.slim,rb,js}',
+    './app/frontend/**/*.{html.erb,html.slim,rb,js}',
+    './app/inputs/**/*.{html.erb,html.slim,rb,js}',
+    './app/presenters/**/*.{html.erb,html.slim,rb,js}',
+    './app/views/**/*.{html.erb,html.slim,rb,js}',
     './node_modules/flowbite/**/*.js'
     // './app/javascript/**/*.js',
     // './app/simple_form/builders/**/*.rb',

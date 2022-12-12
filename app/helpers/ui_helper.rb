@@ -127,7 +127,7 @@ module UiHelper
 
   def section_heading_tw(heading:, extra: nil, spacing: :hr, count: nil, icon: nil, span_id:nil)
     out = ActiveSupport::SafeBuffer.new
-    out << content_tag(:div, class: "mb-4 pb-4") do
+    out << content_tag(:div, class: "mb-2 md:mb-4 pb-4") do
       out2 = ActiveSupport::SafeBuffer.new
       out2 << content_tag(:h3, heading, class: "text-lg font-medium leading-6 text-gray-900")
       if extra

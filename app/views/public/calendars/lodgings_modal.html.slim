@@ -1,4 +1,12 @@
 = render TurboModal::Component.new(title: "Calendrier des disponibilités") do
+  .p-4.mb-4.text-sm.text-blue-700.bg-blue-100.rounded-lg.dark:bg-blue-200.dark:text-blue-800(role="alert")
+    |
+      <span class="font-medium">Pour les disponibilités des chambres de la Maison Communautaire</span>,
+      nous vous invitons à nous envoyer votre demande de réservation. Nous reviendrons
+      vers vous avec la confirmation de disponibilité. Notez déjà que si le Grand-Duc
+      est réservé, il n'y a aucune disponibilité dans la Maison Communautaire 🦉
+
+  .content
   = SimpleCalendar::PublicLodgingsCalendar.new(self, { \
       today: @date \
     }).render do |date|
