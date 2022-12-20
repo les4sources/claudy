@@ -3,7 +3,7 @@ class SimpleCalendar::DashboardCalendar < SimpleCalendar::Calendar
 
   def date_range
     beginning = options[:today].beginning_of_month.beginning_of_week(start_day)
-    ending = options[:today].end_of_month.end_of_week(start_day)
+    ending = (options[:today] + 2.months).end_of_month.end_of_week(start_day)
     (beginning..ending).to_a
   end
 

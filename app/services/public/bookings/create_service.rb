@@ -34,8 +34,10 @@ module Public
           )
         end
         if check_availability(rooms)
+          set_payment_status
           set_price
-          build_reservations
+          set_status
+          build_reservations(rooms)
           @booking.save!
         end
         raise error_message if !error.nil?
@@ -84,19 +86,25 @@ module Public
       end
 
       def check_availability(rooms)
-        set_error_message("dummy dummy foo foo")
-        return false
         rooms.each do |room|
-          if room.reservations.where(date: (@booking.from_date)..(@booking.to_date))
+          if room.reservations.where(date: (@booking.from_date)..(@booking.to_date)).any?
             set_error_message("Cet hébergement n'est pas disponible à cette date. Pourriez-vous vérifier sur le calendrier?")
             return false
           end
         end
       end
 
+      def set_payment_status
+        @booking.payment_status = "unpaid"
+      end
+
       def set_price
         # TODO call a service
         @booking.price = 999
+      end
+
+      def set_status
+        @booking.status = "pending"
       end
     end
   end

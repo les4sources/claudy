@@ -11,7 +11,7 @@ html(lang="fr")
     = csrf_meta_tags
     = csp_meta_tag
     = vite_client_tag
-    = vite_javascript_tag "application", "data-turbo-track": "reload"
+    = vite_javascript_tag "public", "data-turbo-track": "reload"
   body.bg-gradient-to-tl.from-red-400.to-fuchsia-600
     = turbo_frame_tag "modal", target: "_top"
     .container.mx-auto.sm:px-6.lg:px-8
@@ -35,3 +35,5 @@ html(lang="fr")
           use[xlink:href="#gentle-wave" x="50" y="9" fill="#3461c1"]
         g.parallax4
           use[xlink:href="#gentle-wave" x="50" y="6" fill="lightblue"]
+
+

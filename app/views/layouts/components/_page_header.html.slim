@@ -1,60 +1,36 @@
-#page-header-inner.sticky(data-sticky data-sticky-on="medium" data-top-anchor="page-header" data-margin-top="0")
-  .grid-container
-    .grid-x.grid-margin-x.grid-padding-x.align-top
-      .cell.auto
-        h1
-          => title
-          - if !local_assigns[:count].nil?
-            span.badge = count
-          - if !local_assigns[:secondary].nil?
-            br
-            small
-              = secondary
-
-        / - if breadcrumb_trail.count > 1
-          #breadcrumbs
-            nav
-              ul.breadcrumbs
-                - breadcrumb_trail do |name, url, current|
-                  li(class="#{current ? 'selected' : ''}")
-                    - if current
-                      = name
-                    - else
-                      = link_to name, url
-
-      - if @menu_presenter.has_actions_items?
-        .cell.shrink.header-actions
-          .actions
-            span(class="#{local_assigns[:actions_menu_class]}")
-              = link_to "#", class: "hollow light-gray dropdown button", data: { toggle: "actions-menu" } do
-                i.fa.fa-fw.fa-ellipsis-h
-                span.hide-for-small-only &nbsp;Actions
-              #actions-menu.dropdown-pane.small(data-dropdown data-close-on-click="true" data-v-offset="10" data-position="bottom" data-alignment="right")
-                = @menu_presenter.render_actions_menu
-      .cell.small-12.medium-shrink.header-links
-        .actions
-          - if local_assigns[:links] or local_assigns[:form_actions] or local_assigns[:menu]
-            .actions-wrapper
-              - if local_assigns[:menu]
-                - menu_key = SecureRandom.uuid
-                a.hollow.small.button.small-only-expanded(data-toggle="#{menu_key}-menu")
-                  = render "layouts/icons/arrow_down_1"
-                  span Actions
-                .dropdown-pane.dropdown-pane--menu(id="#{menu_key}-menu" data-dropdown data-close-on-click="true" data-position="bottom" data-alignment="right")
-                  = menu
-
-              - if local_assigns[:links]
-                - links.each do |link|
-                  = link
-
-              - if local_assigns[:form_actions]
-                - if local_assigns[:cancel_path]
-                  = link_to "Cancel",
-                            cancel_path,
-                            class: "light-gray hollow button hide-for-small-only"
-                = button_tag  "Save",
-                              class: "button hide-for-small-only",
-                              type: "submit",
-                              data: { \
-                                behavior: 'submit-form',
-                              }
+div
+  div
+    / nav.sm:hidden[aria-label="Back"]
+      a.flex.items-center.text-sm.font-medium.text-gray-500.hover:text-gray-700[href="#"]
+        svg.-ml-1.mr-1.h-5.w-5.flex-shrink-0.text-gray-400[xmlns="http://www.w3.org/2000/svg" viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+          path[fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd"]
+        |  Back 
+    nav.hidden.sm:flex[aria-label="Breadcrumb"]
+      ol.flex.items-center.space-x-4[role="list"]
+        li
+          .flex
+            = link_to "Agenda", root_path, class: "text-sm font-medium text-gray-500 hover:text-gray-700"
+        li
+          .flex.items-center
+            svg.h-5.w-5.flex-shrink-0.text-gray-400[xmlns="http://www.w3.org/2000/svg" viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+              path[fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"]
+            a.ml-4.text-sm.font-medium.text-gray-500.hover:text-gray-700[href="#"]
+              | Section
+        li
+          .flex.items-center
+            svg.h-5.w-5.flex-shrink-0.text-gray-400[xmlns="http://www.w3.org/2000/svg" viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+              path[fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"]
+            a.ml-4.text-sm.font-medium.text-gray-500.hover:text-gray-700[href="#" aria-current="page"]
+              | Sous-page
+  .mt-2.md:flex.md:items-center.md:justify-between
+    .min-w-0.flex-1
+      h2.text-2xl.font-bold.leading-7.text-gray-900.sm:truncate.sm:text-3xl.sm:tracking-tight
+        = title
+    - if local_assigns[:links]
+      .mt-4.gap-1.flex.flex-shrink-0.md:mt-0.md:ml-4
+        - links.each do |link|
+          = link
+          / button.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm.hover:bg-gray-50.focus:outline-none.focus:ring-2.focus:ring-indigo-500.focus:ring-offset-2[type="button"]
+            | Edit
+      / button.ml-3.inline-flex.items-center.rounded-md.border.border-transparent.bg-indigo-600.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.hover:bg-indigo-700.focus:outline-none.focus:ring-2.focus:ring-indigo-500.focus:ring-offset-2[type="button"]
+        | Publish

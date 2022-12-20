@@ -28,6 +28,8 @@ class Booking < ApplicationRecord
   validates_presence_of :payment_method,
                         message: "Veuillez spécifier votre moyen de paiement"
 
+  before_create :generate_token
+
   def canceled?
     status == "canceled"
   end
@@ -39,10 +41,10 @@ class Booking < ApplicationRecord
   def generate_token
     validity = Proc.new { |token| Booking.where(token: token).first.nil? }
     begin
-      token = SecureRandom.hex(8)[0, 8]
-      token = token.encode("UTF-8")
-    end while validity[token] == false
-    token
+      generated_token = SecureRandom.hex(8)[0, 8]
+      generated_token = generated_token.encode("UTF-8")
+    end while validity[generated_] == false
+    self.token = generated_token
   end
 
   def name

@@ -10,9 +10,9 @@ module UiHelper
     out = ActiveSupport::SafeBuffer.new
     if options[:right]
       out << label
-      out << content_tag(:span, render("layouts/icons/#{icon}"), class: "inline-icon inline-icon--right #{options[:icon_class]}")
+      out << content_tag(:svg, render("layouts/icons/paths/#{icon}"), class: "ml-2 -mr-1 w-5 h-5 #{options[:icon_class]}", stroke: "currentColor", "stroke-width": "1.5", viewBox: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg", "aria-hidden": "true")
     else
-      out << content_tag(:span, render("layouts/icons/#{icon}"), class: "inline-icon #{options[:icon_class]}")
+      out << content_tag(:svg, render("layouts/icons/paths/#{icon}"), class: "mr-2 -ml-1 w-5 h-5 #{options[:icon_class]}", stroke: "currentColor", "stroke-width": "1.5", viewBox: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg", "aria-hidden": "true")
       out << label
     end
     out

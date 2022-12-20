@@ -1,17 +1,13 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
            title: l(@date, format: :month_year).capitalize,
-           links: [ \
-             render("pages/calendar/months_dropdown", current_date: @date) \
-           ]
+           links: [ button_to_previous_month(@date), button_to_next_month(@date) ]
 
 = SimpleCalendar::DashboardCalendar.new(self, { \
     today: @date \
   }).render do |date|
-  - if @grouped_events[date]
+  / - if @grouped_events[date]
     - @grouped_events[date].sort_by {|e| [e.starts_at, e.event_category_id] }.each do |event|
-      .item.dropdown-pane(id="event-#{event.id}-menu" data-dropdown data-close-on-click="true" data-position="bottom" data-alignment="right")
-        = render "pages/calendar/event_dropdown", event: event
       .event.event-calendar-item(data-event-path="#{event_path(event)}" data-action="click->calendar#redirectToEvent")
         .grid-x
           .cell.shrink
@@ -30,41 +26,12 @@
                   .spacer__width--dot5
                   = ellipsis_for("event-#{event.id}-menu")
 
-  - if @upcoming_by_date[date]
-    - @upcoming_by_date[date].sort_by {|r| [r.start_time, r.booking.lastname] }.each do |reservation|
-      .item.dropdown-pane(id="reservation-#{reservation.id}-menu" data-dropdown data-close-on-click="true" data-position="bottom" data-alignment="right")
-        = render "pages/calendar/reservation_dropdown", reservation: reservation
-      .reservation.reservation-calendar-item(data-booking-path="#{booking_path(reservation.booking)}" data-action="click->calendar#redirectToBooking")
-        .grid-x
-          .cell.shrink
-            .reservation__border.reservation__border--tiny(style="background-color: #369")
-          .cell.auto
-            .reservation__content
-              .grid-x
-                .cell.auto
-                  .reservation-room-name
-                    = link_to reservation.room.name,
-                              booking_path(reservation.booking)
-                  small.reservation-name
-                    = reservation.booking.name
-                .cell.shrink
-                  .spacer__width--dot5
-                  = ellipsis_for("reservation-#{reservation.id}-menu")
-              / .grid-x
-                .cell.auto
-                  .instance-instructor
-                    - if class_details_presenter.private_session?
-                      | Private session&nbsp;
-                      br.show-for-medium
-                    | with #{class_details_presenter.instructor_name}
-              / .grid-x.align-middle
-                .cell.shrink
-                  = class_details_presenter.class_status_icon
-                .cell.shrink
-                  - if class_details_presenter.instance.has_already_started?
-                    = class_details_presenter.reservations_count_label
-                  - else
-                    = class_details_presenter.waitlist_count
-                .cell.small-12
-                  = class_details_presenter.full_label
-                  = class_details_presenter.online_class_label
+  - if @grouped_reservations[date]
+    - @grouped_reservations[date].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations|
+      - booking = grouped_reservations.last.first.booking
+      ol.mt-2
+        li
+          div = link_to booking.name, booking_path(booking)
+          div
+            - grouped_reservations.last.each do |reservation|
+              = room_badge(reservation.room)

@@ -1,21 +1,21 @@
 class PagesController < BaseController
   def calendar
     set_dates
-    events = Event.all
-      .includes(:event_category)
-      .between_times(@first, @last)
-    @grouped_events = {}
-    events.each do |event|
-      (event.starts_at.to_date..event.ends_at.to_date).each do |date|
-        @grouped_events[date] ||= []
-        @grouped_events[date] << event
-      end
-    end
+    # events = Event.all
+    #   .includes(:event_category)
+    #   .between_times(@first, @last)
+    # @grouped_events = {}
+    # events.each do |event|
+    #   (event.starts_at.to_date..event.ends_at.to_date).each do |date|
+    #     @grouped_events[date] ||= []
+    #     @grouped_events[date] << event
+    #   end
+    # end
     @reservations = Reservation.all
       .includes(:booking)
       .between_times(@first, @last, field: :date)
     # group bookings by day
-    @upcoming_by_date = @reservations.to_a.group_by { |r| r.date }
+    @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
     breadcrumb "Calendrier", :root_path, match: :exact
   end
 

@@ -2,34 +2,42 @@
   = render "layouts/components/page_header",
            title: "Réservations",
            links: [ \
-             link_to(button_label_with_icon("Nouvelle réservation", "add_circle"), new_booking_path, class: "small hollow button") \
+             link_to(button_label_with_icon("Nouvelle réservation", "add_circle"), new_booking_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
            ]
 
-table
-  thead
-    tr
-      th Nom
-      th Du
-      th Au
-      th Draps/Essuies
-      th Statut
-      th Paiement
-  tbody
-    - @bookings.each do |booking|
+
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500.dark:text-gray-400
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50.dark:bg-gray-700.dark:text-gray-400
       tr
-        td
-          strong
-            = link_to booking.name, booking_path(booking)
-        td
-          = booking.from_date
-        td
-          = booking.to_date
-        td
-          - if booking.bedsheets?
-            = booking.label_bedsheets
-          - if booking.towels?
-            = booking.label_towels
-        td
-          = booking.status
-        td
-          = booking.payment_status
+        th.py-3.px-6[scope="col"]
+          |  Nom 
+        th.py-3.px-6[scope="col"]
+          |  Du 
+        th.py-3.px-6[scope="col"]
+          |  Au 
+        th.py-3.px-6[scope="col"]
+          |  Draps/Essuies 
+        th.py-3.px-6[scope="col"]
+          |  Statut 
+        th.py-3.px-6[scope="col"]
+          |  Paiement 
+    tbody
+      - @bookings.each do |booking|
+        tr.bg-white.border-b.dark:bg-gray-800.dark:border-gray-700
+          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap.dark:text-white[scope="row"]
+            strong
+              = link_to booking.name, booking_path(booking)
+          td.py-4.px-6
+            = booking.from_date
+          td.py-4.px-6
+            = booking.to_date
+          td.py-4.px-6
+            - if booking.bedsheets?
+              = booking.label_bedsheets
+            - if booking.towels?
+              = booking.label_towels
+          td.py-4.px-6
+            = booking.status
+          td.py-4.px-6
+            = booking.payment_status

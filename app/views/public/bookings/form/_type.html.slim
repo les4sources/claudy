@@ -16,9 +16,9 @@
     div(data-controller="tabs" data-tabs-active-tab="border-indigo-500 text-indigo-600 whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm" data-tabs-inactive-tab="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm")
       .border-b.border-gray-200
         nav.-mb-px.flex.space-x-2.md:space-x-8(aria-label="Type d'hébergement")
-          a.border-transparent.text-gray-500.hover:text-gray-700.hover:border-gray-300.whitespace-nowrap.pb-4.px-1.border-b-2.font-medium.text-sm(href="#" data-tabs-target="tab" data-action="click->tabs#change click->booking#setBookingType" data-booking-booking-type-param="lodging")
+          a.border-transparent.text-gray-500.hover:text-gray-700.hover:border-gray-300.whitespace-nowrap.pb-4.px-1.border-b-2.font-medium.text-sm(href="#" data-tabs-target="tab" data-action="click->tabs#change click->public--booking#setBookingType" data-public--booking-booking-type-param="lodging")
             | Hébergement de groupe
-          a.border-transparent.text-gray-500.hover:text-gray-700.hover:border-gray-300.whitespace-nowrap.pb-4.px-1.border-b-2.font-medium.text-sm(href="#" data-tabs-target="tab" data-booking-target="roomsTab" data-action="click->tabs#change click->booking#setBookingType" data-booking-booking-type-param="rooms")
+          a.border-transparent.text-gray-500.hover:text-gray-700.hover:border-gray-300.whitespace-nowrap.pb-4.px-1.border-b-2.font-medium.text-sm(href="#" data-tabs-target="tab" data-public--booking-target="roomsTab" data-action="click->tabs#change click->public--booking#setBookingType" data-public--booking-booking-type-param="rooms")
             | Maison Communautaire
 
       / Lodgings
@@ -32,11 +32,11 @@
             .flex.items-center
               = radio_button.radio_button( \
                   data: { \
-                    "action": "booking#selectLodging",
-                    "booking-target": "lodgingRadioButton",
-                    "booking-price-night-param": radio_button.object.price_night_cents,
-                    "booking-price-weekend-param": radio_button.object.price_weekend_cents,
-                    "booking-party-hall-availability-param": radio_button.object.party_hall_availability \
+                    "action": "public--booking#selectLodging",
+                    "public--booking-target": "lodgingRadioButton",
+                    "public--booking-price-night-param": radio_button.object.price_night_cents,
+                    "public--booking-price-weekend-param": radio_button.object.price_weekend_cents,
+                    "public--booking-party-hall-availability-param": radio_button.object.party_hall_availability \
                   })
               = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
@@ -62,6 +62,6 @@
 
       .hidden
         = f.text_field :booking_type,
-                       data: { "booking-target": "bookingTypeField" }
+                       data: { "public--booking-target": "bookingTypeField" }
 
 hr

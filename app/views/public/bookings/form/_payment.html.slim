@@ -3,12 +3,12 @@
     = section_heading_tw heading: "Paiement de mon séjour"
 
   .col-span-2.mb-4
-    div(data-booking-target="tierPricing")
+    div(data-public--booking-target="tierPricing")
       .content.mb-4
         p Nous proposons 3 tarifs pour les nuitées dans la Maison Communautaire. Quel est le tarif qui vous convient le mieux?
 
       .space-y-8
-        .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-booking-target="tierCard" data-action="click->booking#setTier" data-booking-tier-name-param="solidaire" data-booking-tier-amount-param="2500")
+        .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-public--booking-target="tierCard" data-action="click->public--booking#setTier" data-public--booking-tier-name-param="solidaire" data-public--booking-tier-amount-param="2500")
           .flex-1
             h3.text-xl.font-serif.text-gray-900
               | Solidaire
@@ -19,9 +19,9 @@
                 | /nuit/personne
             p.mt-4.text-sm.text-gray-500
               | Tarif permettant à des structures et personnes disposant de moyens plus limités de pouvoir accéder à nos espaces pour séjourner ou organiser une activité chez nous.
-          .tier-pricing-button.bg-indigo-50.text-indigo-700.hover:bg-indigo-100.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(data-booking-target="tierButton")
+          .tier-pricing-button.bg-indigo-50.text-indigo-700.hover:bg-indigo-100.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(data-public--booking-target="tierButton")
             | Sélectionner
-        .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-booking-target="tierCard" data-action="click->booking#setTier" data-booking-tier-name-param="neutre" data-booking-tier-amount-param="3500")
+        .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-public--booking-target="tierCard" data-action="click->public--booking#setTier" data-public--booking-tier-name-param="neutre" data-public--booking-tier-amount-param="3500")
           .flex-1
             h3.text-xl.font-serif.text-gray-900
               | Neutre
@@ -34,9 +34,9 @@
               | Tarif de « base » permettant de faire fonctionner le projet et la gestion du domaine, sans contribuer au développement.
           / a.bg-indigo-500.text-white.hover:bg-indigo-600.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(href="#")
             | Sélectionner
-          .tier-pricing-button.bg-indigo-50.text-indigo-700.hover:bg-indigo-100.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(data-booking-target="tierButton")
+          .tier-pricing-button.bg-indigo-50.text-indigo-700.hover:bg-indigo-100.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(data-public--booking-target="tierButton")
             | Sélectionner
-        .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-booking-target="tierCard" data-action="click->booking#setTier" data-booking-tier-name-param="soutien" data-booking-tier-amount-param="4500")
+        .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-public--booking-target="tierCard" data-action="click->public--booking#setTier" data-public--booking-tier-name-param="soutien" data-public--booking-tier-amount-param="4500")
           .flex-1
             h3.text-xl.font-serif.text-gray-900
               | Soutien
@@ -47,17 +47,17 @@
                 | /nuit/personne
             p.mt-4.text-sm.text-gray-500
               | Tarif permettant d’apporter un soutien financier au déploiement du projet et au maintien d’une formule solidaire.
-          .tier-pricing-button.bg-indigo-50.text-indigo-700.hover:bg-indigo-100.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(data-booking-target="tierButton")
+          .tier-pricing-button.bg-indigo-50.text-indigo-700.hover:bg-indigo-100.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(data-public--booking-target="tierButton")
             | Sélectionner
 
       .hidden
         = f.text_field :tier,
                        label: "Tarif",
                        disabled: true,
-                       data: { "booking-target": "tierInput" }
+                       data: { "public--booking-target": "tierInput" }
       .mb-6
 
-    .hidden.bg-yellow-100.shadow.sm:rounded-lg(data-booking-target="priceCalculationNotice")
+    .hidden.bg-yellow-100.shadow.sm:rounded-lg(data-public--booking-target="priceCalculationNotice")
       .px-4.py-5.sm:p-6
         h3.text-lg.font-medium.leading-6.text-gray-900
           | Calculer le montant de votre réservation?
@@ -70,15 +70,15 @@
               li Dates d'arrivée et de départ 🗓
               li Nombre de giteurs adultes 🧑 et enfants 🧒
 
-    .hidden.flex.flex-col.align-center.mx-auto(data-booking-target="priceDiv")
+    .hidden.flex.flex-col.align-center.mx-auto(data-public--booking-target="priceDiv")
       dt.order-2.text-base.font-medium.text-gray-500
         | Montant de votre réservation
-      dd.order-1.text-2xl.font-bold.text-indigo-600.sm:text-3xl.sm:tracking-tight(data-booking-target="pricePreview")
+      dd.order-1.text-2xl.font-bold.text-indigo-600.sm:text-3xl.sm:tracking-tight(data-public--booking-target="pricePreview")
         | ?
 
     .hidden
       = f.text_field :shown_price_cents,
-                     data: { "booking-target": "shownPriceInput" }
+                     data: { "public--booking-target": "shownPriceInput" }
 
     .my-6
       = f.label :payment_method,

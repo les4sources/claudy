@@ -5,7 +5,7 @@
 
 = form_with model: @booking,
             url: public_bookings_path,
-            data: { controller: "booking" } do |f|
+            data: { controller: "public--booking" } do |f|
   .space-y-8.divide-y.divide-gray-200.sm:space-y-5
     .space-y-6.sm:space-y-5
       = render "form", f: f
