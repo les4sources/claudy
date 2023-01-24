@@ -5,7 +5,7 @@ class BaseController < ActionController::Base
 
   def authenticate
     authenticate_or_request_with_http_basic do |username, password|
-      username == Rails.application.credentials[:claudy][:http_authentication][:username] && password == Rails.application.credentials[:claudy][:http_authentication][:password]
+      username == ENV.fetch('AUTH_USERNAME') && password == ENV.fetch('AUTH_PASSWORD')
     end if Rails.env.production?
   end
 
