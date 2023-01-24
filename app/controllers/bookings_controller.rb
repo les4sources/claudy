@@ -9,7 +9,11 @@ class BookingsController < BaseController
   end
 
   def new
-    @booking = Booking.new
+    @booking = Booking.new(
+      booking_type: "lodging",
+      adults: 0,
+      children: 0
+    )
     @lodgings = Lodging.all
   end
 

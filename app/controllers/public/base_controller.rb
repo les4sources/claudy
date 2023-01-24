@@ -1,7 +1,7 @@
 class Public::BaseController < ActionController::Base
   layout "public"
 
-  default_form_builder TailwindFormBuilder
+  # default_form_builder TailwindFormBuilder
 
   private
 

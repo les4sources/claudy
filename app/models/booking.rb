@@ -1,7 +1,7 @@
 class Booking < ApplicationRecord
   has_many :reservations, dependent: :destroy
   has_many :rooms, through: :reservations
-  belongs_to :lodging
+  belongs_to :lodging, optional: true
 
   monetize :price_cents, allow_nil: true
 
@@ -43,7 +43,7 @@ class Booking < ApplicationRecord
     begin
       generated_token = SecureRandom.hex(8)[0, 8]
       generated_token = generated_token.encode("UTF-8")
-    end while validity[generated_] == false
+    end while validity[generated_token] == false
     self.token = generated_token
   end
 

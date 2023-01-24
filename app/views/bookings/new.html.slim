@@ -2,7 +2,18 @@
   = render 'layouts/components/page_header',
            title: "Nouvelle réservation"
 
-= simple_form_for @booking,
+= form_with model: @booking,
+            url: bookings_path,
+            data: { controller: "booking" } do |f|
+  .space-y-8.divide-y.divide-gray-200.sm:space-y-5
+    .space-y-6.sm:space-y-5
+      = render "form", f: f, lodgings: @lodgings
+
+  = f.actions do
+    = f.submit "Envoyer ma demande"
+
+
+/ = simple_form_for @booking,
                   url: bookings_path do |f|
   .grid-x.grid-padding-x
     .cell.small-12.medium-8.large-6

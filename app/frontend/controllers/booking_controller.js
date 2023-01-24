@@ -32,7 +32,7 @@ export default class extends Controller {
   }
 
   initialize() {
-    console.log('Controller: booking')
+    console.log('Controller: booking', this.bookingTypeFieldTarget.value)
     // initialize form
     if (this.bookingTypeFieldTarget.value == 'lodging') {
       // hide tier pricing

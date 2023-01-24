@@ -1,4 +1,6 @@
 module ApplicationHelper
+  ActionView::Base.default_form_builder = FormBuilders::TailwindFormBuilder
+
   def delete_link(resource)
     link_to "Supprimer",
             send("#{resource.class.name.underscore}_path", resource),
