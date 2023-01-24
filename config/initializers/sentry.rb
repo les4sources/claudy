@@ -1,6 +1,6 @@
 Sentry.init do |config|
-  if Rails.env.production?
-    config.dsn = Rails.application.credentials[:sentry][:dsn]
+  if Rails.env.production? && ENV.fetch('SENTRY_DSN')
+    config.dsn = ENV.fetch('SENTRY_DSN')
   end
   config.breadcrumbs_logger = [:active_support_logger, :http_logger]
 
