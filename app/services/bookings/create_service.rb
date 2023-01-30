@@ -20,15 +20,22 @@ module Bookings
     def run!(params = {})
       @booking.attributes = booking_params(params)
       @booking.generate_token
-      @booking.room_ids.compact_blank.each do |room_id|
-        (@booking.from_date..@booking.to_date).each do |date|
-          @booking.reservations.build(
-            room_id: room_id,
-            date: date
-          )
-        end
+      return false if !@booking.valid?
+      case @booking.booking_type
+      when "lodging"
+        rooms = @booking.lodging.rooms
+      when "rooms"
+        rooms = Room.where(id: @booking.room_ids.compact_blank)
+      else
+        set_error_message(
+          "Le type de réservation n'a pas pu être défini correctement."
+        )
       end
-      @booking.save!
+      if check_availability(rooms)
+        build_reservations(rooms)
+        @booking.save!
+      end
+      raise error_message if !error.nil?
       true
     end
 
@@ -42,6 +49,7 @@ module Bookings
           :lastname,
           :phone,
           :email,
+          :booking_type,
           :estimated_arrival,
           :from_date,
           :to_date,
@@ -56,12 +64,33 @@ module Bookings
           :towels,
           :notes,
           :tier,
+          :option_partyhall,
           :option_bread,
           :option_babysitting,
           :option_discgolf,
           :lodging_id,
           room_ids: [],
         )
+    end
+
+    def build_reservations(rooms)
+      rooms.each do |room|
+        (@booking.from_date..@booking.to_date).each do |date|
+          @booking.reservations.build(
+            room: room,
+            date: date
+          )
+        end
+      end
+    end
+
+    def check_availability(rooms)
+      rooms.each do |room|
+        if room.reservations.where(date: (@booking.from_date)..(@booking.to_date)).any?
+          set_error_message("Cet hébergement n'est pas disponible à cette date.")
+          return false
+        end
+      end
     end
   end
 end

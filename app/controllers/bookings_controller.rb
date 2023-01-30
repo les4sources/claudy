@@ -24,13 +24,15 @@ class BookingsController < BaseController
                   notice: "Merci, la réservation a été enregistrée."
     else
       @booking = service.booking
-      set_error_flash(service.booking, service.error_message)
-      render :new
+      render :new, alert: service.error_message
     end
   end
 
   def edit
     @booking = Booking.find_by!(id: params[:id])
+    @booking.room_ids = @booking.reservations.map { |r| r.room_id }
+    @booking.booking_type = @booking.lodging_id.nil? ? "rooms" : "lodging"
+    @lodgings = Lodging.all
   end
 
   def update

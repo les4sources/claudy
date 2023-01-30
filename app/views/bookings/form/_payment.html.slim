@@ -50,7 +50,7 @@
           .tier-pricing-button.bg-indigo-50.text-indigo-700.hover:bg-indigo-100.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(data-booking-target="tierButton")
             | Sélectionner
 
-      .hidden
+      .hiddenn
         = f.text_field :tier,
                        label: "Tarif",
                        disabled: true,
@@ -75,10 +75,6 @@
         | Montant de votre réservation
       dd.order-1.text-2xl.font-bold.text-indigo-600.sm:text-3xl.sm:tracking-tight(data-booking-target="pricePreview")
         | ?
-
-    .hidden
-      = f.text_field :shown_price_cents,
-                     data: { "booking-target": "shownPriceInput" }
 
     .my-6
       = f.label :payment_method,

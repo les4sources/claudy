@@ -3,13 +3,25 @@
     - flash.each do |name, msg|
       - if msg.class == Array
         - msg.compact.each do |message|
-          div(class="#{name.to_s == "notice" ? "success" : name.to_s == "info" ? "info" : "alert"} callout")
+          - case name.to_s
+          - when "notice"
+            - classes = "text-blue-800 bg-blue-50 dark:bg-gray-800 dark:text-blue-400"
+          - when "info"
+            - classes = "text-yellow-800 bg-yellow-50 dark:bg-gray-800 dark:text-yellow-300"
+          - else
+            - classes = "text-red-800 bg-red-50 dark:bg-gray-800 dark:text-red-400"
+          div(class="p-4 mb-4 text-sm rounded-lg #{classes}" role="alert")
             = content_tag :div, id: "flash_#{name}" do
-              - if name.to_s == "notice"
-                i.fa.fa-fw.fa-check-circle
               == message
       - elsif !msg.nil?
-          div(class="#{name.to_s == "notice" ? "success" : name.to_s == "info" ? "info" : "alert"} callout")
+          - case name.to_s
+          - when "notice"
+            - classes = "text-blue-800 bg-blue-50 dark:bg-gray-800 dark:text-blue-400"
+          - when "info"
+            - classes = "text-yellow-800 bg-yellow-50 dark:bg-gray-800 dark:text-yellow-300"
+          - else
+            - classes = "text-red-800 bg-red-50 dark:bg-gray-800 dark:text-red-400"
+          div(class="p-4 mb-4 text-sm rounded-lg #{classes}" role="alert")
             = content_tag :div, id: "flash_#{name}" do
               - if name.to_s == "notice"
                 i.fa.fa-fw.fa-check-circle

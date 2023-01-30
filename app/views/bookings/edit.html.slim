@@ -2,11 +2,12 @@
   = render 'layouts/components/page_header',
            title: "Mettre à jour la réservation"
 
-= simple_form_for @booking,
-                  url: booking_path(@booking) do |f|
-  .grid-x.grid-padding-x
-    .cell.small-12.medium-8.large-6
-      = render "form", f: f
+= form_with model: @booking,
+            url: booking_path(@booking),
+            data: { controller: "booking" } do |f|
+  .space-y-8.divide-y.divide-gray-200.sm:space-y-5
+    .space-y-6.sm:space-y-5
+      = render "form", f: f, lodgings: @lodgings
 
-      = f.button :submit,
-                 "Mettre à jour"
+  = f.actions do
+    = f.submit "Mettre à jour"

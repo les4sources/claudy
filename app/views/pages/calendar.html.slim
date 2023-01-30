@@ -29,9 +29,8 @@
   - if @grouped_reservations[date]
     - @grouped_reservations[date].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations|
       - booking = grouped_reservations.last.first.booking
-      ol.mt-2
-        li
-          div = link_to booking.name, booking_path(booking)
-          div
-            - grouped_reservations.last.each do |reservation|
-              = room_badge(reservation.room)
+      div.mt-2
+        div = link_to booking.name, booking_path(booking)
+        div
+          - grouped_reservations.last.each do |reservation|
+            = room_badge(reservation.room)
