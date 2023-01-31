@@ -2,7 +2,7 @@
 @import 'tailwindcss/base';
 @import 'tailwindcss/components';
 
-.pagination {
+/*.pagination {
   @apply flex justify-center;
   @apply my-2 py-2;
 
@@ -15,7 +15,7 @@
     @apply font-semibold text-gray-200 bg-gray-700;
   }
 }
-
+*/
 @import 'tailwindcss/utilities';
 
 /* @import '../../components/flow/component.css'; */
