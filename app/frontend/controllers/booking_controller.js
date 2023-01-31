@@ -19,6 +19,7 @@ export default class extends Controller {
     'priceDiv',
     'pricePreview',
     'roomsTab',
+    'shownPriceInput',
     'tierButton',
     'tierCard',
     'tierPricing',
@@ -102,6 +103,7 @@ export default class extends Controller {
         console.log('All good, we can preview the price')
         const amount = this.calculateAmount(nights)
         if (amount >= 0) {
+          this.setInputValue(this.shownPriceInputTarget, amount)
           this.showPricePreview(amount)
         }
       }

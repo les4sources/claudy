@@ -50,10 +50,9 @@
           .tier-pricing-button.bg-indigo-50.text-indigo-700.hover:bg-indigo-100.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(data-booking-target="tierButton")
             | Sélectionner
 
-      .hiddenn
+      .hidden
         = f.text_field :tier,
                        label: "Tarif",
-                       disabled: true,
                        data: { "booking-target": "tierInput" }
       .mb-6
 
@@ -76,9 +75,31 @@
       dd.order-1.text-2xl.font-bold.text-indigo-600.sm:text-3xl.sm:tracking-tight(data-booking-target="pricePreview")
         | ?
 
+    .hidden
+      = f.text_field :shown_price_cents,
+                     data: { "booking-target": "shownPriceInput" }
+
+
+    .my-6
+      = f.number_field :price,
+                       label: "Montant convenu à payer",
+                       required: true,
+                       hint: "Ce montant peut être différent de celui affiché ci-dessus",
+                       class: "w-1/2 md:w-1/2 lg:w-1/4"
+
+    .my-6
+      = f.label :payment_status,
+                "Statut du paiement *"
+      = f.collection_select_field :payment_status,
+                                  [["En attente de paiement", "pending"], ["Payée partiellement", "partially_paid"], ["Payée", "paid"]],
+                                  :last, :first,
+                                  { prompt: true },
+                                  { required: true,   class: "md:w-2/3 lg:w-1/2" }
+
+
     .my-6
       = f.label :payment_method,
-                "Mon moyen de paiement *"
+                "Moyen de paiement *"
       = f.collection_select_field :payment_method,
                                   [["Je paierai en liquide", "cash"], ["Je fais un virement bancaire", "bank_transfer"]],
                                   :last, :first,

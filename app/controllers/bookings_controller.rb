@@ -1,6 +1,12 @@
 class BookingsController < BaseController
   def index
-    @bookings = BookingDecorator.decorate_collection(Booking.all)
+    @bookings = BookingDecorator
+      .decorate_collection(Booking.current_and_future)
+  end
+
+  def past
+    @bookings = BookingDecorator
+      .decorate_collection(Booking.past.paginate(page: params[:page], per_page: 40))
   end
 
   def show
@@ -12,7 +18,8 @@ class BookingsController < BaseController
     @booking = Booking.new(
       booking_type: "lodging",
       adults: 0,
-      children: 0
+      children: 0,
+      platform: "direct"
     )
     @lodgings = Lodging.all
   end

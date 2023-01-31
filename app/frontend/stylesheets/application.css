@@ -1,6 +1,21 @@
 /* Import Tailwind CSS */
 @import 'tailwindcss/base';
 @import 'tailwindcss/components';
+
+.pagination {
+  @apply flex justify-center;
+  @apply my-2 py-2;
+
+  * {
+    @apply px-3 py-2 mx-2;
+    @apply text-gray-700 no-underline bg-white rounded-lg;
+  }
+
+  a:hover {
+    @apply font-semibold text-gray-200 bg-gray-700;
+  }
+}
+
 @import 'tailwindcss/utilities';
 
 /* @import '../../components/flow/component.css'; */

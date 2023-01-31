@@ -1,6 +1,10 @@
 class BookingDecorator < ApplicationDecorator
   delegate_all
 
+  def self.collection_decorator_class
+    PaginatingDecorator
+  end
+
   def children
     (object.children || 0) > 0 ? object.children : "aucun"
   end

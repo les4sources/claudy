@@ -5,7 +5,9 @@ Rails.application.routes.draw do
     mount Lookbook::Engine, at: "/lookbook"
   end
 
-  resources :bookings
+  resources :bookings do
+    get "past", on: :collection
+  end
   resources :event_categories
   resources :events
   resources :lodgings

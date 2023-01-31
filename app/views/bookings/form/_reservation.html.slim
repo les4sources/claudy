@@ -3,6 +3,24 @@
     = section_heading_tw heading: "Ma réservation"
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
+    div
+      = f.label :status,
+                "Statut de la réservation *"
+      = f.collection_select_field :status,
+                                  [["En attente de confirmation", "pending"], ["Confirmée", "confirmed"], ["Annulée", "canceled"]],
+                                  :last, :first,
+                                  { prompt: true },
+                                  { required: true, class: "md:w-2/3 lg:w-1/2" }
+
+    div
+      = f.label :status,
+                "Plateforme de réservation *"
+      = f.collection_select_field :platform,
+                                  [["Réservation en direct", "direct"], ["Airbnb", "airbnb"]],
+                                  :last, :first,
+                                  { prompt: true },
+                                  { required: true, class: "md:w-2/3 lg:w-1/2" }
+
     .space-y-6.md:space-y-0.md:flex.md:space-x-6
       = f.date_field :from_date,
                      html5: true,

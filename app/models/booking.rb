@@ -5,7 +5,8 @@ class Booking < ApplicationRecord
 
   monetize :price_cents, allow_nil: true
 
-  default_scope -> { order(from_date: :desc) }
+  scope :current_and_future, -> { where("from_date >= ?", Date.today).order(from_date: :asc) }
+  scope :past, -> { where("to_date < ?", Date.today).order(from_date: :desc) }
 
   attr_accessor :invoice_wanted
   attr_accessor :room_ids
@@ -36,6 +37,10 @@ class Booking < ApplicationRecord
 
   def confirmed?
     status == "confirmed"
+  end
+
+  def from_airbnb?
+    platform == "airbnb"
   end
 
   def generate_token

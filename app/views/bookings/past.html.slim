@@ -1,9 +1,8 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
-           title: "Réservations",
+           title: "Réservations passées",
            links: [ \
-             link_to("Réservations passées", past_bookings_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"),
-             link_to(button_label_with_icon("Nouvelle réservation", "add_circle"), new_booking_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
+             link_to("Réservations à venir", bookings_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
            ]
 
 .overflow-x-auto.relative
@@ -16,8 +15,6 @@
           |  Du 
         th.py-3.px-6[scope="col"]
           |  Au 
-        th.py-3.px-6[scope="col"]
-          |  Draps/Essuies 
         th.py-3.px-6[scope="col"]
           |  Statut 
         th.py-3.px-6[scope="col"]
@@ -35,11 +32,8 @@
           td.py-4.px-6
             = booking.to_date
           td.py-4.px-6
-            - if booking.bedsheets?
-              = booking.label_bedsheets
-            - if booking.towels?
-              = booking.label_towels
-          td.py-4.px-6
             = booking.status
           td.py-4.px-6
             = booking.payment_status
+
+= will_paginate @bookings

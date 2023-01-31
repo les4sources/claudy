@@ -19,6 +19,7 @@ module Bookings
 
     def run!(params = {})
       @booking.attributes = booking_params(params)
+      byebug
       @booking.generate_token
       return false if !@booking.valid?
       case @booking.booking_type
@@ -45,37 +46,39 @@ module Bookings
       params
         .require(:booking)
         .permit(
-          :firstname,
-          :lastname,
-          :phone,
-          :email,
-          :booking_type,
-          :estimated_arrival,
-          :from_date,
-          :to_date,
-          :status,
           :adults,
-          :children,
-          :price,
-          :payment_status,
-          :payment_method,
-          :invoice_wanted,
           :bedsheets,
-          :towels,
-          :notes,
-          :tier,
-          :option_partyhall,
-          :option_bread,
-          :option_babysitting,
-          :option_discgolf,
+          :booking_type,
+          :children,
+          :email,
+          :estimated_arrival,
+          :firstname,
+          :from_date,
+          :invoice_wanted,
+          :lastname,
           :lodging_id,
+          :notes,
+          :option_babysitting,
+          :option_bread,
+          :option_discgolf,
+          :option_partyhall,
+          :payment_method,
+          :payment_status,
+          :platform,
+          :phone,
+          :price,
+          :shown_price_cents,
+          :status,
+          :tier,
+          :to_date,
+          :towels,
           room_ids: [],
         )
     end
 
     def build_reservations(rooms)
       rooms.each do |room|
-        (@booking.from_date..@booking.to_date).each do |date|
+        (@booking.from_date..(@booking.to_date - 1.day)).each do |date|
           @booking.reservations.build(
             room: room,
             date: date

@@ -61,6 +61,7 @@ gem "sentry-rails"
 gem "simple_calendar", "~> 2.4"
 gem "simple_form"
 gem "slim"
+gem "will_paginate", "~> 3.3"
 # gem "tailwindcss-rails"
 
 # A native development UI for ViewComponent (https://github.com/ViewComponent/lookbook)
