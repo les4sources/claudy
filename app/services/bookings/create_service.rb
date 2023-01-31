@@ -89,7 +89,7 @@ module Bookings
 
     def check_availability(rooms)
       rooms.each do |room|
-        if room.reservations.where(date: (@booking.from_date)..(@booking.to_date)).any?
+        if room.reservations.where(date: (@booking.from_date)..(@booking.to_date - 1.day)).any?
           set_error_message("Cet hébergement n'est pas disponible à cette date.")
           return false
         end
