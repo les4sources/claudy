@@ -14,10 +14,10 @@ class Booking < ApplicationRecord
 
   validates_presence_of :firstname,
                         message: "Veuillez préciser votre prénom"
-  validates_presence_of :lastname,
-                        message: "Veuillez préciser votre nom"
-  validates_presence_of :email,
-                        message: "Veuillez préciser votre adresse email"
+  # validates_presence_of :lastname,
+  #                       message: "Veuillez préciser votre nom"
+  # validates_presence_of :email,
+  #                       message: "Veuillez préciser votre adresse email"
   validates_presence_of :from_date,
                         message: "Veuillez préciser votre date d'arrivée"
   validates_presence_of :to_date,
