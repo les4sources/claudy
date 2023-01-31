@@ -19,7 +19,6 @@ module Bookings
 
     def run!(params = {})
       @booking.attributes = booking_params(params)
-      byebug
       @booking.generate_token
       return false if !@booking.valid?
       case @booking.booking_type
