@@ -5,7 +5,7 @@ class Booking < ApplicationRecord
 
   monetize :price_cents, allow_nil: true
 
-  scope :current_and_future, -> { where("from_date >= ?", Date.today).order(from_date: :asc) }
+  scope :current_and_future, -> { where("to_date >= ?", Date.today).order(from_date: :asc) }
   scope :past, -> { where("to_date < ?", Date.today).order(from_date: :desc) }
 
   attr_accessor :invoice_wanted
