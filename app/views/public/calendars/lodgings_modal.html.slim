@@ -6,23 +6,36 @@
       vers vous avec la confirmation de disponibilité. Notez déjà que si le Grand-Duc
       est réservé, il n'y a aucune disponibilité dans la Maison Communautaire 🦉
 
-  .content
+  .grid.grid-cols-3.space-x-2.mb-4.items-center
+    - if Date.today.beginning_of_month != @date.beginning_of_month
+      .text-left = button_to_previous_month(@date, { "turbo-frame": "modal", "method": "get" })
+    - else
+      div
+    .text-2xl.font-bold.text-center = l(@date, format: :month_year).capitalize
+    .text-right
+      = button_to_next_month(@date, { "turbo-frame": "modal", "method": "get" })
+
   = SimpleCalendar::PublicLodgingsCalendar.new(self, { \
-      today: @date \
+      date: @date \
     }).render do |date|
     - if date >= Date.tomorrow
       ol.mt-2.space-y-2
+        - @available_rooms = false
         - @lodgings.each do |lodging|
           li
-            a.group.flex href="#"
             - if lodging.available_on?(date)
+              - @available_rooms = true
               .rounded-md.bg-green-100.px-2.py-1.text-xs.font-medium.text-green-800
                 div = lodging.name
                 .opacity-70 = lodging.summary
-            - else
+            / - else
               .rounded-md.bg-red-100.px-2.py-1.text-xs.font-medium.text-red-800
                 .line-through = lodging.name
                 .opacity-70 = lodging.summary
+        - if @available_rooms
+          li
+            .rounded-md.border.border-green-100.px-2.py-1.text-xs.font-medium.text-green-800
+              div Chambres disponibles
         / .lodging
           - if lodging.available_on?(date)
             .lodging--available #{lodging.name} ✔

@@ -25,9 +25,12 @@ class Public::CalendarsController < Public::BaseController
 
   def set_dates
     # get the date from params if there is one - for display AND to limit our query
-    @date = Date.tomorrow
-    @first = @date
-    @last = (@date + 1.month).end_of_month.end_of_week
+    @date = params[:date] ? Date.parse(params[:date]) : Date.tomorrow
+    if @date < Date.tomorrow
+      @date = Date.tomorrow
+    end
+    @first = @date.beginning_of_month.beginning_of_week.beginning_of_day
+    @last = @date.end_of_month.end_of_week.end_of_day
     # @dates = (@date.beginning_of_month..@date.end_of_month).map(&:to_date)
   end
 
