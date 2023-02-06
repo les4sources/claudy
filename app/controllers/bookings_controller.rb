@@ -1,4 +1,6 @@
 class BookingsController < BaseController
+  breadcrumb "Réservations", :bookings_path, match: :exact
+
   def index
     @bookings = BookingDecorator
       .decorate_collection(Booking.current_and_future)
@@ -12,6 +14,7 @@ class BookingsController < BaseController
   def show
     @booking = Booking.find_by!(id: params[:id]).decorate
     @reservations_by_date = @booking.reservations.decorate.to_a.group_by { |r| r.date }
+    breadcrumb "Réservation ##{@booking.id}", booking_path(@booking), match: :exact
   end
 
   def new

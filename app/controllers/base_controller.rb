@@ -3,6 +3,8 @@ class BaseController < ActionController::Base
 
   before_action :authenticate
 
+  breadcrumb "Calendrier", :root_path
+
   def authenticate
     authenticate_or_request_with_http_basic do |username, password|
       username == ENV.fetch('AUTH_USERNAME') && password == ENV.fetch('AUTH_PASSWORD')

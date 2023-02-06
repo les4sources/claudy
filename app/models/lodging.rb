@@ -4,7 +4,7 @@ class Lodging < ApplicationRecord
   has_many :bookings
 
   monetize :price_night_cents
-  monetize :price_weekend_cents
+  monetize :weekend_discount_cents
 
   def available_on?(date)
     # none of the lodging rooms has a confirmed reservation

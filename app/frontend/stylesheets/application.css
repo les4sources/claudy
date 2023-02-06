@@ -57,6 +57,22 @@
     @apply p-4 mb-4 text-sm text-green-700 bg-green-100 rounded-lg dark:bg-green-200 dark:text-green-800;
   }
 
+  #main-menu {
+    li {
+      a {
+        @apply block py-2 pl-3 pr-4 rounded md:p-0;
+
+        &.inactive {
+          @apply text-gray-700 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700;
+        }
+
+        &.active {
+          @apply text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700;
+        }
+      }
+    }
+  }
+
   .content {
     ul {
       @apply text-sm;

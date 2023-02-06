@@ -1,8 +1,8 @@
 module ApplicationHelper
   ActionView::Base.default_form_builder = FormBuilders::TailwindFormBuilder
 
-  def delete_link(resource)
-    link_to "Supprimer",
+  def delete_link(resource, text_label = "Supprimer")
+    link_to text_label,
             send("#{resource.class.name.underscore}_path", resource),
             data: { turbo_method: :delete, turbo_confirm: "Etes-vous sûr(e)?" },
             class: "btn-destroy"

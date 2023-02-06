@@ -27,9 +27,10 @@
         tr.bg-white.border-b.dark:bg-gray-800.dark:border-gray-700
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap.dark:text-white[scope="row"]
             strong
-              = link_to booking.name, booking_path(booking)
-              - if booking.from_airbnb?
-                = render "shared/airbnb_icon"
+              = link_to booking.name, 
+                        booking_path(booking)
+            - if booking.group_name.present?
+              .text-gray-500 = booking.group_name
           td.py-4.px-6
             = booking.from_date
           td.py-4.px-6

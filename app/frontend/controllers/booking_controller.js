@@ -1,11 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import moment from "moment"
 
-// TODO: for lodgings, 2 nights max (weekend), 1 night for weekdays
 // TODO: check availability
-// TODO: prepare form when page is loaded
-  // Toggle partyHallSection
-  // Toggle payment details
 
 export default class extends Controller {
   static targets = [
@@ -57,8 +53,9 @@ export default class extends Controller {
     const children = parseInt(this.childrenInputTarget.value) || 0
     try {
       if (this.bookingTypeFieldTarget.value == 'lodging') {
-        const nightPrice = this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0].dataset.bookingPriceNightParam
-        return nights * nightPrice
+        return this.calculateAmountForLodging(nights, this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0])
+        // const nightPrice = this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0].dataset.bookingPriceNightParam
+        // return nights * nightPrice
       } else {
         const tierPrice = document.querySelector('.selected-tier').dataset.bookingTierAmountParam
         return nights * tierPrice * (adults + children)
@@ -66,6 +63,26 @@ export default class extends Controller {
     } catch {
       return -1
     }
+  }
+
+  calculateAmountForLodging(nights, lodgingInput) {
+    const nightPrice = lodgingInput.dataset.bookingPriceNightParam
+    const weekendDiscount = lodgingInput.dataset.bookingWeekendDiscountParam
+    const fromDate = moment(this.fromDateInputTarget.value)
+    const toDate = moment(this.toDateInputTarget.value)
+    var days = []
+    for (var m = moment(fromDate); m.isBefore(toDate); m.add(1, 'days')) {
+      days.push(m.day())
+    }
+    // how many weekends? (for the discount)
+    days = days.filter(day => day == 5 || day == 6);
+    console.log('days', days)
+    var amount = nights * nightPrice
+    const weekendsCount = Math.floor(days.length / 2)
+    console.log('weekendsCount', weekendsCount)
+    console.log('weekendDiscount', weekendDiscount)
+    amount = amount - (weekendsCount * weekendDiscount)
+    return amount
   }
 
   // user checks one of the lodgings options

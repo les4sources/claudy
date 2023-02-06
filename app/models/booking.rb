@@ -22,10 +22,8 @@ class Booking < ApplicationRecord
                         message: "Veuillez préciser votre date d'arrivée"
   validates_presence_of :to_date,
                         message: "Veuillez préciser votre date de départ"
-  validates_presence_of :adults,
-                        message: "Veuillez préciser le nombre d'adultes"
-  validates_presence_of :children,
-                        message: "Veuillez préciser le nombre d'enfants"
+  validates :adults, 
+            numericality: { greater_than: 0, message: "Veuillez préciser le nombre d'adultes" }
   validates_presence_of :payment_method,
                         message: "Veuillez spécifier votre moyen de paiement"
 

@@ -3,7 +3,7 @@
            title: @booking.name,
            secondary: "Du #{@booking.from_date} au #{@booking.to_date}",
            links: [ \
-             delete_link(@booking.object),
+             delete_link(@booking.object, "Supprimer cette réservation"),
              link_to( \
                "Mettre à jour",
                edit_booking_path(@booking),

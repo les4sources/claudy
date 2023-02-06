@@ -1,4 +1,4 @@
-.border-l-8.border-indigo-500.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+.border-l-4.border-indigo-500.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
   .md:border-r-8.md:border-indigo-500.md:pr-4.md:text-right
     = section_heading_tw heading: "Ma réservation"
 
@@ -9,7 +9,11 @@
                      label: "Du *",
                      required: true,
                      error: "Veuillez renseigner une date",
-                     data: { "action": "public--booking#setPrice", "public--booking-target": "fromDateInput" }
+                     min: Date.tomorrow,
+                     data: { \
+                       "action": "public--booking#setFromDate public--booking#setPrice", 
+                       "public--booking-target": "fromDateInput" \
+                     }
       = f.date_field :to_date,
                      html5: true,
                      label: "Au *",

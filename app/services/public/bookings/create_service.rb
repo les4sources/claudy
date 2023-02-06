@@ -22,21 +22,12 @@ module Public
         @booking.attributes = booking_params(params)
         @booking.generate_token
         return false if !@booking.valid?
-        case @booking.booking_type
-        when "lodging"
-          rooms = @booking.lodging.rooms
-        when "rooms"
-          rooms = Room.where(id: @booking.room_ids.compact_blank)
-        else
-          set_error_message(
-            "Le type de réservation n'a pas pu être défini correctement.
-            Veuillez ré-essayer ou nous contacter par email: reservation@les4sources.be."
-          )
-        end
-        if check_availability(rooms)
+        rooms = get_rooms
+        if !rooms.nil? && available?(rooms) && any_people?
           set_payment_status
           set_price
           set_status
+          set_platform
           build_reservations(rooms)
           @booking.save!
         end
@@ -74,18 +65,7 @@ module Public
           )
       end
 
-      def build_reservations(rooms)
-        rooms.each do |room|
-          (@booking.from_date..@booking.to_date).each do |date|
-            @booking.reservations.build(
-              room: room,
-              date: date
-            )
-          end
-        end
-      end
-
-      def check_availability(rooms)
+      def available?(rooms)
         rooms.each do |room|
           if room.reservations.where(date: (@booking.from_date)..(@booking.to_date)).any?
             set_error_message("Cet hébergement n'est pas disponible à cette date. Pourriez-vous vérifier sur le calendrier?")
@@ -94,8 +74,42 @@ module Public
         end
       end
 
+      def build_reservations(rooms)
+        rooms.each do |room|
+          (@booking.from_date..(@booking.to_date - 1.day)).each do |date|
+            @booking.reservations.build(
+              room: room,
+              date: date
+            )
+          end
+        end
+      end
+
+      def get_rooms
+        case @booking.booking_type
+        when "lodging"
+          if @booking.lodging.nil?
+            set_error_message("Veuillez sélectionner un hébergement")
+            nil
+          else
+            @booking.lodging.rooms
+          end
+        when "rooms"
+          Room.where(id: @booking.room_ids.compact_blank)
+        else
+          set_error_message(
+            "Le type de réservation n'a pas pu être défini correctement."
+          )
+          nil
+        end
+      end
+
       def set_payment_status
         @booking.payment_status = "unpaid"
+      end
+
+      def set_platform
+        @booking.platform = "web"
       end
 
       def set_price

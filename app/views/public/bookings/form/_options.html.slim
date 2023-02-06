@@ -1,15 +1,24 @@
-.border-l-8.border-indigo-200.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+.border-l-4.border-indigo-200.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
   .md:border-r-8.md:border-indigo-200.md:pr-4.md:text-right
     = section_heading_tw heading: "Options"
 
-  .col-span-2.mb-4.space-y-6.sm:space-y-5
-    = f.check_input :option_bread,
-                    label: "Je suis intéressé d'avoir du pain à mon arrivée 🍞 (vendredi et samedi uniquement)",
-                    message: "Les boulangères des 4 Sources prendront contact avec vous"
+  .col-span-2.mb-4
+    .hidden.col-span-2.mb-6.space-y-6.sm:space-y-5(data-public--booking-target="partyHallSection")
+      .content
+        p #{link_to("Notre grande salle", "https://www.les4sources.be/nos-salles-et-espaces-exterieurs", onclick: "window.open(this.href); return false;")} est disponible en option uniquement pour les giteurs du Grand-Duc.
 
-    = f.check_input :option_babysitting,
-                    label: "Je suis intéressé par du babysitting 👼",
-                    message: "Les ados des 4 Sources prendront contact avec vous"
+      = f.check_input :option_partyhall,
+                      label: "Je suis intéressé d'également louer la salle des 4 Sources"
+
+    .mb-6
+      = f.check_input :option_bread,
+                      label: "Je suis intéressé d'avoir du pain à mon arrivée 🍞 (vendredi et samedi uniquement)",
+                      message: "Les boulangères des 4 Sources prendront contact avec vous"
+
+    .mb-6
+      = f.check_input :option_babysitting,
+                      label: "Je suis intéressé par du babysitting 👼",
+                      message: "Les ados des 4 Sources prendront contact avec vous"
 
     = f.check_input :option_discgolf,
                     label: "Je suis intéressé par une séance d'initiation au disc-golf 🥏",

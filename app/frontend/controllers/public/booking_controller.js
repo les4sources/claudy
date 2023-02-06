@@ -55,12 +55,16 @@ export default class extends Controller {
   calculateAmount(nights) {
     const adults = parseInt(this.adultsInputTarget.value) || 0
     const children = parseInt(this.childrenInputTarget.value) || 0
+    console.log('adults, children, bookingType', adults, children, this.bookingTypeFieldTarget.value)
     try {
       if (this.bookingTypeFieldTarget.value == 'lodging') {
-        const nightPrice = this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0].dataset.bookingPriceNightParam
-        return nights * nightPrice
+        // const nightPrice = this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0].dataset.bookingPriceNightParam
+        return this.calculateAmountForLodging(nights, this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0])
+        // console.log('nightPrice', nightPrice)
+        // return nights * nightPrice
       } else {
         const tierPrice = document.querySelector('.selected-tier').dataset.bookingTierAmountParam
+        console.log('tierPrice', tierPrice)
         return nights * tierPrice * (adults + children)
       }
     } catch {
@@ -68,9 +72,29 @@ export default class extends Controller {
     }
   }
 
+  calculateAmountForLodging(nights, lodgingInput) {
+    const nightPrice = lodgingInput.dataset.bookingPriceNightParam
+    const weekendDiscount = lodgingInput.dataset.bookingWeekendDiscountParam
+    const fromDate = moment(this.fromDateInputTarget.value)
+    const toDate = moment(this.toDateInputTarget.value)
+    var days = []
+    for (var m = moment(fromDate); m.isBefore(toDate); m.add(1, 'days')) {
+      days.push(m.day())
+    }
+    // how many weekends? (for the discount)
+    days = days.filter(day => day == 5 || day == 6);
+    console.log('days', days)
+    var amount = nights * nightPrice
+    const weekendsCount = Math.floor(days.length / 2)
+    console.log('weekendsCount', weekendsCount)
+    console.log('weekendDiscount', weekendDiscount)
+    amount = amount - (weekendsCount * weekendDiscount)
+    return amount
+  }
+
   // user checks one of the lodgings options
   selectLodging(e) {
-    this.togglePartyHallSection(e.params.partyHallAvailability)
+    this.togglePartyHallSection(e.target.dataset.bookingPartyHallAvailabilityParam)
     this.setPrice()
   }
 
@@ -78,6 +102,17 @@ export default class extends Controller {
   setBookingType(e) {
     this.setInputValue(this.bookingTypeFieldTarget, e.params.bookingType)
     this.toggleTierPricing()
+  }
+
+  setFromDate(e) {
+    const dayAfterFromDate = moment(this.fromDateInputTarget.value).add(1, 'day')
+    this.toDateInputTarget.setAttribute('min', dayAfterFromDate.format('YYYY-MM-DD'))
+    if (this.toDateInputTarget.value == "") {
+      this.toDateInputTarget.value = dayAfterFromDate.format('YYYY-MM-DD')
+    }
+    if (this.toDateInputTarget.value <= this.fromDateInputTarget.value) {
+      this.toDateInputTarget.value = ""
+    }
   }
 
   setInputValue(input, value) {
@@ -96,12 +131,13 @@ export default class extends Controller {
       this.showPriceCalculationNotice()
     } else {
       const nights = toDate.diff(fromDate, 'days')
+      console.log('toDate and fromDate', toDate, fromDate)
       if (nights < 1) {
         console.log('Oops, less than one night', nights)
         this.showPriceCalculationNotice()
       } else {
-        console.log('All good, we can preview the price')
         const amount = this.calculateAmount(nights)
+        console.log('All good, we can preview the price', amount, nights)
         if (amount >= 0) {
           this.setInputValue(this.shownPriceInputTarget, amount)
           this.showPricePreview(amount)
@@ -151,6 +187,7 @@ export default class extends Controller {
 
   // show price preview
   showPricePreview(amount) {
+    console.log('showPricePreview', amount)
     this.pricePreviewTarget.innerHTML = (amount / 100) + ' €'
     this.priceCalculationNoticeTarget.classList.add('hidden')
     this.priceDivTarget.classList.remove('hidden')

@@ -12,7 +12,7 @@ html(lang="fr")
     = csp_meta_tag
     = vite_client_tag
     = vite_javascript_tag "public", "data-turbo-track": "reload"
-  body.bg-gradient-to-tl.from-red-400.to-fuchsia-600
+  body
     = turbo_frame_tag "modal", target: "_top"
     .container.mx-auto.sm:px-6.lg:px-8
       .grid.justify-items-center
@@ -23,7 +23,7 @@ html(lang="fr")
           = render "layouts/public/components/messages"
           = yield
 
-    .relative
+    / .relative
       svg.editorial[xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewbox="0 24 150 28 " preserveaspectratio="none"]
         defs
           path#gentle-wave[d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z"]

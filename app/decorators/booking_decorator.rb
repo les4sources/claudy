@@ -32,7 +32,11 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def name
-    "#{object.firstname} #{object.lastname}"
+    if object.from_airbnb?
+      h.raw("#{object.firstname} #{object.lastname}" + h.render("shared/airbnb_icon"))
+    else
+      "#{object.firstname} #{object.lastname}"
+    end
   end
 
   def payment_method
@@ -41,6 +45,8 @@ class BookingDecorator < ApplicationDecorator
       "En liquide"
     when "bank_transfer"
       "Virement bancaire"
+    when "airbnb"
+      "Via AirBnb"
     end
   end
 

@@ -1,4 +1,4 @@
-.border-l-8.border-indigo-400.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+.border-l-4.border-indigo-400.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
   .md:border-r-8.md:border-indigo-400.md:pr-4.md:text-right
     = section_heading_tw heading: "Paiement de mon séjour"
 
@@ -72,7 +72,7 @@
 
     .hidden.flex.flex-col.align-center.mx-auto(data-public--booking-target="priceDiv")
       dt.order-2.text-base.font-medium.text-gray-500
-        | Montant de votre réservation
+        | Montant de ma réservation
       dd.order-1.text-2xl.font-bold.text-indigo-600.sm:text-3xl.sm:tracking-tight(data-public--booking-target="pricePreview")
         | ?
 
@@ -83,11 +83,21 @@
     .my-6
       = f.label :payment_method,
                 "Mon moyen de paiement *"
-      = f.collection_select_field :payment_method,
+
+      .space-y-3.md:space-y-2
+        = f.collection_radio_buttons :payment_method, 
+                                     [["Je paierai en liquide", "cash"], ["Je fais un virement bancaire", "bank_transfer"]], 
+                                     :last, :first, 
+                                     required: true do |radio_button|
+          .flex.items-center
+            = radio_button.radio_button
+            = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
+      / = f.collection_select_field :payment_method,
                                   [["Je paierai en liquide", "cash"], ["Je fais un virement bancaire", "bank_transfer"]],
                                   :last, :first,
                                   { prompt: true },
-                                  { required: true,   class: "md:w-2/3 lg:w-1/2" }
+                                  { required: true,   class: "md:w-3/4 lg:w-2/3" }
 
     = f.check_input :invoice_wanted,
                     label: "J'ai besoin d'une facture 🧾",

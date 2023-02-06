@@ -16,7 +16,7 @@ class Public::BookingsController < Public::BaseController
                   notice: "Merci, votre demande de réservation est enregistrée. Vous allez recevoir un email de confirmation de notre part et nous vous recontactons très prochainement."
     else
       @booking = @service.booking
-      set_error_flash(@service.booking, @service.error_message)
+      set_error_flash(@service.booking, "<strong>Votre réservation n'a pas pu être enregistrée, merci de vérifier les éléments suivants:</strong><br>#{@service.error_message}")
       render :new, status: :unprocessable_entity
     end
   end
