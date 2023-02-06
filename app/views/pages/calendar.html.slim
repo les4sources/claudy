@@ -29,7 +29,7 @@
   - if @grouped_reservations[date]
     - @grouped_reservations[date].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations|
       - booking = grouped_reservations.last.first.booking
-      div.mt-2
+      div(class="mt-2 #{!booking.confirmed? ? "opacity-50" : ""}")
         div
           strong 
             = link_to booking.decorate.name.html_safe, booking_path(booking)

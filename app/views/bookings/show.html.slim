@@ -28,6 +28,8 @@
               | Nom
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @booking.name
+              - if @booking.group_name.present?
+                .text-gray-500 = @booking.group_name
           .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
               | Téléphone
@@ -87,11 +89,12 @@
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @booking.towels
 
-  div
-    .overflow-hidden.bg-white.shadow.sm:rounded-lg
-      .px-4.py-5.sm:px-6
+  .space-y-4
+    .overflow-hidden.shadow.sm:rounded-lg(class="#{@booking.payment_background}")
+      .flex.place-content-between.px-4.py-5.sm:px-6
         h3.text-lg.font-medium.leading-6.text-gray-900
           | Paiement
+        div = @booking.payment_status
         / p.mt-1.max-w-2xl.text-sm.text-gray-500
           | Nom et coordonnées de la personne qui a réservé
       .border-t.border-gray-200
@@ -103,14 +106,16 @@
               = @booking.price
           .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
-              | Statut du paiement
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @booking.payment_status
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
               | Moyen de paiement
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @booking.payment_method
 
-    = info_header("Notes")
-    = simple_format @booking.notes
+    - if @booking.notes.presence
+      .overflow-hidden.bg-yellow-100.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Notes
+          p.mt-1.max-w-2xl.text-sm.text-gray-500
+            | Informations à usage interne
+        .border-t.border-gray-200
+          = simple_format @booking.notes

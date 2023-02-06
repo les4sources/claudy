@@ -39,6 +39,17 @@ class BookingDecorator < ApplicationDecorator
     end
   end
 
+  def payment_background
+    case object.payment_status
+    when "pending"
+      "bg-red-100"
+    when "partially_paid"
+      "bg-yellow-100"
+    when "paid"
+      "bg-green-100"
+    end
+  end
+
   def payment_method
     case object.payment_method
     when "cash"
@@ -53,14 +64,14 @@ class BookingDecorator < ApplicationDecorator
   def payment_status
     shared_classes = "text-sm font-medium mr-2 px-2.5 py-0.5 rounded"
     case object.payment_status
-    when "unpaid"
-      h.content_tag(:span, "Non payée", class: "#{shared_classes} bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900")
+    when "pending"
+      h.content_tag(:span, "Non payée", class: "#{shared_classes} bg-red-200 text-red-800")
     when "partially_paid"
-      h.content_tag(:span, "Payée partiellement", class: "#{shared_classes} bg-yellow-100 text-yellow-800 dark:bg-yellow-200 dark:text-yellow-900")
+      h.content_tag(:span, "Payée partiellement", class: "#{shared_classes} bg-yellow-200 text-yellow-800")
     when "paid"
-      h.content_tag(:span, "Payée", class: "#{shared_classes} bg-green-100 text-green-800 dark:bg-green-200 dark:text-green-900")
+      h.content_tag(:span, "Payée", class: "#{shared_classes} bg-green-200 text-green-800")
     else
-      h.content_tag(:span, object.payment_status, class: "#{shared_classes} bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300")
+      h.content_tag(:span, object.payment_status, class: "#{shared_classes} bg-gray-100 text-gray-800")
     end
   end
 
