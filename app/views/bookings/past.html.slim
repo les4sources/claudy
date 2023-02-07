@@ -9,16 +9,19 @@
   table.w-full.text-sm.text-left.text-gray-500.dark:text-gray-400
     thead.text-xs.text-gray-700.uppercase.bg-gray-50.dark:bg-gray-700.dark:text-gray-400
       tr
+        th.py-3.px-6.w-64[scope="col"]
+          | Nom 
         th.py-3.px-6[scope="col"]
-          |  Nom 
+          | Du 
         th.py-3.px-6[scope="col"]
-          |  Du 
+          | Au 
         th.py-3.px-6[scope="col"]
-          |  Au 
+          | Statut 
         th.py-3.px-6[scope="col"]
-          |  Statut 
+          | Paiement 
         th.py-3.px-6[scope="col"]
-          |  Paiement 
+          | ID
+
     tbody
       - @bookings.each do |booking|
         tr.bg-white.border-b.dark:bg-gray-800.dark:border-gray-700
@@ -36,5 +39,7 @@
             = booking.status
           td.py-4.px-6
             = booking.payment_status
+          td.py-4.px-6
+            code ##{booking.token}
 
 = will_paginate @bookings

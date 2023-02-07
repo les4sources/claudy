@@ -13,6 +13,10 @@ class BookingDecorator < ApplicationDecorator
     object.bedsheets? ? "OUI" : "non"
   end
 
+  def date_range
+    "du #{from_date} au #{to_date}"
+  end
+
   def email
     object.email.present? ? h.mail_to(object.email) : "-"
   end
@@ -97,6 +101,10 @@ class BookingDecorator < ApplicationDecorator
 
   def price
     h.humanized_money_with_symbol(object.price)
+  end
+
+  def public__name
+    "#{object.firstname} #{object.lastname}"
   end
 
   def rooms_badges(font_size: "xs")

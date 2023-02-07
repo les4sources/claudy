@@ -8,10 +8,10 @@ Rails.application.configure do
   config.content_security_policy do |policy|
     if Rails.env.development?
       # Allow @vite/client to hot reload javascript changes in development
-      # policy.script_src *policy.script_src, :unsafe_eval, "http://#{ ViteRuby.config.host_with_port }"
+      policy.script_src *policy.script_src, :unsafe_eval, "http://#{ ViteRuby.config.host_with_port }"
 
       # Allow @vite/client to hot reload style changes in development
-      # policy.style_src *policy.style_src, :unsafe_inline
+      policy.style_src *policy.style_src, :unsafe_inline
 
       policy.connect_src :self,
                          # Allow @vite/client to hot reload CSS changes

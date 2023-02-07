@@ -6,6 +6,9 @@ html(lang="fr")
     title Claudy
     = csrf_meta_tags
     = csp_meta_tag
+    link(rel="preconnect" href="https://fonts.googleapis.com")
+    link(rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin")
+    link(href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap" rel="stylesheet")
     = vite_client_tag
     = vite_javascript_tag "application", "data-turbo-track": "reload"
   body.bg-teal-50

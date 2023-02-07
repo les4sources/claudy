@@ -15,7 +15,7 @@ Rails.application.routes.draw do
 
   namespace :public do
     resources :bookings, only: [:new, :create]
-    get "reservation/:token", to: "bookings#show"
+    get "reservation/:token", to: "bookings#show", as: :booking
     get "calendrier-hebergements", to: "calendars#lodgings"
     get "calendar-lodgings-modal", to: "calendars#lodgings_modal"
   end
