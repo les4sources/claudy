@@ -24,8 +24,8 @@ class Booking < ApplicationRecord
                         message: "Veuillez préciser votre date de départ"
   validates :adults, 
             numericality: { greater_than: 0, message: "Veuillez préciser le nombre d'adultes" }
-  validates_presence_of :payment_method,
-                        message: "Veuillez spécifier votre moyen de paiement"
+  # validates_presence_of :payment_method,
+  #                       message: "Veuillez spécifier votre moyen de paiement"
 
   before_create :generate_token
 

@@ -46,14 +46,19 @@ class BookingsController < BaseController
   end
 
   def update
-    @booking = Booking.find_by!(id: params[:id])
+    service = Bookings::UpdateService.new(booking_id: params[:id])
     respond_to do |format|
-      if @booking.update(booking_params)
-        format.html { redirect_to @booking, notice: "La réservation a été mise à jour." }
-        format.json { render :show, status: :ok, location: @booking }
+      if service.run(params)
+        format.html { redirect_to service.booking, notice: "La réservation a été mise à jour." }
+        format.json { render :show, status: :ok, location: service.booking }
       else
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @booking.errors, status: :unprocessable_entity }
+        format.html { 
+          @booking = service.booking
+          render :edit, 
+                 status: :unprocessable_entity,
+                 alert: service.error_message
+        }
+        format.json { render json: service.error_message, status: :unprocessable_entity }
       end
     end
   end

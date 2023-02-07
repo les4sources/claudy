@@ -100,12 +100,12 @@
 
     .my-6
       = f.label :payment_method,
-                "Moyen de paiement *"
+                "Moyen de paiement"
       = f.collection_select_field :payment_method,
                                   [["En liquide", "cash"], ["Virement bancaire", "bank_transfer"], ["Via Airbnb", "airbnb"]],
                                   :last, :first,
                                   { prompt: true },
-                                  { required: true,   class: "md:w-2/3 lg:w-1/2" }
+                                  { class: "md:w-2/3 lg:w-1/2" }
 
     = f.check_input :invoice_wanted,
                     label: "J'ai besoin d'une facture 🧾",

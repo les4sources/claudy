@@ -1,17 +1,18 @@
 module Bookings
-  class CreateService < ServiceBase
+  class UpdateService < ServiceBase
     include Bookable
 
     attr_reader :booking
 
-    def initialize
-      @booking = Booking.new
+    def initialize(booking_id:)
       @report_errors = true
+      @booking = Booking.find_by!(id: booking_id)
     end
 
     def run(params = {})
       context = {
-        params: params
+        params: params,
+        booking: booking&.attributes
       }
 
       catch_error(context: context) do
@@ -21,8 +22,9 @@ module Bookings
 
     def run!(params = {})
       @booking.attributes = booking_params(params)
-      @booking.generate_token
       return false if !@booking.valid?
+      # delete previous reservations as we will re-create them
+      @booking.reservations.destroy_all
       rooms = get_rooms
       if !rooms.nil? && available?(rooms)
         build_reservations(rooms)
