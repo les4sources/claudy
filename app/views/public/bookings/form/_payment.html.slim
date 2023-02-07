@@ -1,6 +1,6 @@
 .border-l-4.border-indigo-400.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
   .md:border-r-8.md:border-indigo-400.md:pr-4.md:text-right
-    = section_heading_tw heading: "Paiement de mon séjour"
+    = section_heading_tw heading: "Paiement de votre séjour"
 
   .col-span-2.mb-4
     div(data-public--booking-target="tierPricing")
@@ -8,7 +8,7 @@
         p Nous proposons 3 tarifs pour les nuitées dans la Maison Communautaire. Quel est le tarif qui vous convient le mieux?
 
       .space-y-8
-        .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-public--booking-target="tierCard" data-action="click->public--booking#setTier" data-public--booking-tier-name-param="solidaire" data-public--booking-tier-amount-param="2500")
+        .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-public--booking-target="tierCard" data-action="click->public--booking#setTier" data-booking-tier-name-param="solidaire" data-booking-tier-amount-param="2500")
           .flex-1
             h3.text-xl.font-serif.text-gray-900
               | Solidaire
@@ -20,8 +20,8 @@
             p.mt-4.text-sm.text-gray-500
               | Tarif permettant à des structures et personnes disposant de moyens plus limités de pouvoir accéder à nos espaces pour séjourner ou organiser une activité chez nous.
           .tier-pricing-button.bg-indigo-50.text-indigo-700.hover:bg-indigo-100.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(data-public--booking-target="tierButton")
-            | Sélectionner
-        .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-public--booking-target="tierCard" data-action="click->public--booking#setTier" data-public--booking-tier-name-param="neutre" data-public--booking-tier-amount-param="3500")
+            | Sélectionner ce tarif
+        .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-public--booking-target="tierCard" data-action="click->public--booking#setTier" data-booking-tier-name-param="neutre" data-booking-tier-amount-param="3500")
           .flex-1
             h3.text-xl.font-serif.text-gray-900
               | Neutre
@@ -35,8 +35,8 @@
           / a.bg-indigo-500.text-white.hover:bg-indigo-600.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(href="#")
             | Sélectionner
           .tier-pricing-button.bg-indigo-50.text-indigo-700.hover:bg-indigo-100.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(data-public--booking-target="tierButton")
-            | Sélectionner
-        .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-public--booking-target="tierCard" data-action="click->public--booking#setTier" data-public--booking-tier-name-param="soutien" data-public--booking-tier-amount-param="4500")
+            | Sélectionner ce tarif
+        .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-public--booking-target="tierCard" data-action="click->public--booking#setTier" data-booking-tier-name-param="soutien" data-booking-tier-amount-param="4500")
           .flex-1
             h3.text-xl.font-serif.text-gray-900
               | Soutien
@@ -48,7 +48,7 @@
             p.mt-4.text-sm.text-gray-500
               | Tarif permettant d’apporter un soutien financier au déploiement du projet et au maintien d’une formule solidaire.
           .tier-pricing-button.bg-indigo-50.text-indigo-700.hover:bg-indigo-100.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(data-public--booking-target="tierButton")
-            | Sélectionner
+            | Sélectionner ce tarif
 
       .hidden
         = f.text_field :tier,
@@ -72,7 +72,7 @@
 
     .hidden.flex.flex-col.align-center.mx-auto(data-public--booking-target="priceDiv")
       dt.order-2.text-base.font-medium.text-gray-500
-        | Montant de ma réservation
+        | Montant de votre réservation
       dd.order-1.text-2xl.font-bold.text-indigo-600.sm:text-3xl.sm:tracking-tight(data-public--booking-target="pricePreview")
         | ?
 
@@ -82,11 +82,11 @@
 
     .my-6
       = f.label :payment_method,
-                "Mon moyen de paiement *"
+                "Votre moyen de paiement *"
 
       .space-y-3.md:space-y-2
         = f.collection_radio_buttons :payment_method, 
-                                     [["Je paierai en liquide", "cash"], ["Je fais un virement bancaire", "bank_transfer"]], 
+                                     [["En liquide", "cash"], ["Par virement bancaire (vous recevrez les informations pour le paiement par email)", "bank_transfer"]], 
                                      :last, :first, 
                                      required: true do |radio_button|
           .flex.items-center

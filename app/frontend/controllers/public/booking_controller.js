@@ -1,24 +1,23 @@
 import { Controller } from "@hotwired/stimulus"
 import moment from "moment"
 
-// TODO: for lodgings, 2 nights max (weekend), 1 night for weekdays
 // TODO: check availability
 // TODO: prepare form when page is loaded
-  // Toggle partyHallSection
   // Toggle payment details
 
 export default class extends Controller {
   static targets = [
     'adultsInput',
-    'bookingTypeField',
+    'bookingTypeOptions',
     'childrenInput',
     'fromDateInput',
+    'lodgingsPanel',
     'lodgingRadioButton',
     'partyHallSection',
     'priceCalculationNotice',
     'priceDiv',
     'pricePreview',
-    'roomsTab',
+    'roomsPanel',
     'shownPriceInput',
     'tierButton',
     'tierCard',
@@ -32,11 +31,12 @@ export default class extends Controller {
   }
 
   initialize() {
-    console.log('Controller: booking')
+    console.log('Controller: booking', this.getSelectedBookingType())
     // initialize form
-    if (this.bookingTypeFieldTarget.value == 'lodging') {
+    if (this.getSelectedBookingType() == 'lodging') {
+      this.showLodgingsPanel()
       // hide tier pricing
-      this.toggleTierPricing()
+      this.hideTierPricing()
       this.setPrice()
       // toggle 'party hall' section if Grand-Duc checked
       const selectedLodging = this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0]
@@ -44,9 +44,14 @@ export default class extends Controller {
         this.togglePartyHallSection(selectedLodging.dataset.bookingPartyHallAvailabilityParam)
       }
     } else {
-      this.roomsTabTarget.click()
-      if (this.tierInputTarget.value) {
+      this.showRoomsPanel()
+      this.showTierPricing()
+      // this.roomsTabTarget.click()
+      console.log('this.tierInputTarget.value', this.tierInputTarget.value)
+      if (this.tierInputTarget.value !== undefined && this.tierInputTarget.value != 'undefined') {
         this.setTier()
+      } else {
+        this.showPriceCalculationNotice()
       }
     }
   }
@@ -55,9 +60,9 @@ export default class extends Controller {
   calculateAmount(nights) {
     const adults = parseInt(this.adultsInputTarget.value) || 0
     const children = parseInt(this.childrenInputTarget.value) || 0
-    console.log('adults, children, bookingType', adults, children, this.bookingTypeFieldTarget.value)
+    console.log('adults, children, bookingType', adults, children, this.getSelectedBookingType())
     try {
-      if (this.bookingTypeFieldTarget.value == 'lodging') {
+      if (this.getSelectedBookingType() == 'lodging') {
         // const nightPrice = this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0].dataset.bookingPriceNightParam
         return this.calculateAmountForLodging(nights, this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0])
         // console.log('nightPrice', nightPrice)
@@ -92,16 +97,37 @@ export default class extends Controller {
     return amount
   }
 
+  getSelectedBookingType() {
+    return this.bookingTypeOptionsTargets.find(button => button.checked).value
+  }
+
+  // user clicks one of the booking options
+  selectBookingTypeOption(e) {
+    console.log('selectBookingTypeOption')
+    this.initialize()
+    // if (this.getSelectedBookingType() == "lodging") {
+    //   // hide tier pricing
+    //   this.toggleTierPricing()
+    //   this.setPrice()
+    //   // toggle 'party hall' section if Grand-Duc checked
+    //   const selectedLodging = this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0]
+    //   if (selectedLodging !== undefined) {
+    //     this.togglePartyHallSection(selectedLodging.dataset.bookingPartyHallAvailabilityParam)
+    //   }      
+    // } else {
+
+    // }
+    // const clickedRadio = (e.target == '') ? e : e.target
+    // this.bookingTypeOptionsTargets.forEach((el, i) => {
+    //   el.classList.toggle("bg-blue-200", clickedRadio == el )
+    // })
+    // this.bookingTypeFieldTarget.value = clickedRadio.dataset.bookingLodgingTypeParam
+  }
+
   // user checks one of the lodgings options
   selectLodging(e) {
     this.togglePartyHallSection(e.target.dataset.bookingPartyHallAvailabilityParam)
     this.setPrice()
-  }
-
-  // set booking type
-  setBookingType(e) {
-    this.setInputValue(this.bookingTypeFieldTarget, e.params.bookingType)
-    this.toggleTierPricing()
   }
 
   setFromDate(e) {
@@ -158,6 +184,7 @@ export default class extends Controller {
   }
 
   setTier(e) {
+    console.log('setTier()')
     const tierName = (e === undefined) ? this.tierInputTarget.value : e.params.tierName
     this.setInputValue(this.tierInputTarget, tierName)
     const selectedTierCard = (e === undefined) ? document.querySelector('[data-booking-tier-name-param="' + tierName + '"]') : e.currentTarget
@@ -179,6 +206,16 @@ export default class extends Controller {
     activeButton.innerHTML = 'Sélectionné'
   }
 
+  showLodgingsPanel() {
+    this.roomsPanelTarget.classList.add('hidden')
+    this.lodgingsPanelTarget.classList.remove('hidden')
+  }
+
+  showRoomsPanel() {
+    this.lodgingsPanelTarget.classList.add('hidden')
+    this.roomsPanelTarget.classList.remove('hidden')
+  }
+
   // show notice when price can't be calculated
   showPriceCalculationNotice() {
     this.priceCalculationNoticeTarget.classList.remove('hidden')
@@ -193,13 +230,12 @@ export default class extends Controller {
     this.priceDivTarget.classList.remove('hidden')
   }
 
-  // show tier pricing options only for rooms
-  toggleTierPricing() {
-    if (this.bookingTypeFieldTarget.value == 'lodging') {
-      this.tierPricingTarget.classList.add('hidden')
-    } else {
-      this.tierPricingTarget.classList.remove('hidden')
-    }
+  hideTierPricing() {
+    this.tierPricingTarget.classList.add('hidden')
+  }
+
+  showTierPricing() {
+    this.tierPricingTarget.classList.remove('hidden')
   }
 
   // show 'Party Hall' section only when available
