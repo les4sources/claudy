@@ -31,9 +31,25 @@ class BookingDecorator < ApplicationDecorator
     h.content_tag(:span, "essuies", class: "secondary label")
   end
 
+  def lodging_badge(font_size: "xs")
+    if !object.lodging.nil?
+      shared_classes = "text-#{font_size} font-semibold text-center py-0.5 px-1 rounded"
+      case object.lodging_id
+      when 1
+        h.content_tag(:span, "Chevêche", class: "#{shared_classes} bg-orange-100 text-orange-800")
+      when 2
+        h.content_tag(:span, "Hulotte", class: "#{shared_classes} bg-amber-100 text-amber-800")
+      when 3
+        h.content_tag(:span, "Grand-Duc", class: "#{shared_classes} bg-teal-100 text-teal-800")
+      end
+    end
+  end
+
   def name
     if object.from_airbnb?
       h.raw("#{object.firstname} #{object.lastname}" + h.render("shared/airbnb_icon"))
+    elsif object.from_web?
+      h.raw("#{object.firstname} #{object.lastname}" + h.render("shared/web_icon"))
     else
       "#{object.firstname} #{object.lastname}"
     end
@@ -83,6 +99,23 @@ class BookingDecorator < ApplicationDecorator
     h.humanized_money_with_symbol(object.price)
   end
 
+  def rooms_badges(font_size: "xs")
+    rooms = Room.where(id: object.reservations.map(&:room_id).uniq)
+    shared_classes = "text-#{font_size} font-semibold text-center py-0.5 px-1 rounded"
+    html = ""
+    rooms.each do |room|
+      case room.level
+      when 0
+        html << h.content_tag(:span, room.code, class: "#{shared_classes} bg-indigo-100 text-indigo-800 dark:bg-indigo-200 dark:text-indigo-900")
+      when 1
+        html << h.content_tag(:span, room.code, class: "#{shared_classes} bg-purple-100 text-purple-800 dark:bg-purple-200 dark:text-purple-900")
+      when 2
+        html << h.content_tag(:span, room.code, class: "#{shared_classes} bg-pink-100 text-pink-800 dark:bg-pink-200 dark:text-pink-900")
+      end
+    end
+    h.raw(html)
+  end
+
   def status
     shared_classes = "text-sm font-medium mr-2 px-2.5 py-0.5 rounded"
     case object.status
@@ -97,11 +130,32 @@ class BookingDecorator < ApplicationDecorator
     end
   end
 
+  def status_emoji
+    case object.status
+    when "canceled"
+      "❌"
+    when "confirmed"
+      "✅"
+    when "pending"
+      "⏳"
+    else
+      object.status
+    end
+  end
+
   def to_date
     l(object.to_date, format: :short)
   end
 
   def towels
     object.towels? ? "OUI" : "non"
+  end
+
+  def tr_class
+    if object.confirmed?
+      "bg-white"
+    else
+      "bg-yellow-50 opacity-75"
+    end
   end
 end

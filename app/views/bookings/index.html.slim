@@ -3,13 +3,15 @@
            title: "Réservations",
            links: [ \
              link_to("Réservations passées", past_bookings_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"),
-             link_to(button_label_with_icon("Nouvelle réservation", "add_circle"), new_booking_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
+             link_to("➕ Nouvelle réservation", new_booking_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
            ]
 
 .overflow-x-auto.relative
-  table.w-full.text-sm.text-left.text-gray-500.dark:text-gray-400
-    thead.text-xs.text-gray-700.uppercase.bg-gray-50.dark:bg-gray-700.dark:text-gray-400
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
       tr
+        th.py-3.px-3.w-2[scope="col"]
+          |  &nbsp;
         th.py-3.px-6[scope="col"]
           |  Nom 
         th.py-3.px-6[scope="col"]
@@ -17,15 +19,15 @@
         th.py-3.px-6[scope="col"]
           |  Au 
         th.py-3.px-6[scope="col"]
-          |  Draps/Essuies 
-        th.py-3.px-6[scope="col"]
-          |  Statut 
+          |  Hébergement
         th.py-3.px-6[scope="col"]
           |  Paiement 
     tbody
       - @bookings.each do |booking|
-        tr.bg-white.border-b.dark:bg-gray-800.dark:border-gray-700
-          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap.dark:text-white[scope="row"]
+        tr.border-b(class="#{booking.tr_class}")
+          td.py-4.px-6
+            = booking.status_emoji
+          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
             strong
               = link_to booking.name, 
                         booking_path(booking)
@@ -36,11 +38,9 @@
           td.py-4.px-6
             = booking.to_date
           td.py-4.px-6
-            - if booking.bedsheets?
-              = booking.label_bedsheets
-            - if booking.towels?
-              = booking.label_towels
-          td.py-4.px-6
-            = booking.status
+            - if !booking.lodging.nil?
+              = booking.lodging_badge(font_size: "sm")
+            - else
+              = booking.rooms_badges(font_size: "sm")
           td.py-4.px-6
             = booking.payment_status

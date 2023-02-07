@@ -41,6 +41,10 @@ class Booking < ApplicationRecord
     platform == "airbnb"
   end
 
+  def from_web?
+    platform == "web"
+  end
+
   def generate_token
     validity = Proc.new { |token| Booking.where(token: token).first.nil? }
     begin

@@ -28,7 +28,7 @@
 
   - if @grouped_reservations[date]
     - @grouped_reservations[date].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations|
-      - booking = grouped_reservations.last.first.booking
+      - booking = BookingDecorator.new(grouped_reservations.last.first.booking)
       div(class="mt-2 #{!booking.confirmed? ? "opacity-50" : ""}")
         div
           strong 
@@ -36,6 +36,9 @@
           - if booking.group_name.present?
             .text-gray-500.leading-none.mb-2 = booking.group_name
 
-        .grid.grid-cols-3.gap-1
-          - grouped_reservations.last.each do |reservation|
-            = room_badge(reservation.room)
+        - if !booking.lodging.nil?
+          = booking.lodging_badge
+        - else
+          .grid.grid-cols-3.gap-1
+            - grouped_reservations.last.each do |reservation|
+              = room_badge(reservation.room)

@@ -11,7 +11,8 @@
              ) \
            ]
 
-= render "bookings/status_callout", booking: @booking
+= render "bookings/status_callout", 
+         booking: @booking
 
 .grid.grid-cols-3.gap-4
   .col-span-2.space-y-4
@@ -49,6 +50,12 @@
           | Chambres 
       .border-t.border-gray-200
         dl
+          - if !@booking.lodging.nil?
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Hébergement de groupe
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0      
+                = @booking.lodging.name
           .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
               | Chambres et dates

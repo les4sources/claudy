@@ -1,7 +1,9 @@
 module Public
   module Bookings
     class CreateService < ServiceBase
-      attr_reader :booking, :reservation
+      include Bookable
+
+      attr_reader :booking
 
       def initialize
         @booking = Booking.new
@@ -19,15 +21,13 @@ module Public
       end
 
       def run!(params = {})
-        @booking.attributes = booking_params(params)
+        @booking.attributes = public_booking_params(params)
         @booking.generate_token
         return false if !@booking.valid?
         rooms = get_rooms
-        if !rooms.nil? && available?(rooms) && any_people?
-          set_payment_status
+        if ready_to_book?(rooms) 
+          initialize_public_booking
           set_price
-          set_status
-          set_platform
           build_reservations(rooms)
           @booking.save!
         end
@@ -37,88 +37,24 @@ module Public
 
       private
 
-      def booking_params(params)
-        params
-          .require(:booking)
-          .permit(
-            :firstname,
-            :lastname,
-            :phone,
-            :email,
-            :booking_type,
-            :from_date,
-            :to_date,
-            :adults,
-            :children,
-            :estimated_arrival,
-            :shown_price_cents,
-            :payment_method,
-            :invoice_wanted,
-            :comments,
-            :tier,
-            :option_partyhall,
-            :option_bread,
-            :option_babysitting,
-            :option_discgolf,
-            :lodging_id,
-            room_ids: []
-          )
+      def initialize_public_booking
+        @booking.payment_status = "pending"
+        @booking.platform = "web"
+        @booking.status = "pending"
       end
 
-      def available?(rooms)
-        rooms.each do |room|
-          if room.reservations.where(date: (@booking.from_date)..(@booking.to_date)).any?
-            set_error_message("Cet hébergement n'est pas disponible à cette date. Pourriez-vous vérifier sur le calendrier?")
-            return false
-          end
-        end
-      end
-
-      def build_reservations(rooms)
-        rooms.each do |room|
-          (@booking.from_date..(@booking.to_date - 1.day)).each do |date|
-            @booking.reservations.build(
-              room: room,
-              date: date
-            )
-          end
-        end
-      end
-
-      def get_rooms
+      def ready_to_book?(rooms)
         case @booking.booking_type
         when "lodging"
-          if @booking.lodging.nil?
-            set_error_message("Veuillez sélectionner un hébergement")
-            nil
-          else
-            @booking.lodging.rooms
-          end
+          !rooms.nil? && available?(rooms) && any_people?
         when "rooms"
-          Room.where(id: @booking.room_ids.compact_blank)
-        else
-          set_error_message(
-            "Le type de réservation n'a pas pu être défini correctement."
-          )
-          nil
+          any_people?
         end
-      end
-
-      def set_payment_status
-        @booking.payment_status = "unpaid"
-      end
-
-      def set_platform
-        @booking.platform = "web"
       end
 
       def set_price
-        # TODO call a service
-        @booking.price = 999
-      end
-
-      def set_status
-        @booking.status = "pending"
+        # TODO call a service that calculates prices
+        @booking.price_cents = @booking.shown_price_cents
       end
     end
   end

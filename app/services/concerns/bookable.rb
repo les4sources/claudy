@@ -3,6 +3,10 @@ module Bookable
 
   private
 
+  def any_people?
+    @booking.adults > 0
+  end
+
   def available?(rooms)
     rooms.each do |room|
       if room.reservations.where(date: (@booking.from_date)..(@booking.to_date - 1.day)).any?
@@ -28,7 +32,7 @@ module Bookable
     when "lodging"
       @booking.lodging.rooms
     when "rooms"
-      Room.where(id: @booking.room_ids.compact_blank)
+      Room.where(id: @booking.room_ids&.compact_blank)
     else
       set_error_message(
         "Le type de réservation n'a pas pu être défini correctement."
@@ -69,6 +73,34 @@ module Bookable
         :to_date,
         :towels,
         room_ids: [],
+      )
+  end
+
+  def public_booking_params(params)
+    params
+      .require(:booking)
+      .permit(
+        :adults,
+        :booking_type,
+        :children,
+        :comments,
+        :estimated_arrival,
+        :email,
+        :firstname,
+        :from_date,
+        :invoice_wanted,
+        :lastname,
+        :lodging_id,
+        :option_babysitting,
+        :option_bread,
+        :option_discgolf,
+        :option_partyhall,
+        :payment_method,
+        :phone,
+        :shown_price_cents,
+        :tier,
+        :to_date,
+        room_ids: []
       )
   end
 end
