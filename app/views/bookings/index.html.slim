@@ -27,7 +27,7 @@
     tbody
       - @bookings.each do |booking|
         tr.border-b(class="#{booking.tr_class}")
-          td.py-4.px-6
+          td.py-4.px-6(class="#{booking.tr_border_class}")
             = booking.status_emoji
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
             strong

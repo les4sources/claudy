@@ -29,7 +29,7 @@
   - if @grouped_reservations[date]
     - @grouped_reservations[date].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations|
       - booking = BookingDecorator.new(grouped_reservations.last.first.booking)
-      div(class="mt-2 p-2 rounded-md #{booking.calendar_class}")
+      div(class="mt-2 py-1 px-2 #{booking.calendar_class}")
         div
           strong 
             = link_to booking.decorate.name.html_safe, 

@@ -14,18 +14,26 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def calendar_class
-    div_classes = []
+    classes = ["shadow", "border-l-2", "bg-purple-50"]
     if !object.confirmed?
-      div_classes << ["opacity-50"] 
-    else
-      div_classes << ["border", "border-slate-500", "shadow-md"] 
+      classes << ["opacity-50"] 
     end
     if object.lodging.nil?
-      div_classes << ["bg-teal-200"]
+      classes << ["border-teal-500"]
     else
-      div_classes << ["bg-rose-200"]
+      classes << ["border-orange-500"]
     end
-    div_classes.join(" ")
+    classes.join(" ")
+  end
+
+  def tr_border_class
+    classes = ["border-l-8"]
+    if object.lodging.nil?
+      classes << ["border-teal-500"]
+    else
+      classes << ["border-orange-500"]
+    end
+    classes.join(" ")
   end
 
   def date_range
