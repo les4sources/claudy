@@ -7,18 +7,18 @@
       .content.mb-4
         p Nous proposons 3 tarifs pour les nuitées dans la Maison Communautaire. Quel est le tarif qui vous convient le mieux?
 
-      .space-y-8
-        .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-booking-target="tierCard" data-action="click->booking#setTier" data-booking-tier-name-param="solidaire" data-booking-tier-amount-param="2500")
+      .grid.grid-cols-3.space-x-4
+        .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-booking-target="tierCard" data-action="click->booking#setTier" data-booking-tier-name-param="soutien" data-booking-tier-amount-param="4500")
           .flex-1
             h3.text-xl.font-serif.text-gray-900
-              | Solidaire
+              | Soutien
             p.mt-4.text-gray-900
               span.text-4xl.tracking-tight
-                | 25€
+                | 45€
               span.ml-1.text-xl.font-semibold
                 | /nuit/personne
-            p.mt-4.text-sm.text-gray-500
-              | Tarif permettant à des structures et personnes disposant de moyens plus limités de pouvoir accéder à nos espaces pour séjourner ou organiser une activité chez nous.
+            / p.mt-4.text-sm.text-gray-500
+              | Tarif permettant d’apporter un soutien financier au déploiement du projet et au maintien d’une formule solidaire.
           .tier-pricing-button.bg-indigo-50.text-indigo-700.hover:bg-indigo-100.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(data-booking-target="tierButton")
             | Sélectionner
         .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-booking-target="tierCard" data-action="click->booking#setTier" data-booking-tier-name-param="neutre" data-booking-tier-amount-param="3500")
@@ -30,23 +30,23 @@
                 | 35€
               span.ml-1.text-xl.font-semibold
                 | /nuit/personne
-            p.mt-4.text-sm.text-gray-500
+            / p.mt-4.text-sm.text-gray-500
               | Tarif de « base » permettant de faire fonctionner le projet et la gestion du domaine, sans contribuer au développement.
           / a.bg-indigo-500.text-white.hover:bg-indigo-600.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(href="#")
             | Sélectionner
           .tier-pricing-button.bg-indigo-50.text-indigo-700.hover:bg-indigo-100.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(data-booking-target="tierButton")
             | Sélectionner
-        .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-booking-target="tierCard" data-action="click->booking#setTier" data-booking-tier-name-param="soutien" data-booking-tier-amount-param="4500")
+        .relative.flex.flex-col.rounded-md.border.border-gray-200.bg-white.p-4.shadow-sm.hover:bg-indigo-100.hover:cursor-pointer(data-booking-target="tierCard" data-action="click->booking#setTier" data-booking-tier-name-param="solidaire" data-booking-tier-amount-param="2500")
           .flex-1
             h3.text-xl.font-serif.text-gray-900
-              | Soutien
+              | Solidaire
             p.mt-4.text-gray-900
               span.text-4xl.tracking-tight
-                | 45€
+                | 25€
               span.ml-1.text-xl.font-semibold
                 | /nuit/personne
-            p.mt-4.text-sm.text-gray-500
-              | Tarif permettant d’apporter un soutien financier au déploiement du projet et au maintien d’une formule solidaire.
+            / p.mt-4.text-sm.text-gray-500
+              | Tarif permettant à des structures et personnes disposant de moyens plus limités de pouvoir accéder à nos espaces pour séjourner ou organiser une activité chez nous.
           .tier-pricing-button.bg-indigo-50.text-indigo-700.hover:bg-indigo-100.mt-8.block.w-full.py-2.px-6.border.border-transparent.rounded-md.text-center.font-medium(data-booking-target="tierButton")
             | Sélectionner
 
@@ -64,10 +64,10 @@
           .prose
             p
               | Merci de compléter les informations suivantes ci-dessus afin de pouvoir
-              |  vous calculer le montant de votre réservation.
+              |  calculer le montant de cette réservation.
             ul(role="list")
               li Dates d'arrivée et de départ 🗓
-              li Nombre de giteurs adultes 🧑 et enfants 🧒
+              li Nombre de giteurs
 
     .hidden.flex.flex-col.align-center.mx-auto(data-booking-target="priceDiv")
       dt.order-2.text-base.font-medium.text-gray-500
@@ -102,13 +102,13 @@
       = f.label :payment_method,
                 "Moyen de paiement"
       = f.collection_select_field :payment_method,
-                                  [["En liquide", "cash"], ["Virement bancaire", "bank_transfer"], ["Via Airbnb", "airbnb"]],
+                                  [["En liquide à l'arrivée", "cash"], ["Virement bancaire", "bank_transfer"], ["Via Airbnb", "airbnb"]],
                                   :last, :first,
                                   { prompt: true },
                                   { class: "md:w-2/3 lg:w-1/2" }
 
     = f.check_input :invoice_wanted,
-                    label: "J'ai besoin d'une facture 🧾",
-                    message: "Notre comptabilité vous fournira une facture si nécessaire"
+                    label: "Besoin d'une facture 🧾",
+                    message: "Notre comptabilité fournira une facture si nécessaire"
 
 hr

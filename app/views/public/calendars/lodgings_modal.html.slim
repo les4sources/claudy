@@ -1,7 +1,7 @@
 = render TurboModal::Component.new(title: "Calendrier des disponibilités") do
   .p-4.mb-4.text-sm.text-blue-700.bg-blue-100.rounded-lg.dark:bg-blue-200.dark:text-blue-800(role="alert")
     |
-      <span class="font-medium">Pour les disponibilités des chambres de la Maison Communautaire</span>,
+      <span class="font-medium">Pour les disponibilités des lits de la Maison Communautaire</span>,
       nous vous invitons à nous envoyer votre demande de réservation. Nous reviendrons
       vers vous avec la confirmation de disponibilité. Notez déjà que si le Grand-Duc
       est réservé, il n'y a aucune disponibilité dans la Maison Communautaire 🦉
@@ -37,7 +37,7 @@
             - if lodging.available_on?(date)
               - @available_rooms = true
               .rounded-md.bg-green-100.px-2.py-1.text-xs.font-medium.text-green-800
-                div = lodging.name
+                div ✔️ #{lodging.name}
                 .opacity-70 = lodging.summary
             / - else
               .rounded-md.bg-red-100.px-2.py-1.text-xs.font-medium.text-red-800
@@ -46,7 +46,7 @@
         - if @available_rooms
           li
             .rounded-md.border.border-green-100.px-2.py-1.text-xs.font-medium.text-green-800
-              div Chambres disponibles
+              div Lits disponibles dans la Maison Communautaire
         / .lodging
           - if lodging.available_on?(date)
             .lodging--available #{lodging.name} ✔

@@ -13,6 +13,21 @@ class BookingDecorator < ApplicationDecorator
     object.bedsheets? ? "OUI" : "non"
   end
 
+  def calendar_class
+    div_classes = []
+    if !object.confirmed?
+      div_classes << ["opacity-50"] 
+    else
+      div_classes << ["border", "border-slate-500", "shadow-md"] 
+    end
+    if object.lodging.nil?
+      div_classes << ["bg-teal-200"]
+    else
+      div_classes << ["bg-rose-200"]
+    end
+    div_classes.join(" ")
+  end
+
   def date_range
     "du #{from_date} au #{to_date}"
   end

@@ -15,7 +15,7 @@
   .mt-4.md:mt-0.pb-4.col-span-2.space-y-6.sm:space-y-5
     .-mt-4
     = f.collection_radio_buttons :booking_type, 
-                                 [["Un hébergement privatif pour un groupe", "lodging"], ["Une chambre ou un lit dans la Maison Communautaire", "rooms"]], 
+                                 [["Un hébergement type \"gîte\" pour un groupe", "lodging"], ["Un ou plusieurs lits dans la \"Maison communautaire\"", "rooms"]], 
                                  :last, :first, 
                                  required: true,
                                  data: {  } do |radio_button|
@@ -46,7 +46,10 @@
     .hidden.space-y-4.-mt-4(data-public--booking-target="roomsPanel")
       .space-y-6.sm:space-y-5
         .content.mt-4
-          p Consultez notre site web pour #{link_to("les informations concernant les chambres de la Maison Communautaire", "https://www.les4sources.be/notre-maison-communautaire", onclick: "window.open(this.href); return false;")}.
+          p Consultez notre site web pour #{link_to("les informations concernant les lits de la Maison Communautaire", "https://www.les4sources.be/notre-maison-communautaire", onclick: "window.open(this.href); return false;")}.
+
+        .content.mt-4
+          p Merci de consulter le <strong><a href="https://les4sources.notion.site/Principe-de-la-Maison-communautaire-302077f9ef6148f592a88ee0342d0474" target="_blank">document d'information sur la "Maison Communautaire"</a></strong> avant de réserver.
 
         .content.mt-4
           p

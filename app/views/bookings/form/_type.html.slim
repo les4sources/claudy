@@ -27,7 +27,7 @@
           .content
             p Consulte notre site web pour #{link_to("les informations concernant l'accueil de groupes", "https://www.les4sources.be/accueil-de-groupes", onclick: "window.open(this.href); return false;")}.
 
-          = f.label :lodging_id, "Hébergement sélectionné *"
+          / = f.label :lodging_id, "Hébergement sélectionné *"
           = f.collection_radio_buttons :lodging_id, Lodging.all, :id, :form_label, required: true do |radio_button|
             .flex.items-center
               = radio_button.radio_button( \
@@ -44,7 +44,7 @@
       .hidden.py-4.space-y-4.-mt-4(data-tabs-target="panel")
         .space-y-6.sm:space-y-5
           .content.mt-4
-            p Consulte notre site web pour #{link_to("les informations concernant les chambres de la Maison Communautaire", "https://www.les4sources.be/notre-maison-communautaire", onclick: "window.open(this.href); return false;")}.
+            p Consulte notre site web pour #{link_to("les informations concernant les lits de la Maison Communautaire", "https://www.les4sources.be/notre-maison-communautaire", onclick: "window.open(this.href); return false;")}.
 
           = f.collection_check_boxes(:room_ids, Room.all.order(:level), :id, :name_with_level) do |b|
             .relative.flex.items-start
