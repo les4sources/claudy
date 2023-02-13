@@ -39,7 +39,7 @@
             = booking.from_date
           td.py-4.px-6
             = booking.to_date
-          td.py-4.px-6
+          td.py-4.px-6.space-x-1
             - if !booking.lodging.nil?
               = booking.lodging_badge(font_size: "sm")
             - else
