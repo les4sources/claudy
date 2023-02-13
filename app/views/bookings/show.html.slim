@@ -119,14 +119,22 @@
         dl
           .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
-              | Prix à payer
+              | Montant à payer
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @booking.price
           .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
-              | Moyen de paiement
+              | Paiement
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @booking.payment_method
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Facture
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              - if @booking.invoice_status == "requested"
+                | 🧾 Demandée par le client
+              - else
+                | Non requise
 
     - if @booking.notes.presence
       .overflow-hidden.bg-yellow-100.shadow.sm:rounded-lg

@@ -39,6 +39,24 @@ module Bookable
       )
       nil
     end
+  rescue
+    set_error_message("Merci de vérifier si vous avez sélectionné un type d'hébergement.")
+  end
+
+  def set_invoice_status
+    if @booking.invoice_wanted == "1"
+      @booking.invoice_status = "requested"
+    end
+  end
+
+  def terms_approved?
+    if @booking.terms_approval != "1"
+      set_error_message(
+        "Merci d'accepter nos conditions générales de réservation. Il s'agit de la case à cocher au bas du formulaire."
+      )
+      return false
+    end
+    return true
   end
 
   def booking_params(params)
@@ -98,6 +116,7 @@ module Bookable
         :payment_method,
         :phone,
         :shown_price_cents,
+        :terms_approval,
         :tier,
         :to_date,
         room_ids: []

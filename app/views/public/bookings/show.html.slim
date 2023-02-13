@@ -99,6 +99,7 @@
           | Votre moyen de paiement
         dd.mt-1.text-sm.text-gray-900
           = @booking.payment_method
+
       - if @booking.attributes["payment_method"] == "bank_transfer"
         - if @booking.confirmed?
           .sm:col-span-2
@@ -120,6 +121,11 @@
               | Pour effectuer votre virement bancaire
             dd.mt-1.text-sm.text-gray-900
               | Les informations relatives au paiement seront disponibles lorsque votre réservation aura été confirmée par notre équipe.
+
+      - if @booking.invoice_status == "requested"
+        .text-sm.font-medium.text-gray-900.sm:col-span-2
+          | 🧾 Vous avez demandé de recevoir une facture
+
 
 .content.mt-8
   p.font-bold

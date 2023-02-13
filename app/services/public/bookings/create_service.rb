@@ -24,6 +24,7 @@ module Public
         @booking.attributes = public_booking_params(params)
         @booking.generate_token
         return false if !@booking.valid?
+        set_invoice_status
         rooms = get_rooms
         if ready_to_book?(rooms) 
           initialize_public_booking
@@ -46,9 +47,9 @@ module Public
       def ready_to_book?(rooms)
         case @booking.booking_type
         when "lodging"
-          !rooms.nil? && available?(rooms) && any_people?
+          !rooms.nil? && available?(rooms) && any_people? && terms_approved?
         when "rooms"
-          any_people?
+          any_people? && terms_approved?
         end
       end
 

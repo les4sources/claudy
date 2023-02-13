@@ -42,16 +42,17 @@
 
       / Rooms
       .hidden.py-4.space-y-4.-mt-4(data-tabs-target="panel")
-        .space-y-6.sm:space-y-5
+        .space-y-6.sm:space-y-4
           .content.mt-4
             p Consulte notre site web pour #{link_to("les informations concernant les lits de la Maison Communautaire", "https://www.les4sources.be/notre-maison-communautaire", onclick: "window.open(this.href); return false;")}.
 
-          = f.collection_check_boxes(:room_ids, Room.all.order(:level), :id, :name_with_level) do |b|
-            .relative.flex.items-start
-              .flex.h-5.items-center
-                = b.check_box(class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500")
-              .ml-3.text-sm
-                = b.label(class: "font-medium text-gray-900")
+          .space-y-2
+            = f.collection_check_boxes(:room_ids, RoomDecorator.decorate_collection(Room.all.order(:level)), :id, :checkbox_label) do |b|
+              .relative.flex.items-start
+                .flex.h-5.items-center
+                  = b.check_box(class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500")
+                .ml-3.text-sm
+                  == b.label(class: "font-medium text-gray-900")
 
       .hidden
         = f.text_field :booking_type,

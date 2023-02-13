@@ -73,41 +73,6 @@ class BookingsController < BaseController
 
   private
 
-  def booking_params
-    params
-      .require(:booking)
-      .permit(
-        :adults,
-        :bedsheets,
-        :booking_type,
-        :children,
-        :email,
-        :estimated_arrival,
-        :firstname,
-        :from_date,
-        :group_name,
-        :invoice_wanted,
-        :lastname,
-        :lodging_id,
-        :notes,
-        :option_babysitting,
-        :option_bread,
-        :option_discgolf,
-        :option_partyhall,
-        :payment_method,
-        :payment_status,
-        :platform,
-        :phone,
-        :price,
-        :shown_price_cents,
-        :status,
-        :tier,
-        :to_date,
-        :towels,
-        room_ids: [],
-      )
-  end
-
   def set_presenters
     @menu_presenter = Components::MenuPresenter.new(
       active_primary: "bookings",

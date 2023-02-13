@@ -11,6 +11,7 @@ class Booking < ApplicationRecord
   attr_accessor :invoice_wanted
   attr_accessor :room_ids
   attr_accessor :booking_type # lodging || rooms
+  attr_accessor :terms_approval
 
   validates_presence_of :firstname,
                         message: "Veuillez préciser votre prénom"

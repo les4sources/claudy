@@ -23,6 +23,7 @@ module Bookings
       @booking.attributes = booking_params(params)
       @booking.generate_token
       return false if !@booking.valid?
+      set_invoice_status
       rooms = get_rooms
       if !rooms.nil? && available?(rooms)
         build_reservations(rooms)
