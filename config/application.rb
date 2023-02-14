@@ -35,7 +35,7 @@ module Claudy
 
     config.view_component.preview_paths << "#{Rails.root}/spec/components/previews"
 
-    # config.action_mailer.delivery_method = :postmark
-    # config.action_mailer.postmark_settings = { :api_token => Rails.application.credentials.postmark[:api_token] }
+    config.action_mailer.delivery_method = :postmark
+    config.action_mailer.postmark_settings = { :api_token => Rails.application.credentials.postmark[:api_token] }
   end
 end
