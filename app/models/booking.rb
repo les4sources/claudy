@@ -15,20 +15,24 @@ class Booking < ApplicationRecord
 
   validates_presence_of :firstname,
                         message: "Veuillez préciser votre prénom"
-  # validates_presence_of :lastname,
-  #                       message: "Veuillez préciser votre nom"
-  # validates_presence_of :email,
-  #                       message: "Veuillez préciser votre adresse email"
   validates_presence_of :from_date,
                         message: "Veuillez préciser votre date d'arrivée"
   validates_presence_of :to_date,
                         message: "Veuillez préciser votre date de départ"
+  validates :email,
+            email_format: { message: "L'adresse email fournie ne semble pas valide" },
+            allow_blank: true
   validates :adults, 
             numericality: { greater_than: 0, message: "Veuillez préciser le nombre d'adultes" }
+  # validates_presence_of :lastname,
+  #                       message: "Veuillez préciser votre nom"
+  # validates_presence_of :email,
+  #                       message: "Veuillez préciser votre adresse email"
   # validates_presence_of :payment_method,
   #                       message: "Veuillez spécifier votre moyen de paiement"
 
   before_create :generate_token
+  after_update :notify_customer_on_update
 
   def canceled?
     status == "canceled"
@@ -57,6 +61,16 @@ class Booking < ApplicationRecord
 
   def name
     "#{firstname} #{lastname}"
+  end
+
+  def notify_customer_on_update
+    if saved_change_to_status == ["pending", "confirmed"]
+      # if booking is confirmed
+      BookingMailer.booking_confirmed(self).deliver_now
+    elsif saved_change_to_status? && status == "canceled"
+      # if booking is canceled
+      BookingMailer.booking_canceled(self).deliver_now
+    end
   end
 
   def pending?

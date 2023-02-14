@@ -11,6 +11,10 @@ class ServiceBase
     @error.message = message
   end
 
+  def validation_errors_for(object)
+    object.errors.map(&:message).join(", ")
+  end
+
   private
 
   def catch_error(context: {})

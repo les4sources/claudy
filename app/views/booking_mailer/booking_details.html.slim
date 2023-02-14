@@ -1,0 +1,25 @@
+p Bonjour #{@booking.firstname},
+
+p 
+  |
+    Vous trouverez tous les détails de votre réservation à l'adresse suivante:
+  br
+  = link_to public_booking_url(@booking.token), public_booking_url(@booking.token)
+
+
+p
+  |
+    Répondez-nous si vous constatez une erreur ou une information manquante. Nous
+    modifierons la réservation pour que tout soit bien en ordre.
+
+p
+  |
+    N'hésitez pas à partager ce lien avec vos compagnons de voyage.
+
+p
+  |
+    À bientôt,
+
+p
+  |
+    Le pôle Accueil des 4 Sources

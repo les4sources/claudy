@@ -46,6 +46,21 @@ module Bookable
     set_error_message("Merci de vérifier si vous avez sélectionné un type d'hébergement.")
   end
 
+  def notify_customer_on_create
+    return if !@booking.email.present?
+    if @booking.from_web?
+      BookingMailer.booking_request(@booking).deliver_now
+    elsif @booking.from_airbnb?
+      # no notification
+    else
+      if @booking.confirmed?
+        BookingMailer.booking_confirmed(@booking).deliver_now
+      elsif @booking.pending?
+        BookingMailer.booking_pending(@booking).deliver_now
+      end
+    end
+  end
+
   def set_invoice_status
     if @booking.invoice_wanted == "1"
       @booking.invoice_status = "requested"

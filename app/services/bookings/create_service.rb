@@ -28,6 +28,7 @@ module Bookings
       if !rooms.nil? && available?(rooms)
         build_reservations(rooms)
         @booking.save!
+        notify_customer_on_create
       end
       raise error_message if !error.nil?
       true

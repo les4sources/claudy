@@ -34,7 +34,8 @@ class BookingsController < BaseController
                   notice: "Merci, la réservation a été enregistrée."
     else
       @booking = service.booking
-      render :new, alert: service.error_message
+      set_error_flash(service.booking, "<strong>Cette réservation n'a pas pu être enregistrée, merci de vérifier les éléments suivants:</strong><br>#{service.error_message}")
+      render :new, status: :unprocessable_entity
     end
   end
 

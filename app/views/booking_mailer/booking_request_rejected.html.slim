@@ -1,0 +1,25 @@
+p Bonjour #{@booking.firstname},
+
+p 
+  |
+    Votre demande de réservation aux 4 Sources n'a malheureusement pas pu être confirmée.
+    Cela signifie en général que nous avons confirmé une autre demande préalable à la vôtre.
+
+p
+  |
+    Voici les détails de votre demande de réservation :
+  br
+  = link_to public_booking_url(@booking.token), public_booking_url(@booking.token)
+
+p
+  |
+    Une autre date vous conviendrait? N'hésitez pas à 
+    <a href="#{new_public_booking_url}">réintroduire une demande de réservation</a>.
+
+p
+  |
+    À la prochaine,
+
+p
+  |
+    Le pôle Accueil des 4 Sources

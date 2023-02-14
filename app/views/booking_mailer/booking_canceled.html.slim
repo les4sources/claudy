@@ -1,0 +1,25 @@
+p Bonjour #{@booking.firstname},
+
+p 
+  |
+    Votre réservation aux 4 Sources a été annulée. S'il s'agit d'une erreur de notre part,
+    n'hésitez pas à répondre à cet email.
+
+p
+  |
+    Les détails de votre réservation sont disponibles à l'adresse suivante:
+  br
+  = link_to public_booking_url(@booking.token), public_booking_url(@booking.token)
+
+p
+  |
+    Vous souhaitez réserver à un autre moment? N'hésitez pas à 
+    <a href="#{new_public_booking_url}">réintroduire une demande de réservation</a>.
+
+p
+  |
+    À la prochaine,
+
+p
+  |
+    Le pôle Accueil des 4 Sources
