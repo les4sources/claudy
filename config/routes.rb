@@ -5,6 +5,7 @@ Rails.application.routes.draw do
     mount Lookbook::Engine, at: "/lookbook"
   end
 
+  resources :booking_prices, only: [:create]
   resources :bookings do
     get "past", on: :collection
   end

@@ -5,7 +5,9 @@ class Public::BookingsController < Public::BaseController
     @booking = Booking.new(
       booking_type: "lodging",
       adults: 0,
-      children: 0
+      children: 0,
+      tier_lodgings: "neutre",
+      tier_rooms: "neutre"
     )
   end
 

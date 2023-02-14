@@ -105,7 +105,8 @@ module Bookable
         :price,
         :shown_price_cents,
         :status,
-        :tier,
+        :tier_lodgings,
+        :tier_rooms,
         :to_date,
         :towels,
         room_ids: [],
@@ -135,7 +136,8 @@ module Bookable
         :phone,
         :shown_price_cents,
         :terms_approval,
-        :tier,
+        :tier_lodgings,
+        :tier_rooms,
         :to_date,
         room_ids: []
       )

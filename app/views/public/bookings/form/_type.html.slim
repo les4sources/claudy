@@ -1,5 +1,5 @@
-.border-l-4.border-indigo-600.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
-  .md:border-r-8.md:border-indigo-600.md:pr-4.md:text-right
+.border-l-4.border-slate-400.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-4.md:border-slate-400.md:pr-4.md:text-right
     = section_heading_tw heading: "Type d'hébergement"
 
     = render Button::Component.new path: public_calendar_lodgings_modal_path,
@@ -12,44 +12,45 @@
                                      data: { turbo_frame: "modal" } \
                                    }
 
-  .mt-4.md:mt-0.pb-4.col-span-2.space-y-6.sm:space-y-5
+  .mt-4.md:mt-0.pb-4.col-span-2.space-y-4
     .-mt-4
-    = f.collection_radio_buttons :booking_type, 
-                                 [["Un hébergement type \"gîte\" pour un groupe", "lodging"], ["Un ou plusieurs lits dans la \"Maison communautaire\"", "rooms"]], 
-                                 :last, :first, 
-                                 required: true,
-                                 data: {  } do |radio_button|
-      .flex.items-center
-        = radio_button.radio_button(data: { action: "change->public--booking#selectBookingTypeOption", "public--booking-target": "bookingTypeOptions" })
-        = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+    .space-y-2
+      = f.collection_radio_buttons :booking_type, 
+                                   [["Un hébergement type \"gîte\" pour un groupe", "lodging"], ["Un ou plusieurs lits dans la \"Maison communautaire\"", "rooms"]], 
+                                   :last, :first, 
+                                   required: true,
+                                   data: {  } do |radio_button|
+        .flex.items-center
+          = radio_button.radio_button(data: { action: "change->public--booking#drawForm", "public--booking-target": "bookingTypeOptions" })
+          = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
     / Lodgings
-    .hidden(data-public--booking-target="lodgingsPanel")
-      .space-y-6.sm:space-y-5
+    .hidden(data-public--booking-target="divLodgings")
+      .space-y-2
         .content
-          p Consultez notre site web pour #{link_to("les informations concernant l'accueil de groupes", "https://www.les4sources.be/accueil-de-groupes", onclick: "window.open(this.href); return false;")}.
+          p.text-gray-600 
+            |
+              💁 Consultez notre site web pour #{link_to("les informations concernant l'accueil de groupes", "https://www.les4sources.be/accueil-de-groupes", onclick: "window.open(this.href); return false;")}.
 
         = f.label :lodging_id, "Sélectionnez un hébergement *"
         = f.collection_radio_buttons :lodging_id, Lodging.all, :id, :form_label, required: true do |radio_button|
           .flex.items-center
             = radio_button.radio_button( \
                 data: { \
-                  "action": "public--booking#selectLodging",
+                  "action": "public--booking#drawForm",
                   "public--booking-target": "lodgingRadioButton",
                   "booking-price-night-param": radio_button.object.price_night_cents,
-                  "booking-weekend-discount-param": radio_button.object.weekend_discount_cents,
                   "booking-party-hall-availability-param": radio_button.object.party_hall_availability \
                 })
             = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
     / Rooms
-    .hidden.space-y-4.-mt-4(data-public--booking-target="roomsPanel")
+    .hidden.space-y-4.-mt-4(data-public--booking-target="divRooms")
       .space-y-6.sm:space-y-5
         .content.mt-4
-          p Consultez notre site web pour #{link_to("les informations concernant les lits de la Maison Communautaire", "https://www.les4sources.be/notre-maison-communautaire", onclick: "window.open(this.href); return false;")}.
-
-        .content.mt-4
-          p Merci de consulter le <strong><a href="https://les4sources.notion.site/Principe-de-la-Maison-communautaire-302077f9ef6148f592a88ee0342d0474" target="_blank">document d'information sur la "Maison Communautaire"</a></strong> avant de réserver.
+          p 
+            |
+              Merci de consulter le <strong><a href="https://les4sources.notion.site/Principe-de-la-Maison-communautaire-302077f9ef6148f592a88ee0342d0474" target="_blank">document d'information sur la "Maison Communautaire"</a></strong> avant de réserver.
 
         .content.mt-4
           p
