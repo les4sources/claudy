@@ -24,6 +24,7 @@ module Bookings
       @booking.generate_token
       return false if !@booking.valid?
       set_invoice_status
+      set_tier
       rooms = get_rooms
       if !rooms.nil? && available?(rooms)
         build_reservations(rooms)

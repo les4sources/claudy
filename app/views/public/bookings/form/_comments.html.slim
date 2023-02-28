@@ -1,11 +1,16 @@
-.border-l-4.border-indigo-100.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
-  .md:border-r-8.md:border-indigo-100.md:pr-4.md:text-right
+.border-l-4.border-slate-400.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-4.md:border-slate-400.md:pr-4.md:text-right
     = section_heading_tw heading: "D'autres informations à partager concernant votre demande de réservation"
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
     = f.text_area :comments,
                   label: "Commentaires ou remarques éventuels à nous transmettre",
                   rows: 6
+
+    = f.text_field :estimated_arrival,
+                   label: "Heure d'arrivée estimée",
+                   hint: "Laissez vide si vous ne savez pas encore nous préciser votre heure d'arrivée",
+                   class: "w-1/2 md:w-1/2 lg:w-1/4"
 
     = f.check_input :terms_approval,
                     label: raw("J'accepte les <a href=\"https://les4sources.notion.site/Conditions-g-n-rales-des-r-servations-4e0bd692ad764f638646273d6f705f6d\" target=\"_blank\" class=\"link\">conditions générales des réservations aux 4 Sources</a>")

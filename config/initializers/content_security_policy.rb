@@ -18,6 +18,7 @@ Rails.application.configure do
                          "ws://#{ViteRuby.config.host}"
 
       policy.style_src :self,
+                       :https,
                        # Allow @vite/client to hot reload style changes
                        :unsafe_inline
 

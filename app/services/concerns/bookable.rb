@@ -67,6 +67,14 @@ module Bookable
     end
   end
 
+  def set_tier
+    if @booking.booking_type == "lodging"
+      @booking.tier = @booking.tier_lodgings
+    else
+      @booking.tier = @booking.tier_rooms
+    end
+  end
+
   def terms_approved?
     if @booking.terms_approval != "1"
       set_error_message(
@@ -105,7 +113,8 @@ module Bookable
         :price,
         :shown_price_cents,
         :status,
-        :tier,
+        :tier_lodgings,
+        :tier_rooms,
         :to_date,
         :towels,
         room_ids: [],
@@ -135,7 +144,8 @@ module Bookable
         :phone,
         :shown_price_cents,
         :terms_approval,
-        :tier,
+        :tier_lodgings,
+        :tier_rooms,
         :to_date,
         room_ids: []
       )

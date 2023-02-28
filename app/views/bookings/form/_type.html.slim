@@ -13,39 +13,34 @@
                                    }
 
   .mt-4.md:mt-0.col-span-2.space-y-6.sm:space-y-5
-    div(data-controller="tabs" data-tabs-active-tab="border-indigo-500 text-indigo-600 whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm" data-tabs-inactive-tab="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm")
-      .border-b.border-gray-200
-        nav.-mb-px.flex.space-x-2.md:space-x-8(aria-label="Type d'hébergement")
-          a.border-transparent.text-gray-500.hover:text-gray-700.hover:border-gray-300.whitespace-nowrap.pb-4.px-1.border-b-2.font-medium.text-sm(href="#" data-tabs-target="tab" data-action="click->tabs#change click->booking#setBookingType" data-booking-booking-type-param="lodging")
-            | Hébergement de groupe
-          a.border-transparent.text-gray-500.hover:text-gray-700.hover:border-gray-300.whitespace-nowrap.pb-4.px-1.border-b-2.font-medium.text-sm(href="#" data-tabs-target="tab" data-booking-target="roomsTab" data-action="click->tabs#change click->booking#setBookingType" data-booking-booking-type-param="rooms")
-            | Maison Communautaire
+    .space-y-2
+      = f.collection_radio_buttons :booking_type, 
+                                   [["Un hébergement type \"gîte\" pour un groupe", "lodging"], ["Un ou plusieurs lits dans la \"Maison communautaire\"", "rooms"]], 
+                                   :last, :first, 
+                                   required: true,
+                                   data: {  } do |radio_button|
+        .flex.items-center
+          = radio_button.radio_button(data: { action: "change->booking#drawForm", "booking-target": "bookingTypeOptions" })
+          = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
-      / Lodgings
-      .hidden.py-4(data-tabs-target="panel")
-        .space-y-6.sm:space-y-5
-          .content
-            p Consulte notre site web pour #{link_to("les informations concernant l'accueil de groupes", "https://www.les4sources.be/accueil-de-groupes", onclick: "window.open(this.href); return false;")}.
+    / Lodgings
+    .hidden(data-booking-target="divLodgings")
+      .space-y-2
+        = f.label :lodging_id, "Sélectionne un hébergement *"
+        = f.collection_radio_buttons :lodging_id, Lodging.all, :id, :form_label, required: true do |radio_button|
+          .flex.items-center
+            = radio_button.radio_button( \
+                data: { \
+                  "action": "booking#drawForm",
+                  "booking-target": "lodgingRadioButton",
+                  "booking-party-hall-availability-param": radio_button.object.party_hall_availability \
+                })
+            = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
-          / = f.label :lodging_id, "Hébergement sélectionné *"
-          = f.collection_radio_buttons :lodging_id, Lodging.all, :id, :form_label, required: true do |radio_button|
-            .flex.items-center
-              = radio_button.radio_button( \
-                  data: { \
-                    "action": "booking#selectLodging",
-                    "booking-target": "lodgingRadioButton",
-                    "booking-price-night-param": radio_button.object.price_night_cents,
-                    "booking-weekend-discount-param": radio_button.object.weekend_discount_cents,
-                    "booking-party-hall-availability-param": radio_button.object.party_hall_availability \
-                  })
-              = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
-
-      / Rooms
-      .hidden.py-4.space-y-4.-mt-4(data-tabs-target="panel")
+    / Rooms
+    .hidden.space-y-4.-mt-4(data-booking-target="divRooms")
+      .space-y-6.sm:space-y-5
         .space-y-6.sm:space-y-4
-          .content.mt-4
-            p Consulte notre site web pour #{link_to("les informations concernant les lits de la Maison Communautaire", "https://www.les4sources.be/notre-maison-communautaire", onclick: "window.open(this.href); return false;")}.
-
           .space-y-2
             = f.collection_check_boxes(:room_ids, RoomDecorator.decorate_collection(Room.all.order(:level)), :id, :checkbox_label) do |b|
               .relative.flex.items-start
@@ -53,9 +48,5 @@
                   = b.check_box(class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500")
                 .ml-3.text-sm
                   == b.label(class: "font-medium text-gray-900")
-
-      .hidden
-        = f.text_field :booking_type,
-                       data: { "booking-target": "bookingTypeField" }
 
 hr

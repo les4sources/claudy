@@ -1,5 +1,5 @@
-.border-l-4.border-indigo-500.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
-  .md:border-r-8.md:border-indigo-500.md:pr-4.md:text-right
+.border-l-4.border-slate-400.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-4.md:border-slate-400.md:pr-4.md:text-right
     = section_heading_tw heading: "Votre réservation"
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
@@ -11,7 +11,7 @@
                      error: "Veuillez renseigner une date",
                      min: Date.tomorrow,
                      data: { \
-                       "action": "public--booking#setFromDate public--booking#setPrice", 
+                       "action": "public--booking#setToDate public--booking#drawForm", 
                        "public--booking-target": "fromDateInput" \
                      }
       = f.date_field :to_date,
@@ -19,28 +19,31 @@
                      label: "Au *",
                      required: true,
                      error: "Veuillez renseigner une date",
-                     data: { "action": "public--booking#setPrice", "public--booking-target": "toDateInput" }
+                     data: { "action": "public--booking#drawForm", "public--booking-target": "toDateInput" }
 
     .flex.space-x-6
       = f.number_field :adults,
-                       label: "Nombre d'adultes 🧑 *",
+                       label: "Adultes 🧑 *",
                        min: 0,
                        required: true,
                        remove_default_class: "sm:text-sm",
                        class: "w-24 text-lg",
-                       data: { "action": "public--booking#setPrice", "public--booking-target": "adultsInput" }
+                       data: { "action": "public--booking#drawForm", "public--booking-target": "adultsInput" }
 
       = f.number_field :children,
-                       label: "Nombre d'enfants 🧒 *",
+                       label: "Enfants 🧒 *",
                        min: 0,
                        required: true,
                        remove_default_class: "sm:text-sm",
                        class: "w-24 text-lg",
-                       data: { "action": "public--booking#setPrice", "public--booking-target": "childrenInput" }
+                       data: { "action": "public--booking#drawForm", "public--booking-target": "childrenInput" }
 
-    = f.text_field :estimated_arrival,
-                   label: "Heure d'arrivée estimée",
-                   hint: "Laissez vide si vous ne savez pas encore nous préciser votre heure d'arrivée",
-                   class: "w-1/2 md:w-1/2 lg:w-1/4"
+      / = f.number_field :babies,
+                       label: "Bébés 👶 *",
+                       min: 0,
+                       required: true,
+                       remove_default_class: "sm:text-sm",
+                       class: "w-24 text-lg",
+                       data: { "action": "public--booking#drawForm", "public--booking-target": "childrenInput" }
 
 hr
