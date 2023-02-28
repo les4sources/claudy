@@ -27,6 +27,8 @@
               <% end %>
             </time>
 
+            <%= link_to "New note", new_note_path, data: { turbo_frame: "modal" } %>
+
             <% passed_block.call day, sorted_events.fetch(day, []) %>
           </div>
         <% end %>
