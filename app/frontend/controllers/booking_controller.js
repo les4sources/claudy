@@ -102,6 +102,11 @@ export default class extends Controller {
     return selectedLodging || null
   }
 
+  getSelectedLodgingValue() {
+    const selectedLodging = this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0]
+    return selectedLodging.value || null
+  }
+
   getSelectedTierLodgings() {
     if (this.tierLodgingsRadioButtonTargets.filter(radio => radio.checked).length) {
       return this.tierLodgingsRadioButtonTargets.filter(radio => radio.checked)[0].value
@@ -173,6 +178,7 @@ export default class extends Controller {
 
   async calculatePrice() {
     if (this.readyForPriceCalculation()) {
+      console.log('calculatePrice...')
       const request = new FetchRequest(
         'post', 
         '/booking_prices', 
@@ -180,7 +186,7 @@ export default class extends Controller {
           body: JSON.stringify({ 
           booking: {
             booking_type: (this.forLodging() ? "lodging" : "rooms"),
-            lodging_id: this.getSelectedLodging(),
+            lodging_id: this.getSelectedLodgingValue(),
             tier_lodgings: this.getSelectedTierLodgings(),
             tier_rooms: this.getSelectedTierRooms(),
             from_date: this.fromDateInputTarget.value,
