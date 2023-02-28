@@ -43,6 +43,7 @@ class BookingsController < BaseController
     @booking = Booking.find_by!(id: params[:id])
     @booking.room_ids = @booking.reservations.map { |r| r.room_id }
     @booking.booking_type = @booking.lodging_id.nil? ? "rooms" : "lodging"
+    @booking.tier_lodgings = @booking.tier_rooms = @booking.tier
     @lodgings = Lodging.all
   end
 

@@ -67,6 +67,14 @@ module Bookable
     end
   end
 
+  def set_tier
+    if @booking.booking_type == "lodging"
+      @booking.tier = @booking.tier_lodgings
+    else
+      @booking.tier = @booking.tier_rooms
+    end
+  end
+
   def terms_approved?
     if @booking.terms_approval != "1"
       set_error_message(

@@ -27,13 +27,13 @@
                      label: "Du *",
                      required: true,
                      error: "Veuillez renseigner une date",
-                     data: { "action": "booking#setPrice", "booking-target": "fromDateInput" }
+                     data: { "action": "booking#setToDate booking#drawForm", "booking-target": "fromDateInput" }
       = f.date_field :to_date,
                      html5: true,
                      label: "Au *",
                      required: true,
                      error: "Veuillez renseigner une date",
-                     data: { "action": "booking#setPrice", "booking-target": "toDateInput" }
+                     data: { "action": "booking#drawForm", "booking-target": "toDateInput" }
 
     .flex.space-x-6
       = f.number_field :adults,
@@ -42,7 +42,7 @@
                        required: true,
                        remove_default_class: "sm:text-sm",
                        class: "w-24 text-lg",
-                       data: { "action": "booking#setPrice", "booking-target": "adultsInput" }
+                       data: { "action": "booking#drawForm", "booking-target": "adultsInput" }
 
       = f.number_field :children,
                        label: "Nombre d'enfants 🧒 *",
@@ -50,7 +50,7 @@
                        required: true,
                        remove_default_class: "sm:text-sm",
                        class: "w-24 text-lg",
-                       data: { "action": "booking#setPrice", "booking-target": "childrenInput" }
+                       data: { "action": "booking#drawForm", "booking-target": "childrenInput" }
 
     = f.text_field :estimated_arrival,
                    label: "Heure d'arrivée estimée",

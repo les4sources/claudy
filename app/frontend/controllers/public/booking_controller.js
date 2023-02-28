@@ -2,9 +2,6 @@ import { Controller } from "@hotwired/stimulus"
 import { FetchRequest } from '@rails/request.js'
 import moment from "moment"
 
-// TODO: prepare form when page is loaded
-  // Toggle payment details
-
 export default class extends Controller {
   static targets = [
     'adultsInput',
@@ -86,7 +83,6 @@ export default class extends Controller {
     input.value = value
   }
 
-  // show price preview
   showPricePreview(amount) {
     console.log('showPricePreview', amount)
     this.pricePreviewTarget.innerHTML = (amount / 100) + ' €'
@@ -122,20 +118,6 @@ export default class extends Controller {
     this.togglePriceCalculationNotice()
     this.togglePriceSection()
     this.calculatePrice()
-
-    // if (this.getSelectedBookingType() == 'lodging') {
-    //   // hide tier pricing
-    //   this.hideTierPricing()
-    //   this.setPrice()
-    // } else {
-    //   this.showTierPricing()
-    //   console.log('this.tierInputTarget.value', this.tierInputTarget.value)
-    //   if (this.tierInputTarget.value !== undefined && this.tierInputTarget.value != 'undefined') {
-    //     this.setTier()
-    //   } else {
-    //     this.showPriceCalculationNotice()
-    //   }
-    // }
   }
 
   async calculatePrice() {
@@ -151,7 +133,7 @@ export default class extends Controller {
             tier_lodgings: this.tierLodgingsRadioButtonTargets.filter(radio => radio.checked)[0].value,
             tier_rooms: this.tierRoomsRadioButtonTargets.filter(radio => radio.checked)[0].value,
             from_date: this.fromDateInputTarget.value,
-            to_date: this.fromDateInputTarget.value,
+            to_date: this.toDateInputTarget.value,
             adults: parseInt(this.adultsInputTarget.value) || 0,
             children: parseInt(this.childrenInputTarget.value) || 0
           }
@@ -163,8 +145,6 @@ export default class extends Controller {
         const amount = JSON.parse(body).amount
         console.log('calculated price', amount)
         this.togglePrice(amount)
-        // Do whatever do you want with the response body
-        // You also are able to call `response.html` or `response.json`, be aware that if you call `response.json` and the response contentType isn't `application/json` there will be raised an error.
       }
     }
   }
@@ -185,11 +165,9 @@ export default class extends Controller {
     if (this.readyForPriceCalculation()) {
       this.priceCalculationNoticeTarget.classList.replace('block', 'hidden')
       console.log('readyForPriceCalculation')
-      // this.priceDivTarget.classList.replace('block', 'hidden')
     } else {
       this.priceCalculationNoticeTarget.classList.replace('hidden', 'block')
       console.log('!readyForPriceCalculation')
-      // this.priceDivTarget.classList.replace('block', 'hidden')
     }
   }
 
@@ -203,12 +181,10 @@ export default class extends Controller {
         this.tierPricingForLodgingsTarget.classList.replace('block', 'hidden')
         this.tierPricingForRoomsTarget.classList.replace('hidden', 'block')
       }
-      // this.priceDivTarget.classList.replace('block', 'hidden')
     } else {
       this.priceSectionTarget.classList.replace('block', 'hidden')
       this.tierPricingForLodgingsTarget.classList.replace('block', 'hidden')
       this.tierPricingForRoomsTarget.classList.replace('block', 'hidden')
-      // this.priceDivTarget.classList.replace('block', 'hidden')
     }
   }
 
@@ -221,29 +197,8 @@ export default class extends Controller {
   }
 
   forLodging() {
-    // console.log('forLodging()', this.getSelectedBookingType() == 'lodging')
     return this.getSelectedBookingType() == 'lodging'
   }
-
-  // togglePriceCalculationNotice() {
-  //   var showPriceCalculationNotice = false
-  //   if (this.getSelectedBookingType() == 'lodging') {
-  //     showPriceCalculationNotice = 
-  //       this.getSelectedLodging() && this.getFromDate() && this.getToDate() && this.getPeopleCount() > 0
-  //   } else {
-  //     showPriceCalculationNotice = 
-  //       this.getFromDate() && this.getToDate() && this.getPeopleCount() > 0
-  //   }
-  //   if (showPriceCalculationNotice) {
-  //     this.priceCalculationNoticeTarget.classList.replace('hidden', 'block')
-  //     this.priceDivTarget.classList.replace('block', 'hidden')
-  //     return true
-  //   } else {
-  //     this.priceCalculationNoticeTarget.classList.replace('block', 'hidden')
-  //     this.priceDivTarget.classList.replace('hidden', 'block')
-  //     return false
-  //   }
-  // }
 
   // show 'Party Hall' section only when available
   togglePartyHallOption() {

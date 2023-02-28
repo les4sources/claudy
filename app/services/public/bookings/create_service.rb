@@ -25,6 +25,7 @@ module Public
         @booking.generate_token
         return false if !@booking.valid?
         set_invoice_status
+        set_tier
         rooms = get_rooms
         if ready_to_book?(rooms) 
           initialize_public_booking

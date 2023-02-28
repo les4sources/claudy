@@ -3,6 +3,13 @@
     = section_heading_tw heading: "Options"
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
+    .hidden.col-span-2.mb-6.space-y-6.sm:space-y-5(data-booking-target="partyHallOption")
+      .content
+        p #{link_to("Notre grande salle", "https://www.les4sources.be/nos-salles-et-espaces-exterieurs", onclick: "window.open(this.href); return false;")} est disponible en option uniquement pour les giteurs du Grand-Duc et de la Hulotte.
+
+      = f.check_input :option_partyhall,
+                      label: "Intéressé d'également louer la salle des 4 Sources"
+
     = f.check_input :option_bread,
                     label: "Intéressé d'avoir du pain au levain cuit au feu de bois à son arrivée 🍞 (vendredi et samedi uniquement)"
 
