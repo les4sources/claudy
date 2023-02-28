@@ -180,7 +180,7 @@ export default class extends Controller {
           body: JSON.stringify({ 
           booking: {
             booking_type: (this.forLodging() ? "lodging" : "rooms"),
-            lodging_id: this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0].value,
+            lodging_id: this.getSelectedLodging(),
             tier_lodgings: this.getSelectedTierLodgings(),
             tier_rooms: this.getSelectedTierRooms(),
             from_date: this.fromDateInputTarget.value,

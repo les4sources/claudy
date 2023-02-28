@@ -67,6 +67,22 @@ export default class extends Controller {
     return selectedLodging || null
   }
 
+  getSelectedTierLodgings() {
+    if (this.tierLodgingsRadioButtonTargets.filter(radio => radio.checked).length) {
+      return this.tierLodgingsRadioButtonTargets.filter(radio => radio.checked)[0].value
+    } else {
+      return "neutre"
+    }
+  }
+
+  getSelectedTierRooms() {
+    if (this.tierRoomsRadioButtonTargets.filter(radio => radio.checked).length) {
+      return this.tierRoomsRadioButtonTargets.filter(radio => radio.checked)[0].value
+    } else {
+      return "neutre"
+    }
+  }
+  
   setToDate(e) {
     const dayAfterFromDate = this.getFromDate().add(1, 'day')
     this.toDateInputTarget.setAttribute('min', dayAfterFromDate.format('YYYY-MM-DD'))
@@ -129,9 +145,9 @@ export default class extends Controller {
           body: JSON.stringify({ 
           booking: {
             booking_type: (this.forLodging() ? "lodging" : "rooms"),
-            lodging_id: this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0].value,
-            tier_lodgings: this.tierLodgingsRadioButtonTargets.filter(radio => radio.checked)[0].value,
-            tier_rooms: this.tierRoomsRadioButtonTargets.filter(radio => radio.checked)[0].value,
+            lodging_id: this.getSelectedLodging(),
+            tier_lodgings: this.getSelectedTierLodgings(),
+            tier_rooms: this.getSelectedTierRooms(),
             from_date: this.fromDateInputTarget.value,
             to_date: this.toDateInputTarget.value,
             adults: parseInt(this.adultsInputTarget.value) || 0,
