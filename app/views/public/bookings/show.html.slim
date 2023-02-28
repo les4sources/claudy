@@ -1,7 +1,13 @@
 - content_for :meta_title, "Ma réservation aux 4 Sources"
+
 - content_for :page_header do
   = render 'layouts/public/components/page_header',
            title: "Votre séjour aux 4 Sources"
+
+- content_for :page_banner do
+  .text-sm.leading-6.text-white.text-center
+    | <strong class="font-semibold">Une question </strong>au sujet de votre réservation?
+    <a href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3" target="_blank" class="flex-none rounded-full bg-gray-900 ml-2 py-1 px-3.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900">Consultez la FAQ <span aria-hidden="true">&rarr;</span></a>
 
 = render "public/bookings/status_callout", 
          booking: @booking
@@ -93,14 +99,17 @@
         dt.text-sm.font-medium.text-gray-500
           | Montant de votre réservation 
         dd.mt-1.text-sm.text-gray-900
-          = @booking.price
+          - if @booking.price_cents == 0
+            | Offert
+          - else
+            = @booking.price
       .sm:col-span-1
         dt.text-sm.font-medium.text-gray-500
           | Votre moyen de paiement
         dd.mt-1.text-sm.text-gray-900
           = @booking.payment_method
 
-      - if @booking.attributes["payment_method"] == "bank_transfer"
+      - if @booking.attributes["payment_method"] == "bank_transfer" && @booking.price_cents > 0
         - if @booking.confirmed?
           .sm:col-span-2
             dt.text-sm.font-medium.text-gray-500
@@ -114,7 +123,7 @@
                 br
                 | BIC: TRIOBEBB
               .mt-2
-                | Communication: <em>Réservation #{@booking.token}</em>
+                | Communication: <em>Réservation hébergement #{@booking.token}</em>
         - elsif @booking.pending?
           .sm:col-span-2
             dt.text-sm.font-medium.text-gray-500
@@ -125,6 +134,8 @@
       - if @booking.invoice_status == "requested"
         .text-sm.font-medium.text-gray-900.sm:col-span-2
           | 🧾 Vous avez demandé de recevoir une facture
+
+
 
 
 .content.mt-8

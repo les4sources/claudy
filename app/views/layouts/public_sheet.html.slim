@@ -15,6 +15,10 @@ html(lang="fr")
   body
     = turbo_frame_tag "modal", target: "_top"
     
+    - if content_for?(:page_banner)
+      .text-center.gap-x-6.bg-indigo-600.py-2.5.px-6.sm:px-3.5.sm:before:flex-1
+        = yield :page_banner
+
     .container.mx-auto.sm:px-6.lg:px-8
       .grid.justify-items-center
         .p-4.pb-16.bg-white.md:p-8.md:pb-16.md:shadow-2xl.md:rounded-lg.md:m-8.lg:w-3/4

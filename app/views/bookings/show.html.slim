@@ -96,6 +96,39 @@
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @booking.towels
 
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Options
+        / p.mt-1.max-w-2xl.text-sm.text-gray-500
+          | Nom et coordonnées de la personne qui a réservé
+      .border-t.border-gray-200
+        dl
+          - if @booking.option_partyhall?
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Location de salle
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                | ✔️ Intéressé de louer la salle des 4 Sources
+          - if @booking.option_bread?
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Pain
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                | ✔️ Intéressé par la commande de pains
+          - if @booking.option_babysitting?
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Baby-sitting
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                | ✔️ Intéressé par un service de baby-sitting
+          - if @booking.option_discgolf?
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Disc-golf
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                | ✔️ Intéressé par une session d'initiation au disc-golf
+
   .space-y-4
     .overflow-hidden.shadow.sm:rounded-lg.bg-white
       .flex.place-content-between.px-4.py-5.sm:px-6
@@ -116,18 +149,18 @@
         / p.mt-1.max-w-2xl.text-sm.text-gray-500
           | Nom et coordonnées de la personne qui a réservé
       .border-t.border-gray-200
-        dl
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+        dl.my-2
+          .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
               | Montant à payer
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @booking.price
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+          .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
               | Paiement
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @booking.payment_method
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+          .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
               | Facture
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
@@ -143,5 +176,6 @@
             | Notes
           p.mt-1.max-w-2xl.text-sm.text-gray-500
             | Informations à usage interne
-        .border-t.border-gray-200
-          = simple_format @booking.notes
+        .border-t.border-gray-200.px-6.py-4
+          .content.space-y-4
+            = simple_format @booking.notes

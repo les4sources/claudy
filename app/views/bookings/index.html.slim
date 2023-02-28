@@ -23,6 +23,8 @@
         th.py-3.px-6[scope="col"]
           | Paiement 
         th.py-3.px-6[scope="col"]
+          | Options
+        th.py-3.px-6[scope="col"]
           | ID
     tbody
       - @bookings.each do |booking|
@@ -47,5 +49,7 @@
               = booking.rooms_badges(font_size: "sm")
           td.py-4.px-6
             = booking.payment_status
+          td.py-4.px-6
+            = booking.options_emojis
           td.py-4.px-6
             code ##{booking.token}

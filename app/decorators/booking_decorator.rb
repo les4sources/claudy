@@ -82,6 +82,23 @@ class BookingDecorator < ApplicationDecorator
     end
   end
 
+  def options_emojis
+    emojis = []
+    if object.option_partyhall?
+      emojis << "🥳"
+    end
+    if object.option_bread?
+      emojis << "🍞"
+    end
+    if object.option_babysitting?
+      emojis << "🍼"
+    end
+    if object.option_discgolf?
+      emojis << "🥏"
+    end
+    emojis.join(" ")
+  end
+
   def payment_background
     case object.payment_status
     when "pending"
