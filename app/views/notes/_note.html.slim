@@ -1,2 +1,2 @@
 .mt-2.p-2.text-xs.bg-yellow-200.font-semibold.rounded-sm.shadow-sm.border.border-yellow-300(id="#{dom_id note}")
-  = link_to note.body, edit_note_path(note), data: { turbo_frame: "modal" }
+  = link_to simple_format(note.body), edit_note_path(note), data: { turbo_frame: "modal" }
