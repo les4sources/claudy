@@ -12,6 +12,7 @@ Rails.application.routes.draw do
   resources :event_categories
   resources :events
   resources :lodgings
+  resources :notes
   resources :rooms
 
   namespace :public do

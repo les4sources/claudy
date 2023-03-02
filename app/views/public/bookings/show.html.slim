@@ -44,7 +44,8 @@
             div = @booking.lodging.name
             div = @booking.lodging.summary
           - else
-            table
+            | Maison Communautaire
+            / table
               tbody
                 - @reservations_by_date.each do |date, reservations|
                   tr

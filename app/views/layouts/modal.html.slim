@@ -1,0 +1,7 @@
+.container.mx-auto.px-4.sm:px-6.lg:px-8
+  .py-4
+    - if content_for?(:page_header)
+      = yield :page_header
+
+    = render "layouts/public/components/messages"
+    = yield
