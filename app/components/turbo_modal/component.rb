@@ -6,9 +6,19 @@ class TurboModal::Component < ViewComponent::Base
 
   include Turbo::FramesHelper
 
-  def initialize(title:)
+  def initialize(title:, width: :lg)
     super
     @title = title
+    @modal_classes = set_modal_classes(width)
+  end
+
+  def set_modal_classes(width)
+    case width
+    when :sm
+      "sm:w-full sm:max-w-sm"
+    when :lg
+      "sm:max-w-5xl sm:w-full"
+    end
   end
 
   def turbo_frame_request?

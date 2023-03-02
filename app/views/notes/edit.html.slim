@@ -5,5 +5,12 @@
         = render "form", f: f
 
     = f.actions do
+      = link_to "Supprimer cette note", 
+                note_path(@note), 
+                class: "text-xs font-semibold text-red-500",
+                data: { \
+                  turbo_method: :delete,
+                  action: "turbo-modal--component#closeDialog" \
+                }
       = f.submit "Enregistrer"
  

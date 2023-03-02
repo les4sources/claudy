@@ -7,7 +7,7 @@ module FormBuilders
     end
 
     def actions(&)
-      tag.div class: 'mt-10 flex justify-end space-x-4 text-right', &
+      tag.div class: 'mt-10 flex items-center place-content-between space-x-4 text-right', &
     end
 
     def submit(title)

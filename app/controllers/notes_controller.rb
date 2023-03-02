@@ -2,15 +2,17 @@ class NotesController < BaseController
   before_action :get_note, only: [:edit, :update, :destroy]
   before_action :ensure_frame_response, only: [:new, :edit]
 
+  layout "modal"
+
   def new
-    @note = Note.new
+    @note = Note.new(date: Date.parse(params[:date]))
   end
 
   def create
     @note = Note.new(note_params)
     respond_to do |format|
       if @note.save
-        format.turbo_stream { render turbo_stream: turbo_stream.prepend('notes', partial: 'notes/note', locals: { note: @note }) }
+        format.turbo_stream { render turbo_stream: turbo_stream.prepend("notes-#{@note.date}", partial: 'notes/note', locals: { note: @note }) }
         format.html { redirect_to note_url(@note), notice: "Note was successfully created." }
         format.json { render :show, status: :created, location: @note }
       else
@@ -39,6 +41,7 @@ class NotesController < BaseController
   def destroy
     @note.destroy
     respond_to do |format|
+      format.turbo_stream { render turbo_stream: turbo_stream.remove(@note) }
       format.html { redirect_to notes_url, notice: "Note was successfully destroyed." }
       format.json { head :no_content }
     end
@@ -56,7 +59,7 @@ class NotesController < BaseController
   end
 
   def note_params
-    params.require(:note).permit(:body)
+    params.require(:note).permit(:body, :date)
   end
 
   def set_presenters

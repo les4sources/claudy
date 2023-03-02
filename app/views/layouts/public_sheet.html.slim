@@ -13,7 +13,7 @@ html(lang="fr")
     = vite_client_tag
     = vite_javascript_tag "public", "data-turbo-track": "reload"
   body
-    = turbo_frame_tag "modal", target: "_top"
+    = turbo_frame_tag "modal"
     
     - if content_for?(:page_banner)
       .text-center.gap-x-6.bg-indigo-600.py-2.5.px-6.sm:px-3.5.sm:before:flex-1
