@@ -1,0 +1,21 @@
+- @grouped_reservations.each do |grouped_reservations|
+  p = l(grouped_reservations.first)
+
+  - grouped_reservations.last.sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |reservations|
+    - booking = BookingDecorator.new(reservations.last.first.booking)
+    div(class="flex mt-2 py-1 px-2 #{booking.calendar_class}")
+      .block
+        div
+          strong 
+            = link_to booking.decorate.name.html_safe, 
+                      booking_path(booking), 
+                      class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+          - if booking.group_name.present?
+            .text-gray-500.leading-none.mb-2 = booking.group_name
+
+        - if !booking.lodging.nil?
+          = booking.lodging_badge
+        - else
+          .grid.grid-cols-3.gap-1
+            - reservations.last.each do |reservation|
+              = room_badge(reservation.room)

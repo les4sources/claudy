@@ -16,7 +16,7 @@
       <div class="hidden w-full lg:grid lg:grid-cols-7 lg:gap-px">
         <% date_range.each do |day| %>
           <% month_classes = (day.month == Date.today.month && day.year == Date.today.year) ? "bg-white" : "bg-gray-50 text-gray-500" %>
-          <div class="relative py-2 px-3 text-gray-700 <%= month_classes %>">
+          <div class="relative py-2 px-3 text-gray-700 <%= month_classes %> <%= (Date.today == day) ? "bg-sky-50" : nil %>">
             <div class="flex place-content-between">
               <% day_classes = day == Date.today ? "flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 font-semibold text-white" : nil %>
               <time datetime="<%= l(day, format: "%Y-%m-%d") %>" class="<%= day_classes %>">

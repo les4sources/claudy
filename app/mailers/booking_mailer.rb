@@ -17,12 +17,39 @@ class BookingMailer < ApplicationMailer
     )
   end
 
+  def booking_declined(booking)
+    @booking = booking
+    mail(
+      to: booking.email,
+      subject: "Votre réservation aux 4 Sources ne peut pas être confirmée",
+      tag: "booking_declined"
+    )
+  end
+
   def booking_details(booking)
     @booking = booking
     mail(
       to: booking.email,
       subject: "Votre réservation aux 4 Sources",
       tag: "booking_details"
+    )
+  end
+
+  def booking_paid(booking)
+    @booking = booking
+    mail(
+      to: booking.email,
+      subject: "Nous avons reçu votre paiement 🧾",
+      tag: "booking_paid"
+    )
+  end
+
+  def booking_partially_paid(booking)
+    @booking = booking
+    mail(
+      to: booking.email,
+      subject: "Nous avons reçu votre paiement partiel 🧾",
+      tag: "booking_partially_paid"
     )
   end
 

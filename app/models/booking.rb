@@ -44,6 +44,10 @@ class Booking < ApplicationRecord
     status == "confirmed"
   end
 
+  def declined?
+    status == "declined"
+  end
+
   def from_airbnb?
     platform == "airbnb"
   end
@@ -66,12 +70,22 @@ class Booking < ApplicationRecord
   end
 
   def notify_customer_on_update
+    # status notification
     if saved_change_to_status == ["pending", "confirmed"]
       # if booking is confirmed
       BookingMailer.booking_confirmed(self).deliver_now
+    elsif saved_change_to_status? && status == "declined"
+      # if booking is declined
+      BookingMailer.booking_declined(self).deliver_now
     elsif saved_change_to_status? && status == "canceled"
       # if booking is canceled
       BookingMailer.booking_canceled(self).deliver_now
+    end
+    # payment notification
+    if saved_change_to_payment_status? && payment_status == "partially_paid"
+      BookingMailer.booking_partially_paid(self).deliver_now
+    elsif saved_change_to_payment_status? && payment_status == "paid"
+      BookingMailer.booking_paid(self).deliver_now
     end
   end
 

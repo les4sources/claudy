@@ -1,25 +1,30 @@
 .border-l-8.border-indigo-500.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
   .md:border-r-8.md:border-indigo-500.md:pr-4.md:text-right
-    = section_heading_tw heading: "Ma réservation"
+    = section_heading_tw heading: "Réservation"
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
-    div
+    .space-y-2
       = f.label :status,
                 "Statut de la réservation *"
-      = f.collection_select_field :status,
-                                  [["En attente de confirmation", "pending"], ["Confirmée", "confirmed"], ["Annulée", "canceled"]],
-                                  :last, :first,
-                                  { prompt: true },
-                                  { required: true, class: "md:w-2/3 lg:w-1/2" }
+      = f.collection_radio_buttons :status, 
+                                   [["⏳ En attente de confirmation", "pending"], ["✅ Confirmée", "confirmed"], ["🙅‍♀️ Refusée", "declined"], ["❌ Annulée", "canceled"]],
+                                   :last, :first, 
+                                   required: true do |radio_button|
+        .flex.items-center
+          = radio_button.radio_button
+          = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
-    div
+
+    .space-y-2
       = f.label :status,
                 "Plateforme de réservation *"
-      = f.collection_select_field :platform,
-                                  [["Réservation en direct", "direct"], ["Airbnb", "airbnb"]],
-                                  :last, :first,
-                                  { prompt: true },
-                                  { required: true, class: "md:w-2/3 lg:w-1/2" }
+      = f.collection_radio_buttons :platform, 
+                                   [["Réservation en direct", "direct"], ["Airbnb", "airbnb"]],
+                                   :last, :first, 
+                                   required: true do |radio_button|
+        .flex.items-center
+          = radio_button.radio_button
+          = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
     .space-y-6.md:space-y-0.md:flex.md:space-x-6
       = f.date_field :from_date,
@@ -27,17 +32,17 @@
                      label: "Du *",
                      required: true,
                      error: "Veuillez renseigner une date",
-                     data: { "action": "booking#setToDate booking#drawForm", "booking-target": "fromDateInput" }
+                     data: { "action": "booking#setToDate booking#drawForm booking#showSimilarBookings", "booking-target": "fromDateInput" }
       = f.date_field :to_date,
                      html5: true,
                      label: "Au *",
                      required: true,
                      error: "Veuillez renseigner une date",
-                     data: { "action": "booking#drawForm", "booking-target": "toDateInput" }
+                     data: { "action": "booking#drawForm booking#showSimilarBookings", "booking-target": "toDateInput" }
 
     .flex.space-x-6
       = f.number_field :adults,
-                       label: "Nombre d'adultes 🧑 *",
+                       label: "Nombre d'adultes *",
                        min: 0,
                        required: true,
                        remove_default_class: "sm:text-sm",
@@ -45,16 +50,25 @@
                        data: { "action": "booking#drawForm", "booking-target": "adultsInput" }
 
       = f.number_field :children,
-                       label: "Nombre d'enfants 🧒 *",
+                       label: "Nombre d'enfants *",
                        min: 0,
                        required: true,
                        remove_default_class: "sm:text-sm",
                        class: "w-24 text-lg",
                        data: { "action": "booking#drawForm", "booking-target": "childrenInput" }
 
+      = f.number_field :babies,
+                       label: "Nombre de bébés *",
+                       min: 0,
+                       required: true,
+                       remove_default_class: "sm:text-sm",
+                       class: "w-24 text-lg",
+                       hint: "Ne nécessitant pas un lit ou ayant son propre couchage",
+                       data: { "action": "booking#drawForm" }
+
     = f.text_field :estimated_arrival,
                    label: "Heure d'arrivée estimée",
-                   hint: "Laissez vide si vous ne savez pas encore nous préciser votre heure d'arrivée",
+                   hint: "Laissez vide si le client ne sait pas encore nous préciser son heure d'arrivée",
                    class: "w-1/2 md:w-1/2 lg:w-1/4"
 
 hr

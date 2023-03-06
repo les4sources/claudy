@@ -6,6 +6,7 @@ class Public::BookingsController < Public::BaseController
       booking_type: "lodging",
       adults: 0,
       children: 0,
+      babies: 0,
       tier_lodgings: "neutre",
       tier_rooms: "neutre"
     )

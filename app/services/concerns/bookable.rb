@@ -56,7 +56,7 @@ module Bookable
       if @booking.confirmed?
         BookingMailer.booking_confirmed(@booking).deliver_now
       elsif @booking.pending?
-        BookingMailer.booking_pending(@booking).deliver_now
+        BookingMailer.booking_request(@booking).deliver_now
       end
     end
   end

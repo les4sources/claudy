@@ -24,17 +24,19 @@
         dt.text-sm.font-medium.text-gray-500
           | Vos informations 
         dd.mt-1.text-sm.text-gray-900
-          = @booking.public__name
-          - if @booking.attributes[:phone].presence
-          	br
-          	= @booking.phone
-          - if @booking.email.presence
-          	br
-          	= mail_to @booking.email
+          .content
+            p
+              = @booking.public__name
+              - if @booking.attributes[:phone].presence
+              	br
+              	= @booking.phone
+              - if @booking.email.presence
+              	br
+              	= mail_to @booking.email, class: "text-"
       .sm:col-span-1
         dt.text-sm.font-medium.text-gray-500
           | Dates de votre réservation
-        dd.mt-1.text-sm.text-gray-900
+        dd.mt-1.text-sm.text-gray-900(class="#{@booking.declined? ? "line-through" : nil}")
           = @booking.date_range
       .sm:col-span-1
         dt.text-sm.font-medium.text-gray-500
@@ -57,8 +59,10 @@
           | Personnes enregistrées
         dd.mt-1.text-sm.text-gray-900
           | 🧑 #{@booking.adults} adultes
-          - if @booking.attributes["children"] > 0
+          - if @booking.object.children > 0
             | , 🧒 #{@booking.children} enfants
+          - if @booking.object.babies > 0
+            | , 👶 #{@booking.babies} enfants
       / .sm:col-span-2
         dt.text-sm.font-medium.text-gray-500
           | About
@@ -88,59 +92,90 @@
                 a.font-medium.text-indigo-600.hover:text-indigo-500[href="#"]
                   | Download
 
-.mt-8.overflow-hidden.bg-teal-50.sm:rounded-lg
-  .px-4.py-5.sm:px-6
-    h3.text-lg.font-medium.leading-6.text-gray-900
-      | Votre paiement
-    / p.mt-1.max-w-2xl.text-sm.text-gray-500
-      | Personal details and application.
-  .border-t.border-teal-200.px-4.py-5.sm:px-6
-    dl.grid.grid-cols-1.gap-x-4.gap-y-8.sm:grid-cols-2
-      .sm:col-span-1
-        dt.text-sm.font-medium.text-gray-500
-          | Montant de votre réservation 
-        dd.mt-1.text-sm.text-gray-900
-          - if @booking.price_cents == 0
-            | Offert
-          - else
-            = @booking.price
-      .sm:col-span-1
-        dt.text-sm.font-medium.text-gray-500
-          | Votre moyen de paiement
-        dd.mt-1.text-sm.text-gray-900
-          = @booking.payment_method
+- if @booking.confirmed? && !@booking.lodging.nil?
+  .mt-8.overflow-hidden.bg-teal-50.sm:rounded-lg
+    .px-4.py-5.sm:px-6
+      h3.text-lg.font-medium.leading-6.text-gray-900
+        | Vos chambres
+      p.mt-1.max-w-2xl.text-sm.text-gray-500
+        | Merci de prévoir vos draps, serviettes/essuies de bain et savons biodégradables pour notre lagunage
+    .border-t.border-teal-200.px-4.py-5.sm:px-6
+      - RoomDecorator.decorate_collection(@booking.rooms.uniq.sort_by(&:level).map(&:decorate).group_by(&:level)).each do |level|
+        h4.font-semibold.mb-4 
+          - case level.first
+          - when 0
+            | Rez-de-chaussée
+          - when 1
+            | 1er étage
+          - when 2
+            | 2ème étage
 
-      - if @booking.attributes["payment_method"] == "bank_transfer" && @booking.price_cents > 0
-        - if @booking.confirmed?
-          .sm:col-span-2
-            dt.text-sm.font-medium.text-gray-500
-              | Pour effectuer votre virement bancaire
-            dd.mt-1.text-sm.text-gray-900
-              | Merci de régler le montant de votre réservation sur le compte des 4 Sources.
-              .mt-2
-                | Les 4 Sources
-                br
-                | IBAN: BE72 5230 9060 1116
-                br
-                | BIC: TRIOBEBB
-              .mt-2
-                | Communication: <em>Réservation hébergement #{@booking.token}</em>
-        - elsif @booking.pending?
-          .sm:col-span-2
-            dt.text-sm.font-medium.text-gray-500
-              | Pour effectuer votre virement bancaire
-            dd.mt-1.text-sm.text-gray-900
-              | Les informations relatives au paiement seront disponibles lorsque votre réservation aura été confirmée par notre équipe.
+        ul.grid.grid-cols-1.gap-6.mb-8.sm:grid-cols-2.lg:grid-cols-3[role="list"]
+          - level.last.each do |room|
+            li.col-span-1.divide-y.divide-gray-200.rounded-lg.bg-white.shadow
+              .flex.w-full.items-center.justify-between.space-x-6.p-6
+                .flex-1.truncate
+                  .flex.items-center.space-x-3
+                    h3.truncate.text-sm.font-medium.text-gray-900
+                      = room.name
+                    / span.inline-block.flex-shrink-0.rounded-full.bg-green-100.px-2.py-0.5.text-xs.font-medium.text-green-800
+                      | Admin
+                  p.mt-1.truncate.text-sm.text-gray-500
+                    = room.description
+                / img.h-10.w-10.flex-shrink-0.rounded-full.bg-gray-300[src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=4&w=256&h=256&q=60" alt=""]
 
-      - if @booking.invoice_status == "requested"
-        .text-sm.font-medium.text-gray-900.sm:col-span-2
-          | 🧾 Vous avez demandé de recevoir une facture
+- if !@booking.declined?
+  .mt-8.overflow-hidden.bg-teal-50.sm:rounded-lg
+    .px-4.py-5.sm:px-6
+      h3.text-lg.font-medium.leading-6.text-gray-900
+        | Votre paiement
+      / p.mt-1.max-w-2xl.text-sm.text-gray-500
+        | Personal details and application.
+    .border-t.border-teal-200.px-4.py-5.sm:px-6
+      dl.grid.grid-cols-1.gap-x-4.gap-y-8.sm:grid-cols-2
+        .sm:col-span-1
+          dt.text-sm.font-medium.text-gray-500
+            | Montant de votre réservation 
+          dd.mt-1.text-sm.text-gray-900
+            - if @booking.price_cents == 0
+              | Offert
+            - else
+              = @booking.price
+        .sm:col-span-1
+          dt.text-sm.font-medium.text-gray-500
+            | Votre moyen de paiement
+          dd.mt-1.text-sm.text-gray-900
+            = @booking.payment_method
 
+        - if @booking.attributes["payment_method"] == "bank_transfer" && @booking.price_cents > 0
+          - if @booking.confirmed?
+            .sm:col-span-2
+              dt.text-sm.font-medium.text-gray-500
+                | Pour effectuer votre virement bancaire
+              dd.mt-1.text-sm.text-gray-900
+                | Merci de régler le montant de votre réservation sur le compte des 4 Sources et de nous envoyer une preuve de paiement pour le traitement rapide de votre réservation 👍
+                .mt-2.font-mono
+                  | Les 4 Sources
+                  br
+                  | IBAN: BE72 5230 9060 1116
+                  br
+                  | BIC: TRIOBEBB
+                .mt-2
+                  | Communication: <em>Réservation hébergement #{@booking.token}</em>
+          - elsif @booking.pending?
+            .sm:col-span-2
+              dt.text-sm.font-medium.text-gray-500
+                | Pour effectuer votre virement bancaire
+              dd.mt-1.text-sm.text-gray-900
+                | Les informations relatives au paiement seront disponibles lorsque votre réservation aura été confirmée par notre équipe.
 
+        - if @booking.invoice_status == "requested"
+          .text-sm.font-medium.text-gray-900.sm:col-span-2
+            | 🧾 Vous avez demandé de recevoir une facture
 
 
 .content.mt-8
   p.font-bold
   	|
   		Pour toute question ou information au sujet de votre réservation, nous vous invitons à 
-  		nous contacter par email à <a href="mailto:reservation@les4sources.be">reservation@les4sources.be</a>.
+  		<a href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3" target="_blank">consulter la FAQ des hébergements</a> et à nous contacter par email à <a href="mailto:reservation@les4sources.be">reservation@les4sources.be</a>.

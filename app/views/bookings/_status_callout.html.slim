@@ -4,6 +4,9 @@
 - elsif booking.canceled?
   .callout-error(role="alert")
     strong Cette réservation est annulée.
+- elsif booking.declined?
+  .callout-error(role="alert")
+    strong Cette réservation n'a pas pu être confirmée.
 - elsif booking.confirmed?
   .callout-success(role="alert")
     strong Cette réservation est confirmée.

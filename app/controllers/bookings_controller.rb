@@ -22,6 +22,7 @@ class BookingsController < BaseController
       booking_type: "lodging",
       adults: 0,
       children: 0,
+      babies: 0,
       platform: "direct"
     )
     @lodgings = Lodging.all

@@ -11,4 +11,15 @@ class RoomDecorator < ApplicationDecorator
       h.raw("<div>#{name} (2ème étage)</div><div class='mt-1 text-slate-500'>#{description}</div>")
     end
   end
+
+  def level_name
+    case level
+    when 0
+      "Rez-de-chaussée"
+    when 1
+      "1er étage"
+    when 2
+      "2ème étage"
+    end
+  end
 end

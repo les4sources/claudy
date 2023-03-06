@@ -92,6 +92,31 @@ module FormBuilders
       end
     end
 
+  #   def text_field_with_addon(method, options = {})
+  #     merged_options = arguments_with_updated_default_class(
+  #       input_html_classes(method), **options
+  #     )
+  #     hint = options.fetch(:hint, errors(method))
+  #     error = options.fetch(:error, any_errors?(method))
+
+  #     tag.div class: 'form-control' do
+  #       label(method, class: 'label mb-1') do
+  #         tag.span(label_text(method, merged_options), class: 'label-text')
+  #       # end + super(method, merged_options) + hint_message(hint, error)
+  #       end 
+  #       tag.div class: "mt-2 flex rounded-md shadow-sm" do
+  #         tag.span(options.fetch(:addon), class: "inline-flex items-center rounded-l-md border border-r-0 border-gray-300 px-3 text-gray-500 sm:text-sm")
+  #         + text_field(method, merged_options)
+  #       end
+  #       hint_message(hint, error)
+  #     end
+
+  # # <div class="mt-2 flex rounded-md shadow-sm">
+  # #   <span class="inline-flex items-center rounded-l-md border border-r-0 border-gray-300 px-3 text-gray-500 sm:text-sm">http://</span>
+  # #   <input type="text" name="company-website" id="company-website" class="block w-full min-w-0 flex-1 rounded-none rounded-r-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="www.example.com">
+  # # </div>
+  #   end
+
     def number_field(name, *args, &block)
       args[0].merge!({ type: 'number' }) if args.any?
       text_field(name, *args, &block)

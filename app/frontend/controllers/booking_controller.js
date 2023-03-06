@@ -12,6 +12,7 @@ export default class extends Controller {
     'fromDateInput',
     'lodgingsPanel',
     'lodgingRadioButton',
+    'otherBookings',
     'partyHallOption',
     'priceCalculationNotice',
     'priceDiv',
@@ -103,8 +104,12 @@ export default class extends Controller {
   }
 
   getSelectedLodgingValue() {
+    try {
     const selectedLodging = this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0]
     return selectedLodging.value || null
+    } catch (err) {
+      return null
+    }
   }
 
   getSelectedTierLodgings() {
@@ -204,6 +209,31 @@ export default class extends Controller {
         this.togglePrice(amount)
       }
     }
+  }
+
+  async showSimilarBookings() {
+    console.log('showSimilarBookings()')
+    fetch("/pages/other_bookings?from_date=" + this.fromDateInputTarget.value + "&to_date=" + this.toDateInputTarget.value)
+      .then(response => response.text())
+      .then(html => this.otherBookingsTarget.innerHTML = html)
+    // const request = new FetchRequest(
+    //   'get', 
+    //   '/pages/other_bookings', 
+    //   { 
+    //     body: JSON.stringify({ 
+    //       from_date: this.fromDateInputTarget.value,
+    //       to_date: this.toDateInputTarget.value
+    //     })
+    //   }) 
+    // const response = await request.perform()
+    // if (response.ok) {
+    //   console.log('response is ok')
+    //   // const body = await response.text
+    //   // console.log('body', body)
+    //   // const amount = JSON.parse(body).amount
+    //   // console.log('calculated price', amount)
+    //   // this.togglePrice(amount)
+    // }
   }
 
   togglePrice(amount) {

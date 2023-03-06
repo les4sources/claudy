@@ -105,14 +105,18 @@
                          class: "w-1/2 md:w-1/2 lg:w-1/4",
                          step: "0.01"
 
-      .my-6
+      .my-6.space-y-2
         = f.label :payment_status,
                   "Statut du paiement *"
-        = f.collection_select_field :payment_status,
-                                    [["En attente de paiement", "pending"], ["Payée partiellement", "partially_paid"], ["Payée", "paid"]],
-                                    :last, :first,
-                                    { prompt: true },
-                                    { required: true,   class: "md:w-2/3 lg:w-1/2" }
+
+        = f.collection_radio_buttons :payment_status, 
+                                     [["En attente de paiement", "pending"], ["Payée partiellement", "partially_paid"], ["Payée", "paid"]], 
+                                     :last, :first, 
+                                     required: true do |radio_button|
+          .flex.items-center
+            = radio_button.radio_button
+            = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
 
       .my-6
         = f.label :payment_method,

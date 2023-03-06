@@ -15,6 +15,8 @@ Rails.application.routes.draw do
   resources :notes
   resources :rooms
 
+  get "pages/other_bookings", to: "pages#other_bookings"
+
   namespace :public do
     resources :bookings, only: [:new, :create]
     get "reservation/:token", to: "bookings#show", as: :booking

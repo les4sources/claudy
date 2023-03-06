@@ -5,6 +5,10 @@ class BookingDecorator < ApplicationDecorator
     PaginatingDecorator
   end
 
+  def babies
+    (object.babies || 0) > 0 ? object.babies : "aucun"
+  end
+
   def children
     (object.children || 0) > 0 ? object.children : "aucun"
   end
@@ -14,7 +18,7 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def calendar_class
-    classes = ["shadow", "border-l-2", "bg-purple-50"]
+    classes = ["shadow", "border-l-4", "bg-purple-50"]
     if !object.confirmed?
       classes << ["opacity-50"] 
     end
@@ -186,6 +190,8 @@ class BookingDecorator < ApplicationDecorator
       "✅"
     when "pending"
       "⏳"
+    when "declined"
+      "🙅‍♀️"
     else
       object.status
     end
@@ -202,6 +208,8 @@ class BookingDecorator < ApplicationDecorator
   def tr_class
     if object.confirmed?
       "bg-white"
+    elsif object.declined?
+      "bg-red-50 opacity-75"
     else
       "bg-yellow-50 opacity-75"
     end

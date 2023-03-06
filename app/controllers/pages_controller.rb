@@ -13,10 +13,20 @@ class PagesController < BaseController
     # end
     @reservations = Reservation.all
       .includes(:booking)
+      .where.not(booking: { status: "declined" })
       .between_times(@first, @last, field: :date)
     # group bookings by day
     @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
-    breadcrumb "Calendrier", :root_path, match: :exact
+  end
+
+  def other_bookings
+    @reservations = Reservation.all
+      .includes(:booking)
+      .where.not(booking: { status: "declined" })
+      .between_times(Date.parse(params[:from_date]), Date.parse(params[:to_date]), field: :date)
+    # group bookings by day
+    @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
+    render layout: false
   end
 
   private

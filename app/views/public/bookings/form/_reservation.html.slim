@@ -21,9 +21,9 @@
                      error: "Veuillez renseigner une date",
                      data: { "action": "public--booking#drawForm", "public--booking-target": "toDateInput" }
 
-    .flex.space-x-6
+    .space-y-6.md:space-y-0.md:flex.md:space-x-6
       = f.number_field :adults,
-                       label: "Adultes 🧑 *",
+                       label: "Adultes *",
                        min: 0,
                        required: true,
                        remove_default_class: "sm:text-sm",
@@ -31,19 +31,20 @@
                        data: { "action": "public--booking#drawForm", "public--booking-target": "adultsInput" }
 
       = f.number_field :children,
-                       label: "Enfants 🧒 *",
+                       label: "Enfants *",
                        min: 0,
                        required: true,
                        remove_default_class: "sm:text-sm",
                        class: "w-24 text-lg",
                        data: { "action": "public--booking#drawForm", "public--booking-target": "childrenInput" }
 
-      / = f.number_field :babies,
-                       label: "Bébés 👶 *",
+      = f.number_field :babies,
+                       label: "Bébés *",
                        min: 0,
                        required: true,
                        remove_default_class: "sm:text-sm",
                        class: "w-24 text-lg",
-                       data: { "action": "public--booking#drawForm", "public--booking-target": "childrenInput" }
+                       hint: "Ne nécessitant pas un lit ou ayant son propre couchage",
+                       data: { "action": "public--booking#drawForm" }
 
 hr
