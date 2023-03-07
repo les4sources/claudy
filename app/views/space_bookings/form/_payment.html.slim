@@ -1,0 +1,82 @@
+.border-l-4.border-slate-400.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-4.md:border-slate-400.md:pr-4.md:text-right
+    = section_heading_tw heading: "Paiement de la réservation"
+
+  .col-span-2.mb-4
+    #popover-tier-soutien.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-700.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-lg.opacity-0[data-popover role="tooltip"]
+      .px-3.py-2.bg-gray-100.border-b.border-gray-200.rounded-t-lg
+        h3.font-semibold.text-gray-900
+          | Tarif de soutien
+      .px-3.py-2
+        p
+          | Ce tarif permet d’apporter un soutien financier au déploiement du projet et au maintien d’une formule solidaire.
+      div[data-popper-arrow]
+
+    #popover-tier-neutre.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-700.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-lg.opacity-0[data-popover role="tooltip"]
+      .px-3.py-2.bg-gray-100.border-b.border-gray-200.rounded-t-lg
+        h3.font-semibold.text-gray-900
+          | Tarif neutre
+      .px-3.py-2
+        p
+          | Ce tarif de « base » permet de faire fonctionner le projet et la gestion du domaine, sans contribuer au développement.
+      div[data-popper-arrow]
+
+    #popover-tier-solidaire.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-700.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-lg.opacity-0[data-popover role="tooltip"]
+      .px-3.py-2.bg-gray-100.border-b.border-gray-200.rounded-t-lg
+        h3.font-semibold.text-gray-900
+          | Tarif solidaire
+      .px-3.py-2
+        p
+          | Ce tarif permet à des structures et personnes disposant de moyens plus limités de pouvoir accéder à nos espaces pour séjourner ou organiser une activité chez nous.
+      div[data-popper-arrow]
+
+    .content.mb-4
+      p Quel tarif convient le mieux au client?
+
+    .space-y-3.md:space-y-2
+      = f.collection_radio_buttons :tier, 
+                                   [[raw("Soutien (+25%) #{render partial: "shared/popover_icon", locals: { target: "popover-tier-soutien" }}"), "soutien"], [raw("Neutre #{render partial: "shared/popover_icon", locals: { target: "popover-tier-neutre" }}"), "neutre"], [raw("Solidaire (-25%) #{render partial: "shared/popover_icon", locals: { target: "popover-tier-solidaire" }}"), "solidaire"]], 
+                                   :last, :first, 
+                                   required: true do |radio_button|
+        .flex.items-center
+          = radio_button.radio_button
+          == radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
+    .my-6
+      = f.number_field :price,
+                       label: "Montant convenu à payer",
+                       required: true,
+                       class: "w-1/2 md:w-1/2 lg:w-1/4",
+                       step: "0.01"
+
+    .my-6.space-y-2
+      = f.label :payment_status,
+                "Statut du paiement *"
+
+      = f.collection_radio_buttons :payment_status, 
+                                   [["En attente de paiement", "pending"], ["Payée partiellement", "partially_paid"], ["Payée", "paid"]], 
+                                   :last, :first, 
+                                   required: true do |radio_button|
+        .flex.items-center
+          = radio_button.radio_button
+          = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
+
+    .my-6
+      = f.label :payment_method,
+                "Moyen de paiement *"
+
+      .space-y-3.md:space-y-2
+        = f.collection_radio_buttons :payment_method, 
+                                     [["En liquide à son arrivée", "cash"], ["Par virement bancaire (le client recevra les informations pour le paiement par email)", "bank_transfer"]], 
+                                     :last, :first, 
+                                     required: true do |radio_button|
+          .flex.items-center
+            = radio_button.radio_button
+            = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
+    = f.check_input :invoice_wanted,
+                    label: "Besoin d'une facture 🧾",
+                    message: "Notre comptabilité fournira une facture si nécessaire"
+
+hr

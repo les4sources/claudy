@@ -1,0 +1,25 @@
+p Bonjour #{@space_booking.firstname},
+
+p 
+  |
+    Votre demande de réservation d'espaces aux 4 Sources n'a malheureusement pas pu être confirmée.
+    Cela signifie en général que nous avons confirmé une autre demande préalable à la vôtre.
+
+p
+  |
+    Voici les détails de votre demande de réservation :
+  br
+  = link_to public_space_booking_url(@space_booking.token), public_space_booking_url(@space_booking.token)
+
+p
+  |
+    Une autre date vous conviendrait? N'hésitez pas à répondre à cet email pour nous faire part
+    de votre demande.
+
+p
+  |
+    À la prochaine,
+
+p
+  |
+    Le pôle Accueil des 4 Sources

@@ -2,6 +2,7 @@ module Public
   module Bookings
     class CreateService < ServiceBase
       include Bookable
+      include Subscribable
 
       attr_reader :booking
 
@@ -33,7 +34,7 @@ module Public
           build_reservations(rooms)
           @booking.save!
           notify_customer_on_create
-          create_subscription
+          create_subscription(from: @booking)
         end
         raise error_message if !error.nil?
         true

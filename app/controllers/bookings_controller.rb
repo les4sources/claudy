@@ -1,5 +1,5 @@
 class BookingsController < BaseController
-  breadcrumb "Réservations", :bookings_path, match: :exact
+  breadcrumb "Hébergements", :bookings_path, match: :exact
 
   def index
     @bookings = BookingDecorator

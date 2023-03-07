@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_03_07_092655) do
+ActiveRecord::Schema[7.0].define(version: 2023_03_07_111848) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -113,6 +113,48 @@ ActiveRecord::Schema[7.0].define(version: 2023_03_07_092655) do
     t.string "code"
   end
 
+  create_table "space_bookings", force: :cascade do |t|
+    t.string "firstname"
+    t.string "lastname"
+    t.string "group_name"
+    t.string "phone"
+    t.string "email"
+    t.date "from_date"
+    t.date "to_date"
+    t.string "status"
+    t.string "tier"
+    t.string "payment_status"
+    t.string "invoice_status"
+    t.string "contract_status"
+    t.text "notes"
+    t.string "token"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "price_cents"
+    t.string "payment_method"
+  end
+
+  create_table "space_reservations", force: :cascade do |t|
+    t.bigint "space_booking_id", null: false
+    t.bigint "event_id", null: false
+    t.bigint "space_id", null: false
+    t.date "date"
+    t.string "duration"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["event_id"], name: "index_space_reservations_on_event_id"
+    t.index ["space_booking_id"], name: "index_space_reservations_on_space_booking_id"
+    t.index ["space_id"], name: "index_space_reservations_on_space_id"
+  end
+
+  create_table "spaces", force: :cascade do |t|
+    t.string "name"
+    t.text "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "code"
+  end
+
   create_table "subscriptions", force: :cascade do |t|
     t.string "email"
     t.boolean "newsletter"
@@ -126,4 +168,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_03_07_092655) do
   add_foreign_key "lodging_rooms", "rooms"
   add_foreign_key "reservations", "bookings"
   add_foreign_key "reservations", "rooms"
+  add_foreign_key "space_reservations", "events"
+  add_foreign_key "space_reservations", "space_bookings"
+  add_foreign_key "space_reservations", "spaces"
 end

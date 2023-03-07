@@ -1,0 +1,29 @@
+= turbo_stream.update "space-bookings-for-date-range" do
+  #toast-other-space-bookings.fixed.right-5.bottom-5.flex.items-center.w-full.max-w-xs.p-4.space-x-4.text-gray-500.bg-white.divide-x.divide-gray-200.rounded-lg.shadow-lg.space-x(role="alert")
+    .text-sm.font-normal
+      .font-semibold
+        | Autres réservations à ces dates
+
+      - if @grouped_space_reservations.empty?
+        p.text-gray-400 Aucune autre réservation
+      - else
+        - @grouped_space_reservations.each do |grouped_space_reservations|
+          .mt-2
+            p = l(grouped_space_reservations.first)
+
+            div
+              - grouped_space_reservations.last.sort_by {|sr| sr.start_time }.group_by { |sr| sr.space_booking.id }.each do |space_reservations|
+                - space_booking = SpaceBookingDecorator.new(space_reservations.last.first.space_booking)
+                div(class="flex mt-2 py-1 px-2 #{space_booking.calendar_class}")
+                  .block
+                    div
+                      strong 
+                        = link_to space_booking.decorate.name.html_safe, 
+                                  space_booking_path(space_booking), 
+                                  class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+                      - if space_booking.group_name.present?
+                        .text-gray-500.leading-none.mb-2 = space_booking.group_name
+
+                    .grid.grid-cols-3.gap-1
+                      - space_reservations.last.each do |space_reservation|
+                        = space_badge(space_reservation.space)

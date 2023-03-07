@@ -1,0 +1,113 @@
+- content_for :page_header do
+  = render 'layouts/components/page_header',
+           title: @space_booking.name,
+           secondary: "Du #{@space_booking.from_date} au #{@space_booking.to_date}",
+           links: [ \
+             delete_link(@space_booking.object, "Supprimer cette réservation"),
+             link_to( \
+               "Mettre à jour",
+               edit_space_booking_path(@space_booking),
+               class: "btn-page-header" \
+             ) \
+           ]
+
+= render "space_bookings/status_callout", 
+         space_booking: @space_booking
+
+.grid.grid-cols-3.gap-4
+  .col-span-2.space-y-4
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Informations personnelles
+        / p.mt-1.max-w-2xl.text-sm.text-gray-500
+          | Nom et coordonnées de la personne qui a réservé
+      .border-t.border-gray-200
+        dl
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Nom
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @space_booking.name
+              - if @space_booking.group_name.present?
+                .text-gray-500 = @space_booking.group_name
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Téléphone
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @space_booking.phone
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Adresse email
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = mail_to @space_booking.email
+
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Espaces réservés
+        / p.mt-1.max-w-2xl.text-sm.text-gray-500
+          | Chambres 
+      .border-t.border-gray-200
+        dl
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Espaces et dates
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              table
+                tbody
+                  - @space_reservations_by_date.each do |date, space_reservations|
+                    tr
+                      td(style="width: 10rem") = date
+                      td = space_reservations.collect { |sr| sr.space.name }.join(", ")
+
+  .space-y-4
+    .overflow-hidden.shadow.sm:rounded-lg.bg-white
+      .flex.place-content-between.px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Réservation ##{@space_booking.token}
+      .border-t.border-gray-200
+        .px-6.py-5
+          = link_to "Page web de la réservation",
+                    public_space_booking_path(@space_booking.token),
+                    class: "text-white bg-gradient-to-br from-pink-500 to-orange-400 focus:ring-4 focus:outline-none focus:ring-pink-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2",
+                    target: "_blank"
+
+    .overflow-hidden.shadow.sm:rounded-lg(class="#{@space_booking.payment_background}")
+      .flex.place-content-between.px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Paiement
+        div = @space_booking.payment_status
+        / p.mt-1.max-w-2xl.text-sm.text-gray-500
+          | Nom et coordonnées de la personne qui a réservé
+      .border-t.border-gray-200
+        dl.my-2
+          .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Montant à payer
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @space_booking.price
+          .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Paiement
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @space_booking.payment_method
+          .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Facture
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              - if @space_booking.invoice_status == "requested"
+                | 🧾 Demandée par le client
+              - else
+                | Non requise
+
+    - if @space_booking.notes.presence
+      .overflow-hidden.bg-yellow-100.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Notes
+          p.mt-1.max-w-2xl.text-sm.text-gray-500
+            | Informations à usage interne
+        .border-t.border-gray-200.px-6.py-4
+          .content.space-y-4
+            = simple_format @space_booking.notes

@@ -26,6 +26,23 @@
                   .spacer__width--dot5
                   = ellipsis_for("event-#{event.id}-menu")
 
+  - if @grouped_space_reservations[date]
+    - @grouped_space_reservations[date].sort_by {|sr| sr.start_time }.group_by { |sr| sr.space_booking.id }.each do |grouped_space_reservations|
+      - space_booking = SpaceBookingDecorator.new(grouped_space_reservations.last.first.space_booking)
+      div(class="flex mt-2 py-1 px-2 #{space_booking.calendar_class}")
+        .block
+          div
+            strong 
+              = link_to space_booking.decorate.name.html_safe, 
+                        space_booking_path(space_booking), 
+                        class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+            - if space_booking.group_name.present?
+              .text-gray-500.leading-none.mb-2 = space_booking.group_name
+
+          .grid.grid-cols-3.gap-1
+            - grouped_space_reservations.last.each do |space_reservation|
+              = space_badge(space_reservation.space)
+
   - if @grouped_reservations[date]
     - @grouped_reservations[date].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations|
       - booking = BookingDecorator.new(grouped_reservations.last.first.booking)

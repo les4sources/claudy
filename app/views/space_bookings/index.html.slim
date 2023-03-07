@@ -1,0 +1,48 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Réservations",
+           links: [ \
+             link_to("Réservations passées", past_space_bookings_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"),
+             link_to("➕ Nouvelle réservation", new_space_booking_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
+           ]
+
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-3.w-2[scope="col"]
+          | &nbsp;
+        th.py-3.px-6.w-64[scope="col"]
+          | Nom 
+        th.py-3.px-6[scope="col"]
+          | Du 
+        th.py-3.px-6[scope="col"]
+          | Au 
+        th.py-3.px-6[scope="col"]
+          | Espaces
+        th.py-3.px-6[scope="col"]
+          | Paiement 
+        th.py-3.px-6[scope="col"]
+          | ID
+    tbody
+      - @space_bookings.each do |space_booking|
+        tr.border-b(class="#{space_booking.tr_class}")
+          td.py-4.px-6(class="#{space_booking.tr_border_class}")
+            = space_booking.status_emoji
+          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+            strong(class="#{space_booking.declined? ? "line-through" : nil}")
+              = link_to space_booking.name, 
+                        space_booking_path(space_booking),
+                        class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+            - if space_booking.group_name.present?
+              .text-gray-500 = space_booking.group_name
+          td.py-4.px-6
+            = space_booking.from_date
+          td.py-4.px-6
+            = space_booking.to_date
+          td.py-4.px-6.space-x-1
+            = space_booking.spaces_badges(font_size: "sm")
+          td.py-4.px-6
+            = space_booking.payment_status
+          td.py-4.px-6
+            code ##{space_booking.token}

@@ -1,0 +1,24 @@
+p Bonjour #{@space_booking.firstname},
+
+p 
+  |
+    Nous avons bien reçu un paiement partiel, merci !
+
+p
+  |
+    Les détails de votre réservation sont disponibles à l'adresse suivante:
+  br
+  = link_to public_space_booking_url(@space_booking.token), public_space_booking_url(@space_booking.token)
+
+p
+  |
+    Répondez-nous si vous constatez une erreur ou une information manquante. Nous
+    modifierons votre réservation pour que tout soit bien en ordre.
+
+p
+  |
+    À bientôt,
+
+p
+  |
+    Le pôle Accueil des 4 Sources

@@ -1,0 +1,19 @@
+p Bonjour #{@space_booking.firstname},
+
+p
+  |
+    Votre réservation d'espaces aux 4 Sources n'a malheureusement pas pu être confirmée.
+
+p 
+  |
+    Vous trouverez tous les détails de votre réservation à l'adresse suivante:
+  br
+  = link_to public_space_booking_url(@space_booking.token), public_space_booking_url(@space_booking.token)
+
+p
+  |
+    À bientôt,
+
+p
+  |
+    Le pôle Accueil des 4 Sources

@@ -1,0 +1,103 @@
+- content_for :meta_title, "Ma réservation d'espaces aux 4 Sources"
+
+- content_for :page_header do
+  = render 'layouts/public/components/page_header',
+           title: "Votre réservation d'espaces aux 4 Sources"
+
+- content_for :page_banner do
+  .text-sm.leading-6.text-white.text-center
+    | <strong class="font-semibold">Une question </strong>au sujet de votre réservation?
+    <a href="https://les4sources.notion.site/FAQ-des-espaces-aux-4-Sources-2232b856420d4d718cd769732920e46d" target="_blank" class="flex-none rounded-full bg-gray-900 ml-2 py-1 px-3.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900">Consultez la FAQ <span aria-hidden="true">&rarr;</span></a>
+
+= render "public/space_bookings/status_callout", 
+         space_booking: @space_booking
+
+.overflow-hidden.bg-teal-50.sm:rounded-lg
+  .px-4.py-5.sm:px-6
+    h3.text-lg.font-medium.leading-6.text-gray-900
+      | Votre réservation
+  .border-t.border-teal-200.px-4.py-5.sm:px-6
+    dl.grid.grid-cols-1.gap-x-4.gap-y-8.sm:grid-cols-2
+      .sm:col-span-1
+        dt.text-sm.font-medium.text-gray-500
+          | Vos informations 
+        dd.mt-1.text-sm.text-gray-900
+          .content
+            p
+              = @space_booking.public__name
+              - if @space_booking.attributes[:phone].presence
+              	br
+              	= @space_booking.phone
+              - if @space_booking.email.presence
+              	br
+              	= mail_to @space_booking.email
+      .sm:col-span-1
+        dt.text-sm.font-medium.text-gray-500
+          | Dates de votre réservation
+        dd.mt-1.text-sm.text-gray-900(class="#{@space_booking.declined? ? "line-through" : nil}")
+          = @space_booking.date_range
+      .sm:col-span-1
+        dt.text-sm.font-medium.text-gray-500
+          | Espace(s)
+        dd.mt-1.text-sm.text-gray-900
+          table
+            tbody
+              - @space_reservations_by_date.each do |date, space_reservations|
+                tr
+                  td(style="width: 10rem") = date
+                  td = space_reservations.collect { |sr| sr.space.name }.join(", ")
+
+
+- if !@space_booking.declined?
+  .mt-8.overflow-hidden.bg-teal-50.sm:rounded-lg
+    .px-4.py-5.sm:px-6
+      h3.text-lg.font-medium.leading-6.text-gray-900
+        | Votre paiement
+    .border-t.border-teal-200.px-4.py-5.sm:px-6
+      dl.grid.grid-cols-1.gap-x-4.gap-y-8.sm:grid-cols-2
+        .sm:col-span-1
+          dt.text-sm.font-medium.text-gray-500
+            | Montant de votre réservation 
+          dd.mt-1.text-sm.text-gray-900
+            - if @space_booking.price_cents == 0
+              | Offert
+            - else
+              = @space_booking.price
+        .sm:col-span-1
+          dt.text-sm.font-medium.text-gray-500
+            | Votre moyen de paiement
+          dd.mt-1.text-sm.text-gray-900
+            = @space_booking.payment_method
+
+        - if @space_booking.attributes["payment_method"] == "bank_transfer" && @space_booking.price_cents > 0
+          - if @space_booking.confirmed?
+            .sm:col-span-2
+              dt.text-sm.font-medium.text-gray-500
+                | Pour effectuer votre virement bancaire
+              dd.mt-1.text-sm.text-gray-900
+                | Merci de régler le montant de votre réservation sur le compte des 4 Sources et de nous envoyer une preuve de paiement pour le traitement rapide de votre réservation 👍
+                .mt-2.font-mono
+                  | Les 4 Sources
+                  br
+                  | IBAN: BE72 5230 9060 1116
+                  br
+                  | BIC: TRIOBEBB
+                .mt-2
+                  | Communication: <em>Réservation espaces #{@space_booking.token}</em>
+          - elsif @space_booking.pending?
+            .sm:col-span-2
+              dt.text-sm.font-medium.text-gray-500
+                | Pour effectuer votre virement bancaire
+              dd.mt-1.text-sm.text-gray-900
+                | Les informations relatives au paiement seront disponibles lorsque votre réservation aura été confirmée par notre équipe.
+
+        - if @space_booking.invoice_status == "requested"
+          .text-sm.font-medium.text-gray-900.sm:col-span-2
+            | 🧾 Vous avez demandé de recevoir une facture
+
+
+.content.mt-8
+  p.font-bold
+  	|
+  		Pour toute question ou information au sujet de votre réservation, nous vous invitons à 
+  		<a href="https://les4sources.notion.site/FAQ-des-espaces-aux-4-Sources-2232b856420d4d718cd769732920e46d" target="_blank">consulter la FAQ des espaces</a> et à nous contacter par email à <a href="mailto:reservation@les4sources.be">reservation@les4sources.be</a>.

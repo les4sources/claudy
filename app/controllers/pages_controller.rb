@@ -11,6 +11,12 @@ class PagesController < BaseController
     #     @grouped_events[date] << event
     #   end
     # end
+    @space_reservations = SpaceReservation.all
+      .includes(:space_booking)
+      .where.not(space_booking: { status: "declined" })
+      .between_times(@first, @last, field: :date)
+    # group bookings by day
+    @grouped_space_reservations = @space_reservations.to_a.group_by { |sr| sr.date }
     @reservations = Reservation.all
       .includes(:booking)
       .where.not(booking: { status: "declined" })
@@ -27,6 +33,17 @@ class PagesController < BaseController
       .order(date: :asc)
     # group bookings by day
     @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
+    render layout: false
+  end
+
+  def other_space_bookings
+    @space_reservations = SpaceReservation.all
+      .includes(:space_booking)
+      .where.not(space_booking: { status: "declined" })
+      .between_times(Date.parse(params[:from_date]), Date.parse(params[:to_date]) - 1.day, field: :date)
+      .order(date: :asc)
+    # group bookings by day
+    @grouped_space_reservations = @space_reservations.to_a.group_by { |r| r.date }
     render layout: false
   end
 

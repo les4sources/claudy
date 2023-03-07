@@ -1,0 +1,25 @@
+p Bonjour #{@space_booking.firstname},
+
+p 
+  |
+    Votre demande de réservation d'espaces aux 4 Sources a bien été enregistrée. 
+    Vous recevrez des nouvelles de notre part dans les 48 heures.
+
+p
+  |
+    Les détails de votre réservation sont disponibles à l'adresse suivante:
+  br
+  = link_to public_space_booking_url(@space_booking.token), public_space_booking_url(@space_booking.token)
+
+p
+  |
+    Répondez-nous si vous constatez une erreur ou une information manquante. Nous
+    modifierons votre demande pour que tout soit bien en ordre.
+
+p
+  |
+    À bientôt,
+
+p
+  |
+    Le pôle Accueil des 4 Sources

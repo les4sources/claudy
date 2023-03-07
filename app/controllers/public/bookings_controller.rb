@@ -25,7 +25,6 @@ class Public::BookingsController < Public::BaseController
   end
 
   def show
-    # TODO add token to access booking based on token
     @booking = Booking.find_by(token: params[:token]).decorate
     @reservations_by_date = @booking.reservations.decorate.to_a.group_by { |r| r.date }
   end

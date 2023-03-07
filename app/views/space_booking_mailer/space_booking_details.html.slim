@@ -1,0 +1,25 @@
+p Bonjour #{@space_booking.firstname},
+
+p 
+  |
+    Vous trouverez tous les détails de votre réservation à l'adresse suivante:
+  br
+  = link_to public_space_booking_url(@space_booking.token), public_space_booking_url(@space_booking.token)
+
+
+p
+  |
+    Répondez-nous si vous constatez une erreur ou une information manquante. Nous
+    modifierons la réservation pour que tout soit bien en ordre.
+
+p
+  |
+    N'hésitez pas à partager ce lien avec vos co-organisateurs.
+
+p
+  |
+    À bientôt,
+
+p
+  |
+    Le pôle Accueil des 4 Sources

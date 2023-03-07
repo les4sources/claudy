@@ -1,0 +1,32 @@
+.border-l-8.border-indigo-500.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-500.md:pr-4.md:text-right
+    = section_heading_tw heading: "Réservation"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    .space-y-2
+      = f.label :status,
+                "Statut de la réservation *"
+      = f.collection_radio_buttons :status, 
+                                   [["⏳ En attente de confirmation", "pending"], ["✅ Confirmée", "confirmed"], ["🙅‍♀️ Refusée", "declined"], ["❌ Annulée", "canceled"]],
+                                   :last, :first, 
+                                   required: true do |radio_button|
+        .flex.items-center
+          = radio_button.radio_button
+          = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
+
+    .space-y-6.md:space-y-0.md:flex.md:space-x-6
+      = f.date_field :from_date,
+                     html5: true,
+                     label: "Du *",
+                     required: true,
+                     error: "Veuillez renseigner une date",
+                     data: { "action": "space-booking#setToDate space-booking#drawForm", "space-booking-target": "fromDateInput" }
+      = f.date_field :to_date,
+                     html5: true,
+                     label: "Au *",
+                     required: true,
+                     error: "Veuillez renseigner une date",
+                     data: { "action": "space-booking#drawForm", "space-booking-target": "toDateInput" }
+
+hr
