@@ -46,6 +46,10 @@ module Bookable
     set_error_message("Merci de vérifier si vous avez sélectionné un type d'hébergement.")
   end
 
+  def notify_admin_on_create
+    AdminMailer.booking_request(@booking).deliver_now
+  end
+
   def notify_customer_on_create
     return if !@booking.email.present?
     if @booking.from_web?

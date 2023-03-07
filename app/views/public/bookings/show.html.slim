@@ -139,6 +139,8 @@
           dd.mt-1.text-sm.text-gray-900
             - if @booking.price_cents == 0
               | Offert
+            - elsif @booking.from_airbnb?
+              | Disponible sur Airbnb
             - else
               = @booking.price
         .sm:col-span-1

@@ -1,5 +1,5 @@
 <% current_month = date_range.first.month %>
-<div class="lg:flex lg:h-full lg:flex-col">
+<div class="lg:flex lg:h-full lg:flex-col" data-controller="dashboard-calendar" data-action="click->dashboard-calendar#clickCalendar">
   <div class="shadow ring-1 ring-black ring-opacity-5 lg:flex lg:flex-auto lg:flex-col">
     <% date_range.each_slice(7).with_index do |weekdays, index| %>
       <% if index == 0 %>

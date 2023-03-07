@@ -45,8 +45,54 @@
 
   - if @grouped_reservations[date]
     - @grouped_reservations[date].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations|
-      - booking = BookingDecorator.new(grouped_reservations.last.first.booking)
-      div(class="flex mt-2 py-1 px-2 #{booking.calendar_class}")
+      - reservation = grouped_reservations.last.first
+      - booking = BookingDecorator.new(reservation.booking)
+
+      .popover.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-sm.opacity-0[id="popover-reservation-#{reservation.id}" data-popover role="tooltip"]
+        .p-3
+          .flex.items-center.justify-between.mb-2
+            .text-sm.font-semibold.leading-none.text-gray-900
+              = link_to booking.decorate.name.html_safe, 
+                        booking_path(booking),
+                        class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+              - if booking.group_name.present?
+                .block.text-gray-500.leading-none.mt-1 = booking.group_name
+            div
+              = link_to "Détails", 
+                        booking_path(booking),
+                        class: "text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-xs px-3 py-1.5 focus:outline-none"
+          - if booking.object.phone.present?
+            p.mb-2.text-sm.font-normal
+              | Tél: #{booking.phone}
+          - if booking.estimated_arrival.present?
+            p.mb-2.text-sm.font-light
+              | Heure d'arrivée: #{booking.estimated_arrival}
+          .mb-2
+            = booking.payment_status
+          ul.flex.text-base.font-light
+            - if booking.object.adults > 0
+              li.mr-2
+                span.font-semibold.text-gray-900
+                  | #{booking.adults}x
+                span.ml-1
+                  | 🧑
+            - if booking.object.children > 0
+              li.mr-2
+                span.font-semibold.text-gray-900
+                  | #{booking.children}x
+                span.ml-1
+                  | 👧
+            - if booking.object.babies > 0
+              li.mr-2
+                span.font-semibold.text-gray-900
+                  | #{booking.babies}x
+                span.ml-1
+                  | 👶
+          .mt-2.text-base
+            = booking.options_emojis
+        div[data-popper-arrow]
+
+      div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl #{booking.calendar_class}")
         .block
           div
             strong 
@@ -62,3 +108,4 @@
             .grid.grid-cols-3.gap-1
               - grouped_reservations.last.each do |reservation|
                 = room_badge(reservation.room)
+        .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-reservation-#{reservation.id}" data-popover-trigger="click")
