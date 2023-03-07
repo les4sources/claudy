@@ -25,4 +25,8 @@
                     class: "md:w-2/3 lg:w-1/2",
                     hint: "Le client recevra des notifications par email"
 
+    - if @booking.new_record?
+      = f.check_input :newsletter_subscription,
+                      label: "Inscrire cet email à la newsletter trimestrielle des 4 Sources"
+
 hr

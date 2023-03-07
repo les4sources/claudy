@@ -33,6 +33,7 @@ module Public
           build_reservations(rooms)
           @booking.save!
           notify_customer_on_create
+          create_subscription
         end
         raise error_message if !error.nil?
         true
@@ -56,7 +57,6 @@ module Public
       end
 
       def set_price
-        # TODO call a service that calculates prices
         @booking.price_cents = @booking.shown_price_cents
       end
     end

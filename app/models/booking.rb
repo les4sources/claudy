@@ -14,6 +14,7 @@ class Booking < ApplicationRecord
   attr_accessor :tier_lodgings
   attr_accessor :tier_rooms
   attr_accessor :terms_approval
+  attr_accessor :newsletter_subscription
 
   validates_presence_of :firstname,
                         message: "Veuillez préciser votre prénom"

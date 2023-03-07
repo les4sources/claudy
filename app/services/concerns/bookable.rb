@@ -30,6 +30,12 @@ module Bookable
     end
   end
 
+  def create_subscription
+    return if !@booking.email.present?
+    return if @booking.newsletter_subscription != "1"
+    Subscriptions::CreateService.new.run(email: @booking.email)
+  end
+
   def get_rooms
     case @booking.booking_type
     when "lodging"
@@ -101,6 +107,7 @@ module Bookable
         :invoice_wanted,
         :lastname,
         :lodging_id,
+        :newsletter_subscription,
         :notes,
         :option_babysitting,
         :option_bread,
@@ -136,6 +143,7 @@ module Bookable
         :invoice_wanted,
         :lastname,
         :lodging_id,
+        :newsletter_subscription,
         :option_babysitting,
         :option_bread,
         :option_discgolf,

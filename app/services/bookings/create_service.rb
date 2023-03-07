@@ -30,6 +30,7 @@ module Bookings
         build_reservations(rooms)
         @booking.save!
         notify_customer_on_create
+        create_subscription
       end
       raise error_message if !error.nil?
       true
