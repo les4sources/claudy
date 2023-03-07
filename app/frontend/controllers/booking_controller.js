@@ -6,13 +6,13 @@ export default class extends Controller {
   static targets = [
     'adultsInput',
     'bookingTypeOptions',
+    'bookingsForDateRange',
     'childrenInput',
     'divLodgings',
     'divRooms',
     'fromDateInput',
     'lodgingsPanel',
     'lodgingRadioButton',
-    'otherBookings',
     'partyHallOption',
     'priceCalculationNotice',
     'priceDiv',
@@ -78,6 +78,7 @@ export default class extends Controller {
     this.toggleRoomsDiv()
     this.togglePriceDetails()
     this.togglePartyHallOption()
+    this.showSimilarBookings()
   }
 
   getFromDate() {
@@ -213,27 +214,15 @@ export default class extends Controller {
 
   async showSimilarBookings() {
     console.log('showSimilarBookings()')
-    fetch("/pages/other_bookings?from_date=" + this.fromDateInputTarget.value + "&to_date=" + this.toDateInputTarget.value)
-      .then(response => response.text())
-      .then(html => this.otherBookingsTarget.innerHTML = html)
-    // const request = new FetchRequest(
-    //   'get', 
-    //   '/pages/other_bookings', 
-    //   { 
-    //     body: JSON.stringify({ 
-    //       from_date: this.fromDateInputTarget.value,
-    //       to_date: this.toDateInputTarget.value
-    //     })
-    //   }) 
-    // const response = await request.perform()
-    // if (response.ok) {
-    //   console.log('response is ok')
-    //   // const body = await response.text
-    //   // console.log('body', body)
-    //   // const amount = JSON.parse(body).amount
-    //   // console.log('calculated price', amount)
-    //   // this.togglePrice(amount)
-    // }
+    if (this.getFromDate().isValid() && this.getToDate().isValid()) {
+      console.log('get other bookings...')
+      fetch("/pages/other_bookings?from_date=" + this.fromDateInputTarget.value + "&to_date=" + this.toDateInputTarget.value)
+        .then(response => response.text())
+        .then(html => Turbo.renderStreamMessage(html));
+    } else {
+      console.log('clear bookings list')
+      this.bookingsForDateRangeTarget.innerHTML = ''
+    }
   }
 
   togglePrice(amount) {

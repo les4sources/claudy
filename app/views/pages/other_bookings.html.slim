@@ -1,21 +1,32 @@
-- @grouped_reservations.each do |grouped_reservations|
-  p = l(grouped_reservations.first)
+= turbo_stream.update "bookings-for-date-range" do
+  #toast-other-bookings.fixed.right-5.bottom-5.flex.items-center.w-full.max-w-xs.p-4.space-x-4.text-gray-500.bg-white.divide-x.divide-gray-200.rounded-lg.shadow-lg.space-x(role="alert")
+    .text-sm.font-normal
+      .font-semibold
+        | Autres réservations à ces dates
 
-  - grouped_reservations.last.sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |reservations|
-    - booking = BookingDecorator.new(reservations.last.first.booking)
-    div(class="flex mt-2 py-1 px-2 #{booking.calendar_class}")
-      .block
-        div
-          strong 
-            = link_to booking.decorate.name.html_safe, 
-                      booking_path(booking), 
-                      class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
-          - if booking.group_name.present?
-            .text-gray-500.leading-none.mb-2 = booking.group_name
+      - if @grouped_reservations.empty?
+        p.text-gray-400 Aucune autre réservation
+      - else
+        - @grouped_reservations.each do |grouped_reservations|
+          .mt-2
+            p = l(grouped_reservations.first)
 
-        - if !booking.lodging.nil?
-          = booking.lodging_badge
-        - else
-          .grid.grid-cols-3.gap-1
-            - reservations.last.each do |reservation|
-              = room_badge(reservation.room)
+            div
+              - grouped_reservations.last.sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |reservations|
+                - booking = BookingDecorator.new(reservations.last.first.booking)
+                div(class="flex mt-2 py-1 px-2 #{booking.calendar_class}")
+                  .block
+                    div
+                      strong 
+                        = link_to booking.decorate.name.html_safe, 
+                                  booking_path(booking), 
+                                  class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+                      - if booking.group_name.present?
+                        .text-gray-500.leading-none.mb-2 = booking.group_name
+
+                    - if !booking.lodging.nil?
+                      = booking.lodging_badge
+                    - else
+                      .grid.grid-cols-3.gap-1
+                        - reservations.last.each do |reservation|
+                          = room_badge(reservation.room)
