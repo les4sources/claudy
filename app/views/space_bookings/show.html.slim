@@ -58,7 +58,11 @@
                 tbody
                   - @space_reservations_by_date.each do |date, space_reservations|
                     tr
-                      td(style="width: 10rem") = date
+                      td(style="width: 10rem") 
+                        = date
+                        br
+                        span.text-gray-600 
+                          | (#{space_reservations.first.duration})
                       td = space_reservations.collect { |sr| sr.space.name }.join(", ")
 
   .space-y-4

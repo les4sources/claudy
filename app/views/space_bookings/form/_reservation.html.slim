@@ -29,4 +29,15 @@
                      error: "Veuillez renseigner une date",
                      data: { "action": "space-booking#drawForm", "space-booking-target": "toDateInput" }
 
+    .space-y-2
+      = f.label :duration,
+                "Période *"
+      = f.collection_radio_buttons :duration, 
+                                   [["2 heures (préciser la période dans les notes)", "2h"], ["Journée complète", "day"], ["Soirée", "evening"]],
+                                   :last, :first, 
+                                   required: true do |radio_button|
+        .flex.items-center
+          = radio_button.radio_button
+          = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
 hr

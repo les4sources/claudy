@@ -25,17 +25,17 @@
           .content
             p
               = @space_booking.public__name
-              - if @space_booking.attributes[:phone].presence
+              - if @space_booking.object.phone.presence
               	br
               	= @space_booking.phone
-              - if @space_booking.email.presence
+              - if @space_booking.object.email.presence
               	br
               	= mail_to @space_booking.email
       .sm:col-span-1
         dt.text-sm.font-medium.text-gray-500
           | Dates de votre réservation
         dd.mt-1.text-sm.text-gray-900(class="#{@space_booking.declined? ? "line-through" : nil}")
-          = @space_booking.date_range
+          | #{@space_booking.date_range} (#{@space_booking.duration})
       .sm:col-span-1
         dt.text-sm.font-medium.text-gray-500
           | Espace(s)

@@ -13,13 +13,28 @@ class SpaceBookingDecorator < ApplicationDecorator
     classes.join(" ")
   end
 
+  def duration
+    case object.duration
+    when "2h"
+      "2 heures"
+    when "evening"
+      "soirée"
+    when "day"
+      "journée complète"
+    end
+  end
+
   def tr_border_class
     classes = ["border-l-8", "border-green-500"]
     classes.join(" ")
   end
 
   def date_range
-    "du #{from_date} au #{to_date}"
+    if from_date == to_date
+      "le #{from_date}"
+    else
+      "du #{from_date} au #{to_date}"
+    end
   end
 
   def email

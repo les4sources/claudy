@@ -43,6 +43,9 @@
             - grouped_space_reservations.last.each do |space_reservation|
               = space_badge(space_reservation.space)
 
+          .block.text-gray-500
+            = space_booking.duration
+
   - if @grouped_reservations[date]
     - @grouped_reservations[date].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations|
       - reservation = grouped_reservations.last.first

@@ -20,7 +20,8 @@ module SpaceBookable
       (@space_booking.from_date..@space_booking.to_date).each do |date|
         @space_booking.space_reservations.build(
           space: space,
-          date: date
+          date: date,
+          duration: @space_booking.duration
         )
       end
     end
@@ -49,6 +50,7 @@ module SpaceBookable
     params
       .require(:space_booking)
       .permit(
+        :duration,
         :email,
         :firstname,
         :from_date,

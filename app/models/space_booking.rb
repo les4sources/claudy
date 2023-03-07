@@ -10,6 +10,7 @@ class SpaceBooking < ApplicationRecord
   attr_accessor :invoice_wanted
   attr_accessor :space_ids
   attr_accessor :newsletter_subscription
+  attr_accessor :duration
 
   validates_presence_of :firstname,
                         message: "Veuillez préciser un prénom"
@@ -34,6 +35,10 @@ class SpaceBooking < ApplicationRecord
 
   def declined?
     status == "declined"
+  end
+
+  def duration
+    self&.space_reservations&.first&.duration
   end
 
   def generate_token
