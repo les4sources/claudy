@@ -31,14 +31,13 @@ export default class extends Controller {
   }
 
   setToDate(e) {
-    const dayAfterFromDate = this.getFromDate().add(1, 'day')
-    this.toDateInputTarget.setAttribute('min', dayAfterFromDate.format('YYYY-MM-DD'))
-    if (this.toDateInputTarget.value == "") {
-      this.toDateInputTarget.value = dayAfterFromDate.format('YYYY-MM-DD')
+    this.toDateInputTarget.setAttribute('min', this.getFromDate().format('YYYY-MM-DD'))
+    if (this.toDateInputTarget.value == "" || this.getToDate() < this.getFromDate()) {
+      this.toDateInputTarget.value = this.getFromDate().format('YYYY-MM-DD')
     }
-    if (this.getToDate() <= this.getFromDate()) {
-      this.toDateInputTarget.value = ""
-    }
+    // if (this.getToDate() < this.getFromDate()) {
+    //   this.toDateInputTarget.value = ""
+    // }
   }
 
   async showSimilarSpaceBookings() {

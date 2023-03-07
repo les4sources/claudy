@@ -17,7 +17,7 @@ module SpaceBookable
 
   def build_space_reservations(spaces)
     spaces.each do |space|
-      (@space_booking.from_date..(@space_booking.to_date - 1.day)).each do |date|
+      (@space_booking.from_date..@space_booking.to_date).each do |date|
         @space_booking.space_reservations.build(
           space: space,
           date: date
