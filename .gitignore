@@ -51,3 +51,4 @@ slim_me.*
 /config/credentials/production.key
 
 .env
+.DS_Store

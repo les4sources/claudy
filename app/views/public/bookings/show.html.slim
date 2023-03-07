@@ -110,7 +110,7 @@
           - when 2
             | 2ème étage
 
-        ul.grid.grid-cols-1.gap-6.mb-8.sm:grid-cols-2.lg:grid-cols-3[role="list"]
+        ul.grid.grid-cols-1.gap-6.mb-8.sm:grid-cols-2[role="list"]
           - level.last.each do |room|
             li.col-span-1.divide-y.divide-gray-200.rounded-lg.bg-white.shadow
               .flex.w-full.items-center.justify-between.space-x-6.p-6
@@ -122,7 +122,7 @@
                       | Admin
                   p.mt-1.truncate.text-sm.text-gray-500
                     = room.description
-                / img.h-10.w-10.flex-shrink-0.rounded-full.bg-gray-300[src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=4&w=256&h=256&q=60" alt=""]
+                = image_tag "rooms/#{room.code}.jpg", alt: "", class: "h-12 w-12 flex-shrink-0 rounded-full bg-gray-300"
 
 - if !@booking.declined?
   .mt-8.overflow-hidden.bg-teal-50.sm:rounded-lg
