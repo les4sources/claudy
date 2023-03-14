@@ -87,6 +87,8 @@ class SpaceBookingDecorator < ApplicationDecorator
       label = "Virement"
     when "airbnb"
       label = "Airbnb"
+    else
+      label = "?"
     end
     shared_classes = "text-sm font-medium mr-2 px-2.5 py-0.5 rounded"
     case object.payment_status

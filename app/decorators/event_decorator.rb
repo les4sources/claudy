@@ -7,4 +7,16 @@ class EventDecorator < ApplicationDecorator
     html << object.name
     h.raw(html)
   end
+
+  def name_with_date
+    "#{object.name} (#{date_range})"
+  end
+
+  def date_range
+    if object.starts_at.to_date == object.ends_at.to_date
+      h.l(object.starts_at.to_date)
+    else
+      "#{h.l(object.starts_at.to_date)} - #{h.l(object.ends_at.to_date)}"
+    end
+  end
 end

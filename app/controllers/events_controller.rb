@@ -5,7 +5,7 @@ class EventsController < BaseController
 
   def index
     @events = EventDecorator
-      .decorate_collection(Event.all.includes(:event_category).order(starts_at: :desc))
+      .decorate_collection(Event.all.includes(:event_category).order(starts_at: :asc))
   end
 
   def show

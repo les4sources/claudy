@@ -9,8 +9,8 @@
                 "Événement"
       .md:w-1/2.lg:w-2/3
         = f.collection_select_field :event_id, 
-                                    Event.all.order(:name), 
-                                    :id, :name,
+                                    EventDecorator.decorate_collection(Event.all.order(:starts_at)), 
+                                    :id, :name_with_date,
                                     include_blank: true
 
     = f.text_field :firstname,
