@@ -11,7 +11,7 @@
              ) \
            ]
 
-= render "space_bookings/status_callout", 
+= render "space_bookings/status_callout",
          space_booking: @space_booking
 
 .grid.grid-cols-3.gap-4
@@ -24,6 +24,14 @@
           | Nom et coordonnées de la personne qui a réservé
       .border-t.border-gray-200
         dl
+          - if @space_booking.event.presence
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Événement
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = link_to @space_booking.event.decorate.name_with_color,
+                          event_path(@space_booking.event),
+                          class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
           .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
               | Nom
@@ -65,15 +73,26 @@
                           | (#{space_reservations.first.duration})
                       td = space_reservations.collect { |sr| sr.space.name }.join(", ")
 
+    - if @space_booking.public_notes.presence
+      .overflow-hidden.bg-yellow-200.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6.bg-yellow-300
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Notes pour le client
+          p.mt-1.max-w-2xl.text-sm.text-yellow-500
+            | Informations publiées sur la page web
+        .border-t.border-yellow-400.px-6.py-4
+          .content.space-y-4.text-sm
+            == @space_booking.public_notes
+
   .space-y-4
     .overflow-hidden.shadow.sm:rounded-lg.bg-white
       .flex.place-content-between.px-4.py-5.sm:px-6
         h3.text-lg.font-medium.leading-6.text-gray-900
-          | Réservation ##{@space_booking.token}
+          | Réservation #{@space_booking.token}
       .border-t.border-gray-200
         .px-6.py-5
           = link_to "Page web de la réservation",
-                    public_space_booking_path(@space_booking.token),
+                    public_space_booking_path(@space_booking.object.token),
                     class: "text-white bg-gradient-to-br from-pink-500 to-orange-400 focus:ring-4 focus:outline-none focus:ring-pink-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2",
                     target: "_blank"
 
@@ -96,6 +115,11 @@
               | Paiement
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @space_booking.payment_method
+          .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Tarif
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @space_booking.tier.capitalize
           .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
               | Facture

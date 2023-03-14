@@ -23,7 +23,9 @@ class BookingsController < BaseController
       adults: 0,
       children: 0,
       babies: 0,
-      platform: "direct"
+      platform: "direct",
+      tier_lodgings: "neutre",
+      tier_rooms: "neutre"
     )
     @lodgings = Lodging.all
   end
@@ -55,6 +57,7 @@ class BookingsController < BaseController
         format.html { redirect_to service.booking, notice: "La réservation a été mise à jour." }
         format.json { render :show, status: :ok, location: service.booking }
       else
+        byebug
         format.html { 
           @booking = service.booking
           render :edit, 

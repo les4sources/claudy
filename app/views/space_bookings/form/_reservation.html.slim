@@ -33,7 +33,12 @@
       = f.label :duration,
                 "Période *"
       = f.collection_radio_buttons :duration, 
-                                   [["2 heures (préciser la période dans les notes)", "2h"], ["Journée complète", "day"], ["Soirée", "evening"]],
+                                   [ \
+                                     ["2 heures (préciser la période dans les notes)", "2h"], 
+                                     ["Journée", "day"], 
+                                     ["Soirée", "evening"],
+                                     ["Journée + soirée", "fullday"] \
+                                   ],
                                    :last, :first, 
                                    required: true do |radio_button|
         .flex.items-center

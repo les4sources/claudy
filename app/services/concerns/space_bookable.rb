@@ -15,13 +15,13 @@ module SpaceBookable
     end
   end
 
-  def build_space_reservations(spaces)
+  def build_space_reservations(spaces, duration)
     spaces.each do |space|
       (@space_booking.from_date..@space_booking.to_date).each do |date|
         @space_booking.space_reservations.build(
           space: space,
           date: date,
-          duration: @space_booking.duration
+          duration: duration
         )
       end
     end
@@ -52,6 +52,7 @@ module SpaceBookable
       .permit(
         :duration,
         :email,
+        :event_id,
         :firstname,
         :from_date,
         :group_name,
@@ -63,6 +64,7 @@ module SpaceBookable
         :payment_status,
         :phone,
         :price,
+        :public_notes,
         :status,
         :tier,
         :to_date,

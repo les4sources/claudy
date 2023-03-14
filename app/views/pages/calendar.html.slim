@@ -36,6 +36,8 @@
               = link_to space_booking.decorate.name.html_safe, 
                         space_booking_path(space_booking), 
                         class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+            - if space_booking.event.presence
+              .text-gray-500.leading-none.mb-2.font-semibold = space_booking.event.name_with_color
             - if space_booking.group_name.present?
               .text-gray-500.leading-none.mb-2 = space_booking.group_name
 
@@ -70,8 +72,12 @@
           - if booking.estimated_arrival.present?
             p.mb-2.text-sm.font-light
               | Heure d'arrivée: #{booking.estimated_arrival}
-          .mb-2
-            = booking.payment_status
+          - if booking.canceled?
+            .mb-2.text-sm.font-semibold
+              | Cette réservation est annulée
+          - if booking.confirmed?
+            .mb-2
+              = booking.payment_status
           ul.flex.text-base.font-light
             - if booking.object.adults > 0
               li.mr-2

@@ -2,7 +2,13 @@
   .md:border-r-8.md:border-indigo-100.md:pr-4.md:text-right
     = section_heading_tw heading: "Notes"
 
-  .col-span-2.mb-4.space-y-6.sm:space-y-5
+  .col-span-2.mb-4.space-y-2
+    = f.label :notes, 
+              "Notes éventuelles concernant cette réservation (information interne)"
     = f.text_area :notes,
-                  label: "Notes éventuelles concernant cette réservation (information interne)",
                   rows: 4
+
+    .mt-2
+    = f.label :public_notes, 
+              "Notes à afficher sur la page web de la réservation (partagées avec le client)"
+    = f.rich_text_area :public_notes

@@ -2,7 +2,7 @@
 
 - content_for :page_header do
   = render 'layouts/public/components/page_header',
-           title: "Votre séjour aux 4 Sources"
+           title: @booking.confirmed? ? "Votre séjour aux 4 Sources" : "Votre demande de réservation"
 
 - content_for :page_banner do
   .text-sm.leading-6.text-white.text-center
@@ -47,6 +47,11 @@
             div = @booking.lodging.summary
           - else
             | Maison Communautaire
+
+            .mt-2.bg-yellow-200.p-2.rounded-md
+              |
+                💁 N'oubliez pas d'emporter avec vous vos draps, essuies/serviettes, savons
+                biodégradables et liquide vaisselle écologique.
             / table
               tbody
                 - @reservations_by_date.each do |date, reservations|
@@ -175,6 +180,14 @@
           .text-sm.font-medium.text-gray-900.sm:col-span-2
             | 🧾 Vous avez demandé de recevoir une facture
 
+
+- if @booking.public_notes.presence
+  .relative.mt-8.bg-slate-50.sm:rounded-lg
+    .absolute.-top-4.-left-4
+      svg.w-12.h-12.text-slate-200[xmlns="http://www.w3.org/2000/svg" fill="none" viewbox="0 0 24 24" stroke-width="1.5" stroke="currentColor"]
+        path[stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"]
+    .px-4.py-5.sm:px-6.text-sm
+      == @booking.public_notes
 
 .content.mt-8
   p.font-bold

@@ -2,17 +2,24 @@
   = render 'layouts/components/page_header',
            title: @event_category.name,
            links: [ \
+             delete_link(@event_category),
              link_to( \
-               'Mettre à jour',
+               "Mettre à jour",
                edit_event_category_path(@event_category),
-               class: 'secondary button' \
-             ),
-             delete_link(@event_category) \
+               class: "btn-page-header" \
+             ) \
            ].compact
 
-.grid-x.grid-padding-x
-  .cell.auto
-    p
-      strong Couleur
-      br
-      = @event_category.color
+.grid.grid-cols-3.gap-4
+  .col-span-2.space-y-4
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Informations
+      .border-t.border-gray-200
+        dl
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Couleur
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @event_category.color

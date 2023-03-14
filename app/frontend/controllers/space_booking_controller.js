@@ -9,6 +9,10 @@ export default class extends Controller {
     'toDateInput'
   ]
 
+  static values = {
+    objectId: Number
+  }
+
   connect() {
     console.log('connect space-booking')
   }
@@ -41,10 +45,10 @@ export default class extends Controller {
   }
 
   async showSimilarSpaceBookings() {
-    console.log('showSimilarSpaceBookings()')
+    console.log('showSimilarSpaceBookings()', this.objectIdValue)
     if (this.getFromDate().isValid() && this.getToDate().isValid()) {
       console.log('get other space bookings...')
-      fetch("/pages/other_space_bookings?from_date=" + this.fromDateInputTarget.value + "&to_date=" + this.toDateInputTarget.value)
+      fetch("/pages/other_space_bookings?space_booking_id=" + this.objectIdValue + "&from_date=" + this.fromDateInputTarget.value + "&to_date=" + this.toDateInputTarget.value)
         .then(response => response.text())
         .then(html => Turbo.renderStreamMessage(html));
     } else {

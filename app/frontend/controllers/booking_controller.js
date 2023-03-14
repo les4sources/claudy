@@ -47,6 +47,10 @@ export default class extends Controller {
   //   'toDateInput'
   // ]
 
+  static values = {
+    objectId: Number
+  }
+
   connect() {
     console.log('connect booking')
   }
@@ -216,7 +220,7 @@ export default class extends Controller {
     console.log('showSimilarBookings()')
     if (this.getFromDate().isValid() && this.getToDate().isValid()) {
       console.log('get other bookings...')
-      fetch("/pages/other_bookings?from_date=" + this.fromDateInputTarget.value + "&to_date=" + this.toDateInputTarget.value)
+      fetch("/pages/other_bookings?booking_id=" + this.objectIdValue + "&from_date=" + this.fromDateInputTarget.value + "&to_date=" + this.toDateInputTarget.value)
         .then(response => response.text())
         .then(html => Turbo.renderStreamMessage(html));
     } else {

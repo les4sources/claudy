@@ -67,11 +67,23 @@ class BookingDecorator < ApplicationDecorator
       shared_classes = "text-#{font_size} font-semibold text-center py-0.5 px-1 rounded"
       case object.lodging_id
       when 1
-        h.content_tag(:span, "Chevêche", class: "#{shared_classes} bg-orange-100 text-orange-800")
+        if object.confirmed?
+          h.content_tag(:span, "Chevêche", class: "#{shared_classes} bg-orange-100 text-orange-800")
+        else
+          h.content_tag(:span, "Chevêche", class: "#{shared_classes} border border-orange-200 text-orange-800")
+        end
       when 2
-        h.content_tag(:span, "Hulotte", class: "#{shared_classes} bg-amber-100 text-amber-800")
+        if object.confirmed?
+          h.content_tag(:span, "Hulotte", class: "#{shared_classes} bg-amber-100 text-amber-800")
+        else
+          h.content_tag(:span, "Hulotte", class: "#{shared_classes} border border-amber-200 text-amber-800")
+        end
       when 3
-        h.content_tag(:span, "Grand-Duc", class: "#{shared_classes} bg-teal-100 text-teal-800")
+        if object.confirmed?
+          h.content_tag(:span, "Grand-Duc", class: "#{shared_classes} bg-teal-100 text-teal-800")
+        else
+          h.content_tag(:span, "Grand-Duc", class: "#{shared_classes} border border-teal-200 text-teal-800")
+        end
       end
     end
   end
@@ -117,11 +129,31 @@ class BookingDecorator < ApplicationDecorator
   def payment_method
     case object.payment_method
     when "cash"
-      "En liquide"
+      "En liquide à votre arrivée"
     when "bank_transfer"
       "Virement bancaire"
     when "airbnb"
-      "Via AirBnb"
+      "Via Airbnb"
+    end
+  end
+
+  def payment_badge
+    case object.payment_method
+    when "cash"
+      label = "Liquide"
+    when "bank_transfer"
+      label = "Virement"
+    when "airbnb"
+      label = "Airbnb"
+    end
+    shared_classes = "text-sm font-medium mr-2 px-2.5 py-0.5 rounded"
+    case object.payment_status
+    when "pending"
+      h.content_tag(:span, label, class: "#{shared_classes} bg-red-200 text-red-800")
+    when "partially_paid"
+      h.content_tag(:span, label, class: "#{shared_classes} bg-yellow-200 text-yellow-800")
+    when "paid"
+      h.content_tag(:span, label, class: "#{shared_classes} bg-green-200 text-green-800")
     end
   end
 
@@ -158,12 +190,30 @@ class BookingDecorator < ApplicationDecorator
     rooms.each do |room|
       case room.level
       when 0
-        html << h.content_tag(:span, room.code, class: "#{shared_classes} bg-indigo-100 text-indigo-800 dark:bg-indigo-200 dark:text-indigo-900")
+        if object.confirmed?
+          specific_classes = "bg-indigo-100 text-indigo-800"
+        else
+          specific_classes = "border border-indigo-100 text-indigo-800"
+        end
       when 1
-        html << h.content_tag(:span, room.code, class: "#{shared_classes} bg-purple-100 text-purple-800 dark:bg-purple-200 dark:text-purple-900")
+        if object.confirmed?
+          specific_classes = "bg-purple-100 text-purple-800"
+        else
+          specific_classes = "border border-purple-100 text-purple-800"
+        end
       when 2
-        html << h.content_tag(:span, room.code, class: "#{shared_classes} bg-pink-100 text-pink-800 dark:bg-pink-200 dark:text-pink-900")
+        if object.confirmed?
+          specific_classes = "bg-pink-100 text-pink-800"
+        else
+          specific_classes = "border border-pink-100 text-pink-800"
+        end
       end
+      html << h.content_tag(
+        :span, 
+        room.code, 
+        class: "#{shared_classes} #{specific_classes}", 
+        "data-tooltip-target": "tooltip-room-#{room.id}"
+      )
     end
     h.raw(html)
   end

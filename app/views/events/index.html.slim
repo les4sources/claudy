@@ -1,30 +1,34 @@
+
 - content_for :page_header do
-  = render 'layouts/components/page_header',
-           title: 'Événements',
-           count: @events.size,
+  = render "layouts/components/page_header",
+           title: "Événements",
            links: [ \
-             link_to( \
-               'Ajouter un événement',
-               new_event_path,
-               class: 'primary button show-for-large' \
-             ) \
+             link_to("Types d'événements", event_categories_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"),
+             link_to("➕ Nouvel événement", new_event_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
            ]
 
-table
-  thead
-    tr
-      th Catégorie
-      th Nom
-      th De
-      th À
-  tbody
-    - @events.each do |event|
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
       tr
-        td
-          = event.event_category.name
-        td
-          = link_to(event.name, event_path(event))
-        td
-          = l(event.starts_at, format: :long)
-        td
-          = l(event.ends_at, format: :long)
+        th.py-3.px-6.w-48[scope="col"]
+          | Catégorie
+        th.py-3.px-6[scope="col"]
+          | Nom 
+        th.py-3.px-6.w-64[scope="col"]
+          | De 
+        th.py-3.px-6.w-64[scope="col"]
+          | À 
+    tbody
+      - @events.each do |event|
+        tr.bg-white
+          td.py-4.px-6
+            = event.event_category.name
+          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+            = link_to event.name_with_color, 
+                      event_path(event),
+                      class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+          td.py-4.px-6
+            = l(event.starts_at, format: :long)
+          td.py-4.px-6
+            = l(event.ends_at, format: :long)

@@ -1,8 +1,11 @@
 class SpaceBooking < ApplicationRecord
   has_many :space_reservations, dependent: :destroy
   has_many :spaces, through: :space_reservations
+  belongs_to :event, optional: true
 
   monetize :price_cents, allow_nil: true
+
+  has_rich_text :public_notes
 
   scope :current_and_future, -> { where("to_date >= ?", Date.today).order(from_date: :asc) }
   scope :past, -> { where("to_date < ?", Date.today).order(from_date: :desc) }
@@ -35,10 +38,6 @@ class SpaceBooking < ApplicationRecord
 
   def declined?
     status == "declined"
-  end
-
-  def duration
-    self&.space_reservations&.first&.duration
   end
 
   def generate_token

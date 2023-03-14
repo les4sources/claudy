@@ -27,7 +27,7 @@ module SpaceBookings
       set_invoice_status
       spaces = get_spaces
       if !spaces.nil? && available?(spaces)
-        build_space_reservations(spaces)
+        build_space_reservations(spaces, @space_booking.duration)
         @space_booking.save!
         notify_customer_on_create
         create_subscription(from: @space_booking)

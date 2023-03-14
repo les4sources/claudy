@@ -4,7 +4,10 @@
 
 = form_with model: @booking,
             url: booking_path(@booking),
-            data: { controller: "booking" } do |f|
+            data: { \
+              controller: "booking",
+              "booking-object-id-value": @booking.id \
+            } do |f|
   .space-y-8.divide-y.divide-gray-200.sm:space-y-5
     .space-y-6.sm:space-y-5
       = render "form", f: f, lodgings: @lodgings

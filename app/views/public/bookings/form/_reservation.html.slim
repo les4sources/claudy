@@ -3,6 +3,16 @@
     = section_heading_tw heading: "Votre réservation"
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
+    = render Button::Component.new path: public_calendar_lodgings_modal_path,
+                                   icon: "calendar",
+                                   title: "Afficher le calendrier des disponibilités",
+                                   type: :link,
+                                   style: :secondary,
+                                   options: { \
+                                     method: :get,
+                                     data: { turbo_frame: "modal" } \
+                                   }
+
     .space-y-6.md:space-y-0.md:flex.md:space-x-6
       = f.date_field :from_date,
                      html5: true,

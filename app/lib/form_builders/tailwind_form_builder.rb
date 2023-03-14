@@ -147,6 +147,19 @@ module FormBuilders
       end
     end
 
+    def time_field(method, options = {}) # rubocop:disable Style/OptionHash
+      default_options = { class: input_html_classes(method) }
+      default_options[:class]['w-full'] = 'w-24'
+      default_options[:class]['text-sm'] = 'text-lg'
+      merged_options = default_options.merge(options)
+
+      tag.div class: 'form-control' do
+        label(method, class: 'label') do
+          tag.span(label_text(method, merged_options), class: 'label-text')
+        end + super(method, merged_options) + errors(method)
+      end
+    end
+
     def collection_select_field(name, collection, value_method, text_method, options = {}, html_options = {})
       html_options = arguments_with_updated_default_class(
         "mt-1 block w-full rounded-md border-gray-500 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm", **html_options
@@ -166,6 +179,12 @@ module FormBuilders
 
     def text_area(name, *args, &block)
       args[0].merge!({ class: 'block w-full rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm' }) if args.any?
+      super(name, *args, &block)
+    end
+
+    def rich_text_area(name, *args, &block)
+      args[0] ||= {}
+      args[0].merge!({ class: 'prose block w-full bg-white rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm' })
       super(name, *args, &block)
     end
 

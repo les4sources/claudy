@@ -1,8 +1,11 @@
 class EventsController < BaseController
   before_action :get_event, only: [:show, :edit, :update, :destroy]
 
+  breadcrumb "Événements", :events_path, match: :exact
+
   def index
-    @events = Event.all.order(starts_at: :desc)
+    @events = EventDecorator
+      .decorate_collection(Event.all.includes(:event_category).order(starts_at: :desc))
   end
 
   def show
@@ -25,6 +28,12 @@ class EventsController < BaseController
   end
 
   def edit
+    @event.starts_at_date = @event.starts_at.to_date
+    @event.ends_at_date = @event.ends_at.to_date
+    @event.starts_at_time = @event.starts_at.to_time
+    @event.ends_at_time = @event.ends_at.to_time
+     # value: (f.object.starts_at.present? ? l(f.object.starts_at.to_time, format: :twenty_four_hour) : nil)
+
   end
 
   def update

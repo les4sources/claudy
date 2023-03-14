@@ -27,7 +27,7 @@
     .hidden(data-booking-target="divLodgings")
       .space-y-2
         = f.label :lodging_id, "Sélectionne un hébergement *"
-        = f.collection_radio_buttons :lodging_id, Lodging.all, :id, :form_label, required: true do |radio_button|
+        = f.collection_radio_buttons :lodging_id, Lodging.all.order(:id), :id, :form_label, required: true do |radio_button|
           .flex.items-center
             = radio_button.radio_button( \
                 data: { \

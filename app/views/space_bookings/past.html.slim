@@ -5,16 +5,22 @@
              link_to("Réservations à venir", space_bookings_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
            ]
 
+= render "spaces/tooltips"
+
 .overflow-x-auto.relative
   table.w-full.text-sm.text-left.text-gray-500.dark:text-gray-400
     thead.text-xs.text-gray-700.uppercase.bg-gray-50.dark:bg-gray-700.dark:text-gray-400
       tr
-        th.py-3.px-6.w-64[scope="col"]
+        th.py-3.px-6.w-48[scope="col"]
           | Nom 
+        th.py-3.px-6.w-48[scope="col"]
+          | Événement
         th.py-3.px-6[scope="col"]
-          | Du 
+          | Dates 
         th.py-3.px-6[scope="col"]
-          | Au 
+          | Période 
+        th.py-3.px-6[scope="col"]
+          | Espaces
         th.py-3.px-6[scope="col"]
           | Statut 
         th.py-3.px-6[scope="col"]
@@ -32,14 +38,20 @@
             - if space_booking.group_name.present?
               .text-gray-500 = space_booking.group_name
           td.py-4.px-6
-            = space_booking.from_date
+            = space_booking.event_name_with_color
           td.py-4.px-6
-            = space_booking.to_date
+            = space_booking.from_date
+            br
+            | → #{space_booking.to_date}
+          td.py-4.px-6
+            = space_booking.duration
+          td.py-4.px-6.space-x-1
+            = space_booking.spaces_badges(font_size: "sm")
           td.py-4.px-6
             = space_booking.status
           td.py-4.px-6
             = space_booking.payment_status
           td.py-4.px-6
-            code ##{space_booking.token}
+            code #{space_booking.token}
 
 = will_paginate @space_bookings

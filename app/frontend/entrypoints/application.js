@@ -31,6 +31,9 @@ import '@hotwired/turbo-rails';
 import 'flowbite';
 import 'flowbite/src/flowbite.turbo.js';
 
+import 'trix';
+import '@rails/actiontext';
+
 import '../utils/setupStimulus';
 
 import '../stylesheets/application.css';

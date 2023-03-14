@@ -27,7 +27,7 @@ module SpaceBookings
       @space_booking.space_reservations.destroy_all
       spaces = get_spaces
       if !spaces.nil? && available?(spaces)
-        build_space_reservations(spaces)
+        build_space_reservations(spaces, @space_booking.duration)
         @space_booking.save!
       end
       raise error_message if !error.nil?

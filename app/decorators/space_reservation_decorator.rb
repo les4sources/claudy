@@ -12,7 +12,9 @@ class SpaceReservationDecorator < ApplicationDecorator
     when "evening"
       "soirée"
     when "day"
-      "journée complète"
+      "journée"
+    when "fullday"
+      "journée + soirée"
     end
   end
 end

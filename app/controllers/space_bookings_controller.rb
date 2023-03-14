@@ -3,7 +3,10 @@ class SpaceBookingsController < BaseController
 
   def index
     @space_bookings = SpaceBookingDecorator
-      .decorate_collection(SpaceBooking.current_and_future)
+      .decorate_collection(
+        SpaceBooking.current_and_future
+          .includes(:event)
+      )
   end
 
   def past
@@ -12,8 +15,10 @@ class SpaceBookingsController < BaseController
   end
 
   def show
-    @space_booking = SpaceBooking.find_by!(id: params[:id]).decorate
-    @space_reservations_by_date = @space_booking.space_reservations.decorate.to_a.group_by { |sr| sr.date }
+    @space_booking = SpaceBooking
+      .find_by!(id: params[:id])
+      .decorate
+    @space_reservations_by_date = @space_booking.space_reservations.to_a.group_by { |sr| sr.date }
     breadcrumb "Réservation ##{@space_booking.id}", space_booking_path(@space_booking), match: :exact
   end
 

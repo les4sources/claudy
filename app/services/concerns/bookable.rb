@@ -116,6 +116,7 @@ module Bookable
         :platform,
         :phone,
         :price,
+        :public_notes,
         :shown_price_cents,
         :status,
         :tier_lodgings,

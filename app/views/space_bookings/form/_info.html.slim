@@ -3,6 +3,16 @@
     = section_heading_tw heading: "Informations personnelles"
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
+
+    .space-y-2
+      = f.label :event_id, 
+                "Événement"
+      .md:w-1/2.lg:w-2/3
+        = f.collection_select_field :event_id, 
+                                    Event.all.order(:name), 
+                                    :id, :name,
+                                    include_blank: true
+
     = f.text_field :firstname,
                    label: "Prénom *",
                    required: true,

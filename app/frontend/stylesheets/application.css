@@ -17,6 +17,7 @@
 }
 */
 @import 'tailwindcss/utilities';
+@import 'trix';
 
 /* @import '../../components/flow/component.css'; */
 

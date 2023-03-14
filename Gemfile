@@ -46,7 +46,7 @@ gem "bootsnap", require: false
 # gem "sassc-rails"
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
-# gem "image_processing", "~> 1.2"
+gem "image_processing", "~> 1.2"
 
 gem "dotenv-rails", groups: [:development, :test]
 
@@ -59,6 +59,7 @@ gem "draper"
 gem "loaf"
 gem "money-rails", "~>1.12"
 gem "postmark-rails"
+gem "ruby-vips"
 gem "sentry-ruby"
 gem "sentry-rails"
 gem "simple_calendar", "~> 2.4"

@@ -1,6 +1,9 @@
 class SpaceBookingDecorator < ApplicationDecorator
   delegate_all
 
+  decorates_association :event
+  decorates_association :space_reservations
+
   def self.collection_decorator_class
     PaginatingDecorator
   end
@@ -14,13 +17,29 @@ class SpaceBookingDecorator < ApplicationDecorator
   end
 
   def duration
-    case object.duration
+    case object&.space_reservations&.first&.duration
     when "2h"
       "2 heures"
     when "evening"
       "soirée"
     when "day"
-      "journée complète"
+      "journée"
+    when "fullday"
+      "journée + soirée"
+    else
+      "période non précisée"
+    end
+  end
+
+  def event_name_with_color
+    if object.event.presence
+      h.link_to(
+        object.event.decorate.name_with_color, 
+        h.event_path(object.event),
+        class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+      )
+    else
+      ""
     end
   end
 
@@ -60,10 +79,30 @@ class SpaceBookingDecorator < ApplicationDecorator
     end
   end
 
+  def payment_badge
+    case object.payment_method
+    when "cash"
+      label = "Liquide"
+    when "bank_transfer"
+      label = "Virement"
+    when "airbnb"
+      label = "Airbnb"
+    end
+    shared_classes = "text-sm font-medium mr-2 px-2.5 py-0.5 rounded"
+    case object.payment_status
+    when "pending"
+      h.content_tag(:span, label, class: "#{shared_classes} bg-red-200 text-red-800")
+    when "partially_paid"
+      h.content_tag(:span, label, class: "#{shared_classes} bg-yellow-200 text-yellow-800")
+    when "paid"
+      h.content_tag(:span, label, class: "#{shared_classes} bg-green-200 text-green-800")
+    end
+  end
+
   def payment_method
     case object.payment_method
     when "cash"
-      "En liquide"
+      "En liquide à votre arrivée"
     when "bank_transfer"
       "Virement bancaire"
     end
@@ -100,7 +139,12 @@ class SpaceBookingDecorator < ApplicationDecorator
     shared_classes = "text-#{font_size} font-semibold text-center py-0.5 px-1 rounded"
     html = ""
     spaces.each do |space|
-      html << h.content_tag(:span, space.code, class: "#{shared_classes} bg-indigo-100 text-indigo-800 dark:bg-indigo-200 dark:text-indigo-900")
+      html << h.content_tag(
+        :span, 
+        space.code, 
+        class: "#{shared_classes} bg-indigo-100 text-indigo-800",
+        "data-tooltip-target": "tooltip-space-#{space.id}"
+      )
     end
     h.raw(html)
   end
@@ -136,6 +180,15 @@ class SpaceBookingDecorator < ApplicationDecorator
 
   def to_date
     l(object.to_date, format: :short)
+  end
+
+  def token
+    h.link_to(
+      "##{object.token}",
+      h.public_space_booking_path(object.token),
+      target: "_blank",
+      class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+    )
   end
 
   def tr_class

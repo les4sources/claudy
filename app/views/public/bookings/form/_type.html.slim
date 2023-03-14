@@ -2,16 +2,6 @@
   .md:border-r-4.md:border-slate-400.md:pr-4.md:text-right
     = section_heading_tw heading: "Type d'hébergement"
 
-    = render Button::Component.new path: public_calendar_lodgings_modal_path,
-                                   icon: "calendar",
-                                   title: "Afficher le calendrier",
-                                   type: :link,
-                                   style: :secondary,
-                                   options: { \
-                                     method: :get,
-                                     data: { turbo_frame: "modal" } \
-                                   }
-
   .mt-4.md:mt-0.pb-4.col-span-2.space-y-4
     .-mt-4
     .space-y-2
@@ -33,7 +23,7 @@
               💁 Consultez notre site web pour #{link_to("les informations concernant l'accueil de groupes", "https://www.les4sources.be/accueil-de-groupes", onclick: "window.open(this.href); return false;")}.
 
         = f.label :lodging_id, "Sélectionnez un hébergement *"
-        = f.collection_radio_buttons :lodging_id, Lodging.all, :id, :form_label, required: true do |radio_button|
+        = f.collection_radio_buttons :lodging_id, Lodging.all.order(:id), :id, :form_label, required: true do |radio_button|
           .flex.items-center
             = radio_button.radio_button( \
                 data: { \

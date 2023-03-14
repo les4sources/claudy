@@ -144,12 +144,23 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
               dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
                 | ✔️ Intéressé par une session d'initiation au disc-golf
 
+    - if @booking.public_notes.presence
+      .overflow-hidden.bg-yellow-200.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6.bg-yellow-300
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Notes pour le client
+          p.mt-1.max-w-2xl.text-sm.text-yellow-500
+            | Informations publiées sur la page web
+        .border-t.border-yellow-400.px-6.py-4
+          .content.space-y-4.text-sm
+            == @booking.public_notes
+
   .space-y-4
     .overflow-hidden.shadow.sm:rounded-lg.bg-white
       .flex.place-content-between.px-4.py-5.sm:px-6
         h3.text-lg.font-medium.leading-6.text-gray-900
           | Réservation ##{@booking.token}
-      .border-t.border-gray-200
+      .border-t.border-yelo-200
         .px-6.py-5
           = link_to "Page web de la réservation",
                     public_booking_path(@booking.token),
@@ -177,6 +188,11 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
               = @booking.payment_method
           .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
+              | Tarif
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @booking.tier.capitalize
+          .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
               | Facture
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               - if @booking.invoice_status == "requested"
@@ -186,11 +202,11 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
 
     - if @booking.notes.presence
       .overflow-hidden.bg-yellow-100.shadow.sm:rounded-lg
-        .px-4.py-5.sm:px-6
+        .px-4.py-5.sm:px-6.bg-yellow-200
           h3.text-lg.font-medium.leading-6.text-gray-900
-            | Notes
-          p.mt-1.max-w-2xl.text-sm.text-gray-500
+            | Notes internes
+          p.mt-1.max-w-2xl.text-sm.text-yellow-500
             | Informations à usage interne
-        .border-t.border-gray-200.px-6.py-4
+        .border-t.border-yellow-300.px-6.py-4
           .content.space-y-4
             = simple_format @booking.notes

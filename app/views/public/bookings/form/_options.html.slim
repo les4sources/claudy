@@ -5,10 +5,11 @@
   .col-span-2.mb-4
     .hidden.col-span-2.mb-6.space-y-6.sm:space-y-5(data-public--booking-target="partyHallOption")
       .content
-        p #{link_to("Notre grande salle", "https://www.les4sources.be/nos-salles-et-espaces-exterieurs", onclick: "window.open(this.href); return false;")} est disponible en option uniquement pour les giteurs du Grand-Duc.
+        p #{link_to("Notre grande salle", "https://www.les4sources.be/nos-salles-et-espaces-exterieurs", onclick: "window.open(this.href); return false;")} est disponible en option uniquement pour les giteurs du Grand-Duc et de la Hulotte.
 
       = f.check_input :option_partyhall,
-                      label: "Je suis intéressé d'également louer la salle des 4 Sources"
+                      label: "Je suis intéressé d'également louer la salle des 4 Sources",
+                      message: "Le coût de la location de la salle sera ajouté au montant de votre réservation"
 
     .mb-6
       = f.check_input :option_bread,
@@ -18,10 +19,10 @@
     .mb-6
       = f.check_input :option_babysitting,
                       label: "Je suis intéressé par du babysitting 👼",
-                      message: "Les ados des 4 Sources prendront contact avec vous"
+                      message: "Les ados des 4 Sources prendront contact avec vous et vous feront part de leur tarif"
 
     = f.check_input :option_discgolf,
                     label: "Je suis intéressé par une activité disc-golf 🥏",
-                    message: "Le disc-golf est un sport en pleine nature. L'activité d'une durée de 2h30 se déroule sur tout le domaine (à travers les prairies, les bois, avec les ânes et lamas). Sous réserve de la disponibilité de l'animateur."
+                    message: "Le disc-golf consiste à lancer des disques dans des cibles disposées dans un parcours naturel. C'est un excellent moyen de passer du temps en plein air avec des amis et des membres de votre famille. L'activité d'une durée de 2h30 se déroule sur tout le domaine (à travers les prairies, les bois, avec les ânes et lamas). Sous réserve de la disponibilité de l'animateur."
 
 hr

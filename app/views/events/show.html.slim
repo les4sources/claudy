@@ -2,27 +2,36 @@
   = render 'layouts/components/page_header',
            title: @event.name,
            links: [ \
+             delete_link(@event),
              link_to( \
-               'Mettre à jour',
+               "Mettre à jour",
                edit_event_path(@event),
-               class: 'secondary button' \
-             ),
-             delete_link(@event) \
+               class: "btn-page-header" \
+             ) \
            ].compact
 
-.grid-x.grid-padding-x
-  .cell.auto
-    p
-      strong Catégorie
-      br
-      = link_to(@event.event_category.name, event_category_path(@event.event_category))
-
-    p
-      strong Du
-      br
-      = l(@event.starts_at, format: :long)
-
-    p
-      strong Au
-      br
-      = l(@event.ends_at, format: :long)
+.grid.grid-cols-3.gap-4
+  .col-span-2.space-y-4
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Informations
+        / p.mt-1.max-w-2xl.text-sm.text-gray-500
+          | Nom et coordonnées de la personne qui a réservé
+      .border-t.border-gray-200
+        dl
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Catégorie
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = link_to(@event.event_category.name, event_category_path(@event.event_category))
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Du
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = l(@event.starts_at, format: :long)
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Au
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = l(@event.ends_at, format: :long)
