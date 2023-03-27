@@ -1,5 +1,5 @@
 = render TurboModal::Component.new(title: "Calendrier des disponibilités", width: :lg) do
-  .p-4.mb-4.text-sm.text-blue-700.bg-blue-100.rounded-lg.dark:bg-blue-200.dark:text-blue-800(role="alert")
+  / .p-4.mb-4.text-sm.text-blue-700.bg-blue-100.rounded-lg.dark:bg-blue-200.dark:text-blue-800(role="alert")
     |
       <span class="font-medium">Pour les disponibilités des lits de la Maison Communautaire</span>,
       nous vous invitons à nous envoyer votre demande de réservation. Nous reviendrons
@@ -43,7 +43,7 @@
               .rounded-md.bg-red-100.px-2.py-1.text-xs.font-medium.text-red-800
                 .line-through = lodging.name
                 .opacity-70 = lodging.summary
-        - if @available_rooms
+        / - if @available_rooms
           li
             .rounded-md.border.border-green-100.px-2.py-1.text-xs.font-medium.text-green-800
               div Lits disponibles dans la Maison Communautaire

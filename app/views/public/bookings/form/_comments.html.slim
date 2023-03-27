@@ -3,9 +3,12 @@
     = section_heading_tw heading: "D'autres informations à partager concernant votre demande de réservation"
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
-    = f.text_area :comments,
-                  label: "Commentaires ou remarques éventuels à nous transmettre",
-                  rows: 6
+    .space-y-2
+      = f.label :comments,
+                "Avez-vous des informations complémentaires à nous transmettre ?"
+      = f.text_area :comments,
+                    label: "Commentaires ou remarques éventuels à nous transmettre",
+                    rows: 6
 
     = f.text_field :estimated_arrival,
                    label: "Heure d'arrivée estimée",
@@ -16,4 +19,4 @@
                     label: raw("J'accepte les <a href=\"https://les4sources.notion.site/Conditions-g-n-rales-des-r-servations-4e0bd692ad764f638646273d6f705f6d\" target=\"_blank\" class=\"link\">conditions générales des réservations aux 4 Sources</a>")
 
     = f.check_input :newsletter_subscription,
-                    label: "Je souhaite recevoir la newsletter trimestrielle des 4 Sources"
+                    label: "Je souhaite recevoir la newsletter trimestrielle des 4 Sources 📬"

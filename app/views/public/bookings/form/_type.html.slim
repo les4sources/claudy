@@ -4,7 +4,7 @@
 
   .mt-4.md:mt-0.pb-4.col-span-2.space-y-4
     .-mt-4
-    .space-y-2
+    / .space-y-2
       = f.collection_radio_buttons :booking_type, 
                                    [["Un hébergement type \"gîte\" pour un groupe", "lodging"], ["Un ou plusieurs lits dans la \"Maison communautaire\"", "rooms"]], 
                                    :last, :first, 
@@ -13,6 +13,10 @@
         .flex.items-center
           = radio_button.radio_button(data: { action: "change->public--booking#drawForm", "public--booking-target": "bookingTypeOptions" })
           = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
+    .hidden
+      = f.text_field :booking_type,
+                     value: "lodging"
 
     / Lodgings
     .hidden(data-public--booking-target="divLodgings")

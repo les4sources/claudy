@@ -5,7 +5,7 @@ import moment from "moment"
 export default class extends Controller {
   static targets = [
     'adultsInput',
-    'bookingTypeOptions',
+    // 'bookingTypeOptions',
     'childrenInput',
     'divLodgings',
     'divRooms',
@@ -59,7 +59,8 @@ export default class extends Controller {
   }
 
   getSelectedBookingType() {
-    return this.bookingTypeOptionsTargets.find(button => button.checked).value
+    return 'lodging'
+    // return this.bookingTypeOptionsTargets.find(button => button.checked).value
   }
 
   getSelectedLodging() {
