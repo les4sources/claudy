@@ -13,6 +13,7 @@ html(lang="fr")
     = vite_client_tag
     = vite_javascript_tag "public", "data-turbo-track": "reload"
   body
+    = render "layouts/public/components/google_tag"
     = turbo_frame_tag "modal"
     
     - if content_for?(:page_banner)
