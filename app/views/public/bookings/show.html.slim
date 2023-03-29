@@ -21,10 +21,10 @@
   .border-t.border-teal-200.px-4.py-5.sm:px-6
     dl.grid.grid-cols-1.gap-x-4.gap-y-8.sm:grid-cols-2
       .sm:col-span-1
-        dt.text-sm.font-medium.text-gray-500
+        dt.text-base.font-medium.text-gray-500
           | Vos informations 
-        dd.mt-1.text-sm.text-gray-900
-          .content
+        dd.mt-1.text-base.text-gray-900
+          .content.text-base
             p
               = @booking.public__name
               - if @booking.attributes[:phone].presence
@@ -34,14 +34,14 @@
               	br
               	= mail_to @booking.email
       .sm:col-span-1
-        dt.text-sm.font-medium.text-gray-500
+        dt.text-base.font-medium.text-gray-500
           | Dates de votre réservation
-        dd.mt-1.text-sm.text-gray-900(class="#{@booking.declined? ? "line-through" : nil}")
+        dd.mt-1.text-base.text-gray-900(class="#{@booking.declined? ? "line-through" : nil}")
           = @booking.date_range
       .sm:col-span-1
-        dt.text-sm.font-medium.text-gray-500
+        dt.text-base.font-medium.text-gray-500
           | Hébergement(s)
-        dd.mt-1.text-sm.text-gray-900
+        dd.mt-1.text-base.text-gray-900
           - if !@booking.lodging.nil?
             div = @booking.lodging.name
             div = @booking.lodging.summary
@@ -60,9 +60,9 @@
                     td = reservations.collect { |r| r.room.name }.join(", ")
 
       .sm:col-span-1
-        dt.text-sm.font-medium.text-gray-500
+        dt.text-base.font-medium.text-gray-500
           | Personnes enregistrées
-        dd.mt-1.text-sm.text-gray-900
+        dd.mt-1.text-base.text-gray-900
           | 🧑 #{@booking.adults} adultes
           - if @booking.object.children > 0
             | , 🧒 #{@booking.children} enfants
@@ -102,7 +102,7 @@
     .px-4.py-5.sm:px-6
       h3.text-lg.font-medium.leading-6.text-gray-900
         | Vos chambres
-      p.mt-1.max-w-2xl.text-sm.text-gray-500
+      / p.mt-1.max-w-2xl.text-sm.text-gray-500
         | Merci de prévoir vos draps, serviettes/essuies de bain et savons biodégradables pour notre lagunage
     .border-t.border-teal-200.px-4.py-5.sm:px-6
       - RoomDecorator.decorate_collection(@booking.rooms.uniq.sort_by(&:level).map(&:decorate).group_by(&:level)).each do |level|
@@ -121,13 +121,72 @@
               .flex.w-full.items-center.justify-between.space-x-6.p-6
                 .flex-1.truncate
                   .flex.items-center.space-x-3
-                    h3.truncate.text-sm.font-medium.text-gray-900
+                    h3.truncate.text-base.font-medium.text-gray-900
                       = room.name
                     / span.inline-block.flex-shrink-0.rounded-full.bg-green-100.px-2.py-0.5.text-xs.font-medium.text-green-800
                       | Admin
-                  p.mt-1.truncate.text-sm.text-gray-500
+                  p.mt-1.truncate.text-base.text-gray-500
                     = room.description
                 = image_tag "rooms/#{room.code}.jpg", alt: "", class: "h-12 w-12 flex-shrink-0 rounded-full bg-gray-300"
+
+- if @booking.confirmed?
+  .mt-8.overflow-hidden.bg-teal-50.sm:rounded-lg
+    .px-4.py-5.sm:px-6
+      h3.text-lg.font-medium.leading-6.text-gray-900
+        | À emporter avec vous
+    .border-t.border-teal-200.px-4.py-5.sm:px-6
+      .text-base
+        ul.max-w-xs-xl.space-y-2.text-gray-600[role="list"]
+          li.flex.gap-x-3
+            svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+              path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
+            span
+              strong.font-semibold.text-gray-900
+                | Vos serviettes de bain et de vaisselle
+          li.flex.gap-x-3
+            svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+              path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
+            span
+              strong.font-semibold.text-gray-900
+                | Vos serviettes de bain et de vaisselle
+          li.flex.gap-x-3
+            svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+              path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
+            span
+              strong.font-semibold.text-gray-900
+                | Vos draps
+              br
+              | Soit un drap de lit avec un sac de couchage + taie d'oreille
+              br
+              | Soit un drap de lit et une housse de couette + taie d'oreiller
+          li.flex.gap-x-3
+            svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+              path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
+            span
+              strong.font-semibold.text-gray-900
+                | Du produit vaisselle et savon biodégradable,
+              br
+              | pour notre lagunage, système d’épuration naturel
+          li.flex.gap-x-3
+            svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+              path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
+            span
+              strong.font-semibold.text-gray-900
+                | Du papier toilette en suffisance
+          li.flex.gap-x-3
+            svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+              path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
+            span
+              strong.font-semibold.text-gray-900
+                | Vos repas (voir FAQ → service épicerie)
+          li.flex.gap-x-3
+            svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+              path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
+            span
+              strong.font-semibold.text-gray-900
+                | Vos bottes ou bottines si vous souhaitez participer au nourrissage des animaux,
+              br
+              | selon la disponibilité des habitants
 
 - if !@booking.declined?
   .mt-8.overflow-hidden.bg-teal-50.sm:rounded-lg
@@ -139,9 +198,9 @@
     .border-t.border-teal-200.px-4.py-5.sm:px-6
       dl.grid.grid-cols-1.gap-x-4.gap-y-8.sm:grid-cols-2
         .sm:col-span-1
-          dt.text-sm.font-medium.text-gray-500
+          dt.text-base.font-medium.text-gray-500
             | Montant de votre réservation 
-          dd.mt-1.text-sm.text-gray-900
+          dd.mt-1.text-base.text-gray-900
             - if @booking.price_cents == 0
               | Offert
             - elsif @booking.from_airbnb?
@@ -149,17 +208,17 @@
             - else
               = @booking.price
         .sm:col-span-1
-          dt.text-sm.font-medium.text-gray-500
+          dt.text-base.font-medium.text-gray-500
             | Votre moyen de paiement
-          dd.mt-1.text-sm.text-gray-900
+          dd.mt-1.text-base.text-gray-900
             = @booking.payment_method
 
         - if @booking.attributes["payment_method"] == "bank_transfer" && @booking.price_cents > 0
           - if @booking.confirmed?
             .sm:col-span-2
-              dt.text-sm.font-medium.text-gray-500
+              dt.text-base.font-medium.text-gray-500
                 | Pour effectuer votre virement bancaire
-              dd.mt-1.text-sm.text-gray-900
+              dd.mt-1.text-base.text-gray-900
                 | Merci de régler le montant de votre réservation sur le compte des 4 Sources et de nous envoyer une preuve de paiement pour le traitement rapide de votre réservation 👍
                 .mt-2.font-mono
                   | Les 4 Sources
@@ -171,13 +230,13 @@
                   | Communication: <em>Réservation hébergement #{@booking.token}</em>
           - elsif @booking.pending?
             .sm:col-span-2
-              dt.text-sm.font-medium.text-gray-500
+              dt.text-base.font-medium.text-gray-500
                 | Pour effectuer votre virement bancaire
-              dd.mt-1.text-sm.text-gray-900
+              dd.mt-1.text-base.text-gray-900
                 | Les informations relatives au paiement seront disponibles lorsque votre réservation aura été confirmée par notre équipe.
 
         - if @booking.invoice_status == "requested"
-          .text-sm.font-medium.text-gray-900.sm:col-span-2
+          .text-base.font-medium.text-gray-900.sm:col-span-2
             | 🧾 Vous avez demandé de recevoir une facture
 
 
@@ -186,7 +245,7 @@
     .absolute.-top-4.-left-4
       svg.w-12.h-12.text-slate-200[xmlns="http://www.w3.org/2000/svg" fill="none" viewbox="0 0 24 24" stroke-width="1.5" stroke="currentColor"]
         path[stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"]
-    .px-4.py-5.sm:px-6.text-sm
+    .px-4.py-5.sm:px-6.text-base
       == @booking.public_notes
 
 .content.mt-8
