@@ -2,29 +2,26 @@ p Bonjour #{@booking.firstname},
 
 p
   |
-    Bonne nouvelle ! Votre réservation aux 4 Sources est confirmée.
+    Bonne nouvelle ! Votre réservation d'hébergement aux 4 Sources est confirmée. Vous
+    trouverez tous les détails de votre réservation à l'adresse suivante :
 
-p 
-  |
-    Vous trouverez tous les détails de votre réservation à l'adresse suivante:
-  br
+p
   = link_to public_booking_url(@booking.token), public_booking_url(@booking.token)
 
 p
   |
-    N'hésitez pas à partager ce lien avec vos compagnons de voyage.
+    Merci de veiller à en prendre connaissance car vous y trouverez des informations importantes :
+    les modalités de paiement pour valider votre réservation, ce que vous devez emporter avec vous, 
+    l'accès au domaine, etc.
 
 p
   |
-    Prévoyez bien vos draps, essuies/serviettes de bain et du savon biodégradable pour notre lagunage.
+    N'hésitez pas à partager ce lien avec les personnes qui vous accompagneraient et à nous revenir
+    si vous constatez une erreur ou une information manquante. Nous modifierons votre réservation
+    pour que soit bien en ordre.
 
 p
   |
-    Répondez-nous si vous constatez une erreur ou une information manquante. Nous
-    modifierons la réservation pour que tout soit bien en ordre.
-
-p
-  |
-    À bientôt,
+    Au plaisir de vous accueillir au mieux dans notre p'tit coin de paradis 🙂
 
 = render "shared/email_signature"
