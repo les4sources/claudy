@@ -23,16 +23,14 @@
       .sm:col-span-1
         dt.text-base.font-medium.text-gray-500
           | Vos informations 
-        dd.mt-1.text-base.text-gray-900
-          .content.text-base
-            p
-              = @booking.public__name
-              - if @booking.attributes[:phone].presence
-              	br
-              	= @booking.phone
-              - if @booking.email.presence
-              	br
-              	= mail_to @booking.email
+        dd.mt-1.text-gray-900.text-base
+          = @booking.public__name
+          - if @booking.attributes[:phone].presence
+          	br
+          	= @booking.phone
+          - if @booking.object.email.presence
+          	br
+          	= mail_to @booking.email, class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
       .sm:col-span-1
         dt.text-base.font-medium.text-gray-500
           | Dates de votre réservation
@@ -127,7 +125,10 @@
                       | Admin
                   p.mt-1.truncate.text-base.text-gray-500
                     = room.description
-                = image_tag "rooms/#{room.code}.jpg", alt: "", class: "h-12 w-12 flex-shrink-0 rounded-full bg-gray-300"
+                = vite_image_tag "images/rooms/#{room.code}.jpg", alt: "", class: "h-16 w-16 flex-shrink-0 rounded-full bg-gray-300"
+
+        .text-base
+          | Consultez la <a target="_blank" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700" href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3">FAQ des hébergements</a> pour des informations sur les dimensions des draps.
 
 - if @booking.confirmed?
   .mt-8.overflow-hidden.bg-teal-50.sm:rounded-lg
