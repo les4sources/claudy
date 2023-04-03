@@ -1,6 +1,6 @@
 - content_for :page_header do
   = render 'layouts/components/page_header',
-           title: @space_booking.name,
+           title: @space_booking.group_or_name,
            secondary: "Du #{@space_booking.from_date} au #{@space_booking.to_date}",
            links: [ \
              delete_link(@space_booking.object, "Supprimer cette réservation"),
@@ -73,6 +73,55 @@
                           | (#{space_reservations.first.duration})
                       td = space_reservations.collect { |sr| sr.space.name }.join(", ")
 
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Réservation
+        / p.mt-1.max-w-2xl.text-sm.text-gray-500
+          | Chambres 
+      .border-t.border-gray-200
+        dl
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Nombre de personnes
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @space_booking.persons
+
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Options
+      .border-t.border-gray-200.p-2
+        .grid.grid-cols-3.gap-4.px-4
+          - if @space_booking.option_kitchenware?
+            .relative.flex.items-center.space-x-3.rounded-lg.border.border-gray-300.bg-white.px-6.py-2.shadow-sm.focus-within:ring-2.focus-within:ring-indigo-500.focus-within:ring-offset-2.hover:border-gray-400
+              .flex-shrink-0
+                = vite_image_tag "images/space_options/kitchenware.jpg", alt: "", class: "h-16 w-16"
+              .min-w-0.flex-1
+                p.text-sm.font-medium.text-gray-900
+                  | Vaisselle
+          - if @space_booking.option_beamer?
+            .relative.flex.items-center.space-x-3.rounded-lg.border.border-gray-300.bg-white.px-6.py-2.shadow-sm.focus-within:ring-2.focus-within:ring-indigo-500.focus-within:ring-offset-2.hover:border-gray-400
+              .flex-shrink-0
+                = vite_image_tag "images/space_options/beamer.jpg", alt: "", class: "h-16 w-16"
+              .min-w-0.flex-1
+                p.text-sm.font-medium.text-gray-900
+                  | Projecteur
+          - if @space_booking.option_wifi?
+            .relative.flex.items-center.space-x-3.rounded-lg.border.border-gray-300.bg-white.px-6.py-2.shadow-sm.focus-within:ring-2.focus-within:ring-indigo-500.focus-within:ring-offset-2.hover:border-gray-400
+              .flex-shrink-0
+                = vite_image_tag "images/space_options/wifi.jpg", alt: "", class: "h-16 w-16"
+              .min-w-0.flex-1
+                p.text-sm.font-medium.text-gray-900
+                  | Connexion WiFi
+          - if @space_booking.option_tables?
+            .relative.flex.items-center.space-x-3.rounded-lg.border.border-gray-300.bg-white.px-6.py-2.shadow-sm.focus-within:ring-2.focus-within:ring-indigo-500.focus-within:ring-offset-2.hover:border-gray-400
+              .flex-shrink-0
+                = vite_image_tag "images/space_options/tables.jpg", alt: "", class: "h-16 w-16"
+              .min-w-0.flex-1
+                p.text-sm.font-medium.text-gray-900
+                  | Tables
+
     - if @space_booking.public_notes.presence
       .overflow-hidden.bg-yellow-200.shadow.sm:rounded-lg
         .px-4.py-5.sm:px-6.bg-yellow-300
@@ -96,6 +145,25 @@
                     class: "text-white bg-gradient-to-br from-pink-500 to-orange-400 focus:ring-4 focus:outline-none focus:ring-pink-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2",
                     target: "_blank"
 
+    div
+      dl.grid.grid-cols-2.gap-5
+        - if @space_booking.object.arrival_time.presence
+          .overflow-hidden.rounded-lg.bg-white.px-4.py-5.shadow.sm:p-6
+            dt.truncate.text-sm.font-medium.text-gray-500
+              | Arrivée
+            dd.mt-1.text-3xl.font-semibold.tracking-tight.text-gray-900
+              => @space_booking.arrival_time
+              span.text-lg.ml-1.text-gray-500
+                = @space_booking.from_date
+        - if @space_booking.object.departure_time.presence
+          .overflow-hidden.rounded-lg.bg-white.px-4.py-5.shadow.sm:p-6
+            dt.truncate.text-sm.font-medium.text-gray-500
+              | Départ
+            dd.mt-1.text-3xl.font-semibold.tracking-tight.text-gray-900
+              => @space_booking.departure_time
+              span.text-lg.ml-1.text-gray-500
+                = @space_booking.to_date
+
     .overflow-hidden.shadow.sm:rounded-lg(class="#{@space_booking.payment_background}")
       .flex.place-content-between.px-4.py-5.sm:px-6
         h3.text-lg.font-medium.leading-6.text-gray-900
@@ -107,19 +175,29 @@
         dl.my-2
           .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
-              | Montant à payer
+              | Tarif
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @space_booking.tier.capitalize
+          .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Total à payer
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @space_booking.price
+          .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Payé
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @space_booking.paid_amount
+          .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Caution
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @space_booking.deposit_amount
           .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
               | Paiement
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @space_booking.payment_method
-          .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Tarif
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @space_booking.tier.capitalize
           .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
               | Facture

@@ -42,8 +42,14 @@
               .text-gray-500 = booking.group_name
           td.py-4.px-6
             = booking.from_date
+            - if booking.object.estimated_arrival.presence
+              .text-xs.font-medium
+                = booking.estimated_arrival
           td.py-4.px-6
             = booking.to_date
+            - if booking.object.departure_time.presence
+              .text-xs.font-medium
+                = booking.departure_time
           td.py-4.px-6.space-x-1
             - if !booking.lodging.nil?
               = booking.lodging_badge(font_size: "sm")

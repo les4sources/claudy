@@ -52,6 +52,14 @@ class BookingDecorator < ApplicationDecorator
     l(object.from_date, format: :short)
   end
 
+  def group_or_name
+    if object.group_name.presence
+      group_name
+    else
+      name
+    end
+  end
+
   def label_bedsheets
     return if !object.bedsheets?
     h.content_tag(:span, "draps", class: "secondary label")

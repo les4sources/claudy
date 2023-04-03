@@ -19,24 +19,24 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
     .flex.w-24.flex-shrink-0.items-center.justify-center.bg-blue-600.rounded-l-md.text-xl.font-medium.text-white
       = @booking.adults
     .flex.flex-1.items-center.justify-between.truncate.rounded-r-md.border-t.border-r.border-b.border-gray-200.bg-white
-      .flex-1.truncate.px-4.py-2.text-sm
-        span.font-medium.text-gray-900.hover:text-gray-600
+      .flex-1.truncate.px-4.py-2.text-lg
+        span.font-medium.text-gray-900
           | 🧑 Adultes
   - if @booking.object.children.present? && @booking.object.children > 0
     li.col-span-1.flex.rounded-md.shadow-sm
       .flex.w-24.flex-shrink-0.items-center.justify-center.bg-rose-600.rounded-l-md.text-xl.font-medium.text-white
         = @booking.children
       .flex.flex-1.items-center.justify-between.truncate.rounded-r-md.border-t.border-r.border-b.border-gray-200.bg-white
-        .flex-1.truncate.px-4.py-2.text-sm
-          span.font-medium.text-gray-900.hover:text-gray-600
+        .flex-1.truncate.px-4.py-2.text-lg
+          span.font-medium.text-gray-900
             | 👧 Enfants
   - if @booking.object.babies.present? && @booking.object.babies > 0
     li.col-span-1.flex.rounded-md.shadow-sm
       .flex.w-24.flex-shrink-0.items-center.justify-center.bg-purple-600.rounded-l-md.text-xl.font-medium.text-white
         = @booking.babies
       .flex.flex-1.items-center.justify-between.truncate.rounded-r-md.border-t.border-r.border-b.border-gray-200.bg-white
-        .flex-1.truncate.px-4.py-2.text-sm
-          span.font-medium.text-gray-900.hover:text-gray-600
+        .flex-1.truncate.px-4.py-2.text-lg
+          span.font-medium.text-gray-900
             | 👶 Bébés
 
 .grid.grid-cols-3.gap-4
@@ -166,6 +166,25 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
                     public_booking_path(@booking.token),
                     class: "text-white bg-gradient-to-br from-pink-500 to-orange-400 focus:ring-4 focus:outline-none focus:ring-pink-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2",
                     target: "_blank"
+
+    div
+      dl.grid.grid-cols-2.gap-5
+        - if @booking.object.estimated_arrival.presence
+          .overflow-hidden.rounded-lg.bg-white.px-4.py-5.shadow.sm:p-6
+            dt.truncate.text-sm.font-medium.text-gray-500
+              | Arrivée
+            dd.mt-1.text-3xl.font-semibold.tracking-tight.text-gray-900
+              => @booking.estimated_arrival
+              span.text-lg.ml-1.text-gray-500
+                = @booking.from_date
+        - if @booking.object.departure_time.presence
+          .overflow-hidden.rounded-lg.bg-white.px-4.py-5.shadow.sm:p-6
+            dt.truncate.text-sm.font-medium.text-gray-500
+              | Départ
+            dd.mt-1.text-3xl.font-semibold.tracking-tight.text-gray-900
+              => @booking.departure_time
+              span.text-lg.ml-1.text-gray-500
+                = @booking.to_date
 
     .overflow-hidden.shadow.sm:rounded-lg(class="#{@booking.payment_background}")
       .flex.place-content-between.px-4.py-5.sm:px-6

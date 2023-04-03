@@ -3,6 +3,8 @@ class SpaceBooking < ApplicationRecord
   has_many :spaces, through: :space_reservations
   belongs_to :event, optional: true
 
+  monetize :paid_amount_cents, allow_nil: true
+  monetize :deposit_amount_cents, allow_nil: true
   monetize :price_cents, allow_nil: true
 
   has_rich_text :public_notes
@@ -40,6 +42,10 @@ class SpaceBooking < ApplicationRecord
     status == "declined"
   end
 
+  def filled_duration
+    space_reservations&.first&.duration
+  end
+
   def generate_token
     validity = Proc.new { |token| SpaceBooking.where(token: token).first.nil? }
     begin
@@ -71,6 +77,20 @@ class SpaceBooking < ApplicationRecord
     elsif saved_change_to_payment_status? && payment_status == "paid"
       SpaceBookingMailer.space_booking_paid(self).deliver_now
     end
+  end
+
+  def outstanding_balance
+    price - paid_amount
+  end
+
+  def paid_percent
+    paid_amount / price * 100
+  rescue
+    0
+  end
+
+  def paid?
+    payment_status == "paid"
   end
 
   def pending?

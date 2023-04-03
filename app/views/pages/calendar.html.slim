@@ -72,6 +72,9 @@
           - if booking.estimated_arrival.present?
             p.mb-2.text-sm.font-light
               | Heure d'arrivée: #{booking.estimated_arrival}
+          - if booking.departure_time.present?
+            p.mb-2.text-sm.font-light
+              | Heure de départ: #{booking.departure_time}
           - if booking.canceled?
             .mb-2.text-sm.font-semibold
               | Cette réservation est annulée

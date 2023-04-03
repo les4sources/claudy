@@ -16,6 +16,7 @@ export default class extends Controller {
     'partyHallOption',
     'priceCalculationNotice',
     'priceDiv',
+    'priceInput',
     'pricePreview',
     'priceSection',
     'roomsPanel',
@@ -28,24 +29,6 @@ export default class extends Controller {
     'tierLodgingsRadioButton',
     'toDateInput'
   ]
-  // static targets = [
-  //   'adultsInput',
-  //   'bookingTypeField',
-  //   'childrenInput',
-  //   'fromDateInput',
-  //   'lodgingRadioButton',
-  //   'partyHallSection',
-  //   'priceCalculationNotice',
-  //   'priceDiv',
-  //   'pricePreview',
-  //   'roomsTab',
-  //   'shownPriceInput',
-  //   'tierButton',
-  //   'tierCard',
-  //   'tierPricing',
-  //   'tierInput',
-  //   'toDateInput'
-  // ]
 
   static values = {
     objectId: Number
@@ -58,23 +41,6 @@ export default class extends Controller {
   initialize() {
     console.log('initialize booking', this.getSelectedBookingType())
     this.drawForm()
-
-    // // initialize form
-    // if (this.bookingTypeFieldTarget.value == 'lodging') {
-    //   // hide tier pricing
-    //   this.toggleTierPricing()
-    //   this.setPrice()
-    //   // toggle 'party hall' section if Grand-Duc checked
-    //   const selectedLodging = this.lodgingRadioButtonTargets.filter(radio => radio.checked)[0]
-    //   if (selectedLodging !== undefined) {
-    //     this.togglePartyHallSection(selectedLodging.dataset.bookingPartyHallAvailabilityParam)
-    //   }
-    // } else {
-    //   this.roomsTabTarget.click()
-    //   if (this.tierInputTarget.value) {
-    //     this.setTier()
-    //   }
-    // }
   }
 
   drawForm(e) {
@@ -229,12 +195,19 @@ export default class extends Controller {
     }
   }
 
+  fillPrice(amount) {
+    if (this.priceInputTarget.value == '') {
+      this.setInputValue(this.priceInputTarget, amount / 100)
+    }
+  }
+
   togglePrice(amount) {
     if (amount > 0) {
       console.log('amount > 0')
       this.pricePreviewTarget.innerHTML = (amount / 100) + ' €'
       this.setInputValue(this.shownPriceInputTarget, amount)
       this.priceDivTarget.classList.replace('hidden', 'block')
+      this.fillPrice(amount)
     } else {
       console.log('amount <= 0')
       this.priceDivTarget.classList.replace('block', 'hidden')

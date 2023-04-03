@@ -23,7 +23,10 @@ class SpaceBookingsController < BaseController
   end
 
   def new
-    @space_booking = SpaceBooking.new
+    @space_booking = SpaceBooking.new(
+      paid_amount: 0,
+      deposit_amount: 0
+    )
     @spaces = Space.all
   end
 
@@ -54,6 +57,7 @@ class SpaceBookingsController < BaseController
       else
         format.html { 
           @space_booking = service.space_booking
+          byebug
           render :edit, 
                  status: :unprocessable_entity,
                  alert: service.error_message

@@ -47,11 +47,21 @@
           = radio_button.radio_button
           == radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
-    .my-6
+    .my-6.grid.grid-cols-3.gap-4
       = f.number_field :price,
                        label: "Montant convenu à payer",
                        required: true,
-                       class: "w-1/2 md:w-1/2 lg:w-1/4",
+                       class: "w-2/3",
+                       step: "0.01"
+
+      = f.number_field :paid_amount,
+                       label: "Montant payé (partiel ou complet)",
+                       class: "w-2/3",
+                       step: "0.01"
+
+      = f.number_field :deposit_amount,
+                       label: "Caution",
+                       class: "w-2/3",
                        step: "0.01"
 
     .my-6.space-y-2
@@ -65,7 +75,6 @@
         .flex.items-center
           = radio_button.radio_button
           = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
-
 
     .my-6
       = f.label :payment_method,

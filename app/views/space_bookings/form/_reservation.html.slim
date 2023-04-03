@@ -14,6 +14,9 @@
           = radio_button.radio_button
           = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
+    = f.text_field :persons,
+                   label: "Nombre de personnes",
+                   class: "w-1/2 md:w-1/2 lg:w-1/4"
 
     .space-y-6.md:space-y-0.md:flex.md:space-x-6
       = f.date_field :from_date,
@@ -40,9 +43,21 @@
                                      ["Journée + soirée", "fullday"] \
                                    ],
                                    :last, :first, 
+                                   { checked: f.object.filled_duration },
                                    required: true do |radio_button|
         .flex.items-center
           = radio_button.radio_button
           = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
+    = f.text_field :arrival_time,
+                   label: "Heure d'arrivée",
+                   hint: "Laissez vide si le client ne sait pas encore nous préciser son heure d'arrivée",
+                   class: "w-1/2 md:w-1/2 lg:w-1/4"
+
+    = f.text_field :departure_time,
+                   label: "Heure de départ",
+                   hint: "Laissez vide si le client n'a pas encore précisé son heure de départ",
+                   class: "w-1/2 md:w-1/2 lg:w-1/4"
+
 
 hr

@@ -50,6 +50,9 @@ module SpaceBookable
     params
       .require(:space_booking)
       .permit(
+        :arrival_time,
+        :departure_time,
+        :deposit_amount,
         :duration,
         :email,
         :event_id,
@@ -60,8 +63,14 @@ module SpaceBookable
         :lastname,
         :newsletter_subscription,
         :notes,
+        :option_kitchenware,
+        :option_beamer,
+        :option_wifi,
+        :option_tables,
+        :paid_amount,
         :payment_method,
         :payment_status,
+        :persons,
         :phone,
         :price,
         :public_notes,

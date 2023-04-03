@@ -1,0 +1,18 @@
+.border-l-8.border-indigo-200.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-200.md:pr-4.md:text-right
+    = section_heading_tw heading: "Options"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    = f.check_input :option_kitchenware,
+                    label: "Vaisselle"
+
+    = f.check_input :option_beamer,
+                    label: "Projecteur"
+
+    = f.check_input :option_wifi,
+                    label: "Connexion WiFi"
+
+    = f.check_input :option_tables,
+                    label: "Tables"
+
+hr

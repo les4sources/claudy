@@ -97,6 +97,7 @@ module Bookable
         :bedsheets,
         :booking_type,
         :children,
+        :departure_time,
         :email,
         :estimated_arrival,
         :firstname,

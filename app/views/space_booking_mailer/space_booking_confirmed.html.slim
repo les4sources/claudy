@@ -2,25 +2,24 @@ p Bonjour #{@space_booking.firstname},
 
 p
   |
-    Bonne nouvelle ! Votre réservation d'espaces aux 4 Sources est confirmée.
+    Bonne nouvelle ! Votre réservation d’espace aux 4 Sources est confirmée. Vous trouverez tous les 
+    détails de votre réservation à l'adresse suivante :
 
 p 
-  |
-    Vous trouverez tous les détails de votre réservation à l'adresse suivante:
-  br
   = link_to public_space_booking_url(@space_booking.token), public_space_booking_url(@space_booking.token)
 
 p
   |
-    N'hésitez pas à partager ce lien avec vos co-organisateurs.
+    Merci de veiller à en prendre connaissance car vous y trouverez des informations importantes : les 
+    modalités de payement pour valider votre réservation, l’accès au domaine, le règlement intérieur, etc.
 
 p
   |
-    Répondez-nous si vous constatez une erreur ou une information manquante. Nous
-    modifierons la réservation pour que tout soit bien en ordre.
+    N'hésitez pas à le partager aux personnes qui vous accompagneraient et à nous revenir si vous constatez 
+    une erreur ou une information manquante. Nous modifierons la réservation pour que tout soit bien en ordre.
 
 p
   |
-    À bientôt,
+    Au plaisir de vous accueillir au mieux dans notre p’tit coin de paradis 🙂
 
 = render "shared/email_signature"

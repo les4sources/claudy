@@ -56,6 +56,10 @@ class SpaceBookingDecorator < ApplicationDecorator
     end
   end
 
+  def deposit_amount
+    h.humanized_money_with_symbol(object.deposit_amount)
+  end
+
   def email
     object.email.present? ? h.mail_to(object.email) : "-"
   end
@@ -64,8 +68,20 @@ class SpaceBookingDecorator < ApplicationDecorator
     l(object.from_date, format: :short)
   end
 
+  def group_or_name
+    if object.group_name.presence
+      group_name
+    else
+      name
+    end
+  end
+
   def name
     "#{object.firstname} #{object.lastname}"
+  end
+
+  def paid_amount
+    h.humanized_money_with_symbol(object.paid_amount)
   end
 
   def payment_background

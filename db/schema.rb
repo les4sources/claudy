@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_03_14_145727) do
+ActiveRecord::Schema[7.0].define(version: 2023_04_03_124226) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -86,6 +86,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_03_14_145727) do
     t.string "group_name"
     t.integer "babies", default: 0
     t.text "public_notes"
+    t.string "departure_time"
     t.index ["lodging_id"], name: "index_bookings_on_lodging_id"
   end
 
@@ -173,6 +174,15 @@ ActiveRecord::Schema[7.0].define(version: 2023_03_14_145727) do
     t.string "payment_method"
     t.bigint "event_id"
     t.text "public_notes"
+    t.integer "paid_amount_cents"
+    t.integer "deposit_amount_cents"
+    t.string "persons"
+    t.string "arrival_time"
+    t.string "departure_time"
+    t.boolean "option_kitchenware", default: false
+    t.boolean "option_beamer", default: false
+    t.boolean "option_wifi", default: false
+    t.boolean "option_tables", default: false
     t.index ["event_id"], name: "index_space_bookings_on_event_id"
   end
 
