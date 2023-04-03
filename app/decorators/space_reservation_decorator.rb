@@ -1,6 +1,8 @@
 class SpaceReservationDecorator < ApplicationDecorator
   delegate_all
 
+  decorates_association :space_booking
+
   def date
     l(object.date, format: :short)
   end

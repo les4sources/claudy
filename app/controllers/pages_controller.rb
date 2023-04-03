@@ -25,6 +25,24 @@ class PagesController < BaseController
     @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
   end
 
+  # details for a specific day
+  def day
+    @date = Date.parse(params[:date])
+    @rooms = RoomDecorator.decorate_collection(Room.all.order(level: :asc, id: :asc))
+    @room_reservations = ReservationDecorator.decorate_collection(
+      Reservation
+        .includes(:booking)
+        .where(date: @date, booking: { status: "confirmed" })
+    )
+    @spaces = SpaceDecorator.decorate_collection(Space.all.order(id: :asc))
+    @space_reservations = SpaceReservationDecorator.decorate_collection(
+      SpaceReservation
+        .includes(:space_booking)
+        .where(date: @date, space_booking: { status: "confirmed" })
+    )
+    render layout: false
+  end
+
   def other_bookings
     @reservations = Reservation.all
       .includes(:booking)

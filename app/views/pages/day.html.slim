@@ -1,0 +1,84 @@
+= render TurboModal::Component.new(title: l(@date), width: :lg) do
+  / Rooms
+  .mt-4.flow-root
+    .-mx-4.-my-2.overflow-x-auto.sm:-mx-6.lg:-mx-8
+      .inline-block.min-w-full.py-2.align-middle.sm:px-6.lg:px-8
+        table.min-w-full.divide-y.divide-gray-300
+          thead
+            tr
+              th.py-3.5.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-0[scope="col"]
+                | Chambre
+              th.w-48.px-3.py-3.5.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
+                | Étage
+              th.w-96.px-3.py-3.5.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
+                | Réservation
+          tbody.divide-y.divide-gray-200.bg-white
+            - @rooms.each do |room|
+              tr
+                td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.sm:pl-0
+                  .flex.items-center
+                    .h-10.w-10.flex-shrink-0
+                      = vite_image_tag "images/rooms/#{room.code}.jpg", alt: "", class: "h-10 w-10 rounded-full bg-gray-300"
+                    .ml-4
+                      .font-medium.text-gray-900
+                        = room.name
+                      .text-gray-500
+                        = room.description
+                td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
+                  = room.level_name
+                td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
+                  - if @room_reservations.where(room: room).any?
+                    - @room_reservations.where(room: room).each do |reservation|
+                      .grid.grid-cols-3.gap-4
+                        div
+                          = link_to reservation.booking.name, 
+                                    booking_path(reservation.booking),
+                                    data: { "turbo-frame": "_top" },
+                                    class: "claudy-link"
+                        div
+                          = reservation.booking.people_emojis
+                        .text-right
+                          = reservation.booking.payment_status
+                  - else
+                    span.inline-flex.items-center.rounded-full.bg-gray-100.px-3.py-0.5.text-sm.font-medium.text-gray-500
+                      | Libre
+
+  / Spaces
+  .mt-4.flow-root
+    .-mx-4.-my-2.overflow-x-auto.sm:-mx-6.lg:-mx-8
+      .inline-block.min-w-full.py-2.align-middle.sm:px-6.lg:px-8
+        table.min-w-full.divide-y.divide-gray-300
+          thead
+            tr
+              th.py-3.5.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-0[scope="col"]
+                | Espace
+              th.w-96.px-3.py-3.5.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
+                | Réservation
+          tbody.divide-y.divide-gray-200.bg-white
+            - @spaces.each do |space|
+              tr
+                td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.sm:pl-0
+                  .flex.items-center
+                    .h-10.w-10.flex-shrink-0.rounded-full.bg-gray-200
+                      / = vite_image_tag "images/rooms/#{room.code}.jpg", alt: "", class: "h-10 w-10 rounded-full bg-gray-300"
+                    .ml-4
+                      .font-medium.text-gray-900
+                        = space.name
+                      / .text-gray-500
+                        = room.description
+                td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
+                  - if @space_reservations.where(space: space).any?
+                    - @space_reservations.where(space: space).each do |space_reservation|
+                      .grid.grid-cols-3.gap-4
+                        div
+                          = link_to space_reservation.space_booking.name, 
+                                    space_booking_path(space_reservation.space_booking), 
+                                    data: { "turbo-frame": "_top" },
+                                    class: "claudy-link"
+                        div
+                          / = space_reservation.space_booking.people
+                        .text-right
+                          = space_reservation.space_booking.payment_status
+                  - else
+                    span.inline-flex.items-center.rounded-full.bg-gray-100.px-3.py-0.5.text-sm.font-medium.text-gray-500
+                      | Libre

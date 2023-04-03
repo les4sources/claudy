@@ -107,4 +107,8 @@
       }
     }
   }
+
+  .claudy-link {
+    @apply text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700;
+  }
 }

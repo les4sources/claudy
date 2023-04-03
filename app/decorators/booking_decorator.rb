@@ -171,6 +171,20 @@ class BookingDecorator < ApplicationDecorator
     end
   end
 
+  def people_emojis
+    emojis = []
+    if object.adults > 0
+      emojis << "#{object.adults} 🧑"
+    end
+    if object.children > 0
+      emojis << "#{object.children} 👨‍👧"
+    end
+    if object.babies > 0
+      emojis << "#{object.babies} 🧑‍🍼"
+    end
+    emojis.join(" ")
+  end
+
   def phone
     object.phone.present? ? object.phone : "-"
   end
