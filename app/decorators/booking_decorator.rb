@@ -45,7 +45,7 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def email
-    object.email.present? ? h.mail_to(object.email) : "-"
+    object.email.present? ? h.mail_to(object.email, object.email, class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700") : "-"
   end
 
   def from_date
