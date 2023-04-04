@@ -30,7 +30,7 @@
           	= @booking.phone
           - if @booking.object.email.presence
           	br
-          	= mail_to @booking.email, @booking.email, class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+          	= @booking.email
       .sm:col-span-1
         dt.text-base.font-medium.text-gray-500
           | Dates de votre réservation

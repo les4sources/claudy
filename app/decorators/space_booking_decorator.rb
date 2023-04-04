@@ -26,6 +26,8 @@ class SpaceBookingDecorator < ApplicationDecorator
       "journée"
     when "fullday"
       "journée + soirée"
+    when "see_notes"
+      "voir notes"
     else
       "période non précisée"
     end
