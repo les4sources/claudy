@@ -1,4 +1,6 @@
 class SpaceBookingsController < BaseController
+  include HttpAuthConcern
+  
   breadcrumb "Espaces", :space_bookings_path, match: :exact
 
   def index

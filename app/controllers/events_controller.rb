@@ -1,4 +1,6 @@
 class EventsController < BaseController
+  include HttpAuthConcern
+  
   before_action :get_event, only: [:show, :edit, :update, :destroy]
 
   breadcrumb "Événements", :events_path, match: :exact
