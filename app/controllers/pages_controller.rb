@@ -1,6 +1,4 @@
 class PagesController < BaseController
-  include HttpAuthConcern
-  
   def calendar
     set_dates
     # events = Event.all

@@ -1,4 +1,6 @@
 class BookingPricesController < BaseController
+  skip_before_action :authenticate_user!
+
   def create
     service = BookingPrices::CalculationService.new
     if service.run(params)

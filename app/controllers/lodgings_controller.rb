@@ -1,6 +1,4 @@
 class LodgingsController < BaseController
-  include HttpAuthConcern
-  
   def index
     @lodgings = Lodging.all
   end

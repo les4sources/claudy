@@ -1,6 +1,4 @@
 class BookingsController < BaseController
-  include HttpAuthConcern
-  
   breadcrumb "Hébergements", :bookings_path, match: :exact
 
   def index

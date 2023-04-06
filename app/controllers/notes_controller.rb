@@ -1,6 +1,4 @@
 class NotesController < BaseController
-  include HttpAuthConcern
-  
   before_action :get_note, only: [:edit, :update, :destroy]
   before_action :ensure_frame_response, only: [:new, :edit]
 
