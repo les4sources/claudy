@@ -46,6 +46,10 @@
                     td.w-24 = date
                     td = space_reservations.collect { |sr| sr.space.name }.join(", ")
 
+  - if @space_booking.confirmed?
+    .mt-4.p-8.text-center.text-lg
+      | 🚧 Attention, route fermée entre Crupet et Yvoir. <a href="https://les4sources.notion.site/FAQ-des-espaces-aux-4-Sources-2232b856420d4d718cd769732920e46d" target="_blank" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700">Consultez la FAQ</a> pour en savoir plus. 🚧
+
   .overflow-hidden.bg-teal-50.sm:rounded-lg
     .px-4.py-5.sm:px-6
       h3.text-lg.font-medium.leading-6.text-gray-900
