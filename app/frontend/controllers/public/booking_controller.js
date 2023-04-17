@@ -12,7 +12,9 @@ export default class extends Controller {
     'fromDateInput',
     'lodgingsPanel',
     'lodgingRadioButton',
+    'checkboxPizzaParty',
     'partyHallOption',
+    'pizzaPartyOption',
     'priceCalculationNotice',
     'priceDiv',
     'pricePreview',
@@ -42,6 +44,7 @@ export default class extends Controller {
     this.toggleRoomsDiv()
     this.togglePriceDetails()
     this.togglePartyHallOption()
+    this.togglePizzaPartyOption()
   }
 
   getFromDate() {
@@ -232,6 +235,32 @@ export default class extends Controller {
       } else {
         this.partyHallOptionTarget.classList.replace('block', 'hidden')
       }
+    }
+  }
+
+  togglePizzaPartyOption() {
+    if (this.getFromDate().isValid() && this.getToDate().isValid()) {
+      let hasFriday = false
+      let currentDate = this.getFromDate().clone()
+      while (currentDate.isBefore(this.getToDate())) {
+        if (currentDate.day() === 5) {
+          hasFriday = true
+          break
+        }
+        currentDate.add(1, 'day')
+      }
+      if (hasFriday) {
+        this.pizzaPartyOptionTarget.classList.replace('opacity-50', 'opacity-100')
+        this.checkboxPizzaPartyTarget.disabled = false
+      } else {
+        this.pizzaPartyOptionTarget.classList.replace('opacity-100', 'opacity-50')
+        this.checkboxPizzaPartyTarget.checked = false
+        this.checkboxPizzaPartyTarget.disabled = true
+      }
+    } else {
+        this.pizzaPartyOptionTarget.classList.add('opacity-50')
+        this.checkboxPizzaPartyTarget.checked = false
+        this.checkboxPizzaPartyTarget.disabled = true
     }
   }
 }

@@ -95,6 +95,45 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
     .overflow-hidden.bg-white.shadow.sm:rounded-lg
       .px-4.py-5.sm:px-6
         h3.text-lg.font-medium.leading-6.text-gray-900
+          | Options
+        / p.mt-1.max-w-2xl.text-sm.text-gray-500
+          | Nom et coordonnées de la personne qui a réservé
+      .border-t.border-gray-200
+        dl
+          - if @booking.option_partyhall?
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Location de salle 🥳
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                | ✔️ Intéressé de louer la salle des 4 Sources
+          - if @booking.option_pizza_party?
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Pizza Party 🍕
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                | ✔️ Intéressé d'organiser une Pizza Party privée
+          - if @booking.option_bread?
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Pain 🍞
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                | ✔️ Intéressé par la commande de pains
+          - if @booking.option_babysitting?
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Baby-sitting 🍼
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                | ✔️ Intéressé par un service de baby-sitting
+          - if @booking.option_discgolf?
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Disc-golf 🥏
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                | ✔️ Intéressé par une session d'initiation au disc-golf
+
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
           | Réservation
         / p.mt-1.max-w-2xl.text-sm.text-gray-500
           | Nom et coordonnées de la personne qui a réservé
@@ -110,39 +149,6 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
               | Essuies à fournir
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @booking.towels
-
-    .overflow-hidden.bg-white.shadow.sm:rounded-lg
-      .px-4.py-5.sm:px-6
-        h3.text-lg.font-medium.leading-6.text-gray-900
-          | Options
-        / p.mt-1.max-w-2xl.text-sm.text-gray-500
-          | Nom et coordonnées de la personne qui a réservé
-      .border-t.border-gray-200
-        dl
-          - if @booking.option_partyhall?
-            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-              dt.text-sm.font-medium.text-gray-500
-                | Location de salle
-              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-                | ✔️ Intéressé de louer la salle des 4 Sources
-          - if @booking.option_bread?
-            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-              dt.text-sm.font-medium.text-gray-500
-                | Pain
-              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-                | ✔️ Intéressé par la commande de pains
-          - if @booking.option_babysitting?
-            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-              dt.text-sm.font-medium.text-gray-500
-                | Baby-sitting
-              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-                | ✔️ Intéressé par un service de baby-sitting
-          - if @booking.option_discgolf?
-            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-              dt.text-sm.font-medium.text-gray-500
-                | Disc-golf
-              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-                | ✔️ Intéressé par une session d'initiation au disc-golf
 
     - if @booking.public_notes.presence
       .overflow-hidden.bg-yellow-200.shadow.sm:rounded-lg

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_04_17_124151) do
+ActiveRecord::Schema[7.0].define(version: 2023_04_17_134331) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -87,6 +87,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_17_124151) do
     t.integer "babies", default: 0
     t.text "public_notes"
     t.string "departure_time"
+    t.boolean "option_pizza_party"
     t.index ["lodging_id"], name: "index_bookings_on_lodging_id"
   end
 

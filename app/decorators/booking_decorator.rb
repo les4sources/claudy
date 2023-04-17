@@ -111,6 +111,9 @@ class BookingDecorator < ApplicationDecorator
     if object.option_partyhall?
       emojis << "🥳"
     end
+    if object.option_pizza_party?
+      emojis << "🍕"
+    end
     if object.option_bread?
       emojis << "🍞"
     end
