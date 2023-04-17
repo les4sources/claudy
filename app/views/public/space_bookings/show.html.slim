@@ -50,36 +50,41 @@
     .mt-4.p-8.text-center.text-lg
       | 🚧 Attention, route fermée entre Crupet et Yvoir. <a href="https://les4sources.notion.site/FAQ-des-espaces-aux-4-Sources-2232b856420d4d718cd769732920e46d" target="_blank" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700">Consultez la FAQ</a> pour en savoir plus. 🚧
 
-  .overflow-hidden.bg-teal-50.sm:rounded-lg
-    .px-4.py-5.sm:px-6
-      h3.text-lg.font-medium.leading-6.text-gray-900
-        | Vos options
-    .border-t.border-teal-200.px-4.py-5.sm:px-6
-      .grid.grid-cols-3.gap-4
-        .relative.flex.items-center.space-x-3.rounded-lg.border.bg-white.px-6.py-2.shadow-sm(class="#{@space_booking.option_kitchenware? ? "border-green-300" : "border-gray-300 opacity-50" }")
-          .flex-shrink-0
-            = vite_image_tag "images/space_options/kitchenware.jpg", alt: "", class: "h-16 w-16"
-          .min-w-0.flex-1
-            p.text-base.font-medium.text-gray-900
-              | Vaisselle
-        .relative.flex.items-center.space-x-3.rounded-lg.border.bg-white.px-6.py-2.shadow-sm(class="#{@space_booking.option_beamer? ? "border-green-300" : "border-gray-300 opacity-50" }")
-          .flex-shrink-0
-            = vite_image_tag "images/space_options/beamer.jpg", alt: "", class: "h-16 w-16"
-          .min-w-0.flex-1
-            p.text-base.font-medium.text-gray-900
-              | Projecteur
-        .relative.flex.items-center.space-x-3.rounded-lg.border.bg-white.px-6.py-2.shadow-sm(class="#{@space_booking.option_wifi? ? "border-green-300" : "border-gray-300 opacity-50" }")
-          .flex-shrink-0
-            = vite_image_tag "images/space_options/wifi.jpg", alt: "", class: "h-16 w-16"
-          .min-w-0.flex-1
-            p.text-base.font-medium.text-gray-900
-              | Connexion WiFi
-        .relative.flex.items-center.space-x-3.rounded-lg.border.bg-white.px-6.py-2.shadow-sm(class="#{@space_booking.option_tables? ? "border-green-300" : "border-gray-300 opacity-50" }")
-          .flex-shrink-0
-            = vite_image_tag "images/space_options/tables.jpg", alt: "", class: "h-16 w-16"
-          .min-w-0.flex-1
-            p.text-base.font-medium.text-gray-900
-              | Tables
+  - if @space_booking.has_options?
+    .overflow-hidden.bg-teal-50.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Vos options
+      .border-t.border-teal-200.px-4.py-5.sm:px-6
+        .grid.grid-cols-3.gap-4
+          - if @space_booking.option_kitchenware?
+            .relative.flex.items-center.space-x-3.rounded-lg.border.bg-white.px-6.py-2.shadow-sm(class="#{@space_booking.option_kitchenware? ? "border-green-300" : "border-gray-300 opacity-50" }")
+              .flex-shrink-0
+                = vite_image_tag "images/space_options/kitchenware.jpg", alt: "", class: "h-16 w-16"
+              .min-w-0.flex-1
+                p.text-base.font-medium.text-gray-900
+                  | Vaisselle
+          - if @space_booking.option_beamer?
+            .relative.flex.items-center.space-x-3.rounded-lg.border.bg-white.px-6.py-2.shadow-sm(class="#{@space_booking.option_beamer? ? "border-green-300" : "border-gray-300 opacity-50" }")
+              .flex-shrink-0
+                = vite_image_tag "images/space_options/beamer.jpg", alt: "", class: "h-16 w-16"
+              .min-w-0.flex-1
+                p.text-base.font-medium.text-gray-900
+                  | Projecteur
+          - if @space_booking.option_wifi?
+            .relative.flex.items-center.space-x-3.rounded-lg.border.bg-white.px-6.py-2.shadow-sm(class="#{@space_booking.option_wifi? ? "border-green-300" : "border-gray-300 opacity-50" }")
+              .flex-shrink-0
+                = vite_image_tag "images/space_options/wifi.jpg", alt: "", class: "h-16 w-16"
+              .min-w-0.flex-1
+                p.text-base.font-medium.text-gray-900
+                  | Connexion WiFi
+          - if @space_booking.option_tables?
+            .relative.flex.items-center.space-x-3.rounded-lg.border.bg-white.px-6.py-2.shadow-sm(class="#{@space_booking.option_tables? ? "border-green-300" : "border-gray-300 opacity-50" }")
+              .flex-shrink-0
+                = vite_image_tag "images/space_options/tables.jpg", alt: "", class: "h-16 w-16"
+              .min-w-0.flex-1
+                p.text-base.font-medium.text-gray-900
+                  | Tables
 
   - if !@space_booking.declined?
     .overflow-hidden.bg-teal-50.sm:rounded-lg

@@ -55,6 +55,10 @@ class SpaceBooking < ApplicationRecord
     self.token = generated_token
   end
 
+  def has_options?
+    option_kitchenware? || option_beamer? || option_wifi? || option_tables?
+  end
+
   def name
     "#{firstname} #{lastname}"
   end
