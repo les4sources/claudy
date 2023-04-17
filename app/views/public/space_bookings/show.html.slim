@@ -135,7 +135,10 @@
                 dt.text-base.font-medium.text-gray-500
                   | Pour effectuer votre virement bancaire
                 dd.mt-1.text-base.text-gray-900
-                  | Merci de régler le montant de votre réservation sur le compte des 4 Sources et de nous envoyer une preuve de paiement pour le traitement rapide de votre réservation 👍
+                  - if @space_booking.object.advance_amount.presence && @space_booking.object.advance_amount > 0
+                    | Merci de régler votre acompte de #{@space_booking.advance_amount} sur le compte des 4 Sources et de nous envoyer une preuve de paiement pour le traitement rapide de votre réservation 👍
+                  - else
+                    | Merci de régler vos paiements sur le compte des 4 Sources et de nous envoyer une preuve de paiement pour le traitement rapide de votre réservation 👍
                   .mt-2.font-mono
                     | Les 4 Sources
                     br

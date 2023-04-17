@@ -8,6 +8,10 @@ class SpaceBookingDecorator < ApplicationDecorator
     PaginatingDecorator
   end
 
+  def advance_amount
+    h.humanized_money_with_symbol(object.advance_amount)
+  end
+
   def calendar_class
     classes = ["shadow", "border-l-4", "border-l-pink-500", "bg-pink-50"]
     if !object.confirmed?

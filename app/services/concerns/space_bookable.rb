@@ -50,6 +50,7 @@ module SpaceBookable
     params
       .require(:space_booking)
       .permit(
+        :advance_amount,
         :arrival_time,
         :departure_time,
         :deposit_amount,

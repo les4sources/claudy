@@ -4,8 +4,10 @@ import moment from "moment"
 
 export default class extends Controller {
   static targets = [
+    'advanceAmountInput',
     'spaceBookingsForDateRange',
     'fromDateInput',
+    'priceInput',
     'toDateInput'
   ]
 
@@ -26,12 +28,23 @@ export default class extends Controller {
     this.showSimilarSpaceBookings()
   }
 
+  fillAdvanceAmount() {
+    if (this.priceInputTarget.value != '' && this.advanceAmountInputTarget.value == '') {
+      this.setInputValue(this.advanceAmountInputTarget, this.priceInputTarget.value / 2)
+    }
+  }
+
   getFromDate() {
     return moment(this.fromDateInputTarget.value)
   }
 
   getToDate() {
     return moment(this.toDateInputTarget.value)
+  }
+
+  setInputValue(input, value) {
+    console.log('set input value', input, value)
+    input.value = value
   }
 
   setToDate(e) {

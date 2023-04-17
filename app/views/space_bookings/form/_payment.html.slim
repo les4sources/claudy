@@ -47,22 +47,48 @@
           = radio_button.radio_button
           == radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
-    .my-6.grid.grid-cols-3.gap-4
-      = f.number_field :price,
-                       label: "Montant convenu à payer",
-                       required: true,
-                       class: "w-2/3",
-                       step: "0.01"
-
-      = f.number_field :paid_amount,
-                       label: "Montant payé (partiel ou complet)",
-                       class: "w-2/3",
-                       step: "0.01"
-
-      = f.number_field :deposit_amount,
-                       label: "Caution",
-                       class: "w-2/3",
-                       step: "0.01"
+    .mt-4.sm:grid.sm:grid-cols-3.sm:items-start.sm:gap-4.sm:py-2
+      = f.label :price, 
+                "Montant total de la réservation",
+                class: "block text-sm font-medium leading-6 text-gray-900 sm:pt-3"
+      .mt-2.sm:col-span-2.sm:mt-0
+        = f.number_field :price,
+                         label: false,
+                         required: true,
+                         class: "block w-36 rounded-md py-1.5 sm:max-w-xs sm:leading-6",
+                         step: "0.01",
+                         data: { \
+                           "space-booking-target": "priceInput",
+                           "action": "blur->space-booking#fillAdvanceAmount" \
+                         }
+    .sm:grid.sm:grid-cols-3.sm:items-start.sm:gap-4.sm:py-2
+      = f.label :advance_amount, 
+                "Montant de l'acompte",
+                class: "block text-sm font-medium leading-6 text-gray-900 sm:pt-3"
+      .mt-2.sm:col-span-2.sm:mt-0
+        = f.number_field :advance_amount,
+                         label: false,
+                         class: "block w-36 rounded-md py-1.5 sm:max-w-xs sm:leading-6",
+                         step: "0.01",
+                         data: { "space-booking-target": "advanceAmountInput" }
+    .sm:grid.sm:grid-cols-3.sm:items-start.sm:gap-4.sm:py-2
+      = f.label :paid_amount, 
+                "Montant payé (partiel ou complet)",
+                class: "block text-sm font-medium leading-6 text-gray-900 sm:pt-3"
+      .mt-2.sm:col-span-2.sm:mt-0
+        = f.number_field :paid_amount,
+                         label: false,
+                         class: "block w-36 rounded-md py-1.5 sm:max-w-xs sm:leading-6",
+                         step: "0.01"
+    .sm:grid.sm:grid-cols-3.sm:items-start.sm:gap-4.sm:py-2
+      = f.label :deposit_amount, 
+                "Montant de la caution ♻️",
+                class: "block text-sm font-medium leading-6 text-gray-900 sm:pt-3"
+      .mt-2.sm:col-span-2.sm:mt-0
+        = f.number_field :deposit_amount,
+                         label: false,
+                         class: "block w-36 rounded-md py-1.5 sm:max-w-xs sm:leading-6",
+                         step: "0.01"
 
     .my-6.space-y-2
       = f.label :payment_status,

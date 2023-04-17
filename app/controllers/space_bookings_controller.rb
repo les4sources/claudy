@@ -25,6 +25,7 @@ class SpaceBookingsController < BaseController
   def new
     @space_booking = SpaceBooking.new(
       paid_amount: 0,
+      advance_amount: 0,
       deposit_amount: 0
     )
     @spaces = Space.all

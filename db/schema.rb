@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_04_06_045021) do
+ActiveRecord::Schema[7.0].define(version: 2023_04_17_124151) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -183,6 +183,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_06_045021) do
     t.boolean "option_beamer", default: false
     t.boolean "option_wifi", default: false
     t.boolean "option_tables", default: false
+    t.integer "advance_amount_cents"
     t.index ["event_id"], name: "index_space_bookings_on_event_id"
   end
 
