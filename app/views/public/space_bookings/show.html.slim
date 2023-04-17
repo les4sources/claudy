@@ -126,7 +126,8 @@
 
             - if @space_booking.object.deposit_amount.presence
               .mt-2
-                | ♻️ Vous avez versé une caution pour un montant de <strong>#{@space_booking.deposit_amount}</strong>
+                | 
+                | ♻️ Votre caution: <strong>#{@space_booking.deposit_amount}</strong>
 
           - if @space_booking.attributes["payment_method"] == "bank_transfer" && @space_booking.price_cents > 0
             - if @space_booking.confirmed? && !@space_booking.paid?
