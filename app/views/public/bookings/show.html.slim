@@ -45,11 +45,6 @@
             div = @booking.lodging.summary
           - else
             | Maison Communautaire
-
-            .mt-2.bg-yellow-200.p-2.rounded-md
-              |
-                💁 N'oubliez pas d'emporter avec vous vos draps, essuies/serviettes, savons
-                biodégradables et liquide vaisselle écologique.
             / table
               tbody
                 - @reservations_by_date.each do |date, reservations|
@@ -102,7 +97,7 @@
         Le jour de votre arrivée, merci de <strong>nous confirmer votre heure d'arrivée</strong> via un SMS
         ou un coup de fil sur notre téléphone: #{ENV.fetch('PHONE_NUMBER')}. Ceci permettra de vous accueillir au mieux.
     .mt-2
-      | 🚧 Attention, route fermée entre Crupet et Yvoir. <a href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3" target="_blank" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700">Consultez la FAQ</a> pour en savoir plus. 🚧
+      | 🚧 Attention, route fermée entre Crupet et Les 4 Sources. <a href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3" target="_blank" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700">Consultez la FAQ</a> pour en savoir plus. 🚧
 
 - if @booking.confirmed? && !@booking.lodging.nil?
   .mt-4.overflow-hidden.bg-teal-50.sm:rounded-lg
