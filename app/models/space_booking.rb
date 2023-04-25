@@ -86,6 +86,30 @@ class SpaceBooking < ApplicationRecord
     end
   end
 
+  def notify_customer_on_update
+    notify_on_status_change if saved_change_to_status? || saved_change_to_email?
+    notify_on_payment_status_change if saved_change_to_payment_status? || saved_change_to_email?
+  end
+
+  def notify_on_payment_status_change
+    SpaceBookingMailer.space_booking_partially_paid(self).deliver_now if partially_paid?
+    SpaceBookingMailer.space_booking_paid(self).deliver_now if paid?
+  end
+
+  def notify_on_status_change
+    SpaceBookingMailer.space_booking_confirmed(self).deliver_now if confirmed?
+    SpaceBookingMailer.space_booking_declined(self).deliver_now if declined?
+    SpaceBookingMailer.space_booking_canceled(self).deliver_now if canceled?
+  end
+
+  def paid?
+    payment_status == "paid"
+  end
+
+  def partially_paid?
+    payment_status == "partially_paid"
+  end
+
   def outstanding_balance
     price - paid_amount
   end
