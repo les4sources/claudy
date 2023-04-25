@@ -11,6 +11,7 @@ Rails.application.routes.draw do
   resources :events
   resources :lodgings
   resources :notes
+  resources :reports
   resources :rooms
 
   resources :bookings do
