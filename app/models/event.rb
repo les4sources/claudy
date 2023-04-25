@@ -1,6 +1,8 @@
 class Event < ApplicationRecord
   belongs_to :event_category
 
+  has_paper_trail
+
   validates :name,
             presence: true
   validates :starts_at_date,

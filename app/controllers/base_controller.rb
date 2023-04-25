@@ -2,6 +2,7 @@ class BaseController < ActionController::Base
   layout "application"
 
   before_action :authenticate_user!
+  before_action :set_paper_trail_whodunnit
 
   breadcrumb "Calendrier", :root_path
 

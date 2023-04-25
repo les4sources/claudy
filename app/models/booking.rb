@@ -5,6 +5,8 @@ class Booking < ApplicationRecord
 
   monetize :price_cents, allow_nil: true
 
+  has_paper_trail
+
   has_rich_text :public_notes
 
   scope :current_and_future, -> { where("to_date >= ?", Date.today).order(from_date: :asc) }

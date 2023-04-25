@@ -3,6 +3,8 @@ class SpaceBooking < ApplicationRecord
   has_many :spaces, through: :space_reservations
   belongs_to :event, optional: true
 
+  has_paper_trail
+
   monetize :advance_amount_cents, allow_nil: true
   monetize :paid_amount_cents, allow_nil: true
   monetize :deposit_amount_cents, allow_nil: true
