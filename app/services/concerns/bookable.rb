@@ -9,12 +9,27 @@ module Bookable
 
   def available?(rooms)
     rooms.each do |room|
-      if room.reservations
-          .includes(:booking)
-          .where(date: (@booking.from_date)..(@booking.to_date - 1.day), booking: { status: "confirmed" })
-          .any?
-        set_error_message("Cet hébergement n'est pas disponible à cette date.")
-        return false
+      if @booking.booking_type == "rooms"
+        # Maison Communautaire
+        # Not available if lodging reservations for the same date range
+        if room.reservations
+            .includes(:booking)
+            .where(date: (@booking.from_date)..(@booking.to_date - 1.day), booking: { status: "confirmed" })
+            .where.not(booking: { lodging_id: nil })
+            .any?
+          set_error_message("Cet hébergement n'est pas disponible à cette date.")
+          return false
+        end
+      else
+        # Gite
+        # Not available if any reservations for the same date range
+        if room.reservations
+            .includes(:booking)
+            .where(date: (@booking.from_date)..(@booking.to_date - 1.day), booking: { status: "confirmed" })
+            .any?
+          set_error_message("Cet hébergement n'est pas disponible à cette date.")
+          return false
+        end
       end
     end
   end
