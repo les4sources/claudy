@@ -58,7 +58,6 @@ class SpaceBookingsController < BaseController
       else
         format.html { 
           @space_booking = service.space_booking
-          byebug
           render :edit, 
                  status: :unprocessable_entity,
                  alert: service.error_message
