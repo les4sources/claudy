@@ -28,7 +28,7 @@ Rails.application.configure do
   # config.asset_host = "http://assets.example.com"
 
   config.action_dispatch.default_headers = {
-    'X-Frame-Options' => 'ALLOW-FROM http://www.les4sources.be',
+    'X-Frame-Options' => 'ALLOWALL',
     'X-XSS-Protection' => '1; mode=block',
     'X-Content-Type-Options' => 'nosniff',
     'X-Download-Options' => 'noopen',
