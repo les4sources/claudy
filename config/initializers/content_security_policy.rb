@@ -14,7 +14,7 @@ Rails.application.configure do
       policy.style_src *policy.style_src, :unsafe_inline
 
       # Allow iframe embeds on www.les4sources.be
-      policy.frame_ancestors :self, "www.les4sources.be"
+      policy.frame_ancestors :self, "https://www.les4sources.be"
 
       policy.connect_src :self,
                          # Allow @vite/client to hot reload CSS changes
