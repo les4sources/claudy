@@ -11,9 +11,6 @@
 # It's strongly recommended that you check this file into your version control system.
 
 ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
-  # These are extensions that must be enabled in order to support this database
-  enable_extension "plpgsql"
-
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -78,7 +75,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
     t.boolean "option_bread"
     t.text "comments"
     t.string "tier"
-    t.bigint "lodging_id"
+    t.integer "lodging_id"
     t.boolean "option_discgolf"
     t.integer "shown_price_cents", default: 0, null: false
     t.string "token"
@@ -100,7 +97,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
 
   create_table "events", force: :cascade do |t|
     t.string "name"
-    t.bigint "event_category_id", null: false
+    t.integer "event_category_id", null: false
     t.datetime "starts_at"
     t.datetime "ends_at"
     t.datetime "created_at", null: false
@@ -109,8 +106,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
   end
 
   create_table "lodging_rooms", force: :cascade do |t|
-    t.bigint "lodging_id", null: false
-    t.bigint "room_id", null: false
+    t.integer "lodging_id", null: false
+    t.integer "room_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["lodging_id"], name: "index_lodging_rooms_on_lodging_id"
@@ -136,8 +133,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
   end
 
   create_table "reservations", force: :cascade do |t|
-    t.bigint "booking_id", null: false
-    t.bigint "room_id", null: false
+    t.integer "booking_id", null: false
+    t.integer "room_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.date "date"
@@ -173,7 +170,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
     t.datetime "updated_at", null: false
     t.integer "price_cents"
     t.string "payment_method"
-    t.bigint "event_id"
+    t.integer "event_id"
     t.text "public_notes"
     t.integer "paid_amount_cents"
     t.integer "deposit_amount_cents"
@@ -189,8 +186,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
   end
 
   create_table "space_reservations", force: :cascade do |t|
-    t.bigint "space_booking_id", null: false
-    t.bigint "space_id", null: false
+    t.integer "space_booking_id", null: false
+    t.integer "space_id", null: false
     t.date "date"
     t.string "duration"
     t.datetime "created_at", null: false
@@ -231,9 +228,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
     t.bigint "item_id", null: false
     t.string "event", null: false
     t.string "whodunnit"
-    t.text "object"
+    t.text "object", limit: 1073741823
     t.datetime "created_at"
-    t.text "object_changes"
+    t.text "object_changes", limit: 1073741823
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
   end
 
