@@ -48,7 +48,7 @@
     "3000": {
       "label": "Application",
       "onAutoForward": "openPreview"
-    }
+    },
     "3036": {
       "label": "Vite Server",
       "onAutoForward": "silent"
