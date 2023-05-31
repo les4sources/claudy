@@ -6,7 +6,6 @@
   "development": {
     "autoBuild": true,
     "publicOutputDir": "vite-dev",
-    // "host": "vite.claudy.test",
     "host": "localhost",
     "port": 3036
   },
