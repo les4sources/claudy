@@ -20,7 +20,8 @@
     },
     "vscode": {
       "extensions": [
-        "rebornix.Ruby"
+        "rebornix.Ruby",
+        "GitHub.copilot"
       ]
     }
   },
