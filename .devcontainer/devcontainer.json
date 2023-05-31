@@ -1,8 +1,25 @@
 {
+  "name": "Claudy",
   "image": "mcr.microsoft.com/devcontainers/universal:2",
   "features": {
-    "ghcr.io/devcontainers/features/ruby:1": {},
-    "ruby": "3.1.2",
+    "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
+      "packages": "libpq-dev, libvips"
+    },
+    "ghcr.io/devcontainers/features/ruby:1": {
+      "version": "3.1.2"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18"
+    },
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "username": "vscode",
+      "userUid": 1000,
+      "userGid": 1000,
+      "installZsh": true,
+      "installOhMyZsh": true,
+      "configureZshAsDefaultShell": true,
+      "upgradePackages": true
+    }
   },
   "hostRequirements": {
     "cpus": 2
@@ -32,6 +49,10 @@
       "label": "Application",
       "onAutoForward": "openPreview"
     }
+    "3036": {
+      "label": "Vite Server",
+      "onAutoForward": "silent"
+    }
   },
-  "forwardPorts": [3000]
+  "forwardPorts": [3000, 3036]
 }
