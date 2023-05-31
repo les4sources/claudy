@@ -11,15 +11,15 @@
     "ghcr.io/devcontainers/features/node:1": {
       "version": "18"
     },
-    "ghcr.io/devcontainers/features/common-utils:2": {
-      "username": "vscode",
-      "userUid": 1000,
-      "userGid": 1000,
-      "installZsh": true,
-      "installOhMyZsh": true,
-      "configureZshAsDefaultShell": true,
-      "upgradePackages": true
-    }
+    // "ghcr.io/devcontainers/features/common-utils:2": {
+    //   "username": "vscode",
+    //   "userUid": 1000,
+    //   "userGid": 1000,
+    //   "installZsh": true,
+    //   "installOhMyZsh": true,
+    //   "configureZshAsDefaultShell": true,
+    //   "upgradePackages": true
+    // }
   },
   "hostRequirements": {
     "cpus": 2
