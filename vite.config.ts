@@ -15,9 +15,10 @@ export default defineConfig({
     }),
   ],
   server: {
-    hmr: {
-      host: 'vite.claudy.test',
-      clientPort: 80,
-    },
+    port: 3000
+    // hmr: {
+    //   host: 'vite.claudy.test',
+    //   clientPort: 80,
+    // },
   },
 })
