@@ -3,6 +3,7 @@
            title: @booking.name,
            secondary: "Du #{@booking.from_date} au #{@booking.to_date}",
            links: [ \
+             link_to("Agenda", root_path(date: @booking.object.from_date), class: "btn-page-header-no-background"),
              delete_link(@booking.object, "Supprimer cette réservation"),
              link_to( \
                "Mettre à jour",

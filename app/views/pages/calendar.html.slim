@@ -1,7 +1,10 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
            title: l(@date, format: :month_year).capitalize,
-           links: [ button_to_previous_month(@date), button_to_next_month(@date) ]
+           links: [ \
+             buttons_to_previous_months(@date),
+             buttons_to_next_months(@date) \
+           ]
 
 = SimpleCalendar::DashboardCalendar.new(self, { \
     today: @date \

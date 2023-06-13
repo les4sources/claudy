@@ -32,8 +32,16 @@
     @apply inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-100;
   }
 
+  .btn-page-header-no-background {
+    @apply inline-flex items-center justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium bg-blue-100 text-blue-700 border-b-2 border-blue-200 hover:text-blue-900 focus:text-blue-900 focus:outline-none focus:ring-2;
+  }
+
   .btn-page-header-with-icon {
     @apply text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800;
+  }
+
+  .btn-group-page-header-with-icon {
+    @apply inline-flex items-center px-4 py-2 text-sm font-medium text-gray-900 bg-white border-t border-b border-gray-200 hover:bg-blue-500 hover:text-white focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-100;
   }
 
   .btn-destroy {
