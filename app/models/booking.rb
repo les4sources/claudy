@@ -70,6 +70,10 @@ class Booking < ApplicationRecord
     self.token = generated_token
   end
 
+  def has_options?
+    option_partyhall? || option_pizza_party? || option_bread? || option_babysitting? || option_discgolf?
+  end
+
   def name
     "#{firstname} #{lastname}"
   end

@@ -126,6 +126,16 @@ class BookingDecorator < ApplicationDecorator
     emojis.join(" ")
   end
 
+  def options_text
+    text = []
+    text << "location de la salle" if object.option_partyhall?
+    text << "Pizza Party privée" if @booking.option_pizza_party?
+    text << "pains et viennoiseries" if @booking.option_bread?
+    text << "baby-sitting" if @booking.option_babysitting?
+    text << "initiation au disc-golf" if @booking.option_discgolf?
+    text.join(", ")
+  end
+
   def payment_background
     case object.payment_status
     when "pending"

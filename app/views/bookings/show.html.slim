@@ -162,39 +162,40 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
             == @booking.public_notes
 
   .space-y-4
-    .overflow-hidden.shadow.sm:rounded-lg.bg-white
-      .flex.place-content-between.px-4.py-5.sm:px-6
-        h3.text-lg.font-medium.leading-6.text-gray-900
+    .overflow-hidden.shadow.sm:rounded-lg.bg-teal-600.border-2.border-teal-200
+      .flex.place-content-between.px-4.py-3.sm:px-6
+        h3.text-lg.font-bold.leading-6.text-white
           | Réservation ##{@booking.token}
-      .border-t.border-yelo-200
-        .px-6.py-5
+      div
+        .px-6.pb-5
           = link_to "Page web de la réservation",
                     public_booking_path(@booking.token),
                     class: "text-white bg-gradient-to-br from-pink-500 to-orange-400 focus:ring-4 focus:outline-none focus:ring-pink-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2",
                     target: "_blank"
 
-    div
-      dl.grid.grid-cols-2.gap-5
-        - if @booking.object.estimated_arrival.presence
-          .overflow-hidden.rounded-lg.bg-white.px-4.py-5.shadow.sm:p-6
-            dt.truncate.text-sm.font-medium.text-gray-500
-              | Arrivée
-            dd.mt-1.text-3xl.font-semibold.tracking-tight.text-gray-900
-              => @booking.estimated_arrival
-              span.text-lg.ml-1.text-gray-500
-                = @booking.from_date
-        - if @booking.object.departure_time.presence
-          .overflow-hidden.rounded-lg.bg-white.px-4.py-5.shadow.sm:p-6
-            dt.truncate.text-sm.font-medium.text-gray-500
-              | Départ
-            dd.mt-1.text-3xl.font-semibold.tracking-tight.text-gray-900
-              => @booking.departure_time
-              span.text-lg.ml-1.text-gray-500
-                = @booking.to_date
+    - if @booking.object.estimated_arrival.presence || @booking.object.departure_time.presence
+      div
+        dl.grid.grid-cols-2.gap-5
+          - if @booking.object.estimated_arrival.presence
+            .overflow-hidden.rounded-lg.bg-white.px-4.py-5.shadow.sm:p-6
+              dt.truncate.text-sm.font-medium.text-gray-500
+                | Arrivée
+              dd.mt-1.text-3xl.font-semibold.tracking-tight.text-gray-900
+                => @booking.estimated_arrival
+                span.text-lg.ml-1.text-gray-500
+                  = @booking.from_date
+          - if @booking.object.departure_time.presence
+            .overflow-hidden.rounded-lg.bg-white.px-4.py-5.shadow.sm:p-6
+              dt.truncate.text-sm.font-medium.text-gray-500
+                | Départ
+              dd.mt-1.text-3xl.font-semibold.tracking-tight.text-gray-900
+                => @booking.departure_time
+                span.text-lg.ml-1.text-gray-500
+                  = @booking.to_date
 
     .overflow-hidden.shadow.sm:rounded-lg(class="#{@booking.payment_background}")
-      .flex.place-content-between.px-4.py-5.sm:px-6
-        h3.text-lg.font-medium.leading-6.text-gray-900
+      .flex.place-content-between.px-4.py-3.sm:px-6
+        h3.text-lg.font-bold.leading-6.text-gray-900
           | Paiement
         div = @booking.payment_status
         / p.mt-1.max-w-2xl.text-sm.text-gray-500
@@ -227,11 +228,51 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
 
     - if @booking.notes.presence
       .overflow-hidden.bg-yellow-100.shadow.sm:rounded-lg
-        .px-4.py-5.sm:px-6.bg-yellow-200
-          h3.text-lg.font-medium.leading-6.text-gray-900
+        .px-4.py-3.sm:px-6.bg-yellow-200
+          h3.text-lg.font-bold.leading-6.text-yellow-900
             | Notes internes
           p.mt-1.max-w-2xl.text-sm.text-yellow-500
             | Informations à usage interne
         .border-t.border-yellow-300.px-6.py-4
           .content.space-y-4
             = simple_format @booking.notes
+
+    .overflow-hidden.shadow.sm:rounded-lg
+      .px-4.py-3.sm:px-6.bg-teal-200
+        h3.text-lg.font-bold.leading-6.text-teal-900
+          | Résumé de la réservation
+      .border-t.border-black-300.bg-white.px-6.py-4
+        .content.space-y-4
+          - if @booking.confirmed?
+            p 
+              strong Votre séjour aux 4 Sources
+          - else
+            p 
+              strong Votre demande de réservation
+
+          p 
+            | Date : #{@booking.date_range}
+            br
+            | Hébergement :&nbsp;
+            - if !@booking.lodging.nil?
+              | #{@booking.lodging.name} (#{@booking.lodging.summary})
+            - else
+              | Maison Communautaire
+            br
+            | Personnes enregistrées : #{@booking.adults} adultes
+            - if @booking.object.children > 0
+              | , #{@booking.children} enfants
+            - if @booking.object.babies > 0
+              | , #{@booking.babies} bébés
+
+          - if @booking.has_options?
+            p Ces options vous intéressent : #{@booking.options_text}
+
+          p Statut: #{@booking.status}
+
+          p Statut du paiement: #{@booking.payment_status}
+
+          p 
+            = link_to "Page web de votre réservation", public_booking_path(@booking.token)
+            br
+            = link_to "FAQ des hébergements aux 4 Sources", "https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3"
