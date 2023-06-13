@@ -25,7 +25,8 @@ class BookingsController < BaseController
       babies: 0,
       platform: "direct",
       tier_lodgings: "neutre",
-      tier_rooms: "neutre"
+      tier_rooms: "neutre",
+      from_date: params.fetch("date", nil)
     )
     @lodgings = Lodging.all
   end
