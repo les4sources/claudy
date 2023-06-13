@@ -31,10 +31,9 @@
               <% end %>
 
               <div class="flex">
-                <%= link_to new_booking_path(date: day.strftime("%Y-%m-%d")) do %>
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="mt-1 mr-2 w-4 h-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                  </svg>
+                <% if Date.today <= day %>
+                  <%= link_to "H+", new_booking_path(date: day.strftime("%Y-%m-%d")), class: "mr-2 text-blue-700 hover:text-blue-900" %>
+                  <%= link_to "E+", new_space_booking_path(date: day.strftime("%Y-%m-%d")), class: "mr-2 text-blue-700 hover:text-blue-900" %>
                 <% end %>
 
                 <%= link_to new_note_path(date: day.strftime("%Y-%m-%d")), data: { turbo_frame: "modal" } do %>

@@ -26,7 +26,8 @@ class SpaceBookingsController < BaseController
     @space_booking = SpaceBooking.new(
       paid_amount: 0,
       advance_amount: 0,
-      deposit_amount: 0
+      deposit_amount: 0,
+      from_date: params.fetch(:date, nil)
     )
     @spaces = Space.all
   end
