@@ -1,6 +1,6 @@
 <% if @date.month == Date.today.month && @date.year == Date.today.year && (@grouped_reservations[Date.today].any? || grouped_space_reservations[Date.today].any?) %>
   <div class="mb-4 p-4 pb-1 bg-lime-50 rounded shadow">
-    <h2 class="font-light">Aujourd'hui aux 4 Sources</h2>
+    <h2 class="mb-4 font-light">Aujourd'hui aux 4 Sources</h2>
 
     <% notes = Note.where(date: Date.today).order(id: :desc) %>
     <% if notes.any? %>
