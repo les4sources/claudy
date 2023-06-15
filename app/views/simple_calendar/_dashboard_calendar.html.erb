@@ -10,7 +10,7 @@
     <% end %>
 
     <div class="flex mb-4 grid grid-cols-3 gap-4">
-      <% if @grouped_reservations[Date.today].any? %>
+      <% if !@grouped_reservations[Date.today].nil? %>
         <% @grouped_reservations[Date.today].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations| %>
           <% reservation = grouped_reservations.last.first %>
           <% booking = BookingDecorator.new(reservation.booking) %>
@@ -20,7 +20,7 @@
         <% end %>
       <% end %>
 
-      <% if @grouped_space_reservations[Date.today].any? %>
+      <% if !@grouped_space_reservations[Date.today].nil? %>
         <% @grouped_space_reservations[Date.today].sort_by {|r| r.start_time }.group_by { |r| r.space_booking.id }.each do |grouped_space_reservations| %>
           <% space_reservation = grouped_space_reservations.last.first %>
           <% space_booking = SpaceBookingDecorator.new(space_reservation.space_booking) %>
