@@ -1,0 +1,63 @@
+.p-1.text-center.text-xs.font-bold.bg-cyan-200.text-cyan-700.rounded-t-lg
+  - if Date.today == booking.object.from_date
+    | Check-in
+  - elsif Date.today == booking.object.to_date
+    | Check-out
+  - else
+    | Hébergement en cours
+.p-3
+  .flex.items-center.justify-between.mb-2
+    .text-sm.font-semibold.leading-none.text-gray-900
+      = link_to booking.decorate.name.html_safe, 
+                booking_path(booking),
+                class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+      - if booking.group_name.present?
+        .block.text-gray-500.leading-none.mt-1 = booking.group_name
+    div
+      = link_to "Détails", 
+                booking_path(booking),
+                class: "text-white bg-cyan-700 hover:bg-cyan-800 focus:ring-4 focus:ring-cyan-300 font-medium rounded-lg text-xs px-3 py-1.5 focus:outline-none"
+
+  - if !booking.lodging.nil?
+    p.mb-2.text-sm
+      = booking.lodging_badge
+  - else
+    .grid.grid-cols-6.gap-1.mb-2
+      = booking.rooms_badges
+
+  - if booking.object.phone.present?
+    p.mb-2.text-sm.font-normal
+      | Tél: #{booking.phone}
+  - if booking.estimated_arrival.present?
+    p.mb-2.text-sm.font-light
+      | Heure d'arrivée: #{booking.estimated_arrival}
+  - if booking.departure_time.present?
+    p.mb-2.text-sm.font-light
+      | Heure de départ: #{booking.departure_time}
+  - if booking.canceled?
+    .mb-2.text-sm.font-semibold
+      | Cette réservation est annulée
+  - if booking.confirmed?
+    .mb-2
+      = booking.payment_status
+  ul.flex.text-base.font-light
+    - if booking.object.adults > 0
+      li.mr-2
+        span.font-semibold.text-gray-900
+          | #{booking.adults}x
+        span.ml-1
+          | 🧑
+    - if booking.object.children > 0
+      li.mr-2
+        span.font-semibold.text-gray-900
+          | #{booking.children}x
+        span.ml-1
+          | 👧
+    - if booking.object.babies > 0
+      li.mr-2
+        span.font-semibold.text-gray-900
+          | #{booking.babies}x
+        span.ml-1
+          | 👶
+  .mt-2.text-base
+    = booking.options_emojis

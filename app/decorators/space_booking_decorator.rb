@@ -86,6 +86,23 @@ class SpaceBookingDecorator < ApplicationDecorator
     "#{object.firstname} #{object.lastname}"
   end
 
+  def options_emojis
+    emojis = []
+    if object.option_kitchenware?
+      emojis << "🍽"
+    end
+    if object.option_beamer?
+      emojis << "🎥"
+    end
+    if object.option_wifi?
+      emojis << "👩‍💻"
+    end
+    if object.option_tables?
+      emojis << "🪑"
+    end
+    emojis.join(" ")
+  end
+
   def paid_amount
     h.humanized_money_with_symbol(object.paid_amount)
   end

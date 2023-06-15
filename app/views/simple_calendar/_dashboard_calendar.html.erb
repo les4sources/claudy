@@ -1,3 +1,38 @@
+<% if @date.month == Date.today.month && @date.year == Date.today.year && (@grouped_reservations[Date.today].any? || grouped_space_reservations[Date.today].any?) %>
+  <div class="mb-4 p-4 pb-1 bg-lime-50 rounded shadow">
+    <h2 class="font-light">Aujourd'hui aux 4 Sources</h2>
+
+    <% notes = Note.where(date: Date.today).order(id: :desc) %>
+    <% if notes.any? %>
+      <div class="mb-4 space-y-4">
+        <%= render Note.where(date: Date.today).order(id: :desc) %>
+      </div>
+    <% end %>
+
+    <div class="flex mb-4 grid grid-cols-3 gap-4">
+      <% if @grouped_reservations[Date.today].any? %>
+        <% @grouped_reservations[Date.today].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations| %>
+          <% reservation = grouped_reservations.last.first %>
+          <% booking = BookingDecorator.new(reservation.booking) %>
+          <div class="place-self-stretch text-sm font-light text-gray-500 bg-white border border-gray-200 rounded-lg shadow-sm">
+            <%= render "bookings/popover", booking: booking %>
+          </div>
+        <% end %>
+      <% end %>
+
+      <% if @grouped_space_reservations[Date.today].any? %>
+        <% @grouped_space_reservations[Date.today].sort_by {|r| r.start_time }.group_by { |r| r.space_booking.id }.each do |grouped_space_reservations| %>
+          <% space_reservation = grouped_space_reservations.last.first %>
+          <% space_booking = SpaceBookingDecorator.new(space_reservation.space_booking) %>
+          <div class="place-self-stretch text-sm font-light text-gray-500 bg-white border border-gray-200 rounded-lg shadow-sm">
+            <%= render "space_bookings/popover", space_booking: space_booking %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
 <% current_month = date_range.first.month %>
 <div class="lg:flex lg:h-full lg:flex-col" data-controller="dashboard-calendar" data-action="click->dashboard-calendar#clickCalendar">
   <div class="shadow ring-1 ring-black ring-opacity-5 lg:flex lg:flex-auto lg:flex-col">

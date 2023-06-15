@@ -6,6 +6,9 @@
              buttons_to_next_months(@date) \
            ]
 
+= render "spaces/tooltips"
+= render "rooms/tooltips"
+
 = SimpleCalendar::DashboardCalendar.new(self, { \
     today: @date \
   }).render do |date|
@@ -31,8 +34,14 @@
 
   - if @grouped_space_reservations[date]
     - @grouped_space_reservations[date].sort_by {|sr| sr.start_time }.group_by { |sr| sr.space_booking.id }.each do |grouped_space_reservations|
-      - space_booking = SpaceBookingDecorator.new(grouped_space_reservations.last.first.space_booking)
-      div(class="flex mt-2 py-1 px-2 #{space_booking.calendar_class}")
+      - space_reservation = grouped_space_reservations.last.first
+      - space_booking = SpaceBookingDecorator.new(space_reservation.space_booking)
+      .popover.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-sm.opacity-0[id="popover-space-reservation-#{space_reservation.id}" data-popover role="tooltip"]
+        = render "space_bookings/popover", 
+                 space_booking: space_booking
+        div[data-popper-arrow]
+
+      div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl #{space_booking.calendar_class}")
         .block
           div
             strong 
@@ -50,6 +59,7 @@
 
           .block.text-gray-500
             = space_booking.duration
+        .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-space-reservation-#{space_reservation.id}" data-popover-trigger="click")
 
   - if @grouped_reservations[date]
     - @grouped_reservations[date].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations|
@@ -57,54 +67,8 @@
       - booking = BookingDecorator.new(reservation.booking)
 
       .popover.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-sm.opacity-0[id="popover-reservation-#{reservation.id}" data-popover role="tooltip"]
-        .p-3
-          .flex.items-center.justify-between.mb-2
-            .text-sm.font-semibold.leading-none.text-gray-900
-              = link_to booking.decorate.name.html_safe, 
-                        booking_path(booking),
-                        class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
-              - if booking.group_name.present?
-                .block.text-gray-500.leading-none.mt-1 = booking.group_name
-            div
-              = link_to "Détails", 
-                        booking_path(booking),
-                        class: "text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-xs px-3 py-1.5 focus:outline-none"
-          - if booking.object.phone.present?
-            p.mb-2.text-sm.font-normal
-              | Tél: #{booking.phone}
-          - if booking.estimated_arrival.present?
-            p.mb-2.text-sm.font-light
-              | Heure d'arrivée: #{booking.estimated_arrival}
-          - if booking.departure_time.present?
-            p.mb-2.text-sm.font-light
-              | Heure de départ: #{booking.departure_time}
-          - if booking.canceled?
-            .mb-2.text-sm.font-semibold
-              | Cette réservation est annulée
-          - if booking.confirmed?
-            .mb-2
-              = booking.payment_status
-          ul.flex.text-base.font-light
-            - if booking.object.adults > 0
-              li.mr-2
-                span.font-semibold.text-gray-900
-                  | #{booking.adults}x
-                span.ml-1
-                  | 🧑
-            - if booking.object.children > 0
-              li.mr-2
-                span.font-semibold.text-gray-900
-                  | #{booking.children}x
-                span.ml-1
-                  | 👧
-            - if booking.object.babies > 0
-              li.mr-2
-                span.font-semibold.text-gray-900
-                  | #{booking.babies}x
-                span.ml-1
-                  | 👶
-          .mt-2.text-base
-            = booking.options_emojis
+        = render "bookings/popover", 
+                 booking: booking
         div[data-popper-arrow]
 
       div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl #{booking.calendar_class}")

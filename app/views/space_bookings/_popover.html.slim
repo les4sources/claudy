@@ -1,0 +1,49 @@
+.p-1.text-center.text-xs.font-bold.bg-orange-200.text-orange-700.rounded-t-lg
+  | Location d'espaces&nbsp;
+  - if Date.today == space_booking.object.from_date
+    | (arrivée)
+  - elsif Date.today == space_booking.object.to_date
+    | (départ)
+.p-3
+  .flex.items-center.justify-between.mb-2
+    .text-sm.font-semibold.leading-none.text-gray-900
+      = link_to space_booking.decorate.name.html_safe, 
+                space_booking_path(space_booking),
+                class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+      - if space_booking.group_name.present?
+        .block.text-gray-500.leading-none.mt-1 = space_booking.group_name
+    div
+      = link_to "Détails", 
+                space_booking_path(space_booking),
+                class: "text-white bg-orange-700 hover:bg-orange-800 focus:ring-4 focus:ring-orange-300 font-medium rounded-lg text-xs px-3 py-1.5 focus:outline-none"
+
+  .grid.grid-cols-6.gap-1.mb-2
+    = space_booking.spaces_badges(font_size: "sm")
+
+  .mb-2.block.text-gray-500
+    = space_booking.duration.capitalize
+
+  - if space_booking.object.phone.present?
+    p.mb-2.text-sm.font-normal
+      | Tél: #{space_booking.phone}
+  - if space_booking.arrival_time.present?
+    p.mb-2.text-sm.font-light
+      | Heure d'arrivée: #{space_booking.arrival_time}
+  - if space_booking.departure_time.present?
+    p.mb-2.text-sm.font-light
+      | Heure de départ: #{space_booking.departure_time}
+  - if space_booking.canceled?
+    .mb-2.text-sm.font-semibold
+      | Cette réservation est annulée
+  - if space_booking.confirmed?
+    .mb-2
+      = space_booking.payment_status
+  ul.flex.text-base.font-light
+    - if space_booking.object.persons.present?
+      li.mr-2
+        span.font-semibold.text-gray-900
+          | #{space_booking.persons}x
+        span.ml-1
+          | 🙋
+  .mt-2.text-base
+    = space_booking.options_emojis
