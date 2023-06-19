@@ -1,4 +1,4 @@
-<% if @date.month == Date.today.month && @date.year == Date.today.year && (!@grouped_reservations[Date.today].nil? || !grouped_space_reservations[Date.today].nil?) %>
+<% if @date.month == Date.today.month && @date.year == Date.today.year && (!@grouped_reservations[Date.today].nil? || !@grouped_space_reservations[Date.today].nil?) %>
   <div class="mb-4 p-4 pb-1 bg-lime-50 rounded shadow">
     <h2 class="mb-4 font-light">Aujourd'hui aux 4 Sources</h2>
 
