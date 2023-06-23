@@ -1,0 +1,15 @@
+doctype html
+html.h-full.bg-white(lang="fr")
+  head
+    meta(charset="utf-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1")
+    title Claudy
+    = csrf_meta_tags
+    = csp_meta_tag
+    link(rel="preconnect" href="https://fonts.googleapis.com")
+    link(rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin")
+    link(href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap" rel="stylesheet")
+    = vite_client_tag
+    = vite_javascript_tag "application", "data-turbo-track": "reload"
+  body.h-full
+    = yield

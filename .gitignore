@@ -54,3 +54,5 @@ slim_me.*
 .DS_Store
 
 /db/*.sqlite3
+
+html2slim.*
