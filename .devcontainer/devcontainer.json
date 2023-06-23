@@ -1,16 +1,26 @@
 {
+  "name": "Claudy",
   "image": "mcr.microsoft.com/devcontainers/universal:2",
   "features": {
-    "ghcr.io/devcontainers/features/ruby:1": {}
+    "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
+      "packages": "libpq-dev, libvips"
+    },
+    "ghcr.io/devcontainers/features/ruby:1": {
+      "version": "3.1.2"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18"
+    }
   },
   "hostRequirements": {
     "cpus": 2
   },
   "waitFor": "onCreateCommand",
-  "updateContentCommand": "bundle install",
+  "updateContentCommand": "bundle install && yarn install",
   "postCreateCommand": "",
   "postAttachCommand": {
-    "server": "rails server"
+    "server": "rails server",
+    "vite": "bin/vite dev"
   },
   "customizations": {
     "codespaces": {
@@ -29,7 +39,11 @@
     "3000": {
       "label": "Application",
       "onAutoForward": "openPreview"
+    },
+    "3036": {
+      "label": "Vite Server",
+      "onAutoForward": "silent"
     }
   },
-  "forwardPorts": [3000]
+  "forwardPorts": [3000, 3036]
 }

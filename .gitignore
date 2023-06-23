@@ -52,3 +52,5 @@ slim_me.*
 
 .env
 .DS_Store
+
+/db/*.sqlite3
