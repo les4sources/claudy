@@ -196,6 +196,7 @@ export default class extends Controller {
   }
 
   fillPrice(amount) {
+    console.log('fillPrice')
     if (this.priceInputTarget.value == '') {
       this.setInputValue(this.priceInputTarget, amount / 100)
     }

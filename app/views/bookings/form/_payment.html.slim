@@ -106,6 +106,7 @@
         = f.number_field :price,
                          label: "Montant convenu à payer",
                          required: true,
+                         value: ((f.object.price_cents / 100.0) rescue nil),
                          hint: "Ce montant peut être différent de celui affiché ci-dessus",
                          data: { "booking-target": "priceInput" },
                          class: "w-1/2 md:w-1/2 lg:w-1/4",

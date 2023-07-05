@@ -12,13 +12,14 @@ export default defineConfig({
           'config/locales/**/*.yml',
         ],
       },
-    }),
+    })
   ],
   server: {
-    port: 3000
-    // hmr: {
-    //   host: 'vite.claudy.test',
-    //   clientPort: 80,
-    // },
+    port: 3000,
+    hmr: {
+      // host: 'vite.claudy.test',
+      host: 'mhulet-symmetrical-tribble-vq796p7g5hp6r5-3036.preview.app.github.dev',
+      clientPort: 80
+    },
   },
 })
