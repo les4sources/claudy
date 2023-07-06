@@ -23,6 +23,7 @@ class PagesController < BaseController
       .between_times(@first, @last, field: :date)
     # group bookings by day
     @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
+    @activities = PublicActivity::Activity.where("created_at > ?", 14.days.ago).order(created_at: :desc)
   end
 
   # details for a specific day

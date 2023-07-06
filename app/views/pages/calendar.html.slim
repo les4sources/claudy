@@ -9,6 +9,7 @@
 = render "spaces/tooltips"
 = render "rooms/tooltips"
 
+/ Month calendar
 = SimpleCalendar::DashboardCalendar.new(self, { \
     today: @date \
   }).render do |date|
@@ -88,3 +89,11 @@
               - grouped_reservations.last.each do |reservation|
                 = room_badge(reservation.room)
         .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-reservation-#{reservation.id}" data-popover-trigger="click")
+
+/ Activity feed
+.mt-8.pb-5.border-b.border-gray-200
+  h2.text-base.font-semibold.leading-6.text-gray-900 Activité récente
+
+.flow-root.mt-8
+  ul.-mb-8[role="list"]
+    = render_activities(@activities)

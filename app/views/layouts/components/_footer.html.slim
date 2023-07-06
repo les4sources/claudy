@@ -2,4 +2,6 @@
   hr
   .text-sm.py-4.text-gray-500.text-center
     | <strong>Claudy</strong>, l'app <a href="https://github.com/les4sources/claudy">open source</a> des 4 Sources
-    =< button_to "Me déconnecter", destroy_user_session_path, method: :delete
+    =< button_to "Me déconnecter", 
+                 destroy_user_session_path, method: :delete,
+                 class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"

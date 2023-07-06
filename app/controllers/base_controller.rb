@@ -1,4 +1,6 @@
 class BaseController < ActionController::Base
+  include PublicActivity::StoreController
+  
   layout "application"
 
   before_action :authenticate_user!

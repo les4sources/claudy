@@ -23,12 +23,14 @@ module Bookings
     def run!(params = {})
       @booking.attributes = booking_params(params)
       return false if !@booking.valid?
-      # delete previous reservations as we will re-create them
-      @booking.reservations.destroy_all
-      rooms = get_rooms
-      if !rooms.nil? && available?(rooms)
-        build_reservations(rooms)
-        @booking.save!
+      ActiveRecord::Base.transaction do
+        # delete previous reservations as we will re-create them
+        Reservation.soft_delete_all!(@booking.reservations)
+        rooms = get_rooms
+        if !rooms.nil? && available?(rooms)
+          build_reservations(rooms)
+          @booking.save!
+        end
       end
       raise error_message if !error.nil?
       true

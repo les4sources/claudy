@@ -40,7 +40,7 @@ rails s
 Then use the Rails console to add a first user.
 
 ```
-> User.create email: "it@les4sources.be", password: "[set password here]"
+> User.create email: "[set email here]", password: "[set password here]"
 ```
 
 You are ready to go! Open localhost:3000 and have fun!

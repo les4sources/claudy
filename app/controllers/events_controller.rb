@@ -51,7 +51,7 @@ class EventsController < BaseController
   end
 
   def destroy
-    if @event.destroy
+    if @event.soft_delete!(validate: false)
       redirect_to events_path,
                   notice: "L'événement a été supprimé."
     else

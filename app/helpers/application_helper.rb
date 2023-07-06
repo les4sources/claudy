@@ -9,7 +9,7 @@ module ApplicationHelper
   end
 
   def room_badge(room)
-    shared_classes = "text-xs font-semibold text-center py-0.5 rounded"
+    shared_classes = "text-xs font-semibold text-center px-1 py-0.5 rounded"
     case room.level
     when 0
       content_tag(:span, room.code, class: "#{shared_classes} bg-indigo-100 text-indigo-800 dark:bg-indigo-200 dark:text-indigo-900")

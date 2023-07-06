@@ -3,6 +3,8 @@ class Room < ApplicationRecord
   has_many :lodging_rooms
   has_many :lodgings, through: :lodging_rooms
 
+  has_soft_deletion default_scope: true
+
   def name_with_level
     case level
     when 0

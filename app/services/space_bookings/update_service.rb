@@ -23,12 +23,14 @@ module SpaceBookings
     def run!(params = {})
       @space_booking.attributes = space_booking_params(params)
       return false if !@space_booking.valid?
-      # delete previous reservations as we will re-create them
-      @space_booking.space_reservations.destroy_all
-      spaces = get_spaces
-      if !spaces.nil? && available?(spaces)
-        build_space_reservations(spaces, @space_booking.duration)
-        @space_booking.save!
+      ActiveRecord::Base.transaction do
+        # delete previous reservations as we will re-create them
+        SpaceReservation.soft_delete_all!(@space_booking.space_reservations)
+        spaces = get_spaces
+        if !spaces.nil? && available?(spaces)
+          build_space_reservations(spaces, @space_booking.duration)
+          @space_booking.save!
+        end
       end
       raise error_message if !error.nil?
       true

@@ -5,6 +5,8 @@ class Lodging < ApplicationRecord
 
   monetize :price_night_cents
 
+  has_soft_deletion default_scope: true
+
   def available_on?(date)
     # none of the lodging rooms has a confirmed reservation
     Reservation

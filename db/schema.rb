@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
+ActiveRecord::Schema[7.0].define(version: 2023_07_06_080125) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -49,6 +49,25 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
+  create_table "activities", force: :cascade do |t|
+    t.string "trackable_type"
+    t.integer "trackable_id"
+    t.string "owner_type"
+    t.integer "owner_id"
+    t.string "key"
+    t.text "parameters"
+    t.string "recipient_type"
+    t.integer "recipient_id"
+    t.datetime "created_at", precision: nil, null: false
+    t.datetime "updated_at", precision: nil, null: false
+    t.index ["owner_id", "owner_type"], name: "index_activities_on_owner_id_and_owner_type"
+    t.index ["owner_type", "owner_id"], name: "index_activities_on_owner_type_and_owner_id"
+    t.index ["recipient_id", "recipient_type"], name: "index_activities_on_recipient_id_and_recipient_type"
+    t.index ["recipient_type", "recipient_id"], name: "index_activities_on_recipient_type_and_recipient_id"
+    t.index ["trackable_id", "trackable_type"], name: "index_activities_on_trackable_id_and_trackable_type"
+    t.index ["trackable_type", "trackable_id"], name: "index_activities_on_trackable_type_and_trackable_id"
+  end
+
   create_table "bookings", force: :cascade do |t|
     t.string "firstname"
     t.string "lastname"
@@ -85,6 +104,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
     t.text "public_notes"
     t.string "departure_time"
     t.boolean "option_pizza_party"
+    t.datetime "deleted_at", precision: nil
     t.index ["lodging_id"], name: "index_bookings_on_lodging_id"
   end
 
@@ -93,6 +113,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
     t.string "color"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "deleted_at", precision: nil
   end
 
   create_table "events", force: :cascade do |t|
@@ -102,6 +123,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
     t.datetime "ends_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "deleted_at", precision: nil
     t.index ["event_category_id"], name: "index_events_on_event_category_id"
   end
 
@@ -123,6 +145,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
     t.integer "price_night_cents", default: 0, null: false
     t.boolean "party_hall_availability"
     t.integer "weekend_discount_cents", default: 0, null: false
+    t.datetime "deleted_at", precision: nil
   end
 
   create_table "notes", force: :cascade do |t|
@@ -130,6 +153,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
     t.date "date"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "deleted_at", precision: nil
   end
 
   create_table "reservations", force: :cascade do |t|
@@ -138,6 +162,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.date "date"
+    t.datetime "deleted_at", precision: nil
     t.index ["booking_id"], name: "index_reservations_on_booking_id"
     t.index ["room_id"], name: "index_reservations_on_room_id"
   end
@@ -149,6 +174,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
     t.datetime "updated_at", null: false
     t.integer "level"
     t.string "code"
+    t.datetime "deleted_at", precision: nil
   end
 
   create_table "space_bookings", force: :cascade do |t|
@@ -182,6 +208,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
     t.boolean "option_wifi", default: false
     t.boolean "option_tables", default: false
     t.integer "advance_amount_cents"
+    t.datetime "deleted_at", precision: nil
     t.index ["event_id"], name: "index_space_bookings_on_event_id"
   end
 
@@ -192,6 +219,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
     t.string "duration"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "deleted_at", precision: nil
     t.index ["space_booking_id"], name: "index_space_reservations_on_space_booking_id"
     t.index ["space_id"], name: "index_space_reservations_on_space_id"
   end
@@ -202,6 +230,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_04_25_083126) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "code"
+    t.datetime "deleted_at", precision: nil
   end
 
   create_table "subscriptions", force: :cascade do |t|

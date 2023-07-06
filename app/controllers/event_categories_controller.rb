@@ -46,7 +46,7 @@ class EventCategoriesController < BaseController
 
   def destroy
     @event_category = EventCategory.find_by!(id: params[:id])
-    @event_category.destroy
+    @event_category.soft_delete!(validate: false)
     redirect_to event_categories_url,
                 status: :see_other,
                 notice: "La catégorie d'événements a été supprimé."
