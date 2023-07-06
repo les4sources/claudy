@@ -10,6 +10,7 @@ Rails.application.routes.draw do
   resources :event_categories
   resources :events
   resources :lodgings
+  resources :humans
   resources :notes
   resources :reports
   resources :rooms

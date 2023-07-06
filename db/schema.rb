@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_07_06_080125) do
+ActiveRecord::Schema[7.0].define(version: 2023_07_06_132156) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -125,6 +125,17 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_06_080125) do
     t.datetime "updated_at", null: false
     t.datetime "deleted_at", precision: nil
     t.index ["event_category_id"], name: "index_events_on_event_category_id"
+  end
+
+  create_table "humans", force: :cascade do |t|
+    t.string "name"
+    t.string "email"
+    t.string "photo"
+    t.string "summary"
+    t.text "description"
+    t.datetime "deleted_at", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "lodging_rooms", force: :cascade do |t|

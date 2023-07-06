@@ -71,5 +71,6 @@ class EventsController < BaseController
       active_primary: "events",
       active_secondary: "events"
     )
+    @settings_view = true
   end
 end

@@ -1,33 +1,60 @@
-nav.bg-white.px-2.sm:px-4.py-2.5.dark:bg-gray-900.w-full.border-b.border-gray-200.dark:border-gray-600
-  .container.flex.flex-wrap.items-center.justify-between.mx-auto
+nav.bg-white.border-gray-200.lg:px-4
+  .max-w-screen-xl.flex.flex-wrap.items-center.justify-between.mx-auto.p-4
     a.flex.items-center[href="/"]
-      img.h-6.mr-3.sm:h-9[src="https://flowbite.com/docs/images/logo.svg" alt=""]
-      span.self-center.text-3xl.font-caveat.font-semibold.whitespace-nowrap.text-stone-600
+      img.h-8.mr-3[src="https://flowbite.com/docs/images/logo.svg" alt="Flowbite Logo"]
+      span.self-center.text-2xl.font-semibold.whitespace-nowrap.dark:text-white
         | Claudy
 
-    .flex.md:order-2
-      button.text-gray-900.bg-gradient-to-r.from-teal-200.to-lime-200.focus:ring-4.focus:outline-none.focus:ring-lime-200.font-medium.rounded-lg.text-sm.px-5.py-2.5.text-center[type="button" data-drawer-target="drawer-links" data-drawer-show="drawer-links" data-drawer-placement="bottom" data-drawer-edge="true" data-drawer-edge-offset="bottom-[60px]" data-drawer-backdrop="false" aria-controls="drawer-links"]
-        | Liens utiles
-      / button.text-white.bg-blue-700.hover:bg-blue-800.focus:ring-4.focus:ring-blue-300.font-medium.rounded-lg.text-sm.px-5.py-2.5.mr-2.dark:bg-blue-600.dark:hover:bg-blue-700.focus:outline-none.dark:focus:ring-blue-800[type="button" data-drawer-target="drawer-links" data-drawer-show="drawer-links" aria-controls="drawer-links"]
-        | Liens utiles
-      button.inline-flex.items-center.p-2.text-sm.text-gray-500.rounded-lg.md:hidden.hover:bg-gray-100.focus:outline-none.focus:ring-2.focus:ring-gray-200.dark:text-gray-400.dark:hover:bg-gray-700.dark:focus:ring-gray-600[type="button"]
-        span.sr-only Ouvrir le menu principal
-        svg.w-6.h-6[aria-hidden="true" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"]
-          path[fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"]
+    button.inline-flex.items-center.p-2.w-10.h-10.justify-center.text-sm.text-gray-500.rounded-lg.md:hidden.hover:bg-gray-100.focus:outline-none.focus:ring-2.focus:ring-gray-200.dark:text-gray-400.dark:hover:bg-gray-700.dark:focus:ring-gray-600[data-collapse-toggle="navbar-dropdown" type="button" aria-controls="navbar-dropdown" aria-expanded="false"]
+      span.sr-only
+        | Afficher le menu principal
+      svg.w-5.h-5[aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewbox="0 0 17 14"]
+        path[stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 1h15M1 7h15M1 13h15"]
 
-    .items-center.justify-between.hidden.w-full.md:flex.md:w-auto.md:order-1
-      ul#main-menu.flex.flex-col.p-4.mt-4.border.border-gray-100.rounded-lg.bg-gray-50.md:flex-row.md:space-x-8.md:mt-0.md:text-sm.md:font-medium.md:border-0.md:bg-white.dark:bg-gray-800.md:dark:bg-gray-900.dark:border-gray-700
+    #navbar-dropdown.hidden.w-full.md:block.md:w-auto
+      ul.flex.flex-col.font-medium.p-4.md:p-0.mt-4.border.border-gray-100.rounded-lg.bg-gray-50.md:flex-row.md:space-x-8.md:mt-0.md:border-0.md:bg-white.dark:bg-gray-800.md:dark:bg-gray-900.dark:border-gray-700
         li
-          = link_to "Agenda", root_path, class: current_page?(root_path) ? "active" : "inactive"
+          = link_to "Agenda", 
+                    root_path, 
+                    class: current_page?(root_path) ? "block py-2 pl-3 pr-4 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0" : "block py-2 pl-3 pr-4 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0"
         li
-          = link_to "Hébergements", bookings_path, class: controller_name == "bookings" ? "active" : "inactive"
+          = link_to "Hébergements", 
+                    bookings_path, 
+                    class: controller_name == "bookings" ? "block py-2 pl-3 pr-4 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0" : "block py-2 pl-3 pr-4 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0"
         li
-          = link_to "Espaces", space_bookings_path, class: controller_name == "space_bookings" ? "active" : "inactive"
+          = link_to "Espaces", 
+                    space_bookings_path, 
+                    class: controller_name == "space_bookings" ? "block py-2 pl-3 pr-4 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0" : "block py-2 pl-3 pr-4 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0"
         li
-          = link_to "Événements", events_path, class: (controller_name == "events" || controller_name == "events_categories") ? "active" : "inactive"
+          = link_to "Reporting", 
+                    reports_path, 
+                    class: (controller_name == "reports") ? "block py-2 pl-3 pr-4 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0" : "block py-2 pl-3 pr-4 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0"
         li
-          = link_to "Reporting", reports_path, class: (controller_name == "reports") ? "active" : "inactive"
-        / li
-          = link_to "Hébergements", lodgings_path, class: "block py-2 pl-3 pr-4 text-gray-700 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 md:dark:hover:text-white dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700"
+          = link_to "Paramètres", 
+                    events_path,
+                    class: (controller_name == "events" || controller_name == "events_categories") ? "block py-2 pl-3 pr-4 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0" : "block py-2 pl-3 pr-4 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0"
 
 .w-full.p-1.bg-gradient-to-r.from-indigo-500.via-purple-500.to-pink-500
+
+- if !@settings_view.nil?
+  / Settings menu
+  nav.bg-gray-50.dark:bg-gray-700.border-b.border-gray-300.lg:px-4
+    .max-w-screen-xl.px-4.py-3.mx-auto
+      .flex.items-center
+        ul.flex.flex-row.font-medium.mt-0.mr-6.space-x-8.text-sm
+          li
+            = link_to "Événements", 
+                      events_path, 
+                      class: (controller_name == "events" || controller_name == "events_categories") ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
+          li
+            = link_to "Activités", 
+                      "#", 
+                      class: "text-gray-900 hover:underline"
+          li
+            = link_to "Produits", 
+                      "#", 
+                      class: "text-gray-900 hover:underline"
+          li
+            = link_to "Équipe",
+                      humans_path,
+                      class: controller_name == "humans" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
