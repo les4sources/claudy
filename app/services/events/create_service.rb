@@ -36,7 +36,8 @@ module Events
           :starts_at_date,
           :starts_at_time,
           :ends_at_date,
-          :ends_at_time
+          :ends_at_time,
+          :url
         )
     end
 

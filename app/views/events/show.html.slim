@@ -22,6 +22,11 @@
         dl
           .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
+              | Adresse internet
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = link_to(@event.url, @event.url, target: "_blank")
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
               | Catégorie
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = link_to(@event.event_category.name, event_category_path(@event.event_category))

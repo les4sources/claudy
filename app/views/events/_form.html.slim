@@ -14,6 +14,11 @@
         = radio_button.radio_button
         = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
+    = f.text_field :url,
+                   label: "Adresse internet pour l'inscription *",
+                   class: "md:w-1/2 lg:w-2/3",
+                   hint: "Page publique sur Punchpass"
+
     p.text-sm
       | Toute la journée? Ne spécifie que la date et ne précise aucune heure.
 

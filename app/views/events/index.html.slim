@@ -28,7 +28,13 @@
             = link_to event.name_with_color, 
                       event_path(event),
                       class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+            - if event.url.presence
+              div
+                = link_to event.url,
+                          event.url,
+                          target: "_blank",
+                          class: "text-blue-300 hover:text-blue-500 focus:text-blue-500"
           td.py-4.px-6
-            = l(event.starts_at, format: :long)
+            = l(event.starts_at, format: :short)
           td.py-4.px-6
-            = l(event.ends_at, format: :long)
+            = l(event.ends_at, format: :short)
