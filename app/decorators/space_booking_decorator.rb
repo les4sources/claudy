@@ -21,9 +21,8 @@ class SpaceBookingDecorator < ApplicationDecorator
   end
 
   def dates_counter(current_date)
-    if object.to_date == object.from_date + 1.day
-    else
-      total_days = (object.to_date - object.from_date).to_i
+    if object.to_date != object.from_date
+      total_days = (object.to_date - object.from_date).to_i + 1
       if object.from_date == current_date
         "(1/#{total_days})"
       else
