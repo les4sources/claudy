@@ -52,6 +52,8 @@
             - if space_booking.event.presence
               .text-gray-500.leading-none.mb-2.font-semibold = space_booking.event.name_with_color
 
+            span.text-gray-500 =< space_booking.dates_counter(date)
+
           .grid.grid-cols-3.gap-1
             - grouped_space_reservations.last.each do |space_reservation|
               = space_badge(space_reservation.space)
@@ -77,6 +79,8 @@
               = link_to booking.decorate.group_or_name.html_safe, 
                         booking_path(booking), 
                         class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+
+            span.text-gray-500 =< booking.dates_counter(date)
 
           - if !booking.lodging.nil?
             = booking.lodging_badge

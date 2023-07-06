@@ -30,6 +30,19 @@ class BookingDecorator < ApplicationDecorator
     classes.join(" ")
   end
 
+  def dates_counter(current_date)
+    if object.to_date == object.from_date + 1.day
+    else
+      total_days = (object.to_date - object.from_date).to_i
+      if object.from_date == current_date
+        "(1/#{total_days})"
+      else
+        day = (current_date - object.from_date + 1).to_i
+        "(#{day}/#{total_days})"
+      end
+    end
+  end
+
   def tr_border_class
     classes = ["border-l-8"]
     if object.lodging.nil?
