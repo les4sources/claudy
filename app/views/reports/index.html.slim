@@ -51,14 +51,15 @@
           td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.font-medium.text-gray-900.sm:pl-6
             = l(date, format: :month_year).capitalize
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
-            - bookings_total = bookings_total + @revenue_by_month_for_bookings[[date.year, date.month]]
+            - if !@revenue_by_month_for_bookings[[date.year, date.month]].nil?
+              - bookings_total = bookings_total + @revenue_by_month_for_bookings[[date.year, date.month]]
             = number_to_currency(@revenue_by_month_for_bookings[[date.year, date.month]], unit: "€")
             / = number_to_currency(revenue, unit: "€")
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
-            - space_bookings_total = space_bookings_total + @revenue_by_month_for_space_bookings[[date.year, date.month]]
+            - if !@revenue_by_month_for_space_bookings[[date.year, date.month]].nil?
+              - space_bookings_total = space_bookings_total + @revenue_by_month_for_space_bookings[[date.year, date.month]]
             = number_to_currency(@revenue_by_month_for_space_bookings[[date.year, date.month]], unit: "€")
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
-            - full_total = full_total + @revenue_by_month_for_bookings[[date.year, date.month]] + @revenue_by_month_for_space_bookings[[date.year, date.month]]
             = number_to_currency(@revenue_by_month_for_bookings[[date.year, date.month]] + @revenue_by_month_for_space_bookings[[date.year, date.month]], unit: "€")
     tfoot
       tr
@@ -68,4 +69,4 @@
         td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
           = number_to_currency(space_bookings_total, unit: "€")
         td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
-          = number_to_currency(full_total, unit: "€")
+          = number_to_currency(bookings_total + space_bookings_total, unit: "€")
