@@ -46,13 +46,11 @@
         .block
           div
             strong 
-              = link_to space_booking.decorate.name.html_safe, 
+              = link_to space_booking.decorate.group_or_name.html_safe, 
                         space_booking_path(space_booking), 
                         class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
             - if space_booking.event.presence
               .text-gray-500.leading-none.mb-2.font-semibold = space_booking.event.name_with_color
-            - if space_booking.group_name.present?
-              .text-gray-500.leading-none.mb-2 = space_booking.group_name
 
           .grid.grid-cols-3.gap-1
             - grouped_space_reservations.last.each do |space_reservation|
@@ -76,11 +74,9 @@
         .block
           div
             strong 
-              = link_to booking.decorate.name.html_safe, 
+              = link_to booking.decorate.group_or_name.html_safe, 
                         booking_path(booking), 
                         class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
-            - if booking.group_name.present?
-              .text-gray-500.leading-none.mb-2 = booking.group_name
 
           - if !booking.lodging.nil?
             = booking.lodging_badge

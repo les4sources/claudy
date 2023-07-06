@@ -55,6 +55,7 @@
         = f.number_field :price,
                          label: false,
                          required: true,
+                         value: ((f.object.price_cents / 100.0) rescue nil),
                          class: "block w-36 rounded-md py-1.5 sm:max-w-xs sm:leading-6",
                          step: "0.01",
                          data: { \
@@ -68,6 +69,7 @@
       .mt-2.sm:col-span-2.sm:mt-0
         = f.number_field :advance_amount,
                          label: false,
+                         value: ((f.object.advance_amount_cents / 100.0) rescue nil),
                          class: "block w-36 rounded-md py-1.5 sm:max-w-xs sm:leading-6",
                          step: "0.01",
                          data: { "space-booking-target": "advanceAmountInput" }
@@ -78,6 +80,7 @@
       .mt-2.sm:col-span-2.sm:mt-0
         = f.number_field :paid_amount,
                          label: false,
+                         value: ((f.object.paid_amount_cents / 100.0) rescue nil),
                          class: "block w-36 rounded-md py-1.5 sm:max-w-xs sm:leading-6",
                          step: "0.01"
     .sm:grid.sm:grid-cols-3.sm:items-start.sm:gap-4.sm:py-2
@@ -87,6 +90,7 @@
       .mt-2.sm:col-span-2.sm:mt-0
         = f.number_field :deposit_amount,
                          label: false,
+                         value: ((f.object.deposit_amount_cents / 100.0) rescue nil),
                          class: "block w-36 rounded-md py-1.5 sm:max-w-xs sm:leading-6",
                          step: "0.01"
 

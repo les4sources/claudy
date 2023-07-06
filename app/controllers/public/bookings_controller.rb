@@ -25,7 +25,9 @@ class Public::BookingsController < Public::BaseController
   end
 
   def show
-    @booking = Booking.find_by(token: params[:token]).decorate
+    @booking = Booking.find_by!(token: params[:token]).decorate
     @reservations_by_date = @booking.reservations.decorate.to_a.group_by { |r| r.date }
+  rescue ActiveRecord::RecordNotFound
+    raise ActionController::RoutingError.new('Not Found')
   end
 end

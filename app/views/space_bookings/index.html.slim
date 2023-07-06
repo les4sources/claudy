@@ -35,11 +35,9 @@
             = space_booking.status_emoji
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
             strong(class="#{space_booking.declined? ? "line-through" : nil}")
-              = link_to space_booking.name, 
+              = link_to space_booking.group_or_name, 
                         space_booking_path(space_booking),
                         class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
-            - if space_booking.group_name.present?
-              .text-gray-500 = space_booking.group_name
           td.py-4.px-6
             = space_booking.event_name_with_color
           td.py-4.px-6

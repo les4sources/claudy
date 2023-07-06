@@ -2,7 +2,7 @@
   = render 'layouts/components/page_header',
            title: @booking.name,
            secondary: "Du #{@booking.from_date} au #{@booking.to_date}",
-           links: [ \
+           links: !@booking.deleted? ? [ \
              link_to("Agenda", root_path(date: @booking.object.from_date), class: "btn-page-header-no-background"),
              delete_link(@booking.object, "Supprimer cette réservation"),
              link_to( \
@@ -10,10 +10,20 @@
                edit_booking_path(@booking),
                class: "btn-page-header" \
              ) \
-           ]
+           ] : nil
 
-= render "bookings/status_callout", 
-         booking: @booking
+- if @booking.deleted?
+  .rounded-md.bg-red-50.p-4.mb-4
+    .flex
+      .flex-shrink-0
+        svg.h-5.w-5.text-red-400[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+          path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"]
+      .ml-3
+        h3.text-sm.font-medium.text-red-800
+          | Cette réservation a été supprimée.
+- else
+  = render "bookings/status_callout", 
+           booking: @booking
 
 ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role="list"]
   li.col-span-1.flex.rounded-md.shadow-sm

@@ -4,7 +4,9 @@ class SpaceBookingsController < BaseController
   def index
     @space_bookings = SpaceBookingDecorator
       .decorate_collection(
-        SpaceBooking.current_and_future
+        SpaceBooking
+          .unscoped
+          .current_and_future
           .includes(:event)
       )
   end
@@ -16,9 +18,12 @@ class SpaceBookingsController < BaseController
 
   def show
     @space_booking = SpaceBooking
+      .unscoped
       .find_by!(id: params[:id])
       .decorate
-    @space_reservations_by_date = @space_booking.space_reservations.to_a.group_by { |sr| sr.date }
+    SpaceReservation.with_deleted do
+      @space_reservations_by_date = @space_booking.space_reservations.to_a.group_by { |sr| sr.date }
+    end
     breadcrumb "Réservation ##{@space_booking.id}", space_booking_path(@space_booking), match: :exact
   end
 
@@ -70,7 +75,8 @@ class SpaceBookingsController < BaseController
 
   def destroy
     @space_booking = SpaceBooking.find_by!(id: params[:id])
-    @space_booking.destroy
+    @space_booking.soft_delete!(validate: false)
+    @space_booking.create_activity(:destroy)
     redirect_to space_bookings_url,
                 status: :see_other,
                 notice: "La réservation a été supprimée."

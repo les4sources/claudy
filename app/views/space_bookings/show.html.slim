@@ -2,17 +2,27 @@
   = render 'layouts/components/page_header',
            title: @space_booking.group_or_name,
            secondary: "Du #{@space_booking.from_date} au #{@space_booking.to_date}",
-           links: [ \
+           links: !@space_booking.deleted? ? [ \
              delete_link(@space_booking.object, "Supprimer cette réservation"),
              link_to( \
                "Mettre à jour",
                edit_space_booking_path(@space_booking),
                class: "btn-page-header" \
              ) \
-           ]
+           ] : nil
 
-= render "space_bookings/status_callout",
-         space_booking: @space_booking
+- if @space_booking.deleted?
+  .rounded-md.bg-red-50.p-4.mb-4
+    .flex
+      .flex-shrink-0
+        svg.h-5.w-5.text-red-400[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+          path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"]
+      .ml-3
+        h3.text-sm.font-medium.text-red-800
+          | Cette réservation a été supprimée.
+- else
+  = render "space_bookings/status_callout",
+           space_booking: @space_booking
 
 .grid.grid-cols-3.gap-4
   .col-span-2.space-y-4

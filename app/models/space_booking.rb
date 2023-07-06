@@ -1,9 +1,16 @@
 class SpaceBooking < ApplicationRecord
+  # PublicActivity
+  include PublicActivity::Model
+  tracked owner: Proc.new{ |controller, model| controller.current_user }
+
+  # Relationships
   has_many :space_reservations, dependent: :destroy
   has_many :spaces, through: :space_reservations
   belongs_to :event, optional: true
 
+  # Versioning
   has_paper_trail
+  has_soft_deletion default_scope: true
 
   monetize :advance_amount_cents, allow_nil: true
   monetize :paid_amount_cents, allow_nil: true

@@ -8,11 +8,9 @@
 .p-3
   .flex.items-center.justify-between.mb-2
     .text-sm.font-semibold.leading-none.text-gray-900
-      = link_to booking.decorate.name.html_safe, 
+      = link_to booking.decorate.group_or_name.html_safe, 
                 booking_path(booking),
                 class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
-      - if booking.group_name.present?
-        .block.text-gray-500.leading-none.mt-1 = booking.group_name
     div
       = link_to "Détails", 
                 booking_path(booking),

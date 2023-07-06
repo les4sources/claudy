@@ -35,11 +35,9 @@
             = booking.status_emoji
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
             strong(class="#{booking.declined? ? "line-through" : nil}")
-              = link_to booking.name, 
+              = link_to booking.group_or_name, 
                         booking_path(booking),
                         class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
-            - if booking.group_name.present?
-              .text-gray-500 = booking.group_name
           td.py-4.px-6
             = booking.from_date
             - if booking.object.estimated_arrival.presence

@@ -75,10 +75,11 @@ class SpaceBookingDecorator < ApplicationDecorator
   end
 
   def group_or_name
+    classes = object.deleted? ? "line-through" : nil
     if object.group_name.presence
-      group_name
+      h.content_tag(:span, group_name, class: classes)
     else
-      name
+      h.content_tag(:span, name, class: classes)
     end
   end
 
@@ -192,15 +193,19 @@ class SpaceBookingDecorator < ApplicationDecorator
 
   def status
     shared_classes = "text-sm font-medium mr-2 px-2.5 py-0.5 rounded"
-    case object.status
-    when "canceled"
-      h.content_tag(:span, "Annulée", class: "#{shared_classes} bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900")
-    when "confirmed"
-      h.content_tag(:span, "Confirmée", class: "#{shared_classes} bg-green-100 text-green-800 dark:bg-green-200 dark:text-green-900")
-    when "pending"
-      h.content_tag(:span, "En attente", class: "#{shared_classes} bg-yellow-100 text-yellow-800 dark:bg-yellow-200 dark:text-yellow-900")
+    if object.deleted?
+      h.content_tag(:span, "Supprimée", class: "#{shared_classes} bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900")
     else
-      object.status
+      case object.status
+      when "canceled"
+        h.content_tag(:span, "Annulée", class: "#{shared_classes} bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900")
+      when "confirmed"
+        h.content_tag(:span, "Confirmée", class: "#{shared_classes} bg-green-100 text-green-800 dark:bg-green-200 dark:text-green-900")
+      when "pending"
+        h.content_tag(:span, "En attente", class: "#{shared_classes} bg-yellow-100 text-yellow-800 dark:bg-yellow-200 dark:text-yellow-900")
+      else
+        object.status
+      end
     end
   end
 
@@ -233,7 +238,9 @@ class SpaceBookingDecorator < ApplicationDecorator
   end
 
   def tr_class
-    if object.confirmed?
+    if object.deleted?
+      "bg-stone-50 opacity-50"
+    elsif object.confirmed?
       "bg-white"
     elsif object.declined?
       "bg-red-50 opacity-75"

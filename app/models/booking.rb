@@ -1,4 +1,9 @@
 class Booking < ApplicationRecord
+  # PublicActivity
+  include PublicActivity::Model
+  tracked owner: Proc.new{ |controller, model| controller.current_user }
+
+  # Relationships
   has_many :reservations, dependent: :destroy
   has_many :rooms, through: :reservations
   belongs_to :lodging, optional: true
@@ -6,6 +11,7 @@ class Booking < ApplicationRecord
   monetize :price_cents, allow_nil: true
 
   has_paper_trail
+  has_soft_deletion default_scope: true
 
   has_rich_text :public_notes
 

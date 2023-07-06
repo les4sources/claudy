@@ -3,7 +3,13 @@ class Public::BaseController < ActionController::Base
 
   # default_form_builder TailwindFormBuilder
 
+  rescue_from ActionController::RoutingError, with: :render_404
+
   private
+
+  def render_404
+    render file: "#{Rails.root}/public/404.html", status: 404
+  end
 
   def set_error_flash(object, error_message)
     if object.valid?

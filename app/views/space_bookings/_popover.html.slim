@@ -7,11 +7,9 @@
 .p-3
   .flex.items-center.justify-between.mb-2
     .text-sm.font-semibold.leading-none.text-gray-900
-      = link_to space_booking.decorate.name.html_safe, 
+      = link_to space_booking.decorate.group_or_name.html_safe, 
                 space_booking_path(space_booking),
                 class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
-      - if space_booking.group_name.present?
-        .block.text-gray-500.leading-none.mt-1 = space_booking.group_name
     div
       = link_to "Détails", 
                 space_booking_path(space_booking),

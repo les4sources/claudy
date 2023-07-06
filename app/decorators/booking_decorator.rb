@@ -53,10 +53,11 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def group_or_name
+    classes = object.deleted? ? "line-through" : nil
     if object.group_name.presence
-      group_name
+      h.content_tag(:span, group_name, class: classes)
     else
-      name
+      h.content_tag(:span, name, class: classes)
     end
   end
 
@@ -219,51 +220,57 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def rooms_badges(font_size: "xs")
-    rooms = Room.where(id: object.reservations.map(&:room_id).uniq)
-    shared_classes = "text-#{font_size} font-semibold text-center py-0.5 px-1 rounded"
-    html = ""
-    rooms.each do |room|
-      case room.level
-      when 0
-        if object.confirmed?
-          specific_classes = "bg-indigo-100 text-indigo-800"
-        else
-          specific_classes = "border border-indigo-100 text-indigo-800"
+    Reservation.with_deleted do
+      rooms = Room.where(id: object.reservations.map(&:room_id).uniq)
+      shared_classes = "text-#{font_size} font-semibold text-center py-0.5 px-1 rounded"
+      html = ""
+      rooms.each do |room|
+        case room.level
+        when 0
+          if object.confirmed?
+            specific_classes = "bg-indigo-100 text-indigo-800"
+          else
+            specific_classes = "border border-indigo-100 text-indigo-800"
+          end
+        when 1
+          if object.confirmed?
+            specific_classes = "bg-purple-100 text-purple-800"
+          else
+            specific_classes = "border border-purple-100 text-purple-800"
+          end
+        when 2
+          if object.confirmed?
+            specific_classes = "bg-pink-100 text-pink-800"
+          else
+            specific_classes = "border border-pink-100 text-pink-800"
+          end
         end
-      when 1
-        if object.confirmed?
-          specific_classes = "bg-purple-100 text-purple-800"
-        else
-          specific_classes = "border border-purple-100 text-purple-800"
-        end
-      when 2
-        if object.confirmed?
-          specific_classes = "bg-pink-100 text-pink-800"
-        else
-          specific_classes = "border border-pink-100 text-pink-800"
-        end
+        html << h.content_tag(
+          :span, 
+          room.code, 
+          class: "#{shared_classes} #{specific_classes}", 
+          "data-tooltip-target": "tooltip-room-#{room.id}"
+        )
       end
-      html << h.content_tag(
-        :span, 
-        room.code, 
-        class: "#{shared_classes} #{specific_classes}", 
-        "data-tooltip-target": "tooltip-room-#{room.id}"
-      )
+      h.raw(html)
     end
-    h.raw(html)
   end
 
   def status
     shared_classes = "text-sm font-medium mr-2 px-2.5 py-0.5 rounded"
-    case object.status
-    when "canceled"
-      h.content_tag(:span, "Annulée", class: "#{shared_classes} bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900")
-    when "confirmed"
-      h.content_tag(:span, "Confirmée", class: "#{shared_classes} bg-green-100 text-green-800 dark:bg-green-200 dark:text-green-900")
-    when "pending"
-      h.content_tag(:span, "En attente", class: "#{shared_classes} bg-yellow-100 text-yellow-800 dark:bg-yellow-200 dark:text-yellow-900")
+    if object.deleted?
+      h.content_tag(:span, "Supprimée", class: "#{shared_classes} bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900")
     else
-      object.status
+      case object.status
+      when "canceled"
+        h.content_tag(:span, "Annulée", class: "#{shared_classes} bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900")
+      when "confirmed"
+        h.content_tag(:span, "Confirmée", class: "#{shared_classes} bg-green-100 text-green-800 dark:bg-green-200 dark:text-green-900")
+      when "pending"
+        h.content_tag(:span, "En attente", class: "#{shared_classes} bg-yellow-100 text-yellow-800 dark:bg-yellow-200 dark:text-yellow-900")
+      else
+        object.status
+      end
     end
   end
 
@@ -291,7 +298,9 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def tr_class
-    if object.confirmed?
+    if object.deleted?
+      "bg-stone-50 opacity-50"
+    elsif object.confirmed?
       "bg-white"
     elsif object.declined?
       "bg-red-50 opacity-75"

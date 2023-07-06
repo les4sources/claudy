@@ -3,7 +3,7 @@ class BookingsController < BaseController
 
   def index
     @bookings = BookingDecorator
-      .decorate_collection(Booking.current_and_future)
+      .decorate_collection(Booking.unscoped.current_and_future)
   end
 
   def past
@@ -12,8 +12,10 @@ class BookingsController < BaseController
   end
 
   def show
-    @booking = Booking.find_by!(id: params[:id]).decorate
-    @reservations_by_date = @booking.reservations.decorate.to_a.group_by { |r| r.date }
+    @booking = Booking.unscoped.find_by!(id: params[:id]).decorate
+    Reservation.with_deleted do
+      @reservations_by_date = @booking.reservations.decorate.to_a.group_by { |r| r.date }
+    end
     breadcrumb "Réservation ##{@booking.id}", booking_path(@booking), match: :exact
   end
 
@@ -71,7 +73,8 @@ class BookingsController < BaseController
 
   def destroy
     @booking = Booking.find_by!(id: params[:id])
-    @booking.destroy
+    @booking.soft_delete!(validate: false)
+    @booking.create_activity(:destroy)
     redirect_to bookings_url,
                 status: :see_other,
                 notice: "La réservation a été supprimée."
