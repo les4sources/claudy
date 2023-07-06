@@ -60,7 +60,7 @@
               - space_bookings_total = space_bookings_total + @revenue_by_month_for_space_bookings[[date.year, date.month]]
             = number_to_currency(@revenue_by_month_for_space_bookings[[date.year, date.month]], unit: "€")
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
-            = number_to_currency(@revenue_by_month_for_bookings[[date.year, date.month]] + @revenue_by_month_for_space_bookings[[date.year, date.month]], unit: "€")
+            = number_to_currency((@revenue_by_month_for_bookings[[date.year, date.month]] rescue 0) + (@revenue_by_month_for_space_bookings[[date.year, date.month]] rescue 0), unit: "€")
     tfoot
       tr
         td
