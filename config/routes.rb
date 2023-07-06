@@ -12,6 +12,7 @@ Rails.application.routes.draw do
   resources :lodgings
   resources :humans
   resources :notes
+  resources :products
   resources :reports
   resources :rooms
 

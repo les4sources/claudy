@@ -32,7 +32,7 @@ nav.bg-white.border-gray-200.lg:px-4
         li
           = link_to "Paramètres", 
                     events_path,
-                    class: (controller_name == "events" || controller_name == "events_categories") ? "block py-2 pl-3 pr-4 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0" : "block py-2 pl-3 pr-4 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0"
+                    class: !@settings_view.nil? ? "block py-2 pl-3 pr-4 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0" : "block py-2 pl-3 pr-4 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0"
 
 .w-full.p-1.bg-gradient-to-r.from-indigo-500.via-purple-500.to-pink-500
 
@@ -49,11 +49,15 @@ nav.bg-white.border-gray-200.lg:px-4
           li
             = link_to "Activités", 
                       "#", 
-                      class: "text-gray-900 hover:underline"
+                      class: "text-gray-500 hover:underline"
+          li
+            = link_to "Services", 
+                      "#", 
+                      class: "text-gray-500 hover:underline"
           li
             = link_to "Produits", 
-                      "#", 
-                      class: "text-gray-900 hover:underline"
+                      products_path, 
+                      class: controller_name == "products" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
           li
             = link_to "Équipe",
                       humans_path,
