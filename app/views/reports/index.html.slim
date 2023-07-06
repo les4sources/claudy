@@ -41,7 +41,7 @@
         th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
           | Espaces
         th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
-          | Bar
+          | Total Accueil
     tbody.divide-y.divide-gray-200.bg-white
       - (@start_date..@end_date).select { |d| d.day == 1 }.each do |date|
         tr
@@ -53,4 +53,4 @@
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
             = number_to_currency(@revenue_by_month_for_space_bookings[[date.year, date.month]], unit: "€")
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
-            | -
+            = number_to_currency(@revenue_by_month_for_bookings[[date.year, date.month]] + @revenue_by_month_for_space_bookings[[date.year, date.month]], unit: "€")
