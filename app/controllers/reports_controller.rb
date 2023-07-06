@@ -23,7 +23,7 @@ class ReportsController < BaseController
     if params[:start_date] && params[:end_date]
       [Date.parse(params[:start_date]), Date.parse(params[:end_date])]
     else
-      [Date.yesterday.beginning_of_year, Date.today + 6.months]
+      [Date.yesterday.beginning_of_year, Date.today.end_of_year]
     end
   end
 
