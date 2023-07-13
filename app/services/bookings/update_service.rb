@@ -25,7 +25,7 @@ module Bookings
       return false if !@booking.valid?
       ActiveRecord::Base.transaction do
         # delete previous reservations as we will re-create them
-        Reservation.soft_delete_all!(@booking.reservations)
+        @booking.reservations.destroy_all
         rooms = get_rooms
         if !rooms.nil? && available?(rooms)
           build_reservations(rooms)

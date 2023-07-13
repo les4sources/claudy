@@ -10,7 +10,6 @@ class SpaceBooking < ApplicationRecord
 
   # Versioning
   has_paper_trail
-  has_soft_deletion default_scope: true
 
   monetize :advance_amount_cents, allow_nil: true
   monetize :paid_amount_cents, allow_nil: true

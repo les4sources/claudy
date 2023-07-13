@@ -233,40 +233,38 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def rooms_badges(font_size: "xs")
-    Reservation.with_deleted do
-      rooms = Room.where(id: object.reservations.map(&:room_id).uniq)
-      shared_classes = "text-#{font_size} font-semibold text-center py-0.5 px-1 rounded"
-      html = ""
-      rooms.each do |room|
-        case room.level
-        when 0
-          if object.confirmed?
-            specific_classes = "bg-indigo-100 text-indigo-800"
-          else
-            specific_classes = "border border-indigo-100 text-indigo-800"
-          end
-        when 1
-          if object.confirmed?
-            specific_classes = "bg-purple-100 text-purple-800"
-          else
-            specific_classes = "border border-purple-100 text-purple-800"
-          end
-        when 2
-          if object.confirmed?
-            specific_classes = "bg-pink-100 text-pink-800"
-          else
-            specific_classes = "border border-pink-100 text-pink-800"
-          end
+    rooms = Room.where(id: object.reservations.map(&:room_id).uniq)
+    shared_classes = "text-#{font_size} font-semibold text-center py-0.5 px-1 rounded"
+    html = ""
+    rooms.each do |room|
+      case room.level
+      when 0
+        if object.confirmed?
+          specific_classes = "bg-indigo-100 text-indigo-800"
+        else
+          specific_classes = "border border-indigo-100 text-indigo-800"
         end
-        html << h.content_tag(
-          :span, 
-          room.code, 
-          class: "#{shared_classes} #{specific_classes}", 
-          "data-tooltip-target": "tooltip-room-#{room.id}"
-        )
+      when 1
+        if object.confirmed?
+          specific_classes = "bg-purple-100 text-purple-800"
+        else
+          specific_classes = "border border-purple-100 text-purple-800"
+        end
+      when 2
+        if object.confirmed?
+          specific_classes = "bg-pink-100 text-pink-800"
+        else
+          specific_classes = "border border-pink-100 text-pink-800"
+        end
       end
-      h.raw(html)
+      html << h.content_tag(
+        :span, 
+        room.code, 
+        class: "#{shared_classes} #{specific_classes}", 
+        "data-tooltip-target": "tooltip-room-#{room.id}"
+      )
     end
+    h.raw(html)
   end
 
   def status

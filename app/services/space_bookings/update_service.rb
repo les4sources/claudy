@@ -25,7 +25,7 @@ module SpaceBookings
       return false if !@space_booking.valid?
       ActiveRecord::Base.transaction do
         # delete previous reservations as we will re-create them
-        SpaceReservation.soft_delete_all!(@space_booking.space_reservations)
+        @space_booking.space_reservations.destroy_all
         spaces = get_spaces
         if !spaces.nil? && available?(spaces)
           build_space_reservations(spaces, @space_booking.duration)
