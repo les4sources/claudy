@@ -3,7 +3,8 @@
            title: "Nouveau membre de l'équipe"
 
 = form_with model: @human,
-            url: humans_path do |f|
+            url: humans_path,
+            multipart: true do |f|
   .space-y-8.divide-y.divide-gray-200.sm:space-y-5
     .space-y-6.sm:space-y-5
       = render "form", f: f

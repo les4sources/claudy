@@ -6,6 +6,8 @@ class Human < ApplicationRecord
 
   has_rich_text :description
 
+  mount_uploader :photo, HumanAvatarUploader
+
 	validates :name,
             presence: true,
             uniqueness: true

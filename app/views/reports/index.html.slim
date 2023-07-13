@@ -64,9 +64,9 @@
     tfoot
       tr
         td
-        td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
+        td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
           = number_to_currency(bookings_total, unit: "€")
-        td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
+        td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
           = number_to_currency(space_bookings_total, unit: "€")
-        td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
+        td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
           = number_to_currency(bookings_total + space_bookings_total, unit: "€")

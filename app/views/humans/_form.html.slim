@@ -16,6 +16,16 @@
                    label: "Résumé",
                    class: "md:w-1/2 lg:w-2/3"
 
+    .flex.space-x-4
+      - if @human.photo?
+        = image_tag @human.photo_url(:thumb),
+                    class: "inline-block rounded-md"
+      div
+        = f.file_field :photo,
+                       label: "Photo",
+                       hint: "Un fichier au format JPG, PNG ou GIF"
+        = f.hidden_field :photo_cache
+
     = f.label :description, 
               "Présentation complète"
     = f.rich_text_area :description

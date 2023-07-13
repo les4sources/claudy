@@ -53,6 +53,7 @@ gem "dotenv-rails", groups: [:development, :test]
 gem "annotate"
 gem "awesome_print"
 gem "by_star"
+gem "carrierwave", "~> 3.0"
 # gem "cssbundling-rails"
 # gem "dartsass-rails", "~> 0.4.0"
 gem "devise"

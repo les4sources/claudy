@@ -21,9 +21,17 @@
           dl
             .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
               dt.text-sm.font-medium.text-gray-500
+                | Photo
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                - if @human.photo?
+                  = image_tag @human.photo_url(:profile),
+                              class: "inline-block rounded-md"
+
+              dt.text-sm.font-medium.text-gray-500
                 | Email
               dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
                 = @human.email
+
               dt.text-sm.font-medium.text-gray-500
                 | Résumé
               dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0

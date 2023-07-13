@@ -56,3 +56,5 @@ slim_me.*
 /db/*.sqlite3
 
 html2slim.*
+
+public/uploads/*

@@ -65,6 +65,14 @@ module FormBuilders
       text_field(name, *args, &block)
     end
 
+    def file_field(name, *args, &block)
+      args[0].merge!({ 
+        type: 'file',
+        class: 'block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none'
+      }) if args.any?
+      text_field(name, *args, &block)
+    end
+
     def label(attribute_name, *args, &block)
       options = args.extract_options!.dup
 

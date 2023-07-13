@@ -32,7 +32,8 @@ module Humans
           :name,
           :email,
           :summary,
-          :description
+          :description,
+          :photo
         )
     end
   end
