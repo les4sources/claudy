@@ -47,9 +47,9 @@ nav.bg-white.border-gray-200.lg:px-4
                       events_path, 
                       class: (controller_name == "events" || controller_name == "events_categories") ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
           li
-            = link_to "Activités", 
-                      "#", 
-                      class: "text-gray-500 hover:underline"
+            = link_to "Expériences", 
+                      experiences_path, 
+                      class: controller_name == "experiences" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
           li
             = link_to "Services", 
                       "#", 

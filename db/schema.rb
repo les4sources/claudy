@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_07_06_141011) do
+ActiveRecord::Schema[7.0].define(version: 2023_07_14_094208) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -126,6 +126,19 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_06_141011) do
     t.datetime "deleted_at", precision: nil
     t.string "url"
     t.index ["event_category_id"], name: "index_events_on_event_category_id"
+  end
+
+  create_table "experiences", force: :cascade do |t|
+    t.string "name"
+    t.integer "human_id"
+    t.string "summary"
+    t.text "description"
+    t.string "photo"
+    t.datetime "deleted_at", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "price_cents"
+    t.index ["human_id"], name: "index_experiences_on_human_id"
   end
 
   create_table "humans", force: :cascade do |t|
@@ -290,6 +303,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_06_141011) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "bookings", "lodgings"
   add_foreign_key "events", "event_categories"
+  add_foreign_key "experiences", "humans"
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"
   add_foreign_key "reservations", "bookings"

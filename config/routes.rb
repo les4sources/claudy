@@ -9,6 +9,7 @@ Rails.application.routes.draw do
   resources :booking_prices, only: [:create]
   resources :event_categories
   resources :events
+  resources :experiences
   resources :lodgings
   resources :humans
   resources :notes

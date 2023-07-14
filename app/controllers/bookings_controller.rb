@@ -54,7 +54,7 @@ class BookingsController < BaseController
   def update
     service = Bookings::UpdateService.new(booking_id: params[:id])
     respond_to do |format|
-      if service.run!(params)
+      if service.run(params)
         format.html { redirect_to service.booking, notice: "La réservation a été mise à jour." }
         format.json { render :show, status: :ok, location: service.booking }
       else

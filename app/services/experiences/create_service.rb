@@ -1,17 +1,15 @@
-module Humans
-  class UpdateService < ServiceBase
-    PreconditionFailedError = Class.new(StandardError)
+module Experiences
+  class CreateService < ServiceBase
+    attr_reader :experience
 
-    attr_reader :human
-
-    def initialize(human:)
-      @human = human
+    def initialize
+      @experience = Experience.new
       @report_errors = true
     end
 
     def run(params = {})
       context = {
-        params: params
+        params: params,
       }
 
       catch_error(context: context) do
@@ -20,21 +18,22 @@ module Humans
     end
 
     def run!(params = {})
-      human.attributes = human_params(params)
-      human.save!
+      experience.attributes = experience_params(params)
+      experience.save!
       true
     end
 
     private
 
-    def human_params(params)
+    def experience_params(params)
       params
-        .require(:human)
+        .require(:experience)
         .permit(
           :name,
-          :email,
+          :human_id,
           :summary,
           :description,
+          :price,
           :photo,
           :photo_cache
         )

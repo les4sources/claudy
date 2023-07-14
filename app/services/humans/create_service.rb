@@ -33,7 +33,8 @@ module Humans
           :email,
           :summary,
           :description,
-          :photo
+          :photo,
+          :photo_cache
         )
     end
   end
