@@ -22,12 +22,16 @@ html(lang="fr")
 
     .container.mx-auto.sm:px-6.lg:px-8
       .grid.justify-items-center
-        .p-4.pb-16.bg-white.md:p-8.md:pb-16.md:shadow-2xl.md:rounded-lg.md:m-8.lg:w-3/4
-          - if content_for?(:page_header)
-            = yield :page_header
+        .bg-white.md:shadow-2xl.md:rounded-lg.md:m-8.lg:w-3/4
+          = image_tag "apples.jpg",
+                      class: "w-full h-48 object-cover rounded-t-lg"
 
-          = render "layouts/public/components/messages"
-          = yield
+          .p-4.pb-16.md:p-8.md:pb-16
+            - if content_for?(:page_header)
+              = yield :page_header
+
+            = render "layouts/public/components/messages"
+            = yield
 
     / .relative
       svg.editorial[xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewbox="0 24 150 28 " preserveaspectratio="none"]

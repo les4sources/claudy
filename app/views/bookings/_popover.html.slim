@@ -3,8 +3,10 @@
     | Check-in
   - elsif Date.today == booking.object.to_date
     | Check-out
+  - elsif Date.today < booking.object.from_date
+    | Hébergement à venir
   - else
-    | Hébergement en cours
+    | Hébergement passé
 .p-3
   .flex.items-center.justify-between.mb-2
     .text-sm.font-semibold.leading-none.text-gray-900

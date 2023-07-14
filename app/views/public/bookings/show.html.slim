@@ -91,7 +91,7 @@
                   | Download
 
 - if @booking.confirmed?
-  .mt-4.p-8.text-center.text-lg
+  .mt-4.p-8.text-center.text-md.lg:text-lg
     div
       |
         Lorsque vous arrivez aux 4 Sources, merci de <strong>nous contacter au #{ENV.fetch('PHONE_NUMBER')}</strong> afin de vous annoncer 
@@ -100,7 +100,7 @@
         | Pour toute question d'ici votre arrivée, veuillez nous la communiquer via la messagerie Airbnb.
       - else
         | Pour toute question d'ici votre arrivée, veuillez nous la communiquer à <a href="mailto:reservation@les4sources.be" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700">reservation@les4sources.be</a>. 
-      | Les réservations ne sont pas gérées par téléphone.
+      |  Les réservations ne sont pas gérées par téléphone.
     .mt-2
       | 🚧 Attention, route fermée entre Crupet et Les 4 Sources. <a href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3" target="_blank" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700">Consultez la FAQ</a> pour en savoir plus. 🚧
 
@@ -252,4 +252,8 @@
   p.font-bold
   	|
   		Pour toute question ou information au sujet de votre réservation, nous vous invitons à 
-  		<a href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3" target="_blank">consulter la FAQ des hébergements</a> et à nous contacter par email à <a href="mailto:reservation@les4sources.be">reservation@les4sources.be</a>.
+  		<a href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3" target="_blank">consulter la FAQ des hébergements</a> et à nous contacter 
+    - if @booking.from_airbnb?
+      |  via la messagerie Airbnb.
+    - else
+      |  par email à <a href="mailto:reservation@les4sources.be">reservation@les4sources.be</a>.
