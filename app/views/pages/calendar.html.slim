@@ -43,7 +43,7 @@
         div[data-popper-arrow]
 
       div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl #{space_booking.calendar_class}")
-        .block[class="#{(date < Date.today) ? "opacity-50" : nil}"]
+        .block
           div
             strong 
               = link_to space_booking.decorate.group_or_name.html_safe, 
@@ -73,7 +73,7 @@
         div[data-popper-arrow]
 
       div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl #{booking.calendar_class}")
-        .block[class="#{(date < Date.today) ? "opacity-50" : nil}"]
+        .block
           div
             strong 
               = link_to booking.decorate.group_or_name.html_safe, 
