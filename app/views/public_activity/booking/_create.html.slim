@@ -12,10 +12,16 @@
         .flex.min-w-0.flex-1.justify-between.space-x-4.pt-1.5
           div
             p.text-sm.text-gray-900
-              | Nouvelle réservation pour
-              =< link_to booking.group_or_name,
-                  		   booking_path(booking),
-                  		   class: "font-medium text-blue-700 hover:text-blue-900 focus:text-blue-900"
+              - if booking.from_web?
+                => link_to booking.group_or_name,
+                           booking_path(booking),
+                           class: "font-medium text-blue-700 hover:text-blue-900 focus:text-blue-900"
+                | a envoyé une demande de réservation depuis le formulaire en ligne
+              - else
+                | Nouvelle réservation pour
+                =< link_to booking.group_or_name,
+                    		   booking_path(booking),
+                    		   class: "font-medium text-blue-700 hover:text-blue-900 focus:text-blue-900"
 
             .flex.mt-2
               .mr-2.text-sm.text-gray-500
