@@ -1,7 +1,7 @@
 class SpaceBooking < ApplicationRecord
   # PublicActivity
   include PublicActivity::Model
-  tracked owner: Proc.new{ |controller, model| controller.current_user }
+  tracked owner: Proc.new{ |controller, model| controller.current_user rescue nil }
 
   # Relationships
   has_many :space_reservations, dependent: :destroy
