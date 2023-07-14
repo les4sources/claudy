@@ -32,6 +32,7 @@ module Experiences
         .require(:experience)
         .permit(
           :name,
+          :human_id,
           :summary,
           :description,
           :price,

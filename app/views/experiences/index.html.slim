@@ -13,6 +13,8 @@
         th.py-3.px-6[scope="col"]
           | Nom
         th.py-3.px-6[scope="col"]
+          | Porteur·euse
+        th.py-3.px-6[scope="col"]
           | Prix
     tbody
       - @experiences.each do |experience|
@@ -25,5 +27,8 @@
             = link_to experience.name, 
                       experience_path(experience),
                       class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+            - if experience.human.presence
+              = experience.human.name
           td.py-4.px-6.text-gray-900.whitespace-nowrap[scope="row"]
             = experience.price

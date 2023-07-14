@@ -33,4 +33,10 @@
               "Présentation de l'expérience"
     = f.rich_text_area :description
 
+    = f.label :human_id, "Porteur·euse d'expérience *"
+    = f.collection_radio_buttons :human_id, Human.all.order(:name), :id, :name, required: true do |radio_button|
+      .flex.items-center
+        = radio_button.radio_button
+        = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
 hr

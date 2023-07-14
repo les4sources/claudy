@@ -10,41 +10,59 @@
              ) \
            ].compact
 
-.space-y-4
-  .grid.grid-cols-3.gap-4
-    .col-span-2.space-y-4
-      .overflow-hidden.bg-white.shadow.sm:rounded-lg
-        .px-4.py-5.sm:px-6
-          h3.text-lg.font-medium.leading-6.text-gray-900
-            | Informations
-        .border-t.border-gray-200
-          dl
-            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-              dt.text-sm.font-medium.text-gray-500
-                | Photo
-              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-                - if @experience.photo?
-                  = image_tag @experience.photo_url(:public),
-                              class: "inline-block rounded-md"
+.grid.grid-cols-3.gap-4
+  .col-span-2.space-y-4
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Informations
+      .border-t.border-gray-200
+        dl
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Photo
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              - if @experience.photo?
+                = image_tag @experience.photo_url(:public),
+                            class: "inline-block rounded-md"
 
-              dt.text-sm.font-medium.text-gray-500
-                | Prix
-              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-                = @experience.price
+            dt.text-sm.font-medium.text-gray-500
+              | Prix
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @experience.price
 
-              dt.text-sm.font-medium.text-gray-500
-                | Résumé
-              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-                = @experience.summary
+            dt.text-sm.font-medium.text-gray-500
+              | Résumé
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @experience.summary
 
-  .grid.grid-cols-3.gap-4
-    .col-span-2.space-y-4
-      .overflow-hidden.bg-white.shadow.sm:rounded-lg
-        .px-4.py-5.sm:px-6
-          h3.text-lg.font-medium.leading-6.text-gray-900
-            | Description
-        .border-t.border-gray-200
-          .p-6
-            == @experience.description
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Description
+      .border-t.border-gray-200
+        .p-6
+          == @experience.description
 
-              
+  .space-y-4
+    - if @experience.human.presence
+      ul.grid.grid-cols-1.gap-6[role="list"]
+        li.col-span-1.flex.flex-col.divide-y.divide-gray-200.rounded-lg.bg-white.text-center.shadow
+          .flex.flex-1.flex-col.p-8
+            = image_tag @experience.human.photo_url(:thumb),
+                        class: "mx-auto flex-shrink-0 rounded-md",
+                        alt: ""
+
+            h3.mt-6.text-sm.font-medium.text-gray-900
+              = @experience.human.name
+            dl.mt-1.flex.flex-grow.flex-col.justify-between
+              dt.sr-only
+                | Tagline
+              dd.text-sm.text-gray-500
+                = @experience.human.summary
+              dt.sr-only
+                | Rôle
+              dd.mt-3
+                span.inline-flex.items-center.rounded-full.bg-green-50.px-2.py-1.text-xs.font-medium.text-green-700.ring-1.ring-inset.ring-green-600/20
+                  | Porteur·euse d'expérience
+                  
