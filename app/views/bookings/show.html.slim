@@ -103,6 +103,19 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
                       td(style="width: 10rem") = date
                       td = reservations.collect { |r| r.room.name }.join(", ")
 
+    - if @booking.comments.presence
+      .overflow-hidden.bg-white.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Informations complémentaires
+          / p.mt-1.max-w-2xl.text-sm.text-gray-500
+            | Nom et coordonnées de la personne qui a réservé
+        .border-t.border-gray-200.px-6.py-4
+          .text-gray-500.text-sm.mb-2
+            | Ces informations ont été fournies par le client lors de sa réservation.
+          .content.space-y-4
+            == simple_format @booking.comments
+
     .overflow-hidden.bg-white.shadow.sm:rounded-lg
       .px-4.py-5.sm:px-6
         h3.text-lg.font-medium.leading-6.text-gray-900
@@ -141,25 +154,6 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
                 | Disc-golf 🥏
               dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
                 | ✔️ Intéressé par une session d'initiation au disc-golf
-
-    .overflow-hidden.bg-white.shadow.sm:rounded-lg
-      .px-4.py-5.sm:px-6
-        h3.text-lg.font-medium.leading-6.text-gray-900
-          | Réservation
-        / p.mt-1.max-w-2xl.text-sm.text-gray-500
-          | Nom et coordonnées de la personne qui a réservé
-      .border-t.border-gray-200
-        dl
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Draps à fournir
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @booking.bedsheets
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Essuies à fournir
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @booking.towels
 
     - if @booking.public_notes.presence
       .overflow-hidden.bg-yellow-200.shadow.sm:rounded-lg
