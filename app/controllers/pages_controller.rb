@@ -13,13 +13,13 @@ class PagesController < BaseController
     # end
     @space_reservations = SpaceReservation.all
       .includes(:space_booking)
-      .where.not(space_booking: { status: "declined" })
+      .where.not(space_booking: { status: ["declined", "canceled"] })
       .between_times(@first, @last, field: :date)
     # group bookings by day
     @grouped_space_reservations = @space_reservations.to_a.group_by { |sr| sr.date }
     @reservations = Reservation.all
       .includes(:booking)
-      .where.not(booking: { status: "declined" })
+      .where.not(booking: { status: ["declined", "canceled"] })
       .between_times(@first, @last, field: :date)
     # group bookings by day
     @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
