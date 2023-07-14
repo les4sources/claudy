@@ -49,9 +49,10 @@
       ul.grid.grid-cols-1.gap-6[role="list"]
         li.col-span-1.flex.flex-col.divide-y.divide-gray-200.rounded-lg.bg-white.text-center.shadow
           .flex.flex-1.flex-col.p-8
-            = image_tag @experience.human.photo_url(:thumb),
-                        class: "mx-auto flex-shrink-0 rounded-md",
-                        alt: ""
+            - if @experience.human.photo?
+              = image_tag @experience.human.photo_url(:thumb),
+                          class: "mx-auto flex-shrink-0 rounded-md",
+                          alt: ""
 
             h3.mt-6.text-sm.font-medium.text-gray-900
               = @experience.human.name
