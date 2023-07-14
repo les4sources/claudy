@@ -20,7 +20,7 @@ class ExperiencesController < BaseController
     service = Experiences::CreateService.new
     if service.run(params)
       redirect_to experience_path(service.experience),
-                  notice: "Super! L'expérience '#{service.experience.name}' a été ajouté."
+                  notice: "Super! L'expérience '#{service.experience.name}' a été ajoutée."
     else
       @experience = service.experience
       set_error_flash(service.experience, service.error_message)

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_07_14_094208) do
+ActiveRecord::Schema[7.0].define(version: 2023_07_14_111614) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -213,6 +213,19 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_14_094208) do
     t.datetime "deleted_at", precision: nil
   end
 
+  create_table "services", force: :cascade do |t|
+    t.string "name"
+    t.integer "human_id"
+    t.string "summary"
+    t.text "description"
+    t.string "photo"
+    t.datetime "deleted_at", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "price_cents"
+    t.index ["human_id"], name: "index_services_on_human_id"
+  end
+
   create_table "space_bookings", force: :cascade do |t|
     t.string "firstname"
     t.string "lastname"
@@ -308,6 +321,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_14_094208) do
   add_foreign_key "lodging_rooms", "rooms"
   add_foreign_key "reservations", "bookings"
   add_foreign_key "reservations", "rooms"
+  add_foreign_key "services", "humans"
   add_foreign_key "space_bookings", "events"
   add_foreign_key "space_reservations", "space_bookings"
   add_foreign_key "space_reservations", "spaces"

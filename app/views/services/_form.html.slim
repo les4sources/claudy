@@ -30,10 +30,10 @@
                    class: "md:w-1/2 lg:w-2/3"
 
     = f.label :description, 
-              "Présentation de l'expérience"
+              "Présentation du service"
     = f.rich_text_area :description
 
-    = f.label :human_id, "Porteur·euse d'expérience"
+    = f.label :human_id, "Fournisseur·euse de ce service"
     = f.collection_radio_buttons :human_id, Human.all.order(:name), :id, :name, required: true do |radio_button|
       .flex.items-center
         = radio_button.radio_button

@@ -16,6 +16,7 @@ Rails.application.routes.draw do
   resources :products
   resources :reports
   resources :rooms
+  resources :services
 
   resources :bookings do
     get "past", on: :collection

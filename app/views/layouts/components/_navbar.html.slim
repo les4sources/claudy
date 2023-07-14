@@ -52,8 +52,8 @@ nav.bg-white.border-gray-200.lg:px-4
                       class: controller_name == "experiences" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
           li
             = link_to "Services", 
-                      "#", 
-                      class: "text-gray-500 hover:underline"
+                      services_path, 
+                      class: controller_name == "services" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
           li
             = link_to "Produits", 
                       products_path, 
