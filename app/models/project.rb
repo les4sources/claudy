@@ -1,5 +1,5 @@
 class Project < ApplicationRecord
-  belongs_to :human
+  belongs_to :human, optional: true
 
   has_paper_trail
   has_soft_deletion default_scope: true
