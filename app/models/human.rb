@@ -1,4 +1,8 @@
 class Human < ApplicationRecord
+  has_many :projects
+  has_many :experiences
+  has_many :services
+
   self.table_name = "humans"
 
   has_paper_trail

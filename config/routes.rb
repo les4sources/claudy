@@ -14,6 +14,7 @@ Rails.application.routes.draw do
   resources :humans
   resources :notes
   resources :products
+  resources :projects
   resources :reports
   resources :rooms
   resources :services

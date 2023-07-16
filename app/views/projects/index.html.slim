@@ -1,0 +1,30 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Projets",
+           links: [ \
+             link_to("➕ Nouveau projet", new_project_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
+           ]
+
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-6[scope="col"]
+        th.py-3.px-6[scope="col"]
+          | Nom
+        th.py-3.px-6[scope="col"]
+          | Porteur.euse de projet
+        th.py-3.px-6[scope="col"]
+          | Échéance
+    tbody
+      - @projects.each do |project|
+        tr.border-b.bg-white
+          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+            = link_to project.name, 
+                      project_path(project),
+                      class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+            - if project.human.presence
+              = project.human.name
+          td.py-4.px-6.text-gray-900.whitespace-nowrap[scope="row"]
+            = project.due_date

@@ -1,0 +1,25 @@
+.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Informations"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    = f.text_field :name,
+                   label: "Nom *",
+                   required: true,
+                   class: "md:w-1/2 lg:w-2/3"
+
+    = f.label :description, 
+              "Descriptif du projet"
+    = f.rich_text_area :description
+
+    = f.label :human_id, "Porteur.euse de projet"
+    = f.collection_radio_buttons :human_id, Human.all.order(:name), :id, :name do |radio_button|
+      .flex.items-center
+        = radio_button.radio_button
+        = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
+    = f.date_field :due_date,
+                    html5: true,
+                    label: "Échéance"
+
+hr

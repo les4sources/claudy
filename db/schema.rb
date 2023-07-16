@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_07_14_111614) do
+ActiveRecord::Schema[7.0].define(version: 2023_07_16_161020) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -192,6 +192,17 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_14_111614) do
     t.integer "price_cents"
   end
 
+  create_table "projects", force: :cascade do |t|
+    t.string "name"
+    t.text "description"
+    t.date "due_date"
+    t.integer "human_id", null: false
+    t.datetime "deleted_at", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["human_id"], name: "index_projects_on_human_id"
+  end
+
   create_table "reservations", force: :cascade do |t|
     t.integer "booking_id", null: false
     t.integer "room_id", null: false
@@ -319,6 +330,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_14_111614) do
   add_foreign_key "experiences", "humans"
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"
+  add_foreign_key "projects", "humans"
   add_foreign_key "reservations", "bookings"
   add_foreign_key "reservations", "rooms"
   add_foreign_key "services", "humans"

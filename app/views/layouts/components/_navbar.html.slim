@@ -30,11 +30,30 @@ nav.bg-white.border-gray-200.lg:px-4
                     reports_path, 
                     class: (controller_name == "reports") ? "block py-2 pl-3 pr-4 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0" : "block py-2 pl-3 pr-4 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0"
         li
+          = link_to "Projets", 
+                    projects_path, 
+                    class: (controller_name == "projects") ? "block py-2 pl-3 pr-4 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0" : "block py-2 pl-3 pr-4 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0"
+        li
           = link_to "Paramètres", 
                     events_path,
                     class: !@settings_view.nil? ? "block py-2 pl-3 pr-4 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0" : "block py-2 pl-3 pr-4 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0"
 
 .w-full.p-1.bg-gradient-to-r.from-indigo-500.via-purple-500.to-pink-500
+
+- if !@projects_view.nil?
+  / Settings menu
+  nav.bg-gray-50.dark:bg-gray-700.border-b.border-gray-300.lg:px-4
+    .max-w-screen-xl.px-4.py-3.mx-auto
+      .flex.items-center
+        ul.flex.flex-row.font-medium.mt-0.mr-6.space-x-8.text-sm
+          li
+            = link_to "Projets", 
+                      projects_path, 
+                      class: controller_name == "projects" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
+          li
+            = link_to "Pôles", 
+                      "#", 
+                      class: controller_name == "poles" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
 
 - if !@settings_view.nil?
   / Settings menu
