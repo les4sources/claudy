@@ -5,25 +5,28 @@
              link_to("➕ Nouveau projet", new_project_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
            ]
 
-.overflow-x-auto.relative
-  table.w-full.text-sm.text-left.text-gray-500
-    thead.text-xs.text-gray-700.uppercase.bg-gray-50
-      tr
-        th.py-3.px-6[scope="col"]
-          | Nom
-        th.py-3.px-6[scope="col"]
-          | Porteur.euse de projet
-        th.py-3.px-6[scope="col"]
-          | Échéance
-    tbody
-      - @projects.each do |project|
-        tr.border-b.bg-white
-          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+ul.divide-y.divide-gray-100[role="list"]
+  - @projects.each do |project|
+    li.flex.items-center.justify-between.gap-x-6.py-5
+      .min-w-0
+        .flex.items-start.gap-x-3
+          p.text-sm.font-semibold.leading-6.text-gray-900
             = link_to project.name, 
                       project_path(project),
                       class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
-          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
-            - if project.human.presence
-              = project.human.name
-          td.py-4.px-6.text-gray-900.whitespace-nowrap[scope="row"]
-            = project.due_date
+          p.rounded-md.whitespace-nowrap.text-xs.font-medium.ring-1.ring-inset.text-gray-600.bg-gray-50.ring-gray-500/10[class="mt-0.5 px-1.5 py-0.5"]
+            | En cours
+        .mt-1.flex.items-center.gap-x-2.text-xs.leading-5.text-gray-500
+          - if !project.object.due_date.nil?
+            p.whitespace-nowrap
+              | Échéance le 
+              time[datetime="#{project.object.due_date&.iso8601}"]
+                = project.due_date
+            svg.fill-current[class="h-0.5 w-0.5" viewbox="0 0 2 2"]
+              circle[cx="1" cy="1" r="1"]
+          p.truncate
+            | Porté par #{project.human.name}
+      .flex.flex-none.items-center.gap-x-4
+        = link_to "Afficher le projet",
+                  project_path(project),
+                  class: "hidden rounded-md px-2.5 py-1.5 bg-white text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:block"

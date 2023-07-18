@@ -1,0 +1,14 @@
+tr.border-t.border-gray-300
+  td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.font-medium.text-gray-900.sm:pl-3
+    - if task.closed?
+      span.line-through = task.name
+    - else
+      = task.name
+  td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
+    
+  td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
+    = task.due_date
+  td.relative.whitespace-nowrap.py-4.pl-3.pr-4.text-right.text-sm.font-medium.sm:pr-3
+    = link_to "Détails",
+              task_path(task),
+              class: "text-indigo-600 hover:text-indigo-900"

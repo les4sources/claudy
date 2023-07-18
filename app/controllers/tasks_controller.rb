@@ -13,7 +13,7 @@ class TasksController < BaseController
     end
   
     def new
-      @task = Task.new
+      @task = Task.new(project_id: params[:project_id])
     end
   
     def create
