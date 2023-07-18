@@ -29,6 +29,18 @@
           = radio_button.radio_button
           = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
+    .space-y-2
+      = f.label :human_ids,
+                "Assignée à"
+      = f.collection_check_boxes :human_ids, 
+                                 Human.all.order(:name),
+                                 :id, :name do |cb|
+        .relative.flex.items-start
+          .flex.h-5.items-center
+            = cb.check_box(class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500")
+          .ml-3.text-sm
+            == cb.label(class: "font-medium text-gray-900")
+
     = f.label :description, 
               "Descriptif de l'action / Infos complémentaires"
     = f.rich_text_area :description

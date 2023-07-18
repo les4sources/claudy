@@ -33,7 +33,8 @@ module Tasks
           :description,
           :due_date,
           :status,
-          :project_id
+          :project_id,
+          human_ids: []
         )
     end
   end

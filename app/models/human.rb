@@ -3,6 +3,8 @@ class Human < ApplicationRecord
   has_many :experiences
   has_many :services
 
+  has_and_belongs_to_many :tasks
+
   self.table_name = "humans"
 
   has_paper_trail

@@ -1,6 +1,8 @@
 class Task < ApplicationRecord
   belongs_to :project
 
+  has_and_belongs_to_many :humans
+
   has_paper_trail
   has_soft_deletion default_scope: true
 

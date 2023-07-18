@@ -5,7 +5,7 @@
              delete_link(@task.object),
              link_to( \
                "Mettre à jour",
-               edit_project_path(@task),
+               edit_task_path(@task),
                class: "btn-page-header" \
              ) \
            ].compact
@@ -19,6 +19,10 @@
       .border-t.border-gray-200
         dl
           .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Assignée à
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @task.avatars_with_name
             dt.text-sm.font-medium.text-gray-500
               | Échéance
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0

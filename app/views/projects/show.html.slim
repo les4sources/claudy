@@ -81,17 +81,17 @@
               tr.border-t.border-gray-200
                 th.bg-green-100.py-2.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-3[colspan="5" scope="colgroup"]
                   | En cours
-              - @project.tasks_in_progress.each do |task|
+              - TaskDecorator.decorate_collection(@project.tasks_in_progress).each do |task|
                 = render "tasks/row", task: task
             - if @project.tasks_open.any?
               tr.border-t.border-gray-200
                 th.bg-gray-50.py-2.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-3[colspan="5" scope="colgroup"]
                   | En attente
-              - @project.tasks_open.each do |task|
+              - TaskDecorator.decorate_collection(@project.tasks_open).each do |task|
                 = render "tasks/row", task: task
             - if @project.tasks_closed.any?
               tr.border-t.border-gray-200
                 th.bg-gray-50.py-2.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-3[colspan="5" scope="colgroup"]
                   | Terminées ☑️
-              - @project.tasks_closed.each do |task|
+              - TaskDecorator.decorate_collection(@project.tasks_closed).each do |task|
                 = render "tasks/row", task: task
