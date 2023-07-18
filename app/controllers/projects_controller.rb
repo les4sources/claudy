@@ -10,6 +10,7 @@ class ProjectsController < BaseController
   
     def show
       @project = ProjectDecorator.new(@project)
+      set_tasks_view
     end
   
     def new
@@ -67,6 +68,17 @@ class ProjectsController < BaseController
         active_secondary: "projects"
       )
       @projects_view = true
+    end
+
+    def set_tasks_view
+      case params[:view]
+      when "list"
+        @tasks_view = "list"
+      when "board"
+        @tasks_view = "board"
+      else
+        @tasks_view = "list"
+      end
     end
   end
   

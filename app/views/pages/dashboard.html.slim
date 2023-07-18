@@ -1,0 +1,6 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Mon tableau de bord"
+
+- TaskDecorator.decorate_collection(current_user.human.tasks).each do |task|
+  = render "tasks/card", task: task

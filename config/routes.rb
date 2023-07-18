@@ -30,6 +30,7 @@ Rails.application.routes.draw do
   end
 
   get "pages/day", to: "pages#day", as: :day_details
+  get "pages/dashboard", to: "pages#dashboard", as: :dashboard
   get "pages/other_bookings", to: "pages#other_bookings"
   get "pages/other_space_bookings", to: "pages#other_space_bookings"
 

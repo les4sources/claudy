@@ -1,0 +1,14 @@
+.relative.flex.items-center.space-x-3.rounded-lg.border.border-gray-300.bg-white.px-6.py-5.shadow-sm.focus-within:ring-2.focus-within:ring-indigo-500.focus-within:ring-offset-2.hover:border-gray-400
+  .min-w-0.flex-1
+    = link_to task_path(task),
+              class: "focus:outline-none" do
+      span.absolute.inset-0[aria-hidden="true"]
+    p.text-sm.font-medium.text-gray-900
+      = link_to task.name,
+                task_path(task),
+                class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+    - if task.object.due_date.presence
+      p.truncate.text-sm.text-gray-500
+        = task.due_date
+  .flex-shrink-0
+    = task.avatars

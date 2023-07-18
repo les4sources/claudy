@@ -44,6 +44,10 @@ class PagesController < BaseController
     render layout: false
   end
 
+  def dashboard
+    @projects_view = true
+  end
+
   def other_bookings
     @reservations = Reservation.all
       .includes(:booking)

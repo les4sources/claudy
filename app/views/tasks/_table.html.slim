@@ -1,0 +1,33 @@
+.-mx-4.-my-2.overflow-x-auto.sm:-mx-6.lg:-mx-8
+  .inline-block.min-w-full.py-2.align-middle.sm:px-6.lg:px-8
+    table.min-w-full
+      thead
+        tr
+          th.py-3.5.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-3[scope="col"]
+            | Action
+          th.px-3.py-3.5.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
+            | Assignée à
+          th.px-3.py-3.5.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
+            | Échéance
+          th.relative.py-3.5.pl-3.pr-4.sm:pr-3[scope="col"]
+            span.sr-only
+              | Modifier
+      tbody.bg-white
+        - if project.tasks_in_progress.any?
+          tr.border-t.border-gray-200
+            th.bg-green-100.py-2.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-3[colspan="5" scope="colgroup"]
+              | En cours
+          - TaskDecorator.decorate_collection(project.tasks_in_progress).each do |task|
+            = render "tasks/row", task: task
+        - if project.tasks_open.any?
+          tr.border-t.border-gray-200
+            th.bg-gray-50.py-2.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-3[colspan="5" scope="colgroup"]
+              | En attente
+          - TaskDecorator.decorate_collection(project.tasks_open).each do |task|
+            = render "tasks/row", task: task
+        - if project.tasks_closed.any?
+          tr.border-t.border-gray-200
+            th.bg-gray-50.py-2.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-3[colspan="5" scope="colgroup"]
+              | Terminées ☑️
+          - TaskDecorator.decorate_collection(project.tasks_closed).each do |task|
+            = render "tasks/row", task: task
