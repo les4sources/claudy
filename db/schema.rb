@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_07_16_164015) do
+ActiveRecord::Schema[7.0].define(version: 2023_07_18_053701) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -300,6 +300,18 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_16_164015) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "tasks", force: :cascade do |t|
+    t.string "name"
+    t.integer "project_id", null: false
+    t.text "description"
+    t.string "status"
+    t.date "due_date"
+    t.datetime "deleted_at", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["project_id"], name: "index_tasks_on_project_id"
+  end
+
   create_table "teams", force: :cascade do |t|
     t.string "name"
     t.text "description"
@@ -345,4 +357,5 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_16_164015) do
   add_foreign_key "space_bookings", "events"
   add_foreign_key "space_reservations", "space_bookings"
   add_foreign_key "space_reservations", "spaces"
+  add_foreign_key "tasks", "projects"
 end

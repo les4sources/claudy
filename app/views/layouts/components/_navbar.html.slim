@@ -54,6 +54,10 @@ nav.bg-white.border-gray-200.lg:px-4
             = link_to "Pôles", 
                       teams_path, 
                       class: controller_name == "teams" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
+          li
+            = link_to "Actions", 
+                      tasks_path, 
+                      class: controller_name == "tasks" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
 
 - if !@settings_view.nil?
   / Settings menu

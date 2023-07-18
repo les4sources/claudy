@@ -1,0 +1,35 @@
+- content_for :page_header do
+  = render 'layouts/components/page_header',
+           title: @task.name,
+           links: [ \
+             delete_link(@task.object),
+             link_to( \
+               "Mettre à jour",
+               edit_project_path(@task),
+               class: "btn-page-header" \
+             ) \
+           ].compact
+
+.grid.grid-cols-3.gap-4
+  .col-span-2.space-y-4
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Informations
+      .border-t.border-gray-200
+        dl
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Échéance
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @task.due_date
+
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Description
+      .border-t.border-gray-200
+        .p-6
+          == @task.description
+
+                  

@@ -1,0 +1,40 @@
+.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Informations"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    = f.text_field :name,
+                   label: "Action *",
+                   required: true,
+                   class: "md:w-1/2 lg:w-2/3"
+
+    .space-y-2
+      = f.label :project_id, "Projet concerné *"
+      = f.collection_radio_buttons :project_id, 
+                                   Project.all.order(:name), 
+                                   :id, :name, 
+                                   required: true do |radio_button|
+        .flex.items-center
+          = radio_button.radio_button
+          = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
+    .space-y-2
+      = f.label :status,
+                "Statut"
+      = f.collection_radio_buttons :status, 
+                                   [["En attente", "open"], ["En cours", "in_progress"], ["Terminée", "closed"], ["Annulée", "canceled"]],
+                                   :last, :first, 
+                                   required: true do |radio_button|
+        .flex.items-center
+          = radio_button.radio_button
+          = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
+    = f.label :description, 
+              "Descriptif de l'action / Infos complémentaires"
+    = f.rich_text_area :description
+
+    = f.date_field :due_date,
+                    html5: true,
+                    label: "Échéance"
+
+hr

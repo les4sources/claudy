@@ -18,6 +18,7 @@ Rails.application.routes.draw do
   resources :reports
   resources :rooms
   resources :services
+  resources :tasks
   resources :teams
 
   resources :bookings do
