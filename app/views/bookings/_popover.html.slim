@@ -5,6 +5,8 @@
     | Check-out
   - elsif Date.today < booking.object.from_date
     | Hébergement à venir
+  - elsif Date.today > booking.object.from_date && Date.today < booking.object.to_date
+    | Hébergement en cours
   - else
     | Hébergement passé
 .p-3

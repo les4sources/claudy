@@ -10,8 +10,8 @@ module FormBuilders
       tag.div class: 'mt-10 flex items-center place-content-between space-x-4 text-right', &
     end
 
-    def submit(title)
-      render Button::Component.new(type: :submit, title:)
+    def submit(title, opts={})
+      render Button::Component.new(type: :submit, title: title, options: opts)
     end
 
     def check_box(method, opts={})

@@ -9,7 +9,7 @@
       </div>
     <% end %>
 
-    <div class="flex mb-4 grid grid-cols-3 gap-4">
+    <div class="flex mb-4 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
       <% if !@grouped_reservations[Date.today].nil? %>
         <% @grouped_reservations[Date.today].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations| %>
           <% reservation = grouped_reservations.last.first %>
@@ -34,7 +34,7 @@
 <% end %>
 
 <% current_month = date_range.first.month %>
-<div class="lg:flex lg:h-full lg:flex-col" data-controller="dashboard-calendar" data-action="click->dashboard-calendar#clickCalendar">
+<div class="hidden md:block lg:flex lg:h-full lg:flex-col" data-controller="dashboard-calendar" data-action="click->dashboard-calendar#clickCalendar">
   <div class="shadow ring-1 ring-black ring-opacity-5 lg:flex lg:flex-auto lg:flex-col">
     <% date_range.each_slice(7).with_index do |weekdays, index| %>
       <% if index == 0 %>

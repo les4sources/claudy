@@ -6,7 +6,7 @@ module CalendarHelper
   end
 
   def buttons_to_next_months(current_date, data = {})
-    content_tag(:div, class: "inline-flex rounded-md shadow-sm", role: "group") do
+    content_tag(:div, class: "hidden md:inline-flex rounded-md shadow-sm", role: "group") do
       links = []
       links << link_to(params.permit(:date).merge(date: current_date.next_month), class: "btn-group-page-header-with-icon border rounded-l-lg bg-blue-100", data: data) do
         l(current_date.next_month, format: "%B %Y")
@@ -28,7 +28,7 @@ module CalendarHelper
   end
 
   def buttons_to_previous_months(current_date, data = {})
-    content_tag(:div, class: "inline-flex rounded-md shadow-sm mr-2", role: "group") do
+    content_tag(:div, class: "hidden md:inline-flex rounded-md shadow-sm mr-2", role: "group") do
       links = []
       links << link_to(params.permit(:date).merge(date: current_date - 3.months), class: "btn-group-page-header-with-icon border rounded-l-lg bg-blue-300", data: data) do
         button_label_with_icon(l(current_date - 3.months, format: "%B %Y"), "arrow_small_left")

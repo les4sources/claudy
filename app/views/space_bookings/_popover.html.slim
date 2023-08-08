@@ -1,9 +1,14 @@
 .p-1.text-center.text-xs.font-bold.bg-orange-200.text-orange-700.rounded-t-lg
   | Location d'espaces&nbsp;
   - if Date.today == space_booking.object.from_date
-    | (arrivée)
+    - if Date.today == space_booking.object.to_date
+      | (arrivée et départ)
+    - else
+      | (arrivée)
   - elsif Date.today == space_booking.object.to_date
     | (départ)
+  - elsif Date.today > space_booking.object.from_date && Date.today < space_booking.object.to_date
+    | (en cours)
 .p-3
   .flex.items-center.justify-between.mb-2
     .text-sm.font-semibold.leading-none.text-gray-900
