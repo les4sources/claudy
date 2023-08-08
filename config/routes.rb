@@ -35,7 +35,10 @@ Rails.application.routes.draw do
   get "pages/other_space_bookings", to: "pages#other_space_bookings"
 
   namespace :public do
-    resources :bookings, only: [:new, :create]
+    resources :bookings, only: [:new, :create] do
+      get "edit_estimated_arrival", on: :member
+      patch "update_estimated_arrival", on: :member
+    end
     get "reservation/:token", to: "bookings#show", as: :booking
     get "espaces/:token", to: "space_bookings#show", as: :space_booking
     get "calendrier-hebergements", to: "calendars#lodgings"

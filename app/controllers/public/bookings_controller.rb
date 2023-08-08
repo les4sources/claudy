@@ -30,4 +30,33 @@ class Public::BookingsController < Public::BaseController
   rescue ActiveRecord::RecordNotFound
     raise ActionController::RoutingError.new('Not Found')
   end
+
+  def edit_estimated_arrival
+    @booking = Booking.find(params[:id])
+  end
+
+  def update_estimated_arrival
+    @booking = Booking.find(params[:id])
+    if @booking.update(booking_params)
+      respond_to do |format|
+        format.html { 
+          redirect_to public_booking_path(@booking.token), 
+                      notice: "Merci! Votre réservation a été mise à jour." 
+        }
+        format.turbo_stream
+      end
+    else
+      render :edit_estimated_arrival, status: :unprocessable_entity
+    end
+  end
+
+  private
+
+  def booking_params
+    params
+      .require(:booking)
+      .permit(
+        :estimated_arrival
+      )
+  end
 end

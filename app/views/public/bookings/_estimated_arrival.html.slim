@@ -1,0 +1,5 @@
+= turbo_frame_tag dom_id(@booking, "estimated_arrival") do
+  = @booking.estimated_arrival
+  =< link_to "Mettre à jour",
+          edit_estimated_arrival_public_booking_path(@booking),
+          class: "rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
