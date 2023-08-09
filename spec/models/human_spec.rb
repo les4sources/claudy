@@ -1,3 +1,17 @@
+# == Schema Information
+#
+# Table name: humans
+#
+#  id          :integer          not null, primary key
+#  name        :string
+#  email       :string
+#  photo       :string
+#  summary     :string
+#  description :text
+#  deleted_at  :datetime
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#
 require 'rails_helper'
 
 RSpec.describe Human, type: :model do

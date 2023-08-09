@@ -1,3 +1,18 @@
+# == Schema Information
+#
+# Table name: experiences
+#
+#  id          :integer          not null, primary key
+#  name        :string
+#  human_id    :integer
+#  summary     :string
+#  description :text
+#  photo       :string
+#  deleted_at  :datetime
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#  price_cents :integer
+#
 class Experience < ApplicationRecord
   belongs_to :human, optional: true
 

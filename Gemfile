@@ -50,7 +50,6 @@ gem "image_processing", "~> 1.2"
 
 gem "dotenv-rails", groups: [:development, :test]
 
-gem "annotate"
 gem "awesome_print"
 gem "by_star"
 gem "carrierwave", "~> 3.0"
@@ -92,6 +91,8 @@ group :development, :test do
 end
 
 group :development do
+  gem "annotate"
+  
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"
 

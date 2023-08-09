@@ -1,3 +1,17 @@
+# == Schema Information
+#
+# Table name: products
+#
+#  id          :integer          not null, primary key
+#  name        :string
+#  stock       :integer
+#  photo       :string
+#  description :text
+#  deleted_at  :datetime
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#  price_cents :integer
+#
 class Product < ApplicationRecord
   has_paper_trail
   has_soft_deletion default_scope: true
