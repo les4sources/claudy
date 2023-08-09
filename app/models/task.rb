@@ -13,8 +13,9 @@
 #  updated_at  :datetime         not null
 #
 class Task < ApplicationRecord
-  belongs_to :project
-
+  belongs_to :bundle
+  belongs_to :project, optional: true
+  belongs_to :team, optional: true
   has_and_belongs_to_many :humans
 
   has_paper_trail

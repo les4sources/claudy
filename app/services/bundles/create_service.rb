@@ -1,9 +1,9 @@
-module Projects
+module Bundles
   class CreateService < ServiceBase
-    attr_reader :project
+    attr_reader :bundle
 
     def initialize
-      @project = Project.new
+      @bundle = Bundle.new
       @report_errors = true
     end
 
@@ -18,22 +18,21 @@ module Projects
     end
 
     def run!(params = {})
-      project.attributes = project_params(params)
-      project.bundles.build(name: "Actions du projet", position: 0)
-      project.save!
+      bundle.attributes = bundle_params(params)
+      bundle.save!
       true
     end
 
     private
 
-    def project_params(params)
+    def bundle_params(params)
       params
-        .require(:project)
+        .require(:bundle)
         .permit(
           :name,
-          :description,
-          :due_date,
-          :human_id
+          :project_id,
+          :team_id,
+          :position
         )
     end
   end

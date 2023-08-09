@@ -41,3 +41,37 @@ Space.create(name: "Petite salle", code: "GRI", description: "45 m2")
 Space.create(name: "Les 2 salles", code: "S+G", description: "140 + 45 m2")
 Space.create(name: "Cuisine professionnelle", code: "CUI")
 Space.create(name: "Chambre froide", code: "CHA")
+
+jeanclaude = Human.create(name: "Jean-Claude", email: "jeanclaude@claudy.test")
+User.create(email: "jeanclaude@claudy.test", password: "secret", human: jeanclaude)
+
+miranda = Human.create(name: "Miranda", email: "miranda@claudy.test")
+User.create(email: "miranda@claudy.test", password: "secret", human: miranda)
+
+Team.create(name: "Pole Technique")
+Team.create(name: "Pole Accueil")
+Team.create(name: "Pole Espaces verts")
+
+project = Project.create(name: "Poulailler mobile", due_date: Date.today + 4.months, human: jeanclaude)
+
+Task.create(
+  name: "Faire les plans détaillés du poulailler", 
+  project: project, 
+  status: Task::STATUS_IN_PROGRESS,
+  due_date: Date.today + 1.month,
+  humans: [jeanclaude]
+)
+Task.create(
+  name: "Réunir les matériaux nécessaires à la construction", 
+  project: project, 
+  status: Task::STATUS_OPEN,
+  due_date: Date.today + 2.months,
+  humans: [jeanclaude, miranda]
+)
+Task.create(
+  name: "Construire le poulailler", 
+  project: project, 
+  status: Task::STATUS_OPEN,
+  due_date: Date.today + 4.month,
+  humans: [jeanclaude, miranda]
+)

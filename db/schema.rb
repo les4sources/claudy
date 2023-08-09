@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_07_18_155158) do
+ActiveRecord::Schema[7.0].define(version: 2023_08_09_053928) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -106,6 +106,18 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_18_155158) do
     t.boolean "option_pizza_party"
     t.datetime "deleted_at", precision: nil
     t.index ["lodging_id"], name: "index_bookings_on_lodging_id"
+  end
+
+  create_table "bundles", force: :cascade do |t|
+    t.string "name"
+    t.integer "position"
+    t.integer "project_id"
+    t.integer "team_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["project_id"], name: "index_bundles_on_project_id"
+    t.index ["team_id"], name: "index_bundles_on_team_id"
   end
 
   create_table "event_categories", force: :cascade do |t|
@@ -316,6 +328,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_18_155158) do
     t.datetime "deleted_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "bundle_id", null: false
+    t.index ["bundle_id"], name: "index_tasks_on_bundle_id"
     t.index ["project_id"], name: "index_tasks_on_project_id"
   end
 
@@ -355,6 +369,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_18_155158) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "bookings", "lodgings"
+  add_foreign_key "bundles", "projects"
+  add_foreign_key "bundles", "teams"
   add_foreign_key "events", "event_categories"
   add_foreign_key "experiences", "humans"
   add_foreign_key "lodging_rooms", "lodgings"
@@ -366,6 +382,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_07_18_155158) do
   add_foreign_key "space_bookings", "events"
   add_foreign_key "space_reservations", "space_bookings"
   add_foreign_key "space_reservations", "spaces"
+  add_foreign_key "tasks", "bundles"
   add_foreign_key "tasks", "projects"
   add_foreign_key "users", "humans"
 end

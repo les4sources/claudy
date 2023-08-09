@@ -19,6 +19,7 @@ module Teams
 
     def run!(params = {})
       team.attributes = team_params(params)
+      team.bundles.build(name: "Actions du pôle", position: 0)
       team.save!
       true
     end

@@ -7,6 +7,7 @@ Rails.application.routes.draw do
   end
 
   resources :booking_prices, only: [:create]
+  resources :bundles
   resources :event_categories
   resources :events
   resources :experiences

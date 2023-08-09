@@ -13,8 +13,8 @@
 #
 class Project < ApplicationRecord
   belongs_to :human, optional: true
-  has_many :tasks
-
+  has_many :bundles
+  has_many :tasks, through: :bundles
 
   has_paper_trail
   has_soft_deletion default_scope: true
