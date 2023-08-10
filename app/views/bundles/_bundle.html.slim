@@ -1,0 +1,12 @@
+= turbo_frame_tag bundle do
+  .mt-8.space-y-4
+    .mb-4.font-bold
+      = link_to bundle.name,
+                edit_bundle_path(bundle)
+
+    = turbo_frame_tag "bundle_#{bundle.id}_tasks"
+      = render bundle.tasks
+
+    = turbo_frame_tag "bundle_#{bundle.id}_new_task"
+      = render partial: "bundles/new_task",
+               locals: { bundle: bundle }

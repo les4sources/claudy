@@ -1,0 +1,2 @@
+<%= turbo_stream.append "bundle_#{@task.bundle_id}_tasks", partial: "tasks/task", locals: { task: @task } %>
+<%= turbo_stream.update "bundle_#{@task.bundle_id}_new_task", render(partial: "bundles/new_task", locals: { bundle: @task.bundle }) %>

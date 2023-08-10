@@ -33,6 +33,7 @@ module Tasks
           :description,
           :due_date,
           :status,
+          :bundle_id,
           :project_id,
           human_ids: []
         )

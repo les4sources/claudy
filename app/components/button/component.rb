@@ -51,6 +51,8 @@ class Button::Component < ViewComponent::Base
       btn_secondary_class
     when :hollow
       btn_hollow_class
+    when :inline
+      btn_inline_class
     end
   end
 
@@ -119,6 +121,32 @@ class Button::Component < ViewComponent::Base
       focus:ring-2
       focus:ring-indigo-500
       focus:ring-offset-2
+    ]
+  end
+
+  def btn_inline_class
+    %w[
+      mt-3 
+      inline-flex 
+      w-full 
+      items-center 
+      justify-center 
+      rounded-md 
+      bg-indigo-600 
+      px-3 
+      py-2 
+      text-sm 
+      font-semibold 
+      text-white 
+      shadow-sm 
+      hover:bg-indigo-500 
+      focus-visible:outline 
+      focus-visible:outline-2 
+      focus-visible:outline-offset-2 
+      focus-visible:outline-indigo-600 
+      sm:ml-3 
+      sm:mt-0 
+      sm:w-auto
     ]
   end
 

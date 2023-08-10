@@ -13,14 +13,21 @@ class TasksController < BaseController
     end
   
     def new
-      @task = Task.new(project_id: params[:project_id])
+      @task = Task.new(project_id: params[:project_id], bundle_id: params[:bundle_id])
     end
   
     def create
       service = Tasks::CreateService.new
       if service.run(params)
-        redirect_to task_path(service.task),
-                    notice: "Super! L'action a été ajoutée. Il n'y a plus qu'à!"
+        respond_to do |format|
+          format.html { 
+            redirect_to task_path(service.task),
+                        notice: "Super! L'action a été ajoutée. Il n'y a plus qu'à!"
+          }
+          format.turbo_stream {
+            @task = service.task
+          }
+        end
       else
         @task = service.task
         set_error_flash(service.task, service.error_message)
@@ -47,8 +54,13 @@ class TasksController < BaseController
   
     def destroy
       if @task.soft_delete!(validate: false)
-        redirect_to tasks_path,
-                    notice: "L'action '#{@task.name}' a été supprimée."
+        respond_to do |format|
+          format.html { 
+            redirect_to tasks_path,
+                        notice: "L'action '#{@task.name}' a été supprimée."
+          }
+          format.turbo_stream
+        end
       else
         flash.now[:alert] = "Une erreur est survenue."
         render :show

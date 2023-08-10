@@ -2,11 +2,11 @@
   = render 'layouts/components/page_header',
            title: "Mettre à jour le groupe d'actions"
 
-= form_with model: @bundle,
-            url: bundle_path(@bundle) do |f|
-  .space-y-8.divide-y.divide-gray-200.sm:space-y-5
-    .space-y-6.sm:space-y-5
-      = render "form", f: f
+= turbo_frame_tag @bundle do
+  = form_with model: @bundle,
+              url: bundle_path(@bundle),
+              class: "mt-5 sm:flex sm:items-center" do |f|
+    = render "form", f: f
 
-  = f.actions do
-    = f.submit "Mettre à jour"
+    = f.submit "Mettre à jour",
+               { style: "inline" }

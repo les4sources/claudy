@@ -1,17 +1,11 @@
-.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
-  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
-    = section_heading_tw heading: "Informations"
+.w-full.sm:max-w-xs
+  = f.text_field :name,
+                 label: false,
+                 required: true,
+                 class: "block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 
-  .col-span-2.mb-4.space-y-6.sm:space-y-5
-    = f.text_field :name,
-                   label: "Nom *",
-                   required: true,
-                   class: "md:w-1/2 lg:w-2/3"
+= f.hidden_field :project_id,
+                 value: f.object.project_id || params[:project_id]
 
-    = f.hidden_field :project_id,
-                     value: params[:project_id]
-
-    = f.hidden_field :team_id,
-                     value: params[:team_id]
-
-hr
+= f.hidden_field :team_id,
+                 value: f.object.team_id || params[:team_id]

@@ -2,11 +2,14 @@
   = render 'layouts/components/page_header',
            title: "Nouvelle action"
 
-= form_with model: @task,
-            url: tasks_path do |f|
-  .space-y-8.divide-y.divide-gray-200.sm:space-y-5
-    .space-y-6.sm:space-y-5
-      = render "form", f: f
+= turbo_frame_tag "bundle_#{@task.bundle_id}_new_task" do
+  = form_with model: @task,
+              url: tasks_path,
+              class: "bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl" do |f|
+    .sm:p-4
+      .space-y-8.divide-y.divide-gray-200.sm:space-y-5
+        .space-y-6.sm:space-y-5
+          = render "form", f: f
 
-  = f.actions do
-    = f.submit "Enregistrer"
+      = f.actions do
+        = f.submit "Enregistrer"
