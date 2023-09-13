@@ -131,6 +131,12 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
                 | Disc-golf 🥏
               dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
                 | ✔️ Intéressé par une session d'initiation au disc-golf
+          - if @booking.wifi?
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | WiFi 🤖
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                | ✔️ Brancher le point d'accès WiFi pour ce groupe
 
     - if @booking.public_notes.presence
       .overflow-hidden.bg-yellow-200.shadow.sm:rounded-lg

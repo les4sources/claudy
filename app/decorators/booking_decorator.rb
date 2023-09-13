@@ -193,7 +193,7 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def payment_status
-    shared_classes = "text-sm font-medium mr-2 px-2.5 py-0.5 rounded"
+    shared_classes = "text-xs font-medium mr-2 px-2.5 py-0.5 rounded"
     case object.payment_status
     when "pending"
       h.content_tag(:span, "Non payée", class: "#{shared_classes} bg-red-200 text-red-800")
@@ -318,5 +318,9 @@ class BookingDecorator < ApplicationDecorator
     else
       "bg-yellow-50 opacity-75"
     end
+  end
+
+  def wifi_emoji
+    object.wifi? ? h.content_tag(:span, "🤖 Installer le WiFi", class: "text-sm") : nil 
   end
 end

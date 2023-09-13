@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_08_09_053928) do
+ActiveRecord::Schema[7.0].define(version: 2023_09_13_145141) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.string "name", null: false
     t.text "body"
@@ -105,6 +105,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_09_053928) do
     t.string "departure_time"
     t.boolean "option_pizza_party"
     t.datetime "deleted_at", precision: nil
+    t.boolean "wifi", default: false
     t.index ["lodging_id"], name: "index_bookings_on_lodging_id"
   end
 

@@ -140,6 +140,7 @@ module Bookable
         :tier_rooms,
         :to_date,
         :towels,
+        :wifi,
         room_ids: [],
       )
   end
