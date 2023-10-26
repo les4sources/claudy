@@ -23,7 +23,7 @@ namespace :reporting do
     CSV.open(filename, "w") do |csv|
       csv << ["date", "adultes et enfants"]
       date_totals.each do |date, sleepers|
-        csv << [date.strftime("%d-%m-%Y"), sleepers]
+        csv << [date.strftime("%d/%m/%Y"), sleepers]
       end
     end
 
