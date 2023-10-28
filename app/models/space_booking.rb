@@ -85,6 +85,10 @@ class SpaceBooking < ApplicationRecord
     status == "confirmed"
   end
 
+  def current?
+    (from_date..to_date).cover?(Date.today)
+  end
+
   def declined?
     status == "declined"
   end

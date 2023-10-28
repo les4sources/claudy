@@ -91,6 +91,30 @@
                 p.text-base.font-medium.text-gray-900
                   | Tables
 
+  - if @space_booking.confirmed? && @space_booking.current?
+    .mt-8.overflow-hidden.bg-teal-50.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Votre connexion WiFi
+      .border-t.border-teal-200.px-4.py-5.sm:px-6
+        .grid.gap-y-4
+          .text-base
+            .font-medium.text-gray-500
+              | Nom du réseau
+            .mt-1.text-gray-900
+              = Rails.application.credentials.dig(:wifi, :ssid)
+
+          .text-base
+            .font-medium.text-gray-500
+              | Mot de passe
+            .mt-1.text-gray-900
+              = Rails.application.credentials.dig(:wifi, :password)
+
+          .text-base.font-medium.text-gray-900.sm:col-span-2
+            | 
+              Le réseau n'est pas disponible? Contactez le ou la veilleur·se afin 
+              d'activer la connexion sans fil.
+
   - if !@space_booking.declined?
     .overflow-hidden.bg-teal-50.sm:rounded-lg
       .px-4.py-5.sm:px-6
