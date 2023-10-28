@@ -36,4 +36,16 @@ class Lodging < ApplicationRecord
   def form_label
     "#{name} (#{summary})"
   end
+
+  def is_cheveche?
+    self.name == "La Chevêche"
+  end
+
+  def is_hulotte?
+    self.name == "La Hulotte"
+  end
+
+  def is_grand_duc?
+    self.name == "Le Grand-Duc"
+  end
 end

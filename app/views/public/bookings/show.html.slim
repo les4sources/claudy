@@ -202,6 +202,39 @@
               br
               | selon la disponibilité des habitants
 
+- if @booking.confirmed? && @booking.current?
+  .mt-8.overflow-hidden.bg-teal-50.sm:rounded-lg
+    .px-4.py-5.sm:px-6
+      h3.text-lg.font-medium.leading-6.text-gray-900
+        | Votre connexion WiFi
+      / p.mt-1.max-w-2xl.text-sm.text-gray-500
+        | Personal details and application.
+    .border-t.border-teal-200.px-4.py-5.sm:px-6
+      .grid.gap-y-4
+        .text-base
+          .font-medium.text-gray-500
+            | Nom du réseau
+          .mt-1.text-gray-900
+            - if @booking.lodging.is_cheveche?
+              | CHEVECHE
+            - elsif @booking.lodging.is_hulotte?
+              | HULOTTE
+            - elsif @booking.lodging.is_grand_duc?
+              | CHEVECHE et HULOTTE
+
+        .text-base
+          .font-medium.text-gray-500
+            | Mot de passe
+          .mt-1.text-gray-900
+            | Le mot de passe est indiqué sur l'appareil, qui se trouve dans la cuisine
+
+        .text-base.font-medium.text-gray-900.sm:col-span-2
+          | 
+            L'appareil n'est pas toujours branché à votre arrivée. Vous pouvez alors le 
+            brancher à une prise à proximité. Veillez à l'éteindre la nuit afin de respecter 
+            le précieux sommeil des giteurs et habitants 🙂 Et à la débrancher à votre départ.
+
+
 - if !@booking.declined?
   .mt-8.overflow-hidden.bg-teal-50.sm:rounded-lg
     .px-4.py-5.sm:px-6
