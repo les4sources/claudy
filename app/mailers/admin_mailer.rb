@@ -12,7 +12,7 @@ class AdminMailer < ApplicationMailer
     @booking = BookingDecorator.new(booking)
     mail(
       to: "reservation@les4sources.be",
-      subject: "⚠️ Réservation d'hébergement annulée: #{@booking.group_or_name} (#{@booking.date_range})",
+      subject: "⚠️ Réservation d'hébergement annulée: #{ActionView::Base.full_sanitizer.sanitize(@booking.group_or_name)} (#{@booking.date_range})",
       tag: "admin_booking_canceled"
     )
   end
@@ -21,7 +21,7 @@ class AdminMailer < ApplicationMailer
     @space_booking = SpaceBookingDecorator.new(space_booking)
     mail(
       to: "reservation@les4sources.be",
-      subject: "⚠️ Réservation d'espaces annulée: #{@space_booking.group_or_name} (#{@space_booking.date_range})",
+      subject: "⚠️ Réservation d'espaces annulée: #{ActionView::Base.full_sanitizer.sanitize(@space_booking.group_or_name)} (#{@space_booking.date_range})",
       tag: "admin_space_booking_canceled"
     )
   end
