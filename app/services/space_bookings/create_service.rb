@@ -24,7 +24,6 @@ module SpaceBookings
       @space_booking.attributes = space_booking_params(params)
       @space_booking.generate_token
       return false if !@space_booking.valid?
-      set_invoice_status
       spaces = get_spaces
       if !spaces.nil? && available?(spaces)
         build_space_reservations(spaces, @space_booking.duration)

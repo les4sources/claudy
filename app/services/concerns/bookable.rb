@@ -118,7 +118,7 @@ module Bookable
         :firstname,
         :from_date,
         :group_name,
-        :invoice_wanted,
+        :invoice_status,
         :lastname,
         :lodging_id,
         :newsletter_subscription,

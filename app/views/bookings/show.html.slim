@@ -153,7 +153,7 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
     .overflow-hidden.shadow.sm:rounded-lg.bg-teal-600.border-2.border-teal-200
       .flex.place-content-between.px-4.py-3.sm:px-6
         h3.text-lg.font-bold.leading-6.text-white
-          | Réservation <code>##{@booking.token}</code>
+          | Réservation <code>##{@booking.object.token}</code>
       div
         .px-6.pb-5
           = link_to "Page web de la réservation",
@@ -235,10 +235,7 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
             dt.text-sm.font-medium.text-gray-500
               | Facture
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              - if @booking.invoice_status == "requested"
-                | 🧾 Demandée par le client
-              - else
-                | Non requise
+              = @booking.invoice_status
 
     - if @booking.notes.presence
       .overflow-hidden.bg-yellow-100.shadow.sm:rounded-lg

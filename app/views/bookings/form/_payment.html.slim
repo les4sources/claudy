@@ -142,8 +142,21 @@
               = radio_button.radio_button
               = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
-      = f.check_input :invoice_wanted,
-                      label: "Besoin d'une facture 🧾",
-                      message: "Notre comptabilité fournira une facture si nécessaire"
+    .my-6
+      = f.label :invoice_status,
+                "Facture 🧾 *"
+
+      .space-y-3.md:space-y-2
+        = f.collection_radio_buttons :invoice_status, 
+                                     [ \
+                                       ["Non requise", nil], 
+                                       ["À fournir", "requested"],
+                                       ["Envoyée", "sent"] \
+                                     ], 
+                                     :last, :first, 
+                                     required: true do |radio_button|
+          .flex.items-center
+            = radio_button.radio_button
+            = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
 hr

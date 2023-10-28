@@ -16,7 +16,7 @@
           | &nbsp;
         th.py-3.px-6.w-48[scope="col"]
           | Nom 
-        th.py-3.px-6.w-48[scope="col"]
+        / th.py-3.px-6.w-48[scope="col"]
           | Événement
         th.py-3.px-6[scope="col"]
           | Dates
@@ -26,6 +26,8 @@
           | Espaces
         th.py-3.px-6[scope="col"]
           | Paiement 
+        th.py-3.px-6[scope="col"]
+          | Facture 
         th.py-3.px-6[scope="col"]
           | ID
     tbody
@@ -38,7 +40,7 @@
               = link_to space_booking.group_or_name, 
                         space_booking_path(space_booking),
                         class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
-          td.py-4.px-6
+          / td.py-4.px-6
             = space_booking.event_name_with_color
           td.py-4.px-6
             = space_booking.from_date
@@ -47,8 +49,11 @@
           td.py-4.px-6
             = space_booking.duration
           td.py-4.px-6.space-x-1
-            = space_booking.spaces_badges(font_size: "sm")
+            = space_booking.spaces_badges(font_size: "xs")
           td.py-4.px-6
             = space_booking.payment_badge
+          td.py-4.px-6
+            - if space_booking.confirmed?
+              = space_booking.invoice_status
           td.py-4.px-6
             code #{space_booking.token}

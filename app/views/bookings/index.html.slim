@@ -25,6 +25,8 @@
         th.py-3.px-6[scope="col"]
           | Paiement 
         th.py-3.px-6[scope="col"]
+          | Facture 
+        th.py-3.px-6[scope="col"]
           | Options
         th.py-3.px-6[scope="col"]
           | ID
@@ -57,6 +59,9 @@
             - if booking.confirmed?
               = booking.payment_badge
           td.py-4.px-6
+            - if booking.confirmed?
+              = booking.invoice_status
+          td.py-4.px-6
             = booking.options_emojis
           td.py-4.px-6
-            code ##{booking.token}
+            code #{booking.token}

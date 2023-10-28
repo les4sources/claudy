@@ -59,7 +59,6 @@ class SpaceBooking < ApplicationRecord
   scope :current_and_future, -> { where("to_date >= ?", Date.today).order(from_date: :asc) }
   scope :past, -> { where("to_date < ?", Date.today).order(from_date: :desc) }
 
-  attr_accessor :invoice_wanted
   attr_accessor :space_ids
   attr_accessor :newsletter_subscription
   attr_accessor :duration

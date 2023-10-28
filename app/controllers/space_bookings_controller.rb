@@ -30,6 +30,8 @@ class SpaceBookingsController < BaseController
       paid_amount: 0,
       advance_amount: 0,
       deposit_amount: 0,
+      payment_status: "pending",
+      payment_method: "bank_transfer",
       from_date: params.fetch(:date, nil)
     )
     @spaces = Space.all

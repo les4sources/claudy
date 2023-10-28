@@ -102,35 +102,39 @@
         h3.text-lg.font-medium.leading-6.text-gray-900
           | Options
       .border-t.border-gray-200.p-2
-        .grid.grid-cols-3.gap-4.px-4
-          - if @space_booking.option_kitchenware?
-            .relative.flex.items-center.space-x-3.rounded-lg.border.border-gray-300.bg-white.px-6.py-2.shadow-sm.focus-within:ring-2.focus-within:ring-indigo-500.focus-within:ring-offset-2.hover:border-gray-400
-              .flex-shrink-0
-                = vite_image_tag "images/space_options/kitchenware.jpg", alt: "", class: "h-16 w-16"
-              .min-w-0.flex-1
-                p.text-sm.font-medium.text-gray-900
-                  | Vaisselle
-          - if @space_booking.option_beamer?
-            .relative.flex.items-center.space-x-3.rounded-lg.border.border-gray-300.bg-white.px-6.py-2.shadow-sm.focus-within:ring-2.focus-within:ring-indigo-500.focus-within:ring-offset-2.hover:border-gray-400
-              .flex-shrink-0
-                = vite_image_tag "images/space_options/beamer.jpg", alt: "", class: "h-16 w-16"
-              .min-w-0.flex-1
-                p.text-sm.font-medium.text-gray-900
-                  | Projecteur
-          - if @space_booking.option_wifi?
-            .relative.flex.items-center.space-x-3.rounded-lg.border.border-gray-300.bg-white.px-6.py-2.shadow-sm.focus-within:ring-2.focus-within:ring-indigo-500.focus-within:ring-offset-2.hover:border-gray-400
-              .flex-shrink-0
-                = vite_image_tag "images/space_options/wifi.jpg", alt: "", class: "h-16 w-16"
-              .min-w-0.flex-1
-                p.text-sm.font-medium.text-gray-900
-                  | Connexion WiFi
-          - if @space_booking.option_tables?
-            .relative.flex.items-center.space-x-3.rounded-lg.border.border-gray-300.bg-white.px-6.py-2.shadow-sm.focus-within:ring-2.focus-within:ring-indigo-500.focus-within:ring-offset-2.hover:border-gray-400
-              .flex-shrink-0
-                = vite_image_tag "images/space_options/tables.jpg", alt: "", class: "h-16 w-16"
-              .min-w-0.flex-1
-                p.text-sm.font-medium.text-gray-900
-                  | Tables
+        - if !@space_booking.has_options?
+          .px-4.py-5
+            | Aucune option.
+        - else
+          .grid.grid-cols-3.gap-4.px-4
+            - if @space_booking.option_kitchenware?
+              .relative.flex.items-center.space-x-3.rounded-lg.border.border-gray-300.bg-white.px-6.py-2.shadow-sm.focus-within:ring-2.focus-within:ring-indigo-500.focus-within:ring-offset-2.hover:border-gray-400
+                .flex-shrink-0
+                  = vite_image_tag "images/space_options/kitchenware.jpg", alt: "", class: "h-16 w-16"
+                .min-w-0.flex-1
+                  p.text-sm.font-medium.text-gray-900
+                    | Vaisselle
+            - if @space_booking.option_beamer?
+              .relative.flex.items-center.space-x-3.rounded-lg.border.border-gray-300.bg-white.px-6.py-2.shadow-sm.focus-within:ring-2.focus-within:ring-indigo-500.focus-within:ring-offset-2.hover:border-gray-400
+                .flex-shrink-0
+                  = vite_image_tag "images/space_options/beamer.jpg", alt: "", class: "h-16 w-16"
+                .min-w-0.flex-1
+                  p.text-sm.font-medium.text-gray-900
+                    | Projecteur
+            - if @space_booking.option_wifi?
+              .relative.flex.items-center.space-x-3.rounded-lg.border.border-gray-300.bg-white.px-6.py-2.shadow-sm.focus-within:ring-2.focus-within:ring-indigo-500.focus-within:ring-offset-2.hover:border-gray-400
+                .flex-shrink-0
+                  = vite_image_tag "images/space_options/wifi.jpg", alt: "", class: "h-16 w-16"
+                .min-w-0.flex-1
+                  p.text-sm.font-medium.text-gray-900
+                    | Connexion WiFi
+            - if @space_booking.option_tables?
+              .relative.flex.items-center.space-x-3.rounded-lg.border.border-gray-300.bg-white.px-6.py-2.shadow-sm.focus-within:ring-2.focus-within:ring-indigo-500.focus-within:ring-offset-2.hover:border-gray-400
+                .flex-shrink-0
+                  = vite_image_tag "images/space_options/tables.jpg", alt: "", class: "h-16 w-16"
+                .min-w-0.flex-1
+                  p.text-sm.font-medium.text-gray-900
+                    | Tables
 
     - if @space_booking.public_notes.presence
       .overflow-hidden.bg-yellow-200.shadow.sm:rounded-lg
@@ -217,10 +221,7 @@
             dt.text-sm.font-medium.text-gray-500
               | Facture
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              - if @space_booking.invoice_status == "requested"
-                | 🧾 Demandée par le client
-              - else
-                | Non requise
+              = @space_booking.invoice_status
 
     - if @space_booking.notes.presence
       .overflow-hidden.bg-yellow-100.shadow.sm:rounded-lg

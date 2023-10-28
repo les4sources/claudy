@@ -95,6 +95,17 @@ class SpaceBookingDecorator < ApplicationDecorator
     end
   end
 
+  def invoice_status
+    case object.invoice_status
+    when nil
+      "Non requise"
+    when "requested"
+      "À fournir"
+    when "sent"
+      "Envoyée ✔"
+    end
+  end
+
   def name
     "#{object.firstname} #{object.lastname}"
   end
@@ -142,7 +153,7 @@ class SpaceBookingDecorator < ApplicationDecorator
     else
       label = "?"
     end
-    shared_classes = "text-sm font-medium mr-2 px-2.5 py-0.5 rounded"
+    shared_classes = "text-xs font-medium mr-2 px-2.5 py-0.5 rounded"
     case object.payment_status
     when "pending"
       h.content_tag(:span, label, class: "#{shared_classes} bg-red-200 text-red-800")
@@ -224,13 +235,13 @@ class SpaceBookingDecorator < ApplicationDecorator
   def status_emoji
     case object.status
     when "canceled"
-      "❌"
+      h.content_tag(:span, "❌", data: { "tooltip-target": "tooltip-status-canceled" })
     when "confirmed"
-      "✅"
+      h.content_tag(:span, "✅", data: { "tooltip-target": "tooltip-status-confirmed" })
     when "pending"
-      "⏳"
+      h.content_tag(:span, "⏳", data: { "tooltip-target": "tooltip-status-pending" })
     when "declined"
-      "🙅‍♀️"
+      h.content_tag(:span, "🙅‍♀️", data: { "tooltip-target": "tooltip-status-declined" })
     else
       object.status
     end

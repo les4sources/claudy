@@ -40,12 +40,6 @@ module SpaceBookable
     end
   end
 
-  def set_invoice_status
-    if @space_booking.invoice_wanted == "1"
-      @space_booking.invoice_status = "requested"
-    end
-  end
-
   def space_booking_params(params)
     params
       .require(:space_booking)
@@ -60,7 +54,7 @@ module SpaceBookable
         :firstname,
         :from_date,
         :group_name,
-        :invoice_wanted,
+        :invoice_status,
         :lastname,
         :newsletter_subscription,
         :notes,

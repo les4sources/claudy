@@ -43,16 +43,6 @@ class BookingDecorator < ApplicationDecorator
     end
   end
 
-  def tr_border_class
-    classes = ["border-l-8"]
-    if object.lodging.nil?
-      classes << ["border-teal-500"]
-    else
-      classes << ["border-orange-500"]
-    end
-    classes.join(" ")
-  end
-
   def date_range
     "du #{from_date} au #{to_date}"
   end
@@ -71,6 +61,17 @@ class BookingDecorator < ApplicationDecorator
       h.content_tag(:span, group_name, class: classes)
     else
       h.content_tag(:span, name, class: classes)
+    end
+  end
+
+  def invoice_status
+    case object.invoice_status
+    when nil
+      "Non requise"
+    when "requested"
+      "À fournir"
+    when "sent"
+      "Envoyée ✔"
     end
   end
 
@@ -288,13 +289,13 @@ class BookingDecorator < ApplicationDecorator
   def status_emoji
     case object.status
     when "canceled"
-      "❌"
+      h.content_tag(:span, "❌", data: { "tooltip-target": "tooltip-status-canceled" })
     when "confirmed"
-      "✅"
+      h.content_tag(:span, "✅", data: { "tooltip-target": "tooltip-status-confirmed" })
     when "pending"
-      "⏳"
+      h.content_tag(:span, "⏳", data: { "tooltip-target": "tooltip-status-pending" })
     when "declined"
-      "🙅‍♀️"
+      h.content_tag(:span, "🙅‍♀️", data: { "tooltip-target": "tooltip-status-declined" })
     else
       object.status
     end
@@ -304,8 +305,27 @@ class BookingDecorator < ApplicationDecorator
     l(object.to_date, format: :short)
   end
 
+  def token
+    h.link_to(
+      "##{object.token}",
+      h.public_booking_path(object.token),
+      target: "_blank",
+      class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+    )
+  end
+
   def towels
     object.towels? ? "OUI" : "non"
+  end
+
+  def tr_border_class
+    classes = ["border-l-8"]
+    if object.lodging.nil?
+      classes << ["border-teal-500"]
+    else
+      classes << ["border-orange-500"]
+    end
+    classes.join(" ")
   end
 
   def tr_class
