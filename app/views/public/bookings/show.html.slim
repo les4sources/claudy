@@ -202,7 +202,7 @@
               br
               | selon la disponibilité des habitants
 
-- if @booking.confirmed? && @booking.current?
+- if @booking.confirmed? && @booking.current? && @booking.wifi?
   .mt-8.overflow-hidden.bg-teal-50.sm:rounded-lg
     .px-4.py-5.sm:px-6
       h3.text-lg.font-medium.leading-6.text-gray-900
