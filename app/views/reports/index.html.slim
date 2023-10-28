@@ -1,34 +1,6 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
-           title: "Reporting financier"
-
-/ = form_tag reports_path, method: :get do
-  .flex.items-center.gap-4(date-rangepicker="date-rangepicker")
-    div
-      label.block.text-md.font-medium.text-gray-700(for="start_date") Du
-      .relative
-        .absolute.inset-y-0.left-0.flex.items-center.pl-3.pointer-events-none
-          svg.w-5.h-5.text-gray-500.dark:text-gray-400[aria-hidden="true" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"]
-            path[fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"]
-        = text_field_tag :start_date, 
-                         @start_date,
-                         placeholder: "Sélectionnez une date",
-                         class: "block pl-10 w-full rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-md rounded-md",
-                         datepicker: "datepicker"
-    div
-      label.block.text-md.font-medium.text-gray-700(for="end_date") Au
-      .relative
-        .absolute.inset-y-0.left-0.flex.items-center.pl-3.pointer-events-none
-          svg.w-5.h-5.text-gray-500.dark:text-gray-400[aria-hidden="true" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"]
-            path[fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"]
-        = text_field_tag :end_date, 
-                         @end_date,
-                         placeholder: "Sélectionnez une date",
-                         class: "block pl-10 w-full rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-md rounded-md",
-                         datepicker: "datepicker"
-    div.self-end
-      = submit_tag "Filtrer sur cette période",
-                   class: "text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+           title: "Reporting financier (#{@year})"
 
 .overflow-hidden.shadow.ring-1.ring-black.ring-opacity-5.sm:rounded-lg.mt-4
   table.min-w-full.divide-y.divide-gray-300
@@ -49,13 +21,13 @@
       - (1..12).each do |month|
         tr
           td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.font-medium.text-gray-900.sm:pl-6
-            = l(Date.new(Time.now.year, month, 1), format: :month_year).capitalize
+            = l(Date.new(@year, month, 1), format: :month_year).capitalize
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
-            - month_revenues_for_bookings = @revenues_by_month_for_bookings[sprintf("%02d", month)] || 0.0
+            - month_revenues_for_bookings = @revenues_by_month_for_bookings[month] || 0.0
             - bookings_total = bookings_total + month_revenues_for_bookings
             = number_to_currency(month_revenues_for_bookings / 100.0, unit: "€")
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
-            - month_revenues_for_space_bookings = @revenues_by_month_for_space_bookings[sprintf("%02d", month)] || 0.0
+            - month_revenues_for_space_bookings = @revenues_by_month_for_space_bookings[month] || 0.0
             - space_bookings_total = space_bookings_total + month_revenues_for_space_bookings
             = number_to_currency(month_revenues_for_space_bookings / 100.0, unit: "€")
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
