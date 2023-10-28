@@ -163,7 +163,7 @@ class SpaceBookingDecorator < ApplicationDecorator
   end
 
   def payment_status
-    shared_classes = "text-sm font-medium mr-2 px-2.5 py-0.5 rounded"
+    shared_classes = "text-xs font-medium mr-2 px-2.5 py-0.5 rounded"
     case object.payment_status
     when "pending"
       h.content_tag(:span, "Non payée", class: "#{shared_classes} bg-red-200 text-red-800")

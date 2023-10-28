@@ -268,7 +268,7 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def status
-    shared_classes = "text-sm font-medium mr-2 px-2.5 py-0.5 rounded"
+    shared_classes = "text-xs font-medium mr-2 px-2.5 py-0.5 rounded"
     if object.deleted?
       h.content_tag(:span, "Supprimée", class: "#{shared_classes} bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900")
     else
@@ -321,6 +321,6 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def wifi_emoji
-    object.wifi? ? h.content_tag(:span, "🤖 Installer le WiFi", class: "text-sm") : nil 
+    object.wifi? ? h.content_tag(:span, h.raw("👩‍💻 <a href='https://les4sources.notion.site/Appareils-WiFi-febf850431bc42b68e455574cc32e951?pvs=4' target='_blank' class='claudy-link'>Installer le WiFi</a>"), class: "text-sm") : nil 
   end
 end

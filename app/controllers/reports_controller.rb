@@ -7,6 +7,7 @@ class ReportsController < BaseController
              .group('(EXTRACT(MONTH FROM from_date))::integer')
              .order('2 DESC, 3 DESC')
              .sum(:price_cents)
+
     @revenue_by_month_for_bookings = revenue_by_month_for_bookings.transform_values { |v| v / 100.0 }
     revenue_by_month_for_space_bookings = 
       SpaceBooking.where(status: "confirmed", from_date: @start_date..@end_date)
