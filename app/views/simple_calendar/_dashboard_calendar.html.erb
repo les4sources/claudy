@@ -34,7 +34,7 @@
 <% end %>
 
 <% current_month = date_range.first.month %>
-<div class="hidden md:block lg:flex lg:h-full lg:flex-col" data-controller="dashboard-calendar" data-action="click->dashboard-calendar#clickCalendar">
+<div id="dashboard-calendar" class="md:block lg:flex lg:h-full lg:flex-col bg-stone-100" data-controller="dashboard-calendar" data-dashboard-calendar-current="<%= @date.beginning_of_month == Date.today.beginning_of_month %>" data-action="click->dashboard-calendar#clickCalendar">
   <div class="shadow ring-1 ring-black ring-opacity-5 lg:flex lg:flex-auto lg:flex-col">
     <% date_range.each_slice(7).with_index do |weekdays, index| %>
       <% if index == 0 %>
@@ -45,48 +45,60 @@
             </div>
           <% end %>
         </div>
-      <% end %>
-    <% end %>
-    <div class="flex bg-gray-200 text-xs leading-6 text-gray-700 lg:flex-auto">
-      <div class="hidden w-full lg:grid lg:grid-cols-7 lg:gap-px">
-        <% date_range.each do |day| %>
-          <% month_classes = (day.month == Date.today.month && day.year == Date.today.year) ? "bg-white" : "bg-gray-50 text-gray-500" %>
-          <div class="relative min-h-[8rem] py-2 px-3 text-gray-700 <%= month_classes %> <%= (Date.today == day) ? "bg-purple-200" : ((Date.today > day) ? "bg-white" : nil) %>">
-            <div class="flex place-content-between">
-              <% day_classes = day == Date.today ? "flex px-2 h-6 items-center justify-center rounded-lg bg-indigo-600 font-semibold text-white" : "flex px-2 h-6 bg-blue-100 items-center justify-center rounded-lg border border-blue-300 font-semibold" %>
-              <%= link_to day_details_path(date: day.strftime("%Y-%m-%d")), class: "claudy-link border-0", data: { turbo_frame: "modal" } do %>
-                <time datetime="<%= l(day, format: "%Y-%m-%d") %>" class="<%= day_classes %> <%= day < Date.today ? "opacity-50 line-through" : nil %>">
-                  <% if current_month != day.month %>
-                    <% current_month = day.month %>
-                    <%= l(day, format: "%e %b") %>
-                  <% else %>
-                    <%= l(day, format: "%e") %>
-                  <% end %>
-                </time>
-              <% end %>
 
-              <div class="flex">
-                <% if Date.today <= day %>
-                  <%= link_to "H+", new_booking_path(date: day.strftime("%Y-%m-%d")), class: "mr-2 text-blue-700 hover:text-blue-900" %>
-                  <%= link_to "E+", new_space_booking_path(date: day.strftime("%Y-%m-%d")), class: "mr-2 text-blue-700 hover:text-blue-900" %>
-                <% end %>
-
-                <%= link_to new_note_path(date: day.strftime("%Y-%m-%d")), data: { turbo_frame: "modal" } do %>
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="mt-1 w-4 h-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                  </svg>
-                <% end %>
-              </div>
-            </div>
-
-            <div id="notes-<%= day %>" class="<%= day < Date.today ? "opacity-75" : nil %>">
-              <%= render Note.where(date: day).order(id: :desc) %>
-            </div>
-
-            <% passed_block.call day, sorted_events.fetch(day, []) %>
+        <% if @date.month == Date.today.month && @date.beginning_of_week >= @date.beginning_of_month %>
+          <div class="past-weeks-toggler flex justify-center" data-dashboard-calendar-target="pastWeeksToggler">
+            <%= link_to "Afficher les semaines précédentes",
+                        "#dashboard-calendar",
+                        class: "btn-section my-4",
+                        data: { action: "dashboard-calendar#showPastWeeks" } %>
           </div>
         <% end %>
+      <% end %>
+
+      <div class="week" data-dashboard-calendar-target="week" data-past-week="<%= weekdays.first < Date.today && !weekdays.include?(Date.today) %>" data-first-weekday="<%= weekdays.first %>" data-beginning-of-week="<%= Date.today.beginning_of_week %>">
+        <div class="flex bg-gray-200 text-xs leading-6 text-gray-700 lg:flex-auto">
+          <div class="w-full lg:grid lg:grid-cols-7 lg:gap-px">
+            <% weekdays.each do |day| %>
+              <% month_classes = (day.month == Date.today.month && day.year == Date.today.year) ? "bg-white" : "bg-gray-50 text-gray-500" %>
+              <div class="relative min-h-[8rem] py-2 px-3 text-gray-700 <%= month_classes %> <%= (Date.today == day) ? "bg-purple-200" : ((Date.today > day) ? "bg-white" : nil) %>">
+                <div class="flex place-content-between">
+                  <% day_classes = day == Date.today ? "flex px-2 h-6 items-center justify-center rounded-lg bg-indigo-600 font-semibold text-white" : "flex px-2 h-6 bg-blue-100 items-center justify-center rounded-lg border border-blue-300 font-semibold" %>
+                  <%= link_to day_details_path(date: day.strftime("%Y-%m-%d")), class: "claudy-link border-0", data: { turbo_frame: "modal" } do %>
+                    <time datetime="<%= l(day, format: "%Y-%m-%d") %>" class="<%= day_classes %> <%= day < Date.today ? "opacity-50 line-through" : nil %>">
+                      <% if current_month != day.month %>
+                        <% current_month = day.month %>
+                        <%= l(day, format: "%e %b") %>
+                      <% else %>
+                        <%= l(day, format: "%e") %>
+                      <% end %>
+                    </time>
+                  <% end %>
+
+                  <div class="flex">
+                    <% if Date.today <= day %>
+                      <%= link_to "H+", new_booking_path(date: day.strftime("%Y-%m-%d")), class: "mr-2 text-blue-700 hover:text-blue-900" %>
+                      <%= link_to "E+", new_space_booking_path(date: day.strftime("%Y-%m-%d")), class: "mr-2 text-blue-700 hover:text-blue-900" %>
+                    <% end %>
+
+                    <%= link_to new_note_path(date: day.strftime("%Y-%m-%d")), data: { turbo_frame: "modal" } do %>
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="mt-1 w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                      </svg>
+                    <% end %>
+                  </div>
+                </div>
+
+                <div id="notes-<%= day %>" class="<%= day < Date.today ? "opacity-75" : nil %>">
+                  <%= render Note.where(date: day).order(id: :desc) %>
+                </div>
+
+                <% passed_block.call day, sorted_events.fetch(day, []) %>
+              </div>
+            <% end %>
+          </div>
+        </div>
       </div>
-    </div>
+    <% end %>
   </div>
 </div>
