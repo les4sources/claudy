@@ -13,6 +13,10 @@ class ReportsController < BaseController
                   .group(Arel.sql("EXTRACT(MONTH FROM from_date)::integer"))
                   .order(Arel.sql("EXTRACT(MONTH FROM from_date)::integer"))
                   .sum(:price_cents)
+    @revenues_by_platform = 
+      Booking.where(status: 'confirmed', from_date: Date.new(@year, 1, 1).beginning_of_year..Date.new(@year, 1, 1).end_of_year)
+                  .group(:platform)
+                  .sum(:price_cents)
   end
 
   private

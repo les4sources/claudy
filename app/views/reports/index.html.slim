@@ -25,13 +25,13 @@
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
             - month_revenues_for_bookings = @revenues_by_month_for_bookings[month] || 0.0
             - bookings_total = bookings_total + month_revenues_for_bookings
-            = number_to_currency(month_revenues_for_bookings / 100.0, unit: "€")
+            = number_to_currency(month_revenues_for_bookings / 100.0)
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
             - month_revenues_for_space_bookings = @revenues_by_month_for_space_bookings[month] || 0.0
             - space_bookings_total = space_bookings_total + month_revenues_for_space_bookings
-            = number_to_currency(month_revenues_for_space_bookings / 100.0, unit: "€")
+            = number_to_currency(month_revenues_for_space_bookings / 100.0)
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
-            = number_to_currency((month_revenues_for_bookings + month_revenues_for_space_bookings) / 100.0, unit: "€")
+            = number_to_currency((month_revenues_for_bookings + month_revenues_for_space_bookings) / 100.0)
     tfoot
       tr
         td
@@ -40,4 +40,20 @@
         td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
           = number_to_currency(space_bookings_total / 100.0, unit: "€")
         td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
-          = number_to_currency((bookings_total + space_bookings_total) / 100.0, unit: "€")
+          = number_to_currency((bookings_total + space_bookings_total) / 100.0)
+
+h2.mt-6.text-lg.font-bold Hébergements: revenus par origine
+
+.overflow-hidden.shadow.ring-1.ring-black.ring-opacity-5.sm:rounded-lg.mt-4
+  table.min-w-full.divide-y.divide-gray-300
+    thead.bg-gray-50
+      tr
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"] Origine
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"] Montant
+    tbody.divide-y.divide-gray-200.bg-white
+      - @revenues_by_platform.each do |platform, revenue|
+        tr
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500 
+            = platform || "N/A"
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500 
+            = number_to_currency(revenue / 100.0)
