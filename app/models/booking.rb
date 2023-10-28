@@ -144,6 +144,7 @@ class Booking < ApplicationRecord
     BookingMailer.booking_confirmed(self).deliver_now if confirmed?
     BookingMailer.booking_declined(self).deliver_now if declined?
     BookingMailer.booking_canceled(self).deliver_now if canceled?
+    AdminMailer.booking_canceled(self).deliver_now if canceled?
   end
 
   def paid?

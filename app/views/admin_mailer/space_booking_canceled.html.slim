@@ -1,0 +1,24 @@
+p Salut la team,
+
+p 
+  |
+    Il y a une réservation d'espaces qui a été annulée.
+
+p 
+  | Nom : #{@space_booking.group_or_name}
+  br
+  | Date : #{@space_booking.date_range}
+
+p
+  |
+    Les détails de cette réservation sont disponibles à l'adresse suivante:
+  br
+  = link_to space_booking_url(@space_booking), space_booking_url(@space_booking)
+
+p
+  |
+    Amicalement,
+
+p
+  |
+    Claudy

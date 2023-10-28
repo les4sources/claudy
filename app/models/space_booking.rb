@@ -148,6 +148,7 @@ class SpaceBooking < ApplicationRecord
     SpaceBookingMailer.space_booking_confirmed(self).deliver_now if confirmed?
     SpaceBookingMailer.space_booking_declined(self).deliver_now if declined?
     SpaceBookingMailer.space_booking_canceled(self).deliver_now if canceled?
+    AdminMailer.space_booking_canceled(self).deliver_now if canceled?
   end
 
   def paid?

@@ -4,7 +4,7 @@ module ApplicationHelper
   def delete_link(resource, text_label = "Supprimer")
     link_to text_label,
             send("#{resource.class.name.underscore}_path", resource),
-            data: { turbo_method: :delete, turbo_confirm: "Etes-vous sûr(e)?" },
+            data: { turbo_method: :delete, turbo_confirm: "Merci de plutôt passer le statut à 'annulé' pour une annulation de réservation. Etes-vous sûr•e de vouloir supprimer?" },
             class: "btn-destroy"
   end
 

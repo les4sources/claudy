@@ -1,0 +1,30 @@
+p Salut la team,
+
+p 
+  |
+    Il y a une réservation d'hébergement qui a été annulée.
+
+p 
+  | Nom : #{@booking.group_or_name}
+  br
+  | Date : #{@booking.date_range}
+  br
+  | Hébergement :&nbsp;
+  - if !@booking.lodging.nil?
+    | #{@booking.lodging.name}
+  - else
+    | Maison Communautaire
+
+p
+  |
+    Les détails de cette réservation sont disponibles à l'adresse suivante:
+  br
+  = link_to booking_url(@booking), booking_url(@booking)
+
+p
+  |
+    Amicalement,
+
+p
+  |
+    Claudy
