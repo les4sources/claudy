@@ -1,6 +1,6 @@
 
 
-div(data-controller="calendar" data-calendar-current="#{@date.beginning_of_month == Date.today.beginning_of_month}")
+div(data-controller="calendar notes" data-calendar-current="#{@date.beginning_of_month == Date.today.beginning_of_month}")
   .dashboard.calendar
     - current_month = date_range.first.month
 
