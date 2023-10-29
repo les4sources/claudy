@@ -16,9 +16,9 @@
           | &nbsp;
         th.py-3.px-6.w-64[scope="col"]
           | Nom 
-        th.py-3.px-6[scope="col"]
+        th.py-3.px-6.hidden.md:table-cell[scope="col"]
           | Du 
-        th.py-3.px-6[scope="col"]
+        th.py-3.px-6.hidden.md:table-cell[scope="col"]
           | Au 
         th.py-3.px-6[scope="col"]
           | Hébergement
@@ -40,12 +40,14 @@
               = link_to booking.group_or_name, 
                         booking_path(booking),
                         class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
-          td.py-4.px-6
+            .md:hidden.mt-1.text-gray-900
+              = booking.date_range
+          td.py-4.px-6.hidden.md:table-cell
             = booking.from_date
             - if booking.object.estimated_arrival.presence
               .text-xs.font-medium
                 = booking.estimated_arrival
-          td.py-4.px-6
+          td.py-4.px-6.hidden.md:table-cell
             = booking.to_date
             - if booking.object.departure_time.presence
               .text-xs.font-medium

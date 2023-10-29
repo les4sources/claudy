@@ -18,7 +18,7 @@
           | Nom 
         / th.py-3.px-6.w-48[scope="col"]
           | Événement
-        th.py-3.px-6[scope="col"]
+        th.py-3.px-6.hidden.md:table-cell[scope="col"]
           | Dates
         th.py-3.px-6[scope="col"]
           | Période 
@@ -40,9 +40,11 @@
               = link_to space_booking.group_or_name, 
                         space_booking_path(space_booking),
                         class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+            .md:hidden.mt-1.text-gray-900
+              = space_booking.date_range
           / td.py-4.px-6
             = space_booking.event_name_with_color
-          td.py-4.px-6
+          td.py-4.px-6.hidden.md:table-cell
             = space_booking.from_date
             br
             | → #{space_booking.to_date}

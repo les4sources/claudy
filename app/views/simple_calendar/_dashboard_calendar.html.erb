@@ -4,7 +4,7 @@
 
     <% notes = Note.where(date: Date.today).order(id: :desc) %>
     <% if notes.any? %>
-      <div class="mb-4 space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 mb-4 gap-4">
         <%= render Note.where(date: Date.today).order(id: :desc) %>
       </div>
     <% end %>
@@ -38,7 +38,7 @@
   <div class="shadow ring-1 ring-black ring-opacity-5 lg:flex lg:flex-auto lg:flex-col">
     <% date_range.each_slice(7).with_index do |weekdays, index| %>
       <% if index == 0 %>
-        <div class="grid grid-cols-7 gap-px border-b border-gray-300 bg-stone-300 text-center text-xs font-semibold leading-6 text-stone-700 lg:flex-none">
+        <div class="hidden md:grid md:grid-cols-7 gap-px border-b border-gray-300 bg-stone-300 text-center text-xs font-semibold leading-6 text-stone-700 lg:flex-none">
           <% weekdays.each do |day| %>
             <div class="flex justify-center py-2 <%= day.saturday? || day.sunday? ? "bg-stone-300" : "bg-stone-200" %>">
               <span><%= l(day, format: "%A") %></span>
@@ -47,7 +47,7 @@
         </div>
 
         <% if @date.month == Date.today.month && @date.beginning_of_week >= @date.beginning_of_month %>
-          <div class="past-weeks-toggler flex justify-center" data-dashboard-calendar-target="pastWeeksToggler">
+          <div class="flex past-weeks-toggler justify-center" data-dashboard-calendar-target="pastWeeksToggler">
             <%= link_to "Afficher les semaines précédentes",
                         "#dashboard-calendar",
                         class: "btn-section my-4",
@@ -70,7 +70,7 @@
                         <% current_month = day.month %>
                         <%= l(day, format: "%e %b") %>
                       <% else %>
-                        <%= l(day, format: "%e") %>
+                        <%= l(day, format: "%e") %> <span class="md:hidden ml-1"><%= l(day, format: "%B") %></span>
                       <% end %>
                     </time>
                   <% end %>
