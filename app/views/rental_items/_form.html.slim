@@ -1,0 +1,40 @@
+.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Informations"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    = f.text_field :name,
+                   label: "Libellé de l'objet *",
+                   required: true,
+                   class: "md:w-1/2 lg:w-2/3"
+
+    = f.number_field :stock,
+                     label: "Stock",
+                     min: -1,
+                     required: true,
+                     remove_default_class: "sm:text-sm",
+                     class: "w-24 text-lg"
+
+    = f.number_field :price,
+                     label: "Prix par jour *",
+                     required: true,
+                     value: ((f.object.price_cents / 100.0) rescue nil),
+                     class: "w-1/2 md:w-1/2 lg:w-1/4",
+                     step: "0.01"
+
+    .flex.space-x-4
+      - if f.object.photo?
+        = image_tag f.object.photo_url(:thumb),
+                    class: "inline-block rounded-md"
+      div
+        = f.file_field :photo,
+                       label: "Photo",
+                       hint: "Un fichier au format JPG, PNG ou GIF"
+        = f.hidden_field :photo_cache
+
+    .sm:space-y-1
+      = f.label :description, 
+                "Présentation de l'objet"
+      = f.rich_text_area :description
+
+hr

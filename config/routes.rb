@@ -16,6 +16,7 @@ Rails.application.routes.draw do
   resources :notes
   resources :products
   resources :projects
+  resources :rental_items
   resources :reports
   resources :rooms
   resources :services

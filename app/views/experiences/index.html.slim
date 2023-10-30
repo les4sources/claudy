@@ -19,6 +19,8 @@
         th.w-36.py-3.px-6[scope="col"]
           | Prix/participant
         th.w-36.py-3.px-6[scope="col"]
+          | Nombre de participants
+        th.w-36.py-3.px-6[scope="col"]
           | Durée
     tbody
       - @experiences.each do |experience|
@@ -34,9 +36,11 @@
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
             - if experience.human.presence
               = experience.human.name
-          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+          td.py-4.px-6.text-gray-900.whitespace-nowrap[scope="row"]
             = experience.fixed_price
           td.py-4.px-6.text-gray-900.whitespace-nowrap[scope="row"]
             = experience.price
-          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+          td.py-4.px-6.text-gray-900.whitespace-nowrap[scope="row"]
+            = experience.participants
+          td.py-4.px-6.text-gray-900.whitespace-nowrap[scope="row"]
             = experience.duration
