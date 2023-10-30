@@ -2,7 +2,7 @@
 #
 # Table name: teams
 #
-#  id          :integer          not null, primary key
+#  id          :bigint           not null, primary key
 #  name        :string
 #  description :text
 #  deleted_at  :datetime

@@ -48,7 +48,9 @@ class TasksController < BaseController
       else
         @task = service.task
         set_error_flash(service.task, service.error_message)
-        render :edit
+        render :edit,
+               status: :unprocessable_entity,
+               alert: service.error_message
       end
     end
   

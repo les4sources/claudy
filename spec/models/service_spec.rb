@@ -2,9 +2,9 @@
 #
 # Table name: services
 #
-#  id          :integer          not null, primary key
+#  id          :bigint           not null, primary key
 #  name        :string
-#  human_id    :integer
+#  human_id    :bigint
 #  summary     :string
 #  description :text
 #  photo       :string

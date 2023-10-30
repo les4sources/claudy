@@ -2,7 +2,7 @@
 #
 # Table name: bookings
 #
-#  id                 :integer          not null, primary key
+#  id                 :bigint           not null, primary key
 #  firstname          :string
 #  lastname           :string
 #  phone              :string
@@ -28,7 +28,7 @@
 #  option_bread       :boolean
 #  comments           :text
 #  tier               :string
-#  lodging_id         :integer
+#  lodging_id         :bigint
 #  option_discgolf    :boolean
 #  shown_price_cents  :integer          default(0), not null
 #  token              :string
@@ -39,6 +39,7 @@
 #  departure_time     :string
 #  option_pizza_party :boolean
 #  deleted_at         :datetime
+#  wifi               :boolean          default(FALSE)
 #
 require "test_helper"
 

@@ -2,11 +2,11 @@
 #
 # Table name: projects
 #
-#  id          :integer          not null, primary key
+#  id          :bigint           not null, primary key
 #  name        :string
 #  description :text
 #  due_date    :date
-#  human_id    :integer          not null
+#  human_id    :bigint           not null
 #  deleted_at  :datetime
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null

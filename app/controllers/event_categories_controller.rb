@@ -40,7 +40,9 @@ class EventCategoriesController < BaseController
     else
       @event_category = service.event_category
       set_error_flash(service.event_category, service.error_message)
-      render :edit
+      render :edit, 
+             status: :unprocessable_entity,
+             alert: service.error_message
     end
   end
 

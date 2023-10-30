@@ -2,7 +2,7 @@
 #
 # Table name: event_categories
 #
-#  id         :integer          not null, primary key
+#  id         :bigint           not null, primary key
 #  name       :string
 #  color      :string
 #  created_at :datetime         not null

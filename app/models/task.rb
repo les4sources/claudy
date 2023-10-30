@@ -2,15 +2,16 @@
 #
 # Table name: tasks
 #
-#  id          :integer          not null, primary key
+#  id          :bigint           not null, primary key
 #  name        :string
-#  project_id  :integer          not null
+#  project_id  :bigint           not null
 #  description :text
 #  status      :string
 #  due_date    :date
 #  deleted_at  :datetime
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
+#  bundle_id   :bigint           not null
 #
 class Task < ApplicationRecord
   belongs_to :bundle

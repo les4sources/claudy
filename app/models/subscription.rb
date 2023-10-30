@@ -2,7 +2,7 @@
 #
 # Table name: subscriptions
 #
-#  id         :integer          not null, primary key
+#  id         :bigint           not null, primary key
 #  email      :string
 #  newsletter :boolean
 #  created_at :datetime         not null

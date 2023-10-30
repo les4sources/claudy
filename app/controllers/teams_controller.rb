@@ -41,7 +41,9 @@ class TeamsController < BaseController
       else
         @team = service.team
         set_error_flash(service.team, service.error_message)
-        render :edit
+        render :edit,
+               status: :unprocessable_entity,
+               alert: service.error_message
       end
     end
   

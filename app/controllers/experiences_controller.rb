@@ -41,7 +41,9 @@ class ExperiencesController < BaseController
     else
       @experience = service.experience
       set_error_flash(service.experience, service.error_message)
-      render :edit
+      render :edit, 
+             status: :unprocessable_entity,
+             alert: service.error_message
     end
   end
 

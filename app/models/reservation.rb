@@ -2,9 +2,9 @@
 #
 # Table name: reservations
 #
-#  id         :integer          not null, primary key
-#  booking_id :integer          not null
-#  room_id    :integer          not null
+#  id         :bigint           not null, primary key
+#  booking_id :bigint           not null
+#  room_id    :bigint           not null
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
 #  date       :date

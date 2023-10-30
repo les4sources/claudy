@@ -2,7 +2,7 @@
 #
 # Table name: notes
 #
-#  id         :integer          not null, primary key
+#  id         :bigint           not null, primary key
 #  body       :text
 #  date       :date
 #  created_at :datetime         not null

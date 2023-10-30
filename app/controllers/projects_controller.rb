@@ -42,7 +42,9 @@ class ProjectsController < BaseController
       else
         @project = service.project
         set_error_flash(service.project, service.error_message)
-        render :edit
+        render :edit,
+               status: :unprocessable_entity,
+               alert: service.error_message
       end
     end
   

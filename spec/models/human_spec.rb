@@ -2,7 +2,7 @@
 #
 # Table name: humans
 #
-#  id          :integer          not null, primary key
+#  id          :bigint           not null, primary key
 #  name        :string
 #  email       :string
 #  photo       :string

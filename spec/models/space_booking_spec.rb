@@ -2,7 +2,7 @@
 #
 # Table name: space_bookings
 #
-#  id                   :integer          not null, primary key
+#  id                   :bigint           not null, primary key
 #  firstname            :string
 #  lastname             :string
 #  group_name           :string
@@ -21,7 +21,7 @@
 #  updated_at           :datetime         not null
 #  price_cents          :integer
 #  payment_method       :string
-#  event_id             :integer
+#  event_id             :bigint
 #  public_notes         :text
 #  paid_amount_cents    :integer
 #  deposit_amount_cents :integer

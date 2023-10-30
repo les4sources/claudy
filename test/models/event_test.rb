@@ -2,9 +2,9 @@
 #
 # Table name: events
 #
-#  id                :integer          not null, primary key
+#  id                :bigint           not null, primary key
 #  name              :string
-#  event_category_id :integer          not null
+#  event_category_id :bigint           not null
 #  starts_at         :datetime
 #  ends_at           :datetime
 #  created_at        :datetime         not null

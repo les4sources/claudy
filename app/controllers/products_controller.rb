@@ -41,7 +41,9 @@ class ProductsController < BaseController
     else
       @product = service.product
       set_error_flash(service.product, service.error_message)
-      render :edit
+      render :edit,
+             status: :unprocessable_entity,
+             alert: service.error_message
     end
   end
 
