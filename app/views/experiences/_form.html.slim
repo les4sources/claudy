@@ -4,16 +4,38 @@
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
     = f.text_field :name,
-                   label: "Nom *",
+                   label: "Libellé de l'expérience *",
                    required: true,
                    class: "md:w-1/2 lg:w-2/3"
 
+    = f.number_field :fixed_price,
+                     label: "Montant forfaitaire *",
+                     required: true,
+                     value: ((f.object.fixed_price_cents / 100.0) rescue nil),
+                     class: "w-1/2 md:w-1/2 lg:w-1/4",
+                     step: "0.01"
+
     = f.number_field :price,
-                     label: "Prix",
+                     label: "Prix par participant *",
                      required: true,
                      value: ((f.object.price_cents / 100.0) rescue nil),
                      class: "w-1/2 md:w-1/2 lg:w-1/4",
                      step: "0.01"
+
+    = f.number_field :min_participants,
+                     label: "Nombre de participants minimum *",
+                     required: true,
+                     class: "w-24",
+                     step: "1"
+
+    = f.number_field :max_participants,
+                     label: "Nombre de participants maximum",
+                     class: "w-24",
+                     step: "1"
+
+    = f.text_field :duration,
+                   label: "Durée",
+                   class: "w-1/2 md:w-1/2 lg:w-1/4"
 
     .flex.space-x-4
       - if f.object.photo?
@@ -29,9 +51,10 @@
                    label: "Résumé",
                    class: "md:w-1/2 lg:w-2/3"
 
-    = f.label :description, 
-              "Présentation de l'expérience"
-    = f.rich_text_area :description
+    .sm:space-y-1
+      = f.label :description, 
+                "Présentation de l'expérience"
+      = f.rich_text_area :description
 
     = f.label :human_id, "Porteur·euse d'expérience"
     = f.collection_radio_buttons :human_id, Human.all.order(:name), :id, :name, required: true do |radio_button|

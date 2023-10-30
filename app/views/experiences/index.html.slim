@@ -10,12 +10,16 @@
     thead.text-xs.text-gray-700.uppercase.bg-gray-50
       tr
         th.py-3.px-6[scope="col"]
-        th.py-3.px-6[scope="col"]
-          | Nom
+        th.w-full.py-3.px-6[scope="col"]
+          | Expérience
         th.py-3.px-6[scope="col"]
           | Porteur·euse
-        th.py-3.px-6[scope="col"]
-          | Prix
+        th.w-36.py-3.px-6[scope="col"]
+          | Forfait
+        th.w-36.py-3.px-6[scope="col"]
+          | Prix/participant
+        th.w-36.py-3.px-6[scope="col"]
+          | Durée
     tbody
       - @experiences.each do |experience|
         tr.border-b.bg-white
@@ -30,5 +34,9 @@
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
             - if experience.human.presence
               = experience.human.name
+          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+            = experience.fixed_price
           td.py-4.px-6.text-gray-900.whitespace-nowrap[scope="row"]
             = experience.price
+          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+            = experience.duration

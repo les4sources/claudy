@@ -29,7 +29,12 @@
             dt.text-sm.font-medium.text-gray-500
               | Prix
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @experience.price
+              | #{@experience.fixed_price} + #{@experience.price}/participant
+
+            dt.text-sm.font-medium.text-gray-500
+              | Participants
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @experience.participants
 
             dt.text-sm.font-medium.text-gray-500
               | Résumé

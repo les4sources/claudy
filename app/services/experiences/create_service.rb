@@ -35,7 +35,11 @@ module Experiences
           :description,
           :price,
           :photo,
-          :photo_cache
+          :photo_cache,
+          :fixed_price,
+          :min_participants,
+          :max_participants,
+          :duration
         )
     end
   end
