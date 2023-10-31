@@ -1,5 +1,5 @@
 - current_month = date_range.first.month
-.lg:flex.lg:h-full.lg:flex-col
+.md:flex.md:h-full.md:flex-col
   .md:shadow.md:ring-1.ring-black.ring-opacity-5.lg:flex.lg:flex-auto.lg:flex-col
     - date_range.each_slice(7).with_index do |weekdays, index|
       - if index == 0
@@ -8,7 +8,7 @@
             .flex.justify-center.bg-white.py-2
               span = l(day, format: "%A").capitalize
     .hidden.md:flex.bg-gray-200.text-xs.leading-6.text-gray-700.lg:flex-auto
-      .hidden.w-full.lg:grid.lg:grid-cols-7.lg:gap-px
+      .hidden.w-full.md:grid.md:grid-cols-7.md:gap-px
         - date_range.each_slice(7).with_index do |weekdays, index|
           - weekdays.each do |day|
             - if day.month == Date.today.month
@@ -36,21 +36,24 @@
         - weekdays.each do |day|
           - if day > Date.today
             - if day.month == Date.today.month
-              - day_classes = "relative py-2 px-3 bg-white"
+              - day_classes = "relative py-2 bg-white"
             - else
-              - day_classes = "relative py-2 px-3 bg-gray-50 text-gray-500"
+              - day_classes = "relative py-2 bg-white text-gray-500"
             div(class="#{day_classes}")
               - if day == Date.today
                 - time_classes = "flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 font-semibold text-white"
               - else
                 - time_classes = ""
-              time.text-lg(class="#{time_classes}" datetime="#{day.strftime("%Y-%m-%d")}")
-                - if day.day == 1
-                  | 1er
-                - else
-                  = l(day, format: "%e")
-                - if current_month != day.month
-                  - current_month = day.month
-                  span.font-semibold =< l(day, format: "%B")
+              .mb-2
+                time.text-lg(class="#{time_classes}" datetime="#{day.strftime("%Y-%m-%d")}")
+                  - if day.day == 1
+                    | 1er
+                  - else
+                    = l(day, format: "%e")
+                  - if current_month != day.month
+                    - current_month = day.month
+                    span.font-semibold =< l(day, format: "%B")
+                  - else
+                    span.md:hidden =< l(day, format: "%B")
 
               - passed_block.call day, sorted_events.fetch(day, [])
