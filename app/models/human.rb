@@ -30,6 +30,8 @@ class Human < ApplicationRecord
 
   mount_uploader :photo, HumanAvatarUploader
 
+  default_scope -> { order(:name) }
+
 	validates :name,
             presence: true,
             uniqueness: true

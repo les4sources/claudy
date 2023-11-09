@@ -41,7 +41,10 @@ class PagesController < BaseController
         .includes(:space_booking)
         .where(date: @date, space_booking: { status: "confirmed" })
     )
-    render layout: false
+    @roles = Role.all
+    @humans = Human.all
+    @human_roles = HumanRole.where(date: @date)
+    render layout: !turbo_frame_request?
   end
 
   def dashboard

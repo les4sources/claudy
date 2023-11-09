@@ -1,0 +1,11 @@
+= tag.div id:"human-role-#{date.iso8601}-#{human.id}-#{role.id}", class: "text-xs" do
+  - if human_roles.any? { |hr| hr.human == human && hr.role == role }
+    = button_to humans_role_path(human_roles.find_by(human: human, role: role, date: date)), method: :delete, data: { "tooltip-target": "tooltip-human-#{human.id}" } do
+      = image_tag human.photo_url(:thumb),
+                  class: "inline-block h-10 w-10 rounded-full ring-4 ring-offset-2 ring-green-600",
+                  alt: human.name
+  - else
+    = button_to humans_roles_path(human_id: human.id, role_id: role.id, date: date), data: { "tooltip-target": "tooltip-human-#{human.id}" } do
+      = image_tag human.photo_url(:thumb),
+                  class: "inline-block h-10 w-10 rounded-full opacity-50 hover:opacity-100",
+                  alt: human.name
