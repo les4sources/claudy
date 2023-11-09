@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_10_30_153914) do
+ActiveRecord::Schema[7.0].define(version: 2023_11_09_082805) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -145,6 +145,16 @@ ActiveRecord::Schema[7.0].define(version: 2023_10_30_153914) do
     t.string "duration"
   end
 
+  create_table "human_roles", force: :cascade do |t|
+    t.bigint "human_id", null: false
+    t.bigint "role_id", null: false
+    t.date "date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["human_id"], name: "index_human_roles_on_human_id"
+    t.index ["role_id"], name: "index_human_roles_on_role_id"
+  end
+
   create_table "humans", force: :cascade do |t|
     t.string "name"
     t.string "email"
@@ -227,6 +237,13 @@ ActiveRecord::Schema[7.0].define(version: 2023_10_30_153914) do
     t.datetime "updated_at", precision: nil, null: false
     t.date "date"
     t.datetime "deleted_at", precision: nil
+  end
+
+  create_table "roles", force: :cascade do |t|
+    t.string "name"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "rooms", force: :cascade do |t|
@@ -359,6 +376,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_10_30_153914) do
   add_foreign_key "bundles", "teams", name: "bundles_team_id_fkey"
   add_foreign_key "events", "event_categories", name: "events_event_category_id_fkey"
   add_foreign_key "experiences", "humans", name: "experiences_human_id_fkey"
+  add_foreign_key "human_roles", "humans"
+  add_foreign_key "human_roles", "roles"
   add_foreign_key "lodging_rooms", "lodgings", name: "lodging_rooms_lodging_id_fkey"
   add_foreign_key "lodging_rooms", "rooms", name: "lodging_rooms_room_id_fkey"
   add_foreign_key "projects", "humans", name: "projects_human_id_fkey"

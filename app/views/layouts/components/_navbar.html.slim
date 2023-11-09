@@ -90,6 +90,10 @@ nav.bg-white.border-gray-200.lg:px-4
                       products_path, 
                       class: controller_name == "products" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
           li
+            = link_to "Rôles",
+                      roles_path,
+                      class: controller_name == "roles" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
+          li
             = link_to "Équipe",
                       humans_path,
                       class: controller_name == "humans" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
