@@ -3,6 +3,7 @@
            title: @space_booking.group_or_name,
            secondary: "Du #{@space_booking.from_date} au #{@space_booking.to_date}",
            links: !@space_booking.deleted? ? [ \
+             link_to("Agenda", root_path(date: @space_booking.object.from_date), class: "btn-page-header-no-background"),
              delete_link(@space_booking.object, "Supprimer cette réservation"),
              link_to( \
                "Mettre à jour",
