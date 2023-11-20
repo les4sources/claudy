@@ -13,7 +13,7 @@ class SpaceBookingDecorator < ApplicationDecorator
   end
 
   def calendar_class
-    classes = ["shadow", "border-l-4", "border-l-pink-500", "bg-pink-50"]
+    classes = ["shadow", "border-l-4", "border-l-orange-500", "bg-orange-50"]
     if !object.confirmed?
       classes << ["opacity-50"] 
     end

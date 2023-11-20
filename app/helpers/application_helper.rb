@@ -12,16 +12,16 @@ module ApplicationHelper
     shared_classes = "text-xs font-semibold text-center px-1 py-0.5 rounded"
     case room.level
     when 0
-      content_tag(:span, room.code, class: "#{shared_classes} bg-indigo-100 text-indigo-800")
-    when 1
       content_tag(:span, room.code, class: "#{shared_classes} bg-purple-100 text-purple-800")
+    when 1
+      content_tag(:span, room.code, class: "#{shared_classes} bg-purple-200 text-purple-800")
     when 2
-      content_tag(:span, room.code, class: "#{shared_classes} bg-pink-100 text-pink-800")
+      content_tag(:span, room.code, class: "#{shared_classes} bg-purple-300 text-purple-800")
     end
   end
 
   def space_badge(space)
     shared_classes = "text-xs font-semibold text-center py-0.5 px-1 rounded"
-    content_tag(:span, space.code, class: "#{shared_classes} bg-indigo-100 text-indigo-800")
+    content_tag(:span, space.code, class: "#{shared_classes} bg-orange-100 text-orange-800")
   end
 end

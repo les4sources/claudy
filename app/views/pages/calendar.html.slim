@@ -48,7 +48,7 @@
             strong 
               = link_to space_booking.decorate.group_or_name.html_safe, 
                         space_booking_path(space_booking), 
-                        class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+                        class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6"
             - if space_booking.event.presence
               .text-gray-500.leading-none.mb-2.font-semibold = space_booking.event.name_with_color
 
@@ -78,7 +78,7 @@
             strong 
               = link_to booking.decorate.group_or_name.html_safe, 
                         booking_path(booking), 
-                        class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+                        class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6"
 
             span.text-gray-500 =< booking.dates_counter(date)
 

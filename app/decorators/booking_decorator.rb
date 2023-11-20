@@ -18,14 +18,14 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def calendar_class
-    classes = ["shadow", "border-l-4", "bg-purple-50"]
+    classes = ["shadow", "border-l-4"]
     if !object.confirmed?
       classes << ["opacity-50"] 
     end
     if object.lodging.nil?
-      classes << ["border-teal-500"]
+      classes << ["border-purple-500", "bg-purple-50"]
     else
-      classes << ["border-orange-500"]
+      classes << ["border-emerald-500", "bg-emerald-50"]
     end
     classes.join(" ")
   end
@@ -91,21 +91,21 @@ class BookingDecorator < ApplicationDecorator
       case object.lodging_id
       when 1
         if object.confirmed?
-          h.content_tag(:span, "Chevêche", class: "#{shared_classes} bg-orange-100 text-orange-800")
+          h.content_tag(:span, "Chevêche", class: "#{shared_classes} bg-emerald-100 text-emerald-800")
         else
-          h.content_tag(:span, "Chevêche", class: "#{shared_classes} border border-orange-200 text-orange-800")
+          h.content_tag(:span, "Chevêche", class: "#{shared_classes} border border-emerald-200 text-emerald-800")
         end
       when 2
         if object.confirmed?
-          h.content_tag(:span, "Hulotte", class: "#{shared_classes} bg-amber-100 text-amber-800")
+          h.content_tag(:span, "Hulotte", class: "#{shared_classes} bg-emerald-200 text-emerald-800")
         else
-          h.content_tag(:span, "Hulotte", class: "#{shared_classes} border border-amber-200 text-amber-800")
+          h.content_tag(:span, "Hulotte", class: "#{shared_classes} border border-emerald-200 text-emerald-800")
         end
       when 3
         if object.confirmed?
-          h.content_tag(:span, "Grand-Duc", class: "#{shared_classes} bg-teal-100 text-teal-800")
+          h.content_tag(:span, "Grand-Duc", class: "#{shared_classes} bg-emerald-300 text-emerald-800")
         else
-          h.content_tag(:span, "Grand-Duc", class: "#{shared_classes} border border-teal-200 text-teal-800")
+          h.content_tag(:span, "Grand-Duc", class: "#{shared_classes} border border-emerald-200 text-emerald-800")
         end
       end
     end
