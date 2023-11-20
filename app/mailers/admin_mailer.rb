@@ -3,7 +3,7 @@ class AdminMailer < ApplicationMailer
     @booking = booking
     mail(
       to: "reservation@les4sources.be",
-      subject: "Demande de réservation pour un hébergement: #{@booking.name}",
+      subject: "💁‍♂️ DEMANDE DE RÉSERVATION pour un hébergement: #{@booking.name}",
       tag: "admin_booking_request"
     )
   end
