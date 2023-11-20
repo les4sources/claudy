@@ -34,7 +34,11 @@ export default class extends Controller {
 
   // Close dialog on successful form submission
   submitEnd(event) {
-    if (event.detail.success) this.closeDialog();
+    // add data-keep-turbo-frame-open="true" to avoid frame being closed on Turbo Stream event 
+    // happening inside the frame
+    if (event.srcElement.getElementsByTagName('button')[0].dataset['keepTurboFrameOpen'] != 'true') {
+      if (event.detail.success) this.closeDialog();
+    }
   }
 
   // Close dialog when clicking ESC

@@ -29,7 +29,7 @@ import '@hotwired/turbo-rails';
 // import.meta.globEager('../channels/**/*_channel.js');
 
 import 'flowbite';
-import 'flowbite/src/flowbite.turbo.js';
+import 'flowbite/dist/flowbite.turbo.js';
 
 import '~/utils/setupStimulus.public.js';
 

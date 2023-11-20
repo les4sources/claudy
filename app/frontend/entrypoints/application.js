@@ -31,7 +31,7 @@ import '@hotwired/turbo-rails';
 import 'flowbite';
 import 'flowbite/dist/datepicker';
 import '../utils/datepicker.turbo.min.js';
-import 'flowbite/src/flowbite.turbo.js';
+import 'flowbite/dist/flowbite.turbo.js';
 
 import 'trix';
 import '@rails/actiontext';

@@ -13,7 +13,7 @@ Rails.application.routes.draw do
   resources :experiences
   resources :lodgings
   resources :humans
-  resources :humans_roles
+  resources :human_roles
   resources :notes
   resources :products
   resources :projects

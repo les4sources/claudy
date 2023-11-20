@@ -1,0 +1,12 @@
+- zIndex = human_roles.count * 10 - 10
+- human_roles.each do |human_role|
+  = image_tag human_role.human.photo_url(:thumb),
+              class: "relative z-#{zIndex} inline-block h-10 w-10 rounded-full ring-2 my-2 ring-white",
+              alt: human_role.human.name,
+              data: { "tooltip-target": "tooltip-human-#{human_role.human.id}" }
+  - zIndex = zIndex - 10
+
+javascript:
+  if (typeof(initFlowbite) !== 'undefined') {
+    initFlowbite();
+  }

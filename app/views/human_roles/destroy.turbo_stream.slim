@@ -1,0 +1,14 @@
+= turbo_stream.update "human-role-#{@human_role.date.iso8601}-#{@human_role.human_id}-#{@human_role.role_id}",
+                       partial: "human_roles/edit",
+                       locals: { human: @human_role.human, role: @human_role.role, date: @human_role.date, human_roles: @human_roles }
+= turbo_stream.update "human-roles-#{@human_role.date.iso8601}",
+                       partial: "human_roles/day",
+                       locals: { human_roles: @human_roles.where(role_id: 1) }
+
+- if @human_role.date == Date.today
+  = turbo_stream.update "watchmen-today",
+                         partial: "human_roles/day",
+                         locals: { human_roles: @human_roles.where(role_id: 1) }
+  = turbo_stream.update "feeders-today",
+                         partial: "human_roles/day",
+                         locals: { human_roles: @human_roles.where(role_id: 2) }

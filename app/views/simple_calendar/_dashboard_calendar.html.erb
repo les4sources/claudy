@@ -1,4 +1,4 @@
-<% if @date.month == Date.today.month && @date.year == Date.today.year && (!@grouped_reservations[Date.today].nil? || !@grouped_space_reservations[Date.today].nil?) %>
+<% if @date.month == Date.today.month && @date.year == Date.today.year %>
   <div class="mb-4 pb-1">
     <h2 class="mb-4 font-bold">👋 Aujourd'hui aux 4 Sources</h2>
 
@@ -8,6 +8,25 @@
         <%= render Note.where(date: Date.today).order(id: :desc) %>
       </div>
     <% end %>
+
+    <div class="flex items-center -space-x-6">
+      <% watchmen = HumanRole.where(date: Date.today, role_id: 1) %>
+      <% if watchmen.any? %>
+        <span class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-sm font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">Veilleur·euse·s<span class="w-5"></span></span>
+        <div id="watchmen-today" class="text-xs isolate flex -space-x-2 px-1 overflow-hidden">
+          <%= render partial: "human_roles/day", locals: { human_roles: watchmen } %>
+        </div>
+      <% end %>
+
+      <% feeders = HumanRole.where(date: Date.today, role_id: 2) %>
+      <% if feeders.any? %>
+        <div class="w-14"></div>
+        <span class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-sm font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">Nourrissage<span class="w-5"></span></span>
+        <div id="feeders-today" class="text-xs isolate flex -space-x-2 px-1 overflow-hidden">
+          <%= render partial: "human_roles/day", locals: { human_roles: feeders } %>
+        </div>
+      <% end %>
+    </div>
 
     <div class="flex mb-4 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
       <% if !@grouped_reservations[Date.today].nil? %>
@@ -88,6 +107,12 @@
                     <% end %>
                   </div>
                 </div>
+
+                <% if day >= Date.today %>
+                  <div id="human-roles-<%= day.iso8601 %>" class="text-xs isolate flex -space-x-2 px-1 overflow-hidden">
+                    <%= render partial: "human_roles/day", locals: { human_roles: HumanRole.where(date: day, role_id: 1) } %>
+                  </div>
+                <% end %>
 
                 <div id="notes-<%= day %>" class="<%= day < Date.today ? "opacity-75" : nil %>">
                   <%= render Note.where(date: day).order(id: :desc) %>

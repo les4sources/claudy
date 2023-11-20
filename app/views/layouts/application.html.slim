@@ -12,11 +12,11 @@ html(lang="fr")
     = vite_client_tag
     = vite_javascript_tag "application", "data-turbo-track": "reload"
   body.bg-teal-50
-    / = turbo_frame_tag "modal", target: "_top"
-    = turbo_frame_tag "modal"
-
     = render "layouts/components/tooltips"
     = render "humans/tooltips"
+
+    / = turbo_frame_tag "modal", target: "_top"
+    = turbo_frame_tag "modal"
 
     = render "layouts/components/navbar"
 
