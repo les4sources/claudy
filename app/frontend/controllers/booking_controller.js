@@ -244,7 +244,7 @@ export default class extends Controller {
 
   readyForPriceCalculation() {
     if (this.forLodging()) {
-      return this.getFromDate().isValid() && this.getToDate().isValid() && this.getPeopleCount() > 0 && this.getSelectedLodging() !== null
+      return this.getFromDate().isValid() && this.getToDate().isValid() && this.getSelectedLodging() !== null
     } else {
       return this.getFromDate().isValid() && this.getToDate().isValid() && this.getPeopleCount() > 0
     }
