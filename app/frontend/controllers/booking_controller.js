@@ -106,7 +106,7 @@ export default class extends Controller {
       this.toDateInputTarget.value = dayAfterFromDate.format('YYYY-MM-DD')
     }
     if (this.getToDate() <= this.getFromDate()) {
-      this.toDateInputTarget.value = ""
+      this.toDateInputTarget.value = dayAfterFromDate.format('YYYY-MM-DD')
     }
   }
 
