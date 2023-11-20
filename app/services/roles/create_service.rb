@@ -19,6 +19,8 @@ module Roles
 
     def run!(params = {})
       role.attributes = role_params(params)
+      # Remove empty human ID
+      role.role_team.delete("")
       role.save!
       true
     end
@@ -29,7 +31,8 @@ module Roles
       params
         .require(:role)
         .permit(
-          :name
+          :name,
+          role_team: []
         )
     end
   end

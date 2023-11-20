@@ -1,7 +1,7 @@
 = render TurboModal::Component.new(title: l(@date), width: :lg, ) do
 
   / Roles
-  .mt-4.space-y-4
+  .mt-4.space-y-8
     - @roles.each do |role|
       .flex.items-center
         .flex-none.w-48
@@ -9,7 +9,8 @@
         .flex-initial
           .flex.space-x-4
             - @humans.all.each do |human|
-              = render "human_roles/edit", human: human, role: role, date: @date, human_roles: @human_roles
+              - if role.role_team.include?(human.id.to_s)
+                = render "human_roles/edit", human: human, role: role, date: @date, human_roles: @human_roles
 
   / Rooms
   .mt-4.flow-root

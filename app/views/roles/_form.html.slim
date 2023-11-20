@@ -8,4 +8,16 @@
                    required: true,
                    class: "md:w-1/2 lg:w-2/3"
 
+    .space-y-2
+      = f.label :role_team,
+                "Ce rôle est assignable à"
+      = f.collection_check_boxes :role_team, 
+                                 Human.all.order(:name),
+                                 :id, :name do |cb|
+        .relative.flex.items-start
+          .flex.h-5.items-center
+            = cb.check_box(checked: f.object.role_team.include?(cb.object.id.to_s), class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500")
+          .ml-3.text-sm
+            == cb.label(class: "font-medium text-gray-900")
+
 hr
