@@ -7,6 +7,7 @@
 #  deleted_at :datetime
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
+#  role_team  :jsonb
 #
 class Role < ApplicationRecord
   has_paper_trail

@@ -1,5 +1,22 @@
 = f.text_area :body,
               rows: 3
 
+.space-y-2
+  = f.label :color,
+            "Couleur"
+  .flex.space-x-2
+    = f.collection_radio_buttons :color,
+                                 [ \
+                                   [raw("<span class=\"px-2 py-1 bg-yellow-200 rounded-md\">Jaune</span>"), "yellow"], 
+                                   [raw("<span class=\"px-2 py-1 bg-pink-200 rounded-md\">Rose</span>"), "pink"], 
+                                   [raw("<span class=\"px-2 py-1 bg-blue-200 rounded-md\">Bleu</span>"), "blue"], 
+                                   [raw("<span class=\"px-2 py-1 bg-green-200 rounded-md\">Vert</span>"), "green"] \
+                                 ],
+                                 :last, :first, 
+                                 required: true do |radio_button|
+      .flex.items-center
+        = radio_button.radio_button
+        = radio_button.label(class: "ml-2 block text-sm font-medium text-gray-700")
+
 .hidden
   = f.text_field :date

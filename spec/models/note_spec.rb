@@ -8,6 +8,7 @@
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
 #  deleted_at :datetime
+#  color      :string
 #
 require 'rails_helper'
 

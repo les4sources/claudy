@@ -48,13 +48,22 @@ module.exports = {
       'bg-teal-300',
       'bg-cyan-300',
       'bg-sky-300',
+      'bg-green-300',
       'bg-blue-300',
       'bg-indigo-300',
       'bg-violet-300',
       'bg-purple-300',
       'bg-fuchsia-300',
       'bg-pink-300',
-      'bg-rose-300'
+      'bg-rose-300',
+      'text-yellow-900',
+      'text-pink-900',
+      'text-blue-900',
+      'text-green-900',
+      'bg-yellow-500',
+      'bg-pink-500',
+      'bg-blue-500',
+      'bg-green-500',
     ],
   }
 }

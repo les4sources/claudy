@@ -5,7 +5,7 @@ class NotesController < BaseController
   layout "modal"
 
   def new
-    @note = Note.new(date: Date.parse(params[:date]))
+    @note = Note.new(date: Date.parse(params[:date]), color: "yellow")
   end
 
   def create
@@ -59,7 +59,7 @@ class NotesController < BaseController
   end
 
   def note_params
-    params.require(:note).permit(:body, :date)
+    params.require(:note).permit(:body, :color, :date)
   end
 
   def set_presenters

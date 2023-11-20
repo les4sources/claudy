@@ -1,8 +1,8 @@
-.mt-2.p-2.text-xs.bg-yellow-200.font-medium.rounded-sm.shadow-md.border.border-yellow-300(id="#{dom_id note}" data-controller="notes")
+.mt-2.p-2.text-xs.font-medium.rounded-sm.shadow-md.border(id="#{dom_id note}" class="bg-#{note.color || 'yellow'}-200 border-#{note.color || 'yellow'}-300" data-controller="notes")
   = link_to edit_note_path(note), data: { turbo_frame: "modal" } do
     .block(data-notes-target="truncatedContent")
       == simple_format(note.body.truncate(100))
     .hidden(data-notes-target="fullContent")
       == simple_format(note.body)
-  a(href="#" onclick="return false;" data-action="click->notes#showMore" data-notes-target="moreLink" class="flex -m-2 mt-1 text-center rounded-b-sm bg-yellow-300 px-2 py-1 text-yellow-900 hover:text-white hover:bg-yellow-500")
+  a(href="#" onclick="return false;" data-action="click->notes#showMore" data-notes-target="moreLink" class="flex -m-2 mt-1 text-center rounded-b-sm bg-#{note.color || 'yellow'}-300 px-2 py-1 text-#{note.color || 'yellow'}-900 hover:text-white hover:bg-#{note.color || 'yellow'}-500")
     | afficher la suite
