@@ -26,14 +26,20 @@ class SpaceBookingsController < BaseController
   end
 
   def new
-    @space_booking = SpaceBooking.new(
-      paid_amount: 0,
-      advance_amount: 0,
-      deposit_amount: 0,
-      payment_status: "pending",
-      payment_method: "bank_transfer",
-      from_date: params.fetch(:date, nil)
-    )
+    if !params[:source_space_booking_id].nil?
+      duplication_service = SpaceBookings::DuplicateService.new
+      duplication_service.run!(source_space_booking_id: params[:source_space_booking_id])
+      @space_booking = duplication_service.space_booking
+    else
+      @space_booking = SpaceBooking.new(
+        paid_amount: 0,
+        advance_amount: 0,
+        deposit_amount: 0,
+        payment_status: "pending",
+        payment_method: "bank_transfer",
+        from_date: params.fetch(:date, nil)
+      )
+    end
     @spaces = Space.all
   end
 

@@ -104,6 +104,10 @@ module Bookable
     return true
   end
 
+  def unset_lodging_id
+    @booking.lodging_id = nil
+  end
+
   def booking_params(params)
     params
       .require(:booking)

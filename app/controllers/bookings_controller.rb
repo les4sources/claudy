@@ -18,16 +18,22 @@ class BookingsController < BaseController
   end
 
   def new
-    @booking = Booking.new(
-      booking_type: "lodging",
-      adults: 0,
-      children: 0,
-      babies: 0,
-      platform: "direct",
-      tier_lodgings: "neutre",
-      tier_rooms: "neutre",
-      from_date: params.fetch("date", nil)
-    )
+    if !params[:source_booking_id].nil?
+      duplication_service = Bookings::DuplicateService.new
+      duplication_service.run!(source_booking_id: params[:source_booking_id])
+      @booking = duplication_service.booking
+    else
+      @booking = Booking.new(
+        booking_type: "lodging",
+        adults: 0,
+        children: 0,
+        babies: 0,
+        platform: "direct",
+        tier_lodgings: "neutre",
+        tier_rooms: "neutre",
+        from_date: params.fetch("date", nil)
+      )
+    end
     @lodgings = Lodging.all
   end
 

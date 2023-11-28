@@ -26,6 +26,7 @@ module Bookings
       return false if !@booking.valid?
       set_invoice_status
       set_tier
+      unset_lodging_id if @booking.booking_type == "rooms"
       rooms = get_rooms
       if !rooms.nil? && available?(rooms)
         build_reservations(rooms)

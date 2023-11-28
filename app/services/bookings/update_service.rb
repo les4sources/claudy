@@ -23,6 +23,7 @@ module Bookings
     def run!(params = {})
       @booking.attributes = booking_params(params)
       return false if !@booking.valid?
+      unset_lodging_id if @booking.booking_type == "rooms"
       ActiveRecord::Base.transaction do
         # delete previous reservations as we will re-create them
         @booking.reservations.destroy_all
