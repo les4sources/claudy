@@ -159,4 +159,8 @@ class Booking < ApplicationRecord
   def pending?
     status == "pending"
   end
+
+  def undefined_price?
+    tier == "non défini"
+  end
 end

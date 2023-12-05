@@ -1,0 +1,89 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Comptabilité"
+
+h2.mt-8.mb-4.text-lg.font-medium.tracking-tight.text-gray-900 Hébergements dont le montant est à définir
+
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-3.w-2[scope="col"]
+          | &nbsp;
+        th.py-3.px-6.w-64[scope="col"]
+          | Nom 
+        th.py-3.px-6.hidden.md:table-cell[scope="col"]
+          | Du 
+        th.py-3.px-6.hidden.md:table-cell[scope="col"]
+          | Au 
+        th.py-3.px-6[scope="col"]
+          | Hébergement
+        th.py-3.px-6[scope="col"]
+          | Paiement 
+    tbody
+      - @bookings.each do |booking|
+        tr.border-b(class="#{booking.tr_class}")
+          td.py-4.px-6(class="#{booking.tr_border_class}")
+            = booking.status_emoji
+          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+            strong(class="#{booking.declined? ? "line-through" : nil}")
+              = link_to booking.group_or_name, 
+                        booking_path(booking),
+                        class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+            .md:hidden.mt-1.text-gray-900
+              = booking.date_range
+          td.py-4.px-6.hidden.md:table-cell
+            = booking.from_date
+          td.py-4.px-6.hidden.md:table-cell
+            = booking.to_date
+          td.py-4.px-6.space-x-1
+            - if !booking.lodging.nil?
+              = booking.lodging_badge(font_size: "sm")
+            - else
+              = booking.rooms_badges(font_size: "sm")
+          td.py-4.px-6
+            - if booking.confirmed?
+              = booking.payment_badge
+
+h2.mt-8.mb-4.text-lg.font-medium.tracking-tight.text-gray-900 Réservations d'espaces dont le montant est à définir
+
+= render "spaces/tooltips"
+
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-3.w-2[scope="col"]
+          | &nbsp;
+        th.py-3.px-6.w-48[scope="col"]
+          | Nom 
+        th.py-3.px-6.hidden.md:table-cell[scope="col"]
+          | Dates
+        th.py-3.px-6[scope="col"]
+          | Période 
+        th.py-3.px-6[scope="col"]
+          | Espaces
+        th.py-3.px-6[scope="col"]
+          | Paiement 
+    tbody
+      - @space_bookings.each do |space_booking|
+        tr.border-b(class="#{space_booking.tr_class}")
+          td.py-4.px-6(class="#{space_booking.tr_border_class}")
+            = space_booking.status_emoji
+          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+            strong(class="#{space_booking.declined? ? "line-through" : nil}")
+              = link_to space_booking.group_or_name, 
+                        space_booking_path(space_booking),
+                        class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+            .md:hidden.mt-1.text-gray-900
+              = space_booking.date_range
+          td.py-4.px-6.hidden.md:table-cell
+            = space_booking.from_date
+            br
+            | → #{space_booking.to_date}
+          td.py-4.px-6
+            = space_booking.duration
+          td.py-4.px-6.space-x-1
+            = space_booking.spaces_badges(font_size: "xs")
+          td.py-4.px-6
+            = space_booking.payment_badge

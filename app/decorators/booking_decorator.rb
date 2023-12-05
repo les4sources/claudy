@@ -159,6 +159,8 @@ class BookingDecorator < ApplicationDecorator
       "bg-yellow-100"
     when "paid"
       "bg-green-100"
+    else
+      "bg-white"
     end
   end
 
@@ -203,7 +205,9 @@ class BookingDecorator < ApplicationDecorator
     when "paid"
       h.content_tag(:span, "Payée", class: "#{shared_classes} bg-green-200 text-green-800")
     else
-      h.content_tag(:span, object.payment_status, class: "#{shared_classes} bg-gray-100 text-gray-800")
+      if object.payment_status.presence
+        h.content_tag(:span, object.payment_status, class: "#{shared_classes} bg-gray-100 text-gray-800")
+      end
     end
   end
 
@@ -226,7 +230,11 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def price
-    h.humanized_money_with_symbol(object.price)
+    if object.undefined_price?
+      "à définir"
+    else
+      h.humanized_money_with_symbol(object.price) 
+    end
   end
 
   def public__name
