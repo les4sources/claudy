@@ -3,14 +3,14 @@
 
 .space-y-2
   = f.label :color,
-            "Couleur"
-  .flex.space-x-2
+            "Type de note"
+  .space-y-4
     = f.collection_radio_buttons :color,
                                  [ \
-                                   [raw("<span class=\"px-2 py-1 bg-yellow-200 rounded-md\">Jaune</span>"), "yellow"], 
-                                   [raw("<span class=\"px-2 py-1 bg-pink-200 rounded-md\">Rose</span>"), "pink"], 
-                                   [raw("<span class=\"px-2 py-1 bg-blue-200 rounded-md\">Bleu</span>"), "blue"], 
-                                   [raw("<span class=\"px-2 py-1 bg-green-200 rounded-md\">Vert</span>"), "green"] \
+                                   [raw("<span class=\"px-2 py-1 bg-yellow-200 rounded-md border border-white hover:border hover:border-yellow-500\">Nettoyages</span>"), "yellow"], 
+                                   [raw("<span class=\"px-2 py-1 bg-pink-200 rounded-md border border-white hover:border hover:border-pink-500\">Activités</span>"), "pink"], 
+                                   [raw("<span class=\"px-2 py-1 bg-green-200 rounded-md border border-white hover:border hover:border-green-500\">Locations bivouac/van</span>"), "green"],
+                                   [raw("<span class=\"px-2 py-1 bg-blue-200 rounded-md border border-white hover:border hover:border-blue-500\">Informations/Autres</span>"), "blue"] \
                                  ],
                                  :last, :first, 
                                  required: true do |radio_button|
