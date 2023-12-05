@@ -12,6 +12,17 @@
               - if role.role_team.include?(human.id.to_s)
                 = render "human_roles/edit", human: human, role: role, date: @date, human_roles: @human_roles
 
+  / Availabilities
+  .mt-8.space-y-8
+    .flex
+      .flex-none.w-48
+        | Gites disponibles
+        .text-xs.text-gray-500.mr-2 Contacter Michael pour rendre des gites non disponibles à cette date
+      .flex-initial
+        .flex.space-x-4
+          - @lodgings.each do |lodging|
+            = lodging.availability_badge(@date)
+
   / Rooms
   .mt-4.flow-root
     .-mx-4.-my-2.overflow-x-auto.sm:-mx-6.lg:-mx-8

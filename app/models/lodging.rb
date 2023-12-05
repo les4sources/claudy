@@ -17,20 +17,30 @@ class Lodging < ApplicationRecord
   has_many :lodging_rooms
   has_many :rooms, through: :lodging_rooms
   has_many :bookings
+  has_many :unavailabilities
 
   monetize :price_night_cents
 
   has_soft_deletion default_scope: true
 
+  def available_between?(from_date, to_date)
+    # none of the lodging rooms has a confirmed reservation
+    Reservation.includes(:booking)
+               .where(
+                 date: from_date..to_date,
+                 room: rooms.pluck(:id),
+                 booking: { status: "confirmed" }
+               ).none? && unavailabilities.where(date: from_date..to_date).none?
+  end
+
   def available_on?(date)
     # none of the lodging rooms has a confirmed reservation
-    Reservation
-      .includes(:booking)
-      .where(
-        date: date,
-        room: rooms.pluck(:id),
-        booking: { status: "confirmed" }
-      ).none?
+    Reservation.includes(:booking)
+               .where(
+                 date: date,
+                 room: rooms.pluck(:id),
+                 booking: { status: "confirmed" }
+               ).none? && unavailabilities.where(date: date).none?
   end
 
   def form_label

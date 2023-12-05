@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_11_20_160330) do
+ActiveRecord::Schema[7.0].define(version: 2023_12_05_123722) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -351,6 +351,14 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_20_160330) do
     t.datetime "updated_at", precision: nil, null: false
   end
 
+  create_table "unavailabilities", force: :cascade do |t|
+    t.date "date"
+    t.bigint "lodging_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["lodging_id"], name: "index_unavailabilities_on_lodging_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
@@ -392,5 +400,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_11_20_160330) do
   add_foreign_key "space_reservations", "spaces", name: "space_reservations_space_id_fkey"
   add_foreign_key "tasks", "bundles", name: "tasks_bundle_id_fkey"
   add_foreign_key "tasks", "projects", name: "tasks_project_id_fkey"
+  add_foreign_key "unavailabilities", "lodgings"
   add_foreign_key "users", "humans", name: "users_human_id_fkey"
 end

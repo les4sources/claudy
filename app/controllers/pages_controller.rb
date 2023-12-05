@@ -44,6 +44,7 @@ class PagesController < BaseController
     @roles = Role.all
     @humans = Human.all
     @human_roles = HumanRole.where(date: @date)
+    @lodgings = LodgingDecorator.decorate_collection(Lodging.all)
     render layout: !turbo_frame_request?
   end
 
