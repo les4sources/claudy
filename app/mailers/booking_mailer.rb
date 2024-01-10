@@ -35,14 +35,14 @@ class BookingMailer < ApplicationMailer
     )
   end
 
-  def booking_paid(booking)
-    @booking = booking
-    mail(
-      to: booking.email,
-      subject: "Nous avons reçu votre paiement 🧾",
-      tag: "booking_paid"
-    )
-  end
+  # def booking_paid(booking)
+  #   @booking = booking
+  #   mail(
+  #     to: booking.email,
+  #     subject: "Nous avons reçu votre paiement 🧾",
+  #     tag: "booking_paid"
+  #   )
+  # end
 
   def booking_partially_paid(booking)
     @booking = booking

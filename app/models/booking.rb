@@ -133,13 +133,13 @@ class Booking < ApplicationRecord
 
   def notify_customer_on_update
     notify_on_status_change if saved_change_to_status? || saved_change_to_email?
-    notify_on_payment_status_change if saved_change_to_payment_status? || saved_change_to_email?
+    # notify_on_payment_status_change if saved_change_to_payment_status? || saved_change_to_email?
   end
 
-  def notify_on_payment_status_change
-    BookingMailer.booking_partially_paid(self).deliver_now if partially_paid?
-    BookingMailer.booking_paid(self).deliver_now if paid?
-  end
+  # def notify_on_payment_status_change
+  #   BookingMailer.booking_partially_paid(self).deliver_now if partially_paid?
+  #   BookingMailer.booking_paid(self).deliver_now if paid?
+  # end
 
   def notify_on_status_change
     BookingMailer.booking_confirmed(self).deliver_now if confirmed?

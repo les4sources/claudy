@@ -35,14 +35,14 @@ class SpaceBookingMailer < ApplicationMailer
     )
   end
 
-  def space_booking_paid(space_booking)
-    @space_booking = space_booking
-    mail(
-      to: space_booking.email,
-      subject: "Nous avons reçu votre paiement 🧾",
-      tag: "space_booking_paid"
-    )
-  end
+  # def space_booking_paid(space_booking)
+  #   @space_booking = space_booking
+  #   mail(
+  #     to: space_booking.email,
+  #     subject: "Nous avons reçu votre paiement 🧾",
+  #     tag: "space_booking_paid"
+  #   )
+  # end
 
   def space_booking_partially_paid(space_booking)
     @space_booking = space_booking

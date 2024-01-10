@@ -128,20 +128,20 @@ class SpaceBooking < ApplicationRecord
     # payment notification
     if saved_change_to_payment_status? && payment_status == "partially_paid"
       SpaceBookingMailer.space_booking_partially_paid(self).deliver_now
-    elsif saved_change_to_payment_status? && payment_status == "paid"
-      SpaceBookingMailer.space_booking_paid(self).deliver_now
+    # elsif saved_change_to_payment_status? && payment_status == "paid"
+      # SpaceBookingMailer.space_booking_paid(self).deliver_now
     end
   end
 
   def notify_customer_on_update
     notify_on_status_change if saved_change_to_status? || saved_change_to_email?
-    notify_on_payment_status_change if saved_change_to_payment_status? || saved_change_to_email?
+    # notify_on_payment_status_change if saved_change_to_payment_status? || saved_change_to_email?
   end
 
-  def notify_on_payment_status_change
-    SpaceBookingMailer.space_booking_partially_paid(self).deliver_now if partially_paid?
-    SpaceBookingMailer.space_booking_paid(self).deliver_now if paid?
-  end
+  # def notify_on_payment_status_change
+  #   SpaceBookingMailer.space_booking_partially_paid(self).deliver_now if partially_paid?
+  #   SpaceBookingMailer.space_booking_paid(self).deliver_now if paid?
+  # end
 
   def notify_on_status_change
     SpaceBookingMailer.space_booking_confirmed(self).deliver_now if confirmed?
