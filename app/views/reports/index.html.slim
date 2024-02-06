@@ -1,6 +1,10 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
-           title: "Reporting financier (#{@year})"
+           title: "Reporting financier (#{@year})",
+           links: [ \
+             link_to(button_label_with_icon(@year - 1, "arrow_small_left"), params.permit(:year).merge(year: @year - 1), class: "btn-page-header-with-icon"),
+             link_to(button_label_with_icon(@year + 1, "arrow_small_right", right: true), params.permit(:year).merge(year: @year + 1), class: "btn-page-header-with-icon") \
+           ]
 
 .overflow-hidden.shadow.ring-1.ring-black.ring-opacity-5.sm:rounded-lg.mt-4
   table.min-w-full.divide-y.divide-gray-300
