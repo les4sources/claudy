@@ -16,5 +16,6 @@ class AccountingController < BaseController
     @menu_presenter = Components::MenuPresenter.new(
       active_primary: "accounting"
     )
+    @accounting_view = true
   end
 end
