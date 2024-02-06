@@ -13,8 +13,10 @@
         th.py-3.5.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-6[scope="col"]
           | Mois
         th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
+          | &nbsp;
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-teal-700[scope="col"]
           | Hébergements
-        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-fuchsia-700[scope="col"]
           | Espaces
         th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
           | Total Accueil
@@ -26,18 +28,31 @@
         tr
           td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.font-medium.text-gray-900.sm:pl-6
             = l(Date.new(@year, month, 1), format: :month_year).capitalize
-          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
+          td.whitespace-nowrap.px-3.pr-12.py-4.text-sm.text-gray-500
+            - @lodgings.each do |lodging|
+              div
+                .flex.space-x-2.items-center
+                  div = lodging.monthly_reports_bar(Date.new(@year, month, 1))
+                  .text-xs.text-teal-700 = lodging.name
+            .mb-2
+            - @spaces.each do |space|
+              div
+                .flex.space-x-2.items-center
+                  div = space.monthly_reports_bar(Date.new(@year, month, 1))
+                  .text-xs.text-fuchsia-700 = space.name
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-teal-700.bg-teal-100
             - month_revenues_for_bookings = @revenues_by_month_for_bookings[month] || 0.0
             - bookings_total = bookings_total + month_revenues_for_bookings
             = number_to_currency(month_revenues_for_bookings / 100.0)
-          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-fuchsia-700.bg-fuchsia-100
             - month_revenues_for_space_bookings = @revenues_by_month_for_space_bookings[month] || 0.0
             - space_bookings_total = space_bookings_total + month_revenues_for_space_bookings
             = number_to_currency(month_revenues_for_space_bookings / 100.0)
-          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500.bg-teal-100
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-700.bg-gray-100
             = number_to_currency((month_revenues_for_bookings + month_revenues_for_space_bookings) / 100.0)
-    tfoot.bg-teal-300
+    tfoot.bg-blue-300
       tr.border-t-2.border-t-gray-900
+        td
         td
         td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
           = number_to_currency(bookings_total / 100.0, unit: "€")

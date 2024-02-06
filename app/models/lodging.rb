@@ -43,6 +43,15 @@ class Lodging < ApplicationRecord
                ).none? && unavailabilities.where(date: date).none?
   end
 
+  def booked_on?(date)
+    Reservation.includes(:booking)
+               .where(  
+                 date: date,
+                 room: rooms.pluck(:id),
+                 booking: { status: "confirmed" }
+               ).exists?
+  end
+
   def form_label
     "#{name} (#{summary})"
   end

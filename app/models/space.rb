@@ -14,4 +14,13 @@ class Space < ApplicationRecord
   has_many :space_reservations
 
   has_soft_deletion default_scope: true
+
+  def booked_on?(date)
+    SpaceReservation.includes(:space_booking)
+                    .where(
+                      date: date,
+                      space: self.id,
+                      space_booking: { status: "confirmed" }
+                    ).exists?
+  end
 end

@@ -17,6 +17,12 @@ class ReportsController < BaseController
       Booking.where(status: 'confirmed', from_date: Date.new(@year, 1, 1).beginning_of_year..Date.new(@year, 1, 1).end_of_year)
                   .group(:platform)
                   .sum(:price_cents)
+    @lodgings = LodgingDecorator.decorate_collection(
+      Lodging.where(show_on_reports: true)
+    )
+    @spaces = SpaceDecorator.decorate_collection(
+      Space.all
+    )
   end
 
   private
