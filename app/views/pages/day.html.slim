@@ -1,4 +1,11 @@
-= render TurboModal::Component.new(title: l(@date), width: :lg, ) do
+= render TurboModal::Component.new( \
+            title: l(@date),
+            width: :lg,
+            buttons: [ \
+              link_to(button_label_with_icon(nil, "arrow_small_left"), day_details_path(date: @date.yesterday.strftime("%Y-%m-%d")), class: "btn-page-header-with-icon btn-xs", data: { turbo_frame: "modal" }),
+              link_to(button_label_with_icon(nil, "arrow_small_right", right: true), day_details_path(date: @date.tomorrow.strftime("%Y-%m-%d")), class: "btn-page-header-with-icon btn-xs", data: { turbo_frame: "modal" }) \
+            ] \
+          ) do
 
   / Roles
   .mt-4.space-y-8
