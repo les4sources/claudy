@@ -18,6 +18,8 @@ h2.mt-6.text-lg.font-bold Occupation et revenus
           | &nbsp;
         th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
           | Réservations
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
+          | Hébergés
         th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col" colspan="2"]
           | Taux d'occupation
         th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col" colspan="2"]
@@ -26,16 +28,17 @@ h2.mt-6.text-lg.font-bold Occupation et revenus
           | Durée moyenne des séjours
         th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
           | Nombre moyen de personnes logées
-      tr
-        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"] &nbsp;
-        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"] &nbsp;
-        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"] &nbsp;
-        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"] Total
-        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-500[scope="col"] WE
-        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"] Nuitée
-        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-500[scope="col"] Réservation
-        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"] &nbsp;
-        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"] &nbsp;
+      tr.text-xs.font-semibold.text-left
+        th.px-3.py-3.5.w-48.text-gray-900[scope="col"] &nbsp;
+        th.px-3.py-3.5.w-48.text-gray-900[scope="col"] &nbsp;
+        th.px-3.py-3.5.w-48.text-gray-900[scope="col"] &nbsp;
+        th.px-3.py-3.5.w-48.text-gray-900[scope="col"] &nbsp;
+        th.px-3.py-3.5.w-48.text-gray-900[scope="col"] Total
+        th.px-3.py-3.5.w-48.text-gray-500[scope="col"] WE
+        th.px-3.py-3.5.w-48.text-gray-900[scope="col"] Nuitée
+        th.px-3.py-3.5.w-48.text-gray-500[scope="col"] Réservation
+        th.px-3.py-3.5.w-48.text-gray-900[scope="col"] &nbsp;
+        th.px-3.py-3.5.w-48.text-gray-900[scope="col"] &nbsp;
     tbody.divide-y.divide-gray-200.bg-white
       - bookings_total = 0.0
       - full_total = 0.0
@@ -49,6 +52,8 @@ h2.mt-6.text-lg.font-bold Occupation et revenus
                 = @lodging.monthly_reports_bar(Date.new(@year, month, 1))
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-700
             = @lodging.count_bookings(Date.new(@year, month, 1), Date.new(@year, month, 1).end_of_month)
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-700
+            = @lodging.count_people(Date.new(@year, month, 1), Date.new(@year, month, 1).end_of_month)
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-700
             = @lodging.occupancy_rate(Date.new(@year, month, 1), Date.new(@year, month, 1).end_of_month)
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
@@ -67,6 +72,8 @@ h2.mt-6.text-lg.font-bold Occupation et revenus
         td &nbsp;
         td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
           = @lodging.count_bookings(Date.new(@year, 1, 1), Date.new(@year, 12, 31))
+        td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
+          = @lodging.count_people(Date.new(@year, 1, 1), Date.new(@year, 12, 31))
         td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
           = @lodging.occupancy_rate(Date.new(@year, 1, 1), Date.new(@year, 12, 31))
         td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900

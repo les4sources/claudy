@@ -31,7 +31,7 @@ class LodgingDecorator < ApplicationDecorator
     if people_count.zero?
       "-"
     else
-      "#{people_count} #{"personne".pluralize(people_count)}"
+      "#{people_count} pers."
     end
   end
 
@@ -41,6 +41,15 @@ class LodgingDecorator < ApplicationDecorator
 
   def average_night_revenue(start_date, end_date)
     h.number_to_currency(object.average_night_revenue(start_date, end_date) / 100.0)
+  end
+
+  def count_people(start_date, end_date)
+    people_count = object.count_people(start_date, end_date)
+    if people_count.zero?
+      "-"
+    else
+      "#{people_count} pers."
+    end
   end
 
   def monthly_reports_bar(date)

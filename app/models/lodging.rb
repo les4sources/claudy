@@ -101,6 +101,12 @@ class Lodging < ApplicationRecord
     bookings_for_date_range(start_date, end_date).count
   end
 
+  def count_people(start_date, end_date)
+    bookings_for_date_range(start_date, end_date).collect { |b|
+      b.adults + b.children
+    }.sum
+  end
+
   def form_label
     "#{name} (#{summary})"
   end
