@@ -27,6 +27,7 @@ Rails.application.routes.draw do
 
   resources :bookings do
     get "past", on: :collection
+    resources :payments
   end
 
   resources :space_bookings do

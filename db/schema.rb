@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_02_28_103455) do
+ActiveRecord::Schema[7.0].define(version: 2024_02_28_182631) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -198,6 +198,17 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_28_103455) do
     t.datetime "updated_at", precision: nil, null: false
     t.datetime "deleted_at", precision: nil
     t.string "color"
+  end
+
+  create_table "payments", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.string "payment_method"
+    t.string "status"
+    t.datetime "deleted_at", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "amount_cents", default: 0, null: false
+    t.index ["booking_id"], name: "index_payments_on_booking_id"
   end
 
   create_table "products", force: :cascade do |t|
@@ -393,6 +404,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_28_103455) do
   add_foreign_key "human_roles", "roles"
   add_foreign_key "lodging_rooms", "lodgings", name: "lodging_rooms_lodging_id_fkey"
   add_foreign_key "lodging_rooms", "rooms", name: "lodging_rooms_room_id_fkey"
+  add_foreign_key "payments", "bookings"
   add_foreign_key "projects", "humans", name: "projects_human_id_fkey"
   add_foreign_key "reservations", "bookings", name: "reservations_booking_id_fkey"
   add_foreign_key "reservations", "rooms", name: "reservations_room_id_fkey"

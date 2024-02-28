@@ -1,0 +1,10 @@
+.py-2(id="#{dom_id payment}")
+  .flex.place-content-between
+    .font-semibold 
+      | 💶
+      =< payment.amount
+      = link_to "modifier", 
+                edit_booking_payment_path(@booking, payment), 
+                data: { turbo_frame: "modal" },
+                class: "claudy-link ml-2 text-xs"
+    .font-light = payment.payment_method

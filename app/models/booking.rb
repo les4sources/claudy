@@ -49,6 +49,7 @@ class Booking < ApplicationRecord
   # Relationships
   has_many :reservations, dependent: :destroy
   has_many :rooms, through: :reservations
+  has_many :payments
   belongs_to :lodging, optional: true
 
   monetize :price_cents, allow_nil: true

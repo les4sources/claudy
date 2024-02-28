@@ -1,0 +1,16 @@
+= render TurboModal::Component.new(title: "Paiement", width: :sm) do
+  = form_with model: [@booking, @payment] do |f|
+    .space-y-8.divide-y.divide-gray-200.sm:space-y-5
+      .space-y-6.sm:space-y-5
+        = render "form", f: f
+
+    = f.actions do
+      = link_to "Supprimer ce paiement", 
+                booking_payment_path(@booking, @payment), 
+                class: "text-xs font-semibold text-red-500",
+                data: { \
+                  turbo_method: :delete,
+                  action: "turbo-modal--component#closeDialog" \
+                }
+      = f.submit "Enregistrer"
+ 

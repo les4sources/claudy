@@ -1,0 +1,23 @@
+= f.number_field :amount,
+                 label: "Montant *",
+                 required: true,
+                 value: ((f.object.amount_cents / 100.0) rescue nil),
+                 class: "md:w-1/2",
+                 step: "0.01"
+
+.my-6
+  = f.label :payment_method,
+            "Moyen de paiement *"
+
+  .space-y-3.md:space-y-2
+    = f.collection_radio_buttons :payment_method, 
+                                 [ \
+                                   ["Liquide", "cash"], 
+                                   ["Virement bancaire", "bank_transfer"],
+                                   ["Airbnb", "airbnb"] \
+                                 ], 
+                                 :last, :first, 
+                                 required: true do |radio_button|
+      .flex.items-center
+        = radio_button.radio_button
+        = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")

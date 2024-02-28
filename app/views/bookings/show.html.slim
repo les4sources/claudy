@@ -167,7 +167,7 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
         h3.text-lg.font-semibold.leading-6.text-gray-900
           | Paiement
         div = @booking.payment_status
-      .border-t.border-gray-500
+      .border-t.border-gray-500.mb-4
         dl.my-2
           .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
             dt.text-sm.font-medium.text-gray-500
@@ -189,6 +189,13 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
               | Facture
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @booking.invoice_status
+
+        .text-sm.border-t.border-t-gray-300(id="payments-#{@booking.id}")
+          = render PaymentDecorator.decorate_collection(@booking.payments)
+
+        = link_to "Enregistrer un paiement",
+                  new_booking_payment_path(booking_id: @booking.id), data: { turbo_frame: "modal" },
+                  class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
 
     ul.grid.grid-cols-1.gap-6[role="list"]
       li.col-span-1.divide-y.divide-gray-200.rounded-lg.bg-white.shadow

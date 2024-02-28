@@ -12,6 +12,7 @@
 #  party_hall_availability :boolean
 #  weekend_discount_cents  :integer          default(0), not null
 #  deleted_at              :datetime
+#  show_on_reports         :boolean          default(TRUE)
 #
 class Lodging < ApplicationRecord
   has_many :lodging_rooms
