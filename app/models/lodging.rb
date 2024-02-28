@@ -67,4 +67,18 @@ class Lodging < ApplicationRecord
   def is_grand_duc?
     self.name == "Le Grand-Duc"
   end
+
+  def occupancy_rate(start_date, end_date)
+    days_count = (end_date - start_date + 1).to_i
+    reservations_count = Reservation.includes(:booking)
+      .where(date: start_date..end_date, booking: { status: "confirmed", lodging: self })
+      .pluck(:date).uniq.count
+    (reservations_count.to_f / days_count.to_f * 100).to_i
+  end
+
+  def revenues(start_date, end_date)
+    bookings
+      .where(status: "confirmed", from_date: start_date..end_date)
+      .sum(:price_cents)
+  end
 end

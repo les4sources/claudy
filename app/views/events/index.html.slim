@@ -11,13 +11,13 @@
   table.w-full.text-sm.text-left.text-gray-500
     thead.text-xs.text-gray-700.uppercase.bg-gray-50
       tr
-        th.py-3.px-6.w-48[scope="col"]
+        th.py-3.px-6.w-32[scope="col"]
           | Catégorie
         th.py-3.px-6[scope="col"]
           | Nom 
-        th.py-3.px-6.w-64[scope="col"]
+        th.py-3.px-6.w-96[scope="col"]
           | De 
-        th.py-3.px-6.w-64[scope="col"]
+        th.py-3.px-6.w-96[scope="col"]
           | À 
     tbody
       - @events.each do |event|
@@ -35,6 +35,6 @@
                           target: "_blank",
                           class: "text-blue-300 hover:text-blue-500 focus:text-blue-500"
           td.py-4.px-6
-            = l(event.starts_at, format: :short)
+            = l(event.starts_at, format: :long).sub("h00", "h")
           td.py-4.px-6
-            = l(event.ends_at, format: :short)
+            = l(event.ends_at, format: :long).sub("h00", "h")

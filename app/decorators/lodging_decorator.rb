@@ -25,8 +25,18 @@ class LodgingDecorator < ApplicationDecorator
 
     out = ActiveSupport::SafeBuffer.new
     date.upto(date.end_of_month).each do |current_date|
-      out << h.content_tag(:div, nil, class: "w-1 h-2 mr-px #{bookings_dates.include?(current_date) ? "bg-red-500" : "bg-green-500"}")
+      default_class = current_date.on_weekend? ? "bg-green-500" : "bg-green-300"
+      out << h.content_tag(:div, nil, class: "w-1 h-2 mr-px #{bookings_dates.include?(current_date) ? "bg-red-500" : default_class}")
     end
     out.html_safe
+  end
+
+  def occupancy_rate(start_date, end_date)
+    h.number_to_percentage(object.occupancy_rate(start_date, end_date), precision: 0)
+  end
+
+
+  def revenues(start_date, end_date)
+    h.number_to_currency(object.revenues(start_date, end_date) / 100.0)
   end
 end

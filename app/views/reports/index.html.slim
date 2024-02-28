@@ -25,7 +25,7 @@
       - space_bookings_total = 0.0
       - full_total = 0.0
       - (1..12).each do |month|
-        tr
+        tr(class="#{Date.new(@year, month, 1) > Date.today.end_of_month ? "opacity-70" : nil}")
           td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.font-medium.text-gray-900.sm:pl-6
             = l(Date.new(@year, month, 1), format: :month_year).capitalize
           td.whitespace-nowrap.px-3.pr-12.py-4.text-sm.text-gray-500
@@ -33,7 +33,9 @@
               div
                 .flex.space-x-2.items-center
                   .inline-flex = lodging.monthly_reports_bar(Date.new(@year, month, 1))
-                  .text-xs.text-teal-700 = lodging.name
+                  .text-xs.text-teal-700 
+                    => lodging.name
+                    | (#{lodging.occupancy_rate(Date.new(@year, month, 1), Date.new(@year, month, 1).end_of_month)})
             .mb-2
             - @spaces.each do |space|
               div
@@ -43,12 +45,16 @@
           td.whitespace-nowrap.px-3.py-4.text-sm.text-teal-700.bg-teal-100
             - month_revenues_for_bookings = @revenues_by_month_for_bookings[month] || 0.0
             - bookings_total = bookings_total + month_revenues_for_bookings
-            = number_to_currency(month_revenues_for_bookings / 100.0)
+            .font-semibold = number_to_currency(month_revenues_for_bookings / 100.0)
+            - @lodgings.each do |lodging|
+              .text-xs.flex.space-x-2
+                div = lodging.name
+                .opacity-75 = lodging.revenues(Date.new(@year, month, 1), Date.new(@year, month, 1).end_of_month)
           td.whitespace-nowrap.px-3.py-4.text-sm.text-fuchsia-700.bg-fuchsia-100
             - month_revenues_for_space_bookings = @revenues_by_month_for_space_bookings[month] || 0.0
             - space_bookings_total = space_bookings_total + month_revenues_for_space_bookings
-            = number_to_currency(month_revenues_for_space_bookings / 100.0)
-          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-700.bg-gray-100.font-bold
+            .font-semibold = number_to_currency(month_revenues_for_space_bookings / 100.0)
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-700.bg-gray-100.font-extrabold
             = number_to_currency((month_revenues_for_bookings + month_revenues_for_space_bookings) / 100.0)
     tfoot.bg-blue-300
       tr.border-t-2.border-t-gray-900
@@ -58,7 +64,7 @@
           = number_to_currency(bookings_total / 100.0, unit: "€")
         td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
           = number_to_currency(space_bookings_total / 100.0, unit: "€")
-        td.font-bold.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
+        td.font-extrabold.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
           = number_to_currency((bookings_total + space_bookings_total) / 100.0)
 
 h2.mt-6.text-lg.font-bold Hébergements: revenus par origine

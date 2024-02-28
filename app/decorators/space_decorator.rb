@@ -14,7 +14,8 @@ class SpaceDecorator < ApplicationDecorator
 
     out = ActiveSupport::SafeBuffer.new
     date.upto(date.end_of_month).each do |current_date|
-      out << h.content_tag(:div, nil, class: "w-1 h-2 #{bookings_dates.include?(current_date) ? "bg-red-500" : "bg-green-500"} mr-px")
+      default_class = current_date.on_weekend? ? "bg-green-500" : "bg-green-300"
+      out << h.content_tag(:div, nil, class: "w-1 h-2 #{bookings_dates.include?(current_date) ? "bg-red-500" : default_class} mr-px")
     end
     out.html_safe
   end

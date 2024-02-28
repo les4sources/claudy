@@ -213,7 +213,7 @@ fr:
     am: am
     formats:
       default: "%d %B %Y %Hh %Mmin %Ss"
-      long: "%A %d %B %Y %Hh%M"
+      long: "%A %d %B %Y (%-Hh%M)"
       short: "%d %b %Hh%M"
       only_time: "%H:%M"
       twenty_four_hour: "%kh%M"
