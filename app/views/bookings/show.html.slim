@@ -162,6 +162,34 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
                     class: "text-white bg-gradient-to-br from-pink-500 to-orange-400 focus:ring-4 focus:outline-none focus:ring-pink-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2",
                     target: "_blank"
 
+    .overflow-hidden
+      .flex.place-content-between.py-2
+        h3.text-lg.font-semibold.leading-6.text-gray-900
+          | Paiement
+        div = @booking.payment_status
+      .border-t.border-gray-500
+        dl.my-2
+          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
+            dt.text-sm.font-medium.text-gray-500
+              | Montant à payer
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @booking.price
+          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
+            dt.text-sm.font-medium.text-gray-500
+              | Paiement
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @booking.payment_method
+          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
+            dt.text-sm.font-medium.text-gray-500
+              | Tarif
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @booking.tier.capitalize
+          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
+            dt.text-sm.font-medium.text-gray-500
+              | Facture
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @booking.invoice_status
+
     ul.grid.grid-cols-1.gap-6[role="list"]
       li.col-span-1.divide-y.divide-gray-200.rounded-lg.bg-white.shadow
         .flex.w-full.items-center.justify-between.space-x-6.p-6
@@ -208,36 +236,6 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
                 span.text-lg.ml-1.text-gray-500
                   = @booking.to_date
 
-    .overflow-hidden.shadow.sm:rounded-lg(class="#{@booking.payment_background}")
-      .flex.place-content-between.px-4.py-3.sm:px-6
-        h3.text-lg.font-bold.leading-6.text-gray-900
-          | Paiement
-        div = @booking.payment_status
-        / p.mt-1.max-w-2xl.text-sm.text-gray-500
-          | Nom et coordonnées de la personne qui a réservé
-      .border-t.border-gray-200
-        dl.my-2
-          .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Montant à payer
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @booking.price
-          .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Paiement
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @booking.payment_method
-          .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Tarif
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @booking.tier.capitalize
-          .px-4.py-2.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Facture
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @booking.invoice_status
-
     - if @booking.notes.presence
       .overflow-hidden.bg-yellow-100.shadow.sm:rounded-lg
         .px-4.py-3.sm:px-6.bg-yellow-200
@@ -271,11 +269,11 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
             - else
               | Maison Communautaire
             br
-            | Personnes enregistrées : #{@booking.adults} adultes
+            | Personnes enregistrées : #{@booking.adults} #{"adulte".pluralize(@booking.adults)}
             - if @booking.object.children > 0
-              | , #{@booking.children} enfants
+              | , #{@booking.children} #{"enfant".pluralize(@booking.children)}
             - if @booking.object.babies > 0
-              | , #{@booking.babies} bébés
+              | , #{@booking.babies} #{"bébé".pluralize(@booking.babies)}
 
           - if @booking.has_options?
             p Ces options vous intéressent : #{@booking.options_text}

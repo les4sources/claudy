@@ -61,11 +61,11 @@
         dt.text-base.font-medium.text-gray-500
           | Personnes enregistrées
         dd.mt-1.text-base.text-gray-900
-          | 🧑 #{@booking.adults} adultes
+          | 🧑 #{@booking.adults} #{"adulte".pluralize(@booking.adults)}
           - if @booking.object.children > 0
-            | , 🧒 #{@booking.children} enfants
+            | , 🧒 #{@booking.children} #{"enfant".pluralize(@booking.children)}
           - if @booking.object.babies > 0
-            | , 👶 #{@booking.babies} bébés
+            | , 👶 #{@booking.babies} #{"bébé".pluralize(@booking.babies)}
       / .sm:col-span-2
         dt.text-sm.font-medium.text-gray-500
           | About
