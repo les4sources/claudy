@@ -1,6 +1,11 @@
 class SpaceDecorator < ApplicationDecorator
   delegate_all
 
+  def name_and_description
+    h.content_tag(:div, name, class: "font-medium text-gray-900") + 
+    h.content_tag(:span, description, class: "text-xs text-gray-700")
+  end
+
   def monthly_reports_bar(date)
     bookings_dates = SpaceReservation
       .includes(:space_booking)

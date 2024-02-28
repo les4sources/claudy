@@ -15,6 +15,8 @@ class Space < ApplicationRecord
 
   has_soft_deletion default_scope: true
 
+  default_scope -> { order(:position) }
+
   def booked_on?(date)
     SpaceReservation.includes(:space_booking)
                     .where(
