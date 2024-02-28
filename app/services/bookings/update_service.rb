@@ -24,6 +24,7 @@ module Bookings
       @booking.attributes = booking_params(params)
       return false if !@booking.valid?
       unset_lodging_id if @booking.booking_type == "rooms"
+      set_tier
       ActiveRecord::Base.transaction do
         # delete previous reservations as we will re-create them
         @booking.reservations.destroy_all
