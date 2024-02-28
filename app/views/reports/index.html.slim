@@ -2,7 +2,7 @@
   = render "layouts/components/page_header",
            title: "Reporting financier (#{@year})",
            links: [ \
-             link_to(button_label_with_icon(@year - 1, "arrow_small_left"), params.permit(:year).merge(year: @year - 1), class: "btn-page-header-with-icon"),
+             @year > ENV['REPORTS_FIRST_YEAR'].to_i ? link_to(button_label_with_icon(@year - 1, "arrow_small_left"), params.permit(:year).merge(year: @year - 1), class: "btn-page-header-with-icon") : nil,
              link_to(button_label_with_icon(@year + 1, "arrow_small_right", right: true), params.permit(:year).merge(year: @year + 1), class: "btn-page-header-with-icon") \
            ]
 
