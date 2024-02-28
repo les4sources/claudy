@@ -1,0 +1,81 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "#{@lodging.name} (#{@year})",
+           links: [ \
+             link_to(button_label_with_icon(@year - 1, "arrow_small_left"), params.permit(:year).merge(year: @year - 1), class: "btn-page-header-with-icon"),
+             link_to(button_label_with_icon(@year + 1, "arrow_small_right", right: true), params.permit(:year).merge(year: @year + 1), class: "btn-page-header-with-icon") \
+           ]
+
+h2.mt-6.text-lg.font-bold Occupation et revenus
+
+.overflow-hidden.shadow.ring-1.ring-black.ring-opacity-5.sm:rounded-lg.mt-4
+  table.min-w-full.divide-y.divide-gray-300
+    thead.bg-gray-50
+      tr
+        th.py-3.5.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-6[scope="col"]
+          | Mois
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
+          | &nbsp;
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
+          | Réservations
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col" colspan="2"]
+          | Taux d'occupation
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col" colspan="2"]
+          | Revenu moyen
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
+          | Durée moyenne des séjours
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
+          | Nombre moyen de personnes logées
+      tr
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"] &nbsp;
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"] &nbsp;
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"] &nbsp;
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"] Total
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-500[scope="col"] WE
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"] Nuitée
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-500[scope="col"] Réservation
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"] &nbsp;
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"] &nbsp;
+    tbody.divide-y.divide-gray-200.bg-white
+      - bookings_total = 0.0
+      - full_total = 0.0
+      - (1..12).each do |month|
+        tr(class="#{Date.new(@year, month, 1) > Date.today.end_of_month ? "opacity-70" : nil}")
+          td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.font-medium.text-gray-900.sm:pl-6
+            = link_to(l(Date.new(@year, month, 1), format: :month_year).capitalize, root_path(date: Date.new(@year, month, 1)), class: "claudy-link")
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-700
+            .flex.space-x-2.items-center
+              .inline-flex
+                = @lodging.monthly_reports_bar(Date.new(@year, month, 1))
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-700
+            = @lodging.count_bookings(Date.new(@year, month, 1), Date.new(@year, month, 1).end_of_month)
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-700
+            = @lodging.occupancy_rate(Date.new(@year, month, 1), Date.new(@year, month, 1).end_of_month)
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
+            = @lodging.occupancy_rate(Date.new(@year, month, 1), Date.new(@year, month, 1).end_of_month, weekends_only: true)
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-700
+            = @lodging.average_night_revenue(Date.new(@year, month, 1), Date.new(@year, month, 1).end_of_month)
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
+            = @lodging.average_booking_revenue(Date.new(@year, month, 1), Date.new(@year, month, 1).end_of_month)
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-700
+            = @lodging.average_booking_duration(Date.new(@year, month, 1), Date.new(@year, month, 1).end_of_month)
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-700
+            = @lodging.average_booking_people(Date.new(@year, month, 1), Date.new(@year, month, 1).end_of_month)
+    tfoot.bg-blue-300
+      tr.border-t-2.border-t-gray-900
+        td &nbsp;
+        td &nbsp;
+        td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
+          = @lodging.count_bookings(Date.new(@year, 1, 1), Date.new(@year, 12, 31))
+        td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
+          = @lodging.occupancy_rate(Date.new(@year, 1, 1), Date.new(@year, 12, 31))
+        td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
+          = @lodging.occupancy_rate(Date.new(@year, 1, 1), Date.new(@year, 12, 31), weekends_only: true)
+        td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
+          = @lodging.average_night_revenue(Date.new(@year, 1, 1), Date.new(@year, 12, 31))
+        td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
+          = @lodging.average_booking_revenue(Date.new(@year, 1, 1), Date.new(@year, 12, 31))
+        td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
+          = @lodging.average_booking_duration(Date.new(@year, 1, 1), Date.new(@year, 12, 31))
+        td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
+          = @lodging.average_booking_people(Date.new(@year, 1, 1), Date.new(@year, 12, 31))

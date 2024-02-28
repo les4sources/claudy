@@ -40,6 +40,8 @@ Rails.application.routes.draw do
   get "pages/other_bookings", to: "pages#other_bookings"
   get "pages/other_space_bookings", to: "pages#other_space_bookings"
 
+  get "reports/lodging/:id", to: "reports#lodging", as: :lodging_reports
+
   namespace :public do
     resources :bookings, only: [:new, :create] do
       get "edit_estimated_arrival", on: :member

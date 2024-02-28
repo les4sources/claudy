@@ -29,11 +29,18 @@ class ReportsController < BaseController
     )
   end
 
+  def lodging
+    @lodging = LodgingDecorator.new(Lodging.find(params[:id]))
+    @year = params.fetch(:year, Time.now.year).to_i
+
+  end
+
   private
 
   def set_presenters
     @menu_presenter = Components::MenuPresenter.new(
       active_primary: "reports"
     )
+    @reports_view = true
   end
 end

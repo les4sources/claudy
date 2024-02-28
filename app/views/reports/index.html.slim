@@ -79,6 +79,9 @@ h2.mt-6.text-lg.font-bold Hébergements: revenus par origine
       - @revenues_by_platform.each do |platform, revenue|
         tr
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500 
-            = platform || "N/A"
+            - if platform == ""
+              | Web
+            - else
+              = platform.capitalize || "N/A"
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500 
             = number_to_currency(revenue / 100.0)

@@ -17,6 +17,32 @@ class LodgingDecorator < ApplicationDecorator
     end
   end
 
+  def average_booking_duration(start_date, end_date)
+    duration = object.average_booking_duration(start_date, end_date)
+    if duration.zero?
+      "-"
+    else
+      "#{duration} #{"jour".pluralize(duration)}"
+    end
+  end
+
+  def average_booking_people(start_date, end_date)
+    people_count = object.average_booking_people(start_date, end_date)
+    if people_count.zero?
+      "-"
+    else
+      "#{people_count} #{"personne".pluralize(people_count)}"
+    end
+  end
+
+  def average_booking_revenue(start_date, end_date)
+    h.number_to_currency(object.average_booking_revenue(start_date, end_date) / 100.0)
+  end
+
+  def average_night_revenue(start_date, end_date)
+    h.number_to_currency(object.average_night_revenue(start_date, end_date) / 100.0)
+  end
+
   def monthly_reports_bar(date)
     bookings_dates = Reservation
       .includes(:booking)
@@ -31,8 +57,8 @@ class LodgingDecorator < ApplicationDecorator
     out.html_safe
   end
 
-  def occupancy_rate(start_date, end_date)
-    h.number_to_percentage(object.occupancy_rate(start_date, end_date), precision: 0)
+  def occupancy_rate(start_date, end_date, opts={})
+    h.number_to_percentage(object.occupancy_rate(start_date, end_date, opts), precision: 0)
   end
 
 
