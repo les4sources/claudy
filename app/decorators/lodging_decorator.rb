@@ -18,22 +18,14 @@ class LodgingDecorator < ApplicationDecorator
   end
 
   def monthly_reports_bar(date)
+    bookings_dates = Reservation
+      .includes(:booking)
+      .where(date: date..date.end_of_month, booking: { status: "confirmed", lodging: object })
+      .pluck(:date).uniq
+
     out = ActiveSupport::SafeBuffer.new
-    out << h.content_tag(:div, class: "inline-flex") do
-      bookings_counter = 0
-      date.upto(date.end_of_month).each do |current_date|
-        if object.booked_on?(current_date)
-          bookings_counter += 1
-          out << h.content_tag(:div, nil, class: "w-1 h-2 mr-px bg-red-500")
-        else
-          out << h.content_tag(:div, nil, class: "w-1 h-2 mr-px bg-green-500")
-        end
-        out << h.content_tag(:div, id: "tooltip-lodging-#{object.id}-#{current_date.iso8601}", role: "tooltip", class: "absolute z-20 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-sm opacity-0 tooltip") do
-          out << bookings_counter
-          out << h.content_tag(:div, class: "tooltip-arrow", data: { "popper-arrow": true })
-        end
-      end
-      out
+    date.upto(date.end_of_month).each do |current_date|
+      out << h.content_tag(:div, nil, class: "w-1 h-2 mr-px #{bookings_dates.include?(current_date) ? "bg-red-500" : "bg-green-500"}")
     end
     out.html_safe
   end
