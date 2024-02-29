@@ -1,0 +1,7 @@
+= turbo_stream.remove @payment
+
+= turbo_stream.replace_all ".booking-#{@payment.booking_id}-payment-status", 
+                           @payment.booking.payment_status
+
+= turbo_stream.replace "booking-#{@payment.booking_id}-payments-sum",
+                       @payment.booking.payments_total

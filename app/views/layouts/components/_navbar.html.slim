@@ -67,6 +67,21 @@ nav.bg-white.border-gray-200.lg:px-4
                       tasks_path, 
                       class: controller_name == "tasks" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
 
+- if !@accounting_view.nil?
+  / Accounting menu
+  nav.bg-gray-50.dark:bg-gray-700.border-b.border-gray-300.lg:px-4
+    .max-w-screen-xl.px-4.py-3.mx-auto
+      .flex.items-center
+        ul.flex.flex-row.font-medium.mt-0.mr-6.space-x-8.text-sm
+          li
+            = link_to "Tableau de bord",
+                      accounting_path,
+                      class: controller_name == "accounting" && action_name == "index" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
+          li
+            = link_to "Paiements",
+                      payments_path,
+                      class: controller_name == "payments" && action_name == "index" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
+
 - if !@reports_view.nil?
   / Reports menu
   nav.bg-gray-50.dark:bg-gray-700.border-b.border-gray-300.lg:px-4

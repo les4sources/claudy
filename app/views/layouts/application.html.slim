@@ -11,7 +11,7 @@ html(lang="fr")
     link(href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap" rel="stylesheet")
     = vite_client_tag
     = vite_javascript_tag "application", "data-turbo-track": "reload"
-  body.bg-teal-50
+  body.bg-teal-50(id="body-#{controller_name}_#{action_name}")
     = render "layouts/components/tooltips"
     = render "humans/tooltips"
 

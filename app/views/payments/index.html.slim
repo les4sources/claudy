@@ -1,0 +1,21 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Paiements"
+
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-3.w-2[scope="col"]
+          | &nbsp;
+        th.py-3.px-6.w-64[scope="col"]
+          | Date
+        th.py-3.px-6.w-2[scope="col"]
+          | Montant
+        th.py-3.px-6[scope="col"]
+          | Réservation
+        th.py-3.px-6.w-2[scope="col"]
+          | Actions
+    tbody.bg-white
+      - @payments.each do |payment|
+        = render partial: "payments/payment", locals: { payment: payment }

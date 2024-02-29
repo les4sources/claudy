@@ -32,6 +32,7 @@ module Bookings
         if !rooms.nil? && available?(rooms)
           build_reservations(rooms)
           @booking.save!
+          @booking.set_payment_status
         end
       end
       raise error_message if !error.nil?

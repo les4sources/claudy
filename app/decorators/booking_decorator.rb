@@ -72,6 +72,8 @@ class BookingDecorator < ApplicationDecorator
       "À fournir"
     when "sent"
       "Envoyée ✔"
+    else
+      object.invoice_status
     end
   end
 
@@ -196,7 +198,7 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def payment_status
-    shared_classes = "text-xs font-medium mr-2 px-2.5 py-0.5 rounded"
+    shared_classes = "booking-#{object.id}-payment-status text-xs font-medium mr-2 px-2.5 py-0.5 rounded"
     case object.payment_status
     when "pending"
       h.content_tag(:span, "Non payée", class: "#{shared_classes} bg-red-200 text-red-800")
@@ -235,6 +237,12 @@ class BookingDecorator < ApplicationDecorator
     else
       h.humanized_money_with_symbol(object.price) 
     end
+  end
+
+  def payments_total
+    h.content_tag :span,
+                  h.number_to_currency(payments.sum(:amount_cents) / 100.0),
+                  id: "booking-#{object.id}-payments-sum"
   end
 
   def public__name

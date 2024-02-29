@@ -116,6 +116,7 @@ module Bookable
         :bedsheets,
         :booking_type,
         :children,
+        :babies,
         :departure_time,
         :email,
         :estimated_arrival,
@@ -146,6 +147,12 @@ module Bookable
         :towels,
         :wifi,
         room_ids: [],
+        payments_attributes: [
+          :id,
+          :amount,
+          :payment_method,
+          :_destroy
+        ]
       )
   end
 
@@ -156,6 +163,7 @@ module Bookable
         :adults,
         :booking_type,
         :children,
+        :babies,
         :comments,
         :estimated_arrival,
         :email,
