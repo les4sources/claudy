@@ -94,6 +94,58 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
           .content.space-y-4
             == simple_format @booking.comments
 
+    / Payments
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6.flex.place-content-between
+        .flex.space-x-2
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Paiements
+          div = @booking.payment_status
+
+        = link_to "Enregistrer un paiement",
+          new_booking_payment_path(booking_id: @booking.id), data: { turbo_frame: "modal" },
+          class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+      .border-t.border-gray-200
+        table.table-fixed.w-full.text-sm.text-left.text-gray-500.border-b.border-b-gray-200
+          thead.text-xs.text-gray-700.uppercase.bg-gray-50
+            tr
+              th.py-3.px-3.w-8[scope="col"]
+                | &nbsp;
+              th.py-3.px-6.w-64[scope="col"]
+                | Date
+              th.py-3.px-6[scope="col"]
+                | Montant
+              th.py-3.px-6.hide-if-booking-page[scope="col"]
+                | Réservation
+              th.py-3.px-6[scope="col"] &nbsp;
+          tbody.bg-white(id="payments-#{@booking.id}")
+            = render PaymentDecorator.decorate_collection(@booking.payments)
+          tfoot
+            = render partial: "payments/sum", locals: { booking: @booking }
+
+        dl.my-4.px-6
+          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
+            dt.text-sm.font-medium.text-gray-500
+              | Tarif de la réservation
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @booking.price
+          / .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
+            dt.text-sm.font-medium.text-gray-500
+              | Paiement
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @booking.payment_method
+          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
+            dt.text-sm.font-medium.text-gray-500
+              | Tarification
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @booking.tier.capitalize
+          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
+            dt.text-sm.font-medium.text-gray-500
+              | Facture
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @booking.invoice_status
+
+    / Options
     .overflow-hidden.bg-white.shadow.sm:rounded-lg
       .px-4.py-5.sm:px-6
         h3.text-lg.font-medium.leading-6.text-gray-900
@@ -151,77 +203,7 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
             == @booking.public_notes
 
   .space-y-4
-    .overflow-hidden.shadow.sm:rounded-lg.bg-teal-600.border-2.border-teal-200
-      .flex.place-content-between.px-4.py-3.sm:px-6
-        h3.text-lg.font-bold.leading-6.text-white
-          | Réservation <code>##{@booking.object.token}</code>
-      div
-        .px-6.pb-5
-          = link_to "Page web de la réservation",
-                    public_booking_path(@booking.object.token),
-                    class: "text-white bg-gradient-to-br from-pink-500 to-orange-400 focus:ring-4 focus:outline-none focus:ring-pink-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2",
-                    target: "_blank"
-
-    .overflow-hidden
-      .flex.place-content-between.py-2
-        h3.text-lg.font-semibold.leading-6.text-gray-900
-          | Paiement
-        div = @booking.payment_status
-      .border-t.border-gray-500.mb-4
-        dl.my-2
-          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
-            dt.text-sm.font-medium.text-gray-500
-              | Montant à payer
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @booking.price
-          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
-            dt.text-sm.font-medium.text-gray-500
-              | Paiement
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @booking.payment_method
-          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
-            dt.text-sm.font-medium.text-gray-500
-              | Tarif
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @booking.tier.capitalize
-          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
-            dt.text-sm.font-medium.text-gray-500
-              | Facture
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @booking.invoice_status
-
-        .text-sm.border-t.border-t-gray-300(id="payments-#{@booking.id}")
-          = render PaymentDecorator.decorate_collection(@booking.payments)
-
-        = link_to "Enregistrer un paiement",
-                  new_booking_payment_path(booking_id: @booking.id), data: { turbo_frame: "modal" },
-                  class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
-
-    ul.grid.grid-cols-1.gap-6[role="list"]
-      li.col-span-1.divide-y.divide-gray-200.rounded-lg.bg-white.shadow
-        .flex.w-full.items-center.justify-between.space-x-6.p-6
-          .flex-1.truncate
-            .flex.items-center.space-x-3
-              h3.text-lg.font-medium.leading-6.text-gray-900
-                = @booking.name
-            - if @booking.group_name.present?
-            p.mt-1.truncate.text-sm.text-gray-500
-              = @booking.group_name
-        div
-          .-mt-px.flex.divide-x.divide-gray-200
-            - if @booking.object.email.presence
-              .flex.w-0.flex-1
-                a.relative.-mr-px.inline-flex.w-0.flex-1.items-center.justify-center.gap-x-3.rounded-bl-lg.border.border-transparent.py-4.text-sm.font-semibold.text-gray-900[href="mailto:#{@booking.object.email}"]
-                  svg.h-5.w-5.text-gray-400[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
-                    path[d="M3 4a2 2 0 00-2 2v1.161l8.441 4.221a1.25 1.25 0 001.118 0L19 7.162V6a2 2 0 00-2-2H3z"]
-                    path[d="M19 8.839l-7.77 3.885a2.75 2.75 0 01-2.46 0L1 8.839V14a2 2 0 002 2h14a2 2 0 002-2V8.839z"]
-                  |  Email 
-            - if @booking.object.phone.presence
-              .-ml-px.flex.w-0.flex-1
-                a.relative.inline-flex.w-0.flex-1.items-center.justify-center.gap-x-3.rounded-br-lg.border.border-transparent.py-4.text-sm.font-semibold.text-gray-900[href="tel:#{@booking.object.phone}"]
-                  svg.h-5.w-5.text-gray-400[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
-                    path[fill-rule="evenodd" d="M2 3.5A1.5 1.5 0 013.5 2h1.148a1.5 1.5 0 011.465 1.175l.716 3.223a1.5 1.5 0 01-1.052 1.767l-.933.267c-.41.117-.643.555-.48.95a11.542 11.542 0 006.254 6.254c.395.163.833-.07.95-.48l.267-.933a1.5 1.5 0 011.767-1.052l3.223.716A1.5 1.5 0 0118 15.352V16.5a1.5 1.5 0 01-1.5 1.5H15c-1.149 0-2.263-.15-3.326-.43A13.022 13.022 0 012.43 8.326 13.019 13.019 0 012 5V3.5z" clip-rule="evenodd"]
-                  = @booking.object.phone
+    = render partial: "bookings/show/details", locals: { booking: @booking }
 
     - if @booking.object.estimated_arrival.presence || @booking.object.departure_time.presence
       div
@@ -253,43 +235,3 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
         .border-t.border-yellow-300.px-6.py-4
           .space-y-4.font-caveat.text-xl.text-yellow-600
             = simple_format @booking.notes
-
-    .overflow-hidden.shadow.sm:rounded-lg
-      .px-4.py-3.sm:px-6.bg-teal-200
-        h3.text-lg.font-bold.leading-6.text-teal-900
-          | Résumé de la réservation
-      .border-t.border-black-300.bg-white.px-6.py-4
-        .content.space-y-4
-          - if @booking.confirmed?
-            p 
-              strong Votre séjour aux 4 Sources
-          - else
-            p 
-              strong Votre demande de réservation
-
-          p 
-            | Date : #{@booking.date_range}
-            br
-            | Hébergement :&nbsp;
-            - if !@booking.lodging.nil?
-              | #{@booking.lodging.name} (#{@booking.lodging.summary})
-            - else
-              | Maison Communautaire
-            br
-            | Personnes enregistrées : #{@booking.adults} #{"adulte".pluralize(@booking.adults)}
-            - if @booking.object.children > 0
-              | , #{@booking.children} #{"enfant".pluralize(@booking.children)}
-            - if @booking.object.babies > 0
-              | , #{@booking.babies} #{"bébé".pluralize(@booking.babies)}
-
-          - if @booking.has_options?
-            p Ces options vous intéressent : #{@booking.options_text}
-
-          p Statut: #{@booking.status}
-
-          p Statut du paiement: #{@booking.payment_status}
-
-          p 
-            = link_to "Page web de votre réservation", public_booking_path(@booking.token)
-            br
-            = link_to "FAQ des hébergements aux 4 Sources", "https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3"

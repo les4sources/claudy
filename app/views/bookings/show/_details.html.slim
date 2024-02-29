@@ -1,0 +1,65 @@
+    div
+      .flex.place-content-between.py-2.mb-4.border-b.border-gray-500
+        h3.text-lg.font-semibold.leading-6.text-gray-900
+          | Réservation <code>##{booking.object.token}</code>
+        = link_to "Page web 🔗",
+                  public_booking_path(booking.object.token),
+                  class: "claudy-link",
+                  target: "_blank"
+      .mt-4.content.space-y-4.text-sm
+        .font-bold
+          = @booking.name
+          - if @booking.group_name.present?
+            .truncate.text-sm.font-semibold.text-gray-500
+              = @booking.group_name
+
+        div
+          - if @booking.object.email.presence
+            div
+              a.inline-flex.gap-x-2.claudy-link[href="mailto:#{@booking.object.email}"]
+                svg.h-5.w-5.text-gray-400[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+                  path[d="M3 4a2 2 0 00-2 2v1.161l8.441 4.221a1.25 1.25 0 001.118 0L19 7.162V6a2 2 0 00-2-2H3z"]
+                  path[d="M19 8.839l-7.77 3.885a2.75 2.75 0 01-2.46 0L1 8.839V14a2 2 0 002 2h14a2 2 0 002-2V8.839z"]
+                = @booking.object.email
+          - if @booking.object.phone.presence
+            div
+              a.inline-flex.gap-x-2.claudy-link[href="tel:#{@booking.object.phone}"]
+                svg.h-5.w-5.text-gray-400[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+                  path[fill-rule="evenodd" d="M2 3.5A1.5 1.5 0 013.5 2h1.148a1.5 1.5 0 011.465 1.175l.716 3.223a1.5 1.5 0 01-1.052 1.767l-.933.267c-.41.117-.643.555-.48.95a11.542 11.542 0 006.254 6.254c.395.163.833-.07.95-.48l.267-.933a1.5 1.5 0 011.767-1.052l3.223.716A1.5 1.5 0 0118 15.352V16.5a1.5 1.5 0 01-1.5 1.5H15c-1.149 0-2.263-.15-3.326-.43A13.022 13.022 0 012.43 8.326 13.019 13.019 0 012 5V3.5z" clip-rule="evenodd"]
+                = @booking.object.phone
+
+        - if booking.confirmed?
+          p 
+            strong Votre séjour aux 4 Sources
+        - else
+          p 
+            strong Votre demande de réservation
+
+        p 
+          | Date : #{booking.date_range}
+          br
+          | Hébergement :&nbsp;
+          - if !booking.lodging.nil?
+            | #{booking.lodging.name} (#{booking.lodging.summary})
+          - else
+            | Maison Communautaire
+          br
+          | Personnes enregistrées : #{booking.adults} #{"adulte".pluralize(booking.adults)}
+          - if booking.object.children > 0
+            | , #{booking.children} #{"enfant".pluralize(booking.children)}
+          - if booking.object.babies > 0
+            | , #{booking.babies} #{"bébé".pluralize(booking.babies)}
+
+        - if booking.has_options?
+          p Ces options vous intéressent : #{booking.options_text}
+
+        p Statut: #{booking.status}
+
+        p Statut du paiement: #{booking.payment_status}
+
+        p 
+          = link_to "Page web de votre réservation", public_booking_path(booking.token)
+          br
+          = link_to "FAQ des hébergements aux 4 Sources", 
+                    "https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3"
+                  

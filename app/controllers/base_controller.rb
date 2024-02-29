@@ -6,7 +6,7 @@ class BaseController < ActionController::Base
   before_action :authenticate_user!
   before_action :set_paper_trail_whodunnit
 
-  breadcrumb "Calendrier", :root_path
+  # breadcrumb "Calendrier", :root_path
 
   def render *args
     set_presenters

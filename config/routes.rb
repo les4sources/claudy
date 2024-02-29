@@ -15,6 +15,7 @@ Rails.application.routes.draw do
   resources :humans
   resources :human_roles
   resources :notes
+  resources :payments, only: [:index]
   resources :products
   resources :projects
   resources :rental_items

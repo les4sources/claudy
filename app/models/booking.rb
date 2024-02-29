@@ -49,7 +49,12 @@ class Booking < ApplicationRecord
   # Relationships
   has_many :reservations, dependent: :destroy
   has_many :rooms, through: :reservations
-  has_many :payments
+  has_many :payments, inverse_of: :booking do
+    def persisted
+      reject { |payment| !payment.persisted? }
+    end
+  end
+
   belongs_to :lodging, optional: true
 
   monetize :price_cents, allow_nil: true
@@ -90,6 +95,10 @@ class Booking < ApplicationRecord
 
   before_create :generate_token
   after_update :notify_customer_on_update
+
+  accepts_nested_attributes_for :payments, 
+                                allow_destroy: true,
+                                reject_if: lambda { |attributes| attributes['amount'].to_f.zero? }
 
   def canceled?
     status == "canceled"
@@ -163,5 +172,16 @@ class Booking < ApplicationRecord
 
   def undefined_price?
     tier == "non défini"
+  end
+
+  def set_payment_status
+    if self.payments.sum(:amount_cents) >= self.price_cents
+      status = "paid"
+    elsif self.payments.sum(:amount_cents) > 0.0
+      status = "partially_paid"
+    else
+      status = "pending"
+    end
+    self.update(payment_status: status)
   end
 end

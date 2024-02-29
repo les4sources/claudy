@@ -14,7 +14,6 @@ class BookingsController < BaseController
   def show
     @booking = Booking.unscoped.find_by!(id: params[:id]).decorate
     @reservations_by_date = @booking.reservations.decorate.to_a.group_by { |r| r.date }
-    breadcrumb "Réservation ##{@booking.id}", booking_path(@booking), match: :exact
   end
 
   def new
@@ -33,6 +32,7 @@ class BookingsController < BaseController
         tier_rooms: "neutre",
         from_date: params.fetch("date", nil)
       )
+      @booking.payments.build(amount_cents: nil)
     end
     @lodgings = Lodging.all
   end
@@ -54,6 +54,7 @@ class BookingsController < BaseController
     @booking.room_ids = @booking.reservations.map { |r| r.room_id }
     @booking.booking_type = @booking.lodging_id.nil? ? "rooms" : "lodging"
     @booking.tier_lodgings = @booking.tier_rooms = @booking.tier
+    @booking.payments.build
     @lodgings = Lodging.all
   end
 

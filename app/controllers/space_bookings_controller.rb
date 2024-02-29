@@ -22,7 +22,6 @@ class SpaceBookingsController < BaseController
       .find_by!(id: params[:id])
       .decorate
     @space_reservations_by_date = @space_booking.space_reservations.to_a.group_by { |sr| sr.date }
-    breadcrumb "Réservation ##{@space_booking.id}", space_booking_path(@space_booking), match: :exact
   end
 
   def new

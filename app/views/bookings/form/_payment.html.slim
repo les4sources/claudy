@@ -112,7 +112,7 @@
                          class: "w-1/2 md:w-1/2 lg:w-1/4",
                          step: "0.01"
 
-      .my-6.space-y-2
+      / .my-6.space-y-2
         = f.label :payment_status,
                   "Statut du paiement *"
 
@@ -125,7 +125,7 @@
             = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
 
-      .my-6
+      / .my-6
         = f.label :payment_method,
                   "Moyen de paiement *"
 
@@ -142,6 +142,43 @@
               = radio_button.radio_button
               = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
+    / ---- Payments -----
+
+    - if !@booking.new_record?
+      .mt-4.mb-4
+        .text-md Paiements reçus
+
+      div(id="payments-#{@booking.id}")
+        = render PaymentDecorator.decorate_collection(@booking.payments.persisted)
+
+    = f.fields_for :payments do |fp|
+      - if !fp.object.persisted?
+        .mt-4.mb-4
+          .text-md Enregistrer un paiement
+          - if @booking.payments.persisted.empty?
+            .font-light.text-sm.text-gray-700 Laisser vide s'il n'y a pas encore eu de paiement
+        .flex.space-x-8
+          div
+            = fp.number_field :amount,
+                     label: "Montant",
+                     required: false,
+                     value: ((fp.object.amount_cents / 100.0) rescue nil),
+                     class: "",
+                     step: "0.01"
+          div
+            .space-y-3.md:space-y-2
+              = fp.collection_radio_buttons :payment_method,
+                                           [ \
+                                             ["Liquide", "cash"], 
+                                             ["Virement bancaire", "bank_transfer"],
+                                             ["Airbnb", "airbnb"] \
+                                           ], 
+                                           :last, :first, 
+                                           required: false do |radio_button|
+                .flex.items-center
+                  = radio_button.radio_button
+                  = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+    
     .my-6
       = f.label :invoice_status,
                 "Facture 🧾 *"
