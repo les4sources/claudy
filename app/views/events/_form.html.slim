@@ -47,4 +47,21 @@
                      required: false,
                      include_seconds: false
 
+    = f.number_field :attendees,
+                     label: "Nombre de participants",
+                     min: 0,
+                     remove_default_class: "sm:text-sm",
+                     class: "w-24 text-lg"
+
+    = f.number_field :sales_amount,
+                     label: "Montant des ventes",
+                     value: ((f.object.sales_amount / 100.0) rescue nil),
+                     hint: "Total des ventes pour l'événement",
+                     class: "w-1/2 md:w-1/2 lg:w-1/4",
+                     step: "0.01"
+
+    = f.label :notes,
+              "Notes"
+    = f.rich_text_area :notes
+
 hr

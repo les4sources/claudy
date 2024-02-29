@@ -2,7 +2,8 @@
   = render 'layouts/components/page_header',
            title: @event.name,
            links: [ \
-             delete_link(@event),
+             link_to("🗓 Agenda", root_path(date: @event.object.starts_at.to_date), class: "btn-page-header-no-background"),
+             delete_link(@event.object),
              link_to( \
                "Mettre à jour",
                edit_event_path(@event),
@@ -16,20 +17,22 @@
       .px-4.py-5.sm:px-6
         h3.text-lg.font-medium.leading-6.text-gray-900
           | Informations
-        / p.mt-1.max-w-2xl.text-sm.text-gray-500
-          | Nom et coordonnées de la personne qui a réservé
       .border-t.border-gray-200
         dl
           .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
-              | Adresse internet
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = link_to(@event.url, @event.url, target: "_blank")
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
               | Catégorie
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = link_to(@event.event_category.name, event_category_path(@event.event_category))
+              = link_to @event.event_category.name,
+                        event_category_path(@event.event_category),
+                        class: "claudy-link"
+
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Adresse web
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = link_to(@event.url, @event.url, target: "_blank", class: "claudy-link")
+
           .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
               | Du
@@ -40,3 +43,25 @@
               | Au
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = l(@event.ends_at, format: :long)
+
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Nombre de participants
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @event.attendees
+
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Montant des ventes
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @event.sales_amount
+
+    - if @event.notes.presence
+      .overflow-hidden.bg-yellow-200.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6.bg-yellow-300
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Notes
+        .border-t.border-yellow-400.px-6.py-4
+          .content.space-y-4.text-sm
+            == @event.notes
+

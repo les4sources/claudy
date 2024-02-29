@@ -9,6 +9,7 @@ class EventsController < BaseController
   end
 
   def show
+    @event = EventDecorator.new(@event)
   end
 
   def new

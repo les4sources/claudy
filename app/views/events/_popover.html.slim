@@ -1,0 +1,28 @@
+.p-1.text-center.text-xs.font-bold.bg-blue-200.text-blue-700.rounded-t-lg
+  | Événement&nbsp;
+  - if Date.today == event.object.starts_at.to_date
+    - if Date.today == event.object.ends_at.to_date
+      | (aujourd'hui uniquement)
+    - else
+      | (premier jour)
+  - elsif Date.today == event.object.ends_at.to_date
+    | (dernier jour)
+  - elsif Date.today > event.object.starts_at.to_date && Date.today < event.object.ends_at.to_date
+    | (en cours)
+.p-3
+  .flex.items-top.justify-between.mb-2
+    .text-sm.font-semibold.leading-none.text-gray-900
+      .mb-1 = event.event_category.name
+      = link_to event.name,
+                event_path(event),
+                class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+    div
+      = link_to "Détails", 
+                event_path(event),
+                class: "text-white bg-orange-700 hover:bg-orange-800 focus:ring-4 focus:ring-orange-300 font-medium rounded-lg text-xs px-3 py-1.5 focus:outline-none"
+
+  .mt-2.block
+    = event.date_range
+
+  .mt-2.block
+    = event.url

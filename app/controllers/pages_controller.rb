@@ -1,27 +1,22 @@
 class PagesController < BaseController
   def calendar
     set_dates
-    # events = Event.all
-    #   .includes(:event_category)
-    #   .between_times(@first, @last)
-    # @grouped_events = {}
-    # events.each do |event|
-    #   (event.starts_at.to_date..event.ends_at.to_date).each do |date|
-    #     @grouped_events[date] ||= []
-    #     @grouped_events[date] << event
-    #   end
-    # end
+    @events = EventDecorator.decorate_collection(
+      Event.all
+        .includes(:event_category)
+        .between_times(@first, @last)
+    )
+    # group space reservations by day
     @space_reservations = SpaceReservation.all
       .includes(:space_booking)
       .where.not(space_booking: { status: ["declined", "canceled"] })
       .between_times(@first, @last, field: :date)
-    # group bookings by day
     @grouped_space_reservations = @space_reservations.to_a.group_by { |sr| sr.date }
+    # group reservations by day
     @reservations = Reservation.all
       .includes(:booking)
       .where.not(booking: { status: ["declined", "canceled"] })
       .between_times(@first, @last, field: :date)
-    # group bookings by day
     @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
     @activities = PublicActivity::Activity.where("created_at > ?", 14.days.ago).order(created_at: :desc)
   end

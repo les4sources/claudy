@@ -8,7 +8,7 @@
            ]
 
 .overflow-x-auto.relative
-  table.w-full.text-sm.text-left.text-gray-500
+  table.w-full.text-sm.text-left
     thead.text-xs.text-gray-700.uppercase.bg-gray-50
       tr
         th.py-3.px-6.w-32[scope="col"]
@@ -16,25 +16,32 @@
         th.py-3.px-6[scope="col"]
           | Nom 
         th.py-3.px-6.w-96[scope="col"]
-          | De 
-        th.py-3.px-6.w-96[scope="col"]
-          | À 
+          | Date 
+        th.py-3.px-6.w-32[scope="col"]
+          | Participants
+        th.py-3.px-6.w-32[scope="col"]
+          | Revenus
     tbody
       - @events.each do |event|
         tr.bg-white
           td.py-4.px-6
             = event.event_category.name
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
-            = link_to event.name_with_color, 
+            = link_to event.name, 
                       event_path(event),
                       class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
             - if event.url.presence
-              div
+              .text-xs
                 = link_to event.url,
                           event.url,
                           target: "_blank",
                           class: "text-blue-300 hover:text-blue-500 focus:text-blue-500"
           td.py-4.px-6
+            .text-xs.text-gray-500.font-semibold Début
             = l(event.starts_at, format: :long).sub("h00", "h")
-          td.py-4.px-6
+            .text-xs.text-gray-500.font-semibold Fin 
             = l(event.ends_at, format: :long).sub("h00", "h")
+          td.py-4.px-6
+            = event.attendees
+          td.py-4.px-6
+            = event.sales_amount

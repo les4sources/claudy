@@ -33,12 +33,16 @@ module Events
       params
         .require(:event)
         .permit(
-          :name,
-          :event_category_id,
-          :starts_at_date,
-          :starts_at_time,
+          :attendees,
           :ends_at_date,
           :ends_at_time,
+          :event_category_id,
+          :name,
+          :notes,
+          :sales_amount,
+          :starts_at_date,
+          :starts_at_time,
+          :status,
           :url
         )
     end
