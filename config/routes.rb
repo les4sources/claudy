@@ -27,7 +27,10 @@ Rails.application.routes.draw do
   resources :teams
 
   resources :bookings do
-    get "past", on: :collection
+    collection do
+      get "past"
+      get "search"
+    end
     resources :payments
   end
 

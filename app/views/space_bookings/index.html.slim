@@ -8,54 +8,5 @@
 
 = render "spaces/tooltips"
 
-.overflow-x-auto.relative
-  table.w-full.text-sm.text-left.text-gray-500
-    thead.text-xs.text-gray-700.uppercase.bg-gray-50
-      tr
-        th.py-3.px-3.w-2[scope="col"]
-          | &nbsp;
-        th.py-3.px-6.w-48[scope="col"]
-          | Nom 
-        / th.py-3.px-6.w-48[scope="col"]
-          | Événement
-        th.py-3.px-6.hidden.md:table-cell[scope="col"]
-          | Dates
-        th.py-3.px-6[scope="col"]
-          | Période 
-        th.py-3.px-6[scope="col"]
-          | Espaces
-        th.py-3.px-6[scope="col"]
-          | Paiement 
-        th.py-3.px-6[scope="col"]
-          | Facture 
-        th.py-3.px-6[scope="col"]
-          | ID
-    tbody
-      - @space_bookings.each do |space_booking|
-        tr.border-b(class="#{space_booking.tr_class}")
-          td.py-4.px-6(class="#{space_booking.tr_border_class}")
-            = space_booking.status_emoji
-          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
-            strong(class="#{space_booking.declined? ? "line-through" : nil}")
-              = link_to space_booking.group_or_name, 
-                        space_booking_path(space_booking),
-                        class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
-            .md:hidden.mt-1.text-gray-900
-              = space_booking.date_range
-          / td.py-4.px-6
-            = space_booking.event_name_with_color
-          td.py-4.px-6.hidden.md:table-cell
-            = space_booking.from_date
-            br
-            | → #{space_booking.to_date}
-          td.py-4.px-6
-            = space_booking.duration
-          td.py-4.px-6.space-x-1
-            = space_booking.spaces_badges(font_size: "xs")
-          td.py-4.px-6
-            = space_booking.payment_badge
-          td.py-4.px-6
-            - if space_booking.confirmed?
-              = space_booking.invoice_status
-          td.py-4.px-6
-            code #{space_booking.token}
+= render "space_bookings/table",
+         space_bookings: @space_bookings

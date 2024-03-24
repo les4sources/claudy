@@ -1,0 +1,22 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Rechercher une réservation"
+
+= form_with model: Booking.new, url: search_bookings_path, method: :get, local: true do |f|
+  .flex.space-x-4
+    = f.text_field :query,
+                   label: false,
+                   value: params[:booking] ? params[:booking][:query] : nil,
+                   placeholder: "Nom, email, numéro de réservation ou montant...",
+                   class: "w-96"
+    = f.submit "Rechercher"
+
+h2.mt-8.mb-4.text-lg.font-medium.tracking-tight.text-gray-900 Hébergements
+
+= render "bookings/table", 
+         bookings: @bookings
+
+h2.mt-8.mb-4.text-lg.font-medium.tracking-tight.text-gray-900 Espaces
+
+= render "space_bookings/table", 
+         space_bookings: @space_bookings

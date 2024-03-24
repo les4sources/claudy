@@ -85,6 +85,22 @@ class BookingsController < BaseController
                 notice: "La réservation a été supprimée."
   end
 
+  def search
+    if params[:booking]
+      @bookings = BookingDecorator.decorate_collection(
+        Booking.search(params[:booking][:query])
+      )
+      @space_bookings = SpaceBookingDecorator.decorate_collection(
+        SpaceBooking.search(params[:booking][:query])
+      )
+    else
+      @bookings = Booking.none
+      @space_bookings = SpaceBooking.none
+    end
+    @accounting_view = true
+    render :search_results
+  end
+
   private
 
   def set_presenters

@@ -100,6 +100,21 @@ class Booking < ApplicationRecord
                                 allow_destroy: true,
                                 reject_if: lambda { |attributes| attributes['amount'].to_f.zero? }
 
+  def self.search(query)
+    return none if query.blank?
+    if query.match?(/\A-?\d+(\.\d+)?\z/) # numeric
+      normalized_price_query = query.gsub(',', '.')
+      price_query = normalized_price_query.to_f.round(2) * 100
+    else
+      price_query = -9999
+    end
+    where(
+      "group_name ILIKE :query OR email ILIKE :query OR firstname ILIKE :query OR lastname ILIKE :query OR token ILIKE :query OR price_cents = :price_query", 
+      query: "%#{query}%", 
+      price_query: price_query
+    )
+  end
+
   def canceled?
     status == "canceled"
   end
