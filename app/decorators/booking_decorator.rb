@@ -51,8 +51,8 @@ class BookingDecorator < ApplicationDecorator
     object.email.present? ? h.mail_to(object.email, object.email, class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700") : "-"
   end
 
-  def from_date
-    l(object.from_date, format: :short)
+  def from_date(format: :short)
+    l(object.from_date, format: format)
   end
 
   def group_or_name
@@ -317,8 +317,8 @@ class BookingDecorator < ApplicationDecorator
     end
   end
 
-  def to_date
-    l(object.to_date, format: :short)
+  def to_date(format: :short)
+    l(object.to_date, format: format)
   end
 
   def token

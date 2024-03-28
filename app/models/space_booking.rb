@@ -88,7 +88,7 @@ class SpaceBooking < ApplicationRecord
       "group_name ILIKE :query OR email ILIKE :query OR firstname ILIKE :query OR lastname ILIKE :query OR token ILIKE :query OR price_cents = :price_query", 
       query: "%#{query}%", 
       price_query: price_query
-    )
+    ).order(from_date: :desc)
   end
 
   def canceled?

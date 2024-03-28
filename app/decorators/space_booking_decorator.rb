@@ -82,8 +82,8 @@ class SpaceBookingDecorator < ApplicationDecorator
     object.email.present? ? h.mail_to(object.email) : "-"
   end
 
-  def from_date
-    l(object.from_date, format: :short)
+  def from_date(format: :short)
+    l(object.from_date, format: format)
   end
 
   def group_or_name
@@ -247,8 +247,8 @@ class SpaceBookingDecorator < ApplicationDecorator
     end
   end
 
-  def to_date
-    l(object.to_date, format: :short)
+  def to_date(format: :short)
+    l(object.to_date, format: format)
   end
 
   def token
