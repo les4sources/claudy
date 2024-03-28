@@ -1,12 +1,17 @@
 class PaymentsController < BaseController
-  before_action :get_booking, except: [:index, :pay]
-  before_action :get_payment, only: [:show, :edit, :update, :destroy, :pay]
+  before_action :get_booking, except: [:index, :show]
+  before_action :get_payment, only: [:show, :edit, :update, :destroy]
   before_action :ensure_frame_response, only: [:new, :edit]
 
   layout "modal"
 
   def index
     @payments = PaymentDecorator.decorate_collection(Payment.all.order(created_at: :desc))
+    render layout: "application"
+  end
+
+  def show
+    @payment = PaymentDecorator.decorate(@payment)
     render layout: "application"
   end
 

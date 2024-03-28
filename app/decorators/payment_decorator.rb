@@ -66,7 +66,7 @@ class PaymentDecorator < ApplicationDecorator
     when "pending"
       h.content_tag(:span, "En attente", class: "#{shared_classes} bg-red-200 text-red-800")
     when "paid"
-      h.content_tag(:span, "Payée", class: "#{shared_classes} bg-green-200 text-green-800")
+      h.content_tag(:span, "Payé", class: "#{shared_classes} bg-green-200 text-green-800")
     end
   end
 end

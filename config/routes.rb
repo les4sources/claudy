@@ -52,7 +52,7 @@ Rails.application.routes.draw do
       get "edit_estimated_arrival", on: :member
       patch "update_estimated_arrival", on: :member
     end
-    resources :payments do
+    resources :payments, param: :uuid do
       member do
         get "pay"
       end
