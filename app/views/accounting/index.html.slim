@@ -33,9 +33,9 @@ h2.mt-8.mb-4.text-lg.font-medium.tracking-tight.text-gray-900 Hébergements dont
             .md:hidden.mt-1.text-gray-900
               = booking.date_range
           td.py-4.px-6.hidden.md:table-cell
-            = booking.from_date
+            = booking.from_date(format: :ddmmyyyy)
           td.py-4.px-6.hidden.md:table-cell
-            = booking.to_date
+            = booking.to_date(format: :ddmmyyyy)
           td.py-4.px-6.space-x-1
             - if !booking.lodging.nil?
               = booking.lodging_badge(font_size: "sm")
@@ -78,9 +78,9 @@ h2.mt-8.mb-4.text-lg.font-medium.tracking-tight.text-gray-900 Réservations d'es
             .md:hidden.mt-1.text-gray-900
               = space_booking.date_range
           td.py-4.px-6.hidden.md:table-cell
-            = space_booking.from_date
+            = space_booking.from_date(format: :ddmmyyyy)
             br
-            | → #{space_booking.to_date}
+            | → #{space_booking.to_date(format: :ddmmyyyy)}
           td.py-4.px-6
             = space_booking.duration
           td.py-4.px-6.space-x-1

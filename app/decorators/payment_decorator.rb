@@ -18,8 +18,8 @@ class PaymentDecorator < ApplicationDecorator
     booking.payment_status
   end
 
-  def created_at
-    h.l(object.created_at.to_date)
+  def created_at(format: :default)
+    h.l(object.created_at.to_date, format: format)
   end
 
   def payment_method

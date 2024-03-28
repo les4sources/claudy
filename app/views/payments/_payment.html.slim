@@ -12,7 +12,7 @@ tr(id="#{dom_id payment}")
   td.py-4.px-6.text-center
     = payment.payment_method_emoji
   td.py-4.px-6
-    = payment.created_at
+    = payment.created_at(format: :ddmmyyyy)
   td.py-4.px-6
     = payment.amount
   td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap.hide-if-booking-page[scope="row"]
