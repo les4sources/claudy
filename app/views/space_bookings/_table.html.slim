@@ -34,10 +34,10 @@
               = space_booking.date_range
           / td.py-4.px-6
             = space_booking.event_name_with_color
-          td.py-4.px-6.hidden.md:table-cell
-            = space_booking.from_date
+          td.py-4.px-6.w-64.hidden.md:table-cell
+            = space_booking.from_date(format: :ddmmyyyy)
             br
-            | → #{space_booking.to_date}
+            | → #{space_booking.to_date(format: :ddmmyyyy)}
           td.py-4.px-6
             = space_booking.duration
           td.py-4.px-6.space-x-1
