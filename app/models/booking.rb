@@ -49,6 +49,7 @@ class Booking < ApplicationRecord
   # Relationships
   has_many :reservations, dependent: :destroy
   has_many :rooms, through: :reservations
+  has_many :paylinks, dependent: :nullify
   has_many :payments, inverse_of: :booking do
     def persisted
       reject { |payment| !payment.persisted? }

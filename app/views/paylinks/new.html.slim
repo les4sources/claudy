@@ -1,0 +1,9 @@
+= render TurboModal::Component.new(title: "Paylink", width: :sm) do
+  = form_with model: [@booking, @paylink] do |f|
+    .space-y-8.divide-y.divide-gray-200.sm:space-y-5
+      .space-y-6.sm:space-y-5
+        = render "form", f: f
+
+    = f.actions do
+      = f.submit "Créer le paylink"
+ 
