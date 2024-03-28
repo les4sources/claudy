@@ -38,12 +38,14 @@ class PaymentDecorator < ApplicationDecorator
 
   def payment_method
     case object.payment_method
-    when "cash"
-      "Liquide"
-    when "bank_transfer"
-      "Virement"
     when "airbnb"
       "Airbnb"
+    when "bank_transfer"
+      "Virement"
+    when "cash"
+      "Liquide"
+    when "stripe"
+      "En ligne"
     end
   end
 

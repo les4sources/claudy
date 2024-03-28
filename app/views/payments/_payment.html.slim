@@ -15,7 +15,7 @@ tr(id="#{dom_id payment}")
     = payment.created_at
   td.py-4.px-6
     = payment.amount
-  td.py-4.px-6.w-48
+  td.py-4.px-6
     = payment.status
   td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap.hide-if-booking-page[scope="row"]
     .inline-flex.space-x-2
@@ -26,10 +26,20 @@ tr(id="#{dom_id payment}")
     .text-xs.text-gray-500
       = payment.booking_date_range
   td.py-4.px-6.text-right
-    = link_to "modifier", 
-              edit_booking_payment_path(payment.booking, payment), 
-              data: { turbo_frame: "modal" },
-              class: "claudy-link text-xs"
+    .space-x-2
+      = link_to "détails", 
+                payment_path(payment),
+                class: "claudy-link text-xs"
+      = link_to "modifier", 
+                edit_booking_payment_path(payment.booking, payment), 
+                data: { turbo_frame: "modal" },
+                class: "claudy-link text-xs"
+      = link_to "supprimer", 
+                payment_path(payment),
+                data: { \
+                  turbo_method: :delete \
+                },
+                class: "claudy-link text-xs"
 
 javascript:
   // hide booking details on bookings#show

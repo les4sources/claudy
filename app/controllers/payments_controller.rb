@@ -1,5 +1,5 @@
 class PaymentsController < BaseController
-  before_action :get_booking, except: [:index, :show]
+  before_action :get_booking, except: [:index, :show, :destroy]
   before_action :get_payment, only: [:show, :edit, :update, :destroy]
   before_action :ensure_frame_response, only: [:new, :edit]
 
@@ -11,6 +11,7 @@ class PaymentsController < BaseController
   end
 
   def show
+    breadcrumb "Paiements", :payments_path, match: :exact
     @payment = PaymentDecorator.decorate(@payment)
     render layout: "application"
   end
@@ -64,7 +65,7 @@ class PaymentsController < BaseController
     if service.run
       respond_to do |format|
         format.turbo_stream { @payment = PaymentDecorator.decorate(service.payment) }
-        format.html { redirect_to booking_url(@booking), notice: "Le paiement a été supprimé." }
+        format.html { redirect_to booking_url(@payment.booking), notice: "Le paiement a été supprimé." }
         format.json { head :no_content }
       end
     end
