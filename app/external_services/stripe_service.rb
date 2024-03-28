@@ -1,19 +1,25 @@
 class StripeService
-  def create_checkout_session(email:, success_url:, cancel_url:, item: {})
+  include Singleton
+
+  def create_checkout_session(client_reference_id:, success_url:, cancel_url:, item: {}, metadata: {})
     params = {
-      customer_email: email,
+      mode: "payment",
+      client_reference_id: client_reference_id,
       line_items: [{
-        name: item[:name],
-        amount: item[:amount],
+        price_data: {
+          currency: "eur",
+          unit_amount: item[:amount],
+          product_data: {
+            name: item[:name]
+          }
+        },
         quantity: 1,
       }],
       metadata: metadata,
       payment_intent_data: {
         description: "Paiement pour: #{item[:name]}",
-        receipt_email: email,
         metadata: {
           "Type" => "#{item[:name]}",
-          "Customer email" => email,
           "Booking ID" => "#{item[:id]}",
           "source" => "Claudy"
         }

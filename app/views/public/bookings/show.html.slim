@@ -12,13 +12,12 @@
 = render "public/bookings/status_callout", 
          booking: @booking
 
-.overflow-hidden.bg-teal-50.sm:rounded-lg
-  .px-4.py-5.sm:px-6
-    h3.text-lg.font-medium.leading-6.text-gray-900
+.overflow-hidden
+  .py-5
+    h3.mb-4.text-xl.font-bold.leading-6.text-gray-900
       | Votre réservation
     / p.mt-1.max-w-2xl.text-sm.text-gray-500
       | Personal details and application.
-  .border-t.border-teal-200.px-4.py-5.sm:px-6
 
     .mb-4.font-bold
       | Quel matériel prendre? Comment vous rendre aux 4 Sources? Quel est le Règlement d'Ordre Intérieur? 
@@ -96,13 +95,13 @@
                   | Download
 
 - if @booking.confirmed?
-  .mt-4.overflow-hidden.bg-teal-50.sm:rounded-lg
-    .px-4.py-5.sm:px-6
-      h3.text-lg.font-medium.leading-6.text-gray-900
+  .mt-4.overflow-hidden
+    .py-5
+      h3.mb-4.text-xl.font-bold.leading-6.text-gray-900
         | Votre arrivée
       / p.mt-1.max-w-2xl.text-sm.text-gray-500
         | Personal details and application.
-    .border-t.border-teal-200.px-4.py-5.sm:px-6
+
       dl.grid.grid-cols-1.gap-x-4.gap-y-8.sm:grid-cols-2
         .sm:col-span-1
           dt.text-base.font-medium.text-gray-500
@@ -114,22 +113,23 @@
       .mt-4
         div
           |
-            Lorsque vous arrivez aux 4 Sources, merci de <strong>nous appeler au #{ENV.fetch('PHONE_NUMBER')} (pas de SMS)</strong> afin de vous annoncer 
+            Lorsque vous arrivez aux 4 Sources, merci de <strong>nous appeler au #{ENV.fetch('PHONE_NUMBER')} (pas de SMS, car c'est une redirection d'appel)</strong> afin de vous annoncer 
             et de nous permettre de vous accueillir. 
           - if @booking.from_airbnb?
             | Pour toute question d'ici votre arrivée, veuillez nous la communiquer via la messagerie Airbnb.
           - else
-            | Pour toute question d'ici votre arrivée, veuillez nous la communiquer à <a href="mailto:reservation@les4sources.be" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700">reservation@les4sources.be</a>. 
+            | Pour toute question d'ici votre arrivée, veuillez nous la communiquer à <a href="mailto:contact@les4sources.be" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700">contact@les4sources.be</a>. 
           |  Les réservations ne sont pas gérées par téléphone.
 
 - if @booking.confirmed? && !@booking.lodging.nil?
-  .mt-4.overflow-hidden.bg-teal-50.sm:rounded-lg
-    .px-4.py-5.sm:px-6
-      h3.text-lg.font-medium.leading-6.text-gray-900
-        | Vos chambres
-      p.mt-1.max-w-2xl.text-base.text-gray-500
-        | Consultez la <a target="_blank" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700" href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3">FAQ des hébergements</a> pour des informations sur les dimensions des draps.
-    .border-t.border-teal-200.px-4.py-5.pb-2.sm:px-6
+  .mt-4.overflow-hidden
+    .py-5
+      .mb-4
+        h3.text-xl.font-bold.leading-6.text-gray-900
+          | Vos chambres
+        p.mt-1.max-w-2xl.text-base.text-gray-500
+          | Consultez la <a target="_blank" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700" href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3">FAQ des hébergements</a> pour des informations sur les dimensions des draps.
+
       - RoomDecorator.decorate_collection(@booking.rooms.uniq.sort_by(&:level).map(&:decorate).group_by(&:level)).each do |level|
         h4.font-semibold.mb-4 
           - case level.first
@@ -140,9 +140,9 @@
           - when 2
             | 2ème étage
 
-        ul.grid.grid-cols-1.gap-6.mb-8.sm:grid-cols-2[role="list"]
+        ul.grid.grid-cols-1.gap-6.sm:grid-cols-2[role="list"]
           - level.last.each do |room|
-            li.col-span-1.divide-y.divide-gray-200.rounded-lg.bg-white.shadow
+            li.col-span-1.divide-y.divide-gray-200.rounded-lg.bg-teal-50.shadow
               .flex.w-full.items-center.justify-between.space-x-6.p-6
                 .flex-1.truncate
                   .flex.items-center.space-x-3
@@ -155,11 +155,11 @@
                 = vite_image_tag "images/rooms/#{room.code}.jpg", alt: "", class: "h-16 w-16 flex-shrink-0 rounded-full bg-gray-300"
 
 - if @booking.confirmed?
-  .mt-8.overflow-hidden.bg-teal-50.sm:rounded-lg
-    .px-4.py-5.sm:px-6
-      h3.text-lg.font-medium.leading-6.text-gray-900
+  .mt-8.overflow-hidden
+    .py-5
+      h3.mb-4.text-xl.font-bold.leading-6.text-gray-900
         | À emporter avec vous
-    .border-t.border-teal-200.px-4.py-5.sm:px-6
+
       .text-base
         ul.max-w-xs-xl.space-y-2.text-gray-600[role="list"]
           li.flex.gap-x-3
@@ -191,7 +191,7 @@
               path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
             span
               strong.font-semibold.text-gray-900
-                | Du papier toilette en suffisance
+                | Du papier toilette de réserve
           li.flex.gap-x-3
             svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
               path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
@@ -208,11 +208,11 @@
               | selon la disponibilité des habitants
 
 - if @booking.confirmed? && @booking.current? && @booking.wifi?
-  .mt-8.overflow-hidden.bg-teal-50.sm:rounded-lg
-    .px-4.py-5.sm:px-6
-      h3.text-lg.font-medium.leading-6.text-gray-900
+  .mt-8.overflow-hidden
+    .py-5
+      h3.mb-4.text-xl.font-bold.leading-6.text-gray-900
         | Votre connexion WiFi
-    .border-t.border-teal-200.px-4.py-5.sm:px-6
+
       .grid.gap-y-4
         .text-base
           .font-medium.text-gray-500
@@ -235,16 +235,16 @@
           | 
             L'appareil n'est pas toujours branché à votre arrivée. Vous pouvez alors le 
             brancher à une prise à proximité. Veillez à l'éteindre la nuit afin de respecter 
-            le précieux sommeil des giteurs et habitants 🙂 Et à la débrancher à votre départ.
+            le précieux sommeil des giteurs et habitants 🙂 Et à le débrancher à votre départ.
 
 - if !@booking.declined?
-  .mt-8.overflow-hidden.bg-teal-50.sm:rounded-lg
-    .px-4.py-5.sm:px-6
-      h3.text-lg.font-medium.leading-6.text-gray-900
+  .mt-8.overflow-hidden
+    .py-5
+      h3.mb-4.text-xl.font-bold.leading-6.text-gray-900
         | Votre paiement
       / p.mt-1.max-w-2xl.text-sm.text-gray-500
         | Personal details and application.
-    .border-t.border-teal-200.px-4.py-5.sm:px-6
+
       dl.grid.grid-cols-1.gap-x-4.gap-y-8.sm:grid-cols-2
         .sm:col-span-1
           dt.text-base.font-medium.text-gray-500
@@ -256,11 +256,8 @@
               | Disponible sur Airbnb
             - else
               = @booking.price
-        .sm:col-span-1
-          dt.text-base.font-medium.text-gray-500
-            | Votre moyen de paiement
-          dd.mt-1.text-base.text-gray-900
-            = @booking.payment_method
+
+            span.ml-2 = @booking.payment_status
 
         - if @booking.attributes["payment_method"] == "bank_transfer" && @booking.price_cents > 0
           - if @booking.confirmed?
@@ -284,9 +281,11 @@
               dd.mt-1.text-base.text-gray-900
                 | Les informations relatives au paiement seront disponibles lorsque votre réservation aura été confirmée par notre équipe.
 
-        - if @booking.invoice_status == "requested"
-          .text-base.font-medium.text-gray-900.sm:col-span-2
-            | 🧾 Vous avez demandé de recevoir une facture
+      = render "public/bookings/show/payments", booking: @booking
+
+      - if @booking.invoice_status == "requested"
+        .text-base.font-medium.text-gray-900.sm:col-span-2
+          | 🧾 Vous avez demandé de recevoir une facture
 
 - if @booking.public_notes.presence
   .relative.mt-8.bg-slate-50.sm:rounded-lg
@@ -304,4 +303,4 @@
     - if @booking.from_airbnb?
       |  via la messagerie Airbnb.
     - else
-      |  par email à <a href="mailto:reservation@les4sources.be">reservation@les4sources.be</a>.
+      |  par email à <a href="mailto:contact@les4sources.be">contact@les4sources.be</a>.

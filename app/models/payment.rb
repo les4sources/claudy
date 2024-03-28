@@ -2,14 +2,16 @@
 #
 # Table name: payments
 #
-#  id             :bigint           not null, primary key
-#  booking_id     :bigint           not null
-#  payment_method :string
-#  status         :string
-#  deleted_at     :datetime
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#  amount_cents   :integer          default(0), not null
+#  booking_id                 :bigint           not null
+#  payment_method             :string
+#  status                     :string
+#  deleted_at                 :datetime
+#  created_at                 :datetime         not null
+#  updated_at                 :datetime         not null
+#  amount_cents               :integer          default(0), not null
+#  stripe_checkout_session_id :string
+#  stripe_payment_intent_id   :string
+#  id                         :uuid             not null, primary key
 #
 class Payment < ApplicationRecord
   belongs_to :booking
@@ -21,4 +23,15 @@ class Payment < ApplicationRecord
 
   validates :amount, numericality: { greater_than: 0.0 }
   validates :payment_method, presence: true
+
+  scope :paid, -> { where(status: "paid") }
+  scope :pending, -> { where(status: "pending") }
+
+  def paid?
+    self.status == "paid"
+  end
+
+  def pending?
+    self.status == "pending"
+  end
 end

@@ -15,8 +15,7 @@ Rails.application.routes.draw do
   resources :humans
   resources :human_roles
   resources :notes
-  resources :paylinks
-  resources :payments, only: [:index]
+  resources :payments, only: [:index, :show]
   resources :products
   resources :projects
   resources :rental_items
@@ -53,10 +52,19 @@ Rails.application.routes.draw do
       get "edit_estimated_arrival", on: :member
       patch "update_estimated_arrival", on: :member
     end
+    resources :payments do
+      member do
+        get "pay"
+      end
+    end
     get "reservation/:token", to: "bookings#show", as: :booking
     get "espaces/:token", to: "space_bookings#show", as: :space_booking
     get "calendrier-hebergements", to: "calendars#lodgings"
     get "calendar-lodgings-modal", to: "calendars#lodgings_modal"
+  end
+
+  namespace :webhooks do
+    resource :stripe_hooks, only: :create
   end
 
   # Defines the root path route ("/")

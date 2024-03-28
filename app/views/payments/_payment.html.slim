@@ -15,6 +15,8 @@ tr(id="#{dom_id payment}")
     = payment.created_at
   td.py-4.px-6
     = payment.amount
+  td.py-4.px-6.w-48
+    = payment.status
   td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap.hide-if-booking-page[scope="row"]
     .inline-flex.space-x-2
       = link_to payment.booking_name, 

@@ -102,10 +102,7 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
             | Paiements
           div = @booking.payment_status
 
-        = link_to "Paylink ➕",
-          new_paylink_path(booking_id: @booking.id), data: { turbo_frame: "modal" },
-          class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
-        = link_to "Paiement ➕",
+        = link_to "Nouveau paiement ➕",
           new_booking_payment_path(booking_id: @booking.id), data: { turbo_frame: "modal" },
           class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
       .border-t.border-gray-200
@@ -114,10 +111,12 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
             tr
               th.py-3.px-3.w-8[scope="col"]
                 | &nbsp;
-              th.py-3.px-6.w-64[scope="col"]
+              th.py-3.px-6.w-48[scope="col"]
                 | Date
               th.py-3.px-6[scope="col"]
                 | Montant
+              th.py-3.px-6.w-48[scope="col"]
+                | Statut
               th.py-3.px-6.hide-if-booking-page[scope="col"]
                 | Réservation
               th.py-3.px-6[scope="col"] &nbsp;

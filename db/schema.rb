@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_03_28_094804) do
+ActiveRecord::Schema[7.0].define(version: 2024_03_28_161654) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -215,7 +215,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_28_094804) do
     t.index ["booking_id"], name: "index_paylinks_on_booking_id"
   end
 
-  create_table "payments", force: :cascade do |t|
+  create_table "payments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.bigint "booking_id", null: false
     t.string "payment_method"
     t.string "status"
@@ -223,7 +223,10 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_28_094804) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "amount_cents", default: 0, null: false
+    t.string "stripe_checkout_session_id"
+    t.string "stripe_payment_intent_id"
     t.index ["booking_id"], name: "index_payments_on_booking_id"
+    t.index ["id"], name: "index_payments_on_id", unique: true
   end
 
   create_table "products", force: :cascade do |t|
@@ -350,6 +353,14 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_28_094804) do
     t.string "code"
     t.datetime "deleted_at", precision: nil
     t.integer "position", default: 0
+  end
+
+  create_table "stripe_events", force: :cascade do |t|
+    t.string "webhook_id"
+    t.string "event_type"
+    t.string "object_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "subscriptions", force: :cascade do |t|

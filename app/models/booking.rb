@@ -49,7 +49,6 @@ class Booking < ApplicationRecord
   # Relationships
   has_many :reservations, dependent: :destroy
   has_many :rooms, through: :reservations
-  has_many :paylinks, dependent: :nullify
   has_many :payments, inverse_of: :booking do
     def persisted
       reject { |payment| !payment.persisted? }
@@ -191,9 +190,9 @@ class Booking < ApplicationRecord
   end
 
   def set_payment_status
-    if self.payments.sum(:amount_cents) >= self.price_cents
+    if self.payments.paid.sum(:amount_cents) >= self.price_cents
       status = "paid"
-    elsif self.payments.sum(:amount_cents) > 0.0
+    elsif self.payments.paid.sum(:amount_cents) > 0.0
       status = "partially_paid"
     else
       status = "pending"

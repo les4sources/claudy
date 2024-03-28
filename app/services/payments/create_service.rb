@@ -22,6 +22,7 @@ module Payments
     def run!(params = {})
       @payment.attributes = payment_params(params)
       return false if !@payment.valid?
+      set_status
       @payment.save!
       @booking.set_payment_status
       raise error_message if !error.nil?
@@ -29,6 +30,19 @@ module Payments
     end
 
     private
+
+    def set_status
+      case @payment.payment_method
+      when "airbnb"
+        @payment.status = "paid"
+      when "cash"
+        @payment.status = "paid"
+      when "bank_transfer"
+        @payment.status = "paid"
+      when "stripe"
+        @payment.status = "pending"
+      end
+    end
 
     def payment_params(params)
       params
