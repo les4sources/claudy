@@ -8,7 +8,7 @@
                 data: { turbo_frame: "modal" },
                 class: "claudy-link ml-2 text-xs"
     .font-light = payment.payment_method
-tr(id="#{dom_id payment}")
+tr(id="#{dom_id payment}" class="#{payment.tr_class}")
   td.py-4.px-6.text-center
     = payment.payment_method_emoji
   td.py-4.px-6
@@ -33,12 +33,6 @@ tr(id="#{dom_id payment}")
       = link_to "modifier", 
                 edit_booking_payment_path(payment.booking, payment), 
                 data: { turbo_frame: "modal" },
-                class: "claudy-link text-xs"
-      = link_to "supprimer", 
-                payment_path(payment),
-                data: { \
-                  turbo_method: :delete \
-                },
                 class: "claudy-link text-xs"
 
 javascript:

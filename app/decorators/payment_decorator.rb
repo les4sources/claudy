@@ -71,4 +71,12 @@ class PaymentDecorator < ApplicationDecorator
       h.content_tag(:span, "Payé", class: "#{shared_classes} bg-green-200 text-green-800")
     end
   end
+
+  def tr_class
+    if object.status == "paid"
+      "text-gray-900"
+    else
+      "text-gray-500"
+    end
+  end
 end

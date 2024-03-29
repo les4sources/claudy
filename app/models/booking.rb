@@ -156,6 +156,10 @@ class Booking < ApplicationRecord
     "#{firstname} #{lastname}"
   end
 
+  def nights_count
+    (self.to_date - self.from_date).to_i
+  end
+
   def notify_customer_on_update
     notify_on_status_change if saved_change_to_status? || saved_change_to_email?
     # notify_on_payment_status_change if saved_change_to_payment_status? || saved_change_to_email?

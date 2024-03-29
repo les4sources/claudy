@@ -1,12 +1,35 @@
 - if @booking.payments.pending.any?
-  h4.font-semibold.my-4 Demandes de paiement
+  .mt-4.space-y-4
+    - PaymentDecorator.decorate_collection(@booking.payments.pending).each do |payment|
+      .bg-teal-100.sm:rounded-lg
+        .px-4.py-5.sm:p-6
+          .sm:flex.sm:items-start.sm:justify-between
+            div
+              h3.text-base.font-semibold.leading-6.text-gray-900
+                | Payer en ligne
 
-  - PaymentDecorator.decorate_collection(@booking.payments.pending).each do |payment|
-    div
-      = link_to payment.amount, pay_public_payment_path(payment)
+              .mt-2.max-w-xl.text-sm.text-gray-500
+                p
+                  | 
+                    Nous vous invitons à payer en ligne le montant de #{payment.amount}. Ce
+                    paiement est géré par Stripe, nous n'avons à aucun moment accès à vos
+                    données de paiement.
+
+                .mt-4.flex.space-x-2
+                  = vite_image_tag "images/payments/icon-bancontact.svg", alt: "Bancontact", class: "h-4"
+                  = vite_image_tag "images/payments/icon-ideal.svg", alt: "Bancontact", class: "h-4"
+                  = vite_image_tag "images/payments/icon-visa.svg", alt: "Bancontact", class: "h-4"
+                  = vite_image_tag "images/payments/icon-mastercard.svg", alt: "Bancontact", class: "h-4"
+                  = vite_image_tag "images/payments/icon-apple-pay.svg", alt: "Bancontact", class: "h-4"
+                  = vite_image_tag "images/payments/icon-google-pay.svg", alt: "Bancontact", class: "h-4"
+
+            .mt-5.sm:ml-6.sm:mt-0.sm:flex.sm:flex-shrink-0.sm:items-center
+              = link_to "Paiement →",
+                        pay_public_payment_path(payment),
+                        class: "inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
 
 - if @booking.payments.paid.any?
-  h4.font-semibold.my-4 Paiements
+  h4.font-semibold.my-4 Paiements reçus
 
   .flow-root
     ul.-mb-8[role="list"]
