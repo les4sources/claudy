@@ -152,7 +152,7 @@ class Lodging < ApplicationRecord
   end
 
   # Number of occupied beds for a specific period
-  def beds_count(start_date, end_date)
+  def occupied_beds_count(start_date, end_date)
     counter = 0
     bookings_for_date_range(start_date, end_date).each do |booking|
       (booking.from_date..booking.to_date - 1).each do |date|
@@ -162,6 +162,24 @@ class Lodging < ApplicationRecord
       end
     end
     counter
+  end
+
+  def beds_average_value(start_date, end_date)
+    value = 0
+    nights = 0
+    bookings_for_date_range(start_date, end_date).each do |booking|
+      (booking.from_date..booking.to_date - 1).each do |date|
+        if (start_date..end_date).cover?(date)
+          nights += 1
+          value += booking.price_cents / booking.nights_count / booking.beds_count
+        end
+      end
+    end
+    if value > 0 && nights > 0
+      value.to_f / nights.to_f
+    else
+      0.0
+    end
   end
 
   private

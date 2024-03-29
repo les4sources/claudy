@@ -115,6 +115,10 @@ class Booking < ApplicationRecord
     ).order(from_date: :desc)
   end
 
+  def beds_count
+    adults + children
+  end
+
   def canceled?
     status == "canceled"
   end
