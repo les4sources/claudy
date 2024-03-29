@@ -79,4 +79,8 @@ class PaymentDecorator < ApplicationDecorator
       "text-gray-500"
     end
   end
+
+  def updated_at(format: :default)
+    h.l(object.updated_at.to_date, format: format)
+  end
 end
