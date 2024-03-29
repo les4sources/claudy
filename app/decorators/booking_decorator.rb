@@ -80,14 +80,12 @@ class BookingDecorator < ApplicationDecorator
 
   def invoice_status
     case object.invoice_status
-    when nil
-      "Non requise"
     when "requested"
       "À fournir"
     when "sent"
       "Envoyée ✔"
     else
-      object.invoice_status
+      "Non requise"
     end
   end
 

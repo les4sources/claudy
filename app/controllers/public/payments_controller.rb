@@ -4,7 +4,8 @@ class Public::PaymentsController < Public::BaseController
     service = Payments::PayService.new(payment_id: payment.id)
     if service.run
       redirect_to service.checkout_session_url,
-                  allow_other_host: true
+                  allow_other_host: true,
+                  data: { turbo: false }
     else
       redirect_to public_booking_path(payment.booking.token),
                   alert: "Une erreur est survenue et celle-ci nous empêche de vous rediriger
