@@ -156,6 +156,10 @@ class Booking < ApplicationRecord
     "#{firstname} #{lastname}"
   end
 
+  def nights_count
+    (self.to_date - self.from_date).to_i
+  end
+
   def notify_customer_on_update
     notify_on_status_change if saved_change_to_status? || saved_change_to_email?
     # notify_on_payment_status_change if saved_change_to_payment_status? || saved_change_to_email?
@@ -190,9 +194,9 @@ class Booking < ApplicationRecord
   end
 
   def set_payment_status
-    if self.payments.sum(:amount_cents) >= self.price_cents
+    if self.payments.paid.sum(:amount_cents) >= self.price_cents
       status = "paid"
-    elsif self.payments.sum(:amount_cents) > 0.0
+    elsif self.payments.paid.sum(:amount_cents) > 0.0
       status = "partially_paid"
     else
       status = "pending"

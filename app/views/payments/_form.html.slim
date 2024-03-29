@@ -12,12 +12,25 @@
   .space-y-3.md:space-y-2
     = f.collection_radio_buttons :payment_method, 
                                  [ \
-                                   ["Liquide", "cash"], 
-                                   ["Virement bancaire", "bank_transfer"],
-                                   ["Airbnb", "airbnb"] \
+                                   ["Stripe (paiement en ligne)", "stripe"], 
+                                   ["Reçu en liquide", "cash"], 
+                                   ["Par virement bancaire", "bank_transfer"],
+                                   ["Via Airbnb", "airbnb"] \
                                  ], 
                                  :last, :first, 
                                  required: true do |radio_button|
       .flex.items-center
         = radio_button.radio_button
         = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
+.border-l-4.border-yellow-400.bg-yellow-50.p-4.mt-4
+  .flex
+    .flex-shrink-0
+      | 💳
+      / svg.h-5.w-5.text-yellow-400[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+        path[fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"]
+    .ml-3
+      p.text-sm.text-yellow-700
+        | 
+          En cochant "Stripe", le paiement sera marqué comme en attente, et un lien pour le 
+          paiement en ligne sera disponible sur la page web de la réservation.

@@ -44,7 +44,21 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def date_range
-    "du #{from_date} au #{to_date}"
+    if object.from_date.year == object.to_date.year
+      if object.from_date.month == object.to_date.month && object.from_date.year == Date.today.year
+        # Même mois et année en cours
+        "du #{object.from_date.day} au #{l(object.to_date, format: :short)}"
+      elsif object.from_date.month == object.to_date.month
+        # Même mois, mais année différente de l'année en cours
+        "du #{object.from_date.day} au #{object.to_date.day} #{l(object.from_date, format: :month_year)}"
+      else
+        # Mêmes années, mois différents
+        "du #{object.from_date.day} #{object.from_date.strftime('%B')} au #{object.to_date.day} #{l(object.to_date, format: :month_year)}"
+      end
+    else
+      # Années différentes
+      "du #{object.from_date.day} #{l(object.from_date, format: :month_year)} au #{object.to_date.day} #{l(object.to_date, format: :month_year)}"
+    end
   end
 
   def email
@@ -210,6 +224,19 @@ class BookingDecorator < ApplicationDecorator
       if object.payment_status.presence
         h.content_tag(:span, object.payment_status, class: "#{shared_classes} bg-gray-100 text-gray-800")
       end
+    end
+  end
+
+  def payment_status_color
+    case object.payment_status
+    when "pending"
+      "red-200"
+    when "partially_paid"
+      "yellow-200"
+    when "paid"
+      "green-200"
+    else
+      "gray-200"
     end
   end
 

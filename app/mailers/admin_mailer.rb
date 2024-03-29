@@ -21,6 +21,17 @@ class AdminMailer < ApplicationMailer
     )
   end
 
+  def payment_received(payment)
+    @payment = PaymentDecorator.new(payment)
+    mail(
+      from: "reservation@les4sources.be",
+      to: "reservation@les4sources.be",
+      subject: "💳 Paiement reçu",
+      tag: "admin_payment_received",
+      bcc: nil
+    )
+  end
+
   def space_booking_canceled(space_booking)
     @space_booking = SpaceBookingDecorator.new(space_booking)
     mail(

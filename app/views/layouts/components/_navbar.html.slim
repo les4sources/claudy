@@ -80,7 +80,7 @@ nav.bg-white.border-gray-200.lg:px-4
           li
             = link_to "Paiements",
                       payments_path,
-                      class: controller_name == "payments" && action_name == "index" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
+                      class: controller_name == "payments" ? "text-blue-500 hover:underline" : "text-gray-900 hover:underline"
           li
             = link_to "Recherche",
                       search_bookings_path,

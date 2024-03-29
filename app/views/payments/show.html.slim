@@ -1,0 +1,76 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Paiement #{@payment.id}"
+
+- if @payment.pending?
+  .rounded-md.bg-blue-50.p-4.mb-8
+    .flex
+      .flex-shrink-0
+        svg.h-5.w-5.text-blue-400[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+          path[fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd"]
+      .ml-3.flex-1.md:flex.md:justify-between
+        .text-sm.text-blue-700
+          | Lien pour le paiement en ligne :
+          br
+          = link_to pay_public_payment_url(@payment), 
+                    pay_public_payment_url(@payment),
+                    class: "claudy-link"
+
+          .mt-4
+            = render "payments/icons"
+        .mt-3.text-sm.md:ml-6.md:mt-0
+          a.whitespace-nowrap.font-medium.text-blue-700.hover:text-blue-600[href="#{pay_public_payment_path(@payment)}" target="_blank"]
+            |  Payer en ligne 
+            span[aria-hidden="true"]
+              |  →
+
+
+.grid.grid-cols-3.gap-4
+  .col-span-2.space-y-4
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Informations
+      .border-t.border-gray-200
+        dl
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Moyen de paiement
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @payment.payment_method
+
+            dt.text-sm.font-medium.text-gray-500
+              | Ajouté le
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @payment.created_at
+
+            dt.text-sm.font-medium.text-gray-500
+              | Montant
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @payment.amount
+
+            dt.text-sm.font-medium.text-gray-500
+              | Statut
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @payment.status
+
+            dt.text-sm.font-medium.text-gray-500
+              | Réservation
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              .inline-flex.space-x-2
+                = link_to @payment.booking_name, 
+                          booking_path(@payment.booking),
+                          class: "claudy-link"
+                = @payment.booking_payment_status
+              .text-xs.text-gray-500
+                = @payment.booking_date_range
+
+            dt.text-sm.font-medium.text-gray-500
+              | Stripe Checkout Session ID
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @payment.stripe_checkout_session_id
+
+            dt.text-sm.font-medium.text-gray-500
+              | Stripe Payment Intent ID
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @payment.stripe_payment_intent_id

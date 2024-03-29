@@ -43,7 +43,7 @@ h2.mt-8.mb-4.text-lg.font-medium.tracking-tight.text-gray-900 Hébergements dont
               = booking.rooms_badges(font_size: "sm")
           td.py-4.px-6
             - if booking.confirmed?
-              = booking.payment_badge
+              = booking.payment_status
 
 h2.mt-8.mb-4.text-lg.font-medium.tracking-tight.text-gray-900 Réservations d'espaces dont le montant est à définir
 

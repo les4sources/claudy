@@ -51,12 +51,12 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
           span.font-medium.text-gray-900
             | 👶 Bébés
 
-.grid.grid-cols-3.gap-4
-  .col-span-2.space-y-4
+.grid.sm:grid-cols-1.md:grid-cols-3.gap-4
+  .md:col-span-2.space-y-4
     .overflow-hidden.bg-white.shadow.sm:rounded-lg
       .px-4.py-5.sm:px-6
         h3.text-lg.font-medium.leading-6.text-gray-900
-          | Chambres réservées
+          | Hébergements
         / p.mt-1.max-w-2xl.text-sm.text-gray-500
           | Chambres 
       .border-t.border-gray-200
@@ -102,19 +102,21 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
             | Paiements
           div = @booking.payment_status
 
-        = link_to "Enregistrer un paiement",
+        = link_to "Nouveau paiement ➕",
           new_booking_payment_path(booking_id: @booking.id), data: { turbo_frame: "modal" },
           class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
-      .border-t.border-gray-200
-        table.table-fixed.w-full.text-sm.text-left.text-gray-500.border-b.border-b-gray-200
+      .border-t-4(class="border-#{@booking.payment_status_color}")
+        table.table-fixed.w-full.text-sm.text-left.text-gray-900.border-b.border-b-gray-200
           thead.text-xs.text-gray-700.uppercase.bg-gray-50
             tr
               th.py-3.px-3.w-8[scope="col"]
                 | &nbsp;
-              th.py-3.px-6.w-64[scope="col"]
+              th.py-3.px-6.w-32[scope="col"]
                 | Date
-              th.py-3.px-6[scope="col"]
+              th.py-3.px-6.w-36[scope="col"]
                 | Montant
+              th.py-3.px-6.w-48[scope="col"]
+                | Statut
               th.py-3.px-6.hide-if-booking-page[scope="col"]
                 | Réservation
               th.py-3.px-6[scope="col"] &nbsp;
@@ -128,7 +130,7 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
             dt.text-sm.font-medium.text-gray-500
               | Tarif de la réservation
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @booking.price
+              span.font-semibold = @booking.price
           / .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
             dt.text-sm.font-medium.text-gray-500
               | Paiement
