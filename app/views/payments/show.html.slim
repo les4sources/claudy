@@ -14,7 +14,8 @@
           br
           = link_to pay_public_payment_url(@payment), 
                     pay_public_payment_url(@payment),
-                    class: "claudy-link"
+                    class: "claudy-link",
+                    target: "_blank"
 
           .mt-4
             = render "payments/icons"

@@ -50,6 +50,9 @@
               .text-xs.flex.space-x-2
                 div = lodging.name
                 .opacity-75 = lodging.revenues(Date.new(@year, month, 1), Date.new(@year, month, 1).end_of_month)
+            .mt-2.inline-flex.items-center.rounded-full.bg-gray-50.px-2.py-1.text-xs.font-medium.text-gray-600.ring-1.ring-inset.ring-gray-500/10
+              | 🛌 #{@beds_used_per_month[month]} #{"lit".pluralize(@beds_used_per_month[month])} #{"occupé".pluralize(@beds_used_per_month[month])}
+
           td.whitespace-nowrap.px-3.py-4.text-sm.text-fuchsia-700.bg-fuchsia-100
             - month_revenues_for_space_bookings = @revenues_by_month_for_space_bookings[month] || 0.0
             - space_bookings_total = space_bookings_total + month_revenues_for_space_bookings
@@ -60,11 +63,14 @@
       tr.border-t-2.border-t-gray-900
         td
         td
-        td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
-          = number_to_currency(bookings_total / 100.0, unit: "€")
-        td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
+        td.align-top.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
+          div
+            = number_to_currency(bookings_total / 100.0, unit: "€")
+          .mt-2.inline-flex.items-center.rounded-full.bg-gray-50.px-2.py-1.text-xs.font-medium.text-gray-600.ring-1.ring-inset.ring-gray-500/10
+            | 🛌 #{@beds_used_per_year} #{"lit".pluralize(@beds_used_per_year)} #{"occupé".pluralize(@beds_used_per_year)}
+        td.align-top.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
           = number_to_currency(space_bookings_total / 100.0, unit: "€")
-        td.font-extrabold.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
+        td.align-top.font-extrabold.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
           = number_to_currency((bookings_total + space_bookings_total) / 100.0)
 
 h2.mt-6.text-lg.font-bold Hébergements: revenus par origine

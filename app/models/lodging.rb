@@ -151,6 +151,19 @@ class Lodging < ApplicationRecord
       .sum(:price_cents)
   end
 
+  # Number of occupied beds for a specific period
+  def beds_count(start_date, end_date)
+    counter = 0
+    bookings_for_date_range(start_date, end_date).each do |booking|
+      (booking.from_date..booking.to_date - 1).each do |date|
+        if (start_date..end_date).cover?(date)
+          counter += booking.adults + booking.children
+        end
+      end
+    end
+    counter
+  end
+
   private
 
   def count_weekend_days(start_date, end_date)
