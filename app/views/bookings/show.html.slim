@@ -75,11 +75,11 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
                 tbody
                   - @reservations_by_date.each do |date, reservations|
                     tr
-                      td(style="width: 10rem") 
+                      td.align-top(style="width: 10rem") 
                         = link_to date, 
                                   day_details_path(date: reservations.first.object.date.strftime("%Y-%m-%d")), data: { turbo_frame: "modal" },
                                   class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
-                      td = reservations.collect { |r| r.room.name }.join(", ")
+                      td.align-top = reservations.collect { |r| r.room.name }.join(", ")
 
     - if @booking.comments.presence
       .overflow-hidden.bg-white.shadow.sm:rounded-lg

@@ -130,15 +130,16 @@
         p.mt-1.max-w-2xl.text-base.text-gray-500
           | Consultez la <a target="_blank" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700" href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3">FAQ des hébergements</a> pour des informations sur les dimensions des draps.
 
-      - RoomDecorator.decorate_collection(@booking.rooms.uniq.sort_by(&:level).map(&:decorate).group_by(&:level)).each do |level|
-        h4.font-semibold.mb-4 
-          - case level.first
-          - when 0
-            | Rez-de-chaussée
-          - when 1
-            | 1er étage
-          - when 2
-            | 2ème étage
+      .space-y-4
+        - RoomDecorator.decorate_collection(@booking.rooms.uniq.sort_by(&:level).map(&:decorate).group_by(&:level)).each do |level|
+          h4.font-semibold.mb-4 
+            - case level.first
+            - when 0
+              | Rez-de-chaussée
+            - when 1
+              | 1er étage
+            - when 2
+              | 2ème étage
 
         ul.grid.grid-cols-1.gap-6.sm:grid-cols-2[role="list"]
           - level.last.each do |room|
@@ -259,7 +260,7 @@
 
             span.ml-2 = @booking.payment_status
 
-        - if @booking.attributes["payment_method"] == "bank_transfer" && @booking.price_cents > 0
+        - if !@booking.paid? && @booking.attributes["payment_method"] == "bank_transfer" && @booking.price_cents > 0
           - if @booking.confirmed?
             .sm:col-span-2
               dt.text-base.font-medium.text-gray-500

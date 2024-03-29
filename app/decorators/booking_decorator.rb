@@ -53,7 +53,7 @@ class BookingDecorator < ApplicationDecorator
         "du #{object.from_date.day} au #{object.to_date.day} #{l(object.from_date, format: :month_year)}"
       else
         # Mêmes années, mois différents
-        "du #{object.from_date.day} #{object.from_date.strftime('%B')} au #{object.to_date.day} #{l(object.to_date, format: :month_year)}"
+        "du #{l(object.from_date, format: :short)} au #{object.to_date.day} #{l(object.to_date, format: :month_year)}"
       end
     else
       # Années différentes
