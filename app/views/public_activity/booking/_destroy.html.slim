@@ -1,6 +1,6 @@
 - booking = Booking.unscoped.find(activity.trackable_id)&.decorate
 
-- if !booking.nil?
+- if booking
   li
     .relative.pb-8
       span.absolute.left-4.top-4.-ml-px.h-full.w-0.5.bg-gray-200[aria-hidden="true"]
