@@ -1,4 +1,4 @@
-- booking = Booking.unscoped.find(activity.trackable_id)&.decorate
+- booking = Booking.unscoped.where(id: activity.trackable_id)&.first&.decorate
 
 - if booking
   li
