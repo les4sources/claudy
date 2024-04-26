@@ -58,7 +58,8 @@
         p Statut du paiement: #{booking.payment_status}
 
         p 
-          = link_to "Page web de votre réservation", public_booking_path(booking.token)
+          = link_to "Page web de votre réservation", 
+                    public_booking_path(booking.object.token)
           br
           = link_to "FAQ des hébergements aux 4 Sources", 
                     "https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3"
