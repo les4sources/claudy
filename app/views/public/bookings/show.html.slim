@@ -260,11 +260,11 @@
 
             span.ml-2 = @booking.payment_status
 
-        - if !@booking.paid? && @booking.attributes["payment_method"] == "bank_transfer" && @booking.price_cents > 0
+        - if !@booking.paid? && @booking.price_cents > 0
           - if @booking.confirmed?
             .sm:col-span-2
               dt.text-base.font-medium.text-gray-500
-                | Pour effectuer votre virement bancaire
+                | Pour effectuer un paiement par virement bancaire
               dd.mt-1.text-base.text-gray-900
                 | Merci de régler le montant de votre réservation sur le compte des 4 Sources et de nous envoyer une preuve de paiement pour le traitement rapide de votre réservation 👍
                 .mt-2.font-mono
@@ -278,7 +278,7 @@
           - elsif @booking.pending?
             .sm:col-span-2
               dt.text-base.font-medium.text-gray-500
-                | Pour effectuer votre virement bancaire
+                | Pour effectuer un paiement par virement bancaire
               dd.mt-1.text-base.text-gray-900
                 | Les informations relatives au paiement seront disponibles lorsque votre réservation aura été confirmée par notre équipe.
 
