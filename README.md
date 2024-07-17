@@ -19,18 +19,27 @@ using any test system that you feel comfortable with.
 
 ## Deployment
 
-We deploy on a Akamai/Linode 2GB using Hatchbox. We will set a staging environment up on the same VPS
+We deploy on a Akamai/Linode 2GB using Hatchbox. We might set a staging environment up on the same VPS
 once we start working collectively on the code.
 
 ## Quick Start
 
 Beforehand, get the encryption key for the `development` environment and add it to `config/credentials/development.key`.
 
+Then install Ruby 3.1.2 and NodeJS 18.8.0.
+
+Get the default environment variables values and add them to `.env`, or - for now - duplicate `.env.example` to `.env`.
+
+And everything should go like a couque.
+
 ```
 git clone git@github.com:les4sources/claudy.git
 cd claudy
+gem install bundler:2.3.19
+bundle config build.nio4r --with-cflags="-Wno-incompatible-pointer-types"
 bundle install
 yarn install
+brew install vips
 rails db:create && rails db:migrate
 rails db:seed
 bin/vite dev &
