@@ -10,13 +10,13 @@ lodging_8 = Lodging.create(name: "La Chevêche", summary: "4 à 8 personnes", pr
 lodging_16 = Lodging.create(name: "La Hulotte", summary: "9 à 16 personnes", price_night: 480)
 lodging_25 = Lodging.create(name: "Le Grand-Duc", summary: "17 à 25 personnes", price_night: 750, party_hall_availability: true)
 
-room_romarin = Room.create(name: "Romarin", level: 0, code: "ROM", description: "lit double + lit superposé")
-room_balsamine = Room.create(name: "Balsamine", level: 0, code: "BAL", description: "lit double + lit superposé")
-room_lavande = Room.create(name: "Lavande", level: 1, code: "LAV", description: "2 lits simples")
+room_romarin = Room.create(name: "Romarin", level: 0, code: "ROM", description: "2 lits simples adaptables en lit double + lit superposé")
+room_balsamine = Room.create(name: "Balsamine", level: 0, code: "BAL", description: "2 lits simples adaptables en lit double + lit superposé")
+room_lavande = Room.create(name: "Lavande", level: 1, code: "LAV", description: "2 lits simples adaptables en lit double")
 room_melisse = Room.create(name: "Mélisse", level: 1, code: "MEL", description: "3 lits simples")
 room_capucine = Room.create(name: "Capucine", level: 1, code: "CAP", description: "3 lits simples")
-room_sarriette = Room.create(name: "Sarriette", level: 2, code: "SAR", description: "lit double + lit simple")
-room_origan = Room.create(name: "Origan", level: 2, code: "ORI", description: "lit double + lit superposé")
+room_sarriette = Room.create(name: "Sarriette", level: 2, code: "SAR", description: "2 lits simples adaptables en lit double + lit simple")
+room_origan = Room.create(name: "Origan", level: 2, code: "ORI", description: "2 lits simples adaptables en lit double + lit superposé")
 room_laurier = Room.create(name: "Laurier (mezzanine)", level: 2, code: "MEZ", description: "2 lits simples")
 
 LodgingRoom.create(lodging: lodging_8, room: room_romarin)
