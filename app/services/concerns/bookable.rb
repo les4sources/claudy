@@ -156,6 +156,41 @@ module Bookable
       )
   end
 
+
+  def stay_params(params)
+    params
+      .require(:stay)
+      .permit(
+        :adults,
+        :children,
+        :babies,
+        :departure_time,
+        :estimated_arrival,
+        :start_date,
+        :end_date,
+        :status,
+        :platform,
+        customer_attributes: [
+          :firstname,
+          :lastname,
+          :email,
+          :phone
+        ]
+      )
+  end
+
+
+  def customer_params(params)
+    params
+    .require(:stay).require(:customer_attributes)
+      .permit(
+        :firstname,
+        :lastname,
+        :email,
+        :phone
+      )
+  end
+
   def public_booking_params(params)
     params
       .require(:booking)

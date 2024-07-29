@@ -14,6 +14,9 @@
 class Space < ApplicationRecord
   has_many :space_reservations
 
+  #v2 - stays
+  has_many :stay_items, as: :bookable
+
   has_soft_deletion default_scope: true
 
   default_scope -> { order(:position) }

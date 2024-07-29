@@ -38,6 +38,8 @@ Rails.application.routes.draw do
     get "past", on: :collection
   end
 
+  resources :stays
+
   get "comptabilite", to: "accounting#index", as: :accounting
 
   get "pages/day", to: "pages#day", as: :day_details

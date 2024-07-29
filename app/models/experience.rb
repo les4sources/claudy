@@ -20,6 +20,9 @@
 class Experience < ApplicationRecord
   belongs_to :human, optional: true
 
+  # v2 - stays
+  has_many :stay_items, as: :bookable
+
   has_paper_trail
   has_soft_deletion default_scope: true
 

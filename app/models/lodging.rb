@@ -20,6 +20,9 @@ class Lodging < ApplicationRecord
   has_many :bookings
   has_many :unavailabilities
 
+  # v2 - stays
+  has_many :stay_items, as: :bookable
+
   monetize :price_night_cents
 
   has_soft_deletion default_scope: true

@@ -13,6 +13,10 @@
 #  price_cents :integer
 #
 class Product < ApplicationRecord
+
+  #v2 - stays
+  has_many :stay_items, as: :bookable
+
   has_paper_trail
   has_soft_deletion default_scope: true
 
