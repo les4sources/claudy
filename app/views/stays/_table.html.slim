@@ -1,0 +1,44 @@
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-3.w-2[scope="col"]
+          | &nbsp;
+        th.py-3.px-6.w-64[scope="col"]
+          | Nom 
+        th.py-3.px-6.hidden.md:table-cell[scope="col"]
+          | Nuitées 
+        th.py-3.px-6[scope="col"]
+          | Hébergement
+        th.py-3.px-6[scope="col"]
+          | Paiement 
+        th.py-3.px-6[scope="col"]
+          | Options
+        th.py-3.px-6[scope="col"]
+          | ID
+    tbody
+      - stays.each do |stay|
+        tr.border-b(class="#{stay.tr_class}")
+          td.py-4.px-6(class="#{stay.tr_border_class}")
+            = stay.status_emoji
+          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+            strong(class="#{stay.declined? ? "line-through" : nil}")
+              = link_to stay.customer.lastname, 
+                        stay_path(stay),
+                        class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+            .mt-1.text-gray-900
+              = stay.date_range
+          td.py-4.px-6.hidden.md:table-cell
+            = stay.nights_count
+          td.py-4.stay-6.space-x-1
+            -#- if !stay.lodging.nil?
+            -#  = stay.lodging_badge(font_size: "sm")
+            -#- else
+            -#  = stay.rooms_badges(font_size: "sm")
+          td.py-4.px-6
+           -# - if stay.confirmed?
+           -#   = stay.payment_status
+          td.py-4.px-6
+           -# = stay.options_emojis
+          td.py-4.px-6
+            code #{stay.token}

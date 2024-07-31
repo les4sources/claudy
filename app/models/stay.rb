@@ -21,4 +21,37 @@ class Stay < ApplicationRecord
     self.token = generated_token
   end
 
+
+  def name
+    "#{firstname} #{lastname}"
+  end
+
+  def nights_count
+    (self.end_date - self.start_date).to_i
+  end
+
+  def canceled?
+    status == "canceled"
+  end
+
+  def confirmed?
+    status == "confirmed"
+  end
+
+  def current?
+    (start_date..end_date).cover?(Date.today)
+  end
+
+  def declined?
+    status == "declined"
+  end
+
+  def from_airbnb?
+    platform == "airbnb"
+  end
+
+  def from_web?
+    platform == "web"
+  end
+
 end

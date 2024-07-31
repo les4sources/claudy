@@ -2,8 +2,8 @@ class StaysController < BaseController
 
 
  def index
- 	@stays = Stay.unscoped.current_and_future
-  @bookings = Booking.unscoped.current_and_future
+ 	@stays = StayDecorator.decorate_collection(Stay.unscoped.current_and_future)
+  #@bookings = Booking.unscoped.current_and_future
  end
 
 
@@ -19,15 +19,16 @@ class StaysController < BaseController
         start_date: params.fetch("date", nil)
       )
     end
-    #@stay.build_user
     @stay.build_customer
-    Rails.logger.info(@stay.inspect)
-    Rails.logger.info(@stay.customer)
-    @lodgings = Lodging.all
+    
+    @stay_items = StayItem.build
+  
   end
 
 
   def create
+    Rails.logger.info("**********************************")
+    Rails.logger.info(params.inspect)
     service = Stays::CreateService.new
     if service.run(params)
       redirect_to service.stay,

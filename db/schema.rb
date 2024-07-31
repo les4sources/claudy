@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_07_29_114056) do
+ActiveRecord::Schema[7.0].define(version: 2024_07_30_084235) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -69,6 +69,16 @@ ActiveRecord::Schema[7.0].define(version: 2024_07_29_114056) do
     t.index ["recipient_type", "recipient_id"], name: "index_activities_on_recipient_type_and_recipient_id"
     t.index ["trackable_id", "trackable_type"], name: "index_activities_on_trackable_id_and_trackable_type"
     t.index ["trackable_type", "trackable_id"], name: "index_activities_on_trackable_type_and_trackable_id"
+  end
+
+  create_table "beds", force: :cascade do |t|
+    t.string "name"
+    t.text "description"
+    t.integer "price_cents"
+    t.bigint "room_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["room_id"], name: "index_beds_on_room_id"
   end
 
   create_table "bookings", force: :cascade do |t|
@@ -201,6 +211,15 @@ ActiveRecord::Schema[7.0].define(version: 2024_07_29_114056) do
     t.bigint "human_id", null: false
     t.index ["human_id", "task_id"], name: "index_humans_tasks_on_human_id_and_task_id"
     t.index ["task_id", "human_id"], name: "index_humans_tasks_on_task_id_and_human_id"
+  end
+
+  create_table "items", force: :cascade do |t|
+    t.string "name"
+    t.string "type"
+    t.integer "price_cents"
+    t.string "hint"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "lodging_rooms", force: :cascade do |t|
@@ -389,6 +408,13 @@ ActiveRecord::Schema[7.0].define(version: 2024_07_29_114056) do
     t.decimal "price"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.date "start_date"
+    t.date "end_date"
+    t.string "duration"
+    t.text "notes"
+    t.integer "adults"
+    t.integer "children"
+    t.integer "babies"
     t.index ["bookable_type", "bookable_id"], name: "index_stay_items_on_bookable"
     t.index ["stay_id"], name: "index_stay_items_on_stay_id"
   end
@@ -484,6 +510,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_07_29_114056) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id", name: "active_storage_attachments_blob_id_fkey"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id", name: "active_storage_variant_records_blob_id_fkey"
+  add_foreign_key "beds", "rooms"
   add_foreign_key "bookings", "lodgings", name: "bookings_lodging_id_fkey"
   add_foreign_key "bundles", "projects", name: "bundles_project_id_fkey"
   add_foreign_key "bundles", "teams", name: "bundles_team_id_fkey"

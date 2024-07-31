@@ -15,8 +15,14 @@ class Room < ApplicationRecord
   has_many :reservations
   has_many :lodging_rooms
   has_many :lodgings, through: :lodging_rooms
+  has_many :beds, dependent: :destroy
+
+  #v2 - stays
+  has_many :stay_items, as: :bookable
 
   has_soft_deletion default_scope: true
+
+  default_scope { order(name: :asc) }
 
   def name_with_level
     case level

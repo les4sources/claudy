@@ -39,3 +39,7 @@ import '@rails/actiontext';
 import '../utils/setupStimulus';
 
 import '../stylesheets/application.css';
+
+import "select2/dist/css/select2.min.css"; // Import du CSS de Select2
+
+

@@ -27,6 +27,10 @@ class Lodging < ApplicationRecord
 
   has_soft_deletion default_scope: true
 
+
+  default_scope { order(name: :asc) }
+  
+
   def available_between?(from_date, to_date)
     # none of the lodging rooms has a confirmed reservation
     Reservation.includes(:booking)

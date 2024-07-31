@@ -157,7 +157,7 @@ class Booking < ApplicationRecord
   end
 
   def name
-    "#{firstname} #{lastname}"
+    "#{self.customer.firstname} #{self.customer.lastname}"
   end
 
   def nights_count

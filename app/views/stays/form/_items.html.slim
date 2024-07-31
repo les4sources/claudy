@@ -1,0 +1,30 @@
+.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Hébergement(s)"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    .space-y-2
+ 
+    
+    f.field
+      = f.label :item_id, 'Logement'
+      = f.select :item_id, 
+                 options_for_select(@stay_items.collect{|i| [i[:name],i[:id]] }), {},
+                 { class: 'form-select block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm',
+                   data: { controller: 'select', target: 'select.select' } }     
+
+      = render "stays/form/lodging",  f: f
+
+
+    f.field
+      = f.label :item_id, 'Logement:'
+      = f.select :item_id, 
+                 options_for_select(@stay_items.collect{|i| [i[:name],i[:id]] }), {},
+                 { class: 'form-select block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm',
+                   data: { controller: 'select', target: 'select.select' } }     
+
+
+      = render "stays/form/room",  f: f
+
+  
+hr
