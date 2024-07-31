@@ -17,8 +17,9 @@ class Room < ApplicationRecord
   has_many :lodgings, through: :lodging_rooms
   has_many :beds, dependent: :destroy
 
-  #v2 - stays
-  has_many :stay_items, as: :bookable
+  # v2 - stays
+  has_many :stay_items, as: :item
+  has_many :stays, through: :stay_items
 
   has_soft_deletion default_scope: true
 

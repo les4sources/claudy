@@ -1,7 +1,15 @@
 class Stay < ApplicationRecord
   
   belongs_to :customer
-  has_many :stay_items, dependent: :destroy
+  
+  has_many :stay_items
+  has_many :lodgings, through: :stay_items, source: :item, source_type: 'Lodging'
+  has_many :rooms, through: :stay_items, source: :item, source_type: 'Room'
+  has_many :beds, through: :stay_items, source: :item, source_type: 'Bed'
+  has_many :experiences, through: :stay_items, source: :item, source_type: 'Experience'
+  has_many :rental_items, through: :stay_items, source: :item, source_type: 'RentalItem'
+  has_many :products, through: :stay_items, source: :item, source_type: 'Product'
+
 
   accepts_nested_attributes_for :customer
 

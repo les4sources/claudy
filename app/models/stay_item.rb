@@ -1,7 +1,7 @@
 class StayItem < ApplicationRecord
   
   belongs_to :stay
-  belongs_to :bookable, polymorphic: true
+  belongs_to :item, polymorphic: true
 
 
   def self.build

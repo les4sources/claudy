@@ -13,6 +13,12 @@
 #  updated_at  :datetime         not null
 #
 class RentalItem < ApplicationRecord
+
+
+  # v2 - stays
+  has_many :stay_items, as: :item
+  has_many :stays, through: :stay_items
+
   has_paper_trail
   has_soft_deletion default_scope: true
 

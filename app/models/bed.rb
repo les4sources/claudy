@@ -1,7 +1,9 @@
 class Bed < ApplicationRecord
 
   belongs_to :room
-  has_many :stay_items, as: :bookable, dependent: :destroy
+  # v2 - stays
+  has_many :stay_items, as: :item
+  has_many :stays, through: :stay_items
 
   validates :name, presence: true
 

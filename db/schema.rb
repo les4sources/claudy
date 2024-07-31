@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_07_30_084235) do
+ActiveRecord::Schema[7.0].define(version: 2024_07_31_094148) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -402,20 +402,18 @@ ActiveRecord::Schema[7.0].define(version: 2024_07_30_084235) do
 
   create_table "stay_items", force: :cascade do |t|
     t.bigint "stay_id", null: false
-    t.string "bookable_type", null: false
-    t.bigint "bookable_id", null: false
-    t.integer "quantity"
-    t.decimal "price"
+    t.string "item_type", null: false
+    t.bigint "item_id", null: false
+    t.date "start_date", null: false
+    t.date "end_date", null: false
+    t.integer "quantity", default: 1
+    t.decimal "unit_price", precision: 10, scale: 2
+    t.integer "adults_count"
+    t.integer "children_count"
+    t.string "duration"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.date "start_date"
-    t.date "end_date"
-    t.string "duration"
-    t.text "notes"
-    t.integer "adults"
-    t.integer "children"
-    t.integer "babies"
-    t.index ["bookable_type", "bookable_id"], name: "index_stay_items_on_bookable"
+    t.index ["item_type", "item_id"], name: "index_stay_items_on_item"
     t.index ["stay_id"], name: "index_stay_items_on_stay_id"
   end
 
