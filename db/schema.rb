@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_07_31_094148) do
+ActiveRecord::Schema[7.0].define(version: 2024_08_01_114823) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -254,7 +254,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_07_31_094148) do
   end
 
   create_table "payments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.bigint "booking_id", null: false
+    t.bigint "booking_id"
     t.string "payment_method"
     t.string "status"
     t.datetime "deleted_at", precision: nil
@@ -263,8 +263,10 @@ ActiveRecord::Schema[7.0].define(version: 2024_07_31_094148) do
     t.integer "amount_cents", default: 0, null: false
     t.string "stripe_checkout_session_id"
     t.string "stripe_payment_intent_id"
+    t.bigint "stay_id"
     t.index ["booking_id"], name: "index_payments_on_booking_id"
     t.index ["id"], name: "index_payments_on_id", unique: true
+    t.index ["stay_id"], name: "index_payments_on_stay_id"
   end
 
   create_table "products", force: :cascade do |t|
@@ -432,6 +434,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_07_31_094148) do
     t.string "departure_time"
     t.string "token"
     t.bigint "customer_id", null: false
+    t.datetime "deleted_at", precision: nil
+    t.text "comments"
+    t.text "notes"
     t.index ["customer_id"], name: "index_stays_on_customer_id"
     t.index ["user_id"], name: "index_stays_on_user_id"
   end
@@ -519,6 +524,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_07_31_094148) do
   add_foreign_key "lodging_rooms", "lodgings", name: "lodging_rooms_lodging_id_fkey"
   add_foreign_key "lodging_rooms", "rooms", name: "lodging_rooms_room_id_fkey"
   add_foreign_key "payments", "bookings", name: "payments_booking_id_fkey"
+  add_foreign_key "payments", "stays"
   add_foreign_key "projects", "humans", name: "projects_human_id_fkey"
   add_foreign_key "reservations", "bookings", name: "reservations_booking_id_fkey"
   add_foreign_key "reservations", "rooms", name: "reservations_room_id_fkey"

@@ -4,6 +4,14 @@ class StayItem < ApplicationRecord
   belongs_to :item, polymorphic: true
 
 
+  ROOM = 'Room'
+  BED = 'Bed'
+  SPACE = 'Space'
+  EXPERIENCE = 'Experience'
+  PRODUCT = 'Product'
+  RENTAL_ITEM = 'RentalItem'
+
+
   def self.build
     
     items = []
@@ -28,5 +36,6 @@ class StayItem < ApplicationRecord
     items
     
   end
+
 
 end

@@ -21,7 +21,8 @@ class Lodging < ApplicationRecord
   has_many :unavailabilities
 
   # v2 - stays
-  has_many :stay_items, as: :bookable
+  has_many :stay_items, as: :item
+  has_many :stays, through: :stay_items
 
   monetize :price_night_cents
 

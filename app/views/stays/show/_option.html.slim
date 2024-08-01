@@ -1,0 +1,13 @@
+.px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              = option_label
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              table
+                tbody
+                  - items_by_date.each do |date, items|
+                    tr
+                      td.align-top(style="width: 10rem") 
+                        = link_to date, 
+                                  day_details_path(date: date.strftime("%Y-%m-%d")), data: { turbo_frame: "modal" },
+                                  class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+                      td.align-top = items.collect { |i| i.name }.join(", ")

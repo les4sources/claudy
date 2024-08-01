@@ -41,6 +41,21 @@ class StaysController < BaseController
   end
 
 
+  def show
+    @stay = Stay.unscoped.find_by!(id: params[:id]).decorate
+    @lodgings = @stay.lodgings
+    @rooms_by_date = @stay.rooms_by_date
+    @experiences_by_date = @stay.experiences_by_date
+    @products_by_date = @stay.products_by_date
+    @rental_items_by_date = @stay.rental_items_by_date
+    @spaces_by_date = @stay.spaces_by_date
+
+    Rails.logger.info("**********************************")
+    Rails.logger.info(@products_by_date.inspect)
+  end
+
+
+
    private
 
   def set_presenters

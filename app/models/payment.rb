@@ -17,7 +17,8 @@ class Payment < ApplicationRecord
   # notify ActiveRecord that the default sort order should be created_at
   self.implicit_order_column = :created_at
 
-  belongs_to :booking
+  belongs_to :booking, optional: true
+  belongs_to :stay, optional: true
 
   monetize :amount_cents, allow_nil: false
 

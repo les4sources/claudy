@@ -9,10 +9,13 @@ class Stay < ApplicationRecord
   has_many :experiences, through: :stay_items, source: :item, source_type: 'Experience'
   has_many :rental_items, through: :stay_items, source: :item, source_type: 'RentalItem'
   has_many :products, through: :stay_items, source: :item, source_type: 'Product'
+  has_many :spaces, through: :stay_items, source: :item, source_type: 'Space'
 
+  has_many :bills
 
   accepts_nested_attributes_for :customer
 
+  has_soft_deletion default_scope: true
 
 
   scope :current_and_future, -> { where("end_date >= ?", Date.today).order(start_date: :asc) }
@@ -31,7 +34,7 @@ class Stay < ApplicationRecord
 
 
   def name
-    "#{firstname} #{lastname}"
+    "#{self.customer.firstname} #{self.customer.lastname}"
   end
 
   def nights_count
@@ -39,20 +42,25 @@ class Stay < ApplicationRecord
   end
 
   def canceled?
-    status == "canceled"
+    status == StayStatus::CANCELED
   end
 
   def confirmed?
-    status == "confirmed"
+    status == StayStatus::CONFIRMED
+  end
+
+  def declined?
+    status == StayStatus::DECLINED
+  end
+
+  def pending?
+    status == StayStatus::PENDING
   end
 
   def current?
     (start_date..end_date).cover?(Date.today)
   end
 
-  def declined?
-    status == "declined"
-  end
 
   def from_airbnb?
     platform == "airbnb"
@@ -61,5 +69,44 @@ class Stay < ApplicationRecord
   def from_web?
     platform == "web"
   end
+
+  def has_options?
+    self.experiences.any? || self.spaces.any?
+  end
+
+
+
+  def rooms_by_date
+    dates_with_items(stay_items.where(item_type: StayItem::ROOM))
+  end
+
+  def experiences_by_date
+    dates_with_items(stay_items.where(item_type: StayItem::EXPERIENCE))
+  end
+
+  def products_by_date
+    dates_with_items(stay_items.where(item_type: StayItem::PRODUCT))
+  end
+
+  def spaces_by_date
+    dates_with_items(stay_items.where(item_type: StayItem::SPACE))
+  end
+
+  def rental_items_by_date
+    dates_with_items(stay_items.where(item_type: StayItem::RENTAL_ITEM))
+  end
+
+  def dates_with_items(_stay_items)
+    reservation_hash = Hash.new { |hash, key| hash[key] = [] }
+
+    _stay_items.each do |stay_item|
+      (stay_item.start_date..stay_item.end_date).each do |date|
+        reservation_hash[date] << stay_item.item
+      end
+    end
+
+    reservation_hash.sort.to_h
+  end
+
 
 end
