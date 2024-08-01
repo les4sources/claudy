@@ -42,7 +42,7 @@
           - stay.lodgings.each do |lodging|
             | #{lodging.name} (#{lodging.summary})
           br
-          ul
+          p
           | Chambre(s):
           - stay.rooms.each do |room|
             br
@@ -58,14 +58,33 @@
         - if stay.has_options?
           p Votre réservation comprend ces options : 
 
-          | Activité(s):
-          - stay.experiences.each do |experience|
-            p = experience.name
-
-          | Espace(s):
+          p
+          - unless stay.spaces.empty?
+           strong Espace(s):
           - stay.spaces.each do |space|
-            p = space.name
+            br 
+            = space.name
               
+          p
+          - unless stay.experiences.empty?
+           strong Activité(s):
+          - stay.experiences.each do |experience|
+            br 
+            = experience.name
+
+          p
+          - unless stay.products.empty?
+           strong Produit(s):
+          - stay.products.each do |product|
+            br 
+            = product.name
+
+          p
+          - unless stay.rental_items.empty?
+           strong Object(s) à louer:
+          - stay.rental_items.each do |ri|
+            br 
+            = ri.name
 
         p Statut: #{stay.status}
 

@@ -11,11 +11,13 @@ class Stay < ApplicationRecord
   has_many :products, through: :stay_items, source: :item, source_type: 'Product'
   has_many :spaces, through: :stay_items, source: :item, source_type: 'Space'
 
-  has_many :bills
+  has_many :payments
 
   accepts_nested_attributes_for :customer
 
   has_soft_deletion default_scope: true
+
+  has_paper_trail
 
 
   scope :current_and_future, -> { where("end_date >= ?", Date.today).order(start_date: :asc) }

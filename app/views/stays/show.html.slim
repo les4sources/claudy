@@ -99,9 +99,6 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
             == simple_format @stay.comments
 
 
-
-
-
     / Options
     .overflow-hidden.bg-white.shadow.sm:rounded-lg
       .px-4.py-5.sm:px-6
@@ -112,16 +109,16 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
       .border-t.border-gray-200
         dl
          - unless @spaces_by_date.empty?
-          = render '/stays/show/option', option_label: 'Espaces', items_by_date: @spaces_by_date
+          = render '/stays/show/options', option_label: 'Espace(s)', items_by_date: @spaces_by_date
           
          - unless @experiences_by_date.empty?
-          = render '/stays/show/option', option_label: 'Activités', items_by_date: @experiences_by_date
+          = render '/stays/show/options', option_label: 'Activité(s)', items_by_date: @experiences_by_date
 
          - unless @products_by_date.empty?
-          = render '/stays/show/option', option_label: 'Produits', items_by_date: @products_by_date
+          = render '/stays/show/options', option_label: 'Produit(s)', items_by_date: @products_by_date
 
          - unless @rental_items_by_date.empty?
-          = render '/stays/show/option', option_label: 'Object(s) de location', items_by_date: @rental_items_by_date
+          = render '/stays/show/options', option_label: 'Object(s) de location', items_by_date: @rental_items_by_date
 
 
 
