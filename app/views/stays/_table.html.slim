@@ -36,8 +36,8 @@
             -#- else
             -#  = stay.rooms_badges(font_size: "sm")
           td.py-4.px-6
-           -# - if stay.confirmed?
-           -#   = stay.payment_status
+            - if stay.confirmed?
+              = stay.payment_status
           td.py-4.px-6
            -# = stay.options_emojis
           td.py-4.px-6

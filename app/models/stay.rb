@@ -11,7 +11,7 @@ class Stay < ApplicationRecord
   has_many :products, through: :stay_items, source: :item, source_type: 'Product'
   has_many :spaces, through: :stay_items, source: :item, source_type: 'Space'
 
-  has_many :payments
+  has_many :payment_requests
 
   accepts_nested_attributes_for :customer
 
@@ -77,6 +77,33 @@ class Stay < ApplicationRecord
   end
 
 
+  def payment_status
+    if payment_requests.all? { |pr| pr.paid? }
+      PaymentRequest::PAYMENT_PAID
+    elsif payment_requests.any? { |pr| pr.partially_paid? }
+      PaymentRequest::PAYMENT_PARTIALLY_PAID
+    else
+      PaymentRequest::PAYMENT_PENDING
+    end
+  end
+
+  def total_remaining_amount
+    payment_requests.to_a.sum {|pr| (pr.remaining_amount)}
+  end
+
+  def total_payments_received
+    payment_requests.to_a.sum {|pr| (pr.total_paid/100)}
+  end
+
+  # Calculer le montant total demandé pour le séjour (somme des payment_requests)
+  def total_requested_amount
+    payment_requests.sum(:amount_cents)
+  end
+
+  # Calculer le montant total de la réservation basé sur les stay_items
+  def total_reservation_amount
+    stay_items.to_a.sum { |item| (item.total_price/100) }
+  end
 
   def rooms_by_date
     dates_with_items(stay_items.where(item_type: StayItem::ROOM))

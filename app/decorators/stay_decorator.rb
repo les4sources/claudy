@@ -62,4 +62,49 @@ class StayDecorator < ApplicationDecorator
     end
   end
 
+   def payment_status_color
+    case object.payment_status
+    when "pending"
+      "red-200"
+    when "partially_paid"
+      "yellow-200"
+    when "paid"
+      "green-200"
+    else
+      "gray-200"
+    end
+  end
+
+  def payments_total
+    h.content_tag :span,
+                  h.number_to_currency(total_payments_received),
+                  id: "stay-#{object.id}-payments-sum"
+  end
+
+
+  def total_requested_amount
+    h.number_to_currency(object.total_requested_amount/100)
+  end
+
+   def total_remaining_amount
+    h.number_to_currency(object.total_remaining_amount/100)
+  end
+
+
+  def payment_status
+    shared_classes = "stay-#{object.id}-payment-status text-xs font-medium mr-2 px-2.5 py-0.5 rounded"
+    case object.payment_status
+    when "pending"
+      h.content_tag(:span, "Non payée", class: "#{shared_classes} bg-red-200 text-red-800")
+    when "partially_paid"
+      h.content_tag(:span, "Payée partiellement", class: "#{shared_classes} bg-yellow-200 text-yellow-800")
+    when "paid"
+      h.content_tag(:span, "Payée", class: "#{shared_classes} bg-green-200 text-green-800")
+    else
+      if object.payment_status.presence
+        h.content_tag(:span, object.payment_status, class: "#{shared_classes} bg-gray-100 text-gray-800")
+      end
+    end
+  end
+
 end

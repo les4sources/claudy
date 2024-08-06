@@ -2,6 +2,8 @@ class StayItem < ApplicationRecord
   
   belongs_to :stay
   belongs_to :item, polymorphic: true
+  has_many :payment_requests_stay_items
+  has_many :payment_requests, through: :payment_requests_stay_items
 
 
   ROOM = 'Room'
@@ -36,6 +38,11 @@ class StayItem < ApplicationRecord
     items
     
   end
+
+  def total_price 
+    unit_price_cents * quantity
+  end
+
 
 
 end

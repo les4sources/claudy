@@ -33,4 +33,9 @@ module ApplicationHelper
     options = options.merge renderer: Pagination::TailwindUIPaginationRenderer unless options[:renderer]
     super(*[coll_or_options, options].compact)
   end
+
+  def format_date(date)
+    date.present? ? date.strftime("%d/%m/%Y") : ''
+  end
+
 end

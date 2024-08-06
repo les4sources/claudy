@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_08_01_114823) do
+ActiveRecord::Schema[7.0].define(version: 2024_08_05_101756) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -253,6 +253,26 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_01_114823) do
     t.string "color"
   end
 
+  create_table "payment_requests", force: :cascade do |t|
+    t.bigint "stay_id", null: false
+    t.integer "status", default: 0
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "amount_cents", default: 0, null: false
+    t.string "invoice_status"
+    t.string "payment_status"
+    t.index ["stay_id"], name: "index_payment_requests_on_stay_id"
+  end
+
+  create_table "payment_requests_stay_items", force: :cascade do |t|
+    t.bigint "payment_request_id", null: false
+    t.bigint "stay_item_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["payment_request_id"], name: "index_payment_requests_stay_items_on_payment_request_id"
+    t.index ["stay_item_id"], name: "index_payment_requests_stay_items_on_stay_item_id"
+  end
+
   create_table "payments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.bigint "booking_id"
     t.string "payment_method"
@@ -264,8 +284,10 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_01_114823) do
     t.string "stripe_checkout_session_id"
     t.string "stripe_payment_intent_id"
     t.bigint "stay_id"
+    t.bigint "payment_request_id"
     t.index ["booking_id"], name: "index_payments_on_booking_id"
     t.index ["id"], name: "index_payments_on_id", unique: true
+    t.index ["payment_request_id"], name: "index_payments_on_payment_request_id"
     t.index ["stay_id"], name: "index_payments_on_stay_id"
   end
 
@@ -409,12 +431,13 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_01_114823) do
     t.date "start_date", null: false
     t.date "end_date", null: false
     t.integer "quantity", default: 1
-    t.decimal "unit_price", precision: 10, scale: 2
     t.integer "adults_count"
     t.integer "children_count"
     t.string "duration"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "unit_price_cents", default: 0, null: false
+    t.string "unit_price_currency", default: "EUR", null: false
     t.index ["item_type", "item_id"], name: "index_stay_items_on_item"
     t.index ["stay_id"], name: "index_stay_items_on_stay_id"
   end
@@ -523,7 +546,11 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_01_114823) do
   add_foreign_key "human_roles", "roles", name: "human_roles_role_id_fkey"
   add_foreign_key "lodging_rooms", "lodgings", name: "lodging_rooms_lodging_id_fkey"
   add_foreign_key "lodging_rooms", "rooms", name: "lodging_rooms_room_id_fkey"
+  add_foreign_key "payment_requests", "stays"
+  add_foreign_key "payment_requests_stay_items", "payment_requests"
+  add_foreign_key "payment_requests_stay_items", "stay_items"
   add_foreign_key "payments", "bookings", name: "payments_booking_id_fkey"
+  add_foreign_key "payments", "payment_requests"
   add_foreign_key "payments", "stays"
   add_foreign_key "projects", "humans", name: "projects_human_id_fkey"
   add_foreign_key "reservations", "bookings", name: "reservations_booking_id_fkey"

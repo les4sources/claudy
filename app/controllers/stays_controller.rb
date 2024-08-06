@@ -49,8 +49,7 @@ class StaysController < BaseController
     @products_by_date = @stay.products_by_date
     @rental_items_by_date = @stay.rental_items_by_date
     @spaces_by_date = @stay.spaces_by_date
-    @payements = @stay.payments
-    
+  
   end
 
 

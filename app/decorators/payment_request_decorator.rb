@@ -1,24 +1,16 @@
-class PaymentDecorator < ApplicationDecorator
+class PaymentRequestDecorator < ApplicationDecorator
   delegate_all
-  decorates_association :booking
+  decorates_association :stay
 
-  def amount
-    h.number_to_currency(object.amount)
+  def total_requested_amount
+    h.number_to_currency(object.amount_cents/100)
+  end
+
+  def remaining_amount
+    h.number_to_currency(object.remaining_amount/100)
   end
 
   
-
-  def booking_date_range
-    booking.date_range
-  end
-
-  def booking_name
-    booking.group_or_name
-  end
-
-  def booking_payment_status
-    booking.payment_status
-  end
 
   def created_at(format: :default)
     h.l(object.created_at.to_date, format: format)
