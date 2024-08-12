@@ -9,7 +9,7 @@
 #  updated_at  :datetime         not null
 #  code        :string
 #  deleted_at  :datetime
-#  position    :integer          default(0)
+#  position    :integer          default(999)
 #
 class Space < ApplicationRecord
   has_many :space_reservations
