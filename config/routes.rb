@@ -23,6 +23,9 @@ Rails.application.routes.draw do
   resources :roles
   resources :rooms
   resources :services
+  resources :stays do
+    resources :stay_items
+  end
   resources :tasks
   resources :teams
 
@@ -37,8 +40,6 @@ Rails.application.routes.draw do
   resources :space_bookings do
     get "past", on: :collection
   end
-
-  resources :stays
 
   get "comptabilite", to: "accounting#index", as: :accounting
 

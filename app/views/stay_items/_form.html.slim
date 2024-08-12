@@ -1,0 +1,32 @@
+= f.hidden_field :item_type,
+                 value: f.object.item_type
+
+- case f.object.item_type
+- when "rental_item"
+  .space-y-2
+    = f.label :item_id, "Sélectionne un élément *"
+    = f.collection_radio_buttons :item_id, RentalItem.all.order(:id), :id, :name, required: true do |radio_button|
+      .flex.items-center
+        = radio_button.radio_button
+        = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
+  = f.number_field :quantity,
+                   label: "Quantité",
+                 value: 1,
+                   min: 1,
+                   remove_default_class: "sm:text-sm",
+                   class: "w-24 text-lg"
+
+  .space-y-6.md:space-y-0.md:flex.md:space-x-6
+    = f.date_field :start_date,
+                   html5: true,
+                   label: "Du *",
+                   required: true,
+                   value: Date.today,
+                   error: "Veuillez renseigner une date"
+    = f.date_field :end_date,
+                   html5: true,
+                   label: "Au *",
+                   required: true,
+                   value: Date.tomorrow,
+                   error: "Veuillez renseigner une date"

@@ -5,8 +5,24 @@
   .col-span-2.mb-4.space-y-6.sm:space-y-5
     .space-y-2
  
-    
-    f.field
+    // Section pour les éléments de séjour (StayItems)
+    h3 Éléments du séjour
+    table
+      thead
+        tr
+          th Nom de l'élément
+          th Type
+          th Actions
+      tbody#stay-items
+        = render partial: 'stay_items/stay_item', collection: @stay.stay_items, as: :stay_item
+      
+    // Bouton pour ouvrir la modale et ajouter un RentalItem
+    = link_to "Ajouter un élément en location", 
+              new_stay_stay_item_path(stay_id: @stay.id, type: "rental_item"), 
+              data: { turbo_frame: "modal" }
+
+
+    / f.field
       = f.label :item_id, 'Logement'
       = f.select :item_id, 
                  options_for_select(@stay_items.collect{|i| [i[:name],i[:id]] }), {},
@@ -16,7 +32,7 @@
       = render "stays/form/lodging",  f: f
 
 
-    f.field
+    / f.field
       = f.label :item_id, 'Logement:'
       = f.select :item_id, 
                  options_for_select(@stay_items.collect{|i| [i[:name],i[:id]] }), {},
@@ -25,6 +41,9 @@
 
 
       = render "stays/form/room",  f: f
-
   
 hr
+
+
+
+  
