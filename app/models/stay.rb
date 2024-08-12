@@ -22,8 +22,7 @@
 #  notes             :text
 #
 class Stay < ApplicationRecord
-  
-  belongs_to :customer
+  belongs_to :customer, optional: true
   
   has_many :stay_items
   has_many :lodgings, through: :stay_items, source: :item, source_type: 'Lodging'
