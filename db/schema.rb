@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_08_01_114823) do
+ActiveRecord::Schema[7.0].define(version: 2024_08_12_160639) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -211,15 +211,6 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_01_114823) do
     t.bigint "human_id", null: false
     t.index ["human_id", "task_id"], name: "index_humans_tasks_on_human_id_and_task_id"
     t.index ["task_id", "human_id"], name: "index_humans_tasks_on_task_id_and_human_id"
-  end
-
-  create_table "items", force: :cascade do |t|
-    t.string "name"
-    t.string "type"
-    t.integer "price_cents"
-    t.string "hint"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
   end
 
   create_table "lodging_rooms", force: :cascade do |t|
@@ -433,10 +424,11 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_01_114823) do
     t.string "estimated_arrival"
     t.string "departure_time"
     t.string "token"
-    t.bigint "customer_id", null: false
+    t.bigint "customer_id"
     t.datetime "deleted_at", precision: nil
     t.text "comments"
     t.text "notes"
+    t.boolean "draft", default: true
     t.index ["customer_id"], name: "index_stays_on_customer_id"
     t.index ["user_id"], name: "index_stays_on_user_id"
   end
