@@ -1,3 +1,15 @@
+# == Schema Information
+#
+# Table name: beds
+#
+#  id          :bigint           not null, primary key
+#  name        :string
+#  description :text
+#  price_cents :integer
+#  room_id     :bigint
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#
 class Bed < ApplicationRecord
 
   belongs_to :room

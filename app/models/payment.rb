@@ -2,7 +2,7 @@
 #
 # Table name: payments
 #
-#  booking_id                 :bigint           not null
+#  booking_id                 :bigint
 #  payment_method             :string
 #  status                     :string
 #  deleted_at                 :datetime
@@ -12,6 +12,7 @@
 #  stripe_checkout_session_id :string
 #  stripe_payment_intent_id   :string
 #  id                         :uuid             not null, primary key
+#  stay_id                    :bigint
 #
 class Payment < ApplicationRecord
   # notify ActiveRecord that the default sort order should be created_at

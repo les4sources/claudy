@@ -1,18 +1,13 @@
 - content_for :page_header do
   = render 'layouts/components/page_header',
-           title: "Nouveau Séjour"
+           title: "Nouveau séjour"
 
 = form_with model: @stay,
-            url: stays_path,
+            url: stay_path(@stay),
             data: { controller: "stay" } do |f|
   .space-y-8.divide-y.divide-gray-200.sm:space-y-5
     .space-y-6.sm:space-y-5
-      = render "form", f: f, 
-                       lodgings: @lodgings,
-                       rooms: @rooms,
-                       beds: @beds,
-                       spaces: @spaces,
-                       products: @products
+      = render "form", f: f
 
   = f.actions do
     = f.submit "Enregistrer"

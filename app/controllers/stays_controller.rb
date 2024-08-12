@@ -1,11 +1,8 @@
 class StaysController < BaseController
-
-
  def index
  	@stays = StayDecorator.decorate_collection(Stay.unscoped.current_and_future)
   #@bookings = Booking.unscoped.current_and_future
  end
-
 
  def new
     if !params[:source_booking_id].nil?
@@ -13,16 +10,16 @@ class StaysController < BaseController
       #duplication_service.run!(source_booking_id: params[:source_booking_id])
       #@stay = duplication_service.booking
     else
-      @stay = Stay.new(
+      @stay = Stay.create(
+        draft: true,
         platform: "direct",
         status: "init",
-        start_date: params.fetch("date", nil)
+        start_date: params.fetch("date", nil),
+        user_id: current_user.id
       )
     end
     @stay.build_customer
-    
     @stay_items = StayItem.build
-  
   end
 
 
@@ -50,9 +47,8 @@ class StaysController < BaseController
     @rental_items_by_date = @stay.rental_items_by_date
     @spaces_by_date = @stay.spaces_by_date
   
+    @payements = @stay.payments
   end
-
-
 
    private
 
