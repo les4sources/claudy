@@ -1,47 +1,46 @@
 .border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
   .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
-    = section_heading_tw heading: "Hébergement(s)"
+    = section_heading_tw heading: "Composition du séjour"
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
-    .space-y-2
- 
-    // Section pour les éléments de séjour (StayItems)
-    h3 Éléments du séjour
-    table
-      thead
-        tr
-          th Nom de l'élément
-          th Type
-          th Actions
-      tbody#stay-items
-        = render partial: 'stay_items/stay_item', collection: @stay.stay_items, as: :stay_item
-      
-    // Bouton pour ouvrir la modale et ajouter un RentalItem
-    = link_to "Ajouter un élément en location", 
+    span.isolate.inline-flex.rounded-md.shadow-sm
+      = link_to "Hébergement", 
+              new_stay_stay_item_path(stay_id: @stay.id, type: "lodging"), 
+              data: { turbo_frame: "modal" },
+              class: "relative inline-flex items-center rounded-l-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+      = link_to "Espace", 
+              new_stay_stay_item_path(stay_id: @stay.id, type: "space"), 
+              data: { turbo_frame: "modal" },
+              class: "relative -ml-px inline-flex items-center bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+      = link_to "Location", 
               new_stay_stay_item_path(stay_id: @stay.id, type: "rental_item"), 
-              data: { turbo_frame: "modal" }
+              data: { turbo_frame: "modal" },
+              class: "relative -ml-px inline-flex items-center bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+      = link_to "Atelier", 
+              new_stay_stay_item_path(stay_id: @stay.id, type: "experience"), 
+              data: { turbo_frame: "modal" },
+              class: "relative -ml-px inline-flex items-center bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+      = link_to "Produit", 
+              new_stay_stay_item_path(stay_id: @stay.id, type: "product"), 
+              data: { turbo_frame: "modal" },
+              class: "relative -ml-px inline-flex items-center rounded-r-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
 
-
-    / f.field
-      = f.label :item_id, 'Logement'
-      = f.select :item_id, 
-                 options_for_select(@stay_items.collect{|i| [i[:name],i[:id]] }), {},
-                 { class: 'form-select block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm',
-                   data: { controller: 'select', target: 'select.select' } }     
-
-      = render "stays/form/lodging",  f: f
-
-
-    / f.field
-      = f.label :item_id, 'Logement:'
-      = f.select :item_id, 
-                 options_for_select(@stay_items.collect{|i| [i[:name],i[:id]] }), {},
-                 { class: 'form-select block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm',
-                   data: { controller: 'select', target: 'select.select' } }     
-
-
-      = render "stays/form/room",  f: f
-  
+    .mt-4.flow-root
+      .-mx-4.-my-2.overflow-x-auto.sm:-mx-6.lg:-mx-8
+        .inline-block.min-w-full.py-2.align-middle.sm:px-6.lg:px-8
+          table.min-w-full.divide-y.divide-gray-300
+            thead
+              tr
+                th.py-3.5.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-0[scope="col"]
+                  | Élément
+                th.px-3.py-3.5.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
+                  | Type
+                th.relative.py-3.5.pl-3.pr-4.sm:pr-0[scope="col"]
+                  span.sr-only
+                    | Actions
+            tbody#stay-items.divide-y.divide-gray-200
+              = render partial: "stay_items/stay_item", collection: @stay.stay_items, as: :stay_item
+      
 hr
 
 

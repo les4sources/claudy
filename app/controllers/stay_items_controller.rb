@@ -7,10 +7,7 @@ class StayItemsController < BaseController
 
   def new
     @stay_item = StayItem.new(item_type: params[:type])
-    case @stay_item.item_type
-    when "rental_item"
-      @modal_title = "Ajouter une location"
-    end
+    set_modal_title
   end
 
   def create
@@ -20,7 +17,7 @@ class StayItemsController < BaseController
         format.turbo_stream { 
           render turbo_stream: turbo_stream.append("stay-items", 
                  partial: 'stay_items/stay_item', 
-                 locals: { stay_item: service.stay_item }) }
+                 locals: { stay_item: service.stay_item.decorate }) }
         format.html { 
           redirect_to edit_stay_path(service.stay),
                       notice: "L'élément a été ajouté au séjour."
@@ -45,7 +42,7 @@ class StayItemsController < BaseController
   end
 
   def destroy
-    @stay_item.soft_delete!(validate: false)
+    @stay_item.destroy
     respond_to do |format|
       format.turbo_stream { render turbo_stream: turbo_stream.remove(@stay_item) }
       format.html { redirect_to edit_stay_url(@stay_item.stay), notice: "L'élément a été retiré du séjour." }
@@ -66,6 +63,21 @@ class StayItemsController < BaseController
 
   def get_stay_item
     @stay_item = StayItem.find(params[:id])
+  end
+
+  def set_modal_title
+    case @stay_item.item_type
+    when "experience"
+      @modal_title = "Ajouter un atelier"
+    when "lodging"
+      @modal_title = "Ajouter un hébergement"
+    when "product"
+      @modal_title = "Ajouter un produit"
+    when "rental_item"
+      @modal_title = "Ajouter une location"
+    when "space"
+      @modal_title = "Ajouter un espace"
+    end
   end
 
   def set_presenters

@@ -1,0 +1,13 @@
+.space-y-2
+  = f.label :item_id, "Sélectionne un produit *"
+  = f.collection_radio_buttons :item_id, Product.all.order(:id), :id, :name, required: true do |radio_button|
+    .flex.items-center
+      = radio_button.radio_button
+      = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
+= f.number_field :quantity,
+                 label: "Quantité",
+                 value: 1,
+                 min: 1,
+                 remove_default_class: "sm:text-sm",
+                 class: "w-24 text-lg"

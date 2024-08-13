@@ -1,0 +1,41 @@
+.space-y-2
+  = f.label :item_id, "Sélectionne un hébergement *"
+  = f.collection_radio_buttons :item_id, Lodging.all.order(:id), :id, :form_label, required: true do |radio_button|
+    .flex.items-center
+      = radio_button.radio_button
+      = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+
+.space-y-6.md:space-y-0.md:flex.md:space-x-6
+  = f.date_field :start_date,
+                 html5: true,
+                 label: "Du *",
+                 required: true,
+                 value: Date.today,
+                 error: "Une date de début est requise"
+
+  = f.date_field :end_date,
+                 html5: true,
+                 label: "Au *",
+                 required: true,
+                 error: "Une date de fin est requise"
+
+.flex.space-x-6
+  = f.number_field :adults,
+                   label: "Nombre d'adultes *",
+                   min: 0,
+                   remove_default_class: "sm:text-sm",
+                   class: "w-24 text-lg"
+
+  = f.number_field :children,
+                   label: "Nombre d'enfants *",
+                   min: 0,
+                   required: true,
+                   remove_default_class: "sm:text-sm",
+                   class: "w-24 text-lg"
+
+  = f.number_field :babies,
+                   label: "Nombre de bébés *",
+                   min: 0,
+                   required: true,
+                   remove_default_class: "sm:text-sm",
+                   class: "w-24 text-lg"
