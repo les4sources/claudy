@@ -1,8 +1,12 @@
-tr data-stay-item-id="#{stay_item.id}"
-  td = stay_item.item.name
-  td = stay_item.item_type
-  td
-    = link_to "Supprimer", 
+tr(id="#{dom_id stay_item}")
+  td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.font-medium.text-gray-900.sm:pl-0
+    = stay_item.item_name
+  td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
+    = stay_item.item_type
+  td.relative.whitespace-nowrap.py-4.pl-3.pr-4.text-right.text-sm.font-medium.sm:pr-0
+    / a.text-indigo-600.hover:text-indigo-900[href="#"]
+      | Modifier
+    = link_to "Retirer",
               stay_stay_item_path(stay_item, stay_id: stay_item.stay_id),
-              turbo_method: :delete,
-              data: { turbo_confirm: 'Certain·e ?' }
+              data: { turbo_method: :delete, turbo_confirm: 'Certain·e ?' },
+              class: "claudy-link"

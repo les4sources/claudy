@@ -22,6 +22,11 @@ module StayItems
     def run!(params = {})
       stay_item.attributes = stay_item_params(params)
       stay_item.item_type = stay_item.item_type.camelize
+      
+      # temp fix for setting start_date (can't be null in database)
+      stay_item.start_date = Date.today if stay_item.start_date.nil?
+
+      stay_item.end_date = stay_item.start_date if stay_item.end_date.nil?
       stay_item.save!
       true
     end

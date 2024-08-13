@@ -17,6 +17,8 @@ class TurboModal::Component < ViewComponent::Base
     case width
     when :sm
       "sm:w-full sm:max-w-sm"
+    when :md
+      "sm:w-full md:max-w-md"
     when :lg
       "sm:max-w-5xl sm:w-full"
     end

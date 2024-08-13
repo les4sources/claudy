@@ -2,7 +2,7 @@ module Bills
 
   class CreateService < ServiceBase
     
-    attr_reader :blll
+    attr_reader :bill
     attr_reader :stay
 
     def initialize(stay_id)
