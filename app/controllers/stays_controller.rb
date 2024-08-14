@@ -1,7 +1,7 @@
 class StaysController < BaseController
+ 
  def index
- 	@stays = StayDecorator.decorate_collection(Stay.unscoped.current_and_future)
-  #@bookings = Booking.unscoped.current_and_future
+ 	@stays = StayDecorator.decorate_collection(Stay.unscoped.current_and_future)  
  end
 
  def new
@@ -15,7 +15,8 @@ class StaysController < BaseController
         platform: "direct",
         status: "init",
         start_date: params.fetch("date", nil),
-        user_id: current_user.id
+        user_id: current_user.id,
+        token: Stay.generate_token
       )
     end
     @stay.build_customer
@@ -39,7 +40,6 @@ class StaysController < BaseController
 
   def edit
     @stay = Stay.find_by!(id: params[:id])
-    @stay.stay_items.decorate_collection
   end
 
   def update
@@ -68,8 +68,8 @@ class StaysController < BaseController
     @products_by_date = @stay.products_by_date
     @rental_items_by_date = @stay.rental_items_by_date
     @spaces_by_date = @stay.spaces_by_date
-  
-    @payements = @stay.payments
+    Rails.logger.info("******** #{@rooms_by_date.inspect}")
+    #@payments = @PaymentDecorator.decorate_collection(@stay.payments)
   end
 
    private

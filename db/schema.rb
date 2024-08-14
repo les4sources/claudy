@@ -213,6 +213,15 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_12_160639) do
     t.index ["task_id", "human_id"], name: "index_humans_tasks_on_task_id_and_human_id"
   end
 
+  create_table "items", force: :cascade do |t|
+    t.string "name"
+    t.string "type"
+    t.integer "price_cents"
+    t.string "hint"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "lodging_rooms", force: :cascade do |t|
     t.bigint "lodging_id", null: false
     t.bigint "room_id", null: false

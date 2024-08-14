@@ -23,6 +23,7 @@ module Stays
     def run!(params = {})
       @stay.attributes = stay_params(params)
       return false if !@stay.valid?
+      @stay.draft = false
       # temporary
       # @stay.customer = Customer.create(firstname: "Johnny")
       @stay.save!

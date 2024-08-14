@@ -42,18 +42,18 @@ class Stay < ApplicationRecord
   has_paper_trail
 
 
-  scope :current_and_future, -> { where("end_date >= ?", Date.today).order(start_date: :asc) }
-  scope :past, -> { where("end_date < ?", Date.today).order(start_date: :desc) }
+  scope :current_and_future, -> { where("end_date >= ? and draft = ? ", Date.today, false).order(start_date: :asc) }
+  scope :past, -> { where("end_date < ? and draft = ? ", Date.today, false).order(start_date: :desc) }
 
 
 
-  def generate_token
+  def self.generate_token
     validity = Proc.new { |token| Stay.where(token: token).first.nil? }
     begin
       generated_token = SecureRandom.hex(8)[0, 8]
       generated_token = generated_token.encode("UTF-8")
     end while validity[generated_token] == false
-    self.token = generated_token
+    generated_token
   end
 
 
@@ -128,7 +128,22 @@ class Stay < ApplicationRecord
   end
 
   def rooms_by_date
-    dates_with_items(stay_items.where(item_type: StayItem::ROOM))
+    rooms_hash = dates_with_items(stay_items.where(item_type: StayItem::ROOM))
+    
+    # if lodgings have been booked, the rooms shall be the rooms that belongs to the lodging
+    rooms_from_lods = []
+    stay_items.where(item_type: StayItem::LODGING).each do |lod|
+      Lodging.find(lod.item_id).rooms.each do |room|
+        rooms_from_lods << StayItem.new(stay_id: lod.stay_id, 
+                                        start_date: lod.start_date, 
+                                        end_date: lod.end_date,
+                                        item_id: room.id,
+                                        item_type: StayItem::ROOM)
+      end
+    end
+  
+    rooms_hash = rooms_hash.merge(dates_with_items(rooms_from_lods))
+    rooms_hash
   end
 
   def experiences_by_date
@@ -155,7 +170,6 @@ class Stay < ApplicationRecord
         reservation_hash[date] << stay_item.item
       end
     end
-
     reservation_hash.sort.to_h
   end
 

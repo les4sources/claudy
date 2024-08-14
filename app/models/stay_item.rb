@@ -23,7 +23,7 @@ class StayItem < ApplicationRecord
   has_many :payment_requests_stay_items
   has_many :payment_requests, through: :payment_requests_stay_items
 
-
+  LODGING = 'Lodging'
   ROOM = 'Room'
   BED = 'Bed'
   SPACE = 'Space'
