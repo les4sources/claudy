@@ -123,7 +123,7 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
           tbody.bg-white(id="payments-#{@booking.id}")
             = render PaymentDecorator.decorate_collection(@booking.payments)
           tfoot
-            = render partial: "payments/sum", locals: { booking: @booking }
+            = render partial: "payments/sum", locals: { reservation: @booking }
 
         dl.my-4.px-6
           .py-2.sm:grid.sm:grid-cols-3.sm:gap-4

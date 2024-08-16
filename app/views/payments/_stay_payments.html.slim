@@ -1,31 +1,35 @@
-/ attention si requete sans payment, elle n'est pas affichée
-- payment_requests.each do |payment_request|
-  - PaymentDecorator.decorate_collection(payment_request.payments).each do |payment|
-    tr(id="#{dom_id payment}" class="#{payment.tr_class}")
-      td.py-4.px-6.text-center
-        = payment.payment_method_emoji
-      td.py-4.px-6
-        = payment_request.total_requested_amount
-      td.py-4.px-6
-        = payment.amount
-      td.py-4.px-6
-        = payment_request.created_at(format: :ddmmyyyy)
-      td.py-4.px-6
-        = payment.status
-      td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap.hide-if-stay-page[scope="row"]
-        .inline-flex.space-x-2
-          = link_to payment.payment_request.stay.name, 
-                    booking_path(payment.payment_request.stay.id),
-                    class: "claudy-link"
-          
-        .text-xs.text-gray-500
-          = payment.created_at
-      td.py-4.px-6.text-right
-        .space-x-2
-          = link_to "détails", 
-                    payment_path(payment),
-                    class: "claudy-link text-xs"
-          = link_to "modifier", 
-                    edit_booking_payment_path(payment.payment_request.stay, payment), 
-                    data: { turbo_frame: "modal" },
-                    class: "claudy-link text-xs"
+
+tr(id="#{dom_id payment}" class="#{payment.tr_class}")
+  td.py-4.px-6.text-center
+    = payment.payment_method_emoji
+  td.py-4.px-6
+    = payment.created_at(format: :ddmmyyyy)
+  td.py-4.px-6
+    = payment.amount
+  td.py-4.px-6
+    = payment.status
+  td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap.hide-if-stay-page[scope="row"]
+    .inline-flex.space-x-2
+      = link_to payment.stay_name, 
+                stay_path(payment.stay),
+                class: "claudy-link"
+      = payment.stay_payment_status
+    .text-xs.text-gray-500
+      = payment.stay_date_range
+  td.py-4.px-6.text-right
+    .space-x-2
+      = link_to "détails", 
+                payment_path(payment),
+                class: "claudy-link text-xs"
+      = link_to "modifier", 
+                edit_stay_payment_path(payment.stay, payment), 
+                data: { turbo_frame: "modal" },
+                class: "claudy-link text-xs"
+
+javascript:
+  // hide booking details on bookings#show
+  if (document.querySelector('#body-stays_show')) {
+    document.querySelectorAll('.hide-if-stay-page').forEach((td) => {
+      td.classList.add('hidden');
+    });
+  }

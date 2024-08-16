@@ -1,9 +1,19 @@
-= render TurboModal::Component.new(title: "Paiement", width: :sm) do
-  = form_with model: [@booking, @payment] do |f|
-    .space-y-8.divide-y.divide-gray-200.sm:space-y-5
-      .space-y-6.sm:space-y-5
-        = render "form", f: f
+- if @booking
+  = render TurboModal::Component.new(title: "Paiement", width: :sm) do
+    = form_with model: [@booking, @payment] do |f|
+      .space-y-8.divide-y.divide-gray-200.sm:space-y-5
+        .space-y-6.sm:space-y-5
+          = render "form", f: f
 
-    = f.actions do
-      = f.submit "Enregistrer le paiement"
- 
+      = f.actions do
+        = f.submit "Enregistrer le paiement"
+
+- if @stay
+  = render TurboModal::Component.new(title: "Paiement", width: :sm) do
+    = form_with model: [@stay, @payment] do |f|
+      .space-y-8.divide-y.divide-gray-200.sm:space-y-5
+        .space-y-6.sm:space-y-5
+          = render "form", f: f
+
+      = f.actions do
+        = f.submit "Enregistrer le paiement"

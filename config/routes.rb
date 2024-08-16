@@ -25,6 +25,7 @@ Rails.application.routes.draw do
   resources :services
   resources :stays do
     resources :stay_items
+    resources :payments
   end
   resources :tasks
   resources :teams

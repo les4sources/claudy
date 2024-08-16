@@ -1,6 +1,7 @@
 class PaymentDecorator < ApplicationDecorator
   delegate_all
   decorates_association :booking
+  decorates_association :stay
 
   def amount
     h.number_to_currency(object.amount)
@@ -18,6 +19,18 @@ class PaymentDecorator < ApplicationDecorator
 
   def booking_payment_status
     booking.payment_status
+  end
+
+  def stay_date_range
+    stay.date_range
+  end
+
+  def stay_name
+    stay.name
+  end
+
+  def stay_payment_status
+    stay.payment_status
   end
 
   def created_at(format: :default)

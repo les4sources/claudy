@@ -25,8 +25,6 @@ class StaysController < BaseController
 
   # stays are created on init, with stay.draft == true
   # def create
-  #   Rails.logger.info("**********************************")
-  #   Rails.logger.info(params.inspect)
   #   service = Stays::CreateService.new
   #   if service.run(params)
   #     redirect_to service.stay,
@@ -68,7 +66,6 @@ class StaysController < BaseController
     @products_by_date = @stay.products_by_date
     @rental_items_by_date = @stay.rental_items_by_date
     @spaces_by_date = @stay.spaces_by_date
-    Rails.logger.info("******** #{@rooms_by_date.inspect}")
     #@payments = @PaymentDecorator.decorate_collection(@stay.payments)
   end
 

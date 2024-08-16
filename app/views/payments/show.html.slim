@@ -57,14 +57,7 @@
 
             dt.text-sm.font-medium.text-gray-500
               | Réservation
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              .inline-flex.space-x-2
-                = link_to @payment.booking_name, 
-                          booking_path(@payment.booking),
-                          class: "claudy-link"
-                = @payment.booking_payment_status
-              .text-xs.text-gray-500
-                = @payment.booking_date_range
+            = render '/payments/reservation'
 
             dt.text-sm.font-medium.text-gray-500
               | Stripe Checkout Session ID

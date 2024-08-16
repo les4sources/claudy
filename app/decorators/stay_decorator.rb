@@ -5,6 +5,15 @@ class StayDecorator < ApplicationDecorator
     PaginatingDecorator
   end
 
+   def group_or_name
+    classes = object.deleted? ? "line-through" : nil
+    if object.group_name.presence
+      h.content_tag(:span, group_name, class: classes)
+    else
+      h.content_tag(:span, name, class: classes)
+    end
+  end
+
 
   def date_range
     if object.start_date.year == object.end_date.year
@@ -22,6 +31,69 @@ class StayDecorator < ApplicationDecorator
       # Années différentes
       "du #{object.start_date.day} #{l(object.start_date, format: :month_year)} au #{object.end_date.day} #{l(object.end_date, format: :month_year)}"
     end
+  end
+
+
+  def lodging_badge(font_size: "xs")
+    if !object.lodgings.empty?
+      shared_classes = "text-#{font_size} font-semibold text-center py-0.5 px-1 rounded"
+      case object.lodgings.first.id
+      when 1
+        if object.confirmed?
+          h.content_tag(:span, "Chevêche", class: "#{shared_classes} bg-emerald-100 text-emerald-800")
+        else
+          h.content_tag(:span, "Chevêche", class: "#{shared_classes} border border-emerald-200 text-emerald-800")
+        end
+      when 2
+        if object.confirmed?
+          h.content_tag(:span, "Hulotte", class: "#{shared_classes} bg-emerald-200 text-emerald-800")
+        else
+          h.content_tag(:span, "Hulotte", class: "#{shared_classes} border border-emerald-200 text-emerald-800")
+        end
+      when 3
+        if object.confirmed?
+          h.content_tag(:span, "Grand-Duc", class: "#{shared_classes} bg-emerald-300 text-emerald-800")
+        else
+          h.content_tag(:span, "Grand-Duc", class: "#{shared_classes} border border-emerald-200 text-emerald-800")
+        end
+      end
+    end
+  end 
+
+
+   def rooms_badges(font_size: "xs")
+    rooms = Room.where(id: object.rooms.map(&:room_id).uniq)
+    shared_classes = "text-#{font_size} font-semibold text-center py-0.5 px-1 rounded"
+    html = ""
+    rooms.each do |room|
+      case room.level
+      when 0
+        if object.confirmed?
+          specific_classes = "bg-indigo-100 text-indigo-800"
+        else
+          specific_classes = "border border-indigo-100 text-indigo-800"
+        end
+      when 1
+        if object.confirmed?
+          specific_classes = "bg-purple-100 text-purple-800"
+        else
+          specific_classes = "border border-purple-100 text-purple-800"
+        end
+      when 2
+        if object.confirmed?
+          specific_classes = "bg-pink-100 text-pink-800"
+        else
+          specific_classes = "border border-pink-100 text-pink-800"
+        end
+      end
+      html << h.content_tag(
+        :span, 
+        room.code, 
+        class: "#{shared_classes} #{specific_classes}", 
+        "data-tooltip-target": "tooltip-room-#{room.id}"
+      )
+    end
+    h.raw(html)
   end
 
 
@@ -75,9 +147,9 @@ class StayDecorator < ApplicationDecorator
     end
   end
 
-  def payments_total
+   def payments_total
     h.content_tag :span,
-                  h.number_to_currency(total_payments_received),
+                  h.number_to_currency(payments.sum(:amount_cents) / 100.0),
                   id: "stay-#{object.id}-payments-sum"
   end
 
@@ -89,6 +161,11 @@ class StayDecorator < ApplicationDecorator
    def total_remaining_amount
     h.number_to_currency(object.total_remaining_amount/100)
   end
+
+  def total_reservation_amount
+    h.number_to_currency(object.total_reservation_amount/100)
+  end
+
 
 
   def payment_status
@@ -104,6 +181,17 @@ class StayDecorator < ApplicationDecorator
       if object.payment_status.presence
         h.content_tag(:span, object.payment_status, class: "#{shared_classes} bg-gray-100 text-gray-800")
       end
+    end
+  end
+
+   def invoice_status
+    case object.invoice_status
+    when "requested"
+      "À fournir"
+    when "sent"
+      "Envoyée ✔"
+    else
+      "Non requise"
     end
   end
 

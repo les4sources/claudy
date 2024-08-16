@@ -100,40 +100,59 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
 
 
 
-      / New payement
       / Payments
-      .overflow-hidden.bg-white.shadow.sm:rounded-lg
-        .px-4.py-5.sm:px-6.flex.place-content-between
-          .flex.space-x-2
-           h3.text-lg.font-medium.leading-6.text-gray-900
-              | Paiements
-           div = @stay.payment_status
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6.flex.place-content-between
+        .flex.space-x-2
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Paiements
+          div = @stay.payment_status
 
-          = link_to "Nouveau paiement ➕",
-            new_booking_payment_path(booking_id: @stay.id), data: { turbo_frame: "modal" },
-            class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
-        
-        .border-t-4(class="border-#{@stay.payment_status_color}")
+        = link_to "Nouveau paiement ➕",
+          new_stay_payment_path(stay_id: @stay.id), data: { turbo_frame: "modal" },
+          class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+      .border-t-4(class="border-#{@stay.payment_status_color}")
         table.table-fixed.w-full.text-sm.text-left.text-gray-900.border-b.border-b-gray-200
           thead.text-xs.text-gray-700.uppercase.bg-gray-50
             tr
               th.py-3.px-3.w-8[scope="col"]
                 | &nbsp;
               th.py-3.px-6.w-32[scope="col"]
-                | Montant Dû
+                | Date
               th.py-3.px-6.w-36[scope="col"]
-                | Montant Payé
-              th.py-3.px-6.w-32[scope="col"]
-                | Date            
+                | Montant
               th.py-3.px-6.w-48[scope="col"]
                 | Statut
               th.py-3.px-6.hide-if-stay-page[scope="col"]
                 | Réservation
               th.py-3.px-6[scope="col"] &nbsp;
           tbody.bg-white(id="payments-#{@stay.id}")
-            = render '/payments/stay_payments', payment_requests: PaymentRequestDecorator.decorate_collection(@stay.payment_requests)
+            - @stay.payments.decorate.each do |payment|
+              = render '/payments/stay_payments', payment: payment
           tfoot
-            = render partial: "payments/stay_sum", locals: { stay: @stay }                          
+            = render partial: "payments/sum", locals: { reservation: @stay }
+
+        dl.my-4.px-6
+          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
+            dt.text-sm.font-medium.text-gray-500
+              | Tarif de la réservation
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              span.font-semibold = @stay.total_reservation_amount
+          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
+            dt.text-sm.font-medium.text-gray-500
+              | Reste à payer
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @stay.total_remaining_amount
+          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
+            dt.text-sm.font-medium.text-gray-500
+              | Tarification
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              /= @stay.tier.capitalize
+          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
+            dt.text-sm.font-medium.text-gray-500
+              | Facture
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @stay.invoice_status                        
 
     / Options
     .overflow-hidden.bg-white.shadow.sm:rounded-lg

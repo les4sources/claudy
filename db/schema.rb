@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_08_12_160639) do
+ActiveRecord::Schema[7.0].define(version: 2024_08_16_093545) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -253,26 +253,6 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_12_160639) do
     t.string "color"
   end
 
-  create_table "payment_requests", force: :cascade do |t|
-    t.bigint "stay_id", null: false
-    t.integer "status", default: 0
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.integer "amount_cents", default: 0, null: false
-    t.string "invoice_status"
-    t.string "payment_status"
-    t.index ["stay_id"], name: "index_payment_requests_on_stay_id"
-  end
-
-  create_table "payment_requests_stay_items", force: :cascade do |t|
-    t.bigint "payment_request_id", null: false
-    t.bigint "stay_item_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["payment_request_id"], name: "index_payment_requests_stay_items_on_payment_request_id"
-    t.index ["stay_item_id"], name: "index_payment_requests_stay_items_on_stay_item_id"
-  end
-
   create_table "payments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.bigint "booking_id"
     t.string "payment_method"
@@ -461,6 +441,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_12_160639) do
     t.text "comments"
     t.text "notes"
     t.boolean "draft", default: true
+    t.string "payment_status"
+    t.string "invoice_status"
+    t.string "group_name"
     t.index ["customer_id"], name: "index_stays_on_customer_id"
     t.index ["user_id"], name: "index_stays_on_user_id"
   end
@@ -547,11 +530,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_12_160639) do
   add_foreign_key "human_roles", "roles", name: "human_roles_role_id_fkey"
   add_foreign_key "lodging_rooms", "lodgings", name: "lodging_rooms_lodging_id_fkey"
   add_foreign_key "lodging_rooms", "rooms", name: "lodging_rooms_room_id_fkey"
-  add_foreign_key "payment_requests", "stays"
-  add_foreign_key "payment_requests_stay_items", "payment_requests"
-  add_foreign_key "payment_requests_stay_items", "stay_items"
   add_foreign_key "payments", "bookings", name: "payments_booking_id_fkey"
-  add_foreign_key "payments", "payment_requests"
   add_foreign_key "payments", "stays"
   add_foreign_key "projects", "humans", name: "projects_human_id_fkey"
   add_foreign_key "reservations", "bookings", name: "reservations_booking_id_fkey"

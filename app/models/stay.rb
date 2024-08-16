@@ -33,7 +33,7 @@ class Stay < ApplicationRecord
   has_many :products, through: :stay_items, source: :item, source_type: 'Product'
   has_many :spaces, through: :stay_items, source: :item, source_type: 'Space'
 
-  has_many :payment_requests
+  has_many :payments
 
   accepts_nested_attributes_for :customer
 
@@ -99,38 +99,51 @@ class Stay < ApplicationRecord
   end
 
 
-  def payment_status
-    if payment_requests.all? { |pr| pr.paid? }
-      PaymentRequest::PAYMENT_PAID
-    elsif payment_requests.any? { |pr| pr.partially_paid? }
-      PaymentRequest::PAYMENT_PARTIALLY_PAID
-    else
-      PaymentRequest::PAYMENT_PENDING
-    end
+  def paid?
+    payment_status == "paid"
   end
 
+  def partially_paid?
+    payment_status == "partially_paid"
+  end
+
+  def pending?
+    status == "pending"
+  end
+
+
+  def set_payment_status
+    if self.payments.paid.sum(:amount_cents) >= self.total_reservation_amount
+      status = "paid"
+    elsif self.payments.paid.sum(:amount_cents) > 0.0
+      status = "partially_paid"
+    else
+      status = "pending"
+    end
+    self.update(payment_status: status)
+  end
+
+
   def total_remaining_amount
-    payment_requests.to_a.sum {|pr| (pr.remaining_amount)}
+    self.total_reservation_amount - total_payments_received
   end
 
   def total_payments_received
-    payment_requests.to_a.sum {|pr| (pr.total_paid/100)}
+    payments.to_a.sum {|p| (p.amount_cents)}
   end
 
-  # Calculer le montant total demandé pour le séjour (somme des payment_requests)
-  def total_requested_amount
-    payment_requests.sum(:amount_cents)
-  end
-
-  # Calculer le montant total de la réservation basé sur les stay_items
+  
+  # Calculer le montant total de la réservation basé sur le prix de chaque stay_items
   def total_reservation_amount
-    stay_items.to_a.sum { |item| (item.total_price/100) }
+    stay_items.to_a.sum { |item| (item.total_price) }
   end
+
+
 
   def rooms_by_date
     rooms_hash = dates_with_items(stay_items.where(item_type: StayItem::ROOM))
     
-    # if lodgings have been booked, the rooms shall be the rooms that belongs to the lodging
+    # if lodgings have been booked, the rooms shall also be the rooms that belongs to the lodging
     rooms_from_lods = []
     stay_items.where(item_type: StayItem::LODGING).each do |lod|
       Lodging.find(lod.item_id).rooms.each do |room|

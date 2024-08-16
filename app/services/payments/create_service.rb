@@ -1,11 +1,12 @@
 module Payments
   class CreateService < ServiceBase
-    attr_reader :booking
+    #attr_reader :booking
     attr_reader :payment
+    attr_reader :reservation
 
-    def initialize(booking_id:)
-      @booking = Booking.find(booking_id)
-      @payment = @booking.payments.new
+    def initialize(reservation_type:, reservation_id:)
+      @reservation = get_reservation(reservation_type, reservation_id)
+      @payment = @reservation.payments.new
       @report_errors = true
     end
 
@@ -24,7 +25,7 @@ module Payments
       return false if !@payment.valid?
       set_status
       @payment.save!
-      @booking.set_payment_status
+      @reservation.set_payment_status
       raise error_message if !error.nil?
       true
     end
@@ -52,5 +53,18 @@ module Payments
           :payment_method
         )
     end
+
+   def get_reservation(reservation_type, reservation_id)
+      case reservation_type
+      when 'Booking'
+        Booking.find(reservation_id)
+      when 'Stay'
+        Stay.find(reservation_id)
+      else
+        raise ArgumentError, "Unsupported reservation type: #{reservation_type}"
+      end
+  end
+
+
   end
 end

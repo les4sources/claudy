@@ -1,9 +1,21 @@
-= turbo_stream.prepend "payments-#{@payment.booking_id}", 
-                       partial: "payments/payment", 
-                       locals: { payment: @payment } 
+- if @payment.booking
+    = turbo_stream.prepend "payments-#{@payment.booking_id}", 
+                           partial: "payments/payment", 
+                           locals: { payment: @payment } 
 
-= turbo_stream.replace_all ".booking-#{@payment.booking_id}-payment-status", 
-                           @payment.booking.payment_status
+    = turbo_stream.replace_all ".booking-#{@payment.booking_id}-payment-status", 
+                               @payment.booking.payment_status
 
-= turbo_stream.replace "booking-#{@payment.booking_id}-payments-sum",
-                       @payment.booking.payments_total
+    = turbo_stream.replace "booking-#{@payment.booking_id}-payments-sum",
+                           @payment.booking.payments_total
+
+- if @payment.stay
+    = turbo_stream.prepend "payments-#{@payment.stay_id}", 
+                           partial: "payments/stay_payments", 
+                           locals: { payment: @payment } 
+
+    = turbo_stream.replace_all ".stay-#{@payment.stay_id}-payment-status", 
+                               @payment.stay.payment_status
+
+    = turbo_stream.replace "stauy-#{@payment.stay_id}-payments-sum",
+                           @payment.stay.payments_total

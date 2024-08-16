@@ -1,11 +1,11 @@
 module Payments
   class UpdateService < ServiceBase
-    attr_reader :booking
+    attr_reader :reservation
     attr_reader :payment
 
     def initialize(payment_id:)
       @payment = Payment.find(payment_id)
-      @booking = @payment.booking
+      @reservation = @payment.booking.nil? ? @payment.stay : @payment.booking
       @report_errors = true
     end
 
@@ -24,7 +24,7 @@ module Payments
       return false if !@payment.valid?
       ActiveRecord::Base.transaction do
         @payment.save!
-        @booking.set_payment_status
+        @reservation.set_payment_status
       end
       raise error_message if !error.nil?
       true

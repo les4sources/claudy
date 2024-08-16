@@ -170,6 +170,7 @@ module Bookable
         :end_date,
         :status,
         :platform,
+        :group_name,
         customer_attributes: [
           :firstname,
           :lastname,

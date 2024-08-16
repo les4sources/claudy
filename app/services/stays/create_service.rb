@@ -22,8 +22,6 @@ module Stays
     end
 
     def run!(params = {})
-      Rails.logger.info(params)
-
       customer_service = Customers::CreateService.new
       customer_service.run(params)
       @stay.attributes = stay_params(params).except(:customer_attributes)

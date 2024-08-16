@@ -19,8 +19,8 @@ class Payment < ApplicationRecord
   self.implicit_order_column = :created_at
 
   belongs_to :booking, optional: true
-  #belongs_to :stay, optional: true
-  belongs_to :payment_request, optional: true
+  belongs_to :stay, optional: true
+  
 
   monetize :amount_cents, allow_nil: false
 
@@ -30,7 +30,6 @@ class Payment < ApplicationRecord
   validates :amount, numericality: { greater_than: 0.0 }
   validates :payment_method, presence: true
 
- after_save :update_payment_request_status
 
   scope :paid, -> { where(status: "paid") }
   scope :pending, -> { where(status: "pending") }
@@ -44,14 +43,5 @@ class Payment < ApplicationRecord
   def pending?
     self.status == "pending"
   end
-
-  private
-
-  def update_payment_request_status
-    if payment_request
-      payment_request.update_status
-    end
-  end
-
 
 end

@@ -23,7 +23,7 @@
             = stay.status_emoji
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
             strong(class="#{stay.declined? ? "line-through" : nil}")
-              = link_to stay.customer.lastname, 
+              = link_to stay.group_or_name, 
                         stay_path(stay),
                         class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
             .mt-1.text-gray-900
@@ -31,10 +31,10 @@
           td.py-4.px-6.hidden.md:table-cell
             = stay.nights_count
           td.py-4.stay-6.space-x-1
-            -#- if !stay.lodging.nil?
-            -#  = stay.lodging_badge(font_size: "sm")
-            -#- else
-            -#  = stay.rooms_badges(font_size: "sm")
+            - if !stay.lodgings.empty?
+              = stay.lodging_badge(font_size: "sm")
+            - elsif !stay.rooms.empty?
+              = stay.rooms_badges(font_size: "sm")
           td.py-4.px-6
             - if stay.confirmed?
               = stay.payment_status

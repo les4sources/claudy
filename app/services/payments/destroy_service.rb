@@ -1,11 +1,11 @@
 module Payments
   class DestroyService < ServiceBase
-    attr_reader :booking
+    attr_reader :reservation
     attr_reader :payment
 
     def initialize(payment_id:)
       @payment = Payment.find(payment_id)
-      @booking = @payment.booking
+      @reservation = @payment.booking.nil? ? @payment.stay : @payment.booking
       @report_errors = true
     end
 
@@ -21,7 +21,7 @@ module Payments
 
     def run!(params = {})
       @payment.soft_delete!(validate: false)
-      @booking.set_payment_status
+      @reservation.set_payment_status
       raise error_message if !error.nil?
       true
     end

@@ -6,6 +6,12 @@
     .space-y-2
  
     = f.fields_for :customer, @stay.customer do |customer_form|
+
+      = customer_form.email_field :email,
+                      label: "Adresse email *",
+                      class: "md:w-2/3 lg:w-1/2",
+                      hint: "Le client recevra des notifications par email"
+                      
       = customer_form.text_field :firstname,
                      label: "Prénom *",
                      required: true,
@@ -15,10 +21,9 @@
                      label: "Nom",
                      class: "md:w-1/2 lg:w-2/3"
 
-      = customer_form.email_field :email,
-                      label: "Adresse email *",
-                      class: "md:w-2/3 lg:w-1/2",
-                      hint: "Le client recevra des notifications par email"
+      = f.text_field :group_name,
+                   label: "Nom du groupe",
+                   class: "md:w-1/2 lg:w-1/3"
 
       = customer_form.text_field :phone,
                      label: "Numéro de téléphone",
