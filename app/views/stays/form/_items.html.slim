@@ -8,6 +8,14 @@
               new_stay_stay_item_path(stay_id: @stay.id, type: "lodging"), 
               data: { turbo_frame: "modal" },
               class: "relative inline-flex items-center rounded-l-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+      = link_to "Chambre", 
+              new_stay_stay_item_path(stay_id: @stay.id, type: "room"), 
+              data: { turbo_frame: "modal" },
+              class: "relative inline-flex items-center rounded-l-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+      = link_to "Lit", 
+              new_stay_stay_item_path(stay_id: @stay.id, type: "bed"), 
+              data: { turbo_frame: "modal" },
+              class: "relative inline-flex items-center rounded-l-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
       = link_to "Espace", 
               new_stay_stay_item_path(stay_id: @stay.id, type: "space"), 
               data: { turbo_frame: "modal" },

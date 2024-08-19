@@ -27,5 +27,9 @@ class Bed < ApplicationRecord
   	"#{self.name} (#{self.room.name})"
   end
 
+  def form_label
+    "#{name} (#{description}) - chambre #{self.room.name} "
+  end
+
 
 end

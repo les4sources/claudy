@@ -17,6 +17,10 @@ class StayItemDecorator < ApplicationDecorator
       "Location"
     when "Space"
       "Espace"
+    when "Room"
+      "Chambre"
+    when "Bed"
+      "Lit"
     end
   end
 end

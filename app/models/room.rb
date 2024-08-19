@@ -35,4 +35,9 @@ class Room < ApplicationRecord
       "#{name} (2ème étage)"
     end
   end
+
+  def form_label
+    "#{name} (#{description})"
+  end
+
 end

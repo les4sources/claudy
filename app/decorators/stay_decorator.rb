@@ -62,7 +62,7 @@ class StayDecorator < ApplicationDecorator
 
 
    def rooms_badges(font_size: "xs")
-    rooms = Room.where(id: object.rooms.map(&:room_id).uniq)
+    rooms = Room.where(id: object.rooms.map(&:id).uniq)
     shared_classes = "text-#{font_size} font-semibold text-center py-0.5 px-1 rounded"
     html = ""
     rooms.each do |room|

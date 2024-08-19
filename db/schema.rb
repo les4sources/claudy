@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_08_16_093545) do
+ActiveRecord::Schema[7.0].define(version: 2024_08_18_072241) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -418,6 +418,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_16_093545) do
     t.datetime "updated_at", null: false
     t.integer "unit_price_cents", default: 0, null: false
     t.string "unit_price_currency", default: "EUR", null: false
+    t.integer "babies_count"
     t.index ["item_type", "item_id"], name: "index_stay_items_on_item"
     t.index ["stay_id"], name: "index_stay_items_on_stay_id"
   end
