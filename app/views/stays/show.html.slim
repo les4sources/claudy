@@ -1,6 +1,6 @@
 - content_for :page_header do
   = render 'layouts/components/page_header',
-           title: @stay.name,
+           title: @stay.group_or_name,
            secondary: "Du #{@stay.start_date} au #{@stay.end_date}",
            links: !@stay.deleted? ? [ \
              link_to("🗓 Agenda", root_path(date: @stay.object.start_date), class: "btn-page-header-no-background"),

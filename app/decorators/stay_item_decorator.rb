@@ -7,20 +7,29 @@ class StayItemDecorator < ApplicationDecorator
 
   def item_type
     case object.item_type
-    when "experience"
+    when StayItem::EXPERIENCE
       "Atelier"
-    when "lodging"
+    when StayItem::LODGING
       "Hébergement"
-    when "Product"
+    when StayItem::PRODUCT
       "Produit"
-    when "RentalItem"
+    when StayItem::RENTAL_ITEM
       "Location"
-    when "Space"
+    when StayItem::SPACE
       "Espace"
-    when "Room"
+    when StayItem::ROOM
       "Chambre"
-    when "Bed"
+    when StayItem::BED
       "Lit"
     end
   end
+
+  def start_date(format: :long)
+    l(object.start_date, format: format)
+  end
+
+  def end_date(format: :long)
+    l(object.end_date, format: format)
+  end
+
 end

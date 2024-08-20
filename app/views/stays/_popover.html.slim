@@ -1,0 +1,69 @@
+.p-1.text-center.text-xs.font-bold.bg-cyan-200.text-cyan-700.rounded-t-lg
+  - if Date.today == stay.object.start_date
+    | Check-in
+  - elsif Date.today == stay.object.end_date
+    | Check-out
+  - elsif Date.today < stay.object.start_date
+    | Hébergement à venir
+  - elsif Date.today > stay.object.start_date && Date.today < stay.object.end_date
+    | Hébergement en cours
+  - else
+    | Hébergement passé
+.p-3
+  .flex.items-center.justify-between.mb-2
+    .text-sm.font-semibold.leading-none.text-gray-900
+      = link_to stay.decorate.group_or_name.html_safe, 
+                stay_path(stay),
+                class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+    div
+      = link_to "Détails", 
+                stay_path(stay),
+                class: "text-white bg-cyan-700 hover:bg-cyan-800 focus:ring-4 focus:ring-cyan-300 font-medium rounded-lg text-xs px-3 py-1.5 focus:outline-none"
+
+  - if !stay.lodgings.empty?
+    p.mb-2.text-sm
+      = stay.lodging_badge
+  - elsif !stay.rooms.empty?
+    .grid.grid-cols-6.gap-1.mb-2
+      = stay.rooms_badges
+
+  - if stay.object.customer.phone.present?
+    p.mb-2.text-sm.font-normal
+      | Tél: #{stay.object.customer.phone}
+  - if stay.estimated_arrival.present?
+    p.mb-2.text-sm.font-light
+      | Heure d'arrivée: #{stay.estimated_arrival}
+  - if stay.departure_time.present?
+    p.mb-2.text-sm.font-light
+      | Heure de départ: #{stay.departure_time}
+  - if stay.canceled?
+    .mb-2.text-sm.font-semibold
+      | Cette réservation est annulée
+  - if stay.confirmed?
+    .mb-2
+      = stay.payment_status
+  ul.flex.text-base.font-light
+    - if stay.object.adults > 0
+      li.mr-2
+        span.font-semibold.text-gray-900
+          | #{stay.adults}x
+        span.ml-1
+          | 🧑
+    - if stay.object.children > 0
+      li.mr-2
+        span.font-semibold.text-gray-900
+          | #{stay.children}x
+        span.ml-1
+          | 👧
+    - if stay.object.babies > 0
+      li.mr-2
+        span.font-semibold.text-gray-900
+          | #{stay.babies}x
+        span.ml-1
+          | 👶
+  .mt-2.text-base
+   -# = stay.options_emojis
+   -# = stay.wifi_emoji
+  - if stay.notes.presence
+    .mt-2.space-y-4.text-yellow-600.font-caveat.text-lg
+      = simple_format "📝 " + stay.notes

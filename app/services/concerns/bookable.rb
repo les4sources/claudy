@@ -34,6 +34,59 @@ module Bookable
     end
   end
 
+
+  def is_available?
+    
+    @stay.stay_items.where(item_type: StayItem::LODGING).each do |lodging_item|
+      lod = Lodging.find(lodging_item.item_id)
+      lod.rooms.each do |room|
+        beds = room.beds
+        if StayItemDate.includes(:stay)
+            .where(booking_date: (lodging_item.start_date)..(lodging_item.end_date-1.day),
+                   booked_item_type: StayItem::BED,
+                   booked_item_id: [beds.collect{|b| b.id}],
+                   stay: {status: "confirmed", draft: false, deleted_at: nil})
+            .any?
+         set_error_message("Le gîte #{lod.name} n'est pas disponible à cette date.")
+          return false
+        end
+
+      end
+  
+    end
+
+    @stay.stay_items.where(item_type: StayItem::ROOM).each do |room_item|
+      room = Room.find(room_item.item_id)
+      beds = room.beds
+      if StayItemDate.includes(:stay)
+                      .where(booking_date: (room_item.start_date)..(room_item.end_date-1.day),
+                             booked_item_type: StayItem::BED,
+                             booked_item_id: [beds.collect{|b| b.id}],
+                             stay: {status: "confirmed", draft: false, deleted_at: nil})
+            .any?
+         set_error_message("La chambre #{room.name} n'est pas disponible à cette date.")
+          return false
+      end
+  
+    end
+    
+    @stay.stay_items.where(item_type: StayItem::BED).each do |bed_item|
+      bed = Bed.find(bed_item.item_id)
+      if StayItemDate.includes(:stay)
+                      .where(booking_date: (bed_item.start_date)..(bed_item.end_date-1.day),
+                             booked_item_type: StayItem::BED,
+                             booked_item_id: [bed.id],
+                             stay: {status: "confirmed", draft: false, deleted_at: nil})
+            .any?
+         set_error_message("Le lit #{bed.name} n'est pas disponible à cette date.")
+          return false
+      end
+  
+    end
+
+    true
+  end
+
   def build_reservations(rooms)
     rooms.each do |room|
       (@booking.from_date..(@booking.to_date - 1.day)).each do |date|
@@ -59,6 +112,31 @@ module Bookable
     end
   rescue
     set_error_message("Merci de vérifier si vous avez sélectionné un type d'hébergement.")
+  end
+
+
+  def get_beds
+
+    beds = []
+    @stay.lodgings.each do |lod|
+      lod.rooms.each do |room|
+        beds.concat(room.beds)
+      end
+    end
+
+    @stay.rooms.each do |room|
+      beds.concat(room.beds)
+    end
+
+    beds.concat(@stay.beds)
+
+    if beds.uniq.length != beds.length
+      set_error_message("Attention, vous avez placé 2 hébergements similaires dans la même réservation")
+      nil
+    end 
+
+    beds
+
   end
 
   def notify_admin_on_create
@@ -157,28 +235,7 @@ module Bookable
   end
 
 
-  def stay_params(params)
-    params
-      .require(:stay)
-      .permit(
-        :adults,
-        :children,
-        :babies,
-        :departure_time,
-        :estimated_arrival,
-        :start_date,
-        :end_date,
-        :status,
-        :platform,
-        :group_name,
-        customer_attributes: [
-          :firstname,
-          :lastname,
-          :email,
-          :phone
-        ]
-      )
-  end
+  
 
 
   def customer_params(params)

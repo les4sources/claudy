@@ -19,6 +19,22 @@ class PagesController < BaseController
       .between_times(@first, @last, field: :date)
     @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
     @activities = PublicActivity::Activity.where("created_at > ?", 14.days.ago).order(created_at: :desc)
+    # stays
+    @stay_reservations = StayItemDate.all
+      .includes(:stay)
+      .where(direct_book: true)
+      .where.not(stay: {status: [StayStatus::DECLINED, StayStatus::CANCELED] } )
+      .between_times(@first, @last, field: :booking_date)
+    @grouped_stay_reservations = @stay_reservations.to_a.group_by { |sr| sr.booking_date }
+    # spaces
+    space_items = StayItem.where(item_type: StayItem::SPACE)
+      .includes(:stay)
+      .where.not(stay: {status: [ StayStatus::DECLINED, StayStatus::CANCELED] } )
+      .where("stay_items.start_date >= ? AND stay_items.start_date <= ?", @first, @last)
+    @grouped_spaces = Stay.stay_items_grouped_by_date(space_items)
+     
+    # experiences
+    # rental items
   end
 
   # details for a specific day

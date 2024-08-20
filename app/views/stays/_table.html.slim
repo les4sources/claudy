@@ -16,6 +16,8 @@
           | Options
         th.py-3.px-6[scope="col"]
           | ID
+        th.py-1.px-1[scope="col"]
+          | Actions
     tbody
       - stays.each do |stay|
         tr.border-b(class="#{stay.tr_class}")
@@ -33,7 +35,7 @@
           td.py-4.stay-6.space-x-1
             - if !stay.lodgings.empty?
               = stay.lodging_badge(font_size: "sm")
-            - elsif !stay.rooms.empty?
+            - if !stay.rooms.empty?
               = stay.rooms_badges(font_size: "sm")
           td.py-4.px-6
             - if stay.confirmed?
@@ -42,3 +44,7 @@
            -# = stay.options_emojis
           td.py-4.px-6
             code #{stay.token}
+          td.py-1.px-1
+            = link_to 'Mettre à jour', 
+                      edit_stay_path(stay), 
+                      class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"

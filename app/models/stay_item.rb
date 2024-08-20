@@ -32,24 +32,26 @@ class StayItem < ApplicationRecord
   RENTAL_ITEM = 'RentalItem'
 
 
+  
+
   def self.build
     
     items = []
 
     Lodging.all.each do |lod|
-      obj = {id: lod.id, type: 'Lodging', name: lod.name}
+      obj = {id: lod.id, type: StayItem::LODGING, name: lod.name}
       items << obj
     end 
     Room.all.each do |room|
-      obj = {id: room.id, type: 'Room', name: room.name}
+      obj = {id: room.id, type: StayItem::ROOM, name: room.name}
       items << obj
     end 
     Bed.all.each do |bed|
-      obj = {id: bed.id, type: 'Bed', name: bed.name_with_room}
+      obj = {id: bed.id, type: StayItem::BED, name: bed.name_with_room}
       items << obj
     end 
     Space.all.each do |space|
-      obj = {id: space.id, type: 'Space', name: space.name}
+      obj = {id: space.id, type: StayItem::SPACE, name: space.name}
       items << obj
     end 
   

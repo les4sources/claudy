@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_08_18_072241) do
+ActiveRecord::Schema[7.0].define(version: 2024_08_19_121647) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -404,6 +404,18 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_18_072241) do
     t.integer "position", default: 999
   end
 
+  create_table "stay_item_dates", force: :cascade do |t|
+    t.string "booked_item_type", null: false
+    t.bigint "booked_item_id", null: false
+    t.date "booking_date", null: false
+    t.bigint "stay_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "direct_book", default: true
+    t.index ["booked_item_type", "booked_item_id"], name: "index_stay_item_dates_on_booked_item"
+    t.index ["stay_id"], name: "index_stay_item_dates_on_stay_id"
+  end
+
   create_table "stay_items", force: :cascade do |t|
     t.bigint "stay_id", null: false
     t.string "item_type", null: false
@@ -540,6 +552,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_18_072241) do
   add_foreign_key "space_bookings", "events", name: "space_bookings_event_id_fkey"
   add_foreign_key "space_reservations", "space_bookings", name: "space_reservations_space_booking_id_fkey"
   add_foreign_key "space_reservations", "spaces", name: "space_reservations_space_id_fkey"
+  add_foreign_key "stay_item_dates", "stays"
   add_foreign_key "stay_items", "stays"
   add_foreign_key "stays", "customers"
   add_foreign_key "stays", "users"

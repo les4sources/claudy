@@ -16,6 +16,7 @@ class Bed < ApplicationRecord
   # v2 - stays
   has_many :stay_items, as: :item
   has_many :stays, through: :stay_items
+  has_many :stay_item_dates, as: :booked_item
 
   validates :name, presence: true
 

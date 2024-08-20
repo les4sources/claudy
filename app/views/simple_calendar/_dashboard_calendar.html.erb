@@ -49,6 +49,16 @@
           </div>
         <% end %>
       <% end %>
+
+      <% if !@grouped_stay_reservations[Date.today].nil? %>
+        <% @grouped_stay_reservations[Date.today].sort_by {|r| r.start_time }.group_by { |r| r.stay.id }.each do |grouped_reservations| %>
+          <% reservation = grouped_reservations.last.first %>
+          <% stay = StayDecorator.new(reservation.stay) %>
+          <div class="place-self-stretch text-sm font-light text-gray-500 bg-white border border-gray-200 rounded-lg shadow-xl">
+            <%= render "stays/popover", stay: stay %>
+          </div>
+        <% end %>
+      <% end %>
     </div>
 
     <div class="absolute -top-24 right-0 -z-10 transform-gpu blur-3xl" aria-hidden="true">

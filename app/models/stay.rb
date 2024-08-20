@@ -22,6 +22,11 @@
 #  notes             :text
 #
 class Stay < ApplicationRecord
+
+  # PublicActivity
+  include PublicActivity::Model
+  tracked owner: Proc.new{ |controller, model| controller.current_user rescue nil }
+  
   belongs_to :customer, optional: true
   
   has_many :stay_items
@@ -34,6 +39,7 @@ class Stay < ApplicationRecord
   has_many :spaces, through: :stay_items, source: :item, source_type: 'Space'
 
   has_many :payments
+  has_many :stay_item_dates
 
   accepts_nested_attributes_for :customer
 
@@ -58,7 +64,7 @@ class Stay < ApplicationRecord
 
 
   def name
-    "#{self.customer.firstname} #{self.customer.lastname}"
+    "#{self.customer&.firstname} #{self.customer&.lastname}"
   end
 
   def nights_count
@@ -139,9 +145,46 @@ class Stay < ApplicationRecord
   end
 
 
+  def build_booked_item
+    self.stay_items.each do |item|
+      
+      case item.item_type 
+      
+      when StayItem::LODGING
+        # the lodging is booked
+        StayItemDate.build_item_dates(self.id, item.item_id, item.item_type, item.start_date, item.end_date, true)
+        # the rooms of that lodgings are booked as well'
+        lod = Lodging.find(item.item_id)
+        lod.rooms.each do |room|
+          StayItemDate.build_item_dates(self.id, room.id, StayItem::ROOM, item.start_date, item.end_date)
+          # the beds of the rooms are marked as booked as well
+          room.beds.each do |bed|
+            StayItemDate.build_item_dates(self.id, bed.id, StayItem::BED, item.start_date, item.end_date)
+          end
+        end
+
+      when StayItem::ROOM
+        # the room is booked
+        StayItemDate.build_item_dates(self.id, item.item_id, item.item_type, item.start_date, item.end_date, true)
+        # the corresponding lodging is marked as booked as well
+        room = Room.find(item.item_id)
+        # the beds of this room are booked as well
+        room.beds.each do |bed|
+            StayItemDate.build_item_dates(self.id, bed.id, StayItem::BED, item.start_date, item.end_date)
+        end
+
+      when StayItem::BED
+        # the bed is booked
+        StayItemDate.build_item_dates(self.id, item.item_id, item.item_type, item.start_date, item.end_date, true)
+      end
+      
+    end
+  rescue ActiveRecord::RecordNotUnique => e
+    raise e
+  end
 
   def rooms_by_date
-    rooms_hash = dates_with_items(stay_items.where(item_type: StayItem::ROOM))
+    rooms_hash = Stay.items_grouped_by_date(stay_items.where(item_type: StayItem::ROOM))
     
     # if lodgings have been booked, the rooms shall also be the rooms that belongs to the lodging
     rooms_from_lods = []
@@ -155,32 +198,43 @@ class Stay < ApplicationRecord
       end
     end
   
-    rooms_hash = rooms_hash.merge(dates_with_items(rooms_from_lods))
+    rooms_hash = rooms_hash.merge(Stay.items_grouped_by_date(rooms_from_lods))
     rooms_hash
   end
 
   def experiences_by_date
-    dates_with_items(stay_items.where(item_type: StayItem::EXPERIENCE))
+    Stay.items_grouped_by_date(stay_items.where(item_type: StayItem::EXPERIENCE))
   end
 
   def products_by_date
-    dates_with_items(stay_items.where(item_type: StayItem::PRODUCT))
+    Stay.items_grouped_by_date(stay_items.where(item_type: StayItem::PRODUCT))
   end
 
   def spaces_by_date
-    dates_with_items(stay_items.where(item_type: StayItem::SPACE))
+    Stay.items_grouped_by_date(stay_items.where(item_type: StayItem::SPACE))
   end
 
   def rental_items_by_date
-    dates_with_items(stay_items.where(item_type: StayItem::RENTAL_ITEM))
+    Stay.items_grouped_by_date(stay_items.where(item_type: StayItem::RENTAL_ITEM))
   end
 
-  def dates_with_items(_stay_items)
+  def self.items_grouped_by_date(_stay_items)
     reservation_hash = Hash.new { |hash, key| hash[key] = [] }
 
     _stay_items.each do |stay_item|
       (stay_item.start_date..stay_item.end_date).each do |date|
         reservation_hash[date] << stay_item.item
+      end
+    end
+    reservation_hash.sort.to_h
+  end
+
+  def self.stay_items_grouped_by_date(_stay_items)
+    reservation_hash = Hash.new { |hash, key| hash[key] = [] }
+
+    _stay_items.each do |stay_item|
+      (stay_item.start_date..stay_item.end_date).each do |date|
+        reservation_hash[date] << stay_item
       end
     end
     reservation_hash.sort.to_h

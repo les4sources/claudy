@@ -1,0 +1,14 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Séjours passés",
+           links: [ \
+             link_to("Séjours à venir", stays_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
+           ]
+
+= render "rooms/tooltips"
+
+= render "stays/table", 
+         stays: @stays
+
+.mt-2
+  = will_paginate @stays

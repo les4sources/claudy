@@ -10,24 +10,28 @@
       = customer_form.email_field :email,
                       label: "Adresse email *",
                       class: "md:w-2/3 lg:w-1/2",
-                      hint: "Le client recevra des notifications par email"
+                      required: true,
+                      hint: "Le client recevra des notifications par email",
+                      data: { action: "blur->stay#lookupCustomer", "stay-target": "customerEmail" }
                       
       = customer_form.text_field :firstname,
                      label: "Prénom *",
-                     required: true,
-                     class: "md:w-1/2 lg:w-2/3"
+                     class: "md:w-1/2 lg:w-2/3",
+                      data: { "stay-target": "customerFirstname" }
 
       = customer_form.text_field :lastname,
                      label: "Nom",
-                     class: "md:w-1/2 lg:w-2/3"
+                     class: "md:w-1/2 lg:w-2/3",
+                     data: { "stay-target": "customerLastname" }
+
+      = customer_form.text_field :phone,
+                     label: "Numéro de téléphone",
+                     class: "md:w-1/2 lg:w-1/3",
+                     data: { "stay-target": "customerPhone" }
 
       = f.text_field :group_name,
                    label: "Nom du groupe",
                    class: "md:w-1/2 lg:w-1/3"
-
-      = customer_form.text_field :phone,
-                     label: "Numéro de téléphone",
-                     class: "md:w-1/2 lg:w-1/3"
 
 
 hr

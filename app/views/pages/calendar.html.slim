@@ -88,6 +88,67 @@
                 = room_badge(reservation.room)
         .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-reservation-#{reservation.id}" data-popover-trigger="click")
 
+
+  / Stays
+  - if @grouped_stay_reservations[date]
+    - @grouped_stay_reservations[date].sort_by {|r| r.start_time }.group_by { |r| r.stay.id }.each do |grouped_reservations|
+      - reservation = grouped_reservations.last.first
+      - stay = StayDecorator.new(reservation.stay)
+
+      .popover.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-sm.opacity-0[id="popover-reservation-#{reservation.id}" data-popover role="tooltip"]
+        = render "stays/popover", 
+                 stay: stay
+        div[data-popper-arrow]
+
+      div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl #{stay.calendar_class}")
+        .block
+          div
+            strong 
+              = link_to stay.decorate.group_or_name.html_safe, 
+                        stay_path(stay), 
+                        class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6"
+
+            span.text-gray-500 =< stay.dates_counter(date)
+
+          - if !stay.lodgings.empty?
+            = stay.lodging_badge
+          - elsif !stay.rooms.empty?
+            .grid.grid-cols-3.gap-1
+              - stay.rooms.each do |room|
+                = room_badge(room)
+        .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-reservation-#{reservation.id}" data-popover-trigger="click")
+
+  / Stay Spaces
+  - if @grouped_spaces[date]
+    - @grouped_spaces[date].sort_by {|sr| sr.start_date }.group_by { |sr| sr.item.id }.each do |grouped_space|
+      - space_reservation = grouped_space.last.first
+      - stay = StayDecorator.new(space_reservation.stay)
+      .popover.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-sm.opacity-0[id="popover-space-reservation-#{space_reservation.id}" data-popover role="tooltip"]
+        = render "stays/popover", 
+                 stay: stay
+        div[data-popper-arrow]
+
+      div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl #{stay.space_calendar_class}")
+        .block
+          div
+            strong 
+              = link_to stay.decorate.group_or_name.html_safe, 
+                        stay_path(stay), 
+                        class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6"
+            -# if space_booking.event.presence
+            -#  .text-gray-500.leading-none.mb-2.font-semibold = space_booking.event.name_with_color
+
+            span.text-gray-500 =< stay.dates_counter(date)
+
+          .grid.grid-cols-3.gap-1
+            - grouped_space.last.each do |space_reservation|
+              = space_badge(space_reservation.item)
+
+          .block.text-gray-500
+            = space_reservation.duration
+        .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-space-reservation-#{space_reservation.id}" data-popover-trigger="click")
+        
+
 / Activity feed
 .mt-8.pb-5.border-b.border-gray-200
   h2.text-base.font-semibold.leading-6.text-gray-900 Activité récente

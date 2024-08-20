@@ -23,6 +23,7 @@ class Lodging < ApplicationRecord
   # v2 - stays
   has_many :stay_items, as: :item
   has_many :stays, through: :stay_items
+  has_many :stay_item_dates, as: :booked_item
 
   monetize :price_night_cents
 

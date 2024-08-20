@@ -2,8 +2,6 @@ module Customers
 
   class CreateService < ServiceBase
 
-    include Bookable
-
     attr_reader :customer
 
     def initialize
@@ -21,19 +19,24 @@ module Customers
     end
 
     def run!(params = {})
-
       @customer = Customer.find_or_initialize_by(email: params[:stay][:customer_attributes][:email])
         if @customer.new_record?
           @customer.attributes = customer_params(params)
-          if @customer.save
-            Rails.logger.debug "Customer created: #{@customer.inspect}"
-          else
-            Rails.logger.debug "Customer errors: #{@customer.errors.full_messages}"
-          end
-        else
-          Rails.logger.debug "Customer found: #{@customer.inspect}"
+          @customer.save
         end
+    end
 
+    private
+    
+    def customer_params(params)
+      params
+      .require(:stay).require(:customer_attributes)
+        .permit(
+          :firstname,
+          :lastname,
+          :email,
+          :phone
+        )
     end
   end
 end

@@ -134,6 +134,40 @@ class StayDecorator < ApplicationDecorator
     end
   end
 
+  def calendar_class
+    classes = ["shadow", "border-l-4"]
+    if !object.confirmed?
+      classes << ["opacity-50"] 
+    end
+    if object.lodgings.empty?
+      classes << ["border-purple-500", "bg-purple-50"]
+    else
+      classes << ["border-emerald-500", "bg-emerald-50"]
+    end
+    classes.join(" ")
+  end
+
+   def space_calendar_class
+    classes = ["shadow", "border-l-4", "border-l-orange-500", "bg-orange-50"]
+    if !object.confirmed?
+      classes << ["opacity-50"] 
+    end
+    classes.join(" ")
+  end
+
+  def dates_counter(current_date)
+    if object.end_date == object.start_date + 1.day
+    else
+      total_days = (object.end_date - object.start_date).to_i
+      if object.start_date == current_date
+        "(1/#{total_days})"
+      else
+        day = (current_date - object.start_date + 1).to_i
+        "(#{day}/#{total_days})"
+      end
+    end
+  end
+
    def payment_status_color
     case object.payment_status
     when "pending"

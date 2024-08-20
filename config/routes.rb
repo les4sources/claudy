@@ -26,6 +26,9 @@ Rails.application.routes.draw do
   resources :stays do
     resources :stay_items
     resources :payments
+    collection do 
+      get 'past'
+    end
   end
   resources :tasks
   resources :teams
@@ -50,6 +53,8 @@ Rails.application.routes.draw do
   get "pages/other_space_bookings", to: "pages#other_space_bookings"
 
   get "reports/lodging/:id", to: "reports#lodging", as: :lodging_reports
+
+  get 'customers/lookup', to: 'customers#lookup'
 
   namespace :public do
     resources :bookings, only: [:new, :create] do

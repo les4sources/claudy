@@ -4,6 +4,11 @@ class StaysController < BaseController
  	@stays = StayDecorator.decorate_collection(Stay.unscoped.current_and_future)  
  end
 
+ def past
+    @stays = StayDecorator
+      .decorate_collection(Stay.past.paginate(page: params[:page], per_page: 40))
+  end
+
  def new
     if !params[:source_booking_id].nil?
       #duplication_service = Bookings::DuplicateService.new
@@ -20,6 +25,8 @@ class StaysController < BaseController
       )
     end
     @stay.build_customer
+    Rails.logger.info("$$$$$$$$$$$$$$$")
+    Rails.logger.info(@stay.customer.inspect)
     @stay_items = StayItem.build
   end
 
@@ -47,6 +54,7 @@ class StaysController < BaseController
         format.html { redirect_to service.stay, notice: "Le séjour a été enregistré/mise à jour." }
         format.json { render :show, status: :ok, location: service.stay }
       else
+        set_error_flash(service.stay, "<strong>Cette réservation n'a pas pu être enregistrée, merci de vérifier les éléments suivants:</strong><br>#{service.error_message}")
         format.html { 
           @stay = service.stay
           render :edit, 
@@ -67,6 +75,15 @@ class StaysController < BaseController
     @rental_items_by_date = @stay.rental_items_by_date
     @spaces_by_date = @stay.spaces_by_date
     #@payments = @PaymentDecorator.decorate_collection(@stay.payments)
+  end
+
+   def destroy
+    @stay = Stay.find_by!(id: params[:id])
+    @stay.soft_delete!(validate: false)
+    @stay.create_activity(:destroy)
+    redirect_to stays_url,
+                status: :see_other,
+                notice: "Le séjour a été supprimé."
   end
 
    private

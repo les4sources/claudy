@@ -24,11 +24,51 @@ module Stays
       @stay.attributes = stay_params(params)
       return false if !@stay.valid?
       @stay.draft = false
-      # temporary
-      # @stay.customer = Customer.create(firstname: "Johnny")
+      ActiveRecord::Base.transaction do
+        # delete previous reservations as we will re-create them
+        @stay.stay_item_dates.destroy_all
+        begin
+          if is_available?
+            @stay.build_booked_item
+          end
+        rescue ActiveRecord::RecordNotUnique => e
+          set_error_message("L'un des élément d'hébergement est déjà occupé à ces dates. Veuillez vérifier.")
+          raise error_message
+          true
+        end
+
+      end
+      customer_service = Customers::CreateService.new
+      customer_service.run(params)
+      @stay.customer = customer_service.customer
       @stay.save!
       raise error_message if !error.nil?
       true
     end
-  end
+
+    private
+
+    def stay_params(params)
+      params
+        .require(:stay)
+        .permit(
+          :adults,
+          :children,
+          :babies,
+          :departure_time,
+          :estimated_arrival,
+          :start_date,
+          :end_date,
+          :status,
+          :platform,
+          :group_name,
+          customer_attributes: [
+            :firstname,
+            :lastname,
+            :email,
+            :phone
+          ]
+        )
+    end
+ end
 end

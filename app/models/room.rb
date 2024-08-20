@@ -20,6 +20,7 @@ class Room < ApplicationRecord
   # v2 - stays
   has_many :stay_items, as: :item
   has_many :stays, through: :stay_items
+  has_many :stay_item_dates, as: :booked_item
 
   has_soft_deletion default_scope: true
 
@@ -38,6 +39,18 @@ class Room < ApplicationRecord
 
   def form_label
     "#{name} (#{description})"
+  end
+
+  def available?(start_date, end_date)
+    # check if the room is available
+    return false if StayItemDate.where(item_booked: self, booking_date: start_date..end_date).exists?
+
+    # check if the corresponding lodgings are available
+    self.lodgings.each do |lod|
+      return false if StayItemDate.where(item_booked: lod, booking_date: start_date..end_date).exists?
+    end
+
+    true
   end
 
 end
