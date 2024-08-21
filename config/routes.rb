@@ -29,6 +29,9 @@ Rails.application.routes.draw do
     collection do 
       get 'past'
     end
+    member do
+      post 'save_date' 
+    end
   end
   resources :tasks
   resources :teams

@@ -18,7 +18,6 @@ class PagesController < BaseController
       .where.not(booking: { status: ["declined", "canceled"] })
       .between_times(@first, @last, field: :date)
     @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
-    @activities = PublicActivity::Activity.where("created_at > ?", 14.days.ago).order(created_at: :desc)
     # stays
     @stay_reservations = StayItemDate.all
       .includes(:stay)
@@ -32,9 +31,16 @@ class PagesController < BaseController
       .where.not(stay: {status: [ StayStatus::DECLINED, StayStatus::CANCELED] } )
       .where("stay_items.start_date >= ? AND stay_items.start_date <= ?", @first, @last)
     @grouped_spaces = Stay.stay_items_grouped_by_date(space_items)
-     
+
     # experiences
     # rental items
+
+    # activities
+    activities_without_stays = PublicActivity::Activity.where("created_at > ?", 14.days.ago).order(created_at: :desc)
+      .where.not(trackable_type: 'Stay')
+    stay_activities = Activity.stays_without_drafts.where("created_at > ?", 14.days.ago).order(created_at: :desc)
+    @activities = (activities_without_stays + stay_activities).sort_by(&:created_at).reverse
+
   end
 
   # details for a specific day

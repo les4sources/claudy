@@ -32,13 +32,14 @@
                      label: "Du *",
                      required: true,
                      error: "Veuillez renseigner une date",
-                     data: { "action": "booking#setToDate booking#drawForm", "booking-target": "fromDateInput" }
+                     id: "startDate",
+                     data: { "action": "stay#setEndDate blur->stay#saveStartDate", "stay-target": "startDateInput" }
       = f.date_field :end_date,
                      html5: true,
                      label: "Au *",
                      required: true,
                      error: "Veuillez renseigner une date",
-                     data: { "action": "booking#drawForm", "booking-target": "toDateInput" }
+                     data: {"action": "blur->stay#saveEndDate", "stay-target": "endDateInput" }
 
     .flex.space-x-6
       = f.number_field :adults,

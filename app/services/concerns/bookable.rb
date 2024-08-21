@@ -235,19 +235,6 @@ module Bookable
   end
 
 
-  
-
-
-  def customer_params(params)
-    params
-    .require(:stay).require(:customer_attributes)
-      .permit(
-        :firstname,
-        :lastname,
-        :email,
-        :phone
-      )
-  end
 
   def public_booking_params(params)
     params

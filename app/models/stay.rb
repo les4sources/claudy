@@ -50,6 +50,7 @@ class Stay < ApplicationRecord
 
   scope :current_and_future, -> { where("end_date >= ? and draft = ? ", Date.today, false).order(start_date: :asc) }
   scope :past, -> { where("end_date < ? and draft = ? ", Date.today, false).order(start_date: :desc) }
+  scope :draft_excluded, -> { where("draft = ?", false)}
 
 
 

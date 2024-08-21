@@ -62,6 +62,8 @@ module Stays
           :status,
           :platform,
           :group_name,
+          :notes,
+          :public_notes,
           customer_attributes: [
             :firstname,
             :lastname,

@@ -7,6 +7,8 @@ class StayItemsController < BaseController
 
   def new
     @stay_item = StayItem.new(item_type: params[:type])
+    @stay_item.start_date = @stay.start_date+1
+    @stay_item.end_date = @stay.end_date+1
     set_modal_title
   end
 

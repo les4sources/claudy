@@ -25,8 +25,6 @@ class StaysController < BaseController
       )
     end
     @stay.build_customer
-    Rails.logger.info("$$$$$$$$$$$$$$$")
-    Rails.logger.info(@stay.customer.inspect)
     @stay_items = StayItem.build
   end
 
@@ -66,6 +64,11 @@ class StaysController < BaseController
     end
   end
 
+  def save_date
+    stay = Stay.find(params[:id])
+    stay.update(stay_dates_params)
+  end
+
   def show
     @stay = Stay.unscoped.find_by!(id: params[:id]).decorate
     @lodgings = @stay.lodgings
@@ -95,6 +98,11 @@ class StaysController < BaseController
       action_name: action_name,
       view_context: view_context
     )
+  end
+
+  
+  def stay_dates_params
+    params.require(:stay).permit(:start_date, :end_date)
   end
 
 end

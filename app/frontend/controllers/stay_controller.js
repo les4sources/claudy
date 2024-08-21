@@ -8,7 +8,10 @@ export default class extends Controller {
     'customerEmail', 
     'customerFirstname', 
     'customerLastname', 
-    'customerPhone'
+    'customerPhone',
+    'startDateInput',
+    'endDateInput',
+  
   ]
 
  connect() {
@@ -22,6 +25,7 @@ export default class extends Controller {
    drawForm(e) {
     
    }
+
 
   async lookupCustomer() {
     const email = this.customerEmailTarget.value
@@ -41,6 +45,66 @@ export default class extends Controller {
         })
     }
   }
+
+  getStartDate() {
+    return moment(this.startDateInputTarget.value)
+  }
+
+   getEndDate() {
+    return moment(this.endDateInputTarget.value)
+  }
+
+
+  setEndDate() {
+    const dayAfterStartDate = this.getStartDate().add(1, 'day')
+    this.endDateInputTarget.setAttribute('min', dayAfterStartDate.format('YYYY-MM-DD'))
+    if (this.endDateInputTarget.value == "") {
+      this.endDateInputTarget.value = dayAfterStartDate.format('YYYY-MM-DD')
+    }
+    if (this.getEndDate() <= this.getStartDate()) {
+      this.endDateInputTarget.value = dayAfterStartDate.format('YYYY-MM-DD')
+    }
+  }
+
+
+  async saveStartDate(){
+    
+      const stayId = this.element.querySelector("#stay_id").value
+      console.log("stay_id: "+ stayId)
+      const request = new FetchRequest(
+        'post', 
+        "/stays/"+stayId+"/save_date", 
+         { 
+          body: JSON.stringify({ 
+          stay: {
+            start_date: this.getStartDate(),
+          }
+        }) 
+      })
+      const response = await request.perform()
+      if (response.ok) {
+        console.log('start date saved')
+      }
+  }
+
+  async saveEndDate(){
+      const stayId = this.element.querySelector("#stay_id").value
+      const request = new FetchRequest(
+        'post', 
+        "/stays/"+stayId+"/save_date", 
+         { 
+          body: JSON.stringify({ 
+          stay: {
+            end_date: this.getEndDate(),
+          }
+        }) 
+      })
+      const response = await request.perform()
+      if (response.ok) {
+        console.log('end date saved')
+      }
+  }
+
 
 
 }

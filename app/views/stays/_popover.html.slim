@@ -27,9 +27,9 @@
     .grid.grid-cols-6.gap-1.mb-2
       = stay.rooms_badges
 
-  - if stay.object.customer.phone.present?
+  - if stay.object.customer&.phone.present?
     p.mb-2.text-sm.font-normal
-      | Tél: #{stay.object.customer.phone}
+      | Tél: #{stay.object.customer&.phone}
   - if stay.estimated_arrival.present?
     p.mb-2.text-sm.font-light
       | Heure d'arrivée: #{stay.estimated_arrival}

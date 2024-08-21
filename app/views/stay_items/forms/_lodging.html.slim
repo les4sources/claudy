@@ -10,14 +10,15 @@
                  html5: true,
                  label: "Du *",
                  required: true,
-                 value: Date.today,
-                 error: "Une date de début est requise"
+                 error: "Une date de début est requise",
+                 data: {"stay-target": "lodgingStartDateInput" }
 
   = f.date_field :end_date,
                  html5: true,
                  label: "Au *",
                  required: true,
-                 error: "Une date de fin est requise"
+                 error: "Une date de fin est requise",
+                 data: {"stay-target": "lodgingEndDateInput" }
 
 .flex.space-x-6
   = f.number_field :adults,
