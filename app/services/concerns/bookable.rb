@@ -34,7 +34,7 @@ module Bookable
     end
   end
 
-
+  # is the stay available?
   def is_available?
     
     @stay.stay_items.where(item_type: StayItem::LODGING).each do |lodging_item|

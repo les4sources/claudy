@@ -1,6 +1,9 @@
 tr(id="#{dom_id stay_item}")
   td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.font-medium.text-gray-900.sm:pl-0
-    = stay_item.item_name
+    = link_to stay_item.item_name, edit_stay_stay_item_path(stay_id: stay_item.stay_id, id: stay_item.id), 
+      { data: { turbo_frame: "modal" },
+        class: 'text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700'}          
+    
   td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
     = stay_item.item_type
   td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
@@ -10,7 +13,7 @@ tr(id="#{dom_id stay_item}")
   td.relative.whitespace-nowrap.py-4.pl-3.pr-4.text-right.text-sm.font-medium.sm:pr-0
     / a.text-indigo-600.hover:text-indigo-900[href="#"]
       | Modifier
-    = link_to "Retirer",
-              stay_stay_item_path(stay_item, stay_id: stay_item.stay_id),
-              data: { turbo_method: :delete, turbo_confirm: 'Certain·e ?' },
-              class: "claudy-link"
+    /#= link_to "Retirer",
+     #         stay_stay_item_path(stay_item, stay_id: stay_item.stay_id),
+     #         data: { turbo_method: :delete, turbo_confirm: 'Certain·e ?' },
+     #        class: "claudy-link"

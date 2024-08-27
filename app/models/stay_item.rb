@@ -63,6 +63,10 @@ class StayItem < ApplicationRecord
     unit_price_cents * quantity
   end
 
+  def nights_count
+    (self.end_date - self.start_date).to_i
+  end
+
 
 
 end

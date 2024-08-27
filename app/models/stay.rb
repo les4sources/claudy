@@ -184,6 +184,7 @@ class Stay < ApplicationRecord
     raise e
   end
 
+
   def rooms_by_date
     rooms_hash = Stay.items_grouped_by_date(stay_items.where(item_type: StayItem::ROOM))
     

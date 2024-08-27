@@ -5,31 +5,31 @@
   .col-span-2.mb-4.space-y-6.sm:space-y-5
     span.isolate.inline-flex.rounded-md.shadow-sm
       = link_to "Hébergement", 
-              new_stay_stay_item_path(stay_id: @stay.id, type: "lodging"), 
+              new_stay_stay_item_path(stay_id: @stay.id, type: StayItem::LODGING), 
               data: { turbo_frame: "modal" },
               class: "relative inline-flex items-center rounded-l-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
       = link_to "Chambre", 
-              new_stay_stay_item_path(stay_id: @stay.id, type: "room"), 
+              new_stay_stay_item_path(stay_id: @stay.id, type: StayItem::ROOM), 
               data: { turbo_frame: "modal" },
               class: "relative inline-flex items-center rounded-l-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
       = link_to "Lit", 
-              new_stay_stay_item_path(stay_id: @stay.id, type: "bed"), 
+              new_stay_stay_item_path(stay_id: @stay.id, type: StayItem::BED), 
               data: { turbo_frame: "modal" },
               class: "relative inline-flex items-center rounded-l-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
       = link_to "Espace", 
-              new_stay_stay_item_path(stay_id: @stay.id, type: "space"), 
+              new_stay_stay_item_path(stay_id: @stay.id, type: StayItem::SPACE), 
               data: { turbo_frame: "modal" },
               class: "relative -ml-px inline-flex items-center bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
       = link_to "Location", 
-              new_stay_stay_item_path(stay_id: @stay.id, type: "rental_item"), 
+              new_stay_stay_item_path(stay_id: @stay.id, type: StayItem::RENTAL_ITEM), 
               data: { turbo_frame: "modal" },
               class: "relative -ml-px inline-flex items-center bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
       = link_to "Atelier", 
-              new_stay_stay_item_path(stay_id: @stay.id, type: "experience"), 
+              new_stay_stay_item_path(stay_id: @stay.id, type: StayItem::EXPERIENCE), 
               data: { turbo_frame: "modal" },
               class: "relative -ml-px inline-flex items-center bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
       = link_to "Produit", 
-              new_stay_stay_item_path(stay_id: @stay.id, type: "product"), 
+              new_stay_stay_item_path(stay_id: @stay.id, type: StayItem::PRODUCT), 
               data: { turbo_frame: "modal" },
               class: "relative -ml-px inline-flex items-center rounded-r-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
 

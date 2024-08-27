@@ -10,7 +10,8 @@
                  html5: true,
                  label: "Date *",
                  required: true,
-                 error: "Veuillez renseigner une date"
+                 error: "Veuillez renseigner une date",
+                 data: { "stay-items-target": "experienceStartDate" }
 
 .flex.space-x-6
   = f.number_field :adults,
@@ -31,3 +32,15 @@
                  label: "Durée de l'atelier *",
                  required: true,
                  class: "md:w-1/2 lg:w-2/3"
+
+.flex.space-x-6
+  = f.number_field :calculated_price,
+                   label: "Tarif *",
+                   min: 0,
+                   required: true,
+                   remove_default_class: "sm:text-sm",
+                   class: "w-24 text-lg"
+
+  = f.button       "Obtenir le tarif"
+
+   

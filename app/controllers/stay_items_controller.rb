@@ -38,6 +38,8 @@ class StayItemsController < BaseController
   end
 
   def edit
+    @stay_item = StayItem.find_by!(id: params[:id])
+    set_modal_title("Modifier")
   end
 
   def update
@@ -67,22 +69,22 @@ class StayItemsController < BaseController
     @stay_item = StayItem.find(params[:id])
   end
 
-  def set_modal_title
+  def set_modal_title(action="Ajouter")
     case @stay_item.item_type
-    when "experience"
-      @modal_title = "Ajouter un atelier"
-    when "lodging"
-      @modal_title = "Ajouter un hébergement"
-    when "room"
-      @modal_title = "Ajouter une chambre"
-    when "bed"
-      @modal_title = "Ajouter un lit"
-    when "product"
-      @modal_title = "Ajouter un produit"
-    when "rental_item"
-      @modal_title = "Ajouter une location"
-    when "space"
-      @modal_title = "Ajouter un espace"
+    when StayItem::EXPERIENCE
+      @modal_title = "#{action} un atelier"
+    when StayItem::LODGING
+      @modal_title = "#{action} un hébergement"
+    when StayItem::ROOM
+      @modal_title = "#{action} une chambre"
+    when StayItem::BED
+      @modal_title = "#{action} un lit"
+    when StayItem::PRODUCT
+      @modal_title = "#{action} un produit"
+    when StayItem::RENTAL_ITEM
+      @modal_title = "#{action} une location"
+    when StayItem::SPACE
+      @modal_title = "#{action} un espace"
     end
   end
 

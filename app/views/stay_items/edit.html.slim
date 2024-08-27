@@ -1,0 +1,19 @@
+= render TurboModal::Component.new(title: @modal_title, width: :md) do
+  = form_with model: @stay_item,
+              url: stay_stay_items_path,
+              data: { controller: "stay_items" } do |f|
+    .space-y-8.divide-y.divide-gray-200.sm:space-y-5
+      .space-y-6.sm:space-y-5
+        = render "form", f: f
+
+
+    = f.actions do
+      = link_to "Retirer l'élément", 
+                stay_stay_item_path(@stay_item.stay, @stay_item), 
+                method: :delete,
+                class: "text-xs font-semibold text-red-500",
+                data: { \
+                  turbo_method: :delete,
+                  action: "turbo-modal--component#closeDialog" \
+                }
+      = f.submit "Enregistrer"

@@ -23,13 +23,13 @@ module Stays
     def run!(params = {})
       @stay.attributes = stay_params(params)
       return false if !@stay.valid?
-      @stay.draft = false
       ActiveRecord::Base.transaction do
         # delete previous reservations as we will re-create them
         @stay.stay_item_dates.destroy_all
         begin
           if is_available?
             @stay.build_booked_item
+            @stay.draft = false
           end
         rescue ActiveRecord::RecordNotUnique => e
           set_error_message("L'un des élément d'hébergement est déjà occupé à ces dates. Veuillez vérifier.")
