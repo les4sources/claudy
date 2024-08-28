@@ -43,6 +43,28 @@ class StayItemsController < BaseController
   end
 
   def update
+      service = StayItems::UpdateService.new(stay_item_id: @stay_item.id)
+    if service.run(params)
+      respond_to do |format|
+        format.turbo_stream { 
+          render turbo_stream: turbo_stream.append("stay-items", 
+                 partial: 'stay_items/stay_item', 
+                 locals: { stay_item: service.stay_item.decorate }) }
+        format.html { 
+          redirect_to edit_stay_path(service.stay),
+                      notice: "L'élément a été ajouté au séjour."
+        }
+        format.json { 
+          render :show, 
+                 status: :udpated, 
+                 location: service.stay_item 
+        }
+      end
+    else
+      @stay_item = service.stay_item
+      set_error_flash(service.stay_item, service.error_message)
+      render :new
+    end
   end
 
   def destroy

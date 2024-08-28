@@ -1,11 +1,11 @@
 module StayPrices
+  
   class CalculationService < ServiceBase
     include Bookable
 
-    attr_reader :stay, :amount
+    attr_reader :stay, :stay_item, :item, :amount
 
     def initialize
-      @stay = Stay.new
       @report_errors = true
     end
 
@@ -20,19 +20,47 @@ module StayPrices
     end
 
     def run!(params = {})
-      #@booking.attributes = booking_params(params)
-      @amount = calculate_price
+      
+      if params[:item_type].present?
+         
+         method_name = "calculate_price_for_#{params[:item_type].downcase}"
+
+         if respond_to?(method_name, true)
+          @amount = send(method_name, params)
+         else
+          raise ArgumentError, "Invalid item type: #{params[:item_type]}"
+         end
+      end
       true
+
     end
+
 
     private
 
+    def calculate_price_for_product(params)
+        product = Product.find(params[:product_id])
+        price = 0
+        if product
+          price = BigDecimal(product.price_cents) * BigDecimal(params[:quantity])
+        end
+        (price/100)
+    end
 
     def _calculate_price
       
       @stay.stay_items.each do |stay_item|
 
-        
+        # type de stay item
+        case stay_item.item_type
+
+        when StayItem::LODGING
+          if stay_item.item_id == 1 # Chevêche
+
+          elsif stay_item.item_id == 2 # Hulotte
+          elsif stay_item.item_id == 3 # Grand Duc
+          end
+        end
 
       end
 

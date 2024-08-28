@@ -12,7 +12,25 @@ class StayPricesController < BaseController
     end
   end
 
+
+  def calculate_item_price
+    service = StayPrices::CalculationService.new
+    if service.run(params)
+      Rails.logger.info(service.amount)
+      render json: { amount: service.amount },
+             status: :ok
+    else
+      render json: { amount: service.amount }, 
+             status: :unprocessable_entity
+    end
+
+  end
+
+
+
   private
 
   def set_presenters; end
+
+
 end

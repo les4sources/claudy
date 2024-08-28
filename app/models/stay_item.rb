@@ -31,6 +31,7 @@ class StayItem < ApplicationRecord
   PRODUCT = 'Product'
   RENTAL_ITEM = 'RentalItem'
 
+  monetize :calculated_price_cents,as: "calculated_price"
 
   
 

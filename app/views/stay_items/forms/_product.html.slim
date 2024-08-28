@@ -2,12 +2,26 @@
   = f.label :item_id, "Sélectionne un produit *"
   = f.collection_radio_buttons :item_id, Product.all.order(:id), :id, :name, required: true do |radio_button|
     .flex.items-center
-      = radio_button.radio_button
+      = radio_button.radio_button data: { "stay-items-target": "productSelection" }
       = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
 = f.number_field :quantity,
                  label: "Quantité",
-                 value: 1,
                  min: 1,
-                 remove_default_class: "sm:text-sm",
-                 class: "w-24 text-lg"
+                 class: "w-24 text-lg",
+                 data: { "stay-items-target": "productQuantity" }
+
+.flex.space-x-6
+  = f.number_field :calculated_price,
+                   label: "Tarif *",
+                   min: 0,
+                   required: true,
+                   class: "w-24 text-lg",
+                   step: "0.01",
+                   value: ((f.object.calculated_price_cents / 100.0) rescue nil),
+                   data: { "stay-items-target": "productPrice" }
+
+  = link_to "Obtenir le tarif", '#',
+            data: { action: "stay-items#clickProductPrice"},
+            class: "btn-page-header-no-background h-10 py-2 mt-6"
+

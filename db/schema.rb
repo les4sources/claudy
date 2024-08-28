@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_08_27_094044) do
+ActiveRecord::Schema[7.0].define(version: 2024_08_28_081920) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -333,6 +333,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_27_094044) do
     t.string "code"
     t.datetime "deleted_at", precision: nil
     t.integer "price_night_cents", default: 0, null: false
+    t.integer "calculated_price_cents", default: 0, null: false
   end
 
   create_table "services", force: :cascade do |t|
@@ -432,6 +433,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_27_094044) do
     t.integer "unit_price_cents", default: 0, null: false
     t.string "unit_price_currency", default: "EUR", null: false
     t.integer "babies_count"
+    t.integer "calculated_price_cents", default: 0, null: false
     t.index ["item_type", "item_id"], name: "index_stay_items_on_item"
     t.index ["stay_id"], name: "index_stay_items_on_stay_id"
   end

@@ -50,6 +50,8 @@ Rails.application.routes.draw do
 
   get "comptabilite", to: "accounting#index", as: :accounting
 
+  get "stay_prices/calculate_item_price", to: "stay_prices#calculate_item_price", as: :calculate_item_price
+
   get "pages/day", to: "pages#day", as: :day_details
   get "pages/dashboard", to: "pages#dashboard", as: :dashboard
   get "pages/other_bookings", to: "pages#other_bookings"

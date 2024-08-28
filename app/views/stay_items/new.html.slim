@@ -1,7 +1,7 @@
 = render TurboModal::Component.new(title: @modal_title, width: :md) do
 	= form_with model: @stay_item,
 	            url: stay_stay_items_path,
-	            data: { controller: "stay_items" }  do |f|
+	            data: { controller: "stay-items" }  do |f|
 	  .space-y-8.divide-y.divide-gray-200.sm:space-y-5
 	    .space-y-6.sm:space-y-5
 	      = render "form", f: f

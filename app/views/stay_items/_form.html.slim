@@ -1,4 +1,5 @@
 = f.hidden_field :item_type,
-                 value: f.object.item_type
+                 value: f.object.item_type,
+                 data: { "stay-items-target": "itemType" }
 
 = render "stay_items/forms/#{f.object.item_type.downcase}", f: f
