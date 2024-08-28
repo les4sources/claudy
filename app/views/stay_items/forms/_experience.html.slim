@@ -2,7 +2,7 @@
   = f.label :item_id, "Sélectionne un atelier *"
   = f.collection_radio_buttons :item_id, Experience.all.order(:id), :id, :name, required: true do |radio_button|
     .flex.items-center
-      = radio_button.radio_button
+      = radio_button.radio_button data: { "stay-items-target": "experienceSelection" }
       = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
 .space-y-6.md:space-y-0.md:flex.md:space-x-6
@@ -18,29 +18,36 @@
                    label: "Nombre d'adultes *",
                    min: 0,
                    remove_default_class: "sm:text-sm",
-                   class: "w-24 text-lg"
+                   class: "w-24 text-lg",
+                   data: { "stay-items-target": "experienceAdultCount" }
 
   = f.number_field :children,
                    label: "Nombre d'enfants *",
                    min: 0,
                    required: true,
                    remove_default_class: "sm:text-sm",
-                   class: "w-24 text-lg"
+                   class: "w-24 text-lg",
+                   data: { "stay-items-target": "experienceChildrenCount" }
 
 .col-span-2.mb-4.space-y-6.sm:space-y-5
   = f.text_field :duration,
                  label: "Durée de l'atelier *",
                  required: true,
-                 class: "md:w-1/2 lg:w-2/3"
+                 class: "md:w-1/2 lg:w-2/3",
+                  data: { "stay-items-target": "experienceDuration" }
 
 .flex.space-x-6
   = f.number_field :calculated_price,
                    label: "Tarif *",
                    min: 0,
                    required: true,
-                   remove_default_class: "sm:text-sm",
-                   class: "w-24 text-lg"
+                   class: "w-24 text-lg",
+                   step: "0.01",
+                   value: ((f.object.calculated_price_cents / 100.0) rescue nil),
+                   data: { "stay-items-target": "experiencePrice" }
 
-  = link_to "Obtenir le tarif", '', {class: "btn-page-header-no-background h-10 py-2 mt-6"}
+  = link_to "Obtenir le tarif", '#',
+            data: { action: "stay-items#clickExperiencePrice"},
+            class: "btn-page-header-no-background h-10 py-2 mt-6"
 
    

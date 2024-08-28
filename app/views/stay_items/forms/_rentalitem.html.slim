@@ -2,7 +2,7 @@
   = f.label :item_id, "Sélectionne un élément *"
   = f.collection_radio_buttons :item_id, RentalItem.all.order(:id), :id, :name, required: true do |radio_button|
     .flex.items-center
-      = radio_button.radio_button
+      = radio_button.radio_button data: { "stay-items-target": "rentalItemSelection" }
       = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
 = f.number_field :quantity,
@@ -10,26 +10,33 @@
                  value: 1,
                  min: 1,
                  remove_default_class: "sm:text-sm",
-                 class: "w-24 text-lg"
+                 class: "w-24 text-lg",
+                 data: { "stay-items-target": "rentalItemQuantity" }
 
 .space-y-6.md:space-y-0.md:flex.md:space-x-6
   = f.date_field :start_date,
                  html5: true,
                  label: "Du *",
                  required: true,
-                 error: "Veuillez renseigner une date"
+                 error: "Veuillez renseigner une date",
+                 data: { "stay-items-target": "rentalItemStartDate" }
   = f.date_field :end_date,
                  html5: true,
                  label: "Au *",
                  required: true,
-                 error: "Veuillez renseigner une date"
+                 error: "Veuillez renseigner une date",
+                 data: { "stay-items-target": "rentalItemEndDate" }
 
 .flex.space-x-6
   = f.number_field :calculated_price,
                    label: "Tarif *",
                    min: 0,
                    required: true,
-                   remove_default_class: "sm:text-sm",
-                   class: "w-24 text-lg"
+                   class: "w-24 text-lg",
+                   step: "0.01",
+                   value: ((f.object.calculated_price_cents / 100.0) rescue nil),
+                   data: { "stay-items-target": "rentalItemPrice" }
 
-  = link_to "Obtenir le tarif", '', {class: "btn-page-header-no-background h-10 py-2 mt-6"}
+  = link_to "Obtenir le tarif", '#',
+            data: { action: "stay-items#clickRentalItemPrice"},
+            class: "btn-page-header-no-background h-10 py-2 mt-6"

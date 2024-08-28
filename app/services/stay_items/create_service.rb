@@ -51,7 +51,7 @@ module StayItems
         stay_item.unit_price_cents = item.price_cents
       when StayItem::EXPERIENCE
         item = Experience.find(stay_item.item_id)
-        stay_item.unit_price_cents = item.fixed_price_cents   # price or fixed_price?
+        stay_item.unit_price_cents = item.price_cents   # TODO: price or fixed_price?
       when StayItem::PRODUCT
         item = Product.find(stay_item.item_id)
         stay_item.unit_price_cents = item.price_cents 

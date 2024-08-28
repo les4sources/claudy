@@ -2,7 +2,7 @@
   = f.label :item_id, "Sélectionne un espace *"
   = f.collection_radio_buttons :item_id, SpaceDecorator.decorate_collection(Space.all), :id, :name_and_description do |radio_button|
     .flex.items-center
-      = radio_button.radio_button
+      = radio_button.radio_button data: { "stay-items-target": "spaceSelection" }
       = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
 .space-y-6.md:space-y-0.md:flex.md:space-x-6
@@ -10,7 +10,8 @@
                  html5: true,
                  label: "Date *",
                  required: true,
-                 error: "Une date est requise"
+                 error: "Une date est requise",
+                 data: { "stay-items-target": "spaceStartDate" }
 
 .space-y-2
   = f.label :duration,
@@ -26,7 +27,7 @@
                                :last, :first, 
                                required: true do |radio_button|
     .flex.items-center
-      = radio_button.radio_button
+      = radio_button.radio_button data: { "stay-items-target": "spaceDuration" }
       = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
       
 .flex.space-x-6
@@ -34,7 +35,11 @@
                    label: "Tarif *",
                    min: 0,
                    required: true,
-                   remove_default_class: "sm:text-sm",
-                   class: "w-24 text-lg"
+                   class: "w-24 text-lg",
+                   step: "0.01",
+                   value: ((f.object.calculated_price_cents / 100.0) rescue nil),
+                   data: { "stay-items-target": "spacePrice" }
 
-  = link_to "Obtenir le tarif", '', {class: "btn-page-header-no-background h-10 py-2 mt-6"}
+  = link_to "Obtenir le tarif", '#',
+            data: { action: "stay-items#clickSpacePrice"},
+            class: "btn-page-header-no-background h-10 py-2 mt-6"

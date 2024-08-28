@@ -16,20 +16,20 @@ class StayDecorator < ApplicationDecorator
 
 
   def date_range
-    if object.start_date&.year == object.end_date&.year
-      if object.start_date&.month == object.end_date&.month && object.start_date&.year == Date.today.year
+    if object.start_date.year == object.end_date.year
+      if object.start_date.month == object.end_date.month && object.start_date.year == Date.today.year
         # Même mois et année en cours
-        "du #{object.start_date&.day} au #{l(object.end_date, format: :short)}"
-      elsif object.start_date&.month == object.end_date&.month
+        "du #{object.start_date.day} au #{l(object.end_date, format: :short)}"
+      elsif object.start_date.month == object.end_date.month
         # Même mois, mais année différente de l'année en cours
-        "du #{object.start_date&.day} au #{object.end_date&.day} #{l(object.start_date, format: :month_year)}"
+        "du #{object.start_date.day} au #{object.end_date.day} #{l(object.start_date, format: :month_year)}"
       else
         # Mêmes années, mois différents
-        "du #{l(object.start_date, format: :short)} au #{object.end_date&.day} #{l(object.end_date, format: :month_year)}"
+        "du #{l(object.start_date, format: :short)} au #{object.end_date.day} #{l(object.end_date, format: :month_year)}"
       end
     else
       # Années différentes
-      "du #{object.start_date&.day} #{l(object.start_date, format: :month_year)} au #{object.end_date&.day} #{l(object.end_date, format: :month_year)}"
+      "du #{object.start_date.day} #{l(object.start_date, format: :month_year)} au #{object.end_date.day} #{l(object.end_date, format: :month_year)}"
     end
   end
 
