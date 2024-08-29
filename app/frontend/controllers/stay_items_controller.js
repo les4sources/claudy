@@ -21,7 +21,20 @@ export default class extends Controller {
     'spaceSelection',
     'spaceStartDate',
     'spaceDuration',
-    'spacePrice' 
+    'spacePrice',
+    'lodgingSelection',
+    'lodgingStartDate',
+    'lodgingEndDate',
+    'lodgingPrice',
+    'roomSelection',
+    'roomStartDate',
+    'roomEndDate',
+    'roomPrice',
+    'bedSelection',
+    'bedStartDate',
+    'bedEndDate',
+    'bedPrice'
+      
   ]
 
  connect() {
@@ -54,6 +67,20 @@ export default class extends Controller {
     this.calculateSpacePrice()
   }
 
+  clickLodgingPrice(event){
+    event.preventDefault()
+    this.calculatePriceFor(this.lodgingSelectionTargets, this.lodgingPriceTarget, this.lodgingStartDateTarget, this.lodgingEndDateTarget)
+  }
+
+  clickRoomPrice(event){
+    event.preventDefault()
+    this.calculatePriceFor(this.roomSelectionTargets, this.roomPriceTarget, this.roomStartDateTarget, this.roomEndDateTarget)
+  }
+
+  clickBedPrice(event){
+    event.preventDefault()
+    this.calculatePriceFor(this.bedSelectionTargets, this.bedPriceTarget, this.bedStartDateTarget, this.bedEndDateTarget)
+  }
 
   // calculate the price of the given product 
   async calculateProductPrice(){
@@ -119,7 +146,6 @@ export default class extends Controller {
 
     // calculate the price of the given space
     async calculateSpacePrice(){
-
       let selectedItemId = null;
       this.spaceSelectionTargets.forEach((radio) => {
         if (radio.checked) {
@@ -136,12 +162,30 @@ export default class extends Controller {
 
        let paramsStr = "?item_type="+this.itemTypeTarget.value + 
                       "&item_id=" +selectedItemId +
-                      "&start_date="+this.spacetartDateTarget.value +
                       "&duration="+selectedDuration
 
       fetch("/stay_prices/calculate_item_price"+paramsStr)
           .then(response => response.json())
           .then(data => this.spacePriceTarget.value = data.amount);
+
+    }
+
+     // calculate the price of the given lodging
+    async calculatePriceFor(selectionTargets, priceTarget, startDateTarget, endDateTarget){
+      let selectedItemId = null;
+      selectionTargets.forEach((radio) => {
+        if (radio.checked) {
+          selectedItemId = radio.value;
+        }
+      });
+
+       let paramsStr = "?item_type="+this.itemTypeTarget.value + 
+                      "&item_id=" +selectedItemId +
+                      "&start_date="+startDateTarget.value +
+                      "&end_date="+endDateTarget.value
+      fetch("/stay_prices/calculate_item_price"+paramsStr)
+          .then(response => response.json())
+          .then(data => priceTarget.value = data.amount);
 
     }
 

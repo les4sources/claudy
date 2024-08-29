@@ -26,6 +26,26 @@ class Room < ApplicationRecord
 
   default_scope { order(name: :asc) }
 
+
+
+ # price constant
+ # night_count => price
+ # currently same price for each room, add the room_id as an up hash key should rooms had different prices
+  PRICES = {
+      1 => 12000,
+      2 => 24000,
+      3 => 36000,
+      4 => 48000,
+      5 => 60000,
+      6 => 72000
+  }.freeze
+  
+   def price(nights_count)
+      PRICES[nights_count] if nights_count
+   end
+
+
+
   def name_with_level
     case level
     when 0

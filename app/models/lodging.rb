@@ -32,6 +32,39 @@ class Lodging < ApplicationRecord
 
   default_scope { order(name: :asc) }
   
+  # price constant
+  # lodging_id => {night_count => price }
+  PRICES = {
+    1 => {
+      1 => 23000,
+      2 => 44000,
+      3 => 62000,
+      4 => 78000,
+      5 => 92000,
+      6 => 103500
+    },
+    2 => {
+      1 => 48000,
+      2 => 91000,
+      3 => 130000,
+      4 => 163000,
+      5 => 192000,
+      6 => 216000
+    },
+    3 => {
+      1 => 71000,
+      2 => 135000,
+      3 => 192000,
+      4 => 241000,
+      5 => 284000,
+      6 => 319500
+    }
+  }.freeze
+  
+   def price(nights_count)
+      PRICES[id][nights_count] if PRICES[id]
+   end
+
 
   def available_between?(from_date, to_date)
     # none of the lodging rooms has a confirmed reservation

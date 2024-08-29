@@ -41,6 +41,9 @@ module StayItems
           :children_count,
           :babies_count,
           :duration,
+          :adults, 
+          :children, 
+          :babies,
           :calculated_price
         )
     end

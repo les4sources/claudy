@@ -42,16 +42,12 @@
                 th.py-3.5.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-0[scope="col"]
                   | Élément
                 th.px-3.py-3.5.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
-                  | Type
-                th.px-3.py-3.5.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
-                  | Du
-                th.px-3.py-3.5.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
-                  | Au
+                  | Price
                 th.relative.py-3.5.pl-3.pr-4.sm:pr-0[scope="col"]
                   span.sr-only
                     | Actions
             tbody#stay-items.divide-y.divide-gray-200
-              = render partial: "stay_items/stay_item", collection: @stay.stay_items.decorate, as: :stay_item
+              = render partial: "stay_items/stay_item", collection: @stay.stay_items.order(:created_at).decorate, as: :stay_item
       
 hr
 

@@ -14,14 +14,14 @@
                  data: { "stay-items-target": "experienceStartDate" }
 
 .flex.space-x-6
-  = f.number_field :adults,
+  = f.number_field :adults_count,
                    label: "Nombre d'adultes *",
                    min: 0,
                    remove_default_class: "sm:text-sm",
                    class: "w-24 text-lg",
                    data: { "stay-items-target": "experienceAdultCount" }
 
-  = f.number_field :children,
+  = f.number_field :children_count,
                    label: "Nombre d'enfants *",
                    min: 0,
                    required: true,
