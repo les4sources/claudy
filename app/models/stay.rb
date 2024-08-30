@@ -142,7 +142,7 @@ class Stay < ApplicationRecord
   
   # Calculer le montant total de la réservation basé sur le prix de chaque stay_items
   def total_reservation_amount
-    stay_items.to_a.sum { |item| (item.total_price) }
+    stay_items.to_a.sum { |item| item.calculated_price.to_f }
   end
 
 

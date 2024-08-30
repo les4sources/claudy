@@ -17,9 +17,22 @@ class StayItemsController < BaseController
     if service.run(params)
       respond_to do |format|
         format.turbo_stream { 
-          render turbo_stream: turbo_stream.append("stay-items", 
-                 partial: 'stay_items/stay_item', 
-                 locals: { stay_item: service.stay_item.decorate }) }
+        #  render turbo_stream: turbo_stream.append("stay-items", 
+        #         partial: 'stay_items/stay_item', 
+        #         locals: { stay_item: service.stay_item.decorate }) }
+        render turbo_stream: [
+            turbo_stream.append(
+              "stay-items", 
+              partial: 'stay_items/stay_item', 
+              locals: { stay_item: service.stay_item.decorate }
+            ),
+            turbo_stream.replace(
+              "total-amount", 
+              partial: 'stays/total_amount', 
+              locals: { total_amount: @stay.total_reservation_amount }
+            )
+          ]
+        }
         format.html { 
           redirect_to edit_stay_path(service.stay),
                       notice: "L'élément a été ajouté au séjour."
@@ -47,9 +60,22 @@ class StayItemsController < BaseController
     if service.run(params)
       respond_to do |format|
         format.turbo_stream { 
-          render turbo_stream: turbo_stream.append("stay-items", 
-                 partial: 'stay_items/stay_item', 
-                 locals: { stay_item: service.stay_item.decorate }) }
+          #render turbo_stream: turbo_stream.append("stay-items", 
+          #       partial: 'stay_items/stay_item', 
+          #        locals: { stay_item: service.stay_item.decorate }) }
+          render turbo_stream: [
+            turbo_stream.append(
+              "stay-items", 
+              partial: 'stay_items/stay_item', 
+              locals: { stay_item: service.stay_item.decorate }
+            ),
+            turbo_stream.replace(
+              "total-amount", 
+              partial: 'stays/total_amount', 
+              locals: { total_amount: @stay.total_reservation_amount }
+            )
+          ]
+        }
         format.html { 
           redirect_to edit_stay_path(service.stay),
                       notice: "L'élément a été ajouté au séjour."
@@ -70,7 +96,16 @@ class StayItemsController < BaseController
   def destroy
     @stay_item.destroy
     respond_to do |format|
-      format.turbo_stream { render turbo_stream: turbo_stream.remove(@stay_item) }
+      format.turbo_stream { 
+        render turbo_stream: 
+          [turbo_stream.remove(@stay_item),
+           turbo_stream.replace(
+            "total-amount", 
+            partial: 'stays/total_amount', 
+            locals: { total_amount: @stay.total_reservation_amount }
+            )
+        ] 
+      }
       format.html { redirect_to edit_stay_url(@stay_item.stay), notice: "L'élément a été retiré du séjour." }
       format.json { head :no_content }
     end

@@ -2,7 +2,9 @@ tr(id="#{dom_id stay_item}")
   td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.font-medium.text-gray-900.sm:pl-0
     = link_to stay_item.item_name, edit_stay_stay_item_path(stay_id: stay_item.stay_id, id: stay_item.id), 
       { data: { turbo_frame: "modal" },
-        class: 'text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700'}          
+        class: 'text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700'}  
+    | &nbsp;
+    = item_badge(stay_item.item_type, stay_item.item_type_label)        
     .mt-1.text-gray-900
               = stay_item.item_info
   td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500

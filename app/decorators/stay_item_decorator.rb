@@ -5,7 +5,7 @@ class StayItemDecorator < ApplicationDecorator
     object.item&.name
   end
 
-  def item_type
+  def item_type_label
     case object.item_type
     when StayItem::EXPERIENCE
       "Atelier"

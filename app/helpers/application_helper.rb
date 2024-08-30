@@ -38,4 +38,58 @@ module ApplicationHelper
     date.present? ? date.strftime("%d/%m/%Y") : ''
   end
 
+  def item_badge(item_type, label)
+    shared_classes = "text-xs font-semibold text-center px-1 py-0.5 rounded"
+    content_tag(:span, label, class: "#{shared_classes} #{item_color(item_type)}")
+  end
+
+  def lodging_color
+    "bg-yellow-200"
+  end
+
+  def room_color
+    "bg-orange-400"
+  end
+
+  def bed_color
+    "bg-purple-400"
+  end
+
+  def experience_color
+    "bg-green-400"
+  end
+
+  def space_color
+    "bg-blue-400"
+  end
+
+  def rental_item_color
+    "bg-pink-200"
+  end
+
+  def product_color
+    "bg-red-400"
+  end
+
+  private
+
+  def item_color(item_type)
+    case item_type
+    when StayItem::EXPERIENCE
+      experience_color
+    when StayItem::LODGING
+      lodging_color
+    when StayItem::PRODUCT
+      product_color
+    when StayItem::RENTAL_ITEM
+      rental_item_color
+    when StayItem::SPACE
+      space_color
+    when StayItem::ROOM
+      room_color
+    when StayItem::BED
+      bed_color
+    end
+  end
+
 end
