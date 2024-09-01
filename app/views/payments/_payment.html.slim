@@ -8,37 +8,73 @@
                 data: { turbo_frame: "modal" },
                 class: "claudy-link ml-2 text-xs"
     .font-light = payment.payment_method
-tr(id="#{dom_id payment}" class="#{payment.tr_class}")
-  td.py-4.px-6.text-center
-    = payment.payment_method_emoji
-  td.py-4.px-6
-    = payment.created_at(format: :ddmmyyyy)
-  td.py-4.px-6
-    = payment.amount
-  td.py-4.px-6
-    = payment.status
-  td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap.hide-if-booking-page[scope="row"]
-    .inline-flex.space-x-2
-      = link_to payment.booking_name, 
-                booking_path(payment.booking),
-                class: "claudy-link"
-      = payment.booking_payment_status
-    .text-xs.text-gray-500
-      = payment.booking_date_range
-  td.py-4.px-6.text-right
-    .space-x-2
-      = link_to "détails", 
-                payment_path(payment),
-                class: "claudy-link text-xs"
-      = link_to "modifier", 
-                edit_booking_payment_path(payment.booking, payment), 
-                data: { turbo_frame: "modal" },
-                class: "claudy-link text-xs"
+- if !@booking.nil?
+  tr(id="#{dom_id payment}" class="#{payment.tr_class}")
+    td.py-4.px-6.text-center
+      = payment.payment_method_emoji
+    td.py-4.px-6
+      = payment.created_at(format: :ddmmyyyy)
+    td.py-4.px-6
+      = payment.amount
+    td.py-4.px-6
+      = payment.status
+    td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap.hide-if-booking-page[scope="row"]
+      .inline-flex.space-x-2
+        = link_to payment.booking_name, 
+                  booking_path(payment.booking),
+                  class: "claudy-link"
+        = payment.booking_payment_status
+      .text-xs.text-gray-500
+        = payment.booking_date_range
+    td.py-4.px-6.text-right
+      .space-x-2
+        = link_to "détails", 
+                  payment_path(payment),
+                  class: "claudy-link text-xs"
+        = link_to "modifier", 
+                  edit_booking_payment_path(payment.booking, payment), 
+                  data: { turbo_frame: "modal" },
+                  class: "claudy-link text-xs"
 
-javascript:
-  // hide booking details on bookings#show
-  if (document.querySelector('#body-bookings_show')) {
-    document.querySelectorAll('.hide-if-booking-page').forEach((td) => {
-      td.classList.add('hidden');
-    });
-  }
+  javascript:
+    // hide booking details on bookings#show
+    if (document.querySelector('#body-bookings_show')) {
+      document.querySelectorAll('.hide-if-booking-page').forEach((td) => {
+        td.classList.add('hidden');
+      });
+    }
+
+- if !@stay.nil?
+  tr(id="#{dom_id payment}" class="#{payment.tr_class}")
+    td.py-4.px-6.text-center
+      = payment.payment_method_emoji
+    td.py-4.px-6
+      = payment.created_at(format: :ddmmyyyy)
+    td.py-4.px-6
+      = payment.amount
+    td.py-4.px-6
+      = payment.status
+    td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap.hide-if-booking-page[scope="row"]
+      .inline-flex.space-x-2
+        = link_to payment.stay_name, 
+                  stay_path(payment.stay),
+                  class: "claudy-link"
+        = payment.stay_payment_status
+      .text-xs.text-gray-500
+        = payment.stay_date_range
+    td.py-4.px-6.text-right
+      .space-x-2
+        = link_to "détails", 
+                  payment_path(payment),
+                  class: "claudy-link text-xs"
+        = link_to "modifier", 
+                  edit_stay_payment_path(payment.stay, payment), 
+                  data: { turbo_frame: "modal" },
+                  class: "claudy-link text-xs"
+
+  javascript:
+    // hide booking details on stay#show
+    if (document.querySelector('#body-stays_show')) {
+      document.querySelectorAll('.hide-if-stay-page').forEach((td) => {
+        td.classList.add('hidden');
+      }

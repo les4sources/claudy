@@ -26,7 +26,7 @@ class PaymentDecorator < ApplicationDecorator
   end
 
   def stay_name
-    stay.name
+    stay.group_or_name
   end
 
   def stay_payment_status

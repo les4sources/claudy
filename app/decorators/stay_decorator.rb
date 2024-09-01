@@ -188,16 +188,12 @@ class StayDecorator < ApplicationDecorator
   end
 
 
-  def total_requested_amount
-    h.number_to_currency(object.total_requested_amount/100)
+  def total_remaining_amount
+    h.number_to_currency(object.total_remaining_amount)
   end
 
-   def total_remaining_amount
-    h.number_to_currency(object.total_remaining_amount/100)
-  end
-
-  def total_reservation_amount
-    h.number_to_currency(object.total_reservation_amount/100)
+  def total_amount
+    h.number_to_currency(object.final_price)
   end
 
 

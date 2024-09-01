@@ -38,14 +38,23 @@ class Stay < ApplicationRecord
   has_many :products, through: :stay_items, source: :item, source_type: 'Product'
   has_many :spaces, through: :stay_items, source: :item, source_type: 'Space'
 
-  has_many :payments
+  has_many :payments, inverse_of: :stay do
+        def persisted
+          reject { |payment| !payment.persisted? }
+         end
+        end
   has_many :stay_item_dates
 
   accepts_nested_attributes_for :customer
+  accepts_nested_attributes_for :payments, 
+                                allow_destroy: true,
+                                reject_if: lambda { |attributes| attributes['amount'].to_f.zero? }
 
   has_soft_deletion default_scope: true
 
   has_paper_trail
+
+  monetize :final_price_cents, allow_nil: true
 
 
   scope :current_and_future, -> { where("end_date >= ? and draft = ? ", Date.today, false).order(start_date: :asc) }
@@ -120,7 +129,7 @@ class Stay < ApplicationRecord
 
 
   def set_payment_status
-    if self.payments.paid.sum(:amount_cents) >= self.total_reservation_amount
+    if self.payments.paid.sum(:amount_cents) >= self.final_price_cents
       status = "paid"
     elsif self.payments.paid.sum(:amount_cents) > 0.0
       status = "partially_paid"
@@ -132,11 +141,11 @@ class Stay < ApplicationRecord
 
 
   def total_remaining_amount
-    self.total_reservation_amount - total_payments_received
+    self.final_price.to_f - total_payments_received
   end
 
   def total_payments_received
-    payments.to_a.sum {|p| (p.amount_cents)}
+    payments.to_a.sum {|p| (p.amount.to_f)}
   end
 
   

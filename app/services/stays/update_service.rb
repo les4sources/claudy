@@ -42,6 +42,7 @@ module Stays
       customer_service.run(params)
       @stay.customer = customer_service.customer
       @stay.save!
+      @stay.set_payment_status
       raise error_message if !error.nil?
       true
     end
@@ -64,12 +65,21 @@ module Stays
           :group_name,
           :notes,
           :public_notes,
+          :invoice_status,
+          :final_price,
           customer_attributes: [
+            :id,
             :firstname,
             :lastname,
             :email,
             :phone
-          ]
+          ],
+          payments_attributes: [
+            :id,
+            :amount,
+            :payment_method,
+            :_destroy
+        ]
         )
     end
  end

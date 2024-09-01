@@ -49,8 +49,8 @@
             tbody#stay-items.divide-y.divide-gray-200
               = render partial: "stay_items/stay_item", collection: @stay.stay_items.order(:created_at).decorate, as: :stay_item
             tfoot
-              tr.border-t.border-t-gray-300.text-base.font-medium.text-gray-500
-                td | Montant de la réservation
+              tr.text-base.font-medium.text-gray-500
+                td Montant de la réservation
                 = render partial: "stays/total_amount", locals: {total_amount: @stay.total_reservation_amount}
       
 hr

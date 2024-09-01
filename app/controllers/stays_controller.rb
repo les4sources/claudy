@@ -23,9 +23,9 @@ class StaysController < BaseController
         user_id: current_user.id,
         token: Stay.generate_token
       )
+      @stay.payments.build(amount_cents: nil)      
     end
     @stay.build_customer
-    @stay_items = StayItem.build
   end
 
   # stays are created on init, with stay.draft == true
@@ -43,6 +43,8 @@ class StaysController < BaseController
 
   def edit
     @stay = Stay.find_by!(id: params[:id])
+    @stay.build_customer if @stay.customer.nil?
+    @stay.payments.build(amount_cents: nil) if @stay.payments.empty?
   end
 
   def update
