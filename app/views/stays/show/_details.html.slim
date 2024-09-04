@@ -38,17 +38,18 @@
         p 
           | Date : #{stay.date_range}
           br
-          | Hébergement :&nbsp;
-          - stay.lodgings.each do |lodging|
-            | #{lodging.name} (#{lodging.summary})
-          br
-          p
-          | Chambre(s):
-          - stay.rooms.each do |room|
+          - if stay.lodgings.any?
+            u Hébergement :&nbsp;
+            - stay.lodgings.each do |lodging|
+              | #{lodging.name} (#{lodging.summary})
             br
-            | #{room.name} 
-          br
-          br
+          - if stay.rooms.any?
+            p
+              u Chambre(s):
+            - stay.rooms.each do |room|
+              | #{room.name} 
+            br
+            br
           | Personnes enregistrées : #{stay.adults} #{"adulte".pluralize(stay.adults)}
           - if stay.object.children > 0
             | , #{stay.children} #{"enfant".pluralize(stay.children)}
@@ -56,39 +57,42 @@
             | , #{stay.babies} #{"bébé".pluralize(stay.babies)}
 
         - if stay.has_options?
-          p Votre réservation comprend ces options : 
-
           p
+          strong Votre réservation comprend ces options : 
+
           - unless stay.spaces.empty?
-           strong Espace(s):
+           br
+           u Espace(s):
           - stay.spaces.each do |space|
             br 
             = space.name
               
-          p
+          br
           - unless stay.experiences.empty?
-           strong Activité(s):
+           u Atelier(s):
           - stay.experiences.each do |experience|
             br 
             = experience.name
 
-          p
+          
           - unless stay.products.empty?
-           strong Produit(s):
+           br
+           u Produit(s):
           - stay.products.each do |product|
             br 
             = product.name
 
-          p
+          
           - unless stay.rental_items.empty?
-           strong Object(s) à louer:
+           br
+           u Object(s) à louer:
           - stay.rental_items.each do |ri|
             br 
             = ri.name
 
         p Statut: #{stay.status}
 
-        p Statut du paiement: 
+        p Statut du paiement: #{stay.payment_status}
 
         p 
           = link_to "Page web de votre réservation", 

@@ -196,6 +196,25 @@ class StayDecorator < ApplicationDecorator
     h.number_to_currency(object.final_price)
   end
 
+  
+  def status
+    shared_classes = "text-xs font-medium mr-2 px-2.5 py-0.5 rounded"
+    if object.deleted?
+      h.content_tag(:span, "Supprimée", class: "#{shared_classes} bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900")
+    else
+      case object.status
+      when "canceled"
+        h.content_tag(:span, "Annulée", class: "#{shared_classes} bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900")
+      when "confirmed"
+        h.content_tag(:span, "Confirmée", class: "#{shared_classes} bg-green-100 text-green-800 dark:bg-green-200 dark:text-green-900")
+      when "pending"
+        h.content_tag(:span, "En attente", class: "#{shared_classes} bg-yellow-100 text-yellow-800 dark:bg-yellow-200 dark:text-yellow-900")
+      else
+        object.status
+      end
+    end
+  end
+
 
 
   def payment_status
