@@ -162,32 +162,43 @@ class Stay < ApplicationRecord
       
       when StayItem::LODGING
         # the lodging is booked
-        StayItemDate.build_item_dates(self.id, item.item_id, item.item_type, item.start_date, item.end_date, true)
+        StayItemDate.build_item_dates(self.id, item, StayItem::LODGING, true)
         # the rooms of that lodgings are booked as well'
         lod = Lodging.find(item.item_id)
         lod.rooms.each do |room|
-          StayItemDate.build_item_dates(self.id, room.id, StayItem::ROOM, item.start_date, item.end_date)
+          StayItemDate.build_item_dates(self.id, item, StayItem::ROOM)
           # the beds of the rooms are marked as booked as well
           room.beds.each do |bed|
-            StayItemDate.build_item_dates(self.id, bed.id, StayItem::BED, item.start_date, item.end_date)
+            StayItemDate.build_item_dates(self.id, item, StayItem::BED)
           end
         end
 
+
       when StayItem::ROOM
         # the room is booked
-        StayItemDate.build_item_dates(self.id, item.item_id, item.item_type, item.start_date, item.end_date, true)
+        StayItemDate.build_item_dates(self.id, item, StayItem::ROOM, true)
         # the corresponding lodging is marked as booked as well
         room = Room.find(item.item_id)
         # the beds of this room are booked as well
         room.beds.each do |bed|
-            StayItemDate.build_item_dates(self.id, bed.id, StayItem::BED, item.start_date, item.end_date)
+            StayItemDate.build_item_dates(self.id, item, StayItem::BED)
         end
 
       when StayItem::BED
         # the bed is booked
-        StayItemDate.build_item_dates(self.id, item.item_id, item.item_type, item.start_date, item.end_date, true)
-      end
+        StayItemDate.build_item_dates(self.id, item, StayItem::BED, true)
       
+      
+      when StayItem::EXPERIENCE
+        StayItemDate.build_item_dates(self.id, item, StayItem::EXPERIENCE, true)
+      
+
+      when StayItem::SPACE
+        StayItemDate.build_item_dates(self.id, item, StayItem::SPACE, true)
+      
+
+      end
+
     end
   rescue ActiveRecord::RecordNotUnique => e
     raise e

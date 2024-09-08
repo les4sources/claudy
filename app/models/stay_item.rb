@@ -20,8 +20,7 @@ class StayItem < ApplicationRecord
   
   belongs_to :stay
   belongs_to :item, polymorphic: true
-  has_many :payment_requests_stay_items
-  has_many :payment_requests, through: :payment_requests_stay_items
+  has_many :stay_item_dates
 
   LODGING = 'Lodging'
   ROOM = 'Room'

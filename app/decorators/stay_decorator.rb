@@ -134,6 +134,20 @@ class StayDecorator < ApplicationDecorator
     end
   end
 
+  def people_emojis
+    emojis = []
+    if object.adults > 0
+      emojis << "#{object.adults} 🧑"
+    end
+    if object.children > 0
+      emojis << "#{object.children} 👨‍👧"
+    end
+    if object.babies > 0
+      emojis << "#{object.babies} 🧑‍🍼"
+    end
+    emojis.join(" ")
+  end
+
   def calendar_class
     classes = ["shadow", "border-l-4"]
     if !object.confirmed?
@@ -149,6 +163,14 @@ class StayDecorator < ApplicationDecorator
 
    def space_calendar_class
     classes = ["shadow", "border-l-4", "border-l-orange-500", "bg-orange-50"]
+    if !object.confirmed?
+      classes << ["opacity-50"] 
+    end
+    classes.join(" ")
+  end
+
+  def experience_calendar_class
+    classes = ["shadow", "border-l-4", "border-l-green-500", "bg-green-50"]
     if !object.confirmed?
       classes << ["opacity-50"] 
     end

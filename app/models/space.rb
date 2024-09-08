@@ -53,14 +53,14 @@ class Space < ApplicationRecord
       "fullday" => 15000,
       "see_notes" => 0
     },
-    5 => {
+    5 => { # TODO: set the prices
       "2h" => 0,
       "day" => 0,
       "evening" => 0,
       "fullday" => 0,
       "see_notes" => 0
     },
-    6 => {
+    6 => { # TODO: set the prices
       "2h" => 0,
       "day" => 0,
       "evening" => 0,

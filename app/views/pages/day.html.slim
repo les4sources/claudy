@@ -29,6 +29,16 @@
         .flex.space-x-4
           - @lodgings.each do |lodging|
             = lodging.availability_badge(@date)
+  / Stay Availabilities
+  .mt-8.space-y-8
+    .flex
+      .flex-none.w-48
+        | Gites disponibles
+        .text-xs.text-gray-500.mr-2 Contacter Michael pour rendre des gites non disponibles à cette date
+      .flex-initial
+        .flex.space-x-4
+          - @lodgings.each do |lodging|
+            = lodging.available_badge(@date)
 
   / Rooms
   .mt-4.flow-root
@@ -136,6 +146,114 @@
                     span.inline-flex.items-center.rounded-full.bg-gray-100.px-3.py-0.5.text-sm.font-medium.text-gray-500
                       | Libre
 
+
+  / Stay Rooms
+  .mt-4.flow-root
+    .-mx-4.-my-2.overflow-x-auto.sm:-mx-6.lg:-mx-8
+      .inline-block.min-w-full.py-2.align-middle.sm:px-6.lg:px-8
+        table.min-w-full.divide-y.divide-gray-300
+          thead
+            tr
+              th.py-3.5.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-0[scope="col"]
+                | Chambre
+              th.w-2/3.px-3.py-3.5.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
+                | Réservation
+          tbody.divide-y.divide-gray-200.bg-white
+            tr
+              td.divide-gray-500.py-2.pl-4.pr-3.text-sm.text-gray-500.bg-teal-100.sm:pl-0[colspan="3"]
+                span.px-2
+                  | Rez-de-chaussée
+            - @rooms.where(level: 0).each do |room|
+              tr
+                td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.sm:pl-0
+                  .flex.items-center
+                    .h-10.w-10.flex-shrink-0
+                      = vite_image_tag "images/rooms/#{room.code}.jpg", alt: "", class: "h-10 w-10 rounded-full bg-gray-300"
+                    .ml-4
+                      .font-medium.text-gray-900
+                        = room.name
+                      .text-gray-500
+                        = room.description
+                td.px-3.py-4.text-sm.text-gray-500
+                  - if @stay_room_reservations.where(booked_item: room).any?
+                    - @stay_room_reservations.where(booked_item: room).each do |reservation|
+                      .grid.grid-cols-3.gap-4
+                        div
+                          = link_to reservation.stay.group_or_name, 
+                                    stay_path(reservation.stay),
+                                    data: { "turbo-frame": "_top" },
+                                    class: "claudy-link"
+                        div
+                          = reservation.stay.people_emojis
+                        .text-right
+                          = reservation.stay.payment_status
+                  - else
+                    span.inline-flex.items-center.rounded-full.bg-gray-100.px-3.py-0.5.text-sm.font-medium.text-gray-500
+                      | Libre
+            tr
+              td.divide-gray-500.py-2.pl-4.pr-3.text-sm.text-gray-500.bg-teal-100.sm:pl-0[colspan="3"]
+                span.px-2
+                  | 1<sup>er</sup> étage
+            - @rooms.where(level: 1).each do |room|
+              tr
+                td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.sm:pl-0
+                  .flex.items-center
+                    .h-10.w-10.flex-shrink-0
+                      = vite_image_tag "images/rooms/#{room.code}.jpg", alt: "", class: "h-10 w-10 rounded-full bg-gray-300"
+                    .ml-4
+                      .font-medium.text-gray-900
+                        = room.name
+                      .text-gray-500
+                        = room.description
+                td.px-3.py-4.text-sm.text-gray-500
+                  - if @stay_room_reservations.where(booked_item: room).any?
+                    - @stay_room_reservations.where(booked_item: room).each do |reservation|
+                      .grid.grid-cols-3.gap-4
+                        div
+                          = link_to reservation.stay.group_or_name, 
+                                    stay_path(reservation.stay),
+                                    data: { "turbo-frame": "_top" },
+                                    class: "claudy-link"
+                        div
+                          = reservation.stay.people_emojis
+                        .text-right
+                          = reservation.stay.payment_status
+                  - else
+                    span.inline-flex.items-center.rounded-full.bg-gray-100.px-3.py-0.5.text-sm.font-medium.text-gray-500
+                      | Libre
+            tr
+              td.divide-gray-500.py-2.pl-4.pr-3.text-sm.text-gray-500.bg-teal-100.sm:pl-0[colspan="3"]
+                span.px-2
+                  | 2<sup>ème</sup> étage
+            - @rooms.where(level: 2).each do |room|
+              tr
+                td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.sm:pl-0
+                  .flex.items-center
+                    .h-10.w-10.flex-shrink-0
+                      = vite_image_tag "images/rooms/#{room.code}.jpg", alt: "", class: "h-10 w-10 rounded-full bg-gray-300"
+                    .ml-4
+                      .font-medium.text-gray-900
+                        = room.name
+                      .text-gray-500
+                        = room.description
+                td.px-3.py-4.text-sm.text-gray-500
+                  - if @stay_room_reservations.where(booked_item: room).any?
+                    - @stay_room_reservations.where(booked_item: room).each do |reservation|
+                      .grid.grid-cols-3.gap-4
+                        div
+                          = link_to reservation.stay.group_or_name, 
+                                    stay_path(reservation.stay),
+                                    data: { "turbo-frame": "_top" },
+                                    class: "claudy-link"
+                        div
+                          = reservation.stay.people_emojis
+                        .text-right
+                          = reservation.stay.payment_status
+                  - else
+                    span.inline-flex.items-center.rounded-full.bg-gray-100.px-3.py-0.5.text-sm.font-medium.text-gray-500
+                      | Libre
+
+
   / Spaces
   .mt-4.flow-root
     .-mx-4.-my-2.overflow-x-auto.sm:-mx-6.lg:-mx-8
@@ -172,6 +290,46 @@
                           = space_reservation.space_booking.duration
                         .text-right
                           = space_reservation.space_booking.payment_status
+                  - else
+                    span.inline-flex.items-center.rounded-full.bg-gray-100.px-3.py-0.5.text-sm.font-medium.text-gray-500
+                      | Libre
+
+    / Stay Spaces
+  .mt-4.flow-root
+    .-mx-4.-my-2.overflow-x-auto.sm:-mx-6.lg:-mx-8
+      .inline-block.min-w-full.py-2.align-middle.sm:px-6.lg:px-8
+        table.min-w-full.divide-y.divide-gray-300
+          thead
+            tr
+              th.py-3.5.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-0[scope="col"]
+                | Espace
+              th.w-2/3.px-3.py-3.5.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
+                | Réservation
+          tbody.divide-y.divide-gray-200.bg-white
+            - @spaces.each do |space|
+              tr
+                td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.sm:pl-0
+                  .flex.items-center
+                    .h-10.w-10.flex-shrink-0.rounded-full.bg-gray-200
+                      / = vite_image_tag "images/rooms/#{room.code}.jpg", alt: "", class: "h-10 w-10 rounded-full bg-gray-300"
+                    .ml-4
+                      .font-medium.text-gray-900
+                        = space.name
+                      / .text-gray-500
+                        = room.description
+                td.px-3.py-4.text-sm.text-gray-500
+                  - if @stay_space_reservations.where(booked_item: space).any?
+                    - @stay_space_reservations.where(booked_item: space).each do |space_reservation|
+                      .grid.grid-cols-3.gap-4
+                        div
+                          = link_to space_reservation.stay.group_or_name, 
+                                    stay_path(space_reservation.stay), 
+                                    data: { "turbo-frame": "_top" },
+                                    class: "claudy-link"
+                        div
+                          = space_reservation.stay_item.decorate.duration
+                        .text-right
+                          = space_reservation.stay.payment_status
                   - else
                     span.inline-flex.items-center.rounded-full.bg-gray-100.px-3.py-0.5.text-sm.font-medium.text-gray-500
                       | Libre

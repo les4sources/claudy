@@ -86,6 +86,17 @@ class Lodging < ApplicationRecord
                ).none? && unavailabilities.where(date: date).none?
   end
 
+  def is_available_on?(date)
+    # none of the lodging rooms has a confirmed reservation
+    StayItemDate.includes(:stay)
+               .where(
+                 booking_date: date,
+                 booked_item_type: StayItem::ROOM,
+                 booked_item_id: rooms.pluck(:id),
+                 stay: { status: "confirmed", draft: false }
+               ).none?
+  end
+
   def average_booking_duration(start_date, end_date)
     selected_bookings = bookings_for_date_range(start_date, end_date)
     durations = selected_bookings.map do |booking|

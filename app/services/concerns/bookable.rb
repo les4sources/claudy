@@ -36,7 +36,6 @@ module Bookable
 
   # is the stay available?
   def is_available?
-    
     @stay.stay_items.where(item_type: StayItem::LODGING).each do |lodging_item|
       lod = Lodging.find(lodging_item.item_id)
       lod.rooms.each do |room|
@@ -79,6 +78,34 @@ module Bookable
                              stay: {status: "confirmed", draft: false, deleted_at: nil})
             .any?
          set_error_message("Le lit #{bed.name} n'est pas disponible à cette date.")
+          return false
+      end
+  
+    end
+
+    @stay.stay_items.where(item_type: StayItem::EXPERIENCE).each do |experience_item|
+      experience = Experience.find(experience_item.item_id)
+      if StayItemDate.includes(:stay)
+                      .where(booking_date: (experience_item.start_date)..(experience_item.end_date-1.day),
+                             booked_item_type: StayItem::EXPERIENCE,
+                             booked_item_id: [experience.id],
+                             stay: {status: "confirmed", draft: false, deleted_at: nil})
+            .any?
+         set_error_message("L'atelier #{experience.name} n'est pas disponible à cette date.")
+          return false
+      end
+  
+    end
+
+     @stay.stay_items.where(item_type: StayItem::SPACE).each do |space_item|
+      space = Space.find(space_item.item_id)
+      if StayItemDate.includes(:stay)
+                      .where(booking_date: (space_item.start_date)..(space_item.end_date-1.day),
+                             booked_item_type: StayItem::SPACE,
+                             booked_item_id: [space.id],
+                             stay: {status: "confirmed", draft: false, deleted_at: nil})
+            .any?
+         set_error_message("La salle #{space.name} n'est pas disponible à cette date.")
           return false
       end
   

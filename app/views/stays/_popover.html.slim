@@ -43,19 +43,19 @@
     .mb-2
       = stay.payment_status
   ul.flex.text-base.font-light
-    - if stay.object.adults > 0
+    - if stay.object.adults|| 0 > 0
       li.mr-2
         span.font-semibold.text-gray-900
-          | #{stay.adults}x
+          | #{stay.adults}
         span.ml-1
           | 🧑
-    - if stay.object.children > 0
+    - if stay.object.children|| 0 > 0
       li.mr-2
         span.font-semibold.text-gray-900
           | #{stay.children}x
         span.ml-1
           | 👧
-    - if stay.object.babies > 0
+    - if stay.object.babies|| 0 > 0
       li.mr-2
         span.font-semibold.text-gray-900
           | #{stay.babies}x

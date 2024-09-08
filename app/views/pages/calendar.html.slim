@@ -120,7 +120,7 @@
 
   / Stay Spaces
   - if @grouped_spaces[date]
-    - @grouped_spaces[date].sort_by {|sr| sr.start_date }.group_by { |sr| sr.item.id }.each do |grouped_space|
+    - @grouped_spaces[date].sort_by {|sr| sr.booking_date }.group_by { |sr| sr.booked_item.id }.each do |grouped_space|
       - space_reservation = grouped_space.last.first
       - stay = StayDecorator.new(space_reservation.stay)
       .popover.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-sm.opacity-0[id="popover-space-reservation-#{space_reservation.id}" data-popover role="tooltip"]
@@ -142,11 +142,41 @@
 
           .grid.grid-cols-3.gap-1
             - grouped_space.last.each do |space_reservation|
-              = space_badge(space_reservation.item)
+              = space_badge(space_reservation.booked_item)
 
           .block.text-gray-500
-            = space_reservation.duration
+            = space_reservation.stay_item.decorate.duration
         .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-space-reservation-#{space_reservation.id}" data-popover-trigger="click")
+
+  / Stay Experiences
+  - if @grouped_experiences[date]
+    - @grouped_experiences[date].sort_by {|sr| sr.booking_date }.group_by { |sr| sr.booked_item.id }.each do |grouped_experience|
+      - exp_reservation = grouped_experience.last.first
+      - stay = StayDecorator.new(exp_reservation.stay)
+      .popover.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-sm.opacity-0[id="popover-expreservation-#{exp_reservation.id}" data-popover role="tooltip"]
+        = render "stays/popover", 
+                 stay: stay
+        div[data-popper-arrow]
+
+      div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl #{stay.experience_calendar_class}")
+        .block
+          div
+            strong 
+              = link_to stay.decorate.group_or_name.html_safe, 
+                        stay_path(stay), 
+                        class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6"
+            -# if space_booking.event.presence
+            -#  .text-gray-500.leading-none.mb-2.font-semibold = space_booking.event.name_with_color
+
+            span.text-gray-500 =< stay.dates_counter(date)
+
+          .grid.grid-cols-3.gap-1
+            - grouped_experience.last.each do |exp_reservation|
+              = experience_badge(exp_reservation.booked_item)
+
+          .block.text-gray-500
+            = exp_reservation.stay_item.decorate.duration
+        .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-space-reservation-#{exp_reservation.id}" data-popover-trigger="click")
         
 
 / Activity feed

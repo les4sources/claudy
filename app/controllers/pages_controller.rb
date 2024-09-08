@@ -22,18 +22,19 @@ class PagesController < BaseController
     @stay_reservations = StayItemDate.all
       .includes(:stay)
       .where(direct_book: true)
-      .where.not(stay: {status: [StayStatus::DECLINED, StayStatus::CANCELED] } )
+      .where.not(stay: {status: [StayStatus::DECLINED, StayStatus::CANCELED], draft: true } )
       .between_times(@first, @last, field: :booking_date)
+    
     @grouped_stay_reservations = @stay_reservations.to_a.group_by { |sr| sr.booking_date }
+    
     # spaces
-    space_items = StayItem.where(item_type: StayItem::SPACE)
-      .includes(:stay)
-      .where.not(stay: {status: [ StayStatus::DECLINED, StayStatus::CANCELED] } )
-      .where("stay_items.start_date >= ? AND stay_items.start_date <= ?", @first, @last)
-    @grouped_spaces = Stay.stay_items_grouped_by_date(space_items)
-
+    space_reservations = @stay_reservations.where(booked_item_type: StayItem::SPACE)
+    @grouped_spaces = space_reservations.to_a.group_by { |sr| sr.booking_date }
     # experiences
-    # rental items
+    exp_reservations = @stay_reservations.where(booked_item_type: StayItem::EXPERIENCE)
+    @grouped_experiences = exp_reservations.to_a.group_by { |sr| sr.booking_date }
+
+    # rental items TODO?
 
     # activities
     activities_without_stays = PublicActivity::Activity.where("created_at > ?", 14.days.ago).order(created_at: :desc)
@@ -58,6 +59,24 @@ class PagesController < BaseController
         .includes(:space_booking)
         .where(date: @date, space_booking: { status: "confirmed" })
     )
+
+    # stays
+     @stay_reservations = StayItemDateDecorator.decorate_collection(StayItemDate.all
+      .includes(:stay)
+      .where(booking_date: @date)
+      .where(stay: {status: StayStatus::CONFIRMED, draft: false } ))
+
+    # rooms
+    @stay_room_reservations = @stay_reservations.where(booked_item_type: StayItem::ROOM)
+    Rails.logger.info("$$$$$$$$$ #{@stay_room_reservations}")
+
+    # spaces
+    @stay_space_reservations = @stay_reservations.where(booked_item_type: StayItem::SPACE)
+    
+    # experiences
+    exp_reservations = @stay_reservations.where(booked_item_type: StayItem::EXPERIENCE)
+    
+
     @roles = Role.all
     @humans = Human.all
     @human_roles = HumanRole.where(date: @date)

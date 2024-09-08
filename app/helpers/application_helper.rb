@@ -25,6 +25,11 @@ module ApplicationHelper
     content_tag(:span, space.code, class: "#{shared_classes} bg-orange-100 text-orange-800")
   end
 
+  def experience_badge(exp)
+    shared_classes = "text-xs font-semibold text-center py-0.5 px-1 rounded"
+    content_tag(:span, exp.name, class: "#{shared_classes} bg-green-100 text-green-800")
+  end
+
   def will_paginate(coll_or_options = nil, options = {})
     if coll_or_options.is_a? Hash
       options = coll_or_options

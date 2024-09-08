@@ -79,7 +79,8 @@ class StaysController < BaseController
     @products_by_date = @stay.products_by_date
     @rental_items_by_date = @stay.rental_items_by_date
     @spaces_by_date = @stay.spaces_by_date
-    #@payments = @PaymentDecorator.decorate_collection(@stay.payments)
+    @reservations_by_date = @stay.stay_item_dates.where(booked_item_type: StayItem::ROOM).decorate.to_a.group_by { |r| r.booking_date }
+  
   end
 
    def destroy
