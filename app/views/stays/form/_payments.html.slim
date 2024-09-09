@@ -5,13 +5,14 @@
   .col-span-2.mb-4
     .my-6
       /#= render partial: 'stays/form/final_price', locals: {stay: @stay}
-      = f.number_field :final_price,
-                         label: "Montant convenu à payer",
-                         required: true,
-                         value: ((f.object.final_price_cents / 100) rescue nil),
-                         hint: "Ce montant peut être différent de celui affiché ci-dessus",
-                         class: "w-1/2 md:w-1/2 lg:w-1/4",
-                         step: "0.01"
+      div id="final-price-container"
+        = f.number_field :final_price,
+                          label: "Montant convenu à payer",
+                          required: true,
+                          value: ((f.object.final_price_cents / 100) rescue nil),
+                          hint: "Ce montant peut être différent de celui affiché ci-dessus",
+                          class: "w-1/2 md:w-1/2 lg:w-1/4",
+                          step: "0.01"
 
 
     / ---- Payments -----

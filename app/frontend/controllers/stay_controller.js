@@ -11,7 +11,7 @@ export default class extends Controller {
     'customerPhone',
     'startDateInput',
     'endDateInput',
-  
+    'staysForDateRange'
   ]
 
  connect() {
@@ -23,7 +23,7 @@ export default class extends Controller {
   }
 
    drawForm(e) {
-    
+      this.showSimilarStays();
    }
 
 
@@ -70,7 +70,6 @@ export default class extends Controller {
   async saveStartDate(){
     
       const stayId = this.element.querySelector("#stay_id").value
-      console.log("stay_id: "+ stayId)
       const request = new FetchRequest(
         'post', 
         "/stays/"+stayId+"/save_date", 
@@ -83,7 +82,7 @@ export default class extends Controller {
       })
       const response = await request.perform()
       if (response.ok) {
-        console.log('start date saved')
+        //console.log('start date saved')
       }
   }
 
@@ -101,8 +100,21 @@ export default class extends Controller {
       })
       const response = await request.perform()
       if (response.ok) {
-        console.log('end date saved')
+        //console.log('end date saved')
       }
+  }
+
+  async showSimilarStays() {
+    if (this.getStartDate().isValid() && this.getEndDate().isValid()) {
+      const stayId = this.element.querySelector("#stay_id").value
+      console.log('get other stays...' + stayId)
+      fetch("/pages/other_stays?stay_id=" + stayId + "&start_date=" + this.startDateInputTarget.value + "&end_date=" + this.endDateInputTarget.value)
+        .then(response => response.text())
+        .then(html => Turbo.renderStreamMessage(html));
+    } else {
+      console.log('clear bookings list')
+      this.staysForDateRangeTarget.innerHTML = ''
+    }
   }
 
 

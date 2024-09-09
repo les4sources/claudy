@@ -56,6 +56,7 @@ Rails.application.routes.draw do
   get "pages/dashboard", to: "pages#dashboard", as: :dashboard
   get "pages/other_bookings", to: "pages#other_bookings"
   get "pages/other_space_bookings", to: "pages#other_space_bookings"
+  get "pages/other_stays", to: "pages#other_stays"
 
   get "reports/lodging/:id", to: "reports#lodging", as: :lodging_reports
 

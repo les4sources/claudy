@@ -60,12 +60,8 @@ module StayPrices
           # TODO: how to include duration in the calcul of the price?
           adult_count = params[:adult_count] || 0
           children_count = params[:children_count] || 0
-          Rails.logger.info("#{adult_count == 0}")
-          Rails.logger.info("#{children_count == 0}")
           price_for_adult = BigDecimal(experience.price_cents) * BigDecimal(adult_count) unless adult_count == 0
           price_for_children = BigDecimal(experience.price_cents) * BigDecimal(children_count) * 0.5 unless children_count == 0
-          Rails.logger.info("#{price_for_adult}")
-          Rails.logger.info("#{price_for_children}")
           price = price_for_adult + price_for_children
         end
         (price/100)

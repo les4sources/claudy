@@ -78,6 +78,11 @@ class StayItemsController < BaseController
               "total-amount", 
               partial: 'stays/total_amount', 
               locals: { total_amount: @stay.total_reservation_amount }
+            ),
+             turbo_stream.replace(
+              "final-price-container",
+              partial: 'stays/form/final_price',
+              locals: { stay: @stay }
             )
           ]
         }

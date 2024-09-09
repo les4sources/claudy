@@ -68,7 +68,6 @@ class PagesController < BaseController
 
     # rooms
     @stay_room_reservations = @stay_reservations.where(booked_item_type: StayItem::ROOM)
-    Rails.logger.info("$$$$$$$$$ #{@stay_room_reservations}")
 
     # spaces
     @stay_space_reservations = @stay_reservations.where(booked_item_type: StayItem::SPACE)
@@ -109,6 +108,18 @@ class PagesController < BaseController
       .order(date: :asc)
     # group bookings by day
     @grouped_space_reservations = @space_reservations.to_a.group_by { |r| r.date }
+    render layout: false
+  end
+
+   def other_stays
+    @reservations = StayItemDate.all
+      .includes(:stay)
+      .where.not(stay: { status: "declined" })
+      .where.not(stay_id: params[:stay_id])
+      .between_times(Date.parse(params[:start_date]), Date.parse(params[:end_date]) - 1.day, field: :booking_date)
+      .order(booking_date: :asc)
+    # group stays by day
+    @grouped_reservations = @reservations.to_a.group_by { |r| r.booking_date }
     render layout: false
   end
 

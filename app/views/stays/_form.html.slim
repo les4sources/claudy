@@ -1,5 +1,12 @@
+= f.hidden_field :stay_id, id: 'stay_id', 
+                   value: @stay.id,
+                   data: { "stay-target": "stayId" }
+
 = render "stays/form/info", f: f
 = render "stays/form/stay", f: f
 = render "stays/form/items", f: f
 = render "stays/form/payments", f: f
 = render "stays/form/notes", f: f
+
+
+#stays-for-date-range(data-stay-target="staysForDateRange")

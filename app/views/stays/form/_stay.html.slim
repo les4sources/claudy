@@ -33,7 +33,7 @@
                      required: true,
                      error: "Veuillez renseigner une date",
                      id: "startDate",
-                     data: { "action": "stay#setEndDate blur->stay#saveStartDate", "stay-target": "startDateInput" }
+                     data: { "action": "stay#setEndDate blur->stay#saveStartDate stay#drawForm", "stay-target": "startDateInput" }
       = f.date_field :end_date,
                      html5: true,
                      label: "Au *",

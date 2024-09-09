@@ -1,0 +1,34 @@
+= turbo_stream.update "stays-for-date-range" do
+  #toast-other-stays.fixed.right-5.bottom-5.flex.items-center.w-full.max-w-xs.p-4.space-x-4.text-gray-500.bg-white.divide-x.divide-gray-200.rounded-lg.shadow-lg.space-x(role="alert")
+    .text-sm.font-normal
+      .font-semibold
+        | Autres réservations à ces dates
+
+      - if @grouped_reservations.empty?
+        p.text-gray-400 Aucune autre réservation
+      - else
+        - @grouped_reservations.each do |grouped_reservations|
+          .mt-2
+            p = l(grouped_reservations.first)
+
+            div
+              - grouped_reservations.last.sort_by {|r| r.start_time }.group_by { |r| r.stay.id }.each do |reservations|
+                - stay = StayDecorator.new(reservations.last.first.stay)
+                div(class="flex mt-2 py-1 px-2 #{stay.calendar_class}")
+                  .block
+                    div
+                      strong 
+                        = link_to stay.decorate.name.html_safe, 
+                                  stay_path(stay), 
+                                  class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+                      - if stay.group_name.present?
+                        .text-gray-500.leading-none.mb-2 = stay.group_name
+
+                    - if !stay.lodgings.empty?
+                      = stay.lodging_badge
+                    - elsif !stay.rooms.empty?
+                      .grid.grid-cols-3.gap-1
+                        - stay.rooms.each do |room|
+                          = room_badge(room)
+                      
+             

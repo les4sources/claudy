@@ -21,6 +21,7 @@ module Stays
     end
 
     def run!(params = {})
+    
       @stay.attributes = stay_params(params)
       return false if !@stay.valid?
       ActiveRecord::Base.transaction do
@@ -28,6 +29,7 @@ module Stays
         @stay.stay_item_dates.destroy_all
         begin
           if is_available?
+            Rails.logger.info("$$$$$$$ BEFORE BUILD")
             @stay.build_booked_item
             @stay.draft = false
           end
