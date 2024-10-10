@@ -8,13 +8,22 @@ class PaymentDecorator < ApplicationDecorator
 
   def booking_date_range
     booking.date_range
+  rescue
+    booking = get_deleted_booking(booking_id)
+    booking.date_range
   end
 
   def booking_name
     booking.group_or_name
+  rescue
+    booking = get_deleted_booking(booking_id)
+    booking.group_or_name
   end
 
   def booking_payment_status
+    booking.payment_status
+  rescue
+    booking = get_deleted_booking(booking_id)
     booking.payment_status
   end
 
@@ -82,5 +91,11 @@ class PaymentDecorator < ApplicationDecorator
 
   def updated_at(format: :default)
     h.l(object.updated_at.to_date, format: format)
+  end
+
+  private
+
+  def get_deleted_booking(booking_id)
+    Booking.unscoped.find(booking_id)&.decorate
   end
 end

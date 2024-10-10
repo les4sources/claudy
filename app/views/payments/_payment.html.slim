@@ -8,7 +8,7 @@
                 data: { turbo_frame: "modal" },
                 class: "claudy-link ml-2 text-xs"
     .font-light = payment.payment_method
-tr(id="#{dom_id payment}" class="#{payment.tr_class}")
+tr(id="#{dom_id payment}" class="#{payment.tr_class} hover:bg-sky-100")
   td.py-4.px-6.text-center
     = payment.payment_method_emoji
   td.py-4.px-6
@@ -20,7 +20,7 @@ tr(id="#{dom_id payment}" class="#{payment.tr_class}")
   td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap.hide-if-booking-page[scope="row"]
     .inline-flex.space-x-2
       = link_to payment.booking_name, 
-                booking_path(payment.booking),
+                booking_path(payment.booking_id),
                 class: "claudy-link"
       = payment.booking_payment_status
     .text-xs.text-gray-500
@@ -31,7 +31,7 @@ tr(id="#{dom_id payment}" class="#{payment.tr_class}")
                 payment_path(payment),
                 class: "claudy-link text-xs"
       = link_to "modifier", 
-                edit_booking_payment_path(payment.booking, payment), 
+                edit_booking_payment_path(payment.booking_id, payment), 
                 data: { turbo_frame: "modal" },
                 class: "claudy-link text-xs"
 
