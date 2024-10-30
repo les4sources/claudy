@@ -116,9 +116,9 @@
             Lorsque vous arrivez aux 4 Sources, merci de <strong>nous appeler au #{ENV.fetch('PHONE_NUMBER')} (pas de SMS, car c'est une redirection d'appel)</strong> afin de vous annoncer 
             et de nous permettre de vous accueillir. 
           - if @booking.from_airbnb?
-            | Pour toute question d'ici votre arrivée, veuillez nous la communiquer via la messagerie Airbnb.
+            | Pour toute question d'ici votre arrivée, communiquez avec nous via la messagerie Airbnb.
           - else
-            | Pour toute question d'ici votre arrivée, veuillez nous la communiquer à <a href="mailto:contact@les4sources.be" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700">contact@les4sources.be</a>. 
+            | Pour toute question d'ici votre arrivée, communiquez avec nous par e-mail à <a href="mailto:sejours@les4sources.be" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700">sejours@les4sources.be</a>. 
           |  Les réservations ne sont pas gérées par téléphone.
 
 - if @booking.confirmed? && !@booking.lodging.nil?

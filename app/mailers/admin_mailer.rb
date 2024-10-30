@@ -2,8 +2,8 @@ class AdminMailer < ApplicationMailer
   def booking_request(booking)
     @booking = booking
     mail(
-      from: "reservation@les4sources.be",
-      to: "reservation@les4sources.be",
+      from: "sejours@les4sources.be",
+      to: "sejours@les4sources.be",
       subject: "💁‍♂️ DEMANDE DE RÉSERVATION pour un hébergement: #{@booking.name}",
       tag: "admin_booking_request",
       bcc: nil
@@ -13,8 +13,8 @@ class AdminMailer < ApplicationMailer
   def booking_canceled(booking)
     @booking = BookingDecorator.new(booking)
     mail(
-      from: "reservation@les4sources.be",
-      to: "reservation@les4sources.be",
+      from: "sejours@les4sources.be",
+      to: "sejours@les4sources.be",
       subject: "⚠️ Réservation d'hébergement annulée: #{ActionView::Base.full_sanitizer.sanitize(@booking.group_or_name)} (#{@booking.date_range})",
       tag: "admin_booking_canceled",
       bcc: nil
@@ -24,8 +24,8 @@ class AdminMailer < ApplicationMailer
   def payment_received(payment)
     @payment = PaymentDecorator.new(payment)
     mail(
-      from: "reservation@les4sources.be",
-      to: "reservation@les4sources.be",
+      from: "sejours@les4sources.be",
+      to: "sejours@les4sources.be",
       subject: "💳 Paiement reçu",
       tag: "admin_payment_received",
       bcc: nil
@@ -35,8 +35,8 @@ class AdminMailer < ApplicationMailer
   def space_booking_canceled(space_booking)
     @space_booking = SpaceBookingDecorator.new(space_booking)
     mail(
-      from: "reservation@les4sources.be",
-      to: "reservation@les4sources.be",
+      from: "sejours@les4sources.be",
+      to: "sejours@les4sources.be",
       subject: "⚠️ Réservation d'espaces annulée: #{ActionView::Base.full_sanitizer.sanitize(@space_booking.group_or_name)} (#{@space_booking.date_range})",
       tag: "admin_space_booking_canceled",
       bcc: nil
