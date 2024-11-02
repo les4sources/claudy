@@ -348,7 +348,7 @@ class BookingDecorator < ApplicationDecorator
 
   def token
     h.link_to(
-      "##{object.token}",
+      object.token,
       h.public_booking_path(object.token),
       target: "_blank",
       class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
