@@ -1,24 +1,24 @@
 .border-l-4.border-slate-400.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
   .md:border-r-4.md:border-slate-400.md:pr-4.md:text-right
-    = section_heading_tw heading: "Vos informations personnelles"
+    = section_heading_tw heading: "Tes informations personnelles"
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
     .space-y-6.md:space-y-0.md:columns-2.md:gap-8
       = f.text_field :firstname,
-                     label: "Votre prénom *",
+                     label: "Ton prénom *",
                      required: true
 
       = f.text_field :lastname,
-                     label: "Votre nom *",
+                     label: "Ton nom *",
                      required: true
 
     = f.email_field :email,
-                    label: "Votre adresse email *",
+                    label: "Ton adresse email *",
                     class: "md:w-2/3 lg:w-1/2",
                     required: true
 
     = f.text_field :phone,
-                   label: "Votre numéro de téléphone",
+                   label: "Ton numéro de téléphone",
                    class: "md:w-1/2 lg:w-1/3"
 
 hr
