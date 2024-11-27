@@ -274,7 +274,8 @@
               dd.mt-1.text-base.text-gray-900
                 | Les informations relatives au paiement seront disponibles lorsque votre réservation aura été confirmée par notre équipe.
 
-      = render "public/bookings/show/payments", booking: @booking
+      - if !@booking.from_airbnb?
+        = render "public/bookings/show/payments", booking: @booking
 
       - if @booking.invoice_status == "requested"
         .text-base.font-medium.text-gray-900.sm:col-span-2
