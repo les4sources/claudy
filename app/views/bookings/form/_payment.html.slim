@@ -3,183 +3,20 @@
     = section_heading_tw heading: "Paiement du séjour"
 
   .col-span-2.mb-4
-    .hidden.bg-yellow-100.shadow.sm:rounded-lg(data-booking-target="priceCalculationNotice")
-      .px-4.py-5.sm:p-6
-        h3.text-lg.font-medium.leading-6.text-gray-900
-          | Calculer le montant de la réservation?
-        .mt-2.max-w-xl.text-sm.text-gray-500
-          .prose
-            p
-              | Merci de compléter les informations suivantes ci-dessus afin de pouvoir
-              |  vous calculer le montant de la réservation.
-            ul(role="list")
-              li Type d'hébergement 🏡
-              li Dates d'arrivée et de départ 🗓
-              li Nombre de giteurs adultes 🧑 et enfants 🧒
+    .content
+      p.text-gray-700 
+        | 💁‍♀️ #{link_to("Tarifs en vigueur", "https://www.les4sources.be/locations/tarifs", target: "_blank", class: "claudy-link")} sur notre site web
 
-    #popover-tier-soutien.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-700.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-lg.opacity-0[data-popover role="tooltip"]
-      .px-3.py-2.bg-gray-100.border-b.border-gray-200.rounded-t-lg
-        h3.font-semibold.text-gray-900
-          | Tarif de soutien
-      .px-3.py-2
-        p
-          | Ce tarif permet d’apporter un soutien financier au déploiement du projet et au maintien d’une formule solidaire.
-      div[data-popper-arrow]
-
-    #popover-tier-neutre.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-700.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-lg.opacity-0[data-popover role="tooltip"]
-      .px-3.py-2.bg-gray-100.border-b.border-gray-200.rounded-t-lg
-        h3.font-semibold.text-gray-900
-          | Tarif neutre
-      .px-3.py-2
-        p
-          | Ce tarif de « base » permet de faire fonctionner le projet et la gestion du domaine, sans contribuer au développement.
-      div[data-popper-arrow]
-
-    #popover-tier-solidaire.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-700.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-lg.opacity-0[data-popover role="tooltip"]
-      .px-3.py-2.bg-gray-100.border-b.border-gray-200.rounded-t-lg
-        h3.font-semibold.text-gray-900
-          | Tarif solidaire
-      .px-3.py-2
-        p
-          | Ce tarif permet à des structures et personnes disposant de moyens plus limités de pouvoir accéder à nos espaces pour séjourner ou organiser une activité chez nous.
-      div[data-popper-arrow]
-
-    .hidden(data-booking-target="priceSection")
-      .hidden(data-booking-target="tierPricingForLodgings")
-        .content.mb-4
-          p Quel tarif convient le mieux au client?
-
-        .space-y-3.md:space-y-2
-          = f.collection_radio_buttons :tier_lodgings, 
-                                       [ \
-                                         [raw("Soutien (+25%) #{render partial: "shared/popover_icon", locals: { target: "popover-tier-soutien" }}"), "soutien"], 
-                                         [raw("Neutre #{render partial: "shared/popover_icon", locals: { target: "popover-tier-neutre" }}"), "neutre"], 
-                                         [raw("Solidaire (-25%) #{render partial: "shared/popover_icon", locals: { target: "popover-tier-solidaire" }}"), "solidaire"],
-                                         [raw("À définir ultérieurement"), "non défini"] \
-                                       ], 
-                                       :last, :first, 
-                                       required: true do |radio_button|
-            .flex.items-center
-              = radio_button.radio_button( \
-                  data: { "action": "booking#drawForm", "booking-target": "tierLodgingsRadioButton" } \
-                )
-              == radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
-
-        .content.mt-4
-          p.text-gray-700 
-            | 💁‍♀️ Réduction de 20% à partir de la 2ème nuitée
-            br
-            | 💁 Réduction de 6% les nuits de week-end (vendredi et samedi)
-
-      .hidden(data-booking-target="tierPricingForRooms")
-        .content.mb-4
-          p Quel tarif convient le mieux au client?
-
-        .space-y-2
-          = f.label :tier_rooms, "Sélectionnez un tarif *"
-          = f.collection_radio_buttons :tier_rooms, 
-                                       [[raw("Soutien (45€/nuit/personne) #{render partial: "shared/popover_icon", locals: { target: "popover-tier-soutien" }}"), "soutien"], [raw("Neutre (35€/nuit/personne) #{render partial: "shared/popover_icon", locals: { target: "popover-tier-neutre" }}"), "neutre"], [raw("Solidaire (25€/nuit/personne) #{render partial: "shared/popover_icon", locals: { target: "popover-tier-solidaire" }}"), "solidaire"]], 
-                                       :last, :first, 
-                                       required: true do |radio_button|
-            .flex.items-center
-              = radio_button.radio_button( \
-                  data: { "action": "booking#drawForm", "booking-target": "tierRoomsRadioButton" } \
-                )
-              = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
-
-        .content.mt-4
-          p.text-gray-700 💁‍♀️ Réduction de 20% à partir de la 3ème nuitée
-
-        .mb-6
-
-      .hidden.flex.flex-col.align-center.mx-auto.mt-4(data-booking-target="priceDiv")
-        dt.order-2.text-base.font-medium.text-gray-500
-          | Montant de la réservation
-        dd.order-1.text-2xl.font-bold.text-indigo-600.sm:text-3xl.sm:tracking-tight(data-booking-target="pricePreview")
-          | ?
-
-      .hidden
-        = f.text_field :shown_price_cents,
-                       data: { "booking-target": "shownPriceInput" }
-
-      .my-6
-        = f.number_field :price,
-                         label: "Montant convenu à payer",
-                         required: true,
-                         value: ((f.object.price_cents / 100.0) rescue nil),
-                         hint: "Ce montant peut être différent de celui affiché ci-dessus",
-                         data: { "booking-target": "priceInput" },
-                         class: "w-1/2 md:w-1/2 lg:w-1/4",
-                         step: "0.01"
-
-      / .my-6.space-y-2
-        = f.label :payment_status,
-                  "Statut du paiement *"
-
-        = f.collection_radio_buttons :payment_status, 
-                                     [["En attente de paiement", "pending"], ["Payée partiellement", "partially_paid"], ["Payée", "paid"]], 
-                                     :last, :first, 
-                                     required: true do |radio_button|
-          .flex.items-center
-            = radio_button.radio_button
-            = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
-
-
-      / .my-6
-        = f.label :payment_method,
-                  "Moyen de paiement *"
-
-        .space-y-3.md:space-y-2
-          = f.collection_radio_buttons :payment_method, 
-                                       [ \
-                                         ["En liquide à son arrivée", "cash"], 
-                                         ["Par virement bancaire (le client recevra les informations pour le paiement par email)", "bank_transfer"],
-                                         ["Versement automatique Airbnb", "airbnb"] \
-                                       ], 
-                                       :last, :first, 
-                                       required: true do |radio_button|
-            .flex.items-center
-              = radio_button.radio_button
-              = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
-
-    / ---- Payments -----
-
-    - if !@booking.new_record?
-      .mt-4.mb-4
-        .text-md Paiements reçus
-
-      div(id="payments-#{@booking.id}")
-        = render PaymentDecorator.decorate_collection(@booking.payments.persisted)
-
-    = f.fields_for :payments do |fp|
-      - if !fp.object.persisted?
-        .mt-4.mb-4
-          .text-md Enregistrer un paiement
-          - if @booking.payments.persisted.empty?
-            .font-light.text-sm.text-gray-700 Laisser vide s'il n'y a pas encore eu de paiement
-        .flex.space-x-8
-          div
-            = fp.number_field :amount,
-                     label: "Montant",
-                     required: false,
-                     value: ((fp.object.amount_cents / 100.0) rescue nil),
-                     class: "",
-                     step: "0.01"
-          div
-            .space-y-3.md:space-y-2
-              = fp.collection_radio_buttons :payment_method,
-                                           [ \
-                                             ["Liquide", "cash"], 
-                                             ["Virement bancaire", "bank_transfer"],
-                                             ["Airbnb", "airbnb"] \
-                                           ], 
-                                           :last, :first, 
-                                           required: false do |radio_button|
-                .flex.items-center
-                  = radio_button.radio_button
-                  = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
-    
     .my-6
+      = f.number_field :price,
+                       label: "Montant convenu à payer",
+                       required: true,
+                       value: ((f.object.price_cents / 100.0) rescue nil),
+                       data: { "booking-target": "priceInput" },
+                       class: "w-1/2 md:w-1/2 lg:w-1/4",
+                       step: "0.01"
+
+    .mt-6
       = f.label :invoice_status,
                 "Facture 🧾 *"
 

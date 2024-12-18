@@ -24,9 +24,9 @@
         .content
           p.text-gray-600 
             |
-              💁 Consultez notre site web pour #{link_to("les informations concernant l'accueil de groupes", "https://www.les4sources.be/accueil-de-groupes", onclick: "window.open(this.href); return false;")}.
+              💁 Consulte notre site web pour #{link_to("les informations concernant nos hébergements", "https://www.les4sources.be/hebergements-yvoir", onclick: "window.open(this.href); return false;")}.
 
-        = f.label :lodging_id, "Sélectionnez un hébergement *"
+        = f.label :lodging_id, "Sélectionne un hébergement *"
         = f.collection_radio_buttons :lodging_id, Lodging.all.order(:id), :id, :form_label, required: true do |radio_button|
           .flex.items-center
             = radio_button.radio_button( \

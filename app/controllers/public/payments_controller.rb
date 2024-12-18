@@ -9,7 +9,7 @@ class Public::PaymentsController < Public::BaseController
     else
       redirect_to public_booking_path(payment.booking.token),
                   alert: "Une erreur est survenue et celle-ci nous empêche de vous rediriger
-                    vers le paiement en ligne. Veuillez nous contacter à contact@les4sources.be."
+                    vers le paiement en ligne. Veuillez nous contacter à sejours@les4sources.be."
     end
   end
 end
