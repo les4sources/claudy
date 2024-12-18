@@ -31,7 +31,6 @@ module Bookings
       if !rooms.nil? && available?(rooms)
         build_reservations(rooms)
         @booking.save!
-        @booking.set_payment_status
         notify_customer_on_create
         create_subscription(from: @booking)
       end

@@ -131,16 +131,6 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
               | Tarif de la réservation
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               span.font-semibold = @booking.price
-          / .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
-            dt.text-sm.font-medium.text-gray-500
-              | Paiement
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @booking.payment_method
-          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
-            dt.text-sm.font-medium.text-gray-500
-              | Tarification
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @booking.tier.capitalize
           .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
             dt.text-sm.font-medium.text-gray-500
               | Facture
