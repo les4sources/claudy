@@ -20,6 +20,9 @@ module.exports = {
   ],
   theme: {
     extend: {
+      colors: {
+        '4s-main': '#024442',
+      },
       fontFamily: {
         sans: ['Inter var', ...defaultTheme.fontFamily.sans],
         caveat: ['Caveat', 'Inter var', ...defaultTheme.fontFamily.sans]
