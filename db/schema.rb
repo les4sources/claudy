@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_08_28_081920) do
+ActiveRecord::Schema[7.0].define(version: 2024_09_08_102936) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -213,15 +213,6 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_28_081920) do
     t.index ["task_id", "human_id"], name: "index_humans_tasks_on_task_id_and_human_id"
   end
 
-  create_table "items", force: :cascade do |t|
-    t.string "name"
-    t.string "type"
-    t.integer "price_cents"
-    t.string "hint"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-  end
-
   create_table "lodging_rooms", force: :cascade do |t|
     t.bigint "lodging_id", null: false
     t.bigint "room_id", null: false
@@ -333,7 +324,6 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_28_081920) do
     t.string "code"
     t.datetime "deleted_at", precision: nil
     t.integer "price_night_cents", default: 0, null: false
-    t.integer "calculated_price_cents", default: 0, null: false
   end
 
   create_table "services", force: :cascade do |t|
@@ -414,8 +404,10 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_28_081920) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "direct_book", default: true
+    t.bigint "stay_item_id"
     t.index ["booked_item_type", "booked_item_id"], name: "index_stay_item_dates_on_booked_item"
     t.index ["stay_id"], name: "index_stay_item_dates_on_stay_id"
+    t.index ["stay_item_id"], name: "index_stay_item_dates_on_stay_item_id"
   end
 
   create_table "stay_items", force: :cascade do |t|
@@ -461,6 +453,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_28_081920) do
     t.string "invoice_status"
     t.string "group_name"
     t.text "public_notes"
+    t.integer "final_price_cents", default: 0, null: false
     t.index ["customer_id"], name: "index_stays_on_customer_id"
     t.index ["user_id"], name: "index_stays_on_user_id"
   end
@@ -556,6 +549,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_08_28_081920) do
   add_foreign_key "space_bookings", "events", name: "space_bookings_event_id_fkey"
   add_foreign_key "space_reservations", "space_bookings", name: "space_reservations_space_booking_id_fkey"
   add_foreign_key "space_reservations", "spaces", name: "space_reservations_space_id_fkey"
+  add_foreign_key "stay_item_dates", "stay_items"
   add_foreign_key "stay_item_dates", "stays"
   add_foreign_key "stay_items", "stays"
   add_foreign_key "stays", "customers"
