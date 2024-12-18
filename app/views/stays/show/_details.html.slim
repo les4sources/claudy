@@ -1,9 +1,9 @@
     div
       .flex.place-content-between.py-2.mb-4.border-b.border-gray-500
         h3.text-lg.font-semibold.leading-6.text-gray-900
-          | Réservation <code>##{stay.token}</code>
+          | Séjour <code>##{stay.token}</code>
         = link_to "Page web 🔗",
-                  public_booking_path(stay.object.token),
+                  public_stay_path(stay.object.token),
                   class: "claudy-link",
                   target: "_blank"
       .mt-4.content.space-y-4.text-sm

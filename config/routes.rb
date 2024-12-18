@@ -72,6 +72,7 @@ Rails.application.routes.draw do
         get "pay"
       end
     end
+    get "stays/:token", to: "stays#show", as: :stay
     get "reservation/:token", to: "bookings#show", as: :booking
     get "espaces/:token", to: "space_bookings#show", as: :space_booking
     get "calendrier-hebergements", to: "calendars#lodgings"

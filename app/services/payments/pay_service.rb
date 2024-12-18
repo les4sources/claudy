@@ -31,11 +31,11 @@ module Payments
     def stripe_checkout
       StripeService.instance.create_checkout_session(
         client_reference_id: @payment.id,
-        success_url: public_booking_url(@payment.booking.token),
-        cancel_url: public_booking_url(@payment.booking.token),
+        success_url: public_stay_url(@payment.stay.token),
+        cancel_url: public_stay_url(@payment.stay.token),
         item: {
           id: @payment.id,
-          name: "Réservation ##{@payment.booking.token}",
+          name: "Séjour ##{@payment.stay.token}",
           amount: @payment.amount_cents
         }
       )

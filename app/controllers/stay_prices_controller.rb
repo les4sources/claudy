@@ -16,7 +16,6 @@ class StayPricesController < BaseController
   def calculate_item_price
     service = StayPrices::CalculationService.new
     if service.run(params)
-      Rails.logger.info(service.amount)
       render json: { amount: service.amount },
              status: :ok
     else

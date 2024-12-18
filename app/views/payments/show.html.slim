@@ -57,7 +57,8 @@
 
             dt.text-sm.font-medium.text-gray-500
               | Réservation
-            = render '/payments/reservation'
+            = render partial: "reservation",
+                     locals: { payment: @payment }
 
             dt.text-sm.font-medium.text-gray-500
               | Stripe Checkout Session ID

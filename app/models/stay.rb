@@ -63,7 +63,7 @@ class Stay < ApplicationRecord
   def self.generate_token
     validity = Proc.new { |token| Stay.where(token: token).first.nil? }
     begin
-      generated_token = SecureRandom.hex(8)[0, 8]
+      generated_token = SecureRandom.hex(5)[0, 5]
       generated_token = generated_token.encode("UTF-8")
     end while validity[generated_token] == false
     generated_token

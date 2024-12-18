@@ -80,7 +80,6 @@ class StaysController < BaseController
     @rental_items_by_date = @stay.rental_items_by_date
     @spaces_by_date = @stay.spaces_by_date
     @reservations_by_date = @stay.stay_item_dates.where(booked_item_type: StayItem::ROOM).decorate.to_a.group_by { |r| r.booking_date }
-    Rails.logger.info("$$$$$$$$ #{@reservations_by_date}")
   end
 
    def destroy
