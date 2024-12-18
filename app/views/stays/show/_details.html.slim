@@ -53,7 +53,7 @@
           | Personnes enregistrées : #{stay.adults} #{"adulte".pluralize(stay.adults)}
           - if stay.object.children > 0
             | , #{stay.children} #{"enfant".pluralize(stay.children)}
-          - if stay.object.babies > 0
+          - if (stay.object.babies || 0) > 0
             | , #{stay.babies} #{"bébé".pluralize(stay.babies)}
 
         - if stay.has_options?

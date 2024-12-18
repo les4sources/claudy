@@ -27,10 +27,10 @@ Rails.application.routes.draw do
     resources :stay_items
     resources :payments
     collection do 
-      get 'past'
+      get "past"
     end
     member do
-      post 'save_date' 
+      post "save_dates" 
     end
   end
   resources :tasks

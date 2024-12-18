@@ -3,57 +3,19 @@
     = section_heading_tw heading: "Paiement du séjour"
 
   .col-span-2.mb-4
-    .my-6
-      /#= render partial: 'stays/form/final_price', locals: {stay: @stay}
-      div id="final-price-container"
-        = f.number_field :final_price,
-                          label: "Montant convenu à payer",
-                          required: true,
-                          value: ((f.object.final_price_cents / 100) rescue nil),
-                          hint: "Ce montant peut être différent de celui affiché ci-dessus",
-                          class: "w-1/2 md:w-1/2 lg:w-1/4",
-                          step: "0.01"
+    .content
+      p.text-gray-700 
+        | 💁‍♀️ #{link_to("Tarifs en vigueur", "https://www.les4sources.be/locations/tarifs", target: "_blank", class: "claudy-link")} sur notre site web
 
+    .mt-4
+      = f.number_field :final_price,
+                        label: "Montant convenu à payer",
+                        required: true,
+                        value: ((f.object.final_price_cents / 100) rescue nil),
+                        class: "w-1/2 md:w-1/2 lg:w-1/4",
+                        step: "0.01"
 
-    / ---- Payments -----
-
-    - if !@stay.draft
-      .mt-4.mb-4
-        .text-md Paiements reçus
-
-      div(id="payments-#{@stay.id}")
-        = render PaymentDecorator.decorate_collection(@stay.payments.persisted)
-
-
-    = f.fields_for :payments do |fp|
-      - if !fp.object.persisted?
-        .mt-4.mb-4
-          .text-md Enregistrer un paiement
-          - if @stay.payments.persisted.empty?
-            .font-light.text-sm.text-gray-700 Laisser vide s'il n'y a pas encore eu de paiement
-        .flex.space-x-8
-          div
-            = fp.number_field :amount,                     
-                     label: "Montant",
-                     required: false,
-                     value: ((fp.object.amount_cents / 100.0) rescue nil),
-                     class: "",
-                     step: "0.01"
-          div
-            .space-y-3.md:space-y-2
-              = fp.collection_radio_buttons :payment_method,
-                                           [ \
-                                             ["Liquide", "cash"], 
-                                             ["Virement bancaire", "bank_transfer"],
-                                             ["Airbnb", "airbnb"] \
-                                           ], 
-                                           :last, :first, 
-                                           required: false do |radio_button|
-                .flex.items-center
-                  = radio_button.radio_button
-                  = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
-    
-    .my-6
+    .mt-4
       = f.label :invoice_status,
                 "Facture 🧾 *"
 

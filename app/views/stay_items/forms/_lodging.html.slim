@@ -22,22 +22,20 @@
 
 .flex.space-x-6
   = f.number_field :adults_count,
-                   label: "Nombre d'adultes *",
+                   label: "Nombre d'adultes",
                    min: 0,
                    remove_default_class: "sm:text-sm",
                    class: "w-24 text-lg"
 
   = f.number_field :children_count,
-                   label: "Nombre d'enfants *",
+                   label: "Nombre d'enfants",
                    min: 0,
-                   required: true,
                    remove_default_class: "sm:text-sm",
                    class: "w-24 text-lg"
 
   = f.number_field :babies_count,
-                   label: "Nombre de bébés *",
+                   label: "Nombre de bébés",
                    min: 0,
-                   required: true,
                    remove_default_class: "sm:text-sm",
                    class: "w-24 text-lg"
 .flex.space-x-6

@@ -51,10 +51,10 @@ class StaysController < BaseController
     service = Stays::UpdateService.new(stay_id: params[:id])
     respond_to do |format|
       if service.run(params)
-        format.html { redirect_to service.stay, notice: "Le séjour a été enregistré/mise à jour." }
+        format.html { redirect_to service.stay, notice: "Le séjour a été enregistré." }
         format.json { render :show, status: :ok, location: service.stay }
       else
-        set_error_flash(service.stay, "<strong>Cette réservation n'a pas pu être enregistrée, merci de vérifier les éléments suivants:</strong><br>#{service.error_message}")
+        set_error_flash(service.stay, "<strong>Ce séjour n'a pas pu être enregistré, merci de vérifier les éléments suivants:</strong><br>#{service.error_message}")
         format.html { 
           @stay = service.stay
           render :edit, 
@@ -66,7 +66,7 @@ class StaysController < BaseController
     end
   end
 
-  def save_date
+  def save_dates
     stay = Stay.find(params[:id])
     stay.update(stay_dates_params)
   end
@@ -92,7 +92,7 @@ class StaysController < BaseController
                 notice: "Le séjour a été supprimé."
   end
 
-   private
+  private
 
   def set_presenters
     @menu_presenter = Components::MenuPresenter.new(
@@ -103,9 +103,13 @@ class StaysController < BaseController
     )
   end
 
-  
   def stay_dates_params
-    params.require(:stay).permit(:start_date, :end_date)
+    params
+      .require(:stay)
+      .permit(
+        :start_date, 
+        :end_date
+      )
   end
 
 end

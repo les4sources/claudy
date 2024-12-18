@@ -3,6 +3,10 @@ import { FetchRequest } from '@rails/request.js'
 import moment from "moment"
 
 export default class extends Controller {
+  static values = {
+    id: Number
+  }
+
   static targets = [
     'stayItems',
     'customerEmail', 
@@ -14,20 +18,20 @@ export default class extends Controller {
     'staysForDateRange'
   ]
 
- connect() {
-    console.log('connect stays')
+  connect() {
+    console.log('connect stays', this.idValue)
   }
 
   initialize() {
     console.log('initialize stays')
   }
 
-   drawForm(e) {
-      this.showSimilarStays();
-   }
-
+  drawForm(e) {
+    this.showSimilarStays()
+  }
 
   async lookupCustomer() {
+    console.log('lookupCustomer')
     const email = this.customerEmailTarget.value
 
     if (email) {
@@ -54,8 +58,8 @@ export default class extends Controller {
     return moment(this.endDateInputTarget.value)
   }
 
-
   setEndDate() {
+    console.log('setEndDate')
     const dayAfterStartDate = this.getStartDate().add(1, 'day')
     this.endDateInputTarget.setAttribute('min', dayAfterStartDate.format('YYYY-MM-DD'))
     if (this.endDateInputTarget.value == "") {
@@ -66,49 +70,29 @@ export default class extends Controller {
     }
   }
 
-
-  async saveStartDate(){
-    
-      const stayId = this.element.querySelector("#stay_id").value
-      const request = new FetchRequest(
-        'post', 
-        "/stays/"+stayId+"/save_date", 
-         { 
-          body: JSON.stringify({ 
-          stay: {
-            start_date: this.getStartDate(),
-          }
-        }) 
-      })
-      const response = await request.perform()
-      if (response.ok) {
-        //console.log('start date saved')
-      }
-  }
-
-  async saveEndDate(){
-      const stayId = this.element.querySelector("#stay_id").value
-      const request = new FetchRequest(
-        'post', 
-        "/stays/"+stayId+"/save_date", 
-         { 
-          body: JSON.stringify({ 
-          stay: {
-            end_date: this.getEndDate(),
-          }
-        }) 
-      })
-      const response = await request.perform()
-      if (response.ok) {
-        //console.log('end date saved')
-      }
+  async saveDates() {
+    console.log('saveDates')
+    const request = new FetchRequest(
+      'post', 
+      "/stays/"+this.idValue+"/save_dates", 
+       { 
+        body: JSON.stringify({ 
+        stay: {
+          start_date: this.getStartDate(),
+          end_date: this.getEndDate(),
+        }
+      }) 
+    })
+    const response = await request.perform()
+    if (response.ok) {
+      //console.log('end date saved')
+    }
   }
 
   async showSimilarStays() {
     if (this.getStartDate().isValid() && this.getEndDate().isValid()) {
-      const stayId = this.element.querySelector("#stay_id").value
-      console.log('get other stays...' + stayId)
-      fetch("/pages/other_stays?stay_id=" + stayId + "&start_date=" + this.startDateInputTarget.value + "&end_date=" + this.endDateInputTarget.value)
+      console.log('get other stays...' + this.idValue)
+      fetch("/pages/other_stays?stay_id=" + this.idValue + "&start_date=" + this.startDateInputTarget.value + "&end_date=" + this.endDateInputTarget.value)
         .then(response => response.text())
         .then(html => Turbo.renderStreamMessage(html));
     } else {

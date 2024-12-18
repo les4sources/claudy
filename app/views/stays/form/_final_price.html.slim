@@ -1,7 +1,5 @@
   = number_field_tag   :final_price,
-                       label: "Montant convenu à payer",
                        required: true,
                        value: ((stay.total_reservation_amount) rescue nil),
-                       hint: "Ce montant peut être différent de celui affiché ci-dessus",
                        class: "w-1/2 md:w-1/2 lg:w-1/4",
                        step: "0.01"

@@ -4,7 +4,7 @@
 
 = form_with model: @stay,
             url: stay_path(@stay),
-            data: { controller: "stay" } do |f|
+            data: { controller: "stay", "stay-id-value": @stay.id } do |f|
   .space-y-8.divide-y.divide-gray-200.sm:space-y-5
     .space-y-6.sm:space-y-5
       = render "form", f: f

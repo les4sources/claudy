@@ -61,7 +61,7 @@ class StayItemsController < BaseController
   end
 
   def update
-      service = StayItems::UpdateService.new(stay_item_id: @stay_item.id)
+    service = StayItems::UpdateService.new(stay_item_id: @stay_item.id)
     if service.run(params)
       respond_to do |format|
         format.turbo_stream { 
@@ -78,12 +78,12 @@ class StayItemsController < BaseController
               "total-amount", 
               partial: 'stays/total_amount', 
               locals: { total_amount: @stay.total_reservation_amount }
-            ),
-             turbo_stream.replace(
-              "final-price-container",
-              partial: 'stays/form/final_price',
-              locals: { stay: @stay }
-            )
+            )#,
+            #  turbo_stream.replace(
+            #   "stay_final_price",
+            #   partial: 'stays/form/final_price',
+            #   locals: { stay: @stay }
+            # )
           ]
         }
         format.html { 

@@ -3,17 +3,7 @@
     = section_heading_tw heading: "Informations personnelles"
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
-    .space-y-2
- 
     = f.fields_for :customer, @stay.customer do |customer_form|
-
-      = customer_form.email_field :email,
-                      label: "Adresse email *",
-                      class: "md:w-2/3 lg:w-1/2",
-                      required: true,
-                      hint: "Le client recevra des notifications par email",
-                      data: { action: "blur->stay#lookupCustomer", "stay-target": "customerEmail" }
-                      
       = customer_form.text_field :firstname,
                      label: "Prénom *",
                      class: "md:w-1/2 lg:w-2/3",
@@ -24,6 +14,13 @@
                      class: "md:w-1/2 lg:w-2/3",
                      data: { "stay-target": "customerLastname" }
 
+      = customer_form.email_field :email,
+                      label: "Adresse email *",
+                      class: "md:w-2/3 lg:w-1/2",
+                      required: true,
+                      hint: "Le client recevra des notifications par email",
+                      data: { action: "blur->stay#lookupCustomer", "stay-target": "customerEmail" }
+                      
       = customer_form.text_field :phone,
                      label: "Numéro de téléphone",
                      class: "md:w-1/2 lg:w-1/3",

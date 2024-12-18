@@ -22,7 +22,6 @@
 #  notes             :text
 #
 class Stay < ApplicationRecord
-
   # PublicActivity
   include PublicActivity::Model
   tracked owner: Proc.new{ |controller, model| controller.current_user rescue nil }
@@ -61,8 +60,6 @@ class Stay < ApplicationRecord
   scope :past, -> { where("end_date < ? and draft = ? ", Date.today, false).order(start_date: :desc) }
   scope :draft_excluded, -> { where("draft = ?", false)}
 
-
-
   def self.generate_token
     validity = Proc.new { |token| Stay.where(token: token).first.nil? }
     begin
@@ -71,7 +68,6 @@ class Stay < ApplicationRecord
     end while validity[generated_token] == false
     generated_token
   end
-
 
   def name
     "#{self.customer&.firstname} #{self.customer&.lastname}"
@@ -101,7 +97,6 @@ class Stay < ApplicationRecord
     (start_date..end_date).cover?(Date.today)
   end
 
-
   def from_airbnb?
     platform == "airbnb"
   end
@@ -113,7 +108,6 @@ class Stay < ApplicationRecord
   def has_options?
     self.experiences.any? || self.spaces.any?
   end
-
 
   def paid?
     payment_status == "paid"
@@ -127,7 +121,6 @@ class Stay < ApplicationRecord
     status == "pending"
   end
 
-
   def set_payment_status
     if self.payments.paid.sum(:amount_cents) >= self.final_price_cents
       status = "paid"
@@ -139,7 +132,6 @@ class Stay < ApplicationRecord
     self.update(payment_status: status)
   end
 
-
   def total_remaining_amount
     self.final_price.to_f - total_payments_received
   end
@@ -148,19 +140,14 @@ class Stay < ApplicationRecord
     payments.to_a.sum {|p| (p.amount.to_f)}
   end
 
-  
   # Calculer le montant total de la réservation basé sur le prix de chaque stay_items
   def total_reservation_amount
     stay_items.to_a.sum { |item| item.calculated_price.to_f }
   end
 
-
   def build_booked_item
     self.stay_items.each do |item|
-
-      
       case item.item_type 
-      
       when StayItem::LODGING
         # the lodging is booked
         StayItemDate.build_item_dates(self.id, item, item.item_id, StayItem::LODGING, true)
@@ -173,8 +160,6 @@ class Stay < ApplicationRecord
             StayItemDate.build_item_dates(self.id, item, bed.id, StayItem::BED)
           end
         end
-
-
       when StayItem::ROOM
         # the room is booked
         StayItemDate.build_item_dates(self.id, item, item.item_id, StayItem::ROOM, true)
@@ -184,27 +169,18 @@ class Stay < ApplicationRecord
         room.beds.each do |bed|
             StayItemDate.build_item_dates(self.id, item, bed.id,  StayItem::BED)
         end
-
       when StayItem::BED
         # the bed is booked
         StayItemDate.build_item_dates(self.id, item, item.item_id, StayItem::BED, true)
-      
-      
       when StayItem::EXPERIENCE
         StayItemDate.build_item_dates(self.id, item, item.item_id, StayItem::EXPERIENCE, true)
-      
-
       when StayItem::SPACE
         StayItemDate.build_item_dates(self.id, item, item.item_id, StayItem::SPACE, true)
-      
-
       end
-
     end
   rescue ActiveRecord::RecordNotUnique => e
     raise e
   end
-
 
   def rooms_by_date
     rooms_hash = Stay.items_grouped_by_date(stay_items.where(item_type: StayItem::ROOM))
@@ -220,7 +196,6 @@ class Stay < ApplicationRecord
                                         item_type: StayItem::ROOM)
       end
     end
-  
     rooms_hash = rooms_hash.merge(Stay.items_grouped_by_date(rooms_from_lods))
     rooms_hash
   end
@@ -262,6 +237,4 @@ class Stay < ApplicationRecord
     end
     reservation_hash.sort.to_h
   end
-
-
 end
