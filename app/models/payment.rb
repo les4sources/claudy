@@ -21,7 +21,6 @@ class Payment < ApplicationRecord
   belongs_to :booking, optional: true
   belongs_to :stay, optional: true
   
-
   monetize :amount_cents, allow_nil: false
 
   has_paper_trail
@@ -30,11 +29,8 @@ class Payment < ApplicationRecord
   validates :amount, numericality: { greater_than: 0.0 }
   validates :payment_method, presence: true
 
-
   scope :paid, -> { where(status: "paid") }
   scope :pending, -> { where(status: "pending") }
-
-
 
   def paid?
     self.status == "paid"

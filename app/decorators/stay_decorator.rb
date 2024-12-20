@@ -140,10 +140,10 @@ class StayDecorator < ApplicationDecorator
       emojis << "#{object.adults} 🧑"
     end
     if object.children > 0
-      emojis << "#{object.children} 👨‍👧"
+      emojis << "#{object.children} 🧒"
     end
     if (object.babies || 0) > 0
-      emojis << "#{object.babies} 🧑‍🍼"
+      emojis << "#{object.babies} 👶"
     end
     emojis.join(" ")
   end

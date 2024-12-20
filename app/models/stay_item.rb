@@ -17,7 +17,6 @@
 #  updated_at     :datetime         not null
 #
 class StayItem < ApplicationRecord
-  
   belongs_to :stay
   belongs_to :item, polymorphic: true
   has_many :stay_item_dates
@@ -30,17 +29,25 @@ class StayItem < ApplicationRecord
   PRODUCT = 'Product'
   RENTAL_ITEM = 'RentalItem'
 
-  monetize :calculated_price_cents,as: "calculated_price"
+  ITEM_TYPE_ORDER = [SPACE, LODGING, ROOM, BED, EXPERIENCE, PRODUCT, RENTAL_ITEM]
 
+  scope :order_by_item_type, -> {
+    order(
+      Arel.sql(
+        "CASE item_type " +
+        ITEM_TYPE_ORDER.map.with_index { |type, index| "WHEN '#{type}' THEN #{index}" }.join(" ") +
+        " END"
+      ),
+    )
+  }
 
-  def total_price 
+  monetize :calculated_price_cents, as: "calculated_price"
+
+  def total_price
     unit_price_cents * quantity
   end
 
   def nights_count
     (self.end_date - self.start_date).to_i
   end
-
-
-
 end

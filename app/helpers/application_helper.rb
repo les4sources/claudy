@@ -44,7 +44,7 @@ module ApplicationHelper
   end
 
   def item_badge(item_type, label)
-    shared_classes = "text-xs font-semibold text-center px-1 py-0.5 rounded"
+    shared_classes = "text-xs font-semibold text-center px-2 py-0.5 rounded"
     content_tag(:span, label, class: "#{shared_classes} #{item_color(item_type)}")
   end
 

@@ -137,7 +137,7 @@ class Stay < ApplicationRecord
   end
 
   def total_payments_received
-    payments.to_a.sum {|p| (p.amount.to_f)}
+    payments.paid.to_a.sum {|p| (p.amount.to_f)}
   end
 
   # Calculer le montant total de la réservation basé sur le prix de chaque stay_items

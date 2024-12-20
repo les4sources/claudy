@@ -1,0 +1,28 @@
+= link_to "+ Hébergement", 
+        new_stay_stay_item_path(stay, type: StayItem::LODGING), 
+        data: { turbo_frame: "modal" },
+        class: "relative inline-flex items-center rounded-l-md #{lodging_color} px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+= link_to "+ Chambre", 
+        new_stay_stay_item_path(stay, type: StayItem::ROOM), 
+        data: { turbo_frame: "modal" },
+        class: "relative inline-flex items-center rounded-l-md #{room_color} px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+= link_to "+ Lit", 
+        new_stay_stay_item_path(stay, type: StayItem::BED), 
+        data: { turbo_frame: "modal" },
+        class: "relative inline-flex items-center rounded-l-md #{bed_color} px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+= link_to "+ Espace", 
+        new_stay_stay_item_path(stay, type: StayItem::SPACE), 
+        data: { turbo_frame: "modal" },
+        class: "relative -ml-px inline-flex items-center #{space_color} px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+= link_to "+ Location", 
+        new_stay_stay_item_path(stay, type: StayItem::RENTAL_ITEM), 
+        data: { turbo_frame: "modal" },
+        class: "relative -ml-px inline-flex items-center #{rental_item_color} px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+= link_to "+ Atelier", 
+        new_stay_stay_item_path(stay, type: StayItem::EXPERIENCE), 
+        data: { turbo_frame: "modal" },
+        class: "relative -ml-px inline-flex items-center #{experience_color} px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"
+= link_to "+ Produit", 
+        new_stay_stay_item_path(stay, type: StayItem::PRODUCT), 
+        data: { turbo_frame: "modal" },
+        class: "relative -ml-px inline-flex items-center rounded-r-md #{product_color} px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-10"

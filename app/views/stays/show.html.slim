@@ -21,47 +21,21 @@
           path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"]
       .ml-3
         h3.text-sm.font-medium.text-red-800
-          | Cette réservation a été supprimée.
+          | Ce séjour a été supprimé.
 - else
   = render "stays/status_callout", 
            stay: @stay 
-
-ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role="list"]
-  li.col-span-1.flex.rounded-md.shadow-sm
-    .flex.w-24.flex-shrink-0.items-center.justify-center.bg-blue-600.rounded-l-md.text-xl.font-medium.text-white
-      = @stay.adults
-    .flex.flex-1.items-center.justify-between.truncate.rounded-r-md.border-t.border-r.border-b.border-gray-200.bg-white
-      .flex-1.truncate.px-4.py-2.text-lg
-        span.font-medium.text-gray-900
-          | 🧑 Adultes
-  - if @stay.object.children.present? && @stay.object.children > 0
-    li.col-span-1.flex.rounded-md.shadow-sm
-      .flex.w-24.flex-shrink-0.items-center.justify-center.bg-rose-600.rounded-l-md.text-xl.font-medium.text-white
-        = @stay.children
-      .flex.flex-1.items-center.justify-between.truncate.rounded-r-md.border-t.border-r.border-b.border-gray-200.bg-white
-        .flex-1.truncate.px-4.py-2.text-lg
-          span.font-medium.text-gray-900
-            | 👧 Enfants
-  - if @stay.object.babies.present? && @stay.object.babies > 0
-    li.col-span-1.flex.rounded-md.shadow-sm
-      .flex.w-24.flex-shrink-0.items-center.justify-center.bg-purple-600.rounded-l-md.text-xl.font-medium.text-white
-        = @stay.babies
-      .flex.flex-1.items-center.justify-between.truncate.rounded-r-md.border-t.border-r.border-b.border-gray-200.bg-white
-        .flex-1.truncate.px-4.py-2.text-lg
-          span.font-medium.text-gray-900
-            | 👶 Bébés
-
 
 .grid.sm:grid-cols-1.md:grid-cols-3.gap-4
   .md:col-span-2.space-y-4
     .overflow-hidden.bg-white.shadow.sm:rounded-lg
       .px-4.py-5.sm:px-6
         h3.text-lg.font-medium.leading-6.text-gray-900
-          | Hébergements
+          | Composition du séjour
         / p.mt-1.max-w-2xl.text-sm.text-gray-500
           | Chambres 
       .border-t.border-gray-200
-        dl
+        / dl
           - @lodgings.each do |lodging|
             .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
               dt.text-sm.font-medium.text-gray-500
@@ -83,7 +57,21 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
                       td.align-top = items.collect { |i| i.booked_item.name }.join(", ")
 
 
+        .inline-block.min-w-full.py-2.sm:px-6.lg:px-8
+          span.isolate.inline-flex.rounded-md.shadow-sm
+            = render partial: "stays/stay_items_links", 
+                     locals: { stay: @stay }
 
+          table.min-w-full.divide-y.divide-gray-300
+            tbody#stay-items.divide-y.divide-gray-200.align-top
+              = render partial: "stay_items/stay_item", 
+                       collection: @stay.stay_items.order_by_item_type.decorate, 
+                       as: :stay_item
+            tfoot
+              tr.text-base.font-medium.text-gray-500.text-xl.text-4s-main
+                td(colspan="2") &nbsp;
+                = render partial: "stays/total_amount", 
+                         locals: {total_amount: @stay.total_reservation_amount}
 
     - if @stay.comments.presence
       .overflow-hidden.bg-white.shadow.sm:rounded-lg
@@ -94,13 +82,11 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
             | Nom et coordonnées de la personne qui a réservé
         .border-t.border-gray-200.px-6.py-4
           .text-gray-500.text-sm.mb-2
-            | Ces informations ont été fournies par le client lors de sa réservation.
+            | Ces informations ont été fournies par le client lors de sa demande de réservation.
           .content.space-y-4
             == simple_format @stay.comments
 
-
-
-      / Payments
+    / Payments
     .overflow-hidden.bg-white.shadow.sm:rounded-lg
       .px-4.py-5.sm:px-6.flex.place-content-between
         .flex.space-x-2
@@ -135,7 +121,7 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
         dl.my-4.px-6
           .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
             dt.text-sm.font-medium.text-gray-500
-              | Tarif de la réservation
+              | Tarif du séjour
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               span.font-semibold = @stay.total_amount
           .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
@@ -145,40 +131,46 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
               = @stay.total_remaining_amount
           .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
             dt.text-sm.font-medium.text-gray-500
-              | Tarification
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              /= @stay.tier.capitalize
-          .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
-            dt.text-sm.font-medium.text-gray-500
               | Facture
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @stay.invoice_status                        
 
     / Options
-    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+    / .overflow-hidden.bg-white.shadow.sm:rounded-lg
       .px-4.py-5.sm:px-6
         h3.text-lg.font-medium.leading-6.text-gray-900
           | Options
         / p.mt-1.max-w-2xl.text-sm.text-gray-500
           | Nom et coordonnées de la personne qui a réservé
       .border-t.border-gray-200
-        dl
-         - unless @spaces_by_date.empty?
-          = render '/stays/show/options', option_label: 'Espace(s)', items_by_date: @spaces_by_date
+        / dl
+          - unless @spaces_by_date.empty?
+            = render '/stays/show/options', option_label: 'Espace(s)', items_by_date: @spaces_by_date
           
-         - unless @experiences_by_date.empty?
-          = render '/stays/show/options', option_label: 'Activité(s)', items_by_date: @experiences_by_date
+          - unless @experiences_by_date.empty?
+            = render '/stays/show/options', option_label: 'Activité(s)', items_by_date: @experiences_by_date
 
-         - unless @products_by_date.empty?
-          = render '/stays/show/options', option_label: 'Produit(s)', items_by_date: @products_by_date
+          - unless @products_by_date.empty?
+            = render '/stays/show/options', option_label: 'Produit(s)', items_by_date: @products_by_date
 
-         - unless @rental_items_by_date.empty?
-          = render '/stays/show/options', option_label: 'Object(s) de location', items_by_date: @rental_items_by_date
-
-
+          - unless @rental_items_by_date.empty?
+            = render '/stays/show/options', option_label: 'Object(s) de location', items_by_date: @rental_items_by_date
 
   .space-y-4
     = render partial: "stays/show/details", locals: { stay: @stay }
+
+    = @stay.people_emojis
+
+    - if @stay.notes.presence
+      .overflow-hidden.bg-yellow-100.shadow.sm:rounded-lg
+        / .px-4.py-3.sm:px-6.bg-yellow-200
+          h3.text-lg.font-bold.leading-6.text-yellow-900
+            | Notes internes
+          p.mt-1.max-w-2xl.text-sm.text-yellow-500
+            | Informations à usage interne
+        .px-6.py-4
+          .space-y-4.font-caveat.text-xl.text-yellow-600
+            = simple_format @stay.notes
 
     - if @stay.estimated_arrival.presence || @stay.departure_time.presence
       div
@@ -188,25 +180,14 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
               dt.truncate.text-sm.font-medium.text-gray-500
                 | Arrivée
               dd.mt-1.text-3xl.font-semibold.tracking-tight.text-gray-900
-                => @stay.estimated_arrival
-                span.text-lg.ml-1.text-gray-500
+                = @stay.estimated_arrival
+                / span.text-lg.ml-1.text-gray-500
                   = @stay.start_date
           - if @stay.departure_time.presence
             .overflow-hidden.rounded-lg.bg-white.px-4.py-5.shadow.sm:p-6
               dt.truncate.text-sm.font-medium.text-gray-500
                 | Départ
               dd.mt-1.text-3xl.font-semibold.tracking-tight.text-gray-900
-                => @stay.departure_time
-                span.text-lg.ml-1.text-gray-500
+                = @stay.departure_time
+                / span.text-lg.ml-1.text-gray-500
                   = @stay.end_date
-
-    - if @stay.notes.presence
-      .overflow-hidden.bg-yellow-100.shadow.sm:rounded-lg
-        .px-4.py-3.sm:px-6.bg-yellow-200
-          h3.text-lg.font-bold.leading-6.text-yellow-900
-            | Notes internes
-          p.mt-1.max-w-2xl.text-sm.text-yellow-500
-            | Informations à usage interne
-        .border-t.border-yellow-300.px-6.py-4
-          .space-y-4.font-caveat.text-xl.text-yellow-600
-            = simple_format @stay.notes

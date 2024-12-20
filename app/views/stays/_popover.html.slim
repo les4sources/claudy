@@ -4,11 +4,11 @@
   - elsif Date.today == stay.object.end_date
     | Check-out
   - elsif Date.today < stay.object.start_date
-    | Hébergement à venir
+    | Séjour à venir
   - elsif Date.today > stay.object.start_date && Date.today < stay.object.end_date
-    | Hébergement en cours
+    | Séjour en cours
   - else
-    | Hébergement passé
+    | Séjour passé
 .p-3
   .flex.items-center.justify-between.mb-2
     .text-sm.font-semibold.leading-none.text-gray-900
@@ -38,7 +38,7 @@
       | Heure de départ: #{stay.departure_time}
   - if stay.canceled?
     .mb-2.text-sm.font-semibold
-      | Cette réservation est annulée
+      | Ce séjour est annulé
   - if stay.confirmed?
     .mb-2
       = stay.payment_status

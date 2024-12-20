@@ -17,14 +17,12 @@ class StayItemsController < BaseController
     if service.run(params)
       respond_to do |format|
         format.turbo_stream { 
-        #  render turbo_stream: turbo_stream.append("stay-items", 
-        #         partial: 'stay_items/stay_item', 
-        #         locals: { stay_item: service.stay_item.decorate }) }
         render turbo_stream: [
-            turbo_stream.append(
+            turbo_stream.update(
               "stay-items", 
-              partial: 'stay_items/stay_item', 
-              locals: { stay_item: service.stay_item.decorate }
+              partial: 'stay_items/stay_item',
+              collection: @stay.stay_items.order_by_item_type.decorate,
+              as: :stay_item
             ),
             turbo_stream.replace(
               "total-amount", 
@@ -69,9 +67,9 @@ class StayItemsController < BaseController
           #       partial: 'stay_items/stay_item', 
           #        locals: { stay_item: service.stay_item.decorate }) }
           render turbo_stream: [
-            turbo_stream.append(
-              "stay-items", 
-              partial: 'stay_items/stay_item', 
+            turbo_stream.replace(
+              "stay_item_#{service.stay_item.id}", 
+              partial: 'stay_items/stay_item',
               locals: { stay_item: service.stay_item.decorate }
             ),
             turbo_stream.replace(
