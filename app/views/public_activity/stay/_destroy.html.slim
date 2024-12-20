@@ -1,4 +1,4 @@
-- stay = activity.trackable.decorate rescue nil
+- stay = Stay.unscoped.where(id: activity.trackable_id)&.first&.decorate
 
 - if stay
   li
@@ -12,25 +12,20 @@
         .flex.min-w-0.flex-1.justify-between.space-x-4.pt-1.5
           div
             p.text-sm.text-gray-900
-              - if stay.from_web?
-                => link_to stay.group_or_name,
-                           stay_path(stay),
-                           class: "font-medium text-blue-700 hover:text-blue-900 focus:text-blue-900"
-                | a envoyé une demande de séjour depuis le formulaire en ligne
-              - else
-                | Nouveau séjour pour
-                =< link_to stay.group_or_name,
-                    		   stay_path(stay),
-                    		   class: "font-medium text-blue-700 hover:text-blue-900 focus:text-blue-900"
+              | Le séjour de
+              =<> link_to stay.group_or_name,
+                    		  stay_path(stay),
+                    		  class: "font-medium text-blue-700 hover:text-blue-900 focus:text-blue-900"
+              | a été supprimé
 
             .md:flex.mt-2
               .mr-2.text-sm.text-gray-500
                 = stay.date_range
-              - if !stay.lodgings.empty?
+              - if !stay.lodging.nil?
                 p.mb-2.text-sm
                   = stay.lodging_badge
-              - elsif !stay.rooms.empty?
-                .grid.grid-cols-3.gap-1.mb-2
+              - else
+                .flex.space-x-1
                   = stay.rooms_badges
 
           .whitespace-nowrap.text-right.text-sm.text-gray-500
