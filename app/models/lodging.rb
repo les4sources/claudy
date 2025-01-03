@@ -61,10 +61,9 @@ class Lodging < ApplicationRecord
     }
   }.freeze
   
-   def price(nights_count)
-      PRICES[id][nights_count] if PRICES[id]
-   end
-
+  def price(nights_count)
+    PRICES[id][nights_count] if PRICES[id]
+  end
 
   def available_between?(from_date, to_date)
     # none of the lodging rooms has a confirmed reservation
@@ -76,6 +75,7 @@ class Lodging < ApplicationRecord
                ).none? && unavailabilities.where(date: from_date..to_date).none?
   end
 
+  # to be deprecated
   def available_on?(date)
     # none of the lodging rooms has a confirmed reservation
     Reservation.includes(:booking)
