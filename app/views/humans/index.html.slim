@@ -11,6 +11,8 @@
       tr
         th.py-3.px-6[scope="col"]
         th.py-3.px-6[scope="col"]
+          | Statut
+        th.py-3.px-6[scope="col"]
           | Nom 
         th.py-3.px-6[scope="col"]
           | Résumé 
@@ -21,6 +23,8 @@
             - if human.photo?
               = image_tag human.photo_url(:thumb),
                           class: "rounded-md"
+          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+            = human.status_badge
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
             = link_to human.name, 
                       human_path(human),

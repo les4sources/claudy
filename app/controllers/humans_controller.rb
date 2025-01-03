@@ -5,7 +5,7 @@ class HumansController < BaseController
 
   def index
     @humans = HumanDecorator
-      .decorate_collection(Human.all.order(name: :asc))
+      .decorate_collection(Human.unscoped.all.order(name: :asc))
   end
 
   def show
@@ -59,7 +59,7 @@ class HumansController < BaseController
   private
 
   def get_human
-    @human = Human.find(params[:id])
+    @human = Human.unscoped.find(params[:id])
   end
 
   def set_presenters

@@ -30,9 +30,13 @@ class Human < ApplicationRecord
 
   mount_uploader :photo, HumanAvatarUploader
 
-  default_scope -> { order(:name) }
+  default_scope -> { where(status: "active").order(:name) }
 
 	validates :name,
             presence: true,
             uniqueness: true
+
+  def inactive?
+    self.status == "inactive"
+  end
 end
