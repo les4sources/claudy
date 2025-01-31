@@ -36,7 +36,7 @@ class ReportsController < BaseController
     bookings.each do |booking|
       num_nights = (booking.to_date - booking.from_date).to_i
       beds_used_per_night = booking.adults + booking.children
-      (booking.from_date..booking.to_date).each do |date|
+      (booking.from_date..(booking.to_date-1)).each do |date|
         @beds_used_per_month[date.month] += beds_used_per_night
       end
     end
