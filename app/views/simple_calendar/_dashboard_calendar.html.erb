@@ -64,7 +64,7 @@
           <% end %>
         </div>
 
-        <% if @date.month == Date.today.month && @date.beginning_of_week >= @date.beginning_of_month %>
+        <% if @date.year == Date.today.year && @date.month == Date.today.month && @date.beginning_of_week >= @date.beginning_of_month %>
           <div class="flex past-weeks-toggler justify-center" data-dashboard-calendar-target="pastWeeksToggler">
             <%= link_to "Afficher les semaines précédentes",
                         "#dashboard-calendar",
