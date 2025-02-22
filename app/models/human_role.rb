@@ -10,7 +10,7 @@
 #  updated_at :datetime         not null
 #
 class HumanRole < ApplicationRecord
-  belongs_to :human
+  belongs_to :human, -> { unscope(where: :deleted_at) }
   belongs_to :role
 
   validates :date, presence: true
