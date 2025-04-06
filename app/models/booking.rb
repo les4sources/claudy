@@ -135,6 +135,10 @@ class Booking < ApplicationRecord
     status == "declined"
   end
 
+  def for_tents?
+    lodging_id == 4 # espace tentes
+  end
+
   def from_airbnb?
     platform == "airbnb"
   end

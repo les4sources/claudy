@@ -121,6 +121,12 @@ class BookingDecorator < ApplicationDecorator
         else
           h.content_tag(:span, "Grand-Duc", class: "#{shared_classes} border border-emerald-200 text-emerald-800")
         end
+      when 4
+        if object.confirmed?
+          h.content_tag(:span, "Espace Tentes", class: "#{shared_classes} bg-emerald-400 text-emerald-800")
+        else
+          h.content_tag(:span, "Espace Tentes", class: "#{shared_classes} border border-emerald-200 text-emerald-800")
+        end
       end
     end
   end

@@ -121,7 +121,7 @@
             | Pour toute question d'ici votre arrivée, communiquez avec nous par e-mail à <a href="mailto:sejours@les4sources.be" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700">sejours@les4sources.be</a>. 
           |  Les réservations ne sont pas gérées par téléphone.
 
-- if @booking.confirmed? && !@booking.lodging.nil?
+- if @booking.confirmed? && !@booking.lodging.nil? && !@booking.for_tents?
   .mt-4.overflow-hidden
     .py-5
       .mb-4
@@ -169,22 +169,30 @@
             span
               strong.font-semibold.text-gray-900
                 | Vos essuies/serviettes de bain
+          - if !@booking.for_tents?
+            li.flex.gap-x-3
+              svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+                path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
+              span
+                strong.font-semibold.text-gray-900
+                  | Vos draps
+                br
+                | Soit un drap de lit avec un sac de couchage + taie d'oreille
+                br
+                | Soit un drap de lit et une housse de couette + taie d'oreiller
+          - else
+            li.flex.gap-x-3
+              svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+                path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
+              span
+                strong.font-semibold.text-gray-900
+                  | Votre matériel de camping
           li.flex.gap-x-3
             svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
               path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
             span
               strong.font-semibold.text-gray-900
-                | Vos draps
-              br
-              | Soit un drap de lit avec un sac de couchage + taie d'oreille
-              br
-              | Soit un drap de lit et une housse de couette + taie d'oreiller
-          li.flex.gap-x-3
-            svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
-              path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
-            span
-              strong.font-semibold.text-gray-900
-                | Du savon biodégradable,
+                | Du savon biodégradable
               br
               | pour notre lagunage, système d’épuration naturel
           li.flex.gap-x-3
