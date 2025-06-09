@@ -11,6 +11,8 @@ module ApplicationHelper
   def room_badge(room)
     shared_classes = "text-xs font-semibold text-center px-1 py-0.5 rounded"
     case room.level
+    when -1
+      content_tag(:span, room.code, class: "#{shared_classes} bg-slate-100 text-slate-800")
     when 0
       content_tag(:span, room.code, class: "#{shared_classes} bg-purple-100 text-purple-800")
     when 1

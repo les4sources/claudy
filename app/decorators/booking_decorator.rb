@@ -286,6 +286,12 @@ class BookingDecorator < ApplicationDecorator
     html = ""
     rooms.each do |room|
       case room.level
+      when -1
+        if object.confirmed?
+          specific_classes = "bg-slate-100 text-slate-800"
+        else
+          specific_classes = "border border-slate-100 text-slate-800"
+        end
       when 0
         if object.confirmed?
           specific_classes = "bg-indigo-100 text-indigo-800"

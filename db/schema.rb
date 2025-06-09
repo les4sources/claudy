@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2025_01_03_205033) do
+ActiveRecord::Schema[7.0].define(version: 2025_06_09_152909) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -71,16 +71,6 @@ ActiveRecord::Schema[7.0].define(version: 2025_01_03_205033) do
     t.index ["trackable_type", "trackable_id"], name: "index_activities_on_trackable_type_and_trackable_id"
   end
 
-  create_table "beds", force: :cascade do |t|
-    t.string "name"
-    t.text "description"
-    t.integer "price_cents"
-    t.bigint "room_id"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["room_id"], name: "index_beds_on_room_id"
-  end
-
   create_table "bookings", force: :cascade do |t|
     t.string "firstname"
     t.string "lastname"
@@ -132,16 +122,6 @@ ActiveRecord::Schema[7.0].define(version: 2025_01_03_205033) do
     t.datetime "updated_at", precision: nil, null: false
     t.index ["project_id"], name: "index_bundles_on_project_id"
     t.index ["team_id"], name: "index_bundles_on_team_id"
-  end
-
-  create_table "customers", force: :cascade do |t|
-    t.string "firstname"
-    t.string "lastname"
-    t.string "phone"
-    t.string "email"
-    t.text "notes"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
   end
 
   create_table "event_categories", force: :cascade do |t|
@@ -234,6 +214,7 @@ ActiveRecord::Schema[7.0].define(version: 2025_01_03_205033) do
     t.integer "weekend_discount_cents", default: 0, null: false
     t.datetime "deleted_at", precision: nil
     t.boolean "show_on_reports", default: true
+    t.boolean "available_for_bookings"
   end
 
   create_table "notes", force: :cascade do |t|
@@ -246,7 +227,7 @@ ActiveRecord::Schema[7.0].define(version: 2025_01_03_205033) do
   end
 
   create_table "payments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.bigint "booking_id"
+    t.bigint "booking_id", null: false
     t.string "payment_method"
     t.string "status"
     t.datetime "deleted_at", precision: nil
@@ -255,12 +236,8 @@ ActiveRecord::Schema[7.0].define(version: 2025_01_03_205033) do
     t.integer "amount_cents", default: 0, null: false
     t.string "stripe_checkout_session_id"
     t.string "stripe_payment_intent_id"
-    t.bigint "stay_id"
-    t.bigint "payment_request_id"
     t.index ["booking_id"], name: "index_payments_on_booking_id"
     t.index ["id"], name: "index_payments_on_id", unique: true
-    t.index ["payment_request_id"], name: "index_payments_on_payment_request_id"
-    t.index ["stay_id"], name: "index_payments_on_stay_id"
   end
 
   create_table "products", force: :cascade do |t|
@@ -324,7 +301,6 @@ ActiveRecord::Schema[7.0].define(version: 2025_01_03_205033) do
     t.integer "level"
     t.string "code"
     t.datetime "deleted_at", precision: nil
-    t.integer "price_night_cents", default: 0, null: false
   end
 
   create_table "services", force: :cascade do |t|
@@ -395,68 +371,6 @@ ActiveRecord::Schema[7.0].define(version: 2025_01_03_205033) do
     t.string "code"
     t.datetime "deleted_at", precision: nil
     t.integer "position", default: 999
-  end
-
-  create_table "stay_item_dates", force: :cascade do |t|
-    t.string "booked_item_type", null: false
-    t.bigint "booked_item_id", null: false
-    t.date "booking_date", null: false
-    t.bigint "stay_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.boolean "direct_book", default: true
-    t.bigint "stay_item_id"
-    t.index ["booked_item_type", "booked_item_id"], name: "index_stay_item_dates_on_booked_item"
-    t.index ["stay_id"], name: "index_stay_item_dates_on_stay_id"
-    t.index ["stay_item_id"], name: "index_stay_item_dates_on_stay_item_id"
-  end
-
-  create_table "stay_items", force: :cascade do |t|
-    t.bigint "stay_id", null: false
-    t.string "item_type", null: false
-    t.bigint "item_id", null: false
-    t.date "start_date", null: false
-    t.date "end_date", null: false
-    t.integer "quantity", default: 1
-    t.integer "adults_count"
-    t.integer "children_count"
-    t.string "duration"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.integer "unit_price_cents", default: 0, null: false
-    t.string "unit_price_currency", default: "EUR", null: false
-    t.integer "babies_count"
-    t.integer "calculated_price_cents", default: 0, null: false
-    t.index ["item_type", "item_id"], name: "index_stay_items_on_item"
-    t.index ["stay_id"], name: "index_stay_items_on_stay_id"
-  end
-
-  create_table "stays", force: :cascade do |t|
-    t.bigint "user_id", null: false
-    t.date "start_date"
-    t.date "end_date"
-    t.string "status"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.string "platform"
-    t.integer "adults"
-    t.integer "children"
-    t.integer "babies"
-    t.string "estimated_arrival"
-    t.string "departure_time"
-    t.string "token"
-    t.bigint "customer_id"
-    t.datetime "deleted_at", precision: nil
-    t.text "comments"
-    t.text "notes"
-    t.boolean "draft", default: true
-    t.string "payment_status"
-    t.string "invoice_status"
-    t.string "group_name"
-    t.text "public_notes"
-    t.integer "final_price_cents", default: 0, null: false
-    t.index ["customer_id"], name: "index_stays_on_customer_id"
-    t.index ["user_id"], name: "index_stays_on_user_id"
   end
 
   create_table "stripe_events", force: :cascade do |t|
@@ -531,7 +445,6 @@ ActiveRecord::Schema[7.0].define(version: 2025_01_03_205033) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id", name: "active_storage_attachments_blob_id_fkey"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id", name: "active_storage_variant_records_blob_id_fkey"
-  add_foreign_key "beds", "rooms"
   add_foreign_key "bookings", "lodgings", name: "bookings_lodging_id_fkey"
   add_foreign_key "bundles", "projects", name: "bundles_project_id_fkey"
   add_foreign_key "bundles", "teams", name: "bundles_team_id_fkey"
@@ -542,7 +455,6 @@ ActiveRecord::Schema[7.0].define(version: 2025_01_03_205033) do
   add_foreign_key "lodging_rooms", "lodgings", name: "lodging_rooms_lodging_id_fkey"
   add_foreign_key "lodging_rooms", "rooms", name: "lodging_rooms_room_id_fkey"
   add_foreign_key "payments", "bookings", name: "payments_booking_id_fkey"
-  add_foreign_key "payments", "stays"
   add_foreign_key "projects", "humans", name: "projects_human_id_fkey"
   add_foreign_key "reservations", "bookings", name: "reservations_booking_id_fkey"
   add_foreign_key "reservations", "rooms", name: "reservations_room_id_fkey"
@@ -550,11 +462,6 @@ ActiveRecord::Schema[7.0].define(version: 2025_01_03_205033) do
   add_foreign_key "space_bookings", "events", name: "space_bookings_event_id_fkey"
   add_foreign_key "space_reservations", "space_bookings", name: "space_reservations_space_booking_id_fkey"
   add_foreign_key "space_reservations", "spaces", name: "space_reservations_space_id_fkey"
-  add_foreign_key "stay_item_dates", "stay_items"
-  add_foreign_key "stay_item_dates", "stays"
-  add_foreign_key "stay_items", "stays"
-  add_foreign_key "stays", "customers"
-  add_foreign_key "stays", "users"
   add_foreign_key "tasks", "bundles", name: "tasks_bundle_id_fkey"
   add_foreign_key "tasks", "projects", name: "tasks_project_id_fkey"
   add_foreign_key "unavailabilities", "lodgings", name: "unavailabilities_lodging_id_fkey"

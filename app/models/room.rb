@@ -20,6 +20,8 @@ class Room < ApplicationRecord
 
   def name_with_level
     case level
+    when -1
+      "#{name} (extérieur)"
     when 0
       "#{name} (rez-de-chaussée)"
     when 1

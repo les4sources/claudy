@@ -134,6 +134,8 @@
         - RoomDecorator.decorate_collection(@booking.rooms.uniq.sort_by(&:level).map(&:decorate).group_by(&:level)).each do |level|
           h4.font-semibold.mb-4 
             - case level.first
+            - when -1
+              | Extérieur
             - when 0
               | Rez-de-chaussée
             - when 1

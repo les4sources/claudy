@@ -15,7 +15,7 @@
   .mt-4.md:mt-0.col-span-2.space-y-6.sm:space-y-5
     .space-y-2
       = f.collection_radio_buttons :booking_type, 
-                                   [["Un hébergement type \"gîte\" pour un groupe", "lodging"], ["Un ou plusieurs lits dans la \"Maison communautaire\"", "rooms"]], 
+                                   [["Un hébergement type \"gîte\"", "lodging"], ["Une chambre ou un espace extérieur", "rooms"]], 
                                    :last, :first, 
                                    required: true,
                                    data: {  } do |radio_button|
@@ -27,7 +27,7 @@
     .hidden(data-booking-target="divLodgings")
       .space-y-2
         = f.label :lodging_id, "Sélectionne un hébergement *"
-        = f.collection_radio_buttons :lodging_id, Lodging.all.order(:id), :id, :form_label, required: true do |radio_button|
+        = f.collection_radio_buttons :lodging_id, Lodging.where(available_for_bookings: true).order(:id), :id, :name, required: true do |radio_button|
           .flex.items-center
             = radio_button.radio_button( \
                 data: { \

@@ -3,6 +3,8 @@ class RoomDecorator < ApplicationDecorator
 
   def checkbox_label
     case level
+    when -1
+      h.raw("<div>#{name} (extérieur)</div><div class='mt-1 text-slate-500'>#{description}</div>")
     when 0
       h.raw("<div>#{name} (rez-de-chaussée)</div><div class='mt-1 text-slate-500'>#{description}</div>")
     when 1
@@ -14,6 +16,8 @@ class RoomDecorator < ApplicationDecorator
 
   def level_name
     case level
+    when -1
+      "Extérieur"
     when 0
       "Rez-de-chaussée"
     when 1

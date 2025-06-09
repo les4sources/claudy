@@ -5,7 +5,7 @@ default: &default
 
 development:
   <<: *default
-  database: claudy_development_20250131
+  database: claudy_development_20250609
 
 test:
   <<: *default
