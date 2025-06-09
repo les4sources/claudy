@@ -3,7 +3,7 @@ class Public::CalendarsController < Public::BaseController
 
   def lodgings
     set_dates
-    @lodgings = Lodging.all
+    @lodgings = Lodging.where(available_for_bookings: true)
     @reservations = Reservation.all
       .includes(:booking)
       .between_times(@first, @last, field: :date)
@@ -13,7 +13,7 @@ class Public::CalendarsController < Public::BaseController
 
   def lodgings_modal
     set_dates
-    @lodgings = Lodging.all
+    @lodgings = Lodging.where(available_for_bookings: true)
     @reservations = Reservation.all
       .includes(:booking)
       .between_times(@first, @last, field: :date)
