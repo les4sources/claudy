@@ -135,8 +135,8 @@ class Booking < ApplicationRecord
     status == "declined"
   end
 
-  def for_tents?
-    lodging_id == 4 # espace tentes
+  def for_rooms?
+    rooms.where.not(level: -1).any?
   end
 
   def from_airbnb?
