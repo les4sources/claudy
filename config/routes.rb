@@ -25,6 +25,7 @@ Rails.application.routes.draw do
   resources :services
   resources :tasks
   resources :teams
+  resources :watchman_notes
 
   resources :bookings do
     collection do

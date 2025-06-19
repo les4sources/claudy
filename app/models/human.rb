@@ -11,6 +11,7 @@
 #  deleted_at  :datetime
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
+#  status      :string           default("active")
 #
 class Human < ApplicationRecord
   has_many :projects

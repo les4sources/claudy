@@ -30,6 +30,17 @@
           - @lodgings.each do |lodging|
             = lodging.availability_badge(@date)
 
+  / Watchman notes
+  .mt-8.space-y-8
+    .flex
+      .flex-none.w-48
+        | Notes pour 
+        br
+        | le/la veilleur·se
+      .w-full
+        div(id="watchman-notes-#{@date}")
+          = render "watchman_notes/edit", date: @date
+
   / Rooms
   .mt-4.flow-root
     .-mx-4.-my-2.overflow-x-auto.sm:-mx-6.lg:-mx-8

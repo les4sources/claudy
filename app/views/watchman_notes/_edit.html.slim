@@ -1,0 +1,19 @@
+- watchman_note = WatchmanNote.find_or_initialize_by(date: date)
+- if watchman_note.persisted?
+  = form_with model: watchman_note, local: false, data: { turbo: true } do |f|
+    .space-y-4
+      = render "watchman_notes/form", f: f
+      .flex.justify-between.items-center
+        = f.submit "Mettre à jour", class: "btn-primary btn-sm"
+        = link_to "Supprimer", 
+                  watchman_note_path(watchman_note), 
+                  method: :delete,
+                  data: { turbo_method: :delete, turbo_confirm: "Êtes-vous sûr de vouloir supprimer cette note ?" },
+                  class: "text-xs text-red-600 hover:text-red-800"
+- else
+  = form_with model: watchman_note, local: false, data: { turbo: true } do |f|
+    .space-y-4
+      = render "watchman_notes/form", f: f
+      = f.submit "Créer", class: "btn-primary btn-sm"
+
+= render "watchman_notes/message", message: nil, date: date 

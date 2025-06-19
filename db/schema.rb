@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2025_06_09_152909) do
+ActiveRecord::Schema[7.0].define(version: 2025_06_19_094033) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -441,6 +441,14 @@ ActiveRecord::Schema[7.0].define(version: 2025_06_09_152909) do
     t.datetime "created_at", precision: nil
     t.text "object_changes"
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
+  end
+
+  create_table "watchman_notes", force: :cascade do |t|
+    t.date "date"
+    t.text "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["date"], name: "index_watchman_notes_on_date"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id", name: "active_storage_attachments_blob_id_fkey"

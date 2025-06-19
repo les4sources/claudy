@@ -1,7 +1,15 @@
 - zIndex = human_roles.count * 10 - 10
 - human_roles.each do |human_role|
-  = image_tag human_role.human.photo_url(:thumb),
-              class: "relative z-#{zIndex} inline-block h-10 w-10 rounded-full ring-2 my-2 ring-white hover:shadow-lg transition",
-              alt: human_role.human.name,
-              data: { "tooltip-target": "tooltip-human-#{human_role.human.id}" }
+  .relative.inline-block
+    = image_tag human_role.human.photo_url(:thumb),
+                class: "relative z-#{zIndex} inline-block h-10 w-10 rounded-full ring-2 my-2 ring-white hover:shadow-lg transition",
+                alt: human_role.human.name,
+                data: { "tooltip-target": "tooltip-human-#{human_role.human.id}" }
+    
+    - if human_role.has_watchman_note?
+      .absolute.-top-0.-right-2.inline-flex.items-center.justify-center.text-base.w-5.h-5.shadow-sm(
+        title="Note de veilleur disponible"
+        data-turbo-frame="modal"
+      )
+        | 💬
   - zIndex = zIndex - 10
