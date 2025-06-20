@@ -20,9 +20,9 @@ class WatchmanNotesController < BaseController
             turbo_stream.update("watchman-notes-message-#{@watchman_note.date}", 
                                partial: 'watchman_notes/message', 
                                locals: { message: "Note enregistrée avec succès", type: :notice, date: @watchman_note.date }),
-            turbo_stream.replace("human-roles-#{@watchman_note.date.iso8601}", 
-                               partial: 'human_roles/day', 
-                               locals: { human_roles: HumanRole.where(date: @watchman_note.date, role_id: 1) })
+            turbo_stream.replace("calendar-day-#{@watchman_note.date.iso8601}", 
+                               partial: 'simple_calendar/day', 
+                               locals: { date: @watchman_note.date })
           ]
         }
         format.html { redirect_to day_details_path(date: @watchman_note.date.strftime("%Y-%m-%d")), notice: "Note de veilleur créée avec succès." }
@@ -53,9 +53,9 @@ class WatchmanNotesController < BaseController
             turbo_stream.update("watchman-notes-message-#{@watchman_note.date}", 
                                partial: 'watchman_notes/message', 
                                locals: { message: "Note mise à jour avec succès", type: :notice, date: @watchman_note.date }),
-            turbo_stream.replace("human-roles-#{@watchman_note.date.iso8601}", 
-                               partial: 'human_roles/day', 
-                               locals: { human_roles: HumanRole.where(date: @watchman_note.date, role_id: 1) }),
+            turbo_stream.replace("calendar-day-#{@watchman_note.date.iso8601}", 
+                               partial: 'simple_calendar/day', 
+                               locals: { date: @watchman_note.date })
           ]
         }
         format.html { redirect_to day_details_path(date: @watchman_note.date.strftime("%Y-%m-%d")), notice: "Note de veilleur mise à jour avec succès." }
@@ -84,9 +84,9 @@ class WatchmanNotesController < BaseController
           turbo_stream.update("watchman-notes-message-#{date}", 
                              partial: 'watchman_notes/message', 
                              locals: { message: "Note supprimée avec succès", type: :notice, date: date }),
-          turbo_stream.replace("human-roles-#{date.iso8601}", 
-                             partial: 'human_roles/day', 
-                             locals: { human_roles: HumanRole.where(date: date, role_id: 1) }),
+          turbo_stream.replace("calendar-day-#{date.iso8601}", 
+                             partial: 'simple_calendar/day', 
+                             locals: { date: date })
         ]
       }
       format.html { redirect_to day_details_path(date: date.strftime("%Y-%m-%d")), notice: "Note de veilleur supprimée avec succès." }
