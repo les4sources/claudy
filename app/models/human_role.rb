@@ -14,4 +14,9 @@ class HumanRole < ApplicationRecord
   belongs_to :role
 
   validates :date, presence: true
+
+  def has_watchman_note?
+    # Vérifier si c'est un rôle de veilleur (role_id: 1) et s'il existe une note pour cette date
+    role_id == 1 && WatchmanNote.exists?(date: date)
+  end
 end
