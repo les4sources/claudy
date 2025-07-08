@@ -72,6 +72,18 @@
     @apply p-4 mb-4 text-sm text-green-700 bg-green-100 rounded-lg dark:bg-green-200 dark:text-green-800;
   }
 
+  /* Styles pour la section composition désactivée */
+  .composition-disabled {
+    @apply opacity-50 relative;
+    pointer-events: none;
+  }
+
+  .composition-disabled::before {
+    content: '';
+    @apply absolute top-0 left-0 right-0 bottom-0 bg-white bg-opacity-80 rounded-md;
+    z-index: 10;
+  }
+
   #main-menu {
     li {
       a {

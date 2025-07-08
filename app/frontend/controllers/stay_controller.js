@@ -15,11 +15,14 @@ export default class extends Controller {
     'customerPhone',
     'startDateInput',
     'endDateInput',
-    'staysForDateRange'
+    'staysForDateRange',
+    'compositionSection',
+    'datesRequiredMessage'
   ]
 
   connect() {
     console.log('connect stays', this.idValue)
+    this.checkDatesCompletion()
   }
 
   initialize() {
@@ -28,6 +31,7 @@ export default class extends Controller {
 
   drawForm(e) {
     this.showSimilarStays()
+    this.checkDatesCompletion()
   }
 
   async lookupCustomer() {
@@ -68,6 +72,7 @@ export default class extends Controller {
     if (this.getEndDate() <= this.getStartDate()) {
       this.endDateInputTarget.value = dayAfterStartDate.format('YYYY-MM-DD')
     }
+    this.checkDatesCompletion()
   }
 
   async saveDates() {
@@ -87,6 +92,7 @@ export default class extends Controller {
     if (response.ok) {
       //console.log('end date saved')
     }
+    this.checkDatesCompletion()
   }
 
   async showSimilarStays() {
@@ -101,6 +107,31 @@ export default class extends Controller {
     }
   }
 
+  checkDatesCompletion() {
+    const hasValidDates = this.getStartDate().isValid() && this.getEndDate().isValid()
+    
+    if (hasValidDates) {
+      this.enableComposition()
+    } else {
+      this.disableComposition()
+    }
+  }
 
+  enableComposition() {
+    if (this.hasCompositionSectionTarget) {
+      this.compositionSectionTarget.classList.remove('composition-disabled')
+    }
+    if (this.hasDatesRequiredMessageTarget) {
+      this.datesRequiredMessageTarget.classList.add('hidden')
+    }
+  }
 
+  disableComposition() {
+    if (this.hasCompositionSectionTarget) {
+      this.compositionSectionTarget.classList.add('composition-disabled')
+    }
+    if (this.hasDatesRequiredMessageTarget) {
+      this.datesRequiredMessageTarget.classList.remove('hidden')
+    }
+  }
 }
