@@ -15,4 +15,8 @@ class Customer < ApplicationRecord
 
 	has_many :stays
 
+	def full_name
+    name = "#{firstname} #{lastname}".strip
+    name.present? ? name : "(nom non renseigné)"
+  end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_09_08_102936) do
+ActiveRecord::Schema[7.0].define(version: 2025_07_08_160715) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -142,6 +142,14 @@ ActiveRecord::Schema[7.0].define(version: 2024_09_08_102936) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "company_name"
+    t.string "vat_number"
+    t.string "street"
+    t.string "number"
+    t.string "box"
+    t.string "postcode"
+    t.string "city"
+    t.string "country", default: "Belgique"
   end
 
   create_table "event_categories", force: :cascade do |t|
@@ -204,6 +212,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_09_08_102936) do
     t.datetime "deleted_at", precision: nil
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
+    t.string "status", default: "active"
   end
 
   create_table "humans_tasks", id: false, force: :cascade do |t|
@@ -233,6 +242,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_09_08_102936) do
     t.integer "weekend_discount_cents", default: 0, null: false
     t.datetime "deleted_at", precision: nil
     t.boolean "show_on_reports", default: true
+    t.boolean "available_for_bookings"
   end
 
   create_table "notes", force: :cascade do |t|
@@ -526,6 +536,14 @@ ActiveRecord::Schema[7.0].define(version: 2024_09_08_102936) do
     t.datetime "created_at", precision: nil
     t.text "object_changes"
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
+  end
+
+  create_table "watchman_notes", force: :cascade do |t|
+    t.date "date"
+    t.text "note"
+    t.datetime "created_at", precision: nil, null: false
+    t.datetime "updated_at", precision: nil, null: false
+    t.index ["date"], name: "index_watchman_notes_on_date"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id", name: "active_storage_attachments_blob_id_fkey"

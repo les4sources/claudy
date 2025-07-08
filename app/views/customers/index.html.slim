@@ -1,0 +1,9 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Clients",
+           links: [ \
+             link_to("Nouveau client", new_customer_path, class: "btn-page-header") \
+           ]
+
+= render "customers/table", 
+         customers: @customers 

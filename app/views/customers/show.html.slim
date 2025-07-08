@@ -1,0 +1,219 @@
+- content_for :page_header do
+  = render 'layouts/components/page_header',
+           title: @customer.display_name,
+           secondary: @customer.contact_info,
+           links: [ \
+             link_to("Modifier", edit_customer_path(@customer), class: "btn-page-header") \
+           ]
+
+.grid.sm:grid-cols-1.md:grid-cols-3.gap-4
+  .md:col-span-2.space-y-4
+    / Informations de contact
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Informations de contact
+      .border-t.border-gray-200
+        dl
+          - if @customer.company_name.present?
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Entreprise
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @customer.company_name
+            - if @customer.contact_person_info.present?
+              .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+                dt.text-sm.font-medium.text-gray-500
+                  | Personne de contact
+                dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                  = @customer.contact_person_info
+          - else
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Nom
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @customer.lastname.presence || "(non renseigné)"
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Prénom
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @customer.firstname.presence || "(non renseigné)"
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Téléphone
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              - if @customer.phone.present?
+                = link_to @customer.phone, "tel:#{@customer.phone}", class: "text-blue-600 hover:text-blue-800"
+              - else
+                | (non renseigné)
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Adresse e-mail
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              - if @customer.email.present?
+                = link_to @customer.email, "mailto:#{@customer.email}", class: "text-blue-600 hover:text-blue-800"
+              - else
+                | (non renseigné)
+          - if @customer.formatted_address.present?
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Adresse
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @customer.formatted_address
+
+    / Notes
+    - if @customer.notes.present?
+      .overflow-hidden.bg-yellow-100.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6
+          h3.text-lg.font-medium.leading-6.text-yellow-900
+            | Notes
+        .border-t.border-yellow-200.px-6.py-4
+          .text-yellow-800
+            = simple_format @customer.notes
+
+    / Détail des séjours
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Séjours
+          span.ml-2.text-sm.text-gray-500
+            | (#{@customer.stays.count} total)
+      - if @customer.stays.any?
+        .border-t.border-gray-200
+          .overflow-x-auto.relative
+            table.w-full.text-sm.text-left.text-gray-500
+              thead.text-xs.text-gray-700.uppercase.bg-gray-50
+                tr
+                  th.py-3.px-6[scope="col"] Dates
+                  th.py-3.px-6[scope="col"] Statut
+                  th.py-3.px-6[scope="col"] Montant
+                  th.py-3.px-6[scope="col"] Actions
+              tbody
+                - @customer.stays.order(start_date: :desc).each do |stay|
+                  tr.bg-white.border-b.hover:bg-gray-50
+                    td.py-4.px-6
+                      = link_to stay_path(stay), class: "text-blue-600 hover:text-blue-800 hover:underline" do
+                        .font-medium
+                          | Du #{l(stay.start_date, format: :short)} au #{l(stay.end_date, format: :short)}
+                        .text-gray-500.text-xs
+                          = pluralize(stay.nights_count, "nuitée")
+                    td.py-4.px-6
+                      - case stay.status
+                      - when "confirmed"
+                        span.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-green-100.text-green-800
+                          | Confirmé
+                      - when "pending"
+                        span.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-yellow-100.text-yellow-800
+                          | En attente
+                      - when "declined"
+                        span.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-red-100.text-red-800
+                          | Refusé
+                      - when "canceled"
+                        span.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-gray-100.text-gray-800
+                          | Annulé
+                      - else
+                        span.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-gray-100.text-gray-800
+                          = stay.status
+                    td.py-4.px-6.font-medium
+                      - if stay.final_price_cents.present?
+                        = number_to_currency(stay.final_price_cents / 100.0)
+                      - else
+                        span.text-gray-400 (non renseigné)
+                    td.py-4.px-6
+                      = link_to 'Voir', stay_path(stay), class: "text-blue-500 hover:text-blue-700"
+      - else
+        .px-6.py-4.text-gray-500
+          | Aucun séjour enregistré
+
+    / Liste des paiements
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Paiements
+      - if @customer.vat_number.present?
+        .px-4.py-2.border-b.border-gray-200.bg-gray-50
+          .text-sm.text-gray-600
+            | Numéro de TVA : 
+            span.font-medium = @customer.vat_number
+      - if @customer.stays.joins(:payments).any?
+        .border-t.border-gray-200
+          .overflow-x-auto.relative
+            table.w-full.text-sm.text-left.text-gray-500
+              thead.text-xs.text-gray-700.uppercase.bg-gray-50
+                tr
+                  th.py-3.px-6[scope="col"] Date
+                  th.py-3.px-6[scope="col"] Séjour
+                  th.py-3.px-6[scope="col"] Montant
+                  th.py-3.px-6[scope="col"] Statut
+              tbody
+                - @customer.stays.joins(:payments).includes(:payments).order('payments.created_at DESC').each do |stay|
+                  - stay.payments.each do |payment|
+                    tr.bg-white.border-b.hover:bg-gray-50
+                      td.py-4.px-6
+                        = l(payment.created_at.to_date, format: :short)
+                      td.py-4.px-6
+                        = link_to stay_path(stay), class: "text-blue-600 hover:text-blue-800 hover:underline" do
+                          | #{l(stay.start_date, format: :short)} - #{l(stay.end_date, format: :short)}
+                      td.py-4.px-6.font-medium
+                        = number_to_currency(payment.amount_cents / 100.0)
+                      td.py-4.px-6
+                        - case payment.status
+                        - when "paid"
+                          span.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-green-100.text-green-800
+                            | Payé
+                        - when "pending"
+                          span.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-yellow-100.text-yellow-800
+                            | En attente
+                        - else
+                          span.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-gray-100.text-gray-800
+                            = payment.status
+      - else
+        .px-6.py-4.text-gray-500
+          | Aucun paiement enregistré
+
+  .space-y-4
+    / Statistiques rapides
+    .space-y-4
+      .bg-white.overflow-hidden.shadow.rounded-lg
+        .p-5
+          .flex.items-center
+            .flex-shrink-0
+              .w-8.h-8.bg-blue-500.rounded-md.flex.items-center.justify-center
+                span.text-white.font-semibold.text-sm
+                  = @customer.confirmed_stays_count
+            .ml-5.w-0.flex-1
+              dl
+                dt.text-sm.font-medium.text-gray-500.truncate
+                  | Séjours confirmés
+                dd.text-lg.font-medium.text-gray-900
+                  = @customer.stays_status_summary
+
+      .bg-white.overflow-hidden.shadow.rounded-lg
+        .p-5
+          .flex.items-center
+            .flex-shrink-0
+              .w-8.h-8.bg-green-500.rounded-md.flex.items-center.justify-center
+                span.text-white.font-semibold.text-xs
+                  | €
+            .ml-5.w-0.flex-1
+              dl
+                dt.text-sm.font-medium.text-gray-500.truncate
+                  | Chiffre d'affaires
+                dd.text-lg.font-medium.text-gray-900
+                  = @customer.total_revenue
+
+      - if @customer.latest_stay
+        .bg-white.overflow-hidden.shadow.rounded-lg
+          .p-5
+            .flex.items-center
+              .flex-shrink-0
+                .w-8.h-8.bg-purple-500.rounded-md.flex.items-center.justify-center
+                  span.text-white.font-semibold.text-xs
+                    | 📅
+              .ml-5.w-0.flex-1
+                dl
+                  dt.text-sm.font-medium.text-gray-500.truncate
+                    | Dernier séjour
+                  dd.text-sm.font-medium.text-gray-900
+                    = link_to stay_path(@customer.latest_stay), class: "text-blue-600 hover:text-blue-800 hover:underline" do
+                      = l(@customer.latest_stay.start_date, format: :short) 

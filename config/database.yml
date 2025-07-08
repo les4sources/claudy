@@ -5,7 +5,7 @@ default: &default
 
 development:
   <<: *default
-  database: claudy_development-20241010
+  database: claudy_development-stays
 
 test:
   <<: *default

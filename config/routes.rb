@@ -60,6 +60,7 @@ Rails.application.routes.draw do
 
   get "reports/lodging/:id", to: "reports#lodging", as: :lodging_reports
 
+  resources :customers, only: [:index, :show, :new, :create, :edit, :update]
   get 'customers/lookup', to: 'customers#lookup'
 
   namespace :public do

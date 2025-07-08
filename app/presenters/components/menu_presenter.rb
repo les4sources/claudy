@@ -133,6 +133,11 @@ class Components::MenuPresenter < PresenterBase
         body: "Événements",
         url: events_path,
         active: @active_primary == 'events'
+      },
+      {
+        body: "Clients",
+        url: customers_path,
+        active: @active_primary == 'customers'
       }
     ]
   end

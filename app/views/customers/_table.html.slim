@@ -1,0 +1,35 @@
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-6[scope="col"]
+          | Nom / Entreprise
+        th.py-3.px-6.hidden.md:table-cell[scope="col"]
+          | Contact
+        th.py-3.px-6.text-center[scope="col"]
+          | Séjours confirmés
+        th.py-3.px-6.text-right[scope="col"]
+          | Chiffre d'affaires
+        th.py-1.px-1[scope="col"]
+          | Actions
+    tbody
+      - customers.each do |customer|
+        tr.bg-white.border-b.hover:bg-gray-50
+          td.py-4.px-6.font-medium.text-gray-900
+            = link_to customer.display_name, 
+                      customer_path(customer),
+                      class: "text-blue-600 hover:text-blue-800 hover:underline"
+          td.py-4.px-6.hidden.md:table-cell.text-gray-600
+            = customer.contact_info
+          td.py-4.px-6.text-center
+            span.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-blue-100.text-blue-800
+              = customer.confirmed_stays_count
+          td.py-4.px-6.text-right.font-medium.text-green-600
+            = customer.total_revenue
+          td.py-1.px-1
+            = link_to 'Voir', 
+                      customer_path(customer), 
+                      class: "text-blue-500 hover:text-blue-700 mr-2"
+            = link_to 'Modifier', 
+                      edit_customer_path(customer), 
+                      class: "text-orange-500 hover:text-orange-700" 

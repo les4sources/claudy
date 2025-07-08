@@ -1,7 +1,6 @@
 # Claudy
 
-Claudy is the in-house web application for Les 4 Sources, a foundation whose activities are run 
-by a collective of families living in Yvoir, Belgium, at the Domaine d'Ahinvaux.
+Claudy is the in-house web application for Les 4 Sources, a foundation whose activities are run by a collective of families living in Yvoir, Belgium, at the Domaine d'Ahinvaux.
 [Read more](https://github.com/les4sources/claudy/wiki) in the wiki.
 
 It is built on Ruby on Rails 7 and PostgreSQL.
@@ -13,14 +12,11 @@ See [.ruby-version](https://github.com/les4sources/claudy/blob/main/.ruby-versio
 
 ## Tests
 
-There are no tests for now, but we want to introduce a test suite with the upcoming Spaces 
-refactoring (see [#8](https://github.com/les4sources/claudy/issues/8)). Feel free to start 
-using any test system that you feel comfortable with.
+There are no tests for now. We only have a few users and we know each other. If there is a bug, they'll knock at my door!
 
 ## Deployment
 
-We deploy on a Akamai/Linode 2GB using Hatchbox. We might set a staging environment up on the same VPS
-once we start working collectively on the code.
+We deploy on a Akamai/Linode 2GB using Hatchbox. We might set a staging environment up on the same VPS once we start working collectively on the code.
 
 ## Quick Start
 
