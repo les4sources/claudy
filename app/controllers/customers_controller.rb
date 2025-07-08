@@ -4,7 +4,26 @@ class CustomersController < BaseController
   breadcrumb "Clients", :customers_path, match: :exact
 
   def index
-    @customers = CustomerDecorator.decorate_collection(Customer.all.order(:lastname, :firstname))
+    letter = params[:letter].presence || 'A'
+    @letters = ('A'..'Z').to_a
+    @current_letter = letter
+
+    # On sélectionne tous les clients dont le nom d'affichage commence par la lettre
+    @customers = Customer.where(
+      "(company_name IS NOT NULL AND company_name != '' AND UPPER(SUBSTR(company_name, 1, 1)) = ?) OR (company_name IS NULL OR company_name = '') AND UPPER(SUBSTR(lastname, 1, 1)) = ?",
+      letter, letter
+    )
+
+    # On trie par nom d'affichage (company_name si présent, sinon lastname + firstname)
+    @customers = @customers.sort_by do |c|
+      if c.company_name.present?
+        c.company_name.downcase
+      else
+        "#{c.lastname} #{c.firstname}".downcase
+      end
+    end
+
+    @customers = CustomerDecorator.decorate_collection(@customers)
   end
 
   def show
@@ -57,6 +76,24 @@ class CustomersController < BaseController
       }
     else
       render json: { found: false }
+    end
+  end
+
+  def duplicates
+    @duplicate_groups = Customer.find_duplicates
+  end
+
+  def merge_duplicates
+    master_customer_id = params[:master_customer_id]
+    duplicate_ids = params[:duplicate_ids] || []
+    
+    service = Customers::MergeDuplicatesService.new
+    if service.run(master_customer_id: master_customer_id, duplicate_ids: duplicate_ids)
+      redirect_to duplicates_customers_path, 
+                  notice: "#{duplicate_ids.length} client(s) fusionné(s) avec succès."
+    else
+      redirect_to duplicates_customers_path, 
+                  alert: "Erreur lors de la fusion : #{service.error_message}"
     end
   end
 

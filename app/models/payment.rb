@@ -13,6 +13,7 @@
 #  stripe_payment_intent_id   :string
 #  id                         :uuid             not null, primary key
 #  stay_id                    :bigint
+#  payment_request_id         :bigint
 #
 class Payment < ApplicationRecord
   # notify ActiveRecord that the default sort order should be created_at

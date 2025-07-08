@@ -16,10 +16,16 @@
 #  estimated_arrival :string
 #  departure_time    :string
 #  token             :string
-#  customer_id       :bigint           not null
+#  customer_id       :bigint
 #  deleted_at        :datetime
 #  comments          :text
 #  notes             :text
+#  draft             :boolean          default(TRUE)
+#  payment_status    :string
+#  invoice_status    :string
+#  group_name        :string
+#  public_notes      :text
+#  final_price_cents :integer          default(0), not null
 #
 class Stay < ApplicationRecord
   # PublicActivity

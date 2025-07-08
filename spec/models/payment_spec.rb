@@ -13,6 +13,7 @@
 #  stripe_payment_intent_id   :string
 #  id                         :uuid             not null, primary key
 #  stay_id                    :bigint
+#  payment_request_id         :bigint
 #
 require 'rails_helper'
 

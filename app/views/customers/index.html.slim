@@ -2,8 +2,13 @@
   = render "layouts/components/page_header",
            title: "Clients",
            links: [ \
-             link_to("Nouveau client", new_customer_path, class: "btn-page-header") \
+             link_to("Nouveau client", new_customer_path, class: "btn-page-header"), \
+             link_to("Gérer les doublons", duplicates_customers_path, class: "btn-page-header bg-orange-500 hover:bg-orange-600 text-white") \
            ]
+
+= render "customers/alphabetical_pagination", letters: @letters, current_letter: @current_letter
 
 = render "customers/table", 
          customers: @customers 
+
+= render "customers/alphabetical_pagination", letters: @letters, current_letter: @current_letter 

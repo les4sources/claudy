@@ -8,7 +8,7 @@
                   target: "_blank"
       .mt-4.content.space-y-4.text-sm
         .font-bold.text-xl
-          = @stay.group_or_name
+          = link_to @stay.group_or_name, customer_path(@stay.customer), class: "claudy-link"
           / - if @stay.name
             .truncate.text-sm.font-semibold.text-gray-500
               = @stay.name

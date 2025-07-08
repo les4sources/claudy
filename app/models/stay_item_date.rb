@@ -1,3 +1,17 @@
+# == Schema Information
+#
+# Table name: stay_item_dates
+#
+#  id               :bigint           not null, primary key
+#  booked_item_type :string           not null
+#  booked_item_id   :bigint           not null
+#  booking_date     :date             not null
+#  stay_id          :bigint           not null
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
+#  direct_book      :boolean          default(TRUE)
+#  stay_item_id     :bigint
+#
 class StayItemDate < ApplicationRecord
   belongs_to :booked_item, polymorphic: true
   belongs_to :stay

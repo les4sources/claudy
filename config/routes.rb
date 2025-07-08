@@ -62,6 +62,8 @@ Rails.application.routes.draw do
 
   resources :customers, only: [:index, :show, :new, :create, :edit, :update] do  
     get 'lookup', on: :collection
+    get 'duplicates', on: :collection
+    patch 'merge_duplicates', on: :collection
   end
 
   namespace :public do

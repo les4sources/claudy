@@ -1,0 +1,127 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Gestion des doublons clients"
+
+- if @duplicate_groups.empty?
+  .text-center.py-16
+    .text-gray-400.text-lg Aucun doublon détecté !
+    .text-gray-500.mt-2 Tous les clients semblent uniques.
+    = link_to "Retour à la liste", customers_path, class: "mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+
+- else
+  .mb-6
+    .bg-blue-50.border-l-4.border-blue-400.p-4
+      .flex
+        .flex-shrink-0
+          .text-blue-400 ℹ️
+        .ml-3
+          .text-sm.text-blue-700
+            strong Détection automatique
+            p.mt-1 #{@duplicate_groups.length} groupe(s) de doublons détecté(s). Pour chaque groupe, sélectionnez le client à conserver (maître) et cochez les doublons à supprimer.
+
+  - @duplicate_groups.each_with_index do |duplicate_group, group_index|
+    .mb-8.bg-white.shadow.rounded-lg.overflow-hidden
+      .bg-gray-50.px-6.py-4.border-b
+        h3.text-lg.font-medium.text-gray-900
+          | Groupe #{group_index + 1} : #{duplicate_group.first.full_name}
+        .text-sm.text-gray-600.mt-1
+          | #{duplicate_group.length} clients trouvés
+
+      = form_with url: merge_duplicates_customers_path, method: :patch, local: true, class: "p-6" do |f|
+        .space-y-4
+          - duplicate_group.each do |customer|
+            - customer = customer.decorate
+            .flex.items-center.p-4.border.rounded-lg(class="#{customer.email.present? ? 'border-green-200 bg-green-50' : 'border-gray-200'}")
+              .flex.items-start.space-x-3.flex-1
+                .flex.flex-col.space-y-2
+                  / Radio pour sélectionner le client maître
+                  .flex.items-center
+                    = f.radio_button :master_customer_id, customer.id, 
+                                     id: "master_#{group_index}_#{customer.id}",
+                                     class: "h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    = f.label "master_#{group_index}_#{customer.id}", 
+                              "Client maître", 
+                              class: "ml-2 text-sm font-medium text-blue-600"
+                  
+                  / Checkbox pour marquer comme doublon à supprimer
+                  .flex.items-center
+                    = check_box_tag "duplicate_ids[]", customer.id, false,
+                                    id: "duplicate_#{group_index}_#{customer.id}",
+                                    class: "h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                    = label_tag "duplicate_#{group_index}_#{customer.id}", 
+                                "Supprimer (doublon)", 
+                                class: "ml-2 text-sm font-medium text-red-600"
+
+                .flex-1.ml-4
+                  .font-medium.text-gray-900
+                    = link_to customer.display_name, customer_path(customer), class: "text-blue-600 hover:text-blue-800 hover:underline"
+                  .text-sm.text-gray-600.mt-1
+                    - if customer.email.present?
+                      .text-green-600
+                        strong Email: 
+                        = customer.email
+                    - else
+                      .text-red-500 Pas d'email
+                    
+                    - if customer.phone.present?
+                      div
+                        strong Téléphone: 
+                        = customer.phone
+                    
+                    div
+                      strong Créé le: 
+                      = l(customer.created_at, format: :short_with_year)
+                    
+                    div.font-medium
+                      => customer.stays.count
+                      | séjour(s)
+
+          .mt-6.pt-4.border-t.border-gray-200
+            .text-sm.text-gray-500.mb-4
+              | ⚠️ Les séjours des clients supprimés seront transférés vers le client maître.
+              br
+              | Les informations manquantes du client maître seront complétées.
+            
+            = f.submit "Fusionner ce groupe", 
+                      class: "bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 font-medium",
+                      onclick: "return confirm('Êtes-vous sûr de vouloir fusionner ces clients ? Cette action est irréversible.')"
+
+  .mt-8.text-center
+    = link_to "Retour à la liste des clients", customers_path, 
+              class: "text-blue-500 hover:text-blue-700"
+
+/ JavaScript pour éviter les conflits entre radio et checkbox
+javascript:
+  document.addEventListener('DOMContentLoaded', function() {
+    // Gérer les conflits entre radio buttons (maître) et checkboxes (doublon)
+    const forms = document.querySelectorAll('form');
+    
+    forms.forEach(form => {
+      const radios = form.querySelectorAll('input[type="radio"][name="master_customer_id"]');
+      const checkboxes = form.querySelectorAll('input[type="checkbox"][name="duplicate_ids[]"]');
+      
+      radios.forEach(radio => {
+        radio.addEventListener('change', function() {
+          if (this.checked) {
+            // Décocher la checkbox correspondante si elle est cochée
+            const correspondingCheckbox = form.querySelector(`input[type="checkbox"][value="${this.value}"]`);
+            if (correspondingCheckbox) {
+              correspondingCheckbox.checked = false;
+            }
+          }
+        });
+      });
+      
+      checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+          if (this.checked) {
+            // Décocher le radio button correspondant s'il est sélectionné
+            const correspondingRadio = form.querySelector(`input[type="radio"][value="${this.value}"]`);
+            if (correspondingRadio) {
+              correspondingRadio.checked = false;
+            }
+          }
+        });
+      });
+    });
+  }); 
