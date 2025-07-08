@@ -9,7 +9,7 @@
                       class: "md:w-2/3 lg:w-1/2",
                       required: true,
                       hint: "Le client recevra des notifications par email",
-                      data: { action: "blur->stay#lookupCustomer", "stay-target": "customerEmail" }
+                      data: { "1p-ignore": true, action: "blur->stay#lookupCustomer", "stay-target": "customerEmail" }
                       
       = customer_form.text_field :firstname,
                      label: "Prénom *",

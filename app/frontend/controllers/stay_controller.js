@@ -39,7 +39,7 @@ export default class extends Controller {
         .then(response => response.json())
         .then(data => {
           if (data.found) {
-            console.log("data : " + data)
+            console.log("data : ", data)
             this.customerFirstnameTarget.value = data.firstname
             this.customerLastnameTarget.value = data.lastname
             this.customerPhoneTarget.value = data.phone
