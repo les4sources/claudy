@@ -26,6 +26,7 @@
 #  group_name        :string
 #  public_notes      :text
 #  final_price_cents :integer          default(0), not null
+#  legacy_booking_id :bigint
 #
 class Stay < ApplicationRecord
   # PublicActivity
@@ -34,7 +35,7 @@ class Stay < ApplicationRecord
   
   belongs_to :customer, optional: true
   
-  has_many :stay_items
+  has_many :stay_items, dependent: :destroy
   has_many :lodgings, through: :stay_items, source: :item, source_type: 'Lodging'
   has_many :rooms, through: :stay_items, source: :item, source_type: 'Room'
   has_many :beds, through: :stay_items, source: :item, source_type: 'Bed'

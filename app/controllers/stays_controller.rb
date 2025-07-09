@@ -1,7 +1,7 @@
 class StaysController < BaseController
  
  def index
- 	@stays = StayDecorator.decorate_collection(Stay.unscoped.current_and_future)  
+ 	@stays = StayDecorator.decorate_collection(Stay.current_and_future)
  end
 
  def past

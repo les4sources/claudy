@@ -117,7 +117,6 @@
               = render '/payments/stay_payments', payment: payment
           tfoot
             = render partial: "payments/sum", locals: { reservation: @stay }
-
         dl.my-4.px-6
           .py-2.sm:grid.sm:grid-cols-3.sm:gap-4
             dt.text-sm.font-medium.text-gray-500
@@ -155,6 +154,16 @@
 
           - unless @rental_items_by_date.empty?
             = render '/stays/show/options', option_label: 'Object(s) de location', items_by_date: @rental_items_by_date
+
+    - if @stay.legacy_booking_id.present? || @stay.legacy_space_booking_id.present?
+      .mt-4.px-6.py-3.bg-blue-50.rounded-md.text-blue-900.text-xs.opacity-75
+        | Ce séjour a été migré sur base des réservations suivantes :
+        - if @stay.legacy_booking_id.present?
+          =< link_to "Hébergement ##{@stay.legacy_booking_id}", booking_path(@stay.legacy_booking_id), class: "underline text-blue-700 hover:text-blue-900"
+        - if @stay.legacy_booking_id.present? && @stay.legacy_space_booking_id.present?
+          | ,
+        - if @stay.legacy_space_booking_id.present?
+          =< link_to "Espace(s) ##{@stay.legacy_space_booking_id}", space_booking_path(@stay.legacy_space_booking_id), class: "underline text-blue-700 hover:text-blue-900"
 
   .space-y-4
     = render partial: "stays/show/details", locals: { stay: @stay }

@@ -465,8 +465,10 @@ ActiveRecord::Schema[7.0].define(version: 2025_07_08_190626) do
     t.text "public_notes"
     t.integer "final_price_cents", default: 0, null: false
     t.bigint "legacy_booking_id", comment: "Référence vers l'ancien booking migré"
+    t.bigint "legacy_space_booking_id"
     t.index ["customer_id"], name: "index_stays_on_customer_id"
     t.index ["legacy_booking_id"], name: "index_stays_on_legacy_booking_id"
+    t.index ["legacy_space_booking_id"], name: "index_stays_on_legacy_space_booking_id"
     t.index ["user_id"], name: "index_stays_on_user_id"
   end
 
