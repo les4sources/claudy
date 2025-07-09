@@ -1,0 +1,70 @@
+/!
+/ Partial : liste détaillée des StayItems, affichage continu, trié chronologiquement
+- stay_items.sort_by(&:start_date).each do |item|
+  .bg-white.rounded-lg.shadow-md.p-4.mb-4
+    .flex.flex-row.items-center.justify-between.mb-2
+      h3.text-base.font-semibold.text-gray-900 = item.item_name
+      span.text-xs.text-gray-500 = "(#{item.item_type_label})"
+    - case item.item_type
+    - when StayItem::LODGING
+      p.text-gray-700.mb-1 = item.item.description
+      p.text-gray-600.mb-1
+        | Période :
+        span.font-semibold.ml-1 = item.start_date
+        |  au
+        span.font-semibold.ml-1 = item.end_date
+      p.text-gray-600.mb-1
+        | Adultes :
+        span.font-semibold.ml-1 = item.adults
+        | , Enfants :
+        span.font-semibold.ml-1 = item.children
+        | , Bébés :
+        span.font-semibold.ml-1 = item.babies
+    - when StayItem::ROOM
+      p.text-gray-700.mb-1 = item.item.description
+      p.text-gray-600.mb-1
+        | Période :
+        span.font-semibold.ml-1 = item.start_date
+        |  au
+        span.font-semibold.ml-1 = item.end_date
+      p.text-gray-600.mb-1
+        | Adultes :
+        span.font-semibold.ml-1 = item.adults
+        | , Enfants :
+        span.font-semibold.ml-1 = item.children
+        | , Bébés :
+        span.font-semibold.ml-1 = item.babies
+    - when StayItem::BED
+      p.text-gray-600.mb-1
+        | Période :
+        span.font-semibold.ml-1 = item.start_date
+        |  au
+        span.font-semibold.ml-1 = item.end_date
+    - when StayItem::SPACE
+      p.text-gray-700.mb-1 = item.item.description
+      p.text-gray-600.mb-1
+        | Date :
+        span.font-semibold.ml-1 = item.start_date
+        |  (#{item.duration})
+    - when StayItem::RENTAL_ITEM
+      p.text-gray-600.mb-1
+        | Quantité :
+        span.font-semibold.ml-1 = item.quantity
+      p.text-gray-600.mb-1
+        | Période :
+        span.font-semibold.ml-1 = item.start_date
+        |  au
+        span.font-semibold.ml-1 = item.end_date
+    - when StayItem::EXPERIENCE
+      p.text-gray-600.mb-1
+        | Date :
+        span.font-semibold.ml-1 = item.start_date
+      p.text-gray-600.mb-1
+        | Adultes :
+        span.font-semibold.ml-1 = item.adults
+        | , Enfants :
+        span.font-semibold.ml-1 = item.children
+      p.text-gray-600.mb-1
+        | Durée :
+        span.font-semibold.ml-1 = item.duration
+        |  heure(s)

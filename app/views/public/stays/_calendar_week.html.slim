@@ -1,0 +1,33 @@
+/!
+/ Partial : calendrier hebdomadaire du séjour
+- require 'date'
+- start_date = @stay.start_date
+- end_date = @stay.end_date
+- days = (start_date..end_date).to_a
+- weeks = days.group_by { |d| d.cweek }
+- stay_items_by_day = Hash.new { |h, k| h[k] = [] }
+- stay_items.each do |item|
+  - (item.start_date..item.end_date).each do |d|
+    - stay_items_by_day[d] << item
+
+.table-auto.w-full.text-sm
+  thead
+    tr
+      th.px-2.py-2.text-gray-500.bg-gray-50.rounded-tl-lg Semaine
+      - (1..7).each do |i|
+        th.px-2.py-2.text-gray-500.bg-gray-50 = I18n.t('date.day_names')[i % 7].capitalize
+  tbody
+    - weeks.each do |week_num, week_days|
+      tr
+        td.px-2.py-2.font-semibold.bg-gray-50.align-top Semaine #{week_num}
+        - (1..7).each do |i|
+          - day = week_days.find { |d| d.wday == (i % 7) }
+          td.px-2.py-2.align-top.bg-white.border.border-gray-200.rounded
+            - if day
+              - stay_items_by_day[day].each do |item|
+                .mb-1.p-1.rounded.bg-teal-50.shadow-sm
+                  span.font-medium = item.display_name
+                  span.text-xs.text-gray-500.ml-1 = "(#{item.type_human})"
+            - else
+              .bg-gray-100.text-gray-300.p-2.rounded-lg(style="min-height:2.5em")
+                | — 
