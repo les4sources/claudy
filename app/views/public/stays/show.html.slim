@@ -10,16 +10,15 @@
     h1.text-2xl.font-bold.mb-2.text-gray-900
       | Votre séjour aux 4 Sources
     p.text-gray-600.mb-2
-      | Du
-      = l(@stay.start_date, format: :long)
-      |  au
-      = l(@stay.end_date, format: :long)
+      = @stay.date_range
     .flex.flex-col.md:flex-row.md:items-center.md:justify-between.gap-2.mb-2
       .text-gray-700
-        | 📞 Avant/après séjour :
+        | 📞 Avant/après séjour
+        br
         span.font-semibold.ml-1 +32 490 46 77 10
       .text-gray-700
-        | 📞 Pendant le séjour :
+        | 📞 Pendant le séjour
+        br
         span.font-semibold.ml-1 +32 455 13 61 42
 
   // Calendrier hebdomadaire

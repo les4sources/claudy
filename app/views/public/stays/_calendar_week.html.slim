@@ -7,10 +7,10 @@
 - weeks = days.group_by { |d| d.cweek }
 - stay_items_by_day = Hash.new { |h, k| h[k] = [] }
 - stay_items.each do |item|
-  - (item.start_date..item.end_date).each do |d|
+  - (item.object.start_date..item.object.end_date).each do |d|
     - stay_items_by_day[d] << item
 
-.table-auto.w-full.text-sm
+table.table-auto.w-full.text-sm
   thead
     tr
       th.px-2.py-2.text-gray-500.bg-gray-50.rounded-tl-lg Semaine
@@ -26,8 +26,5 @@
             - if day
               - stay_items_by_day[day].each do |item|
                 .mb-1.p-1.rounded.bg-teal-50.shadow-sm
-                  span.font-medium = item.display_name
-                  span.text-xs.text-gray-500.ml-1 = "(#{item.type_human})"
-            - else
-              .bg-gray-100.text-gray-300.p-2.rounded-lg(style="min-height:2.5em")
-                | — 
+                  span.font-medium = item.item_name
+                  span.text-xs.text-gray-500.ml-1 = "(#{item.item_type_label})"

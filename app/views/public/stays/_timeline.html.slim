@@ -6,7 +6,7 @@
 - days = (start_date..end_date).to_a
 - stay_items_by_day = Hash.new { |h, k| h[k] = [] }
 - stay_items.each do |item|
-  - (item.start_date..item.end_date).each do |d|
+  - (item.object.start_date..item.object.end_date).each do |d|
     - stay_items_by_day[d] << item
 
 .overflow-x-auto
@@ -17,5 +17,5 @@
         .w-2.h-2.bg-teal-400.rounded-full.mb-2
         - stay_items_by_day[day].each do |item|
           .mb-1.px-2.py-1.bg-teal-50.rounded.shadow.text-xs.text-gray-900.text-center
-            span.font-medium = item.display_name
-            span.text-xs.text-gray-500.ml-1 = "(#{item.type_human})" 
+            span.font-medium = item.item_name
+            span.text-xs.text-gray-500.ml-1 = "(#{item.item_type_label})" 
