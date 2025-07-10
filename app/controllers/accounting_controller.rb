@@ -4,18 +4,16 @@ class AccountingController < BaseController
       .decorate_collection(
         Booking.where(tier: "non défini", status: ["confirmed", "pending"])
       )
-    @bookings_with_requested_invoice = BookingDecorator
-      .decorate_collection(
-        Booking.where(status: "confirmed", invoice_status: "requested")
-      )
     @space_bookings = SpaceBookingDecorator
       .decorate_collection(
         SpaceBooking.where(tier: "non défini", status: ["confirmed", "pending"])
       )
-    @space_bookings_with_requested_invoice = SpaceBookingDecorator
-      .decorate_collection(
-        SpaceBooking.where(status: "confirmed", invoice_status: "requested")
-      )
+    @stays_without_price = StayDecorator.decorate_collection(
+      Stay.where(status: "confirmed", final_price_cents: 0, draft: false)
+    )
+    @stays_with_requested_invoice = StayDecorator.decorate_collection(
+      Stay.where(status: "confirmed", invoice_status: "requested", draft: false)
+    )
   end
 
   private
