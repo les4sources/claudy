@@ -8,7 +8,7 @@
                 data: { turbo_frame: "modal" },
                 class: "claudy-link ml-2 text-xs"
     .font-light = payment.payment_method
-- if !@booking.nil?
+- if !@booking.nil? || controller_name == "payments"
   tr(id="#{dom_id payment}" class="#{payment.tr_class}")
     td.py-4.px-6.text-center
       = payment.payment_method_emoji
