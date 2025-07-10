@@ -223,6 +223,11 @@ class Stay < ApplicationRecord
     Stay.items_grouped_by_date(stay_items.where(item_type: StayItem::RENTAL_ITEM))
   end
 
+  # Retourne true si le séjour contient au moins un hébergement de type Lodging
+  def has_lodging?
+    stay_items.where(item_type: StayItem::LODGING).exists?
+  end
+
   def self.items_grouped_by_date(_stay_items)
     reservation_hash = Hash.new { |hash, key| hash[key] = [] }
 

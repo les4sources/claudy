@@ -1,12 +1,15 @@
-- content_for :meta_title, "Mon séjour aux 4 Sources"
+- content_for :meta_title, "Votre réservation aux 4 Sources"
 
 - content_for :page_banner do
   .text-sm.leading-6.text-white.text-center
-    | <strong class="font-semibold">Une question </strong>au sujet de votre séjour ?&nbsp;
+    | <strong class="font-semibold">Une question </strong>au sujet de votre réservation?
     <a href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3" target="_blank" class="flex-none rounded-full bg-gray-900 ml-2 py-1 px-3.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900">Consultez la FAQ <span aria-hidden="true">&rarr;</span></a>
 
-.container.mx-auto.max-w-4xl.px-4
-  .bg-white.rounded-lg.shadow-md.p-6.mb-8
+= render "public/stays/status_callout", 
+         stay: @stay
+
+.container.mx-auto.max-w-4xl.px-4.space-y-8
+  div
     h1.text-2xl.font-bold.mb-2.text-gray-900
       | Votre séjour aux 4 Sources
     p.text-gray-600.mb-2
@@ -21,26 +24,26 @@
         br
         span.font-semibold.ml-1 +32 455 13 61 42
 
-  // Calendrier hebdomadaire
-  .bg-white.rounded-lg.shadow-md.p-6.mb-8
+  div
+    // Calendrier hebdomadaire
     h2.text-lg.font-semibold.mb-4.text-gray-900
-      | Calendrier de votre séjour (vue hebdomadaire)
+      | Calendrier de votre séjour
     = render 'public/stays/calendar_week', stay: @stay, stay_items: @stay_items
 
-  // Frise chronologique
-  .bg-white.rounded-lg.shadow-md.p-6.mb-8
+  / div
+    // Frise chronologique
     h2.text-lg.font-semibold.mb-4.text-gray-900
       | Frise chronologique de votre séjour
     = render 'public/stays/timeline', stay: @stay, stay_items: @stay_items
 
-  // Liste des StayItems (affichage continu, trié chronologiquement)
-  .bg-white.rounded-lg.shadow-md.p-6.mb-8
+  / div
+    // Liste des StayItems (affichage continu, trié chronologiquement)
     h2.text-lg.font-semibold.mb-4.text-gray-900
       | Détail de votre séjour
     = render 'public/stays/stay_items', stay_items: @stay_items
 
   - if @ordered_products.present?
-    .bg-white.rounded-lg.shadow-md.p-6.mb-8
+    div
       h2.text-lg.font-semibold.mb-4.text-gray-900
         | Produits commandés
       table.min-w-full.divide-y.divide-gray-200
@@ -51,36 +54,40 @@
         tbody.bg-white.divide-y.divide-gray-100
           - @ordered_products.each do |product|
             tr
-              td.px-4.py-2.text-gray-900 = product.name
+              td.px-4.py-2.text-gray-900 = product.item.name
               td.px-4.py-2.text-gray-900 = product.quantity
 
-  - if @stay.public_notes.present?
-    .bg-slate-50.sm:rounded-lg.p-6.mb-8
+  - if @stay.public_notes.present? && !strip_tags(@stay.public_notes).strip.empty?
+    div
       h2.text-lg.font-semibold.mb-4.text-gray-900
-        | Notes importantes
+        | Notes concernant votre réservation
       .text-base.text-gray-800
         == @stay.public_notes
 
   // Récapitulatif du prix
-  .bg-white.rounded-lg.shadow-md.p-6.mb-8
+  div
     h2.text-lg.font-semibold.mb-4.text-gray-900
       | Récapitulatif du prix du séjour
     table.min-w-full.divide-y.divide-gray-200.mb-4
       thead
         tr
+          th.text-left.px-4.py-2.text-gray-700.font-medium &nbsp;
           th.text-left.px-4.py-2.text-gray-700.font-medium Élément
           th.text-left.px-4.py-2.text-gray-700.font-medium Montant (€)
       tbody.bg-white.divide-y.divide-gray-100
         - total_items = 0
         - @stay_items.each do |item|
           tr
+            td.px-4.py-2.text-gray-900 = item.item_type_label
             td.px-4.py-2.text-gray-900 = item.item_name
             td.px-4.py-2.text-gray-900 = number_to_currency(item.calculated_price_cents / 100.0, unit: "€", format: "%n %u")
           - total_items += item.calculated_price_cents
         - if @stay.final_price_cents < total_items
           tr
+            td &nbsp;
             td.px-4.py-2.text-gray-900.font-semibold Réduction octroyée
             td.px-4.py-2.text-gray-900.font-semibold.text-red-600 = "-#{number_to_currency((total_items - @stay.final_price_cents) / 100.0, unit: "€", format: "%n %u")}"
         tr
+          td &nbsp;
           td.px-4.py-2.text-gray-900.font-bold Total à payer
           td.px-4.py-2.text-gray-900.font-bold = number_to_currency(@stay.final_price_cents / 100.0, unit: "€", format: "%n %u") 
