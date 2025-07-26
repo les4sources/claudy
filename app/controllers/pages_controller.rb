@@ -50,7 +50,7 @@ class PagesController < BaseController
   def other_bookings
     @reservations = Reservation.all
       .includes(:booking)
-      .where.not(booking: { status: "declined" })
+      .where(booking: { status: "confirmed" })
       .where.not(booking_id: params[:booking_id])
       .between_times(Date.parse(params[:from_date]), Date.parse(params[:to_date]) - 1.day, field: :date)
       .order(date: :asc)
