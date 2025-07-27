@@ -30,6 +30,7 @@ module Stays
       @stay.user_id = User.first.id
       @stay.save!
       return false if !@stay.valid?
+      @stay.build_booked_item
       raise error_message if !error.nil?
       true
     end

@@ -5,6 +5,16 @@ class StayDecorator < ApplicationDecorator
     PaginatingDecorator
   end
 
+  def customer_name
+    if object.customer.company_name.presence
+      object.customer.company_name
+    elsif object.group_name.presence
+      object.group_name
+    else
+      object.customer.full_name
+    end
+  end
+
    def group_or_name
     classes = object.deleted? ? "line-through" : nil
     if object.group_name.presence
@@ -13,7 +23,6 @@ class StayDecorator < ApplicationDecorator
       h.content_tag(:span, name, class: classes)
     end
   end
-
 
   def date_range
     if object.start_date.year == object.end_date.year
@@ -237,8 +246,6 @@ class StayDecorator < ApplicationDecorator
     end
   end
 
-
-
   def payment_status
     shared_classes = "stay-#{object.id}-payment-status text-xs font-medium mr-2 px-2.5 py-0.5 rounded"
     case object.payment_status
@@ -264,5 +271,40 @@ class StayDecorator < ApplicationDecorator
     else
       "Non requise"
     end
+  end
+
+  # Affiche les tags hébergement (lodging, rooms, beds) selon les règles métier
+  def accommodation_tags
+    html = ""
+    # Lodging tags
+    object.lodgings.uniq.each do |lodging|
+      case lodging.name.downcase
+      when /chevêche/
+        html << h.content_tag(:span, "Chevêche", class: "inline-block bg-green-100 text-green-800 font-medium text-xs px-2.5 py-0.5 rounded mr-2")
+      when /hulotte/
+        html << h.content_tag(:span, "Hulotte", class: "inline-block bg-yellow-100 text-yellow-800 font-medium text-xs px-2.5 py-0.5 rounded mr-2")
+      when /grand-duc/
+        html << h.content_tag(:span, "Grand-Duc", class: "inline-block bg-purple-100 text-purple-800 font-medium text-xs px-2.5 py-0.5 rounded mr-2")
+      end
+    end
+    # Room tags (trigramme)
+    object.rooms.uniq.each do |room|
+      trigram = room.name.split.map { |w| w[0,1].upcase }.join[0,3]
+      html << h.content_tag(:span, trigram, class: "inline-block bg-blue-100 text-blue-800 font-medium text-xs px-2.5 py-0.5 rounded mr-2")
+    end
+    # Bed tag
+    if object.beds.uniq.any?
+      count = object.beds.count
+      html << h.content_tag(:span, "#{count} lit#{'s' if count > 1}", class: "inline-block bg-pink-100 text-pink-800 font-medium text-xs px-2.5 py-0.5 rounded mr-2")
+    end
+    h.raw(html)
+  end
+
+  def spaces_tags
+    html = ""
+    object.spaces.uniq.each do |space|
+      html << h.content_tag(:span, space.name, class: "inline-block bg-blue-100 text-blue-800 font-medium text-xs px-2.5 py-0.5 rounded mr-2")
+    end
+    h.raw(html)
   end
 end
