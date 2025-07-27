@@ -17,7 +17,7 @@ h2.mt-6.text-lg.font-bold Occupation et revenus
         th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
           | &nbsp;
         th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
-          | Réservations
+          | Nuitées
         th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
           | Hébergés
         th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col" colspan="2"]
@@ -57,7 +57,7 @@ h2.mt-6.text-lg.font-bold Occupation et revenus
               .inline-flex
                 = @lodging.monthly_reports_bar(Date.new(@year, month, 1))
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-700
-            = @lodging.count_bookings(Date.new(@year, month, 1), Date.new(@year, month, 1).end_of_month)
+            = @lodging.count_stays(Date.new(@year, month, 1), Date.new(@year, month, 1).end_of_month)
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-700
             = @lodging.count_people(Date.new(@year, month, 1), Date.new(@year, month, 1).end_of_month)
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-700
@@ -81,7 +81,7 @@ h2.mt-6.text-lg.font-bold Occupation et revenus
         td &nbsp;
         td &nbsp;
         td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
-          = @lodging.count_bookings(Date.new(@year, 1, 1), Date.new(@year, 12, 31))
+          = @lodging.count_stays(Date.new(@year, 1, 1), Date.new(@year, 12, 31))
         td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
           = @lodging.count_people(Date.new(@year, 1, 1), Date.new(@year, 12, 31))
         td.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900

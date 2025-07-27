@@ -152,8 +152,15 @@ class Lodging < ApplicationRecord
     bookings.where(status: "confirmed", from_date: start_date..end_date)
   end
 
-  def count_bookings(start_date, end_date)
-    bookings_for_date_range(start_date, end_date).count
+  def count_stays(start_date, end_date)
+    StayItemDate
+      .includes(:stay)
+      .where(
+        booking_date: start_date..end_date, 
+        booked_item_type: StayItem::LODGING, 
+        booked_item_id: 1,
+        stay: { status: "confirmed" })
+      .pluck(:booking_date).uniq.count
   end
 
   def count_people(start_date, end_date)

@@ -71,15 +71,23 @@ class LodgingDecorator < ApplicationDecorator
   end
 
   def monthly_reports_bar(date)
-    bookings_dates = Reservation
-      .includes(:booking)
-      .where(date: date..date.end_of_month, booking: { status: "confirmed", lodging: object })
-      .pluck(:date).uniq
+    # bookings_dates = Reservation
+    #   .includes(:booking)
+    #   .where(date: date..date.end_of_month, booking: { status: "confirmed", lodging: object })
+    #   .pluck(:date).uniq
+    stay_dates = StayItemDate
+      .includes(:stay)
+      .where(
+        booking_date: date..date.end_of_month, 
+        booked_item_type: StayItem::LODGING, 
+        booked_item_id: object.id,
+        stay: { status: "confirmed" })
+      .pluck(:booking_date).uniq
 
     out = ActiveSupport::SafeBuffer.new
     date.upto(date.end_of_month).each do |current_date|
       default_class = current_date.on_weekend? ? "bg-green-500" : "bg-green-300"
-      out << h.content_tag(:div, nil, class: "w-1 h-2 mr-px #{bookings_dates.include?(current_date) ? "bg-red-500" : default_class}")
+      out << h.content_tag(:div, nil, class: "w-1 h-2 mr-px #{stay_dates.include?(current_date) ? "bg-red-500" : default_class}")
     end
     out.html_safe
   end

@@ -89,12 +89,12 @@
                   th.py-3.px-6[scope="col"] Montant
                   th.py-3.px-6[scope="col"] Actions
               tbody
-                - @customer.stays.order(start_date: :desc).each do |stay|
+                - StayDecorator.decorate_collection(@customer.stays.order(start_date: :desc)).each do |stay|
                   tr.bg-white.border-b.hover:bg-gray-50
                     td.py-4.px-6
                       = link_to stay_path(stay), class: "text-blue-600 hover:text-blue-800 hover:underline" do
                         .font-medium
-                          | Du #{l(stay.start_date, format: :short_with_year)} au #{l(stay.end_date, format: :short_with_year)}
+                          = stay.date_range
                         .text-gray-500.text-xs
                           = pluralize(stay.nights_count, "nuitée")
                     td.py-4.px-6
@@ -146,14 +146,14 @@
                   th.py-3.px-6[scope="col"] Montant
                   th.py-3.px-6[scope="col"] Statut
               tbody
-                - @customer.stays.joins(:payments).includes(:payments).order('payments.created_at DESC').each do |stay|
+                - StayDecorator.decorate_collection(@customer.stays.joins(:payments).includes(:payments).order('payments.created_at DESC')).each do |stay|
                   - stay.payments.each do |payment|
                     tr.bg-white.border-b.hover:bg-gray-50
                       td.py-4.px-6
                         = l(payment.created_at.to_date, format: :short_with_year)
                       td.py-4.px-6
                         = link_to stay_path(stay), class: "text-blue-600 hover:text-blue-800 hover:underline" do
-                          | #{l(stay.start_date, format: :short_with_year)} - #{l(stay.end_date, format: :short_with_year)}
+                          = stay.date_range
                       td.py-4.px-6.font-medium
                         = number_to_currency(payment.amount_cents / 100.0)
                       td.py-4.px-6

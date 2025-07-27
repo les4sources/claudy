@@ -26,7 +26,10 @@ class StayDecorator < ApplicationDecorator
 
   def date_range
     if object.start_date.year == object.end_date.year
-      if object.start_date.month == object.end_date.month && object.start_date.year == Date.today.year
+      if object.start_date == object.end_date
+        # Même jour
+        "#{l(object.start_date, format: :short_with_year)}"
+      elsif object.start_date.month == object.end_date.month && object.start_date.year == Date.today.year
         # Même mois et année en cours
         "du #{object.start_date.day} au #{l(object.end_date, format: :short)} #{object.start_date.year}"
       elsif object.start_date.month == object.end_date.month

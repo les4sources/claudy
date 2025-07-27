@@ -9,16 +9,23 @@
     | Séjour en cours
   - else
     | Séjour passé
-.p-3
-  .text-sm.font-semibold.leading-none.text-gray-900.mb-2
-    = link_to stay.customer_name, stay_path(stay), class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+.p-3.space-y-2
+  .flex.items-center.justify-between.mb-2
+    .text-sm.font-semibold.leading-none.text-gray-900
+      = link_to stay.customer_name, 
+                stay_path(stay), 
+                class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+    div
+      = link_to "Détails", 
+                stay_path(stay),
+                class: "text-white bg-cyan-700 hover:bg-cyan-800 focus:ring-4 focus:ring-cyan-300 font-medium rounded-lg text-xs px-3 py-1.5 focus:outline-none"
 
   .space-y-1.mb-1
     = stay.accommodation_tags
     = stay.spaces_tags
 
   p.text-sm.font-medium
-    span.ml-1 = stay.payment_status
+    = stay.payment_status
 
   ul.flex.text-base.font-light.mb-2
     - if stay.adults.to_i > 0

@@ -30,7 +30,7 @@
       .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-event-#{event.id}" data-popover-trigger="click")
 
   / Space reservations
-  - if @grouped_space_reservations[date]
+  / - if @grouped_space_reservations[date]
     - @grouped_space_reservations[date].sort_by {|sr| sr.start_time }.group_by { |sr| sr.space_booking.id }.each do |grouped_space_reservations|
       - space_reservation = grouped_space_reservations.last.first
       - space_booking = SpaceBookingDecorator.new(space_reservation.space_booking)
@@ -60,7 +60,7 @@
         .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-space-reservation-#{space_reservation.id}" data-popover-trigger="click")
 
   / Reservations
-  - if @grouped_reservations[date]
+  / - if @grouped_reservations[date]
     - @grouped_reservations[date].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations|
       - reservation = grouped_reservations.last.first
       - booking = BookingDecorator.new(reservation.booking)
@@ -87,7 +87,6 @@
               - grouped_reservations.last.each do |reservation|
                 = room_badge(reservation.room)
         .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-reservation-#{reservation.id}" data-popover-trigger="click")
-
 
   / Stays
   - if @grouped_stay_reservations[date]
@@ -119,7 +118,7 @@
         .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-reservation-#{reservation.id}" data-popover-trigger="click")
 
   / Stay Spaces
-  - if @grouped_spaces[date]
+  / - if @grouped_spaces[date]
     - @grouped_spaces[date].sort_by {|sr| sr.booking_date }.group_by { |sr| sr.booked_item.id }.each do |grouped_space|
       - space_reservation = grouped_space.last.first
       - stay = StayDecorator.new(space_reservation.stay)
@@ -149,7 +148,7 @@
         .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-space-reservation-#{space_reservation.id}" data-popover-trigger="click")
 
   / Stay Experiences
-  - if @grouped_experiences[date]
+  / - if @grouped_experiences[date]
     - @grouped_experiences[date].sort_by {|sr| sr.booking_date }.group_by { |sr| sr.booked_item.id }.each do |grouped_experience|
       - exp_reservation = grouped_experience.last.first
       - stay = StayDecorator.new(exp_reservation.stay)
@@ -177,7 +176,6 @@
           .block.text-gray-500
             = exp_reservation.stay_item.decorate.duration
         .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-space-reservation-#{exp_reservation.id}" data-popover-trigger="click")
-        
 
 / Activity feed
 .mt-8.pb-5.border-b.border-gray-200

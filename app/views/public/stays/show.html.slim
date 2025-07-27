@@ -11,18 +11,19 @@
 .container.mx-auto.max-w-4xl.px-4.space-y-8
   div
     h1.text-2xl.font-bold.mb-2.text-gray-900
-      | Votre séjour aux 4 Sources
-    p.text-gray-600.mb-2
-      = @stay.date_range
+      | Votre réservation aux 4 Sources
+      br
+      span.text-gray-900.font-semibold = @stay.date_range
+
     .flex.flex-col.md:flex-row.md:items-center.md:justify-between.gap-2.mb-2
       .text-gray-700
         | 📞 Avant/après séjour
         br
-        span.font-semibold.ml-1 +32 490 46 77 10
+        span.font-semibold +32 490 46 77 10
       .text-gray-700
         | 📞 Pendant le séjour
         br
-        span.font-semibold.ml-1 +32 455 13 61 42
+        span.font-semibold +32 455 13 61 42
 
   div
     // Calendrier hebdomadaire

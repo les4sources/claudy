@@ -22,8 +22,12 @@
           td.py-4.px-6.hidden.md:table-cell.text-gray-600
             = customer.contact_info
           td.py-4.px-6.text-center
-            span.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-blue-100.text-blue-800
-              = customer.confirmed_stays_count
+            - if customer.confirmed_stays_count > 0
+              span.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-blue-100.text-blue-800
+                = customer.confirmed_stays_count
+            - else
+              span.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.text-gray-500
+                = customer.confirmed_stays_count
           td.py-4.px-6.text-right.font-medium.text-green-600
             = customer.total_revenue
           td.py-1.px-1
