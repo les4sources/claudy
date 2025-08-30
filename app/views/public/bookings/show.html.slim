@@ -119,6 +119,8 @@
             et de nous permettre de vous accueillir. 
           - if @booking.from_airbnb?
             | Pour toute question d'ici votre arrivée, communiquez avec nous via la messagerie Airbnb.
+          - elsif @booking.from_bookingdotcom?
+            | Pour toute question d'ici votre arrivée, communiquez avec nous via la messagerie Booking.com.
           - else
             | Pour toute question d'ici votre arrivée, communiquez avec nous par e-mail à <a href="mailto:sejours@les4sources.be" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700">sejours@les4sources.be</a>. 
           |  Les réservations ne sont pas gérées par téléphone.
@@ -259,6 +261,8 @@
               | Offert
             - elsif @booking.from_airbnb?
               | Disponible sur Airbnb
+            - elsif @booking.from_bookingdotcom?
+              | Disponible sur Booking.com
             - else
               = @booking.price
 
@@ -286,7 +290,7 @@
               dd.mt-1.text-base.text-gray-900
                 | Les informations relatives au paiement seront disponibles lorsque votre réservation aura été confirmée par notre équipe.
 
-      - if !@booking.from_airbnb?
+      - if !@booking.from_airbnb? && !@booking.from_bookingdotcom?
         = render "public/bookings/show/payments", booking: @booking
 
       - if @booking.invoice_status == "requested"
@@ -308,6 +312,8 @@
   		<a href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3" target="_blank">consulter la FAQ des hébergements</a> et à nous contacter 
     - if @booking.from_airbnb?
       |  via la messagerie Airbnb.
+    - elsif @booking.from_bookingdotcom?
+      |  via la messagerie Booking.com.
     - else
       |  par email à <a href="mailto:sejours@les4sources.be">sejours@les4sources.be</a>.
   

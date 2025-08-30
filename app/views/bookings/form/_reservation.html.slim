@@ -19,7 +19,7 @@
       = f.label :status,
                 "Plateforme de réservation *"
       = f.collection_radio_buttons :platform, 
-                                   [["Réservation en direct", "direct"], ["Airbnb", "airbnb"]],
+                                   [["Réservation en direct", "direct"], ["Airbnb", "airbnb"], ["Booking.com", "bookingdotcom"]],
                                    :last, :first, 
                                    required: true do |radio_button|
         .flex.items-center

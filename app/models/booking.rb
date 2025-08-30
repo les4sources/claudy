@@ -143,6 +143,10 @@ class Booking < ApplicationRecord
     platform == "airbnb"
   end
 
+  def from_bookingdotcom?
+    platform == "bookingdotcom"
+  end
+
   def from_web?
     platform == "web"
   end

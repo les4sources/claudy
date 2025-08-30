@@ -134,6 +134,8 @@ class BookingDecorator < ApplicationDecorator
   def name
     if object.from_airbnb?
       h.raw("#{object.firstname} #{object.lastname}" + h.render("shared/airbnb_icon"))
+    elsif object.from_bookingdotcom?
+      h.raw("#{object.firstname} #{object.lastname}" + h.render("shared/bookingdotcom_icon"))
     elsif object.from_web?
       h.raw("#{object.firstname} #{object.lastname}" + h.render("shared/web_icon"))
     else
@@ -192,6 +194,8 @@ class BookingDecorator < ApplicationDecorator
       "Virement bancaire"
     when "airbnb"
       "Via Airbnb"
+    when "bookingdotcom"
+      "Via Booking.com"
     end
   end
 
@@ -203,6 +207,8 @@ class BookingDecorator < ApplicationDecorator
       label = "Virement"
     when "airbnb"
       label = "Airbnb"
+    when "bookingdotcom"
+      label = "Booking.com"
     end
     shared_classes = "text-sm font-medium mr-2 px-2.5 py-0.5 rounded"
     case object.payment_status

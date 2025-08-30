@@ -35,6 +35,8 @@ module Payments
       case @payment.payment_method
       when "airbnb"
         @payment.status = "paid"
+      when "bookingdotcom"
+        @payment.status = "paid"
       when "cash"
         @payment.status = "paid"
       when "bank_transfer"

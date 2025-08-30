@@ -69,7 +69,7 @@ module Bookable
     return if !@booking.email.present?
     if @booking.from_web?
       BookingMailer.booking_request(@booking).deliver_now
-    elsif @booking.from_airbnb?
+    elsif @booking.from_airbnb? || @booking.from_bookingdotcom?
       # no notification
     else
       if @booking.confirmed?

@@ -150,6 +150,8 @@ class SpaceBookingDecorator < ApplicationDecorator
       label = "Virement"
     when "airbnb"
       label = "Airbnb"
+    when "bookingdotcom"
+      label = "Booking.com"
     else
       label = "?"
     end

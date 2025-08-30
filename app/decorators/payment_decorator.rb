@@ -35,6 +35,8 @@ class PaymentDecorator < ApplicationDecorator
     line_content = case object.payment_method
       when "airbnb"
         "Payé #{amount} via Airbnb"
+      when "bookingdotcom"
+        "Payé #{amount} via Booking.com"
       when "bank_transfer"
         "Payé #{amount} par virement bancaire"
       when "cash"
@@ -49,6 +51,8 @@ class PaymentDecorator < ApplicationDecorator
     case object.payment_method
     when "airbnb"
       "Airbnb"
+    when "bookingdotcom"
+      "Booking.com"
     when "bank_transfer"
       "Virement"
     when "cash"
@@ -68,6 +72,8 @@ class PaymentDecorator < ApplicationDecorator
       h.content_tag(:div, "💳", class: "ml-1")
     when "airbnb"
       h.render("shared/airbnb_icon")
+    when "bookingdotcom"
+      h.render("shared/bookingdotcom_icon")
     end
   end
 

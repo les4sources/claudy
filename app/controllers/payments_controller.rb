@@ -20,6 +20,8 @@ class PaymentsController < BaseController
     @payment = @booking.payments.new(amount_cents: nil)
     if @booking.from_airbnb?
       @payment.payment_method = "airbnb"
+    elsif @booking.from_bookingdotcom?
+      @payment.payment_method = "bookingdotcom"
     end
   end
 
