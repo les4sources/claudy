@@ -1,0 +1,20 @@
+= render TurboModal::Component.new(title: l(@date, format: :month_year).capitalize, width: :md) do
+  .space-y-4
+    - if @watchman_stats.any?
+      .divide-y.divide-gray-200
+        - @watchman_stats.each do |stat|
+          .flex.items-center.justify-between.py-3
+            .flex.items-center.gap-3.flex-1
+              span.font-medium.text-gray-900
+                = stat[:human].name
+            .flex.items-center.gap-2
+              - if stat[:count] > 0
+                span.text-sm.text-gray-500
+                  = "#{stat[:count]} #{stat[:count] == 1 ? 'veille' : 'veilles'}"
+              - else
+                span.text-sm.text-gray-400.italic
+                  | Aucune veille
+    - else
+      p.text-gray-500.text-center.py-4
+        | Aucun veilleur enregistré pour cette période.
+

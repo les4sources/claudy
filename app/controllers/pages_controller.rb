@@ -71,6 +71,32 @@ class PagesController < BaseController
     render layout: false
   end
 
+  def month_details
+    # Déterminer la période à partir de la date en paramètre
+    @date = Date.parse(params[:date])
+    @period_start = @date.beginning_of_month
+    @period_end = @date.end_of_month
+    
+    # Récupérer tous les humains actifs avec leur nombre de veilles dans la période
+    watchman_counts = HumanRole
+      .where(role_id: 1, date: @period_start..@period_end)
+      .joins(:human)
+      .group('humans.id')
+      .count
+
+    # Créer la liste avec tous les humains actifs (même ceux avec 0 veilles)
+    # Le default_scope de Human filtre déjà par status: 'active'
+    all_active_humans = Human.all.pluck(:id, :name).to_h
+    @watchman_stats = all_active_humans.map do |human_id, human_name|
+      {
+        human: Human.find(human_id),
+        count: watchman_counts[human_id] || 0
+      }
+    end.sort_by { |stat| -stat[:count] }
+    
+    render layout: false
+  end
+
   private
 
   def set_dates

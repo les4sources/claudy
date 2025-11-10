@@ -9,3 +9,5 @@ Rails.application.config.session_store :cookie_store,
   secure: Rails.env.production?, # Use secure cookies in production
   same_site: :lax
 
+
+

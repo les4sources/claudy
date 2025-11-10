@@ -1,6 +1,7 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
            title: l(@date, format: :month_year).capitalize,
+           date: @date,
            links: [ \
              buttons_to_previous_months(@date),
              buttons_to_next_months(@date) \
