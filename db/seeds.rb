@@ -50,6 +50,7 @@ Space.create(name: "Tilleul", code: "TIL", description: "1er étage, 140 m2")
 Space.create(name: "Saule", code: "SAU", description: "1er étage, 45 m2")
 Space.create(name: "Les 2 salles", code: "T+S", description: "1er étage, 185 m2")
 Space.create(name: "Cuisine professionnelle", code: "CUI")
+Space.create(name: "Coworking", code: "CWK", description: "Espace de travail avec écrans")
 
 jeanclaude = Human.create(name: "Jean-Claude", email: "jeanclaude@claudy.test")
 User.create(email: "jeanclaude@claudy.test", password: "secret", human: jeanclaude)
