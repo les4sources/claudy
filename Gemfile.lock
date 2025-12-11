@@ -195,7 +195,7 @@ GEM
       timeout
     net-smtp (0.3.2)
       net-protocol
-    nio4r (2.5.8)
+    nio4r (2.7.5)
     nokogiri (1.13.9-arm64-darwin)
       racc (~> 1.4)
     nokogiri (1.13.9-x86_64-darwin)
@@ -364,6 +364,7 @@ GEM
 
 PLATFORMS
   arm64-darwin-22
+  arm64-darwin-25
   x86_64-darwin-20
   x86_64-darwin-21
   x86_64-darwin-23
@@ -387,6 +388,7 @@ DEPENDENCIES
   loaf
   lookbook
   money-rails (~> 1.12)
+  nio4r (>= 2.5.9)
   paper_trail
   pg (~> 1.1)
   postmark-rails
