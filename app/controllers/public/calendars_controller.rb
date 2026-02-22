@@ -1,9 +1,12 @@
 class Public::CalendarsController < Public::BaseController
   layout "public"
 
+  CALENDAR_SPACE_NAMES = ["Grande Salle", "Petite Salle", "Cuisine professionnelle"].freeze
+
   def lodgings
     set_dates
     @lodgings = Lodging.where(available_for_bookings: true)
+    @spaces = Space.where(name: CALENDAR_SPACE_NAMES)
     @reservations = Reservation.all
       .includes(:booking)
       .between_times(@first, @last, field: :date)
@@ -14,6 +17,7 @@ class Public::CalendarsController < Public::BaseController
   def lodgings_modal
     set_dates
     @lodgings = Lodging.where(available_for_bookings: true)
+    @spaces = Space.where(name: CALENDAR_SPACE_NAMES)
     @reservations = Reservation.all
       .includes(:booking)
       .between_times(@first, @last, field: :date)

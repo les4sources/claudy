@@ -18,6 +18,10 @@ class Space < ApplicationRecord
 
   default_scope -> { order(:position) }
 
+  def available_on?(date)
+    !booked_on?(date)
+  end
+
   def booked_on?(date)
     SpaceReservation.includes(:space_booking)
                     .where(

@@ -1,0 +1,253 @@
+/* Availability calendar – warm, natural aesthetic (Les 4 Sources) */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..72,500;9..72,600&display=swap');
+
+.availability-calendar {
+  --cal-available-bg: #e6f0ee;
+  --cal-available-text: #024442;
+  --cal-available-border: rgba(2, 68, 66, 0.15);
+  --cal-unavailable-bg: #f5ebe8;
+  --cal-unavailable-text: #7d4f4a;
+  --cal-unavailable-border: rgba(125, 79, 74, 0.2);
+  --cal-accent: #024442;
+  --cal-accent-hover: #03615e;
+  --cal-section-text: #5a6c6b;
+  --cal-cell-bg: #fafbfb;
+  --cal-cell-outside: #f1f3f3;
+  --cal-today-bg: #024442;
+  --cal-header-border: #e2e8e7;
+  --cal-font-month: 'Fraunces', Georgia, serif;
+}
+
+/* Month title */
+.availability-calendar__month {
+  font-family: var(--cal-font-month);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--cal-accent);
+  letter-spacing: -0.02em;
+}
+
+@media (min-width: 768px) {
+  .availability-calendar__month {
+    font-size: 1.75rem;
+  }
+}
+
+/* Navigation */
+.availability-calendar__nav {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.availability-calendar__nav--mobile {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.availability-calendar__nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+  background-color: var(--cal-accent);
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.15s ease;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+.availability-calendar__nav-btn:hover {
+  background-color: var(--cal-accent-hover);
+}
+
+.availability-calendar__nav-btn:active {
+  transform: scale(0.98);
+}
+
+.availability-calendar__nav-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(2, 68, 66, 0.25);
+}
+
+/* Restyle existing nav buttons when inside calendar */
+.availability-calendar .btn-page-header-with-icon {
+  background-color: var(--cal-accent) !important;
+  color: white !important;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.availability-calendar .btn-page-header-with-icon:hover {
+  background-color: var(--cal-accent-hover) !important;
+}
+
+/* Section labels (Hébergements / Espaces) */
+.availability-calendar__section-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cal-section-text);
+  margin-bottom: 0.35rem;
+  margin-top: 0.6rem;
+}
+
+.availability-calendar__section-label:first-child {
+  margin-top: 0;
+}
+
+/* Pills (available / unavailable) */
+.availability-calendar__pill {
+  display: block;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  margin-bottom: 0.25rem;
+}
+
+.availability-calendar__pill:last-child {
+  margin-bottom: 0;
+}
+
+.availability-calendar__pill:hover {
+  transform: translateY(-0.5px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.availability-calendar__pill--available {
+  background: var(--cal-available-bg);
+  color: var(--cal-available-text);
+  border: 1px solid var(--cal-available-border);
+}
+
+.availability-calendar__pill--available .availability-calendar__pill-summary {
+  opacity: 0.82;
+  font-size: 0.7rem;
+}
+
+.availability-calendar__pill--unavailable {
+  background: var(--cal-unavailable-bg);
+  color: var(--cal-unavailable-text);
+  border: 1px solid var(--cal-unavailable-border);
+}
+
+.availability-calendar__pill--unavailable .availability-calendar__pill-name {
+  text-decoration: line-through;
+}
+
+.availability-calendar__pill--unavailable .availability-calendar__pill-summary {
+  opacity: 0.75;
+  font-size: 0.7rem;
+  text-decoration: line-through;
+}
+
+.availability-calendar__pill-icon {
+  margin-right: 0.35rem;
+  opacity: 0.9;
+}
+
+/* Day content block (inside each cell) */
+.availability-calendar__day-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 1px;
+}
+
+/* Calendar grid (partial) */
+.availability-calendar .availability-calendar__grid {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(2, 68, 66, 0.06);
+}
+
+.availability-calendar .availability-calendar__weekday {
+  background: var(--cal-cell-bg) !important;
+  border-color: var(--cal-header-border) !important;
+  color: var(--cal-accent);
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.availability-calendar .availability-calendar__day-cell {
+  min-height: 10rem;
+  padding: 0.5rem !important;
+  background: white !important;
+  border-color: var(--cal-header-border) !important;
+  vertical-align: top;
+}
+
+.availability-calendar .availability-calendar__day-cell--outside {
+  background: var(--cal-cell-outside) !important;
+  color: #8a9a99;
+}
+
+.availability-calendar .availability-calendar__day-cell time {
+  display: inline-block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--cal-accent);
+  margin-bottom: 0.35rem;
+}
+
+.availability-calendar .availability-calendar__day-cell--today time {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--cal-today-bg);
+  color: white;
+  font-size: 0.8rem;
+}
+
+/* Legend */
+.availability-calendar__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cal-header-border);
+  font-size: 0.75rem;
+  color: var(--cal-section-text);
+}
+
+.availability-calendar__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.availability-calendar__legend-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.availability-calendar__legend-dot--available {
+  background: var(--cal-available-bg);
+  border: 1px solid var(--cal-available-border);
+}
+
+.availability-calendar__legend-dot--unavailable {
+  background: var(--cal-unavailable-bg);
+  border: 1px solid var(--cal-unavailable-border);
+}

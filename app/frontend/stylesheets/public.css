@@ -3,6 +3,8 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
+@import 'availability_calendar.css';
+
 /* @import '../../components/flow/component.css'; */
 
 @layer base {

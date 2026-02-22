@@ -7,28 +7,38 @@
              link_to("Demande de réservation", new_public_booking_path, class: "btn-page-header") \
            ]
 
-= SimpleCalendar::PublicLodgingsCalendar.new(self, { \
-    today: @date \
-  }).render do |date|
-  - if date >= Date.tomorrow
-    ol.mt-2.space-y-2
-      - @lodgings.each do |lodging|
-        li
-          a.group.flex href="#"
+.availability-calendar
+  = SimpleCalendar::PublicLodgingsCalendar.new(self, { date: @date, today: @date }).render do |date|
+    - if date >= Date.tomorrow
+      .availability-calendar__day-content
+        .availability-calendar__section-label Hébergements
+        - @lodgings.each do |lodging|
           - if lodging.available_on?(date)
-            .rounded-md.bg-green-100.px-2.py-1.text-xs.font-medium.text-green-800
-              div = lodging.name
-              .opacity-70 = lodging.summary
+            .availability-calendar__pill.availability-calendar__pill--available
+              span.availability-calendar__pill-icon aria-hidden="true" ✓
+              span.availability-calendar__pill-name = lodging.name
+              .availability-calendar__pill-summary = lodging.summary
           - else
-            .rounded-md.bg-red-100.px-2.py-1.text-xs.font-medium.text-red-800
-              .line-through = lodging.name
-              .opacity-70 = lodging.summary
-      / .lodging
-        - if lodging.available_on?(date)
-          .lodging--available #{lodging.name} ✔
-          .lodging__summary = lodging.summary
-        - else
-          .lodging--unavailable = lodging.name
-          .lodging__summary = lodging.summary
+            .availability-calendar__pill.availability-calendar__pill--unavailable
+              span.availability-calendar__pill-name = lodging.name
+              .availability-calendar__pill-summary = lodging.summary
+
+        .availability-calendar__section-label Espaces
+        - @spaces.each do |space|
+          - if space.available_on?(date)
+            .availability-calendar__pill.availability-calendar__pill--available
+              span.availability-calendar__pill-icon aria-hidden="true" ✓
+              span.availability-calendar__pill-name = space.name
+          - else
+            .availability-calendar__pill.availability-calendar__pill--unavailable
+              span.availability-calendar__pill-name = space.name
+
+  .availability-calendar__legend.mt-6
+    .availability-calendar__legend-item
+      span.availability-calendar__legend-dot.availability-calendar__legend-dot--available
+      span Disponible
+    .availability-calendar__legend-item
+      span.availability-calendar__legend-dot.availability-calendar__legend-dot--unavailable
+      span Non disponible
 
 = link_to("Demande de réservation", new_public_booking_path, class: "mt-4 btn-action")

@@ -1,55 +1,55 @@
 = render TurboModal::Component.new(title: (params[:no_title].nil? ? "Calendrier des disponibilités" : nil), width: :lg) do
-  / .p-4.mb-4.text-sm.text-blue-700.bg-blue-100.rounded-lg.dark:bg-blue-200.dark:text-blue-800(role="alert")
-    |
-      <span class="font-medium">Pour les disponibilités des lits de la Maison Communautaire</span>,
-      nous vous invitons à nous envoyer votre demande de réservation. Nous reviendrons
-      vers vous avec la confirmation de disponibilité. Notez déjà que si le Grand-Duc
-      est réservé, il n'y a aucune disponibilité dans la Maison Communautaire 🦉
-
-  .hidden.md:grid.md:grid-cols-3.md:space-x-2.md:items-center.mb-4
-    - if Date.today.beginning_of_month != @date.beginning_of_month
-      .text-left = button_to_previous_month(@date, { "turbo-frame": "modal", "method": "get" })
-    - else
-      div &nbsp;
-    .text-2xl.font-bold.text-center = l(@date, format: :month_year).capitalize
-    .text-right
-      = button_to_next_month(@date, { "turbo-frame": "modal", "method": "get" })
-
-  .md:hidden.mb-4
-    .grid.grid-cols-4.space-x-2.items-center
+  .availability-calendar
+    / Navigation desktop
+    .hidden.md:block.availability-calendar__nav
       - if Date.today.beginning_of_month != @date.beginning_of_month
-        .text-left = button_to_previous_month(@date, { "turbo-frame": "modal", "method": "get" }, { no_label: true })
+        .flex.justify-start = button_to_previous_month(@date, { "turbo-frame": "modal", "method": "get" })
       - else
-        div &nbsp;
-      .text-center.text-lg.font-bold.col-span-2
-        = l(@date, format: :month_year).capitalize
-      .text-right
-        = button_to_next_month(@date, { "turbo-frame": "modal", "method": "get" }, { no_label: true })    
+        div
+      .flex.justify-center
+        span.availability-calendar__month = l(@date, format: :month_year).capitalize
+      .flex.justify-end
+        = button_to_next_month(@date, { "turbo-frame": "modal", "method": "get" })
 
-  = SimpleCalendar::PublicLodgingsCalendar.new(self, { \
-      date: @date \
-    }).render do |date|
-    - if date >= Date.tomorrow
-      .grid.grid-cols-3.gap-4.md:grid-cols-1
-        - @available_rooms = false
-        - @lodgings.each do |lodging|
-          - if lodging.available_on?(date)
-            - @available_rooms = true
-            .rounded-md.bg-green-100.px-2.py-1.text-xs.font-medium.text-green-800
-              div ✔️ #{lodging.name}
-              .opacity-70 = lodging.summary
-          - else
-            .rounded-md.bg-red-100.px-2.py-1.text-xs.font-medium.text-red-800
-              .line-through = lodging.name
-              .opacity-70 = lodging.summary
-        / - if @available_rooms
-          li
-            .rounded-md.border.border-green-100.px-2.py-1.text-xs.font-medium.text-green-800
-              div Lits disponibles dans la Maison Communautaire
-        / .lodging
-          - if lodging.available_on?(date)
-            .lodging--available #{lodging.name} ✔
-            .lodging__summary = lodging.summary
-          - else
-            .lodging--unavailable = lodging.name
-            .lodging__summary = lodging.summary
+    / Navigation mobile
+    .md:hidden.availability-calendar__nav.availability-calendar__nav--mobile
+      - if Date.today.beginning_of_month != @date.beginning_of_month
+        = button_to_previous_month(@date, { "turbo-frame": "modal", "method": "get" }, { no_label: true })
+      - else
+        div
+      .flex.justify-center.items-center
+        span.availability-calendar__month.text-lg = l(@date, format: :month_year).capitalize
+      = button_to_next_month(@date, { "turbo-frame": "modal", "method": "get" }, { no_label: true })
+
+    = SimpleCalendar::PublicLodgingsCalendar.new(self, { date: @date }).render do |date|
+      - if date >= Date.tomorrow
+        .availability-calendar__day-content
+          .availability-calendar__section-label Hébergements
+          - @lodgings.each do |lodging|
+            - if lodging.available_on?(date)
+              .availability-calendar__pill.availability-calendar__pill--available
+                span.availability-calendar__pill-icon aria-hidden="true" ✓
+                span.availability-calendar__pill-name = lodging.name
+                .availability-calendar__pill-summary = lodging.summary
+            - else
+              .availability-calendar__pill.availability-calendar__pill--unavailable
+                span.availability-calendar__pill-name = lodging.name
+                .availability-calendar__pill-summary = lodging.summary
+
+          .availability-calendar__section-label Espaces
+          - @spaces.each do |space|
+            - if space.available_on?(date)
+              .availability-calendar__pill.availability-calendar__pill--available
+                span.availability-calendar__pill-icon aria-hidden="true" ✓
+                span.availability-calendar__pill-name = space.name
+            - else
+              .availability-calendar__pill.availability-calendar__pill--unavailable
+                span.availability-calendar__pill-name = space.name
+
+    .availability-calendar__legend
+      .availability-calendar__legend-item
+        span.availability-calendar__legend-dot.availability-calendar__legend-dot--available
+        span Disponible
+      .availability-calendar__legend-item
+        span.availability-calendar__legend-dot.availability-calendar__legend-dot--unavailable
+        span Non disponible
