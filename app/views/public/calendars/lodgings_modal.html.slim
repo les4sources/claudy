@@ -1,50 +1,55 @@
 = render TurboModal::Component.new(title: (params[:no_title].nil? ? "Calendrier des disponibilités" : nil), width: :lg) do
   .availability-calendar
-    / Navigation desktop
-    .hidden.md:block.availability-calendar__nav
-      - if Date.today.beginning_of_month != @date.beginning_of_month
-        .flex.justify-start = button_to_previous_month(@date, { "turbo-frame": "modal", "method": "get" })
-      - else
-        div
-      .flex.justify-center
-        span.availability-calendar__month = l(@date, format: :month_year).capitalize
-      .flex.justify-end
-        = button_to_next_month(@date, { "turbo-frame": "modal", "method": "get" })
+    / Navigation desktop (wrapper has visibility so our nav display:flex doesn’t override .hidden)
+    .hidden.md:block
+      .availability-calendar__nav
+        - if Date.today.beginning_of_month != @date.beginning_of_month
+          .flex.justify-start = button_to_previous_month(@date, { "turbo-frame": "modal", "method": "get" })
+        - else
+          div
+        .flex.justify-center
+          span.availability-calendar__month = l(@date, format: :month_year).capitalize
+        .flex.justify-end
+          = button_to_next_month(@date, { "turbo-frame": "modal", "method": "get" })
 
     / Navigation mobile
-    .md:hidden.availability-calendar__nav.availability-calendar__nav--mobile
-      - if Date.today.beginning_of_month != @date.beginning_of_month
-        = button_to_previous_month(@date, { "turbo-frame": "modal", "method": "get" }, { no_label: true })
-      - else
-        div
-      .flex.justify-center.items-center
-        span.availability-calendar__month.text-lg = l(@date, format: :month_year).capitalize
-      = button_to_next_month(@date, { "turbo-frame": "modal", "method": "get" }, { no_label: true })
+    .md:hidden
+      .availability-calendar__nav.availability-calendar__nav--mobile
+        - if Date.today.beginning_of_month != @date.beginning_of_month
+          = button_to_previous_month(@date, { "turbo-frame": "modal", "method": "get" }, { no_label: true })
+        - else
+          div
+        .flex.justify-center.items-center
+          span.availability-calendar__month.text-lg = l(@date, format: :month_year).capitalize
+        = button_to_next_month(@date, { "turbo-frame": "modal", "method": "get" }, { no_label: true })
 
     = SimpleCalendar::PublicLodgingsCalendar.new(self, { date: @date }).render do |date|
       - if date >= Date.tomorrow
         .availability-calendar__day-content
-          .availability-calendar__section-label Hébergements
-          - @lodgings.each do |lodging|
-            - if lodging.available_on?(date)
-              .availability-calendar__pill.availability-calendar__pill--available
-                span.availability-calendar__pill-icon aria-hidden="true" ✓
-                span.availability-calendar__pill-name = lodging.name
-                .availability-calendar__pill-summary = lodging.summary
-            - else
-              .availability-calendar__pill.availability-calendar__pill--unavailable
-                span.availability-calendar__pill-name = lodging.name
-                .availability-calendar__pill-summary = lodging.summary
+          .availability-calendar__section.availability-calendar__section--lodgings
+            .availability-calendar__section-label Hébergements
+            - @lodgings.each do |lodging|
+              - if lodging.available_on?(date)
+                .availability-calendar__pill.availability-calendar__pill--available
+                  .availability-calendar__pill-text
+                    span.availability-calendar__pill-name = lodging.name
+                    .availability-calendar__pill-summary = lodging.summary
+              - else
+                .availability-calendar__pill.availability-calendar__pill--unavailable
+                  .availability-calendar__pill-text
+                    span.availability-calendar__pill-name = lodging.name
+                    .availability-calendar__pill-summary = lodging.summary
 
           .availability-calendar__section-label Espaces
           - @spaces.each do |space|
             - if space.available_on?(date)
               .availability-calendar__pill.availability-calendar__pill--available
-                span.availability-calendar__pill-icon aria-hidden="true" ✓
-                span.availability-calendar__pill-name = space.name
+                .availability-calendar__pill-text
+                  span.availability-calendar__pill-name = space.name
             - else
               .availability-calendar__pill.availability-calendar__pill--unavailable
-                span.availability-calendar__pill-name = space.name
+                .availability-calendar__pill-text
+                  span.availability-calendar__pill-name = space.name
 
     .availability-calendar__legend
       .availability-calendar__legend-item

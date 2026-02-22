@@ -34,19 +34,32 @@
   }
 }
 
-/* Navigation */
+/* Navigation – single line: prev | title | next */
 .availability-calendar__nav {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
+  justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 1.25rem;
 }
 
+.availability-calendar__nav .flex.justify-start,
+.availability-calendar__nav .flex.justify-end {
+  flex-shrink: 0;
+}
+
+.availability-calendar__nav .flex.justify-center {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+}
+
 .availability-calendar__nav--mobile {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 1rem;
 }
@@ -95,28 +108,47 @@
 
 /* Section labels (Hébergements / Espaces) */
 .availability-calendar__section-label {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--cal-section-text);
-  margin-bottom: 0.35rem;
-  margin-top: 0.6rem;
+  margin-bottom: 0.2rem;
+  margin-top: 0;
+  padding: 1rem 0 .5rem;
+  line-height: 1.2;
 }
 
 .availability-calendar__section-label:first-child {
   margin-top: 0;
 }
 
-/* Pills (available / unavailable) */
+.availability-calendar__section + .availability-calendar__section-label {
+  margin-top: 0.3rem;
+}
+
+/* Fixed-height block for Hébergements so "Espaces" aligns across all columns */
+.availability-calendar__section--lodgings {
+  min-height: 4.25rem;
+}
+
+/* Pills (available / unavailable) – compact line-height and spacing */
 .availability-calendar__pill {
-  display: block;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.75rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.7rem;
   font-weight: 500;
-  border-radius: 0.375rem;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  margin-bottom: 0.25rem;
+  line-height: 1.25;
+  border-radius: 0.25rem;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  margin-bottom: 0.15rem;
+}
+
+.availability-calendar__pill-text {
+  min-width: 0;
+  flex: 1;
 }
 
 .availability-calendar__pill:last-child {
@@ -136,7 +168,8 @@
 
 .availability-calendar__pill--available .availability-calendar__pill-summary {
   opacity: 0.82;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
+  line-height: 1.2;
 }
 
 .availability-calendar__pill--unavailable {
@@ -151,14 +184,11 @@
 
 .availability-calendar__pill--unavailable .availability-calendar__pill-summary {
   opacity: 0.75;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
+  line-height: 1.2;
   text-decoration: line-through;
 }
 
-.availability-calendar__pill-icon {
-  margin-right: 0.35rem;
-  opacity: 0.9;
-}
 
 /* Day content block (inside each cell) */
 .availability-calendar__day-content {
@@ -166,6 +196,8 @@
   flex-direction: column;
   gap: 0;
   min-height: 1px;
+  line-height: 1.25;
+  padding: 0.15rem 0;
 }
 
 /* Calendar grid (partial) */
@@ -186,8 +218,8 @@
 }
 
 .availability-calendar .availability-calendar__day-cell {
-  min-height: 10rem;
-  padding: 0.5rem !important;
+  min-height: 6.5rem;
+  padding: 0.5rem 0.45rem !important;
   background: white !important;
   border-color: var(--cal-header-border) !important;
   vertical-align: top;
@@ -201,9 +233,10 @@
 .availability-calendar .availability-calendar__day-cell time {
   display: inline-block;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: var(--cal-accent);
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.2rem;
+  line-height: 1.2;
 }
 
 .availability-calendar .availability-calendar__day-cell--today time {

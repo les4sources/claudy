@@ -11,27 +11,30 @@
   = SimpleCalendar::PublicLodgingsCalendar.new(self, { date: @date, today: @date }).render do |date|
     - if date >= Date.tomorrow
       .availability-calendar__day-content
-        .availability-calendar__section-label Hébergements
-        - @lodgings.each do |lodging|
+        .availability-calendar__section.availability-calendar__section--lodgings
+          .availability-calendar__section-label Hébergements
+          - @lodgings.each do |lodging|
           - if lodging.available_on?(date)
             .availability-calendar__pill.availability-calendar__pill--available
-              span.availability-calendar__pill-icon aria-hidden="true" ✓
-              span.availability-calendar__pill-name = lodging.name
-              .availability-calendar__pill-summary = lodging.summary
+              .availability-calendar__pill-text
+                span.availability-calendar__pill-name = lodging.name
+                .availability-calendar__pill-summary = lodging.summary
           - else
             .availability-calendar__pill.availability-calendar__pill--unavailable
-              span.availability-calendar__pill-name = lodging.name
-              .availability-calendar__pill-summary = lodging.summary
+              .availability-calendar__pill-text
+                span.availability-calendar__pill-name = lodging.name
+                .availability-calendar__pill-summary = lodging.summary
 
         .availability-calendar__section-label Espaces
         - @spaces.each do |space|
           - if space.available_on?(date)
             .availability-calendar__pill.availability-calendar__pill--available
-              span.availability-calendar__pill-icon aria-hidden="true" ✓
-              span.availability-calendar__pill-name = space.name
+              .availability-calendar__pill-text
+                span.availability-calendar__pill-name = space.name
           - else
             .availability-calendar__pill.availability-calendar__pill--unavailable
-              span.availability-calendar__pill-name = space.name
+              .availability-calendar__pill-text
+                span.availability-calendar__pill-name = space.name
 
   .availability-calendar__legend.mt-6
     .availability-calendar__legend-item
