@@ -124,3 +124,12 @@
     @apply text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700;
   }
 }
+
+@keyframes flash-highlight {
+  0% { background-color: rgb(204 251 241); }
+  100% { background-color: transparent; }
+}
+
+.animate-flash-highlight {
+  animation: flash-highlight 1.5s ease-out;
+}

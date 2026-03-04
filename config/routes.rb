@@ -12,7 +12,11 @@ Rails.application.routes.draw do
   resources :events
   resources :experiences
   resources :lodgings
-  resources :humans
+  resources :humans do
+    member do
+      patch :toggle_cycle_active
+    end
+  end
   resources :human_roles
   resources :notes
   resources :payments, only: [:index, :show, :destroy]
@@ -26,6 +30,17 @@ Rails.application.routes.draw do
   resources :tasks
   resources :teams
   resources :watchman_notes
+
+  # Organisation
+  get "organisation", to: "organisation#index", as: :organisation
+  resources :cycles
+  resources :cycle_actions, except: [:show] do
+    member do
+      patch :toggle_completed
+      patch :defer
+    end
+  end
+  get "organisation/member/:human_id", to: "organisation#member", as: :organisation_member
 
   resources :bookings do
     collection do

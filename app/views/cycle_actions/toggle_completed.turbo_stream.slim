@@ -1,0 +1,8 @@
+= turbo_stream.replace "cycle_action_#{@cycle_action.id}" do
+  = render "cycle_actions/cycle_action", cycle_action: @cycle_action
+
+= turbo_stream.replace "hours_total" do
+  = render "cycle_actions/hours_total", total_hours: @total_hours
+
+= turbo_stream.replace "category_#{@cycle_action.category}_count" do
+  = render "cycle_actions/category_count", category: @cycle_action.category, count: @human.cycle_actions.active.where(category: @cycle_action.category).count

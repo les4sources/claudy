@@ -1,0 +1,9 @@
+#hours_total.flex.items-center.gap-4.p-4.bg-gradient-to-r.from-teal-50.to-emerald-50.rounded-xl.border.border-teal-100
+  .flex.items-center.gap-2
+    svg.w-5.h-5.text-4s-main[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+      circle[cx="12" cy="12" r="10"]
+      polyline[points="12 6 12 12 16 14"]
+    span.text-sm.font-medium.text-4s-main Total heures estimées
+  span.text-2xl.font-bold.text-4s-main.tabular-nums
+    = number_with_precision(total_hours || 0, precision: 1, strip_insignificant_zeros: true)
+  span.text-sm.text-teal-600 h

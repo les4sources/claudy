@@ -46,6 +46,22 @@ class HumansController < BaseController
     end
   end
 
+  def toggle_cycle_active
+    @human = Human.unscoped.find(params[:id])
+    @human.update_column(:cycle_active, !@human.cycle_active)
+    @human = HumanDecorator.new(@human.reload)
+    respond_to do |format|
+      format.turbo_stream {
+        render turbo_stream: turbo_stream.replace(
+          "human_#{@human.id}_cycle_active",
+          partial: "humans/cycle_active_toggle",
+          locals: { human: @human }
+        )
+      }
+      format.html { redirect_to humans_path }
+    end
+  end
+
   def destroy
     if @human.soft_delete!(validate: false)
       redirect_to humans_path,

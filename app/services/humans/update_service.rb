@@ -36,7 +36,8 @@ module Humans
           :summary,
           :description,
           :photo,
-          :photo_cache
+          :photo_cache,
+          :cycle_active
         )
     end
   end

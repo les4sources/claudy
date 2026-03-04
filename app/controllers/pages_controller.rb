@@ -18,6 +18,7 @@ class PagesController < BaseController
       .where.not(booking: { status: ["declined", "canceled"] })
       .between_times(@first, @last, field: :date)
     @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
+    @cycles = Cycle.overlapping(@first.to_date, @last.to_date)
     @activities = PublicActivity::Activity.where("created_at > ?", 14.days.ago).order(created_at: :desc)
   end
 
