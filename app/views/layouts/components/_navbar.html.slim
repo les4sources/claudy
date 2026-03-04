@@ -61,6 +61,17 @@ nav.bg-white.shadow-sm.lg:px-6
                     rect[width="7" height="5" x="10" y="12" rx="1"]
                   span Espaces
 
+        / Organisation
+        li
+          = link_to organisation_path,
+                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 #{!@organisation_view.nil? ? 'text-4s-main bg-teal-50' : 'text-gray-600 hover:text-4s-main hover:bg-teal-50/60'}" do
+            svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+              path[d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"]
+              circle[cx="9" cy="7" r="4"]
+              path[d="M22 21v-2a4 4 0 0 0-3-3.87"]
+              path[d="M16 3.13a4 4 0 0 1 0 7.75"]
+            span Organisation
+
         / Reporting
         li
           = link_to reports_path,
@@ -79,17 +90,6 @@ nav.bg-white.shadow-sm.lg:px-6
               line[x1="12" y1="1" x2="12" y2="23"]
               path[d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"]
             span Comptabilité
-
-        / Organisation
-        li
-          = link_to organisation_path,
-                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 #{!@organisation_view.nil? ? 'text-4s-main bg-teal-50' : 'text-gray-600 hover:text-4s-main hover:bg-teal-50/60'}" do
-            svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-              path[d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"]
-              circle[cx="9" cy="7" r="4"]
-              path[d="M22 21v-2a4 4 0 0 0-3-3.87"]
-              path[d="M16 3.13a4 4 0 0 1 0 7.75"]
-            span Organisation
 
         / Paramètres (cog icon only)
         li

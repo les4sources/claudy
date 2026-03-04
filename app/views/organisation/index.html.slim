@@ -25,7 +25,6 @@
 
 / Members grid
 - if @humans.any?
-  h3.text-lg.font-semibold.text-gray-800.mb-4 Membres actifs
   .grid.grid-cols-1.md:grid-cols-2.lg:grid-cols-3.gap-4.mb-8
     - @humans.each do |human|
       - action_count = human.cycle_actions.active.count
@@ -35,10 +34,12 @@
         .flex.items-center.gap-4
           - if human.photo?
             = image_tag human.photo_url(:thumb),
-                        class: "w-12 h-12 rounded-full object-cover ring-2 ring-gray-100 group-hover:ring-teal-200 transition-all"
+                        class: "w-12 h-12 rounded-full object-cover ring-2 ring-gray-100 group-hover:ring-teal-200 transition-all",
+                        alt: human.name
           - else
-            .w-12.h-12.rounded-full.bg-teal-50.flex.items-center.justify-center.text-4s-main.font-bold.text-lg.ring-2.ring-gray-100.group-hover:ring-teal-200.transition-all
-              = human.name[0].upcase
+            = image_tag "https://ui-avatars.com/api/?name=#{CGI.escape(human.name)}&size=48&background=ccfbf1&color=0d9488",
+                        class: "w-12 h-12 rounded-full object-cover ring-2 ring-gray-100 group-hover:ring-teal-200 transition-all",
+                        alt: human.name
           div
             .font-semibold.text-gray-800.group-hover:text-4s-main.transition-colors
               = human.name
