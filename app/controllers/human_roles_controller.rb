@@ -1,17 +1,29 @@
 class HumanRolesController < BaseController
   def create
-    @human_role = HumanRole.create(human_role_params)
+    existing = HumanRole.find_by(
+      human_id: params[:human_id],
+      role_id: params[:role_id],
+      date: params[:date]
+    )
+
+    if existing.nil?
+      @human_role = HumanRole.create!(human_role_params.merge(status: :backup))
+    elsif existing.backup?
+      existing.update!(status: :selected)
+      @human_role = existing
+    elsif existing.selected?
+      @human_role = existing
+      existing.destroy
+    end
+
     @human_roles = HumanRole.where(date: @human_role.date)
   end
 
   def destroy
     @human_role = HumanRole.find(params[:id])
     date = @human_role.date
-    
-    if @human_role
-      @human_role.destroy
-      @human_roles = HumanRole.where(date: date)
-    end
+    @human_role.destroy
+    @human_roles = HumanRole.where(date: date)
   end
 
   private

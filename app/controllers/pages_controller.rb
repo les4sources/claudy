@@ -79,7 +79,7 @@ class PagesController < BaseController
     
     # Récupérer tous les humains actifs avec leur nombre de veilles dans la période
     watchman_counts = HumanRole
-      .where(role_id: 1, date: @period_start..@period_end)
+      .where(role_id: 1, status: :selected, date: @period_start..@period_end)
       .joins(:human)
       .group('humans.id')
       .count

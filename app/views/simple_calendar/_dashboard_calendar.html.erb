@@ -2,7 +2,7 @@
   <!--div class="mb-4 p-4 pb-1 bg-white border border-gray-500 shadow-xl rounded-lg"-->
   <div class="mb-8">
     <div class="flex items-center -space-x-6">
-      <% watchmen = HumanRole.where(date: Date.today, role_id: 1) %>
+      <% watchmen = HumanRole.where(date: Date.today, role_id: 1).selected %>
       <% if watchmen.any? %>
         <span class="inline-flex items-center rounded-md bg-purple-50 px-2 py-1 text-sm font-medium text-purple-700 ring-1 ring-inset ring-gray-500/10">Veilleur·se·s<span class="w-5"></span></span>
         <div id="watchmen-today" class="text-xs isolate flex -space-x-2 px-1 overflow-hidden">
@@ -102,7 +102,7 @@
                 </div>
 
                 <div id="human-roles-<%= day.iso8601 %>" class="text-xs isolate flex -space-x-2 px-1 relative inline-block">
-                  <%= render partial: "human_roles/day", locals: { human_roles: HumanRole.where(date: day, role_id: 1) } %>
+                  <%= render partial: "human_roles/day", locals: { human_roles: HumanRole.where(date: day, role_id: 1).selected } %>
                 </div>
 
                 <div id="notes-<%= day %>" class="<%= day < Date.today ? "opacity-75" : nil %>">
