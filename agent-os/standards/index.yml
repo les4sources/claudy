@@ -1,0 +1,29 @@
+# Agent OS Standards Index
+
+controllers:
+  inheritance:
+    description: BaseController (admin/auth) vs Public::BaseController (public), layout assignments
+  response-formats:
+    description: HTML and Turbo Stream response patterns, Turbo Frame handling
+  service-integration:
+    description: How controllers call service objects and handle success/failure
+  soft-deletes-and-audit:
+    description: soft_delete! for all models, PaperTrail versioning, PublicActivity logging
+
+decorators:
+  decorator-structure:
+    description: Draper decorator base class, delegate_all, associations, and collection support
+  method-patterns:
+    description: Status badges, emoji helpers, formatting, CSS classes, and French localization
+  presenters:
+    description: PresenterBase for complex UI components vs Draper decorators for single models
+
+services:
+  concerns:
+    description: Service concerns for shared domain logic (Bookable, Subscribable, etc.)
+  error-handling:
+    description: catch_error wrapper and set_error_message patterns in ServiceBase
+  naming-and-organization:
+    description: Module::ActionService naming, file structure, and namespace mirroring
+  service-structure:
+    description: run/run! dual-method pattern, return values, and instance variable exposure
