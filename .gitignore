@@ -59,4 +59,4 @@ html2slim.*
 
 *.csv
 
-public/uploads/*
+public/uploads/*.worktrees/
