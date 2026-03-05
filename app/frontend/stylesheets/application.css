@@ -127,7 +127,7 @@
 
 @keyframes flash-highlight {
   0% { background-color: rgb(204 251 241); }
-  100% { background-color: transparent; }
+  100% { background-color: white; }
 }
 
 .animate-flash-highlight {

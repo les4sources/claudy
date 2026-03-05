@@ -2,7 +2,7 @@
   = form_with model: cycle_action,
               url: cycle_actions_path,
               data: { turbo_stream: true },
-              class: "rounded-xl border border-gray-200 p-4 shadow-sm #{local_assigns[:flash_success] ? 'animate-flash-highlight' : 'bg-white'}" do |f|
+              class: "rounded-xl border border-gray-200 p-4 shadow-sm bg-white #{local_assigns[:flash_success] ? 'animate-flash-highlight' : ''}" do |f|
     = f.hidden_field :human_id
 
     .flex.flex-wrap.items-end.gap-3
