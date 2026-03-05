@@ -1,0 +1,41 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Cycles",
+           links: [ \
+             link_to("➕ Nouveau cycle", new_cycle_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
+           ]
+
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-6[scope="col"]
+          | Nom
+        th.py-3.px-6[scope="col"]
+          | Début
+        th.py-3.px-6[scope="col"]
+          | Fin
+        th.py-3.px-6[scope="col"]
+          | Durée
+        th.py-3.px-6[scope="col"]
+    tbody
+      - @cycles.each do |cycle|
+        - decorated = CycleDecorator.new(cycle)
+        tr.border-b.bg-white
+          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+            = cycle.name
+          td.py-4.px-6.text-gray-900
+            = l(cycle.start_date, format: :long)
+          td.py-4.px-6.text-gray-900
+            = l(cycle.end_date, format: :long)
+          td.py-4.px-6.text-gray-500
+            = decorated.duration_in_weeks
+          td.py-4.px-6.text-right.whitespace-nowrap
+            = link_to "Modifier",
+                      edit_cycle_path(cycle),
+                      class: "text-blue-500 hover:text-blue-700 mr-3"
+            = button_to "Supprimer",
+                        cycle_path(cycle),
+                        method: :delete,
+                        class: "text-red-500 hover:text-red-700",
+                        form: { data: { turbo_confirm: "Supprimer ce cycle ?" } }

@@ -1,0 +1,23 @@
+- style = CycleActionDecorator::CATEGORY_STYLES[category]
+- count = actions.count
+
+div[id="category_#{category}_group" class="rounded-xl border overflow-hidden"]
+  / Category header
+  .flex.items-center.justify-between.px-4.py-3 class="#{style[:bg]} border-b #{style[:text]}"
+    .flex.items-center.gap-2
+      span.text-base = style[:icon]
+      h3.text-sm.font-semibold = style[:label]
+      = render "cycle_actions/category_count", category: category, count: count
+    - if category == "deleguee"
+      span.text-xs.opacity-60 vers un membre spécifique
+    - elsif category == "demandee"
+      span.text-xs.opacity-60 au collectif
+
+  / Actions list
+  div[id="category_#{category}_list" class="divide-y divide-gray-50 bg-white"]
+    - actions.each do |action|
+      = render "cycle_actions/cycle_action", cycle_action: action
+
+    - if actions.empty?
+      .py-4.px-4.text-center
+        span.text-xs.text-gray-300 Aucune action

@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Sync production database to local development
+# Usage: bin/sync-production-db
+
+SSH_HOST="deploy@HATCHBOXED"
+REMOTE_ENV="/home/deploy/claudy/.hatchbox.env"
+LOCAL_DB="claudy_development"
+REMOTE_DUMP="~/db_261ddab05bf2.bak"
+LOCAL_DUMP="/tmp/claudy_production.bak"
+
+# Postgres.app binaries
+export PATH="/Applications/Postgres.app/Contents/Versions/15/bin:$PATH"
+
+echo "==> Creating compressed dump on remote server..."
+ssh "$SSH_HOST" "export \$(grep DATABASE_URL $REMOTE_ENV | xargs) && pg_dump -Fc \"\$DATABASE_URL\" > $REMOTE_DUMP"
+
+echo "==> Downloading dump file..."
+scp "$SSH_HOST:$REMOTE_DUMP" "$LOCAL_DUMP"
+echo "    Downloaded $(du -h "$LOCAL_DUMP" | cut -f1)"
+
+echo "==> Cleaning up remote dump file..."
+ssh "$SSH_HOST" "rm -f $REMOTE_DUMP"
+
+echo "==> Dropping and recreating local database..."
+dropdb --if-exists "$LOCAL_DB"
+createdb "$LOCAL_DB"
+
+echo "==> Restoring dump into $LOCAL_DB..."
+pg_restore --no-owner --no-acl -d "$LOCAL_DB" "$LOCAL_DUMP" || true
+# pg_restore returns non-zero on warnings (e.g. extensions), this is normal
+
+echo "==> Cleaning up local dump file..."
+rm -f "$LOCAL_DUMP"
+
+echo "==> Done! ✔ Local database '$LOCAL_DB' is now a copy of production."

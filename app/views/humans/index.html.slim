@@ -15,7 +15,9 @@
         th.py-3.px-6[scope="col"]
           | Nom 
         th.py-3.px-6[scope="col"]
-          | Résumé 
+          | Résumé
+        th.py-3.px-6.text-center[scope="col"]
+          | Cycle
     tbody
       - @humans.each do |human|
         tr.border-b.bg-white
@@ -26,8 +28,10 @@
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
             = human.status_badge
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
-            = link_to human.name, 
+            = link_to human.name,
                       human_path(human),
                       class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
           td.py-4.px-6.text-gray-900.whitespace-nowrap[scope="row"]
             = human.summary
+          td.py-4.px-6.text-center[id="human_#{human.id}_cycle_active"]
+            = render "humans/cycle_active_toggle", human: human

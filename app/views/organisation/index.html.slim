@@ -1,0 +1,81 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Organisation"
+
+/ Current cycle highlight
+- current_cycle = ::Cycle.covering_date(Date.today).first
+- if current_cycle
+  .mb-8.relative.overflow-hidden.rounded-2xl.bg-gradient-to-br.from-teal-800.via-4s-main.to-emerald-900.p-6.text-white.shadow-lg
+    .absolute.inset-0.opacity-10
+      .absolute.w-96.h-96.rounded-full.bg-white.-top-20.-right-20.blur-3xl
+    .relative
+      .flex.items-center.justify-between
+        div
+          p.text-teal-200.text-sm.font-medium.tracking-wide.uppercase.mb-1 Cycle en cours
+          h2.text-2xl.font-bold.tracking-tight = current_cycle.name
+          - decorated = CycleDecorator.new(current_cycle)
+          p.text-teal-100.mt-1
+            = "#{l(current_cycle.start_date, format: :long)} — #{l(current_cycle.end_date, format: :long)}"
+            span.ml-3.text-teal-300.text-sm
+              = "(#{decorated.duration_in_weeks})"
+        .text-right
+          - days_left = (current_cycle.end_date - Date.today).to_i
+          .text-4xl.font-bold.tabular-nums = days_left
+          p.text-teal-200.text-sm jours restants
+
+/ Members grid
+- if @humans.any?
+  .grid.grid-cols-1.md:grid-cols-2.lg:grid-cols-3.gap-4.mb-8
+    - @humans.each do |human|
+      - action_count = human.cycle_actions.active.count
+      - total_hours = human.cycle_actions.active.sum(:hours) || 0
+      = link_to organisation_member_path(human.id),
+                class: "group block bg-white rounded-xl border border-gray-100 p-5 shadow-sm hover:shadow-md hover:border-teal-200 transition-all duration-200" do
+        .flex.items-center.gap-4
+          - if human.photo?
+            = image_tag human.photo_url(:thumb),
+                        class: "w-12 h-12 rounded-full object-cover ring-2 ring-gray-100 group-hover:ring-teal-200 transition-all",
+                        alt: human.name
+          - else
+            = image_tag "https://ui-avatars.com/api/?name=#{CGI.escape(human.name)}&size=48&background=ccfbf1&color=0d9488",
+                        class: "w-12 h-12 rounded-full object-cover ring-2 ring-gray-100 group-hover:ring-teal-200 transition-all",
+                        alt: human.name
+          div
+            .font-semibold.text-gray-800.group-hover:text-4s-main.transition-colors
+              = human.name
+            .flex.items-center.gap-3.mt-1
+              span.text-sm.text-gray-500
+                = "#{action_count} action#{'s' if action_count != 1}"
+              - if total_hours > 0
+                span.text-xs.text-gray-300 ·
+                span.text-sm.font-medium.text-teal-700
+                  = "#{total_hours.to_f}h"
+        .mt-3.flex.gap-1.5
+          - CycleAction.categories.keys.each do |cat|
+            - count = human.cycle_actions.active.where(category: cat).count
+            - if count > 0
+              - style = CycleActionDecorator::CATEGORY_STYLES[cat]
+              span.text-xs.px-1.5.py-0.5.rounded-full class=("#{style[:bg]} #{style[:text]}")
+                = "#{count} #{style[:label].downcase}"
+
+- else
+  .text-center.py-12
+    p.text-gray-400.text-lg Aucun membre activé pour les cycles.
+    p.text-gray-400.mt-1
+      | Activez des membres dans
+      = link_to "Paramètres > Équipe", humans_path, class: "text-teal-600 hover:text-teal-800 underline ml-1"
+
+/ Upcoming cycles
+- upcoming = ::Cycle.where("start_date > ?", Date.today).order(start_date: :asc).limit(3)
+- if upcoming.any?
+  h3.text-lg.font-semibold.text-gray-800.mb-4.mt-8 Prochains cycles
+  .space-y-2
+    - upcoming.each do |cycle|
+      .flex.items-center.justify-between.bg-white.rounded-lg.border.border-gray-100.p-4
+        div
+          span.font-medium.text-gray-800 = cycle.name
+          span.text-sm.text-gray-500.ml-3
+            = "#{l(cycle.start_date, format: :long)} — #{l(cycle.end_date, format: :long)}"
+        span.text-xs.px-2.py-1.rounded-full.bg-gray-100.text-gray-600.tabular-nums
+          - days_until = (cycle.start_date - Date.today).to_i
+          = "dans #{days_until} j."

@@ -1,0 +1,34 @@
+#new_cycle_action_form[data-controller="cycle-actions"]
+  = form_with model: cycle_action,
+              url: cycle_actions_path,
+              data: { turbo_stream: true },
+              class: "rounded-xl border border-gray-200 p-4 shadow-sm bg-white #{local_assigns[:flash_success] ? 'animate-flash-highlight' : ''}" do |f|
+    = f.hidden_field :human_id
+
+    .flex.flex-wrap.items-end.gap-3
+      .flex-1.min-w-[200px]
+        = f.text_field :label,
+                       label: "Ajouter une action",
+                       placeholder: "Décrire l'action...",
+                       class: "w-full rounded-lg border-gray-200 text-sm focus:border-teal-400 focus:ring-teal-400 placeholder:text-gray-300",
+                       autofocus: true,
+                       required: true
+
+      .w-40
+        = f.select :category,
+                   CycleAction.categories.keys.map { |k| style = CycleActionDecorator::CATEGORY_STYLES[k]; ["#{style[:icon]} #{style[:label]}", k] },
+                   {},
+                   class: "w-full rounded-lg border-gray-200 text-sm focus:border-teal-400 focus:ring-teal-400",
+                   data: { cycle_actions_target: "categorySelect", action: "change->cycle-actions#categoryChanged" }
+
+      .w-24
+        = f.number_field :hours,
+                         label: "Heures",
+                         step: 0.5,
+                         min: 0,
+                         placeholder: "Heures",
+                         class: "w-full rounded-lg border-gray-200 text-sm focus:border-teal-400 focus:ring-teal-400 tabular-nums placeholder:text-gray-300"
+
+
+      = f.submit "Ajouter",
+                 class: "inline-flex items-center px-4 py-2 rounded-lg bg-4s-main text-white text-sm font-medium hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 transition-colors cursor-pointer"

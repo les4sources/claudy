@@ -1,0 +1,13 @@
+= turbo_stream.replace "category_#{@cycle_action.category}_list" do
+  div[id="category_#{@cycle_action.category}_list" class="divide-y divide-gray-50 bg-white"]
+    - @category_actions.each do |action|
+      = render "cycle_actions/cycle_action", cycle_action: action, highlight: (action.id == @cycle_action.id)
+
+= turbo_stream.replace "hours_total" do
+  = render "cycle_actions/hours_total", total_hours: @total_hours
+
+= turbo_stream.replace "category_#{@cycle_action.category}_count" do
+  = render "cycle_actions/category_count", category: @cycle_action.category, count: @human.cycle_actions.active.where(category: @cycle_action.category).count
+
+= turbo_stream.replace "new_cycle_action_form" do
+  = render "cycle_actions/form", cycle_action: CycleAction.new(human_id: @human.id), human: @human, flash_success: true

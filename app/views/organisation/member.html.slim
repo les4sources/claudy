@@ -1,0 +1,40 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Actions de #{@human.name}"
+
+div[data-controller="cycle-actions"]
+  / Hours summary bar
+  .mb-6
+    = render "cycle_actions/hours_total", total_hours: @total_hours
+
+  / New action form
+  .mb-8
+    = render "cycle_actions/form", cycle_action: CycleAction.new(human_id: @human.id), human: @human
+
+  / Category groups
+  .space-y-6
+    - CycleAction.categories.keys.each do |category|
+      - actions = @cycle_actions[category] || []
+      = render "cycle_actions/category_group",
+               category: category,
+               actions: actions,
+               human: @human
+
+  / Requests from other members
+  - if @demandees.any?
+    .mt-10.pt-6.border-t.border-gray-200
+      .flex.items-center.gap-2.mb-4
+        .w-8.h-8.rounded-full.bg-rose-50.flex.items-center.justify-center
+          span.text-sm 📣
+        h3.text-base.font-semibold.text-gray-700 Demandes des autres membres
+      .space-y-2
+        - @demandees.group_by(&:human).each do |requester, actions|
+          .bg-white.rounded-lg.border.border-rose-100.p-4
+            .text-sm.font-medium.text-gray-600.mb-2
+              = "De #{requester.name}"
+            - actions.each do |action|
+              .flex.items-end.gap-2.py-1.text-sm.text-gray-700
+                span.text-rose-400 →
+                span = action.label
+                - if action.hours.present? && action.hours > 0
+                  span.text-xs.text-gray-400 = "#{action.hours.to_f}h"

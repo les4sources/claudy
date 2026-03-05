@@ -1,0 +1,36 @@
+div[id="cycle_action_#{cycle_action.id}" data-controller="cycle-actions" class="py-2.5 px-4 bg-blue-50/50 border-b border-blue-100"]
+  = form_with model: cycle_action,
+              url: cycle_action_path(cycle_action),
+              method: :patch,
+              data: { turbo_stream: true } do |f|
+    = f.hidden_field :human_id
+
+    .flex.flex-wrap.items-end.gap-3
+      .flex-1.min-w-[200px]
+        = f.text_field :label,
+                       class: "w-full rounded-lg border-gray-200 text-sm focus:border-teal-400 focus:ring-teal-400",
+                       autofocus: true,
+                       required: true
+
+      .w-40
+        = f.select :category,
+                   CycleAction.categories.keys.map { |k| style = CycleActionDecorator::CATEGORY_STYLES[k]; ["#{style[:icon]} #{style[:label]}", k] },
+                   {},
+                   class: "w-full rounded-lg border-gray-200 text-sm focus:border-teal-400 focus:ring-teal-400",
+                   data: { cycle_actions_target: "categorySelect", action: "change->cycle-actions#categoryChanged" }
+
+      .w-24
+        = f.number_field :hours,
+                         label: "Heures",
+                         step: 0.5,
+                         min: 0,
+                         placeholder: "Heures",
+                         class: "w-full rounded-lg border-gray-200 text-sm focus:border-teal-400 focus:ring-teal-400 tabular-nums"
+
+
+      .flex.gap-2
+        = f.submit "Enregistrer",
+                   class: "inline-flex items-center px-3 py-2 rounded-lg bg-4s-main text-white text-sm font-medium hover:bg-teal-700 transition-colors cursor-pointer"
+        = link_to "Annuler",
+                  organisation_member_path(human.id),
+                  class: "inline-flex items-center px-3 py-2 rounded-lg bg-gray-100 text-gray-600 text-sm font-medium hover:bg-gray-200 transition-colors"
