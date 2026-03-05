@@ -1,5 +1,7 @@
-= turbo_stream.append "category_#{@cycle_action.category}_list" do
-  = render "cycle_actions/cycle_action", cycle_action: @cycle_action, highlight: true
+= turbo_stream.replace "category_#{@cycle_action.category}_list" do
+  div[id="category_#{@cycle_action.category}_list" class="divide-y divide-gray-50 bg-white"]
+    - @category_actions.each do |action|
+      = render "cycle_actions/cycle_action", cycle_action: action, highlight: (action.id == @cycle_action.id)
 
 = turbo_stream.replace "hours_total" do
   = render "cycle_actions/hours_total", total_hours: @total_hours

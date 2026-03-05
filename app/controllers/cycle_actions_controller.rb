@@ -7,6 +7,7 @@ class CycleActionsController < BaseController
       @cycle_action = service.cycle_action
       @human = @cycle_action.human
       @total_hours = @human.cycle_actions.active.sum(:hours) || 0
+      @category_actions = @human.cycle_actions.where(category: @cycle_action.category).order(:completed, Arel.sql("COALESCE(hours, 0) DESC"), :created_at)
       respond_to do |format|
         format.turbo_stream
         format.html { redirect_to organisation_member_path(@human.id) }
@@ -46,6 +47,7 @@ class CycleActionsController < BaseController
       @cycle_action = service.cycle_action
       @human = @cycle_action.human
       @total_hours = @human.cycle_actions.active.sum(:hours) || 0
+      @category_actions = @human.cycle_actions.where(category: @cycle_action.category).order(:completed, Arel.sql("COALESCE(hours, 0) DESC"), :created_at)
       respond_to do |format|
         format.turbo_stream
         format.html { redirect_to organisation_member_path(@human.id) }
@@ -81,14 +83,20 @@ class CycleActionsController < BaseController
     @cycle_action.update!(category: :reportee)
     @human = @cycle_action.human
     @total_hours = @human.cycle_actions.active.sum(:hours) || 0
+    reportee_actions = @human.cycle_actions.where(category: :reportee).order(:completed, Arel.sql("COALESCE(hours, 0) DESC"), :created_at)
+    old_category_actions = @human.cycle_actions.where(category: old_category).order(:completed, Arel.sql("COALESCE(hours, 0) DESC"), :created_at)
     respond_to do |format|
       format.turbo_stream {
         render turbo_stream: [
-          turbo_stream.remove("cycle_action_#{@cycle_action.id}"),
-          turbo_stream.append(
+          turbo_stream.replace(
+            "category_#{old_category}_list",
+            partial: "cycle_actions/sorted_list",
+            locals: { actions: old_category_actions, category: old_category }
+          ),
+          turbo_stream.replace(
             "category_reportee_list",
-            partial: "cycle_actions/cycle_action",
-            locals: { cycle_action: @cycle_action }
+            partial: "cycle_actions/sorted_list",
+            locals: { actions: reportee_actions, category: "reportee" }
           ),
           turbo_stream.replace(
             "hours_total",

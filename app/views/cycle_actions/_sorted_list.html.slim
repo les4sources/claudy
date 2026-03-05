@@ -1,0 +1,6 @@
+div[id="category_#{category}_list" class="divide-y divide-gray-50 bg-white"]
+  - actions.each do |action|
+    = render "cycle_actions/cycle_action", cycle_action: action
+  - if actions.empty?
+    .py-4.px-4.text-center
+      span.text-xs.text-gray-300 Aucune action
