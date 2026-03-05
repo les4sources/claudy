@@ -14,7 +14,7 @@ div[id="cycle_action_#{cycle_action.id}" data-controller="cycle-actions" class="
 
       .w-40
         = f.select :category,
-                   CycleAction.categories.keys.map { |k| [CycleActionDecorator::CATEGORY_STYLES[k][:label], k] },
+                   CycleAction.categories.keys.map { |k| style = CycleActionDecorator::CATEGORY_STYLES[k]; ["#{style[:icon]} #{style[:label]}", k] },
                    {},
                    class: "w-full rounded-lg border-gray-200 text-sm focus:border-teal-400 focus:ring-teal-400",
                    data: { cycle_actions_target: "categorySelect", action: "change->cycle-actions#categoryChanged" }

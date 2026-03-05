@@ -74,22 +74,15 @@ nav.bg-white.shadow-sm.lg:px-6
 
         / Reporting
         li
-          = link_to reports_path,
-                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 #{(controller_name == 'reports') ? 'text-4s-main bg-teal-50' : 'text-gray-600 hover:text-4s-main hover:bg-teal-50/60'}" do
-            svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-              line[x1="18" y1="20" x2="18" y2="10"]
-              line[x1="12" y1="20" x2="12" y2="4"]
-              line[x1="6" y1="20" x2="6" y2="14"]
-            span Reporting
+          = link_to "Reporting",
+                    reports_path,
+                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 #{(controller_name == 'reports') ? 'text-4s-main bg-teal-50' : 'text-gray-600 hover:text-4s-main hover:bg-teal-50/60'}"
 
         / Comptabilité
         li
-          = link_to accounting_path,
-                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 #{!@accounting_view.nil? ? 'text-4s-main bg-teal-50' : 'text-gray-600 hover:text-4s-main hover:bg-teal-50/60'}" do
-            svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-              line[x1="12" y1="1" x2="12" y2="23"]
-              path[d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"]
-            span Comptabilité
+          = link_to "Comptabilité",
+                    accounting_path,
+                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 #{!@accounting_view.nil? ? 'text-4s-main bg-teal-50' : 'text-gray-600 hover:text-4s-main hover:bg-teal-50/60'}"
 
         / Paramètres (cog icon only)
         li
