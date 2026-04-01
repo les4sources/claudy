@@ -1,7 +1,7 @@
 class Public::CalendarsController < Public::BaseController
   layout "public"
 
-  CALENDAR_SPACE_NAMES = ["Grande Salle", "Petite Salle", "Cuisine professionnelle"].freeze
+  CALENDAR_SPACE_NAMES = ["Grande Salle", "Petite Salle", "Cuisine professionnelle", "Coworking", "Bois"].freeze
 
   def lodgings
     set_dates

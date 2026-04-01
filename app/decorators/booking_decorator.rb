@@ -128,6 +128,20 @@ class BookingDecorator < ApplicationDecorator
           h.content_tag(:span, "Espace Tentes", class: "#{shared_classes} border border-emerald-200 text-emerald-800")
         end
       end
+      when 5
+        if object.confirmed?
+          h.content_tag(:span, "Espace Camping-cars", class: "#{shared_classes} bg-emerald-400 text-emerald-800")
+        else
+          h.content_tag(:span, "Espace Camping-cars", class: "#{shared_classes} border border-emerald-200 text-emerald-800")
+        end
+      end
+      when 6
+        if object.confirmed?
+          h.content_tag(:span, "Tiny house", class: "#{shared_classes} bg-emerald-400 text-emerald-800")
+        else
+          h.content_tag(:span, "Tiny house", class: "#{shared_classes} border border-emerald-200 text-emerald-800")
+        end
+      end
     end
   end
 

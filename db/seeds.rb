@@ -11,6 +11,7 @@ lodging_16 = Lodging.create(name: "La Hulotte", summary: "9 à 16 personnes", pr
 lodging_25 = Lodging.create(name: "Le Grand-Duc", summary: "17 à 25 personnes", price_night: 750, party_hall_availability: true, available_for_bookings: true, show_on_reports: true)
 lodging_tents = Lodging.create(name: "Espace tentes", summary: "Dans la pâture", price_night: 0, available_for_bookings: false, show_on_reports: false)
 lodging_vans = Lodging.create(name: "Espace camping-cars", summary: "Sur le parking", price_night: 0, available_for_bookings: false, show_on_reports: false)
+lodging_tiny = Lodging.create(name: "Tiny house", summary: "2 personnes", price_night: 0, available_for_bookings: false, show_on_reports: true)
 
 room_romarin = Room.create(name: "Romarin", level: 0, code: "ROM", description: "2 lits simples adaptables en lit double + lit superposé")
 room_balsamine = Room.create(name: "Balsamine", level: 0, code: "BAL", description: "2 lits simples adaptables en lit double + lit superposé")
@@ -22,6 +23,7 @@ room_origan = Room.create(name: "Origan", level: 2, code: "ORI", description: "2
 room_laurier = Room.create(name: "Laurier (mezzanine)", level: 2, code: "MEZ", description: "2 lits simples")
 room_grassland = Room.create(name: "Pâture est", level: -1, code: "PAT", description: "Zone pour les tentes ⛺️")
 room_parking = Room.create(name: "Parking", level: -1, code: "PKG", description: "Zone pour les camping-cars et vans aménagés 🚐")
+room_tiny = Room.create(name: "Tiny house", level: -1, code: "TNY", description: "Tiny house")
 
 LodgingRoom.create(lodging: lodging_8, room: room_romarin)
 LodgingRoom.create(lodging: lodging_8, room: room_balsamine)

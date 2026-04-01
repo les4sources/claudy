@@ -125,6 +125,10 @@ class Lodging < ApplicationRecord
     self.name == "Le Grand-Duc"
   end
 
+  def is_tiny?
+    self.name == "Tiny house"
+  end
+
   # def occupancy_nights(start_date, end_date)
   #   dates = Reservation.includes(:booking)
   #     .where(date: start_date..end_date, booking: { status: "confirmed", lodging: self })
