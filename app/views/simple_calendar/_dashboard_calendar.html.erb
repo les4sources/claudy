@@ -94,7 +94,8 @@
           <div class="w-full lg:grid lg:grid-cols-7 lg:gap-px">
             <% weekdays.each do |day| %>
               <% month_classes = (day.month == Date.today.month && day.year == Date.today.year) ? "bg-white" : "bg-gray-50 text-gray-500" %>
-              <div class="relative min-h-[8rem] py-2 px-3 text-gray-700 <%= month_classes %> <%= (Date.today == day) ? "bg-purple-200" : ((Date.today > day) ? "bg-white" : nil) %>">
+              <% hide_past_day_mobile = @date.year == Date.today.year && @date.month == Date.today.month && day < Date.today %>
+              <div class="relative min-h-[8rem] py-2 px-3 text-gray-700 <%= month_classes %> <%= (Date.today == day) ? "bg-purple-200" : ((Date.today > day) ? "bg-white" : nil) %> <%= "max-md:hidden" if hide_past_day_mobile %>"<% if hide_past_day_mobile %> data-past-day-collapsible="true"<% end %>>
                 <div class="flex place-content-between">
                   <div id="calendar-day-<%= day.iso8601 %>">
                     <%= render partial: "simple_calendar/day", locals: { date: day } %>

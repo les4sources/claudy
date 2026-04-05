@@ -44,5 +44,8 @@ export default class extends Controller {
     this.weekTargets.forEach((el, i) => {
       el.classList.remove('hidden')
     })
+    this.element.querySelectorAll('[data-past-day-collapsible="true"]').forEach((el) => {
+      el.classList.remove('max-md:hidden')
+    })
   }
 }
