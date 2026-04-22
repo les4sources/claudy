@@ -28,7 +28,7 @@
             = link_to event.name_with_color, 
                       event_path(event), 
                       class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6"
-      .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-event-#{event.id}" data-popover-trigger="click")
+      .absolute.top-0.left-0.w-full.h-full(data-controller="popover" data-action="click->popover#toggle click@window->popover#hideOnClickOutside" data-popover-target-value="popover-event-#{event.id}" data-popover-trigger-value="click")
 
   / Space reservations
   - if @grouped_space_reservations[date]
@@ -58,7 +58,7 @@
 
           .block.text-gray-500
             = space_booking.duration
-        .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-space-reservation-#{space_reservation.id}" data-popover-trigger="click")
+        .absolute.top-0.left-0.w-full.h-full(data-controller="popover" data-action="click->popover#toggle click@window->popover#hideOnClickOutside" data-popover-target-value="popover-space-reservation-#{space_reservation.id}" data-popover-trigger-value="click")
 
   / Reservations
   - if @grouped_reservations[date]
@@ -87,7 +87,7 @@
             .grid.grid-cols-3.gap-1
               - grouped_reservations.last.each do |reservation|
                 = room_badge(reservation.room)
-        .absolute.top-0.left-0.w-full.h-full(data-popover-target="popover-reservation-#{reservation.id}" data-popover-trigger="click")
+        .absolute.top-0.left-0.w-full.h-full(data-controller="popover" data-action="click->popover#toggle click@window->popover#hideOnClickOutside" data-popover-target-value="popover-reservation-#{reservation.id}" data-popover-trigger-value="click")
 
 / Activity feed
 .mt-8.pb-5.border-b.border-gray-200

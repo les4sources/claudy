@@ -28,10 +28,8 @@ console.log('Vite ⚡️ Rails')
 import '@hotwired/turbo-rails';
 // import.meta.globEager('../channels/**/*_channel.js');
 
-import 'flowbite';
 import 'flowbite/dist/datepicker';
 import '../utils/datepicker.turbo.min.js';
-import 'flowbite/dist/flowbite.turbo.js';
 
 import 'trix';
 import '@rails/actiontext';

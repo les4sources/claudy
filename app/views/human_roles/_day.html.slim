@@ -4,5 +4,5 @@
     = image_tag human_role.human.photo_url(:thumb),
                 class: "relative z-#{zIndex} inline-block h-10 w-10 rounded-full ring-2 my-2 ring-white hover:shadow-lg transition",
                 alt: human_role.human.name,
-                data: { "tooltip-target": "tooltip-human-#{human_role.human.id}" }
+                data: { controller: "tooltip", action: "mouseenter->tooltip#show mouseleave->tooltip#hide focus->tooltip#show blur->tooltip#hide", "tooltip-target-value": "tooltip-human-#{human_role.human.id}" }
   - zIndex = zIndex - 10

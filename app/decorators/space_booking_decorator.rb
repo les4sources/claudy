@@ -207,10 +207,14 @@ class SpaceBookingDecorator < ApplicationDecorator
     html = ""
     spaces.each do |space|
       html << h.content_tag(
-        :span, 
-        space.code, 
+        :span,
+        space.code,
         class: "#{shared_classes} bg-indigo-100 text-indigo-800",
-        "data-tooltip-target": "tooltip-space-#{space.id}"
+        data: {
+          controller: "tooltip",
+          action: "mouseenter->tooltip#show mouseleave->tooltip#hide focus->tooltip#show blur->tooltip#hide",
+          "tooltip-target-value": "tooltip-space-#{space.id}"
+        }
       )
     end
     h.raw(html)
@@ -237,13 +241,13 @@ class SpaceBookingDecorator < ApplicationDecorator
   def status_emoji
     case object.status
     when "canceled"
-      h.content_tag(:span, "❌", data: { "tooltip-target": "tooltip-status-canceled" })
+      h.content_tag(:span, "❌", data: { controller: "tooltip", action: "mouseenter->tooltip#show mouseleave->tooltip#hide focus->tooltip#show blur->tooltip#hide", "tooltip-target-value": "tooltip-status-canceled" })
     when "confirmed"
-      h.content_tag(:span, "✅", data: { "tooltip-target": "tooltip-status-confirmed" })
+      h.content_tag(:span, "✅", data: { controller: "tooltip", action: "mouseenter->tooltip#show mouseleave->tooltip#hide focus->tooltip#show blur->tooltip#hide", "tooltip-target-value": "tooltip-status-confirmed" })
     when "pending"
-      h.content_tag(:span, "⏳", data: { "tooltip-target": "tooltip-status-pending" })
+      h.content_tag(:span, "⏳", data: { controller: "tooltip", action: "mouseenter->tooltip#show mouseleave->tooltip#hide focus->tooltip#show blur->tooltip#hide", "tooltip-target-value": "tooltip-status-pending" })
     when "declined"
-      h.content_tag(:span, "🙅‍♀️", data: { "tooltip-target": "tooltip-status-declined" })
+      h.content_tag(:span, "🙅‍♀️", data: { controller: "tooltip", action: "mouseenter->tooltip#show mouseleave->tooltip#hide focus->tooltip#show blur->tooltip#hide", "tooltip-target-value": "tooltip-status-declined" })
     else
       object.status
     end
