@@ -133,3 +133,80 @@
 .animate-flash-highlight {
   animation: flash-highlight 1.5s ease-out;
 }
+
+/* ---------------------------------------------------------------------------
+   Dashboard calendar — sticky weekday header + column highlight
+   Goal: prevent data-entry mistakes when scrolling a long month view.
+   --------------------------------------------------------------------------- */
+
+@media (min-width: 768px) {
+  .calendar-weekdays-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    background-color: rgba(231, 229, 228, 0.92);
+    box-shadow:
+      0 1px 0 0 rgba(120, 113, 108, 0.25),
+      0 8px 16px -12px rgba(28, 25, 23, 0.18);
+  }
+
+  /* The whole weekday row shifts from "label" to "label + indicator-dot"
+     subtly when stuck. Purely cosmetic reinforcement. */
+  .calendar-weekdays-header .calendar-weekday {
+    letter-spacing: 0.14em;
+  }
+
+  /* Today's column — always emphasized in the header so the eye has a
+     permanent anchor, regardless of scroll position. */
+  .calendar-weekday--today {
+    color: rgb(88, 28, 135); /* purple-900 */
+    background-color: rgb(233, 213, 255) !important; /* purple-200 */
+    box-shadow: inset 0 -2px 0 0 rgb(126, 34, 206); /* purple-700 */
+  }
+  .calendar-weekday--today .calendar-weekday__dot {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 9999px;
+    background-color: rgb(126, 34, 206);
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.25);
+  }
+
+  /* ---- Column highlight on hover ---------------------------------------
+     When the user hovers any day cell, we light up:
+       - the full column of cells sharing the same data-weekday
+       - the matching weekday label in the sticky header
+     Uses :has() (Safari 15.4+, Chrome 105+, Firefox 121+). No JS required. */
+
+  .js-calendar-col-highlight:has(.calendar-day[data-weekday="0"]:hover) .calendar-weekday[data-weekday="0"],
+  .js-calendar-col-highlight:has(.calendar-day[data-weekday="1"]:hover) .calendar-weekday[data-weekday="1"],
+  .js-calendar-col-highlight:has(.calendar-day[data-weekday="2"]:hover) .calendar-weekday[data-weekday="2"],
+  .js-calendar-col-highlight:has(.calendar-day[data-weekday="3"]:hover) .calendar-weekday[data-weekday="3"],
+  .js-calendar-col-highlight:has(.calendar-day[data-weekday="4"]:hover) .calendar-weekday[data-weekday="4"],
+  .js-calendar-col-highlight:has(.calendar-day[data-weekday="5"]:hover) .calendar-weekday[data-weekday="5"],
+  .js-calendar-col-highlight:has(.calendar-day[data-weekday="6"]:hover) .calendar-weekday[data-weekday="6"] {
+    background-color: rgb(254, 240, 138) !important; /* yellow-200 */
+    color: rgb(113, 63, 18); /* yellow-900 */
+    box-shadow: inset 0 -2px 0 0 rgb(202, 138, 4); /* yellow-600 */
+  }
+
+  .js-calendar-col-highlight:has(.calendar-day[data-weekday="0"]:hover) .calendar-day[data-weekday="0"],
+  .js-calendar-col-highlight:has(.calendar-day[data-weekday="1"]:hover) .calendar-day[data-weekday="1"],
+  .js-calendar-col-highlight:has(.calendar-day[data-weekday="2"]:hover) .calendar-day[data-weekday="2"],
+  .js-calendar-col-highlight:has(.calendar-day[data-weekday="3"]:hover) .calendar-day[data-weekday="3"],
+  .js-calendar-col-highlight:has(.calendar-day[data-weekday="4"]:hover) .calendar-day[data-weekday="4"],
+  .js-calendar-col-highlight:has(.calendar-day[data-weekday="5"]:hover) .calendar-day[data-weekday="5"],
+  .js-calendar-col-highlight:has(.calendar-day[data-weekday="6"]:hover) .calendar-day[data-weekday="6"] {
+    box-shadow: inset 3px 0 0 0 rgba(202, 138, 4, 0.35),
+                inset -3px 0 0 0 rgba(202, 138, 4, 0.35);
+  }
+
+  /* The hovered cell itself keeps its column accent plus a softer wash,
+     so the user sees exactly *which* cell is active within the column. */
+  .js-calendar-col-highlight .calendar-day:hover {
+    background-color: rgb(254, 249, 195) !important; /* yellow-100 */
+    box-shadow: inset 0 0 0 2px rgb(202, 138, 4);
+  }
+}

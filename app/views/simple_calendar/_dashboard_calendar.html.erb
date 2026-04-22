@@ -54,26 +54,27 @@
 <% end %>
 
 <% @current_month = date_range.first.month %>
-<div id="dashboard-calendar" class="md:block lg:flex lg:h-full lg:flex-col bg-stone-100" data-controller="dashboard-calendar" data-dashboard-calendar-current="<%= @date.beginning_of_month == Date.today.beginning_of_month %>" data-action="click->dashboard-calendar#clickCalendar">
+<div id="dashboard-calendar" class="md:block lg:flex lg:h-full lg:flex-col bg-stone-100 js-calendar-col-highlight" data-controller="dashboard-calendar" data-dashboard-calendar-current="<%= @date.beginning_of_month == Date.today.beginning_of_month %>" data-action="click->dashboard-calendar#clickCalendar">
+  <% first_week = date_range.first(7) %>
+  <div class="calendar-weekdays-header hidden md:grid md:grid-cols-7 gap-px border-b border-stone-400/60 bg-stone-300 text-center text-[0.7rem] uppercase tracking-[0.14em] font-semibold leading-6 text-stone-700 lg:flex-none">
+    <% first_week.each_with_index do |day, i| %>
+      <% is_today_weekday = (day.wday == Date.today.wday) %>
+      <div class="calendar-weekday relative flex items-center justify-center gap-1.5 py-2.5 transition-colors duration-150 <%= day.saturday? || day.sunday? ? "bg-stone-300" : "bg-stone-200" %> <%= "calendar-weekday--today" if is_today_weekday %>" data-weekday="<%= day.wday %>">
+        <span class="calendar-weekday__dot hidden"></span>
+        <span class="calendar-weekday__label"><%= l(day, format: "%A") %></span>
+      </div>
+    <% end %>
+  </div>
+
   <div class="shadow ring-1 ring-black ring-opacity-5 lg:flex lg:flex-auto lg:flex-col">
     <% date_range.each_slice(7).with_index do |weekdays, index| %>
-      <% if index == 0 %>
-        <div class="hidden md:grid md:grid-cols-7 gap-px border-b border-gray-300 bg-stone-300 text-center text-xs font-semibold leading-6 text-stone-700 lg:flex-none">
-          <% weekdays.each do |day| %>
-            <div class="flex justify-center py-2 <%= day.saturday? || day.sunday? ? "bg-stone-300" : "bg-stone-200" %>">
-              <span><%= l(day, format: "%A") %></span>
-            </div>
-          <% end %>
+      <% if index == 0 && @date.year == Date.today.year && @date.month == Date.today.month && @date.beginning_of_week >= @date.beginning_of_month %>
+        <div class="flex past-weeks-toggler justify-center" data-dashboard-calendar-target="pastWeeksToggler">
+          <%= link_to "Afficher les semaines précédentes",
+                      "#dashboard-calendar",
+                      class: "btn-section my-4",
+                      data: { action: "dashboard-calendar#showPastWeeks" } %>
         </div>
-
-        <% if @date.year == Date.today.year && @date.month == Date.today.month && @date.beginning_of_week >= @date.beginning_of_month %>
-          <div class="flex past-weeks-toggler justify-center" data-dashboard-calendar-target="pastWeeksToggler">
-            <%= link_to "Afficher les semaines précédentes",
-                        "#dashboard-calendar",
-                        class: "btn-section my-4",
-                        data: { action: "dashboard-calendar#showPastWeeks" } %>
-          </div>
-        <% end %>
       <% end %>
 
       <% if @cycles.present? %>
@@ -95,7 +96,7 @@
             <% weekdays.each do |day| %>
               <% month_classes = (day.month == Date.today.month && day.year == Date.today.year) ? "bg-white" : "bg-gray-50 text-gray-500" %>
               <% hide_past_day_mobile = @date.year == Date.today.year && @date.month == Date.today.month && day < Date.today %>
-              <div class="relative min-h-[8rem] py-2 px-3 text-gray-700 <%= month_classes %> <%= (Date.today == day) ? "bg-purple-200" : ((Date.today > day) ? "bg-white" : nil) %> <%= "max-md:hidden" if hide_past_day_mobile %>"<% if hide_past_day_mobile %> data-past-day-collapsible="true"<% end %>>
+              <div class="calendar-day relative min-h-[8rem] py-2 px-3 text-gray-700 transition-colors duration-150 <%= month_classes %> <%= (Date.today == day) ? "bg-purple-200" : ((Date.today > day) ? "bg-white" : nil) %> <%= "max-md:hidden" if hide_past_day_mobile %>" data-weekday="<%= day.wday %>"<% if hide_past_day_mobile %> data-past-day-collapsible="true"<% end %>>
                 <div class="flex place-content-between">
                   <div id="calendar-day-<%= day.iso8601 %>">
                     <%= render partial: "simple_calendar/day", locals: { date: day } %>
