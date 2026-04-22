@@ -59,7 +59,7 @@
   <div class="calendar-weekdays-header hidden md:grid md:grid-cols-7 gap-px border-b border-stone-400/60 bg-stone-300 text-center text-[0.7rem] uppercase tracking-[0.14em] font-semibold leading-6 text-stone-700 lg:flex-none">
     <% first_week.each_with_index do |day, i| %>
       <% is_today_weekday = (day.wday == Date.today.wday) %>
-      <div class="calendar-weekday relative flex items-center justify-center gap-1.5 py-2.5 transition-colors duration-150 <%= day.saturday? || day.sunday? ? "bg-stone-300" : "bg-stone-200" %> <%= "calendar-weekday--today" if is_today_weekday %>" data-weekday="<%= day.wday %>">
+      <div class="calendar-weekday relative flex items-center justify-center gap-1.5 py-2.5 transition-colors duration-150 <%= day.saturday? || day.sunday? ? "bg-slate-300 text-slate-800" : "bg-stone-200" %> <%= "calendar-weekday--today" if is_today_weekday %>" data-weekday="<%= day.wday %>">
         <span class="calendar-weekday__dot hidden"></span>
         <span class="calendar-weekday__label"><%= l(day, format: "%A") %></span>
       </div>
@@ -81,7 +81,7 @@
         <% week_start = weekdays.first; week_end = weekdays.last %>
         <% active_cycles = @cycles.select { |c| c.start_date <= week_end && c.end_date >= week_start } %>
         <% if active_cycles.any? %>
-          <div class="flex items-center gap-2 px-3 py-1 bg-teal-50/80 border-b border-teal-100">
+          <div class="flex items-center gap-2 px-3 py-1 bg-teal-50/80 border-b border-teal-100" data-dashboard-calendar-target="cycleBanner" data-past-week="<%= weekdays.first < Date.today && !weekdays.include?(Date.today) %>">
             <svg class="w-3 h-3 text-teal-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/><polyline points="22 2 13 11 9 7"/></svg>
             <% active_cycles.each do |cycle| %>
               <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-teal-100/80 text-teal-700 border border-teal-200/60"><%= cycle.name %></span>
@@ -94,9 +94,20 @@
         <div class="flex bg-gray-200 text-xs leading-6 text-gray-700 lg:flex-auto">
           <div class="w-full lg:grid lg:grid-cols-7 lg:gap-px">
             <% weekdays.each do |day| %>
-              <% month_classes = (day.month == Date.today.month && day.year == Date.today.year) ? "bg-white" : "bg-gray-50 text-gray-500" %>
+              <% is_current_month = (day.month == Date.today.month && day.year == Date.today.year) %>
+              <% is_weekend = day.saturday? || day.sunday? %>
+              <% background_class = if Date.today == day
+                                      "bg-purple-200"
+                                    elsif is_weekend
+                                      is_current_month ? "bg-slate-100 ring-1 ring-inset ring-slate-200" : "bg-slate-100/60"
+                                    elsif is_current_month || Date.today > day
+                                      "bg-white"
+                                    else
+                                      "bg-gray-50"
+                                    end %>
+              <% text_class = (is_current_month || is_weekend || Date.today == day) ? "text-gray-700" : "text-gray-500" %>
               <% hide_past_day_mobile = @date.year == Date.today.year && @date.month == Date.today.month && day < Date.today %>
-              <div class="calendar-day relative min-h-[8rem] py-2 px-3 text-gray-700 transition-colors duration-150 <%= month_classes %> <%= (Date.today == day) ? "bg-purple-200" : ((Date.today > day) ? "bg-white" : nil) %> <%= "max-md:hidden" if hide_past_day_mobile %>" data-weekday="<%= day.wday %>"<% if hide_past_day_mobile %> data-past-day-collapsible="true"<% end %>>
+              <div class="calendar-day relative min-h-[8rem] py-2 px-3 transition-colors duration-150 <%= background_class %> <%= text_class %> <%= "max-md:hidden" if hide_past_day_mobile %>" data-weekday="<%= day.wday %>"<% if hide_past_day_mobile %> data-past-day-collapsible="true"<% end %>>
                 <div class="flex place-content-between">
                   <div id="calendar-day-<%= day.iso8601 %>">
                     <%= render partial: "simple_calendar/day", locals: { date: day } %>

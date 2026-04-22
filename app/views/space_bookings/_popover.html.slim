@@ -52,4 +52,4 @@
     = space_booking.options_emojis
   - if space_booking.notes.presence
     .mt-2.space-y-4.text-yellow-600.font-caveat.text-lg
-      = simple_format "📝 " + space_booking.notes
+      = simple_format "📝 " + space_booking.notes.truncate(200)

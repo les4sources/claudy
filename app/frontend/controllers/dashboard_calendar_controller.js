@@ -4,6 +4,7 @@ export default class extends Controller {
   static targets = [
     'item',
     'week',
+    'cycleBanner',
     'pastWeeksToggler'
   ]
 
@@ -26,6 +27,11 @@ export default class extends Controller {
         el.classList.add('hidden')
       }
     })
+    this.cycleBannerTargets.forEach((el) => {
+      if (el.dataset.pastWeek == 'true') {
+        el.classList.add('hidden')
+      }
+    })
   }
 
   clickCalendar(e) {
@@ -42,6 +48,9 @@ export default class extends Controller {
   showPastWeeks() {
     this.pastWeeksTogglerTarget.classList.add('hidden')
     this.weekTargets.forEach((el, i) => {
+      el.classList.remove('hidden')
+    })
+    this.cycleBannerTargets.forEach((el) => {
       el.classList.remove('hidden')
     })
     this.element.querySelectorAll('[data-past-day-collapsible="true"]').forEach((el) => {

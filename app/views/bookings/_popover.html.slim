@@ -66,4 +66,4 @@
     = booking.wifi_emoji
   - if booking.notes.presence
     .mt-2.space-y-4.text-yellow-600.font-caveat.text-lg
-      = simple_format "📝 " + booking.notes
+      = simple_format "📝 " + booking.notes.truncate(200)
