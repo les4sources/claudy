@@ -330,10 +330,14 @@ class BookingDecorator < ApplicationDecorator
         end
       end
       html << h.content_tag(
-        :span, 
-        room.code, 
-        class: "#{shared_classes} #{specific_classes}", 
-        "data-tooltip-target": "tooltip-room-#{room.id}"
+        :span,
+        room.code,
+        class: "#{shared_classes} #{specific_classes}",
+        data: {
+          controller: "tooltip",
+          action: "mouseenter->tooltip#show mouseleave->tooltip#hide focus->tooltip#show blur->tooltip#hide",
+          "tooltip-target-value": "tooltip-room-#{room.id}"
+        }
       )
     end
     h.raw(html)
@@ -360,13 +364,13 @@ class BookingDecorator < ApplicationDecorator
   def status_emoji
     case object.status
     when "canceled"
-      h.content_tag(:span, "❌", data: { "tooltip-target": "tooltip-status-canceled" })
+      h.content_tag(:span, "❌", data: { controller: "tooltip", action: "mouseenter->tooltip#show mouseleave->tooltip#hide focus->tooltip#show blur->tooltip#hide", "tooltip-target-value": "tooltip-status-canceled" })
     when "confirmed"
-      h.content_tag(:span, "✅", data: { "tooltip-target": "tooltip-status-confirmed" })
+      h.content_tag(:span, "✅", data: { controller: "tooltip", action: "mouseenter->tooltip#show mouseleave->tooltip#hide focus->tooltip#show blur->tooltip#hide", "tooltip-target-value": "tooltip-status-confirmed" })
     when "pending"
-      h.content_tag(:span, "⏳", data: { "tooltip-target": "tooltip-status-pending" })
+      h.content_tag(:span, "⏳", data: { controller: "tooltip", action: "mouseenter->tooltip#show mouseleave->tooltip#hide focus->tooltip#show blur->tooltip#hide", "tooltip-target-value": "tooltip-status-pending" })
     when "declined"
-      h.content_tag(:span, "🙅‍♀️", data: { "tooltip-target": "tooltip-status-declined" })
+      h.content_tag(:span, "🙅‍♀️", data: { controller: "tooltip", action: "mouseenter->tooltip#show mouseleave->tooltip#hide focus->tooltip#show blur->tooltip#hide", "tooltip-target-value": "tooltip-status-declined" })
     else
       object.status
     end
