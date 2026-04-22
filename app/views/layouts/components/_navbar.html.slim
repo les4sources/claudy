@@ -9,7 +9,7 @@ nav.bg-white.shadow-sm.lg:px-6
         | Claudy
 
     / Mobile toggle
-    button.inline-flex.items-center.p-2.w-10.h-10.justify-center.text-gray-500.rounded-lg.md:hidden.hover:bg-teal-50.focus:outline-none.focus:ring-2.focus:ring-teal-200.transition-colors[data-collapse-toggle="navbar-dropdown" type="button" aria-controls="navbar-dropdown" aria-expanded="false"]
+    button.inline-flex.items-center.p-2.w-10.h-10.justify-center.text-gray-500.rounded-lg.md:hidden.hover:bg-teal-50.focus:outline-none.focus:ring-2.focus:ring-teal-200.transition-colors[data-controller="collapse" data-action="click->collapse#toggle" data-collapse-toggle-value="navbar-dropdown" type="button" aria-controls="navbar-dropdown" aria-expanded="false"]
       span.sr-only
         | Afficher le menu principal
       svg.w-5.h-5[aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewbox="0 0 17 14"]
@@ -31,7 +31,7 @@ nav.bg-white.shadow-sm.lg:px-6
 
         / Accueil dropdown (Hébergements + Espaces)
         li.relative
-          button.flex.items-center.gap-1.5.px-4.py-2.rounded-lg.text-sm.font-medium.transition-all.duration-150[id="accueilDropdownButton" data-dropdown-toggle="accueilDropdown" type="button" class="#{ (controller_name == 'bookings' || controller_name == 'space_bookings') ? 'text-4s-main bg-teal-50' : 'text-gray-600 hover:text-4s-main hover:bg-teal-50/60'}"]
+          button.flex.items-center.gap-1.5.px-4.py-2.rounded-lg.text-sm.font-medium.transition-all.duration-150[id="accueilDropdownButton" data-controller="dropdown" data-action="click->dropdown#toggle click@window->dropdown#hideOnClickOutside" data-dropdown-toggle-value="accueilDropdown" type="button" class="#{ (controller_name == 'bookings' || controller_name == 'space_bookings') ? 'text-4s-main bg-teal-50' : 'text-gray-600 hover:text-4s-main hover:bg-teal-50/60'}"]
             svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
               path[d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"]
               polyline[points="9 22 9 12 15 12 15 22"]
