@@ -15,7 +15,7 @@
           | Les rassemblements, chantiers et moments de gouvernance.
           =< link_to "Gérer les catégories →", gathering_categories_path, class: "font-medium text-emerald-700 underline decoration-emerald-200 underline-offset-2 hover:decoration-emerald-500"
 
-    .flex.items-center.gap-2
+    .flex.flex-wrap.items-center.gap-2
       - GatheringCategory.ordered.each do |category|
         .inline-flex.items-center.rounded-full.bg-white.border.border-stone-200.text-stone-600(class="gap-1.5 px-2.5 py-1 text-[0.7rem]")
           span.rounded-full(class="h-1.5 w-1.5 bg-#{category.color}-400")
