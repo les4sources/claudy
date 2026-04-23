@@ -1,0 +1,44 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Catégories de rassemblements",
+           links: [ \
+             link_to("➕ Nouvelle catégorie", new_gathering_category_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2") \
+           ]
+
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-6[scope="col"]
+        th.py-3.px-6[scope="col"]
+          | Nom
+        th.py-3.px-6[scope="col"]
+          | Horaire par défaut
+        th.py-3.px-6[scope="col"]
+          | Durée par défaut
+    tbody
+      - @gathering_categories.each do |category|
+        tr.border-b.hover:bg-gray-50
+          td.py-4.px-6.w-6
+            .w-6.h-6.rounded-full(class="bg-#{category.color}-300")
+          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+            = link_to category.name,
+                      gathering_category_path(category),
+                      class: "text-emerald-700 border-b-2 border-emerald-200 hover:text-emerald-900 focus:text-emerald-900"
+          td.py-4.px-6
+            - if category.default_start_time.present?
+              = category.default_start_time.strftime("%H:%M")
+            - else
+              span.text-gray-400.italic variable
+          td.py-4.px-6
+            - if category.default_duration_minutes.present?
+              - hours = category.default_duration_minutes / 60
+              - minutes = category.default_duration_minutes % 60
+              - if hours.positive? && minutes.positive?
+                = "#{hours}h#{format('%02d', minutes)}"
+              - elsif hours.positive?
+                = "#{hours}h"
+              - else
+                = "#{minutes} min"
+            - else
+              span.text-gray-400.italic variable

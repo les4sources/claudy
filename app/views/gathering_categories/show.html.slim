@@ -1,0 +1,42 @@
+- content_for :page_header do
+  = render 'layouts/components/page_header',
+           title: @gathering_category.name,
+           links: [ \
+             delete_link(@gathering_category),
+             link_to( \
+               "Mettre à jour",
+               edit_gathering_category_path(@gathering_category),
+               class: "btn-page-header" \
+             ) \
+           ].compact
+
+.grid.grid-cols-3.gap-4
+  .col-span-2.space-y-4
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6.flex.items-center.gap-3
+        .w-8.h-8.rounded-full.ring-2.ring-white.shadow(class="bg-#{@gathering_category.color}-300")
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          = @gathering_category.name
+      .border-t.border-gray-200
+        dl
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Couleur
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @gathering_category.color
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6.bg-gray-50
+            dt.text-sm.font-medium.text-gray-500
+              | Heure de début par défaut
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              - if @gathering_category.default_start_time.present?
+                = @gathering_category.default_start_time.strftime("%H:%M")
+              - else
+                span.italic.text-gray-400 variable
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Durée par défaut
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              - if @gathering_category.default_duration_minutes.present?
+                = "#{@gathering_category.default_duration_minutes} minutes"
+              - else
+                span.italic.text-gray-400 variable

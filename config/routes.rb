@@ -10,6 +10,12 @@ Rails.application.routes.draw do
   resources :bundles
   resources :event_categories
   resources :events
+  resources :gathering_categories
+  resources :gatherings do
+    collection do
+      post :quick_create
+    end
+  end
   resources :experiences
   resources :lodgings
   resources :humans do

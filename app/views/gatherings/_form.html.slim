@@ -1,0 +1,52 @@
+.border-l-8.border-emerald-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-emerald-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Informations"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    = f.text_field :name,
+                   label: "Nom (optionnel)",
+                   class: "md:w-1/2 lg:w-2/3",
+                   hint: "Laisser vide pour afficher \"Catégorie du JJ mois\"."
+
+    = f.label :gathering_category_id, "Type de rassemblement *"
+    .mt-2.grid.grid-cols-1.sm:grid-cols-2.lg:grid-cols-3.gap-3
+      - GatheringCategory.ordered.each do |category|
+        label.flex.items-center.gap-2.rounded-lg.border.border-gray-200.bg-white.px-3.py-2.cursor-pointer.hover:border-emerald-400(class="has-[:checked]:border-emerald-500 has-[:checked]:ring-2 has-[:checked]:ring-emerald-200")
+          = f.radio_button :gathering_category_id, category.id, required: true
+          span.rounded-full(class="w-3 h-3 bg-#{category.color}-400")
+          span.text-sm.text-gray-800 = category.name
+
+    = f.text_field :location,
+                   label: "Lieu",
+                   class: "md:w-1/2 lg:w-2/3",
+                   hint: "Ex : salle commune, verger, visio…"
+
+    .space-y-6.md:space-y-0.md:flex.md:space-x-6
+      = f.date_field :starts_at_date,
+                     html5: true,
+                     label: "Du *",
+                     required: true,
+                     error: "Veuillez renseigner une date"
+
+      = f.time_field :starts_at_time,
+                     html5: true,
+                     label: "À quelle heure?",
+                     required: false,
+                     include_seconds: false
+
+      = f.date_field :ends_at_date,
+                     html5: true,
+                     label: "Au *",
+                     required: true,
+                     error: "Veuillez renseigner une date"
+
+      = f.time_field :ends_at_time,
+                     html5: true,
+                     label: "À quelle heure?",
+                     required: false,
+                     include_seconds: false
+
+    = f.label :notes, "Notes"
+    = f.rich_text_area :notes
+
+hr

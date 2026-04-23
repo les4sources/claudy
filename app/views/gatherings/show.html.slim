@@ -1,0 +1,59 @@
+- content_for :page_header do
+  = render 'layouts/components/page_header',
+           title: @gathering.display_name,
+           links: [ \
+             link_to("🗓 Agenda", root_path(view: "organisation", start_date: @gathering.object.starts_at.to_date.iso8601), class: "btn-page-header-no-background"),
+             delete_link(@gathering.object),
+             link_to( \
+               "Mettre à jour",
+               edit_gathering_path(@gathering),
+               class: "btn-page-header" \
+             ) \
+           ].compact
+
+.grid.grid-cols-3.gap-4
+  .col-span-2.space-y-4
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg(class="border-l-4 border-#{@gathering.color}-500")
+      .px-4.py-5.sm:px-6.flex.items-center.gap-3
+        span.w-4.h-4.rounded-full(class="bg-#{@gathering.color}-400")
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          = @gathering.gathering_category.name
+      .border-t.border-gray-200
+        dl
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Nom
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              - if @gathering.object.name.present?
+                = @gathering.object.name
+              - else
+                span.text-gray-400.italic
+                  = @gathering.default_name
+
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6.bg-gray-50
+            dt.text-sm.font-medium.text-gray-500
+              | Début
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = l(@gathering.starts_at, format: :long)
+
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Fin
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = l(@gathering.ends_at, format: :long)
+
+          - if @gathering.object.location.present?
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6.bg-gray-50
+              dt.text-sm.font-medium.text-gray-500
+                | Lieu
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @gathering.object.location
+
+    - if @gathering.notes.presence
+      .overflow-hidden.bg-yellow-200.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6.bg-yellow-300
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Notes
+        .border-t.border-yellow-400.px-6.py-4
+          .content.space-y-4.text-sm
+            == @gathering.notes

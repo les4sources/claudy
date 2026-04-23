@@ -1,0 +1,89 @@
+= render "spaces/tooltips"
+= render "rooms/tooltips"
+
+/ Month calendar
+= SimpleCalendar::DashboardCalendar.new(self, { \
+    today: @date \
+  }).render do |date|
+  / Events
+  - @events.select { |event| event.starts_at.to_date <= date && event.ends_at.to_date >= date }.each do |event|
+    .popover.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-sm.opacity-0[id="popover-event-#{event.id}" data-popover role="tooltip"]
+      = render "events/popover",
+               event: event
+      div[data-popper-arrow]
+
+    div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl #{event.calendar_class}")
+      .block
+        div
+          strong
+            = link_to event.name_with_color,
+                      event_path(event),
+                      class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6"
+      .absolute.top-0.left-0.w-full.h-full(data-controller="popover" data-action="click->popover#toggle click@window->popover#hideOnClickOutside" data-popover-target-value="popover-event-#{event.id}" data-popover-trigger-value="click")
+
+  / Space reservations
+  - if @grouped_space_reservations[date]
+    - @grouped_space_reservations[date].sort_by {|sr| sr.start_time }.group_by { |sr| sr.space_booking.id }.each do |grouped_space_reservations|
+      - space_reservation = grouped_space_reservations.last.first
+      - space_booking = SpaceBookingDecorator.new(space_reservation.space_booking)
+      .popover.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-sm.opacity-0[id="popover-space-reservation-#{space_reservation.id}" data-popover role="tooltip"]
+        = render "space_bookings/popover",
+                 space_booking: space_booking
+        div[data-popper-arrow]
+
+      div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl #{space_booking.calendar_class}")
+        .block
+          div
+            strong
+              = link_to space_booking.decorate.group_or_name.html_safe,
+                        space_booking_path(space_booking),
+                        class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6"
+            - if space_booking.event.presence
+              .text-gray-500.leading-none.mb-2.font-semibold = space_booking.event.name_with_color
+
+            span.text-gray-500 =< space_booking.dates_counter(date)
+
+          .grid.grid-cols-3.gap-1
+            - grouped_space_reservations.last.each do |space_reservation|
+              = space_badge(space_reservation.space)
+
+          .block.text-gray-500
+            = space_booking.duration
+        .absolute.top-0.left-0.w-full.h-full(data-controller="popover" data-action="click->popover#toggle click@window->popover#hideOnClickOutside" data-popover-target-value="popover-space-reservation-#{space_reservation.id}" data-popover-trigger-value="click")
+
+  / Reservations
+  - if @grouped_reservations[date]
+    - @grouped_reservations[date].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations|
+      - reservation = grouped_reservations.last.first
+      - booking = BookingDecorator.new(reservation.booking)
+
+      .popover.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-sm.opacity-0[id="popover-reservation-#{reservation.id}" data-popover role="tooltip"]
+        = render "bookings/popover",
+                 booking: booking
+        div[data-popper-arrow]
+
+      div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl #{booking.calendar_class}")
+        .block
+          div
+            strong
+              = link_to booking.decorate.group_or_name.html_safe,
+                        booking_path(booking),
+                        class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6"
+
+            span.text-gray-500 =< booking.dates_counter(date)
+
+          - if !booking.lodging.nil?
+            = booking.lodging_badge
+          - else
+            .grid.grid-cols-3.gap-1
+              - grouped_reservations.last.each do |reservation|
+                = room_badge(reservation.room)
+        .absolute.top-0.left-0.w-full.h-full(data-controller="popover" data-action="click->popover#toggle click@window->popover#hideOnClickOutside" data-popover-target-value="popover-reservation-#{reservation.id}" data-popover-trigger-value="click")
+
+/ Activity feed
+.mt-8.pb-5.border-b.border-gray-200
+  h2.text-base.font-semibold.leading-6.text-gray-900 Activité récente
+
+.flow-root.mt-8
+  ul.-mb-8[role="list"]
+    = render_activities(@activities)

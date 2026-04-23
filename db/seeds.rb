@@ -81,9 +81,33 @@ Task.create(
   humans: [jeanclaude, miranda]
 )
 Task.create(
-  name: "Construire le poulailler", 
-  project: project, 
+  name: "Construire le poulailler",
+  project: project,
   status: Task::STATUS_OPEN,
   due_date: Date.today + 4.month,
   humans: [jeanclaude, miranda]
 )
+
+GatheringCategory.find_or_create_by!(name: "PUD") do |c|
+  c.color = "emerald"
+  c.default_start_time = "08:45"
+  c.default_duration_minutes = 360
+end
+GatheringCategory.find_or_create_by!(name: "Chantier") do |c|
+  c.color = "amber"
+  c.default_start_time = "09:30"
+  c.default_duration_minutes = 480
+end
+GatheringCategory.find_or_create_by!(name: "Conseil des Sourciers") do |c|
+  c.color = "violet"
+  c.default_start_time = "18:00"
+  c.default_duration_minutes = 60
+end
+GatheringCategory.find_or_create_by!(name: "Mise au vert") do |c|
+  c.color = "rose"
+  c.default_start_time = "00:00"
+  c.default_duration_minutes = 1440
+end
+GatheringCategory.find_or_create_by!(name: "Rencontre archis") do |c|
+  c.color = "sky"
+end

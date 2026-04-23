@@ -1,0 +1,38 @@
+.border-l-8.border-emerald-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-emerald-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Informations"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    = f.text_field :name,
+                   label: "Nom *",
+                   required: true,
+                   class: "md:w-1/2 lg:w-2/3",
+                   hint: "Ex : PUD, Chantier, Conseil des Sourciers…"
+
+    = f.text_field :color,
+                   label: "Couleur (ex: emerald) *",
+                   required: true,
+                   class: "md:w-1/2 lg:w-2/3",
+                   hint: link_to("Toutes les couleurs Tailwind", "https://tailwindcss.com/docs/background-color", target: "_blank", class: "text-emerald-700 underline")
+
+hr.my-6
+
+.border-l-8.border-emerald-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-emerald-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Horaires par défaut"
+    p.mt-2.text-xs.text-gray-500.md:text-right
+      | Utilisés pour la création rapide depuis le calendrier.
+      br
+      | Laisser vide pour un horaire variable.
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    = f.time_field :default_start_time,
+                   label: "Heure de début",
+                   class: "md:w-1/2 lg:w-1/3"
+
+    = f.number_field :default_duration_minutes,
+                     label: "Durée (en minutes)",
+                     class: "md:w-1/2 lg:w-1/3",
+                     hint: "Ex : 60 pour 1h, 360 pour 6h, 1440 pour une journée entière."
+
+hr

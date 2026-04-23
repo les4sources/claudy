@@ -1,0 +1,24 @@
+- menu_id = "quick-create-#{date.iso8601}"
+
+.relative.opacity-0.transition-opacity(class="group-hover:opacity-100 focus-within:opacity-100")
+  button.flex.items-center.justify-center.w-6.h-6.rounded-full.bg-white.border.border-emerald-300.text-emerald-700.shadow-sm.hover:bg-emerald-600.hover:text-white.hover:border-emerald-600.focus:outline-none.focus:ring-2.focus:ring-emerald-400.focus:ring-offset-1(type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Ajouter un rassemblement" data-controller="dropdown" data-action="click->dropdown#toggle click@window->dropdown#hideOnClickOutside" data-dropdown-toggle-value=menu_id)
+    svg(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5")
+      path[d="M12 5v14M5 12h14"]
+
+  .hidden.absolute.right-0.top-7.z-30.w-56.rounded-lg.bg-white.shadow-xl.ring-1.ring-black.ring-opacity-5.overflow-hidden(id=menu_id role="menu")
+    .px-3.py-2.border-b.border-stone-100.uppercase.text-stone-400(class="text-[0.65rem] tracking-[0.16em]")
+      = l(date, format: :long)
+    ul.py-1
+      - categories.each do |category|
+        li
+          = button_to quick_create_gatherings_path(category_id: category.id, date: date.iso8601),
+                      method: :post,
+                      class: "group flex items-center gap-2.5 w-full px-3 py-2 text-left text-sm text-stone-700 hover:bg-stone-50 focus:bg-stone-50 focus:outline-none",
+                      form: { data: { turbo_stream: true, turbo_frame: "_top" } } do
+            span.rounded-full.ring-2.ring-white.shadow(class="w-2.5 h-2.5 bg-#{category.color}-400")
+            span.flex-1.font-medium.truncate = category.name
+            - if category.default_start_time.present?
+              span.tabular-nums.text-stone-400(class="text-[0.65rem]")
+                = category.default_start_time.strftime("%H:%M").sub(":00", "h").sub(":", "h")
+            - else
+              span.italic.text-stone-400(class="text-[0.65rem]") variable

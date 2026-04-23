@@ -1,0 +1,22 @@
+= turbo_stream.append "day_gatherings_#{@date.iso8601}",
+                       partial: "pages/calendar/gathering",
+                       locals: { gathering: @gathering, date: @date }
+
+= turbo_stream.replace "quick-create-#{@date.iso8601}" do
+  .hidden.absolute.right-0.top-7.z-30.w-56.rounded-lg.bg-white.shadow-xl.ring-1.ring-black.ring-opacity-5.overflow-hidden(id="quick-create-#{@date.iso8601}" role="menu")
+    .px-3.py-2.border-b.border-stone-100.uppercase.text-stone-400(class="text-[0.65rem] tracking-[0.16em]")
+      = l(@date, format: :long)
+    ul.py-1
+      - GatheringCategory.ordered.each do |category|
+        li
+          = button_to quick_create_gatherings_path(category_id: category.id, date: @date.iso8601),
+                      method: :post,
+                      class: "group flex items-center gap-2.5 w-full px-3 py-2 text-left text-sm text-stone-700 hover:bg-stone-50 focus:bg-stone-50 focus:outline-none",
+                      form: { data: { turbo_stream: true, turbo_frame: "_top" } } do
+            span.rounded-full.ring-2.ring-white.shadow(class="w-2.5 h-2.5 bg-#{category.color}-400")
+            span.flex-1.font-medium.truncate = category.name
+            - if category.default_start_time.present?
+              span.tabular-nums.text-stone-400(class="text-[0.65rem]")
+                = category.default_start_time.strftime("%H:%M").sub(":00", "h").sub(":", "h")
+            - else
+              span.italic.text-stone-400(class="text-[0.65rem]") variable

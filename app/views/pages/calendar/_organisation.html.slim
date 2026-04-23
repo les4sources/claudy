@@ -1,0 +1,31 @@
+/ Intro band — establishes the "Organisation" mood with a subtle emerald accent and contextual links
+.relative.mb-6.overflow-hidden.rounded-xl.border.border-emerald-100.bg-gradient-to-br.from-emerald-50.via-white.to-stone-50.shadow-sm
+  .absolute.inset-y-0.left-0.w-1.bg-emerald-600
+  .relative.flex.flex-wrap.items-center.justify-between.gap-4.px-5.py-4
+    .flex.items-start.gap-3
+      .flex.h-9.w-9.shrink-0.items-center.justify-center.rounded-full.bg-emerald-100.ring-4.ring-white
+        svg.h-4.w-4.text-emerald-700[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+          path[d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"]
+          circle[cx="9" cy="7" r="4"]
+          path[d="M23 21v-2a4 4 0 0 0-3-3.87"]
+          path[d="M16 3.13a4 4 0 0 1 0 7.75"]
+      div
+        .font-semibold.uppercase.text-emerald-700(class="text-[0.7rem] tracking-[0.2em]") Agenda du collectif
+        .mt-0.5.text-sm.text-stone-600
+          | Les rassemblements, chantiers et moments de gouvernance.
+          =< link_to "Gérer les catégories →", gathering_categories_path, class: "font-medium text-emerald-700 underline decoration-emerald-200 underline-offset-2 hover:decoration-emerald-500"
+
+    .flex.items-center.gap-2
+      - GatheringCategory.ordered.each do |category|
+        .inline-flex.items-center.rounded-full.bg-white.border.border-stone-200.text-stone-600(class="gap-1.5 px-2.5 py-1 text-[0.7rem]")
+          span.rounded-full(class="h-1.5 w-1.5 bg-#{category.color}-400")
+          = category.name
+
+/ Month calendar — organisation variant
+= SimpleCalendar::OrganisationCalendar.new(self, { today: @date }).render do |date|
+
+- if @gatherings.empty?
+  .mt-8.flex.flex-col.items-center.justify-center.py-10.text-center.rounded-xl.border.border-dashed.border-stone-300.bg-white
+    .text-4xl.mb-2 🌱
+    .text-sm.font-medium.text-stone-700 Aucun rassemblement ce mois-ci.
+    .mt-1.text-xs.text-stone-500 Survole un jour puis clique sur le « + » pour en ajouter un.

@@ -1,0 +1,46 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Rassemblements",
+           links: [ \
+             link_to("Catégories", gathering_categories_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"),
+             link_to("➕ Nouveau rassemblement", new_gathering_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2") \
+           ]
+
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-6.w-40[scope="col"]
+          | Catégorie
+        th.py-3.px-6[scope="col"]
+          | Nom
+        th.py-3.px-6.w-80[scope="col"]
+          | Quand
+        th.py-3.px-6.w-48[scope="col"]
+          | Lieu
+    tbody
+      - if @gatherings.empty?
+        tr
+          td.py-10.px-6.text-center.text-gray-500.italic[colspan="4"]
+            | Aucun rassemblement pour le moment.
+            = link_to "Créer le premier →", new_gathering_path, class: "ml-2 text-emerald-700 hover:text-emerald-900 underline"
+      - @gatherings.each do |gathering|
+        tr.bg-white.border-b.hover:bg-gray-50
+          td.py-4.px-6
+            .flex.items-center.gap-2
+              span.w-3.h-3.rounded-full(class="bg-#{gathering.color}-400")
+              = gathering.gathering_category.name
+          td.py-4.px-6.font-medium.text-gray-900[scope="row"]
+            = link_to gathering.display_name,
+                      gathering_path(gathering),
+                      class: "text-emerald-700 border-b-2 border-emerald-200 hover:text-emerald-900 focus:text-emerald-900"
+          td.py-4.px-6
+            .text-xs.text-gray-500.font-semibold Début
+            = l(gathering.starts_at, format: :long).sub("h00", "h")
+            .text-xs.text-gray-500.font-semibold.mt-1 Fin
+            = l(gathering.ends_at, format: :long).sub("h00", "h")
+          td.py-4.px-6
+            - if gathering.object.location.present?
+              = gathering.object.location
+            - else
+              span.text-gray-400.italic —

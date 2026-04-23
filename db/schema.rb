@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_03_04_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_04_23_092608) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -190,6 +190,29 @@ ActiveRecord::Schema[7.0].define(version: 2026_03_04_120000) do
     t.integer "max_participants"
     t.string "duration"
     t.index ["human_id"], name: "index_experiences_on_human_id"
+  end
+
+  create_table "gathering_categories", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "color", null: false
+    t.time "default_start_time"
+    t.integer "default_duration_minutes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "deleted_at"
+  end
+
+  create_table "gatherings", force: :cascade do |t|
+    t.string "name"
+    t.bigint "gathering_category_id", null: false
+    t.datetime "starts_at", null: false
+    t.datetime "ends_at", null: false
+    t.string "location"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "deleted_at"
+    t.index ["gathering_category_id"], name: "index_gatherings_on_gathering_category_id"
+    t.index ["starts_at", "ends_at"], name: "index_gatherings_on_starts_at_and_ends_at"
   end
 
   create_table "human_roles", force: :cascade do |t|
@@ -489,6 +512,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_03_04_120000) do
   add_foreign_key "cycle_actions", "humans", column: "delegate_to_human_id"
   add_foreign_key "events", "event_categories"
   add_foreign_key "experiences", "humans"
+  add_foreign_key "gatherings", "gathering_categories"
   add_foreign_key "human_roles", "humans"
   add_foreign_key "human_roles", "roles"
   add_foreign_key "lodging_rooms", "lodgings"

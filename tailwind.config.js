@@ -74,6 +74,10 @@ module.exports = {
     'border-yellow-500',
     'border-pink-500',
     'border-blue-500',
-    'border-yellow-500'
+    'border-yellow-500',
+    // Dynamic category colors (GatheringCategory/EventCategory) — full Tailwind palette
+    // so any color name stored in DB renders without re-seeding the safelist.
+    { pattern: /^(bg|border|text|ring)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(50|100|200|300|400|500|600|700|800|900)$/ },
+    { pattern: /^border-l-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(400|500|600)$/ }
   ],
 }

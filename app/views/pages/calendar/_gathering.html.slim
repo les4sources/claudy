@@ -1,0 +1,19 @@
+.relative
+  .popover.absolute.z-50.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-lg.opacity-0(id="popover-gathering-#{gathering.id}-#{date.iso8601}" data-popover role="tooltip")
+    = render "pages/calendar/gathering_popover", gathering: gathering
+    div[data-popper-arrow]
+
+  = link_to gathering_path(gathering),
+            class: "flex items-center gap-1.5 px-2 py-1 text-[0.7rem] leading-tight rounded-md #{gathering.calendar_class} hover:shadow-md transition-shadow",
+            data: { \
+              controller: "popover", \
+              action: "mouseenter->popover#show mouseleave->popover#hide", \
+              "popover-target-value": "popover-gathering-#{gathering.id}-#{date.iso8601}", \
+              "popover-trigger-value": "hover" \
+            } do
+    span(class="shrink-0 w-1.5 h-1.5 rounded-full bg-#{gathering.color}-500")
+    span.font-semibold.truncate(class="text-#{gathering.color}-900")
+      = gathering.display_name
+    - if date == gathering.starts_at.to_date && !gathering.full_day?
+      span(class="shrink-0 text-[0.65rem] tabular-nums text-#{gathering.color}-700/70")
+        = gathering.time_only(gathering.starts_at)

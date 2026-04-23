@@ -1,25 +1,34 @@
 class PagesController < BaseController
   def calendar
     set_dates
-    @events = EventDecorator.decorate_collection(
-      Event.all
-        .includes(:event_category)
-        .between_times(@first, @last)
-    )
-    # group space reservations by day
-    @space_reservations = SpaceReservation.all
-      .includes(:space_booking)
-      .where.not(space_booking: { status: ["declined", "canceled"] })
-      .between_times(@first, @last, field: :date)
-    @grouped_space_reservations = @space_reservations.to_a.group_by { |sr| sr.date }
-    # group reservations by day
-    @reservations = Reservation.all
-      .includes(:booking)
-      .where.not(booking: { status: ["declined", "canceled"] })
-      .between_times(@first, @last, field: :date)
-    @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
+    @calendar_view = params[:view] == "organisation" ? :organisation : :bookings
     @cycles = Cycle.overlapping(@first.to_date, @last.to_date)
-    @activities = PublicActivity::Activity.where("created_at > ?", 14.days.ago).order(created_at: :desc)
+
+    if @calendar_view == :organisation
+      @gatherings = GatheringDecorator.decorate_collection(
+        Gathering.includes(:gathering_category).between_times(@first, @last)
+      )
+      @gathering_categories = GatheringCategory.ordered
+    else
+      @events = EventDecorator.decorate_collection(
+        Event.all
+          .includes(:event_category)
+          .between_times(@first, @last)
+      )
+      # group space reservations by day
+      @space_reservations = SpaceReservation.all
+        .includes(:space_booking)
+        .where.not(space_booking: { status: ["declined", "canceled"] })
+        .between_times(@first, @last, field: :date)
+      @grouped_space_reservations = @space_reservations.to_a.group_by { |sr| sr.date }
+      # group reservations by day
+      @reservations = Reservation.all
+        .includes(:booking)
+        .where.not(booking: { status: ["declined", "canceled"] })
+        .between_times(@first, @last, field: :date)
+      @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
+      @activities = PublicActivity::Activity.where("created_at > ?", 14.days.ago).order(created_at: :desc)
+    end
   end
 
   # details for a specific day
