@@ -23,6 +23,11 @@
           .text-4xl.font-bold.tabular-nums = days_left
           p.text-teal-200.text-sm jours restants
 
+/ Dashboard cards (Next moment + Recent decisions)
+.grid.grid-cols-1.lg:grid-cols-2.gap-4.mb-8
+  = render "next_moment_card"
+  = render "recent_decisions_card"
+
 / Members grid
 - if @humans.any?
   .grid.grid-cols-1.md:grid-cols-2.lg:grid-cols-3.gap-4.mb-8

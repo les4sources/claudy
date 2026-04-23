@@ -1,0 +1,10 @@
+- count = gathering.agenda_items.count
+- done = gathering.agenda_items.where(completed: true).count
+
+span(id="agenda_items_counter_#{gathering.id}" class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-100")
+  span.font-semibold = count
+  | point
+  - if count != 1
+    | s
+  - if done.positive?
+    span.opacity-60 · #{done}/#{count} traités

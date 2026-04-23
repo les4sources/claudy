@@ -4,6 +4,11 @@ class OrganisationController < BaseController
   def index
     @humans = Human.cycle_active.order(:name)
     @cycles = Cycle.chronological
+    next_g = Gathering.upcoming.includes(:gathering_category, :agenda_items).first
+    @next_gathering = next_g ? GatheringDecorator.new(next_g) : nil
+    @recent_decisions = DecisionDecorator.decorate_collection(
+      Decision.recent.includes(:recorded_by, :gathering).limit(4)
+    )
   end
 
   def member

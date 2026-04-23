@@ -1,0 +1,17 @@
+.border-l-8.border-emerald-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-emerald-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Point de l'ODJ"
+    p.mt-2.text-xs.text-stone-500.md:text-right
+      | Détaille ici la fiche de préparation : contexte, questions à trancher, documents utiles.
+
+  .col-span-2.mb-4.space-y-6
+    = f.text_field :title,
+                   label: "Titre du point *",
+                   required: true,
+                   class: "md:w-2/3",
+                   hint: "Court, scannable. Ex : « Budget chauffage 2027 »."
+
+    = f.label :description, "Fiche de préparation"
+    = f.rich_text_area :description
+
+hr

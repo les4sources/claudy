@@ -15,7 +15,17 @@ Rails.application.routes.draw do
     collection do
       post :quick_create
     end
+    resources :agenda_items, except: [:index, :show] do
+      member do
+        patch :toggle_completed
+      end
+      collection do
+        patch :reorder
+      end
+    end
   end
+  resources :decisions
+  get "organisation/decisions", to: "decisions#index", as: :organisation_decisions
   resources :experiences
   resources :lodgings
   resources :humans do

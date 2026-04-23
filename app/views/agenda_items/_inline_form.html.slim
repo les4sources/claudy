@@ -1,0 +1,13 @@
+= form_with model: [gathering, agenda_item],
+             url: gathering_agenda_items_path(gathering),
+             id: "agenda_item_form_#{gathering.id}",
+             class: "flex items-center gap-2",
+             data: { turbo_frame: "_top" } do |f|
+  = text_field_tag "agenda_item[title]",
+                   nil,
+                   placeholder: "Ajouter un point à l'ODJ…",
+                   required: true,
+                   class: "flex-1 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 focus:outline-none",
+                   aria: { label: "Titre du nouveau point" }
+  = f.submit "Ajouter",
+             class: "inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-1"

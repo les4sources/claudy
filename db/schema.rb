@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_04_23_092608) do
+ActiveRecord::Schema[7.0].define(version: 2026_04_23_101620) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -70,6 +70,20 @@ ActiveRecord::Schema[7.0].define(version: 2026_04_23_092608) do
     t.index ["recipient_type", "recipient_id"], name: "index_activities_on_recipient_type_and_recipient_id"
     t.index ["trackable_id", "trackable_type"], name: "index_activities_on_trackable_id_and_trackable_type"
     t.index ["trackable_type", "trackable_id"], name: "index_activities_on_trackable_type_and_trackable_id"
+  end
+
+  create_table "agenda_items", force: :cascade do |t|
+    t.bigint "gathering_id", null: false
+    t.bigint "author_id", null: false
+    t.string "title", null: false
+    t.integer "position", default: 0, null: false
+    t.boolean "completed", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "deleted_at"
+    t.index ["author_id"], name: "index_agenda_items_on_author_id"
+    t.index ["gathering_id", "position"], name: "index_agenda_items_on_gathering_id_and_position"
+    t.index ["gathering_id"], name: "index_agenda_items_on_gathering_id"
   end
 
   create_table "bookings", force: :cascade do |t|
@@ -149,6 +163,22 @@ ActiveRecord::Schema[7.0].define(version: 2026_04_23_092608) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["start_date", "end_date"], name: "index_cycles_on_start_date_and_end_date"
+  end
+
+  create_table "decisions", force: :cascade do |t|
+    t.string "title", null: false
+    t.string "summary", null: false
+    t.date "taken_at", null: false
+    t.bigint "recorded_by_id", null: false
+    t.bigint "gathering_id"
+    t.bigint "agenda_item_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "deleted_at"
+    t.index ["agenda_item_id"], name: "index_decisions_on_agenda_item_id"
+    t.index ["gathering_id"], name: "index_decisions_on_gathering_id"
+    t.index ["recorded_by_id"], name: "index_decisions_on_recorded_by_id"
+    t.index ["taken_at"], name: "index_decisions_on_taken_at", order: :desc
   end
 
   create_table "event_categories", force: :cascade do |t|
@@ -505,11 +535,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_04_23_092608) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "agenda_items", "gatherings"
+  add_foreign_key "agenda_items", "humans", column: "author_id"
   add_foreign_key "bookings", "lodgings"
   add_foreign_key "bundles", "projects"
   add_foreign_key "bundles", "teams"
   add_foreign_key "cycle_actions", "humans"
   add_foreign_key "cycle_actions", "humans", column: "delegate_to_human_id"
+  add_foreign_key "decisions", "agenda_items", on_delete: :nullify
+  add_foreign_key "decisions", "gatherings", on_delete: :nullify
+  add_foreign_key "decisions", "humans", column: "recorded_by_id"
   add_foreign_key "events", "event_categories"
   add_foreign_key "experiences", "humans"
   add_foreign_key "gatherings", "gathering_categories"

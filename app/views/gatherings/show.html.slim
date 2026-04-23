@@ -11,8 +11,10 @@
              ) \
            ].compact
 
-.grid.grid-cols-3.gap-4
-  .col-span-2.space-y-4
+.grid.grid-cols-1.lg:grid-cols-3.gap-4
+
+  / Left column — gathering info + notes
+  .lg:col-span-1.space-y-4
     .overflow-hidden.bg-white.shadow.sm:rounded-lg(class="border-l-4 border-#{@gathering.color}-500")
       .px-4.py-5.sm:px-6.flex.items-center.gap-3
         span.w-4.h-4.rounded-full(class="bg-#{@gathering.color}-400")
@@ -20,9 +22,8 @@
           = @gathering.gathering_category.name
       .border-t.border-gray-200
         dl
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Nom
+          .px-4.py-4.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500 Nom
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               - if @gathering.object.name.present?
                 = @gathering.object.name
@@ -30,30 +31,84 @@
                 span.text-gray-400.italic
                   = @gathering.default_name
 
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6.bg-gray-50
-            dt.text-sm.font-medium.text-gray-500
-              | Début
+          .px-4.py-4.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6.bg-gray-50
+            dt.text-sm.font-medium.text-gray-500 Début
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = l(@gathering.starts_at, format: :long)
 
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Fin
+          .px-4.py-4.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500 Fin
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = l(@gathering.ends_at, format: :long)
 
           - if @gathering.object.location.present?
-            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6.bg-gray-50
-              dt.text-sm.font-medium.text-gray-500
-                | Lieu
+            .px-4.py-4.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6.bg-gray-50
+              dt.text-sm.font-medium.text-gray-500 Lieu
               dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
                 = @gathering.object.location
 
     - if @gathering.notes.presence
       .overflow-hidden.bg-yellow-200.shadow.sm:rounded-lg
         .px-4.py-5.sm:px-6.bg-yellow-300
-          h3.text-lg.font-medium.leading-6.text-gray-900
-            | Notes
+          h3.text-lg.font-medium.leading-6.text-gray-900 Notes
         .border-t.border-yellow-400.px-6.py-4
           .content.space-y-4.text-sm
             == @gathering.notes
+
+  / Right column — ODJ + decisions
+  .lg:col-span-2.space-y-6
+
+    / Agenda items section
+    section.rounded-xl.border.border-emerald-100.bg-white.shadow-sm.overflow-hidden
+      .flex.items-center.justify-between.gap-3.px-5.py-4.border-b.border-emerald-100.bg-gradient-to-br.from-emerald-50.to-white
+        div
+          .font-semibold.uppercase.text-emerald-700(class="text-[0.65rem] tracking-[0.2em]") Ordre du jour
+          h2.mt-0.5.text-lg.font-semibold.text-stone-900 Les points à traiter
+        = render "agenda_items/counter", gathering: @gathering.object
+
+      ul.p-4.space-y-2(id="agenda_items_list_#{@gathering.id}" data-controller="sortable" data-sortable-url-value=reorder_gathering_agenda_items_path(@gathering))
+        - @gathering.object.agenda_items.ordered.each do |item|
+          = render "agenda_items/item", item: item
+
+      .p-4.border-t.border-stone-100.bg-stone-50
+        - if @gathering.object.agenda_items.empty?
+          .mb-3.rounded-lg.border.border-dashed.border-stone-200.bg-white.px-4.py-3.text-center(id="agenda_items_empty_#{@gathering.id}")
+            .text-sm.text-stone-600 ODJ vide pour l'instant.
+            .mt-0.5.text-xs.text-stone-400 Un sourcier, un point — tout le monde peut alimenter.
+        = render "agenda_items/inline_form", gathering: @gathering.object, agenda_item: @gathering.object.agenda_items.build
+
+    / Decisions section
+    section.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidden
+      .flex.items-center.justify-between.gap-3.px-5.py-4.border-b.border-stone-100.bg-stone-50
+        div
+          .font-semibold.uppercase.text-stone-500(class="text-[0.65rem] tracking-[0.2em]") Décisions prises
+          h2.mt-0.5.text-lg.font-semibold.text-stone-900 Ce qui a été tranché
+        = link_to new_decision_path(gathering_id: @gathering.id),
+                  class: "inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700" do
+          span.leading-none ✎
+          | Consigner
+
+      - decisions = @gathering.object.decisions.recent
+      - if decisions.empty?
+        .p-8.text-center
+          .text-sm.text-stone-500 Aucune décision consignée pour ce rassemblement.
+      - else
+        ul.divide-y.divide-stone-100
+          - decisions.each do |d|
+            - decision = DecisionDecorator.new(d)
+            li.px-5.py-4.hover:bg-stone-50.transition-colors
+              = link_to decision_path(decision), class: "block" do
+                .flex.items-start.justify-between.gap-3
+                  .flex-1.min-w-0
+                    .text-sm.font-semibold.text-stone-900.leading-tight.truncate
+                      = decision.title
+                    .mt-0.5.text-xs.text-stone-600.line-clamp-2
+                      = decision.summary
+                    - if decision.agenda_item.present?
+                      .mt-1.text-stone-400(class="text-[0.65rem]")
+                        | Lié au point :
+                        span.font-medium =< decision.agenda_item.title
+                  .shrink-0.text-right
+                    .text-stone-400.tabular-nums(class="text-[0.65rem]")
+                      = l(decision.taken_at, format: :short)
+                    .text-stone-400.mt-0.5(class="text-[0.65rem]") par #{decision.recorded_by_label}

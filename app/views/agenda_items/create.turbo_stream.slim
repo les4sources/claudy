@@ -1,0 +1,14 @@
+= turbo_stream.append "agenda_items_list_#{@gathering.id}",
+                       partial: "agenda_items/item",
+                       locals: { item: @agenda_item }
+
+= turbo_stream.replace "agenda_item_form_#{@gathering.id}",
+                       partial: "agenda_items/inline_form",
+                       locals: { gathering: @gathering, agenda_item: @gathering.agenda_items.build }
+
+= turbo_stream.replace "agenda_items_empty_#{@gathering.id}",
+                       ""
+
+= turbo_stream.replace "agenda_items_counter_#{@gathering.id}",
+                       partial: "agenda_items/counter",
+                       locals: { gathering: @gathering }

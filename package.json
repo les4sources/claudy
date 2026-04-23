@@ -19,6 +19,7 @@
     "foundation-sites": "^6.7.5",
     "moment": "latest",
     "postcss": "^8.4.19",
+    "sortablejs": "^1.15.7",
     "tailwindcss": "^3.2.4",
     "tailwindcss-stimulus-components": "^3.0.4",
     "trix": "^2.1.3",

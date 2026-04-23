@@ -1,0 +1,15 @@
+- content_for :page_header do
+  = render 'layouts/components/page_header',
+           title: "Mettre à jour le point",
+           links: [ \
+             link_to("← Retour au rassemblement", gathering_path(@gathering), class: "btn-page-header-no-background") \
+           ]
+
+= form_with model: [@gathering, @agenda_item],
+            url: gathering_agenda_item_path(@gathering, @agenda_item) do |f|
+  .space-y-8.divide-y.divide-gray-200.sm:space-y-5
+    .space-y-6.sm:space-y-5
+      = render "form", f: f
+
+  = f.actions do
+    = f.submit "Mettre à jour"

@@ -17,6 +17,8 @@ class Gathering < ApplicationRecord
   tracked owner: Proc.new { |controller, _model| controller.current_user rescue nil }
 
   belongs_to :gathering_category
+  has_many :agenda_items, -> { ordered }, dependent: :destroy
+  has_many :decisions, dependent: :nullify
 
   has_paper_trail
   has_soft_deletion default_scope: true

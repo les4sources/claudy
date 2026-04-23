@@ -1,0 +1,57 @@
+.border-l-8.border-emerald-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-emerald-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Décision"
+    p.mt-2.text-xs.text-stone-500.md:text-right
+      | Consigne la décision telle qu'elle a été formulée par le collectif.
+
+  .col-span-2.mb-4.space-y-6
+    = f.text_field :title,
+                   label: "Titre *",
+                   required: true,
+                   class: "md:w-2/3",
+                   hint: "Formulation courte et identifiable. Ex : « Remplacement chaudière »."
+
+    = f.text_field :summary,
+                   label: "Résumé en une phrase *",
+                   required: true,
+                   class: "md:w-full",
+                   hint: "Ce que scannent les sourciers pressés."
+
+    = f.date_field :taken_at,
+                   html5: true,
+                   label: "Prise le *",
+                   required: true,
+                   class: "md:w-1/3"
+
+    = f.label :body, "Contenu détaillé"
+    = f.rich_text_area :body
+
+hr.my-6
+
+.border-l-8.border-emerald-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-emerald-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Contexte"
+    p.mt-2.text-xs.text-stone-500.md:text-right
+      | Rattache cette décision au moment et au point d'ODJ qui l'ont produite.
+
+  .col-span-2.mb-4.space-y-6
+    = f.label :gathering_id, "Rassemblement d'origine"
+    = f.collection_select :gathering_id,
+                          Gathering.includes(:gathering_category).order(starts_at: :desc).limit(100),
+                          :id,
+                          ->(g) { "#{g.gathering_category.name} du #{l(g.starts_at.to_date)}" },
+                          { include_blank: "— Aucun —" },
+                          class: "w-full md:w-2/3 rounded-md border-gray-300"
+
+    - if f.object.gathering_id.present?
+      - items = f.object.gathering&.agenda_items
+      - if items&.any?
+        = f.label :agenda_item_id, "Point d'ODJ lié (optionnel)"
+        = f.collection_select :agenda_item_id,
+                              items,
+                              :id,
+                              :title,
+                              { include_blank: "— Aucun —" },
+                              class: "w-full md:w-2/3 rounded-md border-gray-300"
+
+hr

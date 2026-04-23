@@ -1,0 +1,50 @@
+- content_for :page_header do
+  = render 'layouts/components/page_header',
+           title: @decision.title,
+           links: [ \
+             link_to("← Registre", organisation_decisions_path, class: "btn-page-header-no-background"),
+             delete_link(@decision.object),
+             link_to( \
+               "Mettre à jour",
+               edit_decision_path(@decision),
+               class: "btn-page-header" \
+             ) \
+           ].compact
+
+.grid.grid-cols-3.gap-4
+  .col-span-2.space-y-4
+    article.rounded-xl.border.border-emerald-100.bg-white.shadow-sm.overflow-hidden
+      .border-l-4.border-emerald-500.bg-gradient-to-br.from-emerald-50.to-white.px-5.py-4
+        .font-semibold.uppercase.text-emerald-700(class="text-[0.7rem] tracking-[0.2em]") Résumé
+        p.mt-1.text-base.font-medium.text-stone-800.leading-snug
+          = @decision.summary
+
+      dl.divide-y.divide-stone-100
+        .px-5.py-3.grid.grid-cols-3.gap-4.items-baseline
+          dt.text-xs.uppercase.tracking-wider.text-stone-400 Prise le
+          dd.col-span-2.text-sm.text-stone-800
+            = @decision.taken_at_label
+
+        .px-5.py-3.grid.grid-cols-3.gap-4.items-baseline
+          dt.text-xs.uppercase.tracking-wider.text-stone-400 Consignée par
+          dd.col-span-2.text-sm.text-stone-800
+            = @decision.recorded_by_label
+
+        - if @decision.gathering_label
+          .px-5.py-3.grid.grid-cols-3.gap-4.items-baseline
+            dt.text-xs.uppercase.tracking-wider.text-stone-400 Rassemblement
+            dd.col-span-2.text-sm
+              = link_to @decision.gathering_label, gathering_path(@decision.gathering), class: "text-emerald-700 hover:text-emerald-900 underline decoration-emerald-200 underline-offset-2"
+
+        - if @decision.agenda_item.present?
+          .px-5.py-3.grid.grid-cols-3.gap-4.items-baseline
+            dt.text-xs.uppercase.tracking-wider.text-stone-400 Point d'ODJ
+            dd.col-span-2.text-sm.text-stone-800
+              = @decision.agenda_item.title
+
+    - if @decision.body.present?
+      article.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidden
+        .px-5.py-3.border-b.border-stone-100.bg-stone-50
+          .font-semibold.uppercase.text-stone-500(class="text-[0.7rem] tracking-[0.2em]") Contenu détaillé
+        .px-5.py-4.prose.prose-sm.max-w-none
+          == @decision.body

@@ -1,0 +1,65 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Registre des décisions",
+           links: [ \
+             link_to("➕ Consigner une décision", new_decision_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2") \
+           ]
+
+/ Search bar
+= form_with url: organisation_decisions_path,
+             method: :get,
+             class: "mb-6",
+             data: { turbo_frame: "_top" } do |f|
+  .relative.max-w-xl
+    .absolute.inset-y-0.left-0.flex.items-center.pl-3.pointer-events-none
+      svg.w-4.h-4.text-stone-400(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2")
+        path[stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"]
+    = f.search_field :q,
+                     value: @query,
+                     placeholder: "Chercher dans les décisions…",
+                     remove_default_class: "sm:text-sm",
+                     class: "w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-stone-200 bg-white placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 focus:outline-none",
+                     aria: { label: "Chercher une décision" }
+
+- if @decisions.empty?
+  - if @query.present?
+    .rounded-xl.border.border-dashed.border-stone-300.bg-white.p-8.text-center
+      .text-sm.text-stone-600 Aucune décision ne correspond à « #{@query} ».
+      = link_to "Voir toutes les décisions", organisation_decisions_path, class: "mt-2 inline-block text-sm text-emerald-700 underline hover:text-emerald-900"
+  - else
+    .rounded-xl.border.border-dashed.border-stone-300.bg-white.p-10.text-center
+      .text-4xl.mb-2 🗳️
+      .text-sm.font-medium.text-stone-700 Aucune décision consignée pour l'instant.
+      .mt-1.text-xs.text-stone-500 La première décision prise en PUD donnera naissance au registre.
+      = link_to "Consigner une décision", new_decision_path, class: "mt-4 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+- else
+  .space-y-4
+    - @decisions.each do |decision|
+      article.rounded-xl.border.border-stone-200.bg-white.shadow-sm.hover:shadow-md.transition-shadow
+        .p-5
+          .flex.items-start.justify-between.gap-4
+            .flex-1.min-w-0
+              h3.text-lg.font-semibold.leading-tight.text-stone-900
+                = link_to decision.title,
+                          decision_path(decision),
+                          class: "hover:text-emerald-700"
+              p.mt-1.text-sm.text-stone-700.leading-snug
+                = decision.summary
+
+              .mt-3.flex.flex-wrap.items-center.gap-x-4.gap-y-1.text-xs.text-stone-500
+                span.inline-flex.items-center.gap-1
+                  svg.w-3.h-3(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2")
+                    path[stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"]
+                  = decision.taken_at_label
+                span.inline-flex.items-center.gap-1
+                  | Consignée par
+                  span.font-medium =< decision.recorded_by_label
+                - if decision.gathering_label
+                  span.inline-flex.items-center.gap-1.text-emerald-700
+                    svg.w-3.h-3(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2")
+                      path[stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-5.13a4 4 0 11-8 0 4 4 0 018 0zm6 3a4 4 0 11-8 0 4 4 0 018 0z"]
+                    = link_to decision.gathering_label, gathering_path(decision.gathering), class: "hover:underline"
+
+              - if decision.body_excerpt.present?
+                p.mt-3.text-sm.text-stone-600.leading-snug.line-clamp-2
+                  = decision.body_excerpt
