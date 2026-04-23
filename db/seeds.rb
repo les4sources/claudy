@@ -88,7 +88,7 @@ Task.create(
   humans: [jeanclaude, miranda]
 )
 
-GatheringCategory.find_or_create_by!(name: "PUD") do |c|
+GatheringCategory.find_or_create_by!(name: "Popup Day") do |c|
   c.color = "emerald"
   c.default_start_time = "08:45"
   c.default_duration_minutes = 360
