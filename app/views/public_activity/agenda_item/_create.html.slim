@@ -1,0 +1,23 @@
+- item = activity.trackable&.decorate rescue nil
+
+- if item
+  li
+    .relative.pb-8
+      span.absolute.left-4.top-4.-ml-px.h-full.w-0.5.bg-gray-200[aria-hidden="true"]
+      .relative.flex.space-x-6
+        div
+          span.h-8.w-8.rounded-full.bg-emerald-400.flex.items-center.justify-center.ring-8.ring-white
+            svg.h-5.w-5.text-white[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+              path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .27.144.518.378.651l3.5 2a.75.75 0 00.744-1.302L10.75 9.566V5z" clip-rule="evenodd"]
+        .flex.min-w-0.flex-1.justify-between.space-x-4.pt-1.5
+          div
+            p.text-sm.text-gray-900
+              | Point ajouté à l'ODJ :
+              =<> link_to item.title,
+                          gathering_path(item.gathering),
+                          class: "claudy-link"
+              | par #{item.author_label}
+
+          .whitespace-nowrap.text-right.text-sm.text-gray-500
+            time[datetime="#{activity.created_at.iso8601}"]
+              = l(activity.created_at, format: :short)

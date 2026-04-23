@@ -1,0 +1,20 @@
+- item = AgendaItem.unscoped.where(id: activity.trackable_id).first
+
+- if item
+  li
+    .relative.pb-8
+      span.absolute.left-4.top-4.-ml-px.h-full.w-0.5.bg-gray-200[aria-hidden="true"]
+      .relative.flex.space-x-6
+        div
+          span.h-8.w-8.rounded-full.bg-gray-400.flex.items-center.justify-center.ring-8.ring-white
+            svg.h-5.w-5.text-white[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+              path[fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9z" clip-rule="evenodd"]
+        .flex.min-w-0.flex-1.justify-between.space-x-4.pt-1.5
+          div
+            p.text-sm.text-gray-900
+              | Point d'ODJ supprimé :
+              span.font-medium =< item.title
+
+          .whitespace-nowrap.text-right.text-sm.text-gray-500
+            time[datetime="#{activity.created_at.iso8601}"]
+              = l(activity.created_at, format: :short)
