@@ -1,0 +1,52 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Archives de #{@human.name}",
+           links: [link_to("← Retour aux actions", organisation_member_path(@human.id), class: "btn-page-header-no-background")]
+
+div
+  / Top summary bar
+  - if @archives_total > 0
+    .flex.flex-wrap.items-center.justify-between.gap-3.mb-5.rounded-2xl.border.border-stone-200.bg-stone-50.px-5.py-4
+      div
+        .flex.items-baseline.gap-2
+          span.text-2xl.font-bold.tabular-nums.text-stone-800
+            = @archives_total
+          span.text-sm.text-stone-500 actions archivées
+        - if @archives_first_at && @archives_last_at
+          .text-xs.text-stone-400.mt-0.5
+            = "du #{l(@archives_first_at.to_date, format: :short)} au #{l(@archives_last_at.to_date, format: :short)}"
+      .flex.flex-wrap.items-center.gap-1.5
+        - @archives_per_category.each do |cat, n|
+          - style = CycleActionDecorator::CATEGORY_STYLES[cat] || {}
+          span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full #{style[:bg]} #{style[:text]}"
+            span = style[:icon]
+            span.tabular-nums.font-semibold = n
+            span.opacity-70 = style[:label]&.downcase
+
+  / Filter bar
+  = render "organisation/archives_filters",
+           human: @human,
+           current_category: @current_category,
+           current_cycle_id: @current_cycle_id,
+           current_q: @current_q,
+           available_cycles: @available_cycles
+
+  / List (turbo-frame for filter updates)
+  turbo-frame#archives_list data-turbo-action="advance"
+    - if @archived_actions.empty?
+      .text-center.py-16.rounded-2xl.border.border-dashed.border-stone-200.bg-white
+        .text-stone-400.text-sm
+          - if @current_category.present? || @current_q.present? || @current_cycle_id.present?
+            | Aucune action archivée pour ce filtre.
+            br
+            = link_to "Réinitialiser les filtres", organisation_member_archives_path(@human.id), class: "text-teal-700 hover:text-teal-900 mt-2 inline-block"
+          - else
+            | Aucune action archivée pour l'instant.
+            br
+            = link_to "Retour à la fiche", organisation_member_path(@human.id), class: "text-teal-700 hover:text-teal-900 mt-2 inline-block"
+    - else
+      .rounded-2xl.border.border-stone-200.bg-white.overflow-hidden.divide-y.divide-stone-100
+        - @archived_actions.each do |action|
+          = render "organisation/archived_row", action: action
+      .mt-4
+        = will_paginate @archived_actions

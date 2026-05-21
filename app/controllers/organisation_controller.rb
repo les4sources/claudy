@@ -66,11 +66,48 @@ class OrganisationController < BaseController
 
   def member
     @human = Human.find(params[:human_id])
-    @cycle_actions = @human.cycle_actions.ordered.group_by(&:category)
-    @demandees = CycleAction.demandee.active.where.not(human_id: @human.id)
-    @total_hours = @human.cycle_actions.active.where.not(category: :reportee).sum(:hours) || 0
+    @cycle_actions = @human.cycle_actions.not_archived.ordered.group_by(&:category)
+    @demandees = CycleAction.demandee.not_archived.active.where.not(human_id: @human.id)
+    @total_hours = @human.cycle_actions.not_archived.active.where.not(category: :reportee).sum(:hours) || 0
     @current_cycle = Cycle.covering_date(Date.today).first
+    @archives_count = @human.cycle_actions.archived.count
     @cycle_active_humans = Human.cycle_active.where.not(id: @human.id).order(:name)
+  end
+
+  def archives
+    @human = Human.find(params[:human_id])
+    scope = @human.cycle_actions.archived
+    scope = scope.where(category: params[:category]) if params[:category].present?
+    if params[:q].present?
+      q = "%#{params[:q].downcase}%"
+      scope = scope.where("LOWER(label) LIKE ?", q)
+    end
+    if params[:cycle_id].present?
+      cycle = Cycle.find_by(id: params[:cycle_id])
+      if cycle
+        scope = scope.where(archived_at: cycle.start_date.beginning_of_day..cycle.end_date.end_of_day)
+      end
+    end
+    @archived_actions = scope.order(archived_at: :desc).paginate(page: params[:page], per_page: 25)
+
+    archives_all = @human.cycle_actions.archived
+    @archives_total = archives_all.count
+    @archives_first_at = archives_all.minimum(:archived_at)
+    @archives_last_at = archives_all.maximum(:archived_at)
+    @archives_per_category = archives_all.group(:category).count
+
+    if @archives_first_at && @archives_last_at
+      @available_cycles = Cycle.where(
+        "(start_date, end_date) OVERLAPS (?, ?)",
+        @archives_first_at.to_date, @archives_last_at.to_date
+      ).order(start_date: :desc)
+    else
+      @available_cycles = []
+    end
+
+    @current_category = params[:category]
+    @current_cycle_id = params[:cycle_id]
+    @current_q = params[:q]
   end
 
   private

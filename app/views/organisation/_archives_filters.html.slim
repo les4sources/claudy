@@ -1,0 +1,46 @@
+- base_params = { category: current_category, cycle_id: current_cycle_id, q: current_q }
+
+form action=organisation_member_archives_path(human.id) method="get" data-turbo-frame="archives_list" data-turbo-action="advance" data-controller="archives-filters" class="mb-4 space-y-3"
+  / Search
+  .relative.max-w-md
+    svg.absolute.left-3.top-1/2.-translate-y-1/2.w-4.h-4.text-stone-400 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+      circle cx="11" cy="11" r="8"
+      line x1="21" y1="21" x2="16.65" y2="16.65"
+    input type="text" name="q" value=current_q placeholder="Rechercher dans les archives…" class="w-full rounded-lg border-stone-200 pl-9 pr-3 py-2 text-sm focus:border-teal-400 focus:ring-teal-400" data-action="input->archives-filters#submit"
+    - if current_category.present?
+      input type="hidden" name="category" value=current_category
+    - if current_cycle_id.present?
+      input type="hidden" name="cycle_id" value=current_cycle_id
+
+  / Cycle pills
+  - if available_cycles.any?
+    .flex.flex-wrap.items-center.gap-1.5
+      div class="text-[0.65rem] uppercase tracking-wider text-stone-400 font-semibold mr-1"
+        | Cycle
+      = link_to organisation_member_archives_path(human.id, base_params.merge(cycle_id: nil)),
+                data: { turbo_frame: "archives_list" },
+                class: "text-xs px-2.5 py-1 rounded-full border #{current_cycle_id.blank? ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-600 border-stone-200 hover:border-stone-400'}" do
+        | Tous
+      - available_cycles.each do |cycle|
+        - active = current_cycle_id.to_s == cycle.id.to_s
+        = link_to organisation_member_archives_path(human.id, base_params.merge(cycle_id: cycle.id)),
+                  data: { turbo_frame: "archives_list" },
+                  class: "text-xs px-2.5 py-1 rounded-full border #{active ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-600 border-stone-200 hover:border-stone-400'}" do
+          = cycle.name
+
+  / Category pills
+  .flex.flex-wrap.items-center.gap-1.5
+    div class="text-[0.65rem] uppercase tracking-wider text-stone-400 font-semibold mr-1"
+      | Catégorie
+    = link_to organisation_member_archives_path(human.id, base_params.merge(category: nil)),
+              data: { turbo_frame: "archives_list" },
+              class: "text-xs px-2.5 py-1 rounded-full border #{current_category.blank? ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-600 border-stone-200 hover:border-stone-400'}" do
+      | Toutes
+    - CycleAction.categories.keys.each do |cat|
+      - active = current_category.to_s == cat
+      - style = CycleActionDecorator::CATEGORY_STYLES[cat]
+      = link_to organisation_member_archives_path(human.id, base_params.merge(category: cat)),
+                data: { turbo_frame: "archives_list" },
+                class: "text-xs px-2.5 py-1 rounded-full border inline-flex items-center gap-1 #{active ? "#{style[:bg]} #{style[:text]} border-current" : 'bg-white text-stone-600 border-stone-200 hover:border-stone-400'}" do
+        span = style[:icon]
+        | #{style[:label]}

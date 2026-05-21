@@ -1,0 +1,45 @@
+- style = CycleActionDecorator::CATEGORY_STYLES[action.category] || {}
+
+div id="archived_row_#{action.id}" class="flex items-center gap-3 px-4 py-3 hover:bg-stone-50 transition-colors"
+  / Date archived
+  .w-28.flex-shrink-0
+    div title=l(action.archived_at, format: :long) class="text-xs tabular-nums text-stone-500"
+      = "il y a #{time_ago_in_words(action.archived_at)}"
+    div class="text-[0.65rem] text-stone-400 tabular-nums"
+      = l(action.archived_at.to_date, format: :short)
+
+  / Category badge
+  .flex-shrink-0
+    span class="inline-flex items-center gap-1 text-[0.7rem] px-2 py-0.5 rounded-full #{style[:bg]} #{style[:text]} whitespace-nowrap"
+      span = style[:icon]
+      span = style[:label]
+
+  / Label
+  .flex-1.min-w-0
+    .text-sm.text-stone-800.truncate
+      = action.label
+
+  / Hours
+  - if action.hours.present? && action.hours > 0
+    .flex-shrink-0.text-sm.font-medium.tabular-nums.text-stone-500
+      = "#{format('%g', action.hours.to_f)}h"
+
+  / Actions
+  .flex.items-center.gap-1.flex-shrink-0
+    = button_to unarchive_cycle_action_path(action),
+                method: :patch,
+                data: { turbo_stream: true },
+                class: "p-1.5 rounded-md text-stone-400 hover:text-teal-700 hover:bg-teal-50 transition-colors",
+                title: "Désarchiver" do
+      svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        path d="M3 12a9 9 0 1 0 3-6.7L3 8"
+        polyline points="3 3 3 8 8 8"
+    = button_to cycle_action_path(action),
+                method: :delete,
+                data: { turbo_stream: true, turbo_confirm: "Supprimer définitivement cette action ?" },
+                class: "p-1.5 rounded-md text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors",
+                title: "Supprimer définitivement" do
+      svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        path d="M3 6h18"
+        path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"
+        path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"

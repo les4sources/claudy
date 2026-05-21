@@ -135,6 +135,41 @@
 }
 
 /* ---------------------------------------------------------------------------
+   Cycle action archive toast
+   --------------------------------------------------------------------------- */
+
+#flash_toasts {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.archive-toast {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+.archive-toast.archive-toast--in {
+  opacity: 1;
+  transform: translateY(0);
+}
+.archive-toast.archive-toast--out {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+/* Row leaving animation when archived/turbo-removed. */
+.cycle-action-row {
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+/* ---------------------------------------------------------------------------
    Cycle action drag-and-drop
    --------------------------------------------------------------------------- */
 

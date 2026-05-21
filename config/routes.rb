@@ -55,12 +55,16 @@ Rails.application.routes.draw do
     member do
       patch :toggle_completed
       patch :defer
+      patch :archive
+      patch :unarchive
     end
     collection do
       patch :reorder
+      patch :archive_completed
     end
   end
   get "organisation/member/:human_id", to: "organisation#member", as: :organisation_member
+  get "organisation/member/:human_id/archives", to: "organisation#archives", as: :organisation_member_archives
 
   resources :bookings do
     collection do

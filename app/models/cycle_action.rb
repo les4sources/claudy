@@ -20,8 +20,22 @@ class CycleAction < ApplicationRecord
   scope :active, -> { where(completed: false) }
   scope :for_human, ->(human) { where(human: human) }
   scope :ordered, -> { order(:completed, :position, :created_at) }
+  scope :archived, -> { where.not(archived_at: nil) }
+  scope :not_archived, -> { where(archived_at: nil) }
 
   before_create :set_default_position
+
+  def archived?
+    archived_at.present?
+  end
+
+  def archive!
+    update!(archived_at: Time.current)
+  end
+
+  def unarchive!
+    update!(archived_at: nil)
+  end
 
   private
 

@@ -2,10 +2,15 @@
   = render "layouts/components/page_header",
            title: "Actions de #{@human.name}"
 
+/ Floating toast container (archive undo)
+div id="flash_toasts"
+
 div[data-controller="cycle-actions"]
   / Hours summary bar
   .mb-6
     = render "cycle_actions/hours_total", total_hours: @total_hours, human: @human, cycle: @current_cycle
+    .mt-2.flex.justify-end
+      = render "organisation/archives_link", human: @human, count: @archives_count
 
   / New action form
   .mb-8

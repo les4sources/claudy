@@ -150,9 +150,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_21_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "position", default: 0, null: false
+    t.datetime "archived_at"
     t.index ["category"], name: "index_cycle_actions_on_category"
     t.index ["completed"], name: "index_cycle_actions_on_completed"
     t.index ["delegate_to_human_id"], name: "index_cycle_actions_on_delegate_to_human_id"
+    t.index ["human_id", "archived_at"], name: "index_cycle_actions_on_human_id_and_archived_at"
     t.index ["human_id", "category", "position"], name: "index_cycle_actions_on_human_id_and_category_and_position"
     t.index ["human_id"], name: "index_cycle_actions_on_human_id"
   end
