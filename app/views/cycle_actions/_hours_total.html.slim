@@ -100,7 +100,7 @@ div id="hours_total" class="relative overflow-hidden rounded-2xl border border-#
         - [25, 50, 75].each do |tick|
           .absolute.top-0.bottom-0.w-px.bg-white style="left: #{tick}%;"
         / Fill
-        div class="absolute top-0 bottom-0 left-0 rounded-full transition-all duration-500 ease-out bg-gradient-to-r from-#{accent}-400 to-#{accent}-600" style="width: #{meter_fill_pct}%;"
+        div class="absolute top-0 bottom-0 left-0 rounded-full transition-all duration-500 ease-out bg-#{accent}-500" style="width: #{meter_fill_pct}%;"
         - if overload
           .absolute.top-0.bottom-0.right-0.w-1.bg-rose-600.rounded-r-full
       .flex.justify-between.mt-1.5

@@ -32,16 +32,6 @@
 - if @humans.any?
   = render "team_load", team_load: @team_load
 
-  / Legend
-  - legend = { "Rituelle" => "bg-blue-400", "Ponctuelle" => "bg-gray-400", "Reportée" => "bg-amber-300", "Déléguée" => "bg-purple-400", "Demandée" => "bg-rose-400", "Invitée" => "bg-emerald-400" }
-  .flex.flex-wrap.items-center.gap-x-4.gap-y-1.mb-3.px-1
-    span class="text-[0.65rem] uppercase tracking-wider text-gray-400 font-semibold mr-2"
-      | Catégories
-    - legend.each do |label, cls|
-      .flex.items-center.gap-1.5
-        span class="h-1.5 w-3 rounded-sm #{cls}"
-        span.text-xs.text-gray-500 = label
-
   .space-y-2.mb-8
     - @member_loads.each do |member|
       = render "member_row", member: member

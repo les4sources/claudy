@@ -5,6 +5,7 @@
 - meter_pct = (ratio * 100).clamp(0, 100)
 - overload = ratio > 1
 - accent = overload ? "rose" : (ratio > 0.85 ? "amber" : "teal")
+- per_person_available = team_load[:member_count] > 0 ? (available / team_load[:member_count]).round : 0
 
 div class="relative overflow-hidden rounded-2xl border border-#{accent}-100 bg-gradient-to-br from-white via-#{accent}-50/30 to-#{accent}-50/60 mb-6"
   div class="pointer-events-none absolute inset-0 opacity-[0.04]" style="background-image: radial-gradient(circle at 1px 1px, #024442 1px, transparent 0); background-size: 18px 18px;"
@@ -23,6 +24,13 @@ div class="relative overflow-hidden rounded-2xl border border-#{accent}-100 bg-g
           span.text-base.font-medium.tabular-nums.text-gray-500
             = "#{number_with_precision(available, precision: 0)}h"
           span.text-sm.text-gray-400 dispo
+        - if per_person_available > 0
+          div class="text-xs text-gray-400 mt-1.5"
+            | Capacité par personne :
+            span.font-semibold.text-gray-600.tabular-nums.ml-1
+              = "#{per_person_available} h"
+            span.text-gray-300.mx-1 ·
+            | 16 h/sem · 2 j de travail
 
       .flex.items-center.gap-3
         - if team_load[:overloaded] > 0
@@ -47,6 +55,6 @@ div class="relative overflow-hidden rounded-2xl border border-#{accent}-100 bg-g
     .relative.h-2.rounded-full.bg-gray-100.overflow-hidden
       - [25, 50, 75].each do |tick|
         .absolute.top-0.bottom-0.w-px.bg-white style="left: #{tick}%;"
-      div class="absolute top-0 bottom-0 left-0 rounded-full transition-all duration-500 ease-out bg-gradient-to-r from-#{accent}-400 to-#{accent}-600" style="width: #{meter_pct}%;"
+      div class="absolute top-0 bottom-0 left-0 rounded-full transition-all duration-500 ease-out bg-#{accent}-500" style="width: #{meter_pct}%;"
       - if overload
         .absolute.top-0.bottom-0.right-0.w-1.bg-rose-600.rounded-r-full
