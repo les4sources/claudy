@@ -1,0 +1,52 @@
+- engaged = team_load[:engaged].to_f
+- available = team_load[:available].to_f
+- ratio = team_load[:ratio]
+- pct = (ratio * 100).round
+- meter_pct = (ratio * 100).clamp(0, 100)
+- overload = ratio > 1
+- accent = overload ? "rose" : (ratio > 0.85 ? "amber" : "teal")
+
+div class="relative overflow-hidden rounded-2xl border border-#{accent}-100 bg-gradient-to-br from-white via-#{accent}-50/30 to-#{accent}-50/60 mb-6"
+  div class="pointer-events-none absolute inset-0 opacity-[0.04]" style="background-image: radial-gradient(circle at 1px 1px, #024442 1px, transparent 0); background-size: 18px 18px;"
+
+  .relative.p-5
+    .flex.flex-wrap.items-end.justify-between.gap-4.mb-4
+      div
+        div class="text-[0.65rem] uppercase tracking-[0.18em] font-semibold text-gray-400 mb-1"
+          | Charge collective du cycle
+        .flex.items-baseline.gap-2
+          span class="text-3xl sm:text-4xl font-bold tabular-nums tracking-tight text-#{accent}-900 leading-none"
+            = number_with_precision(engaged, precision: 0)
+          span class="text-base font-medium text-#{accent}-600"
+            | h engagées
+          span.text-gray-300.mx-1 /
+          span.text-base.font-medium.tabular-nums.text-gray-500
+            = "#{number_with_precision(available, precision: 0)}h"
+          span.text-sm.text-gray-400 dispo
+
+      .flex.items-center.gap-3
+        - if team_load[:overloaded] > 0
+          .flex.items-center.gap-1.5.px-2.5.py-1.rounded-full.bg-rose-50.text-rose-700.border.border-rose-200
+            .h-1.5.w-1.5.rounded-full.bg-rose-500
+            span.text-xs.font-semibold.tabular-nums
+              = team_load[:overloaded]
+            span.text-xs.font-medium en surcharge
+        - if team_load[:idle] > 0
+          .flex.items-center.gap-1.5.px-2.5.py-1.rounded-full.bg-gray-50.text-gray-600.border.border-gray-200
+            .h-1.5.w-1.5.rounded-full.bg-gray-400
+            span.text-xs.font-semibold.tabular-nums
+              = team_load[:idle]
+            span.text-xs.font-medium sous-engagés
+        .flex.items-baseline.gap-1.pl-3.border-l.border-gray-200
+          span class="text-2xl font-semibold tabular-nums text-#{accent}-700 leading-none"
+            = pct
+          span class="text-sm font-medium text-#{accent}-500"
+            | %
+
+    / Capacity meter
+    .relative.h-2.rounded-full.bg-gray-100.overflow-hidden
+      - [25, 50, 75].each do |tick|
+        .absolute.top-0.bottom-0.w-px.bg-white style="left: #{tick}%;"
+      div class="absolute top-0 bottom-0 left-0 rounded-full transition-all duration-500 ease-out bg-gradient-to-r from-#{accent}-400 to-#{accent}-600" style="width: #{meter_pct}%;"
+      - if overload
+        .absolute.top-0.bottom-0.right-0.w-1.bg-rose-600.rounded-r-full
