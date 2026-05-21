@@ -2,7 +2,8 @@
   = render "cycle_actions/cycle_action", cycle_action: @cycle_action
 
 = turbo_stream.replace "hours_total" do
-  = render "cycle_actions/hours_total", total_hours: @total_hours
+  = render "cycle_actions/hours_total", total_hours: @total_hours, human: @human
 
+- cat_scope = @human.cycle_actions.active.where(category: @cycle_action.category)
 = turbo_stream.replace "category_#{@cycle_action.category}_count" do
-  = render "cycle_actions/category_count", category: @cycle_action.category, count: @human.cycle_actions.active.where(category: @cycle_action.category).count
+  = render "cycle_actions/category_count", category: @cycle_action.category, count: cat_scope.count, hours: cat_scope.sum(:hours)

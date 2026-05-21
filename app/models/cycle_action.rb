@@ -19,4 +19,15 @@ class CycleAction < ApplicationRecord
 
   scope :active, -> { where(completed: false) }
   scope :for_human, ->(human) { where(human: human) }
+  scope :ordered, -> { order(:completed, :position, :created_at) }
+
+  before_create :set_default_position
+
+  private
+
+  def set_default_position
+    return if position.to_i > 0
+    max = CycleAction.where(human_id: human_id, category: category).maximum(:position) || -1
+    self.position = max + 1
+  end
 end

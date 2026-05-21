@@ -135,6 +135,69 @@
 }
 
 /* ---------------------------------------------------------------------------
+   Cycle action drag-and-drop
+   --------------------------------------------------------------------------- */
+
+.cycle-action-list {
+  position: relative;
+  transition: background-color 180ms ease, box-shadow 180ms ease;
+}
+
+/* While dragging anywhere on the page, hint all eligible drop zones. */
+.cycle-action-list.ca-droppable {
+  background-image:
+    linear-gradient(180deg, rgba(2, 68, 66, 0.025), rgba(2, 68, 66, 0.025)),
+    repeating-linear-gradient(135deg, rgba(2, 68, 66, 0.06) 0 6px, transparent 6px 12px);
+}
+
+.cycle-action-list.ca-droppable.ca-source {
+  background-image: none;
+  background-color: rgba(2, 68, 66, 0.02);
+}
+
+/* Hovered drop target gets a stronger accent and ring. */
+.cycle-action-list.ca-over {
+  box-shadow: inset 0 0 0 2px rgba(13, 148, 136, 0.45);
+  background-color: rgba(13, 148, 136, 0.06);
+}
+
+/* The placeholder left where the item came from. */
+.ca-ghost {
+  opacity: 0.35 !important;
+  background: rgba(13, 148, 136, 0.08) !important;
+  border-radius: 8px;
+}
+.ca-ghost > * { visibility: hidden; }
+
+/* The "chosen" row right at mousedown. */
+.ca-chosen {
+  background-color: white !important;
+}
+
+/* The floating dragged element (forceFallback). */
+.ca-drag {
+  cursor: grabbing !important;
+  background: white !important;
+  border-radius: 10px;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 12px 28px -8px rgba(15, 23, 42, 0.18),
+    0 0 0 1px rgba(13, 148, 136, 0.25);
+  transform: rotate(-0.4deg) scale(1.01);
+  transition: transform 120ms ease;
+}
+
+/* Disable text selection / blue background flash while dragging. */
+body.ca-dragging,
+body.ca-dragging * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+body.ca-dragging .cycle-action-row [data-drag-handle] {
+  opacity: 1;
+}
+
+/* ---------------------------------------------------------------------------
    Dashboard calendar — sticky weekday header + column highlight
    Goal: prevent data-entry mistakes when scrolling a long month view.
    --------------------------------------------------------------------------- */

@@ -5,7 +5,7 @@
 div[data-controller="cycle-actions"]
   / Hours summary bar
   .mb-6
-    = render "cycle_actions/hours_total", total_hours: @total_hours
+    = render "cycle_actions/hours_total", total_hours: @total_hours, human: @human, cycle: @current_cycle
 
   / New action form
   .mb-8

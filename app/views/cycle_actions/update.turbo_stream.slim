@@ -1,7 +1,18 @@
+- new_cat_scope = @human.cycle_actions.active.where(category: @cycle_action.category)
+
 = turbo_stream.replace "category_#{@cycle_action.category}_list" do
-  div[id="category_#{@cycle_action.category}_list" class="divide-y divide-gray-50 bg-white"]
-    - @category_actions.each do |action|
-      = render "cycle_actions/cycle_action", cycle_action: action
+  = render "cycle_actions/sorted_list", actions: @category_actions, category: @cycle_action.category, human: @human
+
+= turbo_stream.replace "category_#{@cycle_action.category}_count" do
+  = render "cycle_actions/category_count", category: @cycle_action.category, count: new_cat_scope.count, hours: new_cat_scope.sum(:hours)
+
+- if @old_category_actions
+  - old_cat_scope = @human.cycle_actions.active.where(category: @old_category)
+  = turbo_stream.replace "category_#{@old_category}_list" do
+    = render "cycle_actions/sorted_list", actions: @old_category_actions, category: @old_category, human: @human
+
+  = turbo_stream.replace "category_#{@old_category}_count" do
+    = render "cycle_actions/category_count", category: @old_category, count: old_cat_scope.count, hours: old_cat_scope.sum(:hours)
 
 = turbo_stream.replace "hours_total" do
-  = render "cycle_actions/hours_total", total_hours: @total_hours
+  = render "cycle_actions/hours_total", total_hours: @total_hours, human: @human

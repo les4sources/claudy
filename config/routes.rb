@@ -55,6 +55,9 @@ Rails.application.routes.draw do
       patch :toggle_completed
       patch :defer
     end
+    collection do
+      patch :reorder
+    end
   end
   get "organisation/member/:human_id", to: "organisation#member", as: :organisation_member
 

@@ -1,2 +1,8 @@
-span[id="category_#{category}_count" class="text-xs tabular-nums px-1.5 py-0.5 rounded-full bg-white/80 text-gray-500"]
-  = count
+- hours = (local_assigns[:hours] || 0).to_f
+span[id="category_#{category}_count" class="inline-flex items-center gap-1.5 text-xs tabular-nums px-2 py-0.5 rounded-full bg-white/80 text-gray-500 border border-current/10"]
+  span.font-medium = count
+  - if hours > 0
+    span.text-gray-300 ·
+    span
+      span.font-semibold = number_with_precision(hours, precision: 1, strip_insignificant_zeros: true)
+      span.text-gray-400.ml-0.5 h

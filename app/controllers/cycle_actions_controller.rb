@@ -6,8 +6,8 @@ class CycleActionsController < BaseController
     if service.run(params)
       @cycle_action = service.cycle_action
       @human = @cycle_action.human
-      @total_hours = @human.cycle_actions.active.sum(:hours) || 0
-      @category_actions = @human.cycle_actions.where(category: @cycle_action.category).order(:completed, Arel.sql("COALESCE(hours, 0) DESC"), :created_at)
+      @total_hours = @human.cycle_actions.active.where.not(category: :reportee).sum(:hours) || 0
+      @category_actions = @human.cycle_actions.where(category: @cycle_action.category).ordered
       respond_to do |format|
         format.turbo_stream
         format.html { redirect_to organisation_member_path(@human.id) }
@@ -42,12 +42,14 @@ class CycleActionsController < BaseController
   end
 
   def update
+    @old_category = @cycle_action.category
     service = CycleActions::UpdateService.new(cycle_action: @cycle_action)
     if service.run(params)
       @cycle_action = service.cycle_action
       @human = @cycle_action.human
-      @total_hours = @human.cycle_actions.active.sum(:hours) || 0
-      @category_actions = @human.cycle_actions.where(category: @cycle_action.category).order(:completed, Arel.sql("COALESCE(hours, 0) DESC"), :created_at)
+      @total_hours = @human.cycle_actions.active.where.not(category: :reportee).sum(:hours) || 0
+      @category_actions = @human.cycle_actions.where(category: @cycle_action.category).ordered
+      @old_category_actions = @human.cycle_actions.where(category: @old_category).ordered if @old_category != @cycle_action.category
       respond_to do |format|
         format.turbo_stream
         format.html { redirect_to organisation_member_path(@human.id) }
@@ -71,7 +73,7 @@ class CycleActionsController < BaseController
   def toggle_completed
     @cycle_action.update!(completed: !@cycle_action.completed)
     @human = @cycle_action.human
-    @total_hours = @human.cycle_actions.active.sum(:hours) || 0
+    @total_hours = @human.cycle_actions.active.where.not(category: :reportee).sum(:hours) || 0
     respond_to do |format|
       format.turbo_stream
       format.html { redirect_to organisation_member_path(@human.id) }
@@ -82,36 +84,38 @@ class CycleActionsController < BaseController
     old_category = @cycle_action.category
     @cycle_action.update!(category: :reportee)
     @human = @cycle_action.human
-    @total_hours = @human.cycle_actions.active.sum(:hours) || 0
-    reportee_actions = @human.cycle_actions.where(category: :reportee).order(:completed, Arel.sql("COALESCE(hours, 0) DESC"), :created_at)
-    old_category_actions = @human.cycle_actions.where(category: old_category).order(:completed, Arel.sql("COALESCE(hours, 0) DESC"), :created_at)
+    @total_hours = @human.cycle_actions.active.where.not(category: :reportee).sum(:hours) || 0
+    reportee_actions = @human.cycle_actions.where(category: :reportee).ordered
+    old_category_actions = @human.cycle_actions.where(category: old_category).ordered
+    old_scope = @human.cycle_actions.active.where(category: old_category)
+    reportee_scope = @human.cycle_actions.active.where(category: :reportee)
     respond_to do |format|
       format.turbo_stream {
         render turbo_stream: [
           turbo_stream.replace(
             "category_#{old_category}_list",
             partial: "cycle_actions/sorted_list",
-            locals: { actions: old_category_actions, category: old_category }
+            locals: { actions: old_category_actions, category: old_category, human: @human }
           ),
           turbo_stream.replace(
             "category_reportee_list",
             partial: "cycle_actions/sorted_list",
-            locals: { actions: reportee_actions, category: "reportee" }
+            locals: { actions: reportee_actions, category: "reportee", human: @human }
           ),
           turbo_stream.replace(
             "hours_total",
             partial: "cycle_actions/hours_total",
-            locals: { total_hours: @total_hours }
+            locals: { total_hours: @total_hours, human: @human }
           ),
           turbo_stream.replace(
             "category_#{old_category}_count",
             partial: "cycle_actions/category_count",
-            locals: { category: old_category, count: @human.cycle_actions.active.where(category: old_category).count }
+            locals: { category: old_category, count: old_scope.count, hours: old_scope.sum(:hours) }
           ),
           turbo_stream.replace(
             "category_reportee_count",
             partial: "cycle_actions/category_count",
-            locals: { category: "reportee", count: @human.cycle_actions.active.where(category: :reportee).count }
+            locals: { category: "reportee", count: reportee_scope.count, hours: reportee_scope.sum(:hours) }
           )
         ]
       }
@@ -119,11 +123,27 @@ class CycleActionsController < BaseController
     end
   end
 
+  def reorder
+    ids = Array(params[:ids]).map(&:to_i)
+    category = params[:category]
+    human = Human.find(params[:human_id])
+    actions = human.cycle_actions.where(id: ids).index_by(&:id)
+    CycleAction.transaction do
+      ids.each_with_index do |id, idx|
+        action = actions[id]
+        next unless action
+        action.update_columns(position: idx, category: CycleAction.categories[category])
+      end
+    end
+    head :no_content
+  end
+
   def destroy
     @human = @cycle_action.human
     category = @cycle_action.category
     @cycle_action.soft_delete!(validate: false)
-    @total_hours = @human.cycle_actions.active.sum(:hours) || 0
+    @total_hours = @human.cycle_actions.active.where.not(category: :reportee).sum(:hours) || 0
+    cat_scope = @human.cycle_actions.active.where(category: category)
     respond_to do |format|
       format.turbo_stream {
         render turbo_stream: [
@@ -131,12 +151,12 @@ class CycleActionsController < BaseController
           turbo_stream.replace(
             "hours_total",
             partial: "cycle_actions/hours_total",
-            locals: { total_hours: @total_hours }
+            locals: { total_hours: @total_hours, human: @human }
           ),
           turbo_stream.replace(
             "category_#{category}_count",
             partial: "cycle_actions/category_count",
-            locals: { category: category, count: @human.cycle_actions.active.where(category: category).count }
+            locals: { category: category, count: cat_scope.count, hours: cat_scope.sum(:hours) }
           )
         ]
       }

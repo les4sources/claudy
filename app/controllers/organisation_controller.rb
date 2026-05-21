@@ -13,9 +13,10 @@ class OrganisationController < BaseController
 
   def member
     @human = Human.find(params[:human_id])
-    @cycle_actions = @human.cycle_actions.order(:completed, Arel.sql("COALESCE(hours, 0) DESC"), :created_at).group_by(&:category)
+    @cycle_actions = @human.cycle_actions.ordered.group_by(&:category)
     @demandees = CycleAction.demandee.active.where.not(human_id: @human.id)
-    @total_hours = @human.cycle_actions.active.sum(:hours) || 0
+    @total_hours = @human.cycle_actions.active.where.not(category: :reportee).sum(:hours) || 0
+    @current_cycle = Cycle.covering_date(Date.today).first
     @cycle_active_humans = Human.cycle_active.where.not(id: @human.id).order(:name)
   end
 

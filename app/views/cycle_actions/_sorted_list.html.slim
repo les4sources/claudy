@@ -1,6 +1,11 @@
-div[id="category_#{category}_list" class="divide-y divide-gray-50 bg-white"]
+div[id="category_#{category}_list"
+    class="cycle-action-list divide-y divide-gray-50 bg-white min-h-[3rem]"
+    data-controller="cycle-action-sortable"
+    data-cycle-action-sortable-url-value=reorder_cycle_actions_path
+    data-cycle-action-sortable-category-value=category.to_s
+    data-cycle-action-sortable-human-id-value=local_assigns[:human]&.id]
   - actions.each do |action|
     = render "cycle_actions/cycle_action", cycle_action: action
   - if actions.empty?
-    .py-4.px-4.text-center
-      span.text-xs.text-gray-300 Aucune action
+    .py-6.px-4.text-center.pointer-events-none
+      span.text-xs.text-gray-300 Glisser une action ici

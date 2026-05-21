@@ -1,9 +1,132 @@
-#hours_total.flex.items-center.gap-4.p-4.bg-gradient-to-r.from-teal-50.to-emerald-50.rounded-xl.border.border-teal-100
-  .flex.items-center.gap-2
-    svg.w-5.h-5.text-4s-main[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-      circle[cx="12" cy="12" r="10"]
-      polyline[points="12 6 12 12 16 14"]
-    span.text-sm.font-medium.text-4s-main Total heures estimées
-  span.text-2xl.font-bold.text-4s-main.tabular-nums
-    = number_with_precision(total_hours || 0, precision: 1, strip_insignificant_zeros: true)
-  span.text-sm.text-teal-600 h
+- weekly_capacity = 16.0
+- engaged = (total_hours || 0).to_f
+- cycle = local_assigns[:cycle] || ::Cycle.covering_date(Date.today).first
+- human = local_assigns[:human]
+- completed_hours = human ? human.cycle_actions.active.where(completed: true).where.not(category: :reportee).sum(:hours).to_f : 0
+- remaining_hours = [engaged - completed_hours, 0].max
+
+- if cycle
+  - total_days = (cycle.end_date - cycle.start_date).to_i + 1
+  - weeks_total = (total_days / 7.0)
+  - elapsed_days = [[(Date.today - cycle.start_date).to_i, 0].max, total_days].min
+  - remaining_days = [total_days - elapsed_days, 0].max
+  - weeks_remaining = (remaining_days / 7.0)
+  - available = (weeks_total * weekly_capacity).round(1)
+  - load_ratio = available > 0 ? (engaged / available) : 0
+  - load_pct = (load_ratio * 100).clamp(0, 999).round
+  - meter_fill_pct = (load_ratio * 100).clamp(0, 100)
+  - overload = load_ratio > 1
+  - tight = !overload && load_ratio > 0.85
+  - weekly_pace = weeks_remaining > 0 ? (remaining_hours / weeks_remaining) : 0
+- else
+  - elapsed_days = 0
+  - weeks_total = 0
+  - weeks_remaining = 0
+  - available = 0
+  - load_pct = 0
+  - meter_fill_pct = 0
+  - overload = false
+  - tight = false
+  - weekly_pace = 0
+
+- accent = overload ? "rose" : (tight ? "amber" : "teal")
+- status_label = overload ? "Charge dépassée" : (tight ? "Charge soutenue" : "Charge confortable")
+
+div id="hours_total" class="relative overflow-hidden rounded-2xl border border-#{accent}-100 bg-gradient-to-br from-white via-#{accent}-50/30 to-#{accent}-50/60"
+  / Decorative dot grid
+  div class="pointer-events-none absolute inset-0 opacity-[0.04]" style="background-image: radial-gradient(circle at 1px 1px, #024442 1px, transparent 0); background-size: 18px 18px;"
+
+  .relative.p-5.sm:p-6
+    / Top row : status + cycle context
+    .flex.items-start.justify-between.gap-4.mb-5
+      .flex.items-center.gap-2.5
+        .relative.flex.h-2.w-2
+          - if overload
+            span.absolute.inline-flex.h-full.w-full.rounded-full.bg-rose-400.opacity-75.animate-ping
+          span class="relative inline-flex rounded-full h-2 w-2 bg-#{accent}-500"
+        span class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-#{accent}-700"
+          = status_label
+
+      - if cycle
+        .text-right.shrink-0
+          div class="text-[0.65rem] uppercase tracking-wider text-gray-400 font-medium"
+            = cycle.name
+          div class="text-xs text-gray-500 mt-0.5 tabular-nums"
+            = "S#{(elapsed_days / 7.0).ceil} / #{weeks_total.ceil}"
+            span.text-gray-300.mx-1 ·
+            = "#{weeks_remaining.ceil} semaines restantes"
+
+    / Main figures
+    .grid.grid-cols-3.gap-4.items-end.mb-5
+      / Engaged
+      div
+        div class="text-[0.65rem] uppercase tracking-[0.14em] text-gray-400 font-semibold mb-1"
+          | Engagées
+        .flex.items-baseline.gap-1
+          span class="ca-engaged-value text-4xl sm:text-5xl font-bold tabular-nums tracking-tight text-#{accent}-900 leading-none"
+            = number_with_precision(engaged, precision: 1, strip_insignificant_zeros: true)
+          span class="text-base font-medium text-#{accent}-600"
+            | h
+
+      / Available
+      div
+        div class="text-[0.65rem] uppercase tracking-[0.14em] text-gray-400 font-semibold mb-1"
+          | Disponibles
+        .flex.items-baseline.gap-1
+          span.text-2xl.font-semibold.tabular-nums.text-gray-700.leading-none
+            = number_with_precision(available, precision: 0)
+          span.text-sm.font-medium.text-gray-400
+            | h
+        div class="text-[0.65rem] text-gray-400 mt-1"
+          | 16h/sem · 2j travail
+
+      / Capacity ratio
+      .text-right
+        div class="text-[0.65rem] uppercase tracking-[0.14em] text-gray-400 font-semibold mb-1"
+          | Capacité
+        .flex.items-baseline.justify-end.gap-1
+          span class="text-2xl font-semibold tabular-nums text-#{accent}-700 leading-none"
+            = load_pct
+          span class="text-sm font-medium text-#{accent}-500"
+            | %
+
+    / Capacity meter
+    div.mb-4
+      .relative.h-2.5.rounded-full.bg-gray-100.overflow-hidden
+        / Quarter tick marks
+        - [25, 50, 75].each do |tick|
+          .absolute.top-0.bottom-0.w-px.bg-white style="left: #{tick}%;"
+        / Fill
+        div class="absolute top-0 bottom-0 left-0 rounded-full transition-all duration-500 ease-out bg-gradient-to-r from-#{accent}-400 to-#{accent}-600" style="width: #{meter_fill_pct}%;"
+        - if overload
+          .absolute.top-0.bottom-0.right-0.w-1.bg-rose-600.rounded-r-full
+      .flex.justify-between.mt-1.5
+        span class="text-[0.65rem] text-gray-400 tabular-nums"
+          | 0h
+        span class="text-[0.65rem] text-gray-400 tabular-nums"
+          = "#{number_with_precision(available, precision: 0)}h disponibles"
+
+    / Footer micro-stats
+    div class="flex flex-wrap items-center gap-x-5 gap-y-2 pt-4 border-t border-#{accent}-100"
+      .flex.items-center.gap-1.5
+        svg.w-3.5.h-3.5.text-teal-500 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+          polyline points="20 6 9 17 4 12"
+        span.text-xs.text-gray-500
+          span.font-semibold.text-gray-700.tabular-nums = number_with_precision(completed_hours, precision: 1, strip_insignificant_zeros: true)
+          |  h faites
+      .flex.items-center.gap-1.5
+        svg.w-3.5.h-3.5.text-gray-400 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          circle cx="12" cy="12" r="10"
+          polyline points="12 6 12 12 16 14"
+        span.text-xs.text-gray-500
+          span.font-semibold.text-gray-700.tabular-nums = number_with_precision(remaining_hours, precision: 1, strip_insignificant_zeros: true)
+          |  h à faire
+      - if cycle && weeks_remaining > 0
+        .flex.items-center.gap-1.5.ml-auto
+          svg.w-3.5.h-3.5.text-gray-400 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
+          span.text-xs.text-gray-500
+            | Rythme requis :
+            span class=("font-semibold tabular-nums ml-1 #{weekly_pace > weekly_capacity ? 'text-rose-600' : 'text-gray-700'}")
+              = number_with_precision(weekly_pace, precision: 1, strip_insignificant_zeros: true)
+            |  h/sem
