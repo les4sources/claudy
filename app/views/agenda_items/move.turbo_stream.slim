@@ -1,0 +1,8 @@
+= turbo_stream.remove "agenda_item_#{@agenda_item.id}"
+= turbo_stream.replace "agenda_items_counter_#{@gathering.id}" do
+  = render "agenda_items/counter", gathering: @gathering
+- if @gathering.agenda_items.empty?
+  = turbo_stream.append "agenda_items_list_#{@gathering.id}" do
+    .mb-3.rounded-lg.border.border-dashed.border-stone-200.bg-white.px-4.py-3.text-center id="agenda_items_empty_#{@gathering.id}"
+      .text-sm.text-stone-600 ODJ vide pour l'instant.
+      .mt-0.5.text-xs.text-stone-400 Un sourcier, un point — tout le monde peut alimenter.

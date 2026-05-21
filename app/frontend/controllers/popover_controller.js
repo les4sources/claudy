@@ -20,6 +20,7 @@ export default class extends Controller {
     target: String,
     trigger: { type: String, default: "click" },
     placement: { type: String, default: "top" },
+    strategy: { type: String, default: "absolute" },
   }
 
   connect() {
@@ -63,6 +64,7 @@ export default class extends Controller {
     if (!this.popper) {
       this.popper = createPopper(this.element, this.popoverEl, {
         placement: this.placementValue,
+        strategy: this.strategyValue,
         modifiers: [{ name: "offset", options: { offset: [0, 8] } }],
       })
     } else {

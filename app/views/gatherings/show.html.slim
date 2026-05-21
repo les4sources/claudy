@@ -66,9 +66,10 @@
           h2.mt-0.5.text-lg.font-semibold.text-stone-900 Les points à traiter
         = render "agenda_items/counter", gathering: @gathering.object
 
+      - future_gatherings = @gathering.gathering_category.gatherings.where("starts_at > ?", @gathering.starts_at).order(:starts_at).limit(8)
       ul.p-4.space-y-2(id="agenda_items_list_#{@gathering.id}" data-controller="sortable" data-sortable-url-value=reorder_gathering_agenda_items_path(@gathering))
         - @gathering.object.agenda_items.ordered.each do |item|
-          = render "agenda_items/item", item: item
+          = render "agenda_items/item", item: item, future_gatherings: future_gatherings
 
       .p-4.border-t.border-stone-100.bg-stone-50
         - if @gathering.object.agenda_items.empty?

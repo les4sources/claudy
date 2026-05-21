@@ -1,4 +1,5 @@
 - item = item.is_a?(AgendaItemDecorator) ? item : AgendaItemDecorator.new(item)
+- future_gatherings = local_assigns[:future_gatherings] || item.gathering.gathering_category.gatherings.where("starts_at > ?", item.gathering.starts_at).order(:starts_at).limit(8)
 
 li.group.list-none(id="agenda_item_#{item.id}" data-sortable-target="item" data-id=item.id class="rounded-lg border shadow-sm transition-all #{item.status_class}")
   .flex.items-start.gap-3.p-4
@@ -36,6 +37,25 @@ li.group.list-none(id="agenda_item_#{item.id}" data-sortable-target="item" data-
                 | Pièces jointes
 
         .flex.items-center.gap-1
+          / Move (defer to next gathering of same category)
+          .relative
+            button[type="button"
+                   data-controller="popover"
+                   data-action="click->popover#toggle click@window->popover#hideOnClickOutside"
+                   data-popover-target-value="move_popover_#{item.id}"
+                   data-popover-placement-value="bottom-end"
+                   data-popover-strategy-value="fixed"
+                   class="p-1 text-stone-400 hover:text-amber-600 rounded hover:bg-stone-50"
+                   title="Reporter à un prochain rassemblement"
+                   aria-label="Reporter"]
+              svg.w-4.h-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                rect x="3" y="4" width="18" height="18" rx="2" ry="2"
+                line x1="16" y1="2" x2="16" y2="6"
+                line x1="8" y1="2" x2="8" y2="6"
+                line x1="3" y1="10" x2="21" y2="10"
+                polyline points="13 17 17 17"
+                polyline points="15 15 17 17 15 19"
+          = render "agenda_items/move_popover", item: item, future_gatherings: future_gatherings
           = link_to edit_gathering_agenda_item_path(item.gathering, item), class: "p-1 text-stone-400 hover:text-emerald-700 rounded hover:bg-stone-50", title: "Éditer" do
             svg.w-4.h-4(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2")
               path[stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"]

@@ -18,6 +18,7 @@ Rails.application.routes.draw do
     resources :agenda_items, except: [:index, :show] do
       member do
         patch :toggle_completed
+        patch :move
       end
       collection do
         patch :reorder

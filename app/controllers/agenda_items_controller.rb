@@ -1,6 +1,6 @@
 class AgendaItemsController < BaseController
   before_action :set_gathering, except: [:reorder_destroy]
-  before_action :set_agenda_item, only: [:edit, :update, :destroy, :toggle_completed]
+  before_action :set_agenda_item, only: [:edit, :update, :destroy, :toggle_completed, :move]
 
   def new
     @agenda_item = @gathering.agenda_items.build
@@ -50,6 +50,23 @@ class AgendaItemsController < BaseController
     respond_to do |format|
       format.turbo_stream
       format.html { redirect_to gathering_path(@gathering) }
+    end
+  end
+
+  def move
+    target = Gathering.find(params[:target_gathering_id])
+    if target.gathering_category_id != @gathering.gathering_category_id
+      head :unprocessable_entity and return
+    end
+    if target.id == @gathering.id
+      head :unprocessable_entity and return
+    end
+    next_position = (target.agenda_items.maximum(:position) || -1) + 1
+    @agenda_item.update!(gathering_id: target.id, position: next_position)
+    @target_gathering = target
+    respond_to do |format|
+      format.turbo_stream
+      format.html { redirect_to gathering_path(@gathering), notice: "Point déplacé vers le prochain rassemblement." }
     end
   end
 
