@@ -108,6 +108,28 @@ Rails.application.routes.draw do
     resource :stripe_hooks, only: :create
   end
 
+  # Private read-only API for AI agents. Authenticated by a static bearer token
+  # (ENV["AGENT_API_TOKEN"]). Self-documented: GET /api/v1 lists resources and
+  # GET /api/v1/openapi serves the OpenAPI 3 spec.
+  namespace :api, defaults: { format: :json } do
+    namespace :v1 do
+      get "/", to: "index#show"
+      get "openapi", to: "openapi#show"
+      get "availability", to: "availability#index"
+
+      resources :bookings, only: [:index, :show]
+      resources :space_bookings, only: [:index, :show]
+      resources :lodgings, only: [:index, :show]
+      resources :rooms, only: [:index, :show]
+      resources :spaces, only: [:index, :show]
+      resources :humans, only: [:index, :show]
+      resources :cycles, only: [:index, :show]
+      resources :cycle_actions, only: [:index, :show]
+      resources :tasks, only: [:index, :show]
+      resources :payments, only: [:index, :show]
+    end
+  end
+
   # Defines the root path route ("/")
   root "pages#calendar"
 end

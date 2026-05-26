@@ -1,0 +1,9 @@
+json.id space.id
+json.type "space"
+json.name space.name
+json.description space.description
+json.code space.code
+json.position space.position
+json.created_at space.created_at
+json.updated_at space.updated_at
+json.url api_v1_space_url(space)

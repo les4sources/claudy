@@ -1,0 +1,740 @@
+openapi: 3.0.3
+info:
+  title: Claudy API
+  version: "1.0.0"
+  description: >
+    API privée en lecture seule du Domaine d'Ahinvaux (Les 4 Sources, Yvoir).
+    Conçue pour qu'un agent IA puisse consulter les réservations, les disponibilités,
+    le catalogue (logements, chambres, espaces), la vie du collectif et les paiements.
+    Toutes les routes exigent un jeton Bearer fourni hors-bande. Aucune écriture n'est possible.
+servers:
+  - url: /api/v1
+    description: Chemin relatif. Préfixer avec l'origine de l'instance (ex. https://claudy.example.com/api/v1).
+security:
+  - bearerAuth: []
+tags:
+  - name: Discovery
+    description: Découverte et documentation de l'API.
+  - name: Réservations
+    description: Séjours en logement, réservations d'espaces et disponibilités.
+  - name: Catalogue
+    description: Logements, chambres et espaces — données de référence.
+  - name: Collectif
+    description: Membres, cycles, actions de cycle et tâches de l'organisation.
+  - name: Finances
+    description: Paiements liés aux réservations.
+
+paths:
+  /:
+    get:
+      tags: [Discovery]
+      summary: Index de l'API
+      description: Retourne un descriptif JSON des ressources disponibles, des conventions et un lien vers cette spec. Point de départ recommandé pour un agent.
+      responses:
+        "200":
+          description: Descriptif de l'API.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /openapi:
+    get:
+      tags: [Discovery]
+      summary: Spécification OpenAPI
+      description: Retourne cette spécification OpenAPI 3 au format JSON.
+      responses:
+        "200":
+          description: Document OpenAPI.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /bookings:
+    get:
+      tags: [Réservations]
+      summary: Lister les réservations de séjour
+      description: >
+        Réservations de logement. Trie par date. À utiliser pour répondre à
+        « qui vient », « quelles arrivées cette semaine », « réservations confirmées sur juillet ».
+      parameters:
+        - { name: from_date, in: query, schema: { type: string, format: date }, description: "Ne renvoie que les séjours dont to_date >= from_date." }
+        - { name: to_date, in: query, schema: { type: string, format: date }, description: "Ne renvoie que les séjours dont from_date <= to_date." }
+        - { name: status, in: query, schema: { type: string, enum: [pending, confirmed, declined, canceled] }, description: "Filtre par statut." }
+        - { name: lodging_id, in: query, schema: { type: integer }, description: "Filtre par hébergement." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de réservations.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Booking" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /bookings/{id}:
+    get:
+      tags: [Réservations]
+      summary: Détail d'une réservation de séjour
+      description: Inclut le détail jour par jour des chambres réservées et les notes internes.
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Réservation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Booking" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /space_bookings:
+    get:
+      tags: [Réservations]
+      summary: Lister les réservations d'espaces
+      parameters:
+        - { name: from_date, in: query, schema: { type: string, format: date } }
+        - { name: to_date, in: query, schema: { type: string, format: date } }
+        - { name: status, in: query, schema: { type: string } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de réservations d'espaces.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/SpaceBooking" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /space_bookings/{id}:
+    get:
+      tags: [Réservations]
+      summary: Détail d'une réservation d'espace
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Réservation d'espace.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/SpaceBooking" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /availability:
+    get:
+      tags: [Réservations]
+      summary: Disponibilité par date
+      description: >
+        Calcule, pour chaque logement et chaque espace, la disponibilité jour par jour
+        sur la plage [from, to]. Un jour est indisponible s'il existe une réservation
+        confirmée (ou une indisponibilité posée). À utiliser pour « est-ce libre du X au Y ».
+        Plage maximale : 92 jours.
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date }, description: "Premier jour de la plage (inclus)." }
+        - { name: to, in: query, required: true, schema: { type: string, format: date }, description: "Dernier jour de la plage (inclus)." }
+        - { name: lodging_id, in: query, schema: { type: integer }, description: "Restreint aux logements (un seul) et omet les espaces." }
+        - { name: space_id, in: query, schema: { type: integer }, description: "Restreint aux espaces (un seul) et omet les logements." }
+      responses:
+        "200":
+          description: Disponibilités.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Availability" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
+  /lodgings:
+    get:
+      tags: [Catalogue]
+      summary: Lister les hébergements
+      parameters: [{ $ref: "#/components/parameters/Page" }, { $ref: "#/components/parameters/PerPage" }]
+      responses:
+        "200":
+          description: Liste paginée d'hébergements.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Lodging" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /lodgings/{id}:
+    get:
+      tags: [Catalogue]
+      summary: Détail d'un hébergement
+      description: Inclut la liste des chambres rattachées.
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Hébergement.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Lodging" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /rooms:
+    get:
+      tags: [Catalogue]
+      summary: Lister les chambres
+      parameters: [{ $ref: "#/components/parameters/Page" }, { $ref: "#/components/parameters/PerPage" }]
+      responses:
+        "200":
+          description: Liste paginée de chambres.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Room" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /rooms/{id}:
+    get:
+      tags: [Catalogue]
+      summary: Détail d'une chambre
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Chambre.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Room" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /spaces:
+    get:
+      tags: [Catalogue]
+      summary: Lister les espaces
+      parameters: [{ $ref: "#/components/parameters/Page" }, { $ref: "#/components/parameters/PerPage" }]
+      responses:
+        "200":
+          description: Liste paginée d'espaces.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Space" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /spaces/{id}:
+    get:
+      tags: [Catalogue]
+      summary: Détail d'un espace
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Espace.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Space" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /humans:
+    get:
+      tags: [Collectif]
+      summary: Lister les membres
+      parameters: [{ $ref: "#/components/parameters/Page" }, { $ref: "#/components/parameters/PerPage" }]
+      responses:
+        "200":
+          description: Liste paginée de membres.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Human" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /humans/{id}:
+    get:
+      tags: [Collectif]
+      summary: Détail d'un membre
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Membre.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Human" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /cycles:
+    get:
+      tags: [Collectif]
+      summary: Lister les cycles
+      parameters: [{ $ref: "#/components/parameters/Page" }, { $ref: "#/components/parameters/PerPage" }]
+      responses:
+        "200":
+          description: Liste paginée de cycles.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Cycle" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /cycles/{id}:
+    get:
+      tags: [Collectif]
+      summary: Détail d'un cycle
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Cycle.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Cycle" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /cycle_actions:
+    get:
+      tags: [Collectif]
+      summary: Lister les actions de cycle
+      parameters:
+        - { name: human_id, in: query, schema: { type: integer }, description: "Filtre par membre responsable." }
+        - { name: category, in: query, schema: { type: string, enum: [rituelle, ponctuelle, reportee, deleguee, demandee, invitee] } }
+        - { name: completed, in: query, schema: { type: boolean }, description: "Filtre par état d'achèvement." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée d'actions de cycle.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/CycleAction" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /cycle_actions/{id}:
+    get:
+      tags: [Collectif]
+      summary: Détail d'une action de cycle
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Action de cycle.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/CycleAction" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /tasks:
+    get:
+      tags: [Collectif]
+      summary: Lister les tâches
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [open, in_progress, closed, canceled] } }
+        - { name: project_id, in: query, schema: { type: integer } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de tâches.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Task" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /tasks/{id}:
+    get:
+      tags: [Collectif]
+      summary: Détail d'une tâche
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Tâche.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Task" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /payments:
+    get:
+      tags: [Finances]
+      summary: Lister les paiements
+      description: Les identifiants Stripe bruts ne sont jamais exposés.
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [pending, paid] } }
+        - { name: booking_id, in: query, schema: { type: integer } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de paiements.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Payment" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /payments/{id}:
+    get:
+      tags: [Finances]
+      summary: Détail d'un paiement
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Paiement.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Payment" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: "Jeton statique partagé, transmis en header `Authorization: Bearer <token>`."
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, default: 1 }
+      description: Numéro de page (pagination).
+    PerPage:
+      name: per_page
+      in: query
+      schema: { type: integer, default: 50, maximum: 200 }
+      description: Éléments par page (max 200).
+  responses:
+    Unauthorized:
+      description: Jeton manquant ou invalide.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Ressource introuvable.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unprocessable:
+      description: Paramètres invalides.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        message: { type: string }
+    Money:
+      type: object
+      properties:
+        cents: { type: integer, nullable: true, description: "Montant en centimes." }
+        currency: { type: string, example: "EUR" }
+        formatted: { type: string, nullable: true, example: "1.250,00 €" }
+    PaginationMeta:
+      type: object
+      properties:
+        page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+        pages: { type: integer }
+    Ref:
+      type: object
+      description: Référence légère vers une autre ressource.
+      properties:
+        id: { type: integer }
+        name: { type: string }
+    Booking:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "booking" }
+        group_name: { type: string, nullable: true }
+        firstname: { type: string, nullable: true }
+        lastname: { type: string, nullable: true }
+        name: { type: string }
+        email: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        from_date: { type: string, format: date }
+        to_date: { type: string, format: date }
+        nights_count: { type: integer }
+        status: { type: string, nullable: true }
+        payment_status: { type: string, nullable: true }
+        invoice_status: { type: string, nullable: true }
+        contract_status: { type: string, nullable: true }
+        adults: { type: integer, nullable: true }
+        children: { type: integer, nullable: true }
+        babies: { type: integer, nullable: true }
+        beds_count: { type: integer }
+        tier: { type: string, nullable: true }
+        platform: { type: string, nullable: true }
+        estimated_arrival: { type: string, nullable: true }
+        departure_time: { type: string, nullable: true }
+        lodging: { allOf: [{ $ref: "#/components/schemas/Ref" }], nullable: true }
+        price: { $ref: "#/components/schemas/Money" }
+        options:
+          type: object
+          properties:
+            partyhall: { type: boolean, nullable: true }
+            pizza_party: { type: boolean, nullable: true }
+            bread: { type: boolean, nullable: true }
+            babysitting: { type: boolean, nullable: true }
+            discgolf: { type: boolean, nullable: true }
+            bedsheets: { type: boolean, nullable: true }
+            towels: { type: boolean, nullable: true }
+            wifi: { type: boolean, nullable: true }
+        token: { type: string, description: "Jeton d'accès public à la fiche réservation." }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string }
+        notes: { type: string, nullable: true, description: "Présent uniquement sur le détail." }
+        comments: { type: string, nullable: true, description: "Présent uniquement sur le détail." }
+        public_notes: { type: string, nullable: true, description: "Présent uniquement sur le détail." }
+        reservations:
+          type: array
+          description: "Présent uniquement sur le détail : une entrée par chambre et par nuit."
+          items:
+            type: object
+            properties:
+              date: { type: string, format: date }
+              room: { $ref: "#/components/schemas/Ref" }
+    SpaceBooking:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "space_booking" }
+        group_name: { type: string, nullable: true }
+        firstname: { type: string, nullable: true }
+        lastname: { type: string, nullable: true }
+        name: { type: string }
+        email: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        from_date: { type: string, format: date }
+        to_date: { type: string, format: date }
+        status: { type: string, nullable: true }
+        payment_status: { type: string, nullable: true }
+        invoice_status: { type: string, nullable: true }
+        contract_status: { type: string, nullable: true }
+        persons: { type: string, nullable: true }
+        arrival_time: { type: string, nullable: true }
+        departure_time: { type: string, nullable: true }
+        tier: { type: string, nullable: true }
+        event_id: { type: integer, nullable: true }
+        price: { $ref: "#/components/schemas/Money" }
+        paid_amount: { $ref: "#/components/schemas/Money" }
+        deposit_amount: { $ref: "#/components/schemas/Money" }
+        advance_amount: { $ref: "#/components/schemas/Money" }
+        options:
+          type: object
+          properties:
+            kitchenware: { type: boolean }
+            beamer: { type: boolean }
+            wifi: { type: boolean }
+            tables: { type: boolean }
+        spaces:
+          type: array
+          items: { $ref: "#/components/schemas/Ref" }
+        token: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string }
+        notes: { type: string, nullable: true }
+        public_notes: { type: string, nullable: true }
+        space_reservations:
+          type: array
+          description: "Présent uniquement sur le détail."
+          items:
+            type: object
+            properties:
+              date: { type: string, format: date }
+              space: { $ref: "#/components/schemas/Ref" }
+    Lodging:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "lodging" }
+        name: { type: string }
+        summary: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        price_night: { $ref: "#/components/schemas/Money" }
+        weekend_discount_cents: { type: integer }
+        party_hall_availability: { type: boolean, nullable: true }
+        available_for_bookings: { type: boolean, nullable: true }
+        show_on_reports: { type: boolean }
+        rooms:
+          type: array
+          description: "Présent uniquement sur le détail."
+          items: { $ref: "#/components/schemas/Room" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string }
+    Room:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "room" }
+        name: { type: string }
+        name_with_level: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        level: { type: integer, nullable: true }
+        code: { type: string, nullable: true }
+        lodgings:
+          type: array
+          items: { $ref: "#/components/schemas/Ref" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string }
+    Space:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "space" }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        code: { type: string, nullable: true }
+        position: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string }
+    Human:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "human" }
+        name: { type: string }
+        email: { type: string, nullable: true }
+        summary: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        status: { type: string }
+        photo_url: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string }
+    Cycle:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "cycle" }
+        name: { type: string }
+        start_date: { type: string, format: date }
+        end_date: { type: string, format: date }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string }
+    CycleAction:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "cycle_action" }
+        label: { type: string }
+        hours: { type: number, nullable: true }
+        category: { type: string, enum: [rituelle, ponctuelle, reportee, deleguee, demandee, invitee] }
+        completed: { type: boolean }
+        position: { type: integer }
+        archived: { type: boolean }
+        archived_at: { type: string, format: date-time, nullable: true }
+        human: { $ref: "#/components/schemas/Ref" }
+        delegate_to_human: { allOf: [{ $ref: "#/components/schemas/Ref" }], nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string }
+    Task:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "task" }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        status: { type: string, nullable: true }
+        due_date: { type: string, format: date, nullable: true }
+        project_id: { type: integer, nullable: true }
+        team_id: { type: integer, nullable: true }
+        bundle_id: { type: integer }
+        humans:
+          type: array
+          items: { $ref: "#/components/schemas/Ref" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string }
+    Payment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, example: "payment" }
+        amount: { $ref: "#/components/schemas/Money" }
+        status: { type: string, nullable: true }
+        payment_method: { type: string, nullable: true }
+        booking: { $ref: "#/components/schemas/Ref" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string }
+    Availability:
+      type: object
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        lodgings:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer }
+              name: { type: string }
+              dates:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date: { type: string, format: date }
+                    available: { type: boolean }
+        spaces:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer }
+              name: { type: string }
+              dates:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date: { type: string, format: date }
+                    available: { type: boolean }
