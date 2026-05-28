@@ -74,4 +74,9 @@ class CustomersController < BaseController
   def set_accounting_view
     @accounting_view = true
   end
+
+  # BaseController#render calls set_presenters on every render; this controller
+  # has no dedicated presenter, so it is a no-op (same pattern as other
+  # presenter-less controllers, e.g. BookingPricesController).
+  def set_presenters; end
 end

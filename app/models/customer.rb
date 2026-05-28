@@ -100,6 +100,13 @@ class Customer < ApplicationRecord
     end
   end
 
+  # Available on the bare model (not just the decorator) so controllers can use
+  # it for breadcrumbs before decoration. The decorator overrides with the same
+  # semantics for view contexts.
+  def display_name
+    name
+  end
+
   private
 
   def normalize_email

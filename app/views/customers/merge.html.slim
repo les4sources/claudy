@@ -1,0 +1,45 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Fusionner / re-ventiler #{@customer.display_name}"
+
+.space-y-4
+  .rounded-md.bg-gray-50.p-4.text-sm.text-gray-700
+    | Sélectionnez le client <strong>cible</strong> : tous les séjours de
+    strong = " #{@customer.display_name} "
+    | y seront transférés. Si la source n'a plus aucun séjour, elle est archivée.
+
+  .mb-4
+    = form_with url: merge_customer_path(@customer), method: :get do
+      .flex.gap-2
+        = text_field_tag :q, params[:q],
+                         placeholder: "Rechercher le client cible par email, nom ou organisation…",
+                         class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+        = submit_tag "Rechercher",
+                     class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"]
+            | Nom
+          th.py-3.px-6[scope="col"]
+            | Email
+          th.py-3.px-6.text-right[scope="col"]
+            | Action
+      tbody
+        - if @candidates.empty?
+          tr.border-b.bg-white
+            td.py-4.px-6.text-gray-500[colspan="3"]
+              | Aucun client cible trouvé.
+        - else
+          - @candidates.each do |candidate|
+            tr.border-b.bg-white
+              td.py-4.px-6.font-medium.text-gray-900
+                = candidate.name
+              td.py-4.px-6
+                = candidate.email
+              td.py-4.px-6.text-right
+                = link_to "Choisir comme cible",
+                          merge_preview_customer_path(@customer, target_id: candidate.id),
+                          class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-indigo-700 shadow-sm hover:bg-gray-50"

@@ -1,0 +1,38 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Confirmer la fusion"
+
+.space-y-4.max-w-2xl
+  .rounded-md.bg-amber-50.p-4.text-sm.text-amber-800
+    | Cette action transfère les séjours de la source vers la cible. Si la
+    | source n'a plus aucun séjour après transfert, elle est archivée
+    | (soft-delete). L'opération est tracée dans l'historique.
+
+  .grid.grid-cols-2.gap-4
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5
+        h3.text-sm.font-medium.text-gray-500
+          | Source (sera vidée puis archivée)
+        p.mt-1.text-lg.font-medium.text-gray-900
+          = @source.display_name
+        p.text-sm.text-gray-500
+          = @source.email
+        p.mt-2.text-sm.text-gray-700
+          = "#{@source.stays.count} séjour(s) à transférer"
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5
+        h3.text-sm.font-medium.text-gray-500
+          | Cible (recevra les séjours)
+        p.mt-1.text-lg.font-medium.text-gray-900
+          = @target.display_name
+        p.text-sm.text-gray-500
+          = @target.email
+
+  .flex.gap-2
+    = button_to "Confirmer la fusion",
+                merge_commit_customer_path(@source, target_id: @target.id),
+                method: :post,
+                class: "inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+    = link_to "Annuler",
+              merge_customer_path(@source),
+              class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"

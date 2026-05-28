@@ -1,6 +1,12 @@
 class CustomerDecorator < ApplicationDecorator
   delegate_all
 
+  # Use the paginating collection decorator so will_paginate keeps working on
+  # the decorated index collection (same pattern as BookingDecorator).
+  def self.collection_decorator_class
+    PaginatingDecorator
+  end
+
   def type_label
     organization? ? "Organisation" : "Particulier"
   end
