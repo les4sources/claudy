@@ -1,0 +1,81 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: @customer.display_name,
+           links: [ \
+             link_to("Fusionner / re-ventiler", merge_customer_path(@customer), class: "btn-page-header"), \
+             link_to("Modifier", edit_customer_path(@customer), class: "btn-page-header") \
+           ]
+
+.space-y-4
+  - if @customer.catch_all?
+    .rounded-md.bg-amber-50.p-4.text-sm.text-amber-800
+      | Client fourre-tout de la migration. Re-ventiler ses séjours vers de vrais clients via « Fusionner / re-ventiler ».
+
+  .grid.grid-cols-3.gap-4
+    .col-span-2.space-y-4
+      .overflow-hidden.bg-white.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Coordonnées
+        .border-t.border-gray-200
+          dl
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Type
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @customer.type_label
+              dt.text-sm.font-medium.text-gray-500
+                | Email
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @customer.email
+              dt.text-sm.font-medium.text-gray-500
+                | Téléphone
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @customer.phone
+              - if @customer.organization?
+                dt.text-sm.font-medium.text-gray-500
+                  | Organisation
+                dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                  = @customer.organization_name
+              dt.text-sm.font-medium.text-gray-500
+                | Langue
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @customer.language_label
+
+      .overflow-hidden.bg-white.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Séjours à venir
+        .border-t.border-gray-200.px-4.py-4
+          - if @customer.upcoming_stays.empty?
+            p.text-sm.text-gray-500
+              | Aucun séjour à venir.
+          - else
+            ul.divide-y.divide-gray-100
+              - @customer.upcoming_stays.each do |stay|
+                li.py-2.text-sm.text-gray-900
+                  = "#{stay.arrival_date} → #{stay.departure_date}"
+                  span.text-gray-500 = " · #{stay.status}"
+
+      .overflow-hidden.bg-white.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Séjours passés
+        .border-t.border-gray-200.px-4.py-4
+          - if @customer.past_stays.empty?
+            p.text-sm.text-gray-500
+              | Aucun séjour passé.
+          - else
+            ul.divide-y.divide-gray-100
+              - @customer.past_stays.each do |stay|
+                li.py-2.text-sm.text-gray-900
+                  = "#{stay.arrival_date} → #{stay.departure_date}"
+                  span.text-gray-500 = " · #{stay.status}"
+
+    .space-y-4
+      .overflow-hidden.bg-white.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Notes internes
+        .border-t.border-gray-200.px-4.py-4.prose.prose-sm
+          = @customer.notes

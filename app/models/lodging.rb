@@ -21,12 +21,57 @@ class Lodging < ApplicationRecord
   has_many :bookings
   has_many :unavailabilities
 
+  # Self-referential composition (Le Grand-Duc = La Hulotte + La Chevêche).
+  # A composite lodging is made of component lodgings; reserving the composite
+  # makes its components unavailable and vice-versa — derived on the fly, never
+  # stored, never mirrored into a duplicate reservation (decision §11.4 / AC-51).
+  has_many :lodging_compositions,
+           foreign_key: :composite_lodging_id,
+           class_name: "LodgingComposition",
+           dependent: :destroy
+  has_many :composed_of_lodgings,
+           through: :lodging_compositions,
+           source: :component_lodging
+  has_many :component_memberships,
+           foreign_key: :component_lodging_id,
+           class_name: "LodgingComposition",
+           dependent: :destroy
+  has_many :part_of_lodgings,
+           through: :component_memberships,
+           source: :composite_lodging
+
   monetize :price_night_cents
 
   has_soft_deletion default_scope: true
 
+  def composite?
+    composed_of_lodgings.any?
+  end
+
+  def component?
+    part_of_lodgings.any?
+  end
+
+  # Availability that accounts for the composition. The lodging is available only
+  # if its OWN rooms are free AND every lodging entangled with it (its components
+  # if it is a composite, its composites if it is a component) is also free on
+  # its own rooms. This makes Grand-Duc availability a pure read-derivation of
+  # Hulotte + Chevêche, with no stored blocking and no mirror booking.
   def available_between?(from_date, to_date)
-    # none of the lodging rooms has a confirmed reservation
+    entangled_lodgings_including_self.all? do |lodging|
+      lodging.self_available_between?(from_date, to_date)
+    end
+  end
+
+  def available_on?(date)
+    available_between?(date, date)
+  end
+
+  # Availability of THIS lodging's own rooms only (legacy behaviour, composition
+  # blind). Kept public so the composition logic and any caller that explicitly
+  # wants the physical-unit answer can reach it; behaviour for non-composed
+  # lodgings is identical to the previous available_between?/available_on?.
+  def self_available_between?(from_date, to_date)
     Reservation.includes(:booking)
                .where(
                  date: from_date..to_date,
@@ -35,14 +80,14 @@ class Lodging < ApplicationRecord
                ).none? && unavailabilities.where(date: from_date..to_date).none?
   end
 
-  def available_on?(date)
-    # none of the lodging rooms has a confirmed reservation
-    Reservation.includes(:booking)
-               .where(
-                 date: date,
-                 room: rooms.pluck(:id),
-                 booking: { status: "confirmed" }
-               ).none? && unavailabilities.where(date: date).none?
+  def self_available_on?(date)
+    self_available_between?(date, date)
+  end
+
+  # The set of lodgings whose occupancy entangles with this one (self + its
+  # components if composite, self + its composites if component).
+  def entangled_lodgings_including_self
+    ([self] + composed_of_lodgings.to_a + part_of_lodgings.to_a).uniq
   end
 
   def average_booking_duration(start_date, end_date)

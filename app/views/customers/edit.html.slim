@@ -1,0 +1,11 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Modifier #{@customer.display_name}"
+
+= form_with model: @customer, url: customer_path(@customer), method: :patch do |f|
+  .space-y-8.divide-y.divide-gray-200.sm:space-y-5
+    .space-y-6.sm:space-y-5
+      = render "form", f: f
+
+  = f.actions do
+    = f.submit "Enregistrer"

@@ -57,6 +57,11 @@ class Booking < ApplicationRecord
 
   belongs_to :lodging, optional: true
 
+  # Read-side inverse of the Stay graph (tranche 1, strangler pattern). No FK on
+  # bookings — the join lives in stay_items, preserving coexistence.
+  has_one :stay_item, as: :bookable
+  has_one :stay, through: :stay_item
+
   monetize :price_cents, allow_nil: true
 
   has_paper_trail

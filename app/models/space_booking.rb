@@ -45,6 +45,10 @@ class SpaceBooking < ApplicationRecord
   has_many :spaces, through: :space_reservations
   belongs_to :event, optional: true
 
+  # Read-side inverse of the Stay graph (tranche 1, strangler pattern).
+  has_one :stay_item, as: :bookable
+  has_one :stay, through: :stay_item
+
   # Versioning
   has_paper_trail
   has_soft_deletion default_scope: true

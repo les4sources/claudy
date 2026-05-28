@@ -139,6 +139,10 @@ nav.bg-white.shadow-sm.lg:px-6
             = link_to "Recherche",
                       search_bookings_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'bookings' && action_name == 'search' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
+            = link_to "Clients",
+                      customers_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'customers' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
 
 - if !@reports_view.nil?
   nav.bg-white.border-b.border-gray-100.lg:px-6
