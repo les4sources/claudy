@@ -1,9 +1,11 @@
 module Api
   module V1
-    # Base for the private read-only agent API. Inherits from ActionController::Base
-    # (not ::API) so jbuilder views render exactly like the rest of the app. All
-    # endpoints are GET, so CSRF is irrelevant — forgery protection is skipped and
-    # there is no layout.
+    # Base for the private agent API. Inherits from ActionController::Base
+    # (not ::API) so jbuilder views render exactly like the rest of the app.
+    # Reads are GET; writes are PATCH (update) and DELETE (soft-delete). CSRF
+    # forgery protection is skipped (token-authenticated, no cookies) and there
+    # is no layout. Write bodies are wrapped under the resource root key, e.g.
+    # PATCH /api/v1/bookings/1 with { "booking": { "status": "confirmed" } }.
     class BaseController < ActionController::Base
       skip_forgery_protection
       layout false
@@ -41,6 +43,12 @@ module Api
 
       def render_unprocessable(exception)
         render json: { error: "unprocessable_entity", message: exception.message }, status: :unprocessable_entity
+      end
+
+      # Render a 422 with the failed record's validation messages.
+      def render_invalid(record)
+        render json: { error: "unprocessable_entity", messages: record.errors.full_messages },
+               status: :unprocessable_entity
       end
 
       # Paginate an ActiveRecord relation using will_paginate.

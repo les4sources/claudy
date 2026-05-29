@@ -14,6 +14,29 @@ module Api
       def show
         @stay = Stay.includes(:customer, stay_items: :bookable).find(params[:id])
       end
+
+      def update
+        @stay = Stay.find(params[:id])
+        if @stay.update(stay_params)
+          render :show
+        else
+          render_invalid(@stay)
+        end
+      end
+
+      def destroy
+        Stay.find(params[:id]).soft_delete!
+        head :no_content
+      end
+
+      private
+
+      def stay_params
+        params.require(:stay).permit(
+          :customer_id, :arrival_date, :departure_date, :status,
+          :total_amount_cents, :notes, :legacy_origin
+        )
+      end
     end
   end
 end

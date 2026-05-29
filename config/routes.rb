@@ -133,18 +133,20 @@ Rails.application.routes.draw do
       get "openapi", to: "openapi#show"
       get "availability", to: "availability#index"
 
-      resources :customers, only: [:index, :show]
-      resources :stays, only: [:index, :show]
-      resources :bookings, only: [:index, :show]
-      resources :space_bookings, only: [:index, :show]
-      resources :lodgings, only: [:index, :show]
-      resources :rooms, only: [:index, :show]
-      resources :spaces, only: [:index, :show]
-      resources :humans, only: [:index, :show]
-      resources :cycles, only: [:index, :show]
-      resources :cycle_actions, only: [:index, :show]
-      resources :tasks, only: [:index, :show]
-      resources :payments, only: [:index, :show]
+      # Reads (index/show) plus edit (PATCH/PUT update) and delete (soft-delete).
+      # Create (POST) is intentionally not exposed.
+      resources :customers, only: [:index, :show, :update, :destroy]
+      resources :stays, only: [:index, :show, :update, :destroy]
+      resources :bookings, only: [:index, :show, :update, :destroy]
+      resources :space_bookings, only: [:index, :show, :update, :destroy]
+      resources :lodgings, only: [:index, :show, :update, :destroy]
+      resources :rooms, only: [:index, :show, :update, :destroy]
+      resources :spaces, only: [:index, :show, :update, :destroy]
+      resources :humans, only: [:index, :show, :update, :destroy]
+      resources :cycles, only: [:index, :show, :update, :destroy]
+      resources :cycle_actions, only: [:index, :show, :update, :destroy]
+      resources :tasks, only: [:index, :show, :update, :destroy]
+      resources :payments, only: [:index, :show, :update, :destroy]
     end
   end
 

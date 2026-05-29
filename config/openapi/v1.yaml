@@ -3,10 +3,14 @@ info:
   title: Claudy API
   version: "1.0.0"
   description: >
-    API privée en lecture seule du Domaine d'Ahinvaux (Les 4 Sources, Yvoir).
+    API privée du Domaine d'Ahinvaux (Les 4 Sources, Yvoir).
     Conçue pour qu'un agent IA puisse consulter les réservations, les disponibilités,
-    le catalogue (logements, chambres, espaces), la vie du collectif et les paiements.
-    Toutes les routes exigent un jeton Bearer fourni hors-bande. Aucune écriture n'est possible.
+    le catalogue (logements, chambres, espaces), la vie du collectif et les paiements,
+    et éditer (PATCH) ou supprimer (DELETE, suppression douce) chaque ressource.
+    Toutes les routes exigent un jeton Bearer fourni hors-bande.
+    Pour une écriture, encapsuler le corps JSON sous la clé racine de la ressource
+    (ex. PATCH /bookings/1 avec { "booking": { "status": "confirmed" } }).
+    La création (POST) n'est pas exposée.
 servers:
   - url: /api/v1
     description: Chemin relatif. Préfixer avec l'origine de l'instance (ex. https://claudy.example.com/api/v1).
@@ -23,6 +27,8 @@ tags:
     description: Membres, cycles, actions de cycle et tâches de l'organisation.
   - name: Finances
     description: Paiements liés aux réservations.
+  - name: Clients
+    description: Clients (particuliers et organisations) et leurs séjours.
 
 paths:
   /:
@@ -43,6 +49,129 @@ paths:
         "200":
           description: Document OpenAPI.
         "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /customers:
+    get:
+      tags: [Clients]
+      summary: Lister les clients
+      description: Clients (particuliers et organisations) du domaine.
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: "Recherche plein-texte (nom, email…)." }
+        - { name: customer_type, in: query, schema: { type: string, enum: [individual, organization] } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de clients.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Customer" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /customers/{id}:
+    get:
+      tags: [Clients]
+      summary: Détail d'un client
+      description: Inclut les séjours du client. Les notes internes ne sont jamais exposées (§11.7).
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Client.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Customer" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Clients]
+      summary: Éditer un client
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/WriteBody" }
+      responses:
+        "200":
+          description: Client mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Customer" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Clients]
+      summary: Supprimer un client (soft-delete)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /stays:
+    get:
+      tags: [Réservations]
+      summary: Lister les séjours
+      description: Séjours regroupant les items réservés (logements/espaces) d'un client.
+      parameters:
+        - { name: customer_id, in: query, schema: { type: integer }, description: "Filtre par client." }
+        - { name: status, in: query, schema: { type: string }, description: "Filtre par statut." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de séjours.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Stay" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /stays/{id}:
+    get:
+      tags: [Réservations]
+      summary: Détail d'un séjour
+      description: Inclut les items du séjour et leurs types concrets.
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Séjour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Stay" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Réservations]
+      summary: Éditer un séjour
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/WriteBody" }
+      responses:
+        "200":
+          description: Séjour mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Stay" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Réservations]
+      summary: Supprimer un séjour (soft-delete)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /bookings:
     get:
@@ -70,6 +199,30 @@ paths:
                   meta: { $ref: "#/components/schemas/PaginationMeta" }
         "401": { $ref: "#/components/responses/Unauthorized" }
   /bookings/{id}:
+    patch:
+      tags: [Réservations]
+      summary: Éditer une réservation de séjour
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/WriteBody" }
+      responses:
+        "200":
+          description: Réservation mise à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Booking" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Réservations]
+      summary: Supprimer une réservation de séjour (soft-delete)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
     get:
       tags: [Réservations]
       summary: Détail d'une réservation de séjour
@@ -108,6 +261,30 @@ paths:
                   meta: { $ref: "#/components/schemas/PaginationMeta" }
         "401": { $ref: "#/components/responses/Unauthorized" }
   /space_bookings/{id}:
+    patch:
+      tags: [Réservations]
+      summary: Éditer une réservation d'espace
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/WriteBody" }
+      responses:
+        "200":
+          description: Réservation d'espace mise à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/SpaceBooking" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Réservations]
+      summary: Supprimer une réservation d'espace (soft-delete)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
     get:
       tags: [Réservations]
       summary: Détail d'une réservation d'espace
@@ -163,6 +340,30 @@ paths:
                   meta: { $ref: "#/components/schemas/PaginationMeta" }
         "401": { $ref: "#/components/responses/Unauthorized" }
   /lodgings/{id}:
+    patch:
+      tags: [Catalogue]
+      summary: Éditer un hébergement
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/WriteBody" }
+      responses:
+        "200":
+          description: Hébergement mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Lodging" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Catalogue]
+      summary: Supprimer un hébergement (soft-delete)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
     get:
       tags: [Catalogue]
       summary: Détail d'un hébergement
@@ -196,6 +397,30 @@ paths:
                   meta: { $ref: "#/components/schemas/PaginationMeta" }
         "401": { $ref: "#/components/responses/Unauthorized" }
   /rooms/{id}:
+    patch:
+      tags: [Catalogue]
+      summary: Éditer une chambre
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/WriteBody" }
+      responses:
+        "200":
+          description: Chambre mise à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Room" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Catalogue]
+      summary: Supprimer une chambre (soft-delete)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
     get:
       tags: [Catalogue]
       summary: Détail d'une chambre
@@ -228,6 +453,30 @@ paths:
                   meta: { $ref: "#/components/schemas/PaginationMeta" }
         "401": { $ref: "#/components/responses/Unauthorized" }
   /spaces/{id}:
+    patch:
+      tags: [Catalogue]
+      summary: Éditer un espace
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/WriteBody" }
+      responses:
+        "200":
+          description: Espace mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Space" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Catalogue]
+      summary: Supprimer un espace (soft-delete)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
     get:
       tags: [Catalogue]
       summary: Détail d'un espace
@@ -260,6 +509,30 @@ paths:
                   meta: { $ref: "#/components/schemas/PaginationMeta" }
         "401": { $ref: "#/components/responses/Unauthorized" }
   /humans/{id}:
+    patch:
+      tags: [Collectif]
+      summary: Éditer un membre
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/WriteBody" }
+      responses:
+        "200":
+          description: Membre mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Human" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Collectif]
+      summary: Supprimer un membre (soft-delete)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
     get:
       tags: [Collectif]
       summary: Détail d'un membre
@@ -292,6 +565,30 @@ paths:
                   meta: { $ref: "#/components/schemas/PaginationMeta" }
         "401": { $ref: "#/components/responses/Unauthorized" }
   /cycles/{id}:
+    patch:
+      tags: [Collectif]
+      summary: Éditer un cycle
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/WriteBody" }
+      responses:
+        "200":
+          description: Cycle mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Cycle" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Collectif]
+      summary: Supprimer un cycle (soft-delete)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
     get:
       tags: [Collectif]
       summary: Détail d'un cycle
@@ -329,6 +626,30 @@ paths:
                   meta: { $ref: "#/components/schemas/PaginationMeta" }
         "401": { $ref: "#/components/responses/Unauthorized" }
   /cycle_actions/{id}:
+    patch:
+      tags: [Collectif]
+      summary: Éditer une action de cycle
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/WriteBody" }
+      responses:
+        "200":
+          description: Action de cycle mise à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/CycleAction" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Collectif]
+      summary: Supprimer une action de cycle (soft-delete)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
     get:
       tags: [Collectif]
       summary: Détail d'une action de cycle
@@ -365,6 +686,30 @@ paths:
                   meta: { $ref: "#/components/schemas/PaginationMeta" }
         "401": { $ref: "#/components/responses/Unauthorized" }
   /tasks/{id}:
+    patch:
+      tags: [Collectif]
+      summary: Éditer une tâche
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/WriteBody" }
+      responses:
+        "200":
+          description: Tâche mise à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Task" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Collectif]
+      summary: Supprimer une tâche (soft-delete)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
     get:
       tags: [Collectif]
       summary: Détail d'une tâche
@@ -402,6 +747,31 @@ paths:
                   meta: { $ref: "#/components/schemas/PaginationMeta" }
         "401": { $ref: "#/components/responses/Unauthorized" }
   /payments/{id}:
+    patch:
+      tags: [Finances]
+      summary: Éditer un paiement
+      description: Les identifiants Stripe sont gérés par le fournisseur et ne sont jamais modifiables.
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/WriteBody" }
+      responses:
+        "200":
+          description: Paiement mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Payment" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Finances]
+      summary: Supprimer un paiement (soft-delete)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
     get:
       tags: [Finances]
       summary: Détail d'un paiement
@@ -456,6 +826,23 @@ components:
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
+    NoContent:
+      description: Suppression effectuée (soft-delete). Pas de corps de réponse.
+  requestBodies:
+    WriteBody:
+      required: true
+      description: >
+        Champs à modifier, encapsulés sous la clé racine de la ressource
+        (ex. { "booking": { "status": "confirmed" } }). Seuls les champs éditables
+        sont pris en compte ; id, type et champs calculés sont ignorés. Voir le schéma
+        de lecture de la ressource pour la liste des champs.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties:
+              type: object
+              additionalProperties: true
   schemas:
     Error:
       type: object
@@ -481,6 +868,69 @@ components:
       properties:
         id: { type: integer }
         name: { type: string }
+    Customer:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "customer" }
+        customer_type: { type: string, enum: [individual, organization] }
+        first_name: { type: string, nullable: true }
+        last_name: { type: string, nullable: true }
+        organization_name: { type: string, nullable: true }
+        name: { type: string, description: "Nom d'affichage calculé." }
+        email: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        language: { type: string, example: "fr" }
+        vat_number: { type: string, nullable: true }
+        peppol_id: { type: string, nullable: true }
+        address:
+          type: object
+          properties:
+            line: { type: string, nullable: true }
+            zip: { type: string, nullable: true }
+            city: { type: string, nullable: true }
+            country: { type: string, nullable: true }
+        marketing_consent: { type: boolean }
+        nps_eligible: { type: boolean }
+        stripe_customer_id: { type: string, nullable: true }
+        human: { allOf: [{ $ref: "#/components/schemas/Ref" }], nullable: true }
+        stays:
+          type: array
+          description: "Séjours du client (détail uniquement)."
+          items: { $ref: "#/components/schemas/Stay" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string, format: uri }
+    Stay:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "stay" }
+        status: { type: string, nullable: true }
+        arrival_date: { type: string, format: date, nullable: true }
+        departure_date: { type: string, format: date, nullable: true }
+        total_amount: { $ref: "#/components/schemas/Money" }
+        legacy_origin: { type: string, nullable: true }
+        customer:
+          type: object
+          properties:
+            id: { type: integer }
+            name: { type: string, nullable: true }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer }
+              bookable_type: { type: string }
+              bookable_id: { type: integer }
+              from_date: { type: string, format: date, nullable: true }
+              to_date: { type: string, format: date, nullable: true }
+              status: { type: string, nullable: true }
+        items_count: { type: integer, description: "Détail uniquement." }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string, format: uri }
     Booking:
       type: object
       properties:

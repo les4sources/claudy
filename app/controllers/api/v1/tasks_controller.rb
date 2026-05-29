@@ -11,6 +11,26 @@ module Api
       def show
         @task = Task.includes(:humans).find(params[:id])
       end
+
+      def update
+        @task = Task.find(params[:id])
+        if @task.update(task_params)
+          render :show
+        else
+          render_invalid(@task)
+        end
+      end
+
+      def destroy
+        Task.find(params[:id]).soft_delete!
+        head :no_content
+      end
+
+      private
+
+      def task_params
+        params.require(:task).permit(:name, :description, :status, :due_date, :project_id, :bundle_id)
+      end
     end
   end
 end

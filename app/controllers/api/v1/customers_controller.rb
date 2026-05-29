@@ -15,6 +15,32 @@ module Api
       def show
         @customer = Customer.find(params[:id])
       end
+
+      def update
+        @customer = Customer.find(params[:id])
+        if @customer.update(customer_params)
+          render :show
+        else
+          render_invalid(@customer)
+        end
+      end
+
+      def destroy
+        Customer.find(params[:id]).soft_delete!
+        head :no_content
+      end
+
+      private
+
+      # `notes`, `stripe_customer_id` are intentionally not writable here (internal
+      # / provider-managed, §11.7).
+      def customer_params
+        params.require(:customer).permit(
+          :first_name, :last_name, :email, :phone, :customer_type, :organization_name,
+          :vat_number, :peppol_id, :address_line, :address_zip, :address_city,
+          :address_country, :language, :marketing_consent, :nps_eligible, :human_id
+        )
+      end
     end
   end
 end

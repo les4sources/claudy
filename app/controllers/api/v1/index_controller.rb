@@ -7,9 +7,10 @@ module Api
         render json: {
           name: "Claudy API",
           version: "v1",
-          description: "API privée en lecture seule du Domaine d'Ahinvaux (Les 4 Sources). " \
-                       "Donne à un agent IA l'accès aux réservations, disponibilités, catalogue " \
-                       "(logements/chambres/espaces), à la vie du collectif et aux paiements.",
+          description: "API privée du Domaine d'Ahinvaux (Les 4 Sources). Donne à un agent IA " \
+                       "l'accès en lecture aux réservations, disponibilités, catalogue " \
+                       "(logements/chambres/espaces), à la vie du collectif et aux paiements, " \
+                       "ainsi qu'à l'édition (PATCH) et la suppression (DELETE, soft-delete) de chaque ressource.",
           authentication: {
             type: "bearer",
             header: "Authorization: Bearer <token>",
@@ -22,9 +23,15 @@ module Api
             format: "json",
             pagination: "Listes paginées : ?page=N&per_page=M (max 200, défaut 50). Méta dans `meta`.",
             dates: "Dates au format ISO 8601 (YYYY-MM-DD).",
-            money: "Montants exposés en centimes (`cents`) + version formatée."
+            money: "Montants exposés en centimes (`cents`) + version formatée.",
+            writes: "PATCH /<ressource>/:id pour éditer, DELETE /<ressource>/:id pour supprimer (soft-delete). " \
+                    "Corps JSON encapsulé sous la clé de la ressource, ex. { \"booking\": { \"status\": \"confirmed\" } }. " \
+                    "La création (POST) n'est pas exposée.",
+            soft_delete: "DELETE effectue une suppression douce (soft-delete) : l'enregistrement disparaît de l'API mais reste auditable."
           },
           resources: [
+            { name: "customers", path: api_v1_customers_path, description: "Clients (particuliers/organisations). Filtres: q, customer_type." },
+            { name: "stays", path: api_v1_stays_path, description: "Séjours regroupant les items réservés d'un client. Filtres: customer_id, status." },
             { name: "bookings", path: api_v1_bookings_path, description: "Réservations de séjour (logements). Filtres: from_date, to_date, status, lodging_id." },
             { name: "space_bookings", path: api_v1_space_bookings_path, description: "Réservations de salles/espaces. Filtres: from_date, to_date, status." },
             { name: "availability", path: api_v1_availability_path, description: "Disponibilité par logement/espace sur une plage de dates. Requiert ?from= & ?to=." },
