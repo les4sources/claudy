@@ -9,6 +9,12 @@ class CustomersController < BaseController
     @customers = CustomerDecorator.decorate_collection(scope.paginate(page: params[:page], per_page: 30))
   end
 
+  # Autocomplete JSON pour la re-ventilation (recherche dynamique de client cible).
+  def search
+    customers = Customer.search(params[:q]).order(:first_name, :last_name, :email).limit(10)
+    render json: customers.map { |c| { id: c.id, name: c.name, email: c.email } }
+  end
+
   def show
     breadcrumb @customer.display_name, customer_path(@customer)
     # Cibles possibles pour la re-ventilation des séjours (tout client sauf celui-ci).

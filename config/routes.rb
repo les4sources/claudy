@@ -80,6 +80,9 @@ Rails.application.routes.draw do
 
   # Pôle Accueil : clients (Customer) + fusion de doublons / re-ventilation.
   resources :customers, only: [:index, :show, :edit, :update] do
+    collection do
+      get "search" # autocomplete JSON pour la re-ventilation
+    end
     member do
       get "merge"
       get "merge_preview"

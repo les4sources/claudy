@@ -29,5 +29,17 @@ RSpec.describe "Stays (détails admin)", type: :request do
       expect(response.body).to include("Les Amis")
       expect(response.body).to include("Confirmé") # statut en label
     end
+
+    it "includes a reassign form prefilled from the booking (name + group, email blank)" do
+      get stay_path(stay)
+      expect(response.body).to include("Assigner ce séjour à un client")
+      expect(response.body).to include('data-controller="reassign-form"')
+      expect(response.body).to include("Rechercher un client") # recherche dynamique
+      expect(response.body).to include('value="Jean"')         # prénom pré-rempli
+      expect(response.body).to include('value="Dupont"')       # nom pré-rempli
+      expect(response.body).to include('value="Les Amis"')     # groupe pré-rempli
+      # le stay courant est embarqué pour ne réassigner que lui
+      expect(response.body).to include('name="stay_ids[]"')
+    end
   end
 end

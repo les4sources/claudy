@@ -59,6 +59,20 @@ RSpec.describe "Customers (admin Pôle Accueil)", type: :request do
     end
   end
 
+  describe "GET /customers/search (autocomplete JSON)" do
+    it "returns matching customers as JSON" do
+      Customer.create!(email: "michael@semisto.org", first_name: "Michael", last_name: "Hulet", customer_type: "individual")
+      Customer.create!(email: "autre@example.com", first_name: "Autre", customer_type: "individual")
+
+      get search_customers_path, params: { q: "hulet" }
+      expect(response).to have_http_status(:ok)
+      data = JSON.parse(response.body)
+      expect(data.map { |c| c["email"] }).to include("michael@semisto.org")
+      expect(data.map { |c| c["email"] }).not_to include("autre@example.com")
+      expect(data.first).to include("id", "name", "email")
+    end
+  end
+
   describe "re-ventilation (reassign) from the catch-all" do
     let!(:catch_all) { Customer.create!(email: Customer::CATCH_ALL_EMAIL, first_name: "Client", customer_type: "individual") }
     let!(:keep) { Stay.create!(customer: catch_all, arrival_date: Date.today + 1, departure_date: Date.today + 2) }
