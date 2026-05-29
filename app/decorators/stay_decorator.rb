@@ -8,9 +8,25 @@ class StayDecorator < ApplicationDecorator
     "cancelled" => { label: "Annulé", classes: "bg-red-100 text-red-800" }
   }.freeze
 
+  PLATFORM_STYLES = {
+    "airbnb"        => { label: "Airbnb", classes: "bg-rose-50 text-rose-600 ring-1 ring-rose-100" },
+    "bookingdotcom" => { label: "Booking.com", classes: "bg-blue-50 text-blue-700 ring-1 ring-blue-100" }
+  }.freeze
+
   # Premier objet réservable du séjour (Booking / SpaceBooking) — porte le contact.
   def primary_bookable
     @primary_bookable ||= object.stay_items.first&.bookable
+  end
+
+  # Badge plateforme (Airbnb / Booking.com) si le séjour provient d'une OTA.
+  # nil pour les réservations directes / web. Lit `platform` du bookable
+  # (uniforme pour Booking et SpaceBooking).
+  def platform_badge
+    style = PLATFORM_STYLES[primary_bookable&.try(:platform)]
+    return if style.nil?
+    h.content_tag(:span, style[:label],
+                  class: "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium #{style[:classes]}",
+                  title: "Réservation provenant de #{style[:label]}")
   end
 
   def status_badge

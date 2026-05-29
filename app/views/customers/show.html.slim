@@ -61,6 +61,7 @@
                         .flex.items-center.gap-2.flex-wrap
                           span.font-medium = stay.date_range
                           = stay.status_badge
+                          = stay.platform_badge
                         .text-gray-500.truncate = stay.contact_line
                       = link_to "Détails", stay_path(stay),
                                 data: { action: "stay-details#open" },

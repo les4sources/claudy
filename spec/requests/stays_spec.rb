@@ -30,6 +30,21 @@ RSpec.describe "Stays (détails admin)", type: :request do
       expect(response.body).to include("Confirmé") # statut en label
     end
 
+    it "shows the OTA platform badge for an Airbnb booking" do
+      airbnb_stay = Stay.create!(customer: customer, arrival_date: Date.new(2026, 3, 1), departure_date: Date.new(2026, 3, 2), status: "confirmed")
+      airbnb_booking = Booking.create!(firstname: "Guest", from_date: Date.new(2026, 3, 1), to_date: Date.new(2026, 3, 2), adults: 2, status: "confirmed", platform: "airbnb")
+      airbnb_stay.stay_items.create!(bookable: airbnb_booking)
+
+      get stay_path(airbnb_stay)
+      expect(response.body).to include("Airbnb")
+    end
+
+    it "shows no platform badge for a direct booking" do
+      get stay_path(stay) # booking ci-dessus = plateforme par défaut (nil/direct)
+      expect(response.body).not_to include("Booking.com")
+      expect(response.body).not_to match(/>\s*Airbnb\s*</)
+    end
+
     it "includes a reassign form prefilled from the booking (name + group, email blank)" do
       get stay_path(stay)
       expect(response.body).to include("Assigner ce séjour à un client")
