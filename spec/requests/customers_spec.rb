@@ -58,4 +58,52 @@ RSpec.describe "Customers (admin Pôle Accueil)", type: :request do
       expect(Customer.find_by(id: source.id)).to be_nil # source soft-deleted
     end
   end
+
+  describe "re-ventilation (reassign) from the catch-all" do
+    let!(:catch_all) { Customer.create!(email: Customer::CATCH_ALL_EMAIL, first_name: "Client", customer_type: "individual") }
+    let!(:keep) { Stay.create!(customer: catch_all, arrival_date: Date.today + 1, departure_date: Date.today + 2) }
+    let!(:move) { Stay.create!(customer: catch_all, arrival_date: Date.today + 4, departure_date: Date.today + 5) }
+
+    it "renders the show page with selectable stays and the modal" do
+      get customer_path(catch_all)
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("stay_ids[]")
+      expect(response.body).to include("Assigner la sélection à un client")
+    end
+
+    it "assigns selected stays to an existing customer (AC-53)" do
+      target = Customer.create!(email: "real@example.com", customer_type: "individual")
+      post reassign_customer_path(catch_all), params: { stay_ids: [move.id], target_id: target.id, mode: "existing" }
+      expect(response).to redirect_to(customer_path(catch_all))
+      expect(target.stays.reload).to contain_exactly(move)
+      expect(catch_all.stays.reload).to contain_exactly(keep) # catch-all stays active
+    end
+
+    it "creates a new customer on the fly and assigns the stays (AC-54)" do
+      expect {
+        post reassign_customer_path(catch_all),
+             params: { stay_ids: [move.id], mode: "new",
+                       new_customer: { email: "fresh@example.com", first_name: "Fresh", customer_type: "individual" } }
+      }.to change(Customer, :count).by(1)
+      created = Customer.find_by(email: "fresh@example.com")
+      expect(created.stays).to contain_exactly(move)
+    end
+
+    it "is a no-op when nothing is selected (AC-52)" do
+      post reassign_customer_path(catch_all), params: { stay_ids: [], target_id: catch_all.id }
+      expect(response).to redirect_to(customer_path(catch_all))
+      expect(catch_all.stays.reload.count).to eq(2)
+    end
+
+    it "transfers nothing when the new customer email is invalid (AC-54 atomic)" do
+      Customer.create!(email: "taken@example.com", customer_type: "individual")
+      expect {
+        post reassign_customer_path(catch_all),
+             params: { stay_ids: [move.id], mode: "new",
+                       new_customer: { email: "taken@example.com", customer_type: "individual" } }
+      }.not_to change(Customer, :count)
+      expect(move.reload.customer_id).to eq(catch_all.id)
+      expect(flash[:alert]).to be_present
+    end
+  end
 end

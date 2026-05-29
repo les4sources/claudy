@@ -84,6 +84,7 @@ Rails.application.routes.draw do
       get "merge"
       get "merge_preview"
       post "merge_commit"
+      post "reassign"
     end
   end
 

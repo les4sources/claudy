@@ -42,35 +42,60 @@
               dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
                 = @customer.language_label
 
-      .overflow-hidden.bg-white.shadow.sm:rounded-lg
-        .px-4.py-5.sm:px-6
-          h3.text-lg.font-medium.leading-6.text-gray-900
-            | Séjours à venir
-        .border-t.border-gray-200.px-4.py-4
-          - if @customer.upcoming_stays.empty?
-            p.text-sm.text-gray-500
-              | Aucun séjour à venir.
-          - else
-            ul.divide-y.divide-gray-100
-              - @customer.upcoming_stays.each do |stay|
-                li.py-2.text-sm.text-gray-900
-                  = "#{stay.arrival_date} → #{stay.departure_date}"
-                  span.text-gray-500 = " · #{stay.status}"
+      = form_with url: reassign_customer_path(@customer), method: :post, data: { controller: "reventilation-modal" } do
+        - [["Séjours à venir", @customer.upcoming_stays, "Aucun séjour à venir."], ["Séjours passés", @customer.past_stays, "Aucun séjour passé."]].each do |title, stays, empty_label|
+          .overflow-hidden.bg-white.shadow.sm:rounded-lg
+            .px-4.py-5.sm:px-6
+              h3.text-lg.font-medium.leading-6.text-gray-900
+                = title
+            .border-t.border-gray-200.px-4.py-4
+              - if stays.empty?
+                p.text-sm.text-gray-500
+                  = empty_label
+              - else
+                ul.divide-y.divide-gray-100
+                  - stays.each do |stay|
+                    li.py-2.text-sm.text-gray-900.flex.items-center.gap-3
+                      = check_box_tag "stay_ids[]", stay.id, false, id: "stay_#{stay.id}", class: "rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      label.flex-1.cursor-pointer[for="stay_#{stay.id}"]
+                        = "#{stay.arrival_date} → #{stay.departure_date}"
+                        span.text-gray-500 = " · #{stay.status}"
 
-      .overflow-hidden.bg-white.shadow.sm:rounded-lg
-        .px-4.py-5.sm:px-6
-          h3.text-lg.font-medium.leading-6.text-gray-900
-            | Séjours passés
-        .border-t.border-gray-200.px-4.py-4
-          - if @customer.past_stays.empty?
-            p.text-sm.text-gray-500
-              | Aucun séjour passé.
-          - else
-            ul.divide-y.divide-gray-100
-              - @customer.past_stays.each do |stay|
-                li.py-2.text-sm.text-gray-900
-                  = "#{stay.arrival_date} → #{stay.departure_date}"
-                  span.text-gray-500 = " · #{stay.status}"
+        .flex.justify-end
+          button.inline-flex.items-center.rounded-md.border.border-transparent.bg-indigo-600.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.hover:bg-indigo-700(type="button" data-action="reventilation-modal#open")
+            | Assigner la sélection à un client
+
+        dialog.rounded-lg.p-0.shadow-xl.w-full.max-w-lg.backdrop:bg-black/40(data-reventilation-modal-target="dialog")
+          .px-6.py-5.space-y-4
+            h3.text-lg.font-medium.text-gray-900
+              | Assigner les séjours sélectionnés
+            .flex.gap-4.text-sm
+              label.flex.items-center.gap-2
+                input type="radio" name="mode" value="existing" checked=true data-action="change->reventilation-modal#switchMode"
+                | Client existant
+              label.flex.items-center.gap-2
+                input type="radio" name="mode" value="new" data-action="change->reventilation-modal#switchMode"
+                | Nouveau client
+
+            fieldset.space-y-2(data-reventilation-modal-target="existingPanel")
+              label.block.text-sm.font-medium.text-gray-700
+                | Choisir le client cible
+              = select_tag "target_id",
+                           options_from_collection_for_select(@reassign_targets, :id, :name),
+                           include_blank: "— sélectionner —",
+                           class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+
+            fieldset.space-y-2.hidden(data-reventilation-modal-target="newPanel")
+              .grid.grid-cols-2.gap-2
+                = text_field_tag "new_customer[first_name]", nil, placeholder: "Prénom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+                = text_field_tag "new_customer[last_name]", nil, placeholder: "Nom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+              = email_field_tag "new_customer[email]", nil, placeholder: "Email (requis)", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+              = select_tag "new_customer[customer_type]", options_for_select([["Particulier", "individual"], ["Organisation", "organization"]]), class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+            .flex.justify-end.gap-2.pt-2
+              button.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm.hover:bg-gray-50(type="button" data-action="reventilation-modal#close")
+                | Annuler
+              = submit_tag "Assigner", class: "inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
 
     .space-y-4
       .overflow-hidden.bg-white.shadow.sm:rounded-lg

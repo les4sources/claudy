@@ -1,6 +1,6 @@
 class CustomersController < BaseController
   before_action :set_accounting_view
-  before_action :get_customer, only: [:show, :edit, :update, :merge, :merge_preview, :merge_commit]
+  before_action :get_customer, only: [:show, :edit, :update, :merge, :merge_preview, :merge_commit, :reassign]
 
   breadcrumb "Clients", :customers_path, match: :exact
 
@@ -11,6 +11,8 @@ class CustomersController < BaseController
 
   def show
     breadcrumb @customer.display_name, customer_path(@customer)
+    # Cibles possibles pour la re-ventilation des séjours (tout client sauf celui-ci).
+    @reassign_targets = Customer.where.not(id: @customer.id).order(:first_name, :last_name, :email)
     @customer = CustomerDecorator.decorate(@customer)
   end
 
@@ -57,7 +59,55 @@ class CustomersController < BaseController
     end
   end
 
+  # Re-ventilation : transfère les séjours cochés du client courant (souvent le
+  # fourre-tout) vers une cible — soit un client existant (target_id), soit un
+  # nouveau client créé à la volée (new_customer). S'appuie sur le même
+  # MergeService que la fusion de doublons (AC-50/52/53/54).
+  def reassign
+    stay_ids = Array(params[:stay_ids]).reject(&:blank?)
+    if stay_ids.empty?
+      redirect_to customer_path(@customer), notice: "Aucun séjour sélectionné."
+      return
+    end
+
+    target, error = resolve_reassign_target
+    if target.nil?
+      redirect_to customer_path(@customer), alert: error
+      return
+    end
+
+    service = Customers::MergeService.new(source: @customer, target: target)
+    if service.run(stay_ids: stay_ids)
+      redirect_to customer_path(@customer),
+                  notice: "#{service.stays_moved} séjour(s) assigné(s) à #{target.display_name}."
+    else
+      redirect_to customer_path(@customer), alert: service.error_message
+    end
+  end
+
   private
+
+  # Returns [target_customer, nil] on success or [nil, error_message] on failure.
+  def resolve_reassign_target
+    if params[:target_id].present?
+      [Customer.find(params[:target_id]), nil]
+    elsif params.dig(:new_customer, :email).present?
+      customer = Customer.new(new_customer_params)
+      if customer.save
+        [customer, nil]
+      else
+        [nil, customer.errors.full_messages.join(", ")]
+      end
+    else
+      [nil, "Choisissez un client existant ou renseignez un nouveau client."]
+    end
+  end
+
+  def new_customer_params
+    params.require(:new_customer).permit(
+      :first_name, :last_name, :email, :phone, :customer_type, :organization_name, :language
+    )
+  end
 
   def get_customer
     @customer = Customer.find(params[:id])
