@@ -4,12 +4,9 @@ Sentry.init do |config|
   end
   config.breadcrumbs_logger = [:active_support_logger, :http_logger]
 
-  # Set traces_sample_rate to 1.0 to capture 100%
-  # of transactions for performance monitoring.
-  # We recommend adjusting this value in production.
-  # config.traces_sample_rate = 1.0
-  # or
-  config.traces_sampler = lambda do |context|
-    false
-  end
+  # Performance monitoring — activé pour localiser les routes lentes
+  # (N+1 suspecté dans le calendrier, pages#calendar). App interne à faible
+  # trafic → 100 % d'échantillonnage en prod pour des données complètes.
+  # Repasser à un taux plus bas (ex. 0.2) une fois le diagnostic terminé.
+  config.traces_sample_rate = Rails.env.production? ? 1.0 : 0.0
 end

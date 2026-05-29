@@ -18,12 +18,14 @@ class PagesController < BaseController
       # group space reservations by day
       @space_reservations = SpaceReservation.all
         .includes(:space_booking)
+        .preload(:space, space_booking: [:event, :space_reservations])
         .where.not(space_booking: { status: ["declined", "canceled"] })
         .between_times(@first, @last, field: :date)
       @grouped_space_reservations = @space_reservations.to_a.group_by { |sr| sr.date }
       # group reservations by day
       @reservations = Reservation.all
         .includes(:booking)
+        .preload(:room, booking: [:lodging, :reservations])
         .where.not(booking: { status: ["declined", "canceled"] })
         .between_times(@first, @last, field: :date)
       @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
