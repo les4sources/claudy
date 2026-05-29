@@ -1,0 +1,32 @@
+.px-6.py-5.space-y-4
+  .flex.items-center.justify-between
+    h3.text-lg.font-medium.text-gray-900
+      | Séjour ##{@stay.id}
+    = @stay.status_badge
+
+  dl.grid.grid-cols-3.gap-x-4.gap-y-2.text-sm
+    dt.font-medium.text-gray-500 Dates
+    dd.col-span-2.text-gray-900 = @stay.date_range
+    dt.font-medium.text-gray-500 Contact
+    dd.col-span-2.text-gray-900 = @stay.contact_line
+    dt.font-medium.text-gray-500 Client
+    dd.col-span-2.text-gray-900
+      = link_to @stay.customer.name, customer_path(@stay.customer), class: "text-indigo-600 hover:underline"
+    dt.font-medium.text-gray-500 Montant
+    dd.col-span-2.text-gray-900 = @stay.total_amount.format
+    - if @stay.legacy_origin.present?
+      dt.font-medium.text-gray-500 Origine
+      dd.col-span-2.text-gray-500 = @stay.legacy_origin
+
+  .border-t.border-gray-200.pt-3
+    h4.text-sm.font-medium.text-gray-700.mb-2 Éléments réservés
+    ul.divide-y.divide-gray-100
+      - @stay.stay_items.each do |item|
+        - bookable = item.bookable
+        li.py-2.text-sm.flex.justify-between
+          span.text-gray-900
+            = item.bookable_type
+            span.text-gray-500 = " ##{item.bookable_id}"
+          - if bookable
+            span.text-gray-500
+              = bookable.try(:status)

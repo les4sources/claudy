@@ -71,6 +71,22 @@ RSpec.describe "Customers (admin Pôle Accueil)", type: :request do
       expect(response.body).to include("Assigner la sélection à un client")
     end
 
+    it "renders enriched stay rows (French date, colored status label, contact, details link)" do
+      enriched = Stay.create!(customer: catch_all, arrival_date: Date.new(2026, 2, 14),
+                              departure_date: Date.new(2026, 2, 15), status: "confirmed")
+      booking = Booking.create!(firstname: "Jean", lastname: "Dupont", group_name: "Les Amis",
+                                from_date: Date.new(2026, 2, 14), to_date: Date.new(2026, 2, 15),
+                                adults: 2, status: "confirmed")
+      enriched.stay_items.create!(bookable: booking)
+
+      get customer_path(catch_all)
+      expect(response.body).to include("14 février 2026")
+      expect(response.body).to include("Confirmé")
+      expect(response.body).to include("bg-green-100") # label coloré, pas gris
+      expect(response.body).to include("Jean Dupont")
+      expect(response.body).to include(stay_path(enriched)) # bouton Détails
+    end
+
     it "assigns selected stays to an existing customer (AC-53)" do
       target = Customer.create!(email: "real@example.com", customer_type: "individual")
       post reassign_customer_path(catch_all), params: { stay_ids: [move.id], target_id: target.id, mode: "existing" }

@@ -88,6 +88,9 @@ Rails.application.routes.draw do
     end
   end
 
+  # Détails d'un séjour (chargé dans une modale Turbo Frame depuis la page client).
+  resources :stays, only: [:show]
+
   get "comptabilite", to: "accounting#index", as: :accounting
 
   get "pages/day", to: "pages#day", as: :day_details

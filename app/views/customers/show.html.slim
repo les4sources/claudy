@@ -42,7 +42,7 @@
               dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
                 = @customer.language_label
 
-      = form_with url: reassign_customer_path(@customer), method: :post, data: { controller: "reventilation-modal" } do
+      = form_with url: reassign_customer_path(@customer), method: :post, data: { controller: "reventilation-modal stay-details" } do
         - [["Séjours à venir", @customer.upcoming_stays, "Aucun séjour à venir."], ["Séjours passés", @customer.past_stays, "Aucun séjour passé."]].each do |title, stays, empty_label|
           .overflow-hidden.bg-white.shadow.sm:rounded-lg
             .px-4.py-5.sm:px-6
@@ -54,12 +54,17 @@
                   = empty_label
               - else
                 ul.divide-y.divide-gray-100
-                  - stays.each do |stay|
+                  - StayDecorator.decorate_collection(stays).each do |stay|
                     li.py-2.text-sm.text-gray-900.flex.items-center.gap-3
                       = check_box_tag "stay_ids[]", stay.id, false, id: "stay_#{stay.id}", class: "rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      label.flex-1.cursor-pointer[for="stay_#{stay.id}"]
-                        = "#{stay.arrival_date} → #{stay.departure_date}"
-                        span.text-gray-500 = " · #{stay.status}"
+                      .flex-1.min-w-0
+                        .flex.items-center.gap-2.flex-wrap
+                          span.font-medium = stay.date_range
+                          = stay.status_badge
+                        .text-gray-500.truncate = stay.contact_line
+                      = link_to "Détails", stay_path(stay),
+                                data: { action: "stay-details#open" },
+                                class: "shrink-0 text-indigo-600 hover:underline"
 
         .flex.justify-end
           button.inline-flex.items-center.rounded-md.border.border-transparent.bg-indigo-600.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.hover:bg-indigo-700(type="button" data-action="reventilation-modal#open")
@@ -96,6 +101,12 @@
               button.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm.hover:bg-gray-50(type="button" data-action="reventilation-modal#close")
                 | Annuler
               = submit_tag "Assigner", class: "inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+
+        dialog.rounded-lg.p-0.shadow-xl.w-full.max-w-lg.backdrop:bg-black/40(data-stay-details-target="dialog")
+          .flex.justify-end.px-3.pt-3
+            button.text-gray-400.hover:text-gray-600(type="button" data-action="stay-details#close" aria-label="Fermer")
+              | ✕
+          div data-stay-details-target="content"
 
     .space-y-4
       .overflow-hidden.bg-white.shadow.sm:rounded-lg
