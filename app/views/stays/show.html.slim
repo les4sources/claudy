@@ -1,0 +1,68 @@
+.px-6.py-5.space-y-4
+  .flex.items-center.justify-between
+    h3.text-lg.font-medium.text-gray-900
+      | Séjour ##{@stay.id}
+    = @stay.status_badge
+
+  dl.grid.grid-cols-3.gap-x-4.gap-y-2.text-sm
+    dt.font-medium.text-gray-500 Dates
+    dd.col-span-2.text-gray-900 = @stay.date_range
+    dt.font-medium.text-gray-500 Contact
+    dd.col-span-2.text-gray-900 = @stay.contact_line
+    dt.font-medium.text-gray-500 Client
+    dd.col-span-2.text-gray-900
+      = link_to @stay.customer.name, customer_path(@stay.customer), class: "text-indigo-600 hover:underline"
+    dt.font-medium.text-gray-500 Montant
+    dd.col-span-2.text-gray-900 = @stay.total_amount.format
+    - if @stay.legacy_origin.present?
+      dt.font-medium.text-gray-500 Origine
+      dd.col-span-2.text-gray-500 = @stay.legacy_origin
+
+  .border-t.border-gray-200.pt-3
+    h4.text-sm.font-medium.text-gray-700.mb-2 Éléments réservés
+    ul.divide-y.divide-gray-100
+      - @stay.stay_items.each do |item|
+        - bookable = item.bookable
+        li.py-2.text-sm.flex.justify-between
+          span.text-gray-900
+            = item.bookable_type
+            span.text-gray-500 = " ##{item.bookable_id}"
+          - if bookable
+            span.text-gray-500
+              = bookable.try(:status)
+
+  - bk = @stay.primary_bookable
+  - group = bk&.try(:group_name).presence
+  .border-t.border-gray-200.pt-4
+    h4.text-sm.font-medium.text-gray-700.mb-3 Assigner ce séjour à un client
+    = form_with url: reassign_customer_path(@stay.customer), method: :post, data: { controller: "reassign-form", "reassign-form-search-url-value": search_customers_path } do
+      = hidden_field_tag "stay_ids[]", @stay.id
+      .flex.gap-4.text-sm.mb-3
+        label.flex.items-center.gap-2
+          input type="radio" name="mode" value="existing" checked=true data-action="change->reassign-form#switchMode"
+          | Client existant
+        label.flex.items-center.gap-2
+          input type="radio" name="mode" value="new" data-action="change->reassign-form#switchMode"
+          | Nouveau client
+
+      .relative.space-y-1(data-reassign-form-target="existingPanel")
+        = text_field_tag :customer_query, nil,
+                         placeholder: "Rechercher un client (nom, email)…",
+                         autocomplete: "off",
+                         data: { "reassign-form-target": "searchInput", action: "input->reassign-form#search" },
+                         class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+        = hidden_field_tag "target_id", nil, data: { "reassign-form-target": "targetId" }
+        .border.border-gray-100.rounded-md.divide-y.divide-gray-50.bg-white.shadow-sm.max-h-48.overflow-y-auto(data-reassign-form-target="results")
+
+      .space-y-2.hidden(data-reassign-form-target="newPanel")
+        .grid.grid-cols-2.gap-2
+          = text_field_tag "new_customer[first_name]", bk&.try(:firstname), placeholder: "Prénom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+          = text_field_tag "new_customer[last_name]", bk&.try(:lastname), placeholder: "Nom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+        = email_field_tag "new_customer[email]", nil, placeholder: "Email (à retrouver)", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        = text_field_tag "new_customer[phone]", bk&.try(:phone), placeholder: "Téléphone", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        = text_field_tag "new_customer[organization_name]", group, placeholder: "Nom du groupe / organisation", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        = select_tag "new_customer[customer_type]", options_for_select([["Particulier", "individual"], ["Organisation", "organization"]], group.present? ? "organization" : "individual"), class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        = hidden_field_tag "new_customer[language]", "fr"
+
+      .flex.justify-end.pt-3
+        = submit_tag "Assigner le séjour", class: "inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"

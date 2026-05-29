@@ -10,8 +10,9 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_21_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_05_28_120006) do
   # These are extensions that must be enabled in order to support this database
+  enable_extension "citext"
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
 
@@ -139,6 +140,32 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_21_120000) do
     t.index ["team_id"], name: "index_bundles_on_team_id"
   end
 
+  create_table "customers", force: :cascade do |t|
+    t.string "first_name"
+    t.string "last_name"
+    t.citext "email"
+    t.string "phone"
+    t.string "customer_type", default: "individual", null: false
+    t.string "organization_name"
+    t.string "vat_number"
+    t.string "peppol_id"
+    t.string "address_line"
+    t.string "address_zip"
+    t.string "address_city"
+    t.string "address_country"
+    t.string "language", default: "fr", null: false
+    t.string "stripe_customer_id"
+    t.boolean "marketing_consent", default: false, null: false
+    t.boolean "nps_eligible", default: false, null: false
+    t.bigint "human_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_type"], name: "index_customers_on_customer_type"
+    t.index ["email"], name: "index_customers_on_email_unique_live", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["human_id"], name: "index_customers_on_human_id"
+  end
+
   create_table "cycle_actions", force: :cascade do |t|
     t.string "label", null: false
     t.decimal "hours", precision: 5, scale: 2
@@ -149,8 +176,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_21_120000) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "position", default: 0, null: false
     t.datetime "archived_at"
+    t.integer "position", default: 0, null: false
     t.index ["category"], name: "index_cycle_actions_on_category"
     t.index ["completed"], name: "index_cycle_actions_on_completed"
     t.index ["delegate_to_human_id"], name: "index_cycle_actions_on_delegate_to_human_id"
@@ -278,6 +305,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_21_120000) do
     t.bigint "human_id", null: false
     t.index ["human_id", "task_id"], name: "index_humans_tasks_on_human_id_and_task_id"
     t.index ["task_id", "human_id"], name: "index_humans_tasks_on_task_id_and_human_id"
+  end
+
+  create_table "lodging_compositions", force: :cascade do |t|
+    t.bigint "composite_lodging_id", null: false
+    t.bigint "component_lodging_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["component_lodging_id"], name: "index_lodging_compositions_on_component_lodging_id"
+    t.index ["composite_lodging_id", "component_lodging_id"], name: "index_lodging_compositions_unique_pair", unique: true
+    t.index ["composite_lodging_id"], name: "index_lodging_compositions_on_composite_lodging_id"
   end
 
   create_table "lodging_rooms", force: :cascade do |t|
@@ -459,6 +496,33 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_21_120000) do
     t.integer "position", default: 999
   end
 
+  create_table "stay_items", force: :cascade do |t|
+    t.bigint "stay_id", null: false
+    t.string "bookable_type", null: false
+    t.bigint "bookable_id", null: false
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["bookable_type", "bookable_id"], name: "index_stay_items_on_bookable_type_and_bookable_id"
+    t.index ["stay_id", "bookable_type", "bookable_id"], name: "index_stay_items_on_stay_and_bookable_unique_live", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["stay_id"], name: "index_stay_items_on_stay_id"
+  end
+
+  create_table "stays", force: :cascade do |t|
+    t.bigint "customer_id", null: false
+    t.date "arrival_date"
+    t.date "departure_date"
+    t.string "status"
+    t.integer "total_amount_cents", default: 0, null: false
+    t.text "notes"
+    t.string "legacy_origin"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_stays_on_customer_id"
+    t.index ["legacy_origin"], name: "index_stays_on_legacy_origin_unique_live", unique: true, where: "((legacy_origin IS NOT NULL) AND (deleted_at IS NULL))"
+  end
+
   create_table "stripe_events", force: :cascade do |t|
     t.string "webhook_id"
     t.string "event_type"
@@ -544,6 +608,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_21_120000) do
   add_foreign_key "bookings", "lodgings"
   add_foreign_key "bundles", "projects"
   add_foreign_key "bundles", "teams"
+  add_foreign_key "customers", "humans"
   add_foreign_key "cycle_actions", "humans"
   add_foreign_key "cycle_actions", "humans", column: "delegate_to_human_id"
   add_foreign_key "decisions", "agenda_items", on_delete: :nullify
@@ -554,6 +619,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_21_120000) do
   add_foreign_key "gatherings", "gathering_categories"
   add_foreign_key "human_roles", "humans"
   add_foreign_key "human_roles", "roles"
+  add_foreign_key "lodging_compositions", "lodgings", column: "component_lodging_id"
+  add_foreign_key "lodging_compositions", "lodgings", column: "composite_lodging_id"
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"
   add_foreign_key "payments", "bookings"
@@ -564,6 +631,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_21_120000) do
   add_foreign_key "space_bookings", "events"
   add_foreign_key "space_reservations", "space_bookings"
   add_foreign_key "space_reservations", "spaces"
+  add_foreign_key "stay_items", "stays"
+  add_foreign_key "stays", "customers"
   add_foreign_key "tasks", "bundles"
   add_foreign_key "tasks", "projects"
   add_foreign_key "unavailabilities", "lodgings"

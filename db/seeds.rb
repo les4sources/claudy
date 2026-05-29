@@ -48,6 +48,11 @@ LodgingRoom.create(lodging: lodging_tents, room: room_grassland)
 
 LodgingRoom.create(lodging: lodging_vans, room: room_parking)
 
+# Le Grand-Duc est composé de La Hulotte + La Chevêche : réserver le composite
+# bloque ses composants (et inversement), par calcul à la volée (PRD §11.4).
+LodgingComposition.find_or_create_by!(composite_lodging: lodging_25, component_lodging: lodging_16)
+LodgingComposition.find_or_create_by!(composite_lodging: lodging_25, component_lodging: lodging_8)
+
 Space.create(name: "Tilleul", code: "TIL", description: "1er étage, 140 m2")
 Space.create(name: "Saule", code: "SAU", description: "1er étage, 45 m2")
 Space.create(name: "Les 2 salles", code: "T+S", description: "1er étage, 185 m2")

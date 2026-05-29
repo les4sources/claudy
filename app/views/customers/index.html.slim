@@ -1,0 +1,45 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Clients"
+
+.mb-4
+  = form_with url: customers_path, method: :get do
+    .flex.gap-2
+      = text_field_tag :q, params[:q],
+                       placeholder: "Rechercher par email, nom ou organisation…",
+                       class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+      = submit_tag "Rechercher",
+                   class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-6[scope="col"]
+          | Nom
+        th.py-3.px-6[scope="col"]
+          | Email
+        th.py-3.px-6[scope="col"]
+          | Type
+        th.py-3.px-6.text-center[scope="col"]
+          | Séjours
+    tbody
+      - if @customers.empty?
+        tr.border-b.bg-white
+          td.py-4.px-6.text-gray-500[colspan="4"]
+            | Aucun client.
+      - @customers.each do |customer|
+        tr.border-b.bg-white
+          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+            = link_to customer.display_name,
+                      customer_path(customer),
+                      class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+            = customer.catch_all_badge
+          td.py-4.px-6
+            = customer.email
+          td.py-4.px-6
+            = customer.type_badge
+          td.py-4.px-6.text-center
+            = customer.stays.count
+
+= will_paginate @customers

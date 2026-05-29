@@ -1,0 +1,39 @@
+.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Coordonnées"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    = f.text_field :first_name,
+                   label: "Prénom",
+                   class: "md:w-1/2 lg:w-2/3"
+    = f.text_field :last_name,
+                   label: "Nom",
+                   class: "md:w-1/2 lg:w-2/3"
+    = f.text_field :email,
+                   label: "Email *",
+                   class: "md:w-1/2 lg:w-2/3"
+    = f.text_field :phone,
+                   label: "Téléphone",
+                   class: "md:w-1/2 lg:w-2/3"
+    = f.label :customer_type, "Type de client"
+    = f.select :customer_type,
+               options_for_select(Customer::CUSTOMER_TYPES.map { |t| [t == "organization" ? "Organisation" : "Particulier", t] }, @customer.customer_type)
+    = f.text_field :organization_name,
+                   label: "Nom de l'organisation (si organisation)",
+                   class: "md:w-1/2 lg:w-2/3"
+    = f.text_field :vat_number,
+                   label: "Numéro de TVA",
+                   class: "md:w-1/2 lg:w-2/3"
+    = f.label :language, "Langue"
+    = f.select :language,
+               options_for_select(Customer::LANGUAGES.map { |l| [l, l] }, @customer.language)
+
+hr
+
+.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4.mt-6
+  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Notes internes"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    = f.label :notes, "Notes (Pôle Accueil + collectif uniquement)"
+    = f.rich_text_area :notes

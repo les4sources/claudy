@@ -1,0 +1,117 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: @customer.display_name,
+           links: [ \
+             link_to("Fusionner / re-ventiler", merge_customer_path(@customer), class: "btn-page-header"), \
+             link_to("Modifier", edit_customer_path(@customer), class: "btn-page-header") \
+           ]
+
+.space-y-4
+  - if @customer.catch_all?
+    .rounded-md.bg-amber-50.p-4.text-sm.text-amber-800
+      | Client fourre-tout de la migration. Re-ventiler ses séjours vers de vrais clients via « Fusionner / re-ventiler ».
+
+  .grid.grid-cols-3.gap-4
+    .col-span-2.space-y-4(data-controller="stay-details")
+      .overflow-hidden.bg-white.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Coordonnées
+        .border-t.border-gray-200
+          dl
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Type
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @customer.type_label
+              dt.text-sm.font-medium.text-gray-500
+                | Email
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @customer.email
+              dt.text-sm.font-medium.text-gray-500
+                | Téléphone
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @customer.phone
+              - if @customer.organization?
+                dt.text-sm.font-medium.text-gray-500
+                  | Organisation
+                dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                  = @customer.organization_name
+              dt.text-sm.font-medium.text-gray-500
+                | Langue
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @customer.language_label
+
+      = form_with url: reassign_customer_path(@customer), method: :post, data: { controller: "reventilation-modal" } do
+        - [["Séjours à venir", @customer.upcoming_stays, "Aucun séjour à venir."], ["Séjours passés", @customer.past_stays, "Aucun séjour passé."]].each do |title, stays, empty_label|
+          .overflow-hidden.bg-white.shadow.sm:rounded-lg
+            .px-4.py-5.sm:px-6
+              h3.text-lg.font-medium.leading-6.text-gray-900
+                = title
+            .border-t.border-gray-200.px-4.py-4
+              - if stays.empty?
+                p.text-sm.text-gray-500
+                  = empty_label
+              - else
+                ul.divide-y.divide-gray-100
+                  - StayDecorator.decorate_collection(stays).each do |stay|
+                    li.py-2.text-sm.text-gray-900.flex.items-center.gap-3
+                      = check_box_tag "stay_ids[]", stay.id, false, id: "stay_#{stay.id}", class: "rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      .flex-1.min-w-0
+                        .flex.items-center.gap-2.flex-wrap
+                          span.font-medium = stay.date_range
+                          = stay.status_badge
+                        .text-gray-500.truncate = stay.contact_line
+                      = link_to "Détails", stay_path(stay),
+                                data: { action: "stay-details#open" },
+                                class: "shrink-0 text-indigo-600 hover:underline"
+
+        .flex.justify-end
+          button.inline-flex.items-center.rounded-md.border.border-transparent.bg-indigo-600.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.hover:bg-indigo-700(type="button" data-action="reventilation-modal#open")
+            | Assigner la sélection à un client
+
+        dialog.rounded-lg.p-0.shadow-xl.w-full.max-w-lg.backdrop:bg-black/40(data-reventilation-modal-target="dialog")
+          .px-6.py-5.space-y-4
+            h3.text-lg.font-medium.text-gray-900
+              | Assigner les séjours sélectionnés
+            .flex.gap-4.text-sm
+              label.flex.items-center.gap-2
+                input type="radio" name="mode" value="existing" checked=true data-action="change->reventilation-modal#switchMode"
+                | Client existant
+              label.flex.items-center.gap-2
+                input type="radio" name="mode" value="new" data-action="change->reventilation-modal#switchMode"
+                | Nouveau client
+
+            fieldset.space-y-2(data-reventilation-modal-target="existingPanel")
+              label.block.text-sm.font-medium.text-gray-700
+                | Choisir le client cible
+              = select_tag "target_id",
+                           options_from_collection_for_select(@reassign_targets, :id, :name),
+                           include_blank: "— sélectionner —",
+                           class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+
+            fieldset.space-y-2.hidden(data-reventilation-modal-target="newPanel")
+              .grid.grid-cols-2.gap-2
+                = text_field_tag "new_customer[first_name]", nil, placeholder: "Prénom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+                = text_field_tag "new_customer[last_name]", nil, placeholder: "Nom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+              = email_field_tag "new_customer[email]", nil, placeholder: "Email (requis)", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+              = select_tag "new_customer[customer_type]", options_for_select([["Particulier", "individual"], ["Organisation", "organization"]]), class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+            .flex.justify-end.gap-2.pt-2
+              button.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm.hover:bg-gray-50(type="button" data-action="reventilation-modal#close")
+                | Annuler
+              = submit_tag "Assigner", class: "inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+
+      dialog.rounded-lg.p-0.shadow-xl.w-full.max-w-lg.backdrop:bg-black/40(data-stay-details-target="dialog")
+        .flex.justify-end.px-3.pt-3
+          button.text-gray-400.hover:text-gray-600(type="button" data-action="stay-details#close" aria-label="Fermer")
+            | ✕
+        div data-stay-details-target="content"
+
+    .space-y-4
+      .overflow-hidden.bg-white.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Notes internes
+        .border-t.border-gray-200.px-4.py-4.prose.prose-sm
+          = @customer.notes

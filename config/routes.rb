@@ -78,6 +78,22 @@ Rails.application.routes.draw do
     get "past", on: :collection
   end
 
+  # Pôle Accueil : clients (Customer) + fusion de doublons / re-ventilation.
+  resources :customers, only: [:index, :show, :edit, :update] do
+    collection do
+      get "search" # autocomplete JSON pour la re-ventilation
+    end
+    member do
+      get "merge"
+      get "merge_preview"
+      post "merge_commit"
+      post "reassign"
+    end
+  end
+
+  # Détails d'un séjour (chargé dans une modale Turbo Frame depuis la page client).
+  resources :stays, only: [:show]
+
   get "comptabilite", to: "accounting#index", as: :accounting
 
   get "pages/day", to: "pages#day", as: :day_details
@@ -117,6 +133,8 @@ Rails.application.routes.draw do
       get "openapi", to: "openapi#show"
       get "availability", to: "availability#index"
 
+      resources :customers, only: [:index, :show]
+      resources :stays, only: [:index, :show]
       resources :bookings, only: [:index, :show]
       resources :space_bookings, only: [:index, :show]
       resources :lodgings, only: [:index, :show]
