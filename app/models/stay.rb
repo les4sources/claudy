@@ -15,6 +15,11 @@
 #  updated_at         :datetime         not null
 #
 class Stay < ApplicationRecord
+  # Canal d'attribution (Q9 / AC-T2-22). DISTINCT de `legacy_origin` (clé
+  # d'import/dédup de la migration legacy). Tout Stay créé via /reservation
+  # porte la valeur par défaut "reservation".
+  SOURCES = %w[reservation tally_legacy ota manual].freeze
+
   belongs_to :customer
   has_many :stay_items, dependent: :destroy
 
@@ -23,8 +28,12 @@ class Stay < ApplicationRecord
 
   monetize :total_amount_cents
 
+  validates :source, inclusion: { in: SOURCES, message: "Canal d'attribution invalide" }
+
   scope :current_and_future, -> { where("departure_date >= ?", Date.today).order(arrival_date: :asc) }
   scope :past, -> { where("departure_date < ?", Date.today).order(arrival_date: :desc) }
+  scope :from_source, ->(value) { value.present? ? where(source: value) : all }
+  scope :recent, -> { order(created_at: :desc) }
 
   # The concrete reservable objects attached to this stay (Booking, SpaceBooking, …).
   def bookables

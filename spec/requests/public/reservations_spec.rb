@@ -54,7 +54,7 @@ RSpec.describe "Public::Reservations (/reservation)", type: :request do
   describe "soumission → Stripe (Q5 — AC-T2-19) avec Stripe stubbé" do
     before do
       session_double = OpenStruct.new(url: "https://checkout.stripe.test/session/abc")
-      allow_any_instance_of(StripeService).to receive(:create_checkout_session).and_return(session_double)
+      allow(StripeService.instance).to receive(:create_checkout_session).and_return(session_double)
     end
 
     it "crée un Stay pending et redirige vers Stripe (pas d'auto-confirm)" do
@@ -85,7 +85,7 @@ RSpec.describe "Public::Reservations (/reservation)", type: :request do
   describe "webhook Stripe → reste pending (AC-T2-19/20, ISC-4)" do
     before do
       session_double = OpenStruct.new(url: "https://checkout.stripe.test/session/abc")
-      allow_any_instance_of(StripeService).to receive(:create_checkout_session).and_return(session_double)
+      allow(StripeService.instance).to receive(:create_checkout_session).and_return(session_double)
     end
 
     it "le paiement validé ne passe JAMAIS le Stay en confirmed automatiquement" do
