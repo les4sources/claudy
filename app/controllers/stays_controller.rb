@@ -1,18 +1,14 @@
-class StaysController < BaseController
-  before_action :set_accounting_view
-
-  # Rendu sans layout : le fragment HTML est injecté dans la modale de détails
-  # par le contrôleur Stimulus stay-details (fetch + innerHTML).
+class StaysController < ApplicationController
   def show
-    @stay = Stay.includes(stay_items: :bookable, customer: []).find(params[:id]).decorate
-    render layout: false
+    @stay = Stay.find(params[:id]).decorate
+    @reservations_by_date = nil
   end
 
-  private
-
-  def set_accounting_view
-    @accounting_view = true
+  # Vue admin Pôle Accueil — Stays récents filtrables par canal d'attribution
+  # (source), pour observer la transition Tally → /reservation (AC-T2-23/24).
+  def recent
+    @source = params[:source].presence
+    @sources = Stay::SOURCES
+    @stays = Stay.from_source(@source).recent.includes(:customer).limit(100).decorate
   end
-
-  def set_presenters; end
 end

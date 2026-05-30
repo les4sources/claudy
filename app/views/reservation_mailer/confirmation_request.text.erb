@@ -1,0 +1,20 @@
+Bonjour <%= @stay.customer.first_name.presence || "" %>,
+
+Merci pour votre demande de réservation aux 4 Sources. Elle a bien été enregistrée et sera validée par notre équipe avant confirmation définitive.
+
+<% if @stay.arrival_date && @stay.departure_date %>
+Dates : <%= l(@stay.arrival_date, format: :long) %> -> <%= l(@stay.departure_date, format: :long) %>
+<% end %>
+<% if @quote && @quote.lines.any? %>
+Récapitulatif de votre devis :
+<% @quote.lines.each do |line| %>
+- <%= line.label %> : <%= number_to_currency(line.amount_cents / 100.0, unit: "€", format: "%n %u", precision: 2) %>
+<% end %>
+Total TVAC : <%= number_to_currency(@quote.total_cents / 100.0, unit: "€", format: "%n %u", precision: 2) %>
+Tous les prix sont TVAC — pas de TVA en plus.
+<% end %>
+<% if @token %>
+Consultez votre réservation : <%= public_booking_url(@token) %>
+<% end %>
+
+À très bientôt aux 4 Sources !

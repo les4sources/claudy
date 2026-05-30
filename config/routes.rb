@@ -104,6 +104,17 @@ Rails.application.routes.draw do
 
   get "reports/lodging/:id", to: "reports#lodging", as: :lodging_reports
 
+  # Funnel B2C natif /reservation (tranche 2). Public (bypass Devise via
+  # Public::BaseController). Distinct du lien token legacy /public/reservation/:token.
+  get  "reservation",              to: "public/reservations#start",   as: :public_reservation_start
+  get  "reservation/composer",     to: "public/reservations#compose", as: :public_reservation_compose
+  post "reservation/devis",        to: "public/reservations#quote",   as: :public_reservation_quote
+  get  "reservation/coordonnees",  to: "public/reservations#contact", as: :public_reservation_contact
+  post "reservation/coordonnees",  to: "public/reservations#create",  as: :public_reservation_create
+
+  # Vue admin Pôle Accueil — index des Stays récents filtrable par source (Devise).
+  get "sejours/recents", to: "stays#recent", as: :recent_stays
+
   namespace :public do
     resources :bookings, only: [:new, :create] do
       get "edit_estimated_arrival", on: :member

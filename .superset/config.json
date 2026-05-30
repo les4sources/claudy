@@ -1,0 +1,9 @@
+{
+  "setup": [
+    "bundle install"
+  ],
+  "teardown": [],
+  "run": [
+    "bin/dev"
+  ]
+}

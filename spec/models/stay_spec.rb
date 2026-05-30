@@ -63,4 +63,31 @@ RSpec.describe Stay, type: :model do
       expect(Stay.past).not_to include(future)
     end
   end
+
+  describe "#source (Q9 — AC-T2-22 / AC-T2-22b)" do
+    it "défaute sur 'reservation' quand non précisé" do
+      stay = Stay.create!(customer: customer)
+      expect(stay.source).to eq("reservation")
+    end
+
+    it "est distinct de legacy_origin (clé d'import/dédup)" do
+      stay = Stay.create!(customer: customer, source: "reservation", legacy_origin: "booking:42")
+      expect(stay.source).to eq("reservation")
+      expect(stay.legacy_origin).to eq("booking:42")
+    end
+
+    it "refuse une valeur de canal inconnue" do
+      stay = Stay.new(customer: customer, source: "carrier-pigeon")
+      expect(stay).not_to be_valid
+      expect(stay.errors[:source]).to be_present
+    end
+
+    it "filtre par canal via le scope from_source" do
+      reservation = Stay.create!(customer: customer, source: "reservation")
+      tally = Stay.create!(customer: customer, source: "tally_legacy")
+      expect(Stay.from_source("reservation")).to include(reservation)
+      expect(Stay.from_source("reservation")).not_to include(tally)
+      expect(Stay.from_source(nil)).to include(reservation, tally)
+    end
+  end
 end
