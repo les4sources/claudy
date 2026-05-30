@@ -38,6 +38,12 @@ Rails.application.configure do
 
   config.action_mailer.perform_caching = false
 
+  # Host for absolute URL generation in request/system specs. PayService builds
+  # Stripe success/cancel URLs and token links through the Routing concern, which
+  # reads action_mailer.default_url_options — without a host they raise in tests
+  # (works in prod because the controller request provides the host).
+  config.action_mailer.default_url_options = { host: "localhost", port: 3000 }
+
   # Tell Action Mailer not to deliver emails to the real world.
   # The :test delivery method accumulates sent emails in the
   # ActionMailer::Base.deliveries array.
