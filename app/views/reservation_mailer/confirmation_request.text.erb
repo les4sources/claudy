@@ -14,7 +14,7 @@ Total TVAC : <%= number_to_currency(@quote.total_cents / 100.0, unit: "€", for
 Tous les prix sont TVAC — pas de TVA en plus.
 <% end %>
 <% if @token %>
-Consultez votre réservation : <%= public_booking_url(@token) %>
+Consultez votre réservation : <%= public_booking_url(@token, host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be")) %>
 <% end %>
 
 À très bientôt aux 4 Sources !

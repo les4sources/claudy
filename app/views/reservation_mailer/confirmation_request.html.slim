@@ -25,9 +25,10 @@ p
   p Tous les prix sont TVAC — pas de TVA en plus.
 
 - if @token
+  - consultation_url = public_booking_url(@token, host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be"))
   p
     | Vous pouvez consulter votre réservation à tout moment via ce lien :
     br
-    = link_to public_booking_url(@token), public_booking_url(@token)
+    = link_to consultation_url, consultation_url
 
 p À très bientôt aux 4 Sources !

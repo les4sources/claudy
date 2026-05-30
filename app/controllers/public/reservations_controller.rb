@@ -72,7 +72,10 @@ module Public
     end
 
     def persist_draft(attrs)
-      merged = @draft.to_h.merge(attrs.to_h.symbolize_keys) { |_k, old, new| new.nil? ? old : new }
+      incoming = attrs.to_h.deep_symbolize_keys
+      merged = @draft.to_h.merge(incoming) do |_key, old, new|
+        new.nil? || (new.respond_to?(:empty?) && new.empty? && !old.nil?) ? old : new
+      end
       @draft = Reservations::Draft.new(merged)
       session[DRAFT_SESSION_KEY] = @draft.to_h
       @draft

@@ -87,6 +87,7 @@ module Reservations
     def upsert_customer!
       email = Customer.normalize_email(draft.email)
       customer = Customer.where(email: email).first_or_initialize
+      customer.email = email # défensif : garantit l'email même si first_or_initialize ne le porte pas
       customer.first_name = draft.first_name if customer.first_name.blank?
       customer.last_name = draft.last_name if customer.last_name.blank?
       customer.phone = draft.phone if customer.phone.blank?
