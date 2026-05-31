@@ -49,12 +49,6 @@
         dt.text-gray-500.w-32.shrink-0 Repas végé midi
         dd = "#{repas[:people]} personne#{"s" if repas[:people].to_i > 1}"
 
-    - pizza = draft.pizza_parties.find { |p| p[:people].to_i > 0 }
-    - if pizza
-      .flex.gap-2
-        dt.text-gray-500.w-32.shrink-0 Pizza Party
-        dd = "#{pizza[:people]} personnes (allumage + patons)"
-
     - dog_label = { 0 => nil, 1 => "Un chien (+50 €)", 2 => "Plusieurs chiens (sur demande)" }[draft.dogs_count.to_i]
     - if dog_label
       .flex.gap-2

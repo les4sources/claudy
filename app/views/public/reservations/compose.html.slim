@@ -87,15 +87,13 @@
               = number_field_tag "reservation[halls][0][days]", @draft.halls.dig(0, :days), min: 0, class: "mt-1 w-full rounded border-gray-300"
               = hidden_field_tag "reservation[halls][0][kind]", "grande_salle"
             label.block
+              span.text-sm.text-gray-600 Petite salle — jours
+              = number_field_tag "reservation[halls][1][days]", @draft.halls.dig(1, :days), min: 0, class: "mt-1 w-full rounded border-gray-300"
+              = hidden_field_tag "reservation[halls][1][kind]", "petite_salle"
+            label.block
               span.text-sm.text-gray-600 Repas végé midi — personnes
               = number_field_tag "reservation[meals][0][people]", @draft.meals.dig(0, :people), min: 0, class: "mt-1 w-full rounded border-gray-300"
               = hidden_field_tag "reservation[meals][0][kind]", "repas_vege_midi"
-
-        section.mb-6
-          h2.text-lg.font-medium.mb-2 Pizza Party
-          label.block
-            span.text-sm.text-gray-600 Patons — personnes (40 € d'allumage + 7 €/pers)
-            = number_field_tag "reservation[pizza_parties][0][people]", @draft.pizza_parties.dig(0, :people), min: 0, class: "mt-1 w-full rounded border-gray-300"
 
         noscript
           = f.submit "Mettre à jour le devis", class: "rounded bg-gray-800 text-white px-4 py-2"
