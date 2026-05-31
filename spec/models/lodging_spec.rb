@@ -1,34 +1,38 @@
 require "rails_helper"
 
 RSpec.describe Lodging, type: :model do
-  # Le Grand-Duc = La Hulotte + La Chevêche. Reserving any entangled unit makes
-  # the others unavailable, derived on the fly with no stored blocking (AC-24/25/51).
+  # Le Grand-Duc = La Hulotte + La Chevêche. In production the composite SHARES
+  # its components' physical rooms: Grand-Duc owns the UNION of the component
+  # rooms (Chevêche rooms + Hulotte rooms). Occupancy therefore propagates
+  # through the shared room reservations themselves, so availability is simply
+  # each lodging's own rooms being free — no entanglement veto. See
+  # Lodging#available_between?.
   let(:grand_duc) { Lodging.create!(name: "Le Grand-Duc", price_night_cents: 12_000) }
   let(:hulotte) { Lodging.create!(name: "La Hulotte", price_night_cents: 10_000) }
   let(:cheveche) { Lodging.create!(name: "La Chevêche", price_night_cents: 8_000) }
 
-  let(:grand_duc_room) { make_room(grand_duc, "GD") }
-  let(:hulotte_room) { make_room(hulotte, "HU") }
-  let(:cheveche_room) { make_room(cheveche, "CH") }
+  let(:hulotte_room) { Room.create!(name: "Chambre HU", level: 1) }
+  let(:cheveche_room) { Room.create!(name: "Chambre CH", level: 1) }
 
   let(:window) { [Date.new(2026, 8, 1), Date.new(2026, 8, 3)] }
 
-  def make_room(lodging, code)
-    room = Room.create!(name: "Chambre #{code}", level: 1)
-    lodging.rooms << room
-    room
-  end
-
-  def reserve(room, from:, to:)
-    booking = Booking.create!(firstname: "Occ", from_date: from, to_date: to, adults: 1, status: "confirmed")
-    (from..to).each { |date| Reservation.create!(booking: booking, room: room, date: date) }
+  # Reserve a lodging on all of its (possibly shared) rooms for the window.
+  def reserve(lodging, from:, to:)
+    booking = Booking.create!(firstname: "Occ", from_date: from, to_date: to, adults: 1, status: "confirmed", lodging: lodging)
+    lodging.rooms.each do |room|
+      (from..to).each { |date| Reservation.create!(booking: booking, room: room, date: date) }
+    end
     booking
   end
 
   before do
     LodgingComposition.create!(composite_lodging: grand_duc, component_lodging: hulotte)
     LodgingComposition.create!(composite_lodging: grand_duc, component_lodging: cheveche)
-    grand_duc_room && hulotte_room && cheveche_room
+    # Shared rooms: each component owns its room; the composite owns the union.
+    hulotte.rooms << hulotte_room
+    cheveche.rooms << cheveche_room
+    grand_duc.rooms << hulotte_room
+    grand_duc.rooms << cheveche_room
   end
 
   it "knows which lodgings are composite vs component" do
@@ -38,27 +42,39 @@ RSpec.describe Lodging, type: :model do
   end
 
   it "marks the composite unavailable when a component is booked (AC-24)" do
-    reserve(hulotte_room, from: window.first, to: window.last)
+    reserve(cheveche, from: window.first, to: window.last)
 
     expect(grand_duc.available_between?(*window)).to be(false)
-    expect(cheveche.self_available_between?(*window)).to be(true)
-    # Booking only Hulotte must NOT block its sibling Chevêche.
-    expect(cheveche.available_between?(*window)).to be(true)
+    # Booking the Chevêche must NOT block its sibling Hulotte.
+    # Regression guard for Sentry 7296086238 (booking 810): editing a Hulotte
+    # booking failed with "Cet hébergement n'est pas disponible à cette date."
+    # because the Grand-Duc (sharing the Chevêche room) wrongly vetoed it.
+    expect(hulotte.available_between?(*window)).to be(true)
   end
 
-  it "marks a component unavailable when the composite is booked (AC-25)" do
-    reserve(grand_duc_room, from: window.first, to: window.last)
+  it "marks both components unavailable when the composite is booked (AC-25)" do
+    reserve(grand_duc, from: window.first, to: window.last)
 
     expect(hulotte.available_between?(*window)).to be(false)
     expect(cheveche.available_between?(*window)).to be(false)
   end
 
-  it "derives availability with no stored blocking (AC-51)" do
-    reserve(hulotte_room, from: window.first, to: window.last)
+  it "blocks the composite when a component is booked, leaving the sibling free" do
+    reserve(hulotte, from: window.first, to: window.last)
 
+    expect(grand_duc.available_between?(*window)).to be(false)
+    expect(cheveche.available_between?(*window)).to be(true)
+  end
+
+  it "derives availability with no stored blocking / mirror reservation (AC-51)" do
+    reserve(cheveche, from: window.first, to: window.last)
+
+    # Only the Chevêche's own room got reservations — no mirror rows for the composite.
+    expect(Reservation.where(room: cheveche_room).count).to eq(3)
     expect {
       grand_duc.available_between?(*window)
       grand_duc.available_on?(window.first)
+      hulotte.available_between?(*window)
     }.not_to change { [Reservation.count, Unavailability.count] }
   end
 end
