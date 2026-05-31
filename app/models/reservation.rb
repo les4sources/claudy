@@ -15,6 +15,12 @@ class Reservation < ApplicationRecord
   belongs_to :room
 
   has_paper_trail
+  # The `deleted_at` column was added alongside every other soft-deletable model
+  # (migration 20230706080125) but the behaviour was never wired up here. Without
+  # it, a reservation whose `deleted_at` is set (e.g. soft-deleted via the agent
+  # API) stays visible in `room.reservations` and keeps blocking availability —
+  # producing a false "Cet hébergement n'est pas disponible à cette date."
+  has_soft_deletion default_scope: true
 
   def start_time
     date.to_time
