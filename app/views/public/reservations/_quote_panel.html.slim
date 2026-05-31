@@ -11,12 +11,12 @@
           span.font-medium = number_to_currency(line.amount_cents / 100.0, unit: "€", format: "%n %u", precision: 2)
     .border-t.pt-3.space-y-1
       .flex.justify-between.font-semibold
-        span Total TVAC
+        span Total TVAC 0 %
         span = number_to_currency(quote.total_cents / 100.0, unit: "€", format: "%n %u", precision: 2)
       .flex.justify-between.text-sm.text-gray-600
         span = "Acompte (#{(quote.deposit_rate * 100).to_i} %)"
         span = number_to_currency(quote.deposit_cents / 100.0, unit: "€", format: "%n %u", precision: 2)
-    p.text-xs.text-gray-400.mt-2 Tous les prix sont TVAC — pas de TVA en plus.
+    p.text-xs.text-gray-400.mt-2 Tous les prix sont TVAC 0 % — aucune TVA supplémentaire.
 
   - if quote.total_cents.positive?
     = link_to "Continuer vers mes coordonnées", public_reservation_contact_path, class: "mt-4 block text-center rounded bg-emerald-600 text-white px-4 py-2 hover:bg-emerald-700", data: { turbo_frame: "_top" }

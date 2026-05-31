@@ -39,7 +39,7 @@ RSpec.describe "Public::Reservations (/reservation)", type: :request do
                                  headers: { "Accept" => "text/vnd.turbo-stream.html" }
       expect(response.media_type).to eq("text/vnd.turbo-stream.html")
       expect(response.body).to include("turbo-stream")
-      expect(response.body).to include("pas de TVA en plus")
+      expect(response.body).to include("aucune TVA supplémentaire")
     end
   end
 
