@@ -77,6 +77,9 @@
         noscript
           = f.submit "Mettre à jour le devis", class: "rounded bg-gray-800 text-white px-4 py-2"
 
+        .mt-6.flex.justify-end
+          = link_to "Continuer →", public_reservation_contact_path, class: "rounded-lg bg-emerald-600 text-white px-6 py-3 text-sm font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+
     / Colonne devis temps-réel (Turbo Frame)
     aside.lg:col-span-1
       = turbo_frame_tag "reservation_quote"
