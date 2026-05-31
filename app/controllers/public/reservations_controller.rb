@@ -14,7 +14,7 @@ module Public
 
     DRAFT_SESSION_KEY = :reservation_draft
 
-    before_action :load_draft, only: %i[compose quote contact create]
+    before_action :load_draft, only: %i[compose quote advance_contact contact create]
 
     # Étape 1 — entrée, distinction info vs transaction.
     def start
@@ -24,6 +24,14 @@ module Public
     def compose
       @lodgings = bookable_lodgings
       @quote = @draft.quote
+    end
+
+    # Transition compose → contact : persiste le draft depuis le POST du formulaire
+    # compose, puis redirige en GET vers coordonnées. Garantit que la session est
+    # à jour même si le Stimulus quote#refresh n'a pas tiré (ex. : clic rapide).
+    def advance_contact
+      persist_draft(merged_draft_params)
+      redirect_to public_reservation_contact_path
     end
 
     # Recalcul du panier (Turbo Frame, sans rechargement complet — AC-T2-10).
