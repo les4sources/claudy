@@ -1,0 +1,87 @@
+.max-w-3xl.mx-auto.py-8
+
+  h1.text-2xl.font-semibold.mb-2 Vos activités aux 4 Sources
+
+  - if @stay.arrival_date && @stay.departure_date
+    p.text-sm.text-gray-500.mb-1
+      | Séjour du
+      strong = " #{l(@stay.arrival_date, format: :long)}"
+      |  au
+      strong = l(@stay.departure_date, format: :long)
+
+  p.text-sm.text-gray-500.mb-6
+    | Sélectionnez les activités qui vous intéressent. Les animateurs·ices seront contactés
+    | pour confirmer les disponibilités.
+
+  - if flash[:notice]
+    .rounded-lg.bg-emerald-50.border.border-emerald-200.p-4.mb-6
+      p.text-sm.text-emerald-800 = flash[:notice]
+
+  - if flash[:alert]
+    .rounded-lg.bg-red-50.border.border-red-200.p-4.mb-6
+      p.text-sm.text-red-800 = flash[:alert]
+
+  - existing = @stay.experience_bookings.includes(:experience_availability).active.index_by(&:experience_availability_id)
+
+  - if @availabilities.empty?
+    .rounded-lg.border.border-gray-200.p-8.text-center
+      p.text-gray-400.italic Aucune activité planifiée sur vos dates pour le moment.
+      p.text-sm.text-gray-400.mt-2
+        | Contactez Malau au +32(0)490/46.77.10 pour plus d'informations.
+
+  - else
+    = form_with url: public_activity_selection_create_path(@stay.activity_selection_token), method: :post do |f|
+
+      - @availabilities.group_by(&:available_on).each do |date, slots|
+        h2.text-base.font-medium.text-gray-900.mt-6.mb-3 = l(date, format: :long).capitalize
+
+        - slots.each_with_index do |av, i|
+          - existing_booking = existing[av.id]
+          - current_participants = existing_booking&.participants.to_i
+
+          .rounded-lg.border.border-gray-200.p-4.mb-3
+            .flex.items-start.gap-4
+              div
+                input(
+                  type="number"
+                  name="activities[#{av.id}][participants]"
+                  value="#{current_participants > 0 ? current_participants : ''}"
+                  min="0"
+                  max="#{av.effective_max_participants || ''}"
+                  placeholder="0"
+                  class="w-20 rounded border-gray-300 text-center text-sm"
+                )
+                = hidden_field_tag "activities[#{av.id}][availability_id]", av.id
+              div.flex-1
+                .font-medium = av.experience.name
+                - if av.experience.summary.present?
+                  .text-sm.text-gray-500 = av.experience.summary
+                .text-sm.text-gray-600.mt-1
+                  span.font-medium = av.starts_at
+                  - if av.ends_at
+                    | → #{av.ends_at}
+                  - if av.effective_max_participants
+                    span.text-gray-400.ml-2 = "(max #{av.effective_max_participants} pers.)"
+                .text-sm.text-emerald-700.mt-1
+                  - exp = av.experience
+                  - if exp.fixed_price_cents.to_i > 0 && exp.price_cents.to_i > 0
+                    = "#{number_to_currency(exp.fixed_price_cents / 100.0, unit: '€', format: '%n %u', precision: 0)} + #{number_to_currency(exp.price_cents / 100.0, unit: '€', format: '%n %u', precision: 0)}/pers"
+                  - elsif exp.price_cents.to_i > 0
+                    = "#{number_to_currency(exp.price_cents / 100.0, unit: '€', format: '%n %u', precision: 0)}/pers"
+                  - elsif exp.fixed_price_cents.to_i > 0
+                    = number_to_currency(exp.fixed_price_cents / 100.0, unit: '€', format: '%n %u', precision: 0)
+                  - else
+                    | Gratuit
+                - if av.full? && current_participants.zero?
+                  .text-xs.text-red-500.mt-1 Complet
+
+      .mt-6.flex.justify-end
+        = f.submit "Enregistrer mes activités →",
+            class: "rounded-lg bg-emerald-600 text-white px-6 py-3 text-sm font-medium hover:bg-emerald-700 cursor-pointer"
+
+  .mt-8.border-t.border-gray-100.pt-6
+    p.text-sm.text-gray-400
+      | Une question ? Contactez Malau au
+      strong +32(0)490/46.77.10
+      | ou à
+      = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline"

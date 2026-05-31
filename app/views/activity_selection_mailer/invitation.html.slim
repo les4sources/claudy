@@ -1,0 +1,22 @@
+p Bonjour #{@stay.customer.first_name.presence || ""},
+
+p
+  | Votre séjour aux 4 Sources approche ! Vous pouvez maintenant sélectionner les activités
+  | qui vous intéressent parmi celles disponibles à vos dates.
+
+- if @stay.arrival_date && @stay.departure_date
+  p
+    strong Votre séjour :
+    | = " #{l(@stay.arrival_date, format: :long)} → #{l(@stay.departure_date, format: :long)}"
+
+p
+  | Nous proposons des balades avec les ânes, des ateliers créatifs, du golf, de la forge...
+  | Chaque activité peut être réservée sous réserve de disponibilité de l'animateur·ice.
+
+p = link_to "→ Voir les activités disponibles et réserver", @selection_url
+
+p
+  | Ce lien est personnel — il vous donne accès à votre espace de réservation d'activités.
+  | Ne le partagez pas.
+
+p À très bientôt aux 4 Sources !

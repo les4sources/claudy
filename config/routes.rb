@@ -27,7 +27,9 @@ Rails.application.routes.draw do
   end
   resources :decisions
   get "organisation/decisions", to: "decisions#index", as: :organisation_decisions
-  resources :experiences
+  resources :experiences do
+    resources :experience_availabilities, only: [:create, :destroy], path: :disponibilites
+  end
   resources :lodgings
   resources :humans do
     member do
@@ -93,6 +95,11 @@ Rails.application.routes.draw do
 
   # Détails d'un séjour (chargé dans une modale Turbo Frame depuis la page client).
   resources :stays, only: [:show]
+  resources :experience_bookings, only: [:index, :update]
+
+  # Espace client activités (token-based, sans Devise).
+  get  "mon-sejour/:token/activites", to: "public/activity_selections#show",   as: :public_activity_selection
+  post "mon-sejour/:token/activites", to: "public/activity_selections#create",  as: :public_activity_selection_create
 
   get "comptabilite", to: "accounting#index", as: :accounting
 

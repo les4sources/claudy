@@ -50,6 +50,59 @@
           == @experience.description
 
   .space-y-4
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6.flex.items-center.justify-between
+        h3.text-lg.font-medium.leading-6.text-gray-900 Disponibilités
+        span.text-sm.text-gray-400 = "#{@experience.experience_availabilities.upcoming.count} à venir"
+      .border-t.border-gray-200
+        - upcoming = @experience.experience_availabilities.upcoming
+        - if upcoming.empty?
+          p.px-4.py-4.text-sm.text-gray-400.italic Aucune disponibilité planifiée.
+        - else
+          ul.divide-y.divide-gray-100
+            - upcoming.each do |av|
+              li.flex.items-center.justify-between.px-4.py-3.text-sm
+                div
+                  .font-medium = av.available_on.strftime("%-d %B %Y")
+                  .text-gray-500 = "#{av.starts_at}#{av.ends_at ? " → #{av.ends_at}" : ""}"
+                  - if av.effective_max_participants
+                    .text-xs.text-gray-400 = "Max #{av.effective_max_participants} pers. — #{av.booked_participants} réservé(s)"
+                = button_to "×", experience_experience_availability_path(@experience, av),
+                    method: :delete, data: { confirm: "Supprimer cette disponibilité ?" },
+                    class: "text-red-400 hover:text-red-600 text-lg font-bold bg-transparent border-0 cursor-pointer"
+
+        .border-t.border-gray-200.px-4.py-4
+          h4.text-sm.font-medium.text-gray-700.mb-3 Ajouter une disponibilité
+          = form_with url: experience_experience_availabilities_path(@experience), method: :post, class: "space-y-3" do |f|
+            .grid.grid-cols-2.gap-2
+              div
+                label.block.text-xs.text-gray-500.mb-1 Date
+                = f.date_field :available_on, min: Date.today.iso8601,
+                    class: "w-full text-sm rounded border-gray-300",
+                    name: "experience_availability[available_on]"
+              div
+                label.block.text-xs.text-gray-500.mb-1 Heure de début
+                = f.text_field :starts_at, placeholder: "09:00",
+                    class: "w-full text-sm rounded border-gray-300",
+                    name: "experience_availability[starts_at]"
+            .grid.grid-cols-2.gap-2
+              div
+                label.block.text-xs.text-gray-500.mb-1 Durée (min)
+                = f.number_field :duration_minutes, min: 15, step: 15, placeholder: "120",
+                    class: "w-full text-sm rounded border-gray-300",
+                    name: "experience_availability[duration_minutes]"
+              div
+                label.block.text-xs.text-gray-500.mb-1 Max participants
+                = f.number_field :max_participants, min: 1,
+                    placeholder: @experience.max_participants,
+                    class: "w-full text-sm rounded border-gray-300",
+                    name: "experience_availability[max_participants]"
+            div
+              label.block.text-xs.text-gray-500.mb-1 Note interne (optionnel)
+              = f.text_field :notes, class: "w-full text-sm rounded border-gray-300",
+                  name: "experience_availability[notes]"
+            = f.submit "Ajouter", class: "rounded bg-emerald-600 text-white px-4 py-2 text-sm font-medium hover:bg-emerald-700 cursor-pointer"
+
     - if @experience.human.presence
       ul.grid.grid-cols-1.gap-6[role="list"]
         li.col-span-1.flex.flex-col.divide-y.divide-gray-200.rounded-lg.bg-white.text-center.shadow

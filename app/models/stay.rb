@@ -22,11 +22,14 @@ class Stay < ApplicationRecord
 
   belongs_to :customer
   has_many :stay_items, dependent: :destroy
+  has_many :experience_bookings, dependent: :destroy
 
   has_paper_trail
   has_soft_deletion default_scope: true
 
   monetize :total_amount_cents
+
+  before_create :generate_activity_token
 
   validates :source, inclusion: { in: SOURCES, message: "Canal d'attribution invalide" }
 
@@ -34,6 +37,10 @@ class Stay < ApplicationRecord
   scope :past, -> { where("departure_date < ?", Date.today).order(arrival_date: :desc) }
   scope :from_source, ->(value) { value.present? ? where(source: value) : all }
   scope :recent, -> { order(created_at: :desc) }
+
+  def activity_email_pending?
+    activity_email_sent_at.nil? && arrival_date.present? && arrival_date > Date.today
+  end
 
   # The concrete reservable objects attached to this stay (Booking, SpaceBooking, …).
   def bookables
@@ -52,6 +59,17 @@ class Stay < ApplicationRecord
   # Recompute aggregate dates / amount from the attached items (min arrival,
   # max departure, sum of prices). Booking and SpaceBooking both expose
   # from_date/to_date/price_cents.
+  private
+
+  def generate_activity_token
+    loop do
+      self.activity_selection_token = SecureRandom.urlsafe_base64(20)
+      break unless Stay.exists?(activity_selection_token: activity_selection_token)
+    end
+  end
+
+  public
+
   def recompute_aggregates!
     items = bookables
     arrivals = items.map { |b| b.try(:from_date) }.compact

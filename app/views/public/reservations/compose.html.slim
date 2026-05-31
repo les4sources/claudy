@@ -1,4 +1,4 @@
-.max-w-4xl.mx-auto.py-8(data-controller="public--reservation-quote" data-public--reservation-quote-url-value=public_reservation_quote_path data-public--reservation-quote-contact-url-value=public_reservation_activities_path)
+.max-w-4xl.mx-auto.py-8(data-controller="public--reservation-quote" data-public--reservation-quote-url-value=public_reservation_quote_path data-public--reservation-quote-contact-url-value=public_reservation_contact_path)
   h1.text-2xl.font-semibold.mb-6 Composez votre séjour
 
   .grid.gap-8.lg:grid-cols-3
@@ -80,7 +80,7 @@
                 = hidden_field_tag "reservation[hamacs][1][kind]", "double"
 
         section.mb-6
-          h2.text-lg.font-medium.mb-2 Salle & repas
+          h2.text-lg.font-medium.mb-2 Salles
           .grid.grid-cols-2.gap-4
             label.block
               span.text-sm.text-gray-600 Grande salle — jours
@@ -90,10 +90,25 @@
               span.text-sm.text-gray-600 Petite salle — jours
               = number_field_tag "reservation[halls][1][days]", @draft.halls.dig(1, :days), min: 0, class: "mt-1 w-full rounded border-gray-300"
               = hidden_field_tag "reservation[halls][1][kind]", "petite_salle"
+
+        section.mb-6
+          h2.text-lg.font-medium.mb-2 Groupe
+          .grid.grid-cols-2.gap-4
             label.block
-              span.text-sm.text-gray-600 Repas végé midi — personnes
-              = number_field_tag "reservation[meals][0][people]", @draft.meals.dig(0, :people), min: 0, class: "mt-1 w-full rounded border-gray-300"
-              = hidden_field_tag "reservation[meals][0][kind]", "repas_vege_midi"
+              span.text-sm.text-gray-600 Adultes
+              = number_field_tag "reservation[adults]", @draft.adults.presence || 1, min: 1, class: "mt-1 w-full rounded border-gray-300"
+            label.block
+              span.text-sm.text-gray-600 Enfants (–12 ans)
+              = number_field_tag "reservation[children]", @draft.children || 0, min: 0, class: "mt-1 w-full rounded border-gray-300"
+
+        .rounded-lg.border.border-emerald-100.bg-emerald-50.p-4.mb-6
+          h2.text-base.font-medium.text-emerald-900.mb-1 🌿 Activités aux 4 Sources
+          p.text-sm.text-gray-700.mb-2
+            | Balades avec les ânes, ateliers créatifs, forge, golf et bien d'autres...
+          p.text-sm.text-gray-500
+            | Les activités se réservent
+            strong 1 mois avant votre arrivée.
+            |  Vous recevrez un email avec un calendrier de disponibilités pour sélectionner ce qui vous tente.
 
         noscript
           = f.submit "Mettre à jour le devis", class: "rounded bg-gray-800 text-white px-4 py-2"

@@ -20,6 +20,9 @@
 class Experience < ApplicationRecord
   belongs_to :human, optional: true
 
+  has_many :experience_availabilities, dependent: :destroy
+  has_many :experience_bookings, through: :experience_availabilities
+
   has_paper_trail
   has_soft_deletion default_scope: true
 
