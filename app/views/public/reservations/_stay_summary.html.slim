@@ -60,3 +60,10 @@
       .flex.gap-2
         dt.text-gray-500.w-32.shrink-0 Animal
         dd = dog_label
+
+    - Array(draft.experiences).select { |e| e[:participants].to_i > 0 }.each do |entry|
+      - exp = Experience.find_by(id: entry[:id])
+      - next unless exp
+      .flex.gap-2
+        dt.text-gray-500.w-32.shrink-0 Activité
+        dd = "#{exp.name} — #{entry[:participants]} pers"

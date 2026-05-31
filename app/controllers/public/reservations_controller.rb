@@ -14,8 +14,8 @@ module Public
 
     DRAFT_SESSION_KEY = :reservation_draft
 
-    before_action :load_draft, only: %i[compose quote advance_contact contact create]
-    skip_before_action :verify_authenticity_token, only: :advance_contact
+    before_action :load_draft, only: %i[compose quote advance_activities activities advance_contact contact create]
+    skip_before_action :verify_authenticity_token, only: %i[advance_activities advance_contact]
 
     # Étape 1 — entrée, distinction info vs transaction.
     def start
@@ -27,9 +27,19 @@ module Public
       @quote = @draft.quote
     end
 
-    # Transition compose → contact : persiste le draft depuis le POST du formulaire
-    # compose, puis redirige en GET vers coordonnées. Garantit que la session est
-    # à jour même si le Stimulus quote#refresh n'a pas tiré (ex. : clic rapide).
+    # Transition compose → activités : persiste le draft, redirige vers l'étape activités.
+    def advance_activities
+      persist_draft(merged_draft_params)
+      redirect_to public_reservation_activities_path
+    end
+
+    # Étape activités — sélection des expériences disponibles.
+    def activities
+      @experiences = bookable_experiences
+      @quote = @draft.quote
+    end
+
+    # Transition activités → coordonnées : persiste les expériences choisies.
     def advance_contact
       persist_draft(merged_draft_params)
       redirect_to public_reservation_contact_path
@@ -100,18 +110,22 @@ module Public
         :adults, :children, :first_name, :last_name, :email, :phone, :group_name,
         meals: [:kind, :people], halls: [:kind, :days],
         campings: [:kind, :people, :nights], vans: [:nights],
-        pizza_parties: [:people], hamacs: [:kind, :count]
+        pizza_parties: [:people], hamacs: [:kind, :count],
+        experiences: [:id, :participants]
       ).to_h
-      # Les collections arrivent indexées par Rails ; on les renvoie en tableaux
-      # filtrés des lignes vides.
-      %i[meals halls campings vans pizza_parties hamacs].each do |key|
+      %i[meals halls campings vans pizza_parties hamacs experiences].each do |key|
         next unless permitted[key].is_a?(Hash)
         permitted[key] = permitted[key].values
       end
       %i[meals halls campings vans pizza_parties hamacs].each do |key|
         permitted[key] = Array(permitted[key]).reject { |row| row.values.all?(&:blank?) }
       end
+      permitted[:experiences] = Array(permitted[:experiences]).select { |r| r[:participants].to_i > 0 }
       permitted
+    end
+
+    def bookable_experiences
+      Experience.where(deleted_at: nil).where.not(name: "Pizza Party").order(:name)
     end
 
     def bookable_lodgings

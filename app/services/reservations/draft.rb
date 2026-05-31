@@ -9,6 +9,7 @@ module Reservations
   class Draft
     attr_accessor :lodging_id, :arrival_date, :departure_date, :dogs_count,
                   :campings, :vans, :halls, :meals, :pizza_parties, :hamacs,
+                  :experiences,
                   :first_name, :last_name, :email, :phone, :group_name,
                   :adults, :children
 
@@ -26,6 +27,7 @@ module Reservations
       @meals          = symbolize_rows(attrs[:meals])
       @pizza_parties  = symbolize_rows(attrs[:pizza_parties])
       @hamacs         = symbolize_rows(attrs[:hamacs])
+      @experiences    = symbolize_rows(attrs[:experiences])
       @first_name     = attrs[:first_name].presence
       @last_name      = attrs[:last_name].presence
       @email          = attrs[:email].presence
@@ -60,6 +62,7 @@ module Reservations
         meals: meals,
         pizza_parties: pizza_parties,
         hamacs: hamacs,
+        experiences: experiences,
         first_name: first_name,
         last_name: last_name,
         email: email,

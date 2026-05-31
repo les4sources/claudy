@@ -54,6 +54,7 @@ class PricingModel
     lines.concat(camping_lines)
     lines.concat(van_lines)
     lines.concat(hamac_lines)
+    lines.concat(experience_lines)
     lines.concat(hall_lines)
     lines.concat(meal_lines)
     lines.concat(pizza_party_lines)
@@ -143,6 +144,20 @@ class PricingModel
       label = entry[:kind].to_s == "double" ? "Hamac double" : "Hamac simple"
       Line.new(label: "#{label} × #{count} — #{nights} nuit(s)",
                amount_cents: rate * count * nights)
+    end
+  end
+
+  # --- Expériences (Experience) : forfait fixe + €/pers ---
+  def experience_lines
+    Array(read(:experiences)).filter_map do |entry|
+      exp = Experience.find_by(id: entry[:id])
+      next if exp.nil?
+      participants = entry[:participants].to_i
+      next if participants < 1
+      amount = exp.fixed_price_cents.to_i + exp.price_cents.to_i * participants
+      next if amount < 1
+      label_parts = [exp.name, "#{participants} pers"]
+      Line.new(label: label_parts.join(" — "), amount_cents: amount)
     end
   end
 
