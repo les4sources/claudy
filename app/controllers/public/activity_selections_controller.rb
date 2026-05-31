@@ -15,15 +15,16 @@ module Public
 
       ExperienceBooking.transaction do
         selections.each do |sel|
-          availability = @stay.experience_bookings
-                              .joins(:experience_availability)
-                              .where(experience_availabilities: { id: sel[:availability_id] })
-                              .first_or_initialize
+          avail_id = sel[:availability_id].to_i
+          next if avail_id.zero?
 
-          availability.experience_availability_id = sel[:availability_id]
-          availability.participants = sel[:participants].to_i
-          availability.stay = @stay
-          availability.save!
+          booking = ExperienceBooking.find_or_initialize_by(
+            stay_id: @stay.id,
+            experience_availability_id: avail_id
+          )
+          booking.participants = sel[:participants].to_i
+          booking.status = "pending" if booking.new_record?
+          booking.save!
         end
       end
 

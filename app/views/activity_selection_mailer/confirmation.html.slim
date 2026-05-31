@@ -16,7 +16,7 @@ p
       - @bookings.each do |b|
         tr
           td = b.experience.name
-          td = "#{b.available_on_label rescue b.experience_availability.available_on.strftime('%-d/%m')} à #{b.experience_availability.starts_at}"
+          td = "#{b.experience_availability.available_on.strftime('%-d/%m')} à #{b.experience_availability.starts_at}"
           td = "#{b.participants} participant#{"s" if b.participants.to_i > 1}"
 
 p
