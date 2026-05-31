@@ -15,6 +15,7 @@ module Public
     DRAFT_SESSION_KEY = :reservation_draft
 
     before_action :load_draft, only: %i[compose quote advance_contact contact create]
+    skip_before_action :verify_authenticity_token, only: :advance_contact
 
     # Étape 1 — entrée, distinction info vs transaction.
     def start
