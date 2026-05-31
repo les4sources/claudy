@@ -116,3 +116,15 @@ end
 GatheringCategory.find_or_create_by!(name: "Rencontre archis") do |c|
   c.color = "sky"
 end
+
+# Hamacs — RentalItems saisonniers (mai-octobre, tranche 2 funnel B2C)
+RentalItem.find_or_create_by!(name: "Hamac simple") do |r|
+  r.price_cents = 750   # 7,50 €/nuit — à ajuster via l'admin
+  r.stock = 4
+  r.description = "Hamac 1 personne, disponible de mai à octobre."
+end
+RentalItem.find_or_create_by!(name: "Hamac double") do |r|
+  r.price_cents = 1_500 # 15 €/nuit — à ajuster via l'admin
+  r.stock = 2
+  r.description = "Hamac 2 personnes, disponible de mai à octobre."
+end

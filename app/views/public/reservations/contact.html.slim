@@ -4,6 +4,8 @@
 
   h1.text-2xl.font-semibold.mb-6 Vos coordonnées
 
+  = render "public/reservations/stay_summary", draft: @draft
+
   .grid.gap-8.lg:grid-cols-3
     .lg:col-span-2
       = form_with url: public_reservation_create_path, method: :post do |f|

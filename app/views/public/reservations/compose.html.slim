@@ -56,6 +56,29 @@
               span.text-sm.text-gray-600 Van / camping-car — nuits
               = number_field_tag "reservation[vans][0][nights]", @draft.vans.dig(0, :nights), min: 0, class: "mt-1 w-full rounded border-gray-300"
 
+        / --- Hamacs (RentalItem, disponibles mai-octobre seulement) ---
+        - if (5..10).cover?(Date.today.month)
+          section.mb-6
+            h2.text-lg.font-medium.mb-2 Location de hamacs
+            p.text-xs.text-gray-400.mb-2 Disponible de mai à octobre.
+            .grid.grid-cols-2.gap-4
+              label.block
+                - hamac_simple_rate = Pricing::Catalog.hamac_rate("simple")
+                span.text-sm.text-gray-600
+                  | Hamac simple (1 pers.)
+                  - if hamac_simple_rate
+                    span.text-gray-400  — #{number_to_currency(hamac_simple_rate / 100.0, unit: "€", format: "%n %u", precision: 2)}/nuit
+                = number_field_tag "reservation[hamacs][0][count]", @draft.hamacs.dig(0, :count), min: 0, class: "mt-1 w-full rounded border-gray-300"
+                = hidden_field_tag "reservation[hamacs][0][kind]", "simple"
+              label.block
+                - hamac_double_rate = Pricing::Catalog.hamac_rate("double")
+                span.text-sm.text-gray-600
+                  | Hamac double (2 pers.)
+                  - if hamac_double_rate
+                    span.text-gray-400  — #{number_to_currency(hamac_double_rate / 100.0, unit: "€", format: "%n %u", precision: 2)}/nuit
+                = number_field_tag "reservation[hamacs][1][count]", @draft.hamacs.dig(1, :count), min: 0, class: "mt-1 w-full rounded border-gray-300"
+                = hidden_field_tag "reservation[hamacs][1][kind]", "double"
+
         section.mb-6
           h2.text-lg.font-medium.mb-2 Salle & repas
           .grid.grid-cols-2.gap-4

@@ -53,6 +53,7 @@ class PricingModel
     lines.concat(lodging_lines)
     lines.concat(camping_lines)
     lines.concat(van_lines)
+    lines.concat(hamac_lines)
     lines.concat(hall_lines)
     lines.concat(meal_lines)
     lines.concat(pizza_party_lines)
@@ -127,6 +128,21 @@ class PricingModel
       next if people < 1
       Line.new(label: "#{humanize(entry[:kind])} — #{people} pers",
                amount_cents: unit * people)
+    end
+  end
+
+  # --- Hamacs (RentalItem, mai-octobre) : forfait/nuit/unité ---
+  def hamac_lines
+    nights = read(:nights).to_i
+    return [] if nights < 1
+    Array(read(:hamacs)).filter_map do |entry|
+      count = entry[:count].to_i
+      next if count < 1
+      rate = Pricing::Catalog.hamac_rate(entry[:kind])
+      next if rate.nil?
+      label = entry[:kind].to_s == "double" ? "Hamac double" : "Hamac simple"
+      Line.new(label: "#{label} × #{count} — #{nights} nuit(s)",
+               amount_cents: rate * count * nights)
     end
   end
 

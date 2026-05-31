@@ -8,7 +8,7 @@ module Reservations
   # transporte que la composition tarifable.
   class Draft
     attr_accessor :lodging_id, :arrival_date, :departure_date, :dogs_count,
-                  :campings, :vans, :halls, :meals, :pizza_parties,
+                  :campings, :vans, :halls, :meals, :pizza_parties, :hamacs,
                   :first_name, :last_name, :email, :phone, :group_name,
                   :adults, :children
 
@@ -25,6 +25,7 @@ module Reservations
       @halls          = symbolize_rows(attrs[:halls])
       @meals          = symbolize_rows(attrs[:meals])
       @pizza_parties  = symbolize_rows(attrs[:pizza_parties])
+      @hamacs         = symbolize_rows(attrs[:hamacs])
       @first_name     = attrs[:first_name].presence
       @last_name      = attrs[:last_name].presence
       @email          = attrs[:email].presence
@@ -58,6 +59,7 @@ module Reservations
         halls: halls,
         meals: meals,
         pizza_parties: pizza_parties,
+        hamacs: hamacs,
         first_name: first_name,
         last_name: last_name,
         email: email,

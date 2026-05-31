@@ -99,15 +99,16 @@ module Public
         :lodging_id, :arrival_date, :departure_date, :dogs_count,
         :adults, :children, :first_name, :last_name, :email, :phone, :group_name,
         meals: [:kind, :people], halls: [:kind, :days],
-        campings: [:kind, :people, :nights], vans: [:nights], pizza_parties: [:people]
+        campings: [:kind, :people, :nights], vans: [:nights],
+        pizza_parties: [:people], hamacs: [:kind, :count]
       ).to_h
       # Les collections arrivent indexées par Rails ; on les renvoie en tableaux
       # filtrés des lignes vides.
-      %i[meals halls campings vans pizza_parties].each do |key|
+      %i[meals halls campings vans pizza_parties hamacs].each do |key|
         next unless permitted[key].is_a?(Hash)
         permitted[key] = permitted[key].values
       end
-      %i[meals halls campings vans pizza_parties].each do |key|
+      %i[meals halls campings vans pizza_parties hamacs].each do |key|
         permitted[key] = Array(permitted[key]).reject { |row| row.values.all?(&:blank?) }
       end
       permitted

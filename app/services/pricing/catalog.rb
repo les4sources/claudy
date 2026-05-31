@@ -47,10 +47,16 @@ module Pricing
       )
     }.freeze
 
-    # Camping / bivouac : €/pers/nuit.
+    # Camping / bivouac : €/pers/nuit (tente uniquement — hamac géré via RentalItem).
     CAMPING_PER_PERSON_NIGHT_CENTS = {
-      "tente"  => 750,  # 7,50 €/pers/nuit
-      "hamac"  => 750
+      "tente" => 750  # 7,50 €/pers/nuit
+    }.freeze
+
+    # Hamacs (RentalItem) : prix/nuit/unité, lookup DB avec fallback.
+    # Disponibles mai-octobre ; les objets physiques sont dans rental_items.
+    HAMAC_FALLBACK_CENTS = {
+      "simple" => 750,   # 7,50 €/nuit fallback si RentalItem absent
+      "double" => 1_500  # 15 €/nuit fallback
     }.freeze
 
     # Van / camping-car : forfait/nuit/véhicule.
@@ -76,6 +82,13 @@ module Pricing
 
     def lodging_rate(name)
       LODGING_RATES[name]
+    end
+
+    # Prix d'un hamac (RentalItem) pour une nuit. Lookup DB d'abord, fallback
+    # sur HAMAC_FALLBACK_CENTS si le RentalItem n'est pas encore seedé.
+    def hamac_rate(kind)
+      db_name = kind.to_s == "double" ? "Hamac double" : "Hamac simple"
+      RentalItem.find_by(name: db_name)&.price_cents || HAMAC_FALLBACK_CENTS[kind.to_s]
     end
   end
 end
