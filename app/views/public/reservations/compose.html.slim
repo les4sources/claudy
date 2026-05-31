@@ -1,10 +1,10 @@
-.max-w-4xl.mx-auto.py-8(data-controller="reservation-quote" data-reservation-quote-url-value=public_reservation_quote_path data-reservation-quote-contact-url-value=public_reservation_contact_path)
+.max-w-4xl.mx-auto.py-8(data-controller="public--reservation-quote" data-public--reservation-quote-url-value=public_reservation_quote_path data-public--reservation-quote-contact-url-value=public_reservation_contact_path)
   h1.text-2xl.font-semibold.mb-6 Composez votre séjour
 
   .grid.gap-8.lg:grid-cols-3
     / Colonne formulaire de composition
     .lg:col-span-2
-      = form_with url: public_reservation_quote_path, method: :post, data: { reservation_quote_target: "form", action: "change->reservation-quote#refresh" } do |f|
+      = form_with url: public_reservation_quote_path, method: :post, data: { "public--reservation-quote-target": "form", action: "change->public--reservation-quote#refresh" } do |f|
 
         / --- Dates ---
         section.mb-6
@@ -99,7 +99,7 @@
           = f.submit "Mettre à jour le devis", class: "rounded bg-gray-800 text-white px-4 py-2"
 
         .mt-6.flex.justify-end
-          button type="button" data-action="reservation-quote#advance" class="rounded-lg bg-emerald-600 text-white px-6 py-3 text-sm font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+          button type="button" data-action="public--reservation-quote#advance" class="rounded-lg bg-emerald-600 text-white px-6 py-3 text-sm font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
             | Continuer →
         noscript
           = f.submit "Continuer (sans JS)", formaction: public_reservation_advance_contact_path, formmethod: :post, class: "rounded-lg bg-emerald-600 text-white px-6 py-3 text-sm font-medium"
