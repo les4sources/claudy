@@ -24,6 +24,7 @@ class Gathering < ApplicationRecord
   has_soft_deletion default_scope: true
 
   has_rich_text :notes
+  has_rich_text :report
 
   attr_accessor :starts_at_date, :starts_at_time, :ends_at_date, :ends_at_time
 

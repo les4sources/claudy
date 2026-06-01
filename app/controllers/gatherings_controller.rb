@@ -1,5 +1,5 @@
 class GatheringsController < BaseController
-  before_action :get_gathering, only: [:show, :edit, :update, :destroy]
+  before_action :get_gathering, only: [:show, :edit, :update, :destroy, :update_report]
 
   breadcrumb "Organisation", :root_path, match: :exact
   breadcrumb "Rassemblements", :gatherings_path, match: :exact
@@ -53,6 +53,17 @@ class GatheringsController < BaseController
     end
   end
 
+  def update_report
+    if @gathering.update(report_params)
+      redirect_to gathering_path(@gathering),
+                  notice: "Le compte-rendu a été enregistré."
+    else
+      @gathering = GatheringDecorator.new(@gathering)
+      set_error_flash(@gathering.object, "Le compte-rendu n'a pas pu être enregistré.")
+      render :show, status: :unprocessable_entity
+    end
+  end
+
   def destroy
     if @gathering.soft_delete!(validate: false)
       redirect_to gatherings_path,
@@ -87,6 +98,10 @@ class GatheringsController < BaseController
 
   def get_gathering
     @gathering = Gathering.find(params[:id])
+  end
+
+  def report_params
+    params.require(:gathering).permit(:report)
   end
 
   def build_from_category(category, date)

@@ -15,6 +15,9 @@ Rails.application.routes.draw do
     collection do
       post :quick_create
     end
+    member do
+      patch :update_report
+    end
     resources :agenda_items, except: [:index, :show] do
       member do
         patch :toggle_completed
