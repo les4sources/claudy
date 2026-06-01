@@ -113,3 +113,17 @@
                     .text-stone-400.tabular-nums(class="text-[0.65rem]")
                       = l(decision.taken_at, format: :short)
                     .text-stone-400.mt-0.5(class="text-[0.65rem]") par #{decision.recorded_by_label}
+
+    / Compte-rendu section
+    section.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidden
+      .px-5.py-4.border-b.border-stone-100.bg-stone-50
+        .font-semibold.uppercase.text-stone-500(class="text-[0.65rem] tracking-[0.2em]") Compte-rendu
+        h2.mt-0.5.text-lg.font-semibold.text-stone-900 Ce qui s'est dit
+        p.mt-1.text-xs.text-stone-400
+          | Astuce : colle directement du Markdown, il sera mis en forme automatiquement.
+      = form_with model: @gathering.object, url: update_report_gathering_path(@gathering.object), method: :patch do |f|
+        .p-4(data-controller="markdown-paste")
+          = f.rich_text_area :report, class: "trix-content min-h-[12rem]"
+        .px-4.pb-4.flex.justify-end
+          = f.submit "Enregistrer le compte-rendu",
+                     class: "inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 cursor-pointer"
