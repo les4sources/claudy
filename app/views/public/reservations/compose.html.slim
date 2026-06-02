@@ -81,30 +81,29 @@
 
         section.mb-6
           h2.text-lg.font-medium.mb-2 Salles & cuisine
-          - period_opts = [["— Pas besoin —", ""], ["Journée", "journee"], ["Soirée", "soiree"], ["Journée + Soirée", "journee_et_soiree"]]
-          .space-y-3
-            - @hall_spaces.each do |sp|
-              - entry = @draft.halls.find { |h| h[:kind].to_s == sp[:kind] }
-              - sel_period = entry&.dig(:period).to_s
-              - sel_days   = entry&.dig(:days).to_i
-              .rounded-lg.border.border-gray-200.p-3
-                = hidden_field_tag "reservation[halls][#{sp[:index]}][kind]", sp[:kind]
-                .font-medium.text-sm.mb-0.5 = sp[:label]
-                .text-xs.text-gray-400.mb-2 = sp[:prices]
-                .grid.grid-cols-2.gap-2
-                  div
-                    span.text-xs.text-gray-500 Période
-                    = select_tag "reservation[halls][#{sp[:index]}][period]",
-                        options_for_select(period_opts, sel_period),
-                        class: "mt-1 w-full text-sm rounded border-gray-300"
-                  div
-                    span.text-xs.text-gray-500 Nombre de jours
-                    = number_field_tag "reservation[halls][#{sp[:index]}][days]",
-                        (sel_days > 0 ? sel_days : 1), min: 1,
-                        class: "mt-1 w-full text-sm rounded border-gray-300"
+          p.text-xs.text-gray-500.mb-3
+            | Ajoutez une ligne par tranche d'utilisation. Exemples : jeudi soir, vendredi journée + soirée...
+          - kind_opts  = [["— Espace —", ""], ["Grande salle", "grande_salle"], ["Petite salle", "petite_salle"], ["Cuisine pro", "cuisine_pro"]]
+          - period_opts = [["— Période —", ""], ["Journée", "journee"], ["Soirée", "soiree"], ["Journée + Soirée", "journee_et_soiree"]]
+          - stay_min = @draft.arrival_date&.iso8601 || Date.today.iso8601
+          - stay_max = @draft.departure_date&.iso8601 || (Date.today >> 18).iso8601
+          .space-y-2
+            - Public::ReservationsController::HALL_SLOT_COUNT.times do |i|
+              - existing = @draft.halls[i]
+              .grid.grid-cols-3.gap-2.items-center
+                = select_tag "reservation[halls][#{i}][kind]",
+                    options_for_select(kind_opts, existing&.dig(:kind).to_s),
+                    class: "text-sm rounded border-gray-300"
+                = date_field_tag "reservation[halls][#{i}][date]",
+                    existing&.dig(:date),
+                    min: stay_min, max: stay_max,
+                    class: "text-sm rounded border-gray-300"
+                = select_tag "reservation[halls][#{i}][period]",
+                    options_for_select(period_opts, existing&.dig(:period).to_s),
+                    class: "text-sm rounded border-gray-300"
           p.text-xs.text-gray-400.mt-2
-            | Tarifs indicatifs en semaine. Nous vous confirmerons le total exact dans notre réponse.
-            = link_to " Voir tous les tarifs →", "https://www.les4sources.be/sejours/tarifs", target: "_blank", rel: "noopener", class: "underline"
+            | Tarifs indicatifs semaine — Grande salle 290 €/journée, 190 €/soirée · Petite salle 140 €/290 € · Cuisine 110 €/70 €.
+            = link_to " Tous les tarifs →", "https://www.les4sources.be/sejours/tarifs", target: "_blank", rel: "noopener", class: "underline"
 
         section.mb-6
           h2.text-lg.font-medium.mb-2 Groupe

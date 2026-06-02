@@ -21,16 +21,11 @@ module Public
       redirect_to public_reservation_compose_path
     end
 
-    HALL_SPACES = [
-      { index: 0, kind: "grande_salle",  label: "Grande salle",            prices: "290 €/journée · 190 €/soirée · 350 €/journée+soirée" },
-      { index: 1, kind: "petite_salle",  label: "Petite salle",            prices: "140 €/journée · 90 €/soirée · 170 €/journée+soirée" },
-      { index: 2, kind: "cuisine_pro",   label: "Cuisine professionnelle", prices: "110 €/journée · 70 €/soirée · 140 €/journée+soirée" }
-    ].freeze
+    HALL_SLOT_COUNT = 6
 
     # Étape 2 — composition du séjour + devis temps-réel.
     def compose
       @lodgings = bookable_lodgings
-      @hall_spaces = HALL_SPACES
       @quote = @draft.quote
     end
 
@@ -115,7 +110,7 @@ module Public
       permitted = params.fetch(:reservation, {}).permit(
         :lodging_id, :arrival_date, :departure_date, :dogs_count,
         :adults, :children, :first_name, :last_name, :email, :phone, :group_name,
-        meals: [:kind, :people], halls: [:kind, :days, :period],
+        meals: [:kind, :people], halls: [:kind, :date, :period],
         campings: [:kind, :people, :nights], vans: [:nights],
         pizza_parties: [:people], hamacs: [:kind, :count],
         experiences: [:id, :participants]
@@ -127,7 +122,7 @@ module Public
       %i[meals campings vans pizza_parties hamacs].each do |key|
         permitted[key] = Array(permitted[key]).reject { |row| row.values.all?(&:blank?) }
       end
-      permitted[:halls] = Array(permitted[:halls]).reject { |row| row[:period].blank? }
+      permitted[:halls] = Array(permitted[:halls]).reject { |row| row[:kind].blank? || row[:date].blank? || row[:period].blank? }
       permitted[:experiences] = Array(permitted[:experiences]).select { |r| r[:participants].to_i > 0 }
       permitted
     end

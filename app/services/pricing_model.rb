@@ -109,7 +109,7 @@ class PricingModel
     end
   end
 
-  # --- Salles & cuisine pro : forfait par période × nombre de jours ---
+  # --- Salles & cuisine pro : forfait par ligne {kind, date, period} ---
   PERIOD_LABELS = {
     "journee"           => "journée",
     "soiree"            => "soirée",
@@ -123,11 +123,15 @@ class PricingModel
       period = entry[:period].to_s
       unit = rates[period]
       next if unit.nil?
-      days = [entry[:days].to_i, 1].max
+      date_label = begin
+        Date.parse(entry[:date].to_s).strftime("%-d/%m")
+      rescue ArgumentError, TypeError
+        nil
+      end
+      next if date_label.nil?
       period_label = PERIOD_LABELS[period] || period
-      suffix = days > 1 ? " × #{days} jour(s)" : ""
-      Line.new(label: "#{humanize(entry[:kind])} — #{period_label}#{suffix}",
-               amount_cents: unit * days)
+      Line.new(label: "#{humanize(entry[:kind])} — #{date_label}, #{period_label}",
+               amount_cents: unit)
     end
   end
 
