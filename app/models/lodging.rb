@@ -52,15 +52,20 @@ class Lodging < ApplicationRecord
     part_of_lodgings.any?
   end
 
-  # Availability that accounts for the composition. The lodging is available only
-  # if its OWN rooms are free AND every lodging entangled with it (its components
-  # if it is a composite, its composites if it is a component) is also free on
-  # its own rooms. This makes Grand-Duc availability a pure read-derivation of
-  # Hulotte + Chevêche, with no stored blocking and no mirror booking.
+  # Availability that accounts for the composition. The composite (Grand-Duc) and
+  # its components (Hulotte, Chevêche) SHARE their physical rooms — Grand-Duc owns
+  # the union of the component rooms (e.g. Chevêche=1,2 · Hulotte=3-7 · Grand-Duc=
+  # 1-7). Because the rooms are shared, occupancy already propagates through the
+  # room reservations themselves: booking Chevêche occupies rooms 1-2, which makes
+  # Grand-Duc (1-7) unavailable, while leaving Hulotte (3-7) free. So checking this
+  # lodging's own rooms is sufficient and correct for every composition case.
+  #
+  # The previous implementation ALSO vetoed via every entangled lodging's own
+  # rooms, which double-counted the shared rooms: booking only Chevêche then
+  # wrongly blocked Hulotte (Grand-Duc, sharing room 1, vetoed it). That broke
+  # editing a Hulotte booking when the Chevêche was booked on the same dates.
   def available_between?(from_date, to_date)
-    entangled_lodgings_including_self.all? do |lodging|
-      lodging.self_available_between?(from_date, to_date)
-    end
+    self_available_between?(from_date, to_date)
   end
 
   def available_on?(date)
