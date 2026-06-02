@@ -62,12 +62,29 @@ module Pricing
     # Van / camping-car : forfait/nuit/véhicule.
     VAN_PER_NIGHT_CENTS = 1_500 # 15 €/nuit
 
-    # Salles : forfait/jour ou ½-journée (on facture au forfait jour ici).
-    HALL_PER_DAY_CENTS = {
-      "grande_salle" => 30_000, # 250-400 €/jour — milieu de fourchette
-      "petite_salle" => 15_000, # 110-190 €
-      "cuisine_pro"  => 15_000  # 110-200 €
+    # Salles & cuisine pro : tarifs par période, base semaine TVAC 0%.
+    # Source : https://www.les4sources.be/sejours/tarifs (tarifs semaine)
+    # Périodes : "journee" | "soiree" | "journee_et_soiree"
+    HALL_RATES = {
+      "grande_salle" => {
+        "journee"           => 29_000,  # 290 €
+        "soiree"            => 19_000,  # 190 €
+        "journee_et_soiree" => 35_000   # 290 + forfait soir 60 €
+      }.freeze,
+      "petite_salle" => {
+        "journee"           => 14_000,  # 140 €
+        "soiree"            =>  9_000,  # 90 €
+        "journee_et_soiree" => 17_000   # 140 + forfait soir 30 €
+      }.freeze,
+      "cuisine_pro" => {
+        "journee"           => 11_000,  # 110 €
+        "soiree"            =>  7_000,  # 70 €
+        "journee_et_soiree" => 14_000   # 110 + soirée estimée
+      }.freeze
     }.freeze
+
+    # Alias rétrocompatible — rate du forfait journée par kind.
+    HALL_PER_DAY_CENTS = HALL_RATES.transform_values { |r| r["journee"] }.freeze
 
     # Repas : €/pers.
     MEAL_PER_PERSON_CENTS = {

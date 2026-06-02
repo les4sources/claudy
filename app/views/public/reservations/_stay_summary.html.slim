@@ -37,17 +37,16 @@
           dt.text-gray-500.w-32.shrink-0 = "Hamac #{h[:kind]}"
           dd = "#{h[:count]} unité#{"s" if h[:count].to_i > 1}"
 
-    - grande_salle = draft.halls.find { |h| h[:kind].to_s == "grande_salle" }
-    - if grande_salle && grande_salle[:days].to_i > 0
+    - period_labels = { "journee" => "journée", "soiree" => "soirée", "journee_et_soiree" => "journée + soirée" }
+    - hall_display = { "grande_salle" => "Grande salle", "petite_salle" => "Petite salle", "cuisine_pro" => "Cuisine pro" }
+    - draft.halls.each do |h|
+      - next if h[:period].blank?
+      - lbl = hall_display[h[:kind].to_s] || h[:kind].to_s.humanize
+      - plbl = period_labels[h[:period].to_s] || h[:period].to_s
+      - days = h[:days].to_i
       .flex.gap-2
-        dt.text-gray-500.w-32.shrink-0 Grande salle
-        dd = "#{grande_salle[:days]} jour#{"s" if grande_salle[:days].to_i > 1}"
-
-    - petite_salle = draft.halls.find { |h| h[:kind].to_s == "petite_salle" }
-    - if petite_salle && petite_salle[:days].to_i > 0
-      .flex.gap-2
-        dt.text-gray-500.w-32.shrink-0 Petite salle
-        dd = "#{petite_salle[:days]} jour#{"s" if petite_salle[:days].to_i > 1}"
+        dt.text-gray-500.w-32.shrink-0 = lbl
+        dd = days > 1 ? "#{plbl} × #{days} jours" : plbl
 
     - repas = draft.meals.find { |m| m[:kind].to_s == "repas_vege_midi" }
     - if repas && repas[:people].to_i > 0

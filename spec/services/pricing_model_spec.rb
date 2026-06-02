@@ -95,9 +95,9 @@ RSpec.describe PricingModel do
       expect(quote.total_cents).to eq(4_500)
     end
 
-    it "forfait/jour (grande salle) — 1 jour = 250 €" do
-      quote = described_class.quote(draft(halls: [{ kind: "grande_salle", days: 1 }]))
-      expect(quote.total_cents).to eq(30_000)
+    it "forfait journée (grande salle) — 1 jour = 290 €" do
+      quote = described_class.quote(draft(halls: [{ kind: "grande_salle", period: "journee", days: 1 }]))
+      expect(quote.total_cents).to eq(29_000)
     end
 
     it "€/pers (repas végé midi) — 10 pers × 15 € = 150 €" do

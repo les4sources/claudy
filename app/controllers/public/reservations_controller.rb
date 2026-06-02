@@ -108,7 +108,7 @@ module Public
       permitted = params.fetch(:reservation, {}).permit(
         :lodging_id, :arrival_date, :departure_date, :dogs_count,
         :adults, :children, :first_name, :last_name, :email, :phone, :group_name,
-        meals: [:kind, :people], halls: [:kind, :days],
+        meals: [:kind, :people], halls: [:kind, :days, :period],
         campings: [:kind, :people, :nights], vans: [:nights],
         pizza_parties: [:people], hamacs: [:kind, :count],
         experiences: [:id, :participants]
@@ -117,9 +117,10 @@ module Public
         next unless permitted[key].is_a?(Hash)
         permitted[key] = permitted[key].values
       end
-      %i[meals halls campings vans pizza_parties hamacs].each do |key|
+      %i[meals campings vans pizza_parties hamacs].each do |key|
         permitted[key] = Array(permitted[key]).reject { |row| row.values.all?(&:blank?) }
       end
+      permitted[:halls] = Array(permitted[:halls]).reject { |row| row[:period].blank? }
       permitted[:experiences] = Array(permitted[:experiences]).select { |r| r[:participants].to_i > 0 }
       permitted
     end

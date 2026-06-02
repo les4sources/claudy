@@ -109,13 +109,24 @@ class PricingModel
     end
   end
 
-  # --- Salles : forfait/jour ---
+  # --- Salles & cuisine pro : forfait par période × nombre de jours ---
+  PERIOD_LABELS = {
+    "journee"           => "journée",
+    "soiree"            => "soirée",
+    "journee_et_soiree" => "journée + soirée"
+  }.freeze
+
   def hall_lines
     Array(read(:halls)).filter_map do |entry|
-      unit = Pricing::Catalog::HALL_PER_DAY_CENTS[entry[:kind].to_s]
+      rates = Pricing::Catalog::HALL_RATES[entry[:kind].to_s]
+      next if rates.nil?
+      period = entry[:period].to_s
+      unit = rates[period]
       next if unit.nil?
       days = [entry[:days].to_i, 1].max
-      Line.new(label: "#{humanize(entry[:kind])} — #{days} jour(s)",
+      period_label = PERIOD_LABELS[period] || period
+      suffix = days > 1 ? " × #{days} jour(s)" : ""
+      Line.new(label: "#{humanize(entry[:kind])} — #{period_label}#{suffix}",
                amount_cents: unit * days)
     end
   end

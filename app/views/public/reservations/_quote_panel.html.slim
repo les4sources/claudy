@@ -1,3 +1,10 @@
+- includes_nye = draft.arrival_date.present? && draft.departure_date.present? && (draft.arrival_date..draft.departure_date).any? { |d| d.month == 12 && d.day == 31 }
+- if includes_nye
+  .rounded-lg.border.border-orange-200.bg-orange-50.p-3.mb-3
+    p.text-xs.text-orange-800
+      | ⚠️ Votre séjour inclut le 31 décembre — une réservation de ce type requiert le
+      strong  Grand-Duc + les 2 salles.
+      |  Contactez-nous pour valider votre demande.
 / Panneau devis — source unique (PricingModel.quote), partagé compose + email.
 .rounded-lg.border.border-gray-200.p-4.sticky.top-4
   h2.text-lg.font-medium.mb-3 Votre devis
