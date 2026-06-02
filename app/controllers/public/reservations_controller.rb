@@ -17,8 +17,8 @@ module Public
     before_action :load_draft, only: %i[compose quote advance_activities activities advance_contact contact create]
     skip_before_action :verify_authenticity_token, only: %i[advance_activities advance_contact]
 
-    # Étape 1 — entrée, distinction info vs transaction.
     def start
+      redirect_to public_reservation_compose_path
     end
 
     HALL_SPACES = [
