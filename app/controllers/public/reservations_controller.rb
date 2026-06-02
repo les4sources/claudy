@@ -21,9 +21,16 @@ module Public
     def start
     end
 
+    HALL_SPACES = [
+      { index: 0, kind: "grande_salle",  label: "Grande salle",            prices: "290 €/journée · 190 €/soirée · 350 €/journée+soirée" },
+      { index: 1, kind: "petite_salle",  label: "Petite salle",            prices: "140 €/journée · 90 €/soirée · 170 €/journée+soirée" },
+      { index: 2, kind: "cuisine_pro",   label: "Cuisine professionnelle", prices: "110 €/journée · 70 €/soirée · 140 €/journée+soirée" }
+    ].freeze
+
     # Étape 2 — composition du séjour + devis temps-réel.
     def compose
       @lodgings = bookable_lodgings
+      @hall_spaces = HALL_SPACES
       @quote = @draft.quote
     end
 

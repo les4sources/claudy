@@ -81,14 +81,9 @@
 
         section.mb-6
           h2.text-lg.font-medium.mb-2 Salles & cuisine
-          - hall_spaces = [
-            - { index: 0, kind: "grande_salle",  label: "Grande salle",           prices: "290 €/journée · 190 €/soirée · 350 €/journée+soirée" },
-            - { index: 1, kind: "petite_salle",  label: "Petite salle",           prices: "140 €/journée · 90 €/soirée · 170 €/journée+soirée" },
-            - { index: 2, kind: "cuisine_pro",   label: "Cuisine professionnelle", prices: "110 €/journée · 70 €/soirée · 140 €/journée+soirée" }
-            - ]
           - period_opts = [["— Pas besoin —", ""], ["Journée", "journee"], ["Soirée", "soiree"], ["Journée + Soirée", "journee_et_soiree"]]
           .space-y-3
-            - hall_spaces.each do |sp|
+            - @hall_spaces.each do |sp|
               - entry = @draft.halls.find { |h| h[:kind].to_s == sp[:kind] }
               - sel_period = entry&.dig(:period).to_s
               - sel_days   = entry&.dig(:days).to_i
