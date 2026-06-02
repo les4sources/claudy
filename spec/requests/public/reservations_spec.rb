@@ -21,15 +21,9 @@ RSpec.describe "Public::Reservations (/reservation)", type: :request do
   end
 
   describe "accessibilité publique (AC-T2-01)" do
-    it "GET /reservation → 200 sans session Devise" do
+    it "GET /reservation redirige vers le formulaire de composition" do
       get "/reservation"
-      expect(response).to have_http_status(:ok)
-    end
-
-    it "présente les deux choix info vs réserver (AC-T2-02)" do
-      get "/reservation"
-      expect(response.body).to include("Je veux réserver")
-      expect(response.body).to include("Je souhaite des infos")
+      expect(response).to redirect_to("/reservation/composer")
     end
   end
 

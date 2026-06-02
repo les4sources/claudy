@@ -21,7 +21,7 @@ RSpec.describe "Parcours /reservation complet (happy-path B2C)", type: :request 
 
   it "déroule entrée → devis → coordonnées → Stripe → Stay pending + email" do
     get "/reservation"
-    expect(response).to have_http_status(:ok)
+    expect(response).to redirect_to("/reservation/composer")
 
     post "/reservation/devis",
          params: { reservation: { lodging_id: hulotte.id, arrival_date: arrival, departure_date: departure, meals: { "0" => { kind: "repas_vege_midi", people: "4" } } } },
