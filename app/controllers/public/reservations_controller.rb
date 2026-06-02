@@ -1,27 +1,30 @@
 module Public
-  # Funnel B2C natif /reservation (PRD §3.1, Hotwire server-rendered).
-  # Public : bypass Devise via Public::BaseController. FR-only (Q7).
-  #
-  # Étapes :
-  #   1. start    — sélecteur « infos » vs « réserver » (AC-T2-02)
-  #   2. compose  — dates + dispo + catalogue + options + repas + devis live
-  #   3. quote    — recalcul Turbo Frame du panier sans full reload (AC-T2-10)
-  #   4. contact  — coordonnées (champ chien obligatoire, AC-T2-09)
-  #   5. create   — upsert Customer + Stay(pending) + Booking + Payment → Stripe
-  #   6. confirmation / show via lien token
+  # Funnel B2C natif /reservation — 3 étapes (tranche 2).
+  #   1. dates     — dates du séjour + groupe + animal
+  #   2. compose   — composition : hébergement, espaces, camping, hamacs
+  #   3. contact   — coordonnées client → commit + Stripe
   class ReservationsController < Public::BaseController
     layout "public_sheet"
 
     DRAFT_SESSION_KEY = :reservation_draft
+    HALL_SLOT_COUNT   = 6
 
-    before_action :load_draft, only: %i[compose quote advance_activities activities advance_contact contact create]
-    skip_before_action :verify_authenticity_token, only: %i[advance_activities advance_contact]
+    before_action :load_draft, only: %i[dates advance_dates compose quote advance_contact activities contact create]
+    skip_before_action :verify_authenticity_token, only: %i[advance_contact]
 
     def start
-      redirect_to public_reservation_compose_path
+      redirect_to public_reservation_dates_path
     end
 
-    HALL_SLOT_COUNT = 6
+    # Étape 1 — dates, groupe, animal.
+    def dates
+    end
+
+    # Transition étape 1 → 2.
+    def advance_dates
+      persist_draft(merged_draft_params)
+      redirect_to public_reservation_compose_path
+    end
 
     # Étape 2 — composition du séjour + devis temps-réel.
     def compose
@@ -29,19 +32,13 @@ module Public
       @quote = @draft.quote
     end
 
-    # Transition compose → activités : persiste le draft, redirige vers l'étape activités.
-    def advance_activities
-      persist_draft(merged_draft_params)
-      redirect_to public_reservation_activities_path
-    end
-
-    # Étape activités — sélection des expériences disponibles.
+    # Étape activités (accès via email token — pas dans le funnel direct).
     def activities
       @experiences = bookable_experiences
       @quote = @draft.quote
     end
 
-    # Transition activités → coordonnées : persiste les expériences choisies.
+    # Transition étape 2 → 3 (advance depuis le Stimulus quote controller).
     def advance_contact
       persist_draft(merged_draft_params)
       redirect_to public_reservation_contact_path

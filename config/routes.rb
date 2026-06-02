@@ -114,14 +114,15 @@ Rails.application.routes.draw do
 
   get "reports/lodging/:id", to: "reports#lodging", as: :lodging_reports
 
-  # Funnel B2C natif /reservation (tranche 2). Public (bypass Devise via
-  # Public::BaseController). Distinct du lien token legacy /public/reservation/:token.
+  # Funnel B2C natif /reservation — 3 étapes (tranche 2).
+  # Étape 1 : dates + groupe + animal  →  Étape 2 : composition  →  Étape 3 : coordonnées
   get  "reservation",              to: "public/reservations#start",              as: :public_reservation_start
+  get  "reservation/sejour",       to: "public/reservations#dates",              as: :public_reservation_dates
+  post "reservation/sejour",       to: "public/reservations#advance_dates",      as: :public_reservation_advance_dates
   get  "reservation/composer",     to: "public/reservations#compose",            as: :public_reservation_compose
   post "reservation/devis",        to: "public/reservations#quote",              as: :public_reservation_quote
-  post "reservation/composer",     to: "public/reservations#advance_activities", as: :public_reservation_advance_activities
+  post "reservation/composer",     to: "public/reservations#advance_contact",    as: :public_reservation_advance_contact
   get  "reservation/activites",    to: "public/reservations#activities",         as: :public_reservation_activities
-  post "reservation/activites",    to: "public/reservations#advance_contact",    as: :public_reservation_advance_contact
   get  "reservation/coordonnees",  to: "public/reservations#contact",            as: :public_reservation_contact
   post "reservation/coordonnees",  to: "public/reservations#create",             as: :public_reservation_create
 

@@ -23,7 +23,7 @@ RSpec.describe "Public::Reservations (/reservation)", type: :request do
   describe "accessibilité publique (AC-T2-01)" do
     it "GET /reservation redirige vers le formulaire de composition" do
       get "/reservation"
-      expect(response).to redirect_to("/reservation/composer")
+      expect(response).to redirect_to("/reservation/sejour")
     end
   end
 

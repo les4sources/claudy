@@ -1,6 +1,10 @@
 .max-w-2xl.mx-auto.py-8
-  .mb-4
-    = link_to "← Modifier ma réservation", public_reservation_compose_path, class: "text-sm text-gray-500 hover:text-gray-700"
+  .flex.items-center.gap-2.mb-6.text-sm
+    = link_to "1. Votre séjour", public_reservation_dates_path, class: "text-gray-400 hover:text-gray-600"
+    span.text-gray-300 →
+    = link_to "2. Composition", public_reservation_compose_path, class: "text-gray-400 hover:text-gray-600"
+    span.text-gray-300 →
+    span.font-semibold.text-emerald-700 3. Coordonnées
 
   h1.text-2xl.font-semibold.mb-6 Vos coordonnées
 
