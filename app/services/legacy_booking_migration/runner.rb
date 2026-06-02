@@ -105,7 +105,8 @@ module LegacyBookingMigration
         departure_date: record.to_date,
         status: record.status,
         total_amount_cents: record.try(:price_cents).to_i,
-        legacy_origin: origin
+        legacy_origin: origin,
+        source: legacy_source_for(record)
       )
       StayItem.create!(stay: stay, bookable_type: record.class.name, bookable_id: record.id)
       @report.n_stays_created += 1
@@ -122,6 +123,16 @@ module LegacyBookingMigration
         @report.n_actifs += 1
       end
       @report.n_rattaches_fourretout += 1 unless Customer.exploitable_email?(record.email)
+    end
+
+    def legacy_source_for(record)
+      return "tally_legacy" if record.is_a?(SpaceBooking)
+      platform = record.try(:platform).to_s
+      case platform
+      when "airbnb"        then "ota"
+      when "bookingdotcom" then "ota"
+      else                      "tally_legacy"
+      end
     end
 
     def upsert_customer_for(record)

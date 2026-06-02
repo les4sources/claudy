@@ -1,0 +1,59 @@
+.max-w-2xl.mx-auto.py-8
+  .flex.items-center.gap-2.mb-6.text-sm
+    = link_to "1. Votre séjour", public_reservation_dates_path, class: "text-gray-400 hover:text-gray-600"
+    span.text-gray-300 →
+    = link_to "2. Composition", public_reservation_compose_path, class: "text-gray-400 hover:text-gray-600"
+    span.text-gray-300 →
+    span.font-semibold.text-emerald-700 3. Coordonnées
+
+  h1.text-2xl.font-semibold.mb-6 Vos coordonnées
+
+  = render "public/reservations/stay_summary", draft: @draft
+
+  .grid.gap-8.lg:grid-cols-3
+    .lg:col-span-2
+      = form_with url: public_reservation_create_path, method: :post do |f|
+        / Champs de composition re-postés pour que create soit autonome vis-à-vis
+        / de la session (filet de sécurité si le draft en session est incomplet).
+        = hidden_field_tag "reservation[lodging_id]", @draft.lodging_id
+        = hidden_field_tag "reservation[arrival_date]", @draft.arrival_date&.iso8601
+        = hidden_field_tag "reservation[departure_date]", @draft.departure_date&.iso8601
+        = hidden_field_tag "reservation[adults]", @draft.adults
+        = hidden_field_tag "reservation[children]", @draft.children
+        = hidden_field_tag "reservation[dogs_count]", @draft.dogs_count
+
+        .grid.grid-cols-2.gap-4.mb-4
+          label.block
+            span.text-sm.text-gray-600 Prénom *
+            = text_field_tag "reservation[first_name]", @draft.first_name, required: true, class: "mt-1 w-full rounded border-gray-300"
+          label.block
+            span.text-sm.text-gray-600 Nom
+            = text_field_tag "reservation[last_name]", @draft.last_name, class: "mt-1 w-full rounded border-gray-300"
+
+        label.block.mb-4
+          span.text-sm.text-gray-600 Email *
+          = email_field_tag "reservation[email]", @draft.email, required: true, class: "mt-1 w-full rounded border-gray-300"
+
+        .grid.grid-cols-2.gap-4.mb-4
+          label.block
+            span.text-sm.text-gray-600 Téléphone
+            = telephone_field_tag "reservation[phone]", @draft.phone, class: "mt-1 w-full rounded border-gray-300"
+          label.block
+            span.text-sm.text-gray-600 Nom du groupe
+            = text_field_tag "reservation[group_name]", @draft.group_name, class: "mt-1 w-full rounded border-gray-300"
+
+        / Animal — valeur fixée à l'étape composition, affichée en lecture seule.
+        .mb-4
+          span.block.text-sm.text-gray-600.mb-1 Animal de compagnie
+          - dog_label = { 0 => "Pas d'animal", 1 => "Un chien (+50 €)", 2 => "Plusieurs chiens (sur demande)" }[@draft.dogs_count.to_i] || "Pas d'animal"
+          .flex.items-center.gap-3
+            span.text-sm.font-medium = dog_label
+            = link_to "Modifier", public_reservation_compose_path, class: "text-xs text-gray-400 hover:text-gray-600 underline"
+          - if @draft.dogs_count.to_i > 1
+            p.text-xs.text-amber-700.mt-1 Plusieurs chiens : notre équipe vous recontacte pour les chiens supplémentaires.
+
+        = f.submit "Payer l'acompte et envoyer ma demande", class: "rounded bg-emerald-600 text-white px-5 py-2.5 hover:bg-emerald-700"
+        p.text-xs.text-gray-400.mt-2 Votre demande sera validée par notre équipe avant confirmation définitive.
+
+    aside.lg:col-span-1
+      = render "public/reservations/quote_panel", quote: @quote, draft: @draft

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_28_120006) do
+ActiveRecord::Schema[7.0].define(version: 2026_05_31_205355) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -176,8 +176,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_28_120006) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.datetime "archived_at"
     t.integer "position", default: 0, null: false
+    t.datetime "archived_at"
     t.index ["category"], name: "index_cycle_actions_on_category"
     t.index ["completed"], name: "index_cycle_actions_on_completed"
     t.index ["delegate_to_human_id"], name: "index_cycle_actions_on_delegate_to_human_id"
@@ -234,6 +234,30 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_28_120006) do
     t.text "notes"
     t.string "status"
     t.index ["event_category_id"], name: "index_events_on_event_category_id"
+  end
+
+  create_table "experience_availabilities", force: :cascade do |t|
+    t.bigint "experience_id", null: false
+    t.date "available_on"
+    t.string "starts_at"
+    t.integer "duration_minutes"
+    t.integer "max_participants"
+    t.string "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["experience_id"], name: "index_experience_availabilities_on_experience_id"
+  end
+
+  create_table "experience_bookings", force: :cascade do |t|
+    t.bigint "experience_availability_id", null: false
+    t.bigint "stay_id", null: false
+    t.integer "participants"
+    t.string "status"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["experience_availability_id"], name: "index_experience_bookings_on_experience_availability_id"
+    t.index ["stay_id"], name: "index_experience_bookings_on_stay_id"
   end
 
   create_table "experiences", force: :cascade do |t|
@@ -519,8 +543,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_28_120006) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "source", default: "reservation", null: false
+    t.string "activity_selection_token"
+    t.datetime "activity_email_sent_at"
+    t.index ["activity_selection_token"], name: "index_stays_on_activity_selection_token"
     t.index ["customer_id"], name: "index_stays_on_customer_id"
     t.index ["legacy_origin"], name: "index_stays_on_legacy_origin_unique_live", unique: true, where: "((legacy_origin IS NOT NULL) AND (deleted_at IS NULL))"
+    t.index ["source"], name: "index_stays_on_source"
   end
 
   create_table "stripe_events", force: :cascade do |t|
@@ -615,6 +644,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_28_120006) do
   add_foreign_key "decisions", "gatherings", on_delete: :nullify
   add_foreign_key "decisions", "humans", column: "recorded_by_id"
   add_foreign_key "events", "event_categories"
+  add_foreign_key "experience_availabilities", "experiences"
+  add_foreign_key "experience_bookings", "experience_availabilities"
+  add_foreign_key "experience_bookings", "stays"
   add_foreign_key "experiences", "humans"
   add_foreign_key "gatherings", "gathering_categories"
   add_foreign_key "human_roles", "humans"

@@ -278,15 +278,17 @@ module FormBuilders
     end
 
     def input_html_classes(method)
-      ['block w-full rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm rounded-md', ('border-red-300 text-red-900 placeholder-red-300 focus:border-red-500 focus:outline-none focus:ring-red-500' if object.errors[method].present?)].join
+      has_error = object&.errors&.[](method)&.present?
+      ['block w-full rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm rounded-md', ('border-red-300 text-red-900 placeholder-red-300 focus:border-red-500 focus:outline-none focus:ring-red-500' if has_error)].join
     end
 
     def label_text(method, options)
-      options.fetch(:label, object.class.human_attribute_name(method))
+      default = object ? object.class.human_attribute_name(method) : method.to_s.humanize
+      options.fetch(:label, default)
     end
 
     def errors(method)
-      return if object.errors[method].blank?
+      return unless object&.errors&.[](method)&.present?
 
       tag.ul class: 'mt-2 text-sm text-red-500' do
         safe_join(object.errors[method].map { |error| tag.li(error) })

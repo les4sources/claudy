@@ -1,0 +1,29 @@
+- includes_nye = draft.arrival_date.present? && draft.departure_date.present? && (draft.arrival_date..draft.departure_date).any? { |d| d.month == 12 && d.day == 31 }
+- if includes_nye
+  .rounded-lg.border.border-orange-200.bg-orange-50.p-3.mb-3
+    p.text-xs.text-orange-800
+      | ⚠️ Votre séjour inclut le 31 décembre — une réservation de ce type requiert le
+      strong  Grand-Duc + les 2 salles.
+      |  Contactez-nous pour valider votre demande.
+/ Panneau devis — source unique (PricingModel.quote), partagé compose + email.
+.rounded-lg.border.border-gray-200.p-4.sticky.top-4
+  h2.text-lg.font-medium.mb-3 Votre devis
+  - if quote.lines.empty?
+    p.text-sm.text-gray-400 Choisissez vos dates et un hébergement pour voir le prix.
+  - else
+    ul.divide-y.divide-gray-100.mb-3
+      - quote.lines.each do |line|
+        li.flex.justify-between.py-2.text-sm
+          span.text-gray-600 = line.label
+          span.font-medium = number_to_currency(line.amount_cents / 100.0, unit: "€", format: "%n %u", precision: 2)
+    .border-t.pt-3.space-y-1
+      .flex.justify-between.font-semibold
+        span Total TVAC 0 %
+        span = number_to_currency(quote.total_cents / 100.0, unit: "€", format: "%n %u", precision: 2)
+      .flex.justify-between.text-sm.text-gray-600
+        span = "Acompte (#{(quote.deposit_rate * 100).to_i} %)"
+        span = number_to_currency(quote.deposit_cents / 100.0, unit: "€", format: "%n %u", precision: 2)
+    p.text-xs.text-gray-400.mt-2 Tous les prix sont TVAC 0 % — aucune TVA supplémentaire.
+
+  - if quote.total_cents.positive?
+    = link_to "Continuer vers mes coordonnées", public_reservation_contact_path, class: "mt-4 block text-center rounded bg-emerald-600 text-white px-4 py-2 hover:bg-emerald-700", data: { turbo_frame: "_top" }

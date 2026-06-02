@@ -1,0 +1,26 @@
+p Bonjour #{@stay.customer.first_name.presence || ""},
+
+p
+  | Vos demandes d'activités ont bien été enregistrées. Les animateurs·ices concerné·es
+  | seront contacté·es et vous confirmeront les créneaux retenus.
+
+- if @stay.arrival_date && @stay.departure_date
+  p
+    strong Votre séjour :
+    | = " #{l(@stay.arrival_date, format: :long)} → #{l(@stay.departure_date, format: :long)}"
+
+- if @bookings.any?
+  h3 Activités demandées
+  table
+    tbody
+      - @bookings.each do |b|
+        tr
+          td = b.experience.name
+          td = "#{b.experience_availability.available_on.strftime('%-d/%m')} à #{b.experience_availability.starts_at}"
+          td = "#{b.participants} participant#{"s" if b.participants.to_i > 1}"
+
+p
+  | En cas de question, contactez Malau au +32(0)490/46.77.10 ou à
+  = link_to "sejours@les4sources.be", "mailto:sejours@les4sources.be"
+
+p À très bientôt !

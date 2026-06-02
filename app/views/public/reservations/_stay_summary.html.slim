@@ -1,0 +1,66 @@
+/ Récapitulatif lecture seule du séjour composé à l'étape 1.
+/ Affiché sur la page coordonnées pour que le client vérifie ses choix.
+.rounded-lg.border.border-gray-200.p-4.mb-6
+  .flex.items-center.justify-between.mb-3
+    h3.text-base.font-medium Votre séjour
+    = link_to "Modifier", public_reservation_compose_path, class: "text-xs text-gray-400 hover:text-gray-600 underline"
+
+  dl.space-y-2.text-sm
+
+    - if draft.lodging
+      .flex.gap-2
+        dt.text-gray-500.w-32.shrink-0 Hébergement
+        dd.font-medium = draft.lodging.name
+
+    - if draft.arrival_date && draft.departure_date
+      .flex.gap-2
+        dt.text-gray-500.w-32.shrink-0 Dates
+        dd
+          | #{draft.arrival_date.strftime("%-d/%m/%Y")} → #{draft.departure_date.strftime("%-d/%m/%Y")}
+          span.ml-2.text-gray-400 = "(#{draft.nights} nuit#{"s" if draft.nights > 1})"
+
+    - tente = draft.campings.find { |c| c[:kind].to_s == "tente" }
+    - if tente && tente[:people].to_i > 0
+      .flex.gap-2
+        dt.text-gray-500.w-32.shrink-0 Camping tente
+        dd = "#{tente[:people]} personne#{"s" if tente[:people].to_i > 1}"
+
+    - van_nights = draft.vans.sum { |v| v[:nights].to_i }
+    - if van_nights > 0
+      .flex.gap-2
+        dt.text-gray-500.w-32.shrink-0 Van / camping-car
+        dd = "#{van_nights} nuit#{"s" if van_nights > 1}"
+
+    - draft.hamacs.each do |h|
+      - if h[:count].to_i > 0
+        .flex.gap-2
+          dt.text-gray-500.w-32.shrink-0 = "Hamac #{h[:kind]}"
+          dd = "#{h[:count]} unité#{"s" if h[:count].to_i > 1}"
+
+    - period_labels = { "journee" => "journée", "soiree" => "soirée", "journee_et_soiree" => "journée + soirée" }
+    - hall_labels   = { "grande_salle" => "Grande salle", "petite_salle" => "Petite salle", "cuisine_pro" => "Cuisine pro" }
+    - draft.halls.each do |h|
+      - next if h[:kind].blank? || h[:date].blank? || h[:period].blank?
+      - date_str = begin; Date.parse(h[:date].to_s).strftime("%-d/%m"); rescue; h[:date].to_s; end
+      .flex.gap-2
+        dt.text-gray-500.w-32.shrink-0 = hall_labels[h[:kind].to_s] || h[:kind].to_s.humanize
+        dd = "#{date_str} — #{period_labels[h[:period].to_s] || h[:period]}"
+
+    - repas = draft.meals.find { |m| m[:kind].to_s == "repas_vege_midi" }
+    - if repas && repas[:people].to_i > 0
+      .flex.gap-2
+        dt.text-gray-500.w-32.shrink-0 Repas végé midi
+        dd = "#{repas[:people]} personne#{"s" if repas[:people].to_i > 1}"
+
+    - dog_label = { 0 => nil, 1 => "Un chien (+50 €)", 2 => "Plusieurs chiens (sur demande)" }[draft.dogs_count.to_i]
+    - if dog_label
+      .flex.gap-2
+        dt.text-gray-500.w-32.shrink-0 Animal
+        dd = dog_label
+
+    - Array(draft.experiences).select { |e| e[:participants].to_i > 0 }.each do |entry|
+      - exp = Experience.find_by(id: entry[:id])
+      - next unless exp
+      .flex.gap-2
+        dt.text-gray-500.w-32.shrink-0 Activité
+        dd = "#{exp.name} — #{entry[:participants]} pers"

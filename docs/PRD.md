@@ -1,273 +1,241 @@
-# PRD — Claudy · Tranche 1 : Customers + StayComposite + LegacyBookingMigration
+# PRD — Claudy · Tranche 2 : `/reservation` B2C natif + PricingModel minimal
 
-> Contrat de passation du studio Super Génial. Produit par le Cadreur depuis `docs/BRIEF.md` + `ISA.md`, **validé par Michael avant tout build**. Tous les agents lisent ce fichier. Vit dans le repo client (`docs/PRD.md`), versionné.
-> Source de vérité long-lived = `~/code/claudy/ISA.md`. Ce PRD est une **vue dérivée scopée à la tranche 1** — il ne couvre qu'un sous-ensemble de l'ideal state (Features `Customers`, `StayComposite`, `LegacyBookingMigration`). Ne pas déborder.
+> Contrat de passation du studio Super Génial. Produit par le Cadreur depuis `docs/BRIEF.md` (tranche 2), dérivé de la source de vérité long-lived `~/code/claudy/ISA.md`. **À valider par Michael avant tout build.** Tous les agents aval lisent ce fichier. Vit dans le repo, versionné.
 
-- **Statut :** **validé** — les 8 décisions §11 sont verrouillées (2026-05-28). Porte fermée, build autorisé. Aucune question ouverte.
-- **Repo :** github.com/les4sources/claudy · **Branche déploiement :** main · **Déploiement :** Hatchbox → Linode VPS (pas de staging)
-- **Stack :** Ruby on Rails 7.0 · Ruby 3.1.2 · PostgreSQL · Node 18.8.0 · Vite (`vite_rails`)
-- **Stack frontend : `Hotwire`** (Turbo + Stimulus + Slim, server-rendered). Verrouillée par ISA P4 + ISC-12 (anti-criterion : aucun `react` / `vue` / `@inertiajs/*` dans `package.json`). Aucune dérogation. — *ligne lue par Constructeur et Vérificateur, ne pas omettre.*
-- **Stratégie :** strangler pattern (Décision ISA 2026-05-28) — on étend l'app en prod, **pas de rewrite**. Tranche 1 = pivot architectural pur, additif, coexistence ancien/nouveau.
+| Champ | Valeur |
+|-------|--------|
+| **Statut** | ✅ **VALIDÉ — prêt pour le Constructeur.** Michael a validé le PRD et tranché Q1-Q9 le 2026-05-30. Passage au Constructeur / Directrice Artistique / Vérificateur autorisé. |
+| **Projet** | Claudy — app de gestion des 4 Sources (Yvoir, Belgique). Projet interne Studio Super Génial. |
+| **Tranche** | 2 — prolonge la tranche 1 livrée en prod le 2026-05-30 (Customer + Stay + StayItem + LegacyBookingMigration + MergeService + API v1 read+write authentifiée). |
+| **Stratégie** | Strangler pattern : funnel `/reservation` parallèle, coexistence avec Tally + `namespace :public` durant la transition. |
+| **Repo** | https://github.com/les4sources/claudy · **Branche déploiement :** `main` · **Déploiement :** Hatchbox → Linode VPS (pas de staging) |
+| **Stack** | Ruby on Rails 7.0 · Ruby 3.1.2 · PostgreSQL · Vite (`vite_rails`) · Tailwind · Devise · Stripe · Postmark · Sentry |
+| **Stack frontend** | **`Hotwire`** (Turbo + Stimulus + Slim, server-rendered). Verrouillée par ISA P4 + ISC-12. **Pas d'InertiaJS, pas de React, pas de Vue.** *— ligne lue par Constructeur et Vérificateur, ne pas omettre.* |
+| **Date** | 2026-05-30 (rédigé) · **2026-05-30 (validé — Q1-Q9 figées)** |
 
 ---
 
 ## 1. Problème & objectif
 
-Aujourd'hui dans Claudy, le client n'est pas une entité : son email est un champ libre dupliqué sur chaque `Booking` et `SpaceBooking`, sans normalisation ni clé unique. Conséquence : impossible de voir l'historique d'un même client, de détecter la récurrence B2B (~60 % des clients B2B reviennent — cf. analyse inbox), d'offrir un portail self-service, ou de raisonner « panier » sur un séjour qui mélange hébergement + salle. La tranche 1 pose la **fondation du modèle de données** — `Customer` (entité de premier ordre, clé `email`) et `Stay` (tête d'un graphe d'items réservables polymorphes) — et **migre tout l'historique** existant dessus, sans changer aucun flow utilisateur visible et sans interruption de prod. Toutes les tranches suivantes (BookingFlow natif, PricingModel, packs B2B, B2bCrm, NPS, GuestMobileApp) s'appuieront sur cette fondation.
+Le formulaire **Tally `3N4VpO`** est le canal entrant n°1 (~70-90 demandes/an) mais génère 4 frictions structurelles documentées (`docs/research/2026-05-28-pole-accueil-inbox-analysis.md`) : (a) opacité de la **disponibilité** (« est-ce libre ? » dans ~30 % des threads), (b) opacité du **tarif** (« envoyez-moi un devis » quasi systématique), (c) **confusion Hulotte/Chevêche/Grand-Duc** (1 thread sur 3), (d) **processus à 3 étapes mal raccordées** (Tally → mail manuel Malau → app.les4sources.be). Chaque friction = 3-5 allers-retours évitables + abandons documentés.
 
-**Objectif mesurable :** après bascule, **100 %** des `Booking` + `SpaceBooking` (actifs, passés, annulés, soft-deleted, **y compris ceux sans email exploitable** — rattachés au Customer fourre-tout `client@les4sources.be`) sont rattachés à un `Stay` et un `Customer`, zéro perte de donnée historique, idempotence prouvée, zéro régression sur les flows existants (booking public + Stripe).
+**Objectif tranche 2 :** livrer un funnel public natif `/reservation` (B2C) + un `PricingModel` minimal qui suppriment la quasi-totalité de ces frictions côté B2C — devis temps-réel, dispo temps-réel, lien stable, paiement direct — sans toucher au flow `:public` existant ni à Tally (qui restent actifs pendant la transition).
 
 ## 2. Utilisateurs / audience
 
-Aucun nouvel utilisateur final visible n'est introduit par cette tranche (pivot interne). Les surfaces touchées :
+- **Client B2C** (familles, amis, anniversaires, weekends détente) — public cible de `/reservation`. Pas de compte Devise : self-service par lien token email.
+- **Pôle Accueil (Malau)** — utilisateur interne authentifié Devise ; observe la transition via une vue admin des Stays récents filtrable par source.
+- **Hors-cible tranche 2 :** client B2B/entreprises (→ tranche 3, `/sejour-entreprise`) ; agents IA (API v1, livré tranche 1).
 
-- **Pôle Accueil** (Malau + collectif, authentifié Devise) — consommateurs des **nouvelles vues admin Customer** : recherche par email/nom, vue historique d'un client, édition des notes internes, **fusion de doublons** (sert aussi à **re-ventiler** les Stays du Customer fourre-tout `client@les4sources.be` vers de vrais clients).
-- **Agents IA** (Bee + agents internes, Bearer `AGENT_API_TOKEN`) — consommateurs des **nouveaux endpoints API read-only** `/api/v1/customers/:id` et `/api/v1/stays/:id` (P1 : tout modèle métier a sa surface agent).
-- **Mainteneur / opérateur de migration** (Michael) — exécute la rake task d'audit, de migration (dry-run + réel) et lit le rapport post-migration.
-- **Hors tranche** : le client final (pas de portail self-service ici), le flow B2C/B2B natif (tranche 2).
+## 3. Périmètre (in-scope tranche 2)
 
-## 3. Périmètre
+### 3.1 Feature A — BookingFlow B2C natif (`/reservation`)
 
-Trois features, additives, déployables progressivement sur prod active.
+Funnel public Hotwire multi-étapes, navigation Turbo. Parcours :
 
-### 3.1 — `Customer` (modèle + vues admin minimales + fusion de doublons)
-- Nouveau modèle ActiveRecord `Customer`, entité de premier ordre (distinct de `Human` = membres du collectif).
-- Clé d'unicité : `email`, type **citext**, normalisé en lowercase + trim avant validation/persistance.
-- `soft_deletion` (default_scope) + `PaperTrail` (cohérent ISA P2 / ISC-15/17).
-- Vues admin Pôle Accueil en **Hotwire/Slim** (Draper + ViewComponent où pertinent) : index recherchable (email/nom), show avec historique des stays, edit des `notes`, **fusion de doublons** (merge des associations sur un Customer cible + soft-delete de la source + trace PaperTrail).
-- Endpoint API read-only `GET /api/v1/customers/:id` (+ index) via jbuilder + entrée OpenAPI `config/openapi/v1.yaml`.
+1. **Entrée — distinction info vs transaction.** Sélecteur page 1 : « je souhaite des infos » (peut rester routé vers Tally cette tranche) vs « je veux réserver » (entre dans `/reservation`).
+2. **Dates + dispo temps-réel.** Calendrier montrant jours libres/occupés pour Hulotte, Chevêche, Grand-Duc (composé). Fenêtre ouverte à **+18 mois** (Constraint ISA).
+3. **Catalogue hébergement clarifié.** Nom, capacité, description courte, prix-soir indicatif. Grand-Duc marqué « = Hulotte + Chevêche réservées ensemble ».
+4. **Composition libre du séjour** (panier au fil des choix) : hébergement, camping/bivouac (tente/hamac/van), salle(s), repas (Pizza Party, repas végé, buffet Petite Salle). **Pre-order épicerie/boulangerie = simple lien externe** vers `tranches-de-vie.les4sources.be` affiché en post-réservation (PAS d'intégration write API — Q4 tranchée B).
+5. **Devis temps-réel TVAC** — panier mis à jour à chaque modif, sans rechargement complet (Turbo Frames), mention « pas de TVA en plus ».
+6. **Champ animal/chien obligatoire** — supplément **50 € / chien / séjour** (Q2). Le supplément automatique du flow ne couvre **qu'UN seul chien** ; les séjours multi-chiens sont **hors flow**, traités manuellement par Malau.
+7. **Coordonnées client** — upsert `Customer` par email (logique tranche 1).
+8. **Stripe Checkout** — paiement direct, acompte 50 % par défaut (configurable).
+9. **Lien token stable** envoyé par Postmark (pas de compte Devise guest).
+10. **Confirmation Stay — validation manuelle par Malau (Q5 tranchée B, PAS d'auto-confirm).** `/reservation` + paiement Stripe crée une **demande / draft** (`Stay` `pending`) que Malau confirme manuellement ; le Stay ne passe **jamais** automatiquement en `confirmed`. Dispo verte + paiement OK ne déclenchent pas d'auto-réservation. *(Ceci écarte sciemment la posture auto-réservation de l'ISA — voir Journal de décisions + DRIFT-4.)*
 
-### 3.2 — `Stay` (StayComposite : tête d'un graphe d'items réservables)
-- Nouveau modèle `Stay`, `belongs_to :customer`, agrège des **items réservables polymorphes** (`stay_items`).
-- Tranche 1 : seuls `Booking` (hébergement) et `SpaceBooking` (salle) existent comme items. Les 6 autres types (`ActivityBooking`, `EventBooking`, `MealOrder`, `BakeryOrder`, `BarCharge`, `GroceryCharge`) sont **hors-scope** — l'association polymorphe doit juste être extensible sans refonte.
-- `soft_deletion` + `PaperTrail`.
-- Mécanique **Lodging composé** (Grand-Duc = Hulotte + Chevêche) : self-referential `composed_of_lodgings` sur `Lodging` + logique de blocage de disponibilité (réserver Grand-Duc bloque H + C, et inversement).
-- Endpoint API read-only `GET /api/v1/stays/:id` (+ index) via jbuilder + entrée OpenAPI.
+### 3.2 Feature B — PricingModel minimal
 
-### 3.3 — `LegacyBookingMigration` (script rake idempotent + dry-run + rapport)
-- Audit pré-migration → rake task `claudy:migrate:legacy_bookings_to_stays` → rapport post-migration.
-- Fenêtre = **tout l'historique** (décidé) : actifs + passés + annulés + soft-deleted ; les bookings **sans email exploitable** (vide, malformé, ou masqué OTA `*@guest.*`) sont **rattachés au Customer fourre-tout** `client@les4sources.be` (upsert idempotent), **pas skippés** (décision verrouillée §11.2).
-- Pour chaque Booking/SpaceBooking : déterminer l'email exploitable → si exploitable, upsert `Customer` par email lowercase ; sinon, upsert le `Customer` fourre-tout `client@les4sources.be` → crée un `Stay` si pas déjà migré (marqueur `legacy_*_id` idempotent) → attache le booking comme `stay_item`.
-- **Customer fourre-tout** créé/upserté par la migration : `email = client@les4sources.be`, `customer_type = individual`, `language = fr`, `first_name = "Client"`, `last_name = "Les 4 Sources"`, `notes` marquant son rôle (« fourre-tout migration — re-ventiler via fusion de doublons »). Re-ventilation ultérieure des Stays par le Pôle Accueil **via le mécanisme de fusion de doublons** (§3.1).
-- Préservation PaperTrail **et** PublicActivity (les deux sont actifs sur Booking/SpaceBooking) ; ne supprime aucune version existante.
-- Feature transitoire (archivée après bascule).
+Moteur scopé tranche 2, sous-ensemble du `PricingModel` complet de l'ISA. Structures de prix supportées (uniquement celles observées chez Malau, nécessaires au B2C) :
 
-## 4. Hors-périmètre (anti-dérive) — repris du brief, sans exception
+| Structure | Items |
+|-----------|-------|
+| forfait/nuit | Hulotte, Chevêche, Grand-Duc, Tiny (si présent) |
+| forfait/jour ou ½-journée | Grande Salle, Petite Salle, Cuisine pro |
+| €/pers/nuit | camping tente, hamac |
+| forfait/nuit/véhicule | van |
+| €/pers | repas (12-35 €/pers selon type), buffet Petite Salle, pre-order épicerie |
+| forfait + €/pers | Pizza Party (40 € allumage + 7 €/pers patons) |
 
-- **Pas de forms natifs Claudy** (`/reservation` B2C, `/sejour-entreprise` B2B) — tranche 2.
-- **Pas de PricingModel polymorphe** — tranche ultérieure (tracé horizon dans l'ISA).
-- **Pas de packs B2B prédéfinis** — découle du PricingModel.
-- **Pas d'AutoAcknowledgement / Faq / B2bCrm / PostStayNps / PublicApi / GuestMobileApp / Kiosk / Reporting / BudgetTracking / BarAndGrocery / Bakery (TDV) / Activities / Events / ScopedExternalAccess** — toutes horizon, tranches dédiées.
-- **Pas de portail self-service client** (consultation/factures/préférences via lien token) — tranche future, même si `Customer` est conçu pour le supporter.
-- **Pas de refonte UI** — l'admin Pôle Accueil garde Hotwire/Slim existant ; on n'étend que les vues des nouveaux modèles.
-- **Pas de migration vers Rails 8** — on reste Rails 7 + Ruby 3.1.2.
-- **Pas de write API** (`Api::V1` reste read-only ; ajout des seuls nouveaux modèles en GET — ISC-14).
-- **Pas de cutover définitif des anciens controllers Booking/SpaceBooking** dans cette tranche — coexistence durant la transition ; le retrait de l'ancien chemin est une décision ultérieure de Michael après période d'observation.
-- **Pas de déduplication automatique en masse** au-delà du merge manuel par le Pôle Accueil (la détection automatique de doublons fins type OTA n'est pas livrée — décision verrouillée §11.3). Inclut la re-ventilation des Stays rattachés au Customer fourre-tout `client@les4sources.be` : elle se fait **manuellement** via la fusion de doublons, pas automatiquement.
+- **Tous prix TVAC**, affichés tels quels.
+- **Moteur dégressif HYBRIDE (Q3 tranchée — hybride).** Deux mécanismes combinés, paramétrés **par hébergement** :
+  1. **Formule fermée par défaut** : `prix = prix_nuit_1 + (n − 1) × prix_nuit_suivante`. Couvre automatiquement toute durée (4, 5, 6 nuits… sans table).
+  2. **Forfaits nommés qui écrasent (override)** la formule pour certaines durées précises.
+  - **Barème de référence Grand-Duc (à coder comme cas de test) :** `prix_nuit_1 = 750 €`, `prix_nuit_suivante = 600 €` ⇒ formule donne 1 350 € (2n), 1 950 € (3n), 2 550 € (4n)… **Forfait nommé « semaine » = 2 410 €** qui écrase la formule pour 7 nuits.
+- **Politique chien standardisée (Q2 tranchée) : supplément 50 € / chien / séjour.** Le flow facture automatiquement **un seul chien** (50 €) ; multi-chiens = hors flow, traité manuellement par Malau (pas de calcul auto au-delà d'un chien).
+- **Acompte 50 %** par défaut sur le total.
+- **API** : `PricingModel.quote(stay_draft)` → breakdown ligne par ligne TVAC + total + acompte. Le breakdown alimente l'UI temps-réel **et** le récap email post-réservation (source unique).
+
+### 3.3 Surfaces transverses
+
+- **Vue admin Pôle Accueil** — index des Stays récents, filtrage par `Stay#source` (`reservation` vs `tally_legacy` vs `ota` vs `manual`) pour observer la transition. La colonne `source` est **ajoutée par migration T2** (Q9, voir §6).
+- **Réutilisations tranche 1 :** infra Stripe + webhooks (`webhooks/stripe_hooks`, `StripeEvent`), upsert Customer par email, `composed_of_lodgings` sur `Lodging`.
+
+## 4. Hors-périmètre (anti-dérive)
+
+- ❌ Form B2B (`/sejour-entreprise`) — tranche 3.
+- ❌ Packs B2B prédéfinis (les 6 packs ISA) — tranche 3.
+- ❌ Tarif horaire collectif P5 dans le pricing — activités hors panier en T2.
+- ❌ Intégration Activities / Events au panier (`Experience`/`Service`/`Event` existent, attachés à Stay plus tard).
+- ❌ Tranches de groupe dégressives (5-10p / 11-20p / 21-30p) — tranche ultérieure.
+- ❌ Marges B2C/B2B différenciées — B2B ultérieur.
+- ❌ AutoAcknowledgement / Faq / B2bCrm / PostStayNps / PublicApi / GuestMobileApp / Kiosk / Reporting / BudgetTracking / BarAndGrocery / Bakery / ScopedExternalAccess — horizon, tranches dédiées.
+- ❌ Write API guest (`Api::Guest`) — tranche ultérieure.
+- ❌ Migration Rails 8 — on reste Rails 7 / Ruby 3.1.2.
+- ❌ **i18n / sélecteur de langue (Q7) — FR-only en T2.** `/reservation` est en français uniquement ; pas de sélecteur FR/NL/EN cette tranche (le champ `Customer#language` existe mais n'est pas exposé dans le flow).
+- ❌ **Politique d'annulation/remboursement affichée dans le flow (Q8) — NON en T2.** Aucune politique standardisée n'est affichée dans `/reservation` ; les annulations restent traitées au cas par cas, hors flow.
+- ❌ **Blocage OTA double-booking (Q6) — NON en T2.** On ne bloque pas côté Claudy les dates prises par les OTAs ; le blocage de dispo ne joue qu'entre Stays natifs Claudy. La sync OTA reste une tranche dédiée ultérieure.
+- ❌ **Pre-order épicerie/boulangerie intégré (write API TDV) — NON (Q4).** Le pre-order est un **simple lien externe** post-réservation, pas une commande passée à Tranches de Vie via API.
+- ❌ Refonte de la booking flow `:public` actuelle — coexistence : ancien flow token-based actif pour les Stays existants ; `/reservation` est un funnel parallèle.
+- ❌ Dépréciation de Tally côté B2C — reste actif pendant la transition (bascule visée : 4-8 semaines de prod sans incident majeur).
 
 ## 5. Pages & parcours (sitemap)
 
-Surfaces admin nouvelles (authentifiées Devise, hors `namespace :public` et `:api`) :
+**Public (bypass Devise, comme `namespace :public`)**
+- `GET /reservation` — étape 1 : sélecteur info vs transaction.
+- `/reservation/*` — étapes Turbo : dates → hébergement → camping/options → salle(s) → repas → pre-order → coordonnées → Stripe Checkout.
+- Retour Stripe (succès / échec) → confirmation ou reprise.
+- Lien token stable (depuis email Postmark) → consultation read-only du Stay, sans Devise.
 
-- `GET /customers` — index recherchable (email / nom), paginé. Hotwire/Slim.
-- `GET /customers/:id` — show : coordonnées, `customer_type`, historique des stays (à venir / passés), paiements agrégés (via stays), notes internes.
-- `GET /customers/:id/edit` + `PATCH /customers/:id` — édition coordonnées + `notes` (rich text).
-- **Fusion de doublons** — parcours : sélection de 2 Customers (source + cible) → écran de confirmation listant ce qui sera transféré (stays, human link, stripe_customer_id) → exécution → source soft-deleted, cible enrichie, entrée PaperTrail. (Mécanique UI précise à arbitrer DA/Constructeur ; le PRD fixe le comportement, pas le pixel.)
+**Interne (Devise)**
+- Vue admin Pôle Accueil — index Stays récents + filtre `source`.
 
-Surfaces API nouvelles (read-only, Bearer) :
-
-- `GET /api/v1/customers` + `GET /api/v1/customers/:id`
-- `GET /api/v1/stays` + `GET /api/v1/stays/:id`
-
-Aucune page publique (`namespace :public`) nouvelle. Calendrier inchangé.
+**Inchangé (coexistence)**
+- `namespace :public` actuel (Stays Tally legacy), `webhooks/stripe_hooks`, calendrier `pages#calendar`, `namespace :api { :v1 }`.
 
 ## 6. Modèle de données (pressenti, Rails)
 
-> Tous les choix de modélisation ci-dessous sont **validés** (décisions §11, hypothèses §9 confirmées le 2026-05-28). Plus aucun `[HYPOTHÈSE]` ouvert.
+> Le Constructeur confirme l'état réel des modèles tranche 1 à l'ouverture du code. Conventions imposées : décorateurs Draper, services par ressource (`app/services/<resource>/`), ViewComponent + Lookbook pour l'UI réutilisable, Slim, soft_deletion + PaperTrail sur tout modèle auditable.
 
-### `customers`
-| champ | type | notes |
-|---|---|---|
-| `id` | bigint PK | |
-| `first_name` | string | |
-| `last_name` | string | |
-| `email` | **citext** | **unique** (index unique), normalisé lowercase + trim, validation format RFC |
-| `phone` | string | normalisé E.164 |
-| `customer_type` | string/enum | `individual` \| `organization` |
-| `organization_name` | string | requis si `organization` |
-| `vat_number` | string | optionnel |
-| `peppol_id` | string | optionnel |
-| `address_line`, `address_zip`, `address_city`, `address_country` | string | optionnels (requis pour facture, tranche future) |
-| `language` | string/enum | `fr` \| `nl` \| `en` (défaut `fr` — décision §11.8 ; pas de détection auto) |
-| `stripe_customer_id` | string | réutilisable d'un séjour à l'autre |
-| `notes` | rich text (ActionText) | interne Pôle Accueil + collectif uniquement (décision §11.7) ; jamais client/API publique |
-| `marketing_consent` | boolean | défaut false (RGPD) |
-| `nps_eligible` | boolean | défaut false |
-| `human_id` | bigint FK nullable | `belongs_to :human, optional: true` |
-| `deleted_at` | datetime | soft_deletion |
-
-- `has_many :stays` ; `has_many :payments, through: :stays` ; `belongs_to :human, optional: true`.
-- `has_paper_trail` + `has_soft_deletion default_scope: true`.
-- `Customer.normalize_email(raw)` — point unique de normalisation, réutilisé par la migration.
-
-> **Customer fourre-tout (décision §11.2).** Un Customer conventionnel unique d'email `client@les4sources.be` recueille tous les bookings legacy **sans email exploitable** (vide, malformé, ou masqué OTA `*@guest.*`). Attributs imposés : `customer_type = individual`, `language = fr`, `first_name = "Client"`, `last_name = "Les 4 Sources"`, `notes` marquant son rôle. Il se distingue d'un vrai client par son email conventionnel (pivot pour le requêter) et par sa note. Upsert idempotent comme les autres Customers (la migration ne le crée qu'une fois). Re-ventilation de ses Stays vers de vrais Customers = fusion de doublons manuelle (§3.1), jamais auto.
-
-### `stays`
-| champ | type | notes |
-|---|---|---|
-| `id` | bigint PK | |
-| `customer_id` | bigint FK | `belongs_to :customer` |
-| `arrival_date` | date | min des dates des items |
-| `departure_date` | date | max des dates des items |
-| `status` | string/enum | dérivé/agrégé du statut des items (valeurs à aligner sur Booking : `pending`/`confirmed`/`declined`/`canceled`) |
-| `total_amount_cents` | integer | somme des items (monetize) |
-| `notes` | text | |
-| `legacy_origin` | string nullable | marqueur de provenance migration (audit) |
-| `deleted_at` | datetime | soft_deletion |
-
-- `has_many :stay_items` (polymorphe : `bookable_type` / `bookable_id` → `Booking`, `SpaceBooking`, …).
-- `has_many :payments, through: :stay_items` (dérivé en lecture — décision §11.6, voir note ci-dessous).
-- `has_paper_trail` + `has_soft_deletion default_scope: true`.
-
-### `stay_items` (table de jointure polymorphe)
-| champ | type | notes |
-|---|---|---|
-| `id` | bigint PK | |
-| `stay_id` | bigint FK | |
-| `bookable_type` | string | `Booking` \| `SpaceBooking` (extensible) |
-| `bookable_id` | bigint | + index unique `(stay_id, bookable_type, bookable_id)` |
-| `deleted_at` | datetime | soft_deletion |
-
-> **Note paiements (contrainte dure relevée dans le code).** `Payment.booking_id` est **NOT NULL** et `Payment belongs_to :booking`. `SpaceBooking` ne porte pas de `Payment` (montants stockés en colonnes `*_amount_cents`). Donc `Customer.payments through: :stays` ne peut PAS s'appuyer sur une FK `payment.stay_id` sans migration de schéma de `Payment` — hors-scope. **Reco tranche 1 :** dériver `Customer#payments` / `Stay#payments` via la chaîne `stay → stay_items (Booking) → booking.payments` (lecture), sans toucher la table `payments`. Le brief écrit `has_many :payments, through: :stays` ; on l'honore au niveau de l'API lue, pas au niveau d'une nouvelle FK. **Décision verrouillée §11.6 : OUI** (dérivation lecture, schéma `payments` intact, `Payment.booking_id` reste NOT NULL).
-
-### Champs ajoutés aux modèles existants (additifs, non destructifs)
-- `Lodging` : association self-referential `composed_of_lodgings` (table de jointure `lodging_compositions` : `composite_lodging_id`, `component_lodging_id`) → Grand-Duc.composed_of = [Hulotte, Chevêche]. **Aucune** colonne supprimée.
-- `Booking` / `SpaceBooking` : `has_one :stay_item` + `has_one :stay, through: :stay_item` (lecture inverse). Pas de FK directe imposée pour préserver la coexistence.
+- **`Stay`** (tranche 1) — head du séjour-composite. Champs touchés/attendus en T2 :
+  - `status` (au moins `pending` / `confirmed` — `[HYPOTHÈSE]` à confirmer). **Note Q5 :** un Stay créé via `/reservation` reste `pending` jusqu'à validation manuelle Malau, même paiement réussi.
+  - **`source` (string) — NOUVELLE COLONNE, ajoutée par MIGRATION T2 (Q9).** Le schema actuel (`db/schema.rb`) confirme que la table `stays` **n'a PAS** de colonne `source` aujourd'hui. Valeurs admises : `reservation` / `tally_legacy` / `ota` / `manual`. **Défaut = `reservation`** pour toute résa créée via `/reservation`.
+  - ⚠️ **`source` est DISTINCT de `legacy_origin`.** `legacy_origin` existe déjà sur `stays` (clé d'import/dédup de la migration legacy, **index unique**) et ne doit **ni être confondu avec `source` ni réutilisé pour l'attribution de canal**. Le Constructeur crée bien une colonne `source` neuve.
+  - token de consultation stable.
+- **`StayItem`** (tranche 1) — items du panier (hébergement, camping, salle, repas, pre-order) avec prix-ligne TVAC.
+- **`Customer`** (tranche 1) — upsert par email lowercase ; `has_many :stays`.
+- **`Lodging`** (tranche 1) — `composed_of_lodgings` (Grand-Duc = Hulotte + Chevêche), `available_between?`.
+- **`Payment` / `StripeEvent`** (existant) — réutilisés pour le paiement + webhook.
+- **`PricingModel`** — objet de calcul (service, pas forcément table) : `quote(stay_draft)` → breakdown + total + acompte. Barème dégressif + supplément chien paramétrés (pas hardcodés en vue).
 
 ## 7. Intégrations & contraintes
 
-- **Paiement Stripe** — inchangé. `Payment` non modifié (schéma préservé). `stripe_customer_id` ajouté sur `Customer` sans recâbler le flow Stripe existant.
-- **Email Postmark** — inchangé (aucun nouveau mail dans cette tranche).
-- **Auth** — Devise + role models pour l'admin ; Bearer `AGENT_API_TOKEN` pour l'API. Pas de Pundit/CanCan ; contrôles en `before_action` (convention repo).
-- **API read-only** — nouveaux endpoints en GET uniquement (P1 + ISC-14). OpenAPI `config/openapi/v1.yaml` mis à jour. Jamais d'exposition `stripe_payment_intent_id` / `stripe_checkout_session_id` (ISC-9). Soft-deleted absents des réponses (ISC-8).
-- **Audit (P2, contrainte forte)** — Booking/SpaceBooking ont **DEUX** systèmes de traçabilité actifs : `has_paper_trail` **et** `PublicActivity::Model` (`tracked owner:`). La migration doit préserver les deux historiques. Nouveaux modèles : PaperTrail (PublicActivity non requis).
-- **Coexistence sans interruption** — Claudy est en prod active, pas de fenêtre de maintenance. Migrations DB additives (create_table, add_column, add FK nullable) — aucune colonne/table retirée. Anciens controllers Booking/SpaceBooking fonctionnels pendant toute la tranche.
-- **Tests (opportunité)** — le repo n'a **pas** de suite de tests aujourd'hui (RSpec présent, specs `models/` + `components/` minimaux). Tout le **nouveau** code (Customer, Stay, StayItem, composition Lodging, migration rake) DOIT être couvert par model specs + request specs (sous `spec/requests/api/v1/`). Pas d'obligation de tester l'existant.
-- **Déploiement** — `git push main` → Hatchbox déploie + `db:migrate`. Le post-migration check doit être vert.
+- **Paiement :** Stripe Checkout + webhook `webhooks/stripe_hooks` (infra existante réutilisée). Acompte 50 % configurable. Test mode pour le system spec happy-path.
+- **Email :** Postmark — lien token stable de consultation.
+- **Auth :** Devise + `Role`/`HumanRole` (pas de Pundit/CanCan, contrôles `before_action`). `/reservation` est public (bypass Devise). Vue admin protégée Devise.
+- **Persistance auditable :** soft_deletion + PaperTrail, **aucun hard-delete** (ISA P2 / ISC-15 / ISC-17).
+- **Lodging composé :** réserver Grand-Duc bloque Hulotte + Chevêche, et inversement.
+- **Calendrier +18 mois** pour Hulotte, Chevêche, Grand-Duc.
+- **OTA :** Claudy = source de vérité, OTAs en aval (ISA Constraint). **T2 ne bloque PAS les dates OTA (Q6 tranchée NON)** — le blocage de dispo ne joue qu'entre Stays natifs Claudy.
+- **i18n :** `/reservation` est **FR-only en T2 (Q7)** — pas de sélecteur de langue.
+- **Déploiement :** Hatchbox sans staging — tranche déployable sans interruption, sans régression sur Stays tranche 1 / Tally legacy.
+- **Hotwire-only :** `package.json` sans `react` / `vue` / `@inertiajs/*` (ISC-12).
 
 ## 8. Critères d'acceptation (testables par le Vérificateur)
 
-> Atomiques, vérifiables individuellement, mappables à un model/request spec ou une probe shell.
+> Un par ligne, atomique, vérifiable par une action concrète. Numérotation `AC-T2-NN` locale à la tranche 2. Chaque ligne dit comment l'ouvrir/le tester. Toutes les décisions Q1-Q9 sont **figées** (plus de blocage) — voir §11.
 
-### A. Modèle `Customer`
-- [ ] AC-1: Une migration crée la table `customers` avec une colonne `email` de type **citext** et un **index unique** sur `email` (`\d customers` montre `citext` + `UNIQUE`).
-- [ ] AC-2: `Customer.create!(email: "  Foo@Bar.COM ")` persiste `email == "foo@bar.com"` (normalisation lowercase + trim).
-- [ ] AC-3: Créer deux Customers avec le même email (casse/espaces différents) lève une erreur de validation d'unicité — le second n'est pas persisté.
-- [ ] AC-4: Un email au format invalide (`"pas-un-email"`) échoue la validation d'un Customer créé directement (hors migration). En migration, un email invalide/vide/OTA-masqué n'échoue pas : le booking est routé vers le Customer fourre-tout `client@les4sources.be` (cohérent avec AC-37 et AC-47).
-- [ ] AC-5: `customer_type` n'accepte que `individual` ou `organization` ; une autre valeur échoue.
-- [ ] AC-6: Un `Customer` `organization` sans `organization_name` échoue la validation ; un `individual` sans `organization_name` passe.
-- [ ] AC-7: `Customer` a `has_many :stays`, `belongs_to :human (optional)` ; `customer.human` peut être nil sans erreur.
-- [ ] AC-8: Soft-delete d'un Customer (`soft_delete!`) le retire du default scope (`Customer.all` ne le renvoie pas) sans suppression physique (`Customer.unscoped` le retrouve) et crée une version PaperTrail.
-- [ ] AC-9: Une modification d'un champ Customer crée une version PaperTrail (`customer.versions.count` augmente de 1).
+### Funnel `/reservation` — accessibilité & navigation
+- [ ] AC-T2-01 : `GET /reservation` → `200` pour un visiteur **non authentifié Devise** (route publique). Vérif : `curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/reservation` → 200, sans cookie de session.
+- [ ] AC-T2-02 : Page 1 présente le sélecteur « infos » vs « réserver » ; « réserver » mène à l'étape dates par navigation Turbo (pas de full reload). Vérif : Interceptor — ouvrir `/reservation`, cliquer « réserver », transition d'étape sans rechargement complet.
+- [ ] AC-T2-03 : Funnel full Hotwire — `cat package.json | jq '.dependencies + .devDependencies | keys'` ne contient ni `react`, ni `vue`, ni `@inertiajs/*` (ISC-12 préservé). Vérif : commande jq → 0 match.
 
-### B. Vues admin Customer (Hotwire/Slim)
-- [ ] AC-10: `GET /customers` non authentifié redirige vers `/users/sign_in` (ISC-3) ; authentifié rend 200 avec la liste.
-- [ ] AC-11: La recherche `/customers?q=<fragment email ou nom>` retourne les Customers correspondants (insensible à la casse).
-- [ ] AC-12: `GET /customers/:id` affiche l'historique des stays du client (à venir + passés distincts) et ses notes internes.
-- [ ] AC-13: `PATCH /customers/:id` met à jour les `notes` (rich text) et persiste ; une version PaperTrail est créée.
-- [ ] AC-14: Le `package.json` ne contient ni `react`, ni `vue`, ni `@inertiajs/*` après l'ajout de ces vues (ISC-12) — `jq '.dependencies|keys'` vide de ces clés.
+### Calendrier & disponibilité
+- [ ] AC-T2-04 : L'étape dates affiche un calendrier atteignable jusqu'à **≥ +18 mois** pour Hulotte, Chevêche, Grand-Duc. Vérif : Interceptor — naviguer jusqu'au mois M+18 ; il rend.
+- [ ] AC-T2-05 : Les jours occupés par un Stay/Booking existant apparaissent indisponibles, cohérents avec `Lodging#available_between?`. Vérif : créer un Stay confirmé en fixture, ouvrir `/reservation`, la plage est marquée occupée pour le gîte.
+- [ ] AC-T2-06 : Réserver le Grand-Duc marque Hulotte ET Chevêche occupées sur la plage (et inversement). Vérif : request/system spec sur `composed_of_lodgings` ; ou Interceptor (Hulotte occupée → Grand-Duc indispo).
 
-### C. Fusion de doublons
-- [ ] AC-15: Fusionner Customer source S dans cible C ré-affecte **tous** les `stays` de S vers C (aucun stay orphelin, `C.stays` inclut désormais ceux de S).
-- [ ] AC-16: Après fusion, S est soft-deleted (absent du default scope, présent en `unscoped`), C est intact/enrichi.
-- [ ] AC-17: La fusion crée une trace PaperTrail sur S (soft-delete) et sur les stays réaffectés (changement de `customer_id`).
-- [ ] AC-18: Le `human_id` et le `stripe_customer_id` sont conservés sur la cible selon une règle déterministe documentée (cible prioritaire ; source utilisée seulement si cible vide) — vérifiable sur un cas où seule la source porte la valeur.
-- [ ] AC-50: **Re-ventilation depuis le fourre-tout** — sélectionner un Stay rattaché au Customer fourre-tout `client@les4sources.be` et le ré-affecter vers un vrai Customer passe par **le même mécanisme de fusion/merge** (pas de chemin spécial) : le Stay est transféré, tracé PaperTrail (changement de `customer_id`), et le fourre-tout reste actif (non soft-deleted) tant qu'il porte encore d'autres Stays.
-- [ ] AC-52: **Sélection de séjours sur la page client** — la page show d'un Customer (en particulier le fourre-tout) liste ses séjours avec une **case à cocher par séjour** ; un bouton « Assigner la sélection à un client » ouvre une **modale**. Soumettre sans aucun séjour coché est sans effet (message d'info), pas une erreur.
-- [ ] AC-53: **Modale de re-ventilation — client existant** — la modale permet de **rechercher et choisir un client existant** comme cible ; valider déplace **uniquement les séjours cochés** vers ce client via `Customers::MergeService.run(stay_ids:)` (le fourre-tout reste actif si d'autres séjours subsistent — AC-50).
-- [ ] AC-54: **Modale de re-ventilation — nouveau client** — la modale permet de **créer un nouveau client à la volée** (email requis + nom/type) ; à validation, le client est créé puis les séjours cochés lui sont transférés via le même `MergeService`. Un email invalide/déjà pris **n'effectue aucun transfert** et ré-affiche l'erreur de validation (atomique).
+### Catalogue & composition
+- [ ] AC-T2-07 : Chaque option hébergement affiche nom, capacité, description courte, prix-soir indicatif ; le Grand-Duc porte « = Hulotte + Chevêche réservées ensemble ». Vérif : Interceptor — libellé visible sur la carte Grand-Duc.
+- [ ] AC-T2-08 : Composition multi-items end-to-end : dates → hébergement → camping/options → salle(s) → repas → pre-order pain → coordonnées ; chaque ajout apparaît au panier. Vérif : system spec happy-path ajoutant ≥ 1 item par catégorie disponible.
+- [ ] AC-T2-09 : Champ animal/chien obligatoire — soumettre coordonnées sans le renseigner échoue avec message de validation. Vérif : request/system spec — POST sans le champ → erreur ; avec → passe.
+- [ ] AC-T2-09b : Le flow `/reservation` ne facture/ne gère automatiquement qu'**UN SEUL chien** (multi-chiens hors flow, traité manuellement par Malau, Q2). Vérif : system/request spec — sélectionner « plusieurs chiens » ne produit pas un supplément auto > 1× ; le flow oriente vers un traitement manuel (message/route) au lieu de calculer N × 50 €.
 
-### D. Modèle `Stay` + StayItem + Lodging composé
-- [ ] AC-19: Une migration crée `stays` (FK `customer_id`) et `stay_items` (polymorphe `bookable_type`/`bookable_id`) avec index unique `(stay_id, bookable_type, bookable_id)`.
-- [ ] AC-20: Un `Stay` peut agréger un `Booking` **et** un `SpaceBooking` comme items ; `stay.stay_items.count == 2` et `stay.bookables` renvoie les deux objets.
-- [ ] AC-21: `stay.arrival_date` / `stay.departure_date` reflètent le min/max des dates des items agrégés.
-- [ ] AC-22: `Stay` + `StayItem` portent `soft_deletion` + `PaperTrail` (soft-delete retire du scope, crée une version).
-- [ ] AC-23: `Lodging` expose `composed_of_lodgings` ; `Lodging.find_by(name:"Le Grand-Duc").composed_of_lodgings` renvoie La Hulotte + La Chevêche (seedé/migré).
-- [ ] AC-24: Réserver (confirmé) le Grand-Duc sur une fenêtre rend Hulotte ET Chevêche **indisponibles** sur cette même fenêtre (`Lodging#available_between?` retourne false pour H et C). Comportement **calculé à la volée** (décision §11.4), sans blocage stocké ni réservation dupliquée.
-- [ ] AC-25: Réserver (confirmé) la Hulotte rend le Grand-Duc indisponible sur la même fenêtre (dérivation inverse calculée : Grand-Duc dispo ⟺ Hulotte ET Chevêche libres).
-- [ ] AC-26: La disponibilité d'un lodging **non composé** (ex. Tiny) est inchangée par rapport au comportement actuel (non-régression : même résultat avant/après sur un échantillon).
-- [ ] AC-51: Les **requêtes de disponibilité existantes** (calendrier + `available_between?`) intègrent la composition Grand-Duc/Hulotte/Chevêche **par calcul à la volée**, sans colonne de blocage stockée ni réservation dupliquée (décision §11.4) : un grep confirme l'absence de réservation miroir créée pour le composite, et la dispo de Grand-Duc se dérive en lecture de l'état de Hulotte + Chevêche.
+### Devis temps-réel & pricing
+- [ ] AC-T2-10 : Le total TVAC du panier se met à jour à chaque modif **sans rechargement complet** (Turbo Frames/Streams). Vérif : Interceptor — ajouter un item, le total change sans GET document full-page (network).
+- [ ] AC-T2-11 : Le devis affiche « pas de TVA en plus » (ou copy validé) près du total. Vérif : Interceptor — chaîne présente dans le DOM de l'étape panier.
+- [ ] AC-T2-12 : `PricingModel.quote(stay_draft)` retourne breakdown ligne par ligne (label + montant TVAC), `total` TVAC, `deposit` (= 50 % par défaut). Vérif : model spec sur la structure de retour.
+- [ ] AC-T2-13 : `PricingModel.quote` calcule correctement chaque structure de prix supportée (forfait/nuit, forfait/jour-ou-½journée, €/pers/nuit, forfait/nuit/véhicule, €/pers, forfait+€/pers). Vérif : model spec — un exemple par structure, montant attendu en dur depuis le barème documenté.
+- [ ] AC-T2-14 : `PricingModel.quote` applique la **formule fermée dégressive par défaut** `prix = prix_nuit_1 + (n − 1) × prix_nuit_suivante`, paramétrée par hébergement (Q3). Vérif : model spec — Grand-Duc (`prix_nuit_1 = 750 €`, `prix_nuit_suivante = 600 €`) → **2n = 1 350 €**, **3n = 1 950 €**, **4n = 2 550 €**, **5n = 3 150 €**, **6n = 3 750 €** (montants en dur).
+- [ ] AC-T2-14b : Un **forfait nommé écrase (override)** la formule pour la durée concernée (Q3 hybride). Vérif : model spec — Grand-Duc 7 nuits → **forfait « semaine » = 2 410 €** (et NON le résultat de la formule pour 7n), tandis que 4/5/6 nuits restent calculées par la formule.
+- [ ] AC-T2-15 : `PricingModel.quote` applique le supplément chien **50 € / chien / séjour (Q2)** quand le champ animal indique un chien, **plafonné à un seul chien** dans le flow auto. Vérif : model spec — `quote(avec 1 chien) == quote(sans chien) + 50 €` ; `quote(avec 2 chiens)` ne facture pas automatiquement 100 € (multi-chiens hors flow auto, cf. AC-T2-09b).
+- [ ] AC-T2-16 : L'acompte affiché et facturé Stripe = 50 % du total TVAC, valeur configurable (pas de littéral non paramétré en vue). Vérif : model/service spec sur l'acompte + grep absence de `0.5` hardcodé en vue.
+- [ ] AC-T2-17 : Le breakdown de `PricingModel.quote` est la **même source** que le panier UI et le récap email. Vérif : service/request spec — le breakdown du quote correspond au contenu de l'email post-réservation.
 
-### E. API read-only
-- [ ] AC-27: `GET /api/v1/customers/:id` sans Bearer → 401 ; avec Bearer valide → 200 + JSON du customer (ISC-6).
-- [ ] AC-28: `GET /api/v1/stays/:id` avec Bearer valide → 200 + JSON du stay incluant ses items et leurs types.
-- [ ] AC-29: Les réponses API customers/stays n'exposent jamais `stripe_payment_intent_id` ni `stripe_checkout_session_id` (`grep -ri` sur `app/views/api/v1/customers app/views/api/v1/stays` → vide) (ISC-9).
-- [ ] AC-30: Un Customer / Stay soft-deleted est absent des réponses API (`/api/v1/customers` et `:id` → 404/absent) (ISC-8).
-- [ ] AC-31: Toute écriture (`POST /api/v1/customers`, `POST /api/v1/stays`) → 404/405 (read-only, ISC-14).
-- [ ] AC-32: `config/openapi/v1.yaml` contient les chemins `/customers/{id}` et `/stays/{id}` (P1 / ISC-16).
+### Customer, Stay, paiement
+- [ ] AC-T2-18 : À la soumission, `Customer` upserté par email (lowercase) : email existant → Stay rattaché ; email nouveau → Customer créé. Vérif : request spec — deux soumissions même email = 1 Customer, 2 Stays.
+- [ ] AC-T2-19 : **Validation manuelle Malau, PAS d'auto-confirm (Q5).** Paiement Stripe réussi (test mode) sur un Stay `/reservation` → le Stay reste `pending` (demande/draft à valider), il ne passe **jamais** automatiquement en `confirmed`. Le passage à `confirmed` n'a lieu que par une action interne explicite de Malau. Vérif : system/request spec test mode + webhook simulé — après paiement OK, `Stay#status == "pending"` ; une action admin dédiée le passe à `confirmed`.
+- [ ] AC-T2-20 : Webhook Stripe `/webhooks/stripe_hooks` persiste un `StripeEvent` et met à jour le statut Stay/Payment pour un Stay créé via `/reservation`. Vérif : request spec POST webhook signé → `StripeEvent` créé + statut mis à jour (préserve ISC-4).
+- [ ] AC-T2-21 : Après confirmation, email Postmark avec **lien token stable** envoyé au Customer ; ouvrir le lien sans Devise affiche le récap du Stay. Vérif : request/system spec — mail enqueued avec lien token ; GET du lien → 200 + récap, sans session Devise.
 
-### F. Migration legacy (idempotence + zéro perte)
-- [ ] AC-33: `rake claudy:migrate:legacy_bookings_to_stays DRY_RUN=true` (ou flag équivalent) n'écrit rien en base et imprime le rapport prévisionnel.
-- [ ] AC-34: Après migration réelle, **chaque** `Booking` et `SpaceBooking` (incluant passés, annulés, soft-deleted, **et ceux sans email exploitable**) est rattaché à exactement un `Stay` via un `StayItem` — couverture 100 %, aucun booking orphelin.
-- [ ] AC-35: Pour chaque email unique (lowercase) il existe exactement un `Customer` ; deux bookings au même email (casse/espace différents) pointent vers le même Customer.
-- [ ] AC-36: **Idempotence** — relancer la tâche une 2ᵉ fois ne crée aucun nouveau `Customer`, `Stay` ni `StayItem` (compteurs identiques avant/après le 2ᵉ run).
-- [ ] AC-37: Les bookings **sans email exploitable** (vide, malformé, ou masqué OTA `*@guest.*`) sont migrés et rattachés au Customer fourre-tout `client@les4sources.be` ; ils sont comptés dans le rapport (catégorie `n_rattaches_fourretout`). Aucun booking n'est skippé.
-- [ ] AC-38: Aucune perte historique — pour un échantillon de bookings, dates / montants / statuts / paiements restent identiques après migration (le Booking source est inchangé, seulement rattaché).
-- [ ] AC-39: PaperTrail préservé — `booking.versions` existant avant migration est toujours présent après ; **PublicActivity** (`booking.activities` ou équivalent) également préservé.
-- [ ] AC-40: La création du `Stay`-parent par la migration est tracée PaperTrail attribuée au whodunnit `"system:migration"` (décision §11.5) — `stay.versions.last.whodunnit == "system:migration"`.
-- [ ] AC-41: Le rapport post-migration ventile : `n_stays_créés`, `n_customers_créés`, `n_customers_upsertés`, et par catégorie booking `n_actifs / n_passés / n_annulés / n_soft_deleted / n_rattaches_fourretout`.
-- [ ] AC-47: Après migration, il existe **exactement un** Customer d'email `client@les4sources.be` ; ses attributs sont `customer_type == "individual"`, `language == "fr"`, `first_name == "Client"`, `last_name == "Les 4 Sources"`, et ses `notes` mentionnent son rôle de fourre-tout migration (décision §11.2).
-- [ ] AC-48: **Idempotence du fourre-tout** — relancer la migration ne crée pas de second Customer `client@les4sources.be` (compteur identique) et ne duplique aucun StayItem déjà rattaché au fourre-tout.
-- [ ] AC-49: Tous les Stays issus de bookings sans email exploitable pointent vers le Customer fourre-tout ; un booking porteur d'un email OTA **exploitable et distinct** (ex. `jean.x9z@guest.airbnb.com` valide au format) crée **son propre** Customer et **n'est pas** rattaché au fourre-tout (pas de dédup fine — décision §11.3).
+### Attribution de source & vue admin
+- [ ] AC-T2-22 : Une **migration T2 ajoute la colonne `Stay#source` (string)** — absente du schema avant T2 — avec valeurs admises `reservation` / `tally_legacy` / `ota` / `manual` et **défaut `reservation`**. Vérif : `db/schema.rb` après migration contient `t.string "source"` sur `stays` ; model spec — un Stay créé sans source explicite a `source == "reservation"`.
+- [ ] AC-T2-22b : Tout `Stay` créé via `/reservation` porte `source == "reservation"`, et `source` est **distinct de `legacy_origin`** (la migration ne réutilise ni n'écrase `legacy_origin`, qui garde son index unique). Vérif : request spec — Stay du funnel a `source == "reservation"` ; grep/migration review — `legacy_origin` inchangé, aucune confusion `source`/`legacy_origin` dans le code.
+- [ ] AC-T2-23 : La vue admin liste les Stays récents et filtre par `source` (`/reservation` natif vs Tally legacy vs OTA). Vérif : Interceptor authentifié Devise — appliquer le filtre, la liste se restreint correctement.
+- [ ] AC-T2-24 : La vue admin est protégée Devise — visiteur non authentifié redirigé vers `/users/sign_in` (préserve ISC-3). Vérif : `curl` sans session sur la route admin → 302 vers sign_in.
 
-### G. Non-régression (coexistence)
-- [ ] AC-42: Le flow de réservation public (`namespace :public`) jusqu'au paiement Stripe fonctionne à l'identique après la tranche (ISC-2 — vérif Interceptor sur prod-like).
-- [ ] AC-43: La page calendrier (`pages#calendar`) affiche bookings + space_bookings comme avant, sans erreur (ISC-5).
-- [ ] AC-44: Le calendrier de disponibilité sur une fenêtre donnée est **identique** avant et après migration pour les lodgings non composés (probe : comparaison `available_between?` sur échantillon de dates).
-- [ ] AC-45: Aucun appel `destroy!` / `delete_all` n'est introduit sur Customer/Stay/StayItem/Booking/SpaceBooking/Payment (ISC-15/17 — `grep` ciblé → 0 hit non tracé).
-- [ ] AC-46: Le déploiement Hatchbox sur `main` aboutit, `db:migrate` s'applique, et le post-migration check est vert (ISC-11).
+### Non-régression & coexistence
+- [ ] AC-T2-25 : Les Stays Tally legacy restent consultables/payables via leur lien token `:public` existant (aucune régression). Vérif : system spec — Stay legacy fixture s'ouvre via son ancien lien token sans erreur.
+- [ ] AC-T2-26 : Aucun hard-delete introduit — `grep -rn '\.destroy!\|delete_all' app/services app/controllers | grep -iE 'stay|customer|payment|booking'` → 0 hit non-tracé soft_deletion/PaperTrail (préserve P2 / ISC-15 / ISC-17). Vérif : grep → 0 hit.
+- [ ] AC-T2-27 : Le déploiement sur `main` aboutit sur Hatchbox sans intervention manuelle et `/reservation` répond `200` en prod (préserve ISC-11). Vérif : push main → déploiement → `curl https://app.les4sources.be/reservation` → 200.
 
-## 9. Hypothèses — toutes confirmées (2026-05-28)
+### Décisions de périmètre figées (Q4/Q6/Q7/Q8)
+- [ ] AC-T2-29 : **Pre-order = lien externe (Q4).** L'étape pre-order affiche un **lien externe** vers `tranches-de-vie.les4sources.be` (post-réservation) et **n'effectue aucun appel write** à l'API Tranches de Vie. Vérif : Interceptor — le lien est présent et sort du domaine ; grep — aucun appel HTTP POST/PATCH vers l'API TDV dans le code du flow.
+- [ ] AC-T2-30 : **FR-only (Q7).** `/reservation` ne présente **aucun sélecteur de langue** ; les libellés sont en français. Vérif : Interceptor — pas de switch FR/NL/EN dans le DOM du funnel.
+- [ ] AC-T2-31 : **Pas de politique d'annulation dans le flow (Q8).** Aucune politique d'annulation/remboursement standardisée n'est affichée dans `/reservation`. Vérif : Interceptor — absence de bloc « politique d'annulation » dans les étapes du funnel.
+- [ ] AC-T2-32 : **Pas de blocage OTA (Q6).** Une date occupée uniquement côté OTA (sans Stay natif Claudy) n'est pas marquée indisponible dans `/reservation` ; seuls les Stays natifs Claudy bloquent la dispo. Vérif : request/system spec — dispo calculée à partir des Stays/Bookings Claudy uniquement, pas d'une source OTA.
 
-> Les hypothèses Q1→Q9 ont été tranchées par Michael (voir §11). Plus aucune n'est ouverte. Conservées ici comme faits actés pour le Constructeur et le Vérificateur.
+### Tests livrés avec la tranche
+- [ ] AC-T2-28 : La suite contient model spec(s) PricingModel (dont formule dégressive + override forfait nommé + supplément chien) + service spec(s) booking flow + request spec(s) `/reservation/*` + **≥ 1 system spec happy-path B2C** (dates → composition → paiement Stripe test mode → Stay `pending` en attente de validation Malau). Vérif : `bundle exec rspec` vert ; fichiers spec présents.
 
-- ✅ `Stay` est un **nouveau modèle distinct** ; `Booking`/`SpaceBooking` deviennent des `stay_items` (pas de transformation de Booking en Stay-parent). Conforme à la doctrine ISA. (§11.1)
-- ✅ `Customer#payments` / `Stay#payments` sont **dérivés en lecture** via `stay_items → booking → payments`, sans nouvelle FK `payment.stay_id` ni modification du schéma `Payment`. (§11.6)
-- ✅ La mécanique Grand-Duc est **calculée à la volée** (dispo composite = f(composants libres), et inversement), sans blocage stocké ni callbacks dupliquant des réservations. (§11.4)
-- ✅ Les bookings **sans email exploitable** sont **rattachés au Customer fourre-tout** `client@les4sources.be` (upsert idempotent), **pas skippés** ; le Pôle Accueil re-ventile ensuite via fusion de doublons. (§11.2 — ⚠️ changement vs hypothèse initiale « skip »)
-- ✅ La création du Stay-parent par la migration est tracée PaperTrail avec whodunnit `"system:migration"`. (§11.5)
-- ✅ `Customer.notes` est **interne Pôle Accueil + collectif uniquement** ; jamais exposé au client ni à l'API publique future. (§11.7)
-- ✅ `Customer.language` par défaut `fr`, renseigné explicitement plus tard ; pas de détection auto dans cette tranche. (§11.8)
-- ✅ La déduplication OTA fine (même guest via Airbnb `*@guest.airbnb.com` + direct) **n'est pas automatisée** ; ces doublons restent gérables via la fusion manuelle. (§11.3)
-- ✅ `status` de `Stay` est dérivé/agrégé des statuts des items (valeurs alignées sur Booking) ; pas de machine à états indépendante en tranche 1. (acté — non contesté)
+## 9. Hypothèses à confirmer
 
-## 10. Journal de décisions (append-only)
+- [HYPOTHÈSE] Le modèle `Stay` (tranche 1) expose déjà un `status` avec au moins `pending` et `confirmed`. À confirmer par le Constructeur ; sinon migration de statut nécessaire.
+- [HYPOTHÈSE] L'infra Stripe Checkout + webhook existante (`namespace :public`) est réutilisable telle quelle pour un Stay `/reservation`, sans nouvelle clé/compte Stripe. Le BRIEF l'affirme — à confirmer en lisant `webhooks/stripe_hooks` + services `bookings/`.
+- [HYPOTHÈSE] Le catalogue (gîtes, salles, repas, camping) est seedable depuis la spec Tally `reference_les4sources_tally_form.md` + matrice pricing ISA section G. Les libellés/copy client précis relèvent de la Plume.
+- [HYPOTHÈSE] « +18 mois » = mois calendaires glissants depuis aujourd'hui (pas une date fixe). Cohérent avec la Constraint ISA.
 
-- 2026-05-28 — **Stack frontend = Hotwire**, verrouillée — source : ISA P4 + ISC-12, fiche PROJETS-INTERNES, `package.json` du repo. Aucune dérogation possible.
-- 2026-05-28 — **Périmètre = pivot architectural pur** (data model + migration), aucun flow visible modifié — source : brief + décisions Michael 2026-05-28.
-- 2026-05-28 — **Fenêtre de migration = tout l'historique** (actifs + passés + annulés + soft-deleted ; sans-email skippés/ventilés) — décidé par Michael (brief Q6).
-- 2026-05-28 — **Vues Customer = minimal + fusion de doublons** — décidé par Michael.
-- 2026-05-28 — **Hors-scope confirmé sans exception** (toutes features horizon) — décidé par Michael.
-- 2026-05-28 — **Constat code : double traçabilité** sur Booking/SpaceBooking (`PaperTrail` + `PublicActivity`). La migration doit préserver les DEUX — élève la barre de l'AC-39 vs le brief qui ne mentionnait que PaperTrail.
-- 2026-05-28 — **Constat code : `Payment.booking_id` NOT NULL**, `SpaceBooking` sans Payment. → `payments through: :stays` dérivé en lecture, pas de FK ajoutée (proposition, à valider Q9).
-- 2026-05-28 — **Tests : tout nouveau code couvert** (model + request specs), pas d'obligation sur l'existant — source : brief.
-- 2026-05-28 — **Porte §11 fermée : 8 décisions verrouillées par Michael.** Q1=OUI (Stay distinct), Q3=NON (dédup OTA manuelle), Q4=CALCULÉ (Grand-Duc à la volée), Q5=OUI (`system:migration`), Q6=OUI (payments dérivés lecture), Q7=OUI (notes internes), Q8=OUI (`fr` par défaut) — tous conformes aux recos.
-- 2026-05-28 — **Q2 : CHANGEMENT vs reco.** Les bookings sans email exploitable ne sont **pas skippés** mais **rattachés à un Customer fourre-tout unique** `client@les4sources.be` (upsert idempotent ; `individual` / `fr` / "Client" / "Les 4 Sources" + note de rôle). Re-ventilation ultérieure via la **fusion de doublons** (même merge). Rapport : `n_sans_email_skipped` → `n_rattaches_fourretout`. Impacts AC : AC-4, AC-34, AC-37, AC-41 corrigés ; AC-47/48/49 (fourre-tout) et AC-50 (re-ventilation par fusion) ajoutés.
-- 2026-05-28 — **Q4 implication actée : adaptation des requêtes de disponibilité existantes** (calendrier + `available_between?`) pour dériver Grand-Duc par calcul — nouvel AC-51.
-- 2026-05-29 — **Re-ventilation interactive demandée par Michael.** Après constat dry-run (928/1358 = 68% des records sans email exploitable → fourre-tout), Michael confirme le fourre-tout pour l'instant MAIS demande une **UI de re-ventilation** sur la page client interne : sélection de séjours (cases à cocher) + **modale** permettant soit de **créer un nouveau client**, soit d'en **sélectionner un existant**, pour y assigner les séjours cochés. S'appuie sur `Customers::MergeService.run(stay_ids:)` existant (AC-50). Nouveaux AC-52/53/54.
+## 10. Cohérence ISA & drifts BRIEF ↔ ISA
 
-## 11. Décisions verrouillées (2026-05-28)
+**ISC ISA préservés (non-régression) :** ISC-3 → AC-T2-24 · ISC-4 → AC-T2-20 · ISC-11 → AC-T2-27 · ISC-12 → AC-T2-03 · ISC-15/ISC-17 → AC-T2-26. Feature `BookingFlow` : T2 livre la variante `/reservation` (B2C) ; `/sejour-entreprise` (B2B) reste horizon. Feature `PricingModel` : T2 livre l'« étage 2 front B2C » + un « étage 1 backend » réduit aux structures observées ; polymorphisme complet, marges B2C/B2B, tranches de groupe, 6 packs et workshop d'audit des coûts restent horizon. Feature `Customers` : réutilisation de l'upsert par email (T1).
 
-> Les 8 questions ouvertes ont été **tranchées par Michael le 2026-05-28**. Aucune question ouverte ne subsiste. Porte fermée — prêt pour le Constructeur.
+**Drifts — état après arbitrage Michael 2026-05-30 :**
+- **DRIFT-1 — API studio READ-ONLY vs API v1 write — OUVERT, action de suivi (hors build T2).** La fiche `PROJETS-INTERNES.md` (Claudy) déclare l'accès API comme READ-ONLY (tous GET), alors que l'ISA (Changelog 2026-05-30, ISC-14.1, Feature `ApiV1`) et le BRIEF actent l'**écriture authentifiée** (PATCH + soft-delete). → La fiche studio est en retard sur l'ISA. **Sans impact sur le build T2** (ne touche pas l'API v1). **➡️ Action de suivi : mettre à jour `PROJETS-INTERNES.md` (Claudy) pour refléter l'API v1 write authentifiée.** La consigne « le studio n'écrit jamais en prod » reste valable indépendamment.
+- **DRIFT-2 — `Stay#source` existant ou à créer ? — RÉSOLU (Q9).** Confirmé par `db/schema.rb` : la table `stays` n'a **PAS** de colonne `source` (elle a `legacy_origin`, distinct). → `source` est **ajouté par migration T2** (AC-T2-22/22b).
+- **DRIFT-3 — Pre-order boulangerie : couplage API — RÉSOLU (Q4 = B).** Pre-order = **simple lien externe** post-réservation, pas de write API TDV (AC-T2-29).
+- **DRIFT-4 — Posture auto-réservation — RÉSOLU (Q5 = B).** Pas d'auto-réservation : `/reservation` crée une demande/draft `pending` que **Malau valide manuellement** (AC-T2-19). Écart assumé vis-à-vis de la posture auto-réservation de l'ISA — voir Journal de décisions.
+- **NON-DRIFT confirmé — Stack.** Hotwire verrouillé : BRIEF, ISA (P4, ISC-12), `PROJETS-INTERNES.md`, `CLAUDE.md` repo concordent. Aucune ambiguïté.
 
-1. **Stay = nouveau modèle distinct, Booking devient un `stay_item`** (pas de transformation de Booking en Stay-parent). — **VERROUILLÉ : OUI**. Conforme ISA, additif, préserve la coexistence et les controllers existants.
-2. **Bookings sans email exploitable → rattachés à un Customer fourre-tout unique** (et **non** skippés). — **VERROUILLÉ : fourre-tout**, ⚠️ *changement vs reco initiale (skip)*. Tout Booking/SpaceBooking dont l'email est inexploitable (vide, malformé, ou masqué OTA type `*@guest.booking.com` / `*@guest.airbnb.com`) est rattaché à **un Customer fourre-tout unique d'email `client@les4sources.be`**, upsert idempotent comme les autres Customers. Les emails OTA **distincts mais exploitables** créent leurs propres Customers (pas de dédup fine — voir point 3) ; seuls les emails **inexploitables** tombent dans le fourre-tout. Attributs du fourre-tout : `customer_type = individual`, `language = fr`, `first_name = "Client"`, `last_name = "Les 4 Sources"`, marqueur distinctif via l'email conventionnel `client@les4sources.be` **et** une mention en `notes` (« Customer fourre-tout migration — re-ventiler les stays vers de vrais clients via fusion de doublons »). Le Pôle Accueil re-ventile ensuite chaque Stay vers un vrai Customer **via le mécanisme de fusion de doublons** (le même merge que C — voir §3.1 et AC-15→18).
-3. **Déduplication OTA fine** automatisée dans cette tranche ? — **VERROUILLÉ : NON**. Fusion **manuelle** uniquement par le Pôle Accueil. Pas d'auto-détection cette tranche (l'auto-dédup OTA nécessite une stratégie de matching nom+dates → tranche dédiée).
-4. **Grand-Duc : disponibilité CALCULÉE à la volée** (dispo composite = f(composants libres), aucun blocage stocké) ? — **VERROUILLÉ : CALCULÉ**. La dispo de Grand-Duc se dérive de Hulotte + Chevêche libres ; aucune réservation dupliquée, une seule source de vérité. Implique d'**adapter les requêtes de disponibilité existantes** pour intégrer la composition (couvert par AC-24/25/26).
-5. **Trace PaperTrail de la migration** attribuée à un acteur système ? — **VERROUILLÉ : OUI**, whodunnit `"system:migration"`.
-6. **`payments through: :stays` dérivé en lecture** (pas de FK `payment.stay_id`, schéma `payments` intact, `Payment.booking_id` reste NOT NULL) ? — **VERROUILLÉ : OUI** (dérivation lecture via booking).
-7. **`Customer.notes` visibilité = Pôle Accueil + collectif uniquement** (jamais client/API publique) ? — **VERROUILLÉ : OUI** (interne strict).
-8. **`Customer.language` : défaut `fr`, renseigné explicitement plus tard** (pas de détection auto en tranche 1) ? — **VERROUILLÉ : OUI**.
+## 11. Questions de cadrage — RÉPONSES FIGÉES (Michael, 2026-05-30)
+
+> Toutes tranchées. Plus aucun blocage build. Chaque décision pointe les AC concernés.
+
+1. **Q1 — Coexistence `:public` (lien token) → OUI.** Les Stays Tally legacy gardent leur lien token `:public` existant (lecture + paiement acompte). Coexistence avec `/reservation`, pas de bascule forcée. → AC-T2-25.
+2. **Q2 — Supplément chien → 50 € / chien / séjour.** Le flow auto ne facture qu'**UN seul chien** ; multi-chiens = **hors flow**, traité manuellement par Malau. → AC-T2-09b, AC-T2-15.
+3. **Q3 — Barème forfait dégressif → HYBRIDE.** Formule fermée par défaut `prix = prix_nuit_1 + (n − 1) × prix_nuit_suivante` (paramétrée par hébergement) **+ forfaits nommés qui écrasent** pour certaines durées. Cas de test Grand-Duc : **nuit 1 = 750 €, nuits suivantes = 600 €, forfait « semaine » = 2 410 € (override)** ; la formule couvre 4-5-6 nuits automatiquement. → AC-T2-14, AC-T2-14b.
+4. **Q4 — Pre-order épicerie/boulangerie → simple lien externe (B).** Lien vers `tranches-de-vie.les4sources.be` post-réservation, **pas d'intégration write API**. Résout DRIFT-3. → AC-T2-29.
+5. **Q5 — Auto-réservation vs validation manuelle → validation manuelle Malau (B).** PAS d'auto-confirm. `/reservation` crée une demande/draft `pending` que Malau confirme. Résout DRIFT-4. → AC-T2-19.
+6. **Q6 — OTA double-booking → NON.** T2 ne bloque pas les dates OTA ; blocage seulement entre Stays natifs Claudy. → AC-T2-32, §7.
+7. **Q7 — i18n → FR-only.** Pas de sélecteur de langue en T2. → AC-T2-30, §4.
+8. **Q8 — Annulation/remboursement → NON.** Pas de politique d'annulation affichée dans le flow en T2 (cas par cas hors flow). → AC-T2-31, §4.
+9. **Q9 — Champ `source` sur Stay → AJOUTER par MIGRATION T2.** Colonne `source` (string), valeurs `reservation` / `tally_legacy` / `ota` / `manual`, **défaut `reservation`**. Confirmé absent du schema actuel. **DISTINCT de `legacy_origin`** (clé d'import/dédup à index unique, déjà présente — ne pas confondre ni réutiliser). Résout DRIFT-2. → AC-T2-22, AC-T2-22b.
+
+## 12. Journal de décisions (append-only)
+
+- 2026-05-30 — Stack frontend = Hotwire (verrouillé P4 + ISC-12). — *BRIEF §Décisions actées, Michael.*
+- 2026-05-30 — Tranche 2 = option A : BookingFlow B2C natif + PricingModel minimal, sans B2B, sans packs. — *BRIEF §Décisions actées, Michael.*
+- 2026-05-30 — API v1 write = doctrine (ISA Changelog + ISC-14.1) ; hors périmètre build T2. — *BRIEF §Décisions actées, Michael.*
+- 2026-05-30 — PRD tranche 2 rédigé : 28 critères atomiques, 9 questions de cadrage, 4 drifts signalés. Remplace l'ancien `docs/PRD.md` (tranche 1 — historique préservé dans git). En attente validation Michael. — *sg-cadreur.*
+- 2026-05-30 — **PRD VALIDÉ par Michael + Q1-Q9 tranchées.** Q1 OUI (coexistence lien token `:public`) · Q2 50 €/chien/séjour, 1 chien en flow auto / multi-chiens manuel · Q3 HYBRIDE (formule fermée + forfaits nommés override ; cas Grand-Duc 750/600/sem 2410) · Q4 B (pre-order = lien externe) · Q5 B (validation manuelle Malau, pas d'auto-confirm) · Q6 NON (pas de blocage OTA) · Q7 FR-only · Q8 NON (pas de politique d'annulation) · Q9 colonne `source` ajoutée par migration T2, distincte de `legacy_origin`. — *Michael.*
+- 2026-05-30 — **Écart assumé vis-à-vis de l'ISA :** la posture auto-réservation de l'ISA (Feature `BookingFlow` B2C) est volontairement non appliquée en T2 — validation manuelle Malau retenue (Q5). À reverser éventuellement dans l'ISA si la posture devient durable. — *Michael / sg-cadreur.*
+- 2026-05-30 — PRD figé : passage de 28 à **35 critères** (7 ajouts : AC-T2-09b, 14b, 22b, 29, 30, 31, 32 ; AC-T2-22 redéfini en place + AC-T2-22b ajouté pour la distinction `legacy_origin`). Statut → Validé, prêt pour le Constructeur. DRIFT-2/3/4 résolus ; DRIFT-1 reste action de suivi (mise à jour fiche `PROJETS-INTERNES.md`). — *sg-cadreur.*
 
 ---
-*Fin du PRD tranche 1. Le Constructeur, la Directrice Artistique, le Vérificateur et la Plume lisent ce fichier. Les 8 décisions §11 sont verrouillées — build autorisé.*
+
+## Porte humaine (FRANCHIE ✅)
+
+Ce PRD est **validé par Michael (2026-05-30)** : (1) Q1-Q9 tranchées (§11) ; (2) DRIFT-2/3/4 résolus, DRIFT-1 acté comme action de suivi hors build ; (3) périmètre in/out-scope validé ; (4) « oui » explicite donné. **Le Constructeur, la Directrice Artistique, la Plume et le Vérificateur peuvent démarrer.**
+
+**Action de suivi hors build (DRIFT-1) :** mettre à jour la fiche `~/.claude/PAI/USER/PROJECTS/StudioSuperGenial/PROJETS-INTERNES.md` (Claudy) — l'API y est dite READ-ONLY alors que l'ISA/BRIEF actent l'API v1 write authentifiée.
+
+*Fin du PRD tranche 2.*

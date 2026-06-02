@@ -1,0 +1,61 @@
+.max-w-4xl.mx-auto.py-8
+  .mb-4
+    = link_to "← Modifier ma réservation", public_reservation_compose_path, class: "text-sm text-gray-500 hover:text-gray-700"
+
+  h1.text-2xl.font-semibold.mb-2 Activités
+
+  p.text-sm.text-gray-500.mb-6 Vous pouvez ajouter des activités à votre séjour. Notre équipe vous confirmera les disponibilités.
+
+  = render "public/reservations/stay_summary", draft: @draft
+
+  .grid.gap-8.lg:grid-cols-3
+    .lg:col-span-2
+      = form_with url: public_reservation_advance_contact_path, method: :post do |f|
+
+        - if @experiences.empty?
+          p.text-sm.text-gray-400.italic Aucune activité disponible actuellement.
+
+        - @experiences.each_with_index do |exp, i|
+          - selected_entry = @draft.experiences.find { |e| e[:id].to_s == exp.id.to_s }
+          - selected_participants = selected_entry&.dig(:participants).to_i
+
+          .rounded-lg.border.border-gray-200.p-4.mb-3
+            .flex.items-start.gap-3
+              input(
+                type="number"
+                name="reservation[experiences][#{i}][participants]"
+                value="#{selected_participants > 0 ? selected_participants : ''}"
+                min="#{exp.min_participants.presence || 1}"
+                max="#{exp.max_participants.presence || ''}"
+                placeholder="0"
+                class="w-20 rounded border-gray-300 text-center mt-0.5 shrink-0"
+              )
+              = hidden_field_tag "reservation[experiences][#{i}][id]", exp.id
+              div
+                .font-medium = exp.name
+                - if exp.summary.present?
+                  .text-sm.text-gray-500 = exp.summary
+                .text-sm.text-emerald-700.mt-1
+                  - if exp.fixed_price_cents.to_i > 0 && exp.price_cents.to_i > 0
+                    = "#{number_to_currency(exp.fixed_price_cents / 100.0, unit: '€', format: '%n %u', precision: 0)} + #{number_to_currency(exp.price_cents / 100.0, unit: '€', format: '%n %u', precision: 0)}/pers"
+                  - elsif exp.price_cents.to_i > 0
+                    = "#{number_to_currency(exp.price_cents / 100.0, unit: '€', format: '%n %u', precision: 0)}/pers"
+                  - elsif exp.fixed_price_cents.to_i > 0
+                    = number_to_currency(exp.fixed_price_cents / 100.0, unit: '€', format: '%n %u', precision: 0)
+                  - else
+                    | Gratuit
+                - if exp.min_participants.present? || exp.max_participants.present?
+                  .text-xs.text-gray-400
+                    - if exp.min_participants.present? && exp.max_participants.present?
+                      = "#{exp.min_participants}–#{exp.max_participants} participants"
+                    - elsif exp.min_participants.present?
+                      = "Min. #{exp.min_participants} participants"
+                    - else
+                      = "Max. #{exp.max_participants} participants"
+
+        .mt-6.flex.justify-between.items-center
+          = link_to "Passer cette étape", public_reservation_contact_path, class: "text-sm text-gray-400 hover:text-gray-600"
+          = f.submit "Continuer →", class: "rounded-lg bg-emerald-600 text-white px-6 py-3 text-sm font-medium hover:bg-emerald-700 cursor-pointer"
+
+    aside.lg:col-span-1
+      = render "public/reservations/quote_panel", quote: @quote, draft: @draft

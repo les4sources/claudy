@@ -1,0 +1,79 @@
+/ Étape 1/3 — Dates du séjour, taille du groupe, animal
+.max-w-2xl.mx-auto.py-8
+
+  / Indicateur d'étapes
+  .flex.items-center.gap-2.mb-8.text-sm
+    span.font-semibold.text-emerald-700 1. Votre séjour
+    span.text-gray-300 →
+    span.text-gray-400 2. Composition
+    span.text-gray-300 →
+    span.text-gray-400 3. Coordonnées
+
+  h1.text-2xl.font-semibold.mb-6 Votre séjour aux 4 Sources
+
+  = form_with url: public_reservation_advance_dates_path, method: :post do |f|
+
+    / --- Dates ---
+    section.mb-6
+      h2.text-lg.font-medium.mb-3 Dates
+      .grid.grid-cols-2.gap-4
+        label.block
+          span.text-sm.text-gray-600 Arrivée
+          = f.date_field "reservation[arrival_date]",
+              value: @draft.arrival_date,
+              min: Date.today.iso8601,
+              max: (Date.today >> 18).iso8601,
+              class: "mt-1 w-full rounded border-gray-300"
+        label.block
+          span.text-sm.text-gray-600 Départ
+          = f.date_field "reservation[departure_date]",
+              value: @draft.departure_date,
+              min: Date.today.iso8601,
+              max: (Date.today >> 18).iso8601,
+              class: "mt-1 w-full rounded border-gray-300"
+      p.text-xs.text-gray-400.mt-1 Réservation possible jusqu'à 18 mois à l'avance.
+
+    / --- Groupe ---
+    section.mb-6
+      h2.text-lg.font-medium.mb-3 Votre groupe
+      .grid.grid-cols-2.gap-4
+        label.block
+          span.text-sm.text-gray-600 Adultes (13 ans et +)
+          = f.number_field "reservation[adults]",
+              value: (@draft.adults.presence || 1),
+              min: 1,
+              class: "mt-1 w-full rounded border-gray-300"
+        label.block
+          span.text-sm.text-gray-600 Enfants (3–12 ans)
+          = f.number_field "reservation[children]",
+              value: (@draft.children || 0),
+              min: 0,
+              class: "mt-1 w-full rounded border-gray-300"
+      p.text-xs.text-gray-400.mt-1
+        | Enfants jusqu'à 3 ans : gratuit. Nuitées en chambre individuelle (semaine uniquement) :
+        strong  35 €/adulte · 15 €/enfant
+        | — contactez
+        = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline"
+
+    / --- Animal ---
+    section.mb-6
+      h2.text-lg.font-medium.mb-3 Animal de compagnie
+      p.text-xs.text-gray-400.mb-2 Champ obligatoire. Supplément de 50 € par séjour pour un chien (max 2).
+      = f.select "reservation[dogs_count]",
+          options_for_select([["Pas d'animal", 0], ["Un chien (+50 €)", 1], ["Plusieurs chiens (sur demande)", 2]], @draft.dogs_count),
+          {},
+          class: "w-full rounded border-gray-300"
+
+    .mt-8.flex.justify-end
+      = f.submit "Continuer →",
+          class: "rounded-lg bg-emerald-600 text-white px-6 py-3 text-sm font-medium hover:bg-emerald-700 cursor-pointer"
+
+  / --- Infos ---
+  .mt-8.space-y-3
+
+    .rounded-lg.border.border-gray-100.p-4
+      p.text-sm.text-gray-500
+        | Une question ? Contactez Malau au
+        strong  +32 (0)490 46.77.10
+        |  ou à
+        = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline"

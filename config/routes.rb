@@ -30,7 +30,9 @@ Rails.application.routes.draw do
   end
   resources :decisions
   get "organisation/decisions", to: "decisions#index", as: :organisation_decisions
-  resources :experiences
+  resources :experiences do
+    resources :experience_availabilities, only: [:create, :destroy], path: :disponibilites
+  end
   resources :lodgings
   resources :humans do
     member do
@@ -96,6 +98,11 @@ Rails.application.routes.draw do
 
   # Détails d'un séjour (chargé dans une modale Turbo Frame depuis la page client).
   resources :stays, only: [:show]
+  resources :experience_bookings, only: [:index, :update]
+
+  # Espace client activités (token-based, sans Devise).
+  get  "mon-sejour/:token/activites", to: "public/activity_selections#show",   as: :public_activity_selection
+  post "mon-sejour/:token/activites", to: "public/activity_selections#create",  as: :public_activity_selection_create
 
   get "comptabilite", to: "accounting#index", as: :accounting
 
@@ -106,6 +113,21 @@ Rails.application.routes.draw do
   get "pages/month_details", to: "pages#month_details", as: :month_details
 
   get "reports/lodging/:id", to: "reports#lodging", as: :lodging_reports
+
+  # Funnel B2C natif /reservation — 3 étapes (tranche 2).
+  # Étape 1 : dates + groupe + animal  →  Étape 2 : composition  →  Étape 3 : coordonnées
+  get  "reservation",              to: "public/reservations#start",              as: :public_reservation_start
+  get  "reservation/sejour",       to: "public/reservations#dates",              as: :public_reservation_dates
+  post "reservation/sejour",       to: "public/reservations#advance_dates",      as: :public_reservation_advance_dates
+  get  "reservation/composer",     to: "public/reservations#compose",            as: :public_reservation_compose
+  post "reservation/devis",        to: "public/reservations#quote",              as: :public_reservation_quote
+  post "reservation/composer",     to: "public/reservations#advance_contact",    as: :public_reservation_advance_contact
+  get  "reservation/activites",    to: "public/reservations#activities",         as: :public_reservation_activities
+  get  "reservation/coordonnees",  to: "public/reservations#contact",            as: :public_reservation_contact
+  post "reservation/coordonnees",  to: "public/reservations#create",             as: :public_reservation_create
+
+  # Vue admin Pôle Accueil — index des Stays récents filtrable par source (Devise).
+  get "sejours/recents", to: "stays#recent", as: :recent_stays
 
   namespace :public do
     resources :bookings, only: [:new, :create] do
