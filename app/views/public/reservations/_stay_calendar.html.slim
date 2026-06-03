@@ -19,19 +19,33 @@
   .flex.items-start.justify-between.mb-4
     h2.text-base.font-semibold.text-gray-900 🏕️ Composition nuit par nuit
     - if @stay_nights.present?
-      .text-xs.text-gray-400.flex-shrink-0.ml-4.mt-0.5
-        = "#{nights_count} nuit#{nights_count > 1 ? 's' : ''}"
+      .flex.items-center.gap-2.flex-shrink-0.ml-4.mt-0.5
+        .text-xs.text-gray-400
+          = "#{nights_count} nuit#{nights_count > 1 ? 's' : ''}"
+        - if nights_count > 4
+          button(
+            type="button"
+            data-action="click->public--stay-calendar#prevNights"
+            class="w-7 h-7 rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-emerald-400 hover:text-emerald-600 flex items-center justify-center text-sm transition-colors focus:outline-none"
+            aria-label="Nuits précédentes")
+            | ←
+          button(
+            type="button"
+            data-action="click->public--stay-calendar#nextNights"
+            class="w-7 h-7 rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-emerald-400 hover:text-emerald-600 flex items-center justify-center text-sm transition-colors focus:outline-none"
+            aria-label="Nuits suivantes")
+            | →
 
   - if @stay_nights.empty?
     p.text-xs.text-gray-400 Choisissez vos dates à l'étape précédente.
   - else
-    / Scroll horizontal sur mobile — libellés gauche collants
-    .overflow-x-auto.-mx-5.px-5
+    / Scroll horizontal — libellés gauche collants (left-5 aligne avec le padding px-5)
+    .overflow-x-auto.-mx-5.px-5(data-public--stay-calendar-target="scrollArea")
       table.border-collapse style="min-width: #{130 + nights_count * 90}px"
 
         thead
           tr
-            th.text-left.py-2.pr-4.text-xs.font-normal.text-gray-400.whitespace-nowrap.sticky.left-0.z-10.bg-white style="width:130px"
+            th.text-left.py-2.pr-4.text-xs.font-normal.text-gray-400.whitespace-nowrap.sticky.left-5.z-10.bg-white style="width:130px"
             - @stay_nights.each_with_index do |night, i|
               th.text-center.py-2.px-1(data-wday=night.wday.to_s style="width:90px")
                 p.text-xs.font-bold.text-gray-600 = "Nuit #{i + 1}"
@@ -46,7 +60,7 @@
 
           - @lodgings.each do |lodging|
             tr class="border-t border-gray-50"
-              td.py-2.pr-4.whitespace-nowrap.sticky.left-0.z-10.bg-white
+              td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
                 span.text-sm.text-gray-800.font-medium = short_names[lodging.name] || lodging.name
               - @stay_nights.each_with_index do |night, i|
                 - avail = (@lodging_availability.dig(lodging.id, i) != false)
@@ -72,7 +86,7 @@
               span.text-xs.font-semibold.text-gray-400.uppercase.tracking-wide ⛺ Camping
 
           tr class="border-t border-gray-50"
-            td.py-2.pr-4.whitespace-nowrap.sticky.left-0.z-10.bg-white
+            td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
               .flex.items-center.gap-1.5
                 svg.w-4.h-4.text-gray-400.flex-shrink-0(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true")
                   path(fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clip-rule="evenodd")
@@ -84,7 +98,7 @@
                 = render "public/reservations/stepper_cell", name: "reservation[per_night_resources][tente][]", val: val, max: 50
 
           tr class="border-t border-gray-50"
-            td.py-2.pr-4.whitespace-nowrap.sticky.left-0.z-10.bg-white
+            td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
               .flex.items-center.gap-1.5
                 svg.w-4.h-4.text-gray-400.flex-shrink-0(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true")
                   path d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"
@@ -102,7 +116,7 @@
                 span.text-xs.font-semibold.text-gray-400.uppercase.tracking-wide 🌿 Hamacs
 
             tr class="border-t border-gray-50"
-              td.py-2.pr-4.whitespace-nowrap.sticky.left-0.z-10.bg-white
+              td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
                 .flex.items-center.gap-1.5
                   svg.w-4.h-4.text-gray-400.flex-shrink-0(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true")
                     line x1="4" y1="4" x2="4" y2="20"
@@ -118,7 +132,7 @@
                   = render "public/reservations/stepper_cell", name: "reservation[per_night_resources][hamac_simple][]", val: val, max: 10
 
             tr class="border-t border-gray-50"
-              td.py-2.pr-4.whitespace-nowrap.sticky.left-0.z-10.bg-white
+              td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
                 .flex.items-center.gap-1.5
                   svg.w-4.h-4.text-gray-400.flex-shrink-0(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true")
                     line x1="4" y1="4" x2="4" y2="20"

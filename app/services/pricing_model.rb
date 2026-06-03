@@ -157,19 +157,28 @@ class PricingModel
     end
   end
 
-  # --- Espaces (grille nuit-par-nuit) : forfait par créneau {space, night, period} ---
+  # --- Espaces (grille nuit-par-nuit) : tarif semaine ou week-end selon la date ---
+  # ven (wday=5) et sam (wday=6) → tarifs week-end ; autres jours → tarifs semaine.
   def space_slot_lines
     slots = read(:space_slots)
     return [] if slots.blank?
 
+    arrival   = read(:arrival_date)
+    departure = read(:departure_date)
+    stay_dates = (arrival && departure) ? (arrival...departure).to_a : []
+
     slots.flat_map do |space_key, periods|
-      rates = Pricing::Catalog::HALL_RATES[space_key.to_s]
-      next [] if rates.nil?
+      weekday_rates = Pricing::Catalog::HALL_RATES[space_key.to_s]
+      weekend_rates = Pricing::Catalog::HALL_RATES_WEEKEND[space_key.to_s]
+      next [] if weekday_rates.nil?
       space_name = SPACE_NAMES[space_key.to_s] || space_key.to_s
 
       Array(periods).each_with_index.filter_map do |period, night_idx|
         next if period.blank?
-        unit = rates[period.to_s]
+        date    = stay_dates[night_idx]
+        weekend = date && [5, 6].include?(date.wday)
+        rates   = (weekend && weekend_rates) ? weekend_rates : weekday_rates
+        unit    = rates[period.to_s]
         next if unit.nil?
         period_label = PERIOD_LABELS[period.to_s] || period.to_s
         Line.new(

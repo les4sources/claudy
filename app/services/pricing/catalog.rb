@@ -62,24 +62,44 @@ module Pricing
     # Van / camping-car : forfait/nuit/véhicule.
     VAN_PER_NIGHT_CENTS = 1_500 # 15 €/nuit
 
-    # Salles & cuisine pro : tarifs par période, base semaine TVAC 0%.
-    # Source : https://www.les4sources.be/sejours/tarifs (tarifs semaine)
+    # Salles & cuisine pro — tarifs semaine (lun-jeu + ven journée).
+    # Source : https://www.les4sources.be/sejours/tarifs
     # Périodes : "journee" | "soiree" | "journee_et_soiree"
     HALL_RATES = {
       "grande_salle" => {
         "journee"           => 29_000,  # 290 €
         "soiree"            => 19_000,  # 190 €
-        "journee_et_soiree" => 35_000   # 290 + forfait soir 60 €
+        "journee_et_soiree" => 38_000   # 290 + extension soirée 90 €
       }.freeze,
       "petite_salle" => {
         "journee"           => 14_000,  # 140 €
         "soiree"            =>  9_000,  # 90 €
-        "journee_et_soiree" => 17_000   # 140 + forfait soir 30 €
+        "journee_et_soiree" => 20_000   # 140 + extension soirée 60 €
       }.freeze,
       "cuisine_pro" => {
         "journee"           => 11_000,  # 110 €
         "soiree"            =>  7_000,  # 70 €
-        "journee_et_soiree" => 14_000   # 110 + soirée estimée
+        "journee_et_soiree" => 14_000   # 110 + extension soirée 30 €
+      }.freeze
+    }.freeze
+
+    # Tarifs week-end (ven soir + sam + dim). Vendredi soir = début week-end.
+    # En B2C, wday=5 (vendredi) et wday=6 (samedi) → tarifs week-end.
+    HALL_RATES_WEEKEND = {
+      "grande_salle" => {
+        "journee"           => 38_000,  # 380 €
+        "soiree"            => 25_000,  # 250 €
+        "journee_et_soiree" => 47_000   # 380 + extension soirée 90 €
+      }.freeze,
+      "petite_salle" => {
+        "journee"           => 19_000,  # 190 €
+        "soiree"            => 12_000,  # 120 €
+        "journee_et_soiree" => 25_000   # 190 + extension soirée 60 €
+      }.freeze,
+      "cuisine_pro" => {
+        "journee"           => 15_000,  # 150 €
+        "soiree"            =>  9_500,  # 95 €
+        "journee_et_soiree" => 18_000   # 150 + extension soirée 30 €
       }.freeze
     }.freeze
 

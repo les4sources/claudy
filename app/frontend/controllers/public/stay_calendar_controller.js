@@ -13,8 +13,9 @@ import { Controller } from "@hotwired/stimulus"
 // À chaque toggle, on régénère intégralement le conteneur de champs cachés
 // (`reservation[lodging_night_ids][]`) et on émet un `change` bouillonnant.
 export default class extends Controller {
-  static targets = ["hiddenFields"]
+  static targets = ["hiddenFields", "scrollArea"]
   static values  = { nights: Number, avail: Object }
+  static SCROLL_AMOUNT = 4 * 90  // 4 colonnes × 90px
 
   connect() {
     this.syncHiddenFields()
@@ -144,6 +145,18 @@ export default class extends Controller {
       input.name  = "reservation[lodging_night_ids][]"
       input.value = selectionByNight.get(String(night)) ?? ""
       container.appendChild(input)
+    }
+  }
+
+  prevNights() {
+    if (this.hasScrollAreaTarget) {
+      this.scrollAreaTarget.scrollBy({ left: -this.constructor.SCROLL_AMOUNT, behavior: "smooth" })
+    }
+  }
+
+  nextNights() {
+    if (this.hasScrollAreaTarget) {
+      this.scrollAreaTarget.scrollBy({ left: this.constructor.SCROLL_AMOUNT, behavior: "smooth" })
     }
   }
 

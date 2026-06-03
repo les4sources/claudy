@@ -3,24 +3,39 @@
 / Dépend de : @draft, @stay_nights (instance vars du controller).
 - fr_short_days = %w[Dim Lun Mar Mer Jeu Ven Sam]
 - space_kinds   = { "grande_salle" => "Grande Salle", "petite_salle" => "Petite Salle", "cuisine_pro" => "Cuisine pro" }
-- space_hints   = { "grande_salle" => "290€/j · 190€/soir · 350€ j+s", "petite_salle" => "140€/j · 90€/soir · 170€ j+s", "cuisine_pro" => "110€/j · 70€/soir · 140€ j+s" }
+- space_hints   = { "grande_salle" => "290€/j · 190€/soir (sem.)", "petite_salle" => "140€/j · 90€/soir (sem.)", "cuisine_pro" => "110€/j · 70€/soir (sem.)" }
 
-.bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-5
+.bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-5(
+  data-controller="public--spaces-calendar")
   .flex.items-start.justify-between.mb-4
     div
       h2.text-base.font-semibold.text-gray-900 🏛️ Espaces
-      p.text-xs.text-gray-400.mt-0.5 Cliquez sur une cellule pour réserver — journée, soirée ou les deux.
-    = link_to "Tarifs complets →", "https://www.les4sources.be/sejours/tarifs", target: "_blank", rel: "noopener", class: "text-xs text-emerald-600 hover:underline flex-shrink-0 ml-4 mt-0.5"
+      p.text-xs.text-gray-400.mt-0.5 Cliquez pour réserver — journée, soirée ou les deux. Tarifs semaine (↑ week-end).
+    .flex.items-center.gap-2.flex-shrink-0.ml-4.mt-0.5
+      = link_to "Tarifs →", "https://www.les4sources.be/sejours/tarifs", target: "_blank", rel: "noopener", class: "text-xs text-emerald-600 hover:underline"
+      - if @stay_nights.size > 4
+        button(
+          type="button"
+          data-action="click->public--spaces-calendar#prevNights"
+          class="w-7 h-7 rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-emerald-400 hover:text-emerald-600 flex items-center justify-center text-sm transition-colors focus:outline-none"
+          aria-label="Nuits précédentes")
+          | ←
+        button(
+          type="button"
+          data-action="click->public--spaces-calendar#nextNights"
+          class="w-7 h-7 rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-emerald-400 hover:text-emerald-600 flex items-center justify-center text-sm transition-colors focus:outline-none"
+          aria-label="Nuits suivantes")
+          | →
 
   - if @stay_nights.empty?
     p.text-xs.text-gray-400 Choisissez vos dates à l'étape précédente.
   - else
-    .overflow-x-auto.-mx-5.px-5
+    .overflow-x-auto.-mx-5.px-5(data-public--spaces-calendar-target="scrollArea")
       table.border-collapse style="min-width: #{130 + @stay_nights.size * 90}px"
 
         thead
           tr
-            th.text-left.py-2.pr-4.text-xs.font-normal.text-gray-400.whitespace-nowrap.sticky.left-0.z-10.bg-white style="width:130px"
+            th.text-left.py-2.pr-4.text-xs.font-normal.text-gray-400.whitespace-nowrap.sticky.left-5.z-10.bg-white style="width:130px"
             - @stay_nights.each_with_index do |night, i|
               th.text-center.py-2.px-1 style="width:90px"
                 p.text-xs.font-bold.text-gray-600 = "Nuit #{i + 1}"
@@ -29,7 +44,7 @@
         tbody
           - space_kinds.each do |space_key, space_name|
             tr class="border-t border-gray-50"
-              td.py-2.pr-4.whitespace-nowrap.sticky.left-0.z-10.bg-white
+              td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
                 .text-sm.text-gray-800.font-medium = space_name
                 p.text-xs.text-gray-400.leading-tight = space_hints[space_key]
               - @stay_nights.each_with_index do |_night, i|
