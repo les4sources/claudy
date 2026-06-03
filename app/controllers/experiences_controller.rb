@@ -1,7 +1,7 @@
 class ExperiencesController < BaseController
   before_action :get_experience, only: [:show, :edit, :update, :destroy]
 
-  breadcrumb "Expériences", :experiences_path, match: :exact
+  breadcrumb "Activités", :experiences_path, match: :exact
 
   def index
     @experiences = ExperienceDecorator
@@ -20,7 +20,7 @@ class ExperiencesController < BaseController
     service = Experiences::CreateService.new
     if service.run(params)
       redirect_to experience_path(service.experience),
-                  notice: "Super! L'expérience '#{service.experience.name}' a été ajoutée."
+                  notice: "Super! L'activité '#{service.experience.name}' a été ajoutée."
     else
       @experience = service.experience
       set_error_flash(service.experience, service.error_message)
@@ -37,7 +37,7 @@ class ExperiencesController < BaseController
     )
     if service.run(params)
       redirect_to experience_path(service.experience),
-                  notice: "L'expérience a été mise à jour."
+                  notice: "L'activité a été mise à jour."
     else
       @experience = service.experience
       set_error_flash(service.experience, service.error_message)
@@ -50,7 +50,7 @@ class ExperiencesController < BaseController
   def destroy
     if @experience.soft_delete!(validate: false)
       redirect_to experiences_path,
-                  notice: "L'expérience '#{@experience.name}' a été supprimée."
+                  notice: "L'activité '#{@experience.name}' a été supprimée."
     else
       flash.now[:alert] = "Une erreur est survenue."
       render :show
