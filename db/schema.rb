@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_31_205355) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_03_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -85,6 +85,15 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_31_205355) do
     t.index ["author_id"], name: "index_agenda_items_on_author_id"
     t.index ["gathering_id", "position"], name: "index_agenda_items_on_gathering_id_and_position"
     t.index ["gathering_id"], name: "index_agenda_items_on_gathering_id"
+  end
+
+  create_table "booking_page_views", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.string "ip_address"
+    t.string "user_agent"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_booking_page_views_on_booking_id"
   end
 
   create_table "bookings", force: :cascade do |t|
@@ -634,6 +643,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_31_205355) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "agenda_items", "gatherings"
   add_foreign_key "agenda_items", "humans", column: "author_id"
+  add_foreign_key "booking_page_views", "bookings"
   add_foreign_key "bookings", "lodgings"
   add_foreign_key "bundles", "projects"
   add_foreign_key "bundles", "teams"
