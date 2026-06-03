@@ -44,3 +44,5 @@
             = experience.participants
           td.py-4.px-6.text-gray-900.whitespace-nowrap[scope="row"]
             = experience.duration
+            - if experience.duration_hours
+              .text-xs.text-gray-400 = experience.duration_hours

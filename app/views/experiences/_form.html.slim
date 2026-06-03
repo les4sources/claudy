@@ -34,8 +34,16 @@
                      step: "1"
 
     = f.text_field :duration,
-                   label: "Durée",
+                   label: "Durée (libellé affiché)",
+                   hint: "Texte libre montré aux client·es, ex. « une demi-journée »",
                    class: "w-1/2 md:w-1/2 lg:w-1/4"
+
+    = f.number_field :duration_hours,
+                     label: "Durée en heures",
+                     hint: "Valeur numérique (ex. 1 · 2 · 2,5 · 3 · 4) — détermine la taille des créneaux de disponibilité.",
+                     min: "0.5",
+                     step: "0.5",
+                     class: "w-1/2 md:w-1/2 lg:w-1/4"
 
     .flex.space-x-4
       - if f.object.photo?
