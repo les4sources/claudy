@@ -62,6 +62,18 @@ class HumansController < BaseController
     end
   end
 
+  def create_account
+    @human = Human.unscoped.find(params[:id])
+    service = Humans::CreateAccountService.new(human: @human)
+    if service.run
+      redirect_to human_path(@human),
+                  notice: "Un compte d'accès a été créé pour #{@human.name}. Un email d'invitation à définir le mot de passe a été envoyé à #{@human.email}."
+    else
+      redirect_to human_path(@human),
+                  alert: service.error_message
+    end
+  end
+
   def destroy
     if @human.soft_delete!(validate: false)
       redirect_to humans_path,
