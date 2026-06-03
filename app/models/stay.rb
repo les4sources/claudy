@@ -47,13 +47,16 @@ class Stay < ApplicationRecord
     stay_items.includes(:bookable).map(&:bookable).compact
   end
 
-  # Read-derived payments: walk through the Booking items only (SpaceBooking has
-  # no Payment association — its money lives in *_amount_cents columns). Schema
-  # of `payments` is untouched (decision §11.6).
+  # Paiements du séjour. Pendant la transition (issue #26), on unit deux sources :
+  #   - le lien direct dénormalisé `payments.stay_id` (nouveau, posé par le
+  #     Reservations::Builder et par le backfill de migration) ;
+  #   - le lien historique via les items Booking (SpaceBooking n'a pas de Payment
+  #     direct — son montant vit dans les colonnes *_amount_cents).
+  # L'union garantit l'absence de régression tant que tous les Payment ne sont
+  # pas encore reliés directement au Stay.
   def payments
     booking_ids = stay_items.where(bookable_type: "Booking").pluck(:bookable_id)
-    return Payment.none if booking_ids.empty?
-    Payment.where(booking_id: booking_ids)
+    Payment.where(stay_id: id).or(Payment.where(booking_id: booking_ids))
   end
 
   # Recompute aggregate dates / amount from the attached items (min arrival,

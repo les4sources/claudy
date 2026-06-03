@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_03_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_03_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -392,8 +392,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_03_120000) do
     t.integer "amount_cents", default: 0, null: false
     t.string "stripe_checkout_session_id"
     t.string "stripe_payment_intent_id"
+    t.bigint "stay_id"
     t.index ["booking_id"], name: "index_payments_on_booking_id"
     t.index ["id"], name: "index_payments_on_id", unique: true
+    t.index ["stay_id"], name: "index_payments_on_stay_id"
   end
 
   create_table "products", force: :cascade do |t|
@@ -666,6 +668,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_03_120000) do
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"
   add_foreign_key "payments", "bookings"
+  add_foreign_key "payments", "stays"
   add_foreign_key "projects", "humans"
   add_foreign_key "reservations", "bookings"
   add_foreign_key "reservations", "rooms"

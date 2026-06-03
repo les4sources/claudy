@@ -55,6 +55,9 @@ RSpec.describe Reservations::Builder do
       expect(builder.payment.status).to eq("pending")
       # Hulotte 2 nuits = 485 + 260 = 745 € ; acompte 50 % = 372,50 €.
       expect(builder.payment.amount_cents).to eq(37_250)
+      # issue #26 : le Payment porte aussi le lien direct vers le Stay.
+      expect(builder.payment.stay).to eq(builder.stay)
+      expect(builder.stay.payments).to include(builder.payment)
     end
   end
 
