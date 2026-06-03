@@ -26,10 +26,18 @@ module Public
       redirect_to public_reservation_compose_path
     end
 
+    HALL_KIND_TO_SPACE = {
+      "grande_salle" => "Grande salle",
+      "petite_salle" => "Petite salle",
+      "cuisine_pro"  => "Cuisine pro"
+    }.freeze
+
     # Étape 2 — composition du séjour + devis temps-réel.
     def compose
-      @lodgings = bookable_lodgings
-      @quote = @draft.quote
+      @lodgings             = bookable_lodgings
+      @quote                = @draft.quote
+      @lodging_availability = lodging_availability_map(@lodgings)
+      @hall_availability    = hall_availability_map
     end
 
     # Étape activités (accès via email token — pas dans le funnel direct).
@@ -131,6 +139,53 @@ module Public
     def bookable_lodgings
       names = ["La Hulotte", "La Chevêche", "Le Grand-Duc"]
       Lodging.where(name: names).sort_by { |l| names.index(l.name) || 99 }
+    end
+
+    def lodging_availability_map(lodgings)
+      today   = Date.today
+      horizon = today + 180
+      lodgings.each_with_object({}) do |lodging, hash|
+        reserved_dates = Reservation.includes(:booking)
+          .where(
+            date:    today..horizon,
+            room:    lodging.rooms.pluck(:id),
+            booking: { status: "confirmed" }
+          ).pluck(:date).uniq.sort
+        unavail_dates = lodging.unavailabilities.where(date: today..horizon).pluck(:date).uniq
+        hash[lodging.id] = build_date_ranges((reserved_dates + unavail_dates).uniq.sort)
+      end
+    end
+
+    def hall_availability_map
+      today   = Date.today
+      horizon = today + 180
+      HALL_KIND_TO_SPACE.each_with_object({}) do |(kind, space_name), hash|
+        space = Space.find_by(name: space_name)
+        next unless space
+        booked_dates = SpaceReservation.includes(:space_booking)
+          .where(
+            date:          today..horizon,
+            space:         space,
+            space_booking: { status: "confirmed" }
+          ).pluck(:date).uniq.sort
+        hash[kind] = build_date_ranges(booked_dates)
+      end
+    end
+
+    def build_date_ranges(dates)
+      return [] if dates.empty?
+      ranges      = []
+      range_start = prev = dates.first
+      dates[1..].each do |date|
+        if date == prev + 1
+          prev = date
+        else
+          ranges << (range_start..prev)
+          range_start = prev = date
+        end
+      end
+      ranges << (range_start..prev)
+      ranges
     end
   end
 end

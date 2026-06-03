@@ -1,3 +1,9 @@
 = turbo_stream.replace "reservation_quote" do
   = turbo_frame_tag "reservation_quote"
     = render "public/reservations/quote_panel", quote: @quote, draft: @draft
+
+= turbo_stream.replace "quote_total_badge" do
+  span id="quote_total_badge"
+    - if @quote.total_cents > 0
+      span.ml-2.rounded-full.bg-white.bg-opacity-20.px-2.5.py-0.5.text-xs.font-bold
+        = number_to_currency(@quote.total_cents / 100.0, unit: "€", format: "%n %u", precision: 0)
