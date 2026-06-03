@@ -38,6 +38,8 @@ module Public
       @quote                 = @draft.quote
       @cal_month             = Date.today.beginning_of_month
       @availability_calendar = build_availability_calendar(@lodgings, month: @cal_month)
+      @stay_nights           = build_stay_nights
+      @lodging_availability  = build_stay_availability(@lodgings, @stay_nights)
     end
 
     # Étape activités (accès via email token — pas dans le funnel direct).
@@ -126,6 +128,7 @@ module Public
       permitted = params.fetch(:reservation, {}).permit(
         :lodging_id, :arrival_date, :departure_date, :dogs_count,
         :adults, :children, :first_name, :last_name, :email, :phone, :group_name,
+        lodging_night_ids: [],
         meals: [:kind, :people], halls: [:kind, :date, :period],
         campings: [:kind, :people, :nights], vans: [:nights],
         pizza_parties: [:people], hamacs: [:kind, :count],
@@ -141,6 +144,26 @@ module Public
       permitted[:halls] = Array(permitted[:halls]).reject { |row| row[:kind].blank? || row[:date].blank? || row[:period].blank? }
       permitted[:experiences] = Array(permitted[:experiences]).select { |r| r[:participants].to_i > 0 }
       permitted
+    end
+
+    def build_stay_nights
+      return [] if @draft.arrival_date.blank? || @draft.departure_date.blank?
+      (@draft.arrival_date...@draft.departure_date).to_a
+    end
+
+    def build_stay_availability(lodgings, nights)
+      return {} if nights.empty?
+      start_date = nights.first
+      end_date   = nights.last
+      lodgings.each_with_object({}) do |lodging, result|
+        room_ids = lodging.rooms.pluck(:id)
+        reserved = Reservation.includes(:booking)
+          .where(date: start_date..end_date, room: room_ids, booking: { status: "confirmed" })
+          .pluck(:date).to_set
+        unavail  = lodging.unavailabilities.where(date: start_date..end_date).pluck(:date).to_set
+        occupied = reserved | unavail
+        result[lodging.id] = nights.map { |night| !occupied.include?(night) }
+      end
     end
 
     def bookable_experiences

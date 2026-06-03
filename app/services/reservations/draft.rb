@@ -7,7 +7,8 @@ module Reservations
   # FR-only (Q7), pas de politique d'annulation embarquée (Q8) : le draft ne
   # transporte que la composition tarifable.
   class Draft
-    attr_accessor :lodging_id, :arrival_date, :departure_date, :dogs_count,
+    attr_accessor :lodging_id, :lodging_night_ids,
+                  :arrival_date, :departure_date, :dogs_count,
                   :campings, :vans, :halls, :meals, :pizza_parties, :hamacs,
                   :experiences,
                   :first_name, :last_name, :email, :phone, :group_name,
@@ -15,7 +16,8 @@ module Reservations
 
     def initialize(attrs = {})
       attrs = (attrs || {}).symbolize_keys
-      @lodging_id     = attrs[:lodging_id].presence
+      @lodging_id       = attrs[:lodging_id].presence
+      @lodging_night_ids = Array(attrs[:lodging_night_ids]).map { |id| id.presence }
       @arrival_date   = parse_date(attrs[:arrival_date])
       @departure_date = parse_date(attrs[:departure_date])
       @dogs_count     = attrs[:dogs_count].to_i
@@ -38,7 +40,8 @@ module Reservations
     # --- Contrat PricingModel ---------------------------------------------
 
     def lodging
-      @lodging ||= lodging_id.present? ? Lodging.find_by(id: lodging_id) : nil
+      id = lodging_night_ids.compact.first.presence || lodging_id
+      @lodging ||= id.present? ? Lodging.find_by(id: id) : nil
     end
 
     def nights
@@ -51,6 +54,7 @@ module Reservations
     def to_h
       {
         lodging_id: lodging_id,
+        lodging_night_ids: lodging_night_ids,
         arrival_date: arrival_date&.iso8601,
         departure_date: departure_date&.iso8601,
         dogs_count: dogs_count,

@@ -70,16 +70,31 @@ class PricingModel
   private
 
   # --- Hébergement : formule fermée dégressive + forfait nommé override (Q3) ---
+  # Supporte le multi-hébergement via lodging_night_ids (Array indexé par nuit).
+  # Fallback sur lodging + nights si lodging_night_ids absent (backward compat).
   def lodging_lines
-    lodging = read(:lodging)
-    nights = read(:nights).to_i
-    return [] if lodging.nil? || nights < 1
+    night_ids = Array(read(:lodging_night_ids)).map { |id| id.presence }
 
-    rate = Pricing::Catalog.lodging_rate(lodging.name)
-    return [] if rate.nil?
-
-    quote = rate.quote_for(nights)
-    [Line.new(label: quote[:label], amount_cents: quote[:amount_cents])]
+    if night_ids.any?(&:present?)
+      nights_by_id = Hash.new(0)
+      night_ids.each { |id| nights_by_id[id] += 1 if id }
+      nights_by_id.filter_map do |lodging_id, night_count|
+        lodging = Lodging.find_by(id: lodging_id)
+        next unless lodging
+        rate = Pricing::Catalog.lodging_rate(lodging.name)
+        next unless rate
+        q = rate.quote_for(night_count)
+        Line.new(label: q[:label], amount_cents: q[:amount_cents])
+      end
+    else
+      lodging = read(:lodging)
+      nights  = read(:nights).to_i
+      return [] if lodging.nil? || nights < 1
+      rate = Pricing::Catalog.lodging_rate(lodging.name)
+      return [] if rate.nil?
+      q = rate.quote_for(nights)
+      [Line.new(label: q[:label], amount_cents: q[:amount_cents])]
+    end
   end
 
   # --- Camping / bivouac : €/pers/nuit ---

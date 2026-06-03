@@ -47,36 +47,8 @@
           data: { "public--reservation-quote-target": "form",
                   action: "change->public--reservation-quote#refresh" } do |f|
 
-        / ── Hébergement ────────────────────────────────────
-        .bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-6
-          h2.text-base.font-semibold.text-gray-900.mb-4 🏡 Hébergement
-          .space-y-3
-            - @lodgings.each do |lodging|
-              - available = @draft.arrival_date && @draft.departure_date ? lodging.available_between?(@draft.arrival_date, @draft.departure_date) : true
-              - selected = @draft.lodging_id.to_s == lodging.id.to_s
-              label class="block cursor-pointer" class=(!available ? "cursor-not-allowed" : "")
-                = f.radio_button "reservation[lodging_id]", lodging.id,
-                    checked: selected,
-                    disabled: !available,
-                    class: "sr-only peer"
-                .rounded-xl.border-2.p-4.transition-all class="#{selected ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-100' : available ? 'border-gray-200 bg-white hover:border-emerald-300' : 'border-gray-100 bg-gray-50 opacity-60'}"
-                  .flex.items-start.justify-between
-                    div
-                      .font-semibold.text-gray-900 = lodging.name
-                      - if lodging.name == "Le Grand-Duc"
-                        p.text-xs.text-emerald-700.mt-0.5 La Hulotte + La Chevêche réservées ensemble
-                      p.text-sm.text-gray-500.mt-1 = lodging.summary.presence || lodging.description.to_s.truncate(100)
-                      - unless available
-                        p.text-xs.text-red-500.mt-1 Indisponible sur ces dates
-                    div.text-right.flex-shrink-0.ml-4
-                      - if (rate = Pricing::Catalog.lodging_rate(lodging.name))
-                        p.text-sm.font-semibold.text-emerald-700
-                          | À partir de
-                          br
-                          = "#{number_to_currency(rate.first_night_cents / 100.0, unit: '€', format: '%n %u', precision: 0)}/nuit"
-                      - if selected
-                        .mt-2.w-5.h-5.rounded-full.bg-emerald-500.flex.items-center.justify-center.ml-auto
-                          span.text-white.text-xs ✓
+        / ── Hébergement — calendrier interactif ─────────────
+        = render "public/reservations/stay_calendar"
 
         / ── Camping & options ──────────────────────────────
         .bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-6
