@@ -30,13 +30,27 @@
           = "#{@draft.nights} nuit#{"s" if @draft.nights.to_i > 1}"
         = link_to "Modifier", public_reservation_dates_path, class: "ml-2 text-xs text-gray-400 hover:text-gray-600 underline"
 
-    / ── Formulaire (colonne unique — devis en drawer) ────────
     .space-y-6
+
+      / ── Calendrier des disponibilités ───────────────────────
+      .bg-white.rounded-2xl.shadow-sm.border.border-gray-100.overflow-hidden
+        details
+          summary.flex.items-center.gap-3.px-6.py-4.cursor-pointer.list-none.select-none.group
+            .w-9.h-9.rounded-full.bg-emerald-100.flex.items-center.justify-center.flex-shrink-0.text-base 📅
+            div.flex-1.min-w-0
+              h3.text-sm.font-semibold.text-gray-900 Calendrier des disponibilités
+              p.text-xs.text-gray-400.mt-0.5 Hébergements & espaces — 60 jours
+            svg(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-gray-300 flex-shrink-0 transition-transform group-open:rotate-180")
+              path(fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd")
+          .px-6.pb-6.pt-2.border-t.border-gray-50
+            = render "public/reservations/availability_calendar", calendar: @availability_calendar
+
+      / ── Formulaire ──────────────────────────────────────────
       = form_with url: public_reservation_quote_path, method: :post,
           data: { "public--reservation-quote-target": "form",
                   action: "change->public--reservation-quote#refresh" } do |f|
 
-        / ── Hébergement ──────────────────────────────────────
+        / ── Hébergement ────────────────────────────────────
         .bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-6
           h2.text-base.font-semibold.text-gray-900.mb-4 🏡 Hébergement
           .space-y-3
@@ -66,30 +80,8 @@
                       - if selected
                         .mt-2.w-5.h-5.rounded-full.bg-emerald-500.flex.items-center.justify-center.ml-auto
                           span.text-white.text-xs ✓
-                  / ── Disponibilités de cet hébergement ──────
-                  - ranges = @lodging_availability[lodging.id] || []
-                  details.mt-3.pt-3.border-t.border-gray-50
-                    summary.text-xs.cursor-pointer.list-none.select-none.text-emerald-600.hover:text-emerald-800.inline-flex.items-center.gap-1
-                      span 📅
-                      | Vérifier les disponibilités
-                    .mt-2
-                      - if ranges.empty?
-                        .flex.items-center.gap-1.5.text-xs.text-emerald-700.bg-emerald-50.rounded-lg.px-3.py-2
-                          span ✓
-                          | Aucune réservation dans les 6 prochains mois
-                      - else
-                        .bg-gray-50.rounded-lg.px-3.py-2
-                          p.text-xs.text-gray-500.mb-1.5 Périodes indisponibles :
-                          ul.space-y-0.5
-                            - ranges.each do |range|
-                              li.flex.items-center.gap-1.5.text-xs.text-gray-700
-                                span.w-1.5.h-1.5.rounded-full.bg-red-400.flex-shrink-0
-                                - if range.first == range.last
-                                  = range.first.strftime("%-d/%m/%Y")
-                                - else
-                                  = "#{range.first.strftime("%-d/%m")} → #{range.last.strftime("%-d/%m/%Y")}"
 
-        / ── Camping & options ────────────────────────────────
+        / ── Camping & options ──────────────────────────────
         .bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-6
           h2.text-base.font-semibold.text-gray-900.mb-4 ⛺ Camping & options
           .grid.grid-cols-1.sm:grid-cols-2.gap-4
@@ -102,7 +94,7 @@
               span.text-xs.font-medium.text-gray-500.uppercase.tracking-wide Van / camping-car — nuits
               = number_field_tag "reservation[vans][0][nights]", @draft.vans.dig(0, :nights), min: 0, max: 50, class: "mt-1.5 w-full rounded-xl border-gray-300 shadow-sm text-base focus:border-emerald-500 focus:ring-emerald-500"
 
-        / ── Hamacs ───────────────────────────────────────────
+        / ── Hamacs ─────────────────────────────────────────
         - if (5..10).cover?(Date.today.month)
           .bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-6
             h2.text-base.font-semibold.text-gray-900.mb-1 🌿 Hamacs
@@ -125,39 +117,18 @@
                 = number_field_tag "reservation[hamacs][1][count]", @draft.hamacs.dig(1, :count), min: 0, max: 20, class: "mt-1.5 w-full rounded-xl border-gray-300 shadow-sm text-base focus:border-emerald-500 focus:ring-emerald-500"
                 = hidden_field_tag "reservation[hamacs][1][kind]", "double"
 
-        / ── Salles & cuisine ──────────────────────────────────
+        / ── Salles & cuisine ────────────────────────────────
         - stay_min = @draft.arrival_date&.iso8601 || Date.today.iso8601
         - stay_max = @draft.departure_date&.iso8601 || (Date.today >> 18).iso8601
         .bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-6(
           data-controller="public--hall-slots"
           data-public--hall-slots-min-value=stay_min
           data-public--hall-slots-max-value=stay_max)
-          .flex.items-start.justify-between.mb-2
+          .flex.items-start.justify-between.mb-4
             div
               h2.text-base.font-semibold.text-gray-900 🏛️ Salles & cuisine
               p.text-xs.text-gray-400.mt-0.5 Une ligne par tranche d'utilisation — ex. « grande salle jeudi soir ».
             = link_to "Tous les tarifs →", "https://www.les4sources.be/sejours/tarifs", target: "_blank", rel: "noopener", class: "text-xs text-emerald-600 hover:underline flex-shrink-0 ml-4"
-
-          / Disponibilités par salle
-          .space-y-1.mb-4
-            - [["grande_salle", "Grande salle"], ["petite_salle", "Petite salle"], ["cuisine_pro", "Cuisine pro"]].each do |kind, label|
-              details
-                summary.text-xs.cursor-pointer.list-none.select-none.text-emerald-600.hover:text-emerald-800.inline-flex.items-center.gap-1
-                  span 📅
-                  = "Disponibilités — #{label}"
-                .mt-1.ml-4
-                  - hall_ranges = @hall_availability[kind] || []
-                  - if hall_ranges.empty?
-                    .text-xs.text-emerald-700.py-1 ✓ Aucune date réservée dans les 6 prochains mois
-                  - else
-                    .flex.flex-wrap.gap-1.py-1
-                      - hall_ranges.each do |range|
-                        span.text-xs.bg-red-50.text-red-700.rounded.px-2.py-0.5
-                          - if range.first == range.last
-                            = range.first.strftime("%-d/%m")
-                          - else
-                            = "#{range.first.strftime("%-d/%m")}–#{range.last.strftime("%-d/%m")}"
-
           / Liste des lignes (vide au départ, remplie par Stimulus)
           .space-y-2.mb-4 data-public--hall-slots-target="list"
           / Bouton Ajouter
@@ -167,7 +138,7 @@
           p.text-xs.text-gray-400.mt-3
             | Grande salle 290 €/j · 190 €/soir · Petite salle 140 €/j · 290 €/j+soir · Cuisine 110 €/j · 70 €/soir
 
-        / ── Activités ─────────────────────────────────────────
+        / ── Activités ───────────────────────────────────────
         .bg-emerald-50.rounded-2xl.border.border-emerald-100.p-6
           .flex.items-start.gap-3
             span.text-2xl 🌿
@@ -179,7 +150,6 @@
                 strong  1 mois avant votre arrivée.
                 |  Vous recevrez un email avec un calendrier pour sélectionner ce qui vous tente.
 
-        / noscript fallback
         noscript
           = f.submit "Mettre à jour le devis", class: "rounded bg-gray-800 text-white px-4 py-2"
 
@@ -234,15 +204,15 @@
       data-public--quote-drawer-target="overlay"
       data-action="click->public--quote-drawer#close")
 
-    / Panneau latéral
-    aside.fixed.top-0.right-0.h-full.w-full.max-w-sm.bg-white.z-50.shadow-2xl.overflow-y-auto.transition-transform.duration-300(
-      class="translate-x-full"
+    / Panneau latéral — 50% de largeur sur grand écran
+    aside.fixed.top-0.right-0.h-full.bg-white.z-50.shadow-2xl.overflow-y-auto.transition-transform.duration-300(
+      class="translate-x-full w-full max-w-sm lg:max-w-none lg:w-1/2"
       data-public--quote-drawer-target="panel")
       .sticky.top-0.bg-white.border-b.border-gray-100.px-5.py-4.flex.items-center.justify-between.z-10
         h2.text-base.font-semibold.text-gray-900 Votre devis
         button type="button" data-action="public--quote-drawer#close" class="text-gray-400 hover:text-gray-600 transition-colors rounded-lg p-1"
           svg.w-5.h-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"
             path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"
-      .p-5
+      .p-6
         = turbo_frame_tag "reservation_quote"
           = render "public/reservations/quote_panel", quote: @quote, draft: @draft

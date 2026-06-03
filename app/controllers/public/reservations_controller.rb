@@ -34,10 +34,9 @@ module Public
 
     # Étape 2 — composition du séjour + devis temps-réel.
     def compose
-      @lodgings             = bookable_lodgings
-      @quote                = @draft.quote
-      @lodging_availability = lodging_availability_map(@lodgings)
-      @hall_availability    = hall_availability_map
+      @lodgings              = bookable_lodgings
+      @quote                 = @draft.quote
+      @availability_calendar = build_availability_calendar(@lodgings)
     end
 
     # Étape activités (accès via email token — pas dans le funnel direct).
@@ -141,51 +140,30 @@ module Public
       Lodging.where(name: names).sort_by { |l| names.index(l.name) || 99 }
     end
 
-    def lodging_availability_map(lodgings)
+    # Construit les données pour le Gantt calendrier des disponibilités (60 jours).
+    def build_availability_calendar(lodgings)
       today   = Date.today
-      horizon = today + 180
-      lodgings.each_with_object({}) do |lodging, hash|
-        reserved_dates = Reservation.includes(:booking)
-          .where(
-            date:    today..horizon,
-            room:    lodging.rooms.pluck(:id),
-            booking: { status: "confirmed" }
-          ).pluck(:date).uniq.sort
-        unavail_dates = lodging.unavailabilities.where(date: today..horizon).pluck(:date).uniq
-        hash[lodging.id] = build_date_ranges((reserved_dates + unavail_dates).uniq.sort)
-      end
-    end
+      horizon = today + 59
+      dates   = (today..horizon).to_a
 
-    def hall_availability_map
-      today   = Date.today
-      horizon = today + 180
-      HALL_KIND_TO_SPACE.each_with_object({}) do |(kind, space_name), hash|
+      lodging_rows = lodgings.map do |lodging|
+        reserved = Reservation.includes(:booking)
+          .where(date: today..horizon, room: lodging.rooms.pluck(:id), booking: { status: "confirmed" })
+          .pluck(:date).to_set
+        unavail = lodging.unavailabilities.where(date: today..horizon).pluck(:date).to_set
+        { name: lodging.name, occupied: reserved | unavail }
+      end
+
+      hall_rows = HALL_KIND_TO_SPACE.filter_map do |_kind, space_name|
         space = Space.find_by(name: space_name)
         next unless space
-        booked_dates = SpaceReservation.includes(:space_booking)
-          .where(
-            date:          today..horizon,
-            space:         space,
-            space_booking: { status: "confirmed" }
-          ).pluck(:date).uniq.sort
-        hash[kind] = build_date_ranges(booked_dates)
+        booked = SpaceReservation.includes(:space_booking)
+          .where(date: today..horizon, space: space, space_booking: { status: "confirmed" })
+          .pluck(:date).to_set
+        { name: space_name, occupied: booked }
       end
-    end
 
-    def build_date_ranges(dates)
-      return [] if dates.empty?
-      ranges      = []
-      range_start = prev = dates.first
-      dates[1..].each do |date|
-        if date == prev + 1
-          prev = date
-        else
-          ranges << (range_start..prev)
-          range_start = prev = date
-        end
-      end
-      ranges << (range_start..prev)
-      ranges
+      { dates: dates, lodging_rows: lodging_rows, hall_rows: hall_rows }
     end
   end
 end
