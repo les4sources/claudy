@@ -25,6 +25,9 @@ class Human < ApplicationRecord
   has_and_belongs_to_many :tasks
 
   scope :cycle_active, -> { where(cycle_active: true) }
+  # Personnes pouvant recevoir un compte d'accès (un email est requis pour
+  # créer le User Devise). Cf. epic #25 — Phase 2 (comptes porteurs).
+  scope :with_email, -> { where.not(email: [nil, ""]) }
 
   self.table_name = "humans"
 
@@ -43,5 +46,16 @@ class Human < ApplicationRecord
 
   def inactive?
     self.status == "inactive"
+  end
+
+  # A un compte d'accès (User Devise) lié.
+  def account?
+    user.present?
+  end
+
+  # Peut recevoir un compte d'accès (un email est nécessaire et aucun compte
+  # n'existe encore).
+  def account_possible?
+    email.present? && user.blank?
   end
 end

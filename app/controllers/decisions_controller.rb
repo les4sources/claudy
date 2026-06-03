@@ -65,10 +65,6 @@ class DecisionsController < BaseController
     @decision = Decision.find(params[:id])
   end
 
-  def current_human
-    current_user&.human || Human.where(status: "active").first
-  end
-
   def set_presenters
     @menu_presenter = Components::MenuPresenter.new(
       active_primary: "organisation",
