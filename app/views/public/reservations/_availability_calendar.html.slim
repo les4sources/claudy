@@ -1,75 +1,97 @@
-/ Gantt grille — 1 mois x 6 ressources. Reçoit :calendar et :month.
+/ Gantt grille — 1 mois x 6 ressources. Reçoit :calendar.
 / Vert = dispo · Rouge = occupe · Gris = passe · Bague bleue = aujourd'hui.
-- today    = Date.today
+/ Clic sur une cellule → colonne mise en évidence (avail_cal_controller).
+- today     = Date.today
 - cal_dates = calendar[:dates]
-- cell_w   = 14
-- cell_sty = "display:inline-block;width:#{cell_w}px;min-width:#{cell_w}px;margin-right:2px;flex-shrink:0"
+- cell_w    = 14
+- cell_sty  = "display:inline-block;width:#{cell_w}px;min-width:#{cell_w}px;margin-right:2px;flex-shrink:0;cursor:pointer"
 
-/ Axe des jours du mois
-.flex.mb-3
-  .w-36.flex-shrink-0
-  .flex
-    - cal_dates.each do |date|
-      span.text-center.text-gray-400(style="#{cell_sty};font-size:10px;line-height:1.2")
-        - if date == today
-          span.font-bold.text-blue-500(style="font-size:10px") = date.day
-        - else
-          = date.day
+.flex.flex-col(data-controller="public--avail-cal")
 
-/ Axe jour de semaine (abrégé)
-.flex.mb-3
-  .w-36.flex-shrink-0
-  .flex
-    - cal_dates.each do |date|
-      - dow = %w[D L M M J V S][date.wday]
-      span.text-center.text-gray-300(style="#{cell_sty};font-size:9px;line-height:1")
-        = dow
+  / Jour sélectionné — affiché après un clic
+  p.hidden.mb-2.text-sm.font-semibold.text-blue-700(data-public--avail-cal-target="dayLabel")
 
-/ Section Hebergements
-.flex.items-center.mb-2
-  .w-36.flex-shrink-0
-  span.text-xs.font-bold.text-gray-400.uppercase.tracking-widest 🏡 Hébergements
-
-- calendar[:lodging_rows].each do |row|
-  .flex.items-center.mb-2
-    span.text-xs.font-medium.text-gray-700.w-36.pr-3.text-right.truncate.flex-shrink-0 = row[:name]
+  / Axe des jours du mois
+  .flex.mb-3
+    .w-36.flex-shrink-0
     .flex
       - cal_dates.each do |date|
-        - past     = date < today
-        - occupied = row[:occupied].include?(date)
-        - is_today = date == today
-        - bg  = past ? "bg-gray-100" : (occupied ? "bg-red-300" : "bg-emerald-200")
-        - ring = is_today ? "ring-1 ring-blue-400" : ""
-        span.h-7.rounded(title=date.strftime("%-d %b") class="#{bg} #{ring}" style=cell_sty)
+        span.text-center.text-gray-400(
+          data-date=date.iso8601
+          data-action="click->public--avail-cal#selectDay"
+          style="#{cell_sty};font-size:10px;line-height:1.2")
+          - if date == today
+            span.font-bold.text-blue-500(style="font-size:10px") = date.day
+          - else
+            = date.day
 
-/ Section Espaces
-.flex.items-center.mt-4.mb-2
-  .w-36.flex-shrink-0
-  span.text-xs.font-bold.text-gray-400.uppercase.tracking-widest 🏛️ Espaces
-
-- calendar[:hall_rows].each do |row|
-  .flex.items-center.mb-2
-    span.text-xs.text-gray-600.w-36.pr-3.text-right.truncate.flex-shrink-0 = row[:name]
+  / Axe jour de semaine (abrégé)
+  .flex.mb-3
+    .w-36.flex-shrink-0
     .flex
       - cal_dates.each do |date|
-        - past     = date < today
-        - occupied = row[:occupied].include?(date)
-        - is_today = date == today
-        - bg  = past ? "bg-gray-100" : (occupied ? "bg-red-300" : "bg-emerald-200")
-        - ring = is_today ? "ring-1 ring-blue-400" : ""
-        span.h-7.rounded(title=date.strftime("%-d %b") class="#{bg} #{ring}" style=cell_sty)
+        - dow = %w[D L M M J V S][date.wday]
+        span.text-center.text-gray-300(
+          data-date=date.iso8601
+          data-action="click->public--avail-cal#selectDay"
+          style="#{cell_sty};font-size:9px;line-height:1")
+          = dow
 
-/ Legende
-.flex.flex-wrap.items-center.gap-x-6.gap-y-1.mt-5.pt-4.border-t.border-gray-100
-  .flex.items-center.gap-1.5
-    span.w-4.h-4.rounded.bg-emerald-200.flex-shrink-0
-    span.text-xs.text-gray-500 Disponible
-  .flex.items-center.gap-1.5
-    span.w-4.h-4.rounded.bg-red-300.flex-shrink-0
-    span.text-xs.text-gray-500 Réservé
-  .flex.items-center.gap-1.5
-    span.w-4.h-4.rounded.bg-gray-100.flex-shrink-0
-    span.text-xs.text-gray-500 Passé
-  .flex.items-center.gap-1.5
-    span.w-4.h-4.rounded.bg-emerald-200.ring-1.ring-blue-400.flex-shrink-0
-    span.text-xs.text-gray-500 Aujourd'hui
+  / Section Hébergements
+  .flex.items-center.mb-2
+    .w-36.flex-shrink-0
+    span.text-xs.font-bold.text-gray-400.uppercase.tracking-widest 🏡 Hébergements
+
+  - calendar[:lodging_rows].each do |row|
+    .flex.items-center.mb-2
+      span.text-xs.font-medium.text-gray-700.w-36.pr-3.text-right.truncate.flex-shrink-0 = row[:name]
+      .flex
+        - cal_dates.each do |date|
+          - past     = date < today
+          - occupied = row[:occupied].include?(date)
+          - is_today = date == today
+          - bg  = past ? "bg-gray-100" : (occupied ? "bg-red-300" : "bg-emerald-200")
+          - ring = is_today ? "ring-1 ring-blue-400" : ""
+          span.h-7.rounded(
+            title=date.strftime("%-d %b")
+            data-date=date.iso8601
+            data-action="click->public--avail-cal#selectDay"
+            class="#{bg} #{ring}"
+            style=cell_sty)
+
+  / Section Espaces
+  .flex.items-center.mt-4.mb-2
+    .w-36.flex-shrink-0
+    span.text-xs.font-bold.text-gray-400.uppercase.tracking-widest 🏛️ Espaces
+
+  - calendar[:hall_rows].each do |row|
+    .flex.items-center.mb-2
+      span.text-xs.text-gray-600.w-36.pr-3.text-right.truncate.flex-shrink-0 = row[:name]
+      .flex
+        - cal_dates.each do |date|
+          - past     = date < today
+          - occupied = row[:occupied].include?(date)
+          - is_today = date == today
+          - bg  = past ? "bg-gray-100" : (occupied ? "bg-red-300" : "bg-emerald-200")
+          - ring = is_today ? "ring-1 ring-blue-400" : ""
+          span.h-7.rounded(
+            title=date.strftime("%-d %b")
+            data-date=date.iso8601
+            data-action="click->public--avail-cal#selectDay"
+            class="#{bg} #{ring}"
+            style=cell_sty)
+
+  / Légende
+  .flex.flex-wrap.items-center.gap-x-6.gap-y-1.mt-5.pt-4.border-t.border-gray-100
+    .flex.items-center.gap-1.5
+      span.w-4.h-4.rounded.bg-emerald-200.flex-shrink-0
+      span.text-xs.text-gray-500 Disponible
+    .flex.items-center.gap-1.5
+      span.w-4.h-4.rounded.bg-red-300.flex-shrink-0
+      span.text-xs.text-gray-500 Réservé
+    .flex.items-center.gap-1.5
+      span.w-4.h-4.rounded.bg-gray-100.flex-shrink-0
+      span.text-xs.text-gray-500 Passé
+    .flex.items-center.gap-1.5
+      span.w-4.h-4.rounded.bg-emerald-200.ring-1.ring-blue-400.flex-shrink-0
+      span.text-xs.text-gray-500 Aujourd'hui
