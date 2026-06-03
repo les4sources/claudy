@@ -47,11 +47,8 @@
               td.py-2.pr-4.whitespace-nowrap
                 span.text-sm.text-gray-800.font-medium = short_names[lodging.name] || lodging.name
               - @stay_nights.each_with_index do |night, i|
-                - avail   = (@lodging_availability.dig(lodging.id, i) != false)
-                - sel     = selected_ids.at(i).to_s == lodging.id.to_s
-                - btn_sel = "w-14 h-11 rounded-xl border-2 text-sm font-bold transition-all focus:outline-none bg-emerald-500 border-emerald-500 text-white shadow-sm"
-                - btn_ok  = "w-14 h-11 rounded-xl border-2 text-sm font-bold transition-all focus:outline-none bg-white border-gray-200 text-gray-200 hover:border-emerald-400 hover:text-emerald-400"
-                - btn_off = "w-14 h-11 rounded-xl border-2 text-sm font-bold bg-gray-50 border-gray-100 text-gray-200 cursor-not-allowed"
+                - avail = (@lodging_availability.dig(lodging.id, i) != false)
+                - sel   = selected_ids.at(i).to_s == lodging.id.to_s
                 td.py-2.px-1.text-center
                   - if avail
                     button(
@@ -61,10 +58,10 @@
                       data-type="lodging"
                       data-lodging-id=lodging.id.to_s
                       data-night-index=i.to_s
-                      class=(sel ? btn_sel : btn_ok))
+                      class=(sel ? "appearance-none w-14 h-11 rounded-xl border-2 text-sm font-bold transition-all focus:outline-none bg-emerald-500 border-emerald-500 text-white shadow-sm" : "appearance-none w-14 h-11 rounded-xl border-2 text-sm font-bold transition-all focus:outline-none bg-white border-gray-200 text-gray-300 hover:border-emerald-400 hover:bg-emerald-50"))
                       = sel ? "✓" : ""
                   - else
-                    button(type="button" disabled="disabled" data-type="lodging" data-lodging-id=lodging.id.to_s data-night-index=i.to_s class=btn_off)
+                    button(type="button" disabled="disabled" data-type="lodging" data-lodging-id=lodging.id.to_s data-night-index=i.to_s class="w-14 h-11 rounded-xl border-2 text-sm font-bold bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed")
                       | —
 
           / ══ Camping ════════════════════════════════════════════════════

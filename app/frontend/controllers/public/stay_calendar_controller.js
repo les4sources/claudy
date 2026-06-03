@@ -71,21 +71,15 @@ export default class extends Controller {
     return this.element.querySelectorAll('[data-type="lodging"]')
   }
 
-  // Applique l'état visuel + ARIA d'une cellule. `aria-pressed` est la source
-  // de vérité lue partout ailleurs ; les classes Tailwind ne font que refléter
-  // cet état. On retire systématiquement les classes de l'autre état pour
-  // éviter toute accumulation contradictoire.
+  // Classes identiques à celles du template Slim — source de vérité unique.
+  // Le texte (✓ / vide) est mis à jour en même temps que les classes pour
+  // éviter tout désynchronisation entre état visuel et contenu.
   setCellState(cell, selected) {
-    const selectedClasses = ["bg-emerald-500", "border-emerald-500", "text-white"]
-    const idleClasses = [
-      "bg-white",
-      "border-gray-200",
-      "text-gray-500",
-      "hover:border-emerald-300",
-      "hover:bg-emerald-50"
-    ]
+    const selectedClasses = ["bg-emerald-500", "border-emerald-500", "text-white", "shadow-sm"]
+    const idleClasses = ["bg-white", "border-gray-200", "text-gray-300", "hover:border-emerald-400", "hover:bg-emerald-50"]
 
     cell.setAttribute("aria-pressed", selected ? "true" : "false")
+    cell.textContent = selected ? "✓" : ""
 
     if (selected) {
       cell.classList.remove(...idleClasses)
