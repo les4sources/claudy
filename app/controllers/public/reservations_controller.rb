@@ -27,16 +27,17 @@ module Public
     end
 
     HALL_KIND_TO_SPACE = {
-      "grande_salle" => "Grande salle",
-      "petite_salle" => "Petite salle",
-      "cuisine_pro"  => "Cuisine pro"
+      "grande_salle" => "Grande Salle",
+      "petite_salle" => "Petite Salle",
+      "cuisine_pro"  => "Cuisine professionnelle"
     }.freeze
 
     # Étape 2 — composition du séjour + devis temps-réel.
     def compose
       @lodgings              = bookable_lodgings
       @quote                 = @draft.quote
-      @availability_calendar = build_availability_calendar(@lodgings)
+      @cal_month             = Date.today.beginning_of_month
+      @availability_calendar = build_availability_calendar(@lodgings, month: @cal_month)
     end
 
     # Étape activités (accès via email token — pas dans le funnel direct).
@@ -90,6 +91,17 @@ module Public
       end
     end
 
+    # Turbo Frame navigation pour le calendrier de disponibilités (1 mois par page).
+    def availability_calendar
+      today_month = Date.today.beginning_of_month
+      max_month   = today_month >> 18
+      parsed      = params[:month] ? (Date.parse("#{params[:month]}-01") rescue today_month) : today_month
+      @cal_month  = [[parsed, today_month].max, max_month].min.beginning_of_month
+      @lodgings   = bookable_lodgings
+      @availability_calendar = build_availability_calendar(@lodgings, month: @cal_month)
+      render layout: false
+    end
+
     private
 
     def load_draft
@@ -140,17 +152,18 @@ module Public
       Lodging.where(name: names).sort_by { |l| names.index(l.name) || 99 }
     end
 
-    # Construit les données pour le Gantt calendrier des disponibilités (60 jours).
-    def build_availability_calendar(lodgings)
-      today   = Date.today
-      horizon = today + 59
-      dates   = (today..horizon).to_a
+    # Construit les données pour le Gantt calendrier des disponibilités (1 mois).
+    def build_availability_calendar(lodgings, month: nil)
+      month   = (month || Date.today).beginning_of_month
+      start   = month
+      finish  = month.end_of_month
+      dates   = (start..finish).to_a
 
       lodging_rows = lodgings.map do |lodging|
         reserved = Reservation.includes(:booking)
-          .where(date: today..horizon, room: lodging.rooms.pluck(:id), booking: { status: "confirmed" })
+          .where(date: start..finish, room: lodging.rooms.pluck(:id), booking: { status: "confirmed" })
           .pluck(:date).to_set
-        unavail = lodging.unavailabilities.where(date: today..horizon).pluck(:date).to_set
+        unavail = lodging.unavailabilities.where(date: start..finish).pluck(:date).to_set
         { name: lodging.name, occupied: reserved | unavail }
       end
 
@@ -158,7 +171,7 @@ module Public
         space = Space.find_by(name: space_name)
         next unless space
         booked = SpaceReservation.includes(:space_booking)
-          .where(date: today..horizon, space: space, space_booking: { status: "confirmed" })
+          .where(date: start..finish, space: space, space_booking: { status: "confirmed" })
           .pluck(:date).to_set
         { name: space_name, occupied: booked }
       end

@@ -125,6 +125,7 @@ Rails.application.routes.draw do
   get  "reservation/activites",    to: "public/reservations#activities",         as: :public_reservation_activities
   get  "reservation/coordonnees",  to: "public/reservations#contact",            as: :public_reservation_contact
   post "reservation/coordonnees",  to: "public/reservations#create",             as: :public_reservation_create
+  get  "reservation/calendrier",   to: "public/reservations#availability_calendar", as: :public_reservation_availability_calendar
 
   # Vue admin Pôle Accueil — index des Stays récents filtrable par source (Devise).
   get "sejours/recents", to: "stays#recent", as: :recent_stays
