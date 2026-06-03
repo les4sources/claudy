@@ -1,79 +1,104 @@
 / Étape 1/3 — Dates du séjour, taille du groupe, animal
-.max-w-2xl.mx-auto.py-8
+.min-h-screen.bg-gray-50
+  .max-w-2xl.mx-auto.px-4.py-10
 
-  / Indicateur d'étapes
-  .flex.items-center.gap-2.mb-8.text-sm
-    span.font-semibold.text-emerald-700 1. Votre séjour
-    span.text-gray-300 →
-    span.text-gray-400 2. Composition
-    span.text-gray-300 →
-    span.text-gray-400 3. Coordonnées
+    / ── Step indicator ───────────────────────────────────────
+    .flex.items-center.mb-10
+      .flex.items-center.flex-shrink-0
+        .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-emerald-600.text-white.shadow-sm 1
+        span.ml-2.text-sm.font-semibold.text-emerald-700.hidden.sm:inline Votre séjour
+      .flex-1.h-px.mx-4.bg-gray-200
+      .flex.items-center.flex-shrink-0
+        .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.border-2.border-gray-200.bg-white.text-gray-400 2
+        span.ml-2.text-sm.text-gray-400.hidden.sm:inline Composition
+      .flex-1.h-px.mx-4.bg-gray-200
+      .flex.items-center.flex-shrink-0
+        .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.border-2.border-gray-200.bg-white.text-gray-400 3
+        span.ml-2.text-sm.text-gray-400.hidden.sm:inline Coordonnées
 
-  h1.text-2xl.font-semibold.mb-6 Votre séjour aux 4 Sources
+    / ── Titre ────────────────────────────────────────────────
+    .mb-8
+      h1.text-2xl.font-bold.text-gray-900 Votre séjour aux 4 Sources
+      p.text-sm.text-gray-500.mt-1 Dites-nous quand vous venez et qui vous accompagne.
 
-  = form_with url: public_reservation_advance_dates_path, method: :post do |f|
+    / ── Formulaire ───────────────────────────────────────────
+    .bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-6.sm:p-8
+      = form_with url: public_reservation_advance_dates_path, method: :post,
+          data: { controller: "public--dates-nights" } do |f|
 
-    / --- Dates ---
-    section.mb-6
-      h2.text-lg.font-medium.mb-3 Dates
-      .grid.grid-cols-2.gap-4
-        label.block
-          span.text-sm.text-gray-600 Arrivée
-          = f.date_field "reservation[arrival_date]",
-              value: @draft.arrival_date,
-              min: Date.today.iso8601,
-              max: (Date.today >> 18).iso8601,
-              class: "mt-1 w-full rounded border-gray-300"
-        label.block
-          span.text-sm.text-gray-600 Départ
-          = f.date_field "reservation[departure_date]",
-              value: @draft.departure_date,
-              min: Date.today.iso8601,
-              max: (Date.today >> 18).iso8601,
-              class: "mt-1 w-full rounded border-gray-300"
-      p.text-xs.text-gray-400.mt-1 Réservation possible jusqu'à 18 mois à l'avance.
+        / Dates
+        section.mb-8
+          h2.text-base.font-semibold.text-gray-900.mb-4
+            | 📅 Dates
+          .grid.grid-cols-1.sm:grid-cols-2.gap-4
+            label.block
+              span.text-xs.font-medium.text-gray-500.uppercase.tracking-wide Arrivée
+              = f.date_field "reservation[arrival_date]",
+                  value: @draft.arrival_date,
+                  min: Date.today.iso8601,
+                  max: (Date.today >> 18).iso8601,
+                  class: "mt-1.5 w-full rounded-xl border-gray-300 shadow-sm text-base focus:border-emerald-500 focus:ring-emerald-500",
+                  data: { "public--dates-nights-target": "arrival",
+                          action: "change->public--dates-nights#compute" }
+            label.block
+              span.text-xs.font-medium.text-gray-500.uppercase.tracking-wide Départ
+              = f.date_field "reservation[departure_date]",
+                  value: @draft.departure_date,
+                  min: Date.today.iso8601,
+                  max: (Date.today >> 18).iso8601,
+                  class: "mt-1.5 w-full rounded-xl border-gray-300 shadow-sm text-base focus:border-emerald-500 focus:ring-emerald-500",
+                  data: { "public--dates-nights-target": "departure",
+                          action: "change->public--dates-nights#compute" }
 
-    / --- Groupe ---
-    section.mb-6
-      h2.text-lg.font-medium.mb-3 Votre groupe
-      .grid.grid-cols-2.gap-4
-        label.block
-          span.text-sm.text-gray-600 Adultes (13 ans et +)
-          = f.number_field "reservation[adults]",
-              value: (@draft.adults.presence || 1),
-              min: 1,
-              class: "mt-1 w-full rounded border-gray-300"
-        label.block
-          span.text-sm.text-gray-600 Enfants (3–12 ans)
-          = f.number_field "reservation[children]",
-              value: (@draft.children || 0),
-              min: 0,
-              class: "mt-1 w-full rounded border-gray-300"
-      p.text-xs.text-gray-400.mt-1
-        | Enfants jusqu'à 3 ans : gratuit. Nuitées en chambre individuelle (semaine uniquement) :
-        strong  35 €/adulte · 15 €/enfant
-        | — contactez
-        = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline"
+          / Badge nuits dynamique
+          .mt-3.h-6.flex.items-center
+            span.text-sm.font-medium.text-emerald-700.transition-all data-public--dates-nights-target="nights"
 
-    / --- Animal ---
-    section.mb-6
-      h2.text-lg.font-medium.mb-3 Animal de compagnie
-      p.text-xs.text-gray-400.mb-2 Champ obligatoire. Supplément de 50 € par séjour pour un chien (max 2).
-      = f.select "reservation[dogs_count]",
-          options_for_select([["Pas d'animal", 0], ["Un chien (+50 €)", 1], ["Plusieurs chiens (sur demande)", 2]], @draft.dogs_count),
-          {},
-          class: "w-full rounded border-gray-300"
+          p.text-xs.text-gray-400.mt-1 Réservation jusqu'à 18 mois à l'avance.
 
-    .mt-8.flex.justify-end
-      = f.submit "Continuer →",
-          class: "rounded-lg bg-emerald-600 text-white px-6 py-3 text-sm font-medium hover:bg-emerald-700 cursor-pointer"
+        / Groupe
+        section.mb-8
+          h2.text-base.font-semibold.text-gray-900.mb-4
+            | 👥 Votre groupe
+          .grid.grid-cols-2.gap-4
+            label.block
+              span.text-xs.font-medium.text-gray-500.uppercase.tracking-wide Adultes (13 ans +)
+              = f.number_field "reservation[adults]",
+                  value: (@draft.adults.presence || 1),
+                  min: 1, max: 50,
+                  class: "mt-1.5 w-full rounded-xl border-gray-300 shadow-sm text-base focus:border-emerald-500 focus:ring-emerald-500"
+            label.block
+              span.text-xs.font-medium.text-gray-500.uppercase.tracking-wide Enfants (3–12 ans)
+              = f.number_field "reservation[children]",
+                  value: (@draft.children || 0),
+                  min: 0, max: 50,
+                  class: "mt-1.5 w-full rounded-xl border-gray-300 shadow-sm text-base focus:border-emerald-500 focus:ring-emerald-500"
+          p.text-xs.text-gray-400.mt-2
+            | Moins de 3 ans : gratuit. Nuitée individuelle en semaine :
+            strong  35 €/adulte · 15 €/enfant
+            | . Contact :
+            = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline"
 
-  / --- Infos ---
-  .mt-8.space-y-3
+        / Animal
+        section.mb-8
+          h2.text-base.font-semibold.text-gray-900.mb-1
+            | 🐾 Animal de compagnie
+          p.text-xs.text-gray-400.mb-4 Supplément 50 € par séjour pour un chien (max 2).
+          .space-y-2
+            - [["Pas d'animal", "0"], ["Un chien (+50 €)", "1"], ["Plusieurs chiens (sur demande)", "2"]].each do |label, val|
+              label class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all #{@draft.dogs_count.to_s == val ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-200' : 'border-gray-200 bg-white hover:border-emerald-300'}"
+                = f.radio_button "reservation[dogs_count]", val, checked: @draft.dogs_count.to_s == val, class: "text-emerald-600 focus:ring-emerald-500"
+                span.text-sm.font-medium.text-gray-700 = label
 
-    .rounded-lg.border.border-gray-100.p-4
-      p.text-sm.text-gray-500
+        / CTA
+        .flex.justify-end
+          = f.submit "Continuer →",
+              class: "rounded-xl bg-emerald-600 text-white px-8 py-3 text-sm font-semibold hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 shadow-sm cursor-pointer transition-colors"
+
+    / ── Contact ──────────────────────────────────────────────
+    .mt-6.text-center
+      p.text-sm.text-gray-400
         | Une question ? Contactez Malau au
         strong  +32 (0)490 46.77.10
-        |  ou à
-        = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline"
+        |  ou
+        = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline hover:text-gray-600"
