@@ -1,5 +1,5 @@
 / Étape 1/3 — Dates du séjour, taille du groupe, animal
-.min-h-screen.bg-gray-50
+.min-h-screen.bg-gray-50(data-controller="public--avail-modal")
   .max-w-2xl.mx-auto.px-4.py-10
 
     / ── Step indicator ───────────────────────────────────────
@@ -56,6 +56,10 @@
 
           p.text-xs.text-gray-400.mt-1 Réservation jusqu'à 18 mois à l'avance.
 
+          .mt-3
+            button(type="button" data-action="public--avail-modal#open" class="text-sm text-emerald-700 font-medium hover:text-emerald-900 underline underline-offset-2 transition-colors")
+              | 📅 Voir les disponibilités →
+
         / Groupe
         section.mb-8
           h2.text-base.font-semibold.text-gray-900.mb-4
@@ -102,3 +106,6 @@
         strong  +32 (0)490 46.77.10
         |  ou
         = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline hover:text-gray-600"
+
+  / ── Modale calendrier disponibilités ─────────────────────
+  = render "public/reservations/avail_modal"

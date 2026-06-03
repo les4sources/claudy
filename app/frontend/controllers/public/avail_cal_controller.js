@@ -2,7 +2,9 @@ import { Controller } from "@hotwired/stimulus"
 
 // Met en évidence une colonne du Gantt de disponibilités au clic.
 // Les cellules portent data-date="YYYY-MM-DD". Un clic sélectionne la colonne
-// (ring bleu + autres colonnes en opacity-40). Re-clic sur la même date déselectionne.
+// via une ligne bleue en haut de chaque cellule (border-top). Les autres colonnes
+// restent à pleine opacité — approche "illumination" plutôt que "assombrissement".
+// Re-clic sur la même date désélectionne.
 export default class extends Controller {
   static targets = ["dayLabel"]
 
@@ -23,22 +25,14 @@ export default class extends Controller {
   applySelection(date) {
     this.element.dataset.selectedDate = date
 
-    // Toutes les cellules dates
-    const allCells = this.element.querySelectorAll("[data-date]")
-
-    allCells.forEach(cell => {
+    this.element.querySelectorAll("[data-date]").forEach(cell => {
       if (cell.dataset.date === date) {
-        // Colonne sélectionnée : ring bleu + opacité normale
-        cell.classList.add("ring-2", "ring-blue-500", "ring-inset")
-        cell.classList.remove("opacity-30")
+        cell.style.borderTop = "3px solid #0ea5e9"  // sky-500
       } else {
-        // Autres colonnes : griser légèrement
-        cell.classList.remove("ring-2", "ring-blue-500", "ring-inset")
-        cell.classList.add("opacity-30")
+        cell.style.borderTop = ""
       }
     })
 
-    // Afficher le label de date
     if (this.hasDayLabelTarget) {
       this.dayLabelTarget.textContent = "📅 " + this.formatFr(date)
       this.dayLabelTarget.classList.remove("hidden")
@@ -49,7 +43,7 @@ export default class extends Controller {
     delete this.element.dataset.selectedDate
 
     this.element.querySelectorAll("[data-date]").forEach(cell => {
-      cell.classList.remove("ring-2", "ring-blue-500", "ring-inset", "opacity-30")
+      cell.style.borderTop = ""
     })
 
     if (this.hasDayLabelTarget) {

@@ -6,74 +6,105 @@ import { Controller } from "@hotwired/stimulus"
 // `aria-pressed`. La sélection d'un hébergement est EXCLUSIVE par nuit : une
 // seule cellule peut être active dans une colonne donnée.
 //
+// Règle week-end : vendredi (wday=5) et samedi (wday=6) impliquent 2 nuits
+// minimum pour le même hébergement. La sélection d'une nuit cascades
+// automatiquement sur la nuit paire (sauf si elle est déjà occupée).
+//
 // À chaque toggle, on régénère intégralement le conteneur de champs cachés
-// (`reservation[lodging_night_ids][]`) — exactement une entrée par nuit, vide
-// pour les nuits sans hébergement — puis on émet un `change` bouillonnant. Ce
-// `change` remonte au <form> parent porteur de
-// `data-action="change->public--reservation-quote#refresh"` pour relancer le
-// recalcul du devis.
+// (`reservation[lodging_night_ids][]`) et on émet un `change` bouillonnant.
 export default class extends Controller {
   static targets = ["hiddenFields"]
-  static values  = { nights: Number }
+  static values  = { nights: Number, avail: Object }
 
-  // Restaure l'état depuis le rendu serveur (cellules `aria-pressed="true"`)
-  // sans muter le DOM des cellules : on se contente de (re)construire les
-  // champs cachés à partir de ce qui est déjà sélectionné.
   connect() {
     this.syncHiddenFields()
   }
 
-  // Action — clic sur une cellule d'hébergement
-  // (`click->public--stay-calendar#toggleLodging`). Sélection exclusive par
-  // nuit : si la cellule est déjà active on la désactive ; sinon on désactive
-  // l'éventuelle autre cellule active de la même colonne avant d'activer
-  // celle-ci.
   toggleLodging(event) {
     event.preventDefault()
-    const cell = event.currentTarget
-    const nightIndex = cell.getAttribute("data-night-index")
-    const isPressed = cell.getAttribute("aria-pressed") === "true"
+    const cell      = event.currentTarget
+    const nightIndex = parseInt(cell.getAttribute("data-night-index"), 10)
+    const lodgingId  = cell.getAttribute("data-lodging-id")
+    const isPressed  = cell.getAttribute("aria-pressed") === "true"
 
     if (isPressed) {
       this.setCellState(cell, false)
+      this.clearWeekendPair(lodgingId, nightIndex)
     } else {
-      const current = this.selectedCellForNight(nightIndex)
-      // Désactive l'hébergement déjà choisi pour cette nuit (s'il y en a un et
-      // que ce n'est pas la cellule cliquée) avant d'activer le nouveau.
+      const current = this.selectedCellForNight(String(nightIndex))
       if (current && current !== cell) this.setCellState(current, false)
       this.setCellState(cell, true)
+      this.cascadeWeekend(lodgingId, nightIndex)
     }
 
     this.syncHiddenFields()
     this.dispatchChange()
   }
 
-  // Retourne la cellule d'hébergement active (`aria-pressed="true"`) pour la
-  // nuit donnée, ou null si aucune. La nuit est identifiée par la valeur exacte
-  // de `data-night-index` (comparaison sur chaîne, telle que rendue par le
-  // template), pour rester robuste aux index non contigus.
+  // Si la nuit est ven ou sam, sélectionne aussi la nuit paire (si disponible).
+  cascadeWeekend(lodgingId, nightIndex) {
+    const wday = this.nightWday(nightIndex)
+    let pairIndex = -1
+    if (wday === 5) pairIndex = nightIndex + 1  // vendredi → samedi
+    if (wday === 6) pairIndex = nightIndex - 1  // samedi → vendredi
+    if (pairIndex < 0 || pairIndex >= this.nightsValue) return
+
+    // Ne cascade pas si la nuit paire est indisponible (occupée côté admin)
+    const availArr = (this.availValue || {})[lodgingId]
+    if (Array.isArray(availArr) && availArr[pairIndex] === false) return
+
+    const targetCell = this.lodgingCellAt(lodgingId, pairIndex)
+    if (!targetCell || targetCell.disabled) return
+
+    const existing = this.selectedCellForNight(String(pairIndex))
+    if (existing && existing !== targetCell) this.setCellState(existing, false)
+    if (targetCell.getAttribute("aria-pressed") !== "true") {
+      this.setCellState(targetCell, true)
+    }
+  }
+
+  // Si la nuit désélectionnée était en paire week-end, désélectionne aussi le pair.
+  clearWeekendPair(lodgingId, nightIndex) {
+    const wday = this.nightWday(nightIndex)
+    let pairIndex = -1
+    if (wday === 5) pairIndex = nightIndex + 1
+    if (wday === 6) pairIndex = nightIndex - 1
+    if (pairIndex < 0 || pairIndex >= this.nightsValue) return
+
+    const pairCell = this.selectedCellForNight(String(pairIndex))
+    if (pairCell && pairCell.getAttribute("data-lodging-id") === lodgingId) {
+      this.setCellState(pairCell, false)
+    }
+  }
+
   selectedCellForNight(nightIndex) {
-    const cells = this.lodgingCells()
-    for (const cell of cells) {
+    for (const cell of this.lodgingCells()) {
       if (
         cell.getAttribute("data-night-index") === nightIndex &&
         cell.getAttribute("aria-pressed") === "true"
-      ) {
-        return cell
-      }
+      ) return cell
     }
     return null
   }
 
-  // Toutes les cellules d'hébergement de la grille
-  // (`data-type="lodging"`), bornées au scope du controller.
   lodgingCells() {
     return this.element.querySelectorAll('[data-type="lodging"]')
   }
 
+  lodgingCellAt(lodgingId, nightIndex) {
+    return this.element.querySelector(
+      `[data-type="lodging"][data-lodging-id="${lodgingId}"][data-night-index="${nightIndex}"]`
+    )
+  }
+
+  nightWday(nightIndex) {
+    const th = this.element.querySelector(`th[data-wday]`)
+    const ths = Array.from(this.element.querySelectorAll("th[data-wday]"))
+    if (ths[nightIndex]) return parseInt(ths[nightIndex].getAttribute("data-wday"), 10)
+    return -1
+  }
+
   // Classes identiques à celles du template Slim — source de vérité unique.
-  // Le texte (✓ / vide) est mis à jour en même temps que les classes pour
-  // éviter tout désynchronisation entre état visuel et contenu.
   setCellState(cell, selected) {
     const selectedClasses = ["bg-emerald-500", "border-emerald-500", "text-white", "shadow-sm"]
     const idleClasses = ["bg-white", "border-gray-200", "text-gray-300", "hover:border-emerald-400", "hover:bg-emerald-50"]
@@ -90,23 +121,14 @@ export default class extends Controller {
     }
   }
 
-  // (Re)construit le conteneur de champs cachés : on vide entièrement puis on
-  // recrée exactement N inputs (N = `nightsValue`), un par nuit dans l'ordre
-  // 0..N-1. Chaque input porte le `value` de l'hébergement sélectionné pour
-  // cette nuit, ou la chaîne vide sinon. Le serveur reçoit donc toujours un
-  // tableau de longueur fixe, positionnel par nuit.
   syncHiddenFields() {
     if (!this.hasHiddenFieldsTarget) return
 
-    // Indexe les sélections actives par nuit pour un accès en O(1). On garde la
-    // dernière cellule active rencontrée par nuit ; l'invariant d'exclusivité
-    // garantit qu'il n'y en a qu'une, mais cette tolérance évite tout état
-    // incohérent si le rendu serveur en présentait deux.
     const selectionByNight = new Map()
     for (const cell of this.lodgingCells()) {
       if (cell.getAttribute("aria-pressed") !== "true") continue
       const nightIndex = cell.getAttribute("data-night-index")
-      const lodgingId = cell.getAttribute("data-lodging-id")
+      const lodgingId  = cell.getAttribute("data-lodging-id")
       if (nightIndex === null) continue
       selectionByNight.set(nightIndex, lodgingId ?? "")
     }
@@ -114,24 +136,17 @@ export default class extends Controller {
     const container = this.hiddenFieldsTarget
     container.replaceChildren()
 
-    // `nightsValue` est garanti Number par Stimulus (défaut 0 si l'attribut est
-    // absent) ; on borne à un entier >= 0 pour ne jamais boucler sur NaN/négatif.
     const count = Number.isFinite(this.nightsValue) ? Math.max(0, Math.trunc(this.nightsValue)) : 0
 
     for (let night = 0; night < count; night += 1) {
       const input = document.createElement("input")
-      input.type = "hidden"
-      input.name = "reservation[lodging_night_ids][]"
-      // La clé d'index est une chaîne (telle que rendue dans `data-night-index`).
+      input.type  = "hidden"
+      input.name  = "reservation[lodging_night_ids][]"
       input.value = selectionByNight.get(String(night)) ?? ""
       container.appendChild(input)
     }
   }
 
-  // Émet un `change` bouillonnant depuis l'élément du controller. Il remonte au
-  // <form> parent (`change->public--reservation-quote#refresh`) pour déclencher
-  // le recalcul du devis. On émet depuis `this.element` : le bubbling atteint le
-  // formulaire ancêtre sans qu'on ait à le résoudre explicitement.
   dispatchChange() {
     this.element.dispatchEvent(new Event("change", { bubbles: true }))
   }

@@ -18,6 +18,9 @@ module Public
 
     # Étape 1 — dates, groupe, animal.
     def dates
+      @lodgings              = bookable_lodgings
+      @cal_month             = (@draft.arrival_date&.beginning_of_month || Date.today.beginning_of_month)
+      @availability_calendar = build_availability_calendar(@lodgings, month: @cal_month)
     end
 
     # Transition étape 1 → 2.
@@ -36,7 +39,7 @@ module Public
     def compose
       @lodgings              = bookable_lodgings
       @quote                 = @draft.quote
-      @cal_month             = Date.today.beginning_of_month
+      @cal_month             = (@draft.arrival_date&.beginning_of_month || Date.today.beginning_of_month)
       @availability_calendar = build_availability_calendar(@lodgings, month: @cal_month)
       @stay_nights           = build_stay_nights
       @lodging_availability  = build_stay_availability(@lodgings, @stay_nights)
@@ -130,6 +133,7 @@ module Public
         :adults, :children, :first_name, :last_name, :email, :phone, :group_name,
         lodging_night_ids: [],
         per_night_resources: { tente: [], van: [], hamac_simple: [], hamac_double: [] },
+        space_slots: { grande_salle: [], petite_salle: [], cuisine_pro: [] },
         meals: [:kind, :people], halls: [:kind, :date, :period],
         campings: [:kind, :people, :nights], vans: [:nights],
         pizza_parties: [:people], hamacs: [:kind, :count],

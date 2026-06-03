@@ -56,6 +56,7 @@ class PricingModel
     lines.concat(hamac_lines)
     lines.concat(experience_lines)
     lines.concat(hall_lines)
+    lines.concat(space_slot_lines)
     lines.concat(meal_lines)
     lines.concat(pizza_party_lines)
     lines.concat(dog_lines)
@@ -131,6 +132,12 @@ class PricingModel
     "journee_et_soiree" => "journée + soirée"
   }.freeze
 
+  SPACE_NAMES = {
+    "grande_salle" => "Grande Salle",
+    "petite_salle" => "Petite Salle",
+    "cuisine_pro"  => "Cuisine professionnelle"
+  }.freeze
+
   def hall_lines
     Array(read(:halls)).filter_map do |entry|
       rates = Pricing::Catalog::HALL_RATES[entry[:kind].to_s]
@@ -148,6 +155,29 @@ class PricingModel
       Line.new(label: "#{humanize(entry[:kind])} — #{date_label}, #{period_label}",
                amount_cents: unit)
     end
+  end
+
+  # --- Espaces (grille nuit-par-nuit) : forfait par créneau {space, night, period} ---
+  def space_slot_lines
+    slots = read(:space_slots)
+    return [] if slots.blank?
+
+    slots.flat_map do |space_key, periods|
+      rates = Pricing::Catalog::HALL_RATES[space_key.to_s]
+      next [] if rates.nil?
+      space_name = SPACE_NAMES[space_key.to_s] || space_key.to_s
+
+      Array(periods).each_with_index.filter_map do |period, night_idx|
+        next if period.blank?
+        unit = rates[period.to_s]
+        next if unit.nil?
+        period_label = PERIOD_LABELS[period.to_s] || period.to_s
+        Line.new(
+          label:        "#{space_name} — nuit #{night_idx + 1}, #{period_label}",
+          amount_cents: unit
+        )
+      end
+    end.compact
   end
 
   # --- Repas : €/pers ---

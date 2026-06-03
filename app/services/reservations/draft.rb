@@ -9,7 +9,7 @@ module Reservations
   class Draft
     attr_accessor :lodging_id, :lodging_night_ids, :per_night_resources,
                   :arrival_date, :departure_date, :dogs_count,
-                  :halls, :meals, :pizza_parties,
+                  :halls, :space_slots, :meals, :pizza_parties,
                   :experiences,
                   :first_name, :last_name, :email, :phone, :group_name,
                   :adults, :children
@@ -30,6 +30,7 @@ module Reservations
       @campings          = symbolize_rows(attrs[:campings])
       @vans              = symbolize_rows(attrs[:vans])
       @halls             = symbolize_rows(attrs[:halls])
+      @space_slots       = parse_space_slots(attrs[:space_slots])
       @meals             = symbolize_rows(attrs[:meals])
       @pizza_parties     = symbolize_rows(attrs[:pizza_parties])
       @hamacs            = symbolize_rows(attrs[:hamacs])
@@ -104,6 +105,7 @@ module Reservations
         campings:           campings,
         vans:               vans,
         halls:              halls,
+        space_slots:        space_slots,
         meals:              meals,
         pizza_parties:      pizza_parties,
         hamacs:             hamacs,
@@ -137,6 +139,12 @@ module Reservations
       return {} if pnr.blank?
       pnr = pnr.respond_to?(:to_unsafe_h) ? pnr.to_unsafe_h : pnr.to_h
       pnr.transform_keys(&:to_s).transform_values { |arr| Array(arr).map { |v| v.to_s } }
+    end
+
+    def parse_space_slots(slots)
+      return {} if slots.blank?
+      h = slots.respond_to?(:to_unsafe_h) ? slots.to_unsafe_h : slots.to_h
+      h.transform_keys(&:to_s).transform_values { |arr| Array(arr).map(&:to_s) }
     end
   end
 end
