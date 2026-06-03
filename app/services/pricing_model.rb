@@ -163,12 +163,14 @@ class PricingModel
   end
 
   # --- Hamacs (RentalItem, mai-octobre) : forfait/nuit/unité ---
+  # entry[:nights] override le total du séjour pour les entrées per-nuit (backward compat).
   def hamac_lines
-    nights = read(:nights).to_i
-    return [] if nights < 1
+    stay_nights = read(:nights).to_i
     Array(read(:hamacs)).filter_map do |entry|
       count = entry[:count].to_i
       next if count < 1
+      nights = (entry[:nights] || stay_nights).to_i
+      next if nights < 1
       rate = Pricing::Catalog.hamac_rate(entry[:kind])
       next if rate.nil?
       label = entry[:kind].to_s == "double" ? "Hamac double" : "Hamac simple"

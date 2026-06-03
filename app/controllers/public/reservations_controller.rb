@@ -129,6 +129,7 @@ module Public
         :lodging_id, :arrival_date, :departure_date, :dogs_count,
         :adults, :children, :first_name, :last_name, :email, :phone, :group_name,
         lodging_night_ids: [],
+        per_night_resources: { tente: [], van: [], hamac_simple: [], hamac_double: [] },
         meals: [:kind, :people], halls: [:kind, :date, :period],
         campings: [:kind, :people, :nights], vans: [:nights],
         pizza_parties: [:people], hamacs: [:kind, :count],
