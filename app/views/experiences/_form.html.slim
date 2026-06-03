@@ -4,7 +4,7 @@
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
     = f.text_field :name,
-                   label: "Libellé de l'expérience *",
+                   label: "Libellé de l'activité *",
                    required: true,
                    class: "md:w-1/2 lg:w-2/3"
 
@@ -53,10 +53,10 @@
 
     .sm:space-y-1
       = f.label :description, 
-                "Présentation de l'expérience"
+                "Présentation de l'activité"
       = f.rich_text_area :description
 
-    = f.label :human_id, "Porteur·euse d'expérience"
+    = f.label :human_id, "Porteur·euse d'activité"
     = f.collection_radio_buttons :human_id, Human.all.order(:name), :id, :name, required: true do |radio_button|
       .flex.items-center
         = radio_button.radio_button
