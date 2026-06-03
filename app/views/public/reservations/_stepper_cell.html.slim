@@ -1,0 +1,29 @@
+/ Stepper +/− mobile-friendly pour les compteurs de la grille de séjour.
+/ Locals: name (hidden input name), val (Integer, current value), max (Integer)
+.flex.items-center.justify-center.gap-1(
+  data-controller="public--stepper"
+  data-public--stepper-min-value="0"
+  data-public--stepper-max-value=max.to_s)
+
+  button(
+    type="button"
+    data-action="click->public--stepper#decrement"
+    class="appearance-none w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-400 text-base font-bold flex items-center justify-center transition-colors hover:border-emerald-400 hover:text-emerald-500 focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed")
+    | −
+
+  span(
+    data-public--stepper-target="display"
+    class="w-6 text-center text-sm font-semibold text-gray-700 select-none")
+    = val.to_s
+
+  input(
+    type="hidden"
+    name=name
+    value=val.to_s
+    data-public--stepper-target="input")
+
+  button(
+    type="button"
+    data-action="click->public--stepper#increment"
+    class="appearance-none w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-400 text-base font-bold flex items-center justify-center transition-colors hover:border-emerald-400 hover:text-emerald-500 focus:outline-none")
+    | +

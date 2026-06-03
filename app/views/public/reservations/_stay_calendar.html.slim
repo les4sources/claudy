@@ -69,8 +69,6 @@
             td(class="pt-4 pb-1 pr-4" colspan=total_cols.to_s)
               span.text-xs.font-semibold.text-gray-400.uppercase.tracking-wide ⛺ Camping
 
-          - input_cls = "w-14 h-11 rounded-xl border-2 border-gray-200 bg-white text-center text-sm text-gray-700 focus:border-emerald-500 focus:outline-none"
-
           tr class="border-t border-gray-50"
             td.py-2.pr-4.whitespace-nowrap
               .text-sm.text-gray-800.font-medium Tentes
@@ -78,7 +76,7 @@
             - @stay_nights.each_with_index do |night, i|
               - val = (pnr["tente"] || [])[i].to_i
               td.py-2.px-1.text-center
-                input(type="number" min="0" max="50" name="reservation[per_night_resources][tente][]" value=val.to_s placeholder="0" class=input_cls)
+                = render "public/reservations/stepper_cell", name: "reservation[per_night_resources][tente][]", val: val, max: 50
 
           tr class="border-t border-gray-50"
             td.py-2.pr-4.whitespace-nowrap
@@ -87,7 +85,7 @@
             - @stay_nights.each_with_index do |night, i|
               - val = (pnr["van"] || [])[i].to_i
               td.py-2.px-1.text-center
-                input(type="number" min="0" max="20" name="reservation[per_night_resources][van][]" value=val.to_s placeholder="0" class=input_cls)
+                = render "public/reservations/stepper_cell", name: "reservation[per_night_resources][van][]", val: val, max: 20
 
           / ══ Hamacs (mai-octobre) ════════════════════════════════════════
           - if show_hamacs
@@ -103,7 +101,7 @@
               - @stay_nights.each_with_index do |night, i|
                 - val = (pnr["hamac_simple"] || [])[i].to_i
                 td.py-2.px-1.text-center
-                  input(type="number" min="0" max="10" name="reservation[per_night_resources][hamac_simple][]" value=val.to_s placeholder="0" class=input_cls)
+                  = render "public/reservations/stepper_cell", name: "reservation[per_night_resources][hamac_simple][]", val: val, max: 10
 
             tr class="border-t border-gray-50"
               td.py-2.pr-4.whitespace-nowrap
@@ -113,7 +111,7 @@
               - @stay_nights.each_with_index do |night, i|
                 - val = (pnr["hamac_double"] || [])[i].to_i
                 td.py-2.px-1.text-center
-                  input(type="number" min="0" max="10" name="reservation[per_night_resources][hamac_double][]" value=val.to_s placeholder="0" class=input_cls)
+                  = render "public/reservations/stepper_cell", name: "reservation[per_night_resources][hamac_double][]", val: val, max: 10
 
     / Légende
     - if @stay_nights.present?
