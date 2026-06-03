@@ -18,4 +18,12 @@ class ExperienceDecorator < ApplicationDecorator
   def price
     h.humanized_money_with_symbol(object.price)
   end
+
+  # Durée numérique formatée en français (ex. « 2 h », « 2,5 h »), ou nil.
+  def duration_hours
+    return nil if object.duration_hours.nil?
+
+    formatted = object.duration_hours.to_d.to_s("F").sub(/\.0+\z/, "").tr(".", ",")
+    "#{formatted} h"
+  end
 end

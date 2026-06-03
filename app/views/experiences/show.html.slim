@@ -36,6 +36,14 @@
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @experience.participants
 
+            - if @experience.duration.present? || @experience.duration_hours
+              dt.text-sm.font-medium.text-gray-500
+                | Durée
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @experience.duration
+                - if @experience.duration_hours
+                  span.text-gray-400 = " (#{@experience.duration_hours})"
+
             dt.text-sm.font-medium.text-gray-500
               | Résumé
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0

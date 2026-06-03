@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_03_130000) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_03_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -283,6 +283,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_03_130000) do
     t.integer "min_participants"
     t.integer "max_participants"
     t.string "duration"
+    t.decimal "duration_hours", precision: 4, scale: 2
     t.index ["human_id"], name: "index_experiences_on_human_id"
   end
 
