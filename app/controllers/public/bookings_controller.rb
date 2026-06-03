@@ -27,6 +27,7 @@ class Public::BookingsController < Public::BaseController
   def show
     @booking = Booking.find_by!(token: params[:token]).decorate
     @reservations_by_date = @booking.reservations.decorate.to_a.group_by { |r| r.date }
+    record_page_view(@booking) unless params[:donottrack].present?
   rescue ActiveRecord::RecordNotFound
     raise ActionController::RoutingError.new('Not Found')
   end
@@ -51,6 +52,18 @@ class Public::BookingsController < Public::BaseController
   end
 
   private
+
+  # Enregistre une consultation de la page web privée du client (issue #16).
+  # Le tracking ne doit jamais faire échouer l'affichage de la page.
+  def record_page_view(booking)
+    booking.object.page_views.create(
+      ip_address: request.remote_ip,
+      user_agent: request.user_agent
+    )
+  rescue StandardError => e
+    Sentry.capture_exception(e) if defined?(Sentry)
+    nil
+  end
 
   def booking_params
     params

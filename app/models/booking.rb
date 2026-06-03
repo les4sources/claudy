@@ -57,6 +57,9 @@ class Booking < ApplicationRecord
 
   belongs_to :lodging, optional: true
 
+  # Consultations de la page web privée du client (issue #16).
+  has_many :page_views, class_name: "BookingPageView", dependent: :destroy
+
   # Read-side inverse of the Stay graph (tranche 1, strangler pattern). No FK on
   # bookings — the join lives in stay_items, preserving coexistence.
   has_one :stay_item, as: :bookable
