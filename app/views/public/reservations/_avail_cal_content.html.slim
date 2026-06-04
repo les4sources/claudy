@@ -1,0 +1,22 @@
+/ Contenu du turbo-frame "avail_cal" — navigation + grille Gantt.
+/ @cal_month est une variable d'instance du controller.
+- today_month = Date.today.beginning_of_month
+- m = @cal_month
+- prev_m = m.month == 1 ? Date.new(m.year - 1, 12, 1) : Date.new(m.year, m.month - 1, 1)
+- next_m = m.month == 12 ? Date.new(m.year + 1, 1, 1) : Date.new(m.year, m.month + 1, 1)
+- fr_months = %w[janvier février mars avril mai juin juillet août septembre octobre novembre décembre]
+- month_label = "#{fr_months[m.month - 1].capitalize} #{m.year}"
+
+/ Navigation — data-nav-url ciblé par avail_modal_controller#navigate (fetch manuel)
+.flex.items-center.justify-between.mb-5
+  - if prev_m >= today_month
+    button type="button" data-action="public--avail-modal#navigate" data-nav-url=public_reservation_availability_calendar_path(month: prev_m.strftime("%Y-%m")) class="text-sm font-medium text-emerald-600 hover:text-emerald-800 transition-colors rounded-lg px-3 py-1.5 hover:bg-emerald-50"
+      | ← Précédent
+  - else
+    span.text-sm.text-gray-200.px-3.py-1.5 ← Précédent
+  h2.text-base.font-semibold.text-gray-900 = month_label
+  button type="button" data-action="public--avail-modal#navigate" data-nav-url=public_reservation_availability_calendar_path(month: next_m.strftime("%Y-%m")) class="text-sm font-medium text-emerald-600 hover:text-emerald-800 transition-colors rounded-lg px-3 py-1.5 hover:bg-emerald-50"
+    | Suivant →
+
+/ Grille Gantt
+= render "public/reservations/availability_calendar", calendar: calendar

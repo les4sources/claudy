@@ -1,0 +1,16 @@
+/ Action row on a member's cycle dashboard. locals: action
+li.flex.items-start.gap-3.py-2(id="member_gathering_action_#{action.id}")
+  = button_to toggle_completed_gathering_gathering_action_path(action.gathering, action),
+              method: :patch,
+              class: "shrink-0 mt-0.5 inline-flex items-center justify-center w-5 h-5 rounded border-2 #{action.completed? ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-stone-300 hover:border-emerald-400'}",
+              form: { data: { turbo_stream: true } },
+              title: (action.completed? ? "Marquer comme à faire" : "Marquer comme réalisée") do
+    - if action.completed?
+      svg.w-3.h-3(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor")
+        path[fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"]
+
+  .flex-1.min-w-0
+    .text-sm.leading-snug.break-words(class="#{action.completed? ? 'line-through text-stone-400' : 'text-stone-800'}")
+      = action.label
+    .mt-0.5.text-xs.text-stone-400
+      = link_to GatheringDecorator.new(action.gathering).display_name, gathering_path(action.gathering), class: "hover:text-emerald-700"

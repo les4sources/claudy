@@ -1,0 +1,16 @@
+/ One typed agenda list. locals: gathering, list (String key), items, future_gatherings
+.px-4.py-4
+  .flex.items-center.justify-between.gap-3.mb-3
+    .flex.items-center.gap-2
+      h3.text-sm.font-semibold.uppercase.text-stone-600(class="tracking-[0.15em]")
+        = AgendaItem.list_label(list)
+      = render "agenda_items/counter", gathering: gathering, list: list
+
+  ul.space-y-2(id="agenda_items_list_#{gathering.id}_#{list}" class="min-h-[3rem]" data-controller="sortable" data-sortable-url-value=reorder_gathering_agenda_items_path(gathering) data-sortable-list-value=list)
+    - items.each do |item|
+      = render "agenda_items/item", item: item, future_gatherings: future_gatherings
+
+  = render "agenda_items/empty_state", gathering: gathering, list: list, empty: items.empty?
+
+  .mt-3
+    = render "agenda_items/inline_form", gathering: gathering, list: list

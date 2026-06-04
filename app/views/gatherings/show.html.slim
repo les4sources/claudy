@@ -58,25 +58,34 @@
   / Right column — ODJ + decisions
   .lg:col-span-2.space-y-6
 
-    / Agenda items section
+    / Agenda items — four typed lists (Atelier, Informations, Triage, Décisions)
     section.rounded-xl.border.border-emerald-100.bg-white.shadow-sm.overflow-hidden
       .flex.items-center.justify-between.gap-3.px-5.py-4.border-b.border-emerald-100.bg-gradient-to-br.from-emerald-50.to-white
         div
           .font-semibold.uppercase.text-emerald-700(class="text-[0.65rem] tracking-[0.2em]") Ordre du jour
           h2.mt-0.5.text-lg.font-semibold.text-stone-900 Les points à traiter
-        = render "agenda_items/counter", gathering: @gathering.object
 
-      - future_gatherings = @gathering.gathering_category.gatherings.where("starts_at > ?", @gathering.starts_at).order(:starts_at).limit(8)
-      ul.p-4.space-y-2(id="agenda_items_list_#{@gathering.id}" data-controller="sortable" data-sortable-url-value=reorder_gathering_agenda_items_path(@gathering))
-        - @gathering.object.agenda_items.ordered.each do |item|
-          = render "agenda_items/item", item: item, future_gatherings: future_gatherings
+      - future_gatherings = @gathering.gathering_category.gatherings.where("starts_at > ?", @gathering.starts_at).order(:starts_at).limit(3)
+      - items_by_list = @gathering.object.agenda_items.ordered.group_by(&:list)
+      .divide-y.divide-stone-100
+        - AgendaItem.lists.keys.each do |list|
+          = render "agenda_items/list_section", gathering: @gathering.object, list: list, items: (items_by_list[list] || []), future_gatherings: future_gatherings
+
+    / Actions section — actions décidées, assignées à des membres
+    section.rounded-xl.border.border-amber-100.bg-white.shadow-sm.overflow-hidden
+      .px-5.py-4.border-b.border-amber-100.bg-gradient-to-br.from-amber-50.to-white
+        .font-semibold.uppercase.text-amber-700(class="text-[0.65rem] tracking-[0.2em]") Actions
+        h2.mt-0.5.text-lg.font-semibold.text-stone-900 Ce qui est à faire
+
+      ul.divide-y.divide-stone-100(id="gathering_actions_list_#{@gathering.id}")
+        - @gathering.object.gathering_actions.each do |action|
+          = render "gathering_actions/action", action: action
+      div(id="gathering_actions_empty_#{@gathering.id}")
+        - if @gathering.object.gathering_actions.empty?
+          .px-5.py-4.text-sm.text-stone-500 Aucune action décidée pour l'instant.
 
       .p-4.border-t.border-stone-100.bg-stone-50
-        - if @gathering.object.agenda_items.empty?
-          .mb-3.rounded-lg.border.border-dashed.border-stone-200.bg-white.px-4.py-3.text-center(id="agenda_items_empty_#{@gathering.id}")
-            .text-sm.text-stone-600 ODJ vide pour l'instant.
-            .mt-0.5.text-xs.text-stone-400 Un sourcier, un point — tout le monde peut alimenter.
-        = render "agenda_items/inline_form", gathering: @gathering.object, agenda_item: @gathering.object.agenda_items.build
+        = render "gathering_actions/form", gathering: @gathering.object
 
     / Decisions section
     section.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidden

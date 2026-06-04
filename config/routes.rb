@@ -27,6 +27,11 @@ Rails.application.routes.draw do
         patch :reorder
       end
     end
+    resources :gathering_actions, only: [:create, :show, :edit, :update, :destroy] do
+      member do
+        patch :toggle_completed
+      end
+    end
   end
   resources :decisions
   get "organisation/decisions", to: "decisions#index", as: :organisation_decisions
@@ -126,6 +131,7 @@ Rails.application.routes.draw do
   get  "reservation/activites",    to: "public/reservations#activities",         as: :public_reservation_activities
   get  "reservation/coordonnees",  to: "public/reservations#contact",            as: :public_reservation_contact
   post "reservation/coordonnees",  to: "public/reservations#create",             as: :public_reservation_create
+  get  "reservation/calendrier",   to: "public/reservations#availability_calendar", as: :public_reservation_availability_calendar
 
   # Vue admin Pôle Accueil — index des Stays récents filtrable par source (Devise).
   get "sejours/recents", to: "stays#recent", as: :recent_stays

@@ -25,6 +25,17 @@ div[data-controller="cycle-actions"]
                actions: actions,
                human: @human
 
+  / Actions décidées en rassemblement
+  - if @gathering_actions.any?
+    .mt-10.pt-6.border-t.border-gray-200
+      .flex.items-center.gap-2.mb-4
+        .w-8.h-8.rounded-full.bg-amber-50.flex.items-center.justify-center
+          span.text-sm ✅
+        h3.text-base.font-semibold.text-gray-700 Actions de rassemblement
+      ul.divide-y.divide-gray-100.bg-white.rounded-lg.border.border-amber-100.px-4
+        - @gathering_actions.each do |action|
+          = render "gathering_actions/member_action", action: action
+
   / Requests from other members
   - if @demandees.any?
     .mt-10.pt-6.border-t.border-gray-200

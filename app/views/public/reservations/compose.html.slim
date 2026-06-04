@@ -1,156 +1,136 @@
-.max-w-4xl.mx-auto.py-8(data-controller="public--reservation-quote" data-public--reservation-quote-url-value=public_reservation_quote_path data-public--reservation-quote-contact-url-value=public_reservation_contact_path)
+/ Étape 2/3 — Composition du séjour
+.min-h-screen.bg-gray-50(data-controller="public--avail-modal")
+  .max-w-3xl.mx-auto.px-4.py-10(data-controller="public--reservation-quote"
+    data-public--reservation-quote-url-value=public_reservation_quote_path
+    data-public--reservation-quote-contact-url-value=public_reservation_contact_path)
 
-  / Indicateur d'étapes
-  .flex.items-center.gap-2.mb-6.text-sm
-    = link_to "1. Votre séjour", public_reservation_dates_path, class: "text-gray-400 hover:text-gray-600"
-    span.text-gray-300 →
-    span.font-semibold.text-emerald-700 2. Composition
-    span.text-gray-300 →
-    span.text-gray-400 3. Coordonnées
+    / ── Step indicator ───────────────────────────────────────
+    .flex.items-center.mb-10
+      .flex.items-center.flex-shrink-0
+        = link_to public_reservation_dates_path, class: "flex items-center group" do
+          .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-emerald-100.text-emerald-700.border-2.border-emerald-400.group-hover:border-emerald-600.transition-colors ✓
+          span.ml-2.text-sm.text-emerald-600.hidden.sm:inline.group-hover:underline Votre séjour
+      .flex-1.h-px.mx-4.bg-emerald-200
+      .flex.items-center.flex-shrink-0
+        .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-emerald-600.text-white.shadow-sm 2
+        span.ml-2.text-sm.font-semibold.text-emerald-700.hidden.sm:inline Composition
+      .flex-1.h-px.mx-4.bg-gray-200
+      .flex.items-center.flex-shrink-0
+        .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.border-2.border-gray-200.bg-white.text-gray-400 3
+        span.ml-2.text-sm.text-gray-400.hidden.sm:inline Coordonnées
 
-  - if @draft.arrival_date && @draft.departure_date
-    p.text-sm.text-gray-500.mb-4
-      | Séjour du
-      strong  = l(@draft.arrival_date, format: :long)
-      |  au
-      strong  = l(@draft.departure_date, format: :long)
-      |  (#{@draft.nights} nuit#{"s" if @draft.nights > 1}) —
-      = link_to " modifier", public_reservation_dates_path, class: "text-gray-400 underline text-xs"
+    / ── Résumé dates ─────────────────────────────────────────
+    - if @draft.arrival_date && @draft.departure_date
+      .flex.items-center.gap-2.mb-6.text-sm.text-gray-600.bg-white.rounded-xl.px-4.py-3.border.border-gray-100.shadow-sm.w-fit
+        span 📅
+        strong = l(@draft.arrival_date, format: :long)
+        span.text-gray-400 →
+        strong = l(@draft.departure_date, format: :long)
+        .ml-1.px-2.py-0.5.bg-emerald-100.text-emerald-700.rounded-full.text-xs.font-semibold
+          = "#{@draft.nights} nuit#{"s" if @draft.nights.to_i > 1}"
+        = link_to "Modifier", public_reservation_dates_path, class: "ml-2 text-xs text-gray-400 hover:text-gray-600 underline"
 
-  h1.text-2xl.font-semibold.mb-6 Composez votre séjour
+    .space-y-6
 
-  .grid.gap-8.lg:grid-cols-3
-    / Colonne formulaire de composition
-    .lg:col-span-2
-      = form_with url: public_reservation_quote_path, method: :post, data: { "public--reservation-quote-target": "form", action: "change->public--reservation-quote#refresh" } do |f|
+      / ── Calendrier des disponibilités ───────────────────────
+      .bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-4
+        .flex.items-center.gap-3
+          .w-9.h-9.rounded-full.bg-emerald-100.flex.items-center.justify-center.flex-shrink-0.text-lg 📅
+          div.flex-1.min-w-0
+            h3.text-sm.font-semibold.text-gray-900 Calendrier des disponibilités
+            p.text-xs.text-gray-400.mt-0.5 Hébergements & espaces, mois par mois
+          button type="button" data-action="public--avail-modal#open" class="flex-shrink-0 rounded-xl bg-emerald-600 text-white px-4 py-2 text-sm font-medium hover:bg-emerald-700 transition-colors"
+            | Ouvrir →
 
-        / --- Hébergement ---
-        section.mb-6
-          h2.text-lg.font-medium.mb-2 Hébergement
-          .space-y-3
-            - @lodgings.each do |lodging|
-              - available = @draft.arrival_date && @draft.departure_date ? lodging.available_between?(@draft.arrival_date, @draft.departure_date) : true
-              label class=("flex items-start gap-3 rounded-lg border p-4 #{available ? 'border-gray-200' : 'border-gray-100 bg-gray-50 opacity-60'}")
-                = f.radio_button "reservation[lodging_id]", lodging.id, checked: @draft.lodging_id.to_s == lodging.id.to_s, disabled: !available, class: "mt-1"
-                div
-                  .font-medium = lodging.name
-                  - if lodging.name == "Le Grand-Duc"
-                    .text-xs.text-emerald-700 = "Le Grand-Duc = La Hulotte + La Chevêche réservées ensemble"
-                  .text-sm.text-gray-500 = lodging.summary.presence || lodging.description.to_s.truncate(90)
-                  .text-sm.text-gray-700.mt-1
-                    - if (rate = Pricing::Catalog.lodging_rate(lodging.name))
-                      = "À partir de #{number_to_currency(rate.first_night_cents / 100.0, unit: '€', format: '%n %u', precision: 0)} / nuit"
-                  - unless available
-                    .text-xs.text-red-600.mt-1 Indisponible sur ces dates
+      / ── Formulaire ──────────────────────────────────────────
+      = form_with url: public_reservation_quote_path, method: :post,
+          data: { "public--reservation-quote-target": "form",
+                  action: "change->public--reservation-quote#refresh" } do |f|
 
-        / --- Camping / options ---
-        section.mb-6
-          h2.text-lg.font-medium.mb-2 Camping & options
-          .grid.grid-cols-2.gap-4
-            label.block
-              span.text-sm.text-gray-600 Camping (tente) — personnes
-              = number_field_tag "reservation[campings][0][people]", @draft.campings.dig(0, :people), min: 0, class: "mt-1 w-full rounded border-gray-300"
-              = hidden_field_tag "reservation[campings][0][kind]", "tente"
-              = hidden_field_tag "reservation[campings][0][nights]", @draft.nights
-            label.block
-              span.text-sm.text-gray-600 Van / camping-car — nuits
-              = number_field_tag "reservation[vans][0][nights]", @draft.vans.dig(0, :nights), min: 0, class: "mt-1 w-full rounded border-gray-300"
+        / ── Hébergement — calendrier interactif ─────────────
+        = render "public/reservations/stay_calendar"
 
-        / --- Hamacs (RentalItem, disponibles mai-octobre seulement) ---
-        - if (5..10).cover?(Date.today.month)
-          section.mb-6
-            h2.text-lg.font-medium.mb-2 Location de hamacs
-            p.text-xs.text-gray-400.mb-2 Disponible de mai à octobre.
-            .grid.grid-cols-2.gap-4
-              label.block
-                - hamac_simple_rate = Pricing::Catalog.hamac_rate("simple")
-                span.text-sm.text-gray-600
-                  | Hamac simple (1 pers.)
-                  - if hamac_simple_rate
-                    span.text-gray-400  — #{number_to_currency(hamac_simple_rate / 100.0, unit: "€", format: "%n %u", precision: 2)}/nuit
-                = number_field_tag "reservation[hamacs][0][count]", @draft.hamacs.dig(0, :count), min: 0, class: "mt-1 w-full rounded border-gray-300"
-                = hidden_field_tag "reservation[hamacs][0][kind]", "simple"
-              label.block
-                - hamac_double_rate = Pricing::Catalog.hamac_rate("double")
-                span.text-sm.text-gray-600
-                  | Hamac double (2 pers.)
-                  - if hamac_double_rate
-                    span.text-gray-400  — #{number_to_currency(hamac_double_rate / 100.0, unit: "€", format: "%n %u", precision: 2)}/nuit
-                = number_field_tag "reservation[hamacs][1][count]", @draft.hamacs.dig(1, :count), min: 0, class: "mt-1 w-full rounded border-gray-300"
-                = hidden_field_tag "reservation[hamacs][1][kind]", "double"
+        / ── Espaces ──────────────────────────────────────────
+        = render "public/reservations/spaces_calendar"
 
-        section.mb-6
-          h2.text-lg.font-medium.mb-2 Salles & cuisine
-          p.text-xs.text-gray-500.mb-3
-            | Ajoutez une ligne par tranche d'utilisation. Exemples : jeudi soir, vendredi journée + soirée...
-          - kind_opts  = [["— Espace —", ""], ["Grande salle", "grande_salle"], ["Petite salle", "petite_salle"], ["Cuisine pro", "cuisine_pro"]]
-          - period_opts = [["— Période —", ""], ["Journée", "journee"], ["Soirée", "soiree"], ["Journée + Soirée", "journee_et_soiree"]]
-          - stay_min = @draft.arrival_date&.iso8601 || Date.today.iso8601
-          - stay_max = @draft.departure_date&.iso8601 || (Date.today >> 18).iso8601
-          .space-y-2
-            - Public::ReservationsController::HALL_SLOT_COUNT.times do |i|
-              - existing = @draft.halls[i]
-              .grid.grid-cols-3.gap-2.items-center
-                = select_tag "reservation[halls][#{i}][kind]",
-                    options_for_select(kind_opts, existing&.dig(:kind).to_s),
-                    class: "text-sm rounded border-gray-300"
-                = date_field_tag "reservation[halls][#{i}][date]",
-                    existing&.dig(:date),
-                    min: stay_min, max: stay_max,
-                    class: "text-sm rounded border-gray-300"
-                = select_tag "reservation[halls][#{i}][period]",
-                    options_for_select(period_opts, existing&.dig(:period).to_s),
-                    class: "text-sm rounded border-gray-300"
-          p.text-xs.text-gray-400.mt-2
-            | Tarifs indicatifs semaine — Grande salle 290 €/journée, 190 €/soirée · Petite salle 140 €/290 € · Cuisine 110 €/70 €.
-            = link_to " Tous les tarifs →", "https://www.les4sources.be/sejours/tarifs", target: "_blank", rel: "noopener", class: "underline"
-
-        .rounded-lg.border.border-emerald-100.bg-emerald-50.p-4.mb-6
-          h2.text-base.font-medium.text-emerald-900.mb-1 🌿 Activités aux 4 Sources
-          p.text-sm.text-gray-700.mb-2
-            | Balades avec les ânes, ateliers créatifs, forge, golf et bien d'autres...
-          p.text-sm.text-gray-500
-            | Les activités se réservent
-            strong  1 mois avant votre arrivée.
-            |  Vous recevrez un email avec un calendrier de disponibilités pour sélectionner ce qui vous tente.
+        / ── Activités ───────────────────────────────────────
+        .bg-emerald-50.rounded-2xl.border.border-emerald-100.p-6
+          .flex.items-start.gap-3
+            span.text-2xl 🌿
+            div
+              h2.text-base.font-semibold.text-emerald-900.mb-1 Activités aux 4 Sources
+              p.text-sm.text-gray-700.mb-1 Balades avec les ânes, ateliers créatifs, forge, golf et bien d'autres…
+              p.text-sm.text-gray-500
+                | Les activités se réservent
+                strong  1 mois avant votre arrivée.
+                |  Vous recevrez un email avec un calendrier pour sélectionner ce qui vous tente.
 
         noscript
           = f.submit "Mettre à jour le devis", class: "rounded bg-gray-800 text-white px-4 py-2"
 
-        .mt-6.flex.justify-end
-          button type="button" data-action="public--reservation-quote#advance" class="rounded-lg bg-emerald-600 text-white px-6 py-3 text-sm font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
-            | Continuer →
+        / CTA
+        .flex.justify-end.mt-2
+          button type="button" data-action="public--reservation-quote#advance" class="rounded-xl bg-emerald-600 text-white px-8 py-3 text-sm font-semibold hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 shadow-sm transition-colors"
+            | Continuer vers mes coordonnées →
         noscript
-          = f.submit "Continuer (sans JS)", formaction: public_reservation_advance_contact_path, formmethod: :post, class: "rounded-lg bg-emerald-600 text-white px-6 py-3 text-sm font-medium"
+          = f.submit "Continuer (sans JS)", formaction: public_reservation_advance_contact_path, formmethod: :post, class: "rounded-xl bg-emerald-600 text-white px-8 py-3 text-sm font-semibold"
 
+    / ── Infos complémentaires ────────────────────────────────
+    .mt-8.grid.grid-cols-1.sm:grid-cols-2.lg:grid-cols-3.gap-4
 
+      .bg-white.rounded-xl.border.border-blue-100.p-4
+        h3.text-sm.font-semibold.text-blue-900.mb-1 🛌 Nuitée individuelle (semaine)
+        p.text-xs.text-gray-600
+          | En semaine uniquement :
+          strong  35 €/adulte · 15 €/enfant (3–12 ans).
+          |  Contactez-nous à
+          = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline"
 
-    / Colonne devis temps-réel (Turbo Frame)
-    aside.lg:col-span-1
-      = turbo_frame_tag "reservation_quote"
-        = render "public/reservations/quote_panel", quote: @quote, draft: @draft
+      .bg-white.rounded-xl.border.border-gray-200.p-4
+        h3.text-sm.font-semibold.text-gray-700.mb-1 🥖 Pré-commande pain & épicerie
+        p.text-xs.text-gray-500.mb-2 Pain au levain et épicerie disponibles pour votre arrivée.
+        = link_to "Commander sur Tranches de Vie →", "https://tranchesdevie.les4sources.be", target: "_blank", rel: "noopener", class: "text-emerald-700 underline text-xs"
 
-  / --- Infos complémentaires ---
-  .mt-8.space-y-4.max-w-4xl
+      .bg-white.rounded-xl.border.border-gray-100.p-4
+        h3.text-sm.font-semibold.text-gray-700.mb-1 💬 Une question ?
+        p.text-xs.text-gray-500
+          | Malau :
+          strong  +32 (0)490 46.77.10
+          |  ou
+          = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline"
 
-    .rounded-lg.border.border-blue-100.bg-blue-50.p-4
-      h2.text-sm.font-medium.text-blue-900.mb-1 🛌 Logement à la nuitée (en semaine)
-      p.text-sm.text-gray-600
-        | Nous proposons également, en semaine uniquement, le logement à la nuitée avec un prix par personne :
-        strong  35 €/adulte
-        |  et
-        strong  15 €/enfant (3–12 ans).
-        |  Pour une réservation de ce type, contactez-nous directement à
-        = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline"
+  / ── Modale calendrier disponibilités ────────────────────────
+  = render "public/reservations/avail_modal"
 
-    .rounded-lg.border.border-gray-200.p-4
-      h2.text-sm.font-medium.text-gray-700.mb-1 Pré-commande pain & épicerie
-      p.text-sm.text-gray-500.mb-2 Commandez votre pain au levain et vos produits d'épicerie pour votre arrivée.
-      = link_to "Pré-commander sur Tranches de Vie →", "https://tranchesdevie.les4sources.be", target: "_blank", rel: "noopener", class: "text-emerald-700 underline text-sm"
+  / ── Drawer devis ─────────────────────────────────────────────
+  div data-controller="public--quote-drawer"
 
-    .rounded-lg.border.border-gray-100.p-4
-      p.text-sm.text-gray-500
-        | Une question au sujet de nos hébergements, salles ou activités ? Contactez Malau au
-        strong  +32 (0)490 46.77.10
-        |  ou à
-        = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline"
+    / Bouton flottant bas-droite
+    .fixed.bottom-6.right-6.z-40
+      button type="button" data-action="public--quote-drawer#open" class="flex items-center gap-2 rounded-full bg-emerald-600 pl-4 pr-5 py-3.5 text-white shadow-xl hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all font-medium"
+        svg.w-5.h-5.flex-shrink-0 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+          path fill-rule="evenodd" d="M2.25 2.25a.75.75 0 000 1.5H3v10.5a3 3 0 003 3h1.21l-1.172 3.513a.75.75 0 001.424.474l.329-.987h8.418l.33.987a.75.75 0 001.422-.474l-1.17-3.513H18a3 3 0 003-3V3.75h.75a.75.75 0 000-1.5H2.25zm6.04 16.5l.5-1.5h6.42l.5 1.5H8.29zm7.46-12a.75.75 0 00-1.5 0v6a.75.75 0 001.5 0v-6zm-3 2.25a.75.75 0 00-1.5 0v3.75a.75.75 0 001.5 0V9zm-3 2.25a.75.75 0 00-1.5 0v1.5a.75.75 0 001.5 0v-1.5z" clip-rule="evenodd"
+        | Devis
+        span id="quote_total_badge"
+          - if @quote.total_cents > 0
+            span.ml-1.rounded-full.bg-white.bg-opacity-20.px-2.py-0.5.text-xs.font-bold
+              = number_to_currency(@quote.total_cents / 100.0, unit: "€", format: "%n %u", precision: 0)
+
+    / Overlay
+    .fixed.inset-0.bg-black.bg-opacity-50.z-40.transition-opacity.duration-300(
+      class="opacity-0 pointer-events-none"
+      data-public--quote-drawer-target="overlay"
+      data-action="click->public--quote-drawer#close")
+
+    / Panneau latéral — 50% de largeur sur grand écran
+    aside.fixed.top-0.right-0.h-full.bg-white.z-50.shadow-2xl.overflow-y-auto.transition-transform.duration-300(
+      class="translate-x-full w-full max-w-sm lg:max-w-none lg:w-1/2"
+      data-public--quote-drawer-target="panel")
+      .sticky.top-0.bg-white.border-b.border-gray-100.px-5.py-4.flex.items-center.justify-between.z-10
+        h2.text-base.font-semibold.text-gray-900 Votre devis
+        button type="button" data-action="public--quote-drawer#close" class="text-gray-400 hover:text-gray-600 transition-colors rounded-lg p-1"
+          svg.w-5.h-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"
+            path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"
+      .p-6
+        = turbo_frame_tag "reservation_quote"
+          = render "public/reservations/quote_panel", quote: @quote, draft: @draft

@@ -72,6 +72,9 @@ class OrganisationController < BaseController
     @current_cycle = Cycle.covering_date(Date.today).first
     @archives_count = @human.cycle_actions.archived.count
     @cycle_active_humans = Human.cycle_active.where.not(id: @human.id).order(:name)
+    @gathering_actions = @human.gathering_actions
+                                .includes(:gathering)
+                                .order(:completed, created_at: :desc)
   end
 
   def archives

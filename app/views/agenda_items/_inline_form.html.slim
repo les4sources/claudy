@@ -1,11 +1,15 @@
-= form_with model: [gathering, agenda_item],
-             url: gathering_agenda_items_path(gathering),
-             id: "agenda_item_form_#{gathering.id}",
+/ Quick-add form for one list. locals: gathering, list (String key, defaults to atelier)
+- list = local_assigns.fetch(:list, "atelier")
+= form_with url: gathering_agenda_items_path(gathering),
+             method: :post,
+             id: "agenda_item_form_#{gathering.id}_#{list}",
              class: "flex items-center gap-2",
              data: { turbo_frame: "_top" } do |f|
+  = hidden_field_tag "agenda_item[list]", list
   = text_field_tag "agenda_item[title]",
                    nil,
-                   placeholder: "Ajouter un point à l'ODJ…",
+                   id: "agenda_item_title_#{list}",
+                   placeholder: "Ajouter un point…",
                    required: true,
                    class: "flex-1 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 focus:outline-none",
                    aria: { label: "Titre du nouveau point" }

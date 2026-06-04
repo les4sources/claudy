@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_03_140000) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_04_074516) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -82,7 +82,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_03_140000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
+    t.integer "list", default: 0, null: false
+    t.bigint "carrier_id"
     t.index ["author_id"], name: "index_agenda_items_on_author_id"
+    t.index ["carrier_id"], name: "index_agenda_items_on_carrier_id"
+    t.index ["gathering_id", "list", "position"], name: "index_agenda_items_on_gathering_id_and_list_and_position"
     t.index ["gathering_id", "position"], name: "index_agenda_items_on_gathering_id_and_position"
     t.index ["gathering_id"], name: "index_agenda_items_on_gathering_id"
   end
@@ -285,6 +289,30 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_03_140000) do
     t.string "duration"
     t.decimal "duration_hours", precision: 4, scale: 2
     t.index ["human_id"], name: "index_experiences_on_human_id"
+  end
+
+  create_table "gathering_action_humans", force: :cascade do |t|
+    t.bigint "gathering_action_id", null: false
+    t.bigint "human_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["gathering_action_id", "human_id"], name: "index_gathering_action_humans_uniqueness", unique: true
+    t.index ["gathering_action_id"], name: "index_gathering_action_humans_on_gathering_action_id"
+    t.index ["human_id"], name: "index_gathering_action_humans_on_human_id"
+  end
+
+  create_table "gathering_actions", force: :cascade do |t|
+    t.bigint "gathering_id", null: false
+    t.string "label", null: false
+    t.boolean "completed", default: false, null: false
+    t.datetime "completed_at"
+    t.integer "position", default: 0, null: false
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_gathering_actions_on_deleted_at"
+    t.index ["gathering_id", "position"], name: "index_gathering_actions_on_gathering_id_and_position"
+    t.index ["gathering_id"], name: "index_gathering_actions_on_gathering_id"
   end
 
   create_table "gathering_categories", force: :cascade do |t|
@@ -646,6 +674,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_03_140000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "agenda_items", "gatherings"
   add_foreign_key "agenda_items", "humans", column: "author_id"
+  add_foreign_key "agenda_items", "humans", column: "carrier_id"
   add_foreign_key "booking_page_views", "bookings"
   add_foreign_key "bookings", "lodgings"
   add_foreign_key "bundles", "projects"
@@ -661,6 +690,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_03_140000) do
   add_foreign_key "experience_bookings", "experience_availabilities"
   add_foreign_key "experience_bookings", "stays"
   add_foreign_key "experiences", "humans"
+  add_foreign_key "gathering_action_humans", "gathering_actions"
+  add_foreign_key "gathering_action_humans", "humans"
+  add_foreign_key "gathering_actions", "gatherings"
   add_foreign_key "gatherings", "gathering_categories"
   add_foreign_key "human_roles", "humans"
   add_foreign_key "human_roles", "roles"

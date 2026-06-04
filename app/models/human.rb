@@ -23,6 +23,8 @@ class Human < ApplicationRecord
   has_one :user
 
   has_and_belongs_to_many :tasks
+  has_and_belongs_to_many :gathering_actions, join_table: :gathering_action_humans
+  has_many :carried_agenda_items, class_name: "AgendaItem", foreign_key: :carrier_id, dependent: :nullify
 
   scope :cycle_active, -> { where(cycle_active: true) }
   # Personnes pouvant recevoir un compte d'accès (un email est requis pour

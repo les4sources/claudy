@@ -1,0 +1,6 @@
+/ Action row on the gathering page. locals: action
+/ The inner turbo-frame swaps between display and inline edit form; the <li> id
+/ stays stable for the toggle/update/destroy Turbo Streams.
+li.px-5.py-3(id="gathering_action_#{action.id}" class="#{action.completed? ? 'bg-stone-50' : ''}")
+  = turbo_frame_tag "ga_form_#{action.id}" do
+    = render "gathering_actions/action_display", action: action

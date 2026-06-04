@@ -56,6 +56,7 @@ class PricingModel
     lines.concat(hamac_lines)
     lines.concat(experience_lines)
     lines.concat(hall_lines)
+    lines.concat(space_slot_lines)
     lines.concat(meal_lines)
     lines.concat(pizza_party_lines)
     lines.concat(dog_lines)
@@ -70,16 +71,31 @@ class PricingModel
   private
 
   # --- Hébergement : formule fermée dégressive + forfait nommé override (Q3) ---
+  # Supporte le multi-hébergement via lodging_night_ids (Array indexé par nuit).
+  # Fallback sur lodging + nights si lodging_night_ids absent (backward compat).
   def lodging_lines
-    lodging = read(:lodging)
-    nights = read(:nights).to_i
-    return [] if lodging.nil? || nights < 1
+    night_ids = Array(read(:lodging_night_ids)).map { |id| id.presence }
 
-    rate = Pricing::Catalog.lodging_rate(lodging.name)
-    return [] if rate.nil?
-
-    quote = rate.quote_for(nights)
-    [Line.new(label: quote[:label], amount_cents: quote[:amount_cents])]
+    if night_ids.any?(&:present?)
+      nights_by_id = Hash.new(0)
+      night_ids.each { |id| nights_by_id[id] += 1 if id }
+      nights_by_id.filter_map do |lodging_id, night_count|
+        lodging = Lodging.find_by(id: lodging_id)
+        next unless lodging
+        rate = Pricing::Catalog.lodging_rate(lodging.name)
+        next unless rate
+        q = rate.quote_for(night_count)
+        Line.new(label: q[:label], amount_cents: q[:amount_cents])
+      end
+    else
+      lodging = read(:lodging)
+      nights  = read(:nights).to_i
+      return [] if lodging.nil? || nights < 1
+      rate = Pricing::Catalog.lodging_rate(lodging.name)
+      return [] if rate.nil?
+      q = rate.quote_for(nights)
+      [Line.new(label: q[:label], amount_cents: q[:amount_cents])]
+    end
   end
 
   # --- Camping / bivouac : €/pers/nuit ---
@@ -116,6 +132,12 @@ class PricingModel
     "journee_et_soiree" => "journée + soirée"
   }.freeze
 
+  SPACE_NAMES = {
+    "grande_salle" => "Grande Salle",
+    "petite_salle" => "Petite Salle",
+    "cuisine_pro"  => "Cuisine professionnelle"
+  }.freeze
+
   def hall_lines
     Array(read(:halls)).filter_map do |entry|
       rates = Pricing::Catalog::HALL_RATES[entry[:kind].to_s]
@@ -135,6 +157,38 @@ class PricingModel
     end
   end
 
+  # --- Espaces (grille nuit-par-nuit) : tarif semaine ou week-end selon la date ---
+  # ven (wday=5) et sam (wday=6) → tarifs week-end ; autres jours → tarifs semaine.
+  def space_slot_lines
+    slots = read(:space_slots)
+    return [] if slots.blank?
+
+    arrival   = read(:arrival_date)
+    departure = read(:departure_date)
+    stay_dates = (arrival && departure) ? (arrival...departure).to_a : []
+
+    slots.flat_map do |space_key, periods|
+      weekday_rates = Pricing::Catalog::HALL_RATES[space_key.to_s]
+      weekend_rates = Pricing::Catalog::HALL_RATES_WEEKEND[space_key.to_s]
+      next [] if weekday_rates.nil?
+      space_name = SPACE_NAMES[space_key.to_s] || space_key.to_s
+
+      Array(periods).each_with_index.filter_map do |period, night_idx|
+        next if period.blank?
+        date    = stay_dates[night_idx]
+        weekend = date && [5, 6].include?(date.wday)
+        rates   = (weekend && weekend_rates) ? weekend_rates : weekday_rates
+        unit    = rates[period.to_s]
+        next if unit.nil?
+        period_label = PERIOD_LABELS[period.to_s] || period.to_s
+        Line.new(
+          label:        "#{space_name} — nuit #{night_idx + 1}, #{period_label}",
+          amount_cents: unit
+        )
+      end
+    end.compact
+  end
+
   # --- Repas : €/pers ---
   def meal_lines
     Array(read(:meals)).filter_map do |entry|
@@ -148,12 +202,14 @@ class PricingModel
   end
 
   # --- Hamacs (RentalItem, mai-octobre) : forfait/nuit/unité ---
+  # entry[:nights] override le total du séjour pour les entrées per-nuit (backward compat).
   def hamac_lines
-    nights = read(:nights).to_i
-    return [] if nights < 1
+    stay_nights = read(:nights).to_i
     Array(read(:hamacs)).filter_map do |entry|
       count = entry[:count].to_i
       next if count < 1
+      nights = (entry[:nights] || stay_nights).to_i
+      next if nights < 1
       rate = Pricing::Catalog.hamac_rate(entry[:kind])
       next if rate.nil?
       label = entry[:kind].to_s == "double" ? "Hamac double" : "Hamac simple"

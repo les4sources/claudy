@@ -1,5 +1,9 @@
 = turbo_stream.remove "agenda_item_#{@agenda_item.id}"
 
-= turbo_stream.replace "agenda_items_counter_#{@gathering.id}",
+= turbo_stream.replace "agenda_items_counter_#{@gathering.id}_#{@agenda_item.list}",
                        partial: "agenda_items/counter",
-                       locals: { gathering: @gathering }
+                       locals: { gathering: @gathering, list: @agenda_item.list }
+
+= turbo_stream.replace "agenda_items_empty_#{@gathering.id}_#{@agenda_item.list}",
+                       partial: "agenda_items/empty_state",
+                       locals: { gathering: @gathering, list: @agenda_item.list }

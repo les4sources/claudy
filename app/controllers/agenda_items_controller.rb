@@ -1,4 +1,5 @@
 class AgendaItemsController < BaseController
+  layout :resolve_layout
   before_action :set_gathering, except: [:reorder_destroy]
   before_action :set_agenda_item, only: [:edit, :update, :destroy, :toggle_completed, :move]
 
@@ -27,9 +28,14 @@ class AgendaItemsController < BaseController
   end
 
   def update
+    @old_list = @agenda_item.list
     service = AgendaItems::UpdateService.new(agenda_item: @agenda_item)
     if service.run(params)
-      redirect_to gathering_path(@gathering), notice: "Point mis à jour."
+      @agenda_item = AgendaItemDecorator.new(@agenda_item.reload)
+      respond_to do |format|
+        format.turbo_stream
+        format.html { redirect_to gathering_path(@gathering), notice: "Point mis à jour." }
+      end
     else
       set_error_flash(@agenda_item, service.error_message)
       render :edit, status: :unprocessable_entity
@@ -71,13 +77,36 @@ class AgendaItemsController < BaseController
   end
 
   def reorder
+    list_key = params[:list].to_s
+    list_value = AgendaItem.lists[list_key]
     ids = Array(params[:ids]).map(&:to_i)
+
     AgendaItem.transaction do
       ids.each_with_index do |id, index|
-        @gathering.agenda_items.where(id: id).update_all(position: index)
+        attrs = { position: index }
+        attrs[:list] = list_value if list_value
+        @gathering.agenda_items.where(id: id).update_all(attrs)
       end
     end
-    head :no_content
+
+    @list = list_key
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: [
+          turbo_stream.replace(
+            "agenda_items_counter_#{@gathering.id}_#{list_key}",
+            partial: "agenda_items/counter",
+            locals: { gathering: @gathering, list: list_key }
+          ),
+          turbo_stream.replace(
+            "agenda_items_empty_#{@gathering.id}_#{list_key}",
+            partial: "agenda_items/empty_state",
+            locals: { gathering: @gathering, list: list_key }
+          )
+        ]
+      end
+      format.json { head :no_content }
+    end
   end
 
   private
@@ -88,6 +117,10 @@ class AgendaItemsController < BaseController
 
   def set_agenda_item
     @agenda_item = @gathering.agenda_items.find(params[:id])
+  end
+
+  def resolve_layout
+    %w[edit update].include?(action_name) ? "modal" : "application"
   end
 
   def set_presenters

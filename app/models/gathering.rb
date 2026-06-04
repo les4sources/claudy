@@ -18,6 +18,7 @@ class Gathering < ApplicationRecord
 
   belongs_to :gathering_category
   has_many :agenda_items, -> { ordered }, dependent: :destroy
+  has_many :gathering_actions, -> { ordered }, dependent: :destroy
   has_many :decisions, dependent: :nullify
 
   has_paper_trail

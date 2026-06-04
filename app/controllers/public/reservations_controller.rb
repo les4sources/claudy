@@ -18,6 +18,9 @@ module Public
 
     # Étape 1 — dates, groupe, animal.
     def dates
+      @lodgings              = bookable_lodgings
+      @cal_month             = (@draft.arrival_date&.beginning_of_month || Date.today.beginning_of_month)
+      @availability_calendar = build_availability_calendar(@lodgings, month: @cal_month)
     end
 
     # Transition étape 1 → 2.
@@ -26,10 +29,20 @@ module Public
       redirect_to public_reservation_compose_path
     end
 
+    HALL_KIND_TO_SPACE = {
+      "grande_salle" => "Grande Salle",
+      "petite_salle" => "Petite Salle",
+      "cuisine_pro"  => "Cuisine professionnelle"
+    }.freeze
+
     # Étape 2 — composition du séjour + devis temps-réel.
     def compose
-      @lodgings = bookable_lodgings
-      @quote = @draft.quote
+      @lodgings              = bookable_lodgings
+      @quote                 = @draft.quote
+      @cal_month             = (@draft.arrival_date&.beginning_of_month || Date.today.beginning_of_month)
+      @availability_calendar = build_availability_calendar(@lodgings, month: @cal_month)
+      @stay_nights           = build_stay_nights
+      @lodging_availability  = build_stay_availability(@lodgings, @stay_nights)
     end
 
     # Étape activités (accès via email token — pas dans le funnel direct).
@@ -83,6 +96,17 @@ module Public
       end
     end
 
+    # Turbo Frame navigation pour le calendrier de disponibilités (1 mois par page).
+    def availability_calendar
+      today_month = Date.today.beginning_of_month
+      max_month   = today_month >> 18
+      parsed      = params[:month] ? (Date.parse("#{params[:month]}-01") rescue today_month) : today_month
+      @cal_month  = [[parsed, today_month].max, max_month].min.beginning_of_month
+      @lodgings   = bookable_lodgings
+      @availability_calendar = build_availability_calendar(@lodgings, month: @cal_month)
+      render layout: false
+    end
+
     private
 
     def load_draft
@@ -107,6 +131,9 @@ module Public
       permitted = params.fetch(:reservation, {}).permit(
         :lodging_id, :arrival_date, :departure_date, :dogs_count,
         :adults, :children, :first_name, :last_name, :email, :phone, :group_name,
+        lodging_night_ids: [],
+        per_night_resources: { tente: [], van: [], hamac_simple: [], hamac_double: [] },
+        space_slots: { grande_salle: [], petite_salle: [], cuisine_pro: [] },
         meals: [:kind, :people], halls: [:kind, :date, :period],
         campings: [:kind, :people, :nights], vans: [:nights],
         pizza_parties: [:people], hamacs: [:kind, :count],
@@ -124,6 +151,26 @@ module Public
       permitted
     end
 
+    def build_stay_nights
+      return [] if @draft.arrival_date.blank? || @draft.departure_date.blank?
+      (@draft.arrival_date...@draft.departure_date).to_a
+    end
+
+    def build_stay_availability(lodgings, nights)
+      return {} if nights.empty?
+      start_date = nights.first
+      end_date   = nights.last
+      lodgings.each_with_object({}) do |lodging, result|
+        room_ids = lodging.rooms.pluck(:id)
+        reserved = Reservation.includes(:booking)
+          .where(date: start_date..end_date, room: room_ids, booking: { status: "confirmed" })
+          .pluck(:date).to_set
+        unavail  = lodging.unavailabilities.where(date: start_date..end_date).pluck(:date).to_set
+        occupied = reserved | unavail
+        result[lodging.id] = nights.map { |night| !occupied.include?(night) }
+      end
+    end
+
     def bookable_experiences
       Experience.where(deleted_at: nil).where.not(name: "Pizza Party").order(:name)
     end
@@ -131,6 +178,33 @@ module Public
     def bookable_lodgings
       names = ["La Hulotte", "La Chevêche", "Le Grand-Duc"]
       Lodging.where(name: names).sort_by { |l| names.index(l.name) || 99 }
+    end
+
+    # Construit les données pour le Gantt calendrier des disponibilités (1 mois).
+    def build_availability_calendar(lodgings, month: nil)
+      month   = (month || Date.today).beginning_of_month
+      start   = month
+      finish  = month.end_of_month
+      dates   = (start..finish).to_a
+
+      lodging_rows = lodgings.map do |lodging|
+        reserved = Reservation.includes(:booking)
+          .where(date: start..finish, room: lodging.rooms.pluck(:id), booking: { status: "confirmed" })
+          .pluck(:date).to_set
+        unavail = lodging.unavailabilities.where(date: start..finish).pluck(:date).to_set
+        { name: lodging.name, occupied: reserved | unavail }
+      end
+
+      hall_rows = HALL_KIND_TO_SPACE.filter_map do |_kind, space_name|
+        space = Space.find_by(name: space_name)
+        next unless space
+        booked = SpaceReservation.includes(:space_booking)
+          .where(date: start..finish, space: space, space_booking: { status: "confirmed" })
+          .pluck(:date).to_set
+        { name: space_name, occupied: booked }
+      end
+
+      { dates: dates, lodging_rows: lodging_rows, hall_rows: hall_rows }
     end
   end
 end

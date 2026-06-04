@@ -1,7 +1,12 @@
-- count = gathering.agenda_items.count
-- done = gathering.agenda_items.where(completed: true).count
+/ Counter. locals: gathering, list (optional String key).
+/ With a list → counts that list; without → counts the whole agenda.
+- list = local_assigns[:list]
+- scope = list ? gathering.agenda_items.where(list: list) : gathering.agenda_items
+- count = scope.count
+- done = scope.where(completed: true).count
+- dom_id = list ? "agenda_items_counter_#{gathering.id}_#{list}" : "agenda_items_counter_#{gathering.id}"
 
-span(id="agenda_items_counter_#{gathering.id}" class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-100")
+span(id=dom_id class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-100")
   span.font-semibold = count
   | point
   - if count != 1
