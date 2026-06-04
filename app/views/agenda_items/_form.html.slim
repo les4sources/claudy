@@ -1,17 +1,62 @@
-.border-l-8.border-emerald-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
-  .md:border-r-8.md:border-emerald-700.md:pr-4.md:text-right
-    = section_heading_tw heading: "Point de l'ODJ"
-    p.mt-2.text-xs.text-stone-500.md:text-right
-      | Détaille ici la fiche de préparation : contexte, questions à trancher, documents utiles.
+- item = f.object
+.space-y-6
+  - if item.persisted?
+    p.text-xs.text-stone-400
+      = AgendaItemDecorator.new(item).added_meta
 
-  .col-span-2.mb-4.space-y-6
-    = f.text_field :title,
-                   label: "Titre du point *",
-                   required: true,
-                   class: "md:w-2/3",
-                   hint: "Court, scannable. Ex : « Budget chauffage 2027 »."
+  = f.text_field :title,
+                 label: "Titre du point *",
+                 required: true,
+                 hint: "Court, scannable. Ex : « Budget chauffage 2027 »."
 
-    = f.label :description, "Fiche de préparation"
-    = f.rich_text_area :description
+  .space-y-1.5
+    label.block.text-sm.font-medium.text-gray-700 Liste
+    .flex.flex-wrap.gap-2
+      - AgendaItem::LIST_FORM_ORDER.each do |key|
+        label.cursor-pointer.select-none
+          = radio_button_tag "agenda_item[list]", key, (item.list == key), class: "peer sr-only"
+          span.inline-flex.items-center.rounded-full.border.border-stone-300.bg-white.px-3.5.py-1.5.text-sm.font-medium.text-stone-600.transition-colors(class="hover:border-emerald-300 peer-checked:bg-emerald-600 peer-checked:border-emerald-600 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-300")
+            = AgendaItem.list_label(key)
 
-hr
+  .space-y-2
+    label.block.text-sm.font-medium.text-gray-700 Porteur
+    p.text-xs.text-stone-400 Qui présente/anime ce point. Clique sur un avatar.
+    = render "shared/avatar_picker",
+             humans: Human.all,
+             selected_ids: [item.carrier_id].compact,
+             name: "agenda_item[carrier_id]",
+             mode: "single"
+
+  .space-y-2
+    = f.label :description, "Fiche de préparation", class: "block text-sm font-medium text-gray-700"
+    div.rounded-md.border.border-gray-300.shadow-sm.focus-within:border-emerald-500(data-controller="tiptap" data-tiptap-content-value=item.description.to_s)
+      .flex.flex-wrap.items-center.gap-1.border-b.border-gray-200.bg-gray-50.px-2.py-1.5
+        - tb = "px-2 py-1 rounded text-sm text-gray-600 hover:bg-gray-200"
+        button type="button" class=tb data-action="tiptap#toggleBold" title="Gras"
+          strong B
+        button type="button" class=tb data-action="tiptap#toggleItalic" title="Italique"
+          em I
+        button type="button" class=tb data-action="tiptap#toggleHeading" title="Titre"
+          | H3
+        button type="button" class=tb data-action="tiptap#toggleBulletList" title="Liste à puces"
+          | • —
+        button type="button" class=tb data-action="tiptap#toggleOrderedList" title="Liste numérotée"
+          | 1.
+        button type="button" class=tb data-action="tiptap#setLink" title="Lien"
+          | 🔗
+      .px-3.py-2(data-tiptap-target="editor")
+      = hidden_field_tag "agenda_item[description]", item.description.to_s, data: { tiptap_target: "input" }
+
+  .space-y-2
+    = f.label :attachments, "Pièces jointes", class: "block text-sm font-medium text-gray-700"
+    - if item.persisted? && item.attachments.attached?
+      ul.space-y-1.text-sm
+        - item.attachments.each do |att|
+          li.flex.items-center.gap-2.text-stone-600
+            svg.w-4.h-4.text-emerald-600(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2")
+              path[stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"]
+            = link_to att.filename, rails_blob_path(att, disposition: "attachment"), class: "hover:text-emerald-700 underline", target: "_blank"
+    = file_field_tag "agenda_item[attachments][]",
+                     multiple: true,
+                     class: "block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
+    p.text-xs.text-stone-400 Ajoute un ou plusieurs fichiers (s'ajoutent aux existants).

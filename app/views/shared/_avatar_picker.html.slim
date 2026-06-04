@@ -1,0 +1,14 @@
+/ Clickable-avatar person picker (uses each human's avatar).
+/ locals: humans, selected_ids (Array<Integer>), name (String), mode ("single"|"multi")
+- mode = local_assigns.fetch(:mode, "multi")
+- selected_ids = Array(local_assigns.fetch(:selected_ids, [])).map(&:to_i)
+
+div data-controller="avatar-picker" data-avatar-picker-mode-value=mode data-avatar-picker-name-value=name
+  .flex.flex-wrap.gap-2
+    - humans.each do |human|
+      - is_selected = selected_ids.include?(human.id)
+      button type="button" data-avatar-picker-target="option" data-action="avatar-picker#toggle" data-human-id=human.id data-selected=(is_selected ? "true" : "false") title=human.name class="flex flex-col items-center gap-1 rounded-lg p-1.5 transition-all hover:opacity-100 #{is_selected ? 'ring-2 ring-emerald-500 ring-offset-2' : 'opacity-40'}"
+        = render "humans/avatar", human: human, size: "w-11 h-11", ring: ""
+        span.text-xs.font-medium.text-stone-600.leading-tight.truncate(class="max-w-[4.5rem]")
+          = human.name
+  div data-avatar-picker-target="inputs" class="hidden"

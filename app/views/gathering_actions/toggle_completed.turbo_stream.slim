@@ -1,0 +1,9 @@
+/ Replaces the row on whichever page made the request (the other id is absent → no-op),
+/ keeping the gathering page and the member dashboard in sync via the shared record.
+= turbo_stream.replace "gathering_action_#{@gathering_action.id}",
+                       partial: "gathering_actions/action",
+                       locals: { action: @gathering_action }
+
+= turbo_stream.replace "member_gathering_action_#{@gathering_action.id}",
+                       partial: "gathering_actions/member_action",
+                       locals: { action: @gathering_action }

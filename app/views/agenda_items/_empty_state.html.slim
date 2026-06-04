@@ -1,0 +1,9 @@
+/ Empty-state hint for one list. locals: gathering, list, empty (optional Boolean).
+/ Always renders the wrapper (stable id for Turbo Stream replace); the hint shows
+/ only when the list has no points.
+- is_empty = local_assigns.key?(:empty) ? empty : gathering.agenda_items.where(list: list).empty?
+
+div(id="agenda_items_empty_#{gathering.id}_#{list}")
+  - if is_empty
+    .mb-3.rounded-lg.border.border-dashed.border-stone-200.bg-white.px-4.py-2.text-center.text-xs.text-stone-400
+      | Aucun point ici pour l'instant.

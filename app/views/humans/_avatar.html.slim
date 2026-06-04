@@ -1,0 +1,11 @@
+/ Read-only Human avatar. locals: human, size (Tailwind w/h classes), ring (extra classes)
+- size = local_assigns.fetch(:size, "w-8 h-8")
+- ring = local_assigns.fetch(:ring, "ring-1 ring-stone-200")
+- if human&.photo?
+  = image_tag human.photo_url(:thumb), class: "#{size} rounded-full object-cover #{ring}", alt: human.name, title: human.name
+- elsif human
+  = image_tag "https://ui-avatars.com/api/?name=#{CGI.escape(human.name.to_s)}&size=80&background=ccfbf1&color=0d9488", class: "#{size} rounded-full object-cover #{ring}", alt: human.name, title: human.name
+- else
+  span class="#{size} rounded-full bg-stone-100 ring-1 ring-dashed ring-stone-300 inline-flex items-center justify-center text-stone-400" title="Non assigné"
+    svg.w-4.h-4(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2")
+      path[stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"]

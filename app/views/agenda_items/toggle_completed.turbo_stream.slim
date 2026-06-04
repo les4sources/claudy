@@ -2,6 +2,6 @@
                        partial: "agenda_items/item",
                        locals: { item: @agenda_item }
 
-= turbo_stream.replace "agenda_items_counter_#{@gathering.id}",
+= turbo_stream.replace "agenda_items_counter_#{@gathering.id}_#{@agenda_item.list}",
                        partial: "agenda_items/counter",
-                       locals: { gathering: @gathering }
+                       locals: { gathering: @gathering, list: @agenda_item.list }

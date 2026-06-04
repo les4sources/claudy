@@ -21,7 +21,7 @@ module AgendaItems
     private
 
     def agenda_item_params(params)
-      params.require(:agenda_item).permit(:title, :description, :completed)
+      params.require(:agenda_item).permit(:title, :description, :completed, :list, :carrier_id)
     end
   end
 end

@@ -19,6 +19,16 @@ class AgendaItemDecorator < ApplicationDecorator
     object.author&.name || "—"
   end
 
+  def carrier_label
+    object.carrier&.name || "Non assigné"
+  end
+
+  # Shown in the edit modal: who added the point and when.
+  def added_meta
+    by = object.author&.name || "—"
+    "Ajouté par #{by} le #{h.l(object.created_at, format: :long)}"
+  end
+
   def description_plain
     return nil unless object.description.present?
     object.description.to_plain_text
@@ -31,6 +41,11 @@ class AgendaItemDecorator < ApplicationDecorator
   end
 
   def has_attachments?
-    object.description.present? && object.description.body.attachables.any?
+    object.attachments.attached? ||
+      (object.description.present? && object.description.body.attachables.any?)
+  end
+
+  def attachments_count
+    object.attachments.count
   end
 end

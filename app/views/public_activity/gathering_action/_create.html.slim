@@ -1,0 +1,24 @@
+- action = activity.trackable
+
+- if action
+  li
+    .relative.pb-8
+      span.absolute.left-4.top-4.-ml-px.h-full.w-0.5.bg-gray-200[aria-hidden="true"]
+      .relative.flex.space-x-6
+        div
+          span.h-8.w-8.rounded-full.bg-amber-400.flex.items-center.justify-center.ring-8.ring-white
+            svg.h-5.w-5.text-white[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+              path[fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"]
+        .flex.min-w-0.flex-1.justify-between.space-x-4.pt-1.5
+          div
+            p.text-sm.text-gray-900
+              | Action décidée :
+              =<> link_to action.label,
+                          gathering_path(action.gathering),
+                          class: "claudy-link"
+              - if action.assignees.any?
+                | — #{action.assignees.map(&:name).join(', ')}
+
+          .whitespace-nowrap.text-right.text-sm.text-gray-500
+            time[datetime="#{activity.created_at.iso8601}"]
+              = l(activity.created_at, format: :short)

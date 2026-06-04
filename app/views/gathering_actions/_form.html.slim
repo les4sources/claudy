@@ -1,0 +1,21 @@
+/ Add-action form on the gathering page. locals: gathering
+= form_with url: gathering_gathering_actions_path(gathering),
+             method: :post,
+             id: "gathering_action_form_#{gathering.id}",
+             data: { turbo_frame: "_top" } do |f|
+  .space-y-3
+    = text_field_tag "gathering_action[label]",
+                     nil,
+                     placeholder: "Décrire l'action décidée…",
+                     required: true,
+                     class: "w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 focus:outline-none"
+    div
+      .text-xs.font-medium.text-stone-500.mb-1.5 Assigner à
+      = render "shared/avatar_picker",
+               humans: Human.all,
+               selected_ids: [],
+               name: "gathering_action[human_ids][]",
+               mode: "multi"
+    .flex.justify-end
+      = f.submit "Ajouter l'action",
+                 class: "inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-1 cursor-pointer"

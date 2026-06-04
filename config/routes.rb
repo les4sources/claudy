@@ -27,6 +27,11 @@ Rails.application.routes.draw do
         patch :reorder
       end
     end
+    resources :gathering_actions, only: [:create, :update, :destroy] do
+      member do
+        patch :toggle_completed
+      end
+    end
   end
   resources :decisions
   get "organisation/decisions", to: "decisions#index", as: :organisation_decisions

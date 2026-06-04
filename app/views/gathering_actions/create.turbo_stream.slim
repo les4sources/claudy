@@ -1,0 +1,9 @@
+= turbo_stream.append "gathering_actions_list_#{@gathering.id}",
+                       partial: "gathering_actions/action",
+                       locals: { action: @gathering_action }
+
+= turbo_stream.update "gathering_actions_empty_#{@gathering.id}", ""
+
+= turbo_stream.replace "gathering_action_form_#{@gathering.id}",
+                       partial: "gathering_actions/form",
+                       locals: { gathering: @gathering }
