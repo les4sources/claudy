@@ -16,18 +16,20 @@ import Placeholder from "@tiptap/extension-placeholder"
 export default class extends Controller {
   static targets = ["editor", "input"]
   static values = {
-    content: String,
     placeholder: { type: String, default: "Contexte, questions à trancher, documents utiles…" },
   }
 
   connect() {
+    // Initial content comes from the hidden ActionText field (correctly escaped
+    // by Rails), never from a data attribute — rich-text HTML contains quotes
+    // that would break an HTML attribute value.
     this.editor = new Editor({
       element: this.editorTarget,
       extensions: [
         StarterKit.configure({ link: { openOnClick: false, autolink: true } }),
         Placeholder.configure({ placeholder: this.placeholderValue }),
       ],
-      content: this.contentValue || "",
+      content: this.inputTarget.value || "",
       editorProps: {
         attributes: { class: "prose max-w-none focus:outline-none min-h-[10rem]" },
       },
