@@ -42,6 +42,7 @@ Rails.application.routes.draw do
   resources :humans do
     member do
       patch :toggle_cycle_active
+      post :create_account
     end
   end
   resources :human_roles

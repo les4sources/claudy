@@ -18,6 +18,9 @@ class Payment < ApplicationRecord
   self.implicit_order_column = :created_at
 
   belongs_to :booking
+  # Lien direct vers le séjour (issue #26, fondation). Optionnel le temps de la
+  # transition : `booking` reste l'ancre obligatoire, `stay` est dénormalisé.
+  belongs_to :stay, optional: true
 
   monetize :amount_cents, allow_nil: false
 

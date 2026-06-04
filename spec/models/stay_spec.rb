@@ -36,6 +36,26 @@ RSpec.describe Stay, type: :model do
 
       expect(stay.payments).to be_empty
     end
+
+    # issue #26 — lien direct dénormalisé Payment -> Stay
+    it "returns payments linked directly via stay_id" do
+      stay = Stay.create!(customer: customer)
+      b = booking(from: Date.new(2026, 7, 1), to: Date.new(2026, 7, 3))
+      payment = Payment.create!(booking: b, stay: stay, amount_cents: 5_000,
+                                status: "pending", payment_method: "card")
+
+      expect(stay.payments).to contain_exactly(payment)
+    end
+
+    it "n'duplique pas un paiement relié à la fois via stay_id et via son Booking" do
+      stay = Stay.create!(customer: customer)
+      b = booking(from: Date.new(2026, 7, 1), to: Date.new(2026, 7, 3))
+      stay.stay_items.create!(bookable: b)
+      payment = Payment.create!(booking: b, stay: stay, amount_cents: 5_000,
+                                status: "paid", payment_method: "card")
+
+      expect(stay.payments).to contain_exactly(payment)
+    end
   end
 
   describe "#recompute_aggregates!" do

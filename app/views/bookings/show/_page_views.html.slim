@@ -1,0 +1,37 @@
+/ issue #16 — statistiques de consultation de la page web privée du client
+.overflow-hidden.bg-white.shadow.sm:rounded-lg
+  .px-4.py-5.sm:px-6
+    h3.text-lg.font-medium.leading-6.text-gray-900
+      | Consultations de la page client
+    p.mt-1.text-sm.text-gray-500
+      | Le client a-t-il ouvert sa page web ?
+  .border-t.border-gray-200.px-4.py-5.sm:px-6
+    - if booking.page_viewed?
+      dl.grid.grid-cols-2.gap-4
+        div
+          dt.text-sm.font-medium.text-gray-500
+            | Vues
+          dd.mt-1.text-3xl.font-semibold.tracking-tight.text-gray-900
+            = booking.page_views_count
+        div
+          dt.text-sm.font-medium.text-gray-500
+            | Jours distincts
+          dd.mt-1.text-3xl.font-semibold.tracking-tight.text-gray-900
+            = booking.page_views_distinct_days
+        div
+          dt.text-sm.font-medium.text-gray-500
+            | Première vue
+          dd.mt-1.text-sm.text-gray-900
+            = booking.page_views_first_at
+        div
+          dt.text-sm.font-medium.text-gray-500
+            | Dernière vue
+          dd.mt-1.text-sm.text-gray-900
+            = booking.page_views_last_at
+    - else
+      p.text-sm.text-gray-400.italic
+        | Aucune consultation enregistrée pour l'instant.
+    p.mt-4.text-xs.text-gray-400
+      | Astuce : ajoutez
+      code.mx-1.rounded.bg-gray-100.px-1.py-0.5 ?donottrack
+      | à l'URL pour consulter la page sans être comptabilisé.

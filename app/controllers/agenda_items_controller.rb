@@ -119,10 +119,6 @@ class AgendaItemsController < BaseController
     @agenda_item = @gathering.agenda_items.find(params[:id])
   end
 
-  def current_human
-    current_user&.human || Human.where(status: "active").first
-  end
-
   def resolve_layout
     %w[edit update].include?(action_name) ? "modal" : "application"
   end

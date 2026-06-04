@@ -55,6 +55,7 @@ module Reservations
         @stay.stay_items.create!(bookable: @booking)
         @payment = Payment.create!(
           booking: @booking,
+          stay: @stay,
           amount_cents: quote.deposit_cents,
           status: "pending",
           payment_method: "card"

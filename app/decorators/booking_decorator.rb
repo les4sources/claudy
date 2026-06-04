@@ -416,6 +416,31 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def wifi_emoji
-    object.wifi? ? h.content_tag(:span, h.raw("👩‍💻 <a href='https://les4sources.notion.site/Appareils-WiFi-febf850431bc42b68e455574cc32e951?pvs=4' target='_blank' class='claudy-link'>Installer le WiFi</a>"), class: "text-sm") : nil 
+    object.wifi? ? h.content_tag(:span, h.raw("👩‍💻 <a href='https://les4sources.notion.site/Appareils-WiFi-febf850431bc42b68e455574cc32e951?pvs=4' target='_blank' class='claudy-link'>Installer le WiFi</a>"), class: "text-sm") : nil
+  end
+
+  # --- Statistiques de consultation de la page web client (issue #16) ---
+
+  def page_views_count
+    object.page_views.count
+  end
+
+  def page_viewed?
+    page_views_count.positive?
+  end
+
+  # Nombre de jours distincts où la page a été consultée.
+  def page_views_distinct_days
+    object.page_views.pluck(:created_at).map(&:to_date).uniq.count
+  end
+
+  def page_views_first_at
+    view = object.page_views.order(:created_at).first
+    view && l(view.created_at, format: :short)
+  end
+
+  def page_views_last_at
+    view = object.page_views.order(:created_at).last
+    view && l(view.created_at, format: :short)
   end
 end

@@ -4,7 +4,7 @@
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
     = f.text_field :name,
-                   label: "Libellé de l'expérience *",
+                   label: "Libellé de l'activité *",
                    required: true,
                    class: "md:w-1/2 lg:w-2/3"
 
@@ -34,8 +34,16 @@
                      step: "1"
 
     = f.text_field :duration,
-                   label: "Durée",
+                   label: "Durée (libellé affiché)",
+                   hint: "Texte libre montré aux client·es, ex. « une demi-journée »",
                    class: "w-1/2 md:w-1/2 lg:w-1/4"
+
+    = f.number_field :duration_hours,
+                     label: "Durée en heures",
+                     hint: "Valeur numérique (ex. 1 · 2 · 2,5 · 3 · 4) — détermine la taille des créneaux de disponibilité.",
+                     min: "0.5",
+                     step: "0.5",
+                     class: "w-1/2 md:w-1/2 lg:w-1/4"
 
     .flex.space-x-4
       - if f.object.photo?
@@ -53,13 +61,22 @@
 
     .sm:space-y-1
       = f.label :description, 
-                "Présentation de l'expérience"
+                "Présentation de l'activité"
       = f.rich_text_area :description
 
-    = f.label :human_id, "Porteur·euse d'expérience"
-    = f.collection_radio_buttons :human_id, Human.all.order(:name), :id, :name, required: true do |radio_button|
+    - carrier_candidates = (Human.with_email.to_a + [f.object.human]).compact.uniq.sort_by { |human| human.name.to_s }
+    = f.label :human_id, "Porteur·euse d'activité"
+    p.mt-1.mb-2.text-xs.text-gray-500
+      | Seules les personnes disposant d'une adresse email apparaissent ici : un compte d'accès leur sera créé pour gérer leurs disponibilités.
+    = f.collection_radio_buttons :human_id, carrier_candidates, :id, :name, required: true do |radio_button|
       .flex.items-center
         = radio_button.radio_button
         = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+        - if radio_button.object.account?
+          span.ml-2 class="inline-flex items-center rounded-md bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20"
+            | compte actif
+        - else
+          span.ml-2 class="inline-flex items-center rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10"
+            | compte à créer
 
 hr

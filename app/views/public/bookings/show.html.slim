@@ -1,5 +1,18 @@
 - content_for :meta_title, "Ma réservation aux 4 Sources"
 
+/ issue #16 — quand l'équipe consulte la page avec ?donottrack (pour ne pas
+/ fausser les stats), on retire le paramètre de l'URL côté client (sans recharger)
+/ afin qu'il ne soit pas copié-collé et partagé par erreur.
+- if params[:donottrack].present?
+  javascript:
+    (function () {
+      try {
+        var url = new URL(window.location.href);
+        url.searchParams.delete("donottrack");
+        window.history.replaceState({}, document.title, url.toString());
+      } catch (e) {}
+    })();
+
 - content_for :page_header do
   = render 'layouts/public/components/page_header',
            title: @booking.confirmed? ? "Votre séjour aux 4 Sources" : "Votre demande de réservation"

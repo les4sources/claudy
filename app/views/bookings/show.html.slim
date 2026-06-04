@@ -197,6 +197,8 @@ ul.mt-2.mb-4.grid.grid-cols-1.gap-5.sm:grid-cols-2.sm:gap-6.lg:grid-cols-4[role=
   .space-y-4
     = render partial: "bookings/show/details", locals: { booking: @booking }
 
+    = render partial: "bookings/show/page_views", locals: { booking: @booking }
+
     - if @booking.object.estimated_arrival.presence || @booking.object.departure_time.presence
       div
         dl.grid.grid-cols-2.gap-5

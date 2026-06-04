@@ -39,7 +39,8 @@ module Experiences
           :fixed_price,
           :min_participants,
           :max_participants,
-          :duration
+          :duration,
+          :duration_hours
         )
     end
   end

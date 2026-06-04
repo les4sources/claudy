@@ -36,6 +36,14 @@
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @experience.participants
 
+            - if @experience.duration.present? || @experience.duration_hours
+              dt.text-sm.font-medium.text-gray-500
+                | Durée
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @experience.duration
+                - if @experience.duration_hours
+                  span.text-gray-400 = " (#{@experience.duration_hours})"
+
             dt.text-sm.font-medium.text-gray-500
               | Résumé
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
@@ -123,5 +131,5 @@
                 | Rôle
               dd.mt-3
                 span.inline-flex.items-center.rounded-full.bg-green-50.px-2.py-1.text-xs.font-medium.text-green-700.ring-1.ring-inset.ring-green-600/20
-                  | Porteur·euse d'expérience
+                  | Porteur·euse d'activité
                   

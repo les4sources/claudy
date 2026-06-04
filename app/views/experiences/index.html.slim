@@ -1,8 +1,8 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
-           title: "Expériences",
+           title: "Activités",
            links: [ \
-             link_to("➕ Nouvelle expérience", new_experience_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
+             link_to("➕ Nouvelle activité", new_experience_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
            ]
 
 .overflow-x-auto.relative
@@ -11,7 +11,7 @@
       tr
         th.py-3.px-6[scope="col"]
         th.w-full.py-3.px-6[scope="col"]
-          | Expérience
+          | Activité
         th.py-3.px-6[scope="col"]
           | Porteur·euse
         th.w-36.py-3.px-6[scope="col"]
@@ -44,3 +44,5 @@
             = experience.participants
           td.py-4.px-6.text-gray-900.whitespace-nowrap[scope="row"]
             = experience.duration
+            - if experience.duration_hours
+              .text-xs.text-gray-400 = experience.duration_hours

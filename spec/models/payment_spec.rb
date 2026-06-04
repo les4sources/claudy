@@ -16,5 +16,25 @@
 require 'rails_helper'
 
 RSpec.describe Payment, type: :model do
-  pending "add some examples to (or delete) #{__FILE__}"
+  let(:customer) { Customer.create!(email: "pay@example.com", customer_type: "individual") }
+  let(:booking) do
+    Booking.create!(firstname: "Pay", from_date: Date.today, to_date: Date.today + 2,
+                    adults: 1, status: "pending", price_cents: 10_000)
+  end
+
+  it "exige un booking (ancre obligatoire)" do
+    payment = Payment.new(amount_cents: 5_000, payment_method: "card")
+    expect(payment).not_to be_valid
+    expect(payment.errors[:booking]).to be_present
+  end
+
+  it "accepte un stay optionnel (issue #26)" do
+    payment = Payment.create!(booking: booking, amount_cents: 5_000, status: "pending",
+                              payment_method: "card")
+    expect(payment.stay).to be_nil
+
+    stay = Stay.create!(customer: customer)
+    payment.update!(stay: stay)
+    expect(payment.reload.stay).to eq(stay)
+  end
 end
