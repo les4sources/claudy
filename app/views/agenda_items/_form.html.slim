@@ -29,7 +29,7 @@
 
   .space-y-2
     = f.label :description, "Fiche de préparation", class: "block text-sm font-medium text-gray-700"
-    div.rounded-md.border.border-gray-300.shadow-sm.focus-within:border-emerald-500(data-controller="tiptap" data-tiptap-content-value=item.description.to_s)
+    div.rounded-md.border.border-gray-300.shadow-sm.focus-within:border-emerald-500(data-controller="tiptap")
       .flex.flex-wrap.items-center.gap-1.border-b.border-gray-200.bg-gray-50.px-2.py-1.5
         - tb = "px-2 py-1 rounded text-sm text-gray-600 hover:bg-gray-200"
         button type="button" class=tb data-action="tiptap#toggleBold" title="Gras"
