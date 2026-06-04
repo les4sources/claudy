@@ -27,7 +27,7 @@ Rails.application.routes.draw do
         patch :reorder
       end
     end
-    resources :gathering_actions, only: [:create, :update, :destroy] do
+    resources :gathering_actions, only: [:create, :show, :edit, :update, :destroy] do
       member do
         patch :toggle_completed
       end

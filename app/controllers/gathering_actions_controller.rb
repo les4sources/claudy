@@ -1,6 +1,6 @@
 class GatheringActionsController < BaseController
   before_action :set_gathering
-  before_action :set_gathering_action, only: [:update, :destroy, :toggle_completed]
+  before_action :set_gathering_action, only: [:show, :edit, :update, :destroy, :toggle_completed]
 
   def create
     service = GatheringActions::CreateService.new(gathering: @gathering)
@@ -16,15 +16,23 @@ class GatheringActionsController < BaseController
     end
   end
 
+  def show
+  end
+
+  def edit
+  end
+
   def update
     service = GatheringActions::UpdateService.new(gathering_action: @gathering_action)
     if service.run(params)
       respond_to do |format|
+        # Replaces the row (gathering page) and the member-dashboard row, swapping
+        # the inline edit form back to the updated display.
         format.turbo_stream { render :toggle_completed }
         format.html { redirect_to gathering_path(@gathering), notice: "Action mise à jour." }
       end
     else
-      redirect_to gathering_path(@gathering), alert: service.error_message
+      render :edit, status: :unprocessable_entity
     end
   end
 
