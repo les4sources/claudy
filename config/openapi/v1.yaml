@@ -665,6 +665,50 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /human_roles:
+    get:
+      tags: [Collectif]
+      summary: Lister les rôles datés (gardes / Veilleur·euse)
+      description: >
+        Rôles assignés à un membre pour un jour donné. Le rôle "Veilleur·euse"
+        (role_id 1) correspond à la garde. status=selected confirme l'assignation
+        (backup = suppléant). Pour savoir quels jours un membre est de garde :
+        ?human_id=<id>&role_id=1&status=selected&from=<date>&to=<date>.
+      parameters:
+        - { name: human_id, in: query, schema: { type: integer }, description: "Filtre par membre." }
+        - { name: role_id, in: query, schema: { type: integer }, description: "Filtre par rôle (1 = Veilleur·euse / garde)." }
+        - { name: status, in: query, schema: { type: string, enum: [selected, backup] }, description: "selected = confirmé, backup = suppléant." }
+        - { name: from, in: query, schema: { type: string, format: date }, description: "Borne basse de date (incluse)." }
+        - { name: to, in: query, schema: { type: string, format: date }, description: "Borne haute de date (incluse)." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de rôles datés (triés par date croissante).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/HumanRole" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /human_roles/{id}:
+    get:
+      tags: [Collectif]
+      summary: Détail d'un rôle daté
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Rôle daté.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/HumanRole" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /tasks:
     get:
       tags: [Collectif]
@@ -1122,6 +1166,19 @@ components:
         archived_at: { type: string, format: date-time, nullable: true }
         human: { $ref: "#/components/schemas/Ref" }
         delegate_to_human: { allOf: [{ $ref: "#/components/schemas/Ref" }], nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string }
+    HumanRole:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "human_role" }
+        date: { type: string, format: date }
+        status: { type: string, enum: [selected, backup] }
+        human: { $ref: "#/components/schemas/Ref" }
+        role: { $ref: "#/components/schemas/Ref" }
+        has_watchman_note: { type: boolean, description: "Vrai si une note de veilleur existe pour cette date." }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         url: { type: string }
