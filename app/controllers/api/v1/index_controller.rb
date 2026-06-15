@@ -41,6 +41,7 @@ module Api
             { name: "humans", path: api_v1_humans_path, description: "Membres du collectif." },
             { name: "cycles", path: api_v1_cycles_path, description: "Cycles de l'organisation (périodes datées)." },
             { name: "cycle_actions", path: api_v1_cycle_actions_path, description: "Actions de cycle par membre. Filtres: human_id, category, completed." },
+            { name: "human_roles", path: api_v1_human_roles_path, description: "Rôles datés par membre (ex. gardes / Veilleur·euse). Filtres: human_id, role_id, status (selected|backup), from, to." },
             { name: "tasks", path: api_v1_tasks_path, description: "Tâches de l'organisation. Filtres: status, project_id." },
             { name: "payments", path: api_v1_payments_path, description: "Paiements liés aux réservations (identifiants Stripe non exposés)." }
           ],

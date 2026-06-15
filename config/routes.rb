@@ -177,6 +177,7 @@ Rails.application.routes.draw do
       resources :humans, only: [:index, :show, :update, :destroy]
       resources :cycles, only: [:index, :show, :update, :destroy]
       resources :cycle_actions, only: [:index, :show, :update, :destroy]
+      resources :human_roles, only: [:index, :show]
       resources :tasks, only: [:index, :show, :update, :destroy]
       resources :payments, only: [:index, :show, :update, :destroy]
     end
