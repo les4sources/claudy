@@ -1,0 +1,62 @@
+name: "Feature — exécution autonome"
+description: "Décrire une feature avec TOUT le contexte pour qu'un agent autonome la traite seul la nuit."
+title: "[Feature] "
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ⚠️ Lis-moi
+        Un agent autonome pourra traiter cette issue **sans accès à la conversation d'origine** — il n'a que ce texte + le repo cloné.
+        **Tout ce qui n'est pas écrit ici (ou trouvable dans le repo) n'existe pas pour lui.** Remplis chaque section.
+        L'architecture et les conventions du projet sont dans `CLAUDE.md` à la racine du repo — l'agent les lira.
+        L'issue ne sera traitée que si tu lui ajoutes le label `agent:ready` (un contrôle automatique vérifie qu'elle est complète avant de l'accepter).
+  - type: textarea
+    id: contexte
+    attributes:
+      label: "Contexte / problème"
+      description: "Ce qui est cassé ou manquant aujourd'hui, et pourquoi ça compte. L'état actuel."
+    validations:
+      required: true
+  - type: textarea
+    id: criteres
+    attributes:
+      label: "Critères d'acceptation"
+      description: "Un comportement vérifiable par ligne (cases à cocher). C'est la définition du fini ; l'agent doit pouvoir cocher chaque ligne."
+      value: |
+        - [ ]
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: perimetre
+    attributes:
+      label: "Périmètre (dans / hors)"
+      description: "Ce qui EST inclus et surtout ce qui n'est PAS inclus (anti-scope), pour éviter que l'agent dérape."
+      placeholder: |
+        Inclus : …
+        Hors scope : …
+    validations:
+      required: true
+  - type: textarea
+    id: zones-code
+    attributes:
+      label: "Zones de code concernées"
+      description: "Pointe les fichiers/dossiers probables (controllers, vues/pages, models, services…). L'agent peut explorer, mais ces pointeurs évitent les éditions au mauvais endroit."
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: "Stratégie de test"
+      description: "Quels tests l'agent doit ajouter/lancer (ex. RSpec : … ; front : …). Nomme les cas clés."
+    validations:
+      required: true
+  - type: textarea
+    id: dod
+    attributes:
+      label: "Definition of Done"
+      description: "En une phrase : à quoi on reconnaît que c'est fini et mergeable."
+    validations:
+      required: true

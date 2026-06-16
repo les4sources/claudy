@@ -1,0 +1,39 @@
+name: Agent-ready completeness gate
+# Quand une issue reçoit le label `agent:ready`, vérifie qu'elle est assez complète
+# pour une exécution autonome. Sinon : retire `agent:ready` + commente ce qui manque.
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  issues: write
+
+jobs:
+  gate:
+    if: github.event.label.name == 'agent:ready'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verifier la completude
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BODY: ${{ github.event.issue.body }}
+          NUM: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          missing=()
+          for sec in "Contexte" "Critères d'acceptation" "Périmètre" "Zones de code" "Stratégie de test" "Definition of Done"; do
+            printf '%s' "$BODY" | grep -qiF "$sec" || missing+=("$sec")
+          done
+          printf '%s' "$BODY" | grep -qE '^[[:space:]]*- \[[ xX]\]' || missing+=("au moins un critère d'acceptation en case à cocher (- [ ])")
+          if [ ${#missing[@]} -eq 0 ]; then
+            echo "Issue #$NUM complète — agent:ready conservé."
+            exit 0
+          fi
+          {
+            echo "🤖 **Pas encore prête pour l'agent nocturne.** Le label \`agent:ready\` a été retiré : l'agent autonome n'a que l'issue + le repo, et il manque des éléments pour qu'il puisse la traiter seul."
+            echo ""
+            echo "Complète ces points (idéalement via le gabarit *Feature — exécution autonome*), puis remets le label \`agent:ready\` :"
+            printf -- '- %s\n' "${missing[@]}"
+          } > /tmp/gate-msg.md
+          gh issue edit "$NUM" -R "$REPO" --remove-label "agent:ready"
+          gh issue comment "$NUM" -R "$REPO" --body-file /tmp/gate-msg.md
