@@ -10,9 +10,72 @@
 #  code        :string
 #  deleted_at  :datetime
 #  position    :integer          default(999)
+#  capacity    :integer          default(1), not null
 #
 require 'rails_helper'
 
 RSpec.describe Space, type: :model do
-  pending "add some examples to (or delete) #{__FILE__}"
+  let(:date) { Date.new(2030, 8, 1) }
+
+  # Confirme un groupe de plus sur l'espace au jour donné.
+  def book(space, on: date)
+    booking = SpaceBooking.create!(firstname: "G", from_date: on, to_date: on, status: "confirmed")
+    SpaceReservation.create!(space: space, space_booking: booking, date: on)
+  end
+
+  describe "capacity" do
+    it "defaults to 1 (espace exclusif — comportement historique)" do
+      expect(Space.new.capacity).to eq(1)
+    end
+
+    context "espace exclusif (capacity 1, ex. une salle)" do
+      let(:salle) { Space.create!(name: "Grande Salle", capacity: 1) }
+
+      it "est bloqué dès le premier groupe confirmé" do
+        expect(salle.available_on?(date)).to be(true)
+        book(salle)
+        expect(salle.available_on?(date)).to be(false)
+        expect(salle).to be_booked_on(date)
+      end
+
+      it "n'est pas considéré comme partagé" do
+        expect(salle.shared?).to be(false)
+      end
+    end
+
+    context "espace multi-groupe (capacity 3, ex. Bois/Pâture)" do
+      let(:bois) { Space.create!(name: "Bois", capacity: 3) }
+
+      it "accepte plusieurs groupes jusqu'à la capacité" do
+        expect(bois.remaining_capacity_on(date)).to eq(3)
+        book(bois)
+        expect(bois.available_on?(date)).to be(true)
+        expect(bois.remaining_capacity_on(date)).to eq(2)
+        book(bois)
+        expect(bois.available_on?(date)).to be(true)
+      end
+
+      it "bloque une fois la capacité atteinte" do
+        3.times { book(bois) }
+        expect(bois.available_on?(date)).to be(false)
+        expect(bois.remaining_capacity_on(date)).to eq(0)
+      end
+
+      it "est considéré comme partagé" do
+        expect(bois.shared?).to be(true)
+      end
+    end
+
+    it "ignore les réservations non confirmées et les autres jours" do
+      bois = Space.create!(name: "Bois", capacity: 1)
+      pending_booking = SpaceBooking.create!(firstname: "P", from_date: date, to_date: date, status: "pending")
+      SpaceReservation.create!(space: bois, space_booking: pending_booking, date: date)
+      SpaceReservation.create!(
+        space: bois,
+        space_booking: SpaceBooking.create!(firstname: "C", from_date: date - 1, to_date: date - 1, status: "confirmed"),
+        date: date - 1
+      )
+      expect(bois.available_on?(date)).to be(true)
+    end
+  end
 end

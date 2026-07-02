@@ -3,16 +3,20 @@ module SpaceBookable
 
   private
 
+  # Capacity-aware : délègue à Space#available_on? (source unique de vérité).
+  # Un espace multi-groupe (capacity >1) reste dispo tant qu'il reste des
+  # places ; un espace exclusif (capacity 1) bloque dès un groupe confirmé.
+  # Vérifie chaque nuit du séjour (from inclus, to exclu).
   def available?(spaces)
     spaces.each do |space|
-      if space.space_reservations
-          .includes(:space_booking)
-          .where(date: (@space_booking.from_date)..(@space_booking.to_date - 1.day), space_booking: { status: "confirmed" })
-          .any?
-        set_error_message("Cet espace n'est pas disponible à cette date.")
-        return false
+      (@space_booking.from_date...@space_booking.to_date).each do |date|
+        unless space.available_on?(date)
+          set_error_message("Cet espace n'est pas disponible à cette date.")
+          return false
+        end
       end
     end
+    true
   end
 
   def build_space_reservations(spaces, duration)

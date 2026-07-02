@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_04_074516) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_02_201250) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -558,6 +558,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_04_074516) do
     t.string "code"
     t.datetime "deleted_at", precision: nil
     t.integer "position", default: 999
+    t.integer "capacity", default: 1, null: false
   end
 
   create_table "stay_items", force: :cascade do |t|
