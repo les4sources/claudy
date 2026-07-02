@@ -34,6 +34,14 @@
   }
 }
 
+/* Dark mode: the iframe sits on the site's dark background, where the
+   dark-green accent is unreadable. Force the month title to white. */
+@media (prefers-color-scheme: dark) {
+  .availability-calendar__month {
+    color: #ffffff;
+  }
+}
+
 /* Navigation – single line: prev | title | next */
 .availability-calendar__nav {
   display: flex;
