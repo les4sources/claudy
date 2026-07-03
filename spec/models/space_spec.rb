@@ -23,6 +23,31 @@ RSpec.describe Space, type: :model do
     SpaceReservation.create!(space: space, space_booking: booking, date: on)
   end
 
+  describe "validations" do
+    it "exige un nom" do
+      space = Space.new(name: nil, capacity: 1)
+      expect(space).not_to be_valid
+      expect(space.errors[:name]).to be_present
+    end
+
+    it "refuse une capacité nulle" do
+      space = Space.new(name: "Sans capacité", capacity: nil)
+      expect(space).not_to be_valid
+      expect(space.errors[:capacity]).to be_present
+    end
+
+    it "refuse une capacité inférieure à 1" do
+      space = Space.new(name: "Zéro", capacity: 0)
+      expect(space).not_to be_valid
+      expect(space.errors[:capacity]).to be_present
+    end
+
+    it "accepte une capacité entière ≥ 1" do
+      expect(Space.new(name: "Salle", capacity: 1)).to be_valid
+      expect(Space.new(name: "Bois", capacity: 5)).to be_valid
+    end
+  end
+
   describe "capacity" do
     it "defaults to 1 (espace exclusif — comportement historique)" do
       expect(Space.new.capacity).to eq(1)

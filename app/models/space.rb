@@ -10,6 +10,7 @@
 #  code        :string
 #  deleted_at  :datetime
 #  position    :integer          default(999)
+#  capacity    :integer          default(1), not null
 #
 class Space < ApplicationRecord
   has_many :space_reservations
@@ -17,6 +18,10 @@ class Space < ApplicationRecord
   has_soft_deletion default_scope: true
 
   default_scope -> { order(:position) }
+
+  validates :name, presence: true
+  validates :capacity,
+            numericality: { only_integer: true, greater_than_or_equal_to: 1 }
 
   def available_on?(date)
     !booked_on?(date)

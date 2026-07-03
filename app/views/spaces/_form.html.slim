@@ -1,0 +1,36 @@
+.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Informations"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    = f.text_field :name,
+                   label: "Nom *",
+                   required: true,
+                   class: "md:w-1/2 lg:w-2/3"
+
+    = f.text_field :code,
+                   label: "Code",
+                   hint: "Abréviation affichée sur le calendrier (ex. « BOIS »)",
+                   class: "md:w-1/2 lg:w-1/3"
+
+    = f.label :description, "Description"
+    = f.text_area :description, rows: 3
+
+    = f.number_field :capacity,
+                     label: "Capacité (nombre de groupes) *",
+                     min: 1,
+                     step: 1,
+                     required: true,
+                     hint: "1 = espace exclusif (salle) ; >1 = plusieurs groupes simultanés (camping)",
+                     remove_default_class: "sm:text-sm",
+                     class: "w-24 text-lg"
+
+    = f.number_field :position,
+                     label: "Position",
+                     min: 0,
+                     step: 1,
+                     hint: "Ordre d'affichage (plus petit = affiché en premier)",
+                     remove_default_class: "sm:text-sm",
+                     class: "w-24 text-lg"
+
+hr

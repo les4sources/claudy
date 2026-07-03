@@ -2,8 +2,21 @@ class SpaceDecorator < ApplicationDecorator
   delegate_all
 
   def name_and_description
-    h.content_tag(:div, name, class: "font-medium text-gray-900") + 
+    h.content_tag(:div, name, class: "font-medium text-gray-900") +
     h.content_tag(:span, description, class: "text-xs text-gray-700")
+  end
+
+  # Badge « multi-groupe » affiché pour les espaces partagés (capacity > 1,
+  # ex. Bois, Pâture est/ouest). Un espace exclusif (salle, capacity 1)
+  # n'affiche aucun badge.
+  def capacity_badge
+    return unless object.shared?
+
+    h.content_tag(
+      :span,
+      "multi-groupe · #{object.capacity} groupes",
+      class: "inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800"
+    )
   end
 
   def monthly_reports_bar(date)

@@ -55,6 +55,7 @@ Rails.application.routes.draw do
   resources :roles
   resources :rooms
   resources :services
+  resources :spaces
   resources :tasks
   resources :teams
   resources :watchman_notes
