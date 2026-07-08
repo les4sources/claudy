@@ -197,6 +197,10 @@ nav.bg-white.shadow-sm.lg:px-6
                       services_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'services' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
+            = link_to "Espaces",
+                      spaces_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'spaces' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
             = link_to "Objets à louer",
                       rental_items_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'rental_items' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"

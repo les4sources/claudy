@@ -1,0 +1,47 @@
+- content_for :page_header do
+  = render 'layouts/components/page_header',
+           title: @space.name,
+           links: [ \
+             delete_link(@space.object),
+             link_to( \
+               "Mettre à jour",
+               edit_space_path(@space),
+               class: "btn-page-header" \
+             ) \
+           ].compact
+
+.space-y-4
+  .grid.grid-cols-3.gap-4
+    .col-span-2.space-y-4
+      .overflow-hidden.bg-white.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Informations
+        .border-t.border-gray-200
+          dl
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Code
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @space.code
+              dt.text-sm.font-medium.text-gray-500
+                | Capacité
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                .flex.items-center.gap-2
+                  span= @space.capacity
+                  = @space.capacity_badge
+              dt.text-sm.font-medium.text-gray-500
+                | Position
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @space.position
+
+  - if @space.description.present?
+    .grid.grid-cols-3.gap-4
+      .col-span-2.space-y-4
+        .overflow-hidden.bg-white.shadow.sm:rounded-lg
+          .px-4.py-5.sm:px-6
+            h3.text-lg.font-medium.leading-6.text-gray-900
+              | Description
+          .border-t.border-gray-200
+            .p-6
+              = @space.description
