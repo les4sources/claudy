@@ -10,14 +10,17 @@ RSpec.describe "Experiences — sélection du porteur", type: :request do
 
   describe "GET /experiences/new" do
     it "ne propose comme porteur que les personnes ayant un email" do
-      Human.create!(name: "Avec Email Porteur", email: "porteur@example.com")
-      Human.create!(name: "Aucun Email Ici")
+      with_email    = Human.create!(name: "Avec Email Porteur", email: "porteur@example.com")
+      without_email = Human.create!(name: "Aucun Email Ici")
 
       get new_experience_path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Avec Email Porteur")
-      expect(response.body).not_to include("Aucun Email Ici")
+      # On cible les radios du champ porteur : le layout (avatars/tooltips) peut
+      # légitimement afficher tous les humans ailleurs sur la page.
+      carrier_radio = ->(human) { /name="experience\[human_id\]"[^>]*value="#{human.id}"|value="#{human.id}"[^>]*name="experience\[human_id\]"/ }
+      expect(response.body).to match(carrier_radio.call(with_email))
+      expect(response.body).not_to match(carrier_radio.call(without_email))
       expect(response.body).to include("compte à créer")
     end
 
