@@ -91,11 +91,16 @@ module FormBuilders
       )
       hint = options.fetch(:hint, errors(method))
       error = options.fetch(:error, any_errors?(method))
+      show_label = merged_options.delete(:label) != false
 
       tag.div class: 'form-control' do
-        label(method, class: 'label mb-1') do
-          tag.span(label_text(method, merged_options), class: 'label-text')
-        end + super(method, merged_options) + hint_message(hint, error)
+        if show_label
+          label(method, class: 'label mb-1') do
+            tag.span(label_text(method, options), class: 'label-text')
+          end + super(method, merged_options) + hint_message(hint, error)
+        else
+          super(method, merged_options) + hint_message(hint, error)
+        end
         # end + super(method, merged_options) + hint_message(hint, error) + errors(method)
       end
     end
@@ -134,11 +139,16 @@ module FormBuilders
       default_options = { class: input_html_classes(method) }
       default_options[:class] << (options[:maxlength] ? 'w-20' : 'w-full')
       merged_options = default_options.merge(options)
+      show_label = merged_options.delete(:label) != false
 
       tag.div class: 'form-control' do
-        label(method, class: 'label') do
-          tag.span(label_text(method, merged_options), class: 'label-text')
-        end + super(method, merged_options) + errors(method)
+        if show_label
+          label(method, class: 'label') do
+            tag.span(label_text(method, options), class: 'label-text')
+          end + super(method, merged_options) + errors(method)
+        else
+          super(method, merged_options) + errors(method)
+        end
       end
     end
 
@@ -147,11 +157,16 @@ module FormBuilders
       default_options[:class]['w-full'] = 'w-48'
       default_options[:class]['text-sm'] = 'text-lg'
       merged_options = default_options.merge(options)
+      show_label = merged_options.delete(:label) != false
 
       tag.div class: 'form-control' do
-        label(method, class: 'label') do
-          tag.span(label_text(method, merged_options), class: 'label-text')
-        end + super(method, merged_options) + errors(method)
+        if show_label
+          label(method, class: 'label') do
+            tag.span(label_text(method, options), class: 'label-text')
+          end + super(method, merged_options) + errors(method)
+        else
+          super(method, merged_options) + errors(method)
+        end
       end
     end
 
@@ -160,11 +175,16 @@ module FormBuilders
       default_options[:class]['w-full'] = 'w-24'
       default_options[:class]['text-sm'] = 'text-lg'
       merged_options = default_options.merge(options)
+      show_label = merged_options.delete(:label) != false
 
       tag.div class: 'form-control' do
-        label(method, class: 'label') do
-          tag.span(label_text(method, merged_options), class: 'label-text')
-        end + super(method, merged_options) + errors(method)
+        if show_label
+          label(method, class: 'label') do
+            tag.span(label_text(method, options), class: 'label-text')
+          end + super(method, merged_options) + errors(method)
+        else
+          super(method, merged_options) + errors(method)
+        end
       end
     end
 

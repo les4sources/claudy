@@ -34,6 +34,7 @@
             label.block
               span.text-xs.font-medium.text-gray-500.uppercase.tracking-wide Arrivée
               = f.date_field "reservation[arrival_date]",
+                  label: false,
                   value: @draft.arrival_date,
                   min: Date.today.iso8601,
                   max: (Date.today >> 18).iso8601,
@@ -43,6 +44,7 @@
             label.block
               span.text-xs.font-medium.text-gray-500.uppercase.tracking-wide Départ
               = f.date_field "reservation[departure_date]",
+                  label: false,
                   value: @draft.departure_date,
                   min: Date.today.iso8601,
                   max: (Date.today >> 18).iso8601,
@@ -57,7 +59,7 @@
           p.text-xs.text-gray-400.mt-1 Réservation jusqu'à 18 mois à l'avance.
 
           .mt-3
-            button(type="button" data-action="public--avail-modal#open" class="text-sm text-emerald-700 font-medium hover:text-emerald-900 underline underline-offset-2 transition-colors")
+            button(type="button" data-action="public--avail-modal#open" class="relative before:absolute before:-inset-y-3 before:inset-x-0 text-sm text-emerald-700 font-medium hover:text-emerald-900 underline underline-offset-2 transition-colors")
               | 📅 Voir les disponibilités →
 
         / Groupe
@@ -68,12 +70,14 @@
             label.block
               span.text-xs.font-medium.text-gray-500.uppercase.tracking-wide Adultes (13 ans +)
               = f.number_field "reservation[adults]",
+                  label: false,
                   value: (@draft.adults.presence || 1),
                   min: 1, max: 50,
                   class: "mt-1.5 w-full rounded-xl border-gray-300 shadow-sm text-base focus:border-emerald-500 focus:ring-emerald-500"
             label.block
               span.text-xs.font-medium.text-gray-500.uppercase.tracking-wide Enfants (3–12 ans)
               = f.number_field "reservation[children]",
+                  label: false,
                   value: (@draft.children || 0),
                   min: 0, max: 50,
                   class: "mt-1.5 w-full rounded-xl border-gray-300 shadow-sm text-base focus:border-emerald-500 focus:ring-emerald-500"
