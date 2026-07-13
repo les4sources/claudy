@@ -29,6 +29,12 @@ class PagesController < BaseController
         .where.not(booking: { status: ["declined", "canceled"] })
         .between_times(@first, @last, field: :date)
       @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
+      # Bookings à dessiner en barres continues sur le calendrier (issue #10).
+      # Dérivés des mêmes réservations (même filtre de statut) : pas de requête
+      # supplémentaire. Ordre stable — hébergement, puis date de création — pour
+      # que l'empilement des barres ne bouge pas d'un rendu à l'autre.
+      @calendar_bookings = @reservations.map(&:booking).uniq
+        .sort_by { |b| [b.lodging&.name.to_s, b.created_at.to_i] }
       @activities = PublicActivity::Activity.where("created_at > ?", 14.days.ago).order(created_at: :desc)
     end
   end

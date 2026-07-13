@@ -91,6 +91,30 @@
       <% end %>
 
       <div class="week min-w-0" data-dashboard-calendar-target="week" data-past-week="<%= weekdays.first < Date.today && !weekdays.include?(Date.today) %>" data-first-weekday="<%= weekdays.first %>" data-beginning-of-week="<%= Date.today.beginning_of_week %>">
+        <%# issue #10 — barres continues des bookings, une bande de 14 demi-colonnes %>
+        <%# par semaine (arrivée = milieu de cellule PM, départ = milieu de cellule AM). %>
+        <%# Desktop uniquement : sous lg, les jours s'empilent verticalement et les %>
+        <%# pastilles jour-par-jour restent le bon rendu. %>
+        <% week_segments = calendar_booking_segments(weekdays, @calendar_bookings) %>
+        <% if week_segments.any? %>
+          <div class="hidden lg:grid gap-y-1 px-px py-1 bg-gray-200" style="grid-template-columns: repeat(14, minmax(0, 1fr));">
+            <% week_segments.each_with_index do |(booking, segment), row| %>
+              <% decorated = BookingDecorator.new(booking) %>
+              <%= link_to booking_path(booking),
+                          title: "#{decorated.group_or_name} — #{decorated.date_range}",
+                          style: calendar_segment_style(segment, row + 1),
+                          data: { booking_segment: booking.id, segment_start: segment.starts_stay, segment_end: segment.ends_stay },
+                          class: "block min-w-0 truncate px-2 py-0.5 text-xs font-medium text-gray-800 hover:shadow-md transition-shadow #{decorated.calendar_class} #{segment.rounded_classes}" do %>
+                <% if segment.starts_stay %>
+                  <%= decorated.group_or_name.html_safe %>
+                <% else %>
+                  <span class="opacity-70">↩ <%= decorated.group_or_name.html_safe %></span>
+                <% end %>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+
         <div class="flex min-w-0 bg-gray-200 text-xs leading-6 text-gray-700 lg:flex-auto">
           <div class="w-full min-w-0 lg:grid lg:grid-cols-7 lg:gap-px">
             <% weekdays.each do |day| %>
