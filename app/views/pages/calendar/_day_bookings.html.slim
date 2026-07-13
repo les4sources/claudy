@@ -1,0 +1,29 @@
+/ Séjours du jour, rendus dans la cellule entre les avatars veilleurs et les
+/ notes (demande Michael 2026-07-13 — remplace les barres hebdo de l'issue #10).
+- if @grouped_reservations && @grouped_reservations[date]
+  - @grouped_reservations[date].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations|
+    - reservation = grouped_reservations.last.first
+    - booking = BookingDecorator.new(reservation.booking)
+
+    .popover.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-sm.opacity-0[id="popover-reservation-#{reservation.id}" data-popover role="tooltip"]
+      = render "bookings/popover",
+               booking: booking
+      div[data-popper-arrow]
+
+    div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min-w-0 #{booking.calendar_class}" data-booking-day-entry=booking.id)
+      .block.min-w-0.w-full
+        div.min-w-0
+          strong.block.min-w-0.break-words
+            = link_to booking.decorate.group_or_name.html_safe,
+                      booking_path(booking),
+                      class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
+
+          span.text-gray-500 =< booking.dates_counter(date)
+
+        - if !booking.lodging.nil?
+          = booking.lodging_badge
+        - else
+          .grid.grid-cols-3.gap-1
+            - grouped_reservations.last.each do |reservation|
+              = room_badge(reservation.room)
+      .absolute.top-0.left-0.w-full.h-full(data-controller="popover" data-action="click->popover#toggle click@window->popover#hideOnClickOutside" data-popover-target-value="popover-reservation-#{reservation.id}" data-popover-trigger-value="click")
