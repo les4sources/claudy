@@ -84,6 +84,70 @@ RSpec.describe Stay, type: :model do
     end
   end
 
+  describe "jeton public (#26 Phase 1)" do
+    it "génère un token à la création" do
+      expect(Stay.create!(customer: customer).token).to be_present
+    end
+
+    it "génère des tokens distincts" do
+      first = Stay.create!(customer: customer)
+      second = Stay.create!(customer: customer)
+      expect(first.token).not_to eq(second.token)
+    end
+
+    it "refuse un token dupliqué" do
+      existing = Stay.create!(customer: customer)
+      duplicate = Stay.new(customer: customer, token: existing.token)
+      expect(duplicate).not_to be_valid
+      expect(duplicate.errors[:token]).to be_present
+    end
+  end
+
+  describe "#set_payment_status (#26 Phase 1)" do
+    let(:stay) { Stay.create!(customer: customer, total_amount_cents: 20_000) }
+
+    def pay(cents, status)
+      b = booking(from: Date.new(2026, 7, 1), to: Date.new(2026, 7, 3), price_cents: 20_000)
+      stay.stay_items.create!(bookable: b)
+      Payment.create!(booking: b, stay: stay, amount_cents: cents, status: status, payment_method: "card")
+    end
+
+    it "démarre à pending" do
+      expect(stay.payment_status).to eq("pending")
+    end
+
+    it "passe en paid quand les paiements encaissés couvrent le total" do
+      pay(20_000, "paid")
+      stay.set_payment_status
+      expect(stay.reload.payment_status).to eq("paid")
+      expect(stay).to be_paid
+    end
+
+    it "passe en partially_paid quand l'encaissé est insuffisant" do
+      pay(5_000, "paid")
+      stay.set_payment_status
+      expect(stay.reload.payment_status).to eq("partially_paid")
+    end
+
+    it "reste pending tant que le paiement n'est pas encaissé" do
+      pay(20_000, "pending")
+      stay.set_payment_status
+      expect(stay.reload.payment_status).to eq("pending")
+    end
+
+    it "reste pending pour un séjour à 0 € sans paiement (pas de bascule 0 >= 0)" do
+      zero = Stay.create!(customer: customer, total_amount_cents: 0)
+      zero.set_payment_status
+      expect(zero.reload.payment_status).to eq("pending")
+    end
+
+    it "refuse un statut de paiement inconnu" do
+      stay.payment_status = "refunded"
+      expect(stay).not_to be_valid
+      expect(stay.errors[:payment_status]).to be_present
+    end
+  end
+
   describe "#source (Q9 — AC-T2-22 / AC-T2-22b)" do
     it "défaute sur 'reservation' quand non précisé" do
       stay = Stay.create!(customer: customer)

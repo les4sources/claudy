@@ -1,0 +1,28 @@
+fr:
+  public:
+    stays:
+      show:
+        meta_title: "Votre séjour aux 4 Sources"
+        title: "Votre séjour aux 4 Sources"
+        contact_heading: "Vos informations"
+        dates_heading: "Dates de votre séjour"
+        composition_heading: "Votre séjour"
+        empty_composition: "Aucun élément n'est encore rattaché à ce séjour."
+        total: "Total"
+        no_payment: "Aucun paiement n'est attendu pour le moment."
+        questions_html: "Une question ? Écrivez-nous à %{email} ou appelez Malau au %{phone}."
+      items:
+        lodging: "Hébergement"
+        space: "Espace"
+        other: "Prestation"
+      payment_status:
+        pending: "En attente de paiement"
+        partially_paid: "Partiellement payé"
+        paid: "Payé"
+      payments:
+        heading: "Paiement"
+        pay_online: "Payer en ligne"
+        invitation: "Nous vous invitons à payer en ligne le montant de %{amount}."
+        stripe_notice: "Ce paiement est géré par Stripe : nous n'avons à aucun moment accès à vos données de paiement."
+        pay_cta: "Paiement →"
+        received_heading: "Paiements reçus"

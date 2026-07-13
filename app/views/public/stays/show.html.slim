@@ -1,0 +1,45 @@
+/ Page client du séjour-composite (epic #26, Phase 1). Toutes les chaînes vivent
+/ dans config/locales/public.*.yml (scope public.stays.*) — la page naît
+/ i18n-ready pour le passage FR/NL/EN de l'issue #15.
+- content_for :meta_title, t(".meta_title")
+
+- content_for :page_header do
+  = render 'layouts/public/components/page_header', title: t(".title")
+
+.overflow-hidden
+  .py-5
+    .flex.items-center.justify-between.mb-6
+      h3.text-xl.font-bold.leading-6.text-gray-900
+        = t(".composition_heading")
+      = @stay.payment_status_badge
+
+    dl.grid.grid-cols-1.gap-x-4.gap-y-8.sm:grid-cols-2.mb-8
+      .sm:col-span-1
+        dt.text-base.font-medium.text-gray-500
+          = t(".contact_heading")
+        dd.mt-1.text-gray-900.text-base
+          = @stay.contact_line
+      .sm:col-span-1
+        dt.text-base.font-medium.text-gray-500
+          = t(".dates_heading")
+        dd.mt-1.text-base.text-gray-900
+          = @stay.date_range
+
+    - lines = @stay.item_lines
+    - if lines.empty?
+      p.text-sm.text-gray-500 = t(".empty_composition")
+    - else
+      ul.divide-y.divide-gray-200.border-t.border-b.border-gray-200(data-stay-items="true")
+        - lines.each do |line|
+          li.flex.items-center.justify-between.gap-4.py-4
+            div
+              p.text-base.font-medium.text-gray-900 = line[:name]
+              - if line[:date_range].present?
+                p.text-sm.text-gray-500 = line[:date_range]
+            p.text-base.font-semibold.text-gray-900.whitespace-nowrap = line[:amount]
+
+      .flex.items-center.justify-between.py-4
+        p.text-base.font-semibold.text-gray-900 = t(".total")
+        p.text-lg.font-bold.text-gray-900 = @stay.formatted_total
+
+    = render "public/stays/payments"

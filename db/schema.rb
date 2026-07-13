@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_02_201250) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_13_031500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -587,10 +587,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_02_201250) do
     t.string "source", default: "reservation", null: false
     t.string "activity_selection_token"
     t.datetime "activity_email_sent_at"
+    t.string "token"
+    t.string "payment_status", default: "pending", null: false
     t.index ["activity_selection_token"], name: "index_stays_on_activity_selection_token"
     t.index ["customer_id"], name: "index_stays_on_customer_id"
     t.index ["legacy_origin"], name: "index_stays_on_legacy_origin_unique_live", unique: true, where: "((legacy_origin IS NOT NULL) AND (deleted_at IS NULL))"
     t.index ["source"], name: "index_stays_on_source"
+    t.index ["token"], name: "index_stays_on_token", unique: true
   end
 
   create_table "stripe_events", force: :cascade do |t|

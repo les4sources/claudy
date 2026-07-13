@@ -20,6 +20,10 @@ class Stay < ApplicationRecord
   # porte la valeur par défaut "reservation".
   SOURCES = %w[reservation tally_legacy ota manual].freeze
 
+  # Statut de paiement du séjour (epic #26, Phase 1). Le séjour devient l'ancre
+  # de paiement ; Booking garde le sien tant que la colonne existe.
+  PAYMENT_STATUSES = %w[pending partially_paid paid].freeze
+
   belongs_to :customer
   has_many :stay_items, dependent: :destroy
   has_many :experience_bookings, dependent: :destroy
@@ -30,8 +34,11 @@ class Stay < ApplicationRecord
   monetize :total_amount_cents
 
   before_create :generate_activity_token
+  before_create :generate_token
 
   validates :source, inclusion: { in: SOURCES, message: "Canal d'attribution invalide" }
+  validates :payment_status, inclusion: { in: PAYMENT_STATUSES, message: "Statut de paiement invalide" }
+  validates :token, uniqueness: true, allow_nil: true
 
   scope :current_and_future, -> { where("departure_date >= ?", Date.today).order(arrival_date: :asc) }
   scope :past, -> { where("departure_date < ?", Date.today).order(arrival_date: :desc) }
@@ -62,12 +69,46 @@ class Stay < ApplicationRecord
   # Recompute aggregate dates / amount from the attached items (min arrival,
   # max departure, sum of prices). Booking and SpaceBooking both expose
   # from_date/to_date/price_cents.
+  # Recalcule le statut de paiement à partir des paiements encaissés. Même
+  # sémantique que `Booking#set_payment_status`, à une nuance près : un séjour
+  # dont le total est à 0 € et sans paiement reste « pending » (et ne bascule
+  # pas en « paid » par l'effet de bord d'un `0 >= 0`).
+  def set_payment_status
+    paid_cents = payments.paid.sum(:amount_cents)
+
+    status = if paid_cents.positive? && paid_cents >= total_amount_cents.to_i
+      "paid"
+    elsif paid_cents.positive?
+      "partially_paid"
+    else
+      "pending"
+    end
+
+    update(payment_status: status)
+  end
+
+  def paid?
+    payment_status == "paid"
+  end
+
   private
 
   def generate_activity_token
     loop do
       self.activity_selection_token = SecureRandom.urlsafe_base64(20)
       break unless Stay.exists?(activity_selection_token: activity_selection_token)
+    end
+  end
+
+  # Jeton public général du séjour — support de la page client /sejour/:token.
+  # Distinct de `activity_selection_token` (jeton d'usage unique pour le choix
+  # des activités), qu'on ne réutilise pas pour ne pas élargir sa portée.
+  def generate_token
+    return if token.present?
+
+    loop do
+      self.token = SecureRandom.urlsafe_base64(20)
+      break unless Stay.unscoped.exists?(token: token)
     end
   end
 

@@ -137,6 +137,11 @@ Rails.application.routes.draw do
   # Vue admin Pôle Accueil — index des Stays récents filtrable par source (Devise).
   get "sejours/recents", to: "stays#recent", as: :recent_stays
 
+  # Page client du séjour-composite (epic #26, Phase 1) — jeton, sans Devise.
+  # Route à la racine (et non sous /public) : c'est l'URL envoyée aux clients et
+  # la cible des redirections Stripe, on la garde courte, comme /reservation/sejour.
+  get "sejour/:token", to: "public/stays#show", as: :public_stay
+
   namespace :public do
     resources :bookings, only: [:new, :create] do
       get "edit_estimated_arrival", on: :member
