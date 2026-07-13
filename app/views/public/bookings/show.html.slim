@@ -1,4 +1,4 @@
-- content_for :meta_title, "Ma réservation aux 4 Sources"
+- content_for :meta_title, t(".meta_title")
 
 / issue #16 — quand l'équipe consulte la page avec ?donottrack (pour ne pas
 / fausser les stats), on retire le paramètre de l'URL côté client (sans recharger)
@@ -13,33 +13,39 @@
       } catch (e) {}
     })();
 
+- faq_url = "https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3"
+- contact_email = "sejours@les4sources.be"
+
 - content_for :page_header do
   = render 'layouts/public/components/page_header',
-           title: @booking.confirmed? ? "Votre séjour aux 4 Sources" : "Votre demande de réservation"
+           title: @booking.confirmed? ? t(".title_confirmed") : t(".title_pending")
 
 - content_for :page_banner do
   .text-sm.leading-6.text-white.text-center
-    | <strong class="font-semibold">Une question </strong>au sujet de votre réservation?
-    <a href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3" target="_blank" class="flex-none rounded-full bg-gray-900 ml-2 py-1 px-3.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900">Consultez la FAQ <span aria-hidden="true">&rarr;</span></a>
+    = t(".banner_question_html")
+    = link_to faq_url, target: "_blank", class: "flex-none rounded-full bg-gray-900 ml-2 py-1 px-3.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900" do
+      = t(".banner_faq_cta")
+      span<(aria-hidden="true") &rarr;
 
-= render "public/bookings/status_callout", 
+= render "public/language_menu"
+
+= render "public/bookings/status_callout",
          booking: @booking
 
 .overflow-hidden
   .py-5
     h3.mb-4.text-xl.font-bold.leading-6.text-gray-900
-      | Votre réservation
-    / p.mt-1.max-w-2xl.text-sm.text-gray-500
-      | Personal details and application.
+      = t(".heading")
 
     .mb-4.font-bold
-      | Quel matériel prendre? Comment vous rendre aux 4 Sources? Quel est le Règlement d'Ordre Intérieur? 
-      | Quelles sont les conditions d'annulation? <a href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3" target="_blank" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700">Consultez la FAQ des hébergements aux 4 Sources</a>
+      = t(".faq_intro_html",
+            link: link_to(t(".faq_link_label"), faq_url, target: "_blank",
+                          class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"))
 
     dl.grid.grid-cols-1.gap-x-4.gap-y-8.sm:grid-cols-2
       .sm:col-span-1
         dt.text-base.font-medium.text-gray-500
-          | Vos informations 
+          = t(".your_details")
         dd.mt-1.text-gray-900.text-base
           = @booking.public__name
           - if @booking.attributes[:phone].presence
@@ -50,115 +56,82 @@
           	= @booking.email
       .sm:col-span-1
         dt.text-base.font-medium.text-gray-500
-          | Dates de votre réservation
+          = t(".your_dates")
         dd.mt-1.text-base.text-gray-900(class="#{@booking.declined? ? "line-through" : nil}")
           = @booking.date_range
       .sm:col-span-1
         dt.text-base.font-medium.text-gray-500
-          | Hébergement(s)
+          = t(".lodgings")
         dd.mt-1.text-base.text-gray-900
           - if !@booking.lodging.nil?
             div = @booking.lodging.name
             div = @booking.lodging.summary
           - elsif @booking.for_rooms?
-            | Chambre(s)
+            = t(".rooms_generic")
           - else
-            | Espace extérieur
-            / table
-              tbody
-                - @reservations_by_date.each do |date, reservations|
-                  tr
-                    td(style="width: 10rem") = date
-                    td = reservations.collect { |r| r.room.name }.join(", ")
+            = t(".outdoor_space")
 
       .sm:col-span-1
         dt.text-base.font-medium.text-gray-500
-          | Personnes enregistrées
+          = t(".registered_people")
         dd.mt-1.text-base.text-gray-900
-          | 🧑 #{@booking.adults} #{"adulte".pluralize(@booking.adults)}
+          | 🧑 #{@booking.adults} #{t(".adults", count: @booking.object.adults.to_i)}
           - if @booking.object.children > 0
-            | , 🧒 #{@booking.children} #{"enfant".pluralize(@booking.children)}
+            | , 🧒 #{@booking.children} #{t(".children", count: @booking.object.children)}
           - if @booking.object.babies > 0
-            | , 👶 #{@booking.babies} #{"bébé".pluralize(@booking.babies)}
-      / .sm:col-span-2
-        dt.text-sm.font-medium.text-gray-500
-          | About
-        dd.mt-1.text-sm.text-gray-900
-          | Fugiat ipsum ipsum deserunt culpa aute sint do nostrud anim incididunt cillum culpa consequat. Excepteur qui ipsum aliquip consequat sint. Sit id mollit nulla mollit nostrud in ea officia proident. Irure nostrud pariatur mollit ad adipisicing reprehenderit deserunt qui eu.
-      / .sm:col-span-2
-        dt.text-sm.font-medium.text-gray-500
-          | Attachments
-        dd.mt-1.text-sm.text-gray-900
-          ul.divide-y.divide-gray-200.rounded-md.border.border-gray-200[role="list"]
-            li.flex.items-center.justify-between.py-3.pl-3.pr-4.text-sm
-              .flex.w-0.flex-1.items-center
-                svg.h-5.w-5.flex-shrink-0.text-gray-400[xmlns="http://www.w3.org/2000/svg" viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
-                  path[fill-rule="evenodd" d="M15.621 4.379a3 3 0 00-4.242 0l-7 7a3 3 0 004.241 4.243h.001l.497-.5a.75.75 0 011.064 1.057l-.498.501-.002.002a4.5 4.5 0 01-6.364-6.364l7-7a4.5 4.5 0 016.368 6.36l-3.455 3.553A2.625 2.625 0 119.52 9.52l3.45-3.451a.75.75 0 111.061 1.06l-3.45 3.451a1.125 1.125 0 001.587 1.595l3.454-3.553a3 3 0 000-4.242z" clip-rule="evenodd"]
-                span.ml-2.w-0.flex-1.truncate
-                  | resume_back_end_developer.pdf
-              .ml-4.flex-shrink-0
-                a.font-medium.text-indigo-600.hover:text-indigo-500[href="#"]
-                  | Download
-            li.flex.items-center.justify-between.py-3.pl-3.pr-4.text-sm
-              .flex.w-0.flex-1.items-center
-                svg.h-5.w-5.flex-shrink-0.text-gray-400[xmlns="http://www.w3.org/2000/svg" viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
-                  path[fill-rule="evenodd" d="M15.621 4.379a3 3 0 00-4.242 0l-7 7a3 3 0 004.241 4.243h.001l.497-.5a.75.75 0 011.064 1.057l-.498.501-.002.002a4.5 4.5 0 01-6.364-6.364l7-7a4.5 4.5 0 016.368 6.36l-3.455 3.553A2.625 2.625 0 119.52 9.52l3.45-3.451a.75.75 0 111.061 1.06l-3.45 3.451a1.125 1.125 0 001.587 1.595l3.454-3.553a3 3 0 000-4.242z" clip-rule="evenodd"]
-                span.ml-2.w-0.flex-1.truncate
-                  | coverletter_back_end_developer.pdf
-              .ml-4.flex-shrink-0
-                a.font-medium.text-indigo-600.hover:text-indigo-500[href="#"]
-                  | Download
+            | , 👶 #{@booking.babies} #{t(".babies", count: @booking.object.babies)}
 
 - if @booking.confirmed?
   .mt-4.overflow-hidden
     .py-5
       h3.mb-4.text-xl.font-bold.leading-6.text-gray-900
-        | Votre arrivée
-      / p.mt-1.max-w-2xl.text-sm.text-gray-500
-        | Personal details and application.
+        = t(".arrival_heading")
 
       dl.grid.grid-cols-1.gap-x-4.gap-y-8.sm:grid-cols-2
         .sm:col-span-1
           dt.text-base.font-medium.text-gray-500
-            | Votre heure d'arrivée
+            = t(".arrival_time")
           dd.mt-1.text-gray-900.text-base
-            / = turbo_frame_tag dom_id(@booking, "estimated_arrival") do
             = render partial: "estimated_arrival"
 
       .mt-4
         div
-          |
-            Lorsque vous arrivez aux 4 Sources, merci de <strong>nous appeler au #{ENV.fetch('PHONE_NUMBER')} (pas de SMS, car c'est une redirection d'appel)</strong> afin de vous annoncer 
-            et de nous permettre de vous accueillir. 
+          = t(".arrival_call_html", phone: ENV.fetch("PHONE_NUMBER"))
+          = " "
           - if @booking.from_airbnb?
-            | Pour toute question d'ici votre arrivée, communiquez avec nous via la messagerie Airbnb.
+            = t(".contact_airbnb")
           - elsif @booking.from_bookingdotcom?
-            | Pour toute question d'ici votre arrivée, communiquez avec nous via la messagerie Booking.com.
+            = t(".contact_bookingdotcom")
           - else
-            | Pour toute question d'ici votre arrivée, communiquez avec nous par e-mail à <a href="mailto:sejours@les4sources.be" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700">sejours@les4sources.be</a>. 
-          |  Les réservations ne sont pas gérées par téléphone.
+            = t(".contact_email_html",
+                  link: mail_to(contact_email, contact_email,
+                                class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"))
+          = " "
+          = t(".no_phone_bookings")
 
 - if @booking.confirmed? && !@booking.lodging.nil? && @booking.for_rooms?
   .mt-4.overflow-hidden
     .py-5
       .mb-4
         h3.text-xl.font-bold.leading-6.text-gray-900
-          | Vos chambres
+          = t(".rooms_heading")
         p.mt-1.max-w-2xl.text-base.text-gray-500
-          | Consultez la <a target="_blank" class="text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700" href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3">FAQ des hébergements</a> pour des informations sur les dimensions des draps.
+          = t(".rooms_sheets_html",
+                link: link_to(t(".rooms_faq_link_label"), faq_url, target: "_blank",
+                              class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"))
 
       .space-y-4
         - RoomDecorator.decorate_collection(@booking.rooms.uniq.sort_by(&:level).map(&:decorate).group_by(&:level)).each do |level|
-          h4.font-semibold.mb-4 
+          h4.font-semibold.mb-4
             - case level.first
             - when -1
-              | Extérieur
+              = t(".levels.outdoor")
             - when 0
-              | Rez-de-chaussée
+              = t(".levels.ground_floor")
             - when 1
-              | 1er étage
+              = t(".levels.first_floor")
             - when 2
-              | 2ème étage
+              = t(".levels.second_floor")
 
           ul.grid.grid-cols-1.gap-8.sm:grid-cols-2[role="list"]
             - level.last.each do |room|
@@ -168,8 +141,6 @@
                     .flex.items-center.space-x-3
                       h3.text-base.font-medium.text-gray-900
                         = room.name
-                      / span.inline-block.flex-shrink-0.rounded-full.bg-green-100.px-2.py-0.5.text-xs.font-medium.text-green-800
-                        | Admin
                     p.mt-1.text-base.text-gray-500
                       = room.description
                   = vite_image_tag "images/rooms/#{room.code}.jpg", alt: "", class: "h-16 w-16 flex-shrink-0 rounded-full bg-gray-300"
@@ -178,7 +149,7 @@
   .mt-8.overflow-hidden
     .py-5
       h3.mb-4.text-xl.font-bold.leading-6.text-gray-900
-        | À emporter avec vous
+        = t(".packing_heading")
 
       .text-base
         ul.max-w-xs-xl.space-y-2.text-gray-600[role="list"]
@@ -187,56 +158,56 @@
               path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
             span
               strong.font-semibold.text-gray-900
-                | Vos essuies/serviettes de bain
+                = t(".packing_towels")
           - if @booking.for_rooms?
             li.flex.gap-x-3
               svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
                 path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
               span
                 strong.font-semibold.text-gray-900
-                  | Vos draps
+                  = t(".packing_sheets")
                 br
-                | Soit un drap de lit avec un sac de couchage + taie d'oreille
+                = t(".packing_sheets_option_1")
                 br
-                | Soit un drap de lit et une housse de couette + taie d'oreiller
+                = t(".packing_sheets_option_2")
           - else
             li.flex.gap-x-3
               svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
                 path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
               span
                 strong.font-semibold.text-gray-900
-                  | Votre matériel de camping (si vous logez sous tente)
+                  = t(".packing_camping")
           li.flex.gap-x-3
             svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
               path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
             span
               strong.font-semibold.text-gray-900
-                | Du savon biodégradable
+                = t(".packing_soap")
               br
-              | pour notre lagunage, système d’épuration naturel
+              = t(".packing_soap_note")
           li.flex.gap-x-3
             svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
               path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
             span
               strong.font-semibold.text-gray-900
-                | Du papier toilette de réserve (si vous venez plus d'un week-end)
+                = t(".packing_toilet_paper")
           li.flex.gap-x-3
             svg.mt-1.h-5.w-5.flex-none.text-indigo-600[viewbox="0 0 20 20" fill="currentColor" aria-hidden="true"]
               path[fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"]
             span
               strong.font-semibold.text-gray-900
-                | Vos repas (voir FAQ → service épicerie)
+                = t(".packing_meals")
 
 - if @booking.confirmed? && @booking.current? && @booking.wifi?
   .mt-8.overflow-hidden
     .py-5
       h3.mb-4.text-xl.font-bold.leading-6.text-gray-900
-        | Votre connexion WiFi
+        = t(".wifi_heading")
 
       .grid.gap-y-4
         .text-base
           .font-medium.text-gray-500
-            | Nom du réseau
+            = t(".wifi_network")
           .mt-1.text-gray-900
             - if @booking.lodging.is_cheveche?
               | CHEVECHE
@@ -247,35 +218,30 @@
 
         .text-base
           .font-medium.text-gray-500
-            | Mot de passe
+            = t(".wifi_password")
           .mt-1.text-gray-900
-            | Le mot de passe est indiqué sur l'appareil, qui se trouve dans la cuisine
+            = t(".wifi_password_note")
 
         .text-base.font-medium.text-gray-900.sm:col-span-2
-          | 
-            L'appareil n'est pas toujours branché à votre arrivée. Vous pouvez alors le 
-            brancher à une prise à proximité. Veillez à l'éteindre la nuit afin de respecter 
-            le précieux sommeil des giteurs et habitants 🙂 Et à le débrancher à votre départ.
+          = t(".wifi_device_note")
 
 - if !@booking.declined?
   .mt-8.overflow-hidden
     .py-5
       h3.mb-4.text-xl.font-bold.leading-6.text-gray-900
-        | Votre paiement
-      / p.mt-1.max-w-2xl.text-sm.text-gray-500
-        | Personal details and application.
+        = t(".payment_heading")
 
       dl.grid.grid-cols-1.gap-x-4.gap-y-8.sm:grid-cols-2
         .sm:col-span-1
           dt.text-base.font-medium.text-gray-500
-            | Montant de votre réservation 
+            = t(".payment_amount")
           dd.mt-1.text-base.text-gray-900
             - if @booking.price_cents == 0
-              | Offert
+              = t(".payment_free")
             - elsif @booking.from_airbnb?
-              | Disponible sur Airbnb
+              = t(".payment_on_airbnb")
             - elsif @booking.from_bookingdotcom?
-              | Disponible sur Booking.com
+              = t(".payment_on_bookingdotcom")
             - else
               = @booking.price
 
@@ -285,9 +251,9 @@
           - if @booking.confirmed?
             .sm:col-span-2
               dt.text-base.font-medium.text-gray-500
-                | Pour effectuer un paiement par virement bancaire
+                = t(".transfer_heading")
               dd.mt-1.text-base.text-gray-900
-                | Merci de régler le montant de votre réservation sur le compte des 4 Sources et de nous envoyer une preuve de paiement pour le traitement rapide de votre réservation 👍
+                = t(".transfer_intro")
                 .mt-2.font-mono
                   | Les 4 Sources
                   br
@@ -295,20 +261,20 @@
                   br
                   | BIC: TRIOBEBB
                 .mt-2
-                  | Communication: <em>Réservation hébergement #{@booking.token}</em>
+                  = t(".transfer_communication_html", token: @booking.token)
           - elsif @booking.pending?
             .sm:col-span-2
               dt.text-base.font-medium.text-gray-500
-                | Pour effectuer un paiement par virement bancaire
+                = t(".transfer_heading")
               dd.mt-1.text-base.text-gray-900
-                | Les informations relatives au paiement seront disponibles lorsque votre réservation aura été confirmée par notre équipe.
+                = t(".transfer_pending")
 
       - if !@booking.from_airbnb? && !@booking.from_bookingdotcom?
         = render "public/bookings/show/payments", booking: @booking
 
       - if @booking.invoice_status == "requested"
         .text-base.font-medium.text-gray-900.sm:col-span-2
-          | 🧾 Vous avez demandé de recevoir une facture
+          = t(".invoice_requested")
 
 - if @booking.public_notes.presence
   .relative.mt-8.bg-slate-50.sm:rounded-lg
@@ -320,13 +286,12 @@
 
 .content.mt-8
   p.font-bold
-  	|
-  		Pour toute question ou information au sujet de votre réservation, nous vous invitons à 
-  		<a href="https://les4sources.notion.site/FAQ-des-h-bergements-aux-4-Sources-7802454de0bb4305845ed32d852e6cf3" target="_blank">consulter la FAQ des hébergements</a> et à nous contacter 
+    = t(".footer_html",
+          faq_link: link_to(t(".footer_faq_link_label"), faq_url, target: "_blank"))
+    = " "
     - if @booking.from_airbnb?
-      |  via la messagerie Airbnb.
+      = t(".footer_via_airbnb")
     - elsif @booking.from_bookingdotcom?
-      |  via la messagerie Booking.com.
+      = t(".footer_via_bookingdotcom")
     - else
-      |  par email à <a href="mailto:sejours@les4sources.be">sejours@les4sources.be</a>.
-  
+      = t(".footer_via_email_html", link: mail_to(contact_email, contact_email))

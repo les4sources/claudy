@@ -32,6 +32,11 @@ module Claudy
     # config.eager_load_paths << Rails.root.join("extras")
 
     config.i18n.default_locale = :fr
+    # Pages client à jeton trilingues (issue #15). Le fallback vers le FR vaut
+    # dans tous les environnements : une clé non encore traduite s'affiche en
+    # français au lieu de casser la page.
+    config.i18n.available_locales = [:fr, :nl, :en]
+    config.i18n.fallbacks = [:fr]
 
     config.view_component.preview_paths << "#{Rails.root}/spec/components/previews"
 
