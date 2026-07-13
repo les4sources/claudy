@@ -56,6 +56,9 @@ RSpec.configure do |config|
   # https://relishapp.com/rspec/rspec-rails/docs
   config.infer_spec_type_from_file_location!
 
+  # `sign_in` dans les specs request des pages authentifiées (issue #10).
+  config.include Devise::Test::IntegrationHelpers, type: :request
+
   # Filter lines from Rails gems in backtraces.
   config.filter_rails_from_backtrace!
   # arbitrary gems may also be filtered via:

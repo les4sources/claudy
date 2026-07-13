@@ -51,7 +51,11 @@
             = space_booking.duration
         .absolute.top-0.left-0.w-full.h-full(data-controller="popover" data-action="click->popover#toggle click@window->popover#hideOnClickOutside" data-popover-target-value="popover-space-reservation-#{space_reservation.id}" data-popover-trigger-value="click")
 
-  / Reservations
+  / Reservations — pastilles jour par jour. Sur desktop (lg+), les bookings sont
+  / rendus en barres continues au-dessus de la ligne de semaine (issue #10) : on
+  / masque les pastilles pour ne pas afficher deux fois la même réservation. Sous
+  / lg, les jours s'empilent verticalement — la barre n'a pas de sens, on garde
+  / les pastilles.
   - if @grouped_reservations[date]
     - @grouped_reservations[date].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations|
       - reservation = grouped_reservations.last.first
@@ -62,7 +66,7 @@
                  booking: booking
         div[data-popper-arrow]
 
-      div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min-w-0 #{booking.calendar_class}")
+      div(class="lg:hidden relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min-w-0 #{booking.calendar_class}")
         .block.min-w-0.w-full
           div.min-w-0
             strong.block.min-w-0.break-words
