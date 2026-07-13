@@ -1,0 +1,11 @@
+/ Menu de langue des pages client à jeton (issue #15). `url_for` conserve la
+/ route courante — donc le jeton — et n'ajoute que `?locale=xx`.
+nav.flex.items-center.justify-end.gap-1.mb-4(aria-label=t("public.language_menu.label") data-language-menu="true")
+  - Public::BaseController::PUBLIC_LOCALES.each do |code|
+    - active = I18n.locale.to_s == code
+    = link_to code.upcase,
+              url_for(locale: code),
+              lang: code,
+              title: t("public.language_menu.#{code}"),
+              aria: { current: (active ? "true" : nil) },
+              class: "px-2 py-1 text-xs font-semibold rounded-md transition-colors #{active ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}"
