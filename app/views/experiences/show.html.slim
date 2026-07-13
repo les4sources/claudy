@@ -79,37 +79,10 @@
                     method: :delete, data: { confirm: "Supprimer cette disponibilité ?" },
                     class: "text-red-400 hover:text-red-600 text-lg font-bold bg-transparent border-0 cursor-pointer"
 
-        .border-t.border-gray-200.px-4.py-4
-          h4.text-sm.font-medium.text-gray-700.mb-3 Ajouter une disponibilité
-          = form_with url: experience_experience_availabilities_path(@experience), method: :post, class: "space-y-3" do |f|
-            .grid.grid-cols-2.gap-2
-              div
-                label.block.text-xs.text-gray-500.mb-1 Date
-                = f.date_field :available_on, min: Date.today.iso8601,
-                    class: "w-full text-sm rounded border-gray-300",
-                    name: "experience_availability[available_on]"
-              div
-                label.block.text-xs.text-gray-500.mb-1 Heure de début
-                = f.text_field :starts_at, placeholder: "09:00",
-                    class: "w-full text-sm rounded border-gray-300",
-                    name: "experience_availability[starts_at]"
-            .grid.grid-cols-2.gap-2
-              div
-                label.block.text-xs.text-gray-500.mb-1 Durée (min)
-                = f.number_field :duration_minutes, min: 15, step: 15, placeholder: "120",
-                    class: "w-full text-sm rounded border-gray-300",
-                    name: "experience_availability[duration_minutes]"
-              div
-                label.block.text-xs.text-gray-500.mb-1 Max participants
-                = f.number_field :max_participants, min: 1,
-                    placeholder: @experience.max_participants,
-                    class: "w-full text-sm rounded border-gray-300",
-                    name: "experience_availability[max_participants]"
-            div
-              label.block.text-xs.text-gray-500.mb-1 Note interne (optionnel)
-              = f.text_field :notes, class: "w-full text-sm rounded border-gray-300",
-                  name: "experience_availability[notes]"
-            = f.submit "Ajouter", class: "rounded bg-emerald-600 text-white px-4 py-2 text-sm font-medium hover:bg-emerald-700 cursor-pointer"
+        / Le formulaire inline « Ajouter une disponibilité » est remplacé par le
+        / calendrier hebdo ci-dessous (epic #25, Phase 4).
+        .border-t.border-gray-200.px-4.py-3
+          p.text-xs.text-gray-400 Posez vos créneaux dans le calendrier ci-dessous.
 
     - if @experience.human.presence
       ul.grid.grid-cols-1.gap-6[role="list"]
@@ -133,3 +106,8 @@
                 span.inline-flex.items-center.rounded-full.bg-green-50.px-2.py-1.text-xs.font-medium.text-green-700.ring-1.ring-inset.ring-green-600/20
                   | Porteur·euse d'activité
                   
+
+/ Calendrier hebdo des disponibilités (epic #25, Phase 4) — pleine largeur sous
+/ la fiche, la grille de 7 jours a besoin de place.
+.mt-6
+  = render "experiences/week_calendar", calendar: @week_calendar

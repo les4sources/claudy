@@ -18,9 +18,16 @@ class ExperienceAvailability < ApplicationRecord
   belongs_to :experience
   has_many :experience_bookings, dependent: :destroy
 
+  before_validation :default_duration_from_experience
+
   validates :available_on, :starts_at, presence: true
   validates :duration_minutes, numericality: { greater_than: 0 }, allow_nil: true
   validates :max_participants, numericality: { greater_than: 0 }, allow_nil: true
+
+  # Phase 4 de l'epic #25 : les blocs vivent entre 8h et 22h et ne se
+  # chevauchent jamais pour une même activité.
+  validate :within_opening_hours
+  validate :no_overlap_with_siblings
 
   scope :upcoming, -> { where("available_on >= ?", Date.today).order(:available_on, :starts_at) }
   scope :for_date_range, ->(from, to) { where(available_on: from..to) }
@@ -57,5 +64,60 @@ class ExperienceAvailability < ApplicationRecord
 
   def label
     "#{experience.name} — #{available_on.strftime('%-d/%m')} à #{starts_at}"
+  end
+
+  # Bornes du bloc en minutes depuis minuit — nil si l'heure de début est
+  # illisible (la validation de présence/format s'en charge par ailleurs).
+  def starts_at_minutes
+    Experiences::WeekCalendar.parse_time(starts_at)
+  end
+
+  def ends_at_minutes
+    start = starts_at_minutes
+    return nil if start.nil?
+
+    start + effective_duration
+  end
+
+  private
+
+  # Le bloc prend la durée de l'activité quand rien n'est précisé : c'est elle
+  # qui pilote la taille des créneaux du calendrier hebdo.
+  def default_duration_from_experience
+    return if duration_minutes.present?
+    return if experience.nil?
+
+    self.duration_minutes = experience.block_duration_minutes
+  end
+
+  def within_opening_hours
+    start = starts_at_minutes
+    return if start.nil?
+
+    finish = ends_at_minutes
+    return if finish.nil?
+
+    if start < Experiences::WeekCalendar::DAY_START_MINUTES || finish > Experiences::WeekCalendar::DAY_END_MINUTES
+      errors.add(:starts_at, "doit tenir entre 8h et 22h")
+    end
+  end
+
+  def no_overlap_with_siblings
+    start = starts_at_minutes
+    finish = ends_at_minutes
+    return if start.nil? || finish.nil? || experience.nil? || available_on.nil?
+
+    siblings = experience.experience_availabilities.where(available_on: available_on)
+    siblings = siblings.where.not(id: id) if persisted?
+
+    overlapping = siblings.any? do |sibling|
+      sibling_start = sibling.starts_at_minutes
+      sibling_end = sibling.ends_at_minutes
+      next false if sibling_start.nil? || sibling_end.nil?
+
+      start < sibling_end && sibling_start < finish
+    end
+
+    errors.add(:starts_at, "chevauche une disponibilité déjà posée") if overlapping
   end
 end

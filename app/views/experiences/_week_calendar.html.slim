@@ -1,0 +1,66 @@
+/ Calendrier hebdomadaire des disponibilités du porteur (epic #25, Phase 4).
+/ Les blocs ont la durée de l'activité et s'enchaînent de 8h à 22h : une case
+/ libre = un clic pour poser, une case posée = un clic pour retirer. Pas de JS —
+/ chaque case est un `button_to` (Turbo recharge la semaine affichée).
+.overflow-hidden.bg-white.shadow.sm:rounded-lg(data-week-calendar="true")
+  .px-4.py-5.sm:px-6.flex.flex-wrap.items-center.justify-between.gap-3
+    div
+      h3.text-lg.font-medium.leading-6.text-gray-900 Calendrier des disponibilités
+      - if calendar.configured?
+        p.text-sm.text-gray-500
+          = "Blocs de #{@experience.object.duration_hours.to_f.round(2)} h — de 8h à 22h, sans chevauchement."
+
+    .flex.items-center.gap-2
+      = link_to "← Semaine précédente", experience_path(@experience, week: calendar.previous_week.iso8601),
+                class: "text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-100"
+      - unless calendar.current_week?
+        = link_to "Aujourd'hui", experience_path(@experience),
+                  class: "text-sm font-medium text-emerald-700 hover:text-emerald-900 px-2 py-1 rounded hover:bg-emerald-50"
+      = link_to "Semaine suivante →", experience_path(@experience, week: calendar.next_week.iso8601),
+                class: "text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-100"
+
+  .border-t.border-gray-200.p-4
+    - if !calendar.configured?
+      p.text-sm.text-gray-500.italic
+        | Renseignez la
+        =< link_to "durée de l'activité", edit_experience_path(@experience), class: "underline"
+        |  (en heures) pour pouvoir poser des disponibilités.
+    - else
+      .overflow-x-auto
+        table.w-full.text-sm.border-separate(style="border-spacing: 2px;")
+          thead
+            tr
+              th.w-16.text-xs.font-medium.text-gray-400.text-left
+              - calendar.days.each do |day|
+                th.text-xs.font-medium.text-gray-500.text-center(class="#{day == Date.today ? 'text-emerald-700' : ''}")
+                  .uppercase.tracking-wide = l(day, format: "%a")
+                  .text-base.font-semibold(class="#{day == Date.today ? 'text-emerald-700' : 'text-gray-800'}")
+                    = l(day, format: "%-d")
+          tbody
+            - calendar.slot_starts.each do |minutes|
+              - label = Experiences::WeekCalendar.format_minutes(minutes)
+              tr
+                td.text-xs.text-gray-400.pr-2.align-middle.whitespace-nowrap = label
+                - calendar.days.each do |day|
+                  - availability = calendar.availability_at(day, minutes)
+                  - past = day < Date.today
+                  td.align-middle
+                    - if availability
+                      = button_to experience_experience_availability_path(@experience, availability, week: calendar.week_start.iso8601),
+                                  method: :delete,
+                                  form: { data: { turbo_confirm: (availability.booked_participants.positive? ? "Ce créneau a déjà des réservations. Le supprimer ?" : nil) } },
+                                  data: { availability_slot: "#{day.iso8601} #{label}", availability_state: "taken" },
+                                  title: "Retirer ce créneau",
+                                  class: "w-full rounded-md px-2 py-2 text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-red-100 hover:text-red-800 hover:border-red-300 transition-colors cursor-pointer" do
+                        = availability.booked_participants.positive? ? "#{label} · #{availability.booked_participants} pers." : label
+                    - elsif past
+                      .w-full.rounded-md.px-2.py-2.text-xs.text-gray-300.text-center.border.border-dashed.border-gray-100(data-availability-slot="#{day.iso8601} #{label}" data-availability-state="past")
+                        | —
+                    - else
+                      = button_to experience_experience_availabilities_path(@experience, week: calendar.week_start.iso8601),
+                                  method: :post,
+                                  params: { experience_availability: { available_on: day.iso8601, starts_at: label } },
+                                  data: { availability_slot: "#{day.iso8601} #{label}", availability_state: "free" },
+                                  title: "Poser un créneau le #{l(day, format: '%-d %B')} à #{label}",
+                                  class: "w-full rounded-md px-2 py-2 text-xs text-gray-400 bg-gray-50 border border-dashed border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 transition-colors cursor-pointer" do
+                        | +
