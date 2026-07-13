@@ -9,6 +9,13 @@ class ExperiencesController < BaseController
   end
 
   def show
+    # Calendrier hebdo des disponibilités (epic #25, Phase 4) — démarre sur la
+    # semaine en cours ; `?week=` permet de naviguer, y compris dans le passé
+    # (l'historique des dispos reste consultable).
+    @week_calendar = Experiences::WeekCalendar.new(
+      experience: @experience,
+      week_start: (Date.parse(params[:week]) rescue nil)
+    )
     @experience = ExperienceDecorator.new(@experience)
   end
 
