@@ -18,14 +18,24 @@ module Public
 
     # Étape 1 — dates, groupe, animal.
     def dates
-      @lodgings              = bookable_lodgings
-      @cal_month             = (@draft.arrival_date&.beginning_of_month || Date.today.beginning_of_month)
-      @availability_calendar = build_availability_calendar(@lodgings, month: @cal_month)
+      prepare_dates_view
     end
 
-    # Transition étape 1 → 2.
+    # Transition étape 1 → 2. Un départ antérieur ou égal à l'arrivée re-rend
+    # l'étape 1 avec une erreur, sans écrire quoi que ce soit en session : un
+    # draft valide déjà présent reste intact.
     def advance_dates
-      persist_draft(merged_draft_params)
+      attrs     = merged_draft_params
+      candidate = merge_draft(attrs)
+
+      if invalid_stay_dates?(candidate)
+        @draft       = candidate
+        @dates_error = "La date de départ doit être postérieure à la date d'arrivée."
+        prepare_dates_view
+        return render :dates, status: :unprocessable_entity
+      end
+
+      persist_draft(attrs)
       redirect_to public_reservation_compose_path
     end
 
@@ -113,14 +123,33 @@ module Public
       @draft = Reservations::Draft.new(session[DRAFT_SESSION_KEY] || {})
     end
 
-    def persist_draft(attrs)
+    # Fusionne des paramètres dans le draft courant sans toucher à la session.
+    def merge_draft(attrs)
       incoming = attrs.to_h.deep_symbolize_keys
       merged = @draft.to_h.merge(incoming) do |_key, old, new|
         new.nil? || (new.respond_to?(:empty?) && new.empty? && !old.nil?) ? old : new
       end
-      @draft = Reservations::Draft.new(merged)
+      Reservations::Draft.new(merged)
+    end
+
+    def persist_draft(attrs)
+      @draft = merge_draft(attrs)
       session[DRAFT_SESSION_KEY] = @draft.to_h
       @draft
+    end
+
+    # Dates incohérentes : les deux sont saisies mais le départ ne suit pas
+    # l'arrivée. Des dates absentes restent tolérées (l'étape 2 le signale).
+    def invalid_stay_dates?(draft)
+      return false if draft.arrival_date.blank? || draft.departure_date.blank?
+
+      draft.departure_date <= draft.arrival_date
+    end
+
+    def prepare_dates_view
+      @lodgings              = bookable_lodgings
+      @cal_month             = (@draft.arrival_date&.beginning_of_month || Date.today.beginning_of_month)
+      @availability_calendar = build_availability_calendar(@lodgings, month: @cal_month)
     end
 
     def clear_draft

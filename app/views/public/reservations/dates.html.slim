@@ -44,11 +44,15 @@
               span.text-xs.font-medium.text-gray-500.uppercase.tracking-wide Départ
               = f.date_field "reservation[departure_date]",
                   value: @draft.departure_date,
-                  min: Date.today.iso8601,
+                  min: ((@draft.arrival_date + 1) if @draft.arrival_date).try(:iso8601) || Date.today.iso8601,
                   max: (Date.today >> 18).iso8601,
                   class: "mt-1.5 w-full rounded-xl border-gray-300 shadow-sm text-base focus:border-emerald-500 focus:ring-emerald-500",
                   data: { "public--dates-nights-target": "departure",
                           action: "change->public--dates-nights#compute" }
+
+          - if @dates_error.present?
+            p.mt-3.rounded-xl.bg-red-50.border.border-red-200.text-red-700.text-sm.p-3(role="alert" data-dates-error="true")
+              = @dates_error
 
           / Badge nuits dynamique
           .mt-3.h-6.flex.items-center

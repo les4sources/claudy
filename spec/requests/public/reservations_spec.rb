@@ -27,6 +27,46 @@ RSpec.describe "Public::Reservations (/reservation)", type: :request do
     end
   end
 
+  describe "étape 1 — contrainte départ > arrivée (#40)" do
+    it "GET /reservation/sejour n'affiche aucune erreur de dates au premier affichage" do
+      get "/reservation/sejour"
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("data-dates-error")
+    end
+
+    it "POST avec un départ antérieur à l'arrivée re-rend l'étape 1 avec une erreur" do
+      post "/reservation/sejour", params: { reservation: { arrival_date: departure, departure_date: arrival, adults: 2 } }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include("data-dates-error")
+      expect(response.body).to include("postérieure à la date d&#39;arrivée")
+    end
+
+    it "POST avec un départ égal à l'arrivée re-rend l'étape 1 avec une erreur" do
+      post "/reservation/sejour", params: { reservation: { arrival_date: arrival, departure_date: arrival, adults: 2 } }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include("data-dates-error")
+    end
+
+    it "POST avec des dates valides avance vers l'étape 2 (comportement préservé)" do
+      post "/reservation/sejour", params: { reservation: { arrival_date: arrival, departure_date: departure, adults: 2 } }
+
+      expect(response).to redirect_to("/reservation/composer")
+    end
+
+    it "ne corrompt pas un draft valide déjà en session (anti-régression)" do
+      post "/reservation/sejour", params: { reservation: { arrival_date: arrival, departure_date: departure, adults: 2 } }
+      post "/reservation/sejour", params: { reservation: { arrival_date: departure, departure_date: arrival, adults: 2 } }
+      expect(response).to have_http_status(:unprocessable_entity)
+
+      # L'étape 2 reste alimentée par les dates valides mémorisées.
+      get "/reservation/composer"
+      expect(response.body).to include(I18n.l(Date.parse(arrival), format: :long))
+      expect(response.body).not_to include("Choisissez vos dates à l'étape précédente")
+    end
+  end
+
   describe "devis temps-réel (AC-T2-10/11)" do
     it "POST /reservation/devis répond en Turbo Stream et affiche le total TVAC" do
       post "/reservation/devis", params: { reservation: { lodging_id: hulotte.id, arrival_date: arrival, departure_date: departure } },
