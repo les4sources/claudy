@@ -6,6 +6,35 @@ class PaymentDecorator < ApplicationDecorator
     h.number_to_currency(object.amount)
   end
 
+  # Stay-first (epic #26, Phase 2) : un paiement peut désormais n'avoir AUCUN
+  # booking (séjour sans hébergement). L'admin liste tous les paiements — il doit
+  # donc retomber sur le séjour au lieu de planter sur un `booking_path(nil)`.
+  def linked_to_booking?
+    object.booking_id.present?
+  end
+
+  def linked_name
+    return booking_name if linked_to_booking?
+
+    object.stay&.customer&.name.presence || "Séjour"
+  end
+
+  def linked_path
+    linked_to_booking? ? h.booking_path(object.booking_id) : h.stay_path(object.stay)
+  end
+
+  def linked_payment_status
+    return booking_payment_status if linked_to_booking?
+
+    StayDecorator.new(object.stay).payment_status_badge if object.stay
+  end
+
+  def linked_date_range
+    return booking_date_range if linked_to_booking?
+
+    StayDecorator.new(object.stay).date_range if object.stay
+  end
+
   def booking_date_range
     booking.date_range
   rescue

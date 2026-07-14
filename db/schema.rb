@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_13_031500) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_14_013705) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -288,6 +288,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_13_031500) do
     t.integer "max_participants"
     t.string "duration"
     t.decimal "duration_hours", precision: 4, scale: 2
+    t.string "color"
     t.index ["human_id"], name: "index_experiences_on_human_id"
   end
 
@@ -412,7 +413,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_13_031500) do
   end
 
   create_table "payments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.bigint "booking_id", null: false
+    t.bigint "booking_id"
     t.string "payment_method"
     t.string "status"
     t.datetime "deleted_at", precision: nil

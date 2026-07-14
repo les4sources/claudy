@@ -22,10 +22,17 @@ RSpec.describe Payment, type: :model do
                     adults: 1, status: "pending", price_cents: 10_000)
   end
 
-  it "exige un booking (ancre obligatoire)" do
-    payment = Payment.new(amount_cents: 5_000, payment_method: "card")
-    expect(payment).not_to be_valid
-    expect(payment.errors[:booking]).to be_present
+  # Stay-first (epic #26, Phase 2) : le booking n'est plus l'ancre obligatoire du
+  # paiement — un séjour sans hébergement n'en a pas. C'est le Stay qui porte le
+  # paiement (la validation de présence de `stay_id` arrive en Phase 4).
+  it "accepte un paiement sans booking, rattaché à un séjour" do
+    stay = Stay.create!(customer: customer, source: "reservation", status: "pending",
+                        total_amount_cents: 10_000)
+    payment = Payment.new(stay: stay, amount_cents: 5_000, status: "pending",
+                          payment_method: "card")
+
+    expect(payment).to be_valid
+    expect(payment.booking).to be_nil
   end
 
   it "accepte un stay optionnel (issue #26)" do

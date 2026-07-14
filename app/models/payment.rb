@@ -17,9 +17,11 @@ class Payment < ApplicationRecord
   # notify ActiveRecord that the default sort order should be created_at
   self.implicit_order_column = :created_at
 
-  belongs_to :booking
-  # Lien direct vers le séjour (issue #26, fondation). Optionnel le temps de la
-  # transition : `booking` reste l'ancre obligatoire, `stay` est dénormalisé.
+  # Stay-first (issue #26, Phase 2) : le séjour est devenu l'ancre du paiement.
+  # Le booking n'est plus obligatoire — un séjour sans hébergement (camping,
+  # espaces) n'en a pas. Il reste renseigné pour tout le canal historique, et la
+  # colonne `booking_id` ne sera retirée que bien plus tard (epic ultérieur).
+  belongs_to :booking, optional: true
   belongs_to :stay, optional: true
 
   monetize :amount_cents, allow_nil: false

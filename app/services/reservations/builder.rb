@@ -42,7 +42,11 @@ module Reservations
 
       ActiveRecord::Base.transaction do
         @customer = upsert_customer!
-        @booking = build_booking!(quote)
+        # Stay-first (epic #26, Phase 2) : le Booking n'est plus l'ancre de
+        # paiement, c'est une OCCUPATION d'hébergement — il bloque le calendrier
+        # via lodging_id + dates. Un séjour sans hébergement (camping, espaces)
+        # n'en crée donc plus : le « Booking fantôme » disparaît.
+        @booking = draft.lodging.present? ? build_booking!(quote) : nil
         @stay = Stay.create!(
           customer: @customer,
           source: "reservation",
@@ -52,7 +56,9 @@ module Reservations
           total_amount_cents: quote.total_cents,
           notes: internal_notes
         )
-        @stay.stay_items.create!(bookable: @booking)
+        @stay.stay_items.create!(bookable: @booking) if @booking
+        # Le paiement est rattaché au Stay dans tous les cas ; le booking n'est
+        # plus qu'une référence de commodité pour le canal historique.
         @payment = Payment.create!(
           booking: @booking,
           stay: @stay,
@@ -75,14 +81,28 @@ module Reservations
 
     private
 
+    # Un séjour doit porter des dates valides et AU MOINS un élément réservé —
+    # mais plus forcément un hébergement (epic #26, Phase 2) : un séjour camping
+    # ou espaces seuls est légitime, et c'est justement lui qui ne doit plus
+    # produire de Booking fantôme.
     def validate_draft!
-      raise_invalid("Veuillez choisir un hébergement et des dates valides.") if draft.lodging.nil? || draft.nights < 1
+      raise_invalid("Veuillez choisir des dates valides.") if draft.nights < 1
+      raise_invalid("Veuillez choisir un hébergement ou un emplacement.") unless bookable_content?
       raise_invalid("Veuillez indiquer si vous venez avec un animal (champ obligatoire).") if draft.dogs_count.nil?
       raise_invalid("Veuillez préciser votre prénom.") if draft.first_name.blank?
       raise_invalid("Veuillez préciser une adresse email valide.") unless Customer.exploitable_email?(draft.email)
-      unless draft.lodging.available_between?(draft.arrival_date, draft.departure_date)
+      if draft.lodging.present? && !draft.lodging.available_between?(draft.arrival_date, draft.departure_date)
         raise_invalid("Ces dates ne sont plus disponibles pour cet hébergement.")
       end
+    end
+
+    def bookable_content?
+      draft.lodging.present? ||
+        draft.campings.any? ||
+        draft.vans.any? ||
+        draft.hamacs.any? ||
+        Array(draft.halls).any? ||
+        Array(draft.space_slots).any?
     end
 
     def upsert_customer!
