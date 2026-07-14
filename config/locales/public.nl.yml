@@ -1,0 +1,32 @@
+# Traductions NL de la page client à jeton « séjour » (/sejour/:token, epic #26 Phase 1).
+# Traduite ici (issue #15, Phase 2) pour que la spec de parité des clés couvre
+# l'ensemble du scope `public.*` — sans quoi les clés `public.stays.*` n'existeraient
+# qu'en FR. ⚠️ Générées par l'agent — à relire par un locuteur néerlandophone.
+nl:
+  public:
+    stays:
+      show:
+        meta_title: "Uw verblijf bij Les 4 Sources"
+        title: "Uw verblijf bij Les 4 Sources"
+        contact_heading: "Uw gegevens"
+        dates_heading: "Data van uw verblijf"
+        composition_heading: "Uw verblijf"
+        empty_composition: "Er is nog niets aan dit verblijf gekoppeld."
+        total: "Totaal"
+        no_payment: "Er wordt op dit moment geen betaling verwacht."
+        questions_html: "Een vraag? Schrijf ons op %{email} of bel Malau op %{phone}."
+      items:
+        lodging: "Verblijf"
+        space: "Ruimte"
+        other: "Dienst"
+      payment_status:
+        pending: "In afwachting van betaling"
+        partially_paid: "Gedeeltelijk betaald"
+        paid: "Betaald"
+      payments:
+        heading: "Betaling"
+        pay_online: "Online betalen"
+        invitation: "Wij nodigen u uit om het bedrag van %{amount} online te betalen."
+        stripe_notice: "Deze betaling wordt beheerd door Stripe: wij hebben op geen enkel moment toegang tot uw betaalgegevens."
+        pay_cta: "Betaling →"
+        received_heading: "Ontvangen betalingen"

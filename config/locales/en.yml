@@ -31,3 +31,24 @@
 
 en:
   hello: "Hello world"
+  # Plage de dates d'une réservation (BookingDecorator#date_range) — issue #15.
+  date_range:
+    same_month_current_year: "from %{from_day} to %{to}"
+    same_month_other_year: "from %{from_day} to %{to_day} %{month_year}"
+    same_year: "from %{from} to %{to_day} %{to_month_year}"
+    different_years: "from %{from_day} %{from_month_year} to %{to_day} %{to_month_year}"
+  # `date_range` s'appuie sur les formats `short` et `month_year` : le `month_year`
+  # n'existe pas dans les défauts Rails, et le `short` par défaut ("%b %d") donnerait
+  # « Jul 5 » au milieu d'une phrase « from 3 to Jul 5 ». On les fixe ici.
+  date:
+    formats:
+      short: "%e %B"
+      month_year: "%B %Y"
+  number:
+    currency:
+      format:
+        delimiter: ","
+        format: "%u%n"
+        precision: 2
+        separator: "."
+        unit: "€"
