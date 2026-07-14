@@ -4,6 +4,11 @@ class ExperiencesController < BaseController
   breadcrumb "Activités", :experiences_path, match: :exact
 
   def index
+    # Calendrier global des créneaux, toutes activités confondues (epic #25,
+    # Phase 5) — `?week=` navigue, comme sur la fiche d'une activité.
+    @global_calendar = Experiences::GlobalWeekCalendar.new(
+      week_start: (Date.parse(params[:week]) rescue nil)
+    )
     @experiences = ExperienceDecorator
       .decorate_collection(Experience.all.order(name: :asc))
   end
