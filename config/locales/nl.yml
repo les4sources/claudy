@@ -2,6 +2,20 @@
 # pages client vivent dans public.*.nl.yml (Phase 2) ; ici, uniquement ce qu'il
 # faut à `l()` pour ne pas casser quand la locale est :nl.
 nl:
+  # Plage de dates d'une réservation (BookingDecorator#date_range) — issue #15.
+  date_range:
+    same_month_current_year: "van %{from_day} tot %{to}"
+    same_month_other_year: "van %{from_day} tot %{to_day} %{month_year}"
+    same_year: "van %{from} tot %{to_day} %{to_month_year}"
+    different_years: "van %{from_day} %{from_month_year} tot %{to_day} %{to_month_year}"
+  number:
+    currency:
+      format:
+        delimiter: "."
+        format: "%u %n"
+        precision: 2
+        separator: ","
+        unit: "€"
   date:
     abbr_day_names:
     - zo
@@ -37,6 +51,7 @@ nl:
       default: "%d-%m-%Y"
       long: "%e %B %Y"
       short: "%e %b"
+      month_year: "%B %Y"
     month_names:
     -
     - januari

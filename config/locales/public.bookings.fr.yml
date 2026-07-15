@@ -9,6 +9,15 @@ fr:
       nl: "Nederlands"
       en: "English"
     bookings:
+      status_callout:
+        pending: "Votre réservation est en attente de confirmation par notre équipe."
+        canceled: "Votre réservation est annulée."
+        declined: "Votre réservation n'a pas pu être confirmée."
+        confirmed: "Votre réservation est confirmée."
+      estimated_arrival:
+        update: "Mettre à jour"
+        save: "Enregistrer"
+        hint_html: "Idéalement <strong>entre 16h et 20h</strong>. Merci de nous contacter si vous souhaitez arriver hors de cette plage horaire."
       show:
         meta_title: "Ma réservation aux 4 Sources"
         title_confirmed: "Votre séjour aux 4 Sources"

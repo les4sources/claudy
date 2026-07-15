@@ -1,0 +1,32 @@
+# Traductions EN de la page client à jeton « séjour » (/sejour/:token, epic #26 Phase 1).
+# Traduite ici (issue #15, Phase 2) pour que la spec de parité des clés couvre
+# l'ensemble du scope `public.*`. ⚠️ Générées par l'agent — à relire par un
+# locuteur anglophone.
+en:
+  public:
+    stays:
+      show:
+        meta_title: "Your stay at Les 4 Sources"
+        title: "Your stay at Les 4 Sources"
+        contact_heading: "Your details"
+        dates_heading: "Dates of your stay"
+        composition_heading: "Your stay"
+        empty_composition: "Nothing has been added to this stay yet."
+        total: "Total"
+        no_payment: "No payment is expected at the moment."
+        questions_html: "A question? Write to us at %{email} or call Malau on %{phone}."
+      items:
+        lodging: "Accommodation"
+        space: "Space"
+        other: "Service"
+      payment_status:
+        pending: "Awaiting payment"
+        partially_paid: "Partially paid"
+        paid: "Paid"
+      payments:
+        heading: "Payment"
+        pay_online: "Pay online"
+        invitation: "We invite you to pay the amount of %{amount} online."
+        stripe_notice: "This payment is handled by Stripe: we never have access to your payment details."
+        pay_cta: "Payment →"
+        received_heading: "Payments received"
