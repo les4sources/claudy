@@ -56,15 +56,16 @@
               = @payment.status
 
             dt.text-sm.font-medium.text-gray-500
-              | Réservation
+              = @payment.linked_to_booking? ? "Réservation" : "Séjour"
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               .inline-flex.space-x-2
-                = link_to @payment.booking_name, 
-                          booking_path(@payment.booking),
+                / Stay-first (epic #26) : repli sur le séjour quand il n'y a pas de booking.
+                = link_to @payment.linked_name,
+                          @payment.linked_path,
                           class: "claudy-link"
-                = @payment.booking_payment_status
+                = @payment.linked_payment_status
               .text-xs.text-gray-500
-                = @payment.booking_date_range
+                = @payment.linked_date_range
 
             dt.text-sm.font-medium.text-gray-500
               | Stripe Checkout Session ID

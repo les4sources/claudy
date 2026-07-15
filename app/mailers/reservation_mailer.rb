@@ -5,7 +5,10 @@ class ReservationMailer < ApplicationMailer
   def confirmation_request(stay)
     @stay = stay
     @booking = stay.bookables.find { |b| b.is_a?(Booking) }
-    @token = @booking&.token
+    # Stay-first (epic #26, Phase 2) : le lien de consultation envoyé au client
+    # pointe sur la page séjour, pas sur la page booking — un séjour sans
+    # hébergement n'a d'ailleurs pas de booking.
+    @token = stay.token
     @quote = quote_from(stay)
     mail(
       to: stay.customer.email,

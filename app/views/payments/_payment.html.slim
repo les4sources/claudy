@@ -19,21 +19,27 @@ tr(id="#{dom_id payment}" class="#{payment.tr_class} hover:bg-sky-100")
     = payment.status
   td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap.hide-if-booking-page[scope="row"]
     .inline-flex.space-x-2
-      = link_to payment.booking_name, 
-                booking_path(payment.booking_id),
+      / Stay-first (epic #26) : un paiement sans booking (séjour sans hébergement)
+      / pointe sur le séjour — `booking_path(nil)` planterait.
+      = link_to payment.linked_name,
+                payment.linked_path,
                 class: "claudy-link"
-      = payment.booking_payment_status
+      = payment.linked_payment_status
     .text-xs.text-gray-500
-      = payment.booking_date_range
+      = payment.linked_date_range
   td.py-4.px-6.text-right
     .space-x-2
       = link_to "détails", 
                 payment_path(payment),
                 class: "claudy-link text-xs"
-      = link_to "modifier", 
-                edit_booking_payment_path(payment.booking_id, payment), 
-                data: { turbo_frame: "modal" },
-                class: "claudy-link text-xs"
+      / L'édition d'un paiement passe encore par la route nichée sous booking : on
+      / la masque pour un paiement sans booking (séjour sans hébergement, epic #26).
+      / La Phase 3 rattache la création/édition admin au Stay.
+      - if payment.linked_to_booking?
+        = link_to "modifier",
+                  edit_booking_payment_path(payment.booking_id, payment),
+                  data: { turbo_frame: "modal" },
+                  class: "claudy-link text-xs"
 
 javascript:
   // hide booking details on bookings#show

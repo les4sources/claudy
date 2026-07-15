@@ -31,14 +31,33 @@ module Payments
     def stripe_checkout
       StripeService.instance.create_checkout_session(
         client_reference_id: @payment.id,
-        success_url: public_booking_url(@payment.booking.token),
-        cancel_url: public_booking_url(@payment.booking.token),
+        success_url: return_url,
+        cancel_url: return_url,
         item: {
           id: @payment.id,
-          name: "Réservation ##{@payment.booking.token}",
+          name: checkout_label,
           amount: @payment.amount_cents
         }
       )
+    end
+
+    # Stay-first (epic #26, Phase 2) : le client revient sur la page séjour dès
+    # que le paiement est rattaché à un Stay. Repli sur la page booking pour les
+    # paiements historiques, dont les liens circulent encore par email.
+    def return_url
+      if @payment.stay&.token.present?
+        public_stay_url(@payment.stay.token)
+      else
+        public_booking_url(@payment.booking.token)
+      end
+    end
+
+    def checkout_label
+      if @payment.stay&.token.present?
+        "Séjour ##{@payment.stay.token}"
+      else
+        "Réservation ##{@payment.booking.token}"
+      end
     end
   end
 end

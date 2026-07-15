@@ -28,8 +28,18 @@ RSpec.describe ReservationMailer, type: :mailer do
       expect(mail.to).to eq(["guest@example.com"])
     end
 
-    it "contient le lien token stable de consultation" do
-      expect(mail.body.encoded).to include(booking.token)
+    # Stay-first (epic #26, Phase 2) : le lien de consultation pointe désormais
+    # sur la page séjour /sejour/:token, plus sur la page booking.
+    it "contient le lien token stable vers la page séjour (html ET texte)" do
+      # Corps décodé : le quoted-printable coupe les longues lignes, donc un
+      # `include` sur `body.encoded` casserait le jeton en deux.
+      html = mail.html_part.body.decoded
+      text = mail.text_part.body.decoded
+
+      [html, text].each do |body|
+        expect(body).to include("/sejour/#{stay.reload.token}")
+        expect(body).not_to include("/reservation/#{booking.token}")
+      end
     end
 
     it "affiche le breakdown TVAC issu du même PricingModel que l'UI" do

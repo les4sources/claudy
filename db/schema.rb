@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_14_012843) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_14_013705) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -413,7 +413,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_14_012843) do
   end
 
   create_table "payments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.bigint "booking_id", null: false
+    t.bigint "booking_id"
     t.string "payment_method"
     t.string "status"
     t.datetime "deleted_at", precision: nil
