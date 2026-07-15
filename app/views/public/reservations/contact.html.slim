@@ -5,12 +5,12 @@
     / ── Step indicator ───────────────────────────────────────
     .flex.items-center.mb-10
       .flex.items-center.flex-shrink-0
-        = link_to public_reservation_dates_path, class: "flex items-center group" do
+        = link_to public_reservation_dates_path, class: "flex items-center group relative before:content-[''] before:absolute before:-inset-1" do
           .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-emerald-100.text-emerald-700.border-2.border-emerald-400.group-hover:border-emerald-600.transition-colors ✓
           span.ml-2.text-sm.text-emerald-600.hidden.sm:inline.group-hover:underline Votre séjour
       .flex-1.h-px.mx-4.bg-emerald-200
       .flex.items-center.flex-shrink-0
-        = link_to public_reservation_compose_path, class: "flex items-center group" do
+        = link_to public_reservation_compose_path, class: "flex items-center group relative before:content-[''] before:absolute before:-inset-1" do
           .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-emerald-100.text-emerald-700.border-2.border-emerald-400.group-hover:border-emerald-600.transition-colors ✓
           span.ml-2.text-sm.text-emerald-600.hidden.sm:inline.group-hover:underline Composition
       .flex-1.h-px.mx-4.bg-emerald-200
@@ -81,7 +81,7 @@
                 span.text-sm.font-medium.text-gray-700 = dog_label
                 - if @draft.dogs_count.to_i > 1
                   p.text-xs.text-amber-600.mt-1 Notre équipe vous recontacte pour les chiens supplémentaires.
-              = link_to "Modifier", public_reservation_compose_path, class: "text-xs text-emerald-600 hover:underline flex-shrink-0 ml-4"
+              = link_to "Modifier", public_reservation_compose_path, class: "text-xs text-emerald-600 hover:underline flex-shrink-0 ml-4 relative before:content-[''] before:absolute before:-inset-y-3.5 before:inset-x-0"
 
             / CTA
             = f.submit "Envoyer ma demande et payer l'acompte →",
