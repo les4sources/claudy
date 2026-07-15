@@ -150,9 +150,14 @@ RSpec.describe "Api::V1", type: :request do
       Booking.create!(firstname: "Dora", from_date: Date.new(2026, 7, 1), to_date: Date.new(2026, 7, 2),
                       adults: 1, status: "confirmed")
     end
+    # Phase 4 : tout Payment porte désormais un stay (verrouillage stay_id).
+    let!(:stay) do
+      Stay.create!(customer: Customer.create!(email: "dora@example.com", customer_type: "individual"),
+                   source: "reservation", status: "confirmed", total_amount_cents: 5_000)
+    end
     let!(:payment) do
-      Payment.create!(booking: booking, amount_cents: 5_000, payment_method: "card", status: "paid",
-                      stripe_payment_intent_id: "pi_secret_value")
+      Payment.create!(booking: booking, stay: stay, amount_cents: 5_000, payment_method: "card",
+                      status: "paid", stripe_payment_intent_id: "pi_secret_value")
     end
 
     it "never exposes raw Stripe identifiers" do

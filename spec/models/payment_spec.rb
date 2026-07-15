@@ -24,7 +24,7 @@ RSpec.describe Payment, type: :model do
 
   # Stay-first (epic #26, Phase 2) : le booking n'est plus l'ancre obligatoire du
   # paiement — un séjour sans hébergement n'en a pas. C'est le Stay qui porte le
-  # paiement (la validation de présence de `stay_id` arrive en Phase 4).
+  # paiement.
   it "accepte un paiement sans booking, rattaché à un séjour" do
     stay = Stay.create!(customer: customer, source: "reservation", status: "pending",
                         total_amount_cents: 10_000)
@@ -35,13 +35,25 @@ RSpec.describe Payment, type: :model do
     expect(payment.booking).to be_nil
   end
 
-  it "accepte un stay optionnel (issue #26)" do
-    payment = Payment.create!(booking: booking, amount_cents: 5_000, status: "pending",
-                              payment_method: "card")
-    expect(payment.stay).to be_nil
+  # Phase 4 (« verrouillage ») : le stay devient OBLIGATOIRE. Un Payment sans
+  # stay_id est désormais invalide (inversion de la Phase 2 où il était optionnel).
+  it "refuse un paiement sans séjour (verrouillage Phase 4)" do
+    payment = Payment.new(booking: booking, amount_cents: 5_000, status: "pending",
+                          payment_method: "card")
 
-    stay = Stay.create!(customer: customer)
-    payment.update!(stay: stay)
-    expect(payment.reload.stay).to eq(stay)
+    expect(payment).not_to be_valid
+    expect(payment.errors[:stay]).to be_present
+    expect { payment.save! }.to raise_error(ActiveRecord::RecordInvalid)
+  end
+
+  it "redevient valide dès qu'un séjour est rattaché" do
+    stay = Stay.create!(customer: customer, source: "reservation", status: "pending",
+                        total_amount_cents: 10_000)
+    payment = Payment.new(booking: booking, stay: stay, amount_cents: 5_000,
+                          status: "pending", payment_method: "card")
+
+    expect(payment).to be_valid
+    expect(payment.booking).to eq(booking)
+    expect(payment.stay).to eq(stay)
   end
 end

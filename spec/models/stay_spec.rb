@@ -23,7 +23,12 @@ RSpec.describe Stay, type: :model do
       stay = Stay.create!(customer: customer)
       b = booking(from: Date.new(2026, 7, 1), to: Date.new(2026, 7, 3))
       stay.stay_items.create!(bookable: b)
-      payment = Payment.create!(booking: b, amount_cents: 5_000, status: "paid", payment_method: "card")
+      # Donnée LEGACY : un Payment relié à son Booking mais SANS stay_id (état
+      # d'avant le verrouillage Phase 4). On contourne la validation pour
+      # reproduire fidèlement l'état en base et prouver que la branche « union par
+      # booking_id » de Stay#payments reste couverte.
+      payment = Payment.new(booking: b, amount_cents: 5_000, status: "paid", payment_method: "card")
+      payment.save!(validate: false)
 
       expect(stay.payments).to contain_exactly(payment)
     end

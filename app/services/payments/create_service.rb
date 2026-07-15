@@ -21,16 +21,24 @@ module Payments
 
     def run!(params = {})
       @payment.attributes = payment_params(params)
-      return false if !@payment.valid?
       set_status
-      # Stay-first (epic #26, Phase 3) : un paiement admin porte désormais un
-      # stay_id. On garantit (idempotent) que le booking a un Stay AVANT de sauver,
-      # puis on rattache le paiement au Stay. booking_id reste renseigné (canal
-      # historique). Ensure + save dans la même transaction pour l'atomicité.
+      # Stay-first (epic #26, Phases 3-4) : le stay est désormais OBLIGATOIRE sur
+      # Payment. On l'assigne AVANT de valider — sinon la validation de présence
+      # échoue et le paiement admin n'est jamais créé. EnsureForBooking peut créer
+      # un Stay : on l'exécute dans la transaction pour que tout soit atomique (le
+      # Stay est annulé si le paiement se révèle finalement invalide).
+      saved = false
       ActiveRecord::Base.transaction do
         @payment.stay = Stays::EnsureForBooking.call(@booking)
-        @payment.save!
+        if @payment.valid?
+          @payment.save!
+          saved = true
+        else
+          raise ActiveRecord::Rollback
+        end
       end
+      return false unless saved
+
       @booking.set_payment_status
       raise error_message if !error.nil?
       true
