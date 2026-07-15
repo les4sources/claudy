@@ -30,7 +30,14 @@ module Bookings
       rooms = get_rooms
       if !rooms.nil? && available?(rooms)
         build_reservations(rooms)
-        @booking.save!
+        # Stay-first (epic #26, Phase 3) : tout Booking créé côté admin/OTA obtient
+        # automatiquement un Stay + Customer. Booking et Stay sont persistés dans la
+        # MÊME transaction — un échec de Stay annule le booking pour ne jamais laisser
+        # d'orphelin. Les effets de bord (email, abonnement) restent hors transaction.
+        ActiveRecord::Base.transaction do
+          @booking.save!
+          Stays::EnsureForBooking.call(@booking)
+        end
         notify_customer_on_create
         create_subscription(from: @booking)
       end

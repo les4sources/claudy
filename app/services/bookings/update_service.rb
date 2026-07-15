@@ -33,6 +33,10 @@ module Bookings
           build_reservations(rooms)
           @booking.save!
           @booking.set_payment_status
+          # Stay-first (epic #26, Phase 3) : soigne un Booking legacy dépourvu de Stay
+          # (créé avant le backfill ou via un bypass). Idempotent — no-op si un Stay
+          # vivant existe déjà. Dans la transaction pour rester atomique avec le save.
+          Stays::EnsureForBooking.call(@booking)
         end
       end
       raise error_message if !error.nil?

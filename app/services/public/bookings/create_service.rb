@@ -28,11 +28,19 @@ module Public
         set_invoice_status
         set_tier
         rooms = get_rooms
-        if ready_to_book?(rooms) 
+        if ready_to_book?(rooms)
           initialize_public_booking
           set_price
           build_reservations(rooms)
-          @booking.save!
+          # Stay-first (epic #26, Phase 3) : le funnel public legacy (POST /public/bookings,
+          # encore lié depuis le calendrier iframe et les mails) doit lui aussi produire un
+          # Stay, sinon il recrée des Bookings sans Stay et casse l'invariant global. Booking
+          # et Stay dans la MÊME transaction (échec du Stay ⇒ rollback du booking, zéro
+          # orphelin) ; effets de bord (mails, abonnement) hors transaction.
+          ActiveRecord::Base.transaction do
+            @booking.save!
+            Stays::EnsureForBooking.call(@booking)
+          end
           notify_customer_on_create
           notify_admin_on_create
           create_subscription(from: @booking)
