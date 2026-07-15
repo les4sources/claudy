@@ -19,6 +19,14 @@
 #  duration_hours    :decimal(, )
 #
 class Experience < ApplicationRecord
+  # Couleurs du calendrier global des activités (epic #25, Phase 5). Palette fixe
+  # et lisible plutôt qu'un vrai hasard : les créneaux de deux activités qui se
+  # chevauchent doivent rester distinguables au premier coup d'œil.
+  PALETTE = %w[
+    #059669 #2563eb #d97706 #7c3aed #db2777 #0891b2
+    #65a30d #dc2626 #4f46e5 #ea580c #0d9488 #9333ea
+  ].freeze
+
   belongs_to :human, optional: true
 
   has_many :experience_availabilities, dependent: :destroy
@@ -40,6 +48,11 @@ class Experience < ApplicationRecord
   validates :duration_hours,
             numericality: { greater_than: 0 },
             allow_nil: true
+  validates :color,
+            format: { with: /\A#[0-9a-f]{6}\z/i },
+            allow_nil: true
+
+  before_validation :assign_color, on: :create
 
   # Durée d'un bloc de disponibilité, en minutes, dérivée de la durée numérique
   # en heures. Pilote la taille des créneaux (Phase 4 de l'épic #25). Renvoie
@@ -48,5 +61,18 @@ class Experience < ApplicationRecord
     return nil if duration_hours.nil?
 
     (duration_hours * 60).round
+  end
+
+  private
+
+  # Couleur attribuée à la création : on prend la couleur la moins utilisée de la
+  # palette (à égalité, la première dans l'ordre de la palette). Résultat agréable
+  # ET stable — deux activités créées à la suite ne peuvent pas se retrouver de la
+  # même couleur tant que la palette n'est pas épuisée.
+  def assign_color
+    return if color.present?
+
+    used = Experience.unscoped.where.not(color: nil).group(:color).count
+    self.color = PALETTE.min_by { |candidate| used.fetch(candidate, 0) }
   end
 end

@@ -7,7 +7,7 @@
     / ── Step indicator ───────────────────────────────────────
     .flex.items-center.mb-10
       .flex.items-center.flex-shrink-0
-        = link_to public_reservation_dates_path, class: "flex items-center group" do
+        = link_to public_reservation_dates_path, class: "flex items-center group relative before:content-[''] before:absolute before:-inset-1" do
           .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-emerald-100.text-emerald-700.border-2.border-emerald-400.group-hover:border-emerald-600.transition-colors ✓
           span.ml-2.text-sm.text-emerald-600.hidden.sm:inline.group-hover:underline Votre séjour
       .flex-1.h-px.mx-4.bg-emerald-200
@@ -28,7 +28,7 @@
         strong = l(@draft.departure_date, format: :long)
         .ml-1.px-2.py-0.5.bg-emerald-100.text-emerald-700.rounded-full.text-xs.font-semibold
           = "#{@draft.nights} nuit#{"s" if @draft.nights.to_i > 1}"
-        = link_to "Modifier", public_reservation_dates_path, class: "ml-2 text-xs text-gray-400 hover:text-gray-600 underline"
+        = link_to "Modifier", public_reservation_dates_path, class: "ml-2 text-xs text-gray-400 hover:text-gray-600 underline relative before:content-[''] before:absolute before:-inset-y-3.5 before:inset-x-0"
 
     .space-y-6
 

@@ -43,21 +43,36 @@ class BookingDecorator < ApplicationDecorator
     end
   end
 
+  # Rendu i18n (issue #15) : la page client à jeton s'affiche en FR/NL/EN, donc la
+  # phrase « du … au … » vit dans les YAML (scope `date_range`) et non en dur ici.
+  # Le rendu FR est inchangé au caractère près.
   def date_range
     if object.from_date.year == object.to_date.year
       if object.from_date.month == object.to_date.month && object.from_date.year == Date.today.year
         # Même mois et année en cours
-        "du #{object.from_date.day} au #{l(object.to_date, format: :short)}"
+        h.t("date_range.same_month_current_year",
+            from_day: object.from_date.day,
+            to: l(object.to_date, format: :short))
       elsif object.from_date.month == object.to_date.month
         # Même mois, mais année différente de l'année en cours
-        "du #{object.from_date.day} au #{object.to_date.day} #{l(object.from_date, format: :month_year)}"
+        h.t("date_range.same_month_other_year",
+            from_day: object.from_date.day,
+            to_day: object.to_date.day,
+            month_year: l(object.from_date, format: :month_year))
       else
         # Mêmes années, mois différents
-        "du #{l(object.from_date, format: :short)} au #{object.to_date.day} #{l(object.to_date, format: :month_year)}"
+        h.t("date_range.same_year",
+            from: l(object.from_date, format: :short),
+            to_day: object.to_date.day,
+            to_month_year: l(object.to_date, format: :month_year))
       end
     else
       # Années différentes
-      "du #{object.from_date.day} #{l(object.from_date, format: :month_year)} au #{object.to_date.day} #{l(object.to_date, format: :month_year)}"
+      h.t("date_range.different_years",
+          from_day: object.from_date.day,
+          from_month_year: l(object.from_date, format: :month_year),
+          to_day: object.to_date.day,
+          to_month_year: l(object.to_date, format: :month_year))
     end
   end
 

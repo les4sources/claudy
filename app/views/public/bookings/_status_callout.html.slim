@@ -1,12 +1,14 @@
+/ Bandeau de statut de la réservation. Chaînes extraites en i18n (issue #15, Phase 2)
+/ — le partial était resté en français en dur après l'extraction de la Phase 1.
 - if booking.pending?
   .callout-warning(role="alert")
-    strong Votre réservation est en attente de confirmation par notre équipe.
+    strong = t(".pending")
 - elsif booking.canceled?
   .callout-error(role="alert")
-    strong Votre réservation est annulée.
+    strong = t(".canceled")
 - elsif booking.declined?
   .callout-error(role="alert")
-    strong Votre réservation n'a pas pu être confirmée.
+    strong = t(".declined")
 - elsif booking.confirmed?
   .callout-success(role="alert")
-    strong Votre réservation est confirmée.
+    strong = t(".confirmed")

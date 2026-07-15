@@ -7,6 +7,13 @@ fr:
         restrict_dependent_destroy:
           has_one: "Vous ne pouvez pas supprimer l'enregistrement car un(e) %{record} dépendant(e) existe"
           has_many: "Vous ne pouvez pas supprimer l'enregistrement parce que les %{record} dépendants existent"
+  # Plage de dates d'une réservation (BookingDecorator#date_range). Extrait en i18n
+  # pour la page client à jeton multilingue (issue #15) — rendu FR inchangé.
+  date_range:
+    same_month_current_year: "du %{from_day} au %{to}"
+    same_month_other_year: "du %{from_day} au %{to_day} %{month_year}"
+    same_year: "du %{from} au %{to_day} %{to_month_year}"
+    different_years: "du %{from_day} %{from_month_year} au %{to_day} %{to_month_year}"
   date:
     abbr_day_names:
     - dim

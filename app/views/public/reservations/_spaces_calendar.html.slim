@@ -17,13 +17,13 @@
         button(
           type="button"
           data-action="click->public--spaces-calendar#prevNights"
-          class="w-7 h-7 rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-emerald-400 hover:text-emerald-600 flex items-center justify-center text-sm transition-colors focus:outline-none"
+          class="relative before:content-[''] before:absolute before:-inset-2 w-7 h-7 rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-emerald-400 hover:text-emerald-600 flex items-center justify-center text-sm transition-colors focus:outline-none"
           aria-label="Nuits précédentes")
           | ←
         button(
           type="button"
           data-action="click->public--spaces-calendar#nextNights"
-          class="w-7 h-7 rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-emerald-400 hover:text-emerald-600 flex items-center justify-center text-sm transition-colors focus:outline-none"
+          class="relative before:content-[''] before:absolute before:-inset-2 w-7 h-7 rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-emerald-400 hover:text-emerald-600 flex items-center justify-center text-sm transition-colors focus:outline-none"
           aria-label="Nuits suivantes")
           | →
 
@@ -31,13 +31,13 @@
     p.text-xs.text-gray-400 Choisissez vos dates à l'étape précédente.
   - else
     .overflow-x-auto.-mx-5.px-5(data-public--spaces-calendar-target="scrollArea")
-      table.border-collapse style="min-width: #{130 + @stay_nights.size * 90}px"
+      table.border-collapse style="min-width: #{130 + @stay_nights.size * 104}px"
 
         thead
           tr
             th.text-left.py-2.pr-4.text-xs.font-normal.text-gray-400.whitespace-nowrap.sticky.left-5.z-10.bg-white style="width:130px"
             - @stay_nights.each_with_index do |night, i|
-              th.text-center.py-2.px-1 style="width:90px"
+              th.text-center.py-2.px-1 style="width:104px"
                 p.text-xs.font-bold.text-gray-600 = "Nuit #{i + 1}"
                 p.text-xs.text-gray-400.font-normal = "#{fr_short_days[night.wday]} #{night.strftime("%-d/%-m")}"
 
