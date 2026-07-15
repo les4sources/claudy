@@ -57,8 +57,12 @@ RSpec.describe Stripe::CompletedCheckoutService do
   end
 
   it "ne plante pas sur un paiement historique sans séjour" do
-    payment = Payment.create!(booking: booking, amount_cents: 48_500,
-                              status: "pending", payment_method: "card")
+    # Donnée LEGACY d'avant le verrouillage Phase 4 (aucun stay_id) : on
+    # contourne la validation pour reproduire l'état réel en base. Le webhook
+    # doit rester robuste sur ces enregistrements historiques.
+    payment = Payment.new(booking: booking, amount_cents: 48_500,
+                          status: "pending", payment_method: "card")
+    payment.save!(validate: false)
 
     expect { described_class.new(payment: payment).run!(webhook_params) }.not_to raise_error
 

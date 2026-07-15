@@ -60,8 +60,13 @@ RSpec.describe Payments::PayService do
 
   context "paiement historique (booking seul, pas de stay)" do
     it "retombe sur la page booking" do
-      payment = Payment.create!(booking: booking, amount_cents: 24_250,
-                                status: "pending", payment_method: "card")
+      # Donnée LEGACY : un Payment persisté avant le verrouillage Phase 4, donc
+      # sans stay_id. On contourne la validation (save(validate: false)) pour
+      # reproduire fidèlement l'état en base — le repli production sur la page
+      # booking doit rester couvert pour ces enregistrements historiques.
+      payment = Payment.new(booking: booking, amount_cents: 24_250,
+                            status: "pending", payment_method: "card")
+      payment.save!(validate: false)
 
       args = captured_args_for(payment)
 

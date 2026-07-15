@@ -17,12 +17,17 @@ class Payment < ApplicationRecord
   # notify ActiveRecord that the default sort order should be created_at
   self.implicit_order_column = :created_at
 
-  # Stay-first (issue #26, Phase 2) : le séjour est devenu l'ancre du paiement.
-  # Le booking n'est plus obligatoire — un séjour sans hébergement (camping,
-  # espaces) n'en a pas. Il reste renseigné pour tout le canal historique, et la
-  # colonne `booking_id` ne sera retirée que bien plus tard (epic ultérieur).
+  # Stay-first (issue #26, Phase 2 puis Phase 4) : le séjour est devenu l'ANCRE
+  # du paiement. Le booking n'est plus obligatoire — un séjour sans hébergement
+  # (camping, espaces) n'en a pas. Il reste renseigné pour tout le canal
+  # historique, et la colonne `booking_id` ne sera retirée que bien plus tard.
   belongs_to :booking, optional: true
-  belongs_to :stay, optional: true
+  # Phase 4 (« verrouillage ») : le stay devient OBLIGATOIRE. On retire
+  # `optional: true` pour réactiver la validation de présence par défaut de
+  # `belongs_to` — un Payment sans stay_id est désormais invalide. Les données
+  # legacy déjà persistées sans stay ne sont pas re-validées (pas de re-save),
+  # et sont rattrapées par `rake payments:backfill_stay_from_booking`.
+  belongs_to :stay
 
   monetize :amount_cents, allow_nil: false
 
