@@ -39,7 +39,15 @@ module Stays
           departure_date: @booking.to_date,
           total_amount_cents: @booking.price_cents.to_i
         )
-        StayItem.create!(stay: stay, bookable: @booking)
+        # On n'arrive ici que si live_stay_for est nil (pas de StayItem vivant → Stay
+        # vivant). Un StayItem vivant PEUT toutefois subsister en pointant vers un Stay
+        # soft-deleted (état latent improbable) : dans ce cas on le REPOINTE vers le
+        # Stay neuf plutôt que d'en créer un second — sinon deux StayItem vivants pour
+        # un même booking (l'unicité est scoped sur stay_id, donc autorisés). find_or_
+        # initialize garantit exactement UN StayItem vivant par booking.
+        item = StayItem.find_or_initialize_by(bookable: @booking)
+        item.stay = stay
+        item.save!
         stay
       end
     end

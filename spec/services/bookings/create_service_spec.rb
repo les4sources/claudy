@@ -55,4 +55,18 @@ RSpec.describe Bookings::CreateService do
 
     expect(Customer.where(email: "repeat@example.com").count).to eq(1)
   end
+
+  # Trou fermé (epic #26, Phase 3) : `payments_attributes` n'est plus permis dans
+  # booking_params. Une requête forgée qui nicherait un paiement ne doit créer AUCUN
+  # Payment (sinon il serait sauvé sans stay_id, avant EnsureForBooking).
+  it "ignore un payments_attributes forgé : aucun Payment n'est créé, le Stay l'est" do
+    forged = params(payments_attributes: [{ amount: "150", payment_method: "cash" }])
+    service = described_class.new
+
+    expect { expect(service.run(forged)).to be(true) }.not_to change(Payment, :count)
+
+    booking = service.booking.reload
+    expect(booking.payments).to be_empty
+    expect(booking.stay).to be_present
+  end
 end

@@ -76,4 +76,36 @@ RSpec.describe Stays::EnsureForBooking do
       expect(StayItem.where(bookable: booking).count).to eq(1)
     end
   end
+
+  # État latent (improbable mais possible) : un StayItem VIVANT pointant vers un
+  # Stay soft-deleted. `booking.stay` (double scope vivant) vaut alors nil, donc
+  # EnsureForBooking est rappelé. Sans le repoint, il créerait un 2e StayItem vivant
+  # (unicité scoped sur stay_id ⇒ autorisé) et divergerait du compteur du backfill.
+  describe "état latent : StayItem vivant → Stay soft-deleted" do
+    def build_latent_state
+      booking = build_booking(email: "latent@example.com")
+      dead_stay = described_class.call(booking)
+      dead_stay.soft_delete!(validate: false)
+      # Le soft-delete du Stay cascade sur son StayItem : on le ressuscite pour
+      # reconstruire l'état exact « StayItem vivant → Stay mort ».
+      StayItem.with_deleted do
+        StayItem.unscoped
+          .find_by(bookable_id: booking.id, bookable_type: "Booking")
+          .update_column(:deleted_at, nil)
+      end
+      [booking.reload, dead_stay]
+    end
+
+    it "repointe le StayItem orphelin au lieu d'en créer un second" do
+      booking, dead_stay = build_latent_state
+      expect(booking.stay).to be_nil
+      expect(StayItem.where(bookable: booking).count).to eq(1)
+
+      new_stay = described_class.call(booking)
+
+      expect(StayItem.where(bookable: booking).count).to eq(1)
+      expect(new_stay.id).not_to eq(dead_stay.id)
+      expect(booking.reload.stay).to eq(new_stay)
+    end
+  end
 end

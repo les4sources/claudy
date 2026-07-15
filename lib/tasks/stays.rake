@@ -33,11 +33,17 @@ namespace :stays do
   end
 end
 
-# Compte les Bookings (deleted inclus) dépourvus d'un StayItem vivant. Passe par
-# les StayItem vivants pour n'exclure QUE les rattachements actifs, cohérent avec
-# la clé d'idempotence booking.stay.
+# Compte les Bookings (deleted inclus) dépourvus d'un Stay VIVANT. « Rattaché » =
+# StayItem vivant pointant vers un Stay vivant — exactement la même définition que
+# booking.stay et que Stays::EnsureForBooking#live_stay_for, sinon skip et count
+# divergent dans le cas latent « StayItem vivant → Stay soft-deleted ».
+# On restreint aux stay_id vivants via le default scope de Stay : `joins(:stay)`
+# n'applique PAS le default scope de la table jointe (il compterait les Stays
+# soft-deleted), d'où le sous-select explicite `stay_id: Stay.select(:id)`.
 def bookings_without_live_stay
-  linked_ids = StayItem.where(bookable_type: "Booking").pluck(:bookable_id)
+  linked_ids = StayItem
+    .where(bookable_type: "Booking", stay_id: Stay.select(:id))
+    .pluck(:bookable_id)
   Booking.with_deleted do
     Booking.unscoped.where.not(id: linked_ids).count
   end
