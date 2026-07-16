@@ -66,6 +66,28 @@ class Stay < ApplicationRecord
     Payment.where(stay_id: id).or(Payment.where(booking_id: booking_ids))
   end
 
+  # --- Montant dû / soldé (epic #55, Phase 1) -----------------------------
+  # « Soldé » n'est PAS un 4e statut : c'est simplement le statut `paid`
+  # existant (epic #26), exprimé ici en euros via des helpers réutilisables.
+
+  # Total effectivement encaissé (paiements au statut `paid`).
+  def amount_paid_cents
+    payments.paid.sum(:amount_cents)
+  end
+
+  # Reste dû = total du séjour − encaissé. Peut être négatif en cas de
+  # trop-perçu (remboursement à traiter à la main) ; `settled?` le tolère.
+  def amount_due_cents
+    total_amount_cents.to_i - amount_paid_cents
+  end
+
+  # Séjour soldé : au moins un paiement encaissé ET plus rien à devoir. La
+  # condition `amount_paid_cents.positive?` préserve le garde-fou « 0 € sans
+  # paiement ne bascule pas en soldé par l'effet de bord d'un 0 >= 0 ».
+  def settled?
+    amount_paid_cents.positive? && amount_due_cents <= 0
+  end
+
   # Recompute aggregate dates / amount from the attached items (min arrival,
   # max departure, sum of prices). Booking and SpaceBooking both expose
   # from_date/to_date/price_cents.
@@ -74,11 +96,9 @@ class Stay < ApplicationRecord
   # dont le total est à 0 € et sans paiement reste « pending » (et ne bascule
   # pas en « paid » par l'effet de bord d'un `0 >= 0`).
   def set_payment_status
-    paid_cents = payments.paid.sum(:amount_cents)
-
-    status = if paid_cents.positive? && paid_cents >= total_amount_cents.to_i
+    status = if settled?
       "paid"
-    elsif paid_cents.positive?
+    elsif amount_paid_cents.positive?
       "partially_paid"
     else
       "pending"
@@ -118,7 +138,12 @@ class Stay < ApplicationRecord
     items = bookables
     arrivals = items.map { |b| b.try(:from_date) }.compact
     departures = items.map { |b| b.try(:to_date) }.compact
-    amount = items.sum { |b| b.try(:price_cents).to_i }
+    # Le montant agrège désormais les activités réservées (epic #55, Phase 1) :
+    # bookables (hébergement/espaces) + activités ACTIVES (hors annulées). Les
+    # DATES restent dérivées des SEULS bookables — une activité ne déborde
+    # jamais les bornes du calendrier du séjour.
+    amount = items.sum { |b| b.try(:price_cents).to_i } +
+             experience_bookings.active.sum(&:price_cents)
     update!(
       arrival_date: arrivals.min,
       departure_date: departures.max,
