@@ -19,13 +19,26 @@
 # Toute méthode absente est traitée comme vide / zéro — le draft minimal n'a
 # besoin que de #lodging + #nights.
 class PricingModel
-  Line = Struct.new(:label, :amount_cents, keyword_init: true) do
+  # `category` (epic #55, Phase 1) tague la nature de la ligne (ex : `:experience`)
+  # pour permettre au devis d'isoler les activités du reste. `to_h` reste
+  # INCHANGÉ ({label:, amount_cents:}) — l'UI et l'email le consomment tel quel.
+  Line = Struct.new(:label, :amount_cents, :category, keyword_init: true) do
     def to_h
       { label: label, amount_cents: amount_cents }
     end
   end
 
-  Quote = Struct.new(:lines, :total_cents, :deposit_cents, :deposit_rate, keyword_init: true) do
+  # `experiences_cents` (epic #55, Phase 1) : part des activités dans le total.
+  # `total_cents` reste le total COMPLET (activités comprises) pour l'affichage
+  # funnel ; `total_excluding_experiences_cents` en retire les activités —
+  # c'est cette base qui pilote l'acompte et le montant persisté du Stay tant
+  # que les activités ne sont pas encore réservées (phases suivantes).
+  Quote = Struct.new(:lines, :total_cents, :deposit_cents, :deposit_rate,
+                     :experiences_cents, keyword_init: true) do
+    def total_excluding_experiences_cents
+      total_cents.to_i - experiences_cents.to_i
+    end
+
     def breakdown
       lines.map(&:to_h)
     end
@@ -62,9 +75,14 @@ class PricingModel
     lines.concat(dog_lines)
 
     total = lines.sum(&:amount_cents)
-    deposit = (total * @deposit_rate).round
+    # Les activités sont exclues de l'assiette de l'acompte (epic #55, Phase 1) :
+    # on ne demande pas d'acompte sur des activités pas encore confirmées par
+    # l'équipe. L'acompte porte donc sur le total HORS activités.
+    experiences = lines.select { |line| line.category == :experience }.sum(&:amount_cents)
+    deposit = ((total - experiences) * @deposit_rate).round
 
     Quote.new(lines: lines, total_cents: total,
+              experiences_cents: experiences,
               deposit_cents: deposit, deposit_rate: @deposit_rate)
   end
 
@@ -219,16 +237,19 @@ class PricingModel
   end
 
   # --- Expériences (Experience) : forfait fixe + €/pers ---
+  # Le calcul vit dans `Pricing::ExperienceLine` (source de vérité unique,
+  # epic #55). Les lignes sont taguées `category: :experience` pour que le
+  # devis puisse les isoler de l'assiette de l'acompte.
   def experience_lines
     Array(read(:experiences)).filter_map do |entry|
       exp = Experience.find_by(id: entry[:id])
       next if exp.nil?
       participants = entry[:participants].to_i
       next if participants < 1
-      amount = exp.fixed_price_cents.to_i + exp.price_cents.to_i * participants
+      amount = Pricing::ExperienceLine.amount_cents(exp, participants: participants)
       next if amount < 1
       label_parts = [exp.name, "#{participants} pers"]
-      Line.new(label: label_parts.join(" — "), amount_cents: amount)
+      Line.new(label: label_parts.join(" — "), amount_cents: amount, category: :experience)
     end
   end
 

@@ -146,4 +146,36 @@ RSpec.describe Reservations::Builder do
       expect(Stay.count).to eq(0)
     end
   end
+
+  # ------------------------------------------------------------------------
+  # Epic #55, Phase 1 — Fondations composite : les activités n'entrent NI dans
+  # le total persisté du Stay NI dans l'acompte tant qu'aucun ExperienceBooking
+  # n'est créé (fix « montant fantôme »). Le devis funnel garde le total complet.
+  # ------------------------------------------------------------------------
+  describe "activités exclues du total persisté et de l'acompte (epic #55, Phase 1)" do
+    let!(:experience) { Experience.create!(name: "Atelier vannerie", fixed_price_cents: 5_000, price_cents: 1_500) }
+
+    def draft_with_activity
+      draft(experiences: [{ id: experience.id, participants: 2 }])
+    end
+
+    it "ne persiste aucun ExperienceBooking et exclut les activités du total + acompte" do
+      builder = described_class.new(draft: draft_with_activity)
+      expect(builder.run).to be(true)
+
+      # Phase 1 : le Builder ne crée pas encore les ExperienceBooking.
+      expect(builder.stay.experience_bookings).to be_empty
+      # Hulotte 2 nuits = 485 + 260 = 745 € ; les activités (8 000 c) n'y entrent pas.
+      expect(builder.stay.total_amount_cents).to eq(74_500)
+      # Acompte 50 % HORS activités = 372,50 €.
+      expect(builder.payment.amount_cents).to eq(37_250)
+    end
+
+    it "expose néanmoins le total complet (activités comprises) via le devis funnel" do
+      builder = described_class.new(draft: draft_with_activity)
+      # 745 € hébergement + (5 000 + 1 500×2) = 8 000 c d'activité = 82 500 c affichés.
+      expect(builder.quote.total_cents).to eq(82_500)
+      expect(builder.quote.total_excluding_experiences_cents).to eq(74_500)
+    end
+  end
 end

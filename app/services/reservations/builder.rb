@@ -47,13 +47,18 @@ module Reservations
         # via lodging_id + dates. Un séjour sans hébergement (camping, espaces)
         # n'en crée donc plus : le « Booking fantôme » disparaît.
         @booking = draft.lodging.present? ? build_booking!(quote) : nil
+        # Fix « montant fantôme » de l'acompte (epic #55, Phase 1) : le total
+        # persisté et l'acompte EXCLUENT les activités. Tant qu'aucun
+        # ExperienceBooking n'est créé (phases suivantes), les activités
+        # n'entrent NI dans l'acompte NI dans le total du Stay ; elles y
+        # entreront via `Stay#recompute_aggregates!` une fois réservées.
         @stay = Stay.create!(
           customer: @customer,
           source: "reservation",
           status: "pending",
           arrival_date: draft.arrival_date,
           departure_date: draft.departure_date,
-          total_amount_cents: quote.total_cents,
+          total_amount_cents: quote.total_excluding_experiences_cents,
           notes: internal_notes
         )
         @stay.stay_items.create!(bookable: @booking) if @booking
@@ -131,8 +136,11 @@ module Reservations
         payment_status: "pending",
         platform: "web",
         lodging_id: draft.lodging_id,
-        price_cents: quote.total_cents,
-        shown_price_cents: quote.total_cents
+        # Occupation d'hébergement : son prix suit le total HORS activités
+        # (fix montant fantôme, epic #55 Phase 1) — cohérent avec le
+        # `total_amount_cents` du Stay et l'assiette de l'acompte.
+        price_cents: quote.total_excluding_experiences_cents,
+        shown_price_cents: quote.total_excluding_experiences_cents
       )
       booking.generate_token
       booking.save!

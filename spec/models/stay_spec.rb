@@ -179,4 +179,80 @@ RSpec.describe Stay, type: :model do
       expect(Stay.from_source(nil)).to include(reservation, tally)
     end
   end
+
+  describe "#recompute_aggregates! avec activités (epic #55, Phase 1)" do
+    let(:stay) { Stay.create!(customer: customer) }
+    let(:experience) { Experience.create!(name: "Atelier pain", fixed_price_cents: 5_000, price_cents: 1_500) }
+    let(:availability) do
+      # Date volontairement HORS de la fenêtre de l'hébergement pour prouver que
+      # les activités ne déplacent pas les bornes du séjour.
+      ExperienceAvailability.create!(experience: experience, available_on: Date.new(2026, 7, 10), starts_at: "10:00")
+    end
+
+    before do
+      stay.stay_items.create!(bookable: booking(from: Date.new(2026, 7, 1), to: Date.new(2026, 7, 3), price_cents: 20_000))
+    end
+
+    it "ajoute les activités ACTIVES au total, sans toucher aux dates" do
+      ExperienceBooking.create!(experience_availability: availability, stay: stay, participants: 3)
+
+      stay.recompute_aggregates!
+
+      # 20 000 (hébergement) + 5 000 (forfait fixe) + 1 500 × 3 (participants) = 29 500
+      expect(stay.total_amount_cents).to eq(29_500)
+      # Dates dérivées des SEULS bookables — l'activité du 10/07 ne les bouge pas.
+      expect(stay.arrival_date).to eq(Date.new(2026, 7, 1))
+      expect(stay.departure_date).to eq(Date.new(2026, 7, 3))
+    end
+
+    it "exclut les activités annulées" do
+      ExperienceBooking.create!(experience_availability: availability, stay: stay, participants: 3, status: "cancelled")
+
+      stay.recompute_aggregates!
+
+      expect(stay.total_amount_cents).to eq(20_000) # hébergement seul
+    end
+  end
+
+  describe "#amount_due_cents / #settled? (epic #55, Phase 1)" do
+    let(:stay) { Stay.create!(customer: customer, total_amount_cents: 20_000) }
+
+    def pay(cents, status)
+      b = booking(from: Date.new(2026, 7, 1), to: Date.new(2026, 7, 3), price_cents: 20_000)
+      stay.stay_items.create!(bookable: b)
+      Payment.create!(booking: b, stay: stay, amount_cents: cents, status: status, payment_method: "card")
+    end
+
+    it "montant dû = total tant que rien n'est encaissé" do
+      expect(stay.amount_paid_cents).to eq(0)
+      expect(stay.amount_due_cents).to eq(20_000)
+      expect(stay).not_to be_settled
+    end
+
+    it "réduit le dû du montant de l'acompte encaissé" do
+      pay(5_000, "paid")
+      expect(stay.amount_paid_cents).to eq(5_000)
+      expect(stay.amount_due_cents).to eq(15_000)
+      expect(stay).not_to be_settled
+    end
+
+    it "ignore les paiements non encaissés dans le calcul du dû" do
+      pay(20_000, "pending")
+      expect(stay.amount_paid_cents).to eq(0)
+      expect(stay.amount_due_cents).to eq(20_000)
+      expect(stay).not_to be_settled
+    end
+
+    it "est soldé quand l'encaissé couvre le total" do
+      pay(20_000, "paid")
+      expect(stay.amount_due_cents).to eq(0)
+      expect(stay).to be_settled
+    end
+
+    it "un séjour à 0 € sans paiement n'est PAS soldé (garde-fou 0 >= 0)" do
+      zero = Stay.create!(customer: customer, total_amount_cents: 0)
+      expect(zero.amount_due_cents).to eq(0)
+      expect(zero).not_to be_settled
+    end
+  end
 end
