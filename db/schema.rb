@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_14_013705) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_16_011705) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -410,6 +410,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_14_013705) do
     t.datetime "updated_at", null: false
     t.datetime "deleted_at", precision: nil
     t.string "color"
+  end
+
+  create_table "payment_versions", force: :cascade do |t|
+    t.string "item_type", null: false
+    t.uuid "item_id", null: false
+    t.string "event", null: false
+    t.string "whodunnit"
+    t.text "object"
+    t.datetime "created_at"
+    t.text "object_changes"
+    t.index ["item_type", "item_id"], name: "index_payment_versions_on_item_type_and_item_id"
   end
 
   create_table "payments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

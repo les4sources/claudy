@@ -49,14 +49,10 @@ RSpec.describe "Payment — booking_id nullable (epic #26, Phase 4)", type: :mod
         .not_to change { Payment.with_deleted { Payment.unscoped.count } }
     end
 
-    # NOTE (dette technique réelle, HORS périmètre Phase 4) : PaperTrail ne versionne
-    # PAS correctement Payment. La table `versions` a `item_id` en bigint alors que
-    # `Payment` a une clé primaire UUID : chaque version de Payment est écrite avec
-    # `item_id = 0` (cast UUID→bigint) et `payment.versions` ne retrouve donc rien.
-    # L'assertion PaperTrail d'origine était structurellement invérifiable et flaky
-    # (collision sur item_id = 0) : on ne la rejoue pas ici, la voir « verte » aurait
-    # menti. Correctif propre (à planifier hors de cette PR) : migrer `versions.item_id`
-    # en string (impacte TOUS les modèles audités) ou retirer `has_paper_trail` de
-    # Payment si l'audit n'est pas requis.
+    # NOTE (résolu depuis, issue #52) : le trou d'auditabilité PaperTrail décrit ici
+    # (table `versions` en `item_id bigint` incompatible avec la PK UUID de Payment)
+    # est refermé. Payment est désormais versionné dans une table dédiée
+    # `payment_versions` (`item_id uuid`) via `PaymentVersion`. La preuve
+    # d'auditabilité vit dans `spec/models/payment_paper_trail_spec.rb`.
   end
 end

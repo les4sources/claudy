@@ -31,7 +31,9 @@ class Payment < ApplicationRecord
 
   monetize :amount_cents, allow_nil: false
 
-  has_paper_trail
+  # Table de versions dédiée : la PK de Payment est un UUID, incompatible avec
+  # `versions.item_id bigint` (issue #52). Voir `PaymentVersion`.
+  has_paper_trail versions: { class_name: "PaymentVersion" }
   has_soft_deletion default_scope: true
 
   validates :amount, numericality: { greater_than: 0.0 }
