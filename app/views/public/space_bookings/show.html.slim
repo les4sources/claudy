@@ -1,27 +1,34 @@
-- content_for :meta_title, "Ma réservation d'espaces aux 4 Sources"
+- content_for :meta_title, t(".meta_title")
+
+- faq_url = "https://les4sources.notion.site/FAQ-des-espaces-aux-4-Sources-2232b856420d4d718cd769732920e46d"
+- contact_email = "sejours@les4sources.be"
 
 - content_for :page_header do
   = render 'layouts/public/components/page_header',
-           title: @space_booking.confirmed? ? "Votre réservation d'espaces aux 4 Sources" : "Votre demande de réservation d'espaces"
+           title: @space_booking.confirmed? ? t(".title_confirmed") : t(".title_pending")
 
 - content_for :page_banner do
   .text-sm.leading-6.text-white.text-center
-    | <strong class="font-semibold">Une question </strong>au sujet de votre réservation?&nbsp;
-    <a href="https://les4sources.notion.site/FAQ-des-espaces-aux-4-Sources-2232b856420d4d718cd769732920e46d" target="_blank" class="flex-none rounded-full bg-gray-900 ml-2 py-1 px-3.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900">Consultez la FAQ <span aria-hidden="true">&rarr;</span></a>
+    = t(".banner_question_html")
+    = link_to faq_url, target: "_blank", class: "flex-none rounded-full bg-gray-900 ml-2 py-1 px-3.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900" do
+      = t(".banner_faq_cta")
+      span<(aria-hidden="true") &rarr;
 
-= render "public/space_bookings/status_callout", 
+= render "public/language_menu"
+
+= render "public/space_bookings/status_callout",
          space_booking: @space_booking
 
 .space-y-8
   .overflow-hidden.bg-teal-50.sm:rounded-lg
     .px-4.py-5.sm:px-6
       h3.text-lg.font-medium.leading-6.text-gray-900
-        | Votre réservation
+        = t(".heading")
     .border-t.border-teal-200.px-4.py-5.sm:px-6
       dl.grid.grid-cols-1.gap-x-4.gap-y-8.sm:grid-cols-2
         .sm:col-span-1
           dt.text-base.font-medium.text-gray-500
-            | Vos informations 
+            = t(".your_details")
           dd.mt-1.text-base.text-gray-900
             = @space_booking.public__name
             - if @space_booking.object.phone.presence
@@ -32,12 +39,12 @@
             	= mail_to @space_booking.email, class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
         .sm:col-span-1
           dt.text-base.font-medium.text-gray-500
-            | Dates de votre réservation
+            = t(".your_dates")
           dd.mt-1.text-base.text-gray-900(class="#{@space_booking.declined? ? "line-through" : nil}")
             | #{@space_booking.date_range} (#{@space_booking.duration})
         .sm:col-span-2
           dt.text-base.font-medium.text-gray-500
-            | Espace(s)
+            = t(".spaces")
           dd.mt-1.text-base.text-gray-900
             table
               tbody
@@ -49,17 +56,15 @@
   - if @space_booking.confirmed?
     .mt-4.p-8.text-center.text-lg
       div
-        |
-          À votre arrivée, passez un coup de fil au Veilleur du lieu (#{ENV.fetch('PHONE_NUMBER')}), qui viendra vous accueillir. 
+        = t(".arrival_call_html", phone: ENV.fetch('PHONE_NUMBER'))
         br
-        |
-          Ce numéro ne sert qu'à signaler les arrivées 😌
+        = t(".arrival_call_note")
 
   - if @space_booking.has_options?
     .overflow-hidden.bg-teal-50.sm:rounded-lg
       .px-4.py-5.sm:px-6
         h3.text-lg.font-medium.leading-6.text-gray-900
-          | Vos options
+          = t(".options_heading")
       .border-t.border-teal-200.px-4.py-5.sm:px-6
         .grid.grid-cols-3.gap-4
           - if @space_booking.option_kitchenware?
@@ -68,71 +73,69 @@
                 = vite_image_tag "images/space_options/kitchenware.jpg", alt: "", class: "h-16 w-16"
               .min-w-0.flex-1
                 p.text-base.font-medium.text-gray-900
-                  | Vaisselle
+                  = t(".option_kitchenware")
           - if @space_booking.option_beamer?
             .relative.flex.items-center.space-x-3.rounded-lg.border.bg-white.px-6.py-2.shadow-sm(class="#{@space_booking.option_beamer? ? "border-green-300" : "border-gray-300 opacity-50" }")
               .flex-shrink-0
                 = vite_image_tag "images/space_options/beamer.jpg", alt: "", class: "h-16 w-16"
               .min-w-0.flex-1
                 p.text-base.font-medium.text-gray-900
-                  | Projecteur
+                  = t(".option_beamer")
           - if @space_booking.option_wifi?
             .relative.flex.items-center.space-x-3.rounded-lg.border.bg-white.px-6.py-2.shadow-sm(class="#{@space_booking.option_wifi? ? "border-green-300" : "border-gray-300 opacity-50" }")
               .flex-shrink-0
                 = vite_image_tag "images/space_options/wifi.jpg", alt: "", class: "h-16 w-16"
               .min-w-0.flex-1
                 p.text-base.font-medium.text-gray-900
-                  | Connexion WiFi
+                  = t(".option_wifi")
           - if @space_booking.option_tables?
             .relative.flex.items-center.space-x-3.rounded-lg.border.bg-white.px-6.py-2.shadow-sm(class="#{@space_booking.option_tables? ? "border-green-300" : "border-gray-300 opacity-50" }")
               .flex-shrink-0
                 = vite_image_tag "images/space_options/tables.jpg", alt: "", class: "h-16 w-16"
               .min-w-0.flex-1
                 p.text-base.font-medium.text-gray-900
-                  | Tables
+                  = t(".option_tables")
 
   - if @space_booking.confirmed? && @space_booking.current? && @space_booking.option_wifi?
     .mt-8.overflow-hidden.bg-teal-50.sm:rounded-lg
       .px-4.py-5.sm:px-6
         h3.text-lg.font-medium.leading-6.text-gray-900
-          | Votre connexion WiFi
+          = t(".wifi_heading")
       .border-t.border-teal-200.px-4.py-5.sm:px-6
         .grid.gap-y-4
           .text-base
             .font-medium.text-gray-500
-              | Nom du réseau
+              = t(".wifi_network")
             .mt-1.text-gray-900
               = Rails.application.credentials.dig(:wifi, :ssid)
 
           .text-base
             .font-medium.text-gray-500
-              | Mot de passe
+              = t(".wifi_password")
             .mt-1.text-gray-900
               = Rails.application.credentials.dig(:wifi, :password)
 
           .text-base.font-medium.text-gray-900.sm:col-span-2
-            | 
-              Le réseau n'est pas disponible? Contactez le ou la veilleur·se afin 
-              d'activer la connexion sans fil.
+            = t(".wifi_unavailable")
 
   - if !@space_booking.declined?
     .overflow-hidden.bg-teal-50.sm:rounded-lg
       .px-4.py-5.sm:px-6
         h3.text-lg.font-medium.leading-6.text-gray-900
-          | Votre paiement
+          = t(".payment_heading")
       .border-t.border-teal-200.px-4.py-5.sm:px-6
         dl.grid.grid-cols-1.gap-x-4.gap-y-8.sm:grid-cols-2
           .sm:col-span-1
             dt.text-base.font-medium.text-gray-500
-              | Montant de votre réservation 
+              = t(".payment_amount")
             dd.mt-1.text-base.text-gray-900
               - if @space_booking.price_cents == 0
-                | Offert
+                = t(".payment_free")
               - else
                 = @space_booking.price
           .sm:col-span-1
             dt.text-base.font-medium.text-gray-500
-              | Votre moyen de paiement
+              = t(".payment_method_label")
             dd.mt-1.text-base.text-gray-900
               = @space_booking.payment_method
 
@@ -142,32 +145,31 @@
                 .h-4.bg-green-600.text-sm.font-medium.text-green-100.text-center.p-0.5.leading-none.rounded-full[style="width: 100%"]
                   | 100%
               .mt-2
-                | 💶 Nous avons bien reçu votre paiement en intégralité
+                = t(".payment_full_received")
             - elsif @space_booking.paid_percent == 0
               .mt-2
-                | 💶 Nous n'avons enregistré la réception d'aucun paiement
+                = t(".payment_none")
             - else
               .w-full.bg-gray-200.rounded-full
                 .h-4.bg-green-600.text-sm.font-medium.text-green-100.text-center.p-0.5.leading-none.rounded-full[style="width: #{@space_booking.paid_percent}%"]
                   = @space_booking.paid_amount
               .mt-2
-                | 💶 Nous avons reçu un paiement pour un montant de <strong>#{@space_booking.paid_amount}</strong>
+                = t(".payment_partial_html", amount: @space_booking.paid_amount)
 
             - if @space_booking.object.deposit_amount.presence
               .mt-2
-                | 
-                | ♻️ Votre caution: <strong>#{@space_booking.deposit_amount}</strong>
+                = t(".deposit_html", amount: @space_booking.deposit_amount)
 
           - if @space_booking.attributes["payment_method"] == "bank_transfer" && @space_booking.price_cents > 0
             - if @space_booking.confirmed? && !@space_booking.paid?
               .sm:col-span-2
                 dt.text-base.font-medium.text-gray-500
-                  | Pour effectuer votre virement bancaire
+                  = t(".transfer_heading")
                 dd.mt-1.text-base.text-gray-900
                   - if @space_booking.object.advance_amount.presence && @space_booking.object.advance_amount > 0
-                    | Merci de régler votre acompte de #{@space_booking.advance_amount} sur le compte des 4 Sources et de nous envoyer une preuve de paiement pour le traitement rapide de votre réservation 👍
+                    = t(".transfer_with_advance", amount: @space_booking.advance_amount)
                   - else
-                    | Merci de régler vos paiements sur le compte des 4 Sources et de nous envoyer une preuve de paiement pour le traitement rapide de votre réservation 👍
+                    = t(".transfer_without_advance")
                   .mt-2.font-mono
                     | Les 4 Sources
                     br
@@ -175,17 +177,17 @@
                     br
                     | BIC: TRIOBEBB
                   .mt-2
-                    | Communication: <em>Réservation espaces #{@space_booking.object.token}</em>
+                    = t(".transfer_communication_html", token: @space_booking.object.token)
             - elsif @space_booking.pending?
               .sm:col-span-2
                 dt.text-base.font-medium.text-gray-500
-                  | Pour effectuer votre virement bancaire
+                  = t(".transfer_heading")
                 dd.mt-1.text-base.text-gray-900
-                  | Les informations relatives au paiement seront disponibles lorsque votre réservation aura été confirmée par notre équipe.
+                  = t(".transfer_pending")
 
           - if @space_booking.invoice_status == "requested"
             .text-base.font-medium.text-gray-900.sm:col-span-2
-              | 🧾 Vous avez demandé de recevoir une facture
+              = t(".invoice_requested")
 
   - if @space_booking.public_notes.presence
     .relative.bg-slate-50.sm:rounded-lg
@@ -197,6 +199,6 @@
 
   .content
     p.font-bold
-    	|
-    		Pour toute question ou information au sujet de votre réservation, nous vous invitons à 
-    		<a href="https://les4sources.notion.site/FAQ-des-espaces-aux-4-Sources-2232b856420d4d718cd769732920e46d" target="_blank">consulter la FAQ des espaces</a> et à nous contacter par email à <a href="mailto:sejours@les4sources.be">sejours@les4sources.be</a>.
+      = t(".footer_html",
+            faq_link: link_to(t(".footer_faq_link_label"), faq_url, target: "_blank"),
+            email: mail_to(contact_email, contact_email))

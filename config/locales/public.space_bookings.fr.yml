@@ -1,0 +1,62 @@
+# Chaînes de la page client à jeton « réservation d'espaces » (issue #15, Phase 3).
+# Fichier séparé (comme public.bookings.*.yml) pour isoler ce chantier.
+# La spec de parité `spec/i18n/public_locales_parity_spec.rb` garantit que les
+# 3 langues portent exactement les mêmes clés.
+fr:
+  public:
+    space_bookings:
+      show:
+        meta_title: "Ma réservation d'espaces aux 4 Sources"
+        title_confirmed: "Votre réservation d'espaces aux 4 Sources"
+        title_pending: "Votre demande de réservation d'espaces"
+        banner_question_html: "<strong class=\"font-semibold\">Une question </strong>au sujet de votre réservation?"
+        banner_faq_cta: "Consultez la FAQ"
+        heading: "Votre réservation"
+        your_details: "Vos informations"
+        your_dates: "Dates de votre réservation"
+        spaces: "Espace(s)"
+        arrival_call_html: "À votre arrivée, passez un coup de fil au Veilleur du lieu (%{phone}), qui viendra vous accueillir."
+        arrival_call_note: "Ce numéro ne sert qu'à signaler les arrivées 😌"
+        options_heading: "Vos options"
+        option_kitchenware: "Vaisselle"
+        option_beamer: "Projecteur"
+        option_wifi: "Connexion WiFi"
+        option_tables: "Tables"
+        wifi_heading: "Votre connexion WiFi"
+        wifi_network: "Nom du réseau"
+        wifi_password: "Mot de passe"
+        wifi_unavailable: "Le réseau n'est pas disponible? Contactez le ou la veilleur·se afin d'activer la connexion sans fil."
+        payment_heading: "Votre paiement"
+        payment_amount: "Montant de votre réservation"
+        payment_free: "Offert"
+        payment_method_label: "Votre moyen de paiement"
+        payment_full_received: "💶 Nous avons bien reçu votre paiement en intégralité"
+        payment_none: "💶 Nous n'avons enregistré la réception d'aucun paiement"
+        payment_partial_html: "💶 Nous avons reçu un paiement pour un montant de <strong>%{amount}</strong>"
+        deposit_html: "♻️ Votre caution: <strong>%{amount}</strong>"
+        transfer_heading: "Pour effectuer votre virement bancaire"
+        transfer_with_advance: "Merci de régler votre acompte de %{amount} sur le compte des 4 Sources et de nous envoyer une preuve de paiement pour le traitement rapide de votre réservation 👍"
+        transfer_without_advance: "Merci de régler vos paiements sur le compte des 4 Sources et de nous envoyer une preuve de paiement pour le traitement rapide de votre réservation 👍"
+        transfer_communication_html: "Communication: <em>Réservation espaces %{token}</em>"
+        transfer_pending: "Les informations relatives au paiement seront disponibles lorsque votre réservation aura été confirmée par notre équipe."
+        invoice_requested: "🧾 Vous avez demandé de recevoir une facture"
+        footer_html: "Pour toute question ou information au sujet de votre réservation, nous vous invitons à %{faq_link} et à nous contacter par email à %{email}."
+        footer_faq_link_label: "consulter la FAQ des espaces"
+      status_callout:
+        pending: "Votre réservation est en attente de confirmation par notre équipe."
+        canceled: "Votre réservation est annulée."
+        declined: "Votre réservation n'a pas pu être confirmée."
+        confirmed: "Votre réservation est confirmée."
+      duration:
+        two_hours: "2 heures"
+        evening: "soirée"
+        day: "journée"
+        fullday: "journée + soirée"
+        see_notes: "voir notes"
+        unspecified: "période non précisée"
+      payment_method:
+        cash: "En liquide à votre arrivée"
+        bank_transfer: "Virement bancaire"
+      date_range:
+        single: "le %{date}"
+        range: "du %{from} au %{to}"
