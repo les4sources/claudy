@@ -1,16 +1,17 @@
 module Public
-  # Funnel B2C natif /reservation — 3 étapes (tranche 2).
-  #   1. dates     — dates du séjour + groupe + animal
-  #   2. compose   — composition : hébergement, espaces, camping, hamacs
-  #   3. contact   — coordonnées client → commit + Stripe
+  # Funnel B2C natif /reservation — 4 étapes (tranche 2 + epic #55 Phase 4).
+  #   1. dates      — dates du séjour + groupe + animal
+  #   2. compose    — composition : hébergement, espaces, camping, hamacs
+  #   3. activities — activités : créneaux datés dans la fenêtre du séjour (Phase 4)
+  #   4. contact    — coordonnées client → commit + Stripe
   class ReservationsController < Public::BaseController
     layout "public_sheet"
 
     DRAFT_SESSION_KEY = :reservation_draft
     HALL_SLOT_COUNT   = 6
 
-    before_action :load_draft, only: %i[dates advance_dates compose quote advance_contact activities contact create]
-    skip_before_action :verify_authenticity_token, only: %i[advance_contact]
+    before_action :load_draft, only: %i[dates advance_dates compose quote advance_compose activities advance_activities contact create]
+    skip_before_action :verify_authenticity_token, only: %i[advance_compose]
 
     def start
       redirect_to public_reservation_dates_path
@@ -55,14 +56,31 @@ module Public
       @lodging_availability  = build_stay_availability(@lodgings, @stay_nights)
     end
 
-    # Étape activités (accès via email token — pas dans le funnel direct).
+    # Étape 3 — activités (epic #55, Phase 4). Contrairement au rail email
+    # (ActivitySelections), l'utilisateur choisit ici un CRÉNEAU précis
+    # (`ExperienceAvailability`) dans la fenêtre `[arrivée, départ)` de son
+    # séjour : un `ExperienceBooking` exige un créneau daté (NOT NULL). On
+    # n'affiche donc que les Experiences ayant au moins un créneau non complet
+    # dans cette fenêtre. Étape toujours franchissable — la relance email
+    # (Phase 5) couvrira les activités hors fenêtre / ajoutées après coup.
     def activities
-      @experiences = bookable_experiences
-      @quote = @draft.quote
+      @availabilities = bookable_availabilities.reject(&:full?)
+      @quote          = @draft.quote
     end
 
-    # Transition étape 2 → 3 (advance depuis le Stimulus quote controller).
-    def advance_contact
+    # Transition étape 2 → 3 (advance depuis le Stimulus quote controller ou le
+    # fallback noscript). Le draft est déjà persisté par le POST /devis à chaque
+    # changement ; on reçoit ici l'ultime état de composition avant les activités.
+    def advance_compose
+      persist_draft(merged_draft_params)
+      redirect_to public_reservation_activities_path
+    end
+
+    # Transition étape 3 → 4 : persiste les sélections de créneau (chaque entrée
+    # porte `id` = experience_id, `availability_id` = créneau daté et
+    # `participants`) puis passe aux coordonnées. Les entrées sans participant
+    # sont écartées par `merged_draft_params`.
+    def advance_activities
       persist_draft(merged_draft_params)
       redirect_to public_reservation_contact_path
     end
@@ -166,7 +184,7 @@ module Public
         meals: [:kind, :people], halls: [:kind, :date, :period],
         campings: [:kind, :people, :nights], vans: [:nights],
         pizza_parties: [:people], hamacs: [:kind, :count],
-        experiences: [:id, :participants]
+        experiences: [:id, :availability_id, :participants]
       ).to_h
       %i[meals halls campings vans pizza_parties hamacs experiences].each do |key|
         next unless permitted[key].is_a?(Hash)
@@ -200,13 +218,25 @@ module Public
       end
     end
 
-    def bookable_experiences
-      Experience.where(deleted_at: nil).where.not(name: "Pizza Party").order(:name)
-    end
-
     def bookable_lodgings
       names = ["La Hulotte", "La Chevêche", "Le Grand-Duc"]
       Lodging.where(name: names).sort_by { |l| names.index(l.name) || 99 }
+    end
+
+    # Créneaux d'activité réservables au funnel : ceux qui tombent dans la
+    # fenêtre `[arrivée, départ)` du séjour en cours, hors « Pizza Party » (gérée
+    # à part) et hors activités supprimées. Le tri experience/date/heure permet
+    # de les regrouper par activité dans la vue. Sans dates, aucune activité.
+    def bookable_availabilities
+      return ExperienceAvailability.none if @draft.arrival_date.blank? || @draft.departure_date.blank?
+
+      ExperienceAvailability
+        .includes(:experience, :experience_bookings)
+        .where(available_on: @draft.arrival_date...@draft.departure_date)
+        .joins(:experience)
+        .where(experiences: { deleted_at: nil })
+        .where.not(experiences: { name: "Pizza Party" })
+        .order(:available_on, :starts_at)
     end
 
     # Construit les données pour le Gantt calendrier des disponibilités (1 mois).

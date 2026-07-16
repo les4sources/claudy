@@ -2,22 +2,10 @@
 .min-h-screen.bg-gray-50(data-controller="public--avail-modal")
   .max-w-3xl.mx-auto.px-4.py-10(data-controller="public--reservation-quote"
     data-public--reservation-quote-url-value=public_reservation_quote_path
-    data-public--reservation-quote-contact-url-value=public_reservation_contact_path)
+    data-public--reservation-quote-next-url-value=public_reservation_activities_path)
 
     / ── Step indicator ───────────────────────────────────────
-    .flex.items-center.mb-10
-      .flex.items-center.flex-shrink-0
-        = link_to public_reservation_dates_path, class: "flex items-center group relative before:content-[''] before:absolute before:-inset-1" do
-          .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-emerald-100.text-emerald-700.border-2.border-emerald-400.group-hover:border-emerald-600.transition-colors ✓
-          span.ml-2.text-sm.text-emerald-600.hidden.sm:inline.group-hover:underline Votre séjour
-      .flex-1.h-px.mx-4.bg-emerald-200
-      .flex.items-center.flex-shrink-0
-        .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-emerald-600.text-white.shadow-sm 2
-        span.ml-2.text-sm.font-semibold.text-emerald-700.hidden.sm:inline Composition
-      .flex-1.h-px.mx-4.bg-gray-200
-      .flex.items-center.flex-shrink-0
-        .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.border-2.border-gray-200.bg-white.text-gray-400 3
-        span.ml-2.text-sm.text-gray-400.hidden.sm:inline Coordonnées
+    = render "public/reservations/step_indicator", current: 2
 
     / ── Résumé dates ─────────────────────────────────────────
     - if @draft.arrival_date && @draft.departure_date
@@ -71,9 +59,9 @@
         / CTA
         .flex.justify-end.mt-2
           button type="button" data-action="public--reservation-quote#advance" class="rounded-xl bg-emerald-600 text-white px-8 py-3 text-sm font-semibold hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 shadow-sm transition-colors"
-            | Continuer vers mes coordonnées →
+            | Continuer vers les activités →
         noscript
-          = f.submit "Continuer (sans JS)", formaction: public_reservation_advance_contact_path, formmethod: :post, class: "rounded-xl bg-emerald-600 text-white px-8 py-3 text-sm font-semibold"
+          = f.submit "Continuer (sans JS)", formaction: public_reservation_advance_compose_path, formmethod: :post, class: "rounded-xl bg-emerald-600 text-white px-8 py-3 text-sm font-semibold"
 
     / ── Infos complémentaires ────────────────────────────────
     .mt-8.grid.grid-cols-1.sm:grid-cols-2.lg:grid-cols-3.gap-4
@@ -133,4 +121,4 @@
             path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"
       .p-6
         = turbo_frame_tag "reservation_quote"
-          = render "public/reservations/quote_panel", quote: @quote, draft: @draft
+          = render "public/reservations/quote_panel", quote: @quote, draft: @draft, continue_path: public_reservation_activities_path, continue_label: "Continuer vers les activités →"

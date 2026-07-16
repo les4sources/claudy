@@ -3,20 +3,7 @@
   .max-w-5xl.mx-auto.px-4.py-10
 
     / ── Step indicator ───────────────────────────────────────
-    .flex.items-center.mb-10
-      .flex.items-center.flex-shrink-0
-        = link_to public_reservation_dates_path, class: "flex items-center group relative before:content-[''] before:absolute before:-inset-1" do
-          .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-emerald-100.text-emerald-700.border-2.border-emerald-400.group-hover:border-emerald-600.transition-colors ✓
-          span.ml-2.text-sm.text-emerald-600.hidden.sm:inline.group-hover:underline Votre séjour
-      .flex-1.h-px.mx-4.bg-emerald-200
-      .flex.items-center.flex-shrink-0
-        = link_to public_reservation_compose_path, class: "flex items-center group relative before:content-[''] before:absolute before:-inset-1" do
-          .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-emerald-100.text-emerald-700.border-2.border-emerald-400.group-hover:border-emerald-600.transition-colors ✓
-          span.ml-2.text-sm.text-emerald-600.hidden.sm:inline.group-hover:underline Composition
-      .flex-1.h-px.mx-4.bg-emerald-200
-      .flex.items-center.flex-shrink-0
-        .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-emerald-600.text-white.shadow-sm 3
-        span.ml-2.text-sm.font-semibold.text-emerald-700.hidden.sm:inline Coordonnées
+    = render "public/reservations/step_indicator", current: 4
 
     / ── Titre ────────────────────────────────────────────────
     .mb-8
@@ -91,4 +78,4 @@
 
       / ── Devis sidebar ──────────────────────────────────────
       aside.lg:col-span-1
-        = render "public/reservations/quote_panel", quote: @quote, draft: @draft
+        = render "public/reservations/quote_panel", quote: @quote, draft: @draft, continue_path: nil

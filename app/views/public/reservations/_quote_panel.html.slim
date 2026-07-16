@@ -1,4 +1,9 @@
-/ Panneau devis — sticky sur desktop, visible sur mobile avant le CTA
+/ Panneau devis — sticky sur desktop, visible sur mobile avant le CTA.
+/ `continue_path` / `continue_label` (optionnels) pilotent le CTA « Continuer » :
+/ vers les activités depuis la composition, vers les coordonnées depuis les
+/ activités. Passer `continue_path: nil` masque le CTA (ex. sur l'étape finale).
+- continue_path  = local_assigns.fetch(:continue_path, public_reservation_contact_path)
+- continue_label = local_assigns.fetch(:continue_label, "Continuer vers mes coordonnées →")
 - includes_nye = draft.arrival_date.present? && draft.departure_date.present? && (draft.arrival_date..draft.departure_date).any? { |d| d.month == 12 && d.day == 31 }
 
 .sticky.top-6
@@ -35,7 +40,7 @@
       .px-5.pb-4
         p.text-xs.text-gray-400 Tous les prix sont TVAC 0 % — aucune TVA supplémentaire.
 
-  - if quote.total_cents.positive?
-    = link_to "Continuer vers mes coordonnées →", public_reservation_contact_path,
+  - if quote.total_cents.positive? && continue_path
+    = link_to continue_label, continue_path,
         class: "mt-4 block text-center rounded-xl bg-emerald-600 text-white px-4 py-3 text-sm font-semibold hover:bg-emerald-700 shadow-sm transition-colors",
         data: { turbo_frame: "_top" }

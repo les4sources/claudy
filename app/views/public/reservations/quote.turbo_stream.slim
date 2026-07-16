@@ -1,6 +1,6 @@
 = turbo_stream.replace "reservation_quote" do
   = turbo_frame_tag "reservation_quote"
-    = render "public/reservations/quote_panel", quote: @quote, draft: @draft
+    = render "public/reservations/quote_panel", quote: @quote, draft: @draft, continue_path: public_reservation_activities_path, continue_label: "Continuer vers les activités →"
 
 = turbo_stream.replace "quote_total_badge" do
   span id="quote_total_badge"
