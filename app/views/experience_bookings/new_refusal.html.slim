@@ -1,0 +1,22 @@
+- content_for :page_header do
+  h1.text-2xl.font-bold Refuser une activité
+
+.max-w-xl.mx-auto.bg-white.p-6.rounded-lg.shadow-sm
+  .mb-4
+    .font-semibold = @booking.experience.name
+    .text-sm.text-gray-600
+      = @booking.experience_availability.available_on.strftime("%-d/%m/%Y")
+      | &nbsp;à&nbsp;
+      = @booking.experience_availability.starts_at
+      | &nbsp;—&nbsp;
+      = "#{@booking.participants} participant#{"s" if @booking.participants.to_i > 1}"
+    .text-sm.text-gray-500 = @booking.stay.customer.name
+
+  = form_with url: refuse_experience_booking_path(@booking), method: :patch, local: true do |f|
+    .mb-4
+      label.block.text-sm.font-medium.mb-1 for="experience_booking_refusal_reason" Raison du refus (obligatoire)
+      = f.text_area "experience_booking[refusal_reason]", id: "experience_booking_refusal_reason", rows: 4, required: true, class: "w-full border rounded p-2"
+      p.text-xs.text-gray-500.mt-1 Cette raison sera transmise au client avec une invitation à re-choisir un créneau.
+    .flex.gap-2
+      = f.submit "Confirmer le refus", class: "px-4 py-2 bg-red-600 text-white rounded font-medium hover:bg-red-700"
+      = link_to "Annuler", experience_bookings_path, class: "px-4 py-2 bg-gray-100 text-gray-700 rounded font-medium hover:bg-gray-200"

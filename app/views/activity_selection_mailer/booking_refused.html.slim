@@ -1,0 +1,21 @@
+p Bonjour #{@stay.customer.first_name.presence || ""},
+
+p
+  | Malheureusement, votre activité «&nbsp;
+  strong = @experience.name
+  | &nbsp;» n'a pas pu être retenue sur le créneau demandé.
+
+p
+  strong Raison&nbsp;:
+  = " #{@reason}"
+
+p
+  | Vous pouvez re-choisir un autre créneau à tout moment via votre page de
+  | sélection d'activités&nbsp;:
+
+p
+  = link_to "Choisir un autre créneau", @selection_url
+
+p
+  | En cas de question, contactez Malau au +32(0)490/46.77.10 ou à
+  = link_to "sejours@les4sources.be", "mailto:sejours@les4sources.be"

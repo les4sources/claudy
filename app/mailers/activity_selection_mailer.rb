@@ -25,10 +25,40 @@ class ActivitySelectionMailer < ApplicationMailer
     )
   end
 
+  # Notification au client quand le porteur VALIDE son activité (epic #55, Phase 2).
+  def booking_confirmed(experience_booking)
+    @booking = experience_booking
+    @stay = experience_booking.stay
+    @experience = experience_booking.experience
+    mail(
+      to: @stay.customer.email,
+      subject: "Votre activité « #{@experience.name} » est confirmée"
+    )
+  end
+
+  # Notification au client quand le porteur REFUSE son activité (epic #55,
+  # Phase 2) : on transmet la raison et on invite à re-choisir un créneau via
+  # la page de sélection à jeton existante.
+  def booking_refused(experience_booking)
+    @booking = experience_booking
+    @stay = experience_booking.stay
+    @experience = experience_booking.experience
+    @reason = experience_booking.refusal_reason
+    @selection_url = public_activity_selection_url(@stay.activity_selection_token,
+                                                   host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be"))
+    mail(
+      to: @stay.customer.email,
+      subject: "Votre activité « #{@experience.name} » n'a pas pu être retenue"
+    )
+  end
+
   # Email aux animateurs concernés (un par activité demandée).
   def animateur_notification(stay)
     @stay = stay
     @bookings = stay.experience_bookings.includes(experience_availability: :experience).active
+    # Hôte des liens de validation/refus à jeton (epic #55, Phase 2) — même
+    # source que les autres liens de ce mailer, pour rester stable en test.
+    @link_host = ENV.fetch("APPLICATION_HOST", "app.les4sources.be")
     return if @bookings.empty?
 
     animateur_emails = @bookings.filter_map { |b| b.experience.human&.email }.uniq.compact

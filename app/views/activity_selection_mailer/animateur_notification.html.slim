@@ -31,7 +31,17 @@ p
           td = b.experience_availability.available_on.strftime("%-d %B %Y")
           td = "#{b.experience_availability.starts_at}#{b.experience_availability.ends_at ? " → #{b.experience_availability.ends_at}" : ""}"
           td = "#{b.participants} participant#{"s" if b.participants.to_i > 1}"
+          - if b.pending?
+            td
+              = link_to "Valider", activity_validation_url(b.validation_token, host: @link_host)
+              | &nbsp;·&nbsp;
+              = link_to "Refuser", activity_validation_refuse_url(b.validation_token, host: @link_host)
+
+  p
+    em
+      | « Valider » confirme le créneau en un clic. « Refuser » vous demandera
+      | de vous connecter et d'indiquer une raison (transmise au client).
 
 p
   em
-    | Répondez directement à cet email. Malau est en copie.
+    | Vous pouvez aussi tout gérer depuis votre compte porteur. Malau est en copie.

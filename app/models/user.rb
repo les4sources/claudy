@@ -19,4 +19,21 @@ class User < ApplicationRecord
          :recoverable, :rememberable, :validatable
 
   belongs_to :human, optional: true
+
+  # Distinction porteur / admin global pour le scoping de la validation
+  # d'activités (epic #55, Phase 2). Le repo n'a PAS de rôle « admin » dédié
+  # (ni Pundit/CanCan), et le compte d'accueil générique n'est rattaché à aucun
+  # `Human` (cf. le fallback `current_user&.human || Human.first` de
+  # BaseController). On s'appuie donc sur ce fait établi :
+  #   * utilisateur SANS `human` = staff/accueil = admin global (voit tout) ;
+  #   * utilisateur AVEC `human` = porteur, cloisonné à SES activités.
+  # Règle « fail-closed » : un porteur ne voit jamais que les siennes, même s'il
+  # n'en porte aucune (liste vide) — jamais toutes par accident.
+  def porteur?
+    human_id.present?
+  end
+
+  def global_admin?
+    human_id.blank?
+  end
 end
