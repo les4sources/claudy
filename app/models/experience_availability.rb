@@ -32,6 +32,18 @@ class ExperienceAvailability < ApplicationRecord
   scope :upcoming, -> { where("available_on >= ?", Date.today).order(:available_on, :starts_at) }
   scope :for_date_range, ->(from, to) { where(available_on: from..to) }
 
+  # Créneaux sur lesquels un utilisateur a le droit d'agir (créer une activité
+  # sur un séjour — epic #55, Phase 6). MÊME mécanisme de cloisonnement que
+  # `ExperienceBooking.for_user` : tout pour un admin global, seulement les
+  # créneaux de SES propres `Experience` pour un porteur. Centralisé ici pour
+  # qu'un porteur qui cible le créneau d'un autre porteur obtienne un `nil`
+  # (jamais une création réussie hors périmètre).
+  def self.for_user(user)
+    return all if user.nil? || user.global_admin?
+
+    joins(:experience).where(experiences: { human_id: user.human_id })
+  end
+
   def ends_at
     return nil unless starts_at.present? && effective_duration.positive?
     h, m = starts_at.split(":").map(&:to_i)

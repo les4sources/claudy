@@ -5,6 +5,11 @@ class StaysController < BaseController
   # par le contrôleur Stimulus stay-details (fetch + innerHTML). [tranche 1]
   def show
     @stay = Stay.includes(stay_items: :bookable, customer: []).find(params[:id]).decorate
+    # Créneaux proposables à l'ajout d'activité (epic #55, Phase 6), bornés au
+    # périmètre de l'utilisateur (admin global : tout ; porteur : ses activités).
+    @assignable_availabilities = ExperienceAvailability.for_user(current_user)
+                                                       .upcoming
+                                                       .includes(:experience)
     render layout: false
   end
 

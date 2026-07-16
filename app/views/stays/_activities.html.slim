@@ -1,0 +1,51 @@
+/ CRUD admin des activités d'un séjour (epic #55, Phase 6). Enveloppé dans un
+/ turbo-frame : après ajout / édition / retrait, le contrôleur redirige vers
+/ stay_path et Turbo remplace CE fragment en place, sans recharger la modale.
+= turbo_frame_tag "stay_#{@stay.id}_activities" do
+  .border-t.border-gray-200.pt-3
+    h4.text-sm.font-medium.text-gray-700.mb-2 Activités
+    - active_bookings = @stay.experience_bookings.active.includes(experience_availability: :experience).to_a
+    - if active_bookings.empty?
+      p.text-sm.text-gray-500.mb-2 Aucune activité sur ce séjour.
+    - else
+      ul.divide-y.divide-gray-100.mb-3
+        - active_bookings.each do |booking|
+          li.py-2.text-sm.flex.items-center.justify-between.gap-3
+            .min-w-0
+              .text-gray-900.font-medium.truncate = booking.experience.name
+              .text-gray-500
+                = booking.experience_availability.available_on&.strftime("%-d/%m/%Y")
+                | &nbsp;à&nbsp;
+                = booking.experience_availability.starts_at
+              - if booking.pending?
+                span.inline-block.mt-1.px-2.py-0.5.rounded.text-xs.font-medium.bg-amber-100.text-amber-800 À valider
+              - else
+                span.inline-block.mt-1.px-2.py-0.5.rounded.text-xs.font-medium.bg-green-100.text-green-800 Validée
+            .flex.items-center.gap-2.shrink-0
+              = form_with url: experience_booking_path(booking), method: :patch, class: "flex items-center gap-1" do |f|
+                = f.number_field "experience_booking[participants]", value: booking.participants, min: 1, class: "w-14 rounded border-gray-300 text-sm py-1"
+                = f.submit "OK", class: "px-2 py-1 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700"
+              = button_to "Retirer", experience_booking_path(booking), method: :delete, class: "px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium hover:bg-red-200"
+
+    / Ajout d'une activité au séjour.
+    - if @assignable_availabilities.present?
+      .bg-gray-50.rounded-md.p-3.mt-2
+        .text-xs.font-medium.text-gray-600.mb-2 Ajouter une activité
+        = form_with url: stay_experience_bookings_path(@stay), method: :post, class: "space-y-2" do |f|
+          = f.select "experience_booking[experience_availability_id]",
+                     options_for_select(@assignable_availabilities.map { |a| [a.label, a.id] }),
+                     {}, class: "block w-full rounded-md border-gray-300 text-sm"
+          .flex.items-center.gap-3
+            label.text-xs.text-gray-600.flex.items-center.gap-1
+              | Participants
+              = f.number_field "experience_booking[participants]", value: 1, min: 1, class: "w-16 rounded border-gray-300 text-sm py-1"
+            .flex.items-center.gap-3.text-xs.text-gray-700
+              label.flex.items-center.gap-1
+                = f.radio_button "experience_booking[status]", "pending", checked: true
+                | À valider par le porteur
+              label.flex.items-center.gap-1
+                = f.radio_button "experience_booking[status]", "confirmed"
+                | Déjà validée
+          = f.submit "Ajouter l'activité", class: "px-3 py-1.5 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700"
+    - else
+      p.text-xs.text-gray-400.mt-2 Aucun créneau disponible à proposer.

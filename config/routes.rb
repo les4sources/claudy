@@ -104,8 +104,13 @@ Rails.application.routes.draw do
   end
 
   # Détails d'un séjour (chargé dans une modale Turbo Frame depuis la page client).
-  resources :stays, only: [:show]
-  resources :experience_bookings, only: [:index, :update] do
+  # Le CRUD admin d'une activité SUR un séjour (epic #55, Phase 6) est imbriqué
+  # sous cette ressource : la création porte TOUJOURS le séjour dans l'URL, si
+  # bien qu'une activité ne peut jamais naître sans son séjour d'attache.
+  resources :stays, only: [:show] do
+    resources :experience_bookings, only: [:create]
+  end
+  resources :experience_bookings, only: [:index, :update, :destroy] do
     member do
       patch :confirm         # validation par le porteur (canal admin)
       get   :new_refusal     # formulaire de refus (raison obligatoire)

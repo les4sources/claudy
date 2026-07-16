@@ -17,6 +17,12 @@ class ExperienceBooking < ApplicationRecord
   # créneau demandé. Un refus porte TOUJOURS une raison (cf. validation).
   STATUSES = %w[pending confirmed refused cancelled].freeze
 
+  # Statuts que l'admin peut POSER à la création d'une activité (epic #55,
+  # Phase 6) : soit `pending` (à valider par le porteur — flux Phase 2), soit
+  # `confirmed` (déjà validé — court-circuite la validation). On ne crée jamais
+  # directement un `refused` (raison obligatoire, flux dédié) ni un `cancelled`.
+  ADMIN_CREATABLE_STATUSES = %w[pending confirmed].freeze
+
   # Portée du jeton signé embarqué dans l'email au porteur : il ne vaut QUE
   # pour la validation d'UN `ExperienceBooking` précis (cf. `#validation_token`).
   TOKEN_PURPOSE = :validate_experience_booking

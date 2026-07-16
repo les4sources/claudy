@@ -33,6 +33,8 @@
             span.text-gray-500
               = bookable.try(:status)
 
+  = render "stays/activities"
+
   - bk = @stay.primary_bookable
   - group = bk&.try(:group_name).presence
   .border-t.border-gray-200.pt-4
