@@ -135,15 +135,17 @@ Rails.application.routes.draw do
 
   get "reports/lodging/:id", to: "reports#lodging", as: :lodging_reports
 
-  # Funnel B2C natif /reservation — 3 étapes (tranche 2).
-  # Étape 1 : dates + groupe + animal  →  Étape 2 : composition  →  Étape 3 : coordonnées
+  # Funnel B2C natif /reservation — 4 étapes (tranche 2 + epic #55 Phase 4).
+  # Étape 1 : dates + groupe + animal  →  Étape 2 : composition  →  Étape 3 :
+  # activités  →  Étape 4 : coordonnées
   get  "reservation",              to: "public/reservations#start",              as: :public_reservation_start
   get  "reservation/sejour",       to: "public/reservations#dates",              as: :public_reservation_dates
   post "reservation/sejour",       to: "public/reservations#advance_dates",      as: :public_reservation_advance_dates
   get  "reservation/composer",     to: "public/reservations#compose",            as: :public_reservation_compose
   post "reservation/devis",        to: "public/reservations#quote",              as: :public_reservation_quote
-  post "reservation/composer",     to: "public/reservations#advance_contact",    as: :public_reservation_advance_contact
+  post "reservation/composer",     to: "public/reservations#advance_compose",    as: :public_reservation_advance_compose
   get  "reservation/activites",    to: "public/reservations#activities",         as: :public_reservation_activities
+  post "reservation/activites",    to: "public/reservations#advance_activities", as: :public_reservation_advance_activities
   get  "reservation/coordonnees",  to: "public/reservations#contact",            as: :public_reservation_contact
   post "reservation/coordonnees",  to: "public/reservations#create",             as: :public_reservation_create
   get  "reservation/calendrier",   to: "public/reservations#availability_calendar", as: :public_reservation_availability_calendar

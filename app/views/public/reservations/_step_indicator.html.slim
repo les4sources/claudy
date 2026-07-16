@@ -1,0 +1,21 @@
+/ Step indicator partagé du funnel /reservation — 4 étapes (epic #55, Phase 4).
+/ `current` = numéro de l'étape active (1..4). Les étapes déjà franchies sont
+/ cliquables (retour en arrière) ; l'étape active et les suivantes ne le sont pas.
+- steps = [{ n: 1, label: "Votre séjour", path: public_reservation_dates_path }, { n: 2, label: "Composition", path: public_reservation_compose_path }, { n: 3, label: "Activités", path: public_reservation_activities_path }, { n: 4, label: "Coordonnées", path: public_reservation_contact_path }]
+.flex.items-center.mb-10
+  - steps.each_with_index do |step, idx|
+    - unless idx.zero?
+      .flex-1.h-px.mx-4 class=(step[:n] <= current ? "bg-emerald-200" : "bg-gray-200")
+    - if step[:n] < current
+      .flex.items-center.flex-shrink-0
+        = link_to step[:path], class: "flex items-center group relative before:content-[''] before:absolute before:-inset-1" do
+          .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-emerald-100.text-emerald-700.border-2.border-emerald-400.group-hover:border-emerald-600.transition-colors ✓
+          span.ml-2.text-sm.text-emerald-600.hidden.sm:inline.group-hover:underline = step[:label]
+    - elsif step[:n] == current
+      .flex.items-center.flex-shrink-0
+        .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-emerald-600.text-white.shadow-sm = step[:n]
+        span.ml-2.text-sm.font-semibold.text-emerald-700.hidden.sm:inline = step[:label]
+    - else
+      .flex.items-center.flex-shrink-0
+        .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.border-2.border-gray-200.bg-white.text-gray-400 = step[:n]
+        span.ml-2.text-sm.text-gray-400.hidden.sm:inline = step[:label]

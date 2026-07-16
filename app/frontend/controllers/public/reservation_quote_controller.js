@@ -5,7 +5,7 @@ import { Controller } from "@hotwired/stimulus"
 // formulaire de devis qui répond en Turbo Stream et remplace le panneau.
 export default class extends Controller {
   static targets = ["form"]
-  static values  = { url: String, contactUrl: String }
+  static values  = { url: String, nextUrl: String }
 
   refresh() {
     if (this.hasFormTarget) {
@@ -14,12 +14,12 @@ export default class extends Controller {
   }
 
   // Sauvegarde le draft via quote (même token CSRF que le formulaire) puis
-  // navigue vers l'étape coordonnées. Évite le problème per-form CSRF token
-  // que poserait un formaction vers un endpoint différent.
+  // navigue vers l'étape suivante (les activités — epic #55 Phase 4). Évite le
+  // problème per-form CSRF token que poserait un formaction vers un autre endpoint.
   advance(event) {
     event.preventDefault()
     if (!this.hasFormTarget) {
-      window.location.href = this.contactUrlValue
+      window.location.href = this.nextUrlValue
       return
     }
     const form = this.formTarget
@@ -28,9 +28,9 @@ export default class extends Controller {
       body: new FormData(form),
       headers: { "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content }
     }).then(() => {
-      window.location.href = this.contactUrlValue
+      window.location.href = this.nextUrlValue
     }).catch(() => {
-      window.location.href = this.contactUrlValue
+      window.location.href = this.nextUrlValue
     })
   }
 }

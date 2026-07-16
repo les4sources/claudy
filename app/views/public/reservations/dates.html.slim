@@ -3,18 +3,7 @@
   .max-w-2xl.mx-auto.px-4.py-10
 
     / ── Step indicator ───────────────────────────────────────
-    .flex.items-center.mb-10
-      .flex.items-center.flex-shrink-0
-        .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-emerald-600.text-white.shadow-sm 1
-        span.ml-2.text-sm.font-semibold.text-emerald-700.hidden.sm:inline Votre séjour
-      .flex-1.h-px.mx-4.bg-gray-200
-      .flex.items-center.flex-shrink-0
-        .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.border-2.border-gray-200.bg-white.text-gray-400 2
-        span.ml-2.text-sm.text-gray-400.hidden.sm:inline Composition
-      .flex-1.h-px.mx-4.bg-gray-200
-      .flex.items-center.flex-shrink-0
-        .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.border-2.border-gray-200.bg-white.text-gray-400 3
-        span.ml-2.text-sm.text-gray-400.hidden.sm:inline Coordonnées
+    = render "public/reservations/step_indicator", current: 1
 
     / ── Titre ────────────────────────────────────────────────
     .mb-8

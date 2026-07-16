@@ -47,11 +47,12 @@ module Reservations
         # via lodging_id + dates. Un séjour sans hébergement (camping, espaces)
         # n'en crée donc plus : le « Booking fantôme » disparaît.
         @booking = draft.lodging.present? ? build_booking!(quote) : nil
-        # Fix « montant fantôme » de l'acompte (epic #55, Phase 1) : le total
-        # persisté et l'acompte EXCLUENT les activités. Tant qu'aucun
-        # ExperienceBooking n'est créé (phases suivantes), les activités
-        # n'entrent NI dans l'acompte NI dans le total du Stay ; elles y
-        # entreront via `Stay#recompute_aggregates!` une fois réservées.
+        # Assiette de l'acompte (epic #55, Phase 1) : l'acompte EXCLUT toujours
+        # les activités — on ne demande pas d'avance sur des créneaux pas encore
+        # validés par le porteur (Phase 2). Le TOTAL PRÉVU du Stay, lui, agrège
+        # l'hébergement/espaces + les activités `pending` créées ci-dessous
+        # (sémantique `total_amount_cents` du modèle Stay). Le solde des activités
+        # partira au paiement du solde (Phase 3), une fois le porteur validé.
         @stay = Stay.create!(
           customer: @customer,
           source: "reservation",
@@ -62,8 +63,17 @@ module Reservations
           notes: internal_notes
         )
         @stay.stay_items.create!(bookable: @booking) if @booking
+        # Sélections d'activités du funnel (epic #55, Phase 4) : chaque créneau
+        # choisi devient un ExperienceBooking `pending` rattaché au Stay — de la
+        # MÊME nature que ceux du rail email, donc soumis à la validation porteur.
+        # On réintègre leur montant au total prévu (mais JAMAIS à l'acompte).
+        experiences_total = create_experience_bookings!(@stay)
+        if experiences_total.positive?
+          @stay.update!(total_amount_cents: quote.total_excluding_experiences_cents + experiences_total)
+        end
         # Le paiement est rattaché au Stay dans tous les cas ; le booking n'est
-        # plus qu'une référence de commodité pour le canal historique.
+        # plus qu'une référence de commodité pour le canal historique. Son montant
+        # reste l'acompte HORS activités (`quote.deposit_cents`).
         @payment = Payment.create!(
           booking: @booking,
           stay: @stay,
@@ -119,6 +129,29 @@ module Reservations
       customer.phone = draft.phone if customer.phone.blank?
       customer.save!
       customer
+    end
+
+    # Persiste les sélections de créneau du draft (epic #55, Phase 4) en
+    # `ExperienceBooking` `pending`, dans la transaction courante. Chaque entrée
+    # porte `availability_id` = `ExperienceAvailability` (créneau daté, NOT NULL)
+    # et `participants`. Les entrées sans créneau (ancienne forme
+    # `experiences: [{id, participants}]`, rétrocompat / pricing) sont ignorées :
+    # un ExperienceBooking exige un créneau. Retourne la somme des montants TVAC
+    # des activités créées, pour réintégration au total prévu du Stay.
+    def create_experience_bookings!(stay)
+      Array(draft.experiences).sum(0) do |entry|
+        avail_id     = entry[:availability_id].presence
+        participants = entry[:participants].to_i
+        next 0 if avail_id.blank? || participants < 1
+
+        booking = ExperienceBooking.create!(
+          stay_id: stay.id,
+          experience_availability_id: avail_id,
+          participants: participants,
+          status: "pending"
+        )
+        booking.price_cents
+      end
     end
 
     def build_booking!(quote)

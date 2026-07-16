@@ -178,4 +178,47 @@ RSpec.describe Reservations::Builder do
       expect(builder.quote.total_excluding_experiences_cents).to eq(74_500)
     end
   end
+
+  # ------------------------------------------------------------------------
+  # Epic #55, Phase 4 — Sélection d'activités DANS le funnel : chaque créneau
+  # choisi (experience_availability_id + participants) devient un
+  # ExperienceBooking `pending` rattaché au Stay. Le montant réintègre le total
+  # prévu du séjour mais JAMAIS l'acompte initial (garanti Phase 1).
+  # ------------------------------------------------------------------------
+  describe "activités réservées au funnel (epic #55, Phase 4)" do
+    let!(:experience) { Experience.create!(name: "Balade avec les ânes", fixed_price_cents: 2_000, price_cents: 1_000, max_participants: 8) }
+    let!(:slot) { ExperienceAvailability.create!(experience: experience, available_on: arrival, starts_at: "10:00", max_participants: 8) }
+
+    def draft_with_slot(participants: 3)
+      draft(experiences: [{ id: experience.id, availability_id: slot.id, participants: participants }])
+    end
+
+    it "crée un ExperienceBooking pending rattaché au Stay, avec le bon nombre de participants" do
+      builder = described_class.new(draft: draft_with_slot(participants: 3))
+      expect(builder.run).to be(true)
+
+      bookings = builder.stay.experience_bookings
+      expect(bookings.count).to eq(1)
+      eb = bookings.first
+      expect(eb).to be_pending
+      expect(eb.experience_availability).to eq(slot)
+      expect(eb.participants).to eq(3)
+    end
+
+    it "réintègre les activités au total prévu du Stay mais JAMAIS à l'acompte" do
+      builder = described_class.new(draft: draft_with_slot(participants: 3))
+      builder.run
+
+      # Hulotte 2 nuits = 745 € ; activité = 2 000 + 1 000×3 = 5 000 c.
+      expect(builder.stay.total_amount_cents).to eq(74_500 + 5_000)
+      # Acompte 50 % HORS activités = 372,50 € (inchangé Phase 1).
+      expect(builder.payment.amount_cents).to eq(37_250)
+    end
+
+    it "ignore une entrée sans créneau (rétrocompat de l'ancienne forme experiences)" do
+      builder = described_class.new(draft: draft(experiences: [{ id: experience.id, participants: 2 }]))
+      expect(builder.run).to be(true)
+      expect(builder.stay.experience_bookings).to be_empty
+    end
+  end
 end

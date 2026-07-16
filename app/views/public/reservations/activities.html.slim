@@ -1,54 +1,82 @@
-.max-w-4xl.mx-auto.py-8
-  .mb-4
-    = link_to "← Modifier ma réservation", public_reservation_compose_path, class: "text-sm text-gray-500 hover:text-gray-700"
+/ Étape 3/4 — Activités (epic #55, Phase 4)
+.min-h-screen.bg-gray-50
+  .max-w-5xl.mx-auto.px-4.py-10
 
-  h1.text-2xl.font-semibold.mb-2 Activités
+    / ── Step indicator ───────────────────────────────────────
+    = render "public/reservations/step_indicator", current: 3
 
-  p.text-sm.text-gray-500.mb-6 Vous pouvez ajouter des activités à votre séjour. Notre équipe vous confirmera les disponibilités.
+    / ── Titre ────────────────────────────────────────────────
+    .mb-8
+      h1.text-2xl.font-bold.text-gray-900 Des activités pendant votre séjour ?
+      p.text-sm.text-gray-500.mt-1
+        | Choisissez un créneau dans les dates de votre séjour. Notre équipe confirmera
+        | les disponibilités avec les animateurs·ices — les activités ne sont pas comprises
+        | dans l'acompte.
 
-  = render "public/reservations/stay_summary", draft: @draft
+    / ── Résumé dates ─────────────────────────────────────────
+    - if @draft.arrival_date && @draft.departure_date
+      .flex.items-center.gap-2.mb-6.text-sm.text-gray-600.bg-white.rounded-xl.px-4.py-3.border.border-gray-100.shadow-sm.w-fit
+        span 📅
+        strong = l(@draft.arrival_date, format: :long)
+        span.text-gray-400 →
+        strong = l(@draft.departure_date, format: :long)
+        = link_to "Modifier", public_reservation_compose_path, class: "ml-2 text-xs text-gray-400 hover:text-gray-600 underline"
 
-  .grid.gap-8.lg:grid-cols-3
-    .lg:col-span-2
-      = form_with url: public_reservation_advance_contact_path, method: :post do |f|
+    .grid.gap-8.lg:grid-cols-3
+      .lg:col-span-2
 
-        - if @experiences.empty?
-          p.text-sm.text-gray-400.italic Aucune activité disponible actuellement.
+        - if @availabilities.empty?
+          / ── Aucun créneau dans la fenêtre — étape franchissable ──
+          .rounded-2xl.border.border-gray-200.bg-white.p-8.text-center
+            p.text-gray-500 Aucune activité n'est programmée sur vos dates pour le moment.
+            p.text-sm.text-gray-400.mt-2
+              | Pas d'inquiétude : nous vous enverrons un lien pour choisir vos activités
+              | avant votre arrivée.
+          .mt-6.flex.justify-end
+            = link_to "Continuer vers mes coordonnées →", public_reservation_contact_path,
+                class: "rounded-lg bg-emerald-600 text-white px-6 py-3 text-sm font-medium hover:bg-emerald-700"
 
-        - @experiences.each_with_index do |exp, i|
-          - selected_entry = @draft.experiences.find { |e| e[:id].to_s == exp.id.to_s }
-          - selected_participants = selected_entry&.dig(:participants).to_i
+        - else
+          = form_with url: public_reservation_advance_activities_path, method: :post do |f|
+            - idx = 0
+            - @availabilities.group_by(&:experience).each do |experience, slots|
+              .rounded-2xl.border.border-gray-100.bg-white.shadow-sm.p-5.mb-4
+                .mb-3
+                  h2.text-base.font-semibold.text-gray-900 = experience.name
+                  - if experience.summary.present?
+                    p.text-sm.text-gray-500 = experience.summary
+                  .text-sm.text-emerald-700.mt-1 = Pricing::ExperienceLine.rate_label(experience)
 
-          .rounded-lg.border.border-gray-200.p-4.mb-3
-            .flex.items-start.gap-3
-              input(
-                type="number"
-                name="reservation[experiences][#{i}][participants]"
-                value="#{selected_participants > 0 ? selected_participants : ''}"
-                min="#{exp.min_participants.presence || 1}"
-                max="#{exp.max_participants.presence || ''}"
-                placeholder="0"
-                class="w-20 rounded border-gray-300 text-center mt-0.5 shrink-0"
-              )
-              = hidden_field_tag "reservation[experiences][#{i}][id]", exp.id
-              div
-                .font-medium = exp.name
-                - if exp.summary.present?
-                  .text-sm.text-gray-500 = exp.summary
-                .text-sm.text-emerald-700.mt-1
-                  = Pricing::ExperienceLine.rate_label(exp)
-                - if exp.min_participants.present? || exp.max_participants.present?
-                  .text-xs.text-gray-400
-                    - if exp.min_participants.present? && exp.max_participants.present?
-                      = "#{exp.min_participants}–#{exp.max_participants} participants"
-                    - elsif exp.min_participants.present?
-                      = "Min. #{exp.min_participants} participants"
-                    - else
-                      = "Max. #{exp.max_participants} participants"
+                .space-y-2
+                  - slots.each do |av|
+                    - selected_entry = @draft.experiences.find { |e| e[:availability_id].to_s == av.id.to_s }
+                    - selected_participants = selected_entry&.dig(:participants).to_i
+                    label.flex.items-center.gap-3.rounded-lg.border.border-gray-200.p-3
+                      input(
+                        type="number"
+                        name="reservation[experiences][#{idx}][participants]"
+                        value="#{selected_participants > 0 ? selected_participants : ''}"
+                        min="#{experience.min_participants.presence || 1}"
+                        max="#{av.effective_max_participants || ''}"
+                        placeholder="0"
+                        class="w-20 rounded border-gray-300 text-center shrink-0"
+                      )
+                      = hidden_field_tag "reservation[experiences][#{idx}][id]", av.experience_id
+                      = hidden_field_tag "reservation[experiences][#{idx}][availability_id]", av.id
+                      div.flex-1
+                        .text-sm.font-medium.text-gray-900
+                          = l(av.available_on, format: :long).capitalize
+                        .text-sm.text-gray-600
+                          span.font-medium = av.starts_at
+                          - if av.ends_at
+                            | → #{av.ends_at}
+                          - if av.effective_max_participants
+                            span.text-gray-400.ml-2 = "(max #{av.effective_max_participants} pers.)"
+                    - idx += 1
 
-        .mt-6.flex.justify-between.items-center
-          = link_to "Passer cette étape", public_reservation_contact_path, class: "text-sm text-gray-400 hover:text-gray-600"
-          = f.submit "Continuer →", class: "rounded-lg bg-emerald-600 text-white px-6 py-3 text-sm font-medium hover:bg-emerald-700 cursor-pointer"
+            .mt-6.flex.justify-between.items-center
+              = link_to "Passer cette étape", public_reservation_contact_path, class: "text-sm text-gray-400 hover:text-gray-600"
+              = f.submit "Continuer vers mes coordonnées →", class: "rounded-lg bg-emerald-600 text-white px-6 py-3 text-sm font-medium hover:bg-emerald-700 cursor-pointer"
 
-    aside.lg:col-span-1
-      = render "public/reservations/quote_panel", quote: @quote, draft: @draft
+      aside.lg:col-span-1
+        = render "public/reservations/quote_panel", quote: @quote, draft: @draft, continue_path: nil
