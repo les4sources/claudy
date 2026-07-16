@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "Vue admin — Stays récents (/sejours/recents)", type: :request do
+RSpec.describe "Vue admin — Stays récents (/stays/recents)", type: :request do
   include Devise::Test::IntegrationHelpers
 
   let(:customer) { Customer.create!(email: "recent@example.com", customer_type: "individual") }
@@ -43,6 +43,11 @@ RSpec.describe "Vue admin — Stays récents (/sejours/recents)", type: :request
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Rémi Direct")     # canal reservation
       expect(response.body).to include("Tilda Legacy")    # canal tally_legacy
+    end
+
+    it "lie le nom du client vers sa fiche (accès au détail du séjour)" do
+      get recent_stays_path
+      expect(response.body).to include(%(href="#{customer_path(customer)}"))
     end
 
     it "restreint la liste au canal demandé" do
