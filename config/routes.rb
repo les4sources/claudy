@@ -156,6 +156,11 @@ Rails.application.routes.draw do
   # la cible des redirections Stripe, on la garde courte, comme /reservation/sejour.
   get "sejour/:token", to: "public/stays#show", as: :public_stay
 
+  # Paiement du solde exigible du séjour (epic #55, Phase 3) — POST scellé par le
+  # même jeton que la page client ; crée/rafraîchit le paiement puis part sur
+  # Stripe Checkout.
+  post "sejour/:token/payer-le-solde", to: "public/stay_balance_payments#create", as: :public_stay_balance_payment
+
   namespace :public do
     resources :bookings, only: [:new, :create] do
       get "edit_estimated_arrival", on: :member

@@ -1,0 +1,41 @@
+/ Ventilation du montant EXIGIBLE + bouton « Payer le solde » (epic #55, Phase 3).
+/ « Exigible » = hébergement/espaces + activités VALIDÉES − encaissé. Les activités
+/ EN ATTENTE de validation sont affichées mais NON facturées (non exigibles).
+- if @stay.show_balance_section?
+  .mt-8.border-t.border-gray-200.pt-6(data-stay-balance="true")
+    h3.text-base.font-semibold.leading-6.text-gray-900.mb-4
+      = t("public.stays.balance.heading")
+
+    dl.space-y-2.text-sm
+      .flex.items-center.justify-between
+        dt.text-gray-600 = t("public.stays.balance.lodging_and_spaces")
+        dd.text-gray-900 = @stay.formatted_lodging_and_spaces
+
+      - if @stay.has_confirmed_experiences?
+        .flex.items-center.justify-between
+          dt.text-gray-600 = t("public.stays.balance.experiences_confirmed")
+          dd.text-gray-900 = @stay.formatted_experiences_confirmed
+
+      - if @stay.has_pending_experiences?
+        .flex.items-center.justify-between.text-gray-400(data-balance-pending="true")
+          dt
+            = t("public.stays.balance.experiences_pending")
+            span.ml-1.text-xs.italic = t("public.stays.balance.experiences_pending_note")
+          dd = @stay.formatted_experiences_pending
+
+      - if @stay.amount_paid_cents.positive?
+        .flex.items-center.justify-between.text-green-700
+          dt = t("public.stays.balance.amount_paid")
+          dd = "− #{@stay.formatted_amount_paid}"
+
+      .flex.items-center.justify-between.border-t.border-gray-200.pt-2.mt-2
+        dt.text-base.font-semibold.text-gray-900 = t("public.stays.balance.balance_due")
+        dd.text-lg.font-bold.text-gray-900(data-balance-due="true") = @stay.formatted_balance_due
+
+    - if @stay.show_balance_cta?
+      .mt-5(data-stay-balance-cta="true")
+        = button_to t("public.stays.balance.pay_balance_cta", amount: @stay.formatted_balance_due),
+                    public_stay_balance_payment_path(@stay.token),
+                    method: :post,
+                    data: { turbo: false },
+                    class: "inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"

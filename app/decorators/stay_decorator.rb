@@ -100,4 +100,58 @@ class StayDecorator < ApplicationDecorator
     group = primary_bookable.try(:group_name).presence
     [person.presence, group].compact.join(" · ").presence || "—"
   end
+
+  # --- Ventilation du montant exigible (epic #55, Phase 3) ---------------
+  # Montants formatés en euros pour la page client. On lit l'arithmétique du
+  # modèle (source unique de vérité « total prévu vs exigible »).
+
+  def formatted_amount_paid
+    money(object.amount_paid_cents)
+  end
+
+  def formatted_lodging_and_spaces
+    money(object.lodging_and_spaces_amount_cents)
+  end
+
+  def formatted_experiences_confirmed
+    money(object.experiences_confirmed_amount_cents)
+  end
+
+  def formatted_experiences_pending
+    money(object.experiences_pending_amount_cents)
+  end
+
+  def formatted_balance_due
+    money(object.balance_due_cents)
+  end
+
+  def has_confirmed_experiences?
+    object.experiences_confirmed_amount_cents.positive?
+  end
+
+  def has_pending_experiences?
+    object.experiences_pending_amount_cents.positive?
+  end
+
+  # Faut-il afficher le bloc de ventilation du solde ? Dès qu'il y a quelque
+  # chose à dire : un exigible à régler, un encaissé à créditer, ou des
+  # activités en attente à signaler.
+  def show_balance_section?
+    object.payable_now? ||
+      object.amount_paid_cents.positive? ||
+      has_pending_experiences?
+  end
+
+  # Bouton « Payer le solde » : un exigible strictement positif ET aucun
+  # paiement `pending` déjà en cours (l'acompte non réglé, par exemple, est déjà
+  # couvert par son propre CTA — on n'empile pas deux boutons pour la même dette).
+  def show_balance_cta?
+    object.payable_now? && object.payments.pending.none?
+  end
+
+  private
+
+  def money(cents)
+    h.humanized_money_with_symbol(Money.new(cents.to_i))
+  end
 end

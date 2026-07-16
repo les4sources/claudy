@@ -84,19 +84,78 @@ class Stay < ApplicationRecord
   # Séjour soldé : au moins un paiement encaissé ET plus rien à devoir. La
   # condition `amount_paid_cents.positive?` préserve le garde-fou « 0 € sans
   # paiement ne bascule pas en soldé par l'effet de bord d'un 0 >= 0 ».
+  # Adossé au TOTAL PRÉVU (activités pending incluses) : « tout est couvert, y
+  # compris ce qui reste à valider ». Le STATUT de paiement, lui, s'appuie sur
+  # l'EXIGIBLE (voir plus bas / `set_payment_status`).
   def settled?
     amount_paid_cents.positive? && amount_due_cents <= 0
+  end
+
+  # --- Total prévu vs montant exigible (epic #55, Phase 3) ----------------
+  # Deux notions DISTINCTES cohabitent, à ne pas confondre :
+  #
+  #   • « TOTAL PRÉVU » = `total_amount_cents` = hébergement/espaces + activités
+  #     ACTIVES (pending + confirmed). Ce que le séjour coûtera si tout est
+  #     validé. Sémantique Phase 1 — `amount_due_cents` et `settled?` s'y adossent
+  #     et restent inchangés.
+  #
+  #   • « EXIGIBLE » (payable now) = ce que le client peut/doit régler MAINTENANT
+  #     = total prévu MOINS les activités encore `pending` (pas encore validées
+  #     par le porteur, donc non facturables). On l'exprime comme un DELTA du
+  #     total prévu — et non recalculé depuis les bookables — pour rester
+  #     rigoureusement cohérent avec `total_amount_cents` en toute circonstance
+  #     (y compris un séjour dont le total a été posé directement, sans items).
+  #
+  # `price_cents` d'une activité est CALCULÉ (délègue au barème Pricing) : on
+  # somme donc en Ruby (bloc), jamais en SQL — comme `recompute_aggregates!`.
+
+  # Activités en attente de validation — NON exigibles.
+  def experiences_pending_amount_cents
+    experience_bookings.pending.sum(&:price_cents)
+  end
+
+  # Activités validées par le porteur — exigibles.
+  def experiences_confirmed_amount_cents
+    experience_bookings.confirmed.sum(&:price_cents)
+  end
+
+  # Part hébergement/espaces (bookables) = total prévu − activités actives.
+  def lodging_and_spaces_amount_cents
+    total_amount_cents.to_i -
+      experiences_confirmed_amount_cents -
+      experiences_pending_amount_cents
+  end
+
+  # Assiette EXIGIBLE = hébergement/espaces + activités CONFIRMED
+  #                   = total prévu − activités pending.
+  def payable_amount_cents
+    total_amount_cents.to_i - experiences_pending_amount_cents
+  end
+
+  # Reste dû EXIGIBLE = assiette exigible − encaissé. Peut être négatif en cas
+  # de trop-perçu ; le bouton « Payer le solde » ne s'affiche que s'il est > 0.
+  def balance_due_cents
+    payable_amount_cents - amount_paid_cents
+  end
+
+  # Reste-t-il un solde exigible à encaisser maintenant ?
+  def payable_now?
+    balance_due_cents.positive?
   end
 
   # Recompute aggregate dates / amount from the attached items (min arrival,
   # max departure, sum of prices). Booking and SpaceBooking both expose
   # from_date/to_date/price_cents.
-  # Recalcule le statut de paiement à partir des paiements encaissés. Même
-  # sémantique que `Booking#set_payment_status`, à une nuance près : un séjour
-  # dont le total est à 0 € et sans paiement reste « pending » (et ne bascule
-  # pas en « paid » par l'effet de bord d'un `0 >= 0`).
+  # Recalcule le statut de paiement à partir des paiements encaissés. Il s'adosse
+  # à l'EXIGIBLE (`balance_due_cents`) et NON au total prévu : un séjour dont les
+  # seules dettes restantes sont des activités `pending` (non validées, donc non
+  # facturables) est « paid » dès que l'exigible est couvert (epic #55, Phase 3).
+  # Le garde-fou Phase 1 tient toujours : un séjour à 0 € sans paiement reste
+  # « pending » (pas de bascule par effet de bord d'un `0 >= 0`).
+  # NB : sans activité `pending`, `balance_due_cents == amount_due_cents` — le
+  # comportement est donc identique à la Phase 1 pour tous les séjours existants.
   def set_payment_status
-    status = if settled?
+    status = if amount_paid_cents.positive? && balance_due_cents <= 0
       "paid"
     elsif amount_paid_cents.positive?
       "partially_paid"

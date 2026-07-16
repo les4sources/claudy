@@ -30,3 +30,12 @@ nl:
         stripe_notice: "Deze betaling wordt beheerd door Stripe: wij hebben op geen enkel moment toegang tot uw betaalgegevens."
         pay_cta: "Betaling →"
         received_heading: "Ontvangen betalingen"
+      balance:
+        heading: "Saldo van uw verblijf"
+        lodging_and_spaces: "Verblijf & ruimtes"
+        experiences_confirmed: "Bevestigde activiteiten"
+        experiences_pending: "Activiteiten in afwachting van bevestiging"
+        experiences_pending_note: "(niet verschuldigd zolang niet bevestigd)"
+        amount_paid: "Reeds betaald"
+        balance_due: "Nog te betalen"
+        pay_balance_cta: "Betaal het saldo van %{amount}"
