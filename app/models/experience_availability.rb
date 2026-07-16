@@ -39,9 +39,15 @@ class ExperienceAvailability < ApplicationRecord
   # qu'un porteur qui cible le créneau d'un autre porteur obtienne un `nil`
   # (jamais une création réussie hors périmètre).
   def self.for_user(user)
-    return all if user.nil? || user.global_admin?
+    # Toujours borné aux Experience VIVANTES : un créneau dont l'activité a été
+    # supprimée (soft-delete, `has_soft_deletion default_scope: true`) ne doit
+    # jamais être proposé — sinon `#label` fait `experience.name` sur `nil` et
+    # plante le rendu de la modale séjour (epic #55 Phase 6). Même filtre que le
+    # funnel `bookable_availabilities`.
+    scope = joins(:experience).where(experiences: { deleted_at: nil })
+    return scope if user.nil? || user.global_admin?
 
-    joins(:experience).where(experiences: { human_id: user.human_id })
+    scope.where(experiences: { human_id: user.human_id })
   end
 
   def ends_at
