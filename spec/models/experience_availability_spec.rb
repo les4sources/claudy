@@ -84,4 +84,25 @@ RSpec.describe ExperienceAvailability, type: :model do
       expect(block).to be_valid
     end
   end
+
+  # Epic #55 Phase 6 — les créneaux proposables à l'ajout d'activité sur un séjour
+  # ne doivent jamais inclure une activité SUPPRIMÉE : `experience` serait alors
+  # `nil` (soft-delete default_scope) et `#label` (→ `experience.name`) planterait
+  # le rendu de la modale séjour pour l'admin.
+  describe ".for_user" do
+    let(:admin) { User.create!(email: "staff@les4sources.be", password: "password123") }
+    let!(:avail) do
+      ExperienceAvailability.create!(experience: experience, available_on: Date.today + 7, starts_at: "10:00")
+    end
+
+    it "propose les créneaux d'une activité vivante à un admin global" do
+      expect(described_class.for_user(admin)).to include(avail)
+    end
+
+    it "EXCLUT les créneaux d'une activité supprimée (soft-delete) — #label ne plante pas" do
+      experience.destroy
+      expect(described_class.for_user(admin)).not_to include(avail)
+      expect { described_class.for_user(admin).map(&:label) }.not_to raise_error
+    end
+  end
 end
