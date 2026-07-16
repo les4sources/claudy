@@ -103,6 +103,11 @@ Rails.application.routes.draw do
     end
   end
 
+  # Vue admin Pôle Accueil — index des Stays récents filtrable par source (Devise).
+  # URLs admin en anglais. Déclarée AVANT `resources :stays` pour que
+  # /stays/recents ne soit pas capté par la route /stays/:id.
+  get "stays/recents", to: "stays#recent", as: :recent_stays
+
   # Détails d'un séjour (chargé dans une modale Turbo Frame depuis la page client).
   # Le CRUD admin d'une activité SUR un séjour (epic #55, Phase 6) est imbriqué
   # sous cette ressource : la création porte TOUJOURS le séjour dans l'URL, si
@@ -154,9 +159,6 @@ Rails.application.routes.draw do
   get  "reservation/coordonnees",  to: "public/reservations#contact",            as: :public_reservation_contact
   post "reservation/coordonnees",  to: "public/reservations#create",             as: :public_reservation_create
   get  "reservation/calendrier",   to: "public/reservations#availability_calendar", as: :public_reservation_availability_calendar
-
-  # Vue admin Pôle Accueil — index des Stays récents filtrable par source (Devise).
-  get "sejours/recents", to: "stays#recent", as: :recent_stays
 
   # Page client du séjour-composite (epic #26, Phase 1) — jeton, sans Devise.
   # Route à la racine (et non sous /public) : c'est l'URL envoyée aux clients et
