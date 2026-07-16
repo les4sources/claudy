@@ -36,14 +36,7 @@
                 - if exp.summary.present?
                   .text-sm.text-gray-500 = exp.summary
                 .text-sm.text-emerald-700.mt-1
-                  - if exp.fixed_price_cents.to_i > 0 && exp.price_cents.to_i > 0
-                    = "#{number_to_currency(exp.fixed_price_cents / 100.0, unit: '€', format: '%n %u', precision: 0)} + #{number_to_currency(exp.price_cents / 100.0, unit: '€', format: '%n %u', precision: 0)}/pers"
-                  - elsif exp.price_cents.to_i > 0
-                    = "#{number_to_currency(exp.price_cents / 100.0, unit: '€', format: '%n %u', precision: 0)}/pers"
-                  - elsif exp.fixed_price_cents.to_i > 0
-                    = number_to_currency(exp.fixed_price_cents / 100.0, unit: '€', format: '%n %u', precision: 0)
-                  - else
-                    | Gratuit
+                  = Pricing::ExperienceLine.rate_label(exp)
                 - if exp.min_participants.present? || exp.max_participants.present?
                   .text-xs.text-gray-400
                     - if exp.min_participants.present? && exp.max_participants.present?

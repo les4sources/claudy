@@ -30,6 +30,13 @@ class ExperienceBooking < ApplicationRecord
   def confirmed? = status == "confirmed"
   def cancelled? = status == "cancelled"
 
+  # Montant TVAC de l'activité réservée (epic #55, Phase 1). Délègue au service
+  # `Pricing::ExperienceLine`, source de vérité unique du barème « forfait fixe
+  # + €/pers ». `experience` est délégué depuis `experience_availability`.
+  def price_cents
+    Pricing::ExperienceLine.amount_cents(experience, participants: participants)
+  end
+
   private
 
   def set_default_status
