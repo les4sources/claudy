@@ -26,3 +26,12 @@ fr:
         stripe_notice: "Ce paiement est géré par Stripe : nous n'avons à aucun moment accès à vos données de paiement."
         pay_cta: "Paiement →"
         received_heading: "Paiements reçus"
+      balance:
+        heading: "Solde de votre séjour"
+        lodging_and_spaces: "Hébergement & espaces"
+        experiences_confirmed: "Activités validées"
+        experiences_pending: "Activités en attente de validation"
+        experiences_pending_note: "(non exigible tant que non validée)"
+        amount_paid: "Déjà payé"
+        balance_due: "Reste dû"
+        pay_balance_cta: "Payer le solde de %{amount}"

@@ -30,3 +30,12 @@ en:
         stripe_notice: "This payment is handled by Stripe: we never have access to your payment details."
         pay_cta: "Payment →"
         received_heading: "Payments received"
+      balance:
+        heading: "Balance of your stay"
+        lodging_and_spaces: "Accommodation & spaces"
+        experiences_confirmed: "Confirmed activities"
+        experiences_pending: "Activities awaiting confirmation"
+        experiences_pending_note: "(not due until confirmed)"
+        amount_paid: "Already paid"
+        balance_due: "Balance due"
+        pay_balance_cta: "Pay the balance of %{amount}"

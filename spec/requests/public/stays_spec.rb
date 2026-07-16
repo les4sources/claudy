@@ -59,4 +59,46 @@ RSpec.describe "Public::Stays (/sejour/:token)", type: :request do
       expect(response).to have_http_status(:not_found)
     end
   end
+
+  # Epic #55, Phase 3 — ventilation exigible + bouton « Payer le solde ».
+  describe "solde exigible (/sejour/:token)" do
+    it "affiche le bouton « Payer le solde » quand l'exigible > 0 et aucun paiement en attente" do
+      get "/sejour/#{stay.token}"
+
+      expect(response.body).to include('data-stay-balance="true"')
+      expect(response.body).to include('data-stay-balance-cta="true"')
+      expect(response.body).to include(public_stay_balance_payment_path(stay.token))
+    end
+
+    it "masque le bouton quand l'exigible est nul (séjour soldé)" do
+      Payment.create!(booking: booking, stay: stay, amount_cents: 48_500, status: "paid", payment_method: "card")
+
+      get "/sejour/#{stay.token}"
+
+      expect(response.body).not_to include('data-stay-balance-cta="true"')
+    end
+
+    it "masque le bouton quand un paiement est déjà en attente (l'acompte a son propre CTA)" do
+      Payment.create!(booking: booking, stay: stay, amount_cents: 24_250, status: "pending", payment_method: "card")
+
+      get "/sejour/#{stay.token}"
+
+      expect(response.body).not_to include('data-stay-balance-cta="true"')
+      # Le CTA générique de l'acompte, lui, reste présent.
+      expect(response.body).to include('data-stay-payments="pending"')
+    end
+
+    it "distingue les activités validées (exigibles) des activités en attente (non exigibles)" do
+      experience = Experience.create!(name: "Sauna", fixed_price_cents: 3_000, price_cents: 0)
+      availability = ExperienceAvailability.create!(experience: experience, available_on: Date.today + 11, starts_at: "18:00")
+      ExperienceBooking.create!(experience_availability: availability, stay: stay, participants: 2, status: "confirmed")
+      ExperienceBooking.create!(experience_availability: availability, stay: stay, participants: 2, status: "pending")
+      stay.recompute_aggregates!
+
+      get "/sejour/#{stay.token}"
+
+      expect(response.body).to include('data-balance-pending="true"')
+      expect(response.body).to include(I18n.t("public.stays.balance.experiences_confirmed"))
+    end
+  end
 end

@@ -255,4 +255,52 @@ RSpec.describe Stay, type: :model do
       expect(zero).not_to be_settled
     end
   end
+
+  describe "#balance_due_cents / montant exigible (epic #55, Phase 3)" do
+    let(:experience) { Experience.create!(name: "Atelier pain", fixed_price_cents: 5_000, price_cents: 1_500) }
+    let(:availability) do
+      ExperienceAvailability.create!(experience: experience, available_on: Date.new(2026, 7, 10), starts_at: "10:00")
+    end
+
+    # Total prévu posé directement = hébergement 20 000 + confirmée 8 000 + pending 6 500.
+    let(:stay) { Stay.create!(customer: customer, total_amount_cents: 34_500) }
+
+    before do
+      ExperienceBooking.create!(experience_availability: availability, stay: stay, participants: 2, status: "confirmed") # 8 000
+      ExperienceBooking.create!(experience_availability: availability, stay: stay, participants: 1, status: "pending")   # 6 500
+    end
+
+    it "exclut les activités pending de l'assiette exigible, inclut les confirmed" do
+      expect(stay.experiences_pending_amount_cents).to eq(6_500)
+      expect(stay.experiences_confirmed_amount_cents).to eq(8_000)
+      # Assiette exigible = total prévu − pending = 34 500 − 6 500 = 28 000.
+      expect(stay.payable_amount_cents).to eq(28_000)
+    end
+
+    it "déduit l'encaissé du reste dû exigible" do
+      Payment.create!(stay: stay, amount_cents: 10_000, status: "paid", payment_method: "card")
+      expect(stay.balance_due_cents).to eq(18_000) # 28 000 − 10 000
+      expect(stay).to be_payable_now
+    end
+
+    it "n'est plus exigible quand l'encaissé couvre l'assiette exigible (pending exclue)" do
+      Payment.create!(stay: stay, amount_cents: 28_000, status: "paid", payment_method: "card")
+      expect(stay.balance_due_cents).to eq(0)
+      expect(stay).not_to be_payable_now
+    end
+
+    it "distingue TOTAL PRÉVU (amount_due, pending inclus) et EXIGIBLE (balance_due, pending exclu)" do
+      Payment.create!(stay: stay, amount_cents: 28_000, status: "paid", payment_method: "card")
+      # Exigible couvert…
+      expect(stay.balance_due_cents).to eq(0)
+      # …mais le total prévu (qui compte la pending) montre encore 6 500 à venir.
+      expect(stay.amount_due_cents).to eq(6_500)
+    end
+
+    it "marque le séjour paid dès que l'exigible est couvert, malgré une activité pending restante" do
+      Payment.create!(stay: stay, amount_cents: 28_000, status: "paid", payment_method: "card")
+      stay.set_payment_status
+      expect(stay.reload.payment_status).to eq("paid")
+    end
+  end
 end
