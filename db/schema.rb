@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_16_011705) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_16_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -269,6 +269,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_16_011705) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "refusal_reason"
     t.index ["experience_availability_id"], name: "index_experience_bookings_on_experience_availability_id"
     t.index ["stay_id"], name: "index_experience_bookings_on_stay_id"
   end

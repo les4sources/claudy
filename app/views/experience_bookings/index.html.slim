@@ -1,0 +1,33 @@
+- content_for :page_header do
+  h1.text-2xl.font-bold Activités réservées
+
+.max-w-4xl.mx-auto
+  - if @experience_bookings.empty?
+    p.text-gray-500 Aucune activité réservée pour le moment.
+  - else
+    .space-y-3
+      - @experience_bookings.each do |booking|
+        .flex.items-center.justify-between.gap-4.p-4.bg-white.rounded-lg.shadow-sm border=1
+          .min-w-0
+            .font-semibold = booking.experience.name
+            .text-sm.text-gray-600
+              = booking.experience_availability.available_on.strftime("%-d/%m/%Y")
+              | &nbsp;à&nbsp;
+              = booking.experience_availability.starts_at
+              | &nbsp;—&nbsp;
+              = "#{booking.participants} participant#{"s" if booking.participants.to_i > 1}"
+            .text-sm.text-gray-500 = booking.stay.customer.name
+            - if booking.refused? && booking.refusal_reason.present?
+              .text-sm.text-red-600.mt-1
+                strong Raison du refus :
+                | &nbsp;#{booking.refusal_reason}
+          .flex.items-center.gap-2.shrink-0
+            - if booking.pending?
+              = button_to "Valider", confirm_experience_booking_path(booking), method: :patch, class: "px-3 py-1.5 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700"
+              = link_to "Refuser", new_refusal_experience_booking_path(booking), class: "px-3 py-1.5 bg-red-100 text-red-700 rounded text-sm font-medium hover:bg-red-200"
+            - elsif booking.confirmed?
+              span.px-3.py-1.5.bg-green-100.text-green-800.rounded.text-sm.font-medium Confirmée
+            - elsif booking.refused?
+              span.px-3.py-1.5.bg-red-100.text-red-800.rounded.text-sm.font-medium Refusée
+            - else
+              span.px-3.py-1.5.bg-gray-100.text-gray-700.rounded.text-sm.font-medium = booking.status

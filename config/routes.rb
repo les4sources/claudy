@@ -105,7 +105,21 @@ Rails.application.routes.draw do
 
   # Détails d'un séjour (chargé dans une modale Turbo Frame depuis la page client).
   resources :stays, only: [:show]
-  resources :experience_bookings, only: [:index, :update]
+  resources :experience_bookings, only: [:index, :update] do
+    member do
+      patch :confirm         # validation par le porteur (canal admin)
+      get   :new_refusal     # formulaire de refus (raison obligatoire)
+      patch :refuse          # application du refus avec raison
+    end
+  end
+
+  # Canal jeton — validation d'activité par le porteur depuis l'email (epic #55,
+  # Phase 2). La VALIDATION passe par une page de confirmation légère (GET) puis
+  # un POST : jamais de mutation sur simple GET préchargeable. Le REFUS exige une
+  # raison, donc une connexion : le lien renvoie vers le formulaire admin.
+  get  "activites/valider/:token",  to: "experience_booking_validations#show",    as: :activity_validation
+  post "activites/valider/:token",  to: "experience_booking_validations#confirm", as: :activity_validation_confirm
+  get  "activites/refuser/:token",  to: "experience_booking_validations#refuse",  as: :activity_validation_refuse
 
   # Espace client activités (token-based, sans Devise).
   get  "mon-sejour/:token/activites", to: "public/activity_selections#show",   as: :public_activity_selection

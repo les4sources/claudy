@@ -1,0 +1,23 @@
+.max-w-lg.mx-auto.bg-white.p-6.rounded-lg.shadow-sm.mt-6
+  h1.text-xl.font-bold.mb-4 Confirmer votre activité
+
+  - if @booking.pending?
+    p.mb-2 Vous êtes sur le point de confirmer&nbsp;:
+    .p-4.bg-gray-50.rounded.mb-4
+      .font-semibold = @booking.experience.name
+      .text-sm.text-gray-600
+        = @booking.experience_availability.available_on.strftime("%-d/%m/%Y")
+        | &nbsp;à&nbsp;
+        = @booking.experience_availability.starts_at
+        | &nbsp;—&nbsp;
+        = "#{@booking.participants} participant#{"s" if @booking.participants.to_i > 1}"
+    = button_to "Confirmer cette activité", activity_validation_confirm_path(params[:token]), method: :post, class: "px-4 py-2 bg-green-600 text-white rounded font-medium hover:bg-green-700"
+    p.mt-4.text-sm.text-gray-500
+      | Pour refuser ce créneau, utilisez le lien « Refuser » de l'email
+      | (une connexion et une raison vous seront demandées).
+  - elsif @booking.confirmed?
+    p.text-green-700 Cette activité est déjà confirmée. Merci !
+  - elsif @booking.refused?
+    p.text-red-700 Cette activité a déjà été refusée.
+  - else
+    p.text-gray-600 Cette activité n'est plus en attente de validation.

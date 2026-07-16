@@ -1,0 +1,15 @@
+p Bonjour #{@stay.customer.first_name.presence || ""},
+
+p
+  | Bonne nouvelle&nbsp;: votre activité «&nbsp;
+  strong = @experience.name
+  | &nbsp;» est confirmée par l'animateur·ice.
+
+p
+  strong Créneau&nbsp;:
+  = " #{@booking.experience_availability.available_on.strftime('%-d/%m/%Y')} à #{@booking.experience_availability.starts_at}"
+  br
+  strong Participants&nbsp;:
+  = " #{@booking.participants}"
+
+p À très bientôt aux 4 Sources !
