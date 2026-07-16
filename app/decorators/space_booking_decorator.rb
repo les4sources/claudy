@@ -32,21 +32,19 @@ class SpaceBookingDecorator < ApplicationDecorator
     end
   end
 
+  # Rendu i18n (issue #15, Phase 3) : la page client à jeton s'affiche en FR/NL/EN.
+  # Hors de cette page (admin, comptabilité, mailers), la locale reste le FR par
+  # défaut, donc le rendu est inchangé au caractère près.
   def duration
-    case object&.space_reservations&.first&.duration
-    when "2h"
-      "2 heures"
-    when "evening"
-      "soirée"
-    when "day"
-      "journée"
-    when "fullday"
-      "journée + soirée"
-    when "see_notes"
-      "voir notes"
-    else
-      "période non précisée"
-    end
+    key = case object&.space_reservations&.first&.duration
+          when "2h" then "two_hours"
+          when "evening" then "evening"
+          when "day" then "day"
+          when "fullday" then "fullday"
+          when "see_notes" then "see_notes"
+          else "unspecified"
+          end
+    h.t("public.space_bookings.duration.#{key}")
   end
 
   def event_name_with_color
@@ -66,11 +64,13 @@ class SpaceBookingDecorator < ApplicationDecorator
     classes.join(" ")
   end
 
+  # Rendu i18n (issue #15, Phase 3) : les connecteurs « le / du … au … » vivent
+  # dans les YAML (scope public.space_bookings.date_range). FR inchangé.
   def date_range
     if from_date == to_date
-      "le #{from_date}"
+      h.t("public.space_bookings.date_range.single", date: from_date)
     else
-      "du #{from_date} au #{to_date}"
+      h.t("public.space_bookings.date_range.range", from: from_date, to: to_date)
     end
   end
 
@@ -166,12 +166,13 @@ class SpaceBookingDecorator < ApplicationDecorator
     end
   end
 
+  # Rendu i18n (issue #15, Phase 3). FR par défaut hors page client à jeton.
   def payment_method
     case object.payment_method
     when "cash"
-      "En liquide à votre arrivée"
+      h.t("public.space_bookings.payment_method.cash")
     when "bank_transfer"
-      "Virement bancaire"
+      h.t("public.space_bookings.payment_method.bank_transfer")
     end
   end
 

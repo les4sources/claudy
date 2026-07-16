@@ -1,12 +1,12 @@
 - if space_booking.pending?
   .callout-warning(role="alert")
-    strong Votre réservation est en attente de confirmation par notre équipe.
+    strong= t("public.space_bookings.status_callout.pending")
 - elsif space_booking.canceled?
   .callout-error(role="alert")
-    strong Votre réservation est annulée.
+    strong= t("public.space_bookings.status_callout.canceled")
 - elsif space_booking.declined?
   .callout-error(role="alert")
-    strong Votre réservation n'a pas pu être confirmée.
+    strong= t("public.space_bookings.status_callout.declined")
 - elsif space_booking.confirmed?
   .callout-success(role="alert")
-    strong Votre réservation est confirmée.
+    strong= t("public.space_bookings.status_callout.confirmed")
