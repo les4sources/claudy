@@ -30,6 +30,20 @@ class BookingDecorator < ApplicationDecorator
     classes.join(" ")
   end
 
+  # Classe structurelle du bloc calendrier (epic #66, Phase 4). Quand un séjour
+  # groupe l'occupation, la COULEUR vient d'un style inline par `stay_id`
+  # (`CalendarHelper#stay_block_style`) ; on ne garde donc ici que la structure
+  # (ombre + bordure) et l'atténuation des séjours non confirmés. Sans séjour
+  # (bookings legacy sans `StayItem`), on retombe sur `calendar_class` — couleur
+  # par type d'occupation, comportement historique strictement inchangé.
+  def calendar_block_class
+    return calendar_class if object.stay.nil?
+
+    classes = ["shadow", "border-l-4"]
+    classes << "opacity-50" unless object.confirmed?
+    classes.join(" ")
+  end
+
   def dates_counter(current_date)
     if object.to_date == object.from_date + 1.day
     else

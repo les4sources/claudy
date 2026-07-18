@@ -20,6 +20,18 @@ class SpaceBookingDecorator < ApplicationDecorator
     classes.join(" ")
   end
 
+  # Classe structurelle du bloc calendrier (epic #66, Phase 4). Voir la note
+  # jumelle dans `BookingDecorator#calendar_block_class` : couleur par séjour en
+  # style inline quand un `Stay` groupe l'occupation, sinon `calendar_class`
+  # (orange espace) historique.
+  def calendar_block_class
+    return calendar_class if object.stay.nil?
+
+    classes = ["shadow", "border-l-4"]
+    classes << "opacity-50" unless object.confirmed?
+    classes.join(" ")
+  end
+
   def dates_counter(current_date)
     if object.to_date != object.from_date
       total_days = (object.to_date - object.from_date).to_i + 1
