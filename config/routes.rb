@@ -113,7 +113,12 @@ Rails.application.routes.draw do
   # Le CRUD admin d'une activité SUR un séjour (epic #55, Phase 6) est imbriqué
   # sous cette ressource : la création porte TOUJOURS le séjour dans l'URL, si
   # bien qu'une activité ne peut jamais naître sans son séjour d'attache.
-  resources :stays, only: [:show] do
+  # CRUD Séjour admin (epic #66, Phase 1) — le séjour devient le point d'entrée
+  # de création composable côté admin (hébergement + activités). URLs anglaises.
+  # `show` reste rendu sans layout (fragment de modale) ; new/edit sont des pages
+  # pleines. La route `stays/recents` ci-dessus est déclarée AVANT pour ne pas
+  # être captée par `/stays/:id`.
+  resources :stays, only: [:show, :new, :create, :edit, :update, :destroy] do
     resources :experience_bookings, only: [:create]
   end
   resources :experience_bookings, only: [:index, :update, :destroy] do
