@@ -21,17 +21,21 @@
                       class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
       .absolute.top-0.left-0.w-full.h-full(data-controller="popover" data-action="click->popover#toggle click@window->popover#hideOnClickOutside" data-popover-target-value="popover-event-#{event.id}" data-popover-trigger-value="click")
 
-  / Space reservations
+  / Space reservations — regroupées et colorées PAR SÉJOUR (epic #66, Phase 4) :
+  / couleur stable par `stay_id` (style inline), blocs triés par séjour, un bloc
+  / par ESPACE occupé conservé, `data-stay-id` posé pour la modale Phase 5.
   - if @grouped_space_reservations[date]
-    - @grouped_space_reservations[date].sort_by {|sr| sr.start_time }.group_by { |sr| sr.space_booking.id }.each do |grouped_space_reservations|
+    - @grouped_space_reservations[date].sort_by {|sr| sr.start_time }.group_by { |sr| sr.space_booking.id }.sort_by { |_space_booking_id, space_reservations| [space_reservations.first.space_booking.stay&.id.to_i, space_reservations.first.start_time] }.each do |grouped_space_reservations|
       - space_reservation = grouped_space_reservations.last.first
       - space_booking = SpaceBookingDecorator.new(space_reservation.space_booking)
+      - stay = space_booking.stay
+      - block_style = stay ? stay_block_style(stay.id) : nil
       .popover.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-sm.opacity-0[id="popover-space-reservation-#{space_reservation.id}" data-popover role="tooltip"]
         = render "space_bookings/popover",
                  space_booking: space_booking
         div[data-popper-arrow]
 
-      div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min-w-0 #{space_booking.calendar_class}")
+      div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min-w-0 #{space_booking.calendar_block_class}" style=block_style data-space-booking-day-entry=space_booking.id data-stay-id=stay&.id)
         .block.min-w-0.w-full
           div.min-w-0
             strong.block.min-w-0.break-words

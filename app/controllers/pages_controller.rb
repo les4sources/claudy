@@ -16,19 +16,38 @@ class PagesController < BaseController
           .between_times(@first, @last)
       )
       # group space reservations by day
+      # Le calendrier bascule sur les SÉJOURS (epic #66, Phase 4) : on précharge
+      # `space_booking.stay` (via `stay_item`, has_one through) pour colorer et
+      # regrouper les occupations par `stay_id` sans requête N+1.
       @space_reservations = SpaceReservation.all
         .includes(:space_booking)
-        .preload(:space, space_booking: [:event, :space_reservations])
+        .preload(:space, space_booking: [:event, :space_reservations, :stay])
         .where.not(space_booking: { status: ["declined", "canceled"] })
         .between_times(@first, @last, field: :date)
       @grouped_space_reservations = @space_reservations.to_a.group_by { |sr| sr.date }
-      # group reservations by day
+      # group reservations by day (préchargement du séjour porteur, cf. supra)
       @reservations = Reservation.all
         .includes(:booking)
-        .preload(:room, booking: [:lodging, :reservations])
+        .preload(:room, booking: [:lodging, :reservations, :stay])
         .where.not(booking: { status: ["declined", "canceled"] })
         .between_times(@first, @last, field: :date)
       @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
+      # Camping / van (epic #66, Phase 3–4) — capacité globale, aucune réservation
+      # jour par jour : on étale la fenêtre [from, to) en nuits, groupées par jour,
+      # pour un bloc agrégé (« Camping » / « Van ») par nuit occupée, coloré par
+      # séjour. Préchargement du séjour (anti-N+1).
+      @grouped_camping_bookings = nights_grouped_by_day(
+        CampingBooking
+          .includes(:stay)
+          .where.not(status: ["declined", "canceled"])
+          .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
+      )
+      @grouped_van_bookings = nights_grouped_by_day(
+        VanBooking
+          .includes(:stay)
+          .where.not(status: ["declined", "canceled"])
+          .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
+      )
       @activities = PublicActivity::Activity.where("created_at > ?", 14.days.ago).order(created_at: :desc)
     end
   end
@@ -110,6 +129,24 @@ class PagesController < BaseController
   end
 
   private
+
+  # Étale une collection de réservables « capacité globale » (camping / van), qui
+  # ne portent QUE des dates [from_date, to_date), en un hash { jour => [records] }
+  # borné à la fenêtre visible du calendrier. Une nuit `d` est couverte si
+  # `from_date <= d < to_date` (même convention que `GlobalCapacityBookable`).
+  def nights_grouped_by_day(records)
+    window_start = @first.to_date
+    window_end   = @last.to_date
+    grouped = {}
+    records.each do |record|
+      next unless record.from_date && record.to_date
+      (record.from_date...record.to_date).each do |night|
+        next unless night >= window_start && night <= window_end
+        (grouped[night] ||= []) << record
+      end
+    end
+    grouped
+  end
 
   def set_dates
     # get the date from params if there is one - for display AND to limit our query
