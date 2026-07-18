@@ -136,7 +136,8 @@ class StaysController < BaseController
       last_name:      contact[:last_name],
       email:          contact[:email],
       phone:          contact[:phone],
-      experiences:    activity_entries(p)
+      experiences:    activity_entries(p),
+      halls:          space_entries(p)
     )
   end
 
@@ -156,8 +157,29 @@ class StaysController < BaseController
       phone:          stay.customer&.phone,
       experiences:    stay.experience_bookings.active.map { |eb|
         { id: eb.experience&.id, availability_id: eb.experience_availability_id, participants: eb.participants }
-      }
+      },
+      halls:          halls_from_stay(stay)
     )
+  end
+
+  # Reconstruit les lignes d'espaces {kind, date, period} d'un séjour depuis son
+  # SpaceBooking (réservations existantes), pour préremplir le form edit. Le nom
+  # de la Space est re-mappé vers sa clé de pricing (grande_salle, …).
+  def halls_from_stay(stay)
+    space_booking = stay.stay_items.where(bookable_type: "SpaceBooking").first&.bookable
+    return [] if space_booking.nil?
+
+    space_booking.space_reservations.map do |res|
+      key = space_key_for_name(res.space&.name)
+      next if key.nil?
+      { kind: key, date: res.date&.iso8601, period: res.duration }
+    end.compact
+  end
+
+  # Space#name → clé de pricing (inverse de SpaceComposition::SPACE_NAMES_BY_KEY).
+  def space_key_for_name(name)
+    return nil if name.blank?
+    SpaceComposition::SPACE_NAMES_BY_KEY.find { |_key, names| names.include?(name) }&.first
   end
 
   # Coordonnées client : soit un client existant sélectionné (on lit ses
@@ -189,6 +211,23 @@ class StaysController < BaseController
       avail = allowed[availability_id]
       next unless avail
       { id: avail.experience_id, availability_id: availability_id, participants: participants }
+    end
+  end
+
+  # Entrées d'espaces (epic #66, Phase 2) : chaque ligne du form porte un espace
+  # (`kind` = clé de pricing grande_salle/petite_salle/cuisine_pro), une `date` et
+  # une `period` (journee/soiree/journee_et_soiree). On écarte les lignes
+  # incomplètes ; le résultat alimente `Reservations::Draft#halls` — commun au
+  # devis (PricingModel) ET à la persistance (SpaceComposition).
+  def space_entries(p)
+    rows = p[:halls]
+    rows = rows.respond_to?(:values) ? rows.values : Array(rows)
+    rows.filter_map do |row|
+      kind   = row[:kind].to_s
+      date   = row[:date].to_s
+      period = row[:period].to_s
+      next if kind.blank? || date.blank? || period.blank?
+      { kind: kind, date: date, period: period }
     end
   end
 

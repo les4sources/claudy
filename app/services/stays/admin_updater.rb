@@ -21,6 +21,8 @@ module Stays
   #   - Le TOTAL et les DATES sont recalculés par `Stay#recompute_aggregates!`
   #     (source unique déjà éprouvée : bookables + activités actives).
   class AdminUpdater < ServiceBase
+    include SpaceComposition
+
     class Invalid < StandardError; end
 
     attr_reader :stay, :availability_warning
@@ -51,6 +53,7 @@ module Stays
       ActiveRecord::Base.transaction do
         @stay.update!(customer: upsert_customer!, status: stay_status)
         reconcile_lodging!
+        reconcile_spaces!
         reconcile_experiences!
         @stay.recompute_aggregates!
       end
@@ -61,17 +64,21 @@ module Stays
 
     def validate!
       raise_invalid("Veuillez choisir des dates valides.") if @draft.nights < 1
-      # Phase 1 : un séjour admin porte au moins un hébergement (espaces / camping
-      # arrivent aux phases 2-3). Retirer le DERNIER hébergement est donc hors
-      # périmètre ici — on change ou on garde l'hébergement.
-      raise_invalid("Veuillez sélectionner un hébergement.") if @draft.lodging.blank?
+      # Phase 2 (epic #66) : un séjour admin porte AU MOINS un hébergement OU un
+      # espace. On assouplit la contrainte Phase 1 (hébergement obligatoire) pour
+      # autoriser un séjour « espaces seuls ». Camping/repas arrivent en Phase 3.
+      unless @draft.lodging.present? || draft_has_spaces?(@draft)
+        raise_invalid("Veuillez sélectionner un hébergement ou un espace.")
+      end
       unless Customer.exploitable_email?(@draft.email)
         raise_invalid("Veuillez préciser une adresse email valide pour le client.")
       end
       check_availability!
+      check_space_availability!
     end
 
     def check_availability!
+      return if @draft.lodging.blank?
       return if @draft.lodging.available_between?(@draft.arrival_date, @draft.departure_date)
 
       if @skip_availability
@@ -81,6 +88,33 @@ module Stays
       else
         raise_invalid("Ces dates ne sont plus disponibles pour cet hébergement.")
       end
+    end
+
+    # Dispo espaces capacity-aware (`Space#available_on?`), même logique de force
+    # que l'hébergement. On ignore les créneaux DÉJÀ portés par le SpaceBooking du
+    # séjour (sinon l'édition d'un séjour espaces-seuls se bloquerait elle-même).
+    def check_space_availability!
+      specs     = space_reservation_specs(@draft)
+      own       = own_space_reservation_keys
+      conflicts = space_availability_conflicts(specs)
+                    .reject { |c| own.include?([c[:space].id, c[:date]]) }
+      return if conflicts.empty?
+
+      names = conflicts.map { |c| c[:space].name }.uniq.join(", ")
+      if @skip_availability
+        message = "Espace(s) déjà complet(s) à ces dates : #{names} — " \
+                  "séjour enregistré en forçant la disponibilité."
+        @availability_warning = [@availability_warning, message].compact.join(" ")
+      else
+        raise_invalid("Espace(s) déjà complet(s) à ces dates : #{names}.")
+      end
+    end
+
+    # (space_id, date) déjà réservés par le SpaceBooking courant du séjour.
+    def own_space_reservation_keys
+      sb = existing_space_booking(@stay)
+      return [].to_set if sb.nil?
+      sb.space_reservations.map { |r| [r.space_id, r.date] }.to_set
     end
 
     def upsert_customer!
@@ -95,8 +129,22 @@ module Stays
     end
 
     def reconcile_lodging!
-      price   = @draft.quote.total_excluding_experiences_cents
       booking = existing_lodging_booking
+
+      # Séjour « espaces seuls » (epic #66, Phase 2) : plus d'hébergement au
+      # draft → on détache et libère l'occupation existante (soft-delete du
+      # StayItem ET du Booking, pour rendre les dates au calendrier).
+      if @draft.lodging.blank?
+        if booking
+          @stay.stay_items.where(bookable_type: "Booking").each { |i| i.soft_delete!(validate: false) }
+          booking.soft_delete!(validate: false)
+        end
+        return
+      end
+
+      # Prix HORS espaces (les espaces vivent sur le SpaceBooking) et HORS
+      # activités — additionner Booking + SpaceBooking redonne le total prévu.
+      price = @draft.quote.lodging_bundle_cents
 
       if booking
         # NB : ni `status` ni `email` ici — voir l'en-tête de classe (anti-email).
@@ -139,6 +187,51 @@ module Stays
 
     def existing_lodging_booking
       @stay.stay_items.where(bookable_type: "Booking").first&.bookable
+    end
+
+    # Réconcilie l'occupation d'ESPACES du séjour (epic #66, Phase 2) : rebuild
+    # complet des `SpaceReservation` depuis le draft. Comme pour l'hébergement,
+    # on NE TOUCHE PAS au `status`/`email` du SpaceBooking à l'édition (l'update
+    # de statut déclenche l'email client — anti-spam admin).
+    def reconcile_spaces!
+      specs         = space_reservation_specs(@draft)
+      space_booking = existing_space_booking(@stay)
+
+      # Plus d'espace au draft → on détache/soft-delete un éventuel SpaceBooking.
+      if specs.empty?
+        if space_booking
+          @stay.stay_items.where(bookable_type: "SpaceBooking").each { |i| i.soft_delete!(validate: false) }
+          space_booking.soft_delete!(validate: false)
+        end
+        return
+      end
+
+      price = @draft.quote.spaces_cents
+      dates = specs.map { |s| s[:date] }
+
+      if space_booking
+        space_booking.space_reservations.destroy_all
+        space_booking.update!(
+          firstname:   @draft.first_name,
+          lastname:    @draft.last_name,
+          phone:       @draft.phone,
+          group_name:  @draft.group_name,
+          from_date:   @draft.arrival_date || dates.min,
+          to_date:     @draft.departure_date || dates.max,
+          price_cents: price
+        )
+        specs.each do |spec|
+          space_booking.space_reservations.create!(space: spec[:space], date: spec[:date], duration: spec[:duration])
+        end
+      else
+        persist_space_booking!(
+          stay:        @stay,
+          draft:       @draft,
+          specs:       specs,
+          status:      @stay.status,
+          price_cents: price
+        )
+      end
     end
 
     def reconcile_experiences!
