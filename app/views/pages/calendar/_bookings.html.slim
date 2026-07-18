@@ -30,10 +30,12 @@
       - space_booking = SpaceBookingDecorator.new(space_reservation.space_booking)
       - stay = space_booking.stay
       - block_style = stay ? stay_block_style(stay.id) : nil
-      .popover.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-sm.opacity-0[id="popover-space-reservation-#{space_reservation.id}" data-popover role="tooltip"]
-        = render "space_bookings/popover",
-                 space_booking: space_booking
-        div[data-popper-arrow]
+      / Sans séjour rattaché : on garde le popover d'info historique (fallback).
+      - if stay.nil?
+        .popover.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-sm.opacity-0[id="popover-space-reservation-#{space_reservation.id}" data-popover role="tooltip"]
+          = render "space_bookings/popover",
+                   space_booking: space_booking
+          div[data-popper-arrow]
 
       div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min-w-0 #{space_booking.calendar_block_class}" style=block_style data-space-booking-day-entry=space_booking.id data-stay-id=stay&.id)
         .block.min-w-0.w-full
@@ -53,7 +55,12 @@
 
           .block.text-gray-500
             = space_booking.duration
-        .absolute.top-0.left-0.w-full.h-full(data-controller="popover" data-action="click->popover#toggle click@window->popover#hideOnClickOutside" data-popover-target-value="popover-space-reservation-#{space_reservation.id}" data-popover-trigger-value="click")
+        / Overlay cliquable : ouvre la modale séjour (epic #66, Phase 5). Sans
+        / séjour, on retombe sur le popover d'info historique.
+        - if stay
+          a.absolute.top-0.left-0.w-full.h-full(href=stay_path(stay) data-action="stay-details#open" aria-label="Voir le séjour ##{stay.id}")
+        - else
+          .absolute.top-0.left-0.w-full.h-full(data-controller="popover" data-action="click->popover#toggle click@window->popover#hideOnClickOutside" data-popover-target-value="popover-space-reservation-#{space_reservation.id}" data-popover-trigger-value="click")
 
   / Les séjours (bookings hébergement) ne sont plus rendus ici : ils vivent dans
   / la cellule du jour, entre les avatars veilleurs et les notes — voir

@@ -5,6 +5,7 @@
     .flex.items-center.gap-2
       = @stay.platform_badge
       = @stay.status_badge
+      = link_to "Modifier le séjour", edit_stay_path(@stay), class: "text-sm font-medium text-indigo-600 hover:underline"
 
   dl.grid.grid-cols-3.gap-x-4.gap-y-2.text-sm
     dt.font-medium.text-gray-500 Dates
@@ -20,18 +21,74 @@
       dt.font-medium.text-gray-500 Origine
       dd.col-span-2.text-gray-500 = @stay.legacy_origin
 
-  .border-t.border-gray-200.pt-3
-    h4.text-sm.font-medium.text-gray-700.mb-2 Éléments réservés
-    ul.divide-y.divide-gray-100
-      - @stay.stay_items.each do |item|
-        - bookable = item.bookable
-        li.py-2.text-sm.flex.justify-between
-          span.text-gray-900
-            = item.bookable_type
-            span.text-gray-500 = " ##{item.bookable_id}"
-          - if bookable
-            span.text-gray-500
-              = bookable.try(:status)
+  / Composition complète du séjour (epic #66, Phase 5) : hébergement, espaces,
+  / camping, van et repas. Les activités gardent leur bloc CRUD dédié (epic #55,
+  / Phase 6), rendu juste après — flux inchangé.
+  .border-t.border-gray-200.pt-3.space-y-4
+    - if @stay.lodging_bookings.any?
+      div
+        h4.text-sm.font-medium.text-gray-700.mb-2 Hébergement
+        ul.divide-y.divide-gray-100
+          - @stay.lodging_bookings.each do |booking|
+            - b = booking.decorate
+            li.py-2.text-sm.flex.items-start.justify-between.gap-3
+              - guests = "#{booking.adults.to_i} adulte(s)"
+              - guests += ", #{booking.children} enfant(s)" if booking.children.to_i.positive?
+              .min-w-0
+                .text-gray-900.font-medium.truncate = booking.lodging&.name.presence || "Hébergement"
+                .text-gray-500 = b.date_range
+                .text-gray-500 = guests
+              span.text-gray-500.shrink-0 = @stay.formatted_item_amount(booking)
+
+    - if @stay.space_bookings.any?
+      div
+        h4.text-sm.font-medium.text-gray-700.mb-2 Espaces
+        ul.divide-y.divide-gray-100
+          - @stay.space_bookings.each do |space_booking|
+            - d = space_booking.decorate
+            li.py-2.text-sm.flex.items-start.justify-between.gap-3
+              .min-w-0
+                .text-gray-900.font-medium.truncate = space_booking.spaces.map(&:name).compact_blank.join(", ").presence || "Espace"
+                .text-gray-500 = d.date_range
+                .text-gray-500 = d.duration
+              span.text-gray-500.shrink-0 = @stay.formatted_item_amount(space_booking)
+
+    - if @stay.camping_bookings.any?
+      div
+        h4.text-sm.font-medium.text-gray-700.mb-2 Camping
+        ul.divide-y.divide-gray-100
+          - @stay.camping_bookings.each do |camping|
+            li.py-2.text-sm.flex.items-start.justify-between.gap-3
+              .min-w-0
+                .text-gray-900.font-medium ⛺ Camping (#{camping.kind})
+                .text-gray-500 = "#{camping.people} personne(s)"
+              span.text-gray-500.shrink-0 = @stay.formatted_item_amount(camping)
+
+    - if @stay.van_bookings.any?
+      div
+        h4.text-sm.font-medium.text-gray-700.mb-2 Van / camping-car
+        ul.divide-y.divide-gray-100
+          - @stay.van_bookings.each do |van|
+            li.py-2.text-sm.flex.items-start.justify-between.gap-3
+              .min-w-0
+                .text-gray-900.font-medium 🚐 Van (#{van.vehicles} véhicule(s))
+              span.text-gray-500.shrink-0 = @stay.formatted_item_amount(van)
+
+    - if @stay.meals.any?
+      div
+        h4.text-sm.font-medium.text-gray-700.mb-2 Repas
+        ul.divide-y.divide-gray-100
+          - @stay.meals.each do |meal|
+            li.py-2.text-sm.flex.items-start.justify-between.gap-3
+              .min-w-0
+                .text-gray-900.font-medium = meal.label
+                - if meal.date
+                  .text-gray-500 = l(meal.date, format: :long)
+                .text-gray-500 = "#{meal.people} personne(s)"
+              span.text-gray-500.shrink-0 = @stay.formatted_item_amount(meal)
+
+    - unless @stay.any_composition?
+      p.text-sm.text-gray-500 Aucun élément dans ce séjour pour le moment.
 
   = render "stays/activities"
 
