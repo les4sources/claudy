@@ -17,6 +17,13 @@ module Reservations
     include SpaceComposition
     include CampingComposition
     include MealComposition
+    # Reservations de chambres de l'hébergement (epic #66, Phase 6) : on réutilise
+    # `build_reservations` + `get_rooms` du concern Bookable — SOURCE UNIQUE
+    # partagée avec Bookings::CreateService — plutôt que de dupliquer la logique.
+    # On n'appelle PAS `available?` du concern (le Builder fait sa propre
+    # validation de dispo, avec force-dispo admin) ni `set_tier`/`set_price` (le
+    # prix du Booking d'occupation est piloté par le devis, Phase 3 — intact).
+    include Bookable
 
     class DraftInvalid < StandardError; end
 
@@ -75,6 +82,14 @@ module Reservations
         # via lodging_id + dates. Un séjour sans hébergement (camping, espaces)
         # n'en crée donc plus : le « Booking fantôme » disparaît.
         @booking = draft.lodging.present? ? build_booking!(quote) : nil
+        # Occupation d'hébergement room-based (epic #66, Phase 6) : le Booking
+        # `lodging_id` + dates NE SUFFIT PAS — sans Reservation par chambre le
+        # séjour est invisible au calendrier (rendu par chambre, Phase 4) et le
+        # veto `Lodging#available_between?` (qui compte les Reservation confirmées)
+        # ne se pose jamais → surbooking silencieux. On crée donc les Reservation
+        # dans TOUS les canaux (admin ET funnel public natif), aligné sur
+        # `Bookings::CreateService`. Le veto reste piloté par le statut confirmed.
+        build_lodging_reservations! if @booking
         # Assiette de l'acompte (epic #55, Phase 1) : l'acompte EXCLUT toujours
         # les activités — on ne demande pas d'avance sur des créneaux pas encore
         # validés par le porteur (Phase 2). Le TOTAL PRÉVU du Stay, lui, agrège
@@ -303,9 +318,29 @@ module Reservations
         price_cents: lodging_price_cents(quote),
         shown_price_cents: lodging_price_cents(quote)
       )
+      # booking_type (epic #66, Phase 6) : attr_accessor NON persisté — il ne
+      # touche pas la ligne DB. Il est REQUIS par `get_rooms` du concern Bookable
+      # pour router vers `lodging.rooms` (sinon get_rooms renvoie nil et pose une
+      # erreur). L'occupation d'hébergement est toujours de type "lodging".
+      booking.booking_type = "lodging"
       booking.generate_token
       booking.save!
       booking
+    end
+
+    # Crée les Reservation {booking, room, date} de l'occupation d'hébergement :
+    # une par chambre du lodging (`get_rooms` → `lodging.rooms`) et par nuit sur
+    # [arrivée, départ) (`build_reservations`, concern Bookable). C'est ce qui rend
+    # le séjour VISIBLE au calendrier (dès `pending`) et, une fois `confirmed`, pose
+    # le veto de `Lodging#available_between?`. Aucune écriture de prix/tier ici :
+    # l'invariant de prix (Phase 3) est préservé. Idempotent : no-op si le Booking
+    # porte déjà des Reservation (rejeu de run! sur un booking déjà peuplé).
+    def build_lodging_reservations!
+      return if @booking.reservations.any?
+      rooms = get_rooms
+      return if rooms.blank?
+      build_reservations(rooms)
+      @booking.save!
     end
 
     # Part de prix portée par le Booking d'hébergement selon le canal (voir
