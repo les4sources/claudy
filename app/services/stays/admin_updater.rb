@@ -22,6 +22,8 @@ module Stays
   #     (source unique déjà éprouvée : bookables + activités actives).
   class AdminUpdater < ServiceBase
     include SpaceComposition
+    include CampingComposition
+    include MealComposition
 
     class Invalid < StandardError; end
 
@@ -54,6 +56,9 @@ module Stays
         @stay.update!(customer: upsert_customer!, status: stay_status)
         reconcile_lodging!
         reconcile_spaces!
+        reconcile_camping!
+        reconcile_van!
+        reconcile_meals!(@stay, @draft)
         reconcile_experiences!
         @stay.recompute_aggregates!
       end
@@ -64,17 +69,38 @@ module Stays
 
     def validate!
       raise_invalid("Veuillez choisir des dates valides.") if @draft.nights < 1
-      # Phase 2 (epic #66) : un séjour admin porte AU MOINS un hébergement OU un
-      # espace. On assouplit la contrainte Phase 1 (hébergement obligatoire) pour
-      # autoriser un séjour « espaces seuls ». Camping/repas arrivent en Phase 3.
-      unless @draft.lodging.present? || draft_has_spaces?(@draft)
-        raise_invalid("Veuillez sélectionner un hébergement ou un espace.")
+      # Phase 3 (epic #66) : un séjour admin porte AU MOINS un hébergement OU un
+      # espace OU du camping/van. La contrainte de composition s'élargit — un
+      # séjour camping-seul ou van-seul est désormais légitime. (Les repas seuls
+      # ne suffisent pas : ils n'occupent rien et accompagnent une nuitée.)
+      unless @draft.lodging.present? || draft_has_spaces?(@draft) ||
+             draft_has_camping?(@draft) || draft_has_van?(@draft)
+        raise_invalid("Veuillez sélectionner un hébergement, un espace ou un emplacement camping/van.")
       end
       unless Customer.exploitable_email?(@draft.email)
         raise_invalid("Veuillez préciser une adresse email valide pour le client.")
       end
       check_availability!
       check_space_availability!
+      check_outdoor_capacity!
+    end
+
+    # Camping / van : capacité globale (epic #66, Phase 3), en ignorant les
+    # réservables PROPRES au séjour (sinon l'édition d'un séjour camping-seul se
+    # bloquerait elle-même). Même logique de force que l'hébergement/espaces.
+    def check_outdoor_capacity!
+      messages = [
+        camping_capacity_message(@draft, excluding_id: existing_camping_booking(@stay)&.id),
+        van_capacity_message(@draft,     excluding_id: existing_van_booking(@stay)&.id)
+      ].compact
+      return if messages.empty?
+
+      if @skip_availability
+        forced = messages.map { |m| "#{m} — séjour enregistré en forçant la disponibilité." }
+        @availability_warning = [@availability_warning, *forced].compact.join(" ")
+      else
+        raise_invalid(messages.join(" "))
+      end
     end
 
     def check_availability!
@@ -142,9 +168,10 @@ module Stays
         return
       end
 
-      # Prix HORS espaces (les espaces vivent sur le SpaceBooking) et HORS
-      # activités — additionner Booking + SpaceBooking redonne le total prévu.
-      price = @draft.quote.lodging_bundle_cents
+      # Prix de l'hébergement PUR (epic #66, Phase 3) : hors espaces, hors
+      # camping/van/repas (chacun sur son propre modèle) et hors activités.
+      # Additionner tous les réservables + repas redonne exactement le total prévu.
+      price = @draft.quote.lodging_only_cents
 
       if booking
         # NB : ni `status` ni `email` ici — voir l'en-tête de classe (anti-email).
@@ -231,6 +258,65 @@ module Stays
           status:      @stay.status,
           price_cents: price
         )
+      end
+    end
+
+    # Réconcilie le CAMPING du séjour (epic #66, Phase 3) : crée / met à jour /
+    # détache le CampingBooking selon le draft. Comme pour l'hébergement, on ne
+    # touche ni au token ni à l'email à l'édition.
+    def reconcile_camping!
+      camping = existing_camping_booking(@stay)
+
+      unless draft_has_camping?(@draft)
+        if camping
+          @stay.stay_items.where(bookable_type: "CampingBooking").each { |i| i.soft_delete!(validate: false) }
+          camping.soft_delete!(validate: false)
+        end
+        return
+      end
+
+      price = @draft.quote.camping_cents
+      if camping
+        camping.update!(
+          firstname:   @draft.first_name,
+          lastname:    @draft.last_name,
+          phone:       @draft.phone,
+          group_name:  @draft.group_name,
+          from_date:   @draft.arrival_date,
+          to_date:     @draft.departure_date,
+          people:      [draft_camping_people(@draft), 1].max,
+          price_cents: price
+        )
+      else
+        persist_camping_booking!(stay: @stay, draft: @draft, status: @stay.status, price_cents: price)
+      end
+    end
+
+    def reconcile_van!
+      van = existing_van_booking(@stay)
+
+      unless draft_has_van?(@draft)
+        if van
+          @stay.stay_items.where(bookable_type: "VanBooking").each { |i| i.soft_delete!(validate: false) }
+          van.soft_delete!(validate: false)
+        end
+        return
+      end
+
+      price = @draft.quote.van_cents
+      if van
+        van.update!(
+          firstname:   @draft.first_name,
+          lastname:    @draft.last_name,
+          phone:       @draft.phone,
+          group_name:  @draft.group_name,
+          from_date:   @draft.arrival_date,
+          to_date:     @draft.departure_date,
+          vehicles:    [draft_van_vehicles(@draft), 1].max,
+          price_cents: price
+        )
+      else
+        persist_van_booking!(stay: @stay, draft: @draft, status: @stay.status, price_cents: price)
       end
     end
 

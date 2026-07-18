@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_16_130000) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_18_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -151,6 +151,27 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_16_130000) do
     t.datetime "updated_at", null: false
     t.index ["project_id"], name: "index_bundles_on_project_id"
     t.index ["team_id"], name: "index_bundles_on_team_id"
+  end
+
+  create_table "camping_bookings", force: :cascade do |t|
+    t.string "firstname"
+    t.string "lastname"
+    t.string "email"
+    t.string "phone"
+    t.string "group_name"
+    t.date "from_date"
+    t.date "to_date"
+    t.integer "people", default: 1, null: false
+    t.string "kind", default: "tente", null: false
+    t.string "status"
+    t.integer "price_cents"
+    t.string "token"
+    t.text "notes"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_camping_bookings_on_deleted_at"
+    t.index ["from_date", "to_date"], name: "index_camping_bookings_on_from_date_and_to_date"
   end
 
   create_table "customers", force: :cascade do |t|
@@ -402,6 +423,19 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_16_130000) do
     t.datetime "deleted_at", precision: nil
     t.boolean "show_on_reports", default: true
     t.boolean "available_for_bookings"
+  end
+
+  create_table "meal_orders", force: :cascade do |t|
+    t.bigint "stay_id", null: false
+    t.string "kind"
+    t.date "date"
+    t.integer "people", default: 1, null: false
+    t.integer "price_cents"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_meal_orders_on_deleted_at"
+    t.index ["stay_id"], name: "index_meal_orders_on_stay_id"
   end
 
   create_table "notes", force: :cascade do |t|
@@ -669,6 +703,26 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_16_130000) do
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
+  create_table "van_bookings", force: :cascade do |t|
+    t.string "firstname"
+    t.string "lastname"
+    t.string "email"
+    t.string "phone"
+    t.string "group_name"
+    t.date "from_date"
+    t.date "to_date"
+    t.integer "vehicles", default: 1, null: false
+    t.string "status"
+    t.integer "price_cents"
+    t.string "token"
+    t.text "notes"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_van_bookings_on_deleted_at"
+    t.index ["from_date", "to_date"], name: "index_van_bookings_on_from_date_and_to_date"
+  end
+
   create_table "versions", force: :cascade do |t|
     t.string "item_type", null: false
     t.bigint "item_id", null: false
@@ -718,6 +772,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_16_130000) do
   add_foreign_key "lodging_compositions", "lodgings", column: "composite_lodging_id"
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"
+  add_foreign_key "meal_orders", "stays"
   add_foreign_key "payments", "bookings"
   add_foreign_key "payments", "stays"
   add_foreign_key "projects", "humans"

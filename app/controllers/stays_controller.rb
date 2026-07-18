@@ -137,8 +137,58 @@ class StaysController < BaseController
       email:          contact[:email],
       phone:          contact[:phone],
       experiences:    activity_entries(p),
-      halls:          space_entries(p)
+      halls:          space_entries(p),
+      campings:       camping_entries(p),
+      vans:           van_entries(p),
+      meals:          meal_entries(p)
     )
+  end
+
+  # Nombre de nuits déduit des dates du formulaire (pour tarifer camping/van).
+  def nights_from_params(p)
+    arrival   = parse_form_date(p[:arrival_date])
+    departure = parse_form_date(p[:departure_date])
+    return 0 if arrival.nil? || departure.nil?
+    (departure - arrival).to_i.clamp(0, 10_000)
+  end
+
+  def parse_form_date(value)
+    return nil if value.blank?
+    Date.parse(value.to_s)
+  rescue ArgumentError, TypeError
+    nil
+  end
+
+  # Camping (epic #66, Phase 3) : le form porte un nombre de personnes ; le
+  # camping occupe toute la fenêtre du séjour (nights déduit des dates).
+  def camping_entries(p)
+    people = p.dig(:camping, :people).to_i
+    return [] if people < 1
+    nights = nights_from_params(p)
+    return [] if nights < 1
+    [{ kind: "tente", people: people, nights: nights }]
+  end
+
+  # Van / camping-car : le form porte un nombre de véhicules. Une entrée par
+  # véhicule (contrat PricingModel : une ligne `:van` par entrée).
+  def van_entries(p)
+    vehicles = p.dig(:van, :vehicles).to_i
+    return [] if vehicles < 1
+    nights = nights_from_params(p)
+    return [] if nights < 1
+    Array.new(vehicles) { { nights: nights } }
+  end
+
+  # Repas datés {kind, date, people} — on écarte les lignes incomplètes.
+  def meal_entries(p)
+    rows = p[:meals]
+    rows = rows.respond_to?(:values) ? rows.values : Array(rows)
+    rows.filter_map do |row|
+      kind   = row[:kind].to_s
+      people = row[:people].to_i
+      next if kind.blank? || people < 1
+      { kind: kind, date: row[:date].to_s.presence, people: people }
+    end
   end
 
   # Reconstruit un draft depuis un séjour existant, pour préremplir le form edit.
@@ -158,8 +208,35 @@ class StaysController < BaseController
       experiences:    stay.experience_bookings.active.map { |eb|
         { id: eb.experience&.id, availability_id: eb.experience_availability_id, participants: eb.participants }
       },
-      halls:          halls_from_stay(stay)
+      halls:          halls_from_stay(stay),
+      campings:       campings_from_stay(stay),
+      vans:           vans_from_stay(stay),
+      meals:          meals_from_stay(stay)
     )
+  end
+
+  # Reconstruit l'entrée camping {kind, people, nights} depuis le CampingBooking
+  # persisté, pour préremplir le form edit (nights déduit de la fenêtre).
+  def campings_from_stay(stay)
+    camping = stay.stay_items.where(bookable_type: "CampingBooking").first&.bookable
+    return [] if camping.nil?
+    nights = camping.from_date && camping.to_date ? (camping.to_date - camping.from_date).to_i : stay.experience_bookings.size
+    [{ kind: camping.kind, people: camping.people, nights: [nights, 1].max }]
+  end
+
+  # Reconstruit les entrées van (une par véhicule) depuis le VanBooking persisté.
+  def vans_from_stay(stay)
+    van = stay.stay_items.where(bookable_type: "VanBooking").first&.bookable
+    return [] if van.nil?
+    nights = van.from_date && van.to_date ? (van.to_date - van.from_date).to_i : 1
+    Array.new([van.vehicles, 1].max) { { nights: [nights, 1].max } }
+  end
+
+  # Reconstruit les repas {kind, date, people} depuis les MealOrder du séjour.
+  def meals_from_stay(stay)
+    stay.meal_orders.map do |order|
+      { kind: order.kind, date: order.date&.iso8601, people: order.people }
+    end
   end
 
   # Reconstruit les lignes d'espaces {kind, date, period} d'un séjour depuis son

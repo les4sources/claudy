@@ -12,13 +12,14 @@
 #
 class StayItem < ApplicationRecord
   belongs_to :stay
-  # Polymorphic, extensible: Booking + SpaceBooking today; ActivityBooking,
-  # EventBooking, MealOrder, … later without a schema change.
+  # Polymorphic, extensible: Booking + SpaceBooking + CampingBooking + VanBooking
+  # today (epic #66, Phase 3). Les repas (MealOrder) n'occupent PAS le calendrier
+  # → rattachés en direct sur Stay, pas via StayItem.
   belongs_to :bookable, polymorphic: true
 
   has_paper_trail
   has_soft_deletion default_scope: true
 
-  validates :bookable_type, inclusion: { in: %w[Booking SpaceBooking] }
+  validates :bookable_type, inclusion: { in: %w[Booking SpaceBooking CampingBooking VanBooking] }
   validates :bookable_id, uniqueness: { scope: [:stay_id, :bookable_type] }
 end

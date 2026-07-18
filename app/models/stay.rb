@@ -33,6 +33,9 @@ class Stay < ApplicationRecord
   belongs_to :customer
   has_many :stay_items, dependent: :destroy
   has_many :experience_bookings, dependent: :destroy
+  # Repas (epic #66, Phase 3) : rattachés en direct (pas d'occupation calendrier),
+  # sur le modèle d'`experience_bookings`.
+  has_many :meal_orders, dependent: :destroy
 
   has_paper_trail
   has_soft_deletion default_scope: true
@@ -207,8 +210,12 @@ class Stay < ApplicationRecord
     # bookables (hébergement/espaces) + activités ACTIVES (hors annulées). Les
     # DATES restent dérivées des SEULS bookables — une activité ne déborde
     # jamais les bornes du calendrier du séjour.
+    # Le total agrège : bookables (hébergement/espaces/camping/van via StayItem)
+    # + activités ACTIVES + repas (epic #66, Phase 3 — has_many direct, non
+    # calendrier). Les repas soft-deleted sont exclus par le default_scope.
     amount = items.sum { |b| b.try(:price_cents).to_i } +
-             experience_bookings.active.sum(&:price_cents)
+             experience_bookings.active.sum(&:price_cents) +
+             meal_orders.sum(:price_cents).to_i
     # Séjour SANS hébergement (epic #66, Phase 2) : les dates viennent des
     # SpaceBooking (Booking ET SpaceBooking exposent from_date/to_date), donc un
     # séjour « espaces seuls » reste daté. On ne réécrit les dates QUE si au moins
