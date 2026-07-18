@@ -16,11 +16,34 @@ module Reservations
   class Builder < ServiceBase
     class DraftInvalid < StandardError; end
 
-    attr_reader :draft, :stay, :customer, :booking, :payment
+    attr_reader :draft, :stay, :customer, :booking, :payment, :availability_warning
 
-    def initialize(draft:, deposit_rate: Pricing::Catalog::DEFAULT_DEPOSIT_RATE)
+    # Mode admin (epic #66, Phase 1) : le CRUD Séjour admin réutilise ce moteur
+    # SANS jamais passer par Stripe. Les options `admin`/`status`/`source`/
+    # `skip_availability` n'affectent QUE le canal admin ; le funnel public
+    # (`admin: false`) garde exactement le comportement historique.
+    #
+    #   - admin: true           → ne crée AUCUN Payment (le solde se règle après,
+    #                             via la page client /sejour/:token) ; c'est aussi
+    #                             au contrôleur de NE PAS envoyer d'email client.
+    #   - status:               → statut du Stay à la création (`pending`/`confirmed`),
+    #                             au choix de l'admin. Défaut : `pending` (jamais
+    #                             d'auto-confirm côté public — Q5/AC-T2-19).
+    #   - source:               → canal d'attribution du Stay. Défaut `reservation`
+    #                             (public) ; l'admin passe `manual`.
+    #   - skip_availability:    → force la disponibilité : la dispo reste VÉRIFIÉE
+    #                             (le veto Grand-Duc de `Lodging#available_between?`
+    #                             fait foi) mais l'indisponibilité n'échoue plus —
+    #                             elle est exposée via `availability_warning`
+    #                             (surbooking / saisie a posteriori autorisés).
+    def initialize(draft:, deposit_rate: Pricing::Catalog::DEFAULT_DEPOSIT_RATE,
+                   admin: false, status: nil, source: nil, skip_availability: false)
       @draft = draft
       @deposit_rate = deposit_rate
+      @admin = admin
+      @requested_status = status
+      @requested_source = source
+      @skip_availability = skip_availability
       @report_errors = true
     end
 
@@ -55,8 +78,8 @@ module Reservations
         # partira au paiement du solde (Phase 3), une fois le porteur validé.
         @stay = Stay.create!(
           customer: @customer,
-          source: "reservation",
-          status: "pending",
+          source: stay_source,
+          status: stay_status,
           arrival_date: draft.arrival_date,
           departure_date: draft.departure_date,
           total_amount_cents: quote.total_excluding_experiences_cents,
@@ -74,13 +97,10 @@ module Reservations
         # Le paiement est rattaché au Stay dans tous les cas ; le booking n'est
         # plus qu'une référence de commodité pour le canal historique. Son montant
         # reste l'acompte HORS activités (`quote.deposit_cents`).
-        @payment = Payment.create!(
-          booking: @booking,
-          stay: @stay,
-          amount_cents: quote.deposit_cents,
-          status: "pending",
-          payment_method: "card"
-        )
+        #
+        # Canal admin (epic #66) : AUCUN paiement n'est créé à l'enregistrement —
+        # le solde se règle après coup depuis la page client /sejour/:token.
+        @payment = build_payment!(quote) unless @admin
       end
       true
     end
@@ -107,7 +127,16 @@ module Reservations
       raise_invalid("Veuillez préciser votre prénom.") if draft.first_name.blank?
       raise_invalid("Veuillez préciser une adresse email valide.") unless Customer.exploitable_email?(draft.email)
       if draft.lodging.present? && !draft.lodging.available_between?(draft.arrival_date, draft.departure_date)
-        raise_invalid("Ces dates ne sont plus disponibles pour cet hébergement.")
+        # Force-dispo admin (epic #66) : on n'échoue pas, on consigne un
+        # avertissement que le contrôleur remonte à l'admin. Hors force, le
+        # comportement historique tient (l'indisponibilité bloque la création).
+        if @skip_availability
+          @availability_warning =
+            "Ces dates ne sont plus disponibles pour #{draft.lodging.name} — " \
+            "séjour enregistré en forçant la disponibilité (surbooking / saisie a posteriori)."
+        else
+          raise_invalid("Ces dates ne sont plus disponibles pour cet hébergement.")
+        end
       end
     end
 
@@ -165,7 +194,7 @@ module Reservations
         to_date: draft.departure_date,
         adults: [draft.adults, 1].max,
         children: draft.children.to_i,
-        status: "pending",
+        status: stay_status,
         payment_status: "pending",
         platform: "web",
         lodging_id: draft.lodging_id,
@@ -178,6 +207,27 @@ module Reservations
       booking.generate_token
       booking.save!
       booking
+    end
+
+    def build_payment!(quote)
+      Payment.create!(
+        booking: @booking,
+        stay: @stay,
+        amount_cents: quote.deposit_cents,
+        status: "pending",
+        payment_method: "card"
+      )
+    end
+
+    # Statut du Stay (et du Booking d'occupation) à la création. Le public reste
+    # sur `pending` (jamais d'auto-confirm — Q5) ; l'admin choisit explicitement.
+    def stay_status
+      return "pending" unless @admin
+      Stay::STATUSES_ADMIN_CREATABLE.include?(@requested_status) ? @requested_status : "pending"
+    end
+
+    def stay_source
+      @requested_source.presence || "reservation"
     end
 
     # Multi-chiens hors flow auto (Q2) : on consigne pour traitement manuel.

@@ -1,0 +1,102 @@
+/ Formulaire CRUD Séjour admin (epic #66, Phase 1). Locals : url, method, submit_label.
+/ Champs sous le namespace `stay[...]`. Devis B2C forfaitaire (PricingModel).
+- selected_customer_id = @stay.persisted? ? @stay.customer_id : nil
+- current_status = (@stay.status.presence || "pending")
+- selected_experiences = {}
+- Array(@draft&.experiences).each { |e| selected_experiences[e[:availability_id].to_i] = e[:participants] }
+
+= form_with url: url, method: method, data: { controller: "stay-form" } do
+  .space-y-8
+    / --- Client -------------------------------------------------------------
+    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+      h2.text-base.font-semibold.text-gray-900 Client
+      .flex.gap-4.text-sm
+        label.flex.items-center.gap-2
+          input type="radio" name="stay[customer_mode]" value="existing" checked=true data-action="change->stay-form#toggleCustomer"
+          | Client existant
+        label.flex.items-center.gap-2
+          input type="radio" name="stay[customer_mode]" value="new" data-action="change->stay-form#toggleCustomer"
+          | Nouveau client
+
+      .space-y-1(data-stay-form-target="existingPanel")
+        label.block.text-sm.font-medium.text-gray-700 Sélectionner un client
+        = select_tag "stay[customer_id]", options_for_select(@customers.map { |c| [c.name.presence || c.email, c.id] }, selected_customer_id), include_blank: "— Choisir un client —", class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+
+      .space-y-2.hidden(data-stay-form-target="newPanel")
+        .grid.grid-cols-2.gap-2
+          = text_field_tag "stay[new_customer][first_name]", @draft&.first_name, placeholder: "Prénom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+          = text_field_tag "stay[new_customer][last_name]", @draft&.last_name, placeholder: "Nom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+        = email_field_tag "stay[new_customer][email]", @draft&.email, placeholder: "Email", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        = telephone_field_tag "stay[new_customer][phone]", @draft&.phone, placeholder: "Téléphone", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+    / --- Séjour (dates + groupe) --------------------------------------------
+    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+      h2.text-base.font-semibold.text-gray-900 Séjour
+      .grid.grid-cols-2.gap-4
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 Arrivée
+          = date_field_tag "stay[arrival_date]", @draft&.arrival_date&.iso8601, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 Départ
+          = date_field_tag "stay[departure_date]", @draft&.departure_date&.iso8601, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      .grid.grid-cols-3.gap-4
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 Adultes
+          = number_field_tag "stay[adults]", (@draft&.adults.to_i.positive? ? @draft.adults : 1), min: 1, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 Enfants
+          = number_field_tag "stay[children]", @draft&.children.to_i, min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 Chiens
+          = number_field_tag "stay[dogs_count]", @draft&.dogs_count.to_i, min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      .space-y-1
+        label.block.text-sm.font-medium.text-gray-700 Nom du groupe (optionnel)
+        = text_field_tag "stay[group_name]", @draft&.group_name, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+    / --- Hébergement --------------------------------------------------------
+    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+      h2.text-base.font-semibold.text-gray-900 Hébergement
+      .space-y-1
+        label.block.text-sm.font-medium.text-gray-700 Hébergement
+        = select_tag "stay[lodging_id]", options_for_select(@lodgings.map { |l| [l.form_label, l.id] }, @draft&.lodging_id), include_blank: "— Choisir un hébergement —", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+    / --- Activités ----------------------------------------------------------
+    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+      h2.text-base.font-semibold.text-gray-900 Activités
+      - if @assignable_availabilities.blank?
+        p.text-sm.text-gray-500 Aucun créneau d'activité proposable.
+      - else
+        p.text-sm.text-gray-500 Indiquez le nombre de participants pour chaque créneau souhaité (0 = non réservé).
+        ul.divide-y.divide-gray-100
+          - @assignable_availabilities.each_with_index do |availability, index|
+            li.py-2.flex.items-center.justify-between.gap-4
+              span.text-sm.text-gray-900 = availability.label
+              = hidden_field_tag "stay[experiences][#{index}][availability_id]", availability.id
+              = number_field_tag "stay[experiences][#{index}][participants]", selected_experiences[availability.id].to_i, min: 0, class: "w-20 rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+    / --- Statut + force dispo -----------------------------------------------
+    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+      h2.text-base.font-semibold.text-gray-900 Statut & disponibilité
+      .space-y-1
+        label.block.text-sm.font-medium.text-gray-700 Statut du séjour
+        = select_tag "stay[status]", options_for_select([["En attente", "pending"], ["Confirmé", "confirmed"]], current_status), class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      label.flex.items-center.gap-2.text-sm.text-gray-700
+        = check_box_tag "stay[force_availability]", "1", false
+        | Forcer la disponibilité (surbooking / saisie a posteriori)
+
+    / --- Devis --------------------------------------------------------------
+    - if @quote
+      section.bg-gray-50.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-2
+        h2.text-base.font-semibold.text-gray-900 Devis (B2C)
+        ul.text-sm.text-gray-700.space-y-1
+          - @quote.breakdown.each do |line|
+            li.flex.justify-between
+              span = line[:label]
+              span = humanized_money_with_symbol(Money.new(line[:amount_cents]))
+        .flex.justify-between.border-t.border-gray-200.pt-2.font-semibold.text-gray-900
+          span Total
+          span = humanized_money_with_symbol(Money.new(@quote.total_cents))
+
+    .flex.justify-end.gap-3
+      = link_to "Annuler", recent_stays_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+      = submit_tag submit_label, class: "inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"

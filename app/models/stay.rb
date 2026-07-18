@@ -24,6 +24,12 @@ class Stay < ApplicationRecord
   # de paiement ; Booking garde le sien tant que la colonne existe.
   PAYMENT_STATUSES = %w[pending partially_paid paid].freeze
 
+  # Statuts qu'un admin peut POSER à la création d'un séjour (epic #66, Phase 1).
+  # `status` reste une chaîne libre au niveau modèle (valeurs historiques :
+  # pending / confirmed / canceled) ; on borne seulement ce que le CRUD admin
+  # accepte de créer — jamais un `canceled` par le formulaire de création.
+  STATUSES_ADMIN_CREATABLE = %w[pending confirmed].freeze
+
   belongs_to :customer
   has_many :stay_items, dependent: :destroy
   has_many :experience_bookings, dependent: :destroy

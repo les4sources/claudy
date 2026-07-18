@@ -1,0 +1,5 @@
+.px-4.sm:px-6.lg:px-8.py-6
+  .mb-6
+    h1.text-xl.font-semibold.text-gray-900 Nouveau séjour
+    p.mt-1.text-sm.text-gray-600 Créez un séjour composable (hébergement + activités). Aucun paiement n'est déclenché à la création.
+  = render "form", url: stays_path, method: :post, submit_label: "Créer le séjour"
