@@ -209,10 +209,15 @@ class Stay < ApplicationRecord
     # jamais les bornes du calendrier du séjour.
     amount = items.sum { |b| b.try(:price_cents).to_i } +
              experience_bookings.active.sum(&:price_cents)
-    update!(
-      arrival_date: arrivals.min,
-      departure_date: departures.max,
-      total_amount_cents: amount
-    )
+    # Séjour SANS hébergement (epic #66, Phase 2) : les dates viennent des
+    # SpaceBooking (Booking ET SpaceBooking exposent from_date/to_date), donc un
+    # séjour « espaces seuls » reste daté. On ne réécrit les dates QUE si au moins
+    # un bookable en porte — sinon on préserve les dates existantes plutôt que de
+    # les écraser à nil (garde-fou : un recompute sur un séjour sans bookable daté
+    # ne doit pas effacer arrival/departure).
+    attrs = { total_amount_cents: amount }
+    attrs[:arrival_date]   = arrivals.min   if arrivals.any?
+    attrs[:departure_date] = departures.max if departures.any?
+    update!(attrs)
   end
 end

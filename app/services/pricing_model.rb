@@ -39,6 +39,20 @@ class PricingModel
       total_cents.to_i - experiences_cents.to_i
     end
 
+    # Part des ESPACES (salles / cuisine pro) dans le total (epic #66, Phase 2).
+    # Permet de ventiler proprement le devis entre le `Booking` d'hébergement et
+    # le `SpaceBooking` d'espaces SANS jamais double-compter : l'hébergement porte
+    # `lodging_bundle_cents`, les espaces `spaces_cents`, la somme reste
+    # `total_excluding_experiences_cents`.
+    def spaces_cents
+      lines.select { |line| line.category == :space }.sum(&:amount_cents)
+    end
+
+    # Base hébergement/camping/repas = total hors activités ET hors espaces.
+    def lodging_bundle_cents
+      total_excluding_experiences_cents - spaces_cents
+    end
+
     def breakdown
       lines.map(&:to_h)
     end
@@ -171,7 +185,7 @@ class PricingModel
       next if date_label.nil?
       period_label = PERIOD_LABELS[period] || period
       Line.new(label: "#{humanize(entry[:kind])} — #{date_label}, #{period_label}",
-               amount_cents: unit)
+               amount_cents: unit, category: :space)
     end
   end
 
@@ -201,7 +215,7 @@ class PricingModel
         period_label = PERIOD_LABELS[period.to_s] || period.to_s
         Line.new(
           label:        "#{space_name} — nuit #{night_idx + 1}, #{period_label}",
-          amount_cents: unit
+          amount_cents: unit, category: :space
         )
       end
     end.compact

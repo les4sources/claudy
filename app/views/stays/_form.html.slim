@@ -60,6 +60,21 @@
         label.block.text-sm.font-medium.text-gray-700 Hébergement
         = select_tag "stay[lodging_id]", options_for_select(@lodgings.map { |l| [l.form_label, l.id] }, @draft&.lodging_id), include_blank: "— Choisir un hébergement —", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
+    / --- Espaces (salles / cuisine pro) -------------------------------------
+    - space_kind_options = [["Grande salle", "grande_salle"], ["Petite salle", "petite_salle"], ["Cuisine pro", "cuisine_pro"]]
+    - period_options = [["Journée", "journee"], ["Soirée", "soiree"], ["Journée + soirée", "journee_et_soiree"]]
+    - existing_halls = Array(@draft&.halls).map { |h| h.respond_to?(:symbolize_keys) ? h.symbolize_keys : h }
+    - space_rows = existing_halls + Array.new([3 - existing_halls.size, 1].max) { {} }
+    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+      h2.text-base.font-semibold.text-gray-900 Espaces
+      p.text-sm.text-gray-500 Ajoutez une salle ou la cuisine pro (date + période). Un séjour peut être composé d'espaces seuls, sans hébergement.
+      ul.divide-y.divide-gray-100
+        - space_rows.each_with_index do |row, index|
+          li.py-2.grid.grid-cols-3.gap-2
+            = select_tag "stay[halls][#{index}][kind]", options_for_select(space_kind_options, row[:kind]), include_blank: "— Espace —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+            = date_field_tag "stay[halls][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+            = select_tag "stay[halls][#{index}][period]", options_for_select(period_options, row[:period]), include_blank: "— Période —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+
     / --- Activités ----------------------------------------------------------
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
       h2.text-base.font-semibold.text-gray-900 Activités

@@ -14,9 +14,11 @@ module Reservations
   # plusieurs chiens est marqué pour traitement manuel (note interne) et ne
   # facture jamais N × 50 € (AC-T2-09b / AC-T2-15).
   class Builder < ServiceBase
+    include SpaceComposition
+
     class DraftInvalid < StandardError; end
 
-    attr_reader :draft, :stay, :customer, :booking, :payment, :availability_warning
+    attr_reader :draft, :stay, :customer, :booking, :space_booking, :payment, :availability_warning
 
     # Mode admin (epic #66, Phase 1) : le CRUD Séjour admin réutilise ce moteur
     # SANS jamais passer par Stripe. Les options `admin`/`status`/`source`/
@@ -86,6 +88,11 @@ module Reservations
           notes: internal_notes
         )
         @stay.stay_items.create!(bookable: @booking) if @booking
+        # Espaces (epic #66, Phase 2) : les salles / cuisine pro choisies
+        # deviennent un SpaceBooking + StayItem, MÊME sans hébergement (séjour
+        # « espaces seuls »). Sa part de prix vient du devis (`spaces_cents`) —
+        # l'hébergement porte `lodging_bundle_cents`, donc aucun double-compte.
+        @space_booking = build_space_booking_for!(@stay, quote)
         # Sélections d'activités du funnel (epic #55, Phase 4) : chaque créneau
         # choisi devient un ExperienceBooking `pending` rattaché au Stay — de la
         # MÊME nature que ceux du rail email, donc soumis à la validation porteur.
@@ -138,6 +145,25 @@ module Reservations
           raise_invalid("Ces dates ne sont plus disponibles pour cet hébergement.")
         end
       end
+      check_space_availability!
+    end
+
+    # Dispo espaces CAPACITY-AWARE (`Space#available_on?`, source unique). Hors
+    # force, un espace déjà plein bloque ; en force-dispo admin, on consigne un
+    # avertissement (surbooking / saisie a posteriori) sans échouer — comme pour
+    # l'hébergement.
+    def check_space_availability!
+      conflicts = space_availability_conflicts(space_reservation_specs(draft))
+      return if conflicts.empty?
+
+      names = conflicts.map { |c| c[:space].name }.uniq.join(", ")
+      if @skip_availability
+        message = "Espace(s) déjà complet(s) à ces dates : #{names} — " \
+                  "séjour enregistré en forçant la disponibilité."
+        @availability_warning = [@availability_warning, message].compact.join(" ")
+      else
+        raise_invalid("Espace(s) déjà complet(s) à ces dates : #{names}.")
+      end
     end
 
     def bookable_content?
@@ -145,8 +171,23 @@ module Reservations
         draft.campings.any? ||
         draft.vans.any? ||
         draft.hamacs.any? ||
-        Array(draft.halls).any? ||
-        Array(draft.space_slots).any?
+        draft_has_spaces?(draft)
+    end
+
+    # Crée le SpaceBooking (+ StayItem) du séjour depuis les espaces du draft.
+    # No-op si aucun espace résolu. La dispo capacity-aware a déjà été vérifiée
+    # (ou forcée) dans `validate_draft!`. Retourne le SpaceBooking ou nil.
+    def build_space_booking_for!(stay, quote)
+      specs = space_reservation_specs(draft)
+      return nil if specs.empty?
+
+      persist_space_booking!(
+        stay:        stay,
+        draft:       draft,
+        specs:       specs,
+        status:      stay_status,
+        price_cents: quote.spaces_cents
+      )
     end
 
     def upsert_customer!
@@ -198,11 +239,12 @@ module Reservations
         payment_status: "pending",
         platform: "web",
         lodging_id: draft.lodging_id,
-        # Occupation d'hébergement : son prix suit le total HORS activités
-        # (fix montant fantôme, epic #55 Phase 1) — cohérent avec le
-        # `total_amount_cents` du Stay et l'assiette de l'acompte.
-        price_cents: quote.total_excluding_experiences_cents,
-        shown_price_cents: quote.total_excluding_experiences_cents
+        # Occupation d'hébergement : son prix porte l'hébergement + camping/repas
+        # HORS espaces et HORS activités (epic #66, Phase 2). Les espaces vivent
+        # sur leur propre SpaceBooking — additionner les deux redonne exactement
+        # `total_excluding_experiences_cents`, sans double-compte.
+        price_cents: quote.lodging_bundle_cents,
+        shown_price_cents: quote.lodging_bundle_cents
       )
       booking.generate_token
       booking.save!
