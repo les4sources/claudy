@@ -1,0 +1,10 @@
+/ Modale séjour du calendrier (epic #66, Phase 5). Un seul <dialog> pour toute
+/ la grille : les blocs (chambre / espace / camping / van) portent
+/ data-action="stay-details#open" + href=stay_path(stay) ; le contrôleur Stimulus
+/ stay-details (déjà utilisé sur customers#show) récupère le fragment stays#show
+/ (rendu sans layout) et l'injecte ici. Réutilise la route stays#show existante.
+dialog.rounded-lg.p-0.shadow-xl.w-full.max-w-lg.backdrop:bg-black/40(data-stay-details-target="dialog")
+  .flex.justify-end.px-3.pt-3
+    button.text-gray-400.hover:text-gray-600(type="button" data-action="stay-details#close" aria-label="Fermer")
+      | ✕
+  div data-stay-details-target="content"

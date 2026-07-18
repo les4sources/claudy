@@ -18,6 +18,54 @@ class StayDecorator < ApplicationDecorator
     @primary_bookable ||= object.stay_items.first&.bookable
   end
 
+  # --- Composition complète du séjour (epic #66, Phase 5) ------------------
+  # Bookables typés, pour la modale séjour (ouverte depuis le calendrier ou la
+  # fiche client). On lit les `stay_items` préchargés (les soft-deleted sont
+  # déjà exclus par le default_scope), regroupés par type d'occupation. Les
+  # repas ne sont PAS des `stay_items` (pas d'occupation calendrier) : ils sont
+  # rattachés en direct au séjour.
+
+  def lodging_bookings
+    bookables_of("Booking")
+  end
+
+  def space_bookings
+    bookables_of("SpaceBooking")
+  end
+
+  def camping_bookings
+    bookables_of("CampingBooking")
+  end
+
+  def van_bookings
+    bookables_of("VanBooking")
+  end
+
+  def meals
+    object.meal_orders.to_a
+  end
+
+  # Le séjour a-t-il au moins un élément de composition à afficher ?
+  def any_composition?
+    lodging_bookings.any? || space_bookings.any? || camping_bookings.any? ||
+      van_bookings.any? || meals.any? || object.experience_bookings.active.any?
+  end
+
+  # Montant formaté d'un bookable (Booking/SpaceBooking/Camping/Van) ou d'un repas.
+  def formatted_item_amount(record)
+    money(record.try(:price_cents))
+  end
+
+  private
+
+  # Bookables d'un type polymorphe donné, dans l'ordre des stay_items préchargés.
+  def bookables_of(type)
+    object.stay_items.select { |item| item.bookable_type == type }
+          .map(&:bookable).compact
+  end
+
+  public
+
   # Badge plateforme (Airbnb / Booking.com) si le séjour provient d'une OTA.
   # nil pour les réservations directes / web. Lit `platform` du bookable
   # (uniforme pour Booking et SpaceBooking).

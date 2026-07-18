@@ -11,4 +11,9 @@
 - if @calendar_view == :organisation
   = render "pages/calendar/organisation"
 - else
-  = render "pages/calendar/bookings"
+  / Enveloppe la grille dans le contrôleur stay-details : les blocs du calendrier
+  / ouvrent la modale séjour (epic #66, Phase 5) qui vit à la fin, dans la même
+  / portée Stimulus.
+  div(data-controller="stay-details")
+    = render "pages/calendar/bookings"
+    = render "pages/calendar/stay_modal"

@@ -12,10 +12,12 @@
     - stay = booking.stay
     - block_style = stay ? stay_block_style(stay.id) : nil
 
-    .popover.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-sm.opacity-0[id="popover-reservation-#{reservation.id}" data-popover role="tooltip"]
-      = render "bookings/popover",
-               booking: booking
-      div[data-popper-arrow]
+    / Sans séjour rattaché : on garde le popover d'info historique (fallback).
+    - if stay.nil?
+      .popover.absolute.z-10.invisible.inline-block.w-64.text-sm.font-light.text-gray-500.transition-opacity.duration-300.bg-white.border.border-gray-200.rounded-lg.shadow-sm.opacity-0[id="popover-reservation-#{reservation.id}" data-popover role="tooltip"]
+        = render "bookings/popover",
+                 booking: booking
+        div[data-popper-arrow]
 
     div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min-w-0 #{booking.calendar_block_class}" style=block_style data-booking-day-entry=booking.id data-stay-id=stay&.id)
       .block.min-w-0.w-full
@@ -33,7 +35,12 @@
           .grid.grid-cols-3.gap-1
             - grouped_reservations.last.each do |reservation|
               = room_badge(reservation.room)
-      .absolute.top-0.left-0.w-full.h-full(data-controller="popover" data-action="click->popover#toggle click@window->popover#hideOnClickOutside" data-popover-target-value="popover-reservation-#{reservation.id}" data-popover-trigger-value="click")
+      / Overlay cliquable : ouvre la modale séjour (epic #66, Phase 5). Sans
+      / séjour, on retombe sur le popover d'info historique.
+      - if stay
+        a.absolute.top-0.left-0.w-full.h-full(href=stay_path(stay) data-action="stay-details#open" aria-label="Voir le séjour ##{stay.id}")
+      - else
+        .absolute.top-0.left-0.w-full.h-full(data-controller="popover" data-action="click->popover#toggle click@window->popover#hideOnClickOutside" data-popover-target-value="popover-reservation-#{reservation.id}" data-popover-trigger-value="click")
 
 / Camping (epic #66, Phase 4) — bloc agrégé « Camping » par nuit occupée, coloré
 / par séjour. Capacité GLOBALE du terrain : pas de ressource nommée (décision
@@ -43,21 +50,27 @@
   - @grouped_camping_bookings[date].sort_by { |cb| [cb.stay&.id.to_i, cb.from_date.to_s] }.each do |camping|
     - stay = camping.stay
     - block_style = stay ? stay_block_style(stay.id) : "border-left-color: #0d9488; background-color: #f0fdfa;"
-    div(class="relative flex mt-2 py-1 px-2 min-w-0 shadow border-l-4 #{"opacity-50" unless camping.confirmed?}" style=block_style data-camping-booking-entry=camping.id data-stay-id=stay&.id)
+    div(class="relative flex mt-2 py-1 px-2 min-w-0 shadow border-l-4 #{"hover:cursor-pointer hover:shadow-xl" if stay} #{"opacity-50" unless camping.confirmed?}" style=block_style data-camping-booking-entry=camping.id data-stay-id=stay&.id)
       .block.min-w-0.w-full
         strong.block.min-w-0.break-words.text-gray-700
           = camping.group_name.presence || camping.name.presence || "Camping"
         .text-xs.text-gray-500
           | ⛺ Camping · #{camping.people} pers.
+      / Camping cliquable (epic #66, Phase 5) : ouvre la modale de son séjour porteur.
+      - if stay
+        a.absolute.top-0.left-0.w-full.h-full(href=stay_path(stay) data-action="stay-details#open" aria-label="Voir le séjour ##{stay.id}")
 
 / Van / camping-car (epic #66, Phase 4) — même logique que le camping.
 - if @grouped_van_bookings && @grouped_van_bookings[date]
   - @grouped_van_bookings[date].sort_by { |vb| [vb.stay&.id.to_i, vb.from_date.to_s] }.each do |van|
     - stay = van.stay
     - block_style = stay ? stay_block_style(stay.id) : "border-left-color: #0d9488; background-color: #f0fdfa;"
-    div(class="relative flex mt-2 py-1 px-2 min-w-0 shadow border-l-4 #{"opacity-50" unless van.confirmed?}" style=block_style data-van-booking-entry=van.id data-stay-id=stay&.id)
+    div(class="relative flex mt-2 py-1 px-2 min-w-0 shadow border-l-4 #{"hover:cursor-pointer hover:shadow-xl" if stay} #{"opacity-50" unless van.confirmed?}" style=block_style data-van-booking-entry=van.id data-stay-id=stay&.id)
       .block.min-w-0.w-full
         strong.block.min-w-0.break-words.text-gray-700
           = van.group_name.presence || van.name.presence || "Van"
         .text-xs.text-gray-500
           | 🚐 Van · #{van.vehicles} véh.
+      / Van cliquable (epic #66, Phase 5) : ouvre la modale de son séjour porteur.
+      - if stay
+        a.absolute.top-0.left-0.w-full.h-full(href=stay_path(stay) data-action="stay-details#open" aria-label="Voir le séjour ##{stay.id}")
