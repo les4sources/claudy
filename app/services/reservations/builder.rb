@@ -15,10 +15,13 @@ module Reservations
   # facture jamais N × 50 € (AC-T2-09b / AC-T2-15).
   class Builder < ServiceBase
     include SpaceComposition
+    include CampingComposition
+    include MealComposition
 
     class DraftInvalid < StandardError; end
 
-    attr_reader :draft, :stay, :customer, :booking, :space_booking, :payment, :availability_warning
+    attr_reader :draft, :stay, :customer, :booking, :space_booking,
+                :camping_booking, :van_booking, :payment, :availability_warning
 
     # Mode admin (epic #66, Phase 1) : le CRUD Séjour admin réutilise ce moteur
     # SANS jamais passer par Stripe. Les options `admin`/`status`/`source`/
@@ -93,6 +96,16 @@ module Reservations
         # « espaces seuls »). Sa part de prix vient du devis (`spaces_cents`) —
         # l'hébergement porte `lodging_bundle_cents`, donc aucun double-compte.
         @space_booking = build_space_booking_for!(@stay, quote)
+        # Camping / van / repas (epic #66, Phase 3) — PERSISTÉS UNIQUEMENT côté
+        # admin. Le funnel public reste devis-only pour ces éléments (leur montant
+        # est noyé dans `lodging_bundle_cents` du Booking, comportement historique
+        # inchangé). Côté admin, chacun devient son propre modèle et le Booking
+        # d'hébergement porte `lodging_only_cents` (extraction sans double-compte).
+        if @admin
+          @camping_booking = build_camping_booking_for!(@stay, quote)
+          @van_booking     = build_van_booking_for!(@stay, quote)
+          create_meal_orders!(@stay, draft)
+        end
         # Sélections d'activités du funnel (epic #55, Phase 4) : chaque créneau
         # choisi devient un ExperienceBooking `pending` rattaché au Stay — de la
         # MÊME nature que ceux du rail email, donc soumis à la validation porteur.
@@ -146,6 +159,23 @@ module Reservations
         end
       end
       check_space_availability!
+      check_outdoor_capacity!
+    end
+
+    # Camping / van : capacité GLOBALE du domaine (epic #66, Phase 3). Vérifiée
+    # UNIQUEMENT côté admin — le funnel public ne persiste pas ces réservables et
+    # garde son comportement historique. Même logique de force que l'hébergement.
+    def check_outdoor_capacity!
+      return unless @admin
+      messages = [camping_capacity_message(draft), van_capacity_message(draft)].compact
+      return if messages.empty?
+
+      if @skip_availability
+        forced = messages.map { |m| "#{m} — séjour enregistré en forçant la disponibilité." }
+        @availability_warning = [@availability_warning, *forced].compact.join(" ")
+      else
+        raise_invalid(messages.join(" "))
+      end
     end
 
     # Dispo espaces CAPACITY-AWARE (`Space#available_on?`, source unique). Hors
@@ -187,6 +217,30 @@ module Reservations
         specs:       specs,
         status:      stay_status,
         price_cents: quote.spaces_cents
+      )
+    end
+
+    # Camping (epic #66, Phase 3) : no-op si aucune personne demandée. Sa part de
+    # prix vient du devis (`camping_cents`). Retourne le CampingBooking ou nil.
+    def build_camping_booking_for!(stay, quote)
+      return nil unless draft_has_camping?(draft)
+
+      persist_camping_booking!(
+        stay:        stay,
+        draft:       draft,
+        status:      stay_status,
+        price_cents: quote.camping_cents
+      )
+    end
+
+    def build_van_booking_for!(stay, quote)
+      return nil unless draft_has_van?(draft)
+
+      persist_van_booking!(
+        stay:        stay,
+        draft:       draft,
+        status:      stay_status,
+        price_cents: quote.van_cents
       )
     end
 
@@ -239,16 +293,25 @@ module Reservations
         payment_status: "pending",
         platform: "web",
         lodging_id: draft.lodging_id,
-        # Occupation d'hébergement : son prix porte l'hébergement + camping/repas
-        # HORS espaces et HORS activités (epic #66, Phase 2). Les espaces vivent
-        # sur leur propre SpaceBooking — additionner les deux redonne exactement
-        # `total_excluding_experiences_cents`, sans double-compte.
-        price_cents: quote.lodging_bundle_cents,
-        shown_price_cents: quote.lodging_bundle_cents
+        # Prix de l'occupation d'hébergement (epic #66, Phase 3) :
+        #   - Canal ADMIN → `lodging_only_cents` : hébergement PUR (camping / van /
+        #     repas sont extraits sur leurs propres modèles). Invariant admin :
+        #     Booking + SpaceBooking + CampingBooking + VanBooking + MealOrder(s)
+        #     + ExperienceBooking(s) == total du séjour.
+        #   - Canal PUBLIC → `lodging_bundle_cents` : comportement historique
+        #     INCHANGÉ (camping / van / repas noyés dans le Booking, devis-only).
+        price_cents: lodging_price_cents(quote),
+        shown_price_cents: lodging_price_cents(quote)
       )
       booking.generate_token
       booking.save!
       booking
+    end
+
+    # Part de prix portée par le Booking d'hébergement selon le canal (voir
+    # `build_booking!`). Admin : hébergement pur ; public : bundle historique.
+    def lodging_price_cents(quote)
+      @admin ? quote.lodging_only_cents : quote.lodging_bundle_cents
     end
 
     def build_payment!(quote)

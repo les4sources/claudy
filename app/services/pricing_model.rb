@@ -45,12 +45,33 @@ class PricingModel
     # `lodging_bundle_cents`, les espaces `spaces_cents`, la somme reste
     # `total_excluding_experiences_cents`.
     def spaces_cents
-      lines.select { |line| line.category == :space }.sum(&:amount_cents)
+      category_cents(:space)
     end
 
+    # Parts camping / van / repas (epic #66, Phase 3). Chacune est extraite du
+    # devis pour être portée par son propre modèle persisté (`CampingBooking`,
+    # `VanBooking`, `MealOrder`) côté canal admin — sans jamais double-compter.
+    def camping_cents = category_cents(:camping)
+    def van_cents     = category_cents(:van)
+    def meals_cents   = category_cents(:meal)
+
     # Base hébergement/camping/repas = total hors activités ET hors espaces.
+    # INCHANGÉ pour préserver EXACTEMENT le canal public (funnel) : côté public,
+    # camping/van/repas restent devis-only et noyés dans le prix du `Booking`.
     def lodging_bundle_cents
       total_excluding_experiences_cents - spaces_cents
+    end
+
+    # Hébergement PUR (epic #66, Phase 3) = bundle MOINS camping/van/repas. C'est
+    # la part que porte le `Booking` d'hébergement dans le canal ADMIN, où
+    # camping/van/repas vivent sur leurs propres modèles. Invariant admin :
+    #   lodging_only + spaces + camping + van + meals == total_excluding_experiences.
+    def lodging_only_cents
+      lodging_bundle_cents - camping_cents - van_cents - meals_cents
+    end
+
+    def category_cents(category)
+      lines.select { |line| line.category == category }.sum(&:amount_cents)
     end
 
     def breakdown
@@ -139,7 +160,7 @@ class PricingModel
       nights = entry[:nights].to_i
       next if people < 1 || nights < 1
       Line.new(label: "Camping #{entry[:kind]} — #{people} pers × #{nights} nuit(s)",
-               amount_cents: unit * people * nights)
+               amount_cents: unit * people * nights, category: :camping)
     end
   end
 
@@ -153,7 +174,7 @@ class PricingModel
       nights = entry[:nights].to_i
       next if nights < 1
       Line.new(label: "Van / camping-car — #{nights} nuit(s)",
-               amount_cents: Pricing::Catalog::VAN_PER_NIGHT_CENTS * nights)
+               amount_cents: Pricing::Catalog::VAN_PER_NIGHT_CENTS * nights, category: :van)
     end
   end
 
@@ -229,7 +250,7 @@ class PricingModel
       people = entry[:people].to_i
       next if people < 1
       Line.new(label: "#{humanize(entry[:kind])} — #{people} pers",
-               amount_cents: unit * people)
+               amount_cents: unit * people, category: :meal)
     end
   end
 

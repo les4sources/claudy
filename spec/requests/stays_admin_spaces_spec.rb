@@ -118,7 +118,8 @@ RSpec.describe "Stays — espaces (epic #66, Phase 2)", type: :request do
       stay = create_spaces_only_stay
       patch stay_path(stay), params: update_params(stay) # ni lodging ni halls
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.body).to include("hébergement ou un espace")
+      # Phase 3 (epic #66) : la contrainte de composition s'élargit au camping/van.
+      expect(response.body).to include("hébergement, un espace ou un emplacement camping/van")
     end
   end
 

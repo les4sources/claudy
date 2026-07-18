@@ -75,6 +75,38 @@
             = date_field_tag "stay[halls][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
             = select_tag "stay[halls][#{index}][period]", options_for_select(period_options, row[:period]), include_blank: "— Période —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
 
+    / --- Camping (tente) ----------------------------------------------------
+    - camping_people = Array(@draft&.campings).sum { |c| (c.respond_to?(:symbolize_keys) ? c.symbolize_keys : c)[:people].to_i }
+    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+      h2.text-base.font-semibold.text-gray-900 Camping (tente)
+      p.text-sm.text-gray-500 Nombre de personnes en tente sur la durée du séjour. Capacité globale du terrain (forçable). Un séjour peut être composé de camping seul.
+      .space-y-1
+        label.block.text-sm.font-medium.text-gray-700 Personnes
+        = number_field_tag "stay[camping][people]", (camping_people.positive? ? camping_people : nil), min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+    / --- Van / camping-car --------------------------------------------------
+    - van_vehicles = Array(@draft&.vans).size
+    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+      h2.text-base.font-semibold.text-gray-900 Van / camping-car
+      p.text-sm.text-gray-500 Nombre de véhicules sur la durée du séjour. Capacité globale (forçable).
+      .space-y-1
+        label.block.text-sm.font-medium.text-gray-700 Véhicules
+        = number_field_tag "stay[van][vehicles]", (van_vehicles.positive? ? van_vehicles : nil), min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+    / --- Repas --------------------------------------------------------------
+    - meal_kind_options = [["Repas végé (midi)", "repas_vege_midi"], ["Buffet pain-fromages", "buffet"], ["Formule complète", "formule_complete"]]
+    - existing_meals = Array(@draft&.meals).map { |m| m.respond_to?(:symbolize_keys) ? m.symbolize_keys : m }
+    - meal_rows = existing_meals + Array.new([3 - existing_meals.size, 1].max) { {} }
+    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+      h2.text-base.font-semibold.text-gray-900 Repas
+      p.text-sm.text-gray-500 Ajoutez un repas (type + date + nombre de convives). Les repas n'occupent pas le calendrier.
+      ul.divide-y.divide-gray-100
+        - meal_rows.each_with_index do |row, index|
+          li.py-2.grid.grid-cols-3.gap-2
+            = select_tag "stay[meals][#{index}][kind]", options_for_select(meal_kind_options, row[:kind]), include_blank: "— Repas —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+            = date_field_tag "stay[meals][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+            = number_field_tag "stay[meals][#{index}][people]", row[:people], min: 0, placeholder: "Convives", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+
     / --- Activités ----------------------------------------------------------
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
       h2.text-base.font-semibold.text-gray-900 Activités
