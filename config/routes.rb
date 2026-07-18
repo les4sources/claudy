@@ -43,6 +43,7 @@ Rails.application.routes.draw do
     member do
       patch :toggle_cycle_active
       post :create_account
+      post :resend_invitation
     end
   end
   resources :human_roles
