@@ -49,10 +49,14 @@
         .border-t.border-gray-200
           .px-4.py-5.sm:px-6
             - if @human.account?
-              p.text-sm.text-gray-700
+              p.text-sm.text-gray-700.mb-4
                 | Connexion à Claudy avec l'adresse
                 |
                 span.font-medium = @human.user.email
+              = button_to "Renvoyer l'invitation",
+                          resend_invitation_human_path(@human),
+                          method: :post,
+                          class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             - elsif @human.email.present?
               p.text-sm.text-gray-700.mb-4
                 | Aucun compte d'accès pour l'instant. Créez-en un pour permettre à #{@human.name} de se connecter à Claudy et de gérer ses activités et disponibilités.

@@ -74,6 +74,20 @@ class HumansController < BaseController
     end
   end
 
+  # Renvoie l'email de définition / réinitialisation du mot de passe à un porteur
+  # qui a déjà un compte (utile si l'invitation initiale a échoué, ex. Postmark).
+  def resend_invitation
+    @human = Human.unscoped.find(params[:id])
+    if @human.user
+      @human.user.send_reset_password_instructions
+      redirect_to human_path(@human),
+                  notice: "Invitation renvoyée à #{@human.email} — le lien pour définir/réinitialiser le mot de passe a été envoyé."
+    else
+      redirect_to human_path(@human),
+                  alert: "#{@human.name} n'a pas encore de compte d'accès — créez-en un d'abord."
+    end
+  end
+
   def destroy
     if @human.soft_delete!(validate: false)
       redirect_to humans_path,
