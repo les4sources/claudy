@@ -124,4 +124,31 @@ RSpec.describe Reservations::Builder, "chambres seules (epic #81, Phase 5)" do
       expect(forced.availability_warning).to include("forçant la disponibilité")
     end
   end
+
+  describe "garde-fous de revue (Forge Phase 5)" do
+    it "refuse des room_ids tous étrangers au gîte — jamais d'occupation fantôme (F1)" do
+      foreign = Room.create!(name: "Chambre étrangère", level: 1)
+      builder = described_class.new(
+        draft: draft(booking_type: "rooms", room_ids: [foreign.id]),
+        admin: true, status: "confirmed", source: "manual"
+      )
+      expect(builder.run).to be(false)
+      expect(builder.error_message).to include("n'appartiennent pas")
+      expect(Booking.count).to eq(0)
+    end
+
+    it "persiste booking_type sur le Booking créé (F2 — plus de dérivation fragile)" do
+      described_class.new(
+        draft: draft(booking_type: "rooms", room_ids: [@room_1.id, @room_2.id]),
+        admin: true, status: "confirmed", source: "manual"
+      ).run!
+      expect(Booking.last.read_attribute(:booking_type)).to eq("rooms")
+
+      described_class.new(
+        draft: draft(email: "entier@example.com", arrival_date: (departure + 1).iso8601, departure_date: (departure + 3).iso8601),
+        admin: true, status: "confirmed", source: "manual"
+      ).run!
+      expect(Booking.last.read_attribute(:booking_type)).to eq("lodging")
+    end
+  end
 end

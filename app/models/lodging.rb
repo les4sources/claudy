@@ -102,8 +102,11 @@ class Lodging < ApplicationRecord
     ids = Array(room_ids).map(&:to_i).reject(&:zero?).uniq
     return self_available_between?(from_date, to_date) if ids.empty?
 
+    # room_ids fournis mais AUCUN n'appartient à ce gîte : réponse conservatrice
+    # (revue Forge F1) — « indisponible » plutôt que d'avaliser une occupation
+    # fantôme (Booking sans aucune Reservation, invisible du calendrier).
     scoped = rooms.where(id: ids).pluck(:id)
-    return true if scoped.empty?
+    return false if scoped.empty?
 
     Reservation.includes(:booking)
                .where(date: from_date..to_date, room: scoped, booking: { status: "confirmed" })

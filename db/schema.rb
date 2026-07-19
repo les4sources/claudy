@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_19_130000) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_19_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -138,6 +138,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_19_130000) do
     t.boolean "option_pizza_party"
     t.datetime "deleted_at", precision: nil
     t.boolean "wifi", default: false
+    t.string "booking_type"
     t.index ["lodging_id"], name: "index_bookings_on_lodging_id"
   end
 

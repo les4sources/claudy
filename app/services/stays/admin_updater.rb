@@ -107,6 +107,12 @@ module Stays
       if @draft.lodging.present? && @draft.rooms_mode? && @draft.room_ids.blank?
         raise_invalid("Veuillez sélectionner au moins une chambre pour une réservation de chambres seules.")
       end
+      # Revue Forge F1 : chambres toutes étrangères au gîte = params forgés,
+      # jamais une saisie UI — refus explicite plutôt qu'occupation fantôme.
+      if @draft.lodging.present? && @draft.rooms_mode? && @draft.room_ids.present? &&
+         @draft.lodging.rooms.where(id: @draft.room_ids).none?
+        raise_invalid("Les chambres sélectionnées n'appartiennent pas à cet hébergement.")
+      end
       check_availability!
       check_space_availability!
       check_outdoor_capacity!
@@ -153,23 +159,32 @@ module Stays
     # (comportement historique inchangé). Mode chambres seules (epic #81, Phase 5) :
     # dispo des chambres cochées, en EXCLUANT la propre occupation du séjour édité
     # (sinon un séjour confirmé se bloquerait lui-même à chaque réenregistrement).
+    # Dispo en édition, mode gîte entier comme chambres seules : on vérifie les
+    # Reservation confirmées sur les chambres visées en EXCLUANT TOUS les
+    # Booking du séjour édité (revue Forge F4 : `.first` seul laissait un
+    # éventuel second Booking auto-bloquer le séjour ; et le mode gîte entier
+    # ne s'excluait pas du tout — un séjour confirmé se bloquait lui-même).
     def lodging_available?
       if @draft.rooms_mode?
-        rooms_available_excluding_self?
+        ids = @draft.lodging.rooms.where(id: @draft.room_ids).pluck(:id)
+        # Chambres toutes hors gîte : déjà refusé en validation ; réponse
+        # conservatrice si on arrive ici par un autre chemin.
+        return false if ids.empty?
       else
-        @draft.lodging.available_between?(@draft.arrival_date, @draft.departure_date)
+        ids = @draft.lodging.rooms.pluck(:id)
+        # Gîte sans chambre modélisée : aucune Reservation possible — seule une
+        # indisponibilité posée à la main compte (comportement historique).
+        if ids.empty?
+          return @draft.lodging.unavailabilities
+                       .where(date: @draft.arrival_date..@draft.departure_date).none?
+        end
       end
-    end
-
-    def rooms_available_excluding_self?
-      ids = @draft.lodging.rooms.where(id: @draft.room_ids).pluck(:id)
-      return true if ids.empty?
 
       scope = Reservation.joins(:booking)
                          .where(date: @draft.arrival_date..@draft.departure_date,
                                 room_id: ids, bookings: { status: "confirmed" })
-      own = existing_lodging_booking
-      scope = scope.where.not(bookings: { id: own.id }) if own
+      own_ids = @stay.stay_items.where(bookable_type: "Booking").pluck(:bookable_id)
+      scope = scope.where.not(bookings: { id: own_ids }) if own_ids.any?
       scope.none? &&
         @draft.lodging.unavailabilities.where(date: @draft.arrival_date..@draft.departure_date).none?
     end

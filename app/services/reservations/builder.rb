@@ -193,6 +193,13 @@ module Reservations
       if draft.lodging.present? && draft.rooms_mode? && draft.room_ids.blank?
         raise_invalid("Veuillez sélectionner au moins une chambre pour une réservation de chambres seules.")
       end
+      # Revue Forge F1 : room_ids fournis mais tous étrangers au gîte (params
+      # forgés) → sans ce garde-fou, Booking créé avec ZÉRO Reservation
+      # (occupation fantôme, invisible du calendrier, aucun veto).
+      if draft.lodging.present? && draft.rooms_mode? && draft.room_ids.present? &&
+         draft.lodging.rooms.where(id: draft.room_ids).none?
+        raise_invalid("Les chambres sélectionnées n'appartiennent pas à cet hébergement.")
+      end
       if draft.lodging.present? && !lodging_available?
         # Force-dispo admin (epic #66) : on n'échoue pas, on consigne un
         # avertissement que le contrôleur remonte à l'admin. Hors force, le

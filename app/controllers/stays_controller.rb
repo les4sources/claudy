@@ -383,10 +383,10 @@ class StaysController < BaseController
   # Reconstruit un draft depuis un séjour existant, pour préremplir le form edit.
   def draft_from_stay(stay)
     booking = stay.stay_items.where(bookable_type: "Booking").first&.bookable
-    # Chambres seules (epic #81, Phase 5) : rétablit le mode + les chambres cochées
-    # depuis les Reservation persistées (pas de drapeau stocké, cf.
-    # Booking#rooms_only_occupation?).
-    rooms_mode = booking&.rooms_only_occupation?
+    # Chambres seules (epic #81, Phase 5) : rétablit le mode + les chambres
+    # cochées. La colonne `booking_type` fait foi ; dérivation des Reservation
+    # en secours pour le legacy (cf. Booking#rooms_mode?).
+    rooms_mode = booking&.rooms_mode?
     Reservations::Draft.new(
       lodging_id:     booking&.lodging_id,
       booking_type:   rooms_mode ? "rooms" : "lodging",

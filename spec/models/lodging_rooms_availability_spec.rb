@@ -46,9 +46,11 @@ RSpec.describe Lodging, "#rooms_available_between? (epic #81, Phase 5)", type: :
   end
 
   it "borne les room_ids aux chambres du gîte (anti-injection cross-gîte)" do
-    # La chambre de la Chevêche n'appartient pas à La Hulotte → ignorée.
+    # La chambre de la Chevêche n'appartient pas à La Hulotte : réponse
+    # CONSERVATRICE (revue Forge F1) — « indisponible » plutôt que d'avaliser
+    # une occupation fantôme (Booking sans aucune Reservation).
     reserve_room(cheveche_1, from: from, to: to) # confirmé sur la chambre Chevêche
-    expect(hulotte.rooms_available_between?([cheveche_1.id], from, to)).to be(true)
+    expect(hulotte.rooms_available_between?([cheveche_1.id], from, to)).to be(false)
   end
 
   it "retombe sur la dispo du gîte entier sans room_ids exploitables" do

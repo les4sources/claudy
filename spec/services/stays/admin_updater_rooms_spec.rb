@@ -115,4 +115,29 @@ RSpec.describe Stays::AdminUpdater, "chambres seules (epic #81, Phase 5)" do
     expect(updater.run).to be(false)
     expect(updater.error_message).to include("plus disponibles")
   end
+
+  # Revue Forge Phase 5.
+  it "refuse des room_ids tous étrangers au gîte en édition (F1)" do
+    foreign = Room.create!(name: "Chambre étrangère", level: 1)
+    stay = create_rooms_stay
+    updater = described_class.new(
+      stay: stay,
+      draft: draft(booking_type: "rooms", room_ids: [foreign.id], price_override_cents: 12_000),
+      status: "confirmed", price_override_cents: 12_000
+    )
+    expect(updater.run).to be(false)
+    expect(updater.error_message).to include("n'appartiennent pas")
+  end
+
+  it "n'auto-bloque pas la réédition d'un séjour GÎTE ENTIER confirmé (F4 — exclusion de soi en mode lodging)" do
+    builder = Reservations::Builder.new(
+      draft: draft, admin: true, status: "confirmed", source: "manual"
+    )
+    builder.run!
+    stay = builder.stay
+
+    updater = described_class.new(stay: stay, draft: draft, status: "confirmed")
+    expect(updater.run).to be(true)
+    expect(updater.availability_warning).to be_nil
+  end
 end
