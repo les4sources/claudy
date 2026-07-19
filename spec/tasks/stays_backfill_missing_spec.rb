@@ -65,4 +65,52 @@ RSpec.describe "stays:backfill_missing", type: :task do
 
     expect(Booking.with_deleted { Booking.unscoped.find(booking.id).stay }).to be_present
   end
+
+  # --- SpaceBookings (epic #81, Phase 1) ---------------------------------
+  def build_space_booking(**attrs)
+    SpaceBooking.create!({
+      firstname: "Backfill",
+      email: "sb-backfill@example.com",
+      from_date: Date.new(2026, 11, 1),
+      to_date: Date.new(2026, 11, 3),
+      status: "confirmed",
+      price_cents: 20_000
+    }.merge(attrs))
+  end
+
+  it "rattache plusieurs SpaceBookings orphelins : 0 orphelin après exécution" do
+    sb1 = build_space_booking(email: "sb-a@example.com")
+    sb2 = build_space_booking(email: "sb-b@example.com")
+
+    run_task
+
+    expect(sb1.reload.stay).to be_present
+    expect(sb2.reload.stay).to be_present
+    expect(sb1.reload.stay.source).to eq("manual")
+  end
+
+  it "est idempotente sur les SpaceBookings : un second passage ne crée aucun Stay" do
+    build_space_booking(email: "sb-c@example.com")
+    run_task
+    count_after_first = Stay.count
+
+    expect { run_task }.not_to change(Stay, :count)
+    expect(Stay.count).to eq(count_after_first)
+  end
+
+  it "ne recrée pas de Stay pour un SpaceBooking déjà rattaché" do
+    space_booking = build_space_booking(email: "sb-d@example.com")
+    existing = Stays::EnsureForSpaceBooking.call(space_booking)
+
+    expect { run_task }.not_to change(Stay, :count)
+    expect(space_booking.reload.stay).to eq(existing)
+  end
+
+  it "ignore les SpaceBookings soft-deleted (aucun Stay créé pour eux)" do
+    space_booking = build_space_booking(email: "sb-deleted@example.com")
+    space_booking.soft_delete!(validate: false)
+
+    expect { run_task }.not_to change { StayItem.where(bookable_type: "SpaceBooking").count }
+    expect(StayItem.where(bookable: space_booking).count).to eq(0)
+  end
 end
