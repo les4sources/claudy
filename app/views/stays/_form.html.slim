@@ -6,10 +6,11 @@
 - Array(@draft&.experiences).each { |e| selected_experiences[e[:availability_id].to_i] = e[:participants] }
 / Attribution + prix imposé (epic #81, Phase 3). Source portée par le Stay,
 / plateforme portée par le Booking d'occupation (quand il y en a un).
-- current_source = (@stay&.source.presence || "manual")
-- source_labels = { "manual" => "Saisie manuelle", "ota" => "OTA (Airbnb / Booking.com)", "reservation" => "Réservation en ligne", "tally_legacy" => "Import Tally (legacy)" }
+/ Séjour NEUF : canal "manual" (saisie admin) — le défaut DB "reservation"
+/ (funnel public) ne doit pas fuir dans le form. En édition : source réelle.
+- current_source = @stay&.persisted? ? (@stay.source.presence || "manual") : "manual"
 - source_values = (Stay::ADMIN_SELECTABLE_SOURCES + [current_source]).uniq
-- source_options = source_values.map { |v| [source_labels[v] || v, v] }
+- source_options = source_values.map { |v| [stay_source_label(v), v] }
 - lodging_booking = @stay&.persisted? ? @stay.stay_items.where(bookable_type: "Booking").first&.bookable : nil
 - current_platform = (lodging_booking&.platform.presence || "web")
 - platform_options = [["Réservation directe (aucune)", "web"], ["Airbnb", "airbnb"], ["Booking.com", "bookingdotcom"]]
@@ -180,8 +181,8 @@
     section.bg-gray-50.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-2
       h2.text-base.font-semibold.text-gray-900 Prix
       .space-y-1
-        label.block.text-sm.font-medium.text-gray-700 Prix total imposé (€)
-        = number_field_tag "stay[price_override]", override_prefill, step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        label.block.text-sm.font-medium.text-gray-700 for="stay_price_override" Prix total imposé (€)
+        = number_field_tag "stay[price_override]", override_prefill, id: "stay_price_override", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
         p.text-xs.text-gray-500 Laisser vide pour appliquer le devis B2C. Un montant remplace le total du devis.
 
     .flex.justify-end.gap-3

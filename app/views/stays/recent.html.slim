@@ -9,7 +9,7 @@
   / Filtre par source (AC-T2-23).
   = form_with url: recent_stays_path, method: :get, class: "mb-4 flex items-center gap-2" do
     label.text-sm.text-gray-600 Canal :
-    = select_tag :source, options_for_select([["Tous", ""]] + @sources.map { |s| [s, s] }, @source), onchange: "this.form.requestSubmit()", class: "rounded border-gray-300 text-sm"
+    = select_tag :source, options_for_select([["Tous", ""]] + @sources.map { |s| [stay_source_label(s), s] }, @source), onchange: "this.form.requestSubmit()", class: "rounded border-gray-300 text-sm"
 
   .overflow-hidden.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg
     table.min-w-full.divide-y.divide-gray-300
@@ -19,6 +19,7 @@
           th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Dates
           th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Canal
           th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Statut
+          th.px-4.py-2.text-right.text-xs.font-medium.text-gray-500.uppercase Total
           th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Créé le
           th.px-4.py-2.text-right.text-xs.font-medium.text-gray-500.uppercase Actions
       tbody.divide-y.divide-gray-200.bg-white
@@ -31,11 +32,15 @@
                 = stay.contact_line
             td.px-4.py-2.text-sm = stay.date_range
             td.px-4.py-2.text-sm
-              span.inline-flex.items-center.rounded-full.bg-gray-100.px-2.py-0.5.text-xs.font-medium.text-gray-700 = stay.source
+              span.inline-flex.items-center.rounded-full.bg-gray-100.px-2.text-xs.font-medium.text-gray-700(class="py-0.5") = stay_source_label(stay.source)
             td.px-4.py-2.text-sm = stay.status_badge
+            td.px-4.py-2.text-sm.text-right.whitespace-nowrap
+              span.font-medium.text-gray-900 = humanized_money_with_symbol(stay.total_amount)
+              - if stay.price_overridden?
+                span.ml-1.text-xs.text-amber-700(title="Prix total imposé par l'admin (devis B2C court-circuité)") imposé
             td.px-4.py-2.text-sm.text-gray-500 = l(stay.created_at.to_date, format: :long)
             td.px-4.py-2.text-sm.text-right
               = link_to "Éditer", edit_stay_path(stay), class: "text-indigo-600 hover:text-indigo-800 hover:underline"
         - if @stays.empty?
           tr
-            td.px-4.py-6.text-center.text-sm.text-gray-400 colspan="6" Aucun séjour pour ce canal.
+            td.px-4.py-6.text-center.text-sm.text-gray-400 colspan="7" Aucun séjour pour ce canal.
