@@ -137,6 +137,11 @@ module Reservations
         # le solde se règle après coup depuis la page client /sejour/:token.
         @payment = build_payment!(quote) unless @admin
       end
+      # Séjour activités-seules / repas-seuls SANS dates saisies (issue #80) :
+      # dériver arrivée/départ de l'élément présent. `recompute_aggregates!`
+      # redonne le MÊME total (bookables + activités actives + repas) — invariant
+      # préservé — et ne touche pas aux dates s'il n'y a rien à dériver.
+      @stay.recompute_aggregates! if @stay.arrival_date.blank? && @stay.bookables.empty?
       true
     end
 
@@ -156,8 +161,12 @@ module Reservations
     # ou espaces seuls est légitime, et c'est justement lui qui ne doit plus
     # produire de Booking fantôme.
     def validate_draft!
-      raise_invalid("Veuillez choisir des dates valides.") if draft.nights < 1
-      raise_invalid("Veuillez choisir un hébergement ou un emplacement.") unless bookable_content?
+      # Nuits requises UNIQUEMENT pour les réservables à la nuit (hébergement,
+      # camping, van, hamac). Les compositions sans nuitée — location d'espace en
+      # journée sèche (0 nuit), activités seules, repas seuls — sont légitimes
+      # (issue #80) : elles portent leurs propres dates (espace/activité/repas).
+      raise_invalid("Veuillez choisir des dates valides.") if requires_nights? && draft.nights < 1
+      raise_invalid("Veuillez choisir un hébergement, un espace, une activité ou un repas.") unless bookable_content?
       raise_invalid("Veuillez indiquer si vous venez avec un animal (champ obligatoire).") if draft.dogs_count.nil?
       raise_invalid("Veuillez préciser votre prénom.") if draft.first_name.blank?
       raise_invalid("Veuillez préciser une adresse email valide.") unless Customer.exploitable_email?(draft.email)
@@ -216,7 +225,15 @@ module Reservations
         draft.campings.any? ||
         draft.vans.any? ||
         draft.hamacs.any? ||
-        draft_has_spaces?(draft)
+        draft_has_spaces?(draft) ||
+        draft.bookable_experiences? ||
+        draft_has_meals?(draft)
+    end
+
+    # Réservables facturés À LA NUIT : ils exigent au moins une nuit. Les espaces
+    # (forfait date+période), activités et repas n'en exigent pas (issue #80).
+    def requires_nights?
+      draft.lodging.present? || draft.campings.any? || draft.vans.any? || draft.hamacs.any?
     end
 
     # Crée le SpaceBooking (+ StayItem) du séjour depuis les espaces du draft.

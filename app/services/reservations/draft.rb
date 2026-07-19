@@ -122,6 +122,15 @@ module Reservations
       PricingModel.quote(self, deposit_rate: deposit_rate)
     end
 
+    # Le draft porte-t-il au moins une activité exploitable (créneau + participants) ?
+    # Sert au gate « contenu réservable » élargi (séjour activités-seules, issue #80).
+    def bookable_experiences?
+      Array(experiences).any? do |entry|
+        entry = entry.symbolize_keys if entry.respond_to?(:symbolize_keys)
+        entry[:availability_id].present? && entry[:participants].to_i >= 1
+      end
+    end
+
     private
 
     def parse_date(value)
