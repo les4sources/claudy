@@ -104,6 +104,18 @@ class StaysController < BaseController
       return render json: { checkable: false }
     end
 
+    # Mode chambres seules (epic #81, Phase 5) : la dispo porte sur les chambres
+    # cochées, pas sur tout le gîte. Sans chambre cochée, rien à vérifier.
+    if params[:booking_type].to_s == "rooms"
+      room_ids = Array(params[:room_ids]).reject(&:blank?)
+      return render json: { checkable: false } if room_ids.empty?
+      return render json: {
+        checkable: true,
+        available: lodging.rooms_available_between?(room_ids, from, to),
+        lodging:   lodging.name
+      }
+    end
+
     render json: {
       checkable: true,
       available: lodging.available_between?(from, to),
@@ -295,6 +307,8 @@ class StaysController < BaseController
     contact = customer_contact(p)
     Reservations::Draft.new(
       lodging_id:     p[:lodging_id],
+      booking_type:   p[:booking_type],
+      room_ids:       room_ids_param(p),
       arrival_date:   p[:arrival_date],
       departure_date: p[:departure_date],
       adults:         p[:adults],
@@ -311,6 +325,12 @@ class StaysController < BaseController
       vans:           van_entries(p),
       meals:          meal_entries(p)
     )
+  end
+
+  # Chambres cochées (mode chambres seules, epic #81, Phase 5). Tableau de la
+  # forme stay[room_ids][] ; on ne garde que des entiers exploitables.
+  def room_ids_param(p)
+    Array(p[:room_ids]).map { |id| id.to_i }.reject(&:zero?)
   end
 
   # Nombre de nuits déduit des dates du formulaire (pour tarifer camping/van).
@@ -363,8 +383,14 @@ class StaysController < BaseController
   # Reconstruit un draft depuis un séjour existant, pour préremplir le form edit.
   def draft_from_stay(stay)
     booking = stay.stay_items.where(bookable_type: "Booking").first&.bookable
+    # Chambres seules (epic #81, Phase 5) : rétablit le mode + les chambres cochées
+    # depuis les Reservation persistées (pas de drapeau stocké, cf.
+    # Booking#rooms_only_occupation?).
+    rooms_mode = booking&.rooms_only_occupation?
     Reservations::Draft.new(
       lodging_id:     booking&.lodging_id,
+      booking_type:   rooms_mode ? "rooms" : "lodging",
+      room_ids:       rooms_mode ? booking.reservations.map(&:room_id).uniq : [],
       arrival_date:   stay.arrival_date,
       departure_date: stay.departure_date,
       adults:         booking&.adults,

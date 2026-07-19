@@ -79,11 +79,39 @@
         = text_field_tag "stay[group_name]", @draft&.group_name, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
     / --- Hébergement --------------------------------------------------------
+    / Mode d'occupation (epic #81, Phase 5) : gîte entier (défaut) ou chambres
+    / seules. En mode chambres, on coche les chambres du gîte choisi (pré-rendues
+    / par gîte, affichées/masquées par Stimulus — pas d'endpoint : plus robuste).
+    - current_booking_type = (@draft&.rooms_mode? ? "rooms" : "lodging")
+    - selected_room_ids = Array(@draft&.room_ids).map(&:to_i)
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
       h2.text-base.font-semibold.text-gray-900 Hébergement
+      .flex.gap-4.text-sm
+        label.flex.items-center.gap-2
+          input type="radio" name="stay[booking_type]" value="lodging" checked=(current_booking_type == "lodging") data-action="change->stay-form#toggleBookingMode change->stay-availability#check"
+          | Gîte entier
+        label.flex.items-center.gap-2
+          input type="radio" name="stay[booking_type]" value="rooms" checked=(current_booking_type == "rooms") data-action="change->stay-form#toggleBookingMode change->stay-availability#check"
+          | Chambres seules
       .space-y-1
         label.block.text-sm.font-medium.text-gray-700 Hébergement
-        = select_tag "stay[lodging_id]", options_for_select(@lodgings.map { |l| [l.form_label, l.id] }, @draft&.lodging_id), include_blank: "— Choisir un hébergement —", data: { action: "change->stay-availability#check" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        = select_tag "stay[lodging_id]", options_for_select(@lodgings.map { |l| [l.form_label, l.id] }, @draft&.lodging_id), include_blank: "— Choisir un hébergement —", data: { action: "change->stay-availability#check change->stay-form#syncRoomVisibility" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      / Chambres du gîte (mode chambres seules). Un groupe par gîte, masqué par
+      / défaut ; Stimulus n'affiche que le groupe du gîte sélectionné, en mode rooms.
+      .space-y-2.hidden(data-stay-form-target="roomsPanel")
+        p.text-sm.text-gray-500 Cochez les chambres à réserver. Pas de devis automatique pour des chambres seules — utilisez le Prix total imposé plus bas.
+        - @lodgings.each do |lodging|
+          .space-y-1.hidden(data-stay-form-target="roomsGroup" data-lodging-id=lodging.id)
+            - rooms = lodging.rooms.order(:level)
+            - if rooms.any?
+              ul.space-y-1
+                - rooms.each do |room|
+                  li
+                    label.flex.items-center.gap-2.text-sm.text-gray-700
+                      input type="checkbox" name="stay[room_ids][]" value=room.id checked=(selected_room_ids.include?(room.id)) data-action="change->stay-availability#check" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      = room.name_with_level.presence || room.name
+            - else
+              p.text-sm.text-gray-400 Aucune chambre déclarée pour cet hébergement.
       / Indicateur de disponibilité en temps réel (issue #77). Informe sans bloquer :
       / la checkbox « Forcer la disponibilité » plus bas reste la seule décision.
       .hidden.text-sm.font-medium.rounded-md.px-3.py-2(data-stay-availability-target="indicator")

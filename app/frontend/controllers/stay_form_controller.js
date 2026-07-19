@@ -13,10 +13,43 @@ import { Controller } from "@hotwired/stimulus"
 //     select[name="stay[platform]"] (data-stay-form-target="platform" data-action="change->stay-form#syncChannelFromPlatform")
 //     select[name="stay[source]"]   (data-stay-form-target="source")
 export default class extends Controller {
-  static targets = ["existingPanel", "newPanel", "platform", "source"]
+  static targets = ["existingPanel", "newPanel", "platform", "source", "roomsPanel", "roomsGroup"]
 
   connect() {
     this.toggleCustomer()
+    this.toggleBookingMode()
+  }
+
+  // Mode d'occupation (epic #81, Phase 5) : gîte entier / chambres seules. En mode
+  // chambres, on révèle le panneau des chambres (et le bon groupe de gîte) ; sinon
+  // on le masque. Idempotent — rappelé au connect pour restaurer l'état à l'édition.
+  toggleBookingMode() {
+    const rooms = this.bookingMode() === "rooms"
+    if (this.hasRoomsPanelTarget) this.roomsPanelTarget.classList.toggle("hidden", !rooms)
+    this.syncRoomVisibility()
+  }
+
+  // N'affiche que le groupe de chambres du gîte sélectionné, et seulement en mode
+  // chambres. Décoche les chambres des gîtes masqués pour ne pas soumettre des
+  // chambres d'un autre gîte (le serveur les filtrerait de toute façon).
+  syncRoomVisibility() {
+    if (!this.hasRoomsGroupTarget) return
+    const rooms = this.bookingMode() === "rooms"
+    const lodgingId = this.element.querySelector('[name="stay[lodging_id]"]')?.value || ""
+
+    this.roomsGroupTargets.forEach((group) => {
+      const match = rooms && group.dataset.lodgingId === lodgingId
+      group.classList.toggle("hidden", !match)
+      if (!match) {
+        group.querySelectorAll('input[type="checkbox"]').forEach((cb) => (cb.checked = false))
+      }
+    })
+  }
+
+  bookingMode() {
+    return (
+      this.element.querySelector('input[name="stay[booking_type]"]:checked')?.value || "lodging"
+    )
   }
 
   toggleCustomer() {
