@@ -1,0 +1,40 @@
+/ Étape A de la fusion (epic #81, Phase 2) — désignation du séjour survivant.
+/ Rendu PAR LE SERVEUR (aucune donnée reconstruite en JS) et injecté dans le
+/ <dialog> par le contrôleur Stimulus stay-merge. Cartes radio riches, avec
+/ présélection intelligente motivée (badge « suggéré »).
+- different_customers = stays.map(&:customer_id).uniq.size > 1
+
+.px-6.py-5(data-merge-step="setup")
+  h3.text-lg.font-semibold.text-gray-900
+    | Fusionner #{stays.size} séjours
+  p.mt-1.text-sm.text-gray-500
+    | Choisis le séjour survivant : sa fiche client est conservée, tout le reste y est rapatrié.
+
+  - if different_customers
+    .mt-4.rounded-md.border.border-amber-200.bg-amber-50.px-4.py-3.text-sm.text-amber-800
+      | Clients différents : le client du séjour survivant sera conservé, les autres seront écartés.
+
+  .mt-4.space-y-3
+    - stays.each do |stay|
+      - hue = stay_hue(stay.id)
+      - decorated = stay.decorate
+      label.flex.items-start.gap-3.rounded-lg.border.border-gray-200.bg-white.p-4.cursor-pointer.hover:border-indigo-300.transition-colors(style="border-left-width: 4px; border-left-color: hsl(#{hue}, 65%, 45%);")
+        input.mt-1.h-4.w-4.text-indigo-600(type="radio" name="target_id" value=stay.id checked=(stay.id == target&.id) data-action="stay-merge#targetChanged")
+        .min-w-0.flex-1
+          .flex.items-center.flex-wrap.gap-2
+            span.font-semibold.text-gray-900 ##{stay.id}
+            span.text-gray-700 = stay_short_label(stay)
+            - if stay.id == suggested_id
+              span.inline-flex.items-center.rounded-full.bg-indigo-50.px-2.py-0.5.text-xs.font-medium.text-indigo-700(title="Présélection : #{merge_suggestion_reason(suggested_reason)}")
+                | suggéré · #{merge_suggestion_reason(suggested_reason)}
+          .mt-0.5.text-sm.text-gray-500 = decorated.date_range
+          .mt-1.text-sm.text-gray-600 = stay_composition_summary(stay)
+          .mt-1.flex.items-center.flex-wrap.gap-x-3.gap-y-1.text-sm
+            span.font-medium.text-gray-900 = humanized_money_with_symbol(stay.total_amount)
+            span.text-gray-500 = stay_payments_summary(stay)
+
+  .mt-6.flex.items-center.justify-end.gap-3
+    button.text-sm.font-medium.text-gray-600.hover:text-gray-800(type="button" data-action="stay-merge#closeDialog")
+      | Annuler
+    button.inline-flex.items-center.rounded-md.bg-indigo-600.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.hover:bg-indigo-700(type="button" data-action="stay-merge#showPreview")
+      | Voir l'aperçu →

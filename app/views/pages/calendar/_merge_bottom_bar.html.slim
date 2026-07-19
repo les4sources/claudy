@@ -1,0 +1,15 @@
+/ Barre d'action contextuelle de fusion (epic #81, Phase 2). Fixée en bas,
+/ masquée (translate-y-full) tant qu'aucun séjour n'est sélectionné. Les chips
+/ sont construites côté client depuis les data-attributes des blocs (label +
+/ dates), le contrôleur stay-merge en pilote l'affichage.
+.stay-merge-bar.fixed.bottom-0.inset-x-0.z-30.translate-y-full.bg-white.border-t.border-gray-200(data-stay-merge-target="bar" hidden=true style="box-shadow: 0 -4px 12px rgba(0,0,0,0.08);")
+  .max-w-6xl.mx-auto.px-4.py-3.flex.items-center.gap-4.flex-wrap
+    / Chips (scrollables horizontalement en mobile).
+    .flex-1.min-w-0.flex.items-center.gap-2.overflow-x-auto(data-stay-merge-target="chips")
+
+    .flex.items-center.gap-3.flex-shrink-0
+      span.text-sm.text-gray-500(data-stay-merge-target="count" aria-live="polite")
+      button.text-sm.font-medium.text-gray-500.hover:text-gray-700(type="button" data-action="stay-merge#clearSelection")
+        | Tout désélectionner
+      button.inline-flex.items-center.rounded-md.bg-indigo-600.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.hover:bg-indigo-700.disabled:opacity-50.disabled:cursor-not-allowed(type="button" data-stay-merge-target="mergeButton" data-action="stay-merge#openDialog" disabled=true title="Sélectionne au moins 2 séjours")
+        | Fusionner

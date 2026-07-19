@@ -19,7 +19,7 @@
                  booking: booking
         div[data-popper-arrow]
 
-    div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min-w-0 #{booking.calendar_block_class}" style=block_style data-booking-day-entry=booking.id data-stay-id=stay&.id)
+    div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min-w-0 #{booking.calendar_block_class}" style=block_style data-booking-day-entry=booking.id data-stay-id=stay&.id data-stay-label=(stay && stay_short_label(stay)) data-stay-dates=(stay && stay_short_dates(stay)))
       .block.min-w-0.w-full
         div.min-w-0
           strong.block.min-w-0.break-words
@@ -50,7 +50,7 @@
   - @grouped_camping_bookings[date].sort_by { |cb| [cb.stay&.id.to_i, cb.from_date.to_s] }.each do |camping|
     - stay = camping.stay
     - block_style = stay ? stay_block_style(stay.id) : "border-left-color: #0d9488; background-color: #f0fdfa;"
-    div(class="relative flex mt-2 py-1 px-2 min-w-0 shadow border-l-4 #{"hover:cursor-pointer hover:shadow-xl" if stay} #{"opacity-50" unless camping.confirmed?}" style=block_style data-camping-booking-entry=camping.id data-stay-id=stay&.id)
+    div(class="relative flex mt-2 py-1 px-2 min-w-0 shadow border-l-4 #{"hover:cursor-pointer hover:shadow-xl" if stay} #{"opacity-50" unless camping.confirmed?}" style=block_style data-camping-booking-entry=camping.id data-stay-id=stay&.id data-stay-label=(stay && stay_short_label(stay)) data-stay-dates=(stay && stay_short_dates(stay)))
       .block.min-w-0.w-full
         strong.block.min-w-0.break-words.text-gray-700
           = camping.group_name.presence || camping.name.presence || "Camping"
@@ -65,7 +65,7 @@
   - @grouped_van_bookings[date].sort_by { |vb| [vb.stay&.id.to_i, vb.from_date.to_s] }.each do |van|
     - stay = van.stay
     - block_style = stay ? stay_block_style(stay.id) : "border-left-color: #0d9488; background-color: #f0fdfa;"
-    div(class="relative flex mt-2 py-1 px-2 min-w-0 shadow border-l-4 #{"hover:cursor-pointer hover:shadow-xl" if stay} #{"opacity-50" unless van.confirmed?}" style=block_style data-van-booking-entry=van.id data-stay-id=stay&.id)
+    div(class="relative flex mt-2 py-1 px-2 min-w-0 shadow border-l-4 #{"hover:cursor-pointer hover:shadow-xl" if stay} #{"opacity-50" unless van.confirmed?}" style=block_style data-van-booking-entry=van.id data-stay-id=stay&.id data-stay-label=(stay && stay_short_label(stay)) data-stay-dates=(stay && stay_short_dates(stay)))
       .block.min-w-0.w-full
         strong.block.min-w-0.break-words.text-gray-700
           = van.group_name.presence || van.name.presence || "Van"
