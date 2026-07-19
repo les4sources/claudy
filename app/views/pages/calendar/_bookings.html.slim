@@ -41,9 +41,12 @@
         .block.min-w-0.w-full
           div.min-w-0
             strong.block.min-w-0.break-words
-              = link_to space_booking.decorate.group_or_name.html_safe,
-                        space_booking_path(space_booking),
-                        class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
+              / Édition unifiée (epic #81, Phase 8) : avec un séjour vivant, le lien
+              / ouvre la modale séjour (comme l'overlay). Sinon, lien espace legacy.
+              - if stay
+                = link_to space_booking.decorate.group_or_name.html_safe, stay_path(stay), data: { action: "stay-details#open" }, class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
+              - else
+                = link_to space_booking.decorate.group_or_name.html_safe, space_booking_path(space_booking), class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
             - if space_booking.event.presence
               .text-gray-500.leading-none.mb-2.font-semibold = space_booking.event.name_with_color
 

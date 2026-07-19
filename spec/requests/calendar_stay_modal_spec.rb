@@ -49,10 +49,15 @@ RSpec.describe "Calendrier — modale séjour depuis les blocs (epic #66, Phase 
 
       get "/"
 
-      expect(response.body).to include('data-action="stay-details#open"')
-      expect(response.body).to include("href=\"#{stay_path(stay)}\"")
-      # Le lien historique reste présent (anti-régression Phase 4).
-      expect(response.body).to include(booking_path(booking))
+      # On borne les assertions à la GRILLE (avant le flux « Activité récente »,
+      # qui garde légitimement son lien booking historique — hors scope Phase 8).
+      grid = response.body.split("Activité récente").first
+
+      expect(grid).to include('data-action="stay-details#open"')
+      expect(grid).to include("href=\"#{stay_path(stay)}\"")
+      # Édition unifiée (epic #81, Phase 8) : le lien booking legacy a disparu du
+      # bloc dès qu'un séjour vivant le porte — le nom pointe vers la modale.
+      expect(grid).not_to include(booking_path(booking))
     end
   end
 
@@ -68,9 +73,11 @@ RSpec.describe "Calendrier — modale séjour depuis les blocs (epic #66, Phase 
 
       get "/"
 
-      expect(response.body).to include("href=\"#{stay_path(stay)}\"")
-      # Lien historique espace conservé.
-      expect(response.body).to include(space_booking_path(space_booking))
+      grid = response.body.split("Activité récente").first
+      expect(grid).to include("href=\"#{stay_path(stay)}\"")
+      # Édition unifiée (epic #81, Phase 8) : le lien espace legacy a disparu du
+      # bloc dès qu'un séjour vivant le porte.
+      expect(grid).not_to include(space_booking_path(space_booking))
     end
   end
 
