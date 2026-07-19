@@ -174,7 +174,8 @@ class StaysController < BaseController
     stays = load_merge_stays
     return render_merge_guard if stays.size < 2
 
-    target = stays.find { |s| s.id == params[:target_id].to_i } || stays.min_by(&:id)
+    target = resolve_merge_target(stays)
+    return render_merge_guard(message: "Le séjour survivant ne fait pas partie de la sélection.") if target.nil?
     sources = stays.reject { |s| s.id == target.id }
 
     preview = Stays::MergePreview.new(target: target, sources: sources).call
@@ -189,7 +190,8 @@ class StaysController < BaseController
     stays = load_merge_stays
     return render_merge_guard if stays.size < 2
 
-    target = stays.find { |s| s.id == params[:target_id].to_i } || stays.min_by(&:id)
+    target = resolve_merge_target(stays)
+    return render_merge_guard(message: "Le séjour survivant ne fait pas partie de la sélection.") if target.nil?
     sources = stays.reject { |s| s.id == target.id }
 
     service = Stays::MergeService.new(target: target, sources: sources)
@@ -219,13 +221,23 @@ class StaysController < BaseController
         .to_a
   end
 
+  # Résout le survivant STRICTEMENT parmi les séjours postés : un `target_id`
+  # forgé hors sélection ne doit jamais retomber silencieusement sur un autre
+  # séjour (le survivant serait choisi à l'insu de l'admin). Sans `target_id`
+  # (ouverture de l'étape B sans passer par A), repli déterministe : plus petit id.
+  def resolve_merge_target(stays)
+    return stays.min_by(&:id) if params[:target_id].blank?
+
+    stays.find { |s| s.id == params[:target_id].to_i }
+  end
+
   # Garde-fou serveur : moins de 2 séjours résolus = fusion impossible (422).
-  def render_merge_guard
+  def render_merge_guard(message: "Sélectionne au moins deux séjours existants à fusionner.")
     render partial: "stays/merge_error",
            layout: false,
            formats: [:html],
            status: :unprocessable_entity,
-           locals: { message: "Sélectionne au moins deux séjours existants à fusionner." }
+           locals: { message: message }
   end
 
   def merge_success_message(target, sources)

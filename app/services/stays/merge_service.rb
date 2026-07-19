@@ -34,15 +34,28 @@ module Stays
       return false unless valid_operands?
 
       catch_error(context: { target: target.id, sources: sources.map(&:id) }) do
-        ActiveRecord::Base.transaction do
+        result = ActiveRecord::Base.transaction do
+          # Verrou pessimiste : deux fusions concurrentes sur des ensembles qui
+          # se recoupent (deux onglets, cibles croisées) passeraient toutes deux
+          # les garde-fous lus hors transaction, et pourraient éparpiller des
+          # occupations sur des séjours archivés. On verrouille les lignes puis
+          # on re-vérifie l'état sous le verrou.
+          raise ActiveRecord::Rollback unless lock_operands!
+
           sources.each { |source| absorb!(source) }
           # Les associations de la cible ont changé en base : on recharge avant de
           # recalculer, sinon `recompute_aggregates!` lirait un cache périmé.
           target.reload
           target.recompute_aggregates!
-          target.set_payment_status
+          # `set_payment_status` est non-bang (partagé avec le webhook Stripe) :
+          # ici, un échec silencieux violerait le tout-ou-rien de la fusion.
+          unless target.set_payment_status
+            set_error_message("Le statut de paiement n'a pas pu être recalculé : #{validation_errors_for(target)}")
+            raise ActiveRecord::Rollback
+          end
           true
         end
+        result || false
       end
     end
 
@@ -60,6 +73,25 @@ module Stays
 
       return set_error_message("La cible est déjà supprimée.") && false if soft_deleted?(target)
       return set_error_message("Une source est déjà supprimée.") && false if sources.any? { |s| soft_deleted?(s) }
+
+      true
+    end
+
+    # Verrouille toutes les lignes concernées (FOR UPDATE, ordre d'id stable
+    # pour éviter les deadlocks) et re-vérifie sous le verrou qu'aucun séjour
+    # n'a été supprimé entre les garde-fous et la transaction.
+    def lock_operands!
+      ids = ([target.id] + sources.map(&:id)).sort
+      locked = Stay.unscoped.where(id: ids).lock("FOR UPDATE").to_a
+
+      if locked.size != ids.size
+        set_error_message("Un des séjours n'existe plus.")
+        return false
+      end
+      if locked.any? { |stay| stay.deleted_at.present? }
+        set_error_message("Un des séjours vient d'être supprimé (fusion concurrente ?). Recharge la page.")
+        return false
+      end
 
       true
     end

@@ -16,6 +16,8 @@ import { Controller } from "@hotwired/stimulus"
 const GOLDEN_ANGLE = 137.508
 const STORAGE_ACTIVE = "claudy.stayMerge.active"
 const STORAGE_SELECTION = "claudy.stayMerge.selection"
+const STORAGE_STAMP = "claudy.stayMerge.stamp"
+const SELECTION_TTL_MS = 60 * 60 * 1000 // sélection périmée au-delà d'une heure
 
 export default class extends Controller {
   static targets = ["bar", "chips", "count", "mergeButton", "dialog", "dialogContent", "toggleButton", "banner"]
@@ -259,6 +261,13 @@ export default class extends Controller {
   async commit(event) {
     event.preventDefault()
     const form = event.currentTarget
+    // Désarme le bouton : le serveur est protégé contre le double POST, mais
+    // inutile d'envoyer une requête vouée au 422.
+    const submitButton = form.querySelector("button, input[type=submit]")
+    if (submitButton) {
+      if (submitButton.disabled) return
+      submitButton.disabled = true
+    }
     try {
       const response = await fetch(form.action, {
         method: "POST",
@@ -330,7 +339,16 @@ export default class extends Controller {
     try {
       const raw = sessionStorage.getItem(STORAGE_SELECTION)
       const parsed = raw ? JSON.parse(raw) : []
-      return Array.isArray(parsed) ? parsed : []
+      if (!Array.isArray(parsed)) return []
+      // Sélection périmée (> 60 min) : on repart à neuf plutôt que de ré-entrer
+      // en mode fusion avec des séjours choisis il y a longtemps.
+      const stampRaw = sessionStorage.getItem(STORAGE_STAMP)
+      const stamp = stampRaw ? parseInt(stampRaw, 10) : 0
+      if (!stamp || Date.now() - stamp > SELECTION_TTL_MS) {
+        this.clearStorage()
+        return []
+      }
+      return parsed
     } catch (_e) {
       return []
     }
@@ -338,10 +356,12 @@ export default class extends Controller {
 
   persistSelection() {
     sessionStorage.setItem(STORAGE_SELECTION, JSON.stringify(this.selection))
+    sessionStorage.setItem(STORAGE_STAMP, String(Date.now()))
   }
 
   clearStorage() {
     sessionStorage.removeItem(STORAGE_ACTIVE)
     sessionStorage.removeItem(STORAGE_SELECTION)
+    sessionStorage.removeItem(STORAGE_STAMP)
   }
 }
