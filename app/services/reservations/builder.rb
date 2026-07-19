@@ -28,7 +28,8 @@ module Reservations
     class DraftInvalid < StandardError; end
 
     attr_reader :draft, :stay, :customer, :booking, :space_booking,
-                :camping_booking, :van_booking, :payment, :availability_warning
+                :camping_booking, :van_booking, :payment, :availability_warning,
+                :space_warning
 
     # Mode admin (epic #66, Phase 1) : le CRUD Séjour admin réutilise ce moteur
     # SANS jamais passer par Stripe. Les options `admin`/`status`/`source`/
@@ -137,6 +138,9 @@ module Reservations
         # le solde se règle après coup depuis la page client /sejour/:token.
         @payment = build_payment!(quote) unless @admin
       end
+      # Espaces DEVISÉS mais non persistables (aucune `Space` correspondante) :
+      # on ne les perd pas en silence — le contrôleur admin remonte l'avertissement.
+      @space_warning = unresolved_space_warning(draft)
       true
     end
 
