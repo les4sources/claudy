@@ -14,16 +14,16 @@
         .availability-calendar__section.availability-calendar__section--lodgings
           .availability-calendar__section-label Hébergements
           - @lodgings.each do |lodging|
-          - if lodging.available_on?(date)
-            .availability-calendar__pill.availability-calendar__pill--available
-              .availability-calendar__pill-text
-                span.availability-calendar__pill-name = lodging.name
-                .availability-calendar__pill-summary = lodging.summary
-          - else
-            .availability-calendar__pill.availability-calendar__pill--unavailable
-              .availability-calendar__pill-text
-                span.availability-calendar__pill-name = lodging.name
-                .availability-calendar__pill-summary = lodging.summary
+            - if lodging.available_on?(date)
+              .availability-calendar__pill.availability-calendar__pill--available
+                .availability-calendar__pill-text
+                  span.availability-calendar__pill-name = lodging.name
+                  .availability-calendar__pill-summary = lodging.summary
+            - else
+              .availability-calendar__pill.availability-calendar__pill--unavailable
+                .availability-calendar__pill-text
+                  span.availability-calendar__pill-name = lodging.name
+                  .availability-calendar__pill-summary = lodging.summary
 
         .availability-calendar__section-label Espaces
         - @spaces.each do |space|
