@@ -84,6 +84,28 @@ class StaysController < BaseController
     end
   end
 
+  # Disponibilité de l'hébergement en temps réel (issue #77). Réutilise
+  # `Lodging#available_between?` (source unique de vérité, veto Grand-Duc /
+  # chambres partagées inclus). Répond en JSON, INFORME sans bloquer : le form
+  # garde la checkbox « Forcer la disponibilité » comme seule décision de blocage.
+  #   - `checkable: false` tant que l'hébergement ou les dates manquent ;
+  #   - `available: true/false` sinon.
+  def availability
+    lodging = Lodging.find_by(id: params[:lodging_id])
+    from    = parse_form_date(params[:arrival_date])
+    to      = parse_form_date(params[:departure_date])
+
+    if lodging.nil? || from.nil? || to.nil? || to < from
+      return render json: { checkable: false }
+    end
+
+    render json: {
+      checkable: true,
+      available: lodging.available_between?(from, to),
+      lodging:   lodging.name
+    }
+  end
+
   # Suppression = soft-delete (soft_deletion + PaperTrail), jamais de hard destroy.
   def destroy
     @stay.soft_delete!(validate: false)

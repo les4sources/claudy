@@ -119,6 +119,12 @@ Rails.application.routes.draw do
   # pleines. La route `stays/recents` ci-dessus est déclarée AVANT pour ne pas
   # être captée par `/stays/:id`.
   resources :stays, only: [:show, :new, :create, :edit, :update, :destroy] do
+    collection do
+      # Vérification de disponibilité en temps réel dans le form de composition
+      # (issue #77) : lodging_id + dates → JSON { available: bool }. Informe sans
+      # bloquer (le forçage reste la seule décision de blocage).
+      get :availability
+    end
     resources :experience_bookings, only: [:create]
   end
   resources :experience_bookings, only: [:index, :update, :destroy] do

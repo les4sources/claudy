@@ -5,7 +5,7 @@
 - selected_experiences = {}
 - Array(@draft&.experiences).each { |e| selected_experiences[e[:availability_id].to_i] = e[:participants] }
 
-= form_with url: url, method: method, data: { controller: "stay-form" } do
+= form_with url: url, method: method, data: { controller: "stay-form stay-availability", "stay-availability-url-value": availability_stays_path } do
   .space-y-8
     / --- Client -------------------------------------------------------------
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
@@ -35,10 +35,10 @@
       .grid.grid-cols-2.gap-4
         .space-y-1
           label.block.text-sm.font-medium.text-gray-700 Arrivée
-          = date_field_tag "stay[arrival_date]", @draft&.arrival_date&.iso8601, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          = date_field_tag "stay[arrival_date]", @draft&.arrival_date&.iso8601, data: { action: "change->stay-availability#check" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
         .space-y-1
           label.block.text-sm.font-medium.text-gray-700 Départ
-          = date_field_tag "stay[departure_date]", @draft&.departure_date&.iso8601, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          = date_field_tag "stay[departure_date]", @draft&.departure_date&.iso8601, data: { action: "change->stay-availability#check" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
       .grid.grid-cols-3.gap-4
         .space-y-1
           label.block.text-sm.font-medium.text-gray-700 Adultes
@@ -58,7 +58,10 @@
       h2.text-base.font-semibold.text-gray-900 Hébergement
       .space-y-1
         label.block.text-sm.font-medium.text-gray-700 Hébergement
-        = select_tag "stay[lodging_id]", options_for_select(@lodgings.map { |l| [l.form_label, l.id] }, @draft&.lodging_id), include_blank: "— Choisir un hébergement —", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        = select_tag "stay[lodging_id]", options_for_select(@lodgings.map { |l| [l.form_label, l.id] }, @draft&.lodging_id), include_blank: "— Choisir un hébergement —", data: { action: "change->stay-availability#check" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      / Indicateur de disponibilité en temps réel (issue #77). Informe sans bloquer :
+      / la checkbox « Forcer la disponibilité » plus bas reste la seule décision.
+      .hidden.text-sm.font-medium.rounded-md.px-3.py-2(data-stay-availability-target="indicator")
 
     / --- Espaces (salles / cuisine pro) -------------------------------------
     - space_kind_options = [["Grande salle", "grande_salle"], ["Petite salle", "petite_salle"], ["Cuisine pro", "cuisine_pro"]]
