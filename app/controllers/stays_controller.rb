@@ -103,7 +103,10 @@ class StaysController < BaseController
   # Données partagées par les vues new/edit.
   def prepare_form
     @lodgings  = bookable_lodgings
-    @customers = Customer.order(:organization_name, :last_name, :first_name).limit(1_000)
+    # Client existant : autocomplete via `customers/search` (issue #74). On ne
+    # précharge plus TOUS les clients — seul le client courant (édition) alimente
+    # le `<select>` de repli sans-JS. La recherche dynamique fait le reste.
+    @customers = Customer.where(id: @stay&.customer_id).to_a
     @assignable_availabilities = ExperienceAvailability.for_user(current_user)
                                                        .upcoming
                                                        .includes(:experience)
