@@ -242,6 +242,10 @@ class StaysController < BaseController
   # saisie datée d'un hébergement. À défaut, un draft vierge.
   def build_prefilled_draft
     if (source = duplicate_source)
+      # Le client du séjour source est PRÉSÉLECTIONNÉ dans le <select> « Client
+      # existant » (sinon le prérempli n'atterrissait que dans les champs masqués
+      # du panneau « Nouveau client » et une soumission partait sans customer_id).
+      @preselected_customer_id = source.customer_id
       return Stays::DuplicateService.call(stay: source)
     end
 
@@ -318,7 +322,7 @@ class StaysController < BaseController
     # Client existant : autocomplete via `customers/search` (issue #74). On ne
     # précharge plus TOUS les clients — seul le client courant (édition) alimente
     # le `<select>` de repli sans-JS. La recherche dynamique fait le reste.
-    @customers = Customer.where(id: @stay&.customer_id).to_a
+    @customers = Customer.where(id: [@stay&.customer_id, @preselected_customer_id].compact).to_a
     @assignable_availabilities = ExperienceAvailability.for_user(current_user)
                                                        .upcoming
                                                        .includes(:experience)

@@ -65,6 +65,10 @@ RSpec.describe "Stays — saisie rapide datée & duplication (epic #81, Phase 7)
       # Client conservé (nom pré-rempli dans le panneau « nouveau client » de repli).
       expect(response.body).to include('value="Alice"')
       expect(response.body).to include('value="Martin"')
+      # …et surtout PRÉSÉLECTIONNÉ dans le <select> « Client existant » (passe
+      # navigateur Phase 7) : sans ça, la soumission partait en mode « existant »
+      # avec customer_id vide.
+      expect(response.body).to match(/name="stay\[customer_id\]".*?<option selected[^>]*value="#{source.customer_id}"/m)
       # Composition conservée : hébergement présélectionné + une ligne d'espace.
       expect(response.body).to match(/selected="selected" value="#{lodging.id}"/)
       expect(response.body).to match(/selected="selected" value="grande_salle"/)
