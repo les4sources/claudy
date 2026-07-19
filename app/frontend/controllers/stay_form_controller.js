@@ -13,11 +13,33 @@ import { Controller } from "@hotwired/stimulus"
 //     select[name="stay[platform]"] (data-stay-form-target="platform" data-action="change->stay-form#syncChannelFromPlatform")
 //     select[name="stay[source]"]   (data-stay-form-target="source")
 export default class extends Controller {
-  static targets = ["existingPanel", "newPanel", "platform", "source", "roomsPanel", "roomsGroup"]
+  static targets = [
+    "existingPanel",
+    "newPanel",
+    "platform",
+    "source",
+    "roomsPanel",
+    "roomsGroup",
+    "spaceBillingPanel",
+  ]
 
   connect() {
     this.toggleCustomer()
     this.toggleBookingMode()
+    this.toggleSpaceBilling()
+  }
+
+  // Facturation espace (epic #81, Phase 6) : le sous-panneau n'apparaît que si au
+  // moins une ligne d'espace porte un type sélectionné. Idempotent — rappelé au
+  // connect pour restaurer l'état à l'édition (espace déjà présent → panneau
+  // ouvert). Les champs restent dans le DOM même masqués : le serveur lit
+  // `space_billing` normalement, et un panneau replié resoumet ses valeurs.
+  toggleSpaceBilling() {
+    if (!this.hasSpaceBillingPanelTarget) return
+    const anyKindSelected = Array.from(
+      this.element.querySelectorAll('select[name^="stay[halls]"][name$="[kind]"]'),
+    ).some((select) => select.value.trim() !== "")
+    this.spaceBillingPanelTarget.classList.toggle("hidden", !anyKindSelected)
   }
 
   // Mode d'occupation (epic #81, Phase 5) : gîte entier / chambres seules. En mode
