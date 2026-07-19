@@ -27,7 +27,15 @@ module SpaceBookings
       spaces = get_spaces
       if !spaces.nil? && available?(spaces)
         build_space_reservations(spaces, @space_booking.duration)
-        @space_booking.save!
+        # Stay-first (epic #81, Phase 1) : tout SpaceBooking créé côté admin obtient
+        # automatiquement un Stay + Customer, comme le canal Booking. SpaceBooking et
+        # Stay sont persistés dans la MÊME transaction — un échec de Stay annule le
+        # space_booking pour ne jamais laisser d'orphelin. Les effets de bord (email,
+        # abonnement) restent hors transaction.
+        ActiveRecord::Base.transaction do
+          @space_booking.save!
+          Stays::EnsureForSpaceBooking.call(@space_booking)
+        end
         notify_customer_on_create
         create_subscription(from: @space_booking)
       end
