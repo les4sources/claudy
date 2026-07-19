@@ -151,6 +151,20 @@ class Booking < ApplicationRecord
     rooms.where.not(level: -1).any?
   end
 
+  # Occupation « chambres seules » (epic #81, Phase 5) : le Booking ne réserve
+  # qu'un SOUS-ENSEMBLE des chambres de son gîte (et non le gîte entier). Dérivé
+  # des Reservation comparées à l'ensemble des chambres du gîte — aucun drapeau
+  # persisté (le `booking_type` est un attr_accessor non stocké). Sert au
+  # préremplissage du form d'édition Séjour pour rétablir le bon mode.
+  def rooms_only_occupation?
+    return false if lodging.blank?
+    reserved = reservations.map(&:room_id).uniq.compact
+    return false if reserved.empty?
+
+    lodging_room_ids = lodging.rooms.pluck(:id).uniq
+    (reserved - lodging_room_ids).empty? && reserved.sort != lodging_room_ids.sort
+  end
+
   def from_airbnb?
     platform == "airbnb"
   end

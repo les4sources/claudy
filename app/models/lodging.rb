@@ -89,6 +89,27 @@ class Lodging < ApplicationRecord
     self_available_between?(date, date)
   end
 
+  # Disponibilité d'un SOUS-ENSEMBLE de chambres de ce gîte (epic #81, Phase 5 —
+  # chambres seules). Mêmes sémantiques de dates (inclusives) et d'indisponibilité
+  # que `self_available_between?`, mais bornées aux chambres passées plutôt qu'à
+  # l'ensemble du gîte. Comme l'occupation est portée par les Reservation de
+  # chambres, ceci suffit à rendre le veto symétrique : réserver une chambre prise
+  # (confirmée) sur ces dates la rend indisponible, qu'elle ait été prise par un
+  # gîte entier ou par une autre réservation chambres seules. Les room_ids sont
+  # bornés aux chambres de CE gîte (anti-injection cross-gîte). Sans room_ids
+  # exploitables, on retombe sur la dispo du gîte entier.
+  def rooms_available_between?(room_ids, from_date, to_date)
+    ids = Array(room_ids).map(&:to_i).reject(&:zero?).uniq
+    return self_available_between?(from_date, to_date) if ids.empty?
+
+    scoped = rooms.where(id: ids).pluck(:id)
+    return true if scoped.empty?
+
+    Reservation.includes(:booking)
+               .where(date: from_date..to_date, room: scoped, booking: { status: "confirmed" })
+               .none? && unavailabilities.where(date: from_date..to_date).none?
+  end
+
   # The set of lodgings whose occupancy entangles with this one (self + its
   # components if composite, self + its composites if component).
   def entangled_lodgings_including_self
