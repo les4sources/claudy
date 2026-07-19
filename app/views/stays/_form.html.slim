@@ -18,9 +18,19 @@
           input type="radio" name="stay[customer_mode]" value="new" data-action="change->stay-form#toggleCustomer"
           | Nouveau client
 
-      .space-y-1(data-stay-form-target="existingPanel")
+      / Client existant — autocomplete (issue #74) : recherche dynamique via
+      / customers/search. Le <select> reste le fallback sans-JS (réduit au client
+      / courant en édition) ; le contrôleur customer-search le masque et pilote sa
+      / valeur à la sélection d'un résultat.
+      .space-y-1(data-stay-form-target="existingPanel" data-controller="customer-search" data-customer-search-url-value=search_customers_path)
         label.block.text-sm.font-medium.text-gray-700 Sélectionner un client
-        = select_tag "stay[customer_id]", options_for_select(@customers.map { |c| [c.name.presence || c.email, c.id] }, selected_customer_id), include_blank: "— Choisir un client —", class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+        = select_tag "stay[customer_id]", options_for_select(@customers.map { |c| [c.name.presence || c.email, c.id] }, selected_customer_id), include_blank: "— Choisir un client —", data: { "customer-search-target": "select" }, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+        .relative.space-y-1.hidden(data-customer-search-target="searchWrap")
+          = text_field_tag :customer_query, nil, placeholder: "Rechercher un client (nom, email)…", autocomplete: "off", data: { "customer-search-target": "searchInput", action: "input->customer-search#search" }, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          .border.border-gray-100.rounded-md.divide-y.divide-gray-50.bg-white.shadow-sm.max-h-48.overflow-y-auto(data-customer-search-target="results")
+        .flex.items-center.justify-between.gap-2.text-sm.hidden(data-customer-search-target="chosen")
+          span.text-gray-900.font-medium(data-customer-search-target="chosenLabel")
+          button type="button" data-action="customer-search#clear" class="text-indigo-600 hover:underline" Changer
 
       .space-y-2.hidden(data-stay-form-target="newPanel")
         .grid.grid-cols-2.gap-2
