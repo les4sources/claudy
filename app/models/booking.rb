@@ -82,6 +82,10 @@ class Booking < ApplicationRecord
   attr_accessor :tier_rooms
   attr_accessor :terms_approval
   attr_accessor :newsletter_subscription
+  # Coupe l'email client au prochain update (issue #76) : la propagation de statut
+  # depuis les actions rapides admin ne doit pas spammer le client — même
+  # philosophie anti-email que `Stays::AdminUpdater`.
+  attr_accessor :skip_customer_notification
 
   validates_presence_of :firstname,
                         message: "Veuillez préciser votre prénom"
@@ -181,6 +185,7 @@ class Booking < ApplicationRecord
   end
 
   def notify_customer_on_update
+    return if skip_customer_notification
     notify_on_status_change if saved_change_to_status? || saved_change_to_email?
     # notify_on_payment_status_change if saved_change_to_payment_status? || saved_change_to_email?
   end

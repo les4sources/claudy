@@ -1,0 +1,142 @@
+/ Contenu de la modale séjour (issue #76) : extrait dans un partial id'd pour
+/ pouvoir être remplacé sur place par Turbo Stream après une action rapide.
+div id="stay-details-#{@stay.id}"
+  .px-6.py-5.space-y-4
+    .flex.items-center.justify-between
+      h3.text-lg.font-medium.text-gray-900
+        | Séjour ##{@stay.id}
+      .flex.items-center.gap-2
+        = @stay.platform_badge
+        = @stay.status_badge
+        = link_to "Modifier le séjour", edit_stay_path(@stay), class: "text-sm font-medium text-indigo-600 hover:underline"
+
+    / Actions rapides (issue #76) : bascule de statut + accès solde, sans ouvrir
+    / le form d'édition. Le changement de statut propage aux réservables (veto).
+    .flex.flex-wrap.items-center.gap-2.border-t.border-gray-200.pt-3
+      - if @stay.status == "confirmed"
+        = button_to "Repasser en attente", update_status_stay_path(@stay, status: "pending"), method: :patch, class: "inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100"
+      - else
+        = button_to "Confirmer le séjour", update_status_stay_path(@stay, status: "confirmed"), method: :patch, class: "inline-flex items-center rounded-md border border-transparent bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700"
+      - if @stay.token.present?
+        = link_to "Solde / paiement client ↗", public_stay_path(@stay.token), target: "_blank", rel: "noopener", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+
+    dl.grid.grid-cols-3.gap-x-4.gap-y-2.text-sm
+      dt.font-medium.text-gray-500 Dates
+      dd.col-span-2.text-gray-900 = @stay.date_range
+      dt.font-medium.text-gray-500 Contact
+      dd.col-span-2.text-gray-900 = @stay.contact_line
+      dt.font-medium.text-gray-500 Client
+      dd.col-span-2.text-gray-900
+        = link_to @stay.customer.name, customer_path(@stay.customer), class: "text-indigo-600 hover:underline"
+      dt.font-medium.text-gray-500 Montant
+      dd.col-span-2.text-gray-900 = @stay.total_amount.format
+      - if @stay.legacy_origin.present?
+        dt.font-medium.text-gray-500 Origine
+        dd.col-span-2.text-gray-500 = @stay.legacy_origin
+
+    / Composition complète du séjour (epic #66, Phase 5) : hébergement, espaces,
+    / camping, van et repas. Les activités gardent leur bloc CRUD dédié (epic #55,
+    / Phase 6), rendu juste après — flux inchangé.
+    .border-t.border-gray-200.pt-3.space-y-4
+      - if @stay.lodging_bookings.any?
+        div
+          h4.text-sm.font-medium.text-gray-700.mb-2 Hébergement
+          ul.divide-y.divide-gray-100
+            - @stay.lodging_bookings.each do |booking|
+              - b = booking.decorate
+              li.py-2.text-sm.flex.items-start.justify-between.gap-3
+                - guests = "#{booking.adults.to_i} adulte(s)"
+                - guests += ", #{booking.children} enfant(s)" if booking.children.to_i.positive?
+                .min-w-0
+                  .text-gray-900.font-medium.truncate = booking.lodging&.name.presence || "Hébergement"
+                  .text-gray-500 = b.date_range
+                  .text-gray-500 = guests
+                span.text-gray-500.shrink-0 = @stay.formatted_item_amount(booking)
+
+      - if @stay.space_bookings.any?
+        div
+          h4.text-sm.font-medium.text-gray-700.mb-2 Espaces
+          ul.divide-y.divide-gray-100
+            - @stay.space_bookings.each do |space_booking|
+              - d = space_booking.decorate
+              li.py-2.text-sm.flex.items-start.justify-between.gap-3
+                .min-w-0
+                  .text-gray-900.font-medium.truncate = space_booking.spaces.map(&:name).compact_blank.join(", ").presence || "Espace"
+                  .text-gray-500 = d.date_range
+                  .text-gray-500 = d.duration
+                span.text-gray-500.shrink-0 = @stay.formatted_item_amount(space_booking)
+
+      - if @stay.camping_bookings.any?
+        div
+          h4.text-sm.font-medium.text-gray-700.mb-2 Camping
+          ul.divide-y.divide-gray-100
+            - @stay.camping_bookings.each do |camping|
+              li.py-2.text-sm.flex.items-start.justify-between.gap-3
+                .min-w-0
+                  .text-gray-900.font-medium ⛺ Camping (#{camping.kind})
+                  .text-gray-500 = "#{camping.people} personne(s)"
+                span.text-gray-500.shrink-0 = @stay.formatted_item_amount(camping)
+
+      - if @stay.van_bookings.any?
+        div
+          h4.text-sm.font-medium.text-gray-700.mb-2 Van / camping-car
+          ul.divide-y.divide-gray-100
+            - @stay.van_bookings.each do |van|
+              li.py-2.text-sm.flex.items-start.justify-between.gap-3
+                .min-w-0
+                  .text-gray-900.font-medium 🚐 Van (#{van.vehicles} véhicule(s))
+                span.text-gray-500.shrink-0 = @stay.formatted_item_amount(van)
+
+      - if @stay.meals.any?
+        div
+          h4.text-sm.font-medium.text-gray-700.mb-2 Repas
+          ul.divide-y.divide-gray-100
+            - @stay.meals.each do |meal|
+              li.py-2.text-sm.flex.items-start.justify-between.gap-3
+                .min-w-0
+                  .text-gray-900.font-medium = meal.label
+                  - if meal.date
+                    .text-gray-500 = l(meal.date, format: :long)
+                  .text-gray-500 = "#{meal.people} personne(s)"
+                span.text-gray-500.shrink-0 = @stay.formatted_item_amount(meal)
+
+      - unless @stay.any_composition?
+        p.text-sm.text-gray-500 Aucun élément dans ce séjour pour le moment.
+
+    = render "stays/activities"
+
+    - bk = @stay.primary_bookable
+    - group = bk&.try(:group_name).presence
+    .border-t.border-gray-200.pt-4
+      h4.text-sm.font-medium.text-gray-700.mb-3 Assigner ce séjour à un client
+      = form_with url: reassign_customer_path(@stay.customer), method: :post, data: { controller: "reassign-form", "reassign-form-search-url-value": search_customers_path } do
+        = hidden_field_tag "stay_ids[]", @stay.id
+        .flex.gap-4.text-sm.mb-3
+          label.flex.items-center.gap-2
+            input type="radio" name="mode" value="existing" checked=true data-action="change->reassign-form#switchMode"
+            | Client existant
+          label.flex.items-center.gap-2
+            input type="radio" name="mode" value="new" data-action="change->reassign-form#switchMode"
+            | Nouveau client
+
+        .relative.space-y-1(data-reassign-form-target="existingPanel")
+          = text_field_tag :customer_query, nil,
+                           placeholder: "Rechercher un client (nom, email)…",
+                           autocomplete: "off",
+                           data: { "reassign-form-target": "searchInput", action: "input->reassign-form#search" },
+                           class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          = hidden_field_tag "target_id", nil, data: { "reassign-form-target": "targetId" }
+          .border.border-gray-100.rounded-md.divide-y.divide-gray-50.bg-white.shadow-sm.max-h-48.overflow-y-auto(data-reassign-form-target="results")
+
+        .space-y-2.hidden(data-reassign-form-target="newPanel")
+          .grid.grid-cols-2.gap-2
+            = text_field_tag "new_customer[first_name]", bk&.try(:firstname), placeholder: "Prénom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+            = text_field_tag "new_customer[last_name]", bk&.try(:lastname), placeholder: "Nom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+          = email_field_tag "new_customer[email]", nil, placeholder: "Email (à retrouver)", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          = text_field_tag "new_customer[phone]", bk&.try(:phone), placeholder: "Téléphone", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          = text_field_tag "new_customer[organization_name]", group, placeholder: "Nom du groupe / organisation", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          = select_tag "new_customer[customer_type]", options_for_select([["Particulier", "individual"], ["Organisation", "organization"]], group.present? ? "organization" : "individual"), class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          = hidden_field_tag "new_customer[language]", "fr"
+
+        .flex.justify-end.pt-3
+          = submit_tag "Assigner le séjour", class: "inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
