@@ -187,7 +187,13 @@ module Reservations
       raise_invalid("Veuillez indiquer si vous venez avec un animal (champ obligatoire).") if draft.dogs_count.nil?
       raise_invalid("Veuillez préciser votre prénom.") if draft.first_name.blank?
       raise_invalid("Veuillez préciser une adresse email valide.") unless Customer.exploitable_email?(draft.email)
-      if draft.lodging.present? && !draft.lodging.available_between?(draft.arrival_date, draft.departure_date)
+      # Mode chambres seules (epic #81, Phase 5) : au moins une chambre doit être
+      # cochée, sinon il n'y a rien à réserver (on ne retombe pas sur le gîte
+      # entier en silence).
+      if draft.lodging.present? && draft.rooms_mode? && draft.room_ids.blank?
+        raise_invalid("Veuillez sélectionner au moins une chambre pour une réservation de chambres seules.")
+      end
+      if draft.lodging.present? && !lodging_available?
         # Force-dispo admin (epic #66) : on n'échoue pas, on consigne un
         # avertissement que le contrôleur remonte à l'admin. Hors force, le
         # comportement historique tient (l'indisponibilité bloque la création).
@@ -201,6 +207,17 @@ module Reservations
       end
       check_space_availability!
       check_outdoor_capacity!
+    end
+
+    # Dispo de l'hébergement : sur les chambres cochées en mode "rooms" (epic #81,
+    # Phase 5), sur le gîte entier sinon. Source unique de vérité (veto Grand-Duc /
+    # chambres partagées inclus).
+    def lodging_available?
+      if draft.rooms_mode?
+        draft.lodging.rooms_available_between?(draft.room_ids, draft.arrival_date, draft.departure_date)
+      else
+        draft.lodging.available_between?(draft.arrival_date, draft.departure_date)
+      end
     end
 
     # Camping / van : capacité GLOBALE du domaine (epic #66, Phase 3). Vérifiée
@@ -349,11 +366,13 @@ module Reservations
         price_cents: lodging_price_cents(quote),
         shown_price_cents: lodging_price_cents(quote)
       )
-      # booking_type (epic #66, Phase 6) : attr_accessor NON persisté — il ne
-      # touche pas la ligne DB. Il est REQUIS par `get_rooms` du concern Bookable
-      # pour router vers `lodging.rooms` (sinon get_rooms renvoie nil et pose une
-      # erreur). L'occupation d'hébergement est toujours de type "lodging".
-      booking.booking_type = "lodging"
+      # booking_type (epic #66, Phase 6 ; chambres seules epic #81, Phase 5) :
+      # attr_accessor NON persisté. En mode "rooms" l'occupation ne vise qu'un
+      # sous-ensemble de chambres du gîte (cf. `reservation_rooms`) ; sinon le
+      # gîte entier. On CONSERVE `lodging_id` dans les deux modes (contrairement
+      # au canal Booking direct qui le retire) : le séjour garde ainsi la
+      # référence du gîte (préremplissage édition, devis, entanglement).
+      booking.booking_type = draft.rooms_mode? ? "rooms" : "lodging"
       booking.generate_token
       booking.save!
       booking
@@ -368,10 +387,23 @@ module Reservations
     # porte déjà des Reservation (rejeu de run! sur un booking déjà peuplé).
     def build_lodging_reservations!
       return if @booking.reservations.any?
-      rooms = get_rooms
+      rooms = reservation_rooms
       return if rooms.blank?
       build_reservations(rooms)
       @booking.save!
+    end
+
+    # Chambres à réserver pour l'occupation d'hébergement. En mode "rooms" (epic
+    # #81, Phase 5) : le SOUS-ENSEMBLE coché, borné aux chambres du gîte
+    # (anti-injection cross-gîte). Sinon : toutes les chambres du gîte (== ce que
+    # `get_rooms` renvoie en mode lodging — comportement historique inchangé).
+    def reservation_rooms
+      return Room.none if draft.lodging.blank?
+      if draft.rooms_mode?
+        draft.lodging.rooms.where(id: draft.room_ids)
+      else
+        draft.lodging.rooms
+      end
     end
 
     # Part de prix portée par le Booking d'hébergement : hébergement PUR dans tous
