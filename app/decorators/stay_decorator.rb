@@ -94,17 +94,29 @@ class StayDecorator < ApplicationDecorator
   # Lignes du séjour-composite : un réservable (Booking / SpaceBooking) par ligne,
   # avec ses dates et son montant. Alimente la page client /sejour/:token.
   def item_lines
-    object.stay_items.map do |item|
+    lines = object.stay_items.map do |item|
       bookable = item.bookable
       next if bookable.nil?
 
       {
         kind: item.bookable_type,
         name: item_label(bookable),
-        date_range: bookable.decorate.try(:date_range),
+        date_range: bookable_date_range(bookable),
         amount: h.humanized_money_with_symbol(Money.new(bookable.try(:price_cents).to_i))
       }
     end.compact
+
+    # Repas (issue #79) : ce ne sont PAS des `stay_items` (has_many direct), mais
+    # ils comptent dans le total — on les ajoute aux lignes pour que la
+    # décomposition somme bien au total affiché (aucun écart lignes ≠ total).
+    lines + object.meal_orders.map do |meal|
+      {
+        kind: "MealOrder",
+        name: meal_line_label(meal),
+        date_range: meal.date.present? ? h.l(meal.date, format: :long) : nil,
+        amount: h.humanized_money_with_symbol(Money.new(meal.price_cents.to_i))
+      }
+    end
   end
 
   # Total formaté pour la page client. Volontairement PAS nommé `total_amount` :
@@ -136,9 +148,31 @@ class StayDecorator < ApplicationDecorator
     when SpaceBooking
       spaces = bookable.try(:spaces)&.map(&:name)&.compact_blank
       spaces.presence&.join(", ") || h.t("public.stays.items.space")
+    when CampingBooking
+      h.t("public.stays.items.camping")
+    when VanBooking
+      h.t("public.stays.items.van")
     else
       h.t("public.stays.items.other")
     end
+  end
+
+  # Libellé d'une ligne repas (ex. « Repas — Buffet pain-fromages »).
+  def meal_line_label(meal)
+    "#{h.t('public.stays.items.meal')} — #{meal.label}"
+  end
+
+  # Plage de dates d'un bookable pour la page client. Utilise son décorateur
+  # dédié quand il existe (Booking/SpaceBooking) ; à défaut (CampingBooking /
+  # VanBooking, sans décorateur), dérive directement de from/to_date (issue #79).
+  def bookable_date_range(bookable)
+    bookable.decorate.try(:date_range)
+  rescue Draper::UninferrableDecoratorError
+    from = bookable.try(:from_date)
+    to   = bookable.try(:to_date)
+    return nil if from.blank? && to.blank?
+
+    "#{from.present? ? h.l(from, format: :long) : '?'} → #{to.present? ? h.l(to, format: :long) : '?'}"
   end
 
   # Nom/prénom + nom de groupe issus du booking sous-jacent.
