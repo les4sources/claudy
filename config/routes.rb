@@ -127,6 +127,14 @@ Rails.application.routes.draw do
       # Devis live du form de composition (issue #73) : recalcule le panneau
       # « Devis (B2C) » en Turbo Stream à chaque changement, via PricingModel.
       post :quote
+      # Fusion de séjours depuis le calendrier (epic #81, Phase 2). Trois étapes
+      # rendues PAR LE SERVEUR (fragments HTML, aucune vérité recalculée en JS) :
+      #   - merge_setup   : étape A — désignation du séjour survivant (cartes radio) ;
+      #   - merge_preview : étape B — aperçu dry-run (Stays::MergePreview) ;
+      #   - merge         : commit — Stays::MergeService, puis redirection + flash.
+      post :merge_setup
+      post :merge_preview
+      post :merge
     end
     member do
       # Action rapide depuis la modale du calendrier (issue #76) : bascule
