@@ -56,6 +56,14 @@ class SpaceBookingsController < BaseController
 
   def edit
     @space_booking = SpaceBooking.find_by!(id: params[:id])
+
+    # Édition unifiée (epic #81, Phase 8) : l'édition d'une résa d'espace passe
+    # désormais par le form séjour. Sans Stay vivant (backfill Phase 1 pas encore
+    # tourné en prod), on tombe sur l'écran legacy ci-dessous — fallback orphelin.
+    if (stay = @space_booking.stay)
+      return redirect_to edit_stay_path(stay)
+    end
+
     @space_booking.space_ids = @space_booking.space_reservations.map { |sr| sr.space_id }
     @spaces = Space.all
   end
