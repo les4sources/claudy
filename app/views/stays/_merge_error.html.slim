@@ -1,0 +1,8 @@
+/ Fragment d'erreur de garde-fou serveur (epic #81) — rendu DANS le dialog de
+/ fusion (jamais perdu), status 422. Ex. moins de deux séjours résolus.
+.px-6.py-8(data-merge-step="error")
+  .rounded-md.border.border-red-200.bg-red-50.px-4.py-3.text-sm.text-red-700(role="alert")
+    = message
+  .mt-6.flex.justify-end
+    button.text-sm.font-medium.text-gray-600.hover:text-gray-800(type="button" data-action="stay-merge#closeDialog")
+      | Fermer
