@@ -119,6 +119,11 @@ Rails.application.routes.draw do
   # pleines. La route `stays/recents` ci-dessus est déclarée AVANT pour ne pas
   # être captée par `/stays/:id`.
   resources :stays, only: [:show, :new, :create, :edit, :update, :destroy] do
+    member do
+      # Action rapide depuis la modale du calendrier (issue #76) : bascule
+      # pending ↔ confirmed sans ouvrir le form d'édition, réponse Turbo Stream.
+      patch :update_status
+    end
     resources :experience_bookings, only: [:create]
   end
   resources :experience_bookings, only: [:index, :update, :destroy] do

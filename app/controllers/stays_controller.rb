@@ -1,6 +1,6 @@
 class StaysController < BaseController
   before_action :set_accounting_view, only: :show
-  before_action :set_stay, only: %i[edit update destroy]
+  before_action :set_stay, only: %i[edit update destroy update_status]
 
   # Rendu sans layout : le fragment HTML est injecté dans la modale de détails
   # par le contrôleur Stimulus stay-details (fetch + innerHTML). [tranche 1]
@@ -81,6 +81,25 @@ class StaysController < BaseController
       flash.now[:alert] = updater.error_message(default: "Le séjour n'a pas pu être mis à jour.")
       prepare_form
       render :edit, status: :unprocessable_entity
+    end
+  end
+
+  # Action rapide depuis la modale du calendrier (issue #76) : bascule pending ↔
+  # confirmed sans ouvrir le form d'édition. Propage le statut aux réservables
+  # pour garder le veto de dispo cohérent (cf. `Stays::QuickStatusUpdater`).
+  # Réponse Turbo Stream : rafraîchit le contenu de la modale sur place.
+  def update_status
+    updater = Stays::QuickStatusUpdater.new(stay: @stay, status: params[:status])
+    ok = updater.run
+    @stay = Stay.includes(stay_items: :bookable, customer: []).find(@stay.id).decorate
+    @assignable_availabilities = ExperienceAvailability.for_user(current_user).upcoming.includes(:experience)
+
+    respond_to do |format|
+      format.turbo_stream do
+        flash.now[:alert] = updater.error_message unless ok
+        render turbo_stream: turbo_stream.replace("stay-details-#{@stay.id}", partial: "stays/details")
+      end
+      format.html { redirect_to recent_stays_path, notice: (ok ? "Statut mis à jour." : updater.error_message) }
     end
   end
 
