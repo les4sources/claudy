@@ -46,7 +46,7 @@ class StaysController < BaseController
 
     if builder.run
       flash[:notice] = "Séjour créé."
-      flash[:alert]  = builder.availability_warning if builder.availability_warning
+      flash[:alert]  = combined_warning(builder)
       redirect_to recent_stays_path
     else
       @stay  = Stay.new(status: requested_status.presence || "pending")
@@ -74,7 +74,7 @@ class StaysController < BaseController
 
     if updater.run
       flash[:notice] = "Séjour mis à jour."
-      flash[:alert]  = updater.availability_warning if updater.availability_warning
+      flash[:alert]  = combined_warning(updater)
       redirect_to recent_stays_path
     else
       @quote = safe_quote(@draft)
@@ -113,6 +113,12 @@ class StaysController < BaseController
 
   def set_stay
     @stay = Stay.find(params[:id])
+  end
+
+  # Concatène l'avertissement de disponibilité (force-dispo) et celui des espaces
+  # non enregistrables (issue #75), pour un flash unique. nil si aucun des deux.
+  def combined_warning(service)
+    [service.availability_warning, service.space_warning].compact.join(" ").presence
   end
 
   def set_accounting_view
@@ -266,16 +272,21 @@ class StaysController < BaseController
     return [] if space_booking.nil?
 
     space_booking.space_reservations.map do |res|
-      key = space_key_for_name(res.space&.name)
+      key = space_key_for(res.space)
       next if key.nil?
       { kind: key, date: res.date&.iso8601, period: res.duration }
     end.compact
   end
 
-  # Space#name → clé de pricing (inverse de SpaceComposition::SPACE_NAMES_BY_KEY).
-  def space_key_for_name(name)
-    return nil if name.blank?
-    SpaceComposition::SPACE_NAMES_BY_KEY.find { |_key, names| names.include?(name) }&.first
+  # `Space` → clé de pricing (inverse du mapping SpaceComposition). Résolution par
+  # le `code` stable d'abord (issue #75), puis repli sur le nom d'affichage.
+  def space_key_for(space)
+    return nil if space.nil?
+
+    by_code = SpaceComposition::SPACE_CODES_BY_KEY.find { |_key, code| code == space.code }&.first
+    return by_code if by_code
+
+    SpaceComposition::SPACE_NAMES_BY_KEY.find { |_key, names| names.include?(space.name) }&.first
   end
 
   # Coordonnées client : soit un client existant sélectionné (on lit ses
