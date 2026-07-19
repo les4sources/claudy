@@ -25,9 +25,9 @@
             span.font-semibold.text-gray-900 ##{stay.id}
             span.text-gray-700 = stay_short_label(stay)
             - if stay.id == suggested_id
-              span.inline-flex.items-center.rounded-full.bg-indigo-50.px-2.py-0.5.text-xs.font-medium.text-indigo-700(title="Présélection : #{merge_suggestion_reason(suggested_reason)}")
+              span.inline-flex.items-center.rounded-full.bg-indigo-50.px-2.text-xs.font-medium.text-indigo-700(class="py-0.5" title="Présélection : #{merge_suggestion_reason(suggested_reason)}")
                 | suggéré · #{merge_suggestion_reason(suggested_reason)}
-          .mt-0.5.text-sm.text-gray-500 = decorated.date_range
+          .text-sm.text-gray-500(class="mt-0.5") = decorated.date_range
           .mt-1.text-sm.text-gray-600 = stay_composition_summary(stay)
           .mt-1.flex.items-center.flex-wrap.gap-x-3.gap-y-1.text-sm
             span.font-medium.text-gray-900 = humanized_money_with_symbol(stay.total_amount)

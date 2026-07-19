@@ -18,7 +18,9 @@ css:
   .stay-merge-bar { transition: transform .15s ease; }
 
 .flex.items-center.gap-3.mb-4
-  button.inline-flex.items-center.gap-1.5.rounded-md.border.border-gray-300.bg-white.px-3.py-1.5.text-sm.font-medium.text-gray-700.shadow-sm.hover:bg-gray-50(type="button" data-stay-merge-target="toggleButton" data-action="stay-merge#toggle" aria-pressed="false")
+  / `gap-1.5` / `py-1.5` en attribut class : la notation à points de Slim
+  / scinderait `gap-1.5` en deux classes (`gap-1` + `5`).
+  button.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-3.text-sm.font-medium.text-gray-700.shadow-sm.hover:bg-gray-50(class="gap-1.5 py-1.5" type="button" data-stay-merge-target="toggleButton" data-action="stay-merge#toggle" aria-pressed="false")
     svg.h-4.w-4(xmlns="http://www.w3.org/2000/svg" fill="none" viewbox="0 0 24 24" stroke-width="1.8" stroke="currentColor")
       path(stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5")
     span Fusionner des séjours

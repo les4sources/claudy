@@ -76,12 +76,21 @@ export default class extends Controller {
 
   applyModeChrome(on) {
     this.element.classList.toggle("merge-mode", on)
-    if (this.hasBannerTarget) this.bannerTarget.classList.toggle("hidden", !on)
+    if (this.hasBannerTarget) {
+      // Le bandeau est un conteneur flex : `hidden` et `flex` se toggleent
+      // ensemble, sinon il s'affiche en block et écrase sa mise en page.
+      this.bannerTarget.classList.toggle("hidden", !on)
+      this.bannerTarget.classList.toggle("flex", on)
+    }
     if (this.hasToggleButtonTarget) {
       this.toggleButtonTarget.setAttribute("aria-pressed", on ? "true" : "false")
-      this.toggleButtonTarget.classList.toggle("bg-indigo-600", on)
-      this.toggleButtonTarget.classList.toggle("text-white", on)
-      this.toggleButtonTarget.classList.toggle("border-indigo-600", on)
+      // Swap COMPLET des classes d'état : ajouter bg-indigo-600 sans retirer
+      // bg-white laisse gagner bg-white (ordre CSS Tailwind) → texte blanc sur
+      // fond blanc. Chaque classe de base a son pendant actif.
+      const activeClasses = ["bg-indigo-600", "text-white", "border-indigo-600", "hover:bg-indigo-700"]
+      const baseClasses = ["bg-white", "text-gray-700", "border-gray-300", "hover:bg-gray-50"]
+      activeClasses.forEach((c) => this.toggleButtonTarget.classList.toggle(c, on))
+      baseClasses.forEach((c) => this.toggleButtonTarget.classList.toggle(c, !on))
     }
   }
 
@@ -136,7 +145,6 @@ export default class extends Controller {
     const ids = new Set(this.selection.map((s) => String(s.id)))
     this.element.classList.toggle("has-selection", this.selection.length > 0)
 
-    const seen = new Set()
     this.element.querySelectorAll("[data-stay-id]").forEach((block) => {
       const id = String(block.dataset.stayId)
       const selected = ids.has(id)
@@ -144,12 +152,9 @@ export default class extends Controller {
       if (selected) {
         const hue = this.hueFor(id)
         block.style.boxShadow = `0 0 0 2px hsl(${hue} 65% 45%), 0 0 0 5px hsl(${hue} 70% 90%)`
-        if (!seen.has(id)) {
-          seen.add(id)
-          this.addBadge(block, hue)
-        } else {
-          this.removeBadge(block)
-        }
+        // Badge ✓ sur CHAQUE bloc du séjour : chaque fragment confirme sa
+        // sélection, le ring seul est trop discret sur les petits blocs.
+        this.addBadge(block, hue)
       } else {
         block.style.boxShadow = ""
         this.removeBadge(block)
@@ -193,8 +198,12 @@ export default class extends Controller {
     }
     if (this.hasMergeButtonTarget) {
       this.mergeButtonTarget.disabled = count < 2
-      this.mergeButtonTarget.title = count < 2 ? "Sélectionne au moins 2 séjours" : "Fusionner les séjours sélectionnés"
-      this.mergeButtonTarget.textContent = `Fusionner ${count} séjours`
+      // Libellé explicite VISIBLE quand la sélection est insuffisante (un title
+      // seul est invisible au tactile), accord correct sinon.
+      this.mergeButtonTarget.textContent =
+        count < 2 ? "Sélectionne au moins 2 séjours" : `Fusionner ${count} séjours`
+      this.mergeButtonTarget.title =
+        count < 2 ? "Sélectionne au moins 2 séjours" : "Fusionner les séjours sélectionnés"
     }
     if (this.hasChipsTarget) this.renderChips()
   }
