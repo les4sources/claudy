@@ -8,6 +8,9 @@ div id="stay-details-#{@stay.id}"
       .flex.items-center.gap-2
         = @stay.platform_badge
         = @stay.status_badge
+        / Duplication (epic #81, Phase 7) : ouvre le form NEW prérempli depuis ce
+        / séjour (client + composition), dates/paiement/prix imposé exclus.
+        = link_to "Dupliquer", new_stay_path(duplicate_from: @stay.id), title: "Dupliquer ce séjour (nouvelles dates à choisir)", class: "text-sm font-medium text-gray-500 hover:text-gray-700 hover:underline"
         = link_to "Modifier le séjour", edit_stay_path(@stay), class: "text-sm font-medium text-indigo-600 hover:underline"
 
     / Actions rapides (issue #76) : bascule de statut + accès solde, sans ouvrir

@@ -3,5 +3,9 @@
     div
       h1.text-xl.font-semibold.text-gray-900 = "Modifier le séjour ##{@stay.id}"
       p.mt-1.text-sm.text-gray-600 Modifiez la composition du séjour (hébergement + activités). Aucun paiement n'est déclenché.
-    = button_to "Supprimer le séjour", stay_path(@stay), method: :delete, data: { turbo_confirm: "Supprimer ce séjour ? Cette action est réversible (soft-delete)." }, class: "inline-flex items-center rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+    .flex.items-center.gap-2
+      / Duplication (epic #81, Phase 7) : form NEW prérempli depuis ce séjour,
+      / dates/paiement/prix imposé exclus.
+      = link_to "Dupliquer", new_stay_path(duplicate_from: @stay.id), title: "Dupliquer ce séjour (nouvelles dates à choisir)", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+      = button_to "Supprimer le séjour", stay_path(@stay), method: :delete, data: { turbo_confirm: "Supprimer ce séjour ? Cette action est réversible (soft-delete)." }, class: "inline-flex items-center rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
   = render "form", url: stay_path(@stay), method: :patch, submit_label: "Enregistrer les modifications"

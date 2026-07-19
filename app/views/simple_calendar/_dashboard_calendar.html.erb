@@ -115,8 +115,9 @@
 
                   <div class="flex">
                     <% if Date.today <= day %>
-                      <%= link_to "H+", new_booking_path(date: day.strftime("%Y-%m-%d")), class: "mr-2 text-blue-700 hover:text-blue-900" %>
-                      <%= link_to "E+", new_space_booking_path(date: day.strftime("%Y-%m-%d")), class: "mr-2 text-blue-700 hover:text-blue-900" %>
+                      <%# Saisie rapide datée (epic #81, Phase 7) : les chips H+/E+ pointent désormais vers le form SÉJOUR prérempli à la date cliquée (plus de création directe Booking/SpaceBooking depuis le calendrier). %>
+                      <%= link_to "H+", new_stay_path(date: day.iso8601), title: "Nouveau séjour hébergement à cette date", class: "mr-2 text-blue-700 hover:text-blue-900" %>
+                      <%= link_to "E+", new_stay_path(date: day.iso8601, space: 1), title: "Nouveau séjour espace à cette date", class: "mr-2 text-blue-700 hover:text-blue-900" %>
                     <% end %>
 
                     <%= link_to new_note_path(date: day.strftime("%Y-%m-%d")), data: { turbo_frame: "modal" } do %>
