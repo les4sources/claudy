@@ -101,4 +101,24 @@ RSpec.describe "Public::Stays (/sejour/:token)", type: :request do
       expect(response.body).to include(I18n.t("public.stays.balance.experiences_confirmed"))
     end
   end
+
+  # Issue #79 — le funnel public persiste camping/van/repas : la page /sejour doit
+  # les afficher en lignes distinctes (repas inclus, bien que non `stay_items`) et
+  # rester cohérente (décomposition qui somme au total).
+  describe "GET /sejour/:token — composition camping + repas (issue #79)" do
+    it "affiche les lignes camping et repas" do
+      camping = CampingBooking.create!(firstname: "Alex", from_date: Date.today + 10,
+                                       to_date: Date.today + 12, people: 3, status: "pending",
+                                       kind: "tente", price_cents: 4_500)
+      stay.stay_items.create!(bookable: camping)
+      stay.meal_orders.create!(kind: "buffet", people: 4, price_cents: 4_800) # sans date
+      stay.update!(total_amount_cents: 48_500 + 4_500 + 4_800)
+
+      get "/sejour/#{stay.token}"
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(I18n.t("public.stays.items.camping"))
+      expect(response.body).to include(I18n.t("public.stays.items.meal"))
+    end
+  end
 end

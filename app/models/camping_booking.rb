@@ -27,9 +27,11 @@
 class CampingBooking < ApplicationRecord
   include GlobalCapacityBookable
 
-  # Capacité totale du terrain de camping, en PERSONNES. Valeur par défaut
-  # provisoire — À AJUSTER par Michael selon la capacité réelle du domaine.
+  # Capacité totale du terrain de camping, en PERSONNES. DÉFAUT provisoire,
+  # surchargeable sans redéploiement via `Setting` (issue #78) sous la clé
+  # `CAPACITY_SETTING_KEY` — la constante reste la valeur de repli.
   TOTAL_CAPACITY = 30
+  CAPACITY_SETTING_KEY = "camping_total_capacity".freeze
 
   # Inverse de la relation StayItem (mêmes conventions que Booking/SpaceBooking).
   has_one :stay_item, as: :bookable

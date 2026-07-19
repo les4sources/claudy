@@ -18,6 +18,9 @@ nl:
       items:
         lodging: "Verblijf"
         space: "Ruimte"
+        camping: "Camping"
+        van: "Camper"
+        meal: "Maaltijd"
         other: "Dienst"
       payment_status:
         pending: "In afwachting van betaling"

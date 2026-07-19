@@ -27,7 +27,7 @@ module Stays
 
     class Invalid < StandardError; end
 
-    attr_reader :stay, :availability_warning
+    attr_reader :stay, :availability_warning, :space_warning
 
     def initialize(stay:, draft:, status: nil, skip_availability: false, user: nil)
       @stay = stay
@@ -62,6 +62,9 @@ module Stays
         reconcile_experiences!
         @stay.recompute_aggregates!
       end
+      # Espaces DEVISÉS mais non persistables (aucune `Space` correspondante) :
+      # remontés à l'admin plutôt que perdus en silence (issue #75).
+      @space_warning = unresolved_space_warning(@draft)
       true
     end
 

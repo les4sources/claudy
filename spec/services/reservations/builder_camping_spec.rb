@@ -181,23 +181,27 @@ RSpec.describe Reservations::Builder, "camping / van / repas (epic #66, Phase 3)
     end
   end
 
-  describe "funnel public inchangé (camping/van/repas devis-only)" do
-    it "ne persiste NI CampingBooking NI VanBooking NI MealOrder" do
+  describe "funnel public — persistance camping/repas à total constant (issue #79)" do
+    it "persiste CampingBooking + MealOrder et re-ventile SANS changer le total" do
       d = draft(
         lodging_id: hulotte.id,
         campings: [{ kind: "tente", people: 3, nights: 2 }],
         meals:    [{ kind: "buffet", people: 4 }]
       )
-      builder = described_class.new(draft: d) # PAS admin
+      builder = described_class.new(draft: d) # PAS admin (funnel public)
       expect(builder.run).to be(true)
 
-      expect(CampingBooking.count).to eq(0)
-      expect(VanBooking.count).to eq(0)
-      expect(builder.stay.meal_orders).to be_empty
-      # Le Booking public porte encore le bundle (camping + repas noyés).
-      # Total prévu = 74 500 (héberg) + 4 500 (camping) + 4 800 (repas) = 83 800 c.
+      # Camping / repas désormais persistés (comme le canal admin).
+      expect(CampingBooking.count).to eq(1)
+      expect(builder.stay.meal_orders.count).to eq(1)
+      expect(builder.camping_booking.people).to eq(3)   # 3 pers (camping 4 500 c)
+      expect(builder.camping_booking.price_cents).to eq(4_500)
+      expect(builder.stay.meal_orders.first.price_cents).to eq(4_800)
+
+      # INVARIANT #79 : total prévu STRICTEMENT inchangé = 74 500 + 4 500 + 4 800.
       expect(builder.stay.total_amount_cents).to eq(83_800)
-      expect(builder.booking.price_cents).to eq(83_800)
+      # Le Booking ne porte plus que l'hébergement PUR (extraction sans double-compte).
+      expect(builder.booking.price_cents).to eq(74_500)
     end
   end
 end

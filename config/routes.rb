@@ -124,6 +124,11 @@ Rails.application.routes.draw do
       # « Devis (B2C) » en Turbo Stream à chaque changement, via PricingModel.
       post :quote
     end
+    member do
+      # Action rapide depuis la modale du calendrier (issue #76) : bascule
+      # pending ↔ confirmed sans ouvrir le form d'édition, réponse Turbo Stream.
+      patch :update_status
+    end
     resources :experience_bookings, only: [:create]
   end
   resources :experience_bookings, only: [:index, :update, :destroy] do

@@ -28,6 +28,30 @@ module CampingComposition
     draft_camping_people(draft).positive?
   end
 
+  # Occupation SIMULTANÉE (pic) de personnes camping — valeur à PERSISTER sur le
+  # `CampingBooking`, qui couvre toute la fenêtre en UN enregistrement. Les deux
+  # représentations du draft convergent : admin = une entrée `{people, nights}`,
+  # public = une entrée `{people, nights: 1}` par nuit (issue #79). Le pic = max
+  # des `people` par entrée — cohérent avec le prix (people × nuits == person-nuits
+  # facturées) sur le cas uniforme, et identique à la valeur admin actuelle.
+  def draft_camping_peak_people(draft)
+    Array(draft.campings).map { |e| symbol(e)[:people].to_i }.max.to_i
+  end
+
+  # Véhicules SIMULTANÉS (pic) à persister sur le `VanBooking`. Admin encode N
+  # véhicules en N entrées couvrant toute la fenêtre (`nights == window`) ; le
+  # public encode la présence par nuit en 1 entrée `{nights: 1}` par nuit (issue
+  # #79, où le funnel plafonne de fait à un van). Le pic = nombre d'entrées
+  # couvrant la fenêtre entière (admin) ; à défaut (public), 1.
+  def draft_van_peak_vehicles(draft)
+    entries = Array(draft.vans).map { |e| symbol(e) }
+    return 0 if entries.empty?
+
+    window   = [draft.nights, 1].max
+    spanning = entries.count { |e| e[:nights].to_i >= window }
+    spanning.positive? ? spanning : 1
+  end
+
   # Nombre de véhicules demandés — une entrée `vans` = un véhicule (contrat
   # PricingModel : `van_lines` produit une ligne par entrée).
   def draft_van_vehicles(draft)
@@ -82,7 +106,7 @@ module CampingComposition
       group_name:  draft.group_name,
       from_date:   draft.arrival_date,
       to_date:     draft.departure_date,
-      people:      [draft_camping_people(draft), 1].max,
+      people:      [draft_camping_peak_people(draft), 1].max,
       kind:        "tente",
       status:      status,
       price_cents: price_cents
@@ -105,7 +129,7 @@ module CampingComposition
       group_name:  draft.group_name,
       from_date:   draft.arrival_date,
       to_date:     draft.departure_date,
-      vehicles:    [draft_van_vehicles(draft), 1].max,
+      vehicles:    [draft_van_peak_vehicles(draft), 1].max,
       status:      status,
       price_cents: price_cents
     )
