@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_19_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_19_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -645,6 +645,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_19_120000) do
     t.string "token"
     t.string "payment_status", default: "pending", null: false
     t.datetime "balance_reminder_sent_at"
+    t.integer "price_override_cents"
     t.index ["activity_selection_token"], name: "index_stays_on_activity_selection_token"
     t.index ["customer_id"], name: "index_stays_on_customer_id"
     t.index ["legacy_origin"], name: "index_stays_on_legacy_origin_unique_live", unique: true, where: "((legacy_origin IS NOT NULL) AND (deleted_at IS NULL))"

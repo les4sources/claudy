@@ -8,6 +8,7 @@
 #  departure_date     :date
 #  status             :string
 #  total_amount_cents :integer          default(0), not null
+#  price_override_cents :integer
 #  notes              :text
 #  legacy_origin      :string
 #  deleted_at         :datetime
@@ -19,6 +20,14 @@ class Stay < ApplicationRecord
   # d'import/dédup de la migration legacy). Tout Stay créé via /reservation
   # porte la valeur par défaut "reservation".
   SOURCES = %w[reservation tally_legacy ota manual].freeze
+
+  # Canaux d'attribution qu'un admin peut POSER depuis le CRUD Séjour (epic #81,
+  # Phase 3). `reservation` (funnel public natif) et `tally_legacy` (import) sont
+  # automatiques — jamais choisis à la main. On borne donc le `<select>` du form
+  # à la saisie manuelle et à l'OTA (parité avec le canal Booking direct). Le
+  # modèle, lui, continue d'accepter toute valeur de `SOURCES` (édition d'un
+  # séjour issu d'un canal automatique : sa source d'origine est préservée).
+  ADMIN_SELECTABLE_SOURCES = %w[manual ota].freeze
 
   # Statut de paiement du séjour (epic #26, Phase 1). Le séjour devient l'ancre
   # de paiement ; Booking garde le sien tant que la colonne existe.
@@ -41,6 +50,8 @@ class Stay < ApplicationRecord
   has_soft_deletion default_scope: true
 
   monetize :total_amount_cents
+  # Prix libre / override du séjour (epic #81, Phase 3) : nullable — vide = devis.
+  monetize :price_override_cents, allow_nil: true
 
   before_create :generate_activity_token
   before_create :generate_token
@@ -179,6 +190,14 @@ class Stay < ApplicationRecord
     payment_status == "paid"
   end
 
+  # Le séjour porte-t-il un prix imposé (epic #81, Phase 3) ? Quand oui, le total
+  # est FIXÉ par l'admin et court-circuite le devis B2C forfaitaire ; l'exigible
+  # (`payable_amount_cents` / `balance_due_cents`) en découle automatiquement,
+  # car il se dérive de `total_amount_cents`.
+  def price_overridden?
+    price_override_cents.present?
+  end
+
   private
 
   def generate_activity_token
@@ -213,9 +232,16 @@ class Stay < ApplicationRecord
     # Le total agrège : bookables (hébergement/espaces/camping/van via StayItem)
     # + activités ACTIVES + repas (epic #66, Phase 3 — has_many direct, non
     # calendrier). Les repas soft-deleted sont exclus par le default_scope.
-    amount = items.sum { |b| b.try(:price_cents).to_i } +
-             experience_bookings.active.sum(&:price_cents) +
-             meal_orders.sum(:price_cents).to_i
+    # Prix imposé (epic #81, Phase 3) : s'il est présent, il FIXE le total et
+    # court-circuite le devis calculé depuis la composition. Les DATES, elles,
+    # restent toujours dérivées des bookables (l'override ne borne que le montant).
+    amount = if price_overridden?
+      price_override_cents
+    else
+      items.sum { |b| b.try(:price_cents).to_i } +
+        experience_bookings.active.sum(&:price_cents) +
+        meal_orders.sum(:price_cents).to_i
+    end
     # Séjour SANS hébergement (epic #66, Phase 2) : les dates viennent des
     # SpaceBooking (Booking ET SpaceBooking exposent from_date/to_date), donc un
     # séjour « espaces seuls » reste daté. On ne réécrit les dates QUE si au moins
