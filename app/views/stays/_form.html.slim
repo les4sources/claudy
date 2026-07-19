@@ -156,10 +156,11 @@
       .grid.grid-cols-2.gap-4
         .space-y-1
           label.block.text-sm.font-medium.text-gray-700 Canal (source)
-          = select_tag "stay[source]", options_for_select(source_options, current_source), class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          = select_tag "stay[source]", options_for_select(source_options, current_source), data: { "stay-form-target": "source" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
         .space-y-1
           label.block.text-sm.font-medium.text-gray-700 Plateforme
-          = select_tag "stay[platform]", options_for_select(platform_options, current_platform), class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          / Choisir une plateforme OTA bascule le canal sur « OTA » (stay-form#syncChannelFromPlatform).
+          = select_tag "stay[platform]", options_for_select(platform_options, current_platform), data: { "stay-form-target": "platform", action: "change->stay-form#syncChannelFromPlatform" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
     / --- Statut + force dispo -----------------------------------------------
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
