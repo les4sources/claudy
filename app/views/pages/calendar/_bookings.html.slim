@@ -37,7 +37,7 @@
                    space_booking: space_booking
           div[data-popper-arrow]
 
-      div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min-w-0 #{space_booking.calendar_block_class}" style=block_style data-space-booking-day-entry=space_booking.id data-stay-id=stay&.id)
+      div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min-w-0 #{space_booking.calendar_block_class}" style=block_style data-space-booking-day-entry=space_booking.id data-stay-id=stay&.id data-stay-label=(stay && stay_short_label(stay)) data-stay-dates=(stay && stay_short_dates(stay)))
         .block.min-w-0.w-full
           div.min-w-0
             strong.block.min-w-0.break-words

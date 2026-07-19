@@ -1,0 +1,8 @@
+/ Dialog natif de fusion (epic #81, Phase 2) — 2 étapes (désignation puis
+/ aperçu) alimentées par fetch des fragments serveur, injectés dans le contenu.
+/ Même pattern que la modale séjour (stay-details) : <dialog> + Stimulus.
+dialog.rounded-lg.p-0.shadow-xl.w-full.max-w-lg.backdrop:bg-black/40(data-stay-merge-target="dialog")
+  .flex.justify-end.px-3.pt-3
+    button.text-gray-400.hover:text-gray-600(type="button" data-action="stay-merge#closeDialog" aria-label="Fermer")
+      | ✕
+  div(data-stay-merge-target="dialogContent")
