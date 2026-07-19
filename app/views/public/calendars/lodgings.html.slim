@@ -4,7 +4,7 @@
            secondary: "Les 4 Sources à Yvoir",
            icon: "calendar_days",
            links: [ \
-             link_to("Demande de réservation", new_public_booking_path, class: "btn-page-header") \
+             link_to("Demande de réservation", public_reservation_start_path, class: "btn-page-header") \
            ]
 
 .availability-calendar
@@ -44,4 +44,4 @@
       span.availability-calendar__legend-dot.availability-calendar__legend-dot--unavailable
       span Non disponible
 
-= link_to("Demande de réservation", new_public_booking_path, class: "mt-4 btn-action")
+= link_to("Demande de réservation", public_reservation_start_path, class: "mt-4 btn-action")
