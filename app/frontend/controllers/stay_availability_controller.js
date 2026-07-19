@@ -43,6 +43,15 @@ export default class extends Controller {
       departure_date: departure,
     })
 
+    // Mode chambres seules (epic #81, Phase 5) : la dispo porte sur les chambres
+    // cochées. Sans chambre cochée, l'endpoint répond checkable:false → on masque.
+    const bookingType =
+      this.element.querySelector('input[name="stay[booking_type]"]:checked')?.value || "lodging"
+    if (bookingType === "rooms") {
+      params.set("booking_type", "rooms")
+      this.checkedRoomIds().forEach((id) => params.append("room_ids[]", id))
+    }
+
     try {
       const response = await fetch(`${this.urlValue}?${params}`, {
         headers: { Accept: "application/json" },
@@ -66,6 +75,13 @@ export default class extends Controller {
 
   fieldValue(name) {
     return this.element.querySelector(`[name="${name}"]`)?.value?.trim() || ""
+  }
+
+  // Chambres cochées ET VISIBLES (les groupes masqués sont décochés par stay-form).
+  checkedRoomIds() {
+    return Array.from(
+      this.element.querySelectorAll('input[name="stay[room_ids][]"]:checked')
+    ).map((cb) => cb.value)
   }
 
   render(available, message) {

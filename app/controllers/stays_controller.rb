@@ -104,6 +104,18 @@ class StaysController < BaseController
       return render json: { checkable: false }
     end
 
+    # Mode chambres seules (epic #81, Phase 5) : la dispo porte sur les chambres
+    # cochées, pas sur tout le gîte. Sans chambre cochée, rien à vérifier.
+    if params[:booking_type].to_s == "rooms"
+      room_ids = Array(params[:room_ids]).reject(&:blank?)
+      return render json: { checkable: false } if room_ids.empty?
+      return render json: {
+        checkable: true,
+        available: lodging.rooms_available_between?(room_ids, from, to),
+        lodging:   lodging.name
+      }
+    end
+
     render json: {
       checkable: true,
       available: lodging.available_between?(from, to),
@@ -277,6 +289,9 @@ class StaysController < BaseController
                                                        .upcoming
                                                        .includes(:experience)
     @statuses = Stay::STATUSES_ADMIN_CREATABLE
+    # Événements sélectionnables pour la facturation espace (epic #81, Phase 6),
+    # décorés pour l'affichage « nom (dates) » — même source que le form direct.
+    @events = EventDecorator.decorate_collection(Event.order(starts_at: :desc))
     @quote  ||= safe_quote(@draft)
   end
 
@@ -295,6 +310,8 @@ class StaysController < BaseController
     contact = customer_contact(p)
     Reservations::Draft.new(
       lodging_id:     p[:lodging_id],
+      booking_type:   p[:booking_type],
+      room_ids:       room_ids_param(p),
       arrival_date:   p[:arrival_date],
       departure_date: p[:departure_date],
       adults:         p[:adults],
@@ -309,8 +326,19 @@ class StaysController < BaseController
       halls:          space_entries(p),
       campings:       camping_entries(p),
       vans:           van_entries(p),
-      meals:          meal_entries(p)
+      meals:          meal_entries(p),
+      # Facturation espace (epic #81, Phase 6) : le sous-hash brut transite tel
+      # quel ; le Draft normalise (presence → nil) et la persistance convertit les
+      # montants via les setters `monetize`. Absent du form → `space_billing` nil,
+      # les valeurs existantes survivent à la réédition.
+      space_billing:  p[:space_billing]
     )
+  end
+
+  # Chambres cochées (mode chambres seules, epic #81, Phase 5). Tableau de la
+  # forme stay[room_ids][] ; on ne garde que des entiers exploitables.
+  def room_ids_param(p)
+    Array(p[:room_ids]).map { |id| id.to_i }.reject(&:zero?)
   end
 
   # Nombre de nuits déduit des dates du formulaire (pour tarifer camping/van).
@@ -363,8 +391,14 @@ class StaysController < BaseController
   # Reconstruit un draft depuis un séjour existant, pour préremplir le form edit.
   def draft_from_stay(stay)
     booking = stay.stay_items.where(bookable_type: "Booking").first&.bookable
+    # Chambres seules (epic #81, Phase 5) : rétablit le mode + les chambres
+    # cochées. La colonne `booking_type` fait foi ; dérivation des Reservation
+    # en secours pour le legacy (cf. Booking#rooms_mode?).
+    rooms_mode = booking&.rooms_mode?
     Reservations::Draft.new(
       lodging_id:     booking&.lodging_id,
+      booking_type:   rooms_mode ? "rooms" : "lodging",
+      room_ids:       rooms_mode ? booking.reservations.map(&:room_id).uniq : [],
       arrival_date:   stay.arrival_date,
       departure_date: stay.departure_date,
       adults:         booking&.adults,
@@ -380,8 +414,33 @@ class StaysController < BaseController
       halls:          halls_from_stay(stay),
       campings:       campings_from_stay(stay),
       vans:           vans_from_stay(stay),
-      meals:          meals_from_stay(stay)
+      meals:          meals_from_stay(stay),
+      space_billing:  space_billing_from_stay(stay)
     )
+  end
+
+  # Facturation espace (epic #81, Phase 6) : reconstitue le sous-hash de
+  # facturation depuis le SpaceBooking du séjour, pour préremplir le form edit.
+  # nil si le séjour n'a pas d'espace. Les montants repassent en € (chaîne `%g`
+  # pour éviter les décimales parasites) — miroir du form direct `_payment`.
+  def space_billing_from_stay(stay)
+    sb = stay.stay_items.where(bookable_type: "SpaceBooking").first&.bookable
+    return nil if sb.nil?
+
+    {
+      advance_amount: euro_prefill(sb.advance_amount_cents),
+      deposit_amount: euro_prefill(sb.deposit_amount_cents),
+      payment_method: sb.payment_method,
+      event_id:       sb.event_id,
+      arrival_time:   sb.arrival_time,
+      departure_time: sb.departure_time
+    }
+  end
+
+  # Cents → chaîne € prête pour un number_field (nil si absent, "50" pas "50.0").
+  def euro_prefill(cents)
+    return nil if cents.nil?
+    format("%g", cents / 100.0)
   end
 
   # Reconstruit l'entrée camping {kind, people, nights} depuis le CampingBooking

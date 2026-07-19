@@ -77,7 +77,10 @@ class Booking < ApplicationRecord
 
   attr_accessor :invoice_wanted
   attr_accessor :room_ids
-  attr_accessor :booking_type # lodging || rooms
+  # `booking_type` (lodging || rooms) est désormais une COLONNE (epic #81,
+  # Phase 5) : le mode d'occupation est persisté à la création, la dérivation
+  # depuis les Reservation (`rooms_only_occupation?`) ne sert plus que de
+  # secours pour le legacy (colonne nil).
   attr_accessor :tier_lodgings
   attr_accessor :tier_rooms
   attr_accessor :terms_approval
@@ -149,6 +152,29 @@ class Booking < ApplicationRecord
 
   def for_rooms?
     rooms.where.not(level: -1).any?
+  end
+
+  # Occupation « chambres seules » (epic #81, Phase 5) : le Booking ne réserve
+  # qu'un SOUS-ENSEMBLE des chambres de son gîte (et non le gîte entier). Dérivé
+  # des Reservation comparées à l'ensemble des chambres du gîte — aucun drapeau
+  # persisté (le `booking_type` est un attr_accessor non stocké). Sert au
+  # préremplissage du form d'édition Séjour pour rétablir le bon mode.
+  def rooms_only_occupation?
+    return false if lodging.blank?
+    reserved = reservations.map(&:room_id).uniq.compact
+    return false if reserved.empty?
+
+    lodging_room_ids = lodging.rooms.pluck(:id).uniq
+    (reserved - lodging_room_ids).empty? && reserved.sort != lodging_room_ids.sort
+  end
+
+  # Mode d'occupation effectif : la colonne persistée fait foi (fiable même si
+  # l'ensemble des chambres du gîte évolue après coup — revue Forge F2) ; pour le
+  # legacy (colonne nil), on retombe sur la dérivation depuis les Reservation.
+  def rooms_mode?
+    return booking_type == "rooms" if booking_type.present?
+
+    rooms_only_occupation?
   end
 
   def from_airbnb?

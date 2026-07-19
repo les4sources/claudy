@@ -5,6 +5,10 @@
   - if @quote
     section.bg-gray-50.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-2
       h2.text-base.font-semibold.text-gray-900 Devis (B2C)
+      / Chambres seules (epic #81, Phase 5) : pas de barème par chambre — le total
+      / vient du Prix total imposé. On l'annonce clairement dans le panneau.
+      - if @draft&.rooms_mode?
+        p.text-sm.font-medium.text-amber-700 Pas de devis automatique pour des chambres seules — utilisez le Prix total imposé.
       ul.text-sm.text-gray-700.space-y-1
         - @quote.breakdown.each do |line|
           li.flex.justify-between

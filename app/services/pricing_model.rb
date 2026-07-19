@@ -127,6 +127,13 @@ class PricingModel
   # Supporte le multi-hébergement via lodging_night_ids (Array indexé par nuit).
   # Fallback sur lodging + nights si lodging_night_ids absent (backward compat).
   def lodging_lines
+    # Chambres seules (epic #81, Phase 5) : le barème B2C (`LODGING_RATES`) est un
+    # FORFAIT par gîte entier — il n'existe pas de tarif par chambre exploitable.
+    # En mode "rooms", on ne facture donc AUCUN forfait d'hébergement automatique ;
+    # le total du séjour vient du Prix total imposé (override, Phase 3). L'UI
+    # l'annonce explicitement dans le panneau devis.
+    return [] if read(:rooms_mode?)
+
     night_ids = Array(read(:lodging_night_ids)).map { |id| id.presence }
 
     if night_ids.any?(&:present?)

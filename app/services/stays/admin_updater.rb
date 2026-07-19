@@ -103,6 +103,16 @@ module Stays
       unless Customer.exploitable_email?(@draft.email)
         raise_invalid("Veuillez préciser une adresse email valide pour le client.")
       end
+      # Chambres seules (epic #81, Phase 5) : au moins une chambre cochée.
+      if @draft.lodging.present? && @draft.rooms_mode? && @draft.room_ids.blank?
+        raise_invalid("Veuillez sélectionner au moins une chambre pour une réservation de chambres seules.")
+      end
+      # Revue Forge F1 : chambres toutes étrangères au gîte = params forgés,
+      # jamais une saisie UI — refus explicite plutôt qu'occupation fantôme.
+      if @draft.lodging.present? && @draft.rooms_mode? && @draft.room_ids.present? &&
+         @draft.lodging.rooms.where(id: @draft.room_ids).none?
+        raise_invalid("Les chambres sélectionnées n'appartiennent pas à cet hébergement.")
+      end
       check_availability!
       check_space_availability!
       check_outdoor_capacity!
@@ -134,7 +144,7 @@ module Stays
 
     def check_availability!
       return if @draft.lodging.blank?
-      return if @draft.lodging.available_between?(@draft.arrival_date, @draft.departure_date)
+      return if lodging_available?
 
       if @skip_availability
         @availability_warning =
@@ -143,6 +153,40 @@ module Stays
       else
         raise_invalid("Ces dates ne sont plus disponibles pour cet hébergement.")
       end
+    end
+
+    # Dispo de l'hébergement à l'édition. Mode gîte entier : `available_between?`
+    # (comportement historique inchangé). Mode chambres seules (epic #81, Phase 5) :
+    # dispo des chambres cochées, en EXCLUANT la propre occupation du séjour édité
+    # (sinon un séjour confirmé se bloquerait lui-même à chaque réenregistrement).
+    # Dispo en édition, mode gîte entier comme chambres seules : on vérifie les
+    # Reservation confirmées sur les chambres visées en EXCLUANT TOUS les
+    # Booking du séjour édité (revue Forge F4 : `.first` seul laissait un
+    # éventuel second Booking auto-bloquer le séjour ; et le mode gîte entier
+    # ne s'excluait pas du tout — un séjour confirmé se bloquait lui-même).
+    def lodging_available?
+      if @draft.rooms_mode?
+        ids = @draft.lodging.rooms.where(id: @draft.room_ids).pluck(:id)
+        # Chambres toutes hors gîte : déjà refusé en validation ; réponse
+        # conservatrice si on arrive ici par un autre chemin.
+        return false if ids.empty?
+      else
+        ids = @draft.lodging.rooms.pluck(:id)
+        # Gîte sans chambre modélisée : aucune Reservation possible — seule une
+        # indisponibilité posée à la main compte (comportement historique).
+        if ids.empty?
+          return @draft.lodging.unavailabilities
+                       .where(date: @draft.arrival_date..@draft.departure_date).none?
+        end
+      end
+
+      scope = Reservation.joins(:booking)
+                         .where(date: @draft.arrival_date..@draft.departure_date,
+                                room_id: ids, bookings: { status: "confirmed" })
+      own_ids = @stay.stay_items.where(bookable_type: "Booking").pluck(:bookable_id)
+      scope = scope.where.not(bookings: { id: own_ids }) if own_ids.any?
+      scope.none? &&
+        @draft.lodging.unavailabilities.where(date: @draft.arrival_date..@draft.departure_date).none?
     end
 
     # Dispo espaces capacity-aware (`Space#available_on?`), même logique de force
@@ -242,6 +286,37 @@ module Stays
         booking.save!
         @stay.stay_items.create!(bookable: booking)
       end
+
+      # Reconstruction PROPRE des Reservation de chambres (epic #81, Phase 5). Le
+      # changement d'hébergement, de dates OU de chambres cochées doit se refléter
+      # dans les Reservation qui portent l'occupation (calendrier + veto de dispo).
+      # On les rebâtit intégralement pour rester la source de vérité : gîte entier
+      # → toutes les chambres du gîte ; chambres seules → le sous-ensemble coché.
+      rebuild_reservations!(booking)
+    end
+
+    # Rebâtit les Reservation {room, date} de l'occupation depuis le draft courant.
+    # Idempotent : détruit d'abord l'existant, puis reconstruit sur [arrivée, départ).
+    def rebuild_reservations!(booking)
+      booking.reservations.destroy_all
+      rooms = reservation_rooms
+      return if rooms.blank?
+      rooms.each do |room|
+        (booking.from_date..(booking.to_date - 1.day)).each do |date|
+          booking.reservations.create!(room: room, date: date)
+        end
+      end
+    end
+
+    # Chambres de l'occupation : sous-ensemble coché (mode rooms, borné au gîte) ou
+    # toutes les chambres du gîte (mode lodging). Miroir de `Reservations::Builder`.
+    def reservation_rooms
+      return Room.none if @draft.lodging.blank?
+      if @draft.rooms_mode?
+        @draft.lodging.rooms.where(id: @draft.room_ids)
+      else
+        @draft.lodging.rooms
+      end
     end
 
     def existing_lodging_booking
@@ -270,7 +345,7 @@ module Stays
 
       if space_booking
         space_booking.space_reservations.destroy_all
-        space_booking.update!(
+        space_booking.assign_attributes(
           firstname:   @draft.first_name,
           lastname:    @draft.last_name,
           phone:       @draft.phone,
@@ -279,6 +354,11 @@ module Stays
           to_date:     @draft.departure_date || dates.max,
           price_cents: price
         )
+        # Facturation espace (epic #81, Phase 6) : appliquée seulement si le draft
+        # la porte ; sinon les valeurs existantes survivent. N'affecte ni le
+        # `status` ni l'`email` → aucun email déclenché (cf. en-tête de classe).
+        assign_space_billing(space_booking, @draft)
+        space_booking.save!
         specs.each do |spec|
           space_booking.space_reservations.create!(space: spec[:space], date: spec[:date], duration: spec[:duration])
         end
