@@ -289,6 +289,9 @@ class StaysController < BaseController
                                                        .upcoming
                                                        .includes(:experience)
     @statuses = Stay::STATUSES_ADMIN_CREATABLE
+    # Événements sélectionnables pour la facturation espace (epic #81, Phase 6),
+    # décorés pour l'affichage « nom (dates) » — même source que le form direct.
+    @events = EventDecorator.decorate_collection(Event.order(starts_at: :desc))
     @quote  ||= safe_quote(@draft)
   end
 
@@ -323,7 +326,12 @@ class StaysController < BaseController
       halls:          space_entries(p),
       campings:       camping_entries(p),
       vans:           van_entries(p),
-      meals:          meal_entries(p)
+      meals:          meal_entries(p),
+      # Facturation espace (epic #81, Phase 6) : le sous-hash brut transite tel
+      # quel ; le Draft normalise (presence → nil) et la persistance convertit les
+      # montants via les setters `monetize`. Absent du form → `space_billing` nil,
+      # les valeurs existantes survivent à la réédition.
+      space_billing:  p[:space_billing]
     )
   end
 
@@ -406,8 +414,33 @@ class StaysController < BaseController
       halls:          halls_from_stay(stay),
       campings:       campings_from_stay(stay),
       vans:           vans_from_stay(stay),
-      meals:          meals_from_stay(stay)
+      meals:          meals_from_stay(stay),
+      space_billing:  space_billing_from_stay(stay)
     )
+  end
+
+  # Facturation espace (epic #81, Phase 6) : reconstitue le sous-hash de
+  # facturation depuis le SpaceBooking du séjour, pour préremplir le form edit.
+  # nil si le séjour n'a pas d'espace. Les montants repassent en € (chaîne `%g`
+  # pour éviter les décimales parasites) — miroir du form direct `_payment`.
+  def space_billing_from_stay(stay)
+    sb = stay.stay_items.where(bookable_type: "SpaceBooking").first&.bookable
+    return nil if sb.nil?
+
+    {
+      advance_amount: euro_prefill(sb.advance_amount_cents),
+      deposit_amount: euro_prefill(sb.deposit_amount_cents),
+      payment_method: sb.payment_method,
+      event_id:       sb.event_id,
+      arrival_time:   sb.arrival_time,
+      departure_time: sb.departure_time
+    }
+  end
+
+  # Cents → chaîne € prête pour un number_field (nil si absent, "50" pas "50.0").
+  def euro_prefill(cents)
+    return nil if cents.nil?
+    format("%g", cents / 100.0)
   end
 
   # Reconstruit l'entrée camping {kind, people, nights} depuis le CampingBooking
