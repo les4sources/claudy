@@ -84,6 +84,21 @@ class StaysController < BaseController
     end
   end
 
+  # Devis live du form de composition (issue #73). Reconstruit le `Draft` depuis
+  # les params du form (même helper que create/update) et recalcule le panneau
+  # « Devis (B2C) » via `PricingModel` — MÊME barème que le submit, aucun nouveau
+  # calcul. Réponse Turbo Stream qui remplace le panneau sur place.
+  def quote
+    @draft = build_draft
+    @quote = safe_quote(@draft)
+
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace("stay-quote-panel", partial: "stays/quote_panel")
+      end
+    end
+  end
+
   # Action rapide depuis la modale du calendrier (issue #76) : bascule pending ↔
   # confirmed sans ouvrir le form d'édition. Propage le statut aux réservables
   # pour garder le veto de dispo cohérent (cf. `Stays::QuickStatusUpdater`).

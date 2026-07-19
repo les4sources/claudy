@@ -119,6 +119,11 @@ Rails.application.routes.draw do
   # pleines. La route `stays/recents` ci-dessus est déclarée AVANT pour ne pas
   # être captée par `/stays/:id`.
   resources :stays, only: [:show, :new, :create, :edit, :update, :destroy] do
+    collection do
+      # Devis live du form de composition (issue #73) : recalcule le panneau
+      # « Devis (B2C) » en Turbo Stream à chaque changement, via PricingModel.
+      post :quote
+    end
     member do
       # Action rapide depuis la modale du calendrier (issue #76) : bascule
       # pending ↔ confirmed sans ouvrir le form d'édition, réponse Turbo Stream.
