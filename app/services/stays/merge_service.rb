@@ -73,7 +73,11 @@ module Stays
 
       # Source désormais vidée de toutes ses occupations : soft-delete (comme
       # Customers::MergeService, validate: false pour ne pas buter sur d'éventuels
-      # invariants legacy).
+      # invariants legacy). Le reload est OBLIGATOIRE : si l'appelant a préchargé
+      # stay_items (includes du contrôleur), la cascade dependent: :destroy du
+      # soft-delete relirait le cache d'association et supprimerait les items
+      # pourtant déjà migrés vers la cible.
+      source.reload
       source.soft_delete!(validate: false)
     end
 

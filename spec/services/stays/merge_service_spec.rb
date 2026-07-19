@@ -177,6 +177,26 @@ RSpec.describe Stays::MergeService, type: :service do
     end
   end
 
+  describe "cache d'association préchargé (régression)" do
+    # Le contrôleur charge les séjours avec includes(stay_items: :bookable) :
+    # sans le reload d'absorb!, la cascade dependent: :destroy du soft-delete
+    # relisait le cache et supprimait les items pourtant déjà migrés.
+    it "ne re-supprime pas les items migrés quand stay_items est préchargé" do
+      customer = make_customer("preload@example.com")
+      target = make_stay(customer: customer)
+      source = make_stay(customer: customer)
+      attach(target, make_booking)
+      attach(source, make_space_booking)
+
+      preloaded = Stay.where(id: [target.id, source.id]).includes(stay_items: :bookable).to_a
+      preloaded_target = preloaded.find { |s| s.id == target.id }
+      preloaded_source = preloaded.find { |s| s.id == source.id }
+
+      expect(described_class.new(target: preloaded_target, sources: [preloaded_source]).run).to be_truthy
+      expect(target.reload.stay_items.count).to eq(2)
+    end
+  end
+
   describe "intégrité transactionnelle" do
     it "ne modifie rien si une étape échoue en cours de route" do
       customer = make_customer("tx@example.com")
