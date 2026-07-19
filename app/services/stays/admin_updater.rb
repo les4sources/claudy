@@ -27,7 +27,7 @@ module Stays
 
     class Invalid < StandardError; end
 
-    attr_reader :stay, :availability_warning
+    attr_reader :stay, :availability_warning, :space_warning
 
     def initialize(stay:, draft:, status: nil, skip_availability: false, user: nil)
       @stay = stay
@@ -62,20 +62,27 @@ module Stays
         reconcile_experiences!
         @stay.recompute_aggregates!
       end
+      # Espaces DEVISÉS mais non persistables (aucune `Space` correspondante) :
+      # remontés à l'admin plutôt que perdus en silence (issue #75).
+      @space_warning = unresolved_space_warning(@draft)
       true
     end
 
     private
 
     def validate!
-      raise_invalid("Veuillez choisir des dates valides.") if @draft.nights < 1
-      # Phase 3 (epic #66) : un séjour admin porte AU MOINS un hébergement OU un
-      # espace OU du camping/van. La contrainte de composition s'élargit — un
-      # séjour camping-seul ou van-seul est désormais légitime. (Les repas seuls
-      # ne suffisent pas : ils n'occupent rien et accompagnent une nuitée.)
+      # Nuits requises UNIQUEMENT pour les réservables à la nuit (hébergement,
+      # camping, van). Les compositions sans nuitée — espace en journée sèche
+      # (0 nuit), activités seules, repas seuls — sont légitimes (issue #80).
+      raise_invalid("Veuillez choisir des dates valides.") if requires_nights? && @draft.nights < 1
+      # La contrainte de composition s'élargit (issue #80) : un séjour est valide
+      # dès qu'il porte AU MOINS un hébergement, un espace, du camping/van, une
+      # activité OU un repas. Les activités seules et repas seuls sont désormais
+      # des compositions légitimes (validé par Michael).
       unless @draft.lodging.present? || draft_has_spaces?(@draft) ||
-             draft_has_camping?(@draft) || draft_has_van?(@draft)
-        raise_invalid("Veuillez sélectionner un hébergement, un espace ou un emplacement camping/van.")
+             draft_has_camping?(@draft) || draft_has_van?(@draft) ||
+             @draft.bookable_experiences? || draft_has_meals?(@draft)
+        raise_invalid("Veuillez sélectionner un hébergement, un espace, un emplacement camping/van, une activité ou un repas.")
       end
       unless Customer.exploitable_email?(@draft.email)
         raise_invalid("Veuillez préciser une adresse email valide pour le client.")
@@ -83,6 +90,12 @@ module Stays
       check_availability!
       check_space_availability!
       check_outdoor_capacity!
+    end
+
+    # Réservables facturés À LA NUIT : ils exigent au moins une nuit. Espaces
+    # (forfait date+période), activités et repas n'en exigent pas (issue #80).
+    def requires_nights?
+      @draft.lodging.present? || draft_has_camping?(@draft) || draft_has_van?(@draft)
     end
 
     # Camping / van : capacité globale (epic #66, Phase 3), en ignorant les

@@ -28,7 +28,8 @@ module Reservations
     class DraftInvalid < StandardError; end
 
     attr_reader :draft, :stay, :customer, :booking, :space_booking,
-                :camping_booking, :van_booking, :payment, :availability_warning
+                :camping_booking, :van_booking, :payment, :availability_warning,
+                :space_warning
 
     # Mode admin (epic #66, Phase 1) : le CRUD Séjour admin réutilise ce moteur
     # SANS jamais passer par Stripe. Les options `admin`/`status`/`source`/
@@ -111,16 +112,15 @@ module Reservations
         # « espaces seuls »). Sa part de prix vient du devis (`spaces_cents`) —
         # l'hébergement porte `lodging_bundle_cents`, donc aucun double-compte.
         @space_booking = build_space_booking_for!(@stay, quote)
-        # Camping / van / repas (epic #66, Phase 3) — PERSISTÉS UNIQUEMENT côté
-        # admin. Le funnel public reste devis-only pour ces éléments (leur montant
-        # est noyé dans `lodging_bundle_cents` du Booking, comportement historique
-        # inchangé). Côté admin, chacun devient son propre modèle et le Booking
-        # d'hébergement porte `lodging_only_cents` (extraction sans double-compte).
-        if @admin
-          @camping_booking = build_camping_booking_for!(@stay, quote)
-          @van_booking     = build_van_booking_for!(@stay, quote)
-          create_meal_orders!(@stay, draft)
-        end
+        # Camping / van / repas (epic #66, Phase 3 ; alignement public issue #79) —
+        # PERSISTÉS DANS TOUS LES CANAUX. Chacun devient son propre modèle et le
+        # Booking d'hébergement porte `lodging_only_cents` (extraction SANS
+        # double-compte, cf. `lodging_price_cents`). Ce n'est qu'une RE-VENTILATION :
+        # le TOTAL du séjour et l'ACOMPTE restent identiques à avant (invariant #79),
+        # car ils dérivent du devis (`quote`), inchangé par cette ventilation.
+        @camping_booking = build_camping_booking_for!(@stay, quote)
+        @van_booking     = build_van_booking_for!(@stay, quote)
+        create_meal_orders!(@stay, draft)
         # Sélections d'activités du funnel (epic #55, Phase 4) : chaque créneau
         # choisi devient un ExperienceBooking `pending` rattaché au Stay — de la
         # MÊME nature que ceux du rail email, donc soumis à la validation porteur.
@@ -137,6 +137,14 @@ module Reservations
         # le solde se règle après coup depuis la page client /sejour/:token.
         @payment = build_payment!(quote) unless @admin
       end
+      # Séjour activités-seules / repas-seuls SANS dates saisies (issue #80) :
+      # dériver arrivée/départ de l'élément présent. `recompute_aggregates!`
+      # redonne le MÊME total (bookables + activités actives + repas) — invariant
+      # préservé — et ne touche pas aux dates s'il n'y a rien à dériver.
+      @stay.recompute_aggregates! if @stay.arrival_date.blank? && @stay.bookables.empty?
+      # Espaces DEVISÉS mais non persistables (aucune `Space` correspondante) :
+      # on ne les perd pas en silence — le contrôleur admin remonte l'avertissement.
+      @space_warning = unresolved_space_warning(draft)
       true
     end
 
@@ -156,8 +164,12 @@ module Reservations
     # ou espaces seuls est légitime, et c'est justement lui qui ne doit plus
     # produire de Booking fantôme.
     def validate_draft!
-      raise_invalid("Veuillez choisir des dates valides.") if draft.nights < 1
-      raise_invalid("Veuillez choisir un hébergement ou un emplacement.") unless bookable_content?
+      # Nuits requises UNIQUEMENT pour les réservables à la nuit (hébergement,
+      # camping, van, hamac). Les compositions sans nuitée — location d'espace en
+      # journée sèche (0 nuit), activités seules, repas seuls — sont légitimes
+      # (issue #80) : elles portent leurs propres dates (espace/activité/repas).
+      raise_invalid("Veuillez choisir des dates valides.") if requires_nights? && draft.nights < 1
+      raise_invalid("Veuillez choisir un hébergement, un espace, une activité ou un repas.") unless bookable_content?
       raise_invalid("Veuillez indiquer si vous venez avec un animal (champ obligatoire).") if draft.dogs_count.nil?
       raise_invalid("Veuillez préciser votre prénom.") if draft.first_name.blank?
       raise_invalid("Veuillez préciser une adresse email valide.") unless Customer.exploitable_email?(draft.email)
@@ -216,7 +228,15 @@ module Reservations
         draft.campings.any? ||
         draft.vans.any? ||
         draft.hamacs.any? ||
-        draft_has_spaces?(draft)
+        draft_has_spaces?(draft) ||
+        draft.bookable_experiences? ||
+        draft_has_meals?(draft)
+    end
+
+    # Réservables facturés À LA NUIT : ils exigent au moins une nuit. Les espaces
+    # (forfait date+période), activités et repas n'en exigent pas (issue #80).
+    def requires_nights?
+      draft.lodging.present? || draft.campings.any? || draft.vans.any? || draft.hamacs.any?
     end
 
     # Crée le SpaceBooking (+ StayItem) du séjour depuis les espaces du draft.
@@ -308,13 +328,10 @@ module Reservations
         payment_status: "pending",
         platform: "web",
         lodging_id: draft.lodging_id,
-        # Prix de l'occupation d'hébergement (epic #66, Phase 3) :
-        #   - Canal ADMIN → `lodging_only_cents` : hébergement PUR (camping / van /
-        #     repas sont extraits sur leurs propres modèles). Invariant admin :
-        #     Booking + SpaceBooking + CampingBooking + VanBooking + MealOrder(s)
-        #     + ExperienceBooking(s) == total du séjour.
-        #   - Canal PUBLIC → `lodging_bundle_cents` : comportement historique
-        #     INCHANGÉ (camping / van / repas noyés dans le Booking, devis-only).
+        # Prix de l'occupation d'hébergement = hébergement PUR (`lodging_only_cents`),
+        # dans TOUS les canaux (issue #79) : camping / van / repas sont extraits sur
+        # leurs propres modèles. Invariant : Booking + SpaceBooking + CampingBooking
+        # + VanBooking + MealOrder(s) + ExperienceBooking(s) == total du séjour.
         price_cents: lodging_price_cents(quote),
         shown_price_cents: lodging_price_cents(quote)
       )
@@ -343,10 +360,10 @@ module Reservations
       @booking.save!
     end
 
-    # Part de prix portée par le Booking d'hébergement selon le canal (voir
-    # `build_booking!`). Admin : hébergement pur ; public : bundle historique.
+    # Part de prix portée par le Booking d'hébergement : hébergement PUR dans tous
+    # les canaux (issue #79) — camping/van/repas vivent sur leurs propres modèles.
     def lodging_price_cents(quote)
-      @admin ? quote.lodging_only_cents : quote.lodging_bundle_cents
+      quote.lodging_only_cents
     end
 
     def build_payment!(quote)

@@ -49,13 +49,15 @@ RSpec.describe Reservations::Builder do
         draft(lodging_id: nil, per_night_resources: { "tente" => ["2", "2"] })
       end
 
-      it "ne crée AUCUN Booking" do
+      it "ne crée AUCUN Booking d'hébergement (le camping est persisté à part)" do
         builder = described_class.new(draft: camping_draft)
         expect(builder.run).to be(true)
 
+        # Aucun Booking d'hébergement (le « Booking fantôme » ne réapparaît pas)…
         expect(builder.booking).to be_nil
-        expect(builder.stay.stay_items).to be_empty
-        expect(builder.stay.bookables).to be_empty
+        expect(builder.stay.stay_items.where(bookable_type: "Booking")).to be_empty
+        # …mais le camping public est désormais persisté sur son propre modèle (issue #79).
+        expect(builder.stay.stay_items.where(bookable_type: "CampingBooking").count).to eq(1)
       end
 
       it "rattache quand même le paiement au Stay" do
@@ -74,7 +76,8 @@ RSpec.describe Reservations::Builder do
         builder = described_class.new(draft: draft(lodging_id: nil))
 
         expect(builder.run).to be(false)
-        expect(builder.error_message).to match(/hébergement ou un emplacement/i)
+        # Issue #80 : message élargi (hébergement / espace / activité / repas).
+        expect(builder.error_message).to match(/hébergement, un espace, une activité ou un repas/i)
       end
     end
   end

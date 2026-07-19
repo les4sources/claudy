@@ -26,9 +26,11 @@
 class VanBooking < ApplicationRecord
   include GlobalCapacityBookable
 
-  # Capacité totale en VÉHICULES. Valeur par défaut provisoire — À AJUSTER par
-  # Michael selon le nombre réel de places véhicules du domaine.
+  # Capacité totale en VÉHICULES. DÉFAUT provisoire, surchargeable sans
+  # redéploiement via `Setting` (issue #78) sous la clé `CAPACITY_SETTING_KEY`
+  # — la constante reste la valeur de repli.
   TOTAL_CAPACITY = 5
+  CAPACITY_SETTING_KEY = "van_total_capacity".freeze
 
   has_one :stay_item, as: :bookable
   has_one :stay, through: :stay_item

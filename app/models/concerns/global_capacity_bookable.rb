@@ -23,6 +23,16 @@ module GlobalCapacityBookable
   end
 
   class_methods do
+    # Capacité totale effective du domaine pour ce réservable. Lue depuis la
+    # config (`Setting`) quand le modèle déclare une `CAPACITY_SETTING_KEY`
+    # (issue #78 : ajustable sans redéploiement), sinon la constante `TOTAL_CAPACITY`.
+    # Le défaut reste `TOTAL_CAPACITY` tant que le paramètre n'est pas renseigné.
+    def total_capacity
+      return self::TOTAL_CAPACITY unless const_defined?(:CAPACITY_SETTING_KEY)
+
+      Setting.integer(self::CAPACITY_SETTING_KEY, default: self::TOTAL_CAPACITY)
+    end
+
     # Unités déjà CONFIRMÉES pour la nuit `date`, en excluant éventuellement une
     # réservation donnée (utile à l'édition d'un réservable existant).
     def units_reserved_on(date, excluding_id: nil)
@@ -33,7 +43,7 @@ module GlobalCapacityBookable
 
     # Unités restantes pour la nuit `date`.
     def remaining_on(date, excluding_id: nil)
-      [self::TOTAL_CAPACITY - units_reserved_on(date, excluding_id: excluding_id), 0].max
+      [total_capacity - units_reserved_on(date, excluding_id: excluding_id), 0].max
     end
 
     # Première nuit en conflit de capacité pour une demande, ou nil si tout passe.
@@ -41,8 +51,9 @@ module GlobalCapacityBookable
     def capacity_conflict_date(units:, from:, to:, excluding_id: nil)
       return nil if units.to_i < 1 || from.blank? || to.blank?
 
+      cap = total_capacity
       (from...to).find do |date|
-        units_reserved_on(date, excluding_id: excluding_id) + units.to_i > self::TOTAL_CAPACITY
+        units_reserved_on(date, excluding_id: excluding_id) + units.to_i > cap
       end
     end
 

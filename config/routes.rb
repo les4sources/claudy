@@ -124,6 +124,14 @@ Rails.application.routes.draw do
       # (issue #77) : lodging_id + dates → JSON { available: bool }. Informe sans
       # bloquer (le forçage reste la seule décision de blocage).
       get :availability
+      # Devis live du form de composition (issue #73) : recalcule le panneau
+      # « Devis (B2C) » en Turbo Stream à chaque changement, via PricingModel.
+      post :quote
+    end
+    member do
+      # Action rapide depuis la modale du calendrier (issue #76) : bascule
+      # pending ↔ confirmed sans ouvrir le form d'édition, réponse Turbo Stream.
+      patch :update_status
     end
     resources :experience_bookings, only: [:create]
   end

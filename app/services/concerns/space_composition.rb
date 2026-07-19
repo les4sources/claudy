@@ -11,24 +11,54 @@
 #   - le montant de l'espace vient du devis B2C (`PricingModel`, part `:space`),
 #     jamais recalculé ici.
 #
-# ⚠️ MAPPING clé de pricing → `Space` (à surveiller — voir gap connu) : le funnel
-# public price les espaces avec des clés forfaitaires (`grande_salle`, …) qui ne
-# correspondent pas 1:1 aux `Space.name` en base (seed : « Tilleul », « Saule »).
-# On résout donc par une LISTE de noms candidats par clé, tolérante aux deux
-# conventions (nom marketing OU nom du seed). Si aucune `Space` ne matche, la
-# ligne reste dans le devis mais n'est pas persistée (voir `unresolved_space_keys`).
+# MAPPING clé de pricing → `Space` (issue #75) : le funnel public price les
+# espaces avec des clés forfaitaires (`grande_salle`, …) qui ne correspondent pas
+# 1:1 aux `Space.name` en base (seed : « Tilleul », « Saule »). On résout en
+# PRIORITÉ par le `Space.code` — identifiant STABLE et insensible au renommage
+# d'affichage (seed : TIL/SAU/CUI) — puis, en repli tolérant, par une liste de
+# noms candidats. Si aucune `Space` ne matche, la ligne reste dans le devis mais
+# n'est PAS persistée : elle est alors remontée à l'admin (`unresolved_space_keys`
+# / `unresolved_space_warning`) au lieu d'être perdue silencieusement.
 module SpaceComposition
   extend ActiveSupport::Concern
 
-  # Noms de `Space` acceptés pour chaque clé de pricing, par ordre de préférence.
-  # Le premier trouvé en base gagne. Cf. `PricingModel::SPACE_NAMES`.
+  # Résolution PRIMAIRE : clé de pricing → `Space.code` (identifiant stable, seed
+  # `db/seeds.rb`). Insensible au renommage d'affichage des `Space`.
+  SPACE_CODES_BY_KEY = {
+    "grande_salle" => "TIL",
+    "petite_salle" => "SAU",
+    "cuisine_pro"  => "CUI"
+  }.freeze
+
+  # Repli TOLÉRANT si aucun `code` ne matche : noms de `Space` acceptés par clé,
+  # par ordre de préférence (le premier trouvé gagne). Cf. `PricingModel::SPACE_NAMES`.
   SPACE_NAMES_BY_KEY = {
     "grande_salle" => ["Grande Salle", "Tilleul"],
     "petite_salle" => ["Petite Salle", "Saule"],
     "cuisine_pro"  => ["Cuisine professionnelle", "Cuisine pro"]
   }.freeze
 
+  # Libellés lisibles par clé, pour la remontée d'avertissement à l'admin.
+  SPACE_LABELS_BY_KEY = {
+    "grande_salle" => "Grande salle",
+    "petite_salle" => "Petite salle",
+    "cuisine_pro"  => "Cuisine professionnelle"
+  }.freeze
+
   private
+
+  # Avertissement (String) listant les espaces DEVISÉS mais NON persistables
+  # (aucune `Space` correspondante), ou nil si tout est résolu. Sert au contrôleur
+  # admin à ne jamais perdre un espace en silence.
+  def unresolved_space_warning(draft)
+    keys = unresolved_space_keys(draft)
+    return nil if keys.empty?
+
+    labels = keys.map { |k| SPACE_LABELS_BY_KEY[k] || k }
+    "Espace(s) non enregistrable(s) — aucune salle correspondante en base : " \
+      "#{labels.join(', ')}. Ils figurent au devis mais N'ONT PAS été réservés " \
+      "(vérifier le paramétrage des espaces)."
+  end
 
   # Le draft porte-t-il au moins un espace exploitable (résolu ou non) ?
   # Sert au gate « contenu réservable » (un séjour peut être espaces-seuls).
@@ -136,9 +166,19 @@ module SpaceComposition
     @space_by_key ||= {}
     return @space_by_key[key.to_s] if @space_by_key.key?(key.to_s)
 
-    names = SPACE_NAMES_BY_KEY[key.to_s]
-    space = names && Space.where(name: names).min_by { |s| names.index(s.name) || 99 }
-    @space_by_key[key.to_s] = space
+    @space_by_key[key.to_s] = resolve_space_for_key(key.to_s)
+  end
+
+  # Résolution en deux temps : d'abord le `Space.code` stable (insensible au
+  # renommage), sinon repli sur la liste de noms candidats.
+  def resolve_space_for_key(key)
+    if (code = SPACE_CODES_BY_KEY[key]).present?
+      by_code = Space.find_by(code: code)
+      return by_code if by_code
+    end
+
+    names = SPACE_NAMES_BY_KEY[key]
+    names && Space.where(name: names).min_by { |s| names.index(s.name) || 99 }
   end
 
   def parse_space_date(value)

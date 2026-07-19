@@ -223,8 +223,27 @@ class Stay < ApplicationRecord
     # les écraser à nil (garde-fou : un recompute sur un séjour sans bookable daté
     # ne doit pas effacer arrival/departure).
     attrs = { total_amount_cents: amount }
-    attrs[:arrival_date]   = arrivals.min   if arrivals.any?
-    attrs[:departure_date] = departures.max if departures.any?
+    if arrivals.any? || departures.any?
+      attrs[:arrival_date]   = arrivals.min   if arrivals.any?
+      attrs[:departure_date] = departures.max if departures.any?
+    else
+      # Séjour SANS bookable daté (activités-seules / repas-seuls, issue #80) :
+      # dériver les dates de l'élément présent (activité `available_on`, repas
+      # `date`) plutôt que d'écraser à nil. Si aucune date dérivable, on préserve
+      # les dates existantes (garde-fou historique).
+      derived = activity_and_meal_dates
+      if derived.any?
+        attrs[:arrival_date]   = derived.min
+        attrs[:departure_date] = derived.max
+      end
+    end
     update!(attrs)
+  end
+
+  # Dates portées par les éléments NON calendaires du séjour (activités actives
+  # via leur créneau, repas via leur date) — pour dater un séjour sans bookable.
+  def activity_and_meal_dates
+    experience_bookings.active.filter_map { |eb| eb.experience_availability&.available_on } +
+      meal_orders.filter_map(&:date)
   end
 end

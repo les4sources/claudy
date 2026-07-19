@@ -14,6 +14,9 @@ fr:
       items:
         lodging: "Hébergement"
         space: "Espace"
+        camping: "Camping"
+        van: "Van / camping-car"
+        meal: "Repas"
         other: "Prestation"
       payment_status:
         pending: "En attente de paiement"
