@@ -4,6 +4,16 @@
 - current_status = (@stay.status.presence || "pending")
 - selected_experiences = {}
 - Array(@draft&.experiences).each { |e| selected_experiences[e[:availability_id].to_i] = e[:participants] }
+/ Attribution + prix imposé (epic #81, Phase 3). Source portée par le Stay,
+/ plateforme portée par le Booking d'occupation (quand il y en a un).
+- current_source = (@stay&.source.presence || "manual")
+- source_labels = { "manual" => "Saisie manuelle", "ota" => "OTA (Airbnb / Booking.com)", "reservation" => "Réservation en ligne", "tally_legacy" => "Import Tally (legacy)" }
+- source_values = (Stay::ADMIN_SELECTABLE_SOURCES + [current_source]).uniq
+- source_options = source_values.map { |v| [source_labels[v] || v, v] }
+- lodging_booking = @stay&.persisted? ? @stay.stay_items.where(bookable_type: "Booking").first&.bookable : nil
+- current_platform = (lodging_booking&.platform.presence || "web")
+- platform_options = [["Réservation directe (aucune)", "web"], ["Airbnb", "airbnb"], ["Booking.com", "bookingdotcom"]]
+- override_prefill = params.dig(:stay, :price_override).presence || (@stay&.price_override_cents.present? ? format("%g", @stay.price_override_cents / 100.0) : nil)
 
 = form_with url: url, method: method, data: { controller: "stay-form stay-quote stay-availability", "stay-quote-url-value": quote_stays_path, "stay-availability-url-value": availability_stays_path, action: "change->stay-quote#check input->stay-quote#check" } do
   .space-y-8
@@ -134,6 +144,18 @@
               = hidden_field_tag "stay[experiences][#{index}][availability_id]", availability.id
               = number_field_tag "stay[experiences][#{index}][participants]", selected_experiences[availability.id].to_i, min: 0, class: "w-20 rounded-md border-gray-300 shadow-sm sm:text-sm"
 
+    / --- Attribution (source + plateforme) ----------------------------------
+    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+      h2.text-base.font-semibold.text-gray-900 Attribution
+      p.text-sm.text-gray-500 D'où vient ce séjour ? La plateforme n'est enregistrée que si le séjour comporte un hébergement.
+      .grid.grid-cols-2.gap-4
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 Canal (source)
+          = select_tag "stay[source]", options_for_select(source_options, current_source), class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 Plateforme
+          = select_tag "stay[platform]", options_for_select(platform_options, current_platform), class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+
     / --- Statut + force dispo -----------------------------------------------
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
       h2.text-base.font-semibold.text-gray-900 Statut & disponibilité
@@ -146,6 +168,17 @@
 
     / --- Devis (live — issue #73) -------------------------------------------
     = render "stays/quote_panel"
+
+    / --- Prix imposé (override — epic #81, Phase 3) --------------------------
+    / Le devis B2C ci-dessus reste la référence par défaut. Saisir un montant ici
+    / IMPOSE le total du séjour et court-circuite le devis ; laisser vide applique
+    / le devis. Le solde exigible se recalcule automatiquement depuis ce total.
+    section.bg-gray-50.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-2
+      h2.text-base.font-semibold.text-gray-900 Prix
+      .space-y-1
+        label.block.text-sm.font-medium.text-gray-700 Prix total imposé (€)
+        = number_field_tag "stay[price_override]", override_prefill, step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        p.text-xs.text-gray-500 Laisser vide pour appliquer le devis B2C. Un montant remplace le total du devis.
 
     .flex.justify-end.gap-3
       = link_to "Annuler", recent_stays_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
