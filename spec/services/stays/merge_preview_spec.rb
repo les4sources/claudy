@@ -82,6 +82,38 @@ RSpec.describe Stays::MergePreview, type: :service do
     end
   end
 
+  # --- Prix imposé (epic #81, Phase 3) --------------------------------------
+  describe "prix imposé" do
+    it "projette le total imposé de la cible et signale l'override" do
+      target.update!(price_override_cents: 88_000)
+      pv = described_class.new(target: target, sources: [source]).call
+
+      expect(pv.total_cents).to eq(88_000) # override cible, pas la somme des items
+      expect(pv.warnings.map(&:kind)).to include(:price_override)
+    end
+
+    it "signale aussi l'override d'une source (qui sera ignoré à la fusion)" do
+      source.update!(price_override_cents: 12_345)
+      pv = described_class.new(target: target, sources: [source]).call
+
+      expect(pv.warnings.map(&:kind)).to include(:price_override)
+    end
+
+    it "reste rigoureusement cohérent avec la fusion réelle quand la cible porte un override" do
+      target.update!(price_override_cents: 88_000)
+      snapshot = described_class.new(target: target, sources: [source]).call
+
+      expect(Stays::MergeService.new(target: target, sources: [source]).run).to be_truthy
+      target.reload
+
+      aggregate_failures do
+        expect(target.total_amount_cents).to eq(snapshot.total_cents)
+        expect(target.amount_paid_cents).to eq(snapshot.paid_cents)
+        expect(target.amount_due_cents).to eq(snapshot.balance_cents)
+      end
+    end
+  end
+
   # --- LA garantie anti-divergence ------------------------------------------
   describe "cohérence preview == fusion réelle (garantie anti-divergence)" do
     it "annonce exactement le total / payé / solde / dates que la fusion produit" do

@@ -55,7 +55,13 @@ module Stays
 
     # --- Total : mirror de `recompute_aggregates!` sur l'ensemble fusionné ----
     # bookables (hébergement/espaces/camping/van) + activités ACTIVES + repas.
+    # Prix imposé (epic #81, Phase 3) : décision figée — à la fusion, si la CIBLE
+    # porte un override il est CONSERVÉ (recompute de la cible fusionnée le
+    # honore) ; les overrides des SOURCES sont ignorés (leur montant réel a déjà
+    # été absorbé dans les items migrés). On projette donc EXACTEMENT cela.
     def projected_total_cents
+      return target.price_override_cents if target.price_overridden?
+
       all_stays.sum { |stay| computed_total_cents(stay) }
     end
 
@@ -144,6 +150,19 @@ module Stays
           kind: :pending_payment,
           message: "Le séjour ##{source.id} porte un paiement en attente — vérifier avant de fusionner."
         )
+      end
+
+      # Prix imposé impliqué (epic #81, Phase 3) : l'admin DOIT savoir qu'un
+      # override est en jeu — la cible conserve le sien, ceux des sources tombent.
+      overridden = all_stays.select(&:price_overridden?)
+      if overridden.any?
+        message = if target.price_overridden?
+          "Prix imposé sur la cible (##{target.id}) : il sera CONSERVÉ comme total du séjour fusionné."
+        else
+          ids = overridden.map { |s| "##{s.id}" }.join(", ")
+          "Prix imposé sur une source (#{ids}) : il sera IGNORÉ (le total sera recalculé depuis la composition fusionnée)."
+        end
+        warnings << Warning.new(kind: :price_override, message: message)
       end
 
       dupes = all_stays
