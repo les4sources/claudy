@@ -5,7 +5,7 @@
 - selected_experiences = {}
 - Array(@draft&.experiences).each { |e| selected_experiences[e[:availability_id].to_i] = e[:participants] }
 
-= form_with url: url, method: method, data: { controller: "stay-form" } do
+= form_with url: url, method: method, data: { controller: "stay-form stay-quote", "stay-quote-url-value": quote_stays_path, action: "change->stay-quote#check input->stay-quote#check" } do
   .space-y-8
     / --- Client -------------------------------------------------------------
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
@@ -131,18 +131,8 @@
         = check_box_tag "stay[force_availability]", "1", false
         | Forcer la disponibilité (surbooking / saisie a posteriori)
 
-    / --- Devis --------------------------------------------------------------
-    - if @quote
-      section.bg-gray-50.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-2
-        h2.text-base.font-semibold.text-gray-900 Devis (B2C)
-        ul.text-sm.text-gray-700.space-y-1
-          - @quote.breakdown.each do |line|
-            li.flex.justify-between
-              span = line[:label]
-              span = humanized_money_with_symbol(Money.new(line[:amount_cents]))
-        .flex.justify-between.border-t.border-gray-200.pt-2.font-semibold.text-gray-900
-          span Total
-          span = humanized_money_with_symbol(Money.new(@quote.total_cents))
+    / --- Devis (live — issue #73) -------------------------------------------
+    = render "stays/quote_panel"
 
     .flex.justify-end.gap-3
       = link_to "Annuler", recent_stays_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"

@@ -1,0 +1,15 @@
+/ Panneau « Devis (B2C) » du form de composition Séjour admin. Extrait en partial
+/ id'd (issue #73) pour être remplacé en Turbo Stream à chaque changement de la
+/ composition — même barème que le submit (PricingModel), aucun nouveau calcul.
+#stay-quote-panel
+  - if @quote
+    section.bg-gray-50.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-2
+      h2.text-base.font-semibold.text-gray-900 Devis (B2C)
+      ul.text-sm.text-gray-700.space-y-1
+        - @quote.breakdown.each do |line|
+          li.flex.justify-between
+            span = line[:label]
+            span = humanized_money_with_symbol(Money.new(line[:amount_cents]))
+      .flex.justify-between.border-t.border-gray-200.pt-2.font-semibold.text-gray-900
+        span Total
+        span = humanized_money_with_symbol(Money.new(@quote.total_cents))
