@@ -76,7 +76,8 @@ RSpec.describe Reservations::Builder do
         builder = described_class.new(draft: draft(lodging_id: nil))
 
         expect(builder.run).to be(false)
-        expect(builder.error_message).to match(/hébergement ou un emplacement/i)
+        # Issue #80 : message élargi (hébergement / espace / activité / repas).
+        expect(builder.error_message).to match(/hébergement, un espace, une activité ou un repas/i)
       end
     end
   end

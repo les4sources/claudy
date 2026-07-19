@@ -112,7 +112,8 @@ RSpec.describe "Stays — camping / van / repas (epic #66, Phase 3)", type: :req
       stay = create_camping_only_stay
       patch stay_path(stay), params: update_params(stay, camping: { people: 0 })
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.body).to include("hébergement, un espace ou un emplacement camping/van")
+      # Issue #80 : la contrainte de composition s'élargit aux activités/repas.
+      expect(response.body).to include("un emplacement camping/van, une activité ou un repas")
     end
   end
 
