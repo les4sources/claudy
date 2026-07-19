@@ -120,6 +120,10 @@ Rails.application.routes.draw do
   # être captée par `/stays/:id`.
   resources :stays, only: [:show, :new, :create, :edit, :update, :destroy] do
     collection do
+      # Vérification de disponibilité en temps réel dans le form de composition
+      # (issue #77) : lodging_id + dates → JSON { available: bool }. Informe sans
+      # bloquer (le forçage reste la seule décision de blocage).
+      get :availability
       # Devis live du form de composition (issue #73) : recalcule le panneau
       # « Devis (B2C) » en Turbo Stream à chaque changement, via PricingModel.
       post :quote
