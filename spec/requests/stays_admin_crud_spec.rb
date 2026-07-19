@@ -222,6 +222,29 @@ RSpec.describe "Stays — CRUD admin (epic #66)", type: :request do
       expect(stay.reload.price_override_cents).to be_nil
       expect(stay.total_amount_cents).to eq(hulotte_two_nights_cents) # devis repris
     end
+
+    it "ignore un override négatif (revue Forge F2) : traité comme une saisie vide" do
+      post stays_path, params: base_params(price_override: "-50")
+      stay = Stay.order(:created_at).last
+      expect(stay.price_override_cents).to be_nil
+      expect(stay.total_amount_cents).to eq(hulotte_two_nights_cents)
+    end
+
+    # Revue Forge F1 : le form Booking direct historique écrit platform="direct",
+    # hors des 3 options du select séjour. Sans garde-fou, l'édition retombait
+    # sur "web" et réécrivait la plateforme en silence.
+    it "préserve une plateforme historique hors options (ex. \"direct\") à l'édition" do
+      stay = create_admin_stay
+      booking = stay.stay_items.where(bookable_type: "Booking").first.bookable
+      booking.update!(platform: "direct")
+
+      get edit_stay_path(stay)
+      expect(response.body).to match(/<option selected[^>]*value="direct"|<option[^>]*value="direct"[^>]*selected/)
+
+      # Resoumettre le form avec la valeur affichée ne mute pas la plateforme.
+      patch stay_path(stay), params: update_params(stay, platform: "direct")
+      expect(booking.reload.platform).to eq("direct")
+    end
   end
 
   describe "DELETE /stays/:id (destroy)" do

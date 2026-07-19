@@ -506,7 +506,10 @@ class StaysController < BaseController
     return nil if raw.blank?
     normalized = raw.tr(",", ".").delete("^0-9.-")
     return nil if normalized.blank?
-    (BigDecimal(normalized) * 100).round
+    cents = (BigDecimal(normalized) * 100).round
+    # Négatif = saisie invalide, jamais un prix (le `min: 0` du champ n'est
+    # qu'un garde-fou client). 0 € reste un override valide.
+    cents.negative? ? nil : cents
   rescue ArgumentError
     nil
   end

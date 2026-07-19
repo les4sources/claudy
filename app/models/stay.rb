@@ -57,6 +57,9 @@ class Stay < ApplicationRecord
   before_create :generate_token
 
   validates :source, inclusion: { in: SOURCES, message: "Canal d'attribution invalide" }
+  # Défense en profondeur : le contrôleur rejette déjà le négatif, mais aucun
+  # chemin (import, console, futur canal) ne doit pouvoir imposer un prix < 0.
+  validates :price_override_cents, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :payment_status, inclusion: { in: PAYMENT_STATUSES, message: "Statut de paiement invalide" }
   validates :token, uniqueness: true, allow_nil: true
 
@@ -148,7 +151,13 @@ class Stay < ApplicationRecord
 
   # Assiette EXIGIBLE = hébergement/espaces + activités CONFIRMED
   #                   = total prévu − activités pending.
+  # SOUS PRIX IMPOSÉ (epic #81, Phase 3) : l'admin a fixé un montant ferme — il
+  # est exigible tel quel, sans déduire les activités pending (sinon un override
+  # inférieur au montant des activités en attente rendait le solde négatif et
+  # faisait disparaître le bouton « Payer le solde »).
   def payable_amount_cents
+    return total_amount_cents.to_i if price_overridden?
+
     total_amount_cents.to_i - experiences_pending_amount_cents
   end
 

@@ -337,5 +337,37 @@ RSpec.describe Stay, type: :model do
       stay.set_payment_status
       expect(stay.reload.payment_status).to eq("paid")
     end
+
+    # Décision figée (epic #81, Phase 3, revue Forge F3) : un prix IMPOSÉ est
+    # ferme — exigible tel quel, sans déduction des activités pending (sinon un
+    # override inférieur au montant pending rendait le solde négatif et faisait
+    # disparaître le bouton « Payer le solde »).
+    it "sous prix imposé, l'exigible est l'override entier (pending non déduite)" do
+      stay.update!(price_override_cents: 30_000)
+      stay.recompute_aggregates!
+      expect(stay.payable_amount_cents).to eq(30_000)
+      expect(stay.balance_due_cents).to eq(30_000)
+      expect(stay).to be_payable_now
+    end
+
+    it "sous prix imposé inférieur aux activités pending, le solde reste exigible (jamais négatif par déduction)" do
+      stay.update!(price_override_cents: 5_000) # < 6 500 de pending
+      stay.recompute_aggregates!
+      expect(stay.payable_amount_cents).to eq(5_000)
+      expect(stay).to be_payable_now
+    end
+  end
+
+  describe "validation du prix imposé (epic #81, Phase 3)" do
+    it "refuse un override négatif (défense en profondeur, tout canal)" do
+      stay = Stay.new(customer: customer, source: "manual", price_override_cents: -100)
+      expect(stay).not_to be_valid
+      expect(stay.errors[:price_override_cents]).to be_present
+    end
+
+    it "accepte 0 € (override valide) et nil (pas d'override)" do
+      expect(Stay.new(customer: customer, source: "manual", price_override_cents: 0)).to be_valid
+      expect(Stay.new(customer: customer, source: "manual", price_override_cents: nil)).to be_valid
+    end
   end
 end

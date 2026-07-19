@@ -13,6 +13,10 @@
 - lodging_booking = @stay&.persisted? ? @stay.stay_items.where(bookable_type: "Booking").first&.bookable : nil
 - current_platform = (lodging_booking&.platform.presence || "web")
 - platform_options = [["Réservation directe (aucune)", "web"], ["Airbnb", "airbnb"], ["Booking.com", "bookingdotcom"]]
+/ Même garde-fou que `source` : une valeur historique hors options (ex. "direct",
+/ posée par le form Booking) doit apparaître sélectionnée, sinon le navigateur
+/ retombe sur "web" et l'édition réécrit la plateforme en silence.
+- platform_options += [[current_platform, current_platform]] unless platform_options.any? { |_l, v| v == current_platform }
 - override_prefill = params.dig(:stay, :price_override).presence || (@stay&.price_override_cents.present? ? format("%g", @stay.price_override_cents / 100.0) : nil)
 
 = form_with url: url, method: method, data: { controller: "stay-form stay-quote stay-availability", "stay-quote-url-value": quote_stays_path, "stay-availability-url-value": availability_stays_path, action: "change->stay-quote#check input->stay-quote#check" } do
