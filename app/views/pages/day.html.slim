@@ -73,10 +73,12 @@
                     - @room_reservations.where(room: room).each do |reservation|
                       .grid.grid-cols-3.gap-4
                         div
-                          = link_to reservation.booking.group_or_name, 
-                                    booking_path(reservation.booking),
-                                    data: { "turbo-frame": "_top" },
-                                    class: "claudy-link"
+                          / Édition unifiée (epic #81, Phase 8) : hors modale, on
+                          / renvoie vers le form séjour ; sinon fiche booking legacy.
+                          - if (stay = reservation.booking.stay)
+                            = link_to reservation.booking.group_or_name, edit_stay_path(stay), data: { "turbo-frame": "_top" }, class: "claudy-link"
+                          - else
+                            = link_to reservation.booking.group_or_name, booking_path(reservation.booking), data: { "turbo-frame": "_top" }, class: "claudy-link"
                         div
                           = reservation.booking.people_emojis
                         .text-right
@@ -104,10 +106,12 @@
                     - @room_reservations.where(room: room).each do |reservation|
                       .grid.grid-cols-3.gap-4
                         div
-                          = link_to reservation.booking.group_or_name, 
-                                    booking_path(reservation.booking),
-                                    data: { "turbo-frame": "_top" },
-                                    class: "claudy-link"
+                          / Édition unifiée (epic #81, Phase 8) : hors modale, on
+                          / renvoie vers le form séjour ; sinon fiche booking legacy.
+                          - if (stay = reservation.booking.stay)
+                            = link_to reservation.booking.group_or_name, edit_stay_path(stay), data: { "turbo-frame": "_top" }, class: "claudy-link"
+                          - else
+                            = link_to reservation.booking.group_or_name, booking_path(reservation.booking), data: { "turbo-frame": "_top" }, class: "claudy-link"
                         div
                           = reservation.booking.people_emojis
                         .text-right
@@ -135,10 +139,12 @@
                     - @room_reservations.where(room: room).each do |reservation|
                       .grid.grid-cols-3.gap-4
                         div
-                          = link_to reservation.booking.group_or_name, 
-                                    booking_path(reservation.booking),
-                                    data: { "turbo-frame": "_top" },
-                                    class: "claudy-link"
+                          / Édition unifiée (epic #81, Phase 8) : hors modale, on
+                          / renvoie vers le form séjour ; sinon fiche booking legacy.
+                          - if (stay = reservation.booking.stay)
+                            = link_to reservation.booking.group_or_name, edit_stay_path(stay), data: { "turbo-frame": "_top" }, class: "claudy-link"
+                          - else
+                            = link_to reservation.booking.group_or_name, booking_path(reservation.booking), data: { "turbo-frame": "_top" }, class: "claudy-link"
                         div
                           = reservation.booking.people_emojis
                         .text-right
@@ -175,10 +181,12 @@
                     - @space_reservations.where(space: space).each do |space_reservation|
                       .grid.grid-cols-3.gap-4
                         div
-                          = link_to space_reservation.space_booking.group_or_name, 
-                                    space_booking_path(space_reservation.space_booking), 
-                                    data: { "turbo-frame": "_top" },
-                                    class: "claudy-link"
+                          / Édition unifiée (epic #81, Phase 8) : hors modale, on
+                          / renvoie vers le form séjour ; sinon fiche espace legacy.
+                          - if (stay = space_reservation.space_booking.stay)
+                            = link_to space_reservation.space_booking.group_or_name, edit_stay_path(stay), data: { "turbo-frame": "_top" }, class: "claudy-link"
+                          - else
+                            = link_to space_reservation.space_booking.group_or_name, space_booking_path(space_reservation.space_booking), data: { "turbo-frame": "_top" }, class: "claudy-link"
                         div
                           = space_reservation.space_booking.duration
                         .text-right

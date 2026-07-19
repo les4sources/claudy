@@ -17,10 +17,13 @@
                 div(class="flex mt-2 py-1 px-2 #{space_booking.calendar_class}")
                   .block
                     div
-                      strong 
-                        = link_to space_booking.decorate.name.html_safe, 
-                                  space_booking_path(space_booking), 
-                                  class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+                      strong
+                        / Édition unifiée (epic #81, Phase 8) : hors modale, on renvoie
+                        / vers le form séjour ; sinon fiche espace legacy.
+                        - if (stay = space_booking.stay)
+                          = link_to space_booking.decorate.name.html_safe, edit_stay_path(stay), class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
+                        - else
+                          = link_to space_booking.decorate.name.html_safe, space_booking_path(space_booking), class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
                       - if space_booking.group_name.present?
                         .text-gray-500.leading-none.mb-2 = space_booking.group_name
 

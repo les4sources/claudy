@@ -33,8 +33,13 @@
         tr.border-b(class="#{space_booking.tr_class}")
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap(class="#{space_booking.tr_border_class}")
             strong
-              = link_to space_booking.name, 
-                        space_booking_path(space_booking)
+              / Édition unifiée (epic #81, Phase 8) : renvoie vers le form séjour
+              / quand un Stay vivant existe ; sinon fiche espace legacy. Parité avec
+              / bookings/past (repointée via le partial _table partagé).
+              - if (stay = space_booking.stay)
+                = link_to space_booking.name, edit_stay_path(stay)
+              - else
+                = link_to space_booking.name, space_booking_path(space_booking)
             - if space_booking.group_name.present?
               .text-gray-500 = space_booking.group_name
           td.py-4.px-6

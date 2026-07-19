@@ -1,4 +1,8 @@
 - content_for :page_header do
+  / Édition unifiée (epic #81, Phase 8) : « Mettre à jour » passe par le form
+  / séjour quand un Stay vivant existe. Sinon, lien legacy (fallback orphelin —
+  / disparaît après le backfill Phase 1).
+  - edit_path = @space_booking.stay ? edit_stay_path(@space_booking.stay) : edit_space_booking_path(@space_booking)
   = render 'layouts/components/page_header',
            title: @space_booking.group_or_name,
            secondary: "Du #{@space_booking.from_date} au #{@space_booking.to_date}",
@@ -8,7 +12,7 @@
              delete_link(@space_booking.object, "Supprimer cette réservation"),
              link_to( \
                "Mettre à jour",
-               edit_space_booking_path(@space_booking),
+               edit_path,
                class: "btn-page-header" \
              ) \
            ] : nil

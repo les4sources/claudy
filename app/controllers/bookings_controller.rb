@@ -51,6 +51,15 @@ class BookingsController < BaseController
 
   def edit
     @booking = Booking.find_by!(id: params[:id])
+
+    # Édition unifiée (epic #81, Phase 8) : l'édition d'un booking passe désormais
+    # par le form séjour. Un vieux favori / lien email vers /bookings/:id/edit
+    # atterrit au bon endroit. Sans Stay vivant (backfill Phase 1 pas encore
+    # tourné en prod), on tombe sur l'écran legacy ci-dessous — fallback orphelin.
+    if (stay = @booking.stay)
+      return redirect_to edit_stay_path(stay)
+    end
+
     @booking.room_ids = @booking.reservations.map { |r| r.room_id }
     @booking.booking_type = @booking.lodging_id.nil? ? "rooms" : "lodging"
     @booking.tier_lodgings = @booking.tier_rooms = @booking.tier

@@ -28,9 +28,16 @@ class StaysController < BaseController
   # (hébergement + activités), en réutilisant `Reservations::Builder` en mode
   # admin (aucun Stripe, aucun email forcé, force-dispo, statut au choix).
 
+  # Saisie rapide datée + duplication (epic #81, Phase 7). Le form NEW se
+  # préremplit selon les params :
+  #   - `duplicate_from` → reprise du séjour source (client + composition, sans
+  #     dates ni paiement ni prix imposé), via `Stays::DuplicateService` ;
+  #   - `date`           → arrivée = date, départ = date + 1 (1 nuit, hébergement) ;
+  #   - `date` + `space` → une ligne d'espace datée, SANS dates de séjour (journée
+  #     sèche : composition d'espace légitime).
   def new
     @stay  = Stay.new(status: "pending")
-    @draft = Reservations::Draft.new
+    @draft = build_prefilled_draft
     prepare_form
   end
 
@@ -60,7 +67,7 @@ class StaysController < BaseController
   end
 
   def edit
-    @draft = draft_from_stay(@stay)
+    @draft = Stays::DraftReconstructor.new(@stay).to_draft
     prepare_form
   end
 
@@ -230,6 +237,37 @@ class StaysController < BaseController
 
   private
 
+  # Draft de préremplissage du form NEW (epic #81, Phase 7). Trois cas, dans
+  # l'ordre de priorité : duplication d'un séjour, saisie datée d'un espace,
+  # saisie datée d'un hébergement. À défaut, un draft vierge.
+  def build_prefilled_draft
+    if (source = duplicate_source)
+      # Le client du séjour source est PRÉSÉLECTIONNÉ dans le <select> « Client
+      # existant » (sinon le prérempli n'atterrissait que dans les champs masqués
+      # du panneau « Nouveau client » et une soumission partait sans customer_id).
+      @preselected_customer_id = source.customer_id
+      return Stays::DuplicateService.call(stay: source)
+    end
+
+    date = parse_form_date(params[:date])
+    return Reservations::Draft.new if date.nil?
+
+    if params[:space].present?
+      # Espace en journée sèche : une ligne d'espace datée, aucune date de séjour.
+      Reservations::Draft.new(halls: [{ date: date.iso8601 }])
+    else
+      # Hébergement : arrivée = date, départ = lendemain (1 nuit par défaut).
+      Reservations::Draft.new(arrival_date: date.iso8601, departure_date: (date + 1).iso8601)
+    end
+  end
+
+  # Séjour source d'une duplication (`duplicate_from`). nil si absent ou introuvable.
+  def duplicate_source
+    id = params[:duplicate_from]
+    return nil if id.blank?
+    Stay.find_by(id: id)
+  end
+
   # Séjours candidats à la fusion, préchargés pour éviter les N+1 des aperçus.
   def load_merge_stays
     ids = Array(params[:stay_ids]).map(&:to_i).uniq.reject(&:zero?)
@@ -284,7 +322,7 @@ class StaysController < BaseController
     # Client existant : autocomplete via `customers/search` (issue #74). On ne
     # précharge plus TOUS les clients — seul le client courant (édition) alimente
     # le `<select>` de repli sans-JS. La recherche dynamique fait le reste.
-    @customers = Customer.where(id: @stay&.customer_id).to_a
+    @customers = Customer.where(id: [@stay&.customer_id, @preselected_customer_id].compact).to_a
     @assignable_availabilities = ExperienceAvailability.for_user(current_user)
                                                        .upcoming
                                                        .includes(:experience)
@@ -386,110 +424,6 @@ class StaysController < BaseController
       next if kind.blank? || people < 1
       { kind: kind, date: row[:date].to_s.presence, people: people }
     end
-  end
-
-  # Reconstruit un draft depuis un séjour existant, pour préremplir le form edit.
-  def draft_from_stay(stay)
-    booking = stay.stay_items.where(bookable_type: "Booking").first&.bookable
-    # Chambres seules (epic #81, Phase 5) : rétablit le mode + les chambres
-    # cochées. La colonne `booking_type` fait foi ; dérivation des Reservation
-    # en secours pour le legacy (cf. Booking#rooms_mode?).
-    rooms_mode = booking&.rooms_mode?
-    Reservations::Draft.new(
-      lodging_id:     booking&.lodging_id,
-      booking_type:   rooms_mode ? "rooms" : "lodging",
-      room_ids:       rooms_mode ? booking.reservations.map(&:room_id).uniq : [],
-      arrival_date:   stay.arrival_date,
-      departure_date: stay.departure_date,
-      adults:         booking&.adults,
-      children:       booking&.children,
-      group_name:     booking&.group_name,
-      first_name:     stay.customer&.first_name,
-      last_name:      stay.customer&.last_name,
-      email:          stay.customer&.email,
-      phone:          stay.customer&.phone,
-      experiences:    stay.experience_bookings.active.map { |eb|
-        { id: eb.experience&.id, availability_id: eb.experience_availability_id, participants: eb.participants }
-      },
-      halls:          halls_from_stay(stay),
-      campings:       campings_from_stay(stay),
-      vans:           vans_from_stay(stay),
-      meals:          meals_from_stay(stay),
-      space_billing:  space_billing_from_stay(stay)
-    )
-  end
-
-  # Facturation espace (epic #81, Phase 6) : reconstitue le sous-hash de
-  # facturation depuis le SpaceBooking du séjour, pour préremplir le form edit.
-  # nil si le séjour n'a pas d'espace. Les montants repassent en € (chaîne `%g`
-  # pour éviter les décimales parasites) — miroir du form direct `_payment`.
-  def space_billing_from_stay(stay)
-    sb = stay.stay_items.where(bookable_type: "SpaceBooking").first&.bookable
-    return nil if sb.nil?
-
-    {
-      advance_amount: euro_prefill(sb.advance_amount_cents),
-      deposit_amount: euro_prefill(sb.deposit_amount_cents),
-      payment_method: sb.payment_method,
-      event_id:       sb.event_id,
-      arrival_time:   sb.arrival_time,
-      departure_time: sb.departure_time
-    }
-  end
-
-  # Cents → chaîne € prête pour un number_field (nil si absent, "50" pas "50.0").
-  def euro_prefill(cents)
-    return nil if cents.nil?
-    format("%g", cents / 100.0)
-  end
-
-  # Reconstruit l'entrée camping {kind, people, nights} depuis le CampingBooking
-  # persisté, pour préremplir le form edit (nights déduit de la fenêtre).
-  def campings_from_stay(stay)
-    camping = stay.stay_items.where(bookable_type: "CampingBooking").first&.bookable
-    return [] if camping.nil?
-    nights = camping.from_date && camping.to_date ? (camping.to_date - camping.from_date).to_i : stay.experience_bookings.size
-    [{ kind: camping.kind, people: camping.people, nights: [nights, 1].max }]
-  end
-
-  # Reconstruit les entrées van (une par véhicule) depuis le VanBooking persisté.
-  def vans_from_stay(stay)
-    van = stay.stay_items.where(bookable_type: "VanBooking").first&.bookable
-    return [] if van.nil?
-    nights = van.from_date && van.to_date ? (van.to_date - van.from_date).to_i : 1
-    Array.new([van.vehicles, 1].max) { { nights: [nights, 1].max } }
-  end
-
-  # Reconstruit les repas {kind, date, people} depuis les MealOrder du séjour.
-  def meals_from_stay(stay)
-    stay.meal_orders.map do |order|
-      { kind: order.kind, date: order.date&.iso8601, people: order.people }
-    end
-  end
-
-  # Reconstruit les lignes d'espaces {kind, date, period} d'un séjour depuis son
-  # SpaceBooking (réservations existantes), pour préremplir le form edit. Le nom
-  # de la Space est re-mappé vers sa clé de pricing (grande_salle, …).
-  def halls_from_stay(stay)
-    space_booking = stay.stay_items.where(bookable_type: "SpaceBooking").first&.bookable
-    return [] if space_booking.nil?
-
-    space_booking.space_reservations.map do |res|
-      key = space_key_for(res.space)
-      next if key.nil?
-      { kind: key, date: res.date&.iso8601, period: res.duration }
-    end.compact
-  end
-
-  # `Space` → clé de pricing (inverse du mapping SpaceComposition). Résolution par
-  # le `code` stable d'abord (issue #75), puis repli sur le nom d'affichage.
-  def space_key_for(space)
-    return nil if space.nil?
-
-    by_code = SpaceComposition::SPACE_CODES_BY_KEY.find { |_key, code| code == space.code }&.first
-    return by_code if by_code
-
-    SpaceComposition::SPACE_NAMES_BY_KEY.find { |_key, names| names.include?(space.name) }&.first
   end
 
   # Coordonnées client : soit un client existant sélectionné (on lit ses

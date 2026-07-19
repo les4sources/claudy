@@ -23,9 +23,12 @@
       .block.min-w-0.w-full
         div.min-w-0
           strong.block.min-w-0.break-words
-            = link_to booking.decorate.group_or_name.html_safe,
-                      booking_path(booking),
-                      class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
+            / Édition unifiée (epic #81, Phase 8) : avec un séjour vivant, le lien
+            / ouvre la modale séjour (comme l'overlay). Sinon, lien booking legacy.
+            - if stay
+              = link_to booking.decorate.group_or_name.html_safe, stay_path(stay), data: { action: "stay-details#open" }, class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
+            - else
+              = link_to booking.decorate.group_or_name.html_safe, booking_path(booking), class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
 
           span.text-gray-500 =< booking.dates_counter(date)
 

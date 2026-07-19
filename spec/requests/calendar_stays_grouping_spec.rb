@@ -89,13 +89,18 @@ RSpec.describe "Calendrier — regroupement par séjour (epic #66, Phase 4)", ty
   describe "occupations chambres — anti-régression veto Grand-Duc" do
     it "rend toujours un bloc par jour réservé avec le badge chambre" do
       from = Date.today.next_occurring(:friday)
-      _stay, booking = stay_with_lodging(from: from, to: from + 2)
+      stay, booking = stay_with_lodging(from: from, to: from + 2)
 
       get "/"
 
       # Deux nuits réservées → deux entrées jour (la source de vérité du veto).
       expect(response.body.scan("data-booking-day-entry=\"#{booking.id}\"").size).to eq(2)
-      expect(response.body).to include(booking_path(booking))
+      # Édition unifiée (epic #81, Phase 8) : le bloc pointe vers la modale séjour,
+      # plus vers la fiche booking legacy. On borne à la grille (le flux d'activité,
+      # hors scope, garde son lien booking historique).
+      grid = response.body.split("Activité récente").first
+      expect(grid).to include(stay_path(stay))
+      expect(grid).not_to include(booking_path(booking))
     end
 
     it "retombe sur la couleur historique (par type) pour un booking SANS séjour" do

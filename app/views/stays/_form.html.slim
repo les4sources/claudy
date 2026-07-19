@@ -1,6 +1,7 @@
 / Formulaire CRUD Séjour admin (epic #66, Phase 1). Locals : url, method, submit_label.
 / Champs sous le namespace `stay[...]`. Devis B2C forfaitaire (PricingModel).
-- selected_customer_id = @stay.persisted? ? @stay.customer_id : nil
+/ Duplication (epic #81, Phase 7) : le client du séjour source est présélectionné.
+- selected_customer_id = (@stay.persisted? ? @stay.customer_id : nil) || @preselected_customer_id
 - current_status = (@stay.status.presence || "pending")
 - selected_experiences = {}
 - Array(@draft&.experiences).each { |e| selected_experiences[e[:availability_id].to_i] = e[:participants] }
