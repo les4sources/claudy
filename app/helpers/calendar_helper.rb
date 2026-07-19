@@ -22,6 +22,32 @@ module CalendarHelper
     "border-left-color: hsl(#{hue}, 65%, 45%); background-color: hsl(#{hue}, 70%, 96%);"
   end
 
+  # --- Méta séjour pour les chips de fusion (epic #81) ---------------------
+  # Posées en `data-stay-label` / `data-stay-dates` à côté du `data-stay-id`
+  # existant sur chaque bloc calendrier. Le contrôleur Stimulus `stay-merge`
+  # construit ses chips de bottom bar depuis ces attributs — pas de recalcul.
+
+  # Nom client court pour la chip (le nom du client de la modale est déjà long).
+  def stay_short_label(stay)
+    stay&.customer&.name.presence || "Séjour ##{stay&.id}"
+  end
+
+  # Dates compactes, ex. « 12–15 sept. » (même mois) ou « 30 août – 2 sept. ».
+  def stay_short_dates(stay)
+    return nil if stay.nil?
+
+    from = stay.arrival_date
+    to   = stay.departure_date
+    return nil if from.blank? && to.blank?
+    return abbr_day_month(from || to) if from.blank? || to.blank?
+
+    if from.month == to.month && from.year == to.year
+      "#{from.day}–#{to.day} #{abbr_month(from)}"
+    else
+      "#{abbr_day_month(from)} – #{abbr_day_month(to)}"
+    end
+  end
+
   def button_to_next_month(current_date, data = {}, options = {})
     link_to(params.permit(:date, :no_title, :view).merge(date: current_date.next_month), class: "btn-page-header-with-icon", data: data) do
       if options[:no_label].nil?
@@ -78,4 +104,15 @@ module CalendarHelper
   # def calendar(date = Date.today, from = "public", &block)
   #   Calendar.new(self, date, from, block).table
   # end
+
+  private
+
+  # Mois abrégé FR sans point superflu (ex. « sept. », « août »).
+  def abbr_month(date)
+    I18n.t("date.abbr_month_names")[date.month]
+  end
+
+  def abbr_day_month(date)
+    "#{date.day} #{abbr_month(date)}"
+  end
 end

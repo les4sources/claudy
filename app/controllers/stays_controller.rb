@@ -146,7 +146,106 @@ class StaysController < BaseController
     redirect_to recent_stays_path, notice: "Séjour supprimé."
   end
 
+  # --- Fusion de séjours depuis le calendrier (epic #81, Phase 2) -----------
+  # Trois fragments SERVEUR successifs. Aucune vérité n'est recalculée en JS :
+  # l'étape A (désignation) comme l'étape B (aperçu) sortent d'ici.
+
+  # Étape A — cartes radio de désignation du survivant, avec présélection
+  # intelligente motivée. Reçoit `stay_ids[]` (+ éventuel `target_id` pour
+  # re-cocher la cible au retour depuis l'aperçu).
+  def merge_setup
+    @stays = load_merge_stays
+    return render_merge_guard if @stays.size < 2
+
+    preselected = @stays.find { |s| s.id == params[:target_id].to_i }
+    suggested, reason = helpers.suggested_merge_target(@stays)
+    @target = preselected || suggested
+    @suggested_id = suggested&.id
+    @suggested_reason = reason
+
+    render partial: "stays/merge_setup",
+           layout: false,
+           formats: [:html],
+           locals: { stays: @stays, target: @target, suggested_id: @suggested_id, suggested_reason: @suggested_reason }
+  end
+
+  # Étape B — aperçu dry-run (Stays::MergePreview). Reçoit `target_id` + `stay_ids[]`.
+  def merge_preview
+    stays = load_merge_stays
+    return render_merge_guard if stays.size < 2
+
+    target = resolve_merge_target(stays)
+    return render_merge_guard(message: "Le séjour survivant ne fait pas partie de la sélection.") if target.nil?
+    sources = stays.reject { |s| s.id == target.id }
+
+    preview = Stays::MergePreview.new(target: target, sources: sources).call
+    render partial: "stays/merge_preview", layout: false, formats: [:html], locals: { preview: preview, error: nil }
+  end
+
+  # Commit — Stays::MergeService, puis redirection calendrier (mois du début du
+  # survivant) + flash détaillé. En cas d'échec, re-rendu du fragment d'aperçu
+  # avec l'erreur DANS le dialog (422). Appelé en fetch JSON par le contrôleur
+  # Stimulus (le flash persiste jusqu'au GET de redirection qui l'affiche).
+  def merge
+    stays = load_merge_stays
+    return render_merge_guard if stays.size < 2
+
+    target = resolve_merge_target(stays)
+    return render_merge_guard(message: "Le séjour survivant ne fait pas partie de la sélection.") if target.nil?
+    sources = stays.reject { |s| s.id == target.id }
+
+    service = Stays::MergeService.new(target: target, sources: sources)
+    if service.run
+      target.reload
+      flash[:notice] = merge_success_message(target, sources)
+      render json: {
+        redirect: root_path(date: target.arrival_date&.strftime("%Y-%m-%d"), stay_merge_done: 1)
+      }
+    else
+      preview = Stays::MergePreview.new(target: target, sources: sources).call
+      render partial: "stays/merge_preview",
+             layout: false,
+             formats: [:html],
+             status: :unprocessable_entity,
+             locals: { preview: preview, error: service.error_message }
+    end
+  end
+
   private
+
+  # Séjours candidats à la fusion, préchargés pour éviter les N+1 des aperçus.
+  def load_merge_stays
+    ids = Array(params[:stay_ids]).map(&:to_i).uniq.reject(&:zero?)
+    Stay.where(id: ids)
+        .includes(:customer, :meal_orders, experience_bookings: { experience_availability: :experience }, stay_items: :bookable)
+        .to_a
+  end
+
+  # Résout le survivant STRICTEMENT parmi les séjours postés : un `target_id`
+  # forgé hors sélection ne doit jamais retomber silencieusement sur un autre
+  # séjour (le survivant serait choisi à l'insu de l'admin). Sans `target_id`
+  # (ouverture de l'étape B sans passer par A), repli déterministe : plus petit id.
+  def resolve_merge_target(stays)
+    return stays.min_by(&:id) if params[:target_id].blank?
+
+    stays.find { |s| s.id == params[:target_id].to_i }
+  end
+
+  # Garde-fou serveur : moins de 2 séjours résolus = fusion impossible (422).
+  def render_merge_guard(message: "Sélectionne au moins deux séjours existants à fusionner.")
+    render partial: "stays/merge_error",
+           layout: false,
+           formats: [:html],
+           status: :unprocessable_entity,
+           locals: { message: message }
+  end
+
+  def merge_success_message(target, sources)
+    ids = sources.map { |s| "##{s.id}" }.join(" et ")
+    total = helpers.humanized_money_with_symbol(target.total_amount)
+    balance = helpers.humanized_money_with_symbol(Money.new(target.amount_due_cents))
+    "Séjour#{'s' if sources.size > 1} #{ids} fusionné#{'s' if sources.size > 1} dans ##{target.id} — total recalculé : #{total}, solde : #{balance}."
+  end
 
   def set_stay
     @stay = Stay.find(params[:id])

@@ -35,7 +35,8 @@ RSpec.describe "Calendrier — modale séjour depuis les blocs (epic #66, Phase 
       get "/"
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('data-controller="stay-details"')
+      # Le wrapper porte désormais stay-details ET stay-merge (epic #81, Phase 2).
+      expect(response.body).to match(/data-controller="[^"]*\bstay-details\b[^"]*"/)
       expect(response.body).to include('data-stay-details-target="dialog"')
       expect(response.body).to include('data-stay-details-target="content"')
     end

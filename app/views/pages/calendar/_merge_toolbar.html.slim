@@ -1,0 +1,32 @@
+/ Barre-outil de fusion (epic #81, Phase 2) — vue mois uniquement. Le bouton
+/ bascule le MODE FUSION ; il vit DANS la portée du contrôleur stay-merge (les
+/ actions Stimulus ne se lient qu'à l'intérieur de l'élément-contrôleur, d'où sa
+/ place ici plutôt que dans l'entête de page global).
+css:
+  .merge-mode [data-stay-id] { transition: opacity .15s ease, box-shadow .15s ease; cursor: pointer; }
+  .merge-mode.has-selection [data-stay-id]:not(.merge-selected) { opacity: .45; }
+  /* En mode fusion, le lien-overlay du bloc est neutralisé : le clic sélectionne
+     le séjour au lieu d'ouvrir la modale (la capture JS le double par sécurité). */
+  .merge-mode [data-stay-id] a[data-action~="stay-details#open"] { pointer-events: none; }
+  .merge-selection-badge {
+    position: absolute; top: 2px; right: 2px; z-index: 5;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 9999px;
+    color: #fff; font-size: 11px; line-height: 1; font-weight: 700;
+    box-shadow: 0 1px 2px rgba(0,0,0,.25);
+  }
+  .stay-merge-bar { transition: transform .15s ease; }
+
+.flex.items-center.gap-3.mb-4
+  / `gap-1.5` / `py-1.5` en attribut class : la notation à points de Slim
+  / scinderait `gap-1.5` en deux classes (`gap-1` + `5`).
+  button.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-3.text-sm.font-medium.text-gray-700.shadow-sm.hover:bg-gray-50(class="gap-1.5 py-1.5" type="button" data-stay-merge-target="toggleButton" data-action="stay-merge#toggle" aria-pressed="false")
+    svg.h-4.w-4(xmlns="http://www.w3.org/2000/svg" fill="none" viewbox="0 0 24 24" stroke-width="1.8" stroke="currentColor")
+      path(stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5")
+    span Fusionner des séjours
+
+/ Bandeau contextuel du mode fusion (affiché par le contrôleur).
+.hidden.items-center.justify-between.gap-3.rounded-md.border.border-indigo-200.bg-indigo-50.px-4.py-2.mb-4.text-sm.text-indigo-800(data-stay-merge-target="banner")
+  span Mode fusion — clique les séjours à fusionner, puis désigne le survivant.
+  button.font-medium.text-indigo-700.hover:text-indigo-900(type="button" data-action="stay-merge#toggle")
+    | Quitter

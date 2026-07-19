@@ -31,6 +31,12 @@ class ExperienceBooking < ApplicationRecord
   belongs_to :experience_availability
   belongs_to :stay
 
+  # Audit (epic #81) : seul modèle rapatrié par la fusion de séjours qui n'avait
+  # pas encore d'historique (Stay/StayItem/MealOrder/Payment l'ont déjà). Un
+  # changement de `stay_id` (rattachement à un autre séjour) est ainsi tracé.
+  # Table `versions` par défaut (PK bigint compatible, contrairement à Payment).
+  has_paper_trail
+
   delegate :experience, to: :experience_availability
 
   validates :participants, numericality: { greater_than: 0 }

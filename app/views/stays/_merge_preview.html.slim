@@ -1,0 +1,85 @@
+/ Étape B de la fusion (epic #81, Phase 2) — aperçu dry-run SERVEUR (source de
+/ vérité). Tout ce qui est affiché ici sort de Stays::MergePreview : jamais
+/ recalculé en JS. Le commit est un button_to (form réel) intercepté par le
+/ contrôleur Stimulus stay-merge pour rester DANS le dialog en cas d'erreur.
+- target = preview.target
+- target_hue = stay_hue(target.id)
+- all_ids = [target.id, *preview.sources.map(&:id)]
+- ordered_types = %i[lodging space camping van activity meal]
+- grouped = preview.composition.group_by(&:type)
+
+.px-6.py-5(data-merge-step="preview")
+  - if error.present?
+    .mb-4.rounded-md.border.border-red-200.bg-red-50.px-4.py-3.text-sm.text-red-700(role="alert")
+      = error
+
+  h3.text-lg.font-semibold.text-gray-900 Aperçu de la fusion
+  p.mt-1.text-sm.text-gray-500
+    | Résultat une fois les séjours sources rapatriés sur le survivant.
+
+  / --- Carte du séjour survivant après fusion --------------------------------
+  .mt-4.rounded-lg.border.border-gray-200.bg-white.p-4(style="border-left-width: 4px; border-left-color: hsl(#{target_hue}, 65%, 45%);")
+    .flex.items-center.flex-wrap.gap-2
+      span.font-semibold.text-gray-900 Séjour ##{target.id}
+      span.inline-flex.items-center.rounded-full.bg-indigo-50.px-2.text-xs.font-medium.text-indigo-700(class="py-0.5") survivant
+      span.text-gray-700 = preview.customer_name
+    .mt-1.text-sm.text-gray-500
+      - if preview.arrival_date.present? || preview.departure_date.present?
+        = "#{preview.arrival_date ? l(preview.arrival_date, format: :long) : '?'} → #{preview.departure_date ? l(preview.departure_date, format: :long) : '?'}"
+      - else
+        | —
+
+    / Composition complète groupée par type, avec provenance.
+    .mt-4.space-y-3
+      - ordered_types.each do |type|
+        - items = grouped[type]
+        - next if items.blank?
+        div
+          .text-xs.font-semibold.uppercase.tracking-wide.text-gray-400 = merge_type_label(type)
+          ul.mt-1.space-y-1
+            - items.each do |item|
+              li.flex.items-center.justify-between.gap-2.text-sm
+                .min-w-0.flex-1.text-gray-700
+                  = item.label
+                  - unless item.from_target
+                    span.ml-1.text-xs.text-gray-400 depuis ##{item.origin_stay_id}
+                span.text-gray-600 = humanized_money_with_symbol(Money.new(item.amount_cents))
+
+    / Totaux recalculés.
+    .mt-4.border-t.border-gray-100.pt-3.space-y-1.text-sm
+      .flex.items-center.justify-between
+        span.text-gray-500 Nouveau total
+        span.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(preview.total_cents))
+      .flex.items-center.justify-between
+        span.text-gray-500 Déjà payé
+        span.text-gray-700 = humanized_money_with_symbol(Money.new(preview.paid_cents))
+      .flex.items-center.justify-between
+        span.text-gray-500 Nouveau solde
+        span.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(preview.balance_cents))
+
+  / --- Séjours sources (archivés) --------------------------------------------
+  - if preview.sources.any?
+    .mt-4
+      .text-xs.font-semibold.uppercase.tracking-wide.text-gray-400 Séjours archivés
+      ul.mt-1.space-y-1
+        - preview.sources.each do |source|
+          - source_hue = stay_hue(source.id)
+          li.flex.items-center.gap-2.text-sm.text-gray-600
+            span.inline-block.h-3.w-3.rounded-full.flex-shrink-0(style="background-color: hsl(#{source_hue}, 65%, 45%);")
+            span ##{source.id} (#{source.customer_name}) → archivé
+
+  / --- Avertissements contextuels --------------------------------------------
+  - if preview.warnings.any?
+    .mt-4.space-y-2
+      - preview.warnings.each do |warning|
+        .rounded-md.border.border-amber-200.bg-amber-50.px-4.py-2.text-sm.text-amber-800
+          = warning.message
+
+  / --- Actions ---------------------------------------------------------------
+  .mt-6.flex.items-center.justify-between.gap-3
+    button.text-sm.font-medium.text-gray-600.hover:text-gray-800(type="button" data-action="stay-merge#backToSetup")
+      | ← Modifier la cible
+    .flex.items-center.gap-3
+      button.text-sm.font-medium.text-gray-600.hover:text-gray-800(type="button" data-action="stay-merge#closeDialog")
+        | Annuler
+      = button_to "Confirmer la fusion", merge_stays_path, params: { target_id: target.id, stay_ids: all_ids }, method: :post, form: { data: { action: "submit->stay-merge#commit" } }, class: "inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"

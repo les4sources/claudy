@@ -11,9 +11,13 @@
 - if @calendar_view == :organisation
   = render "pages/calendar/organisation"
 - else
-  / Enveloppe la grille dans le contrôleur stay-details : les blocs du calendrier
-  / ouvrent la modale séjour (epic #66, Phase 5) qui vit à la fin, dans la même
-  / portée Stimulus.
-  div(data-controller="stay-details")
+  / Enveloppe la grille dans les contrôleurs stay-details ET stay-merge (epic #81) :
+  / les blocs ouvrent la modale séjour (Phase 5) ou, en mode fusion, se sélectionnent.
+  / `stay_merge_done` (posé par la redirection post-fusion) déclenche le nettoyage
+  / du sessionStorage et la sortie du mode côté contrôleur.
+  div(data-controller="stay-details stay-merge" data-stay-merge-setup-url-value=merge_setup_stays_path data-stay-merge-preview-url-value=merge_preview_stays_path data-stay-merge-reset-value=params[:stay_merge_done].present?)
+    = render "pages/calendar/merge_toolbar"
     = render "pages/calendar/bookings"
     = render "pages/calendar/stay_modal"
+    = render "pages/calendar/merge_dialog"
+    = render "pages/calendar/merge_bottom_bar"
