@@ -37,11 +37,13 @@ class StaysController < BaseController
   def create
     @draft  = build_draft
     builder = Reservations::Builder.new(
-      draft:             @draft,
-      admin:             true,
-      status:            requested_status,
-      source:            "manual",
-      skip_availability: force_availability?
+      draft:                @draft,
+      admin:                true,
+      status:               requested_status,
+      source:               requested_source || "manual",
+      platform:             requested_platform,
+      price_override_cents: requested_price_override_cents,
+      skip_availability:    force_availability?
     )
 
     if builder.run
@@ -65,11 +67,14 @@ class StaysController < BaseController
   def update
     @draft  = build_draft
     updater = Stays::AdminUpdater.new(
-      stay:              @stay,
-      draft:             @draft,
-      status:            requested_status,
-      skip_availability: force_availability?,
-      user:              current_user
+      stay:                 @stay,
+      draft:                @draft,
+      status:               requested_status,
+      source:               requested_source,
+      platform:             requested_platform,
+      price_override_cents: requested_price_override_cents,
+      skip_availability:    force_availability?,
+      user:                 current_user
     )
 
     if updater.run
@@ -479,6 +484,31 @@ class StaysController < BaseController
 
   def requested_status
     stay_params[:status]
+  end
+
+  # Canal d'attribution du séjour (epic #81, Phase 3). Validé contre `SOURCES`
+  # (le service borne / préserve ensuite). nil si absent ou forgé — l'appelant
+  # décide du repli (create → "manual" ; update → source d'origine préservée).
+  def requested_source
+    src = stay_params[:source]
+    Stay::SOURCES.include?(src) ? src : nil
+  end
+
+  # Attribution OTA à propager au Booking d'occupation (Airbnb/Booking.com/web).
+  def requested_platform
+    stay_params[:platform].presence
+  end
+
+  # Prix imposé (€ saisis) → cents. Vide = nil (pas d'override → devis B2C).
+  # Tolère la virgule décimale (locale FR) et un éventuel symbole/espaces.
+  def requested_price_override_cents
+    raw = stay_params[:price_override].to_s.strip
+    return nil if raw.blank?
+    normalized = raw.tr(",", ".").delete("^0-9.-")
+    return nil if normalized.blank?
+    (BigDecimal(normalized) * 100).round
+  rescue ArgumentError
+    nil
   end
 
   def force_availability?

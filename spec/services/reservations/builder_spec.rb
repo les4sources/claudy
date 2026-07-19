@@ -224,4 +224,52 @@ RSpec.describe Reservations::Builder do
       expect(builder.stay.experience_bookings).to be_empty
     end
   end
+
+  # ------------------------------------------------------------------------
+  # Epic #81, Phase 3 — Prix libre / override + attribution (source/platform),
+  # RÉSERVÉS au canal admin. Le funnel public les ignore, même sur param forgé.
+  # ------------------------------------------------------------------------
+  describe "prix imposé & attribution admin (epic #81, Phase 3)" do
+    it "impose le total du séjour quand un override admin est fourni" do
+      builder = described_class.new(draft: draft, admin: true, price_override_cents: 99_900)
+      expect(builder.run).to be(true)
+
+      expect(builder.stay.price_override_cents).to eq(99_900)
+      expect(builder.stay.total_amount_cents).to eq(99_900) # pas 74 500 (devis B2C)
+    end
+
+    it "applique le devis B2C quand aucun override n'est fourni (admin)" do
+      builder = described_class.new(draft: draft, admin: true)
+      expect(builder.run).to be(true)
+
+      expect(builder.stay.price_override_cents).to be_nil
+      expect(builder.stay.total_amount_cents).to eq(74_500)
+    end
+
+    it "IGNORE un override forgé côté public (admin: false)" do
+      builder = described_class.new(draft: draft, price_override_cents: 1)
+      expect(builder.run).to be(true)
+
+      expect(builder.stay.price_override_cents).to be_nil     # jamais persisté hors admin
+      expect(builder.stay.total_amount_cents).to eq(74_500)   # devis appliqué, override ignoré
+    end
+
+    it "propage la plateforme OTA au Booking d'occupation (admin)" do
+      builder = described_class.new(draft: draft, admin: true, platform: "airbnb")
+      expect(builder.run).to be(true)
+      expect(builder.booking.platform).to eq("airbnb")
+    end
+
+    it "garde platform=web côté public même sur param de plateforme forgé" do
+      builder = described_class.new(draft: draft, platform: "airbnb")
+      expect(builder.run).to be(true)
+      expect(builder.booking.platform).to eq("web")
+    end
+
+    it "propage la source d'attribution du Stay (admin)" do
+      builder = described_class.new(draft: draft, admin: true, source: "ota")
+      expect(builder.run).to be(true)
+      expect(builder.stay.source).to eq("ota")
+    end
+  end
 end
