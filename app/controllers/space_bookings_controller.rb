@@ -24,35 +24,9 @@ class SpaceBookingsController < BaseController
     @space_reservations_by_date = @space_booking.space_reservations.to_a.group_by { |sr| sr.date }
   end
 
-  def new
-    if !params[:source_space_booking_id].nil?
-      duplication_service = SpaceBookings::DuplicateService.new
-      duplication_service.run!(source_space_booking_id: params[:source_space_booking_id])
-      @space_booking = duplication_service.space_booking
-    else
-      @space_booking = SpaceBooking.new(
-        paid_amount: 0,
-        advance_amount: 0,
-        deposit_amount: 0,
-        payment_status: "pending",
-        payment_method: "bank_transfer",
-        from_date: params.fetch(:date, nil)
-      )
-    end
-    @spaces = Space.all
-  end
-
-  def create
-    service = SpaceBookings::CreateService.new
-    if service.run(params)
-      redirect_to service.space_booking,
-                  notice: "Merci, la réservation a été enregistrée."
-    else
-      @space_booking = service.space_booking
-      set_error_flash(service.space_booking, "<strong>Cette réservation n'a pas pu être enregistrée, merci de vérifier les éléments suivants:</strong><br>#{service.error_message}")
-      render :new, status: :unprocessable_entity
-    end
-  end
+  # Épic #81, Phase 9 — création directe retirée. `#new`/`#create` supprimés :
+  # toute nouvelle résa d'espace naît désormais du séjour (`StaysController`). La
+  # duplication est disponible au niveau du séjour (`new_stay_path(duplicate_from:)`).
 
   def edit
     @space_booking = SpaceBooking.find_by!(id: params[:id])

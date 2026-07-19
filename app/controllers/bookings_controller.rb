@@ -16,38 +16,10 @@ class BookingsController < BaseController
     @reservations_by_date = @booking.reservations.decorate.to_a.group_by { |r| r.date }
   end
 
-  def new
-    if !params[:source_booking_id].nil?
-      duplication_service = Bookings::DuplicateService.new
-      duplication_service.run!(source_booking_id: params[:source_booking_id])
-      @booking = duplication_service.booking
-    else
-      @booking = Booking.new(
-        booking_type: "lodging",
-        adults: 0,
-        children: 0,
-        babies: 0,
-        platform: "direct",
-        tier_lodgings: "neutre",
-        tier_rooms: "neutre",
-        from_date: params.fetch("date", nil)
-      )
-      @booking.payments.build(amount_cents: nil)
-    end
-    @lodgings = Lodging.all
-  end
-
-  def create
-    service = Bookings::CreateService.new
-    if service.run(params)
-      redirect_to service.booking,
-                  notice: "Merci, la réservation a été enregistrée."
-    else
-      @booking = service.booking
-      set_error_flash(service.booking, "<strong>Cette réservation n'a pas pu être enregistrée, merci de vérifier les éléments suivants:</strong><br>#{service.error_message}")
-      render :new, status: :unprocessable_entity
-    end
-  end
+  # Épic #81, Phase 9 — création directe retirée. `#new`/`#create` supprimés :
+  # tout nouveau booking naît désormais du séjour (`StaysController`) ou du funnel
+  # natif. La duplication est disponible au niveau du séjour
+  # (`new_stay_path(duplicate_from:)`).
 
   def edit
     @booking = Booking.find_by!(id: params[:id])

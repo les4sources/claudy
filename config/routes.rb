@@ -79,7 +79,11 @@ Rails.application.routes.draw do
   get "organisation/member/:human_id", to: "organisation#member", as: :organisation_member
   get "organisation/member/:human_id/archives", to: "organisation#archives", as: :organisation_member_archives
 
-  resources :bookings do
+  # Épic #81, Phase 9 — création directe retirée : le séjour (`resources :stays`)
+  # est désormais le SEUL point d'entrée de création. On garde
+  # show/edit/update/destroy/index/past/search : l'édition legacy reste le
+  # fallback orphelin tant que le backfill Phase 1 n'a pas tourné en prod.
+  resources :bookings, except: [:new, :create] do
     collection do
       get "past"
       get "search"
@@ -87,7 +91,7 @@ Rails.application.routes.draw do
     resources :payments
   end
 
-  resources :space_bookings do
+  resources :space_bookings, except: [:new, :create] do
     get "past", on: :collection
   end
 
@@ -199,7 +203,12 @@ Rails.application.routes.draw do
   post "sejour/:token/payer-le-solde", to: "public/stay_balance_payments#create", as: :public_stay_balance_payment
 
   namespace :public do
-    resources :bookings, only: [:new, :create] do
+    # Épic #81, Phase 9 — demande de réservation publique legacy retirée
+    # (new/create). Le funnel natif /reservation est le seul point d'entrée public.
+    # On conserve `edit_estimated_arrival`/`update_estimated_arrival` (services aux
+    # clients existants) : ce sont des routes membres qui n'ont pas besoin de
+    # new/create.
+    resources :bookings, only: [] do
       get "edit_estimated_arrival", on: :member
       patch "update_estimated_arrival", on: :member
     end
