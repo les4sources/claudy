@@ -99,6 +99,34 @@ RSpec.describe Stays::MergeService, type: :service do
     end
   end
 
+  # Décision figée (epic #81, Phase 3) : à la fusion, l'override de la CIBLE est
+  # CONSERVÉ (le recompute de la cible fusionnée l'honore) ; les overrides des
+  # SOURCES tombent (leur montant réel a déjà été absorbé dans les items migrés).
+  describe "prix imposé (epic #81, Phase 3)" do
+    let(:customer) { make_customer("override@example.com") }
+
+    it "conserve l'override de la CIBLE comme total du séjour fusionné" do
+      target = make_stay(customer: customer, price_override_cents: 88_000)
+      source = make_stay(customer: customer, arrival_date: Date.new(2026, 8, 4), departure_date: Date.new(2026, 8, 6))
+      attach(target, make_booking(price_cents: 30_000))
+      attach(source, make_space_booking(price_cents: 20_000))
+
+      expect(described_class.new(target: target, sources: [source]).run).to be_truthy
+      expect(target.reload.total_amount_cents).to eq(88_000) # override conservé, pas 50 000
+    end
+
+    it "ignore l'override d'une SOURCE (montant réel déjà absorbé dans les items)" do
+      target = make_stay(customer: customer)
+      source = make_stay(customer: customer, price_override_cents: 99_999,
+                         arrival_date: Date.new(2026, 8, 4), departure_date: Date.new(2026, 8, 6))
+      attach(target, make_booking(price_cents: 30_000))
+      attach(source, make_space_booking(price_cents: 20_000))
+
+      expect(described_class.new(target: target, sources: [source]).run).to be_truthy
+      expect(target.reload.total_amount_cents).to eq(50_000) # somme des items, override source ignoré
+    end
+  end
+
   describe "clients différents" do
     it "conserve le client de la cible (la cible gagne)" do
       target_customer = make_customer("cible@example.com")

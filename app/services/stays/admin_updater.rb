@@ -29,12 +29,20 @@ module Stays
 
     attr_reader :stay, :availability_warning, :space_warning
 
-    def initialize(stay:, draft:, status: nil, skip_availability: false, user: nil)
+    # `price_override_cents` / `platform` / `source` (epic #81, Phase 3) : prix
+    # imposé, attribution OTA du Booking et canal du Stay. `price_override_cents`
+    # est appliqué TEL QUEL — nil le RETIRE (retour au devis B2C). Ce service est
+    # le canal admin exclusif : aucun garde-fou public à prévoir ici.
+    def initialize(stay:, draft:, status: nil, skip_availability: false, user: nil,
+                   price_override_cents: nil, platform: nil, source: nil)
       @stay = stay
       @draft = draft
       @requested_status = status
       @skip_availability = skip_availability
       @user = user
+      @requested_price_override_cents = price_override_cents
+      @requested_platform = platform
+      @requested_source = source
       @report_errors = true
     end
 
@@ -53,7 +61,15 @@ module Stays
     def run!
       validate!
       ActiveRecord::Base.transaction do
-        @stay.update!(customer: upsert_customer!, status: stay_status)
+        # `price_override_cents` est posé AVANT le recompute final : ce dernier
+        # honore l'override (total = override) tout en gardant les dates dérivées
+        # de la composition. nil retire l'override → le recompute reprend le devis.
+        @stay.update!(
+          customer:             upsert_customer!,
+          status:               stay_status,
+          source:               stay_source,
+          price_override_cents: @requested_price_override_cents.presence
+        )
         reconcile_lodging!
         reconcile_spaces!
         reconcile_camping!
@@ -188,6 +204,8 @@ module Stays
 
       if booking
         # NB : ni `status` ni `email` ici — voir l'en-tête de classe (anti-email).
+        # `platform` (attribution OTA, epic #81) est en revanche propagé : son
+        # changement ne déclenche AUCUN email (cf. `notify_customer_on_update`).
         booking.update!(
           lodging_id:        @draft.lodging_id,
           from_date:         @draft.arrival_date,
@@ -198,6 +216,7 @@ module Stays
           firstname:         @draft.first_name,
           lastname:          @draft.last_name,
           phone:             @draft.phone,
+          platform:          booking_platform(booking.platform),
           price_cents:       price,
           shown_price_cents: price
         )
@@ -214,7 +233,7 @@ module Stays
           children:          @draft.children.to_i,
           status:            stay_status,
           payment_status:    "pending",
-          platform:          "web",
+          platform:          booking_platform,
           lodging_id:        @draft.lodging_id,
           price_cents:       price,
           shown_price_cents: price
@@ -375,6 +394,19 @@ module Stays
 
     def stay_status
       Stay::STATUSES_ADMIN_CREATABLE.include?(@requested_status) ? @requested_status : @stay.status
+    end
+
+    # Canal du Stay : on ne change la source QUE si l'admin en fournit une valide
+    # (`SOURCES`). Sinon on préserve celle d'origine — ne jamais écraser en
+    # silence l'attribution d'un séjour issu d'un canal automatique.
+    def stay_source
+      Stay::SOURCES.include?(@requested_source) ? @requested_source : @stay.source
+    end
+
+    # Attribution OTA à propager au Booking. Priorité au choix admin ; à défaut,
+    # on préserve la valeur courante (`current`) plutôt que de la réinitialiser.
+    def booking_platform(current = nil)
+      @requested_platform.presence || current || "web"
     end
 
     def raise_invalid(message)

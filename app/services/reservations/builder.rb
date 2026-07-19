@@ -49,14 +49,20 @@ module Reservations
     #                             fait foi) mais l'indisponibilité n'échoue plus —
     #                             elle est exposée via `availability_warning`
     #                             (surbooking / saisie a posteriori autorisés).
+    # `price_override_cents` / `platform` (epic #81, Phase 3) : prix libre imposé
+    # et attribution OTA — RÉSERVÉS au canal admin. Ignorés hors `admin: true`,
+    # même sur param forgé (le funnel public ne les expose jamais).
     def initialize(draft:, deposit_rate: Pricing::Catalog::DEFAULT_DEPOSIT_RATE,
-                   admin: false, status: nil, source: nil, skip_availability: false)
+                   admin: false, status: nil, source: nil, skip_availability: false,
+                   price_override_cents: nil, platform: nil)
       @draft = draft
       @deposit_rate = deposit_rate
       @admin = admin
       @requested_status = status
       @requested_source = source
       @skip_availability = skip_availability
+      @requested_price_override_cents = price_override_cents
+      @requested_platform = platform
       @report_errors = true
     end
 
@@ -104,6 +110,10 @@ module Reservations
           arrival_date: draft.arrival_date,
           departure_date: draft.departure_date,
           total_amount_cents: quote.total_excluding_experiences_cents,
+          # Prix imposé (epic #81, Phase 3) : persisté d'entrée. `total_amount_cents`
+          # est réaligné juste après (voir plus bas) pour que le total reflète
+          # l'override dès la création, sans attendre un recompute.
+          price_override_cents: admin_price_override,
           notes: internal_notes
         )
         @stay.stay_items.create!(bookable: @booking) if @booking
@@ -126,7 +136,11 @@ module Reservations
         # MÊME nature que ceux du rail email, donc soumis à la validation porteur.
         # On réintègre leur montant au total prévu (mais JAMAIS à l'acompte).
         experiences_total = create_experience_bookings!(@stay)
-        if experiences_total.positive?
+        # Total du séjour : le prix imposé (epic #81) PRIME sur le devis. Sinon,
+        # comportement historique — devis hors activités + activités créées.
+        if admin_price_override.present?
+          @stay.update!(total_amount_cents: admin_price_override)
+        elsif experiences_total.positive?
           @stay.update!(total_amount_cents: quote.total_excluding_experiences_cents + experiences_total)
         end
         # Le paiement est rattaché au Stay dans tous les cas ; le booking n'est
@@ -326,7 +340,7 @@ module Reservations
         children: draft.children.to_i,
         status: stay_status,
         payment_status: "pending",
-        platform: "web",
+        platform: booking_platform,
         lodging_id: draft.lodging_id,
         # Prix de l'occupation d'hébergement = hébergement PUR (`lodging_only_cents`),
         # dans TOUS les canaux (issue #79) : camping / van / repas sont extraits sur
@@ -385,6 +399,20 @@ module Reservations
 
     def stay_source
       @requested_source.presence || "reservation"
+    end
+
+    # Prix imposé effectif : seulement en mode admin (jamais côté public, même sur
+    # param forgé). nil = pas d'override → devis appliqué.
+    def admin_price_override
+      return nil unless @admin
+      @requested_price_override_cents.presence
+    end
+
+    # Attribution OTA du Booking d'occupation (epic #81, Phase 3). Réservée à
+    # l'admin ; le funnel public reste "web" (réservation directe native).
+    def booking_platform
+      return "web" unless @admin
+      @requested_platform.presence || "web"
     end
 
     # Multi-chiens hors flow auto (Q2) : on consigne pour traitement manuel.

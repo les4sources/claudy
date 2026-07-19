@@ -77,6 +77,41 @@ RSpec.describe Stay, type: :model do
     end
   end
 
+  describe "#recompute_aggregates! avec prix imposé (epic #81, Phase 3)" do
+    it "impose le total = override tout en gardant les dates de la composition" do
+      stay = Stay.create!(customer: customer, price_override_cents: 99_900)
+      stay.stay_items.create!(bookable: booking(from: Date.new(2026, 7, 5), to: Date.new(2026, 7, 8), price_cents: 30_000))
+
+      stay.recompute_aggregates!
+
+      expect(stay.total_amount_cents).to eq(99_900)         # override, pas 30 000
+      expect(stay.arrival_date).to eq(Date.new(2026, 7, 5)) # dates toujours dérivées des items
+      expect(stay.departure_date).to eq(Date.new(2026, 7, 8))
+    end
+
+    it "reprend le total de la composition quand l'override est retiré" do
+      stay = Stay.create!(customer: customer, price_override_cents: 99_900)
+      stay.stay_items.create!(bookable: booking(from: Date.new(2026, 7, 5), to: Date.new(2026, 7, 8), price_cents: 30_000))
+      stay.recompute_aggregates!
+      expect(stay.total_amount_cents).to eq(99_900)
+
+      stay.update!(price_override_cents: nil)
+      stay.recompute_aggregates!
+      expect(stay.total_amount_cents).to eq(30_000)
+    end
+
+    it "fait suivre l'exigible et le solde depuis le total imposé" do
+      stay = Stay.create!(customer: customer, price_override_cents: 50_000)
+      b = booking(from: Date.new(2026, 7, 5), to: Date.new(2026, 7, 8), price_cents: 30_000)
+      stay.stay_items.create!(bookable: b)
+      Payment.create!(booking: b, stay: stay, amount_cents: 20_000, status: "paid", payment_method: "card")
+      stay.recompute_aggregates!
+
+      expect(stay.payable_amount_cents).to eq(50_000) # = total imposé (aucune activité pending)
+      expect(stay.balance_due_cents).to eq(30_000)    # 50 000 imposés − 20 000 encaissés
+    end
+  end
+
   describe "scopes" do
     it "separates current/future stays from past ones" do
       future = Stay.create!(customer: customer, arrival_date: Date.today + 5, departure_date: Date.today + 10)
@@ -301,6 +336,38 @@ RSpec.describe Stay, type: :model do
       Payment.create!(stay: stay, amount_cents: 28_000, status: "paid", payment_method: "card")
       stay.set_payment_status
       expect(stay.reload.payment_status).to eq("paid")
+    end
+
+    # Décision figée (epic #81, Phase 3, revue Forge F3) : un prix IMPOSÉ est
+    # ferme — exigible tel quel, sans déduction des activités pending (sinon un
+    # override inférieur au montant pending rendait le solde négatif et faisait
+    # disparaître le bouton « Payer le solde »).
+    it "sous prix imposé, l'exigible est l'override entier (pending non déduite)" do
+      stay.update!(price_override_cents: 30_000)
+      stay.recompute_aggregates!
+      expect(stay.payable_amount_cents).to eq(30_000)
+      expect(stay.balance_due_cents).to eq(30_000)
+      expect(stay).to be_payable_now
+    end
+
+    it "sous prix imposé inférieur aux activités pending, le solde reste exigible (jamais négatif par déduction)" do
+      stay.update!(price_override_cents: 5_000) # < 6 500 de pending
+      stay.recompute_aggregates!
+      expect(stay.payable_amount_cents).to eq(5_000)
+      expect(stay).to be_payable_now
+    end
+  end
+
+  describe "validation du prix imposé (epic #81, Phase 3)" do
+    it "refuse un override négatif (défense en profondeur, tout canal)" do
+      stay = Stay.new(customer: customer, source: "manual", price_override_cents: -100)
+      expect(stay).not_to be_valid
+      expect(stay.errors[:price_override_cents]).to be_present
+    end
+
+    it "accepte 0 € (override valide) et nil (pas d'override)" do
+      expect(Stay.new(customer: customer, source: "manual", price_override_cents: 0)).to be_valid
+      expect(Stay.new(customer: customer, source: "manual", price_override_cents: nil)).to be_valid
     end
   end
 end
