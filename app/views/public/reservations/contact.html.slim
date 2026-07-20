@@ -15,7 +15,11 @@
       / ── Formulaire ─────────────────────────────────────────
       .lg:col-span-2
         .bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-6.sm:p-8
-          = form_with url: public_reservation_create_path, method: :post do |f|
+          / turbo: false OBLIGATOIRE : la réponse est un redirect vers Stripe
+            Checkout (hôte externe). Un POST Turbo suit ce redirect en fetch,
+            que CORS bloque → aucune navigation, le clic semble mort. En POST
+            natif, le navigateur suit le redirect en top-level sans restriction.
+          = form_with url: public_reservation_create_path, method: :post, data: { turbo: false } do |f|
             / Champs cachés composition
             = hidden_field_tag "reservation[lodging_id]", @draft.lodging_id
             = hidden_field_tag "reservation[arrival_date]", @draft.arrival_date&.iso8601
