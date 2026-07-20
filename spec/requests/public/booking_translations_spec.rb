@@ -2,9 +2,13 @@ require "rails_helper"
 
 # Issue #15, Phase 2 — contenu traduit de la page booking à jeton en NL et EN.
 RSpec.describe "Page booking client — contenu NL/EN", type: :request do
+  # Dates ancrées DANS un seul mois futur (jours 10 → 12) : avec `Date.today + 10`,
+  # la plage chevauchait parfois deux mois et `date_range` affichait le mois aux
+  # deux bornes — les regex « du \d+ au » devenaient flaky selon le jour du run.
   let(:booking) do
-    Booking.create!(firstname: "Alex", lastname: "Durand", from_date: Date.today + 10,
-                    to_date: Date.today + 12, adults: 2, children: 1, babies: 0, status: "confirmed",
+    month = (Date.today + 40).beginning_of_month
+    Booking.create!(firstname: "Alex", lastname: "Durand", from_date: month + 9,
+                    to_date: month + 11, adults: 2, children: 1, babies: 0, status: "confirmed",
                     booking_type: "lodging", price_cents: 48_500)
   end
 

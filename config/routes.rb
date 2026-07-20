@@ -79,11 +79,12 @@ Rails.application.routes.draw do
   get "organisation/member/:human_id", to: "organisation#member", as: :organisation_member
   get "organisation/member/:human_id/archives", to: "organisation#archives", as: :organisation_member_archives
 
-  # Épic #81, Phase 9 — création directe retirée : le séjour (`resources :stays`)
-  # est désormais le SEUL point d'entrée de création. On garde
-  # show/edit/update/destroy/index/past/search : l'édition legacy reste le
-  # fallback orphelin tant que le backfill Phase 1 n'a pas tourné en prod.
-  resources :bookings, except: [:new, :create] do
+  # Épic #81 / issue #99 — le séjour (`resources :stays`) est le SEUL point
+  # d'entrée de création ET d'édition. `bookings`/`space_bookings` ne gardent que
+  # les routes d'occupation : index/show/past/search/destroy + `edit` (pure
+  # redirection vers le séjour). `new`/`create` retirés (Phase 9), `update` retiré
+  # (issue #99 — l'écran d'édition legacy n'existe plus, rien ne peut soumettre).
+  resources :bookings, except: [:new, :create, :update] do
     collection do
       get "past"
       get "search"
@@ -91,7 +92,7 @@ Rails.application.routes.draw do
     resources :payments
   end
 
-  resources :space_bookings, except: [:new, :create] do
+  resources :space_bookings, except: [:new, :create, :update] do
     get "past", on: :collection
   end
 

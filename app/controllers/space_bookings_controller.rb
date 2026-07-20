@@ -28,37 +28,22 @@ class SpaceBookingsController < BaseController
   # toute nouvelle résa d'espace naît désormais du séjour (`StaysController`). La
   # duplication est disponible au niveau du séjour (`new_stay_path(duplicate_from:)`).
 
+  # Édition unifiée (issue #99, aboutissement epic #81 Phase 8) : `#edit` est une
+  # PURE redirection — l'écran d'édition legacy n'existe plus. Cas résiduel
+  # (séjour soft-deleté à la main) : on renvoie sur la fiche `#show` avec alerte.
   def edit
     @space_booking = SpaceBooking.find_by!(id: params[:id])
 
-    # Édition unifiée (epic #81, Phase 8) : l'édition d'une résa d'espace passe
-    # désormais par le form séjour. Sans Stay vivant (backfill Phase 1 pas encore
-    # tourné en prod), on tombe sur l'écran legacy ci-dessous — fallback orphelin.
     if (stay = @space_booking.stay)
-      return redirect_to edit_stay_path(stay)
-    end
-
-    @space_booking.space_ids = @space_booking.space_reservations.map { |sr| sr.space_id }
-    @spaces = Space.all
-  end
-
-  def update
-    service = SpaceBookings::UpdateService.new(space_booking_id: params[:id])
-    respond_to do |format|
-      if service.run(params)
-        format.html { redirect_to service.space_booking, notice: "La réservation a été mise à jour." }
-        format.json { render :show, status: :ok, location: service.space_booking }
-      else
-        format.html { 
-          @space_booking = service.space_booking
-          render :edit, 
-                 status: :unprocessable_entity,
-                 alert: service.error_message
-        }
-        format.json { render json: service.error_message, status: :unprocessable_entity }
-      end
+      redirect_to edit_stay_path(stay)
+    else
+      redirect_to space_booking_path(@space_booking),
+                  alert: "Cette résa d'espace n'est plus rattachée à un séjour — relancer rake stays:backfill_missing."
     end
   end
+
+  # `#update` retiré (issue #99) : le form legacy n'existe plus, aucune
+  # soumission possible. L'édition passe exclusivement par le séjour.
 
   def destroy
     @space_booking = SpaceBooking.find_by!(id: params[:id])

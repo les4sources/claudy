@@ -21,41 +21,24 @@ class BookingsController < BaseController
   # natif. La duplication est disponible au niveau du séjour
   # (`new_stay_path(duplicate_from:)`).
 
+  # Édition unifiée (issue #99, aboutissement epic #81 Phase 8) : `#edit` est une
+  # PURE redirection — l'écran d'édition legacy n'existe plus. Un vieux favori /
+  # lien email vers /bookings/:id/edit atterrit sur le form séjour. Cas résiduel
+  # (séjour soft-deleté à la main, avant que le backfill ait tourné) : on renvoie
+  # sur la fiche `#show` avec une alerte plutôt que de servir un form disparu.
   def edit
     @booking = Booking.find_by!(id: params[:id])
 
-    # Édition unifiée (epic #81, Phase 8) : l'édition d'un booking passe désormais
-    # par le form séjour. Un vieux favori / lien email vers /bookings/:id/edit
-    # atterrit au bon endroit. Sans Stay vivant (backfill Phase 1 pas encore
-    # tourné en prod), on tombe sur l'écran legacy ci-dessous — fallback orphelin.
     if (stay = @booking.stay)
-      return redirect_to edit_stay_path(stay)
-    end
-
-    @booking.room_ids = @booking.reservations.map { |r| r.room_id }
-    @booking.booking_type = @booking.lodging_id.nil? ? "rooms" : "lodging"
-    @booking.tier_lodgings = @booking.tier_rooms = @booking.tier
-    @booking.payments.build
-    @lodgings = Lodging.all
-  end
-
-  def update
-    service = Bookings::UpdateService.new(booking_id: params[:id])
-    respond_to do |format|
-      if service.run(params)
-        format.html { redirect_to service.booking, notice: "La réservation a été mise à jour." }
-        format.json { render :show, status: :ok, location: service.booking }
-      else
-        format.html { 
-          @booking = service.booking
-          render :edit, 
-                 status: :unprocessable_entity,
-                 alert: service.error_message
-        }
-        format.json { render json: service.error_message, status: :unprocessable_entity }
-      end
+      redirect_to edit_stay_path(stay)
+    else
+      redirect_to booking_path(@booking),
+                  alert: "Ce booking n'est plus rattaché à un séjour — relancer rake stays:backfill_missing."
     end
   end
+
+  # `#update` retiré (issue #99) : le form legacy n'existe plus, aucune
+  # soumission possible. L'édition passe exclusivement par le séjour.
 
   def destroy
     @booking = Booking.find_by!(id: params[:id])
