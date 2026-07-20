@@ -17,6 +17,7 @@ module Reservations
     include SpaceComposition
     include CampingComposition
     include MealComposition
+    include TerraceComposition
     # Reservations de chambres de l'hébergement (epic #66, Phase 6) : on réutilise
     # `build_reservations` + `get_rooms` du concern Bookable — SOURCE UNIQUE
     # partagée avec Bookings::CreateService — plutôt que de dupliquer la logique.
@@ -79,6 +80,11 @@ module Reservations
     end
 
     def run!
+      # Terrasse = ADMIN uniquement (décision Michael 2026-07-20). Hors admin, on
+      # NEUTRALISE tout param `terrasses` forgé AVANT le devis : il ne doit ni être
+      # facturé, ni gonfler le total/acompte, ni être persisté (miroir de
+      # `admin_price_override`, ignoré côté public même sur param forgé).
+      draft.terrasses = [] unless @admin
       validate_draft!
       quote = draft.quote(deposit_rate: @deposit_rate)
 
@@ -131,6 +137,11 @@ module Reservations
         @camping_booking = build_camping_booking_for!(@stay, quote)
         @van_booking     = build_van_booking_for!(@stay, quote)
         create_meal_orders!(@stay, draft)
+        # Terrasse (décision Michael 2026-07-20) : ADMIN UNIQUEMENT. Une occupation
+        # `CampingBooking` de `kind: "terrasse"` par JOUR. Ignorée hors admin, même
+        # sur param forgé (comme `price_override_cents`) — le funnel public ne
+        # l'expose jamais. Sa part de prix vient du devis (`quote.terrace_cents`).
+        build_terrace_bookings_for!(@stay) if terrace_enabled?
         # Sélections d'activités du funnel (epic #55, Phase 4) : chaque créneau
         # choisi devient un ExperienceBooking `pending` rattaché au Stay — de la
         # MÊME nature que ceux du rail email, donc soumis à la validation porteur.
@@ -275,7 +286,20 @@ module Reservations
         draft.hamacs.any? ||
         draft_has_spaces?(draft) ||
         draft.bookable_experiences? ||
-        draft_has_meals?(draft)
+        draft_has_meals?(draft) ||
+        (terrace_enabled? && draft_has_terrace?(draft))
+    end
+
+    # Terrasse activée : ADMIN uniquement (jamais le funnel public, même sur param
+    # forgé — miroir de `admin_price_override`).
+    def terrace_enabled?
+      @admin && draft_has_terrace?(draft)
+    end
+
+    # Crée les CampingBooking terrasse (un par jour) du séjour. No-op si aucune
+    # entrée exploitable. Retourne les occupations créées.
+    def build_terrace_bookings_for!(stay)
+      persist_terrace_bookings!(stay: stay, draft: draft, status: stay_status)
     end
 
     # Réservables facturés À LA NUIT : ils exigent au moins une nuit. Les espaces

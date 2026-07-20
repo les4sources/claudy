@@ -62,6 +62,11 @@ module Pricing
     # Van / camping-car : forfait/nuit/véhicule.
     VAN_PER_NIGHT_CENTS = 1_500 # 15 €/nuit
 
+    # Terrasse : forfait €/pers/JOUR (occupation d'un jour, ex. BBQ de randonneurs).
+    # ADMIN UNIQUEMENT — jamais proposé sur le funnel public (décision Michael,
+    # 2026-07-20). Persisté en `CampingBooking` de `kind: "terrasse"`, un par jour.
+    TERRACE_PER_PERSON_DAY_CENTS = 250 # 2,50 €/pers/jour
+
     # Salles & cuisine pro — tarifs semaine (lun-jeu + ven journée).
     # Source : https://www.les4sources.be/sejours/tarifs
     # Périodes : "journee" | "soiree" | "journee_et_soiree"

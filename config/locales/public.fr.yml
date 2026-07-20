@@ -16,6 +16,7 @@ fr:
         space: "Espace"
         camping: "Camping"
         van: "Van / camping-car"
+        terrace: "Terrasse"
         meal: "Repas"
         other: "Prestation"
       payment_status:

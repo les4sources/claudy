@@ -24,6 +24,7 @@ module Stays
     include SpaceComposition
     include CampingComposition
     include MealComposition
+    include TerraceComposition
 
     class Invalid < StandardError; end
 
@@ -75,6 +76,10 @@ module Stays
         reconcile_camping!
         reconcile_van!
         reconcile_meals!(@stay, @draft)
+        # Terrasse (ADMIN uniquement, décision Michael 2026-07-20) : rebuild complet
+        # des occupations `CampingBooking` de kind "terrasse", indépendamment du
+        # camping (tente). Ce canal EST admin — aucun garde-fou public à prévoir.
+        reconcile_terrace!(@stay, @draft)
         reconcile_experiences!
         @stay.recompute_aggregates!
       end
@@ -97,7 +102,8 @@ module Stays
       # des compositions légitimes (validé par Michael).
       unless @draft.lodging.present? || draft_has_spaces?(@draft) ||
              draft_has_camping?(@draft) || draft_has_van?(@draft) ||
-             @draft.bookable_experiences? || draft_has_meals?(@draft)
+             @draft.bookable_experiences? || draft_has_meals?(@draft) ||
+             draft_has_terrace?(@draft)
         raise_invalid("Veuillez sélectionner un hébergement, un espace, un emplacement camping/van, une activité ou un repas.")
       end
       unless Customer.exploitable_email?(@draft.email)

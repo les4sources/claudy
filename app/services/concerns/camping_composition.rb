@@ -281,18 +281,24 @@ module CampingComposition
     )
   end
 
-  # Réservables déjà rattachés au séjour (édition), ou nil.
+  # Réservables déjà rattachés au séjour (édition), ou nil. Un `CampingBooking`
+  # peut désormais aussi être une TERRASSE (`kind: "terrasse"`, décision Michael
+  # 2026-07-20) : on l'EXCLUT ici — le camping ne compte que les tentes, sinon la
+  # réconciliation camping écraserait les terrasses du séjour.
   def existing_camping_booking(stay)
-    stay.stay_items.where(bookable_type: "CampingBooking").first&.bookable
+    existing_camping_bookings(stay).first
   end
 
   def existing_van_booking(stay)
     stay.stay_items.where(bookable_type: "VanBooking").first&.bookable
   end
 
-  # TOUS les CampingBooking / VanBooking du séjour (une plage par nuit possible).
+  # TOUS les CampingBooking CAMPING (kind "tente") du séjour — les terrasses
+  # (kind "terrasse", `TerraceComposition`) sont exclues du périmètre camping.
   def existing_camping_bookings(stay)
-    stay.stay_items.where(bookable_type: "CampingBooking").filter_map(&:bookable)
+    stay.stay_items.where(bookable_type: "CampingBooking")
+        .filter_map(&:bookable)
+        .reject { |b| b.kind == "terrasse" }
   end
 
   def existing_van_bookings(stay)
@@ -304,6 +310,9 @@ module CampingComposition
   # `rebuild_reservations!` pour les chambres) plutôt que de réconcilier N↔N.
   def detach_camping_bookings!(stay)
     stay.stay_items.where(bookable_type: "CampingBooking").each do |item|
+      # Ne JAMAIS détacher une terrasse ici (kind "terrasse") : elle a son propre
+      # cycle de vie (`TerraceComposition`). Le camping ne touche qu'aux tentes.
+      next if item.bookable&.kind == "terrasse"
       item.bookable&.soft_delete!(validate: false)
       item.soft_delete!(validate: false)
     end

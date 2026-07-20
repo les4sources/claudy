@@ -54,6 +54,9 @@ class PricingModel
     def camping_cents = category_cents(:camping)
     def van_cents     = category_cents(:van)
     def meals_cents   = category_cents(:meal)
+    # Terrasse (ADMIN uniquement, décision Michael 2026-07-20) : part datée à la
+    # journée, portée par des `CampingBooking` de `kind: "terrasse"`.
+    def terrace_cents = category_cents(:terrace)
 
     # Base hébergement/camping/repas = total hors activités ET hors espaces.
     # INCHANGÉ pour préserver EXACTEMENT le canal public (funnel) : côté public,
@@ -67,7 +70,7 @@ class PricingModel
     # camping/van/repas vivent sur leurs propres modèles. Invariant admin :
     #   lodging_only + spaces + camping + van + meals == total_excluding_experiences.
     def lodging_only_cents
-      lodging_bundle_cents - camping_cents - van_cents - meals_cents
+      lodging_bundle_cents - camping_cents - van_cents - meals_cents - terrace_cents
     end
 
     def category_cents(category)
@@ -106,6 +109,7 @@ class PricingModel
     lines.concat(hall_lines)
     lines.concat(space_slot_lines)
     lines.concat(meal_lines)
+    lines.concat(terrace_lines)
     lines.concat(pizza_party_lines)
     lines.concat(dog_lines)
 
@@ -258,6 +262,27 @@ class PricingModel
       next if people < 1
       Line.new(label: "#{humanize(entry[:kind])} — #{people} pers",
                amount_cents: unit * people, category: :meal)
+    end
+  end
+
+  # --- Terrasse : forfait €/pers/JOUR, une ligne par jour d'occupation ---
+  # ADMIN uniquement (décision Michael 2026-07-20). Chaque entrée `{date, people}`
+  # devient une ligne `category: :terrace`. Le funnel public ne porte jamais cette
+  # clé (non permise dans le contrôleur public) → aucune ligne côté public.
+  def terrace_lines
+    Array(read(:terrasses)).filter_map do |entry|
+      entry  = entry.symbolize_keys if entry.respond_to?(:symbolize_keys)
+      people = entry[:people].to_i
+      next if people < 1
+      date_label = begin
+        Date.parse(entry[:date].to_s).strftime("%-d/%m")
+      rescue ArgumentError, TypeError
+        nil
+      end
+      label = date_label ? "Terrasse — #{date_label}, #{people} pers" : "Terrasse — #{people} pers"
+      Line.new(label: label,
+               amount_cents: Pricing::Catalog::TERRACE_PER_PERSON_DAY_CENTS * people,
+               category: :terrace)
     end
   end
 

@@ -10,6 +10,11 @@ module Reservations
     attr_accessor :lodging_id, :lodging_night_ids, :per_night_resources,
                   :arrival_date, :departure_date, :dogs_count,
                   :halls, :space_slots, :meals, :pizza_parties,
+                  # Terrasse (ADMIN uniquement, décision Michael 2026-07-20) :
+                  # lignes datées `[{date:, people:}]` — une par JOUR d'occupation,
+                  # comme les repas datés. Le funnel public ne la porte JAMAIS
+                  # (non permis dans le contrôleur public).
+                  :terrasses,
                   :experiences,
                   :first_name, :last_name, :email, :phone, :group_name,
                   # Client organisation vs particulier (form admin, addendum) :
@@ -49,6 +54,7 @@ module Reservations
       @halls             = symbolize_rows(attrs[:halls])
       @space_slots       = parse_space_slots(attrs[:space_slots])
       @meals             = symbolize_rows(attrs[:meals])
+      @terrasses         = symbolize_rows(attrs[:terrasses])
       @pizza_parties     = symbolize_rows(attrs[:pizza_parties])
       @hamacs            = symbolize_rows(attrs[:hamacs])
       @experiences       = symbolize_rows(attrs[:experiences])
@@ -144,6 +150,7 @@ module Reservations
         halls:              halls,
         space_slots:        space_slots,
         meals:              meals,
+        terrasses:          terrasses,
         pizza_parties:      pizza_parties,
         hamacs:             hamacs,
         experiences:        experiences,
