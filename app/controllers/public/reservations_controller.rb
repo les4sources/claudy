@@ -111,9 +111,12 @@ module Public
         pay = Payments::PayService.new(payment_id: builder.payment.id)
         clear_draft
         if pay.run
-          redirect_to pay.checkout_session_url, allow_other_host: true, data: { turbo: false }
+          redirect_to pay.checkout_session_url, allow_other_host: true
         else
-          redirect_to public_booking_path(builder.booking.token),
+          # Stay-first : le Booking n'existe pas pour un séjour sans hébergement
+          # classique (camping/espaces seuls) — seul le Stay est garanti. Même
+          # cible que le lien du mail de confirmation (/sejour/:token).
+          redirect_to public_stay_path(builder.stay.token),
                       notice: "Votre demande est enregistrée. Nous vous recontactons pour le paiement."
         end
       else
