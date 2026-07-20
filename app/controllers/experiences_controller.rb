@@ -4,14 +4,21 @@ class ExperiencesController < BaseController
   breadcrumb "Activités", :experiences_path, match: :exact
 
   def index
-    # Calendrier global MENSUEL des créneaux, toutes activités confondues
-    # (2026-07-20) — `?month=YYYY-MM` navigue.
-    @global_calendar = Experiences::GlobalMonthCalendar.new(month: params[:month])
+    # Un porteur restreint ne voit QUE ses propres activités (son planning) ;
+    # l'admin global voit tout (comportement inchangé).
+    scope = restricted_human_id ? Experience.where(human_id: restricted_human_id) : Experience.all
+    # Calendrier global MENSUEL des créneaux — borné aux activités du porteur
+    # restreint le cas échéant (`?month=YYYY-MM` navigue).
+    @global_calendar = Experiences::GlobalMonthCalendar.new(
+      month: params[:month],
+      human_id: restricted_human_id
+    )
     @experiences = ExperienceDecorator
-      .decorate_collection(Experience.all.order(name: :asc))
+      .decorate_collection(scope.order(name: :asc))
     # Créneaux FUTURS par activité (une requête pour toute la liste).
     @future_slot_counts = ExperienceAvailability
       .where("available_on >= ?", Date.today)
+      .where(experience_id: scope.select(:id))
       .group(:experience_id)
       .count
   end
@@ -75,8 +82,19 @@ class ExperiencesController < BaseController
 
   private
 
+  # `human_id` de cloisonnement quand le porteur est restreint à ses activités,
+  # sinon `nil` (pas de restriction). Fail-closed : un porteur restreint sans
+  # `human_id` ne verra aucune activité plutôt que toutes.
+  def restricted_human_id
+    current_user&.restricted_to_experiences? ? current_user.human_id : nil
+  end
+
   def get_experience
     @experience = Experience.find(params[:id])
+    # Un porteur restreint ne peut consulter qu'une de SES activités.
+    if restricted_human_id && @experience.human_id != restricted_human_id
+      redirect_to experiences_path
+    end
   end
 
   def set_presenters

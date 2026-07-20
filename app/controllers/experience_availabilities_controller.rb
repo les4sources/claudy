@@ -37,6 +37,13 @@ class ExperienceAvailabilitiesController < ApplicationController
 
   def set_experience
     @experience = Experience.find(params[:experience_id])
+    # Ce contrôleur n'hérite pas de BaseController : on applique ici le même
+    # cloisonnement qu'ailleurs pour un porteur restreint (il ne pose/retire de
+    # créneaux que sur SES propres activités).
+    if current_user&.restricted_to_experiences? &&
+       @experience.human_id != current_user.human_id
+      redirect_to experiences_path and return
+    end
   end
 
   # Grille du mois que le porteur regardait (pas le mois courant) : sans ça,

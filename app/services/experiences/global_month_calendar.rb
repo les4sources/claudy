@@ -6,7 +6,8 @@ module Experiences
   class GlobalMonthCalendar
     attr_reader :month
 
-    def initialize(month: nil)
+    def initialize(month: nil, human_id: nil)
+      @human_id = human_id
       base = case month
              when Date then month
              when /\A\d{4}-\d{2}\z/ then (Date.parse("#{month}-01") rescue Date.today)
@@ -31,8 +32,13 @@ module Experiences
     # activités qui ont au moins un créneau dans le mois affiché.
     def rows
       @rows ||= begin
-        counts = ExperienceAvailability
-                 .where(available_on: days.first..days.last)
+        availabilities = ExperienceAvailability.where(available_on: days.first..days.last)
+        # Cloisonnement porteur restreint : ne compter que ses propres activités.
+        if @human_id
+          availabilities = availabilities.joins(:experience)
+                                         .where(experiences: { human_id: @human_id })
+        end
+        counts = availabilities
                  .group(:experience_id, :available_on)
                  .count
         by_experience = {}

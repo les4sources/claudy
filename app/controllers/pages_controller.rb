@@ -77,7 +77,9 @@ class PagesController < BaseController
         .where(date: @date, space_booking: { status: "confirmed" })
     )
     @roles = Role.all
-    @humans = Human.all
+    # Écran d'assignation des rôles (veilleur, nourrissage…) : on n'y liste que
+    # les membres dont la gestion des rôles est activée.
+    @humans = Human.roles_enabled
     @human_roles = HumanRole.where(date: @date)
     @lodgings = LodgingDecorator.decorate_collection(Lodging.all)
     render layout: !turbo_frame_request?
@@ -125,8 +127,9 @@ class PagesController < BaseController
       .count
 
     # Créer la liste avec tous les humains actifs (même ceux avec 0 veilles)
-    # Le default_scope de Human filtre déjà par status: 'active'
-    all_active_humans = Human.all.pluck(:id, :name).to_h
+    # Le default_scope de Human filtre déjà par status: 'active' ; on restreint
+    # en plus aux membres dont la gestion des rôles est activée.
+    all_active_humans = Human.roles_enabled.pluck(:id, :name).to_h
     @watchman_stats = all_active_humans.map do |human_id, human_name|
       {
         human: Human.find(human_id),

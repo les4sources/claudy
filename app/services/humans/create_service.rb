@@ -34,7 +34,9 @@ module Humans
           :summary,
           :description,
           :photo,
-          :photo_cache
+          :photo_cache,
+          :roles_enabled,
+          :status
         )
     end
   end

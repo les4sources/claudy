@@ -4,7 +4,7 @@ class OrganisationController < BaseController
   breadcrumb "Organisation", :organisation_path, match: :exact
 
   def index
-    humans = Human.cycle_active.order(:name).to_a
+    humans = Human.cycle_active.roles_enabled.order(:name).to_a
     @current_cycle = Cycle.covering_date(Date.today).first
     @cycles = Cycle.chronological
 
@@ -71,7 +71,7 @@ class OrganisationController < BaseController
     @total_hours = @human.cycle_actions.not_archived.active.where.not(category: :reportee).sum(:hours) || 0
     @current_cycle = Cycle.covering_date(Date.today).first
     @archives_count = @human.cycle_actions.archived.count
-    @cycle_active_humans = Human.cycle_active.where.not(id: @human.id).order(:name)
+    @cycle_active_humans = Human.cycle_active.roles_enabled.where.not(id: @human.id).order(:name)
     @gathering_actions = @human.gathering_actions
                                 .includes(:gathering)
                                 .order(:completed, created_at: :desc)

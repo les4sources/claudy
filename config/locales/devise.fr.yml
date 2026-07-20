@@ -35,6 +35,7 @@ fr:
       send_instructions: Vous allez recevoir sous quelques minutes un email comportant des instructions pour confirmer votre compte.
       send_paranoid_instructions: Si votre email existe sur notre base de données, vous recevrez sous quelques minutes un message avec des instructions pour confirmer votre compte.
     failure:
+      account_deactivated: Votre compte a été désactivé. Contactez un administrateur.
       already_authenticated: Vous êtes déjà connecté(e).
       inactive: Votre compte n’est pas encore activé.
       invalid: "%{authentication_keys} ou mot de passe incorrect."
