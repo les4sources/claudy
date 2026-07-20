@@ -23,8 +23,8 @@
       .block.min-w-0.w-full
         div.min-w-0
           strong.block.min-w-0.break-words
-            / Édition unifiée (epic #81, Phase 8) : avec un séjour vivant, le lien
-            / ouvre la modale séjour (comme l'overlay). Sinon, lien booking legacy.
+            / Édition unifiée (issue #99) : avec un séjour vivant, le lien ouvre la
+            / modale séjour (comme l'overlay). Cas résiduel sans séjour → fiche show.
             - if stay
               = link_to booking.decorate.group_or_name.html_safe, stay_path(stay), data: { action: "stay-details#open" }, class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
             - else

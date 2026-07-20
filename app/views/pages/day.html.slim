@@ -73,8 +73,8 @@
                     - @room_reservations.where(room: room).each do |reservation|
                       .grid.grid-cols-3.gap-4
                         div
-                          / Édition unifiée (epic #81, Phase 8) : hors modale, on
-                          / renvoie vers le form séjour ; sinon fiche booking legacy.
+                          / Édition unifiée (issue #99) : hors modale, on renvoie
+                          / vers le form séjour ; cas résiduel sans séjour → fiche show.
                           - if (stay = reservation.booking.stay)
                             = link_to reservation.booking.group_or_name, edit_stay_path(stay), data: { "turbo-frame": "_top" }, class: "claudy-link"
                           - else
@@ -106,8 +106,8 @@
                     - @room_reservations.where(room: room).each do |reservation|
                       .grid.grid-cols-3.gap-4
                         div
-                          / Édition unifiée (epic #81, Phase 8) : hors modale, on
-                          / renvoie vers le form séjour ; sinon fiche booking legacy.
+                          / Édition unifiée (issue #99) : hors modale, on renvoie
+                          / vers le form séjour ; cas résiduel sans séjour → fiche show.
                           - if (stay = reservation.booking.stay)
                             = link_to reservation.booking.group_or_name, edit_stay_path(stay), data: { "turbo-frame": "_top" }, class: "claudy-link"
                           - else
@@ -139,8 +139,8 @@
                     - @room_reservations.where(room: room).each do |reservation|
                       .grid.grid-cols-3.gap-4
                         div
-                          / Édition unifiée (epic #81, Phase 8) : hors modale, on
-                          / renvoie vers le form séjour ; sinon fiche booking legacy.
+                          / Édition unifiée (issue #99) : hors modale, on renvoie
+                          / vers le form séjour ; cas résiduel sans séjour → fiche show.
                           - if (stay = reservation.booking.stay)
                             = link_to reservation.booking.group_or_name, edit_stay_path(stay), data: { "turbo-frame": "_top" }, class: "claudy-link"
                           - else
@@ -181,8 +181,8 @@
                     - @space_reservations.where(space: space).each do |space_reservation|
                       .grid.grid-cols-3.gap-4
                         div
-                          / Édition unifiée (epic #81, Phase 8) : hors modale, on
-                          / renvoie vers le form séjour ; sinon fiche espace legacy.
+                          / Édition unifiée (issue #99) : hors modale, on renvoie
+                          / vers le form séjour ; cas résiduel sans séjour → fiche show.
                           - if (stay = space_reservation.space_booking.stay)
                             = link_to space_reservation.space_booking.group_or_name, edit_stay_path(stay), data: { "turbo-frame": "_top" }, class: "claudy-link"
                           - else

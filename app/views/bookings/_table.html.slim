@@ -23,8 +23,8 @@
             = booking.status_emoji
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
             strong(class="#{booking.declined? ? "line-through" : nil}")
-              / Édition unifiée (epic #81, Phase 8) : la liste renvoie vers le form
-              / séjour quand un Stay vivant existe ; sinon fiche booking legacy.
+              / Édition unifiée (issue #99) : la liste renvoie vers le form séjour
+              / quand un Stay vivant existe ; cas résiduel sans séjour → fiche show.
               - if (stay = booking.stay)
                 = link_to booking.group_or_name, edit_stay_path(stay), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
               - else

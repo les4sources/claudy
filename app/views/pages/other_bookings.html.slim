@@ -18,8 +18,8 @@
                   .block
                     div
                       strong
-                        / Édition unifiée (epic #81, Phase 8) : hors modale, on renvoie
-                        / vers le form séjour ; sinon fiche booking legacy.
+                        / Édition unifiée (issue #99) : hors modale, on renvoie vers
+                        / le form séjour ; cas résiduel sans séjour → fiche show.
                         - if (stay = booking.stay)
                           = link_to booking.decorate.name.html_safe, edit_stay_path(stay), class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
                         - else

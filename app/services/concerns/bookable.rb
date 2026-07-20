@@ -149,8 +149,8 @@ module Bookable
         room_ids: []
       )
       # NB (epic #26, Phase 3) : `payments_attributes` a été RETIRÉ de la liste
-      # permise. Aucun formulaire admin ne soumet de paiement niché (le partial
-      # bookings/form/_payment n'édite que :price/:invoice_status), et un Payment
+      # permise. Aucun formulaire admin ne soumet de paiement niché (l'écran
+      # d'édition legacy Booking a été retiré — issue #99), et un Payment
       # niché serait sauvé DANS @booking.save! — donc AVANT Stays::EnsureForBooking —
       # d'où un Payment sans stay_id (trou exploitable par requête forgée/API, et
       # bloquant en Phase 4 où stay_id devient requis). Les paiements admin passent
