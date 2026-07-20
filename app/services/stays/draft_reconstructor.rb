@@ -113,7 +113,11 @@ module Stays
       sb.space_reservations.map do |res|
         key = space_key_for(res.space)
         next if key.nil?
-        { kind: key, date: res.date&.iso8601, period: res.duration }
+        # Durée canonique persistée ("day"…) → clé de PRICING ("journee"…),
+        # sinon le devis d'édition ne retrouverait pas son tarif. Une valeur
+        # historique déjà en vocabulaire pricing passe inchangée.
+        period = SpaceComposition::PERIOD_BY_DURATION.fetch(res.duration.to_s, res.duration)
+        { kind: key, date: res.date&.iso8601, period: period }
       end.compact
     end
 
