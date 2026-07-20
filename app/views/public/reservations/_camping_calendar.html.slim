@@ -1,0 +1,52 @@
+/ Grille "Camping / Van" nuit par nuit — extraite pour être RÉUTILISÉE par le
+/ form admin (issue camping/van une nuit du séjour, Michael 2026-07-20), sur le
+/ modèle de `_spaces_calendar`. Chaque cellule est un stepper (0..max), le name
+/ posté est `#{param_root}[per_night_resources][tente|van][]` — MÊME représentation
+/ que le funnel public, donc même persistance (plages contiguës).
+/ Locals :
+/   - param_root : préfixe des name= (défaut "reservation" ; le form admin passe "stay") ;
+/   - draft      : le Draft à préremplir (défaut @draft) ;
+/   - days       : les jours-colonnes (défaut @stay_nights).
+- param_root  = local_assigns.fetch(:param_root, "reservation")
+- draft       = local_assigns.fetch(:draft, @draft)
+- stay_nights = local_assigns.fetch(:days, @stay_nights)
+- fr_short_days = %w[Dim Lun Mar Mer Jeu Ven Sam]
+- pnr = (draft&.per_night_resources || {})
+
+.bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-5
+  .flex.items-start.justify-between.mb-4
+    div
+      h2.text-base.font-semibold.text-gray-900 🏕️ Camping / Van
+      p.text-xs.text-gray-400.mt-0.5 Nombre de personnes en tente et de véhicules, nuit par nuit. Capacité globale du terrain (forçable).
+
+  - if stay_nights.blank?
+    p.text-xs.text-gray-400 Choisissez les dates du séjour pour composer le camping nuit par nuit.
+  - else
+    .overflow-x-auto.-mx-5.px-5
+      table.border-collapse style="min-width: #{130 + stay_nights.size * 104}px"
+        thead
+          tr
+            th.text-left.py-2.pr-4.text-xs.font-normal.text-gray-400.whitespace-nowrap.sticky.left-5.z-10.bg-white style="width:130px"
+            - stay_nights.each_with_index do |night, i|
+              th.text-center.py-2.px-1 style="width:104px"
+                p.text-xs.font-bold.text-gray-600 = "Nuit #{i + 1}"
+                p.text-xs.text-gray-400.font-normal = "#{fr_short_days[night.wday]} #{night.strftime("%-d/%-m")}"
+
+        tbody
+          tr class="border-t border-gray-50"
+            td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
+              .text-sm.text-gray-800.font-medium ⛺ Tentes
+              p.text-xs.text-gray-400.leading-tight nb de personnes
+            - stay_nights.each_with_index do |_night, i|
+              - val = (pnr["tente"] || [])[i].to_i
+              td.py-2.px-1.text-center
+                = render "public/reservations/stepper_cell", name: "#{param_root}[per_night_resources][tente][]", val: val, max: 50
+
+          tr class="border-t border-gray-50"
+            td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
+              .text-sm.text-gray-800.font-medium 🚐 Vans
+              p.text-xs.text-gray-400.leading-tight nb de véhicules
+            - stay_nights.each_with_index do |_night, i|
+              - val = (pnr["van"] || [])[i].to_i
+              td.py-2.px-1.text-center
+                = render "public/reservations/stepper_cell", name: "#{param_root}[per_night_resources][van][]", val: val, max: 20
