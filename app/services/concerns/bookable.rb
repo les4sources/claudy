@@ -22,11 +22,16 @@ module Bookable
         end
       else
         # Gite
-        # Not available if any reservations for the same date range
+        # Not available if any reservations for the same date range.
+        # Requête directe déjà en NUITS : `from..(to-1.day)` couvre les nuits du
+        # séjour (le jour de départ n'est pas occupé) — sémantique correcte, inchangée.
+        # `available_between?` attend en revanche une FENÊTRE DE SÉJOUR `[from, to)`
+        # (contrat issue #94) et retranche lui-même le jour de départ : on lui passe
+        # donc `to_date` NON décrémenté (sinon double soustraction → dernière nuit ignorée).
         if room.reservations
             .includes(:booking)
             .where(date: (@booking.from_date)..(@booking.to_date - 1.day), booking: { status: "confirmed", deleted_at: nil })
-            .any? || !@booking.lodging.available_between?(@booking.from_date, @booking.to_date - 1.day)
+            .any? || !@booking.lodging.available_between?(@booking.from_date, @booking.to_date)
           set_error_message("Cet hébergement n'est pas disponible à cette date.")
           return false
         end
