@@ -26,8 +26,43 @@
                        hint: "Un fichier au format JPG, PNG ou GIF"
         = f.hidden_field :photo_cache
 
-    = f.label :description, 
+    = f.label :description,
               "Présentation complète"
     = f.rich_text_area :description
 
 hr
+
+.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Accès & rôles"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    / Statut du membre — un membre inactif reste dans l'équipe mais ne peut plus
+    / se connecter (même si son compte existe).
+    .space-y-1
+      = f.hidden_field :status, value: "inactive"
+      label class="inline-flex items-center gap-3 cursor-pointer"
+        input type="checkbox" name="human[status]" value="active" checked=(@human.status == "active") role="switch" aria-label="Membre actif" class="sr-only peer"
+        span.ui-switch aria-hidden="true"
+        span.ui-switch-label-off class="text-sm font-medium text-gray-500" Membre inactif
+        span.ui-switch-label-on class="text-sm font-medium text-emerald-700" Membre actif
+
+    / Gestion des rôles — quand elle est désactivée, le membre n'apparaît plus
+    / dans les écrans d'assignation de rôles (veilleur, nourrissage…).
+    .space-y-1
+      = f.hidden_field :roles_enabled, value: "0"
+      label class="inline-flex items-center gap-3 cursor-pointer"
+        input type="checkbox" name="human[roles_enabled]" value="1" checked=f.object.roles_enabled role="switch" aria-label="Gestion des rôles" class="sr-only peer"
+        span.ui-switch aria-hidden="true"
+        span.ui-switch-label-off class="text-sm font-medium text-gray-500" Rôles désactivés
+        span.ui-switch-label-on class="text-sm font-medium text-emerald-700" Gestion des rôles
+
+    - if @human.user
+      / Accès restreint — l'utilisateur ne voit QUE son planning d'activités.
+      .space-y-1
+        input type="hidden" name="human[restricted_to_experiences]" value="0"
+        label class="inline-flex items-center gap-3 cursor-pointer"
+          input type="checkbox" name="human[restricted_to_experiences]" value="1" checked=@human.user.restricted_to_experiences? role="switch" aria-label="Accès restreint aux activités" class="sr-only peer"
+          span.ui-switch aria-hidden="true"
+          span.ui-switch-label-off class="text-sm font-medium text-gray-500" Accès complet
+          span.ui-switch-label-on class="text-sm font-medium text-emerald-700" Restreint à ses activités

@@ -27,6 +27,10 @@ class Human < ApplicationRecord
   has_many :carried_agenda_items, class_name: "AgendaItem", foreign_key: :carrier_id, dependent: :nullify
 
   scope :cycle_active, -> { where(cycle_active: true) }
+  # Membres pour lesquels la gestion des rôles (veilleur, nourrissage…) est
+  # activée. Un membre avec `roles_enabled: false` reste dans l'équipe mais
+  # n'apparaît plus dans les écrans d'assignation de rôles.
+  scope :roles_enabled, -> { where(roles_enabled: true) }
   # Personnes pouvant recevoir un compte d'accès (un email est requis pour
   # créer le User Devise). Cf. epic #25 — Phase 2 (comptes porteurs).
   scope :with_email, -> { where.not(email: [nil, ""]) }

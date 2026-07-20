@@ -11,8 +11,8 @@
     .space-y-2
       = f.label :role_team,
                 "Ce rôle est assignable à"
-      = f.collection_check_boxes :role_team, 
-                                 Human.all.order(:name),
+      = f.collection_check_boxes :role_team,
+                                 Human.roles_enabled.order(:name),
                                  :id, :name do |cb|
         .relative.flex.items-start
           .flex.h-5.items-center
