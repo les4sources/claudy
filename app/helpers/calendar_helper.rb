@@ -68,6 +68,28 @@ module CalendarHelper
     "(#{day}/#{total_nights})"
   end
 
+  # --- Bandeau d'état des cartes booking (section veilleur + popovers) -------
+  # Check-in / Check-out en couleurs distinctes : lisibilité immédiate pour le
+  # veilleur du jour (2026-07-20). « Séjour » remplace « Hébergement ».
+  def booking_popover_state(booking)
+    today = Date.today
+    return :checkin  if today == booking.from_date
+    return :checkout if today == booking.to_date
+    return :upcoming if today < booking.from_date
+    return :ongoing  if today < booking.to_date
+    :past
+  end
+
+  def booking_popover_band(state)
+    {
+      checkin:  ["🛎️ Check-in",       "bg-emerald-200 text-emerald-800"],
+      checkout: ["🧳 Check-out",       "bg-amber-200 text-amber-800"],
+      upcoming: ["Séjour à venir",     "bg-cyan-200 text-cyan-700"],
+      ongoing:  ["🛏️ Séjour en cours", "bg-cyan-200 text-cyan-700"],
+      past:     ["Séjour passé",       "bg-gray-200 text-gray-600"]
+    }.fetch(state)
+  end
+
   def button_to_next_month(current_date, data = {}, options = {})
     link_to(params.permit(:date, :no_title, :view).merge(date: current_date.next_month), class: "btn-page-header-with-icon", data: data) do
       if options[:no_label].nil?

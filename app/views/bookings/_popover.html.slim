@@ -1,14 +1,9 @@
-.p-1.text-center.text-xs.font-bold.bg-cyan-200.text-cyan-700.rounded-t-lg
-  - if Date.today == booking.object.from_date
-    | Check-in
-  - elsif Date.today == booking.object.to_date
-    | Check-out
-  - elsif Date.today < booking.object.from_date
-    | Hébergement à venir
-  - elsif Date.today > booking.object.from_date && Date.today < booking.object.to_date
-    | Hébergement en cours
-  - else
-    | Hébergement passé
+/ Bandeau d'état — couleurs distinctes pour rendre Check-in / Check-out
+  immédiatement lisibles par le veilleur du jour (demande Michael 2026-07-20).
+- state = booking_popover_state(booking.object)
+- band = booking_popover_band(state)
+div class="p-1 text-center text-xs font-bold rounded-t-lg #{band.last}"
+  = band.first
 .p-3
   .flex.items-center.justify-between.mb-2
     .text-sm.font-semibold.leading-none.text-gray-900

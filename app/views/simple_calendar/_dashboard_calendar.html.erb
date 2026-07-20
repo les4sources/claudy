@@ -30,9 +30,20 @@
     <% end %>
 
     <div class="flex mb-4 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <% if !@grouped_reservations[Date.today].nil? %>
-        <% @grouped_reservations[Date.today].sort_by {|r| r.start_time }.group_by { |r| r.booking.id }.each do |grouped_reservations| %>
-          <% reservation = grouped_reservations.last.first %>
+      <%# Section veilleur (2026-07-20) : les CHECK-OUT du jour n'apparaissaient
+          jamais — un départ du jour n'a pas de nuitée aujourd'hui (nuits
+          [arrivée, départ)), sa dernière réservation date d'HIER. On les
+          récupère donc depuis la veille, et on ordonne selon le flux du
+          veilleur : départs, puis arrivées, puis séjours en cours. %>
+      <% today_res    = (@grouped_reservations[Date.today] || []) %>
+      <% checkout_res = (@grouped_reservations[Date.today - 1] || []).select { |r| r.booking.to_date == Date.today } %>
+      <% all_res = (checkout_res + today_res) %>
+      <% if all_res.any? %>
+        <% state_order = { checkout: 0, checkin: 1, ongoing: 2 } %>
+        <% groups = all_res.sort_by { |r| r.start_time }.group_by { |r| r.booking.id }.values %>
+        <% groups = groups.sort_by { |rs| b = rs.first.booking; [state_order.fetch(booking_popover_state(b), 3), b.from_date.to_s] } %>
+        <% groups.each do |grouped_reservations| %>
+          <% reservation = grouped_reservations.first %>
           <% booking = BookingDecorator.new(reservation.booking) %>
           <div class="place-self-stretch text-sm font-light text-gray-500 bg-white border border-gray-200 rounded-lg shadow-xl">
             <%= render "bookings/popover", booking: booking %>
