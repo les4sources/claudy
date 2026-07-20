@@ -4,9 +4,29 @@ class CustomersController < BaseController
 
   breadcrumb "Clients", :customers_path, match: :exact
 
+  PER_PAGE = 100
+
   def index
-    scope = Customer.search(params[:q]).order(created_at: :desc)
-    @customers = CustomerDecorator.decorate_collection(scope.paginate(page: params[:page], per_page: 30))
+    @type = params[:type].presence_in(Customer::CUSTOMER_TYPES)
+    @sort = params[:sort]
+    @direction = params[:direction] == "asc" ? "asc" : "desc"
+
+    # Compteur total (scalaire) calculé sur la relation NON groupée : la relation
+    # `with_stay_counts` porte un GROUP BY dont le `.count` renverrait un hash et
+    # casserait will_paginate. On l'injecte donc via `total_entries:`.
+    filtered = Customer.search(params[:q])
+    filtered = filtered.where(customer_type: @type) if @type
+    total = filtered.count
+
+    scope = filtered.with_stay_counts
+    scope = if @sort == "stays"
+      scope.order(Arel.sql("stays_count #{@direction.upcase}, customers.created_at DESC"))
+    else
+      scope.order(created_at: :desc)
+    end
+
+    paginated = scope.paginate(page: params[:page], per_page: PER_PAGE, total_entries: total)
+    @customers = CustomerDecorator.decorate_collection(paginated)
   end
 
   # Autocomplete JSON pour la re-ventilation (recherche dynamique de client cible).

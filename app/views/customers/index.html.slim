@@ -2,14 +2,34 @@
   = render "layouts/components/page_header",
            title: "Clients"
 
+/ Recherche — les filtres/tri actifs sont conservés via des champs cachés pour
+/ que la recherche se combine avec eux plutôt que de les réinitialiser.
 .mb-4
   = form_with url: customers_path, method: :get do
+    - if @type
+      = hidden_field_tag :type, @type
+    - if @sort.present?
+      = hidden_field_tag :sort, @sort
+      = hidden_field_tag :direction, @direction
     .flex.gap-2
       = text_field_tag :q, params[:q],
                        placeholder: "Rechercher par email, nom ou organisation…",
                        class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
       = submit_tag "Rechercher",
                    class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+
+/ Filtre par type de client (param `type`), combinable avec la recherche et le tri.
+- pill_base = "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium"
+- pill_active = "bg-indigo-600 text-white"
+- pill_idle = "bg-gray-100 text-gray-700 hover:bg-gray-200"
+nav.mb-4.flex.gap-2
+  = link_to "Tous", customers_path(request.query_parameters.except("type", "page")), class: "#{pill_base} #{@type.nil? ? pill_active : pill_idle}"
+  = link_to "Particuliers", customers_path(request.query_parameters.merge("type" => "individual").except("page")), class: "#{pill_base} #{@type == 'individual' ? pill_active : pill_idle}"
+  = link_to "Organisations", customers_path(request.query_parameters.merge("type" => "organization").except("page")), class: "#{pill_base} #{@type == 'organization' ? pill_active : pill_idle}"
+
+/ Tri par nombre de séjours : 1er clic → desc, 2e clic → asc. Conserve les autres params.
+- next_dir = (@sort == "stays" && @direction == "desc") ? "asc" : "desc"
+- sort_url = customers_path(request.query_parameters.merge("sort" => "stays", "direction" => next_dir).except("page"))
 
 .overflow-x-auto.relative
   table.w-full.text-sm.text-left.text-gray-500
@@ -22,14 +42,19 @@
         th.py-3.px-6[scope="col"]
           | Type
         th.py-3.px-6.text-center[scope="col"]
-          | Séjours
+          = link_to sort_url, class: "inline-flex items-center gap-1 hover:text-gray-900" do
+            | Séjours
+            - if @sort == "stays"
+              span.text-gray-400 = @direction == "desc" ? "▼" : "▲"
+        th.py-3.px-6.text-center[scope="col"]
+          | À venir
     tbody
       - if @customers.empty?
         tr.border-b.bg-white
-          td.py-4.px-6.text-gray-500[colspan="4"]
+          td.py-4.px-6.text-gray-500[colspan="5"]
             | Aucun client.
       - @customers.each do |customer|
-        tr.border-b.bg-white
+        tr.border-b.bg-white id="customer_#{customer.id}"
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
             = link_to customer.display_name,
                       customer_path(customer),
@@ -40,6 +65,8 @@
           td.py-4.px-6
             = customer.type_badge
           td.py-4.px-6.text-center
-            = customer.stays.count
+            span.font-medium.text-gray-900 data-role="total-stays" = customer.stays_count
+          td.py-4.px-6.text-center
+            span.text-gray-700 data-role="upcoming-stays" = customer.upcoming_stays_count
 
 = will_paginate @customers
