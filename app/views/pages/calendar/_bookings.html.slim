@@ -56,10 +56,4 @@
   / la cellule du jour, entre les avatars veilleurs et les notes — voir
   / pages/calendar/_day_bookings rendu par simple_calendar/_dashboard_calendar.
 
-/ Activity feed
-.mt-8.pb-5.border-b.border-gray-200
-  h2.text-base.font-semibold.leading-6.text-gray-900 Activité récente
-
-.flow-root.mt-8
-  ul.-mb-8[role="list"]
-    = render_activities(@activities)
+/ Le fil « Activité récente » vit désormais sur sa page dédiée (recent_activity_path).

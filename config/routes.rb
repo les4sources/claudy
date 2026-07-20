@@ -171,6 +171,7 @@ Rails.application.routes.draw do
   get "comptabilite", to: "accounting#index", as: :accounting
 
   get "pages/day", to: "pages#day", as: :day_details
+  get "recent-activity", to: "pages#recent_activity", as: :recent_activity
   get "pages/dashboard", to: "pages#dashboard", as: :dashboard
   get "pages/other_bookings", to: "pages#other_bookings"
   get "pages/other_space_bookings", to: "pages#other_space_bookings"

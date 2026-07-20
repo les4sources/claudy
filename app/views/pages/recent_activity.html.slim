@@ -1,0 +1,9 @@
+/ Fil d'activité récente — page dédiée (sortie du bas du calendrier, 2026-07-20).
+.max-w-3xl.mx-auto.px-4.py-8
+  .pb-5.border-b.border-gray-200
+    h1.text-2xl.font-bold.text-gray-900 Activité récente
+    p.text-sm.text-gray-500.mt-1 Les 14 derniers jours d'activité sur Claudy.
+
+  .flow-root.mt-8
+    ul.-mb-8[role="list"]
+      = render_activities(@activities)
