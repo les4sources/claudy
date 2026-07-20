@@ -46,6 +46,11 @@ module Stays
           # Les associations de la cible ont changé en base : on recharge avant de
           # recalculer, sinon `recompute_aggregates!` lirait un cache périmé.
           target.reload
+          # Consolidation ADDITIVE des notes (principe P2 : rien ne se perd). On
+          # rassemble sur le survivant les notes internes ET publiques de la cible,
+          # des sources et de TOUS les bookables migrés, en une seule note interne
+          # et une seule note publique. Les colonnes des bookables ne sont PAS vidées.
+          consolidate_notes!
           target.recompute_aggregates!
           # `set_payment_status` est non-bang (partagé avec le webhook Stripe) :
           # ici, un échec silencieux violerait le tout-ou-rien de la fusion.
@@ -143,5 +148,102 @@ module Stays
     def soft_deleted?(stay)
       stay.deleted_at.present?
     end
+
+    # --- Consolidation des notes (fusion) -----------------------------------
+    # Réunit sur le survivant les notes éparpillées, sans jamais rien perdre ni
+    # vider les colonnes d'origine des bookables. Écrit uniquement si le résultat
+    # change quelque chose (aucune note nulle part → survivant inchangé).
+    def consolidate_notes!
+      consolidate_internal_notes!
+      consolidate_public_notes!
+    end
+
+    # Note interne : texte brut. Ordre : note du séjour cible, notes des séjours
+    # sources, PUIS notes internes de tous les bookables (cible + migrés). Ignore
+    # les blancs, déduplique les contenus strictement identiques. Une seule note
+    # → contenu tel quel ; plusieurs → en-têtes de provenance courts + jointure.
+    def consolidate_internal_notes!
+      entries = []
+      entries << internal_entry("séjour ##{target.id}", target.notes)
+      sources.each { |source| entries << internal_entry("séjour ##{source.id}", source.notes) }
+      target.bookables.each do |bookable|
+        entries << internal_entry(bookable_provenance(bookable), bookable_notes(bookable))
+      end
+
+      entries = dedup_internal(entries)
+      return if entries.empty?
+
+      consolidated =
+        if entries.size == 1
+          entries.first[:content]
+        else
+          entries.map { |e| "— Note de #{e[:label]} —\n#{e[:content]}" }.join("\n\n")
+        end
+
+      target.update!(notes: consolidated) if consolidated != target.notes
+    end
+
+    # Note publique : HTML ActionText. Rassemble les `public_notes` de la cible,
+    # des sources et des bookables qui en portent (Booking, SpaceBooking). Une
+    # seule → telle quelle ; plusieurs → concaténées, séparées par `<hr>`.
+    # Déduplique les contenus HTML identiques.
+    def consolidate_public_notes!
+      htmls = []
+      htmls << public_html(target)
+      sources.each { |source| htmls << public_html(source) }
+      target.bookables.each { |bookable| htmls << public_html(bookable) }
+
+      htmls = htmls.compact.uniq
+      return if htmls.empty?
+
+      consolidated = htmls.size == 1 ? htmls.first : htmls.join("<hr>")
+      target.public_notes = consolidated if consolidated != current_public_html(target)
+    end
+
+    # {label:, content:} d'une note interne, ou nil si le contenu est blanc.
+    def internal_entry(label, content)
+      text = content.to_s.strip
+      return nil if text.blank?
+      { label: label, content: text }
+    end
+
+    # Retire les nil et déduplique sur le CONTENU strict (garde la 1re provenance).
+    def dedup_internal(entries)
+      seen = {}
+      entries.compact.each { |e| seen[e[:content]] ||= e }
+      seen.values
+    end
+
+    # Provenance courte d'un bookable, p.ex. « La Hulotte (résa #345) ».
+    def bookable_provenance(bookable)
+      "#{bookable_label(bookable)} (résa ##{bookable.id})"
+    end
+
+    def bookable_label(bookable)
+      case bookable
+      when Booking      then bookable.lodging&.name.presence || "Hébergement"
+      when SpaceBooking then bookable.spaces.map(&:name).compact_blank.join(", ").presence || "Espace"
+      when CampingBooking then "Camping"
+      when VanBooking     then "Van"
+      else bookable.class.model_name.human
+      end
+    end
+
+    # Colonne `notes` texte brut d'un bookable (Booking/SpaceBooking/Camping/Van).
+    def bookable_notes(bookable)
+      bookable.respond_to?(:notes) ? bookable.notes : nil
+    end
+
+    # HTML de la note publique d'un enregistrement (Stay/Booking/SpaceBooking) qui
+    # porte `public_notes` (ActionText), ou nil si absent/vide.
+    def public_html(record)
+      return nil unless record.respond_to?(:public_notes)
+      rich = record.public_notes
+      return nil if rich.nil?
+      body = rich.body
+      return nil if body.nil? || body.to_plain_text.blank?
+      body.to_html
+    end
+    alias current_public_html public_html
   end
 end

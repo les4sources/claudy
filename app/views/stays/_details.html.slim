@@ -108,6 +108,20 @@ div id="stay-details-#{@stay.id}"
 
     = render "stays/activities"
 
+    / Notes du séjour (lecture). La note interne (texte brut, style post-it) ne
+    / fuite JAMAIS côté client ; la note publique (ActionText) est celle vue par
+    / le client sur /sejour/:token.
+    - if @stay.notes.present? || @stay.public_notes.present?
+      .border-t.border-gray-200.pt-4.space-y-3
+        - if @stay.notes.present?
+          .rounded-md.bg-yellow-50.ring-1.ring-yellow-200.px-4.py-3
+            h4.text-sm.font-medium.text-yellow-900.mb-1 Note interne
+            .text-sm.text-yellow-800.space-y-2 = simple_format @stay.notes
+        - if @stay.public_notes.present?
+          .rounded-md.bg-gray-50.ring-1.ring-gray-200.px-4.py-3
+            h4.text-sm.font-medium.text-gray-700.mb-1 Note publique (visible client)
+            .content.text-sm.text-gray-800.space-y-2 == @stay.public_notes
+
     - bk = @stay.primary_bookable
     - group = bk&.try(:group_name).presence
     .border-t.border-gray-200.pt-4

@@ -247,6 +247,19 @@
         = number_field_tag "stay[price_override]", override_prefill, id: "stay_price_override", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
         p.text-xs.text-gray-500 Laisser vide pour appliquer le devis B2C. Un montant remplace le total du devis.
 
+    / --- Notes --------------------------------------------------------------
+    / Note interne (texte brut, jamais visible du client) + note publique
+    / (ActionText, affichée sur /sejour/:token). À la création, la note interne
+    / saisie est concaténée avec l'éventuelle note auto (multi-chiens).
+    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+      h2.text-base.font-semibold.text-gray-900 Notes
+      .space-y-1
+        label.block.text-sm.font-medium.text-gray-700 for="stay_notes" Note interne (jamais visible du client)
+        = text_area_tag "stay[notes]", @stay&.notes, id: "stay_notes", rows: 3, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+      .space-y-1
+        label.block.text-sm.font-medium.text-gray-700 Note publique (visible par le client)
+        = rich_text_area_tag "stay[public_notes]", @stay&.public_notes&.to_trix_html, class: "trix-content"
+
     .flex.justify-end.gap-3
       = link_to "Annuler", recent_stays_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
       = submit_tag submit_label, class: "inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"

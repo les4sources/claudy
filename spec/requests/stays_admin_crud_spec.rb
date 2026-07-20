@@ -123,6 +123,45 @@ RSpec.describe "Stays — CRUD admin (epic #66)", type: :request do
     end
   end
 
+  describe "notes du séjour" do
+    def update_params(stay, overrides = {})
+      {
+        stay: {
+          customer_mode: "existing", customer_id: stay.customer_id, new_customer: {},
+          arrival_date: arrival.iso8601, departure_date: departure.iso8601,
+          adults: 2, children: 0, dogs_count: 0,
+          lodging_id: lodging.id, status: "pending"
+        }.merge(overrides)
+      }
+    end
+
+    it "CRÉATION avec multi-chiens : la note saisie COEXISTE avec l'avertissement auto" do
+      post stays_path, params: base_params(dogs_count: 3, notes: "Client VIP", public_notes: "<div>Merci de votre visite</div>")
+      stay = Stay.order(:created_at).last
+
+      # Les DEUX textes internes coexistent (concaténation, pas d'écrasement).
+      expect(stay.notes).to include("Client VIP")
+      expect(stay.notes).to include("multi-chiens")
+      # Note publique posée telle quelle.
+      expect(stay.public_notes.body.to_plain_text).to include("Merci de votre visite")
+    end
+
+    it "ÉDITION : persiste la note interne + publique, puis les préremplit au re-edit" do
+      stay = create_admin_stay
+      patch stay_path(stay), params: update_params(stay, notes: "Note interne éditée",
+                                                         public_notes: "<div>Note publique éditée</div>")
+      expect(response).to redirect_to(recent_stays_path)
+
+      stay.reload
+      expect(stay.notes).to eq("Note interne éditée")
+      expect(stay.public_notes.body.to_plain_text).to include("Note publique éditée")
+
+      get edit_stay_path(stay)
+      expect(response.body).to include("Note interne éditée")
+      expect(response.body).to include("Note publique éditée")
+    end
+  end
+
   describe "PATCH /stays/:id (update)" do
     let!(:cheveche) { Lodging.create!(name: "La Chevêche", summary: "gîte") }
 

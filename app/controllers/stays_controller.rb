@@ -54,6 +54,10 @@ class StaysController < BaseController
     )
 
     if builder.run
+      # Notes admin appliquées APRÈS la création : la note interne saisie est
+      # CONCATÉNÉE avec l'éventuelle note auto du Builder (avertissement
+      # multi-chiens) — on ne l'écrase jamais. La note publique est posée telle quelle.
+      apply_admin_notes(builder.stay, merge_auto: true)
       flash[:notice] = "Séjour créé."
       flash[:alert]  = combined_warning(builder)
       redirect_to recent_stays_path
@@ -85,6 +89,9 @@ class StaysController < BaseController
     )
 
     if updater.run
+      # À l'édition, le form préremplit les notes courantes : simple écrasement
+      # (note interne texte brut + note publique ActionText), pas de concaténation.
+      apply_admin_notes(@stay, merge_auto: false)
       flash[:notice] = "Séjour mis à jour."
       flash[:alert]  = combined_warning(updater)
       redirect_to recent_stays_path
@@ -308,6 +315,25 @@ class StaysController < BaseController
 
   def set_stay
     @stay = Stay.find(params[:id])
+  end
+
+  # Applique la note interne (colonne `notes`, texte brut) et la note publique
+  # (`public_notes`, ActionText) saisies au form. `merge_auto` distingue les deux
+  # canaux : à la CRÉATION, on concatène la note interne saisie avec l'éventuelle
+  # note auto déjà posée par le Builder (multi-chiens) ; à l'ÉDITION, on écrase.
+  def apply_admin_notes(stay, merge_auto:)
+    return if stay.nil?
+
+    admin_internal = stay_params[:notes].to_s.strip.presence
+    stay.notes =
+      if merge_auto
+        [admin_internal, stay.notes.to_s.strip.presence].compact.uniq.join("\n\n").presence
+      else
+        admin_internal
+      end
+
+    stay.public_notes = stay_params[:public_notes] if stay_params.key?(:public_notes)
+    stay.save!
   end
 
   # Concatène l'avertissement de disponibilité (force-dispo) et celui des espaces

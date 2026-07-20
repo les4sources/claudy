@@ -42,6 +42,10 @@ class Stay < ApplicationRecord
   belongs_to :customer
   has_many :stay_items, dependent: :destroy
   has_many :experience_bookings, dependent: :destroy
+  # Note publique du séjour (visible client) — ActionText, PAS de colonne. Consolide
+  # à la fusion les `public_notes` des bookables + des stays sources (epic notes).
+  # La note INTERNE reste la colonne `stays.notes` (texte brut, jamais publique).
+  has_rich_text :public_notes
   # Repas (epic #66, Phase 3) : rattachés en direct (pas d'occupation calendrier),
   # sur le modèle d'`experience_bookings`.
   has_many :meal_orders, dependent: :destroy

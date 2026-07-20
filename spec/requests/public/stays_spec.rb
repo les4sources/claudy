@@ -58,6 +58,17 @@ RSpec.describe "Public::Stays (/sejour/:token)", type: :request do
       get "/sejour/inconnu"
       expect(response).to have_http_status(:not_found)
     end
+
+    it "affiche la note PUBLIQUE du séjour et JAMAIS la note interne" do
+      stay.update!(notes: "SECRET INTERNE À NE PAS DIVULGUER")
+      stay.public_notes = "<div>Bon séjour à vous et à bientôt</div>"
+      stay.save!
+
+      get "/sejour/#{stay.token}"
+
+      expect(response.body).to include("Bon séjour à vous et à bientôt")
+      expect(response.body).not_to include("SECRET INTERNE")
+    end
   end
 
   # Epic #55, Phase 3 — ventilation exigible + bouton « Payer le solde ».

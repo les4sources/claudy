@@ -225,6 +225,71 @@ RSpec.describe Stays::MergeService, type: :service do
     end
   end
 
+  describe "consolidation des notes" do
+    let(:customer) { make_customer("notes@example.com") }
+    let!(:lodging) { Lodging.create!(name: "La Hulotte", summary: "gîte") }
+
+    it "réunit UNE note interne et UNE note publique consolidées sur le survivant, sans vider les bookables" do
+      target = make_stay(customer: customer, notes: "Note du séjour cible")
+      source = make_stay(customer: customer, notes: "Note du séjour source",
+                         arrival_date: Date.new(2026, 8, 4), departure_date: Date.new(2026, 8, 6))
+
+      booking = make_booking(notes: "Note interne hébergement", lodging: lodging)
+      booking.public_notes = "<div>Bienvenue à La Hulotte</div>"
+      booking.save!
+
+      space_booking = make_space_booking(notes: "Note interne espace")
+      space_booking.public_notes = "<div>Salle prête dès 14h</div>"
+      space_booking.save!
+
+      attach(target, booking)
+      attach(source, space_booking)
+
+      expect(described_class.new(target: target, sources: [source]).run).to be_truthy
+      target.reload
+
+      # Note interne consolidée : tous les contenus + provenance.
+      expect(target.notes).to include("Note du séjour cible")
+      expect(target.notes).to include("Note du séjour source")
+      expect(target.notes).to include("Note interne hébergement")
+      expect(target.notes).to include("Note interne espace")
+      expect(target.notes).to include("La Hulotte") # provenance du bookable
+
+      # Note publique consolidée (HTML des deux bookables).
+      html = target.public_notes.body.to_html
+      expect(html).to include("Bienvenue à La Hulotte")
+      expect(html).to include("Salle prête dès 14h")
+
+      # Les bookables GARDENT leurs notes (rien ne se perd — principe P2).
+      expect(booking.reload.notes).to eq("Note interne hébergement")
+      expect(space_booking.reload.notes).to eq("Note interne espace")
+      expect(space_booking.public_notes.body.to_plain_text).to include("Salle prête dès 14h")
+    end
+
+    it "laisse les notes du survivant inchangées quand il n'y a AUCUNE note nulle part" do
+      target = make_stay(customer: customer)
+      source = make_stay(customer: customer,
+                         arrival_date: Date.new(2026, 8, 4), departure_date: Date.new(2026, 8, 6))
+      attach(target, make_booking)
+      attach(source, make_space_booking)
+
+      expect(described_class.new(target: target, sources: [source]).run).to be_truthy
+      expect(target.reload.notes).to be_blank
+      expect(target.public_notes.body).to be_blank
+    end
+
+    it "déduplique les contenus internes strictement identiques" do
+      target = make_stay(customer: customer, notes: "Même note")
+      source = make_stay(customer: customer, notes: "Même note",
+                         arrival_date: Date.new(2026, 8, 4), departure_date: Date.new(2026, 8, 6))
+      attach(target, make_booking(notes: "Même note", lodging: lodging))
+      attach(source, make_space_booking)
+
+      expect(described_class.new(target: target, sources: [source]).run).to be_truthy
+      expect(target.reload.notes.scan("Même note").size).to eq(1)
+    end
+  end
+
   describe "intégrité transactionnelle" do
     it "ne modifie rien si une étape échoue en cours de route" do
       customer = make_customer("tx@example.com")
