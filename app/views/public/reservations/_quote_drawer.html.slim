@@ -1,0 +1,45 @@
+/ Barre récap sticky + drawer devis — présent sur composer / activités /
+/ coordonnées. Remplace l'ancien panneau latéral (aside.lg:col-span-1) : le
+/ visiteur ouvre le détail du devis à la demande, à tout moment.
+/ Le contenu du panneau (turbo_frame « reservation_quote ») et le total de la
+/ barre (« quote_sticky_total ») sont re-rendus par quote.turbo_stream.slim.
+div data-controller="public--quote-drawer" data-action="keydown.esc@window->public--quote-drawer#closeOnEsc"
+
+  / ── Barre récap sticky (bas de viewport) ─────────────────────
+  .fixed.bottom-0.inset-x-0.z-40.border-t.border-gray-100.bg-white(class="bg-opacity-95 backdrop-blur shadow-[0_-4px_24px_rgba(0,0,0,0.07)]")
+    .max-w-5xl.mx-auto.px-4.py-3.flex.items-center.justify-between.gap-4
+      = render "public/reservations/quote_sticky_total", quote: quote
+      button type="button" data-action="public--quote-drawer#open" aria-haspopup="dialog" class="flex-shrink-0 inline-flex items-center gap-2 rounded-xl bg-emerald-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 shadow-sm transition-colors"
+        | Voir le détail
+        svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"
+          path fill-rule="evenodd" d="M10 3a1 1 0 011 1v10.586l3.293-3.293a1 1 0 011.414 1.414l-5 5a1 1 0 01-1.414 0l-5-5a1 1 0 111.414-1.414L9 14.586V4a1 1 0 011-1z" clip-rule="evenodd"
+
+  / ── Overlay ──────────────────────────────────────────────────
+  .fixed.inset-0.bg-black.z-40.transition-opacity.duration-300(
+    class="bg-opacity-50 opacity-0 pointer-events-none"
+    data-public--quote-drawer-target="overlay"
+    data-action="click->public--quote-drawer#close")
+
+  / ── Panneau devis (drawer) ───────────────────────────────────
+  / Mobile : bottom-sheet (translate-y). Desktop (sm+) : slide-over droite,
+  / ~28rem (max-w-md), translate-x. Fermé au montage.
+  aside(
+    role="dialog"
+    aria-modal="true"
+    aria-label="Votre devis"
+    aria-hidden="true"
+    tabindex="-1"
+    class="fixed z-50 bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-out focus:outline-none inset-x-0 bottom-0 max-h-[80vh] rounded-t-2xl sm:inset-y-0 sm:right-0 sm:left-auto sm:bottom-auto sm:h-full sm:max-h-none sm:w-full sm:max-w-md sm:rounded-t-none sm:rounded-l-2xl translate-y-full sm:translate-y-0 sm:translate-x-full"
+    data-public--quote-drawer-target="panel")
+
+    / En-tête
+    .flex-shrink-0.flex.items-center.justify-between.border-b.border-gray-100.px-5.py-4
+      h2.text-base.font-semibold.text-gray-900 Votre devis
+      button type="button" data-action="public--quote-drawer#close" aria-label="Fermer le devis" class="text-gray-400 hover:text-gray-600 transition-colors rounded-lg p-1 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"
+          path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"
+
+    / Contenu scrollable — le quote panel complet
+    .flex-1.overflow-y-auto.overscroll-contain.px-5.py-5(class="[-webkit-overflow-scrolling:touch]")
+      = turbo_frame_tag "reservation_quote"
+        = render "public/reservations/quote_panel", quote: quote, draft: draft, continue_path: nil

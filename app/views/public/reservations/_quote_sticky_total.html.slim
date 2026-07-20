@@ -1,0 +1,6 @@
+/ Total TVAC affiché dans la barre récap sticky. Extrait en partial pour rester
+/ identique entre le rendu initial et le remplacement Turbo Stream (POST /devis).
+div id="quote_sticky_total" class="flex items-baseline gap-2 min-w-0"
+  span class="text-xs font-medium text-gray-500 uppercase tracking-wide hidden sm:inline" Total TVAC
+  span class="text-lg font-bold text-gray-900 truncate leading-none"
+    = number_to_currency(quote.total_cents / 100.0, unit: "€", format: "%n %u", precision: 2)
