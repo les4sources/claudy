@@ -1,0 +1,49 @@
+/ Bloc SÉJOUR UNIFIÉ — UN SEUL bloc par séjour et par jour (remplace les blocs
+/ par composant : chambres + gîte + espaces + camping + van fusionnés en badges
+/ compacts sur un même bloc). Couleur stable par séjour (style inline via
+/ CalendarHelper#stay_block_style). Le câblage `data-stay-*` + l'overlay
+/ `stay-details#open` sont IDENTIQUES aux anciens blocs : la modale séjour ET le
+/ mode fusion (stay_merge, sélection par `[data-stay-id]`) continuent de marcher —
+/ un seul bloc sélectionnable par séjour et par jour. Agrégation : voir
+/ Calendar::DayStayBlocks. Locals : `block` (StayBlock), `date`.
+- stay = block.stay
+- confirmed = stay.status.to_s == "confirmed"
+- named = block.named_bookable
+- fallback = block.fallback_bookable
+- counter = stay_nights_counter(stay, date)
+div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min-w-0 shadow border-l-4 #{"opacity-50" unless confirmed}" style=stay_block_style(stay.id) data-stay-id=stay.id data-stay-label=stay_short_label(stay) data-stay-dates=stay_short_dates(stay))
+  .block.min-w-0.w-full
+    div.min-w-0
+      strong.block.min-w-0.break-words
+        / Titre = nom du groupe/client (comme avant). Le lien ouvre la modale séjour.
+        - if named
+          = link_to named.group_or_name.html_safe, stay_path(stay), data: { action: "stay-details#open" }, class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
+        - else
+          = link_to (fallback&.group_name.presence || fallback&.name.presence || stay_short_label(stay)), stay_path(stay), data: { action: "stay-details#open" }, class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
+      - if counter
+        span.text-gray-500 =< counter
+
+    / Badges compacts de tous les composants du séjour, sur le même bloc.
+    .flex.flex-wrap.items-center.gap-1.mt-1
+      / Hébergement : gîte entier (un badge) OU chambres (un badge par chambre).
+      - block.booking_groups.each do |group|
+        - if group.booking.lodging.nil?
+          - group.reservations.each do |reservation|
+            = room_badge(reservation.room)
+        - else
+          = group.booking.lodging_badge
+      / Espaces : un badge par espace occupé, suivi de la durée si pertinente.
+      - block.space_groups.each do |group|
+        - group.space_reservations.each do |space_reservation|
+          = space_badge(space_reservation.space)
+        span.text-xs.text-gray-500.whitespace-nowrap = group.space_booking.duration
+      / Camping : capacité globale du terrain (pas de ressource nommée) → chip info.
+      - block.camping_bookings.each do |camping|
+        span(class="text-xs text-gray-600 whitespace-nowrap") ⛺ Camping · #{camping.people} pers.
+      / Van / camping-car : même logique que le camping.
+      - block.van_bookings.each do |van|
+        span(class="text-xs text-gray-600 whitespace-nowrap") 🚐 Van · #{van.vehicles} véh.
+
+  / Overlay cliquable : ouvre la modale séjour (epic #66, Phase 5) et sert de
+  / cible unique au mode fusion pour tout le séjour.
+  a.absolute.top-0.left-0.w-full.h-full(href=stay_path(stay) data-action="stay-details#open" aria-label="Voir le séjour ##{stay.id}")

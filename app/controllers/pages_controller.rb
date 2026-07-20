@@ -21,14 +21,14 @@ class PagesController < BaseController
       # regrouper les occupations par `stay_id` sans requête N+1.
       @space_reservations = SpaceReservation.all
         .includes(:space_booking)
-        .preload(:space, space_booking: [:event, :space_reservations, :stay])
+        .preload(:space, space_booking: [:event, :space_reservations, { stay: :customer }])
         .where.not(space_booking: { status: ["declined", "canceled"] })
         .between_times(@first, @last, field: :date)
       @grouped_space_reservations = @space_reservations.to_a.group_by { |sr| sr.date }
       # group reservations by day (préchargement du séjour porteur, cf. supra)
       @reservations = Reservation.all
         .includes(:booking)
-        .preload(:room, booking: [:lodging, :reservations, :stay])
+        .preload(:room, booking: [:lodging, :reservations, { stay: :customer }])
         .where.not(booking: { status: ["declined", "canceled"] })
         .between_times(@first, @last, field: :date)
       @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
@@ -38,13 +38,13 @@ class PagesController < BaseController
       # séjour. Préchargement du séjour (anti-N+1).
       @grouped_camping_bookings = nights_grouped_by_day(
         CampingBooking
-          .includes(:stay)
+          .includes(stay: :customer)
           .where.not(status: ["declined", "canceled"])
           .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
       )
       @grouped_van_bookings = nights_grouped_by_day(
         VanBooking
-          .includes(:stay)
+          .includes(stay: :customer)
           .where.not(status: ["declined", "canceled"])
           .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
       )

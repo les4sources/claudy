@@ -8,12 +8,7 @@ export default class extends Controller {
     'pastWeeksToggler'
   ]
 
-  connect() {
-    console.log('connect dashboard-calendar')
-  }
-
   initialize() {
-    console.log('initialize dashboard-calendar')
     const isCurrent = this.data.get('current')
     if (isCurrent == 'true') {
       this.hidePastWeeks()
@@ -21,7 +16,6 @@ export default class extends Controller {
   }
 
   hidePastWeeks() {
-    console.log('hidePastWeeks')
     this.weekTargets.forEach((el, i) => {
       if (el.dataset.pastWeek == 'true') {
         el.classList.add('hidden')
@@ -36,9 +30,7 @@ export default class extends Controller {
 
   clickCalendar(e) {
     // hide popovers
-    console.log('click calendar', e.target.dataset.popoverTarget)
     document.querySelectorAll('.popover').forEach((element) => {
-      console.log(element.id, e.target.dataset.popoverTarget)
       if (element.id != e.target.dataset.popoverTarget) {
         element.classList.replace('visible', 'invisible')
       }
