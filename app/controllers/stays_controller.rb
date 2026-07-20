@@ -555,6 +555,12 @@ class StaysController < BaseController
       organization_name: contact[:organization_name],
       experiences:    activity_entries(p),
       halls:          space_entries(p),
+      # Grille camping/van par nuit (parité funnel, Michael 2026-07-20) : quand le
+      # form poste `stay[per_night_resources][tente|van][]`, le Draft en dérive
+      # `campings`/`vans` — même chemin que le funnel public. `campings:`/`vans:`
+      # ci-dessous ne servent plus que de REPLI (grille absente : emails legacy /
+      # form historique reconstruit sans dates).
+      per_night_resources: p[:per_night_resources],
       campings:       camping_entries(p),
       vans:           van_entries(p),
       meals:          meal_entries(p),

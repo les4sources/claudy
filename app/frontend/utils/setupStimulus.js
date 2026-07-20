@@ -34,6 +34,12 @@ import SpacesCalendarController from '../controllers/public/spaces_calendar_cont
 application.register('public--space-slot', SpaceSlotController);
 application.register('public--spaces-calendar', SpacesCalendarController);
 
+// Grille camping/van par nuit (Michael 2026-07-20) : le form Séjour admin
+// embarque la même grille steppers que le funnel. On enregistre le contrôleur
+// stepper public — MÊME fichier que le funnel, aucune copie de code.
+import StepperController from '../controllers/public/stepper_controller.js';
+application.register('public--stepper', StepperController);
+
 // Load and register view_components controllers
 registerControllers(
   application,

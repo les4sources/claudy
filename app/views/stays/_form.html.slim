@@ -195,23 +195,31 @@
             label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_departure_time" Heure de départ
             = text_field_tag "stay[space_billing][departure_time]", space_billing[:departure_time], id: "stay_space_billing_departure_time", placeholder: "ex. 11:00", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
-    / --- Camping (tente) ----------------------------------------------------
-    - camping_people = Array(@draft&.campings).sum { |c| (c.respond_to?(:symbolize_keys) ? c.symbolize_keys : c)[:people].to_i }
-    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Camping (tente)
-      p.text-sm.text-gray-500 Nombre de personnes en tente sur la durée du séjour. Capacité globale du terrain (forçable). Un séjour peut être composé de camping seul.
-      .space-y-1
-        label.block.text-sm.font-medium.text-gray-700 Personnes
-        = number_field_tag "stay[camping][people]", (camping_people.positive? ? camping_people : nil), min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-
-    / --- Van / camping-car --------------------------------------------------
-    - van_vehicles = Array(@draft&.vans).size
-    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Van / camping-car
-      p.text-sm.text-gray-500 Nombre de véhicules sur la durée du séjour. Capacité globale (forçable).
-      .space-y-1
-        label.block.text-sm.font-medium.text-gray-700 Véhicules
-        = number_field_tag "stay[van][vehicles]", (van_vehicles.positive? ? van_vehicles : nil), min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+    / --- Camping / Van (grille par nuit) ------------------------------------
+    / Parité funnel (Michael 2026-07-20) : dès que le séjour a des dates, on
+    / réutilise la grille steppers nuit-par-nuit du funnel (`per_night_resources`)
+    / — persistée honnêtement en plages contiguës. Sans dates (jamais un camping
+    / valide, mais on ne casse pas le form), on retombe sur les compteurs
+    / pleine-fenêtre historiques (`stay[camping][people]` / `stay[van][vehicles]`).
+    - if use_space_grid
+      section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+        h2.text-base.font-semibold.text-gray-900 Camping / Van
+        = render "public/reservations/camping_calendar", param_root: "stay", draft: @draft, days: @stay_nights
+    - else
+      - camping_people = Array(@draft&.campings).sum { |c| (c.respond_to?(:symbolize_keys) ? c.symbolize_keys : c)[:people].to_i }
+      - van_vehicles = Array(@draft&.vans).size
+      section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+        h2.text-base.font-semibold.text-gray-900 Camping (tente)
+        p.text-sm.text-gray-500 Choisissez les dates du séjour pour composer le camping nuit par nuit. À défaut, nombre de personnes sur toute la durée.
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 Personnes
+          = number_field_tag "stay[camping][people]", (camping_people.positive? ? camping_people : nil), min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+        h2.text-base.font-semibold.text-gray-900 Van / camping-car
+        p.text-sm.text-gray-500 Nombre de véhicules sur la durée du séjour. Capacité globale (forçable).
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 Véhicules
+          = number_field_tag "stay[van][vehicles]", (van_vehicles.positive? ? van_vehicles : nil), min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
     / --- Repas --------------------------------------------------------------
     - meal_kind_options = [["Repas végé (midi)", "repas_vege_midi"], ["Buffet pain-fromages", "buffet"]]

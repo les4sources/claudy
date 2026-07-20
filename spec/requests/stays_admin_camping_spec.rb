@@ -87,12 +87,18 @@ RSpec.describe "Stays — camping / van / repas (epic #66, Phase 3)", type: :req
       }
     end
 
-    it "préremplit le form d'édition avec le camping existant" do
+    it "préremplit la GRILLE d'édition avec le camping existant" do
+      # Réécrit (Michael 2026-07-20) : le séjour ayant des dates, le form rend la
+      # grille camping/van par nuit (parité funnel) — plus les champs pleine-fenêtre.
+      # Le camping [3 pers × 2 nuits] est reconstruit en `per_night_resources`
+      # {tente:[3,3]} par le DraftReconstructor → les steppers affichent 3 par nuit.
       stay = create_camping_only_stay
       get edit_stay_path(stay)
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Camping (tente)")
-      expect(response.body).to include('value="3"') # people prérempli
+      expect(response.body).to include("Camping / Van")
+      # Cellules de grille préremplies à 3 (name per_night_resources) + display.
+      expect(response.body).to include('name="stay[per_night_resources][tente][]"')
+      expect(response.body).to include('value="3"')
     end
 
     it "change le nombre de personnes et recalcule le total" do
