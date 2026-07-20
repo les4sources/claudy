@@ -45,28 +45,31 @@ module Calendar
     # Blocs unifiés (un par séjour), triés par id de séjour puis date d'arrivée
     # — même ordre stable qu'avant, pour ne pas faire sautiller le calendrier.
     def stay_blocks
+      # Clé = stay.id (revue Forge F4) : les quatre collections viennent de
+      # requêtes préchargées distinctes, donc d'INSTANCES Ruby différentes du
+      # même Stay — l'unicité du bloc ne doit pas dépendre de l'égalité AR.
       by_stay = {}
 
       @booking_groups.each do |group|
         stay = group.booking.stay
         next if stay.nil?
-        (by_stay[stay] ||= new_block(stay)).booking_groups << group
+        (by_stay[stay.id] ||= new_block(stay)).booking_groups << group
       end
 
       @space_groups.each do |group|
         stay = group.space_booking.stay
         next if stay.nil?
-        (by_stay[stay] ||= new_block(stay)).space_groups << group
+        (by_stay[stay.id] ||= new_block(stay)).space_groups << group
       end
 
       @camping.each do |camping|
         next if camping.stay.nil?
-        (by_stay[camping.stay] ||= new_block(camping.stay)).camping_bookings << camping
+        (by_stay[camping.stay.id] ||= new_block(camping.stay)).camping_bookings << camping
       end
 
       @van.each do |van|
         next if van.stay.nil?
-        (by_stay[van.stay] ||= new_block(van.stay)).van_bookings << van
+        (by_stay[van.stay.id] ||= new_block(van.stay)).van_bookings << van
       end
 
       by_stay.values.sort_by { |block| [block.stay.id.to_i, block.stay.arrival_date.to_s] }

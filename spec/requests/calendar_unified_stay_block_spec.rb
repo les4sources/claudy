@@ -68,6 +68,62 @@ RSpec.describe "Calendrier — bloc séjour unifié", type: :request do
     expect(response.body).to include("href=\"#{stay_path(stay)}\"")
   end
 
+  # Revue Forge F3 — les cas subtils du split avec/sans séjour, verrouillés.
+  it "rend UN bloc pour un séjour espaces-seuls (sans hébergement)" do
+    from = Date.today.next_occurring(:friday)
+
+    customer = Customers::UpsertByEmail.call(email: "salle@example.com", attrs: { first_name: "Salle" })
+    stay = Stay.create!(customer: customer, source: "manual", status: "confirmed",
+                        arrival_date: from, departure_date: from)
+    space_booking = SpaceBooking.create!(firstname: "Salle", group_name: "Salle seule",
+                                         from_date: from, to_date: from, status: "confirmed")
+    SpaceReservation.create!(space: space, space_booking: space_booking, date: from)
+    StayItem.create!(stay: stay, bookable: space_booking)
+
+    get "/"
+
+    expect(response.body.scan("data-stay-id=\"#{stay.id}\"").size).to eq(1)
+    # Pas de double rendu : l'espace AVEC séjour ne sort plus en bloc espace legacy.
+    expect(response.body).not_to include("data-space-booking-day-entry=\"#{space_booking.id}\"")
+  end
+
+  it "rend le bloc séjour un jour où seul l'ESPACE occupe (aucune chambre ce jour-là)" do
+    from = Date.today.next_occurring(:friday)
+
+    customer = Customers::UpsertByEmail.call(email: "decale@example.com", attrs: { first_name: "Décalé" })
+    stay = Stay.create!(customer: customer, source: "manual", status: "confirmed",
+                        arrival_date: from, departure_date: from + 2)
+    booking = Booking.create!(firstname: "Décalé", group_name: "Séjour Décalé", lodging: nil,
+                              from_date: from, to_date: from + 1, adults: 2, children: 0, babies: 0,
+                              status: "confirmed", booking_type: "lodging", price_cents: 0)
+    Reservation.create!(booking: booking, room: room_a, date: from) # chambre : nuit `from` uniquement
+    StayItem.create!(stay: stay, bookable: booking)
+    space_booking = SpaceBooking.create!(firstname: "Décalé", group_name: "Séjour Décalé",
+                                         from_date: from + 2, to_date: from + 2, status: "confirmed")
+    SpaceReservation.create!(space: space, space_booking: space_booking, date: from + 2) # jour du départ
+    StayItem.create!(stay: stay, bookable: space_booking)
+
+    get "/"
+
+    # Deux jours rendus pour ce séjour : la nuit chambre ET le jour espace-seul.
+    expect(response.body.scan("data-stay-id=\"#{stay.id}\"").size).to eq(2)
+    # Compteur borné (Forge F1) : le jour du départ n'affiche jamais (3/2).
+    expect(response.body).not_to include("(3/2)")
+  end
+
+  it "laisse un espace SANS séjour garder son bloc espace legacy" do
+    from = Date.today.next_occurring(:friday)
+
+    space_booking = SpaceBooking.create!(firstname: "Externe", group_name: "Salle externe",
+                                         from_date: from, to_date: from, status: "confirmed")
+    SpaceReservation.create!(space: space, space_booking: space_booking, date: from)
+    # PAS de Stay / StayItem.
+
+    get "/"
+
+    expect(response.body).to include("data-space-booking-day-entry=\"#{space_booking.id}\"")
+  end
+
   it "laisse un booking SANS séjour garder son propre bloc et son lien fiche" do
     from = Date.today.next_occurring(:friday)
 

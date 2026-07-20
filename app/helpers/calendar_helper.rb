@@ -61,7 +61,10 @@ module CalendarHelper
     total_nights = (to - from).to_i
     return nil if total_nights <= 1
 
-    day = (current_date.to_date - from + 1).to_i
+    # Borné : une occupation posée le jour du départ (espace réservé le jour du
+    # checkout — les dates du séjour dérivent du max des bookables) afficherait
+    # sinon un « (3/2) » absurde. Revue Forge F1.
+    day = (current_date.to_date - from + 1).to_i.clamp(1, total_nights)
     "(#{day}/#{total_nights})"
   end
 
