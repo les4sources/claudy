@@ -17,9 +17,9 @@ div id="stay-details-#{@stay.id}"
     / le form d'édition. Le changement de statut propage aux réservables (veto).
     .flex.flex-wrap.items-center.gap-2.border-t.border-gray-200.pt-3
       - if @stay.status == "confirmed"
-        = button_to "Repasser en attente", update_status_stay_path(@stay, status: "pending"), method: :patch, class: "inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100"
+        = button_to "Repasser en attente", update_status_stay_path(@stay, status: "pending"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100"
       - else
-        = button_to "Confirmer le séjour", update_status_stay_path(@stay, status: "confirmed"), method: :patch, class: "inline-flex items-center rounded-md border border-transparent bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700"
+        = button_to "Confirmer le séjour", update_status_stay_path(@stay, status: "confirmed"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "inline-flex items-center rounded-md border border-transparent bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700"
       - if @stay.token.present?
         = link_to "Solde / paiement client ↗", public_stay_path(@stay.token), target: "_blank", rel: "noopener", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
 
