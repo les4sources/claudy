@@ -42,6 +42,21 @@ RSpec.describe "Stays — disponibilité temps réel (issue #77)", type: :reques
     expect(body["available"]).to be(false)
   end
 
+  it "renvoie available: true pour une rotation dos-à-dos (issue #94)" do
+    # Séjour existant B[+32 → +34] confirmé : occupe les NUITS +32 et +33.
+    later_from = Date.today + 32
+    later_to   = Date.today + 34
+    occ = Booking.create!(firstname: "Occ", from_date: later_from, to_date: later_to, adults: 1, status: "confirmed")
+    (later_from...later_to).each { |d| Reservation.create!(booking: occ, room: hulotte.rooms.first, date: d) }
+
+    # Nouveau séjour A[+30 → +32] : son jour de départ (+32) = jour d'arrivée de B.
+    # Avant le fix, la requête inclusive `date: +30..+32` captait la nuit +32 de B
+    # et refusait A à tort. Désormais A ne vérifie que les nuits +30 et +31 : libre.
+    body = get_availability(arrival_date: (Date.today + 30).iso8601, departure_date: (Date.today + 32).iso8601)
+    expect(body["checkable"]).to be(true)
+    expect(body["available"]).to be(true)
+  end
+
   it "renvoie checkable: false sans hébergement ou sans dates" do
     expect(get_availability(lodging_id: "")["checkable"]).to be(false)
     expect(get_availability(arrival_date: "")["checkable"]).to be(false)
