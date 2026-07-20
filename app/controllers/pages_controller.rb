@@ -51,8 +51,14 @@ class PagesController < BaseController
           .where.not(status: ["declined", "canceled"])
           .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
       )
-      @activities = PublicActivity::Activity.where("created_at > ?", 14.days.ago).order(created_at: :desc)
     end
+  end
+
+  # Fil d'activité récente — page dédiée (2026-07-20, sortie du bas du
+  # calendrier). NB : cette action avait été perdue dans une collision de
+  # checkout le soir même (page rendue implicitement avec @activities nil).
+  def recent_activity
+    @activities = PublicActivity::Activity.where("created_at > ?", 14.days.ago).order(created_at: :desc)
   end
 
   # details for a specific day

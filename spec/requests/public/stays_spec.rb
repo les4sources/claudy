@@ -133,3 +133,25 @@ RSpec.describe "Public::Stays (/sejour/:token)", type: :request do
     end
   end
 end
+
+# Fourre-tout OTA (2026-07-20) : un client fourre-tout (générique ou par OTA)
+# ne doit JAMAIS voir d'autres séjours sur la page publique d'un séjour — les
+# clients standards, eux, verront à terme leur historique.
+RSpec.describe "Public /sejour/:token — anti-fuite fourre-tout", type: :request do
+  it "la page d'un séjour d'un client fourre-tout OTA ne mentionne aucun autre séjour" do
+    airbnb = Customer.create!(email: Customer::OTA_CATCH_ALL_EMAILS.fetch("airbnb"),
+                              first_name: "Client", last_name: "Airbnb", customer_type: "organization", organization_name: "Airbnb")
+    expect(airbnb.catch_all?).to be(true)
+
+    stay_a = Stay.create!(customer: airbnb, source: "manual", status: "confirmed",
+                          arrival_date: Date.today + 10, departure_date: Date.today + 12)
+    stay_b = Stay.create!(customer: airbnb, source: "manual", status: "confirmed",
+                          arrival_date: Date.today + 20, departure_date: Date.today + 22)
+
+    get "/sejour/#{stay_a.token}"
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include(stay_b.token)
+    expect(response.body).not_to include("##{stay_b.id}")
+  end
+end

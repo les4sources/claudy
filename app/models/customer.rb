@@ -31,6 +31,15 @@ class Customer < ApplicationRecord
   # Email of the conventional catch-all customer that collects every legacy
   # booking without an exploitable email. Re-ventilated later via the merge flow.
   CATCH_ALL_EMAIL = "client@les4sources.be".freeze
+  # Fourre-tout par OTA (2026-07-20) : les clients Airbnb/Booking.com n'ont pas
+  # d'email — plutôt qu'engorger le fourre-tout générique, chaque OTA a le sien.
+  # Un client fourre-tout ne doit JAMAIS voir d'historique inter-séjours sur la
+  # page publique (contrairement aux clients standards, à terme).
+  OTA_CATCH_ALL_EMAILS = {
+    "airbnb"        => "client-airbnb@les4sources.be",
+    "bookingdotcom" => "client-booking@les4sources.be"
+  }.freeze
+  CATCH_ALL_EMAILS = ([CATCH_ALL_EMAIL] + OTA_CATCH_ALL_EMAILS.values).freeze
 
   belongs_to :human, optional: true
   has_many :stays, dependent: :restrict_with_error
@@ -107,7 +116,7 @@ class Customer < ApplicationRecord
   end
 
   def catch_all?
-    email == CATCH_ALL_EMAIL
+    CATCH_ALL_EMAILS.include?(email)
   end
 
   # Nombre de séjours VIVANTS rattachés. `stays` porte le default_scope de

@@ -9,11 +9,18 @@ RSpec.describe "Activité récente (/recent-activity)", type: :request do
 
   before { sign_in user }
 
-  it "rend la page dédiée avec le titre" do
+  it "rend la page dédiée avec le titre ET le contenu du fil" do
+    booking = Booking.create!(firstname: "Feed", from_date: Date.today + 10, to_date: Date.today + 11,
+                              adults: 1, status: "pending", price_cents: 0)
+    PublicActivity::Activity.create!(trackable: booking, key: "booking.create", created_at: 1.day.ago)
+
     get "/recent-activity"
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Activité récente")
+    # Le fil n'est pas vide (l'action contrôleur doit charger @activities —
+    # bug du 2026-07-20 : action perdue, page rendue avec un fil nil).
+    expect(response.body).to include("Feed")
   end
 
   it "le calendrier ne porte plus le fil d'activité" do
