@@ -25,6 +25,7 @@ module Stripe
       @payment.stay&.set_payment_status
       @payment.booking&.set_payment_status
       email_admin
+      email_customer_deposit_received
       true
     end
 
@@ -32,6 +33,21 @@ module Stripe
 
     def email_admin
       AdminMailer.payment_received(payment).deliver_later
+    end
+
+    # Second email client du flux funnel (décision 2026-07-20) : « acompte bien
+    # reçu, notre équipe valide votre demande ». UNIQUEMENT au premier
+    # encaissement d'un séjour encore `pending` — le paiement du solde ou tout
+    # encaissement d'un séjour déjà confirmé ne redéclenche pas ce message de
+    # pré-validation. L'idempotence webhook est déjà garantie en amont
+    # (StripeEvent) ; le garde « premier paid » protège en plus contre un rejeu.
+    def email_customer_deposit_received
+      stay = payment.stay
+      return unless stay&.status == "pending"
+      return if stay.customer&.email.blank?
+      return if stay.payments.paid.where.not(id: payment.id).exists?
+
+      ReservationMailer.deposit_received(payment).deliver_later
     end
   end
 end

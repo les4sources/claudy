@@ -1,9 +1,17 @@
 Bonjour <%= @stay.customer.first_name.presence || "" %>,
 
-Merci pour votre demande de réservation aux 4 Sources. Elle a bien été enregistrée et sera validée par notre équipe avant confirmation définitive.
+Merci pour votre demande de réservation aux 4 Sources. Elle est bien enregistrée.
 
 <% if @stay.arrival_date && @stay.departure_date %>
 Dates : <%= l(@stay.arrival_date, format: :long) %> -> <%= l(@stay.departure_date, format: :long) %>
+<% end %>
+<% if @pending_deposit %>
+Pour confirmer votre réservation, il reste l'acompte de <%= number_to_currency(@pending_deposit.amount_cents / 100.0, unit: "€", format: "%n %u", precision: 2) %> à régler — si ce n'est pas déjà fait :
+<%= pay_public_payment_url(@pending_deposit, host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be")) %>
+
+Dès l'acompte reçu, notre équipe valide votre demande et vous envoie la confirmation définitive.
+<% else %>
+Votre demande sera validée par notre équipe avant confirmation définitive.
 <% end %>
 <% if @quote && @quote.lines.any? %>
 Récapitulatif de votre devis :

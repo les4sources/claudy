@@ -1,13 +1,31 @@
+/ NB Slim : deux lignes `|` consécutives se concatènent SANS espace — toujours
+  une seule barre avec continuation indentée pour la prose multi-ligne.
 p Bonjour #{@stay.customer.first_name.presence || ""},
 
 p
-  | Merci pour votre demande de réservation aux 4 Sources. Elle a bien été
-  | enregistrée et sera validée par notre équipe avant confirmation définitive.
+  | Merci pour votre demande de réservation aux 4 Sources. Elle est bien
+    enregistrée.
 
 - if @stay.arrival_date && @stay.departure_date
   p
     strong Dates :
-    | = " #{l(@stay.arrival_date, format: :long)} → #{l(@stay.departure_date, format: :long)}"
+    = " #{l(@stay.arrival_date, format: :long)} → #{l(@stay.departure_date, format: :long)}"
+
+- if @pending_deposit
+  - pay_url = pay_public_payment_url(@pending_deposit, host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be"))
+  p
+    | Pour confirmer votre réservation, il reste l'acompte de
+      #{number_to_currency(@pending_deposit.amount_cents / 100.0, unit: "€", format: "%n %u", precision: 2)}
+      à régler — si ce n'est pas déjà fait :
+  p
+    = link_to "Régler mon acompte", pay_url
+  p
+    | Dès l'acompte reçu, notre équipe valide votre demande et vous envoie la
+      confirmation définitive.
+- else
+  p
+    | Votre demande sera validée par notre équipe avant confirmation
+      définitive.
 
 - if @quote && @quote.lines.any?
   h3 Récapitulatif de votre devis

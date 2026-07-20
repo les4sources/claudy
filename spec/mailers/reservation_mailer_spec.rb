@@ -47,5 +47,66 @@ RSpec.describe ReservationMailer, type: :mailer do
       expect(mail.body.encoded).to include("745") # Hulotte 2 nuits = 485 + 260 = 745 €
       expect(mail.body.encoded).to match(/pas de TVA en plus/i)
     end
+
+    # Bug 2026-07-20 : deux lignes `|` Slim consécutives se concatènent sans
+    # espace (« étéenregistrée ») et `| = "…"` sortait littéralement `= "` dans
+    # le corps. On verrouille le rendu réel, espaces normalisés.
+    it "rend une prose propre (pas de mots collés ni de `= \"` littéral)" do
+      html = mail.html_part.body.decoded.gsub(/\s+/, " ")
+
+      expect(html).to include("Elle est bien enregistrée")
+      expect(html).not_to include('= "')
+      expect(html).not_to match(/Dates\s*:=/)
+    end
+
+    context "avec un acompte encore dû (paiement pending)" do
+      let!(:deposit) do
+        Payment.create!(stay: stay, booking: booking, amount_cents: 37_250,
+                        status: "pending", payment_method: "card")
+      end
+
+      it "annonce le montant de l'acompte et le lien de paiement direct" do
+        html = mail.html_part.body.decoded.gsub(/\s+/, " ")
+        text = mail.text_part.body.decoded
+
+        expect(html).to include("372,50 €")
+        expect(html).to include("Régler mon acompte")
+        [html, text].each do |body|
+          expect(body).to include("/payments/#{deposit.id}/pay")
+        end
+      end
+    end
+
+    it "sans acompte dû, replie sur la mention de validation par l'équipe" do
+      html = mail.html_part.body.decoded.gsub(/\s+/, " ")
+
+      expect(html).not_to include("Régler mon acompte")
+      expect(html).to include("validée par notre équipe")
+    end
+  end
+
+  describe "#deposit_received (email post-acompte, décision 2026-07-20)" do
+    let!(:deposit) do
+      Payment.create!(stay: stay, booking: booking, amount_cents: 37_250,
+                      status: "paid", payment_method: "card")
+    end
+
+    subject(:mail) { described_class.deposit_received(deposit) }
+
+    it "adresse le mail au Customer avec le bon sujet" do
+      expect(mail.to).to eq(["guest@example.com"])
+      expect(mail.subject).to include("Acompte bien reçu")
+    end
+
+    it "confirme le montant reçu et la validation à venir (html ET texte)" do
+      html = mail.html_part.body.decoded.gsub(/\s+/, " ")
+      text = mail.text_part.body.decoded
+
+      [html, text].each do |body|
+        expect(body).to include("372,50 €")
+        expect(body).to include("validation par")
+        expect(body).to include("/sejour/#{stay.reload.token}")
+      end
+    end
   end
 end

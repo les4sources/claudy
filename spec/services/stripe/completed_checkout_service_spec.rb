@@ -56,6 +56,52 @@ RSpec.describe Stripe::CompletedCheckoutService do
     expect(stay.reload.payment_status).to eq("paid")
   end
 
+  # Décision 2026-07-20 : l'acompte confirme la réservation → le client reçoit
+  # « acompte bien reçu » au PREMIER encaissement d'un séjour pending, et
+  # uniquement là.
+  describe "email client « acompte reçu »" do
+    before { ActiveJob::Base.queue_adapter = :test }
+
+    it "part au premier encaissement d'un séjour pending" do
+      payment = Payment.create!(stay: stay, amount_cents: 24_250,
+                                status: "pending", payment_method: "card")
+
+      expect {
+        described_class.new(payment: payment).run!(webhook_params)
+      }.to have_enqueued_mail(ReservationMailer, :deposit_received)
+    end
+
+    it "ne repart PAS pour un paiement suivant (solde) du même séjour" do
+      Payment.create!(stay: stay, amount_cents: 24_250, status: "paid", payment_method: "card")
+      balance = Payment.create!(stay: stay, amount_cents: 24_250,
+                                status: "pending", payment_method: "card")
+
+      expect {
+        described_class.new(payment: balance).run!(webhook_params)
+      }.not_to have_enqueued_mail(ReservationMailer, :deposit_received)
+    end
+
+    it "ne part pas pour un séjour déjà confirmé" do
+      stay.update!(status: "confirmed")
+      payment = Payment.create!(stay: stay, amount_cents: 24_250,
+                                status: "pending", payment_method: "card")
+
+      expect {
+        described_class.new(payment: payment).run!(webhook_params)
+      }.not_to have_enqueued_mail(ReservationMailer, :deposit_received)
+    end
+
+    it "ne part pas pour un paiement legacy sans séjour" do
+      payment = Payment.new(booking: booking, amount_cents: 48_500,
+                            status: "pending", payment_method: "card")
+      payment.save!(validate: false)
+
+      expect {
+        described_class.new(payment: payment).run!(webhook_params)
+      }.not_to have_enqueued_mail(ReservationMailer, :deposit_received)
+    end
+  end
+
   it "ne plante pas sur un paiement historique sans séjour" do
     # Donnée LEGACY d'avant le verrouillage Phase 4 (aucun stay_id) : on
     # contourne la validation pour reproduire l'état réel en base. Le webhook
