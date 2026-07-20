@@ -59,6 +59,58 @@ RSpec.describe "Customers (admin Pôle Accueil)", type: :request do
     end
   end
 
+  describe "DELETE /customers/:id (suppression gardée)" do
+    it "soft-deletes a customer with no stay and redirects with a notice" do
+      orphan = Customer.create!(email: "orphan@example.com", first_name: "Orphelin", customer_type: "individual")
+
+      delete customer_path(orphan)
+
+      expect(response).to redirect_to(customers_path)
+      expect(flash[:notice]).to be_present
+      expect(Customer.find_by(id: orphan.id)).to be_nil          # soft-deleted (default scope)
+      expect(Customer.unscoped.find(orphan.id).deleted_at).to be_present # trace conservée
+    end
+
+    it "refuses to delete a customer with a live stay and leaves it intact" do
+      kept = Customer.create!(email: "hasstay@example.com", first_name: "Occupé", customer_type: "individual")
+      Stay.create!(customer: kept, arrival_date: Date.today + 1, departure_date: Date.today + 2)
+
+      delete customer_path(kept)
+
+      expect(response).to redirect_to(customer_path(kept))
+      expect(flash[:alert]).to be_present
+      expect(Customer.find_by(id: kept.id)).to be_present        # intact
+    end
+
+    it "allows deleting a customer whose only stays are soft-deleted (assainissement)" do
+      cleaned = Customer.create!(email: "cleaned@example.com", first_name: "Assaini", customer_type: "individual")
+      stay = Stay.create!(customer: cleaned, arrival_date: Date.today + 1, departure_date: Date.today + 2)
+      stay.soft_delete!
+
+      delete customer_path(cleaned)
+
+      expect(response).to redirect_to(customers_path)
+      expect(Customer.find_by(id: cleaned.id)).to be_nil
+    end
+  end
+
+  describe "delete affordance on the customer show page" do
+    it "shows the destructive button when the customer has no live stay" do
+      orphan = Customer.create!(email: "showorphan@example.com", first_name: "Sans", customer_type: "individual")
+      get customer_path(orphan)
+      expect(response.body).to include("Supprimer ce client")
+      expect(response.body).not_to include("Suppression impossible")
+    end
+
+    it "hides the button and shows a greyed hint when a live stay blocks deletion" do
+      blocked = Customer.create!(email: "showblocked@example.com", first_name: "Avec", customer_type: "individual")
+      Stay.create!(customer: blocked, arrival_date: Date.today + 1, departure_date: Date.today + 2)
+      get customer_path(blocked)
+      expect(response.body).to include("Suppression impossible")
+      expect(response.body).not_to include("Supprimer ce client")
+    end
+  end
+
   describe "GET /customers/search (autocomplete JSON)" do
     it "returns matching customers as JSON" do
       Customer.create!(email: "michael@semisto.org", first_name: "Michael", last_name: "Hulet", customer_type: "individual")

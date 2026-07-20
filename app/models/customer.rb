@@ -92,6 +92,28 @@ class Customer < ApplicationRecord
     email == CATCH_ALL_EMAIL
   end
 
+  # Nombre de séjours VIVANTS rattachés. `stays` porte le default_scope de
+  # soft-deletion de Stay : les séjours soft-deletés (restes d'assainissement)
+  # sont déjà exclus, donc ne comptent pas.
+  def live_stays_count
+    stays.count
+  end
+
+  # Un client n'est supprimable que s'il n'a AUCUN séjour vivant. C'est la seule
+  # garde qui compte : les `payments` sont dérivés `through: :stays` (zéro séjour
+  # vivant ⟹ zéro paiement vivant), et les Booking legacy ne sont reliés au
+  # Customer QUE via le graphe des séjours (stay_items). Aucun rattachement
+  # vivant ne subsiste donc en dehors des séjours.
+  def deletable?
+    live_stays_count.zero?
+  end
+
+  # Message expliquant pourquoi la suppression est refusée (nil si supprimable).
+  def deletion_blocker
+    return if deletable?
+    "#{live_stays_count} séjour(s) vivant(s) rattaché(s)"
+  end
+
   def name
     if organization? && organization_name.present?
       organization_name

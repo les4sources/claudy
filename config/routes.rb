@@ -97,7 +97,7 @@ Rails.application.routes.draw do
   end
 
   # Pôle Accueil : clients (Customer) + fusion de doublons / re-ventilation.
-  resources :customers, only: [:index, :show, :edit, :update] do
+  resources :customers, only: [:index, :show, :edit, :update, :destroy] do
     collection do
       get "search" # autocomplete JSON pour la re-ventilation
     end
