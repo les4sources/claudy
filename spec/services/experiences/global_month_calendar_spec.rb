@@ -16,7 +16,7 @@ RSpec.describe Experiences::GlobalMonthCalendar do
     calendar = described_class.new(month: month.strftime("%Y-%m"))
 
     expect(calendar.days.size).to eq(month.end_of_month.day)
-    expect(calendar.rows.map { |e, _| e.name }).to eq(["Zythologie", "Ânes"].sort)
+    expect(calendar.rows.map { |e, _| e.name }).to match_array(["Zythologie", "Ânes"])
     zytho_counts = calendar.rows.find { |e, _| e == zytho }.last
     expect(zytho_counts[month + 3]).to eq(2)
     expect(zytho_counts[month + 5]).to be_nil

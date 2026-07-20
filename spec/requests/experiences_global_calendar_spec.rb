@@ -1,11 +1,13 @@
 require "rails_helper"
 
-# Epic #25, Phase 5 — calendrier global au-dessus du tableau des activités.
+# Calendrier global MENSUEL de /experiences (2026-07-20, remplace la vue
+# semaine de l'epic #25) : une ligne par activité, un badge « nombre de
+# créneaux » par jour — jamais le détail des créneaux.
 RSpec.describe "Experiences — calendrier global de l'index", type: :request do
   include Devise::Test::IntegrationHelpers
 
   let(:user) { User.create!(email: "agent@les4sources.be", password: "password123") }
-  let(:monday) { Date.today.beginning_of_week(:monday) }
+  let(:month) { Date.today.next_month.beginning_of_month }
   let(:balade) { Experience.create!(name: "Balade avec les ânes", duration_hours: 2) }
   let(:poterie) { Experience.create!(name: "Atelier poterie", duration_hours: 3) }
 
@@ -17,57 +19,57 @@ RSpec.describe "Experiences — calendrier global de l'index", type: :request do
     get experiences_path
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("data-global-week-calendar")
-    expect(response.body).to include("Aucun créneau posé cette semaine")
+    expect(response.body).to include("Créneaux du mois")
+    expect(response.body).to include("Aucun créneau posé ce mois-ci")
   end
 
-  it "affiche les créneaux de la semaine en cours, toutes activités confondues" do
-    ExperienceAvailability.create!(experience: balade, available_on: monday + 1, starts_at: "10:00")
-    ExperienceAvailability.create!(experience: poterie, available_on: monday + 2, starts_at: "14:00")
+  it "affiche une ligne par activité avec le NOMBRE de créneaux par jour, pas le détail" do
+    2.times { |i| ExperienceAvailability.create!(experience: balade, available_on: month + 3, starts_at: "#{10 + i * 3}:00") }
+    ExperienceAvailability.create!(experience: poterie, available_on: month + 5, starts_at: "14:00")
 
-    get experiences_path
+    get experiences_path, params: { month: month.strftime("%Y-%m") }
+
+    expect(response.body).to include("Balade avec les ânes")
+    expect(response.body).to include("Atelier poterie")
+    expect(response.body).to match(/2 créneaux le/)   # badge + tooltip
+    expect(response.body).not_to include("10:00→")    # aucun détail de créneau
+  end
+
+  it "le nom d'activité en tête de ligne pointe vers sa fiche, dans une cellule sticky" do
+    ExperienceAvailability.create!(experience: balade, available_on: month + 3, starts_at: "10:00")
+
+    get experiences_path, params: { month: month.strftime("%Y-%m") }
+
+    row_header = response.body[/<th[^>]*sticky[^>]*scope="row".*?<\/th>/m]
+    expect(row_header).to include(experience_path(balade))
+    expect(row_header).to include("Balade avec les ânes")
+  end
+
+  it "navigue vers un autre mois via ?month=" do
+    target = month.next_month
+    ExperienceAvailability.create!(experience: balade, available_on: target + 4, starts_at: "10:00")
+
+    get experiences_path, params: { month: target.strftime("%Y-%m") }
+
+    expect(response.body).to include(I18n.l(target, format: "%B %Y").capitalize)
+    expect(response.body).to include("Balade avec les ânes")
+  end
+
+  it "ignore un ?month= illisible et retombe sur le mois courant" do
+    get experiences_path, params: { month: "grumpf" }
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("data-global-slot=\"#{(monday + 1).iso8601} 10:00\"")
-    expect(response.body).to include("data-global-slot=\"#{(monday + 2).iso8601} 14:00\"")
-    expect(response.body).to include("10:00→12:00")
-    expect(response.body).to include("14:00→17:00")
+    expect(response.body).to include(I18n.l(Date.today.beginning_of_month, format: "%B %Y").capitalize)
   end
 
-  it "donne à chaque activité sa couleur (style inline, pas de classe Tailwind)" do
-    ExperienceAvailability.create!(experience: balade, available_on: monday + 1, starts_at: "10:00")
+  it "n'affiche pas de ligne pour une activité sans créneau dans le mois affiché" do
+    poterie
+    ExperienceAvailability.create!(experience: balade, available_on: month + 3, starts_at: "10:00")
 
-    get experiences_path
+    get experiences_path, params: { month: month.strftime("%Y-%m") }
 
-    expect(response.body).to include(balade.reload.color)
-    expect(response.body).to include("data-calendar-legend")
-  end
-
-  it "affiche les créneaux qui se chevauchent entre deux activités" do
-    ExperienceAvailability.create!(experience: balade, available_on: monday + 3, starts_at: "10:00")
-    ExperienceAvailability.create!(experience: poterie, available_on: monday + 3, starts_at: "10:00")
-
-    get experiences_path
-
-    expect(response.body.scan("data-global-slot=\"#{(monday + 3).iso8601} 10:00\"").size).to eq(2)
-  end
-
-  it "navigue vers une autre semaine via ?week=" do
-    ExperienceAvailability.create!(experience: balade, available_on: monday + 8, starts_at: "10:00")
-
-    get experiences_path(week: (monday + 7).iso8601)
-
-    expect(response).to have_http_status(:ok)
-    expect(response.body).to include("data-global-slot=\"#{(monday + 8).iso8601} 10:00\"")
-    expect(response.body).to include("Aujourd&#39;hui") # retour à la semaine en cours proposé
-  end
-
-  it "ignore un ?week= illisible et retombe sur la semaine en cours" do
-    ExperienceAvailability.create!(experience: balade, available_on: monday + 1, starts_at: "10:00")
-
-    get experiences_path(week: "pas-une-date")
-
-    expect(response).to have_http_status(:ok)
-    expect(response.body).to include("data-global-slot=\"#{(monday + 1).iso8601} 10:00\"")
+    grid = response.body[/Créneaux du mois.*?<\/table>/m]
+    expect(grid).to include("Balade avec les ânes")
+    expect(grid).not_to include("Atelier poterie")
   end
 end

@@ -71,9 +71,9 @@
         = hidden_field_tag "stay[new_customer][customer_type]", "individual", id: nil
         label class="inline-flex items-center gap-3 cursor-pointer"
           input id="new_customer_org_toggle" type="checkbox" name="stay[new_customer][customer_type]" value="organization" checked=new_is_org role="switch" aria-label="Client organisation" class="sr-only peer"
-          span aria-hidden="true" class="relative w-11 h-6 flex-shrink-0 rounded-full bg-gray-200 transition-colors peer-checked:bg-emerald-500 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-500 peer-focus-visible:ring-offset-2 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"
-          span class="text-sm font-medium text-gray-500 peer-checked:hidden" Particulier
-          span class="text-sm font-medium text-emerald-700 hidden peer-checked:inline" Organisation
+          span.ui-switch aria-hidden="true"
+          span.ui-switch-label-off class="text-sm font-medium text-gray-500" Particulier
+          span.ui-switch-label-on class="text-sm font-medium text-emerald-700" Organisation
         = text_field_tag "stay[new_customer][organization_name]", @draft&.organization_name, placeholder: "Nom du groupe / organisation", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
     / --- Séjour (dates + groupe) --------------------------------------------
@@ -276,9 +276,9 @@
         = hidden_field_tag "stay[status]", "pending", id: nil
         label class="inline-flex items-center gap-3 cursor-pointer"
           input id="stay_status_toggle" type="checkbox" name="stay[status]" value="confirmed" checked=status_confirmed role="switch" aria-label="Séjour confirmé" class="sr-only peer"
-          span aria-hidden="true" class="relative w-11 h-6 flex-shrink-0 rounded-full bg-gray-200 transition-colors peer-checked:bg-emerald-500 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-500 peer-focus-visible:ring-offset-2 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"
-          span class="text-sm font-medium text-gray-500 peer-checked:hidden" En attente
-          span class="text-sm font-medium text-emerald-700 hidden peer-checked:inline" Confirmé
+          span.ui-switch aria-hidden="true"
+          span.ui-switch-label-off class="text-sm font-medium text-gray-500" En attente
+          span.ui-switch-label-on class="text-sm font-medium text-emerald-700" Confirmé
       label.flex.items-center.gap-2.text-sm.text-gray-700
         = check_box_tag "stay[force_availability]", "1", false
         | Forcer la disponibilité (surbooking / saisie a posteriori)
