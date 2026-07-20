@@ -28,18 +28,19 @@
 
 ## Volet B — Exploitation & assainissement (ACTIF)
 
-- [ ] **B.1 Assainissement historique 2023→aujourd'hui** *(Michael, avec l'outil de fusion)* — remonter les séjours via le mode fusion du calendrier + la re-ventilation, jusqu'à cohérence complète. C'est LA raison d'être de la fusion. Signal de fin : plus de doublons ni d'orphelins visibles sur 2023→2026.
-- [ ] **B.2 Activer « Deploy on push »** *(Michael, UI Hatchbox)* — les restarts sont déterministes depuis le drop-in systemd. Après activation : merge sur main = prod.
-- [ ] **B.3 Vérif post-deploy du lot du 20/07** *(Michael)* — page Stripe détaillée, les 2 emails, drawer devis, calendrier un-bloc, salle « 22 · journée » sur le séjour test (la migration #109 tourne au deploy).
+- [ ] **B.1 Assainissement historique 2023→aujourd'hui** *(Michael, avec la fusion — calendrier OU fiche client)* — notes consolidées automatiquement à la fusion, aperçu agrégé. Signal de fin : plus de doublons ni d'orphelins 2023→2026.
+- [~] **B.2 Déploiement du lot du 20-21/07** *(Michael)* — main déployable en continu (929→953 specs vertes au fil des merges). Post-deploy, rake en dry-run puis APPLY : `bookings:convert_parking_to_van` (16), `bookings:convert_tent_spaces_to_camping` (7 + 7 ambigus à arbitrer), `customers:ensure_ota_catch_alls`, `rooms:link_laurier` (~454), `space_bookings:billing_to_payments` (166+30 ; poser d'abord un moyen de paiement sur SpaceBookings #82 et #686), et bientôt la conversion « Les 2 salles ».
+- [ ] **B.3 Arbitrages données** *(Michael)* — 7 tentes au prix ambigu (#599, 604, 605, 646, 649, 673, 682) ; anomalies vues sur /stays : séjour aux dates inversées 2027→2026 (Semisto), reste dû négatif (trop-perçu 180 €), badge paiement « En attente » sur un séjour soldé (Aurore Delvaux).
 
-## Volet C — Dette & suites connues (à séquencer)
+## Volet C — Lot du 20-21/07 (LIVRÉ, mergé sur main)
 
-- [ ] **C.1 Issue #52 — PaperTrail ne versionne pas les `Payment`** (PK UUID vs `versions.item_id` bigint) — viole P2, découvert à l'epic #26. Candidat agent nocturne (issue à compléter avant `agent:ready`).
-- [ ] **C.2 `ExperienceBooking` sans soft-deletion** — la suppression d'un séjour annule ses activités (`cancelled`, #99) mais le modèle n'a pas `has_soft_deletion` : cascade incohérente avec les autres bookables. Follow-up recommandé par la Decision #99.
-- [ ] **C.3 Questions produit en attente (PRs mergées)** — #90 : couvrir ou non les SpaceBooking soft-deleted historiques dans le backfill ; #91 : blocs calendrier fusionnés, nom du Booking vs client du séjour (reco : client du séjour).
-- [ ] **C.4 Petits restes UX** — devis : agréger les lignes camping (« 2 pers × 2 nuits » au lieu de 2 lignes × 1 nuit) · drawer : piège à focus complet (Tab confiné au dialog) · calendrier : badge court pour « période non précisée » + tooltips sur les codes espaces (TIL/SAU/CUI) · funnel : `min` dynamique du champ départ (AC-D-02, reste de l'epic #27).
-- [ ] **C.5 Restes epic #66 « à caler »** — vérifier en prod : capacités globales camping/van par défaut (30 pers / 5 véh.), paramétrage `Space.code` complet (TIL/SAU/CUI).
-- [ ] **C.6 Tests Stripe non hermétiques ?** — non observé sur claudy (stub `StripeService.instance`) ; garder l'œil si des clés TEST apparaissent en env local.
+Épuisé en une soirée, tout vérifié (Forge + navigateur + suite complète à chaque merge) :
+fusion depuis la fiche client (retour fiche, sessionStorage scopé) · notes séjour (lecture modale, édition, consolidation à la fusion avec provenance) · modale de fusion enrichie + notes calendrier masquées en mode fusion + aperçu espaces agrégé « (3 j) » · suppression client gardée + liste clients (tri séjours, filtres, 100/p) + fiche client (total + icônes) + TVA orga + fix notes · menu « Séjours » + table /stays (encaissé/reste dû) + fiche séjour pleine page (carte blanche) · double-clic statuts · calendrier : un bloc/séjour, 💤 nuitées, « + » unique, mois sans année, chips ⛺️/🚐 courtes, cycles hors Accueil, section veilleur (check-out enfin visibles, bandeaux colorés) · activités : calendrier mensuel interactif (fiche + global), bloc Réservations, « Expériences » en tête des paramètres, durée courte + créneaux à venir · funnel réparé (paiement Stripe #104, page Checkout détaillée #105, 2 emails #106, drawer devis #107) · **camping/van PAR NUIT** (plages contiguës, grille admin, devis exact largest-remainder, durcissements Forge) + grilles qui suivent les dates + devis live d'édition réparé · **terrasse 2,50 €/pers/jour** (fieldset admin, chip 🪑, jamais au public) · équipe (rôles activables, statut, blocage connexion inactifs, accès restreint porteurs) · fourre-tout OTA Airbnb/Booking (anti-fuite) · Laurier liée (+454 résas) · formule repas fantôme retirée · « Formule complète » n'existe plus · conversions Parking→Van et Bois/Pâtures→tentes · facturation espaces → Payments (162+30 localement).
+
+## Volet D — En cours / cette nuit
+
+- [~] **D.1 « Les 2 salles »** *(agent en cours)* — remise duo (390/495 j, 250/335 soir, J+S +150), conversion des 64 historiques en paires, retrait de l'espace.
+- [ ] **D.2 Nuit du 21/07 (agent nocturne)** — #124 Paramètres > Tarifs · #127 Coworking modèle+admin+calendrier · #128 Portail client OTP + Mes séjours. Ensuite : #129 (achat/réservation coworking), #130 (finitions) — agent:ready à poser après merges amont. Epic #126.
 
 ## Horizon (ISA, non séquencé)
 
