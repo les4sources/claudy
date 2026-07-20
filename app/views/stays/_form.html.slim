@@ -266,6 +266,9 @@
         label.block.text-sm.font-medium.text-gray-700 Note publique (visible par le client)
         = rich_text_area_tag "stay[public_notes]", @stay&.public_notes&.to_trix_html, class: "trix-content"
 
+    / « Annuler » : retour à la FICHE du séjour en édition (elle existe en pleine
+    / page depuis stays#show), sinon à la liste en création (demande Michael).
+    - cancel_path = @stay&.persisted? ? stay_path(@stay) : stays_path
     .flex.justify-end.gap-3
-      = link_to "Annuler", recent_stays_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+      = link_to "Annuler", cancel_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
       = submit_tag submit_label, class: "inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
