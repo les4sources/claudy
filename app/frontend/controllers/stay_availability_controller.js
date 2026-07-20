@@ -15,7 +15,7 @@ import { Controller } from "@hotwired/stimulus"
 //     div(data-stay-availability-target="indicator")
 export default class extends Controller {
   static targets = ["indicator"]
-  static values = { url: String }
+  static values = { url: String, excludeStayId: Number }
 
   connect() {
     this.check()
@@ -42,6 +42,11 @@ export default class extends Controller {
       arrival_date: arrival,
       departure_date: departure,
     })
+
+    // Édition : exclure les chambres du séjour lui-même (pas d'auto-indispo).
+    if (this.hasExcludeStayIdValue && this.excludeStayIdValue > 0) {
+      params.set("exclude_stay_id", this.excludeStayIdValue)
+    }
 
     // Mode chambres seules (epic #81, Phase 5) : la dispo porte sur les chambres
     // cochées. Sans chambre cochée, l'endpoint répond checkable:false → on masque.

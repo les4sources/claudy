@@ -73,4 +73,38 @@ RSpec.describe "Stays — disponibilité temps réel (issue #77)", type: :reques
     expect(response.body).to include("stay-availability-target=\"indicator\"")
     expect(response.body).to include(availability_stays_path)
   end
+
+  # Bug callout d'indisponibilité à tort en ÉDITION : la dispo du form comptait
+  # les Reservation DU SÉJOUR ÉDITÉ → « indisponible » injustifié. On exclut
+  # désormais ses propres Booking via `exclude_stay_id`.
+  describe "exclusion du séjour édité (pas d'auto-indispo)" do
+    let(:confirmed_stay) do
+      draft = Reservations::Draft.new(
+        lodging_id: hulotte.id, arrival_date: arrival, departure_date: departure,
+        adults: 2, dogs_count: 0, first_name: "Ed", last_name: "Ité", email: "ed@example.com"
+      )
+      builder = Reservations::Builder.new(draft: draft, admin: true, status: "confirmed", source: "manual")
+      builder.run!
+      builder.stay
+    end
+
+    it "renvoie available: false SANS exclusion (le séjour occupe ses dates)" do
+      confirmed_stay
+      body = get_availability
+      expect(body["available"]).to be(false)
+    end
+
+    it "renvoie available: true AVEC exclude_stay_id (ses propres chambres ignorées)" do
+      stay = confirmed_stay
+      body = get_availability(exclude_stay_id: stay.id)
+      expect(body["checkable"]).to be(true)
+      expect(body["available"]).to be(true)
+    end
+
+    it "le form edit transmet l'id du séjour au contrôleur de dispo" do
+      stay = confirmed_stay
+      get edit_stay_path(stay)
+      expect(response.body).to include("stay-availability-exclude-stay-id-value=\"#{stay.id}\"")
+    end
+  end
 end

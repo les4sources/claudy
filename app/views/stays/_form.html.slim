@@ -25,7 +25,10 @@
 - platform_options += [[current_platform, current_platform]] unless platform_options.any? { |_l, v| v == current_platform }
 - override_prefill = params.dig(:stay, :price_override).presence || (@stay&.price_override_cents.present? ? format("%g", @stay.price_override_cents / 100.0) : nil)
 
-= form_with url: url, method: method, data: { controller: "stay-form stay-quote stay-availability", "stay-quote-url-value": quote_stays_path, "stay-availability-url-value": availability_stays_path, action: "change->stay-quote#check input->stay-quote#check change->stay-form#toggleSpaceBilling" } do
+/ `stay-availability-exclude-stay-id-value` : en édition, on transmet l'id du
+/ séjour pour que la vérif de dispo du form IGNORE ses propres chambres (sinon
+/ un séjour confirmé s'affiche « indisponible » à tort au chargement).
+= form_with url: url, method: method, data: { controller: "stay-form stay-quote stay-availability", "stay-quote-url-value": quote_stays_path, "stay-availability-url-value": availability_stays_path, "stay-availability-exclude-stay-id-value": (@stay&.persisted? ? @stay.id : nil), action: "change->stay-quote#check input->stay-quote#check change->stay-form#toggleSpaceBilling" } do
   .space-y-8
     / --- Client -------------------------------------------------------------
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4

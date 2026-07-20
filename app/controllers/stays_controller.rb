@@ -146,6 +146,12 @@ class StaysController < BaseController
       return render json: { checkable: false }
     end
 
+    # Exclusion du séjour ÉDITÉ (bug callout d'indispo à tort) : en édition, la
+    # dispo du form comptait les Reservation DU SÉJOUR LUI-MÊME → callout
+    # « indisponible » injustifié. On exclut ici ses propres Booking, comme
+    # `Stays::AdminUpdater#lodging_available?` le fait au submit.
+    exclude_ids = own_booking_ids(params[:exclude_stay_id])
+
     # Mode chambres seules (epic #81, Phase 5) : la dispo porte sur les chambres
     # cochées, pas sur tout le gîte. Sans chambre cochée, rien à vérifier.
     if params[:booking_type].to_s == "rooms"
@@ -153,16 +159,50 @@ class StaysController < BaseController
       return render json: { checkable: false } if room_ids.empty?
       return render json: {
         checkable: true,
-        available: lodging.rooms_available_between?(room_ids, from, to),
+        available: form_availability(lodging, room_ids: room_ids, from: from, to: to, exclude_booking_ids: exclude_ids),
         lodging:   lodging.name
       }
     end
 
     render json: {
       checkable: true,
-      available: lodging.available_between?(from, to),
+      available: form_availability(lodging, room_ids: nil, from: from, to: to, exclude_booking_ids: exclude_ids),
       lodging:   lodging.name
     }
+  end
+
+  # Booking ids d'occupation d'un séjour (à exclure de la dispo en édition). []
+  # si pas de séjour (création) — la dispo garde alors son comportement historique.
+  def own_booking_ids(stay_id)
+    return [] if stay_id.blank?
+    stay = Stay.find_by(id: stay_id)
+    return [] if stay.nil?
+    stay.stay_items.where(bookable_type: "Booking").pluck(:bookable_id)
+  end
+
+  # Dispo affichée par le form. SANS exclusion (création) → méthodes modèle
+  # (source unique, comportement inchangé). AVEC exclusion (édition) → mêmes
+  # règles de dates (issue #94) en ignorant les Reservation confirmées des Booking
+  # du séjour édité — miroir EXACT de `Stays::AdminUpdater#lodging_available?`.
+  def form_availability(lodging, room_ids:, from:, to:, exclude_booking_ids:)
+    rooms_mode = room_ids.present?
+    if exclude_booking_ids.blank?
+      return rooms_mode ? lodging.rooms_available_between?(room_ids, from, to) : lodging.available_between?(from, to)
+    end
+
+    if rooms_mode
+      ids = lodging.rooms.where(id: room_ids).pluck(:id)
+      return false if ids.empty?
+    else
+      ids = lodging.rooms.pluck(:id)
+      return lodging.unavailabilities.where(date: from..to).none? if ids.empty?
+    end
+
+    last_night = [to - 1, from].max
+    scope = Reservation.joins(:booking)
+                       .where(date: from..last_night, room_id: ids, bookings: { status: "confirmed" })
+                       .where.not(bookings: { id: exclude_booking_ids })
+    scope.none? && lodging.unavailabilities.where(date: from..to).none?
   end
 
   # Devis live du form de composition (issue #73). Reconstruit le `Draft` depuis
