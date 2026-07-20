@@ -11,8 +11,21 @@
     .rounded-md.bg-amber-50.p-4.text-sm.text-amber-800
       | Client fourre-tout de la migration. Re-ventiler ses séjours vers de vrais clients via « Fusionner / re-ventiler ».
 
+  / Fusion de séjours DEPUIS la fiche client (réutilise le contrôleur stay-merge
+  / du calendrier). `scope` namespace la sélection sessionStorage par client :
+  / entrer en mode fusion ici n'hérite JAMAIS d'une sélection faite au calendrier
+  / ni d'un autre client. `return-url` ramène sur cette fiche après fusion ;
+  / `reset` (posé par ?stay_merge_done=1 au retour) purge la sélection scopée.
   .grid.grid-cols-3.gap-4
-    .col-span-2.space-y-4(data-controller="stay-details")
+    .col-span-2.space-y-4(data-controller="stay-details stay-merge" data-stay-merge-setup-url-value=merge_setup_stays_path data-stay-merge-preview-url-value=merge_preview_stays_path data-stay-merge-return-url-value=customer_path(@customer) data-stay-merge-scope-value="customer-#{@customer.id}" data-stay-merge-reset-value=params[:stay_merge_done].present?)
+      = render "stays/merge_styles"
+
+      / Bandeau contextuel du mode fusion (piloté par le contrôleur : caché hors mode).
+      .hidden.items-center.justify-between.gap-3.rounded-md.border.border-indigo-200.bg-indigo-50.px-4.py-2.text-sm.text-indigo-800(data-stay-merge-target="banner")
+        span Mode fusion — clique les séjours à fusionner, puis désigne le survivant.
+        button.font-medium.text-indigo-700.hover:text-indigo-900(type="button" data-action="stay-merge#toggle")
+          | Quitter
+
       .overflow-hidden.bg-white.shadow.sm:rounded-lg
         .px-4.py-5.sm:px-6
           h3.text-lg.font-medium.leading-6.text-gray-900
@@ -37,6 +50,11 @@
                   | Organisation
                 dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
                   = @customer.organization_name
+                - if @customer.vat_number.present?
+                  dt.text-sm.font-medium.text-gray-500
+                    | Numéro de TVA
+                  dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                    = @customer.vat_number
               dt.text-sm.font-medium.text-gray-500
                 | Langue
               dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
@@ -55,7 +73,10 @@
               - else
                 ul.divide-y.divide-gray-100
                   - StayDecorator.decorate_collection(stays).each do |stay|
-                    li.py-2.text-sm.text-gray-900.flex.items-center.gap-3
+                    / `relative` : ancre le badge ✓ (absolute) du mode fusion.
+                    / `data-stay-*` : mêmes attributs que les blocs du calendrier,
+                    / c'est ce que le contrôleur stay-merge sélectionne au clic.
+                    li.relative.py-2.text-sm.text-gray-900.flex.items-center.gap-3(data-stay-id=stay.id data-stay-label=stay_short_label(stay) data-stay-dates=stay_short_dates(stay))
                       = check_box_tag "stay_ids[]", stay.id, false, id: "stay_#{stay.id}", class: "rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                       .flex-1.min-w-0
                         .flex.items-center.gap-2.flex-wrap
@@ -112,13 +133,30 @@
             | ✕
         div data-stay-details-target="content"
 
+      / Bouton flottant d'activation du mode fusion — visible seulement si ≥ 2
+      / séjours (sinon rien à fusionner). Masqué une fois le mode entré via CSS
+      / (.merge-mode .merge-fab) : le bandeau « Quitter » prend alors le relais.
+      - if (@upcoming_stays.size + @past_stays.size) >= 2
+        button.merge-fab.fixed.bottom-6.right-6.z-40.inline-flex.items-center.rounded-full.border.border-indigo-200.bg-white.px-4.py-3.text-sm.font-medium.text-indigo-700.shadow-lg.hover:bg-indigo-50(class="gap-1.5" type="button" data-action="stay-merge#toggle" title="Sélectionner des séjours à fusionner")
+          svg.h-5.w-5(xmlns="http://www.w3.org/2000/svg" fill="none" viewbox="0 0 24 24" stroke-width="1.8" stroke="currentColor")
+            path(stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5")
+          span Fusionner les séjours
+
+      / Dialog 2 étapes + barre du bas : MÊMES partials que le calendrier.
+      = render "stays/merge_dialog"
+      = render "stays/merge_bottom_bar"
+
     .space-y-4
-      .overflow-hidden.bg-white.shadow.sm:rounded-lg
-        .px-4.py-5.sm:px-6
-          h3.text-lg.font-medium.leading-6.text-gray-900
-            | Notes internes
-        .border-t.border-gray-200.px-4.py-4.prose.prose-sm
-          = @customer.notes
+      / Notes internes (ActionText) : rendu NON échappé (== ) via le rendu standard,
+      / et carte entièrement masquée quand le corps est vide (`.body.present?`) —
+      / sinon un Trix vide affichait un `<div class="trix-content">` parasite.
+      - if @customer.notes.body.present?
+        .overflow-hidden.bg-white.shadow.sm:rounded-lg
+          .px-4.py-5.sm:px-6
+            h3.text-lg.font-medium.leading-6.text-gray-900
+              | Notes internes
+          .border-t.border-gray-200.px-4.py-4.prose.prose-sm
+            == @customer.notes
 
 / Zone destructive — discrète, tout en bas. N'apparaît que si le client n'a
 / aucun séjour vivant (assainissement de l'historique). Sinon, indice grisé.
