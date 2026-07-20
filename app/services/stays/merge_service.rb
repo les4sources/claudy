@@ -197,7 +197,15 @@ module Stays
       return if htmls.empty?
 
       consolidated = htmls.size == 1 ? htmls.first : htmls.join("<hr>")
-      target.public_notes = consolidated if consolidated != current_public_html(target)
+      return if consolidated == current_public_html(target)
+
+      target.public_notes = consolidated
+      # Persistance EXPLICITE (revue Forge F1) : sans ce save, l'écriture
+      # ActionText ne tenait que par l'autosave du `update!` de
+      # `recompute_aggregates!` appelé juste après — un couplage invisible
+      # qu'un réordonnancement ou un `update_columns` ferait disparaître en
+      # silence. La consolidation se suffit à elle-même, par contrat.
+      target.save!
     end
 
     # {label:, content:} d'une note interne, ou nil si le contenu est blanc.

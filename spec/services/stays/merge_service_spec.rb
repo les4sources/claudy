@@ -266,6 +266,25 @@ RSpec.describe Stays::MergeService, type: :service do
       expect(space_booking.public_notes.body.to_plain_text).to include("Salle prête dès 14h")
     end
 
+    # Revue Forge F5 — le scénario réel de l'assainissement : un séjour SOURCE
+    # (qui sera soft-deleté par la fusion) porte SA PROPRE note publique. Elle
+    # doit survivre dans la consolidation, lue APRÈS le soft_delete! de la source.
+    it "conserve la note PUBLIQUE d'un séjour source soft-deleté par la fusion" do
+      target = make_stay(customer: customer)
+      source = make_stay(customer: customer,
+                         arrival_date: Date.new(2026, 8, 4), departure_date: Date.new(2026, 8, 6))
+      source.public_notes = "<div>Arrivée possible dès 15h, clés dans le boîtier</div>"
+      source.save!
+      attach(target, make_booking)
+      attach(source, make_space_booking)
+
+      expect(described_class.new(target: target, sources: [source]).run).to be_truthy
+
+      expect(source.reload.deleted_at).to be_present
+      expect(target.reload.public_notes.body.to_plain_text)
+        .to include("Arrivée possible dès 15h")
+    end
+
     it "laisse les notes du survivant inchangées quand il n'y a AUCUNE note nulle part" do
       target = make_stay(customer: customer)
       source = make_stay(customer: customer,
