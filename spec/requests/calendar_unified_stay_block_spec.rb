@@ -59,8 +59,8 @@ RSpec.describe "Calendrier — bloc séjour unifié", type: :request do
     expect(response.body).to include("CHA")            # badge chambre A
     expect(response.body).to include("CHB")            # badge chambre B
     expect(response.body).to include("GS")             # badge espace
-    expect(response.body).to include("⛺ Camping · 3 pers.")
-    expect(response.body).to include("🚐 Van · 2 véh.")
+    expect(response.body).to include("⛺️ 3 pers.")
+    expect(response.body).to include("🚐 2 véhicules")
 
     # Couleur stable par séjour + câblage modale conservés.
     expect(response.body).to include("hsl(#{hue_for(stay.id)}, 65%, 45%)")
