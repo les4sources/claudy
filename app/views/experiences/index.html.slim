@@ -35,6 +35,9 @@
             = link_to experience.name, 
                       experience_path(experience),
                       class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+            - slots = @future_slot_counts.to_h.fetch(experience.id, 0)
+            .text-xs.text-gray-400
+              = slots.zero? ? "aucun créneau à venir" : "#{slots} créneau#{"x" if slots > 1} à venir"
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
             - if experience.human.presence
               = experience.human.name

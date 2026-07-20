@@ -11,6 +11,11 @@ class ExperiencesController < BaseController
     )
     @experiences = ExperienceDecorator
       .decorate_collection(Experience.all.order(name: :asc))
+    # Créneaux FUTURS par activité (une requête pour toute la liste).
+    @future_slot_counts = ExperienceAvailability
+      .where("available_on >= ?", Date.today)
+      .group(:experience_id)
+      .count
   end
 
   def show
