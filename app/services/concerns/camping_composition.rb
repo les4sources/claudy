@@ -80,19 +80,30 @@ module CampingComposition
 
   # Plages camping depuis la grille `per_night_resources["tente"]`.
   def camping_night_ranges(draft)
-    night_value_ranges(draft.per_night_resources&.[]("tente"), draft.arrival_date)
+    night_value_ranges(draft.per_night_resources&.[]("tente"), draft.arrival_date, max_nights: draft_window_nights(draft))
   end
 
   # Plages van depuis la grille `per_night_resources["van"]`.
   def van_night_ranges(draft)
-    night_value_ranges(draft.per_night_resources&.[]("van"), draft.arrival_date)
+    night_value_ranges(draft.per_night_resources&.[]("van"), draft.arrival_date, max_nights: draft_window_nights(draft))
   end
 
   # Découpe un tableau de valeurs par nuit (indexé depuis `arrival_date`) en
   # plages contiguës de valeur constante NON NULLE. Retourne
   # `[{from_date:, to_date:, nights:, value:}, ...]` — `to_date` exclusif.
-  def night_value_ranges(values, arrival_date)
+  # Nombre de nuits de la fenêtre du séjour (nil si dates absentes — la grille
+  # n'est de toute façon pas dérivable sans arrivée).
+  def draft_window_nights(draft)
+    return nil if draft.arrival_date.blank? || draft.departure_date.blank?
+    [(draft.departure_date - draft.arrival_date).to_i, 0].max
+  end
+
+  def night_value_ranges(values, arrival_date, max_nights: nil)
     ints = Array(values).map { |v| v.to_i }
+    # Revue Forge F1 : la longueur de la grille vient du CLIENT — bornée à la
+    # fenêtre du séjour, sinon un tableau forgé plus long créerait des plages
+    # (prix + occupation) AU-DELÀ du départ.
+    ints = ints.first(max_nights) if max_nights
     return [] if arrival_date.blank?
 
     ranges = []

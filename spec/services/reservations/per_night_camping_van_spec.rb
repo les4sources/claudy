@@ -89,3 +89,46 @@ RSpec.describe "Persistance camping/van par nuit (plages contiguës)" do
     end
   end
 end
+
+# Revue Forge F1/F4 — durcissements.
+RSpec.describe Reservations::Builder, "grille par nuit — garde-fous (revue Forge)" do
+  let(:arrival)   { Date.today + 40 }
+  let(:departure) { arrival + 2 } # 2 nuits
+
+  def draft(**overrides)
+    Reservations::Draft.new({
+      arrival_date: arrival.iso8601, departure_date: departure.iso8601,
+      dogs_count: 0, first_name: "Forge", last_name: "Garde",
+      email: "forge-garde@example.com", phone: "+32470000000"
+    }.merge(overrides))
+  end
+
+  it "F1 : une grille plus longue que la fenêtre est bornée (aucune plage après le départ)" do
+    builder = described_class.new(
+      draft: draft(per_night_resources: { "tente" => [2, 2, 5, 5, 5] }), # 5 valeurs, 2 nuits
+      admin: true, source: "manual"
+    )
+    expect(builder.run).to be(true)
+
+    campings = builder.stay.stay_items.where(bookable_type: "CampingBooking").map(&:bookable)
+    expect(campings.size).to eq(1)
+    expect(campings.first.to_date).to eq(departure) # jamais au-delà du départ
+    expect(campings.first.people).to eq(2)
+  end
+
+  it "F4 : prix imposé + grille — les plages somment toujours à la part camping du devis" do
+    builder = described_class.new(
+      draft: draft(per_night_resources: { "tente" => [2, 3] }),
+      admin: true, source: "manual", price_override_cents: 99_900
+    )
+    expect(builder.run).to be(true)
+
+    quote = builder.stay ? Reservations::Draft.new(
+      arrival_date: arrival.iso8601, departure_date: departure.iso8601, dogs_count: 0,
+      first_name: "x", email: "x@x.be", per_night_resources: { "tente" => [2, 3] }
+    ).quote : nil
+    campings = builder.stay.stay_items.where(bookable_type: "CampingBooking").map(&:bookable)
+    expect(campings.sum(&:price_cents)).to eq(quote.camping_cents)
+    expect(builder.stay.reload.total_amount_cents).to eq(99_900) # l'override gouverne le total
+  end
+end

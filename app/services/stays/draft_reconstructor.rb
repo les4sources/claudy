@@ -83,7 +83,9 @@ module Stays
         next if b.from_date.blank? || b.to_date.blank?
         (b.from_date...b.to_date).each do |date|
           idx = (date - arrival).to_i
-          arr[idx] = yield(b) if idx >= 0 && idx < nights
+          # Somme (revue Forge F2) : deux réservables du même type qui se
+          # chevaucheraient une nuit (hors grille) ne s'écrasent pas en silence.
+          arr[idx] += yield(b).to_i if idx >= 0 && idx < nights
         end
       end
       arr
