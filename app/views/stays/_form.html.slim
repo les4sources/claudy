@@ -214,7 +214,7 @@
         = number_field_tag "stay[van][vehicles]", (van_vehicles.positive? ? van_vehicles : nil), min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
     / --- Repas --------------------------------------------------------------
-    - meal_kind_options = [["Repas végé (midi)", "repas_vege_midi"], ["Buffet pain-fromages", "buffet"], ["Formule complète", "formule_complete"]]
+    - meal_kind_options = [["Repas végé (midi)", "repas_vege_midi"], ["Buffet pain-fromages", "buffet"]]
     - existing_meals = Array(@draft&.meals).map { |m| m.respond_to?(:symbolize_keys) ? m.symbolize_keys : m }
     - meal_rows = existing_meals + Array.new([3 - existing_meals.size, 1].max) { {} }
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4

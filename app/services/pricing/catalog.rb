@@ -110,7 +110,6 @@ module Pricing
     MEAL_PER_PERSON_CENTS = {
       "repas_vege_midi" => 1_500, # 15 €/pers
       "buffet"          => 1_200, # buffet pain-fromages 12 €/pers
-      "formule_complete" => 3_500 # 35 €/pers/jour
     }.freeze
 
     # Pizza Party : forfait + €/pers (40 € allumage + 7 €/pers patons).

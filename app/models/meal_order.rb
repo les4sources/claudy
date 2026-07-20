@@ -31,8 +31,7 @@ class MealOrder < ApplicationRecord
   # Libellé lisible du type de repas (fallback sur la clé humanisée).
   MEAL_LABELS = {
     "repas_vege_midi"  => "Repas végé (midi)",
-    "buffet"           => "Buffet pain-fromages",
-    "formule_complete" => "Formule complète"
+    "buffet"           => "Buffet pain-fromages"
   }.freeze
 
   def label
