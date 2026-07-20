@@ -40,6 +40,10 @@ class CustomersController < BaseController
     # Cibles possibles pour la re-ventilation des séjours (tout client sauf celui-ci).
     @reassign_targets = Customer.where.not(id: @customer.id).order(:first_name, :last_name, :email)
     @customer = CustomerDecorator.decorate(@customer)
+    # Séjours préchargés pour l'affichage du total + des icônes de composition
+    # (StaysCompositionHelper), sans N+1 sur la liste.
+    @upcoming_stays = preload_stays_composition(@customer.upcoming_stays)
+    @past_stays     = preload_stays_composition(@customer.past_stays)
   end
 
   def edit
@@ -128,6 +132,26 @@ class CustomersController < BaseController
   end
 
   private
+
+  # Précharge tout ce dont la liste des séjours a besoin pour afficher le total et
+  # les icônes de composition SANS N+1 : items→bookable (polymorphe) + activités,
+  # puis — pour les seuls SpaceBooking — leurs espaces (classés salle/cuisine dans
+  # `StaysCompositionHelper`). Le préchargement des espaces est fait à part car il
+  # ne concerne qu'un type de bookable polymorphe (Booking/Camping/Van n'ont pas
+  # d'espaces). Retourne un Array de Stay prêt à décorer.
+  def preload_stays_composition(relation)
+    stays = relation.includes(:experience_bookings, stay_items: :bookable).to_a
+    space_bookings = stays.flat_map(&:stay_items)
+                          .select { |item| item.bookable_type == "SpaceBooking" }
+                          .filter_map(&:bookable)
+    if space_bookings.any?
+      ActiveRecord::Associations::Preloader.new(
+        records: space_bookings,
+        associations: { space_reservations: :space }
+      ).call
+    end
+    stays
+  end
 
   # Returns [target_customer, nil] on success or [nil, error_message] on failure.
   def resolve_reassign_target
