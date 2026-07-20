@@ -53,6 +53,50 @@ RSpec.describe Reservations::Builder, "espaces (epic #66, Phase 2)" do
     end
   end
 
+  # Bug 2026-07-20 : la salle demandée « le 22, journée » était persistée sur la
+  # fenêtre du séjour (21→23) avec la période de PRICING brute ("journee"), que
+  # l'affichage (vocabulaire tranche 1) traduit… « période non précisée ».
+  describe "dates réelles + vocabulaire canonique de durée" do
+    it "persiste la durée CANONIQUE (day/evening/fullday), jamais la clé de pricing" do
+      builder = described_class.new(
+        draft: draft(halls: [hall(period: "journee"),
+                             hall(date: arrival + 1, period: "soiree"),
+                             hall(date: arrival + 2, period: "journee_et_soiree")]),
+        admin: true, source: "manual"
+      )
+      expect(builder.run).to be(true)
+
+      durations = builder.space_booking.space_reservations.order(:date).map(&:duration)
+      expect(durations).to eq(%w[day evening fullday])
+      # Le décorateur (source des libellés partout) sait donc les afficher.
+      decorated = SpaceBookingDecorator.new(builder.space_booking)
+      expect(decorated.duration).not_to include("non précisée")
+    end
+
+    it "borne from/to_date aux dates RÉELLEMENT occupées, pas à la fenêtre du séjour" do
+      middle_day = arrival + 1
+      builder = described_class.new(
+        draft: draft(halls: [hall(date: middle_day)]), admin: true, source: "manual"
+      )
+      expect(builder.run).to be(true)
+
+      sb = builder.space_booking
+      expect(sb.from_date).to eq(middle_day)
+      expect(sb.to_date).to eq(middle_day)
+    end
+
+    it "aller-retour édition : le DraftReconstructor re-mappe la durée en clé de pricing" do
+      builder = described_class.new(draft: draft(halls: [hall(period: "journee")]),
+                                    admin: true, source: "manual")
+      expect(builder.run).to be(true)
+
+      rebuilt = Stays::DraftReconstructor.new(builder.stay.reload).to_draft
+      expect(rebuilt.halls.first[:period]).to eq("journee")
+      # …et le devis d'édition retrouve son tarif (290 € — pas un 0 silencieux).
+      expect(rebuilt.quote.spaces_cents).to eq(grande_salle_journee_cents)
+    end
+  end
+
   describe "séjour « espaces seuls » (sans hébergement)" do
     let(:spaces_only) { draft(lodging_id: nil, halls: [hall]) }
 
@@ -77,8 +121,11 @@ RSpec.describe Reservations::Builder, "espaces (epic #66, Phase 2)" do
       stay.recompute_aggregates!
       stay.reload
       expect(stay.total_amount_cents).to eq(grande_salle_journee_cents)
+      # Depuis le fix 2026-07-20, le SpaceBooking porte ses dates RÉELLES (le
+      # seul jour de salle réservé), plus la fenêtre saisie du séjour : le
+      # recompute d'un séjour espaces-seuls s'aligne donc sur la salle.
       expect(stay.arrival_date).to eq(arrival)
-      expect(stay.departure_date).to eq(departure)
+      expect(stay.departure_date).to eq(arrival)
     end
   end
 

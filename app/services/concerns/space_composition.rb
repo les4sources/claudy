@@ -45,6 +45,19 @@ module SpaceComposition
     "cuisine_pro"  => "Cuisine professionnelle"
   }.freeze
 
+  # Période de PRICING (funnel/admin : "journee"…) → durée CANONIQUE de
+  # `SpaceReservation#duration` (vocabulaire tranche 1 : "day"/"evening"/
+  # "fullday"/"2h"/"see_notes", celui que lit `SpaceBookingDecorator#duration`).
+  # Sans ce mapping, la composition persistait "journee" → affiché « période
+  # non précisée » partout (bug repéré le 2026-07-20). L'inverse vit dans
+  # `Stays::DraftReconstructor` (édition → clés de pricing).
+  DURATION_BY_PERIOD = {
+    "journee"           => "day",
+    "soiree"            => "evening",
+    "journee_et_soiree" => "fullday"
+  }.freeze
+  PERIOD_BY_DURATION = DURATION_BY_PERIOD.invert.freeze
+
   private
 
   # Avertissement (String) listant les espaces DEVISÉS mais NON persistables
@@ -93,8 +106,10 @@ module SpaceComposition
 
   # Crée un `SpaceBooking` + ses `SpaceReservation` à partir de specs résolues,
   # et le rattache au séjour via un `StayItem`. Retourne le `SpaceBooking`.
-  # `window` = [arrival_date, departure_date] du draft, pour fixer from/to_date
-  # sur la fenêtre du séjour (cohérent avec `Stay#recompute_aggregates!`).
+  # `from/to_date` = les dates RÉELLEMENT occupées (min/max des specs) — pas la
+  # fenêtre du séjour : une salle louée le seul 22 ne doit pas s'afficher
+  # « du 21 au 23 » (bug repéré le 2026-07-20). Repli sur la fenêtre du draft
+  # si les specs n'ont pas de dates (défensif).
   def persist_space_booking!(stay:, draft:, specs:, status:, price_cents:)
     space_booking = build_space_booking(draft: draft, specs: specs, status: status, price_cents: price_cents)
     space_booking.save!
@@ -110,8 +125,8 @@ module SpaceComposition
       email:          Customer.normalize_email(draft.email),
       phone:          draft.phone,
       group_name:     draft.group_name,
-      from_date:      draft.arrival_date || dates.min,
-      to_date:        draft.departure_date || dates.max,
+      from_date:      dates.min || draft.arrival_date,
+      to_date:        dates.max || draft.departure_date,
       status:         status,
       payment_status: "pending",
       price_cents:    price_cents
@@ -162,7 +177,7 @@ module SpaceComposition
         next unless SPACE_NAMES_BY_KEY.key?(key.to_s)
         Array(periods).each_with_index do |period, night_idx|
           next if period.blank?
-          entries << { key: key.to_s, date: arrival + night_idx, duration: period.to_s }
+          entries << { key: key.to_s, date: arrival + night_idx, duration: canonical_duration(period) }
         end
       end
     end
@@ -175,10 +190,16 @@ module SpaceComposition
       next if period.blank?
       date = parse_space_date(hall[:date])
       next if date.nil?
-      entries << { key: key, date: date, duration: period }
+      entries << { key: key, date: date, duration: canonical_duration(period) }
     end
 
     entries
+  end
+
+  # Toujours persister le vocabulaire canonique ; une valeur déjà canonique
+  # (réédition d'un séjour, donnée historique) passe inchangée.
+  def canonical_duration(period)
+    DURATION_BY_PERIOD.fetch(period.to_s, period.to_s)
   end
 
   def space_for_key(key)

@@ -110,7 +110,7 @@ RSpec.describe "Stays — espaces (epic #66, Phase 2)", type: :request do
 
       stay.reload
       sb = stay.stay_items.where(bookable_type: "SpaceBooking").first.bookable
-      expect(sb.space_reservations.first.duration).to eq("journee_et_soiree")
+      expect(sb.space_reservations.first.duration).to eq("fullday") # durée canonique (fix 2026-07-20)
       expect(stay.total_amount_cents).to eq(38_000)
     end
 
