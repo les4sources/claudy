@@ -270,15 +270,16 @@ RSpec.describe "Stays — CRUD admin (epic #66)", type: :request do
     end
 
     # Revue Forge F1 : le form Booking direct historique écrit platform="direct",
-    # hors des 3 options du select séjour. Sans garde-fou, l'édition retombait
-    # sur "web" et réécrivait la plateforme en silence.
+    # hors des 3 options du groupe de radios séjour. Sans garde-fou, l'édition
+    # retombait sur "web" et réécrivait la plateforme en silence.
     it "préserve une plateforme historique hors options (ex. \"direct\") à l'édition" do
       stay = create_admin_stay
       booking = stay.stay_items.where(bookable_type: "Booking").first.bookable
       booking.update!(platform: "direct")
 
       get edit_stay_path(stay)
-      expect(response.body).to match(/<option selected[^>]*value="direct"|<option[^>]*value="direct"[^>]*selected/)
+      # Radio « direct » ajouté et coché (attributs triés par Slim → checked avant value).
+      expect(response.body).to match(%r{<input[^>]*checked[^>]*name="stay\[platform\]"[^>]*value="direct"})
 
       # Resoumettre le form avec la valeur affichée ne mute pas la plateforme.
       patch stay_path(stay), params: update_params(stay, platform: "direct")

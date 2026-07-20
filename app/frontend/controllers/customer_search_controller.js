@@ -17,7 +17,7 @@ import { Controller } from "@hotwired/stimulus"
 //       span(data-customer-search-target="chosenLabel")
 //       button(data-action="customer-search#clear")
 export default class extends Controller {
-  static targets = ["select", "searchWrap", "searchInput", "results", "chosen", "chosenLabel"]
+  static targets = ["select", "searchWrap", "searchInput", "results", "chosen", "chosenLabel", "chosenContact"]
   static values = { url: String }
 
   connect() {
@@ -58,17 +58,22 @@ export default class extends Controller {
       return
     }
     this.resultsTarget.innerHTML = customers
-      .map(
-        (c) =>
-          `<button type="button" data-action="customer-search#pick" data-id="${c.id}" data-label="${this.escape(c.name || c.email)}" class="block w-full text-left px-3 py-2 text-sm hover:bg-indigo-50">${this.escape(c.name || "")} <span class="text-gray-400">${this.escape(c.email || "")}</span></button>`
-      )
+      .map((c) => {
+        // Contact affiché sous le nom (issue parité funnel) : email · téléphone.
+        const contact = [c.email, c.phone].filter(Boolean).map((v) => this.escape(v)).join(" · ")
+        return `<button type="button" data-action="customer-search#pick" data-id="${c.id}" data-label="${this.escape(c.name || c.email)}" data-email="${this.escape(c.email || "")}" data-phone="${this.escape(c.phone || "")}" class="block w-full text-left px-3 py-2 text-sm hover:bg-indigo-50">
+          <span class="block font-medium text-gray-900">${this.escape(c.name || "")}</span>
+          <span class="block text-gray-400">${contact}</span>
+        </button>`
+      })
       .join("")
   }
 
   pick(event) {
-    const { id, label } = event.currentTarget.dataset
+    const { id, label, email, phone } = event.currentTarget.dataset
     this.setSelectValue(id, label)
-    this.showChosen(label)
+    const contact = [email, phone].filter(Boolean).join(" · ")
+    this.showChosen(label, contact)
     this.resultsTarget.innerHTML = ""
     this.searchInputTarget.value = ""
   }
@@ -95,8 +100,12 @@ export default class extends Controller {
     return option ? option.textContent.trim() : ""
   }
 
-  showChosen(label) {
+  // `contact` (email · téléphone) : passé à la sélection d'un résultat de
+  // recherche ; laissé `null` au connect en édition pour préserver le contact
+  // déjà rendu côté serveur pour le client courant.
+  showChosen(label, contact = null) {
     if (this.hasChosenLabelTarget) this.chosenLabelTarget.textContent = label
+    if (contact !== null && this.hasChosenContactTarget) this.chosenContactTarget.textContent = contact
     this.chosenTarget.classList.remove("hidden")
     this.searchWrapTarget.classList.add("hidden")
   }

@@ -2,6 +2,10 @@
 / Champs sous le namespace `stay[...]`. Devis B2C forfaitaire (PricingModel).
 / Duplication (epic #81, Phase 7) : le client du séjour source est présélectionné.
 - selected_customer_id = (@stay.persisted? ? @stay.customer_id : nil) || @preselected_customer_id
+/ Client présélectionné (édition / duplication) : sert à pré-afficher son contact
+/ (email · téléphone) dans le panneau « client choisi » dès le chargement.
+- selected_customer = Array(@customers).find { |c| c.id == selected_customer_id }
+- selected_customer_contact = selected_customer ? [selected_customer.email, selected_customer.phone].compact_blank.join(" · ") : nil
 - current_status = (@stay.status.presence || "pending")
 - selected_experiences = {}
 - Array(@draft&.experiences).each { |e| selected_experiences[e[:availability_id].to_i] = e[:participants] }
@@ -21,7 +25,10 @@
 - platform_options += [[current_platform, current_platform]] unless platform_options.any? { |_l, v| v == current_platform }
 - override_prefill = params.dig(:stay, :price_override).presence || (@stay&.price_override_cents.present? ? format("%g", @stay.price_override_cents / 100.0) : nil)
 
-= form_with url: url, method: method, data: { controller: "stay-form stay-quote stay-availability", "stay-quote-url-value": quote_stays_path, "stay-availability-url-value": availability_stays_path, action: "change->stay-quote#check input->stay-quote#check" } do
+/ `stay-availability-exclude-stay-id-value` : en édition, on transmet l'id du
+/ séjour pour que la vérif de dispo du form IGNORE ses propres chambres (sinon
+/ un séjour confirmé s'affiche « indisponible » à tort au chargement).
+= form_with url: url, method: method, data: { controller: "stay-form stay-quote stay-availability", "stay-quote-url-value": quote_stays_path, "stay-availability-url-value": availability_stays_path, "stay-availability-exclude-stay-id-value": (@stay&.persisted? ? @stay.id : nil), action: "change->stay-quote#check input->stay-quote#check change->stay-form#toggleSpaceBilling" } do
   .space-y-8
     / --- Client -------------------------------------------------------------
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
@@ -45,8 +52,10 @@
           = text_field_tag :customer_query, nil, placeholder: "Rechercher un client (nom, email)…", autocomplete: "off", data: { "customer-search-target": "searchInput", action: "input->customer-search#search" }, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           .border.border-gray-100.rounded-md.divide-y.divide-gray-50.bg-white.shadow-sm.max-h-48.overflow-y-auto(data-customer-search-target="results")
         .flex.items-center.justify-between.gap-2.text-sm.hidden(data-customer-search-target="chosen")
-          span.text-gray-900.font-medium(data-customer-search-target="chosenLabel")
-          button type="button" data-action="customer-search#clear" class="text-indigo-600 hover:underline" Changer
+          .min-w-0
+            span.block.text-gray-900.font-medium.truncate(data-customer-search-target="chosenLabel") = selected_customer&.name
+            span.block.text-gray-500.text-xs.truncate(data-customer-search-target="chosenContact") = selected_customer_contact
+          button type="button" data-action="customer-search#clear" class="flex-shrink-0 text-indigo-600 hover:underline" Changer
 
       .space-y-2.hidden(data-stay-form-target="newPanel")
         .grid.grid-cols-2.gap-2
@@ -54,6 +63,18 @@
           = text_field_tag "stay[new_customer][last_name]", @draft&.last_name, placeholder: "Nom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
         = email_field_tag "stay[new_customer][email]", @draft&.email, placeholder: "Email", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
         = telephone_field_tag "stay[new_customer][phone]", @draft&.phone, placeholder: "Téléphone", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        / Type de client (addendum) : switch particulier ↔ organisation (même style
+        / que le statut). Hidden `individual` de repli avant le checkbox
+        / `organization` (Rack retient la dernière valeur). En organisation, le
+        / « Nom du groupe » ci-dessous alimente `organization_name` du client.
+        - new_is_org = (@draft&.customer_type.to_s == "organization")
+        = hidden_field_tag "stay[new_customer][customer_type]", "individual", id: nil
+        label class="inline-flex items-center gap-3 cursor-pointer"
+          input id="new_customer_org_toggle" type="checkbox" name="stay[new_customer][customer_type]" value="organization" checked=new_is_org role="switch" aria-label="Client organisation" class="sr-only peer"
+          span aria-hidden="true" class="relative w-11 h-6 flex-shrink-0 rounded-full bg-gray-200 transition-colors peer-checked:bg-emerald-500 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-500 peer-focus-visible:ring-offset-2 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"
+          span class="text-sm font-medium text-gray-500 peer-checked:hidden" Particulier
+          span class="text-sm font-medium text-emerald-700 hidden peer-checked:inline" Organisation
+        = text_field_tag "stay[new_customer][organization_name]", @draft&.organization_name, placeholder: "Nom du groupe / organisation", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
     / --- Séjour (dates + groupe) --------------------------------------------
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
@@ -127,16 +148,26 @@
     - space_billing = @draft&.space_billing || {}
     - payment_method_options = [["En liquide à son arrivée", "cash"], ["Par virement bancaire", "bank_transfer"], ["Versement automatique Airbnb", "airbnb"], ["Versement automatique Booking.com", "bookingdotcom"]]
     - event_options = Array(@events).map { |e| [e.name_with_date, e.id] }
-    - space_billing_open = existing_halls.any? { |h| h[:kind].present? }
+    / Grille date-par-date (issue parité funnel) : dès que le séjour a des dates,
+    / on réutilise la grille nuits × espaces du funnel (space_slots) au lieu des
+    / lignes `halls`. Sans dates (journée sèche / espaces seuls non datés), on
+    / retombe sur les lignes `halls` — seule saisie possible hors fenêtre.
+    - use_space_grid = @stay_nights.present?
+    - space_slots_present = Array(@draft&.space_slots&.values).flatten.any?(&:present?)
+    - space_billing_open = existing_halls.any? { |h| h[:kind].present? } || space_slots_present
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
       h2.text-base.font-semibold.text-gray-900 Espaces
-      p.text-sm.text-gray-500 Ajoutez une salle ou la cuisine pro (date + période). Un séjour peut être composé d'espaces seuls, sans hébergement.
-      ul.divide-y.divide-gray-100
-        - space_rows.each_with_index do |row, index|
-          li.py-2.grid.grid-cols-3.gap-2
-            = select_tag "stay[halls][#{index}][kind]", options_for_select(space_kind_options, row[:kind]), include_blank: "— Espace —", data: { action: "change->stay-form#toggleSpaceBilling" }, class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-            = date_field_tag "stay[halls][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-            = select_tag "stay[halls][#{index}][period]", options_for_select(period_options, row[:period]), include_blank: "— Période —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+      - if use_space_grid
+        p.text-sm.text-gray-500 Cliquez une cellule pour réserver un espace — journée, soirée ou les deux — nuit par nuit.
+        = render "public/reservations/spaces_calendar", param_root: "stay", draft: @draft, days: @stay_nights
+      - else
+        p.text-sm.text-gray-500 Ajoutez une salle ou la cuisine pro (date + période). Un séjour peut être composé d'espaces seuls, sans hébergement.
+        ul.divide-y.divide-gray-100
+          - space_rows.each_with_index do |row, index|
+            li.py-2.grid.grid-cols-3.gap-2
+              = select_tag "stay[halls][#{index}][kind]", options_for_select(space_kind_options, row[:kind]), include_blank: "— Espace —", data: { action: "change->stay-form#toggleSpaceBilling" }, class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+              = date_field_tag "stay[halls][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+              = select_tag "stay[halls][#{index}][period]", options_for_select(period_options, row[:period]), include_blank: "— Période —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
 
       / Facturation espaces — n'apparaît que si ≥1 ligne d'espace est renseignée.
       / Tous les champs sont optionnels (acompte/caution en €, converties comme le
@@ -214,21 +245,40 @@
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
       h2.text-base.font-semibold.text-gray-900 Attribution
       p.text-sm.text-gray-500 D'où vient ce séjour ? La plateforme n'est enregistrée que si le séjour comporte un hébergement.
-      .grid.grid-cols-2.gap-4
-        .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 Canal (source)
-          = select_tag "stay[source]", options_for_select(source_options, current_source), data: { "stay-form-target": "source" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-        .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 Plateforme
-          / Choisir une plateforme OTA bascule le canal sur « OTA » (stay-form#syncChannelFromPlatform).
-          = select_tag "stay[platform]", options_for_select(platform_options, current_platform), data: { "stay-form-target": "platform", action: "change->stay-form#syncChannelFromPlatform" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      / Radios (issue parité funnel) : canal + plateforme en boutons radio plutôt
+      / que des selects. Chaque radio porte un target stay-form (source/platform) ;
+      / choisir une plateforme OTA bascule le canal sur « OTA » côté Stimulus.
+      .grid.grid-cols-1.sm:grid-cols-2.gap-4
+        fieldset.space-y-2
+          legend.text-sm.font-medium.text-gray-700 Canal (source)
+          .flex.flex-col.gap-2
+            - source_options.each do |label, value|
+              label.flex.items-center.gap-2.text-sm.text-gray-700
+                input type="radio" name="stay[source]" value=value checked=(value.to_s == current_source.to_s) data-stay-form-target="source" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                = label
+        fieldset.space-y-2
+          legend.text-sm.font-medium.text-gray-700 Plateforme
+          .flex.flex-col.gap-2
+            - platform_options.each do |label, value|
+              label.flex.items-center.gap-2.text-sm.text-gray-700
+                input type="radio" name="stay[platform]" value=value checked=(value.to_s == current_platform.to_s) data-stay-form-target="platform" data-action="change->stay-form#syncChannelFromPlatform" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                = label
 
     / --- Statut + force dispo -----------------------------------------------
+    / Switch accessible (issue parité funnel) : bascule En attente ↔ Confirmé.
+    / Un hidden `stay[status]=pending` précède le checkbox `stay[status]=confirmed`
+    / (Rack retient la DERNIÈRE valeur) : coché → confirmed, décoché → pending.
+    - status_confirmed = (current_status == "confirmed")
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Statut & disponibilité
+      h2.text-base.font-semibold.text-gray-900 Statut
       .space-y-1
-        label.block.text-sm.font-medium.text-gray-700 Statut du séjour
-        = select_tag "stay[status]", options_for_select([["En attente", "pending"], ["Confirmé", "confirmed"]], current_status), class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        span.block.text-sm.font-medium.text-gray-700 Statut du séjour
+        = hidden_field_tag "stay[status]", "pending", id: nil
+        label class="inline-flex items-center gap-3 cursor-pointer"
+          input id="stay_status_toggle" type="checkbox" name="stay[status]" value="confirmed" checked=status_confirmed role="switch" aria-label="Séjour confirmé" class="sr-only peer"
+          span aria-hidden="true" class="relative w-11 h-6 flex-shrink-0 rounded-full bg-gray-200 transition-colors peer-checked:bg-emerald-500 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-500 peer-focus-visible:ring-offset-2 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"
+          span class="text-sm font-medium text-gray-500 peer-checked:hidden" En attente
+          span class="text-sm font-medium text-emerald-700 hidden peer-checked:inline" Confirmé
       label.flex.items-center.gap-2.text-sm.text-gray-700
         = check_box_tag "stay[force_availability]", "1", false
         | Forcer la disponibilité (surbooking / saisie a posteriori)
@@ -260,6 +310,9 @@
         label.block.text-sm.font-medium.text-gray-700 Note publique (visible par le client)
         = rich_text_area_tag "stay[public_notes]", @stay&.public_notes&.to_trix_html, class: "trix-content"
 
+    / « Annuler » : retour à la FICHE du séjour en édition (elle existe en pleine
+    / page depuis stays#show), sinon à la liste en création (demande Michael).
+    - cancel_path = @stay&.persisted? ? stay_path(@stay) : stays_path
     .flex.justify-end.gap-3
-      = link_to "Annuler", recent_stays_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+      = link_to "Annuler", cancel_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
       = submit_tag submit_label, class: "inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"

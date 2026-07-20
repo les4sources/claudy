@@ -32,7 +32,7 @@ class CustomersController < BaseController
   # Autocomplete JSON pour la re-ventilation (recherche dynamique de client cible).
   def search
     customers = Customer.search(params[:q]).order(:first_name, :last_name, :email).limit(10)
-    render json: customers.map { |c| { id: c.id, name: c.name, email: c.email } }
+    render json: customers.map { |c| { id: c.id, name: c.name, email: c.email, phone: c.phone } }
   end
 
   def show

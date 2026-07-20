@@ -36,10 +36,16 @@ export default class extends Controller {
   // `space_billing` normalement, et un panneau replié resoumet ses valeurs.
   toggleSpaceBilling() {
     if (!this.hasSpaceBillingPanelTarget) return
+    // Lignes `halls` (journée sèche) OU grille date-par-date (`space_slots`) :
+    // le panneau facturation s'ouvre dès qu'un espace est renseigné dans l'une
+    // ou l'autre représentation.
     const anyKindSelected = Array.from(
       this.element.querySelectorAll('select[name^="stay[halls]"][name$="[kind]"]'),
     ).some((select) => select.value.trim() !== "")
-    this.spaceBillingPanelTarget.classList.toggle("hidden", !anyKindSelected)
+    const anySlotSelected = Array.from(
+      this.element.querySelectorAll('input[name^="stay[space_slots]"]'),
+    ).some((input) => input.value.trim() !== "")
+    this.spaceBillingPanelTarget.classList.toggle("hidden", !(anyKindSelected || anySlotSelected))
   }
 
   // Mode d'occupation (epic #81, Phase 5) : gîte entier / chambres seules. En mode
@@ -92,26 +98,34 @@ export default class extends Controller {
   // en « Réservation directe » (web) NE force le retour à « Saisie manuelle » QUE
   // si le canal était justement « ota » — on ne réécrit jamais un autre canal
   // (reservation / tally_legacy conservés en édition).
+  //
+  // `source`/`platform` sont désormais des groupes de RADIOS (issue parité
+  // funnel) : `this.sourceTargets` / `this.platformTargets` listent les inputs.
   syncChannelFromPlatform() {
     if (!this.hasPlatformTarget || !this.hasSourceTarget) return
 
-    const isOta =
-      this.platformTarget.value === "airbnb" ||
-      this.platformTarget.value === "bookingdotcom"
+    const platform = this.checkedValue(this.platformTargets)
+    const isOta = platform === "airbnb" || platform === "bookingdotcom"
 
     if (isOta) {
       this.setSourceIfPossible("ota")
-    } else if (this.sourceTarget.value === "ota") {
+    } else if (this.checkedValue(this.sourceTargets) === "ota") {
       this.setSourceIfPossible("manual")
     }
   }
 
-  // Positionne le <select> canal sur `value` uniquement si l'option existe (les
-  // options sont bornées côté serveur à manual/ota + la source d'origine). No-op
-  // si la valeur est déjà en place — évite tout événement superflu.
+  // Valeur du radio coché dans un groupe (ou "").
+  checkedValue(radios) {
+    return radios.find((r) => r.checked)?.value || ""
+  }
+
+  // Coche le radio canal `value` uniquement s'il existe (les options sont bornées
+  // côté serveur à manual/ota + la source d'origine). No-op si déjà coché — sinon
+  // on émet un `change` bouillonnant (pour le devis live et la cohérence).
   setSourceIfPossible(value) {
-    const hasOption = Array.from(this.sourceTarget.options).some((o) => o.value === value)
-    if (!hasOption || this.sourceTarget.value === value) return
-    this.sourceTarget.value = value
+    const radio = this.sourceTargets.find((r) => r.value === value)
+    if (!radio || radio.checked) return
+    radio.checked = true
+    radio.dispatchEvent(new Event("change", { bubbles: true }))
   }
 }

@@ -28,6 +28,16 @@ RSpec.describe "Stays — autocomplete client (issue #74)", type: :request do
       expect(body.first).to include("id", "name", "email")
       expect(body.first["email"]).to eq("zoe@example.com")
     end
+
+    it "expose aussi le téléphone (identité client enrichie)" do
+      Customer.create!(first_name: "Zoé", last_name: "Dupont", email: "zoe@example.com",
+                       phone: "0470111222", customer_type: "individual")
+      get search_customers_path, params: { q: "Zoé" }, headers: { "Accept" => "application/json" }
+
+      body = JSON.parse(response.body)
+      expect(body.first).to include("phone")
+      expect(body.first["phone"]).to eq("0470111222")
+    end
   end
 
   describe "POST /stays avec un client sélectionné (customer_id)" do
@@ -64,6 +74,18 @@ RSpec.describe "Stays — autocomplete client (issue #74)", type: :request do
       get edit_stay_path(stay)
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("selected=\"selected\" value=\"#{customer.id}\"")
+    end
+
+    it "pré-affiche le contact (email · téléphone) du client courant dans le panneau choisi" do
+      customer = Customer.create!(first_name: "Bob", last_name: "Durand", email: "bob@example.com",
+                                  phone: "0470333444", customer_type: "individual")
+      stay = Stay.create!(customer: customer, source: "manual", status: "pending",
+                          arrival_date: arrival, departure_date: departure, total_amount_cents: 0)
+
+      get edit_stay_path(stay)
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('data-customer-search-target="chosenContact"')
+      expect(response.body).to include("bob@example.com · 0470333444")
     end
   end
 end
