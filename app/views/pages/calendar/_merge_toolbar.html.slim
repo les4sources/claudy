@@ -2,20 +2,9 @@
 / bascule le MODE FUSION ; il vit DANS la portée du contrôleur stay-merge (les
 / actions Stimulus ne se lient qu'à l'intérieur de l'élément-contrôleur, d'où sa
 / place ici plutôt que dans l'entête de page global).
-css:
-  .merge-mode [data-stay-id] { transition: opacity .15s ease, box-shadow .15s ease; cursor: pointer; }
-  .merge-mode.has-selection [data-stay-id]:not(.merge-selected) { opacity: .45; }
-  /* En mode fusion, le lien-overlay du bloc est neutralisé : le clic sélectionne
-     le séjour au lieu d'ouvrir la modale (la capture JS le double par sécurité). */
-  .merge-mode [data-stay-id] a[data-action~="stay-details#open"] { pointer-events: none; }
-  .merge-selection-badge {
-    position: absolute; top: 2px; right: 2px; z-index: 5;
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 18px; height: 18px; border-radius: 9999px;
-    color: #fff; font-size: 11px; line-height: 1; font-weight: 700;
-    box-shadow: 0 1px 2px rgba(0,0,0,.25);
-  }
-  .stay-merge-bar { transition: transform .15s ease; }
+/ Styles du mode fusion — factorisés dans stays/_merge_styles (partagés avec la
+/ fiche client). Voir ce partial pour l'estompage, l'overlay neutralisé, le badge.
+= render "stays/merge_styles"
 
 .flex.items-center.gap-3.mb-4
   / `gap-1.5` / `py-1.5` en attribut class : la notation à points de Slim

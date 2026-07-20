@@ -21,7 +21,11 @@ const SELECTION_TTL_MS = 60 * 60 * 1000 // sélection périmée au-delà d'une h
 
 export default class extends Controller {
   static targets = ["bar", "chips", "count", "mergeButton", "dialog", "dialogContent", "toggleButton", "banner"]
-  static values = { setupUrl: String, previewUrl: String, reset: Boolean }
+  // `scope` namespace le sessionStorage (calendrier vs fiche client : chaque
+  // contexte a SA sélection, aucune contamination croisée). Vide = clés
+  // historiques du calendrier — aucune régression. `returnUrl`, s'il est posé,
+  // redirige la fusion vers la page d'origine (fiche client) au lieu du calendrier.
+  static values = { setupUrl: String, previewUrl: String, reset: Boolean, returnUrl: String, scope: String }
 
   connect() {
     // Fusion tout juste réalisée (redirection ?stay_merge_done=1) : on repart propre.
@@ -29,7 +33,7 @@ export default class extends Controller {
       this.clearStorage()
     }
 
-    this.active = sessionStorage.getItem(STORAGE_ACTIVE) === "1"
+    this.active = sessionStorage.getItem(this.key(STORAGE_ACTIVE)) === "1"
     this.selection = this.readSelection()
     this.lastTargetId = null
 
@@ -58,7 +62,7 @@ export default class extends Controller {
 
   enterMode() {
     this.active = true
-    sessionStorage.setItem(STORAGE_ACTIVE, "1")
+    sessionStorage.setItem(this.key(STORAGE_ACTIVE), "1")
     this.applyModeChrome(true)
     this.applySelectionStyles()
     this.renderBar()
@@ -298,11 +302,16 @@ export default class extends Controller {
       if (submitButton.disabled) return
       submitButton.disabled = true
     }
+    // `return_url` (posé côté fiche client) : le serveur redirige vers la page
+    // d'origine après fusion au lieu du calendrier. Absent sur le calendrier → le
+    // serveur garde son repli (mois du survivant).
+    const formData = new FormData(form)
+    if (this.returnUrlValue) formData.append("return_url", this.returnUrlValue)
     try {
       const response = await fetch(form.action, {
         method: "POST",
         headers: { Accept: "application/json" },
-        body: new FormData(form)
+        body: formData
       })
       const contentType = response.headers.get("content-type") || ""
       if (response.ok && contentType.includes("json")) {
@@ -365,14 +374,20 @@ export default class extends Controller {
     if (this.active) this.exitMode()
   }
 
+  // Clé sessionStorage effective : suffixée par `scope` s'il est fourni (fiche
+  // client), sinon clé nue (calendrier — comportement historique intact).
+  key(base) {
+    return this.scopeValue ? `${base}.${this.scopeValue}` : base
+  }
+
   readSelection() {
     try {
-      const raw = sessionStorage.getItem(STORAGE_SELECTION)
+      const raw = sessionStorage.getItem(this.key(STORAGE_SELECTION))
       const parsed = raw ? JSON.parse(raw) : []
       if (!Array.isArray(parsed)) return []
       // Sélection périmée (> 60 min) : on repart à neuf plutôt que de ré-entrer
       // en mode fusion avec des séjours choisis il y a longtemps.
-      const stampRaw = sessionStorage.getItem(STORAGE_STAMP)
+      const stampRaw = sessionStorage.getItem(this.key(STORAGE_STAMP))
       const stamp = stampRaw ? parseInt(stampRaw, 10) : 0
       if (!stamp || Date.now() - stamp > SELECTION_TTL_MS) {
         this.clearStorage()
@@ -385,13 +400,13 @@ export default class extends Controller {
   }
 
   persistSelection() {
-    sessionStorage.setItem(STORAGE_SELECTION, JSON.stringify(this.selection))
-    sessionStorage.setItem(STORAGE_STAMP, String(Date.now()))
+    sessionStorage.setItem(this.key(STORAGE_SELECTION), JSON.stringify(this.selection))
+    sessionStorage.setItem(this.key(STORAGE_STAMP), String(Date.now()))
   }
 
   clearStorage() {
-    sessionStorage.removeItem(STORAGE_ACTIVE)
-    sessionStorage.removeItem(STORAGE_SELECTION)
-    sessionStorage.removeItem(STORAGE_STAMP)
+    sessionStorage.removeItem(this.key(STORAGE_ACTIVE))
+    sessionStorage.removeItem(this.key(STORAGE_SELECTION))
+    sessionStorage.removeItem(this.key(STORAGE_STAMP))
   }
 }

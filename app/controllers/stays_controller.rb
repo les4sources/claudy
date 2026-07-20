@@ -261,9 +261,7 @@ class StaysController < BaseController
     if service.run
       target.reload
       flash[:notice] = merge_success_message(target, sources)
-      render json: {
-        redirect: root_path(date: target.arrival_date&.strftime("%Y-%m-%d"), stay_merge_done: 1)
-      }
+      render json: { redirect: merge_redirect_url(target) }
     else
       preview = Stays::MergePreview.new(target: target, sources: sources).call
       render partial: "stays/merge_preview",
@@ -364,6 +362,28 @@ class StaysController < BaseController
            formats: [:html],
            status: :unprocessable_entity,
            locals: { message: message }
+  end
+
+  # Destination post-fusion. Par défaut le calendrier au mois du survivant ;
+  # si le client a fourni un `return_url` (fiche client), on y retourne. Le
+  # `return_url` est STRICTEMENT borné à un chemin same-origin (commence par « / »
+  # mais pas « // », ni schéma ni hôte) pour couper tout open-redirect, même si
+  # ces actions sont déjà derrière Devise. On y injecte `stay_merge_done=1` pour
+  # que la page d'arrivée nettoie sa sélection sessionStorage (comme le calendrier).
+  def merge_redirect_url(target)
+    default = root_path(date: target.arrival_date&.strftime("%Y-%m-%d"), stay_merge_done: 1)
+    raw = params[:return_url].to_s
+    return default unless raw.start_with?("/") && !raw.start_with?("//")
+
+    uri = URI.parse(raw)
+    return default if uri.scheme.present? || uri.host.present?
+
+    query = Rack::Utils.parse_nested_query(uri.query)
+    query["stay_merge_done"] = "1"
+    uri.query = query.to_query
+    uri.to_s
+  rescue URI::InvalidURIError
+    default
   end
 
   def merge_success_message(target, sources)

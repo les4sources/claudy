@@ -88,6 +88,24 @@ RSpec.describe "Stays merge (epic #81)", type: :request do
       post merge_stays_path, params: { target_id: target.id, stay_ids: [target.id] }, as: :json
       expect(response).to have_http_status(:unprocessable_entity)
     end
+
+    it "redirige vers le `return_url` fourni (fiche client) au lieu du calendrier" do
+      post merge_stays_path,
+           params: { target_id: target.id, stay_ids: [target.id, source.id], return_url: "/customers/#{c_target.id}" },
+           as: :json
+      json = JSON.parse(response.body)
+      expect(json["redirect"]).to start_with("/customers/#{c_target.id}")
+      expect(json["redirect"]).to include("stay_merge_done=1")
+    end
+
+    it "ignore un `return_url` non same-origin (anti open-redirect) et retombe sur le calendrier" do
+      post merge_stays_path,
+           params: { target_id: target.id, stay_ids: [target.id, source.id], return_url: "https://evil.example/phish" },
+           as: :json
+      json = JSON.parse(response.body)
+      expect(json["redirect"]).not_to include("evil.example")
+      expect(json["redirect"]).to include("stay_merge_done=1")
+    end
   end
 
   describe "authentification" do
