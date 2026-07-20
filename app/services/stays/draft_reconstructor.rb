@@ -28,6 +28,12 @@ module Stays
         room_ids:       rooms_mode ? booking.reservations.map(&:room_id).uniq : [],
         arrival_date:   @stay.arrival_date,
         departure_date: @stay.departure_date,
+        # Grille par nuit (Michael 2026-07-20) : reconstituée depuis les N
+        # CampingBooking / VanBooking (une plage par tranche contiguë) pour que
+        # l'édition ré-affiche FIDÈLEMENT la grille du funnel. Présente → le Draft
+        # dérive `campings`/`vans` d'elle ; absente (pas de dates / pas de plein
+        # air) → repli sur les entrées pleine-fenêtre ci-dessous.
+        per_night_resources: per_night_resources_from_stay,
         adults:         booking&.adults,
         children:       booking&.children,
         group_name:     booking&.group_name,
@@ -47,6 +53,41 @@ module Stays
     end
 
     private
+
+    # Reconstruit `per_night_resources = { "tente" => [...], "van" => [...] }` en
+    # étalant chaque CampingBooking / VanBooking sur ses nuits `[from, to)`,
+    # indexé depuis l'arrivée du séjour. nil si le séjour n'a pas de dates OU pas
+    # de plein air — l'édition retombe alors sur les entrées pleine-fenêtre legacy.
+    def per_night_resources_from_stay
+      arrival   = @stay.arrival_date
+      departure = @stay.departure_date
+      return nil if arrival.blank? || departure.blank?
+      nights = (departure - arrival).to_i
+      return nil if nights < 1
+
+      campings = @stay.stay_items.select { |i| i.bookable_type == "CampingBooking" }.filter_map(&:bookable)
+      vans     = @stay.stay_items.select { |i| i.bookable_type == "VanBooking" }.filter_map(&:bookable)
+      return nil if campings.empty? && vans.empty?
+
+      pnr = {}
+      pnr["tente"] = spread_nights(campings, arrival, nights, &:people)   if campings.any?
+      pnr["van"]   = spread_nights(vans,     arrival, nights, &:vehicles) if vans.any?
+      pnr
+    end
+
+    # Tableau de `nights` valeurs (0 par défaut), rempli par `yield(b)` sur chaque
+    # nuit couverte par le réservable `b` (fenêtre `[from, to)`).
+    def spread_nights(bookings, arrival, nights)
+      arr = Array.new(nights, 0)
+      bookings.each do |b|
+        next if b.from_date.blank? || b.to_date.blank?
+        (b.from_date...b.to_date).each do |date|
+          idx = (date - arrival).to_i
+          arr[idx] = yield(b) if idx >= 0 && idx < nights
+        end
+      end
+      arr
+    end
 
     def lodging_booking
       @stay.stay_items.where(bookable_type: "Booking").first&.bookable
