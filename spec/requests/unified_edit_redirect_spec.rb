@@ -105,13 +105,14 @@ RSpec.describe "Édition unifiée — edit → redirection (issue #99)", type: :
       expect(response.body).not_to include(edit_booking_path(booking))
     end
 
-    it "ne propose plus d'édition legacy quand le booking n'a pas de Stay vivant (cas résiduel)" do
+    it "disparaît quand le booking n'a pas de Stay vivant (un lien vers la fiche serait un no-op)" do
       from = Date.today.next_occurring(:friday)
       booking = orphan_booking(from: from)
 
       get booking_path(booking)
 
       expect(response.body).not_to include(edit_booking_path(booking))
+      expect(response.body).not_to include("Mettre à jour")
     end
   end
 
@@ -126,13 +127,14 @@ RSpec.describe "Édition unifiée — edit → redirection (issue #99)", type: :
       expect(response.body).not_to include(edit_space_booking_path(space_booking))
     end
 
-    it "ne propose plus d'édition legacy quand la résa d'espace n'a pas de Stay vivant (cas résiduel)" do
+    it "disparaît quand la résa d'espace n'a pas de Stay vivant (un lien vers la fiche serait un no-op)" do
       from = Date.today.next_occurring(:friday)
       space_booking = orphan_space_booking(on: from)
 
       get space_booking_path(space_booking)
 
       expect(response.body).not_to include(edit_space_booking_path(space_booking))
+      expect(response.body).not_to include("Mettre à jour")
     end
   end
 end
