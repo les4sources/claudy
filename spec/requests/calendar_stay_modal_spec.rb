@@ -96,7 +96,10 @@ RSpec.describe "Calendrier — modale séjour depuis les blocs (epic #66, Phase 
       get "/"
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("data-camping-booking-entry=\"#{camping.id}\"")
+      # Camping AVEC séjour : désormais agrégé dans le bloc SÉJOUR UNIFIÉ, qui
+      # porte `data-stay-id` et ouvre la modale via l'overlay `stay_path`.
+      expect(response.body).to include("data-stay-id=\"#{stay.id}\"")
+      expect(response.body).to include("⛺ Camping")
       expect(response.body).to include("href=\"#{stay_path(stay)}\"")
     end
   end

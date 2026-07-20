@@ -48,6 +48,23 @@ module CalendarHelper
     end
   end
 
+  # Compteur de nuits AU NIVEAU DU SÉJOUR pour le bloc unifié (« (2/3) »). Même
+  # convention que `BookingDecorator#dates_counter`, mais adossée aux dates du
+  # séjour (arrival/departure) plutôt qu'à un bookable isolé : un seul compteur
+  # pour tout le séjour, quel que soit le nombre de composants. Renvoie `nil`
+  # pour une nuitée unique (rien à compter) ou si les dates manquent.
+  def stay_nights_counter(stay, current_date)
+    from = stay&.arrival_date
+    to   = stay&.departure_date
+    return nil if from.blank? || to.blank?
+
+    total_nights = (to - from).to_i
+    return nil if total_nights <= 1
+
+    day = (current_date.to_date - from + 1).to_i
+    "(#{day}/#{total_nights})"
+  end
+
   def button_to_next_month(current_date, data = {}, options = {})
     link_to(params.permit(:date, :no_title, :view).merge(date: current_date.next_month), class: "btn-page-header-with-icon", data: data) do
       if options[:no_label].nil?

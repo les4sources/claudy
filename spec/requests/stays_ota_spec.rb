@@ -125,8 +125,10 @@ RSpec.describe "Stays — canal OTA (epic #81, Phase 4)", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("data-stay-id=\"#{stay.id}\"")
-      # 2 nuits → 2 entrées jour chambre (la représentation qui porte le veto).
-      expect(response.body.scan("data-booking-day-entry=\"#{booking.id}\"").size).to eq(2)
+      # 2 nuits → 2 cellules du jour → 2 blocs séjour unifiés (la table Reservation,
+      # qui porte le veto, reste à 2 nuits indépendamment de la fusion d'affichage).
+      expect(response.body.scan("data-stay-id=\"#{stay.id}\"").size).to eq(2)
+      expect(Reservation.where(booking: booking).count).to eq(2)
       expect(response.body).to include("hsl(#{hue_for(stay.id)}, 65%, 45%)")
     end
   end

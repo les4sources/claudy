@@ -46,7 +46,7 @@ RSpec.describe "Calendrier — regroupement par séjour (epic #66, Phase 4)", ty
       expect(response.body).to include("hsl(#{hue_for(stay.id)}, 65%, 45%)")
     end
 
-    it "groupe un séjour MULTI-RESSOURCES (hébergement + espace) sous le même séjour et la même couleur" do
+    it "fusionne un séjour MULTI-RESSOURCES (hébergement + espace) en UN SEUL bloc" do
       from = Date.today.next_occurring(:friday)
       stay, _booking = stay_with_lodging(from: from, to: from + 1)
 
@@ -58,11 +58,12 @@ RSpec.describe "Calendrier — regroupement par séjour (epic #66, Phase 4)", ty
 
       get "/"
 
-      # Le bloc chambre ET le bloc espace portent le même stay_id…
-      expect(response.body).to include("data-booking-day-entry=\"#{_booking.id}\"")
-      expect(response.body).to include("data-space-booking-day-entry=\"#{space_booking.id}\"")
-      # …et la même teinte de séjour.
-      expect(response.body.scan("data-stay-id=\"#{stay.id}\"").size).to be >= 2
+      # Bloc SÉJOUR UNIFIÉ : un seul `data-stay-id` ce jour-là (avant : un bloc
+      # par ressource, donc plusieurs). L'hébergement ET l'espace sont agrégés…
+      expect(response.body.scan("data-stay-id=\"#{stay.id}\"").size).to eq(1)
+      # …le badge espace (orange) figure bien dans ce bloc unifié…
+      expect(response.body).to include("bg-orange-100")
+      # …et la teinte stable du séjour colore le bloc.
       expect(response.body).to include("hsl(#{hue_for(stay.id)}, 65%, 45%)")
     end
 
@@ -87,14 +88,17 @@ RSpec.describe "Calendrier — regroupement par séjour (epic #66, Phase 4)", ty
   end
 
   describe "occupations chambres — anti-régression veto Grand-Duc" do
-    it "rend toujours un bloc par jour réservé avec le badge chambre" do
+    it "rend un bloc séjour par jour réservé, la source du veto restant les Reservation en base" do
       from = Date.today.next_occurring(:friday)
       stay, booking = stay_with_lodging(from: from, to: from + 2)
 
       get "/"
 
-      # Deux nuits réservées → deux entrées jour (la source de vérité du veto).
-      expect(response.body.scan("data-booking-day-entry=\"#{booking.id}\"").size).to eq(2)
+      # Deux nuits réservées → deux cellules du jour → deux blocs séjour unifiés.
+      expect(response.body.scan("data-stay-id=\"#{stay.id}\"").size).to eq(2)
+      # La VRAIE source de vérité du veto reste la table Reservation (inchangée
+      # par la fusion d'affichage) : une réservation de chambre par nuit.
+      expect(Reservation.where(booking: booking).count).to eq(2)
       # Édition unifiée (epic #81, Phase 8) : le bloc pointe vers la modale séjour,
       # plus vers la fiche booking legacy. On borne à la grille (le flux d'activité,
       # hors scope, garde son lien booking historique).
@@ -120,7 +124,7 @@ RSpec.describe "Calendrier — regroupement par séjour (epic #66, Phase 4)", ty
   end
 
   describe "camping / van agrégés, groupés par séjour" do
-    it "rend un bloc « Camping » par nuit occupée, coloré par le séjour" do
+    it "rend un bloc séjour par nuit occupée avec la chip camping agrégée, coloré par le séjour" do
       from = Date.today.next_occurring(:friday)
       to   = from + 2 # 2 nuits
       camping = CampingBooking.create!(firstname: "Cam", group_name: "Groupe Camping",
@@ -134,10 +138,12 @@ RSpec.describe "Calendrier — regroupement par séjour (epic #66, Phase 4)", ty
       get "/"
 
       expect(response).to have_http_status(:ok)
-      # Une entrée camping par nuit (2), colorée par le séjour.
-      expect(response.body.scan("data-camping-booking-entry=\"#{camping.id}\"").size).to eq(2)
+      # Bloc séjour unifié : une entrée par nuit (2), colorée par le séjour, avec
+      # la chip camping agrégée (avant : un bloc « Camping » distinct par nuit).
+      expect(response.body.scan("data-stay-id=\"#{stay.id}\"").size).to eq(2)
       expect(response.body).to include("hsl(#{hue_for(stay.id)}, 65%, 45%)")
       expect(response.body).to include("Groupe Camping")
+      expect(response.body).to include("⛺ Camping · 4 pers.")
     end
   end
 
