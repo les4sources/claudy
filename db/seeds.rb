@@ -55,7 +55,9 @@ LodgingComposition.find_or_create_by!(composite_lodging: lodging_25, component_l
 
 Space.find_or_create_by!(code: "TIL") { |s| s.name = "Tilleul"; s.description = "1er étage, 140 m2" }
 Space.find_or_create_by!(code: "SAU") { |s| s.name = "Saule"; s.description = "1er étage, 45 m2" }
-Space.find_or_create_by!(code: "T+S") { |s| s.name = "Les 2 salles"; s.description = "1er étage, 185 m2" }
+# « Les 2 salles » (code T+S) RETIRÉ (décision Michael 2026-07-20) : remplacé par
+# la remise DUO automatique au devis (Grande + Petite salle le même jour). Voir
+# rake spaces:convert_deux_salles pour la conversion de l'historique en prod.
 Space.find_or_create_by!(code: "CUI") { |s| s.name = "Cuisine professionnelle" }
 Space.find_or_create_by!(code: "CWK") { |s| s.name = "Coworking"; s.description = "Espace de travail avec écrans" }
 

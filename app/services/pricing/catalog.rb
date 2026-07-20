@@ -85,6 +85,16 @@ module Pricing
         "journee"           => 11_000,  # 110 €
         "soiree"            =>  7_000,  # 70 €
         "journee_et_soiree" => 14_000   # 110 + extension soirée 30 €
+      }.freeze,
+      # Remise DUO (décision Michael 2026-07-20) : quand Grande Salle ET Petite
+      # Salle sont louées le MÊME jour, la MÊME période, un tarif duo remplace la
+      # somme des deux (< somme). L'ancien espace « Les 2 salles » disparaît au
+      # profit de cette remise automatique. Journée+soirée = jour duo + 150 €
+      # (extensions soirée des deux salles : 90 + 60).
+      "deux_salles" => {
+        "journee"           => 39_000,  # 390 € (au lieu de 290 + 140 = 430)
+        "soiree"            => 25_000,  # 250 €
+        "journee_et_soiree" => 54_000   # 390 + 150 = 540 €
       }.freeze
     }.freeze
 
@@ -105,6 +115,12 @@ module Pricing
         "journee"           => 15_000,  # 150 €
         "soiree"            =>  9_500,  # 95 €
         "journee_et_soiree" => 18_000   # 150 + extension soirée 30 €
+      }.freeze,
+      # Remise DUO week-end (cf. HALL_RATES["deux_salles"]).
+      "deux_salles" => {
+        "journee"           => 49_500,  # 495 € (au lieu de 380 + 190 = 570)
+        "soiree"            => 33_500,  # 335 €
+        "journee_et_soiree" => 64_500   # 495 + 150 = 645 €
       }.freeze
     }.freeze
 
