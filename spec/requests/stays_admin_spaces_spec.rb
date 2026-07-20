@@ -89,15 +89,15 @@ RSpec.describe "Stays — espaces (epic #66, Phase 2)", type: :request do
       }
     end
 
-    it "préremplit le form d'édition avec l'espace existant" do
+    it "préremplit la grille date-par-date avec l'espace existant" do
       stay = create_spaces_only_stay
       get edit_stay_path(stay)
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Espaces")
-      # L'espace existant est présélectionné (grande_salle / journée) et chiffré.
-      expect(response.body).to include('selected="selected" value="grande_salle"')
-      expect(response.body).to include('selected="selected" value="journee"')
-      expect(response.body).to include("Grande salle — ")
+      # Le séjour a des dates → grille date-par-date : la cellule Grande Salle de
+      # la nuit d'arrivée porte la période « journee » (input caché prérempli).
+      # Attributs triés par Slim → name/type/value consécutifs.
+      expect(response.body).to include('name="stay[space_slots][grande_salle][]" type="hidden" value="journee"')
     end
 
     it "change la période de l'espace et recalcule le total" do
@@ -120,6 +120,44 @@ RSpec.describe "Stays — espaces (epic #66, Phase 2)", type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
       # Issue #80 : la contrainte de composition s'élargit aux activités/repas.
       expect(response.body).to include("un emplacement camping/van, une activité ou un repas")
+    end
+  end
+
+  describe "POST /stays — composition date-par-date (space_slots, parité funnel)" do
+    it "crée une SpaceReservation à la BONNE date depuis la grille nuits × espaces" do
+      # 2 nuits [arrivée, départ) : grande salle en journée la SEULE nuit d'arrivée.
+      expect {
+        post stays_path, params: base_params(space_slots: { grande_salle: ["journee", ""] })
+      }.to change(SpaceBooking, :count).by(1)
+
+      stay = Stay.order(:created_at).last
+      sb = stay.stay_items.where(bookable_type: "SpaceBooking").first.bookable
+      expect(sb.space_reservations.count).to eq(1)
+      res = sb.space_reservations.first
+      expect(res.space).to eq(grande_salle)
+      expect(res.date).to eq(arrival)              # nuit 0 = date d'arrivée
+      expect(res.duration).to eq("day")            # "journee" → durée canonique
+    end
+
+    it "réserve chaque nuit à sa date propre (deux nuits, deux périodes)" do
+      post stays_path, params: base_params(
+        lodging_id: "", space_slots: { grande_salle: ["journee", "soiree"] }
+      )
+      stay = Stay.order(:created_at).last
+      sb = stay.stay_items.where(bookable_type: "SpaceBooking").first.bookable
+      by_date = sb.space_reservations.index_by(&:date)
+      expect(by_date[arrival].duration).to eq("day")
+      expect(by_date[arrival + 1].duration).to eq("evening")
+    end
+
+    it "le devis live reflète l'espace saisi via la grille (space_slots)" do
+      post quote_stays_path,
+           params: base_params(space_slots: { grande_salle: ["journee", ""] }),
+           headers: { "Accept" => "text/vnd.turbo-stream.html" }
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("stay-quote-panel")
+      # Hulotte 2 nuits (745 €) + grande salle journée (290 €) = 1 035 €.
+      expect(response.body).to include("1 035").or include("1035")
     end
   end
 

@@ -420,7 +420,48 @@ class StaysController < BaseController
     # Événements sélectionnables pour la facturation espace (epic #81, Phase 6),
     # décorés pour l'affichage « nom (dates) » — même source que le form direct.
     @events = EventDecorator.decorate_collection(Event.order(starts_at: :desc))
+    # Grille espaces date-par-date : les colonnes-nuits du séjour. Vide si pas de
+    # dates → le form retombe sur les lignes `halls` (journée sèche / espaces
+    # seuls sans dates), qui restent la seule saisie possible hors fenêtre.
+    @stay_nights = stay_nights_for_grid
+    apply_space_grid_prefill
     @quote  ||= safe_quote(@draft)
+  end
+
+  # Préremplissage de la GRILLE espaces (issue parité funnel) : quand le séjour a
+  # des dates, on convertit les `halls` reconstruits (édition / duplication datée)
+  # en `space_slots` (grille nuits × espaces) et on VIDE `halls` — pour que le
+  # devis, la persistance ET le rendu utilisent UNE seule représentation (jamais
+  # les deux → pas de double-compte). Idempotent : no-op si la grille n'est pas
+  # active, ou si le draft porte déjà des `space_slots` (re-render POST grille).
+  def apply_space_grid_prefill
+    return if @stay_nights.blank?
+    return if Array(@draft&.space_slots&.values).flatten.any?(&:present?)
+    return if Array(@draft&.halls).blank?
+
+    @draft.space_slots = halls_to_space_slots(@draft.halls, @stay_nights)
+    @draft.halls = []
+  end
+
+  # Convertit des lignes `halls` {kind, date, period} en grille `space_slots`
+  # {kind => [period_par_nuit]}, indexée depuis la première nuit. Les lignes hors
+  # fenêtre (date absente / hors [arrivée, départ)) sont ignorées : la grille ne
+  # couvre que les nuits du séjour (limitation assumée, cf. rapport).
+  def halls_to_space_slots(halls, nights)
+    arrival = nights.first
+    count   = nights.size
+    slots   = {}
+    Array(halls).each do |raw|
+      hall   = raw.respond_to?(:symbolize_keys) ? raw.symbolize_keys : raw
+      key    = hall[:kind].to_s
+      period = hall[:period].to_s
+      date   = parse_form_date(hall[:date].to_s)
+      next if key.blank? || period.blank? || date.nil?
+      idx = (date - arrival).to_i
+      next if idx.negative? || idx >= count
+      (slots[key] ||= Array.new(count, ""))[idx] = period
+    end
+    slots
   end
 
   # Hébergements tarifables (barème B2C forfaitaire, `Pricing::Catalog`), dans
@@ -459,8 +500,22 @@ class StaysController < BaseController
       # quel ; le Draft normalise (presence → nil) et la persistance convertit les
       # montants via les setters `monetize`. Absent du form → `space_billing` nil,
       # les valeurs existantes survivent à la réédition.
-      space_billing:  p[:space_billing]
+      space_billing:  p[:space_billing],
+      # Espaces date-par-date (issue parité funnel) : grille nuits × espaces,
+      # MÊME représentation que le funnel public (`space_slots[kind][night_idx]`).
+      # Le concern SpaceComposition la fusionne avec `halls` (mutuellement
+      # exclusifs ici : le form rend la grille OU les lignes, jamais les deux).
+      space_slots:    p[:space_slots]
     )
+  end
+
+  # Jours-colonnes de la grille espaces date-par-date (nuits [arrivée, départ)),
+  # ou [] si les dates manquent. Pilote l'affichage grille vs lignes `halls`.
+  def stay_nights_for_grid
+    arrival   = parse_form_date(@draft&.arrival_date&.to_s)
+    departure = parse_form_date(@draft&.departure_date&.to_s)
+    return [] if arrival.nil? || departure.nil? || departure <= arrival
+    (arrival...departure).to_a
   end
 
   # Chambres cochées (mode chambres seules, epic #81, Phase 5). Tableau de la

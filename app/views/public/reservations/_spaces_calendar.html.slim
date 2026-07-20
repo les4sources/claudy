@@ -1,6 +1,14 @@
 / Grille "Espaces" nuit par nuit — remplace les hall slots pour le B2C.
 / Chaque cellule cycle : — → Journée → Soirée → J+S via space_slot_controller.
 / Dépend de : @draft, @stay_nights (instance vars du controller).
+/ RÉUTILISÉ par le form admin (issue parité funnel) via des locals :
+/   - param_root : préfixe des name= (défaut "reservation", le form admin passe "stay") ;
+/   - draft      : le Draft à préremplir (défaut @draft) ;
+/   - days       : les jours-colonnes (défaut @stay_nights).
+/ Sans locals, le rendu public est STRICTEMENT identique.
+- param_root  = local_assigns.fetch(:param_root, "reservation")
+- draft       = local_assigns.fetch(:draft, @draft)
+- stay_nights = local_assigns.fetch(:days, @stay_nights)
 - fr_short_days = %w[Dim Lun Mar Mer Jeu Ven Sam]
 - space_kinds   = { "grande_salle" => "Grande Salle", "petite_salle" => "Petite Salle", "cuisine_pro" => "Cuisine pro" }
 - space_hints   = { "grande_salle" => "290€/j · 190€/soir (sem.)", "petite_salle" => "140€/j · 90€/soir (sem.)", "cuisine_pro" => "110€/j · 70€/soir (sem.)" }
@@ -13,7 +21,7 @@
       p.text-xs.text-gray-400.mt-0.5 Cliquez pour réserver — journée, soirée ou les deux. Tarifs semaine (↑ week-end).
     .flex.items-center.gap-2.flex-shrink-0.ml-4.mt-0.5
       = link_to "Tarifs →", "https://www.les4sources.be/sejours/tarifs", target: "_blank", rel: "noopener", class: "text-xs text-emerald-600 hover:underline"
-      - if @stay_nights.size > 4
+      - if stay_nights.size > 4
         button(
           type="button"
           data-action="click->public--spaces-calendar#prevNights"
@@ -27,16 +35,16 @@
           aria-label="Nuits suivantes")
           | →
 
-  - if @stay_nights.empty?
+  - if stay_nights.empty?
     p.text-xs.text-gray-400 Choisissez vos dates à l'étape précédente.
   - else
     .overflow-x-auto.-mx-5.px-5(data-public--spaces-calendar-target="scrollArea")
-      table.border-collapse style="min-width: #{130 + @stay_nights.size * 104}px"
+      table.border-collapse style="min-width: #{130 + stay_nights.size * 104}px"
 
         thead
           tr
             th.text-left.py-2.pr-4.text-xs.font-normal.text-gray-400.whitespace-nowrap.sticky.left-5.z-10.bg-white style="width:130px"
-            - @stay_nights.each_with_index do |night, i|
+            - stay_nights.each_with_index do |night, i|
               th.text-center.py-2.px-1 style="width:104px"
                 p.text-xs.font-bold.text-gray-600 = "Nuit #{i + 1}"
                 p.text-xs.text-gray-400.font-normal = "#{fr_short_days[night.wday]} #{night.strftime("%-d/%-m")}"
@@ -47,8 +55,8 @@
               td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
                 .text-sm.text-gray-800.font-medium = space_name
                 p.text-xs.text-gray-400.leading-tight = space_hints[space_key]
-              - @stay_nights.each_with_index do |_night, i|
-                - current_period = (@draft.space_slots[space_key] || [])[i].to_s
+              - stay_nights.each_with_index do |_night, i|
+                - current_period = (draft.space_slots[space_key] || [])[i].to_s
                 td.py-2.px-1.text-center
                   div(
                     data-controller="public--space-slot")
@@ -59,7 +67,7 @@
                       class="appearance-none w-14 h-11 rounded-xl border-2 text-xs font-bold transition-all focus:outline-none")
                     input(
                       type="hidden"
-                      name="reservation[space_slots][#{space_key}][]"
+                      name="#{param_root}[space_slots][#{space_key}][]"
                       value=current_period
                       data-public--space-slot-target="input")
 

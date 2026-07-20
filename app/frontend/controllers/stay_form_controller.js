@@ -36,10 +36,16 @@ export default class extends Controller {
   // `space_billing` normalement, et un panneau replié resoumet ses valeurs.
   toggleSpaceBilling() {
     if (!this.hasSpaceBillingPanelTarget) return
+    // Lignes `halls` (journée sèche) OU grille date-par-date (`space_slots`) :
+    // le panneau facturation s'ouvre dès qu'un espace est renseigné dans l'une
+    // ou l'autre représentation.
     const anyKindSelected = Array.from(
       this.element.querySelectorAll('select[name^="stay[halls]"][name$="[kind]"]'),
     ).some((select) => select.value.trim() !== "")
-    this.spaceBillingPanelTarget.classList.toggle("hidden", !anyKindSelected)
+    const anySlotSelected = Array.from(
+      this.element.querySelectorAll('input[name^="stay[space_slots]"]'),
+    ).some((input) => input.value.trim() !== "")
+    this.spaceBillingPanelTarget.classList.toggle("hidden", !(anyKindSelected || anySlotSelected))
   }
 
   // Mode d'occupation (epic #81, Phase 5) : gîte entier / chambres seules. En mode
