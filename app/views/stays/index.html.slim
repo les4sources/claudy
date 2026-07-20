@@ -35,7 +35,9 @@
           - amount = @amounts[stay.id]
           tr.hover:bg-gray-50
             td.px-4.py-2.text-sm.whitespace-nowrap
-              = link_to "##{stay.id}", stay_path(stay), class: "text-indigo-600 hover:text-indigo-800 font-medium hover:underline"
+              / stays#show rend un fragment sans layout (réservé à la modale du
+                calendrier) — la navigation directe pointe donc vers l'édition.
+              = link_to "##{stay.id}", edit_stay_path(stay), class: "text-indigo-600 hover:text-indigo-800 font-medium hover:underline"
             td.px-4.py-2.text-sm
               - if stay.customer
                 = link_to stay.customer.name, customer_path(stay.customer), class: "text-indigo-600 hover:text-indigo-800 font-medium hover:underline"
