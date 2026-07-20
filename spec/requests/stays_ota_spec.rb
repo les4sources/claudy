@@ -141,10 +141,11 @@ RSpec.describe "Stays — canal OTA (epic #81, Phase 4)", type: :request do
       get edit_stay_path(stay)
 
       expect(response).to have_http_status(:ok)
-      # Plateforme Airbnb présélectionnée dans le <select>.
-      expect(response.body).to match(/<option selected[^>]*value="airbnb"|<option[^>]*value="airbnb"[^>]*selected/)
-      # Canal OTA présélectionné.
-      expect(response.body).to match(/<option selected[^>]*value="ota"|<option[^>]*value="ota"[^>]*selected/)
+      # Radios (parité funnel) : la plateforme Airbnb est cochée (attributs triés
+      # par Slim → `checked` précède `value`).
+      expect(response.body).to match(%r{<input[^>]*checked[^>]*name="stay\[platform\]"[^>]*value="airbnb"})
+      # Canal OTA coché.
+      expect(response.body).to match(%r{<input[^>]*checked[^>]*name="stay\[source\]"[^>]*value="ota"})
       # Prix imposé prérempli (640 €).
       expect(response.body).to include('value="640"')
     end

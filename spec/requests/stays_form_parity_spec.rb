@@ -55,4 +55,28 @@ RSpec.describe "Stays — form parité (switch statut + radios attribution)", ty
       expect(response.body).to match(%r{<input[^>]*checked[^>]*id="stay_status_toggle"})
     end
   end
+
+  describe "Volet 3 — radios attribution (source + plateforme)" do
+    it "rend le canal et la plateforme en radios (plus des selects)" do
+      get new_stay_path
+      # Slim trie les attributs → name/type/value se retrouvent consécutifs.
+      expect(response.body).to include('name="stay[source]" type="radio" value="manual"')
+      expect(response.body).to include('name="stay[source]" type="radio" value="ota"')
+      expect(response.body).to include('name="stay[platform]" type="radio" value="web"')
+      expect(response.body).to include('name="stay[platform]" type="radio" value="airbnb"')
+      expect(response.body).to include('name="stay[platform]" type="radio" value="bookingdotcom"')
+      # Plus aucun <select> de canal/plateforme.
+      expect(response.body).not_to include('select name="stay[source]"')
+      expect(response.body).not_to include('select name="stay[platform]"')
+    end
+
+    it "persiste source + plateforme choisies via les radios" do
+      post stays_path, params: base_params(source: "ota", platform: "airbnb",
+                                           status: "confirmed", price_override: "500")
+      stay = Stay.order(:created_at).last
+      expect(stay.source).to eq("ota")
+      booking = stay.stay_items.where(bookable_type: "Booking").first.bookable
+      expect(booking.platform).to eq("airbnb")
+    end
+  end
 end

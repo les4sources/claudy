@@ -220,14 +220,24 @@
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
       h2.text-base.font-semibold.text-gray-900 Attribution
       p.text-sm.text-gray-500 D'où vient ce séjour ? La plateforme n'est enregistrée que si le séjour comporte un hébergement.
-      .grid.grid-cols-2.gap-4
-        .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 Canal (source)
-          = select_tag "stay[source]", options_for_select(source_options, current_source), data: { "stay-form-target": "source" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-        .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 Plateforme
-          / Choisir une plateforme OTA bascule le canal sur « OTA » (stay-form#syncChannelFromPlatform).
-          = select_tag "stay[platform]", options_for_select(platform_options, current_platform), data: { "stay-form-target": "platform", action: "change->stay-form#syncChannelFromPlatform" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      / Radios (issue parité funnel) : canal + plateforme en boutons radio plutôt
+      / que des selects. Chaque radio porte un target stay-form (source/platform) ;
+      / choisir une plateforme OTA bascule le canal sur « OTA » côté Stimulus.
+      .grid.grid-cols-1.sm:grid-cols-2.gap-4
+        fieldset.space-y-2
+          legend.text-sm.font-medium.text-gray-700 Canal (source)
+          .flex.flex-col.gap-2
+            - source_options.each do |label, value|
+              label.flex.items-center.gap-2.text-sm.text-gray-700
+                input type="radio" name="stay[source]" value=value checked=(value.to_s == current_source.to_s) data-stay-form-target="source" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                = label
+        fieldset.space-y-2
+          legend.text-sm.font-medium.text-gray-700 Plateforme
+          .flex.flex-col.gap-2
+            - platform_options.each do |label, value|
+              label.flex.items-center.gap-2.text-sm.text-gray-700
+                input type="radio" name="stay[platform]" value=value checked=(value.to_s == current_platform.to_s) data-stay-form-target="platform" data-action="change->stay-form#syncChannelFromPlatform" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                = label
 
     / --- Statut + force dispo -----------------------------------------------
     / Switch accessible (issue parité funnel) : bascule En attente ↔ Confirmé.
