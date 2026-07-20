@@ -136,7 +136,7 @@
                   <%= render partial: "pages/calendar/day_bookings", locals: { date: day } %>
                 </div>
 
-                <div id="notes-<%= day %>" class="<%= day < Date.today ? "opacity-75" : nil %>">
+                <div id="notes-<%= day %>" data-calendar-notes class="<%= day < Date.today ? "opacity-75" : nil %>">
                   <%= render Note.where(date: day).order(id: :desc) %>
                 </div>
 

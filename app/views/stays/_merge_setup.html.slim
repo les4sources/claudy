@@ -27,8 +27,24 @@
             - if stay.id == suggested_id
               span.inline-flex.items-center.rounded-full.bg-indigo-50.px-2.text-xs.font-medium.text-indigo-700(class="py-0.5" title="Présélection : #{merge_suggestion_reason(suggested_reason)}")
                 | suggéré · #{merge_suggestion_reason(suggested_reason)}
+          - if stay.customer&.email.present?
+            .truncate.text-xs.text-gray-500 = stay.customer.email
           .text-sm.text-gray-500(class="mt-0.5") = decorated.date_range
+          .mt-1.flex.items-center.flex-wrap.gap-x-2.gap-y-1
+            = decorated.status_badge
+            span.inline-flex.items-center.rounded-full.bg-gray-100.text-gray-600(class="px-2 py-0.5 text-xs font-medium") = merge_source_label(stay)
+            = decorated.platform_badge
+            span.text-xs.text-gray-400
+              | saisi le #{l(stay.created_at.to_date)}
           .mt-1.text-sm.text-gray-600 = stay_composition_summary(stay)
+          - internal_note = stay_has_internal_note?(stay)
+          - public_note = stay_has_public_note?(stay)
+          - if internal_note || public_note
+            .mt-1.flex.items-center.flex-wrap.gap-y-1(class="gap-x-1.5")
+              - if internal_note
+                span.inline-flex.items-center.rounded.bg-amber-50.text-amber-700(class="px-1.5 py-0.5 text-xs") 📝 note interne
+              - if public_note
+                span.inline-flex.items-center.rounded.bg-sky-50.text-sky-700(class="px-1.5 py-0.5 text-xs") 📝 note publique
           .mt-1.flex.items-center.flex-wrap.gap-x-3.gap-y-1.text-sm
             span.font-medium.text-gray-900 = humanized_money_with_symbol(stay.total_amount)
             span.text-gray-500 = stay_payments_summary(stay)

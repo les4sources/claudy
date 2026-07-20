@@ -92,6 +92,27 @@ export default class extends Controller {
       activeClasses.forEach((c) => this.toggleButtonTarget.classList.toggle(c, on))
       baseClasses.forEach((c) => this.toggleButtonTarget.classList.toggle(c, !on))
     }
+    // Les blocs notes du jour ajoutent du bruit en mode fusion (on désigne des
+    // séjours, pas des notes). Le masquage est accroché ICI — la routine d'état
+    // visuel du mode — et non dans le handler du clic : ainsi il suit AUSSI la
+    // restauration au connect() (navigation de mois, sélection persistée en
+    // sessionStorage) et la sortie du mode, sans duplication.
+    this.toggleCalendarNotes(on)
+  }
+
+  // Masque (on=true) ou réaffiche (on=false) les blocs notes du calendrier. Ils
+  // vivent hors du fragment de sélection, dans les cellules jour du template ERB
+  // (data-calendar-notes). Un simple `hidden` suffit — au rechargement d'un mois,
+  // l'état est reposé par applyModeChrome selon le mode restauré.
+  toggleCalendarNotes(hidden) {
+    document.querySelectorAll("[data-calendar-notes]").forEach((el) => {
+      el.classList.toggle("hidden", hidden)
+      if (hidden) {
+        el.setAttribute("aria-hidden", "true")
+      } else {
+        el.removeAttribute("aria-hidden")
+      }
+    })
   }
 
   // --- Sélection d'un séjour entier -----------------------------------------

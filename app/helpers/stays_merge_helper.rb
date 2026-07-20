@@ -61,6 +61,41 @@ module StaysMergeHelper
     "#{pluralize_fr(count, 'paiement')} · #{humanized_money_with_symbol(Money.new(stay.amount_paid_cents))} encaissé#{'s' if count > 1}"
   end
 
+  # Canal d'attribution d'un séjour, en libellé COURT pour la carte de fusion.
+  # Distinct de `StaysHelper#stay_source_label` (libellés verbeux du form/index) :
+  # ici la carte est une comparaison rapide, donc on abrège. Le nom de l'OTA
+  # (Airbnb / Booking.com) est affiché à part par `platform_badge` (décorateur).
+  MERGE_SOURCE_LABELS = {
+    "reservation"  => "Funnel",
+    "manual"       => "Manuel",
+    "ota"          => "OTA",
+    "tally_legacy" => "Import"
+  }.freeze
+
+  def merge_source_label(stay)
+    MERGE_SOURCE_LABELS.fetch(stay.source, stay.source.to_s.humanize.presence || "—")
+  end
+
+  # Le séjour porte-t-il une note INTERNE quelque part ? (note du séjour lui-même
+  # OU note d'un de ses bookables). Itère sur les `stay_items` PRÉCHARGÉS — pas de
+  # requête supplémentaire (le contrôleur précharge `stay_items: :bookable`).
+  def stay_has_internal_note?(stay)
+    return true if stay.notes.present?
+
+    stay.stay_items.any? { |item| item.bookable&.try(:notes).present? }
+  end
+
+  # Le séjour porte-t-il une note PUBLIQUE (ActionText) sur un de ses bookables ?
+  # Seuls Booking et SpaceBooking exposent `public_notes` (has_rich_text) ; le
+  # rich text est préchargé côté contrôleur (`preload_public_notes`) pour éviter
+  # le N+1 sur cet accès.
+  def stay_has_public_note?(stay)
+    stay.stay_items.any? do |item|
+      bookable = item.bookable
+      bookable.respond_to?(:public_notes) && bookable.public_notes.body.present?
+    end
+  end
+
   # Libellé français d'une catégorie de composition (titre de section d'aperçu).
   MERGE_TYPE_LABELS = {
     lodging:  "Hébergements",
