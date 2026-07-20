@@ -29,8 +29,8 @@
 ## Volet B — Exploitation & assainissement (ACTIF)
 
 - [ ] **B.1 Assainissement historique 2023→aujourd'hui** *(Michael, avec la fusion — calendrier OU fiche client)* — notes consolidées automatiquement à la fusion, aperçu agrégé. Signal de fin : plus de doublons ni d'orphelins 2023→2026.
-- [~] **B.2 Déploiement du lot du 20-21/07** *(Michael)* — main déployable en continu (929→953 specs vertes au fil des merges). Post-deploy, rake en dry-run puis APPLY : `bookings:convert_parking_to_van` (16), `bookings:convert_tent_spaces_to_camping` (7 + 7 ambigus à arbitrer), `customers:ensure_ota_catch_alls`, `rooms:link_laurier` (~454), `space_bookings:billing_to_payments` (166+30 ; poser d'abord un moyen de paiement sur SpaceBookings #82 et #686), et bientôt la conversion « Les 2 salles ».
-- [ ] **B.3 Arbitrages données** *(Michael)* — 7 tentes au prix ambigu (#599, 604, 605, 646, 649, 673, 682) ; anomalies vues sur /stays : séjour aux dates inversées 2027→2026 (Semisto), reste dû négatif (trop-perçu 180 €), badge paiement « En attente » sur un séjour soldé (Aurore Delvaux).
+- [~] **B.2 Déploiement du lot du 20-21/07** *(Michael)* — main déployable en continu (966 specs vertes). Post-deploy, rake en dry-run puis APPLY, dans l'ordre : `bookings:convert_parking_to_van` (16) · `bookings:convert_tent_spaces_to_camping` (13 convertis dont 7 à personnes arrondies ; #605 refusé — séjour #1384 pré-incohérent, correction manuelle) · `customers:ensure_ota_catch_alls` · `rooms:link_laurier` (~454) · `space_bookings:billing_to_payments` (166+30 ; poser d'abord un moyen de paiement sur SpaceBookings #82 et #686) · `spaces:convert_deux_salles` (64 bookings → paires, 7 collisions historiques acceptées, l'espace est soft-deleté en fin) · `stays:recompute_payment_statuses` (11 statuts périmés en local).
+- [ ] **B.3 Arbitrages données** *(Michael)* — séjour #1384 (total 265 € ≠ parts 285,25 € — antérieur, refusé par le garde-fou de conversion) ; séjour Semisto aux dates inversées 2027→2026 ; trop-perçu 180 € (reste dû négatif, remboursement à traiter).
 
 ## Volet C — Lot du 20-21/07 (LIVRÉ, mergé sur main)
 
@@ -39,8 +39,8 @@ fusion depuis la fiche client (retour fiche, sessionStorage scopé) · notes sé
 
 ## Volet D — En cours / cette nuit
 
-- [~] **D.1 « Les 2 salles »** *(agent en cours)* — remise duo (390/495 j, 250/335 soir, J+S +150), conversion des 64 historiques en paires, retrait de l'espace.
-- [ ] **D.2 Nuit du 21/07 (agent nocturne)** — #124 Paramètres > Tarifs · #127 Coworking modèle+admin+calendrier · #128 Portail client OTP + Mes séjours. Ensuite : #129 (achat/réservation coworking), #130 (finitions) — agent:ready à poser après merges amont. Epic #126.
+- [x] **D.1 « Les 2 salles »** — remise duo au devis (funnel + admin), conversion appliquée en local, espace soft-deleté. PR #132.
+- [ ] **D.2 Nuit du 21/07 (agent nocturne)** — #124 Paramètres > Tarifs · #127 Coworking modèle+admin+calendrier (⚠ retirer l'espace « Coworking » du canal espaces, cf. commentaire) · #128 Portail client OTP + Mes séjours · #133 Modification de séjour par le client (demande validée équipe, delta sur solde, IBAN remboursement 10 j post-séjour). Ensuite : #129, #130 (agent:ready après merges amont). Epic #126.
 
 ## Horizon (ISA, non séquencé)
 
