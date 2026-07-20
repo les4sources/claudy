@@ -1,4 +1,4 @@
-/ Panneau devis — sticky sur desktop, visible sur mobile avant le CTA.
+/ Panneau devis — rendu dans le drawer (conteneur scrollable), plus en sidebar.
 / `continue_path` / `continue_label` (optionnels) pilotent le CTA « Continuer » :
 / vers les activités depuis la composition, vers les coordonnées depuis les
 / activités. Passer `continue_path: nil` masque le CTA (ex. sur l'étape finale).
@@ -6,7 +6,7 @@
 - continue_label = local_assigns.fetch(:continue_label, "Continuer vers mes coordonnées →")
 - includes_nye = draft.arrival_date.present? && draft.departure_date.present? && (draft.arrival_date..draft.departure_date).any? { |d| d.month == 12 && d.day == 31 }
 
-.sticky.top-6
+div
   - if includes_nye
     .rounded-xl.border.border-orange-200.bg-orange-50.p-4.mb-4
       p.text-xs.text-orange-800.leading-relaxed

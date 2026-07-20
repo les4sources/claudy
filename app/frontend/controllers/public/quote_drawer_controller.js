@@ -14,6 +14,12 @@ export default class extends Controller {
     this.render()
   }
 
+  disconnect() {
+    // Défense en profondeur : si le contrôleur disparaît drawer ouvert
+    // (navigation Turbo partielle, morphing), le scroll-lock ne survit pas.
+    document.body.classList.remove("overflow-hidden")
+  }
+
   open() {
     this.previouslyFocused = document.activeElement
     this.openValue = true
