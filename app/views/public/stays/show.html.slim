@@ -42,6 +42,11 @@
         p.text-base.font-semibold.text-gray-900 = t(".total")
         p.text-lg.font-bold.text-gray-900 = @stay.formatted_total
 
+    / Note publique du séjour (visible client). JAMAIS la note interne.
+    - if @stay.public_notes.present?
+      .mt-8.bg-slate-50.rounded-lg.px-4.py-5.sm:px-6
+        .content.text-base.text-gray-800.space-y-4 == @stay.public_notes
+
     = render "public/stays/balance"
 
     = render "public/stays/payments"
