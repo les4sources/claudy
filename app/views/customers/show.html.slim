@@ -43,7 +43,7 @@
                 = @customer.language_label
 
       = form_with url: reassign_customer_path(@customer), method: :post, data: { controller: "reventilation-modal" } do
-        - [["Séjours à venir", @customer.upcoming_stays, "Aucun séjour à venir."], ["Séjours passés", @customer.past_stays, "Aucun séjour passé."]].each do |title, stays, empty_label|
+        - [["Séjours à venir", @upcoming_stays, "Aucun séjour à venir."], ["Séjours passés", @past_stays, "Aucun séjour passé."]].each do |title, stays, empty_label|
           .overflow-hidden.bg-white.shadow.sm:rounded-lg
             .px-4.py-5.sm:px-6
               h3.text-lg.font-medium.leading-6.text-gray-900
@@ -63,6 +63,9 @@
                           = stay.status_badge
                           = stay.platform_badge
                         .text-gray-500.truncate = stay.contact_line
+                        .mt-1.flex.items-center.gap-2.flex-wrap
+                          span.font-medium.text-gray-900 = humanized_money_with_symbol(stay.total_amount)
+                          = stay_composition_icons(stay)
                       = link_to "Détails", stay_path(stay),
                                 data: { action: "stay-details#open" },
                                 class: "shrink-0 text-indigo-600 hover:underline"
