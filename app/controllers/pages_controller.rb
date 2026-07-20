@@ -2,7 +2,10 @@ class PagesController < BaseController
   def calendar
     set_dates
     @calendar_view = params[:view] == "organisation" ? :organisation : :bookings
-    @cycles = Cycle.overlapping(@first.to_date, @last.to_date)
+    # Cycles réservés à la vue Organisation (demande Michael 2026-07-20) : en
+    # mode Accueil, les bandeaux de cycles n'apportent rien à la gestion des
+    # séjours et chargent visuellement le calendrier.
+    @cycles = @calendar_view == :organisation ? Cycle.overlapping(@first.to_date, @last.to_date) : Cycle.none
 
     if @calendar_view == :organisation
       @gatherings = GatheringDecorator.decorate_collection(

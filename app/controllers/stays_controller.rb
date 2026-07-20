@@ -28,8 +28,10 @@ class StaysController < BaseController
     @stays   = StayDecorator.decorate_collection(@stays)
   end
 
-  # Rendu sans layout : le fragment HTML est injecté dans la modale de détails
-  # par le contrôleur Stimulus stay-details (fetch + innerHTML). [tranche 1]
+  # Deux rendus : `?modal=1` (fetch du contrôleur Stimulus stay-details) →
+  # fragment sans layout injecté dans la modale [tranche 1] ; navigation
+  # directe → fiche séjour pleine page (cible du « Annuler » de l'édition et
+  # des liens de la table /stays).
   def show
     @stay = Stay.includes(stay_items: :bookable, customer: []).find(params[:id]).decorate
     # Créneaux proposables à l'ajout d'activité (epic #55, Phase 6), bornés au
@@ -37,7 +39,7 @@ class StaysController < BaseController
     @assignable_availabilities = ExperienceAvailability.for_user(current_user)
                                                        .upcoming
                                                        .includes(:experience)
-    render layout: false
+    render layout: false if params[:modal].present?
   end
 
   # Vue admin Pôle Accueil — Stays récents filtrables par canal d'attribution

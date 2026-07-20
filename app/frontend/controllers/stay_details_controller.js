@@ -15,7 +15,10 @@ export default class extends Controller {
 
   async open(event) {
     event.preventDefault()
-    const url = event.currentTarget.href
+    // `modal=1` : demande le FRAGMENT sans layout — la navigation directe vers
+    // la même URL rend désormais la fiche séjour pleine page.
+    const base = event.currentTarget.href
+    const url = base + (base.includes("?") ? "&" : "?") + "modal=1"
     this.contentTarget.innerHTML = '<div class="px-6 py-8 text-center text-sm text-gray-500">Chargement…</div>'
     this.dialogTarget.showModal()
     try {
