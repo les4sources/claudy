@@ -324,6 +324,13 @@ module Reservations
       customer.first_name = draft.first_name if customer.first_name.blank?
       customer.last_name = draft.last_name if customer.last_name.blank?
       customer.phone = draft.phone if customer.phone.blank?
+      # Type de client + nom d'organisation (form admin, addendum) : posés
+      # UNIQUEMENT à la création d'un nouveau client — on ne bascule jamais en
+      # silence un client existant particulier ↔ organisation.
+      if customer.new_record?
+        customer.customer_type = draft.customer_type if draft.customer_type.present?
+        customer.organization_name = draft.organization_name if draft.organization_name.present?
+      end
       customer.save!
       customer
     end

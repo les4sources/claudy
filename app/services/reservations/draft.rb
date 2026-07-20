@@ -12,6 +12,10 @@ module Reservations
                   :halls, :space_slots, :meals, :pizza_parties,
                   :experiences,
                   :first_name, :last_name, :email, :phone, :group_name,
+                  # Client organisation vs particulier (form admin, addendum) :
+                  # `customer_type` ("individual"/"organization") + le nom du
+                  # groupe/organisation. Portés à la CRÉATION d'un nouveau client.
+                  :customer_type, :organization_name,
                   :adults, :children,
                   # Chambres seules (epic #81, Phase 5) : mode d'occupation de
                   # l'hébergement — "lodging" (gîte entier, défaut) ou "rooms"
@@ -56,6 +60,8 @@ module Reservations
       @email             = attrs[:email].presence
       @phone             = attrs[:phone].presence
       @group_name        = attrs[:group_name].presence
+      @customer_type     = attrs[:customer_type].presence || "individual"
+      @organization_name = attrs[:organization_name].presence
     end
 
     # --- Contrat PricingModel ---------------------------------------------
@@ -148,7 +154,9 @@ module Reservations
         last_name:          last_name,
         email:              email,
         phone:              phone,
-        group_name:         group_name
+        group_name:         group_name,
+        customer_type:      customer_type,
+        organization_name:  organization_name
       }
     end
 

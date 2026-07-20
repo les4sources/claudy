@@ -79,4 +79,36 @@ RSpec.describe "Stays — form parité (switch statut + radios attribution)", ty
       expect(booking.platform).to eq("airbnb")
     end
   end
+
+  describe "Nouveau client — organisation vs particulier (addendum)" do
+    it "rend le switch organisation + le champ nom du groupe" do
+      get new_stay_path
+      expect(response.body).to include('id="new_customer_org_toggle"')
+      expect(response.body).to include('name="stay[new_customer][organization_name]"')
+      # Hidden `individual` de repli avant le checkbox `organization`.
+      expect(response.body).to match(%r{<input type="hidden" name="stay\[new_customer\]\[customer_type\]" value="individual"})
+    end
+
+    it "crée un client organisation avec son nom de groupe" do
+      post stays_path, params: base_params(
+        customer_mode: "new",
+        new_customer: { first_name: "Jean", last_name: "Dupont", email: "asso@example.com",
+                        phone: "0470111222", customer_type: "organization", organization_name: "Asso Verte" }
+      )
+      expect(response).to redirect_to(recent_stays_path)
+      customer = Customer.find_by(email: "asso@example.com")
+      expect(customer.customer_type).to eq("organization")
+      expect(customer.organization_name).to eq("Asso Verte")
+    end
+
+    it "crée un particulier par défaut (switch décoché)" do
+      post stays_path, params: base_params(
+        customer_mode: "new",
+        new_customer: { first_name: "Alice", last_name: "Martin", email: "alice@example.com",
+                        phone: "0470111222", customer_type: "individual" }
+      )
+      customer = Customer.find_by(email: "alice@example.com")
+      expect(customer.customer_type).to eq("individual")
+    end
+  end
 end

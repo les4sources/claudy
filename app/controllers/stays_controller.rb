@@ -531,6 +531,8 @@ class StaysController < BaseController
       last_name:      contact[:last_name],
       email:          contact[:email],
       phone:          contact[:phone],
+      customer_type:     contact[:customer_type],
+      organization_name: contact[:organization_name],
       experiences:    activity_entries(p),
       halls:          space_entries(p),
       campings:       camping_entries(p),
@@ -617,9 +619,11 @@ class StaysController < BaseController
   def customer_contact(p)
     if p[:customer_mode].to_s == "new"
       nc = p[:new_customer] || {}
-      { first_name: nc[:first_name], last_name: nc[:last_name], email: nc[:email], phone: nc[:phone] }
+      { first_name: nc[:first_name], last_name: nc[:last_name], email: nc[:email], phone: nc[:phone],
+        customer_type: nc[:customer_type], organization_name: nc[:organization_name] }
     elsif (customer = Customer.find_by(id: p[:customer_id]))
-      { first_name: customer.first_name, last_name: customer.last_name, email: customer.email, phone: customer.phone }
+      { first_name: customer.first_name, last_name: customer.last_name, email: customer.email, phone: customer.phone,
+        customer_type: customer.customer_type, organization_name: customer.organization_name }
     else
       {}
     end
