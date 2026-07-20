@@ -2,6 +2,32 @@ class StaysController < BaseController
   before_action :set_accounting_view, only: :show
   before_action :set_stay, only: %i[edit update destroy update_status]
 
+  # Index admin des séjours (epic #81) — le séjour devient le point d'entrée
+  # unique. Tableau paginé (30/page) orienté GESTION des réservations et
+  # paiements : contact, canal, dates + statut, composition compacte, et surtout
+  # total / encaissé / reste dû exigible + statut de paiement.
+  #
+  # Filtres légers : « Tous » (défaut), « À venir » (current_and_future),
+  # « Passés » (past). Les montants agrégés (encaissé, reste dû) sont calculés
+  # EN LOT par `Stays::IndexAmounts` (aucun N+1 — voir le service).
+  def index
+    @filter = params[:filter].presence_in(%w[upcoming past]) # nil = tous
+    @stays  = index_scope
+              .includes(
+                :customer,
+                :meal_orders,
+                { stay_items: :bookable },
+                { experience_bookings: { experience_availability: :experience } }
+              )
+              .paginate(page: params[:page], per_page: 30)
+
+    # Agrégats monétaires de la page (encaissé + reste dû exigible) — calculés
+    # AVANT décoration, sur les enregistrements préchargés, en une requête de
+    # paiements pour toute la page.
+    @amounts = Stays::IndexAmounts.new(@stays).call
+    @stays   = StayDecorator.decorate_collection(@stays)
+  end
+
   # Rendu sans layout : le fragment HTML est injecté dans la modale de détails
   # par le contrôleur Stimulus stay-details (fetch + innerHTML). [tranche 1]
   def show
@@ -240,6 +266,19 @@ class StaysController < BaseController
   end
 
   private
+
+  # Relation de base de l'index selon le filtre actif. « À venir » / « Passés »
+  # réutilisent les scopes du modèle (qui portent DÉJÀ leur propre tri utile :
+  # arrivée asc pour l'à-venir, arrivée desc pour le passé). « Tous » (défaut) :
+  # arrivée la plus récente/future d'abord — les séjours sans date d'arrivée
+  # (activités/repas seuls) rejetés en fin de liste, tri stable sur l'id.
+  def index_scope
+    case @filter
+    when "upcoming" then Stay.current_and_future
+    when "past"     then Stay.past
+    else Stay.order(Arel.sql("arrival_date DESC NULLS LAST, id DESC"))
+    end
+  end
 
   # Draft de préremplissage du form NEW (epic #81, Phase 7). Trois cas, dans
   # l'ordre de priorité : duplication d'un séjour, saisie datée d'un espace,
