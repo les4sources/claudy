@@ -1,6 +1,6 @@
 / Étape 2/3 — Composition du séjour
 .min-h-screen.bg-gray-50(data-controller="public--avail-modal")
-  .max-w-3xl.mx-auto.px-4.py-10(data-controller="public--reservation-quote"
+  .max-w-3xl.mx-auto.px-4.pt-10.pb-28(data-controller="public--reservation-quote"
     data-public--reservation-quote-url-value=public_reservation_quote_path
     data-public--reservation-quote-next-url-value=public_reservation_activities_path)
 
@@ -90,35 +90,5 @@
   / ── Modale calendrier disponibilités ────────────────────────
   = render "public/reservations/avail_modal"
 
-  / ── Drawer devis ─────────────────────────────────────────────
-  div data-controller="public--quote-drawer"
-
-    / Bouton flottant bas-droite
-    .fixed.bottom-6.right-6.z-40
-      button type="button" data-action="public--quote-drawer#open" class="flex items-center gap-2 rounded-full bg-emerald-600 pl-4 pr-5 py-3.5 text-white shadow-xl hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all font-medium"
-        svg.w-5.h-5.flex-shrink-0 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
-          path fill-rule="evenodd" d="M2.25 2.25a.75.75 0 000 1.5H3v10.5a3 3 0 003 3h1.21l-1.172 3.513a.75.75 0 001.424.474l.329-.987h8.418l.33.987a.75.75 0 001.422-.474l-1.17-3.513H18a3 3 0 003-3V3.75h.75a.75.75 0 000-1.5H2.25zm6.04 16.5l.5-1.5h6.42l.5 1.5H8.29zm7.46-12a.75.75 0 00-1.5 0v6a.75.75 0 001.5 0v-6zm-3 2.25a.75.75 0 00-1.5 0v3.75a.75.75 0 001.5 0V9zm-3 2.25a.75.75 0 00-1.5 0v1.5a.75.75 0 001.5 0v-1.5z" clip-rule="evenodd"
-        | Devis
-        span id="quote_total_badge"
-          - if @quote.total_cents > 0
-            span.ml-1.rounded-full.bg-white.bg-opacity-20.px-2.py-0.5.text-xs.font-bold
-              = number_to_currency(@quote.total_cents / 100.0, unit: "€", format: "%n %u", precision: 0)
-
-    / Overlay
-    .fixed.inset-0.bg-black.bg-opacity-50.z-40.transition-opacity.duration-300(
-      class="opacity-0 pointer-events-none"
-      data-public--quote-drawer-target="overlay"
-      data-action="click->public--quote-drawer#close")
-
-    / Panneau latéral — 50% de largeur sur grand écran
-    aside.fixed.top-0.right-0.h-full.bg-white.z-50.shadow-2xl.overflow-y-auto.transition-transform.duration-300(
-      class="translate-x-full w-full max-w-sm lg:max-w-none lg:w-1/2"
-      data-public--quote-drawer-target="panel")
-      .sticky.top-0.bg-white.border-b.border-gray-100.px-5.py-4.flex.items-center.justify-between.z-10
-        h2.text-base.font-semibold.text-gray-900 Votre devis
-        button type="button" data-action="public--quote-drawer#close" class="text-gray-400 hover:text-gray-600 transition-colors rounded-lg p-1"
-          svg.w-5.h-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"
-            path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"
-      .p-6
-        = turbo_frame_tag "reservation_quote"
-          = render "public/reservations/quote_panel", quote: @quote, draft: @draft, continue_path: public_reservation_activities_path, continue_label: "Continuer vers les activités →"
+  / ── Barre récap sticky + drawer devis ────────────────────────
+  = render "public/reservations/quote_drawer", quote: @quote, draft: @draft

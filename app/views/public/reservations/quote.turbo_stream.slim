@@ -1,9 +1,9 @@
+/ Recalcul temps-réel (POST /reservation/devis depuis l'étape composer).
+/ On rafraîchit à la fois le contenu du drawer (frame « reservation_quote »)
+/ et le total affiché dans la barre récap sticky (« quote_sticky_total »).
 = turbo_stream.replace "reservation_quote" do
   = turbo_frame_tag "reservation_quote"
-    = render "public/reservations/quote_panel", quote: @quote, draft: @draft, continue_path: public_reservation_activities_path, continue_label: "Continuer vers les activités →"
+    = render "public/reservations/quote_panel", quote: @quote, draft: @draft, continue_path: nil
 
-= turbo_stream.replace "quote_total_badge" do
-  span id="quote_total_badge"
-    - if @quote.total_cents > 0
-      span.ml-2.rounded-full.bg-white.bg-opacity-20.px-2.5.py-0.5.text-xs.font-bold
-        = number_to_currency(@quote.total_cents / 100.0, unit: "€", format: "%n %u", precision: 0)
+= turbo_stream.replace "quote_sticky_total" do
+  = render "public/reservations/quote_sticky_total", quote: @quote
