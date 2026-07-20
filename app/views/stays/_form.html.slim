@@ -2,6 +2,10 @@
 / Champs sous le namespace `stay[...]`. Devis B2C forfaitaire (PricingModel).
 / Duplication (epic #81, Phase 7) : le client du séjour source est présélectionné.
 - selected_customer_id = (@stay.persisted? ? @stay.customer_id : nil) || @preselected_customer_id
+/ Client présélectionné (édition / duplication) : sert à pré-afficher son contact
+/ (email · téléphone) dans le panneau « client choisi » dès le chargement.
+- selected_customer = Array(@customers).find { |c| c.id == selected_customer_id }
+- selected_customer_contact = selected_customer ? [selected_customer.email, selected_customer.phone].compact_blank.join(" · ") : nil
 - current_status = (@stay.status.presence || "pending")
 - selected_experiences = {}
 - Array(@draft&.experiences).each { |e| selected_experiences[e[:availability_id].to_i] = e[:participants] }
@@ -45,8 +49,10 @@
           = text_field_tag :customer_query, nil, placeholder: "Rechercher un client (nom, email)…", autocomplete: "off", data: { "customer-search-target": "searchInput", action: "input->customer-search#search" }, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           .border.border-gray-100.rounded-md.divide-y.divide-gray-50.bg-white.shadow-sm.max-h-48.overflow-y-auto(data-customer-search-target="results")
         .flex.items-center.justify-between.gap-2.text-sm.hidden(data-customer-search-target="chosen")
-          span.text-gray-900.font-medium(data-customer-search-target="chosenLabel")
-          button type="button" data-action="customer-search#clear" class="text-indigo-600 hover:underline" Changer
+          .min-w-0
+            span.block.text-gray-900.font-medium.truncate(data-customer-search-target="chosenLabel") = selected_customer&.name
+            span.block.text-gray-500.text-xs.truncate(data-customer-search-target="chosenContact") = selected_customer_contact
+          button type="button" data-action="customer-search#clear" class="flex-shrink-0 text-indigo-600 hover:underline" Changer
 
       .space-y-2.hidden(data-stay-form-target="newPanel")
         .grid.grid-cols-2.gap-2
