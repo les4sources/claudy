@@ -232,7 +232,14 @@ module Reservations
     # garde son comportement historique. Même logique de force que l'hébergement.
     def check_outdoor_capacity!
       return unless @admin
-      messages = [camping_capacity_message(draft), van_capacity_message(draft)].compact
+      # Grille par nuit → capacité vérifiée nuit par nuit (chaque plage contre SA
+      # demande) ; sinon repli pleine-fenêtre historique.
+      messages =
+        if draft_per_night_grid?(draft)
+          [camping_grid_capacity_message(draft), van_grid_capacity_message(draft)].compact
+        else
+          [camping_capacity_message(draft), van_capacity_message(draft)].compact
+        end
       return if messages.empty?
 
       if @skip_availability
@@ -295,26 +302,46 @@ module Reservations
 
     # Camping (epic #66, Phase 3) : no-op si aucune personne demandée. Sa part de
     # prix vient du devis (`camping_cents`). Retourne le CampingBooking ou nil.
+    # Grille par nuit (funnel public natif + form admin parité) → une plage
+    # persistée par tranche contiguë (issue « camping/van une nuit du séjour »,
+    # Michael 2026-07-20). REPLI inchangé sur la représentation pleine-fenêtre
+    # (`campings: [{people, nights}]`) quand la grille est absente (rétrocompat
+    # emails legacy / admin historique). `@camping_booking` reste la 1re plage
+    # pour la compatibilité de l'accesseur (aucun consommateur ne suppose l'unicité).
     def build_camping_booking_for!(stay, quote)
       return nil unless draft_has_camping?(draft)
 
-      persist_camping_booking!(
-        stay:        stay,
-        draft:       draft,
-        status:      stay_status,
-        price_cents: quote.camping_cents
-      )
+      if draft_per_night_grid?(draft)
+        persist_camping_ranges!(
+          stay: stay, draft: draft, status: stay_status,
+          total_price_cents: quote.camping_cents
+        ).first
+      else
+        persist_camping_booking!(
+          stay:        stay,
+          draft:       draft,
+          status:      stay_status,
+          price_cents: quote.camping_cents
+        )
+      end
     end
 
     def build_van_booking_for!(stay, quote)
       return nil unless draft_has_van?(draft)
 
-      persist_van_booking!(
-        stay:        stay,
-        draft:       draft,
-        status:      stay_status,
-        price_cents: quote.van_cents
-      )
+      if draft_per_night_grid?(draft)
+        persist_van_ranges!(
+          stay: stay, draft: draft, status: stay_status,
+          total_price_cents: quote.van_cents
+        ).first
+      else
+        persist_van_booking!(
+          stay:        stay,
+          draft:       draft,
+          status:      stay_status,
+          price_cents: quote.van_cents
+        )
+      end
     end
 
     def upsert_customer!

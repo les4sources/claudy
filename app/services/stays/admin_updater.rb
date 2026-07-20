@@ -128,10 +128,19 @@ module Stays
     # réservables PROPRES au séjour (sinon l'édition d'un séjour camping-seul se
     # bloquerait elle-même). Même logique de force que l'hébergement/espaces.
     def check_outdoor_capacity!
-      messages = [
-        camping_capacity_message(@draft, excluding_id: existing_camping_booking(@stay)&.id),
-        van_capacity_message(@draft,     excluding_id: existing_van_booking(@stay)&.id)
-      ].compact
+      # On exclut TOUTES les propres réservations plein air du séjour (une plage
+      # par nuit possible désormais), sinon l'édition d'un séjour camping/van se
+      # bloquerait elle-même. Grille → capacité nuit par nuit ; sinon pleine fenêtre.
+      camping_ids = existing_camping_bookings(@stay).map(&:id)
+      van_ids     = existing_van_bookings(@stay).map(&:id)
+      messages =
+        if draft_per_night_grid?(@draft)
+          [camping_grid_capacity_message(@draft, excluding_id: camping_ids.presence),
+           van_grid_capacity_message(@draft,     excluding_id: van_ids.presence)].compact
+        else
+          [camping_capacity_message(@draft, excluding_id: camping_ids.presence),
+           van_capacity_message(@draft,     excluding_id: van_ids.presence)].compact
+        end
       return if messages.empty?
 
       if @skip_availability
@@ -391,17 +400,24 @@ module Stays
     # détache le CampingBooking selon le draft. Comme pour l'hébergement, on ne
     # touche ni au token ni à l'email à l'édition.
     def reconcile_camping!
-      camping = existing_camping_booking(@stay)
-
       unless draft_has_camping?(@draft)
-        if camping
-          @stay.stay_items.where(bookable_type: "CampingBooking").each { |i| i.soft_delete!(validate: false) }
-          camping.soft_delete!(validate: false)
-        end
+        detach_camping_bookings!(@stay)
         return
       end
 
       price = @draft.quote.camping_cents
+
+      # Grille par nuit → reconstruction INTÉGRALE des plages (comme les chambres
+      # dans `rebuild_reservations!`) : détacher l'existant puis recréer une plage
+      # par tranche contiguë. Une nuit modifiée recompose proprement les plages.
+      if draft_per_night_grid?(@draft)
+        detach_camping_bookings!(@stay)
+        persist_camping_ranges!(stay: @stay, draft: @draft, status: @stay.status, total_price_cents: price)
+        return
+      end
+
+      # Repli pleine-fenêtre (admin historique / emails legacy) : update en place.
+      camping = existing_camping_booking(@stay)
       if camping
         camping.update!(
           firstname:   @draft.first_name,
@@ -419,17 +435,20 @@ module Stays
     end
 
     def reconcile_van!
-      van = existing_van_booking(@stay)
-
       unless draft_has_van?(@draft)
-        if van
-          @stay.stay_items.where(bookable_type: "VanBooking").each { |i| i.soft_delete!(validate: false) }
-          van.soft_delete!(validate: false)
-        end
+        detach_van_bookings!(@stay)
         return
       end
 
       price = @draft.quote.van_cents
+
+      if draft_per_night_grid?(@draft)
+        detach_van_bookings!(@stay)
+        persist_van_ranges!(stay: @stay, draft: @draft, status: @stay.status, total_price_cents: price)
+        return
+      end
+
+      van = existing_van_booking(@stay)
       if van
         van.update!(
           firstname:   @draft.first_name,
