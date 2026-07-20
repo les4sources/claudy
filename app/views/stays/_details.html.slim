@@ -78,6 +78,8 @@ div id="stay-details-#{@stay.id}"
                 .min-w-0
                   .text-gray-900.font-medium ⛺ Camping (#{camping.kind})
                   .text-gray-500 = "#{camping.people} personne(s)"
+                  - if (nights_label = outdoor_nights_label(camping))
+                    .text-gray-500 = nights_label
                 span.text-gray-500.shrink-0 = @stay.formatted_item_amount(camping)
 
       - if @stay.van_bookings.any?
@@ -88,6 +90,8 @@ div id="stay-details-#{@stay.id}"
               li.py-2.text-sm.flex.items-start.justify-between.gap-3
                 .min-w-0
                   .text-gray-900.font-medium 🚐 Van (#{van.vehicles} véhicule(s))
+                  - if (nights_label = outdoor_nights_label(van))
+                    .text-gray-500 = nights_label
                 span.text-gray-500.shrink-0 = @stay.formatted_item_amount(van)
 
       - if @stay.meals.any?

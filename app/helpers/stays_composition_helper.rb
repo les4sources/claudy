@@ -27,6 +27,19 @@ module StaysCompositionHelper
     tag.span(safe_join(icons, " "), class: "inline-flex items-center gap-1")
   end
 
+  # Libellé de la ou des nuits couvertes par un réservable plein air (camping /
+  # van), fenêtre `[from, to)`. Sert à distinguer les PLAGES d'un même séjour
+  # quand le camping/van varie d'une nuit à l'autre (grille par nuit, Michael
+  # 2026-07-20) : « Nuit du 12 août » ou « Du 12 au 14 août ». nil si pas de dates.
+  def outdoor_nights_label(booking)
+    from = booking.try(:from_date)
+    to   = booking.try(:to_date)
+    return nil if from.blank? || to.blank?
+    last = to - 1
+    return "Nuit du #{l(from, format: :long)}" if last <= from
+    "Du #{l(from, format: :long)} au #{l(last, format: :long)}"
+  end
+
   private
 
   def composition_icon(emoji, label)
