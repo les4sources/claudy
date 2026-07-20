@@ -35,7 +35,9 @@ nav.mb-4.flex.gap-2
   table.w-full.text-sm.text-left.text-gray-500
     thead.text-xs.text-gray-700.uppercase.bg-gray-50
       tr
-        th.py-3.px-6[scope="col"]
+        / Largeur bornée (demande Michael : −1/3) — le nom tronque proprement
+          plutôt que d'écraser les autres colonnes.
+        th.py-3.px-6.w-56.max-w-56[scope="col"]
           | Nom
         th.py-3.px-6[scope="col"]
           | Email
@@ -55,7 +57,7 @@ nav.mb-4.flex.gap-2
             | Aucun client.
       - @customers.each do |customer|
         tr.border-b.bg-white id="customer_#{customer.id}"
-          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
+          td.py-4.px-6.font-medium.text-gray-900.truncate.max-w-56[scope="row"]
             = link_to customer.display_name,
                       customer_path(customer),
                       class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
