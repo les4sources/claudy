@@ -12,6 +12,9 @@
 - fallback = block.fallback_bookable
 - counter = stay_nights_counter(stay, date)
 div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min-w-0 shadow border-l-4 #{"opacity-50" unless confirmed}" style=stay_block_style(stay.id) data-stay-id=stay.id data-stay-label=stay_short_label(stay) data-stay-dates=stay_short_dates(stay))
+  / Nuitée sur place cette nuit-là : 💤 en débord du coin haut-droit.
+  - if block.overnight?
+    span(class="absolute -top-2 -right-1 text-sm leading-none pointer-events-none select-none" title="Nuitée sur place" aria-label="Nuitée sur place") 💤
   .block.min-w-0.w-full
     div.min-w-0
       strong.block.min-w-0.break-words

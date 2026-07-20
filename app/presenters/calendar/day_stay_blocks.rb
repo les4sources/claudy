@@ -23,6 +23,13 @@ module Calendar
         booking_groups.first&.booking || space_groups.first&.space_booking
       end
 
+      # Le séjour dort-il SUR PLACE la nuit de cette carte ? Vrai dès qu'un
+      # composant NUITÉ est présent ce jour-là (chambres, camping, van) —
+      # jamais pour une salle seule (les espaces sont des forfaits de journée).
+      def overnight?
+        booking_groups.any? || camping_bookings.any? || van_bookings.any?
+      end
+
       # Repli quand le séjour n'a que du camping / van (pas de bookable nommé).
       def fallback_bookable
         camping_bookings.first || van_bookings.first

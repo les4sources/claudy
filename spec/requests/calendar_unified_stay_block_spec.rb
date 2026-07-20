@@ -68,6 +68,34 @@ RSpec.describe "Calendrier — bloc séjour unifié", type: :request do
     expect(response.body).to include("href=\"#{stay_path(stay)}\"")
   end
 
+  it "affiche 💤 sur une carte de nuitée, jamais sur une carte espaces-seuls" do
+    from = Date.today.next_occurring(:friday)
+
+    customer = Customers::UpsertByEmail.call(email: "dodo@example.com", attrs: { first_name: "Dodo" })
+    night_stay = Stay.create!(customer: customer, source: "manual", status: "confirmed",
+                              arrival_date: from, departure_date: from + 1)
+    booking = Booking.create!(firstname: "Dodo", group_name: "Nuitée", lodging: nil,
+                              from_date: from, to_date: from + 1, adults: 2, children: 0, babies: 0,
+                              status: "confirmed", booking_type: "lodging", price_cents: 0)
+    Reservation.create!(booking: booking, room: room_a, date: from)
+    StayItem.create!(stay: night_stay, bookable: booking)
+
+    day_customer = Customers::UpsertByEmail.call(email: "journee@example.com", attrs: { first_name: "Journée" })
+    day_stay = Stay.create!(customer: day_customer, source: "manual", status: "confirmed",
+                            arrival_date: from, departure_date: from)
+    sb = SpaceBooking.create!(firstname: "Journée", group_name: "Salle sèche",
+                              from_date: from, to_date: from, status: "confirmed")
+    SpaceReservation.create!(space: space, space_booking: sb, date: from)
+    StayItem.create!(stay: day_stay, bookable: sb)
+
+    get "/"
+
+    night_block = response.body[/data-stay-id="#{night_stay.id}".*?<\/div>/m]
+    day_block   = response.body[/data-stay-id="#{day_stay.id}".*?<\/div>/m]
+    expect(night_block).to include("💤")
+    expect(day_block).not_to include("💤")
+  end
+
   # Revue Forge F3 — les cas subtils du split avec/sans séjour, verrouillés.
   it "rend UN bloc pour un séjour espaces-seuls (sans hébergement)" do
     from = Date.today.next_occurring(:friday)
