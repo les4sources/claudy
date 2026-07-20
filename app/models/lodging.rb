@@ -76,10 +76,29 @@ class Lodging < ApplicationRecord
   # blind). Kept public so the composition logic and any caller that explicitly
   # wants the physical-unit answer can reach it; behaviour for non-composed
   # lodgings is identical to the previous available_between?/available_on?.
+  #
+  # CONTRAT DE DATES (issue #94). `(from_date, to_date)` décrit une FENÊTRE DE
+  # SÉJOUR `[from_date, to_date)` : arrivée le jour `from_date`, départ le jour
+  # `to_date` — le jour de départ n'est PAS occupé. L'occupation est portée par
+  # des `Reservation` NUITÉES : un séjour occupe les nuits `from_date..(to_date-1)`.
+  # On interroge donc les `Reservation` sur cet intervalle de NUITS (borne haute
+  # EXCLUANT le jour de départ) — sinon un enchaînement dos-à-dos (départ le jour J,
+  # arrivée d'un autre séjour le même jour J) serait faussement refusé.
+  #
+  # Garde-fou ANTI-SURBOOKING : `available_on?(d)` appelle `(d, d)` pour demander
+  # « la NUIT d est-elle libre ? ». Une borne haute naïve `to_date - 1` donnerait
+  # ici un intervalle VIDE (`d..d-1`) → « toujours disponible » → surbooking
+  # silencieux. Le `max` avec `from_date` ramène l'appel nuit-unique `(d, d)` à la
+  # nuit `d`, tout en gardant la sémantique de fenêtre quand `to_date > from_date`.
+  #
+  # Les `Unavailability` (indispos posées à la main) gardent leur sémantique de
+  # JOURNÉES PLEINES : `from_date..to_date` INCLUSIF — volontairement différente
+  # des nuits (une indispo posée sur le jour de départ d'une fenêtre bloque).
   def self_available_between?(from_date, to_date)
+    last_night = [to_date - 1, from_date].max
     Reservation.includes(:booking)
                .where(
-                 date: from_date..to_date,
+                 date: from_date..last_night,
                  room: rooms.pluck(:id),
                  booking: { status: "confirmed" }
                ).none? && unavailabilities.where(date: from_date..to_date).none?
@@ -108,8 +127,14 @@ class Lodging < ApplicationRecord
     scoped = rooms.where(id: ids).pluck(:id)
     return false if scoped.empty?
 
+    # Même contrat de dates que `self_available_between?` (issue #94) : `(from_date,
+    # to_date)` est une fenêtre de séjour `[from_date, to_date)`. Les `Reservation`
+    # sont NUITÉES → on borne la requête aux nuits `from_date..(to_date-1)` (borne
+    # haute excluant le jour de départ), avec le même garde-fou `max` pour l'appel
+    # nuit-unique `(d, d)`. Les `Unavailability` restent en journées pleines (inclusif).
+    last_night = [to_date - 1, from_date].max
     Reservation.includes(:booking)
-               .where(date: from_date..to_date, room: scoped, booking: { status: "confirmed" })
+               .where(date: from_date..last_night, room: scoped, booking: { status: "confirmed" })
                .none? && unavailabilities.where(date: from_date..to_date).none?
   end
 
