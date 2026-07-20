@@ -2,22 +2,35 @@ class ExperienceAvailabilitiesController < ApplicationController
   before_action :authenticate_user!
   before_action :set_experience
 
-  # Dépôt d'un bloc depuis le calendrier hebdo (epic #25, Phase 4) : un clic sur
-  # une case suffit — la durée vient de l'activité, le non-chevauchement et les
-  # bornes 8h-22h sont validés par le modèle.
+  # Dépôt d'un bloc depuis le calendrier mensuel : un clic sur une case suffit —
+  # la durée vient de l'activité, le non-chevauchement et les bornes 8h-22h sont
+  # validés par le modèle. Réponse en turbo_stream (le frame + le récap latéral
+  # se remplacent en place, la position de scroll est conservée) avec repli HTML
+  # (redirect) pour le no-JS.
   def create
     @availability = @experience.experience_availabilities.build(availability_params)
     if @availability.save
-      redirect_to experience_week_path, notice: "Disponibilité ajoutée."
+      @calendar = build_month_calendar
+      respond_to do |format|
+        format.turbo_stream
+        format.html { redirect_to experience_month_path, notice: "Disponibilité ajoutée." }
+      end
     else
-      redirect_to experience_week_path, alert: @availability.errors.full_messages.to_sentence
+      # Sur échec (chevauchement, hors bornes…) on repasse par un redirect qui
+      # porte le flash : Turbo suit la redirection et recharge le frame. Rare, et
+      # ça garde le message d'erreur visible.
+      redirect_to experience_month_path, alert: @availability.errors.full_messages.to_sentence
     end
   end
 
   def destroy
     @availability = @experience.experience_availabilities.find(params[:id])
     @availability.destroy
-    redirect_to experience_week_path, notice: "Disponibilité supprimée."
+    @calendar = build_month_calendar
+    respond_to do |format|
+      format.turbo_stream
+      format.html { redirect_to experience_month_path, notice: "Disponibilité supprimée." }
+    end
   end
 
   private
@@ -26,12 +39,15 @@ class ExperienceAvailabilitiesController < ApplicationController
     @experience = Experience.find(params[:experience_id])
   end
 
-  # On revient sur la semaine que le porteur regardait, pas sur la semaine
-  # courante : sans ça, poser un bloc trois semaines plus loin le ramènerait
-  # au début à chaque clic.
-  def experience_week_path
-    week = params[:week].presence
-    week ? experience_path(@experience, week: week) : experience_path(@experience)
+  # Grille du mois que le porteur regardait (pas le mois courant) : sans ça,
+  # poser un bloc deux mois plus loin ramènerait au mois en cours à chaque clic.
+  def build_month_calendar
+    Experiences::MonthCalendar.new(experience: @experience, month: params[:month])
+  end
+
+  def experience_month_path
+    month = params[:month].presence
+    month ? experience_path(@experience, month: month) : experience_path(@experience)
   end
 
   def availability_params

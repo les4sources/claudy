@@ -102,7 +102,7 @@ RSpec.describe "Calendrier — regroupement par séjour (epic #66, Phase 4)", ty
       # Édition unifiée (epic #81, Phase 8) : le bloc pointe vers la modale séjour,
       # plus vers la fiche booking legacy. On borne à la grille (le flux d'activité,
       # hors scope, garde son lien booking historique).
-      grid = response.body.split("Activité récente").first
+      grid = response.body
       expect(grid).to include(stay_path(stay))
       expect(grid).not_to include(booking_path(booking))
     end
@@ -143,7 +143,7 @@ RSpec.describe "Calendrier — regroupement par séjour (epic #66, Phase 4)", ty
       expect(response.body.scan("data-stay-id=\"#{stay.id}\"").size).to eq(2)
       expect(response.body).to include("hsl(#{hue_for(stay.id)}, 65%, 45%)")
       expect(response.body).to include("Groupe Camping")
-      expect(response.body).to include("⛺ Camping · 4 pers.")
+      expect(response.body).to include("⛺️ 4 pers.")
     end
   end
 

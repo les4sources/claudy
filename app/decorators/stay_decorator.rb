@@ -187,8 +187,15 @@ class StayDecorator < ApplicationDecorator
     when Booking
       bookable.lodging&.name.presence || h.t("public.stays.items.lodging")
     when SpaceBooking
-      spaces = bookable.try(:spaces)&.map(&:name)&.compact_blank
-      spaces.presence&.join(", ") || h.t("public.stays.items.space")
+      # Un espace apparaît UNE fois par jour réservé dans l'association : on
+      # agrège par nom avec le nombre de jours — « Grande Salle (3 j) » au lieu
+      # de « Grande Salle, Grande Salle, Grande Salle » (aperçu de fusion).
+      names = bookable.try(:spaces)&.map(&:name)&.compact_blank
+      if names.present?
+        names.tally.map { |name, days| days > 1 ? "#{name} (#{days} j)" : name }.join(", ")
+      else
+        h.t("public.stays.items.space")
+      end
     when CampingBooking
       h.t("public.stays.items.camping")
     when VanBooking

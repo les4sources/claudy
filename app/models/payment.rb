@@ -29,6 +29,12 @@ class Payment < ApplicationRecord
   # et sont rattrapées par `rake payments:backfill_stay_from_booking`.
   belongs_to :stay
 
+  # Provenance de facturation des espaces (facturation espaces → paiements).
+  # Optionnel : seuls les Payment issus de la rake `space_bookings:billing_to_payments`
+  # le portent. Sert de trace d'audit ET de clé d'idempotence de cette rake
+  # (un seul Payment `paid` + un seul Payment `pending` par SpaceBooking).
+  belongs_to :space_booking, optional: true
+
   monetize :amount_cents, allow_nil: false
 
   # Table de versions dédiée : la PK de Payment est un UUID, incompatible avec

@@ -54,6 +54,13 @@ nav.bg-white.shadow-sm.lg:px-6
                     path[d="M2 18h20"]
                   span Séjours
               li
+                = link_to recent_activity_path,
+                          class: "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors #{action_name == 'recent_activity' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-600 hover:bg-teal-50/60 hover:text-4s-main'}" do
+                  svg.w-4.h-4.opacity-70[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+                    circle[cx="12" cy="12" r="10"]
+                    polyline[points="12 6 12 12 16 14"]
+                  span Activité récente
+              li
                 = link_to reports_path,
                           class: "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors #{controller_name == 'reports' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-600 hover:bg-teal-50/60 hover:text-4s-main'}" do
                   svg.w-4.h-4.opacity-70[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]

@@ -45,7 +45,7 @@
       strong.block.min-w-0.break-words.text-gray-700
         = camping.group_name.presence || camping.name.presence || "Camping"
       .text-xs.text-gray-500
-        | ⛺ Camping · #{camping.people} pers.
+        | ⛺️ #{camping.people} pers.
 
 / 4) Van / camping-car SANS séjour — même logique que le camping.
 - blocks.no_stay_van.each do |van|
@@ -54,4 +54,4 @@
       strong.block.min-w-0.break-words.text-gray-700
         = van.group_name.presence || van.name.presence || "Van"
       .text-xs.text-gray-500
-        | 🚐 Van · #{van.vehicles} véh.
+        | 🚐 #{van.vehicles} véhicule#{"s" if van.vehicles.to_i > 1}

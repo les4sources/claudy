@@ -49,9 +49,9 @@ RSpec.describe "Calendrier — modale séjour depuis les blocs (epic #66, Phase 
 
       get "/"
 
-      # On borne les assertions à la GRILLE (avant le flux « Activité récente »,
-      # qui garde légitimement son lien booking historique — hors scope Phase 8).
-      grid = response.body.split("Activité récente").first
+      # Le fil « Activité récente » a quitté la page calendrier (page dédiée,
+      # 2026-07-20) : plus rien à exclure, on asserte sur la page entière.
+      grid = response.body
 
       expect(grid).to include('data-action="stay-details#open"')
       expect(grid).to include("href=\"#{stay_path(stay)}\"")
@@ -73,7 +73,7 @@ RSpec.describe "Calendrier — modale séjour depuis les blocs (epic #66, Phase 
 
       get "/"
 
-      grid = response.body.split("Activité récente").first
+      grid = response.body
       expect(grid).to include("href=\"#{stay_path(stay)}\"")
       # Édition unifiée (epic #81, Phase 8) : le lien espace legacy a disparu du
       # bloc dès qu'un séjour vivant le porte.
@@ -99,7 +99,7 @@ RSpec.describe "Calendrier — modale séjour depuis les blocs (epic #66, Phase 
       # Camping AVEC séjour : désormais agrégé dans le bloc SÉJOUR UNIFIÉ, qui
       # porte `data-stay-id` et ouvre la modale via l'overlay `stay_path`.
       expect(response.body).to include("data-stay-id=\"#{stay.id}\"")
-      expect(response.body).to include("⛺ Camping")
+      expect(response.body).to include("⛺️")
       expect(response.body).to include("href=\"#{stay_path(stay)}\"")
     end
   end

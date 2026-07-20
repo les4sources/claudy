@@ -1,0 +1,76 @@
+/ Calendrier MENSUEL des disponibilités du porteur. Une colonne par jour du mois
+/ (28 à 31), une ligne par créneau horaire. Un clic sur une case libre pose un
+/ bloc, un clic sur une case posée le retire. Tout est enrobé d'un Turbo Frame :
+/ create/destroy répondent en turbo_stream (remplacement du frame, scroll
+/ conservé) et la navigation de mois recharge le frame, jamais la page.
+= turbo_frame_tag "experience_availabilities" do
+  .overflow-hidden.bg-white.shadow.sm:rounded-lg(data-month-calendar="true")
+    .px-4.py-5.sm:px-6.flex.flex-wrap.items-center.justify-between.gap-3
+      div
+        h3.text-lg.font-medium.leading-6.text-gray-900 Calendrier des disponibilités
+        - if calendar.configured?
+          p.text-sm.text-gray-500
+            = "Blocs de #{calendar.experience.duration_hours.to_f.round(2)} h — de 8h à 22h, sans chevauchement."
+
+      .flex.items-center.gap-2
+        = link_to "← Mois précédent", experience_path(calendar.experience, month: calendar.previous_month_param),
+                  data: { turbo_frame: "experience_availabilities" },
+                  class: "text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-100"
+        span.text-sm.font-medium.capitalize.text-gray-800(data-month-label=calendar.month_param)
+          = l(calendar.month_start, format: "%B %Y")
+        - unless calendar.current_month?
+          = link_to "Ce mois-ci", experience_path(calendar.experience),
+                    data: { turbo_frame: "experience_availabilities" },
+                    class: "text-sm font-medium text-emerald-700 hover:text-emerald-900 px-2 py-1 rounded hover:bg-emerald-50"
+        = link_to "Mois suivant →", experience_path(calendar.experience, month: calendar.next_month_param),
+                  data: { turbo_frame: "experience_availabilities" },
+                  class: "text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-100"
+
+    .border-t.border-gray-200.p-4
+      - if !calendar.configured?
+        p.text-sm.text-gray-500.italic
+          | Renseignez la
+          =< link_to "durée de l'activité", edit_experience_path(calendar.experience), class: "underline"
+          |  (en heures) pour pouvoir poser des disponibilités.
+      - else
+        .overflow-x-auto
+          table.text-sm.border-separate(style="border-spacing: 2px;")
+            thead
+              tr
+                th.sticky.left-0.z-10.bg-white.w-12.text-xs.font-medium.text-gray-400.text-left
+                - calendar.days.each do |day|
+                  - weekend = day.saturday? || day.sunday?
+                  - today = day == Date.today
+                  th.text-center.text-xs.font-medium(class="#{weekend ? 'bg-gray-50' : ''} #{today ? 'text-emerald-700' : 'text-gray-500'}" style="min-width: 2.5rem;")
+                    .uppercase.tracking-wide = l(day, format: "%a")
+                    .text-base.font-semibold(class="#{today ? 'text-emerald-700' : 'text-gray-800'}")
+                      = l(day, format: "%-d")
+            tbody
+              - calendar.slot_starts.each do |minutes|
+                - label = calendar.format_minutes(minutes)
+                tr
+                  td.sticky.left-0.z-10.bg-white.text-xs.text-gray-400.pr-2.align-middle.whitespace-nowrap = label
+                  - calendar.days.each do |day|
+                    - availability = calendar.availability_at(day, minutes)
+                    - past = day < Date.today
+                    - weekend = day.saturday? || day.sunday?
+                    td.align-middle(class="#{weekend ? 'bg-gray-50' : ''}" style="min-width: 2.5rem;")
+                      - if availability
+                        = button_to experience_experience_availability_path(calendar.experience, availability, month: calendar.month_param),
+                                    method: :delete,
+                                    form: { data: { turbo_confirm: (availability.booked_participants.positive? ? "Ce créneau a déjà des réservations. Le supprimer ?" : nil) } },
+                                    data: { availability_slot: "#{day.iso8601} #{label}", availability_state: "taken" },
+                                    title: "Retirer le créneau du #{l(day, format: '%-d %B')} à #{label}",
+                                    class: "w-full rounded-md px-1 py-2 text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-red-100 hover:text-red-800 hover:border-red-300 transition-colors cursor-pointer" do
+                          = availability.booked_participants.positive? ? "#{availability.booked_participants}p" : "✓"
+                      - elsif past
+                        .w-full.rounded-md.px-1.py-2.text-xs.text-gray-300.text-center.border.border-dashed.border-gray-100(data-availability-slot="#{day.iso8601} #{label}" data-availability-state="past")
+                          | —
+                      - else
+                        = button_to experience_experience_availabilities_path(calendar.experience, month: calendar.month_param),
+                                    method: :post,
+                                    params: { experience_availability: { available_on: day.iso8601, starts_at: label } },
+                                    data: { availability_slot: "#{day.iso8601} #{label}", availability_state: "free" },
+                                    title: "Poser un créneau le #{l(day, format: '%-d %B')} à #{label}",
+                                    class: "w-full rounded-md px-1 py-2 text-xs text-gray-400 bg-gray-50 border border-dashed border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 transition-colors cursor-pointer" do
+                          | +

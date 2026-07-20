@@ -39,10 +39,10 @@ div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min
         span.text-xs.text-gray-500.whitespace-nowrap = group.space_booking.duration
       / Camping : capacité globale du terrain (pas de ressource nommée) → chip info.
       - block.camping_bookings.each do |camping|
-        span(class="text-xs text-gray-600 whitespace-nowrap") ⛺ Camping · #{camping.people} pers.
+        span(class="text-xs text-gray-600 whitespace-nowrap") ⛺️ #{camping.people} pers.
       / Van / camping-car : même logique que le camping.
       - block.van_bookings.each do |van|
-        span(class="text-xs text-gray-600 whitespace-nowrap") 🚐 Van · #{van.vehicles} véh.
+        span(class="text-xs text-gray-600 whitespace-nowrap") 🚐 #{van.vehicles} véhicule#{"s" if van.vehicles.to_i > 1}
 
   / Overlay cliquable : ouvre la modale séjour (epic #66, Phase 5) et sert de
   / cible unique au mode fusion pour tout le séjour.

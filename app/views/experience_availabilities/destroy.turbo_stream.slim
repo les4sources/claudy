@@ -1,0 +1,6 @@
+/ Remplace le frame du calendrier (créneau retiré) ET le récap latéral
+/ (compteur + liste), sans recharger la page ni perdre le scroll.
+= turbo_stream.replace "experience_availabilities" do
+  = render "experiences/month_calendar", calendar: @calendar
+= turbo_stream.replace "experience_availabilities_summary" do
+  = render "experiences/availabilities_summary", experience: @experience, month: @calendar.month_param
