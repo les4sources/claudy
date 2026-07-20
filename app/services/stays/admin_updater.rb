@@ -180,11 +180,19 @@ module Stays
         end
       end
 
+      # Contrat de dates (issue #94) : `[arrival_date, departure_date)` est une
+      # fenêtre de séjour ; le jour de départ n'est PAS occupé. Les `Reservation`
+      # sont NUITÉES → on borne aux nuits `arrival_date..(departure_date-1)` (borne
+      # haute excluant le jour de départ) pour ne pas refuser une rotation dos-à-dos.
+      # Le `max` garde un intervalle valide même sur une fenêtre dégénérée (0 nuit).
+      last_night = [@draft.departure_date - 1, @draft.arrival_date].max
       scope = Reservation.joins(:booking)
-                         .where(date: @draft.arrival_date..@draft.departure_date,
+                         .where(date: @draft.arrival_date..last_night,
                                 room_id: ids, bookings: { status: "confirmed" })
       own_ids = @stay.stay_items.where(bookable_type: "Booking").pluck(:bookable_id)
       scope = scope.where.not(bookings: { id: own_ids }) if own_ids.any?
+      # Les `Unavailability` gardent leur sémantique de JOURNÉES PLEINES (inclusif
+      # du jour de départ) — volontairement différente des nuits ci-dessus.
       scope.none? &&
         @draft.lodging.unavailabilities.where(date: @draft.arrival_date..@draft.departure_date).none?
     end
