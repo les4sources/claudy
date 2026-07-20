@@ -1,0 +1,47 @@
+/ Calendrier global MENSUEL (2026-07-20, remplace la vue semaine) : une ligne
+  par activité, une colonne par jour, le NOMBRE de créneaux posés (pas le
+  détail — il vit sur la fiche de l'activité). Nom d'activité cliquable et
+  FIGÉ au scroll horizontal (sticky left).
+.mb-8.overflow-hidden.bg-white.shadow.sm:rounded-lg
+  .px-4.py-5.sm:px-6.flex.flex-wrap.items-center.justify-between.gap-3
+    div
+      h3.text-lg.font-medium.leading-6.text-gray-900 Créneaux du mois
+      p.text-sm.text-gray-500 = l(calendar.month, format: "%B %Y").capitalize
+
+    .flex.items-center.gap-2
+      = link_to "← #{l(calendar.previous_month, format: '%B').capitalize}", experiences_path(month: calendar.previous_month.strftime("%Y-%m")),
+                class: "text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-100"
+      - unless calendar.current_month?
+        = link_to "Ce mois-ci", experiences_path,
+                  class: "text-sm font-medium text-emerald-700 hover:text-emerald-900 px-2 py-1 rounded hover:bg-emerald-50"
+      = link_to "#{l(calendar.next_month, format: '%B').capitalize} →", experiences_path(month: calendar.next_month.strftime("%Y-%m")),
+                class: "text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-100"
+
+  .border-t.border-gray-200
+    - if !calendar.any?
+      p.p-4.text-sm.text-gray-500.italic
+        | Aucun créneau posé ce mois-ci. Les disponibilités se posent depuis la fiche de chaque activité.
+    - else
+      .overflow-x-auto
+        table.text-sm.border-separate(style="border-spacing: 0; min-width: 100%;")
+          thead
+            tr
+              th.sticky.left-0.z-10.bg-white.text-left.text-xs.font-medium.text-gray-400.px-3.py-2(style="min-width: 11rem;") Activité
+              - calendar.days.each do |day|
+                - weekend = day.saturday? || day.sunday?
+                th.text-center.px-1.py-2(class="#{weekend ? 'bg-slate-50' : ''} #{day == Date.today ? 'bg-emerald-50' : ''}" style="min-width: 2rem;")
+                  .text-xs.uppercase.text-gray-400 = l(day, format: "%a")[0]
+                  .text-xs.font-semibold(class="#{day == Date.today ? 'text-emerald-700' : 'text-gray-700'}") = day.day
+          tbody
+            - calendar.rows.each do |experience, counts|
+              tr.border-t.border-gray-100
+                th.sticky.left-0.z-10.bg-white.text-left.px-3.py-2.font-medium.whitespace-nowrap.border-t.border-gray-100(scope="row")
+                  = link_to experience.name, experience_path(experience),
+                            class: "text-blue-600 hover:text-blue-800 hover:underline"
+                - calendar.days.each do |day|
+                  - count = counts[day]
+                  - weekend = day.saturday? || day.sunday?
+                  td.text-center.px-1.py-2.border-t.border-gray-100(class="#{weekend ? 'bg-slate-50/60' : ''} #{day == Date.today ? 'bg-emerald-50/60' : ''}")
+                    - if count
+                      span class="inline-flex items-center justify-center min-w-[1.4rem] rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold px-1 py-0.5" title="#{count} créneau#{"x" if count > 1} le #{l(day, format: :long)}"
+                        = count

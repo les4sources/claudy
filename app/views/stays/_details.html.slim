@@ -21,7 +21,7 @@ div id="stay-details-#{@stay.id}"
       - else
         = button_to "Confirmer le séjour", update_status_stay_path(@stay, status: "confirmed"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "inline-flex items-center rounded-md border border-transparent bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700"
       - if @stay.token.present?
-        = link_to "Solde / paiement client ↗", public_stay_path(@stay.token), target: "_blank", rel: "noopener", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        = link_to "Page web du séjour ↗", public_stay_path(@stay.token), target: "_blank", rel: "noopener", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
 
     dl.grid.grid-cols-3.gap-x-4.gap-y-2.text-sm
       dt.font-medium.text-gray-500 Dates
