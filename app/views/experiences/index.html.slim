@@ -44,7 +44,7 @@
             = experience.price
           td.py-4.px-6.text-gray-900.whitespace-nowrap[scope="row"]
             = experience.participants
+          / Durée courte (« 1 h ») en texte principal — la version texte libre
+          / faisait doublon avec l'info grise (demande Michael 2026-07-20).
           td.py-4.px-6.text-gray-900.whitespace-nowrap[scope="row"]
-            = experience.duration
-            - if experience.duration_hours
-              .text-xs.text-gray-400 = experience.duration_hours
+            = experience.duration_hours || experience.duration
