@@ -33,9 +33,11 @@ module Payments
         client_reference_id: @payment.id,
         success_url: return_url,
         cancel_url: return_url,
+        customer_email: prefill_email,
         item: {
           id: @payment.id,
           name: checkout_label,
+          description: checkout_description,
           amount: @payment.amount_cents
         }
       )
@@ -52,12 +54,72 @@ module Payments
       end
     end
 
+    # Libellé lisible par le CLIENT sur la page Stripe — plus de token brut :
+    # les dates situent immédiatement le séjour. Repli générique sans dates ;
+    # les paiements historiques booking-seuls gardent leur libellé d'origine.
     def checkout_label
-      if @payment.stay&.token.present?
-        "Séjour ##{@payment.stay.token}"
+      stay = @payment.stay
+      return "Réservation ##{@payment.booking.token}" if stay&.token.blank?
+
+      if stay.arrival_date.present? && stay.departure_date.present?
+        "Séjour aux 4 Sources · du #{I18n.l(stay.arrival_date, format: :long)} " \
+          "au #{I18n.l(stay.departure_date, format: :long)}"
       else
-        "Réservation ##{@payment.booking.token}"
+        "Séjour aux 4 Sources"
       end
+    end
+
+    # Sous-titre Stripe : nature du paiement (acompte / solde / total) puis
+    # composition du séjour — de quoi reconnaître SON séjour et comprendre
+    # pourquoi le montant demandé diffère du total.
+    def checkout_description
+      stay = @payment.stay
+      return nil unless stay
+
+      [payment_nature(stay), composition_summary(stay)].compact.join(" — ").presence
+    end
+
+    # Adossé au TOTAL PRÉVU (`total_amount_cents`) : la notion que le client
+    # connaît (devis, email de récap). Acompte tant que rien n'est encaissé,
+    # solde ensuite ; rien à préciser si le paiement couvre tout le séjour.
+    def payment_nature(stay)
+      total = stay.total_amount_cents.to_i
+      return nil unless total.positive?
+
+      if @payment.amount_cents >= total
+        "Montant total du séjour"
+      elsif stay.amount_paid_cents.positive?
+        "Solde de #{euros(@payment.amount_cents)} sur un séjour de #{euros(total)}"
+      else
+        "Acompte de #{euros(@payment.amount_cents)} sur un séjour de #{euros(total)}"
+      end
+    end
+
+    # Résumé de la composition : hébergement(s) nommé(s), espaces, camping,
+    # van, activités actives.
+    def composition_summary(stay)
+      parts = stay.bookables.filter_map do |bookable|
+        case bookable
+        when Booking        then bookable.lodging&.name || "Hébergement"
+        when SpaceBooking   then "Salles & espaces"
+        when CampingBooking then "Camping"
+        when VanBooking     then "Emplacement van"
+        end
+      end.uniq
+      activities = stay.experience_bookings.active.count
+      parts << "#{activities} activité#{"s" if activities > 1}" if activities.positive?
+      parts.presence&.join(", ")
+    end
+
+    def euros(cents)
+      Money.new(cents, "EUR").format
+    end
+
+    # Pré-remplit l'email sur la page Stripe (une saisie de moins pour le
+    # client). Jamais bloquant : sans email exploitable, Stripe le demandera.
+    def prefill_email
+      email = @payment.stay&.customer&.email.presence || @payment.booking&.email.presence
+      email if email&.match?(URI::MailTo::EMAIL_REGEXP)
     end
   end
 end
