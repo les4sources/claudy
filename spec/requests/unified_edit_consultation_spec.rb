@@ -5,8 +5,9 @@ require "rails_helper"
 # séjour (`edit_stay_path`, page pleine avec layout) quand un Stay VIVANT porte
 # le record — `stays#show` rend un fragment sans layout, inexploitable en
 # navigation directe, et le form séjour EST le point d'entrée unifié de l'epic.
-# Sans Stay (backfill Phase 1 pas encore tourné), lien legacy conservé — et
-# aucune page ne rend de lien mort.
+# Sans Stay VIVANT (cas résiduel post-backfill : séjour soft-deleté à la main),
+# le lien mène à la fiche `#show` — l'édition legacy n'existe plus (issue #99) —
+# et aucune page ne rend de lien mort.
 RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 8)", type: :request do
   include Devise::Test::IntegrationHelpers
 
@@ -51,7 +52,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
       expect(response.body).not_to include(booking_path(booking))
     end
 
-    it "garde le lien booking legacy quand le booking n'a pas de séjour" do
+    it "renvoie vers la fiche show (jamais l'édition) quand le booking n'a pas de séjour" do
       from = Date.today.next_occurring(:friday)
       booking = confirmed_booking(from: from, to: from + 1)
 
@@ -59,6 +60,8 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(booking_path(booking))
+      # booking_path est une sous-chaîne de edit_booking_path : on distingue.
+      expect(response.body).not_to include(edit_booking_path(booking))
     end
 
     it "renvoie le lien d'une résa d'espace à séjour vers le form séjour" do
@@ -73,7 +76,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
       expect(response.body).not_to include(space_booking_path(sb))
     end
 
-    it "garde le lien espace legacy quand la résa d'espace n'a pas de séjour" do
+    it "renvoie vers la fiche show (jamais l'édition) quand la résa d'espace n'a pas de séjour" do
       from = Date.today.next_occurring(:friday)
       sb = confirmed_space_booking(on: from)
 
@@ -81,6 +84,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(space_booking_path(sb))
+      expect(response.body).not_to include(edit_space_booking_path(sb))
     end
   end
 
@@ -97,7 +101,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
       expect(response.body).not_to include(booking_path(booking))
     end
 
-    it "garde le lien legacy pour un booking sans séjour (aucun lien mort)" do
+    it "renvoie vers la fiche show pour un booking sans séjour (aucun lien mort)" do
       from = Date.today.next_occurring(:friday)
       booking = confirmed_booking(from: from, to: from + 2)
 
@@ -105,6 +109,8 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(booking_path(booking))
+      # booking_path est une sous-chaîne de edit_booking_path : on distingue.
+      expect(response.body).not_to include(edit_booking_path(booking))
     end
   end
 
@@ -121,7 +127,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
       expect(response.body).not_to include(booking_path(other))
     end
 
-    it "garde le lien legacy pour un booking sans séjour" do
+    it "renvoie vers la fiche show pour un booking sans séjour" do
       from = Date.today.next_occurring(:friday)
       other = confirmed_booking(from: from, to: from + 2)
 
@@ -129,6 +135,8 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(booking_path(other))
+      # booking_path est une sous-chaîne de edit_booking_path : on distingue.
+      expect(response.body).not_to include(edit_booking_path(other))
     end
   end
 
@@ -159,7 +167,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
       expect(response.body).not_to include(space_booking_path(sb))
     end
 
-    it "garde le lien legacy pour une résa d'espace sans séjour" do
+    it "renvoie vers la fiche show pour une résa d'espace sans séjour" do
       from = Date.today.next_occurring(:friday)
       sb = confirmed_space_booking(on: from)
 
@@ -167,6 +175,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(space_booking_path(sb))
+      expect(response.body).not_to include(edit_space_booking_path(sb))
     end
   end
 end

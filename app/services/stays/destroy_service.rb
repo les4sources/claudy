@@ -26,6 +26,12 @@ module Stays
   #   - Camping/Van   : occupation dérivée de leurs propres dates → le soft-delete
   #                     du bookable suffit.
   #
+  # Les ACTIVITÉS (`ExperienceBooking`, revue Forge #99) n'ont pas de
+  # soft-deletion : on les passe en `cancelled` — statut du domaine, silencieux
+  # (aucun callback email sur le modèle), tracé PaperTrail. Le scope `.active`
+  # les exclut → le créneau (`experience_availability`) est rendu et aucune
+  # relance ne peut plus les viser. La trace de facturation est conservée.
+  #
   # Les `Payment` sont PRÉSERVÉS (trace financière auditable) : aucune association
   # de paiement ne figure dans le `soft_delete_dependents` d'un bookable.
   class DestroyService < ServiceBase
@@ -36,6 +42,7 @@ module Stays
     def run
       Stay.transaction do
         soft_delete_bookables!
+        cancel_experience_bookings!
         @stay.soft_delete!(validate: false)
       end
       true
@@ -47,9 +54,20 @@ module Stays
       @stay.bookables.each do |bookable|
         # SpaceReservation n'est pas soft-deletable et ne cascade pas depuis le
         # SpaceBooking : on retire ses lignes explicitement (hard-delete assumé,
-        # la trace vit dans le SpaceBooking soft-deleté + PaperTrail).
+        # la trace vit dans le SpaceBooking soft-deleté + PaperTrail). L'ordre
+        # destroy_all AVANT soft_delete! est volontaire : si l'association
+        # gagnait un jour une cascade de soft-delete, on ne relirait pas un
+        # cache d'association périmé (leçon du MergeService).
         bookable.space_reservations.destroy_all if bookable.respond_to?(:space_reservations)
         bookable.soft_delete!(validate: false)
+      end
+    end
+
+    # Activités encore actives (pending/confirmed) → cancelled. update! silencieux
+    # (pas de callback email sur ExperienceBooking), tracé PaperTrail.
+    def cancel_experience_bookings!
+      @stay.experience_bookings.active.find_each do |experience_booking|
+        experience_booking.update!(status: "cancelled")
       end
     end
   end

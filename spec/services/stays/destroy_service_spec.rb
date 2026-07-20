@@ -71,6 +71,24 @@ RSpec.describe Stays::DestroyService do
       expect(Payment.find_by(id: payment.id)).to be_present
     end
 
+    # Revue Forge #99 : sans annulation, l'activité restait ACTIVE après la
+    # suppression du séjour — créneau toujours consommé, relances possibles.
+    it "annule les activités du séjour (créneau rendu, trace conservée)" do
+      experience = Experience.create!(name: "Atelier pain", fixed_price_cents: 5_000, price_cents: 1_500)
+      availability = ExperienceAvailability.create!(experience: experience,
+                                                    available_on: Date.today + 600, starts_at: "10:00")
+      customer = Customer.create!(email: "destroy-eb@example.com", customer_type: "individual")
+      stay = Stay.create!(customer: customer, source: "manual", status: "confirmed")
+      eb = ExperienceBooking.create!(experience_availability: availability, stay: stay,
+                                     participants: 2, status: "confirmed")
+
+      described_class.new(stay: stay).run
+
+      expect(eb.reload.status).to eq("cancelled")
+      expect(ExperienceBooking.active.where(id: eb.id)).to be_empty
+      expect(eb.versions.last.object_changes).to include("status") # tracé PaperTrail
+    end
+
     it "gère un séjour hébergement-seul (pas de SpaceBooking)" do
       from = Date.today + 500
       booking = Booking.create!(firstname: "Solo", group_name: "G", lodging: lodging,
