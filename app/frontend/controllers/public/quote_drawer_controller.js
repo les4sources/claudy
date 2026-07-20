@@ -44,6 +44,8 @@ export default class extends Controller {
     if (this.openValue) {
       this.panelTarget.classList.remove("translate-y-full", "sm:translate-x-full")
       this.panelTarget.classList.add("translate-y-0", "sm:translate-x-0")
+      // aria-hidden retiré AVANT le focus (un élément aria-hidden focusé est invalide).
+      this.panelTarget.removeAttribute("aria-hidden")
       this.overlayTarget.classList.remove("opacity-0", "pointer-events-none")
       document.body.classList.add("overflow-hidden")
       this.panelTarget.focus()
@@ -52,10 +54,12 @@ export default class extends Controller {
       this.panelTarget.classList.remove("translate-y-0", "sm:translate-x-0")
       this.overlayTarget.classList.add("opacity-0", "pointer-events-none")
       document.body.classList.remove("overflow-hidden")
+      // Focus rendu AVANT de poser aria-hidden (jamais d'élément focusé caché).
       if (this.previouslyFocused && this.previouslyFocused.focus) {
         this.previouslyFocused.focus()
         this.previouslyFocused = null
       }
+      this.panelTarget.setAttribute("aria-hidden", "true")
     }
   }
 }
