@@ -112,3 +112,36 @@ RSpec.describe "Stays — form parité (switch statut + radios attribution)", ty
     end
   end
 end
+
+# Grilles datées rechargeables (2026-07-21) : quand les dates changent, le
+# frame `stay_compose_grids` se recharge avec les bonnes colonnes.
+RSpec.describe "Stays — rechargement des grilles de composition", type: :request do
+  include Devise::Test::IntegrationHelpers
+
+  let(:user) { User.create!(email: "grids@les4sources.be", password: "password123") }
+  before { sign_in user }
+
+  it "compose_grids rend le frame avec une colonne par nuit" do
+    arrival = Date.today + 30
+    get "/stays/compose_grids", params: { arrival_date: arrival.iso8601, departure_date: (arrival + 3).iso8601 }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('turbo-frame id="stay_compose_grids"')
+    expect(response.body.scan("Nuit ").size).to be >= 3
+  end
+
+  it "sans dates : repli sur les saisies hors fenêtre (halls + compteurs)" do
+    get "/stays/compose_grids"
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("stay[halls]")
+    expect(response.body).to include("stay[camping][people]")
+  end
+
+  it "le form embarque le frame et le câblage stay-grids" do
+    get "/stays/new"
+
+    expect(response.body).to include('turbo-frame id="stay_compose_grids"')
+    expect(response.body).to include("stay-grids#reload")
+  end
+end

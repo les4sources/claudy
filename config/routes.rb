@@ -129,6 +129,9 @@ Rails.application.routes.draw do
       # (issue #77) : lodging_id + dates → JSON { available: bool }. Informe sans
       # bloquer (le forçage reste la seule décision de blocage).
       get :availability
+      # Grilles de composition datées (espaces + camping/van) rechargées quand
+      # les dates du séjour changent : rend le frame `stay_compose_grids`.
+      get :compose_grids
       # Devis live du form de composition (issue #73) : recalcule le panneau
       # « Devis (B2C) » en Turbo Stream à chaque changement, via PricingModel.
       post :quote

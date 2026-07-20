@@ -28,7 +28,7 @@
 / `stay-availability-exclude-stay-id-value` : en édition, on transmet l'id du
 / séjour pour que la vérif de dispo du form IGNORE ses propres chambres (sinon
 / un séjour confirmé s'affiche « indisponible » à tort au chargement).
-= form_with url: url, method: method, data: { controller: "stay-form stay-quote stay-availability", "stay-quote-url-value": quote_stays_path, "stay-availability-url-value": availability_stays_path, "stay-availability-exclude-stay-id-value": (@stay&.persisted? ? @stay.id : nil), action: "change->stay-quote#check input->stay-quote#check change->stay-form#toggleSpaceBilling" } do
+= form_with url: url, method: method, data: { controller: "stay-form stay-quote stay-availability stay-grids", "stay-quote-url-value": quote_stays_path, "stay-availability-url-value": availability_stays_path, "stay-availability-exclude-stay-id-value": (@stay&.persisted? ? @stay.id : nil), "stay-grids-url-value": compose_grids_stays_path, action: "change->stay-quote#check input->stay-quote#check change->stay-form#toggleSpaceBilling" } do
   .space-y-8
     / --- Client -------------------------------------------------------------
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
@@ -82,10 +82,10 @@
       .grid.grid-cols-2.gap-4
         .space-y-1
           label.block.text-sm.font-medium.text-gray-700 Arrivée
-          = date_field_tag "stay[arrival_date]", @draft&.arrival_date&.iso8601, data: { action: "change->stay-availability#check" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          = date_field_tag "stay[arrival_date]", @draft&.arrival_date&.iso8601, data: { action: "change->stay-availability#check change->stay-grids#reload" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
         .space-y-1
           label.block.text-sm.font-medium.text-gray-700 Départ
-          = date_field_tag "stay[departure_date]", @draft&.departure_date&.iso8601, data: { action: "change->stay-availability#check" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          = date_field_tag "stay[departure_date]", @draft&.departure_date&.iso8601, data: { action: "change->stay-grids#reload change->stay-availability#check" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
       .grid.grid-cols-3.gap-4
         .space-y-1
           label.block.text-sm.font-medium.text-gray-700 Adultes
@@ -138,88 +138,42 @@
       / la checkbox « Forcer la disponibilité » plus bas reste la seule décision.
       .hidden.text-sm.font-medium.rounded-md.px-3.py-2(data-stay-availability-target="indicator")
 
-    / --- Espaces (salles / cuisine pro) -------------------------------------
-    - space_kind_options = [["Grande salle", "grande_salle"], ["Petite salle", "petite_salle"], ["Cuisine pro", "cuisine_pro"]]
-    - period_options = [["Journée", "journee"], ["Soirée", "soiree"], ["Journée + soirée", "journee_et_soiree"]]
-    - existing_halls = Array(@draft&.halls).map { |h| h.respond_to?(:symbolize_keys) ? h.symbolize_keys : h }
-    - space_rows = existing_halls + Array.new([3 - existing_halls.size, 1].max) { {} }
-    / Facturation espace (epic #81, Phase 6). Sous-panneau masqué tant qu'aucune
-    / ligne d'espace n'est renseignée ; révélé par stay-form#toggleSpaceBilling.
+    = render "stays/compose_grids"
+
+    / --- Facturation espaces (HORS frame : ses valeurs survivent aux
+    / rechargements de grille quand les dates changent) --------------------
     - space_billing = @draft&.space_billing || {}
     - payment_method_options = [["En liquide à son arrivée", "cash"], ["Par virement bancaire", "bank_transfer"], ["Versement automatique Airbnb", "airbnb"], ["Versement automatique Booking.com", "bookingdotcom"]]
     - event_options = Array(@events).map { |e| [e.name_with_date, e.id] }
-    / Grille date-par-date (issue parité funnel) : dès que le séjour a des dates,
-    / on réutilise la grille nuits × espaces du funnel (space_slots) au lieu des
-    / lignes `halls`. Sans dates (journée sèche / espaces seuls non datés), on
-    / retombe sur les lignes `halls` — seule saisie possible hors fenêtre.
-    - use_space_grid = @stay_nights.present?
+    - existing_halls = Array(@draft&.halls).map { |h| h.respond_to?(:symbolize_keys) ? h.symbolize_keys : h }
     - space_slots_present = Array(@draft&.space_slots&.values).flatten.any?(&:present?)
     - space_billing_open = existing_halls.any? { |h| h[:kind].present? } || space_slots_present
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Espaces
-      - if use_space_grid
-        p.text-sm.text-gray-500 Cliquez une cellule pour réserver un espace — journée, soirée ou les deux — nuit par nuit.
-        = render "public/reservations/spaces_calendar", param_root: "stay", draft: @draft, days: @stay_nights
-      - else
-        p.text-sm.text-gray-500 Ajoutez une salle ou la cuisine pro (date + période). Un séjour peut être composé d'espaces seuls, sans hébergement.
-        ul.divide-y.divide-gray-100
-          - space_rows.each_with_index do |row, index|
-            li.py-2.grid.grid-cols-3.gap-2
-              = select_tag "stay[halls][#{index}][kind]", options_for_select(space_kind_options, row[:kind]), include_blank: "— Espace —", data: { action: "change->stay-form#toggleSpaceBilling" }, class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-              = date_field_tag "stay[halls][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-              = select_tag "stay[halls][#{index}][period]", options_for_select(period_options, row[:period]), include_blank: "— Période —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-
-      / Facturation espaces — n'apparaît que si ≥1 ligne d'espace est renseignée.
-      / Tous les champs sont optionnels (acompte/caution en €, converties comme le
-      / canal direct ; mode de paiement, événement, horaires d'arrivée/départ).
-      div class=("space-y-4 rounded-md bg-gray-50 p-4 ring-1 ring-black ring-opacity-5" + (space_billing_open ? "" : " hidden")) data-stay-form-target="spaceBillingPanel"
-        h3.text-sm.font-semibold.text-gray-900 Facturation espaces
-        .grid.grid-cols-2.gap-4
-          .space-y-1
-            label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_advance_amount" Acompte (€)
-            = number_field_tag "stay[space_billing][advance_amount]", space_billing[:advance_amount], id: "stay_space_billing_advance_amount", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-          .space-y-1
-            label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_deposit_amount" Caution (€) ♻️
-            = number_field_tag "stay[space_billing][deposit_amount]", space_billing[:deposit_amount], id: "stay_space_billing_deposit_amount", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+    / Facturation espaces — n'apparaît que si ≥1 ligne d'espace est renseignée.
+    / Tous les champs sont optionnels (acompte/caution en €, converties comme le
+    / canal direct ; mode de paiement, événement, horaires d'arrivée/départ).
+    div class=("space-y-4 rounded-md bg-gray-50 p-4 ring-1 ring-black ring-opacity-5" + (space_billing_open ? "" : " hidden")) data-stay-form-target="spaceBillingPanel"
+      h3.text-sm.font-semibold.text-gray-900 Facturation espaces
+      .grid.grid-cols-2.gap-4
         .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_payment_method" Mode de paiement
-          = select_tag "stay[space_billing][payment_method]", options_for_select(payment_method_options, space_billing[:payment_method]), id: "stay_space_billing_payment_method", include_blank: "— Mode de paiement —", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_advance_amount" Acompte (€)
+          = number_field_tag "stay[space_billing][advance_amount]", space_billing[:advance_amount], id: "stay_space_billing_advance_amount", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
         .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_event_id" Événement
-          = select_tag "stay[space_billing][event_id]", options_for_select(event_options, space_billing[:event_id]), id: "stay_space_billing_event_id", include_blank: "— Aucun événement —", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-        .grid.grid-cols-2.gap-4
-          .space-y-1
-            label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_arrival_time" Heure d'arrivée
-            = text_field_tag "stay[space_billing][arrival_time]", space_billing[:arrival_time], id: "stay_space_billing_arrival_time", placeholder: "ex. 14:00", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-          .space-y-1
-            label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_departure_time" Heure de départ
-            = text_field_tag "stay[space_billing][departure_time]", space_billing[:departure_time], id: "stay_space_billing_departure_time", placeholder: "ex. 11:00", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-
-    / --- Camping / Van (grille par nuit) ------------------------------------
-    / Parité funnel (Michael 2026-07-20) : dès que le séjour a des dates, on
-    / réutilise la grille steppers nuit-par-nuit du funnel (`per_night_resources`)
-    / — persistée honnêtement en plages contiguës. Sans dates (jamais un camping
-    / valide, mais on ne casse pas le form), on retombe sur les compteurs
-    / pleine-fenêtre historiques (`stay[camping][people]` / `stay[van][vehicles]`).
-    - if use_space_grid
-      section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-        h2.text-base.font-semibold.text-gray-900 Camping / Van
-        = render "public/reservations/camping_calendar", param_root: "stay", draft: @draft, days: @stay_nights
-    - else
-      - camping_people = Array(@draft&.campings).sum { |c| (c.respond_to?(:symbolize_keys) ? c.symbolize_keys : c)[:people].to_i }
-      - van_vehicles = Array(@draft&.vans).size
-      section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-        h2.text-base.font-semibold.text-gray-900 Camping (tente)
-        p.text-sm.text-gray-500 Choisissez les dates du séjour pour composer le camping nuit par nuit. À défaut, nombre de personnes sur toute la durée.
+          label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_deposit_amount" Caution (€) ♻️
+          = number_field_tag "stay[space_billing][deposit_amount]", space_billing[:deposit_amount], id: "stay_space_billing_deposit_amount", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      .space-y-1
+        label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_payment_method" Mode de paiement
+        = select_tag "stay[space_billing][payment_method]", options_for_select(payment_method_options, space_billing[:payment_method]), id: "stay_space_billing_payment_method", include_blank: "— Mode de paiement —", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      .space-y-1
+        label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_event_id" Événement
+        = select_tag "stay[space_billing][event_id]", options_for_select(event_options, space_billing[:event_id]), id: "stay_space_billing_event_id", include_blank: "— Aucun événement —", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      .grid.grid-cols-2.gap-4
         .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 Personnes
-          = number_field_tag "stay[camping][people]", (camping_people.positive? ? camping_people : nil), min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-      section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-        h2.text-base.font-semibold.text-gray-900 Van / camping-car
-        p.text-sm.text-gray-500 Nombre de véhicules sur la durée du séjour. Capacité globale (forçable).
+          label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_arrival_time" Heure d'arrivée
+          = text_field_tag "stay[space_billing][arrival_time]", space_billing[:arrival_time], id: "stay_space_billing_arrival_time", placeholder: "ex. 14:00", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
         .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 Véhicules
-          = number_field_tag "stay[van][vehicles]", (van_vehicles.positive? ? van_vehicles : nil), min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_departure_time" Heure de départ
+          = text_field_tag "stay[space_billing][departure_time]", space_billing[:departure_time], id: "stay_space_billing_departure_time", placeholder: "ex. 11:00", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
     / --- Repas --------------------------------------------------------------
     - meal_kind_options = [["Repas végé (midi)", "repas_vege_midi"], ["Buffet pain-fromages", "buffet"]]

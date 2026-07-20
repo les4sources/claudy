@@ -20,6 +20,11 @@ export default class extends Controller {
   async refresh() {
     const form = this.element
     const body = new FormData(form)
+    // Bug 2026-07-20 : en ÉDITION le form porte `_method=patch` — embarqué
+    // dans le fetch, Rails réécrivait POST /stays/quote en PATCH → routé vers
+    // #update avec id="quote" → 404 et devis figé. Le devis est toujours un
+    // POST pur.
+    body.delete("_method")
 
     try {
       const response = await fetch(this.urlValue, {

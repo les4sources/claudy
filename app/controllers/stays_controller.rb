@@ -131,6 +131,21 @@ class StaysController < BaseController
     end
   end
 
+  # Grilles de composition datées (espaces + camping/van) — rechargées via le
+  # frame `stay_compose_grids` quand les dates changent dans le form (bug
+  # 2026-07-20 : les grilles restaient figées sur les dates de chargement, on
+  # ne pouvait composer que la 1re nuit sur un séjour rallongé). Les valeurs
+  # de grille repartent à zéro au changement de dates (les nuits ont changé) ;
+  # la facturation espaces vit HORS du frame et survit.
+  def compose_grids
+    @draft = Reservations::Draft.new(
+      arrival_date:   params[:arrival_date],
+      departure_date: params[:departure_date]
+    )
+    @stay_nights = stay_nights_for_grid
+    render layout: false
+  end
+
   # Disponibilité de l'hébergement en temps réel (issue #77). Réutilise
   # `Lodging#available_between?` (source unique de vérité, veto Grand-Duc /
   # chambres partagées inclus). Répond en JSON, INFORME sans bloquer : le form
