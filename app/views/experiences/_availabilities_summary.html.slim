@@ -1,0 +1,28 @@
+/ Récap latéral des disponibilités à venir. Extrait dans un partiel avec un id
+/ stable pour que create/destroy le remplacent en turbo_stream (le compteur et
+/ la liste restent synchronisés avec le calendrier). `month` propage le mois
+/ affiché : supprimer depuis ce récap ne fait pas sauter le calendrier ailleurs.
+#experience_availabilities_summary.overflow-hidden.bg-white.shadow.sm:rounded-lg
+  .px-4.py-5.sm:px-6.flex.items-center.justify-between
+    h3.text-lg.font-medium.leading-6.text-gray-900 Disponibilités
+    span.text-sm.text-gray-400 = "#{experience.experience_availabilities.upcoming.count} à venir"
+  .border-t.border-gray-200
+    - upcoming = experience.experience_availabilities.upcoming
+    - if upcoming.empty?
+      p.px-4.py-4.text-sm.text-gray-400.italic Aucune disponibilité planifiée.
+    - else
+      ul.divide-y.divide-gray-100
+        - upcoming.each do |av|
+          li.flex.items-center.justify-between.px-4.py-3.text-sm
+            div
+              .font-medium = l(av.available_on, format: "%-d %B %Y")
+              .text-gray-500 = "#{av.starts_at}#{av.ends_at ? " → #{av.ends_at}" : ""}"
+              - if av.effective_max_participants
+                .text-xs.text-gray-400 = "Max #{av.effective_max_participants} pers. — #{av.booked_participants} réservé(s)"
+            = button_to "×", experience_experience_availability_path(experience, av, month: month),
+                method: :delete,
+                form: { data: { turbo_confirm: (av.booked_participants.positive? ? "Ce créneau a déjà des réservations. Le supprimer ?" : "Supprimer cette disponibilité ?") } },
+                class: "text-red-400 hover:text-red-600 text-lg font-bold bg-transparent border-0 cursor-pointer"
+
+    .border-t.border-gray-200.px-4.py-3
+      p.text-xs.text-gray-400 Posez vos créneaux dans le calendrier ci-dessous.

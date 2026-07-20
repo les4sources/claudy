@@ -58,31 +58,7 @@
           == @experience.description
 
   .space-y-4
-    .overflow-hidden.bg-white.shadow.sm:rounded-lg
-      .px-4.py-5.sm:px-6.flex.items-center.justify-between
-        h3.text-lg.font-medium.leading-6.text-gray-900 Disponibilités
-        span.text-sm.text-gray-400 = "#{@experience.experience_availabilities.upcoming.count} à venir"
-      .border-t.border-gray-200
-        - upcoming = @experience.experience_availabilities.upcoming
-        - if upcoming.empty?
-          p.px-4.py-4.text-sm.text-gray-400.italic Aucune disponibilité planifiée.
-        - else
-          ul.divide-y.divide-gray-100
-            - upcoming.each do |av|
-              li.flex.items-center.justify-between.px-4.py-3.text-sm
-                div
-                  .font-medium = av.available_on.strftime("%-d %B %Y")
-                  .text-gray-500 = "#{av.starts_at}#{av.ends_at ? " → #{av.ends_at}" : ""}"
-                  - if av.effective_max_participants
-                    .text-xs.text-gray-400 = "Max #{av.effective_max_participants} pers. — #{av.booked_participants} réservé(s)"
-                = button_to "×", experience_experience_availability_path(@experience, av),
-                    method: :delete, data: { confirm: "Supprimer cette disponibilité ?" },
-                    class: "text-red-400 hover:text-red-600 text-lg font-bold bg-transparent border-0 cursor-pointer"
-
-        / Le formulaire inline « Ajouter une disponibilité » est remplacé par le
-        / calendrier hebdo ci-dessous (epic #25, Phase 4).
-        .border-t.border-gray-200.px-4.py-3
-          p.text-xs.text-gray-400 Posez vos créneaux dans le calendrier ci-dessous.
+    = render "experiences/availabilities_summary", experience: @experience, month: @calendar.month_param
 
     - if @experience.human.presence
       ul.grid.grid-cols-1.gap-6[role="list"]
@@ -107,7 +83,8 @@
                   | Porteur·euse d'activité
                   
 
-/ Calendrier hebdo des disponibilités (epic #25, Phase 4) — pleine largeur sous
-/ la fiche, la grille de 7 jours a besoin de place.
+/ Calendrier MENSUEL des disponibilités — pleine largeur sous la fiche, la
+/ grille de 28-31 jours a besoin de place. Enrobé d'un Turbo Frame : poser,
+/ retirer et naviguer d'un mois à l'autre se fait sans rechargement de page.
 .mt-6
-  = render "experiences/week_calendar", calendar: @week_calendar
+  = render "experiences/month_calendar", calendar: @calendar

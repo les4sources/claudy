@@ -14,12 +14,13 @@ class ExperiencesController < BaseController
   end
 
   def show
-    # Calendrier hebdo des disponibilités (epic #25, Phase 4) — démarre sur la
-    # semaine en cours ; `?week=` permet de naviguer, y compris dans le passé
-    # (l'historique des dispos reste consultable).
-    @week_calendar = Experiences::WeekCalendar.new(
+    # Calendrier MENSUEL des disponibilités — démarre sur le mois en cours ;
+    # `?month=YYYY-MM` navigue, y compris dans le passé (l'historique des dispos
+    # reste consultable). Le rendu du calendrier vit dans un Turbo Frame, donc
+    # poser/retirer un créneau et changer de mois ne recharge jamais la page.
+    @calendar = Experiences::MonthCalendar.new(
       experience: @experience,
-      week_start: (Date.parse(params[:week]) rescue nil)
+      month: params[:month]
     )
     @experience = ExperienceDecorator.new(@experience)
   end
