@@ -275,9 +275,28 @@ class StaysController < BaseController
   # Séjours candidats à la fusion, préchargés pour éviter les N+1 des aperçus.
   def load_merge_stays
     ids = Array(params[:stay_ids]).map(&:to_i).uniq.reject(&:zero?)
-    Stay.where(id: ids)
-        .includes(:customer, :meal_orders, experience_bookings: { experience_availability: :experience }, stay_items: :bookable)
-        .to_a
+    stays = Stay.where(id: ids)
+                .includes(:customer, :meal_orders, experience_bookings: { experience_availability: :experience }, stay_items: :bookable)
+                .to_a
+    preload_public_notes(stays)
+    stays
+  end
+
+  # `public_notes` est de l'ActionText (`has_rich_text`) porté par Booking et
+  # SpaceBooking UNIQUEMENT. Le `bookable` étant polymorphe (types mixtes —
+  # Camping/Van n'ont pas de rich text), on ne peut pas l'`includes` dans la
+  # requête ci-dessus sans lever une erreur ; on précharge donc le rich text sur
+  # le seul sous-ensemble concerné, pour que la carte de désignation puisse tester
+  # la présence d'une note publique sans N+1.
+  def preload_public_notes(stays)
+    notable = stays.flat_map(&:stay_items)
+                   .map(&:bookable)
+                   .select { |b| b.is_a?(Booking) || b.is_a?(SpaceBooking) }
+    return if notable.empty?
+
+    ActiveRecord::Associations::Preloader.new(
+      records: notable, associations: :rich_text_public_notes
+    ).call
   end
 
   # Résout le survivant STRICTEMENT parmi les séjours postés : un `target_id`
