@@ -21,6 +21,7 @@ module StaysCompositionHelper
     icons << composition_icon("🍳", "Cuisine")      if stay_has_kitchen?(stay)
     icons << composition_icon("🚐", "Van")          if stay_has_van?(stay)
     icons << composition_icon("⛺", "Tente")        if stay_has_tent?(stay)
+    icons << composition_icon("🪑", "Terrasse")     if stay_has_terrace?(stay)
     icons << composition_icon("🎯", "Activité")     if stay_has_activity?(stay)
     return if icons.empty?
 
@@ -61,9 +62,15 @@ module StaysCompositionHelper
     stay_items_of(stay, "VanBooking").any?
   end
 
-  # Camping = tente (seul `kind` persisté aujourd'hui — cf. note hamac ci-dessus).
+  # Camping = tente. Un `CampingBooking` peut aussi être une TERRASSE (kind
+  # "terrasse", décision Michael 2026-07-20) : on distingue par `kind`.
   def stay_has_tent?(stay)
-    stay_items_of(stay, "CampingBooking").any?
+    stay_items_of(stay, "CampingBooking").any? { |i| i.bookable&.kind != "terrasse" }
+  end
+
+  # Terrasse = occupation de jour (kind "terrasse") — icône dédiée 🪑.
+  def stay_has_terrace?(stay)
+    stay_items_of(stay, "CampingBooking").any? { |i| i.bookable&.kind == "terrasse" }
   end
 
   # Activité = au moins un ExperienceBooking ACTIF (ni annulé, ni refusé — même

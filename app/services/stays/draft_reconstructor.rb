@@ -48,6 +48,7 @@ module Stays
         campings:       campings_from_stay,
         vans:           vans_from_stay,
         meals:          meals_from_stay,
+        terrasses:      terrasses_from_stay,
         space_billing:  space_billing_from_stay
       )
     end
@@ -65,7 +66,10 @@ module Stays
       nights = (departure - arrival).to_i
       return nil if nights < 1
 
-      campings = @stay.stay_items.select { |i| i.bookable_type == "CampingBooking" }.filter_map(&:bookable)
+      # Les TERRASSES (kind "terrasse") sont des CampingBooking mais N'ENTRENT PAS
+      # dans la grille camping/van par nuit — elles ont leur propre reconstruction.
+      campings = @stay.stay_items.select { |i| i.bookable_type == "CampingBooking" }
+                      .filter_map(&:bookable).reject { |b| b.kind == "terrasse" }
       vans     = @stay.stay_items.select { |i| i.bookable_type == "VanBooking" }.filter_map(&:bookable)
       return nil if campings.empty? && vans.empty?
 
@@ -126,7 +130,8 @@ module Stays
     # Reconstruit l'entrée camping {kind, people, nights} depuis le CampingBooking
     # persisté (nights déduit de la fenêtre).
     def campings_from_stay
-      camping = @stay.stay_items.where(bookable_type: "CampingBooking").first&.bookable
+      camping = @stay.stay_items.where(bookable_type: "CampingBooking")
+                     .filter_map(&:bookable).reject { |b| b.kind == "terrasse" }.first
       return [] if camping.nil?
       nights = camping.from_date && camping.to_date ? (camping.to_date - camping.from_date).to_i : @stay.experience_bookings.size
       [{ kind: camping.kind, people: camping.people, nights: [nights, 1].max }]
@@ -138,6 +143,16 @@ module Stays
       return [] if van.nil?
       nights = van.from_date && van.to_date ? (van.to_date - van.from_date).to_i : 1
       Array.new([van.vehicles, 1].max) { { nights: [nights, 1].max } }
+    end
+
+    # Reconstruit les terrasses {date, people} depuis les CampingBooking terrasse
+    # (un par jour, `from_date` = jour d'occupation). Prérempli le fieldset admin.
+    def terrasses_from_stay
+      @stay.stay_items.select { |i| i.bookable_type == "CampingBooking" }
+           .filter_map(&:bookable)
+           .select { |b| b.kind == "terrasse" }
+           .sort_by { |b| b.from_date.to_s }
+           .map { |b| { date: b.from_date&.iso8601, people: b.people } }
     end
 
     # Reconstruit les repas {kind, date, people} depuis les MealOrder du séjour.

@@ -20,6 +20,7 @@ en:
         space: "Space"
         camping: "Camping"
         van: "Van / campervan"
+        terrace: "Terrace"
         meal: "Meal"
         other: "Service"
       payment_status:

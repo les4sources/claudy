@@ -46,6 +46,9 @@ div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min
       / Van / camping-car : même logique que le camping.
       - block.van_bookings.each do |van|
         span(class="text-xs text-gray-600 whitespace-nowrap") 🚐 #{van.vehicles} véhicule#{"s" if van.vehicles.to_i > 1}
+      / Terrasse : occupation de JOUR (pas une nuitée) → chip distincte 🪑, pas ⛺️.
+      - block.terrace_bookings.each do |terrace|
+        span(class="text-xs text-gray-600 whitespace-nowrap") 🪑 Terrasse · #{terrace.people} pers.
 
   / Overlay cliquable : ouvre la modale séjour (epic #66, Phase 5) et sert de
   / cible unique au mode fusion pour tout le séjour.

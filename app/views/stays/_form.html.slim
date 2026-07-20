@@ -189,6 +189,21 @@
             = date_field_tag "stay[meals][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
             = number_field_tag "stay[meals][#{index}][people]", row[:people], min: 0, placeholder: "Convives", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
 
+    / --- Terrasse (ADMIN uniquement) ---------------------------------------
+    / Groupes occupant UNIQUEMENT la terrasse (ex. randonneurs / BBQ) : forfait
+    / 2,50 €/pers/jour. Une ligne par JOUR (date + nb de personnes), comme les
+    / repas datés. Jamais proposé sur le funnel public.
+    - existing_terrasses = Array(@draft&.terrasses).map { |t| t.respond_to?(:symbolize_keys) ? t.symbolize_keys : t }
+    - terrace_rows = existing_terrasses + Array.new([3 - existing_terrasses.size, 1].max) { {} }
+    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+      h2.text-base.font-semibold.text-gray-900 Terrasse
+      p.text-sm.text-gray-500 Groupe occupant uniquement la terrasse (ex. BBQ). Forfait 2,50 €/pers/jour — une ligne par jour (date + nombre de personnes).
+      ul.divide-y.divide-gray-100
+        - terrace_rows.each_with_index do |row, index|
+          li.py-2.grid.grid-cols-2.gap-2
+            = date_field_tag "stay[terrasses][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+            = number_field_tag "stay[terrasses][#{index}][people]", row[:people], min: 0, placeholder: "Personnes", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+
     / --- Activités ----------------------------------------------------------
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
       h2.text-base.font-semibold.text-gray-900 Activités

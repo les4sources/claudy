@@ -14,6 +14,7 @@ module Calendar
     # Un bloc unifié : un séjour et ses composants présents ce jour-là.
     StayBlock = Struct.new(
       :stay, :booking_groups, :space_groups, :camping_bookings, :van_bookings,
+      :terrace_bookings,
       keyword_init: true
     ) do
       # Le bookable « nommé » (Booking ou SpaceBooking, tous deux décorés et
@@ -25,14 +26,16 @@ module Calendar
 
       # Le séjour dort-il SUR PLACE la nuit de cette carte ? Vrai dès qu'un
       # composant NUITÉ est présent ce jour-là (chambres, camping, van) —
-      # jamais pour une salle seule (les espaces sont des forfaits de journée).
+      # jamais pour une salle seule NI pour une TERRASSE (occupation de jour,
+      # pas une nuitée — décision Michael 2026-07-20).
       def overnight?
         booking_groups.any? || camping_bookings.any? || van_bookings.any?
       end
 
-      # Repli quand le séjour n'a que du camping / van (pas de bookable nommé).
+      # Repli quand le séjour n'a que du camping / van / terrasse (pas de
+      # bookable nommé).
       def fallback_bookable
-        camping_bookings.first || van_bookings.first
+        camping_bookings.first || van_bookings.first || terrace_bookings.first
       end
     end
 
@@ -71,7 +74,14 @@ module Calendar
 
       @camping.each do |camping|
         next if camping.stay.nil?
-        (by_stay[camping.stay.id] ||= new_block(camping.stay)).camping_bookings << camping
+        block = (by_stay[camping.stay.id] ||= new_block(camping.stay))
+        # Terrasse (kind "terrasse") : CampingBooking, mais rendu distinct (🪑,
+        # pas ⛺️) et exclu de la nuitée (`overnight?`). Décision Michael 2026-07-20.
+        if camping.kind == "terrasse"
+          block.terrace_bookings << camping
+        else
+          block.camping_bookings << camping
+        end
       end
 
       @van.each do |van|
@@ -88,8 +98,9 @@ module Calendar
     end
 
     # Camping / van SANS séjour : gardent leur bloc informatif « Camping » / « Van ».
+    # La terrasse (kind "terrasse") en est exclue (jamais un bloc « Camping »).
     def no_stay_camping
-      @camping.select { |camping| camping.stay.nil? }
+      @camping.select { |camping| camping.stay.nil? && camping.kind != "terrasse" }
     end
 
     def no_stay_van
@@ -100,7 +111,7 @@ module Calendar
 
     def new_block(stay)
       StayBlock.new(stay: stay, booking_groups: [], space_groups: [],
-                    camping_bookings: [], van_bookings: [])
+                    camping_bookings: [], van_bookings: [], terrace_bookings: [])
     end
 
     # Réplique le regroupement historique des vues : trie par heure, regroupe par

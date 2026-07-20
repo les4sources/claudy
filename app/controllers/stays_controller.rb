@@ -579,6 +579,10 @@ class StaysController < BaseController
       campings:       camping_entries(p),
       vans:           van_entries(p),
       meals:          meal_entries(p),
+      # Terrasse (ADMIN uniquement, décision Michael 2026-07-20) : lignes datées
+      # {date, people}. Le funnel public ne porte JAMAIS cette clé (non permise
+      # dans le contrôleur public) ; ce contrôleur admin la lit du form.
+      terrasses:      terrace_entries(p),
       # Facturation espace (epic #81, Phase 6) : le sous-hash brut transite tel
       # quel ; le Draft normalise (presence → nil) et la persistance convertit les
       # montants via les setters `monetize`. Absent du form → `space_billing` nil,
@@ -651,6 +655,19 @@ class StaysController < BaseController
       people = row[:people].to_i
       next if kind.blank? || people < 1
       { kind: kind, date: row[:date].to_s.presence, people: people }
+    end
+  end
+
+  # Terrasse datée {date, people} — une ligne par JOUR d'occupation. On écarte les
+  # lignes incomplètes (sans date ou sans personnes). ADMIN uniquement.
+  def terrace_entries(p)
+    rows = p[:terrasses]
+    rows = rows.respond_to?(:values) ? rows.values : Array(rows)
+    rows.filter_map do |row|
+      date   = row[:date].to_s.presence
+      people = row[:people].to_i
+      next if date.blank? || people < 1
+      { date: date, people: people }
     end
   end
 

@@ -20,6 +20,7 @@ nl:
         space: "Ruimte"
         camping: "Camping"
         van: "Camper"
+        terrace: "Terras"
         meal: "Maaltijd"
         other: "Dienst"
       payment_status:

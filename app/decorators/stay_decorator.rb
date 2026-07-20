@@ -197,7 +197,9 @@ class StayDecorator < ApplicationDecorator
         h.t("public.stays.items.space")
       end
     when CampingBooking
-      h.t("public.stays.items.camping")
+      # Un CampingBooking terrasse (kind "terrasse") a son propre libellé (🪑),
+      # distinct du camping (⛺) — décision Michael 2026-07-20.
+      bookable.kind == "terrasse" ? h.t("public.stays.items.terrace") : h.t("public.stays.items.camping")
     when VanBooking
       h.t("public.stays.items.van")
     else
