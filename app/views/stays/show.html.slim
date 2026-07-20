@@ -1,4 +1,11 @@
 / Modale de détails d'un séjour (rendu sans layout, injecté par stay-details).
 / Le contenu vit dans le partial `_details` (id'd) pour pouvoir être remplacé sur
 / place par Turbo Stream après une action rapide (issue #76).
-= render "stays/details"
+- if params[:modal].present?
+  = render "stays/details"
+- else
+  / Navigation directe (table /stays, /payments, « Annuler » d'édition) : la
+  / carte blanche remplace le fond que la modale fournissait.
+  .max-w-5xl.mx-auto.px-4.py-8
+    .bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-6
+      = render "stays/details"
