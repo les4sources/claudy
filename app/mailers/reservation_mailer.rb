@@ -10,9 +10,28 @@ class ReservationMailer < ApplicationMailer
     # hébergement n'a d'ailleurs pas de booking.
     @token = stay.token
     @quote = quote_from(stay)
+    # L'acompte confirme la réservation : cet email est aussi le filet de
+    # rattrapage si le client a quitté la page Stripe sans payer — il porte
+    # donc le montant et un lien de paiement direct tant que l'acompte est dû.
+    @pending_deposit = stay.payments.pending.where(payment_method: "card")
+                           .order(:created_at).first
     mail(
       to: stay.customer.email,
       subject: "Votre demande de réservation aux 4 Sources"
+    )
+  end
+
+  # Second email du flux (décision 2026-07-20) : envoyé par le webhook Stripe
+  # au PREMIER encaissement d'un séjour encore `pending` — « acompte bien reçu,
+  # notre équipe valide votre demande ». Le solde d'un séjour confirmé ne passe
+  # jamais ici (voir Stripe::CompletedCheckoutService).
+  def deposit_received(payment)
+    @payment = payment
+    @stay = payment.stay
+    @token = @stay.token
+    mail(
+      to: @stay.customer.email,
+      subject: "Acompte bien reçu — votre réservation aux 4 Sources"
     )
   end
 

@@ -1,0 +1,24 @@
+p Bonjour #{@stay.customer.first_name.presence || ""},
+
+p
+  | Nous avons bien reçu votre acompte de
+    #{number_to_currency(@payment.amount_cents / 100.0, unit: "€", format: "%n %u", precision: 2)}
+    — merci !
+
+p
+  | Votre demande de réservation est maintenant en cours de validation par
+    notre équipe : vous recevrez très vite la confirmation définitive.
+
+- if @stay.arrival_date && @stay.departure_date
+  p
+    strong Dates :
+    = " #{l(@stay.arrival_date, format: :long)} → #{l(@stay.departure_date, format: :long)}"
+
+- if @token
+  - consultation_url = public_stay_url(@token, host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be"))
+  p
+    | Vous pouvez consulter votre séjour à tout moment via ce lien :
+    br
+    = link_to consultation_url, consultation_url
+
+p À très bientôt aux 4 Sources !
