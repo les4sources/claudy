@@ -256,5 +256,20 @@ RSpec.describe "Stays — CRUD admin (epic #66)", type: :request do
       expect(Stay.exists?(stay.id)).to be(false)                     # hors default scope
       expect(Stay.unscoped.find(stay.id).deleted_at).to be_present   # présent mais marqué supprimé
     end
+
+    # Issue #99 — la suppression cascade sur les bookables (Stays::DestroyService) :
+    # plus aucune occupation vivante (Booking + Reservation de chambres) ne survit
+    # au calendrier ni au veto.
+    it "libère l'occupation d'hébergement (Booking + Reservations soft-deletés)" do
+      lodging.rooms << Room.create!(name: "Chambre 1", level: 1) # pour que le Builder pose des Reservations
+      stay = create_admin_stay
+      booking = stay.stay_items.where(bookable_type: "Booking").first.bookable
+      expect(Reservation.where(booking_id: booking.id).count).to be > 0
+
+      delete stay_path(stay)
+
+      expect(Booking.exists?(booking.id)).to be(false)               # soft-deleté
+      expect(Reservation.where(booking_id: booking.id).count).to eq(0) # chambres rendues
+    end
   end
 end

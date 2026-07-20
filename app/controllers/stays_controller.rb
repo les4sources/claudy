@@ -165,8 +165,12 @@ class StaysController < BaseController
   end
 
   # Suppression = soft-delete (soft_deletion + PaperTrail), jamais de hard destroy.
+  # Déléguée à `Stays::DestroyService` : le soft-delete du Stay ne cascade PAS sur
+  # ses bookables (Booking/SpaceBooking/Camping/Van) — le service les soft-delete
+  # explicitement pour qu'AUCUNE occupation (chambres, espaces) ne survive au
+  # calendrier ni au veto de dispo (issue #99). Les paiements sont conservés.
   def destroy
-    @stay.soft_delete!(validate: false)
+    Stays::DestroyService.new(stay: @stay).run
     redirect_to recent_stays_path, notice: "Séjour supprimé."
   end
 
