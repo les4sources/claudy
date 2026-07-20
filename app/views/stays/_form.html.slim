@@ -230,11 +230,20 @@
           = select_tag "stay[platform]", options_for_select(platform_options, current_platform), data: { "stay-form-target": "platform", action: "change->stay-form#syncChannelFromPlatform" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
     / --- Statut + force dispo -----------------------------------------------
+    / Switch accessible (issue parité funnel) : bascule En attente ↔ Confirmé.
+    / Un hidden `stay[status]=pending` précède le checkbox `stay[status]=confirmed`
+    / (Rack retient la DERNIÈRE valeur) : coché → confirmed, décoché → pending.
+    - status_confirmed = (current_status == "confirmed")
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Statut & disponibilité
+      h2.text-base.font-semibold.text-gray-900 Statut
       .space-y-1
-        label.block.text-sm.font-medium.text-gray-700 Statut du séjour
-        = select_tag "stay[status]", options_for_select([["En attente", "pending"], ["Confirmé", "confirmed"]], current_status), class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        span.block.text-sm.font-medium.text-gray-700 Statut du séjour
+        = hidden_field_tag "stay[status]", "pending", id: nil
+        label class="inline-flex items-center gap-3 cursor-pointer"
+          input id="stay_status_toggle" type="checkbox" name="stay[status]" value="confirmed" checked=status_confirmed role="switch" aria-label="Séjour confirmé" class="sr-only peer"
+          span aria-hidden="true" class="relative w-11 h-6 flex-shrink-0 rounded-full bg-gray-200 transition-colors peer-checked:bg-emerald-500 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-500 peer-focus-visible:ring-offset-2 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"
+          span class="text-sm font-medium text-gray-500 peer-checked:hidden" En attente
+          span class="text-sm font-medium text-emerald-700 hidden peer-checked:inline" Confirmé
       label.flex.items-center.gap-2.text-sm.text-gray-700
         = check_box_tag "stay[force_availability]", "1", false
         | Forcer la disponibilité (surbooking / saisie a posteriori)
