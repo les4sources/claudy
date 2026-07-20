@@ -1,6 +1,6 @@
 class CustomersController < BaseController
   before_action :set_accounting_view
-  before_action :get_customer, only: [:show, :edit, :update, :merge, :merge_preview, :merge_commit, :reassign]
+  before_action :get_customer, only: [:show, :edit, :update, :destroy, :merge, :merge_preview, :merge_commit, :reassign]
 
   breadcrumb "Clients", :customers_path, match: :exact
 
@@ -33,6 +33,22 @@ class CustomersController < BaseController
     else
       set_error_flash(@customer, @customer.errors.full_messages.join(", "))
       render :edit, status: :unprocessable_entity
+    end
+  end
+
+  # Suppression d'un client — strictement gardée pour l'assainissement de
+  # l'historique. On ne supprime QUE les clients orphelins (aucun séjour vivant) :
+  # cf. Customer#deletable?. La suppression est un soft-delete (soft_deletion +
+  # PaperTrail), jamais un hard destroy (principe : rien ne se perd). Un client
+  # avec un séjour vivant est refusé, sa fiche listant la raison.
+  def destroy
+    if @customer.deletable?
+      name = @customer.display_name
+      @customer.soft_delete!
+      redirect_to customers_path, notice: "Le client #{name} a été supprimé."
+    else
+      redirect_to customer_path(@customer),
+                  alert: "Suppression impossible : #{@customer.deletion_blocker}. Re-ventilez ou supprimez d'abord ses séjours."
     end
   end
 

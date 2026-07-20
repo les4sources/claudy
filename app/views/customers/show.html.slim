@@ -116,3 +116,15 @@
             | Notes internes
         .border-t.border-gray-200.px-4.py-4.prose.prose-sm
           = @customer.notes
+
+/ Zone destructive — discrète, tout en bas. N'apparaît que si le client n'a
+/ aucun séjour vivant (assainissement de l'historique). Sinon, indice grisé.
+.mt-8.pt-4.border-t.border-gray-200
+  - if @customer.deletable?
+    = button_to "Supprimer ce client", customer_path(@customer),
+                method: :delete,
+                class: "text-sm font-medium text-red-600 hover:text-red-800 hover:underline",
+                form: { data: { turbo_confirm: "Supprimer définitivement #{@customer.display_name} ? Ce client n'a aucun séjour et sera retiré de la liste." } }
+  - else
+    p.text-sm.text-gray-400
+      | Suppression impossible : #{@customer.deletion_blocker}.
