@@ -106,8 +106,7 @@ class PricingModel
     lines.concat(van_lines)
     lines.concat(hamac_lines)
     lines.concat(experience_lines)
-    lines.concat(hall_lines)
-    lines.concat(space_slot_lines)
+    lines.concat(space_lines)
     lines.concat(meal_lines)
     lines.concat(terrace_lines)
     lines.concat(pizza_party_lines)
@@ -202,28 +201,45 @@ class PricingModel
     "cuisine_pro"  => "Cuisine professionnelle"
   }.freeze
 
-  def hall_lines
+  # --- Espaces (salles / cuisine pro) : lignes ponctuelles `halls` + grille
+  # nuit-par-nuit `space_slots`, avec REMISE DUO (décision Michael 2026-07-20).
+  #
+  # Les deux représentations produisent d'abord des ENTRÉES normalisées
+  # ({key, date, period, weekend, position_label, label, amount_cents}), puis un
+  # passage de combinaison remplace chaque paire Grande + Petite salle du MÊME
+  # jour et de la MÊME période par une seule ligne « Les 2 salles (duo) » au tarif
+  # duo (< somme). Périodes différentes le même jour → pas de duo, somme normale.
+  # Vaut au funnel public comme en admin (même moteur, décision figée).
+  DUO_KEYS = %w[grande_salle petite_salle].freeze
+
+  def space_lines
+    combine_duo(hall_space_entries + slot_space_entries)
+  end
+
+  # Entrées ponctuelles `halls` ({kind, date, period}). Tarif SEMAINE (comme
+  # historiquement — pas de logique week-end sur ce canal ponctuel).
+  def hall_space_entries
     Array(read(:halls)).filter_map do |entry|
-      rates = Pricing::Catalog::HALL_RATES[entry[:kind].to_s]
+      key   = entry[:kind].to_s
+      rates = Pricing::Catalog::HALL_RATES[key]
       next if rates.nil?
       period = entry[:period].to_s
-      unit = rates[period]
+      unit   = rates[period]
       next if unit.nil?
-      date_label = begin
-        Date.parse(entry[:date].to_s).strftime("%-d/%m")
-      rescue ArgumentError, TypeError
-        nil
-      end
+      date = parse_space_date(entry[:date])
+      date_label = date&.strftime("%-d/%m")
       next if date_label.nil?
       period_label = PERIOD_LABELS[period] || period
-      Line.new(label: "#{humanize(entry[:kind])} — #{date_label}, #{period_label}",
-               amount_cents: unit, category: :space)
+      { key: key, date: date, period: period, weekend: false,
+        position_label: date_label,
+        label: "#{humanize(key)} — #{date_label}, #{period_label}",
+        amount_cents: unit }
     end
   end
 
-  # --- Espaces (grille nuit-par-nuit) : tarif semaine ou week-end selon la date ---
-  # ven (wday=5) et sam (wday=6) → tarifs week-end ; autres jours → tarifs semaine.
-  def space_slot_lines
+  # Entrées grille nuit-par-nuit `space_slots` : tarif semaine ou week-end selon
+  # la date. ven (wday=5) et sam (wday=6) → tarifs week-end ; autres → semaine.
+  def slot_space_entries
     slots = read(:space_slots)
     return [] if slots.blank?
 
@@ -232,25 +248,72 @@ class PricingModel
     stay_dates = (arrival && departure) ? (arrival...departure).to_a : []
 
     slots.flat_map do |space_key, periods|
-      weekday_rates = Pricing::Catalog::HALL_RATES[space_key.to_s]
-      weekend_rates = Pricing::Catalog::HALL_RATES_WEEKEND[space_key.to_s]
+      key = space_key.to_s
+      weekday_rates = Pricing::Catalog::HALL_RATES[key]
+      weekend_rates = Pricing::Catalog::HALL_RATES_WEEKEND[key]
       next [] if weekday_rates.nil?
-      space_name = SPACE_NAMES[space_key.to_s] || space_key.to_s
+      space_name = SPACE_NAMES[key] || key
 
       Array(periods).each_with_index.filter_map do |period, night_idx|
         next if period.blank?
+        p       = period.to_s
         date    = stay_dates[night_idx]
-        weekend = date && [5, 6].include?(date.wday)
+        weekend = !!(date && [5, 6].include?(date.wday))
         rates   = (weekend && weekend_rates) ? weekend_rates : weekday_rates
-        unit    = rates[period.to_s]
+        unit    = rates[p]
         next if unit.nil?
-        period_label = PERIOD_LABELS[period.to_s] || period.to_s
-        Line.new(
-          label:        "#{space_name} — nuit #{night_idx + 1}, #{period_label}",
-          amount_cents: unit, category: :space
-        )
+        period_label = PERIOD_LABELS[p] || p
+        { key: key, date: date, period: p, weekend: weekend,
+          position_label: "nuit #{night_idx + 1}",
+          label: "#{space_name} — nuit #{night_idx + 1}, #{period_label}",
+          amount_cents: unit }
       end
     end.compact
+  end
+
+  # Combine les entrées d'espaces : chaque paire Grande + Petite salle sur le
+  # MÊME (date, période) → une ligne duo. Le reste passe inchangé. On apparie au
+  # plus UNE grande avec UNE petite par groupe (un éventuel doublon reste séparé).
+  def combine_duo(entries)
+    duo_groups = entries
+      .select { |e| e[:date] && DUO_KEYS.include?(e[:key]) }
+      .group_by { |e| [e[:date], e[:period]] }
+      .select { |_, es| es.map { |e| e[:key] }.uniq.sort == DUO_KEYS.sort }
+
+    # Le duo n'emprunte le tarif week-end que si les DEUX salles étaient
+    # week-end (cas propre de la grille un ven/sam) ; sinon tarif semaine.
+    group_weekend = duo_groups.transform_values { |es| es.all? { |e| e[:weekend] } }
+
+    consumed = Hash.new { |h, k| h[k] = { "grande_salle" => false, "petite_salle" => false } }
+    emitted  = {}
+
+    entries.filter_map do |e|
+      gid = [e[:date], e[:period]]
+      if e[:date] && DUO_KEYS.include?(e[:key]) && duo_groups.key?(gid) && !consumed[gid][e[:key]]
+        consumed[gid][e[:key]] = true
+        next nil if emitted[gid]
+        emitted[gid] = true
+        duo_line(e, group_weekend[gid])
+      else
+        Line.new(label: e[:label], amount_cents: e[:amount_cents], category: :space)
+      end
+    end
+  end
+
+  def duo_line(entry, weekend)
+    rates = weekend ? Pricing::Catalog::HALL_RATES_WEEKEND["deux_salles"]
+                    : Pricing::Catalog::HALL_RATES["deux_salles"]
+    unit = rates[entry[:period]]
+    period_label = PERIOD_LABELS[entry[:period]] || entry[:period]
+    Line.new(label: "Les 2 salles (duo) — #{entry[:position_label]}, #{period_label}",
+             amount_cents: unit, category: :space)
+  end
+
+  def parse_space_date(value)
+    return value if value.is_a?(Date)
+    Date.parse(value.to_s)
+  rescue ArgumentError, TypeError
+    nil
   end
 
   # --- Repas : €/pers ---

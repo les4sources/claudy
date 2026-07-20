@@ -108,6 +108,87 @@ RSpec.describe PricingModel do
       expect(quote.total_cents).to eq(33_000)
     end
 
+    describe "remise DUO Grande + Petite salle (décision Michael 2026-07-20)" do
+      it "duo journée SEMAINE — 1 ligne « Les 2 salles (duo) » = 390 € (au lieu de 430 €)" do
+        quote = described_class.quote(draft(halls: [
+          { kind: "grande_salle", date: "2026-09-01", period: "journee" },
+          { kind: "petite_salle", date: "2026-09-01", period: "journee" }
+        ]))
+        expect(quote.total_cents).to eq(39_000)
+        expect(quote.breakdown.size).to eq(1)
+        expect(quote.breakdown.first[:label]).to include("Les 2 salles (duo)")
+        expect(quote.spaces_cents).to eq(39_000)
+      end
+
+      it "duo soirée SEMAINE = 250 €" do
+        quote = described_class.quote(draft(halls: [
+          { kind: "grande_salle", date: "2026-09-01", period: "soiree" },
+          { kind: "petite_salle", date: "2026-09-01", period: "soiree" }
+        ]))
+        expect(quote.total_cents).to eq(25_000)
+        expect(quote.breakdown.size).to eq(1)
+      end
+
+      it "duo journée + soirée SEMAINE = 540 € (jour duo + 150 €)" do
+        quote = described_class.quote(draft(halls: [
+          { kind: "grande_salle", date: "2026-09-01", period: "journee_et_soiree" },
+          { kind: "petite_salle", date: "2026-09-01", period: "journee_et_soiree" }
+        ]))
+        expect(quote.total_cents).to eq(54_000)
+        expect(quote.breakdown.size).to eq(1)
+      end
+
+      it "duo WEEK-END (grille un vendredi) — journée = 495 €, soirée = 335 €, jour+soirée = 645 €" do
+        {
+          "journee" => 49_500, "soiree" => 33_500, "journee_et_soiree" => 64_500
+        }.each do |period, expected|
+          quote = described_class.quote(draft(
+            arrival_date: Date.parse("2026-09-04"),      # vendredi (week-end)
+            departure_date: Date.parse("2026-09-05"),
+            space_slots: { "grande_salle" => [period], "petite_salle" => [period] }
+          ))
+          expect(quote.total_cents).to eq(expected), "période #{period}"
+          expect(quote.breakdown.size).to eq(1)
+          expect(quote.breakdown.first[:label]).to include("Les 2 salles (duo)")
+        end
+      end
+
+      it "PAS de duo si périodes différentes le même jour — somme normale, 2 lignes" do
+        quote = described_class.quote(draft(halls: [
+          { kind: "grande_salle", date: "2026-09-01", period: "journee" }, # 290 €
+          { kind: "petite_salle", date: "2026-09-01", period: "soiree" }   #  90 €
+        ]))
+        expect(quote.total_cents).to eq(38_000)
+        expect(quote.breakdown.size).to eq(2)
+        expect(quote.breakdown.map { |l| l[:label] }.join).not_to include("duo")
+      end
+
+      it "PAS de duo si dates différentes — somme normale (grande le 1er, petite le 2)" do
+        quote = described_class.quote(draft(halls: [
+          { kind: "grande_salle", date: "2026-09-01", period: "journee" }, # 290 €
+          { kind: "petite_salle", date: "2026-09-02", period: "journee" }  # 140 €
+        ]))
+        expect(quote.total_cents).to eq(43_000)
+        expect(quote.breakdown.size).to eq(2)
+      end
+
+      it "invariant #79 sur un séjour composite avec duo : bundle + spaces == total hors activités" do
+        quote = described_class.quote(draft(
+          lodging: hulotte, nights: 1,                       # 485 €
+          halls: [
+            { kind: "grande_salle", date: "2026-09-01", period: "journee" },
+            { kind: "petite_salle", date: "2026-09-01", period: "journee" }, # duo 390 €
+            { kind: "cuisine_pro",  date: "2026-09-01", period: "journee" }  # 110 €
+          ]
+        ))
+        expect(quote.spaces_cents).to eq(50_000)             # duo 390 + cuisine 110
+        expect(quote.lodging_bundle_cents).to eq(48_500)     # Hulotte 485
+        expect(quote.lodging_bundle_cents + quote.spaces_cents)
+          .to eq(quote.total_excluding_experiences_cents)
+        expect(quote.total_cents).to eq(98_500)
+      end
+    end
+
     it "€/pers (repas végé midi) — 10 pers × 15 € = 150 €" do
       quote = described_class.quote(draft(meals: [{ kind: "repas_vege_midi", people: 10 }]))
       expect(quote.total_cents).to eq(15_000)
