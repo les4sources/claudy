@@ -35,6 +35,25 @@ class CustomerDecorator < ApplicationDecorator
     stays.current_and_future
   end
 
+  # Compteurs de la liste : lus depuis les colonnes calculées par
+  # `Customer.with_stay_counts` (aucun N+1). Repli sur une requête si le
+  # décorateur est utilisé hors de ce scope (ex. page show).
+  def stays_count
+    if object.has_attribute?(:stays_count)
+      object.stays_count.to_i
+    else
+      object.stays.count
+    end
+  end
+
+  def upcoming_stays_count
+    if object.has_attribute?(:upcoming_stays_count)
+      object.upcoming_stays_count.to_i
+    else
+      object.stays.current_and_future.count
+    end
+  end
+
   def past_stays
     stays.past
   end

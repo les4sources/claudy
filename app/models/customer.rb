@@ -64,6 +64,24 @@ class Customer < ApplicationRecord
     where("email ILIKE :q OR first_name ILIKE :q OR last_name ILIKE :q OR organization_name ILIKE :q", q: q)
   }
 
+  # Compteurs de séjours calculés EN SQL (aucun N+1) pour la liste admin :
+  #   - `stays_count`          : nombre de séjours VIVANTS (soft-delete exclu) ;
+  #   - `upcoming_stays_count` : séjours vivants à venir, même sémantique que le
+  #     scope `Stay.current_and_future` (`departure_date >= aujourd'hui`).
+  # Le LEFT JOIN porte lui-même le filtre `stays.deleted_at IS NULL` (le
+  # default_scope de Stay ne s'applique pas à une jointure manuelle). GROUP BY
+  # sur la PK ⇒ `customers.*` est sélectionnable (dépendance fonctionnelle PG).
+  scope :with_stay_counts, -> {
+    today = connection.quote(Date.current)
+    select(
+      "customers.*",
+      "COUNT(stays.id) AS stays_count",
+      "COUNT(stays.id) FILTER (WHERE stays.departure_date >= #{today}) AS upcoming_stays_count"
+    )
+      .joins("LEFT JOIN stays ON stays.customer_id = customers.id AND stays.deleted_at IS NULL")
+      .group("customers.id")
+  }
+
   # Single point of email normalization, reused by the legacy migration.
   def self.normalize_email(raw)
     return nil if raw.nil?

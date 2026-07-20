@@ -20,6 +20,95 @@ RSpec.describe "Customers (admin Pôle Accueil)", type: :request do
     end
   end
 
+  # Assainissement de l'historique clients (epic « liste des clients ») :
+  # tri par nombre de séjours, filtre par type, colonne « séjours à venir »,
+  # pagination à 100. Les compteurs se calculent en SQL (LEFT JOIN + COUNT +
+  # FILTER), séjours soft-deletés exclus, sans N+1.
+  describe "GET /customers — tri, filtre, compteurs, pagination" do
+    def customer_row(customer_id)
+      Nokogiri::HTML(response.body).at_css("#customer_#{customer_id}")
+    end
+
+    describe "tri par nombre de séjours vivants" do
+      let!(:few) { Customer.create!(email: "few@example.com", customer_type: "individual") }
+      let!(:many) { Customer.create!(email: "many@example.com", customer_type: "individual") }
+
+      before do
+        Stay.create!(customer: few, arrival_date: Date.today + 1, departure_date: Date.today + 2)
+        2.times do |i|
+          Stay.create!(customer: many, arrival_date: Date.today + i + 1, departure_date: Date.today + i + 2)
+        end
+        # Un séjour soft-deleté sur `few` ne doit PAS gonfler son compteur.
+        dead = Stay.create!(customer: few, arrival_date: Date.today + 5, departure_date: Date.today + 6)
+        dead.destroy
+      end
+
+      it "ordonne desc par défaut quand le tri est actif, séjours soft-deletés exclus" do
+        get customers_path, params: { sort: "stays", direction: "desc" }
+        expect(response).to have_http_status(:ok)
+        # `many` (2 séjours) avant `few` (1 séjour vivant, le soft-deleté ne compte pas).
+        expect(response.body.index("many@example.com")).to be < response.body.index("few@example.com")
+        expect(customer_row(few.id).at_css("[data-role=total-stays]").text.strip).to eq("1")
+      end
+
+      it "inverse en ordre asc au 2e clic" do
+        get customers_path, params: { sort: "stays", direction: "asc" }
+        expect(response.body.index("few@example.com")).to be < response.body.index("many@example.com")
+      end
+    end
+
+    describe "filtre par type de client" do
+      let!(:org) do
+        Customer.create!(email: "org@example.com", customer_type: "organization", organization_name: "ACME")
+      end
+
+      it "n'affiche que les organisations quand type=organization" do
+        get customers_path, params: { type: "organization" }
+        expect(response.body).to include("org@example.com")
+        expect(response.body).not_to include("admin@example.com") # individual masqué
+      end
+
+      it "n'affiche que les particuliers quand type=individual" do
+        get customers_path, params: { type: "individual" }
+        expect(response.body).to include("admin@example.com")
+        expect(response.body).not_to include("org@example.com")
+      end
+    end
+
+    describe "colonne séjours à venir" do
+      let!(:mix) { Customer.create!(email: "mix@example.com", customer_type: "individual") }
+
+      before do
+        Stay.create!(customer: mix, arrival_date: Date.today - 5, departure_date: Date.today - 3) # passé
+        Stay.create!(customer: mix, arrival_date: Date.today + 3, departure_date: Date.today + 5) # à venir
+      end
+
+      it "compte 1 séjour à venir et 2 séjours au total (un passé + un futur)" do
+        get customers_path
+        row = customer_row(mix.id)
+        expect(row.at_css("[data-role=total-stays]").text.strip).to eq("2")
+        expect(row.at_css("[data-role=upcoming-stays]").text.strip).to eq("1")
+      end
+    end
+
+    describe "pagination à 100 par page" do
+      before do
+        # `customer` (admin) existe déjà ⇒ 1 + 100 = 101 clients au total.
+        100.times { |i| Customer.create!(email: "p#{i}@example.com", customer_type: "individual") }
+      end
+
+      it "affiche 100 lignes en page 1 et 1 ligne en page 2" do
+        get customers_path
+        page1 = Nokogiri::HTML(response.body).css("tbody tr[id^='customer_']")
+        expect(page1.size).to eq(100)
+
+        get customers_path, params: { page: 2 }
+        page2 = Nokogiri::HTML(response.body).css("tbody tr[id^='customer_']")
+        expect(page2.size).to eq(1)
+      end
+    end
+  end
+
   describe "GET /customers/:id" do
     it "renders the customer page" do
       get customer_path(customer)
