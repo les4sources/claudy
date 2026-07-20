@@ -31,7 +31,7 @@ nav.bg-white.shadow-sm.lg:px-6
 
         / Accueil dropdown (Hébergements + Espaces + Reporting + Comptabilité)
         li.relative
-          button.flex.items-center.gap-1.5.px-4.py-2.rounded-lg.text-sm.font-medium.transition-all.duration-150[id="accueilDropdownButton" data-controller="dropdown" data-action="click->dropdown#toggle click@window->dropdown#hideOnClickOutside" data-dropdown-toggle-value="accueilDropdown" type="button" class="#{ (controller_name == 'bookings' || controller_name == 'space_bookings' || controller_name == 'reports' || !@accounting_view.nil?) ? 'text-4s-main bg-teal-50' : 'text-gray-600 hover:text-4s-main hover:bg-teal-50/60'}"]
+          button.flex.items-center.gap-1.5.px-4.py-2.rounded-lg.text-sm.font-medium.transition-all.duration-150[id="accueilDropdownButton" data-controller="dropdown" data-action="click->dropdown#toggle click@window->dropdown#hideOnClickOutside" data-dropdown-toggle-value="accueilDropdown" type="button" class="#{ (controller_name == 'stays' || controller_name == 'bookings' || controller_name == 'space_bookings' || controller_name == 'reports' || !@accounting_view.nil?) ? 'text-4s-main bg-teal-50' : 'text-gray-600 hover:text-4s-main hover:bg-teal-50/60'}"]
             svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
               path[d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"]
               polyline[points="9 22 9 12 15 12 15 22"]
@@ -40,26 +40,19 @@ nav.bg-white.shadow-sm.lg:px-6
               polyline[points="6 9 12 15 18 9"]
           #accueilDropdown.absolute.left-0.mt-1.z-10.hidden.bg-white.divide-y.divide-gray-50.rounded-xl.shadow-lg.shadow-gray-200/80.border.border-gray-100.w-52
             ul.py-1.5[aria-labelledby="accueilDropdownButton"]
+              / Épic #81 — le séjour est le point d'entrée unique. Les entrées
+              / « Hébergements » (bookings) et « Espaces » (space_bookings) sont
+              / retirées du menu ; leurs anciennes vues restent accessibles via
+              / les boutons de transition en tête de l'index Séjours.
               li
-                = link_to bookings_path,
-                          class: "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors #{controller_name == 'bookings' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-600 hover:bg-teal-50/60 hover:text-4s-main'}" do
+                = link_to stays_path,
+                          class: "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors #{controller_name == 'stays' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-600 hover:bg-teal-50/60 hover:text-4s-main'}" do
                   svg.w-4.h-4.opacity-70[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
                     path[d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"]
                     path[d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"]
                     path[d="M12 4v6"]
                     path[d="M2 18h20"]
-                  span Hébergements
-              li
-                = link_to space_bookings_path,
-                          class: "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors #{controller_name == 'space_bookings' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-600 hover:bg-teal-50/60 hover:text-4s-main'}" do
-                  svg.w-4.h-4.opacity-70[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-                    path[d="M3 7V5a2 2 0 0 1 2-2h2"]
-                    path[d="M17 3h2a2 2 0 0 1 2 2v2"]
-                    path[d="M21 17v2a2 2 0 0 1-2 2h-2"]
-                    path[d="M7 21H5a2 2 0 0 1-2-2v-2"]
-                    rect[width="7" height="5" x="7" y="7" rx="1"]
-                    rect[width="7" height="5" x="10" y="12" rx="1"]
-                  span Espaces
+                  span Séjours
               li
                 = link_to reports_path,
                           class: "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors #{controller_name == 'reports' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-600 hover:bg-teal-50/60 hover:text-4s-main'}" do

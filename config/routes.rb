@@ -123,7 +123,7 @@ Rails.application.routes.draw do
   # `show` reste rendu sans layout (fragment de modale) ; new/edit sont des pages
   # pleines. La route `stays/recents` ci-dessus est déclarée AVANT pour ne pas
   # être captée par `/stays/:id`.
-  resources :stays, only: [:show, :new, :create, :edit, :update, :destroy] do
+  resources :stays, only: [:index, :show, :new, :create, :edit, :update, :destroy] do
     collection do
       # Vérification de disponibilité en temps réel dans le form de composition
       # (issue #77) : lodging_id + dates → JSON { available: bool }. Informe sans

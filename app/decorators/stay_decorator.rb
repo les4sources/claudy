@@ -1,6 +1,16 @@
 class StayDecorator < ApplicationDecorator
   delegate_all
 
+  # Collection paginée (index Séjours) : préserve les méthodes will_paginate sur
+  # la collection décorée — même pattern que CustomerDecorator.
+  def self.collection_decorator_class
+    PaginatingDecorator
+  end
+
+  # Statuts d'activité écartés de la composition « active » (miroir du scope
+  # `ExperienceBooking.active`), filtrés EN MÉMOIRE pour éviter tout N+1.
+  DEAD_EXPERIENCE_STATUSES = %w[cancelled refused].freeze
+
   STATUS_STYLES = {
     "confirmed" => { label: "Confirmé", classes: "bg-green-100 text-green-800" },
     "pending"   => { label: "En attente", classes: "bg-amber-100 text-amber-800" },
@@ -51,6 +61,23 @@ class StayDecorator < ApplicationDecorator
       van_bookings.any? || meals.any? || object.experience_bookings.active.any?
   end
 
+  # Résumé compact de la composition pour l'index Séjours : « 1 gîte · 2 espaces
+  # · 3 activités ». N'affiche que les catégories présentes. Tout est lu sur des
+  # associations PRÉCHARGÉES (stay_items, experience_bookings, meal_orders) —
+  # aucun accès base, contrairement à `stay_composition_summary` (helper de
+  # fusion) qui interroge `experience_bookings.active` / `meal_orders`.
+  def composition_summary
+    parts = [
+      compo_part(lodging_bookings.size, "gîte", "gîtes"),
+      compo_part(space_bookings.size, "espace", "espaces"),
+      compo_part(camping_bookings.size, "camping", "campings"),
+      compo_part(van_bookings.size, "van", "vans"),
+      compo_part(active_experiences_count, "activité", "activités"),
+      compo_part(object.meal_orders.size, "repas", "repas")
+    ].compact
+    parts.any? ? parts.join(" · ") : "—"
+  end
+
   # Montant formaté d'un bookable (Booking/SpaceBooking/Camping/Van) ou d'un repas.
   def formatted_item_amount(record)
     money(record.try(:price_cents))
@@ -62,6 +89,20 @@ class StayDecorator < ApplicationDecorator
   def bookables_of(type)
     object.stay_items.select { |item| item.bookable_type == type }
           .map(&:bookable).compact
+  end
+
+  # Nombre d'activités actives, filtré EN MÉMOIRE (association préchargée) —
+  # jamais `experience_bookings.active` (scope = requête).
+  def active_experiences_count
+    object.experience_bookings.reject { |eb| DEAD_EXPERIENCE_STATUSES.include?(eb.status) }.size
+  end
+
+  # Fragment « N mot » de la composition ; nil quand la catégorie est absente
+  # (pour être filtré). Pluriel FR simple.
+  def compo_part(count, singular, plural)
+    return nil if count.to_i.zero?
+
+    "#{count} #{count.to_i > 1 ? plural : singular}"
   end
 
   public
