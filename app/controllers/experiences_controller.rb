@@ -32,6 +32,14 @@ class ExperiencesController < BaseController
       experience: @experience,
       month: params[:month]
     )
+    # Prochaines réservations (bloc « Réservations » — remplace le récap des
+    # disponibilités, doublon du calendrier).
+    @upcoming_bookings = ExperienceBooking.active
+                                          .joins(:experience_availability)
+                                          .where(experience_availabilities: { experience_id: @experience.id })
+                                          .where("experience_availabilities.available_on >= ?", Date.today)
+                                          .includes(:stay, :experience_availability)
+                                          .order("experience_availabilities.available_on ASC, experience_availabilities.starts_at ASC")
     @experience = ExperienceDecorator.new(@experience)
   end
 

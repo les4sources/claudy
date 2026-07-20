@@ -9,11 +9,13 @@ RSpec.describe "Experiences (UI « Activités »)", type: :request do
   before { sign_in user }
 
   describe "GET /experiences" do
-    it "affiche le libellé « Activités » et plus « Expériences »" do
+    # 2026-07-20 : le libellé du MENU paramètres est redevenu « Expériences »
+    # (décision Michael) — l'interdiction globale du mot est levée ; les pages
+    # elles-mêmes continuent de parler d'« activités ».
+    it "affiche le libellé « Activités » et le lien de création" do
       get experiences_path
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Activités")
-      expect(response.body).not_to include("Expériences")
       expect(response.body).to include("Nouvelle activité")
     end
   end
@@ -26,7 +28,6 @@ RSpec.describe "Experiences (UI « Activités »)", type: :request do
       # l'apostrophe est échappée en HTML (&#39;)
       expect(response.body).to include("Libellé de l&#39;activité")
       expect(response.body).to include("Porteur·euse d&#39;activité")
-      expect(response.body).not_to include("xpérience")
     end
   end
 end

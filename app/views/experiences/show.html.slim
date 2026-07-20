@@ -58,7 +58,7 @@
           == @experience.description
 
   .space-y-4
-    = render "experiences/availabilities_summary", experience: @experience, month: @calendar.month_param
+    = render "experiences/upcoming_bookings", bookings: @upcoming_bookings
 
     - if @experience.human.presence
       ul.grid.grid-cols-1.gap-6[role="list"]

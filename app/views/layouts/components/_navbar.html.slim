@@ -87,9 +87,9 @@ nav.bg-white.shadow-sm.lg:px-6
               path[d="M16 3.13a4 4 0 0 1 0 7.75"]
             span Organisation
 
-        / Paramètres (cog icon only)
+        / Paramètres (cog icon only) — atterrit sur Expériences (2026-07-20)
         li
-          = link_to events_path,
+          = link_to experiences_path,
                     class: "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 #{!@settings_view.nil? ? 'text-4s-main bg-teal-50' : 'text-gray-400 hover:text-4s-main hover:bg-teal-50/60'}",
                     title: "Paramètres" do
             svg.w-5.h-5[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
@@ -185,13 +185,13 @@ nav.bg-white.shadow-sm.lg:px-6
       .flex.items-center
         ul.flex.flex-row.font-medium.mt-0.gap-1.text-sm
           li
+            = link_to "Expériences",
+                      experiences_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'experiences' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
             = link_to "Événements",
                       events_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{(controller_name == 'events' || controller_name == 'events_categories') ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
-          li
-            = link_to "Activités",
-                      experiences_path,
-                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'experiences' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
             = link_to "Services",
                       services_path,

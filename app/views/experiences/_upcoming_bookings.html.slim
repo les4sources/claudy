@@ -1,0 +1,27 @@
+/ Prochaines réservations de l'activité (2026-07-20 — remplace le récap
+  « Disponibilités », doublon du calendrier). Une ligne par ExperienceBooking
+  à venir, actif (pending/confirmed).
+.overflow-hidden.bg-white.shadow.sm:rounded-lg
+  .px-4.py-4.sm:px-6
+    h3.text-base.font-medium.leading-6.text-gray-900 Réservations
+    p.text-xs.text-gray-500 Les prochaines réservations pour cette activité.
+  .border-t.border-gray-200
+    - if bookings.empty?
+      p.p-4.text-sm.text-gray-500.italic Aucune réservation à venir.
+    - else
+      ul.divide-y.divide-gray-100[role="list"]
+        - bookings.each do |booking|
+          - availability = booking.experience_availability
+          li.px-4.py-3.sm:px-6.flex.items-center.justify-between.gap-3
+            .min-w-0
+              .text-sm.font-medium.text-gray-900
+                = l(availability.available_on, format: :long)
+                span.text-gray-500 =< "· #{availability.starts_at}"
+              .text-xs.text-gray-500
+                = "#{booking.participants} participant#{"s" if booking.participants.to_i > 1}"
+                - if booking.stay
+                  |  ·&nbsp;
+                  = link_to (booking.stay.customer&.name.presence || "Séjour ##{booking.stay_id}"), stay_path(booking.stay), class: "text-blue-600 hover:underline"
+            - status_classes = booking.status == "confirmed" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"
+            span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium flex-shrink-0 #{status_classes}"
+              = booking.status == "confirmed" ? "Confirmée" : "En attente"
