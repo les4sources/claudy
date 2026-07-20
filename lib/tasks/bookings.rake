@@ -205,6 +205,7 @@ namespace :bookings do
       skipped_empty: [],
       skipped_no_stay: [],
       skipped_price_ambiguous: [],
+      converted_rounded_people: [],
       failed_total_drift: []
     }
 
@@ -259,12 +260,15 @@ namespace :bookings do
       end
 
       people, remainder = price_cents.divmod(denom)
-      # La division DOIT tomber juste (reste 0) et donner ≥1 personne, sinon on ne
-      # devine pas : Michael tranchera (people ≥ 1 est aussi la validation modèle).
+      # Décision Michael 2026-07-21 : les prix qui ne tombent pas juste sont
+      # convertis QUAND MÊME — people = arrondi le plus proche (≥ 1, la
+      # validation modèle), PRIX HISTORIQUE conservé (totaux intacts, le nombre
+      # de personnes est indicatif). Les cas arrondis sont listés au rapport
+      # (`converted_rounded_people`) pour relecture.
       if remainder != 0 || people <= 0
-        report[:skipped_price_ambiguous] <<
-          "space_booking #{space_booking.id} : prix=#{price_cents} cts, nuits=#{nights}, #{price_cents}/#{denom}=#{(price_cents.to_f / denom).round(2)} pers (non entier)"
-        next
+        people = [(price_cents.to_f / denom).round, 1].max
+        report[:converted_rounded_people] <<
+          "space_booking #{space_booking.id} : prix=#{price_cents} cts, nuits=#{nights} → #{people} pers (arrondi de #{(price_cents.to_f / denom).round(2)})"
       end
 
       total_before = stay.total_amount_cents
@@ -353,8 +357,12 @@ def print_tent_camping_report(report, apply)
   puts "Ignorés — sans séjour              : #{report[:skipped_no_stay].size} #{parking_ids(report[:skipped_no_stay])}"
   puts "Échecs — dérive de total           : #{report[:failed_total_drift].size} #{parking_ids(report[:failed_total_drift])}"
   unless report[:skipped_price_ambiguous].empty?
-    puts "Ignorés — prix ambigu (à trancher) : #{report[:skipped_price_ambiguous].size}"
+    puts "Ignorés — prix ambigu (indéterminable) : #{report[:skipped_price_ambiguous].size}"
     report[:skipped_price_ambiguous].each { |line| puts "  - #{line}" }
+  end
+  unless report[:converted_rounded_people].empty?
+    puts "Convertis avec personnes ARRONDIES (prix conservé) : #{report[:converted_rounded_people].size}"
+    report[:converted_rounded_people].each { |line| puts "  - #{line}" }
   end
   puts(apply ? "OK — conversions appliquées." : "DRY-RUN — aucune écriture. Relancer avec APPLY=1 pour appliquer.")
 end

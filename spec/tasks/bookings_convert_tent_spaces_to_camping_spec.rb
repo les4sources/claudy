@@ -87,19 +87,22 @@ RSpec.describe "bookings:convert_tent_spaces_to_camping", type: :task do
   end
 
   context "prix qui ne tombe pas juste (20 € / 2 nuits → 1,33 pers)" do
-    it "ne convertit pas et le rapporte en prix ambigu" do
-      sb = build_space_booking(price_cents: 2_000) # 2000 / 1500 = 1,33 → non entier
+    # Décision Michael 2026-07-21 : on convertit QUAND MÊME — personnes
+    # arrondies au plus proche (≥ 1), PRIX HISTORIQUE conservé (totaux
+    # intacts), et le cas est listé au rapport pour relecture.
+    it "convertit avec personnes arrondies et prix conservé, listé au rapport" do
+      sb = build_space_booking(price_cents: 2_000) # 2000 / 1500 = 1,33 → arrondi 1
       reserve(sb, bois, d1)
       reserve(sb, bois, d2)
 
       output = nil
-      expect { output = run_task(apply: true) }.not_to change(CampingBooking, :count)
+      expect { output = run_task(apply: true) }.to change(CampingBooking, :count).by(1)
 
-      # Intact.
-      expect(SpaceBooking.find_by(id: sb.id)).to be_present
-      expect(SpaceReservation.where(space_booking_id: sb.id, deleted_at: nil).count).to eq(2)
-
-      expect(output).to match(/prix ambigu/i)
+      camping = CampingBooking.order(:id).last
+      expect(camping.people).to eq(1)
+      expect(camping.price_cents).to eq(2_000) # prix historique conservé
+      expect(SpaceBooking.find_by(id: sb.id)).to be_nil # soft-deleté
+      expect(output).to match(/personnes ARRONDIES/i)
       expect(output).to match(/space_booking #{sb.id}/)
     end
   end
