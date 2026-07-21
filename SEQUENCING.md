@@ -30,7 +30,8 @@
 
 - [ ] **B.1 Assainissement historique 2023→aujourd'hui** *(Michael, avec la fusion — calendrier OU fiche client)* — notes consolidées automatiquement à la fusion, aperçu agrégé. Signal de fin : plus de doublons ni d'orphelins 2023→2026.
 - [~] **B.2 Déploiement du lot du 20-21/07** *(Michael)* — main déployable en continu (966 specs vertes). Post-deploy, rake en dry-run puis APPLY, dans l'ordre : `bookings:convert_parking_to_van` (16) · `bookings:convert_tent_spaces_to_camping` (13 convertis dont 7 à personnes arrondies ; #605 refusé — séjour #1384 pré-incohérent, correction manuelle) · `customers:ensure_ota_catch_alls` · `rooms:link_laurier` (~454) · `space_bookings:billing_to_payments` (166+30 ; poser d'abord un moyen de paiement sur SpaceBookings #82 et #686) · `spaces:convert_deux_salles` (64 bookings → paires, 7 collisions historiques acceptées, l'espace est soft-deleté en fin) · `stays:recompute_payment_statuses` (11 statuts périmés en local).
-- [ ] **B.3 Arbitrages données** *(Michael)* — séjour #1384 (total 265 € ≠ parts 285,25 € — antérieur, refusé par le garde-fou de conversion) ; séjour Semisto aux dates inversées 2027→2026 ; trop-perçu 180 € (reste dû négatif, remboursement à traiter).
+- [x] **B.2bis Rake prod exécutées** (21/07, Michael) — toutes appliquées et vérifiées : vans 17, tentes 14, catch-alls 2, rates 47 (4 coworking, 0 pizza), 2 salles soft-deleted, 190 payments espaces, dry-runs de contrôle à zéro. Skips assumés : 19 soldes dus sur séjours morts, 360 sans signal monétaire, 7 cautions listées non transformées.
+- [x] **B.3 Arbitrages données** — #1384 corrigé (total → 285,25 €) ; #1414 Semisto dates corrigées (Michael) ; #966 Guillaume annulé (Michael) ; #1418 = séjour Thomas Melchers (40 ans de Camille), total corrigé à 180 € — ce n'était PAS un trop-perçu.
 
 ## Volet C — Lot du 20-21/07 (LIVRÉ, mergé sur main)
 
