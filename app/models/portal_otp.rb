@@ -15,6 +15,16 @@ class PortalOtp < ApplicationRecord
   scope :usable, -> { where(consumed_at: nil).where("expires_at > ?", Time.current) }
   scope :for_email, ->(email) { where(email: email.to_s.strip.downcase) }
 
+  # Rate-limit d'émission (best practice OTP) : pas plus de MAX_ISSUES_PER_HOUR
+  # codes émis par heure et par email — sinon n'importe qui peut bombarder de
+  # mails une adresse connue. Les lignes consommées comptent aussi (elles
+  # restent en base), donc brûler un code ne remet pas le compteur à zéro.
+  MAX_ISSUES_PER_HOUR = 5
+
+  def self.throttled?(email)
+    for_email(email).where("created_at > ?", 1.hour.ago).count >= MAX_ISSUES_PER_HOUR
+  end
+
   # Émet un code pour cet email et retourne [otp, code_en_clair]. Les codes
   # précédents encore vivants sont brûlés : un seul code valide à la fois.
   def self.issue!(email)

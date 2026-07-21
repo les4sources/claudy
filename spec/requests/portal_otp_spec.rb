@@ -3,6 +3,7 @@ require "rails_helper"
 # Epic #126, Phase 2 — portail client, connexion par code à usage unique.
 RSpec.describe "Portail client — connexion OTP", type: :request do
   include ActiveJob::TestHelper
+  include ActiveSupport::Testing::TimeHelpers
   let!(:customer) do
     Customer.create!(first_name: "Ana", last_name: "Lopez", email: "ana@example.com")
   end
@@ -27,11 +28,32 @@ RSpec.describe "Portail client — connexion OTP", type: :request do
         post portal_code_path, params: { email: "ana@example.com" }
       }.to change { PortalOtp.count }.by(1)
 
+      expect(response).to redirect_to(portal_verify_path)
+      follow_redirect!
       expect(response.body).to include("Si un compte existe")
+    end
+
+    it "throttle l'émission : pas plus de 5 codes par heure et par email" do
+      5.times { post portal_code_path, params: { email: "ana@example.com" } }
+
+      expect {
+        post portal_code_path, params: { email: "ana@example.com" }
+      }.not_to change { PortalOtp.count }
+
+      # La réponse reste neutre : rien ne dit que l'envoi a été bloqué.
+      expect(response).to redirect_to(portal_verify_path)
+
+      travel_to(61.minutes.from_now) do
+        expect {
+          post portal_code_path, params: { email: "ana@example.com" }
+        }.to change { PortalOtp.count }.by(1)
+      end
     end
 
     it "répond EXACTEMENT pareil à un email inconnu, sans créer de code" do
       post portal_code_path, params: { email: "ana@example.com" }
+      expect(response).to redirect_to(portal_verify_path)
+      follow_redirect!
       known_body = response.body
 
       PortalOtp.delete_all
@@ -39,6 +61,8 @@ RSpec.describe "Portail client — connexion OTP", type: :request do
       expect {
         post portal_code_path, params: { email: "inconnu@example.com" }
       }.not_to change { PortalOtp.count }
+      expect(response).to redirect_to(portal_verify_path)
+      follow_redirect!
 
       # Les deux réponses sont identiques au caractère près, une fois l'email
       # saisi (simplement réaffiché dans le formulaire) neutralisé : rien dans
@@ -58,6 +82,8 @@ RSpec.describe "Portail client — connexion OTP", type: :request do
           post portal_code_path, params: { email: catch_all }
         }.not_to change { PortalOtp.count }
 
+        expect(response).to redirect_to(portal_verify_path)
+        follow_redirect!
         expect(response.body).to include("Si un compte existe")
       end
     end

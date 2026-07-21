@@ -57,8 +57,7 @@ RSpec.describe "Tarifs paramétrés (Pricing::Rates)" do
         hamac.simple
         meal.repas_vege_midi.per_person
         meal.buffet.per_person
-        pizza_party.base
-        pizza_party.per_person
+        coworking.pack_1
         dog.supplement
         deposit.default_rate
       ].each do |key|
@@ -119,21 +118,19 @@ RSpec.describe "Tarifs paramétrés (Pricing::Rates)" do
         .to eq(((quote.total_cents - quote.experiences_cents) * 0.3).round)
     end
 
-    it "chien / camping / repas / terrasse / pizza suivent aussi la base" do
+    it "chien / camping / repas / terrasse suivent aussi la base" do
       base = PricingModel.quote(composite_draft).total_cents
 
       Rate.find_by(key: "dog.supplement").update!(amount_cents: 6_000)
       Rate.find_by(key: "camping.tente_per_person_night").update!(amount_cents: 850)
       Rate.find_by(key: "meal.buffet.per_person").update!(amount_cents: 1_300)
       Rate.find_by(key: "terrace.per_person_day").update!(amount_cents: 350)
-      Rate.find_by(key: "pizza_party.per_person").update!(amount_cents: 800)
       Pricing::Rates.reset!
 
       delta = 1_000 +                # chien +10 €
               (100 * 3 * 2) +        # camping +1 €/pers/nuit × 3 pers × 2 nuits
               (100 * 4) +            # buffet +1 €/pers × 4
-              (100 * 5) +            # terrasse +1 €/pers × 5
-              (100 * 6)              # pizza +1 €/pers × 6
+              (100 * 5)              # terrasse +1 €/pers × 5
       expect(PricingModel.quote(composite_draft).total_cents).to eq(base + delta)
     end
   end

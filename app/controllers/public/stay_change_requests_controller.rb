@@ -118,13 +118,11 @@ module Public
     end
 
     def build_change_request
-      new_total = @draft.quote.total_excluding_experiences_cents
-
       StayChangeRequest.new(
         stay: @stay.object,
         draft_snapshot: @draft.to_h,
-        new_total_cents: new_total,
-        delta_cents: new_total - @stay.total_amount_cents.to_i,
+        new_total_cents: @new_total_cents,
+        delta_cents: @delta_cents,
         refund_iban: params[:refund_iban]
       )
     end
@@ -141,9 +139,22 @@ module Public
       @stay_nights          = stay_nights
       @lodging_availability = build_stay_availability(@lodgings, @stay_nights)
       @quote                = @draft.quote
-      @new_total_cents      = @quote.total_excluding_experiences_cents
-      @delta_cents          = @new_total_cents - @stay.total_amount_cents.to_i
+      # PRIX PRÉSERVÉ (décision 2026-07-21) : beaucoup de séjours portent un
+      # prix historique/négocié/OTA différent du barème actuel. On ne recote
+      # donc JAMAIS le séjour entier — le delta est la différence entre la
+      # recote de la composition PROPOSÉE et la recote de la composition
+      # ACTUELLE (même barème des deux côtés), appliquée au prix existant.
+      # Formulaire intact → delta 0 ; une nuit ajoutée → + son prix catalogue.
+      @delta_cents          = @quote.total_excluding_experiences_cents - baseline_quote_cents
+      @new_total_cents      = @stay.total_amount_cents.to_i + @delta_cents
       @refund_cents         = [@stay.amount_paid_cents.to_i - @new_total_cents, 0].max
+    end
+
+    # Recote de la composition ACTUELLE du séjour, au barème du jour — le point
+    # de référence du delta.
+    def baseline_quote_cents
+      @baseline_quote_cents ||=
+        Stays::DraftReconstructor.call(@stay).quote.total_excluding_experiences_cents
     end
 
     def stay_nights

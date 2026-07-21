@@ -215,6 +215,7 @@ Rails.application.routes.draw do
   # Devise : le portail n'ouvre JAMAIS d'accès admin.
   get    "portail",              to: "portal/sessions#new",         as: :portal
   post   "portail/code",         to: "portal/sessions#create_code",  as: :portal_code
+  get    "portail/verification", to: "portal/sessions#verify",       as: :portal_verify
   post   "portail/connexion",    to: "portal/sessions#create",       as: :portal_login
   delete "portail/deconnexion",  to: "portal/sessions#destroy",      as: :portal_logout
   get    "portail/sejours",      to: "portal/stays#index",           as: :portal_stays

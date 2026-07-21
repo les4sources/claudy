@@ -32,6 +32,11 @@ module Stays
         stay: stay,
         draft: draft,
         skip_availability: true,
+        # PRIX PRÉSERVÉ : `new_total_cents` = prix existant du séjour + delta
+        # (jamais une recote complète — cf. StayChangeRequestsController). On
+        # l'impose pour qu'un séjour à prix historique/négocié garde son prix
+        # à l'approbation d'une demande qui ne change rien (delta 0).
+        price_override_cents: @change_request.new_total_cents,
         user: @user
       )
 

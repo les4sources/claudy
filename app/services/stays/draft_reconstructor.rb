@@ -34,6 +34,10 @@ module Stays
         # dérive `campings`/`vans` d'elle ; absente (pas de dates / pas de plein
         # air) → repli sur les entrées pleine-fenêtre ci-dessous.
         per_night_resources: per_night_resources_from_stay,
+        # Grille hébergement nuit par nuit du funnel public (`_stay_calendar`
+        # lit `lodging_night_ids`, pas `lodging_id`) : sans elle, le formulaire
+        # de modification client s'affichait vide (bug 2026-07-21).
+        lodging_night_ids: lodging_night_ids_from_stay,
         adults:         booking&.adults,
         children:       booking&.children,
         group_name:     booking&.group_name,
@@ -90,6 +94,30 @@ module Stays
           # Somme (revue Forge F2) : deux réservables du même type qui se
           # chevaucheraient une nuit (hors grille) ne s'écrasent pas en silence.
           arr[idx] += yield(b).to_i if idx >= 0 && idx < nights
+        end
+      end
+      arr
+    end
+
+    # Une entrée par nuit du séjour `[arrivée, départ)` : l'id du Lodging occupé
+    # cette nuit-là (fenêtre `[from, to)` de chaque Booking), nil sinon. nil
+    # global si le séjour n'a ni dates ni hébergement.
+    def lodging_night_ids_from_stay
+      arrival   = @stay.arrival_date
+      departure = @stay.departure_date
+      return nil if arrival.blank? || departure.blank?
+      nights = (departure - arrival).to_i
+      return nil if nights < 1
+
+      bookings = @stay.stay_items.select { |i| i.bookable_type == "Booking" }.filter_map(&:bookable)
+      return nil if bookings.empty?
+
+      arr = Array.new(nights, nil)
+      bookings.each do |b|
+        next if b.from_date.blank? || b.to_date.blank? || b.lodging_id.blank?
+        (b.from_date...b.to_date).each do |date|
+          idx = (date - arrival).to_i
+          arr[idx] = b.lodging_id.to_s if idx >= 0 && idx < nights
         end
       end
       arr

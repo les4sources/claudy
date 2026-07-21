@@ -116,10 +116,8 @@ module Rates
       rows = Pricing::Catalog::MEAL_PER_PERSON_CENTS.map do |kind, amount|
         entry("meal.#{kind}.per_person", amount, "#{meal_label(kind)} — €/pers")
       end
-      rows << entry("pizza_party.base", Pricing::Catalog::PIZZA_PARTY_BASE_CENTS,
-                    "Pizza Party — forfait allumage")
-      rows << entry("pizza_party.per_person", Pricing::Catalog::PIZZA_PARTY_PER_PERSON_CENTS,
-                    "Pizza Party — €/pers")
+      # Pizza Party volontairement ABSENTE du seed (décision Michael 2026-07-21) :
+      # gérée par l'application de la boulangerie, plus proposée dans Claudy.
       rows
     end
 

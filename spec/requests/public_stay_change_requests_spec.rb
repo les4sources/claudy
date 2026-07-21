@@ -11,9 +11,17 @@ RSpec.describe "Demande de modification de séjour (client)", type: :request do
   let(:departure) { Date.current + 12 }
 
   let(:stay) do
-    Stay.create!(customer: customer, source: "manual", status: "confirmed",
-                 arrival_date: arrival, departure_date: departure,
-                 total_amount_cents: 74_500)
+    s = Stay.create!(customer: customer, source: "manual", status: "confirmed",
+                     arrival_date: arrival, departure_date: departure,
+                     total_amount_cents: 74_500)
+    # Composition réelle : un Booking Hulotte sur les 2 nuits (74 500 = barème
+    # 48 500 + 26 000) — la recote de la composition actuelle sert de point de
+    # référence au delta (prix préservé).
+    booking = Booking.create!(firstname: "Ana", lastname: "Lopez", email: "ana@example.com",
+                              from_date: arrival, to_date: departure, adults: 2,
+                              status: "confirmed", price_cents: 74_500, lodging: lodging)
+    s.stay_items.create!(bookable: booking)
+    s
   end
 
   before { ActionMailer::Base.deliveries.clear }
@@ -88,6 +96,19 @@ RSpec.describe "Demande de modification de séjour (client)", type: :request do
       recipients = ActionMailer::Base.deliveries.map(&:to).flatten
       expect(recipients).to include("sejours@les4sources.be")
       expect(recipients).to include("ana@example.com")
+    end
+
+    it "préserve un prix historique : formulaire intact → delta 0, nouveau total = prix négocié" do
+      # Prix négocié AU-DESSUS du barème (74 500) : la demande ne recote pas le
+      # séjour, elle applique le delta de composition au prix existant.
+      stay.stay_items.first.bookable.update!(price_cents: 186_000)
+      stay.update!(total_amount_cents: 186_000)
+
+      submit
+
+      change = stay.stay_change_requests.last
+      expect(change.delta_cents).to eq(0)
+      expect(change.new_total_cents).to eq(186_000)
     end
 
     it "calcule un delta positif quand le client agrandit son séjour" do

@@ -13,17 +13,27 @@ module Portal
     end
 
     # POST /portail/code — émet et envoie un code, si et seulement si l'email
-    # correspond à un client réel non fourre-tout.
+    # correspond à un client réel non fourre-tout, sous le rate-limit
+    # (PortalOtp.throttled?). PRG : on redirige TOUJOURS vers la page de saisie
+    # (Turbo exige une redirection), quelle que soit l'issue — la réponse reste
+    # identique pour un email connu, inconnu, fourre-tout ou throttlé.
     def create_code
       email = params[:email].to_s.strip.downcase
 
-      if deliverable_customer(email)
+      if deliverable_customer(email) && !PortalOtp.throttled?(email)
         otp, code = PortalOtp.issue!(email)
         PortalMailer.login_code(email: email, code: code, expires_at: otp.expires_at).deliver_later
       end
 
-      @email = email
-      render :verify
+      session[:portal_pending_email] = email
+      redirect_to portal_verify_path
+    end
+
+    # GET /portail/verification — saisie du code. L'email attendu vit en
+    # session, jamais dans l'URL.
+    def verify
+      @email = session[:portal_pending_email].to_s
+      redirect_to portal_path if @email.blank?
     end
 
     # POST /portail/connexion — vérifie le code saisi.

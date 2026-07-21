@@ -17,8 +17,9 @@ Rails.application.configure do
       policy.frame_ancestors :self, "https://www.les4sources.be", "https://tally.so"
 
       policy.connect_src :self,
-                         # Allow @vite/client to hot reload CSS changes
-                         "ws://#{ViteRuby.config.host}"
+                         # Allow @vite/client HMR websocket — the PORT must be
+                         # included: "ws://localhost" alone only matches port 80.
+                         "ws://#{ViteRuby.config.host_with_port}"
 
       policy.style_src :self,
                        :https,
