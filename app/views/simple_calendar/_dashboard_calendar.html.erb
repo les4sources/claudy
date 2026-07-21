@@ -79,7 +79,12 @@
 
   <div class="shadow ring-1 ring-black ring-opacity-5 lg:flex lg:flex-auto lg:flex-col">
     <% date_range.each_slice(7).with_index do |weekdays, index| %>
-      <% if index == 0 && @date.year == Date.today.year && @date.month == Date.today.month && @date.beginning_of_week >= @date.beginning_of_month %>
+      <%# Toggler dès que (a) on regarde le mois COURANT — peu importe comment on
+          y est arrivé : @date peut être aujourd'hui OU le 1er du mois via la
+          navigation (bug 2026-07-21) — et (b) il existe au moins une semaine
+          passée masquée par hidePastWeeks (le calendrier démarre avant la
+          semaine courante). %>
+      <% if index == 0 && @date.beginning_of_month == Date.today.beginning_of_month && date_range.first < Date.today.beginning_of_week %>
         <div class="flex past-weeks-toggler justify-center" data-dashboard-calendar-target="pastWeeksToggler">
           <%= link_to "Afficher les semaines précédentes",
                       "#dashboard-calendar",
