@@ -1,0 +1,62 @@
+- content_for :meta_title do
+  | Mon coworking
+
+.portal-header
+  div
+    h1.portal-title Coworking
+    p.portal-header__name = current_portal_customer.display_name
+  = link_to "Mes séjours", portal_stays_path, class: "portal-link-muted"
+
+section.portal-block
+  .cowork-balance
+    span.cowork-balance__num = @credits
+    span.cowork-balance__label
+      = @credits > 1 ? "journées disponibles" : "journée disponible"
+  - if @packs.any?
+    ul.cowork-packs
+      - @packs.each do |pack|
+        li.cowork-pack
+          span.cowork-pack__days = "#{pack.days_remaining} / #{pack.days_total} j"
+          span.cowork-pack__meta = "valable jusqu'au #{l(pack.expires_at.to_date, format: :long)}"
+          - if pack.paid?
+            span.cowork-badge.cowork-badge--paid payé
+          - elsif pack.payment_status == "pending"
+            span.cowork-badge.cowork-badge--pending en attente de paiement
+          - else
+            span.cowork-badge.cowork-badge--unpaid non payé
+
+section.portal-block
+  .portal-block__head
+    h2.portal-section-title Acheter un pack
+  .cowork-shop
+    - @pack_options.each do |opt|
+      = form_with url: portal_coworking_purchase_path, method: :post, data: { turbo: false }, class: "cowork-offer" do
+        = hidden_field_tag :days_total, opt[:days]
+        span.cowork-offer__days
+          = opt[:days]
+          span.cowork-offer__unit = opt[:days] > 1 ? "journées" : "journée"
+        span.cowork-offer__price = humanized_money_with_symbol(Money.new(opt[:price_cents], "EUR"))
+        = submit_tag "Acheter", class: "portal-btn portal-btn--block cowork-offer__btn"
+
+section.portal-block
+  .portal-block__head
+    h2.portal-section-title Réserver une journée
+  .cowork-cal
+    .cowork-cal__nav
+      = link_to "←", portal_coworking_path(month: @prev_month.strftime("%Y-%m")), class: "cowork-cal__navbtn", "aria-label": "Mois précédent"
+      span.cowork-cal__title = "#{t('date.month_names')[@month.month].capitalize} #{@month.year}"
+      = link_to "→", portal_coworking_path(month: @next_month.strftime("%Y-%m")), class: "cowork-cal__navbtn", "aria-label": "Mois suivant"
+    .cowork-cal__grid
+      - %w[Lun Mar Mer Jeu Ven].each do |dow|
+        .cowork-cal__dow = dow
+      - @weeks.each do |week|
+        - week.each do |cell|
+          - if cell.nil?
+            .cowork-day.cowork-day--empty
+          - else
+            = render "portal/coworking/day", cell: cell
+    p.cowork-cal__legend
+      | Coworking du lundi au vendredi · 3 bureaux par jour · annulation jusqu'à 8h le jour même.
+
+.portal-signoff
+  span.portal-hand à bientôt sous les arbres !

@@ -1,18 +1,32 @@
 - content_for :meta_title do
   | Mon espace client
 
+- coworking = @context == "coworking"
+
 header
-  h1.portal-title Bienvenue chez vous
-  p.portal-lead
-    | Retrouvez vos séjours aux 4 Sources. Entrez l'adresse email que vous nous avez communiquée : nous vous envoyons un code à usage unique — aucun mot de passe à retenir.
+  - if coworking
+    h1.portal-title Votre coworking
+    p.portal-lead
+      | Achetez vos journées de coworking et réservez en ligne. Entrez votre adresse email : nous vous envoyons un code à usage unique — pas de mot de passe, et votre espace est créé automatiquement.
+  - else
+    h1.portal-title Bienvenue chez vous
+    p.portal-lead
+      | Retrouvez vos séjours aux 4 Sources. Entrez l'adresse email que vous nous avez communiquée : nous vous envoyons un code à usage unique — aucun mot de passe à retenir.
 
 .portal-panel
   = form_with url: portal_code_path, method: :post do
+    = hidden_field_tag :context, (coworking ? "coworking" : "stays")
     .portal-field
       label.portal-label[for="email"] Votre adresse email
       = email_field_tag :email, @email, required: true, autofocus: true,
                         placeholder: "prenom@exemple.be", class: "portal-input"
     = submit_tag "Recevoir mon code", class: "portal-btn portal-btn--block"
+
+  .mt-5.text-center
+    - if coworking
+      = link_to "J'ai plutôt un séjour", portal_path, class: "portal-link"
+    - else
+      = link_to "Acheter du coworking", portal_path(context: "coworking"), class: "portal-link"
 
 .portal-signoff
   span.portal-hand à tout de suite sous les arbres

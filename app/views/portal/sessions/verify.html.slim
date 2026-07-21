@@ -19,4 +19,4 @@ header
     = submit_tag "Me connecter", class: "portal-btn portal-btn--block"
 
   .mt-5.text-center
-    = link_to "Recevoir un nouveau code", portal_path(email: @email), class: "portal-link"
+    = link_to "Recevoir un nouveau code", portal_path(email: @email, context: @context), class: "portal-link"
