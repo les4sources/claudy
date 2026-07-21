@@ -1,0 +1,5 @@
+/ Badge de statut de paiement d'un pack — DÉRIVÉ des Payment ancrés dessus.
+- classes = { "paid" => "bg-green-100 text-green-700", "pending" => "bg-amber-100 text-amber-700", "unpaid" => "bg-gray-100 text-gray-600" }
+- labels  = { "paid" => "payé", "pending" => "en attente", "unpaid" => "non payé" }
+span class="px-2 py-0.5 text-xs rounded #{classes[pack.payment_status]}"
+  = labels[pack.payment_status]

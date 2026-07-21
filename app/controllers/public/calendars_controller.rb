@@ -1,7 +1,11 @@
 class Public::CalendarsController < Public::BaseController
   layout "public"
 
-  CALENDAR_SPACE_NAMES = ["Grande Salle", "Petite Salle", "Cuisine professionnelle", "Coworking", "Bois"].freeze
+  # « Coworking » a été RETIRÉ de ce calendrier (amendement Michael 2026-07-21,
+  # epic #126) : les 3 bureaux vivent désormais dans le domaine coworking
+  # (`CoworkingPack` / `CoworkingReservation`), qui en est l'unique source de
+  # vérité. L'historique `SpaceBooking` de l'espace reste intact et lisible.
+  CALENDAR_SPACE_NAMES = ["Grande Salle", "Petite Salle", "Cuisine professionnelle", "Bois"].freeze
 
   def lodgings
     set_dates

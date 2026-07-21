@@ -90,11 +90,11 @@ class PricingModel
   end
 
   # API publique (AC-T2-12). Retourne un Quote.
-  def self.quote(stay_draft, deposit_rate: Pricing::Catalog::DEFAULT_DEPOSIT_RATE)
+  def self.quote(stay_draft, deposit_rate: Pricing::Catalog.default_deposit_rate)
     new(stay_draft, deposit_rate: deposit_rate).quote
   end
 
-  def initialize(stay_draft, deposit_rate: Pricing::Catalog::DEFAULT_DEPOSIT_RATE)
+  def initialize(stay_draft, deposit_rate: Pricing::Catalog.default_deposit_rate)
     @draft = stay_draft
     @deposit_rate = deposit_rate
   end
@@ -164,7 +164,7 @@ class PricingModel
   # --- Camping / bivouac : €/pers/nuit ---
   def camping_lines
     Array(read(:campings)).filter_map do |entry|
-      unit = Pricing::Catalog::CAMPING_PER_PERSON_NIGHT_CENTS[entry[:kind].to_s]
+      unit = Pricing::Catalog.camping_per_person_night_cents(entry[:kind])
       next if unit.nil?
       people = entry[:people].to_i
       nights = entry[:nights].to_i
@@ -184,7 +184,7 @@ class PricingModel
       nights = entry[:nights].to_i
       next if nights < 1
       Line.new(label: "Van / camping-car — #{nights} nuit(s)",
-               amount_cents: Pricing::Catalog::VAN_PER_NIGHT_CENTS * nights, category: :van)
+               amount_cents: Pricing::Catalog.van_per_night_cents * nights, category: :van)
     end
   end
 
@@ -220,11 +220,10 @@ class PricingModel
   # historiquement — pas de logique week-end sur ce canal ponctuel).
   def hall_space_entries
     Array(read(:halls)).filter_map do |entry|
-      key   = entry[:kind].to_s
-      rates = Pricing::Catalog::HALL_RATES[key]
-      next if rates.nil?
+      key = entry[:kind].to_s
+      next unless Pricing::Catalog.hall_kind?(key)
       period = entry[:period].to_s
-      unit   = rates[period]
+      unit   = Pricing::Catalog.hall_rate_cents(key, period)
       next if unit.nil?
       date = parse_space_date(entry[:date])
       date_label = date&.strftime("%-d/%m")
@@ -249,9 +248,7 @@ class PricingModel
 
     slots.flat_map do |space_key, periods|
       key = space_key.to_s
-      weekday_rates = Pricing::Catalog::HALL_RATES[key]
-      weekend_rates = Pricing::Catalog::HALL_RATES_WEEKEND[key]
-      next [] if weekday_rates.nil?
+      next [] unless Pricing::Catalog.hall_kind?(key)
       space_name = SPACE_NAMES[key] || key
 
       Array(periods).each_with_index.filter_map do |period, night_idx|
@@ -259,8 +256,7 @@ class PricingModel
         p       = period.to_s
         date    = stay_dates[night_idx]
         weekend = !!(date && [5, 6].include?(date.wday))
-        rates   = (weekend && weekend_rates) ? weekend_rates : weekday_rates
-        unit    = rates[p]
+        unit    = Pricing::Catalog.hall_rate_cents(key, p, weekend: weekend)
         next if unit.nil?
         period_label = PERIOD_LABELS[p] || p
         { key: key, date: date, period: p, weekend: weekend,
@@ -301,9 +297,7 @@ class PricingModel
   end
 
   def duo_line(entry, weekend)
-    rates = weekend ? Pricing::Catalog::HALL_RATES_WEEKEND["deux_salles"]
-                    : Pricing::Catalog::HALL_RATES["deux_salles"]
-    unit = rates[entry[:period]]
+    unit = Pricing::Catalog.hall_rate_cents("deux_salles", entry[:period], weekend: weekend)
     period_label = PERIOD_LABELS[entry[:period]] || entry[:period]
     Line.new(label: "Les 2 salles (duo) — #{entry[:position_label]}, #{period_label}",
              amount_cents: unit, category: :space)
@@ -319,7 +313,7 @@ class PricingModel
   # --- Repas : €/pers ---
   def meal_lines
     Array(read(:meals)).filter_map do |entry|
-      unit = Pricing::Catalog::MEAL_PER_PERSON_CENTS[entry[:kind].to_s]
+      unit = Pricing::Catalog.meal_per_person_cents(entry[:kind])
       next if unit.nil?
       people = entry[:people].to_i
       next if people < 1
@@ -344,7 +338,7 @@ class PricingModel
       end
       label = date_label ? "Terrasse — #{date_label}, #{people} pers" : "Terrasse — #{people} pers"
       Line.new(label: label,
-               amount_cents: Pricing::Catalog::TERRACE_PER_PERSON_DAY_CENTS * people,
+               amount_cents: Pricing::Catalog.terrace_per_person_day_cents * people,
                category: :terrace)
     end
   end
@@ -387,8 +381,8 @@ class PricingModel
   def pizza_party_lines
     Array(read(:pizza_parties)).filter_map do |entry|
       people = entry[:people].to_i
-      amount = Pricing::Catalog::PIZZA_PARTY_BASE_CENTS +
-               Pricing::Catalog::PIZZA_PARTY_PER_PERSON_CENTS * people
+      amount = Pricing::Catalog.pizza_party_base_cents +
+               Pricing::Catalog.pizza_party_per_person_cents * people
       Line.new(label: "Pizza Party — allumage + #{people} pers",
                amount_cents: amount)
     end
@@ -400,7 +394,7 @@ class PricingModel
     return [] if dogs < 1
     # Le flow auto ne facture qu'un seul chien, quel que soit le nombre demandé
     # (multi-chiens = hors flow, traité manuellement par Malau — AC-T2-09b/15).
-    [Line.new(label: "Supplément chien", amount_cents: Pricing::Catalog::DOG_SUPPLEMENT_CENTS)]
+    [Line.new(label: "Supplément chien", amount_cents: Pricing::Catalog.dog_supplement_cents)]
   end
 
   def read(method)

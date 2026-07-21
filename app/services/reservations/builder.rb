@@ -53,7 +53,7 @@ module Reservations
     # `price_override_cents` / `platform` (epic #81, Phase 3) : prix libre imposé
     # et attribution OTA — RÉSERVÉS au canal admin. Ignorés hors `admin: true`,
     # même sur param forgé (le funnel public ne les expose jamais).
-    def initialize(draft:, deposit_rate: Pricing::Catalog::DEFAULT_DEPOSIT_RATE,
+    def initialize(draft:, deposit_rate: Pricing::Catalog.default_deposit_rate,
                    admin: false, status: nil, source: nil, skip_availability: false,
                    price_override_cents: nil, platform: nil)
       @draft = draft

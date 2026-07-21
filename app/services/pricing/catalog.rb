@@ -137,13 +137,130 @@ module Pricing
     PIZZA_PARTY_BASE_CENTS = 4_000
     PIZZA_PARTY_PER_PERSON_CENTS = 700
 
-    def lodging_rate(name)
-      LODGING_RATES[name]
+    # Packs de coworking (epic #126, Phase 1) : prix par nombre de journées.
+    COWORKING_PACKS = {
+      1  =>  2_000, # 20 €
+      5  =>  8_000, # 80 €
+      10 => 16_000, # 160 €
+      20 => 30_000  # 300 €
+    }.freeze
+
+    # ------------------------------------------------------------------
+    # Façade de lecture (issue #124) : BASE D'ABORD, constantes en repli.
+    #
+    # Chaque accesseur ci-dessous interroge `Pricing::Rates` (table `rates`,
+    # mémoïsée pour la requête) puis retombe sur la constante codée juste
+    # au-dessus quand la clé n'est pas paramétrée. Les constantes restent la
+    # source du seed (`rake rates:seed_from_catalog`) et le filet de sécurité :
+    # à barème identique en base, aucun devis ne bouge.
+    #
+    # Les consommateurs (PricingModel, drafts, vues) DOIVENT passer par ces
+    # méthodes et non plus lire les constantes directement.
+    # ------------------------------------------------------------------
+
+    # Slug de clé stable pour un nom d'hébergement ("La Chevêche" → la_cheveche).
+    def lodging_key(name)
+      I18n.transliterate(name.to_s).tr("-", " ").parameterize(separator: "_")
     end
 
-    # Prix d'un hamac (RentalItem) pour une nuit. Lookup DB d'abord, fallback
-    # sur HAMAC_FALLBACK_CENTS si le RentalItem n'est pas encore seedé.
+    # Prix d'un pack de coworking — table `rates` (issue #124) d'abord,
+    # constante en repli, comme le reste de la façade.
+    def coworking_pack_cents(days)
+      fallback = COWORKING_PACKS[days.to_i]
+      return nil if fallback.nil?
+
+      Pricing::Rates.cents_or("coworking.pack_#{days.to_i}", fallback)
+    end
+
+    def default_deposit_rate
+      Pricing::Rates.rate_or("deposit.default_rate", DEFAULT_DEPOSIT_RATE)
+    end
+
+    def dog_supplement_cents
+      Pricing::Rates.cents_or("dog.supplement", DOG_SUPPLEMENT_CENTS)
+    end
+
+    def camping_per_person_night_cents(kind)
+      return nil unless CAMPING_PER_PERSON_NIGHT_CENTS.key?(kind.to_s)
+
+      Pricing::Rates.cents_or("camping.#{kind}_per_person_night",
+                              CAMPING_PER_PERSON_NIGHT_CENTS[kind.to_s])
+    end
+
+    def van_per_night_cents
+      Pricing::Rates.cents_or("van.per_night", VAN_PER_NIGHT_CENTS)
+    end
+
+    def terrace_per_person_day_cents
+      Pricing::Rates.cents_or("terrace.per_person_day", TERRACE_PER_PERSON_DAY_CENTS)
+    end
+
+    def meal_per_person_cents(kind)
+      return nil unless MEAL_PER_PERSON_CENTS.key?(kind.to_s)
+
+      Pricing::Rates.cents_or("meal.#{kind}.per_person", MEAL_PER_PERSON_CENTS[kind.to_s])
+    end
+
+    def meal_kinds
+      MEAL_PER_PERSON_CENTS.keys
+    end
+
+    def pizza_party_base_cents
+      Pricing::Rates.cents_or("pizza_party.base", PIZZA_PARTY_BASE_CENTS)
+    end
+
+    def pizza_party_per_person_cents
+      Pricing::Rates.cents_or("pizza_party.per_person", PIZZA_PARTY_PER_PERSON_CENTS)
+    end
+
+    # Barème d'un espace pour une période, tarif semaine ou week-end.
+    # Retourne nil si l'espace ou la période n'existe pas au catalogue.
+    def hall_rate_cents(kind, period, weekend: false)
+      # Un espace sans grille week-end retombe sur son tarif semaine (parité
+      # avec le comportement historique de PricingModel).
+      weekend  = weekend && HALL_RATES_WEEKEND.key?(kind.to_s)
+      table    = weekend ? HALL_RATES_WEEKEND : HALL_RATES
+      fallback = table.dig(kind.to_s, period.to_s)
+      return nil if fallback.nil?
+
+      Pricing::Rates.cents_or(hall_key(kind, period, weekend: weekend), fallback)
+    end
+
+    # true si l'espace existe au catalogue (semaine — référence structurelle).
+    def hall_kind?(kind)
+      HALL_RATES.key?(kind.to_s)
+    end
+
+    def hall_key(kind, period, weekend: false)
+      "#{weekend ? 'hall_weekend' : 'hall'}.#{kind}.#{period}"
+    end
+
+    def lodging_rate(name)
+      base = LODGING_RATES[name]
+      return nil if base.nil?
+
+      slug = lodging_key(name)
+      Pricing::LodgingRate.new(
+        name: base.name,
+        first_night_cents: Pricing::Rates.cents_or("lodging.#{slug}.first_night",
+                                                   base.first_night_cents),
+        extra_night_cents: Pricing::Rates.cents_or("lodging.#{slug}.extra_night",
+                                                   base.extra_night_cents),
+        named_packages: base.named_packages.to_h { |nights, package|
+          [nights, package.merge(
+            amount_cents: Pricing::Rates.cents_or("lodging.#{slug}.package_#{nights}",
+                                                  package[:amount_cents])
+          )]
+        }
+      )
+    end
+
+    # Prix d'un hamac (RentalItem) pour une nuit. Tarif paramétré d'abord, puis
+    # lookup RentalItem, puis fallback sur HAMAC_FALLBACK_CENTS.
     def hamac_rate(kind)
+      configured = Pricing::Rates.cents("hamac.#{kind}")
+      return configured if configured
+
       db_name = kind.to_s == "double" ? "Hamac double" : "Hamac simple"
       RentalItem.find_by(name: db_name)&.price_cents || HAMAC_FALLBACK_CENTS[kind.to_s]
     end

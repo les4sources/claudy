@@ -33,6 +33,11 @@ Rails.application.routes.draw do
       end
     end
   end
+  # Coworking (epic #126, Phase 1) — domaine indépendant des séjours : packs de
+  # journées achetés par un client, journées posées dans la limite des crédits.
+  resources :coworking_packs, only: [:index, :show, :new, :create, :destroy] do
+    resources :coworking_reservations, only: [:create, :destroy]
+  end
   resources :decisions
   get "organisation/decisions", to: "decisions#index", as: :organisation_decisions
   resources :experiences do
@@ -51,6 +56,7 @@ Rails.application.routes.draw do
   resources :payments, only: [:index, :show, :destroy]
   resources :products
   resources :projects
+  resources :rates, only: [:index, :update]
   resources :rental_items
   resources :reports
   resources :roles
@@ -204,6 +210,15 @@ Rails.application.routes.draw do
   # Page client du séjour-composite (epic #26, Phase 1) — jeton, sans Devise.
   # Route à la racine (et non sous /public) : c'est l'URL envoyée aux clients et
   # la cible des redirections Stripe, on la garde courte, comme /reservation/sejour.
+  # Portail client (epic #126, Phase 2) — connexion par code à usage unique
+  # envoyé par email. Session propre (cookie signé dédié), aucun lien avec
+  # Devise : le portail n'ouvre JAMAIS d'accès admin.
+  get    "portail",              to: "portal/sessions#new",         as: :portal
+  post   "portail/code",         to: "portal/sessions#create_code",  as: :portal_code
+  post   "portail/connexion",    to: "portal/sessions#create",       as: :portal_login
+  delete "portail/deconnexion",  to: "portal/sessions#destroy",      as: :portal_logout
+  get    "portail/sejours",      to: "portal/stays#index",           as: :portal_stays
+
   get "sejour/:token", to: "public/stays#show", as: :public_stay
 
   # Paiement du solde exigible du séjour (epic #55, Phase 3) — POST scellé par le

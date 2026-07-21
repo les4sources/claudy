@@ -1,0 +1,7 @@
+---
+fr:
+  portal:
+    session:
+      required: "Connectez-vous pour accéder à votre espace client."
+      invalid_code: "Ce code est incorrect ou expiré. Demandez-en un nouveau si besoin."
+      signed_out: "Vous êtes déconnecté."
