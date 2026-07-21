@@ -36,6 +36,19 @@ RSpec.describe "Stay payments (modale séjour)", type: :request do
   context "authentifié" do
     before { sign_in admin }
 
+    it "modifie montant, moyen et statut d'un paiement enregistré" do
+      payment = Payment.create!(stay: stay, amount_cents: 5_000, payment_method: "cash", status: "pending")
+
+      patch stay_payment_path(stay, payment),
+            params: { payment: { amount: 75, payment_method: "bank_transfer", status: "paid" } }
+
+      expect(response).to redirect_to(stay_path(stay))
+      payment.reload
+      expect(payment.amount_cents).to eq(7_500)
+      expect(payment.payment_method).to eq("bank_transfer")
+      expect(payment.status).to eq("paid")
+    end
+
     describe "ajout d'un paiement" do
       it "crée le paiement rattaché au séjour et redirige vers la fiche" do
         expect {

@@ -185,21 +185,38 @@ div id="stay-details-#{@stay.id}"
           ul.divide-y.divide-gray-100
             - stay_payments.each do |payment|
               - p = payment.decorate
-              li.py-2.text-sm.flex.items-center.justify-between.gap-3
-                .flex.items-center.gap-2.min-w-0
-                  span.text-lg.shrink-0 = p.payment_method_emoji
-                  .min-w-0
-                    .text-gray-900.font-medium = p.amount
-                    .text-gray-500 = p.payment_method
-                .flex.items-center.gap-3.shrink-0
-                  = p.status
-                  span.text-gray-500 = p.created_at
-                  / Bascule de statut — seulement pour les paiements DIRECTS du séjour.
-                  - if payment.stay_id.present?
-                    - if payment.pending?
-                      = button_to "Marquer payé", stay_payment_path(@stay, payment), method: :patch, params: { payment: { status: "paid" } }, class: "px-2 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700"
-                    - else
-                      = button_to "Repasser en attente", stay_payment_path(@stay, payment), method: :patch, params: { payment: { status: "pending" } }, class: "px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-medium hover:bg-amber-200"
+              li.py-2.text-sm
+                .flex.items-center.justify-between.gap-3
+                  .flex.items-center.gap-2.min-w-0
+                    span.text-lg.shrink-0 = p.payment_method_emoji
+                    .min-w-0
+                      .text-gray-900.font-medium = p.amount
+                      .text-gray-500 = p.payment_method
+                  .flex.items-center.gap-3.shrink-0
+                    = p.status
+                    span.text-gray-500 = p.created_at
+                    / Bascule de statut — seulement pour les paiements DIRECTS du séjour.
+                    - if payment.stay_id.present?
+                      - if payment.pending?
+                        = button_to "Marquer payé", stay_payment_path(@stay, payment), method: :patch, params: { payment: { status: "paid" } }, class: "px-2 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700"
+                      - else
+                        = button_to "Repasser en attente", stay_payment_path(@stay, payment), method: :patch, params: { payment: { status: "pending" } }, class: "px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-medium hover:bg-amber-200"
+                / Édition complète (montant / moyen / statut) — disclosure native,
+                / même contrôleur que la bascule (StayPaymentsController#update).
+                - if payment.stay_id.present?
+                  details.mt-1
+                    summary.text-xs.text-indigo-600.cursor-pointer.select-none Modifier
+                    = form_with url: stay_payment_path(@stay, payment), method: :patch, class: "mt-2 flex flex-wrap items-end gap-3 bg-gray-50 rounded-md p-2" do
+                      label.text-xs.text-gray-600
+                        | Montant (€)
+                        = number_field_tag "payment[amount]", (payment.amount_cents / 100.0).then { |e| format("%g", e) }, step: "0.01", min: "0.01", required: true, class: "block w-24 rounded border-gray-300 text-sm py-1"
+                      label.text-xs.text-gray-600
+                        | Moyen
+                        = select_tag "payment[payment_method]", options_for_select([["Liquide", "cash"], ["Virement", "bank_transfer"], ["Carte", "card"], ["En ligne", "stripe"]], payment.payment_method), class: "block rounded border-gray-300 text-sm py-1"
+                      label.text-xs.text-gray-600
+                        | Statut
+                        = select_tag "payment[status]", options_for_select([["Encaissé", "paid"], ["En attente", "pending"]], payment.status), class: "block rounded border-gray-300 text-sm py-1"
+                      = submit_tag "Enregistrer", class: "px-3 py-1.5 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700 cursor-pointer"
         - else
           p.text-sm.text-gray-500 Aucun paiement enregistré pour ce séjour.
 
