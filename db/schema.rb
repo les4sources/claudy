@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_20_200100) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_21_011642) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -498,6 +498,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_20_200100) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["human_id"], name: "index_projects_on_human_id"
+  end
+
+  create_table "rates", force: :cascade do |t|
+    t.string "key", null: false
+    t.integer "amount_cents", default: 0, null: false
+    t.string "label"
+    t.string "unit", default: "cents", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_rates_on_key", unique: true
   end
 
   create_table "rental_items", force: :cascade do |t|
