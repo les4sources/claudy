@@ -1,0 +1,19 @@
+- content_for :meta_title do
+  | Mon espace client
+
+.px-6.py-8.md:px-10.space-y-6
+  h1.text-2xl.font-semibold.text-gray-900 Entrez votre code
+  / Message NEUTRE : identique pour un email connu, inconnu ou fourre-tout.
+  / Rien ici ne permet de savoir si un compte existe.
+  p.text-sm.text-gray-500
+    | Si un compte existe pour cette adresse, un code vient d'être envoyé. Il est valable 15 minutes.
+
+  = form_with url: portal_login_path, method: :post, class: "space-y-4 max-w-sm" do
+    = hidden_field_tag :email, @email
+    div
+      label.block.text-sm.font-medium.text-gray-700.mb-1[for="code"] Code à 6 chiffres
+      = text_field_tag :code, nil, required: true, autofocus: true, inputmode: "numeric", autocomplete: "one-time-code", maxlength: 6, class: "w-full rounded-md border-gray-300 text-sm tracking-widest"
+    = submit_tag "Me connecter",
+                 class: "inline-flex items-center rounded-md border border-transparent bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 cursor-pointer"
+
+  = link_to "Recevoir un nouveau code", portal_path(email: @email), class: "text-sm text-emerald-600 hover:underline"

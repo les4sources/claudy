@@ -1,0 +1,7 @@
+---
+nl:
+  portal:
+    session:
+      required: "Log in om toegang te krijgen tot uw klantenruimte."
+      invalid_code: "Deze code is onjuist of verlopen. Vraag zo nodig een nieuwe aan."
+      signed_out: "U bent afgemeld."

@@ -1,0 +1,7 @@
+---
+en:
+  portal:
+    session:
+      required: "Sign in to access your customer area."
+      invalid_code: "This code is incorrect or expired. Request a new one if needed."
+      signed_out: "You have been signed out."

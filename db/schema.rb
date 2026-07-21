@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_21_012425) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_21_013149) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -506,6 +506,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_21_012425) do
     t.index ["id"], name: "index_payments_on_id", unique: true
     t.index ["space_booking_id"], name: "index_payments_on_space_booking_id"
     t.index ["stay_id"], name: "index_payments_on_stay_id"
+  end
+
+  create_table "portal_otps", force: :cascade do |t|
+    t.citext "email", null: false
+    t.string "code_digest", null: false
+    t.datetime "expires_at", null: false
+    t.integer "attempts", default: 0, null: false
+    t.datetime "consumed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email", "created_at"], name: "index_portal_otps_on_email_and_created_at"
   end
 
   create_table "products", force: :cascade do |t|
