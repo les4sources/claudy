@@ -1,0 +1,17 @@
+p Bonjour,
+p
+  | Merci ! Votre pack de coworking est confirmé et prêt à l'emploi.
+ul
+  li
+    strong Journées :
+    = " #{@pack.days_total}"
+  li
+    strong Montant réglé :
+    = " #{@amount}"
+  li
+    strong Valable jusqu'au :
+    = " #{l(@pack.expires_at.to_date, format: :long)}"
+p
+  | Rendez-vous sur votre portail pour poser vos journées, du lundi au vendredi.
+p = link_to "Réserver une journée", portal_coworking_url
+p À bientôt sous les arbres.

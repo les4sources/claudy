@@ -1,0 +1,24 @@
+- if cell[:past]
+  .cowork-day.cowork-day--past
+    span.cowork-day__num = cell[:date].day
+- elsif cell[:reservation]
+  .cowork-day.cowork-day--mine
+    span.cowork-day__num = cell[:date].day
+    span.cowork-day__tag réservé
+    - if cell[:cancellable]
+      = form_with url: portal_coworking_reservation_path(cell[:reservation], month: @month.strftime("%Y-%m")), method: :delete, data: { turbo: false } do
+        = submit_tag "Annuler", class: "cowork-day__cancel"
+    - else
+      span.cowork-day__note trop tard
+- elsif cell[:full]
+  .cowork-day.cowork-day--full
+    span.cowork-day__num = cell[:date].day
+    span.cowork-day__tag complet
+- else
+  = form_with url: portal_coworking_reservations_path, method: :post, data: { turbo: false }, class: "cowork-day-form" do
+    = hidden_field_tag :date, cell[:date].iso8601
+    = hidden_field_tag :month, @month.strftime("%Y-%m")
+    button.cowork-day.cowork-day--free type="submit"
+      span.cowork-day__num = cell[:date].day
+      span.cowork-day__tag
+        = "#{cell[:remaining]} libre#{'s' if cell[:remaining] > 1}"

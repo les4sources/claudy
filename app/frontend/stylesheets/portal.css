@@ -401,3 +401,200 @@
 }
 .portal-flash--alert { background: var(--p-accent-tint); color: #7a3d13; border: 1px solid rgba(201, 123, 61, 0.35); }
 .portal-flash--notice { background: var(--p-primary-tint); color: var(--p-primary); border: 1px solid rgba(11, 61, 58, 0.2); }
+
+/* ===========================================================================
+   Coworking (epic #126, Phase 3) — solde, boutique de packs, calendrier.
+   Même vocabulaire visuel que les cartes séjour : surface crème, bord sable,
+   titrage serif, accent ambre. Plain-CSS (pas de variantes Tailwind exotiques).
+   =========================================================================== */
+
+.portal-header__actions { display: flex; align-items: center; gap: 1rem; }
+
+/* --- Solde ----------------------------------------------------------------- */
+.cowork-balance {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  background: var(--p-surface);
+  border: 2px solid var(--p-primary);
+  border-radius: var(--p-radius-lg);
+  box-shadow: var(--p-shadow-md);
+  padding: 1.4rem 1.6rem;
+}
+.cowork-balance__num {
+  font-family: var(--p-serif);
+  font-weight: 600;
+  font-size: clamp(2rem, 7vw, 3rem);
+  line-height: 1;
+  color: var(--p-primary);
+}
+.cowork-balance__label { font-size: 0.95rem; color: var(--p-muted); }
+
+.cowork-packs { list-style: none; margin: 1rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.cowork-pack {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.9rem;
+  background: var(--p-past-bg);
+  border: 1px solid var(--p-past-border);
+  border-radius: var(--p-radius-md);
+  padding: 0.65rem 0.95rem;
+}
+.cowork-pack__days { font-weight: 600; color: var(--p-text); font-variant-numeric: tabular-nums; }
+.cowork-pack__meta { font-size: 0.82rem; color: var(--p-muted); flex: 1 1 8rem; }
+
+.cowork-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+.cowork-badge--paid { background: var(--p-primary-tint); color: var(--p-primary); }
+.cowork-badge--pending { background: var(--p-accent-tint); color: #7a3d13; }
+.cowork-badge--unpaid { background: #f3e0dc; color: var(--p-danger); }
+
+/* --- Boutique de packs ----------------------------------------------------- */
+.cowork-shop {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+@media (min-width: 640px) { .cowork-shop { grid-template-columns: repeat(4, 1fr); } }
+
+.cowork-offer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--p-surface);
+  border: 1px solid var(--p-border);
+  border-radius: var(--p-radius-md);
+  box-shadow: var(--p-shadow-sm);
+  padding: 1rem 0.75rem;
+  text-align: center;
+}
+.cowork-offer__days {
+  font-family: var(--p-serif);
+  font-weight: 600;
+  font-size: 1.5rem;
+  color: var(--p-primary);
+  line-height: 1;
+}
+.cowork-offer__unit { display: block; font-family: var(--p-sans); font-size: 0.72rem; font-weight: 400; color: var(--p-muted); }
+.cowork-offer__price { font-size: 0.95rem; font-weight: 600; color: var(--p-text); }
+.cowork-offer__btn { margin-top: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.85rem; }
+
+/* --- Calendrier ------------------------------------------------------------ */
+.cowork-cal {
+  background: var(--p-surface);
+  border: 1px solid var(--p-border);
+  border-radius: var(--p-radius-lg);
+  box-shadow: var(--p-shadow-sm);
+  padding: 1.1rem;
+}
+.cowork-cal__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
+}
+.cowork-cal__title {
+  font-family: var(--p-serif);
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--p-primary);
+}
+.cowork-cal__navbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: var(--p-radius-md);
+  border: 1px solid var(--p-border);
+  background: var(--p-bg);
+  color: var(--p-primary);
+  text-decoration: none;
+  font-size: 1.1rem;
+}
+.cowork-cal__navbtn:hover { background: var(--p-primary-tint); }
+
+.cowork-cal__grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.4rem;
+}
+.cowork-cal__dow {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--p-muted);
+  padding-bottom: 0.2rem;
+}
+
+.cowork-day-form { display: contents; }
+
+.cowork-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  min-height: 3.6rem;
+  padding: 0.4rem 0.25rem;
+  border-radius: var(--p-radius-sm);
+  border: 1px solid var(--p-border);
+  background: var(--p-bg);
+  text-align: center;
+  width: 100%;
+  font-family: var(--p-sans);
+  cursor: default;
+}
+.cowork-day__num { font-weight: 600; font-size: 0.95rem; color: var(--p-text); }
+.cowork-day__tag { font-size: 0.62rem; line-height: 1.1; color: var(--p-muted); }
+.cowork-day__note { font-size: 0.6rem; color: var(--p-muted); }
+
+.cowork-day--empty { border: none; background: transparent; min-height: 0; }
+.cowork-day--past { opacity: 0.45; }
+.cowork-day--past .cowork-day__num { color: var(--p-muted); }
+
+.cowork-day--full { background: var(--p-surface-sunken); border-color: var(--p-past-border); }
+.cowork-day--full .cowork-day__tag { color: var(--p-danger); }
+
+button.cowork-day--free {
+  cursor: pointer;
+  background: var(--p-primary-tint);
+  border-color: var(--p-primary);
+  transition: background-color 140ms var(--p-ease), transform 100ms var(--p-ease);
+}
+button.cowork-day--free .cowork-day__tag { color: var(--p-primary); font-weight: 600; }
+button.cowork-day--free:hover { background: #d3e5df; }
+button.cowork-day--free:active { transform: translateY(1px); }
+
+.cowork-day--mine {
+  background: var(--p-surface);
+  border: 2px solid var(--p-accent);
+}
+.cowork-day--mine .cowork-day__tag { color: var(--p-accent); font-weight: 600; }
+.cowork-day__cancel {
+  margin-top: 0.15rem;
+  border: none;
+  background: none;
+  color: var(--p-danger);
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cowork-cal__legend {
+  margin-top: 0.9rem;
+  font-size: 0.78rem;
+  color: var(--p-muted);
+  line-height: 1.5;
+}

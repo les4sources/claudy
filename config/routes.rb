@@ -225,6 +225,13 @@ Rails.application.routes.draw do
   delete "portail/deconnexion",  to: "portal/sessions#destroy",      as: :portal_logout
   get    "portail/sejours",      to: "portal/stays#index",           as: :portal_stays
 
+  # Coworking (epic #126, Phase 3) — solde, achat de packs (Stripe Checkout) et
+  # réservation/annulation de journées, en self-service.
+  get    "portail/coworking",              to: "portal/coworking#index",    as: :portal_coworking
+  post   "portail/coworking/achat",        to: "portal/coworking#purchase", as: :portal_coworking_purchase
+  post   "portail/coworking/reservations", to: "portal/coworking_reservations#create", as: :portal_coworking_reservations
+  delete "portail/coworking/reservations/:id", to: "portal/coworking_reservations#destroy", as: :portal_coworking_reservation
+
   get "sejour/:token", to: "public/stays#show", as: :public_stay
 
   # Paiement du solde exigible du séjour (epic #55, Phase 3) — POST scellé par le

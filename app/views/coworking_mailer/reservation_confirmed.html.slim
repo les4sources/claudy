@@ -1,0 +1,9 @@
+p Bonjour,
+p
+  | Votre journée de coworking est réservée :
+p
+  strong = l(@reservation.date, format: :long)
+p
+  | Vous pouvez l'annuler jusqu'à 8h le jour même depuis votre portail.
+p = link_to "Voir mes réservations", portal_coworking_url
+p À bientôt sous les arbres.

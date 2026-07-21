@@ -46,6 +46,11 @@ class Customer < ApplicationRecord
   # Payments are derived read-only through the stays graph (Payment schema is
   # untouched — Payment.booking_id stays NOT NULL). No payment.stay_id FK.
   has_many :payments, through: :stays
+  # Coworking (epic #126) : domaine indépendant des séjours. Un client achète
+  # des packs et pose ses journées ; les paiements coworking s'ancrent sur le
+  # pack, pas sur un séjour, donc ils ne transitent pas par `payments`.
+  has_many :coworking_packs, dependent: :restrict_with_error
+  has_many :coworking_reservations, dependent: :restrict_with_error
 
   has_paper_trail
   has_soft_deletion default_scope: true

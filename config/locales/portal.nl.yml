@@ -3,5 +3,6 @@ nl:
   portal:
     session:
       required: "Log in om toegang te krijgen tot uw klantenruimte."
+      coworking_required: "Vul uw e-mailadres in om uw coworking te kopen en te reserveren."
       invalid_code: "Deze code is onjuist of verlopen. Vraag zo nodig een nieuwe aan."
       signed_out: "U bent afgemeld."
