@@ -64,6 +64,41 @@ RSpec.describe "Portail client — Mes séjours", type: :request do
     expect(response.body).not_to include("NE PAS DIRE AU CLIENT")
   end
 
+  it "sépare à venir / passés et met les à venir en tête" do
+    past   = stay_for(ana, arrival: Date.today - 30, departure: Date.today - 28)
+    future = stay_for(ana, arrival: Date.today + 10, departure: Date.today + 12)
+
+    sign_in_portal_as("ana@example.com")
+    get portal_stays_path
+
+    expect(response.body).to include("À venir")
+    expect(response.body).to include("Séjours passés")
+    # La section « À venir » précède la section « Séjours passés ».
+    expect(response.body.index("À venir")).to be < response.body.index("Séjours passés")
+    expect(response.body.index(future.token)).to be < response.body.index(past.token)
+  end
+
+  it "limite les passés à 5 visibles et cache le reste derrière « Voir plus »" do
+    # 8 séjours passés + 1 à venir.
+    past_stays = (1..8).map do |i|
+      stay_for(ana, arrival: Date.today - (i * 10 + 2), departure: Date.today - (i * 10))
+    end
+    stay_for(ana, arrival: Date.today + 5, departure: Date.today + 7)
+
+    sign_in_portal_as("ana@example.com")
+    get portal_stays_path
+
+    # Contrôle « Voir plus » présent, avec le décompte des séjours cachés (8 - 5 = 3).
+    expect(response.body).to include("Voir 3 séjours de plus")
+    expect(response.body).to include("<details")
+
+    # Les 8 séjours passés sont tous dans le DOM (les 3 en trop derrière le
+    # disclosure, mais bien rendus — chaque séjour garde son lien token).
+    past_stays.each do |stay|
+      expect(response.body).to include(public_stay_path(stay.token))
+    end
+  end
+
   it "affiche un état vide propre" do
     sign_in_portal_as("ana@example.com")
     get portal_stays_path
