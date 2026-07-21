@@ -1,5 +1,9 @@
-- zIndex = human_roles.count * 10 - 10
-- human_roles.each do |human_role|
+/ Un HumanRole historique peut pointer un membre parti : `human` revient nil
+/ (default_scope des Humans exclut les inactifs) — on l'écarte au lieu de
+/ planter le calendrier (Sentry CLAUDY-7A, novembre 2023).
+- visible_roles = human_roles.select { |hr| hr.human.present? }
+- zIndex = visible_roles.count * 10 - 10
+- visible_roles.each do |human_role|
   .relative.inline-block
     = image_tag human_role.human.photo_url(:thumb),
                 class: "relative z-#{zIndex} inline-block h-10 w-10 rounded-full ring-2 my-2 ring-white hover:shadow-lg transition",
