@@ -40,7 +40,8 @@ fusion depuis la fiche client (retour fiche, sessionStorage scopé) · notes sé
 ## Volet D — En cours / cette nuit
 
 - [x] **D.1 « Les 2 salles »** — remise duo au devis (funnel + admin), conversion appliquée en local, espace soft-deleté. PR #132.
-- [ ] **D.2 Nuit du 21/07 (agent nocturne)** — #124 Paramètres > Tarifs · #127 Coworking modèle+admin+calendrier (⚠ retirer l'espace « Coworking » du canal espaces, cf. commentaire) · #128 Portail client OTP + Mes séjours · #133 Modification de séjour par le client (demande validée équipe, delta sur solde, IBAN remboursement 10 j post-séjour). Ensuite : #129, #130 (agent:ready après merges amont). Epic #126.
+- [x] **D.2 Nuit du 21/07 (agent nocturne)** — LIVRÉ et mergé le 21/07 matin (main `c964dcb`, 1086 ex / 0 failure) : #124 Tarifs (PR #134) · #127 Coworking Phase 1 (PR #135, conflit #124 résolu — packs raccordés à la façade `Pricing::Rates`, + 4 clés `coworking.pack_*` ajoutées au seed) · #128 Portail OTP + Mes séjours (PR #136) · #133 Modification de séjour client (PR #137). #129/#130 labellisées `agent:ready` pour la nuit suivante.
+- [ ] **D.3 Validations à l'œil (issues des PR nocturnes)** — écrans Paramètres > Coworking + bloc calendrier 💻 (PR #135, zéro capture) · les 3 écrans du portail dont « Mes séjours » (PR #136) · formulaire client de modification (grille nuit par nuit préremplie) + diff admin sur un vrai cas (PR #137). À trancher : portail trilingue ? rate-limit sur POST /portail/code ? repas modifiables par le client ?
 
 ## Horizon (ISA, non séquencé)
 
