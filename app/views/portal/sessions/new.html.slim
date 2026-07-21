@@ -1,0 +1,14 @@
+- content_for :meta_title do
+  | Mon espace client
+
+.px-6.py-8.md:px-10.space-y-6
+  h1.text-2xl.font-semibold.text-gray-900 Mon espace client
+  p.text-sm.text-gray-500
+    | Entrez l'adresse email que vous nous avez communiquée. Nous vous envoyons un code à usage unique — pas de mot de passe à retenir.
+
+  = form_with url: portal_code_path, method: :post, class: "space-y-4 max-w-sm" do
+    div
+      label.block.text-sm.font-medium.text-gray-700.mb-1[for="email"] Votre adresse email
+      = email_field_tag :email, @email, required: true, autofocus: true, class: "w-full rounded-md border-gray-300 text-sm"
+    = submit_tag "Recevoir mon code",
+                 class: "inline-flex items-center rounded-md border border-transparent bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 cursor-pointer"
