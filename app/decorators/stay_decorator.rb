@@ -78,6 +78,24 @@ class StayDecorator < ApplicationDecorator
     parts.any? ? parts.join(" · ") : "—"
   end
 
+  # Notes INTERNES agrégées : celle du séjour + celles portées par les
+  # bookables historiques (Booking/SpaceBooking, colonnes `notes`) — la plupart
+  # des notes privées vivent encore là (399 bookings + 255 espaces au
+  # 2026-07-21). Chaque entrée = { source:, text: } ; jamais exposé côté client.
+  def internal_notes_entries
+    entries = []
+    entries << { source: "Séjour", text: object.notes } if object.notes.present?
+    object.stay_items.each do |item|
+      bookable = item.bookable
+      note = bookable.try(:notes)
+      next if note.blank? || note == object.notes
+
+      label = item.bookable_type == "SpaceBooking" ? "Espaces" : "Hébergement"
+      entries << { source: label, text: note }
+    end
+    entries.uniq { |e| e[:text] }
+  end
+
   # Montant formaté d'un bookable (Booking/SpaceBooking/Camping/Van) ou d'un repas.
   def formatted_item_amount(record)
     money(record.try(:price_cents))
