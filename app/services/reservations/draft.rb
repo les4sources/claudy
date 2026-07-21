@@ -22,6 +22,11 @@ module Reservations
                   # groupe/organisation. Portés à la CRÉATION d'un nouveau client.
                   :customer_type, :organization_name,
                   :adults, :children,
+                  # Catégorie de séjour (Michael 2026-07-21) — clé stable
+                  # `Stay::CATEGORIES`. Portée par le funnel public (étape
+                  # coordonnées) ET le form admin ; posée telle quelle sur le Stay
+                  # à la création/édition. Optionnelle (nil autorisé).
+                  :category,
                   # Chambres seules (epic #81, Phase 5) : mode d'occupation de
                   # l'hébergement — "lodging" (gîte entier, défaut) ou "rooms"
                   # (sous-ensemble de chambres du gîte). `room_ids` porte les
@@ -66,6 +71,7 @@ module Reservations
       @email             = attrs[:email].presence
       @phone             = attrs[:phone].presence
       @group_name        = attrs[:group_name].presence
+      @category          = attrs[:category].presence
       @customer_type     = attrs[:customer_type].presence || "individual"
       @organization_name = attrs[:organization_name].presence
     end
@@ -162,6 +168,7 @@ module Reservations
         email:              email,
         phone:              phone,
         group_name:         group_name,
+        category:           category,
         customer_type:      customer_type,
         organization_name:  organization_name
       }

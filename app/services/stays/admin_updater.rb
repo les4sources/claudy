@@ -69,6 +69,10 @@ module Stays
           customer:             upsert_customer!,
           status:               stay_status,
           source:               stay_source,
+          # Catégorie (Michael 2026-07-21) : reflète le `<select>` du form admin,
+          # reconstruit par `DraftReconstructor` à l'ouverture — donc une édition
+          # sans y toucher la PRÉSERVE. Vidée → nil.
+          category:             @draft.category,
           price_override_cents: @requested_price_override_cents.presence
         )
         reconcile_lodging!

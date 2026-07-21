@@ -41,6 +41,11 @@ module Stays
         adults:         booking&.adults,
         children:       booking&.children,
         group_name:     booking&.group_name,
+        # Catégorie (Michael 2026-07-21) : reconstruite depuis le Stay pour que
+        # l'édition admin ET la modification client (proposed_draft) la portent —
+        # sinon une approbation de modif client l'effacerait. Vit sur le Stay,
+        # PAS sur un bookable : source unique = `@stay.category`.
+        category:       @stay.category,
         first_name:     @stay.customer&.first_name,
         last_name:      @stay.customer&.last_name,
         email:          @stay.customer&.email,
