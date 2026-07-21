@@ -34,6 +34,14 @@ module Payments
         success_url: return_url,
         cancel_url: return_url,
         customer_email: prefill_email,
+        # Réconciliation comptable : catégorie stable + références métier dans
+        # les métadonnées du PaymentIntent (visibles dashboard + exports).
+        category: "sejour",
+        references: {
+          "stay_id"    => @payment.stay&.id,
+          "booking_id" => @payment.booking_id,
+          "client"     => client_reference_label
+        }.compact,
         item: {
           id: @payment.id,
           name: checkout_label,
@@ -57,6 +65,15 @@ module Payments
     # Libellé lisible par le CLIENT sur la page Stripe — plus de token brut :
     # les dates situent immédiatement le séjour. Repli générique sans dates ;
     # les paiements historiques booking-seuls gardent leur libellé d'origine.
+    # « Nom Prénom / Organisation » — pour reconnaître le paiement d'un coup
+    # d'œil dans Stripe sans ouvrir Claudy.
+    def client_reference_label
+      customer = @payment.stay&.customer
+      return customer.display_name if customer.respond_to?(:display_name) && customer&.display_name.present?
+
+      [@payment.booking&.firstname, @payment.booking&.lastname].compact_blank.join(" ").presence
+    end
+
     def checkout_label
       stay = @payment.stay
       return "Réservation ##{@payment.booking.token}" if stay&.token.blank?

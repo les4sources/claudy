@@ -83,6 +83,18 @@ RSpec.describe Payments::PayService do
 
       expect(captured_args_for(payment)[:item][:description]).to include("Montant total du séjour")
     end
+  end
+
+  describe "réconciliation comptable Stripe (2026-07-21)" do
+    it "passe la catégorie « sejour » et les références métier au checkout" do
+      payment = Payment.create!(stay: stay, booking: booking, amount_cents: 24_250,
+                                status: "pending", payment_method: "card")
+      args = captured_args_for(payment)
+
+      expect(args[:category]).to eq("sejour")
+      expect(args[:references]).to include("stay_id" => stay.id)
+      expect(args[:references]["client"]).to be_present
+    end
 
     it "pré-remplit l'email du client sur la page Stripe" do
       payment = Payment.create!(stay: stay, booking: booking, amount_cents: 24_250,

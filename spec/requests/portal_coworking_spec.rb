@@ -12,6 +12,19 @@ RSpec.describe "Portail client — Coworking", type: :request do
       .and_return(OpenStruct.new(url: "https://checkout.stripe.test/session/abc"))
   end
 
+  it "passe la catégorie « coworking » et les références pack/client à Stripe (réconciliation comptable)" do
+    customer = Customer.create!(first_name: "Coco", last_name: "Work", email: "coco@example.com")
+    service = Coworking::StartOnlinePurchase.new(customer: customer, days_total: 5,
+                                                 return_url: "http://test.host/portail/coworking")
+    expect(service.run).to be(true)
+
+    expect(StripeService.instance).to have_received(:create_checkout_session) do |args|
+      expect(args[:category]).to eq("coworking")
+      expect(args[:references]).to include("coworking_pack_id" => service.pack.id, "jours" => 5)
+      expect(args[:references]["client"]).to be_present
+    end
+  end
+
   # Un lundi bien dans le futur, stable (pas de week-end, pas de « jour passé »).
   let(:day) { next_weekday(Date.current + 30) }
 

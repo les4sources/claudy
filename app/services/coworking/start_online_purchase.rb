@@ -54,6 +54,14 @@ module Coworking
         success_url: @return_url,
         cancel_url: @return_url,
         customer_email: prefill_email,
+        # Réconciliation comptable : le paiement se distingue des séjours dans
+        # Stripe (categorie=coworking + références pack/client).
+        category: "coworking",
+        references: {
+          "coworking_pack_id" => @pack.id,
+          "jours"             => @pack.days_total,
+          "client"            => (@customer.display_name.presence || @customer.email)
+        }.compact,
         item: {
           id: @payment.id,
           name: "Pack coworking · #{@pack.days_total} journée#{'s' if @pack.days_total > 1}",
