@@ -43,3 +43,8 @@ nl:
         amount_paid: "Reeds betaald"
         balance_due: "Nog te betalen"
         pay_balance_cta: "Betaal het saldo van %{amount}"
+    stay_change_requests:
+      cta: "Een wijziging aanvragen"
+      submitted: "Uw wijzigingsaanvraag is verzonden. Ons team bekijkt ze en antwoordt u snel."
+      unavailable: "Dit verblijf is niet meer beschikbaar op deze data — uw aanvraag werd niet geregistreerd."
+      too_late: "Dit verblijf is afgelopen: het kan niet meer worden gewijzigd."

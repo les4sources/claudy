@@ -1,0 +1,5 @@
+/ Recalcul temps-réel du nouveau total / delta de la demande de modification.
+= turbo_stream.replace "change_request_delta" do
+  = render "public/stay_change_requests/delta_panel",
+           stay: @stay, new_total_cents: @new_total_cents,
+           delta_cents: @delta_cents, refund_cents: @refund_cents

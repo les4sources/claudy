@@ -43,3 +43,8 @@ en:
         amount_paid: "Already paid"
         balance_due: "Balance due"
         pay_balance_cta: "Pay the balance of %{amount}"
+    stay_change_requests:
+      cta: "Request a change"
+      submitted: "Your change request has been sent. Our team is reviewing it and will get back to you shortly."
+      unavailable: "This lodging is no longer available on those dates — your request was not saved."
+      too_late: "This stay is over: it can no longer be changed."

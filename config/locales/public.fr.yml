@@ -39,3 +39,8 @@ fr:
         amount_paid: "Déjà payé"
         balance_due: "Reste dû"
         pay_balance_cta: "Payer le solde de %{amount}"
+    stay_change_requests:
+      cta: "Demander une modification"
+      submitted: "Votre demande de modification a bien été envoyée. Notre équipe la valide et vous répond rapidement."
+      unavailable: "Cet hébergement n'est plus disponible sur ces dates — votre demande n'a pas été enregistrée."
+      too_late: "Ce séjour est terminé : il ne peut plus être modifié."

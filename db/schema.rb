@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_21_013149) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_21_013839) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -671,6 +671,22 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_21_013149) do
     t.integer "capacity", default: 1, null: false
   end
 
+  create_table "stay_change_requests", force: :cascade do |t|
+    t.bigint "stay_id", null: false
+    t.jsonb "draft_snapshot", default: {}, null: false
+    t.integer "new_total_cents", default: 0, null: false
+    t.integer "delta_cents", default: 0, null: false
+    t.string "refund_iban"
+    t.string "status", default: "pending", null: false
+    t.text "refusal_reason"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_stay_change_requests_on_deleted_at"
+    t.index ["stay_id", "status"], name: "index_stay_change_requests_on_stay_id_and_status"
+    t.index ["stay_id"], name: "index_stay_change_requests_on_stay_id"
+  end
+
   create_table "stay_items", force: :cascade do |t|
     t.bigint "stay_id", null: false
     t.string "bookable_type", null: false
@@ -852,6 +868,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_21_013149) do
   add_foreign_key "space_bookings", "events"
   add_foreign_key "space_reservations", "space_bookings"
   add_foreign_key "space_reservations", "spaces"
+  add_foreign_key "stay_change_requests", "stays"
   add_foreign_key "stay_items", "stays"
   add_foreign_key "stays", "customers"
   add_foreign_key "tasks", "bundles"

@@ -50,3 +50,11 @@
     = render "public/stays/balance"
 
     = render "public/stays/payments"
+
+    / Demande de modification (issue #133). Un séjour déjà parti ne se modifie
+    / plus : pas de bouton quand le départ est passé.
+    - if @stay.departure_date.present? && @stay.departure_date >= Date.current
+      .mt-8.flex.justify-center
+        = link_to t("public.stay_change_requests.cta"),
+                  new_public_stay_change_request_path(@stay.token),
+                  class: "inline-flex items-center rounded-xl border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"

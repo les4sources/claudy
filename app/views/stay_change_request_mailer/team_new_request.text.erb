@@ -1,0 +1,9 @@
+Une demande de modification vient d'arriver pour le séjour #<%= @stay.id %> (<%= @stay.customer&.email %>).
+
+Nouveau total : <%= @new_total %>
+Delta : <%= @delta_label %>
+<% if @change_request.refund_expected? %>
+Remboursement attendu — IBAN : <%= @change_request.refund_iban %>
+<%= StayChangeRequest::REFUND_NOTICE %>
+<% end %>
+À approuver ou refuser depuis la fiche séjour dans Claudy.
