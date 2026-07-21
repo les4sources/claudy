@@ -1,6 +1,6 @@
 /* Availability calendar – warm, natural aesthetic (Les 4 Sources) */
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..72,500;9..72,600&display=swap');
+/* Fraunces désormais self-hostée via portal.css (importé par public.css). */
 
 .availability-calendar {
   --cal-available-bg: #e6f0ee;

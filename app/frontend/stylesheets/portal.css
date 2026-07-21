@@ -1,0 +1,403 @@
+/* ===========================================================================
+   Portail Clients — Les 4 Sources · identité « sous-bois »
+   ---------------------------------------------------------------------------
+   Design-tokens de la Directrice Artistique (docs/design-tokens.json) traduits
+   en CSS PUR — pas de variantes Tailwind exotiques (peer-checked:, after:*),
+   non fiables sous le JIT/Vite de ce repo. Importé par public.css (portail +
+   flux public) ET application.css (admin, pour l'accent Caveat).
+
+   Typographie SELF-HOSTÉE (woff2 dans app/frontend/fonts/) — remplace les
+   @import Google Fonts CDN (Caveat dans application.css, Fraunces dans
+   availability_calendar.css). Fraunces est un fichier variable unique qui
+   couvre les graisses 400→700.
+   =========================================================================== */
+
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('../fonts/fraunces-latin-var.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('../fonts/caveat-latin-var.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* --- Design tokens --------------------------------------------------------- */
+:root {
+  --p-bg: #F7F2E9;
+  --p-surface: #FFFFFF;
+  --p-text: #1C2620;
+  --p-muted: #6B7568;
+  --p-primary: #0B3D3A;
+  --p-primary-soft: #12524D;
+  --p-primary-tint: #E4EEEA;
+  --p-primary-contrast: #F7F2E9;
+  --p-accent: #C97B3D;
+  --p-accent-tint: #F5E3D0;
+  --p-success: #3F7D4E;
+  --p-danger: #B4462E;
+  --p-border: #E4DBC8;
+  --p-surface-sunken: #EFE7D6;
+  --p-past-bg: #EFEAE0;
+  --p-past-border: #DED4BE;
+
+  --p-serif: 'Fraunces', Georgia, 'Iowan Old Style', 'Charter', 'Times New Roman', serif;
+  --p-sans: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --p-hand: 'Caveat', 'Segoe Script', cursive;
+
+  --p-radius-sm: 0.375rem;
+  --p-radius-md: 0.75rem;
+  --p-radius-lg: 1.25rem;
+  --p-shadow-sm: 0 1px 2px rgba(28, 38, 32, 0.06);
+  --p-shadow-md: 0 4px 14px rgba(28, 38, 32, 0.08);
+  --p-shadow-lg: 0 12px 32px rgba(11, 61, 58, 0.14);
+  --p-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Shell ----------------------------------------------------------------- */
+.portal-body {
+  min-height: 100vh;
+  background-color: var(--p-bg);
+  /* Texture sous-bois très discrète : deux halos vert forêt / ambre. */
+  background-image:
+    radial-gradient(60rem 40rem at 100% -10%, rgba(11, 61, 58, 0.05), transparent 60%),
+    radial-gradient(45rem 35rem at -10% 110%, rgba(201, 123, 61, 0.06), transparent 55%);
+  background-attachment: fixed;
+  color: var(--p-text);
+  font-family: var(--p-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.portal-shell {
+  width: 100%;
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+@media (min-width: 768px) {
+  .portal-shell { padding: 3.5rem 2rem 5rem; }
+}
+
+.portal-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.75rem;
+  font-family: var(--p-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--p-primary);
+}
+.portal-brand__sub {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.72rem;
+  color: var(--p-muted);
+}
+.portal-brand__dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 9999px;
+  background: var(--p-primary);
+  box-shadow: 0 0 0 4px var(--p-primary-tint);
+  flex-shrink: 0;
+}
+
+/* --- Typographie ----------------------------------------------------------- */
+.portal-title {
+  font-family: var(--p-serif);
+  font-weight: 600;
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--p-primary);
+  margin: 0;
+}
+.portal-lead {
+  margin-top: 0.6rem;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: var(--p-muted);
+  max-width: 34rem;
+}
+.portal-hand {
+  font-family: var(--p-hand);
+  font-weight: 700;
+  color: var(--p-accent);
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+.portal-section-title {
+  font-family: var(--p-serif);
+  font-weight: 600;
+  font-size: 1.25rem;
+  color: var(--p-primary);
+  margin: 0;
+}
+.portal-section-title--muted { color: var(--p-muted); }
+
+.portal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.portal-header__name {
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+  color: var(--p-muted);
+}
+
+/* --- Auth card (email / code) --------------------------------------------- */
+.portal-panel {
+  background: var(--p-surface);
+  border: 1px solid var(--p-border);
+  border-radius: var(--p-radius-lg);
+  box-shadow: var(--p-shadow-md);
+  padding: 1.75rem;
+  margin-top: 1.75rem;
+}
+@media (min-width: 768px) {
+  .portal-panel { padding: 2.25rem; }
+}
+
+.portal-field { display: block; margin-bottom: 1.1rem; }
+.portal-label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--p-text);
+  margin-bottom: 0.4rem;
+}
+.portal-input {
+  width: 100%;
+  border: 1px solid var(--p-border);
+  border-radius: var(--p-radius-md);
+  background: var(--p-bg);
+  padding: 0.7rem 0.9rem;
+  font-size: 1rem;
+  font-family: var(--p-sans);
+  color: var(--p-text);
+  transition: border-color 160ms var(--p-ease), box-shadow 160ms var(--p-ease);
+}
+.portal-input:focus {
+  outline: none;
+  border-color: var(--p-primary);
+  box-shadow: 0 0 0 3px var(--p-primary-tint);
+  background: var(--p-surface);
+}
+.portal-input--code {
+  letter-spacing: 0.5em;
+  font-size: 1.35rem;
+  font-family: var(--p-serif);
+  text-align: center;
+  font-weight: 600;
+}
+
+/* --- Boutons / liens ------------------------------------------------------- */
+.portal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 1px solid transparent;
+  border-radius: var(--p-radius-md);
+  background: var(--p-primary);
+  color: var(--p-primary-contrast);
+  padding: 0.7rem 1.3rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: var(--p-sans);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 160ms var(--p-ease), transform 120ms var(--p-ease);
+}
+.portal-btn:hover { background: var(--p-primary-soft); }
+.portal-btn:active { transform: translateY(1px); }
+.portal-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--p-primary-tint);
+}
+.portal-btn--block { width: 100%; }
+
+.portal-link {
+  display: inline-block;
+  color: var(--p-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid var(--p-primary-tint);
+}
+.portal-link:hover { border-bottom-color: var(--p-primary); }
+
+.portal-link-muted {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--p-sans);
+  color: var(--p-muted);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.portal-link-muted:hover { color: var(--p-text); }
+
+/* --- Badges ---------------------------------------------------------------- */
+.portal-badges { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+/* --- Séjours à venir (cartes riches) --------------------------------------- */
+.portal-stack { display: flex; flex-direction: column; gap: 1rem; }
+.portal-block + .portal-block { margin-top: 2.5rem; }
+.portal-block__head { margin-bottom: 1rem; }
+
+.portal-card-upcoming {
+  position: relative;
+  background: var(--p-surface);
+  border: 2px solid var(--p-primary);
+  border-radius: var(--p-radius-lg);
+  box-shadow: var(--p-shadow-md);
+  padding: 1.5rem;
+  overflow: hidden;
+}
+@media (min-width: 768px) {
+  .portal-card-upcoming { padding: 2rem; }
+}
+/* Filet ambre feu-de-bois en bord gauche. */
+.portal-card-upcoming::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 5px;
+  background: var(--p-accent);
+}
+.portal-card-upcoming__dates {
+  font-family: var(--p-serif);
+  font-weight: 600;
+  font-size: clamp(1.15rem, 3.4vw, 1.55rem);
+  line-height: 1.2;
+  color: var(--p-primary);
+  margin: 0.9rem 0 0.5rem;
+}
+.portal-card-upcoming__compo {
+  font-size: 0.92rem;
+  color: var(--p-muted);
+  margin-bottom: 1.2rem;
+}
+.portal-card-upcoming__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--p-primary);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  border-bottom: 2px solid var(--p-accent-tint);
+  padding-bottom: 1px;
+  transition: border-color 160ms var(--p-ease);
+}
+.portal-card-upcoming__cta:hover { border-bottom-color: var(--p-accent); }
+
+/* --- Séjours passés (compacts, en retrait) --------------------------------- */
+.portal-past-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+
+.portal-card-past {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+  background: var(--p-past-bg);
+  border: 1px solid var(--p-past-border);
+  border-radius: var(--p-radius-md);
+  padding: 0.75rem 1rem;
+}
+.portal-card-past__dates {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--p-text);
+  font-variant-numeric: tabular-nums;
+}
+.portal-card-past__compo {
+  font-size: 0.82rem;
+  color: var(--p-muted);
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+.portal-card-past__cta {
+  color: var(--p-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.portal-card-past__cta:hover { color: var(--p-primary); text-decoration: underline; }
+
+/* Disclosure « Voir plus » — natif, sans JS. */
+.portal-more { margin-top: 0.75rem; }
+.portal-more__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  list-style: none;
+  color: var(--p-primary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--p-past-border);
+  border-radius: 9999px;
+  background: var(--p-surface-sunken);
+  transition: background-color 160ms var(--p-ease);
+  user-select: none;
+}
+.portal-more__summary:hover { background: var(--p-past-bg); }
+.portal-more__summary::-webkit-details-marker { display: none; }
+.portal-more__summary::after {
+  content: "▾";
+  font-size: 0.7rem;
+  transition: transform 160ms var(--p-ease);
+}
+.portal-more[open] .portal-more__summary::after { transform: rotate(180deg); }
+.portal-more[open] .portal-more__summary { margin-bottom: 0.5rem; }
+
+/* --- État vide ------------------------------------------------------------- */
+.portal-empty {
+  background: var(--p-surface);
+  border: 1px dashed var(--p-past-border);
+  border-radius: var(--p-radius-lg);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  color: var(--p-muted);
+  font-size: 0.95rem;
+}
+
+/* --- Signature / pied ------------------------------------------------------ */
+.portal-signoff {
+  margin-top: 3rem;
+  text-align: center;
+}
+.portal-signoff .portal-hand { font-size: 1.7rem; }
+
+/* --- Flash ----------------------------------------------------------------- */
+.portal-flash {
+  border-radius: var(--p-radius-md);
+  padding: 0.8rem 1rem;
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+.portal-flash--alert { background: var(--p-accent-tint); color: #7a3d13; border: 1px solid rgba(201, 123, 61, 0.35); }
+.portal-flash--notice { background: var(--p-primary-tint); color: var(--p-primary); border: 1px solid rgba(11, 61, 58, 0.2); }

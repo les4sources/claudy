@@ -5,6 +5,9 @@
 
 @import 'availability_calendar.css';
 
+/* Fonts self-hostées (Fraunces + Caveat) + identité Portail Clients (sous-bois). */
+@import 'portal.css';
+
 /* @import '../../components/flow/component.css'; */
 
 @layer base {
