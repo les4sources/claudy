@@ -27,7 +27,13 @@ class Payment < ApplicationRecord
   # `belongs_to` — un Payment sans stay_id est désormais invalide. Les données
   # legacy déjà persistées sans stay ne sont pas re-validées (pas de re-save),
   # et sont rattrapées par `rake payments:backfill_stay_from_booking`.
-  belongs_to :stay
+  #
+  # Coworking (epic #126, Phase 1) : un paiement peut désormais s'ancrer sur un
+  # `CoworkingPack` au lieu d'un séjour — le coworking n'est PAS un séjour.
+  # L'invariant du verrouillage Phase 4 devient donc « stay_id OU
+  # coworking_pack_id » : un paiement sans ancre reste invalide.
+  belongs_to :stay, optional: true
+  belongs_to :coworking_pack, optional: true
 
   # Provenance de facturation des espaces (facturation espaces → paiements).
   # Optionnel : seuls les Payment issus de la rake `space_bookings:billing_to_payments`
@@ -44,6 +50,7 @@ class Payment < ApplicationRecord
 
   validates :amount, numericality: { greater_than: 0.0 }
   validates :payment_method, presence: true
+  validate :anchored_on_stay_or_coworking_pack
 
   scope :paid, -> { where(status: "paid") }
   scope :pending, -> { where(status: "pending") }
@@ -54,5 +61,19 @@ class Payment < ApplicationRecord
 
   def pending?
     self.status == "pending"
+  end
+
+  private
+
+  # Un paiement doit toujours savoir CE QU'IL PAIE : un séjour, ou un pack de
+  # coworking. Jamais rien, jamais les deux.
+  def anchored_on_stay_or_coworking_pack
+    return if stay_id.present? ^ coworking_pack_id.present?
+
+    if stay_id.present?
+      errors.add(:base, "Un paiement ne peut pas porter à la fois un séjour et un pack de coworking")
+    else
+      errors.add(:stay, "doit être renseigné (ou un pack de coworking)")
+    end
   end
 end

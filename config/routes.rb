@@ -33,6 +33,11 @@ Rails.application.routes.draw do
       end
     end
   end
+  # Coworking (epic #126, Phase 1) — domaine indépendant des séjours : packs de
+  # journées achetés par un client, journées posées dans la limite des crédits.
+  resources :coworking_packs, only: [:index, :show, :new, :create, :destroy] do
+    resources :coworking_reservations, only: [:create, :destroy]
+  end
   resources :decisions
   get "organisation/decisions", to: "decisions#index", as: :organisation_decisions
   resources :experiences do

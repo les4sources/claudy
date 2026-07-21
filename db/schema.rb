@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_20_200100) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_21_012425) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -173,6 +173,34 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_20_200100) do
     t.datetime "updated_at", null: false
     t.index ["deleted_at"], name: "index_camping_bookings_on_deleted_at"
     t.index ["from_date", "to_date"], name: "index_camping_bookings_on_from_date_and_to_date"
+  end
+
+  create_table "coworking_packs", force: :cascade do |t|
+    t.bigint "customer_id", null: false
+    t.integer "days_total", null: false
+    t.integer "price_cents", default: 0, null: false
+    t.datetime "purchased_at", null: false
+    t.datetime "expires_at", null: false
+    t.string "payment_method", null: false
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_coworking_packs_on_customer_id"
+    t.index ["deleted_at"], name: "index_coworking_packs_on_deleted_at"
+    t.index ["expires_at"], name: "index_coworking_packs_on_expires_at"
+  end
+
+  create_table "coworking_reservations", force: :cascade do |t|
+    t.bigint "coworking_pack_id", null: false
+    t.bigint "customer_id", null: false
+    t.date "date", null: false
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["coworking_pack_id"], name: "index_coworking_reservations_on_coworking_pack_id"
+    t.index ["customer_id"], name: "index_coworking_reservations_on_customer_id"
+    t.index ["date"], name: "index_coworking_reservations_on_date"
+    t.index ["deleted_at"], name: "index_coworking_reservations_on_deleted_at"
   end
 
   create_table "customers", force: :cascade do |t|
@@ -472,7 +500,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_20_200100) do
     t.string "stripe_payment_intent_id"
     t.bigint "stay_id"
     t.bigint "space_booking_id"
+    t.bigint "coworking_pack_id"
     t.index ["booking_id"], name: "index_payments_on_booking_id"
+    t.index ["coworking_pack_id"], name: "index_payments_on_coworking_pack_id"
     t.index ["id"], name: "index_payments_on_id", unique: true
     t.index ["space_booking_id"], name: "index_payments_on_space_booking_id"
     t.index ["stay_id"], name: "index_payments_on_stay_id"
@@ -498,6 +528,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_20_200100) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["human_id"], name: "index_projects_on_human_id"
+  end
+
+  create_table "rates", force: :cascade do |t|
+    t.string "key", null: false
+    t.integer "amount_cents", default: 0, null: false
+    t.string "label"
+    t.string "unit", default: "cents", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_rates_on_key", unique: true
   end
 
   create_table "rental_items", force: :cascade do |t|
@@ -765,6 +805,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_20_200100) do
   add_foreign_key "bookings", "lodgings"
   add_foreign_key "bundles", "projects"
   add_foreign_key "bundles", "teams"
+  add_foreign_key "coworking_packs", "customers"
+  add_foreign_key "coworking_reservations", "coworking_packs"
+  add_foreign_key "coworking_reservations", "customers"
   add_foreign_key "customers", "humans"
   add_foreign_key "cycle_actions", "humans"
   add_foreign_key "cycle_actions", "humans", column: "delegate_to_human_id"
@@ -788,6 +831,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_20_200100) do
   add_foreign_key "lodging_rooms", "rooms"
   add_foreign_key "meal_orders", "stays"
   add_foreign_key "payments", "bookings"
+  add_foreign_key "payments", "coworking_packs"
   add_foreign_key "payments", "space_bookings"
   add_foreign_key "payments", "stays"
   add_foreign_key "projects", "humans"
