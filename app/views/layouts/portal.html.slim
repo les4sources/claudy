@@ -1,0 +1,30 @@
+doctype html
+html(lang=I18n.locale)
+  head
+    meta(charset="utf-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1")
+    meta(name="theme-color" content="#F7F2E9")
+    title
+      - if content_for?(:meta_title)
+        = yield :meta_title
+      | &nbsp;| Les 4 Sources
+    meta(name="robots" content="noindex,nofollow")
+    = csrf_meta_tags
+    = csp_meta_tag
+    = vite_client_tag
+    = vite_javascript_tag "public", "data-turbo-track": "reload"
+  body.portal-body
+    = render "layouts/public/components/google_tag"
+
+    main.portal-shell
+      .portal-brand
+        span.portal-brand__dot
+        span Les 4 Sources
+        span.portal-brand__sub Portail clients
+
+      - if flash[:alert]
+        .portal-flash.portal-flash--alert = flash[:alert]
+      - if flash[:notice]
+        .portal-flash.portal-flash--notice = flash[:notice]
+
+      = yield

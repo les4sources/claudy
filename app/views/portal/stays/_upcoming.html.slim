@@ -1,0 +1,12 @@
+/ Séjour à venir — carte riche (bordure primaire, dates en serif, ombre).
+article.portal-card-upcoming
+  .portal-badges
+    = stay.status_badge
+    = stay.payment_status_badge
+  .portal-card-upcoming__dates
+    = "#{l(stay.arrival_date, format: :long)} → #{l(stay.departure_date, format: :long)}"
+  .portal-card-upcoming__compo
+    = stay.composition_summary
+  = link_to public_stay_path(stay.token), class: "portal-card-upcoming__cta" do
+    | Voir mon séjour
+    span aria-hidden="true" →

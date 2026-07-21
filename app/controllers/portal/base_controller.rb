@@ -5,7 +5,9 @@ module Portal
   # Devise : elle n'ouvre AUCUN accès admin, et l'admin connectée n'ouvre aucun
   # accès portail. Durée 24 h.
   class BaseController < Public::BaseController
-    layout "public_sheet"
+    # Layout dédié « sous-bois » du portail (identité distincte du flux public
+    # de réservation, cf. app/frontend/stylesheets/portal.css).
+    layout "portal"
 
     SESSION_COOKIE = :portal_customer_id
     SESSION_DURATION = 24.hours

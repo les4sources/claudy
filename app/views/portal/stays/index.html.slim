@@ -1,28 +1,36 @@
 - content_for :meta_title do
   | Mes séjours
 
-.px-6.py-8.md:px-10.space-y-6
-  .flex.items-start.justify-between.gap-4
-    div
-      h1.text-2xl.font-semibold.text-gray-900 Mes séjours
-      p.text-sm.text-gray-500
-        = current_portal_customer.display_name
-    = button_to "Me déconnecter", portal_logout_path, method: :delete, class: "text-sm text-gray-500 hover:text-gray-700 underline"
+.portal-header
+  div
+    h1.portal-title Mes séjours
+    p.portal-header__name = current_portal_customer.display_name
+  = button_to "Me déconnecter", portal_logout_path, method: :delete, class: "portal-link-muted"
 
-  - if @stays.empty?
-    .rounded-lg.border.border-gray-100.bg-gray-50.p-6.text-sm.text-gray-500
-      | Aucun séjour pour l'instant. Dès qu'une réservation sera enregistrée à votre nom, elle apparaîtra ici.
-  - else
-    ul.space-y-4
-      - @stays.each do |stay|
-        li.rounded-lg.border.border-gray-100.bg-white.shadow-sm.p-5.space-y-3
-          .flex.flex-wrap.items-center.gap-2
-            = stay.status_badge
-            = stay.payment_status_badge
-          .text-lg.font-medium.text-gray-900
-            = "#{l(stay.arrival_date, format: :long)} → #{l(stay.departure_date, format: :long)}"
-          .text-sm.text-gray-500
-            = stay.composition_summary
-          = link_to "Voir mon séjour →",
-                    public_stay_path(stay.token),
-                    class: "inline-block text-sm text-emerald-600 hover:underline"
+- if @upcoming.empty? && @past.empty?
+  .portal-empty
+    | Aucun séjour pour l'instant. Dès qu'une réservation sera enregistrée à votre nom, elle apparaîtra ici.
+- else
+  - if @upcoming.any?
+    section.portal-block
+      .portal-block__head
+        h2.portal-section-title À venir
+      .portal-stack
+        = render partial: "portal/stays/upcoming", collection: @upcoming, as: :stay
+
+  - if @past.any?
+    section.portal-block
+      .portal-block__head
+        h2.portal-section-title.portal-section-title--muted Séjours passés
+      ul.portal-past-list
+        = render partial: "portal/stays/past", collection: @past_visible, as: :stay
+
+      - if @past_hidden.any?
+        details.portal-more
+          summary.portal-more__summary
+            = "Voir #{@past_hidden.size} #{@past_hidden.size > 1 ? 'séjours' : 'séjour'} de plus"
+          ul.portal-past-list
+            = render partial: "portal/stays/past", collection: @past_hidden, as: :stay
+
+  .portal-signoff
+    span.portal-hand à bientôt sous les arbres !

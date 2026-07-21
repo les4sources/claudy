@@ -1,0 +1,69 @@
+{
+  "_note": "design-tokens Super Génial — palette de DÉPART produite par la Directrice Artistique pour le Portail Clients Les 4 Sources (/portail). Michael écrase à son goût. Vit dans le repo (docs/design-tokens.json).",
+  "project": "Claudy — Portail Clients Les 4 Sources",
+  "brand": {
+    "name": "Les 4 Sources",
+    "voice": "Chaleureux, sobre, terrien. Un accueil de tiers-lieu forestier, pas un SaaS. On garde la sobriété (peu de couleurs, beaucoup d'air) mais on remplace le gris/émeraude générique par une palette de sous-bois : vert forêt profond ancré sur la couleur de marque existante (#024442), fond sable chaud au lieu de blanc froid, une touche ambre feu-de-bois pour les accents et les séjours à venir. Une seule fioriture assumée : un accent manuscrit (Caveat, déjà dans la charte, à self-hoster) réservé aux petites signatures ('à bientôt !', dates mises en avant) — jamais pour du texte fonctionnel."
+  },
+  "color": {
+    "bg": "#F7F2E9",
+    "surface": "#FFFFFF",
+    "text": "#1C2620",
+    "muted": "#6B7568",
+    "primary": "#0B3D3A",
+    "primaryContrast": "#F7F2E9",
+    "accent": "#C97B3D",
+    "success": "#3F7D4E",
+    "warning": "#C97B3D",
+    "danger": "#B4462E",
+    "border": "#E4DBC8"
+  },
+  "colorExtra": {
+    "primarySoft": "#12524D",
+    "primaryTint": "#E4EEEA",
+    "accentTint": "#F5E3D0",
+    "surfaceSunken": "#EFE7D6",
+    "pastBg": "#EFEAE0",
+    "pastBorder": "#DED4BE",
+    "upcomingRing": "#0B3D3A"
+  },
+  "typography": {
+    "fontSans": "'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+    "fontSerif": "'Fraunces', Georgia, 'Times New Roman', serif",
+    "fontHand": "'Caveat', cursive",
+    "fontMono": "'JetBrains Mono', ui-monospace, monospace",
+    "scale": { "xs": "0.75rem", "sm": "0.875rem", "base": "1rem", "lg": "1.125rem", "xl": "1.375rem", "2xl": "1.75rem", "3xl": "2.25rem", "4xl": "3rem" },
+    "weight": { "regular": 400, "medium": 500, "bold": 700, "serifDisplay": 600 },
+    "lineHeight": { "tight": 1.15, "normal": 1.55 },
+    "usage": "fontSerif (Fraunces) réservé aux titres H1/H2 et aux dates de séjour mises en avant — c'est LA touche distinctive. fontSans (Public Sans, self-host ou system stack si pas dispo) pour tout le reste : labels, corps, boutons. fontHand (Caveat) en accent ponctuel uniquement (ex: 'à bientôt sous les arbres'), jamais pour un badge ou une donnée."
+  },
+  "space": { "0": "0", "1": "0.25rem", "2": "0.5rem", "3": "0.75rem", "4": "1rem", "6": "1.5rem", "8": "2rem", "12": "3rem", "16": "4rem", "20": "5rem" },
+  "radius": { "none": "0", "sm": "0.375rem", "md": "0.75rem", "lg": "1.25rem", "full": "9999px" },
+  "shadow": {
+    "sm": "0 1px 2px rgba(28, 38, 32, 0.06)",
+    "md": "0 4px 14px rgba(28, 38, 32, 0.08)",
+    "lg": "0 12px 32px rgba(11, 61, 58, 0.14)"
+  },
+  "motion": { "fast": "120ms", "base": "220ms", "slow": "360ms", "ease": "cubic-bezier(0.4,0,0.2,1)" },
+  "components": {
+    "cardUpcoming": {
+      "bg": "surface",
+      "border": "2px solid primary",
+      "radius": "lg",
+      "shadow": "md",
+      "note": "Carte riche : gros bloc dates en fontSerif, badges statut/paiement, photo/illustration discrète optionnelle en coin (four à bois / forêt), padding généreux (space.8)."
+    },
+    "cardPast": {
+      "bg": "colorExtra.pastBg",
+      "border": "1px solid colorExtra.pastBorder",
+      "radius": "md",
+      "shadow": "none",
+      "note": "Compact, une ligne dense, texte en muted, pas de fontSerif — visuellement en retrait assumé."
+    },
+    "badge": {
+      "radius": "full",
+      "padding": "space.1 space.3",
+      "note": "Statut = fond primaryTint/texte primary ; paiement OK = success ; paiement en attente = accentTint/accent."
+    }
+  }
+}

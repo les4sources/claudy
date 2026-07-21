@@ -1,0 +1,9 @@
+/ Séjour passé — compact, en retrait (fond sable sombre, pas de relief, pas de serif).
+li.portal-card-past
+  .portal-badges
+    = stay.status_badge
+    = stay.payment_status_badge
+  span.portal-card-past__dates
+    = "#{l(stay.arrival_date, format: :long)} → #{l(stay.departure_date, format: :long)}"
+  span.portal-card-past__compo = stay.composition_summary
+  = link_to "Voir mon séjour", public_stay_path(stay.token), class: "portal-card-past__cta"
