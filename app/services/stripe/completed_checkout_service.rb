@@ -26,10 +26,21 @@ module Stripe
       @payment.booking&.set_payment_status
       email_admin
       email_customer_deposit_received
+      email_customer_coworking_purchase
       true
     end
 
     private
+
+    # Coworking (epic #126, Phase 3) : un paiement ancré sur un pack marque
+    # celui-ci comme payé (statut dérivé). On confirme l'achat au client. Pas de
+    # séjour ni de booking ici — les emails ci-dessus sont donc no-op.
+    def email_customer_coworking_purchase
+      pack = payment.coworking_pack
+      return if pack.nil?
+
+      CoworkingMailer.pack_purchased(pack).deliver_later
+    end
 
     def email_admin
       AdminMailer.payment_received(payment).deliver_later

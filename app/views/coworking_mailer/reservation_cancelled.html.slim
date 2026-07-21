@@ -1,0 +1,7 @@
+p Bonjour,
+p
+  | Votre journée de coworking du
+  = " #{l(@reservation.date, format: :long)} "
+  | a bien été annulée. Le crédit correspondant est de nouveau disponible.
+p = link_to "Réserver une autre journée", portal_coworking_url
+p À bientôt sous les arbres.
