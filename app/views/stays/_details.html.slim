@@ -210,13 +210,13 @@ div id="stay-details-#{@stay.id}"
             .flex.flex-wrap.items-end.gap-3
               label.text-xs.text-gray-600.flex.flex-col.gap-1
                 | Montant (€)
-                = f.number_field "payment[amount]", step: "0.01", min: "0.01", required: true, class: "w-28 rounded border-gray-300 text-sm py-1"
+                = number_field_tag "payment[amount]", nil, step: "0.01", min: "0.01", required: true, class: "w-28 rounded border-gray-300 text-sm py-1"
               label.text-xs.text-gray-600.flex.flex-col.gap-1
                 | Moyen
-                = f.select "payment[payment_method]", options_for_select([["Liquide", "cash"], ["Virement", "bank_transfer"], ["En ligne", "stripe"]], "bank_transfer"), {}, class: "rounded border-gray-300 text-sm py-1"
+                = select_tag "payment[payment_method]", options_for_select([["Liquide", "cash"], ["Virement", "bank_transfer"], ["En ligne", "stripe"]], "bank_transfer"), class: "rounded border-gray-300 text-sm py-1"
               label.text-xs.text-gray-600.flex.flex-col.gap-1
                 | Statut
-                = f.select "payment[status]", options_for_select([["Encaissé", "paid"], ["En attente", "pending"]], "paid"), {}, class: "rounded border-gray-300 text-sm py-1"
+                = select_tag "payment[status]", options_for_select([["Encaissé", "paid"], ["En attente", "pending"]], "paid"), class: "rounded border-gray-300 text-sm py-1"
             = f.submit "Ajouter le paiement", class: "px-3 py-1.5 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700"
 
     / Notes du séjour (lecture). La note interne (texte brut, style post-it) ne
