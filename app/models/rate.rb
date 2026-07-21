@@ -17,7 +17,8 @@ class Rate < ApplicationRecord
     "Hébergements"  => %w[lodging.],
     "Salles"        => %w[hall. hall_weekend.],
     "Camping & van" => %w[camping. van. terrace. hamac.],
-    "Repas"         => %w[meal. pizza_party.]
+    "Repas"         => %w[meal. pizza_party.],
+    "Coworking"     => %w[coworking.]
   }.freeze
 
   OTHER_GROUP = "Divers".freeze
