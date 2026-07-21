@@ -137,6 +137,14 @@ module Pricing
     PIZZA_PARTY_BASE_CENTS = 4_000
     PIZZA_PARTY_PER_PERSON_CENTS = 700
 
+    # Packs de coworking (epic #126, Phase 1) : prix par nombre de journées.
+    COWORKING_PACKS = {
+      1  =>  2_000, # 20 €
+      5  =>  8_000, # 80 €
+      10 => 16_000, # 160 €
+      20 => 30_000  # 300 €
+    }.freeze
+
     # ------------------------------------------------------------------
     # Façade de lecture (issue #124) : BASE D'ABORD, constantes en repli.
     #
@@ -153,6 +161,15 @@ module Pricing
     # Slug de clé stable pour un nom d'hébergement ("La Chevêche" → la_cheveche).
     def lodging_key(name)
       I18n.transliterate(name.to_s).tr("-", " ").parameterize(separator: "_")
+    end
+
+    # Prix d'un pack de coworking — table `rates` (issue #124) d'abord,
+    # constante en repli, comme le reste de la façade.
+    def coworking_pack_cents(days)
+      fallback = COWORKING_PACKS[days.to_i]
+      return nil if fallback.nil?
+
+      Pricing::Rates.cents_or("coworking.pack_#{days.to_i}", fallback)
     end
 
     def default_deposit_rate

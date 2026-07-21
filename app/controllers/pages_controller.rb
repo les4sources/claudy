@@ -45,6 +45,14 @@ class PagesController < BaseController
           .where.not(status: ["declined", "canceled"])
           .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
       )
+      # Coworking (epic #126, Phase 1) — domaine INDÉPENDANT des séjours : un
+      # bloc agrégé par jour (« 💻 Coworking N/3 »), jamais rattaché à un stay
+      # et donc jamais sélectionnable par le mode fusion.
+      @grouped_coworking_reservations = CoworkingReservation
+        .includes(:customer)
+        .between(@first.to_date, @last.to_date)
+        .to_a
+        .group_by(&:date)
       @grouped_van_bookings = nights_grouped_by_day(
         VanBooking
           .includes(stay: :customer)

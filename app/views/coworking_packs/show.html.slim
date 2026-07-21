@@ -1,0 +1,71 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Coworking — #{@pack.customer.display_name}",
+           links: [ \
+             button_to("🗑️ Supprimer le pack", coworking_pack_path(@pack), method: :delete, form: { data: { turbo_confirm: "Supprimer ce pack et ses journées ?" } }, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") \
+           ]
+
+.grid.gap-6.lg:grid-cols-3
+  .lg:col-span-1.space-y-4
+    .bg-white.rounded-lg.border.border-gray-100.p-5.space-y-3
+      div
+        .text-xs.uppercase.text-gray-400 Pack
+        .text-gray-900
+          = "#{@pack.days_total} journée#{'s' if @pack.days_total > 1}"
+          span.text-gray-400.ml-1
+            = number_to_currency(@pack.price_cents / 100.0, unit: "€", format: "%n %u")
+      div
+        .text-xs.uppercase.text-gray-400 Jours restants
+        .text-2xl.font-semibold.text-gray-900
+          = @pack.days_remaining
+      div
+        .text-xs.uppercase.text-gray-400 Expiration
+        .text-gray-900
+          = l(@pack.expires_at.to_date, format: :long)
+          - if @pack.expired?
+            span.ml-2.px-2.py-0.5.text-xs.rounded.bg-red-100.text-red-700 expiré
+      div
+        .text-xs.uppercase.text-gray-400 Paiement
+        div
+          = render "coworking_packs/payment_badge", pack: @pack
+
+    .bg-white.rounded-lg.border.border-gray-100.p-5
+      h3.text-sm.font-semibold.text-gray-700.mb-3 Réserver une journée
+      - if @pack.credits_left? && !@pack.expired?
+        = form_with model: CoworkingReservation.new, url: coworking_pack_coworking_reservations_path(@pack), method: :post, class: "flex items-center gap-2" do |f|
+          = f.date_field :date, class: "rounded-md border-gray-300 text-sm"
+          = f.submit "Réserver",
+                     class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 cursor-pointer"
+        p.text-xs.text-gray-400.mt-2
+          | Lundi à vendredi, 3 bureaux maximum par jour.
+      - else
+        p.text-sm.text-gray-500
+          = @pack.expired? ? "Ce pack est expiré." : "Plus aucune journée disponible sur ce pack."
+
+  .lg:col-span-2
+    .bg-white.rounded-lg.border.border-gray-100.overflow-hidden
+      table.w-full.text-sm.text-left.text-gray-500
+        thead.text-xs.text-gray-700.uppercase.bg-gray-50
+          tr
+            th.py-3.px-6[scope="col"]
+              | Journée réservée
+            th.py-3.px-6[scope="col"]
+              | Occupation du jour
+            th.w-32.py-3.px-6[scope="col"]
+        tbody
+          - if @reservations.empty?
+            tr
+              td.py-4.px-6.text-gray-400[colspan="3"]
+                | Aucune journée réservée pour l'instant.
+          - @reservations.each do |reservation|
+            tr.border-b.bg-white
+              td.py-3.px-6.text-gray-900
+                = l(reservation.date, format: :long)
+              td.py-3.px-6
+                = "#{CoworkingReservation.count_on(reservation.date)}/#{CoworkingReservation::DAILY_CAPACITY}"
+              td.py-3.px-6
+                = button_to "Annuler",
+                            coworking_pack_coworking_reservation_path(@pack, reservation),
+                            method: :delete,
+                            form: { data: { turbo_confirm: "Annuler cette journée ?" } },
+                            class: "text-xs text-red-600 hover:underline"

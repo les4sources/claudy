@@ -55,3 +55,15 @@
         = van.group_name.presence || van.name.presence || "Van"
       .text-xs.text-gray-500
         | 🚐 #{van.vehicles} véhicule#{"s" if van.vehicles.to_i > 1}
+
+/ 5) Coworking (epic #126, Phase 1) — domaine INDÉPENDANT des séjours : un seul
+/ bloc agrégé par jour, style distinct (indigo), sans `data-stay-id` : le mode
+/ fusion du calendrier ne peut donc jamais le sélectionner.
+- coworking_day = (@grouped_coworking_reservations || {})[date] || []
+- if coworking_day.any?
+  div(class="relative flex mt-2 py-1 px-2 min-w-0 shadow border-l-4" style="border-left-color: #4f46e5; background-color: #eef2ff;" data-coworking-day-entry=date.to_s title="#{coworking_day.map { |r| r.customer&.display_name }.compact.join(', ')}")
+    .block.min-w-0.w-full
+      strong.block.min-w-0.break-words.text-gray-700
+        = "💻 Coworking #{coworking_day.size}/#{CoworkingReservation::DAILY_CAPACITY}"
+      .text-xs.text-gray-500.break-words
+        = coworking_day.map { |r| r.customer&.display_name }.compact.join(", ")
