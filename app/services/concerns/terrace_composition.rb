@@ -40,7 +40,7 @@ module TerraceComposition
 
   # Prix TVAC d'une entrée terrasse (source unique = Catalog, comme `terrace_lines`).
   def terrace_entry_price_cents(entry)
-    Pricing::Catalog::TERRACE_PER_PERSON_DAY_CENTS * entry[:people].to_i
+    Pricing::Catalog.terrace_per_person_day_cents * entry[:people].to_i
   end
 
   # Persiste la terrasse en N CampingBooking `kind: "terrasse"` (un par JOUR).

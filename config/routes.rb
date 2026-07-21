@@ -56,6 +56,7 @@ Rails.application.routes.draw do
   resources :payments, only: [:index, :show, :destroy]
   resources :products
   resources :projects
+  resources :rates, only: [:index, :update]
   resources :rental_items
   resources :reports
   resources :roles

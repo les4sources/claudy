@@ -167,7 +167,7 @@ module Reservations
       }
     end
 
-    def quote(deposit_rate: Pricing::Catalog::DEFAULT_DEPOSIT_RATE)
+    def quote(deposit_rate: Pricing::Catalog.default_deposit_rate)
       PricingModel.quote(self, deposit_rate: deposit_rate)
     end
 
