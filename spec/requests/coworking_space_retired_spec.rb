@@ -24,7 +24,10 @@ RSpec.describe "Espace « Coworking » retiré du canal espaces", type: :request
 
     get new_stay_path
     expect(response).to have_http_status(:ok)
-    expect(response.body).not_to include("Coworking")
+    # La navbar porte désormais une entrée « Coworking » (menu Accueil) : on
+    # vérifie le corps de page HORS navigation.
+    body_without_nav = response.body.gsub(%r{<nav.*?</nav>}m, "")
+    expect(body_without_nav).not_to include("Coworking")
 
     get compose_grids_stays_path, params: { arrival_date: "2026-09-07", departure_date: "2026-09-10" }
     expect(response).to have_http_status(:ok)
