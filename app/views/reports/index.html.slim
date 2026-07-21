@@ -100,5 +100,46 @@ h2.mt-6.text-lg.font-bold Hébergements: revenus par origine
             - else
               .font-semibold Web
               .text-xs.text-gray-500 Réservations enregistrées via notre formulaire en ligne
-          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500 
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-500
             = number_to_currency(revenue / 100.0)
+
+/ Coworking (epic #126, Phase 4) — domaine indépendant, présenté à part.
+h2.mt-8.text-lg.font-bold Coworking
+
+.mt-4.flex.flex-wrap.gap-4
+  .rounded-lg.bg-amber-50.ring-1.ring-amber-200.px-4.py-3
+    .text-xs.font-medium.text-amber-700.uppercase.tracking-wide Packs actifs
+    .text-2xl.font-bold.text-amber-900 = @coworking_active_packs
+    .text-xs.text-amber-700 = "#{@coworking_credits_remaining} #{"journée".pluralize(@coworking_credits_remaining)} en réserve"
+  .rounded-lg.bg-amber-50.ring-1.ring-amber-200.px-4.py-3
+    .text-xs.font-medium.text-amber-700.uppercase.tracking-wide = "Occupation #{@year}"
+    .text-2xl.font-bold.text-amber-900 = @coworking_days_total
+    .text-xs.text-amber-700 journées-bureau réservées
+  .rounded-lg.bg-amber-50.ring-1.ring-amber-200.px-4.py-3
+    .text-xs.font-medium.text-amber-700.uppercase.tracking-wide = "CA coworking #{@year}"
+    .text-2xl.font-bold.text-amber-900 = number_to_currency(@coworking_revenue_total / 100.0, unit: "€")
+
+.overflow-hidden.shadow.ring-1.ring-black.ring-opacity-5.sm:rounded-lg.mt-4
+  table.min-w-full.divide-y.divide-gray-300
+    thead.bg-gray-50
+      tr
+        th.py-3.5.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-6[scope="col"] Mois
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-amber-700[scope="col"] Occupation (journées)
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-amber-700[scope="col"] CA coworking
+    tbody.divide-y.divide-gray-200.bg-white
+      - (1..12).each do |month|
+        - cowork_days = @coworking_days_by_month[month] || 0
+        - cowork_rev = @coworking_revenue_by_month[month] || 0
+        tr(class="#{Date.new(@year, month, 1) > Date.today.end_of_month ? "opacity-70" : nil}")
+          td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.font-medium.text-gray-900.sm:pl-6
+            = l(Date.new(@year, month, 1), format: :month_year).capitalize
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-amber-700.bg-amber-50
+            = cowork_days
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-amber-700.bg-amber-50.font-semibold
+            = number_to_currency(cowork_rev / 100.0)
+    tfoot.bg-amber-200
+      tr.border-t-2.border-t-gray-900
+        td.font-medium.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.text-gray-900.sm:pl-6 Total
+        td.font-bold.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900 = @coworking_days_total
+        td.font-extrabold.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
+          = number_to_currency(@coworking_revenue_total / 100.0, unit: "€")
