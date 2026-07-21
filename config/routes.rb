@@ -160,6 +160,11 @@ Rails.application.routes.draw do
       post :refuse_change_request
     end
     resources :experience_bookings, only: [:create]
+    # Gestion des paiements DEPUIS la modale séjour (issue paiements-secrétaire) :
+    # ajout d'un paiement et bascule de statut (pending ↔ paid), sans quitter la
+    # modale. Le paiement porte TOUJOURS le séjour dans l'URL — jamais un paiement
+    # sans séjour d'attache. URLs admin en anglais.
+    resources :payments, only: [:create, :update], controller: "stay_payments"
   end
   resources :experience_bookings, only: [:index, :update, :destroy] do
     member do
