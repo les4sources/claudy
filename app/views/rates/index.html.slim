@@ -1,0 +1,46 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Tarifs"
+
+- if @grouped_rates.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucun tarif paramétré.
+    p.mt-1
+      | Les prix appliqués sont ceux codés dans le catalogue. Lance
+      code.mx-1.px-1.py-0.5.bg-gray-100.rounded rake rates:seed_from_catalog
+      | pour les rendre éditables ici.
+- else
+  .space-y-8
+    - @grouped_rates.each do |group_name, rates|
+      section
+        h2.text-sm.font-semibold.text-gray-700.uppercase.tracking-wide.mb-2
+          = group_name
+        .overflow-x-auto.relative
+          table.w-full.text-sm.text-left.text-gray-500
+            thead.text-xs.text-gray-700.uppercase.bg-gray-50
+              tr
+                th.py-3.px-6[scope="col"]
+                  | Tarif
+                th.py-3.px-6[scope="col"]
+                  | Clé
+                th.w-64.py-3.px-6[scope="col"]
+                  | Montant
+            tbody
+              - rates.each do |rate|
+                tr.border-b.bg-white
+                  td.py-3.px-6.font-medium.text-gray-900[scope="row"]
+                    = rate.label.presence || rate.key
+                  td.py-3.px-6.text-xs.text-gray-400.font-mono
+                    = rate.key
+                  td.py-3.px-6
+                    = form_with model: rate, url: rate_path(rate), method: :patch, class: "flex items-center gap-2" do |f|
+                      = number_field_tag "rate[amount]",
+                                         rate.amount,
+                                         step: (rate.percent? ? 1 : 0.01),
+                                         min: 0,
+                                         class: "w-28 rounded-md border-gray-300 text-sm",
+                                         "aria-label" => "Montant pour #{rate.key}"
+                      span.text-gray-500
+                        = rate.percent? ? "%" : "€"
+                      = f.submit "Enregistrer",
+                                 class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 cursor-pointer"

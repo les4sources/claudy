@@ -1,0 +1,31 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Nouveau pack de coworking"
+
+.max-w-xl.bg-white.rounded-lg.border.border-gray-100.p-6
+  = form_with model: @pack, url: coworking_packs_path, method: :post, class: "space-y-5" do |f|
+    div
+      = f.label :customer_id, "Client", class: "block text-sm font-medium text-gray-700 mb-1"
+      = f.collection_select :customer_id,
+                            Customer.order(:first_name, :last_name, :email),
+                            :id,
+                            :display_name,
+                            { prompt: "Choisir un client" },
+                            class: "w-full rounded-md border-gray-300 text-sm"
+    div
+      = f.label :days_total, "Pack", class: "block text-sm font-medium text-gray-700 mb-1"
+      = f.select :days_total,
+                 CoworkingPack::DAYS_OPTIONS.map { |d| ["#{d} journée#{'s' if d > 1} — #{number_to_currency(Pricing::Catalog.coworking_pack_cents(d) / 100.0, unit: '€', format: '%n %u')}", d] },
+                 {},
+                 class: "w-full rounded-md border-gray-300 text-sm"
+    div
+      = f.label :payment_method, "Moyen de paiement", class: "block text-sm font-medium text-gray-700 mb-1"
+      = f.select :payment_method,
+                 [["Carte", "card"], ["Virement", "bank_transfer"], ["Espèces", "cash"]],
+                 {},
+                 class: "w-full rounded-md border-gray-300 text-sm"
+      p.text-xs.text-gray-400.mt-1
+        | Virement et espèces créent un paiement en attente sur le pack.
+    div
+      = f.submit "Créer le pack",
+                 class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90 cursor-pointer"

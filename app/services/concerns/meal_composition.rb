@@ -22,7 +22,7 @@ module MealComposition
       kind   = entry[:kind].to_s
       people = entry[:people].to_i
       next if kind.blank? || people < 1
-      next unless Pricing::Catalog::MEAL_PER_PERSON_CENTS.key?(kind)
+      next unless Pricing::Catalog.meal_kinds.include?(kind)
       { kind: kind, date: parse_meal_date(entry[:date]), people: people }
     end
   end
@@ -33,7 +33,7 @@ module MealComposition
 
   # Prix TVAC d'une entrée repas (source unique = Catalog, comme `meal_lines`).
   def meal_entry_price_cents(entry)
-    Pricing::Catalog::MEAL_PER_PERSON_CENTS[entry[:kind].to_s].to_i * entry[:people].to_i
+    Pricing::Catalog.meal_per_person_cents(entry[:kind]).to_i * entry[:people].to_i
   end
 
   # Crée les MealOrder du séjour depuis les entrées du draft. Retourne la somme
