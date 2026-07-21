@@ -598,3 +598,47 @@ button.cowork-day--free:active { transform: translateY(1px); }
   color: var(--p-muted);
   line-height: 1.5;
 }
+
+/* --- Coworking Phase 4 : expiration + historique ---------------------------- */
+.cowork-expiry-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  background: var(--p-accent-tint);
+  border: 1px solid var(--p-accent);
+  border-radius: var(--p-radius-md);
+  color: var(--p-text);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.cowork-expiry-alert + .cowork-expiry-alert { margin-top: 0.6rem; }
+.cowork-expiry-alert__icon { font-size: 1.1rem; line-height: 1.2; }
+.cowork-expiry-alert__text strong { color: var(--p-accent); }
+
+.cowork-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.cowork-history__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.85rem;
+  background: var(--p-past-bg);
+  border: 1px solid var(--p-past-border);
+  border-radius: var(--p-radius-sm);
+  font-size: 0.85rem;
+  color: var(--p-muted);
+}
+.cowork-history__date { font-weight: 500; color: var(--p-text); }
+.cowork-history__tag {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--p-muted);
+}

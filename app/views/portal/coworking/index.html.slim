@@ -7,6 +7,16 @@
     p.portal-header__name = current_portal_customer.display_name
   = link_to "Mes séjours", portal_stays_path, class: "portal-link-muted"
 
+- if @expiring_packs.any?
+  section.portal-block
+    - @expiring_packs.each do |pack|
+      .cowork-expiry-alert
+        span.cowork-expiry-alert__icon ⏳
+        span.cowork-expiry-alert__text
+          strong = "#{pack.days_remaining} journée#{'s' if pack.days_remaining > 1}"
+          = " expire#{'nt' if pack.days_remaining > 1} le #{l(pack.expires_at.to_date, format: :long)}."
+          | Pensez à les poser avant cette date.
+
 section.portal-block
   .cowork-balance
     span.cowork-balance__num = @credits
@@ -57,6 +67,16 @@ section.portal-block
             = render "portal/coworking/day", cell: cell
     p.cowork-cal__legend
       | Coworking du lundi au vendredi · 3 bureaux par jour · annulation jusqu'à 8h le jour même.
+
+- if @past_reservations.any?
+  section.portal-block
+    .portal-block__head
+      h2.portal-section-title Journées passées
+    ul.cowork-history
+      - @past_reservations.each do |reservation|
+        li.cowork-history__item
+          span.cowork-history__date = l(reservation.date, format: :long)
+          span.cowork-history__tag venue
 
 .portal-signoff
   span.portal-hand à bientôt sous les arbres !

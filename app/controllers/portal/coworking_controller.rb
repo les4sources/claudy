@@ -15,6 +15,13 @@ module Portal
       @pack_options = PACK_OPTIONS.map do |days|
         { days: days, price_cents: Pricing::Catalog.coworking_pack_cents(days) }
       end
+      # Packs payés dont les crédits vont bientôt périmer : signalés en haut du
+      # portail (« 3 jours expirent le 12/08 »).
+      @expiring_packs = @packs.select { |pack| pack.credits_expiring_soon? }
+      # Historique des journées déjà passées, plus récentes d'abord.
+      @past_reservations = current_portal_customer.coworking_reservations
+                                                  .where("date < ?", Date.current)
+                                                  .order(date: :desc)
       build_calendar
     end
 

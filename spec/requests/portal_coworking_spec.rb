@@ -239,4 +239,64 @@ RSpec.describe "Portail client — Coworking", type: :request do
       expect(res.reload.deleted_at).to be_nil
     end
   end
+
+  # Epic #126, Phase 4 — finitions : visibilité expiration + historique.
+  describe "signalement d'expiration proche (Phase 4)" do
+    it "affiche une alerte quand des crédits payés expirent dans moins de 30 jours" do
+      customer = sign_in_coworking("ana@example.com")
+      paid_pack(customer, days: 5, expires_at: (Date.current + 20).to_time)
+
+      get portal_coworking_path
+
+      expect(response.body).to include("expire")
+      expect(response.body).to include(I18n.l((Date.current + 20), format: :long))
+    end
+
+    it "n'affiche pas d'alerte pour un pack qui expire au-delà de 30 jours" do
+      customer = sign_in_coworking("ana@example.com")
+      paid_pack(customer, days: 5, expires_at: (Date.current + 90).to_time)
+
+      get portal_coworking_path
+
+      expect(response.body).not_to include("cowork-expiry-alert")
+    end
+  end
+
+  describe "historique des journées passées (Phase 4)" do
+    it "liste les journées déjà passées du client" do
+      customer = sign_in_coworking("ana@example.com")
+      pack = paid_pack(customer, days: 5)
+      past = previous_weekday(Date.current - 7)
+      pack.coworking_reservations.create!(date: past, customer: customer)
+
+      get portal_coworking_path
+
+      expect(response.body).to include("Journées passées")
+      expect(response.body).to include(I18n.l(past, format: :long))
+    end
+  end
+
+  # Edge case contractuel : réserver le jour même AVANT 8h doit fonctionner
+  # (le cap de 8h ne concerne que l'ANNULATION, pas la réservation).
+  describe "réservation le jour même avant 8h (Phase 4)" do
+    it "autorise la réservation du jour courant tôt le matin" do
+      today = next_weekday(Date.current)
+      Time.use_zone("Europe/Brussels") do
+        travel_to Time.zone.local(today.year, today.month, today.day, 7, 0, 0) do
+          customer = sign_in_coworking("ana@example.com")
+          paid_pack(customer, days: 1)
+
+          expect {
+            post portal_coworking_reservations_path, params: { date: today.iso8601 }
+          }.to change(CoworkingReservation, :count).by(1)
+        end
+      end
+    end
+  end
+
+  def previous_weekday(from)
+    d = from
+    d -= 1 until (1..5).cover?(d.wday)
+    d
+  end
 end
