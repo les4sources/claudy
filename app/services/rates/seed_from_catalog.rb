@@ -45,7 +45,8 @@ module Rates
 
     # Toutes les entrées du catalogue, à plat.
     def entries
-      lodging_entries + hall_entries + outdoor_entries + meal_entries + misc_entries
+      lodging_entries + hall_entries + outdoor_entries + meal_entries +
+        coworking_entries + misc_entries
     end
 
     private
@@ -128,6 +129,15 @@ module Rates
     }.freeze
 
     def meal_label(kind) = MEAL_LABELS.fetch(kind, kind.to_s.tr("_", " ").capitalize)
+
+    # Packs coworking (#127) — mergés en parallèle de #124, absents du seed
+    # d'origine ; `Pricing::Catalog.coworking_pack_cents` lit ces clés d'abord.
+    def coworking_entries
+      Pricing::Catalog::COWORKING_PACKS.map do |days, amount|
+        entry("coworking.pack_#{days}", amount,
+              "Coworking — pack #{days} journée#{'s' if days > 1}")
+      end
+    end
 
     def misc_entries
       [
