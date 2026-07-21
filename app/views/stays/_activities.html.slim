@@ -23,7 +23,7 @@
                 span.inline-block.mt-1.px-2.py-0.5.rounded.text-xs.font-medium.bg-green-100.text-green-800 Validée
             .flex.items-center.gap-2.shrink-0
               = form_with url: experience_booking_path(booking), method: :patch, class: "flex items-center gap-1" do |f|
-                = f.number_field "experience_booking[participants]", value: booking.participants, min: 1, class: "w-14 rounded border-gray-300 text-sm py-1"
+                = number_field_tag "experience_booking[participants]", booking.participants, min: 1, class: "w-14 rounded border-gray-300 text-sm py-1"
                 = f.submit "OK", class: "px-2 py-1 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700"
               = button_to "Retirer", experience_booking_path(booking), method: :delete, class: "px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium hover:bg-red-200"
 
@@ -32,19 +32,21 @@
       .bg-gray-50.rounded-md.p-3.mt-2
         .text-xs.font-medium.text-gray-600.mb-2 Ajouter une activité
         = form_with url: stay_experience_bookings_path(@stay), method: :post, class: "space-y-2" do |f|
-          = f.select "experience_booking[experience_availability_id]",
-                     options_for_select(@assignable_availabilities.map { |a| [a.label, a.id] }),
-                     {}, class: "block w-full rounded-md border-gray-300 text-sm"
+          / *_tag et non f.* : sans modèle, les helpers du builder rendent un
+          / libellé auto « Experience booking[participants] » (bug 2026-07-21).
+          = select_tag "experience_booking[experience_availability_id]",
+                       options_for_select(@assignable_availabilities.map { |a| [a.label, a.id] }),
+                       class: "block w-full rounded-md border-gray-300 text-sm"
           .flex.items-center.gap-3
             label.text-xs.text-gray-600.flex.items-center.gap-1
               | Participants
-              = f.number_field "experience_booking[participants]", value: 1, min: 1, class: "w-16 rounded border-gray-300 text-sm py-1"
+              = number_field_tag "experience_booking[participants]", 1, min: 1, class: "w-16 rounded border-gray-300 text-sm py-1"
             .flex.items-center.gap-3.text-xs.text-gray-700
               label.flex.items-center.gap-1
-                = f.radio_button "experience_booking[status]", "pending", checked: true
+                = radio_button_tag "experience_booking[status]", "pending", true
                 | À valider par le porteur
               label.flex.items-center.gap-1
-                = f.radio_button "experience_booking[status]", "confirmed"
+                = radio_button_tag "experience_booking[status]", "confirmed"
                 | Déjà validée
           = f.submit "Ajouter l'activité", class: "px-3 py-1.5 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700"
     - else

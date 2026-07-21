@@ -34,11 +34,7 @@ class StaysController < BaseController
   # des liens de la table /stays).
   def show
     @stay = Stay.includes(stay_items: :bookable, customer: []).find(params[:id]).decorate
-    # Créneaux proposables à l'ajout d'activité (epic #55, Phase 6), bornés au
-    # périmètre de l'utilisateur (admin global : tout ; porteur : ses activités).
-    @assignable_availabilities = ExperienceAvailability.for_user(current_user)
-                                                       .upcoming
-                                                       .includes(:experience)
+    @assignable_availabilities = assignable_availabilities_for(@stay)
     render layout: false if params[:modal].present?
   end
 
@@ -276,7 +272,7 @@ class StaysController < BaseController
     updater = Stays::QuickStatusUpdater.new(stay: @stay, status: params[:status])
     ok = updater.run
     @stay = Stay.includes(stay_items: :bookable, customer: []).find(@stay.id).decorate
-    @assignable_availabilities = ExperienceAvailability.for_user(current_user).upcoming.includes(:experience)
+    @assignable_availabilities = assignable_availabilities_for(@stay)
 
     respond_to do |format|
       format.turbo_stream do
@@ -361,6 +357,19 @@ class StaysController < BaseController
   end
 
   private
+
+  # Créneaux proposables à l'ajout d'activité (epic #55, Phase 6) : bornés au
+  # périmètre de l'utilisateur (admin global : tout ; porteur : ses activités)
+  # ET aux dates du séjour — proposer un créneau du 7/08 sur un séjour du
+  # 18-19/07 n'a aucun sens (retour Michael 2026-07-21). Un séjour sans dates
+  # retombe sur tous les créneaux à venir.
+  def assignable_availabilities_for(stay)
+    scope = ExperienceAvailability.for_user(current_user).upcoming.includes(:experience)
+    if stay.arrival_date.present? && stay.departure_date.present?
+      scope = scope.where(available_on: stay.arrival_date..stay.departure_date)
+    end
+    scope
+  end
 
   # Relation de base de l'index selon le filtre actif. « À venir » / « Passés »
   # réutilisent les scopes du modèle (qui portent DÉJÀ leur propre tri utile :
