@@ -21,6 +21,19 @@ class CoworkingMailer < ApplicationMailer
     mail(to: @customer.email, subject: "Journée de coworking réservée — Les 4 Sources")
   end
 
+  # Rappel J-30 (epic #126, Phase 4) : le pack va bientôt expirer alors qu'il
+  # reste des crédits. Déclenché par `rake coworking:send_expiry_reminders`,
+  # idempotent (colonne `expiry_reminder_sent_at`).
+  def pack_expiring(pack)
+    @pack = pack
+    @customer = pack.customer
+    @days_remaining = pack.days_remaining
+    @expires_on = pack.expires_at.to_date
+    return if @customer.nil? || @customer.email.blank?
+
+    mail(to: @customer.email, subject: "Vos journées de coworking expirent bientôt — Les 4 Sources")
+  end
+
   # Confirmation d'une journée annulée.
   def reservation_cancelled(reservation)
     @reservation = reservation

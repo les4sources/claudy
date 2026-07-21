@@ -1,0 +1,12 @@
+p Bonjour,
+p
+  | Il vous reste
+  strong = " #{@days_remaining} journée#{'s' if @days_remaining > 1} "
+  | de coworking sur votre pack, mais elles expirent le
+  strong = " #{l(@expires_on, format: :long)}"
+  | .
+p
+  | Pensez à les poser avant cette date depuis votre portail — après, les
+  | journées non utilisées seront perdues.
+p = link_to "Réserver mes journées", portal_coworking_url
+p À bientôt sous les arbres.
