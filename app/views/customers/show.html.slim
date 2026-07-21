@@ -83,6 +83,7 @@
                           span.font-medium = stay.date_range
                           = stay.status_badge
                           = stay.platform_badge
+                          = stay.category_badge
                         .text-gray-500.truncate = stay.contact_line
                         .mt-1.flex.items-center.gap-2.flex-wrap
                           span.font-medium.text-gray-900 = humanized_money_with_symbol(stay.total_amount)

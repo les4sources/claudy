@@ -47,6 +47,7 @@
               .mt-1.flex.flex-wrap.items-center.gap-1
                 span.inline-flex.items-center.rounded-full.bg-gray-100.px-2.text-xs.font-medium.text-gray-700(class="py-0.5") = stay_source_label(stay.source)
                 = stay.platform_badge
+                = stay.category_badge
             td.px-4.py-2.text-sm
               .text-gray-900.whitespace-nowrap = stay.date_range
               .mt-1 = stay.status_badge

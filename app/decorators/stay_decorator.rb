@@ -190,6 +190,15 @@ class StayDecorator < ApplicationDecorator
                   class: "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium #{style[:classes]}")
   end
 
+  # Badge discret de la catégorie de séjour (Michael 2026-07-21). nil → nil (rien
+  # à afficher). Libellé FR via `Stay#category_label`.
+  def category_badge
+    label = object.category_label
+    return if label.blank?
+    h.content_tag(:span, label,
+                  class: "inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700")
+  end
+
   # Plage de dates au format français long (ex. « 12 février 2026 »).
   def date_range
     return "—" if arrival_date.blank? && departure_date.blank?
