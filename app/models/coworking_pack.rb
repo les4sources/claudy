@@ -10,6 +10,9 @@ class CoworkingPack < ApplicationRecord
   DAYS_OPTIONS = [1, 5, 10, 20].freeze
   PAYMENT_METHODS = %w[card bank_transfer cash].freeze
   VALIDITY_MONTHS = 12
+  # Fenêtre du rappel d'expiration (Phase 4) : on prévient le client 30 jours
+  # avant que son pack ne périme, tant qu'il lui reste des crédits.
+  EXPIRY_REMINDER_DAYS = 30
 
   belongs_to :customer
   has_many :coworking_reservations, dependent: :destroy
@@ -28,6 +31,15 @@ class CoworkingPack < ApplicationRecord
   scope :ordered, -> { order(purchased_at: :desc) }
   scope :active, -> { where("expires_at >= ?", Time.current) }
 
+  # Pré-sélection SQL des packs à rappeler : rappel pas encore envoyé et
+  # expiration dans la fenêtre [aujourd'hui, aujourd'hui + within_days]. Le
+  # filtrage fin (payé, crédits restants, client joignable) se fait ensuite en
+  # Ruby via `expiry_reminder_due?`.
+  scope :expiry_reminder_candidates, lambda { |on: Date.current, within_days: EXPIRY_REMINDER_DAYS|
+    where(expiry_reminder_sent_at: nil)
+      .where(expires_at: on.beginning_of_day..(on + within_days).end_of_day)
+  }
+
   # Journées déjà posées (réservations vivantes — la soft-deletion les retire).
   def days_used = coworking_reservations.count
 
@@ -37,6 +49,31 @@ class CoworkingPack < ApplicationRecord
 
   def expired?(on = Date.current)
     expires_at.to_date < on
+  end
+
+  # Nombre de jours (calendaires) avant expiration à partir d'une date donnée.
+  def days_until_expiry(on = Date.current)
+    (expires_at.to_date - on).to_i
+  end
+
+  # Le pack va bientôt périmer alors qu'il reste des crédits payés à consommer :
+  # c'est ce qui déclenche à la fois le signalement dans le portail et le rappel
+  # email J-30. Un pack déjà expiré, non payé ou sans crédit n'est pas concerné.
+  def credits_expiring_soon?(within_days: EXPIRY_REMINDER_DAYS, on: Date.current)
+    return false unless paid? && credits_left?
+    return false if expired?(on)
+
+    expires_at.to_date <= on + within_days
+  end
+
+  # Éligibilité au rappel email J-30 (idempotent) : un pack qui expire bientôt,
+  # qui a encore des crédits, dont le client est joignable, et qui n'a pas déjà
+  # reçu son rappel. Filtré en Ruby car `paid?`/`credits_left?` sont calculés.
+  def expiry_reminder_due?(on: Date.current, within_days: EXPIRY_REMINDER_DAYS)
+    return false if expiry_reminder_sent_at.present?
+    return false unless credits_expiring_soon?(within_days: within_days, on: on)
+
+    customer.present? && customer.email.present? && !customer.catch_all?
   end
 
   # Statut de paiement DÉRIVÉ : "paid" dès que les paiements encaissés couvrent

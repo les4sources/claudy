@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_21_013839) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_21_131104) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -185,6 +185,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_21_013839) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "expiry_reminder_sent_at"
     t.index ["customer_id"], name: "index_coworking_packs_on_customer_id"
     t.index ["deleted_at"], name: "index_coworking_packs_on_deleted_at"
     t.index ["expires_at"], name: "index_coworking_packs_on_expires_at"
