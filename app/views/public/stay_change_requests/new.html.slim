@@ -1,0 +1,43 @@
+/ Demande de modification de séjour (issue #133). Le formulaire est prérempli
+/ depuis le séjour et réutilise TELS QUELS les partiels de composition du
+/ funnel public — même grilles, même devis, une seule vérité de composition.
+/ Rien n'est appliqué ici : la soumission crée une DEMANDE.
+- content_for :meta_title do
+  | Modifier mon séjour
+
+.px-4.py-8.md:px-8.space-y-6(data-controller="public--reservation-quote"
+  data-public--reservation-quote-url-value=public_stay_change_request_quote_path(@stay.token))
+
+  div
+    h1.text-2xl.font-semibold.text-gray-900 Modifier mon séjour
+    p.text-sm.text-gray-500.mt-1
+      | Ajustez votre séjour ci-dessous. Votre demande est envoyée à l'équipe, qui la valide — rien n'est modifié avant son accord.
+
+  - if flash.now[:alert].present?
+    .rounded-lg.bg-red-50.border.border-red-100.px-4.py-3.text-sm.text-red-800
+      = flash.now[:alert]
+
+  = form_with url: public_stay_change_requests_path(@stay.token), method: :post,
+      data: { "public--reservation-quote-target": "form",
+              action: "change->public--reservation-quote#refresh" } do |f|
+
+    .space-y-6
+      / Hébergement + camping/van/hamacs, nuit par nuit — partiel du funnel
+      / réutilisé TEL QUEL (il émet des champs `reservation[...]`, que le
+      / contrôleur lit sous cette clé). Aucune modification du funnel public.
+      = render "public/reservations/stay_calendar"
+
+      / Espaces, nuit par nuit — même partiel que le funnel.
+      = render "public/reservations/spaces_calendar"
+
+      = render "public/stay_change_requests/delta_panel",
+               stay: @stay, new_total_cents: @new_total_cents,
+               delta_cents: @delta_cents, refund_cents: @refund_cents
+
+      .rounded-lg.bg-gray-50.border.border-gray-100.px-4.py-3.text-xs.text-gray-500
+        | Vos activités déjà réservées ne sont pas concernées par ce formulaire — elles gardent leur propre validation.
+
+      .flex.justify-between.items-center.gap-4
+        = link_to "Annuler", public_stay_path(@stay.token), class: "text-sm text-gray-500 hover:text-gray-700 underline"
+        = f.submit "Envoyer ma demande",
+                   class: "rounded-xl bg-emerald-600 text-white px-8 py-3 text-sm font-semibold hover:bg-emerald-700 cursor-pointer"

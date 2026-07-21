@@ -1,0 +1,12 @@
+p
+  | Une demande de modification vient d'arriver pour le séjour
+  strong  ##{@stay.id}
+  |  (#{@stay.customer&.email}).
+ul
+  li = "Nouveau total : #{@new_total}"
+  li = "Delta : #{@delta_label}"
+  - if @change_request.refund_expected?
+    li = "Remboursement attendu — IBAN : #{@change_request.refund_iban}"
+    li = StayChangeRequest::REFUND_NOTICE
+p
+  | À approuver ou refuser depuis la fiche séjour dans Claudy.

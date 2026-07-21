@@ -179,37 +179,11 @@ module Stays
     # Booking du séjour édité (revue Forge F4 : `.first` seul laissait un
     # éventuel second Booking auto-bloquer le séjour ; et le mode gîte entier
     # ne s'excluait pas du tout — un séjour confirmé se bloquait lui-même).
+    # Déléguée à `Stays::LodgingAvailability` (issue #133) : la demande de
+    # modification client doit appliquer EXACTEMENT la même règle de dispo que
+    # la validation admin. Le corps a été déplacé tel quel, sans changement.
     def lodging_available?
-      if @draft.rooms_mode?
-        ids = @draft.lodging.rooms.where(id: @draft.room_ids).pluck(:id)
-        # Chambres toutes hors gîte : déjà refusé en validation ; réponse
-        # conservatrice si on arrive ici par un autre chemin.
-        return false if ids.empty?
-      else
-        ids = @draft.lodging.rooms.pluck(:id)
-        # Gîte sans chambre modélisée : aucune Reservation possible — seule une
-        # indisponibilité posée à la main compte (comportement historique).
-        if ids.empty?
-          return @draft.lodging.unavailabilities
-                       .where(date: @draft.arrival_date..@draft.departure_date).none?
-        end
-      end
-
-      # Contrat de dates (issue #94) : `[arrival_date, departure_date)` est une
-      # fenêtre de séjour ; le jour de départ n'est PAS occupé. Les `Reservation`
-      # sont NUITÉES → on borne aux nuits `arrival_date..(departure_date-1)` (borne
-      # haute excluant le jour de départ) pour ne pas refuser une rotation dos-à-dos.
-      # Le `max` garde un intervalle valide même sur une fenêtre dégénérée (0 nuit).
-      last_night = [@draft.departure_date - 1, @draft.arrival_date].max
-      scope = Reservation.joins(:booking)
-                         .where(date: @draft.arrival_date..last_night,
-                                room_id: ids, bookings: { status: "confirmed" })
-      own_ids = @stay.stay_items.where(bookable_type: "Booking").pluck(:bookable_id)
-      scope = scope.where.not(bookings: { id: own_ids }) if own_ids.any?
-      # Les `Unavailability` gardent leur sémantique de JOURNÉES PLEINES (inclusif
-      # du jour de départ) — volontairement différente des nuits ci-dessus.
-      scope.none? &&
-        @draft.lodging.unavailabilities.where(date: @draft.arrival_date..@draft.departure_date).none?
+      Stays::LodgingAvailability.call(stay: @stay, draft: @draft)
     end
 
     # Dispo espaces capacity-aware (`Space#available_on?`), même logique de force

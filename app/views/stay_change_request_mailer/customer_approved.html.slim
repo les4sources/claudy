@@ -1,0 +1,10 @@
+p Bonjour,
+p Votre demande de modification a été acceptée — votre séjour est à jour.
+ul
+  li = "Nouveau total : #{number_to_currency(@stay.total_amount_cents.to_i / 100.0, unit: '€', format: '%n %u')}"
+  li = "Solde restant : #{number_to_currency(@stay.balance_due_cents.to_i / 100.0, unit: '€', format: '%n %u')}"
+  - if @change_request.refund_expected?
+    li = StayChangeRequest::REFUND_NOTICE
+p
+  = link_to "Voir mon séjour", public_stay_url(@stay.token)
+p — Les 4 Sources

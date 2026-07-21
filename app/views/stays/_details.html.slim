@@ -23,6 +23,52 @@ div id="stay-details-#{@stay.id}"
       - if @stay.token.present?
         = link_to "Page web du séjour ↗", public_stay_path(@stay.token, donottrack: 1), target: "_blank", rel: "noopener", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
 
+    / Demande de modification en attente (issue #133) : ce que le client propose
+    / face à ce qui est actuellement enregistré. Rien n'a été appliqué.
+    - pending_change = @stay.stay_change_requests.pending.order(created_at: :desc).first
+    - if pending_change.present?
+      .rounded-lg.border.border-amber-200.bg-amber-50.p-4.space-y-3
+        h4.text-sm.font-semibold.text-amber-900 Demande de modification en attente
+        dl.grid.grid-cols-3.gap-x-4.gap-y-1.text-sm
+          dt.font-medium.text-amber-800 Total actuel
+          dd.col-span-2.text-gray-900 = number_to_currency(@stay.total_amount_cents.to_i / 100.0, unit: "€", format: "%n %u")
+          dt.font-medium.text-amber-800 Total proposé
+          dd.col-span-2.text-gray-900.font-semibold = number_to_currency(pending_change.new_total_cents.to_i / 100.0, unit: "€", format: "%n %u")
+          dt.font-medium.text-amber-800 Delta
+          dd.col-span-2.text-gray-900
+            = "#{pending_change.delta_cents.to_i.positive? ? '+' : ''}#{number_to_currency(pending_change.delta_cents.to_i / 100.0, unit: '€', format: '%n %u')}"
+          - if pending_change.refund_expected?
+            dt.font-medium.text-amber-800 IBAN
+            dd.col-span-2.text-gray-900.font-mono.text-xs = pending_change.refund_iban
+            dt.font-medium.text-amber-800 Remboursement
+            dd.col-span-2.text-gray-700.text-xs = StayChangeRequest::REFUND_NOTICE
+
+        / Composition proposée vs actuelle — diff lisible ligne à ligne.
+        .grid.grid-cols-2.gap-4.text-xs
+          div
+            .font-semibold.text-gray-500.uppercase.mb-1 Actuel
+            ul.space-y-0.5
+              - @stay.item_lines.each do |line|
+                li.text-gray-700
+                  = "#{line[:name]} — #{line[:amount]}"
+          div
+            .font-semibold.text-amber-800.uppercase.mb-1 Proposé
+            ul.space-y-0.5
+              - pending_change.proposed_draft.quote.breakdown.each do |line|
+                li.text-gray-900
+                  = "#{line[:label]} — #{number_to_currency(line[:amount_cents].to_i / 100.0, unit: '€', format: '%n %u')}"
+
+        .flex.flex-wrap.items-center.gap-2.pt-1
+          = button_to "Approuver",
+                      approve_change_request_stay_path(@stay, change_request_id: pending_change.id),
+                      method: :post,
+                      form: { data: { turbo_confirm: "Appliquer cette modification au séjour ?" } },
+                      class: "inline-flex items-center rounded-md border border-transparent bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700"
+          = form_with url: refuse_change_request_stay_path(@stay, change_request_id: pending_change.id), method: :post, class: "flex items-center gap-2" do
+            = text_field_tag :refusal_reason, nil, required: true, placeholder: "Motif du refus (obligatoire)", class: "rounded-md border-gray-300 text-sm w-64"
+            = submit_tag "Refuser",
+                         class: "inline-flex items-center rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 cursor-pointer"
+
     dl.grid.grid-cols-3.gap-x-4.gap-y-2.text-sm
       dt.font-medium.text-gray-500 Dates
       dd.col-span-2.text-gray-900 = @stay.date_range

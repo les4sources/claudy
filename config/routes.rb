@@ -148,6 +148,10 @@ Rails.application.routes.draw do
       # Action rapide depuis la modale du calendrier (issue #76) : bascule
       # pending ↔ confirmed sans ouvrir le form d'édition, réponse Turbo Stream.
       patch :update_status
+      # Demande de modification client (issue #133) : approbation / refus par
+      # l'équipe. C'est le seul chemin qui applique la demande au séjour.
+      post :approve_change_request
+      post :refuse_change_request
     end
     resources :experience_bookings, only: [:create]
   end
@@ -206,6 +210,12 @@ Rails.application.routes.draw do
   # même jeton que la page client ; crée/rafraîchit le paiement puis part sur
   # Stripe Checkout.
   post "sejour/:token/payer-le-solde", to: "public/stay_balance_payments#create", as: :public_stay_balance_payment
+
+  # Demande de modification de séjour par le client (issue #133) — canal jeton.
+  # C'est une DEMANDE : rien n'est appliqué avant validation par l'équipe.
+  get  "sejour/:token/modification",       to: "public/stay_change_requests#new",    as: :new_public_stay_change_request
+  post "sejour/:token/modification/devis", to: "public/stay_change_requests#quote",  as: :public_stay_change_request_quote
+  post "sejour/:token/modification",       to: "public/stay_change_requests#create", as: :public_stay_change_requests
 
   namespace :public do
     # Épic #81, Phase 9 — demande de réservation publique legacy retirée

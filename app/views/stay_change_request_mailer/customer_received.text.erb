@@ -1,0 +1,11 @@
+Bonjour,
+
+Nous avons bien reçu votre demande de modification de séjour. Notre équipe la valide et vous répond rapidement — rien n'est modifié tant qu'elle n'est pas acceptée.
+
+Nouveau total demandé : <%= @new_total %>
+<% if @change_request.increase? %>
+Différence à régler : <%= @delta_label %> — elle s'ajoutera à votre solde une fois la demande acceptée.
+<% elsif @change_request.refund_expected? %>
+<%= StayChangeRequest::REFUND_NOTICE %>
+<% end %>
+— Les 4 Sources

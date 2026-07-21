@@ -1,6 +1,6 @@
 class StaysController < BaseController
   before_action :set_accounting_view, only: :show
-  before_action :set_stay, only: %i[edit update destroy update_status]
+  before_action :set_stay, only: %i[edit update destroy update_status approve_change_request refuse_change_request]
 
   # Index admin des séjours (epic #81) — le séjour devient le point d'entrée
   # unique. Tableau paginé (30/page) orienté GESTION des réservations et
@@ -101,6 +101,39 @@ class StaysController < BaseController
   def edit
     @draft = Stays::DraftReconstructor.new(@stay).to_draft
     prepare_form
+  end
+
+  # Approbation d'une demande de modification client (issue #133). C'est ICI —
+  # et nulle part avant — que le séjour change. La dispo est re-vérifiée, sauf
+  # forçage explicite par l'équipe.
+  def approve_change_request
+    change_request = @stay.stay_change_requests.pending.find(params[:change_request_id])
+    service = Stays::ApplyChangeRequest.new(
+      change_request: change_request,
+      user: current_user,
+      force_availability: params[:force_availability].present?
+    )
+
+    if service.run
+      StayChangeRequestMailer.customer_approved(change_request).deliver_later
+      redirect_to stay_path(@stay), notice: "La modification a été appliquée."
+    else
+      redirect_to stay_path(@stay), alert: service.error_message
+    end
+  end
+
+  # Refus d'une demande — le motif est OBLIGATOIRE, il part au client.
+  def refuse_change_request
+    change_request = @stay.stay_change_requests.pending.find(params[:change_request_id])
+    reason = params[:refusal_reason].to_s.strip
+
+    if reason.blank?
+      return redirect_to stay_path(@stay), alert: "Un motif de refus est obligatoire."
+    end
+
+    change_request.update!(status: "refused", refusal_reason: reason)
+    StayChangeRequestMailer.customer_refused(change_request).deliver_later
+    redirect_to stay_path(@stay), notice: "La demande de modification a été refusée."
   end
 
   def update

@@ -41,6 +41,9 @@ class Stay < ApplicationRecord
 
   belongs_to :customer
   has_many :stay_items, dependent: :destroy
+  # Demandes de modification par le client (issue #133). Elles ne modifient
+  # JAMAIS le séjour tant qu'elles ne sont pas approuvées par l'équipe.
+  has_many :stay_change_requests, dependent: :destroy
   has_many :experience_bookings, dependent: :destroy
   # Note publique du séjour (visible client) — ActionText, PAS de colonne. Consolide
   # à la fusion les `public_notes` des bookables + des stays sources (epic notes).
