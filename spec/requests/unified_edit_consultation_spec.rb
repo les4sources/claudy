@@ -40,7 +40,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
   end
 
   describe "vue jour (pages#day)" do
-    it "renvoie le lien d'un booking à séjour vers le form séjour (pas la fiche legacy)" do
+    it "renvoie le lien d'un booking à séjour vers la fiche séjour (pas la fiche legacy)" do
       from = Date.today.next_occurring(:friday)
       booking = confirmed_booking(from: from, to: from + 1)
       stay = Stays::EnsureForBooking.call(booking)
@@ -48,7 +48,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
       get day_details_path(date: from.iso8601)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(edit_stay_path(stay))
+      expect(response.body).to include(stay_path(stay))
       expect(response.body).not_to include(booking_path(booking))
     end
 
@@ -64,7 +64,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
       expect(response.body).not_to include(edit_booking_path(booking))
     end
 
-    it "renvoie le lien d'une résa d'espace à séjour vers le form séjour" do
+    it "renvoie le lien d'une résa d'espace à séjour vers la fiche séjour" do
       from = Date.today.next_occurring(:friday)
       sb = confirmed_space_booking(on: from)
       stay = Stays::EnsureForSpaceBooking.call(sb)
@@ -72,7 +72,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
       get day_details_path(date: from.iso8601)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(edit_stay_path(stay))
+      expect(response.body).to include(stay_path(stay))
       expect(response.body).not_to include(space_booking_path(sb))
     end
 
@@ -89,7 +89,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
   end
 
   describe "index hébergements (bookings#index)" do
-    it "renvoie un booking à séjour vers le form séjour (pas la fiche legacy)" do
+    it "renvoie un booking à séjour vers la fiche séjour (pas la fiche legacy)" do
       from = Date.today.next_occurring(:friday)
       booking = confirmed_booking(from: from, to: from + 2)
       stay = Stays::EnsureForBooking.call(booking)
@@ -97,7 +97,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
       get bookings_path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(edit_stay_path(stay))
+      expect(response.body).to include(stay_path(stay))
       expect(response.body).not_to include(booking_path(booking))
     end
 
@@ -115,7 +115,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
   end
 
   describe "toast « autres réservations » (pages#other_bookings)" do
-    it "renvoie un booking à séjour vers le form séjour" do
+    it "renvoie un booking à séjour vers la fiche séjour" do
       from = Date.today.next_occurring(:friday)
       other = confirmed_booking(from: from, to: from + 2)
       stay = Stays::EnsureForBooking.call(other)
@@ -123,7 +123,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
       get "/pages/other_bookings", params: { from_date: from.iso8601, to_date: (from + 2).iso8601, booking_id: 0 }
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(edit_stay_path(stay))
+      expect(response.body).to include(stay_path(stay))
       expect(response.body).not_to include(booking_path(other))
     end
 
@@ -141,7 +141,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
   end
 
   describe "toast « autres réservations » espaces (pages#other_space_bookings)" do
-    it "renvoie une résa d'espace à séjour vers le form séjour" do
+    it "renvoie une résa d'espace à séjour vers la fiche séjour" do
       from = Date.today.next_occurring(:friday)
       sb = confirmed_space_booking(on: from)
       stay = Stays::EnsureForSpaceBooking.call(sb)
@@ -149,13 +149,13 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
       get "/pages/other_space_bookings", params: { from_date: from.iso8601, to_date: (from + 1).iso8601, space_booking_id: 0 }
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(edit_stay_path(stay))
+      expect(response.body).to include(stay_path(stay))
       expect(response.body).not_to include(space_booking_path(sb))
     end
   end
 
   describe "index espaces (space_bookings#index)" do
-    it "renvoie une résa d'espace à séjour vers le form séjour" do
+    it "renvoie une résa d'espace à séjour vers la fiche séjour" do
       from = Date.today.next_occurring(:friday)
       sb = confirmed_space_booking(on: from)
       stay = Stays::EnsureForSpaceBooking.call(sb)
@@ -163,7 +163,7 @@ RSpec.describe "Édition unifiée — consultation hors modale (epic #81, Phase 
       get space_bookings_path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(edit_stay_path(stay))
+      expect(response.body).to include(stay_path(stay))
       expect(response.body).not_to include(space_booking_path(sb))
     end
 

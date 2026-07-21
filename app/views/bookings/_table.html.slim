@@ -26,7 +26,7 @@
               / Édition unifiée (issue #99) : la liste renvoie vers le form séjour
               / quand un Stay vivant existe ; cas résiduel sans séjour → fiche show.
               - if (stay = booking.stay)
-                = link_to booking.group_or_name, edit_stay_path(stay), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+                = link_to booking.group_or_name, stay_path(stay), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
               - else
                 = link_to booking.group_or_name, booking_path(booking), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
             .mt-1.text-gray-900
