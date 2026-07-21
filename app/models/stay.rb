@@ -96,6 +96,14 @@ class Stay < ApplicationRecord
     Payment.where(stay_id: id).or(Payment.where(booking_id: booking_ids))
   end
 
+  # Paiements DIRECTEMENT rattachés au séjour (lien `stay_id`), par opposition au
+  # canal booking historique agrégé par `#payments`. Ce sont les seuls que la
+  # modale séjour crée et mute (ajout / bascule de statut) — un paiement du canal
+  # booking garde son propre écran de gestion.
+  def direct_payments
+    Payment.where(stay_id: id)
+  end
+
   # --- Montant dû / soldé (epic #55, Phase 1) -----------------------------
   # « Soldé » n'est PAS un 4e statut : c'est simplement le statut `paid`
   # existant (epic #26), exprimé ici en euros via des helpers réutilisables.

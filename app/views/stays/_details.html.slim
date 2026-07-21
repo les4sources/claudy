@@ -159,27 +159,65 @@ div id="stay-details-#{@stay.id}"
     = render "stays/activities"
 
     / Paiements du séjour (facturation espaces → paiements, epic #26 / #55).
-    / Liste TOUS les paiements du séjour — encaissés ET en attente — avec montant,
-    / moyen, statut (badge) et date. `@stay.payments` unit le lien direct
-    / `stay_id` (espaces, Stripe, saisie manuelle) et le canal booking historique.
+    / Enveloppé dans un turbo-frame : ajouter un paiement ou basculer un statut
+    / (pending ↔ paid) redirige vers stay_path et Turbo remplace CE fragment en
+    / place — badge de statut et liste rafraîchis sans recharger la modale.
+    / La secrétaire (vérif compte bancaire) gère ainsi les encaissements depuis
+    / la modale. `@stay.payments` unit le lien direct `stay_id` (espaces, Stripe,
+    / saisie manuelle) et le canal booking historique ; seuls les paiements à
+    / `stay_id` direct sont éditables ici (les autres n'ont pas de bouton).
     - stay_payments = @stay.payments.order(:created_at)
-    .border-t.border-gray-200.pt-4
-      h4.text-sm.font-medium.text-gray-700.mb-2 Paiements
-      - if stay_payments.any?
-        ul.divide-y.divide-gray-100
-          - stay_payments.each do |payment|
-            - p = payment.decorate
-            li.py-2.text-sm.flex.items-center.justify-between.gap-3
-              .flex.items-center.gap-2.min-w-0
-                span.text-lg.shrink-0 = p.payment_method_emoji
-                .min-w-0
-                  .text-gray-900.font-medium = p.amount
-                  .text-gray-500 = p.payment_method
-              .flex.items-center.gap-3.shrink-0
-                = p.status
-                span.text-gray-500 = p.created_at
-      - else
-        p.text-sm.text-gray-500 Aucun paiement enregistré pour ce séjour.
+    = turbo_frame_tag "stay_#{@stay.id}_payments" do
+      .border-t.border-gray-200.pt-4.space-y-3
+        .flex.items-center.justify-between.gap-3
+          h4.text-sm.font-medium.text-gray-700 Paiements
+          .flex.items-center.gap-2
+            span.text-xs.text-gray-500 Statut du séjour :
+            = @stay.payment_status_badge
+
+        / Bandeau « soldé » bien visible dès que le séjour est intégralement payé.
+        - if @stay.paid?
+          .rounded-md.bg-green-50.ring-1.ring-green-300.px-3.py-2.flex.items-center.gap-2
+            span.text-green-700.text-lg ✓
+            span.text-sm.font-semibold.text-green-800 Séjour intégralement payé
+
+        - if stay_payments.any?
+          ul.divide-y.divide-gray-100
+            - stay_payments.each do |payment|
+              - p = payment.decorate
+              li.py-2.text-sm.flex.items-center.justify-between.gap-3
+                .flex.items-center.gap-2.min-w-0
+                  span.text-lg.shrink-0 = p.payment_method_emoji
+                  .min-w-0
+                    .text-gray-900.font-medium = p.amount
+                    .text-gray-500 = p.payment_method
+                .flex.items-center.gap-3.shrink-0
+                  = p.status
+                  span.text-gray-500 = p.created_at
+                  / Bascule de statut — seulement pour les paiements DIRECTS du séjour.
+                  - if payment.stay_id.present?
+                    - if payment.pending?
+                      = button_to "Marquer payé", stay_payment_path(@stay, payment), method: :patch, params: { payment: { status: "paid" } }, class: "px-2 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700"
+                    - else
+                      = button_to "Repasser en attente", stay_payment_path(@stay, payment), method: :patch, params: { payment: { status: "pending" } }, class: "px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-medium hover:bg-amber-200"
+        - else
+          p.text-sm.text-gray-500 Aucun paiement enregistré pour ce séjour.
+
+        / Ajout d'un paiement au séjour.
+        .bg-gray-50.rounded-md.p-3.mt-2
+          .text-xs.font-medium.text-gray-600.mb-2 Ajouter un paiement
+          = form_with url: stay_payments_path(@stay), method: :post, class: "space-y-2" do |f|
+            .flex.flex-wrap.items-end.gap-3
+              label.text-xs.text-gray-600.flex.flex-col.gap-1
+                | Montant (€)
+                = f.number_field "payment[amount]", step: "0.01", min: "0.01", required: true, class: "w-28 rounded border-gray-300 text-sm py-1"
+              label.text-xs.text-gray-600.flex.flex-col.gap-1
+                | Moyen
+                = f.select "payment[payment_method]", options_for_select([["Liquide", "cash"], ["Virement", "bank_transfer"], ["En ligne", "stripe"]], "bank_transfer"), {}, class: "rounded border-gray-300 text-sm py-1"
+              label.text-xs.text-gray-600.flex.flex-col.gap-1
+                | Statut
+                = f.select "payment[status]", options_for_select([["Encaissé", "paid"], ["En attente", "pending"]], "paid"), {}, class: "rounded border-gray-300 text-sm py-1"
+            = f.submit "Ajouter le paiement", class: "px-3 py-1.5 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700"
 
     / Notes du séjour (lecture). La note interne (texte brut, style post-it) ne
     / fuite JAMAIS côté client ; la note publique (ActionText) est celle vue par
