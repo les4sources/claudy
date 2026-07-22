@@ -86,6 +86,13 @@
         .space-y-1
           label.block.text-sm.font-medium.text-gray-700 Départ
           = date_field_tag "stay[departure_date]", @draft&.departure_date&.iso8601, data: { action: "change->stay-grids#reload change->stay-availability#check" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      .grid.grid-cols-2.gap-4
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 for="stay_arrival_time" Heure d'arrivée
+          = text_field_tag "stay[arrival_time]", @draft&.arrival_time, id: "stay_arrival_time", placeholder: "ex. 14:00", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 for="stay_departure_time" Heure de départ
+          = text_field_tag "stay[departure_time]", @draft&.departure_time, id: "stay_departure_time", placeholder: "ex. 11:00", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
       .grid.grid-cols-3.gap-4
         .space-y-1
           label.block.text-sm.font-medium.text-gray-700 Adultes
@@ -157,7 +164,7 @@
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
     / Facturation espaces — n'apparaît que si ≥1 ligne d'espace est renseignée.
     / Tous les champs sont optionnels (acompte/caution en €, converties comme le
-    / canal direct ; mode de paiement, événement, horaires d'arrivée/départ).
+    / canal direct ; mode de paiement, événement).
     div class=("space-y-4 rounded-md bg-gray-50 p-4 ring-1 ring-black ring-opacity-5" + (space_billing_open ? "" : " hidden")) data-stay-form-target="spaceBillingPanel"
       h3.text-sm.font-semibold.text-gray-900 Facturation espaces
       .grid.grid-cols-2.gap-4
@@ -173,13 +180,6 @@
       .space-y-1
         label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_event_id" Événement
         = select_tag "stay[space_billing][event_id]", options_for_select(event_options, space_billing[:event_id]), id: "stay_space_billing_event_id", include_blank: "— Aucun événement —", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-      .grid.grid-cols-2.gap-4
-        .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_arrival_time" Heure d'arrivée
-          = text_field_tag "stay[space_billing][arrival_time]", space_billing[:arrival_time], id: "stay_space_billing_arrival_time", placeholder: "ex. 14:00", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-        .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_departure_time" Heure de départ
-          = text_field_tag "stay[space_billing][departure_time]", space_billing[:departure_time], id: "stay_space_billing_departure_time", placeholder: "ex. 11:00", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
     / --- Repas --------------------------------------------------------------
     - meal_kind_options = [["Repas végé (midi)", "repas_vege_midi"], ["Buffet pain-fromages", "buffet"]]

@@ -166,8 +166,6 @@ module SpaceComposition
     space_booking.deposit_amount = billing[:deposit_amount]
     space_booking.payment_method = billing[:payment_method]
     space_booking.event_id       = billing[:event_id]
-    space_booking.arrival_time   = billing[:arrival_time]
-    space_booking.departure_time = billing[:departure_time]
   end
 
   # Réservable d'espace déjà rattaché au séjour (édition), ou nil.

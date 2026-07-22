@@ -72,6 +72,10 @@ div id="stay-details-#{@stay.id}"
     dl.grid.grid-cols-3.gap-x-4.gap-y-2.text-sm
       dt.font-medium.text-gray-500 Dates
       dd.col-span-2.text-gray-900 = @stay.date_range
+      - if @stay.arrival_time.present? || @stay.departure_time.present?
+        dt.font-medium.text-gray-500 Horaires
+        dd.col-span-2.text-gray-900
+          = [(@stay.arrival_time.present? ? "Arrivée #{@stay.arrival_time}" : nil), (@stay.departure_time.present? ? "Départ #{@stay.departure_time}" : nil)].compact.join(" · ")
       dt.font-medium.text-gray-500 Contact
       dd.col-span-2.text-gray-900 = @stay.contact_line
       dt.font-medium.text-gray-500 Client

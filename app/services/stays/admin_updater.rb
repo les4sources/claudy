@@ -69,6 +69,8 @@ module Stays
           customer:             upsert_customer!,
           status:               stay_status,
           source:               stay_source,
+          arrival_time:         @draft.arrival_time,
+          departure_time:       @draft.departure_time,
           # Catégorie (Michael 2026-07-21) : reflète le `<select>` du form admin,
           # reconstruit par `DraftReconstructor` à l'ouverture — donc une édition
           # sans y toucher la PRÉSERVE. Vidée → nil.

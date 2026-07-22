@@ -614,6 +614,8 @@ class StaysController < BaseController
       room_ids:       room_ids_param(p),
       arrival_date:   p[:arrival_date],
       departure_date: p[:departure_date],
+      arrival_time:   p[:arrival_time],
+      departure_time: p[:departure_time],
       adults:         p[:adults],
       children:       p[:children],
       dogs_count:     p[:dogs_count],

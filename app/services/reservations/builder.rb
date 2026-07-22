@@ -115,6 +115,8 @@ module Reservations
           status: stay_status,
           arrival_date: draft.arrival_date,
           departure_date: draft.departure_date,
+          arrival_time: draft.arrival_time,
+          departure_time: draft.departure_time,
           # Catégorie de séjour (Michael 2026-07-21) — portée par le draft
           # (funnel public ET form admin), posée telle quelle. nil accepté.
           category: draft.category,

@@ -28,6 +28,8 @@ module Stays
         room_ids:       rooms_mode ? booking.reservations.map(&:room_id).uniq : [],
         arrival_date:   @stay.arrival_date,
         departure_date: @stay.departure_date,
+        arrival_time:   @stay.arrival_time.presence || space_booking&.arrival_time,
+        departure_time: @stay.departure_time.presence || space_booking&.departure_time,
         # Grille par nuit (Michael 2026-07-20) : reconstituée depuis les N
         # CampingBooking / VanBooking (une plage par tranche contiguë) pour que
         # l'édition ré-affiche FIDÈLEMENT la grille du funnel. Présente → le Draft
@@ -163,9 +165,7 @@ module Stays
         advance_amount: euro_prefill(sb.advance_amount_cents),
         deposit_amount: euro_prefill(sb.deposit_amount_cents),
         payment_method: sb.payment_method,
-        event_id:       sb.event_id,
-        arrival_time:   sb.arrival_time,
-        departure_time: sb.departure_time
+        event_id:       sb.event_id
       }
     end
 

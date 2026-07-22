@@ -8,7 +8,9 @@ module Reservations
   # transporte que la composition tarifable.
   class Draft
     attr_accessor :lodging_id, :lodging_night_ids, :per_night_resources,
-                  :arrival_date, :departure_date, :dogs_count,
+                  :arrival_date, :departure_date,
+                  :arrival_time, :departure_time,
+                  :dogs_count,
                   :halls, :space_slots, :meals, :pizza_parties,
                   # Terrasse (ADMIN uniquement, décision Michael 2026-07-20) :
                   # lignes datées `[{date:, people:}]` — une par JOUR d'occupation,
@@ -45,8 +47,8 @@ module Reservations
                   :needs
 
     # Facturation ESPACE (epic #81, Phase 6) : attributs portés par le
-    # `SpaceBooking` du séjour (acompte, caution, mode de paiement, événement,
-    # horaires). Vaut `nil` quand le form ne porte PAS la clé `space_billing` —
+    # `SpaceBooking` du séjour (acompte, caution, mode de paiement, événement).
+    # Vaut `nil` quand le form ne porte PAS la clé `space_billing` —
     # signal « ne pas toucher » à la réédition ; un Hash (même à valeurs vides)
     # signifie « appliquer tel quel » (champ vidé → nil, jamais 0 forcé).
     attr_reader :space_billing
@@ -62,6 +64,8 @@ module Reservations
       @per_night_resources = parse_per_night_resources(attrs[:per_night_resources])
       @arrival_date      = parse_date(attrs[:arrival_date])
       @departure_date    = parse_date(attrs[:departure_date])
+      @arrival_time      = attrs[:arrival_time].presence
+      @departure_time    = attrs[:departure_time].presence
       @dogs_count        = attrs[:dogs_count].to_i
       @adults            = attrs[:adults].to_i
       @children          = attrs[:children].to_i
@@ -161,6 +165,8 @@ module Reservations
         per_night_resources: per_night_resources,
         arrival_date:       arrival_date&.iso8601,
         departure_date:     departure_date&.iso8601,
+        arrival_time:       arrival_time,
+        departure_time:     departure_time,
         dogs_count:         dogs_count,
         adults:             adults,
         children:           children,
@@ -240,9 +246,7 @@ module Reservations
         advance_amount: raw[:advance_amount].presence,
         deposit_amount: raw[:deposit_amount].presence,
         payment_method: raw[:payment_method].presence,
-        event_id:       raw[:event_id].presence,
-        arrival_time:   raw[:arrival_time].presence,
-        departure_time: raw[:departure_time].presence
+        event_id:       raw[:event_id].presence
       }
     end
 
