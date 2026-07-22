@@ -32,8 +32,25 @@
 
       / ── Formulaire ──────────────────────────────────────────
       = form_with url: public_reservation_quote_path, method: :post,
-          data: { "public--reservation-quote-target": "form",
+          class: "space-y-6",
+          data: { controller: "public--needs",
+                  "public--needs-selected-value": @draft.needs.to_json,
+                  "public--reservation-quote-target": "form",
                   action: "change->public--reservation-quote#refresh" } do |f|
+
+        / Champs cachés `reservation[needs][]` — la sélection survit aux POST devis.
+        div data-public--needs-target="fields"
+
+        / ── Zone « Ajouter un bloc » (feature 5) ─────────────
+        / Masquée quand tout est déjà visible ; sinon un bouton par bloc replié.
+        .rounded-2xl.border.border-dashed.border-gray-200.bg-gray-50.p-4(data-public--needs-target="addZone")
+          p.text-xs.font-medium.text-gray-500.mb-2 Ajouter à votre séjour
+          .flex.flex-wrap.gap-2
+            - [["gite", "🏡", "Gîte"], ["salles", "🏛️", "Salles & cuisine"], ["camping", "⛺", "Camping"], ["van", "🚐", "Van"], ["repas", "🍽️", "Repas"], ["activites", "🌿", "Activités"]].each do |token, icon, label_text|
+              button(type="button" data-needs-add-token=token data-action="click->public--needs#add" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-600 hover:border-emerald-400 hover:text-emerald-700 transition-colors focus:outline-none")
+                span.text-base = icon
+                span
+                  | + #{label_text}
 
         / ── Hébergement — calendrier interactif ─────────────
         = render "public/reservations/stay_calendar"
@@ -41,8 +58,20 @@
         / ── Espaces ──────────────────────────────────────────
         = render "public/reservations/spaces_calendar"
 
+        / ── Repas (feature 5 : bloc du besoin « repas ») ─────
+        .bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-6(data-needs-block="repas")
+          .flex.items-start.gap-3
+            span.text-2xl 🍽️
+            div
+              h2.text-base.font-semibold.text-gray-900.mb-1 Repas & pain
+              p.text-sm.text-gray-600.mb-1 Pain au levain et épicerie à pré-commander pour votre arrivée ; repas de groupe sur demande.
+              p.text-sm.text-gray-500
+                = link_to "Commander sur Tranches de Vie →", "https://tranchesdevie.les4sources.be", target: "_blank", rel: "noopener", class: "text-emerald-700 underline"
+                |  ou écrivez-nous à
+                = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline"
+
         / ── Activités ───────────────────────────────────────
-        .bg-emerald-50.rounded-2xl.border.border-emerald-100.p-6
+        .bg-emerald-50.rounded-2xl.border.border-emerald-100.p-6(data-needs-block="activites")
           .flex.items-start.gap-3
             span.text-2xl 🌿
             div

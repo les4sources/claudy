@@ -2,10 +2,11 @@
 / Nécessite data-controller="public--avail-modal" sur un ancêtre.
 / Nécessite @availability_calendar dans le controller.
 
-/ Overlay
+/ Overlay. Écoute aussi l'évènement window `reservation:open-avail` émis par la
+/ mini-modale d'indisponibilité (feature 1) pour s'ouvrir depuis une cellule grise.
 .fixed.inset-0.bg-black.bg-opacity-60.z-50.hidden(
   data-public--avail-modal-target="overlay"
-  data-action="click->public--avail-modal#close")
+  data-action="click->public--avail-modal#close reservation:open-avail@window->public--avail-modal#open")
 / Panneau — centré, largeur adaptée au Gantt (~48rem)
 div(
   class="fixed top-4 bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col hidden md:top-8 md:bottom-8"

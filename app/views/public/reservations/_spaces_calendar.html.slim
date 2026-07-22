@@ -14,7 +14,8 @@
 - space_hints   = { "grande_salle" => "290€/j · 190€/soir (sem.)", "petite_salle" => "140€/j · 90€/soir (sem.)", "cuisine_pro" => "110€/j · 70€/soir (sem.)" }
 
 .bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-5(
-  data-controller="public--spaces-calendar")
+  data-controller="public--spaces-calendar"
+  data-needs-block="salles")
   .flex.items-start.justify-between.mb-4
     div
       h2.text-base.font-semibold.text-gray-900 🏛️ Espaces
@@ -82,3 +83,13 @@
       .flex.items-center.gap-1.5
         .w-14.h-8.rounded-xl.bg-teal-100.border-2.border-teal-300.text-teal-700.text-xs.font-bold.flex.items-center.justify-center J+S
         span.text-xs.text-gray-500 Les deux
+
+    / ── Précision libre du besoin d'espace (facultatif) ──────────
+    / Rangée à la création dans la note INTERNE du SpaceBooking
+    / (préfixe « Demande client espaces : »), visible dans la modale admin.
+    .mt-5.pt-4.border-t.border-gray-50
+      label.block(for="#{param_root}_spaces_note")
+        span.text-sm.font-medium.text-gray-800 Précisez votre besoin
+        p.text-xs.text-gray-400.mt-0.5 Installation, horaire, matériel, nombre de personnes… (facultatif)
+      textarea id="#{param_root}_spaces_note" name="#{param_root}[spaces_note]" rows="3" class="mt-2 w-full rounded-xl border-gray-300 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="Ex. : arrivée vendredi 17h, besoin de 60 chaises et d'un vidéoprojecteur…"
+        = draft.spaces_note

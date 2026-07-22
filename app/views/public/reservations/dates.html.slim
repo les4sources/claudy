@@ -91,6 +91,22 @@
                 = f.radio_button "reservation[dogs_count]", val, checked: @draft.dogs_count.to_s == val, class: "text-emerald-600 focus:ring-emerald-500"
                 span.text-sm.font-medium.text-gray-700 = label
 
+        / Besoins — cards cochables (feature 5). Pilotent l'affichage des blocs à
+        / l'étape 2 : un besoin coché = son bloc visible d'emblée ; les autres
+        / sont repliés (redéployables). Rien de coché = tout s'affiche (conservateur).
+        section.mb-8
+          h2.text-base.font-semibold.text-gray-900.mb-1
+            | ✨ De quoi avez-vous envie ?
+          p.text-xs.text-gray-400.mb-4 Facultatif — cochez ce qui vous intéresse, vous ajusterez tout à l'étape suivante.
+          .grid.grid-cols-2.sm:grid-cols-3.gap-3
+            - [["gite", "🏡", "Gîte pour groupe"], ["salles", "🏛️", "Salles et cuisine pro"], ["camping", "⛺", "Espace camping"], ["van", "🚐", "Espace van"], ["repas", "🍽️", "Repas"], ["activites", "🌿", "Activités"]].each do |token, icon, label_text|
+              label.relative.block.cursor-pointer
+                input(type="checkbox" name="reservation[needs][]" value=token checked=@draft.needs.include?(token) class="peer sr-only")
+                .h-full.rounded-xl.border-2.border-gray-200.bg-white.p-3.flex.items-center.gap-2.transition-all.hover:border-emerald-300.peer-checked:border-emerald-500.peer-checked:bg-emerald-50.peer-checked:ring-1.peer-checked:ring-emerald-200.peer-focus-visible:ring-2.peer-focus-visible:ring-emerald-400
+                  span.text-lg.flex-shrink-0 = icon
+                  span.text-sm.font-medium.text-gray-700.leading-tight = label_text
+                  span.ml-auto.text-emerald-600.font-bold.opacity-0.transition-opacity.peer-checked:opacity-100 ✓
+
         / CTA
         .flex.justify-end
           = f.submit "Continuer →",
