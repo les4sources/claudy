@@ -12,8 +12,11 @@ RSpec.describe "Stays — espaces (epic #66, Phase 2)", type: :request do
 
   let!(:lodging)      { Lodging.create!(name: "La Hulotte", summary: "gîte") }
   let!(:grande_salle) { Space.create!(name: "Grande Salle", capacity: 1) }
-  let(:arrival)       { Date.today + 30 }
-  let(:departure)     { Date.today + 32 }
+  # Ancré sur un LUNDI : la Grande Salle a un tarif week-end (ven/sam) — un
+  # arrival flottant (Date.today + 30) faisait basculer le devis attendu selon
+  # le jour d'exécution de la suite (échec du 2026-07-22).
+  let(:arrival)       { (Date.today + 30).next_occurring(:monday) }
+  let(:departure)     { arrival + 2 }
   let(:grande_salle_journee_cents) { 29_000 }
   let(:hulotte_two_nights_cents)   { 74_500 }
 
