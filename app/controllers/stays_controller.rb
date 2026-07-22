@@ -1,6 +1,6 @@
 class StaysController < BaseController
   before_action :set_accounting_view, only: :show
-  before_action :set_stay, only: %i[edit update destroy update_status approve_change_request refuse_change_request]
+  before_action :set_stay, only: %i[edit update destroy update_status update_category approve_change_request refuse_change_request]
 
   # Index admin des séjours (epic #81) — le séjour devient le point d'entrée
   # unique. Tableau paginé (30/page) orienté GESTION des réservations et
@@ -280,6 +280,20 @@ class StaysController < BaseController
         render turbo_stream: turbo_stream.replace("stay-details-#{@stay.id}", partial: "stays/details")
       end
       format.html { redirect_to recent_stays_path, notice: (ok ? "Statut mis à jour." : updater.error_message) }
+    end
+  end
+
+  # Changement rapide de catégorie depuis la modale séjour (Michael 2026-07-21),
+  # sans ouvrir le form d'édition. Le `<select>` + bouton vivent dans un
+  # turbo-frame de la modale ; on redirige vers `stay_path` et Turbo remplace le
+  # fragment en place (même pattern que les paiements). Une valeur vide retire la
+  # catégorie ; une valeur hors liste est refusée par la validation du modèle.
+  def update_category
+    category = params.dig(:stay, :category).presence
+    if @stay.update(category: category)
+      redirect_to stay_path(@stay), notice: "Catégorie mise à jour."
+    else
+      redirect_to stay_path(@stay), alert: @stay.errors.full_messages.to_sentence.presence || "Catégorie invalide."
     end
   end
 
@@ -604,6 +618,9 @@ class StaysController < BaseController
       children:       p[:children],
       dogs_count:     p[:dogs_count],
       group_name:     p[:group_name],
+      # Catégorie de séjour (Michael 2026-07-21) : le `<select>` du form admin
+      # circule par le Draft, comme `group_name`, jusqu'au Stay (Builder/Updater).
+      category:       p[:category],
       first_name:     contact[:first_name],
       last_name:      contact[:last_name],
       email:          contact[:email],

@@ -154,6 +154,9 @@ Rails.application.routes.draw do
       # Action rapide depuis la modale du calendrier (issue #76) : bascule
       # pending ↔ confirmed sans ouvrir le form d'édition, réponse Turbo Stream.
       patch :update_status
+      # Changement rapide de catégorie depuis la modale (Michael 2026-07-21),
+      # sans ouvrir le form d'édition. URL admin en ANGLAIS.
+      patch :update_category
       # Demande de modification client (issue #133) : approbation / refus par
       # l'équipe. C'est le seul chemin qui applique la demande au séjour.
       post :approve_change_request

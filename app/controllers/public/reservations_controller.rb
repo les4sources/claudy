@@ -180,7 +180,7 @@ module Public
     def merged_draft_params
       permitted = params.fetch(:reservation, {}).permit(
         :lodging_id, :arrival_date, :departure_date, :dogs_count,
-        :adults, :children, :first_name, :last_name, :email, :phone, :group_name,
+        :adults, :children, :first_name, :last_name, :email, :phone, :group_name, :category,
         lodging_night_ids: [],
         per_night_resources: { tente: [], van: [], hamac_simple: [], hamac_double: [] },
         space_slots: { grande_salle: [], petite_salle: [], cuisine_pro: [] },
@@ -198,6 +198,10 @@ module Public
       end
       permitted[:halls] = Array(permitted[:halls]).reject { |row| row[:kind].blank? || row[:date].blank? || row[:period].blank? }
       permitted[:experiences] = Array(permitted[:experiences]).select { |r| r[:participants].to_i > 0 }
+      # Catégorie : le funnel n'offre QUE les catégories publiques. Défense en
+      # profondeur — un `category` forgé hors de cette liste (ex. `les4sources`,
+      # réservé à l'usage interne) est neutralisé avant d'atteindre le Draft.
+      permitted.delete(:category) unless Stay.public_categories.key?(permitted[:category])
       permitted
     end
 

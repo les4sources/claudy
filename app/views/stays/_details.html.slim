@@ -82,6 +82,19 @@ div id="stay-details-#{@stay.id}"
       - if @stay.legacy_origin.present?
         dt.font-medium.text-gray-500 Origine
         dd.col-span-2.text-gray-500 = @stay.legacy_origin
+      dt.font-medium.text-gray-500 Catégorie
+      dd.col-span-2.text-gray-900
+        = @stay.category_badge || content_tag(:span, "Non précisée", class: "text-gray-400")
+
+    / Changement rapide de catégorie (Michael 2026-07-21) — sans ouvrir le form
+    / d'édition. Enveloppé dans un turbo-frame : le submit redirige vers stay_path
+    / et Turbo remplace CE fragment en place (même pattern que les paiements).
+    = turbo_frame_tag "stay_#{@stay.id}_category" do
+      = form_with url: update_category_stay_path(@stay), method: :patch, class: "flex flex-wrap items-end gap-2" do
+        label.text-xs.text-gray-500.flex.flex-col.gap-1
+          | Changer la catégorie
+          = select_tag "stay[category]", options_for_select(Stay::CATEGORIES.map(&:reverse), @stay.category), include_blank: "— Aucune —", class: "rounded-md border-gray-300 text-sm py-1"
+        = submit_tag "Enregistrer", class: "px-3 py-1.5 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700 cursor-pointer"
 
     / Composition complète du séjour (epic #66, Phase 5) : hébergement, espaces,
     / camping, van et repas. Les activités gardent leur bloc CRUD dédié (epic #55,

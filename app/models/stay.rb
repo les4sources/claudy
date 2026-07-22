@@ -39,6 +39,35 @@ class Stay < ApplicationRecord
   # accepte de créer — jamais un `canceled` par le formulaire de création.
   STATUSES_ADMIN_CREATABLE = %w[pending confirmed].freeze
 
+  # Catégorie de séjour (Michael 2026-07-21). Clé STABLE anglaise persistée en
+  # base → libellé FR à l'affichage. Nullable au niveau modèle : tout
+  # l'historique importé n'a pas de catégorie, et le funnel public la laisse
+  # optionnelle. L'ORDRE de ce hash pilote l'ordre des `<select>` (admin + public).
+  CATEGORIES = {
+    "wedding"          => "Mariage",
+    "training"         => "Formation/Initiation",
+    "friends"          => "Groupe d'amis",
+    "family"           => "Famille",
+    "team_building"    => "Team building",
+    "collective"       => "Collectif",
+    "retreat"          => "Mise au vert",
+    "workshop_retreat" => "Retraite/Stage",
+    "birthday"         => "Fête d'anniversaire",
+    "les4sources"      => "Les 4 Sources",
+    "meeting"          => "Réunion",
+    "other"            => "Autre"
+  }.freeze
+
+  # Catégorie interne — jamais proposée au public (le funnel B2C ne doit pas
+  # laisser un client s'auto-attribuer un séjour « maison »).
+  PRIVATE_CATEGORIES = %w[les4sources].freeze
+
+  # Catégories exposées au funnel public (toutes sauf les catégories internes),
+  # dans l'ordre d'affichage de `CATEGORIES`.
+  def self.public_categories
+    CATEGORIES.except(*PRIVATE_CATEGORIES)
+  end
+
   belongs_to :customer
   has_many :stay_items, dependent: :destroy
   # Demandes de modification par le client (issue #133). Elles ne modifient
@@ -68,12 +97,21 @@ class Stay < ApplicationRecord
   # chemin (import, console, futur canal) ne doit pouvoir imposer un prix < 0.
   validates :price_override_cents, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :payment_status, inclusion: { in: PAYMENT_STATUSES, message: "Statut de paiement invalide" }
+  # Catégorie : nil permis (historique + funnel optionnel), toute valeur posée
+  # doit appartenir à la liste stable.
+  validates :category, inclusion: { in: CATEGORIES.keys, message: "Catégorie invalide" }, allow_nil: true
   validates :token, uniqueness: true, allow_nil: true
 
   scope :current_and_future, -> { where("departure_date >= ?", Date.today).order(arrival_date: :asc) }
   scope :past, -> { where("departure_date < ?", Date.today).order(arrival_date: :desc) }
   scope :from_source, ->(value) { value.present? ? where(source: value) : all }
   scope :recent, -> { order(created_at: :desc) }
+
+  # Libellé FR de la catégorie (nil → nil). Présentation légère partagée par les
+  # vues admin/public ; le badge stylé vit dans le décorateur.
+  def category_label
+    CATEGORIES[category]
+  end
 
   def activity_email_pending?
     activity_email_sent_at.nil? && arrival_date.present? && arrival_date > Date.today

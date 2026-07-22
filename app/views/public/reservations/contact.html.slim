@@ -61,6 +61,13 @@
             = text_field_tag "reservation[group_name]", @draft.group_name,
                 class: "mt-1.5 w-full rounded-xl border-gray-300 shadow-sm text-base focus:border-emerald-500 focus:ring-emerald-500"
 
+        / Type de séjour (Michael 2026-07-21) — optionnel, SANS la catégorie
+        / interne « Les 4 Sources » (Stay.public_categories). La valeur circule
+        / par le Draft jusqu'au Stay créé.
+        label.block.mb-5
+          span.text-xs.font-medium.text-gray-500.uppercase.tracking-wide Type de séjour (optionnel)
+          = select_tag "reservation[category]", options_for_select(Stay.public_categories.map(&:reverse), @draft.category), include_blank: "— Non précisé —", class: "mt-1.5 w-full rounded-xl border-gray-300 shadow-sm text-base focus:border-emerald-500 focus:ring-emerald-500"
+
         / Animal read-only
         .mb-6.p-4.bg-gray-50.rounded-xl.flex.items-center.justify-between
           div

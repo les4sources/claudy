@@ -99,6 +99,12 @@
       .space-y-1
         label.block.text-sm.font-medium.text-gray-700 Nom du groupe (optionnel)
         = text_field_tag "stay[group_name]", @draft&.group_name, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      / Catégorie de séjour (Michael 2026-07-21) : liste complète (les 4 sources
+      / incluse côté admin). Optionnelle — option vide en tête. Circule par le
+      / Draft comme `group_name`.
+      .space-y-1
+        label.block.text-sm.font-medium.text-gray-700 Catégorie (optionnel)
+        = select_tag "stay[category]", options_for_select(Stay::CATEGORIES.map(&:reverse), @draft&.category), include_blank: "— Aucune —", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
     / --- Hébergement --------------------------------------------------------
     / Mode d'occupation (epic #81, Phase 5) : gîte entier (défaut) ou chambres
