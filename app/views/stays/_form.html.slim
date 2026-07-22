@@ -165,7 +165,7 @@
     - existing_meals = Array(@draft&.meals).map { |m| m.respond_to?(:symbolize_keys) ? m.symbolize_keys : m }
     - meal_rows = existing_meals + Array.new([3 - existing_meals.size, 1].max) { {} }
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Repas
+      h2.text-base.font-semibold.text-gray-900 🍽️ Repas
       p.text-sm.text-gray-500 Ajoutez un repas (type + date + nombre de convives). Les repas n'occupent pas le calendrier.
       ul.divide-y.divide-gray-100
         - meal_rows.each_with_index do |row, index|
@@ -181,7 +181,7 @@
     - existing_terrasses = Array(@draft&.terrasses).map { |t| t.respond_to?(:symbolize_keys) ? t.symbolize_keys : t }
     - terrace_rows = existing_terrasses + Array.new([3 - existing_terrasses.size, 1].max) { {} }
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Terrasse
+      h2.text-base.font-semibold.text-gray-900 🪑 Terrasse
       p.text-sm.text-gray-500 Groupe occupant uniquement la terrasse (ex. BBQ). Forfait 2,50 €/pers/jour — une ligne par jour (date + nombre de personnes).
       ul.divide-y.divide-gray-100
         - terrace_rows.each_with_index do |row, index|
@@ -191,7 +191,7 @@
 
     / --- Activités ----------------------------------------------------------
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Activités
+      h2.text-base.font-semibold.text-gray-900 🎯 Activités
       - if @assignable_availabilities.blank?
         p.text-sm.text-gray-500 Aucun créneau d'activité proposable.
       - else

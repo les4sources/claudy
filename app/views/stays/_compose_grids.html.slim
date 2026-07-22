@@ -8,7 +8,7 @@
   / mode « chambres seules » par stay-form (data-stay-form-target="lodgingGrid").
   / Rechargée avec les autres grilles quand les dates changent.
   section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4(data-stay-form-target="lodgingGrid")
-    h2.text-base.font-semibold.text-gray-900 Hébergement — nuit par nuit
+    h2.text-base.font-semibold.text-gray-900 🏡 Hébergement — nuit par nuit
     p.text-sm.text-gray-500 Choisissez le gîte pour chaque nuit. Le mode « chambres seules » se règle dans la section Hébergement ci-dessus.
     = render "stays/lodging_calendar", param_root: "stay", draft: @draft, days: @stay_nights, lodgings: @lodgings, availability: @lodging_availability
 
@@ -23,7 +23,7 @@
   / retombe sur les lignes `halls` — seule saisie possible hors fenêtre.
   - use_space_grid = @stay_nights.present?
   section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-    h2.text-base.font-semibold.text-gray-900 Espaces
+    h2.text-base.font-semibold.text-gray-900 🏛️ Espaces
     - if use_space_grid
       p.text-sm.text-gray-500 Cliquez une cellule pour réserver un espace — journée, soirée ou les deux — nuit par nuit.
       = render "public/reservations/spaces_calendar", param_root: "stay", draft: @draft, days: @stay_nights
@@ -50,19 +50,19 @@
   / pleine-fenêtre historiques (`stay[camping][people]` / `stay[van][vehicles]`).
   - if use_space_grid
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Camping / Van
+      h2.text-base.font-semibold.text-gray-900 ⛺ Camping / Van
       = render "public/reservations/camping_calendar", param_root: "stay", draft: @draft, days: @stay_nights
   - else
     - camping_people = Array(@draft&.campings).sum { |c| (c.respond_to?(:symbolize_keys) ? c.symbolize_keys : c)[:people].to_i }
     - van_vehicles = Array(@draft&.vans).size
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Camping (tente)
+      h2.text-base.font-semibold.text-gray-900 ⛺ Camping (tente)
       p.text-sm.text-gray-500 Choisissez les dates du séjour pour composer le camping nuit par nuit. À défaut, nombre de personnes sur toute la durée.
       .space-y-1
         label.block.text-sm.font-medium.text-gray-700 Personnes
         = number_field_tag "stay[camping][people]", (camping_people.positive? ? camping_people : nil), min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Van / camping-car
+      h2.text-base.font-semibold.text-gray-900 🚐 Van / camping-car
       p.text-sm.text-gray-500 Nombre de véhicules sur la durée du séjour. Capacité globale (forçable).
       .space-y-1
         label.block.text-sm.font-medium.text-gray-700 Véhicules
@@ -77,7 +77,7 @@
   - hamac_s_rate = Pricing::Catalog.hamac_rate("simple")
   - hamac_d_rate = Pricing::Catalog.hamac_rate("double")
   section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-    h2.text-base.font-semibold.text-gray-900 Location de hamacs
+    h2.text-base.font-semibold.text-gray-900 🌿 Location de hamacs
     - if @stay_nights.blank?
       p.text-sm.text-gray-500 Choisissez d'abord les dates du séjour pour composer les hamacs nuit par nuit.
     - else
