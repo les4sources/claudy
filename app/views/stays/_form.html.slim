@@ -252,6 +252,22 @@
         = number_field_tag "stay[price_override]", override_prefill, id: "stay_price_override", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
         p.text-xs.text-gray-500 Laisser vide pour appliquer le devis B2C. Un montant remplace le total du devis.
 
+      / Paiement initial en attente (création uniquement — refonte 2026-07-22).
+      / Coché → un Payment `pending` est créé sur le séjour au montant indiqué,
+      / prérempli avec l'acompte du devis (deposit du PricingModel). En édition,
+      / le solde se gère depuis la fiche séjour : ce bloc n'apparaît donc pas.
+      - unless @stay&.persisted?
+        - deposit_cents = (@draft&.quote&.deposit_cents.to_i rescue 0)
+        - initial_payment_prefill = deposit_cents.positive? ? format("%g", deposit_cents / 100.0) : nil
+        .space-y-2.pt-2.border-t.border-gray-200
+          label.flex.items-center.gap-2.text-sm.text-gray-700
+            = check_box_tag "stay[create_initial_payment]", "1", false, id: "stay_create_initial_payment"
+            | Créer un paiement initial en attente
+          .space-y-1
+            label.block.text-sm.font-medium.text-gray-700 for="stay_initial_payment_amount" Montant du paiement (€)
+            = number_field_tag "stay[initial_payment_amount]", initial_payment_prefill, id: "stay_initial_payment_amount", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+            p.text-xs.text-gray-500 Prérempli avec l'acompte du devis. Ignoré si la case n'est pas cochée.
+
     / --- Notes --------------------------------------------------------------
     / Note interne (texte brut, jamais visible du client) + note publique
     / (ActionText, affichée sur /sejour/:token). À la création, la note interne

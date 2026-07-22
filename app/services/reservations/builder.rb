@@ -55,7 +55,8 @@ module Reservations
     # même sur param forgé (le funnel public ne les expose jamais).
     def initialize(draft:, deposit_rate: Pricing::Catalog.default_deposit_rate,
                    admin: false, status: nil, source: nil, skip_availability: false,
-                   price_override_cents: nil, platform: nil)
+                   price_override_cents: nil, platform: nil,
+                   create_initial_payment: false, initial_payment_amount_cents: nil)
       @draft = draft
       @deposit_rate = deposit_rate
       @admin = admin
@@ -64,6 +65,10 @@ module Reservations
       @skip_availability = skip_availability
       @requested_price_override_cents = price_override_cents
       @requested_platform = platform
+      # Paiement initial en attente (canal admin uniquement, refonte 2026-07-22) :
+      # le funnel public garde son propre acompte Stripe (`build_payment!`).
+      @create_initial_payment = create_initial_payment
+      @requested_initial_payment_amount_cents = initial_payment_amount_cents
       @report_errors = true
     end
 
@@ -163,9 +168,16 @@ module Reservations
         # plus qu'une référence de commodité pour le canal historique. Son montant
         # reste l'acompte HORS activités (`quote.deposit_cents`).
         #
-        # Canal admin (epic #66) : AUCUN paiement n'est créé à l'enregistrement —
-        # le solde se règle après coup depuis la page client /sejour/:token.
-        @payment = build_payment!(quote) unless @admin
+        # Canal admin (epic #66) : AUCUN paiement automatique — le solde se règle
+        # après coup depuis la page client /sejour/:token. Exception (refonte
+        # 2026-07-22) : si l'admin a coché « Créer un paiement initial en attente »,
+        # on crée UN Payment `pending` du montant saisi (prérempli à l'acompte).
+        @payment =
+          if @admin
+            build_initial_payment!(quote) if @create_initial_payment
+          else
+            build_payment!(quote)
+          end
       end
       # Séjour activités-seules / repas-seuls SANS dates saisies (issue #80) :
       # dériver arrivée/départ de l'élément présent. `recompute_aggregates!`
@@ -487,6 +499,24 @@ module Reservations
         booking: @booking,
         stay: @stay,
         amount_cents: quote.deposit_cents,
+        status: "pending",
+        payment_method: "card"
+      )
+    end
+
+    # Paiement initial admin (refonte 2026-07-22) : Payment `pending` rattaché au
+    # séjour. Montant = celui saisi au form (déjà converti en cents par le
+    # contrôleur), à défaut l'acompte du devis. No-op si le montant effectif est
+    # nul/négatif (`Payment` exige un montant > 0) — on ne crée jamais un paiement
+    # vide. Aucun appel Stripe : c'est une trace de solde attendu, réglée ensuite.
+    def build_initial_payment!(quote)
+      amount = @requested_initial_payment_amount_cents.presence || quote.deposit_cents
+      return nil if amount.to_i <= 0
+
+      Payment.create!(
+        booking: @booking,
+        stay: @stay,
+        amount_cents: amount,
         status: "pending",
         payment_method: "card"
       )

@@ -74,7 +74,9 @@ class StaysController < BaseController
       source:               requested_source || "manual",
       platform:             requested_platform,
       price_override_cents: requested_price_override_cents,
-      skip_availability:    force_availability?
+      skip_availability:    force_availability?,
+      create_initial_payment:       create_initial_payment?,
+      initial_payment_amount_cents: initial_payment_amount_cents
     )
 
     if builder.run
@@ -809,6 +811,24 @@ class StaysController < BaseController
 
   def force_availability?
     ActiveModel::Type::Boolean.new.cast(stay_params[:force_availability])
+  end
+
+  # Paiement initial en attente (création, refonte 2026-07-22) : case cochée.
+  def create_initial_payment?
+    ActiveModel::Type::Boolean.new.cast(stay_params[:create_initial_payment])
+  end
+
+  # Montant (€ saisis) du paiement initial → cents. Vide/invalide = nil (le Builder
+  # retombe alors sur l'acompte du devis). Même normalisation FR que le prix imposé.
+  def initial_payment_amount_cents
+    raw = stay_params[:initial_payment_amount].to_s.strip
+    return nil if raw.blank?
+    normalized = raw.tr(",", ".").delete("^0-9.-")
+    return nil if normalized.blank?
+    cents = (BigDecimal(normalized) * 100).round
+    cents.positive? ? cents : nil
+  rescue ArgumentError
+    nil
   end
 
   def safe_quote(draft)
