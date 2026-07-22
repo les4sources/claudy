@@ -40,6 +40,16 @@ application.register('public--spaces-calendar', SpacesCalendarController);
 import StepperController from '../controllers/public/stepper_controller.js';
 application.register('public--stepper', StepperController);
 
+// Grille hébergement par nuit (Slice C) : le form Séjour admin embarque la MÊME
+// grille nuits × gîtes que le funnel (`public--stay-calendar`) plus la mini-modale
+// « occupé » (`public--unavail`). Sans ces deux enregistrements, la grille reste
+// inerte (clics sans effet, aucun `lodging_night_ids` généré) — le glob admin ne
+// couvre que `controllers/*_controller.js`, pas `controllers/public/**`.
+import StayCalendarController from '../controllers/public/stay_calendar_controller.js';
+import UnavailController from '../controllers/public/unavail_controller.js';
+application.register('public--stay-calendar', StayCalendarController);
+application.register('public--unavail', UnavailController);
+
 // Load and register view_components controllers
 registerControllers(
   application,
