@@ -128,9 +128,16 @@
         label.flex.items-center.gap-2
           input type="radio" name="stay[booking_type]" value="rooms" checked=(current_booking_type == "rooms") data-action="change->stay-form#toggleBookingMode change->stay-availability#check"
           | Chambres seules
-      .space-y-1
-        label.block.text-sm.font-medium.text-gray-700 Hébergement
-        = select_tag "stay[lodging_id]", options_for_select(@lodgings.map { |l| [l.form_label, l.id] }, @draft&.lodging_id), include_blank: "— Choisir un hébergement —", data: { action: "change->stay-availability#check change->stay-form#syncRoomVisibility" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      / Mode GÎTE ENTIER : le gîte se choisit nuit par nuit dans la grille
+      / « Hébergement — nuit par nuit » (frame des grilles, plus bas). Le <select>
+      / ci-dessous ne sert qu'au mode CHAMBRES SEULES (choix du gîte dont on coche
+      / les chambres) ; masqué + désactivé en gîte entier pour ne pas imposer un
+      / lodging_id concurrent de la grille.
+      p.text-sm.text-gray-500(data-stay-form-target="lodgingGridHint")
+        | Choisissez le gîte pour chaque nuit dans la grille « Hébergement — nuit par nuit » ci-dessous.
+      .space-y-1.hidden(data-stay-form-target="lodgingSelectPanel")
+        label.block.text-sm.font-medium.text-gray-700 Gîte (chambres seules)
+        = select_tag "stay[lodging_id]", options_for_select(@lodgings.map { |l| [l.form_label, l.id] }, @draft&.lodging_id), include_blank: "— Choisir un hébergement —", data: { "stay-form-target": "lodgingSelect", action: "change->stay-availability#check change->stay-form#syncRoomVisibility" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
       / Chambres du gîte (mode chambres seules). Un groupe par gîte, masqué par
       / défaut ; Stimulus n'affiche que le groupe du gîte sélectionné, en mode rooms.
       .space-y-2.hidden(data-stay-form-target="roomsPanel")

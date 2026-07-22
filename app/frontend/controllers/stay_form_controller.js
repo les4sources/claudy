@@ -20,10 +20,21 @@ export default class extends Controller {
     "source",
     "roomsPanel",
     "roomsGroup",
+    "lodgingGrid",
+    "lodgingSelectPanel",
+    "lodgingSelect",
+    "lodgingGridHint",
   ]
 
   connect() {
     this.toggleCustomer()
+    this.toggleBookingMode()
+  }
+
+  // La grille hébergement vit dans le frame `stay_compose_grids` : elle est
+  // remplacée à chaque changement de dates. Quand elle (ré)apparaît, on ré-applique
+  // l'état du mode d'occupation (afficher/masquer, activer/désactiver ses champs).
+  lodgingGridTargetConnected() {
     this.toggleBookingMode()
   }
 
@@ -33,6 +44,20 @@ export default class extends Controller {
   toggleBookingMode() {
     const rooms = this.bookingMode() === "rooms"
     if (this.hasRoomsPanelTarget) this.roomsPanelTarget.classList.toggle("hidden", !rooms)
+
+    // Mode CHAMBRES : le <select> gîte pilote le choix (activé) ; la grille nuit
+    // par nuit est masquée et ses champs `lodging_night_ids` désactivés pour ne
+    // pas poster un gîte concurrent. Mode GÎTE ENTIER : l'inverse.
+    if (this.hasLodgingSelectPanelTarget) this.lodgingSelectPanelTarget.classList.toggle("hidden", !rooms)
+    if (this.hasLodgingSelectTarget) this.lodgingSelectTarget.disabled = !rooms
+    if (this.hasLodgingGridHintTarget) this.lodgingGridHintTarget.classList.toggle("hidden", rooms)
+    if (this.hasLodgingGridTarget) {
+      this.lodgingGridTarget.classList.toggle("hidden", rooms)
+      this.lodgingGridTarget
+        .querySelectorAll('input[name$="[lodging_night_ids][]"]')
+        .forEach((input) => (input.disabled = rooms))
+    }
+
     this.syncRoomVisibility()
   }
 

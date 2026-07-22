@@ -1,0 +1,84 @@
+/ Grille hébergement nuit par nuit (form admin) — parité funnel _stay_calendar,
+/ mais UNIQUEMENT les lignes hébergement (le camping/van/hamacs de l'admin
+/ vivent dans leurs propres grilles). Réutilise le controller Stimulus
+/ `public--stay-calendar` (mêmes cibles hiddenFields/scrollArea) ; le param_root
+/ "stay" fait poster `stay[lodging_night_ids][]`.
+/ Locals : lodgings, days (nuits), draft, availability (Hash lodging_id => [bool]),
+/          param_root (défaut "stay").
+- param_root  = local_assigns.fetch(:param_root, "stay")
+- lodgings    = local_assigns.fetch(:lodgings, @lodgings)
+- days        = local_assigns.fetch(:days, @stay_nights)
+- draft       = local_assigns.fetch(:draft, @draft)
+- availability = local_assigns.fetch(:availability, @lodging_availability) || {}
+- fr_short_days = %w[Dim Lun Mar Mer Jeu Ven Sam]
+- nights_count = Array(days).size
+- selected_ids = Array(draft&.lodging_night_ids).presence || []
+
+.bg-white.rounded-xl.border.border-gray-100.p-4(
+  data-controller="public--stay-calendar public--unavail"
+  data-public--stay-calendar-param-root-value=param_root
+  data-public--stay-calendar-nights-value=nights_count.to_s
+  data-public--stay-calendar-avail-value=availability.to_json)
+
+  - if nights_count.zero?
+    p.text-sm.text-gray-500 Choisissez d'abord les dates du séjour pour composer l'hébergement nuit par nuit.
+  - else
+    .overflow-x-auto.-mx-4.px-4(data-public--stay-calendar-target="scrollArea")
+      table.border-collapse style="min-width: #{150 + nights_count * 96}px"
+        thead
+          tr
+            th.text-left.py-2.pr-4.text-xs.font-normal.text-gray-400.whitespace-nowrap.sticky.left-4.z-10.bg-white style="width:150px"
+            - days.each_with_index do |night, i|
+              th.text-center.py-2.px-1(data-wday=night.wday.to_s style="width:96px")
+                p.text-xs.font-bold.text-gray-600 = "Nuit #{i + 1}"
+                p.text-xs.text-gray-400.font-normal = "#{fr_short_days[night.wday]} #{night.strftime("%-d/%-m")}"
+        tbody
+          - lodgings.each do |lodging|
+            tr.border-t.border-gray-50
+              td.py-2.pr-4.whitespace-nowrap.sticky.left-4.z-10.bg-white
+                span.text-sm.text-gray-800.font-medium = lodging.form_label.presence || lodging.name
+              - days.each_with_index do |night, i|
+                - avail = (availability.dig(lodging.id, i) != false)
+                - sel   = selected_ids.at(i).to_s == lodging.id.to_s
+                td.py-2.px-1.text-center
+                  - if avail || sel
+                    button(
+                      type="button"
+                      aria-pressed=sel.to_s
+                      data-action="click->public--stay-calendar#toggleLodging"
+                      data-type="lodging"
+                      data-lodging-id=lodging.id.to_s
+                      data-night-index=i.to_s
+                      class=(sel ? "appearance-none w-12 h-10 rounded-lg border-2 text-sm font-bold transition-all focus:outline-none bg-emerald-500 border-emerald-500 text-white shadow-sm" : "appearance-none w-12 h-10 rounded-lg border-2 text-sm font-bold transition-all focus:outline-none bg-white border-gray-200 text-gray-300 hover:border-emerald-400 hover:bg-emerald-50"))
+                      = sel ? "✓" : ""
+                  - else
+                    button(
+                      type="button"
+                      data-type="lodging"
+                      data-lodging-id=lodging.id.to_s
+                      data-night-index=i.to_s
+                      data-action="click->public--unavail#show"
+                      data-unavail-name=lodging.name
+                      data-unavail-date=l(night, format: :long)
+                      aria-label="#{lodging.name} occupé le #{l(night, format: :long)}"
+                      class="w-12 h-10 rounded-lg border-2 text-sm font-bold bg-gray-50 border-gray-100 text-gray-300 hover:border-gray-300 hover:text-gray-500 cursor-pointer transition-colors focus:outline-none")
+                      | —
+
+    p.mt-3.text-xs.text-gray-400 Une cellule = un gîte pour cette nuit. Occupé (—) : forçable via « Forcer la disponibilité » ; le gîte du séjour sert de référence de facturation.
+
+  / Champs cachés `#{param_root}[lodging_night_ids][]` — régénérés par Stimulus.
+  div data-public--stay-calendar-target="hiddenFields"
+
+  / Mini-modale « occupé » — inerte hors funnel (pas de modale de dispo à ouvrir).
+  dialog(data-public--unavail-target="dialog" class="rounded-2xl p-0 border-0 shadow-2xl backdrop:bg-black/40" style="width:min(92vw,22rem)")
+    .p-5
+      .flex.items-start.gap-3
+        .w-9.h-9.rounded-full.bg-amber-100.flex.items-center.justify-center.flex-shrink-0.text-lg 🚫
+        .flex-1.min-w-0
+          h3.text-sm.font-semibold.text-gray-900 Hébergement occupé
+          p.text-sm.text-gray-600.mt-1(data-public--unavail-target="message")
+      .mt-4.flex.items-center.justify-end.gap-2
+        button(type="button" data-action="click->public--unavail#close" class="rounded-lg px-3 py-2 text-sm text-gray-500 hover:text-gray-700 focus:outline-none")
+          | Fermer
+        button(type="button" data-action="click->public--unavail#openAvailability" data-public--unavail-target="availLink" class="hidden rounded-lg bg-emerald-600 text-white px-3 py-2 text-sm font-medium hover:bg-emerald-700 focus:outline-none")
+          | Voir les disponibilités →

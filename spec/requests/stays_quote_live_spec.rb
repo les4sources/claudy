@@ -60,4 +60,25 @@ RSpec.describe "Stays — devis live (issue #73)", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("stay-quote-panel")
   end
+
+  it "facture le supplément chien (50 €/séjour) dans le devis live" do
+    post quote_stays_path, params: composition_params(dogs_count: 1),
+         headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Supplément chien")
+    # 745 € héberg + 50 € chien = 795 €.
+    expect(response.body).to include("795")
+  end
+
+  it "facture les hamacs (parité funnel, devis seul) via per_night_resources" do
+    # 2 nuits × 1 hamac simple à 7,50 €/nuit = 15 € → 745 + 15 = 760 €.
+    post quote_stays_path, params: composition_params(
+      per_night_resources: { hamac_simple: ["1", "1"] }
+    ), headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Hamac simple")
+    expect(response.body).to include("760")
+  end
 end

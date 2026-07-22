@@ -174,6 +174,12 @@ class StaysController < BaseController
       departure_date: params[:departure_date]
     )
     @stay_nights = stay_nights_for_grid
+    # La grille hébergement fait partie du frame rechargé : il lui faut les gîtes
+    # et leur dispo aux nouvelles dates (l'exclusion du séjour édité passe par
+    # `exclude_stay_id`, transmis par le controller stay-grids en édition).
+    @lodgings = bookable_lodgings
+    @stay = Stay.find_by(id: params[:exclude_stay_id]) if params[:exclude_stay_id].present?
+    @lodging_availability = stay_lodging_availability(@lodgings, @stay_nights)
     render layout: false
   end
 
@@ -554,6 +560,9 @@ class StaysController < BaseController
     # dates → le form retombe sur les lignes `halls` (journée sèche / espaces
     # seuls sans dates), qui restent la seule saisie possible hors fenêtre.
     @stay_nights = stay_nights_for_grid
+    # Dispo par gîte × nuit pour la grille hébergement (parité funnel). En édition,
+    # on EXCLUT les propres Booking du séjour (sinon ses nuits s'affichent occupées).
+    @lodging_availability = stay_lodging_availability(@lodgings, @stay_nights)
     apply_space_grid_prefill
     @quote  ||= safe_quote(@draft)
   end
@@ -608,9 +617,17 @@ class StaysController < BaseController
     p = stay_params
     contact = customer_contact(p)
     Reservations::Draft.new(
-      lodging_id:     p[:lodging_id],
+      # Le <select> gîte (mode chambres) OU, à défaut, le 1er gîte sélectionné dans
+      # la grille nuit par nuit (mode gîte entier). Le Builder/AdminUpdater posent
+      # UN Booking par gîte : comme le funnel, un séjour multi-gîtes se ramène au
+      # 1er gîte choisi (limitation assumée du modèle mono-Booking, issue #138).
+      lodging_id:     p[:lodging_id].presence || Array(p[:lodging_night_ids]).map { |v| v.to_s.presence }.compact.first,
       booking_type:   p[:booking_type],
       room_ids:       room_ids_param(p),
+      # Grille hébergement nuit par nuit (parité funnel) : le gîte occupé nuit par
+      # nuit. Le Draft dérive `lodging` de la 1re nuit ; DraftReconstructor le
+      # reconstruit depuis les Booking. Absent (mode chambres / select) → nil.
+      lodging_night_ids: p[:lodging_night_ids],
       arrival_date:   p[:arrival_date],
       departure_date: p[:departure_date],
       arrival_time:   p[:arrival_time],
@@ -647,7 +664,11 @@ class StaysController < BaseController
       # MÊME représentation que le funnel public (`space_slots[kind][night_idx]`).
       # Le concern SpaceComposition la fusionne avec `halls` (mutuellement
       # exclusifs ici : le form rend la grille OU les lignes, jamais les deux).
-      space_slots:    p[:space_slots]
+      space_slots:    p[:space_slots],
+      # Précision libre du besoin d'espace (textarea de la grille espaces, parité
+      # funnel) : rangée à la création dans la note interne préfixée du
+      # SpaceBooking (SpaceComposition), visible dans la modale admin.
+      spaces_note:    p[:spaces_note]
     )
   end
 
@@ -658,6 +679,27 @@ class StaysController < BaseController
     departure = parse_form_date(@draft&.departure_date&.to_s)
     return [] if arrival.nil? || departure.nil? || departure <= arrival
     (arrival...departure).to_a
+  end
+
+  # Dispo `{ lodging_id => [bool par nuit] }` pour la grille hébergement admin.
+  # Miroir de `build_stay_availability` du funnel, MAIS on exclut les propres
+  # Booking du séjour édité (`@stay`) : sans cela, un séjour confirmé afficherait
+  # ses propres nuits comme « occupées » et perdrait sa sélection au rendu.
+  def stay_lodging_availability(lodgings, nights)
+    return {} if Array(nights).empty?
+    start_date  = nights.first
+    end_date    = nights.last
+    exclude_ids = @stay&.persisted? ? @stay.stay_items.where(bookable_type: "Booking").pluck(:bookable_id) : []
+    Array(lodgings).each_with_object({}) do |lodging, result|
+      room_ids = lodging.rooms.pluck(:id)
+      reserved = Reservation.joins(:booking)
+                            .where(date: start_date..end_date, room_id: room_ids, bookings: { status: "confirmed" })
+                            .where.not(bookings: { id: exclude_ids })
+                            .pluck(:date).to_set
+      unavail  = lodging.unavailabilities.where(date: start_date..end_date).pluck(:date).to_set
+      occupied = reserved | unavail
+      result[lodging.id] = nights.map { |night| !occupied.include?(night) }
+    end
   end
 
   # Chambres cochées (mode chambres seules, epic #81, Phase 5). Tableau de la

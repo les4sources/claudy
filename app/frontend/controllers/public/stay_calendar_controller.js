@@ -14,7 +14,10 @@ import { Controller } from "@hotwired/stimulus"
 // (`reservation[lodging_night_ids][]`) et on émet un `change` bouillonnant.
 export default class extends Controller {
   static targets = ["hiddenFields", "scrollArea"]
-  static values  = { nights: Number, avail: Object }
+  // `paramRoot` (défaut "reservation") : préfixe des champs cachés
+  // `lodging_night_ids[]`. Le funnel public poste sous "reservation", le form
+  // admin sous "stay" (data-public--stay-calendar-param-root-value="stay").
+  static values  = { nights: Number, avail: Object, paramRoot: String }
   static SCROLL_AMOUNT = 4 * 90  // 4 colonnes × 90px
 
   connect() {
@@ -142,7 +145,7 @@ export default class extends Controller {
     for (let night = 0; night < count; night += 1) {
       const input = document.createElement("input")
       input.type  = "hidden"
-      input.name  = "reservation[lodging_night_ids][]"
+      input.name  = `${this.paramRootValue || "reservation"}[lodging_night_ids][]`
       input.value = selectionByNight.get(String(night)) ?? ""
       container.appendChild(input)
     }

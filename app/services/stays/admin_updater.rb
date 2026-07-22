@@ -260,7 +260,7 @@ module Stays
         # `platform` (attribution OTA, epic #81) est en revanche propagé : son
         # changement ne déclenche AUCUN email (cf. `notify_customer_on_update`).
         booking.update!(
-          lodging_id:        @draft.lodging_id,
+          lodging_id:        @draft.lodging.id,
           from_date:         @draft.arrival_date,
           to_date:           @draft.departure_date,
           adults:            [@draft.adults, 1].max,
@@ -287,7 +287,7 @@ module Stays
           status:            stay_status,
           payment_status:    "pending",
           platform:          booking_platform,
-          lodging_id:        @draft.lodging_id,
+          lodging_id:        @draft.lodging.id,
           price_cents:       price,
           shown_price_cents: price
         )

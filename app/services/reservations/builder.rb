@@ -440,7 +440,11 @@ module Reservations
         status: stay_status,
         payment_status: "pending",
         platform: booking_platform,
-        lodging_id: draft.lodging_id,
+        # Gîte occupé : la lodging DÉRIVÉE (`draft.lodging`) — vaut le `lodging_id`
+        # du select comme la 1re nuit de la grille `lodging_night_ids` (parité
+        # funnel). Sans ça, une occupation posée uniquement par la grille portait
+        # `lodging_id` nil → DraftReconstructor ne pouvait plus rebâtir la grille.
+        lodging_id: draft.lodging.id,
         # Prix de l'occupation d'hébergement = hébergement PUR (`lodging_only_cents`),
         # dans TOUS les canaux (issue #79) : camping / van / repas sont extraits sur
         # leurs propres modèles. Invariant : Booking + SpaceBooking + CampingBooking
