@@ -548,9 +548,6 @@ class StaysController < BaseController
                                                        .upcoming
                                                        .includes(:experience)
     @statuses = Stay::STATUSES_ADMIN_CREATABLE
-    # Événements sélectionnables pour la facturation espace (epic #81, Phase 6),
-    # décorés pour l'affichage « nom (dates) » — même source que le form direct.
-    @events = EventDecorator.decorate_collection(Event.order(starts_at: :desc))
     # Grille espaces date-par-date : les colonnes-nuits du séjour. Vide si pas de
     # dates → le form retombe sur les lignes `halls` (journée sèche / espaces
     # seuls sans dates), qui restent la seule saisie possible hors fenêtre.
@@ -644,11 +641,6 @@ class StaysController < BaseController
       # {date, people}. Le funnel public ne porte JAMAIS cette clé (non permise
       # dans le contrôleur public) ; ce contrôleur admin la lit du form.
       terrasses:      terrace_entries(p),
-      # Facturation espace (epic #81, Phase 6) : le sous-hash brut transite tel
-      # quel ; le Draft normalise (presence → nil) et la persistance convertit les
-      # montants via les setters `monetize`. Absent du form → `space_billing` nil,
-      # les valeurs existantes survivent à la réédition.
-      space_billing:  p[:space_billing],
       # Espaces date-par-date (issue parité funnel) : grille nuits × espaces,
       # MÊME représentation que le funnel public (`space_slots[kind][night_idx]`).
       # Le concern SpaceComposition la fusionne avec `halls` (mutuellement

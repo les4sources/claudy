@@ -29,8 +29,7 @@ RSpec.describe Stays::DuplicateService, type: :service do
       email:          "alice@example.com",
       phone:          "0470111222",
       halls:          [{ kind: "grande_salle", date: arrival.iso8601, period: "journee" }],
-      meals:          [{ kind: "buffet", date: arrival.iso8601, people: 3 }],
-      space_billing:  { advance_amount: "50", deposit_amount: "200", payment_method: "bank_transfer" }
+      meals:          [{ kind: "buffet", date: arrival.iso8601, people: 3 }]
     )
     builder = Reservations::Builder.new(
       draft: draft, admin: true, source: "manual",
@@ -60,14 +59,10 @@ RSpec.describe Stays::DuplicateService, type: :service do
       expect(draft.booking_type).to eq("lodging")
     end
 
-    it "conserve la composition espace + sa facturation" do
+    it "conserve la composition espace" do
       hall = draft.halls.first
       expect(hall[:kind]).to eq("grande_salle")
       expect(hall[:period]).to eq("journee")
-      # Facturation espace reconstruite depuis le SpaceBooking (acompte/caution/mode).
-      expect(draft.space_billing[:advance_amount]).to eq("50")
-      expect(draft.space_billing[:deposit_amount]).to eq("200")
-      expect(draft.space_billing[:payment_method]).to eq("bank_transfer")
     end
 
     it "conserve les repas (type + convives)" do

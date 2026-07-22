@@ -46,13 +46,6 @@ module Reservations
                   # persisté en base. Tableau de clés (String).
                   :needs
 
-    # Facturation ESPACE (epic #81, Phase 6) : attributs portés par le
-    # `SpaceBooking` du séjour (acompte, caution, mode de paiement, événement).
-    # Vaut `nil` quand le form ne porte PAS la clé `space_billing` —
-    # signal « ne pas toucher » à la réédition ; un Hash (même à valeurs vides)
-    # signifie « appliquer tel quel » (champ vidé → nil, jamais 0 forcé).
-    attr_reader :space_billing
-
     # Backing stores pour campings/vans/hamacs (utilisés quand per_night_resources absent)
     attr_writer :campings, :vans, :hamacs
     attr_writer :room_ids
@@ -80,7 +73,6 @@ module Reservations
       @experiences       = symbolize_rows(attrs[:experiences])
       @booking_type      = attrs[:booking_type].presence
       @room_ids          = normalize_room_ids(attrs[:room_ids])
-      @space_billing     = normalize_space_billing(attrs[:space_billing])
       @first_name        = attrs[:first_name].presence
       @last_name         = attrs[:last_name].presence
       @email             = attrs[:email].presence
@@ -181,7 +173,6 @@ module Reservations
         experiences:        experiences,
         booking_type:       booking_type,
         room_ids:           room_ids,
-        space_billing:      space_billing,
         first_name:         first_name,
         last_name:          last_name,
         email:              email,
@@ -231,23 +222,6 @@ module Reservations
     # Chambres cochées → Integer dédupliqués, ordre stable, sans zéro/blanc.
     def normalize_room_ids(ids)
       Array(ids).map { |id| id.to_i }.reject(&:zero?).uniq
-    end
-
-    # Facturation espace → Hash normalisé à clés symboles, ou nil si la clé est
-    # absente (« ne pas toucher »). Chaque valeur est ramenée à nil quand elle est
-    # vide : les montants (`advance_amount`/`deposit_amount`) restent des chaînes €
-    # brutes, converties en cents par les setters `monetize` du SpaceBooking —
-    # même conversion EXACTE que le canal direct `SpaceBookings::CreateService`.
-    def normalize_space_billing(raw)
-      return nil if raw.nil?
-      raw = raw.respond_to?(:to_unsafe_h) ? raw.to_unsafe_h : raw.to_h
-      raw = raw.symbolize_keys
-      {
-        advance_amount: raw[:advance_amount].presence,
-        deposit_amount: raw[:deposit_amount].presence,
-        payment_method: raw[:payment_method].presence,
-        event_id:       raw[:event_id].presence
-      }
     end
 
     def parse_per_night_resources(pnr)

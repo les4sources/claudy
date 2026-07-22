@@ -20,32 +20,11 @@ export default class extends Controller {
     "source",
     "roomsPanel",
     "roomsGroup",
-    "spaceBillingPanel",
   ]
 
   connect() {
     this.toggleCustomer()
     this.toggleBookingMode()
-    this.toggleSpaceBilling()
-  }
-
-  // Facturation espace (epic #81, Phase 6) : le sous-panneau n'apparaît que si au
-  // moins une ligne d'espace porte un type sélectionné. Idempotent — rappelé au
-  // connect pour restaurer l'état à l'édition (espace déjà présent → panneau
-  // ouvert). Les champs restent dans le DOM même masqués : le serveur lit
-  // `space_billing` normalement, et un panneau replié resoumet ses valeurs.
-  toggleSpaceBilling() {
-    if (!this.hasSpaceBillingPanelTarget) return
-    // Lignes `halls` (journée sèche) OU grille date-par-date (`space_slots`) :
-    // le panneau facturation s'ouvre dès qu'un espace est renseigné dans l'une
-    // ou l'autre représentation.
-    const anyKindSelected = Array.from(
-      this.element.querySelectorAll('select[name^="stay[halls]"][name$="[kind]"]'),
-    ).some((select) => select.value.trim() !== "")
-    const anySlotSelected = Array.from(
-      this.element.querySelectorAll('input[name^="stay[space_slots]"]'),
-    ).some((input) => input.value.trim() !== "")
-    this.spaceBillingPanelTarget.classList.toggle("hidden", !(anyKindSelected || anySlotSelected))
   }
 
   // Mode d'occupation (epic #81, Phase 5) : gîte entier / chambres seules. En mode

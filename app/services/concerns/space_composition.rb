@@ -145,27 +145,10 @@ module SpaceComposition
       space_booking.notes = "#{SPACES_NOTE_PREFIX}#{draft.spaces_note}"
     end
     space_booking.generate_token
-    assign_space_billing(space_booking, draft)
     specs.each do |spec|
       space_booking.space_reservations.build(space: spec[:space], date: spec[:date], duration: spec[:duration])
     end
     space_booking
-  end
-
-  # Facturation ESPACE (epic #81, Phase 6) : recopie les attributs de facturation
-  # portés par le draft (`space_billing`) sur le SpaceBooking. No-op quand le draft
-  # ne porte PAS la facturation (`space_billing` nil) — les valeurs existantes
-  # SURVIVENT alors à une réédition qui ne les change pas. Les montants passent par
-  # les setters `monetize` (`advance_amount=` / `deposit_amount=`) : conversion
-  # €→cents IDENTIQUE au canal direct, et champ vide (nil) → cents nil, jamais 0.
-  def assign_space_billing(space_booking, draft)
-    billing = draft.space_billing
-    return if billing.nil?
-
-    space_booking.advance_amount = billing[:advance_amount]
-    space_booking.deposit_amount = billing[:deposit_amount]
-    space_booking.payment_method = billing[:payment_method]
-    space_booking.event_id       = billing[:event_id]
   end
 
   # Réservable d'espace déjà rattaché au séjour (édition), ou nil.

@@ -363,10 +363,6 @@ module Stays
           to_date:     @draft.departure_date || dates.max,
           price_cents: price
         )
-        # Facturation espace (epic #81, Phase 6) : appliquée seulement si le draft
-        # la porte ; sinon les valeurs existantes survivent. N'affecte ni le
-        # `status` ni l'`email` → aucun email déclenché (cf. en-tête de classe).
-        assign_space_billing(space_booking, @draft)
         space_booking.save!
         specs.each do |spec|
           space_booking.space_reservations.create!(space: spec[:space], date: spec[:date], duration: spec[:duration])

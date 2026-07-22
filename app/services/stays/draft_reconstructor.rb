@@ -60,7 +60,6 @@ module Stays
         vans:           vans_from_stay,
         meals:          meals_from_stay,
         terrasses:      terrasses_from_stay,
-        space_billing:  space_billing_from_stay,
         # Précision libre du besoin d'espace (funnel public) : reconstruite depuis
         # la note interne préfixée du SpaceBooking, PRÉFIXE RETIRÉ, pour que le
         # textarea réaffiche le texte brut du client à l'édition / la modif client.
@@ -151,28 +150,6 @@ module Stays
       prefix = SpaceComposition::SPACES_NOTE_PREFIX
       return nil unless raw.start_with?(prefix)
       raw.delete_prefix(prefix).presence
-    end
-
-    # Facturation espace (epic #81, Phase 6) : reconstitue le sous-hash de
-    # facturation depuis le SpaceBooking du séjour. nil si le séjour n'a pas
-    # d'espace. Les montants repassent en € (chaîne `%g` pour éviter les décimales
-    # parasites) — miroir du form direct `_payment`.
-    def space_billing_from_stay
-      sb = space_booking
-      return nil if sb.nil?
-
-      {
-        advance_amount: euro_prefill(sb.advance_amount_cents),
-        deposit_amount: euro_prefill(sb.deposit_amount_cents),
-        payment_method: sb.payment_method,
-        event_id:       sb.event_id
-      }
-    end
-
-    # Cents → chaîne € prête pour un number_field (nil si absent, "50" pas "50.0").
-    def euro_prefill(cents)
-      return nil if cents.nil?
-      format("%g", cents / 100.0)
     end
 
     # Reconstruit l'entrée camping {kind, people, nights} depuis le CampingBooking

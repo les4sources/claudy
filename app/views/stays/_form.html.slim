@@ -28,7 +28,7 @@
 / `stay-availability-exclude-stay-id-value` : en édition, on transmet l'id du
 / séjour pour que la vérif de dispo du form IGNORE ses propres chambres (sinon
 / un séjour confirmé s'affiche « indisponible » à tort au chargement).
-= form_with url: url, method: method, data: { controller: "stay-form stay-quote stay-availability stay-grids", "stay-quote-url-value": quote_stays_path, "stay-availability-url-value": availability_stays_path, "stay-availability-exclude-stay-id-value": (@stay&.persisted? ? @stay.id : nil), "stay-grids-url-value": compose_grids_stays_path, action: "change->stay-quote#check input->stay-quote#check change->stay-form#toggleSpaceBilling" } do
+= form_with url: url, method: method, data: { controller: "stay-form stay-quote stay-availability stay-grids", "stay-quote-url-value": quote_stays_path, "stay-availability-url-value": availability_stays_path, "stay-availability-exclude-stay-id-value": (@stay&.persisted? ? @stay.id : nil), "stay-grids-url-value": compose_grids_stays_path, action: "change->stay-quote#check input->stay-quote#check" } do
   .space-y-8
     / --- Client -------------------------------------------------------------
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
@@ -152,34 +152,6 @@
       .hidden.text-sm.font-medium.rounded-md.px-3.py-2(data-stay-availability-target="indicator")
 
     = render "stays/compose_grids"
-
-    / --- Facturation espaces (HORS frame : ses valeurs survivent aux
-    / rechargements de grille quand les dates changent) --------------------
-    - space_billing = @draft&.space_billing || {}
-    - payment_method_options = [["En liquide à son arrivée", "cash"], ["Par virement bancaire", "bank_transfer"], ["Versement automatique Airbnb", "airbnb"], ["Versement automatique Booking.com", "bookingdotcom"]]
-    - event_options = Array(@events).map { |e| [e.name_with_date, e.id] }
-    - existing_halls = Array(@draft&.halls).map { |h| h.respond_to?(:symbolize_keys) ? h.symbolize_keys : h }
-    - space_slots_present = Array(@draft&.space_slots&.values).flatten.any?(&:present?)
-    - space_billing_open = existing_halls.any? { |h| h[:kind].present? } || space_slots_present
-    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-    / Facturation espaces — n'apparaît que si ≥1 ligne d'espace est renseignée.
-    / Tous les champs sont optionnels (acompte/caution en €, converties comme le
-    / canal direct ; mode de paiement, événement).
-    div class=("space-y-4 rounded-md bg-gray-50 p-4 ring-1 ring-black ring-opacity-5" + (space_billing_open ? "" : " hidden")) data-stay-form-target="spaceBillingPanel"
-      h3.text-sm.font-semibold.text-gray-900 Facturation espaces
-      .grid.grid-cols-2.gap-4
-        .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_advance_amount" Acompte (€)
-          = number_field_tag "stay[space_billing][advance_amount]", space_billing[:advance_amount], id: "stay_space_billing_advance_amount", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-        .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_deposit_amount" Caution (€) ♻️
-          = number_field_tag "stay[space_billing][deposit_amount]", space_billing[:deposit_amount], id: "stay_space_billing_deposit_amount", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-      .space-y-1
-        label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_payment_method" Mode de paiement
-        = select_tag "stay[space_billing][payment_method]", options_for_select(payment_method_options, space_billing[:payment_method]), id: "stay_space_billing_payment_method", include_blank: "— Mode de paiement —", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-      .space-y-1
-        label.block.text-sm.font-medium.text-gray-700 for="stay_space_billing_event_id" Événement
-        = select_tag "stay[space_billing][event_id]", options_for_select(event_options, space_billing[:event_id]), id: "stay_space_billing_event_id", include_blank: "— Aucun événement —", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
     / --- Repas --------------------------------------------------------------
     - meal_kind_options = [["Repas végé (midi)", "repas_vege_midi"], ["Buffet pain-fromages", "buffet"]]

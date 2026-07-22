@@ -97,7 +97,11 @@ module Public
       attrs[:experiences]   = current.experiences
       attrs[:meals]         = current.meals
       attrs[:terrasses]     = current.terrasses
-      attrs[:space_billing] = current.space_billing
+      # Heures d'arrivée/départ portées par le SÉJOUR (refonte 2026-07-22) :
+      # reportées depuis l'état courant pour qu'une demande approuvée ne les
+      # efface pas (le formulaire de modification client ne les affiche pas).
+      attrs[:arrival_time]   = current.arrival_time
+      attrs[:departure_time] = current.departure_time
       attrs[:first_name]    = current.first_name
       attrs[:last_name]     = current.last_name
       attrs[:email]         = current.email
