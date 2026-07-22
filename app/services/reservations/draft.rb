@@ -31,7 +31,18 @@ module Reservations
                   # l'hébergement — "lodging" (gîte entier, défaut) ou "rooms"
                   # (sous-ensemble de chambres du gîte). `room_ids` porte les
                   # chambres cochées ; il n'a de sens qu'en mode "rooms".
-                  :booking_type
+                  :booking_type,
+                  # Précision libre du besoin d'ESPACE (funnel public, textarea
+                  # sous la grille des espaces) : rangée à la CRÉATION dans la note
+                  # INTERNE du SpaceBooking (préfixe « Demande client espaces : »)
+                  # pour que l'équipe la voie dans la modale admin. Optionnelle.
+                  :spaces_note,
+                  # Besoins pré-sélectionnés à l'étape 1 du funnel (cards
+                  # cochables : gite, camping, van, salles, repas, activites).
+                  # Purement UI — pilote le masquage/affichage des blocs à
+                  # l'étape 2 et survit aux allers-retours via la session. Jamais
+                  # persisté en base. Tableau de clés (String).
+                  :needs
 
     # Facturation ESPACE (epic #81, Phase 6) : attributs portés par le
     # `SpaceBooking` du séjour (acompte, caution, mode de paiement, événement,
@@ -74,6 +85,8 @@ module Reservations
       @category          = attrs[:category].presence
       @customer_type     = attrs[:customer_type].presence || "individual"
       @organization_name = attrs[:organization_name].presence
+      @spaces_note       = attrs[:spaces_note].presence
+      @needs             = normalize_needs(attrs[:needs])
     end
 
     # --- Contrat PricingModel ---------------------------------------------
@@ -170,7 +183,9 @@ module Reservations
         group_name:         group_name,
         category:           category,
         customer_type:      customer_type,
-        organization_name:  organization_name
+        organization_name:  organization_name,
+        spaces_note:        spaces_note,
+        needs:              needs
       }
     end
 
@@ -198,6 +213,13 @@ module Reservations
 
     def symbolize_rows(rows)
       Array(rows).map { |row| row.respond_to?(:symbolize_keys) ? row.symbolize_keys : row }
+    end
+
+    # Besoins → clés String dédupliquées, ordre stable, sans blanc. Bornées aux
+    # clés connues du funnel (défense en profondeur — un besoin forgé est ignoré).
+    KNOWN_NEEDS = %w[gite salles camping van repas activites].freeze
+    def normalize_needs(values)
+      Array(values).map { |v| v.to_s.strip }.reject(&:empty?).uniq & KNOWN_NEEDS
     end
 
     # Chambres cochées → Integer dédupliqués, ordre stable, sans zéro/blanc.

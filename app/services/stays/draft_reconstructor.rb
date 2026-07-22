@@ -58,7 +58,11 @@ module Stays
         vans:           vans_from_stay,
         meals:          meals_from_stay,
         terrasses:      terrasses_from_stay,
-        space_billing:  space_billing_from_stay
+        space_billing:  space_billing_from_stay,
+        # Précision libre du besoin d'espace (funnel public) : reconstruite depuis
+        # la note interne préfixée du SpaceBooking, PRÉFIXE RETIRÉ, pour que le
+        # textarea réaffiche le texte brut du client à l'édition / la modif client.
+        spaces_note:    spaces_note_from_stay
       )
     end
 
@@ -134,6 +138,17 @@ module Stays
 
     def space_booking
       @stay.stay_items.where(bookable_type: "SpaceBooking").first&.bookable
+    end
+
+    # Note interne préfixée du SpaceBooking → texte brut du client (préfixe
+    # retiré). nil si pas d'espace, note vide, ou note sans le préfixe « client »
+    # (note d'équipe interne non issue du funnel — ne pas la ramener au textarea).
+    def spaces_note_from_stay
+      raw = space_booking&.notes
+      return nil if raw.blank?
+      prefix = SpaceComposition::SPACES_NOTE_PREFIX
+      return nil unless raw.start_with?(prefix)
+      raw.delete_prefix(prefix).presence
     end
 
     # Facturation espace (epic #81, Phase 6) : reconstitue le sous-hash de

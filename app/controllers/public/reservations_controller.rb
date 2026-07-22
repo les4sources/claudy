@@ -181,6 +181,8 @@ module Public
       permitted = params.fetch(:reservation, {}).permit(
         :lodging_id, :arrival_date, :departure_date, :dogs_count,
         :adults, :children, :first_name, :last_name, :email, :phone, :group_name, :category,
+        :spaces_note,
+        needs: [],
         lodging_night_ids: [],
         per_night_resources: { tente: [], van: [], hamac_simple: [], hamac_double: [] },
         space_slots: { grande_salle: [], petite_salle: [], cuisine_pro: [] },

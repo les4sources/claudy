@@ -22,6 +22,12 @@
 module SpaceComposition
   extend ActiveSupport::Concern
 
+  # Préfixe de la note INTERNE portée par le SpaceBooking quand le client a
+  # précisé son besoin d'espace au funnel (`draft.spaces_note`). L'équipe la voit
+  # agrégée dans la modale admin (source « Espaces »). Le `DraftReconstructor`
+  # retire ce préfixe pour ré-afficher le texte brut dans le textarea.
+  SPACES_NOTE_PREFIX = "Demande client espaces : ".freeze
+
   # Résolution PRIMAIRE : clé de pricing → `Space.code` (identifiant stable, seed
   # `db/seeds.rb`). Insensible au renommage d'affichage des `Space`.
   SPACE_CODES_BY_KEY = {
@@ -131,6 +137,13 @@ module SpaceComposition
       payment_status: "pending",
       price_cents:    price_cents
     )
+    # Précision libre du besoin d'espace (funnel public) → note INTERNE préfixée,
+    # visible dans la modale admin. Posée UNIQUEMENT à la création d'un nouveau
+    # SpaceBooking et seulement si le draft la porte (les éditions admin d'un
+    # SpaceBooking existant préservent la note — cf. AdminUpdater).
+    if draft.respond_to?(:spaces_note) && draft.spaces_note.present?
+      space_booking.notes = "#{SPACES_NOTE_PREFIX}#{draft.spaces_note}"
+    end
     space_booking.generate_token
     assign_space_billing(space_booking, draft)
     specs.each do |spec|
