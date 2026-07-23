@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_22_090000) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_23_011804) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -389,6 +389,28 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_22_090000) do
     t.datetime "deleted_at"
     t.index ["gathering_category_id"], name: "index_gatherings_on_gathering_category_id"
     t.index ["starts_at", "ends_at"], name: "index_gatherings_on_starts_at_and_ends_at"
+  end
+
+  create_table "hamac_bookings", force: :cascade do |t|
+    t.string "firstname"
+    t.string "lastname"
+    t.string "email"
+    t.string "phone"
+    t.string "group_name"
+    t.date "from_date"
+    t.date "to_date"
+    t.string "kind", default: "simple", null: false
+    t.integer "count", default: 1, null: false
+    t.string "status"
+    t.integer "price_cents"
+    t.string "token"
+    t.text "notes"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_hamac_bookings_on_deleted_at"
+    t.index ["from_date", "to_date"], name: "index_hamac_bookings_on_from_date_and_to_date"
+    t.index ["token"], name: "index_hamac_bookings_on_token", unique: true
   end
 
   create_table "human_roles", force: :cascade do |t|

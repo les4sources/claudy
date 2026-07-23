@@ -58,6 +58,10 @@ module Stays
         halls:          halls_from_stay,
         campings:       campings_from_stay,
         vans:           vans_from_stay,
+        # Hamacs (issue #138) : repli pleine-fenêtre quand la grille n'est pas
+        # dérivable (séjour sans dates). La grille, elle, est reconstruite dans
+        # `per_night_resources_from_stay` — c'est elle qui fait foi si présente.
+        hamacs:         hamacs_from_stay,
         meals:          meals_from_stay,
         terrasses:      terrasses_from_stay,
         # Précision libre du besoin d'espace (funnel public) : reconstruite depuis
@@ -85,11 +89,20 @@ module Stays
       campings = @stay.stay_items.select { |i| i.bookable_type == "CampingBooking" }
                       .filter_map(&:bookable).reject { |b| b.kind == "terrasse" }
       vans     = @stay.stay_items.select { |i| i.bookable_type == "VanBooking" }.filter_map(&:bookable)
-      return nil if campings.empty? && vans.empty?
+      hamacs   = @stay.stay_items.select { |i| i.bookable_type == "HamacBooking" }.filter_map(&:bookable)
+      return nil if campings.empty? && vans.empty? && hamacs.empty?
 
       pnr = {}
       pnr["tente"] = spread_nights(campings, arrival, nights, &:people)   if campings.any?
       pnr["van"]   = spread_nights(vans,     arrival, nights, &:vehicles) if vans.any?
+      # Hamacs (issue #138) : une ligne de grille par TYPE, `hamac_simple` /
+      # `hamac_double` — mêmes clés que celles postées par le funnel et le form
+      # admin, donc le round-trip édition ré-affiche fidèlement la sélection.
+      HamacBooking::KINDS.each do |kind|
+        of_kind = hamacs.select { |h| h.kind.to_s == kind }
+        next if of_kind.empty?
+        pnr["hamac_#{kind}"] = spread_nights(of_kind, arrival, nights, &:count)
+      end
       pnr
     end
 
@@ -168,6 +181,19 @@ module Stays
       return [] if van.nil?
       nights = van.from_date && van.to_date ? (van.to_date - van.from_date).to_i : 1
       Array.new([van.vehicles, 1].max) { { nights: [nights, 1].max } }
+    end
+
+    # Reconstruit les entrées hamac {kind, count, nights} depuis les HamacBooking
+    # persistés (une par plage). Sert de repli quand la grille n'est pas
+    # dérivable ; sinon le Draft dérive `hamacs` de `per_night_resources`.
+    def hamacs_from_stay
+      @stay.stay_items.select { |i| i.bookable_type == "HamacBooking" }
+           .filter_map(&:bookable)
+           .sort_by { |h| [h.kind.to_s, h.from_date.to_s] }
+           .map do |h|
+             nights = h.from_date && h.to_date ? (h.to_date - h.from_date).to_i : 1
+             { kind: h.kind, count: h.count, nights: [nights, 1].max }
+           end
     end
 
     # Reconstruit les terrasses {date, people} depuis les CampingBooking terrasse

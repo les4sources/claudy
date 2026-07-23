@@ -51,6 +51,11 @@ class StayDecorator < ApplicationDecorator
     bookables_of("VanBooking")
   end
 
+  # Locations de hamacs (issue #138) — une entrée par plage de nuits et par type.
+  def hamac_bookings
+    bookables_of("HamacBooking")
+  end
+
   def meals
     object.meal_orders.to_a
   end
@@ -58,7 +63,8 @@ class StayDecorator < ApplicationDecorator
   # Le séjour a-t-il au moins un élément de composition à afficher ?
   def any_composition?
     lodging_bookings.any? || space_bookings.any? || camping_bookings.any? ||
-      van_bookings.any? || meals.any? || object.experience_bookings.active.any?
+      van_bookings.any? || hamac_bookings.any? || meals.any? ||
+      object.experience_bookings.active.any?
   end
 
   # Résumé compact de la composition pour l'index Séjours : « 1 gîte · 2 espaces
@@ -72,6 +78,7 @@ class StayDecorator < ApplicationDecorator
       compo_part(space_bookings.size, "espace", "espaces"),
       compo_part(camping_bookings.size, "camping", "campings"),
       compo_part(van_bookings.size, "van", "vans"),
+      compo_part(hamac_bookings.sum { |h| h.count.to_i }, "hamac", "hamacs"),
       compo_part(active_experiences_count, "activité", "activités"),
       compo_part(object.meal_orders.size, "repas", "repas")
     ].compact
@@ -229,6 +236,8 @@ class StayDecorator < ApplicationDecorator
       bookable.kind == "terrasse" ? h.t("public.stays.items.terrace") : h.t("public.stays.items.camping")
     when VanBooking
       h.t("public.stays.items.van")
+    when HamacBooking
+      "#{h.t('public.stays.items.hamac')} — #{bookable.label} × #{bookable.count}"
     else
       h.t("public.stays.items.other")
     end

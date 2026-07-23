@@ -16,6 +16,8 @@ module Reservations
   class Builder < ServiceBase
     include SpaceComposition
     include CampingComposition
+    # Hamacs (issue #138) : persistés dans TOUS les canaux, comme camping/van.
+    include HamacComposition
     include MealComposition
     include TerraceComposition
     # Reservations de chambres de l'hébergement (epic #66, Phase 6) : on réutilise
@@ -29,8 +31,8 @@ module Reservations
     class DraftInvalid < StandardError; end
 
     attr_reader :draft, :stay, :customer, :booking, :space_booking,
-                :camping_booking, :van_booking, :payment, :availability_warning,
-                :space_warning
+                :camping_booking, :van_booking, :hamac_bookings, :payment,
+                :availability_warning, :space_warning
 
     # Mode admin (epic #66, Phase 1) : le CRUD Séjour admin réutilise ce moteur
     # SANS jamais passer par Stripe. Les options `admin`/`status`/`source`/
@@ -146,6 +148,11 @@ module Reservations
         # car ils dérivent du devis (`quote`), inchangé par cette ventilation.
         @camping_booking = build_camping_booking_for!(@stay, quote)
         @van_booking     = build_van_booking_for!(@stay, quote)
+        # Hamacs (issue #138) : jusqu'ici devis-only, donc invisibles du séjour et
+        # sur-louables. Persistés désormais dans TOUS les canaux, une réservation
+        # par plage contiguë ; leur part (`quote.hamac_cents`) est extraite de
+        # `lodging_only_cents` — aucun double-compte, total du séjour inchangé.
+        @hamac_bookings  = build_hamac_bookings_for!(@stay, quote)
         create_meal_orders!(@stay, draft)
         # Terrasse (décision Michael 2026-07-20) : ADMIN UNIQUEMENT. Une occupation
         # `CampingBooking` de `kind: "terrasse"` par JOUR. Ignorée hors admin, même
@@ -242,6 +249,23 @@ module Reservations
       end
       check_space_availability!
       check_outdoor_capacity!
+      check_hamac_stock!
+    end
+
+    # Stock hamacs (issue #138) : vérifié dans TOUS les canaux — contrairement au
+    # camping/van (admin only), le funnel public PERSISTE les hamacs, donc il peut
+    # sur-louer. Stock non renseigné sur le `RentalItem` → aucune limite.
+    def check_hamac_stock!
+      message = hamac_stock_message(draft)
+      return if message.nil?
+
+      if @skip_availability
+        @availability_warning =
+          [@availability_warning,
+           "#{message} — séjour enregistré en forçant la disponibilité."].compact.join(" ")
+      else
+        raise_invalid(message)
+      end
     end
 
     # Dispo de l'hébergement : sur les chambres cochées en mode "rooms" (epic #81,
@@ -383,6 +407,18 @@ module Reservations
           price_cents: quote.van_cents
         )
       end
+    end
+
+    # Hamacs (issue #138) : no-op si le draft n'en porte aucun. Une `HamacBooking`
+    # par plage contiguë et par type ; leur part de prix vient du devis
+    # (`hamac_cents`), ventilée exactement sur les plages.
+    def build_hamac_bookings_for!(stay, quote)
+      return [] unless draft_has_hamacs?(draft)
+
+      persist_hamac_ranges!(
+        stay: stay, draft: draft, status: stay_status,
+        total_price_cents: quote.hamac_cents
+      )
     end
 
     def upsert_customer!

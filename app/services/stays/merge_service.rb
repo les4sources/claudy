@@ -233,6 +233,7 @@ module Stays
       when SpaceBooking then bookable.spaces.map(&:name).compact_blank.join(", ").presence || "Espace"
       when CampingBooking then "Camping"
       when VanBooking     then "Van"
+      when HamacBooking   then bookable.label
       else bookable.class.model_name.human
       end
     end

@@ -121,6 +121,7 @@ module Payments
         when SpaceBooking   then "Salles & espaces"
         when CampingBooking then "Camping"
         when VanBooking     then "Emplacement van"
+        when HamacBooking   then "Location de hamacs"
         end
       end.uniq
       activities = stay.experience_bookings.active.count
