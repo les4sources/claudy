@@ -21,6 +21,7 @@ nl:
         camping: "Camping"
         van: "Camper"
         terrace: "Terras"
+        hamac: "Hangmat"
         meal: "Maaltijd"
         other: "Dienst"
       payment_status:

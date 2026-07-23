@@ -59,6 +59,14 @@ class PagesController < BaseController
           .where.not(status: ["declined", "canceled"])
           .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
       )
+      # Hamacs (issue #138) — même étalement par nuit que camping/van : ils
+      # comptent dans le bloc du séjour (chip 🛌) et dans la nuitée (💤).
+      @grouped_hamac_bookings = nights_grouped_by_day(
+        HamacBooking
+          .includes(stay: :customer)
+          .where.not(status: ["declined", "canceled"])
+          .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
+      )
     end
   end
 

@@ -68,8 +68,8 @@
         label.block.text-sm.font-medium.text-gray-700 Véhicules
         = number_field_tag "stay[van][vehicles]", (van_vehicles.positive? ? van_vehicles : nil), min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
-  / --- Location de hamacs (parité funnel, DEVIS SEUL — aucune persistance ;
-  / la vraie persistance = issue #138). Grille par nuit simple/double, mêmes
+  / --- Location de hamacs (parité funnel). PERSISTÉS depuis l issue #138 :
+  / une HamacBooking par plage contiguë. Grille par nuit simple/double, mêmes
   / `per_night_resources` que le funnel. Toujours visible côté admin (pas de
   / saisonnalité mai-octobre : l'équipe compose hors saison si besoin). Le
   / PricingModel dérive les hamacs de `per_night_resources` → devis live. ------
@@ -81,7 +81,7 @@
     - if @stay_nights.blank?
       p.text-sm.text-gray-500 Choisissez d'abord les dates du séjour pour composer les hamacs nuit par nuit.
     - else
-      p.text-sm.text-gray-500 Hamac fourni et posé sur place — location nuit par nuit. Facturé au devis, non persisté (issue #138).
+      p.text-sm.text-gray-500 Hamac fourni et posé sur place — location nuit par nuit. Le stock disponible est vérifié nuit par nuit.
       .overflow-x-auto
         table.border-collapse style="min-width: #{140 + @stay_nights.size * 88}px"
           thead

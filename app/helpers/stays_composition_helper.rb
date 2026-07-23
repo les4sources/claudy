@@ -4,11 +4,8 @@ module StaysCompositionHelper
   # icône par occurrence — une seule par type présent. Chaque icône porte un
   # `title` (tooltip natif) nommant la ressource.
   #
-  # HAMAC : aucune icône. Les hamacs ne sont PAS persistés côté séjour — ils
-  # n'existent que dans le devis B2C (`Reservations::Draft#hamacs`, pour le
-  # prix) ; `CampingBooking` ne persiste jamais que `kind: "tente"` et
-  # `RentalItem` n'est qu'un catalogue d'objets physiques (jamais rattaché à un
-  # Stay). Dès qu'un stockage hamac côté séjour existera, ajouter 🛌 ici.
+  # HAMAC : 🛌, depuis l'issue #138 — les hamacs sont désormais persistés sur le
+  # séjour (`HamacBooking` via `StayItem`), plus seulement présents dans le devis.
   #
   # PERFORMANCE : ne déclenche AUCUNE requête. S'appuie sur les associations
   # préchargées par `CustomersController#show` (stay_items→bookable,
@@ -21,6 +18,7 @@ module StaysCompositionHelper
     icons << composition_icon("🍳", "Cuisine")      if stay_has_kitchen?(stay)
     icons << composition_icon("🚐", "Van")          if stay_has_van?(stay)
     icons << composition_icon("⛺", "Tente")        if stay_has_tent?(stay)
+    icons << composition_icon("🛌", "Hamac")        if stay_has_hamac?(stay)
     icons << composition_icon("🪑", "Terrasse")     if stay_has_terrace?(stay)
     icons << composition_icon("🎯", "Activité")     if stay_has_activity?(stay)
     return if icons.empty?
@@ -66,6 +64,11 @@ module StaysCompositionHelper
   # "terrasse", décision Michael 2026-07-20) : on distingue par `kind`.
   def stay_has_tent?(stay)
     stay_items_of(stay, "CampingBooking").any? { |i| i.bookable&.kind != "terrasse" }
+  end
+
+  # Hamac = location persistée sur le séjour (issue #138).
+  def stay_has_hamac?(stay)
+    stay_items_of(stay, "HamacBooking").any?
   end
 
   # Terrasse = occupation de jour (kind "terrasse") — icône dédiée 🪑.

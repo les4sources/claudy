@@ -14,7 +14,7 @@ module Calendar
     # Un bloc unifié : un séjour et ses composants présents ce jour-là.
     StayBlock = Struct.new(
       :stay, :booking_groups, :space_groups, :camping_bookings, :van_bookings,
-      :terrace_bookings,
+      :terrace_bookings, :hamac_bookings,
       keyword_init: true
     ) do
       # Le bookable « nommé » (Booking ou SpaceBooking, tous deux décorés et
@@ -27,15 +27,18 @@ module Calendar
       # Le séjour dort-il SUR PLACE la nuit de cette carte ? Vrai dès qu'un
       # composant NUITÉ est présent ce jour-là (chambres, camping, van) —
       # jamais pour une salle seule NI pour une TERRASSE (occupation de jour,
-      # pas une nuitée — décision Michael 2026-07-20).
+      # pas une nuitée — décision Michael 2026-07-20). Un HAMAC, lui, EST une
+      # nuitée (issue #138) : on y dort.
       def overnight?
-        booking_groups.any? || camping_bookings.any? || van_bookings.any?
+        booking_groups.any? || camping_bookings.any? || van_bookings.any? ||
+          hamac_bookings.any?
       end
 
       # Repli quand le séjour n'a que du camping / van / terrasse (pas de
       # bookable nommé).
       def fallback_bookable
-        camping_bookings.first || van_bookings.first || terrace_bookings.first
+        camping_bookings.first || van_bookings.first || hamac_bookings.first ||
+          terrace_bookings.first
       end
     end
 
@@ -45,11 +48,13 @@ module Calendar
     SpaceGroup = Struct.new(:space_booking, :space_reservations, keyword_init: true)
 
     def initialize(date, grouped_reservations:, grouped_space_reservations:,
-                   grouped_camping_bookings:, grouped_van_bookings:)
+                   grouped_camping_bookings:, grouped_van_bookings:,
+                   grouped_hamac_bookings: nil)
       @booking_groups = build_booking_groups(grouped_reservations && grouped_reservations[date])
       @space_groups   = build_space_groups(grouped_space_reservations && grouped_space_reservations[date])
       @camping        = Array(grouped_camping_bookings && grouped_camping_bookings[date])
       @van            = Array(grouped_van_bookings && grouped_van_bookings[date])
+      @hamac          = Array(grouped_hamac_bookings && grouped_hamac_bookings[date])
     end
 
     # Blocs unifiés (un par séjour), triés par id de séjour puis date d'arrivée
@@ -89,6 +94,12 @@ module Calendar
         (by_stay[van.stay.id] ||= new_block(van.stay)).van_bookings << van
       end
 
+      # Hamacs (issue #138) : chip dédiée sur le bloc du séjour, et nuitée (💤).
+      @hamac.each do |hamac|
+        next if hamac.stay.nil?
+        (by_stay[hamac.stay.id] ||= new_block(hamac.stay)).hamac_bookings << hamac
+      end
+
       by_stay.values.sort_by { |block| [block.stay.id.to_i, block.stay.arrival_date.to_s] }
     end
 
@@ -111,7 +122,8 @@ module Calendar
 
     def new_block(stay)
       StayBlock.new(stay: stay, booking_groups: [], space_groups: [],
-                    camping_bookings: [], van_bookings: [], terrace_bookings: [])
+                    camping_bookings: [], van_bookings: [], terrace_bookings: [],
+                    hamac_bookings: [])
     end
 
     # Réplique le regroupement historique des vues : trie par heure, regroupe par

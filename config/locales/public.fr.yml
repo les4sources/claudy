@@ -17,6 +17,7 @@ fr:
         camping: "Camping"
         van: "Van / camping-car"
         terrace: "Terrasse"
+        hamac: "Hamac"
         meal: "Repas"
         other: "Prestation"
       payment_status:

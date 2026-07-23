@@ -57,6 +57,9 @@ class PricingModel
     # Terrasse (ADMIN uniquement, décision Michael 2026-07-20) : part datée à la
     # journée, portée par des `CampingBooking` de `kind: "terrasse"`.
     def terrace_cents = category_cents(:terrace)
+    # Hamacs (issue #138) : part extraite du devis pour être portée par les
+    # `HamacBooking` persistés — dans TOUS les canaux, comme camping/van.
+    def hamac_cents   = category_cents(:hamac)
 
     # Base hébergement/camping/repas = total hors activités ET hors espaces.
     # INCHANGÉ pour préserver EXACTEMENT le canal public (funnel) : côté public,
@@ -70,7 +73,7 @@ class PricingModel
     # camping/van/repas vivent sur leurs propres modèles. Invariant admin :
     #   lodging_only + spaces + camping + van + meals == total_excluding_experiences.
     def lodging_only_cents
-      lodging_bundle_cents - camping_cents - van_cents - meals_cents - terrace_cents
+      lodging_bundle_cents - camping_cents - van_cents - meals_cents - terrace_cents - hamac_cents
     end
 
     def category_cents(category)
@@ -356,7 +359,7 @@ class PricingModel
       next if rate.nil?
       label = entry[:kind].to_s == "double" ? "Hamac double" : "Hamac simple"
       Line.new(label: "#{label} × #{count} — #{nights} nuit(s)",
-               amount_cents: rate * count * nights)
+               amount_cents: rate * count * nights, category: :hamac)
     end
   end
 

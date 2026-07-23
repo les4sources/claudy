@@ -46,6 +46,9 @@ div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min
       / Van / camping-car : même logique que le camping.
       - block.van_bookings.each do |van|
         span(class="text-xs text-gray-600 whitespace-nowrap") 🚐 #{van.vehicles} véhicule#{"s" if van.vehicles.to_i > 1}
+      / Hamacs (issue #138) : location par nuit → chip 🛌, et compte dans 💤.
+      - block.hamac_bookings.each do |hamac|
+        span(class="text-xs text-gray-600 whitespace-nowrap") 🛌 #{hamac.label} × #{hamac.count}
       / Terrasse : occupation de JOUR (pas une nuitée) → chip distincte 🪑, pas ⛺️.
       - block.terrace_bookings.each do |terrace|
         span(class="text-xs text-gray-600 whitespace-nowrap") 🪑 Terrasse · #{terrace.people} pers.

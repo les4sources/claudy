@@ -5,7 +5,7 @@
 / L'agrégation (pure affichage, aucune logique de dispo/veto) vit dans
 / Calendar::DayStayBlocks. Les occupations SANS séjour gardent leur rendu
 / bloc-par-bloc historique et leurs popovers (fallbacks plus bas).
-- blocks = Calendar::DayStayBlocks.new(date, grouped_reservations: @grouped_reservations, grouped_space_reservations: @grouped_space_reservations, grouped_camping_bookings: @grouped_camping_bookings, grouped_van_bookings: @grouped_van_bookings)
+- blocks = Calendar::DayStayBlocks.new(date, grouped_reservations: @grouped_reservations, grouped_space_reservations: @grouped_space_reservations, grouped_camping_bookings: @grouped_camping_bookings, grouped_van_bookings: @grouped_van_bookings, grouped_hamac_bookings: @grouped_hamac_bookings)
 
 / 1) Blocs SÉJOUR unifiés (un par séjour), couleur stable + câblage modale/fusion.
 - blocks.stay_blocks.each do |stay_block|

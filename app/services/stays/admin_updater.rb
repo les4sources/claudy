@@ -23,6 +23,8 @@ module Stays
   class AdminUpdater < ServiceBase
     include SpaceComposition
     include CampingComposition
+    # Hamacs (issue #138) : persistés et réconciliés comme le camping/van.
+    include HamacComposition
     include MealComposition
     include TerraceComposition
 
@@ -81,6 +83,7 @@ module Stays
         reconcile_spaces!
         reconcile_camping!
         reconcile_van!
+        reconcile_hamacs!
         reconcile_meals!(@stay, @draft)
         # Terrasse (ADMIN uniquement, décision Michael 2026-07-20) : rebuild complet
         # des occupations `CampingBooking` de kind "terrasse", indépendamment du
@@ -109,7 +112,7 @@ module Stays
       unless @draft.lodging.present? || draft_has_spaces?(@draft) ||
              draft_has_camping?(@draft) || draft_has_van?(@draft) ||
              @draft.bookable_experiences? || draft_has_meals?(@draft) ||
-             draft_has_terrace?(@draft)
+             draft_has_terrace?(@draft) || draft_has_hamacs?(@draft)
         raise_invalid("Veuillez sélectionner un hébergement, un espace, un emplacement camping/van, une activité ou un repas.")
       end
       unless Customer.exploitable_email?(@draft.email)
@@ -128,12 +131,29 @@ module Stays
       check_availability!
       check_space_availability!
       check_outdoor_capacity!
+      check_hamac_stock!
+    end
+
+    # Stock hamacs (issue #138), en EXCLUANT les propres réservations du séjour
+    # édité — sinon un séjour déjà confirmé avec hamacs se bloquerait lui-même.
+    def check_hamac_stock!
+      message = hamac_stock_message(@draft, excluding_id: existing_hamac_bookings(@stay).map(&:id).presence)
+      return if message.nil?
+
+      if @skip_availability
+        @availability_warning =
+          [@availability_warning,
+           "#{message} — séjour enregistré en forçant la disponibilité."].compact.join(" ")
+      else
+        raise_invalid(message)
+      end
     end
 
     # Réservables facturés À LA NUIT : ils exigent au moins une nuit. Espaces
     # (forfait date+période), activités et repas n'en exigent pas (issue #80).
     def requires_nights?
-      @draft.lodging.present? || draft_has_camping?(@draft) || draft_has_van?(@draft)
+      @draft.lodging.present? || draft_has_camping?(@draft) || draft_has_van?(@draft) ||
+        draft_has_hamacs?(@draft)
     end
 
     # Camping / van : capacité globale (epic #66, Phase 3), en ignorant les
@@ -445,6 +465,19 @@ module Stays
       else
         persist_van_booking!(stay: @stay, draft: @draft, status: @stay.status, price_cents: price)
       end
+    end
+
+    # Réconcilie les HAMACS du séjour (issue #138) : reconstruction INTÉGRALE des
+    # plages depuis le draft (détacher puis recréer), comme le camping en mode
+    # grille. Plus de hamac au draft → tout est détaché.
+    def reconcile_hamacs!
+      detach_hamac_bookings!(@stay)
+      return unless draft_has_hamacs?(@draft)
+
+      persist_hamac_ranges!(
+        stay: @stay, draft: @draft, status: @stay.status,
+        total_price_cents: @draft.quote.hamac_cents
+      )
     end
 
     def reconcile_experiences!
