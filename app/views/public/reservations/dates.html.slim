@@ -24,6 +24,7 @@
               span.text-xs.font-medium.text-gray-500.uppercase.tracking-wide Arrivée
               = f.date_field "reservation[arrival_date]",
                   label: false,
+                  required: true,
                   value: @draft.arrival_date,
                   min: Date.today.iso8601,
                   max: (Date.today >> 18).iso8601,
@@ -34,6 +35,7 @@
               span.text-xs.font-medium.text-gray-500.uppercase.tracking-wide Départ
               = f.date_field "reservation[departure_date]",
                   label: false,
+                  required: true,
                   value: @draft.departure_date,
                   min: ((@draft.arrival_date + 1) if @draft.arrival_date).try(:iso8601) || Date.today.iso8601,
                   max: (Date.today >> 18).iso8601,
@@ -44,6 +46,13 @@
           - if @dates_error.present?
             p.mt-3.rounded-xl.bg-red-50.border.border-red-200.text-red-700.text-sm.p-3(role="alert" data-dates-error="true")
               = @dates_error
+
+          / Chambres en semaine (Michael 2026-07-23) : information dès l'étape 1,
+          / reprise du site public — le funnel ne réserve que des gîtes entiers.
+          .mt-4.rounded-xl.bg-sky-50.border.border-sky-100.p-3.text-sm.text-sky-900
+            | 🛏️ En semaine, des <strong>chambres et lits</strong> sont aussi accessibles dès 35 €/personne (15 €/enfant) — 
+            a.underline.font-medium href="tel:+32455136142" contactez-nous
+            |  pour réserver une chambre seule.
 
           / Badge nuits dynamique
           .mt-3.h-6.flex.items-center

@@ -29,6 +29,16 @@ module Public
       attrs     = merged_draft_params
       candidate = merge_draft(attrs)
 
+      # Dates OBLIGATOIRES pour avancer (Michael 2026-07-23) : le HTML `required`
+      # fait le gros du travail, mais un POST direct sans dates ne doit pas
+      # passer non plus — toute l'étape 2 dérive des nuits du séjour.
+      if candidate.arrival_date.blank? || candidate.departure_date.blank?
+        @draft       = candidate
+        @dates_error = "Choisissez vos dates d'arrivée et de départ pour continuer."
+        prepare_dates_view
+        return render :dates, status: :unprocessable_entity
+      end
+
       if invalid_stay_dates?(candidate)
         @draft       = candidate
         @dates_error = "La date de départ doit être postérieure à la date d'arrivée."
