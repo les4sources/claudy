@@ -25,7 +25,7 @@ div id="stay-category-#{stay.id}"
     = select_tag "stay[category]",
                  options_for_select(Stay::CATEGORIES.map(&:reverse), stay.category),
                  include_blank: "—",
-                 class: "w-full max-w-[10rem] rounded-md border-0 py-1 pl-2 pr-7 text-xs font-medium ring-1 ring-inset #{tone} focus:ring-2 focus:ring-indigo-500 cursor-pointer",
+                 class: "w-full rounded-md border-0 py-1 pl-2 pr-6 text-xs font-medium ring-1 ring-inset #{tone} focus:ring-2 focus:ring-indigo-500 cursor-pointer",
                  aria: { label: "Catégorie du séjour" }
   - if local_assigns[:error].present?
     p.mt-1.text-xs.text-red-600 = error

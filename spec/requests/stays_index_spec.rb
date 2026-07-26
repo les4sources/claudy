@@ -36,7 +36,7 @@ RSpec.describe "Index Séjours (/stays)", type: :request do
                   arrival: Date.today + 5, departure: Date.today + 7, total_cents: 12_345)
     end
 
-    it "répond 200 et affiche client, total et badge de paiement" do
+    it "répond 200 et affiche client et total" do
       get stays_path
       expect(response).to have_http_status(:ok)
       # Client (nom + email)
@@ -45,8 +45,9 @@ RSpec.describe "Index Séjours (/stays)", type: :request do
       # Total formaté (même helper que la vue → indépendant de la locale de test)
       expected_total = ApplicationController.helpers.humanized_money_with_symbol(Money.new(12_345))
       expect(response.body).to include(expected_total)
-      # Badge de statut de paiement (défaut « pending »)
-      expect(response.body).to include(I18n.t("public.stays.payment_status.pending"))
+      # Plus de colonne « Paiement » (Michael 2026-07-26) : l'état de paiement se
+      # lit dans la colonne Montant (solde dû en rouge / check vert).
+      expect(response.body).not_to include(I18n.t("public.stays.payment_status.pending"))
     end
 
     it "affiche les boutons vers les anciennes vues (transition)" do

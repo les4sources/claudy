@@ -27,6 +27,8 @@ RSpec.describe "Index Séjours — refonte du tableau", type: :request do
       expect(response.body).not_to include("Encaissé")
       expect(response.body).not_to include("Reste dû")
       expect(response.body).to include("Montant")
+      # « Paiement » retirée à son tour : redondante avec la colonne Montant.
+      expect(response.body).not_to include(">Paiement<")
       # Le lien « #<id> » de l'ancienne première colonne a disparu.
       expect(response.body).not_to include(">##{stay.id}<")
     end
@@ -88,6 +90,30 @@ RSpec.describe "Index Séjours — refonte du tableau", type: :request do
     it "conserve la redirection vers la fiche quand l'appel ne vient pas de l'index" do
       patch update_category_stay_path(stay), params: { stay: { category: "retreat" } }
       expect(response).to redirect_to(stay_path(stay))
+    end
+  end
+
+  # Le canal d'attribution est du bruit (présent sur chaque ligne) ; la
+  # PLATEFORME, elle, change la façon de traiter la réservation.
+  describe "badges du client" do
+    let!(:direct) { create_stay(email: "direct@example.com", first: "Direct", last: "Client") }
+    let!(:ota)    { create_stay(email: "ota@example.com", first: "Ota", last: "Client") }
+
+    before do
+      booking = Booking.create!(firstname: "T", from_date: Date.today + 5, to_date: Date.today + 7,
+                                adults: 2, platform: "airbnb")
+      StayItem.create!(stay: ota, bookable: booking)
+    end
+
+    it "n'affiche plus le canal d'attribution" do
+      get stays_path
+      expect(response.body).not_to include("Saisie manuelle")
+      expect(response.body).not_to include("Réservation en ligne")
+    end
+
+    it "affiche le badge plateforme pour une réservation OTA" do
+      get stays_path
+      expect(response.body).to include("Airbnb")
     end
   end
 
