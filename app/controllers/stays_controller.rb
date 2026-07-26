@@ -1,29 +1,57 @@
 class StaysController < BaseController
-  before_action :set_accounting_view, only: :show
-  before_action :set_stay, only: %i[edit update destroy update_status update_category approve_change_request refuse_change_request]
+  # Section « Accueil » (Michael 2026-07-26) : ses pages affichent la
+  # sous-navigation Séjours · Coworking · Reporting · Comptabilité, qui remplace
+  # l'ancien dropdown de la barre principale.
+  before_action :set_home_view
+  before_action :set_stay, only: %i[edit update destroy update_status update_category update_notes approve_change_request refuse_change_request]
 
   # Index admin des séjours (epic #81) — le séjour devient le point d'entrée
   # unique. Tableau paginé (30/page) orienté GESTION des réservations et
   # paiements : contact, canal, dates + statut, composition compacte, et surtout
   # total / encaissé / reste dû exigible + statut de paiement.
   #
-  # Filtres légers : « Tous » (défaut), « À venir » (current_and_future),
-  # « Passés » (past). Les montants agrégés (encaissé, reste dû) sont calculés
-  # EN LOT par `Stays::IndexAmounts` (aucun N+1 — voir le service).
+  # PAGINATION PAR TRIMESTRE (Michael 2026-07-26) — plus par nombre de lignes.
+  # On ouvre sur le trimestre courant et on navigue ← →. Le trimestre est le SEUL
+  # sélecteur de période : les anciennes pastilles « À venir / Passés » ont été
+  # retirées, deux sélecteurs concurrents pouvant se contredire (« À venir » +
+  # trimestre passé = liste vide sans raison lisible).
+  # Volume : de 2 à 151 séjours par trimestre sur les données réelles, médiane 88
+  # — tenable sur une page, d'où l'abandon de will_paginate.
+  #
+  # Les montants agrégés (encaissé, reste dû) sont calculés EN LOT par
+  # `Stays::IndexAmounts` (aucun N+1 — voir le service).
+  #
+  # Recherche `?q=` (Michael 2026-07-26) : client (prénom/nom/email), nom du
+  # groupe, mot dans la note interne — y compris les notes des bookables. Elle
+  # s'applique AVANT `.includes` pour que les `.or` du service composent sur une
+  # structure de jointures nue (cf. `Stays::Search`), et se combine aux pills.
   def index
-    @filter = params[:filter].presence_in(%w[upcoming past]) # nil = tous
-    @stays  = index_scope
-              .includes(
-                :customer,
-                :meal_orders,
-                { stay_items: :bookable },
-                { experience_bookings: { experience_availability: :experience } }
-              )
-              .paginate(page: params[:page], per_page: 30)
+    @query   = params[:q].to_s.strip
+    # Une RECHERCHE porte sur TOUTE la période, pas sur le trimestre affiché :
+    # chercher « Freya » sans savoir dans quel trimestre elle tombe est le cas
+    # d'usage normal. La navigation trimestrielle s'efface donc pendant une
+    # recherche (cf. la vue), sinon on ne trouverait que par hasard.
+    @searching = @query.present?
+    @quarter   = requested_quarter
+
+    scope  = @searching ? Stay.all : quarter_scope
+    @stays = Stays::Search.new(scope, @query).call
+             .includes(
+               :customer,
+               :meal_orders,
+               { stay_items: :bookable },
+               { experience_bookings: { experience_availability: :experience } }
+             )
+             .order(Arel.sql("arrival_date ASC NULLS LAST, id ASC"))
 
     # Agrégats monétaires de la page (encaissé + reste dû exigible) — calculés
     # AVANT décoration, sur les enregistrements préchargés, en une requête de
     # paiements pour toute la page.
+    # Nombre de séjours par trimestre de l'ANNÉE affichée : le sélecteur peut
+    # ainsi éteindre les trimestres vides plutôt que de laisser cliquer dans le
+    # vide. Une seule requête agrégée, pas de chargement des séjours.
+    @quarter_counts = quarter_counts_for(@quarter.year)
+
     @amounts = Stays::IndexAmounts.new(@stays).call
     @stays   = StayDecorator.decorate_collection(@stays)
   end
@@ -296,13 +324,36 @@ class StaysController < BaseController
   # turbo-frame de la modale ; on redirige vers `stay_path` et Turbo remplace le
   # fragment en place (même pattern que les paiements). Une valeur vide retire la
   # catégorie ; une valeur hors liste est refusée par la validation du modèle.
+  #
+  # DEUX APPELANTS, deux réponses (discriminées par `from`) :
+  #   - modale séjour (défaut) : redirection vers `stay_path`, Turbo remplace le
+  #     fragment de la modale — comportement historique, inchangé ;
+  #   - index Séjours (`from=index`, dropdown en ligne) : Turbo Stream qui
+  #     remplace la SEULE cellule concernée. On ne recharge pas les 30 lignes de
+  #     la page pour un changement de catégorie.
   def update_category
     category = params.dig(:stay, :category).presence
-    if @stay.update(category: category)
+    ok = @stay.update(category: category)
+    error = @stay.errors.full_messages.to_sentence.presence || "Catégorie invalide."
+
+    return update_category_from_index(ok, error) if params[:from] == "index"
+
+    if ok
       redirect_to stay_path(@stay), notice: "Catégorie mise à jour."
     else
-      redirect_to stay_path(@stay), alert: @stay.errors.full_messages.to_sentence.presence || "Catégorie invalide."
+      redirect_to stay_path(@stay), alert: error
     end
+  end
+
+  # Note INTERNE éditée depuis la modale séjour (Michael 2026-07-26). N'écrit QUE
+  # `stays.notes` — jamais la note publique, jamais la composition. Une chaîne
+  # vide efface la note, ce qui est un usage légitime.
+  #
+  # NB : les notes portées par les bookables historiques (Booking/SpaceBooking)
+  # restent en lecture seule, elles appartiennent à la réservation d'origine.
+  def update_notes
+    @stay.update(notes: params.dig(:stay, :notes).to_s.strip.presence)
+    redirect_to stay_path(@stay), notice: "Note enregistrée."
   end
 
   # Suppression = soft-delete (soft_deletion + PaperTrail), jamais de hard destroy.
@@ -398,12 +449,31 @@ class StaysController < BaseController
   # arrivée asc pour l'à-venir, arrivée desc pour le passé). « Tous » (défaut) :
   # arrivée la plus récente/future d'abord — les séjours sans date d'arrivée
   # (activités/repas seuls) rejetés en fin de liste, tri stable sur l'id.
-  def index_scope
-    case @filter
-    when "upcoming" then Stay.current_and_future
-    when "past"     then Stay.past
-    else Stay.order(Arel.sql("arrival_date DESC NULLS LAST, id DESC"))
-    end
+  # Trimestre demandé, borné à des valeurs saines. Toute entrée fantaisiste
+  # retombe sur le trimestre courant plutôt que de lever.
+  def requested_quarter
+    year    = params[:year].to_i
+    quarter = params[:quarter].to_i
+    return Date.today.beginning_of_quarter unless year.between?(2000, 2100) && quarter.between?(1, 4)
+
+    Date.new(year, (quarter - 1) * 3 + 1, 1)
+  end
+
+  # => { 1 => 12, 2 => 151, 3 => 102, 4 => 41 } pour l'année donnée.
+  def quarter_counts_for(year)
+    debut = Date.new(year, 1, 1)
+    Stay.where(arrival_date: debut..debut.end_of_year)
+        .group(Arel.sql("EXTRACT(QUARTER FROM arrival_date)"))
+        .count
+        .transform_keys(&:to_i)
+  end
+
+  # Séjours du trimestre affiché, PLUS ceux sans date d'arrivée : ces derniers
+  # n'appartiennent à aucun trimestre et disparaîtraient sinon complètement de
+  # l'index. Il n'y en a aucun en base aujourd'hui — c'est un garde-fou.
+  def quarter_scope
+    Stay.where(arrival_date: @quarter..@quarter.end_of_quarter)
+        .or(Stay.where(arrival_date: nil))
   end
 
   # Draft de préremplissage du form NEW (epic #81, Phase 7). Trois cas, dans
@@ -512,8 +582,33 @@ class StaysController < BaseController
     "Séjour#{'s' if sources.size > 1} #{ids} fusionné#{'s' if sources.size > 1} dans ##{target.id} — total recalculé : #{total}, solde : #{balance}."
   end
 
+  def set_home_view
+    @home_view = true
+  end
+
   def set_stay
     @stay = Stay.find(params[:id])
+  end
+
+  # Réponse au dropdown de catégorie de l'index : Turbo Stream ciblant la seule
+  # cellule `stay-category-<id>`. Le fallback HTML (JS coupé, ou soumission hors
+  # Turbo) revient à l'index en préservant filtre + recherche courants, pour ne
+  # pas éjecter l'utilisateur de sa liste filtrée.
+  def update_category_from_index(ok, error)
+    stay = @stay.decorate
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace(
+          "stay-category-#{stay.id}",
+          partial: "stays/category_select",
+          locals: { stay: stay, error: (ok ? nil : error) }
+        )
+      end
+      format.html do
+        redirect_to stays_path(filter: params[:filter].presence, q: params[:q].presence),
+                    notice: (ok ? "Catégorie mise à jour." : nil), alert: (ok ? nil : error)
+      end
+    end
   end
 
   # Applique la note interne (colonne `notes`, texte brut) et la note publique
@@ -539,10 +634,6 @@ class StaysController < BaseController
   # non enregistrables (issue #75), pour un flash unique. nil si aucun des deux.
   def combined_warning(service)
     [service.availability_warning, service.space_warning].compact.join(" ").presence
-  end
-
-  def set_accounting_view
-    @accounting_view = true
   end
 
   # Données partagées par les vues new/edit.

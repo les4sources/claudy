@@ -104,6 +104,6 @@ class PaymentsController < BaseController
       active_primary: "accounting",
       active_secondary: "payments"
     )
-    @accounting_view = true
+    @home_view = true
   end
 end

@@ -63,15 +63,15 @@ RSpec.describe "Stays#show — composition complète (epic #66, Phase 5)", type:
       expect(response.body).to include("Séjour ##{stay.id}")
     end
 
-    it "liste la section HÉBERGEMENT (lodging, dates, occupants)" do
-      expect(response.body).to include("Hébergement")
+    # La composition ne groupe plus par TYPE (Michael 2026-07-26) : chaque ligne
+    # porte le nom de la ressource, ce qui est plus parlant que « Hébergement ».
+    it "liste la ligne d'hébergement (nom du gîte, dates, occupants)" do
       expect(response.body).to include("La Hulotte")
       expect(response.body).to include("3 adulte(s)")
       expect(response.body).to include("1 enfant(s)")
     end
 
-    it "liste la section ESPACES (nom de l'espace)" do
-      expect(response.body).to include("Espaces")
+    it "liste la ligne d'espace (nom de l'espace)" do
       expect(response.body).to include("Grande Salle")
     end
 
@@ -98,13 +98,15 @@ RSpec.describe "Stays#show — composition complète (epic #66, Phase 5)", type:
       expect(response.body).to include("Ajouter une activité")
     end
 
-    it "expose un lien « Modifier le séjour » vers le form d'édition Phase 1" do
-      expect(response.body).to include("Modifier le séjour")
+    # Tout ce qui touche à la composition renvoie au formulaire d'édition.
+    it "renvoie vers le form d'édition pour modifier la composition" do
+      expect(response.body).to include("Modifier la composition")
       expect(response.body).to include(edit_stay_path(stay))
     end
 
+    # Le formulaire existe toujours, désormais replié derrière un `details`.
     it "conserve le formulaire de réassignation client (anti-régression)" do
-      expect(response.body).to include("Assigner ce séjour à un client")
+      expect(response.body).to include("Réassigner le client")
       expect(response.body).to include('name="stay_ids[]"')
     end
   end

@@ -1,81 +1,208 @@
-.px-4.sm:px-6.lg:px-8.py-6
+/ `stay-details` enveloppe toute la page : les lignes du tableau vivent DANS le
+  turbo-frame de résultats, mais le <dialog> est placé EN DEHORS — une recherche
+  remplace le contenu du frame et emporterait la modale avec lui.
+.px-4.sm:px-6.lg:px-8.py-6(data-controller="stay-details")
   / En-tête + boutons de transition vers les anciennes vues (epic #81).
   .sm:flex.sm:items-center.sm:justify-between.mb-4
     .sm:flex-auto
-      h1.text-xl.font-semibold.text-gray-900 Séjours
-      p.mt-1.text-sm.text-gray-600 Tous les séjours — gestion des réservations et des paiements.
+      /  Ce titre est écrit EN DUR ici (l'index n'utilise pas le composant
+         `page_header`) : on reprend donc à l'identique le style que ce composant
+         applique, pour que /stays ne détonne pas — Averia, mêmes tailles, même
+         `pr-2` contre le rognage du dernier glyphe.
+      h1.font-averia.text-2xl.font-bold.leading-7.text-gray-900.sm:text-3xl.sm:tracking-tight.pr-2 Séjours
     .mt-4.sm:mt-0.sm:ml-4.flex.flex-wrap.items-center.gap-2
       = link_to "Hébergements (ancienne vue)", bookings_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm hover:bg-gray-50"
       = link_to "Espaces (ancienne vue)", space_bookings_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm hover:bg-gray-50"
       = link_to "Nouveau séjour", new_stay_path, class: "inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
 
-  / Filtres légers (pills) : Tous · À venir · Passés.
-  - pill_active = "bg-indigo-600 text-white"
-  - pill_idle = "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50"
-  nav.mb-4.flex.flex-wrap.gap-2
-    = link_to "Tous", stays_path, class: "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium #{@filter.nil? ? pill_active : pill_idle}"
-    = link_to "À venir", stays_path(filter: "upcoming"), class: "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium #{@filter == 'upcoming' ? pill_active : pill_idle}"
-    = link_to "Passés", stays_path(filter: "past"), class: "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium #{@filter == 'past' ? pill_active : pill_idle}"
+  / Barre de contrôle : recherche à gauche, navigation trimestrielle à droite.
+    La recherche vise le turbo-frame `stays-results` — le champ vit HORS du
+    frame, donc il conserve le focus et le curseur pendant la frappe (une
+    navigation pleine page les perdrait à chaque caractère).
+  .mb-4.flex.flex-col.gap-3.lg:flex-row.lg:items-center.lg:justify-between
+    = form_with url: stays_path, method: :get, data: { turbo_frame: "stays-results", controller: "auto-submit", action: "input->auto-submit#submit" }, class: "w-full lg:max-w-md" do |f|
+      .relative
+        .pointer-events-none.absolute.inset-y-0.left-0.flex.items-center.pl-3
+          svg.w-4.h-4.text-gray-400 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
+            path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m2.1-5.4a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z"
+        = search_field_tag :q, @query, placeholder: "Rechercher — nom, groupe, email, note interne…", autocomplete: "off", class: "block w-full rounded-md border-0 py-2 pl-9 pr-3 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 shadow-sm focus:ring-2 focus:ring-inset focus:ring-indigo-500"
 
-  .overflow-x-auto.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg
-    table.min-w-full.divide-y.divide-gray-300
-      thead.bg-gray-50
-        tr
-          th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase #
-          th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Client
-          th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Dates
-          th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Composition
-          th.px-4.py-2.text-right.text-xs.font-medium.text-gray-500.uppercase Total
-          th.px-4.py-2.text-right.text-xs.font-medium.text-gray-500.uppercase Encaissé
-          th.px-4.py-2.text-right.text-xs.font-medium.text-gray-500.uppercase Reste dû
-          th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Paiement
-          th.px-4.py-2.text-right.text-xs.font-medium.text-gray-500.uppercase Actions
-      tbody.divide-y.divide-gray-200.bg-white
-        - @stays.each do |stay|
-          - amount = @amounts[stay.id]
-          tr.hover:bg-gray-50
-            td.px-4.py-2.text-sm.whitespace-nowrap
-              / stays#show rend un fragment sans layout (réservé à la modale du
-                calendrier) — la navigation directe pointe donc vers l'édition.
-              = link_to "##{stay.id}", edit_stay_path(stay), class: "text-indigo-600 hover:text-indigo-800 font-medium hover:underline"
-            td.px-4.py-2.text-sm
-              - if stay.customer
-                = link_to stay.customer.name, customer_path(stay.customer), class: "text-indigo-600 hover:text-indigo-800 font-medium hover:underline"
-                .text-xs.text-gray-500 = stay.customer.email
-              - else
-                span.text-gray-400 —
-              .mt-1.flex.flex-wrap.items-center.gap-1
-                span.inline-flex.items-center.rounded-full.bg-gray-100.px-2.text-xs.font-medium.text-gray-700(class="py-0.5") = stay_source_label(stay.source)
-                = stay.platform_badge
-                = stay.category_badge
-            td.px-4.py-2.text-sm
-              .text-gray-900.whitespace-nowrap = stay.date_range
-              .mt-1 = stay.status_badge
-            td.px-4.py-2.text-sm.text-gray-600 = stay.composition_summary
-            td.px-4.py-2.text-sm.text-right.whitespace-nowrap
-              span.font-medium.text-gray-900 = humanized_money_with_symbol(stay.total_amount)
-              - if stay.price_overridden?
-                span.ml-1.text-xs.text-amber-700(title="Prix total imposé par l'admin") imposé
-            td.px-4.py-2.text-sm.text-right.whitespace-nowrap.text-gray-700
-              = humanized_money_with_symbol(Money.new(amount.paid_cents))
-            td.px-4.py-2.text-sm.text-right.whitespace-nowrap
-              - if amount.balance_due_cents.positive?
-                span.font-medium.text-red-600 = humanized_money_with_symbol(Money.new(amount.balance_due_cents))
-              - else
-                span.text-gray-400 = humanized_money_with_symbol(Money.new(amount.balance_due_cents))
-            td.px-4.py-2.text-sm = stay.payment_status_badge
-            td.px-4.py-2.text-sm.text-right.whitespace-nowrap
-              = link_to "Éditer", edit_stay_path(stay), class: "text-indigo-600 hover:text-indigo-800 hover:underline"
-        - if @stays.empty?
+  = turbo_frame_tag "stays-results", data: { turbo_action: "advance" } do
+    /  SÉLECTEUR DE PÉRIODE (Michael 2026-07-26). Il remplace les deux flèches
+       ← → qui ne permettaient qu'un pas-à-pas : atteindre T1 2024 depuis
+       aujourd'hui demandait huit clics, et rien ne disait où l'on se trouvait
+       dans le temps ni où il y avait de la matière.
+       Ici : un pas d'année, puis les QUATRE trimestres en accès direct. Un
+       trimestre SANS séjour est éteint et non cliquable — on ne propose pas
+       d'aller regarder du vide, et le nombre annoncé sert d'aperçu.
+       Il disparaît pendant une recherche, qui porte sur toute la période.
+    - unless @searching
+      - trimestre_actuel = ((@quarter.month - 1) / 3) + 1
+      - pas_annee = "inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-500 hover:bg-white hover:text-gray-900 transition-colors"
+      .mb-4.flex.flex-wrap.items-center.gap-2.rounded-lg.bg-gray-50.p-1.5(class="ring-1 ring-gray-200" role="group" aria-label="Navigation par trimestre")
+        /  Pas d'année, encadrant l'année en cours de consultation.
+        = link_to stays_path(year: @quarter.year - 1, quarter: trimestre_actuel), class: pas_annee, "aria-label": "Année précédente" do
+          svg.w-4.h-4 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"
+            path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"
+        span.px-1.text-sm.font-semibold.text-gray-900.tabular-nums = @quarter.year
+        = link_to stays_path(year: @quarter.year + 1, quarter: trimestre_actuel), class: pas_annee, "aria-label": "Année suivante" do
+          svg.w-4.h-4 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"
+            path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"
+
+        span.mx-1.h-5.w-px.bg-gray-200(aria-hidden="true")
+
+        /  Les quatre trimestres de l'année affichée, en accès direct.
+        - (1..4).each do |t|
+          - nombre = @quarter_counts[t].to_i
+          - actif = (t == trimestre_actuel)
+          - debut_t = Date.new(@quarter.year, (t - 1) * 3 + 1, 1)
+          - mois = "#{I18n.l(debut_t, format: '%B')} – #{I18n.l(debut_t.end_of_quarter, format: '%B')}"
+          - if nombre.zero? && !actif
+            span.inline-flex.items-center.gap-1.rounded-md.px-2.5.py-1.text-sm.text-gray-300.cursor-not-allowed(title="#{mois} — aucun séjour" aria-disabled="true")
+              | T#{t}
+          - else
+            - tonalite = actif ? "bg-4s-main text-white shadow-sm" : "text-gray-600 hover:bg-white hover:text-gray-900"
+            = link_to stays_path(year: @quarter.year, quarter: t), class: "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-medium transition-colors #{tonalite}", title: mois, "aria-current": (actif ? "page" : nil) do
+              | T#{t}
+              - if nombre.positive?
+                span class="text-xs tabular-nums #{actif ? 'text-white/70' : 'text-gray-400'}"
+                  = nombre
+
+        /  Retour au présent — n'apparaît que si l'on n'y est pas déjà.
+        - unless @quarter == Date.today.beginning_of_quarter
+          span.mx-1.h-5.w-px.bg-gray-200(aria-hidden="true")
+          = link_to "Aujourd'hui", stays_path, class: "rounded-md px-2 py-1 text-sm font-medium text-indigo-600 hover:bg-white"
+
+    - if @query.present?
+      p.mb-2.text-sm.text-gray-600
+        | #{@stays.size} résultat#{'s' if @stays.size > 1} pour «&nbsp;
+        span.font-medium.text-gray-900 = @query
+        | &nbsp;»
+        |  sur toute la période
+        =< link_to "Effacer", stays_path, class: "ml-1 text-indigo-600 hover:underline"
+
+    /  En-tête COLLANT au défilement (Michael 2026-07-26).
+       Piège : `position: sticky` se cale sur le plus proche ancêtre qui DÉFILE.
+       `overflow-x-auto` fait de ce conteneur une boîte de défilement (un
+       `overflow-x` non-visible force `overflow-y: auto`), et comme il n'a pas
+       de hauteur bornée, c'est la PAGE qui défile — l'en-tête serait donc parti
+       avec elle. On neutralise donc le conteneur à partir de `xl`, largeur à
+       laquelle le tableau tient sans déborder : le sticky se cale alors sur la
+       fenêtre. En dessous de `xl`, on garde le défilement horizontal (priorité
+       à l'accès aux colonnes) et l'en-tête ne colle pas.
+       Le fond `bg-gray-50` est porté par chaque `th` : une cellule collante ne
+       transporte pas le fond de son `thead`, elle deviendrait transparente et
+       laisserait défiler les lignes DERRIÈRE elle.
+    .overflow-x-auto.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg(class="xl:overflow-x-visible")
+      table.min-w-full.divide-y.divide-gray-300
+        - sticky_th = "sticky top-0 z-10 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500 uppercase"
+        thead.bg-gray-50
           tr
-            td.px-4.py-6.text-center.text-sm.text-gray-400 colspan="9" Aucun séjour.
+            th class="#{sticky_th} text-left" Client
+            th class="#{sticky_th} text-left" Dates
+            th class="#{sticky_th} text-left" Catégorie
+            th class="#{sticky_th} text-center" Composition
+            th class="#{sticky_th} text-right" Montant
+            th class="#{sticky_th} text-right" Actions
+        tbody.divide-y.divide-gray-200
+          /  Groupement par mois d'ARRIVÉE (Michael 2026-07-26). La liste est déjà
+             triée par date, donc un simple suivi du mois précédent suffit —
+             aucun regroupement en mémoire, aucune requête de plus.
+             Un trimestre couvre trois mois : la liste porte donc jusqu'à trois
+             en-têtes, ce qui donne le rythme de lecture de la page.
+             Les séjours SANS date d'arrivée (import legacy) tombent dans un
+             groupe « Sans date » explicite, jamais silencieusement rattachés au
+             mois précédent.
+             Sentinelle `:unset` (et non nil) comme mois initial : un premier
+             séjour SANS date porte `month_key == nil`, et un `nil != nil` aurait
+             sauté son en-tête.
+          - current_month = :unset
+          - @stays.each do |stay|
+            - amount = @amounts[stay.id]
+            - month_key = stay.arrival_date&.beginning_of_month
+            - if month_key != current_month
+              - current_month = month_key
+              tr.bg-gray-100
+                th scope="rowgroup" colspan="6" class="px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
+                  - if stay.arrival_date
+                    = I18n.l(stay.arrival_date, format: "%B %Y").capitalize
+                  - else
+                    | Sans date d'arrivée
+            tr class="#{stay_row_classes(stay)} transition-colors cursor-pointer" data-stay-url=stay_path(stay) data-action="click->stay-details#openFromRow"
+              td.px-3.py-2.text-sm
+                /  L'icône de plateforme est SUR LA MÊME LIGNE que le nom, à sa
+                   droite (Michael 2026-07-26) : elle qualifie le client, elle ne
+                   mérite pas une ligne à elle. `platform_badge` rend nil hors OTA
+                   — rien ne s'affiche pour une réservation directe.
+                .flex.items-center.gap-1.5
+                  /  `display_name` et non `customer.name` : sur un séjour du
+                     fourre-tout, on affiche le nom porté par la réservation
+                     d'origine (groupe, ou personne pour une résa OTA), seul nom
+                     parlant pour l'équipe.
+                     Le nom ouvre la MODALE du séjour, pas la fiche client
+                     (Michael 2026-07-26) : depuis une liste de séjours, c'est le
+                     séjour qu'on veut voir. C'est un <button> et non un <span>
+                     pour rester atteignable au clavier — il porte lui-même
+                     l'action, que `openFromRow` reconnaît comme légitime.
+                  - if stay.customer
+                    button.text-indigo-600.hover:text-indigo-800.font-medium.hover:underline.text-left(type="button" data-stay-url=stay_path(stay) data-action="click->stay-details#openFromRow")
+                      = stay.display_name
+                  - else
+                    span.text-gray-400 —
+                  = stay.platform_badge
+                - if stay.customer
+                  .text-xs.text-gray-500 = stay.customer.email
+              td.px-3.py-2.text-sm
+                .text-gray-900.whitespace-nowrap = stay.date_range
+                .mt-1 = stay.status_badge
+              /  `min-w` : sans elle, la mise en page auto du tableau serrait la
+                 colonne à ~136 px et rognait le plus long libellé
+                 (« Formation/Initiation » → « Formation/Initia »).
+              td.px-3.py-2.text-sm(class="min-w-[11.5rem]")
+                = render "stays/category_select", stay: stay
+              /  Le résumé TEXTE (« 1 gîte · 2 espaces ») a été retiré (Michael
+                 2026-07-26) : il faisait doublon avec la rangée d'icônes, qui
+                 reprend son titre. Les comptes restent lisibles dans la fiche.
+              td.px-3.py-2.text-sm.text-center = stay_composition_icon_row(stay)
+              td.px-3.py-2.text-sm.text-right.whitespace-nowrap
+                .flex.items-center.justify-end.gap-1
+                  span.font-medium.text-gray-900 = humanized_money_with_symbol(stay.total_amount)
+                  / Soldé = au moins un encaissement ET plus rien d'exigible. Le
+                    check vert remplace la colonne « Encaissé » supprimée.
+                  - if amount.paid_cents.positive? && !amount.balance_due_cents.positive?
+                    svg.w-4.h-4.text-green-600(fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true" title="Intégralement payé")
+                      path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"
+                    span.sr-only Intégralement payé
+                - if stay.price_overridden?
+                  .text-xs.text-amber-700(title="Prix total imposé par l'admin") imposé
+                - if amount.balance_due_cents.positive?
+                  .text-xs.text-red-600.whitespace-nowrap
+                    | Solde dû #{humanized_money_with_symbol(Money.new(amount.balance_due_cents))}
+              /  Pas de colonne « Paiement » (Michael 2026-07-26) : l'état de
+                 paiement se lit déjà dans la colonne Montant — solde dû en rouge
+                 ou check vert. Le badge faisait doublon et coûtait 150 px.
+              td.px-3.py-2.text-sm.text-right.whitespace-nowrap
+                = link_to "Éditer", edit_stay_path(stay), class: "text-indigo-600 hover:text-indigo-800 hover:underline"
+          - if @stays.empty?
+            tr.bg-white
+              td.px-4.py-6.text-center.text-sm.text-gray-400 colspan="6"
+                - if @query.present?
+                  | Aucun séjour ne correspond à cette recherche.
+                - else
+                  | Aucun séjour.
 
-  / Pagination (30/page) + « X–Y sur N ».
-  - if @stays.total_entries.positive?
-    .mt-4.flex.flex-col.gap-2.sm:flex-row.sm:items-center.sm:justify-between
-      p.text-sm.text-gray-600
-        - page_count = @stays.to_a.size
-        - first = @stays.offset + 1
-        - last = @stays.offset + page_count
-        = "#{first}–#{last} sur #{@stays.total_entries}"
-      = will_paginate @stays
+    /  Plus de pagination par nombre : le trimestre EST la page. On garde un
+       total, seule information que la pagination apportait encore.
+    - if @stays.any?
+      p.mt-4.text-sm.text-gray-600
+        | #{@stays.size} séjour#{'s' if @stays.size > 1}#{@searching ? '' : ' sur ce trimestre'}
+
+  / Modale « fiche séjour » ouverte au clic sur une ligne. Même mécanique que le
+    calendrier et la fiche client : le fragment sans layout est chargé en fetch
+    puis injecté ici.
+  dialog.rounded-lg.p-0.shadow-xl.w-full(class="max-w-5xl max-h-[90vh] overflow-y-auto backdrop:bg-black/40" data-stay-details-target="dialog")
+    .flex.justify-end.p-2
+      button.text-gray-400.hover:text-gray-600(type="button" data-action="stay-details#close" aria-label="Fermer")
+        svg.w-5.h-5 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
+          path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"
+    div data-stay-details-target="content"

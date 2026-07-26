@@ -28,7 +28,9 @@ RSpec.describe "Hamacs — affichage modale + calendrier (issue #138)", type: :r
     get stay_path(stay)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Location de hamacs")
+    # La composition ne groupe plus par type : la ligne porte le libellé du
+      # hamac et sa quantité (« Hamac double × 2 »), plus un titre de section.
+      expect(response.body).to include("×")
     expect(response.body).to include("Hamac double × 1")
   end
 

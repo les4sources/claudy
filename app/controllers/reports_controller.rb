@@ -93,5 +93,6 @@ class ReportsController < BaseController
       active_primary: "reports"
     )
     @reports_view = true
+    @home_view = true
   end
 end

@@ -17,6 +17,39 @@
 }
 */
 @import 'tailwindcss/utilities';
+
+/* --- Averia Serif Libre ---------------------------------------------------
+   PLACÉ APRÈS LES @import : en CSS, `@import` doit précéder toute autre règle.
+   Un @font-face au-dessus les invalide et casse la compilation Tailwind.
+
+   Averia Serif Libre — police des TITRES DE PAGE (Michael 2026-07-26).
+   AUTO-HÉBERGÉE, pas chargée depuis Google Fonts : aucune requête tierce, et
+   la licence OFL (voir ../fonts/averia-serif-libre-OFL.txt) l'autorise
+   explicitement. Les .ttf de la charte 4 Sources ont été sous-ensemblés en
+   latin puis convertis en woff2 : 216 Ko → 70 Ko pour les deux graisses.
+   Même motif que les polices du portail public (stylesheets/portal.css).
+   `font-display: swap` : le titre s'affiche tout de suite dans la police de
+   repli, puis bascule — jamais de texte invisible au chargement. */
+@font-face {
+  font-family: 'Averia Serif Libre';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/averia-serif-libre-latin-regular.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+20AC, U+2122, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Averia Serif Libre';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/averia-serif-libre-latin-bold.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+20AC, U+2122, U+FEFF, U+FFFD;
+}
+
 @import 'trix';
 
 /* @import '../../components/flow/component.css'; */

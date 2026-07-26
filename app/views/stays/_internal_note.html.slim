@@ -1,0 +1,44 @@
+/ NOTE INTERNE — éditable sur place (Michael 2026-07-26). C'était jusqu'ici la
+  seule information de la modale qu'on pouvait lire sans pouvoir la corriger :
+  il fallait ouvrir le formulaire d'édition complet pour un mot à changer.
+  Le turbo-frame permet d'enregistrer sans recharger la modale.
+  Les notes portées par les BOOKABLES (réservation d'origine) restent en
+  lecture seule : elles appartiennent à la résa, pas au séjour.
+- entrees = @stay.internal_notes_entries
+- note_sejour = @stay.notes.to_s
+- autres = entrees.reject { |e| e[:source] == "Séjour" }
+- derniere = @stay.note_last_edit
+= turbo_frame_tag "stay_#{@stay.id}_notes" do
+  .bg-yellow-50.px-5.py-4
+    .text-xs.font-semibold.uppercase.tracking-wide.text-yellow-800 Note interne
+    /  `details` fermé par défaut quand une note existe (on vient la LIRE), mais
+       ouvert quand il n'y en a pas — pour que le champ vide invite à écrire.
+    details.mt-2(open=note_sejour.blank?)
+      summary.cursor-pointer.select-none.list-none
+        - if note_sejour.present?
+          .rounded-md.border.border-dashed.border-yellow-300.bg-white.px-3.py-2.text-sm.text-yellow-900
+            = simple_format note_sejour
+        - else
+          .rounded-md.border.border-dashed.border-yellow-300.px-3.py-2.text-sm.text-yellow-700
+            | Aucune note interne — cliquer pour en ajouter
+      = form_with url: update_notes_stay_path(@stay), method: :patch, class: "mt-2 space-y-2" do
+        = text_area_tag "stay[notes]", note_sejour, rows: 5, class: "block w-full rounded-md border-yellow-300 text-sm", placeholder: "Ce que l'équipe doit savoir sur ce séjour…"
+        .flex.items-center.gap-2
+          = submit_tag "Enregistrer la note", class: "cursor-pointer rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
+          - if derniere
+            span.text-xs.text-yellow-700
+              = ["modifiée", (derniere[:by].present? ? "par #{derniere[:by]}" : nil), "· #{l(derniere[:at].to_date, format: :long)}"].compact.join(" ")
+
+    /  Notes de la RÉSERVATION D'ORIGINE — lecture seule, et signalées comme
+       telles pour qu'on ne les cherche pas dans le champ ci-dessus.
+    - if autres.any?
+      .mt-3.space-y-2
+        - autres.each do |entree|
+          .rounded-md.bg-white.px-3.py-2
+            .text-xs.font-medium.text-yellow-700 = "#{entree[:source]} · réservation d'origine"
+            .text-sm.text-yellow-900 = simple_format entree[:text]
+
+    - if @stay.public_notes.present?
+      .mt-3.rounded-md.bg-white.px-3.py-2
+        .text-xs.font-medium.text-gray-500 Note publique — visible par le client
+        .content.text-sm.text-gray-800 == @stay.public_notes

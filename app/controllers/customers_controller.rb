@@ -1,5 +1,5 @@
 class CustomersController < BaseController
-  before_action :set_accounting_view
+  before_action :set_home_view
   before_action :get_customer, only: [:show, :edit, :update, :destroy, :merge, :merge_preview, :merge_commit, :reassign]
 
   breadcrumb "Clients", :customers_path, match: :exact
@@ -187,8 +187,8 @@ class CustomersController < BaseController
     )
   end
 
-  def set_accounting_view
-    @accounting_view = true
+  def set_home_view
+    @home_view = true
   end
 
   # BaseController#render calls set_presenters on every render; this controller

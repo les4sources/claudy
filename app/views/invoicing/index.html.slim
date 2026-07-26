@@ -1,0 +1,63 @@
+/ Poste de travail FACTURATION (Michael 2026-07-26) — remplace l'ancien
+  « Comptabilité / Tableau de bord » et ses quatre tableaux quasi identiques.
+  La page répond à UNE question : qu'est-ce qui reste à facturer ? D'où la file
+  « à fournir » en tête, action à portée de clic, et le reste en second plan.
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Facturation"
+
+.px-4.sm:px-6.lg:px-8.py-6.space-y-8
+  - requested = @queue.requested
+  - sans_tarif = @queue.undefined_tier
+
+  / Compteur d'attaque : le nombre à traiter, énoncé en clair. Vert quand la
+    file est vide — c'est une info utile, pas un vide à masquer.
+  .rounded-lg.p-5(class="#{requested.any? ? 'bg-amber-50 ring-1 ring-amber-200' : 'bg-green-50 ring-1 ring-green-200'}")
+    .flex.items-center.gap-3
+      - if requested.any?
+        span.text-3xl.font-semibold.text-amber-900 = requested.size
+        .text-sm.text-amber-900
+          p.font-medium facture#{'s' if requested.size > 1} à fournir
+          p.text-amber-700 Les plus anciennes d'abord — ce sont les plus en retard.
+      - else
+        svg.w-8.h-8.text-green-600 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
+          path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+        .text-sm.text-green-900
+          p.font-medium Aucune facture en attente
+          p.text-green-700 Tout ce qui devait être facturé l'a été.
+
+  /  Réservations sans tarif tranché : on ne peut PAS émettre de facture tant
+     que le montant n'est pas décidé. Bloc d'alerte affiché seulement s'il y a
+     matière — pas un tableau vide permanent comme dans l'ancienne vue.
+  - if sans_tarif.any?
+    .rounded-lg.bg-red-50.p-4(class="ring-1 ring-red-200")
+      p.text-sm.font-medium.text-red-900
+        | #{sans_tarif.size} réservation#{'s' if sans_tarif.size > 1} sans tarif défini — impossible de facturer tant que le montant n'est pas tranché.
+      ul.mt-2.space-y-1.text-sm.text-red-800
+        - sans_tarif.each do |line|
+          li
+            - if line.stay
+              = link_to line.label, edit_stay_path(line.stay), class: "font-medium underline decoration-red-300 hover:decoration-red-600"
+            - else
+              span.font-medium = line.label
+            - if line.from_date
+              span.text-red-600 &nbsp;— #{l(line.from_date, format: :long)}
+
+  / --- File de travail ----------------------------------------------------
+  - if requested.any?
+    section.space-y-3
+      h2.text-base.font-semibold.text-gray-900 À fournir
+      = render "invoicing/table", lines: requested, action_label: "Marquer envoyée", action_status: Invoicing::Queue::SENT, tone: :requested
+
+  / --- Mémoire courte des envois ------------------------------------------
+  - sent = @queue.recently_sent
+  - if sent.any?
+    section.space-y-3
+      h2.text-base.font-semibold.text-gray-900
+        | Envoyées récemment
+        /  Le texte passe par `|` : en Slim, une parenthèse qui suit immédiatement
+           un tag est lue comme un bloc d'ATTRIBUTS, pas comme du contenu.
+        span.ml-2.text-sm.font-normal.text-gray-500
+          | (#{sent.size} dernières)
+      /  Le bouton fait le chemin INVERSE : une facture marquée envoyée par
+         erreur se remet dans la file en un clic, sans passer par la console.
+      = render "invoicing/table", lines: sent, action_label: "Remettre à fournir", action_status: Invoicing::Queue::REQUESTED, tone: :sent

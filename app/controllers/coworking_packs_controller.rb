@@ -57,6 +57,8 @@ class CoworkingPacksController < BaseController
       active_primary: "settings",
       active_secondary: "coworking"
     )
-    @settings_view = true
+    # Coworking vit sous « Accueil » (c'est de l'opérationnel quotidien), pas
+    # sous « Paramètres » où il pointait par héritage.
+    @home_view = true
   end
 end

@@ -1,0 +1,31 @@
+/ Dropdown de catégorie en ligne dans l'index Séjours (Michael 2026-07-26).
+  Le choix EST la validation : `auto-submit` soumet au `change`, le contrôleur
+  répond en Turbo Stream et remplace CE fragment (d'où l'id stable, qui doit
+  rester identique entre le rendu initial et le rendu de réponse).
+
+  `from=index` discrimine l'appelant côté contrôleur — la modale séjour utilise
+  la MÊME route avec son propre rendu (redirection). Ne pas retirer ce champ.
+div id="stay-category-#{stay.id}"
+  = form_with url: update_category_stay_path(stay), method: :patch, data: { controller: "auto-submit", action: "change->auto-submit#submit" } do |f|
+    /  `id: nil` sur les trois champs cachés : ils sont répétés sur CHAQUE ligne
+       du tableau et entreraient en collision d'id avec le champ de recherche
+       (`#q`) et son `#filter`. Seul le `name` compte ici.
+    = hidden_field_tag :from, "index", id: nil
+    = hidden_field_tag :filter, @filter, id: nil
+    = hidden_field_tag :q, @query, id: nil
+    /  Sans catégorie, le select reste discret (gris) ; une fois posée, il prend
+       la teinte indigo du badge pour se lire comme une valeur, pas comme un champ.
+    - assigned = stay.category.present?
+    - tone = assigned ? "text-indigo-700 bg-indigo-50 ring-indigo-100" : "text-gray-400 bg-transparent ring-transparent hover:ring-gray-200"
+    /  Le champ DOIT s'appeler `stay[category]` : `update_category` lit
+       `params.dig(:stay, :category)`, contrat partagé avec la modale séjour. Un
+       `f.select :category` sur un `form_with url:` (sans modèle) produirait un
+       simple `category=…` — le contrôleur lirait alors nil et EFFACERAIT la
+       catégorie au lieu de la poser.
+    = select_tag "stay[category]",
+                 options_for_select(Stay::CATEGORIES.map(&:reverse), stay.category),
+                 include_blank: "—",
+                 class: "w-full rounded-md border-0 py-1 pl-2 pr-6 text-xs font-medium ring-1 ring-inset #{tone} focus:ring-2 focus:ring-indigo-500 cursor-pointer",
+                 aria: { label: "Catégorie du séjour" }
+  - if local_assigns[:error].present?
+    p.mt-1.text-xs.text-red-600 = error

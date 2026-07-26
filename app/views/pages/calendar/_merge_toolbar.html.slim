@@ -1,12 +1,13 @@
-/ Barre-outil de fusion (epic #81, Phase 2) — vue mois uniquement. Le bouton
-/ bascule le MODE FUSION ; il vit DANS la portée du contrôleur stay-merge (les
-/ actions Stimulus ne se lient qu'à l'intérieur de l'élément-contrôleur, d'où sa
-/ place ici plutôt que dans l'entête de page global).
+/ Barre-outil de fusion (epic #81, Phase 2) — vue mois uniquement, rendue en
+/ PIED d'agenda (Michael 2026-07-26). Le bouton bascule le MODE FUSION ; il vit
+/ DANS la portée du contrôleur stay-merge (les actions Stimulus ne se lient qu'à
+/ l'intérieur de l'élément-contrôleur, d'où sa place ici plutôt que dans
+/ l'entête de page global).
 / Styles du mode fusion — factorisés dans stays/_merge_styles (partagés avec la
 / fiche client). Voir ce partial pour l'estompage, l'overlay neutralisé, le badge.
 = render "stays/merge_styles"
 
-.flex.items-center.gap-3.mb-4
+.flex.items-center.gap-3.mt-4
   / `gap-1.5` / `py-1.5` en attribut class : la notation à points de Slim
   / scinderait `gap-1.5` en deux classes (`gap-1` + `5`).
   button.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-3.text-sm.font-medium.text-gray-700.shadow-sm.hover:bg-gray-50(class="gap-1.5 py-1.5" type="button" data-stay-merge-target="toggleButton" data-action="stay-merge#toggle" aria-pressed="false")
@@ -15,7 +16,7 @@
     span Fusionner des séjours
 
 / Bandeau contextuel du mode fusion (affiché par le contrôleur).
-.hidden.items-center.justify-between.gap-3.rounded-md.border.border-indigo-200.bg-indigo-50.px-4.py-2.mb-4.text-sm.text-indigo-800(data-stay-merge-target="banner")
+.hidden.items-center.justify-between.gap-3.rounded-md.border.border-indigo-200.bg-indigo-50.px-4.py-2.mt-4.text-sm.text-indigo-800(data-stay-merge-target="banner")
   span Mode fusion — clique les séjours à fusionner, puis désigne le survivant.
   button.font-medium.text-indigo-700.hover:text-indigo-900(type="button" data-action="stay-merge#toggle")
     | Quitter

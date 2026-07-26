@@ -21,9 +21,15 @@ tr(id="#{dom_id payment}" class="#{payment.tr_class} hover:bg-sky-100")
     .inline-flex.space-x-2
       / Stay-first (epic #26) : un paiement sans booking (séjour sans hébergement)
       / pointe sur le séjour — `booking_path(nil)` planterait.
-      = link_to payment.linked_name,
-                payment.linked_path,
-                class: "claudy-link"
+      / Et un paiement SANS cible du tout (ni booking ni séjour) reste affiché,
+      / en texte : `linked_path` rend nil, et un seul orphelin ne doit pas faire
+      / tomber la page entière.
+      - if payment.linked_path
+        = link_to payment.linked_name,
+                  payment.linked_path,
+                  class: "claudy-link"
+      - else
+        span.text-gray-500 = payment.linked_name
       = payment.linked_payment_status
     .text-xs.text-gray-500
       = payment.linked_date_range
