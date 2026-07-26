@@ -111,9 +111,92 @@ RSpec.describe "Index Séjours — refonte du tableau", type: :request do
       expect(response.body).not_to include("Réservation en ligne")
     end
 
-    it "affiche le badge plateforme pour une réservation OTA" do
+    # ICÔNE et non libellé (Michael 2026-07-26) : le SVG partagé, pas le mot.
+    it "affiche l'ICÔNE de la plateforme pour une réservation OTA" do
       get stays_path
-      expect(response.body).to include("Airbnb")
+      expect(response.body).to include(%(aria-label="Airbnb"))
+      # Le partial SVG partagé est bien rendu, teinté à la couleur de marque.
+      expect(response.body).to include("fill-current text-rose-500")
+      expect(response.body).to match(%r{<span[^>]*aria-label="Airbnb"[^>]*>\s*<svg}m)
+    end
+
+    it "ne rend plus l'ancien badge texte de plateforme" do
+      get stays_path
+      expect(response.body).not_to include("bg-rose-50 text-rose-600")
+    end
+  end
+
+  # « Tous » retiré : on est toujours sur une période, « À venir » par défaut.
+  describe "filtres de période" do
+    let!(:futur) { create_stay(email: "futur@example.com", first: "Futur", last: "Client") }
+    let!(:passe) { create_stay(email: "passe@example.com", first: "Passe", last: "Client") }
+
+    before { passe.update_columns(arrival_date: Date.today - 20, departure_date: Date.today - 18) }
+
+    it "affiche « À venir » par défaut, sans séjour passé" do
+      get stays_path
+      expect(response.body).to include("Futur Client")
+      expect(response.body).not_to include("Passe Client")
+    end
+
+    it "ne propose plus le filtre « Tous »" do
+      get stays_path
+      expect(response.body).not_to include(">Tous<")
+    end
+
+    it "bascule sur « Passés »" do
+      get stays_path(filter: "past")
+      expect(response.body).to include("Passe Client")
+      expect(response.body).not_to include("Futur Client")
+    end
+
+    it "retombe sur « À venir » pour une valeur de filtre inconnue" do
+      get stays_path(filter: "n_importe_quoi")
+      expect(response.body).to include("Futur Client")
+      expect(response.body).not_to include("Passe Client")
+    end
+
+    # Garde-fou : sans le OR sur `departure_date IS NULL`, un séjour sans date
+    # ne serait dans AUCUNE des deux vues et disparaîtrait de l'index.
+    it "rattrape les séjours sans date dans « À venir »" do
+      sans_date = create_stay(email: "sansdate2@example.com", first: "Sans", last: "Date")
+      sans_date.update_columns(arrival_date: nil, departure_date: nil)
+      get stays_path
+      expect(response.body).to include("Sans Date")
+    end
+  end
+
+  describe "groupement par mois" do
+    let!(:juillet) { create_stay(email: "juil@example.com", first: "Juillet", last: "Client") }
+    let!(:aout)    { create_stay(email: "aout@example.com", first: "Aout", last: "Client") }
+
+    before do
+      juillet.update_columns(arrival_date: Date.new(2027, 7, 9),  departure_date: Date.new(2027, 7, 11))
+      aout.update_columns(arrival_date: Date.new(2027, 8, 3), departure_date: Date.new(2027, 8, 5))
+    end
+
+    it "insère une ligne pleine largeur par mois, mois et année en clair" do
+      get stays_path
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Juillet 2027")
+      expect(response.body).to include("Août 2027")
+      expect(response.body).to include(%(scope="rowgroup"))
+    end
+
+    it "regroupe deux séjours du même mois sous un SEUL en-tête" do
+      create_stay(email: "juil2@example.com").update_columns(
+        arrival_date: Date.new(2027, 7, 20), departure_date: Date.new(2027, 7, 22)
+      )
+      get stays_path
+      expect(response.body.scan("Juillet 2027").size).to eq(1)
+    end
+
+    # Les imports legacy peuvent ne porter aucune date : ils doivent avoir leur
+    # propre groupe, jamais être rattachés en silence au mois précédent.
+    it "isole les séjours sans date d'arrivée" do
+      create_stay(email: "sansdate@example.com").update_columns(arrival_date: nil, departure_date: nil)
+      get stays_path
+      expect(response.body).to include("Sans date d'arrivée")
     end
   end
 

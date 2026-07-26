@@ -18,9 +18,18 @@ class StayDecorator < ApplicationDecorator
     "cancelled" => { label: "Annulé", classes: "bg-red-100 text-red-800" }
   }.freeze
 
+  # `classes` : ancien badge texte, encore utilisé par d'autres vues.
+  # `icon_classes` : teinte de marque, sans pastille de fond — le logo se suffit
+  # à lui-même. `fill-current` est INDISPENSABLE : les `<path>` des partials
+  # partagés ne portent aucun attribut `fill` et retombent donc sur le noir par
+  # défaut. `fill` étant une propriété héritée, la poser sur le `<span>` la fait
+  # descendre jusqu'au `<path>` — sans toucher aux partials, que `BookingDecorator`
+  # utilise aussi.
   PLATFORM_STYLES = {
-    "airbnb"        => { label: "Airbnb", classes: "bg-rose-50 text-rose-600 ring-1 ring-rose-100" },
-    "bookingdotcom" => { label: "Booking.com", classes: "bg-blue-50 text-blue-700 ring-1 ring-blue-100" }
+    "airbnb"        => { label: "Airbnb", classes: "bg-rose-50 text-rose-600 ring-1 ring-rose-100",
+                         icon_classes: "fill-current text-rose-500" },
+    "bookingdotcom" => { label: "Booking.com", classes: "bg-blue-50 text-blue-700 ring-1 ring-blue-100",
+                         icon_classes: "fill-current text-blue-700" }
   }.freeze
 
   # Premier objet réservable du séjour (Booking / SpaceBooking) — porte le contact.
@@ -85,6 +94,63 @@ class StayDecorator < ApplicationDecorator
     parts.any? ? parts.join(" · ") : "—"
   end
 
+  # --- Contact d'origine porté par les réservables (Michael 2026-07-26) -----
+  #
+  # Tout l'historique importé est rattaché au client FOURRE-TOUT
+  # (`client@les4sources.be`, ou son équivalent par OTA) faute d'email
+  # exploitable à la migration. Le seul nom réel du dossier vit alors sur le
+  # RÉSERVABLE, dans ses colonnes `firstname` / `lastname` / `group_name` —
+  # exactement comme les notes privées (cf. `internal_notes_entries`).
+  #
+  # Sans ce rappel, la fiche d'édition d'un séjour legacy n'affiche AUCUN nom :
+  # elle montre « Client Les 4 Sources » et l'info existante reste invisible.
+  # Même logique que `internal_notes_entries` : on lit les `stay_items`
+  # préchargés, aucun accès base supplémentaire.
+
+  # Le séjour est-il rattaché à un client fourre-tout (générique ou par OTA) ?
+  def catch_all_customer?
+    Customer::CATCH_ALL_EMAILS.include?(object.customer&.email)
+  end
+
+  # Une entrée par réservable porteur d'un contact, dédoublonnée. Un réservable
+  # sans aucune coordonnée est ignoré (rien à rappeler).
+  def origin_contacts
+    object.stay_items.filter_map { |item| origin_contact_for(item) }
+          .uniq { |e| [e[:name], e[:group], e[:email], e[:phone]] }
+  end
+
+  # Le contact du réservable APPORTE-T-IL quelque chose que le client ne dit pas
+  # déjà ? Vrai dès que le séjour est sur un fourre-tout (le client ne nomme
+  # personne) ou qu'un nom/groupe diffère du nom du client.
+  def origin_contacts_worth_showing?
+    return false if origin_contacts.empty?
+    return true if catch_all_customer?
+
+    customer_name = object.customer&.name.to_s.strip.downcase
+    origin_contacts.any? do |c|
+      c[:group].present? || (c[:name].present? && c[:name].strip.downcase != customer_name)
+    end
+  end
+
+  private
+
+  def origin_contact_for(item)
+    bookable = item.bookable
+    return nil if bookable.nil?
+
+    name  = [bookable.try(:firstname), bookable.try(:lastname)].compact_blank.join(" ").presence
+    group = bookable.try(:group_name).presence
+    email = bookable.try(:email).presence
+    phone = bookable.try(:phone).presence
+    return nil if name.blank? && group.blank? && email.blank? && phone.blank?
+
+    { label:     item.bookable_type == "SpaceBooking" ? "Espaces" : "Hébergement",
+      reference: "#{item.bookable_type.underscore.humanize} ##{item.bookable_id}",
+      name: name, group: group, email: email, phone: phone }
+  end
+
+  public
+
   # Notes INTERNES agrégées : celle du séjour + celles portées par les
   # bookables historiques (Booking/SpaceBooking, colonnes `notes`) — la plupart
   # des notes privées vivent encore là (399 bookings + 255 espaces au
@@ -135,12 +201,28 @@ class StayDecorator < ApplicationDecorator
   # Badge plateforme (Airbnb / Booking.com) si le séjour provient d'une OTA.
   # nil pour les réservations directes / web. Lit `platform` du bookable
   # (uniforme pour Booking et SpaceBooking).
+  #
+  # ICÔNE et non libellé (Michael 2026-07-26) : on réutilise les partials SVG
+  # déjà en place (`shared/_airbnb_icon`, `shared/_bookingdotcom_icon`), ceux-là
+  # mêmes qu'utilisait `BookingDecorator`. Le logo se reconnaît d'un coup d'œil
+  # là où « Airbnb » en toutes lettres consommait de la largeur sur chaque ligne.
+  # Le nom reste porté par `title` + `aria-label` : l'information n'est pas
+  # perdue pour un lecteur d'écran ni au survol.
+  PLATFORM_ICON_PARTIALS = {
+    "airbnb"        => "shared/airbnb_icon",
+    "bookingdotcom" => "shared/bookingdotcom_icon"
+  }.freeze
+
   def platform_badge
-    style = PLATFORM_STYLES[primary_bookable&.try(:platform)]
-    return if style.nil?
-    h.content_tag(:span, style[:label],
-                  class: "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium #{style[:classes]}",
-                  title: "Réservation provenant de #{style[:label]}")
+    platform = primary_bookable&.try(:platform)
+    partial  = PLATFORM_ICON_PARTIALS[platform]
+    return if partial.nil?
+
+    style = PLATFORM_STYLES[platform]
+    h.content_tag(:span, h.render(partial),
+                  class: "inline-flex items-center #{style[:icon_classes]}",
+                  title: "Réservation provenant de #{style[:label]}",
+                  role: "img", aria: { label: style[:label] })
   end
 
   PAYMENT_STATUS_STYLES = {

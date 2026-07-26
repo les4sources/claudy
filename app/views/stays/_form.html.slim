@@ -57,6 +57,30 @@
             span.block.text-gray-500.text-xs.truncate(data-customer-search-target="chosenContact") = selected_customer_contact
           button type="button" data-action="customer-search#clear" class="flex-shrink-0 text-indigo-600 hover:underline" Changer
 
+      /  Contact d'ORIGINE porté par les réservables (Michael 2026-07-26). Sur un
+         séjour importé, le client est le fourre-tout `client@les4sources.be` et
+         le seul nom réel du dossier vit sur le Booking/SpaceBooking. Sans ce
+         bloc, la fiche n'affiche AUCUN nom. Lecture seule : c'est un rappel de
+         ce que dit la résa d'origine, pas un champ — pour rattacher un vrai
+         client, on passe par « Changer » au-dessus.
+      - stay_for_origin = @stay&.persisted? ? @stay.decorate : nil
+      - if stay_for_origin&.origin_contacts_worth_showing?
+        .rounded-md.bg-amber-50.p-3.text-sm(class="ring-1 ring-amber-100")
+          .flex.items-start.gap-2
+            svg.w-4.h-4.text-amber-600.flex-shrink-0(class="mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true")
+              path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+            .min-w-0.space-y-1
+              p.font-medium.text-amber-900
+                - if stay_for_origin.catch_all_customer?
+                  | Contact d'origine — ce séjour n'est rattaché à aucun vrai client
+                - else
+                  | Contact d'origine de la réservation
+              - stay_for_origin.origin_contacts.each do |contact|
+                .text-amber-800
+                  - parts = [contact[:name], (contact[:group].present? ? "groupe « #{contact[:group]} »" : nil), contact[:email], contact[:phone]].compact_blank
+                  span.font-medium = parts.join(" · ")
+                  span.text-xs.text-amber-600 &nbsp;— #{contact[:label]} (#{contact[:reference]})
+
       .space-y-2.hidden(data-stay-form-target="newPanel")
         .grid.grid-cols-2.gap-2
           = text_field_tag "stay[new_customer][first_name]", @draft&.first_name, placeholder: "Prénom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"

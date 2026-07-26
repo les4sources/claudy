@@ -104,6 +104,16 @@ class Stay < ApplicationRecord
   validates :token, uniqueness: true, allow_nil: true
 
   scope :current_and_future, -> { where("departure_date >= ?", Date.today).order(arrival_date: :asc) }
+  # Variante de `current_and_future` qui RATTRAPE les séjours sans date de
+  # départ (Michael 2026-07-26). Depuis la suppression du filtre « Tous » de
+  # l'index, un séjour n'est visible que via « À venir » ou « Passés » : sans ce
+  # OR, un séjour sans date ne serait dans AUCUN des deux et deviendrait
+  # inatteignable, y compris par la recherche (qui se compose sur ces scopes).
+  # Il n'y en a aucun en base aujourd'hui — c'est un garde-fou, pas un correctif.
+  scope :upcoming_or_undated, lambda {
+    where("departure_date >= ? OR departure_date IS NULL", Date.today)
+      .order(Arel.sql("arrival_date ASC NULLS LAST, id DESC"))
+  }
   scope :past, -> { where("departure_date < ?", Date.today).order(arrival_date: :desc) }
   scope :from_source, ->(value) { value.present? ? where(source: value) : all }
   scope :recent, -> { order(created_at: :desc) }

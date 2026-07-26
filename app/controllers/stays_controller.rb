@@ -7,16 +7,20 @@ class StaysController < BaseController
   # paiements : contact, canal, dates + statut, composition compacte, et surtout
   # total / encaissé / reste dû exigible + statut de paiement.
   #
-  # Filtres légers : « Tous » (défaut), « À venir » (current_and_future),
-  # « Passés » (past). Les montants agrégés (encaissé, reste dû) sont calculés
-  # EN LOT par `Stays::IndexAmounts` (aucun N+1 — voir le service).
+  # Filtres : « À venir » (DÉFAUT) et « Passés ». Le filtre « Tous » a été retiré
+  # (Michael 2026-07-26) — on est toujours sur l'une des deux périodes. Les
+  # montants agrégés (encaissé, reste dû) sont calculés EN LOT par
+  # `Stays::IndexAmounts` (aucun N+1 — voir le service).
   #
   # Recherche `?q=` (Michael 2026-07-26) : client (prénom/nom/email), nom du
   # groupe, mot dans la note interne — y compris les notes des bookables. Elle
   # s'applique AVANT `.includes` pour que les `.or` du service composent sur une
   # structure de jointures nue (cf. `Stays::Search`), et se combine aux pills.
   def index
-    @filter = params[:filter].presence_in(%w[upcoming past]) # nil = tous
+    # « Tous » retiré (Michael 2026-07-26) : on est TOUJOURS sur une période.
+    # Défaut = « À venir », qui est la vue de travail quotidienne ; « Passés »
+    # est l'autre moitié. Toute valeur inconnue retombe sur « À venir ».
+    @filter = params[:filter] == "past" ? "past" : "upcoming"
     @query  = params[:q].to_s.strip
     @stays  = Stays::Search.new(index_scope, @query).call
               .includes(
@@ -417,11 +421,10 @@ class StaysController < BaseController
   # arrivée la plus récente/future d'abord — les séjours sans date d'arrivée
   # (activités/repas seuls) rejetés en fin de liste, tri stable sur l'id.
   def index_scope
-    case @filter
-    when "upcoming" then Stay.current_and_future
-    when "past"     then Stay.past
-    else Stay.order(Arel.sql("arrival_date DESC NULLS LAST, id DESC"))
-    end
+    # `upcoming_or_undated` et non `current_and_future` : sans le filtre
+    # « Tous », un séjour sans date de départ ne serait dans aucune des deux
+    # vues et disparaîtrait de l'index (cf. le scope du modèle).
+    @filter == "past" ? Stay.past : Stay.upcoming_or_undated
   end
 
   # Draft de préremplissage du form NEW (epic #81, Phase 7). Trois cas, dans
