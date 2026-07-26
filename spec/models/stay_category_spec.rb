@@ -35,11 +35,12 @@ RSpec.describe Stay, type: :model do
       expect(Stay.public_categories.keys).to match_array(Stay::CATEGORIES.keys - ["les4sources"])
     end
 
-    it "inclut l'amendement (collective, workshop_retreat) et les 12 clés au total" do
-      expect(Stay::CATEGORIES.keys).to include("collective", "workshop_retreat")
-      expect(Stay::CATEGORIES.size).to eq(12)
+    it "inclut l'amendement (collective, workshop_retreat, couple) et les 13 clés au total" do
+      expect(Stay::CATEGORIES.keys).to include("collective", "workshop_retreat", "couple")
+      expect(Stay::CATEGORIES.size).to eq(13)
       expect(Stay::CATEGORIES["collective"]).to eq("Collectif")
       expect(Stay::CATEGORIES["workshop_retreat"]).to eq("Retraite/Stage")
+      expect(Stay::CATEGORIES["couple"]).to eq("Couple")
     end
   end
 
