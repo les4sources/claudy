@@ -25,7 +25,9 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Inter var', ...defaultTheme.fontFamily.sans],
-        caveat: ['Caveat', 'Inter var', ...defaultTheme.fontFamily.sans]
+        caveat: ['Caveat', 'Inter var', ...defaultTheme.fontFamily.sans],
+        // Titres de page — auto-hébergée (cf. @font-face dans application.css).
+        averia: ['Averia Serif Libre', ...defaultTheme.fontFamily.serif]
       },
     },
   },
