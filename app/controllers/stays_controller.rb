@@ -3,7 +3,6 @@ class StaysController < BaseController
   # sous-navigation Séjours · Coworking · Reporting · Comptabilité, qui remplace
   # l'ancien dropdown de la barre principale.
   before_action :set_home_view
-  before_action :set_accounting_view, only: :show
   before_action :set_stay, only: %i[edit update destroy update_status update_category approve_change_request refuse_change_request]
 
   # Index admin des séjours (epic #81) — le séjour devient le point d'entrée
@@ -589,10 +588,6 @@ class StaysController < BaseController
   # non enregistrables (issue #75), pour un flash unique. nil si aucun des deux.
   def combined_warning(service)
     [service.availability_warning, service.space_warning].compact.join(" ").presence
-  end
-
-  def set_accounting_view
-    @accounting_view = true
   end
 
   # Données partagées par les vues new/edit.

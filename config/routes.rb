@@ -93,7 +93,6 @@ Rails.application.routes.draw do
   resources :bookings, except: [:new, :create, :update] do
     collection do
       get "past"
-      get "search"
     end
     resources :payments
   end
@@ -189,7 +188,11 @@ Rails.application.routes.draw do
   get  "mon-sejour/:token/activites", to: "public/activity_selections#show",   as: :public_activity_selection
   post "mon-sejour/:token/activites", to: "public/activity_selections#create",  as: :public_activity_selection_create
 
-  get "comptabilite", to: "accounting#index", as: :accounting
+  # Facturation — poste de travail du Pôle Admin (Michael 2026-07-26). Remplace
+  # « Comptabilité / Tableau de bord » (`/comptabilite`, retiré). URL admin en
+  # ANGLAIS, comme le reste de l'admin.
+  get "invoicing", to: "invoicing#index", as: :invoicing
+  patch "invoicing/:kind/:id/status", to: "invoicing#update_status", as: :invoicing_status
 
   get "pages/day", to: "pages#day", as: :day_details
   get "recent-activity", to: "pages#recent_activity", as: :recent_activity

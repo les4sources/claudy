@@ -1,0 +1,45 @@
+/ Tableau d'une file de facturation. Locals : lines, action_label,
+  action_status, tone (:requested | :sent).
+  UN seul partial pour les deux files — c'est tout l'intérêt d'avoir normalisé
+  Booking et SpaceBooking en `Invoicing::Queue::Line`.
+- muted = (tone == :sent)
+.overflow-x-auto.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg
+  table.min-w-full.divide-y.divide-gray-300
+    thead.bg-gray-50
+      tr
+        th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Réservation
+        th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Dates
+        th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Type
+        th.px-3.py-2.text-right.text-xs.font-medium.text-gray-500.uppercase Montant
+        th.px-3.py-2.text-right.text-xs.font-medium.text-gray-500.uppercase Action
+    tbody.divide-y.divide-gray-200.bg-white
+      - lines.each do |line|
+        tr class="#{muted ? 'bg-white hover:bg-gray-50' : 'bg-amber-50/50 hover:bg-amber-50'} transition-colors"
+          td.px-3.py-2.text-sm
+            /  Le lien pointe vers le SÉJOUR quand il existe : c'est le point
+               d'entrée unique de l'app. À défaut (réservable orphelin), on
+               retombe sur l'ancienne fiche du réservable.
+            - if line.stay
+              = link_to line.label, edit_stay_path(line.stay), class: "font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
+            - elsif line.kind == "booking"
+              = link_to line.label, booking_path(line.record), class: "font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
+            - else
+              = link_to line.label, space_booking_path(line.record), class: "font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
+          td.px-3.py-2.text-sm.text-gray-700.whitespace-nowrap
+            - if line.from_date && line.to_date
+              = "#{l(line.from_date, format: :long)} → #{l(line.to_date, format: :long)}"
+            - else
+              span.text-gray-400 —
+          td.px-3.py-2.text-sm.text-gray-600
+            = line.kind == "booking" ? "Hébergement" : "Espaces"
+          td.px-3.py-2.text-sm.text-right.whitespace-nowrap
+            - if line.priceless?
+              span.text-xs.font-medium.text-red-600(title="Aucun montant : la facture ne peut pas être émise") montant à définir
+            - else
+              span.font-medium.text-gray-900 = humanized_money_with_symbol(Money.new(line.price_cents))
+          td.px-3.py-2.text-sm.text-right.whitespace-nowrap
+            = button_to action_label,
+                        invoicing_status_path(kind: line.kind, id: line.id),
+                        method: :patch,
+                        params: { invoice_status: action_status },
+                        class: (muted ? "text-xs text-gray-500 hover:text-gray-800 hover:underline" : "inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-indigo-700")
