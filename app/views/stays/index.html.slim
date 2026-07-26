@@ -5,8 +5,11 @@
   / En-tête + boutons de transition vers les anciennes vues (epic #81).
   .sm:flex.sm:items-center.sm:justify-between.mb-4
     .sm:flex-auto
-      h1.text-xl.font-semibold.text-gray-900 Séjours
-      p.mt-1.text-sm.text-gray-600 Tous les séjours — gestion des réservations et des paiements.
+      /  Ce titre est écrit EN DUR ici (l'index n'utilise pas le composant
+         `page_header`) : on reprend donc à l'identique le style que ce composant
+         applique, pour que /stays ne détonne pas — Averia, mêmes tailles, même
+         `pr-2` contre le rognage du dernier glyphe.
+      h1.font-averia.text-2xl.font-bold.leading-7.text-gray-900.sm:text-3xl.sm:tracking-tight.pr-2 Séjours
     .mt-4.sm:mt-0.sm:ml-4.flex.flex-wrap.items-center.gap-2
       = link_to "Hébergements (ancienne vue)", bookings_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm hover:bg-gray-50"
       = link_to "Espaces (ancienne vue)", space_bookings_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm hover:bg-gray-50"
