@@ -128,7 +128,7 @@
                 | Annuler
               = submit_tag "Assigner", class: "inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
 
-      dialog.rounded-lg.p-0.shadow-xl.w-full.max-w-lg.backdrop:bg-black/40(data-stay-details-target="dialog")
+      dialog.rounded-lg.p-0.shadow-xl.w-full(class="max-w-5xl max-h-[90vh] overflow-y-auto backdrop:bg-black/40" data-stay-details-target="dialog")
         .flex.justify-end.px-3.pt-3
           button.text-gray-400.hover:text-gray-600(type="button" data-action="stay-details#close" aria-label="Fermer")
             | ✕

@@ -200,7 +200,7 @@
   / Modale « fiche séjour » ouverte au clic sur une ligne. Même mécanique que le
     calendrier et la fiche client : le fragment sans layout est chargé en fetch
     puis injecté ici.
-  dialog.rounded-lg.p-0.shadow-xl.w-full.max-w-3xl(class="backdrop:bg-black/40" data-stay-details-target="dialog")
+  dialog.rounded-lg.p-0.shadow-xl.w-full(class="max-w-5xl max-h-[90vh] overflow-y-auto backdrop:bg-black/40" data-stay-details-target="dialog")
     .flex.justify-end.p-2
       button.text-gray-400.hover:text-gray-600(type="button" data-action="stay-details#close" aria-label="Fermer")
         svg.w-5.h-5 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
