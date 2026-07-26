@@ -48,6 +48,7 @@ class Stay < ApplicationRecord
     "training"         => "Formation/Initiation",
     "friends"          => "Groupe d'amis",
     "family"           => "Famille",
+    "couple"           => "Couple",
     "team_building"    => "Team building",
     "collective"       => "Collectif",
     "retreat"          => "Mise au vert",
