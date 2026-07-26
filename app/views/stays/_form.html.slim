@@ -113,10 +113,10 @@
       .grid.grid-cols-2.gap-4
         .space-y-1
           label.block.text-sm.font-medium.text-gray-700 for="stay_arrival_time" Heure d'arrivée
-          = text_field_tag "stay[arrival_time]", @draft&.arrival_time, id: "stay_arrival_time", placeholder: "ex. 14:00", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          = text_field_tag "stay[arrival_time]", @draft&.arrival_time, id: "stay_arrival_time", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
         .space-y-1
           label.block.text-sm.font-medium.text-gray-700 for="stay_departure_time" Heure de départ
-          = text_field_tag "stay[departure_time]", @draft&.departure_time, id: "stay_departure_time", placeholder: "ex. 11:00", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          = text_field_tag "stay[departure_time]", @draft&.departure_time, id: "stay_departure_time", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
       .grid.grid-cols-3.gap-4
         .space-y-1
           label.block.text-sm.font-medium.text-gray-700 Adultes

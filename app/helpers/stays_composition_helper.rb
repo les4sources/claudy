@@ -1,6 +1,7 @@
 module StaysCompositionHelper
-  # Une icône emoji PAR TYPE de ressource composant un séjour, dans un ordre fixe
-  # et stable : hébergement, salle, cuisine, van, tente, activité. Jamais une
+  # (Vue fiche client.) Une icône emoji PAR TYPE de ressource composant un
+  # séjour, dans un ordre fixe et stable. L'index Séjours utilise, lui,
+  # `stay_composition_icon_row` plus bas (emplacements fixes, SVG). Jamais une
   # icône par occurrence — une seule par type présent. Chaque icône porte un
   # `title` (tooltip natif) nommant la ressource.
   #
@@ -29,17 +30,18 @@ module StaysCompositionHelper
   # --- Rangée d'icônes à emplacements FIXES (index Séjours, Michael 2026-07-26)
   #
   # Différence avec `stay_composition_icons` ci-dessus, qui n'affiche QUE les
-  # types présents : ici les 5 emplacements sont TOUJOURS rendus, gris clair par
-  # défaut et colorés quand le séjour contient l'élément. Les colonnes restent
-  # ainsi alignées d'une ligne à l'autre — on lit la composition d'un coup d'œil
-  # vertical, ce qu'une liste à longueur variable ne permet pas.
+  # types présents : ici les SIX emplacements sont TOUJOURS rendus, gris clair
+  # par défaut et colorés quand le séjour contient l'élément. Les colonnes
+  # restent ainsi alignées d'une ligne à l'autre — on lit la composition d'un
+  # coup d'œil vertical, ce qu'une liste à longueur variable ne permet pas.
   #
-  # « Tente » = tout couchage PLEIN AIR (tente, van, hamac, terrasse) : Michael a
-  # demandé 5 icônes, et regrouper évite qu'un séjour van-seul apparaisse vide.
-  # Le tooltip nomme, lui, ce qui est réellement présent.
+  # Le CAMPING-CAR a son emplacement propre (Michael 2026-07-26). L'emplacement
+  # « tente » couvre donc le reste du plein air — tente, hamac, terrasse — pour
+  # qu'aucune composition ne soit invisible ; son tooltip nomme ce qui est
+  # réellement présent.
   #
   # PERFORMANCE : aucun accès base — mêmes prédicats en mémoire que ci-dessus.
-  COMPOSITION_SLOTS = %i[lodging outdoor hall kitchen activity].freeze
+  COMPOSITION_SLOTS = %i[lodging outdoor van hall kitchen activity].freeze
 
   def stay_composition_icon_row(stay)
     icons = COMPOSITION_SLOTS.map { |slot| composition_slot_icon(slot, stay) }
@@ -61,8 +63,8 @@ module StaysCompositionHelper
   def composition_slot_active?(slot, stay)
     case slot
     when :lodging  then stay_has_lodging?(stay)
-    when :outdoor  then stay_has_tent?(stay) || stay_has_van?(stay) ||
-                        stay_has_hamac?(stay) || stay_has_terrace?(stay)
+    when :outdoor  then stay_has_tent?(stay) || stay_has_hamac?(stay) || stay_has_terrace?(stay)
+    when :van      then stay_has_van?(stay)
     when :hall     then stay_has_hall?(stay)
     when :kitchen  then stay_has_kitchen?(stay)
     when :activity then stay_has_activity?(stay)
@@ -71,7 +73,8 @@ module StaysCompositionHelper
 
   SLOT_LABELS = {
     lodging:  "Hébergement",
-    outdoor:  "Plein air (tente / van / hamac)",
+    outdoor:  "Tente (ou hamac / terrasse)",
+    van:      "Camping-car",
     hall:     "Salle",
     kitchen:  "Cuisine",
     activity: "Activité"
@@ -88,7 +91,6 @@ module StaysCompositionHelper
   def outdoor_detail_label(stay)
     parts = []
     parts << "Tente"    if stay_has_tent?(stay)
-    parts << "Van"      if stay_has_van?(stay)
     parts << "Hamac"    if stay_has_hamac?(stay)
     parts << "Terrasse" if stay_has_terrace?(stay)
     parts.join(" · ").presence || SLOT_LABELS[:outdoor]
@@ -98,17 +100,20 @@ module StaysCompositionHelper
   # dense, 5 emojis par ligne × 30 lignes deviennent du bruit, et un emoji ne se
   # « désature » pas proprement. Le trait suit la couleur du slot.
   SLOT_PATHS = {
-    # Maison (hébergement)
-    lodging:  "M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 " \
-              ".621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 " \
-              "0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75",
+    # Hébergement : un LIT (Michael 2026-07-26) — une maison désignait le bâti,
+    # pas le couchage. C'est le MÊME tracé que l'entrée « Séjours » de la nav :
+    # même objet, même icône dans toute l'app.
+    lodging:  "M2 20v-8a2 2 0 012-2h16a2 2 0 012 2v8M4 10V6a2 2 0 012-2h12a2 2 0 012 2v4M12 4v6M2 18h20",
     # Tente / plein air
     outdoor:  "M12 3.75L3 20.25h18L12 3.75zm0 0v16.5",
     # Salle (bâtiment / colonnes)
     hall:     "M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h6M9 11.25h6M9 15.75h6",
-    # Cuisine (ustensiles)
-    kitchen:  "M15.75 3.75v16.5M18.75 3.75c-1.657 0-3 1.343-3 3v3h6v-3c0-1.657-1.343-3-3-3zM5.25 " \
-              "3.75v5.25a2.25 2.25 0 004.5 0V3.75M7.5 9v11.25",
+    # Camping-car : caisse + capot + deux roues.
+    van:      "M2 16V7a1 1 0 011-1h11v4h4l3 3v3h-2m-4 0H9m-4 0H2M9 17a2 2 0 11-4 0 2 2 0 014 0z" \
+              "M19 17a2 2 0 11-4 0 2 2 0 014 0z",
+    # Cuisine : ASSIETTE vue de dessus (Michael 2026-07-26) — deux cercles
+    # concentriques, plus lisible à 16 px que des ustensiles entrelacés.
+    kitchen:  "M21 12a9 9 0 11-18 0 9 9 0 0118 0zM17 12a5 5 0 11-10 0 5 5 0 0110 0z",
     # Activité (étoile / cible)
     activity: "M11.48 3.5a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l" \
               "-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 " \

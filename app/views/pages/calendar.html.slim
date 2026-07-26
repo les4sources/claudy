@@ -16,8 +16,12 @@
   / `stay_merge_done` (posé par la redirection post-fusion) déclenche le nettoyage
   / du sessionStorage et la sortie du mode côté contrôleur.
   div(data-controller="stay-details stay-merge" data-stay-merge-setup-url-value=merge_setup_stays_path data-stay-merge-preview-url-value=merge_preview_stays_path data-stay-merge-reset-value=params[:stay_merge_done].present?)
-    = render "pages/calendar/merge_toolbar"
     = render "pages/calendar/bookings"
+    /  La barre de fusion est rendue APRÈS la grille (Michael 2026-07-26) : c'est
+       une action de fin de consultation, elle n'a pas à occuper le haut de
+       l'agenda. Elle reste DANS la portée du contrôleur `stay-merge` — les
+       actions Stimulus ne se lient qu'à l'intérieur de l'élément-contrôleur.
+    = render "pages/calendar/merge_toolbar"
     = render "pages/calendar/stay_modal"
     = render "stays/merge_dialog"
     = render "stays/merge_bottom_bar"

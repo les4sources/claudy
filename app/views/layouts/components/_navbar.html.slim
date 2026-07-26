@@ -1,15 +1,33 @@
-nav.bg-white.shadow-sm.lg:px-6
+/ Header en VERT DE MARQUE (Michael 2026-07-26) : la bande `4s-main` (#024442,
+  la couleur du logo) pose le domaine et encadre l'espace de travail, resté
+  blanc. Sur ce fond, les états de nav ne peuvent plus être des teintes `teal-50`
+  (invisibles) : ils passent en BLANC TRANSLUCIDE, qui se lit sur n'importe quel
+  vert sans introduire de seconde couleur.
+- nav_idle = "text-white/70 hover:text-white hover:bg-white/10"
+- nav_active = "text-white bg-white/15 ring-1 ring-inset ring-white/20"
+/ `relative z-40` sur la barre : elle crée un plan de superposition qui passe
+  AU-DESSUS du contenu de page, dont l'en-tête collant du tableau des séjours
+  (`z-10`). Sans lui, à z-index égal c'est le dernier élément du DOM qui gagne —
+  le `thead` tranchait donc le menu « Accueil » en deux.
+nav.bg-4s-main.shadow-sm.lg:px-6.relative.z-40
   .max-w-screen-xl.flex.flex-wrap.items-center.justify-between.mx-auto.px-4.py-3
-    / Logo
+    / Logo — VARIANTE BLANCHE dédiée, pas un filtre CSS.
+      Le PNG d'origine mêle trois zones : la forme en vert de marque, des
+      contre-formes en blanc OPAQUE, et du transparent autour. Un
+      `brightness-0 invert` blanchissait donc tout le rectangle (forme +
+      contre-formes) et rendait un bloc plein. `…-blanc.png` est généré depuis la
+      source en prenant la luminance inversée comme alpha : la forme devient
+      blanche, les contre-formes deviennent transparentes et laissent voir le
+      vert du header. La source reste intacte pour les fonds clairs.
     a.flex.items-center.gap-2.group[href="/"]
-      = vite_image_tag "images/les-4-sources-logo-seul.png",
+      = vite_image_tag "images/les-4-sources-logo-seul-blanc.png",
                      class: "h-9 transition-transform duration-200 group-hover:scale-105",
                      alt: ""
-      span.text-3xl.text-4s-main.font-semibold.whitespace-nowrap.font-caveat.tracking-tight
+      span.text-3xl.text-white.font-semibold.whitespace-nowrap.font-caveat.tracking-tight
         | Claudy
 
     / Mobile toggle
-    button.inline-flex.items-center.p-2.w-10.h-10.justify-center.text-gray-500.rounded-lg.md:hidden.hover:bg-teal-50.focus:outline-none.focus:ring-2.focus:ring-teal-200.transition-colors[data-controller="collapse" data-action="click->collapse#toggle" data-collapse-toggle-value="navbar-dropdown" type="button" aria-controls="navbar-dropdown" aria-expanded="false"]
+    button.inline-flex.items-center.p-2.w-10.h-10.justify-center.rounded-lg.md:hidden.focus:outline-none.focus:ring-2.transition-colors[data-controller="collapse" data-action="click->collapse#toggle" data-collapse-toggle-value="navbar-dropdown" type="button" aria-controls="navbar-dropdown" aria-expanded="false" class="text-white/80 hover:bg-white/10 focus:ring-white/40"]
       span.sr-only
         | Afficher le menu principal
       svg.w-5.h-5[aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewbox="0 0 17 14"]
@@ -17,11 +35,14 @@ nav.bg-white.shadow-sm.lg:px-6
 
     / Navigation links
     #navbar-dropdown.hidden.w-full.md:block.md:w-auto
-      ul.flex.flex-col.items-center.font-medium.p-4.md:p-0.mt-4.border.border-gray-100.rounded-xl.bg-gray-50.md:flex-row.md:flex-wrap.md:gap-1.md:mt-0.md:border-0.md:bg-white
+      /  Sur mobile ce panneau se déplie DANS la barre verte : un fond gris clair
+         y ferait une tache. Blanc translucide, donc, puis plus aucun fond dès
+         `md` où les items reviennent en ligne dans la barre.
+      ul.flex.flex-col.items-center.font-medium.p-4.md:p-0.mt-4.rounded-xl.md:flex-row.md:flex-wrap.md:gap-1.md:mt-0.md:border-0(class="border border-white/15 bg-white/10 md:bg-transparent")
         / Agenda
         li
           = link_to root_path,
-                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 #{current_page?(root_path) ? 'text-4s-main bg-teal-50' : 'text-gray-600 hover:text-4s-main hover:bg-teal-50/60'}" do
+                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 #{current_page?(root_path) ? nav_active : nav_idle}" do
             svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
               rect[width="18" height="18" x="3" y="4" rx="2" ry="2"]
               line[x1="16" y1="2" x2="16" y2="6"]
@@ -29,65 +50,22 @@ nav.bg-white.shadow-sm.lg:px-6
               line[x1="3" y1="10" x2="21" y2="10"]
             span Agenda
 
-        / Accueil dropdown (Hébergements + Espaces + Reporting + Comptabilité)
-        li.relative
-          button.flex.items-center.gap-1.5.px-4.py-2.rounded-lg.text-sm.font-medium.transition-all.duration-150[id="accueilDropdownButton" data-controller="dropdown" data-action="click->dropdown#toggle click@window->dropdown#hideOnClickOutside" data-dropdown-toggle-value="accueilDropdown" type="button" class="#{ (controller_name == 'stays' || controller_name == 'bookings' || controller_name == 'space_bookings' || controller_name == 'reports' || controller_name.start_with?('coworking') || !@accounting_view.nil?) ? 'text-4s-main bg-teal-50' : 'text-gray-600 hover:text-4s-main hover:bg-teal-50/60'}"]
+        / Accueil — LIEN de section (Michael 2026-07-26), plus un dropdown : ses
+          entrées vivent maintenant dans la sous-navigation ci-dessous, comme
+          celles de « Paramètres ». Il pointe sur Séjours, la page de travail
+          quotidienne de la section.
+        li
+          = link_to stays_path,
+                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 #{!@home_view.nil? ? nav_active : nav_idle}" do
             svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
               path[d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"]
               polyline[points="9 22 9 12 15 12 15 22"]
             span Accueil
-            svg.w-3.h-3.ml-0.5.opacity-60[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"]
-              polyline[points="6 9 12 15 18 9"]
-          #accueilDropdown.absolute.left-0.mt-1.z-10.hidden.bg-white.divide-y.divide-gray-50.rounded-xl.shadow-lg.shadow-gray-200/80.border.border-gray-100.w-52
-            ul.py-1.5[aria-labelledby="accueilDropdownButton"]
-              / Épic #81 — le séjour est le point d'entrée unique. Les entrées
-              / « Hébergements » (bookings) et « Espaces » (space_bookings) sont
-              / retirées du menu ; leurs anciennes vues restent accessibles via
-              / les boutons de transition en tête de l'index Séjours.
-              li
-                = link_to stays_path,
-                          class: "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors #{controller_name == 'stays' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-600 hover:bg-teal-50/60 hover:text-4s-main'}" do
-                  svg.w-4.h-4.opacity-70[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-                    path[d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"]
-                    path[d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"]
-                    path[d="M12 4v6"]
-                    path[d="M2 18h20"]
-                  span Séjours
-              li
-                = link_to recent_activity_path,
-                          class: "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors #{action_name == 'recent_activity' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-600 hover:bg-teal-50/60 hover:text-4s-main'}" do
-                  svg.w-4.h-4.opacity-70[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-                    circle[cx="12" cy="12" r="10"]
-                    polyline[points="12 6 12 12 16 14"]
-                  span Activité récente
-              li
-                / Coworking : opérationnel quotidien, pas un paramètre (Michael 2026-07-21).
-                = link_to coworking_packs_path,
-                          class: "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors #{controller_name.start_with?('coworking') ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-600 hover:bg-teal-50/60 hover:text-4s-main'}" do
-                  svg.w-4.h-4.opacity-70[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-                    rect[width="18" height="12" x="3" y="4" rx="2"]
-                    line[x1="2" y1="20" x2="22" y2="20"]
-                  span Coworking
-              li
-                = link_to reports_path,
-                          class: "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors #{controller_name == 'reports' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-600 hover:bg-teal-50/60 hover:text-4s-main'}" do
-                  svg.w-4.h-4.opacity-70[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-                    line[x1="18" y1="20" x2="18" y2="10"]
-                    line[x1="12" y1="20" x2="12" y2="4"]
-                    line[x1="6" y1="20" x2="6" y2="14"]
-                  span Reporting
-              li
-                = link_to accounting_path,
-                          class: "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors #{!@accounting_view.nil? ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-600 hover:bg-teal-50/60 hover:text-4s-main'}" do
-                  svg.w-4.h-4.opacity-70[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-                    rect[width="20" height="14" x="2" y="5" rx="2"]
-                    line[x1="2" y1="10" x2="22" y2="10"]
-                  span Comptabilité
 
         / Organisation
         li
           = link_to organisation_path,
-                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 #{!@organisation_view.nil? ? 'text-4s-main bg-teal-50' : 'text-gray-600 hover:text-4s-main hover:bg-teal-50/60'}" do
+                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 #{!@organisation_view.nil? ? nav_active : nav_idle}" do
             svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
               path[d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"]
               circle[cx="9" cy="7" r="4"]
@@ -95,22 +73,59 @@ nav.bg-white.shadow-sm.lg:px-6
               path[d="M16 3.13a4 4 0 0 1 0 7.75"]
             span Organisation
 
+        / Activité récente — ICÔNE SEULE (Michael 2026-07-26). Sortie du menu
+          « Accueil », elle se pose entre les libellés et la roue crantée : c'est
+          une consultation ponctuelle, pas une destination de travail.
+        li
+          = link_to recent_activity_path,
+                    class: "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 #{action_name == 'recent_activity' ? nav_active : 'text-white/50 hover:text-white hover:bg-white/10'}",
+                    title: "Activité récente" do
+            svg.w-5.h-5[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+              circle[cx="12" cy="12" r="10"]
+              polyline[points="12 6 12 12 16 14"]
+            span.sr-only Activité récente
+
         / Paramètres (cog icon only) — atterrit sur Expériences (2026-07-20)
         li
           = link_to experiences_path,
-                    class: "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 #{!@settings_view.nil? ? 'text-4s-main bg-teal-50' : 'text-gray-400 hover:text-4s-main hover:bg-teal-50/60'}",
+                    class: "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 #{!@settings_view.nil? ? nav_active : 'text-white/50 hover:text-white hover:bg-white/10'}",
                     title: "Paramètres" do
             svg.w-5.h-5[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
               path[d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"]
               circle[cx="12" cy="12" r="3"]
 
-/ Gradient accent bar
-.h-0.5.bg-gradient-to-r.from-teal-400.via-emerald-400.to-4s-main
+/ Liseré d'accent. Il allait auparavant vers `4s-main` — désormais la couleur
+  DU header : la moitié droite s'y serait fondue. On l'inverse donc, du vert de
+  marque vers les verts clairs, pour qu'il se détache sous la bande sombre.
+div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
 
 / Sub-navigation menus
+/ Sous-navigation « Accueil » (Michael 2026-07-26) — remplace l'ancien dropdown.
+- if !@home_view.nil?
+  nav.bg-white.border-b.border-gray-100.lg:px-6
+    .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
+      .flex.items-center
+        ul.flex.flex-row.font-medium.mt-0.gap-1.text-sm
+          li
+            = link_to "Séjours",
+                      stays_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'stays' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
+            = link_to "Coworking",
+                      coworking_packs_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name.start_with?('coworking') ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
+            = link_to "Reporting",
+                      reports_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'reports' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
+            = link_to "Comptabilité",
+                      accounting_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{!@accounting_view.nil? ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+
 - if !@projects_view.nil?
   nav.bg-white.border-b.border-gray-100.lg:px-6
-    .max-w-screen-xl.px-4.py-2.5.mx-auto
+    .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
       .flex.items-center
         ul.flex.flex-row.font-medium.mt-0.gap-1.text-sm
           li
@@ -132,7 +147,7 @@ nav.bg-white.shadow-sm.lg:px-6
 
 - if !@accounting_view.nil?
   nav.bg-white.border-b.border-gray-100.lg:px-6
-    .max-w-screen-xl.px-4.py-2.5.mx-auto
+    .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
       .flex.items-center
         ul.flex.flex-row.font-medium.mt-0.gap-1.text-sm
           li
@@ -154,7 +169,7 @@ nav.bg-white.shadow-sm.lg:px-6
 
 - if !@reports_view.nil?
   nav.bg-white.border-b.border-gray-100.lg:px-6
-    .max-w-screen-xl.px-4.py-2.5.mx-auto
+    .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
       .flex.items-center
         ul.flex.flex-row.font-medium.mt-0.gap-1.text-sm
           li
@@ -189,7 +204,7 @@ nav.bg-white.shadow-sm.lg:px-6
 
 - if !@settings_view.nil?
   nav.bg-white.border-b.border-gray-100.lg:px-6
-    .max-w-screen-xl.px-4.py-2.5.mx-auto
+    .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
       .flex.items-center
         ul.flex.flex-row.font-medium.mt-0.gap-1.text-sm
           li
@@ -231,7 +246,7 @@ nav.bg-white.shadow-sm.lg:px-6
 
 - if !@organisation_view.nil?
   nav.bg-white.border-b.border-gray-100.lg:px-6
-    .max-w-screen-xl.px-4.py-2.5.mx-auto
+    .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
       .flex.items-center
         ul.flex.flex-row.font-medium.mt-0.gap-1.text-sm
           li

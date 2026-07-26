@@ -25,5 +25,6 @@ class AccountingController < BaseController
       active_primary: "accounting"
     )
     @accounting_view = true
+    @home_view = true
   end
 end

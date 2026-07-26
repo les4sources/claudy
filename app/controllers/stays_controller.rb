@@ -1,4 +1,8 @@
 class StaysController < BaseController
+  # Section « Accueil » (Michael 2026-07-26) : ses pages affichent la
+  # sous-navigation Séjours · Coworking · Reporting · Comptabilité, qui remplace
+  # l'ancien dropdown de la barre principale.
+  before_action :set_home_view
   before_action :set_accounting_view, only: :show
   before_action :set_stay, only: %i[edit update destroy update_status update_category approve_change_request refuse_change_request]
 
@@ -531,6 +535,10 @@ class StaysController < BaseController
     total = helpers.humanized_money_with_symbol(target.total_amount)
     balance = helpers.humanized_money_with_symbol(Money.new(target.amount_due_cents))
     "Séjour#{'s' if sources.size > 1} #{ids} fusionné#{'s' if sources.size > 1} dans ##{target.id} — total recalculé : #{total}, solde : #{balance}."
+  end
+
+  def set_home_view
+    @home_view = true
   end
 
   def set_stay

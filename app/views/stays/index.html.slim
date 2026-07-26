@@ -1,4 +1,7 @@
-.px-4.sm:px-6.lg:px-8.py-6
+/ `stay-details` enveloppe toute la page : les lignes du tableau vivent DANS le
+  turbo-frame de résultats, mais le <dialog> est placé EN DEHORS — une recherche
+  remplace le contenu du frame et emporterait la modale avec lui.
+.px-4.sm:px-6.lg:px-8.py-6(data-controller="stay-details")
   / En-tête + boutons de transition vers les anciennes vues (epic #81).
   .sm:flex.sm:items-center.sm:justify-between.mb-4
     .sm:flex-auto
@@ -88,23 +91,20 @@
                     = I18n.l(stay.arrival_date, format: "%B %Y").capitalize
                   - else
                     | Sans date d'arrivée
-            tr class="#{stay_row_classes(stay)} transition-colors"
+            tr class="#{stay_row_classes(stay)} transition-colors cursor-pointer" data-stay-url=stay_path(stay) data-action="click->stay-details#openFromRow"
               td.px-3.py-2.text-sm
+                /  L'icône de plateforme est SUR LA MÊME LIGNE que le nom, à sa
+                   droite (Michael 2026-07-26) : elle qualifie le client, elle ne
+                   mérite pas une ligne à elle. `platform_badge` rend nil hors OTA
+                   — rien ne s'affiche pour une réservation directe.
+                .flex.items-center.gap-1.5
+                  - if stay.customer
+                    = link_to stay.customer.name, customer_path(stay.customer), class: "text-indigo-600 hover:text-indigo-800 font-medium hover:underline"
+                  - else
+                    span.text-gray-400 —
+                  = stay.platform_badge
                 - if stay.customer
-                  / stays#show rend un fragment sans layout (réservé à la modale du
-                    calendrier) — la navigation directe pointe donc vers l'édition.
-                  = link_to stay.customer.name, customer_path(stay.customer), class: "text-indigo-600 hover:text-indigo-800 font-medium hover:underline"
                   .text-xs.text-gray-500 = stay.customer.email
-                - else
-                  span.text-gray-400 —
-                /  Le canal d'attribution (« Saisie manuelle », « Réservation en
-                   ligne ») n'est PLUS affiché (Michael 2026-07-26) : présent sur
-                   chaque ligne, il ne distinguait rien. Le badge PLATEFORME reste
-                   — savoir qu'une résa vient d'Airbnb ou de Booking.com change la
-                   façon de la traiter. `platform_badge` rend nil hors OTA, d'où
-                   le garde : pas de bloc vide sur les résas directes.
-                - if stay.platform_badge.present?
-                  .mt-1 = stay.platform_badge
               td.px-3.py-2.text-sm
                 .text-gray-900.whitespace-nowrap = stay.date_range
                 .mt-1 = stay.status_badge
@@ -151,3 +151,13 @@
           - last = @stays.offset + page_count
           = "#{first}–#{last} sur #{@stays.total_entries}"
         = will_paginate @stays
+
+  / Modale « fiche séjour » ouverte au clic sur une ligne. Même mécanique que le
+    calendrier et la fiche client : le fragment sans layout est chargé en fetch
+    puis injecté ici.
+  dialog.rounded-lg.p-0.shadow-xl.w-full.max-w-3xl(class="backdrop:bg-black/40" data-stay-details-target="dialog")
+    .flex.justify-end.p-2
+      button.text-gray-400.hover:text-gray-600(type="button" data-action="stay-details#close" aria-label="Fermer")
+        svg.w-5.h-5 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
+          path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"
+    div data-stay-details-target="content"

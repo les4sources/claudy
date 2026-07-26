@@ -272,12 +272,14 @@ RSpec.describe "Index Séjours — refonte du tableau", type: :request do
   describe "rangée d'icônes de composition" do
     let!(:stay) { create_stay(email: "compo@example.com") }
 
-    it "rend les 5 emplacements, éteints par défaut" do
+    it "rend les 6 emplacements, éteints par défaut" do
       get stays_path
       expect(response.body).to include("Hébergement — non compris")
       expect(response.body).to include("Salle — non compris")
       expect(response.body).to include("Cuisine — non compris")
       expect(response.body).to include("Activité — non compris")
+      # Le camping-car a son emplacement propre depuis 2026-07-26.
+      expect(response.body).to include("Camping-car — non compris")
       expect(response.body).to include("text-gray-200")
     end
 
