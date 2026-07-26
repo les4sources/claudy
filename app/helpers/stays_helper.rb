@@ -73,4 +73,18 @@ module StaysHelper
 
     jalons.sort_by { |j| j[:date] }
   end
+
+  # Marqueur d'une section dépliable du formulaire séjour (Michael 2026-07-26).
+  # Il dit d'un coup d'œil, section repliée, s'il y a quelque chose dedans — sans
+  # quoi il faudrait toutes les ouvrir pour savoir ce que contient le séjour.
+  # `count` est optionnel : certains blocs (hébergement) n'ont pas de cardinal
+  # parlant.
+  def stay_form_section_marker(defined, count = nil)
+    if defined
+      libelle = count.to_i.positive? ? "#{count} défini#{'s' if count.to_i > 1}" : "défini"
+      tag.span(libelle, class: "rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700")
+    else
+      tag.span("+ ajouter", class: "text-xs font-normal text-gray-400")
+    end
+  end
 end

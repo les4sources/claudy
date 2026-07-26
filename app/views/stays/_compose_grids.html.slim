@@ -3,14 +3,27 @@
   stay-grids → GET stays#compose_grids). La facturation espaces vit HORS du
   frame pour ne jamais perdre ses valeurs au rechargement.
 = turbo_frame_tag "stay_compose_grids" do
+  /  Sections DÉPLIABLES, comme le reste du formulaire (Michael 2026-07-26) :
+     repliées par défaut, ouvertes dès qu'elles contiennent quelque chose. Les
+     grilles datées sont les plus hautes du formulaire — ouvertes en permanence,
+     elles noyaient tout le reste.
+  - grid_box = "bg-white shadow ring-1 ring-black ring-opacity-5 rounded-lg"
+  - grid_summary = "flex cursor-pointer select-none items-center justify-between gap-3 p-5 text-base font-semibold text-gray-900 list-none"
+  - nuits_gite = Array(@draft&.lodging_night_ids).compact_blank
+  - creneaux_espaces = Array(@draft&.space_slots)
+  - plein_air = Array(@draft&.campings) + Array(@draft&.vans)
+  - hamacs_pris = Array(@draft&.hamacs)
   / --- Hébergement (grille nuit par nuit, mode gîte entier) ----------------
   / Parité funnel : le gîte occupé nuit par nuit (lodging_night_ids). Masquée en
   / mode « chambres seules » par stay-form (data-stay-form-target="lodgingGrid").
   / Rechargée avec les autres grilles quand les dates changent.
-  section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4(data-stay-form-target="lodgingGrid")
-    h2.text-base.font-semibold.text-gray-900 🏡 Hébergement — nuit par nuit
-    p.text-sm.text-gray-500 Choisissez le gîte pour chaque nuit. Le mode « chambres seules » se règle dans la section Hébergement ci-dessus.
-    = render "stays/lodging_calendar", param_root: "stay", draft: @draft, days: @stay_nights, lodgings: @lodgings, availability: @lodging_availability
+  details(class=grid_box open=nuits_gite.any? data-stay-form-target="lodgingGrid")
+    summary class=grid_summary
+      span 🏡 Hébergement — nuit par nuit
+      = stay_form_section_marker(nuits_gite.any?, nuits_gite.size)
+    .px-5.pb-5.space-y-4
+      p.text-sm.text-gray-500 Choisissez le gîte pour chaque nuit. Le mode « chambres seules » se règle dans la section Hébergement ci-dessus.
+      = render "stays/lodging_calendar", param_root: "stay", draft: @draft, days: @stay_nights, lodgings: @lodgings, availability: @lodging_availability
 
   / --- Espaces (salles / cuisine pro) -------------------------------------
   - space_kind_options = [["Grande salle", "grande_salle"], ["Petite salle", "petite_salle"], ["Cuisine pro", "cuisine_pro"]]
@@ -22,24 +35,27 @@
   / lignes `halls`. Sans dates (journée sèche / espaces seuls non datés), on
   / retombe sur les lignes `halls` — seule saisie possible hors fenêtre.
   - use_space_grid = @stay_nights.present?
-  section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-    h2.text-base.font-semibold.text-gray-900 🏛️ Espaces
-    - if use_space_grid
-      p.text-sm.text-gray-500 Cliquez une cellule pour réserver un espace — journée, soirée ou les deux — nuit par nuit.
-      = render "public/reservations/spaces_calendar", param_root: "stay", draft: @draft, days: @stay_nights
-    - else
-      p.text-sm.text-gray-500 Ajoutez une salle ou la cuisine pro (date + période). Un séjour peut être composé d'espaces seuls, sans hébergement.
-      ul.divide-y.divide-gray-100
-        - space_rows.each_with_index do |row, index|
-          li.py-2.grid.grid-cols-3.gap-2
-            = select_tag "stay[halls][#{index}][kind]", options_for_select(space_kind_options, row[:kind]), include_blank: "— Espace —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-            = date_field_tag "stay[halls][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-            = select_tag "stay[halls][#{index}][period]", options_for_select(period_options, row[:period]), include_blank: "— Période —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-    / Précision libre du besoin d'espace (parité funnel) : reconstruite depuis la
-    / note interne préfixée du SpaceBooking en édition ; persistée à la création.
-    .space-y-1
-      label.block.text-sm.font-medium.text-gray-700 for="stay_spaces_note" Précision du besoin (espaces)
-      = text_area_tag "stay[spaces_note]", @draft&.spaces_note, id: "stay_spaces_note", rows: 2, placeholder: "Ex. configuration de la salle, matériel, horaires souhaités…", class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+  details(class=grid_box open=(creneaux_espaces.any? || existing_halls.any?))
+    summary class=grid_summary
+      span 🏛️ Espaces
+      = stay_form_section_marker((creneaux_espaces.any? || existing_halls.any?), creneaux_espaces.size)
+    .px-5.pb-5.space-y-4
+      - if use_space_grid
+        p.text-sm.text-gray-500 Cliquez une cellule pour réserver un espace — journée, soirée ou les deux — nuit par nuit.
+        = render "public/reservations/spaces_calendar", param_root: "stay", draft: @draft, days: @stay_nights
+      - else
+        p.text-sm.text-gray-500 Ajoutez une salle ou la cuisine pro (date + période). Un séjour peut être composé d'espaces seuls, sans hébergement.
+        ul.divide-y.divide-gray-100
+          - space_rows.each_with_index do |row, index|
+            li.py-2.grid.grid-cols-3.gap-2
+              = select_tag "stay[halls][#{index}][kind]", options_for_select(space_kind_options, row[:kind]), include_blank: "— Espace —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+              = date_field_tag "stay[halls][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+              = select_tag "stay[halls][#{index}][period]", options_for_select(period_options, row[:period]), include_blank: "— Période —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+      / Précision libre du besoin d'espace (parité funnel) : reconstruite depuis la
+      / note interne préfixée du SpaceBooking en édition ; persistée à la création.
+      .space-y-1
+        label.block.text-sm.font-medium.text-gray-700 for="stay_spaces_note" Précision du besoin (espaces)
+        = text_area_tag "stay[spaces_note]", @draft&.spaces_note, id: "stay_spaces_note", rows: 2, placeholder: "Ex. configuration de la salle, matériel, horaires souhaités…", class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 
 
   / --- Camping / Van (grille par nuit) ------------------------------------
@@ -49,24 +65,33 @@
   / valide, mais on ne casse pas le form), on retombe sur les compteurs
   / pleine-fenêtre historiques (`stay[camping][people]` / `stay[van][vehicles]`).
   - if use_space_grid
-    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 ⛺ Camping / Van
-      = render "public/reservations/camping_calendar", param_root: "stay", draft: @draft, days: @stay_nights
+    details(class=grid_box open=plein_air.any?)
+      summary class=grid_summary
+        span ⛺ Camping / Van
+        = stay_form_section_marker(plein_air.any?, plein_air.size)
+      .px-5.pb-5.space-y-4
+        = render "public/reservations/camping_calendar", param_root: "stay", draft: @draft, days: @stay_nights
   - else
     - camping_people = Array(@draft&.campings).sum { |c| (c.respond_to?(:symbolize_keys) ? c.symbolize_keys : c)[:people].to_i }
     - van_vehicles = Array(@draft&.vans).size
-    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 ⛺ Camping (tente)
-      p.text-sm.text-gray-500 Choisissez les dates du séjour pour composer le camping nuit par nuit. À défaut, nombre de personnes sur toute la durée.
-      .space-y-1
-        label.block.text-sm.font-medium.text-gray-700 Personnes
-        = number_field_tag "stay[camping][people]", (camping_people.positive? ? camping_people : nil), min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 🚐 Van / camping-car
-      p.text-sm.text-gray-500 Nombre de véhicules sur la durée du séjour. Capacité globale (forçable).
-      .space-y-1
-        label.block.text-sm.font-medium.text-gray-700 Véhicules
-        = number_field_tag "stay[van][vehicles]", (van_vehicles.positive? ? van_vehicles : nil), min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+    details(class=grid_box open=camping_people.positive?)
+      summary class=grid_summary
+        span ⛺ Camping (tente)
+        = stay_form_section_marker(camping_people.positive?, camping_people)
+      .px-5.pb-5.space-y-4
+        p.text-sm.text-gray-500 Choisissez les dates du séjour pour composer le camping nuit par nuit. À défaut, nombre de personnes sur toute la durée.
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 Personnes
+          = number_field_tag "stay[camping][people]", (camping_people.positive? ? camping_people : nil), min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+    details(class=grid_box open=van_vehicles.positive?)
+      summary class=grid_summary
+        span 🚐 Van / camping-car
+        = stay_form_section_marker(van_vehicles.positive?, van_vehicles)
+      .px-5.pb-5.space-y-4
+        p.text-sm.text-gray-500 Nombre de véhicules sur la durée du séjour. Capacité globale (forçable).
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 Véhicules
+          = number_field_tag "stay[van][vehicles]", (van_vehicles.positive? ? van_vehicles : nil), min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
   / --- Location de hamacs (parité funnel). PERSISTÉS depuis l issue #138 :
   / une HamacBooking par plage contiguë. Grille par nuit simple/double, mêmes
@@ -76,34 +101,37 @@
   - pnr = @draft&.per_night_resources || {}
   - hamac_s_rate = Pricing::Catalog.hamac_rate("simple")
   - hamac_d_rate = Pricing::Catalog.hamac_rate("double")
-  section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-    h2.text-base.font-semibold.text-gray-900 🌿 Location de hamacs
-    - if @stay_nights.blank?
-      p.text-sm.text-gray-500 Choisissez d'abord les dates du séjour pour composer les hamacs nuit par nuit.
-    - else
-      p.text-sm.text-gray-500 Hamac fourni et posé sur place — location nuit par nuit. Le stock disponible est vérifié nuit par nuit.
-      .overflow-x-auto
-        table.border-collapse style="min-width: #{140 + @stay_nights.size * 88}px"
-          thead
-            tr
-              th.text-left.py-2.pr-4.text-xs.font-normal.text-gray-400.whitespace-nowrap style="width:140px"
-              - @stay_nights.each_with_index do |night, i|
-                th.text-center.py-2.px-1.text-xs.font-medium.text-gray-500 = "Nuit #{i + 1}"
-          tbody
-            tr.border-t.border-gray-50
-              td.py-2.pr-4.text-sm.text-gray-800.font-medium.whitespace-nowrap
-                | Hamac simple
-                - if hamac_s_rate
-                  span.text-xs.text-gray-400.ml-1 = "(#{number_to_currency(hamac_s_rate / 100.0, unit: '€', format: '%n %u', precision: 2)}/nuit)"
-              - @stay_nights.each_with_index do |night, i|
-                td.py-2.px-1.text-center
-                  = render "public/reservations/stepper_cell", name: "stay[per_night_resources][hamac_simple][]", val: (pnr["hamac_simple"] || [])[i].to_i, max: 10
-            tr.border-t.border-gray-50
-              td.py-2.pr-4.text-sm.text-gray-800.font-medium.whitespace-nowrap
-                | Hamac double
-                - if hamac_d_rate
-                  span.text-xs.text-gray-400.ml-1 = "(#{number_to_currency(hamac_d_rate / 100.0, unit: '€', format: '%n %u', precision: 2)}/nuit)"
-              - @stay_nights.each_with_index do |night, i|
-                td.py-2.px-1.text-center
-                  = render "public/reservations/stepper_cell", name: "stay[per_night_resources][hamac_double][]", val: (pnr["hamac_double"] || [])[i].to_i, max: 10
+  details(class=grid_box open=hamacs_pris.any?)
+    summary class=grid_summary
+      span 🌿 Location de hamacs
+      = stay_form_section_marker(hamacs_pris.any?, hamacs_pris.size)
+    .px-5.pb-5.space-y-4
+      - if @stay_nights.blank?
+        p.text-sm.text-gray-500 Choisissez d'abord les dates du séjour pour composer les hamacs nuit par nuit.
+      - else
+        p.text-sm.text-gray-500 Hamac fourni et posé sur place — location nuit par nuit. Le stock disponible est vérifié nuit par nuit.
+        .overflow-x-auto
+          table.border-collapse style="min-width: #{140 + @stay_nights.size * 88}px"
+            thead
+              tr
+                th.text-left.py-2.pr-4.text-xs.font-normal.text-gray-400.whitespace-nowrap style="width:140px"
+                - @stay_nights.each_with_index do |night, i|
+                  th.text-center.py-2.px-1.text-xs.font-medium.text-gray-500 = "Nuit #{i + 1}"
+            tbody
+              tr.border-t.border-gray-50
+                td.py-2.pr-4.text-sm.text-gray-800.font-medium.whitespace-nowrap
+                  | Hamac simple
+                  - if hamac_s_rate
+                    span.text-xs.text-gray-400.ml-1 = "(#{number_to_currency(hamac_s_rate / 100.0, unit: '€', format: '%n %u', precision: 2)}/nuit)"
+                - @stay_nights.each_with_index do |night, i|
+                  td.py-2.px-1.text-center
+                    = render "public/reservations/stepper_cell", name: "stay[per_night_resources][hamac_simple][]", val: (pnr["hamac_simple"] || [])[i].to_i, max: 10
+              tr.border-t.border-gray-50
+                td.py-2.pr-4.text-sm.text-gray-800.font-medium.whitespace-nowrap
+                  | Hamac double
+                  - if hamac_d_rate
+                    span.text-xs.text-gray-400.ml-1 = "(#{number_to_currency(hamac_d_rate / 100.0, unit: '€', format: '%n %u', precision: 2)}/nuit)"
+                - @stay_nights.each_with_index do |night, i|
+                  td.py-2.px-1.text-center
+                    = render "public/reservations/stepper_cell", name: "stay[per_night_resources][hamac_double][]", val: (pnr["hamac_double"] || [])[i].to_i, max: 10
 

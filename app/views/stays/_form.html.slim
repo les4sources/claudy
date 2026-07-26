@@ -23,6 +23,16 @@
 / posée par le form Booking) doit apparaître sélectionnée, sinon le navigateur
 / retombe sur "web" et l'édition réécrit la plateforme en silence.
 - platform_options += [[current_platform, current_platform]] unless platform_options.any? { |_l, v| v == current_platform }
+/  SECTIONS DE COMPOSITION DÉPLIABLES (Michael 2026-07-26). Le formulaire
+   présentait huit sections ouvertes en permanence : on faisait défiler une page
+   entière pour trouver la seule qu'on venait remplir. Elles sont désormais
+   REPLIÉES par défaut, et celles qui contiennent déjà quelque chose restent
+   OUVERTES — à l'édition, on voit immédiatement ce qui compose le séjour.
+   Techniquement : un `details` natif, donc zéro JS, navigable au clavier. Les
+   champs d'une section repliée restent dans le DOM et sont donc bien soumis :
+   replier ne perd aucune donnée.
+- section_box = "bg-white shadow ring-1 ring-black ring-opacity-5 rounded-lg"
+- section_summary = "flex cursor-pointer select-none items-center justify-between gap-3 p-5 text-base font-semibold text-gray-900 list-none"
 - override_prefill = params.dig(:stay, :price_override).presence || (@stay&.price_override_cents.present? ? format("%g", @stay.price_override_cents / 100.0) : nil)
 
 / `stay-availability-exclude-stay-id-value` : en édition, on transmet l'id du
@@ -169,44 +179,48 @@
     / par gîte, affichées/masquées par Stimulus — pas d'endpoint : plus robuste).
     - current_booking_type = (@draft&.rooms_mode? ? "rooms" : "lodging")
     - selected_room_ids = Array(@draft&.room_ids).map(&:to_i)
-    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Hébergement
-      .flex.gap-4.text-sm
-        label.flex.items-center.gap-2
-          input type="radio" name="stay[booking_type]" value="lodging" checked=(current_booking_type == "lodging") data-action="change->stay-form#toggleBookingMode change->stay-availability#check"
-          | Gîte entier
-        label.flex.items-center.gap-2
-          input type="radio" name="stay[booking_type]" value="rooms" checked=(current_booking_type == "rooms") data-action="change->stay-form#toggleBookingMode change->stay-availability#check"
-          | Chambres seules
-      / Mode GÎTE ENTIER : le gîte se choisit nuit par nuit dans la grille
-      / « Hébergement — nuit par nuit » (frame des grilles, plus bas). Le <select>
-      / ci-dessous ne sert qu'au mode CHAMBRES SEULES (choix du gîte dont on coche
-      / les chambres) ; masqué + désactivé en gîte entier pour ne pas imposer un
-      / lodging_id concurrent de la grille.
-      p.text-sm.text-gray-500(data-stay-form-target="lodgingGridHint")
-        | Choisissez le gîte pour chaque nuit dans la grille « Hébergement — nuit par nuit » ci-dessous.
-      .space-y-1.hidden(data-stay-form-target="lodgingSelectPanel")
-        label.block.text-sm.font-medium.text-gray-700 Gîte (chambres seules)
-        = select_tag "stay[lodging_id]", options_for_select(@lodgings.map { |l| [l.form_label, l.id] }, @draft&.lodging_id), include_blank: "— Choisir un hébergement —", data: { "stay-form-target": "lodgingSelect", action: "change->stay-availability#check change->stay-form#syncRoomVisibility" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-      / Chambres du gîte (mode chambres seules). Un groupe par gîte, masqué par
-      / défaut ; Stimulus n'affiche que le groupe du gîte sélectionné, en mode rooms.
-      .space-y-2.hidden(data-stay-form-target="roomsPanel")
-        p.text-sm.text-gray-500 Cochez les chambres à réserver. Pas de devis automatique pour des chambres seules — utilisez le Prix total imposé plus bas.
-        - @lodgings.each do |lodging|
-          .space-y-1.hidden(data-stay-form-target="roomsGroup" data-lodging-id=lodging.id)
-            - rooms = lodging.rooms.order(:level)
-            - if rooms.any?
-              ul.space-y-1
-                - rooms.each do |room|
-                  li
-                    label.flex.items-center.gap-2.text-sm.text-gray-700
-                      input type="checkbox" name="stay[room_ids][]" value=room.id checked=(selected_room_ids.include?(room.id)) data-action="change->stay-availability#check" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      = room.name_with_level.presence || room.name
-            - else
-              p.text-sm.text-gray-400 Aucune chambre déclarée pour cet hébergement.
-      / Indicateur de disponibilité en temps réel (issue #77). Informe sans bloquer :
-      / la checkbox « Forcer la disponibilité » plus bas reste la seule décision.
-      .hidden.text-sm.font-medium.rounded-md.px-3.py-2(data-stay-availability-target="indicator")
+    - has_lodging = @draft&.lodging_id.present? || selected_room_ids.any? || Array(@draft&.lodging_night_ids).compact_blank.any?
+    details class=section_box open=has_lodging
+      summary class=section_summary
+        span Hébergement
+        = stay_form_section_marker(has_lodging)
+      .px-5.pb-5.space-y-4
+        .flex.gap-4.text-sm
+          label.flex.items-center.gap-2
+            input type="radio" name="stay[booking_type]" value="lodging" checked=(current_booking_type == "lodging") data-action="change->stay-form#toggleBookingMode change->stay-availability#check"
+            | Gîte entier
+          label.flex.items-center.gap-2
+            input type="radio" name="stay[booking_type]" value="rooms" checked=(current_booking_type == "rooms") data-action="change->stay-form#toggleBookingMode change->stay-availability#check"
+            | Chambres seules
+        / Mode GÎTE ENTIER : le gîte se choisit nuit par nuit dans la grille
+        / « Hébergement — nuit par nuit » (frame des grilles, plus bas). Le <select>
+        / ci-dessous ne sert qu'au mode CHAMBRES SEULES (choix du gîte dont on coche
+        / les chambres) ; masqué + désactivé en gîte entier pour ne pas imposer un
+        / lodging_id concurrent de la grille.
+        p.text-sm.text-gray-500(data-stay-form-target="lodgingGridHint")
+          | Choisissez le gîte pour chaque nuit dans la grille « Hébergement — nuit par nuit » ci-dessous.
+        .space-y-1.hidden(data-stay-form-target="lodgingSelectPanel")
+          label.block.text-sm.font-medium.text-gray-700 Gîte (chambres seules)
+          = select_tag "stay[lodging_id]", options_for_select(@lodgings.map { |l| [l.form_label, l.id] }, @draft&.lodging_id), include_blank: "— Choisir un hébergement —", data: { "stay-form-target": "lodgingSelect", action: "change->stay-availability#check change->stay-form#syncRoomVisibility" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        / Chambres du gîte (mode chambres seules). Un groupe par gîte, masqué par
+        / défaut ; Stimulus n'affiche que le groupe du gîte sélectionné, en mode rooms.
+        .space-y-2.hidden(data-stay-form-target="roomsPanel")
+          p.text-sm.text-gray-500 Cochez les chambres à réserver. Pas de devis automatique pour des chambres seules — utilisez le Prix total imposé plus bas.
+          - @lodgings.each do |lodging|
+            .space-y-1.hidden(data-stay-form-target="roomsGroup" data-lodging-id=lodging.id)
+              - rooms = lodging.rooms.order(:level)
+              - if rooms.any?
+                ul.space-y-1
+                  - rooms.each do |room|
+                    li
+                      label.flex.items-center.gap-2.text-sm.text-gray-700
+                        input type="checkbox" name="stay[room_ids][]" value=room.id checked=(selected_room_ids.include?(room.id)) data-action="change->stay-availability#check" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        = room.name_with_level.presence || room.name
+              - else
+                p.text-sm.text-gray-400 Aucune chambre déclarée pour cet hébergement.
+        / Indicateur de disponibilité en temps réel (issue #77). Informe sans bloquer :
+        / la checkbox « Forcer la disponibilité » plus bas reste la seule décision.
+        .hidden.text-sm.font-medium.rounded-md.px-3.py-2(data-stay-availability-target="indicator")
 
     = render "stays/compose_grids"
 
@@ -214,15 +228,18 @@
     - meal_kind_options = [["Repas végé (midi)", "repas_vege_midi"], ["Buffet pain-fromages", "buffet"]]
     - existing_meals = Array(@draft&.meals).map { |m| m.respond_to?(:symbolize_keys) ? m.symbolize_keys : m }
     - meal_rows = existing_meals + Array.new([3 - existing_meals.size, 1].max) { {} }
-    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 🍽️ Repas
-      p.text-sm.text-gray-500 Ajoutez un repas (type + date + nombre de convives). Les repas n'occupent pas le calendrier.
-      ul.divide-y.divide-gray-100
-        - meal_rows.each_with_index do |row, index|
-          li.py-2.grid.grid-cols-3.gap-2
-            = select_tag "stay[meals][#{index}][kind]", options_for_select(meal_kind_options, row[:kind]), include_blank: "— Repas —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-            = date_field_tag "stay[meals][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-            = number_field_tag "stay[meals][#{index}][people]", row[:people], min: 0, placeholder: "Convives", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+    details class=section_box open=existing_meals.any?
+      summary class=section_summary
+        span 🍽️ Repas
+        = stay_form_section_marker(existing_meals.any?, existing_meals.size)
+      .px-5.pb-5.space-y-4
+        p.text-sm.text-gray-500 Ajoutez un repas (type + date + nombre de convives). Les repas n'occupent pas le calendrier.
+        ul.divide-y.divide-gray-100
+          - meal_rows.each_with_index do |row, index|
+            li.py-2.grid.grid-cols-3.gap-2
+              = select_tag "stay[meals][#{index}][kind]", options_for_select(meal_kind_options, row[:kind]), include_blank: "— Repas —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+              = date_field_tag "stay[meals][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+              = number_field_tag "stay[meals][#{index}][people]", row[:people], min: 0, placeholder: "Convives", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
 
     / --- Terrasse (ADMIN uniquement) ---------------------------------------
     / Groupes occupant UNIQUEMENT la terrasse (ex. randonneurs / BBQ) : forfait
@@ -230,28 +247,35 @@
     / repas datés. Jamais proposé sur le funnel public.
     - existing_terrasses = Array(@draft&.terrasses).map { |t| t.respond_to?(:symbolize_keys) ? t.symbolize_keys : t }
     - terrace_rows = existing_terrasses + Array.new([3 - existing_terrasses.size, 1].max) { {} }
-    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 🪑 Terrasse
-      p.text-sm.text-gray-500 Groupe occupant uniquement la terrasse (ex. BBQ). Forfait 2,50 €/pers/jour — une ligne par jour (date + nombre de personnes).
-      ul.divide-y.divide-gray-100
-        - terrace_rows.each_with_index do |row, index|
-          li.py-2.grid.grid-cols-2.gap-2
-            = date_field_tag "stay[terrasses][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-            = number_field_tag "stay[terrasses][#{index}][people]", row[:people], min: 0, placeholder: "Personnes", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+    details class=section_box open=existing_terrasses.any?
+      summary class=section_summary
+        span 🪑 Terrasse
+        = stay_form_section_marker(existing_terrasses.any?, existing_terrasses.size)
+      .px-5.pb-5.space-y-4
+        p.text-sm.text-gray-500 Groupe occupant uniquement la terrasse (ex. BBQ). Forfait 2,50 €/pers/jour — une ligne par jour (date + nombre de personnes).
+        ul.divide-y.divide-gray-100
+          - terrace_rows.each_with_index do |row, index|
+            li.py-2.grid.grid-cols-2.gap-2
+              = date_field_tag "stay[terrasses][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+              = number_field_tag "stay[terrasses][#{index}][people]", row[:people], min: 0, placeholder: "Personnes", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
 
     / --- Activités ----------------------------------------------------------
-    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 🎯 Activités
-      - if @assignable_availabilities.blank?
-        p.text-sm.text-gray-500 Aucun créneau d'activité proposable.
-      - else
-        p.text-sm.text-gray-500 Indiquez le nombre de participants pour chaque créneau souhaité (0 = non réservé).
-        ul.divide-y.divide-gray-100
-          - @assignable_availabilities.each_with_index do |availability, index|
-            li.py-2.flex.items-center.justify-between.gap-4
-              span.text-sm.text-gray-900 = availability.label
-              = hidden_field_tag "stay[experiences][#{index}][availability_id]", availability.id
-              = number_field_tag "stay[experiences][#{index}][participants]", selected_experiences[availability.id].to_i, min: 0, class: "w-20 rounded-md border-gray-300 shadow-sm sm:text-sm"
+    - retenues = selected_experiences.values.count { |v| v.to_i.positive? }
+    details class=section_box open=retenues.positive?
+      summary class=section_summary
+        span 🎯 Activités
+        = stay_form_section_marker(retenues.positive?, retenues)
+      .px-5.pb-5.space-y-4
+        - if @assignable_availabilities.blank?
+          p.text-sm.text-gray-500 Aucun créneau d'activité proposable.
+        - else
+          p.text-sm.text-gray-500 Indiquez le nombre de participants pour chaque créneau souhaité (0 = non réservé).
+          ul.divide-y.divide-gray-100
+            - @assignable_availabilities.each_with_index do |availability, index|
+              li.py-2.flex.items-center.justify-between.gap-4
+                span.text-sm.text-gray-900 = availability.label
+                = hidden_field_tag "stay[experiences][#{index}][availability_id]", availability.id
+                = number_field_tag "stay[experiences][#{index}][participants]", selected_experiences[availability.id].to_i, min: 0, class: "w-20 rounded-md border-gray-300 shadow-sm sm:text-sm"
 
     / --- Attribution (source + plateforme) ----------------------------------
     section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
