@@ -50,14 +50,38 @@ module StaysCompositionHelper
 
   private
 
+  # Tooltip en CSS PUR (`group-hover`) et non via le contrôleur Popper existant :
+  # le tableau affiche 6 icônes × 30 lignes, soit 180 déclencheurs. Autant
+  # d'instances Stimulus + Popper coûteraient cher pour une bulle statique, et le
+  # `title` natif reste lent (~1 s) et non stylé. Ici, l'affichage est immédiat.
+  #
+  # PAS de `title` en plus : le navigateur superposerait sa propre bulle native
+  # à la nôtre.
   def composition_slot_icon(slot, stay)
     active = composition_slot_active?(slot, stay)
-    label  = composition_slot_label(slot, stay, active)
-    classes = active ? "text-indigo-600" : "text-gray-200"
+    tone   = active ? "text-indigo-600" : "text-gray-200"
 
-    tag.span(composition_slot_svg(slot),
-             class: "#{classes} transition-colors",
-             title: label, role: "img", aria: { label: label })
+    tag.span(class: "relative inline-flex group") do
+      safe_join([
+        tag.span(composition_slot_svg(slot),
+                 class: "#{tone} transition-colors",
+                 role: "img", aria: { label: composition_slot_aria(slot, active) }),
+        composition_slot_tooltip(slot)
+      ])
+    end
+  end
+
+  # La bulle : masquée par défaut, révélée au survol ET au focus clavier du
+  # groupe. `pointer-events-none` pour qu'elle ne vole jamais le clic de la
+  # ligne (qui ouvre la modale du séjour).
+  def composition_slot_tooltip(slot)
+    tag.span(
+      SLOT_LABELS[slot],
+      class: "pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden -translate-x-1/2 " \
+             "whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs font-medium text-white shadow-sm " \
+             "group-hover:block group-focus-within:block",
+      aria: { hidden: "true" }
+    )
   end
 
   def composition_slot_active?(slot, stay)
@@ -73,27 +97,17 @@ module StaysCompositionHelper
 
   SLOT_LABELS = {
     lodging:  "Hébergement",
-    outdoor:  "Tente (ou hamac / terrasse)",
-    van:      "Camping-car",
+    outdoor:  "Bivouac",
+    van:      "Van",
     hall:     "Salle",
     kitchen:  "Cuisine",
-    activity: "Activité"
+    activity: "Activités"
   }.freeze
 
-  # Tooltip : le libellé du slot, précisé pour le plein air (on nomme ce qui est
-  # RÉELLEMENT présent), et suffixé « — non compris » quand l'icône est éteinte.
-  def composition_slot_label(slot, stay, active)
-    base = SLOT_LABELS[slot]
-    base = outdoor_detail_label(stay) if slot == :outdoor && active
-    active ? base : "#{SLOT_LABELS[slot]} — non compris"
-  end
-
-  def outdoor_detail_label(stay)
-    parts = []
-    parts << "Tente"    if stay_has_tent?(stay)
-    parts << "Hamac"    if stay_has_hamac?(stay)
-    parts << "Terrasse" if stay_has_terrace?(stay)
-    parts.join(" · ").presence || SLOT_LABELS[:outdoor]
+  # Ce que dit le lecteur d'écran : le nom ET l'état, puisqu'il ne voit pas la
+  # couleur de l'icône.
+  def composition_slot_aria(slot, active)
+    "#{SLOT_LABELS[slot]}#{active ? '' : ' — non compris'}"
   end
 
   # SVG inline en trait (stroke currentColor) plutôt qu'emoji : dans un tableau

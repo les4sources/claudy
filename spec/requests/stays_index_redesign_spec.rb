@@ -278,13 +278,22 @@ RSpec.describe "Index Séjours — refonte du tableau", type: :request do
 
     it "rend les 6 emplacements, éteints par défaut" do
       get stays_path
-      expect(response.body).to include("Hébergement — non compris")
-      expect(response.body).to include("Salle — non compris")
-      expect(response.body).to include("Cuisine — non compris")
-      expect(response.body).to include("Activité — non compris")
-      # Le camping-car a son emplacement propre depuis 2026-07-26.
-      expect(response.body).to include("Camping-car — non compris")
+      # L'état « non compris » vit dans l'aria-label : le lecteur d'écran ne voit
+      # pas la couleur de l'icône, contrairement à l'œil.
+      ["Hébergement", "Bivouac", "Van", "Salle", "Cuisine", "Activités"].each do |slot|
+        expect(response.body).to include("#{slot} — non compris")
+      end
       expect(response.body).to include("text-gray-200")
+    end
+
+    # Tooltip CSS (group-hover) et non `title` natif : ce dernier est lent et
+    # non stylé, et le navigateur superposerait sa bulle à la nôtre.
+    it "porte un tooltip nommant chaque élément" do
+      get stays_path
+      expect(response.body).to include("group-hover:block")
+      ["Hébergement", "Bivouac", "Van", "Salle", "Cuisine", "Activités"].each do |slot|
+        expect(response.body).to include(">#{slot}</span>")
+      end
     end
 
     it "allume l'hébergement quand le séjour en comporte un" do
@@ -292,7 +301,7 @@ RSpec.describe "Index Séjours — refonte du tableau", type: :request do
       StayItem.create!(stay: stay, bookable: booking)
 
       get stays_path
-      expect(response.body).to include(%(title="Hébergement"))
+      expect(response.body).to include(%(aria-label="Hébergement"))
       expect(response.body).not_to include("Hébergement — non compris")
     end
   end
