@@ -338,6 +338,58 @@ class StayDecorator < ApplicationDecorator
                   class: "inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700")
   end
 
+  # --- Données d'en-tête de la modale (Michael 2026-07-26) ------------------
+
+  # Nombre de NUITS. nil si le séjour n'est pas daté (journée sèche, import).
+  def nights_count
+    return nil if object.arrival_date.blank? || object.departure_date.blank?
+
+    (object.departure_date - object.arrival_date).to_i
+  end
+
+  # « 2 nuits · vendredi → dimanche » — le jour de la semaine compte autant que
+  # la date pour qui prépare un accueil.
+  def stay_span_label
+    nights = nights_count
+    return nil if nights.nil?
+
+    jours = "#{I18n.l(object.arrival_date, format: '%A')} → #{I18n.l(object.departure_date, format: '%A')}"
+    nights.zero? ? "Journée · #{jours}" : "#{nights} nuit#{'s' if nights > 1} · #{jours}"
+  end
+
+  # Occupants agrégés sur TOUS les hébergements du séjour — un groupe réparti
+  # sur plusieurs gîtes doit apparaître comme un seul effectif.
+  def occupants
+    bookables = lodging_bookings + camping_bookings + van_bookings
+    {
+      adults:   bookables.sum { |b| b.try(:adults).to_i },
+      children: bookables.sum { |b| b.try(:children).to_i }
+    }
+  end
+
+  # Dernière édition de la NOTE interne : qui, quand. Lue dans PaperTrail, qui
+  # versionne déjà le séjour — aucune colonne à ajouter. nil si la note n'a
+  # jamais été touchée (import legacy).
+  def note_last_edit
+    version = PaperTrail::Version
+              .where(item_type: "Stay", item_id: object.id)
+              .where("object_changes LIKE ?", "%notes:%")
+              .order(created_at: :desc)
+              .first
+    return nil if version.nil?
+
+    { at: version.created_at, by: note_editor_name(version.whodunnit) }
+  end
+
+  # `whodunnit` porte l'id du User. On préfère le nom du Human rattaché, à
+  # défaut l'email — jamais l'id brut, illisible dans une interface.
+  def note_editor_name(whodunnit)
+    return nil if whodunnit.blank?
+
+    user = User.find_by(id: whodunnit)
+    user&.human&.name.presence || user&.email
+  end
+
   # Plage de dates au format français long (ex. « 12 février 2026 »).
   def date_range
     return "—" if arrival_date.blank? && departure_date.blank?

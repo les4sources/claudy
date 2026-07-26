@@ -3,7 +3,7 @@ class StaysController < BaseController
   # sous-navigation Séjours · Coworking · Reporting · Comptabilité, qui remplace
   # l'ancien dropdown de la barre principale.
   before_action :set_home_view
-  before_action :set_stay, only: %i[edit update destroy update_status update_category approve_change_request refuse_change_request]
+  before_action :set_stay, only: %i[edit update destroy update_status update_category update_notes approve_change_request refuse_change_request]
 
   # Index admin des séjours (epic #81) — le séjour devient le point d'entrée
   # unique. Tableau paginé (30/page) orienté GESTION des réservations et
@@ -343,6 +343,17 @@ class StaysController < BaseController
     else
       redirect_to stay_path(@stay), alert: error
     end
+  end
+
+  # Note INTERNE éditée depuis la modale séjour (Michael 2026-07-26). N'écrit QUE
+  # `stays.notes` — jamais la note publique, jamais la composition. Une chaîne
+  # vide efface la note, ce qui est un usage légitime.
+  #
+  # NB : les notes portées par les bookables historiques (Booking/SpaceBooking)
+  # restent en lecture seule, elles appartiennent à la réservation d'origine.
+  def update_notes
+    @stay.update(notes: params.dig(:stay, :notes).to_s.strip.presence)
+    redirect_to stay_path(@stay), notice: "Note enregistrée."
   end
 
   # Suppression = soft-delete (soft_deletion + PaperTrail), jamais de hard destroy.

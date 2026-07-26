@@ -1,0 +1,32 @@
+/ Lignes de composition du séjour, extraites de `_details` (Michael 2026-07-26).
+  Un seul format de ligne pour tous les types de réservable — l'ancienne version
+  répétait six blocs quasi identiques.
+- lignes = []
+- @stay.lodging_bookings.each do |b|
+  - occupants = "#{b.adults.to_i} adulte(s)#{b.children.to_i.positive? ? ", #{b.children} enfant(s)" : ''}"
+  - lignes << { titre: b.lodging&.name.presence || "Hébergement", details: [b.decorate.date_range, occupants], montant: @stay.formatted_item_amount(b) }
+- @stay.space_bookings.each do |sb|
+  - d = sb.decorate
+  - lignes << { titre: sb.spaces.map(&:name).compact_blank.join(", ").presence || "Espace", details: [d.date_range, d.duration], montant: @stay.formatted_item_amount(sb) }
+- @stay.camping_bookings.each do |c|
+  - lignes << { titre: "Camping (#{c.kind})", details: ["#{c.people} personne(s)", outdoor_nights_label(c)], montant: @stay.formatted_item_amount(c) }
+- @stay.van_bookings.each do |v|
+  - lignes << { titre: "Van (#{v.vehicles} véhicule(s))", details: [outdoor_nights_label(v)], montant: @stay.formatted_item_amount(v) }
+- @stay.hamac_bookings.each do |h|
+  - lignes << { titre: "#{h.label} × #{h.count}", details: [outdoor_nights_label(h)], montant: @stay.formatted_item_amount(h) }
+- @stay.meals.each do |m|
+  - lignes << { titre: m.label, details: [(m.date ? l(m.date, format: :long) : nil), "#{m.people} personne(s)"], montant: @stay.formatted_item_amount(m) }
+
+- if lignes.any?
+  ul.space-y-2
+    - lignes.each do |ligne|
+      li.flex.items-start.justify-between.gap-3.rounded-lg.border.border-gray-200.bg-white.px-3.py-2
+        .min-w-0
+          .text-sm.font-semibold.text-gray-900 = ligne[:titre]
+          - ligne[:details].compact_blank.each do |detail|
+            .text-sm.text-gray-500 = detail
+        span.shrink-0.text-sm.font-semibold.text-gray-900 = ligne[:montant]
+- else
+  .rounded-lg.border.border-dashed.border-gray-300.px-3.py-6.text-center
+    p.text-sm.text-gray-500 Aucun élément dans ce séjour.
+    = link_to "Composer le séjour →", edit_stay_path(@stay), class: "mt-1 inline-block text-sm text-indigo-600 hover:underline"

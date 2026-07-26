@@ -1,325 +1,178 @@
-/ Contenu de la modale séjour (issue #76) : extrait dans un partial id'd pour
-/ pouvoir être remplacé sur place par Turbo Stream après une action rapide.
+/ Modale séjour — POSTE DE TRAVAIL du quotidien (Michael 2026-07-26, d'après
+  son prototype). Elle remplace une colonne unique où tout s'empilait sur 300
+  lignes : il fallait faire défiler pour trouver le solde ou la note.
+  Deux colonnes désormais :
+    · GAUCHE, immuable pendant la lecture — qui, quand, combien. C'est l'argent
+      et l'identité : ce qu'on vient vérifier en premier.
+    · DROITE — ce qu'on lit et modifie : note interne, déroulé, composition,
+      activités.
+  Ce qui touche à la COMPOSITION (dates, gîtes, espaces) part vers le formulaire
+  d'édition : on ne réplique pas ici une saisie qui a ses propres règles de
+  disponibilité.
+  Le partial garde son `id` : il est remplacé sur place par Turbo Stream après
+  une action rapide (statut, catégorie, paiement, note).
+- statut_teinte = { "confirmed" => "bg-green-50 border-green-200", "pending" => "bg-amber-50 border-amber-200" }.fetch(@stay.status.to_s, "bg-red-50 border-red-200")
+- occupants = @stay.occupants
+- paiements = @stay.payments.order(:created_at)
+- encaisse = @stay.amount_paid_cents
+- total = @stay.total_amount_cents.to_i
+- avancement = total.positive? ? [[(encaisse * 100.0 / total).round, 0].max, 100].min : 0
 div id="stay-details-#{@stay.id}"
-  .px-6.py-5.space-y-4
-    .flex.items-center.justify-between
-      h3.text-lg.font-medium.text-gray-900
+  /  En-tête TEINTÉ PAR LE STATUT : la couleur dit l'état du dossier avant même
+     qu'on lise le badge.
+  .flex.flex-wrap.items-center.justify-between.gap-3.border-b.px-5.py-3(class=statut_teinte)
+    .flex.items-center.gap-3.min-w-0
+      h3.font-averia.text-xl.font-bold.text-gray-900.pr-1
         | Séjour ##{@stay.id}
-      .flex.items-center.gap-2
-        = @stay.platform_badge
-        = @stay.status_badge
-        / Duplication (epic #81, Phase 7) : ouvre le form NEW prérempli depuis ce
-        / séjour (client + composition), dates/paiement/prix imposé exclus.
-        = link_to "Dupliquer", new_stay_path(duplicate_from: @stay.id), title: "Dupliquer ce séjour (nouvelles dates à choisir)", class: "text-sm font-medium text-gray-500 hover:text-gray-700 hover:underline"
-        = link_to "Modifier le séjour", edit_stay_path(@stay), class: "text-sm font-medium text-indigo-600 hover:underline"
-
-    / Actions rapides (issue #76) : bascule de statut + accès solde, sans ouvrir
-    / le form d'édition. Le changement de statut propage aux réservables (veto).
-    .flex.flex-wrap.items-center.gap-2.border-t.border-gray-200.pt-3
+      = @stay.status_badge
+      = @stay.platform_badge
+    .flex.flex-wrap.items-center.gap-2
       - if @stay.status == "confirmed"
-        = button_to "Repasser en attente", update_status_stay_path(@stay, status: "pending"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100"
+        = button_to "Repasser en attente", update_status_stay_path(@stay, status: "pending"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
       - else
-        = button_to "Confirmer le séjour", update_status_stay_path(@stay, status: "confirmed"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "inline-flex items-center rounded-md border border-transparent bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700"
+        = button_to "Confirmer le séjour", update_status_stay_path(@stay, status: "confirmed"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-transparent bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700"
       - if @stay.token.present?
-        = link_to "Page web du séjour ↗", public_stay_path(@stay.token, donottrack: 1), target: "_blank", rel: "noopener", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        = link_to "Page web ↗", public_stay_path(@stay.token, donottrack: 1), target: "_blank", rel: "noopener", class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+      = link_to "Dupliquer", new_stay_path(duplicate_from: @stay.id), title: "Dupliquer ce séjour (nouvelles dates à choisir)", class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+      /  « Modifier » est l'ISSUE DE SECOURS de cette modale : tout ce qui touche
+         à la composition (dates, gîtes, espaces, activités payantes) se règle
+         dans le formulaire, qui porte les vérifications de disponibilité.
+      = link_to "Modifier", edit_stay_path(@stay), class: "rounded-md border border-transparent bg-gray-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-gray-800"
 
-    / Demande de modification en attente (issue #133) : ce que le client propose
-    / face à ce qui est actuellement enregistré. Rien n'a été appliqué.
-    - pending_change = @stay.stay_change_requests.pending.order(created_at: :desc).first
-    - if pending_change.present?
-      .rounded-lg.border.border-amber-200.bg-amber-50.p-4.space-y-3
-        h4.text-sm.font-semibold.text-amber-900 Demande de modification en attente
-        dl.grid.grid-cols-3.gap-x-4.gap-y-1.text-sm
-          dt.font-medium.text-amber-800 Total actuel
-          dd.col-span-2.text-gray-900 = number_to_currency(@stay.total_amount_cents.to_i / 100.0, unit: "€", format: "%n %u")
-          dt.font-medium.text-amber-800 Total proposé
-          dd.col-span-2.text-gray-900.font-semibold = number_to_currency(pending_change.new_total_cents.to_i / 100.0, unit: "€", format: "%n %u")
-          dt.font-medium.text-amber-800 Delta
-          dd.col-span-2.text-gray-900
-            = "#{pending_change.delta_cents.to_i.positive? ? '+' : ''}#{number_to_currency(pending_change.delta_cents.to_i / 100.0, unit: '€', format: '%n %u')}"
-          - if pending_change.refund_expected?
-            dt.font-medium.text-amber-800 IBAN
-            dd.col-span-2.text-gray-900.font-mono.text-xs = pending_change.refund_iban
-            dt.font-medium.text-amber-800 Remboursement
-            dd.col-span-2.text-gray-700.text-xs = StayChangeRequest::REFUND_NOTICE
+  /  Demande de modification client en attente (issue #133) : elle passe AVANT
+     les deux colonnes — c'est une décision à prendre, pas une information.
+  - pending_change = @stay.stay_change_requests.pending.order(created_at: :desc).first
+  - if pending_change.present?
+    = render "stays/pending_change", pending_change: pending_change
 
-        / Composition proposée vs actuelle — diff lisible ligne à ligne.
-        .grid.grid-cols-2.gap-4.text-xs
-          div
-            .font-semibold.text-gray-500.uppercase.mb-1 Actuel
-            ul.space-y-0.5
-              - @stay.item_lines.each do |line|
-                li.text-gray-700
-                  = "#{line[:name]} — #{line[:amount]}"
-          div
-            .font-semibold.text-amber-800.uppercase.mb-1 Proposé
-            ul.space-y-0.5
-              - pending_change.proposed_draft.quote.breakdown.each do |line|
-                li.text-gray-900
-                  = "#{line[:label]} — #{number_to_currency(line[:amount_cents].to_i / 100.0, unit: '€', format: '%n %u')}"
+  /  La largeur de colonne passe par un attribut `class` : en notation à points,
+     Slim lirait le `[` de `lg:grid-cols-[20rem_1fr]` comme un début de bloc
+     d'attributs et avalerait tout le sous-arbre — il était rendu en TEXTE.
+  .grid(class="grid-cols-1 lg:grid-cols-[20rem_1fr]")
+    /  === COLONNE GAUCHE : identité et argent =============================
+    .space-y-5.border-r.border-gray-200.bg-gray-50.px-5.py-5
+      div
+        .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Dates
+        .mt-1.text-lg.font-semibold.text-gray-900 = @stay.date_range
+        - if (span = @stay.stay_span_label)
+          .text-sm.text-gray-500 = span
+        - if @stay.arrival_time.present? || @stay.departure_time.present?
+          .mt-1.text-sm.text-gray-500
+            = [(@stay.arrival_time.present? ? "Arrivée #{@stay.arrival_time}" : nil), (@stay.departure_time.present? ? "Départ #{@stay.departure_time}" : nil)].compact.join(" · ")
 
-        .flex.flex-wrap.items-center.gap-2.pt-1
-          = button_to "Approuver",
-                      approve_change_request_stay_path(@stay, change_request_id: pending_change.id),
-                      method: :post,
-                      form: { data: { turbo_confirm: "Appliquer cette modification au séjour ?" } },
-                      class: "inline-flex items-center rounded-md border border-transparent bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700"
-          = form_with url: refuse_change_request_stay_path(@stay, change_request_id: pending_change.id), method: :post, class: "flex items-center gap-2" do
-            = text_field_tag :refusal_reason, nil, required: true, placeholder: "Motif du refus (obligatoire)", class: "rounded-md border-gray-300 text-sm w-64"
-            = submit_tag "Refuser",
-                         class: "inline-flex items-center rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 cursor-pointer"
-
-    dl.grid.grid-cols-3.gap-x-4.gap-y-2.text-sm
-      dt.font-medium.text-gray-500 Dates
-      dd.col-span-2.text-gray-900 = @stay.date_range
-      - if @stay.arrival_time.present? || @stay.departure_time.present?
-        dt.font-medium.text-gray-500 Horaires
-        dd.col-span-2.text-gray-900
-          = [(@stay.arrival_time.present? ? "Arrivée #{@stay.arrival_time}" : nil), (@stay.departure_time.present? ? "Départ #{@stay.departure_time}" : nil)].compact.join(" · ")
-      dt.font-medium.text-gray-500 Contact
-      dd.col-span-2.text-gray-900 = @stay.contact_line
-      dt.font-medium.text-gray-500 Client
-      dd.col-span-2.text-gray-900
-        = link_to @stay.customer.name, customer_path(@stay.customer), class: "text-indigo-600 hover:underline"
-      dt.font-medium.text-gray-500 Montant
-      dd.col-span-2.text-gray-900 = @stay.total_amount.format
-      - if @stay.legacy_origin.present?
-        dt.font-medium.text-gray-500 Origine
-        dd.col-span-2.text-gray-500 = @stay.legacy_origin
-      dt.font-medium.text-gray-500 Catégorie
-      dd.col-span-2.text-gray-900
-        = @stay.category_badge || content_tag(:span, "Non précisée", class: "text-gray-400")
-
-    / Changement rapide de catégorie (Michael 2026-07-21) — sans ouvrir le form
-    / d'édition. Enveloppé dans un turbo-frame : le submit redirige vers stay_path
-    / et Turbo remplace CE fragment en place (même pattern que les paiements).
-    = turbo_frame_tag "stay_#{@stay.id}_category" do
-      = form_with url: update_category_stay_path(@stay), method: :patch, class: "flex flex-wrap items-end gap-2" do
-        label.text-xs.text-gray-500.flex.flex-col.gap-1
-          | Changer la catégorie
-          = select_tag "stay[category]", options_for_select(Stay::CATEGORIES.map(&:reverse), @stay.category), include_blank: "— Aucune —", class: "rounded-md border-gray-300 text-sm py-1"
-        = submit_tag "Enregistrer", class: "px-3 py-1.5 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700 cursor-pointer"
-
-    / Composition complète du séjour (epic #66, Phase 5) : hébergement, espaces,
-    / camping, van et repas. Les activités gardent leur bloc CRUD dédié (epic #55,
-    / Phase 6), rendu juste après — flux inchangé.
-    .border-t.border-gray-200.pt-3.space-y-4
-      - if @stay.lodging_bookings.any?
+      - if occupants[:adults].positive? || occupants[:children].positive?
         div
-          h4.text-sm.font-medium.text-gray-700.mb-2 Hébergement
-          ul.divide-y.divide-gray-100
-            - @stay.lodging_bookings.each do |booking|
-              - b = booking.decorate
-              li.py-2.text-sm.flex.items-start.justify-between.gap-3
-                - guests = "#{booking.adults.to_i} adulte(s)"
-                - guests += ", #{booking.children} enfant(s)" if booking.children.to_i.positive?
-                .min-w-0
-                  .text-gray-900.font-medium.truncate = booking.lodging&.name.presence || "Hébergement"
-                  .text-gray-500 = b.date_range
-                  .text-gray-500 = guests
-                span.text-gray-500.shrink-0 = @stay.formatted_item_amount(booking)
+          .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Occupants
+          .mt-1.flex.flex-wrap.gap-1.5
+            - if occupants[:adults].positive?
+              span.inline-flex.items-center.rounded-full.border.border-gray-300.bg-white.px-2.5.py-1.text-sm.text-gray-700
+                = "#{occupants[:adults]} adulte#{'s' if occupants[:adults] > 1}"
+            - if occupants[:children].positive?
+              span.inline-flex.items-center.rounded-full.border.border-gray-300.bg-white.px-2.5.py-1.text-sm.text-gray-700
+                = "#{occupants[:children]} enfant#{'s' if occupants[:children] > 1}"
 
-      - if @stay.space_bookings.any?
-        div
-          h4.text-sm.font-medium.text-gray-700.mb-2 Espaces
-          ul.divide-y.divide-gray-100
-            - @stay.space_bookings.each do |space_booking|
-              - d = space_booking.decorate
-              li.py-2.text-sm.flex.items-start.justify-between.gap-3
-                .min-w-0
-                  .text-gray-900.font-medium.truncate = space_booking.spaces.map(&:name).compact_blank.join(", ").presence || "Espace"
-                  .text-gray-500 = d.date_range
-                  .text-gray-500 = d.duration
-                span.text-gray-500.shrink-0 = @stay.formatted_item_amount(space_booking)
+      - if @stay.contact_line.present?
+        .rounded-lg.border.border-gray-200.bg-white.p-3
+          .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Contact
+          .mt-1.text-sm.text-gray-900 = @stay.contact_line
 
-      - if @stay.camping_bookings.any?
-        div
-          h4.text-sm.font-medium.text-gray-700.mb-2 Camping
-          ul.divide-y.divide-gray-100
-            - @stay.camping_bookings.each do |camping|
-              li.py-2.text-sm.flex.items-start.justify-between.gap-3
-                .min-w-0
-                  .text-gray-900.font-medium ⛺ Camping (#{camping.kind})
-                  .text-gray-500 = "#{camping.people} personne(s)"
-                  - if (nights_label = outdoor_nights_label(camping))
-                    .text-gray-500 = nights_label
-                span.text-gray-500.shrink-0 = @stay.formatted_item_amount(camping)
+      div
+        .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Client
+        .mt-1
+          = link_to @stay.display_name, customer_path(@stay.customer), class: "text-indigo-600 font-medium hover:underline"
+        - if @stay.legacy_origin.present?
+          .text-xs.text-gray-500 Origine · #{@stay.legacy_origin}
+        /  Réassignation REPLIÉE : c'est une opération rare (re-ventilation du
+           fourre-tout), elle ne doit pas occuper l'écran en permanence.
+        details.mt-2
+          summary.cursor-pointer.select-none.text-sm.text-gray-600.hover:text-gray-900 Réassigner le client…
+          .mt-2 = render "stays/reassign_form"
 
-      - if @stay.van_bookings.any?
-        div
-          h4.text-sm.font-medium.text-gray-700.mb-2 Van / camping-car
-          ul.divide-y.divide-gray-100
-            - @stay.van_bookings.each do |van|
-              li.py-2.text-sm.flex.items-start.justify-between.gap-3
-                .min-w-0
-                  .text-gray-900.font-medium 🚐 Van (#{van.vehicles} véhicule(s))
-                  - if (nights_label = outdoor_nights_label(van))
-                    .text-gray-500 = nights_label
-                span.text-gray-500.shrink-0 = @stay.formatted_item_amount(van)
+      div
+        .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Catégorie
+        /  Le choix EST la validation : pas de bouton « Enregistrer », le select
+           soumet au changement (même mécanique que le tableau des séjours).
+        = turbo_frame_tag "stay_#{@stay.id}_category" do
+          = form_with url: update_category_stay_path(@stay), method: :patch, data: { controller: "auto-submit", action: "change->auto-submit#submit" }, class: "mt-1" do
+            = select_tag "stay[category]", options_for_select(Stay::CATEGORIES.map(&:reverse), @stay.category), include_blank: "— Aucune —", class: "block w-full rounded-md border-gray-300 text-sm py-1.5"
 
-      / Hamacs (issue #138) : location par nuit, persistée comme le camping/van.
-      - if @stay.hamac_bookings.any?
-        div
-          h4.text-sm.font-medium.text-gray-700.mb-2 Location de hamacs
-          ul.divide-y.divide-gray-100
-            - @stay.hamac_bookings.each do |hamac|
-              li.py-2.text-sm.flex.items-start.justify-between.gap-3
-                .min-w-0
-                  .text-gray-900.font-medium = "🛌 #{hamac.label} × #{hamac.count}"
-                  - if (nights_label = outdoor_nights_label(hamac))
-                    .text-gray-500 = nights_label
-                span.text-gray-500.shrink-0 = @stay.formatted_item_amount(hamac)
+      = turbo_frame_tag "stay_#{@stay.id}_payments" do
+        .border-t.border-gray-200.pt-4
+          .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Paiements
+          dl.mt-2.space-y-1.text-sm
+            .flex.items-baseline.justify-between
+              dt.text-gray-600 Total séjour
+              dd.font-semibold.text-gray-900 = humanized_money_with_symbol(@stay.total_amount)
+            .flex.items-baseline.justify-between
+              dt.text-gray-600 Encaissé
+              dd.text-gray-900 = humanized_money_with_symbol(Money.new(encaisse))
 
-      - if @stay.meals.any?
-        div
-          h4.text-sm.font-medium.text-gray-700.mb-2 Repas
-          ul.divide-y.divide-gray-100
-            - @stay.meals.each do |meal|
-              li.py-2.text-sm.flex.items-start.justify-between.gap-3
-                .min-w-0
-                  .text-gray-900.font-medium = meal.label
-                  - if meal.date
-                    .text-gray-500 = l(meal.date, format: :long)
-                  .text-gray-500 = "#{meal.people} personne(s)"
-                span.text-gray-500.shrink-0 = @stay.formatted_item_amount(meal)
+          - if paiements.any?
+            ul.mt-3.space-y-2
+              - paiements.each do |payment|
+                = render "stays/payment_line", payment: payment.decorate, raw_payment: payment
+          - else
+            p.mt-3.text-sm.text-gray-500 Aucun paiement enregistré.
 
-      - unless @stay.any_composition?
-        p.text-sm.text-gray-500 Aucun élément dans ce séjour pour le moment.
+          /  Jauge d'encaissement : le rapport encaissé/total se lit d'un coup
+             d'œil, là où deux montants demandent un calcul mental.
+          - if total.positive?
+            .mt-3.h-2.w-full.overflow-hidden.rounded-full.bg-gray-200(role="img" aria-label="#{avancement}% encaissé")
+              .h-full.rounded-full.bg-gray-900(style="width: #{avancement}%")
 
-    = render "stays/activities"
+          .mt-3.flex.items-baseline.justify-between
+            span.text-sm.font-semibold(class=(@stay.payable_now? ? "text-red-700" : "text-green-700"))
+              = @stay.payable_now? ? "Solde dû" : "Soldé"
+            span.text-lg.font-bold(class=(@stay.payable_now? ? "text-red-700" : "text-green-700"))
+              = humanized_money_with_symbol(Money.new([@stay.balance_due_cents, 0].max))
 
-    / Paiements du séjour (facturation espaces → paiements, epic #26 / #55).
-    / Enveloppé dans un turbo-frame : ajouter un paiement ou basculer un statut
-    / (pending ↔ paid) redirige vers stay_path et Turbo remplace CE fragment en
-    / place — badge de statut et liste rafraîchis sans recharger la modale.
-    / La secrétaire (vérif compte bancaire) gère ainsi les encaissements depuis
-    / la modale. `@stay.payments` unit le lien direct `stay_id` (espaces, Stripe,
-    / saisie manuelle) et le canal booking historique ; seuls les paiements à
-    / `stay_id` direct sont éditables ici (les autres n'ont pas de bouton).
-    - stay_payments = @stay.payments.order(:created_at)
-    = turbo_frame_tag "stay_#{@stay.id}_payments" do
-      .border-t.border-gray-200.pt-4.space-y-3
-        .flex.items-center.justify-between.gap-3
-          h4.text-sm.font-medium.text-gray-700 Paiements
-          .flex.items-center.gap-2
-            span.text-xs.text-gray-500 Statut du séjour :
-            = @stay.payment_status_badge
-
-        / Bandeau « soldé » bien visible dès que le séjour est intégralement payé.
-        - if @stay.paid?
-          .rounded-md.bg-green-50.ring-1.ring-green-300.px-3.py-2.flex.items-center.gap-2
-            span.text-green-700.text-lg ✓
-            span.text-sm.font-semibold.text-green-800 Séjour intégralement payé
-
-        - if stay_payments.any?
-          ul.divide-y.divide-gray-100
-            - stay_payments.each do |payment|
-              - p = payment.decorate
-              li.py-2.text-sm
-                .flex.items-center.justify-between.gap-3
-                  .flex.items-center.gap-2.min-w-0
-                    span.text-lg.shrink-0 = p.payment_method_emoji
-                    .min-w-0
-                      .text-gray-900.font-medium = p.amount
-                      .text-gray-500 = p.payment_method
-                  .flex.items-center.gap-3.shrink-0
-                    = p.status
-                    span.text-gray-500 = p.created_at
-                    / Bascule de statut — seulement pour les paiements DIRECTS du séjour.
-                    - if payment.stay_id.present?
-                      - if payment.pending?
-                        = button_to "Marquer payé", stay_payment_path(@stay, payment), method: :patch, params: { payment: { status: "paid" } }, class: "px-2 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700"
-                      - else
-                        = button_to "Repasser en attente", stay_payment_path(@stay, payment), method: :patch, params: { payment: { status: "pending" } }, class: "px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-medium hover:bg-amber-200"
-                / Édition complète (montant / moyen / statut) — disclosure native,
-                / même contrôleur que la bascule (StayPaymentsController#update).
-                - if payment.stay_id.present?
-                  details.mt-1
-                    summary.text-xs.text-indigo-600.cursor-pointer.select-none Modifier
-                    = form_with url: stay_payment_path(@stay, payment), method: :patch, class: "mt-2 flex flex-wrap items-end gap-3 bg-gray-50 rounded-md p-2" do
-                      label.text-xs.text-gray-600
-                        | Montant (€)
-                        = number_field_tag "payment[amount]", (payment.amount_cents / 100.0).then { |e| format("%g", e) }, step: "0.01", min: "0.01", required: true, class: "block w-24 rounded border-gray-300 text-sm py-1"
-                      label.text-xs.text-gray-600
-                        | Moyen
-                        = select_tag "payment[payment_method]", options_for_select([["Liquide", "cash"], ["Virement", "bank_transfer"], ["Carte", "card"], ["En ligne", "stripe"]], payment.payment_method), class: "block rounded border-gray-300 text-sm py-1"
-                      label.text-xs.text-gray-600
-                        | Statut
-                        = select_tag "payment[status]", options_for_select([["Encaissé", "paid"], ["En attente", "pending"]], payment.status), class: "block rounded border-gray-300 text-sm py-1"
-                      = submit_tag "Enregistrer", class: "px-3 py-1.5 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700 cursor-pointer"
-        - else
-          p.text-sm.text-gray-500 Aucun paiement enregistré pour ce séjour.
-
-        / Ajout d'un paiement au séjour.
-        .bg-gray-50.rounded-md.p-3.mt-2
-          .text-xs.font-medium.text-gray-600.mb-2 Ajouter un paiement
-          = form_with url: stay_payments_path(@stay), method: :post, class: "space-y-2" do |f|
-            .flex.flex-wrap.items-end.gap-3
-              label.text-xs.text-gray-600.flex.flex-col.gap-1
+          /  Enregistrer un paiement — REPLIÉ mais à un clic. C'est l'action la
+             plus fréquente du poste, d'où sa place en bas de colonne, sous le
+             solde qu'elle vient réduire.
+          details.mt-3(open=(@stay.payable_now? && paiements.empty?))
+            summary.w-full.cursor-pointer.select-none.rounded-md.bg-gray-900.px-3.py-2.text-center.text-sm.font-medium.text-white.hover:bg-gray-800
+              | Enregistrer un paiement
+            = form_with url: stay_payments_path(@stay), method: :post, class: "mt-2 space-y-2 rounded-md border border-gray-200 bg-white p-3" do |f|
+              label.block.text-xs.text-gray-600
                 | Montant (€)
-                = number_field_tag "payment[amount]", nil, step: "0.01", min: "0.01", required: true, class: "w-28 rounded border-gray-300 text-sm py-1"
-              label.text-xs.text-gray-600.flex.flex-col.gap-1
+                = number_field_tag "payment[amount]", nil, step: "0.01", min: "0.01", required: true, class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
+              label.block.text-xs.text-gray-600
                 | Moyen
-                = select_tag "payment[payment_method]", options_for_select([["Liquide", "cash"], ["Virement", "bank_transfer"], ["En ligne", "stripe"]], "bank_transfer"), class: "rounded border-gray-300 text-sm py-1"
-              label.text-xs.text-gray-600.flex.flex-col.gap-1
+                = select_tag "payment[payment_method]", options_for_select([["Liquide", "cash"], ["Virement", "bank_transfer"], ["En ligne", "stripe"]], "bank_transfer"), class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
+              label.block.text-xs.text-gray-600
                 | Statut
-                = select_tag "payment[status]", options_for_select([["Encaissé", "paid"], ["En attente", "pending"]], "paid"), class: "rounded border-gray-300 text-sm py-1"
-            = f.submit "Ajouter le paiement", class: "px-3 py-1.5 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700"
+                = select_tag "payment[status]", options_for_select([["Encaissé", "paid"], ["En attente", "pending"]], "paid"), class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
+              = f.submit "Ajouter le paiement", class: "w-full cursor-pointer rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
 
-    / Notes du séjour (lecture). Les notes INTERNES sont agrégées : celle du
-    / séjour + celles des bookables historiques (Booking/SpaceBooking) — la
-    / plupart des notes privées vivent encore là. Jamais côté client. La note
-    / publique (ActionText) est celle vue par le client sur /sejour/:token.
-    - internal_notes = @stay.internal_notes_entries
-    - if internal_notes.any? || @stay.public_notes.present?
-      .border-t.border-gray-200.pt-4.space-y-3
-        - if internal_notes.any?
-          .rounded-md.bg-yellow-50.ring-1.ring-yellow-200.px-4.py-3
-            h4.text-sm.font-medium.text-yellow-900.mb-1
-              = internal_notes.size > 1 ? "Notes internes" : "Note interne"
-            .space-y-2
-              - internal_notes.each do |entry|
-                div
-                  - if internal_notes.size > 1 || entry[:source] != "Séjour"
-                    .text-xs.font-medium.text-yellow-700 = entry[:source]
-                  .text-sm.text-yellow-800 = simple_format entry[:text]
-        - if @stay.public_notes.present?
-          .rounded-md.bg-gray-50.ring-1.ring-gray-200.px-4.py-3
-            h4.text-sm.font-medium.text-gray-700.mb-1 Note publique (visible client)
-            .content.text-sm.text-gray-800.space-y-2 == @stay.public_notes
+    /  === COLONNE DROITE : ce qu'on lit et modifie ========================
+    .divide-y.divide-gray-200
+      = render "stays/internal_note"
 
-    - bk = @stay.primary_bookable
-    - group = bk&.try(:group_name).presence
-    .border-t.border-gray-200.pt-4
-      h4.text-sm.font-medium.text-gray-700.mb-3 Assigner ce séjour à un client
-      = form_with url: reassign_customer_path(@stay.customer), method: :post, data: { controller: "reassign-form", "reassign-form-search-url-value": search_customers_path } do
-        = hidden_field_tag "stay_ids[]", @stay.id
-        .flex.gap-4.text-sm.mb-3
-          label.flex.items-center.gap-2
-            input type="radio" name="mode" value="existing" checked=true data-action="change->reassign-form#switchMode"
-            | Client existant
-          label.flex.items-center.gap-2
-            input type="radio" name="mode" value="new" data-action="change->reassign-form#switchMode"
-            | Nouveau client
+      /  Déroulé du séjour : arrivée, activités datées, départ. Il donne la
+         forme du séjour dans le temps, ce qu'une liste de lignes ne dit pas.
+      - jalons = stay_timeline(@stay)
+      - if jalons.any?
+        .px-5.py-4
+          .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Déroulé du séjour
+          ol.mt-3.space-y-3
+            - jalons.each_with_index do |jalon, index|
+              li.flex.gap-3
+                .mt-1.flex.flex-col.items-center
+                  span.h-2.w-2.rounded-full(class=(index == jalons.size - 1 ? "bg-gray-900" : "border border-gray-400 bg-white"))
+                  - unless index == jalons.size - 1
+                    span.mt-1.w-px.flex-1.bg-gray-200
+                .pb-1
+                  .text-sm.font-semibold.text-gray-900 = jalon[:title]
+                  - if jalon[:detail].present?
+                    .text-sm.text-gray-500 = jalon[:detail]
 
-        .relative.space-y-1(data-reassign-form-target="existingPanel")
-          = text_field_tag :customer_query, nil,
-                           placeholder: "Rechercher un client (nom, email)…",
-                           autocomplete: "off",
-                           data: { "reassign-form-target": "searchInput", action: "input->reassign-form#search" },
-                           class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          = hidden_field_tag "target_id", nil, data: { "reassign-form-target": "targetId" }
-          .border.border-gray-100.rounded-md.divide-y.divide-gray-50.bg-white.shadow-sm.max-h-48.overflow-y-auto(data-reassign-form-target="results")
+      .px-5.py-4
+        .flex.items-baseline.justify-between
+          .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Composition
+          /  Toute modification de composition passe par le formulaire : c'est
+             lui qui vérifie la disponibilité.
+          = link_to "Modifier la composition →", edit_stay_path(@stay), class: "text-xs text-indigo-600 hover:underline"
+        .mt-3 = render "stays/composition_lines"
 
-        .space-y-2.hidden(data-reassign-form-target="newPanel")
-          .grid.grid-cols-2.gap-2
-            = text_field_tag "new_customer[first_name]", bk&.try(:firstname), placeholder: "Prénom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-            = text_field_tag "new_customer[last_name]", bk&.try(:lastname), placeholder: "Nom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-          = email_field_tag "new_customer[email]", nil, placeholder: "Email (à retrouver)", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-          = text_field_tag "new_customer[phone]", bk&.try(:phone), placeholder: "Téléphone", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-          = text_field_tag "new_customer[organization_name]", group, placeholder: "Nom du groupe / organisation", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-          = select_tag "new_customer[customer_type]", options_for_select([["Particulier", "individual"], ["Organisation", "organization"]], group.present? ? "organization" : "individual"), class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-          = hidden_field_tag "new_customer[language]", "fr"
-
-        .flex.justify-end.pt-3
-          = submit_tag "Assigner le séjour", class: "inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+      .px-5.py-4
+        = render "stays/activities"

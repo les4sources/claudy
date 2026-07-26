@@ -51,7 +51,7 @@ RSpec.describe "Stays#show — section Paiements (epic #26 / #55)", type: :reque
 
     it "affiche l'état vide de la section" do
       get stay_path(empty_stay)
-      expect(response.body).to include("Aucun paiement enregistré pour ce séjour.")
+      expect(response.body).to include("Aucun paiement enregistré.")
     end
   end
 end

@@ -1,0 +1,36 @@
+/ Réassignation du séjour à un autre client (re-ventilation du fourre-tout).
+  Extrait de `_details` (Michael 2026-07-26) et REPLIÉ derrière un `details` :
+  c'est une opération rare qui n'a pas à occuper l'écran en permanence.
+- bk = @stay.primary_bookable
+- group = bk&.try(:group_name).presence
+= form_with url: reassign_customer_path(@stay.customer), method: :post, data: { controller: "reassign-form", "reassign-form-search-url-value": search_customers_path } do
+  = hidden_field_tag "stay_ids[]", @stay.id
+  .flex.gap-3.text-sm.mb-2
+    label.flex.items-center.gap-1.5
+      input type="radio" name="mode" value="existing" checked=true data-action="change->reassign-form#switchMode"
+      | Existant
+    label.flex.items-center.gap-1.5
+      input type="radio" name="mode" value="new" data-action="change->reassign-form#switchMode"
+      | Nouveau
+
+  .relative.space-y-1(data-reassign-form-target="existingPanel")
+    = text_field_tag :customer_query, nil,
+                     placeholder: "Rechercher un client…",
+                     autocomplete: "off",
+                     data: { "reassign-form-target": "searchInput", action: "input->reassign-form#search" },
+                     class: "block w-full rounded-md border-gray-300 shadow-sm text-sm"
+    = hidden_field_tag "target_id", nil, data: { "reassign-form-target": "targetId" }
+    .border.border-gray-100.rounded-md.divide-y.divide-gray-50.bg-white.shadow-sm.max-h-40.overflow-y-auto(data-reassign-form-target="results")
+
+  .space-y-2.hidden(data-reassign-form-target="newPanel")
+    .grid.grid-cols-2.gap-2
+      = text_field_tag "new_customer[first_name]", bk&.try(:firstname), placeholder: "Prénom", class: "rounded-md border-gray-300 shadow-sm text-sm"
+      = text_field_tag "new_customer[last_name]", bk&.try(:lastname), placeholder: "Nom", class: "rounded-md border-gray-300 shadow-sm text-sm"
+    = email_field_tag "new_customer[email]", nil, placeholder: "Email", class: "block w-full rounded-md border-gray-300 shadow-sm text-sm"
+    = text_field_tag "new_customer[phone]", bk&.try(:phone), placeholder: "Téléphone", class: "block w-full rounded-md border-gray-300 shadow-sm text-sm"
+    = text_field_tag "new_customer[organization_name]", group, placeholder: "Nom du groupe", class: "block w-full rounded-md border-gray-300 shadow-sm text-sm"
+    = select_tag "new_customer[customer_type]", options_for_select([["Particulier", "individual"], ["Organisation", "organization"]], group.present? ? "organization" : "individual"), class: "block w-full rounded-md border-gray-300 shadow-sm text-sm"
+    = hidden_field_tag "new_customer[language]", "fr"
+
+  .pt-2
+    = submit_tag "Assigner le séjour", class: "w-full cursor-pointer rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"

@@ -156,6 +156,10 @@ Rails.application.routes.draw do
       # Changement rapide de catégorie depuis la modale (Michael 2026-07-21),
       # sans ouvrir le form d'édition. URL admin en ANGLAIS.
       patch :update_category
+      # Édition de la note INTERNE depuis la modale séjour (Michael 2026-07-26),
+      # sans ouvrir le form d'édition. C'est l'écriture la plus fréquente du
+      # quotidien : elle mérite d'être à un clic.
+      patch :update_notes
       # Demande de modification client (issue #133) : approbation / refus par
       # l'équipe. C'est le seul chemin qui applique la demande au séjour.
       post :approve_change_request

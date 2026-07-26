@@ -1,0 +1,34 @@
+/ Une ligne de paiement dans la colonne gauche de la modale. Locals : payment
+  (décoré), raw_payment (le modèle, pour les liens et le test `stay_id`).
+  Seuls les paiements DIRECTEMENT rattachés au séjour sont modifiables ici :
+  ceux du canal booking historique appartiennent à leur booking.
+li.rounded-md.border.border-gray-200.bg-white.p-2
+  .flex.items-start.justify-between.gap-2
+    .min-w-0
+      .flex.items-center.gap-1.5
+        span.text-sm(class=(raw_payment.paid? ? "text-green-600" : "text-amber-600") aria-hidden="true")
+          = raw_payment.paid? ? "✓" : "◦"
+        span.text-sm.font-medium.text-gray-900 = payment.payment_method
+      /  Le statut reste EN TOUTES LETTRES à côté du pictogramme : ce dernier ne
+         dit rien à un lecteur d'écran, et « encaissé » vs « en attente » est
+         l'information qui décide s'il faut relancer.
+      .mt-0.5.flex.items-center.gap-2
+        = payment.status
+        span.text-xs.text-gray-500 = payment.created_at
+    span.shrink-0.text-sm.font-semibold.text-gray-900 = payment.amount
+  - if raw_payment.stay_id.present?
+    .mt-1.flex.flex-wrap.items-center.gap-2
+      - if raw_payment.pending?
+        = button_to "Marquer payé", stay_payment_path(@stay, raw_payment), method: :patch, params: { payment: { status: "paid" } }, class: "rounded bg-green-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-green-700"
+      - else
+        = button_to "Repasser en attente", stay_payment_path(@stay, raw_payment), method: :patch, params: { payment: { status: "pending" } }, class: "rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-200"
+      details
+        summary.cursor-pointer.select-none.text-xs.text-indigo-600 Modifier
+        = form_with url: stay_payment_path(@stay, raw_payment), method: :patch, class: "mt-2 space-y-2 rounded-md bg-gray-50 p-2" do
+          label.block.text-xs.text-gray-600
+            | Montant (€)
+            = number_field_tag "payment[amount]", (raw_payment.amount_cents / 100.0).then { |e| format("%g", e) }, step: "0.01", min: "0.01", required: true, class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
+          label.block.text-xs.text-gray-600
+            | Moyen
+            = select_tag "payment[payment_method]", options_for_select([["Liquide", "cash"], ["Virement", "bank_transfer"], ["Carte", "card"], ["En ligne", "stripe"]], raw_payment.payment_method), class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
+          = submit_tag "Enregistrer", class: "w-full cursor-pointer rounded bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700"

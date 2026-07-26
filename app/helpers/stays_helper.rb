@@ -31,4 +31,46 @@ module StaysHelper
   def stay_row_classes(stay)
     ROW_STATUS_CLASSES.fetch(stay.status.to_s, "bg-white hover:bg-gray-50")
   end
+
+  # --- Déroulé du séjour (modale, Michael 2026-07-26) ------------------------
+  # Arrivée, activités datées, départ : la forme du séjour DANS LE TEMPS, ce
+  # qu'une liste de lignes de composition ne dit pas.
+  #
+  # Aucune requête : on lit `stay_items`, `experience_bookings` et `meal_orders`,
+  # tous préchargés par le contrôleur.
+  def stay_timeline(stay)
+    jalons = []
+
+    if stay.arrival_date
+      lieu = stay.lodging_bookings.filter_map { |b| b.lodging&.name }.uniq.join(", ").presence
+      jalons << { date: stay.arrival_date,
+                  title: "#{l(stay.arrival_date, format: :long).capitalize}#{stay.arrival_time.present? ? " · #{stay.arrival_time}" : ''} — Arrivée",
+                  detail: lieu }
+    end
+
+    stay.experience_bookings.reject { |eb| eb.cancelled? || eb.refused? }.each do |eb|
+      creneau = eb.experience_availability
+      next if creneau&.available_on.blank?
+
+      jalons << { date: creneau.available_on,
+                  title: "#{l(creneau.available_on, format: :long).capitalize} — #{creneau.experience&.name}",
+                  detail: "#{eb.participants} participant(s)" }
+    end
+
+    stay.meals.each do |repas|
+      next if repas.date.blank?
+
+      jalons << { date: repas.date,
+                  title: "#{l(repas.date, format: :long).capitalize} — #{repas.label}",
+                  detail: "#{repas.people} personne(s)" }
+    end
+
+    if stay.departure_date
+      jalons << { date: stay.departure_date,
+                  title: "#{l(stay.departure_date, format: :long).capitalize}#{stay.departure_time.present? ? " · #{stay.departure_time}" : ''} — Départ",
+                  detail: nil }
+    end
+
+    jalons.sort_by { |j| j[:date] }
+  end
 end
