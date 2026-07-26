@@ -171,6 +171,47 @@ RSpec.describe "Index Séjours — refonte du tableau", type: :request do
     end
   end
 
+  # Le sélecteur donne un accès DIRECT aux quatre trimestres de l'année, et dit
+  # où il y a de la matière — les flèches ← → ne faisaient ni l'un ni l'autre.
+  describe "sélecteur de trimestre" do
+    let(:annee) { Date.today.year }
+    let(:trimestre_courant) { ((Date.today.month - 1) / 3) + 1 }
+
+    it "propose les quatre trimestres de l'année affichée" do
+      get stays_path
+      (1..4).each { |t| expect(response.body).to include(">T#{t}") }
+    end
+
+    it "marque le trimestre courant comme page active" do
+      get stays_path
+      expect(response.body).to include(%(aria-current="page"))
+    end
+
+    it "affiche le nombre de séjours d'un trimestre peuplé" do
+      create_stay(email: "compte@example.com")
+      get stays_path
+      # On cible la pastille ACTIVE par `aria-current` : les flèches d'année
+      # portent elles aussi `quarter=<courant>` dans leur href.
+      pastille = response.body[%r{<a[^>]*aria-current="page".*?</a>}m]
+      expect(pastille).to be_present
+      expect(pastille).to include("T#{trimestre_courant}")
+      expect(pastille).to include(">1</span>")
+    end
+
+    it "éteint et rend non cliquable un trimestre sans séjour" do
+      get stays_path
+      vide = (1..4).find { |t| t != trimestre_courant }
+      expect(response.body).to include(%(aria-disabled="true"))
+      expect(response.body).not_to include(%(href="/stays?quarter=#{vide}&amp;year=#{annee}"))
+    end
+
+    it "permet de sauter d'une année d'un seul clic" do
+      get stays_path
+      expect(response.body).to include("Année précédente")
+      expect(response.body).to include("Année suivante")
+    end
+  end
+
   describe "groupement par mois" do
     let!(:juillet) { create_stay(email: "juil@example.com", first: "Juillet", last: "Client") }
     let!(:aout)    { create_stay(email: "aout@example.com", first: "Aout", last: "Client") }

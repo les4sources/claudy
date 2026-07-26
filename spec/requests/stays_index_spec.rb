@@ -97,7 +97,9 @@ RSpec.describe "Index Séjours (/stays)", type: :request do
 
     it "ouvre sur le trimestre courant" do
       get stays_path
-      expect(response.body).to include("T#{((trimestre.month - 1) / 3) + 1} #{trimestre.year}")
+      # L'année et le trimestre sont deux éléments distincts du sélecteur.
+      expect(response.body).to include(">#{trimestre.year}</span>")
+      expect(response.body).to include(%(aria-current="page"))
     end
 
     it "ne propose plus les anciennes pastilles de période" do
@@ -109,7 +111,9 @@ RSpec.describe "Index Séjours (/stays)", type: :request do
     it "retombe sur le trimestre courant pour des paramètres fantaisistes" do
       get stays_path(year: "abc", quarter: "9")
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("T#{((trimestre.month - 1) / 3) + 1} #{trimestre.year}")
+      # L'année et le trimestre sont deux éléments distincts du sélecteur.
+      expect(response.body).to include(">#{trimestre.year}</span>")
+      expect(response.body).to include(%(aria-current="page"))
     end
   end
 end

@@ -47,6 +47,11 @@ class StaysController < BaseController
     # Agrégats monétaires de la page (encaissé + reste dû exigible) — calculés
     # AVANT décoration, sur les enregistrements préchargés, en une requête de
     # paiements pour toute la page.
+    # Nombre de séjours par trimestre de l'ANNÉE affichée : le sélecteur peut
+    # ainsi éteindre les trimestres vides plutôt que de laisser cliquer dans le
+    # vide. Une seule requête agrégée, pas de chargement des séjours.
+    @quarter_counts = quarter_counts_for(@quarter.year)
+
     @amounts = Stays::IndexAmounts.new(@stays).call
     @stays   = StayDecorator.decorate_collection(@stays)
   end
@@ -441,6 +446,15 @@ class StaysController < BaseController
     return Date.today.beginning_of_quarter unless year.between?(2000, 2100) && quarter.between?(1, 4)
 
     Date.new(year, (quarter - 1) * 3 + 1, 1)
+  end
+
+  # => { 1 => 12, 2 => 151, 3 => 102, 4 => 41 } pour l'année donnée.
+  def quarter_counts_for(year)
+    debut = Date.new(year, 1, 1)
+    Stay.where(arrival_date: debut..debut.end_of_year)
+        .group(Arel.sql("EXTRACT(QUARTER FROM arrival_date)"))
+        .count
+        .transform_keys(&:to_i)
   end
 
   # Séjours du trimestre affiché, PLUS ceux sans date d'arrivée : ces derniers
