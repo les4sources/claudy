@@ -1,10 +1,18 @@
 / Header en VERT DE MARQUE (Michael 2026-07-26) : la bande `4s-main` (#024442,
   la couleur du logo) pose le domaine et encadre l'espace de travail, resté
   blanc. Sur ce fond, les états de nav ne peuvent plus être des teintes `teal-50`
-  (invisibles) : ils passent en BLANC TRANSLUCIDE, qui se lit sur n'importe quel
-  vert sans introduire de seconde couleur.
-- nav_idle = "text-white/70 hover:text-white hover:bg-white/10"
-- nav_active = "text-white bg-white/15 ring-1 ring-inset ring-white/20"
+  (invisibles). Les items AU REPOS passent donc en blanc translucide ; l'item
+  ACTIF, lui, inverse franchement (voir juste en dessous).
+/  État ACTIF : pastille BLANCHE PLEINE, texte au vert de marque (Michael
+   2026-07-26). L'ancien état — blanc translucide à 15 % cerné d'un fin liseré —
+   se lisait à peine sur le vert : deux nuances de vert-blanchi voisines.
+   L'inversion franche (fond blanc / texte vert) donne 11:1 de contraste, se
+   repère au premier coup d'œil, et ne mobilise QUE les deux couleurs de la
+   charte — pas de troisième teinte introduite pour signaler « vous êtes ici ».
+   L'ombre portée décolle légèrement la pastille de la bande, comme un onglet
+   encastré dans le header.
+- nav_idle = "font-medium text-white/70 hover:text-white hover:bg-white/10"
+- nav_active = "bg-white text-4s-main font-semibold shadow-sm"
 / `relative z-40` sur la barre : elle crée un plan de superposition qui passe
   AU-DESSUS du contenu de page, dont l'en-tête collant du tableau des séjours
   (`z-10`). Sans lui, à z-index égal c'est le dernier élément du DOM qui gagne —
@@ -42,7 +50,7 @@ nav.bg-4s-main.shadow-sm.lg:px-6.relative.z-40
         / Agenda
         li
           = link_to root_path,
-                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 #{current_page?(root_path) ? nav_active : nav_idle}" do
+                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{current_page?(root_path) ? nav_active : nav_idle}" do
             svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
               rect[width="18" height="18" x="3" y="4" rx="2" ry="2"]
               line[x1="16" y1="2" x2="16" y2="6"]
@@ -56,7 +64,7 @@ nav.bg-4s-main.shadow-sm.lg:px-6.relative.z-40
           quotidienne de la section.
         li
           = link_to stays_path,
-                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 #{!@home_view.nil? ? nav_active : nav_idle}" do
+                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{!@home_view.nil? ? nav_active : nav_idle}" do
             svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
               path[d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"]
               polyline[points="9 22 9 12 15 12 15 22"]
@@ -65,7 +73,7 @@ nav.bg-4s-main.shadow-sm.lg:px-6.relative.z-40
         / Organisation
         li
           = link_to organisation_path,
-                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 #{!@organisation_view.nil? ? nav_active : nav_idle}" do
+                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{!@organisation_view.nil? ? nav_active : nav_idle}" do
             svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
               path[d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"]
               circle[cx="9" cy="7" r="4"]
