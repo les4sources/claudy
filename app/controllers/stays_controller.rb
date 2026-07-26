@@ -10,9 +10,15 @@ class StaysController < BaseController
   # Filtres légers : « Tous » (défaut), « À venir » (current_and_future),
   # « Passés » (past). Les montants agrégés (encaissé, reste dû) sont calculés
   # EN LOT par `Stays::IndexAmounts` (aucun N+1 — voir le service).
+  #
+  # Recherche `?q=` (Michael 2026-07-26) : client (prénom/nom/email), nom du
+  # groupe, mot dans la note interne — y compris les notes des bookables. Elle
+  # s'applique AVANT `.includes` pour que les `.or` du service composent sur une
+  # structure de jointures nue (cf. `Stays::Search`), et se combine aux pills.
   def index
     @filter = params[:filter].presence_in(%w[upcoming past]) # nil = tous
-    @stays  = index_scope
+    @query  = params[:q].to_s.strip
+    @stays  = Stays::Search.new(index_scope, @query).call
               .includes(
                 :customer,
                 :meal_orders,
@@ -296,12 +302,24 @@ class StaysController < BaseController
   # turbo-frame de la modale ; on redirige vers `stay_path` et Turbo remplace le
   # fragment en place (même pattern que les paiements). Une valeur vide retire la
   # catégorie ; une valeur hors liste est refusée par la validation du modèle.
+  #
+  # DEUX APPELANTS, deux réponses (discriminées par `from`) :
+  #   - modale séjour (défaut) : redirection vers `stay_path`, Turbo remplace le
+  #     fragment de la modale — comportement historique, inchangé ;
+  #   - index Séjours (`from=index`, dropdown en ligne) : Turbo Stream qui
+  #     remplace la SEULE cellule concernée. On ne recharge pas les 30 lignes de
+  #     la page pour un changement de catégorie.
   def update_category
     category = params.dig(:stay, :category).presence
-    if @stay.update(category: category)
+    ok = @stay.update(category: category)
+    error = @stay.errors.full_messages.to_sentence.presence || "Catégorie invalide."
+
+    return update_category_from_index(ok, error) if params[:from] == "index"
+
+    if ok
       redirect_to stay_path(@stay), notice: "Catégorie mise à jour."
     else
-      redirect_to stay_path(@stay), alert: @stay.errors.full_messages.to_sentence.presence || "Catégorie invalide."
+      redirect_to stay_path(@stay), alert: error
     end
   end
 
@@ -514,6 +532,27 @@ class StaysController < BaseController
 
   def set_stay
     @stay = Stay.find(params[:id])
+  end
+
+  # Réponse au dropdown de catégorie de l'index : Turbo Stream ciblant la seule
+  # cellule `stay-category-<id>`. Le fallback HTML (JS coupé, ou soumission hors
+  # Turbo) revient à l'index en préservant filtre + recherche courants, pour ne
+  # pas éjecter l'utilisateur de sa liste filtrée.
+  def update_category_from_index(ok, error)
+    stay = @stay.decorate
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace(
+          "stay-category-#{stay.id}",
+          partial: "stays/category_select",
+          locals: { stay: stay, error: (ok ? nil : error) }
+        )
+      end
+      format.html do
+        redirect_to stays_path(filter: params[:filter].presence, q: params[:q].presence),
+                    notice: (ok ? "Catégorie mise à jour." : nil), alert: (ok ? nil : error)
+      end
+    end
   end
 
   # Applique la note interne (colonne `notes`, texte brut) et la note publique
