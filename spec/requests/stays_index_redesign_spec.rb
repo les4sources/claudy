@@ -12,8 +12,12 @@ RSpec.describe "Index Séjours — refonte du tableau", type: :request do
 
   def create_stay(email:, status: "pending", total_cents: 0, first: "Jean", last: "Test", notes: nil, category: nil)
     customer = Customer.create!(email: email, first_name: first, last_name: last)
+    # Ancré dans le trimestre COURANT : c'est la page ouverte par défaut depuis
+    # le passage à la pagination trimestrielle. `Date.today + 5` pouvait basculer
+    # dans le trimestre suivant selon le jour d'exécution.
+    debut = Date.today.beginning_of_quarter
     Stay.create!(customer: customer, source: "manual", status: status, notes: notes, category: category,
-                 arrival_date: Date.today + 5, departure_date: Date.today + 7,
+                 arrival_date: debut + 5, departure_date: debut + 7,
                  total_amount_cents: total_cents)
   end
 
@@ -130,43 +134,40 @@ RSpec.describe "Index Séjours — refonte du tableau", type: :request do
     end
   end
 
-  # « Tous » retiré : on est toujours sur une période, « À venir » par défaut.
-  describe "filtres de période" do
-    let!(:futur) { create_stay(email: "futur@example.com", first: "Futur", last: "Client") }
-    let!(:passe) { create_stay(email: "passe@example.com", first: "Passe", last: "Client") }
+  # Le trimestre remplace les pastilles « À venir / Passés » (Michael 2026-07-26).
+  describe "navigation trimestrielle" do
+    let(:trimestre) { Date.today.beginning_of_quarter }
+    let!(:ici)      { create_stay(email: "ici@example.com", first: "Dans", last: "Trimestre") }
+    let!(:ailleurs) { create_stay(email: "ailleurs@example.com", first: "Autre", last: "Trimestre") }
 
-    before { passe.update_columns(arrival_date: Date.today - 20, departure_date: Date.today - 18) }
+    before do
+      ailleurs.update_columns(arrival_date: trimestre + 4.months,
+                              departure_date: trimestre + 4.months + 1.day)
+    end
 
-    it "affiche « À venir » par défaut, sans séjour passé" do
+    it "n'affiche que le trimestre courant" do
       get stays_path
-      expect(response.body).to include("Futur Client")
-      expect(response.body).not_to include("Passe Client")
+      expect(response.body).to include("Dans Trimestre")
+      expect(response.body).not_to include("Autre Trimestre")
     end
 
-    it "ne propose plus le filtre « Tous »" do
+    it "ne propose plus les pastilles de période" do
       get stays_path
-      expect(response.body).not_to include(">Tous<")
+      expect(response.body).not_to include(">À venir<")
+      expect(response.body).not_to include(">Passés<")
     end
 
-    it "bascule sur « Passés »" do
-      get stays_path(filter: "past")
-      expect(response.body).to include("Passe Client")
-      expect(response.body).not_to include("Futur Client")
+    # Une recherche doit traverser les trimestres : on ne sait pas d'avance dans
+    # lequel tombe ce qu'on cherche.
+    it "cherche sur TOUTE la période, hors du trimestre affiché" do
+      get stays_path(q: "Autre Trimestre")
+      expect(response.body).to include("Autre Trimestre")
+      expect(response.body).to include("sur toute la période")
     end
 
-    it "retombe sur « À venir » pour une valeur de filtre inconnue" do
-      get stays_path(filter: "n_importe_quoi")
-      expect(response.body).to include("Futur Client")
-      expect(response.body).not_to include("Passe Client")
-    end
-
-    # Garde-fou : sans le OR sur `departure_date IS NULL`, un séjour sans date
-    # ne serait dans AUCUNE des deux vues et disparaîtrait de l'index.
-    it "rattrape les séjours sans date dans « À venir »" do
-      sans_date = create_stay(email: "sansdate2@example.com", first: "Sans", last: "Date")
-      sans_date.update_columns(arrival_date: nil, departure_date: nil)
-      get stays_path
-      expect(response.body).to include("Sans Date")
+    it "masque la navigation trimestrielle pendant une recherche" do
+      get stays_path(q: "Trimestre")
+      expect(response.body).not_to include("Navigation par trimestre")
     end
   end
 
@@ -174,29 +175,37 @@ RSpec.describe "Index Séjours — refonte du tableau", type: :request do
     let!(:juillet) { create_stay(email: "juil@example.com", first: "Juillet", last: "Client") }
     let!(:aout)    { create_stay(email: "aout@example.com", first: "Aout", last: "Client") }
 
+    # Un trimestre couvre TROIS mois : on place un séjour dans son 1er mois et un
+    # autre dans son 2e, tous deux visibles sur la page par défaut.
+    let(:trimestre) { Date.today.beginning_of_quarter }
+    let(:mois1) { trimestre }
+    let(:mois2) { trimestre + 1.month }
+
     before do
-      juillet.update_columns(arrival_date: Date.new(2027, 7, 9),  departure_date: Date.new(2027, 7, 11))
-      aout.update_columns(arrival_date: Date.new(2027, 8, 3), departure_date: Date.new(2027, 8, 5))
+      juillet.update_columns(arrival_date: mois1 + 8, departure_date: mois1 + 10)
+      aout.update_columns(arrival_date: mois2 + 2, departure_date: mois2 + 4)
     end
 
     it "insère une ligne pleine largeur par mois, mois et année en clair" do
       get stays_path
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Juillet 2027")
-      expect(response.body).to include("Août 2027")
+      expect(response.body).to include(I18n.l(mois1, format: "%B %Y").capitalize)
+      expect(response.body).to include(I18n.l(mois2, format: "%B %Y").capitalize)
       expect(response.body).to include(%(scope="rowgroup"))
     end
 
     it "regroupe deux séjours du même mois sous un SEUL en-tête" do
       create_stay(email: "juil2@example.com").update_columns(
-        arrival_date: Date.new(2027, 7, 20), departure_date: Date.new(2027, 7, 22)
+        arrival_date: mois1 + 20, departure_date: mois1 + 22
       )
       get stays_path
-      expect(response.body.scan("Juillet 2027").size).to eq(1)
+      expect(response.body.scan(I18n.l(mois1, format: "%B %Y").capitalize).size).to eq(1)
     end
 
     # Les imports legacy peuvent ne porter aucune date : ils doivent avoir leur
     # propre groupe, jamais être rattachés en silence au mois précédent.
+    # Un séjour sans date n'appartient à AUCUN trimestre : le scope le rattrape
+    # explicitement, sinon il disparaîtrait de l'index quel que soit le trimestre.
     it "isole les séjours sans date d'arrivée" do
       create_stay(email: "sansdate@example.com").update_columns(arrival_date: nil, departure_date: nil)
       get stays_path
@@ -254,9 +263,9 @@ RSpec.describe "Index Séjours — refonte du tableau", type: :request do
       expect(response.body).to include("Aucun séjour ne correspond à cette recherche")
     end
 
-    it "se combine avec le filtre de période" do
-      alice.update_columns(arrival_date: Date.today - 20, departure_date: Date.today - 18)
-      get stays_path(filter: "past", q: "Durand")
+    it "trouve un séjour d'un AUTRE trimestre que celui affiché" do
+      alice.update_columns(arrival_date: Date.today - 200, departure_date: Date.today - 198)
+      get stays_path(q: "Durand")
       expect(response.body).to include("Alice Durand")
       expect(response.body).not_to include("Bruno Martin")
     end

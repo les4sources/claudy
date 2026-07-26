@@ -10,9 +10,15 @@ class StaysController < BaseController
   # paiements : contact, canal, dates + statut, composition compacte, et surtout
   # total / encaissé / reste dû exigible + statut de paiement.
   #
-  # Filtres : « À venir » (DÉFAUT) et « Passés ». Le filtre « Tous » a été retiré
-  # (Michael 2026-07-26) — on est toujours sur l'une des deux périodes. Les
-  # montants agrégés (encaissé, reste dû) sont calculés EN LOT par
+  # PAGINATION PAR TRIMESTRE (Michael 2026-07-26) — plus par nombre de lignes.
+  # On ouvre sur le trimestre courant et on navigue ← →. Le trimestre est le SEUL
+  # sélecteur de période : les anciennes pastilles « À venir / Passés » ont été
+  # retirées, deux sélecteurs concurrents pouvant se contredire (« À venir » +
+  # trimestre passé = liste vide sans raison lisible).
+  # Volume : de 2 à 151 séjours par trimestre sur les données réelles, médiane 88
+  # — tenable sur une page, d'où l'abandon de will_paginate.
+  #
+  # Les montants agrégés (encaissé, reste dû) sont calculés EN LOT par
   # `Stays::IndexAmounts` (aucun N+1 — voir le service).
   #
   # Recherche `?q=` (Michael 2026-07-26) : client (prénom/nom/email), nom du
@@ -20,19 +26,23 @@ class StaysController < BaseController
   # s'applique AVANT `.includes` pour que les `.or` du service composent sur une
   # structure de jointures nue (cf. `Stays::Search`), et se combine aux pills.
   def index
-    # « Tous » retiré (Michael 2026-07-26) : on est TOUJOURS sur une période.
-    # Défaut = « À venir », qui est la vue de travail quotidienne ; « Passés »
-    # est l'autre moitié. Toute valeur inconnue retombe sur « À venir ».
-    @filter = params[:filter] == "past" ? "past" : "upcoming"
-    @query  = params[:q].to_s.strip
-    @stays  = Stays::Search.new(index_scope, @query).call
-              .includes(
-                :customer,
-                :meal_orders,
-                { stay_items: :bookable },
-                { experience_bookings: { experience_availability: :experience } }
-              )
-              .paginate(page: params[:page], per_page: 30)
+    @query   = params[:q].to_s.strip
+    # Une RECHERCHE porte sur TOUTE la période, pas sur le trimestre affiché :
+    # chercher « Freya » sans savoir dans quel trimestre elle tombe est le cas
+    # d'usage normal. La navigation trimestrielle s'efface donc pendant une
+    # recherche (cf. la vue), sinon on ne trouverait que par hasard.
+    @searching = @query.present?
+    @quarter   = requested_quarter
+
+    scope  = @searching ? Stay.all : quarter_scope
+    @stays = Stays::Search.new(scope, @query).call
+             .includes(
+               :customer,
+               :meal_orders,
+               { stay_items: :bookable },
+               { experience_bookings: { experience_availability: :experience } }
+             )
+             .order(Arel.sql("arrival_date ASC NULLS LAST, id ASC"))
 
     # Agrégats monétaires de la page (encaissé + reste dû exigible) — calculés
     # AVANT décoration, sur les enregistrements préchargés, en une requête de
@@ -423,11 +433,22 @@ class StaysController < BaseController
   # arrivée asc pour l'à-venir, arrivée desc pour le passé). « Tous » (défaut) :
   # arrivée la plus récente/future d'abord — les séjours sans date d'arrivée
   # (activités/repas seuls) rejetés en fin de liste, tri stable sur l'id.
-  def index_scope
-    # `upcoming_or_undated` et non `current_and_future` : sans le filtre
-    # « Tous », un séjour sans date de départ ne serait dans aucune des deux
-    # vues et disparaîtrait de l'index (cf. le scope du modèle).
-    @filter == "past" ? Stay.past : Stay.upcoming_or_undated
+  # Trimestre demandé, borné à des valeurs saines. Toute entrée fantaisiste
+  # retombe sur le trimestre courant plutôt que de lever.
+  def requested_quarter
+    year    = params[:year].to_i
+    quarter = params[:quarter].to_i
+    return Date.today.beginning_of_quarter unless year.between?(2000, 2100) && quarter.between?(1, 4)
+
+    Date.new(year, (quarter - 1) * 3 + 1, 1)
+  end
+
+  # Séjours du trimestre affiché, PLUS ceux sans date d'arrivée : ces derniers
+  # n'appartiennent à aucun trimestre et disparaîtraient sinon complètement de
+  # l'index. Il n'y en a aucun en base aujourd'hui — c'est un garde-fou.
+  def quarter_scope
+    Stay.where(arrival_date: @quarter..@quarter.end_of_quarter)
+        .or(Stay.where(arrival_date: nil))
   end
 
   # Draft de préremplissage du form NEW (epic #81, Phase 7). Trois cas, dans
