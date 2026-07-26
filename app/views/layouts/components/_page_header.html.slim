@@ -20,7 +20,13 @@ div
   .mt-2.md:flex.md:flex-wrap.md:items-center.md:justify-between.gap-y-2
     .min-w-0.flex-1
       .flex.items-center.gap-2.min-w-0
-        h2.font-caveat.text-2xl.font-bold.leading-7.text-gray-900.sm:text-3xl.sm:tracking-tight.truncate
+        /  `pr-2` avec `truncate` (Michael 2026-07-26) : Caveat est une script très
+           penchée dont les glyphes DÉBORDENT à droite de leur chasse. `truncate`
+           pose `overflow: hidden`, qui rognait donc le dernier caractère
+           (« Juillet 2026 » amputé de son 6) même sans titre trop long. Le
+           padding décale le bord de rognage : le débordement tombe dedans.
+           On garde `truncate` — il protège la mise en page des titres longs.
+        h2.font-caveat.text-2xl.font-bold.leading-7.text-gray-900.sm:text-3xl.sm:tracking-tight.truncate.pr-2
           = title
         - if controller_name == "pages" && action_name == "calendar"
           = link_to month_details_path(title: title, date: local_assigns[:date]&.strftime("%Y-%m-%d")), 

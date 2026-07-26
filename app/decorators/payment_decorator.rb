@@ -13,14 +13,31 @@ class PaymentDecorator < ApplicationDecorator
     object.booking_id.present?
   end
 
+  # Un paiement de COWORKING n'a par conception ni booking ni séjour : il est
+  # ancré sur un `CoworkingPack` (cf. la validation
+  # `anchored_on_stay_or_coworking_pack` du modèle, qui impose l'un OU l'autre).
+  def linked_to_coworking?
+    object.coworking_pack_id.present?
+  end
+
   def linked_name
     return booking_name if linked_to_booking?
+    return object.coworking_pack&.customer&.name.presence || "Coworking" if linked_to_coworking?
 
     object.stay&.customer&.name.presence || "Séjour"
   end
 
+  # Cible du lien, dans l'ordre : booking, pack de coworking, séjour. nil s'il
+  # n'y a rien — la vue rend alors du texte.
+  #
+  # C'est ici que /payments tombait : le paiement de coworking n'ayant pas de
+  # séjour, on appelait `stay_path(nil)` → UrlGenerationError, et UNE ligne
+  # faisait tomber TOUTE la page. `linked_name` gérait déjà le nil, pas le chemin.
   def linked_path
-    linked_to_booking? ? h.booking_path(object.booking_id) : h.stay_path(object.stay)
+    return h.booking_path(object.booking_id) if linked_to_booking?
+    return h.coworking_pack_path(object.coworking_pack_id) if linked_to_coworking?
+
+    object.stay ? h.stay_path(object.stay) : nil
   end
 
   def linked_payment_status
