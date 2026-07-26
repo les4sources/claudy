@@ -85,6 +85,21 @@ RSpec.describe "Fiche séjour — contact d'origine", type: :request do
       expect(stay.reload.decorate.display_name).to eq("Camp supprimé")
     end
 
+    # Résa OTA : pas de nom de groupe, mais un prénom sur le réservable. C'est
+    # ce que le calendrier affiche déjà via `group_or_name` — la liste doit dire
+    # la même chose (séjour 1440, « Freya », Airbnb).
+    it "retombe sur le prénom du réservable quand il n'y a pas de nom de groupe" do
+      stay = stay_for(catch_all)
+      attach_space_booking(stay, group_name: nil, firstname: "Freya", lastname: nil)
+      expect(stay.reload.decorate.display_name).to eq("Freya")
+    end
+
+    it "préfère le nom de GROUPE au nom de la personne quand les deux existent" do
+      stay = stay_for(catch_all)
+      attach_space_booking(stay, group_name: "Camp louveteaux", firstname: "Freya")
+      expect(stay.reload.decorate.display_name).to eq("Camp louveteaux")
+    end
+
     it "garde le nom du client quand il n'est pas un fourre-tout" do
       customer = Customer.create!(email: "vrai@example.com", first_name: "Vrai", last_name: "Client")
       stay = stay_for(customer)
@@ -92,9 +107,11 @@ RSpec.describe "Fiche séjour — contact d'origine", type: :request do
       expect(stay.reload.decorate.display_name).to eq("Vrai Client")
     end
 
-    it "retombe sur le nom du client quand aucun groupe n'est connu" do
+    # Le seul cas où l'on retombe vraiment sur le fourre-tout : aucun réservable,
+    # donc aucun nom d'origine à récupérer. Dès qu'un réservable existe, il porte
+    # au minimum un prénom (contrainte du modèle).
+    it "retombe sur le nom du client quand le séjour n'a aucun réservable" do
       stay = stay_for(catch_all)
-      attach_space_booking(stay, group_name: nil)
       expect(stay.reload.decorate.display_name).to eq("Client Les 4 Sources")
     end
   end

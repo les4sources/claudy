@@ -89,7 +89,14 @@ module Stays
     def stay_items_matching(type)
       model = type.constantize
       table = model.table_name
-      matching = model.where("#{table}.notes ILIKE :t OR #{table}.group_name ILIKE :t", t: term).select(:id)
+      # `firstname` / `lastname` en plus du groupe : depuis que la liste affiche
+      # le nom porté par la réservation d'origine (résa OTA sans nom de groupe —
+      # « Freya »), voir un nom qu'on ne peut pas rechercher serait incohérent.
+      matching = model.where(
+        "#{table}.notes ILIKE :t OR #{table}.group_name ILIKE :t " \
+        "OR #{table}.firstname ILIKE :t OR #{table}.lastname ILIKE :t",
+        t: term
+      ).select(:id)
       StayItem.where(bookable_type: type, bookable_id: matching)
     end
   end

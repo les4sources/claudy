@@ -126,14 +126,27 @@ class StayDecorator < ApplicationDecorator
   def display_name
     return object.customer&.name unless catch_all_customer?
 
-    origin_group_name.presence || object.customer&.name
+    origin_label.presence || object.customer&.name
   end
 
-  def origin_group_name
-    @origin_group_name ||= begin
-      vivant = object.stay_items.filter_map { |i| i.bookable.try(:group_name).presence }.first
-      vivant || supprime_group_name
+  # Nom porté par la réservation d'origine : le NOM DE GROUPE d'abord, à défaut
+  # le nom de la personne (`firstname` / `lastname`). Les résas OTA n'ont pas de
+  # nom de groupe mais bien un prénom — le séjour 1440 (Airbnb) affiche « Freya »
+  # au calendrier via `group_or_name`, et doit le faire ici aussi.
+  def origin_label
+    @origin_label ||= begin
+      vivants = object.stay_items.filter_map { |i| bookable_label(i.bookable) }
+      vivants.first || label_depuis_supprime
     end
+  end
+
+  # Même ordre de préférence que `BookingDecorator#group_or_name`, dont le
+  # calendrier se sert : groupe, puis personne.
+  def bookable_label(bookable)
+    return nil if bookable.nil?
+
+    bookable.try(:group_name).presence ||
+      [bookable.try(:firstname), bookable.try(:lastname)].compact_blank.join(" ").presence
   end
 
   # Une entrée par réservable porteur d'un contact, dédoublonnée. Un réservable
@@ -158,15 +171,15 @@ class StayDecorator < ApplicationDecorator
 
   private
 
-  # Dernier recours : le réservable a été soft-deleted, son nom de groupe n'est
-  # plus atteignable par l'association (le default_scope l'exclut).
-  def supprime_group_name
+  # Dernier recours : le réservable a été soft-deleted, son nom n'est plus
+  # atteignable par l'association (le default_scope l'exclut).
+  def label_depuis_supprime
     object.stay_items.each do |item|
       next if item.bookable.present?
 
       record = item.bookable_type.constantize.unscoped.find_by(id: item.bookable_id)
-      name = record.try(:group_name).presence
-      return name if name
+      label = bookable_label(record)
+      return label if label
     end
     nil
   end

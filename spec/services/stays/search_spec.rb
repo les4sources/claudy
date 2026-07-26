@@ -104,6 +104,23 @@ RSpec.describe Stays::Search do
     end
   end
 
+  # Une résa OTA n'a pas de nom de groupe : son seul nom vit dans `firstname`.
+  # C'est celui que la liste affiche, il doit donc être cherchable.
+  describe "recherche sur le nom de personne du réservable" do
+    let!(:target) { create_stay(create_customer) }
+    let!(:other)  { create_stay(create_customer) }
+    let(:query) { "Freya" }
+
+    before do
+      Booking.create!(firstname: "Freya", from_date: Date.today + 5, to_date: Date.today + 7,
+                      adults: 2, platform: "airbnb").tap { |b| StayItem.create!(stay: target, bookable: b) }
+      Booking.create!(firstname: "Autre", from_date: Date.today + 5, to_date: Date.today + 7,
+                      adults: 2).tap { |b| StayItem.create!(stay: other, bookable: b) }
+    end
+
+    it { expect(results).to contain_exactly(target) }
+  end
+
   describe "recherche dans la note interne du séjour" do
     let!(:target) { create_stay(create_customer, notes: "Prévoir un lit parapluie pour le bébé") }
     let!(:other)  { create_stay(create_customer, notes: "RAS") }

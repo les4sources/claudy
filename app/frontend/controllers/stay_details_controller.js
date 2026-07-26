@@ -39,7 +39,12 @@ export default class extends Controller {
   // Sans lui, la modale volerait ces clics et le dropdown deviendrait
   // inutilisable. On ne réagit donc qu'aux clics sur le « vide » de la ligne.
   async openFromRow(event) {
-    if (event.target.closest("a, button, select, input, label, [data-row-modal-ignore]")) return
+    // Un élément interactif NICHÉ dans la ligne garde son comportement (le
+    // <select> de catégorie, le lien « Éditer »). Mais s'il PORTE lui-même
+    // l'action — cas du bouton qui affiche le nom du client — c'est bien la
+    // modale qu'on veut : d'où la comparaison avec `currentTarget`.
+    const interactive = event.target.closest("a, button, select, input, label, [data-row-modal-ignore]")
+    if (interactive && interactive !== event.currentTarget) return
 
     const url = event.currentTarget.dataset.stayUrl
     if (!url) return

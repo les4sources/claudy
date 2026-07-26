@@ -204,6 +204,22 @@ RSpec.describe "Index Séjours — refonte du tableau", type: :request do
     end
   end
 
+  # Depuis une liste de SÉJOURS, cliquer un nom doit montrer le séjour — pas
+  # emmener sur la fiche client.
+  describe "clic sur le nom du client" do
+    let!(:stay) { create_stay(email: "nom@example.com", first: "Ana", last: "Nom") }
+
+    it "ouvre la modale du séjour au lieu de naviguer vers le client" do
+      get stays_path
+      expect(response.body).not_to include(%(href="#{customer_path(stay.customer)}"))
+      # Slim TRIE les attributs : on teste leur PRÉSENCE sur la même balise, pas
+      # leur ordre (déjà tombé dans le piège avec `checked` vs `value`).
+      bouton = response.body[%r{<button[^>]*data-stay-url="#{Regexp.escape(stay_path(stay))}"[^>]*>}]
+      expect(bouton).to be_present
+      expect(bouton).to include("stay-details#openFromRow")
+    end
+  end
+
   describe "recherche" do
     let!(:alice) { create_stay(email: "alice@example.com", first: "Alice", last: "Durand") }
     let!(:bruno) { create_stay(email: "bruno@example.com", first: "Bruno", last: "Martin", notes: "Vient avec un chien") }

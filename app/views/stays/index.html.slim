@@ -98,11 +98,17 @@
                    — rien ne s'affiche pour une réservation directe.
                 .flex.items-center.gap-1.5
                   /  `display_name` et non `customer.name` : sur un séjour du
-                     fourre-tout, on affiche le nom de groupe de la réservation
-                     d'origine, seul nom parlant pour l'équipe. Le lien continue
-                     de pointer vers la fiche client réelle.
+                     fourre-tout, on affiche le nom porté par la réservation
+                     d'origine (groupe, ou personne pour une résa OTA), seul nom
+                     parlant pour l'équipe.
+                     Le nom ouvre la MODALE du séjour, pas la fiche client
+                     (Michael 2026-07-26) : depuis une liste de séjours, c'est le
+                     séjour qu'on veut voir. C'est un <button> et non un <span>
+                     pour rester atteignable au clavier — il porte lui-même
+                     l'action, que `openFromRow` reconnaît comme légitime.
                   - if stay.customer
-                    = link_to stay.display_name, customer_path(stay.customer), class: "text-indigo-600 hover:text-indigo-800 font-medium hover:underline"
+                    button.text-indigo-600.hover:text-indigo-800.font-medium.hover:underline.text-left(type="button" data-stay-url=stay_path(stay) data-action="click->stay-details#openFromRow")
+                      = stay.display_name
                   - else
                     span.text-gray-400 —
                   = stay.platform_badge
