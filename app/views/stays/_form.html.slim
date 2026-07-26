@@ -133,9 +133,35 @@
       / Catégorie de séjour (Michael 2026-07-21) : liste complète (les 4 sources
       / incluse côté admin). Optionnelle — option vide en tête. Circule par le
       / Draft comme `group_name`.
-      .space-y-1
-        label.block.text-sm.font-medium.text-gray-700 Catégorie (optionnel)
-        = select_tag "stay[category]", options_for_select(Stay::CATEGORIES.map(&:reverse), @draft&.category), include_blank: "— Aucune —", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      /  TAGS cliquables plutôt qu'un <select> (Michael 2026-07-26). Ce sont de
+         vrais `input[type=radio]` masqués (`sr-only`) : l'exclusivité du choix
+         est garantie par le NAVIGATEUR, pas par du JS, et le clavier
+         (Tab + flèches) fonctionne nativement. Le style suit l'état coché via la
+         variante `peer-checked:` de Tailwind — d'où l'ordre input PUIS span,
+         qu'exige `peer` (il ne cible qu'un frère PRÉCÉDENT).
+         « Aucune » est une puce à part entière (valeur vide) et non l'absence de
+         sélection : une valeur part donc toujours, y compris pour retirer la
+         catégorie d'un séjour qui en avait une.
+      fieldset.space-y-2
+        legend.block.text-sm.font-medium.text-gray-700 Catégorie (optionnel)
+        /  Les classes sont écrites EN TOUTES LETTRES, jamais construites par
+           interpolation : Tailwind génère son CSS en scannant le TEXTE de ce
+           fichier. Un `peer-checked:#{...}` assemblé au rendu ne serait trouvé
+           par aucun scan et la puce cochée resterait sans style.
+        - chip = "inline-flex items-center rounded-full border px-3 py-1 text-sm transition-colors cursor-pointer select-none " \
+                 "border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50 " \
+                 "peer-checked:border-transparent peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-sm " \
+                 "peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500 peer-focus-visible:ring-offset-2"
+        .flex.flex-wrap.gap-2
+          - ([["— Aucune —", nil]] + Stay::CATEGORIES.map(&:reverse)).each do |chip_label, value|
+            /  Booléen sorti dans une variable : plus lisible qu'une comparaison
+               inline dans la liste d'attributs. Slim rend `checked=""` quand il
+               est vrai, et omet l'attribut quand il est faux.
+            - chip_on = (@draft&.category.presence == value)
+            label.cursor-pointer
+              input.sr-only.peer type="radio" name="stay[category]" value=value.to_s checked=chip_on
+              span class=chip
+                = chip_label
 
     / --- Hébergement --------------------------------------------------------
     / Mode d'occupation (epic #81, Phase 5) : gîte entier (défaut) ou chambres

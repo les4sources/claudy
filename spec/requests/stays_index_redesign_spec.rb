@@ -33,10 +33,14 @@ RSpec.describe "Index Séjours — refonte du tableau", type: :request do
       expect(response.body).not_to include(">##{stay.id}<")
     end
 
-    it "expose les nouvelles colonnes Catégorie et Éléments" do
+    # « Éléments » a été renommée « Composition » et le résumé TEXTE homonyme
+    # supprimé (Michael 2026-07-26) : une seule colonne de composition, en icônes.
+    it "expose la colonne Catégorie et une SEULE colonne Composition" do
       get stays_path
       expect(response.body).to include("Catégorie")
-      expect(response.body).to include("Éléments")
+      expect(response.body).not_to include("Éléments")
+      entetes = response.body.scan(%r{<th[^>]*>Composition</th>})
+      expect(entetes.size).to eq(1)
     end
   end
 

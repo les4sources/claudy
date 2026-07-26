@@ -62,8 +62,7 @@
             th class="#{sticky_th} text-left" Client
             th class="#{sticky_th} text-left" Dates
             th class="#{sticky_th} text-left" Catégorie
-            th class="#{sticky_th} text-left" Composition
-            th class="#{sticky_th} text-center" Éléments
+            th class="#{sticky_th} text-center" Composition
             th class="#{sticky_th} text-right" Montant
             th class="#{sticky_th} text-right" Actions
         tbody.divide-y.divide-gray-200
@@ -86,7 +85,7 @@
             - if month_key != current_month
               - current_month = month_key
               tr.bg-gray-100
-                th scope="rowgroup" colspan="7" class="px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
+                th scope="rowgroup" colspan="6" class="px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
                   - if stay.arrival_date
                     = I18n.l(stay.arrival_date, format: "%B %Y").capitalize
                   - else
@@ -98,8 +97,12 @@
                    mérite pas une ligne à elle. `platform_badge` rend nil hors OTA
                    — rien ne s'affiche pour une réservation directe.
                 .flex.items-center.gap-1.5
+                  /  `display_name` et non `customer.name` : sur un séjour du
+                     fourre-tout, on affiche le nom de groupe de la réservation
+                     d'origine, seul nom parlant pour l'équipe. Le lien continue
+                     de pointer vers la fiche client réelle.
                   - if stay.customer
-                    = link_to stay.customer.name, customer_path(stay.customer), class: "text-indigo-600 hover:text-indigo-800 font-medium hover:underline"
+                    = link_to stay.display_name, customer_path(stay.customer), class: "text-indigo-600 hover:text-indigo-800 font-medium hover:underline"
                   - else
                     span.text-gray-400 —
                   = stay.platform_badge
@@ -113,7 +116,9 @@
                  (« Formation/Initiation » → « Formation/Initia »).
               td.px-3.py-2.text-sm(class="min-w-[11.5rem]")
                 = render "stays/category_select", stay: stay
-              td.px-3.py-2.text-sm.text-gray-600 = stay.composition_summary
+              /  Le résumé TEXTE (« 1 gîte · 2 espaces ») a été retiré (Michael
+                 2026-07-26) : il faisait doublon avec la rangée d'icônes, qui
+                 reprend son titre. Les comptes restent lisibles dans la fiche.
               td.px-3.py-2.text-sm.text-center = stay_composition_icon_row(stay)
               td.px-3.py-2.text-sm.text-right.whitespace-nowrap
                 .flex.items-center.justify-end.gap-1
@@ -136,7 +141,7 @@
                 = link_to "Éditer", edit_stay_path(stay), class: "text-indigo-600 hover:text-indigo-800 hover:underline"
           - if @stays.empty?
             tr.bg-white
-              td.px-4.py-6.text-center.text-sm.text-gray-400 colspan="7"
+              td.px-4.py-6.text-center.text-sm.text-gray-400 colspan="6"
                 - if @query.present?
                   | Aucun séjour ne correspond à cette recherche.
                 - else

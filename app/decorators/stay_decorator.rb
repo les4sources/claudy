@@ -112,6 +112,30 @@ class StayDecorator < ApplicationDecorator
     Customer::CATCH_ALL_EMAILS.include?(object.customer&.email)
   end
 
+  # Nom À AFFICHER pour le séjour (Michael 2026-07-26). Sur un séjour rattaché au
+  # client FOURRE-TOUT, « Client Les 4 Sources » ne dit rien : on lui préfère le
+  # `group_name` porté par la réservation d'origine (« Camp louveteaux »), qui est
+  # le nom sous lequel l'équipe connaît le dossier.
+  #
+  # On regarde AUSSI les bookables soft-deleted : sur 620 séjours fourre-tout,
+  # 77 n'ont plus de réservable vivant et leur nom ne vit QUE là (c'est le cas du
+  # séjour 1417 qui a motivé ce changement). Le repli reste le nom du client.
+  #
+  # COÛT : la relecture unscoped n'a lieu que si le client est un fourre-tout ET
+  # que les bookables préchargés n'ont rien donné — jamais sur un séjour normal.
+  def display_name
+    return object.customer&.name unless catch_all_customer?
+
+    origin_group_name.presence || object.customer&.name
+  end
+
+  def origin_group_name
+    @origin_group_name ||= begin
+      vivant = object.stay_items.filter_map { |i| i.bookable.try(:group_name).presence }.first
+      vivant || supprime_group_name
+    end
+  end
+
   # Une entrée par réservable porteur d'un contact, dédoublonnée. Un réservable
   # sans aucune coordonnée est ignoré (rien à rappeler).
   def origin_contacts
@@ -133,6 +157,19 @@ class StayDecorator < ApplicationDecorator
   end
 
   private
+
+  # Dernier recours : le réservable a été soft-deleted, son nom de groupe n'est
+  # plus atteignable par l'association (le default_scope l'exclut).
+  def supprime_group_name
+    object.stay_items.each do |item|
+      next if item.bookable.present?
+
+      record = item.bookable_type.constantize.unscoped.find_by(id: item.bookable_id)
+      name = record.try(:group_name).presence
+      return name if name
+    end
+    nil
+  end
 
   def origin_contact_for(item)
     bookable = item.bookable

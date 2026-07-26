@@ -65,6 +65,40 @@ RSpec.describe "Fiche séjour — contact d'origine", type: :request do
     end
   end
 
+  # Nom AFFICHÉ dans les listes : « Client Les 4 Sources » ne dit rien, on lui
+  # préfère le nom de groupe de la réservation d'origine.
+  describe "#display_name" do
+    it "préfère le nom de groupe d'origine sur un séjour fourre-tout" do
+      stay = stay_for(catch_all)
+      attach_space_booking(stay, group_name: "Camp louveteaux")
+      expect(stay.reload.decorate.display_name).to eq("Camp louveteaux")
+    end
+
+    # Forme RÉELLE des données legacy (séjour 1417) : le réservable est
+    # soft-deleted mais son StayItem survit. On pose donc `deleted_at` par
+    # `update_column` — un `destroy` cascaderait sur l'item et ne reproduirait
+    # pas le cas.
+    it "va chercher le nom sur un réservable SOFT-DELETED" do
+      stay = stay_for(catch_all)
+      sb = attach_space_booking(stay, group_name: "Camp supprimé")
+      sb.update_column(:deleted_at, Time.current)
+      expect(stay.reload.decorate.display_name).to eq("Camp supprimé")
+    end
+
+    it "garde le nom du client quand il n'est pas un fourre-tout" do
+      customer = Customer.create!(email: "vrai@example.com", first_name: "Vrai", last_name: "Client")
+      stay = stay_for(customer)
+      attach_space_booking(stay, group_name: "Peu importe")
+      expect(stay.reload.decorate.display_name).to eq("Vrai Client")
+    end
+
+    it "retombe sur le nom du client quand aucun groupe n'est connu" do
+      stay = stay_for(catch_all)
+      attach_space_booking(stay, group_name: nil)
+      expect(stay.reload.decorate.display_name).to eq("Client Les 4 Sources")
+    end
+  end
+
   # Un séjour sans réservable n'a aucun contact d'origine à rappeler : le bloc
   # ne doit pas s'afficher, même sur le fourre-tout.
   context "séjour sans réservable" do
