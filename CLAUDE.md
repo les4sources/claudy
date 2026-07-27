@@ -10,8 +10,9 @@ Stack: Rails 7.0 · Ruby 3.1.2 · PostgreSQL · Node 18.8.0 · Vite (via `vite_r
 
 ## Common commands
 
-- `bin/dev` — run app + Vite (foreman, Procfile.dev). Vite serves on port 3000 per `vite.config.ts`.
-- `rails s` / `bin/vite dev` — run the two processes separately.
+- `bin/dev` — runs **Vite only** (foreman, `Procfile.dev` contains just `vite: bin/vite dev`). It does *not* start Rails.
+- `rails s` — the app, on port 3000. Always needed alongside `bin/dev` (or `bin/vite dev`).
+- Vite dev listens on port 3036 per `config/vite.json`; dev assets are auto-built into `public/vite-dev/` when no Vite process runs.
 - `rails db:create && rails db:migrate && rails db:seed` — bootstrap DB (seeds lodgings/rooms/spaces).
 - `bundle exec rspec` — run tests (RSpec; specs live in `spec/`, currently only `models/` and `components/`).
 - `bundle exec rspec spec/models/booking_spec.rb:42` — run a single test.
