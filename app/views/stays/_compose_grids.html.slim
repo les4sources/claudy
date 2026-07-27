@@ -17,7 +17,9 @@
   / Parité funnel : le gîte occupé nuit par nuit (lodging_night_ids). Masquée en
   / mode « chambres seules » par stay-form (data-stay-form-target="lodgingGrid").
   / Rechargée avec les autres grilles quand les dates changent.
-  details(class=grid_box open=nuits_gite.any? data-stay-form-target="lodgingGrid")
+  / Ouverte par défaut, comme la section Hébergement : choisir le gîte nuit par
+  / nuit est le geste central de la composition, pas une option à révéler.
+  details(class=grid_box open=true data-stay-form-target="lodgingGrid")
     summary class=grid_summary
       span 🏡 Hébergement — nuit par nuit
       = stay_form_section_marker(nuits_gite.any?, nuits_gite.size)
@@ -51,11 +53,14 @@
               = select_tag "stay[halls][#{index}][kind]", options_for_select(space_kind_options, row[:kind]), include_blank: "— Espace —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
               = date_field_tag "stay[halls][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
               = select_tag "stay[halls][#{index}][period]", options_for_select(period_options, row[:period]), include_blank: "— Période —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-      / Précision libre du besoin d'espace (parité funnel) : reconstruite depuis la
-      / note interne préfixée du SpaceBooking en édition ; persistée à la création.
-      .space-y-1
-        label.block.text-sm.font-medium.text-gray-700 for="stay_spaces_note" Précision du besoin (espaces)
-        = text_area_tag "stay[spaces_note]", @draft&.spaces_note, id: "stay_spaces_note", rows: 2, placeholder: "Ex. configuration de la salle, matériel, horaires souhaités…", class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+        /  Précision libre du besoin d'espace (parité funnel) — UNIQUEMENT dans la
+           branche sans-dates. Avec dates, c'est `_spaces_calendar` qui porte déjà ce
+           champ (même `name`, même `id`) : les rendre tous les deux postait DEUX
+           `stay[spaces_note]`, dont le second vide, et Rails retenant la dernière
+           valeur, la saisie de l'équipe était écrasée en silence (bug 2026-07-27).
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 for="stay_spaces_note" Précision du besoin (espaces)
+          = text_area_tag "stay[spaces_note]", @draft&.spaces_note, id: "stay_spaces_note", rows: 2, placeholder: "Ex. configuration de la salle, matériel, horaires souhaités…", class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 
 
   / --- Camping / Van (grille par nuit) ------------------------------------
@@ -140,3 +145,31 @@
                   td.py-2.px-1.text-center
                     = render "public/reservations/stepper_cell", name: "stay[per_night_resources][hamac_double][]", val: (pnr["hamac_double"] || [])[i].to_i, max: 10
 
+  /  --- Activités ----------------------------------------------------------
+     DANS LE FRAME depuis 2026-07-27 : la liste des créneaux dépend des dates du
+     séjour (`form_assignable_availabilities`), elle doit donc être re-rendue avec
+     les grilles quand l'arrivée ou le départ changent. Hors frame, elle restait
+     figée sur les créneaux calculés au chargement de la page.
+     `selected_experiences` est reconstruit ici : le partial ne voit pas les
+     locals de `_form`.
+  - selected_experiences = {}
+  - Array(@draft&.experiences).each { |e| selected_experiences[e[:availability_id].to_i] = e[:participants] }
+  - retenues = selected_experiences.values.count { |v| v.to_i.positive? }
+  details(class=grid_box open=retenues.positive?)
+    summary class=grid_summary
+      span 🎯 Activités
+      = stay_form_section_marker(retenues.positive?, retenues)
+    .px-5.pb-5.space-y-4
+      - if @assignable_availabilities.blank?
+        - if @stay_nights.present?
+          p.text-sm.text-gray-500 Aucun créneau d'activité proposé sur ces dates.
+        - else
+          p.text-sm.text-gray-500 Choisissez d'abord les dates du séjour pour voir les créneaux disponibles.
+      - else
+        p.text-sm.text-gray-500 Seuls les créneaux disponibles pendant le séjour sont proposés. Indiquez le nombre de participants (0 = non réservé).
+        ul.divide-y.divide-gray-100
+          - @assignable_availabilities.each_with_index do |availability, index|
+            li.py-2.flex.items-center.justify-between.gap-4
+              span.text-sm.text-gray-900 = availability.label
+              = hidden_field_tag "stay[experiences][#{index}][availability_id]", availability.id
+              = number_field_tag "stay[experiences][#{index}][participants]", selected_experiences[availability.id].to_i, min: 0, class: "w-20 rounded-md border-gray-300 shadow-sm sm:text-sm"

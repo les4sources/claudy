@@ -1,19 +1,38 @@
-/ Panneau « Devis (B2C) » du form de composition Séjour admin. Extrait en partial
-/ id'd (issue #73) pour être remplacé en Turbo Stream à chaque changement de la
+/ Carte « Devis » du form de composition Séjour admin. Extraite en partial id'd
+/ (issue #73) pour être remplacée en Turbo Stream à chaque changement de la
 / composition — même barème que le submit (PricingModel), aucun nouveau calcul.
+/ Depuis 2026-07-27 elle vit dans le RAIL COLLANT du form : c'est la carte qu'on
+/ regarde en composant, donc le total passe en tête et en gros, et le détail
+/ dessous — l'ordre de lecture d'une carte de prix Airbnb.
 #stay-quote-panel
-  - if @quote
-    section.bg-gray-50.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-2
-      h2.text-base.font-semibold.text-gray-900 Devis (B2C)
-      / Chambres seules (epic #81, Phase 5) : pas de barème par chambre — le total
-      / vient du Prix total imposé. On l'annonce clairement dans le panneau.
-      - if @draft&.rooms_mode?
-        p.text-sm.font-medium.text-amber-700 Pas de devis automatique pour des chambres seules — utilisez le Prix total imposé.
-      ul.text-sm.text-gray-700.space-y-1
-        - @quote.breakdown.each do |line|
-          li.flex.justify-between
-            span = line[:label]
-            span = humanized_money_with_symbol(Money.new(line[:amount_cents]))
-      .flex.justify-between.border-t.border-gray-200.pt-2.font-semibold.text-gray-900
-        span Total
-        span = humanized_money_with_symbol(Money.new(@quote.total_cents))
+  section.bg-white.rounded-2xl.overflow-hidden(class="ring-1 ring-gray-200 shadow-sm")
+    - if @quote
+      .p-5.space-y-4
+        .flex.items-baseline.justify-between.gap-3
+          span.text-sm.font-medium.text-gray-500 Devis (B2C)
+          span.text-2xl.font-semibold.text-gray-900.tabular-nums = humanized_money_with_symbol(Money.new(@quote.total_cents))
+
+        / Chambres seules (epic #81, Phase 5) : pas de barème par chambre — le total
+        / vient du Prix total imposé. On l'annonce clairement dans la carte.
+        - if @draft&.rooms_mode?
+          p.rounded-xl.bg-amber-50.px-3.py-2.text-xs.font-medium.text-amber-800 Pas de devis automatique pour des chambres seules — utilisez le prix imposé ci-dessous.
+
+        - if @quote.breakdown.present?
+          ul.space-y-2.text-sm
+            - @quote.breakdown.each do |line|
+              li.flex.items-start.justify-between.gap-3
+                span.text-gray-600 = line[:label]
+                span.flex-shrink-0.text-gray-900.tabular-nums = humanized_money_with_symbol(Money.new(line[:amount_cents]))
+          .flex.items-center.justify-between.gap-3.border-t.border-gray-100.pt-3.text-sm.font-semibold.text-gray-900
+            span Total
+            span.tabular-nums = humanized_money_with_symbol(Money.new(@quote.total_cents))
+        - else
+          /  Devis à zéro : un séjour sans aucune ligne facturable. Le dire
+             explicitement vaut mieux qu'une carte vide qu'on prend pour un bug.
+          p.text-sm.text-gray-500 Rien de facturable pour l'instant — composez le séjour ci-contre.
+    - else
+      /  Pas de devis calculable (dates manquantes, composition vide au premier
+         rendu). Le rail ne doit jamais être un trou blanc : on annonce l'état.
+      .p-5.space-y-1
+        span.block.text-sm.font-medium.text-gray-500 Devis (B2C)
+        p.text-sm.text-gray-400 Le devis apparaîtra dès que le séjour aura des dates et une composition.

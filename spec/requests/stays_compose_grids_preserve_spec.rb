@@ -19,10 +19,13 @@ RSpec.describe "Stays — rechargement des grilles sans perte de saisie", type: 
 
   let(:arrival) { Date.today + 30 }
 
-  # Nom + valeur du stepper tente tels que rendus par `_stepper_cell` (l'ordre
-  # des attributs suit la source Slim : type, name, value).
+  # Cellule stepper « tente » portant une valeur donnée. On matche le TAG entier
+  # plutôt qu'un fragment `name="…" value="…"` : Slim réordonne les attributs au
+  # rendu (data-*, name, type, value), donc les deux ne sont jamais adjacents et
+  # l'ancienne version ne matchait rien — silencieusement, puisque les exemples
+  # concernés levaient déjà avant d'arriver ici.
   def tente_field(value)
-    %(name="stay[per_night_resources][tente][]" value="#{value}")
+    /<input[^>]*name="stay\[per_night_resources\]\[tente\]\[\]"[^>]*value="#{value}"[^>]*>/
   end
 
   def tente_fields_count(body)
@@ -33,7 +36,10 @@ RSpec.describe "Stays — rechargement des grilles sans perte de saisie", type: 
     post compose_grids_stays_path,
          params: { stay: {
            customer_mode: "new",
-           arrival_date: arrival.iso8601, departure_date: departure.iso8601,
+           # `departure` arrive DÉJÀ en ISO des appelants — le reconvertir levait
+           # `NoMethodError: undefined method 'iso8601' for String` et les cinq
+           # exemples qui passent par ce helper n'ont jamais tourné au vert.
+           arrival_date: arrival.iso8601, departure_date: departure.to_s,
            adults: 2, children: 0, dogs_count: 0,
            per_night_resources: { tente: tente }
          }.merge(extra) },
@@ -69,6 +75,16 @@ RSpec.describe "Stays — rechargement des grilles sans perte de saisie", type: 
            extra: { spaces_note: "Salle en U, 20 chaises" })
 
     expect(response.body).to include("Salle en U, 20 chaises")
+  end
+
+  # Bug 2026-07-27 : `_compose_grids` rendait un `stay[spaces_note]` EN PLUS de
+  # celui que `_spaces_calendar` fournit déjà. Rack retenant la dernière valeur,
+  # le champ du bas (vide) écrasait la saisie du champ du haut. Un seul champ,
+  # donc — sinon la note se perd en silence à chaque enregistrement.
+  it "ne rend QU'UN SEUL champ « précision du besoin »" do
+    reload(departure: (arrival + 3).iso8601, tente: %w[0 0 0])
+
+    expect(response.body.scan('name="stay[spaces_note]"').size).to eq(1)
   end
 
   it "conserve la sélection de gîte nuit par nuit" do

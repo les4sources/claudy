@@ -225,6 +225,10 @@ class StaysController < BaseController
     @lodgings = bookable_lodgings
     @stay = Stay.find_by(id: params[:exclude_stay_id]) if params[:exclude_stay_id].present?
     @lodging_availability = stay_lodging_availability(@lodgings, @stay_nights)
+    # Les activités font partie du frame : leur liste dépend des dates, elle doit
+    # donc être recalculée ici, sinon changer les dates rechargerait les grilles
+    # en laissant des créneaux hors fenêtre à l'écran.
+    @assignable_availabilities = form_assignable_availabilities(@draft)
 
     respond_to do |format|
       format.turbo_stream do
@@ -460,11 +464,36 @@ class StaysController < BaseController
   # 18-19/07 n'a aucun sens (retour Michael 2026-07-21). Un séjour sans dates
   # retombe sur tous les créneaux à venir.
   def assignable_availabilities_for(stay)
+    assignable_availabilities_between(stay.arrival_date, stay.departure_date)
+  end
+
+  # Créneaux proposables DANS LE FORM. Deux différences avec la version fiche :
+  #
+  #   1. la fenêtre vient du DRAFT, pas du séjour persisté — l'équipe compose et
+  #      change les dates avant d'enregistrer, la liste doit suivre la saisie ;
+  #   2. on RAJOUTE toujours les créneaux déjà retenus (participants > 0), même
+  #      hors fenêtre ou déjà passés. Sans eux leur `input` ne serait pas rendu,
+  #      donc pas soumis, et `AdminUpdater#reconcile_experiences!` annulerait
+  #      l'activité EN SILENCE (il annule tout créneau du périmètre absent des
+  #      params). Décaler les dates d'un séjour ne doit jamais supprimer une
+  #      activité déjà réservée sans que personne ne l'ait demandé.
+  def form_assignable_availabilities(draft)
+    offered  = assignable_availabilities_between(draft&.arrival_date, draft&.departure_date).to_a
+    kept_ids = Array(draft&.experiences)
+               .select { |e| e[:participants].to_i.positive? }
+               .map { |e| e[:availability_id].to_i }
+               .reject(&:zero?) - offered.map(&:id)
+    return offered if kept_ids.empty?
+
+    extra = ExperienceAvailability.for_user(current_user).includes(:experience).where(id: kept_ids)
+    (offered + extra.to_a).sort_by { |a| [a.available_on, a.starts_at.to_s] }
+  end
+
+  def assignable_availabilities_between(from, to)
     scope = ExperienceAvailability.for_user(current_user).upcoming.includes(:experience)
-    if stay.arrival_date.present? && stay.departure_date.present?
-      scope = scope.where(available_on: stay.arrival_date..stay.departure_date)
-    end
-    scope
+    return scope if from.blank? || to.blank?
+
+    scope.for_date_range(from, to)
   end
 
   # Relation de base de l'index selon le filtre actif. « À venir » / « Passés »
@@ -666,9 +695,10 @@ class StaysController < BaseController
     # précharge plus TOUS les clients — seul le client courant (édition) alimente
     # le `<select>` de repli sans-JS. La recherche dynamique fait le reste.
     @customers = Customer.where(id: [@stay&.customer_id, @preselected_customer_id].compact).to_a
-    @assignable_availabilities = ExperienceAvailability.for_user(current_user)
-                                                       .upcoming
-                                                       .includes(:experience)
+    # Bornés aux dates SAISIES (retour Michael 2026-07-27) : proposer un créneau
+    # du 7/08 sur un séjour du 18-19/07 n'a aucun sens. Cette liste vit dans le
+    # frame `stay_compose_grids`, donc elle se rafraîchit quand les dates bougent.
+    @assignable_availabilities = form_assignable_availabilities(@draft)
     @statuses = Stay::STATUSES_ADMIN_CREATABLE
     # Grille espaces date-par-date : les colonnes-nuits du séjour. Vide si pas de
     # dates → le form retombe sur les lignes `halls` (journée sèche / espaces

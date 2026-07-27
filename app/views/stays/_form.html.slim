@@ -39,332 +39,329 @@
 / séjour pour que la vérif de dispo du form IGNORE ses propres chambres (sinon
 / un séjour confirmé s'affiche « indisponible » à tort au chargement).
 = form_with url: url, method: method, data: { controller: "stay-form stay-quote stay-availability stay-grids", "stay-quote-url-value": quote_stays_path, "stay-availability-url-value": availability_stays_path, "stay-availability-exclude-stay-id-value": (@stay&.persisted? ? @stay.id : nil), "stay-grids-url-value": compose_grids_stays_path, "stay-grids-exclude-stay-id-value": (@stay&.persisted? ? @stay.id : nil), action: "change->stay-quote#check input->stay-quote#check" } do
-  .space-y-8
-    / --- Client -------------------------------------------------------------
-    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Client
-      .flex.gap-4.text-sm
-        label.flex.items-center.gap-2
-          input type="radio" name="stay[customer_mode]" value="existing" checked=true data-action="change->stay-form#toggleCustomer"
-          | Client existant
-        label.flex.items-center.gap-2
-          input type="radio" name="stay[customer_mode]" value="new" data-action="change->stay-form#toggleCustomer"
-          | Nouveau client
-
-      / Client existant — autocomplete (issue #74) : recherche dynamique via
-      / customers/search. Le <select> reste le fallback sans-JS (réduit au client
-      / courant en édition) ; le contrôleur customer-search le masque et pilote sa
-      / valeur à la sélection d'un résultat.
-      .space-y-1(data-stay-form-target="existingPanel" data-controller="customer-search" data-customer-search-url-value=search_customers_path)
-        label.block.text-sm.font-medium.text-gray-700 Sélectionner un client
-        = select_tag "stay[customer_id]", options_for_select(@customers.map { |c| [c.name.presence || c.email, c.id] }, selected_customer_id), include_blank: "— Choisir un client —", data: { "customer-search-target": "select" }, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-        .relative.space-y-1.hidden(data-customer-search-target="searchWrap")
-          = text_field_tag :customer_query, nil, placeholder: "Rechercher un client (nom, email)…", autocomplete: "off", data: { "customer-search-target": "searchInput", action: "input->customer-search#search" }, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          .border.border-gray-100.rounded-md.divide-y.divide-gray-50.bg-white.shadow-sm.max-h-48.overflow-y-auto(data-customer-search-target="results")
-        .flex.items-center.justify-between.gap-2.text-sm.hidden(data-customer-search-target="chosen")
-          .min-w-0
-            span.block.text-gray-900.font-medium.truncate(data-customer-search-target="chosenLabel") = selected_customer&.name
-            span.block.text-gray-500.text-xs.truncate(data-customer-search-target="chosenContact") = selected_customer_contact
-          button type="button" data-action="customer-search#clear" class="flex-shrink-0 text-indigo-600 hover:underline" Changer
-
-      /  Contact d'ORIGINE porté par les réservables (Michael 2026-07-26). Sur un
-         séjour importé, le client est le fourre-tout `client@les4sources.be` et
-         le seul nom réel du dossier vit sur le Booking/SpaceBooking. Sans ce
-         bloc, la fiche n'affiche AUCUN nom. Lecture seule : c'est un rappel de
-         ce que dit la résa d'origine, pas un champ — pour rattacher un vrai
-         client, on passe par « Changer » au-dessus.
-      - stay_for_origin = @stay&.persisted? ? @stay.decorate : nil
-      - if stay_for_origin&.origin_contacts_worth_showing?
-        .rounded-md.bg-amber-50.p-3.text-sm(class="ring-1 ring-amber-100")
-          .flex.items-start.gap-2
-            svg.w-4.h-4.text-amber-600.flex-shrink-0(class="mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true")
-              path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-            .min-w-0.space-y-1
-              p.font-medium.text-amber-900
-                - if stay_for_origin.catch_all_customer?
-                  | Contact d'origine — ce séjour n'est rattaché à aucun vrai client
-                - else
-                  | Contact d'origine de la réservation
-              - stay_for_origin.origin_contacts.each do |contact|
-                .text-amber-800
-                  - parts = [contact[:name], (contact[:group].present? ? "groupe « #{contact[:group]} »" : nil), contact[:email], contact[:phone]].compact_blank
-                  span.font-medium = parts.join(" · ")
-                  span.text-xs.text-amber-600 &nbsp;— #{contact[:label]} (#{contact[:reference]})
-
-      .space-y-2.hidden(data-stay-form-target="newPanel")
-        .grid.grid-cols-2.gap-2
-          = text_field_tag "stay[new_customer][first_name]", @draft&.first_name, placeholder: "Prénom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-          = text_field_tag "stay[new_customer][last_name]", @draft&.last_name, placeholder: "Nom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-        = email_field_tag "stay[new_customer][email]", @draft&.email, placeholder: "Email", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-        = telephone_field_tag "stay[new_customer][phone]", @draft&.phone, placeholder: "Téléphone", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-        / Type de client (addendum) : switch particulier ↔ organisation (même style
-        / que le statut). Hidden `individual` de repli avant le checkbox
-        / `organization` (Rack retient la dernière valeur). En organisation, le
-        / « Nom du groupe » ci-dessous alimente `organization_name` du client.
-        - new_is_org = (@draft&.customer_type.to_s == "organization")
-        = hidden_field_tag "stay[new_customer][customer_type]", "individual", id: nil
-        label class="inline-flex items-center gap-3 cursor-pointer"
-          input id="new_customer_org_toggle" type="checkbox" name="stay[new_customer][customer_type]" value="organization" checked=new_is_org role="switch" aria-label="Client organisation" class="sr-only peer"
-          span.ui-switch aria-hidden="true"
-          span.ui-switch-label-off class="text-sm font-medium text-gray-500" Particulier
-          span.ui-switch-label-on class="text-sm font-medium text-emerald-700" Organisation
-        = text_field_tag "stay[new_customer][organization_name]", @draft&.organization_name, placeholder: "Nom du groupe / organisation", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-
-    / --- Séjour (dates + groupe) --------------------------------------------
-    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Séjour
-      .grid.grid-cols-2.gap-4
-        .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 Arrivée
-          = date_field_tag "stay[arrival_date]", @draft&.arrival_date&.iso8601, data: { action: "change->stay-availability#check change->stay-grids#reload" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-        .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 Départ
-          = date_field_tag "stay[departure_date]", @draft&.departure_date&.iso8601, data: { action: "change->stay-grids#reload change->stay-availability#check" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-      .grid.grid-cols-2.gap-4
-        .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 for="stay_arrival_time" Heure d'arrivée
-          = text_field_tag "stay[arrival_time]", @draft&.arrival_time, id: "stay_arrival_time", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-        .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 for="stay_departure_time" Heure de départ
-          = text_field_tag "stay[departure_time]", @draft&.departure_time, id: "stay_departure_time", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-      .grid.grid-cols-3.gap-4
-        .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 Adultes
-          = number_field_tag "stay[adults]", (@draft&.adults.to_i.positive? ? @draft.adults : 1), min: 1, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-        .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 Enfants
-          = number_field_tag "stay[children]", @draft&.children.to_i, min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-        .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 Chiens
-          = number_field_tag "stay[dogs_count]", @draft&.dogs_count.to_i, min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-      .space-y-1
-        label.block.text-sm.font-medium.text-gray-700 Nom du groupe (optionnel)
-        = text_field_tag "stay[group_name]", @draft&.group_name, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-      / Catégorie de séjour (Michael 2026-07-21) : liste complète (les 4 sources
-      / incluse côté admin). Optionnelle — option vide en tête. Circule par le
-      / Draft comme `group_name`.
-      /  TAGS cliquables plutôt qu'un <select> (Michael 2026-07-26). Ce sont de
-         vrais `input[type=radio]` masqués (`sr-only`) : l'exclusivité du choix
-         est garantie par le NAVIGATEUR, pas par du JS, et le clavier
-         (Tab + flèches) fonctionne nativement. Le style suit l'état coché via la
-         variante `peer-checked:` de Tailwind — d'où l'ordre input PUIS span,
-         qu'exige `peer` (il ne cible qu'un frère PRÉCÉDENT).
-         « Aucune » est une puce à part entière (valeur vide) et non l'absence de
-         sélection : une valeur part donc toujours, y compris pour retirer la
-         catégorie d'un séjour qui en avait une.
-      fieldset.space-y-2
-        legend.block.text-sm.font-medium.text-gray-700 Catégorie (optionnel)
-        /  Les classes sont écrites EN TOUTES LETTRES, jamais construites par
-           interpolation : Tailwind génère son CSS en scannant le TEXTE de ce
-           fichier. Un `peer-checked:#{...}` assemblé au rendu ne serait trouvé
-           par aucun scan et la puce cochée resterait sans style.
-        - chip = "inline-flex items-center rounded-full border px-3 py-1 text-sm transition-colors cursor-pointer select-none " \
-                 "border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50 " \
-                 "peer-checked:border-transparent peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-sm " \
-                 "peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500 peer-focus-visible:ring-offset-2"
-        .flex.flex-wrap.gap-2
-          - ([["— Aucune —", nil]] + Stay::CATEGORIES.map(&:reverse)).each do |chip_label, value|
-            /  Booléen sorti dans une variable : plus lisible qu'une comparaison
-               inline dans la liste d'attributs. Slim rend `checked=""` quand il
-               est vrai, et omet l'attribut quand il est faux.
-            - chip_on = (@draft&.category.presence == value)
-            label.cursor-pointer
-              input.sr-only.peer type="radio" name="stay[category]" value=value.to_s checked=chip_on
-              span class=chip
-                = chip_label
-
-    / --- Hébergement --------------------------------------------------------
-    / Mode d'occupation (epic #81, Phase 5) : gîte entier (défaut) ou chambres
-    / seules. En mode chambres, on coche les chambres du gîte choisi (pré-rendues
-    / par gîte, affichées/masquées par Stimulus — pas d'endpoint : plus robuste).
-    - current_booking_type = (@draft&.rooms_mode? ? "rooms" : "lodging")
-    - selected_room_ids = Array(@draft&.room_ids).map(&:to_i)
-    - has_lodging = @draft&.lodging_id.present? || selected_room_ids.any? || Array(@draft&.lodging_night_ids).compact_blank.any?
-    details class=section_box open=has_lodging
-      summary class=section_summary
-        span Hébergement
-        = stay_form_section_marker(has_lodging)
-      .px-5.pb-5.space-y-4
+  /  DEUX COLONNES (Michael 2026-07-27). Le formulaire est un outil de laptop,
+     jamais de téléphone : on exploite la largeur. À gauche la composition, à
+     droite un rail COLLANT qui garde le prix sous les yeux pendant qu'on assemble
+     — le devis vivait auparavant tout en bas, donc systématiquement hors écran au
+     moment précis où il sert. C'est le pattern de la page de réservation Airbnb.
+  .grid.gap-6.items-start(class="lg:grid-cols-[minmax(0,1fr)_360px]")
+    .space-y-6.min-w-0
+      / --- Client -------------------------------------------------------------
+      section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+        h2.text-base.font-semibold.text-gray-900 Client
         .flex.gap-4.text-sm
           label.flex.items-center.gap-2
-            input type="radio" name="stay[booking_type]" value="lodging" checked=(current_booking_type == "lodging") data-action="change->stay-form#toggleBookingMode change->stay-availability#check"
-            | Gîte entier
+            input type="radio" name="stay[customer_mode]" value="existing" checked=true data-action="change->stay-form#toggleCustomer"
+            | Client existant
           label.flex.items-center.gap-2
-            input type="radio" name="stay[booking_type]" value="rooms" checked=(current_booking_type == "rooms") data-action="change->stay-form#toggleBookingMode change->stay-availability#check"
-            | Chambres seules
-        / Mode GÎTE ENTIER : le gîte se choisit nuit par nuit dans la grille
-        / « Hébergement — nuit par nuit » (frame des grilles, plus bas). Le <select>
-        / ci-dessous ne sert qu'au mode CHAMBRES SEULES (choix du gîte dont on coche
-        / les chambres) ; masqué + désactivé en gîte entier pour ne pas imposer un
-        / lodging_id concurrent de la grille.
-        p.text-sm.text-gray-500(data-stay-form-target="lodgingGridHint")
-          | Choisissez le gîte pour chaque nuit dans la grille « Hébergement — nuit par nuit » ci-dessous.
-        .space-y-1.hidden(data-stay-form-target="lodgingSelectPanel")
-          label.block.text-sm.font-medium.text-gray-700 Gîte (chambres seules)
-          = select_tag "stay[lodging_id]", options_for_select(@lodgings.map { |l| [l.form_label, l.id] }, @draft&.lodging_id), include_blank: "— Choisir un hébergement —", data: { "stay-form-target": "lodgingSelect", action: "change->stay-availability#check change->stay-form#syncRoomVisibility" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-        / Chambres du gîte (mode chambres seules). Un groupe par gîte, masqué par
-        / défaut ; Stimulus n'affiche que le groupe du gîte sélectionné, en mode rooms.
-        .space-y-2.hidden(data-stay-form-target="roomsPanel")
-          p.text-sm.text-gray-500 Cochez les chambres à réserver. Pas de devis automatique pour des chambres seules — utilisez le Prix total imposé plus bas.
-          - @lodgings.each do |lodging|
-            .space-y-1.hidden(data-stay-form-target="roomsGroup" data-lodging-id=lodging.id)
-              - rooms = lodging.rooms.order(:level)
-              - if rooms.any?
-                ul.space-y-1
-                  - rooms.each do |room|
-                    li
-                      label.flex.items-center.gap-2.text-sm.text-gray-700
-                        input type="checkbox" name="stay[room_ids][]" value=room.id checked=(selected_room_ids.include?(room.id)) data-action="change->stay-availability#check" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        = room.name_with_level.presence || room.name
-              - else
-                p.text-sm.text-gray-400 Aucune chambre déclarée pour cet hébergement.
-        / Indicateur de disponibilité en temps réel (issue #77). Informe sans bloquer :
-        / la checkbox « Forcer la disponibilité » plus bas reste la seule décision.
-        .hidden.text-sm.font-medium.rounded-md.px-3.py-2(data-stay-availability-target="indicator")
+            input type="radio" name="stay[customer_mode]" value="new" data-action="change->stay-form#toggleCustomer"
+            | Nouveau client
 
-    = render "stays/compose_grids"
+        / Client existant — autocomplete (issue #74) : recherche dynamique via
+        / customers/search. Le <select> reste le fallback sans-JS (réduit au client
+        / courant en édition) ; le contrôleur customer-search le masque et pilote sa
+        / valeur à la sélection d'un résultat.
+        .space-y-1(data-stay-form-target="existingPanel" data-controller="customer-search" data-customer-search-url-value=search_customers_path)
+          label.block.text-sm.font-medium.text-gray-700 Sélectionner un client
+          = select_tag "stay[customer_id]", options_for_select(@customers.map { |c| [c.name.presence || c.email, c.id] }, selected_customer_id), include_blank: "— Choisir un client —", data: { "customer-search-target": "select" }, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          .relative.space-y-1.hidden(data-customer-search-target="searchWrap")
+            = text_field_tag :customer_query, nil, placeholder: "Rechercher un client (nom, email)…", autocomplete: "off", data: { "customer-search-target": "searchInput", action: "input->customer-search#search" }, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            .border.border-gray-100.rounded-md.divide-y.divide-gray-50.bg-white.shadow-sm.max-h-48.overflow-y-auto(data-customer-search-target="results")
+          .flex.items-center.justify-between.gap-2.text-sm.hidden(data-customer-search-target="chosen")
+            .min-w-0
+              span.block.text-gray-900.font-medium.truncate(data-customer-search-target="chosenLabel") = selected_customer&.name
+              span.block.text-gray-500.text-xs.truncate(data-customer-search-target="chosenContact") = selected_customer_contact
+            button type="button" data-action="customer-search#clear" class="flex-shrink-0 text-indigo-600 hover:underline" Changer
 
-    / --- Repas --------------------------------------------------------------
-    - meal_kind_options = [["Repas végé (midi)", "repas_vege_midi"], ["Buffet pain-fromages", "buffet"]]
-    - existing_meals = Array(@draft&.meals).map { |m| m.respond_to?(:symbolize_keys) ? m.symbolize_keys : m }
-    - meal_rows = existing_meals + Array.new([3 - existing_meals.size, 1].max) { {} }
-    details class=section_box open=existing_meals.any?
-      summary class=section_summary
-        span 🍽️ Repas
-        = stay_form_section_marker(existing_meals.any?, existing_meals.size)
-      .px-5.pb-5.space-y-4
-        p.text-sm.text-gray-500 Ajoutez un repas (type + date + nombre de convives). Les repas n'occupent pas le calendrier.
-        ul.divide-y.divide-gray-100
-          - meal_rows.each_with_index do |row, index|
-            li.py-2.grid.grid-cols-3.gap-2
-              = select_tag "stay[meals][#{index}][kind]", options_for_select(meal_kind_options, row[:kind]), include_blank: "— Repas —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-              = date_field_tag "stay[meals][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-              = number_field_tag "stay[meals][#{index}][people]", row[:people], min: 0, placeholder: "Convives", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+        /  Contact d'ORIGINE porté par les réservables (Michael 2026-07-26). Sur un
+           séjour importé, le client est le fourre-tout `client@les4sources.be` et
+           le seul nom réel du dossier vit sur le Booking/SpaceBooking. Sans ce
+           bloc, la fiche n'affiche AUCUN nom. Lecture seule : c'est un rappel de
+           ce que dit la résa d'origine, pas un champ — pour rattacher un vrai
+           client, on passe par « Changer » au-dessus.
+        - stay_for_origin = @stay&.persisted? ? @stay.decorate : nil
+        - if stay_for_origin&.origin_contacts_worth_showing?
+          .rounded-md.bg-amber-50.p-3.text-sm(class="ring-1 ring-amber-100")
+            .flex.items-start.gap-2
+              svg.w-4.h-4.text-amber-600.flex-shrink-0(class="mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true")
+                path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+              .min-w-0.space-y-1
+                p.font-medium.text-amber-900
+                  - if stay_for_origin.catch_all_customer?
+                    | Contact d'origine — ce séjour n'est rattaché à aucun vrai client
+                  - else
+                    | Contact d'origine de la réservation
+                - stay_for_origin.origin_contacts.each do |contact|
+                  .text-amber-800
+                    - parts = [contact[:name], (contact[:group].present? ? "groupe « #{contact[:group]} »" : nil), contact[:email], contact[:phone]].compact_blank
+                    span.font-medium = parts.join(" · ")
+                    span.text-xs.text-amber-600 &nbsp;— #{contact[:label]} (#{contact[:reference]})
 
-    / --- Terrasse (ADMIN uniquement) ---------------------------------------
-    / Groupes occupant UNIQUEMENT la terrasse (ex. randonneurs / BBQ) : forfait
-    / 2,50 €/pers/jour. Une ligne par JOUR (date + nb de personnes), comme les
-    / repas datés. Jamais proposé sur le funnel public.
-    - existing_terrasses = Array(@draft&.terrasses).map { |t| t.respond_to?(:symbolize_keys) ? t.symbolize_keys : t }
-    - terrace_rows = existing_terrasses + Array.new([3 - existing_terrasses.size, 1].max) { {} }
-    details class=section_box open=existing_terrasses.any?
-      summary class=section_summary
-        span 🪑 Terrasse
-        = stay_form_section_marker(existing_terrasses.any?, existing_terrasses.size)
-      .px-5.pb-5.space-y-4
-        p.text-sm.text-gray-500 Groupe occupant uniquement la terrasse (ex. BBQ). Forfait 2,50 €/pers/jour — une ligne par jour (date + nombre de personnes).
-        ul.divide-y.divide-gray-100
-          - terrace_rows.each_with_index do |row, index|
-            li.py-2.grid.grid-cols-2.gap-2
-              = date_field_tag "stay[terrasses][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-              = number_field_tag "stay[terrasses][#{index}][people]", row[:people], min: 0, placeholder: "Personnes", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+        .space-y-2.hidden(data-stay-form-target="newPanel")
+          .grid.grid-cols-2.gap-2
+            = text_field_tag "stay[new_customer][first_name]", @draft&.first_name, placeholder: "Prénom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+            = text_field_tag "stay[new_customer][last_name]", @draft&.last_name, placeholder: "Nom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+          = email_field_tag "stay[new_customer][email]", @draft&.email, placeholder: "Email", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          = telephone_field_tag "stay[new_customer][phone]", @draft&.phone, placeholder: "Téléphone", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          / Type de client (addendum) : switch particulier ↔ organisation (même style
+          / que le statut). Hidden `individual` de repli avant le checkbox
+          / `organization` (Rack retient la dernière valeur). En organisation, le
+          / « Nom du groupe » ci-dessous alimente `organization_name` du client.
+          - new_is_org = (@draft&.customer_type.to_s == "organization")
+          = hidden_field_tag "stay[new_customer][customer_type]", "individual", id: nil
+          label class="inline-flex items-center gap-3 cursor-pointer"
+            input id="new_customer_org_toggle" type="checkbox" name="stay[new_customer][customer_type]" value="organization" checked=new_is_org role="switch" aria-label="Client organisation" class="sr-only peer"
+            span.ui-switch aria-hidden="true"
+            span.ui-switch-label-off class="text-sm font-medium text-gray-500" Particulier
+            span.ui-switch-label-on class="text-sm font-medium text-emerald-700" Organisation
+          = text_field_tag "stay[new_customer][organization_name]", @draft&.organization_name, placeholder: "Nom du groupe / organisation", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
-    / --- Activités ----------------------------------------------------------
-    - retenues = selected_experiences.values.count { |v| v.to_i.positive? }
-    details class=section_box open=retenues.positive?
-      summary class=section_summary
-        span 🎯 Activités
-        = stay_form_section_marker(retenues.positive?, retenues)
-      .px-5.pb-5.space-y-4
-        - if @assignable_availabilities.blank?
-          p.text-sm.text-gray-500 Aucun créneau d'activité proposable.
-        - else
-          p.text-sm.text-gray-500 Indiquez le nombre de participants pour chaque créneau souhaité (0 = non réservé).
-          ul.divide-y.divide-gray-100
-            - @assignable_availabilities.each_with_index do |availability, index|
-              li.py-2.flex.items-center.justify-between.gap-4
-                span.text-sm.text-gray-900 = availability.label
-                = hidden_field_tag "stay[experiences][#{index}][availability_id]", availability.id
-                = number_field_tag "stay[experiences][#{index}][participants]", selected_experiences[availability.id].to_i, min: 0, class: "w-20 rounded-md border-gray-300 shadow-sm sm:text-sm"
-
-    / --- Attribution (source + plateforme) ----------------------------------
-    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Attribution
-      p.text-sm.text-gray-500 D'où vient ce séjour ? La plateforme n'est enregistrée que si le séjour comporte un hébergement.
-      / Radios (issue parité funnel) : canal + plateforme en boutons radio plutôt
-      / que des selects. Chaque radio porte un target stay-form (source/platform) ;
-      / choisir une plateforme OTA bascule le canal sur « OTA » côté Stimulus.
-      .grid.grid-cols-1.sm:grid-cols-2.gap-4
-        fieldset.space-y-2
-          legend.text-sm.font-medium.text-gray-700 Canal (source)
-          .flex.flex-col.gap-2
-            - source_options.each do |label, value|
-              label.flex.items-center.gap-2.text-sm.text-gray-700
-                input type="radio" name="stay[source]" value=value checked=(value.to_s == current_source.to_s) data-stay-form-target="source" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                = label
-        fieldset.space-y-2
-          legend.text-sm.font-medium.text-gray-700 Plateforme
-          .flex.flex-col.gap-2
-            - platform_options.each do |label, value|
-              label.flex.items-center.gap-2.text-sm.text-gray-700
-                input type="radio" name="stay[platform]" value=value checked=(value.to_s == current_platform.to_s) data-stay-form-target="platform" data-action="change->stay-form#syncChannelFromPlatform" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                = label
-
-    / --- Statut + force dispo -----------------------------------------------
-    / Switch accessible (issue parité funnel) : bascule En attente ↔ Confirmé.
-    / Un hidden `stay[status]=pending` précède le checkbox `stay[status]=confirmed`
-    / (Rack retient la DERNIÈRE valeur) : coché → confirmed, décoché → pending.
-    - status_confirmed = (current_status == "confirmed")
-    section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Statut
-      .space-y-1
-        span.block.text-sm.font-medium.text-gray-700 Statut du séjour
-        = hidden_field_tag "stay[status]", "pending", id: nil
-        label class="inline-flex items-center gap-3 cursor-pointer"
-          input id="stay_status_toggle" type="checkbox" name="stay[status]" value="confirmed" checked=status_confirmed role="switch" aria-label="Séjour confirmé" class="sr-only peer"
-          span.ui-switch aria-hidden="true"
-          span.ui-switch-label-off class="text-sm font-medium text-gray-500" En attente
-          span.ui-switch-label-on class="text-sm font-medium text-emerald-700" Confirmé
-      label.flex.items-center.gap-2.text-sm.text-gray-700
-        = check_box_tag "stay[force_availability]", "1", false
-        | Forcer la disponibilité (surbooking / saisie a posteriori)
-
-    / --- Devis (live — issue #73) -------------------------------------------
-    = render "stays/quote_panel"
-
-    / --- Prix imposé (override — epic #81, Phase 3) --------------------------
-    / Le devis B2C ci-dessus reste la référence par défaut. Saisir un montant ici
-    / IMPOSE le total du séjour et court-circuite le devis ; laisser vide applique
-    / le devis. Le solde exigible se recalcule automatiquement depuis ce total.
-    section.bg-gray-50.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-2
-      h2.text-base.font-semibold.text-gray-900 Prix
-      .space-y-1
-        label.block.text-sm.font-medium.text-gray-700 for="stay_price_override" Prix total imposé (€)
-        = number_field_tag "stay[price_override]", override_prefill, id: "stay_price_override", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-        p.text-xs.text-gray-500 Laisser vide pour appliquer le devis B2C. Un montant remplace le total du devis.
-
-      / Paiement initial en attente (création uniquement — refonte 2026-07-22).
-      / Coché → un Payment `pending` est créé sur le séjour au montant indiqué,
-      / prérempli avec l'acompte du devis (deposit du PricingModel). En édition,
-      / le solde se gère depuis la fiche séjour : ce bloc n'apparaît donc pas.
-      - unless @stay&.persisted?
-        - deposit_cents = (@draft&.quote&.deposit_cents.to_i rescue 0)
-        - initial_payment_prefill = deposit_cents.positive? ? format("%g", deposit_cents / 100.0) : nil
-        .space-y-2.pt-2.border-t.border-gray-200
-          label.flex.items-center.gap-2.text-sm.text-gray-700
-            = check_box_tag "stay[create_initial_payment]", "1", false, id: "stay_create_initial_payment"
-            | Créer un paiement initial en attente
+      / --- Séjour (dates + groupe) --------------------------------------------
+      section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+        h2.text-base.font-semibold.text-gray-900 Séjour
+        .grid.grid-cols-2.gap-4
           .space-y-1
-            label.block.text-sm.font-medium.text-gray-700 for="stay_initial_payment_amount" Montant du paiement (€)
-            = number_field_tag "stay[initial_payment_amount]", initial_payment_prefill, id: "stay_initial_payment_amount", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-            p.text-xs.text-gray-500 Prérempli avec l'acompte du devis. Ignoré si la case n'est pas cochée.
+            label.block.text-sm.font-medium.text-gray-700 Arrivée
+            = date_field_tag "stay[arrival_date]", @draft&.arrival_date&.iso8601, data: { action: "change->stay-availability#check change->stay-grids#reload" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          .space-y-1
+            label.block.text-sm.font-medium.text-gray-700 Départ
+            = date_field_tag "stay[departure_date]", @draft&.departure_date&.iso8601, data: { action: "change->stay-grids#reload change->stay-availability#check" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        .grid.grid-cols-2.gap-4
+          .space-y-1
+            label.block.text-sm.font-medium.text-gray-700 for="stay_arrival_time" Heure d'arrivée
+            = text_field_tag "stay[arrival_time]", @draft&.arrival_time, id: "stay_arrival_time", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          .space-y-1
+            label.block.text-sm.font-medium.text-gray-700 for="stay_departure_time" Heure de départ
+            = text_field_tag "stay[departure_time]", @draft&.departure_time, id: "stay_departure_time", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        .grid.grid-cols-3.gap-4
+          .space-y-1
+            label.block.text-sm.font-medium.text-gray-700 Adultes
+            = number_field_tag "stay[adults]", (@draft&.adults.to_i.positive? ? @draft.adults : 1), min: 1, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          .space-y-1
+            label.block.text-sm.font-medium.text-gray-700 Enfants
+            = number_field_tag "stay[children]", @draft&.children.to_i, min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          .space-y-1
+            label.block.text-sm.font-medium.text-gray-700 Chiens
+            = number_field_tag "stay[dogs_count]", @draft&.dogs_count.to_i, min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 Nom du groupe (optionnel)
+          = text_field_tag "stay[group_name]", @draft&.group_name, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        / Catégorie de séjour (Michael 2026-07-21) : liste complète (les 4 sources
+        / incluse côté admin). Optionnelle — option vide en tête. Circule par le
+        / Draft comme `group_name`.
+        /  TAGS cliquables plutôt qu'un <select> (Michael 2026-07-26). Ce sont de
+           vrais `input[type=radio]` masqués (`sr-only`) : l'exclusivité du choix
+           est garantie par le NAVIGATEUR, pas par du JS, et le clavier
+           (Tab + flèches) fonctionne nativement. Le style suit l'état coché via la
+           variante `peer-checked:` de Tailwind — d'où l'ordre input PUIS span,
+           qu'exige `peer` (il ne cible qu'un frère PRÉCÉDENT).
+           « Aucune » est une puce à part entière (valeur vide) et non l'absence de
+           sélection : une valeur part donc toujours, y compris pour retirer la
+           catégorie d'un séjour qui en avait une.
+        fieldset.space-y-2
+          legend.block.text-sm.font-medium.text-gray-700 Catégorie (optionnel)
+          /  Les classes sont écrites EN TOUTES LETTRES, jamais construites par
+             interpolation : Tailwind génère son CSS en scannant le TEXTE de ce
+             fichier. Un `peer-checked:#{...}` assemblé au rendu ne serait trouvé
+             par aucun scan et la puce cochée resterait sans style.
+          - chip = "inline-flex items-center rounded-full border px-3 py-1 text-sm transition-colors cursor-pointer select-none " \
+                   "border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50 " \
+                   "peer-checked:border-transparent peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-sm " \
+                   "peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500 peer-focus-visible:ring-offset-2"
+          .flex.flex-wrap.gap-2
+            - ([["— Aucune —", nil]] + Stay::CATEGORIES.map(&:reverse)).each do |chip_label, value|
+              /  Booléen sorti dans une variable : plus lisible qu'une comparaison
+                 inline dans la liste d'attributs. Slim rend `checked=""` quand il
+                 est vrai, et omet l'attribut quand il est faux.
+              - chip_on = (@draft&.category.presence == value)
+              label.cursor-pointer
+                input.sr-only.peer type="radio" name="stay[category]" value=value.to_s checked=chip_on
+                span class=chip
+                  = chip_label
 
-    / --- Notes --------------------------------------------------------------
-    / Note interne (texte brut, jamais visible du client) + note publique
-    / (ActionText, affichée sur /sejour/:token). À la création, la note interne
-    / saisie est concaténée avec l'éventuelle note auto (multi-chiens).
-    section.bg-yellow-50.shadow.ring-1.ring-yellow-200.rounded-lg.p-5.space-y-4
-      h2.text-base.font-semibold.text-gray-900 Notes
-      .space-y-1
-        label.block.text-sm.font-medium.text-gray-700 for="stay_notes" Note interne (jamais visible du client)
-        = text_area_tag "stay[notes]", @stay&.notes, id: "stay_notes", rows: 3, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-      .space-y-1
-        label.block.text-sm.font-medium.text-gray-700 Note publique (visible par le client)
-        = rich_text_area_tag "stay[public_notes]", @stay&.public_notes&.to_trix_html, class: "trix-content"
+      / --- Hébergement --------------------------------------------------------
+      / Mode d'occupation (epic #81, Phase 5) : gîte entier (défaut) ou chambres
+      / seules. En mode chambres, on coche les chambres du gîte choisi (pré-rendues
+      / par gîte, affichées/masquées par Stimulus — pas d'endpoint : plus robuste).
+      - current_booking_type = (@draft&.rooms_mode? ? "rooms" : "lodging")
+      - selected_room_ids = Array(@draft&.room_ids).map(&:to_i)
+      - has_lodging = @draft&.lodging_id.present? || selected_room_ids.any? || Array(@draft&.lodging_night_ids).compact_blank.any?
+      /  TOUJOURS OUVERTE (Michael 2026-07-27). Un séjour aux 4 Sources, c'est un
+         gîte : l'hébergement est le chemin par défaut, pas une option à déplier.
+         Toutes les autres sections restent repliées tant qu'elles sont vides —
+         c'est ce contraste qui dit à l'équipe par où commencer.
+      details class=section_box open=true
+        summary class=section_summary
+          span Hébergement
+          = stay_form_section_marker(has_lodging)
+        .px-5.pb-5.space-y-4
+          .flex.gap-4.text-sm
+            label.flex.items-center.gap-2
+              input type="radio" name="stay[booking_type]" value="lodging" checked=(current_booking_type == "lodging") data-action="change->stay-form#toggleBookingMode change->stay-availability#check"
+              | Gîte entier
+            label.flex.items-center.gap-2
+              input type="radio" name="stay[booking_type]" value="rooms" checked=(current_booking_type == "rooms") data-action="change->stay-form#toggleBookingMode change->stay-availability#check"
+              | Chambres seules
+          / Mode GÎTE ENTIER : le gîte se choisit nuit par nuit dans la grille
+          / « Hébergement — nuit par nuit » (frame des grilles, plus bas). Le <select>
+          / ci-dessous ne sert qu'au mode CHAMBRES SEULES (choix du gîte dont on coche
+          / les chambres) ; masqué + désactivé en gîte entier pour ne pas imposer un
+          / lodging_id concurrent de la grille.
+          p.text-sm.text-gray-500(data-stay-form-target="lodgingGridHint")
+            | Choisissez le gîte pour chaque nuit dans la grille « Hébergement — nuit par nuit » ci-dessous.
+          .space-y-1.hidden(data-stay-form-target="lodgingSelectPanel")
+            label.block.text-sm.font-medium.text-gray-700 Gîte (chambres seules)
+            = select_tag "stay[lodging_id]", options_for_select(@lodgings.map { |l| [l.form_label, l.id] }, @draft&.lodging_id), include_blank: "— Choisir un hébergement —", data: { "stay-form-target": "lodgingSelect", action: "change->stay-availability#check change->stay-form#syncRoomVisibility" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          / Chambres du gîte (mode chambres seules). Un groupe par gîte, masqué par
+          / défaut ; Stimulus n'affiche que le groupe du gîte sélectionné, en mode rooms.
+          .space-y-2.hidden(data-stay-form-target="roomsPanel")
+            p.text-sm.text-gray-500 Cochez les chambres à réserver. Pas de devis automatique pour des chambres seules — utilisez le Prix total imposé plus bas.
+            - @lodgings.each do |lodging|
+              .space-y-1.hidden(data-stay-form-target="roomsGroup" data-lodging-id=lodging.id)
+                - rooms = lodging.rooms.order(:level)
+                - if rooms.any?
+                  ul.space-y-1
+                    - rooms.each do |room|
+                      li
+                        label.flex.items-center.gap-2.text-sm.text-gray-700
+                          input type="checkbox" name="stay[room_ids][]" value=room.id checked=(selected_room_ids.include?(room.id)) data-action="change->stay-availability#check" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          = room.name_with_level.presence || room.name
+                - else
+                  p.text-sm.text-gray-400 Aucune chambre déclarée pour cet hébergement.
+          / Indicateur de disponibilité en temps réel (issue #77). Informe sans bloquer :
+          / la checkbox « Forcer la disponibilité » plus bas reste la seule décision.
+          .hidden.text-sm.font-medium.rounded-md.px-3.py-2(data-stay-availability-target="indicator")
 
-    / « Annuler » : retour à la FICHE du séjour en édition (elle existe en pleine
-    / page depuis stays#show), sinon à la liste en création (demande Michael).
-    - cancel_path = @stay&.persisted? ? stay_path(@stay) : stays_path
-    .flex.justify-end.gap-3
-      = link_to "Annuler", cancel_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-      = submit_tag submit_label, class: "inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+      = render "stays/compose_grids"
+
+      / --- Repas --------------------------------------------------------------
+      - meal_kind_options = [["Repas végé (midi)", "repas_vege_midi"], ["Buffet pain-fromages", "buffet"]]
+      - existing_meals = Array(@draft&.meals).map { |m| m.respond_to?(:symbolize_keys) ? m.symbolize_keys : m }
+      - meal_rows = existing_meals + Array.new([3 - existing_meals.size, 1].max) { {} }
+      details class=section_box open=existing_meals.any?
+        summary class=section_summary
+          span 🍽️ Repas
+          = stay_form_section_marker(existing_meals.any?, existing_meals.size)
+        .px-5.pb-5.space-y-4
+          p.text-sm.text-gray-500 Ajoutez un repas (type + date + nombre de convives). Les repas n'occupent pas le calendrier.
+          ul.divide-y.divide-gray-100
+            - meal_rows.each_with_index do |row, index|
+              li.py-2.grid.grid-cols-3.gap-2
+                = select_tag "stay[meals][#{index}][kind]", options_for_select(meal_kind_options, row[:kind]), include_blank: "— Repas —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+                = date_field_tag "stay[meals][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+                = number_field_tag "stay[meals][#{index}][people]", row[:people], min: 0, placeholder: "Convives", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+      / --- Terrasse (ADMIN uniquement) ---------------------------------------
+      / Groupes occupant UNIQUEMENT la terrasse (ex. randonneurs / BBQ) : forfait
+      / 2,50 €/pers/jour. Une ligne par JOUR (date + nb de personnes), comme les
+      / repas datés. Jamais proposé sur le funnel public.
+      - existing_terrasses = Array(@draft&.terrasses).map { |t| t.respond_to?(:symbolize_keys) ? t.symbolize_keys : t }
+      - terrace_rows = existing_terrasses + Array.new([3 - existing_terrasses.size, 1].max) { {} }
+      details class=section_box open=existing_terrasses.any?
+        summary class=section_summary
+          span 🪑 Terrasse
+          = stay_form_section_marker(existing_terrasses.any?, existing_terrasses.size)
+        .px-5.pb-5.space-y-4
+          p.text-sm.text-gray-500 Groupe occupant uniquement la terrasse (ex. BBQ). Forfait 2,50 €/pers/jour — une ligne par jour (date + nombre de personnes).
+          ul.divide-y.divide-gray-100
+            - terrace_rows.each_with_index do |row, index|
+              li.py-2.grid.grid-cols-2.gap-2
+                = date_field_tag "stay[terrasses][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+                = number_field_tag "stay[terrasses][#{index}][people]", row[:people], min: 0, placeholder: "Personnes", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+      / --- Attribution (source + plateforme) ----------------------------------
+      section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+        h2.text-base.font-semibold.text-gray-900 Attribution
+        p.text-sm.text-gray-500 D'où vient ce séjour ? La plateforme n'est enregistrée que si le séjour comporte un hébergement.
+        / Radios (issue parité funnel) : canal + plateforme en boutons radio plutôt
+        / que des selects. Chaque radio porte un target stay-form (source/platform) ;
+        / choisir une plateforme OTA bascule le canal sur « OTA » côté Stimulus.
+        .grid.grid-cols-1.sm:grid-cols-2.gap-4
+          fieldset.space-y-2
+            legend.text-sm.font-medium.text-gray-700 Canal (source)
+            .flex.flex-col.gap-2
+              - source_options.each do |label, value|
+                label.flex.items-center.gap-2.text-sm.text-gray-700
+                  input type="radio" name="stay[source]" value=value checked=(value.to_s == current_source.to_s) data-stay-form-target="source" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  = label
+          fieldset.space-y-2
+            legend.text-sm.font-medium.text-gray-700 Plateforme
+            .flex.flex-col.gap-2
+              - platform_options.each do |label, value|
+                label.flex.items-center.gap-2.text-sm.text-gray-700
+                  input type="radio" name="stay[platform]" value=value checked=(value.to_s == current_platform.to_s) data-stay-form-target="platform" data-action="change->stay-form#syncChannelFromPlatform" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  = label
+
+      / --- Statut + force dispo -----------------------------------------------
+      / Switch accessible (issue parité funnel) : bascule En attente ↔ Confirmé.
+      / Un hidden `stay[status]=pending` précède le checkbox `stay[status]=confirmed`
+      / (Rack retient la DERNIÈRE valeur) : coché → confirmed, décoché → pending.
+      - status_confirmed = (current_status == "confirmed")
+      section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+        h2.text-base.font-semibold.text-gray-900 Statut
+        .space-y-1
+          span.block.text-sm.font-medium.text-gray-700 Statut du séjour
+          = hidden_field_tag "stay[status]", "pending", id: nil
+          label class="inline-flex items-center gap-3 cursor-pointer"
+            input id="stay_status_toggle" type="checkbox" name="stay[status]" value="confirmed" checked=status_confirmed role="switch" aria-label="Séjour confirmé" class="sr-only peer"
+            span.ui-switch aria-hidden="true"
+            span.ui-switch-label-off class="text-sm font-medium text-gray-500" En attente
+            span.ui-switch-label-on class="text-sm font-medium text-emerald-700" Confirmé
+        label.flex.items-center.gap-2.text-sm.text-gray-700
+          = check_box_tag "stay[force_availability]", "1", false
+          | Forcer la disponibilité (surbooking / saisie a posteriori)
+
+      / --- Notes --------------------------------------------------------------
+      / Note interne (texte brut, jamais visible du client) + note publique
+      / (ActionText, affichée sur /sejour/:token). À la création, la note interne
+      / saisie est concaténée avec l'éventuelle note auto (multi-chiens).
+      section.bg-yellow-50.shadow.ring-1.ring-yellow-200.rounded-lg.p-5.space-y-4
+        h2.text-base.font-semibold.text-gray-900 Notes
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 for="stay_notes" Note interne (jamais visible du client)
+          = text_area_tag "stay[notes]", @stay&.notes, id: "stay_notes", rows: 3, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 Note publique (visible par le client)
+          = rich_text_area_tag "stay[public_notes]", @stay&.public_notes&.to_trix_html, class: "trix-content"
+
+    /  RAIL DE PRIX. Tout ce qui répond à « combien ça coûte et est-ce que je
+       valide ? » : le devis live, le prix imposé qui le court-circuite, le
+       paiement initial à la création, et les deux boutons. Les remonter ici, c'est
+       supprimer l'aller-retour bas-de-page ↔ grille qu'imposait l'ancien form.
+    aside.space-y-4(class="lg:sticky lg:top-6")
+      = render "stays/quote_panel"
+
+      /  Prix imposé (override — epic #81, Phase 3). Le devis ci-dessus reste la
+         référence par défaut. Saisir un montant ici IMPOSE le total du séjour et
+         court-circuite le devis ; laisser vide applique le devis. Le solde
+         exigible se recalcule automatiquement depuis ce total.
+      section.bg-white.rounded-2xl.p-5.space-y-3(class="ring-1 ring-gray-200")
+        .space-y-1
+          label.block.text-sm.font-semibold.text-gray-900 for="stay_price_override" Prix total imposé
+          .relative
+            = number_field_tag "stay[price_override]", override_prefill, id: "stay_price_override", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-xl border-gray-300 pr-8 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            span.pointer-events-none.absolute.inset-y-0.right-3.flex.items-center.text-sm.text-gray-400 €
+          p.text-xs.text-gray-500 Laisser vide pour appliquer le devis. Un montant remplace le total.
+
+        / Paiement initial en attente (création uniquement — refonte 2026-07-22).
+        / Coché → un Payment `pending` est créé sur le séjour au montant indiqué,
+        / prérempli avec l'acompte du devis (deposit du PricingModel). En édition,
+        / le solde se gère depuis la fiche séjour : ce bloc n'apparaît donc pas.
+        - unless @stay&.persisted?
+          - deposit_cents = (@draft&.quote&.deposit_cents.to_i rescue 0)
+          - initial_payment_prefill = deposit_cents.positive? ? format("%g", deposit_cents / 100.0) : nil
+          .space-y-2.pt-3.border-t.border-gray-100
+            label.flex.items-start.gap-2.text-sm.text-gray-700
+              = check_box_tag "stay[create_initial_payment]", "1", false, id: "stay_create_initial_payment", class: "mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              span Créer un paiement initial en attente
+            .space-y-1
+              label.block.text-xs.font-medium.text-gray-600 for="stay_initial_payment_amount" Montant du paiement (€)
+              = number_field_tag "stay[initial_payment_amount]", initial_payment_prefill, id: "stay_initial_payment_amount", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              p.text-xs.text-gray-500 Prérempli avec l'acompte du devis. Ignoré si la case n'est pas cochée.
+
+      / « Annuler » : retour à la FICHE du séjour en édition (elle existe en pleine
+      / page depuis stays#show), sinon à la liste en création (demande Michael).
+      - cancel_path = @stay&.persisted? ? stay_path(@stay) : stays_path
+      .space-y-2
+        = submit_tag submit_label, class: "w-full inline-flex items-center justify-center rounded-xl border border-transparent bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+        = link_to "Annuler", cancel_path, class: "w-full inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
