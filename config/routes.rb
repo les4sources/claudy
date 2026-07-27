@@ -192,6 +192,12 @@ Rails.application.routes.draw do
   get  "mon-sejour/:token/activites", to: "public/activity_selections#show",   as: :public_activity_selection
   post "mon-sejour/:token/activites", to: "public/activity_selections#create",  as: :public_activity_selection_create
 
+  # Canal jeton — flux iCal des gardes, abonnable depuis Google Agenda
+  # (issue #142). Le jeton passe en paramètre (`?token=…`) et non dans le chemin :
+  # Google Agenda ne veut qu'une URL, et un jeton en query se recopie tel quel.
+  # Lecture seule, sans Devise (Google récupère l'URL sans cookie).
+  get "watchman.ics", to: "watchman_ics#show", as: :watchman_ics
+
   # Facturation — poste de travail du Pôle Admin (Michael 2026-07-26). Remplace
   # « Comptabilité / Tableau de bord » (`/comptabilite`, retiré). URL admin en
   # ANGLAIS, comme le reste de l'admin.
