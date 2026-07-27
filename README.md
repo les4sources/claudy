@@ -61,3 +61,37 @@ Use `rails db:seed` to add lodgings, rooms and spaces to the database.
 ### Sending emails
 
 Emails are delivered using Postmark. Please ask Michael (it@les4sources.be) for credentials.
+
+### Flux iCal des gardes (Google Agenda)
+
+Les gardes (rôle « Veilleur·euse ») sont publiées sous forme de flux iCalendar
+abonnable, pour qu'elles apparaissent dans l'agenda personnel de chacun·e sans
+avoir à ouvrir Claudy.
+
+**S'abonner depuis Google Agenda**
+
+1. Dans Google Agenda : *Autres agendas* → **+** → **Ajouter à partir de l'URL**.
+2. Coller `https://app.les4sources.be/watchman.ics?token=LE_JETON`.
+3. Valider. Google re-synchronise le flux tout seul (comptez plusieurs heures
+   entre deux rafraîchissements — c'est Google qui décide, pas nous).
+
+Le flux est en **lecture seule** et **collectif** : un seul événement journée
+entière par jour, titré `Garde : Ana & Bruno` quand plusieurs personnes sont de
+garde le même jour. Seuls les **titulaires** y figurent (les `backup` non), et
+tout l'historique est exporté. Chaque événement renvoie vers le calendrier
+Claudy du mois concerné.
+
+**Le jeton**
+
+L'URL n'est protégée que par le jeton `?token=…`, comparé en temps constant à la
+variable d'environnement `WATCHMAN_ICS_TOKEN`. Toute requête sans jeton, avec un
+mauvais jeton, ou lorsque la variable n'est pas configurée reçoit un **404** : le
+flux n'est jamais ouvert par défaut. Le jeton vaut donc accès en lecture aux noms
+et aux dates de garde — il se transmet à la main, pas en clair sur le web.
+
+Générer un jeton : `ruby -rsecurerandom -e 'puts SecureRandom.urlsafe_base64(32)'`.
+
+> ⚠️ **Déploiement Hatchbox.** Après avoir ajouté ou changé `WATCHMAN_ICS_TOKEN`,
+> il faut un **vrai redémarrage** de l'app, pas un simple déploiement : le
+> hot-reload (SIGUSR2) ne recharge pas l'environnement, et la route continuerait
+> de renvoyer 404 alors que la variable semble bien configurée.
