@@ -31,7 +31,12 @@
    Techniquement : un `details` natif, donc zéro JS, navigable au clavier. Les
    champs d'une section repliée restent dans le DOM et sont donc bien soumis :
    replier ne perd aucune donnée.
-- section_box = "bg-white shadow ring-1 ring-black ring-opacity-5 rounded-lg"
+/  UN SEUL langage de carte dans tout le form (2026-07-27) : fond blanc, coins
+   `rounded-2xl`, filet `ring-gray-200`, pas d'ombre. Airbnb structure ses pages
+   au filet fin et réserve l'ombre à ce qui flotte — ici rien ne flotte, tout est
+   posé. Les cartes du rail de prix suivent la même règle : les deux colonnes se
+   lisent comme une seule surface.
+- section_box = "bg-white rounded-2xl ring-1 ring-gray-200"
 - section_summary = "flex cursor-pointer select-none items-center justify-between gap-3 p-5 text-base font-semibold text-gray-900 list-none"
 - override_prefill = params.dig(:stay, :price_override).presence || (@stay&.price_override_cents.present? ? format("%g", @stay.price_override_cents / 100.0) : nil)
 
@@ -47,7 +52,7 @@
   .grid.gap-6.items-start(class="lg:grid-cols-[minmax(0,1fr)_360px]")
     .space-y-6.min-w-0
       / --- Client -------------------------------------------------------------
-      section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+      section.bg-white.rounded-2xl.ring-1.ring-gray-200.p-5.space-y-4
         h2.text-base.font-semibold.text-gray-900 Client
         .flex.gap-4.text-sm
           label.flex.items-center.gap-2
@@ -117,7 +122,7 @@
           = text_field_tag "stay[new_customer][organization_name]", @draft&.organization_name, placeholder: "Nom du groupe / organisation", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
       / --- Séjour (dates + groupe) --------------------------------------------
-      section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+      section.bg-white.rounded-2xl.ring-1.ring-gray-200.p-5.space-y-4
         h2.text-base.font-semibold.text-gray-900 Séjour
         .grid.grid-cols-2.gap-4
           .space-y-1
@@ -270,7 +275,7 @@
                 = number_field_tag "stay[terrasses][#{index}][people]", row[:people], min: 0, placeholder: "Personnes", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
 
       / --- Attribution (source + plateforme) ----------------------------------
-      section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+      section.bg-white.rounded-2xl.ring-1.ring-gray-200.p-5.space-y-4
         h2.text-base.font-semibold.text-gray-900 Attribution
         p.text-sm.text-gray-500 D'où vient ce séjour ? La plateforme n'est enregistrée que si le séjour comporte un hébergement.
         / Radios (issue parité funnel) : canal + plateforme en boutons radio plutôt
@@ -297,7 +302,7 @@
       / Un hidden `stay[status]=pending` précède le checkbox `stay[status]=confirmed`
       / (Rack retient la DERNIÈRE valeur) : coché → confirmed, décoché → pending.
       - status_confirmed = (current_status == "confirmed")
-      section.bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-5.space-y-4
+      section.bg-white.rounded-2xl.ring-1.ring-gray-200.p-5.space-y-4
         h2.text-base.font-semibold.text-gray-900 Statut
         .space-y-1
           span.block.text-sm.font-medium.text-gray-700 Statut du séjour
@@ -315,11 +320,17 @@
       / Note interne (texte brut, jamais visible du client) + note publique
       / (ActionText, affichée sur /sejour/:token). À la création, la note interne
       / saisie est concaténée avec l'éventuelle note auto (multi-chiens).
-      section.bg-yellow-50.shadow.ring-1.ring-yellow-200.rounded-lg.p-5.space-y-4
+      /  La carte entière était jaune. Ce jaune criait « attention » sur les DEUX
+         notes, dont la publique qui n'a rien de sensible — et il cassait la
+         surface blanche du reste du form. Le signal remonte là où il compte : sur
+         la seule note interne, en pastille discrète à côté de son libellé.
+      section.bg-white.rounded-2xl.ring-1.ring-gray-200.p-5.space-y-4
         h2.text-base.font-semibold.text-gray-900 Notes
         .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 for="stay_notes" Note interne (jamais visible du client)
-          = text_area_tag "stay[notes]", @stay&.notes, id: "stay_notes", rows: 3, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          label.flex.items-center.gap-2.text-sm.font-medium.text-gray-700 for="stay_notes"
+            | Note interne
+            span.rounded-full.bg-amber-50.px-2.py-0.5.text-xs.font-medium.text-amber-700.ring-1.ring-amber-200 jamais visible du client
+          = text_area_tag "stay[notes]", @stay&.notes, id: "stay_notes", rows: 3, class: "block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
         .space-y-1
           label.block.text-sm.font-medium.text-gray-700 Note publique (visible par le client)
           = rich_text_area_tag "stay[public_notes]", @stay&.public_notes&.to_trix_html, class: "trix-content"

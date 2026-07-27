@@ -7,7 +7,8 @@
      repliées par défaut, ouvertes dès qu'elles contiennent quelque chose. Les
      grilles datées sont les plus hautes du formulaire — ouvertes en permanence,
      elles noyaient tout le reste.
-  - grid_box = "bg-white shadow ring-1 ring-black ring-opacity-5 rounded-lg"
+  / Même langage de carte que `_form` (fond blanc, rounded-2xl, filet, pas d'ombre).
+  - grid_box = "bg-white rounded-2xl ring-1 ring-gray-200"
   - grid_summary = "flex cursor-pointer select-none items-center justify-between gap-3 p-5 text-base font-semibold text-gray-900 list-none"
   - nuits_gite = Array(@draft&.lodging_night_ids).compact_blank
   - creneaux_espaces = Array(@draft&.space_slots)
