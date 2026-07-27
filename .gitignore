@@ -63,4 +63,10 @@ html2slim.*
 
 *.csv
 
-public/uploads/*.worktrees/
+public/uploads/*
+
+.worktrees/
+
+# Artefacts de captures d'écran lancées depuis la racine
+/--*
+/*.png
