@@ -12,12 +12,18 @@
 - stay_nights = local_assigns.fetch(:days, @stay_nights)
 - fr_short_days = %w[Dim Lun Mar Mer Jeu Ven Sam]
 - pnr = (draft&.per_night_resources || {})
+/ Tarifs affichés en clair sous chaque libellé (Michael 2026-07-27) : la ligne
+/ tente compte des PERSONNES, pas des tentes — sans le tarif €/pers/nuit sous les
+/ yeux, un « 1 » se lit comme « une tente » et le devis paraît insensible au
+/ nombre de campeurs. Mêmes helpers Catalog que le funnel (barème unique).
+- tente_rate = Pricing::Catalog.camping_per_person_night_cents("tente")
+- van_rate   = Pricing::Catalog.van_per_night_cents
 
 .bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-5
   .flex.items-start.justify-between.mb-4
     div
       h2.text-base.font-semibold.text-gray-900 🏕️ Camping / Van
-      p.text-xs.text-gray-400.mt-0.5 Nombre de personnes en tente et de véhicules, nuit par nuit. Capacité globale du terrain (forçable).
+      p.text-xs.text-gray-400.mt-0.5 Nombre de personnes sous tente et de véhicules, nuit par nuit. Capacité globale du terrain (forçable).
 
   - if stay_nights.blank?
     p.text-xs.text-gray-400 Choisissez les dates du séjour pour composer le camping nuit par nuit.
@@ -35,8 +41,13 @@
         tbody
           tr class="border-t border-gray-50"
             td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
-              .text-sm.text-gray-800.font-medium ⛺ Tentes
-              p.text-xs.text-gray-400.leading-tight nb de personnes
+              .text-sm.text-gray-800.font-medium ⛺ Campeurs (tentes)
+              p.text-xs.text-gray-400.leading-tight
+                | nombre de
+                strong.text-gray-500  personnes
+                |  sous tente
+                - if tente_rate
+                  = " — #{number_to_currency(tente_rate / 100.0, unit: '€', format: '%n %u', precision: 2)}/pers/nuit"
             - stay_nights.each_with_index do |_night, i|
               - val = (pnr["tente"] || [])[i].to_i
               td.py-2.px-1.text-center
@@ -44,8 +55,12 @@
 
           tr class="border-t border-gray-50"
             td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
-              .text-sm.text-gray-800.font-medium 🚐 Vans
-              p.text-xs.text-gray-400.leading-tight nb de véhicules
+              .text-sm.text-gray-800.font-medium 🚐 Vans / camping-cars
+              p.text-xs.text-gray-400.leading-tight
+                | nombre de
+                strong.text-gray-500  véhicules
+                - if van_rate
+                  = " — #{number_to_currency(van_rate / 100.0, unit: '€', format: '%n %u', precision: 2)}/nuit/véhicule"
             - stay_nights.each_with_index do |_night, i|
               - val = (pnr["van"] || [])[i].to_i
               td.py-2.px-1.text-center

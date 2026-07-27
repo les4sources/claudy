@@ -81,7 +81,12 @@
       .px-5.pb-5.space-y-4
         p.text-sm.text-gray-500 Choisissez les dates du séjour pour composer le camping nuit par nuit. À défaut, nombre de personnes sur toute la durée.
         .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 Personnes
+          / Le camping se facture À LA PERSONNE et par nuit : ce compteur porte des
+          / campeurs, jamais des tentes (confusion remontée par Michael 2026-07-27).
+          label.block.text-sm.font-medium.text-gray-700 Campeurs (personnes sous tente)
+          - tente_rate = Pricing::Catalog.camping_per_person_night_cents("tente")
+          - if tente_rate
+            p.text-xs.text-gray-400 = "#{number_to_currency(tente_rate / 100.0, unit: '€', format: '%n %u', precision: 2)}/pers/nuit"
           = number_field_tag "stay[camping][people]", (camping_people.positive? ? camping_people : nil), min: 0, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
     details(class=grid_box open=van_vehicles.positive?)
       summary class=grid_summary
