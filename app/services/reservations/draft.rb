@@ -112,13 +112,26 @@ module Reservations
       booking_type.to_s == "rooms"
     end
 
+    # Une grille par nuit ne peut JAMAIS déborder la fenêtre du séjour : on la
+    # borne à `nights`, même garde qu'à la persistance (`night_value_ranges`,
+    # revue Forge F1). Deux cas réels sans ce garde-fou : une grille forgée plus
+    # longue que le séjour, et le raccourcissement des dates dans le form admin
+    # (le devis live partait avec la grille de l'ancienne fenêtre et facturait
+    # des nuits au-delà du départ). Sans dates exploitables — duplication, où
+    # `Stays::DuplicateService` les vide — on laisse la grille intacte.
+    def night_values(values)
+      values = Array(values)
+      window = nights
+      window.positive? ? values.first(window) : values
+    end
+
     # Quand per_night_resources présent, on calcule depuis les comptes per-nuit.
     # Sinon, on retourne le backing store @campings (backward compat).
     def campings
       pnr = per_night_resources
       return @campings if pnr.blank?
 
-      Array(pnr["tente"]).filter_map do |people|
+      night_values(pnr["tente"]).filter_map do |people|
         next if people.to_i < 1
         { kind: "tente", people: people.to_i, nights: 1 }
       end
@@ -128,7 +141,7 @@ module Reservations
       pnr = per_night_resources
       return @vans if pnr.blank?
 
-      Array(pnr["van"]).filter_map do |count|
+      night_values(pnr["van"]).filter_map do |count|
         next if count.to_i < 1
         { nights: 1 }
       end
@@ -140,7 +153,7 @@ module Reservations
 
       result = []
       %w[simple double].each do |kind|
-        Array(pnr["hamac_#{kind}"]).each do |count|
+        night_values(pnr["hamac_#{kind}"]).each do |count|
           next if count.to_i < 1
           result << { kind: kind, count: count.to_i, nights: 1 }
         end

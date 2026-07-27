@@ -136,7 +136,10 @@ Rails.application.routes.draw do
       get :availability
       # Grilles de composition datées (espaces + camping/van) rechargées quand
       # les dates du séjour changent : rend le frame `stay_compose_grids`.
-      get :compose_grids
+      # POST = chemin nominal — le form envoie sa composition complète pour que
+      # le frame se re-rende sans la perdre. GET = repli dates-seules (sans JS).
+      get  :compose_grids
+      post :compose_grids
       # Devis live du form de composition (issue #73) : recalcule le panneau
       # « Devis (B2C) » en Turbo Stream à chaque changement, via PricingModel.
       post :quote

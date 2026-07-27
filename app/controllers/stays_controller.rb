@@ -190,17 +190,34 @@ class StaysController < BaseController
     end
   end
 
-  # Grilles de composition datées (espaces + camping/van) — rechargées via le
-  # frame `stay_compose_grids` quand les dates changent dans le form (bug
-  # 2026-07-20 : les grilles restaient figées sur les dates de chargement, on
-  # ne pouvait composer que la 1re nuit sur un séjour rallongé). Les valeurs
-  # de grille repartent à zéro au changement de dates (les nuits ont changé) ;
-  # la facturation espaces vit HORS du frame et survit.
+  # Grilles de composition datées (hébergement + espaces + camping/van/hamacs) —
+  # rechargées quand les dates changent dans le form (bug 2026-07-20 : les
+  # grilles restaient figées sur les dates de chargement, on ne pouvait composer
+  # que la 1re nuit sur un séjour rallongé).
+  #
+  # Le form POSTe sa composition COMPLÈTE (mêmes params que `#quote`) et on
+  # rebâtit le Draft avec `build_draft` : le frame se re-rend sur les NOUVELLES
+  # colonnes SANS perdre la saisie (Michael 2026-07-27). Avant, le Draft ne
+  # portait que les deux dates — changer une date après avoir composé vidait
+  # tout ce qui vit dans le frame : tentes, vans, hamacs, nuits de gîte, grille
+  # espaces et note « précision du besoin ».
+  #
+  # Les valeurs de grille sont conservées PAR INDEX DE NUIT (nuit 1 reste nuit 1),
+  # ce qui préserve la composition quand on décale ou rallonge le séjour ; les
+  # nuits ajoutées arrivent à zéro et celles retirées tombent (le Draft borne les
+  # grilles à la fenêtre, cf. `Reservations::Draft#night_values`).
+  #
+  # Repli GET dates-seules conservé : sans JS (ou si le frame est navigué
+  # directement), on retombe sur l'ancien comportement.
   def compose_grids
-    @draft = Reservations::Draft.new(
-      arrival_date:   params[:arrival_date],
-      departure_date: params[:departure_date]
-    )
+    @draft = if params[:stay].present?
+               build_draft
+             else
+               Reservations::Draft.new(
+                 arrival_date:   params[:arrival_date],
+                 departure_date: params[:departure_date]
+               )
+             end
     @stay_nights = stay_nights_for_grid
     # La grille hébergement fait partie du frame rechargé : il lui faut les gîtes
     # et leur dispo aux nouvelles dates (l'exclusion du séjour édité passe par
@@ -208,7 +225,13 @@ class StaysController < BaseController
     @lodgings = bookable_lodgings
     @stay = Stay.find_by(id: params[:exclude_stay_id]) if params[:exclude_stay_id].present?
     @lodging_availability = stay_lodging_availability(@lodgings, @stay_nights)
-    render layout: false
+
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace("stay_compose_grids", partial: "stays/compose_grids")
+      end
+      format.html { render layout: false }
+    end
   end
 
   # Disponibilité de l'hébergement en temps réel (issue #77). Réutilise

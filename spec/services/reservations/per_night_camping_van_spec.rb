@@ -116,6 +116,33 @@ RSpec.describe Reservations::Builder, "grille par nuit — garde-fous (revue For
     expect(campings.first.people).to eq(2)
   end
 
+  # Bug 2026-07-27 : en raccourcissant les dates dans le form admin, le devis
+  # live partait avec la grille de l'ANCIENNE fenêtre et facturait des nuits
+  # au-delà du départ. Le Draft borne désormais toute grille par nuit à `nights`
+  # (même garde qu'à la persistance, cf. `night_value_ranges`).
+  describe "grille bornée à la fenêtre du séjour" do
+    it "ignore les nuits de grille au-delà du départ (camping)" do
+      # Fenêtre de 2 nuits, grille de 6 → seules les 2 premières comptent.
+      d = draft(per_night_resources: { "tente" => %w[2 2 2 2 2 2] })
+      expect(d.campings.size).to eq(2)
+      expect(d.quote.camping_cents).to eq(750 * 2 * 2)
+    end
+
+    it "ignore les nuits de grille au-delà du départ (van et hamacs)" do
+      d = draft(per_night_resources: {
+        "tente" => [], "van" => %w[1 1 1 1 1 1], "hamac_simple" => %w[1 1 1 1 1 1]
+      })
+      expect(d.vans.size).to eq(2)
+      expect(d.hamacs.size).to eq(2)
+    end
+
+    it "laisse la grille intacte quand le séjour n'a pas de dates (duplication)" do
+      d = Reservations::Draft.new(per_night_resources: { "tente" => %w[2 2 2] })
+      expect(d.nights).to eq(0)
+      expect(d.campings.size).to eq(3)
+    end
+  end
+
   it "F4 : prix imposé + grille — les plages somment toujours à la part camping du devis" do
     builder = described_class.new(
       draft: draft(per_night_resources: { "tente" => [2, 3] }),
