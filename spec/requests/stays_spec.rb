@@ -20,14 +20,20 @@ RSpec.describe "Stays (détails admin)", type: :request do
   before { stay.stay_items.create!(bookable: booking) }
 
   describe "GET /stays/:id" do
-    it "renders the stay details fragment with French dates and contact" do
+    it "renders the stay details fragment with French dates" do
       get stay_path(stay)
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Séjour ##{stay.id}")
       expect(response.body).to include("14 février 2026")
-      expect(response.body).to include("Jean Dupont")
-      expect(response.body).to include("Les Amis")
       expect(response.body).to include("Confirmé") # statut en label
+    end
+
+    # Le contact porté par la réservation d'origine a quitté la modale (Michael
+    # 2026-07-28) : il doublonnait le bloc Client juste en dessous. Il reste
+    # visible dans le formulaire d'édition (cf. stays_origin_contact_spec).
+    it "n'affiche plus le bloc Contact de la réservation d'origine" do
+      get stay_path(stay)
+      expect(response.body).not_to include("Jean Dupont")
     end
 
     it "shows the OTA platform badge for an Airbnb booking" do

@@ -37,7 +37,13 @@ div id="stay-details-#{@stay.id}"
       /  « Modifier » est l'ISSUE DE SECOURS de cette modale : tout ce qui touche
          à la composition (dates, gîtes, espaces, activités payantes) se règle
          dans le formulaire, qui porte les vérifications de disponibilité.
-      = link_to "Modifier", edit_stay_path(@stay), class: "rounded-md border border-transparent bg-gray-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-gray-800"
+      = link_to "Modifier", edit_stay_path(@stay), class: "rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+      /  Fermeture logée DANS l'en-tête, au bout des actions. `stay-modal-close`
+         la masque hors <dialog> (règle contextuelle dans application.css) : ce
+         même partial sert la page pleine /stays/:id, où il n'y a rien à fermer.
+      button.stay-modal-close.hidden.ml-1.items-center.justify-center.rounded-md.p-1(class="text-gray-500 hover:bg-white/70 hover:text-gray-900" type="button" data-action="stay-details#close" aria-label="Fermer")
+        svg.h-5.w-5(xmlns="http://www.w3.org/2000/svg" fill="none" viewbox="0 0 24 24" stroke-width="1.75" stroke="currentColor")
+          path(stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12")
 
   /  Demande de modification client en attente (issue #133) : elle passe AVANT
      les deux colonnes — c'est une décision à prendre, pas une information.
@@ -70,11 +76,6 @@ div id="stay-details-#{@stay.id}"
             - if occupants[:children].positive?
               span.inline-flex.items-center.rounded-full.border.border-gray-300.bg-white.px-2.5.py-1.text-sm.text-gray-700
                 = "#{occupants[:children]} enfant#{'s' if occupants[:children] > 1}"
-
-      - if @stay.contact_line.present?
-        .rounded-lg.border.border-gray-200.bg-white.p-3
-          .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Contact
-          .mt-1.text-sm.text-gray-900 = @stay.contact_line
 
       div
         .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Client
@@ -116,9 +117,13 @@ div id="stay-details-#{@stay.id}"
 
           /  Jauge d'encaissement : le rapport encaissé/total se lit d'un coup
              d'œil, là où deux montants demandent un calcul mental.
+          /  La jauge reprend le code couleur du solde juste en dessous : ambre
+             tant qu'il reste à encaisser, vert une fois le séjour soldé. Le
+             rouge reste réservé au montant dû, qui est l'alerte.
           - if total.positive?
+            - teinte_jauge = @stay.payable_now? ? "bg-amber-500" : "bg-emerald-500"
             .mt-3.h-2.w-full.overflow-hidden.rounded-full.bg-gray-200(role="img" aria-label="#{avancement}% encaissé")
-              .h-full.rounded-full.bg-gray-900(style="width: #{avancement}%")
+              .h-full.rounded-full(class=teinte_jauge style="width: #{avancement}%")
 
           .mt-3.flex.items-baseline.justify-between
             span.text-sm.font-semibold(class=(@stay.payable_now? ? "text-red-700" : "text-green-700"))
@@ -130,7 +135,7 @@ div id="stay-details-#{@stay.id}"
              plus fréquente du poste, d'où sa place en bas de colonne, sous le
              solde qu'elle vient réduire.
           details.mt-3(open=(@stay.payable_now? && paiements.empty?))
-            summary.w-full.cursor-pointer.select-none.rounded-md.bg-gray-900.px-3.py-2.text-center.text-sm.font-medium.text-white.hover:bg-gray-800
+            summary.w-full.cursor-pointer.select-none.rounded-md.bg-indigo-600.px-3.py-2.text-center.text-sm.font-medium.text-white.hover:bg-indigo-700
               | Enregistrer un paiement
             = form_with url: stay_payments_path(@stay), method: :post, class: "mt-2 space-y-2 rounded-md border border-gray-200 bg-white p-3" do |f|
               label.block.text-xs.text-gray-600
@@ -145,14 +150,16 @@ div id="stay-details-#{@stay.id}"
               = f.submit "Ajouter le paiement", class: "w-full cursor-pointer rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
 
     /  === COLONNE DROITE : ce qu'on lit et modifie ========================
-    .divide-y.divide-gray-200
+       Séparateurs posés bloc par bloc plutôt qu'en `divide-y` : « Activités »
+       clôt la colonne sans trait, et la fin de la modale reste ouverte.
+    div
       = render "stays/internal_note"
 
       /  Déroulé du séjour : arrivée, activités datées, départ. Il donne la
          forme du séjour dans le temps, ce qu'une liste de lignes ne dit pas.
       - jalons = stay_timeline(@stay)
       - if jalons.any?
-        .px-5.py-4
+        .border-t.border-gray-200.px-5.py-4
           .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Déroulé du séjour
           ol.mt-3.space-y-3
             - jalons.each_with_index do |jalon, index|
@@ -166,7 +173,7 @@ div id="stay-details-#{@stay.id}"
                   - if jalon[:detail].present?
                     .text-sm.text-gray-500 = jalon[:detail]
 
-      .px-5.py-4
+      .border-t.border-gray-200.px-5.py-4
         .flex.items-baseline.justify-between
           .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Composition
           /  Toute modification de composition passe par le formulaire : c'est

@@ -11,9 +11,10 @@
 = turbo_frame_tag "stay_#{@stay.id}_notes" do
   .bg-yellow-50.px-5.py-4
     .text-xs.font-semibold.uppercase.tracking-wide.text-yellow-800 Note interne
-    /  `details` fermé par défaut quand une note existe (on vient la LIRE), mais
-       ouvert quand il n'y en a pas — pour que le champ vide invite à écrire.
-    details.mt-2(open=note_sejour.blank?)
+    /  TOUJOURS fermé à l'ouverture de la modale (Michael 2026-07-28) : on vient
+       LIRE le dossier, pas écrire. Le champ ne se déplie qu'au clic sur la note
+       — ou sur l'invite « cliquer pour en ajouter » quand elle est vide.
+    details.mt-2
       summary.cursor-pointer.select-none.list-none
         - if note_sejour.present?
           .rounded-md.border.border-dashed.border-yellow-300.bg-white.px-3.py-2.text-sm.text-yellow-900
@@ -24,7 +25,7 @@
       = form_with url: update_notes_stay_path(@stay), method: :patch, class: "mt-2 space-y-2" do
         = text_area_tag "stay[notes]", note_sejour, rows: 5, class: "block w-full rounded-md border-yellow-300 text-sm", placeholder: "Ce que l'équipe doit savoir sur ce séjour…"
         .flex.items-center.gap-2
-          = submit_tag "Enregistrer la note", class: "cursor-pointer rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
+          = submit_tag "Enregistrer la note", class: "cursor-pointer rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
           - if derniere
             span.text-xs.text-yellow-700
               = ["modifiée", (derniere[:by].present? ? "par #{derniere[:by]}" : nil), "· #{l(derniere[:at].to_date, format: :long)}"].compact.join(" ")

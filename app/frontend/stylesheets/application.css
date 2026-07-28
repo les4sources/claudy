@@ -90,6 +90,15 @@
     @apply text-xs px-2 py-1;
   }
 
+  /* Croix de fermeture de l'en-tête séjour. Le partial `stays/_details` sert à
+     la fois la modale et la page pleine /stays/:id, où il n'y a rien à fermer :
+     être dans un <dialog> EST la définition de « je suis en modale ». La règle
+     contextuelle évite de trimballer un drapeau jusque dans les réponses Turbo
+     Stream qui remplacent le fragment après une action rapide. */
+  dialog .stay-modal-close {
+    display: inline-flex;
+  }
+
   .btn-destroy {
     @apply focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900;
   }
