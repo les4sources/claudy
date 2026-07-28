@@ -9,13 +9,13 @@
     - if @quote
       .p-5.space-y-4
         .flex.items-baseline.justify-between.gap-3
-          span.text-sm.font-medium.text-gray-500 Devis (B2C)
+          span.text-sm.font-medium.text-gray-500 Total calculé
           span.text-2xl.font-semibold.text-gray-900.tabular-nums = humanized_money_with_symbol(Money.new(@quote.total_cents))
 
         / Chambres seules (epic #81, Phase 5) : pas de barème par chambre — le total
         / vient du Prix total imposé. On l'annonce clairement dans la carte.
         - if @draft&.rooms_mode?
-          p.rounded-xl.bg-amber-50.px-3.py-2.text-xs.font-medium.text-amber-800 Pas de devis automatique pour des chambres seules — utilisez le prix imposé ci-dessous.
+          p.rounded-xl.bg-amber-50.px-3.py-2.text-xs.font-medium.text-amber-800 Pas de calcul automatique pour des chambres seules — utilisez le montant demandé ci-dessous.
 
         - if @quote.breakdown.present?
           ul.space-y-2.text-sm
@@ -34,5 +34,5 @@
       /  Pas de devis calculable (dates manquantes, composition vide au premier
          rendu). Le rail ne doit jamais être un trou blanc : on annonce l'état.
       .p-5.space-y-1
-        span.block.text-sm.font-medium.text-gray-500 Devis (B2C)
+        span.block.text-sm.font-medium.text-gray-500 Total calculé
         p.text-sm.text-gray-400 Le devis apparaîtra dès que le séjour aura des dates et une composition.

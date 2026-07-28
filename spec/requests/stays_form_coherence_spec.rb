@@ -113,7 +113,7 @@ RSpec.describe "Stays — cohérence composition ↔ devis dans le form", type: 
       corps = devis(booking_type: "rooms", lodging_id: gite.id.to_s,
                     room_ids: gite.rooms.limit(1).pluck(:id).map(&:to_s))
 
-      expect(corps).to include("Pas de devis automatique")
+      expect(corps).to include("Pas de calcul automatique")
     end
   end
 

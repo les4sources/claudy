@@ -75,7 +75,7 @@ RSpec.describe "Stays — chambres seules (epic #81, Phase 5)", type: :request d
 
     it "affiche le message « pas de devis automatique » via le devis live" do
       post quote_stays_path, params: base_params(booking_type: "rooms", room_ids: [@room_1.id]), as: :turbo_stream
-      expect(response.body).to include("Pas de devis automatique pour des chambres seules")
+      expect(response.body).to include("Pas de calcul automatique pour des chambres seules")
     end
   end
 

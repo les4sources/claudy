@@ -2,7 +2,7 @@ require "rails_helper"
 
 # Issue #73 — devis live du form de composition Séjour admin. L'endpoint
 # `POST /stays/quote` reconstruit le Draft depuis les params et renvoie le
-# panneau « Devis (B2C) » recalculé (Turbo Stream), cohérent avec le devis au
+# panneau « Total calculé » recalculé (Turbo Stream), cohérent avec le devis au
 # submit (même PricingModel).
 RSpec.describe "Stays — devis live (issue #73)", type: :request do
   include Devise::Test::IntegrationHelpers
@@ -38,7 +38,7 @@ RSpec.describe "Stays — devis live (issue #73)", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.media_type).to eq("text/vnd.turbo-stream.html")
     expect(response.body).to include("stay-quote-panel")
-    expect(response.body).to include("Devis (B2C)")
+    expect(response.body).to include("Total calculé")
     # Hulotte 2 nuits = 745 € : le total apparaît dans le panneau.
     expect(response.body).to include("745")
   end

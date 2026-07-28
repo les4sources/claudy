@@ -18,6 +18,16 @@
 */
 @import 'tailwindcss/utilities';
 
+/* Éditeur riche Trix (note publique du séjour) + identité Portail Clients.
+   REMONTÉS ICI le 2026-07-28. Ils vivaient sous les blocs `@font-face` : en CSS,
+   un `@import` placé après une règle est purement IGNORÉ par le navigateur, donc
+   la feuille de Trix n'était plus chargée du tout et l'éditeur se rendait en
+   texte brut (barre d'outils « Bold Italic Strikethrough… » à nu). Le projet
+   n'a pas `postcss-import` — rien ne rattrape un import mal placé.
+   Tout nouvel `@import` va ICI, au-dessus des `@font-face`. */
+@import 'trix';
+@import 'portal.css';
+
 /* --- Averia Serif Libre ---------------------------------------------------
    PLACÉ APRÈS LES @import : en CSS, `@import` doit précéder toute autre règle.
    Un @font-face au-dessus les invalide et casse la compilation Tailwind.
@@ -50,13 +60,10 @@
     U+02DC, U+2000-206F, U+20AC, U+2122, U+FEFF, U+FFFD;
 }
 
-@import 'trix';
-
 /* @import '../../components/flow/component.css'; */
 
-/* Fonts self-hostées (Fraunces + Caveat) + identité Portail Clients.
-   Remplace l'ancien @import CDN Google Fonts de Caveat (plus de dépendance réseau). */
-@import 'portal.css';
+/* Fonts self-hostées (Fraunces + Caveat) + identité Portail Clients :
+   `@import 'portal.css'` est remonté en tête du fichier, avec les autres imports. */
 
 @layer base {
 

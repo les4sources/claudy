@@ -127,10 +127,16 @@
         .grid.grid-cols-2.gap-4
           .space-y-1
             label.block.text-sm.font-medium.text-gray-700 Arrivée
-            = date_field_tag "stay[arrival_date]", @draft&.arrival_date&.iso8601, data: { action: "change->stay-availability#check change->stay-grids#reload" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+            /  Arrivée et départ sont les deux champs les plus manipulés du form —
+               ils pilotent toute la composition. Ils passent à ~150 % (texte `lg`
+               + padding généreux) pour être visés du premier coup. Les dates
+               secondaires (repas, terrasse, salles) restent compactes : elles
+               vivent dans des rangées à trois colonnes qu'un champ haut ferait
+               exploser.
+            = date_field_tag "stay[arrival_date]", @draft&.arrival_date&.iso8601, data: { action: "change->stay-availability#check change->stay-grids#reload" }, class: "block w-full rounded-xl border-gray-300 px-4 py-3 text-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           .space-y-1
             label.block.text-sm.font-medium.text-gray-700 Départ
-            = date_field_tag "stay[departure_date]", @draft&.departure_date&.iso8601, data: { action: "change->stay-grids#reload change->stay-availability#check" }, class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+            = date_field_tag "stay[departure_date]", @draft&.departure_date&.iso8601, data: { action: "change->stay-grids#reload change->stay-availability#check" }, class: "block w-full rounded-xl border-gray-300 px-4 py-3 text-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
         .grid.grid-cols-2.gap-4
           .space-y-1
             label.block.text-sm.font-medium.text-gray-700 for="stay_arrival_time" Heure d'arrivée
@@ -220,7 +226,7 @@
           / Chambres du gîte (mode chambres seules). Un groupe par gîte, masqué par
           / défaut ; Stimulus n'affiche que le groupe du gîte sélectionné, en mode rooms.
           .space-y-2.hidden(data-stay-form-target="roomsPanel")
-            p.text-sm.text-gray-500 Cochez les chambres à réserver. Pas de devis automatique pour des chambres seules — utilisez le Prix total imposé plus bas.
+            p.text-sm.text-gray-500 Cochez les chambres à réserver. Pas de calcul automatique pour des chambres seules — utilisez le « Montant total demandé » dans le rail de droite.
             - @lodgings.each do |lodging|
               .space-y-1.hidden(data-stay-form-target="roomsGroup" data-lodging-id=lodging.id)
                 - rooms = lodging.rooms.order(:level)
@@ -348,7 +354,7 @@
          exigible se recalcule automatiquement depuis ce total.
       section.bg-white.rounded-2xl.p-5.space-y-3(class="ring-1 ring-gray-200")
         .space-y-1
-          label.block.text-sm.font-semibold.text-gray-900 for="stay_price_override" Prix total imposé
+          label.block.text-sm.font-semibold.text-gray-900 for="stay_price_override" Montant total demandé
           .relative
             = number_field_tag "stay[price_override]", override_prefill, id: "stay_price_override", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-xl border-gray-300 pr-8 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             span.pointer-events-none.absolute.inset-y-0.right-3.flex.items-center.text-sm.text-gray-400 €

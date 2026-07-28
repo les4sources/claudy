@@ -10,7 +10,12 @@ RSpec.describe "Calendrier — bloc terrasse", type: :request do
   before { sign_in user }
 
   it "rend une chip 🪑 Terrasse, sans ⛺️ ni 💤, sur un séjour terrasse-seule" do
-    day = Date.today.next_occurring(:tuesday)
+    # Un jour du mois AFFICHÉ par `get "/"` (le mois courant, sans paramètre).
+    # L'ancien `Date.today.next_occurring(:tuesday)` sortait du mois dès que le
+    # mardi suivant tombait le mois d'après : la chip était alors cherchée dans un
+    # calendrier qui ne la contenait pas. Rouge chaque fin de mois — et rouge
+    # aujourd'hui, un mardi 28, où « mardi prochain » est le 4 du mois suivant.
+    day = [Date.today + 2, Date.today.end_of_month].min
 
     customer = Customers::UpsertByEmail.call(email: "bbq@example.com", attrs: { first_name: "BBQ" })
     stay = Stay.create!(customer: customer, source: "manual", status: "confirmed",
