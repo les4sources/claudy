@@ -8,7 +8,7 @@
 
     / ── Titre ────────────────────────────────────────────────
     .mb-8
-      h1.text-2xl.font-bold.text-ink Des activités pendant votre séjour ?
+      h1.funnel-title Des activités pendant votre séjour ?
       p.text-sm.text-moss.mt-1
         | Choisissez un créneau dans les dates de votre séjour. Notre équipe confirmera
         | les disponibilités avec les animateurs·ices — les activités ne sont pas comprises
@@ -40,7 +40,7 @@
         - @availabilities.group_by(&:experience).each do |experience, slots|
           .rounded-2xl.border.border-bark.bg-white.shadow-sm.p-5.mb-4
             .mb-3
-              h2.text-base.font-semibold.text-ink = experience.name
+              h2.funnel-section-title = experience.name
               - if experience.summary.present?
                 p.text-sm.text-moss = experience.summary
               .text-sm.text-forest.mt-1 = Pricing::ExperienceLine.rate_label(experience)

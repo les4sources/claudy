@@ -66,7 +66,7 @@
 
           - @lodgings.each do |lodging|
             - lodging_rate = Pricing::Catalog.lodging_rate(lodging.name)
-            tr(class="border-t border-gray-50" data-needs-block="gite")
+            tr(class="border-t border-bark/60" data-needs-block="gite")
               td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
                 span.text-sm.text-ink.font-medium = short_names[lodging.name] || lodging.name
                 - if lodging_rate
@@ -117,7 +117,7 @@
 
           / Campeurs (tentes) — la saisie est un nombre de PERSONNES, pas de
           / tentes (source de confusion levée, feature 2).
-          tr(class="border-t border-gray-50" data-needs-block="camping")
+          tr(class="border-t border-bark/60" data-needs-block="camping")
             td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
               .flex.items-center.gap-1.5
                 svg.w-4.h-4.text-moss.flex-shrink-0(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true")
@@ -134,7 +134,7 @@
               td.py-2.px-1.text-center
                 = render "public/reservations/stepper_cell", name: "reservation[per_night_resources][tente][]", val: val, max: 50
 
-          tr(class="border-t border-gray-50" data-needs-block="van")
+          tr(class="border-t border-bark/60" data-needs-block="van")
             td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
               .flex.items-center.gap-1.5
                 svg.w-4.h-4.text-moss.flex-shrink-0(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true")
@@ -158,7 +158,7 @@
                 span Location de hamacs
                 p.text-xs.text-moss.font-normal.normal-case.tracking-normal.mt-0.5 Hamac fourni et posé dans les arbres du domaine — rien à apporter.
 
-            tr(class="border-t border-gray-50" data-needs-block="camping")
+            tr(class="border-t border-bark/60" data-needs-block="camping")
               td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
                 .flex.items-center.gap-1.5
                   svg.w-4.h-4.text-moss.flex-shrink-0(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true")
@@ -174,7 +174,7 @@
                 td.py-2.px-1.text-center
                   = render "public/reservations/stepper_cell", name: "reservation[per_night_resources][hamac_simple][]", val: val, max: 10
 
-            tr(class="border-t border-gray-50" data-needs-block="camping")
+            tr(class="border-t border-bark/60" data-needs-block="camping")
               td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
                 .flex.items-center.gap-1.5
                   svg.w-4.h-4.text-moss.flex-shrink-0(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true")

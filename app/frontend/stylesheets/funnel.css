@@ -271,6 +271,59 @@
   border: 1px dashed var(--p-past-border);
 }
 
+/* --- Créneaux d'espaces (journée / soirée / les deux) ----------------------- */
+
+/* Même principe que les cellules de nuit : l'état vit dans `data-slot`, le
+   dessin dans le CSS. Il vivait avant en double — une table de classes Tailwind
+   dans `space_slot_controller.js` ET les mêmes couleurs recopiées à la main dans
+   la légende du template, en bleu, violet et sarcelle, trois teintes venues de
+   nulle part.
+   Les trois états se distinguent d'abord par leur VALEUR (clair chaud, clair
+   froid, foncé plein), pas seulement par leur teinte — et chaque cellule porte
+   son libellé écrit (« Jour », « Soir », « J+S »). La couleur ne porte donc
+   jamais l'information seule. */
+.funnel-slot {
+  appearance: none;
+  width: 3.5rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--p-border);
+  border-radius: var(--p-radius-md);
+  background: var(--p-surface);
+  color: var(--p-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms var(--p-ease), border-color 160ms var(--p-ease),
+              color 160ms var(--p-ease);
+}
+.funnel-slot:hover {
+  border-color: var(--p-primary);
+}
+.funnel-slot[data-slot="journee"] {
+  background: var(--p-accent-tint);
+  border-color: var(--p-accent);
+  color: #8A4E1E;
+}
+.funnel-slot[data-slot="soiree"] {
+  background: var(--p-primary-tint);
+  border-color: var(--p-primary);
+  color: var(--p-primary);
+}
+.funnel-slot[data-slot="journee_et_soiree"] {
+  background: var(--p-primary);
+  border-color: var(--p-primary);
+  color: var(--p-primary-contrast);
+}
+/* Pastille de légende — même dessin, plus petite et non cliquable. */
+.funnel-slot--legend {
+  width: 3.5rem;
+  height: 2rem;
+  cursor: default;
+}
+
 /* --- Sélection de plage dans le calendrier ---------------------------------- */
 
 /* Le calendrier ne servait qu'à consulter : le client le refermait puis retapait

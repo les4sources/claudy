@@ -54,7 +54,7 @@
 
         tbody
           - space_kinds.each do |space_key, space_name|
-            tr class="border-t border-gray-50"
+            tr class="border-t border-bark/60"
               td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
                 .text-sm.text-ink.font-medium = space_name
                 p.text-xs.text-moss.leading-tight = space_hints[space_key]
@@ -67,7 +67,9 @@
                       type="button"
                       data-action="click->public--space-slot#toggle"
                       data-public--space-slot-target="button"
-                      class="appearance-none w-14 h-11 rounded-xl border-2 text-xs font-bold transition-all")
+                      data-slot=current_period
+                      aria-label="#{space_name} — nuit #{i + 1}, #{l(_night, format: :long)}"
+                      class="funnel-slot")
                     input(
                       type="hidden"
                       name="#{param_root}[space_slots][#{space_key}][]"
@@ -75,21 +77,21 @@
                       data-public--space-slot-target="input")
 
     / Légende
-    .flex.flex-wrap.items-center.gap-x-4.gap-y-1.mt-4.pt-3.border-t.border-gray-50
+    .flex.flex-wrap.items-center.gap-x-4.gap-y-1.mt-4.pt-3.border-t.border-bark/60
       .flex.items-center.gap-1.5
-        .w-14.h-8.rounded-xl.bg-blue-100.border-2.border-blue-300.text-blue-700.text-xs.font-bold.flex.items-center.justify-center Jour
+        span.funnel-slot.funnel-slot--legend(data-slot="journee") Jour
         span.text-xs.text-moss Journée
       .flex.items-center.gap-1.5
-        .w-14.h-8.rounded-xl.bg-purple-100.border-2.border-purple-300.text-purple-700.text-xs.font-bold.flex.items-center.justify-center Soir
+        span.funnel-slot.funnel-slot--legend(data-slot="soiree") Soir
         span.text-xs.text-moss Soirée
       .flex.items-center.gap-1.5
-        .w-14.h-8.rounded-xl.bg-teal-100.border-2.border-teal-300.text-teal-700.text-xs.font-bold.flex.items-center.justify-center J+S
+        span.funnel-slot.funnel-slot--legend(data-slot="journee_et_soiree") J+S
         span.text-xs.text-moss Les deux
 
     / ── Précision libre du besoin d'espace (facultatif) ──────────
     / Rangée à la création dans la note INTERNE du SpaceBooking
     / (préfixe « Demande client espaces : »), visible dans la modale admin.
-    .mt-5.pt-4.border-t.border-gray-50
+    .mt-5.pt-4.border-t.border-bark/60
       label.block(for="#{param_root}_spaces_note")
         span.text-sm.font-medium.text-ink Précisez votre besoin
         p.text-xs.text-moss.mt-0.5 Installation, horaire, matériel, nombre de personnes… (facultatif)
