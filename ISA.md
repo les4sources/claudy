@@ -7,7 +7,7 @@ phase: build
 progress: 0/15
 mode: interactive
 started: 2026-05-28T00:00:00Z
-updated: 2026-07-29T00:11:57+02:00
+updated: 2026-07-29T01:19:55+02:00
 ---
 
 ## Problem
@@ -99,13 +99,20 @@ Constat d'ouverture : le funnel est la **première impression** commerciale des 
 - [x] ISC-27: Le repère d'étapes est un `<nav aria-label>` + `<ol>` avec `aria-current="step"` sur l'étape active, et le libellé de l'étape courante reste **visible à 390 px** (aujourd'hui masqué par `hidden sm:inline` — sur mobile le client ne voit que des pastilles numérotées). Probe : navigateur à 390 px.
   - Évidence 2026-07-29 : fait — `<nav aria-label>` + `<ol>` + `aria-current="step"` ; à 390 px le libellé actif reste visible et un `sr-only` dit « Étape 1 sur 4 — Votre séjour » ; aucun débordement horizontal.
 
+- [x] ISC-28: Le calendrier de disponibilités EST le sélecteur de dates : on choisit sa plage dessus (1er clic = arrivée, 2e = départ), « Choisir ces dates » remplit les deux champs de l'étape 1, recalcule le badge des nuits et le `min` du départ, puis ferme la modale. La modale s'ouvre sur le mois du séjour visé, pas sur le mois courant. Probe : navigateur.
+  - Évidence 2026-07-29 : navigation juillet→août dans la modale, clics sur 14 et 17 août → résumé « 14 août → 17 août · 3 nuits », confirmation → champs `2026-08-14` / `2026-08-17`, badge « = 3 nuits », `min` du départ à `2026-08-15`, modale fermée, formulaire valide. Arrivée posée au 2026-10-15 → la modale rouvre sur `data-cal-month="2026-10"` (« Octobre 2026 »). 7 specs de contrat de balisage.
+- [x] ISC-29: Un panier à 0,00 € ne peut pas avancer : le CTA de l'étape 2 est bloqué et dit pourquoi, et se débloque dès la première sélection sans rechargement.
+  - Évidence 2026-07-29 : à 0,00 € le bouton porte `disabled` et « Choisissez au moins une nuit d'hébergement… » lié par `aria-describedby` ; le Turbo Stream de `/reservation/devis` remplace bien `compose_cta` (3 cibles) et le rend actif avec une nuit choisie. 3 specs.
+- [x] ISC-30: Aucun état d'interface du funnel n'est décrit en double entre un template et son contrôleur Stimulus. Probe : lecture des contrôleurs `stay_calendar` et `space_slot`.
+  - Évidence 2026-07-29 : les cellules de nuit et les créneaux d'espaces portent leur état en attribut (`aria-pressed`, `data-slot`) ; tout le dessin vit dans `funnel.css`. Les tables de classes Tailwind recopiées dans les deux contrôleurs ont disparu.
+- [x] ISC-31: Zéro classe de palette générique (`emerald-*`, `*-gray-*`, `purple-*`, `teal-*`, `blue-*`) dans les vues du funnel. Probe : `rg` sur `app/views/public/reservations/*.slim`.
+  - Évidence 2026-07-29 : 0 occurrence.
+
 ### Reste à faire sur le funnel (constaté, non traité dans cette passe)
 
 Ces points sont sortis de l'observation du 2026-07-28 mais dépassent le périmètre livré. Ils ne sont pas des criteria tant que Michael n'a pas tranché.
 
 - **Les gîtes se choisissent à l'aveugle.** Hulotte / Chevêche / Grand-Duc n'ont qu'un nom et un prix à la nuit. Aucune photo, aucune capacité, aucun nombre de lits, aucune description. C'est l'écart le plus large avec Airbnb, dont tout le flux repose sur l'image. Demande une décision produit (quelles photos, quel texte) avant d'être codé.
-- **Le calendrier de disponibilités ne sert pas à choisir ses dates.** Il s'ouvre en lecture seule, sur le mois COURANT même quand le séjour visé est trois mois plus loin, et il faut le refermer pour retaper ses dates dans deux champs `jj/mm/aaaa`. Chez Airbnb, le calendrier EST le sélecteur de dates.
-- **Un séjour vide peut avancer.** Total à 0,00 € et le bouton « Continuer vers les activités » reste actif ; rien ne dit qu'aucun hébergement n'est sélectionné.
 - **Aucune issue quand les dates ne passent pas.** Si les nuits demandées sont occupées, la grille affiche une colonne de tirets sans proposer la moindre alternative (dates voisines, autre gîte).
 - **`f.submit` est un piège de repo.** `TailwindFormBuilder#submit` route vers `Button::Component`, qui concatène ses propres classes APRÈS celles de l'appelant : à spécificité égale, le template ne peut pas gagner. L'ancien CTA du funnel demandait `bg-emerald-600` et rendait le vert Flowbite. Les deux CTA du funnel sont passés en `<button>` nu ; le reste de l'app garde le piège.
 - **Vérification par pixels différée.** Le pipeline de captures d'agent-browser est tombé pendant la session (échec du daemon jusque sur `data:text/html`, indépendant de la page). Tout a été vérifié par arbre d'accessibilité, styles calculés sur éléments témoins, mesures de contraste et smoke HTTP — mais l'apparence n'a pas été revue en pixels après la refonte.
