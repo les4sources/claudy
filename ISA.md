@@ -7,7 +7,7 @@ phase: build
 progress: 0/15
 mode: interactive
 started: 2026-05-28T00:00:00Z
-updated: 2026-07-29T01:23:29+02:00
+updated: 2026-07-29T01:27:04+02:00
 ---
 
 ## Problem
@@ -109,12 +109,14 @@ Constat d'ouverture : le funnel est la **première impression** commerciale des 
   - Évidence 2026-07-29 : 0 occurrence.
 - [x] ISC-32: Une nuit indisponible n'est pas un cul-de-sac : la mini-modale nomme les autres gîtes libres cette nuit-là.
   - Évidence 2026-07-29 : Hulotte occupée du 10 au 12 novembre → clic sur une cellule barrée → « La Hulotte n'est pas libre le 10 novembre 2026. » + « Chevêche est libre cette nuit-là. » Données lues dans `@lodging_availability`, déjà calculé pour la grille — aucune requête de plus. 3 specs, dont le cas « tout est pris » et le cas « attribut uniquement sur les cellules barrées ».
+- [x] ISC-33: Chaque gîte de la grille annonce sa capacité et son nombre de chambres, pas seulement son nom et son prix.
+  - Évidence 2026-07-29 : « Hulotte · 9 à 16 personnes · 6 chambres · dès 260 €/nuit », « Chevêche · 4 à 8 personnes · 2 chambres · dès 200 €/nuit », « Grand-Duc · 17 à 25 personnes · 8 chambres · dès 600 €/nuit ». Données déjà en base (`Lodging#summary` + `rooms`), jamais montrées jusqu'ici. 3 specs, dont l'accord au singulier.
 
 ### Reste à faire sur le funnel (constaté, non traité dans cette passe)
 
 Ces points sont sortis de l'observation du 2026-07-28 mais dépassent le périmètre livré. Ils ne sont pas des criteria tant que Michael n'a pas tranché.
 
-- **Les gîtes se choisissent à l'aveugle.** Hulotte / Chevêche / Grand-Duc n'ont qu'un nom et un prix à la nuit. Aucune photo, aucune capacité, aucun nombre de lits, aucune description. C'est l'écart le plus large avec Airbnb, dont tout le flux repose sur l'image. Demande une décision produit (quelles photos, quel texte) avant d'être codé.
+- **Les gîtes n'ont toujours pas de photo.** Capacité, nombre de chambres et prix à la nuit sont désormais affichés (2026-07-29), mais l'image manque — et c'est sur elle que repose tout le flux d'Airbnb. Demande une décision : quelles photos, combien par gîte, et faut-il une courte description en propre.
 - **`f.submit` est un piège de repo.** `TailwindFormBuilder#submit` route vers `Button::Component`, qui concatène ses propres classes APRÈS celles de l'appelant : à spécificité égale, le template ne peut pas gagner. L'ancien CTA du funnel demandait `bg-emerald-600` et rendait le vert Flowbite. Les deux CTA du funnel sont passés en `<button>` nu ; le reste de l'app garde le piège.
 - **Vérification par pixels différée.** Le pipeline de captures d'agent-browser est tombé pendant la session (échec du daemon jusque sur `data:text/html`, indépendant de la page). Tout a été vérifié par arbre d'accessibilité, styles calculés sur éléments témoins, mesures de contraste et smoke HTTP — mais l'apparence n'a pas été revue en pixels après la refonte.
 
