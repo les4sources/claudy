@@ -74,6 +74,10 @@
               - @stay_nights.each_with_index do |night, i|
                 - avail = (@lodging_availability.dig(lodging.id, i) != false)
                 - sel   = selected_ids.at(i).to_s == lodging.id.to_s
+                / Autres gîtes libres CETTE nuit-là. Lu dans @lodging_availability, déjà
+                / calculé pour la grille : pas de requête de plus. Sert la mini-modale
+                / d'indisponibilité, qui se contentait jusqu'ici de constater le refus.
+                - alts = @lodgings.reject { |o| o.id == lodging.id }.select { |o| @lodging_availability.dig(o.id, i) != false }.map { |o| short_names[o.name] || o.name }
                 td.py-2.px-1.text-center
                   - if avail
                     / Cellule disponible — la cible de clic principale de l'étape 2.
@@ -104,6 +108,7 @@
                       data-action="click->public--unavail#show"
                       data-unavail-name=lodging.name
                       data-unavail-date=l(night, format: :long)
+                      data-unavail-alternatives=alts.to_json
                       aria-label="#{lodging.name} n'est pas libre le #{l(night, format: :long)} — voir les disponibilités"
                       class="funnel-night-cell funnel-night-cell--off")
                       span(aria-hidden="true") —
@@ -221,10 +226,16 @@
         span.w-9.h-9.rounded-full.bg-ember-tint.text-ember.flex.items-center.justify-center.flex-shrink-0
           = funnel_icon :ban, css_class: "w-5 h-5"
         .flex-1.min-w-0
-          h3.text-sm.font-semibold.text-ink Hébergement indisponible
+          h3.funnel-section-title.text-base Hébergement indisponible
           p.text-sm.text-moss.mt-1(data-public--unavail-target="message")
+          / Issue de secours : les autres gîtes libres CETTE nuit-là. Sans ça, la
+          / modale ne faisait que constater le refus et laissait le client sans
+          / piste — alors que le gîte voisin est souvent libre aux mêmes dates.
+          p.hidden.mt-2.rounded-lg.bg-forest-tint.text-forest.text-sm.font-medium.px-3.py-2(
+            data-public--unavail-target="alternatives")
       .mt-4.flex.items-center.justify-end.gap-2
         button(type="button" data-action="click->public--unavail#close" class="rounded-lg px-3 py-2 text-sm text-moss hover:text-ink")
           | Fermer
-        button(type="button" data-action="click->public--unavail#openAvailability" data-public--unavail-target="availLink" class="rounded-lg bg-forest text-white px-3 py-2 text-sm font-medium hover:bg-forest-soft")
-          | Voir les disponibilités →
+        button(type="button" data-action="click->public--unavail#openAvailability" data-public--unavail-target="availLink" class="inline-flex items-center gap-2 rounded-lg bg-forest text-sand px-3 py-2 text-sm font-medium hover:bg-forest-soft")
+          | Voir les disponibilités
+          = funnel_icon :arrow_right, css_class: "w-4 h-4"
