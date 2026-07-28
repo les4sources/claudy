@@ -19,32 +19,36 @@
 - tente_rate = Pricing::Catalog.camping_per_person_night_cents("tente")
 - van_rate   = Pricing::Catalog.van_per_night_cents
 
-.bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-5
+.bg-white.rounded-2xl.shadow-sm.border.border-bark.p-5
   .flex.items-start.justify-between.mb-4
     div
-      h2.text-base.font-semibold.text-gray-900 🏕️ Camping / Van
-      p.text-xs.text-gray-400.mt-0.5 Nombre de personnes sous tente et de véhicules, nuit par nuit. Capacité globale du terrain (forçable).
+      h2.funnel-section-title.flex.items-center.gap-2
+        = funnel_icon :tent, css_class: "w-4 h-4 text-ember flex-shrink-0"
+        span Camping / Van
+      p.text-xs.text-moss.mt-0.5 Nombre de personnes sous tente et de véhicules, nuit par nuit. Capacité globale du terrain (forçable).
 
   - if stay_nights.blank?
-    p.text-xs.text-gray-400 Choisissez les dates du séjour pour composer le camping nuit par nuit.
+    p.text-xs.text-moss Choisissez les dates du séjour pour composer le camping nuit par nuit.
   - else
     .overflow-x-auto.-mx-5.px-5
       table.border-collapse style="min-width: #{130 + stay_nights.size * 104}px"
         thead
           tr
-            th.text-left.py-2.pr-4.text-xs.font-normal.text-gray-400.whitespace-nowrap.sticky.left-5.z-10.bg-white style="width:130px"
+            th.text-left.py-2.pr-4.text-xs.font-normal.text-moss.whitespace-nowrap.sticky.left-5.z-10.bg-white style="width:130px"
             - stay_nights.each_with_index do |night, i|
               th.text-center.py-2.px-1 style="width:104px"
-                p.text-xs.font-bold.text-gray-600 = "Nuit #{i + 1}"
-                p.text-xs.text-gray-400.font-normal = "#{fr_short_days[night.wday]} #{night.strftime("%-d/%-m")}"
+                p.text-xs.font-bold.text-moss = "Nuit #{i + 1}"
+                p.text-xs.text-moss.font-normal = "#{fr_short_days[night.wday]} #{night.strftime("%-d/%-m")}"
 
         tbody
           tr class="border-t border-gray-50"
             td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
-              .text-sm.text-gray-800.font-medium ⛺ Campeurs (tentes)
-              p.text-xs.text-gray-400.leading-tight
+              .text-sm.text-ink.font-medium.flex.items-center.gap-2
+                = funnel_icon :tent, css_class: "w-4 h-4 text-ember flex-shrink-0"
+                span Campeurs (tentes)
+              p.text-xs.text-moss.leading-tight
                 | nombre de
-                strong.text-gray-500  personnes
+                strong.text-moss  personnes
                 |  sous tente
                 - if tente_rate
                   = " — #{number_to_currency(tente_rate / 100.0, unit: '€', format: '%n %u', precision: 2)}/pers/nuit"
@@ -55,10 +59,12 @@
 
           tr class="border-t border-gray-50"
             td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
-              .text-sm.text-gray-800.font-medium 🚐 Vans / camping-cars
-              p.text-xs.text-gray-400.leading-tight
+              .text-sm.text-ink.font-medium.flex.items-center.gap-2
+                = funnel_icon :van, css_class: "w-4 h-4 text-ember flex-shrink-0"
+                span Vans / camping-cars
+              p.text-xs.text-moss.leading-tight
                 | nombre de
-                strong.text-gray-500  véhicules
+                strong.text-moss  véhicules
                 - if van_rate
                   = " — #{number_to_currency(van_rate / 100.0, unit: '€', format: '%n %u', precision: 2)}/nuit/véhicule"
             - stay_nights.each_with_index do |_night, i|

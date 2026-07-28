@@ -8,6 +8,10 @@
 /* Fonts self-hostées (Fraunces + Caveat) + identité Portail Clients (sous-bois). */
 @import 'portal.css';
 
+/* Funnel public /reservation — même identité sous-bois, appliquée en amont du
+   paiement (portal.css doit précéder : funnel.css consomme ses tokens --p-*). */
+@import 'funnel.css';
+
 /* @import '../../components/flow/component.css'; */
 
 @layer base {

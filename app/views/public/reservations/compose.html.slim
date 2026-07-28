@@ -1,5 +1,6 @@
-/ Étape 2/3 — Composition du séjour
-.min-h-screen.bg-gray-50(data-controller="public--avail-modal")
+/ Étape 2/4 — Composition du séjour
+- content_for :meta_title, "Composez votre séjour"
+.min-h-screen.funnel-page(data-controller="public--avail-modal")
   .max-w-3xl.mx-auto.px-4.pt-10.pb-28(data-controller="public--reservation-quote"
     data-public--reservation-quote-url-value=public_reservation_quote_path
     data-public--reservation-quote-next-url-value=public_reservation_activities_path)
@@ -9,25 +10,26 @@
 
     / ── Résumé dates ─────────────────────────────────────────
     - if @draft.arrival_date && @draft.departure_date
-      .flex.items-center.gap-2.mb-6.text-sm.text-gray-600.bg-white.rounded-xl.px-4.py-3.border.border-gray-100.shadow-sm.w-fit
-        span 📅
+      .flex.items-center.gap-2.mb-6.text-sm.text-moss.bg-white.rounded-xl.px-4.py-3.border.border-bark.shadow-sm.w-fit
+        = funnel_icon :calendar, css_class: "w-4 h-4 text-ember flex-shrink-0"
         strong = l(@draft.arrival_date, format: :long)
-        span.text-gray-400 →
+        span.text-moss →
         strong = l(@draft.departure_date, format: :long)
-        .ml-1.px-2.py-0.5.bg-emerald-100.text-emerald-700.rounded-full.text-xs.font-semibold
+        .ml-1.px-2.py-0.5.bg-forest-tint.text-forest.rounded-full.text-xs.font-semibold
           = "#{@draft.nights} nuit#{"s" if @draft.nights.to_i > 1}"
-        = link_to "Modifier", public_reservation_dates_path, class: "ml-2 text-xs text-gray-400 hover:text-gray-600 underline relative before:content-[''] before:absolute before:-inset-y-3.5 before:inset-x-0"
+        = link_to "Modifier", public_reservation_dates_path, class: "ml-2 text-xs text-moss hover:text-moss underline relative before:content-[''] before:absolute before:-inset-y-3.5 before:inset-x-0"
 
     .space-y-6
 
       / ── Calendrier des disponibilités ───────────────────────
-      .bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-4
+      .bg-white.rounded-2xl.shadow-sm.border.border-bark.p-4
         .flex.items-center.gap-3
-          .w-9.h-9.rounded-full.bg-emerald-100.flex.items-center.justify-center.flex-shrink-0.text-lg 📅
+          span.w-9.h-9.rounded-full.bg-forest-tint.text-forest.flex.items-center.justify-center.flex-shrink-0
+            = funnel_icon :calendar, css_class: "w-5 h-5"
           div.flex-1.min-w-0
-            h3.text-sm.font-semibold.text-gray-900 Calendrier des disponibilités
-            p.text-xs.text-gray-400.mt-0.5 Hébergements & espaces, mois par mois
-          button type="button" data-action="public--avail-modal#open" class="flex-shrink-0 rounded-xl bg-emerald-600 text-white px-4 py-2 text-sm font-medium hover:bg-emerald-700 transition-colors"
+            h3.funnel-section-title.text-base Calendrier des disponibilités
+            p.text-xs.text-moss.mt-0.5 Hébergements & espaces, mois par mois
+          button type="button" data-action="public--avail-modal#open" class="flex-shrink-0 rounded-xl bg-forest text-white px-4 py-2 text-sm font-medium hover:bg-forest-soft transition-colors"
             | Ouvrir →
 
       / ── Formulaire ──────────────────────────────────────────
@@ -43,12 +45,12 @@
 
         / ── Zone « Ajouter un bloc » (feature 5) ─────────────
         / Masquée quand tout est déjà visible ; sinon un bouton par bloc replié.
-        .rounded-2xl.border.border-dashed.border-gray-200.bg-gray-50.p-4(data-public--needs-target="addZone")
-          p.text-xs.font-medium.text-gray-500.mb-2 Ajouter à votre séjour
+        .rounded-2xl.border.border-dashed.border-bark.bg-sand-deep.p-4(data-public--needs-target="addZone")
+          p.text-xs.font-medium.text-moss.mb-2 Ajouter à votre séjour
           .flex.flex-wrap.gap-2
-            - [["gite", "🏡", "Gîte"], ["salles", "🏛️", "Salles & cuisine"], ["camping", "⛺", "Camping"], ["van", "🚐", "Van"], ["repas", "🍽️", "Repas"], ["activites", "🌿", "Activités"]].each do |token, icon, label_text|
-              button(type="button" data-needs-add-token=token data-action="click->public--needs#add" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-600 hover:border-emerald-400 hover:text-emerald-700 transition-colors focus:outline-none")
-                span.text-base = icon
+            - [["gite", :house, "Gîte"], ["salles", :hall, "Salles & cuisine"], ["camping", :tent, "Camping"], ["van", :van, "Van"], ["repas", :utensils, "Repas"], ["activites", :leaf, "Activités"]].each do |token, icon, label_text|
+              button(type="button" data-needs-add-token=token data-action="click->public--needs#add" class="inline-flex items-center gap-1.5 rounded-lg border border-bark bg-white px-3 py-1.5 text-sm text-moss hover:border-forest hover:text-forest transition-colors")
+                = funnel_icon icon, css_class: "w-4 h-4 flex-shrink-0"
                 span
                   | + #{label_text}
 
@@ -59,25 +61,27 @@
         = render "public/reservations/spaces_calendar"
 
         / ── Repas (feature 5 : bloc du besoin « repas ») ─────
-        .bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-6(data-needs-block="repas")
+        .bg-white.rounded-2xl.shadow-sm.border.border-bark.p-6(data-needs-block="repas")
           .flex.items-start.gap-3
-            span.text-2xl 🍽️
+            span.text-ember.flex-shrink-0.mt-0.5
+              = funnel_icon :utensils, css_class: "w-6 h-6"
             div
-              h2.text-base.font-semibold.text-gray-900.mb-1 Repas & pain
-              p.text-sm.text-gray-600.mb-1 Pain au levain et épicerie à pré-commander pour votre arrivée ; repas de groupe sur demande.
-              p.text-sm.text-gray-500
-                = link_to "Commander sur Tranches de Vie →", "https://tranchesdevie.les4sources.be", target: "_blank", rel: "noopener", class: "text-emerald-700 underline"
+              h2.funnel-section-title.mb-1 Repas & pain
+              p.text-sm.text-moss.mb-1 Pain au levain et épicerie à pré-commander pour votre arrivée ; repas de groupe sur demande.
+              p.text-sm.text-moss
+                = link_to "Commander sur Tranches de Vie →", "https://tranchesdevie.les4sources.be", target: "_blank", rel: "noopener", class: "text-forest underline"
                 |  ou écrivez-nous à
                 = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline"
 
         / ── Activités ───────────────────────────────────────
-        .bg-emerald-50.rounded-2xl.border.border-emerald-100.p-6(data-needs-block="activites")
+        .bg-forest-tint.rounded-2xl.border.border-bark.p-6(data-needs-block="activites")
           .flex.items-start.gap-3
-            span.text-2xl 🌿
+            span.text-forest.flex-shrink-0.mt-0.5
+              = funnel_icon :leaf, css_class: "w-6 h-6"
             div
-              h2.text-base.font-semibold.text-emerald-900.mb-1 Activités aux 4 Sources
-              p.text-sm.text-gray-700.mb-1 Balades avec les ânes, ateliers créatifs, forge, golf et bien d'autres…
-              p.text-sm.text-gray-500
+              h2.funnel-section-title.mb-1 Activités aux 4 Sources
+              p.text-sm.text-ink.mb-1 Balades avec les ânes, ateliers créatifs, forge, golf et bien d'autres…
+              p.text-sm.text-moss
                 | Les activités se réservent
                 strong  1 mois avant votre arrivée.
                 |  Vous recevrez un email avec un calendrier pour sélectionner ce qui vous tente.
@@ -87,30 +91,36 @@
 
         / CTA
         .flex.justify-end.mt-2
-          button type="button" data-action="public--reservation-quote#advance" class="rounded-xl bg-emerald-600 text-white px-8 py-3 text-sm font-semibold hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 shadow-sm transition-colors"
+          button type="button" data-action="public--reservation-quote#advance" class="rounded-xl bg-forest text-white px-8 py-3 text-sm font-semibold hover:bg-forest-soft focus:outline-none focus:ring-2 focus:ring-forest focus:ring-offset-2 shadow-sm transition-colors"
             | Continuer vers les activités →
         noscript
-          = f.submit "Continuer (sans JS)", formaction: public_reservation_advance_compose_path, formmethod: :post, class: "rounded-xl bg-emerald-600 text-white px-8 py-3 text-sm font-semibold"
+          = f.submit "Continuer (sans JS)", formaction: public_reservation_advance_compose_path, formmethod: :post, class: "rounded-xl bg-forest text-white px-8 py-3 text-sm font-semibold"
 
     / ── Infos complémentaires ────────────────────────────────
     .mt-8.grid.grid-cols-1.sm:grid-cols-2.lg:grid-cols-3.gap-4
 
-      .bg-white.rounded-xl.border.border-blue-100.p-4
-        h3.text-sm.font-semibold.text-blue-900.mb-1 🛌 Nuitée individuelle (semaine)
-        p.text-xs.text-gray-600
+      .funnel-card.p-4
+        h3.text-sm.font-semibold.text-ink.mb-1.flex.items-center.gap-2
+          = funnel_icon :bed, css_class: "w-4 h-4 text-ember flex-shrink-0"
+          span Nuitée individuelle (semaine)
+        p.text-xs.text-moss
           | En semaine uniquement :
           strong  35 €/adulte · 15 €/enfant (3–12 ans).
           |  Contactez-nous à
           = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline"
 
-      .bg-white.rounded-xl.border.border-gray-200.p-4
-        h3.text-sm.font-semibold.text-gray-700.mb-1 🥖 Pré-commande pain & épicerie
-        p.text-xs.text-gray-500.mb-2 Pain au levain et épicerie disponibles pour votre arrivée.
-        = link_to "Commander sur Tranches de Vie →", "https://tranchesdevie.les4sources.be", target: "_blank", rel: "noopener", class: "text-emerald-700 underline text-xs"
+      .bg-white.rounded-xl.border.border-bark.p-4
+        h3.text-sm.font-semibold.text-ink.mb-1.flex.items-center.gap-2
+          = funnel_icon :bread, css_class: "w-4 h-4 text-ember flex-shrink-0"
+          span Pré-commande pain & épicerie
+        p.text-xs.text-moss.mb-2 Pain au levain et épicerie disponibles pour votre arrivée.
+        = link_to "Commander sur Tranches de Vie →", "https://tranchesdevie.les4sources.be", target: "_blank", rel: "noopener", class: "text-forest underline text-xs"
 
-      .bg-white.rounded-xl.border.border-gray-100.p-4
-        h3.text-sm.font-semibold.text-gray-700.mb-1 💬 Une question ?
-        p.text-xs.text-gray-500
+      .bg-white.rounded-xl.border.border-bark.p-4
+        h3.text-sm.font-semibold.text-ink.mb-1.flex.items-center.gap-2
+          = funnel_icon :chat, css_class: "w-4 h-4 text-ember flex-shrink-0"
+          span Une question ?
+        p.text-xs.text-moss
           | Malau :
           strong  +32 (0)490 46.77.10
           |  ou

@@ -1,40 +1,40 @@
 / Récapitulatif lecture seule — affiché sur l'étape coordonnées
-.rounded-xl.border.border-emerald-100.bg-emerald-50.p-4.mb-0
+.rounded-xl.border.border-bark.bg-forest-tint.p-4.mb-0
   .flex.items-center.justify-between.mb-3
-    h3.text-sm.font-semibold.text-emerald-900 Votre séjour
-    = link_to "Modifier", public_reservation_compose_path, class: "text-xs text-emerald-600 hover:underline"
+    h3.text-sm.font-semibold.text-forest Votre séjour
+    = link_to "Modifier", public_reservation_compose_path, class: "text-xs text-forest hover:underline"
 
   dl.space-y-2
 
     - if draft.lodging
       .flex.items-start.gap-3
-        dt.text-xs.text-emerald-700.w-28.shrink-0.pt-0.5 Hébergement
-        dd.text-sm.font-medium.text-gray-800 = draft.lodging.name
+        dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 Hébergement
+        dd.text-sm.font-medium.text-ink = draft.lodging.name
 
     - if draft.arrival_date && draft.departure_date
       .flex.items-start.gap-3
-        dt.text-xs.text-emerald-700.w-28.shrink-0.pt-0.5 Dates
-        dd.text-sm.text-gray-700
+        dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 Dates
+        dd.text-sm.text-ink
           | #{draft.arrival_date.strftime("%-d/%m/%Y")} → #{draft.departure_date.strftime("%-d/%m/%Y")}
-          span.ml-1.text-xs.text-emerald-600.font-medium = "(#{draft.nights} nuit#{"s" if draft.nights.to_i > 1})"
+          span.ml-1.text-xs.text-forest.font-medium = "(#{draft.nights} nuit#{"s" if draft.nights.to_i > 1})"
 
     - tente = draft.campings.find { |c| c[:kind].to_s == "tente" }
     - if tente && tente[:people].to_i > 0
       .flex.items-start.gap-3
-        dt.text-xs.text-emerald-700.w-28.shrink-0.pt-0.5 Camping tente
-        dd.text-sm.text-gray-700 = "#{tente[:people]} personne#{"s" if tente[:people].to_i > 1}"
+        dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 Camping tente
+        dd.text-sm.text-ink = "#{tente[:people]} personne#{"s" if tente[:people].to_i > 1}"
 
     - van_nights = draft.vans.sum { |v| v[:nights].to_i }
     - if van_nights > 0
       .flex.items-start.gap-3
-        dt.text-xs.text-emerald-700.w-28.shrink-0.pt-0.5 Van / camping-car
-        dd.text-sm.text-gray-700 = "#{van_nights} nuit#{"s" if van_nights > 1}"
+        dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 Van / camping-car
+        dd.text-sm.text-ink = "#{van_nights} nuit#{"s" if van_nights > 1}"
 
     - draft.hamacs.each do |h|
       - if h[:count].to_i > 0
         .flex.items-start.gap-3
-          dt.text-xs.text-emerald-700.w-28.shrink-0.pt-0.5 = "Hamac #{h[:kind]}"
-          dd.text-sm.text-gray-700 = "#{h[:count]} unité#{"s" if h[:count].to_i > 1}"
+          dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 = "Hamac #{h[:kind]}"
+          dd.text-sm.text-ink = "#{h[:count]} unité#{"s" if h[:count].to_i > 1}"
 
     - period_labels = { "journee" => "journée", "soiree" => "soirée", "journee_et_soiree" => "j. + soirée" }
     - hall_labels   = { "grande_salle" => "Grande salle", "petite_salle" => "Petite salle", "cuisine_pro" => "Cuisine pro" }
@@ -42,11 +42,11 @@
       - next if h[:kind].blank? || h[:date].blank? || h[:period].blank?
       - date_str = begin; Date.parse(h[:date].to_s).strftime("%-d/%m"); rescue; h[:date].to_s; end
       .flex.items-start.gap-3
-        dt.text-xs.text-emerald-700.w-28.shrink-0.pt-0.5 = hall_labels[h[:kind].to_s] || h[:kind].to_s.humanize
-        dd.text-sm.text-gray-700 = "#{date_str} — #{period_labels[h[:period].to_s] || h[:period]}"
+        dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 = hall_labels[h[:kind].to_s] || h[:kind].to_s.humanize
+        dd.text-sm.text-ink = "#{date_str} — #{period_labels[h[:period].to_s] || h[:period]}"
 
     - dog_label = { 0 => nil, 1 => "Un chien (+50 €)", 2 => "Plusieurs chiens (sur demande)" }[draft.dogs_count.to_i]
     - if dog_label
       .flex.items-start.gap-3
-        dt.text-xs.text-emerald-700.w-28.shrink-0.pt-0.5 Animal
-        dd.text-sm.text-gray-700 = dog_label
+        dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 Animal
+        dd.text-sm.text-ink = dog_label

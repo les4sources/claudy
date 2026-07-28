@@ -10,12 +10,12 @@
 / Navigation — data-nav-url ciblé par avail_modal_controller#navigate (fetch manuel)
 .flex.items-center.justify-between.mb-5
   - if prev_m >= today_month
-    button type="button" data-action="public--avail-modal#navigate" data-nav-url=public_reservation_availability_calendar_path(month: prev_m.strftime("%Y-%m")) class="text-sm font-medium text-emerald-600 hover:text-emerald-800 transition-colors rounded-lg px-3 py-1.5 hover:bg-emerald-50"
+    button type="button" data-action="public--avail-modal#navigate" data-nav-url=public_reservation_availability_calendar_path(month: prev_m.strftime("%Y-%m")) class="text-sm font-medium text-forest hover:text-forest transition-colors rounded-lg px-3 py-1.5 hover:bg-forest-tint"
       | ← Précédent
   - else
     span.text-sm.text-gray-200.px-3.py-1.5 ← Précédent
-  h2.text-base.font-semibold.text-gray-900 = month_label
-  button type="button" data-action="public--avail-modal#navigate" data-nav-url=public_reservation_availability_calendar_path(month: next_m.strftime("%Y-%m")) class="text-sm font-medium text-emerald-600 hover:text-emerald-800 transition-colors rounded-lg px-3 py-1.5 hover:bg-emerald-50"
+  h2.text-base.font-semibold.text-ink = month_label
+  button type="button" data-action="public--avail-modal#navigate" data-nav-url=public_reservation_availability_calendar_path(month: next_m.strftime("%Y-%m")) class="text-sm font-medium text-forest hover:text-forest transition-colors rounded-lg px-3 py-1.5 hover:bg-forest-tint"
     | Suivant →
 
 / Grille Gantt

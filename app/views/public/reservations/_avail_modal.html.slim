@@ -1,22 +1,40 @@
 / Modale calendrier disponibilités — overlay + panneau.
 / Nécessite data-controller="public--avail-modal" sur un ancêtre.
 / Nécessite @availability_calendar dans le controller.
+/
+/ Accessibilité (2026-07-28) : le panneau était un simple <div> masqué —
+/ pas de `role`, pas de `aria-modal`, pas de titre lié, un bouton de fermeture
+/ réduit à un SVG donc annoncé « bouton » tout court, et Escape sans effet. Un
+/ client au clavier pouvait ouvrir cette modale et tabuler dans la page DERRIÈRE
+/ elle sans jamais pouvoir la refermer. Corrigé ici et dans le contrôleur Stimulus
+/ (piège de focus, retour du focus au déclencheur, fermeture Escape).
 
 / Overlay. Écoute aussi l'évènement window `reservation:open-avail` émis par la
 / mini-modale d'indisponibilité (feature 1) pour s'ouvrir depuis une cellule grise.
-.fixed.inset-0.bg-black.bg-opacity-60.z-50.hidden(
+.fixed.inset-0.z-50.hidden(
+  style="background-color: rgba(28, 38, 32, 0.55); backdrop-filter: blur(2px)"
   data-public--avail-modal-target="overlay"
   data-action="click->public--avail-modal#close reservation:open-avail@window->public--avail-modal#open")
+
 / Panneau — centré, largeur adaptée au Gantt (~48rem)
 div(
-  class="fixed top-4 bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col hidden md:top-8 md:bottom-8"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="avail_modal_title"
+  tabindex="-1"
+  class="funnel-page fixed top-4 bottom-4 left-1/2 -translate-x-1/2 z-50 rounded-2xl shadow-2xl overflow-hidden flex flex-col hidden md:top-8 md:bottom-8"
   style="width: min(calc(100vw - 2rem), 48rem)"
   data-public--avail-modal-target="modal")
-  .flex.items-center.justify-between.px-6.py-4.border-b.border-gray-100.flex-shrink-0
-    h2.text-lg.font-semibold.text-gray-900 Disponibilités
-    button type="button" data-action="public--avail-modal#close" class="text-gray-400 hover:text-gray-600 transition-colors rounded-lg p-1"
-      svg.w-5.h-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"
-        path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"
-  .overflow-auto.p-6.flex-1
+
+  .flex.items-center.justify-between.gap-4.px-5.sm:px-6.py-4.border-b.border-bark.flex-shrink-0.bg-white/70
+    div
+      h2#avail_modal_title.funnel-section-title Disponibilités
+      p.funnel-hint.mt-0.5 Gîtes et salles, mois par mois
+    button(type="button" data-action="public--avail-modal#close"
+      class="flex-shrink-0 rounded-lg p-2 text-moss hover:text-ink hover:bg-sand-deep transition-colors")
+      = funnel_icon :close, css_class: "w-5 h-5"
+      span.sr-only Fermer le calendrier des disponibilités
+
+  .overflow-auto.p-5.sm:p-6.flex-1
     = turbo_frame_tag "avail_cal"
       = render "public/reservations/avail_cal_content", calendar: @availability_calendar

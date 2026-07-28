@@ -76,6 +76,20 @@ Opérer la totalité de la vie économique et associative des 4 Sources depuis u
 - [ ] ISC-17: Anti (dérive P2) — sur la liste auditable (bookings, payments, cycle_actions, decisions, humans, human_roles), aucun appel à `destroy!`/`delete_all` ne court-circuite soft_deletion ou PaperTrail. Probe : `grep -rn '\.destroy!\|delete_all' app/ | grep -iE 'booking|payment|cycle_action|decision|human|human_role'` retourne 0 hit non-tracé.
 - [ ] ISC-18: Anti (dérive P3) — pas de namespace parallèle `app/<commerce>/` vs `app/<collective>/` ; pas de tables distinctes pour la même notion entre les deux mondes dans le schéma DB. Probe : `ls app/` et `psql -c '\dt'` audités semestriellement contre cette règle.
 
+### Qualité du funnel public `/reservation` (ajout 2026-07-28)
+
+Constat d'ouverture : le funnel est la **première impression** commerciale des 4 Sources, et c'est la seule surface publique restée en Tailwind générique (`bg-gray-50` + `emerald-600` + ~30 emoji) alors que la charte « sous-bois » — Fraunces auto-hébergée, `--p-primary #0B3D3A`, fond sable `--p-bg #F7F2E9` — est **déjà chargée** sur ces pages via `public.css → portal.css`, et habille le portail client que le même visiteur découvre *après* avoir payé. L'identité arrive donc trop tard. Cible fixée par Michael : qualité de flux **au moins égale à Airbnb**, et réserver doit « déjà être une expérience ».
+
+- [ ] ISC-19: Chaque page de `/reservation/*` rend sur le fond sable de la charte et ses titres `h1`/`h2` en Fraunces — ni `bg-gray-50`, ni la pile sans-serif par défaut. Probe : `agent-browser eval getComputedStyle(document.body).backgroundColor` + `getComputedStyle(h1).fontFamily` sur les 4 étapes.
+- [ ] ISC-20: Zéro emoji dans les vues du funnel — les pictogrammes sont des SVG inline cohérents (24×24, `stroke`, `currentColor`, `aria-hidden`). Probe : grep des plages Unicode emoji sur `app/views/public/reservations/` → 0 hit.
+- [ ] ISC-21: Tout contrôle du funnel qui neutralise l'outline natif fournit un anneau de focus de remplacement. Probe : `rg "focus:outline-none"` non suivi de `focus-visible:ring` sur `app/views/public/` → 0 hit.
+- [ ] ISC-22: Aucun bouton du funnel n'a de nom accessible vide — en particulier les cellules « nuit disponible » de la grille de composition, qui sont la cible de clic principale de l'étape 2. Probe : `agent-browser snapshot -i` sur `/reservation/composer` → aucune ligne `button [ref=…]` sans libellé.
+- [ ] ISC-23: La modale de disponibilités est un dialogue accessible : `role="dialog"` + `aria-modal="true"` + `aria-labelledby`, fermeture par Escape, bouton de fermeture nommé, focus déplacé dedans à l'ouverture et rendu au déclencheur à la fermeture. Probe : navigateur — Escape ferme, `document.activeElement` revient sur le bouton d'origine.
+- [ ] ISC-24: L'étape 1 propose **1 adulte** par défaut, jamais 0. Probe : `agent-browser eval` sur la valeur du champ adultes en session vierge.
+- [ ] ISC-25: Chaque étape du funnel a un `<title>` distinct et non vide (aujourd'hui : `" | Les 4 Sources"` sur les 4). Probe : `agent-browser get title` sur les 4 étapes.
+- [ ] ISC-26: Les champs de coordonnées portent les attributs `autocomplete` normalisés (`given-name`, `family-name`, `email`, `tel`) et le téléphone un `inputmode="tel"`. Probe : lecture du HTML rendu de `/reservation/coordonnees`.
+- [ ] ISC-27: Le repère d'étapes est un `<nav aria-label>` + `<ol>` avec `aria-current="step"` sur l'étape active, et le libellé de l'étape courante reste **visible à 390 px** (aujourd'hui masqué par `hidden sm:inline` — sur mobile le client ne voit que des pastilles numérotées). Probe : navigateur à 390 px.
+
 ## Test Strategy
 
 ```yaml
