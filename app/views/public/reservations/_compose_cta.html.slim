@@ -1,0 +1,29 @@
+/ CTA de l'étape 2 — extrait en partial pour être remplaçable par le Turbo Stream
+/ du devis (quote.turbo_stream.slim), au même titre que le total de la barre
+/ collante. Sans ça, l'état du bouton resterait figé au premier rendu.
+/
+/ Garde-fou panier vide : le bouton restait actif à 0,00 € — on pouvait traverser
+/ les activités puis les coordonnées et déposer une demande sans le moindre
+/ hébergement ni emplacement. Un lead vide côté équipe, et côté client la
+/ mauvaise surprise d'un « séjour » qui ne contient rien. Le bouton n'est donc
+/ actif qu'à partir du moment où le devis porte quelque chose ; l'explication est
+/ donnée à côté, jamais seulement par le grisé.
+- empty = quote.total_cents.to_i.zero?
+
+div id="compose_cta" class="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3"
+  - if empty
+    p#compose_cta_reason.funnel-hint.flex.items-start.gap-2.sm:mr-auto
+      span.text-ember.flex-shrink-0.mt-0.5
+        = funnel_icon :alert, css_class: "w-4 h-4"
+      span
+        | Choisissez au moins une nuit d'hébergement, un emplacement de camping ou une salle
+        |  pour continuer.
+
+  button(
+    type="button"
+    data-action="public--reservation-quote#advance"
+    disabled=empty
+    aria-describedby=(empty ? "compose_cta_reason" : nil)
+    class="inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-sand px-8 py-3.5 text-base font-semibold shadow-sm transition-colors #{empty ? 'opacity-40 cursor-not-allowed' : 'hover:bg-forest-soft'}")
+    | Continuer vers les activités
+    = funnel_icon :arrow_right, css_class: "w-4 h-4"

@@ -271,6 +271,30 @@
   border: 1px dashed var(--p-past-border);
 }
 
+/* --- Sélection de plage dans le calendrier ---------------------------------- */
+
+/* Le calendrier ne servait qu'à consulter : le client le refermait puis retapait
+   ses dates dans deux champs `jj/mm/aaaa`. Il choisit désormais sa plage
+   directement dessus. Les bornes sont pleines, l'entre-deux teinté — la forme
+   suffit à lire la plage, la couleur n'est qu'un renfort. */
+.avail-pick--start,
+.avail-pick--end {
+  box-shadow: inset 0 0 0 2px var(--p-primary);
+  border-radius: var(--p-radius-sm);
+  position: relative;
+  z-index: 1;
+}
+.avail-pick--between {
+  box-shadow: inset 0 -2px 0 0 var(--p-primary);
+}
+/* Les lignes de dates (numéro du jour, initiale) marquent aussi la plage, pour
+   que la sélection se lise même quand on regarde l'axe et pas les ressources. */
+span.avail-pick--start,
+span.avail-pick--end {
+  font-weight: 700;
+  color: var(--p-primary);
+}
+
 /* --- Mouvement ------------------------------------------------------------- */
 
 /* Une seule respiration à l'arrivée : le contenu de l'étape monte de 8 px.

@@ -8,6 +8,11 @@
 / client au clavier pouvait ouvrir cette modale et tabuler dans la page DERRIÈRE
 / elle sans jamais pouvoir la refermer. Corrigé ici et dans le contrôleur Stimulus
 / (piège de focus, retour du focus au déclencheur, fermeture Escape).
+/
+/ Sélection de dates (2026-07-29) : `public--avail-cal` est posé SUR LE PANNEAU,
+/ pas sur la grille — la grille vit dans un turbo-frame remplacé à chaque
+/ changement de mois, et la plage en cours de sélection ne doit pas s'y perdre.
+/ Le pied (résumé + « Choisir ces dates ») vit lui aussi hors du frame.
 
 / Overlay. Écoute aussi l'évènement window `reservation:open-avail` émis par la
 / mini-modale d'indisponibilité (feature 1) pour s'ouvrir depuis une cellule grise.
@@ -22,6 +27,8 @@ div(
   aria-modal="true"
   aria-labelledby="avail_modal_title"
   tabindex="-1"
+  data-controller="public--avail-cal"
+  data-action="reservation:cal-navigated@window->public--avail-cal#render"
   class="funnel-page fixed top-4 bottom-4 left-1/2 -translate-x-1/2 z-50 rounded-2xl shadow-2xl overflow-hidden flex flex-col hidden md:top-8 md:bottom-8"
   style="width: min(calc(100vw - 2rem), 48rem)"
   data-public--avail-modal-target="modal")
@@ -29,7 +36,7 @@ div(
   .flex.items-center.justify-between.gap-4.px-5.sm:px-6.py-4.border-b.border-bark.flex-shrink-0.bg-white/70
     div
       h2#avail_modal_title.funnel-section-title Disponibilités
-      p.funnel-hint.mt-0.5 Gîtes et salles, mois par mois
+      p.funnel-hint.mt-0.5(data-public--avail-cal-target="hint") Gîtes et salles, mois par mois
     button(type="button" data-action="public--avail-modal#close"
       class="flex-shrink-0 rounded-lg p-2 text-moss hover:text-ink hover:bg-sand-deep transition-colors")
       = funnel_icon :close, css_class: "w-5 h-5"
@@ -38,3 +45,15 @@ div(
   .overflow-auto.p-5.sm:p-6.flex-1
     = turbo_frame_tag "avail_cal"
       = render "public/reservations/avail_cal_content", calendar: @availability_calendar
+
+  / Pied — résumé de la plage + validation. Le contrôleur le neutralise là où les
+  / champs de dates n'existent pas (étape 2 : la modale y reste consultative).
+  .flex-shrink-0.border-t.border-bark.bg-white/80.px-5.sm:px-6.py-4.flex.flex-wrap.items-center.justify-between.gap-3
+    p.text-sm.font-semibold.text-forest(data-public--avail-cal-target="summary")
+    button(type="button"
+      disabled="disabled"
+      data-public--avail-cal-target="confirm"
+      data-action="public--avail-cal#apply public--avail-modal#close"
+      class="inline-flex items-center gap-2 rounded-xl bg-forest text-sand px-5 py-2.5 text-sm font-semibold hover:bg-forest-soft shadow-sm transition-colors opacity-40 cursor-not-allowed")
+      | Choisir ces dates
+      = funnel_icon :check, css_class: "w-4 h-4", stroke_width: 2.5

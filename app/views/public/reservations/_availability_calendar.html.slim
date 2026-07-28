@@ -8,7 +8,11 @@
 - cell_w    = 14
 - cell_sty  = "display:inline-block;width:#{cell_w}px;min-width:#{cell_w}px;margin-right:2px;flex-shrink:0;cursor:pointer"
 
-.flex.flex-col(data-controller="public--avail-cal")
+.flex.flex-col
+  / Le contrôleur `public--avail-cal` vit sur le PANNEAU de la modale, pas ici :
+  / ce partial est le contenu d'un turbo-frame remplacé à chaque changement de
+  / mois, et la plage de dates en cours de sélection ne doit pas être perdue en
+  / passant de septembre à octobre.
 
   / Jour sélectionné — affiché après un clic
   p.hidden.mb-3.text-sm.font-medium.text-forest.bg-forest-tint.border.border-forest/30.rounded-xl.px-3.py-2.w-fit(

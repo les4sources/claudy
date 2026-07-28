@@ -89,10 +89,8 @@
         noscript
           = f.submit "Mettre à jour le devis", class: "rounded bg-gray-800 text-white px-4 py-2"
 
-        / CTA
-        .flex.justify-end.mt-2
-          button type="button" data-action="public--reservation-quote#advance" class="rounded-xl bg-forest text-white px-8 py-3 text-sm font-semibold hover:bg-forest-soft focus:outline-none focus:ring-2 focus:ring-forest focus:ring-offset-2 shadow-sm transition-colors"
-            | Continuer vers les activités →
+        / CTA — partial remplaçable par le Turbo Stream du devis.
+        = render "public/reservations/compose_cta", quote: @quote
         noscript
           = f.submit "Continuer (sans JS)", formaction: public_reservation_advance_compose_path, formmethod: :post, class: "rounded-xl bg-forest text-white px-8 py-3 text-sm font-semibold"
 

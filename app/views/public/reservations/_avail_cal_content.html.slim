@@ -8,7 +8,11 @@
 - month_label = "#{fr_months[m.month - 1].capitalize} #{m.year}"
 
 / Navigation — data-nav-url ciblé par avail_modal_controller#navigate (fetch manuel)
-.flex.items-center.justify-between.mb-5
+/ `data-cal-month` : mois actuellement affiché. Lu à l'ouverture de la modale
+/ pour sauter directement au mois du séjour visé — elle s'ouvrait sur le mois
+/ COURANT même quand l'arrivée était trois mois plus loin, et le client devait
+/ cliquer « Suivant » autant de fois que de mois d'écart.
+.flex.items-center.justify-between.mb-5(data-cal-month=m.strftime("%Y-%m"))
   - if prev_m >= today_month
     button type="button" data-action="public--avail-modal#navigate" data-nav-url=public_reservation_availability_calendar_path(month: prev_m.strftime("%Y-%m")) class="text-sm font-medium text-forest hover:text-forest transition-colors rounded-lg px-3 py-1.5 hover:bg-forest-tint"
       | ← Précédent

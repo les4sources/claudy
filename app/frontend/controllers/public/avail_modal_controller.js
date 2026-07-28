@@ -47,6 +47,28 @@ export default class extends Controller {
     // premier bouton : le lecteur d'écran annonce alors le titre du dialogue
     // avant son premier contrôle.
     this.modalTarget.focus()
+
+    this.jumpToStayMonth()
+  }
+
+  // Aligne le mois affiché sur la date d'arrivée déjà saisie. Le serveur rend la
+  // modale avec le mois du draft, mais une date tapée sans soumettre le
+  // formulaire lui est inconnue : sans ce saut, quelqu'un qui vise mars ouvre
+  // le calendrier sur le mois courant.
+  jumpToStayMonth() {
+    const arrival = document.querySelector('[name="reservation[arrival_date]"]')
+    const value = arrival && arrival.value
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return
+
+    const wanted = value.slice(0, 7)
+    const header = this.element.querySelector("[data-cal-month]")
+    if (!header || header.dataset.calMonth === wanted) return
+
+    const anyNav = this.element.querySelector("[data-nav-url]")
+    if (!anyNav) return
+    const url = new URL(anyNav.dataset.navUrl, window.location.origin)
+    url.searchParams.set("month", wanted)
+    this.fetchMonth(url.toString())
   }
 
   close() {
@@ -110,6 +132,10 @@ export default class extends Controller {
     event.preventDefault()
     const url = event.currentTarget.dataset.navUrl
     if (!url) return
+    await this.fetchMonth(url)
+  }
+
+  async fetchMonth(url) {
     const frame = this.element.querySelector("#avail_cal")
     if (!frame) return
     try {
@@ -117,7 +143,12 @@ export default class extends Controller {
       const html = await res.text()
       const doc = new DOMParser().parseFromString(html, "text/html")
       const newFrame = doc.getElementById("avail_cal")
-      if (newFrame) frame.innerHTML = newFrame.innerHTML
+      if (!newFrame) return
+      frame.innerHTML = newFrame.innerHTML
+      // Le contenu du frame vient d'être remplacé : la plage de dates en cours
+      // de sélection vit dans `public--avail-cal`, monté sur le PANNEAU, et doit
+      // repeindre les cellules du nouveau mois.
+      window.dispatchEvent(new CustomEvent("reservation:cal-navigated"))
     } catch (_e) {
       // navigation silently fails — user can retry
     }
