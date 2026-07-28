@@ -42,5 +42,9 @@ module Claudy
 
     config.action_mailer.delivery_method = :postmark
     config.action_mailer.postmark_settings = { api_token: ENV.fetch('POSTMARK_API_TOKEN') }
+    # Journal des emails envoyés aux clients (visible sur la fiche client).
+    # Déclaré en chaîne : la classe n'est constantisée qu'au chargement
+    # d'ActionMailer, pas au boot du framework.
+    config.action_mailer.observers = ["SentEmails::Observer"]
   end
 end

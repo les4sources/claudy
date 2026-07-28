@@ -37,6 +37,18 @@ RSpec.describe Customers::MergeService, type: :service do
       expect(target.reload.phone).to eq("+32470999999")
     end
 
+    # Le journal des emails suit le client survivant : une fiche fusionnée
+    # devient invisible, son historique d'envois ne doit pas disparaître.
+    it "moves the sent-email log onto the target" do
+      sent = SentEmail.create!(customer: source, to_email: source.email,
+                                subject: "Votre séjour", sent_at: 2.days.ago)
+
+      described_class.new(source: source, target: target).run
+
+      expect(sent.reload.customer_id).to eq(target.id)
+      expect(target.sent_emails.count).to eq(1)
+    end
+
     it "records the customer change on the moved stay via PaperTrail (AC-17)" do
       stay = source.stays.first
       described_class.new(source: source, target: target).run

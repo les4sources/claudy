@@ -51,6 +51,11 @@ class Customer < ApplicationRecord
   # pack, pas sur un séjour, donc ils ne transitent pas par `payments`.
   has_many :coworking_packs, dependent: :restrict_with_error
   has_many :coworking_reservations, dependent: :restrict_with_error
+  # Journal des emails envoyés au client. AUCUN `dependent:` volontairement :
+  # soft_deletion cascade sur les associations qui en déclarent un (cf.
+  # SoftDeletion::Core#soft_delete_dependents), et le journal doit survivre à la
+  # mise au rebut d'une fiche — la fusion le transfère (Customers::MergeService).
+  has_many :sent_emails
 
   has_paper_trail
   has_soft_deletion default_scope: true

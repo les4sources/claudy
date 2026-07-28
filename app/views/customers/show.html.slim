@@ -148,6 +148,29 @@
       = render "stays/merge_bottom_bar"
 
     .space-y-4
+      / Historique des emails envoyés AU client (jamais les notifications
+      / internes ni le bcc d'archivage). Le sujet ouvre le contenu du message
+      / dans la modale Turbo du layout.
+      .overflow-hidden.bg-white.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6.flex.items-baseline.justify-between.gap-2
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Emails envoyés
+          - if @sent_emails.any?
+            span.text-sm.text-gray-500 = @sent_emails.size
+        .border-t.border-gray-200.px-4.py-4
+          - if @sent_emails.empty?
+            p.text-sm.text-gray-500
+              | Aucun email envoyé à ce client.
+          - else
+            ul.divide-y.divide-gray-100
+              - @sent_emails.each do |sent_email|
+                li.py-2
+                  = link_to sent_email.display_subject,
+                            customer_sent_email_path(@customer, sent_email),
+                            data: { turbo_frame: "modal" },
+                            class: "block text-sm font-medium text-indigo-600 hover:underline"
+                  .text-xs.text-gray-500 = l(sent_email.sent_at, format: :short)
+
       / Notes internes (ActionText) : rendu NON échappé (== ) via le rendu standard,
       / et carte entièrement masquée quand le corps est vide (`.body.present?`) —
       / sinon un Trix vide affichait un `<div class="trix-content">` parasite.

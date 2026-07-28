@@ -1,0 +1,22 @@
+= render TurboModal::Component.new(title: @sent_email.display_subject, width: :lg) do
+  .space-y-4
+    dl.grid.grid-cols-2.gap-x-4.gap-y-1.text-sm.border-b.border-gray-200.pb-3
+      dt.text-gray-500 Envoyé le
+      dd.text-gray-900 = l(@sent_email.sent_at, format: :long)
+      dt.text-gray-500 Destinataire
+      dd.text-gray-900 = @sent_email.to_email
+      - if @sent_email.tag.present?
+        dt.text-gray-500 Type
+        dd.text-gray-900 = @sent_email.tag
+
+    / Le HTML d'un email porte ses propres styles : on l'isole dans une iframe
+    / bac à sable (`sandbox` vide = ni script, ni navigation) pour qu'il ne
+    / déteigne pas sur la mise en page de l'app. `srcdoc` est échappé par Slim.
+    - if @sent_email.html_body?
+      iframe.w-full.rounded.border.border-gray-200.bg-white(class="h-[70vh]" sandbox="" title="Contenu de l'email" srcdoc=@sent_email.body_html)
+    - elsif @sent_email.body_text.present?
+      .max-h-96.overflow-y-auto.rounded.border.border-gray-200.bg-gray-50.p-4.text-sm.text-gray-900.whitespace-pre-wrap
+        = @sent_email.body_text
+    - else
+      p.text-sm.text-gray-500
+        | Le contenu de cet email n'a pas été conservé.

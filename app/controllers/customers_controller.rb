@@ -44,6 +44,9 @@ class CustomersController < BaseController
     # (StaysCompositionHelper), sans N+1 sur la liste.
     @upcoming_stays = preload_stays_composition(@customer.upcoming_stays)
     @past_stays     = preload_stays_composition(@customer.past_stays)
+    # Journal des emails envoyés — colonnes lourdes (corps HTML) exclues de la
+    # liste : la modale les recharge à l'ouverture.
+    @sent_emails = @customer.sent_emails.recent.select(:id, :customer_id, :subject, :sent_at)
   end
 
   def edit

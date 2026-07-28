@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_23_011804) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_28_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pgcrypto"
@@ -615,6 +615,24 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_23_011804) do
     t.datetime "deleted_at", precision: nil
   end
 
+  create_table "sent_emails", force: :cascade do |t|
+    t.bigint "customer_id", null: false
+    t.citext "to_email", null: false
+    t.string "subject"
+    t.text "body_html"
+    t.text "body_text"
+    t.string "mailer"
+    t.string "tag"
+    t.string "postmark_message_id"
+    t.datetime "sent_at", null: false
+    t.string "source", default: "app", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id", "sent_at"], name: "index_sent_emails_on_customer_id_and_sent_at"
+    t.index ["customer_id"], name: "index_sent_emails_on_customer_id"
+    t.index ["postmark_message_id"], name: "index_sent_emails_on_postmark_message_id", unique: true, where: "(postmark_message_id IS NOT NULL)"
+  end
+
   create_table "services", force: :cascade do |t|
     t.string "name"
     t.bigint "human_id"
@@ -890,6 +908,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_23_011804) do
   add_foreign_key "projects", "humans"
   add_foreign_key "reservations", "bookings"
   add_foreign_key "reservations", "rooms"
+  add_foreign_key "sent_emails", "customers"
   add_foreign_key "services", "humans"
   add_foreign_key "space_bookings", "events"
   add_foreign_key "space_reservations", "space_bookings"

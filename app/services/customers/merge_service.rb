@@ -45,7 +45,14 @@ module Customers
           # merge empties it (soft-deleted); a partial re-ventilation leaves it
           # active while other stays remain (AC-50).
           source.reload
-          source.soft_delete!(validate: false) if source.stays.reload.empty?
+          if source.stays.reload.empty?
+            # Le journal d'emails suit le client survivant : une fiche fusionnée
+            # devient invisible, son historique d'envois ne doit pas disparaître
+            # avec elle. Sur une re-ventilation partielle, la source reste
+            # active et garde ses emails.
+            SentEmail.where(customer_id: source.id).update_all(customer_id: target.id, updated_at: Time.current)
+            source.soft_delete!(validate: false)
+          end
 
           true
         end

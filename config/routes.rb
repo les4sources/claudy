@@ -112,6 +112,9 @@ Rails.application.routes.draw do
       post "merge_commit"
       post "reassign"
     end
+    # Historique des emails envoyés au client : la liste vit sur la fiche, le
+    # corps du message s'ouvre dans la modale Turbo. URL admin en anglais.
+    resources :sent_emails, only: [:show]
   end
 
   # Vue admin Pôle Accueil — index des Stays récents filtrable par source (Devise).
