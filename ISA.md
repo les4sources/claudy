@@ -7,7 +7,7 @@ phase: build
 progress: 0/15
 mode: interactive
 started: 2026-05-28T00:00:00Z
-updated: 2026-07-20T20:30:00+02:00
+updated: 2026-07-29T00:11:57+02:00
 ---
 
 ## Problem
@@ -80,15 +80,35 @@ Opérer la totalité de la vie économique et associative des 4 Sources depuis u
 
 Constat d'ouverture : le funnel est la **première impression** commerciale des 4 Sources, et c'est la seule surface publique restée en Tailwind générique (`bg-gray-50` + `emerald-600` + ~30 emoji) alors que la charte « sous-bois » — Fraunces auto-hébergée, `--p-primary #0B3D3A`, fond sable `--p-bg #F7F2E9` — est **déjà chargée** sur ces pages via `public.css → portal.css`, et habille le portail client que le même visiteur découvre *après* avoir payé. L'identité arrive donc trop tard. Cible fixée par Michael : qualité de flux **au moins égale à Airbnb**, et réserver doit « déjà être une expérience ».
 
-- [ ] ISC-19: Chaque page de `/reservation/*` rend sur le fond sable de la charte et ses titres `h1`/`h2` en Fraunces — ni `bg-gray-50`, ni la pile sans-serif par défaut. Probe : `agent-browser eval getComputedStyle(document.body).backgroundColor` + `getComputedStyle(h1).fontFamily` sur les 4 étapes.
-- [ ] ISC-20: Zéro emoji dans les vues du funnel — les pictogrammes sont des SVG inline cohérents (24×24, `stroke`, `currentColor`, `aria-hidden`). Probe : grep des plages Unicode emoji sur `app/views/public/reservations/` → 0 hit.
-- [ ] ISC-21: Tout contrôle du funnel qui neutralise l'outline natif fournit un anneau de focus de remplacement. Probe : `rg "focus:outline-none"` non suivi de `focus-visible:ring` sur `app/views/public/` → 0 hit.
-- [ ] ISC-22: Aucun bouton du funnel n'a de nom accessible vide — en particulier les cellules « nuit disponible » de la grille de composition, qui sont la cible de clic principale de l'étape 2. Probe : `agent-browser snapshot -i` sur `/reservation/composer` → aucune ligne `button [ref=…]` sans libellé.
-- [ ] ISC-23: La modale de disponibilités est un dialogue accessible : `role="dialog"` + `aria-modal="true"` + `aria-labelledby`, fermeture par Escape, bouton de fermeture nommé, focus déplacé dedans à l'ouverture et rendu au déclencheur à la fermeture. Probe : navigateur — Escape ferme, `document.activeElement` revient sur le bouton d'origine.
-- [ ] ISC-24: L'étape 1 propose **1 adulte** par défaut, jamais 0. Probe : `agent-browser eval` sur la valeur du champ adultes en session vierge.
-- [ ] ISC-25: Chaque étape du funnel a un `<title>` distinct et non vide (aujourd'hui : `" | Les 4 Sources"` sur les 4). Probe : `agent-browser get title` sur les 4 étapes.
-- [ ] ISC-26: Les champs de coordonnées portent les attributs `autocomplete` normalisés (`given-name`, `family-name`, `email`, `tel`) et le téléphone un `inputmode="tel"`. Probe : lecture du HTML rendu de `/reservation/coordonnees`.
-- [ ] ISC-27: Le repère d'étapes est un `<nav aria-label>` + `<ol>` avec `aria-current="step"` sur l'étape active, et le libellé de l'étape courante reste **visible à 390 px** (aujourd'hui masqué par `hidden sm:inline` — sur mobile le client ne voit que des pastilles numérotées). Probe : navigateur à 390 px.
+- [x] ISC-19: Chaque page de `/reservation/*` rend sur le fond sable de la charte et ses titres `h1`/`h2` en Fraunces — ni `bg-gray-50`, ni la pile sans-serif par défaut. Probe : `agent-browser eval getComputedStyle(document.body).backgroundColor` + `getComputedStyle(h1).fontFamily` sur les 4 étapes.
+  - Évidence 2026-07-29 : fait — `.funnel-page` mesuré au navigateur : fond `rgb(247,242,233)` (#F7F2E9) + texture sous-bois en radial-gradient ; `h1` en Fraunces 37.6 px `rgb(11,61,58)`.
+- [x] ISC-20: Zéro emoji dans les vues du funnel — les pictogrammes sont des SVG inline cohérents (24×24, `stroke`, `currentColor`, `aria-hidden`). Probe : grep des plages Unicode emoji sur `app/views/public/reservations/` → 0 hit.
+  - Évidence 2026-07-29 : fait — 0 emoji sur les 46 recensés au départ (22 distincts). Sonde : script Ruby sur les plages U+1F000–1FAFF / 2600–27BF / 2B00–2BFF dans `app/views/public/reservations/`.
+- [x] ISC-21: Tout contrôle du funnel qui neutralise l'outline natif fournit un anneau de focus de remplacement. Probe : `rg "focus:outline-none"` non suivi de `focus-visible:ring` sur `app/views/public/` → 0 hit.
+  - Évidence 2026-07-29 : fait — 11 occurrences nues retirées sur 15 ; les 4 restantes portent un `focus:ring-*` explicite. Le relais est `.funnel-page …:focus-visible` (funnel.css).
+- [x] ISC-22: Aucun bouton du funnel n'a de nom accessible vide — en particulier les cellules « nuit disponible » de la grille de composition, qui sont la cible de clic principale de l'étape 2. Probe : `agent-browser snapshot -i` sur `/reservation/composer` → aucune ligne `button [ref=…]` sans libellé.
+  - Évidence 2026-07-29 : fait — 9 cellules « nuit » rendues, 9 `aria-label` (« Hulotte — nuit du 14 septembre 2026 »). `snapshot -i` ne liste plus aucun `button` anonyme sur les étapes 1 et 2.
+- [x] ISC-23: La modale de disponibilités est un dialogue accessible : `role="dialog"` + `aria-modal="true"` + `aria-labelledby`, fermeture par Escape, bouton de fermeture nommé, focus déplacé dedans à l'ouverture et rendu au déclencheur à la fermeture. Probe : navigateur — Escape ferme, `document.activeElement` revient sur le bouton d'origine.
+  - Évidence 2026-07-29 : fait — mesuré : `role=dialog`, `aria-modal=true`, `aria-labelledby` → « Disponibilités », focus entrant dans le panneau, Escape ferme, scroll du body rendu, focus rendu au bouton déclencheur.
+- [x] ISC-24: L'étape 1 propose **1 adulte** par défaut, jamais 0. Probe : `agent-browser eval` sur la valeur du champ adultes en session vierge.
+  - Évidence 2026-07-29 : fait — champ adultes à `1` en session vierge, `checkValidity()` vrai. Avant : `0` contre `min=1`, formulaire invalide dès l'arrivée.
+- [x] ISC-25: Chaque étape du funnel a un `<title>` distinct et non vide (aujourd'hui : `" | Les 4 Sources"` sur les 4). Probe : `agent-browser get title` sur les 4 étapes.
+  - Évidence 2026-07-29 : fait — « Vos dates » / « Composez votre séjour » / « Vos activités » / « Vos coordonnées », les 4 en 200.
+- [x] ISC-26: Les champs de coordonnées portent les attributs `autocomplete` normalisés (`given-name`, `family-name`, `email`, `tel`) et le téléphone un `inputmode="tel"`. Probe : lecture du HTML rendu de `/reservation/coordonnees`.
+  - Évidence 2026-07-29 : fait — `given-name`, `family-name`, `email`+`inputmode=email`, `tel`+`inputmode=tel`, `organization` ; `autocapitalize` posé sur les noms, coupé sur l'email.
+- [x] ISC-27: Le repère d'étapes est un `<nav aria-label>` + `<ol>` avec `aria-current="step"` sur l'étape active, et le libellé de l'étape courante reste **visible à 390 px** (aujourd'hui masqué par `hidden sm:inline` — sur mobile le client ne voit que des pastilles numérotées). Probe : navigateur à 390 px.
+  - Évidence 2026-07-29 : fait — `<nav aria-label>` + `<ol>` + `aria-current="step"` ; à 390 px le libellé actif reste visible et un `sr-only` dit « Étape 1 sur 4 — Votre séjour » ; aucun débordement horizontal.
+
+### Reste à faire sur le funnel (constaté, non traité dans cette passe)
+
+Ces points sont sortis de l'observation du 2026-07-28 mais dépassent le périmètre livré. Ils ne sont pas des criteria tant que Michael n'a pas tranché.
+
+- **Les gîtes se choisissent à l'aveugle.** Hulotte / Chevêche / Grand-Duc n'ont qu'un nom et un prix à la nuit. Aucune photo, aucune capacité, aucun nombre de lits, aucune description. C'est l'écart le plus large avec Airbnb, dont tout le flux repose sur l'image. Demande une décision produit (quelles photos, quel texte) avant d'être codé.
+- **Le calendrier de disponibilités ne sert pas à choisir ses dates.** Il s'ouvre en lecture seule, sur le mois COURANT même quand le séjour visé est trois mois plus loin, et il faut le refermer pour retaper ses dates dans deux champs `jj/mm/aaaa`. Chez Airbnb, le calendrier EST le sélecteur de dates.
+- **Un séjour vide peut avancer.** Total à 0,00 € et le bouton « Continuer vers les activités » reste actif ; rien ne dit qu'aucun hébergement n'est sélectionné.
+- **Aucune issue quand les dates ne passent pas.** Si les nuits demandées sont occupées, la grille affiche une colonne de tirets sans proposer la moindre alternative (dates voisines, autre gîte).
+- **`f.submit` est un piège de repo.** `TailwindFormBuilder#submit` route vers `Button::Component`, qui concatène ses propres classes APRÈS celles de l'appelant : à spécificité égale, le template ne peut pas gagner. L'ancien CTA du funnel demandait `bg-emerald-600` et rendait le vert Flowbite. Les deux CTA du funnel sont passés en `<button>` nu ; le reste de l'app garde le piège.
+- **Vérification par pixels différée.** Le pipeline de captures d'agent-browser est tombé pendant la session (échec du daemon jusque sur `data:text/html`, indépendant de la page). Tout a été vérifié par arbre d'accessibilité, styles calculés sur éléments témoins, mesures de contraste et smoke HTTP — mais l'apparence n'a pas été revue en pixels après la refonte.
 
 ## Test Strategy
 
