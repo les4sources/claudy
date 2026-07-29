@@ -1,0 +1,52 @@
+/ Layout du funnel public /reservation — pleine largeur.
+/
+/ Il sortait de `public_sheet`, qui enferme son contenu dans un panneau blanc de
+/ 3/4 de large avec ombre portée. Deux problèmes une fois le funnel passé à la
+/ charte sable : le fond de la maison se retrouvait encadré de blanc — sable dans
+/ blanc dans blanc — et surtout la grille nuits × ressources, qui a besoin de
+/ largeur, se retrouvait bridée sans raison. Michael a tranché (2026-07-29) : le
+/ formulaire de réservation prend toute la largeur.
+/
+/ Le fond sable est porté par le <body> lui-même, pour qu'il aille de bord à bord
+/ et couvre aussi la zone de rebond du défilement. Chaque étape garde son propre
+/ conteneur centré (`max-w-2xl` / `max-w-3xl`) : pleine largeur veut dire « pas
+/ de cadre », pas « lignes de texte de 1600 px ».
+doctype html
+html(lang=I18n.locale)
+  head
+    meta(charset="utf-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1")
+    title
+      - if content_for?(:meta_title)
+        = yield :meta_title
+      | &nbsp;| Les 4 Sources
+    meta(name="robots" value="noindex,nofollow")
+    / Couleur de la barre d'adresse sur mobile : sans elle, iOS coiffe la page
+    / sable d'un bandeau blanc.
+    meta(name="theme-color" content="#F7F2E9")
+    = csrf_meta_tags
+    = csp_meta_tag
+    = vite_client_tag
+    = vite_javascript_tag "public", "data-turbo-track": "reload"
+
+  / `min-w-0` : sans lui, la largeur intrinsèque des tableaux de composition
+  / (min-width en pixels) gonfle le corps et fait déborder le viewport mobile.
+  body.funnel-page.min-h-screen.min-w-0
+    = render "layouts/public/components/google_tag"
+    = turbo_frame_tag "modal"
+
+    - if content_for?(:page_banner)
+      .text-center.bg-forest.text-sand.py-2.5.px-6
+        = yield :page_banner
+
+    / Bandeau photo — sur demande de la vue seulement. Le répéter à chaque étape
+    / faisait perdre un écran de haut à quelqu'un qui remplit un formulaire.
+    - if content_for?(:funnel_hero)
+      = yield :funnel_hero
+
+    main.w-full.min-w-0
+      - if content_for?(:page_header)
+        = yield :page_header
+
+      = render "layouts/public/components/messages"
+      = yield

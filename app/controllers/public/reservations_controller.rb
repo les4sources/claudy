@@ -5,7 +5,11 @@ module Public
   #   3. activities — activités : créneaux datés dans la fenêtre du séjour (Phase 4)
   #   4. contact    — coordonnées client → commit + Stripe
   class ReservationsController < Public::BaseController
-    layout "public_sheet"
+    # Layout dédié, pleine largeur (Michael 2026-07-29). `public_sheet` enferme
+    # son contenu dans un panneau blanc de 3/4 de large : le fond sable de la
+    # charte s'y retrouvait encadré de blanc, et la grille nuits × ressources
+    # bridée sans raison.
+    layout "funnel"
 
     DRAFT_SESSION_KEY = :reservation_draft
     HALL_SLOT_COUNT   = 6

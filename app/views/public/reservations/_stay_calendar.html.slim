@@ -20,7 +20,7 @@
 
   .flex.items-start.justify-between.mb-4
     h2.funnel-section-title.flex.items-center.gap-2
-      = funnel_icon :tent, css_class: "w-5 h-5 text-ember flex-shrink-0"
+      = funnel_icon :bed, css_class: "w-5 h-5 text-ember flex-shrink-0"
       | Composition nuit par nuit
     - if @stay_nights.present?
       .flex.items-center.gap-2.flex-shrink-0.ml-4.mt-0.5
@@ -60,10 +60,7 @@
           / ══ Hébergements ══════════════════════════════════════════════
           tr data-needs-block="gite"
             td(class="pt-3 pb-1 pr-4" colspan=total_cols.to_s)
-              span.inline-flex.items-center.gap-1.5.text-xs.font-semibold.text-moss.uppercase.tracking-wide
-                = funnel_icon :house, css_class: "w-3.5 h-3.5 flex-shrink-0"
-                span Hébergement
-
+              span.text-xs.font-semibold.text-moss.uppercase.tracking-wide Hébergement
           - @lodgings.each do |lodging|
             - lodging_rate = Pricing::Catalog.lodging_rate(lodging.name)
             tr(class="border-t border-bark/60" data-needs-block="gite")
@@ -131,10 +128,7 @@
           / ══ Camping ════════════════════════════════════════════════════
           tr data-needs-block="camping van"
             td(class="pt-4 pb-1 pr-4" colspan=total_cols.to_s)
-              span.inline-flex.items-center.gap-1.5.text-xs.font-semibold.text-moss.uppercase.tracking-wide
-                = funnel_icon :tent, css_class: "w-3.5 h-3.5 flex-shrink-0"
-                span Camping
-
+              span.text-xs.font-semibold.text-moss.uppercase.tracking-wide Camping
           / Campeurs (tentes) — la saisie est un nombre de PERSONNES, pas de
           / tentes (source de confusion levée, feature 2).
           tr(class="border-t border-bark/60" data-needs-block="camping")
@@ -173,9 +167,7 @@
           - if show_hamacs
             tr data-needs-block="camping"
               td(class="pt-4 pb-1 pr-4" colspan=total_cols.to_s)
-                span.inline-flex.items-center.gap-1.5.text-xs.font-semibold.text-moss.uppercase.tracking-wide
-                = funnel_icon :hammock, css_class: "w-3.5 h-3.5 flex-shrink-0"
-                span Location de hamacs
+                span.text-xs.font-semibold.text-moss.uppercase.tracking-wide Location de hamacs
                 p.text-xs.text-moss.font-normal.normal-case.tracking-normal.mt-0.5 Hamac fourni et posé dans les arbres du domaine — rien à apporter.
 
             tr(class="border-t border-bark/60" data-needs-block="camping")
