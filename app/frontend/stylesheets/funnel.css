@@ -271,6 +271,99 @@
   border: 1px dashed var(--p-past-border);
 }
 
+/* --- Cartes de gîtes -------------------------------------------------------- */
+
+/* Le choix le plus engageant du parcours se faisait entre trois NOMS dans une
+   colonne de tableau. Ces cartes mettent la photo, la capacité et le prix devant
+   le client avant qu'il choisisse ses nuits. */
+.funnel-lodging-card {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  background: var(--p-surface);
+  border: 1px solid var(--p-border);
+  border-radius: var(--p-radius-lg);
+  box-shadow: var(--p-shadow-sm);
+  cursor: pointer;
+  transition: transform 180ms var(--p-ease), box-shadow 180ms var(--p-ease),
+              border-color 180ms var(--p-ease);
+}
+.funnel-lodging-card:hover {
+  border-color: var(--p-primary);
+  box-shadow: var(--p-shadow-md);
+  transform: translateY(-2px);
+}
+.funnel-lodging-card__media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--p-surface-sunken);
+}
+.funnel-lodging-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 400ms var(--p-ease);
+}
+.funnel-lodging-card:hover .funnel-lodging-card__img {
+  transform: scale(1.03);
+}
+/* Compteur de photos — posé sur l'image, donc sur un fond imprévisible : fond
+   sombre translucide plutôt qu'une couleur de la charte, pour rester lisible
+   qu'il tombe sur un ciel bleu ou un mur ocre. */
+.funnel-lodging-card__count {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  background: rgba(28, 38, 32, 0.72);
+  color: var(--p-bg);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .funnel-lodging-card,
+  .funnel-lodging-card__img {
+    transition: none;
+  }
+  .funnel-lodging-card:hover {
+    transform: none;
+  }
+  .funnel-lodging-card:hover .funnel-lodging-card__img {
+    transform: none;
+  }
+}
+
+/* --- Galerie ---------------------------------------------------------------- */
+
+.funnel-gallery-figure {
+  margin: 0;
+}
+.funnel-gallery-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--p-radius-md);
+  background: var(--p-surface-sunken);
+}
+
+/* Vignette du gîte dans la colonne de gauche de la grille — relie visuellement
+   la carte du haut à la ligne où l'on clique ses nuits. */
+.funnel-lodging-thumb {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--p-radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 /* --- Créneaux d'espaces (journée / soirée / les deux) ----------------------- */
 
 /* Même principe que les cellules de nuit : l'état vit dans `data-slot`, le

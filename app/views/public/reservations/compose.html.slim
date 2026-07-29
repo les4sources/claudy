@@ -19,6 +19,10 @@
           = "#{@draft.nights} nuit#{"s" if @draft.nights.to_i > 1}"
         = link_to "Modifier", public_reservation_dates_path, class: "ml-2 text-xs text-moss hover:text-moss underline relative before:content-[''] before:absolute before:-inset-y-3.5 before:inset-x-0"
 
+    / ── Les gîtes en photos ─────────────────────────────────
+    / Placé AVANT la grille : on regarde, puis on choisit ses nuits.
+    = render "public/reservations/lodging_cards"
+
     .space-y-6
 
       / ── Calendrier des disponibilités ───────────────────────

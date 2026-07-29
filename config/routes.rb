@@ -233,6 +233,10 @@ Rails.application.routes.draw do
   get  "reservation/coordonnees",  to: "public/reservations#contact",            as: :public_reservation_contact
   post "reservation/coordonnees",  to: "public/reservations#create",             as: :public_reservation_create
   get  "reservation/calendrier",   to: "public/reservations#availability_calendar", as: :public_reservation_availability_calendar
+  # Galerie photo d'un gîte — chargée à la demande dans un Turbo Frame. Rendre
+  # les 39 images dans CHAQUE /reservation/composer alourdissait la page pour
+  # tout le monde et faisait passer la suite de tests de 38 s à 2 min 23.
+  get  "reservation/gite/:slug/photos", to: "public/reservations#lodging_photos", as: :public_reservation_lodging_photos
 
   # Page client du séjour-composite (epic #26, Phase 1) — jeton, sans Devise.
   # Route à la racine (et non sous /public) : c'est l'URL envoyée aux clients et

@@ -1,0 +1,19 @@
+/ Contenu du turbo-frame « lodging_gallery » — la galerie d'un gîte.
+/ Servi par Public::ReservationsController#lodging_photos, sans layout.
+/ @lodging_name et @photos viennent du contrôleur.
+
+= turbo_frame_tag "lodging_gallery"
+  - if @photos.empty?
+    p.funnel-hint.py-8.text-center Aucune photo pour ce gîte pour le moment.
+  - else
+    / Une colonne sur mobile, deux au-delà ; la première photo occupe la largeur
+    / — c'est celle qui donne le ton, elle mérite la place.
+    .grid.grid-cols-1.md:grid-cols-2.gap-3.sm:gap-4
+      - @photos.each_with_index do |photo, idx|
+        figure.funnel-gallery-figure(class=("md:col-span-2" if idx.zero?))
+          = vite_image_tag photo.path,
+              alt: photo.alt,
+              loading: (idx < 2 ? "eager" : "lazy"),
+              decoding: "async",
+              class: "funnel-gallery-img"
+          figcaption.funnel-hint.mt-1.5.px-0.5 = photo.alt

@@ -137,6 +137,16 @@ module Public
       end
     end
 
+    # Galerie photo d'un gîte, servie dans un Turbo Frame à l'ouverture de la
+    # modale. Hors du draft et sans session : c'est du catalogue public.
+    # Un slug inconnu rend une galerie vide plutôt qu'une erreur — l'URL est
+    # publique et devinable, elle ne doit ni lever ni renseigner un curieux.
+    def lodging_photos
+      @lodging_name = LodgingPhotosHelper.name_for(params[:slug])
+      @photos       = LodgingPhotosHelper.gallery_for(params[:slug])
+      render layout: false
+    end
+
     # Turbo Frame navigation pour le calendrier de disponibilités (1 mois par page).
     def availability_calendar
       today_month = Date.today.beginning_of_month

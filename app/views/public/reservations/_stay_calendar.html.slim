@@ -75,7 +75,12 @@
               - rooms_count = lodging.rooms.size
               - capacity_bits = [lodging.summary.presence, ("#{rooms_count} chambre#{'s' if rooms_count > 1}" if rooms_count.positive?)].compact
               td.py-2.pr-4.sticky.left-5.z-10.bg-white(style="width:150px")
-                span.text-sm.text-ink.font-medium.whitespace-nowrap = short_names[lodging.name] || lodging.name
+                .flex.items-center.gap-2
+                  / Vignette : relie la ligne à la carte photo du haut de page.
+                  / Décorative — le nom juste à côté porte déjà l'information.
+                  - if lodging_thumb_path(lodging.name)
+                    = vite_image_tag lodging_thumb_path(lodging.name), alt: "", loading: "lazy", decoding: "async", class: "funnel-lodging-thumb"
+                  span.text-sm.text-ink.font-medium.whitespace-nowrap = short_names[lodging.name] || lodging.name
                 - if capacity_bits.any?
                   p.text-xs.text-moss.leading-tight.mt-0.5 = capacity_bits.join(" · ")
                 - if lodging_rate
