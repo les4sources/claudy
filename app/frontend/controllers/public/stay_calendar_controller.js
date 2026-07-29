@@ -108,21 +108,16 @@ export default class extends Controller {
     return -1
   }
 
-  // Classes identiques à celles du template Slim — source de vérité unique.
+  // `aria-pressed` est la SEULE source de vérité de l'état d'une cellule.
+  //
+  // Avant, cette méthode recopiait à la main une liste de classes Tailwind qui
+  // devait rester identique à celle du template Slim, et réécrivait le contenu
+  // de la cellule (`textContent = "✓"`) — trois copies du même état à maintenir
+  // d'accord, et un glyphe emoji au passage. Le dessin vit désormais dans
+  // `.funnel-night-cell[aria-pressed="true"]` (funnel.css) et la coche est un
+  // SVG permanent que le CSS révèle. Écrire l'attribut suffit.
   setCellState(cell, selected) {
-    const selectedClasses = ["bg-emerald-500", "border-emerald-500", "text-white", "shadow-sm"]
-    const idleClasses = ["bg-white", "border-gray-200", "text-gray-300", "hover:border-emerald-400", "hover:bg-emerald-50"]
-
     cell.setAttribute("aria-pressed", selected ? "true" : "false")
-    cell.textContent = selected ? "✓" : ""
-
-    if (selected) {
-      cell.classList.remove(...idleClasses)
-      cell.classList.add(...selectedClasses)
-    } else {
-      cell.classList.remove(...selectedClasses)
-      cell.classList.add(...idleClasses)
-    }
   }
 
   syncHiddenFields() {

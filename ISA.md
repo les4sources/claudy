@@ -7,7 +7,7 @@ phase: build
 progress: 0/15
 mode: interactive
 started: 2026-05-28T00:00:00Z
-updated: 2026-07-20T20:30:00+02:00
+updated: 2026-07-29T08:50:09+02:00
 ---
 
 ## Problem
@@ -75,6 +75,53 @@ Opérer la totalité de la vie économique et associative des 4 Sources depuis u
 - [ ] ISC-16: Anti (dérive P1) — tout modèle ActiveRecord métier exposable dans `app/models/` a un endpoint `/api/v1/<resource>` correspondant et une entrée dans `config/openapi/v1.yaml`. Probe : script d'audit qui liste les modèles métier et grep les routes + le YAML.
 - [ ] ISC-17: Anti (dérive P2) — sur la liste auditable (bookings, payments, cycle_actions, decisions, humans, human_roles), aucun appel à `destroy!`/`delete_all` ne court-circuite soft_deletion ou PaperTrail. Probe : `grep -rn '\.destroy!\|delete_all' app/ | grep -iE 'booking|payment|cycle_action|decision|human|human_role'` retourne 0 hit non-tracé.
 - [ ] ISC-18: Anti (dérive P3) — pas de namespace parallèle `app/<commerce>/` vs `app/<collective>/` ; pas de tables distinctes pour la même notion entre les deux mondes dans le schéma DB. Probe : `ls app/` et `psql -c '\dt'` audités semestriellement contre cette règle.
+
+### Qualité du funnel public `/reservation` (ajout 2026-07-28)
+
+Constat d'ouverture : le funnel est la **première impression** commerciale des 4 Sources, et c'est la seule surface publique restée en Tailwind générique (`bg-gray-50` + `emerald-600` + ~30 emoji) alors que la charte « sous-bois » — Fraunces auto-hébergée, `--p-primary #0B3D3A`, fond sable `--p-bg #F7F2E9` — est **déjà chargée** sur ces pages via `public.css → portal.css`, et habille le portail client que le même visiteur découvre *après* avoir payé. L'identité arrive donc trop tard. Cible fixée par Michael : qualité de flux **au moins égale à Airbnb**, et réserver doit « déjà être une expérience ».
+
+- [x] ISC-19: Chaque page de `/reservation/*` rend sur le fond sable de la charte et ses titres `h1`/`h2` en Fraunces — ni `bg-gray-50`, ni la pile sans-serif par défaut. Probe : `agent-browser eval getComputedStyle(document.body).backgroundColor` + `getComputedStyle(h1).fontFamily` sur les 4 étapes.
+  - Évidence 2026-07-29 : fait — `.funnel-page` mesuré au navigateur : fond `rgb(247,242,233)` (#F7F2E9) + texture sous-bois en radial-gradient ; `h1` en Fraunces 37.6 px `rgb(11,61,58)`.
+- [x] ISC-20: Zéro emoji dans les vues du funnel — les pictogrammes sont des SVG inline cohérents (24×24, `stroke`, `currentColor`, `aria-hidden`). Probe : grep des plages Unicode emoji sur `app/views/public/reservations/` → 0 hit.
+  - Évidence 2026-07-29 : fait — 0 emoji sur les 46 recensés au départ (22 distincts). Sonde : script Ruby sur les plages U+1F000–1FAFF / 2600–27BF / 2B00–2BFF dans `app/views/public/reservations/`.
+- [x] ISC-21: Tout contrôle du funnel qui neutralise l'outline natif fournit un anneau de focus de remplacement. Probe : `rg "focus:outline-none"` non suivi de `focus-visible:ring` sur `app/views/public/` → 0 hit.
+  - Évidence 2026-07-29 : fait — 11 occurrences nues retirées sur 15 ; les 4 restantes portent un `focus:ring-*` explicite. Le relais est `.funnel-page …:focus-visible` (funnel.css).
+- [x] ISC-22: Aucun bouton du funnel n'a de nom accessible vide — en particulier les cellules « nuit disponible » de la grille de composition, qui sont la cible de clic principale de l'étape 2. Probe : `agent-browser snapshot -i` sur `/reservation/composer` → aucune ligne `button [ref=…]` sans libellé.
+  - Évidence 2026-07-29 : fait — 9 cellules « nuit » rendues, 9 `aria-label` (« Hulotte — nuit du 14 septembre 2026 »). `snapshot -i` ne liste plus aucun `button` anonyme sur les étapes 1 et 2.
+- [x] ISC-23: La modale de disponibilités est un dialogue accessible : `role="dialog"` + `aria-modal="true"` + `aria-labelledby`, fermeture par Escape, bouton de fermeture nommé, focus déplacé dedans à l'ouverture et rendu au déclencheur à la fermeture. Probe : navigateur — Escape ferme, `document.activeElement` revient sur le bouton d'origine.
+  - Évidence 2026-07-29 : fait — mesuré : `role=dialog`, `aria-modal=true`, `aria-labelledby` → « Disponibilités », focus entrant dans le panneau, Escape ferme, scroll du body rendu, focus rendu au bouton déclencheur.
+- [x] ISC-24: L'étape 1 propose **1 adulte** par défaut, jamais 0. Probe : `agent-browser eval` sur la valeur du champ adultes en session vierge.
+  - Évidence 2026-07-29 : fait — champ adultes à `1` en session vierge, `checkValidity()` vrai. Avant : `0` contre `min=1`, formulaire invalide dès l'arrivée.
+- [x] ISC-25: Chaque étape du funnel a un `<title>` distinct et non vide (aujourd'hui : `" | Les 4 Sources"` sur les 4). Probe : `agent-browser get title` sur les 4 étapes.
+  - Évidence 2026-07-29 : fait — « Vos dates » / « Composez votre séjour » / « Vos activités » / « Vos coordonnées », les 4 en 200.
+- [x] ISC-26: Les champs de coordonnées portent les attributs `autocomplete` normalisés (`given-name`, `family-name`, `email`, `tel`) et le téléphone un `inputmode="tel"`. Probe : lecture du HTML rendu de `/reservation/coordonnees`.
+  - Évidence 2026-07-29 : fait — `given-name`, `family-name`, `email`+`inputmode=email`, `tel`+`inputmode=tel`, `organization` ; `autocapitalize` posé sur les noms, coupé sur l'email.
+- [x] ISC-27: Le repère d'étapes est un `<nav aria-label>` + `<ol>` avec `aria-current="step"` sur l'étape active, et le libellé de l'étape courante reste **visible à 390 px** (aujourd'hui masqué par `hidden sm:inline` — sur mobile le client ne voit que des pastilles numérotées). Probe : navigateur à 390 px.
+  - Évidence 2026-07-29 : fait — `<nav aria-label>` + `<ol>` + `aria-current="step"` ; à 390 px le libellé actif reste visible et un `sr-only` dit « Étape 1 sur 4 — Votre séjour » ; aucun débordement horizontal.
+
+- [x] ISC-28: Le calendrier de disponibilités EST le sélecteur de dates : on choisit sa plage dessus (1er clic = arrivée, 2e = départ), « Choisir ces dates » remplit les deux champs de l'étape 1, recalcule le badge des nuits et le `min` du départ, puis ferme la modale. La modale s'ouvre sur le mois du séjour visé, pas sur le mois courant. Probe : navigateur.
+  - Évidence 2026-07-29 : navigation juillet→août dans la modale, clics sur 14 et 17 août → résumé « 14 août → 17 août · 3 nuits », confirmation → champs `2026-08-14` / `2026-08-17`, badge « = 3 nuits », `min` du départ à `2026-08-15`, modale fermée, formulaire valide. Arrivée posée au 2026-10-15 → la modale rouvre sur `data-cal-month="2026-10"` (« Octobre 2026 »). 7 specs de contrat de balisage.
+- [x] ISC-29: Un panier à 0,00 € ne peut pas avancer : le CTA de l'étape 2 est bloqué et dit pourquoi, et se débloque dès la première sélection sans rechargement.
+  - Évidence 2026-07-29 : à 0,00 € le bouton porte `disabled` et « Choisissez au moins une nuit d'hébergement… » lié par `aria-describedby` ; le Turbo Stream de `/reservation/devis` remplace bien `compose_cta` (3 cibles) et le rend actif avec une nuit choisie. 3 specs.
+- [x] ISC-30: Aucun état d'interface du funnel n'est décrit en double entre un template et son contrôleur Stimulus. Probe : lecture des contrôleurs `stay_calendar` et `space_slot`.
+  - Évidence 2026-07-29 : les cellules de nuit et les créneaux d'espaces portent leur état en attribut (`aria-pressed`, `data-slot`) ; tout le dessin vit dans `funnel.css`. Les tables de classes Tailwind recopiées dans les deux contrôleurs ont disparu.
+- [x] ISC-31: Zéro classe de palette générique (`emerald-*`, `*-gray-*`, `purple-*`, `teal-*`, `blue-*`) dans les vues du funnel. Probe : `rg` sur `app/views/public/reservations/*.slim`.
+  - Évidence 2026-07-29 : 0 occurrence.
+- [x] ISC-32: Une nuit indisponible n'est pas un cul-de-sac : la mini-modale nomme les autres gîtes libres cette nuit-là.
+  - Évidence 2026-07-29 : Hulotte occupée du 10 au 12 novembre → clic sur une cellule barrée → « La Hulotte n'est pas libre le 10 novembre 2026. » + « Chevêche est libre cette nuit-là. » Données lues dans `@lodging_availability`, déjà calculé pour la grille — aucune requête de plus. 3 specs, dont le cas « tout est pris » et le cas « attribut uniquement sur les cellules barrées ».
+- [x] ISC-33: Chaque gîte de la grille annonce sa capacité et son nombre de chambres, pas seulement son nom et son prix.
+  - Évidence 2026-07-29 : « Hulotte · 9 à 16 personnes · 6 chambres · dès 260 €/nuit », « Chevêche · 4 à 8 personnes · 2 chambres · dès 200 €/nuit », « Grand-Duc · 17 à 25 personnes · 8 chambres · dès 600 €/nuit ». Données déjà en base (`Lodging#summary` + `rooms`), jamais montrées jusqu'ici. 3 specs, dont l'accord au singulier.
+- [x] ISC-34: Le client voit les gîtes avant de les choisir : une carte par gîte (couverture, capacité, chambres, prix) ouvre sa galerie photo complète.
+  - Évidence 2026-07-29 : 3 cartes rendues, couvertures distinctes chargées (900×675). Galerie Chevêche 8 photos, Hulotte 12, Grand-Duc 19 (les deux gîtes réunis — c'est ce qu'il est). Chaque photo a un texte alternatif descriptif de plus de 20 caractères et une légende. Dialogue accessible : role/aria-modal, titre lié, Escape ferme, focus rendu à la carte d'origine. 10 specs.
+- [x] ISC-35: Le poids de la page de composition ne grandit pas avec la taille des galeries.
+  - Évidence 2026-07-29 : 7 `<img>` sur `/reservation/composer` (3 couvertures + 3 vignettes + le bandeau du layout) au lieu de 46. La galerie arrive par requête à l'ouverture, et n'est pas rechargée si on revient sur un gîte déjà consulté — 2 requêtes réseau pour 3 ouvertures.
+
+### Reste à faire sur le funnel (constaté, non traité dans cette passe)
+
+Ces points sont sortis de l'observation du 2026-07-28 mais dépassent le périmètre livré. Ils ne sont pas des criteria tant que Michael n'a pas tranché.
+
+- **`f.submit` est un piège de repo.** `TailwindFormBuilder#submit` route vers `Button::Component`, qui concatène ses propres classes APRÈS celles de l'appelant : à spécificité égale, le template ne peut pas gagner. L'ancien CTA du funnel demandait `bg-emerald-600` et rendait le vert Flowbite. Les deux CTA du funnel sont passés en `<button>` nu ; le reste de l'app garde le piège.
+- **Vérification par pixels différée.** Le pipeline de captures d'agent-browser est tombé pendant la session (échec du daemon jusque sur `data:text/html`, indépendant de la page). Tout a été vérifié par arbre d'accessibilité, styles calculés sur éléments témoins, mesures de contraste et smoke HTTP — mais l'apparence n'a pas été revue en pixels après la refonte.
 
 ## Test Strategy
 

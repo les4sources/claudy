@@ -1,21 +1,35 @@
-/ Step indicator partagé du funnel /reservation — 4 étapes (epic #55, Phase 4).
+/ Repère d'étapes du funnel /reservation — 4 étapes (epic #55, Phase 4).
 / `current` = numéro de l'étape active (1..4). Les étapes déjà franchies sont
 / cliquables (retour en arrière) ; l'étape active et les suivantes ne le sont pas.
+/
+/ Sémantique : <nav> + <ol>, parce que c'est une liste ordonnée de repères de
+/ navigation. `aria-current="step"` désigne l'étape active — sans lui, un lecteur
+/ d'écran énumère quatre pastilles sans dire où on en est.
+/
+/ Mobile : les libellés étaient tous en `hidden sm:inline`, donc sous 640 px le
+/ client ne voyait que « 1 2 3 4 » — quatre ronds muets. Le libellé de l'étape
+/ COURANTE reste maintenant visible à toute largeur ; seuls les autres se
+/ replient. Un « Étape n sur 4 » en sr-only donne le compte à la voix.
 - steps = [{ n: 1, label: "Votre séjour", path: public_reservation_dates_path }, { n: 2, label: "Composition", path: public_reservation_compose_path }, { n: 3, label: "Activités", path: public_reservation_activities_path }, { n: 4, label: "Coordonnées", path: public_reservation_contact_path }]
-.flex.items-center.mb-10
-  - steps.each_with_index do |step, idx|
-    - unless idx.zero?
-      .flex-1.h-px.mx-4 class=(step[:n] <= current ? "bg-emerald-200" : "bg-gray-200")
-    - if step[:n] < current
-      .flex.items-center.flex-shrink-0
-        = link_to step[:path], class: "flex items-center group relative before:content-[''] before:absolute before:-inset-1" do
-          .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-emerald-100.text-emerald-700.border-2.border-emerald-400.group-hover:border-emerald-600.transition-colors ✓
-          span.ml-2.text-sm.text-emerald-600.hidden.sm:inline.group-hover:underline = step[:label]
-    - elsif step[:n] == current
-      .flex.items-center.flex-shrink-0
-        .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-emerald-600.text-white.shadow-sm = step[:n]
-        span.ml-2.text-sm.font-semibold.text-emerald-700.hidden.sm:inline = step[:label]
-    - else
-      .flex.items-center.flex-shrink-0
-        .w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.border-2.border-gray-200.bg-white.text-gray-400 = step[:n]
-        span.ml-2.text-sm.text-gray-400.hidden.sm:inline = step[:label]
+
+nav.mb-8.md:mb-10 aria-label="Étapes de la réservation"
+  p.sr-only = "Étape #{current} sur #{steps.size} — #{steps.find { |s| s[:n] == current }&.dig(:label)}"
+  ol.flex.items-center.list-none.m-0.p-0
+    - steps.each_with_index do |step, idx|
+      - unless idx.zero?
+        li.flex-1.h-px.mx-2.sm:mx-4(aria-hidden="true" class=(step[:n] <= current ? "bg-forest/25" : "bg-bark"))
+      - if step[:n] < current
+        li.flex.items-center.flex-shrink-0
+          = link_to step[:path], class: "flex items-center group relative before:content-[''] before:absolute before:-inset-1 rounded-lg" do
+            span.w-9.h-9.rounded-full.flex.items-center.justify-center.bg-forest-tint.text-forest.border.border-forest/30.group-hover:border-forest.transition-colors
+              = funnel_icon :check, css_class: "w-4 h-4", stroke_width: 2.5
+              span.sr-only = "Étape franchie : #{step[:label]} — revenir"
+            span.ml-2.text-sm.text-forest.hidden.sm:inline.group-hover:underline.underline-offset-2 = step[:label]
+      - elsif step[:n] == current
+        li.flex.items-center.flex-shrink-0(aria-current="step")
+          span.w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.bg-forest.text-sand.shadow-sm = step[:n]
+          span.ml-2.text-sm.font-semibold.text-forest = step[:label]
+      - else
+        li.flex.items-center.flex-shrink-0
+          span.w-9.h-9.rounded-full.flex.items-center.justify-center.text-sm.font-bold.border.border-bark.bg-white/60.text-moss = step[:n]
+          span.ml-2.text-sm.text-moss.hidden.sm:inline = step[:label]

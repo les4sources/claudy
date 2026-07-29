@@ -5,7 +5,11 @@ module Public
   #   3. activities — activités : créneaux datés dans la fenêtre du séjour (Phase 4)
   #   4. contact    — coordonnées client → commit + Stripe
   class ReservationsController < Public::BaseController
-    layout "public_sheet"
+    # Layout dédié, pleine largeur (Michael 2026-07-29). `public_sheet` enferme
+    # son contenu dans un panneau blanc de 3/4 de large : le fond sable de la
+    # charte s'y retrouvait encadré de blanc, et la grille nuits × ressources
+    # bridée sans raison.
+    layout "funnel"
 
     DRAFT_SESSION_KEY = :reservation_draft
     HALL_SLOT_COUNT   = 6
@@ -135,6 +139,16 @@ module Public
         flash.now[:alert] = builder.error_message(default: "Votre réservation n'a pas pu être enregistrée.")
         render :contact, status: :unprocessable_entity
       end
+    end
+
+    # Galerie photo d'un gîte, servie dans un Turbo Frame à l'ouverture de la
+    # modale. Hors du draft et sans session : c'est du catalogue public.
+    # Un slug inconnu rend une galerie vide plutôt qu'une erreur — l'URL est
+    # publique et devinable, elle ne doit ni lever ni renseigner un curieux.
+    def lodging_photos
+      @lodging_name = LodgingPhotosHelper.name_for(params[:slug])
+      @photos       = LodgingPhotosHelper.gallery_for(params[:slug])
+      render layout: false
     end
 
     # Turbo Frame navigation pour le calendrier de disponibilités (1 mois par page).

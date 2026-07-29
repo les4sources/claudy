@@ -10,37 +10,37 @@ div
   - if includes_nye
     .rounded-xl.border.border-orange-200.bg-orange-50.p-4.mb-4
       p.text-xs.text-orange-800.leading-relaxed
-        | ⚠️
+        = funnel_icon :alert, css_class: "w-4 h-4 flex-shrink-0 inline-block align-text-bottom"
         strong  Séjour incluant le 31 décembre
         |  — ce type de réservation requiert le Grand-Duc + les 2 salles. Contactez-nous pour valider.
 
-  .rounded-2xl.border.border-gray-100.bg-white.shadow-sm.overflow-hidden
-    .px-5.py-4.border-b.border-gray-100
-      h2.text-base.font-semibold.text-gray-900 Votre devis estimé
+  .rounded-2xl.border.border-bark.bg-white.shadow-sm.overflow-hidden
+    .px-5.py-4.border-b.border-bark
+      h2.funnel-section-title Votre devis estimé
 
     - if quote.lines.empty?
       .px-5.py-6.text-center
-        p.text-sm.text-gray-400.leading-relaxed
+        p.text-sm.text-moss.leading-relaxed
           | Choisissez vos dates et un hébergement
           br
           | pour voir apparaître le prix.
     - else
-      ul.divide-y.divide-gray-50.px-5
+      ul.divide-y.divide-bark.px-5
         - quote.lines.each do |line|
           li.flex.items-center.justify-between.py-3
-            span.text-sm.text-gray-600.pr-4 = line.label
-            span.text-sm.font-semibold.text-gray-900.flex-shrink-0 = number_to_currency(line.amount_cents / 100.0, unit: "€", format: "%n %u", precision: 2)
-      .px-5.py-4.bg-gray-50.border-t.border-gray-100.space-y-2
+            span.text-sm.text-moss.pr-4 = line.label
+            span.text-sm.font-semibold.text-ink.flex-shrink-0 = number_to_currency(line.amount_cents / 100.0, unit: "€", format: "%n %u", precision: 2)
+      .px-5.py-4.bg-sand-deep.border-t.border-bark.space-y-2
         .flex.items-center.justify-between
-          span.text-sm.font-bold.text-gray-900 Total TVAC 0 %
-          span.text-lg.font-bold.text-gray-900 = number_to_currency(quote.total_cents / 100.0, unit: "€", format: "%n %u", precision: 2)
+          span.text-sm.font-bold.text-ink Total TVAC 0 %
+          span.text-lg.font-bold.text-ink = number_to_currency(quote.total_cents / 100.0, unit: "€", format: "%n %u", precision: 2)
         .flex.items-center.justify-between
-          span.text-xs.text-gray-500 = "Acompte #{(quote.deposit_rate * 100).to_i} % à la réservation"
-          span.text-sm.font-semibold.text-emerald-700 = number_to_currency(quote.deposit_cents / 100.0, unit: "€", format: "%n %u", precision: 2)
+          span.text-xs.text-moss = "Acompte #{(quote.deposit_rate * 100).to_i} % à la réservation"
+          span.text-sm.font-semibold.text-forest = number_to_currency(quote.deposit_cents / 100.0, unit: "€", format: "%n %u", precision: 2)
       .px-5.pb-4
-        p.text-xs.text-gray-400 Tous les prix sont TVAC 0 % — aucune TVA supplémentaire.
+        p.text-xs.text-moss Tous les prix sont TVAC 0 % — aucune TVA supplémentaire.
 
   - if quote.total_cents.positive? && continue_path
     = link_to continue_label, continue_path,
-        class: "mt-4 block text-center rounded-xl bg-emerald-600 text-white px-4 py-3 text-sm font-semibold hover:bg-emerald-700 shadow-sm transition-colors",
+        class: "mt-4 block text-center rounded-xl bg-forest text-white px-4 py-3 text-sm font-semibold hover:bg-forest-soft shadow-sm transition-colors",
         data: { turbo_frame: "_top" }

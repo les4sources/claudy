@@ -1,15 +1,21 @@
 / Gantt grille — 1 mois x 6 ressources. Reçoit :calendar.
-/ Vert = dispo · Rouge = occupe · Gris = passe · Bague bleue = aujourd'hui.
+/ Libre = vert tendre · Réservé = hachures ambre · Passé = sable · Aujourd'hui = anneau forêt.
+/ L'état n'est JAMAIS porté par la seule couleur (WCAG 1.4.1) : une case réservée
+/ est hachurée, et chaque case porte un `title` qui dit son état en toutes lettres.
 / Clic sur une cellule → colonne mise en évidence (avail_cal_controller).
 - today     = Date.today
 - cal_dates = calendar[:dates]
 - cell_w    = 14
 - cell_sty  = "display:inline-block;width:#{cell_w}px;min-width:#{cell_w}px;margin-right:2px;flex-shrink:0;cursor:pointer"
 
-.flex.flex-col(data-controller="public--avail-cal")
+.flex.flex-col
+  / Le contrôleur `public--avail-cal` vit sur le PANNEAU de la modale, pas ici :
+  / ce partial est le contenu d'un turbo-frame remplacé à chaque changement de
+  / mois, et la plage de dates en cours de sélection ne doit pas être perdue en
+  / passant de septembre à octobre.
 
   / Jour sélectionné — affiché après un clic
-  p.hidden.mb-3.text-sm.font-medium.text-sky-700.bg-sky-50.border.border-sky-200.rounded-xl.px-3.py-2.w-fit(
+  p.hidden.mb-3.text-sm.font-medium.text-forest.bg-forest-tint.border.border-forest/30.rounded-xl.px-3.py-2.w-fit(
     data-public--avail-cal-target="dayLabel")
 
   / Axe des jours du mois
@@ -17,12 +23,12 @@
     .w-36.flex-shrink-0
     .flex
       - cal_dates.each do |date|
-        span.text-center.text-gray-400(
+        span.text-center.text-moss(
           data-date=date.iso8601
           data-action="click->public--avail-cal#selectDay"
           style="#{cell_sty};font-size:10px;line-height:1.2")
           - if date == today
-            span.font-bold.text-blue-500(style="font-size:10px") = date.day
+            span.font-bold.text-forest(style="font-size:10px") = date.day
           - else
             = date.day
 
@@ -32,29 +38,32 @@
     .flex
       - cal_dates.each do |date|
         - dow = %w[D L M M J V S][date.wday]
-        span.text-center.text-gray-300(
+        span.text-center.text-moss.font-medium(
           data-date=date.iso8601
           data-action="click->public--avail-cal#selectDay"
-          style="#{cell_sty};font-size:9px;line-height:1")
+          style="#{cell_sty};font-size:10px;line-height:1")
           = dow
 
   / Section Hébergements
   .flex.items-center.mb-2
     .w-36.flex-shrink-0
-    span.text-xs.font-bold.text-gray-400.uppercase.tracking-widest 🏡 Hébergements
+    span.inline-flex.items-center.gap-1.5.text-xs.font-bold.text-moss.uppercase.tracking-widest
+      = funnel_icon :house, css_class: "w-4 h-4 text-ember flex-shrink-0"
+      span Hébergements
 
   - calendar[:lodging_rows].each do |row|
     .flex.items-center.mb-2
-      span.text-xs.font-medium.text-gray-700.w-36.pr-3.text-right.truncate.flex-shrink-0 = row[:name]
+      span.text-xs.font-medium.text-ink.w-36.pr-3.text-right.truncate.flex-shrink-0 = row[:name]
       .flex
         - cal_dates.each do |date|
           - past     = date < today
           - occupied = row[:occupied].include?(date)
           - is_today = date == today
-          - bg  = past ? "bg-gray-100" : (occupied ? "bg-red-300" : "bg-emerald-200")
-          - ring = is_today ? "ring-1 ring-blue-400" : ""
+          - bg    = past ? "avail-cell--past" : (occupied ? "avail-cell--busy" : "avail-cell--free")
+          - state = past ? "passé" : (occupied ? "réservé" : "libre")
+          - ring = is_today ? "ring-2 ring-forest" : ""
           span.h-7.rounded(
-            title=date.strftime("%-d %b")
+            title="#{row[:name]} — #{l(date, format: :long)} : #{state}"
             data-date=date.iso8601
             data-action="click->public--avail-cal#selectDay"
             class="#{bg} #{ring}"
@@ -63,36 +72,39 @@
   / Section Espaces
   .flex.items-center.mt-4.mb-2
     .w-36.flex-shrink-0
-    span.text-xs.font-bold.text-gray-400.uppercase.tracking-widest 🏛️ Espaces
+    span.inline-flex.items-center.gap-1.5.text-xs.font-bold.text-moss.uppercase.tracking-widest
+      = funnel_icon :hall, css_class: "w-4 h-4 text-ember flex-shrink-0"
+      span Espaces
 
   - calendar[:hall_rows].each do |row|
     .flex.items-center.mb-2
-      span.text-xs.text-gray-600.w-36.pr-3.text-right.truncate.flex-shrink-0 = row[:name]
+      span.text-xs.text-moss.w-36.pr-3.text-right.truncate.flex-shrink-0 = row[:name]
       .flex
         - cal_dates.each do |date|
           - past     = date < today
           - occupied = row[:occupied].include?(date)
           - is_today = date == today
-          - bg  = past ? "bg-gray-100" : (occupied ? "bg-red-300" : "bg-emerald-200")
-          - ring = is_today ? "ring-1 ring-blue-400" : ""
+          - bg    = past ? "avail-cell--past" : (occupied ? "avail-cell--busy" : "avail-cell--free")
+          - state = past ? "passé" : (occupied ? "réservé" : "libre")
+          - ring = is_today ? "ring-2 ring-forest" : ""
           span.h-7.rounded(
-            title=date.strftime("%-d %b")
+            title="#{row[:name]} — #{l(date, format: :long)} : #{state}"
             data-date=date.iso8601
             data-action="click->public--avail-cal#selectDay"
             class="#{bg} #{ring}"
             style=cell_sty)
 
   / Légende
-  .flex.flex-wrap.items-center.gap-x-6.gap-y-1.mt-5.pt-4.border-t.border-gray-100
+  .flex.flex-wrap.items-center.gap-x-6.gap-y-1.mt-5.pt-4.border-t.border-bark
     .flex.items-center.gap-1.5
-      span.w-4.h-4.rounded.bg-emerald-200.flex-shrink-0
-      span.text-xs.text-gray-500 Disponible
+      span.w-4.h-4.rounded.avail-cell--free.flex-shrink-0
+      span.text-xs.text-moss Disponible
     .flex.items-center.gap-1.5
-      span.w-4.h-4.rounded.bg-red-300.flex-shrink-0
-      span.text-xs.text-gray-500 Réservé
+      span.w-4.h-4.rounded.avail-cell--busy.flex-shrink-0
+      span.text-xs.text-moss Réservé
     .flex.items-center.gap-1.5
-      span.w-4.h-4.rounded.bg-gray-100.flex-shrink-0
-      span.text-xs.text-gray-500 Passé
+      span.w-4.h-4.rounded.avail-cell--past.flex-shrink-0
+      span.text-xs.text-moss Passé
     .flex.items-center.gap-1.5
-      span.w-4.h-4.rounded.bg-emerald-200.ring-1.ring-blue-400.flex-shrink-0
-      span.text-xs.text-gray-500 Aujourd'hui
+      span.w-4.h-4.rounded.avail-cell--free.ring-2.ring-forest.flex-shrink-0
+      span.text-xs.text-moss Aujourd'hui

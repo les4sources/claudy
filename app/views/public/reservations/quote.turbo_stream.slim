@@ -7,3 +7,9 @@
 
 = turbo_stream.replace "quote_sticky_total" do
   = render "public/reservations/quote_sticky_total", quote: @quote
+
+/ CTA de l'étape 2 — son état (actif / bloqué sur panier vide) suit le devis.
+/ Turbo ignore silencieusement une cible absente : ce stream sert aussi les
+/ pages où ce bouton n'existe pas.
+= turbo_stream.replace "compose_cta" do
+  = render "public/reservations/compose_cta", quote: @quote

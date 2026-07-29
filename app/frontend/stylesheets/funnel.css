@@ -1,0 +1,467 @@
+/* ===========================================================================
+   Funnel public /reservation — identité « sous-bois »
+   ---------------------------------------------------------------------------
+   Le funnel est la PREMIÈRE impression commerciale des 4 Sources. Il portait
+   jusqu'ici la peau Tailwind par défaut (fond `gray-50`, boutons `emerald-600`,
+   pictogrammes en emoji) alors que la charte de la maison — Fraunces, vert
+   forêt #0B3D3A, fond sable #F7F2E9 — était déjà chargée sur ces mêmes pages
+   par `public.css → portal.css`, et n'habillait que le portail client, c'est-à-
+   dire l'écran que le visiteur découvre APRÈS avoir payé. L'identité arrivait
+   trop tard.
+
+   Ce fichier ne contient que ce que Tailwind rend mal ou pas : les textures de
+   fond, le rythme typographique de Fraunces, l'anneau de focus commun. Tout le
+   reste passe par les couleurs de `tailwind.config.js` (sand / forest / ember /
+   bark / ink / moss), qui reprennent les mêmes valeurs que les tokens `--p-*`.
+   =========================================================================== */
+
+/* --- Le sol ---------------------------------------------------------------- */
+
+/* Deux halos très dilués — vert forêt en haut à droite, ambre en bas à gauche —
+   posés sur le sable. C'est la même texture que `.portal-body` : le client doit
+   reconnaître le même lieu entre le formulaire et son espace client. Fixés au
+   viewport pour que le fond ne « défile » pas sous un formulaire long. */
+.funnel-page {
+  /* Texte secondaire un cran plus sombre que dans le portail : le `--p-muted`
+     d'origine (#6B7568) tombe à 4.31:1 sur le sable, sous le seuil AA de 4.5.
+     Surcharge locale — le portail garde sa valeur, non revérifiée ici. */
+  --p-muted: #5C6659;
+  background-color: var(--p-bg);
+  background-image:
+    radial-gradient(60rem 40rem at 100% -10%, rgba(11, 61, 58, 0.05), transparent 60%),
+    radial-gradient(45rem 35rem at -10% 110%, rgba(201, 123, 61, 0.06), transparent 55%);
+  background-attachment: fixed;
+  color: var(--p-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Le rythme typographique ----------------------------------------------- */
+
+/* Fraunces a un œil large et des terminaisons vivantes : au-delà de ~1.5rem
+   elle a besoin d'un interlignage serré et d'un léger resserrement optique,
+   sinon les titres flottent. */
+.funnel-title {
+  font-family: var(--p-serif);
+  font-weight: 600;
+  font-size: clamp(1.75rem, 4.5vw, 2.35rem);
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  color: var(--p-primary);
+}
+
+.funnel-section-title {
+  font-family: var(--p-serif);
+  font-weight: 600;
+  font-size: 1.15rem;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  color: var(--p-primary);
+}
+
+/* Intitulé de champ : bas de casse, lisible. Le funnel utilisait des capitales
+   en 12 px (`text-xs uppercase tracking-wide`) — élégant en maquette, pénible à
+   lire quand on remplit huit champs d'affilée, et illisible pour un œil fatigué
+   ou dyslexique. */
+.funnel-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--p-text);
+}
+.funnel-hint {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--p-muted);
+}
+
+/* Accent manuscrit — réservé aux respirations éditoriales (une phrase, pas un
+   libellé d'interface). */
+.funnel-hand {
+  font-family: var(--p-hand);
+  font-weight: 700;
+  font-size: 1.35rem;
+  line-height: 1.15;
+  color: var(--p-accent);
+}
+
+/* --- Le focus -------------------------------------------------------------- */
+
+/* Un seul anneau, partout. Le funnel comptait 13 contrôles qui neutralisaient
+   l'outline natif (`focus:outline-none`) sans rien remettre : au clavier, la
+   position du curseur devenait invisible — y compris sur les cellules de nuit,
+   qui sont la cible de clic principale de l'étape 2.
+   `:focus-visible` plutôt que `:focus` : l'anneau apparaît au clavier, pas
+   après un clic souris. */
+.funnel-focus:focus-visible,
+.funnel-page a:focus-visible,
+.funnel-page button:focus-visible,
+.funnel-page input:focus-visible,
+.funnel-page select:focus-visible,
+.funnel-page textarea:focus-visible,
+.funnel-page summary:focus-visible,
+.funnel-page [tabindex]:focus-visible {
+  outline: 2px solid var(--p-primary);
+  outline-offset: 2px;
+  border-radius: var(--p-radius-sm);
+}
+
+/* --- Surfaces -------------------------------------------------------------- */
+
+.funnel-card {
+  background: var(--p-surface);
+  border: 1px solid var(--p-border);
+  border-radius: var(--p-radius-lg);
+  box-shadow: var(--p-shadow-sm);
+}
+
+/* --- Cartes cochables (radio / checkbox) ----------------------------------- */
+
+/* Motif : un <label> contient l'<input> (masqué visuellement mais focusable) et
+   un frère `.funnel-choice__body` qui porte tout le dessin.
+   Écrit en CSS pur, pour deux raisons. (1) Les variantes `peer-checked:` sont
+   notées non fiables sous le JIT de ce repo (cf. en-tête de portal.css).
+   (2) Surtout : les cartes « animal » tiraient leur état coché d'une classe
+   calculée côté serveur — cliquer une autre carte ne déplaçait donc PAS le
+   surlignage tant qu'on n'avait pas rechargé. Le sélecteur `:checked + …` règle
+   les deux d'un coup, sans JavaScript. */
+.funnel-choice {
+  display: block;
+  cursor: pointer;
+  position: relative;
+}
+.funnel-choice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.funnel-choice__body {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: 100%;
+  padding: 0.875rem 1rem;
+  background: var(--p-surface);
+  border: 1px solid var(--p-border);
+  border-radius: var(--p-radius-md);
+  color: var(--p-text);
+  transition: border-color 160ms var(--p-ease), background-color 160ms var(--p-ease),
+              box-shadow 160ms var(--p-ease);
+}
+.funnel-choice:hover .funnel-choice__body {
+  border-color: var(--p-primary-soft);
+  background: var(--p-primary-tint);
+}
+.funnel-choice input:checked + .funnel-choice__body {
+  border-color: var(--p-primary);
+  background: var(--p-primary-tint);
+  box-shadow: inset 0 0 0 1px var(--p-primary);
+}
+/* L'anneau de focus doit suivre le clavier jusque sur l'input masqué. */
+.funnel-choice input:focus-visible + .funnel-choice__body {
+  outline: 2px solid var(--p-primary);
+  outline-offset: 2px;
+}
+/* Coche de confirmation — révélée seulement à l'état coché. */
+.funnel-choice__check {
+  margin-left: auto;
+  flex-shrink: 0;
+  opacity: 0;
+  color: var(--p-primary);
+  transform: scale(0.8);
+  transition: opacity 160ms var(--p-ease), transform 160ms var(--p-ease);
+}
+.funnel-choice input:checked + .funnel-choice__body .funnel-choice__check {
+  opacity: 1;
+  transform: none;
+}
+.funnel-choice__icon {
+  flex-shrink: 0;
+  color: var(--p-primary);
+}
+
+/* --- Cellules « nuit » de la grille de composition -------------------------- */
+
+/* L'état visuel suit `aria-pressed`, pas une liste de classes recopiée en JS.
+   Avant, l'état vivait en trois exemplaires — les classes du template Slim, les
+   mêmes classes dupliquées dans le contrôleur Stimulus (`setCellState`), et le
+   glyphe « ✓ » écrit via `textContent`. Trois copies à garder d'accord à la main.
+   Ici l'attribut ARIA est la seule source de vérité : il porte le sens pour
+   l'assistance technique ET déclenche le dessin. Une seule chose à changer. */
+.funnel-night-cell {
+  appearance: none;
+  width: 3.5rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--p-border);
+  border-radius: var(--p-radius-md);
+  background: var(--p-surface);
+  color: var(--p-muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms var(--p-ease), border-color 160ms var(--p-ease),
+              color 160ms var(--p-ease), box-shadow 160ms var(--p-ease);
+}
+.funnel-night-cell:hover {
+  border-color: var(--p-primary);
+  background: var(--p-primary-tint);
+}
+.funnel-night-cell__check {
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 140ms var(--p-ease), transform 140ms var(--p-ease);
+}
+.funnel-night-cell[aria-pressed="true"] {
+  background: var(--p-primary);
+  border-color: var(--p-primary);
+  color: var(--p-primary-contrast);
+  box-shadow: var(--p-shadow-sm);
+}
+.funnel-night-cell[aria-pressed="true"] .funnel-night-cell__check {
+  opacity: 1;
+  transform: none;
+}
+
+/* Nuit indisponible : lisible comme « pas ici », jamais comme une panne. Reste
+   cliquable — elle ouvre l'explication et le calendrier. */
+.funnel-night-cell--off {
+  background: var(--p-past-bg);
+  border-color: var(--p-past-border);
+  color: var(--p-muted);
+}
+.funnel-night-cell--off:hover {
+  background: var(--p-past-bg);
+  border-color: var(--p-muted);
+  color: var(--p-text);
+}
+
+/* --- Cases du calendrier de disponibilités ---------------------------------- */
+
+/* La grille disait « libre » en vert et « réservé » en rouge, et rien d'autre.
+   Pour une deutéranopie — environ un homme sur douze — ces deux verts-rouges
+   tombent sur la même teinte : le calendrier ne dit alors plus rien du tout.
+   WCAG 1.4.1 demande un second canal. Ici : les cases réservées sont HACHURÉES,
+   et chaque case porte un `title` qui nomme l'état en toutes lettres (le motif
+   se voit d'un coup d'œil, le titre sert au survol et aux outils d'assistance). */
+.avail-cell--free {
+  background-color: #BFD9C9;
+}
+.avail-cell--busy {
+  background-color: var(--p-accent-tint);
+  /* Hachures à 45° : lisibles sans couleur, discrètes à 14 px de large. */
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--p-accent) 0,
+    var(--p-accent) 1.5px,
+    transparent 1.5px,
+    transparent 4.5px
+  );
+}
+.avail-cell--past {
+  background-color: var(--p-past-bg);
+  border: 1px dashed var(--p-past-border);
+}
+
+/* --- Cartes de gîtes -------------------------------------------------------- */
+
+/* Le choix le plus engageant du parcours se faisait entre trois NOMS dans une
+   colonne de tableau. Ces cartes mettent la photo, la capacité et le prix devant
+   le client avant qu'il choisisse ses nuits. */
+.funnel-lodging-card {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  background: var(--p-surface);
+  border: 1px solid var(--p-border);
+  border-radius: var(--p-radius-lg);
+  box-shadow: var(--p-shadow-sm);
+  cursor: pointer;
+  transition: transform 180ms var(--p-ease), box-shadow 180ms var(--p-ease),
+              border-color 180ms var(--p-ease);
+}
+.funnel-lodging-card:hover {
+  border-color: var(--p-primary);
+  box-shadow: var(--p-shadow-md);
+  transform: translateY(-2px);
+}
+.funnel-lodging-card__media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--p-surface-sunken);
+}
+.funnel-lodging-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 400ms var(--p-ease);
+}
+.funnel-lodging-card:hover .funnel-lodging-card__img {
+  transform: scale(1.03);
+}
+/* Compteur de photos — posé sur l'image, donc sur un fond imprévisible : fond
+   sombre translucide plutôt qu'une couleur de la charte, pour rester lisible
+   qu'il tombe sur un ciel bleu ou un mur ocre. */
+.funnel-lodging-card__count {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  background: rgba(28, 38, 32, 0.72);
+  color: var(--p-bg);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .funnel-lodging-card,
+  .funnel-lodging-card__img {
+    transition: none;
+  }
+  .funnel-lodging-card:hover {
+    transform: none;
+  }
+  .funnel-lodging-card:hover .funnel-lodging-card__img {
+    transform: none;
+  }
+}
+
+/* --- Galerie ---------------------------------------------------------------- */
+
+.funnel-gallery-figure {
+  margin: 0;
+}
+.funnel-gallery-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--p-radius-md);
+  background: var(--p-surface-sunken);
+}
+
+/* Vignette du gîte dans la colonne de gauche de la grille — relie visuellement
+   la carte du haut à la ligne où l'on clique ses nuits. */
+.funnel-lodging-thumb {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--p-radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* --- Créneaux d'espaces (journée / soirée / les deux) ----------------------- */
+
+/* Même principe que les cellules de nuit : l'état vit dans `data-slot`, le
+   dessin dans le CSS. Il vivait avant en double — une table de classes Tailwind
+   dans `space_slot_controller.js` ET les mêmes couleurs recopiées à la main dans
+   la légende du template, en bleu, violet et sarcelle, trois teintes venues de
+   nulle part.
+   Les trois états se distinguent d'abord par leur VALEUR (clair chaud, clair
+   froid, foncé plein), pas seulement par leur teinte — et chaque cellule porte
+   son libellé écrit (« Jour », « Soir », « J+S »). La couleur ne porte donc
+   jamais l'information seule. */
+.funnel-slot {
+  appearance: none;
+  width: 3.5rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--p-border);
+  border-radius: var(--p-radius-md);
+  background: var(--p-surface);
+  color: var(--p-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms var(--p-ease), border-color 160ms var(--p-ease),
+              color 160ms var(--p-ease);
+}
+.funnel-slot:hover {
+  border-color: var(--p-primary);
+}
+.funnel-slot[data-slot="journee"] {
+  background: var(--p-accent-tint);
+  border-color: var(--p-accent);
+  color: #8A4E1E;
+}
+.funnel-slot[data-slot="soiree"] {
+  background: var(--p-primary-tint);
+  border-color: var(--p-primary);
+  color: var(--p-primary);
+}
+.funnel-slot[data-slot="journee_et_soiree"] {
+  background: var(--p-primary);
+  border-color: var(--p-primary);
+  color: var(--p-primary-contrast);
+}
+/* Pastille de légende — même dessin, plus petite et non cliquable. */
+.funnel-slot--legend {
+  width: 3.5rem;
+  height: 2rem;
+  cursor: default;
+}
+
+/* --- Sélection de plage dans le calendrier ---------------------------------- */
+
+/* Le calendrier ne servait qu'à consulter : le client le refermait puis retapait
+   ses dates dans deux champs `jj/mm/aaaa`. Il choisit désormais sa plage
+   directement dessus. Les bornes sont pleines, l'entre-deux teinté — la forme
+   suffit à lire la plage, la couleur n'est qu'un renfort. */
+.avail-pick--start,
+.avail-pick--end {
+  box-shadow: inset 0 0 0 2px var(--p-primary);
+  border-radius: var(--p-radius-sm);
+  position: relative;
+  z-index: 1;
+}
+.avail-pick--between {
+  box-shadow: inset 0 -2px 0 0 var(--p-primary);
+}
+/* Les lignes de dates (numéro du jour, initiale) marquent aussi la plage, pour
+   que la sélection se lise même quand on regarde l'axe et pas les ressources. */
+span.avail-pick--start,
+span.avail-pick--end {
+  font-weight: 700;
+  color: var(--p-primary);
+}
+
+/* --- Mouvement ------------------------------------------------------------- */
+
+/* Une seule respiration à l'arrivée : le contenu de l'étape monte de 8 px.
+   Assez pour que le passage d'une étape à l'autre se sente, assez court pour ne
+   jamais retarder quelqu'un qui sait où il va. Le décalage en cascade est posé
+   à la main dans les vues (`style="animation-delay:…"`) là où il apporte. */
+@keyframes funnel-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.funnel-rise {
+  animation: funnel-rise 420ms var(--p-ease) both;
+}
+
+/* Respect strict de la préférence système : plus aucun mouvement, et surtout
+   pas d'état intermédiaire à opacité 0 qui laisserait la page vide. */
+@media (prefers-reduced-motion: reduce) {
+  .funnel-rise {
+    animation: none;
+  }
+  .funnel-page * {
+    scroll-behavior: auto !important;
+  }
+}

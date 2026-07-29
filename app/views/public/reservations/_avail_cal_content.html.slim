@@ -8,14 +8,23 @@
 - month_label = "#{fr_months[m.month - 1].capitalize} #{m.year}"
 
 / Navigation — data-nav-url ciblé par avail_modal_controller#navigate (fetch manuel)
-.flex.items-center.justify-between.mb-5
+/ `data-cal-month` : mois actuellement affiché. Lu à l'ouverture de la modale
+/ pour sauter directement au mois du séjour visé — elle s'ouvrait sur le mois
+/ COURANT même quand l'arrivée était trois mois plus loin, et le client devait
+/ cliquer « Suivant » autant de fois que de mois d'écart.
+.flex.items-center.justify-between.mb-5(data-cal-month=m.strftime("%Y-%m"))
   - if prev_m >= today_month
-    button type="button" data-action="public--avail-modal#navigate" data-nav-url=public_reservation_availability_calendar_path(month: prev_m.strftime("%Y-%m")) class="text-sm font-medium text-emerald-600 hover:text-emerald-800 transition-colors rounded-lg px-3 py-1.5 hover:bg-emerald-50"
+    button type="button" data-action="public--avail-modal#navigate" data-nav-url=public_reservation_availability_calendar_path(month: prev_m.strftime("%Y-%m")) class="text-sm font-medium text-forest hover:text-forest transition-colors rounded-lg px-3 py-1.5 hover:bg-forest-tint"
       | ← Précédent
   - else
-    span.text-sm.text-gray-200.px-3.py-1.5 ← Précédent
-  h2.text-base.font-semibold.text-gray-900 = month_label
-  button type="button" data-action="public--avail-modal#navigate" data-nav-url=public_reservation_availability_calendar_path(month: next_m.strftime("%Y-%m")) class="text-sm font-medium text-emerald-600 hover:text-emerald-800 transition-colors rounded-lg px-3 py-1.5 hover:bg-emerald-50"
+    / Bouton réellement `disabled` plutôt qu'un <span> fantôme : l'assistance
+    / technique annonce alors un contrôle indisponible au lieu de rien du tout,
+    / et le texte reste lisible (il était en gray-200, soit 1.11:1).
+    button(type="button" disabled="disabled" class="text-sm font-medium text-moss/60 px-3 py-1.5 cursor-not-allowed")
+      | ← Précédent
+      span.sr-only  (mois passés non réservables)
+  h2.funnel-section-title = month_label
+  button type="button" data-action="public--avail-modal#navigate" data-nav-url=public_reservation_availability_calendar_path(month: next_m.strftime("%Y-%m")) class="text-sm font-medium text-forest hover:text-forest transition-colors rounded-lg px-3 py-1.5 hover:bg-forest-tint"
     | Suivant →
 
 / Grille Gantt

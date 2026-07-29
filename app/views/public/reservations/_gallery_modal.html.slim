@@ -1,0 +1,45 @@
+/ Galerie photo d'un gîte — dialogue plein écran ouvert depuis les cartes.
+/ Nécessite data-controller="public--gallery" sur un ancêtre commun.
+/
+/ Le contenu arrive par Turbo Frame à l'ouverture, PAS dans le rendu de la page.
+/ Rendre les trois galeries (39 images) dans chaque /reservation/composer
+/ alourdissait la page de tout le monde pour un panneau que la plupart des
+/ visiteurs n'ouvriront jamais — et faisait passer la suite de tests de 38 s à
+/ 2 min 23. La première photo de la galerie est en chargement immédiat, le reste
+/ en différé : le panneau n'attend jamais l'intégralité du lot pour s'afficher.
+/
+/ Même contrat d'accessibilité que la modale de disponibilités : role/aria-modal,
+/ titre lié, Escape, piège de focus, focus rendu au déclencheur.
+
+.fixed.inset-0.z-50.hidden(
+  style="background-color: rgba(28, 38, 32, 0.75); backdrop-filter: blur(3px)"
+  data-public--gallery-target="overlay"
+  data-action="click->public--gallery#close")
+
+div(
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="gallery_modal_title"
+  tabindex="-1"
+  class="funnel-page fixed inset-3 sm:inset-6 lg:inset-10 z-50 rounded-2xl shadow-2xl overflow-hidden flex flex-col hidden"
+  data-public--gallery-target="modal")
+
+  .flex.items-center.justify-between.gap-4.px-5.py-3.5.border-b.border-bark.flex-shrink-0.bg-white/80
+    div.min-w-0
+      h2#gallery_modal_title.funnel-section-title.truncate(data-public--gallery-target="title")
+      p.funnel-hint.mt-0.5(data-public--gallery-target="counter")
+    button(type="button" data-action="public--gallery#close"
+      class="flex-shrink-0 rounded-lg p-2 text-moss hover:text-ink hover:bg-sand-deep transition-colors")
+      = funnel_icon :close, css_class: "w-5 h-5"
+      span.sr-only Fermer la galerie
+
+  .flex-1.overflow-y-auto.overscroll-contain.p-4.sm:p-6(data-public--gallery-target="body")
+    = turbo_frame_tag "lodging_gallery"
+      p.funnel-hint.py-8.text-center(data-public--gallery-target="loading") Chargement des photos…
+
+  .flex-shrink-0.border-t.border-bark.bg-white/80.px-5.py-3.5.flex.flex-wrap.items-center.justify-between.gap-3
+    p.funnel-hint Les gîtes se réservent entiers, nuit par nuit, dans la grille ci-dessous.
+    button(type="button" data-action="public--gallery#close"
+      class="inline-flex items-center gap-2 rounded-xl bg-forest text-sand px-5 py-2.5 text-sm font-semibold hover:bg-forest-soft shadow-sm transition-colors")
+      | Choisir mes nuits
+      = funnel_icon :arrow_right, css_class: "w-4 h-4"

@@ -1,0 +1,52 @@
+/ Cartes des gîtes — étape 2 du funnel, au-dessus de la grille nuit par nuit.
+/
+/ On choisissait jusqu'ici entre trois NOMS dans une colonne de tableau. Le
+/ client ne savait ni à quoi ressemblait un gîte, ni combien de personnes il
+/ loge — alors que c'est la décision la plus engageante du parcours. Ces cartes
+/ mettent la photo, la capacité et le prix devant lui AVANT qu'il choisisse ses
+/ nuits ; la grille en dessous reste l'outil de sélection.
+/
+/ Dépend de : @lodgings (instance var du controller).
+- cards = @lodgings.select { |l| lodging_has_photos?(l.name) }
+
+- if cards.any?
+  section.mb-6(data-controller="public--gallery")
+    .flex.items-baseline.justify-between.gap-4.mb-3
+      h2.funnel-section-title Nos gîtes
+      p.funnel-hint.hidden.sm:block Cliquez pour voir les photos
+
+    .grid.grid-cols-1.sm:grid-cols-3.gap-4
+      - cards.each do |lodging|
+        - rate  = Pricing::Catalog.lodging_rate(lodging.name)
+        - rooms = lodging.rooms.size
+        - shots = lodging_gallery(lodging.name).size
+        button(
+          type="button"
+          data-action="public--gallery#open"
+          data-gallery-lodging=lodging.name
+          data-gallery-url=public_reservation_lodging_photos_path(slug: LodgingPhotosHelper::COVER_SLUGS[lodging.name])
+          data-gallery-count="#{shots} photo#{'s' if shots > 1}"
+          aria-haspopup="dialog"
+          class="funnel-lodging-card group text-left")
+
+          .funnel-lodging-card__media
+            = vite_image_tag lodging_cover_path(lodging.name),
+                alt: "",
+                loading: "lazy",
+                decoding: "async",
+                class: "funnel-lodging-card__img"
+            span.funnel-lodging-card__count
+              = funnel_icon :sparkles, css_class: "w-3.5 h-3.5"
+              = "#{shots} photos"
+
+          .p-3.5
+            h3.funnel-section-title.text-base = lodging.name
+            - if lodging.summary.present? || rooms.positive?
+              p.funnel-hint.mt-0.5
+                = [lodging.summary.presence, ("#{rooms} chambre#{'s' if rooms > 1}" if rooms.positive?)].compact.join(" · ")
+            - if rate
+              p.mt-1.5.text-sm.font-semibold.text-forest
+                = "dès #{number_to_currency(rate.extra_night_cents / 100.0, unit: '€', format: '%n %u', precision: 0)}/nuit"
+
+    / Modale galerie — un seul turbo-frame, rempli à la demande.
+    = render "public/reservations/gallery_modal"

@@ -22,12 +22,31 @@ module.exports = {
     extend: {
       colors: {
         '4s-main': '#024442',
+        // Charte « sous-bois » — mêmes valeurs que les tokens --p-* de
+        // portal.css, exposées comme couleurs Tailwind pour que le funnel
+        // public (/reservation) parle la langue de la marque au lieu de
+        // l'emerald générique. Une seule source de vérité : si une valeur
+        // bouge ici, la bouger aussi dans portal.css:36 (et inversement).
+        sand:   { DEFAULT: '#F7F2E9', deep: '#EFE7D6' },
+        forest: { DEFAULT: '#0B3D3A', soft: '#12524D', tint: '#E4EEEA' },
+        ember:  { DEFAULT: '#C97B3D', tint: '#F5E3D0' },
+        bark:   { DEFAULT: '#E4DBC8', deep: '#DED4BE' },
+        ink:    '#1C2620',
+        // Un cran plus sombre que le `--p-muted` du portail (#6B7568) : sur le
+        // fond sable, celui-ci plafonne à 4.31:1, sous le seuil AA de 4.5 pour
+        // du texte courant — et le funnel s'en sert pour TOUTES ses mentions
+        // secondaires (prix à la nuit, règles, contacts). #5C6659 donne 5.38:1
+        // sur sable, 6.00:1 sur blanc, 4.88:1 sur sable profond.
+        moss:   '#5C6659'
       },
       fontFamily: {
         sans: ['Inter var', ...defaultTheme.fontFamily.sans],
         caveat: ['Caveat', 'Inter var', ...defaultTheme.fontFamily.sans],
         // Titres de page — auto-hébergée (cf. @font-face dans application.css).
-        averia: ['Averia Serif Libre', ...defaultTheme.fontFamily.serif]
+        averia: ['Averia Serif Libre', ...defaultTheme.fontFamily.serif],
+        // Titres du funnel public + portail — Fraunces variable auto-hébergée
+        // (cf. @font-face dans portal.css, chargée par public.css).
+        fraunces: ['Fraunces', 'Georgia', 'Iowan Old Style', ...defaultTheme.fontFamily.serif]
       },
     },
   },

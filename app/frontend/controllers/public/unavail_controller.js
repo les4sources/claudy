@@ -9,7 +9,38 @@ import { Controller } from "@hotwired/stimulus"
 // existe (étape 2 du funnel). Dans le formulaire de modification client, où la
 // modale n'est pas rendue, on masque le bouton — le message explicatif suffit.
 export default class extends Controller {
-  static targets = ["dialog", "message", "availLink"]
+  static targets = ["dialog", "message", "availLink", "alternatives"]
+
+  // Les autres gîtes libres cette nuit-là, calculés côté serveur et posés sur la
+  // cellule. La modale se contentait de constater le refus — un cul-de-sac : le
+  // client lisait « pas libre » et n'avait aucune piste, alors que le gîte voisin
+  // était peut-être disponible pour exactement les mêmes nuits.
+  renderAlternatives(cell) {
+    if (!this.hasAlternativesTarget) return
+
+    let names = []
+    try {
+      names = JSON.parse(cell.getAttribute("data-unavail-alternatives") || "[]")
+    } catch (_e) {
+      names = []
+    }
+
+    if (names.length === 0) {
+      this.alternativesTarget.classList.add("hidden")
+      this.alternativesTarget.textContent = ""
+      return
+    }
+
+    const liste =
+      names.length === 1
+        ? names[0]
+        : `${names.slice(0, -1).join(", ")} et ${names[names.length - 1]}`
+    this.alternativesTarget.textContent =
+      names.length === 1
+        ? `${liste} est libre cette nuit-là.`
+        : `${liste} sont libres cette nuit-là.`
+    this.alternativesTarget.classList.remove("hidden")
+  }
 
   // Y a-t-il une modale de disponibilités dans la page ?
   get hasAvailModal() {
@@ -27,6 +58,8 @@ export default class extends Controller {
         ? `${name} n'est pas libre le ${date}.`
         : `${name} n'est pas libre pour cette nuit.`
     }
+
+    this.renderAlternatives(cell)
 
     if (this.hasAvailLinkTarget) {
       this.availLinkTarget.classList.toggle("hidden", !this.hasAvailModal)
