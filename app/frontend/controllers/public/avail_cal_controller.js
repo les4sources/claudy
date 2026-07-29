@@ -90,6 +90,15 @@ export default class extends Controller {
   }
 
   paintCells() {
+    // Deux drapeaux sur le conteneur, lus par le CSS :
+    //   `avail-range` — une sélection est en cours : tout ce qui est hors plage
+    //                   s'estompe, pour que la travée choisie soit ce qu'on regarde.
+    //   `avail-span`  — la plage a ses DEUX bornes : les bouts s'arrondissent
+    //                   vers l'extérieur et les cases se soudent entre elles.
+    //                   Sans lui, une arrivée seule reste une pastille entière.
+    this.element.classList.toggle("avail-range", this.start !== null)
+    this.element.classList.toggle("avail-span", this.start !== null && this.end !== null)
+
     const cells = this.element.querySelectorAll("[data-date]")
     cells.forEach((cell) => {
       const d = this.parse(cell.dataset.date)

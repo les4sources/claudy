@@ -417,28 +417,106 @@
   cursor: default;
 }
 
-/* --- Sélection de plage dans le calendrier ---------------------------------- */
+/* --- Axe des dates du calendrier -------------------------------------------- */
 
-/* Le calendrier ne servait qu'à consulter : le client le refermait puis retapait
-   ses dates dans deux champs `jj/mm/aaaa`. Il choisit désormais sa plage
-   directement dessus. Les bornes sont pleines, l'entre-deux teinté — la forme
-   suffit à lire la plage, la couleur n'est qu'un renfort. */
-.avail-pick--start,
-.avail-pick--end {
-  box-shadow: inset 0 0 0 2px var(--p-primary);
+:root { --avail-band: #CBE0D7; }
+
+/* Une cellule par jour : le numéro et l'initiale du jour empilés. Assez haute
+   pour porter la bande de sélection sans qu'elle ressemble à un surlignage. */
+.avail-axis {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 3px 0;
+  line-height: 1;
+  color: var(--p-muted);
   border-radius: var(--p-radius-sm);
-  position: relative;
-  z-index: 1;
+  transition: background-color 140ms var(--p-ease), color 140ms var(--p-ease),
+              opacity 140ms var(--p-ease);
 }
-.avail-pick--between {
-  box-shadow: inset 0 -2px 0 0 var(--p-primary);
-}
-/* Les lignes de dates (numéro du jour, initiale) marquent aussi la plage, pour
-   que la sélection se lise même quand on regarde l'axe et pas les ressources. */
-span.avail-pick--start,
-span.avail-pick--end {
+.avail-axis__day { font-size: 10px; font-weight: 600; }
+.avail-axis__dow { font-size: 9px; opacity: 0.7; }
+.avail-axis--today { color: var(--p-primary); }
+.avail-axis--today .avail-axis__day {
   font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* --- Sélection de plage ------------------------------------------------------ */
+
+/* La plage se lit sur l'AXE, en une bande continue, et nulle part ailleurs.
+   Première version : un anneau autour de chaque borne et un soulignement sous
+   chaque jour intermédiaire. À l'écran, ça donnait deux « O » et une suite de
+   tirets détachés — jamais une travée. Deux raisons : la sélection était posée
+   sur les cases de ressources, qui disent déjà la disponibilité par leur fond
+   (deux informations sur un seul canal), et chaque case portant sa propre
+   marque, la gouttière de 2 px hachait le tout.
+   Ici, une seule bande : chaque case prolonge son fond de 2 px vers la droite
+   pour combler la gouttière, les bornes sont pleines et arrondies en bout de
+   course, l'entre-deux est teinté. Ce qui est hors plage s'estompe — la travée
+   choisie devient ce qu'on regarde. */
+.avail-axis.avail-pick--start,
+.avail-axis.avail-pick--between,
+.avail-axis.avail-pick--end {
+  background-color: var(--avail-band);
   color: var(--p-primary);
+  border-radius: 0;
+}
+
+/* Comble la gouttière vers la case suivante : la bande devient continue. */
+.avail-span .avail-axis.avail-pick--start,
+.avail-span .avail-axis.avail-pick--between {
+  box-shadow: 2px 0 0 0 var(--avail-band);
+}
+
+/* Bouts arrondis. Une arrivée seule (pas encore de départ) reste une pastille
+   entière : elle n'est pas le début d'une bande tant qu'il n'y a rien après. */
+.avail-axis.avail-pick--start { border-radius: 999px; }
+.avail-span .avail-axis.avail-pick--start {
+  border-radius: 999px 0 0 999px;
+}
+.avail-axis.avail-pick--end { border-radius: 0 999px 999px 0; }
+
+/* Les deux bornes sont pleines : ce sont les dates réellement choisies. */
+.avail-axis.avail-pick--start,
+.avail-axis.avail-pick--end {
+  background-color: var(--p-primary);
+  color: var(--p-primary-contrast);
+}
+.avail-axis.avail-pick--start .avail-axis__dow,
+.avail-axis.avail-pick--end .avail-axis__dow { opacity: 0.85; }
+.avail-axis.avail-pick--start .avail-axis__day,
+.avail-axis.avail-pick--end .avail-axis__day { font-weight: 700; }
+.avail-axis--today.avail-pick--start .avail-axis__day,
+.avail-axis--today.avail-pick--end .avail-axis__day { text-decoration: none; }
+
+/* Pas d'estompage du reste de la grille. C'était la première idée — faire
+   reculer tout ce qui est hors plage — et à l'écran elle assomme le calendrier :
+   six lignes de ressources sur vingt-quatre jours passent en gris, et lire les
+   disponibilités devient impossible. Or c'est précisément le métier de cette
+   modale. La bande sur l'axe suffit à dire la plage ; la grille reste entière.
+
+   Les cases de ressources reçoivent quand même les classes `avail-pick--*` (le
+   contrôleur peint tout ce qui porte `data-date`) : on les neutralise ici pour
+   qu'aucune marque de sélection ne vienne se superposer à leur couleur de
+   disponibilité. Une seule information par canal. */
+.avail-cell--free.avail-pick--start,
+.avail-cell--free.avail-pick--between,
+.avail-cell--free.avail-pick--end,
+.avail-cell--busy.avail-pick--start,
+.avail-cell--busy.avail-pick--between,
+.avail-cell--busy.avail-pick--end,
+.avail-cell--past.avail-pick--start,
+.avail-cell--past.avail-pick--between,
+.avail-cell--past.avail-pick--end {
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avail-axis { transition: none; }
 }
 
 /* --- Mouvement ------------------------------------------------------------- */

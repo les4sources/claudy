@@ -7,6 +7,10 @@
 - cal_dates = calendar[:dates]
 - cell_w    = 14
 - cell_sty  = "display:inline-block;width:#{cell_w}px;min-width:#{cell_w}px;margin-right:2px;flex-shrink:0;cursor:pointer"
+/ L'axe ne fixe PAS son `display` en ligne : `.avail-axis` a besoin d'empiler le
+/ numéro et l'initiale, et un `display:inline-block` en style inline gagnerait
+/ sur la classe. Les deux se sont retrouvés côte à côte pour cette raison.
+- axis_sty  = "width:#{cell_w}px;min-width:#{cell_w}px;margin-right:2px;flex-shrink:0;cursor:pointer"
 
 .flex.flex-col
   / Le contrôleur `public--avail-cal` vit sur le PANNEAU de la modale, pas ici :
@@ -18,31 +22,25 @@
   p.hidden.mb-3.text-sm.font-medium.text-forest.bg-forest-tint.border.border-forest/30.rounded-xl.px-3.py-2.w-fit(
     data-public--avail-cal-target="dayLabel")
 
-  / Axe des jours du mois
-  .flex.mb-3
-    .w-36.flex-shrink-0
-    .flex
-      - cal_dates.each do |date|
-        span.text-center.text-moss(
-          data-date=date.iso8601
-          data-action="click->public--avail-cal#selectDay"
-          style="#{cell_sty};font-size:10px;line-height:1.2")
-          - if date == today
-            span.font-bold.text-forest(style="font-size:10px") = date.day
-          - else
-            = date.day
-
-  / Axe jour de semaine (abrégé)
+  / Axe des dates — numéro du jour ET initiale dans UNE seule cellule.
+  / Ils vivaient sur deux rangées séparées : la plage sélectionnée devait donc
+  / être dessinée deux fois, et se lisait comme deux séries de marques au lieu
+  / d'une travée. Réunis, ils portent une bande continue (cf. `.avail-axis`
+  / dans funnel.css), qui est le seul endroit où la sélection s'exprime — les
+  / cases de ressources en dessous gardent leur unique métier : libre ou pris.
   .flex.mb-3
     .w-36.flex-shrink-0
     .flex
       - cal_dates.each do |date|
         - dow = %w[D L M M J V S][date.wday]
-        span.text-center.text-moss.font-medium(
+        span.avail-axis(
+          class=("avail-axis--today" if date == today)
           data-date=date.iso8601
           data-action="click->public--avail-cal#selectDay"
-          style="#{cell_sty};font-size:10px;line-height:1")
-          = dow
+          title=(date == today ? "Aujourd'hui, #{l(date, format: :long)}" : l(date, format: :long))
+          style=axis_sty)
+          span.avail-axis__day = date.day
+          span.avail-axis__dow = dow
 
   / Section Hébergements
   .flex.items-center.mb-2
