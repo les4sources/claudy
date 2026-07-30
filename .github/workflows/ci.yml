@@ -1,0 +1,70 @@
+name: CI
+# Lance la suite RSpec sur chaque pull request et sur chaque push vers la branche par défaut.
+# C'est le gate de la migration Rails 8.1 / Ruby 3.4 (epic #144) : aucune phase ne se ferme
+# sans cette CI au vert.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rspec:
+    name: RSpec
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: claudy_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer Ruby et les gems
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Installer Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .tool-versions
+          cache: yarn
+
+      # Le layout admin appelle `vite_client_tag` / `vite_javascript_tag` : les specs request
+      # qui rendent une page authentifiée déclenchent un build Vite (`autoBuild: true` en test),
+      # d'où les dépendances JS et le build explicite ci-dessous.
+      - name: Installer les dépendances JS
+        run: yarn install --frozen-lockfile
+
+      - name: Construire les assets Vite
+        run: bin/vite build
+
+      - name: Préparer la base de test
+        run: bin/rails db:test:prepare
+
+      - name: RSpec
+        run: bundle exec rspec
