@@ -38,6 +38,17 @@ jobs:
       PGPORT: 5432
       PGUSER: postgres
       PGPASSWORD: postgres
+      # En local ces variables viennent de `.env` (dotenv, non versionné). Plusieurs sont
+      # lues par `ENV.fetch` sans valeur par défaut — `POSTMARK_API_TOKEN` dans
+      # config/application.rb, `STRIPE_API_KEY` dans config/initializers/stripe.rb,
+      # `PHONE_NUMBER` dans deux vues publiques — donc sans elles Rails ne boote pas.
+      # Valeurs factices : rien n'est appelé pour de vrai en test (delivery_method = :test).
+      DEFAULT_FROM_EMAIL: ci@example.com
+      DEFAULT_BCC_EMAIL: ci-bcc@example.com
+      PHONE_NUMBER: "+32(0)81/12.34.56"
+      POSTMARK_API_TOKEN: POSTMARK_API_TEST
+      STRIPE_API_KEY: sk_test_ci_placeholder
+      REPORTS_FIRST_YEAR: "2022"
 
     steps:
       - uses: actions/checkout@v4
