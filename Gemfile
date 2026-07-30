@@ -72,7 +72,9 @@ gem "simple_calendar", "~> 2.4"
 gem "simple_form"
 gem "slim"
 gem "soft_deletion"
-gem "stripe"
+# Pinnée volontairement : la montée 10.x -> 19.x touche le chemin des paiements et se fait
+# dans un chantier séparé, pas au fil des `bundle update` de la migration Rails.
+gem "stripe", "~> 10.13"
 gem "validates_email_format_of"
 gem "will_paginate", "~> 3.3"
 # gem "tailwindcss-rails"
@@ -91,7 +93,6 @@ group :development, :test do
   gem "byebug"
   gem "debug", platforms: %i[ mri mingw x64_mingw ]
   gem "rspec-rails", "~> 6.0.0"
-  gem "sqlite3"
 end
 
 group :development do
@@ -110,6 +111,7 @@ end
 group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
+  # Selenium Manager (intégré depuis selenium-webdriver 4.11) remplace la gem `webdrivers`,
+  # dépréciée et qui plafonnait selenium-webdriver sous la 4.11.
   gem "selenium-webdriver"
-  gem "webdrivers"
 end

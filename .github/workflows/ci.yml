@@ -1,0 +1,91 @@
+name: CI
+# Lance la suite RSpec sur chaque pull request et sur chaque push vers la branche par défaut.
+# C'est le gate de la migration Rails 8.1 / Ruby 3.4 (epic #144) : aucune phase ne se ferme
+# sans cette CI au vert.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rspec:
+    name: RSpec
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: claudy_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      # En local ces variables viennent de `.env` (dotenv, non versionné). Plusieurs sont
+      # lues par `ENV.fetch` sans valeur par défaut — `POSTMARK_API_TOKEN` dans
+      # config/application.rb, `STRIPE_API_KEY` dans config/initializers/stripe.rb,
+      # `PHONE_NUMBER` dans deux vues publiques — donc sans elles Rails ne boote pas.
+      # Valeurs factices : rien n'est appelé pour de vrai en test (delivery_method = :test).
+      DEFAULT_FROM_EMAIL: ci@example.com
+      DEFAULT_BCC_EMAIL: ci-bcc@example.com
+      PHONE_NUMBER: "+32(0)81/12.34.56"
+      POSTMARK_API_TOKEN: POSTMARK_API_TEST
+      STRIPE_API_KEY: sk_test_ci_placeholder
+      REPORTS_FIRST_YEAR: "2022"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # `ruby-vips` est requis dès config/application.rb : sans la bibliothèque système,
+      # Rails ne boote pas du tout (LoadError sur libvips.so.42). Le nom du paquet a changé
+      # avec la transition time_t 64 bits d'Ubuntu 24.04 (libvips42 -> libvips42t64), d'où
+      # le repli sur l'ancien nom.
+      - name: Installer libvips
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libvips42t64 \
+            || sudo apt-get install -y --no-install-recommends libvips42
+
+      - name: Installer Ruby et les gems
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Installer Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .tool-versions
+          cache: yarn
+
+      # Le layout admin appelle `vite_client_tag` / `vite_javascript_tag` : les specs request
+      # qui rendent une page authentifiée déclenchent un build Vite (`autoBuild: true` en test),
+      # d'où les dépendances JS et le build explicite ci-dessous.
+      - name: Installer les dépendances JS
+        run: yarn install --frozen-lockfile
+
+      - name: Construire les assets Vite
+        run: bin/vite build
+
+      - name: Préparer la base de test
+        run: bin/rails db:test:prepare
+
+      - name: RSpec
+        run: bundle exec rspec
