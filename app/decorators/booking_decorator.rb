@@ -330,7 +330,7 @@ class BookingDecorator < ApplicationDecorator
   def rooms_badges(font_size: "xs")
     rooms = Room.where(id: object.reservations.map(&:room_id).uniq)
     shared_classes = "text-#{font_size} font-semibold text-center py-0.5 px-1 rounded"
-    html = ""
+    html = +""
     rooms.each do |room|
       case room.level
       when -1

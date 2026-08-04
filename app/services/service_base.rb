@@ -1,3 +1,7 @@
+# Ruby 3.4 : ostruct n'est plus chargé d'office (et json 2.21 ne le tire plus
+# par effet de bord). Require explicite — seul usage applicatif d'OpenStruct.
+require "ostruct"
+
 class ServiceBase
   attr_reader :error
   attr_writer :report_errors, :report_level

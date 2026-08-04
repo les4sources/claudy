@@ -217,7 +217,7 @@ class SpaceBookingDecorator < ApplicationDecorator
   def spaces_badges(font_size: "xs")
     spaces = Space.where(id: object.space_reservations.map(&:space_id).uniq)
     shared_classes = "text-#{font_size} font-semibold text-center py-0.5 px-1 rounded"
-    html = ""
+    html = +""
     spaces.each do |space|
       html << h.content_tag(
         :span,

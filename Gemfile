@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby "3.3.10"
+ruby "3.4.10"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem "rails", "~> 8.0.0"
@@ -53,6 +53,11 @@ gem "bootsnap", require: false
 gem "image_processing", "~> 1.2"
 
 gem "dotenv-rails", groups: [:development, :test]
+
+# Sorties des default gems (csv : bundled dès Ruby 3.4 ; ostruct : annoncé pour Ruby 4).
+# csv est requis par lib/tasks (imports/exports), ostruct par service_base et neuf specs.
+gem "csv"
+gem "ostruct"
 
 gem "awesome_print"
 gem "by_star"
