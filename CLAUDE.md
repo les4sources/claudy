@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Claudy is an in-house web app for Les 4 Sources (foundation in Yvoir, Belgium). Manages bookings, lodgings, spaces, humans, cycles, and payments for the Domaine d'Ahinvaux.
 
-Stack: Rails 7.1 · Ruby 3.1.2 · PostgreSQL · Node 18.8.0 · Vite (via `vite_rails`) · Hotwire (Turbo + Stimulus) · Tailwind · Slim · Devise · Stripe · Postmark · Sentry.
+Stack: Rails 7.1 · Ruby 3.3.10 · PostgreSQL · Node 18.8.0 · Vite (via `vite_rails`) · Hotwire (Turbo + Stimulus) · Tailwind · Slim · Devise · Stripe · Postmark · Sentry.
 
 ## Common commands
 

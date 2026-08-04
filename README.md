@@ -26,7 +26,7 @@ once we start working collectively on the code.
 
 Beforehand, get the encryption key for the `development` environment and add it to `config/credentials/development.key`.
 
-Then install Ruby 3.1.2 and NodeJS 18.8.0.
+Then install Ruby 3.3.10 and NodeJS 18.8.0.
 
 Get the default environment variables values and add them to `.env`, or - for now - duplicate `.env.example` to `.env`.
 
@@ -35,7 +35,7 @@ And everything should go like a couque.
 ```
 git clone git@github.com:les4sources/claudy.git
 cd claudy
-gem install bundler:2.3.19
+gem install bundler:2.6.9
 bundle config build.nio4r --with-cflags="-Wno-incompatible-pointer-types"
 bundle install
 yarn install
