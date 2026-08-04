@@ -4,7 +4,12 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby "3.1.2"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 7.0.8"
+gem "rails", "~> 7.1.0"
+
+# Rack 3 est prévu pour la phase 6 de l'epic #144 (Rails 8.0, avec Puma 7). Sans cette
+# borne, actionpack 7.1 accepte rack 3.x et la résolution l'embarquerait dès maintenant —
+# une variable de trop pour cette phase. À retirer en phase 6.
+gem "rack", "~> 2.2"
 
 # The original asset pipeline for Rails [https://github.com/rails/sprockets-rails]
 # gem "sprockets-rails"
