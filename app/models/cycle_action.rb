@@ -5,7 +5,7 @@ class CycleAction < ApplicationRecord
   has_paper_trail
   has_soft_deletion default_scope: true
 
-  enum category: {
+  enum :category, {
     rituelle: 0,
     ponctuelle: 1,
     reportee: 2,

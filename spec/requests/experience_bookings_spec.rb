@@ -2,7 +2,7 @@ require "rails_helper"
 
 # Epic #55 — Phase 2 : canal ADMIN de validation/refus des activités, avec
 # scoping d'autorisation par porteur.
-RSpec.describe "ExperienceBookings — canal admin", type: :request do
+RSpec.describe "ExperienceBookings — canal admin", type: :request, queue_adapter: :test do
   include Devise::Test::IntegrationHelpers
 
   let(:customer) { Customer.create!(email: "client@example.com", customer_type: "individual") }

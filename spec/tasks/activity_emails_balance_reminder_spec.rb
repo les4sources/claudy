@@ -4,7 +4,7 @@ require "rake"
 # Epic #55, Phase 5 — relance du solde exigible à J-14 (sans blocage).
 # On vérifie le CIBLAGE (J-14 + solde impayé, hors soldés/annulés) et
 # l'IDEMPOTENCE (pas de second envoi).
-RSpec.describe "activity_emails:balance_reminder", type: :task do
+RSpec.describe "activity_emails:balance_reminder", type: :task, queue_adapter: :test do
   include ActiveJob::TestHelper
 
   before(:all) do

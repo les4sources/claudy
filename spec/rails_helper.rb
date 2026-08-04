@@ -30,6 +30,20 @@ rescue ActiveRecord::PendingMigrationError => e
   abort e.to_s.strip
 end
 RSpec.configure do |config|
+  # La suite tourne sous queue_adapter :inline (cf. config/environments/test.rb) :
+  # les jobs s'exécutent dans le thread du test. Les specs qui assertent des
+  # ENQUEUES (have_enqueued_mail / have_enqueued_job) ont besoin de l'adaptateur
+  # :test — ils le déclarent via le tag `queue_adapter: :test` sur leur describe.
+  # Depuis Rails 7.2, les tests respectent VRAIMENT l'adaptateur configuré (le
+  # shim qui forçait TestAdapter a disparu) — d'où ce mécanisme explicite.
+  config.around(:example, queue_adapter: :test) do |example|
+    previous = ActiveJob::Base.queue_adapter
+    ActiveJob::Base.queue_adapter = :test
+    example.run
+  ensure
+    ActiveJob::Base.queue_adapter = previous
+  end
+
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_path = "#{::Rails.root}/spec/fixtures"
 

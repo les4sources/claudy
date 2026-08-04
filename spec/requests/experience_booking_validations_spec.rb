@@ -1,7 +1,7 @@
 require "rails_helper"
 
 # Epic #55 — Phase 2 : canal JETON (lien email) de validation d'activité.
-RSpec.describe "ExperienceBookingValidations — canal jeton", type: :request do
+RSpec.describe "ExperienceBookingValidations — canal jeton", type: :request, queue_adapter: :test do
   include Devise::Test::IntegrationHelpers
 
   let(:customer) { Customer.create!(email: "client@example.com", customer_type: "individual") }

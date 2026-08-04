@@ -59,8 +59,7 @@ RSpec.describe Stripe::CompletedCheckoutService do
   # Décision 2026-07-20 : l'acompte confirme la réservation → le client reçoit
   # « acompte bien reçu » au PREMIER encaissement d'un séjour pending, et
   # uniquement là.
-  describe "email client « acompte reçu »" do
-    before { ActiveJob::Base.queue_adapter = :test }
+  describe "email client « acompte reçu »", queue_adapter: :test do
 
     it "part au premier encaissement d'un séjour pending" do
       payment = Payment.create!(stay: stay, amount_cents: 24_250,
