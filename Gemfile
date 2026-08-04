@@ -4,12 +4,8 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby "3.3.10"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 7.2.0"
+gem "rails", "~> 8.0.0"
 
-# Rack 3 est prévu pour la phase 6 de l'epic #144 (Rails 8.0, avec Puma 7). Sans cette
-# borne, actionpack 7.1 accepte rack 3.x et la résolution l'embarquerait dès maintenant —
-# une variable de trop pour cette phase. À retirer en phase 6.
-gem "rack", "~> 2.2"
 
 # The original asset pipeline for Rails [https://github.com/rails/sprockets-rails]
 # gem "sprockets-rails"
@@ -18,7 +14,7 @@ gem "rack", "~> 2.2"
 gem "pg", "~> 1.1"
 
 # Use the Puma web server [https://github.com/puma/puma]
-gem "puma", "~> 5.0"
+gem "puma", "~> 7.0"
 
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]
 gem "importmap-rails"
@@ -33,7 +29,7 @@ gem "stimulus-rails"
 gem "jbuilder"
 
 # Use Redis adapter to run Action Cable in production
-gem "redis", "~> 4.0"
+gem "redis", "~> 5.0"
 
 # Fix compatibility with macOS Sequoia
 gem "nio4r", ">= 2.5.9"
@@ -97,11 +93,11 @@ group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "byebug"
   gem "debug", platforms: %i[ mri mingw x64_mingw ]
-  gem "rspec-rails", "~> 6.0.0"
+  gem "rspec-rails", "~> 8.0"
 end
 
 group :development do
-  gem "annotate"
+  gem "annotaterb"
   
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"

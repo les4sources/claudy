@@ -9,7 +9,7 @@ class Button::Component < ViewComponent::Base
     options: {}
   )
     # rubocop:enable Style/MultilineMethodSignature, Metrics/ParameterLists
-    super
+    super()
 
     if title.nil? && icon.nil?
       # :nocov:
