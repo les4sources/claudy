@@ -21,7 +21,7 @@ Bundler.require(*Rails.groups)
 module Claudy
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
-    config.load_defaults 8.0
+    config.load_defaults 8.1
 
     # Convention Rails 7.1. No-op aujourd'hui : lib/ ne contient aucun code Ruby
     # autochargeable (assets, tâches rake, gabarits de générateurs). Le jour où du
