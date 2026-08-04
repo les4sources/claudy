@@ -4,7 +4,7 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby "3.3.10"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 7.1.0"
+gem "rails", "~> 7.2.0"
 
 # Rack 3 est prévu pour la phase 6 de l'epic #144 (Rails 8.0, avec Puma 7). Sans cette
 # borne, actionpack 7.1 accepte rack 3.x et la résolution l'embarquerait dès maintenant —

@@ -5,7 +5,7 @@ require "rake"
 # crédits restants. On vérifie le CIBLAGE (fenêtre J-30, payé, crédits, client
 # joignable) et l'IDEMPOTENCE (aucun doublon), plus les edge cases contractuels
 # (pack remboursé = soft-delete → crédits gelés, client soft-deleté).
-RSpec.describe "coworking:send_expiry_reminders", type: :task do
+RSpec.describe "coworking:send_expiry_reminders", type: :task, queue_adapter: :test do
   include ActiveJob::TestHelper
 
   before(:all) do

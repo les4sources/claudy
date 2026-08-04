@@ -1,4 +1,4 @@
-json.page collection.current_page
-json.per_page collection.per_page
-json.total collection.total_entries
-json.pages collection.total_pages
+json.page paginated.current_page
+json.per_page paginated.per_page
+json.total paginated.total_entries
+json.pages paginated.total_pages

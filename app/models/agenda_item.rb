@@ -28,7 +28,7 @@ class AgendaItem < ApplicationRecord
   has_many_attached :attachments
 
   # Ordered lists of agenda points. Order of declaration = display order.
-  enum list: { atelier: 0, informations: 1, triage: 2, decisions: 3 }
+  enum :list, { atelier: 0, informations: 1, triage: 2, decisions: 3 }
 
   LIST_LABELS = {
     "atelier" => "Atelier",

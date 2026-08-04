@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "Public::Reservations (/reservation)", type: :request do
+RSpec.describe "Public::Reservations (/reservation)", type: :request, queue_adapter: :test do
   let!(:hulotte) do
     lodging = Lodging.create!(name: "La Hulotte", price_night_cents: 48_500)
     lodging.rooms << Room.create!(name: "Chambre 1", level: 1)
