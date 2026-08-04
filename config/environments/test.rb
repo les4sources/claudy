@@ -9,7 +9,7 @@ Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
   # Turn false under Spring and add config.action_view.cache_template_loading = true.
-  config.cache_classes = true
+  config.enable_reloading = false
 
   # Eager loading loads your whole application. When running a single test locally,
   # this probably isn't necessary. It's a good idea to do in a continuous integration
@@ -28,7 +28,10 @@ Rails.application.configure do
   config.cache_store = :null_store
 
   # Raise exceptions instead of rendering exception templates.
-  config.action_dispatch.show_exceptions = false
+  # :none = comportement historique (`false` avant Rails 7.1) : les exceptions remontent
+  # nues dans les specs. NE PAS revenir à `false` : depuis Rails 8.1 la valeur booléenne
+  # tombe dans le cas par défaut du middleware et signifierait… tout afficher.
+  config.action_dispatch.show_exceptions = :none
 
   # Disable request forgery protection in test environment.
   config.action_controller.allow_forgery_protection = false
@@ -48,6 +51,14 @@ Rails.application.configure do
   # The :test delivery method accumulates sent emails in the
   # ActionMailer::Base.deliveries array.
   config.action_mailer.delivery_method = :test
+
+  # Sans réglage, Active Job retombe sur :async — un pool de threads. Rails 7.1
+  # partage la connexion SQL de test entre threads : les jobs async (deliver_later,
+  # analyse Active Storage, et SentEmails::Observer qui écrit en base à la livraison)
+  # écrivent alors sur le socket Postgres EN MÊME TEMPS que la suite — protocole
+  # désynchronisé, suite figée. :inline exécute les jobs dans le thread du test :
+  # déterministe, même connexion, et les emails restent observables immédiatement.
+  config.active_job.queue_adapter = :inline
 
   # Print deprecation notices to the stderr.
   config.active_support.deprecation = :stderr

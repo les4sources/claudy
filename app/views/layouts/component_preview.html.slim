@@ -1,0 +1,15 @@
+/ Layout des previews ViewComponent (Lookbook). Déclaré par
+/ config.view_component.default_preview_layout dans development.rb — le réglage
+/ existait depuis le commit Vite sans que le fichier n'existe : Lookbook 1
+/ l'ignorait en silence, Lookbook 2 le résout strictement (MissingTemplate).
+/ Volontairement minimal : les assets Vite pour que Tailwind style les
+/ composants, un fond neutre, et le rendu au centre.
+doctype html
+html
+  head
+    title Preview composant — Claudy
+    meta[name="viewport" content="width=device-width, initial-scale=1"]
+    = vite_client_tag
+    = vite_javascript_tag "application", "data-turbo-track": "reload"
+  body.p-8.bg-gray-50
+    = yield
