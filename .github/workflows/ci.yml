@@ -67,6 +67,11 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: .ruby-version
+          # Le RubyGems d'origine de Ruby 3.1.2 (3.3.7) ne sait pas résoudre les plateformes
+          # suffixées libc (x86_64-linux-gnu) : nokogiri se compilerait depuis les sources.
+          # 3.6.9 = dernière ligne compatible Ruby 3.1, jumelle du Bundler 2.6.9 du lockfile.
+          # À retirer quand la phase 4 de l'epic #144 apportera Ruby 3.3 (RubyGems moderne inclus).
+          rubygems: 3.6.9
           bundler-cache: true
 
       - name: Installer Node
