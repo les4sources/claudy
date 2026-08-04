@@ -145,7 +145,6 @@ GEM
     dry-cli (1.4.1)
     erb (6.0.6)
     erubi (1.13.1)
-    ffi (1.17.4)
     ffi (1.17.4-arm64-darwin)
     ffi (1.17.4-x86_64-darwin)
     ffi (1.17.4-x86_64-linux-gnu)
@@ -446,7 +445,6 @@ DEPENDENCIES
   rails (~> 8.1.0)
   redis (~> 5.0)
   rspec-rails (~> 8.0)
-  ruby-vips
   selenium-webdriver
   sentry-rails
   sentry-ruby

@@ -53,16 +53,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # `ruby-vips` est requis dès config/application.rb : sans la bibliothèque système,
-      # Rails ne boote pas du tout (LoadError sur libvips.so.42). Le nom du paquet a changé
-      # avec la transition time_t 64 bits d'Ubuntu 24.04 (libvips42 -> libvips42t64), d'où
-      # le repli sur l'ancien nom.
-      - name: Installer libvips
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libvips42t64 \
-            || sudo apt-get install -y --no-install-recommends libvips42
-
+      # Pas de libvips : comme en production (Ubuntu 22.04, libvips 8.12 retiré — trop
+      # vieux pour la garde de sécurité d'Active Storage 8.1.3.1). ruby-vips n'est plus
+      # qu'une dépendance transitive de image_processing, jamais requise par Bundler ;
+      # Active Storage rescue son LoadError et analyse via ImageMagick, présent sur les
+      # runners comme sur le serveur.
       - name: Installer Ruby et les gems
         uses: ruby/setup-ruby@v1
         with:

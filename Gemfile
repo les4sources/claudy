@@ -50,6 +50,11 @@ gem "bootsnap", require: false
 # gem "sassc-rails"
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
+# NB : image_processing tire ruby-vips en dépendance transitive — c'est voulu qu'il ne soit
+# PAS listé ici en direct. Une entrée directe le ferait charger par Bundler.require, qui
+# enveloppe tout échec en GemRequireError fatale ; en transitif, seul Active Storage le
+# require, et il rescue proprement l'absence de libvips (retiré du serveur : 8.12 < 8.13
+# exigé par la garde de sécurité de Rails 8.1.3.1 ; les uploaders sont MiniMagick).
 gem "image_processing", "~> 1.2"
 
 gem "dotenv-rails", groups: [:development, :test]
@@ -71,7 +76,6 @@ gem "money-rails", "~>1.12"
 gem "paper_trail"
 gem "postmark-rails"
 gem "public_activity"
-gem "ruby-vips"
 gem "sentry-ruby"
 gem "sentry-rails"
 gem "simple_calendar", "~> 2.4"
