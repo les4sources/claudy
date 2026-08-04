@@ -7,7 +7,7 @@ class TurboModal::Component < ViewComponent::Base
   include Turbo::FramesHelper
 
   def initialize(title:, buttons: nil, width: :lg)
-    super
+    super()
     @title = title
     @buttons = buttons
     @modal_classes = set_modal_classes(width)

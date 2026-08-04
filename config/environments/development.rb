@@ -69,11 +69,8 @@ Rails.application.configure do
 
   config.hosts << "claudy.test"
 
-  config.view_component.preview_paths << Rails.root.join(
-    'spec',
-    'components',
-    'previews',
-  )
-  config.view_component.default_preview_layout = 'component_preview'
-  config.view_component.show_previews = true
+  # ViewComponent 4 : previews configurées sous `previews.*` (le chemin est déjà
+  # déclaré globalement dans application.rb).
+  config.view_component.previews.default_layout = 'component_preview'
+  config.view_component.previews.enabled = true
 end

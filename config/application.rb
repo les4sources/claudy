@@ -21,7 +21,7 @@ Bundler.require(*Rails.groups)
 module Claudy
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
-    config.load_defaults 7.2
+    config.load_defaults 8.0
 
     # Convention Rails 7.1. No-op aujourd'hui : lib/ ne contient aucun code Ruby
     # autochargeable (assets, tâches rake, gabarits de générateurs). Le jour où du
@@ -43,7 +43,8 @@ module Claudy
     config.i18n.available_locales = [:fr, :nl, :en]
     config.i18n.fallbacks = [:fr]
 
-    config.view_component.preview_paths << "#{Rails.root}/spec/components/previews"
+    # ViewComponent 4 : la config des previews vit sous `previews.*`.
+    config.view_component.previews.paths << "#{Rails.root}/spec/components/previews"
 
     config.action_mailer.delivery_method = :postmark
     config.action_mailer.postmark_settings = { api_token: ENV.fetch('POSTMARK_API_TOKEN') }
