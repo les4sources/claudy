@@ -27,12 +27,14 @@ namespace :spaces do
   #
   # Résolution des espaces par CODE stable (puis noms candidats) — jamais d'id en
   # dur (cf. SpaceComposition).
-  DEUX_SALLES_CODE  = "T+S".freeze
-  DEUX_SALLES_NAMES = ["Les 2 salles"].freeze
-  GRANDE_CODE  = "TIL".freeze
-  GRANDE_NAMES = ["Grande Salle", "Tilleul"].freeze
-  PETITE_CODE  = "SAU".freeze
-  PETITE_NAMES = ["Petite Salle", "Saule"].freeze
+  # Gardées : les tasks rake sont chargées plusieurs fois dans la suite de specs,
+  # et Ruby (-W) signale toute constante redéfinie.
+  DEUX_SALLES_CODE  = "T+S".freeze unless defined?(DEUX_SALLES_CODE)
+  DEUX_SALLES_NAMES = ["Les 2 salles"].freeze unless defined?(DEUX_SALLES_NAMES)
+  GRANDE_CODE  = "TIL".freeze unless defined?(GRANDE_CODE)
+  GRANDE_NAMES = ["Grande Salle", "Tilleul"].freeze unless defined?(GRANDE_NAMES)
+  PETITE_CODE  = "SAU".freeze unless defined?(PETITE_CODE)
+  PETITE_NAMES = ["Petite Salle", "Saule"].freeze unless defined?(PETITE_NAMES)
 
   desc "Convertit l'historique « Les 2 salles » en paires Grande + Petite salle (prix conservé), puis soft-delete l'espace. DRY-RUN sauf APPLY=1"
   task convert_deux_salles: :environment do

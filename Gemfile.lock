@@ -116,6 +116,7 @@ GEM
     css_parser (3.0.0)
       addressable
       ssrf_filter (~> 1.5)
+    csv (3.3.6)
     date (3.5.1)
     debug (1.11.1)
       irb (~> 1.10)
@@ -167,7 +168,7 @@ GEM
     jbuilder (2.15.1)
       actionview (>= 7.0.0)
       activesupport (>= 7.0.0)
-    json (2.6.3)
+    json (2.21.2)
     loaf (0.10.0)
       railties (>= 3.2)
     logger (1.7.0)
@@ -227,6 +228,7 @@ GEM
     nokogiri (1.19.4-x86_64-linux-gnu)
       racc (~> 1.4)
     orm_adapter (0.5.0)
+    ostruct (0.6.3)
     paper_trail (17.0.0)
       activerecord (>= 7.1)
       request_store (~> 1.4)
@@ -420,6 +422,7 @@ DEPENDENCIES
   byebug
   capybara
   carrierwave (~> 3.0)
+  csv
   debug
   devise
   dotenv-rails
@@ -431,6 +434,7 @@ DEPENDENCIES
   lookbook
   money-rails (~> 1.12)
   nio4r (>= 2.5.9)
+  ostruct
   paper_trail
   pg (~> 1.1)
   postmark-rails
@@ -460,7 +464,7 @@ DEPENDENCIES
   will_paginate (~> 3.3)
 
 RUBY VERSION
-   ruby 3.3.10p183
+   ruby 3.4.10p104
 
 BUNDLED WITH
    2.6.9
