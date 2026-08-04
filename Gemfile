@@ -88,6 +88,12 @@ gem "view_component"
 
 # Use Vite in Rails and bring joy to your JavaScript experience (https://github.com/ElMassimo/vite_ruby)
 gem "vite_rails"
+# Le gem Ruby et le plugin JS (vite-plugin-ruby, via package.json) doivent avancer en
+# tandem : leurs formats de manifest divergent au-delà. Le chantier Vite/Node est hors
+# périmètre de l'epic #144 — on épingle le gem au niveau du plugin JS actuel, et on ne
+# prend de rack-proxy que le correctif Rack 3 (HeaderHash supprimé → 0.8+).
+gem "vite_ruby", "~> 3.2.12"
+gem "rack-proxy", ">= 0.8"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
