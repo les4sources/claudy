@@ -66,10 +66,13 @@ module Finance
       @household = Household.find(params[:id])
     end
 
-    # Trois lignes vides pour ajouter des membres sans JavaScript. Les lignes
-    # laissées vides sont ignorées (`reject_if` sur le nom).
+    # UNE ligne vierge pour démarrer ; les suivantes s'ajoutent au clic, sans
+    # limite (contrôleur Stimulus `nested_form`). Avant, trois lignes fixes
+    # plafonnaient la saisie à trois personnes par passage — or il y a des
+    # ménages de cinq. Les lignes laissées vides restent ignorées (`reject_if`
+    # sur le nom).
     def blank_members(household)
-      3.times { household.household_members.build(kind: "adult", started_on: household.moved_in_on || Date.current) }
+      household.household_members.build(kind: "adult", started_on: household.moved_in_on || Date.current)
     end
 
     def household_params
