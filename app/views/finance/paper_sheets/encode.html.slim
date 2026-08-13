@@ -1,0 +1,104 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "#{@sheet.channel_label} — #{l(@sheet.period_month, format: '%B %Y')}",
+           links: [ \
+             link_to("Modifier la fiche", edit_finance_paper_sheet_path(@sheet), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"), \
+             link_to("← Toutes les fiches", finance_paper_sheets_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") \
+           ]
+
+- if @items.blank? || @accounts.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Impossible d'encoder cette fiche.
+    - if @items.blank?
+      p.mt-1
+        | Aucun article actif dans le catalogue pour le canal « #{@sheet.channel_label} ».
+        = link_to "Ouvrir le catalogue", finance_catalog_index_path(channel: @sheet.channel), class: "text-blue-600 underline"
+    - if @accounts.blank?
+      p.mt-1 Aucun compte actif.
+- else
+  = form_with url: save_encoding_finance_paper_sheet_path(@sheet), method: :post, data: { controller: "encoding-matrix", encoding_matrix_mode_value: @sheet.entry_mode, action: "submit->encoding-matrix#submit" } do
+    = hidden_field_tag :entry_mode, @sheet.entry_mode, data: { encoding_matrix_target: "modeInput" }
+
+    .mb-4.flex.flex-wrap.items-center.justify-between.gap-3
+      / Le tableur actuel contient des MONTANTS, la nouvelle vie contiendra des
+        QUANTITÉS. L'écran accepte les deux plutôt que d'imposer un changement
+        d'habitude le jour de la bascule.
+      button.inline-flex.items-center.gap-2.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(class="hover:bg-gray-50" type="button" data-action="encoding-matrix#toggleMode")
+        span ⇄
+        span data-encoding-matrix-target="modeLabel"
+          = PaperSheet::ENTRY_MODE_LABELS.fetch(@sheet.entry_mode)
+
+      .text-sm.text-gray-500
+        | Total de la fiche :
+        span.ml-1.text-lg.font-semibold.text-gray-900(data-encoding-matrix-target="grandTotal") 0,00 €
+
+    / DESKTOP — la matrice, reproduction exacte de la forme du tableur : une
+      ligne par produit, une colonne par compte, une cellule à l'intersection.
+    .hidden.md:block.overflow-x-auto.relative
+      table.w-full.text-sm.text-left.text-gray-500
+        thead.text-xs.text-gray-700.uppercase.bg-gray-50
+          tr
+            th.py-3.px-4.sticky.left-0.bg-gray-50[scope="col"] Article
+            - @accounts.each do |account|
+              th.py-3.px-2.text-center[scope="col"]
+                = account.name
+                .font-mono.text-gray-400.normal-case= account.code
+        tbody
+          - @items.each do |item|
+            - price = @sheet.price_for(item)
+            tr.border-b.bg-white
+              td.py-2.px-4.font-medium.text-gray-900.sticky.left-0.bg-white[scope="row"]
+                = item.name
+                .text-xs.text-gray-400
+                  - if price
+                    = number_to_currency(price.member_price_cents / 100.0)
+                    |  / #{item.unit_label}
+                  - else
+                    span.text-red-600 pas de prix à cette date
+              - @accounts.each do |account|
+                - entry = @entries[[account.id, item.id]]
+                td.py-1.px-2
+                  = text_field_tag "cells[#{account.id}][#{item.id}]",
+                                   (entry ? (@sheet.quantity_mode? ? entry.quantity&.to_s&.sub(".0", "") : format("%.2f", entry.amount_cents / 100.0).tr(".", ",")) : nil),
+                                   disabled: entry&.locked?,
+                                   data: { encoding_matrix_target: "cell", layout: "desktop", account_id: account.id, unit_price_cents: price&.member_price_cents || 0, action: "input->encoding-matrix#recompute keydown->encoding-matrix#navigate" },
+                                   class: "w-20 rounded border-gray-300 text-sm text-right #{entry&.locked? ? 'bg-gray-100 text-gray-400' : ''}"
+          tr.bg-gray-50.font-medium
+            td.py-3.px-4.sticky.left-0.bg-gray-50 Total
+            - @accounts.each do |account|
+              td.py-3.px-2.text-right.text-gray-900(data-encoding-matrix-target="columnTotal" data-account-id=account.id) 0,00 €
+
+    / MOBILE — un accordéon par compte : on encode une fiche à la fois, donc une
+      colonne à la fois. L'encodage se fera au bar, sur téléphone.
+    .md:hidden.space-y-3
+      - @accounts.each do |account|
+        details.bg-white.rounded-lg.border.border-gray-100
+          summary.p-3.font-medium.text-gray-900.cursor-pointer
+            = account.name
+            span.ml-2.text-xs.font-mono.text-gray-400= account.code
+            span.float-right.text-sm.text-gray-500(data-encoding-matrix-target="columnTotal" data-account-id=account.id) 0,00 €
+          .p-3.pt-0.space-y-2
+            - @items.each do |item|
+              - price = @sheet.price_for(item)
+              - entry = @entries[[account.id, item.id]]
+              .flex.items-center.justify-between.gap-3
+                .text-sm
+                  = item.name
+                  .text-xs.text-gray-400
+                    = price ? number_to_currency(price.member_price_cents / 100.0) : "—"
+                = text_field_tag "cells[#{account.id}][#{item.id}]",
+                                 (entry ? (@sheet.quantity_mode? ? entry.quantity&.to_s&.sub(".0", "") : format("%.2f", entry.amount_cents / 100.0).tr(".", ",")) : nil),
+                                 disabled: entry&.locked?,
+                                 inputmode: "decimal",
+                                 data: { encoding_matrix_target: "cell", layout: "mobile", account_id: account.id, unit_price_cents: price&.member_price_cents || 0, action: "input->encoding-matrix#recompute" },
+                                 class: "w-24 rounded border-gray-300 text-sm text-right #{entry&.locked? ? 'bg-gray-100 text-gray-400' : ''}"
+
+    - if @entries.values.any?(&:locked?)
+      .mt-4.p-3.rounded-md.bg-amber-50.text-sm.text-amber-900
+        | Certaines cellules sont verrouillées : leurs écritures sont rattachées à un décompte déjà émis. Elles ne peuvent plus être modifiées ici — la correction passe par une contre-écriture.
+
+    .mt-6
+      button.inline-flex.items-center.rounded-md.bg-green-700.px-5.py-2.5.text-sm.font-medium.text-white.shadow-sm(class="hover:bg-green-800" type="submit")
+        | Enregistrer la fiche
+      p.mt-2.text-xs.text-gray-400
+        | Une cellule vide n'écrit rien. Réenregistrer la fiche met à jour ses écritures — elle ne les duplique jamais.

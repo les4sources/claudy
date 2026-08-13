@@ -27,6 +27,7 @@ require "rails_helper"
 #  account_statement_id :bigint
 #  catalog_item_id      :bigint
 #  member_account_id    :bigint           not null
+#  paper_sheet_id       :bigint
 #  reversal_of_id       :bigint
 #
 # Indexes
@@ -37,12 +38,14 @@ require "rails_helper"
 #  index_account_entries_on_deleted_at                        (deleted_at)
 #  index_account_entries_on_idempotency_key                   (idempotency_key) UNIQUE
 #  index_account_entries_on_member_account_id_and_entry_date  (member_account_id,entry_date)
+#  index_account_entries_on_paper_sheet_id                    (paper_sheet_id)
 #  index_account_entries_on_reversal_of_id                    (reversal_of_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (catalog_item_id => catalog_items.id)
 #  fk_rails_...  (member_account_id => member_accounts.id)
+#  fk_rails_...  (paper_sheet_id => paper_sheets.id)
 #  fk_rails_...  (reversal_of_id => account_entries.id)
 #
 RSpec.describe AccountEntry, type: :model do

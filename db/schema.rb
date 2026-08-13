@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_13_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_13_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -30,6 +30,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_140000) do
     t.string "label"
     t.datetime "locked_at"
     t.bigint "member_account_id", null: false
+    t.bigint "paper_sheet_id"
     t.datetime "posted_at"
     t.string "price_basis"
     t.decimal "quantity", precision: 12, scale: 3
@@ -43,6 +44,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_140000) do
     t.index ["deleted_at"], name: "index_account_entries_on_deleted_at"
     t.index ["idempotency_key"], name: "index_account_entries_on_idempotency_key", unique: true
     t.index ["member_account_id", "entry_date"], name: "index_account_entries_on_member_account_id_and_entry_date"
+    t.index ["paper_sheet_id"], name: "index_account_entries_on_paper_sheet_id"
     t.index ["reversal_of_id"], name: "index_account_entries_on_reversal_of_id"
     t.check_constraint "amount_cents <> 0", name: "account_entries_amount_not_zero_check"
   end
@@ -609,6 +611,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_140000) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "paper_sheets", force: :cascade do |t|
+    t.string "channel", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.datetime "encoded_at"
+    t.bigint "encoded_by_id"
+    t.string "entry_mode", default: "quantity", null: false
+    t.bigint "member_account_id"
+    t.text "notes"
+    t.date "period_month", null: false
+    t.string "status", default: "open", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_paper_sheets_on_deleted_at"
+    t.index ["encoded_by_id"], name: "index_paper_sheets_on_encoded_by_id"
+    t.index ["member_account_id"], name: "index_paper_sheets_on_member_account_id"
+    t.index ["period_month", "channel"], name: "index_paper_sheets_on_period_month_and_channel"
+  end
+
   create_table "payment_versions", force: :cascade do |t|
     t.datetime "created_at"
     t.string "event", null: false
@@ -1014,6 +1034,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_140000) do
   add_foreign_key "account_entries", "account_entries", column: "reversal_of_id"
   add_foreign_key "account_entries", "catalog_items"
   add_foreign_key "account_entries", "member_accounts"
+  add_foreign_key "account_entries", "paper_sheets"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "agenda_items", "gatherings"
@@ -1053,6 +1074,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_140000) do
   add_foreign_key "meal_orders", "stays"
   add_foreign_key "member_accounts", "households"
   add_foreign_key "member_accounts", "humans"
+  add_foreign_key "paper_sheets", "member_accounts"
+  add_foreign_key "paper_sheets", "users", column: "encoded_by_id"
   add_foreign_key "payments", "bookings"
   add_foreign_key "payments", "coworking_packs"
   add_foreign_key "payments", "space_bookings"
