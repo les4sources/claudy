@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_13_120200) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_13_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -695,6 +695,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_120200) do
     t.index ["key"], name: "index_rates_on_key", unique: true
   end
 
+  create_table "recurring_charges", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.integer "amount_cents"
+    t.string "basis", default: "flat", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "ends_on"
+    t.string "flow"
+    t.bigint "household_member_id"
+    t.string "kind"
+    t.string "label", null: false
+    t.bigint "member_account_id", null: false
+    t.string "rate_key"
+    t.string "split_label"
+    t.string "split_rate_key"
+    t.date "starts_on", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_recurring_charges_on_deleted_at"
+    t.index ["household_member_id"], name: "index_recurring_charges_on_household_member_id"
+    t.index ["member_account_id"], name: "index_recurring_charges_on_member_account_id"
+    t.check_constraint "amount_cents IS NOT NULL AND rate_key IS NULL OR amount_cents IS NULL AND rate_key IS NOT NULL", name: "recurring_charges_amount_source_check"
+  end
+
   create_table "rental_items", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
@@ -1036,6 +1059,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_120200) do
   add_foreign_key "payments", "stays"
   add_foreign_key "projects", "humans"
   add_foreign_key "rate_versions", "rates"
+  add_foreign_key "recurring_charges", "household_members"
+  add_foreign_key "recurring_charges", "member_accounts"
   add_foreign_key "reservations", "bookings"
   add_foreign_key "reservations", "rooms"
   add_foreign_key "sent_emails", "customers"

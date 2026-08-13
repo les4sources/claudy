@@ -1,0 +1,62 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Charges récurrentes",
+           links: [ \
+             link_to("➕ Nouvelle charge", new_finance_recurring_charge_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") \
+           ]
+
+/ Générer un mois passe TOUJOURS par un aperçu : on voit ce qui sera écrit avant
+  d'écrire. Pas de job de fond — l'ActiveJob de l'app est en `async`, un job posé
+  en file disparaît au redémarrage, et sur une dette entre voisins un automatisme
+  silencieux est de toute façon une mauvaise idée.
+.mb-6.p-4.bg-white.rounded-lg.border.border-gray-100
+  = form_with url: preview_finance_recurring_charges_path, method: :get, class: "flex flex-wrap items-end gap-3" do
+    div
+      = label_tag :month, "Mois à générer", class: "block text-sm font-medium text-gray-700"
+      = text_field_tag :month, @month.strftime("%Y-%m"), placeholder: "2026-08", class: "mt-1 w-40 rounded-md border-gray-300 shadow-sm text-sm"
+    button.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(class="hover:bg-gray-50" type="submit")
+      | Prévisualiser le mois
+
+- if @charges.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucune charge récurrente.
+    p.mt-1
+      | La cagnotte, les forfaits dôme et la pension d'un animal se posent ici une fois, puis se génèrent chaque mois.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Libellé
+          th.py-3.px-6[scope="col"] Compte
+          th.py-3.px-6[scope="col"] Base
+          th.py-3.px-6.text-right[scope="col"] Montant unitaire
+          th.py-3.px-6[scope="col"] Période
+          th.py-3.px-6[scope="col"]
+      tbody
+        - @charges.each do |charge|
+          - unit = charge.unit_amount_cents_on(Date.current)
+          tr.border-b.bg-white
+            td.py-4.px-6.font-medium.text-gray-900[scope="row"]
+              = charge.label
+              - if charge.split_rate_key.present?
+                .mt-0.5.text-xs.text-gray-400
+                  | scindée : #{charge.split_label.presence || 'part séparée'}
+              - if charge.rate_key.present?
+                .mt-0.5.text-xs.text-gray-400.font-mono= charge.rate_key
+            td.py-4.px-6= charge.member_account.name
+            td.py-4.px-6= charge.basis_label
+            td.py-4.px-6.text-right
+              - if unit
+                = number_to_currency(unit / 100.0)
+              - else
+                span.text-red-600 barème non résolu
+            td.py-4.px-6.text-xs
+              | depuis le #{l(charge.starts_on, format: :long).squish}
+              - if charge.ends_on
+                |  · jusqu'au #{l(charge.ends_on, format: :long).squish}
+              - unless charge.active?
+                .mt-0.5
+                  span.px-2.py-0.5.rounded-full.text-xs.bg-gray-100.text-gray-500 inactive
+            td.py-4.px-6.text-right
+              = link_to "Modifier", edit_finance_recurring_charge_path(charge), class: "text-xs text-blue-600 hover:text-blue-800"

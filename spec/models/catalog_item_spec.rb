@@ -1,5 +1,25 @@
 require "rails_helper"
 
+# == Schema Information
+#
+# Table name: catalog_items
+#
+#  id         :bigint           not null, primary key
+#  active     :boolean          default(TRUE), not null
+#  category   :string
+#  channel    :string           not null
+#  deleted_at :datetime
+#  name       :string           not null
+#  reference  :string
+#  unit       :string           default("piece"), not null
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#
+# Indexes
+#
+#  index_catalog_items_on_channel_and_name  (channel,name)
+#  index_catalog_items_on_deleted_at        (deleted_at)
+#
 RSpec.describe CatalogItem do
   let(:item) { described_class.create!(name: "Moinette", channel: "bar", unit: "piece") }
 

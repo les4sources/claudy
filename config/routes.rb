@@ -81,6 +81,12 @@ Rails.application.routes.draw do
     resources :catalog do
       resources :prices, only: [:create, :destroy], controller: "catalog_prices"
     end
+    resources :recurring_charges, except: [:show] do
+      collection do
+        get :preview
+        post :generate
+      end
+    end
   end
 
   # Organisation

@@ -50,4 +50,25 @@ namespace :finance do
          "#{created_prices} palier(s) initial(aux) créé(s), " \
          "#{CatalogItem.count} article(s) au catalogue"
   end
+
+  desc "Génère les charges récurrentes d'un mois — MONTH=2026-08, dry-run par défaut, APPLY=1 pour écrire"
+  task generate_recurring: :environment do
+    month = ENV["MONTH"].presence || Date.current.strftime("%Y-%m")
+    apply = ENV["APPLY"] == "1"
+
+    report = Finance::GenerateRecurringCharges.new(month: month, dry_run: !apply).run!
+
+    report.created.each do |line|
+      puts "  + #{line[:charge].member_account.name.ljust(28)} #{line[:label].ljust(34)} " \
+           "#{format('%8.2f', line[:amount_cents] / 100.0)} €"
+    end
+    report.skipped.each do |line|
+      puts "  ! #{line[:charge].label} — #{line[:reason]}"
+    end
+
+    puts "[finance:generate_recurring] #{month} : #{report.created.size} à créer, " \
+         "#{report.existing.size} déjà présente(s), #{report.skipped.size} ignorée(s), " \
+         "total #{format('%.2f', report.total_cents / 100.0)} €"
+    puts "[finance:generate_recurring] Rien n'a été écrit — relance avec APPLY=1." unless apply
+  end
 end
