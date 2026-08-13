@@ -2,6 +2,29 @@ require "rails_helper"
 
 # Epic #66, Phase 3 — MealOrder : commande de repas datée rattachée directement
 # au séjour (has_many), hors calendrier. `date` nullable (repas funnel sans date).
+# == Schema Information
+#
+# Table name: meal_orders
+#
+#  id          :bigint           not null, primary key
+#  date        :date
+#  deleted_at  :datetime
+#  kind        :string
+#  people      :integer          default(1), not null
+#  price_cents :integer
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#  stay_id     :bigint           not null
+#
+# Indexes
+#
+#  index_meal_orders_on_deleted_at  (deleted_at)
+#  index_meal_orders_on_stay_id     (stay_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (stay_id => stays.id)
+#
 RSpec.describe MealOrder do
   let(:customer) { Customer.create!(email: "meal@example.com", first_name: "Meal", last_name: "Test") }
   let(:stay) { Stay.create!(customer: customer, source: "manual", status: "pending") }

@@ -1,6 +1,23 @@
 require "rails_helper"
 
 # Epic #126, Phase 2 — code à usage unique du portail.
+# == Schema Information
+#
+# Table name: portal_otps
+#
+#  id          :bigint           not null, primary key
+#  attempts    :integer          default(0), not null
+#  code_digest :string           not null
+#  consumed_at :datetime
+#  email       :citext           not null
+#  expires_at  :datetime         not null
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#
+# Indexes
+#
+#  index_portal_otps_on_email_and_created_at  (email,created_at)
+#
 RSpec.describe PortalOtp, type: :model do
   it "émet un code à 6 chiffres, haché, valable 15 minutes" do
     otp, code = PortalOtp.issue!("Ana@Example.COM")

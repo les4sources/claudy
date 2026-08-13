@@ -3,6 +3,34 @@ require "rails_helper"
 # HamacBooking (issue #138) — location de hamacs persistée sur le séjour.
 # La capacité n'est PAS une constante du domaine mais le STOCK du `RentalItem`
 # correspondant ; stock non renseigné = aucune limite.
+# == Schema Information
+#
+# Table name: hamac_bookings
+#
+#  id          :bigint           not null, primary key
+#  count       :integer          default(1), not null
+#  deleted_at  :datetime
+#  email       :string
+#  firstname   :string
+#  from_date   :date
+#  group_name  :string
+#  kind        :string           default("simple"), not null
+#  lastname    :string
+#  notes       :text
+#  phone       :string
+#  price_cents :integer
+#  status      :string
+#  to_date     :date
+#  token       :string
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#
+# Indexes
+#
+#  index_hamac_bookings_on_deleted_at             (deleted_at)
+#  index_hamac_bookings_on_from_date_and_to_date  (from_date,to_date)
+#  index_hamac_bookings_on_token                  (token) UNIQUE
+#
 RSpec.describe HamacBooking do
   let(:arrival) { Date.today + 30 }
 

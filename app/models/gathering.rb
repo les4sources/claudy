@@ -3,14 +3,23 @@
 # Table name: gatherings
 #
 #  id                    :bigint           not null, primary key
-#  name                  :string
-#  gathering_category_id :bigint           not null
-#  starts_at             :datetime         not null
+#  deleted_at            :datetime
 #  ends_at               :datetime         not null
 #  location              :string
+#  name                  :string
+#  starts_at             :datetime         not null
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
-#  deleted_at            :datetime
+#  gathering_category_id :bigint           not null
+#
+# Indexes
+#
+#  index_gatherings_on_gathering_category_id  (gathering_category_id)
+#  index_gatherings_on_starts_at_and_ends_at  (starts_at,ends_at)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (gathering_category_id => gathering_categories.id)
 #
 class Gathering < ApplicationRecord
   include PublicActivity::Model

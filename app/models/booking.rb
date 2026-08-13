@@ -3,43 +3,52 @@
 # Table name: bookings
 #
 #  id                 :bigint           not null, primary key
-#  firstname          :string
-#  lastname           :string
-#  phone              :string
-#  email              :string
-#  from_date          :date
-#  to_date            :date
-#  status             :string
 #  adults             :integer
-#  children           :integer
-#  payment_status     :string
-#  payment_method     :string
+#  babies             :integer          default(0)
 #  bedsheets          :boolean
-#  towels             :boolean
+#  booking_type       :string
+#  children           :integer
+#  comments           :text
+#  contract_status    :string
+#  deleted_at         :datetime
+#  departure_time     :string
+#  email              :string
+#  estimated_arrival  :string
+#  firstname          :string
+#  from_date          :date
+#  group_name         :string
+#  invoice_status     :string
+#  lastname           :string
 #  notes              :text
+#  option_babysitting :boolean
+#  option_bread       :boolean
+#  option_discgolf    :boolean
+#  option_partyhall   :boolean
+#  option_pizza_party :boolean
+#  payment_method     :string
+#  payment_status     :string
+#  phone              :string
+#  platform           :string
+#  price_cents        :integer
+#  public_notes       :text
+#  shown_price_cents  :integer          default(0), not null
+#  status             :string
+#  tier               :string
+#  to_date            :date
+#  token              :string
+#  towels             :boolean
+#  wifi               :boolean          default(FALSE)
 #  created_at         :datetime         not null
 #  updated_at         :datetime         not null
-#  price_cents        :integer
-#  invoice_status     :string
-#  contract_status    :string
-#  estimated_arrival  :string
-#  option_babysitting :boolean
-#  option_partyhall   :boolean
-#  option_bread       :boolean
-#  comments           :text
-#  tier               :string
 #  lodging_id         :bigint
-#  option_discgolf    :boolean
-#  shown_price_cents  :integer          default(0), not null
-#  token              :string
-#  platform           :string
-#  group_name         :string
-#  babies             :integer          default(0)
-#  public_notes       :text
-#  departure_time     :string
-#  option_pizza_party :boolean
-#  deleted_at         :datetime
-#  wifi               :boolean          default(FALSE)
+#
+# Indexes
+#
+#  index_bookings_on_lodging_id  (lodging_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (lodging_id => lodgings.id)
 #
 class Booking < ApplicationRecord
   # PublicActivity

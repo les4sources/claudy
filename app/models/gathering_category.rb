@@ -3,13 +3,13 @@
 # Table name: gathering_categories
 #
 #  id                       :bigint           not null, primary key
-#  name                     :string           not null
 #  color                    :string           not null
-#  default_start_time       :time
 #  default_duration_minutes :integer
+#  default_start_time       :time
+#  deleted_at               :datetime
+#  name                     :string           not null
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
-#  deleted_at               :datetime
 #
 class GatheringCategory < ApplicationRecord
   has_many :gatherings, dependent: :nullify

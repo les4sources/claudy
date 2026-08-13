@@ -1,5 +1,35 @@
 require 'rails_helper'
 
+# == Schema Information
+#
+# Table name: agenda_items
+#
+#  id           :bigint           not null, primary key
+#  completed    :boolean          default(FALSE), not null
+#  deleted_at   :datetime
+#  list         :integer          default(0), not null
+#  position     :integer          default(0), not null
+#  title        :string           not null
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#  author_id    :bigint           not null
+#  carrier_id   :bigint
+#  gathering_id :bigint           not null
+#
+# Indexes
+#
+#  index_agenda_items_on_author_id                           (author_id)
+#  index_agenda_items_on_carrier_id                          (carrier_id)
+#  index_agenda_items_on_gathering_id                        (gathering_id)
+#  index_agenda_items_on_gathering_id_and_list_and_position  (gathering_id,list,position)
+#  index_agenda_items_on_gathering_id_and_position           (gathering_id,position)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (author_id => humans.id)
+#  fk_rails_...  (carrier_id => humans.id)
+#  fk_rails_...  (gathering_id => gatherings.id)
+#
 RSpec.describe AgendaItem, type: :model do
   let(:category) { GatheringCategory.create!(name: "Réunion", color: "emerald") }
   let(:gathering) do

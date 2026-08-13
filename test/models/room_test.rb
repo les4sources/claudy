@@ -3,13 +3,13 @@
 # Table name: rooms
 #
 #  id          :bigint           not null, primary key
-#  name        :string
-#  description :text
-#  created_at  :datetime         not null
-#  updated_at  :datetime         not null
-#  level       :integer
 #  code        :string
 #  deleted_at  :datetime
+#  description :text
+#  level       :integer
+#  name        :string
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
 #
 require "test_helper"
 

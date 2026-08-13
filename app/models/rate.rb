@@ -8,6 +8,22 @@
 # `unit` distingue les montants monétaires (`cents`, l'écrasante majorité) des
 # valeurs exprimées en pourcentage (`percent`, ex. le taux d'acompte par
 # défaut). L'écran d'édition rend les deux différemment.
+# == Schema Information
+#
+# Table name: rates
+#
+#  id           :bigint           not null, primary key
+#  amount_cents :integer          default(0), not null
+#  key          :string           not null
+#  label        :string
+#  unit         :string           default("cents"), not null
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#
+# Indexes
+#
+#  index_rates_on_key  (key) UNIQUE
+#
 class Rate < ApplicationRecord
   UNITS = %w[cents percent].freeze
 

@@ -3,9 +3,9 @@
 # Table name: teams
 #
 #  id          :bigint           not null, primary key
-#  name        :string
-#  description :text
 #  deleted_at  :datetime
+#  description :text
+#  name        :string
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
 #

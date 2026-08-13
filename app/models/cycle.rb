@@ -1,3 +1,19 @@
+# == Schema Information
+#
+# Table name: cycles
+#
+#  id         :bigint           not null, primary key
+#  deleted_at :datetime
+#  end_date   :date             not null
+#  name       :string           not null
+#  start_date :date             not null
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#
+# Indexes
+#
+#  index_cycles_on_start_date_and_end_date  (start_date,end_date)
+#
 class Cycle < ApplicationRecord
   has_paper_trail
   has_soft_deletion default_scope: true

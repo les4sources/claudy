@@ -3,11 +3,15 @@
 # Table name: roles
 #
 #  id         :bigint           not null, primary key
-#  name       :string
 #  deleted_at :datetime
+#  name       :string
+#  role_team  :jsonb
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
-#  role_team  :jsonb
+#
+# Indexes
+#
+#  index_roles_on_role_team  (role_team) USING gin
 #
 class Role < ApplicationRecord
   has_paper_trail

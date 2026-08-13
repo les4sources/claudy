@@ -1,5 +1,24 @@
 require "rails_helper"
 
+# == Schema Information
+#
+# Table name: booking_page_views
+#
+#  id         :bigint           not null, primary key
+#  ip_address :string
+#  user_agent :string
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#  booking_id :bigint           not null
+#
+# Indexes
+#
+#  index_booking_page_views_on_booking_id  (booking_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (booking_id => bookings.id)
+#
 RSpec.describe BookingPageView, type: :model do
   let(:booking) do
     Booking.create!(firstname: "Test", lastname: "Client", from_date: Date.today,

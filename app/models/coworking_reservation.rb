@@ -6,6 +6,30 @@
 #
 # Le domaine est indépendant du canal `SpaceBooking` de l'espace « Coworking »
 # historique : aucun `SpaceReservation` n'est créé ni consulté ici.
+# == Schema Information
+#
+# Table name: coworking_reservations
+#
+#  id                :bigint           not null, primary key
+#  date              :date             not null
+#  deleted_at        :datetime
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  coworking_pack_id :bigint           not null
+#  customer_id       :bigint           not null
+#
+# Indexes
+#
+#  index_coworking_reservations_on_coworking_pack_id  (coworking_pack_id)
+#  index_coworking_reservations_on_customer_id        (customer_id)
+#  index_coworking_reservations_on_date               (date)
+#  index_coworking_reservations_on_deleted_at         (deleted_at)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (coworking_pack_id => coworking_packs.id)
+#  fk_rails_...  (customer_id => customers.id)
+#
 class CoworkingReservation < ApplicationRecord
   DAILY_CAPACITY = 3
 

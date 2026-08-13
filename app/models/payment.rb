@@ -2,16 +2,34 @@
 #
 # Table name: payments
 #
-#  booking_id                 :bigint           not null
+#  id                         :uuid             not null, primary key
+#  amount_cents               :integer          default(0), not null
+#  deleted_at                 :datetime
 #  payment_method             :string
 #  status                     :string
-#  deleted_at                 :datetime
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
-#  amount_cents               :integer          default(0), not null
+#  booking_id                 :bigint
+#  coworking_pack_id          :bigint
+#  space_booking_id           :bigint
+#  stay_id                    :bigint
 #  stripe_checkout_session_id :string
 #  stripe_payment_intent_id   :string
-#  id                         :uuid             not null, primary key
+#
+# Indexes
+#
+#  index_payments_on_booking_id         (booking_id)
+#  index_payments_on_coworking_pack_id  (coworking_pack_id)
+#  index_payments_on_id                 (id) UNIQUE
+#  index_payments_on_space_booking_id   (space_booking_id)
+#  index_payments_on_stay_id            (stay_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (booking_id => bookings.id)
+#  fk_rails_...  (coworking_pack_id => coworking_packs.id)
+#  fk_rails_...  (space_booking_id => space_bookings.id)
+#  fk_rails_...  (stay_id => stays.id)
 #
 class Payment < ApplicationRecord
   # notify ActiveRecord that the default sort order should be created_at

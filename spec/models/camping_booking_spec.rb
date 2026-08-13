@@ -2,6 +2,33 @@ require "rails_helper"
 
 # Epic #66, Phase 3 — CampingBooking : capacité GLOBALE du terrain, vérifiée nuit
 # par nuit contre TOTAL_CAPACITY (seules les résas `confirmed` comptent).
+# == Schema Information
+#
+# Table name: camping_bookings
+#
+#  id          :bigint           not null, primary key
+#  deleted_at  :datetime
+#  email       :string
+#  firstname   :string
+#  from_date   :date
+#  group_name  :string
+#  kind        :string           default("tente"), not null
+#  lastname    :string
+#  notes       :text
+#  people      :integer          default(1), not null
+#  phone       :string
+#  price_cents :integer
+#  status      :string
+#  to_date     :date
+#  token       :string
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#
+# Indexes
+#
+#  index_camping_bookings_on_deleted_at             (deleted_at)
+#  index_camping_bookings_on_from_date_and_to_date  (from_date,to_date)
+#
 RSpec.describe CampingBooking do
   let(:d0) { Date.today + 40 }
   let(:d1) { d0 + 1 }

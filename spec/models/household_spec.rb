@@ -3,6 +3,24 @@ require "rails_helper"
 # Issue #155 — la composition d'un ménage se déduit toujours des périodes de
 # présence. Recalculer « 10 €/adulte » pour mars 2024 ne doit pas mentir parce
 # qu'un enfant est né depuis, ou qu'un colocataire est parti.
+# == Schema Information
+#
+# Table name: households
+#
+#  id           :bigint           not null, primary key
+#  deleted_at   :datetime
+#  kind         :string           default("resident"), not null
+#  moved_in_on  :date
+#  moved_out_on :date
+#  name         :string           not null
+#  notes        :text
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#
+# Indexes
+#
+#  index_households_on_deleted_at  (deleted_at)
+#
 RSpec.describe Household, type: :model do
   let(:household) do
     Household.create!(name: "Famille Chevêche", kind: "resident", moved_in_on: Date.new(2023, 1, 1))

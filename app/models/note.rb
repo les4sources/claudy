@@ -4,11 +4,11 @@
 #
 #  id         :bigint           not null, primary key
 #  body       :text
+#  color      :string
 #  date       :date
+#  deleted_at :datetime
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
-#  deleted_at :datetime
-#  color      :string
 #
 class Note < ApplicationRecord
   has_paper_trail

@@ -1,6 +1,34 @@
 require "rails_helper"
 
 # Journal des emails envoyés à un client (fiche client → « Emails envoyés »).
+# == Schema Information
+#
+# Table name: sent_emails
+#
+#  id                  :bigint           not null, primary key
+#  body_html           :text
+#  body_text           :text
+#  mailer              :string
+#  sent_at             :datetime         not null
+#  source              :string           default("app"), not null
+#  subject             :string
+#  tag                 :string
+#  to_email            :citext           not null
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  customer_id         :bigint           not null
+#  postmark_message_id :string
+#
+# Indexes
+#
+#  index_sent_emails_on_customer_id              (customer_id)
+#  index_sent_emails_on_customer_id_and_sent_at  (customer_id,sent_at)
+#  index_sent_emails_on_postmark_message_id      (postmark_message_id) UNIQUE WHERE (postmark_message_id IS NOT NULL)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (customer_id => customers.id)
+#
 RSpec.describe SentEmail, type: :model do
   let(:customer) do
     Customer.create!(email: "journal@example.com", customer_type: "individual",

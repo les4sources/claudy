@@ -3,6 +3,36 @@ require "rails_helper"
 # Issue #155 — le compte courant. Deux invariants sont testés au niveau de la
 # BASE, pas du modèle : l'ancrage (contrainte CHECK) et l'absence de colonne de
 # solde. Une validation Ruby se contourne ; une contrainte, non.
+# == Schema Information
+#
+# Table name: member_accounts
+#
+#  id                    :bigint           not null, primary key
+#  active                :boolean          default(TRUE), not null
+#  code                  :string           not null
+#  contact_email         :string
+#  deleted_at            :datetime
+#  kind                  :string           not null
+#  name                  :string           not null
+#  opening_balance_cents :bigint           default(0), not null
+#  opening_balance_on    :date
+#  created_at            :datetime         not null
+#  updated_at            :datetime         not null
+#  household_id          :bigint
+#  human_id              :bigint
+#
+# Indexes
+#
+#  index_member_accounts_on_code          (code) UNIQUE
+#  index_member_accounts_on_deleted_at    (deleted_at)
+#  index_member_accounts_on_household_id  (household_id)
+#  index_member_accounts_on_human_id      (human_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (household_id => households.id)
+#  fk_rails_...  (human_id => humans.id)
+#
 RSpec.describe MemberAccount, type: :model do
   let(:household) { Household.create!(name: "Famille Chevêche", kind: "resident") }
   let(:human) { Human.create!(name: "Ada Lovelace", status: "active") }

@@ -3,22 +3,28 @@
 # Table name: hamac_bookings
 #
 #  id          :bigint           not null, primary key
-#  firstname   :string
-#  lastname    :string
-#  email       :string
-#  phone       :string
-#  group_name  :string
-#  from_date   :date
-#  to_date     :date
-#  kind        :string           default("simple"), not null
 #  count       :integer          default(1), not null
-#  status      :string
-#  price_cents :integer
-#  token       :string
-#  notes       :text
 #  deleted_at  :datetime
+#  email       :string
+#  firstname   :string
+#  from_date   :date
+#  group_name  :string
+#  kind        :string           default("simple"), not null
+#  lastname    :string
+#  notes       :text
+#  phone       :string
+#  price_cents :integer
+#  status      :string
+#  to_date     :date
+#  token       :string
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
+#
+# Indexes
+#
+#  index_hamac_bookings_on_deleted_at             (deleted_at)
+#  index_hamac_bookings_on_from_date_and_to_date  (from_date,to_date)
+#  index_hamac_bookings_on_token                  (token) UNIQUE
 #
 # Location de HAMACS sur un séjour (issue #138). Jusqu'ici les hamacs n'existaient
 # que dans le devis (`Reservations::Draft#hamacs`, lignes `PricingModel`) : un

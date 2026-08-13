@@ -1,5 +1,22 @@
 require "rails_helper"
 
+# == Schema Information
+#
+# Table name: lodgings
+#
+#  id                      :bigint           not null, primary key
+#  available_for_bookings  :boolean
+#  deleted_at              :datetime
+#  description             :text
+#  name                    :string
+#  party_hall_availability :boolean
+#  price_night_cents       :integer          default(0), not null
+#  show_on_reports         :boolean          default(TRUE)
+#  summary                 :string
+#  weekend_discount_cents  :integer          default(0), not null
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#
 RSpec.describe Lodging, type: :model do
   # Le Grand-Duc = La Hulotte + La Chevêche. In production the composite SHARES
   # its components' physical rooms: Grand-Duc owns the UNION of the component

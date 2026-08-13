@@ -2,16 +2,18 @@
 #
 # Table name: humans
 #
-#  id          :bigint           not null, primary key
-#  name        :string
-#  email       :string
-#  photo       :string
-#  summary     :string
-#  description :text
-#  deleted_at  :datetime
-#  created_at  :datetime         not null
-#  updated_at  :datetime         not null
-#  status      :string           default("active")
+#  id            :bigint           not null, primary key
+#  cycle_active  :boolean          default(FALSE)
+#  deleted_at    :datetime
+#  description   :text
+#  email         :string
+#  name          :string
+#  photo         :string
+#  roles_enabled :boolean          default(TRUE), not null
+#  status        :string           default("active")
+#  summary       :string
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
 #
 class Human < ApplicationRecord
   has_many :projects

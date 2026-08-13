@@ -3,21 +3,26 @@
 # Table name: van_bookings
 #
 #  id          :bigint           not null, primary key
-#  firstname   :string
-#  lastname    :string
-#  email       :string
-#  phone       :string
-#  group_name  :string
-#  from_date   :date
-#  to_date     :date
-#  vehicles    :integer          default(1), not null
-#  status      :string
-#  price_cents :integer
-#  token       :string
-#  notes       :text
 #  deleted_at  :datetime
+#  email       :string
+#  firstname   :string
+#  from_date   :date
+#  group_name  :string
+#  lastname    :string
+#  notes       :text
+#  phone       :string
+#  price_cents :integer
+#  status      :string
+#  to_date     :date
+#  token       :string
+#  vehicles    :integer          default(1), not null
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
+#
+# Indexes
+#
+#  index_van_bookings_on_deleted_at             (deleted_at)
+#  index_van_bookings_on_from_date_and_to_date  (from_date,to_date)
 #
 # Réservation de VAN / camping-car — epic #66, Phase 3. Même logique que le
 # camping : occupe le calendrier via un `StayItem` polymorphe et consomme

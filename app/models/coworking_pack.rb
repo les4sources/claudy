@@ -6,6 +6,32 @@
 #
 # Le statut de paiement est DÉRIVÉ des `Payment` ancrés sur le pack — le pack ne
 # porte aucune colonne de statut, pour qu'il n'y ait jamais deux vérités.
+# == Schema Information
+#
+# Table name: coworking_packs
+#
+#  id                      :bigint           not null, primary key
+#  days_total              :integer          not null
+#  deleted_at              :datetime
+#  expires_at              :datetime         not null
+#  expiry_reminder_sent_at :datetime
+#  payment_method          :string           not null
+#  price_cents             :integer          default(0), not null
+#  purchased_at            :datetime         not null
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#  customer_id             :bigint           not null
+#
+# Indexes
+#
+#  index_coworking_packs_on_customer_id  (customer_id)
+#  index_coworking_packs_on_deleted_at   (deleted_at)
+#  index_coworking_packs_on_expires_at   (expires_at)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (customer_id => customers.id)
+#
 class CoworkingPack < ApplicationRecord
   DAYS_OPTIONS = [1, 5, 10, 20].freeze
   PAYMENT_METHODS = %w[card bank_transfer cash].freeze

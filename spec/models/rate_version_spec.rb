@@ -2,6 +2,28 @@ require "rails_helper"
 
 # Issue #156 — barèmes datés. Une clé peut porter plusieurs valeurs successives ;
 # la seule règle dure est qu'elles ne se recouvrent jamais.
+# == Schema Information
+#
+# Table name: rate_versions
+#
+#  id           :bigint           not null, primary key
+#  active_from  :date             not null
+#  active_until :date
+#  amount_cents :integer          not null
+#  note         :string
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#  rate_id      :bigint           not null
+#
+# Indexes
+#
+#  index_rate_versions_on_rate_id                  (rate_id)
+#  index_rate_versions_on_rate_id_and_active_from  (rate_id,active_from) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (rate_id => rates.id)
+#
 RSpec.describe RateVersion, type: :model do
   let(:rate) { Rate.create!(key: "pot.monthly_per_adult", amount_cents: 1_000, label: "Cagnotte") }
 

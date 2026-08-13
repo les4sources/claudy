@@ -3,14 +3,14 @@
 # Table name: spaces
 #
 #  id          :bigint           not null, primary key
-#  name        :string
-#  description :text
-#  created_at  :datetime         not null
-#  updated_at  :datetime         not null
+#  capacity    :integer          default(1), not null
 #  code        :string
 #  deleted_at  :datetime
+#  description :text
+#  name        :string
 #  position    :integer          default(999)
-#  capacity    :integer          default(1), not null
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
 #
 class Space < ApplicationRecord
   has_many :space_reservations

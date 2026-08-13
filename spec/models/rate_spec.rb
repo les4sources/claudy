@@ -1,6 +1,22 @@
 require "rails_helper"
 
 # Issue #124 — table des tarifs paramétrables.
+# == Schema Information
+#
+# Table name: rates
+#
+#  id           :bigint           not null, primary key
+#  amount_cents :integer          default(0), not null
+#  key          :string           not null
+#  label        :string
+#  unit         :string           default("cents"), not null
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#
+# Indexes
+#
+#  index_rates_on_key  (key) UNIQUE
+#
 RSpec.describe Rate, type: :model do
   it "exige une clé unique" do
     Rate.create!(key: "van.per_night", amount_cents: 1_500, label: "Van")

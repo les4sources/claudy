@@ -4,9 +4,17 @@
 #
 #  id         :bigint           not null, primary key
 #  date       :date
-#  lodging_id :bigint           not null
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
+#  lodging_id :bigint           not null
+#
+# Indexes
+#
+#  index_unavailabilities_on_lodging_id  (lodging_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (lodging_id => lodgings.id)
 #
 class Unavailability < ApplicationRecord
   validates :date,

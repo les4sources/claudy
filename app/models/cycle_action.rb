@@ -1,3 +1,34 @@
+# == Schema Information
+#
+# Table name: cycle_actions
+#
+#  id                   :bigint           not null, primary key
+#  archived_at          :datetime
+#  category             :integer          default(0), not null
+#  completed            :boolean          default(FALSE)
+#  deleted_at           :datetime
+#  hours                :decimal(5, 2)
+#  label                :string           not null
+#  position             :integer          default(0), not null
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  delegate_to_human_id :bigint
+#  human_id             :bigint           not null
+#
+# Indexes
+#
+#  index_cycle_actions_on_category                            (category)
+#  index_cycle_actions_on_completed                           (completed)
+#  index_cycle_actions_on_delegate_to_human_id                (delegate_to_human_id)
+#  index_cycle_actions_on_human_id                            (human_id)
+#  index_cycle_actions_on_human_id_and_archived_at            (human_id,archived_at)
+#  index_cycle_actions_on_human_id_and_category_and_position  (human_id,category,position)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (delegate_to_human_id => humans.id)
+#  fk_rails_...  (human_id => humans.id)
+#
 class CycleAction < ApplicationRecord
   belongs_to :human
   belongs_to :delegate_to_human, class_name: "Human", optional: true

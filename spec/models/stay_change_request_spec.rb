@@ -1,6 +1,32 @@
 require "rails_helper"
 
 # Issue #133 — demande de modification de séjour par le client.
+# == Schema Information
+#
+# Table name: stay_change_requests
+#
+#  id              :bigint           not null, primary key
+#  deleted_at      :datetime
+#  delta_cents     :integer          default(0), not null
+#  draft_snapshot  :jsonb            not null
+#  new_total_cents :integer          default(0), not null
+#  refund_iban     :string
+#  refusal_reason  :text
+#  status          :string           default("pending"), not null
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  stay_id         :bigint           not null
+#
+# Indexes
+#
+#  index_stay_change_requests_on_deleted_at          (deleted_at)
+#  index_stay_change_requests_on_stay_id             (stay_id)
+#  index_stay_change_requests_on_stay_id_and_status  (stay_id,status)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (stay_id => stays.id)
+#
 RSpec.describe StayChangeRequest, type: :model do
   let(:customer) { Customer.create!(first_name: "Ana", last_name: "Lopez", email: "ana@example.com") }
   let(:stay) do

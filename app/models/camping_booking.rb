@@ -3,22 +3,27 @@
 # Table name: camping_bookings
 #
 #  id          :bigint           not null, primary key
-#  firstname   :string
-#  lastname    :string
-#  email       :string
-#  phone       :string
-#  group_name  :string
-#  from_date   :date
-#  to_date     :date
-#  people      :integer          default(1), not null
-#  kind        :string           default("tente"), not null
-#  status      :string
-#  price_cents :integer
-#  token       :string
-#  notes       :text
 #  deleted_at  :datetime
+#  email       :string
+#  firstname   :string
+#  from_date   :date
+#  group_name  :string
+#  kind        :string           default("tente"), not null
+#  lastname    :string
+#  notes       :text
+#  people      :integer          default(1), not null
+#  phone       :string
+#  price_cents :integer
+#  status      :string
+#  to_date     :date
+#  token       :string
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
+#
+# Indexes
+#
+#  index_camping_bookings_on_deleted_at             (deleted_at)
+#  index_camping_bookings_on_from_date_and_to_date  (from_date,to_date)
 #
 # Réservation de CAMPING (tente) — epic #66, Phase 3. Occupe le calendrier via un
 # `StayItem` polymorphe (expose from_date/to_date comme Booking/SpaceBooking), et

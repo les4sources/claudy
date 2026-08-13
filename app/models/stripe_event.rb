@@ -3,11 +3,11 @@
 # Table name: stripe_events
 #
 #  id         :bigint           not null, primary key
-#  webhook_id :string
 #  event_type :string
-#  object_id  :string
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
+#  object_id  :string
+#  webhook_id :string
 #
 class StripeEvent < ApplicationRecord
 end

@@ -8,6 +8,10 @@
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
 #
+# Indexes
+#
+#  index_settings_on_key  (key) UNIQUE
+#
 # Magasin clé/valeur pour les paramètres globaux du domaine ajustables SANS
 # redéploiement (issue #78). Chaque paramètre est une ligne `key`/`value` ;
 # absence de ligne = on retombe sur le défaut fourni par l'appelant. Les valeurs

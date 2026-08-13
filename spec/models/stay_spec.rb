@@ -1,5 +1,43 @@
 require "rails_helper"
 
+# == Schema Information
+#
+# Table name: stays
+#
+#  id                       :bigint           not null, primary key
+#  activity_email_sent_at   :datetime
+#  activity_selection_token :string
+#  arrival_date             :date
+#  arrival_time             :string
+#  balance_reminder_sent_at :datetime
+#  category                 :string
+#  deleted_at               :datetime
+#  departure_date           :date
+#  departure_time           :string
+#  legacy_origin            :string
+#  notes                    :text
+#  payment_status           :string           default("pending"), not null
+#  price_override_cents     :integer
+#  source                   :string           default("reservation"), not null
+#  status                   :string
+#  token                    :string
+#  total_amount_cents       :integer          default(0), not null
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  customer_id              :bigint           not null
+#
+# Indexes
+#
+#  index_stays_on_activity_selection_token   (activity_selection_token)
+#  index_stays_on_customer_id                (customer_id)
+#  index_stays_on_legacy_origin_unique_live  (legacy_origin) UNIQUE WHERE ((legacy_origin IS NOT NULL) AND (deleted_at IS NULL))
+#  index_stays_on_source                     (source)
+#  index_stays_on_token                      (token) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (customer_id => customers.id)
+#
 RSpec.describe Stay, type: :model do
   let(:customer) { Customer.create!(email: "stay@example.com", customer_type: "individual") }
 

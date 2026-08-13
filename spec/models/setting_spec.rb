@@ -1,6 +1,20 @@
 require "rails_helper"
 
 # Magasin clé/valeur des paramètres globaux ajustables sans redéploiement (issue #78).
+# == Schema Information
+#
+# Table name: settings
+#
+#  id         :bigint           not null, primary key
+#  key        :string           not null
+#  value      :string
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#
+# Indexes
+#
+#  index_settings_on_key  (key) UNIQUE
+#
 RSpec.describe Setting do
   it "exige une clé unique" do
     described_class.create!(key: "foo", value: "1")

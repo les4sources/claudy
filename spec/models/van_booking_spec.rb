@@ -1,6 +1,32 @@
 require "rails_helper"
 
 # VanBooking : capacité GLOBALE en véhicules, configurable sans redéploiement (issue #78).
+# == Schema Information
+#
+# Table name: van_bookings
+#
+#  id          :bigint           not null, primary key
+#  deleted_at  :datetime
+#  email       :string
+#  firstname   :string
+#  from_date   :date
+#  group_name  :string
+#  lastname    :string
+#  notes       :text
+#  phone       :string
+#  price_cents :integer
+#  status      :string
+#  to_date     :date
+#  token       :string
+#  vehicles    :integer          default(1), not null
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#
+# Indexes
+#
+#  index_van_bookings_on_deleted_at             (deleted_at)
+#  index_van_bookings_on_from_date_and_to_date  (from_date,to_date)
+#
 RSpec.describe VanBooking do
   let(:d0) { Date.today + 40 }
   let(:d1) { d0 + 1 }

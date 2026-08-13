@@ -3,17 +3,17 @@
 # Table name: lodgings
 #
 #  id                      :bigint           not null, primary key
-#  name                    :string
+#  available_for_bookings  :boolean
+#  deleted_at              :datetime
 #  description             :text
+#  name                    :string
+#  party_hall_availability :boolean
+#  price_night_cents       :integer          default(0), not null
+#  show_on_reports         :boolean          default(TRUE)
+#  summary                 :string
+#  weekend_discount_cents  :integer          default(0), not null
 #  created_at              :datetime         not null
 #  updated_at              :datetime         not null
-#  summary                 :string
-#  price_night_cents       :integer          default(0), not null
-#  party_hall_availability :boolean
-#  weekend_discount_cents  :integer          default(0), not null
-#  deleted_at              :datetime
-#  show_on_reports         :boolean          default(TRUE)
-#  available_for_bookings  :boolean
 #
 require "test_helper"
 

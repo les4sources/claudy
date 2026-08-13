@@ -1,3 +1,27 @@
+# == Schema Information
+#
+# Table name: gathering_actions
+#
+#  id           :bigint           not null, primary key
+#  completed    :boolean          default(FALSE), not null
+#  completed_at :datetime
+#  deleted_at   :datetime
+#  label        :string           not null
+#  position     :integer          default(0), not null
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#  gathering_id :bigint           not null
+#
+# Indexes
+#
+#  index_gathering_actions_on_deleted_at                 (deleted_at)
+#  index_gathering_actions_on_gathering_id               (gathering_id)
+#  index_gathering_actions_on_gathering_id_and_position  (gathering_id,position)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (gathering_id => gatherings.id)
+#
 class GatheringAction < ApplicationRecord
   include PublicActivity::Model
   tracked owner: Proc.new { |controller, _model| controller.current_user rescue nil }

@@ -3,15 +3,23 @@
 # Table name: services
 #
 #  id          :bigint           not null, primary key
-#  name        :string
-#  human_id    :bigint
-#  summary     :string
-#  description :text
-#  photo       :string
 #  deleted_at  :datetime
+#  description :text
+#  name        :string
+#  photo       :string
+#  price_cents :integer
+#  summary     :string
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
-#  price_cents :integer
+#  human_id    :bigint
+#
+# Indexes
+#
+#  index_services_on_human_id  (human_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (human_id => humans.id)
 #
 class Service < ApplicationRecord
   belongs_to :human, optional: true

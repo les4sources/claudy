@@ -3,13 +3,21 @@
 # Table name: projects
 #
 #  id          :bigint           not null, primary key
-#  name        :string
+#  deleted_at  :datetime
 #  description :text
 #  due_date    :date
-#  human_id    :bigint           not null
-#  deleted_at  :datetime
+#  name        :string
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
+#  human_id    :bigint           not null
+#
+# Indexes
+#
+#  index_projects_on_human_id  (human_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (human_id => humans.id)
 #
 class Project < ApplicationRecord
   belongs_to :human, optional: true

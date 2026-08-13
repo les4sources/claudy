@@ -2,16 +2,29 @@
 #
 # Table name: decisions
 #
-#  id              :bigint           not null, primary key
-#  title           :string           not null
-#  summary         :string           not null
-#  taken_at        :date             not null
-#  recorded_by_id  :bigint           not null
-#  gathering_id    :bigint
-#  agenda_item_id  :bigint
-#  created_at      :datetime         not null
-#  updated_at      :datetime         not null
-#  deleted_at      :datetime
+#  id             :bigint           not null, primary key
+#  deleted_at     :datetime
+#  summary        :string           not null
+#  taken_at       :date             not null
+#  title          :string           not null
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#  agenda_item_id :bigint
+#  gathering_id   :bigint
+#  recorded_by_id :bigint           not null
+#
+# Indexes
+#
+#  index_decisions_on_agenda_item_id  (agenda_item_id)
+#  index_decisions_on_gathering_id    (gathering_id)
+#  index_decisions_on_recorded_by_id  (recorded_by_id)
+#  index_decisions_on_taken_at        (taken_at)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (agenda_item_id => agenda_items.id) ON DELETE => nullify
+#  fk_rails_...  (gathering_id => gatherings.id) ON DELETE => nullify
+#  fk_rails_...  (recorded_by_id => humans.id)
 #
 class Decision < ApplicationRecord
   include PublicActivity::Model

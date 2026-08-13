@@ -3,14 +3,14 @@
 # Table name: products
 #
 #  id          :bigint           not null, primary key
-#  name        :string
-#  stock       :integer
-#  photo       :string
-#  description :text
 #  deleted_at  :datetime
+#  description :text
+#  name        :string
+#  photo       :string
+#  price_cents :integer
+#  stock       :integer
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
-#  price_cents :integer
 #
 class Product < ApplicationRecord
   has_paper_trail

@@ -3,26 +3,36 @@
 # Table name: customers
 #
 #  id                 :bigint           not null, primary key
-#  first_name         :string
-#  last_name          :string
-#  email              :citext
-#  phone              :string
-#  customer_type      :string           default("individual"), not null
-#  organization_name  :string
-#  vat_number         :string
-#  peppol_id          :string
-#  address_line       :string
-#  address_zip        :string
 #  address_city       :string
 #  address_country    :string
+#  address_line       :string
+#  address_zip        :string
+#  customer_type      :string           default("individual"), not null
+#  deleted_at         :datetime
+#  email              :citext
+#  first_name         :string
 #  language           :string           default("fr"), not null
-#  stripe_customer_id :string
+#  last_name          :string
 #  marketing_consent  :boolean          default(FALSE), not null
 #  nps_eligible       :boolean          default(FALSE), not null
-#  human_id           :bigint
-#  deleted_at         :datetime
+#  organization_name  :string
+#  phone              :string
+#  vat_number         :string
 #  created_at         :datetime         not null
 #  updated_at         :datetime         not null
+#  human_id           :bigint
+#  peppol_id          :string
+#  stripe_customer_id :string
+#
+# Indexes
+#
+#  index_customers_on_customer_type      (customer_type)
+#  index_customers_on_email_unique_live  (email) UNIQUE WHERE (deleted_at IS NULL)
+#  index_customers_on_human_id           (human_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (human_id => humans.id)
 #
 class Customer < ApplicationRecord
   CUSTOMER_TYPES = %w[individual organization].freeze

@@ -3,6 +3,45 @@ require "rails_helper"
 # Issue #155 — le grand livre. Deux règles dures : une écriture ne vaut jamais
 # zéro (contrainte en base), et une écriture rattachée à un décompte émis est
 # immuable — y compris en console.
+# == Schema Information
+#
+# Table name: account_entries
+#
+#  id                   :bigint           not null, primary key
+#  amount_cents         :bigint           not null
+#  client_uuid          :string
+#  deleted_at           :datetime
+#  entry_date           :date             not null
+#  flow                 :string
+#  idempotency_key      :string
+#  kind                 :string
+#  label                :string
+#  locked_at            :datetime
+#  posted_at            :datetime
+#  price_basis          :string
+#  quantity             :decimal(12, 3)
+#  source               :string
+#  unit_price_cents     :integer
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  account_statement_id :bigint
+#  member_account_id    :bigint           not null
+#  reversal_of_id       :bigint
+#
+# Indexes
+#
+#  index_account_entries_on_account_statement_id              (account_statement_id)
+#  index_account_entries_on_client_uuid                       (client_uuid) UNIQUE
+#  index_account_entries_on_deleted_at                        (deleted_at)
+#  index_account_entries_on_idempotency_key                   (idempotency_key) UNIQUE
+#  index_account_entries_on_member_account_id_and_entry_date  (member_account_id,entry_date)
+#  index_account_entries_on_reversal_of_id                    (reversal_of_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (member_account_id => member_accounts.id)
+#  fk_rails_...  (reversal_of_id => account_entries.id)
+#
 RSpec.describe AccountEntry, type: :model do
   let(:account) { MemberAccount.create!(kind: "entity", name: "Semisto") }
 

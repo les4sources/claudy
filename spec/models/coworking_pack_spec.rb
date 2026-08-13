@@ -1,6 +1,32 @@
 require "rails_helper"
 
 # Epic #126, Phase 1 — packs de coworking.
+# == Schema Information
+#
+# Table name: coworking_packs
+#
+#  id                      :bigint           not null, primary key
+#  days_total              :integer          not null
+#  deleted_at              :datetime
+#  expires_at              :datetime         not null
+#  expiry_reminder_sent_at :datetime
+#  payment_method          :string           not null
+#  price_cents             :integer          default(0), not null
+#  purchased_at            :datetime         not null
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#  customer_id             :bigint           not null
+#
+# Indexes
+#
+#  index_coworking_packs_on_customer_id  (customer_id)
+#  index_coworking_packs_on_deleted_at   (deleted_at)
+#  index_coworking_packs_on_expires_at   (expires_at)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (customer_id => customers.id)
+#
 RSpec.describe CoworkingPack, type: :model do
   let(:customer) { Customer.create!(first_name: "Ana", last_name: "Lopez", email: "ana@example.com") }
 

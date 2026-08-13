@@ -5,6 +5,23 @@
 #
 # Un code vit 15 minutes et tolère 5 tentatives ; au-delà, il est brûlé et le
 # client doit en redemander un.
+# == Schema Information
+#
+# Table name: portal_otps
+#
+#  id          :bigint           not null, primary key
+#  attempts    :integer          default(0), not null
+#  code_digest :string           not null
+#  consumed_at :datetime
+#  email       :citext           not null
+#  expires_at  :datetime         not null
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#
+# Indexes
+#
+#  index_portal_otps_on_email_and_created_at  (email,created_at)
+#
 class PortalOtp < ApplicationRecord
   CODE_LENGTH = 6
   VALIDITY = 15.minutes

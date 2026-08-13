@@ -2,15 +2,23 @@
 #
 # Table name: experience_availabilities
 #
-#  id                 :bigint           not null, primary key
-#  experience_id      :bigint           not null
-#  available_on       :date
-#  starts_at          :string
-#  duration_minutes   :integer
-#  max_participants   :integer
-#  notes              :string
-#  created_at         :datetime         not null
-#  updated_at         :datetime         not null
+#  id               :bigint           not null, primary key
+#  available_on     :date
+#  duration_minutes :integer
+#  max_participants :integer
+#  notes            :string
+#  starts_at        :string
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
+#  experience_id    :bigint           not null
+#
+# Indexes
+#
+#  index_experience_availabilities_on_experience_id  (experience_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (experience_id => experiences.id)
 #
 class ExperienceAvailability < ApplicationRecord
   STATUSES = %w[open full].freeze

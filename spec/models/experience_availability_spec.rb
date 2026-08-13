@@ -2,6 +2,28 @@ require "rails_helper"
 
 # Epic #25, Phase 4 — les blocs de disponibilité ont la durée de l'activité,
 # tiennent entre 8h et 22h, et ne se chevauchent jamais.
+# == Schema Information
+#
+# Table name: experience_availabilities
+#
+#  id               :bigint           not null, primary key
+#  available_on     :date
+#  duration_minutes :integer
+#  max_participants :integer
+#  notes            :string
+#  starts_at        :string
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
+#  experience_id    :bigint           not null
+#
+# Indexes
+#
+#  index_experience_availabilities_on_experience_id  (experience_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (experience_id => experiences.id)
+#
 RSpec.describe ExperienceAvailability, type: :model do
   let(:experience) { Experience.create!(name: "Balade en forêt", duration_hours: 2) }
   let(:day) { Date.today + 7 }

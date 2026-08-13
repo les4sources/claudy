@@ -1,5 +1,27 @@
 require "rails_helper"
 
+# == Schema Information
+#
+# Table name: stay_items
+#
+#  id            :bigint           not null, primary key
+#  bookable_type :string           not null
+#  deleted_at    :datetime
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#  bookable_id   :bigint           not null
+#  stay_id       :bigint           not null
+#
+# Indexes
+#
+#  index_stay_items_on_bookable_type_and_bookable_id  (bookable_type,bookable_id)
+#  index_stay_items_on_stay_and_bookable_unique_live  (stay_id,bookable_type,bookable_id) UNIQUE WHERE (deleted_at IS NULL)
+#  index_stay_items_on_stay_id                        (stay_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (stay_id => stays.id)
+#
 RSpec.describe StayItem, type: :model do
   let(:customer) { Customer.create!(email: "stayitem@example.com", customer_type: "individual") }
   let(:stay) { Stay.create!(customer: customer) }

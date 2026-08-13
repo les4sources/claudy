@@ -8,6 +8,32 @@
 # Delta négatif avec trop-perçu → l'IBAN du client est exigé, et le
 # remboursement est fait à la main par l'équipe dans les 10 jours qui suivent
 # le séjour.
+# == Schema Information
+#
+# Table name: stay_change_requests
+#
+#  id              :bigint           not null, primary key
+#  deleted_at      :datetime
+#  delta_cents     :integer          default(0), not null
+#  draft_snapshot  :jsonb            not null
+#  new_total_cents :integer          default(0), not null
+#  refund_iban     :string
+#  refusal_reason  :text
+#  status          :string           default("pending"), not null
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  stay_id         :bigint           not null
+#
+# Indexes
+#
+#  index_stay_change_requests_on_deleted_at          (deleted_at)
+#  index_stay_change_requests_on_stay_id             (stay_id)
+#  index_stay_change_requests_on_stay_id_and_status  (stay_id,status)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (stay_id => stays.id)
+#
 class StayChangeRequest < ApplicationRecord
   STATUSES = %w[pending approved refused].freeze
 

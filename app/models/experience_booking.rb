@@ -2,15 +2,25 @@
 #
 # Table name: experience_bookings
 #
-#  id                          :bigint           not null, primary key
-#  experience_availability_id  :bigint           not null
-#  stay_id                     :bigint           not null
-#  participants                :integer
-#  status                      :string           default("pending")
-#  notes                       :text
-#  refusal_reason              :text
-#  created_at                  :datetime         not null
-#  updated_at                  :datetime         not null
+#  id                         :bigint           not null, primary key
+#  notes                      :text
+#  participants               :integer
+#  refusal_reason             :text
+#  status                     :string
+#  created_at                 :datetime         not null
+#  updated_at                 :datetime         not null
+#  experience_availability_id :bigint           not null
+#  stay_id                    :bigint           not null
+#
+# Indexes
+#
+#  index_experience_bookings_on_experience_availability_id  (experience_availability_id)
+#  index_experience_bookings_on_stay_id                     (stay_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (experience_availability_id => experience_availabilities.id)
+#  fk_rails_...  (stay_id => stays.id)
 #
 class ExperienceBooking < ApplicationRecord
   # `refused` (epic #55, Phase 2) : le porteur de l'activité a décliné le
