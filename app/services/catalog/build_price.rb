@@ -1,27 +1,32 @@
 module Catalog
-  # PROPOSE les prix sourcier et public d'un palier (issue #157).
+  # Calcule le prix sourcier d'un palier à partir du prix d'achat et d'une MARGE
+  # paramétrée par canal (Michael, 2026-08-13).
   #
-  # Ce service ne décide de rien : il préremplit un formulaire. Ce qui est
-  # enregistré est la valeur du champ, pas le résultat de ce calcul — c'est
-  # exactement ce qui empêche une correction rétroactive de coefficient de
-  # déplacer un prix déjà appliqué.
+  #     prix sourcier = prix d'achat × (1 + marge / 100)
   #
-  # Deux règles, de sens opposé :
+  # Une seule notion, trois valeurs — bar, cellier, repas — éditables dans
+  # Paramètres > Tarifs sans redéploiement. C'est ce qui rend le prix sourcier
+  # AUTOMATIQUE : on saisit ce qu'on lit sur la facture du fournisseur, le reste
+  # suit.
   #
-  #   bar     : sourcier = ACHAT × bar.member_markup      (1,91 € → 2,10 €)
-  #             le prix public est saisi à la main (4,00 €), jamais dérivé
-  #   cellier : sourcier = RÉFÉRENCE × grocery.member_ratio (2,95 € → 2,80 €)
-  #             public   = RÉFÉRENCE × grocery.public_ratio (2,95 € → 3,10 €)
+  # Le résultat reste STOCKÉ sur le palier, jamais recalculé à la lecture :
+  # relever la marge demain ne doit pas déplacer un décompte déjà émis. Et il
+  # reste modifiable à la main — ce qui est enregistré est la valeur du champ.
   #
-  # Les coefficients vivent dans `rates` (clés seedées en #156) et sont lus À LA
-  # DATE du palier : proposer un palier de mars 2024 doit utiliser la majoration
-  # de mars 2024.
+  # La marge est lue À LA DATE du palier : reconstituer un palier de 2024 doit
+  # utiliser la marge de 2024, pas celle d'aujourd'hui.
+  #
+  # Le prix PUBLIC n'est pas une marge : au bar c'est une décision commerciale
+  # (4,00 € pour une bière achetée 1,91 €), au cellier il se propose encore
+  # depuis le prix de référence quand il y en a un. On ne le fixe jamais d'office.
   class BuildPrice < ServiceBase
-    DEFAULT_BAR_MARKUP = 1.10
-    DEFAULT_GROCERY_MEMBER_RATIO = 0.95
+    # Marges de repli, utilisées seulement si la clé n'est pas paramétrée.
+    DEFAULT_MARGINS = { "bar" => 10, "grocery" => 17, "meal" => 0 }.freeze
     DEFAULT_GROCERY_PUBLIC_RATIO = 1.05
 
     Proposal = Struct.new(:member_price_cents, :public_price_cents, keyword_init: true)
+
+    def self.margin_key(channel) = "catalog.margin.#{channel}"
 
     def initialize(channel:, purchase_price_cents: nil, reference_price_cents: nil, on: Date.current)
       @channel = channel.to_s
@@ -38,45 +43,33 @@ module Catalog
       build
     end
 
+    # Le prix sourcier seul — ce que le contrôleur applique quand le champ est
+    # laissé vide. `nil` quand il n'y a pas de prix d'achat : on ne devine pas.
+    def member_price_cents
+      return nil if @purchase_price_cents.blank?
+
+      (@purchase_price_cents.to_i * (1 + margin_percent / 100.0)).round
+    end
+
     private
 
     def build
-      case @channel
-      when "bar" then bar_proposal
-      when "grocery" then grocery_proposal
-      else Proposal.new(member_price_cents: nil, public_price_cents: nil)
-      end
+      Proposal.new(member_price_cents: member_price_cents, public_price_cents: public_proposal)
     end
 
-    # Au bar, seul le prix sourcier se déduit — du prix d'ACHAT. Le prix public
-    # est une décision commerciale (4,00 € pour une bière achetée 1,91 €), pas
-    # un multiple de l'achat : on ne le propose pas.
-    def bar_proposal
-      Proposal.new(
-        member_price_cents: apply(@purchase_price_cents, rate("bar.member_markup", DEFAULT_BAR_MARKUP)),
-        public_price_cents: nil
-      )
+    # Marge du canal, en pourcentage (10 = +10 %).
+    def margin_percent
+      configured = Pricing::Rates.cents(self.class.margin_key(@channel), on: @on)
+      configured || DEFAULT_MARGINS.fetch(@channel, 0)
     end
 
-    def grocery_proposal
-      Proposal.new(
-        member_price_cents: apply(@reference_price_cents, rate("grocery.member_ratio", DEFAULT_GROCERY_MEMBER_RATIO)),
-        public_price_cents: apply(@reference_price_cents, rate("grocery.public_ratio", DEFAULT_GROCERY_PUBLIC_RATIO))
-      )
-    end
+    def public_proposal
+      return nil unless @channel == "grocery" && @reference_price_cents.present?
 
-    def apply(cents, coefficient)
-      return nil if cents.blank? || coefficient.nil?
+      ratio = Pricing::Rates.cents("grocery.public_ratio", on: @on)
+      coefficient = ratio.nil? ? DEFAULT_GROCERY_PUBLIC_RATIO : ratio / 100.0
 
-      (cents.to_i * coefficient).round
-    end
-
-    # Les clés sourcières sont stockées en unité `percent` : 110 signifie 1,10.
-    # `Pricing::Rates` n'expose pas encore de lecture datée en pourcentage, donc
-    # on convertit ici — un cent absent retombe sur la constante documentée.
-    def rate(key, fallback)
-      value = Pricing::Rates.cents(key, on: @on)
-      value.nil? ? fallback : value / 100.0
+      (@reference_price_cents.to_i * coefficient).round
     end
   end
 end

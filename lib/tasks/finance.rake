@@ -51,6 +51,45 @@ namespace :finance do
          "#{CatalogItem.count} article(s) au catalogue"
   end
 
+  desc "Seed des marges sourcier par canal (bar / cellier / repas) — idempotent"
+  task seed_margins: :environment do
+    # Une seule notion : le prix sourcier = prix d'achat + marge. Les valeurs
+    # de départ reproduisent au plus près ce qui se pratiquait :
+    #   bar     10 % — exactement l'ancien « achat × 1,10 »
+    #   cellier 17 % — l'avoine passait de 2,40 € d'achat à 2,80 € sourcier
+    #   repas    0 % — pas de marge sur un repas, son prix est un barème
+    marges = {
+      "catalog.margin.bar" => [10, "Marge sourcier — Bar (%)"],
+      "catalog.margin.grocery" => [17, "Marge sourcier — Cellier (%)"],
+      "catalog.margin.meal" => [0, "Marge sourcier — Repas (%)"]
+    }
+
+    creees = 0
+    marges.each do |key, (percent, label)|
+      rate = Rate.find_or_initialize_by(key: key)
+      next unless rate.new_record?
+
+      rate.update!(amount_cents: percent, unit: "percent", label: label)
+      rate.rate_versions.create!(amount_cents: percent, active_from: RateVersion::ORIGIN,
+                                 note: "Marge initiale")
+      creees += 1
+    end
+
+    # Les anciennes clés ne servent plus au prix sourcier. On ne les supprime
+    # pas — elles restent dans l'historique des paliers déjà posés — mais leur
+    # libellé le dit, pour que personne ne les édite en croyant agir.
+    { "bar.member_markup" => "OBSOLÈTE — remplacée par « Marge sourcier — Bar »",
+      "grocery.member_ratio" => "OBSOLÈTE — remplacée par « Marge sourcier — Cellier »" }.each do |key, label|
+      rate = Rate.find_by(key: key)
+      rate&.update!(label: label) unless rate&.label.to_s.start_with?("OBSOLÈTE")
+    end
+
+    puts "[finance:seed_margins] #{creees} marge(s) créée(s), #{marges.size - creees} déjà présente(s)."
+    Rate.ordered.where("key LIKE 'catalog.margin.%'").each do |rate|
+      puts "  #{rate.key.ljust(24)} #{rate.amount_cents} %"
+    end
+  end
+
   desc "Recalcule chaque solde depuis les écritures et le compare aux décomptes figés — exit 1 si écart"
   task verify_ledger: :environment do
     ecarts = []

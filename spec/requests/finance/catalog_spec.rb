@@ -72,6 +72,38 @@ RSpec.describe "Finances > Catalogue", type: :request do
       expect(moinette.price_on(Date.new(2026, 9, 1)).member_price_cents).to eq(220)
     end
 
+    # Le prix sourcier est AUTOMATIQUE : laissé vide, il se calcule depuis
+    # l'achat et la marge du canal.
+    it "calcule le prix sourcier quand le champ est laissé vide" do
+      Rate.find_or_create_by!(key: "catalog.margin.bar") { |r| r.amount_cents = 10; r.unit = "percent" }
+          .rate_versions.create!(amount_cents: 10, active_from: Date.new(2023, 1, 1))
+
+      post finance_catalog_prices_path(moinette), params: {
+        catalog_price: { active_from: "2026-09-01", purchase_price: "2,00" }
+      }
+
+      expect(moinette.catalog_prices.most_recent_first.first.member_price_cents).to eq(220)
+    end
+
+    it "laisse la saisie manuelle gagner sur le calcul" do
+      post finance_catalog_prices_path(moinette), params: {
+        catalog_price: { active_from: "2026-09-01", purchase_price: "2,00", member_price: "3,50" }
+      }
+
+      expect(moinette.catalog_prices.most_recent_first.first.member_price_cents).to eq(350)
+    end
+
+    it "refuse clairement quand ni achat ni prix sourcier ne sont donnés" do
+      expect {
+        post finance_catalog_prices_path(moinette), params: {
+          catalog_price: { active_from: "2026-09-01" }
+        }
+      }.not_to change(CatalogPrice, :count)
+
+      follow_redirect!
+      expect(response.body).to include("ne peut pas être calculé")
+    end
+
     it "accepte la virgule décimale et laisse vides les prix non saisis" do
       post finance_catalog_prices_path(avoine), params: {
         catalog_price: { active_from: "2026-09-01", member_price: "2,85" }
@@ -116,6 +148,38 @@ RSpec.describe "Finances > Catalogue", type: :request do
       get finance_catalog_suggest_price_path(channel: "bar", purchase: "1,91")
 
       expect(JSON.parse(response.body)["member_price"]).to eq(2.10)
+    end
+  end
+
+  describe "suppression" do
+    # Soft delete : l'article disparaît des listes, mais les écritures passées
+    # gardent leur libellé et leur prix — elles ne dépendent pas de lui.
+    it "retire l'article des listes sans le détruire" do
+      expect {
+        delete finance_catalog_path(moinette)
+      }.not_to change { CatalogItem.unscoped.count }
+
+      expect(CatalogItem.where(id: moinette.id)).to be_empty
+      expect(CatalogItem.unscoped.find(moinette.id).deleted_at).to be_present
+    end
+
+    it "laisse intactes les écritures qui le référencent" do
+      household = Household.create!(name: "Chevêche", kind: "resident")
+      account = MemberAccount.create!(kind: "household", household: household, name: "Chevêche")
+      entry = account.account_entries.create!(entry_date: Date.current, amount_cents: 210,
+                                              label: "Moinette", catalog_item_id: moinette.id)
+
+      delete finance_catalog_path(moinette)
+
+      expect(entry.reload.label).to eq("Moinette")
+      expect(entry.amount_cents).to eq(210)
+    end
+
+    it "propose la suppression depuis la fiche de l'article" do
+      get finance_catalog_path(moinette)
+
+      expect(response.body).to include("Supprimer")
+      expect(response.body).to include("turbo-confirm")
     end
   end
 
