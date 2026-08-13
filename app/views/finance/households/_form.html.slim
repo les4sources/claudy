@@ -24,26 +24,26 @@
   .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
     = section_heading_tw heading: "Composition"
 
-  .col-span-2.mb-4.space-y-4
+  .col-span-2.mb-4.space-y-4(data-controller="nested-form")
     p.text-sm.text-gray-500
       | Chaque membre porte sa période de présence : c'est elle qui fera foi quand
         on recomptera les adultes d'un mois passé. Laisse une ligne vide pour l'ignorer.
 
-    = f.fields_for :household_members do |member_form|
-      .p-3.bg-gray-50.rounded-md.grid.grid-cols-1.md:grid-cols-5.gap-3.items-end
-        div.md:col-span-2
-          = member_form.text_field :name, label: "Nom"
-        div
-          = member_form.select :kind,
-                               HouseholdMember::KINDS.map { |kind| [HouseholdMember::KIND_LABELS.fetch(kind, kind), kind] },
-                               { label: "Statut" }
-        div
-          = member_form.date_field :started_on, label: "Depuis"
-        div
-          = member_form.date_field :ended_on, label: "Jusqu'au"
-        - if member_form.object.persisted?
-          div.md:col-span-5
-            = member_form.check_box :_destroy
-            = member_form.label :_destroy, "Retirer ce membre"
+    .space-y-4(data-nested-form-target="rows")
+      = f.fields_for :household_members do |member_form|
+        = render "finance/households/member_fields", member_form: member_form
+
+    / Gabarit d'une ligne vierge. `child_index: "NEW_RECORD"` produit des noms de
+      champs `household[household_members_attributes][NEW_RECORD][...]` que le
+      contrôleur Stimulus réindexe à chaque insertion.
+      `started_on` est prérempli comme la ligne rendue par le serveur : la date
+      de présence est obligatoire, une ligne ajoutée sans elle ferait échouer
+      tout le formulaire pour un champ qu'on n'a pas pensé à remplir.
+    template(data-nested-form-target="template")
+      = f.fields_for :household_members, HouseholdMember.new(kind: "adult", started_on: f.object.moved_in_on || Date.current), child_index: "NEW_RECORD" do |member_form|
+        = render "finance/households/member_fields", member_form: member_form
+
+    button.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(class="hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" type="button" data-action="nested-form#add")
+      | ➕ Ajouter une personne
 
 hr

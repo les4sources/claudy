@@ -69,6 +69,71 @@ RSpec.describe "Finances > Ménages", type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
+
+    # Le formulaire ne rendait que trois lignes vides : un ménage de cinq
+    # demandait deux passages, sans que rien ne le dise. Le serveur, lui, n'a
+    # jamais eu de plafond — c'est ce que cette spec verrouille, pendant que le
+    # bouton « Ajouter une personne » lève la limite côté écran.
+    it "crée un ménage de cinq personnes en une seule soumission" do
+      members = %w[Ada Bob Chloé Dan Eve].each_with_index.to_h do |name, index|
+        [index.to_s, { name: name, kind: index >= 3 ? "child" : "adult", started_on: "2023-01-01" }]
+      end
+
+      post finance_households_path, params: {
+        household: { name: "Famille Grand-Duc", kind: "resident", household_members_attributes: members }
+      }
+
+      household = Household.last
+      expect(household.household_members.count).to eq(5)
+      expect(household.adults_on(Date.new(2026, 1, 1))).to eq(3)
+      expect(household.children_on(Date.new(2026, 1, 1))).to eq(2)
+    end
+
+    # Les lignes ajoutées au clic portent un index horodaté, pas 0..n-1 : si le
+    # contrôleur les regroupait mal, deux personnes ajoutées de suite n'en
+    # feraient qu'une. On rejoue donc des index non contigus.
+    it "accepte des index de membres non contigus, comme ceux ajoutés au clic" do
+      post finance_households_path, params: {
+        household: {
+          name: "Famille Hulotte", kind: "resident",
+          household_members_attributes: {
+            "0" => { name: "Ada", kind: "adult", started_on: "2023-01-01" },
+            "17555512340001" => { name: "Bob", kind: "adult", started_on: "2023-01-01" },
+            "17555512340002" => { name: "Chloé", kind: "child", started_on: "2023-01-01" }
+          }
+        }
+      }
+
+      expect(Household.last.household_members.pluck(:name)).to match_array(%w[Ada Bob Chloé])
+    end
+  end
+
+  describe "formulaire" do
+    it "rend le gabarit de ligne et le bouton d'ajout" do
+      get new_finance_household_path
+
+      expect(response.body).to include('data-controller="nested-form"')
+      expect(response.body).to include("Ajouter une personne")
+      expect(response.body).to include("household_members_attributes][NEW_RECORD]")
+    end
+
+    it "ne rend qu'une seule ligne vierge au départ" do
+      get new_finance_household_path
+
+      rows = response.body.scan(/household\[household_members_attributes\]\[\d+\]\[name\]/)
+      expect(rows.size).to eq(1)
+    end
+
+    # `started_on` est obligatoire : un gabarit qui la laisse vide fait échouer
+    # tout le formulaire dès qu'on ajoute quelqu'un sans y penser.
+    it "préremplit la date de présence dans le gabarit, comme dans la ligne rendue" do
+      household = Household.create!(name: "Famille Chevêche", kind: "resident", moved_in_on: Date.new(2023, 4, 1))
+
+      get edit_finance_household_path(household)
+
+      template = response.body[/<template.*?<\/template>/m]
+      expect(template).to include('value="2023-04-01"')
+    end
   end
 
   describe "édition" do

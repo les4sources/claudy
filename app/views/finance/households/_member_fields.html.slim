@@ -1,0 +1,18 @@
+/ Une ligne de composition. Rendue en boucle pour les membres existants, et une
+  fois de plus dans un <template> avec l'index NEW_RECORD pour servir de gabarit
+  au bouton « Ajouter une personne » (contrôleur Stimulus `nested_form`).
+.p-3.bg-gray-50.rounded-md.grid.grid-cols-1.md:grid-cols-5.gap-3.items-end
+  div.md:col-span-2
+    = member_form.text_field :name, label: "Nom"
+  div
+    = member_form.select :kind,
+                         HouseholdMember::KINDS.map { |kind| [HouseholdMember::KIND_LABELS.fetch(kind, kind), kind] },
+                         { label: "Statut" }
+  div
+    = member_form.date_field :started_on, label: "Depuis"
+  div
+    = member_form.date_field :ended_on, label: "Jusqu'au"
+  - if member_form.object&.persisted?
+    div.md:col-span-5
+      = member_form.check_box :_destroy
+      = member_form.label :_destroy, "Retirer ce membre"
