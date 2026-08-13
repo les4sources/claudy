@@ -1,0 +1,55 @@
+- content_for :title do
+  | Décompte #{@account.code} — #{l(@statement.period_month, format: '%B %Y')}
+
+.mb-6.flex.items-start.justify-between
+  div
+    h1.text-2xl.font-semibold.text-gray-900
+      | Décompte — #{l(@statement.period_month, format: "%B %Y")}
+    p.text-sm.text-gray-500
+      = @account.name
+      span.ml-2.font-mono= @account.code
+  button.text-sm.text-gray-500.underline(class="print:hidden" type="button" onclick="window.print()")
+    | Imprimer
+
+.mb-6.p-4.rounded-lg.bg-gray-50
+  table.w-full.text-sm
+    tbody
+      tr
+        td.py-1.text-gray-600 Solde reporté
+        td.py-1.text-right= number_to_currency(@statement.opening_balance_cents / 100.0)
+      tr
+        td.py-1.text-gray-600 Consommations et charges du mois
+        td.py-1.text-right= number_to_currency(@statement.debits_cents / 100.0)
+      - if @statement.credits_cents != 0
+        tr
+          td.py-1.text-gray-600 Règlements et avoirs
+          td.py-1.text-right= number_to_currency(@statement.credits_cents / 100.0)
+      tr.border-t.border-gray-300
+        td.py-2.font-semibold.text-gray-900 Total dû
+        td.py-2.text-right.text-xl.font-semibold.text-gray-900= number_to_currency(@statement.closing_balance_cents / 100.0)
+
+- if @entries.any?
+  h2.text-sm.uppercase.tracking-wide.text-gray-400.mb-2 Détail du mois
+  table.w-full.text-sm.mb-6
+    tbody
+      - @entries.each do |entry|
+        tr.border-b.border-gray-100
+          td.py-1.5.text-gray-500.whitespace-nowrap= l(entry.entry_date, format: :short)
+          td.py-1.5.text-gray-800
+            = entry.label
+            - if entry.quantity.present?
+              span.ml-2.text-xs.text-gray-400
+                = "#{entry.quantity.to_s.sub('.0', '')} × #{number_to_currency(entry.unit_price_cents.to_i / 100.0)}"
+          td.py-1.5.text-right.whitespace-nowrap class=(entry.amount_cents.negative? ? "text-emerald-700" : "text-gray-900")
+            = number_to_currency(entry.amount_cents / 100.0)
+
+.p-4.rounded-lg.bg-teal-50.text-sm.text-teal-900
+  p
+    | Pour payer par virement, indique
+    strong = " #{@account.code}"
+    |  en communication : c'est ce qui permet de rattacher ton paiement automatiquement.
+  p.mt-2.text-teal-800
+    | Une ligne te semble fausse ? Signale-la — le décompte est figé, la correction apparaîtra sur celui du mois suivant.
+
+p.mt-8.text-xs.text-gray-400
+  | Les 4 Sources · décompte émis le #{l(@statement.issued_at.to_date, format: :long).squish if @statement.issued_at}

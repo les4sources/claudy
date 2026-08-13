@@ -81,8 +81,10 @@ RSpec.describe "Finances > Comptes", type: :request do
 
     it "marque les écritures verrouillées et n'offre pas de suppression" do
       account = create_account
+      # Un VRAI décompte : depuis #160, la colonne porte une clé étrangère.
+      statement = AccountStatement.create!(member_account: account, period_month: Date.current)
       account.account_entries.create!(entry_date: Date.current, amount_cents: 1_000,
-                                      label: "Verrouillée", account_statement_id: 42)
+                                      label: "Verrouillée", account_statement_id: statement.id)
 
       get finance_account_path(account)
 
@@ -183,8 +185,9 @@ RSpec.describe "Finances > Comptes", type: :request do
     end
 
     it "refuse la suppression d'une écriture verrouillée, avec un message clair" do
+      statement = AccountStatement.create!(member_account: account, period_month: Date.current)
       entry = account.account_entries.create!(entry_date: Date.current, amount_cents: 1_000,
-                                              label: "Bar", account_statement_id: 42)
+                                              label: "Bar", account_statement_id: statement.id)
 
       delete finance_account_entry_path(account, entry)
 

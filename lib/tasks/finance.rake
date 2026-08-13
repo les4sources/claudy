@@ -51,6 +51,57 @@ namespace :finance do
          "#{CatalogItem.count} article(s) au catalogue"
   end
 
+  desc "Recalcule chaque solde depuis les écritures et le compare aux décomptes figés — exit 1 si écart"
+  task verify_ledger: :environment do
+    ecarts = []
+
+    MemberAccount.unscoped.find_each do |account|
+      statements = AccountStatement.unscoped
+                                   .where(member_account_id: account.id)
+                                   .order(:period_month).to_a
+      next if statements.empty?
+
+      # Contrôle 1 — chaque décompte doit refermer sa propre addition.
+      statements.each do |statement|
+        attendu = statement.opening_balance_cents + statement.debits_cents + statement.credits_cents
+        next if attendu == statement.closing_balance_cents
+
+        ecarts << "#{account.code} #{statement.period_month.strftime('%Y-%m')} : clôture figée " \
+                  "#{statement.closing_balance_cents}, recalculée #{attendu}"
+      end
+
+      # Contrôle 2 — le CHAÎNAGE : l'ouverture d'un mois est la clôture du
+      # précédent. C'est lui qui attrape une écriture glissée entre deux
+      # décomptes déjà émis.
+      statements.each_cons(2) do |precedent, suivant|
+        next if suivant.opening_balance_cents == precedent.closing_balance_cents
+
+        ecarts << "#{account.code} #{suivant.period_month.strftime('%Y-%m')} : ouverture " \
+                  "#{suivant.opening_balance_cents} ≠ clôture précédente #{precedent.closing_balance_cents}"
+      end
+
+      # Contrôle 3 — le solde du compte doit égaler la clôture du dernier
+      # décompte plus les écritures non encore couvertes.
+      dernier = statements.last
+      hors_decompte = AccountEntry.unscoped
+                                  .where(member_account_id: account.id, account_statement_id: nil)
+                                  .where("entry_date > ?", dernier.period_month.end_of_month)
+                                  .sum(:amount_cents)
+      attendu = dernier.closing_balance_cents + hors_decompte
+      next if attendu == account.balance_cents
+
+      ecarts << "#{account.code} : solde courant #{account.balance_cents}, attendu #{attendu}"
+    end
+
+    if ecarts.empty?
+      puts "[finance:verify_ledger] Aucun écart — #{AccountStatement.unscoped.count} décompte(s) vérifié(s)."
+    else
+      puts "[finance:verify_ledger] #{ecarts.size} écart(s) :"
+      ecarts.each { |e| puts "  ! #{e}" }
+      exit 1
+    end
+  end
+
   desc "Génère les charges récurrentes d'un mois — MONTH=2026-08, dry-run par défaut, APPLY=1 pour écrire"
   task generate_recurring: :environment do
     month = ENV["MONTH"].presence || Date.current.strftime("%Y-%m")

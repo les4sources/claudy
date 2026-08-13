@@ -1,0 +1,45 @@
+p
+  | Voici ton décompte de
+  strong = " #{l(@statement.period_month, format: '%B %Y')}"
+  | .
+
+table(cellpadding="6" style="border-collapse: collapse; margin: 16px 0;")
+  tr
+    td Solde reporté du mois précédent
+    td(align="right")= number_to_currency(@statement.opening_balance_cents / 100.0)
+  tr
+    td Consommations et charges du mois
+    td(align="right")= number_to_currency(@statement.debits_cents / 100.0)
+  - if @statement.credits_cents != 0
+    tr
+      td Règlements et avoirs
+      td(align="right")= number_to_currency(@statement.credits_cents / 100.0)
+  tr
+    td
+      strong Total dû
+    td(align="right")
+      strong= number_to_currency(@statement.closing_balance_cents / 100.0)
+
+- if @entries.any?
+  p
+    strong Le détail :
+  table(cellpadding="4" style="border-collapse: collapse; font-size: 14px;")
+    - @entries.each do |entry|
+      tr
+        td= l(entry.entry_date, format: :short)
+        td= entry.label
+        td
+          - if entry.quantity.present?
+            = "#{entry.quantity.to_s.sub('.0', '')} × #{number_to_currency(entry.unit_price_cents.to_i / 100.0)}"
+        td(align="right")= number_to_currency(entry.amount_cents / 100.0)
+
+p
+  | Pour payer par virement, la communication à indiquer est
+  strong = " #{@account.code}"
+  | . C'est elle qui permet de rattacher ton paiement sans avoir à te courir après.
+
+p = link_to "→ Voir et imprimer ce décompte", @statement_url
+
+p(style="color: #666; font-size: 13px;")
+  | Une erreur, une ligne qui te semble fausse ? Réponds à ce mail, on corrige.
+  | Le décompte est figé : une correction apparaîtra sur le décompte du mois suivant, jamais en modifiant celui-ci.
