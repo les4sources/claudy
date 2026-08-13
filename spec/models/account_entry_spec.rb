@@ -43,6 +43,7 @@ require "rails_helper"
 #
 # Foreign Keys
 #
+#  fk_rails_...  (account_statement_id => account_statements.id)
 #  fk_rails_...  (catalog_item_id => catalog_items.id)
 #  fk_rails_...  (member_account_id => member_accounts.id)
 #  fk_rails_...  (paper_sheet_id => paper_sheets.id)
@@ -50,6 +51,12 @@ require "rails_helper"
 #
 RSpec.describe AccountEntry, type: :model do
   let(:account) { MemberAccount.create!(kind: "entity", name: "Semisto") }
+
+  # Un VRAI décompte : depuis #160, `account_entries.account_statement_id`
+  # porte une clé étrangère — un id fantôme ne passe plus, et c'est tant mieux.
+  let(:statement) do
+    AccountStatement.create!(member_account: account, period_month: Date.new(2024, 5, 1))
+  end
 
   def entry(attrs = {})
     account.account_entries.create!({ entry_date: Date.new(2024, 5, 1), amount_cents: 1_250,
@@ -93,7 +100,7 @@ RSpec.describe AccountEntry, type: :model do
 
   describe "#locked?" do
     it "est vrai dès qu'un décompte est rattaché" do
-      expect(entry(account_statement_id: 42)).to be_locked
+      expect(entry(account_statement_id: statement.id)).to be_locked
     end
 
     it "est vrai dès que locked_at est renseigné" do
@@ -106,7 +113,7 @@ RSpec.describe AccountEntry, type: :model do
   end
 
   describe "immuabilité d'une écriture verrouillée" do
-    let!(:locked) { entry(account_statement_id: 42) }
+    let!(:locked) { entry(account_statement_id: statement.id) }
 
     it "refuse un update" do
       expect { locked.update!(label: "Falsifié") }.to raise_error(AccountEntry::Locked)
@@ -137,7 +144,7 @@ RSpec.describe AccountEntry, type: :model do
 
   describe "#reverse!" do
     it "crée l'écriture opposée sans jamais toucher à l'originale" do
-      original = entry(account_statement_id: 42)
+      original = entry(account_statement_id: statement.id)
 
       reversal = original.reverse!(label: "Erreur de saisie")
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_13_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_13_180100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -47,6 +47,47 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_160000) do
     t.index ["paper_sheet_id"], name: "index_account_entries_on_paper_sheet_id"
     t.index ["reversal_of_id"], name: "index_account_entries_on_reversal_of_id"
     t.check_constraint "amount_cents <> 0", name: "account_entries_amount_not_zero_check"
+  end
+
+  create_table "account_settlements", force: :cascade do |t|
+    t.bigint "account_entry_id"
+    t.bigint "amount_cents", null: false
+    t.string "bank_reference"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "member_account_id", null: false
+    t.string "method", default: "bank_transfer", null: false
+    t.text "notes"
+    t.string "received_channel", default: "bank", null: false
+    t.date "received_on", null: false
+    t.string "reference"
+    t.datetime "updated_at", null: false
+    t.index ["account_entry_id"], name: "index_account_settlements_on_account_entry_id"
+    t.index ["deleted_at"], name: "index_account_settlements_on_deleted_at"
+    t.index ["member_account_id"], name: "index_account_settlements_on_member_account_id"
+    t.index ["received_on"], name: "index_account_settlements_on_received_on"
+  end
+
+  create_table "account_statements", force: :cascade do |t|
+    t.bigint "closing_balance_cents", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.bigint "credits_cents", default: 0, null: false
+    t.bigint "debits_cents", default: 0, null: false
+    t.datetime "deleted_at"
+    t.datetime "issued_at"
+    t.datetime "last_reminder_at"
+    t.bigint "member_account_id", null: false
+    t.bigint "opening_balance_cents", default: 0, null: false
+    t.date "period_month", null: false
+    t.integer "reminders_count", default: 0, null: false
+    t.datetime "sent_at"
+    t.string "status", default: "draft", null: false
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_account_statements_on_deleted_at"
+    t.index ["member_account_id", "period_month"], name: "index_account_statements_on_member_account_id_and_period_month", unique: true
+    t.index ["member_account_id"], name: "index_account_statements_on_member_account_id"
+    t.index ["token"], name: "index_account_statements_on_token", unique: true
   end
 
   create_table "action_text_rich_texts", force: :cascade do |t|
@@ -1032,9 +1073,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_160000) do
   end
 
   add_foreign_key "account_entries", "account_entries", column: "reversal_of_id"
+  add_foreign_key "account_entries", "account_statements"
   add_foreign_key "account_entries", "catalog_items"
   add_foreign_key "account_entries", "member_accounts"
   add_foreign_key "account_entries", "paper_sheets"
+  add_foreign_key "account_settlements", "account_entries"
+  add_foreign_key "account_settlements", "member_accounts"
+  add_foreign_key "account_statements", "member_accounts"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "agenda_items", "gatherings"

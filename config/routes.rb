@@ -73,6 +73,7 @@ Rails.application.routes.draw do
     resources :households
     resources :accounts do
       resources :entries, only: [:create, :destroy], controller: "account_entries"
+      resources :settlements, only: [:create]
     end
     # Routes nommées AVANT la ressource : sinon `/finance/catalog/print` serait
     # capté par `catalog#show` avec `id = "print"`.
@@ -91,6 +92,16 @@ Rails.application.routes.draw do
       member do
         get :encode
         post :save_encoding
+      end
+    end
+    resources :statements, only: [:index] do
+      collection do
+        post :issue
+      end
+      member do
+        post :send_email
+        post :remind
+        post :mark_settled
       end
     end
   end
@@ -287,6 +298,10 @@ Rails.application.routes.draw do
   delete "portail/coworking/reservations/:id", to: "portal/coworking_reservations#destroy", as: :portal_coworking_reservation
 
   get "sejour/:token", to: "public/stays#show", as: :public_stay
+
+  # Décompte sourcier à jeton (issue #160) — sans session, sans Devise : le lien
+  # du mail doit s'ouvrir sur le téléphone d'un sourcier qui n'a pas de compte.
+  get "decompte/:token", to: "public/statements#show", as: :public_statement
 
   # Paiement du solde exigible du séjour (epic #55, Phase 3) — POST scellé par le
   # même jeton que la page client ; crée/rafraîchit le paiement puis part sur

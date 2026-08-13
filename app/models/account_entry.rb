@@ -38,6 +38,7 @@
 #
 # Foreign Keys
 #
+#  fk_rails_...  (account_statement_id => account_statements.id)
 #  fk_rails_...  (catalog_item_id => catalog_items.id)
 #  fk_rails_...  (member_account_id => member_accounts.id)
 #  fk_rails_...  (paper_sheet_id => paper_sheets.id)

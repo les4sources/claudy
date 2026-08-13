@@ -1,0 +1,80 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Décomptes — #{l(@month, format: '%B %Y')}"
+
+.mb-6.p-4.bg-white.rounded-lg.border.border-gray-100
+  = form_with url: finance_statements_path, method: :get, class: "flex flex-wrap items-end gap-3" do
+    div
+      = label_tag :month, "Mois", class: "block text-sm font-medium text-gray-700"
+      = text_field_tag :month, @month.strftime("%Y-%m"), class: "mt-1 w-40 rounded-md border-gray-300 shadow-sm text-sm"
+    label.flex.items-center.gap-2.text-sm.text-gray-600
+      = check_box_tag :include_zero, "1", @include_zero
+      | Inclure les soldes nuls
+    button.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(class="hover:bg-gray-50" type="submit")
+      | Afficher
+
+/ À ÉMETTRE — sélection par défaut : les comptes au solde non nul. Envoyer
+  « tu dois 0,00 € » chaque mois est le meilleur moyen de faire ignorer le
+  décompte de celui qui doit vraiment quelque chose.
+- if @candidates.any?
+  = section_heading_tw heading: "À émettre (#{@candidates.size})"
+  = form_with url: issue_finance_statements_path(month: @month.strftime("%Y-%m")), method: :post do
+    .overflow-x-auto.relative.mb-3
+      table.w-full.text-sm.text-left.text-gray-500
+        thead.text-xs.text-gray-700.uppercase.bg-gray-50
+          tr
+            th.py-3.px-4[scope="col"]
+            th.py-3.px-6[scope="col"] Compte
+            th.py-3.px-6.text-right[scope="col"] Solde actuel
+        tbody
+          - @candidates.each do |account|
+            - decorated = MemberAccountDecorator.decorate(account)
+            tr.border-b.bg-white
+              td.py-3.px-4
+                = check_box_tag "member_account_ids[]", account.id, true, id: "account_#{account.id}"
+              td.py-3.px-6.font-medium.text-gray-900
+                = account.name
+                span.ml-2.text-xs.font-mono.text-gray-400= account.code
+              td.py-3.px-6.text-right(class=decorated.balance_css)= decorated.balance
+    button.inline-flex.items-center.rounded-md.bg-green-700.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="hover:bg-green-800" type="submit")
+      | Émettre les décomptes sélectionnés
+    p.mt-2.text-xs.text-gray-400
+      | L'émission fige les montants et verrouille les écritures du mois. Une correction passera par une contre-écriture, sur le décompte suivant.
+
+= section_heading_tw heading: "Décomptes du mois (#{@statements.size})"
+
+- if @statements.blank?
+  p.text-sm.text-gray-500 Aucun décompte émis pour ce mois.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Compte
+          th.py-3.px-6[scope="col"] Statut
+          th.py-3.px-6.text-right[scope="col"] Ouverture
+          th.py-3.px-6.text-right[scope="col"] Mouvements
+          th.py-3.px-6.text-right[scope="col"] Total dû
+          th.py-3.px-6[scope="col"]
+      tbody
+        - @statements.each do |statement|
+          tr.border-b.bg-white
+            td.py-3.px-6.font-medium.text-gray-900
+              = link_to statement.member_account.name, finance_account_path(statement.member_account), class: "text-blue-500 hover:text-blue-700"
+              .text-xs.font-mono.text-gray-400= statement.member_account.code
+            td.py-3.px-6
+              span.px-2.py-0.5.rounded-full.text-xs class=(statement.settled? ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600")
+                = statement.status_label
+              - if statement.reminders_count.positive?
+                .mt-0.5.text-xs.text-amber-700= "#{statement.reminders_count} relance(s)"
+            td.py-3.px-6.text-right= number_to_currency(statement.opening_balance_cents / 100.0)
+            td.py-3.px-6.text-right
+              = number_to_currency((statement.debits_cents + statement.credits_cents) / 100.0)
+            td.py-3.px-6.text-right.font-semibold.text-gray-900= number_to_currency(statement.closing_balance_cents / 100.0)
+            td.py-3.px-6.text-right.whitespace-nowrap
+              = link_to "Voir", public_statement_path(statement.token), target: "_blank", class: "text-xs text-blue-600 hover:text-blue-800 mr-3"
+              - if statement.sent_at.nil?
+                = button_to "Envoyer", send_email_finance_statement_path(statement), method: :post, class: "inline text-xs text-blue-600 hover:text-blue-800 mr-3"
+              - else
+                = button_to "Relancer", remind_finance_statement_path(statement), method: :post, class: "inline text-xs text-amber-700 hover:text-amber-900 mr-3"
+              - unless statement.settled?
+                = button_to "Marquer réglé", mark_settled_finance_statement_path(statement), method: :post, class: "inline text-xs text-gray-500 hover:text-gray-700"

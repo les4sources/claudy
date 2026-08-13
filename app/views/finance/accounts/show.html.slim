@@ -19,6 +19,33 @@
       = @account.anchor_label
       span.ml-2= @account.status_badge
 
+/ Enregistrer un RÈGLEMENT (issue #160). Le canal de réception est distinct du
+  compte réglé : « 20 € dans la caisse de l'épicerie pour le bar » se saisit
+  enfin tel quel. Un règlement crée UNE écriture négative et UN AccountSettlement
+  qui la documente — jamais deux écritures pour un même paiement.
+.mb-8.p-4.bg-white.rounded-lg.border.border-gray-100
+  h3.text-sm.font-semibold.text-gray-700.uppercase.tracking-wide.mb-3
+    | Enregistrer un règlement
+  = form_with url: finance_account_settlements_path(@account), method: :post, class: "grid grid-cols-1 md:grid-cols-6 gap-3 items-end" do
+    div
+      = label_tag "settlement[amount]", "Montant (€) *", class: "block text-xs text-gray-500 mb-1"
+      = text_field_tag "settlement[amount]", nil, required: true, class: "w-full rounded-md border-gray-300 shadow-sm text-sm"
+    div
+      = label_tag "settlement[received_on]", "Reçu le", class: "block text-xs text-gray-500 mb-1"
+      = date_field_tag "settlement[received_on]", Date.current, class: "w-full rounded-md border-gray-300 shadow-sm text-sm"
+    div
+      = label_tag "settlement[method]", "Moyen", class: "block text-xs text-gray-500 mb-1"
+      = select_tag "settlement[method]", options_for_select(AccountSettlement::METHODS.map { |m| [AccountSettlement::METHOD_LABELS.fetch(m), m] }), class: "w-full rounded-md border-gray-300 shadow-sm text-sm"
+    div
+      = label_tag "settlement[received_channel]", "Reçu où", class: "block text-xs text-gray-500 mb-1"
+      = select_tag "settlement[received_channel]", options_for_select(AccountSettlement::CHANNELS.map { |c| [AccountSettlement::CHANNEL_LABELS.fetch(c), c] }), class: "w-full rounded-md border-gray-300 shadow-sm text-sm"
+    div
+      = label_tag "settlement[reference]", "Communication", class: "block text-xs text-gray-500 mb-1"
+      = text_field_tag "settlement[reference]", nil, placeholder: @account.code, class: "w-full rounded-md border-gray-300 shadow-sm text-sm"
+    div
+      button.w-full.inline-flex.items-center.justify-center.rounded-md.bg-green-700.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="hover:bg-green-800" type="submit")
+        | Enregistrer
+
 / Ajout d'une écriture manuelle. Montant SIGNÉ : positif = dû par le compte,
   négatif = en sa faveur (un règlement, un avoir).
 .mb-8.p-4.bg-white.rounded-lg.border.border-gray-100
