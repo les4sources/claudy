@@ -10,11 +10,40 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_13_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_13_030300) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
+
+  create_table "account_entries", force: :cascade do |t|
+    t.bigint "account_statement_id"
+    t.bigint "amount_cents", null: false
+    t.string "client_uuid"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "entry_date", null: false
+    t.string "flow"
+    t.string "idempotency_key"
+    t.string "kind"
+    t.string "label"
+    t.datetime "locked_at"
+    t.bigint "member_account_id", null: false
+    t.datetime "posted_at"
+    t.string "price_basis"
+    t.decimal "quantity", precision: 12, scale: 3
+    t.bigint "reversal_of_id"
+    t.string "source"
+    t.integer "unit_price_cents"
+    t.datetime "updated_at", null: false
+    t.index ["account_statement_id"], name: "index_account_entries_on_account_statement_id"
+    t.index ["client_uuid"], name: "index_account_entries_on_client_uuid", unique: true
+    t.index ["deleted_at"], name: "index_account_entries_on_deleted_at"
+    t.index ["idempotency_key"], name: "index_account_entries_on_idempotency_key", unique: true
+    t.index ["member_account_id", "entry_date"], name: "index_account_entries_on_member_account_id_and_entry_date"
+    t.index ["reversal_of_id"], name: "index_account_entries_on_reversal_of_id"
+    t.check_constraint "amount_cents <> 0", name: "account_entries_amount_not_zero_check"
+  end
 
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
@@ -413,6 +442,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_020000) do
     t.index ["token"], name: "index_hamac_bookings_on_token", unique: true
   end
 
+  create_table "household_members", force: :cascade do |t|
+    t.date "born_on"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "ended_on"
+    t.bigint "household_id", null: false
+    t.bigint "human_id"
+    t.string "kind", default: "adult", null: false
+    t.string "name", null: false
+    t.date "started_on", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_household_members_on_deleted_at"
+    t.index ["household_id", "started_on"], name: "index_household_members_on_household_id_and_started_on"
+    t.index ["household_id"], name: "index_household_members_on_household_id"
+    t.index ["human_id"], name: "index_household_members_on_human_id"
+  end
+
+  create_table "households", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "kind", default: "resident", null: false
+    t.date "moved_in_on"
+    t.date "moved_out_on"
+    t.string "name", null: false
+    t.text "notes"
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_households_on_deleted_at"
+  end
+
   create_table "human_roles", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.date "date"
@@ -489,6 +547,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_020000) do
     t.datetime "updated_at", null: false
     t.index ["deleted_at"], name: "index_meal_orders_on_deleted_at"
     t.index ["stay_id"], name: "index_meal_orders_on_stay_id"
+  end
+
+  create_table "member_accounts", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "code", null: false
+    t.string "contact_email"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "household_id"
+    t.bigint "human_id"
+    t.string "kind", null: false
+    t.string "name", null: false
+    t.bigint "opening_balance_cents", default: 0, null: false
+    t.date "opening_balance_on"
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_member_accounts_on_code", unique: true
+    t.index ["deleted_at"], name: "index_member_accounts_on_deleted_at"
+    t.index ["household_id"], name: "index_member_accounts_on_household_id"
+    t.index ["human_id"], name: "index_member_accounts_on_human_id"
+    t.check_constraint "kind::text = 'household'::text AND household_id IS NOT NULL AND human_id IS NULL OR kind::text = 'human'::text AND human_id IS NOT NULL AND household_id IS NULL OR kind::text = 'entity'::text AND household_id IS NULL AND human_id IS NULL", name: "member_accounts_anchor_check"
   end
 
   create_table "notes", force: :cascade do |t|
@@ -879,6 +957,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_020000) do
     t.index ["date"], name: "index_watchman_notes_on_date"
   end
 
+  add_foreign_key "account_entries", "account_entries", column: "reversal_of_id"
+  add_foreign_key "account_entries", "member_accounts"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "agenda_items", "gatherings"
@@ -906,6 +986,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_020000) do
   add_foreign_key "gathering_action_humans", "humans"
   add_foreign_key "gathering_actions", "gatherings"
   add_foreign_key "gatherings", "gathering_categories"
+  add_foreign_key "household_members", "households"
+  add_foreign_key "household_members", "humans"
   add_foreign_key "human_roles", "humans"
   add_foreign_key "human_roles", "roles"
   add_foreign_key "lodging_compositions", "lodgings", column: "component_lodging_id"
@@ -913,6 +995,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_020000) do
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"
   add_foreign_key "meal_orders", "stays"
+  add_foreign_key "member_accounts", "households"
+  add_foreign_key "member_accounts", "humans"
   add_foreign_key "payments", "bookings"
   add_foreign_key "payments", "coworking_packs"
   add_foreign_key "payments", "space_bookings"

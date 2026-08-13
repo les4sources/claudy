@@ -67,6 +67,15 @@ Rails.application.routes.draw do
   resources :teams
   resources :watchman_notes
 
+  # Finances (issue #155, lot A phase 1) — comptes courants internes et grand
+  # livre. Réservé à la comptabilité, derrière Devise comme le reste de l'admin.
+  namespace :finance do
+    resources :households
+    resources :accounts do
+      resources :entries, only: [:create, :destroy], controller: "account_entries"
+    end
+  end
+
   # Organisation
   get "organisation", to: "organisation#index", as: :organisation
   resources :cycles

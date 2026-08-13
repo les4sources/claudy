@@ -1,0 +1,16 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Modifier #{@account.name}",
+           links: [ \
+             link_to("Supprimer", finance_account_path(@account), data: { turbo_method: :delete, turbo_confirm: "Supprimer ce compte et ses écritures ?" }, class: "inline-flex items-center rounded-md border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 shadow-sm hover:bg-red-50") \
+           ]
+
+= form_with model: @account,
+            url: finance_account_path(@account),
+            method: :patch do |f|
+  .space-y-8.divide-y.divide-gray-200.sm:space-y-5
+    .space-y-6.sm:space-y-5
+      = render "form", f: f
+
+  = f.actions do
+    = f.submit "Enregistrer"

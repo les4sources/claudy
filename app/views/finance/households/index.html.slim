@@ -1,0 +1,40 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Ménages",
+           links: [ \
+             link_to("➕ Nouveau ménage", new_finance_household_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
+           ]
+
+- if @households.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucun ménage enregistré.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"]
+            | Ménage
+          th.py-3.px-6[scope="col"]
+            | Type
+          th.py-3.px-6.text-right[scope="col"]
+            | Adultes
+          th.py-3.px-6.text-right[scope="col"]
+            | Enfants
+          th.py-3.px-6[scope="col"]
+            | Arrivée
+      tbody
+        - @households.each do |household|
+          tr.border-b.bg-white
+            td.py-4.px-6.font-medium.text-gray-900[scope="row"]
+              = link_to household.name,
+                        finance_household_path(household),
+                        class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+            td.py-4.px-6
+              = household.kind_label
+            td.py-4.px-6.text-right
+              = household.adults_on(Date.current)
+            td.py-4.px-6.text-right
+              = household.children_on(Date.current)
+            td.py-4.px-6.text-gray-500.whitespace-nowrap
+              = household.moved_in_on ? l(household.moved_in_on, format: :ddmmyyyy) : "—"
