@@ -1,0 +1,56 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Comptes courants",
+           links: [ \
+             link_to("Ménages", finance_households_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"), \
+             link_to("➕ Nouveau compte", new_finance_account_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
+           ]
+
+/ Filtre actif / inactif / tous — trois liens, pas de formulaire : l'état vit
+  dans l'URL, donc il se partage et se recharge.
+.mb-4.flex.items-center.gap-2.text-sm
+  - { "active" => "Actifs", "inactive" => "Inactifs", "all" => "Tous" }.each do |value, label|
+    = link_to label,
+              finance_accounts_path(filter: value),
+              class: "px-3 py-1.5 rounded-md transition-colors #{@filter == value ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+
+- if @accounts.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucun compte pour ce filtre.
+    p.mt-1
+      | Crée un ménage puis son compte, ou un compte d'entité (Semisto, Low tech…).
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"]
+            | Compte
+          th.py-3.px-6[scope="col"]
+            | Type
+          th.py-3.px-6.text-right[scope="col"]
+            | Solde
+          th.py-3.px-6.text-right[scope="col"]
+            | Écritures
+          th.py-3.px-6[scope="col"]
+            | Dernière écriture
+      tbody
+        - @accounts.each do |account|
+          tr.border-b.bg-white
+            td.py-4.px-6.font-medium.text-gray-900[scope="row"]
+              = link_to account.name,
+                        finance_account_path(account),
+                        class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+              .mt-0.5.flex.items-center.gap-2
+                span.text-xs.text-gray-400.font-mono
+                  = account.code
+                - unless account.active?
+                  = account.status_badge
+            td.py-4.px-6
+              = account.anchor_label
+            td.py-4.px-6.text-right.whitespace-nowrap(class="#{account.balance_css}")
+              = account.balance
+            td.py-4.px-6.text-right.text-gray-500
+              = account.entries_count
+            td.py-4.px-6.text-gray-500.whitespace-nowrap
+              = account.last_entry

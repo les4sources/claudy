@@ -1,0 +1,67 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: @household.name,
+           links: [ \
+             link_to("Modifier", edit_finance_household_path(@household), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"), \
+             link_to("← Tous les ménages", finance_households_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") \
+           ]
+
+.mb-6.flex.flex-wrap.items-baseline.gap-x-8.gap-y-2.text-sm
+  div
+    .text-xs.uppercase.tracking-wide.text-gray-400 Type
+    = @household.kind_label
+  div
+    .text-xs.uppercase.tracking-wide.text-gray-400 Aujourd'hui
+    = "#{@household.adults_on(Date.current)} adulte(s), #{@household.children_on(Date.current)} enfant(s)"
+  div
+    .text-xs.uppercase.tracking-wide.text-gray-400 Arrivée
+    = @household.moved_in_on ? l(@household.moved_in_on, format: :ddmmyyyy) : "—"
+  - if @household.moved_out_on
+    div
+      .text-xs.uppercase.tracking-wide.text-gray-400 Départ
+      = l(@household.moved_out_on, format: :ddmmyyyy)
+
+section.mb-8
+  h3.text-sm.font-semibold.text-gray-700.uppercase.tracking-wide.mb-2
+    | Composition
+  - if @members.blank?
+    p.text-sm.text-gray-500 Aucun membre enregistré.
+  - else
+    .overflow-x-auto.relative
+      table.w-full.text-sm.text-left.text-gray-500
+        thead.text-xs.text-gray-700.uppercase.bg-gray-50
+          tr
+            th.py-3.px-6[scope="col"]
+              | Nom
+            th.py-3.px-6[scope="col"]
+              | Statut
+            th.py-3.px-6[scope="col"]
+              | Depuis
+            th.py-3.px-6[scope="col"]
+              | Jusqu'au
+        tbody
+          - @members.each do |member|
+            tr.border-b.bg-white
+              td.py-3.px-6.font-medium.text-gray-900[scope="row"]
+                = member.name
+              td.py-3.px-6
+                = member.kind_label
+              td.py-3.px-6.whitespace-nowrap
+                = member.started_on ? l(member.started_on, format: :ddmmyyyy) : "—"
+              td.py-3.px-6.whitespace-nowrap
+                = member.ended_on ? l(member.ended_on, format: :ddmmyyyy) : "—"
+
+section
+  h3.text-sm.font-semibold.text-gray-700.uppercase.tracking-wide.mb-2
+    | Comptes
+  - if @accounts.blank?
+    p.text-sm.text-gray-500
+      | Aucun compte rattaché.
+      = link_to "Créer le compte de ce ménage", new_finance_account_path, class: "ml-1 text-blue-500 hover:text-blue-700"
+  - else
+    ul.space-y-1.text-sm
+      - @accounts.each do |account|
+        li
+          = link_to account.name, finance_account_path(account), class: "text-blue-500 hover:text-blue-700"
+          span.mx-2.text-gray-300 ·
+          span(class="#{account.balance_css}")= account.balance

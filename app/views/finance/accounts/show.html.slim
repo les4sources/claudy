@@ -1,0 +1,107 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: @account.name,
+           links: [ \
+             link_to("Modifier", edit_finance_account_path(@account), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"), \
+             link_to("← Tous les comptes", finance_accounts_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") \
+           ]
+
+.mb-6.flex.flex-wrap.items-baseline.gap-x-6.gap-y-2
+  div
+    .text-xs.uppercase.tracking-wide.text-gray-400 Solde
+    .text-3xl.font-bold(class="#{@account.balance_css}")
+      = @account.balance
+  div
+    .text-xs.uppercase.tracking-wide.text-gray-400 Compte
+    .text-sm.text-gray-700
+      span.font-mono= @account.code
+      span.mx-2 ·
+      = @account.anchor_label
+      span.ml-2= @account.status_badge
+
+/ Ajout d'une écriture manuelle. Montant SIGNÉ : positif = dû par le compte,
+  négatif = en sa faveur (un règlement, un avoir).
+.mb-8.p-4.bg-white.rounded-lg.border.border-gray-100
+  h3.text-sm.font-semibold.text-gray-700.uppercase.tracking-wide.mb-3
+    | Ajouter une écriture
+  = form_with model: @entry, url: finance_account_entries_path(@account), method: :post, class: "flex flex-wrap items-end gap-3" do |f|
+    div
+      label.block.text-xs.text-gray-500.mb-1[for="account_entry_entry_date"] Date
+      = date_field_tag "account_entry[entry_date]",
+                       Date.current,
+                       id: "account_entry_entry_date",
+                       class: "w-40 rounded-md border-gray-300 text-sm"
+    div.flex-1(class="min-w-[12rem]")
+      label.block.text-xs.text-gray-500.mb-1[for="account_entry_label"] Libellé
+      = text_field_tag "account_entry[label]",
+                       nil,
+                       id: "account_entry_label",
+                       class: "w-full rounded-md border-gray-300 text-sm",
+                       placeholder: "Bières du vendredi, régularisation…"
+    div
+      label.block.text-xs.text-gray-500.mb-1[for="account_entry_flow"] Canal
+      = select_tag "account_entry[flow]",
+                   options_for_select(AccountEntry::FLOWS.map { |flow| [AccountEntry::FLOW_LABELS.fetch(flow, flow), flow] }),
+                   include_blank: "—",
+                   id: "account_entry_flow",
+                   class: "w-36 rounded-md border-gray-300 text-sm"
+    div
+      label.block.text-xs.text-gray-500.mb-1[for="account_entry_amount"] Montant (€)
+      = number_field_tag "account_entry[amount]",
+                         nil,
+                         step: 0.01,
+                         id: "account_entry_amount",
+                         class: "w-32 rounded-md border-gray-300 text-sm",
+                         placeholder: "12,50"
+    = f.submit "Ajouter"
+  p.mt-2.text-xs.text-gray-400
+    | Montant positif = dû par le compte. Montant négatif = en sa faveur (règlement, avoir).
+
+- if @entries.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucune écriture sur ce compte.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-4[scope="col"]
+            | Date
+          th.py-3.px-4[scope="col"]
+            | Libellé
+          th.py-3.px-4[scope="col"]
+            | Canal
+          th.py-3.px-4.text-right[scope="col"]
+            | Qté
+          th.py-3.px-4.text-right[scope="col"]
+            | P.U.
+          th.py-3.px-4.text-right[scope="col"]
+            | Montant
+          th.py-3.px-4.w-24[scope="col"]
+      tbody
+        - @entries.each do |entry|
+          tr.border-b.bg-white
+            td.py-3.px-4.whitespace-nowrap[scope="row"]
+              = entry.entry_date
+            td.py-3.px-4.text-gray-900
+              = entry.label
+              = entry.lock_icon
+            td.py-3.px-4
+              = entry.flow
+            td.py-3.px-4.text-right
+              = entry.quantity
+            td.py-3.px-4.text-right
+              = entry.unit_price
+            td.py-3.px-4.text-right.whitespace-nowrap(class="#{entry.amount_css}")
+              = entry.amount
+            td.py-3.px-4.text-right
+              - if entry.locked?
+                span.text-xs.text-gray-400 verrouillée
+              - else
+                = link_to "Supprimer",
+                          finance_account_entry_path(@account, entry),
+                          data: { turbo_method: :delete, turbo_confirm: "Supprimer cette écriture ?" },
+                          class: "text-xs text-red-600 hover:text-red-800"
+
+  .mt-3.text-right.text-xs.text-gray-500
+    = @account.opening_balance_line

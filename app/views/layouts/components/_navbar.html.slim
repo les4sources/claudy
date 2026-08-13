@@ -81,6 +81,17 @@ nav.bg-4s-main.shadow-sm.lg:px-6.relative.z-40
               path[d="M16 3.13a4 4 0 0 1 0 7.75"]
             span Organisation
 
+        / Finances — comptes courants internes (issue #155). Atterrit sur les
+          comptes, la page de travail de la section ; ses autres entrées vivent
+          dans la sous-navigation ci-dessous, comme « Paramètres ».
+        li
+          = link_to finance_accounts_path,
+                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{!@finance_view.nil? ? nav_active : nav_idle}" do
+            svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+              line[x1="12" y1="1" x2="12" y2="23"]
+              path[d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"]
+            span Finances
+
         / Activité récente — ICÔNE SEULE (Michael 2026-07-26). Sortie du menu
           « Accueil », elle se pose entre les libellés et la roue crantée : c'est
           une consultation ponctuelle, pas une destination de travail.
@@ -247,6 +258,19 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
             = link_to "Équipe",
                       humans_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'humans' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+
+/ Sous-navigation Finances (issue #155). UNE SEULE entrée pour l'instant, comme
+  demandé : les ménages s'atteignent depuis l'écran des comptes ; les décomptes
+  et les règlements rejoindront cette barre en phase 6.
+- if !@finance_view.nil?
+  nav.border-b.lg:px-6(class="bg-teal-50/70 border-teal-100")
+    .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
+      .flex.items-center
+        ul.flex.flex-row.font-medium.mt-0.gap-1.text-sm
+          li
+            = link_to "Comptes",
+                      finance_accounts_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/accounts' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
 
 - if !@organisation_view.nil?
   nav.border-b.lg:px-6(class="bg-teal-50/70 border-teal-100")

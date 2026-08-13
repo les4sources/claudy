@@ -1,0 +1,49 @@
+.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Le ménage"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    = f.text_field :name,
+                   label: "Nom du ménage *",
+                   required: true,
+                   hint: "Ex. « Famille Hulet », « Chambre 3 »",
+                   class: "md:w-2/3"
+
+    = f.select :kind,
+               Household::KINDS.map { |kind| [Household::KIND_LABELS.fetch(kind, kind), kind] },
+               { label: "Type *" },
+               { class: "md:w-1/2" }
+
+    = f.date_field :moved_in_on, label: "Arrivée", class: "md:w-1/3"
+    = f.date_field :moved_out_on, label: "Départ", class: "md:w-1/3"
+
+    = f.label :notes, "Notes"
+    = f.text_area :notes, rows: 3
+
+.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Composition"
+
+  .col-span-2.mb-4.space-y-4
+    p.text-sm.text-gray-500
+      | Chaque membre porte sa période de présence : c'est elle qui fera foi quand
+        on recomptera les adultes d'un mois passé. Laisse une ligne vide pour l'ignorer.
+
+    = f.fields_for :household_members do |member_form|
+      .p-3.bg-gray-50.rounded-md.grid.grid-cols-1.md:grid-cols-5.gap-3.items-end
+        div.md:col-span-2
+          = member_form.text_field :name, label: "Nom"
+        div
+          = member_form.select :kind,
+                               HouseholdMember::KINDS.map { |kind| [HouseholdMember::KIND_LABELS.fetch(kind, kind), kind] },
+                               { label: "Statut" }
+        div
+          = member_form.date_field :started_on, label: "Depuis"
+        div
+          = member_form.date_field :ended_on, label: "Jusqu'au"
+        - if member_form.object.persisted?
+          div.md:col-span-5
+            = member_form.check_box :_destroy
+            = member_form.label :_destroy, "Retirer ce membre"
+
+hr

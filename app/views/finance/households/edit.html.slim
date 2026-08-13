@@ -1,0 +1,16 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Modifier #{@household.name}",
+           links: [ \
+             link_to("Supprimer", finance_household_path(@household), data: { turbo_method: :delete, turbo_confirm: "Supprimer ce ménage ?" }, class: "inline-flex items-center rounded-md border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 shadow-sm hover:bg-red-50") \
+           ]
+
+= form_with model: @household,
+            url: finance_household_path(@household),
+            method: :patch do |f|
+  .space-y-8.divide-y.divide-gray-200.sm:space-y-5
+    .space-y-6.sm:space-y-5
+      = render "form", f: f
+
+  = f.actions do
+    = f.submit "Enregistrer"
