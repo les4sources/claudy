@@ -1,0 +1,18 @@
+/ Gabarit des pages destinées au papier (issue #157) : les listes de prix
+  affichées au bar et au cellier. Pas de navigation, pas de bandeau — juste le
+  contenu, pour qu'« Imprimer → Enregistrer en PDF » du navigateur donne une
+  feuille propre. Aucune gem PDF au Gemfile, et on n'en ajoute pas une pour
+  imprimer une liste de bières.
+doctype html
+html(lang="fr")
+  head
+    meta(charset="utf-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1")
+    title= yield(:title).presence || "Claudy"
+    = csrf_meta_tags
+    = csp_meta_tag
+    = vite_client_tag
+    = vite_javascript_tag "application", "data-turbo-track": "reload"
+  body.bg-white
+    .max-w-3xl.mx-auto.p-8
+      = yield

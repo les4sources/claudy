@@ -1,0 +1,37 @@
+.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "L'article"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    = f.text_field :name,
+                   label: "Nom *",
+                   required: true,
+                   hint: "Ex. « Moinette », « Avoine bio »",
+                   class: "md:w-2/3"
+
+    = f.select :channel,
+               CatalogItem::CHANNELS.map { |channel| [CatalogItem::CHANNEL_LABELS.fetch(channel, channel), channel] },
+               { label: "Canal *" },
+               { class: "md:w-1/3" }
+
+    = f.select :unit,
+               CatalogItem::UNITS.map { |unit| [CatalogItem::UNIT_LABELS.fetch(unit, unit), unit] },
+               { label: "Unité *" },
+               { class: "md:w-1/3" }
+
+    = f.text_field :category,
+                   label: "Catégorie",
+                   hint: "Ex. « Bières », « Vracs secs » — sert au regroupement des listes imprimées.",
+                   class: "md:w-1/2"
+
+    = f.text_field :reference,
+                   label: "Référence fournisseur",
+                   class: "md:w-1/2"
+
+    div
+      = f.check_box :active
+      = f.label :active, "Article actif"
+      p.mt-1.text-sm.text-gray-500
+        | Un article inactif reste dans l'historique et sur les écritures passées, mais disparaît des listes imprimées.
+
+hr
