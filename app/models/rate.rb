@@ -38,7 +38,7 @@ class Rate < ApplicationRecord
     "Salles"        => %w[hall. hall_weekend.],
     "Camping & van" => %w[camping. van. terrace. hamac.],
     "Repas"         => %w[meal. pizza_party.],
-    "Sourciers"     => %w[bar. grocery. pot. dome. pet.],
+    "Sourciers"     => %w[catalog. bar. grocery. pot. dome. pet.],
     "Coworking"     => %w[coworking.]
   }.freeze
 

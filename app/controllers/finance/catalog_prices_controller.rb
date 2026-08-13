@@ -10,7 +10,14 @@ module Finance
 
     def create
       @price = @item.catalog_prices.new(price_params)
+      apply_automatic_member_price
       close_previous_period
+
+      if @price.member_price_cents.blank?
+        return redirect_to finance_catalog_path(@item),
+                           alert: "Sans prix d'achat, le prix sourcier ne peut pas être calculé — " \
+                                  "saisis l'un ou l'autre."
+      end
 
       if @price.save
         redirect_to finance_catalog_path(@item), notice: "Le palier de prix a été ajouté."
@@ -33,6 +40,19 @@ module Finance
 
     def get_price
       @price = @item.catalog_prices.find(params[:id])
+    end
+
+    # Le prix sourcier est AUTOMATIQUE : laissé vide, il se calcule depuis le
+    # prix d'achat et la marge du canal. Saisi, c'est la saisie qui gagne — le
+    # calcul propose, il ne décide pas, et ce qui est enregistré reste un montant.
+    def apply_automatic_member_price
+      return if @price.member_price_cents.present?
+
+      @price.member_price_cents = Catalog::BuildPrice.new(
+        channel: @item.channel,
+        purchase_price_cents: @price.purchase_price_cents,
+        on: @price.active_from || Date.current
+      ).member_price_cents
     end
 
     # Le palier en vigueur la veille du nouveau est clos à cette veille. Sans

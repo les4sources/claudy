@@ -3,6 +3,7 @@
            title: @item.name,
            links: [ \
              link_to("Modifier", edit_finance_catalog_path(@item), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"), \
+             link_to("Supprimer", finance_catalog_path(@item), data: { turbo_method: :delete, turbo_confirm: "Supprimer « #{@item.name} » du catalogue ? Les écritures passées gardent leur libellé et leur prix." }, class: "inline-flex items-center rounded-md border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 shadow-sm hover:bg-red-50"), \
              link_to("← Tout le catalogue", finance_catalog_index_path(channel: @item.channel), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") \
            ]
 
@@ -28,13 +29,15 @@
 .mb-8.p-4.bg-white.rounded-lg.border.border-gray-100(data-controller="catalog-price" data-catalog-price-url-value=finance_catalog_suggest_price_path data-catalog-price-channel-value=@item.channel)
   = section_heading_tw heading: "Nouveau palier de prix"
 
+  - marge = Pricing::Rates.cents(Catalog::BuildPrice.margin_key(@item.channel)) || Catalog::BuildPrice::DEFAULT_MARGINS[@item.channel]
   p.mb-3.text-sm.text-gray-500
-    - if @item.channel == "bar"
-      | Le prix sourcier proposé est le prix d'achat majoré. Le prix public reste une décision, pas un multiple : il se saisit à la main.
-    - elsif @item.channel == "grocery"
-      | Les prix proposés se calculent sur le prix de référence — sourcier en dessous, public au dessus.
-    - else
-      | Les prix de ce canal se saisissent à la main.
+    | Saisis le prix d'achat : le prix sourcier se calcule tout seul, avec la marge
+    strong = " #{@item.channel_label} de #{marge} %"
+    |  (modifiable dans
+    = link_to "Paramètres > Tarifs", rates_path, class: "underline"
+    | ). Tu peux l'écraser à la main — c'est la valeur du champ qui est enregistrée.
+    - if @item.channel == "grocery"
+      |  Le prix public se propose depuis le prix de référence, quand il y en a un.
 
   / Champs nus (`*_tag`) et non `f.text_field` : le builder maison
     (`FormBuilders::TailwindFormBuilder`) génère son propre libellé à partir du
@@ -52,8 +55,8 @@
       = label_tag "catalog_price[reference_price]", "Référence (€)", class: "block text-sm font-medium text-gray-700"
       = text_field_tag "catalog_price[reference_price]", nil, data: { catalog_price_target: "reference", action: "input->catalog-price#suggest" }, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm"
     div
-      = label_tag "catalog_price[member_price]", "Sourcier (€) *", class: "block text-sm font-medium text-gray-700"
-      = text_field_tag "catalog_price[member_price]", nil, required: true, data: { catalog_price_target: "member" }, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm"
+      = label_tag "catalog_price[member_price]", "Sourcier (€)", class: "block text-sm font-medium text-gray-700"
+      = text_field_tag "catalog_price[member_price]", nil, placeholder: "auto", data: { catalog_price_target: "member" }, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm"
     div
       = label_tag "catalog_price[public_price]", "Public (€)", class: "block text-sm font-medium text-gray-700"
       = text_field_tag "catalog_price[public_price]", nil, data: { catalog_price_target: "public" }, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm"
@@ -62,7 +65,7 @@
         | Ajouter
 
   p.mt-2.text-xs.text-gray-400
-    | Les montants proposés sont modifiables : c'est la valeur du champ qui est enregistrée, jamais le calcul.
+    | Laisse « Sourcier » vide pour le calcul automatique. Un palier déjà posé ne bouge jamais, même si la marge change ensuite.
 
 = section_heading_tw heading: "Historique des paliers"
 
