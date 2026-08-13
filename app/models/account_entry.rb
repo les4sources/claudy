@@ -55,7 +55,7 @@ class AccountEntry < ApplicationRecord
   # Levée dès qu'on tente de toucher une écriture verrouillée.
   class Locked < StandardError; end
 
-  FLOWS = %w[bar grocery meal pot dome pet other].freeze
+  FLOWS = %w[bar grocery meal pot dome pet charges other].freeze
 
   FLOW_LABELS = {
     "bar"     => "Bar",
@@ -64,6 +64,7 @@ class AccountEntry < ApplicationRecord
     "pot"     => "Cagnotte",
     "dome"    => "Dôme",
     "pet"     => "Animaux",
+    "charges" => "Charges",
     "other"   => "Divers"
   }.freeze
 

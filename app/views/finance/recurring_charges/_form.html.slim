@@ -1,0 +1,68 @@
+.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "La charge"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    = f.text_field :label,
+                   label: "Libellé *",
+                   required: true,
+                   hint: "Ce qui s'affichera sur le décompte. Ex. « Cagnotte », « Forfait dôme ».",
+                   class: "md:w-2/3"
+
+    = f.select :member_account_id,
+               MemberAccount.ordered.map { |account| ["#{account.name} (#{account.code})", account.id] },
+               { label: "Compte *" },
+               { class: "md:w-2/3" }
+
+    = f.select :basis,
+               RecurringCharge::BASES.map { |basis| [RecurringCharge::BASIS_LABELS.fetch(basis, basis), basis] },
+               { label: "Base de calcul *" },
+               { class: "md:w-1/2" }
+
+    = f.select :flow,
+               AccountEntry::FLOWS.map { |flow| [AccountEntry::FLOW_LABELS.fetch(flow, flow), flow] },
+               { label: "Canal", include_blank: "—" },
+               { class: "md:w-1/2" }
+
+.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Le montant"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    p.text-sm.text-gray-500
+      | Renseigne SOIT un montant fixe, SOIT une clé de barème — pas les deux. Une clé suit les tarifs datés : recalculer un mois passé utilisera la valeur de ce mois-là.
+
+    div
+      = label_tag "recurring_charge[amount_euros]", "Montant fixe (€)", class: "block text-sm font-medium text-gray-700"
+      = text_field_tag "recurring_charge[amount_euros]",
+                       (f.object.amount_cents ? format("%.2f", f.object.amount_cents / 100.0).tr(".", ",") : nil),
+                       class: "mt-1 w-40 rounded-md border-gray-300 shadow-sm text-sm"
+
+    = f.select :rate_key,
+               Rate.ordered.pluck(:key),
+               { label: "…ou clé de barème", include_blank: "—" },
+               { class: "md:w-1/2" }
+
+    = f.select :split_rate_key,
+               Rate.ordered.pluck(:key),
+               { label: "Part scindée (clé)", include_blank: "—" },
+               { class: "md:w-1/2" }
+
+    = f.text_field :split_label,
+                   label: "Libellé de la part scindée",
+                   hint: "Ex. « Balançoire — Magali ». Quand la clé scindée cesse d'être en vigueur, la ligne redevient unique, sans changement de code.",
+                   class: "md:w-2/3"
+
+.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Période"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    = f.date_field :starts_on, label: "À partir du *", class: "md:w-1/3"
+    = f.date_field :ends_on, label: "Jusqu'au", class: "md:w-1/3"
+
+    div
+      = f.check_box :active
+      = f.label :active, "Charge active"
+
+hr

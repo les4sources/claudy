@@ -275,6 +275,10 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
             = link_to "Catalogue",
                       finance_catalog_index_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path.start_with?('finance/catalog') ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
+            = link_to "Charges récurrentes",
+                      finance_recurring_charges_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/recurring_charges' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
 
 - if !@organisation_view.nil?
   nav.border-b.lg:px-6(class="bg-teal-50/70 border-teal-100")

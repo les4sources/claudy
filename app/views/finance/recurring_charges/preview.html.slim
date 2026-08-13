@@ -1,0 +1,58 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Aperçu — #{l(@month, format: '%B %Y')}",
+           links: [ \
+             link_to("← Charges récurrentes", finance_recurring_charges_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") \
+           ]
+
+p.mb-4.text-sm.text-gray-500
+  | Rien n'est encore écrit. Voilà ce que la génération créerait pour ce mois.
+
+- if @report.created.any?
+  = section_heading_tw heading: "À créer (#{@report.created.size})"
+  .overflow-x-auto.relative.mb-6
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Compte
+          th.py-3.px-6[scope="col"] Libellé
+          th.py-3.px-6[scope="col"] Base
+          th.py-3.px-6.text-right[scope="col"] Montant
+      tbody
+        - @report.created.each do |line|
+          tr.border-b.bg-white
+            td.py-3.px-6= line[:charge].member_account.name
+            td.py-3.px-6.text-gray-900= line[:label]
+            td.py-3.px-6.text-xs= line[:charge].basis_label
+            td.py-3.px-6.text-right.font-semibold.text-gray-900= number_to_currency(line[:amount_cents] / 100.0)
+        tr.bg-gray-50
+          td.py-3.px-6.font-medium[colspan="3"] Total
+          td.py-3.px-6.text-right.font-semibold.text-gray-900= number_to_currency(@report.total_cents / 100.0)
+
+- if @report.existing.any?
+  = section_heading_tw heading: "Déjà générées (#{@report.existing.size})"
+  ul.mb-6.text-sm.text-gray-500.list-disc.pl-5
+    - @report.existing.each do |line|
+      li
+        = line[:charge].label
+        span.text-gray-400  — #{line[:charge].member_account.name}
+
+/ Une clé de barème qui ne résout rien ne crée PAS une écriture à zéro : elle
+  apparaît ici, nommée, pour qu'on aille corriger le barème.
+- if @report.skipped.any?
+  = section_heading_tw heading: "Ignorées (#{@report.skipped.size})"
+  ul.mb-6.text-sm.list-disc.pl-5
+    - @report.skipped.each do |line|
+      li
+        span.text-gray-900= line[:charge].label
+        span.text-red-600  — #{line[:reason]}
+
+- if @report.created.any?
+  = button_to "Générer ces #{@report.created.size} écriture(s)",
+              generate_finance_recurring_charges_path(month: @month.strftime("%Y-%m")),
+              method: :post,
+              class: "inline-flex items-center rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-800"
+- elsif !@report.any?
+  p.text-sm.text-gray-500 Aucune charge récurrente n'est active sur ce mois.
+- else
+  p.text-sm.text-gray-500 Rien de neuf à créer pour ce mois.
