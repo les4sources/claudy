@@ -10,18 +10,37 @@ class RatesController < BaseController
     @grouped_rates = Rate.grouped
   end
 
+  # Depuis #156, l'édition passe par `Rates::UpdateAmount` : elle ouvre une
+  # version datée et ne touche au montant courant que si la date saisie couvre
+  # aujourd'hui. Sans date saisie, le comportement est celui d'avant — le prix
+  # change tout de suite.
   def update
-    if @rate.update(amount_cents: submitted_amount_cents)
-      Pricing::Rates.reset!
-      redirect_to rates_path, notice: "Le tarif « #{@rate.label.presence || @rate.key} » a été mis à jour."
+    service = Rates::UpdateAmount.new(rate: @rate)
+
+    if service.run(amount_cents: submitted_amount_cents, active_from: submitted_active_from)
+      redirect_to rates_path, notice: update_notice(service.version)
     else
       @grouped_rates = Rate.grouped
-      flash.now[:alert] = @rate.errors.full_messages.to_sentence
+      flash.now[:alert] = update_error_message(service)
       render :index, status: :unprocessable_entity
     end
   end
 
   private
+
+  def rate_label = @rate.label.presence || @rate.key
+
+  def update_notice(version)
+    return "Le tarif « #{rate_label} » a été mis à jour." if version.nil? || version.covers?(Date.current)
+
+    "Le tarif « #{rate_label} » changera le #{I18n.l(version.active_from, format: :long)} " \
+      "— la valeur actuelle est inchangée."
+  end
+
+  def update_error_message(service)
+    errors = service.version&.errors&.full_messages
+    errors.presence&.to_sentence || service.error_message(default: "Le tarif n'a pas pu être mis à jour.")
+  end
 
   def get_rate
     @rate = Rate.find(params[:id])
@@ -35,6 +54,12 @@ class RatesController < BaseController
     return -1 unless raw.match?(/\A-?\d+(\.\d+)?\z/)
 
     @rate.percent? ? raw.to_f.round : (raw.to_f * 100).round
+  end
+
+  # « À partir du », facultatif : vide = aujourd'hui, donc le comportement
+  # historique de l'écran.
+  def submitted_active_from
+    params.dig(:rate, :active_from).presence
   end
 
   def set_presenters

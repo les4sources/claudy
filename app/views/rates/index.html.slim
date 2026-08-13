@@ -23,7 +23,7 @@
                   | Tarif
                 th.py-3.px-6[scope="col"]
                   | Clé
-                th.w-64.py-3.px-6[scope="col"]
+                th.w-80.py-3.px-6[scope="col"]
                   | Montant
             tbody
               - rates.each do |rate|
@@ -33,14 +33,44 @@
                   td.py-3.px-6.text-xs.text-gray-400.font-mono
                     = rate.key
                   td.py-3.px-6
-                    = form_with model: rate, url: rate_path(rate), method: :patch, class: "flex items-center gap-2" do |f|
-                      = number_field_tag "rate[amount]",
-                                         rate.amount,
-                                         step: (rate.percent? ? 1 : 0.01),
-                                         min: 0,
-                                         class: "w-28 rounded-md border-gray-300 text-sm",
-                                         "aria-label" => "Montant pour #{rate.key}"
-                      span.text-gray-500
-                        = rate.percent? ? "%" : "€"
-                      = f.submit "Enregistrer",
-                                 class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 cursor-pointer"
+                    = form_with model: rate, url: rate_path(rate), method: :patch, class: "space-y-1.5" do |f|
+                      .flex.items-center.gap-2
+                        = number_field_tag "rate[amount]",
+                                           rate.amount,
+                                           step: (rate.percent? ? 1 : 0.01),
+                                           min: 0,
+                                           class: "w-28 rounded-md border-gray-300 text-sm",
+                                           "aria-label" => "Montant pour #{rate.key}"
+                        span.text-gray-500
+                          = rate.percent? ? "%" : "€"
+                        / `f.submit` rend un Button::Component déjà stylé. Lui passer
+                        / `bg-white text-gray-700` gagnait sur ses propres classes
+                        / (ordre des règles Tailwind) et rendait le bouton blanc sur
+                        / blanc, donc invisible — défaut d'affichage hérité de #124.
+                        = f.submit "Enregistrer"
+                      / Vide = aujourd'hui. Une date future programme le prix sans
+                      / toucher à la valeur appliquée aujourd'hui (issue #156).
+                      .flex.items-center.gap-2
+                        label.text-xs.text-gray-500[for="rate_active_from_#{rate.id}"]
+                          | à partir du
+                        = date_field_tag "rate[active_from]",
+                                         nil,
+                                         id: "rate_active_from_#{rate.id}",
+                                         class: "w-36 rounded-md border-gray-300 text-xs",
+                                         "aria-label" => "Date d'entrée en vigueur pour #{rate.key}"
+                    - versions = rate.versions_history
+                    - if versions.any?
+                      details.mt-2
+                        summary.text-xs.text-gray-500.cursor-pointer
+                          = "Historique (#{versions.size} version#{'s' if versions.size > 1})"
+                        ul.mt-1.space-y-1
+                          - versions.each do |version|
+                            - decorated = version.decorate
+                            li.text-xs.text-gray-500
+                              span.font-medium.text-gray-700
+                                = decorated.amount
+                              span.mx-1 —
+                              = decorated.period
+                              - if version.note.present?
+                                span.ml-1.text-gray-400
+                                  = "(#{version.note})"
