@@ -1,0 +1,38 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Fiches papier",
+           links: [ \
+             link_to("➕ Nouvelle fiche", new_finance_paper_sheet_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") \
+           ]
+
+- if @sheets.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucune fiche.
+    p.mt-1
+      | Crée une fiche par mois et par canal, puis encode-la en matrice — une ligne par produit, une colonne par compte.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Mois
+          th.py-3.px-6[scope="col"] Canal
+          th.py-3.px-6[scope="col"] Statut
+          th.py-3.px-6.text-right[scope="col"] Écritures
+          th.py-3.px-6.text-right[scope="col"] Total
+          th.py-3.px-6[scope="col"]
+      tbody
+        - @sheets.each do |sheet|
+          tr.border-b.bg-white
+            td.py-4.px-6.font-medium.text-gray-900[scope="row"]
+              = link_to l(sheet.period_month, format: "%B %Y"),
+                        encode_finance_paper_sheet_path(sheet),
+                        class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+            td.py-4.px-6= sheet.channel_label
+            td.py-4.px-6
+              span.px-2.py-0.5.rounded-full.text-xs class=(sheet.status == "encoded" ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600")
+                = sheet.status_label
+            td.py-4.px-6.text-right= sheet.account_entries.count
+            td.py-4.px-6.text-right.font-semibold.text-gray-900= number_to_currency(sheet.total_cents / 100.0)
+            td.py-4.px-6.text-right
+              = link_to "Encoder", encode_finance_paper_sheet_path(sheet), class: "text-xs text-blue-600 hover:text-blue-800"

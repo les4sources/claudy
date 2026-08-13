@@ -87,6 +87,12 @@ Rails.application.routes.draw do
         post :generate
       end
     end
+    resources :paper_sheets do
+      member do
+        get :encode
+        post :save_encoding
+      end
+    end
   end
 
   # Organisation

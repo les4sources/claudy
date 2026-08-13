@@ -1,0 +1,10 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Nouvelle fiche papier"
+
+= form_with model: @sheet, url: finance_paper_sheets_path, scope: :paper_sheet do |f|
+  .space-y-8.divide-y.divide-gray-200.sm:space-y-5
+    .space-y-6.sm:space-y-5
+      = render "form", f: f
+
+  = f.actions do
+    = f.submit "Créer la fiche"
