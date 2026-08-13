@@ -1,3 +1,8 @@
+/  Récapitulatif d'erreurs en tête. Le builder affiche désormais l'erreur sous
+   chaque champ, mais deux cas lui échappent : les erreurs portées par `:base`
+   et celles des membres imbriqués. Ce bloc les rattrape.
+= render "finance/shared/form_errors", record: f.object
+
 .border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
   .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
     = section_heading_tw heading: "Le ménage"
@@ -12,13 +17,20 @@
     = f.select :kind,
                Household::KINDS.map { |kind| [Household::KIND_LABELS.fetch(kind, kind), kind] },
                { label: "Type *" },
-               { class: "md:w-1/2" }
+               { class: "md:w-1/3" }
+    p.-mt-4.mb-2.text-sm.text-gray-500
+      | Un ménage habitant vit sur le domaine ; un ménage membre y participe sans y résider.
 
-    = f.date_field :moved_in_on, label: "Arrivée", class: "md:w-1/3"
-    = f.date_field :moved_out_on, label: "Départ", class: "md:w-1/3"
+    /  Les deux dates encadrent la même chose — la présence du ménage. Elles se
+       lisaient l'une sous l'autre, chacune sur son propre rang, alors qu'elles
+       forment une seule information à deux bornes.
+    .grid.grid-cols-1.gap-4(class="sm:grid-cols-2 md:w-2/3")
+      = f.date_field :moved_in_on, label: "Arrivée", class: "w-full"
+      = f.date_field :moved_out_on, label: "Départ", class: "w-full"
 
-    = f.label :notes, "Notes"
-    = f.text_area :notes, rows: 3
+    div
+      = f.label :notes, "Notes", class: "mb-1"
+      = f.text_area :notes, rows: 3, class: "md:w-2/3"
 
 .border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
   .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right

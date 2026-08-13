@@ -19,70 +19,106 @@
       = @account.anchor_label
       span.ml-2= @account.status_badge
 
+/  UN SEUL langage pour les deux formulaires en ligne de cette page. Ils se
+   lisaient auparavant comme deux composants venus d'écrans différents : grille
+   de six colonnes ÉGALES d'un côté (un montant aussi large qu'une
+   communication), `flex` à largeurs fixes de l'autre, et deux boutons de
+   soumission qui ne se ressemblaient pas. Même carte, même libellé, même champ,
+   même bouton, même rangée d'action — on encode ici tous les jours.
+   La carte reprend le langage posé sur le formulaire Séjour (2026-07-27) :
+   fond blanc, `rounded-2xl`, filet `ring-gray-200`, pas d'ombre.
+- panel = "mb-6 p-5 bg-white rounded-2xl ring-1 ring-gray-200"
+- panel_title = "text-base font-semibold text-gray-900 mb-4"
+/  Le libellé reprend exactement celui du `TailwindFormBuilder`
+   (`block text-sm font-medium text-gray-700`) : les formulaires en ligne et les
+   formulaires d'édition parlent enfin la même langue. Le `text-xs text-gray-500`
+   d'avant était plus pâle que le texte d'aide qu'il surplombait.
+- field_label = "block text-sm font-medium text-gray-700 mb-1"
+- field_input = "block w-full rounded-md border-gray-300 shadow-sm text-sm focus:border-indigo-500 focus:ring-indigo-500"
+/  Un montant se lit aligné à droite, en chiffres de largeur fixe : c'est ce qui
+   permet de comparer une colonne de sommes d'un coup d'œil. `inputmode=decimal`
+   ouvre le pavé numérique au bar, sur téléphone.
+- money_input = field_input + " text-right tabular-nums"
+- primary_button = "w-full md:w-auto inline-flex items-center justify-center rounded-md bg-green-700 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2"
+- action_row = "mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4 md:flex-row md:items-center md:justify-between"
+- action_hint = "text-xs text-gray-500 md:max-w-xl"
+
 / Enregistrer un RÈGLEMENT (issue #160). Le canal de réception est distinct du
   compte réglé : « 20 € dans la caisse de l'épicerie pour le bar » se saisit
   enfin tel quel. Un règlement crée UNE écriture négative et UN AccountSettlement
   qui la documente — jamais deux écritures pour un même paiement.
-.mb-8.p-4.bg-white.rounded-lg.border.border-gray-100
-  h3.text-sm.font-semibold.text-gray-700.uppercase.tracking-wide.mb-3
-    | Enregistrer un règlement
-  = form_with url: finance_account_settlements_path(@account), method: :post, class: "grid grid-cols-1 md:grid-cols-6 gap-3 items-end" do
-    div
-      = label_tag "settlement[amount]", "Montant (€) *", class: "block text-xs text-gray-500 mb-1"
-      = text_field_tag "settlement[amount]", nil, required: true, class: "w-full rounded-md border-gray-300 shadow-sm text-sm"
-    div
-      = label_tag "settlement[received_on]", "Reçu le", class: "block text-xs text-gray-500 mb-1"
-      = date_field_tag "settlement[received_on]", Date.current, class: "w-full rounded-md border-gray-300 shadow-sm text-sm"
-    div
-      = label_tag "settlement[method]", "Moyen", class: "block text-xs text-gray-500 mb-1"
-      = select_tag "settlement[method]", options_for_select(AccountSettlement::METHODS.map { |m| [AccountSettlement::METHOD_LABELS.fetch(m), m] }), class: "w-full rounded-md border-gray-300 shadow-sm text-sm"
-    div
-      = label_tag "settlement[received_channel]", "Reçu où", class: "block text-xs text-gray-500 mb-1"
-      = select_tag "settlement[received_channel]", options_for_select(AccountSettlement::CHANNELS.map { |c| [AccountSettlement::CHANNEL_LABELS.fetch(c), c] }), class: "w-full rounded-md border-gray-300 shadow-sm text-sm"
-    div
-      = label_tag "settlement[reference]", "Communication", class: "block text-xs text-gray-500 mb-1"
-      = text_field_tag "settlement[reference]", nil, placeholder: @account.code, class: "w-full rounded-md border-gray-300 shadow-sm text-sm"
-    div
-      button.w-full.inline-flex.items-center.justify-center.rounded-md.bg-green-700.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="hover:bg-green-800" type="submit")
-        | Enregistrer
+div(class=panel)
+  h3(class=panel_title) Enregistrer un règlement
+  = form_with url: finance_account_settlements_path(@account), method: :post do
+    /  Grille de 12 colonnes : la largeur de chaque champ dit ce qu'on y saisit.
+       Un montant et une date sont courts, un moyen de paiement et une
+       communication sont longs.
+    .grid.grid-cols-1.gap-4(class="md:grid-cols-12 md:gap-3")
+      div(class="md:col-span-2")
+        = label_tag "settlement[amount]", "Montant (€) *", class: field_label
+        = text_field_tag "settlement[amount]", nil, required: true, inputmode: "decimal", placeholder: "0,00", class: money_input
+      div(class="md:col-span-2")
+        = label_tag "settlement[received_on]", "Reçu le", class: field_label
+        = date_field_tag "settlement[received_on]", Date.current, class: field_input
+      div(class="md:col-span-2")
+        = label_tag "settlement[method]", "Moyen", class: field_label
+        = select_tag "settlement[method]", options_for_select(AccountSettlement::METHODS.map { |m| [AccountSettlement::METHOD_LABELS.fetch(m), m] }), class: field_input
+      div(class="md:col-span-3")
+        = label_tag "settlement[received_channel]", "Reçu où", class: field_label
+        = select_tag "settlement[received_channel]", options_for_select(AccountSettlement::CHANNELS.map { |c| [AccountSettlement::CHANNEL_LABELS.fetch(c), c] }), class: field_input
+      div(class="md:col-span-3")
+        = label_tag "settlement[reference]", "Communication", class: field_label
+        = text_field_tag "settlement[reference]", nil, placeholder: @account.code, class: field_input
+
+    div(class=action_row)
+      p(class=action_hint)
+        | Le règlement crée une seule écriture, en faveur du compte. « Reçu où » est l'endroit où l'argent a atterri — pas forcément le compte réglé.
+      button(class=primary_button type="submit") Enregistrer
 
 / Ajout d'une écriture manuelle. Montant SIGNÉ : positif = dû par le compte,
   négatif = en sa faveur (un règlement, un avoir).
-.mb-8.p-4.bg-white.rounded-lg.border.border-gray-100
-  h3.text-sm.font-semibold.text-gray-700.uppercase.tracking-wide.mb-3
-    | Ajouter une écriture
-  = form_with model: @entry, url: finance_account_entries_path(@account), method: :post, class: "flex flex-wrap items-end gap-3" do |f|
-    div
-      label.block.text-xs.text-gray-500.mb-1[for="account_entry_entry_date"] Date
-      = date_field_tag "account_entry[entry_date]",
-                       Date.current,
-                       id: "account_entry_entry_date",
-                       class: "w-40 rounded-md border-gray-300 text-sm"
-    div.flex-1(class="min-w-[12rem]")
-      label.block.text-xs.text-gray-500.mb-1[for="account_entry_label"] Libellé
-      = text_field_tag "account_entry[label]",
-                       nil,
-                       id: "account_entry_label",
-                       class: "w-full rounded-md border-gray-300 text-sm",
-                       placeholder: "Bières du vendredi, régularisation…"
-    div
-      label.block.text-xs.text-gray-500.mb-1[for="account_entry_flow"] Canal
-      = select_tag "account_entry[flow]",
-                   options_for_select(AccountEntry::FLOWS.map { |flow| [AccountEntry::FLOW_LABELS.fetch(flow, flow), flow] }),
-                   include_blank: "—",
-                   id: "account_entry_flow",
-                   class: "w-36 rounded-md border-gray-300 text-sm"
-    div
-      label.block.text-xs.text-gray-500.mb-1[for="account_entry_amount"] Montant (€)
-      = number_field_tag "account_entry[amount]",
+div(class=panel)
+  h3(class=panel_title) Ajouter une écriture
+  /  Bouton nu plutôt que `f.submit` : le `Button::Component` concatène ses
+     propres classes après celles de l'appelant, on ne peut donc pas lui imposer
+     l'apparence du bouton voisin. Les deux boutons de la page doivent être le
+     même bouton.
+  = form_with model: @entry, url: finance_account_entries_path(@account), method: :post do
+    .grid.grid-cols-1.gap-4(class="md:grid-cols-12 md:gap-3")
+      div(class="md:col-span-2")
+        label.block.text-sm.font-medium.text-gray-700.mb-1[for="account_entry_entry_date"] Date
+        = date_field_tag "account_entry[entry_date]",
+                         Date.current,
+                         id: "account_entry_entry_date",
+                         class: field_input
+      div(class="md:col-span-6")
+        label.block.text-sm.font-medium.text-gray-700.mb-1[for="account_entry_label"] Libellé
+        = text_field_tag "account_entry[label]",
                          nil,
-                         step: 0.01,
-                         id: "account_entry_amount",
-                         class: "w-32 rounded-md border-gray-300 text-sm",
-                         placeholder: "12,50"
-    = f.submit "Ajouter"
-  p.mt-2.text-xs.text-gray-400
-    | Montant positif = dû par le compte. Montant négatif = en sa faveur (règlement, avoir).
+                         id: "account_entry_label",
+                         class: field_input,
+                         placeholder: "Bières du vendredi, régularisation…"
+      div(class="md:col-span-2")
+        label.block.text-sm.font-medium.text-gray-700.mb-1[for="account_entry_flow"] Canal
+        = select_tag "account_entry[flow]",
+                     options_for_select(AccountEntry::FLOWS.map { |flow| [AccountEntry::FLOW_LABELS.fetch(flow, flow), flow] }),
+                     include_blank: "—",
+                     id: "account_entry_flow",
+                     class: field_input
+      div(class="md:col-span-2")
+        label.block.text-sm.font-medium.text-gray-700.mb-1[for="account_entry_amount"] Montant (€)
+        = number_field_tag "account_entry[amount]",
+                           nil,
+                           step: 0.01,
+                           inputmode: "decimal",
+                           id: "account_entry_amount",
+                           class: money_input,
+                           placeholder: "12,50"
+
+    div(class=action_row)
+      p(class=action_hint)
+        | Montant positif = dû par le compte. Montant négatif = en sa faveur (règlement, avoir).
+      button(class=primary_button type="submit") Ajouter
 
 - if @entries.blank?
   .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
