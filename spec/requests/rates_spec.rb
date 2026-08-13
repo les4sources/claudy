@@ -68,6 +68,57 @@ RSpec.describe "Paramètres > Tarifs", type: :request do
     end
   end
 
+  # Issue #156 — l'écran gagne une date d'entrée en vigueur et l'historique.
+  describe "barèmes datés" do
+    let(:van) { Rate.find_by(key: "van.per_night") }
+
+    before { Rates::BackfillVersions.new(dry_run: false).run }
+
+    it "propose un champ « à partir du » sur chaque ligne" do
+      get rates_path
+
+      expect(response.body).to include("à partir du")
+      expect(response.body).to include("rate_active_from_#{van.id}")
+    end
+
+    it "affiche l'historique des versions d'une clé" do
+      Rates::UpdateAmount.new(rate: van).run(amount_cents: 1_800)
+
+      get rates_path
+
+      expect(response.body).to include("Historique (2 versions)")
+      expect(response.body).to include("depuis le")
+    end
+
+    it "édite à la date du jour et change la valeur courante" do
+      patch rate_path(van), params: { rate: { amount: "18", active_from: "" } }
+
+      expect(response).to redirect_to(rates_path)
+      expect(van.reload.amount_cents).to eq(1_800)
+    end
+
+    it "édite à une date future sans toucher à la valeur courante" do
+      future = Date.current + 60
+
+      patch rate_path(van), params: { rate: { amount: "20", active_from: future.to_s } }
+
+      expect(response).to redirect_to(rates_path)
+      expect(van.reload.amount_cents).to eq(1_500)
+      expect(Pricing::Rates.cents("van.per_night", on: future)).to eq(2_000)
+      follow_redirect!
+      expect(response.body).to include("la valeur actuelle est inchangée")
+    end
+
+    it "affiche le groupe Sourciers quand ses clés existent" do
+      Rates::SeedSourciers.new.run
+
+      get rates_path
+
+      expect(response.body).to include("Sourciers")
+      expect(response.body).to include("pot.swing_share")
+    end
+  end
+
   describe "sans authentification" do
     it "redirige vers la connexion" do
       sign_out user

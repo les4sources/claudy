@@ -146,4 +146,82 @@ RSpec.describe "Tarifs paramétrés (Pricing::Rates)" do
       expect(Pricing::Rates).to have_received(:load_lookup).once
     end
   end
+
+  # Issue #156 — la dimension temporelle s'ajoute SANS rien changer aux lectures
+  # existantes. C'est la contrainte non négociable : ces clés servent le devis
+  # public en production.
+  describe "lecture datée (issue #156)" do
+    before { Rates::SeedFromCatalog.new.run }
+
+    describe "non-régression" do
+      it "ne change aucun montant courant après le backfill des versions" do
+        before_amounts = Rate.pluck(:key, :amount_cents).to_h
+        before_lookup = before_amounts.keys.index_with { |key| Pricing::Rates.cents(key) }
+
+        Rates::BackfillVersions.new(dry_run: false).run
+
+        expect(Rate.pluck(:key, :amount_cents).to_h).to eq(before_amounts)
+        expect(before_lookup.keys.index_with { |key| Pricing::Rates.cents(key) }).to eq(before_lookup)
+      end
+
+      it "produit le même devis composite avant et après le backfill" do
+        before_quote = PricingModel.quote(composite_draft)
+
+        Rates::BackfillVersions.new(dry_run: false).run
+
+        after_quote = PricingModel.quote(composite_draft)
+        expect(after_quote.total_cents).to eq(before_quote.total_cents)
+        expect(after_quote.breakdown).to eq(before_quote.breakdown)
+      end
+
+      it "ne touche pas au chemin sans `on:` : toujours un seul chargement" do
+        Rates::BackfillVersions.new(dry_run: false).run
+        Pricing::Rates.reset!
+
+        allow(Pricing::Rates).to receive(:load_lookup).and_call_original
+        PricingModel.quote(composite_draft)
+
+        expect(Pricing::Rates).to have_received(:load_lookup).once
+      end
+    end
+
+    describe "cents(key, on:)" do
+      let(:van) { Rate.find_by(key: "van.per_night") }
+
+      before do
+        van.rate_versions.create!(amount_cents: 1_200, active_from: Date.new(2023, 1, 1),
+                                  active_until: Date.new(2023, 12, 31))
+        van.rate_versions.create!(amount_cents: 1_500, active_from: Date.new(2024, 1, 1))
+        Pricing::Rates.reset!
+      end
+
+      it "renvoie le montant de la version qui couvre la date" do
+        expect(Pricing::Rates.cents("van.per_night", on: Date.new(2023, 6, 1))).to eq(1_200)
+        expect(Pricing::Rates.cents("van.per_night", on: Date.new(2025, 6, 1))).to eq(1_500)
+      end
+
+      it "renvoie nil avant la première version" do
+        expect(Pricing::Rates.cents("van.per_night", on: Date.new(2022, 12, 31))).to be_nil
+      end
+
+      it "renvoie nil pour une clé dont aucune version ne couvre la date" do
+        closed = Rate.create!(key: "pot.swing_share", amount_cents: 500)
+        closed.rate_versions.create!(amount_cents: 500, active_from: Date.new(2023, 1, 1),
+                                     active_until: Date.new(2027, 4, 30))
+        Pricing::Rates.reset!
+
+        expect(Pricing::Rates.cents("pot.swing_share", on: Date.new(2027, 4, 30))).to eq(500)
+        expect(Pricing::Rates.cents("pot.swing_share", on: Date.new(2027, 5, 1))).to be_nil
+      end
+
+      it "ne fait qu'un chargement par date, même sur plusieurs clés" do
+        allow(Pricing::Rates).to receive(:load_dated_lookup).and_call_original
+
+        Pricing::Rates.cents("van.per_night", on: Date.new(2023, 6, 1))
+        Pricing::Rates.cents("dog.supplement", on: Date.new(2023, 6, 1))
+
+        expect(Pricing::Rates).to have_received(:load_dated_lookup).once
+      end
+    end
+  end
 end
