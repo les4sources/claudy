@@ -74,6 +74,13 @@ Rails.application.routes.draw do
     resources :accounts do
       resources :entries, only: [:create, :destroy], controller: "account_entries"
     end
+    # Routes nommées AVANT la ressource : sinon `/finance/catalog/print` serait
+    # capté par `catalog#show` avec `id = "print"`.
+    get "catalog/print", to: "catalog#print", as: :catalog_print
+    get "catalog/suggest_price", to: "catalog#suggest_price", as: :catalog_suggest_price
+    resources :catalog do
+      resources :prices, only: [:create, :destroy], controller: "catalog_prices"
+    end
   end
 
   # Organisation

@@ -1,0 +1,61 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Catalogue",
+           links: [ \
+             link_to("🖨️ Liste sourcier", finance_catalog_print_path(audience: "member", channel: @channel), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50", target: "_blank"), \
+             link_to("🖨️ Liste publique", finance_catalog_print_path(audience: "public", channel: @channel), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50", target: "_blank"), \
+             link_to("➕ Nouvel article", new_finance_catalog_path(channel: @channel), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
+           ]
+
+/ Filtre de canal dans l'URL, comme le filtre actif/inactif des comptes : il se
+  partage et survit au rechargement.
+.mb-4.flex.flex-wrap.items-center.gap-4
+  .flex.items-center.gap-2.text-sm
+    - ({ nil => "Tous" }.merge(CatalogItem::CHANNEL_LABELS)).each do |value, label|
+      = link_to label,
+                finance_catalog_index_path(channel: value, q: @term),
+                class: "px-3 py-1.5 rounded-md transition-colors #{@channel == value ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+
+  = form_with url: finance_catalog_index_path, method: :get, data: { controller: "auto-submit", auto_submit_delay_value: 300 }, class: "flex items-center gap-2" do |f|
+    = f.hidden_field :channel, value: @channel
+    = f.text_field :q,
+                   value: @term,
+                   placeholder: "Chercher un article…",
+                   data: { action: "input->auto-submit#submit" },
+                   class: "rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+
+- if @items.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucun article pour ce filtre.
+    p.mt-1
+      | Crée un article, puis pose-lui un premier palier de prix.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Article
+          th.py-3.px-6[scope="col"] Canal
+          th.py-3.px-6.text-right[scope="col"] Achat
+          th.py-3.px-6.text-right[scope="col"] Sourcier
+          th.py-3.px-6.text-right[scope="col"] Public
+          th.py-3.px-6[scope="col"] Palier en vigueur
+      tbody
+        - @items.each do |item|
+          tr.border-b.bg-white
+            td.py-4.px-6.font-medium.text-gray-900[scope="row"]
+              = link_to item.name,
+                        finance_catalog_path(item),
+                        class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+              - if item.category.present?
+                .mt-0.5.text-xs.text-gray-400= item.category
+              - unless item.active?
+                .mt-0.5
+                  span.px-2.py-0.5.rounded-full.text-xs.bg-gray-100.text-gray-500 Inactif
+            td.py-4.px-6
+              span class="px-2 py-0.5 rounded-full text-xs #{item.channel_badge_css}"
+                = item.channel_label
+            td.py-4.px-6.text-right.text-gray-400= item.purchase_price
+            td.py-4.px-6.text-right.font-semibold.text-gray-900= item.member_price
+            td.py-4.px-6.text-right= item.public_price
+            td.py-4.px-6.text-xs.text-gray-500= item.price_period

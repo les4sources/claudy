@@ -25,12 +25,14 @@ require "rails_helper"
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
 #  account_statement_id :bigint
+#  catalog_item_id      :bigint
 #  member_account_id    :bigint           not null
 #  reversal_of_id       :bigint
 #
 # Indexes
 #
 #  index_account_entries_on_account_statement_id              (account_statement_id)
+#  index_account_entries_on_catalog_item_id                   (catalog_item_id)
 #  index_account_entries_on_client_uuid                       (client_uuid) UNIQUE
 #  index_account_entries_on_deleted_at                        (deleted_at)
 #  index_account_entries_on_idempotency_key                   (idempotency_key) UNIQUE
@@ -39,6 +41,7 @@ require "rails_helper"
 #
 # Foreign Keys
 #
+#  fk_rails_...  (catalog_item_id => catalog_items.id)
 #  fk_rails_...  (member_account_id => member_accounts.id)
 #  fk_rails_...  (reversal_of_id => account_entries.id)
 #

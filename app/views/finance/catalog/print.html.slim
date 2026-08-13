@@ -1,0 +1,47 @@
+/ Liste imprimable. `audience=member` est affichée au bar : elle ne montre NI
+  prix d'achat NI prix de référence — c'est le seul chiffre qui n'a rien à faire
+  sur un mur, et l'oublier une fois suffit à créer un malaise durable.
+- content_for :title do
+  | Catalogue — #{@audience == "public" ? "prix public" : "prix sourcier"}
+
+.mb-6.flex.items-baseline.justify-between
+  div
+    h1.text-2xl.font-semibold.text-gray-900
+      - if @audience == "public"
+        | Nos prix
+      - else
+        | Prix sourciers
+    p.text-sm.text-gray-500
+      | Au #{l(Date.current, format: :long).squish}
+      - if @channel.present?
+        |  · #{CatalogItem::CHANNEL_LABELS.fetch(@channel, @channel)}
+  button.text-sm.text-gray-500.underline(class="print:hidden" type="button" onclick="window.print()")
+    | Imprimer
+
+- @items.group_by(&:channel).each do |channel, items|
+  .mb-8
+    h2.text-lg.font-semibold.text-gray-800.border-b.border-gray-200.pb-1.mb-3
+      = CatalogItem::CHANNEL_LABELS.fetch(channel, channel)
+
+    - items.group_by { |item| item.category.presence }.each do |category, grouped|
+      - if category.present?
+        h3.text-sm.uppercase.tracking-wide.text-gray-400.mt-4.mb-1= category
+
+      table.w-full.text-sm
+        tbody
+          - grouped.each do |item|
+            - price = @audience == "public" ? item.public_price : item.member_price
+            / Un article sans prix pour ce public n'est pas listé : mieux vaut une
+              ligne absente qu'une ligne à « — » que personne ne sait honorer.
+            - next if price == "—"
+            tr.border-b.border-gray-100
+              td.py-1.5.text-gray-800
+                = item.name
+                span.ml-1.text-xs.text-gray-400= item.unit_suffix
+              td.py-1.5.text-right.font-medium.text-gray-900= price
+
+p.mt-8.text-xs.text-gray-400
+  - if @audience == "public"
+    | Les 4 Sources · prix TTC
+  - else
+    | Les 4 Sources · réservé aux sourciers · à porter sur la fiche du mois

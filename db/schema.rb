@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_13_030300) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_13_120200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -19,6 +19,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_030300) do
   create_table "account_entries", force: :cascade do |t|
     t.bigint "account_statement_id"
     t.bigint "amount_cents", null: false
+    t.bigint "catalog_item_id"
     t.string "client_uuid"
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
@@ -37,6 +38,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_030300) do
     t.integer "unit_price_cents"
     t.datetime "updated_at", null: false
     t.index ["account_statement_id"], name: "index_account_entries_on_account_statement_id"
+    t.index ["catalog_item_id"], name: "index_account_entries_on_catalog_item_id"
     t.index ["client_uuid"], name: "index_account_entries_on_client_uuid", unique: true
     t.index ["deleted_at"], name: "index_account_entries_on_deleted_at"
     t.index ["idempotency_key"], name: "index_account_entries_on_idempotency_key", unique: true
@@ -202,6 +204,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_030300) do
     t.datetime "updated_at", null: false
     t.index ["deleted_at"], name: "index_camping_bookings_on_deleted_at"
     t.index ["from_date", "to_date"], name: "index_camping_bookings_on_from_date_and_to_date"
+  end
+
+  create_table "catalog_items", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "category"
+    t.string "channel", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "name", null: false
+    t.string "reference"
+    t.string "unit", default: "piece", null: false
+    t.datetime "updated_at", null: false
+    t.index ["channel", "name"], name: "index_catalog_items_on_channel_and_name"
+    t.index ["deleted_at"], name: "index_catalog_items_on_deleted_at"
+  end
+
+  create_table "catalog_prices", force: :cascade do |t|
+    t.date "active_from", null: false
+    t.date "active_until"
+    t.bigint "catalog_item_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "member_price_cents", null: false
+    t.string "note"
+    t.integer "public_price_cents"
+    t.integer "purchase_price_cents"
+    t.integer "reference_price_cents"
+    t.datetime "updated_at", null: false
+    t.index ["catalog_item_id", "active_from"], name: "index_catalog_prices_on_catalog_item_id_and_active_from", unique: true
+    t.index ["catalog_item_id"], name: "index_catalog_prices_on_catalog_item_id"
   end
 
   create_table "coworking_packs", force: :cascade do |t|
@@ -958,6 +989,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_030300) do
   end
 
   add_foreign_key "account_entries", "account_entries", column: "reversal_of_id"
+  add_foreign_key "account_entries", "catalog_items"
   add_foreign_key "account_entries", "member_accounts"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
@@ -968,6 +1000,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_030300) do
   add_foreign_key "bookings", "lodgings"
   add_foreign_key "bundles", "projects"
   add_foreign_key "bundles", "teams"
+  add_foreign_key "catalog_prices", "catalog_items"
   add_foreign_key "coworking_packs", "customers"
   add_foreign_key "coworking_reservations", "coworking_packs"
   add_foreign_key "coworking_reservations", "customers"

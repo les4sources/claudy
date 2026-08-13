@@ -54,6 +54,14 @@ RSpec.configure do |config|
   # instead of true.
   config.use_transactional_fixtures = true
 
+  # `Pricing::Rates` mémoïse ses lectures dans `ActiveSupport::CurrentAttributes`,
+  # que Rails remet à zéro à chaque requête et à chaque job — mais pas entre deux
+  # exemples RSpec. Sans ce reset, les tarifs seedés par un exemple fuient dans
+  # le suivant, et comme la suite tourne en ordre ALÉATOIRE (`config.order =
+  # :random`), l'échec ne se reproduit pas d'une fois sur l'autre. Ça a mordu en
+  # écrivant #157 ; on le règle ici plutôt que dans chaque fichier.
+  config.before { Pricing::Rates.reset! }
+
   # You can uncomment this line to turn off ActiveRecord support entirely.
   # config.use_active_record = false
 
