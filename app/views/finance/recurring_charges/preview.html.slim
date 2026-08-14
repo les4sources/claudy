@@ -21,7 +21,7 @@ p.mb-4.text-sm.text-gray-500
       tbody
         - @report.created.each do |line|
           tr.border-b.bg-white
-            td.py-3.px-6= line[:charge].member_account.name
+            td.py-3.px-6= line[:account]&.name || line[:charge].member_account&.name
             td.py-3.px-6.text-gray-900= line[:label]
             td.py-3.px-6.text-xs= line[:charge].basis_label
             td.py-3.px-6.text-right.font-semibold.text-gray-900= number_to_currency(line[:amount_cents] / 100.0)
@@ -35,7 +35,7 @@ p.mb-4.text-sm.text-gray-500
     - @report.existing.each do |line|
       li
         = line[:charge].label
-        span.text-gray-400  — #{line[:charge].member_account.name}
+        span.text-gray-400  — #{line[:account]&.name || line[:charge].member_account&.name}
 
 / Une clé de barème qui ne résout rien ne crée PAS une écriture à zéro : elle
   apparaît ici, nommée, pour qu'on aille corriger le barème.

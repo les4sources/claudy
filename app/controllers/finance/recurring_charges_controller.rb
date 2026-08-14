@@ -16,7 +16,7 @@ module Finance
     end
 
     def new
-      @charge = RecurringCharge.new(basis: "flat", starts_on: Date.current.beginning_of_month, active: true)
+      @charge = RecurringCharge.new(basis: "flat", applies_to: "account", starts_on: Date.current.beginning_of_month, active: true)
     end
 
     def create
@@ -78,7 +78,7 @@ module Finance
     def charge_params
       permitted = params.require(:recurring_charge).permit(
         :member_account_id, :household_member_id, :kind, :label, :flow, :basis,
-        :rate_key, :split_rate_key, :split_label, :starts_on, :ends_on, :active
+        :applies_to, :rate_key, :split_rate_key, :split_label, :starts_on, :ends_on, :active
       )
 
       # Montant saisi en euros. Une saisie vide laisse `amount_cents` nul, ce qui
@@ -86,6 +86,9 @@ module Finance
       # contrainte, pas par un silence.
       raw = params.dig(:recurring_charge, :amount_euros).to_s.strip.tr(",", ".")
       permitted[:amount_cents] = raw.match?(/\A\d+(\.\d+)?\z/) ? (raw.to_f * 100).round : nil
+      # Un périmètre et un compte sont exclusifs : on vide le compte plutôt que
+      # de laisser la contrainte de base refuser une saisie compréhensible.
+      permitted[:member_account_id] = nil if permitted[:applies_to].present? && permitted[:applies_to] != "account"
       permitted[:rate_key] = permitted[:rate_key].presence
       permitted[:split_rate_key] = permitted[:split_rate_key].presence
       permitted

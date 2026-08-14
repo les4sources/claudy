@@ -90,6 +90,22 @@ namespace :finance do
     end
   end
 
+  desc "Seed du forfait charges habitants — 65 €/personne à partir du 01/02/2026"
+  task seed_housing_charges: :environment do
+    rate = Rate.find_or_initialize_by(key: "charges.per_person_monthly")
+    if rate.new_record?
+      rate.update!(amount_cents: 6500, unit: "cents", label: "Charges habitants — €/personne/mois")
+      # Pas de version AVANT le 01/02/2026 : les charges d'avant étaient d'un
+      # autre montant, qu'on ne connaît pas. Générer un mois antérieur ne
+      # résoudra donc rien et sera SIGNALÉ, plutôt que facturé au mauvais tarif.
+      rate.rate_versions.create!(amount_cents: 6500, active_from: Date.new(2026, 2, 1),
+                                 note: "Barème en vigueur depuis le 01/02/2026")
+      puts "[finance:seed_housing_charges] créé : 65,00 €/personne à partir du 01/02/2026"
+    else
+      puts "[finance:seed_housing_charges] déjà présent : #{rate.amount_cents / 100.0} €"
+    end
+  end
+
   desc "Recalcule chaque solde depuis les écritures et le compare aux décomptes figés — exit 1 si écart"
   task verify_ledger: :environment do
     ecarts = []
@@ -149,7 +165,8 @@ namespace :finance do
     report = Finance::GenerateRecurringCharges.new(month: month, dry_run: !apply).run!
 
     report.created.each do |line|
-      puts "  + #{line[:charge].member_account.name.ljust(28)} #{line[:label].ljust(34)} " \
+      nom = (line[:account] || line[:charge].member_account)&.name.to_s
+      puts "  + #{nom.ljust(28)} #{line[:label].ljust(34)} " \
            "#{format('%8.2f', line[:amount_cents] / 100.0)} €"
     end
     report.skipped.each do |line|

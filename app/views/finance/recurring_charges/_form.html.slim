@@ -13,10 +13,20 @@
                    hint: "Ce qui s'affichera sur le décompte. Ex. « Cagnotte », « Forfait dôme ».",
                    class: "md:w-2/3"
 
+    /  Une charge vise SOIT un compte, SOIT un groupe de ménages. Le forfait
+       charges vaut pour tous les habitants : le recopier ménage par ménage,
+       c'est garantir que la prochaine famille arrivée sera oubliée.
+    = f.select :applies_to,
+               RecurringCharge::SCOPES.map { |scope| [RecurringCharge::SCOPE_LABELS.fetch(scope), scope] },
+               { label: "Appliquer à *" },
+               { class: "md:w-2/3" }
+
     = f.select :member_account_id,
                MemberAccount.ordered.map { |account| ["#{account.name} (#{account.code})", account.id] },
-               { label: "Compte *" },
+               { label: "Compte (si « Un seul compte »)", include_blank: "—" },
                { class: "md:w-2/3" }
+    p.-mt-4.mb-2.text-sm.text-gray-500
+      | Laisse ce champ vide dès que la charge vise un groupe : le périmètre est recalculé à chaque génération, donc un ménage créé plus tard est couvert sans qu'on y pense.
 
     = f.select :basis,
                RecurringCharge::BASES.map { |basis| [RecurringCharge::BASIS_LABELS.fetch(basis, basis), basis] },

@@ -41,26 +41,31 @@ module Finance
       report = Report.new(created: [], existing: [], skipped: [])
 
       PaperTrail.request(whodunnit: @whodunnit || "recurring") do
-        RecurringCharge.active_on(@month).includes(member_account: :household).each do |charge|
-          process(charge, report)
+        RecurringCharge.active_on(@month).each do |charge|
+          # Une règle de périmètre se déplie ici, au moment de la génération :
+          # la liste des ménages est celle du jour, pas celle du jour où la
+          # règle a été écrite.
+          charge.target_accounts.each { |account| process(charge, account, report) }
         end
       end
 
       report
     end
 
-    def process(charge, report)
+    def process(charge, account, report)
       unit = charge.unit_amount_cents_on(@month)
       if unit.nil?
-        return report.skipped << { charge: charge, reason: "barème « #{charge.rate_key} » non résolu au #{@month}" }
+        return report.skipped << { charge: charge, account: account,
+                                   reason: "barème « #{charge.rate_key} » non résolu au #{@month}" }
       end
 
-      multiplier = charge.multiplier_on(@month)
+      multiplier = charge.multiplier_on(@month, account)
       if multiplier.zero?
-        return report.skipped << { charge: charge, reason: "aucun #{charge.basis == 'per_child' ? 'enfant' : 'adulte'} sur ce mois" }
+        return report.skipped << { charge: charge, account: account,
+                                   reason: "aucune personne à compter sur ce mois (#{charge.basis_label.downcase})" }
       end
 
-      lines_for(charge, unit, multiplier).each { |line| write(charge, line, report) }
+      lines_for(charge, unit, multiplier).each { |line| write(charge, account, line, report) }
     end
 
     # Une ou deux lignes selon que la part scindée résout encore quelque chose.
@@ -78,17 +83,22 @@ module Finance
       ]
     end
 
-    def write(charge, line, report)
+    def write(charge, account, line, report)
       return if line[:amount_cents].zero?
 
+      # Le compte n'entre dans la clé que pour une règle de PÉRIMÈTRE. Pour une
+      # règle visant un seul compte, il est déjà impliqué par l'identifiant de
+      # la règle : garder l'ancienne forme laisse les mois déjà générés
+      # inchangés, au lieu de les recréer sous une clé neuve.
       key = ["recurring", charge.id, @month.strftime("%Y-%m"), line[:suffix]].compact.join(":")
+      key = "#{key}:acct#{account.id}" if charge.scoped?
 
       if AccountEntry.unscoped.exists?(idempotency_key: key)
-        return report.existing << { charge: charge, key: key }
+        return report.existing << { charge: charge, account: account, key: key }
       end
 
       entry_attributes = {
-        member_account_id: charge.member_account_id,
+        member_account_id: account.id,
         entry_date: @month.end_of_month,
         posted_at: Time.current,
         amount_cents: line[:amount_cents],
@@ -99,7 +109,7 @@ module Finance
         idempotency_key: key
       }
 
-      report.created << entry_attributes.merge(charge: charge)
+      report.created << entry_attributes.merge(charge: charge, account: account)
       return if @dry_run
 
       AccountEntry.create!(entry_attributes)
@@ -107,7 +117,7 @@ module Finance
       # Deux générations concurrentes du même mois : l'index a tranché, et c'est
       # exactement le comportement voulu — on note l'existant, on ne lève pas.
       report.created.pop
-      report.existing << { charge: charge, key: key }
+      report.existing << { charge: charge, account: account, key: key }
     end
   end
 end
