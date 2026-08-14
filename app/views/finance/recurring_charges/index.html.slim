@@ -44,7 +44,12 @@
                   | scindée : #{charge.split_label.presence || 'part séparée'}
               - if charge.rate_key.present?
                 .mt-0.5.text-xs.text-gray-400.font-mono= charge.rate_key
-            td.py-4.px-6= charge.member_account.name
+            td.py-4.px-6
+              - if charge.scoped?
+                span.px-2.py-0.5.rounded-full.text-xs.bg-indigo-100.text-indigo-800= charge.scope_label
+                .mt-0.5.text-xs.text-gray-400= "#{charge.target_accounts.size} compte(s) visé(s)"
+              - else
+                = charge.member_account&.name
             td.py-4.px-6= charge.basis_label
             td.py-4.px-6.text-right
               - if unit

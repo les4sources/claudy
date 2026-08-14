@@ -58,6 +58,11 @@ class Household < ApplicationRecord
 
   def children_on(date) = members_on(date).where(kind: "child").count
 
+  # TOUTES les personnes présentes, enfants compris — c'est la base du forfait
+  # charges (65 €/personne), qui ne distingue pas l'âge : un enfant consomme de
+  # l'eau et du chauffage comme un adulte.
+  def people_on(date) = members_on(date).count
+
   private
 
   def moved_out_after_moved_in

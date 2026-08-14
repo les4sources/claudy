@@ -177,6 +177,88 @@ RSpec.describe Finance::GenerateRecurringCharges do
     end
   end
 
+  # Le forfait charges vaut pour TOUS les ménages habitants. Une règle, pas une
+  # par famille : sinon la prochaine arrivée est oubliée.
+  describe "périmètre de ménages" do
+    let(:autre_menage) { Household.create!(name: "Hulotte", kind: "resident", moved_in_on: Date.new(2023, 1, 1)) }
+    let!(:autre_compte) { MemberAccount.create!(kind: "household", household: autre_menage, name: "Hulotte") }
+    let!(:menage_membre) { Household.create!(name: "Grand-Duc", kind: "member", moved_in_on: Date.new(2023, 1, 1)) }
+    let!(:compte_membre) { MemberAccount.create!(kind: "household", household: menage_membre, name: "Grand-Duc") }
+
+    before do
+      account # `let` paresseux : sans cette ligne le compte n'existe pas encore
+              # quand la génération résout le périmètre, et le test passe à côté.
+      seed_rate("charges.per_person_monthly", 6500, active_from: Date.new(2026, 2, 1))
+      add_member("Ada", "adult")
+      add_member("Zoé", "child")
+      autre_menage.household_members.create!(name: "Bob", kind: "adult", started_on: Date.new(2023, 1, 1))
+      menage_membre.household_members.create!(name: "Cléo", kind: "adult", started_on: Date.new(2023, 1, 1))
+
+      RecurringCharge.create!(label: "Charges habitants", basis: "per_person",
+                              applies_to: "resident_households",
+                              rate_key: "charges.per_person_monthly", flow: "charges",
+                              starts_on: Date.new(2026, 2, 1))
+    end
+
+    it "écrit sur TOUS les ménages habitants, et sur eux seuls" do
+      described_class.new(month: "2026-08").run!
+
+      expect(AccountEntry.where(member_account: account).sum(:amount_cents)).to eq(13_000) # 2 personnes
+      expect(AccountEntry.where(member_account: autre_compte).sum(:amount_cents)).to eq(6_500) # 1 personne
+      expect(AccountEntry.where(member_account: compte_membre)).to be_empty # ménage membre
+    end
+
+    it "compte les ENFANTS aussi — 65 € par personne, pas par adulte" do
+      described_class.new(month: "2026-08").run!
+
+      expect(AccountEntry.where(member_account: account).count).to eq(1)
+      expect(AccountEntry.where(member_account: account).first.amount_cents).to eq(13_000)
+    end
+
+    it "ne duplique rien à la seconde exécution" do
+      described_class.new(month: "2026-08").run!
+
+      expect { described_class.new(month: "2026-08").run! }.not_to change(AccountEntry, :count)
+    end
+
+    # LA raison d'être du périmètre : la famille arrivée après coup est couverte
+    # sans que personne n'ait touché à la règle.
+    it "couvre un ménage créé APRÈS la règle" do
+      described_class.new(month: "2026-08").run!
+
+      nouveau = Household.create!(name: "Chevêchette", kind: "resident", moved_in_on: Date.new(2026, 9, 1))
+      nouveau.household_members.create!(name: "Dan", kind: "adult", started_on: Date.new(2026, 9, 1))
+      compte = MemberAccount.create!(kind: "household", household: nouveau, name: "Chevêchette")
+
+      described_class.new(month: "2026-09").run!
+
+      expect(AccountEntry.where(member_account: compte).sum(:amount_cents)).to eq(6_500)
+    end
+
+    # La règle démarre au 01/02/2026 : janvier n'est pas « ignoré », il est HORS
+    # PÉRIODE. Rien n'est écrit, et c'est la date de début qui protège — pas le
+    # barème.
+    it "n'écrit rien sur un mois antérieur à la règle" do
+      report = described_class.new(month: "2026-01").run!
+
+      expect(AccountEntry.count).to eq(0)
+      expect(report.created).to be_empty
+    end
+
+    # En revanche, une règle DÉJÀ active dont le barème n'est pas encore en
+    # vigueur doit être signalée, pas facturée à zéro.
+    it "signale une règle active dont le barème ne résout rien" do
+      RecurringCharge.create!(label: "Charges anticipées", basis: "per_person",
+                              applies_to: "resident_households",
+                              rate_key: "charges.inexistante", flow: "charges",
+                              starts_on: Date.new(2023, 1, 1))
+
+      report = described_class.new(month: "2026-08").run!
+
+      expect(report.skipped.map { |l| l[:charge].label }).to include("Charges anticipées")
+    end
+  end
+
   it "trace les écritures générées comme telles" do
     RecurringCharge.create!(member_account: account, label: "Forfait dôme", basis: "flat",
                             amount_cents: 5000, starts_on: Date.new(2023, 1, 1))

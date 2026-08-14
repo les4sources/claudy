@@ -5,6 +5,7 @@
 #  id                  :bigint           not null, primary key
 #  active              :boolean          default(TRUE), not null
 #  amount_cents        :integer
+#  applies_to          :string           default("account"), not null
 #  basis               :string           default("flat"), not null
 #  deleted_at          :datetime
 #  ends_on             :date
@@ -18,7 +19,7 @@
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
 #  household_member_id :bigint
-#  member_account_id   :bigint           not null
+#  member_account_id   :bigint
 #
 # Indexes
 #
@@ -38,21 +39,35 @@
 # aussi — `per_adult` compte les adultes DU MOIS, pas ceux d'aujourd'hui, sinon
 # un enfant devenu majeur depuis ferait mentir tout l'historique.
 class RecurringCharge < ApplicationRecord
-  BASES = %w[flat per_adult per_child].freeze
+  BASES = %w[flat per_person per_adult per_child].freeze
   BASIS_LABELS = {
-    "flat" => "Forfait",
+    "flat" => "Forfait (montant fixe)",
+    "per_person" => "Par personne (enfants compris)",
     "per_adult" => "Par adulte",
     "per_child" => "Par enfant"
+  }.freeze
+
+  # Périmètre d'application. Une règle vise soit UN compte, soit un GROUPE de
+  # ménages — résolu au moment de la génération, si bien qu'un ménage créé après
+  # coup est couvert sans que personne n'ait à y penser.
+  SCOPES = %w[account resident_households member_households all_households].freeze
+  SCOPE_LABELS = {
+    "account" => "Un seul compte",
+    "resident_households" => "Tous les ménages habitants",
+    "member_households" => "Tous les ménages membres",
+    "all_households" => "Tous les ménages"
   }.freeze
 
   has_soft_deletion default_scope: true
   has_paper_trail
 
-  belongs_to :member_account
+  belongs_to :member_account, optional: true
   belongs_to :household_member, optional: true
 
   validates :label, presence: true
   validates :basis, inclusion: { in: BASES }
+  validates :applies_to, inclusion: { in: SCOPES }
+  validate :anchored_on_account_or_scope
   validates :starts_on, presence: true
   validates :flow, inclusion: { in: AccountEntry::FLOWS }, allow_blank: true
   validate :exactly_one_amount_source
@@ -87,20 +102,49 @@ class RecurringCharge < ApplicationRecord
     Pricing::Rates.cents(split_rate_key, on: date)
   end
 
-  # Combien de fois le montant unitaire s'applique, pour le mois demandé.
-  def multiplier_on(month)
-    household = member_account.household
+  # Les comptes visés par cette règle. Pour un périmètre, la liste est calculée
+  # à CHAQUE génération : une famille arrivée le mois dernier est donc couverte
+  # sans qu'on ait eu à toucher la règle.
+  def target_accounts
+    return MemberAccount.where(id: member_account_id) if applies_to == "account"
+
+    households = Household.all
+    households = households.where(kind: "resident") if applies_to == "resident_households"
+    households = households.where(kind: "member") if applies_to == "member_households"
+
+    MemberAccount.where(active: true, household_id: households.select(:id)).ordered
+  end
+
+  def scope_label = SCOPE_LABELS.fetch(applies_to, applies_to)
+  def scoped? = applies_to != "account"
+
+  # Combien de fois le montant unitaire s'applique, pour un compte et un mois.
+  # Le compte est passé en argument : une même règle sert plusieurs ménages, et
+  # chacun a son propre effectif.
+  def multiplier_on(month, account = member_account)
     return 1 if basis == "flat"
+
+    household = account&.household
     return 0 if household.nil?
 
+    on = month.beginning_of_month
     case basis
-    when "per_adult" then household.adults_on(month.beginning_of_month)
-    when "per_child" then household.children_on(month.beginning_of_month)
+    when "per_person" then household.people_on(on)
+    when "per_adult" then household.adults_on(on)
+    when "per_child" then household.children_on(on)
     else 1
     end
   end
 
   private
+
+  def anchored_on_account_or_scope
+    if applies_to == "account" && member_account_id.blank?
+      errors.add(:member_account_id, "est obligatoire pour une charge visant un seul compte")
+    elsif applies_to != "account" && member_account_id.present?
+      errors.add(:member_account_id, "doit rester vide pour une charge qui vise un groupe de ménages")
+    end
+  end
 
   def exactly_one_amount_source
     return if amount_cents.present? ^ rate_key.present?
