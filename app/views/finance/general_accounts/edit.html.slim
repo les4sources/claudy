@@ -1,0 +1,5 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Compte #{@account.code}"
+= render "form", account: @account
+.mt-6
+  = button_to "Supprimer ce compte", finance_general_account_path(@account), method: :delete, class: "text-sm text-red-500 hover:text-red-700", data: { turbo_confirm: "Supprimer le compte #{@account.code} ?" }

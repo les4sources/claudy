@@ -1,0 +1,15 @@
+= form_with model: [:finance, year], class: "space-y-4" do |f|
+  = render "finance/shared/form_errors", record: year
+  .grid.gap-4(class="md:grid-cols-3")
+    div
+      = f.label :legal_entity_id, "Entité *", class: "block text-sm font-medium text-gray-700"
+      = f.collection_select :legal_entity_id, LegalEntity.ordered, :id, :name, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+    div
+      = f.label :starts_on, "Début *", class: "block text-sm font-medium text-gray-700"
+      = f.date_field :starts_on, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+    div
+      = f.label :ends_on, "Fin *", class: "block text-sm font-medium text-gray-700"
+      = f.date_field :ends_on, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+  .flex.items-center.gap-3
+    = f.submit "Enregistrer", class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+    = link_to "Annuler", finance_fiscal_years_path, class: "text-sm text-gray-500 hover:text-gray-700"

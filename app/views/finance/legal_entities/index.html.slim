@@ -1,0 +1,29 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Entités juridiques",
+           links: [link_to("➕ Nouvelle entité", new_finance_legal_entity_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-6[scope="col"] Entité
+        th.py-3.px-6[scope="col"] Forme
+        th.py-3.px-6[scope="col"] Régime TVA
+        th.py-3.px-6[scope="col"] Comptes de trésorerie
+        th.py-3.px-6[scope="col"]
+    tbody
+      - @entities.each do |entity|
+        tr.border-b.bg-white
+          td.py-4.px-6.font-medium.text-gray-900
+            = entity.name
+            - unless entity.active?
+              span.ml-2.px-2.py-0.5.rounded-full.text-xs.bg-gray-100.text-gray-500 Inactive
+          td.py-4.px-6= entity.form_label
+          td.py-4.px-6
+            = entity.vat_regime_label
+            - if entity.vat_number.present?
+              .text-xs.text-gray-400= entity.vat_number
+          td.py-4.px-6= entity.cash_accounts.size
+          td.py-4.px-6.text-right
+            = link_to "Modifier", edit_finance_legal_entity_path(entity), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"

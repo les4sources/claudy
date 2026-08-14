@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_14_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_15_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -165,6 +165,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_090000) do
     t.index ["gathering_id"], name: "index_agenda_items_on_gathering_id"
   end
 
+  create_table "analytic_accounts", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "name", null: false
+    t.bigint "team_id"
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_analytic_accounts_on_code", unique: true
+    t.index ["deleted_at"], name: "index_analytic_accounts_on_deleted_at"
+    t.index ["team_id"], name: "index_analytic_accounts_on_team_id"
+  end
+
   create_table "booking_page_views", force: :cascade do |t|
     t.bigint "booking_id", null: false
     t.datetime "created_at", null: false
@@ -247,6 +260,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_090000) do
     t.datetime "updated_at", null: false
     t.index ["deleted_at"], name: "index_camping_bookings_on_deleted_at"
     t.index ["from_date", "to_date"], name: "index_camping_bookings_on_from_date_and_to_date"
+  end
+
+  create_table "cash_accounts", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "general_account_id", null: false
+    t.string "iban"
+    t.string "kind", null: false
+    t.bigint "legal_entity_id", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_cash_accounts_on_deleted_at"
+    t.index ["general_account_id"], name: "index_cash_accounts_on_general_account_id"
+    t.index ["legal_entity_id"], name: "index_cash_accounts_on_legal_entity_id"
+    t.index ["name"], name: "index_cash_accounts_on_name", unique: true
   end
 
   create_table "catalog_items", force: :cascade do |t|
@@ -447,6 +476,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_090000) do
     t.index ["human_id"], name: "index_experiences_on_human_id"
   end
 
+  create_table "fiscal_years", force: :cascade do |t|
+    t.datetime "closed_at"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "ends_on", null: false
+    t.bigint "legal_entity_id", null: false
+    t.date "starts_on", null: false
+    t.string "status", default: "open", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_fiscal_years_on_deleted_at"
+    t.index ["legal_entity_id", "starts_on"], name: "index_fiscal_years_on_legal_entity_id_and_starts_on", unique: true
+    t.index ["legal_entity_id"], name: "index_fiscal_years_on_legal_entity_id"
+  end
+
   create_table "gathering_action_humans", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "gathering_action_id", null: false
@@ -492,6 +535,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_090000) do
     t.datetime "updated_at", null: false
     t.index ["gathering_category_id"], name: "index_gatherings_on_gathering_category_id"
     t.index ["starts_at", "ends_at"], name: "index_gatherings_on_starts_at_and_ends_at"
+  end
+
+  create_table "general_accounts", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.integer "klass", null: false
+    t.string "name", null: false
+    t.string "nature", null: false
+    t.boolean "reconcilable", default: false, null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_general_accounts_on_code", unique: true
+    t.index ["deleted_at"], name: "index_general_accounts_on_deleted_at"
+    t.index ["klass"], name: "index_general_accounts_on_klass"
   end
 
   create_table "hamac_bookings", force: :cascade do |t|
@@ -575,6 +633,63 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_090000) do
     t.bigint "task_id", null: false
     t.index ["human_id", "task_id"], name: "index_humans_tasks_on_human_id_and_task_id"
     t.index ["task_id", "human_id"], name: "index_humans_tasks_on_task_id_and_human_id"
+  end
+
+  create_table "journal_entries", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "entry_date", null: false
+    t.bigint "fiscal_year_id", null: false
+    t.string "journal", null: false
+    t.string "label", null: false
+    t.bigint "legal_entity_id", null: false
+    t.datetime "locked_at"
+    t.integer "number", null: false
+    t.datetime "posted_at", null: false
+    t.bigint "reversal_of_id"
+    t.bigint "source_id"
+    t.string "source_type"
+    t.datetime "updated_at", null: false
+    t.string "whodunnit"
+    t.index ["deleted_at"], name: "index_journal_entries_on_deleted_at"
+    t.index ["entry_date"], name: "index_journal_entries_on_entry_date"
+    t.index ["fiscal_year_id", "journal", "number"], name: "index_journal_entries_on_sequence", unique: true
+    t.index ["fiscal_year_id"], name: "index_journal_entries_on_fiscal_year_id"
+    t.index ["legal_entity_id"], name: "index_journal_entries_on_legal_entity_id"
+    t.index ["reversal_of_id"], name: "index_journal_entries_on_single_reversal", unique: true, where: "(reversal_of_id IS NOT NULL)"
+    t.index ["source_type", "source_id", "journal"], name: "index_journal_entries_on_source", unique: true, where: "(source_id IS NOT NULL)"
+  end
+
+  create_table "journal_lines", force: :cascade do |t|
+    t.bigint "analytic_account_id"
+    t.datetime "created_at", null: false
+    t.bigint "credit_cents", default: 0, null: false
+    t.bigint "debit_cents", default: 0, null: false
+    t.datetime "deleted_at"
+    t.bigint "general_account_id", null: false
+    t.bigint "journal_entry_id", null: false
+    t.string "label"
+    t.bigint "team_id"
+    t.datetime "updated_at", null: false
+    t.index ["analytic_account_id"], name: "index_journal_lines_on_analytic_account_id"
+    t.index ["deleted_at"], name: "index_journal_lines_on_deleted_at"
+    t.index ["general_account_id"], name: "index_journal_lines_on_general_account_id"
+    t.index ["journal_entry_id"], name: "index_journal_lines_on_journal_entry_id"
+    t.index ["team_id"], name: "index_journal_lines_on_team_id"
+    t.check_constraint "debit_cents >= 0 AND credit_cents >= 0 AND (debit_cents = 0 OR credit_cents = 0) AND (debit_cents > 0 OR credit_cents > 0)", name: "journal_lines_one_side_only"
+  end
+
+  create_table "legal_entities", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "form", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.string "vat_number"
+    t.string "vat_regime", default: "exempt", null: false
+    t.index ["deleted_at"], name: "index_legal_entities_on_deleted_at"
+    t.index ["name"], name: "index_legal_entities_on_name", unique: true
   end
 
   create_table "lodging_compositions", force: :cascade do |t|
@@ -1004,12 +1119,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_090000) do
     t.index ["project_id"], name: "index_tasks_on_project_id"
   end
 
+  create_table "team_memberships", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "human_id", null: false
+    t.string "role", default: "member", null: false
+    t.bigint "team_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_team_memberships_on_deleted_at"
+    t.index ["human_id"], name: "index_team_memberships_on_human_id"
+    t.index ["team_id", "human_id"], name: "index_team_memberships_on_team_id_and_human_id", unique: true
+    t.index ["team_id"], name: "index_team_memberships_on_team_id"
+  end
+
   create_table "teams", force: :cascade do |t|
+    t.string "analytic_code"
     t.datetime "created_at", null: false
     t.datetime "deleted_at", precision: nil
     t.text "description"
+    t.string "kind"
     t.string "name"
+    t.bigint "parent_id"
     t.datetime "updated_at", null: false
+    t.index ["analytic_code"], name: "index_teams_on_analytic_code", unique: true
+    t.index ["parent_id"], name: "index_teams_on_parent_id"
   end
 
   create_table "unavailabilities", force: :cascade do |t|
@@ -1087,10 +1220,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_090000) do
   add_foreign_key "agenda_items", "gatherings"
   add_foreign_key "agenda_items", "humans", column: "author_id"
   add_foreign_key "agenda_items", "humans", column: "carrier_id"
+  add_foreign_key "analytic_accounts", "teams"
   add_foreign_key "booking_page_views", "bookings"
   add_foreign_key "bookings", "lodgings"
   add_foreign_key "bundles", "projects"
   add_foreign_key "bundles", "teams"
+  add_foreign_key "cash_accounts", "general_accounts"
+  add_foreign_key "cash_accounts", "legal_entities"
   add_foreign_key "catalog_prices", "catalog_items"
   add_foreign_key "coworking_packs", "customers"
   add_foreign_key "coworking_reservations", "coworking_packs"
@@ -1106,6 +1242,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_090000) do
   add_foreign_key "experience_bookings", "experience_availabilities"
   add_foreign_key "experience_bookings", "stays"
   add_foreign_key "experiences", "humans"
+  add_foreign_key "fiscal_years", "legal_entities"
   add_foreign_key "gathering_action_humans", "gathering_actions"
   add_foreign_key "gathering_action_humans", "humans"
   add_foreign_key "gathering_actions", "gatherings"
@@ -1114,6 +1251,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_090000) do
   add_foreign_key "household_members", "humans"
   add_foreign_key "human_roles", "humans"
   add_foreign_key "human_roles", "roles"
+  add_foreign_key "journal_entries", "fiscal_years"
+  add_foreign_key "journal_entries", "journal_entries", column: "reversal_of_id"
+  add_foreign_key "journal_entries", "legal_entities"
+  add_foreign_key "journal_lines", "analytic_accounts"
+  add_foreign_key "journal_lines", "general_accounts"
+  add_foreign_key "journal_lines", "journal_entries"
+  add_foreign_key "journal_lines", "teams"
   add_foreign_key "lodging_compositions", "lodgings", column: "component_lodging_id"
   add_foreign_key "lodging_compositions", "lodgings", column: "composite_lodging_id"
   add_foreign_key "lodging_rooms", "lodgings"
@@ -1143,6 +1287,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_090000) do
   add_foreign_key "stays", "customers"
   add_foreign_key "tasks", "bundles"
   add_foreign_key "tasks", "projects"
+  add_foreign_key "team_memberships", "humans"
+  add_foreign_key "team_memberships", "teams"
+  add_foreign_key "teams", "teams", column: "parent_id"
   add_foreign_key "unavailabilities", "lodgings"
   add_foreign_key "users", "humans"
 end
