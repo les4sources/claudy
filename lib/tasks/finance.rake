@@ -208,4 +208,264 @@ namespace :finance do
          "total #{format('%.2f', report.total_cents / 100.0)} €"
     puts "[finance:generate_recurring] Rien n'a été écrit — relance avec APPLY=1." unless apply
   end
+
+  # ---------------------------------------------------------------------------
+  # Reprise du bar papier — juillet 2026
+  #
+  # Le catalogue du bar n'existait nulle part ailleurs que sur la feuille A4
+  # scotchée au mur. Ces deux tâches le font entrer dans l'app, puis encodent la
+  # fiche de juillet 2026 relevée dessus. Elles sont IDEMPOTENTES et rejouables :
+  # c'est ce qui permet de répéter en dry-run avant d'écrire en prod.
+  #
+  # Sources : « Fiche de BAR — juillet 2026 » (colonne +10 % = prix sourcier,
+  # bâtonnets par famille) et « Au bar des 4 Sources » (carte août 2026, prix
+  # publics). Comptages relus deux fois et arbitrés avec Michael le 14/08/2026.
+  # ---------------------------------------------------------------------------
+
+  BAR_2026_07 = Date.new(2026, 7, 1)
+
+  # [nom, catégorie, unité, sourcier, achat, public] — montants en cents.
+  #
+  # Le prix d'achat vaut sourcier ÷ 1,10 (marge bar) SAUF là où il est nil : ces
+  # articles-là ne s'achètent pas à l'unité, leur prix sourcier est une décision
+  # maison (bouteille de vin, repas, miel, pizza party) ou une portion tirée du
+  # vrac (tisane, sirop, café, jus au verre). On n'invente pas un prix fournisseur.
+  BAR_CATALOG_2026_07 = [
+    ["Moinette",                 "Bières", "piece", 210, 191, 400],
+    ["Lupulus fruit",            "Bières", "piece", 205, 186, 400],
+    ["Ducassis",                 "Bières", "piece", 193, 175, 400],
+    ["Seed",                     "Bières", "piece", 189, 172, 400],
+    ["Holy IPA",                 "Bières", "piece", 198, 180, 400],
+    ["Acid",                     "Bières", "piece", 198, 180, 400],
+    ["Big Nose",                 "Bières", "piece", 196, 178, 400],
+    ["Cambrée",                  "Bières", "piece", 195, 177, 350],
+    ["Topless",                  "Bières", "piece", 180, 164, 300],
+    ["Chinette",                 "Bières", "piece", 195, 177, 350],
+    ["Chimay dorée",             "Bières", "piece", 146, 133, nil],
+    ["Lupulus organicus",        "Bières", "piece", 206, 187, 400],
+    ["Carolus gouden",           "Bières", "piece", 241, 219, nil],
+    ["Wout (Vaillante, Tiestu)", "Bières", "piece", 157, 143, 400],
+    ["Badjawe brune",            "Bières", "piece", 220, 200, 400],
+    ["Brune des braves",         "Bières", "piece", 218, 198, nil],
+    ["Trottinette",              "Bières", "piece", 200, 182, 350],
+    ["Trottinette passion",      "Bières", "piece", 200, 182, nil],
+    ["Taras Boulba",             "Bières", "piece", 138, 125, 300],
+    ["Mobius Triple",            "Bières", "piece", 116, 105, nil],
+
+    ["Vin rouge bouteille",      "Vin", "piece",   800, nil, 1500],
+    ["Vin rosé bouteille",       "Vin", "piece",   800, nil, 1500],
+    ["Vin blanc bouteille",      "Vin", "piece",   800, nil, 1500],
+    ["Vin verre",                "Vin", "portion", 176, 160, 300],
+
+    ["Eau pétillante 1 L",       "Softs", "piece",   97,  88, 100],
+    ["Jus de pomme 3 L",         "Softs", "piece",  450, 409, nil],
+    ["Jus de pomme 1 L",         "Softs", "piece",  165, 150, 400],
+    ["Jus de pomme verre",       "Softs", "portion", 50, nil, 200],
+    ["Tisane",                   "Softs", "portion", 50, nil, 200],
+    ["Bionina",                  "Softs", "piece",  165, 150, 300],
+    ["Whole Earth",              "Softs", "piece",  204, 185, nil],
+    ["Sirop steph",              "Softs", "portion", 50, nil, 150],
+    ["Kombucha",                 "Softs", "piece",  307, 279, 500],
+    ["Kefir (Eau Vertueuse)",    "Softs", "piece",  141, 128, 300],
+
+    ["Chips ReBel",              "Snacks", "piece", 281, 255, 400],
+    ["Chips Waltson",            "Snacks", "piece", 314, 285, nil],
+
+    ["Café/Thé",                 "Autres", "portion",  50, nil, 200],
+    ["Repas",                    "Autres", "portion", 500, nil, nil],
+    ["Miel",                     "Autres", "piece",   800, nil, nil],
+    ["Pizza Party",              "Autres", "portion", 200, nil, nil]
+  ].freeze
+
+  # Articles du seed de démo (#157) qui ne sont sur aucun des deux documents.
+  # Retirés seulement s'ils n'ont jamais servi — une écriture qui les cite fige
+  # leur sort, on ne touche pas au grand livre par une tâche de catalogue.
+  BAR_OBSOLETES_2026_07 = ["Chimay bleue", "Jus de pomme"].freeze
+
+  desc "Catalogue du bar relevé sur la fiche papier de juillet 2026 — dry-run par défaut, APPLY=1 pour écrire"
+  task seed_bar_catalog_2026_07: :environment do
+    apply = ENV["APPLY"] == "1"
+    creees = maj = paliers = conserves = retires = 0
+
+    ApplicationRecord.transaction do
+      BAR_CATALOG_2026_07.each do |name, category, unit, member, purchase, public_price|
+        item = CatalogItem.find_or_initialize_by(channel: "bar", name: name)
+        nouveau = item.new_record?
+        item.assign_attributes(category: category, unit: unit)
+        item.active = true if nouveau
+
+        if nouveau
+          item.save!
+          creees += 1
+          puts "  + #{name.ljust(26)} #{category}"
+        elsif item.changed?
+          item.save!
+          maj += 1
+          puts "  ~ #{name.ljust(26)} #{item.previous_changes.keys.join(', ')}"
+        end
+
+        existant = item.catalog_prices.covering(BAR_2026_07).first
+
+        # Un palier déjà en place n'est jamais écrasé : quelqu'un a pu corriger
+        # un prix depuis, et la fiche papier n'est pas plus légitime que lui.
+        # On le signale quand il diverge, c'est tout.
+        if existant
+          conserves += 1
+          ecart = []
+          ecart << "sourcier #{existant.member_price_cents} ≠ #{member}" if existant.member_price_cents != member
+          if public_price && existant.public_price_cents != public_price
+            ecart << "public #{existant.public_price_cents.inspect} ≠ #{public_price}"
+          end
+          puts "  ! #{name.ljust(26)} palier existant conservé — #{ecart.join(' / ')}" if ecart.any?
+          next
+        end
+
+        item.catalog_prices.create!(
+          active_from: BAR_2026_07,
+          member_price_cents: member,
+          purchase_price_cents: purchase,
+          public_price_cents: public_price,
+          note: "Fiche de bar papier juillet 2026 / carte août 2026"
+        )
+        paliers += 1
+      end
+
+      BAR_OBSOLETES_2026_07.each do |name|
+        item = CatalogItem.find_by(channel: "bar", name: name)
+        next if item.nil?
+
+        ecritures = item.account_entries.count
+        if ecritures.positive?
+          puts "  ! #{name.ljust(26)} #{ecritures} écriture(s) rattachée(s) — CONSERVÉ"
+          next
+        end
+
+        item.soft_delete!(validate: false)
+        retires += 1
+        puts "  - #{name.ljust(26)} retiré (jamais vendu)"
+      end
+
+      raise ActiveRecord::Rollback unless apply
+    end
+
+    puts "[finance:seed_bar_catalog_2026_07] #{creees} article(s) créé(s), #{maj} mis à jour, " \
+         "#{paliers} palier(s) posé(s) au #{BAR_2026_07}, #{conserves} palier(s) déjà en place, " \
+         "#{retires} article(s) retiré(s)"
+    puts "[finance:seed_bar_catalog_2026_07] Rien n'a été écrit — relance avec APPLY=1." unless apply
+  end
+
+  # Familles de la fiche, dans l'ordre des colonnes. La valeur est ce qu'on
+  # cherche dans le NOM du compte sourcier — les comptes s'appellent rarement
+  # exactement comme la colonne d'une feuille A4.
+  BAR_SHEET_FAMILIES_2026_07 = ["Frennet", "Vanhamme", "Hulet", "Fays", "Grignard"].freeze
+
+  # Bâtonnets relevés, dans l'ordre des familles ci-dessus. Les colonnes Manon
+  # et Emilie de la fiche sont hors périmètre (elles ne sont pas des ménages).
+  BAR_SHEET_TALLIES_2026_07 = {
+    "Moinette"                 => [2, 0, 4, 0, 0],
+    "Ducassis"                 => [1, 0, 1, 1, 0],
+    "Holy IPA"                 => [6, 1, 2, 0, 0],
+    "Acid"                     => [0, 1, 0, 0, 0],
+    "Big Nose"                 => [1, 0, 0, 1, 2],
+    "Cambrée"                  => [0, 0, 1, 1, 0],
+    "Topless"                  => [2, 0, 2, 0, 0],
+    "Chinette"                 => [2, 0, 0, 1, 0],
+    "Lupulus organicus"        => [3, 0, 1, 0, 0],
+    "Wout (Vaillante, Tiestu)" => [3, 0, 4, 1, 0],
+    "Brune des braves"         => [2, 0, 2, 1, 0],
+    "Taras Boulba"             => [8, 3, 5, 0, 0],
+    "Mobius Triple"            => [6, 3, 1, 0, 0],
+    "Vin rosé bouteille"       => [3, 0, 1, 0, 5],
+    "Vin blanc bouteille"      => [0, 0, 1, 1, 0],
+    "Vin verre"                => [1, 0, 2, 5, 1],
+    "Eau pétillante 1 L"       => [0, 0, 0, 2, 3],
+    "Jus de pomme 3 L"         => [0, 0, 0, 2, 0],
+    "Jus de pomme 1 L"         => [0, 0, 0, 1, 0],
+    "Bionina"                  => [5, 5, 5, 11, 0],
+    "Chips ReBel"              => [7, 5, 5, 2, 0],
+    "Pizza Party"              => [4, 3, 3, 2, 1]
+  }.freeze
+
+  desc "Fiche de bar de juillet 2026 : création + encodage des bâtonnets — dry-run par défaut, APPLY=1 pour écrire"
+  task import_bar_sheet_2026_07: :environment do
+    apply = ENV["APPLY"] == "1"
+
+    # 1. Les comptes. On s'arrête net si l'un d'eux est introuvable ou ambigu :
+    #    encoder la conso d'une famille sur le compte d'une autre est le seul
+    #    dégât vraiment coûteux ici.
+    comptes = BAR_SHEET_FAMILIES_2026_07.to_h do |famille|
+      trouves = MemberAccount.actives.where("name ILIKE ?", "%#{famille}%").to_a
+      [famille, trouves]
+    end
+
+    if comptes.any? { |_, trouves| trouves.size != 1 }
+      puts "[finance:import_bar_sheet_2026_07] Correspondance des comptes impossible :"
+      comptes.each do |famille, trouves|
+        etat = case trouves.size
+               when 0 then "AUCUN compte"
+               when 1 then "→ #{trouves.first.name} (#{trouves.first.code})"
+               else "AMBIGU : #{trouves.map(&:name).join(' / ')}"
+               end
+        puts "  #{famille.ljust(12)} #{etat}"
+      end
+      puts "\nComptes actifs existants :"
+      MemberAccount.actives.ordered.each { |a| puts "  #{a.code}  #{a.kind_label.ljust(9)} #{a.name}" }
+      abort "\nAjuste BAR_SHEET_FAMILIES_2026_07 dans lib/tasks/finance.rake avant de relancer."
+    end
+
+    comptes = comptes.transform_values(&:first)
+    comptes.each { |famille, compte| puts "  #{famille.ljust(12)} → #{compte.name} (#{compte.code})" }
+
+    # 2. Les articles. Idem : un article manquant fausserait le total en silence.
+    articles = CatalogItem.active.for_channel("bar").index_by(&:name)
+    manquants = BAR_SHEET_TALLIES_2026_07.keys - articles.keys
+    if manquants.any?
+      abort "\n[finance:import_bar_sheet_2026_07] Articles absents du catalogue : #{manquants.join(', ')}." \
+            "\nLance d'abord finance:seed_bar_catalog_2026_07 APPLY=1."
+    end
+
+    rapport = nil
+    totaux = Hash.new(0)
+
+    ApplicationRecord.transaction do
+      fiche = PaperSheet.find_or_initialize_by(period_month: BAR_2026_07, channel: "bar")
+      nouvelle = fiche.new_record?
+      fiche.entry_mode = "quantity"
+      fiche.notes = "Reprise de la feuille A4 « Fiche de BAR — juillet 2026 ». " \
+                    "Colonnes Manon et Emilie non reprises."
+      fiche.save!
+
+      cells = Hash.new { |h, k| h[k] = {} }
+      BAR_SHEET_TALLIES_2026_07.each do |nom, quantites|
+        article = articles.fetch(nom)
+        prix = fiche.price_for(article)
+        abort "\nPas de prix pour « #{nom} » au #{fiche.entry_date}." if prix.nil?
+
+        quantites.each_with_index do |quantite, index|
+          next if quantite.zero?
+
+          compte = comptes.fetch(BAR_SHEET_FAMILIES_2026_07[index])
+          cells[compte.id][article.id] = quantite
+          totaux[compte.name] += quantite * prix.member_price_cents
+        end
+      end
+
+      rapport = Finance::EncodePaperSheet.new(
+        sheet: fiche, cells: cells, entry_mode: "quantity", whodunnit: "rake:import_bar_sheet_2026_07"
+      ).run!
+
+      puts "\n  Fiche ##{fiche.id} (#{nouvelle ? 'créée' : 'déjà existante'}) — écritures datées du #{fiche.entry_date}"
+      puts "  #{rapport.summary}"
+
+      raise ActiveRecord::Rollback unless apply
+    end
+
+    puts "\n  Totaux par ménage :"
+    totaux.sort_by { |_, cents| -cents }.each do |nom, cents|
+      puts "    #{nom.ljust(28)} #{format('%8.2f', cents / 100.0)} €"
+    end
+    puts "    #{'TOTAL'.ljust(28)} #{format('%8.2f', totaux.values.sum / 100.0)} €"
+
+    puts "[finance:import_bar_sheet_2026_07] Rien n'a été écrit — relance avec APPLY=1." unless apply
+  end
 end
