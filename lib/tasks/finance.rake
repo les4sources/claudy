@@ -100,10 +100,40 @@ namespace :finance do
       # résoudra donc rien et sera SIGNALÉ, plutôt que facturé au mauvais tarif.
       rate.rate_versions.create!(amount_cents: 6500, active_from: Date.new(2026, 2, 1),
                                  note: "Barème en vigueur depuis le 01/02/2026")
-      puts "[finance:seed_housing_charges] créé : 65,00 €/personne à partir du 01/02/2026"
+      puts "[finance:seed_housing_charges] barème créé : 65,00 €/personne à partir du 01/02/2026"
     else
-      puts "[finance:seed_housing_charges] déjà présent : #{rate.amount_cents / 100.0} €"
+      puts "[finance:seed_housing_charges] barème déjà présent : #{rate.amount_cents / 100.0} €"
     end
+
+    # Un barème ne facture rien tout seul : il dit COMBIEN, la règle dit à QUI
+    # et depuis quand. On pose donc aussi les deux règles standard, qui visent
+    # tous les ménages habitants. Créer une règle ne débite personne — la
+    # génération reste une action séparée, avec aperçu et confirmation.
+    regles = [
+      { label: "Charges habitants", basis: "per_person", flow: "charges",
+        rate_key: "charges.per_person_monthly", starts_on: Date.new(2026, 2, 1) },
+      { label: "Cagnotte habitants", basis: "per_adult", flow: "pot",
+        rate_key: "pot.monthly_per_adult", split_rate_key: "pot.swing_share",
+        split_label: "Balançoire — Magali", starts_on: Date.new(2026, 2, 1) }
+    ]
+
+    creees = 0
+    regles.each do |attrs|
+      next if RecurringCharge.unscoped.exists?(label: attrs[:label], applies_to: "resident_households")
+
+      RecurringCharge.create!(attrs.merge(applies_to: "resident_households", active: true))
+      creees += 1
+    end
+
+    puts "[finance:seed_housing_charges] #{creees} règle(s) créée(s), " \
+         "#{regles.size - creees} déjà présente(s)"
+    RecurringCharge.ordered.each do |charge|
+      montant = charge.unit_amount_cents_on(Date.current)
+      puts "  · #{charge.label.ljust(22)} #{charge.basis_label.ljust(30)} " \
+           "#{montant ? format('%.2f €', montant / 100.0) : 'barème non résolu'} " \
+           "· #{charge.scope_label} (#{charge.target_accounts.size} compte(s))"
+    end
+    puts "[finance:seed_housing_charges] Rien n'est facturé : passe par « Prévisualiser le mois » pour générer."
   end
 
   desc "Recalcule chaque solde depuis les écritures et le compare aux décomptes figés — exit 1 si écart"
