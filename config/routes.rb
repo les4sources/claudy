@@ -363,6 +363,18 @@ Rails.application.routes.draw do
       resources :human_roles, only: [:index, :show]
       resources :tasks, only: [:index, :show, :update, :destroy]
       resources :payments, only: [:index, :show, :update, :destroy]
+
+      # Finances internes (#155-#158). Seul endroit de l'API où POST existe :
+      # le catalogue du bar et les fiches papier se remontent depuis des
+      # documents papier, et ces données d'exploitation n'ont pas à passer par
+      # un script versionné dans un dépôt public.
+      resources :catalog_items, only: [:index, :show, :create, :update, :destroy] do
+        resources :prices, only: [:index, :create, :update, :destroy], controller: "catalog_prices"
+      end
+      resources :member_accounts, only: [:index, :show]
+      resources :paper_sheets, only: [:index, :show, :create, :update] do
+        member { post :encode }
+      end
     end
   end
 
