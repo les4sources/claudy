@@ -167,12 +167,37 @@ namespace :finance do
 
       # Contrôle 3 — le solde du compte doit égaler la clôture du dernier
       # décompte plus les écritures non encore couvertes.
+      #
+      # Le seuil est le DÉBUT du premier décompte, pas la fin du dernier : tout
+      # ce qui précède le premier décompte est déjà plié dans son ouverture
+      # (`IssueStatement#opening_from_history`), et tout ce qui suit ce seuil
+      # sans être rattaché est de l'argent qui pèse sur le solde. Prendre la fin
+      # du dernier décompte comme seuil rendait le rake rouge dès le premier
+      # règlement reçu pendant le mois de son propre décompte — c'est-à-dire en
+      # fonctionnement normal.
+      premier = statements.first
       dernier = statements.last
       hors_decompte = AccountEntry.unscoped
                                   .where(member_account_id: account.id, account_statement_id: nil)
-                                  .where("entry_date > ?", dernier.period_month.end_of_month)
+                                  .where("entry_date >= ?", premier.period_month.beginning_of_month)
                                   .sum(:amount_cents)
       attendu = dernier.closing_balance_cents + hors_decompte
+
+      # Contrôle 4 — les DÉBITS orphelins. Une écriture positive non rattachée
+      # dont la date tombe dans une période déjà décomptée ne sera jamais reprise
+      # par un décompte ultérieur (`IssueStatement` sélectionne par mois) : elle
+      # pèse sur le solde sans jamais apparaître sur un document. Les écritures
+      # négatives, elles, sont normales là — un règlement se reçoit pendant le
+      # mois de son décompte.
+      AccountEntry.unscoped
+                  .where(member_account_id: account.id, account_statement_id: nil)
+                  .where(entry_date: premier.period_month.beginning_of_month..dernier.period_month.end_of_month)
+                  .where("amount_cents > 0")
+                  .find_each do |orpheline|
+        ecarts << "#{account.code} : écriture orpheline dans une période déjà décomptée — " \
+                  "#{orpheline.entry_date} #{orpheline.label} #{orpheline.amount_cents}"
+      end
+
       next if attendu == account.balance_cents
 
       ecarts << "#{account.code} : solde courant #{account.balance_cents}, attendu #{attendu}"
