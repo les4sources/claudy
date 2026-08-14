@@ -1,0 +1,75 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Règles d'affectation",
+           links: [link_to("➕ Nouvelle règle", new_finance_allocation_rule_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
+  p.text-sm.text-gray-700
+    strong Une règle propose, elle ne décide jamais.
+    |  Elle produit une suggestion motivée qu'un humain accepte ou refuse. L'ordre compte : la première règle qui correspond gagne, ce qui permet de poser une règle très précise avant une règle générale.
+  - if @pending_suggestions.positive?
+    p.mt-2.text-sm.text-gray-700
+      | #{@pending_suggestions} suggestion(s) en attente.
+      = link_to "Les traiter", finance_unallocated_cash_entries_path, class: "ml-1 text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+
+- if @rules.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucune règle pour l'instant.
+    p.mt-1 Une règle sans critère est refusée : elle s'appliquerait à tout, et ce serait le compte par défaut qu'on refuse d'avoir.
+- else
+  .overflow-x-auto.relative.mb-6
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Ordre
+          th.py-3.px-6[scope="col"] Règle
+          th.py-3.px-6[scope="col"] Propose
+          th.py-3.px-6.text-right[scope="col"] Confiance
+          th.py-3.px-6.text-right[scope="col"] Acceptées / refusées
+          th.py-3.px-6[scope="col"]
+      tbody
+        - @rules.each do |rule|
+          tr.border-b.bg-white
+            td.py-4.px-6
+              = rule.position
+              .mt-1.flex.gap-1
+                = button_to "↑", move_finance_allocation_rule_path(rule, direction: "up"), method: :post, class: "text-xs text-gray-400 hover:text-gray-700", form: { class: "inline" }
+                = button_to "↓", move_finance_allocation_rule_path(rule, direction: "down"), method: :post, class: "text-xs text-gray-400 hover:text-gray-700", form: { class: "inline" }
+            td.py-4.px-6.font-medium.text-gray-900
+              = rule.label
+              - unless rule.active?
+                span.ml-2.px-2.py-0.5.rounded-full.text-xs.bg-gray-100.text-gray-500 Inactive
+              .mt-1.text-xs.text-gray-400
+                - criteres = []
+                - criteres << "IBAN #{rule.counterparty_iban}" if rule.counterparty_iban.present?
+                - criteres << "tiers ~ #{rule.counterparty_name_contains}" if rule.counterparty_name_contains.present?
+                - criteres << "communication ~ #{rule.communication_contains}" if rule.communication_contains.present?
+                - criteres << rule.direction_label.downcase if rule.direction.present?
+                = criteres.join(" · ")
+            td.py-4.px-6
+              = rule.general_account.to_s
+              - if rule.team
+                .text-xs.text-gray-400= rule.team.name
+            td.py-4.px-6.text-right= "#{rule.confidence} %"
+            td.py-4.px-6.text-right
+              span.text-green-700= rule.accepted_count
+              |  /
+              span.text-gray-400= rule.rejected_count
+            td.py-4.px-6.text-right
+              = link_to "Modifier", edit_finance_allocation_rule_path(rule), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+
+  / Acceptation en masse, BORNÉE. Il n'existe pas de « tout accepter » : c'est le
+    geste par lequel une machine finit par décider à notre place.
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-2.text-sm.font-semibold.text-gray-900 Accepter en masse
+    p.mb-3.text-xs.text-gray-500
+      | Une règle à la fois, au-dessus d'un seuil de confiance. Il n'existe pas d'acceptation « toutes règles confondues ».
+    = form_with url: bulk_finance_allocation_suggestions_path, method: :post, class: "flex flex-wrap items-end gap-3" do |f|
+      div
+        = f.label :allocation_rule_id, "Règle", class: "block text-xs font-medium text-gray-500"
+        = f.collection_select :allocation_rule_id, @rules.select(&:active?), :id, :label, { include_blank: "Choisir…" }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+      div
+        = f.label :confidence, "Confiance minimum (%)", class: "block text-xs font-medium text-gray-500"
+        = f.number_field :confidence, value: 80, min: 0, max: 100, class: "mt-1 w-28 rounded-md border-gray-300 text-sm shadow-sm"
+      button.inline-flex.items-center.rounded-md.border.border-transparent.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90" type="submit")
+        | Accepter ces suggestions

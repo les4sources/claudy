@@ -237,6 +237,7 @@ module Coda
           counterparty_name: movement.counterparty_name.presence,
           counterparty_iban: movement.counterparty_account.presence,
           communication: movement.communication.presence,
+          transaction_code: movement.transaction_code.presence,
           external_ref: reference,
           statement_ref: coda_statement.label
         )

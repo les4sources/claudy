@@ -16,6 +16,7 @@ require "rails_helper"
 #  label             :string           not null
 #  statement_ref     :string
 #  status            :string           default("pending"), not null
+#  transaction_code  :string
 #  value_date        :date
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null
@@ -23,11 +24,12 @@ require "rails_helper"
 #
 # Indexes
 #
-#  index_cash_entries_on_cash_account_id  (cash_account_id)
-#  index_cash_entries_on_deleted_at       (deleted_at)
-#  index_cash_entries_on_entry_date       (entry_date)
-#  index_cash_entries_on_external_ref     (cash_account_id,external_ref) UNIQUE WHERE (external_ref IS NOT NULL)
-#  index_cash_entries_on_status           (status)
+#  index_cash_entries_on_cash_account_id   (cash_account_id)
+#  index_cash_entries_on_deleted_at        (deleted_at)
+#  index_cash_entries_on_entry_date        (entry_date)
+#  index_cash_entries_on_external_ref      (cash_account_id,external_ref) UNIQUE WHERE (external_ref IS NOT NULL)
+#  index_cash_entries_on_status            (status)
+#  index_cash_entries_on_transaction_code  (transaction_code)
 #
 # Foreign Keys
 #

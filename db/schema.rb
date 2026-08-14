@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_15_040000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_15_060000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -165,6 +165,63 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_040000) do
     t.index ["gathering_id"], name: "index_agenda_items_on_gathering_id"
   end
 
+  create_table "allocation_rules", force: :cascade do |t|
+    t.integer "accepted_count", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.bigint "analytic_account_id"
+    t.string "communication_contains"
+    t.integer "confidence", default: 80, null: false
+    t.string "counterparty_iban"
+    t.string "counterparty_name_contains"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "direction"
+    t.bigint "general_account_id", null: false
+    t.string "label", null: false
+    t.bigint "legal_entity_id", null: false
+    t.bigint "max_amount_cents"
+    t.bigint "min_amount_cents"
+    t.integer "position", default: 0, null: false
+    t.integer "rejected_count", default: 0, null: false
+    t.bigint "team_id"
+    t.string "transaction_code"
+    t.datetime "updated_at", null: false
+    t.index ["analytic_account_id"], name: "index_allocation_rules_on_analytic_account_id"
+    t.index ["deleted_at"], name: "index_allocation_rules_on_deleted_at"
+    t.index ["general_account_id"], name: "index_allocation_rules_on_general_account_id"
+    t.index ["legal_entity_id"], name: "index_allocation_rules_on_legal_entity_id"
+    t.index ["position"], name: "index_allocation_rules_on_position"
+    t.index ["team_id"], name: "index_allocation_rules_on_team_id"
+  end
+
+  create_table "allocation_suggestions", force: :cascade do |t|
+    t.bigint "allocation_rule_id"
+    t.bigint "amount_cents", null: false
+    t.bigint "analytic_account_id"
+    t.bigint "cash_entry_id", null: false
+    t.integer "confidence", default: 50, null: false
+    t.datetime "created_at", null: false
+    t.datetime "decided_at"
+    t.string "decided_by"
+    t.datetime "deleted_at"
+    t.bigint "general_account_id", null: false
+    t.bigint "legal_entity_id", null: false
+    t.text "rationale", null: false
+    t.string "source", default: "rule", null: false
+    t.string "status", default: "pending", null: false
+    t.bigint "team_id"
+    t.datetime "updated_at", null: false
+    t.index ["allocation_rule_id"], name: "index_allocation_suggestions_on_allocation_rule_id"
+    t.index ["analytic_account_id"], name: "index_allocation_suggestions_on_analytic_account_id"
+    t.index ["cash_entry_id", "status"], name: "index_allocation_suggestions_on_cash_entry_id_and_status"
+    t.index ["cash_entry_id"], name: "index_allocation_suggestions_on_cash_entry_id"
+    t.index ["cash_entry_id"], name: "index_one_pending_suggestion_per_entry", unique: true, where: "(((status)::text = 'pending'::text) AND (deleted_at IS NULL))"
+    t.index ["deleted_at"], name: "index_allocation_suggestions_on_deleted_at"
+    t.index ["general_account_id"], name: "index_allocation_suggestions_on_general_account_id"
+    t.index ["legal_entity_id"], name: "index_allocation_suggestions_on_legal_entity_id"
+    t.index ["team_id"], name: "index_allocation_suggestions_on_team_id"
+  end
+
   create_table "analytic_accounts", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.string "code", null: false
@@ -316,6 +373,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_040000) do
     t.string "label", null: false
     t.string "statement_ref"
     t.string "status", default: "pending", null: false
+    t.string "transaction_code"
     t.datetime "updated_at", null: false
     t.date "value_date"
     t.index ["cash_account_id", "external_ref"], name: "index_cash_entries_on_external_ref", unique: true, where: "(external_ref IS NOT NULL)"
@@ -323,6 +381,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_040000) do
     t.index ["deleted_at"], name: "index_cash_entries_on_deleted_at"
     t.index ["entry_date"], name: "index_cash_entries_on_entry_date"
     t.index ["status"], name: "index_cash_entries_on_status"
+    t.index ["transaction_code"], name: "index_cash_entries_on_transaction_code"
     t.check_constraint "amount_cents <> 0", name: "cash_entries_non_zero"
   end
 
@@ -1306,6 +1365,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_040000) do
   add_foreign_key "agenda_items", "gatherings"
   add_foreign_key "agenda_items", "humans", column: "author_id"
   add_foreign_key "agenda_items", "humans", column: "carrier_id"
+  add_foreign_key "allocation_rules", "analytic_accounts"
+  add_foreign_key "allocation_rules", "general_accounts"
+  add_foreign_key "allocation_rules", "legal_entities"
+  add_foreign_key "allocation_rules", "teams"
+  add_foreign_key "allocation_suggestions", "allocation_rules"
+  add_foreign_key "allocation_suggestions", "analytic_accounts"
+  add_foreign_key "allocation_suggestions", "cash_entries"
+  add_foreign_key "allocation_suggestions", "general_accounts"
+  add_foreign_key "allocation_suggestions", "legal_entities"
+  add_foreign_key "allocation_suggestions", "teams"
   add_foreign_key "analytic_accounts", "teams"
   add_foreign_key "booking_page_views", "bookings"
   add_foreign_key "bookings", "lodgings"
