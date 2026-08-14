@@ -1,0 +1,16 @@
+/  Récapitulatif d'erreurs en tête de formulaire. Les champs affichent chacun la
+   leur, mais deux cas leur échappent : les erreurs portées par `:base` (les
+   règles qui concernent l'objet entier, comme « soit un montant, soit une clé
+   de barème ») et celles des enregistrements imbriqués. Sans ce bloc, un refus
+   pour ces motifs renverrait l'utilisatrice sur le formulaire sans rien dire.
+- messages = record&.errors&.full_messages || []
+- if messages.any?
+  .mb-6.rounded-md.border.border-red-200.bg-red-50.p-4
+    p.text-sm.font-medium.text-red-800
+      - if messages.one?
+        | Le formulaire n'a pas pu être enregistré :
+      - else
+        | Le formulaire n'a pas pu être enregistré — #{messages.size} points à corriger :
+    ul.mt-2.list-disc.pl-5.text-sm.text-red-700
+      - messages.each do |message|
+        li= message

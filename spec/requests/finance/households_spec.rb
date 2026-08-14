@@ -70,6 +70,27 @@ RSpec.describe "Finances > Ménages", type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
     end
 
+    # Le builder rangeait l'erreur au MÊME endroit que le texte d'aide, et
+    # l'aide gagnait : un champ avec `hint:` — c'est le cas du nom du ménage —
+    # ne montrait jamais pourquoi il était refusé, et l'utilisatrice revenait
+    # sur le formulaire sans la moindre explication.
+    it "dit POURQUOI il refuse, sous le champ et en tête de formulaire" do
+      post finance_households_path, params: { household: { name: "", kind: "resident" } }
+
+      expect(response.body).to include("n'a pas pu être enregistré")
+      expect(response.body).to include("hint-error")
+      expect(response.body).to include("Nom du ménage doit être rempli(e)")
+    end
+
+    # `join` sans séparateur collait les classes : un champ en erreur recevait
+    # `rounded-mdborder-red-300`, donc ni coins arrondis ni liseré rouge.
+    it "marque visuellement le champ fautif" do
+      post finance_households_path, params: { household: { name: "", kind: "resident" } }
+
+      expect(response.body).to include("border-red-300")
+      expect(response.body).not_to include("rounded-mdborder")
+    end
+
     # Le formulaire ne rendait que trois lignes vides : un ménage de cinq
     # demandait deux passages, sans que rien ne le dise. Le serveur, lui, n'a
     # jamais eu de plafond — c'est ce que cette spec verrouille, pendant que le

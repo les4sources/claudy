@@ -1,6 +1,49 @@
 ---
 fr:
   activerecord:
+    # Noms d'attributs des modèles Finances (lot A). Sans eux, un refus de
+    # validation s'affiche « Name doit être rempli(e) » — un mot anglais au
+    # milieu d'une phrase française, sur un écran destiné à la comptabilité.
+    attributes:
+      household:
+        name: Nom du ménage
+        kind: Type
+        moved_in_on: Date d'arrivée
+        moved_out_on: Date de départ
+      household_member:
+        name: Nom
+        kind: Statut
+        started_on: Date de début de présence
+        ended_on: Date de fin de présence
+      member_account:
+        name: Nom du compte
+        code: Code
+        opening_balance_cents: Solde d'ouverture
+        contact_email: Email de contact
+      account_entry:
+        entry_date: Date
+        amount_cents: Montant
+        label: Libellé
+      catalog_item:
+        name: Nom de l'article
+        channel: Canal
+        unit: Unité
+      catalog_price:
+        active_from: Date de début
+        active_until: Date de fin
+        member_price_cents: Prix sourcier
+      recurring_charge:
+        label: Libellé
+        basis: Base de calcul
+        starts_on: Date de début
+        ends_on: Date de fin
+      account_statement:
+        period_month: Mois
+        opening_balance_cents: Solde d'ouverture
+        closing_balance_cents: Solde de clôture
+      account_settlement:
+        amount_cents: Montant
+        received_on: Date de réception
     errors:
       messages:
         record_invalid: 'La validation a échoué : %{errors}'

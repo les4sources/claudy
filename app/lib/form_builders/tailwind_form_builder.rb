@@ -89,9 +89,18 @@ module FormBuilders
       merged_options = arguments_with_updated_default_class(
         input_html_classes(method), **options
       )
-      hint = options.fetch(:hint, errors(method))
+      # L'ERREUR PASSE AVANT L'AIDE. Avant, `options.fetch(:hint, errors(method))`
+      # ne consultait les erreurs QUE si aucune aide n'était fournie : un champ
+      # avec `hint:` ne montrait jamais pourquoi il était refusé, et
+      # l'utilisatrice revenait sur le formulaire sans explication.
       error = options.fetch(:error, any_errors?(method))
+      hint = error ? (errors(method) || options[:hint]) : options[:hint]
       show_label = merged_options.delete(:label) != false
+      # `hint` et `error` sont des options DU BUILDER, pas des attributs HTML :
+      # sans ce retrait, elles fuyaient sur le `<input>` (`hint="Ex. « Famille
+      # Hulet »"`), un attribut inventé que le navigateur garde tel quel.
+      merged_options.delete(:hint)
+      merged_options.delete(:error)
 
       tag.div class: 'form-control' do
         if show_label
@@ -158,14 +167,18 @@ module FormBuilders
       default_options[:class]['text-sm'] = 'text-lg'
       merged_options = default_options.merge(options)
       show_label = merged_options.delete(:label) != false
+      # Comme pour `text_field` : `hint` est une option du builder, pas un
+      # attribut HTML. Sans ce retrait elle fuit sur le `<input>`.
+      hint = merged_options.delete(:hint)
+      merged_options.delete(:error)
 
       tag.div class: 'form-control' do
         if show_label
           label(method, class: 'label') do
             tag.span(label_text(method, options), class: 'label-text')
-          end + super(method, merged_options) + errors(method)
+          end + super(method, merged_options) + hint_message(errors(method) || hint, any_errors?(method))
         else
-          super(method, merged_options) + errors(method)
+          super(method, merged_options) + hint_message(errors(method) || hint, any_errors?(method))
         end
       end
     end
@@ -195,14 +208,30 @@ module FormBuilders
       collection_select(name, collection, value_method, text_method, options, html_options)
     end
 
+    # Ce `select` était un simple passe-plat vers `super` : il avalait sans rien
+    # en faire le `label:` qu'on lui passait, si bien que TOUS les menus
+    # déroulants de l'app flottaient sans intitulé — illisibles, et sans
+    # étiquette pour un lecteur d'écran. Ils n'héritaient pas non plus des
+    # classes d'input, donc un menu et un champ texte du même formulaire
+    # n'avaient pas la même apparence.
+    #
+    # Le libellé n'est rendu QUE s'il est demandé : aucun `f.select` existant
+    # hors de la section Finances n'en passe, leur rendu ne change donc pas.
     def select(method, choices = nil, options = {}, html_options = {}, &block)
-      super(
-        method,
-        choices,
-        options,
-        html_options,
-        &block
+      label_option = options.delete(:label)
+      merged_html = arguments_with_updated_default_class(
+        input_html_classes(method), **html_options
       )
+      error = any_errors?(method)
+      field = super(method, choices, options, merged_html, &block)
+
+      return field if label_option.blank?
+
+      tag.div class: 'form-control' do
+        label(method, class: 'label mb-1') do
+          tag.span(label_option, class: 'label-text')
+        end + field + hint_message(errors(method), error)
+      end
     end
 
     def text_area(name, *args, &block)
@@ -297,9 +326,16 @@ module FormBuilders
       end
     end
 
+    # `join` SANS séparateur collait les deux chaînes : un champ en erreur
+    # recevait `rounded-mdborder-red-300`, une classe qui n'existe pas — il
+    # perdait donc à la fois ses coins arrondis et son liseré rouge. L'état
+    # d'erreur était invisible depuis toujours.
     def input_html_classes(method)
       has_error = object&.errors&.[](method)&.present?
-      ['block w-full rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm rounded-md', ('border-red-300 text-red-900 placeholder-red-300 focus:border-red-500 focus:outline-none focus:ring-red-500' if has_error)].join
+      [
+        'block w-full rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm',
+        ('border-red-300 text-red-900 placeholder-red-300 focus:border-red-500 focus:outline-none focus:ring-red-500' if has_error)
+      ].compact.join(' ')
     end
 
     def label_text(method, options)
