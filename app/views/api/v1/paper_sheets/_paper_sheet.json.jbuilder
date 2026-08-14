@@ -1,0 +1,17 @@
+json.id paper_sheet.id
+json.type "paper_sheet"
+json.period_month paper_sheet.period_month
+json.entry_date paper_sheet.entry_date
+json.channel paper_sheet.channel
+json.channel_label paper_sheet.channel_label
+json.status paper_sheet.status
+json.status_label paper_sheet.status_label
+json.entry_mode paper_sheet.entry_mode
+json.member_account_id paper_sheet.member_account_id
+json.notes paper_sheet.notes
+json.encoded_at paper_sheet.encoded_at
+json.total_cents paper_sheet.total_cents
+json.total_formatted Money.new(paper_sheet.total_cents).format
+json.created_at paper_sheet.created_at
+json.updated_at paper_sheet.updated_at
+json.url api_v1_paper_sheet_url(paper_sheet)

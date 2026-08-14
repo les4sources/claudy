@@ -10,7 +10,12 @@ info:
     Toutes les routes exigent un jeton Bearer fourni hors-bande.
     Pour une écriture, encapsuler le corps JSON sous la clé racine de la ressource
     (ex. PATCH /bookings/1 avec { "booking": { "status": "confirmed" } }).
-    La création (POST) n'est pas exposée.
+    La création (POST) n'est exposée que sur le catalogue interne (catalog_items,
+    leurs prices) et les fiches papier (paper_sheets) : ces données se remontent
+    depuis des documents papier et n'ont pas à transiter par un script versionné.
+    Sur ces deux ressources, POST est un UPSERT sur la clé naturelle — canal + nom
+    pour un article, mois + canal pour une fiche — et `meta.created` dit si
+    l'enregistrement a été créé ou simplement retrouvé.
 servers:
   - url: /api/v1
     description: Chemin relatif. Préfixer avec l'origine de l'instance (ex. https://claudy.example.com/api/v1).
@@ -27,6 +32,10 @@ tags:
     description: Membres, cycles, actions de cycle et tâches de l'organisation.
   - name: Finances
     description: Paiements liés aux réservations.
+  - name: Bar & comptes internes
+    description: >
+      Catalogue interne (bar, cellier, repas) avec ses paliers de prix datés,
+      comptes courants des ménages, et fiches papier mensuelles avec leur encodage.
   - name: Clients
     description: Clients (particuliers et organisations) et leurs séjours.
 
@@ -832,6 +841,395 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /catalog_items:
+    get:
+      tags: [Bar & comptes internes]
+      summary: Lister les articles du catalogue
+      parameters:
+        - { name: channel, in: query, schema: { type: string, enum: [bar, grocery, meal] } }
+        - { name: q, in: query, schema: { type: string }, description: "Recherche sur le nom." }
+        - { name: active, in: query, schema: { type: boolean }, description: "true pour n'obtenir que les articles actifs." }
+        - { $ref: "#/components/parameters/PriceOn" }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée d'articles, chacun avec le palier de prix qui couvre `on`.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/CatalogItem" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Bar & comptes internes]
+      summary: Créer un article (upsert sur canal + nom)
+      description: >
+        Reposter le même couple (channel, name) met l'article à jour au lieu d'en
+        créer un second. `meta.created` vaut true si l'article a été créé, false
+        s'il existait déjà. Le prix ne se pose pas ici mais via
+        POST /catalog_items/{id}/prices.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                catalog_item:
+                  type: object
+                  required: [name, channel]
+                  properties:
+                    name: { type: string, example: "Taras Boulba" }
+                    channel: { type: string, enum: [bar, grocery, meal] }
+                    category: { type: string, example: "Bières" }
+                    unit: { type: string, enum: [piece, kg, l, portion, day] }
+                    reference: { type: string, nullable: true }
+                    active: { type: boolean }
+      responses:
+        "201":
+          description: Article créé.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/CatalogItem" }
+                  meta: { type: object, properties: { created: { type: boolean, example: true } } }
+        "200":
+          description: Article déjà existant, mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/CatalogItem" }
+                  meta: { type: object, properties: { created: { type: boolean, example: false } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /catalog_items/{id}:
+    get:
+      tags: [Bar & comptes internes]
+      summary: Détail d'un article, avec tout l'historique de ses paliers
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+        - { $ref: "#/components/parameters/PriceOn" }
+      responses:
+        "200":
+          description: Article et ses paliers, du plus récent au plus ancien.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/CatalogItem" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Bar & comptes internes]
+      summary: Éditer un article
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/WriteBody" }
+      responses:
+        "200":
+          description: Article mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/CatalogItem" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Bar & comptes internes]
+      summary: Retirer un article (soft-delete)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /catalog_items/{catalog_item_id}/prices:
+    get:
+      tags: [Bar & comptes internes]
+      summary: Paliers de prix d'un article
+      parameters: [{ $ref: "#/components/parameters/CatalogItemId" }]
+      responses:
+        "200":
+          description: Paliers, du plus récent au plus ancien.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/CatalogPrice" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Bar & comptes internes]
+      summary: Poser un palier de prix
+      description: >
+        Les périodes ne peuvent pas se chevaucher : poser un palier sur une période
+        déjà couverte répond 422 plutôt que d'écraser en silence. Pour corriger un
+        palier existant, le viser en PATCH. Seul `member_price_cents` est
+        obligatoire — le prix d'achat manque parfois (don, récupération) et le prix
+        public n'existe pas pour un article qui n'est pas vendu au public.
+      parameters: [{ $ref: "#/components/parameters/CatalogItemId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                price:
+                  type: object
+                  required: [active_from, member_price_cents]
+                  properties:
+                    active_from: { type: string, format: date }
+                    active_until: { type: string, format: date, nullable: true, description: "Vide = jusqu'à nouvel ordre." }
+                    member_price_cents: { type: integer, example: 138 }
+                    purchase_price_cents: { type: integer, nullable: true, example: 125 }
+                    reference_price_cents: { type: integer, nullable: true }
+                    public_price_cents: { type: integer, nullable: true, example: 300 }
+                    note: { type: string, nullable: true }
+      responses:
+        "201":
+          description: Palier créé.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/CatalogPrice" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /catalog_items/{catalog_item_id}/prices/{id}:
+    patch:
+      tags: [Bar & comptes internes]
+      summary: Corriger un palier de prix
+      parameters:
+        - { $ref: "#/components/parameters/CatalogItemId" }
+        - { $ref: "#/components/parameters/Id" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                price: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: Palier mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/CatalogPrice" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Bar & comptes internes]
+      summary: Supprimer un palier de prix
+      parameters:
+        - { $ref: "#/components/parameters/CatalogItemId" }
+        - { $ref: "#/components/parameters/Id" }
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /member_accounts:
+    get:
+      tags: [Bar & comptes internes]
+      summary: Lister les comptes courants internes
+      description: >
+        Lecture seule — un compte s'ouvre et se ferme dans l'app. Sert notamment à
+        résoudre « nom de famille → identifiant de compte » avant d'encoder une fiche.
+        Le solde n'est jamais stocké : il est recalculé depuis les écritures.
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: "Recherche sur le nom du compte." }
+        - { name: kind, in: query, schema: { type: string, enum: [household, human, entity] } }
+        - { name: active, in: query, schema: { type: boolean } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de comptes, avec solde et nombre d'écritures.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/MemberAccount" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /member_accounts/{id}:
+    get:
+      tags: [Bar & comptes internes]
+      summary: Détail d'un compte courant
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Compte.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/MemberAccount" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /paper_sheets:
+    get:
+      tags: [Bar & comptes internes]
+      summary: Lister les fiches papier
+      parameters:
+        - { name: channel, in: query, schema: { type: string, enum: [bar, grocery, meal] } }
+        - { name: status, in: query, schema: { type: string, enum: [open, encoded, archived] } }
+        - { name: period_month, in: query, schema: { type: string, format: date }, description: "N'importe quelle date du mois visé." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de fiches, de la plus récente à la plus ancienne.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/PaperSheet" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Bar & comptes internes]
+      summary: Créer une fiche papier (upsert sur mois + canal)
+      description: >
+        Il n'existe qu'une fiche de bar par mois : reposter le même couple
+        (period_month, channel) retrouve la fiche existante. `period_month` est
+        ramené au premier jour du mois. Les écritures qui en naîtront seront datées
+        du DERNIER jour du mois.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                paper_sheet:
+                  type: object
+                  required: [period_month, channel]
+                  properties:
+                    period_month: { type: string, format: date, example: "2026-07-01" }
+                    channel: { type: string, enum: [bar, grocery, meal] }
+                    entry_mode: { type: string, enum: [quantity, amount], default: quantity }
+                    status: { type: string, enum: [open, encoded, archived] }
+                    notes: { type: string, nullable: true }
+      responses:
+        "201":
+          description: Fiche créée.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/PaperSheet" }
+                  meta: { type: object, properties: { created: { type: boolean } } }
+        "200":
+          description: Fiche déjà existante, mise à jour.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /paper_sheets/{id}:
+    get:
+      tags: [Bar & comptes internes]
+      summary: Détail d'une fiche, avec ses totaux par compte
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Fiche et répartition de son total par compte.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/PaperSheet" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Bar & comptes internes]
+      summary: Éditer une fiche papier
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/WriteBody" }
+      responses:
+        "200":
+          description: Fiche mise à jour.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /paper_sheets/{id}/encode:
+    post:
+      tags: [Bar & comptes internes]
+      summary: Encoder la matrice d'une fiche
+      description: >
+        Une cellule non vide = une écriture au grand livre. L'opération est
+        REJOUABLE : chaque cellule porte une clé d'idempotence, donc réencoder la
+        même fiche met ses écritures à jour au lieu d'en créer un second jeu, et
+        mettre une cellule à zéro supprime la sienne. Une écriture déjà rattachée à
+        un décompte émis n'est ni modifiée ni supprimée : elle est comptée dans
+        `meta.encoding.locked` et sa cellule reste telle quelle.
+
+
+        En mode `quantity`, la valeur de la cellule est multipliée par le prix
+        sourcier qui couvre le dernier jour du mois de la fiche ; en mode `amount`,
+        elle est prise comme un montant en euros.
+
+
+        Les cellules sont adressées par IDENTIFIANT, jamais par nom : passer par
+        /member_accounts?q= et /catalog_items?q= pour résoudre les noms d'abord.
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cells]
+              properties:
+                entry_mode: { type: string, enum: [quantity, amount] }
+                cells:
+                  type: object
+                  description: "{ \"<member_account_id>\": { \"<catalog_item_id>\": quantité } }"
+                  additionalProperties:
+                    type: object
+                    additionalProperties: { type: number }
+                  example: { "12": { "45": 3, "46": 1 }, "13": { "45": 2 } }
+      responses:
+        "200":
+          description: Fiche encodée, avec le rapport dans `meta.encoding` et les totaux par compte.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/PaperSheet" }
+                  meta:
+                    type: object
+                    properties:
+                      encoding:
+                        type: object
+                        properties:
+                          created: { type: integer }
+                          updated: { type: integer }
+                          deleted: { type: integer }
+                          locked: { type: integer, description: "Cellules laissées telles quelles car verrouillées par un décompte émis." }
+                          ignored: { type: integer, description: "Cellules dont l'article n'appartient pas au canal de la fiche." }
+                          summary: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -854,6 +1252,18 @@ components:
       in: query
       schema: { type: integer, default: 50, maximum: 200 }
       description: Éléments par page (max 200).
+    CatalogItemId:
+      name: catalog_item_id
+      in: path
+      required: true
+      schema: { type: integer }
+    PriceOn:
+      name: on
+      in: query
+      schema: { type: string, format: date }
+      description: >
+        Date à laquelle résoudre le prix (défaut : aujourd'hui). Relire un mois
+        clôturé sans ce paramètre afficherait les prix d'aujourd'hui.
   responses:
     Unauthorized:
       description: Jeton manquant ou invalide.
@@ -1245,3 +1655,116 @@ components:
                   properties:
                     date: { type: string, format: date }
                     available: { type: boolean }
+    CatalogPrice:
+      type: object
+      description: >
+        Palier de prix daté. Les périodes [active_from, active_until] sont bornes
+        incluses, ne se chevauchent jamais, et active_until vide signifie
+        « jusqu'à nouvel ordre ». Les quatre prix sont STOCKÉS, jamais recalculés
+        à la lecture : relever une marge demain ne doit pas déplacer un décompte
+        déjà émis.
+      properties:
+        id: { type: integer }
+        type: { type: string, example: catalog_price }
+        catalog_item_id: { type: integer }
+        active_from: { type: string, format: date }
+        active_until: { type: string, format: date, nullable: true }
+        open_ended: { type: boolean }
+        current: { type: boolean, description: "Le palier couvre-t-il la date du jour ?" }
+        member_price: { $ref: "#/components/schemas/Money" }
+        purchase_price: { $ref: "#/components/schemas/Money" }
+        reference_price: { $ref: "#/components/schemas/Money" }
+        public_price: { $ref: "#/components/schemas/Money" }
+        note: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    CatalogItem:
+      type: object
+      description: >
+        Article du bar, du cellier ou des repas. L'article ne porte pas de prix :
+        il a des paliers datés. `price` est celui qui couvre la date `on` de la
+        requête ; `prices` (détail seulement) donne tout l'historique.
+      properties:
+        id: { type: integer }
+        type: { type: string, example: catalog_item }
+        name: { type: string, example: "Taras Boulba" }
+        channel: { type: string, enum: [bar, grocery, meal] }
+        channel_label: { type: string, example: "Bar" }
+        category: { type: string, nullable: true, example: "Bières" }
+        unit: { type: string, enum: [piece, kg, l, portion, day] }
+        unit_label: { type: string, example: "pièce" }
+        reference: { type: string, nullable: true }
+        active: { type: boolean }
+        price_on: { type: string, format: date }
+        price:
+          allOf: [{ $ref: "#/components/schemas/CatalogPrice" }]
+          nullable: true
+          description: "Palier couvrant `price_on`, ou null si l'article n'est pas tarifé à cette date."
+        prices:
+          type: array
+          description: "Historique complet des paliers (endpoint de détail uniquement)."
+          items: { $ref: "#/components/schemas/CatalogPrice" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string, format: uri }
+    MemberAccount:
+      type: object
+      description: >
+        Compte courant interne, ancré sur exactement une chose : un ménage, une
+        personne, ou rien (entité). Le solde n'est pas une colonne — il vaut
+        toujours solde d'ouverture + somme des écritures.
+      properties:
+        id: { type: integer }
+        type: { type: string, example: member_account }
+        code: { type: string, example: "SRC-0001" }
+        name: { type: string, example: "Ménage Alpha" }
+        kind: { type: string, enum: [household, human, entity] }
+        kind_label: { type: string, example: "Ménage" }
+        active: { type: boolean }
+        household_id: { type: integer, nullable: true }
+        human_id: { type: integer, nullable: true }
+        contact_email: { type: string, nullable: true }
+        opening_balance: { $ref: "#/components/schemas/Money" }
+        balance_cents: { type: integer, description: "Positif = dû par le compte." }
+        balance_formatted: { type: string }
+        entries_count: { type: integer }
+        last_entry_on: { type: string, format: date, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string, format: uri }
+    PaperSheet:
+      type: object
+      description: >
+        Fiche papier d'un mois et d'un canal. Les écritures qui en naissent sont
+        datées de `entry_date`, le dernier jour du mois — c'est ce qui les fait
+        tomber dans le bon décompte.
+      properties:
+        id: { type: integer }
+        type: { type: string, example: paper_sheet }
+        period_month: { type: string, format: date, example: "2026-07-01" }
+        entry_date: { type: string, format: date, example: "2026-07-31" }
+        channel: { type: string, enum: [bar, grocery, meal] }
+        channel_label: { type: string }
+        status: { type: string, enum: [open, encoded, archived] }
+        status_label: { type: string }
+        entry_mode: { type: string, enum: [quantity, amount] }
+        member_account_id: { type: integer, nullable: true }
+        notes: { type: string, nullable: true }
+        encoded_at: { type: string, format: date-time, nullable: true }
+        total_cents: { type: integer }
+        total_formatted: { type: string }
+        totals_by_account:
+          type: array
+          description: "Répartition du total par compte — de quoi vérifier un encodage sans relire les écritures."
+          items:
+            type: object
+            properties:
+              member_account_id: { type: integer }
+              name: { type: string }
+              code: { type: string }
+              entries: { type: integer }
+              cents: { type: integer }
+              formatted: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string, format: uri }
