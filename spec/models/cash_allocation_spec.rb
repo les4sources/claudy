@@ -1,4 +1,40 @@
 require "rails_helper"
+# == Schema Information
+#
+# Table name: cash_allocations
+#
+#  id                  :bigint           not null, primary key
+#  amount_cents        :bigint           not null
+#  deleted_at          :datetime
+#  document_type       :string
+#  label               :string
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  analytic_account_id :bigint
+#  cash_entry_id       :bigint           not null
+#  document_id         :bigint
+#  general_account_id  :bigint           not null
+#  legal_entity_id     :bigint           not null
+#  team_id             :bigint
+#
+# Indexes
+#
+#  index_cash_allocations_on_analytic_account_id            (analytic_account_id)
+#  index_cash_allocations_on_cash_entry_id                  (cash_entry_id)
+#  index_cash_allocations_on_deleted_at                     (deleted_at)
+#  index_cash_allocations_on_document_type_and_document_id  (document_type,document_id)
+#  index_cash_allocations_on_general_account_id             (general_account_id)
+#  index_cash_allocations_on_legal_entity_id                (legal_entity_id)
+#  index_cash_allocations_on_team_id                        (team_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (analytic_account_id => analytic_accounts.id)
+#  fk_rails_...  (cash_entry_id => cash_entries.id)
+#  fk_rails_...  (general_account_id => general_accounts.id)
+#  fk_rails_...  (legal_entity_id => legal_entities.id)
+#  fk_rails_...  (team_id => teams.id)
+#
 require Rails.root.join("spec/support/finance_builders")
 
 # Les trois refus qui empêchent une affectation de créer de l'argent : pas plus
