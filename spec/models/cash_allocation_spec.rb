@@ -1,0 +1,69 @@
+require "rails_helper"
+require Rails.root.join("spec/support/finance_builders")
+
+# Les trois refus qui empêchent une affectation de créer de l'argent : pas plus
+# que le montant, pas dans l'autre sens, pas après comptabilisation.
+RSpec.describe CashAllocation do
+  include FinanceBuilders
+
+  let(:entity) { build_legal_entity }
+  let!(:fiscal_year) { build_fiscal_year(entity) }
+  let(:bank_account) { build_general_account(code: "550000", name: "Banque") }
+  let(:revenue) { build_general_account(code: "700000", name: "Locations", klass: 7, nature: "revenue") }
+  let(:cash_account) { build_cash_account(entity, bank_account) }
+  let(:entry) { build_cash_entry(cash_account, amount_cents: 130_000) }
+
+  it "refuse de dépasser le montant de la ligne" do
+    allocation = entry.cash_allocations.new(general_account: revenue, legal_entity: entity,
+                                            amount_cents: 200_000)
+
+    expect(allocation).not_to be_valid
+    expect(allocation.errors.full_messages.join).to match(/il ne reste/i)
+  end
+
+  it "refuse une allocation de sens contraire" do
+    allocation = entry.cash_allocations.new(general_account: revenue, legal_entity: entity,
+                                            amount_cents: -5_000)
+
+    expect(allocation).not_to be_valid
+    expect(allocation.errors.full_messages.join).to match(/sens contraire/i)
+  end
+
+  it "exige une entité juridique — c'est elle qui dit à qui la charge appartient" do
+    allocation = entry.cash_allocations.new(general_account: revenue, amount_cents: 1_000)
+
+    expect(allocation).not_to be_valid
+  end
+
+  it "accepte de découper une ligne en plusieurs affectations" do
+    allocate(entry, account: revenue, amount_cents: 80_000, entity: entity)
+    allocate(entry, account: revenue, amount_cents: 50_000, entity: entity)
+
+    expect(entry.reload.remaining_cents).to eq(0)
+  end
+
+  it "refuse d'affecter une ligne exclue" do
+    entry.exclude!("Doublon d'import")
+    allocation = entry.cash_allocations.new(general_account: revenue, legal_entity: entity, amount_cents: 1_000)
+
+    expect(allocation).not_to be_valid
+    expect(allocation.errors.full_messages.join).to match(/exclue/i)
+  end
+
+  it "refuse de MODIFIER une allocation après comptabilisation, pas seulement d'en créer" do
+    allocation = allocate(entry, account: revenue, amount_cents: 130_000, entity: entity)
+    Accounting::PostCashEntry.new(cash_entry: entry).run!
+
+    expect(allocation.reload.update(amount_cents: 10_000)).to be(false)
+  end
+
+  it "refuse d'affecter une ligne déjà comptabilisée" do
+    allocate(entry, account: revenue, amount_cents: 130_000, entity: entity)
+    Accounting::PostCashEntry.new(cash_entry: entry).run!
+
+    allocation = entry.reload.cash_allocations.new(general_account: revenue, legal_entity: entity,
+                                                   amount_cents: 100)
+    expect(allocation).not_to be_valid
+    expect(allocation.errors.full_messages.join).to match(/déjà comptabilisée/i)
+  end
+end

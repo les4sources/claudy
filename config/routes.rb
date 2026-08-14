@@ -100,6 +100,20 @@ Rails.application.routes.draw do
     get "accounting", to: "accounting#index"
     get "ledger", to: "ledger#index"
     get "trial_balance", to: "trial_balance#index"
+    # Journal de trésorerie (issue #179). `unallocated` est nommée AVANT la
+    # ressource : sinon `/finance/cash_entries/unallocated` serait capté par
+    # `show` avec `id = "unallocated"`.
+    get "cash_entries/unallocated", to: "cash_entries#unallocated", as: :unallocated_cash_entries
+    get "analytic_balance", to: "analytic_balance#index"
+    resources :cash_entries do
+      member do
+        post :post_entry
+        post :unpost
+        post :exclude
+      end
+      resources :allocations, only: [:create, :destroy], controller: "cash_allocations"
+    end
+
     resources :general_accounts, path: "chart_of_accounts", except: [:show]
     resources :legal_entities, path: "entities", except: [:show]
     resources :fiscal_years, except: [:show] do

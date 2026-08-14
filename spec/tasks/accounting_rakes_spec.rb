@@ -12,7 +12,10 @@ RSpec.describe "accounting rakes" do
     Claudy::Application.load_tasks
   end
 
-  before { %w[seed_reference verify_double_entry verify_numbering verify_internal_transfers].each { |t| Rake::Task["accounting:#{t}"].reenable } }
+  before do
+    %w[seed_reference verify_double_entry verify_numbering verify_internal_transfers
+       verify_allocations].each { |t| Rake::Task["accounting:#{t}"].reenable }
+  end
 
   def run_task(name)
     Rake::Task["accounting:#{name}"].invoke
@@ -92,6 +95,40 @@ RSpec.describe "accounting rakes" do
       post_simple_entry(entity: entity, debit_account: transfers, credit_account: bank)
 
       expect { expect(run_task("verify_internal_transfers")).to eq(:exit_1) }.to output(/virements internes/i).to_stdout
+    end
+  end
+
+  describe "verify_allocations" do
+    let(:entity) { build_legal_entity }
+    let!(:fiscal_year) { build_fiscal_year(entity) }
+    let(:bank_account) { build_general_account(code: "550000", name: "Banque") }
+    let(:revenue) { build_general_account(code: "700000", name: "Locations", klass: 7, nature: "revenue") }
+    let(:cash_account) { build_cash_account(entity, bank_account) }
+
+    it "sort sans écart sur une ligne correctement affectée et comptabilisée" do
+      entry = build_cash_entry(cash_account, amount_cents: 20_000)
+      allocate(entry, account: revenue, amount_cents: 20_000, entity: entity)
+      Accounting::PostCashEntry.new(cash_entry: entry).run!
+
+      expect { expect(run_task("verify_allocations")).to eq(:ok) }.to output(/Aucun écart/).to_stdout
+    end
+
+    # Le statut « affectée » sans écriture, c'est une ligne que la compta croit
+    # traitée et qui n'est nulle part au grand livre.
+    it "attrape une ligne marquée affectée sans écriture" do
+      entry = build_cash_entry(cash_account, amount_cents: 20_000)
+      allocate(entry, account: revenue, amount_cents: 20_000, entity: entity)
+      entry.update_columns(status: "allocated")
+
+      expect { expect(run_task("verify_allocations")).to eq(:exit_1) }.to output(/sans écriture/i).to_stdout
+    end
+
+    it "attrape une sur-affectation forcée en base" do
+      entry = build_cash_entry(cash_account, amount_cents: 20_000)
+      allocation = allocate(entry, account: revenue, amount_cents: 20_000, entity: entity)
+      allocation.update_columns(amount_cents: 90_000)
+
+      expect { expect(run_task("verify_allocations")).to eq(:exit_1) }.to output(/sur-affectée/i).to_stdout
     end
   end
 end

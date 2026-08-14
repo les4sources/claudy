@@ -1,0 +1,73 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: @entry.label,
+           links: [link_to("← Toutes les lignes", finance_cash_entries_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.grid.gap-4.mb-6(class="md:grid-cols-4")
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.text-gray-400 Montant
+    p.mt-1.text-xl.font-semibold class="#{@entry.incoming? ? 'text-green-700' : 'text-gray-900'}"
+      = humanized_money_with_symbol(@entry.amount)
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.text-gray-400 Affecté
+    p.mt-1.text-xl.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(@entry.allocated_cents, "EUR"))
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.text-gray-400 Reste
+    p class="mt-1 text-xl font-semibold #{@entry.remaining_cents.zero? ? 'text-green-700' : 'text-amber-700'}"
+      = humanized_money_with_symbol(Money.new(@entry.remaining_cents, "EUR"))
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.text-gray-400 Statut
+    p.mt-1.text-xl.font-semibold.text-gray-900= @entry.status_label
+    - if @entry.excluded_reason.present?
+      p.mt-1.text-xs.text-gray-500= @entry.excluded_reason
+
+- if @entry.posted?
+  .mb-6.p-4.rounded-lg.border.border-green-100(class="bg-green-50/60")
+    p.text-sm.text-gray-700
+      | Comptabilisée :
+      strong.ml-1= @entry.journal_entry.reference
+      = link_to "voir au grand livre", finance_ledger_path(general_account_id: @entry.cash_account.general_account_id, from: @entry.entry_date.beginning_of_year, to: @entry.entry_date.end_of_year), class: "ml-2 text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+    = button_to "Annuler la passation", unpost_finance_cash_entry_path(@entry), method: :post, class: "mt-2 text-sm text-gray-500 hover:text-gray-700", data: { turbo_confirm: "L'écriture sera contre-passée, pas supprimée. On continue ?" }
+
+h3.mb-3.text-lg.font-semibold.text-gray-900 Affectations
+- if @allocations.blank?
+  .p-4.mb-4.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p Rien d'affecté pour l'instant.
+- else
+  .overflow-x-auto.relative.mb-4
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Compte
+          th.py-3.px-6[scope="col"] Pôle
+          th.py-3.px-6[scope="col"] Entité
+          th.py-3.px-6.text-right[scope="col"] Montant
+          th.py-3.px-6[scope="col"]
+      tbody
+        - @allocations.each do |allocation|
+          tr.border-b.bg-white
+            td.py-4.px-6.text-gray-900= allocation.general_account.to_s
+            td.py-4.px-6= allocation.team&.name || "— non affecté"
+            td.py-4.px-6= allocation.legal_entity.name
+            td.py-4.px-6.text-right.font-semibold.text-gray-900= humanized_money_with_symbol(allocation.amount)
+            td.py-4.px-6.text-right
+              - unless @entry.posted?
+                = button_to "Retirer", finance_cash_entry_allocation_path(@entry, allocation), method: :delete, class: "text-sm text-gray-500 hover:text-red-600", form: { class: "inline" }
+
+- unless @entry.posted? || @entry.status == "excluded"
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h4.mb-3.text-sm.font-semibold.text-gray-900 Affecter le reste
+    = render "allocation_form", entry: @entry, general_accounts: @general_accounts, teams: @teams, entities: @entities, from_unallocated: false
+
+  - if @entry.fully_allocated?
+    .mt-4
+      = button_to "Comptabiliser cette ligne", post_entry_finance_cash_entry_path(@entry), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+
+  .mt-6.p-4.bg-white.rounded-lg.border.border-gray-100
+    h4.mb-2.text-sm.font-semibold.text-gray-900 Exclure cette ligne
+    p.mb-3.text-xs.text-gray-500 Une ligne de trésorerie ne se supprime pas. Si elle n'a rien à faire là, exclus-la avec un motif — la trace de la décision reste.
+    = form_with url: exclude_finance_cash_entry_path(@entry), method: :post, class: "flex flex-wrap items-end gap-3" do |f|
+      div
+        = f.label :reason, "Motif", class: "block text-xs font-medium text-gray-500"
+        = f.text_field :reason, class: "mt-1 w-80 rounded-md border-gray-300 text-sm shadow-sm"
+      button.text-sm.text-gray-500(class="hover:text-gray-700" type="submit") Exclure

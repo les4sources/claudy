@@ -41,6 +41,12 @@ class GeneralAccount < ApplicationRecord
   # richesse. `rake accounting:verify_internal_transfers` s'appuie dessus.
   INTERNAL_TRANSFER_CODE = "580000".freeze
 
+  # Le compte courant entre les entités de la maison. Une charge de la Société
+  # simple payée depuis le compte de la Fondation crée une dette réelle entre
+  # elles : sans ce compte, il faudrait ranger la charge chez la mauvaise entité
+  # ou faire disparaître la dette. Son solde est ce qu'une entité doit à l'autre.
+  INTER_ENTITY_CODE = "416100".freeze
+
   has_paper_trail
   has_soft_deletion default_scope: true
 

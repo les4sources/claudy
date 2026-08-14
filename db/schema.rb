@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_15_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_15_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -276,6 +276,54 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_020000) do
     t.index ["general_account_id"], name: "index_cash_accounts_on_general_account_id"
     t.index ["legal_entity_id"], name: "index_cash_accounts_on_legal_entity_id"
     t.index ["name"], name: "index_cash_accounts_on_name", unique: true
+  end
+
+  create_table "cash_allocations", force: :cascade do |t|
+    t.bigint "amount_cents", null: false
+    t.bigint "analytic_account_id"
+    t.bigint "cash_entry_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "document_id"
+    t.string "document_type"
+    t.bigint "general_account_id", null: false
+    t.string "label"
+    t.bigint "legal_entity_id", null: false
+    t.bigint "team_id"
+    t.datetime "updated_at", null: false
+    t.index ["analytic_account_id"], name: "index_cash_allocations_on_analytic_account_id"
+    t.index ["cash_entry_id"], name: "index_cash_allocations_on_cash_entry_id"
+    t.index ["deleted_at"], name: "index_cash_allocations_on_deleted_at"
+    t.index ["document_type", "document_id"], name: "index_cash_allocations_on_document_type_and_document_id"
+    t.index ["general_account_id"], name: "index_cash_allocations_on_general_account_id"
+    t.index ["legal_entity_id"], name: "index_cash_allocations_on_legal_entity_id"
+    t.index ["team_id"], name: "index_cash_allocations_on_team_id"
+    t.check_constraint "amount_cents <> 0", name: "cash_allocations_non_zero"
+  end
+
+  create_table "cash_entries", force: :cascade do |t|
+    t.datetime "allocated_at"
+    t.bigint "amount_cents", null: false
+    t.bigint "cash_account_id", null: false
+    t.string "communication"
+    t.string "counterparty_iban"
+    t.string "counterparty_name"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "entry_date", null: false
+    t.string "excluded_reason"
+    t.string "external_ref"
+    t.string "label", null: false
+    t.string "statement_ref"
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.date "value_date"
+    t.index ["cash_account_id", "external_ref"], name: "index_cash_entries_on_external_ref", unique: true, where: "(external_ref IS NOT NULL)"
+    t.index ["cash_account_id"], name: "index_cash_entries_on_cash_account_id"
+    t.index ["deleted_at"], name: "index_cash_entries_on_deleted_at"
+    t.index ["entry_date"], name: "index_cash_entries_on_entry_date"
+    t.index ["status"], name: "index_cash_entries_on_status"
+    t.check_constraint "amount_cents <> 0", name: "cash_entries_non_zero"
   end
 
   create_table "catalog_items", force: :cascade do |t|
@@ -1227,6 +1275,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_020000) do
   add_foreign_key "bundles", "teams"
   add_foreign_key "cash_accounts", "general_accounts"
   add_foreign_key "cash_accounts", "legal_entities"
+  add_foreign_key "cash_allocations", "analytic_accounts"
+  add_foreign_key "cash_allocations", "cash_entries"
+  add_foreign_key "cash_allocations", "general_accounts"
+  add_foreign_key "cash_allocations", "legal_entities"
+  add_foreign_key "cash_allocations", "teams"
+  add_foreign_key "cash_entries", "cash_accounts"
   add_foreign_key "catalog_prices", "catalog_items"
   add_foreign_key "coworking_packs", "customers"
   add_foreign_key "coworking_reservations", "coworking_packs"
