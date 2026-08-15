@@ -29,7 +29,12 @@ module Finance
 
     # L'écran de travail : ce qui reste à affecter, et rien d'autre.
     def unallocated
-      @entries = CashEntry.pending.ordered.includes(:cash_account, :cash_allocations)
+      # Les suggestions se recalculent à l'ouverture de l'écran : c'est le seul
+      # moment où elles servent, et ça évite un job de fond que l'application
+      # n'a pas les moyens de garantir.
+      Finance::SuggestAllocations.new(whodunnit: current_user&.email).run!
+
+      @entries = CashEntry.pending.ordered.includes(:cash_account, :cash_allocations, :allocation_suggestions)
       @general_accounts = GeneralAccount.actives.ordered
       @teams = Team.ordered
       @entities = LegalEntity.actives.ordered

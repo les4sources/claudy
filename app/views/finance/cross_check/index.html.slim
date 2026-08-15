@@ -1,0 +1,70 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Contrôle croisé — #{l(@month, format: '%B %Y')}"
+
+= form_with url: finance_cross_check_path, method: :get, class: "mb-6 p-4 bg-white rounded-lg border border-gray-100 flex flex-wrap items-end gap-4" do |f|
+  div
+    = f.label :month, "Mois", class: "block text-sm font-medium text-gray-700"
+    = f.text_field :month, value: @month.strftime("%Y-%m"), placeholder: "2026-08", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  = f.submit "Afficher", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+
+/ L'écart n'est pas une anomalie, et le dire évite de partir en chasse pour rien.
+.mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
+  p.text-sm.text-gray-700
+    | Les deux colonnes ne mesurent pas la même chose. Le
+    strong  journal
+    | , c'est l'argent
+    strong  encaissé et ventilé
+    | . Les
+    strong  séjours
+    | , c'est ce qui a été
+    strong  facturé
+    | . L'écart, c'est ce qui reste à encaisser plus ce qui reste à affecter — pas une erreur en soi.
+
+.grid.gap-4.mb-8(class="md:grid-cols-4")
+  .p-5.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.text-gray-400 Recettes au journal
+    p.mt-1.text-2xl.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(@journal_total_cents, "EUR"))
+  .p-5.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.text-gray-400 Séjours facturés
+    p.mt-1.text-2xl.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(@stays_total_cents, "EUR"))
+    p.mt-1.text-xs.text-gray-400= "#{@stays.count} séjour(s) au départ ce mois-ci"
+  .p-5.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.text-gray-400 Paiements encaissés
+    p.mt-1.text-2xl.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(@cashed_cents, "EUR"))
+  .p-5.rounded-lg.border class="#{@pending_entries.zero? ? 'bg-white border-gray-100' : 'bg-amber-50 border-amber-100'}"
+    p.text-xs.uppercase.text-gray-400 Reste à affecter
+    p class="mt-1 text-2xl font-semibold #{@pending_entries.zero? ? 'text-green-700' : 'text-amber-700'}"
+      - if @pending_entries.zero?
+        | ✓ rien
+      - else
+        = humanized_money_with_symbol(Money.new(@pending_cents, "EUR"))
+    - if @pending_entries.positive?
+      p.mt-1.text-xs
+        = link_to "#{@pending_entries} ligne(s) de ce mois", finance_unallocated_cash_entries_path, class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+    - if @pending_all_count > @pending_entries
+      p.mt-1.text-xs.text-gray-400= "#{@pending_all_count} au total, tous mois confondus"
+
+.mb-6.p-4.bg-white.rounded-lg.border.border-gray-100
+  p.text-sm.text-gray-700
+    | Écart entre facturé et ventilé :
+    strong.ml-1= humanized_money_with_symbol(Money.new(@delta_cents, "EUR"))
+    - if @pending_entries.positive?
+      |  — dont #{humanized_money_with_symbol(Money.new(@pending_cents, "EUR"))} de lignes bancaires pas encore affectées.
+
+h3.mb-3.text-lg.font-semibold.text-gray-900 Recettes affectées par pôle
+- if @journal_rows.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucune recette comptabilisée sur ce mois.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Pôle
+          th.py-3.px-6.text-right[scope="col"] Recettes au journal
+      tbody
+        - @journal_rows.each do |row|
+          tr.border-b.bg-white
+            td.py-4.px-6.font-medium class="#{row[:team] ? 'text-gray-900' : 'text-amber-800'}"
+              = row[:team]&.name || "— non affecté à un pôle"
+            td.py-4.px-6.text-right.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(row[:revenue_cents], "EUR"))

@@ -32,4 +32,24 @@
           - if entry.allocated_cents != 0
             .text-xs.text-amber-700
               | reste #{humanized_money_with_symbol(Money.new(entry.remaining_cents, "EUR"))}
+      - suggestion = entry.allocation_suggestions.pending.ordered.first
+      - if suggestion
+        / La suggestion porte TOUJOURS son motif : un humain doit pouvoir juger
+          sans rouvrir la configuration des règles.
+        .mb-3.p-3.rounded-lg.border.border-blue-100(class="bg-blue-50/60")
+          .flex.flex-wrap.items-center.justify-between.gap-2
+            div
+              p.text-sm.text-gray-800
+                strong Proposition :
+                = " #{suggestion.general_account}"
+                - if suggestion.team
+                  = " · #{suggestion.team.name}"
+                = " · #{humanized_money_with_symbol(suggestion.amount)}"
+              p.mt-0.5.text-xs.text-gray-500
+                = suggestion.rationale
+                = " (#{suggestion.source_label}, #{suggestion.confidence} % de confiance)"
+            .flex.items-center.gap-2
+              = button_to "Accepter", finance_allocation_suggestion_path(suggestion, decision: "accept"), method: :patch, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+              = button_to "Refuser", finance_allocation_suggestion_path(suggestion, decision: "reject"), method: :patch, class: "text-xs text-gray-500 hover:text-gray-700", form: { class: "inline" }
+
       = render "allocation_form", entry: entry, general_accounts: @general_accounts, teams: @teams, entities: @entities, from_unallocated: true

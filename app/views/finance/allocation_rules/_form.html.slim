@@ -1,0 +1,58 @@
+= form_with model: [:finance, rule], class: "space-y-6" do |f|
+  = render "finance/shared/form_errors", record: rule
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-3.text-sm.font-semibold.text-gray-900 La règle
+    .grid.gap-4(class="md:grid-cols-3")
+      div
+        = f.label :label, "Libellé *", class: "block text-sm font-medium text-gray-700"
+        = f.text_field :label, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :position, "Ordre", class: "block text-sm font-medium text-gray-700"
+        = f.number_field :position, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :confidence, "Confiance (%)", class: "block text-sm font-medium text-gray-700"
+        = f.number_field :confidence, min: 0, max: 100, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+    label.mt-3.flex.items-center.gap-2.text-sm.text-gray-700
+      = f.check_box :active, class: "rounded border-gray-300"
+      |  Active
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-1.text-sm.font-semibold.text-gray-900 Quand la ligne ressemble à…
+    p.mb-3.text-xs.text-gray-500 Tous les critères renseignés doivent correspondre. Au moins un est obligatoire — une règle sans critère s'appliquerait à tout.
+    .grid.gap-4(class="md:grid-cols-2")
+      div
+        = f.label :counterparty_iban, "IBAN de la contrepartie", class: "block text-sm font-medium text-gray-700"
+        = f.text_field :counterparty_iban, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :counterparty_name_contains, "Le nom du tiers contient", class: "block text-sm font-medium text-gray-700"
+        = f.text_field :counterparty_name_contains, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :communication_contains, "La communication contient", class: "block text-sm font-medium text-gray-700"
+        = f.text_field :communication_contains, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :direction, "Sens", class: "block text-sm font-medium text-gray-700"
+        = f.select :direction, AllocationRule::DIRECTION_LABELS.map { |v, l| [l, v] }, { include_blank: "Les deux" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :min_amount, "Montant minimum (€)", class: "block text-sm font-medium text-gray-700"
+        = f.text_field :min_amount, value: rule.min_amount_cents ? number_with_precision(rule.min_amount_cents / 100.0, precision: 2, separator: ",") : nil, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :max_amount, "Montant maximum (€)", class: "block text-sm font-medium text-gray-700"
+        = f.text_field :max_amount, value: rule.max_amount_cents ? number_with_precision(rule.max_amount_cents / 100.0, precision: 2, separator: ",") : nil, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-3.text-sm.font-semibold.text-gray-900 …propose cette affectation
+    .grid.gap-4(class="md:grid-cols-2")
+      div
+        = f.label :general_account_id, "Compte général *", class: "block text-sm font-medium text-gray-700"
+        = f.collection_select :general_account_id, GeneralAccount.actives.ordered, :id, :to_s, { include_blank: "Choisir…" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :legal_entity_id, "Entité *", class: "block text-sm font-medium text-gray-700"
+        = f.collection_select :legal_entity_id, LegalEntity.actives.ordered, :id, :name, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :team_id, "Pôle", class: "block text-sm font-medium text-gray-700"
+        = f.collection_select :team_id, Team.ordered, :id, :name, { include_blank: "Non affecté" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+
+  .flex.items-center.gap-3
+    = f.submit "Enregistrer", class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+    = link_to "Annuler", finance_allocation_rules_path, class: "text-sm text-gray-500 hover:text-gray-700"

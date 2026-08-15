@@ -106,6 +106,13 @@ Rails.application.routes.draw do
     get "cash_entries/unallocated", to: "cash_entries#unallocated", as: :unallocated_cash_entries
     get "analytic_balance", to: "analytic_balance#index"
     resources :coda_imports, only: [:index, :show, :create]
+    get "cross_check", to: "cross_check#index"
+    resources :allocation_rules, except: [:show] do
+      member { post :move }
+    end
+    resources :allocation_suggestions, only: [:update] do
+      collection { post :bulk }
+    end
     resources :cash_entries do
       member do
         post :post_entry

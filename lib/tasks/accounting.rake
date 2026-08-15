@@ -219,6 +219,31 @@ namespace :accounting do
     report("verify_allocations", ecarts, "#{CashEntry.count} ligne(s) vérifiée(s)")
   end
 
+  desc "Vérifie les suggestions d'affectation — exit 1 si écart"
+  task verify_suggestions: :environment do
+    ecarts = []
+
+    AllocationSuggestion.includes(:cash_entry, :allocation_rule).find_each do |suggestion|
+      entry = suggestion.cash_entry
+
+      if suggestion.status == "accepted" && entry.cash_allocations.empty?
+        ecarts << "Suggestion ##{suggestion.id} : acceptée mais la ligne n'a aucune affectation"
+      end
+
+      if suggestion.status == "pending" && entry.posted?
+        ecarts << "Suggestion ##{suggestion.id} : encore proposée sur une ligne déjà comptabilisée"
+      end
+    end
+
+    AllocationRule.find_each do |rule|
+      next if AllocationRule::CRITERIA.any? { |c| rule.public_send(c).present? }
+
+      ecarts << "Règle ##{rule.id} « #{rule.label} » : aucun critère, elle s'appliquerait à tout"
+    end
+
+    report("verify_suggestions", ecarts, "#{AllocationSuggestion.count} suggestion(s) vérifiée(s)")
+  end
+
   def report(name, ecarts, resume)
     if ecarts.empty?
       puts "[accounting:#{name}] Aucun écart — #{resume}."
