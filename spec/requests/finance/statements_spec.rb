@@ -107,6 +107,52 @@ RSpec.describe "Finances > Décomptes", type: :request do
     end
   end
 
+  # Le statut « réglé » ne se pose pas à la main : il découle d'un encaissement.
+  # Sans ça, l'écran affiche « Réglé » pendant que le grand livre réclame encore.
+  describe "marquer réglé" do
+    before { sign_in user }
+
+    let(:statement) do
+      add_entry(Date.new(2026, 7, 10), 1500)
+      Finance::IssueStatement.new(member_account: account, month: "2026-07").run!
+    end
+
+    it "enregistre un vrai règlement et ramène le solde à zéro" do
+      expect {
+        post mark_settled_finance_statement_path(statement)
+      }.to change { AccountSettlement.count }.by(1)
+
+      expect(statement.reload.status).to eq("settled")
+      expect(account.reload.balance_cents).to eq(0)
+      expect(AccountSettlement.last.amount_cents).to eq(1500)
+    end
+
+    it "n'encaisse pas deux fois si on clique deux fois" do
+      post mark_settled_finance_statement_path(statement)
+
+      expect {
+        post mark_settled_finance_statement_path(statement)
+      }.not_to change { AccountSettlement.count }
+
+      expect(account.reload.balance_cents).to eq(0)
+    end
+
+    # Le sourcier a payé de son côté entre l'émission et le clic : on ne
+    # ré-encaisse pas un montant déjà encaissé.
+    it "plafonne l'encaissement au solde réel quand un règlement a déjà eu lieu" do
+      statement
+      Finance::RecordSettlement.new(member_account: account, amount_cents: 1500,
+                                    received_on: Date.new(2026, 7, 28)).run!
+
+      expect {
+        post mark_settled_finance_statement_path(statement)
+      }.not_to change { AccountSettlement.count }
+
+      expect(statement.reload.status).to eq("settled")
+      expect(account.reload.balance_cents).to eq(0)
+    end
+  end
+
   describe "page publique à jeton" do
     let(:statement) do
       add_entry(Date.new(2026, 7, 10), 1500)
