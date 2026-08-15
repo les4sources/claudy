@@ -284,6 +284,21 @@ namespace :accounting do
     report("verify_stay_ventilations", ecarts, "ventilations de séjour vérifiées")
   end
 
+  desc "Vérifie les versements Stripe — exit 1 si un versement ne se referme pas"
+  task verify_stripe_payouts: :environment do
+    ecarts = []
+
+    StripePayout.includes(:stripe_balance_transactions).find_each do |payout|
+      next if payout.stripe_balance_transactions.empty?
+      next if payout.balanced?
+
+      ecarts << "Versement #{payout.stripe_id} : transactions à #{payout.transactions_net_cents} " \
+                "pour un net de #{payout.amount_cents}"
+    end
+
+    report("verify_stripe_payouts", ecarts, "#{StripePayout.count} versement(s) vérifié(s)")
+  end
+
   def report(name, ecarts, resume)
     if ecarts.empty?
       puts "[accounting:#{name}] Aucun écart — #{resume}."

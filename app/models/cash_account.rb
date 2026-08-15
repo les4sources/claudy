@@ -14,6 +14,7 @@
 #  iban               :string
 #  kind               :string           not null
 #  name               :string           not null
+#  stripe_account_key :string
 #  created_at         :datetime         not null
 #  updated_at         :datetime         not null
 #  general_account_id :bigint           not null
@@ -25,6 +26,7 @@
 #  index_cash_accounts_on_general_account_id  (general_account_id)
 #  index_cash_accounts_on_legal_entity_id     (legal_entity_id)
 #  index_cash_accounts_on_name                (name) UNIQUE
+#  index_cash_accounts_on_stripe_account_key  (stripe_account_key) UNIQUE WHERE (stripe_account_key IS NOT NULL)
 #
 # Foreign Keys
 #

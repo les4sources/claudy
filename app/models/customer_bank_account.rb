@@ -3,6 +3,30 @@
 # C'est le mécanisme le plus rentable du lot : au deuxième séjour d'un client
 # récurrent, son virement se rattache tout seul. Et il ne s'apprend que sur
 # validation humaine — un IBAN deviné une fois deviendrait une erreur répétée.
+# == Schema Information
+#
+# Table name: customer_bank_accounts
+#
+#  id              :bigint           not null, primary key
+#  deleted_at      :datetime
+#  holder_name     :string
+#  iban            :string           not null
+#  last_matched_at :datetime
+#  matches_count   :integer          default(0), not null
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  customer_id     :bigint           not null
+#
+# Indexes
+#
+#  index_customer_bank_accounts_on_customer_id           (customer_id)
+#  index_customer_bank_accounts_on_deleted_at            (deleted_at)
+#  index_customer_bank_accounts_on_iban_and_customer_id  (iban,customer_id) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (customer_id => customers.id)
+#
 class CustomerBankAccount < ApplicationRecord
   has_paper_trail
   has_soft_deletion default_scope: true

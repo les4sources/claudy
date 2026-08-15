@@ -312,6 +312,10 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
                       finance_cross_check_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/cross_check' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
+            = link_to "Encaissement",
+                      finance_collection_cost_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/collection_cost' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
             = link_to "Analytique",
                       finance_analytic_balance_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/analytic_balance' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"

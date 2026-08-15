@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_15_070000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_15_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -328,11 +328,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_070000) do
     t.string "kind", null: false
     t.bigint "legal_entity_id", null: false
     t.string "name", null: false
+    t.string "stripe_account_key"
     t.datetime "updated_at", null: false
     t.index ["deleted_at"], name: "index_cash_accounts_on_deleted_at"
     t.index ["general_account_id"], name: "index_cash_accounts_on_general_account_id"
     t.index ["legal_entity_id"], name: "index_cash_accounts_on_legal_entity_id"
     t.index ["name"], name: "index_cash_accounts_on_name", unique: true
+    t.index ["stripe_account_key"], name: "index_cash_accounts_on_stripe_account_key", unique: true, where: "(stripe_account_key IS NOT NULL)"
   end
 
   create_table "cash_allocations", force: :cascade do |t|
@@ -1262,12 +1264,50 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_070000) do
     t.index ["token"], name: "index_stays_on_token", unique: true
   end
 
+  create_table "stripe_balance_transactions", force: :cascade do |t|
+    t.string "category"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "description"
+    t.bigint "fee_cents", default: 0, null: false
+    t.bigint "gross_cents", default: 0, null: false
+    t.string "kind", null: false
+    t.bigint "net_cents", default: 0, null: false
+    t.datetime "occurred_at"
+    t.uuid "payment_id"
+    t.string "stripe_id", null: false
+    t.bigint "stripe_payout_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_stripe_balance_transactions_on_deleted_at"
+    t.index ["payment_id"], name: "index_stripe_balance_transactions_on_payment_id"
+    t.index ["stripe_id"], name: "index_stripe_transactions_on_stripe_id", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["stripe_payout_id"], name: "index_stripe_balance_transactions_on_stripe_payout_id"
+  end
+
   create_table "stripe_events", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "event_type"
     t.string "object_id"
     t.datetime "updated_at", null: false
     t.string "webhook_id"
+  end
+
+  create_table "stripe_payouts", force: :cascade do |t|
+    t.string "account_key", null: false
+    t.bigint "amount_cents", null: false
+    t.date "arrival_date"
+    t.bigint "cash_account_id"
+    t.datetime "created_at", null: false
+    t.string "currency", default: "EUR", null: false
+    t.datetime "deleted_at"
+    t.string "status"
+    t.string "stripe_id", null: false
+    t.datetime "synced_at"
+    t.datetime "updated_at", null: false
+    t.index ["account_key", "stripe_id"], name: "index_stripe_payouts_on_account_and_id", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["arrival_date"], name: "index_stripe_payouts_on_arrival_date"
+    t.index ["cash_account_id"], name: "index_stripe_payouts_on_cash_account_id"
+    t.index ["deleted_at"], name: "index_stripe_payouts_on_deleted_at"
   end
 
   create_table "subscriptions", force: :cascade do |t|
@@ -1478,6 +1518,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_070000) do
   add_foreign_key "stay_change_requests", "stays"
   add_foreign_key "stay_items", "stays"
   add_foreign_key "stays", "customers"
+  add_foreign_key "stripe_balance_transactions", "payments"
+  add_foreign_key "stripe_balance_transactions", "stripe_payouts"
+  add_foreign_key "stripe_payouts", "cash_accounts"
   add_foreign_key "tasks", "bundles"
   add_foreign_key "tasks", "projects"
   add_foreign_key "team_memberships", "humans"
