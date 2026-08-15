@@ -90,7 +90,7 @@ div(class=panel data-controller="catalog-price" data-catalog-price-url-value=fin
   p.text-sm.text-gray-500 Aucun palier — cet article n'a pas encore de prix.
 - else
   .overflow-x-auto.relative
-    table.w-full.text-sm.text-left.text-gray-500
+    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
       thead.text-xs.text-gray-700.uppercase.bg-gray-50
         tr
           th.py-3.px-6[scope="col"] Période

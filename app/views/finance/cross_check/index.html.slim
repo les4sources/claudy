@@ -57,7 +57,7 @@ h3.mb-3.text-lg.font-semibold.text-gray-900 Recettes affectées par pôle
     p.font-medium.text-gray-700 Aucune recette comptabilisée sur ce mois.
 - else
   .overflow-x-auto.relative
-    table.w-full.text-sm.text-left.text-gray-500
+    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
       thead.text-xs.text-gray-700.uppercase.bg-gray-50
         tr
           th.py-3.px-6[scope="col"] Pôle

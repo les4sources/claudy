@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_15_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_15_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -917,6 +917,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_090000) do
     t.index ["household_id"], name: "index_member_accounts_on_household_id"
     t.index ["human_id"], name: "index_member_accounts_on_human_id"
     t.check_constraint "kind::text = 'household'::text AND household_id IS NOT NULL AND human_id IS NULL OR kind::text = 'human'::text AND human_id IS NOT NULL AND household_id IS NULL OR kind::text = 'entity'::text AND household_id IS NULL AND human_id IS NULL", name: "member_accounts_anchor_check"
+  end
+
+  create_table "month_closings", force: :cascade do |t|
+    t.datetime "closed_at", null: false
+    t.string "closed_by"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.text "notes"
+    t.date "period_month", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_month_closings_on_deleted_at"
+    t.index ["period_month"], name: "index_month_closings_on_period_month", unique: true, where: "(deleted_at IS NULL)"
   end
 
   create_table "notes", force: :cascade do |t|

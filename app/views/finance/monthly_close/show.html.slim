@@ -1,0 +1,81 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Arrêté du mois — #{l(@month, format: '%B %Y')}"
+
+/ Le verdict d'abord. Si on n'ouvre l'écran que trente secondes, c'est cette
+  ligne-là qu'on lit — le détail est pour ceux qui vont agir.
+- if @closing
+  .mb-8.p-6.rounded-xl.border class="#{@blocking.any? ? 'border-amber-200 bg-gradient-to-br from-amber-50 to-white' : 'border-green-200 bg-gradient-to-br from-green-50 to-white'}"
+    p.text-3xl.font-semibold class="#{@blocking.any? ? 'text-amber-800' : 'text-green-800'}"
+      = @blocking.any? ? "Mois arrêté, mais quelque chose a bougé depuis" : "✓ Mois arrêté"
+    p.mt-2.text-sm.text-gray-600
+      = "Arrêté le #{l(@closing.closed_at.to_date, format: :long)}"
+      - if @closing.closed_by.present?
+        = " par #{@closing.closed_by}"
+      | .
+    / L'état affiché ne doit jamais contredire l'état réel : un mouvement arrivé
+      après l'arrêté rouvre la question, et l'écran le dit au lieu de rester vert.
+    - if @blocking.any?
+      p.mt-2.text-sm.text-amber-800
+        = "#{@blocking.size} point#{'s' if @blocking.size > 1} #{@blocking.size > 1 ? 'sont redevenus' : 'est redevenu'} ouverts depuis l'arrêté — regarde ci-dessous."
+- elsif @blocking.empty?
+  .mb-8.p-6.rounded-xl.border.border-green-200(class="bg-gradient-to-br from-green-50 to-white")
+    p.text-3xl.font-semibold.text-green-800 Tout est fait
+    p.mt-2.text-sm.text-gray-600 Il ne reste qu'à arrêter le mois.
+    = form_with url: finance_close_monthly_close_path(month: @month.strftime("%Y-%m")), method: :post, class: "mt-4 flex flex-wrap items-end gap-3" do |f|
+      div
+        = f.label :notes, "Note (facultative)", class: "block text-xs font-medium text-gray-500"
+        = f.text_field :notes, class: "mt-1 w-72 rounded-md border-gray-300 text-sm shadow-sm"
+      button.inline-flex.items-center.rounded-md.border.border-transparent.px-5.py-2.text-sm.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90" type="submit")
+        | Arrêter #{l(@month, format: '%B %Y')}
+- else
+  .mb-8.p-6.rounded-xl.border.border-amber-200(class="bg-gradient-to-br from-amber-50 to-white")
+    p.text-3xl.font-semibold.text-amber-800
+      = "#{@blocking.size} point#{'s' if @blocking.size > 1} à traiter"
+    p.mt-2.text-sm.text-gray-600
+      | Le mois ne peut pas être arrêté tant qu'ils restent ouverts.
+
+/ Le mois se choisit dans l'URL : ça se partage, et ça survit au rechargement.
+.mb-6.flex.flex-wrap.items-center.gap-2.text-sm
+  - [1, 2, 3].each do |recul|
+    - mois = Date.current.prev_month(recul).beginning_of_month
+    = link_to l(mois, format: "%B %Y").capitalize,
+              finance_monthly_close_path(month: mois.strftime("%Y-%m")),
+              class: "px-3 py-1.5 rounded-md transition-colors #{@month == mois ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+  = link_to l(Date.current.beginning_of_month, format: "%B %Y").capitalize,
+            finance_monthly_close_path(month: Date.current.strftime("%Y-%m")),
+            class: "px-3 py-1.5 rounded-md transition-colors #{@month == Date.current.beginning_of_month ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+
+ol.space-y-3
+  - @steps.each_with_index do |step, index|
+    li
+      .flex.items-start.gap-4.p-4.bg-white.rounded-lg.border class="#{step.done? ? 'border-gray-100' : step.warning? ? 'border-amber-100' : 'border-amber-200'}"
+        / La pastille porte l'état ET le numéro d'ordre : on suit une séquence,
+          pas une liste de cases indépendantes.
+        .flex-none.flex.items-center.justify-center.w-8.h-8.rounded-full.text-sm.font-semibold class="#{step.done? ? 'bg-green-100 text-green-700' : step.warning? ? 'bg-amber-50 text-amber-700' : 'bg-amber-100 text-amber-800'}"
+          - if step.done?
+            | ✓
+          - else
+            = index + 1
+        .flex-1
+          p.font-medium class="#{step.done? ? 'text-gray-500' : 'text-gray-900'}"
+            = step.title
+          p.mt-0.5.text-sm.text-gray-500= step.detail
+        - chemin = monthly_close_action_path(step, @month)
+        - if chemin && !step.done?
+          .flex-none
+            = link_to step.action_label, chemin, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 whitespace-nowrap"
+
+- if @closing
+  .mt-6
+    = button_to "Rouvrir le mois", finance_reopen_monthly_close_path(month: @month.strftime("%Y-%m")), method: :post, class: "text-sm text-gray-400 hover:text-gray-700", data: { turbo_confirm: "Rouvrir #{l(@month, format: '%B %Y')} ?" }
+
+- if @closings.any?
+  .mt-10
+    h3.mb-3.text-sm.font-semibold.uppercase.tracking-wide.text-gray-400 Mois arrêtés
+    ul.space-y-1.text-sm.text-gray-600
+      - @closings.each do |closing|
+        li
+          = link_to closing.label.capitalize, finance_monthly_close_path(month: closing.period_month.strftime("%Y-%m")), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+          = " — arrêté le #{l(closing.closed_at.to_date)}"
+          - if closing.closed_by.present?
+            = " par #{closing.closed_by}"

@@ -292,6 +292,10 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
             une seule liste.
           li.self-center.px-2.text-teal-200 |
           li
+            = link_to "Arrêté du mois",
+                      finance_monthly_close_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/monthly_close' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
             = link_to "Comptabilité",
                       finance_accounting_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{%w[finance/accounting finance/general_accounts finance/legal_entities finance/fiscal_years].include?(controller_path) ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"

@@ -11,7 +11,7 @@ p.mb-4.text-sm.text-gray-500
 - if @report.created.any?
   = section_heading_tw heading: "À créer (#{@report.created.size})"
   .overflow-x-auto.relative.mb-6
-    table.w-full.text-sm.text-left.text-gray-500
+    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
       thead.text-xs.text-gray-700.uppercase.bg-gray-50
         tr
           th.py-3.px-6[scope="col"] Compte

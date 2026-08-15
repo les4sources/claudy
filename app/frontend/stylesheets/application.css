@@ -27,6 +27,7 @@
    Tout nouvel `@import` va ICI, au-dessus des `@font-face`. */
 @import 'trix';
 @import 'portal.css';
+@import 'finance_tables.css';
 
 /* --- Averia Serif Libre ---------------------------------------------------
    PLACÉ APRÈS LES @import : en CSS, `@import` doit précéder toute autre règle.
