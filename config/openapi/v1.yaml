@@ -1260,6 +1260,235 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /general_accounts:
+    get:
+      tags: [Comptabilité]
+      summary: Lister le plan comptable général
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: klass, in: query, schema: { type: integer, minimum: 1, maximum: 7 } }
+        - { name: nature, in: query, schema: { type: string, enum: [asset, liability, equity, revenue, expense] } }
+        - { name: active, in: query, schema: { type: boolean } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: Liste paginée de comptes généraux. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Comptabilité]
+      summary: Créer (ou retrouver) un compte général
+      description: >
+        UPSERT sur le CODE — deux comptes portant le même numéro rendraient toute
+        balance ininterprétable. `klass` et `nature` se déduisent du numéro
+        (PCMN) quand ils ne sont pas fournis ; une valeur explicite l'emporte
+        toujours. Les classes 4 et 5 retiennent `asset` par défaut : un compte de
+        tiers peut être créance ou dette, à la reprise de le préciser.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [general_account]
+              properties:
+                general_account:
+                  type: object
+                  required: [code, name]
+                  properties:
+                    code: { type: string, description: "3 à 8 chiffres." }
+                    name: { type: string }
+                    klass: { type: integer, minimum: 1, maximum: 7 }
+                    nature: { type: string, enum: [asset, liability, equity, revenue, expense] }
+                    reconcilable: { type: boolean }
+                    active: { type: boolean }
+      responses:
+        "201": { description: Compte créé. }
+        "200": { description: Compte existant retrouvé sur son code. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /general_accounts/{id}:
+    get:
+      tags: [Comptabilité]
+      summary: Détail d'un compte général
+      description: "S'adresse par le CODE (`/general_accounts/613313`) ou par l'identifiant technique."
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Compte. }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Comptabilité]
+      summary: Modifier un compte général
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { general_account: { type: object } } }
+      responses:
+        "200": { description: Compte mis à jour. }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /analytic_accounts:
+    get:
+      tags: [Comptabilité]
+      summary: Lister les axes analytiques
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: team_id, in: query, schema: { type: integer } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: Liste paginée d'axes analytiques. }
+    post:
+      tags: [Comptabilité]
+      summary: Créer (ou retrouver) un axe analytique
+      description: >
+        UPSERT sur le code. `team_id` peut rester vide : le plan comptable du
+        comptable connaît plus de pôles que claudy n'a d'équipes, et inventer
+        l'équipe manquante produirait une hiérarchie que personne n'a décidée.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [analytic_account]
+              properties:
+                analytic_account:
+                  type: object
+                  required: [code, name]
+                  properties:
+                    code: { type: string }
+                    name: { type: string }
+                    team_id: { type: integer }
+                    active: { type: boolean }
+      responses:
+        "201": { description: Axe créé. }
+        "200": { description: Axe existant retrouvé sur son code. }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /analytic_accounts/{id}:
+    patch:
+      tags: [Comptabilité]
+      summary: Modifier un axe analytique
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { analytic_account: { type: object } } }
+      responses:
+        "200": { description: Axe mis à jour. }
+
+  /fiscal_years:
+    get:
+      tags: [Comptabilité]
+      summary: Lister les exercices comptables
+      parameters:
+        - { name: legal_entity_id, in: query, schema: { type: integer } }
+        - { name: status, in: query, schema: { type: string, enum: [open, closed] } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: Liste paginée d'exercices. }
+    post:
+      tags: [Comptabilité]
+      summary: Créer (ou retrouver) un exercice
+      description: >
+        UPSERT sur (entité, date de début). Sans exercice couvrant la date,
+        aucune écriture ne peut être comptabilisée — c'est voulu. Un exercice
+        clôturé sort en 409 : le rouvrir est une décision comptable, pas un effet
+        de bord d'un import rejoué.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fiscal_year]
+              properties:
+                fiscal_year:
+                  type: object
+                  required: [legal_entity_id, starts_on, ends_on]
+                  properties:
+                    legal_entity_id: { type: integer }
+                    starts_on: { type: string, format: date }
+                    ends_on: { type: string, format: date }
+                    status: { type: string, enum: [open, closed] }
+      responses:
+        "201": { description: Exercice créé. }
+        "200": { description: Exercice existant retrouvé. }
+        "409": { description: "Exercice clôturé." }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /fiscal_years/{id}:
+    get:
+      tags: [Comptabilité]
+      summary: Détail d'un exercice
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Exercice. }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Comptabilité]
+      summary: Modifier un exercice
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { fiscal_year: { type: object } } }
+      responses:
+        "200": { description: Exercice mis à jour. }
+        "409": { description: "Exercice clôturé." }
+
+  /opening_entries:
+    get:
+      tags: [Comptabilité]
+      summary: Lister les écritures d'à-nouveau
+      parameters:
+        - { name: fiscal_year_id, in: query, schema: { type: integer } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: Liste paginée d'écritures d'ouverture. }
+    post:
+      tags: [Comptabilité]
+      summary: Poser l'écriture d'à-nouveau d'un exercice
+      description: >
+        La SEULE écriture comptable que l'API pose. Tout le reste se génère
+        depuis un document métier — une ouverture, elle, vient d'un bilan produit
+        ailleurs. Refusée en 422 si les débits ne font pas les crédits, avec
+        l'écart en clair : une ouverture qui ne balance pas contamine l'exercice
+        entier. Un code de compte inconnu arrête tout, plutôt que de poser une
+        ouverture amputée qui balancerait quand même. Reposter contre-passe
+        l'ouverture précédente au lieu d'en empiler une seconde.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fiscal_year_id, lines]
+              properties:
+                fiscal_year_id: { type: integer }
+                entry_date: { type: string, format: date, description: "Par défaut, le premier jour de l'exercice." }
+                label: { type: string }
+                lines:
+                  type: array
+                  items:
+                    type: object
+                    required: [general_account_code]
+                    properties:
+                      general_account_code: { type: string }
+                      analytic_account_code: { type: string }
+                      debit_cents: { type: integer }
+                      credit_cents: { type: integer }
+                      label: { type: string }
+      responses:
+        "201": { description: À-nouveau posé et numéroté. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { description: "Exercice clôturé." }
+        "422": { description: "À-nouveau déséquilibré, ou compte inconnu." }
+
   /paper_sheets:
     get:
       tags: [Bar & comptes internes]

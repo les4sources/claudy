@@ -53,6 +53,21 @@ class GeneralAccount < ApplicationRecord
   has_many :journal_lines, dependent: :restrict_with_error
   has_many :cash_accounts, dependent: :restrict_with_error
 
+  # La classe et la nature se lisent dans le NUMÉRO — c'est toute la logique du
+  # PCMN, et la reprise d'un plan comptable de 146 comptes ne va pas les
+  # ressaisir un par un. Les classes 4 et 5 sont les seules ambiguës : un compte
+  # de tiers peut être une créance ou une dette selon son sens, donc la reprise
+  # doit le préciser, faute de quoi on retient l'actif — le cas majoritaire.
+  NATURE_BY_KLASS = {
+    1 => "equity", 2 => "asset", 3 => "asset", 4 => "asset",
+    5 => "asset", 6 => "expense", 7 => "revenue"
+  }.freeze
+
+  def self.klass_from(code) = code.to_s[0].to_i
+  def self.nature_from(code) = NATURE_BY_KLASS[klass_from(code)]
+
+  before_validation :infer_klass_and_nature, on: :create
+
   validates :code, presence: true, uniqueness: true, format: { with: /\A\d{3,8}\z/, message: "doit être numérique" }
   validates :name, presence: true
   validates :klass, inclusion: { in: 1..7 }
@@ -68,4 +83,15 @@ class GeneralAccount < ApplicationRecord
   # Un produit et un passif augmentent au crédit ; un actif et une charge
   # augmentent au débit. C'est ce qui donne au solde son signe lisible.
   def credit_natured? = %w[liability equity revenue].include?(nature)
+
+  private
+
+  # Une valeur explicitement fournie l'emporte toujours : la déduction est un
+  # confort de reprise, pas une règle qui écrase ce qu'un comptable a décidé.
+  def infer_klass_and_nature
+    return if code.blank?
+
+    self.klass = self.class.klass_from(code) if klass.blank?
+    self.nature = self.class.nature_from(code) if nature.blank?
+  end
 end
