@@ -1,0 +1,54 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Grand livre"
+
+= form_with url: finance_ledger_path, method: :get, class: "mb-6 p-4 bg-white rounded-lg border border-gray-100 flex flex-wrap items-end gap-4" do |f|
+  div
+    = f.label :general_account_id, "Compte", class: "block text-sm font-medium text-gray-700"
+    = f.collection_select :general_account_id, @accounts, :id, :to_s, { include_blank: "Choisir un compte…", selected: @account&.id }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+  div
+    = f.label :legal_entity_id, "Entité", class: "block text-sm font-medium text-gray-700"
+    = f.collection_select :legal_entity_id, @entities, :id, :name, { include_blank: "Toutes", selected: @entity&.id }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+  div
+    = f.label :from, "Du", class: "block text-sm font-medium text-gray-700"
+    = f.date_field :from, value: @from, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+  div
+    = f.label :to, "Au", class: "block text-sm font-medium text-gray-700"
+    = f.date_field :to, value: @to, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+  = f.submit "Afficher", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+
+- if @account.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Choisis un compte pour lire son grand livre.
+- elsif @lines.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucun mouvement sur #{@account} pour cette période.
+    p.mt-1 Solde d'ouverture : #{humanized_money_with_symbol(Money.new(@opening_cents, "EUR"))}
+- else
+  .mb-3.flex.flex-wrap.items-baseline.gap-4.text-sm
+    span.text-gray-500
+      | Ouverture :
+      strong.ml-1.text-gray-900= humanized_money_with_symbol(Money.new(@opening_cents, "EUR"))
+    span.text-gray-500
+      | Clôture :
+      strong.ml-1.text-gray-900= humanized_money_with_symbol(Money.new(@closing_cents, "EUR"))
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Date
+          th.py-3.px-6[scope="col"] Écriture
+          th.py-3.px-6[scope="col"] Libellé
+          th.py-3.px-6[scope="col"] Pôle
+          th.py-3.px-6.text-right[scope="col"] Débit
+          th.py-3.px-6.text-right[scope="col"] Crédit
+          th.py-3.px-6.text-right[scope="col"] Solde
+      tbody
+        - @lines.each do |line, running|
+          tr.border-b.bg-white
+            td.py-4.px-6.whitespace-nowrap= l(line.journal_entry.entry_date, format: :short)
+            td.py-4.px-6.whitespace-nowrap.text-gray-900= line.journal_entry.reference
+            td.py-4.px-6= line.label.presence || line.journal_entry.label
+            td.py-4.px-6= line.team&.name || "—"
+            td.py-4.px-6.text-right= line.debit_cents.positive? ? humanized_money_with_symbol(line.debit) : ""
+            td.py-4.px-6.text-right= line.credit_cents.positive? ? humanized_money_with_symbol(line.credit) : ""
+            td.py-4.px-6.text-right.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(running, "EUR"))

@@ -1,0 +1,51 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Balance"
+
+= form_with url: finance_trial_balance_path, method: :get, class: "mb-6 p-4 bg-white rounded-lg border border-gray-100 flex flex-wrap items-end gap-4" do |f|
+  div
+    = f.label :legal_entity_id, "Entité", class: "block text-sm font-medium text-gray-700"
+    = f.collection_select :legal_entity_id, @entities, :id, :name, { include_blank: "Toutes", selected: @entity&.id }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+  div
+    = f.label :from, "Du", class: "block text-sm font-medium text-gray-700"
+    = f.date_field :from, value: @from, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+  div
+    = f.label :to, "Au", class: "block text-sm font-medium text-gray-700"
+    = f.date_field :to, value: @to, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+  = f.submit "Afficher", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+
+/ L'égalité débit = crédit affichée en grand : c'est le contrôle qui se fait
+  tout seul, et le seul chiffre qu'on regarde avant de croire le reste.
+.mb-6.p-5.rounded-lg.border class="#{@balanced ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-200'}"
+  .flex.flex-wrap.items-baseline.gap-6
+    div
+      p.text-xs.uppercase.text-gray-500 Total débit
+      p.text-2xl.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(@total_debit_cents, "EUR"))
+    div
+      p.text-xs.uppercase.text-gray-500 Total crédit
+      p.text-2xl.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(@total_credit_cents, "EUR"))
+    div
+      p.text-xs.uppercase.text-gray-500 Équilibre
+      p class="text-2xl font-semibold #{@balanced ? 'text-green-700' : 'text-red-700'}"
+        = @balanced ? "✓ équilibrée" : "✗ #{humanized_money_with_symbol(Money.new(@total_debit_cents - @total_credit_cents, 'EUR'))} d'écart"
+
+- if @rows.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucune écriture sur cette période.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Compte
+          th.py-3.px-6.text-right[scope="col"] Débit
+          th.py-3.px-6.text-right[scope="col"] Crédit
+          th.py-3.px-6.text-right[scope="col"] Solde
+      tbody
+        - @rows.each do |row|
+          tr.border-b.bg-white
+            td.py-4.px-6
+              span.font-mono.text-gray-900= row[:account].code
+              span.ml-2= row[:account].name
+            td.py-4.px-6.text-right= humanized_money_with_symbol(Money.new(row[:debit_cents], "EUR"))
+            td.py-4.px-6.text-right= humanized_money_with_symbol(Money.new(row[:credit_cents], "EUR"))
+            td.py-4.px-6.text-right.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(row[:balance_cents], "EUR"))

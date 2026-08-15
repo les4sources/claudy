@@ -94,6 +94,32 @@ Rails.application.routes.draw do
         post :save_encoding
       end
     end
+    # Comptabilité en partie double (issue #177). Le référentiel et les deux
+    # lectures — grand livre et balance. Aucune route ne permet de SAISIR une
+    # écriture : elles se génèrent, elles ne se saisissent jamais.
+    get "accounting", to: "accounting#index"
+    get "ledger", to: "ledger#index"
+    get "trial_balance", to: "trial_balance#index"
+    # Journal de trésorerie (issue #179). `unallocated` est nommée AVANT la
+    # ressource : sinon `/finance/cash_entries/unallocated` serait capté par
+    # `show` avec `id = "unallocated"`.
+    get "cash_entries/unallocated", to: "cash_entries#unallocated", as: :unallocated_cash_entries
+    get "analytic_balance", to: "analytic_balance#index"
+    resources :cash_entries do
+      member do
+        post :post_entry
+        post :unpost
+        post :exclude
+      end
+      resources :allocations, only: [:create, :destroy], controller: "cash_allocations"
+    end
+
+    resources :general_accounts, path: "chart_of_accounts", except: [:show]
+    resources :legal_entities, path: "entities", except: [:show]
+    resources :fiscal_years, except: [:show] do
+      member { post :close }
+    end
+
     resources :statements, only: [:index] do
       collection do
         post :issue

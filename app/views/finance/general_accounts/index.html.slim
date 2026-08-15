@@ -1,0 +1,38 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Plan comptable",
+           links: [ \
+             link_to("➕ Nouveau compte", new_finance_general_account_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") \
+           ]
+
+.mb-4.flex.flex-wrap.items-center.gap-2.text-sm
+  = link_to "Toutes les classes", finance_general_accounts_path, class: "px-3 py-1.5 rounded-md transition-colors #{@klass.nil? ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+  - (1..7).each do |klass|
+    = link_to "Classe #{klass}", finance_general_accounts_path(klass: klass), class: "px-3 py-1.5 rounded-md transition-colors #{@klass.to_i == klass ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+
+- if @accounts.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucun compte pour ce filtre.
+    p.mt-1 Lance <code>rake accounting:seed_reference</code> pour poser le plan de départ.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Code
+          th.py-3.px-6[scope="col"] Libellé
+          th.py-3.px-6[scope="col"] Nature
+          th.py-3.px-6[scope="col"] Lettrable
+          th.py-3.px-6[scope="col"]
+      tbody
+        - @accounts.each do |account|
+          tr.border-b.bg-white
+            td.py-4.px-6.font-mono.text-gray-900= account.code
+            td.py-4.px-6.font-medium.text-gray-900
+              = account.name
+              - unless account.active?
+                span.ml-2.px-2.py-0.5.rounded-full.text-xs.bg-gray-100.text-gray-500 Inactif
+            td.py-4.px-6= account.nature_label
+            td.py-4.px-6= account.reconcilable? ? "Oui" : "—"
+            td.py-4.px-6.text-right
+              = link_to "Modifier", edit_finance_general_account_path(account), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"

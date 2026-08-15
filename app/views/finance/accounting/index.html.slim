@@ -1,0 +1,49 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Comptabilité"
+
+.mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
+  p.text-sm.text-gray-700
+    strong La double écriture se génère, elle ne se saisit jamais.
+    |  On encode un fait — une ligne bancaire ventilée, un décompte, un règlement — et l'application produit les deux côtés. Aucun écran ne permet de taper un débit et un crédit à la main.
+
+.grid.gap-4.mb-8(class="md:grid-cols-3")
+  .p-5.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.text-gray-400 Plan comptable
+    p.mt-1.text-2xl.font-semibold.text-gray-900= @accounts_count
+    p.mt-2
+      = link_to "Consulter et corriger", finance_general_accounts_path, class: "text-blue-500 text-sm border-b-2 border-blue-200 hover:text-blue-700"
+  .p-5.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.text-gray-400 Écritures passées
+    p.mt-1.text-2xl.font-semibold.text-gray-900= @entries_count
+    p.mt-2
+      = link_to "Ouvrir le grand livre", finance_ledger_path, class: "text-blue-500 text-sm border-b-2 border-blue-200 hover:text-blue-700"
+  .p-5.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.text-gray-400 Exercices ouverts
+    p.mt-1.text-2xl.font-semibold.text-gray-900= @open_years.size
+    p.mt-2
+      = link_to "Gérer les exercices", finance_fiscal_years_path, class: "text-blue-500 text-sm border-b-2 border-blue-200 hover:text-blue-700"
+
+h3.mb-3.text-lg.font-semibold.text-gray-900 Entités juridiques
+- if @entities.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p Aucune entité — lance <code>rake accounting:seed_reference</code>.
+- else
+  .overflow-x-auto.relative.mb-4
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Entité
+          th.py-3.px-6[scope="col"] Forme
+          th.py-3.px-6[scope="col"] TVA
+          th.py-3.px-6[scope="col"] Exercices
+      tbody
+        - @entities.each do |entity|
+          tr.border-b.bg-white
+            td.py-4.px-6.font-medium.text-gray-900= entity.name
+            td.py-4.px-6= entity.form_label
+            td.py-4.px-6
+              = entity.vat_regime_label
+              - if entity.vat_number.present?
+                .text-xs.text-gray-400= entity.vat_number
+            td.py-4.px-6= entity.fiscal_years.size
+= link_to "Gérer les entités", finance_legal_entities_path, class: "text-blue-500 text-sm border-b-2 border-blue-200 hover:text-blue-700"

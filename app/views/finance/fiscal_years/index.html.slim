@@ -1,0 +1,34 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Exercices comptables",
+           links: [link_to("➕ Nouvel exercice", new_finance_fiscal_year_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.mb-4.p-4.rounded-lg.border.border-amber-100(class="bg-amber-50/60")
+  p.text-sm.text-gray-700
+    | Clôturer un exercice rend ses écritures définitives : elles ne se corrigent plus que par contre-passation. Les à-nouveaux ne se calculent pas, ils se reprennent — ils attendent le bilan d'ouverture du comptable.
+
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-6[scope="col"] Entité
+        th.py-3.px-6[scope="col"] Période
+        th.py-3.px-6[scope="col"] Statut
+        th.py-3.px-6.text-right[scope="col"] Écritures
+        th.py-3.px-6[scope="col"]
+    tbody
+      - @years.each do |year|
+        tr.border-b.bg-white
+          td.py-4.px-6.font-medium.text-gray-900= year.legal_entity.name
+          td.py-4.px-6
+            = l(year.starts_on, format: :long)
+            |  →
+            = l(year.ends_on, format: :long)
+          td.py-4.px-6
+            span class="px-2 py-0.5 rounded-full text-xs #{year.closed? ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'}"
+              = year.status_label
+          td.py-4.px-6.text-right= year.journal_entries.size
+          td.py-4.px-6.text-right
+            = link_to "Modifier", edit_finance_fiscal_year_path(year), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+            - unless year.closed?
+              = button_to "Clôturer", close_finance_fiscal_year_path(year), method: :post, class: "ml-3 text-sm text-gray-500 hover:text-gray-700", form: { class: "inline" }, data: { turbo_confirm: "Clôturer l'exercice #{year.label} ? Ses écritures deviennent définitives." }

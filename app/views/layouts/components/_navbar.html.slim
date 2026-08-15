@@ -287,6 +287,30 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
             = link_to "Décomptes",
                       finance_statements_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/statements' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          / La comptabilité générale est un autre métier que le compte sourcier :
+            le séparateur le dit à l'œil plutôt que de noyer neuf entrées dans
+            une seule liste.
+          li.self-center.px-2.text-teal-200 |
+          li
+            = link_to "Comptabilité",
+                      finance_accounting_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{%w[finance/accounting finance/general_accounts finance/legal_entities finance/fiscal_years].include?(controller_path) ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
+            = link_to "Trésorerie",
+                      finance_cash_entries_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/cash_entries' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
+            = link_to "Grand livre",
+                      finance_ledger_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/ledger' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
+            = link_to "Analytique",
+                      finance_analytic_balance_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/analytic_balance' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
+            = link_to "Balance",
+                      finance_trial_balance_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/trial_balance' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
 
 - if !@organisation_view.nil?
   nav.border-b.lg:px-6(class="bg-teal-50/70 border-teal-100")

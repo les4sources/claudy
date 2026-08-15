@@ -1,0 +1,60 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Trésorerie",
+           links: [ \
+             link_to("À affecter (#{@pending_count})", finance_unallocated_cash_entries_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"), \
+             link_to("➕ Nouvelle ligne", new_finance_cash_entry_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") \
+           ]
+
+= form_with url: finance_cash_entries_path, method: :get, class: "mb-6 p-4 bg-white rounded-lg border border-gray-100 flex flex-wrap items-end gap-4" do |f|
+  div
+    = f.label :cash_account_id, "Compte", class: "block text-sm font-medium text-gray-700"
+    = f.collection_select :cash_account_id, @accounts, :id, :name, { include_blank: "Tous", selected: @account&.id }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  div
+    = f.label :status, "Statut", class: "block text-sm font-medium text-gray-700"
+    = f.select :status, CashEntry::STATUS_LABELS.map { |v, l| [l, v] }, { include_blank: "Tous", selected: @status }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  div
+    = f.label :from, "Du", class: "block text-sm font-medium text-gray-700"
+    = f.date_field :from, value: @from, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  div
+    = f.label :to, "Au", class: "block text-sm font-medium text-gray-700"
+    = f.date_field :to, value: @to, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  = f.submit "Afficher", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+
+/ Le compteur qui doit tomber à zéro. C'est le seul indicateur qui dit, en un
+  coup d'œil, si la comptabilité du mois est à jour.
+.mb-6.p-5.rounded-lg.border class="#{@pending_count.zero? ? 'bg-green-50 border-green-100' : 'bg-amber-50 border-amber-100'}"
+  p.text-xs.uppercase.text-gray-500 À affecter
+  p class="mt-1 text-2xl font-semibold #{@pending_count.zero? ? 'text-green-700' : 'text-amber-700'}"
+    - if @pending_count.zero?
+      | ✓ tout est affecté
+    - else
+      = "#{@pending_count} ligne(s) — #{humanized_money_with_symbol(Money.new(@pending_cents, 'EUR'))}"
+
+- if @entries.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucune ligne de trésorerie sur cette période.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Date
+          th.py-3.px-6[scope="col"] Compte
+          th.py-3.px-6[scope="col"] Libellé
+          th.py-3.px-6.text-right[scope="col"] Montant
+          th.py-3.px-6[scope="col"] Statut
+      tbody
+        - @entries.each do |entry|
+          tr.border-b.bg-white
+            td.py-4.px-6.whitespace-nowrap= l(entry.entry_date, format: :short)
+            td.py-4.px-6= entry.cash_account.name
+            td.py-4.px-6.font-medium.text-gray-900
+              = link_to entry.label, finance_cash_entry_path(entry), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+              - if entry.counterparty_name.present?
+                .text-xs.text-gray-400= entry.counterparty_name
+            td.py-4.px-6.text-right.font-semibold class="#{entry.incoming? ? 'text-green-700' : 'text-gray-900'}"
+              = humanized_money_with_symbol(entry.amount)
+            td.py-4.px-6
+              span class="px-2 py-0.5 rounded-full text-xs #{entry.status == 'allocated' ? 'bg-green-100 text-green-700' : entry.status == 'excluded' ? 'bg-gray-100 text-gray-500' : 'bg-amber-100 text-amber-700'}"
+                = entry.status_label

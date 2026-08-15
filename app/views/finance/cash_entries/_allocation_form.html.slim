@@ -1,0 +1,21 @@
+/ Aucun compte proposé par défaut : une allocation naît d'un geste humain, jamais
+  d'une règle qui remplit à notre place.
+= form_with model: [:finance, entry, CashAllocation.new], url: finance_cash_entry_allocations_path(entry), class: "flex flex-wrap items-end gap-3" do |f|
+  - if from_unallocated
+    = hidden_field_tag :from_unallocated, "1"
+  div
+    = f.label :general_account_id, "Compte", class: "block text-xs font-medium text-gray-500"
+    = f.collection_select :general_account_id, general_accounts, :id, :to_s, { include_blank: "Choisir…" }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  div
+    = f.label :team_id, "Pôle", class: "block text-xs font-medium text-gray-500"
+    = f.collection_select :team_id, teams, :id, :name, { include_blank: "Non affecté" }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  div
+    = f.label :legal_entity_id, "Entité", class: "block text-xs font-medium text-gray-500"
+    = f.collection_select :legal_entity_id, entities, :id, :name, {}, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  div
+    = f.label :amount, "Montant (€)", class: "block text-xs font-medium text-gray-500"
+    / Deux décimales toujours : « -450,0 » se lit comme un montant tronqué et
+      fait douter de ce qu'on est en train de valider.
+    = f.text_field :amount, value: number_with_precision(entry.remaining_cents / 100.0, precision: 2, separator: ","), class: "mt-1 w-28 rounded-md border-gray-300 text-sm shadow-sm"
+  button.inline-flex.items-center.rounded-md.border.border-transparent.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90" type="submit")
+    | Affecter
