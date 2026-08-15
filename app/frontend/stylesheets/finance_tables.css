@@ -1,0 +1,105 @@
+/* Tableaux de la section Finances — lisibles au comptoir, pas seulement au bureau.
+   ------------------------------------------------------------------------------
+
+   Le problème, constaté en ouvrant les écrans sur un iPhone 14 : un tableau à six
+   colonnes dans un conteneur qui défile horizontalement pousse les ACTIONS hors
+   de l'écran, et coupe les noms sur trois lignes. « Michael & Malau » devenait
+   trois lignes, « SRC-0001 » se brisait au tiret, et le bouton « Marquer réglé »
+   n'était atteignable qu'en devinant qu'il fallait faire glisser le tableau.
+
+   Or l'encodage se fait AU BAR, sur un téléphone. C'est le cas d'usage principal
+   de ces écrans, pas le cas dégradé.
+
+   La réponse : sous `md`, chaque ligne devient une carte, chaque cellule porte
+   son intitulé de colonne à gauche et sa valeur à droite. Aucun défilement
+   horizontal, aucune action cachée. Au-dessus de `md`, le tableau reste un
+   tableau — sur un grand écran, la densité est une qualité.
+
+   Les intitulés ne sont pas recopiés à la main dans chaque vue : le contrôleur
+   Stimulus `stacked-table` les prend dans le `thead` et les pose en
+   `data-label`. Une colonne renommée reste juste, et aucune vue n'a à savoir
+   que ce mécanisme existe. */
+
+@media (max-width: 767px) {
+  table[data-stacked-table] thead {
+    display: none;
+  }
+
+  table[data-stacked-table],
+  table[data-stacked-table] tbody,
+  table[data-stacked-table] tr,
+  table[data-stacked-table] td {
+    display: block;
+    width: 100%;
+  }
+
+  table[data-stacked-table] tr {
+    margin-bottom: 0.75rem;
+    border: 1px solid rgb(243 244 246);
+    border-radius: 0.5rem;
+    background-color: #fff;
+    overflow: hidden;
+  }
+
+  table[data-stacked-table] td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.625rem 0.875rem;
+    text-align: right;
+    border-bottom: 1px solid rgb(249 250 251);
+  }
+
+  table[data-stacked-table] td:last-child {
+    border-bottom: 0;
+  }
+
+  /* L'intitulé de colonne, posé par le contrôleur. Discret : c'est la valeur
+     qu'on lit, l'intitulé n'est là que pour lever le doute. */
+  table[data-stacked-table] td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    margin-right: auto;
+    text-align: left;
+    font-size: 0.6875rem;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgb(156 163 175);
+    font-weight: 500;
+  }
+
+  /* Une cellule sans intitulé — la colonne d'actions — occupe toute la largeur
+     et se pose en bas de la carte, là où le pouce l'attend. */
+  table[data-stacked-table] td[data-label=""],
+  table[data-stacked-table] td:not([data-label]) {
+    justify-content: flex-end;
+    background-color: rgb(249 250 251);
+  }
+
+  table[data-stacked-table] td[data-label=""]::before,
+  table[data-stacked-table] td:not([data-label])::before {
+    content: "";
+  }
+
+  /* Un montant ne se coupe jamais en deux lignes. */
+  table[data-stacked-table] td {
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Les montants s'alignent sur leurs chiffres, pas sur leur largeur de glyphe.
+   Sur une colonne de soldes, c'est la différence entre une liste qu'on parcourt
+   et une liste qu'on déchiffre : sans chiffres à chasse fixe, un « 1 » étroit
+   décale toute la ligne et l'œil ne peut plus comparer les ordres de grandeur
+   d'un coup.
+   
+   Appliqué par la structure plutôt que classe par classe : dans ces tableaux,
+   une cellule alignée à droite EST un montant. */
+table[data-stacked-table] td.text-right,
+table[data-stacked-table] th.text-right,
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}

@@ -4,7 +4,7 @@
            links: [link_to("➕ Nouvelle entité", new_finance_legal_entity_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
 
 .overflow-x-auto.relative
-  table.w-full.text-sm.text-left.text-gray-500
+  table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
     thead.text-xs.text-gray-700.uppercase.bg-gray-50
       tr
         th.py-3.px-6[scope="col"] Entité

@@ -106,6 +106,10 @@ Rails.application.routes.draw do
     get "cash_entries/unallocated", to: "cash_entries#unallocated", as: :unallocated_cash_entries
     get "analytic_balance", to: "analytic_balance#index"
     resources :coda_imports, only: [:index, :show, :create]
+    # L'arrêté du mois — la porte d'entrée de la comptabilité mensuelle.
+    get "monthly_close", to: "monthly_close#show"
+    post "monthly_close/close", to: "monthly_close#close", as: :close_monthly_close
+    post "monthly_close/reopen", to: "monthly_close#reopen", as: :reopen_monthly_close
     get "cross_check", to: "cross_check#index"
     get "collection_cost", to: "collection_cost#index"
     resources :allocation_rules, except: [:show] do

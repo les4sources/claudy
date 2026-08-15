@@ -19,7 +19,7 @@
   = section_heading_tw heading: "À émettre (#{@candidates.size})"
   = form_with url: issue_finance_statements_path(month: @month.strftime("%Y-%m")), method: :post do
     .overflow-x-auto.relative.mb-3
-      table.w-full.text-sm.text-left.text-gray-500
+      table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
         thead.text-xs.text-gray-700.uppercase.bg-gray-50
           tr
             th.py-3.px-4[scope="col"]
@@ -46,7 +46,7 @@
   p.text-sm.text-gray-500 Aucun décompte émis pour ce mois.
 - else
   .overflow-x-auto.relative
-    table.w-full.text-sm.text-left.text-gray-500
+    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
       thead.text-xs.text-gray-700.uppercase.bg-gray-50
         tr
           th.py-3.px-6[scope="col"] Compte

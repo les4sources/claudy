@@ -12,7 +12,7 @@
       | Crée une fiche par mois et par canal, puis encode-la en matrice — une ligne par produit, une colonne par compte.
 - else
   .overflow-x-auto.relative
-    table.w-full.text-sm.text-left.text-gray-500
+    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
       thead.text-xs.text-gray-700.uppercase.bg-gray-50
         tr
           th.py-3.px-6[scope="col"] Mois

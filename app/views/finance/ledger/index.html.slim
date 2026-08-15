@@ -32,7 +32,7 @@
       | Clôture :
       strong.ml-1.text-gray-900= humanized_money_with_symbol(Money.new(@closing_cents, "EUR"))
   .overflow-x-auto.relative
-    table.w-full.text-sm.text-left.text-gray-500
+    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
       thead.text-xs.text-gray-700.uppercase.bg-gray-50
         tr
           th.py-3.px-6[scope="col"] Date

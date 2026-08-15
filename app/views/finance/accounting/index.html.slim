@@ -29,7 +29,7 @@ h3.mb-3.text-lg.font-semibold.text-gray-900 Entités juridiques
     p Aucune entité — lance <code>rake accounting:seed_reference</code>.
 - else
   .overflow-x-auto.relative.mb-4
-    table.w-full.text-sm.text-left.text-gray-500
+    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
       thead.text-xs.text-gray-700.uppercase.bg-gray-50
         tr
           th.py-3.px-6[scope="col"] Entité
