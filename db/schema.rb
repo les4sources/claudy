@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_15_060000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_15_070000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -479,6 +479,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_060000) do
     t.index ["customer_id"], name: "index_coworking_reservations_on_customer_id"
     t.index ["date"], name: "index_coworking_reservations_on_date"
     t.index ["deleted_at"], name: "index_coworking_reservations_on_deleted_at"
+  end
+
+  create_table "customer_bank_accounts", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "customer_id", null: false
+    t.datetime "deleted_at"
+    t.string "holder_name"
+    t.string "iban", null: false
+    t.datetime "last_matched_at"
+    t.integer "matches_count", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_customer_bank_accounts_on_customer_id"
+    t.index ["deleted_at"], name: "index_customer_bank_accounts_on_deleted_at"
+    t.index ["iban", "customer_id"], name: "index_customer_bank_accounts_on_iban_and_customer_id", unique: true
   end
 
   create_table "customers", force: :cascade do |t|
@@ -1063,6 +1077,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_060000) do
     t.index ["room_id"], name: "index_reservations_on_room_id"
   end
 
+  create_table "revenue_mappings", force: :cascade do |t|
+    t.string "category", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "general_account_id", null: false
+    t.bigint "team_id"
+    t.datetime "updated_at", null: false
+    t.index ["category"], name: "index_revenue_mappings_on_category", unique: true
+    t.index ["deleted_at"], name: "index_revenue_mappings_on_deleted_at"
+    t.index ["general_account_id"], name: "index_revenue_mappings_on_general_account_id"
+    t.index ["team_id"], name: "index_revenue_mappings_on_team_id"
+  end
+
   create_table "roles", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
@@ -1394,6 +1421,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_060000) do
   add_foreign_key "coworking_packs", "customers"
   add_foreign_key "coworking_reservations", "coworking_packs"
   add_foreign_key "coworking_reservations", "customers"
+  add_foreign_key "customer_bank_accounts", "customers"
   add_foreign_key "customers", "humans"
   add_foreign_key "cycle_actions", "humans"
   add_foreign_key "cycle_actions", "humans", column: "delegate_to_human_id"
@@ -1440,6 +1468,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_060000) do
   add_foreign_key "recurring_charges", "member_accounts"
   add_foreign_key "reservations", "bookings"
   add_foreign_key "reservations", "rooms"
+  add_foreign_key "revenue_mappings", "general_accounts"
+  add_foreign_key "revenue_mappings", "teams"
   add_foreign_key "sent_emails", "customers"
   add_foreign_key "services", "humans"
   add_foreign_key "space_bookings", "events"

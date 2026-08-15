@@ -91,9 +91,32 @@ namespace :accounting do
       fiscal.save!
     end
 
+    # Correspondance catégorie de devis → compte de recette. Le compte est
+    # mécanique ; le pôle reste vide, c'est une décision du collectif.
+    mappings = {
+      "lodging" => "700000",
+      "spaces" => "700100",
+      "meals" => "700200",
+      "camping" => "700000",
+      "van" => "700000",
+      "terrace" => "700000",
+      "hamac" => "700000",
+      "experiences" => "700400"
+    }
+    mappings.each do |category, code|
+      compte = GeneralAccount.find_by(code: code)
+      next if compte.nil?
+
+      mapping = RevenueMapping.find_or_initialize_by(category: category)
+      created[:mappings] += 1 if mapping.new_record?
+      mapping.general_account = compte
+      mapping.save!
+    end
+
     puts "[accounting:seed_reference] #{created[:entities]} entité(s), #{created[:accounts]} compte(s), " \
          "#{created[:fiscal_years]} exercice(s) créé(s). Total : #{LegalEntity.count} entités, " \
-         "#{GeneralAccount.count} comptes, #{FiscalYear.count} exercices."
+         "#{GeneralAccount.count} comptes, #{FiscalYear.count} exercices, " \
+         "#{RevenueMapping.count} correspondances de recette."
   end
 
   desc "Vérifie l'équilibre et la cohérence des écritures — exit 1 si écart"
@@ -242,6 +265,23 @@ namespace :accounting do
     end
 
     report("verify_suggestions", ecarts, "#{AllocationSuggestion.count} suggestion(s) vérifiée(s)")
+  end
+
+  desc "Vérifie les ventilations de séjour — exit 1 si une somme ne colle pas"
+  task verify_stay_ventilations: :environment do
+    ecarts = []
+
+    CashEntry.joins(:cash_allocations)
+             .where(cash_allocations: { document_type: "Stay" })
+             .distinct.find_each do |entry|
+      affecte = entry.cash_allocations.where(document_type: "Stay").sum(:amount_cents)
+      next if affecte == entry.amount_cents
+
+      ecarts << "Ligne ##{entry.id} (#{entry.label}) : ventilation de séjour à #{affecte} " \
+                "pour un mouvement de #{entry.amount_cents}"
+    end
+
+    report("verify_stay_ventilations", ecarts, "ventilations de séjour vérifiées")
   end
 
   def report(name, ecarts, resume)

@@ -118,6 +118,7 @@ Rails.application.routes.draw do
         post :post_entry
         post :unpost
         post :exclude
+        post :ventilate
       end
       resources :allocations, only: [:create, :destroy], controller: "cash_allocations"
     end
