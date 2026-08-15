@@ -57,6 +57,7 @@ class Team < ApplicationRecord
   validates :analytic_code, uniqueness: true, allow_nil: true
   validate :depth_of_two
 
+  scope :ordered, -> { order(:name) }
   scope :roots, -> { where(parent_id: nil) }
   scope :analytics, -> { where(kind: "analytic") }
 

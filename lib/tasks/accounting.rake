@@ -38,6 +38,7 @@ namespace :accounting do
       ["400000", "Clients", 4, "asset", true],
       ["411000", "TVA à récupérer", 4, "asset"],
       ["416000", "Créances diverses", 4, "asset", true],
+      [GeneralAccount::INTER_ENTITY_CODE, "Compte courant inter-entités", 4, "asset", true],
       ["440000", "Fournisseurs", 4, "liability", true],
       ["451000", "TVA à payer", 4, "liability"],
       ["455000", "Rémunérations à payer", 4, "liability"],
@@ -170,6 +171,52 @@ namespace :accounting do
     end
 
     report("verify_internal_transfers", ecarts, "#{FiscalYear.unscoped.count} exercice(s) vérifié(s)")
+  end
+
+  desc "Vérifie la cohérence des affectations de trésorerie — exit 1 si écart"
+  task verify_allocations: :environment do
+    ecarts = []
+
+    # Le scope par défaut, pas `unscoped` : une ligne de trésorerie ne se
+    # supprime pas (le modèle le refuse), donc tout ce qui porte un `deleted_at`
+    # a été retiré à la main et ne fait plus partie du grand livre vivant.
+    CashEntry.includes(:cash_allocations, :journal_entries).find_each do |entry|
+      affecte = entry.cash_allocations.sum(&:amount_cents)
+
+      if affecte.abs > entry.amount_cents.abs
+        ecarts << "Ligne ##{entry.id} (#{entry.label}) : sur-affectée — #{affecte} pour #{entry.amount_cents}"
+      end
+
+      if entry.status == "allocated" && !entry.posted?
+        ecarts << "Ligne ##{entry.id} (#{entry.label}) : marquée affectée mais sans écriture comptable"
+      end
+
+      if entry.status == "allocated" && affecte != entry.amount_cents
+        ecarts << "Ligne ##{entry.id} (#{entry.label}) : marquée affectée alors qu'il reste #{entry.amount_cents - affecte}"
+      end
+
+      if entry.status != "allocated" && entry.posted?
+        ecarts << "Ligne ##{entry.id} (#{entry.label}) : #{entry.status} alors qu'une écriture la référence encore"
+      end
+
+      entry.cash_allocations.each do |allocation|
+        ecarts << "Ligne ##{entry.id} : allocation #{allocation.id} sans entité juridique" if allocation.legal_entity_id.blank?
+
+        if allocation.amount_cents.positive? != entry.amount_cents.positive?
+          ecarts << "Ligne ##{entry.id} : allocation #{allocation.id} de sens contraire au mouvement"
+        end
+      end
+    end
+
+    # Une écriture de trésorerie sans sa ligne source serait un montant qui
+    # n'est rattaché à aucun mouvement réel.
+    JournalEntry.unscoped.where(journal: %w[bank cash], source_type: "CashEntry").find_each do |entry|
+      next if CashEntry.unscoped.exists?(id: entry.source_id)
+
+      ecarts << "Écriture #{entry.reference} : sa ligne de trésorerie source a disparu"
+    end
+
+    report("verify_allocations", ecarts, "#{CashEntry.count} ligne(s) vérifiée(s)")
   end
 
   def report(name, ecarts, resume)

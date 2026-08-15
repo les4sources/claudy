@@ -1,0 +1,35 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "À affecter",
+           links: [link_to("Tout le journal", finance_cash_entries_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+- if @entries.blank?
+  .p-8.text-center.bg-green-50.rounded-lg.border.border-green-100
+    p.text-2xl.font-semibold.text-green-700 ✓ Rien à affecter
+    p.mt-2.text-sm.text-gray-600 Tout ce qui est passé en trésorerie est ventilé et comptabilisé. C'est l'état dans lequel on veut finir chaque mois.
+- else
+  p.mb-4.text-sm.text-gray-500
+    | #{@entries.size} ligne(s) en attente. Une ligne entièrement affectée se comptabilise toute seule.
+
+  - @entries.each do |entry|
+    .mb-4.p-4.bg-white.rounded-lg.border.border-gray-100
+      .flex.flex-wrap.items-baseline.justify-between.gap-2.mb-3
+        div
+          = link_to entry.label, finance_cash_entry_path(entry), class: "font-medium text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+          .text-xs.text-gray-400
+            = l(entry.entry_date, format: :short)
+            |  ·
+            = entry.cash_account.name
+            - if entry.counterparty_name.present?
+              |  ·
+              = entry.counterparty_name
+            - if entry.communication.present?
+              |  ·
+              = entry.communication
+        .text-right
+          .text-lg.font-semibold class="#{entry.incoming? ? 'text-green-700' : 'text-gray-900'}"
+            = humanized_money_with_symbol(entry.amount)
+          - if entry.allocated_cents != 0
+            .text-xs.text-amber-700
+              | reste #{humanized_money_with_symbol(Money.new(entry.remaining_cents, "EUR"))}
+      = render "allocation_form", entry: entry, general_accounts: @general_accounts, teams: @teams, entities: @entities, from_unallocated: true

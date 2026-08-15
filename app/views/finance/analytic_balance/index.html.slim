@@ -1,0 +1,49 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Balance analytique"
+
+= form_with url: finance_analytic_balance_path, method: :get, class: "mb-6 p-4 bg-white rounded-lg border border-gray-100 flex flex-wrap items-end gap-4" do |f|
+  div
+    = f.label :legal_entity_id, "Entité", class: "block text-sm font-medium text-gray-700"
+    = f.collection_select :legal_entity_id, @entities, :id, :name, { include_blank: "Toutes", selected: @entity&.id }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  div
+    = f.label :from, "Du", class: "block text-sm font-medium text-gray-700"
+    = f.date_field :from, value: @from, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  div
+    = f.label :to, "Au", class: "block text-sm font-medium text-gray-700"
+    = f.date_field :to, value: @to, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  = f.submit "Afficher", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+
+- if @pending_entries.positive?
+  .mb-4.p-4.rounded-lg.border.border-amber-100(class="bg-amber-50/60")
+    p.text-sm.text-gray-700
+      | #{@pending_entries} ligne(s) de trésorerie ne sont pas encore affectées — ces chiffres sont donc incomplets.
+      = link_to "Les affecter", finance_unallocated_cash_entries_path, class: "ml-1 text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+
+- if @rows.blank? && @unallocated.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucune charge ni produit comptabilisé sur cette période.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Pôle
+          th.py-3.px-6.text-right[scope="col"] Produits
+          th.py-3.px-6.text-right[scope="col"] Charges
+          th.py-3.px-6.text-right[scope="col"] Net
+      tbody
+        - @rows.each do |row|
+          tr.border-b.bg-white
+            td.py-4.px-6.font-medium.text-gray-900= row[:team].name
+            td.py-4.px-6.text-right= humanized_money_with_symbol(Money.new(row[:revenue_cents], "EUR"))
+            td.py-4.px-6.text-right= humanized_money_with_symbol(Money.new(row[:charges_cents], "EUR"))
+            td.py-4.px-6.text-right.font-semibold class="#{row[:net_cents].negative? ? 'text-red-700' : 'text-gray-900'}"
+              = humanized_money_with_symbol(Money.new(row[:net_cents], "EUR"))
+        / La part non affectée est montrée comme telle et jamais répartie au
+          prorata : un chiffre réparti d'office a l'air complet et ne l'est pas.
+        - if @unallocated.present?
+          tr.border-b(class="bg-amber-50/60")
+            td.py-4.px-6.font-medium.text-amber-800 — non affecté à un pôle
+            td.py-4.px-6.text-right= humanized_money_with_symbol(Money.new(@unallocated[:revenue_cents], "EUR"))
+            td.py-4.px-6.text-right= humanized_money_with_symbol(Money.new(@unallocated[:charges_cents], "EUR"))
+            td.py-4.px-6.text-right.font-semibold.text-amber-800= humanized_money_with_symbol(Money.new(@unallocated[:net_cents], "EUR"))

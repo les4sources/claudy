@@ -20,6 +20,21 @@ module FinanceBuilders
       GeneralAccount.create!(code: code, name: name, klass: klass, nature: nature)
   end
 
+  def build_cash_account(entity, general_account, name: "Banque Triodos", kind: "bank")
+    CashAccount.create!(name: name, kind: kind, legal_entity: entity, general_account: general_account)
+  end
+
+  def build_cash_entry(cash_account, amount_cents: 130_000, entry_date: Date.new(2026, 6, 15),
+                       label: "Virement client")
+    CashEntry.create!(cash_account: cash_account, entry_date: entry_date,
+                      amount_cents: amount_cents, label: label)
+  end
+
+  def allocate(cash_entry, account:, amount_cents:, entity:, team: nil)
+    cash_entry.cash_allocations.create!(general_account: account, amount_cents: amount_cents,
+                                        legal_entity: entity, team: team)
+  end
+
   # Une écriture équilibrée minimale : un débit, un crédit, le même montant.
   def post_simple_entry(entity:, debit_account:, credit_account:, amount_cents: 10_000,
                         entry_date: Date.new(2026, 6, 15), journal: "misc", source: nil,

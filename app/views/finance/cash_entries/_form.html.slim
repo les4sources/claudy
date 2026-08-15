@@ -1,0 +1,29 @@
+= form_with model: [:finance, entry], class: "space-y-4" do |f|
+  = render "finance/shared/form_errors", record: entry
+  .grid.gap-4(class="md:grid-cols-3")
+    div
+      = f.label :cash_account_id, "Compte de trésorerie *", class: "block text-sm font-medium text-gray-700"
+      = f.collection_select :cash_account_id, accounts, :id, :name, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+    div
+      = f.label :entry_date, "Date d'opération *", class: "block text-sm font-medium text-gray-700"
+      = f.date_field :entry_date, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+    div
+      = f.label :amount, "Montant (€) *", class: "block text-sm font-medium text-gray-700"
+      = f.text_field :amount, value: entry.amount_cents ? number_with_precision(entry.amount_cents / 100.0, precision: 2, separator: ",") : nil, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      p.mt-1.text-xs.text-gray-500 Négatif pour un décaissement.
+  div
+    = f.label :label, "Libellé *", class: "block text-sm font-medium text-gray-700"
+    = f.text_field :label, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+  .grid.gap-4(class="md:grid-cols-3")
+    div
+      = f.label :counterparty_name, "Tiers", class: "block text-sm font-medium text-gray-700"
+      = f.text_field :counterparty_name, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+    div
+      = f.label :counterparty_iban, "IBAN", class: "block text-sm font-medium text-gray-700"
+      = f.text_field :counterparty_iban, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+    div
+      = f.label :communication, "Communication", class: "block text-sm font-medium text-gray-700"
+      = f.text_field :communication, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+  .flex.items-center.gap-3
+    = f.submit "Enregistrer", class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+    = link_to "Annuler", finance_cash_entries_path, class: "text-sm text-gray-500 hover:text-gray-700"
