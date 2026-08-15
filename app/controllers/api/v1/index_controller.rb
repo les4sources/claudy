@@ -57,6 +57,8 @@ module Api
             { name: "analytic_accounts", path: api_v1_analytic_accounts_path, description: "Axes analytiques, rattachables à une équipe. POST/PATCH, upsert sur le code. Filtres: q, team_id." },
             { name: "fiscal_years", path: api_v1_fiscal_years_path, description: "Exercices comptables par entité. POST/PATCH, upsert sur (entité, date de début) ; un exercice clôturé sort en 409. Filtres: legal_entity_id, status." },
             { name: "opening_entries", path: api_v1_opening_entries_path, description: "Écritures d'à-nouveau. La SEULE écriture comptable que l'API pose ; refusée si elle ne balance pas, et rejouée par contre-passation." },
+            { name: "cash_accounts", path: api_v1_cash_accounts_path, description: "Comptes de trésorerie (banque, caisse, Stripe) et leur contrepartie générale. POST/PATCH, upsert sur le nom. Filtres: kind, active." },
+            { name: "coda_imports", path: api_v1_coda_imports_path, description: "Dépôt d'extraits CODA : POST { filename, content }. Rejouer un fichier déjà déposé rend 200 sans rien créer ; un fichier refusé rend 422 avec le motif chiffré." },
             { name: "paper_sheets", path: api_v1_paper_sheets_path, description: "Fiches papier mensuelles et leur encodage matriciel (POST /paper_sheets/:id/encode). Filtres: channel, status, period_month." }
           ],
           example: "curl -H 'Authorization: Bearer $AGENT_API_TOKEN' #{api_v1_bookings_url}"

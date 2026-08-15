@@ -125,24 +125,54 @@ module Coda
     # compte général de contrepartie — une décision qui n'appartient pas à un
     # import de fichier.
     def resolve_accounts(file)
-      known = CashAccount.all.index_by { |account| normalize(account.iban) }
+      known = CashAccount.all.reject { |account| account.iban.blank? }
       manquants = []
+      ambigus = []
 
       resolved = file.statements.each_with_object({}) do |statement, hash|
         key = normalize(statement.account_number)
-        account = known[key]
-        manquants << statement.account_number if account.nil?
-        hash[key] = account
+        candidats = known.select { |account| same_account?(account.iban, statement.account_number) }
+
+        manquants << statement.account_number if candidats.empty?
+        ambigus << [statement.account_number, candidats.map(&:name)] if candidats.size > 1
+        hash[key] = candidats.first
       end
 
       if manquants.any?
         raise Rejected,
-              "Aucun compte de trésorerie ne porte l'IBAN #{manquants.uniq.join(', ')}. " \
+              "Aucun compte de trésorerie ne porte le numéro de compte #{manquants.uniq.join(', ')}. " \
               "Crée-le dans Comptabilité > Entités avant de réimporter — un import ne crée pas de compte."
+      end
+
+      if ambigus.any?
+        détail = ambigus.uniq.map { |numéro, noms| "#{numéro} → #{noms.join(' et ')}" }.join(" ; ")
+        raise Rejected,
+              "Le numéro de compte est porté par PLUSIEURS comptes de trésorerie : #{détail}. " \
+              "Corrige les IBAN avant de réimporter — choisir à ta place serait pire que refuser."
       end
 
       resolved
     end
+
+    # Un fichier CODA belge identifie le compte par sa BBAN — douze chiffres,
+    # `523080601116` — parfois suivie du code devise. claudy, lui, stocke un
+    # IBAN, `BE72 5230 8060 1116`. Les deux désignent le même compte, et une
+    # comparaison de chaînes ne peut pas le voir : sans ce rapprochement, aucun
+    # CODA belge réel n'entre, quel que soit le compte.
+    #
+    # La règle reste stricte : on compare les CHIFFRES du numéro de compte, et
+    # l'IBAN doit s'y terminer. Une BBAN de douze chiffres ne se retrouve pas en
+    # fin d'un autre IBAN par hasard, et un numéro trop court (moins de six
+    # chiffres) ne rapproche rien du tout plutôt que de rapprocher au hasard.
+    def same_account?(iban, coda_number)
+      gauche = digits(iban)
+      droite = digits(coda_number)
+      return false if gauche.blank? || droite.length < 6
+
+      gauche == droite || gauche.end_with?(droite)
+    end
+
+    def digits(value) = value.to_s.gsub(/\D/, "")
 
     def validate!(file, _accounts)
       validate_trailer!(file)
@@ -171,9 +201,11 @@ module Coda
       end
 
       # Continuité avec ce qui est déjà en base.
-      file.statements.group_by { |s| normalize(s.account_number) }.each do |key, statements|
-        account = CashAccount.find_by(iban: statements.first.account_number) ||
-                  CashAccount.all.find { |a| normalize(a.iban) == key }
+      file.statements.group_by { |s| normalize(s.account_number) }.each_value do |statements|
+        # Le MÊME rapprochement que `resolve_accounts`, sinon le contrôle de
+        # continuité se croit sans compte et se tait — exactement le contrôle
+        # qu'on ne veut pas voir se taire.
+        account = CashAccount.all.find { |a| same_account?(a.iban, statements.first.account_number) }
         next if account.nil?
 
         dernier = CodaStatement.last_for(account)

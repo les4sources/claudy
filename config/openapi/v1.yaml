@@ -1489,6 +1489,114 @@ paths:
         "409": { description: "Exercice clôturé." }
         "422": { description: "À-nouveau déséquilibré, ou compte inconnu." }
 
+  /cash_accounts:
+    get:
+      tags: [Comptabilité]
+      summary: Lister les comptes de trésorerie
+      parameters:
+        - { name: kind, in: query, schema: { type: string, enum: [bank, cash, stripe] } }
+        - { name: active, in: query, schema: { type: boolean } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: Liste paginée de comptes de trésorerie. }
+    post:
+      tags: [Comptabilité]
+      summary: Créer (ou retrouver) un compte de trésorerie
+      description: >
+        UPSERT sur le nom. Un import CODA refuse de créer le compte qu'il ne
+        connaît pas — décider qu'un compte bancaire existe, et avec quelle
+        contrepartie générale, n'appartient pas à un import de fichier. Le compte
+        général s'adresse par son CODE, pas par son identifiant : un identifiant
+        technique ne survit pas à une reprise de référentiel.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cash_account]
+              properties:
+                cash_account:
+                  type: object
+                  required: [name, kind]
+                  properties:
+                    name: { type: string }
+                    kind: { type: string, enum: [bank, cash, stripe] }
+                    iban: { type: string }
+                    legal_entity_id: { type: integer }
+                    general_account_code: { type: string }
+                    active: { type: boolean }
+      responses:
+        "201": { description: Compte créé. }
+        "200": { description: Compte existant retrouvé sur son nom. }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /cash_accounts/{id}:
+    get:
+      tags: [Comptabilité]
+      summary: Détail d'un compte de trésorerie
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Compte. }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Comptabilité]
+      summary: Modifier un compte de trésorerie
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { cash_account: { type: object } } }
+      responses:
+        "200": { description: Compte mis à jour. }
+
+  /coda_imports:
+    get:
+      tags: [Comptabilité]
+      summary: Lister les dépôts CODA
+      parameters:
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: Liste paginée de dépôts, avec leurs relevés. }
+    post:
+      tags: [Comptabilité]
+      summary: Déposer un extrait CODA
+      description: >
+        Passe par le même service que l'écran, et de façon SYNCHRONE : un import
+        bancaire qui échoue en silence dans un job est une panne qu'on découvre
+        trois mois plus tard, à la clôture. Un fichier déjà déposé rend 200 avec
+        le statut `already_imported` et ne crée rien — rejouer un import est une
+        opération normale. Un fichier refusé rend 422 avec le motif chiffré :
+        relevé qui ne se referme pas, chaînage rompu, ou compte inconnu. Le
+        rapprochement du compte se fait sur les chiffres du numéro de compte, ce
+        qui permet à une BBAN belge de retrouver son IBAN. Aucune allocation
+        n'est créée : les lignes arrivent en attente, un humain ventile.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                filename: { type: string }
+                content: { type: string, description: "Le contenu du fichier CODA, en clair." }
+      responses:
+        "201": { description: Fichier importé. }
+        "200": { description: "Fichier déjà déposé — rien créé." }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { description: "Fichier refusé : le motif porte le relevé et l'écart chiffré." }
+  /coda_imports/{id}:
+    get:
+      tags: [Comptabilité]
+      summary: Détail d'un dépôt CODA
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Dépôt et ses relevés. }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /paper_sheets:
     get:
       tags: [Bar & comptes internes]
