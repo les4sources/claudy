@@ -78,8 +78,19 @@ class PaperSheet < ApplicationRecord
 
   # Le catalogue du canal, à la date de la fiche : encoder mars 2024 doit
   # utiliser les prix de mars 2024.
+  #
+  # Les articles ACTIFS du canal, PLUS ceux que cette fiche porte déjà. Une fiche
+  # de février 2022 contient une soixantaine d'articles qui ne sont plus vendus
+  # (Atrium PAM, Grosse Bertha, Chips Lucien…) : les filtrer sur `active` rendrait
+  # la fiche illisible et inencodable, et les laisser actifs polluerait l'écran du
+  # mois courant de soixante lignes mortes. L'union règle les deux d'un coup —
+  # chaque fiche montre exactement ses propres articles.
   def catalog_items
-    CatalogItem.active.for_channel(channel).ordered.includes(:catalog_prices)
+    used_ids = account_entries.where.not(catalog_item_id: nil).distinct.pluck(:catalog_item_id)
+    scope = CatalogItem.for_channel(channel)
+    scope = used_ids.any? ? scope.where(active: true).or(scope.where(id: used_ids)) : scope.active
+
+    scope.ordered.includes(:catalog_prices)
   end
 
   def price_for(item) = item.price_on(entry_date)
