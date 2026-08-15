@@ -125,21 +125,14 @@ module CampingComposition
   end
 
   # Ventile un total en cents sur des plages, au prorata de leurs poids
-  # (`value × nights`), le reste de division allant aux plus fortes parts
-  # fractionnaires (largest-remainder). Somme EXACTEMENT égale à `total` —
+  # (`value × nights`), au plus fort reste. Somme EXACTEMENT égale à `total` —
   # c'est l'invariant asserté en spec : ∑ plages == part camping/van du devis.
   # Sur le cas uniforme, chaque plage porte exactement `people × nuits × tarif`.
-  def distribute_cents(total, weights)
-    total = total.to_i
-    sum = weights.sum
-    return Array.new(weights.size, 0) if sum <= 0
-
-    base = weights.map { |w| total * w / sum }
-    remainder = total - base.sum
-    order = weights.each_index.sort_by { |i| [-((total * weights[i]) % sum), i] }
-    remainder.times { |k| base[order[k % base.size]] += 1 }
-    base
-  end
+  #
+  # L'algorithme vit maintenant dans `MoneyDistribution` : la ventilation des
+  # recettes de séjour en a besoin aussi, et trois copies d'un arrondi, c'est
+  # trois occasions de perdre un centime à des endroits différents.
+  def distribute_cents(total, weights) = MoneyDistribution.distribute_cents(total, weights)
 
   # --- Disponibilité capacité globale (forçable) ---------------------------
 

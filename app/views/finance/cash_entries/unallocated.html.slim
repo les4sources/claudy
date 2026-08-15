@@ -32,6 +32,30 @@
           - if entry.allocated_cents != 0
             .text-xs.text-amber-700
               | reste #{humanized_money_with_symbol(Money.new(entry.remaining_cents, "EUR"))}
+      - proposition = @stay_matches[entry.id]
+      - if proposition
+        / Le DÉTAIL de la ventilation, pas seulement le total : c'est ce qui
+          permet de repérer d'un coup d'œil qu'on s'apprête à ranger une salle
+          dans l'hébergement.
+        .mb-3.p-3.rounded-lg.border.border-green-100(class="bg-green-50/60")
+          .flex.flex-wrap.items-start.justify-between.gap-3
+            div
+              p.text-sm.text-gray-800
+                strong Ce virement paie le séjour ##{proposition[:match].stay.id}
+                - if proposition[:match].stay.customer
+                  = " — #{proposition[:match].stay.customer.try(:organization_name).presence || [proposition[:match].stay.customer.first_name, proposition[:match].stay.customer.last_name].compact.join(' ')}"
+              p.mt-0.5.text-xs.text-gray-500
+                = proposition[:match].rationale
+                = " (#{proposition[:match].confidence} % de confiance)"
+              ul.mt-2.text-xs.text-gray-600
+                - proposition[:lines].each do |ligne|
+                  li
+                    = "#{ligne.general_account.code} #{RevenueMapping::CATEGORY_LABELS.fetch(ligne.category, ligne.category)} : "
+                    strong= humanized_money_with_symbol(Money.new(ligne.amount_cents, "EUR"))
+                    - if ligne.team
+                      = " · #{ligne.team.name}"
+            = button_to "Ventiler ce séjour", ventilate_finance_cash_entry_path(entry, stay_id: proposition[:match].stay.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+
       - suggestion = entry.allocation_suggestions.pending.ordered.first
       - if suggestion
         / La suggestion porte TOUJOURS son motif : un humain doit pouvoir juger
