@@ -9,6 +9,40 @@
 # Une ligne ne se détruit jamais. Un relevé bancaire est un fait : s'il est
 # entré par erreur, on l'exclut avec un motif, ce qui laisse une trace de la
 # décision. Supprimer effacerait la question au lieu d'y répondre.
+# == Schema Information
+#
+# Table name: cash_entries
+#
+#  id                :bigint           not null, primary key
+#  allocated_at      :datetime
+#  amount_cents      :bigint           not null
+#  communication     :string
+#  counterparty_iban :string
+#  counterparty_name :string
+#  deleted_at        :datetime
+#  entry_date        :date             not null
+#  excluded_reason   :string
+#  external_ref      :string
+#  label             :string           not null
+#  statement_ref     :string
+#  status            :string           default("pending"), not null
+#  value_date        :date
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  cash_account_id   :bigint           not null
+#
+# Indexes
+#
+#  index_cash_entries_on_cash_account_id  (cash_account_id)
+#  index_cash_entries_on_deleted_at       (deleted_at)
+#  index_cash_entries_on_entry_date       (entry_date)
+#  index_cash_entries_on_external_ref     (cash_account_id,external_ref) UNIQUE WHERE (external_ref IS NOT NULL)
+#  index_cash_entries_on_status           (status)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (cash_account_id => cash_accounts.id)
+#
 class CashEntry < ApplicationRecord
   STATUSES = %w[pending allocated excluded].freeze
   STATUS_LABELS = {

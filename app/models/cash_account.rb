@@ -38,6 +38,8 @@ class CashAccount < ApplicationRecord
   has_paper_trail
   has_soft_deletion default_scope: true
 
+  has_many :cash_entries, dependent: :restrict_with_error
+
   belongs_to :legal_entity
   belongs_to :general_account
 

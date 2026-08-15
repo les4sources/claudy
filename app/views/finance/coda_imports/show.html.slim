@@ -1,0 +1,48 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: @import.filename,
+           links: [link_to("← Tous les imports", finance_coda_imports_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.grid.gap-4.mb-6(class="md:grid-cols-4")
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.text-gray-400 Relevés
+    p.mt-1.text-xl.font-semibold.text-gray-900= @import.statements_count
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.text-gray-400 Lignes créées
+    p.mt-1.text-xl.font-semibold.text-gray-900= @import.entries_count
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.text-gray-400 Créé le
+    p.mt-1.text-xl.font-semibold.text-gray-900= @import.creation_date ? l(@import.creation_date, format: :short) : "—"
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.text-gray-400 Statut
+    p.mt-1.text-xl.font-semibold.text-gray-900= @import.status_label
+
+- if @import.report.present?
+  .mb-6.p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-2.text-sm.font-semibold.text-gray-900 Rapport
+    pre.text-xs.text-gray-600.whitespace-pre-wrap= @import.report
+
+h3.mb-3.text-lg.font-semibold.text-gray-900 Relevés
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-6[scope="col"] Compte
+        th.py-3.px-6[scope="col"] Relevé
+        th.py-3.px-6.text-right[scope="col"] Ancien solde
+        th.py-3.px-6.text-right[scope="col"] Nouveau solde
+        th.py-3.px-6.text-right[scope="col"] Lignes
+    tbody
+      - @statements.each do |statement|
+        tr.border-b.bg-white
+          td.py-4.px-6.font-medium.text-gray-900= statement.cash_account.name
+          td.py-4.px-6
+            = statement.label
+            - if statement.new_balance_date
+              .text-xs.text-gray-400= l(statement.new_balance_date, format: :short)
+          td.py-4.px-6.text-right= humanized_money_with_symbol(Money.new(statement.old_balance_cents, "EUR"))
+          td.py-4.px-6.text-right.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(statement.new_balance_cents, "EUR"))
+          td.py-4.px-6.text-right= statement.entries_count
+
+.mt-6
+  = link_to "Voir les lignes à affecter", finance_unallocated_cash_entries_path, class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"

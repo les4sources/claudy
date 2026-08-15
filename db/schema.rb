@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_15_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_15_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -353,6 +353,44 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_030000) do
     t.datetime "updated_at", null: false
     t.index ["catalog_item_id", "active_from"], name: "index_catalog_prices_on_catalog_item_id_and_active_from", unique: true
     t.index ["catalog_item_id"], name: "index_catalog_prices_on_catalog_item_id"
+  end
+
+  create_table "coda_imports", force: :cascade do |t|
+    t.text "content", null: false
+    t.datetime "created_at", null: false
+    t.date "creation_date"
+    t.datetime "deleted_at"
+    t.integer "entries_count", default: 0, null: false
+    t.string "file_reference"
+    t.string "filename", null: false
+    t.datetime "imported_at"
+    t.text "report"
+    t.string "sha256", null: false
+    t.integer "statements_count", default: 0, null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.string "whodunnit"
+    t.index ["deleted_at"], name: "index_coda_imports_on_deleted_at"
+    t.index ["sha256"], name: "index_coda_imports_on_sha256", unique: true
+  end
+
+  create_table "coda_statements", force: :cascade do |t|
+    t.bigint "cash_account_id", null: false
+    t.bigint "coda_import_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.integer "entries_count", default: 0, null: false
+    t.bigint "new_balance_cents", null: false
+    t.date "new_balance_date"
+    t.bigint "old_balance_cents", null: false
+    t.date "old_balance_date"
+    t.integer "period_year", null: false
+    t.string "sequence_number", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cash_account_id", "period_year", "sequence_number"], name: "index_coda_statements_on_account_and_sequence", unique: true
+    t.index ["cash_account_id"], name: "index_coda_statements_on_cash_account_id"
+    t.index ["coda_import_id"], name: "index_coda_statements_on_coda_import_id"
+    t.index ["deleted_at"], name: "index_coda_statements_on_deleted_at"
   end
 
   create_table "coworking_packs", force: :cascade do |t|
@@ -1282,6 +1320,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_030000) do
   add_foreign_key "cash_allocations", "teams"
   add_foreign_key "cash_entries", "cash_accounts"
   add_foreign_key "catalog_prices", "catalog_items"
+  add_foreign_key "coda_statements", "cash_accounts"
+  add_foreign_key "coda_statements", "coda_imports"
   add_foreign_key "coworking_packs", "customers"
   add_foreign_key "coworking_reservations", "coworking_packs"
   add_foreign_key "coworking_reservations", "customers"

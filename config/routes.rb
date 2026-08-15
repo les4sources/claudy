@@ -105,6 +105,7 @@ Rails.application.routes.draw do
     # `show` avec `id = "unallocated"`.
     get "cash_entries/unallocated", to: "cash_entries#unallocated", as: :unallocated_cash_entries
     get "analytic_balance", to: "analytic_balance#index"
+    resources :coda_imports, only: [:index, :show, :create]
     resources :cash_entries do
       member do
         post :post_entry
