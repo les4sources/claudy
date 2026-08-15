@@ -107,6 +107,7 @@ Rails.application.routes.draw do
     get "analytic_balance", to: "analytic_balance#index"
     resources :coda_imports, only: [:index, :show, :create]
     get "cross_check", to: "cross_check#index"
+    get "collection_cost", to: "collection_cost#index"
     resources :allocation_rules, except: [:show] do
       member { post :move }
     end

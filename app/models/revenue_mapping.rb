@@ -5,6 +5,30 @@
 # collectif, pas une évidence technique. La colonne reste donc vide tant que
 # personne ne l'a tranchée, et une recette sans pôle apparaît comme non affectée
 # plutôt que rangée au hasard.
+# == Schema Information
+#
+# Table name: revenue_mappings
+#
+#  id                 :bigint           not null, primary key
+#  category           :string           not null
+#  deleted_at         :datetime
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  general_account_id :bigint           not null
+#  team_id            :bigint
+#
+# Indexes
+#
+#  index_revenue_mappings_on_category            (category) UNIQUE
+#  index_revenue_mappings_on_deleted_at          (deleted_at)
+#  index_revenue_mappings_on_general_account_id  (general_account_id)
+#  index_revenue_mappings_on_team_id             (team_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (general_account_id => general_accounts.id)
+#  fk_rails_...  (team_id => teams.id)
+#
 class RevenueMapping < ApplicationRecord
   CATEGORIES = %w[lodging spaces camping van meals terrace hamac experiences].freeze
   CATEGORY_LABELS = {
