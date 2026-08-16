@@ -1597,6 +1597,67 @@ paths:
         "200": { description: Dépôt et ses relevés. }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /cash_entries:
+    get:
+      tags: [Comptabilité]
+      summary: Lister les lignes du journal de trésorerie
+      parameters:
+        - { name: cash_account_id, in: query, schema: { type: integer } }
+        - { name: status, in: query, schema: { type: string, enum: [pending, allocated, excluded] } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: Liste paginée de lignes, dans l'ordre chronologique. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Comptabilité]
+      summary: Créer une ligne de trésorerie hors CODA
+      description: >
+        Pour ce que la banque ne raconte pas — une caisse en espèces ne produit
+        aucun fichier CODA. La ligne arrive `pending` : l'affectation reste
+        humaine. `external_ref` porte l'idempotence, et la base la garantit par
+        un index unique sur (compte, référence) ; rejouer un import met donc à
+        jour au lieu de créer une seconde ligne. Une ligne déjà comptabilisée
+        sort en 409 : elle est gelée, et la correction passe par une
+        contre-passation. Le compte s'adresse par son identifiant ou par son NOM.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cash_entry]
+              properties:
+                cash_entry:
+                  type: object
+                  required: [entry_date, amount_cents, label]
+                  properties:
+                    cash_account_id: { type: integer }
+                    cash_account_name: { type: string, description: "Alternative à l'identifiant." }
+                    entry_date: { type: string, format: date }
+                    value_date: { type: string, format: date }
+                    amount_cents: { type: integer, description: "Signé : positif = entrée, négatif = sortie. Zéro refusé." }
+                    label: { type: string }
+                    counterparty_name: { type: string }
+                    communication: { type: string }
+                    external_ref: { type: string }
+      responses:
+        "201": { description: Ligne créée. }
+        "200": { description: Ligne retrouvée sur sa référence et mise à jour. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { description: "Ligne déjà comptabilisée, donc gelée." }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /cash_entries/{id}:
+    get:
+      tags: [Comptabilité]
+      summary: Détail d'une ligne de trésorerie
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Ligne. }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /paper_sheets:
     get:
       tags: [Bar & comptes internes]
