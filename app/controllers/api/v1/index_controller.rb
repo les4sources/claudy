@@ -26,10 +26,12 @@ module Api
             money: "Montants exposés en centimes (`cents`) + version formatée.",
             writes: "PATCH /<ressource>/:id pour éditer, DELETE /<ressource>/:id pour supprimer (soft-delete). " \
                     "Corps JSON encapsulé sous la clé de la ressource, ex. { \"booking\": { \"status\": \"confirmed\" } }. " \
-                    "La création (POST) n'est exposée que sur catalog_items, ses prices et paper_sheets.",
-            upsert: "Sur catalog_items et paper_sheets, POST est un UPSERT : sur la clé naturelle " \
-                    "(canal + nom pour un article, mois + canal pour une fiche). Rejouer un import ne " \
-                    "duplique donc rien ; `meta.created` dit si l'enregistrement a été créé ou retrouvé.",
+                    "La création (POST) est exposée sur catalog_items, ses prices, paper_sheets, member_accounts, " \
+                    "account_entries et les règlements — les données d'exploitation n'ont pas à passer par un script versionné dans un dépôt public.",
+            upsert: "POST est un UPSERT partout où une clé naturelle existe : canal + nom pour un article, " \
+                    "mois + canal pour une fiche, nom pour un compte membre, `idempotency_key` pour une écriture, " \
+                    "`reference` pour un règlement. Rejouer un import ne duplique donc rien ; `meta.created` dit " \
+                    "si l'enregistrement a été créé ou retrouvé.",
             soft_delete: "DELETE effectue une suppression douce (soft-delete) : l'enregistrement disparaît de l'API mais reste auditable."
           },
           resources: [
@@ -48,7 +50,9 @@ module Api
             { name: "tasks", path: api_v1_tasks_path, description: "Tâches de l'organisation. Filtres: status, project_id." },
             { name: "payments", path: api_v1_payments_path, description: "Paiements liés aux réservations (identifiants Stripe non exposés)." },
             { name: "catalog_items", path: api_v1_catalog_items_path, description: "Catalogue bar/cellier/repas. Filtres: channel, q, active, on (date de résolution du prix). POST/PATCH/DELETE exposés." },
-            { name: "member_accounts", path: api_v1_member_accounts_path, description: "Comptes courants internes des ménages et personnes, avec leur solde recalculé. Lecture seule. Filtres: q, kind, active." },
+            { name: "member_accounts", path: api_v1_member_accounts_path, description: "Comptes courants internes des ménages et personnes, avec leur solde recalculé. POST (upsert sur le nom)/PATCH exposés. Filtres: q, kind, active." },
+            { name: "account_entries", path: api_v1_account_entries_path, description: "Écritures de compte courant hors fiche papier (charges, loyers, forfaits, arrondis). POST avec idempotency_key. Filtres: member_account_id, flow, source, from, to." },
+            { name: "settlements", path: api_v1_member_account_settlements_path(":member_account_id"), description: "Règlements reçus sur un compte : POST /member_accounts/:id/settlements. Idempotent sur `reference`." },
             { name: "paper_sheets", path: api_v1_paper_sheets_path, description: "Fiches papier mensuelles et leur encodage matriciel (POST /paper_sheets/:id/encode). Filtres: channel, status, period_month." }
           ],
           example: "curl -H 'Authorization: Bearer $AGENT_API_TOKEN' #{api_v1_bookings_url}"

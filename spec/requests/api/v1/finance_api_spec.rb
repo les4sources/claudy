@@ -150,10 +150,18 @@ RSpec.describe "Api::V1 bar & comptes internes", type: :request do
                                             "entries_count" => 1, "kind_label" => "Ménage")
     end
 
-    it "n'expose ni création ni édition — un compte s'ouvre dans l'app" do
-      expect { post_json "/api/v1/member_accounts", { member_account: { name: "X", kind: "entity" } } }
-        .to raise_error(ActionController::RoutingError)
-      expect { patch_json "/api/v1/member_accounts/#{account.id}", { member_account: { name: "Y" } } }
+    # La création s'est ouverte en #193 : les fiches de bar d'avant 2025 portent
+    # des ménages partis et des personnes de passage qui n'existent nulle part
+    # dans claudy, et sans compte leur consommation est perdue. Ce qui reste
+    # fermé, c'est la SUPPRESSION — on désactive un compte, on ne l'efface pas.
+    it "expose la création et l'édition, mais jamais la suppression" do
+      post_json "/api/v1/member_accounts", { member_account: { name: "X", kind: "entity" } }
+      expect(response).to have_http_status(:created)
+
+      patch_json "/api/v1/member_accounts/#{account.id}", { member_account: { active: false } }
+      expect(response).to have_http_status(:ok)
+
+      expect { delete "/api/v1/member_accounts/#{account.id}", headers: auth }
         .to raise_error(ActionController::RoutingError)
     end
   end

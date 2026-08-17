@@ -411,7 +411,15 @@ Rails.application.routes.draw do
       resources :catalog_items, only: [:index, :show, :create, :update, :destroy] do
         resources :prices, only: [:index, :create, :update, :destroy], controller: "catalog_prices"
       end
-      resources :member_accounts, only: [:index, :show]
+      # Reprise de l'historique (#193) : les comptes des sourciers, leurs
+      # écritures et leurs règlements s'écrivent par ici. Les fiches de bar
+      # d'avant 2025 portent des ménages partis et des personnes de passage qui
+      # n'ont aucun compte dans claudy — sans création, leur consommation est
+      # perdue et aucun total mensuel ne se recoupe.
+      resources :member_accounts, only: [:index, :show, :create, :update] do
+        resources :settlements, only: [:index, :create], controller: "account_settlements"
+      end
+      resources :account_entries, only: [:index, :show, :create]
       resources :paper_sheets, only: [:index, :show, :create, :update] do
         member { post :encode }
       end

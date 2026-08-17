@@ -44,9 +44,14 @@ module Finance
       PaperTrail.request(whodunnit: @whodunnit || "paper_sheet") do
         ApplicationRecord.transaction do
           @sheet.update!(entry_mode: @entry_mode)
-          items = @sheet.catalog_items.index_by(&:id)
+          items = resolvable_items
 
           @cells.each do |account_id, per_item|
+            # Une ligne malformée (un scalaire là où on attend une matrice) est
+            # comptée comme ignorée, pas remontée en 500 : un import de masse doit
+            # dire ce qu'il n'a pas su lire, pas tomber au milieu d'un mois.
+            next report.ignored += 1 unless per_item.respond_to?(:each_pair)
+
             per_item.each { |item_id, raw| apply(account_id.to_i, items[item_id.to_i], raw, report) }
           end
 
@@ -55,6 +60,19 @@ module Finance
       end
 
       report
+    end
+
+    # Les articles adressables par l'encodage : tout le catalogue du CANAL, actif
+    # ou non. `PaperSheet#catalog_items` décide de ce que l'écran PROPOSE ; ce
+    # service, lui, honore un identifiant explicitement fourni. Sans ça, reprendre
+    # une fiche de 2022 serait impossible : ses articles ne sont plus vendus, donc
+    # plus actifs, et chaque cellule tomberait silencieusement dans `ignored`.
+    def resolvable_items
+      ids = @cells.values.flat_map { |per_item| per_item.respond_to?(:keys) ? per_item.keys : [] }
+                  .map(&:to_i).uniq
+      return {} if ids.empty?
+
+      CatalogItem.for_channel(@sheet.channel).where(id: ids).index_by(&:id)
     end
 
     def apply(account_id, item, raw, report)

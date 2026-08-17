@@ -1,0 +1,22 @@
+json.id account_entry.id
+json.type "account_entry"
+json.member_account_id account_entry.member_account_id
+json.member_account_code account_entry.member_account.code
+json.entry_date account_entry.entry_date
+json.posted_at account_entry.posted_at
+json.amount { json.partial! "api/v1/shared/money", money: account_entry.amount }
+json.flow account_entry.flow
+json.flow_label account_entry.flow_label
+json.kind account_entry.kind
+json.label account_entry.label
+json.source account_entry.source
+json.idempotency_key account_entry.idempotency_key
+json.quantity account_entry.quantity
+json.unit_price_cents account_entry.unit_price_cents
+json.catalog_item_id account_entry.catalog_item_id
+json.paper_sheet_id account_entry.paper_sheet_id
+json.account_statement_id account_entry.account_statement_id
+json.locked account_entry.locked?
+json.created_at account_entry.created_at
+json.updated_at account_entry.updated_at
+json.url api_v1_account_entry_url(account_entry)

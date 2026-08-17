@@ -5,6 +5,24 @@
 # recalcule depuis les données à chaque affichage. Un état stocké se périme au
 # premier mouvement qui arrive en retard, et une case cochée qui ment est pire
 # que pas de case du tout.
+# == Schema Information
+#
+# Table name: month_closings
+#
+#  id           :bigint           not null, primary key
+#  closed_at    :datetime         not null
+#  closed_by    :string
+#  deleted_at   :datetime
+#  notes        :text
+#  period_month :date             not null
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#
+# Indexes
+#
+#  index_month_closings_on_deleted_at    (deleted_at)
+#  index_month_closings_on_period_month  (period_month) UNIQUE WHERE (deleted_at IS NULL)
+#
 class MonthClosing < ApplicationRecord
   has_paper_trail
   has_soft_deletion default_scope: true

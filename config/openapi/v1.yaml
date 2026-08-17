@@ -1067,6 +1067,45 @@ paths:
                   data: { type: array, items: { $ref: "#/components/schemas/MemberAccount" } }
                   meta: { $ref: "#/components/schemas/PaginationMeta" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Bar & comptes internes]
+      summary: Créer (ou retrouver) un compte courant
+      description: >
+        UPSERT sur le NOM. Reposter le même nom renvoie le compte existant en 200
+        au lieu d'en créer un second : deux comptes portant le même nom rendraient
+        tout recoupement de total impossible. Le code SRC-xxxx est attribué par
+        l'application. `meta.created` dit lequel des deux s'est produit.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [member_account]
+              properties:
+                member_account:
+                  type: object
+                  required: [name, kind]
+                  properties:
+                    name: { type: string }
+                    kind: { type: string, enum: [household, human, entity] }
+                    contact_email: { type: string }
+                    active: { type: boolean }
+                    opening_balance_cents: { type: integer }
+                    opening_balance_on: { type: string, format: date }
+                    household_id: { type: integer }
+                    human_id: { type: integer }
+      responses:
+        "201":
+          description: Compte créé.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/MemberAccount" } }
+        "200": { description: Compte existant retrouvé sur le nom. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
   /member_accounts/{id}:
     get:
       tags: [Bar & comptes internes]
@@ -1080,6 +1119,144 @@ paths:
               schema:
                 type: object
                 properties: { data: { $ref: "#/components/schemas/MemberAccount" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Bar & comptes internes]
+      summary: Modifier un compte courant
+      description: >
+        Sert notamment à clore le compte d'un ménage parti (`active: false`) sans
+        perdre son historique.
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                member_account:
+                  type: object
+                  properties:
+                    name: { type: string }
+                    kind: { type: string, enum: [household, human, entity] }
+                    contact_email: { type: string }
+                    active: { type: boolean }
+                    opening_balance_cents: { type: integer }
+                    opening_balance_on: { type: string, format: date }
+      responses:
+        "200": { description: Compte mis à jour. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /member_accounts/{member_account_id}/settlements:
+    get:
+      tags: [Bar & comptes internes]
+      summary: Lister les règlements reçus sur un compte
+      parameters:
+        - { name: member_account_id, in: path, required: true, schema: { type: integer } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: Liste paginée de règlements. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Bar & comptes internes]
+      summary: Enregistrer un règlement reçu
+      description: >
+        Passe par le même service que l'écran : UN règlement = UNE écriture
+        négative + UN règlement qui la documente. `reference` sert de clé
+        d'idempotence sur le compte — reposter la même référence renvoie
+        l'existant en 200 au lieu d'encaisser deux fois.
+      parameters:
+        - { name: member_account_id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [account_settlement]
+              properties:
+                account_settlement:
+                  type: object
+                  required: [amount_cents, received_on]
+                  properties:
+                    amount_cents: { type: integer, description: "Montant positif, en centimes." }
+                    received_on: { type: string, format: date }
+                    method: { type: string, enum: [cash, bank_transfer, compensation] }
+                    received_channel: { type: string, enum: [bank, bar_box, grocery_box, hand] }
+                    reference: { type: string }
+                    notes: { type: string }
+      responses:
+        "201": { description: Règlement enregistré. }
+        "200": { description: Règlement déjà enregistré sous cette référence. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /account_entries:
+    get:
+      tags: [Bar & comptes internes]
+      summary: Lister les écritures de compte courant
+      parameters:
+        - { name: member_account_id, in: query, schema: { type: integer } }
+        - { name: flow, in: query, schema: { type: string, enum: [bar, grocery, meal, pot, dome, pet, charges, other] } }
+        - { name: source, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: Liste paginée d'écritures, dans l'ordre chronologique. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Bar & comptes internes]
+      summary: Créer une écriture de compte courant
+      description: >
+        Pour tout ce qui n'est pas une fiche papier : charges habitants, loyer,
+        pension, location du dôme, forfaits, arrondis de reprise. Avec
+        `idempotency_key`, POST est un UPSERT — rejouer un import met à jour
+        l'écriture au lieu d'en créer une seconde. Une écriture rattachée à un
+        décompte émis sort en 409 : la correction passe par une contre-écriture.
+        Le solde du compte après écriture est renvoyé dans `meta`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [account_entry]
+              properties:
+                account_entry:
+                  type: object
+                  required: [member_account_id, entry_date, amount_cents]
+                  properties:
+                    member_account_id: { type: integer }
+                    entry_date: { type: string, format: date }
+                    amount_cents: { type: integer, description: "Signé : positif = dû par le compte, négatif = en sa faveur. Zéro refusé." }
+                    label: { type: string }
+                    flow: { type: string, enum: [bar, grocery, meal, pot, dome, pet, charges, other] }
+                    kind: { type: string }
+                    source: { type: string }
+                    idempotency_key: { type: string }
+                    quantity: { type: number }
+                    unit_price_cents: { type: integer }
+                    catalog_item_id: { type: integer }
+      responses:
+        "201": { description: Écriture créée. }
+        "200": { description: Écriture retrouvée sur sa clé d'idempotence et mise à jour. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { description: "Écriture verrouillée par un décompte émis." }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /account_entries/{id}:
+    get:
+      tags: [Bar & comptes internes]
+      summary: Détail d'une écriture
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Écriture. }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 

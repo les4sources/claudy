@@ -63,6 +63,7 @@ class MemberAccount < ApplicationRecord
   belongs_to :household, optional: true
   belongs_to :human, optional: true
   has_many :account_entries, dependent: :destroy
+  has_many :account_settlements, dependent: :destroy
 
   monetize :opening_balance_cents
 
