@@ -435,6 +435,8 @@ Rails.application.routes.draw do
       # contrepartie générale, n'appartient pas à un import de fichier.
       resources :cash_accounts, only: [:index, :show, :create, :update]
       resources :coda_imports, only: [:index, :show, :create]
+      # La caisse en espèces ne produit pas de CODA : ses lignes s'écrivent ici.
+      resources :cash_entries, only: [:index, :show, :create]
       resources :paper_sheets, only: [:index, :show, :create, :update] do
         member { post :encode }
       end
