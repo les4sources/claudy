@@ -430,6 +430,11 @@ Rails.application.routes.draw do
       resources :analytic_accounts, only: [:index, :show, :create, :update]
       resources :fiscal_years, only: [:index, :show, :create, :update]
       resources :opening_entries, only: [:index, :create]
+      # Trésorerie (#198). Le compte se crée EXPLICITEMENT, jamais depuis
+      # l'import : décider qu'un compte bancaire existe, et avec quelle
+      # contrepartie générale, n'appartient pas à un import de fichier.
+      resources :cash_accounts, only: [:index, :show, :create, :update]
+      resources :coda_imports, only: [:index, :show, :create]
       resources :paper_sheets, only: [:index, :show, :create, :update] do
         member { post :encode }
       end

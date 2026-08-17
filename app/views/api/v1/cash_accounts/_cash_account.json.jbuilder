@@ -1,0 +1,10 @@
+json.id cash_account.id
+json.type "cash_account"
+json.name cash_account.name
+json.kind cash_account.kind
+json.iban cash_account.iban
+json.legal_entity_id cash_account.legal_entity_id
+json.legal_entity_name cash_account.legal_entity&.name
+json.general_account_code cash_account.general_account&.code
+json.general_account_name cash_account.general_account&.name
+json.active cash_account.active
