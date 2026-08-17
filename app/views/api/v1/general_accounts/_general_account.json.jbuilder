@@ -1,0 +1,10 @@
+json.id general_account.id
+json.type "general_account"
+json.code general_account.code
+json.name general_account.name
+json.klass general_account.klass
+json.nature general_account.nature
+json.nature_label general_account.nature_label
+json.reconcilable general_account.reconcilable
+json.active general_account.active
+json.url api_v1_general_account_url(general_account.code)

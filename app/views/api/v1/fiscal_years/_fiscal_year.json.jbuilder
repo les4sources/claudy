@@ -1,0 +1,10 @@
+json.id fiscal_year.id
+json.type "fiscal_year"
+json.legal_entity_id fiscal_year.legal_entity_id
+json.legal_entity_name fiscal_year.legal_entity.name
+json.label fiscal_year.label
+json.starts_on fiscal_year.starts_on
+json.ends_on fiscal_year.ends_on
+json.status fiscal_year.status
+json.status_label fiscal_year.status_label
+json.closed_at fiscal_year.closed_at

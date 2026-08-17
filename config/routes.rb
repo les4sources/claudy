@@ -420,6 +420,16 @@ Rails.application.routes.draw do
         resources :settlements, only: [:index, :create], controller: "account_settlements"
       end
       resources :account_entries, only: [:index, :show, :create]
+
+      # Référentiel comptable (#196). Le vrai plan comptable vit dans les bilans
+      # internes du comptable, pas dans un seed : il entre par ici. L'écriture
+      # d'à-nouveau est la SEULE écriture comptable que l'API pose — elle ne
+      # dérive d'aucun document métier de claudy, elle vient d'un bilan produit
+      # ailleurs. Tout le reste se génère.
+      resources :general_accounts, only: [:index, :show, :create, :update]
+      resources :analytic_accounts, only: [:index, :show, :create, :update]
+      resources :fiscal_years, only: [:index, :show, :create, :update]
+      resources :opening_entries, only: [:index, :create]
       resources :paper_sheets, only: [:index, :show, :create, :update] do
         member { post :encode }
       end

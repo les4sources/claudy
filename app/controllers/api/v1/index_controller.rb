@@ -53,6 +53,10 @@ module Api
             { name: "member_accounts", path: api_v1_member_accounts_path, description: "Comptes courants internes des ménages et personnes, avec leur solde recalculé. POST (upsert sur le nom)/PATCH exposés. Filtres: q, kind, active." },
             { name: "account_entries", path: api_v1_account_entries_path, description: "Écritures de compte courant hors fiche papier (charges, loyers, forfaits, arrondis). POST avec idempotency_key. Filtres: member_account_id, flow, source, from, to." },
             { name: "settlements", path: api_v1_member_account_settlements_path(":member_account_id"), description: "Règlements reçus sur un compte : POST /member_accounts/:id/settlements. Idempotent sur `reference`." },
+            { name: "general_accounts", path: api_v1_general_accounts_path, description: "Plan comptable général (PCMN). POST/PATCH, upsert sur le code ; classe et nature déduites du numéro. Filtres: q, klass, nature, active." },
+            { name: "analytic_accounts", path: api_v1_analytic_accounts_path, description: "Axes analytiques, rattachables à une équipe. POST/PATCH, upsert sur le code. Filtres: q, team_id." },
+            { name: "fiscal_years", path: api_v1_fiscal_years_path, description: "Exercices comptables par entité. POST/PATCH, upsert sur (entité, date de début) ; un exercice clôturé sort en 409. Filtres: legal_entity_id, status." },
+            { name: "opening_entries", path: api_v1_opening_entries_path, description: "Écritures d'à-nouveau. La SEULE écriture comptable que l'API pose ; refusée si elle ne balance pas, et rejouée par contre-passation." },
             { name: "paper_sheets", path: api_v1_paper_sheets_path, description: "Fiches papier mensuelles et leur encodage matriciel (POST /paper_sheets/:id/encode). Filtres: channel, status, period_month." }
           ],
           example: "curl -H 'Authorization: Bearer $AGENT_API_TOKEN' #{api_v1_bookings_url}"
