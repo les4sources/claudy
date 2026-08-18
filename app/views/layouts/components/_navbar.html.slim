@@ -138,7 +138,7 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
   fond, qui laisse la pastille active se détacher.
 / Sous-navigation « Accueil » (Michael 2026-07-26) — remplace l'ancien dropdown.
 - if !@home_view.nil?
-  nav.border-b.lg:px-6(class="bg-teal-50/70 border-teal-100")
+  nav.border-b#subnav-home.lg:px-6(class="bg-teal-50/70 border-teal-100")
     .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
       .flex.items-center
         ul.flex.flex-row.flex-wrap.font-medium.mt-0.gap-1.text-sm
@@ -168,7 +168,7 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'reports' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
 
 - if !@projects_view.nil?
-  nav.border-b.lg:px-6(class="bg-teal-50/70 border-teal-100")
+  nav.border-b#subnav-projects.lg:px-6(class="bg-teal-50/70 border-teal-100")
     .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
       .flex.items-center
         ul.flex.flex-row.flex-wrap.font-medium.mt-0.gap-1.text-sm
@@ -195,7 +195,7 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
   d'un cran plus petits. Sans cette différence, deux barres identiques se lisent
   comme des pairs et la hiérarchie disparaît.
 - if !@reports_view.nil?
-  nav.border-b.lg:px-6(class="bg-white border-gray-100")
+  nav.border-b#subnav-reports.lg:px-6(class="bg-white border-gray-100")
     .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
       .flex.items-center
         ul.flex.flex-row.font-medium.mt-0.gap-1.text-xs
@@ -230,7 +230,7 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
 
 
 - if !@settings_view.nil?
-  nav.border-b.lg:px-6(class="bg-teal-50/70 border-teal-100")
+  nav.border-b#subnav-settings.lg:px-6(class="bg-teal-50/70 border-teal-100")
     .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
       .flex.items-center
         ul.flex.flex-row.flex-wrap.font-medium.mt-0.gap-1.text-sm
@@ -275,7 +275,7 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
   quotidien : son compte, ce qu'il y consomme, et le décompte qu'il reçoit.
   La comptabilité générale a sa propre section depuis le 2026-08-19.
 - if !@finance_view.nil?
-  nav.border-b.lg:px-6(class="bg-teal-50/70 border-teal-100")
+  nav.border-b#subnav-finance.lg:px-6(class="bg-teal-50/70 border-teal-100")
     .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
       .flex.items-center
         ul.flex.flex-row.flex-wrap.font-medium.mt-0.gap-1.text-sm
@@ -305,7 +305,7 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
   neuf écrans de tenue de journaux n'ont rien à faire devant quelqu'un qui
   vient lire sa consommation de bar.
 - if !@accounting_view.nil?
-  nav.border-b.lg:px-6(class="bg-teal-50/70 border-teal-100")
+  nav.border-b#subnav-accounting.lg:px-6(class="bg-teal-50/70 border-teal-100")
     .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
       .flex.items-center
         ul.flex.flex-row.flex-wrap.font-medium.mt-0.gap-1.text-sm
@@ -347,7 +347,7 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/trial_balance' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
 
 - if !@organisation_view.nil?
-  nav.border-b.lg:px-6(class="bg-teal-50/70 border-teal-100")
+  nav.border-b#subnav-organisation.lg:px-6(class="bg-teal-50/70 border-teal-100")
     .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
       .flex.items-center
         ul.flex.flex-row.flex-wrap.font-medium.mt-0.gap-1.text-sm

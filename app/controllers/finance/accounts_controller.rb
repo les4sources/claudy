@@ -3,7 +3,7 @@ module Finance
   class AccountsController < Finance::BaseController
     FILTERS = %w[active inactive all].freeze
 
-    before_action :get_account, only: [:show, :edit, :update, :destroy]
+    before_action :get_account, only: [:show, :retrospective, :edit, :update, :destroy]
 
     breadcrumb "Comptes", :finance_accounts_path, match: :exact
 
@@ -21,6 +21,15 @@ module Finance
       @entries = AccountEntryDecorator.decorate_collection(@account.account_entries.recent_first)
       @entry = @account.account_entries.new(entry_date: Date.current)
       @account = MemberAccountDecorator.new(@account)
+    end
+
+    # Douze mois de compte, vus de l'intérieur. La même page qu'un habitant
+    # ouvre depuis son décompte — ici sans jeton, puisqu'on est déjà connecté.
+    def retrospective
+      breadcrumb @account.name, finance_account_path(@account), match: :exact
+      breadcrumb "Douze mois", retrospective_finance_account_path(@account), match: :exact
+
+      @retrospective = MemberAccounts::Retrospective.new(@account)
     end
 
     def new

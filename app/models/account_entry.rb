@@ -76,6 +76,10 @@ class AccountEntry < ApplicationRecord
   has_soft_deletion default_scope: true
 
   belongs_to :member_account
+  # La colonne et sa clé étrangère existent depuis l'encodage des fiches
+  # papier ; l'association manquait, si bien que remonter d'une écriture à
+  # l'article vendu imposait une seconde requête écrite à la main.
+  belongs_to :catalog_item, optional: true
   belongs_to :reversal_of, class_name: "AccountEntry", optional: true
   has_one :reversal, class_name: "AccountEntry", foreign_key: :reversal_of_id,
                      inverse_of: :reversal_of

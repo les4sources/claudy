@@ -12,6 +12,10 @@ RSpec.describe "Sections de navigation", type: :request do
 
   before { sign_in user }
 
+  def subnav(section)
+    Nokogiri::HTML(response.body).at_css("#subnav-#{section}")&.text.to_s
+  end
+
   # Les libellés qui n'appartiennent qu'à une seule des deux barres.
   SOURCIER = ["Fiches papier", "Décomptes", "Charges récurrentes"].freeze
   COMPTABLE = ["Grand livre", "Contrôle croisé", "Balance", "CODA"].freeze
@@ -21,15 +25,15 @@ RSpec.describe "Sections de navigation", type: :request do
       get finance_accounts_path
 
       expect(response).to have_http_status(:ok)
-      SOURCIER.each { |onglet| expect(response.body).to include(onglet) }
-      COMPTABLE.each { |onglet| expect(response.body).not_to include(">#{onglet}<") }
+      SOURCIER.each { |onglet| expect(subnav("finance")).to include(onglet) }
+      COMPTABLE.each { |onglet| expect(subnav("finance")).not_to include(onglet) }
     end
 
     it "garde les décomptes chez les sourciers" do
       get finance_statements_path
 
-      expect(response.body).to include("Fiches papier")
-      expect(response.body).not_to include(">Grand livre<")
+      expect(subnav("finance")).to include("Fiches papier")
+      expect(subnav("finance")).not_to include("Grand livre")
     end
   end
 
@@ -38,8 +42,8 @@ RSpec.describe "Sections de navigation", type: :request do
       get finance_accounting_path
 
       expect(response).to have_http_status(:ok)
-      COMPTABLE.each { |onglet| expect(response.body).to include(onglet) }
-      SOURCIER.each { |onglet| expect(response.body).not_to include(">#{onglet}<") }
+      COMPTABLE.each { |onglet| expect(subnav("accounting")).to include(onglet) }
+      SOURCIER.each { |onglet| expect(subnav("accounting")).not_to include(onglet) }
     end
 
     # La trésorerie est l'écran le plus fréquenté de la section : si un seul
@@ -47,8 +51,8 @@ RSpec.describe "Sections de navigation", type: :request do
     it "vaut pour la trésorerie comme pour le tableau de bord" do
       get finance_cash_entries_path
 
-      expect(response.body).to include("Grand livre")
-      expect(response.body).not_to include(">Décomptes<")
+      expect(subnav("accounting")).to include("Grand livre")
+      expect(subnav("accounting")).not_to include("Décomptes")
     end
   end
 

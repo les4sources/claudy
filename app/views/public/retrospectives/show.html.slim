@@ -1,0 +1,9 @@
+- content_for :title do
+  | Douze mois — #{@account.code}
+
+= render "shared/retrospective", retrospective: @retrospective, account: @account
+
+p.mx-auto.mt-6.max-w-3xl.text-center.text-xs.text-moss
+  = link_to "← Revenir au décompte de #{l(@statement.period_month, format: '%B %Y')}",
+            public_statement_path(@statement.token),
+            class: "underline hover:text-ink"

@@ -72,6 +72,11 @@ Rails.application.routes.draw do
   namespace :finance do
     resources :households
     resources :accounts do
+      member do
+        # La rétrospective sur douze mois — la même page que celle qu'un
+        # habitant ouvre depuis son décompte, atteinte ici par le compte.
+        get :retrospective
+      end
       resources :entries, only: [:create, :destroy], controller: "account_entries"
       resources :settlements, only: [:create]
     end
@@ -342,6 +347,9 @@ Rails.application.routes.draw do
   # Décompte sourcier à jeton (issue #160) — sans session, sans Devise : le lien
   # du mail doit s'ouvrir sur le téléphone d'un sourcier qui n'a pas de compte.
   get "decompte/:token", to: "public/statements#show", as: :public_statement
+  # Douze mois de compte, atteints par le MÊME jeton que le décompte du mois :
+  # l'habitant qui a reçu son décompte par mail y accède sans compte Claudy.
+  get "decompte/:token/annee", to: "public/retrospectives#show", as: :public_retrospective
 
   # Paiement du solde exigible du séjour (epic #55, Phase 3) — POST scellé par le
   # même jeton que la page client ; crée/rafraîchit le paiement puis part sur

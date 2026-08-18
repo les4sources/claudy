@@ -1,0 +1,166 @@
+/  Douze mois de compte, lus par la personne dont c'est le compte.
+   (Michael, 2026-08-19 — « du reporting utile pour les habitants ».)
+
+   La page emprunte l'identité SOUS-BOIS du portail — sable, forêt, cuivre,
+   Fraunces — et non le gris de l'admin : elle s'ouvre sur le téléphone d'un
+   habitant, souvent depuis le mail de son décompte, pas dans un back-office.
+
+   Règle qui tient toute la lecture : CHAQUE CANAL GARDE SA COULEUR partout.
+   Le cuivre est le bar dans le ruban des mois, dans la barre de répartition et
+   dans la liste — on lit le graphique sans faire l'aller-retour vers la légende.
+
+- r = retrospective
+- canaux = r.canaux
+- plafond = [r.plafond_cents, 1].max
+- carte = "rounded-2xl bg-white ring-1 ring-bark p-5 md:p-6"
+
+.mx-auto.max-w-3xl.space-y-5.py-2
+  /  En-tête : le vert profond du lieu, et les trois nombres qui répondent aux
+     trois questions qu'on se pose vraiment — combien, à quel rythme, et
+     combien j'ai déjà réglé.
+  header.rounded-3xl.bg-forest.px-6.py-7.text-sand.md:px-8
+    p(class="text-xs uppercase tracking-[0.16em] text-sand/60")
+      = "#{account.name} · "
+      span.font-mono= account.code
+    h1.mt-1.font-fraunces.text-3xl.leading-tight.md:text-4xl Douze mois de compte
+    p.mt-1.text-sm(class="text-sand/70")
+      = "#{l(r.debut, format: '%B %Y')} → #{l(r.fin, format: '%B %Y')}"
+
+    - if r.any?
+      .mt-6.grid.grid-cols-3.gap-4(class="border-t border-sand/15 pt-5")
+        div
+          .text-xs.uppercase.tracking-wide(class="text-sand/60") Consommé
+          .font-fraunces.text-2xl.tabular-nums.md:text-3xl= number_to_currency(r.total_depense_cents / 100.0)
+        div
+          .text-xs.uppercase.tracking-wide(class="text-sand/60") Par mois
+          .font-fraunces.text-2xl.tabular-nums.md:text-3xl= number_to_currency(r.moyenne_mensuelle_cents / 100.0)
+        div
+          .text-xs.uppercase.tracking-wide(class="text-sand/60") Réglé
+          .font-fraunces.text-2xl.tabular-nums.md:text-3xl= number_to_currency(r.total_regle_cents / 100.0)
+
+  - unless r.any?
+    section class=carte
+      p.text-ink Aucun mouvement sur ce compte depuis douze mois.
+      p.mt-1.text-sm.text-moss Le compte existe, il est simplement resté à l'arrêt sur la période.
+
+  - if r.any?
+    /  LE RYTHME. Un solde ne dit pas si on consomme plus que d'habitude ; une
+       série de douze barres, si. La ligne pointillée est la moyenne : elle
+       transforme chaque colonne en écart plutôt qu'en valeur absolue.
+    section class=carte
+      .flex.flex-wrap.items-baseline.justify-between.gap-2
+        h2.font-fraunces.text-xl.text-ink Le rythme des mois
+        p.text-sm.text-moss
+          - if r.mois_le_plus_charge && r.mois_le_plus_charge.total_cents.positive?
+            = "Pic en #{l(r.mois_le_plus_charge.month, format: '%B %Y')}"
+
+      .mt-5.overflow-x-auto
+        svg(class="w-full min-w-[600px]" viewBox="0 0 720 215" role="img" aria-label="Consommation mensuelle sur douze mois, par canal")
+          /  Repère de moyenne, tracé AVANT les barres pour passer dessous.
+          - moyenne_y = 165 - (r.moyenne_mensuelle_cents * 130.0 / plafond)
+          - if r.moyenne_mensuelle_cents.positive?
+            line[x1="8" x2="712" y1=moyenne_y y2=moyenne_y stroke="#A79D89" stroke-width="1" stroke-dasharray="3 4"]
+            text(class="text-[12px]" x="712" y=(moyenne_y - 5) fill="#5C6659" text-anchor="end")
+              = "moyenne #{number_to_currency(r.moyenne_mensuelle_cents / 100.0, precision: 0)}"
+
+          - r.mois.each_with_index do |m, i|
+            - x = 12 + i * 59
+            g
+              title= "#{l(m.month, format: '%B %Y')} — #{number_to_currency(m.total_cents / 100.0)}"
+              - if m.total_cents.zero?
+                /  Un mois sans rien n'est pas un trou : c'est une information.
+                line[x1=x x2=(x + 40) y1="164" y2="164" stroke="#DED4BE" stroke-width="2"]
+              - else
+                - haut = 165
+                - canaux.each do |canal|
+                  - cents = m.par_flow[canal.flow].to_i
+                  - next if cents.zero?
+                  - hauteur = cents * 130.0 / plafond
+                  - haut -= hauteur
+                  rect[x=x y=haut width="40" height=hauteur fill=canal.couleur]
+                - if m.total_cents == r.plafond_cents
+                  text(class="text-[12px]" x=(x + 20) y=(haut - 6) fill="#1C2620" text-anchor="middle" font-weight="600")
+                    = number_to_currency(m.total_cents / 100.0, precision: 0)
+              text(class="text-[13px]" x=(x + 20) y="182" fill="#5C6659" text-anchor="middle")
+                = l(m.month, format: "%b").delete(".").capitalize
+              - if m.month.month == 1 || i.zero?
+                text(class="text-[12px]" x=(x + 20) y="196" fill="#A79D89" text-anchor="middle")= m.month.year
+
+    /  OÙ PART L'ARGENT. Une seule barre pour la forme d'ensemble, la liste
+       pour les montants : la question « le bar, c'est combien au juste ? » ne
+       se répond pas sur un camembert.
+    section class=carte
+      h2.font-fraunces.text-xl.text-ink Où part l'argent
+      .mt-4.flex.h-4.w-full.overflow-hidden.rounded-full(class="bg-sand-deep")
+        - canaux.each do |canal|
+          div[style="width: #{canal.part}%; background-color: #{canal.couleur}"
+              title="#{canal.label} — #{number_to_currency(canal.amount_cents / 100.0)}"]
+
+      ul.mt-4.divide-y.divide-bark
+        - canaux.each do |canal|
+          li.flex.items-center.justify-between.gap-4.py-2.5
+            span.flex.items-center.gap-3.text-sm.text-ink
+              span.h-3.w-3.shrink-0.rounded-full[style="background-color: #{canal.couleur}"]
+              = canal.label
+            span.flex.items-baseline.gap-3
+              span.text-xs.tabular-nums.text-moss= "#{canal.part.round} %"
+              span.w-24.text-right.text-sm.font-semibold.tabular-nums.text-ink
+                = number_to_currency(canal.amount_cents / 100.0)
+
+    - if r.articles.any?
+      /  CE QUI REVIENT LE PLUS. La barre de fond porte la couleur du canal :
+         elle donne la proportion sans ajouter une colonne de pourcentages.
+      section class=carte
+        h2.font-fraunces.text-xl.text-ink Ce qui revient le plus
+        p.mt-1.text-sm.text-moss Les articles du bar et de l'épicerie, sur les douze mois.
+        - sommet = [r.articles.first.amount_cents, 1].max
+        ul.mt-4.space-y-1.5
+          - r.articles.each do |article|
+            li.relative.overflow-hidden.rounded-lg
+              .absolute.inset-y-0.left-0(style="width: #{article.amount_cents * 100.0 / sommet}%; background-color: #C97B3D; opacity: 0.13")
+              .relative.flex.items-center.justify-between.gap-4.px-3.py-2
+                span.text-sm.text-ink
+                  = "#{article.name} "
+                  - if article.quantity.positive?
+                    span.text-xs.text-moss= "× #{article.quantity.round(article.quantity == article.quantity.round ? 0 : 1)}"
+                span.text-sm.font-semibold.tabular-nums.text-ink= number_to_currency(article.amount_cents / 100.0)
+
+    - if r.reglements.any?
+      /  LES RÈGLEMENTS. Le pendant de la consommation : à quel rythme le
+         compte se remet à zéro. C'est ce qui manque le plus quand on ne voit
+         qu'un solde.
+      section class=carte
+        h2.font-fraunces.text-xl.text-ink Mes règlements
+        ul.mt-4.divide-y.divide-bark
+          - r.reglements.reverse.first(8).each do |entry|
+            li.flex.items-baseline.justify-between.gap-4.py-2
+              span.text-sm.text-ink
+                = "#{entry.label.presence || 'Règlement'} "
+                span.text-xs.text-moss= l(entry.entry_date, format: :long).squish
+              span.text-sm.font-semibold.tabular-nums(class="text-forest-soft")
+                = number_to_currency(-entry.amount_cents / 100.0)
+
+  /  CE QUI RESTE. Même lecture que sur la fiche interne du compte : les
+     règlements éteignent les dettes les plus anciennes, et ce qui reste debout
+     est détaillé mois par mois. Le cuivre plutôt que le rouge — c'est un
+     rappel, pas une mise en demeure.
+  - if r.outstanding.any?
+    section.rounded-2xl.p-5.md:p-6(class="bg-ember-tint ring-1 ring-ember/30")
+      .flex.flex-wrap.items-baseline.justify-between.gap-x-6.gap-y-1
+        div
+          h2.font-fraunces.text-xl(class="text-ember") À régler
+          - if r.outstanding.oldest_month
+            p.text-sm.text-moss= "En attente depuis #{l(r.outstanding.oldest_month, format: '%B %Y')}"
+        .font-fraunces.text-2xl.tabular-nums(class="text-ember")
+          = number_to_currency(r.outstanding.total_cents / 100.0)
+
+      ul.mt-4.divide-y(class="divide-ember/20 border-t border-ember/20")
+        - r.outstanding.postes.each do |poste|
+          li.flex.items-baseline.justify-between.gap-4.py-2
+            span.text-sm.text-ink= l(poste.month, format: "%B %Y").capitalize
+            span.text-sm.font-semibold.tabular-nums.text-ink= number_to_currency(poste.amount_cents / 100.0)
+
+      p.mt-4.text-xs.text-moss
+        ' Un virement avec le code
+        span.font-mono.font-semibold= account.code
+        |  en communication se rapproche tout seul.

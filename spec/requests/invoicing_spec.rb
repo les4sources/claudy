@@ -137,7 +137,10 @@ RSpec.describe "Facturation (/invoicing)", type: :request do
       expect(response.body).to include("Facturation")
       expect(response.body).to include(%(href="#{payments_path}"))
       expect(response.body).to include(%(href="#{customers_path}"))
-      expect(response.body).not_to include("Comptabilité")
+      # Scopé au sous-menu : « Comptabilité » est une section primaire depuis
+      # le 2026-08-19, et le mot figure donc dans la barre de toutes les pages.
+      sous_menu = Nokogiri::HTML(response.body).at_css("#subnav-home")&.text.to_s
+      expect(sous_menu).not_to include("Comptabilité")
     end
   end
 end
