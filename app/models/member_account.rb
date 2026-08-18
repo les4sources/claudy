@@ -103,6 +103,14 @@ class MemberAccount < ApplicationRecord
     self
   end
 
+  # Les agrégats ci-dessus sont mémoïsés, et `reload` ne touche pas aux
+  # variables d'instance : sans ça, un objet rechargé après l'écriture d'une
+  # ligne continuait de servir l'ancien solde, sans rien signaler.
+  def reload(...)
+    @balance_cents = @entries_count = @last_entry_on = nil
+    super
+  end
+
   # Séquence jamais réattribuée : on regarde AUSSI les comptes soft-deletés,
   # sinon supprimer le dernier compte recyclerait son code sur le suivant.
   def self.next_code

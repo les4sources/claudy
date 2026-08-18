@@ -197,7 +197,62 @@ RSpec.describe "Finances > Comptes", type: :request do
     end
   end
 
-  describe "sans authentification" do
+describe "le callout des paiements dûs" do
+      # La table des écritures, en bas de page, porte les mêmes libellés :
+      # une assertion sur la page entière passerait sans que le callout existe.
+      def callout = Nokogiri::HTML(response.body).at_css("#outstanding")&.text.to_s
+  it "décompose le solde mois par mois au lieu de l'afficher nu" do
+    account = create_account(name: "Béné", kind: "household", household: household)
+    account.account_entries.create!(entry_date: Date.new(2026, 1, 31), amount_cents: 17_000,
+                                    label: "Charges habitants", flow: "charges")
+    account.account_entries.create!(entry_date: Date.new(2026, 6, 27), amount_cents: 2_500,
+                                    label: "Batchcooking", flow: "meal")
+
+    get finance_account_path(account)
+
+    expect(callout).to include("À régler")
+    expect(callout).to include("Charges habitants").and include("Batchcooking")
+    expect(callout).to include("Janvier 2026").and include("Juin 2026")
+    # Le total du callout est le solde : les deux nombres de la page doivent
+    # tomber pareil, sinon la décomposition dit le contraire du solde.
+    expect(callout).to include("195,00")
+  end
+
+  it "ne montre que ce qui reste après imputation des règlements" do
+    account = create_account(name: "Béné", kind: "household", household: household)
+    account.account_entries.create!(entry_date: Date.new(2026, 1, 31), amount_cents: 17_000,
+                                    label: "Charges de janvier", flow: "charges")
+    account.account_entries.create!(entry_date: Date.new(2026, 3, 31), amount_cents: 5_000,
+                                    label: "Conso bar", flow: "bar")
+    account.account_entries.create!(entry_date: Date.new(2026, 2, 5), amount_cents: -17_000,
+                                    label: "Virement")
+
+    get finance_account_path(account)
+
+    expect(callout).to include("Conso bar")
+    expect(callout).not_to include("Charges de janvier")
+  end
+
+  it "se tait quand le compte est à zéro" do
+    account = create_account(name: "Semisto")
+
+    get finance_account_path(account)
+
+    expect(callout).not_to include("À régler")
+  end
+
+  it "annonce une avance plutôt qu'une dette quand le compte est créditeur" do
+    account = create_account(name: "Semisto")
+    account.account_entries.create!(entry_date: Date.current, amount_cents: -4_000, label: "Provision")
+
+    get finance_account_path(account)
+
+    expect(callout).to include("Rien à régler")
+    expect(callout).to include("en avance sur ses consommations")
+  end
+end
+
+describe "sans authentification" do
     it "redirige la liste et la fiche vers la connexion" do
       account = create_account
       sign_out user

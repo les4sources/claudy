@@ -17,6 +17,7 @@ module Finance
     def show
       breadcrumb @account.name, finance_account_path(@account), match: :exact
 
+      @outstanding = MemberAccounts::Outstanding.new(@account)
       @entries = AccountEntryDecorator.decorate_collection(@account.account_entries.recent_first)
       @entry = @account.account_entries.new(entry_date: Date.current)
       @account = MemberAccountDecorator.new(@account)

@@ -19,6 +19,8 @@
       = @account.anchor_label
       span.ml-2= @account.status_badge
 
+= render "outstanding_callout", outstanding: @outstanding, account: @account
+
 /  UN SEUL langage pour les deux formulaires en ligne de cette page. Ils se
    lisaient auparavant comme deux composants venus d'écrans différents : grille
    de six colonnes ÉGALES d'un côté (un montant aussi large qu'une
