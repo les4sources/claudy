@@ -5,8 +5,7 @@ module Finance
   # adaptateur `async` — un job posé en file disparaît au redémarrage — et un
   # import bancaire qui échoue en silence dans un job est exactement le genre de
   # panne qu'on découvre trois mois plus tard, au moment de la clôture.
-  class CodaImportsController < Finance::BaseController
-    breadcrumb "Comptabilité", :finance_accounting_path, match: :exact
+  class CodaImportsController < Finance::AccountingBaseController
     breadcrumb "Import CODA", :finance_coda_imports_path, match: :exact
 
     def index
@@ -41,9 +40,5 @@ module Finance
       # et c'est ce qui permet à la compta de savoir quoi demander à la banque.
       redirect_to finance_coda_imports_path, alert: e.message
     end
-
-    private
-
-    def finance_secondary = "accounting"
   end
 end

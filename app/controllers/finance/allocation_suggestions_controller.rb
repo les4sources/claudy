@@ -6,7 +6,7 @@ module Finance
   # l'écran annonce combien de lignes seront touchées avant qu'on valide. « Tout
   # accepter » est le geste par lequel une machine finit par décider à notre
   # place sans qu'on s'en aperçoive.
-  class AllocationSuggestionsController < Finance::BaseController
+  class AllocationSuggestionsController < Finance::AccountingBaseController
     def update
       suggestion = AllocationSuggestion.find(params[:id])
 
@@ -63,9 +63,5 @@ module Finance
                   notice: "#{acceptees} suggestion(s) acceptée(s) pour la règle « #{rule.label} » " \
                           "au-dessus de #{seuil} % de confiance."
     end
-
-    private
-
-    def finance_secondary = "accounting"
   end
 end

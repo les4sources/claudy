@@ -5,8 +5,7 @@ module Finance
   # euros et en pourcentage du canal. C'est lui qui justifie de mettre le
   # virement en avant sur les emails de solde — un virement ne coûte pas de
   # commission, et sur des séjours à quatre chiffres l'écart est réel.
-  class CollectionCostController < Finance::BaseController
-    breadcrumb "Comptabilité", :finance_accounting_path, match: :exact
+  class CollectionCostController < Finance::AccountingBaseController
     breadcrumb "Coût d'encaissement", :finance_collection_cost_path, match: :exact
 
     def index
@@ -37,8 +36,6 @@ module Finance
     end
 
     private
-
-    def finance_secondary = "accounting"
 
     def parsed_date(raw)
       raw.present? ? Date.parse(raw) : nil

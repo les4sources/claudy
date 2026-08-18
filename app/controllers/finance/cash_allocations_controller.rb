@@ -2,7 +2,7 @@ module Finance
   # Les affectations d'une ligne de trésorerie. Une allocation ne naît que d'un
   # geste humain : il n'existe aucun compte par défaut, aucune règle qui affecte
   # d'office. C'est le défaut de Winbooks éliminé par le schéma.
-  class CashAllocationsController < Finance::BaseController
+  class CashAllocationsController < Finance::AccountingBaseController
     before_action :get_entry
 
     # Le verrou sérialise les affectations concurrentes : deux saisies
@@ -36,7 +36,6 @@ module Finance
     private
 
     def get_entry = @entry = CashEntry.find(params[:cash_entry_id])
-    def finance_secondary = "accounting"
 
     # Une ligne entièrement affectée se comptabilise dans la foulée : demander
     # un second clic pour un geste qui n'a plus aucune décision à prendre, c'est

@@ -2,10 +2,8 @@ module Finance
   # Les règles d'affectation (issue #183). Elles proposent, elles ne décident
   # jamais — et le compteur d'acceptations / refus de chaque règle est là pour
   # qu'on puisse juger, dans six mois, si elle mérite encore d'exister.
-  class AllocationRulesController < Finance::BaseController
+  class AllocationRulesController < Finance::AccountingBaseController
     before_action :get_rule, only: [:edit, :update, :destroy, :move]
-
-    breadcrumb "Comptabilité", :finance_accounting_path, match: :exact
     breadcrumb "Règles d'affectation", :finance_allocation_rules_path, match: :exact
 
     def index
@@ -66,7 +64,6 @@ module Finance
     private
 
     def get_rule = @rule = AllocationRule.find(params[:id])
-    def finance_secondary = "accounting"
 
     def rule_params
       permitted = params.require(:allocation_rule).permit(

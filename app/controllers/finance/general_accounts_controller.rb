@@ -2,10 +2,8 @@ module Finance
   # Le plan comptable, éditable. C'est un référentiel de DÉPART : le plan réel de
   # la Fondation appartient au comptable, et cet écran existe pour qu'il le
   # corrige sans qu'on ait à écrire une migration.
-  class GeneralAccountsController < Finance::BaseController
+  class GeneralAccountsController < Finance::AccountingBaseController
     before_action :get_account, only: [:edit, :update, :destroy]
-
-    breadcrumb "Comptabilité", :finance_accounting_path, match: :exact
     breadcrumb "Plan comptable", :finance_general_accounts_path, match: :exact
 
     def index
@@ -54,7 +52,6 @@ module Finance
     private
 
     def get_account = @account = GeneralAccount.find(params[:id])
-    def finance_secondary = "accounting"
 
     def account_params
       params.require(:general_account).permit(:code, :name, :klass, :nature, :reconcilable, :active)

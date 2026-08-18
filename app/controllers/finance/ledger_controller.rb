@@ -2,8 +2,7 @@ module Finance
   # Le grand livre général : toutes les lignes d'un compte, dans l'ordre, avec le
   # solde qui court. C'est la lecture qui permet de répondre « d'où vient ce
   # chiffre » sans rouvrir un tableur.
-  class LedgerController < Finance::BaseController
-    breadcrumb "Comptabilité", :finance_accounting_path, match: :exact
+  class LedgerController < Finance::AccountingBaseController
     breadcrumb "Grand livre", :finance_ledger_path, match: :exact
 
     def index
@@ -41,8 +40,6 @@ module Finance
     end
 
     private
-
-    def finance_secondary = "accounting"
 
     def parsed_date(raw)
       raw.present? ? Date.parse(raw) : nil

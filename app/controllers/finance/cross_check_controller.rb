@@ -11,8 +11,7 @@ module Finance
   # est persisté au moment de la vente. Re-coter un vieux séjour donnerait un
   # montant qui n'a jamais été facturé, parce que deux moteurs de prix ont
   # coexisté dans l'application.
-  class CrossCheckController < Finance::BaseController
-    breadcrumb "Comptabilité", :finance_accounting_path, match: :exact
+  class CrossCheckController < Finance::AccountingBaseController
     breadcrumb "Contrôle croisé", :finance_cross_check_path, match: :exact
 
     def index
@@ -52,8 +51,6 @@ module Finance
         { team: teams[team_id], revenue_cents: credits.to_i - debits.to_i }
       end.sort_by { |row| row[:team]&.name || "zzz" }
     end
-
-    def finance_secondary = "accounting"
 
     def parsed_month
       raw = params[:month].presence
