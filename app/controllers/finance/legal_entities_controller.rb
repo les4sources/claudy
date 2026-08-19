@@ -2,10 +2,8 @@ module Finance
   # Les entités juridiques. La frontière entre elles n'est pas décorative : une
   # facture de travaux payée depuis le compte de la Fondation reste une charge de
   # la Société simple.
-  class LegalEntitiesController < Finance::BaseController
+  class LegalEntitiesController < Finance::AccountingBaseController
     before_action :get_entity, only: [:edit, :update, :destroy]
-
-    breadcrumb "Comptabilité", :finance_accounting_path, match: :exact
     breadcrumb "Entités", :finance_legal_entities_path, match: :exact
 
     def index
@@ -50,7 +48,6 @@ module Finance
     private
 
     def get_entity = @entity = LegalEntity.find(params[:id])
-    def finance_secondary = "accounting"
 
     def entity_params
       params.require(:legal_entity).permit(:name, :form, :vat_regime, :vat_number, :active)

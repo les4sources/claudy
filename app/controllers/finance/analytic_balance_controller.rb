@@ -4,8 +4,7 @@ module Finance
   # La part NON AFFECTÉE est affichée comme telle et n'est jamais répartie
   # d'office. Un chiffre réparti au prorata a l'air complet et ne l'est pas ;
   # une ligne « non affecté » qui dérange est ce qui fait qu'on va l'affecter.
-  class AnalyticBalanceController < Finance::BaseController
-    breadcrumb "Comptabilité", :finance_accounting_path, match: :exact
+  class AnalyticBalanceController < Finance::AccountingBaseController
     breadcrumb "Balance analytique", :finance_analytic_balance_path, match: :exact
 
     def index
@@ -37,8 +36,6 @@ module Finance
     end
 
     private
-
-    def finance_secondary = "accounting"
 
     def parsed_date(raw)
       raw.present? ? Date.parse(raw) : nil

@@ -5,10 +5,8 @@ module Finance
   # tomber à zéro à la fin d'un mois. C'est le seul indicateur qui dit, en un
   # coup d'œil, si la comptabilité est à jour — et il remplace des heures de
   # rapprochement annuel par un geste mensuel.
-  class CashEntriesController < Finance::BaseController
+  class CashEntriesController < Finance::AccountingBaseController
     before_action :get_entry, only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate]
-
-    breadcrumb "Comptabilité", :finance_accounting_path, match: :exact
     breadcrumb "Trésorerie", :finance_cash_entries_path, match: :exact
 
     def index
@@ -192,7 +190,6 @@ module Finance
     private
 
     def get_entry = @entry = CashEntry.find(params[:id])
-    def finance_secondary = "accounting"
 
     def entry_params
       permitted = params.require(:cash_entry).permit(:cash_account_id, :entry_date, :value_date, :label,

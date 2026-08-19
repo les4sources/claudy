@@ -1,10 +1,8 @@
 module Finance
   # Les exercices. Leur clôture est ce qui rend une écriture définitivement
   # intouchable — sans elle, « verrouillé » resterait une politesse.
-  class FiscalYearsController < Finance::BaseController
+  class FiscalYearsController < Finance::AccountingBaseController
     before_action :get_year, only: [:edit, :update, :destroy, :close]
-
-    breadcrumb "Comptabilité", :finance_accounting_path, match: :exact
     breadcrumb "Exercices", :finance_fiscal_years_path, match: :exact
 
     def index
@@ -55,7 +53,6 @@ module Finance
     private
 
     def get_year = @year = FiscalYear.find(params[:id])
-    def finance_secondary = "accounting"
 
     def year_params
       params.require(:fiscal_year).permit(:legal_entity_id, :starts_on, :ends_on, :status)

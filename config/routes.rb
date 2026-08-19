@@ -72,6 +72,12 @@ Rails.application.routes.draw do
   namespace :finance do
     resources :households
     resources :accounts do
+      member do
+        # La lecture agrégée d'un compte, sur une période choisie. Derrière
+        # Devise comme le reste : tous les habitants ont un accès Claudy, une
+        # porte publique par jeton n'achèterait rien de plus.
+        get :retrospective
+      end
       resources :entries, only: [:create, :destroy], controller: "account_entries"
       resources :settlements, only: [:create]
     end

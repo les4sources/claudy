@@ -5,8 +5,7 @@ module Finance
   # est tout l'intérêt de la partie double : c'est la comptabilité qui se
   # contredit toute seule quand quelque chose cloche, au lieu d'attendre qu'un
   # humain remarque l'écart six mois plus tard.
-  class TrialBalanceController < Finance::BaseController
-    breadcrumb "Comptabilité", :finance_accounting_path, match: :exact
+  class TrialBalanceController < Finance::AccountingBaseController
     breadcrumb "Balance", :finance_trial_balance_path, match: :exact
 
     def index
@@ -37,8 +36,6 @@ module Finance
     end
 
     private
-
-    def finance_secondary = "accounting"
 
     def parsed_date(raw)
       raw.present? ? Date.parse(raw) : nil

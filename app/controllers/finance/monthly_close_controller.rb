@@ -3,8 +3,7 @@ module Finance
   #
   # Un seul endroit à ouvrir le 5 du mois pour savoir si le mois précédent est
   # fini. Rien n'y est stocké : tout se recalcule, donc rien n'y ment.
-  class MonthlyCloseController < Finance::BaseController
-    breadcrumb "Comptabilité", :finance_accounting_path, match: :exact
+  class MonthlyCloseController < Finance::AccountingBaseController
     breadcrumb "Arrêté du mois", :finance_monthly_close_path, match: :exact
 
     def show
@@ -49,8 +48,6 @@ module Finance
     end
 
     private
-
-    def finance_secondary = "accounting"
 
     def parsed_month
       raw = params[:month].presence

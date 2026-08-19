@@ -3,7 +3,7 @@ module Finance
   class AccountsController < Finance::BaseController
     FILTERS = %w[active inactive all].freeze
 
-    before_action :get_account, only: [:show, :edit, :update, :destroy]
+    before_action :get_account, only: [:show, :retrospective, :edit, :update, :destroy]
 
     breadcrumb "Comptes", :finance_accounts_path, match: :exact
 
@@ -17,9 +17,20 @@ module Finance
     def show
       breadcrumb @account.name, finance_account_path(@account), match: :exact
 
+      @outstanding = MemberAccounts::Outstanding.new(@account)
       @entries = AccountEntryDecorator.decorate_collection(@account.account_entries.recent_first)
       @entry = @account.account_entries.new(entry_date: Date.current)
       @account = MemberAccountDecorator.new(@account)
+    end
+
+    # La lecture agrégée d'un compte : le rythme, la répartition, ce qui revient
+    # le plus. `periode` vient de l'URL et se valide dans le service — une URL
+    # bricolée retombe sur la fenêtre glissante, elle ne rend pas une 500.
+    def retrospective
+      breadcrumb @account.name, finance_account_path(@account), match: :exact
+      breadcrumb "Lecture du compte", retrospective_finance_account_path(@account), match: :exact
+
+      @retrospective = MemberAccounts::Retrospective.new(@account, periode: params[:periode])
     end
 
     def new
