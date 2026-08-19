@@ -172,6 +172,12 @@ div id="stay-details-#{@stay.id}"
                   .text-sm.font-semibold.text-gray-900 = jalon[:title]
                   - if jalon[:detail].present?
                     .text-sm.text-gray-500 = jalon[:detail]
+                  /  L'heure annoncée par le client, quand c'est une phrase et
+                     non une heure : elle ne tient pas dans le titre, mais qui
+                     accueille a besoin de la lire — d'où l'indigo plutôt que
+                     le gris du lieu.
+                  - if jalon[:note].present?
+                    .text-sm.font-medium.text-indigo-700 = jalon[:note]
 
       .border-t.border-gray-200.px-5.py-4
         .flex.items-baseline.justify-between

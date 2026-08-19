@@ -123,7 +123,15 @@ div(class=panel)
         | Montant positif = dû par le compte. Montant négatif = en sa faveur (règlement, avoir).
       button(class=primary_button type="submit") Ajouter
 
-- if @entries.blank?
+/  Le grand livre REPLIÉ (Michael, 2026-08-19). Ce compte porte cinq cents
+   écritures : chaque bière, chaque café. Déroulées une par une, elles ne
+   disaient plus rien — personne ne lit cinquante lignes pour savoir ce que le
+   bar a coûté en juillet. Une ligne « Bar — juillet 2026 » et son total, oui.
+
+   Les règlements, eux, ne se replient jamais : un virement de 350 € est un
+   événement daté qu'on vient vérifier, et un total mensuel est exactement ce
+   qui le rendrait introuvable.
+- if @groupes.blank?
   .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
     p.font-medium.text-gray-700 Aucune écriture sur ce compte.
 - else
@@ -131,43 +139,74 @@ div(class=panel)
     table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
       thead.text-xs.text-gray-700.uppercase.bg-gray-50
         tr
-          th.py-3.px-4[scope="col"]
-            | Date
-          th.py-3.px-4[scope="col"]
-            | Libellé
-          th.py-3.px-4[scope="col"]
-            | Canal
-          th.py-3.px-4.text-right[scope="col"]
-            | Qté
-          th.py-3.px-4.text-right[scope="col"]
-            | P.U.
-          th.py-3.px-4.text-right[scope="col"]
-            | Montant
+          th.py-3.px-4[scope="col"] Période
+          th.py-3.px-4[scope="col"] Libellé
+          th.py-3.px-4[scope="col"] Canal
+          th.py-3.px-4.text-right[scope="col"] Lignes
+          th.py-3.px-4.text-right[scope="col"] Montant
           th.py-3.px-4.w-24[scope="col"]
-      tbody
-        - @entries.each do |entry|
+
+      - @groupes.each do |groupe|
+        tbody
           tr.border-b.bg-white
             td.py-3.px-4.whitespace-nowrap[scope="row"]
-              = entry.entry_date
-            td.py-3.px-4.text-gray-900
-              = entry.label
-              = entry.lock_icon
-            td.py-3.px-4
-              = entry.flow
-            td.py-3.px-4.text-right
-              = entry.quantity
-            td.py-3.px-4.text-right
-              = entry.unit_price
-            td.py-3.px-4.text-right.whitespace-nowrap(class="#{entry.amount_css}")
-              = entry.amount
-            td.py-3.px-4.text-right
-              - if entry.locked?
-                span.text-xs.text-gray-400 verrouillée
+              - if groupe.replie?
+                = l(groupe.month, format: "%B %Y").capitalize
               - else
-                = link_to "Supprimer",
-                          finance_account_entry_path(@account, entry),
-                          data: { turbo_method: :delete, turbo_confirm: "Supprimer cette écriture ?" },
-                          class: "text-xs text-red-600 hover:text-red-800"
+                = l(groupe.entree.entry_date, format: :ddmmyyyy)
+            td.py-3.px-4.text-gray-900
+              - if groupe.replie?
+                /  Le repli passe par le contrôleur `collapse` déjà en place
+                   dans la barre de navigation : un `tbody` masqué, pas une
+                   ligne de plus dans le DOM à chaque rendu.
+                /  `-my-3 py-3` annule exactement le rembourrage de la cellule :
+                   la zone cliquable couvre toute la hauteur de la ligne (44 px,
+                   le minimum d'une cible tactile) sans que la ligne grandisse.
+                button.block.w-full.text-left.font-medium.text-gray-900(class="-my-3 py-3" type="button" data-controller="collapse" data-action="click->collapse#toggle" data-collapse-toggle-value="detail-#{groupe.cle}" aria-expanded="false" aria-controls="detail-#{groupe.cle}")
+                  = groupe.label
+                  span.ml-2.text-xs.font-normal.text-gray-400 ▾
+              - else
+                = groupe.entree.label.presence || "—"
+                = AccountEntryDecorator.new(groupe.entree).lock_icon
+            td.py-3.px-4= groupe.libelle_canal
+            td.py-3.px-4.text-right.tabular-nums
+              = groupe.replie? ? groupe.entries.size : "—"
+            td.py-3.px-4.text-right.whitespace-nowrap.tabular-nums(class="#{groupe.amount_cents.positive? ? 'text-red-600' : 'text-emerald-700'}")
+              = number_to_currency(groupe.amount_cents / 100.0)
+            td.py-3.px-4.text-right
+              - unless groupe.replie?
+                - entree = groupe.entree
+                - if entree.locked?
+                  span.text-xs.text-gray-400 verrouillée
+                - else
+                  = link_to "Supprimer",
+                            finance_account_entry_path(@account, entree),
+                            data: { turbo_method: :delete, turbo_confirm: "Supprimer cette écriture ?" },
+                            class: "text-xs text-red-600 hover:text-red-800"
+
+        - if groupe.replie?
+          tbody.hidden(id="detail-#{groupe.cle}")
+            - groupe.entries.each do |entry|
+              - ligne = AccountEntryDecorator.new(entry)
+              tr.border-b(class="bg-gray-50/60")
+                td.py-2.px-4.pl-8.whitespace-nowrap.text-xs= ligne.entry_date
+                td.py-2.px-4.text-xs.text-gray-700
+                  = ligne.label
+                  = ligne.lock_icon
+                  - if entry.quantity.present?
+                    span.ml-2.text-gray-400= "#{ligne.quantity} × #{ligne.unit_price}"
+                td.py-2.px-4
+                td.py-2.px-4
+                td.py-2.px-4.text-right.whitespace-nowrap.text-xs.tabular-nums(class="#{ligne.amount_css}")
+                  = ligne.amount
+                td.py-2.px-4.text-right
+                  - if entry.locked?
+                    span.text-xs.text-gray-400 verrouillée
+                  - else
+                    = link_to "Supprimer",
+                              finance_account_entry_path(@account, entry),
+                              data: { turbo_method: :delete, turbo_confirm: "Supprimer cette écriture ?" },
+                              class: "text-xs text-red-600 hover:text-red-800"
 
   .mt-3.text-right.text-xs.text-gray-500
     = @account.opening_balance_line
