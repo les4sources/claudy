@@ -9,7 +9,10 @@
     p.mt-2.text-sm.text-gray-600 Tout ce qui est passé en trésorerie est ventilé et comptabilisé. C'est l'état dans lequel on veut finir chaque mois.
 - else
   p.mb-4.text-sm.text-gray-500
-    | #{@entries.size} ligne(s) en attente. Une ligne entièrement affectée se comptabilise toute seule.
+    | #{@pending_total} ligne(s) en attente
+    - if @entries.total_pages > 1
+      |  — page #{@entries.current_page} sur #{@entries.total_pages}
+    |  . Une ligne entièrement affectée se comptabilise toute seule.
 
   - @entries.each do |entry|
     .mb-4.p-4.bg-white.rounded-lg.border.border-gray-100
@@ -77,3 +80,7 @@
               = button_to "Refuser", finance_allocation_suggestion_path(suggestion, decision: "reject"), method: :patch, class: "text-xs text-gray-500 hover:text-gray-700", form: { class: "inline" }
 
       = render "allocation_form", entry: entry, general_accounts: @general_accounts, teams: @teams, entities: @entities, from_unallocated: true
+
+  - if @entries.total_pages > 1
+    .mt-6.flex.justify-center
+      = will_paginate @entries

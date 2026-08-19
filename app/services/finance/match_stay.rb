@@ -16,8 +16,14 @@ module Finance
 
     OPEN_STATUSES = %w[pending partially_paid].freeze
 
-    def initialize(cash_entry:)
+    # `open_stays` et `soldes` sont injectables : l'écran « à affecter » traite
+    # vingt-cinq lignes d'un coup, et chaque instance recalculait sinon le solde
+    # des 351 séjours ouverts — une seconde par ligne, vingt-sept par page. Le
+    # calcul est le même pour toutes : il se fait une fois, en amont.
+    def initialize(cash_entry:, open_stays: nil, soldes: nil)
       @entry = cash_entry
+      @stays_precharges = open_stays
+      @soldes = soldes
     end
 
     def run
@@ -88,7 +94,7 @@ module Finance
 
       customer = clients.first
 
-      candidats = open_stays.where(customer_id: customer.id).to_a
+      candidats = open_stays.select { |stay| stay.customer_id == customer.id }
       return :ambiguous if candidats.size > 1
       return nil if candidats.empty?
 
@@ -103,7 +109,7 @@ module Finance
       nom = @entry.counterparty_name.to_s.strip
       return nil if nom.length < 4
 
-      candidats = open_stays.includes(:customer).select do |stay|
+      candidats = open_stays.select do |stay|
         client = stay.customer
         next false if client.nil?
 
@@ -138,11 +144,42 @@ module Finance
     # paiements des deux canaux (lien direct et lien historique par booking) et
     # sait ce qui est réellement exigible. Recalculer à côté, c'est se
     # désynchroniser au premier changement de règle.
-    def remaining_cents(stay) = stay.balance_due_cents.to_i
+    # Le solde d'un séjour coûte deux requêtes. Il ne sert qu'au quatrième
+    # niveau de la cascade — le plus faible, souvent jamais atteint. Le cache est
+    # donc PARESSEUX et PARTAGÉ : rien n'est calculé tant qu'aucune ligne de la
+    # page ne descend jusque-là, et une fois calculé le solde sert à toutes.
+    def remaining_cents(stay)
+      return stay.balance_due_cents.to_i if @soldes.nil?
+
+      @soldes[stay.id] ||= stay.balance_due_cents.to_i
+    end
 
     def open_stays
-      @open_stays ||= Stay.where(payment_status: OPEN_STATUSES)
-                          .where(departure_date: (@entry.entry_date - 1.year)..(@entry.entry_date + 6.months))
+      @open_stays ||= begin
+        fenetre = (@entry.entry_date - 1.year)..(@entry.entry_date + 6.months)
+        if @stays_precharges
+          # Le lot préchargé couvre l'union des fenêtres de la page ; chaque
+          # ligne garde la sienne, filtrée en mémoire.
+          @stays_precharges.select { |stay| fenetre.cover?(stay.departure_date) }
+        else
+          Stay.where(payment_status: OPEN_STATUSES).where(departure_date: fenetre)
+              .includes(:customer).to_a
+        end
+      end
+    end
+
+    # Le lot des séjours ouverts couvrant une liste de lignes, et leurs soldes,
+    # calculés UNE fois. À passer à chaque `MatchStay` de la même page.
+    def self.prechargement(cash_entries)
+      dates = cash_entries.map(&:entry_date)
+      return [[], {}] if dates.empty?
+
+      stays = Stay.where(payment_status: OPEN_STATUSES)
+                  .where(departure_date: (dates.min - 1.year)..(dates.max + 6.months))
+                  .includes(:customer).to_a
+      # Le cache des soldes part VIDE : il se remplit à la demande, et seulement
+      # si la cascade descend jusqu'au niveau qui en a besoin.
+      [stays, {}]
     end
 
     def customer_label(customer)
