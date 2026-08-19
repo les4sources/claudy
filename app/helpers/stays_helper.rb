@@ -43,9 +43,11 @@ module StaysHelper
 
     if stay.arrival_date
       lieu = stay.lodging_bookings.filter_map { |b| b.lodging&.name }.uniq.join(", ").presence
+      heure, annonce = arrival_hour_and_note(stay)
       jalons << { date: stay.arrival_date,
-                  title: "#{l(stay.arrival_date, format: :long).capitalize}#{stay.arrival_time.present? ? " · #{stay.arrival_time}" : ''} — Arrivée",
-                  detail: lieu }
+                  title: "#{l(stay.arrival_date, format: :long).capitalize}#{heure.present? ? " · #{heure}" : ''} — Arrivée",
+                  detail: lieu,
+                  note: annonce }
     end
 
     stay.experience_bookings.reject { |eb| eb.cancelled? || eb.refused? }.each do |eb|
@@ -68,10 +70,33 @@ module StaysHelper
     if stay.departure_date
       jalons << { date: stay.departure_date,
                   title: "#{l(stay.departure_date, format: :long).capitalize}#{stay.departure_time.present? ? " · #{stay.departure_time}" : ''} — Départ",
-                  detail: nil }
+                  detail: nil,
+                  note: nil }
     end
 
     jalons.sort_by { |j| j[:date] }
+  end
+
+  # L'heure d'arrivée vient de DEUX endroits, et les deux comptent pour qui
+  # accueille : celle qu'on note en interne (`Stay#arrival_time`) et celle que
+  # le client annonce lui-même depuis sa page (`Booking#estimated_arrival`).
+  #
+  # La seconde est du texte libre, et elle l'est vraiment : « 16h », mais aussi
+  # « 16-18h » ou « Après 18h car ils s'installent d'abord à leur évènement ».
+  # C'est la longueur qui décide où elle va — une heure courte tient dans le
+  # titre du jalon, une phrase se lit en dessous. La tronquer serait pire que
+  # de la déplacer : c'est précisément la fin qui porte la raison.
+  HEURE_COURTE = 12
+
+  def arrival_hour_and_note(stay)
+    annoncees = stay.lodging_bookings.filter_map { |b| b.estimated_arrival.presence }.uniq
+    interne = stay.arrival_time.presence
+
+    heure = interne || annoncees.find { |h| h.length <= HEURE_COURTE }
+    restantes = annoncees - [heure]
+    note = restantes.any? ? "Arrivée annoncée : #{restantes.join(' · ')}" : nil
+
+    [heure, note]
   end
 
   # Marqueur d'une section dépliable du formulaire séjour (Michael 2026-07-26).
