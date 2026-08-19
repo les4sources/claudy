@@ -127,4 +127,55 @@ RSpec.describe "Finances > Comptabilité", type: :request do
       expect(response).to redirect_to(new_user_session_path)
     end
   end
+  # Retirer une entité créée par erreur — le cas réel : « Marco & Vespucci »,
+  # la SRL de Michael, n'a rien à faire dans la compta des 4 Sources.
+  #
+  # Le garde-fou n'est pas dans le bouton, il est dans le modèle : une entité
+  # qui porte un exercice, un compte ou une écriture ne peut pas partir, et le
+  # refus est motivé plutôt que silencieux.
+  describe "supprimer une entité" do
+    it "retire une entité qui ne porte rien" do
+      seule = LegalEntity.create!(name: "Créée par erreur", form: "srl", vat_regime: "exempt")
+
+      expect { delete finance_legal_entity_path(seule) }.to change(LegalEntity, :count).by(-1)
+      expect(flash[:notice]).to include("supprimée")
+    end
+
+    it "refuse tant qu'un exercice y est rattaché, et le dit" do
+      expect { delete finance_legal_entity_path(entity) }.not_to change(LegalEntity, :count)
+
+      expect(flash[:alert]).to include("exercices")
+    end
+
+    it "offre le bouton sur l'écran, faute de quoi la route est injoignable" do
+      get finance_legal_entities_path
+
+      expect(response.body).to include(finance_legal_entity_path(entity))
+      expect(response.body).to include("Supprimer")
+    end
+
+    # L'ordre imposé : l'exercice vide d'abord, l'entité ensuite.
+    it "laisse partir l'entité une fois son exercice vide retiré" do
+      delete finance_fiscal_year_path(fiscal_year)
+
+      expect { delete finance_legal_entity_path(entity) }.to change(LegalEntity, :count).by(-1)
+    end
+
+    it "garde un exercice qui porte des écritures" do
+      post_simple_entry(entity: entity, debit_account: bank, credit_account: revenue)
+
+      expect { delete finance_fiscal_year_path(fiscal_year) }.not_to change(FiscalYear, :count)
+      expect(flash[:alert]).to include("écritures")
+    end
+
+    # Un arrêté ne se défait pas d'un clic : le bouton n'existe pas sur un
+    # exercice clôturé.
+    it "ne propose pas la suppression d'un exercice clôturé" do
+      fiscal_year.update!(status: "closed")
+
+      get finance_fiscal_years_path
+
+      expect(response.body).not_to include(%(action="#{finance_fiscal_year_path(fiscal_year)}"))
+    end
+  end
 end

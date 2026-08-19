@@ -27,3 +27,12 @@
           td.py-4.px-6= entity.cash_accounts.size
           td.py-4.px-6.text-right
             = link_to "Modifier", edit_finance_legal_entity_path(entity), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+            /  La route `destroy` existait depuis le début, rien ne la
+               déclenchait : retirer une entité créée par erreur imposait une
+               console. Le garde-fou est côté modèle — exercices, comptes de
+               trésorerie et écritures sont en `restrict_with_error`, donc le
+               bouton ne peut pas emporter une entité qui porte quoi que ce
+               soit ; il rend la main avec le motif.
+            = button_to "Supprimer", finance_legal_entity_path(entity), method: :delete,
+                        class: "ml-3 text-sm text-red-600 hover:text-red-800", form: { class: "inline" },
+                        data: { turbo_confirm: "Supprimer l'entité « #{entity.name} » ? Elle ne doit porter ni exercice, ni compte, ni écriture." }
