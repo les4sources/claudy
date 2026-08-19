@@ -6,11 +6,18 @@ module MemberAccounts
   # d'habitude ». Ces deux questions-là sont celles qu'un habitant se pose, et
   # aucune ligne de journal ne les adresse — d'où cette lecture agrégée.
   #
-  # Tout est calculé sur une fenêtre GLISSANTE de douze mois : une année civile
+  # La fenêtre par défaut est GLISSANTE sur douze mois : une année civile
   # rendrait la page inutile en janvier, au moment précis où on veut faire le
-  # point.
+  # point. Mais comparer une année à la précédente est la question suivante —
+  # d'où les périodes nommées (`2025`, `2024`…, `tout`).
+  #
+  # Pas de sélecteur de dates libre, volontairement : « du 14 mars au 2
+  # septembre » n'est une question que personne ne se pose, et deux champs de
+  # dates coûteraient plus cher en attention qu'ils ne rapportent.
   class Retrospective
     MOIS = 12
+    GLISSANTE = "12m".freeze
+    TOUT = "tout".freeze
 
     # Chaque canal garde SA couleur d'un bout à l'autre de la page — dans le
     # ruban des mois, dans la barre de répartition, dans la légende. C'est ce
@@ -36,18 +43,62 @@ module MemberAccounts
     Canal = Struct.new(:flow, :label, :couleur, :amount_cents, :part, keyword_init: true)
     Article = Struct.new(:name, :quantity, :amount_cents, keyword_init: true)
 
-    def initialize(member_account, today: Date.current)
+    def initialize(member_account, periode: GLISSANTE, today: Date.current)
       @account = member_account
       @today = today
+      @periode = periode.to_s.presence || GLISSANTE
     end
 
-    def debut = @today.beginning_of_month - (MOIS - 1).months
-    def fin = @today.end_of_month
+    # Une période inconnue retombe sur la fenêtre glissante plutôt que de
+    # lever : le paramètre vient de l'URL, et une URL bricolée ne doit pas
+    # rendre une 500.
+    def periode
+      @periode_retenue ||= periodes_disponibles.include?(@periode) ? @periode : GLISSANTE
+    end
+
+    # Les choix offerts : la fenêtre glissante, chaque année civile où le compte
+    # a bougé, et tout l'historique — proposé seulement s'il dépasse une année,
+    # sinon il ferait doublon avec la fenêtre glissante.
+    def periodes_disponibles
+      @periodes_disponibles ||= begin
+        annees = annees_actives.map(&:to_s)
+        [GLISSANTE, *annees.reverse, (TOUT if annees.size > 1)].compact
+      end
+    end
+
+    def libelle_periode(valeur = periode)
+      case valeur
+      when GLISSANTE then "12 derniers mois"
+      when TOUT then "Tout l'historique"
+      else valeur
+      end
+    end
+
+    def debut
+      @debut ||= case periode
+                 when GLISSANTE then @today.beginning_of_month - (MOIS - 1).months
+                 when TOUT then (premiere_ecriture || @today).beginning_of_month
+                 else Date.new(periode.to_i, 1, 1)
+                 end
+    end
+
+    # Une année en cours s'arrête au mois courant : douze colonnes dont sept
+    # vides diraient « le compte s'est arrêté », pas « l'année n'est pas finie ».
+    def fin
+      @fin ||= case periode
+               when GLISSANTE, TOUT then @today.end_of_month
+               else [Date.new(periode.to_i, 12, 31), @today.end_of_month].min
+               end
+    end
+
+    def nombre_de_mois
+      @nombre_de_mois ||= ((fin.year * 12 + fin.month) - (debut.year * 12 + debut.month)) + 1
+    end
 
     # Un mois par colonne, même vide : un trou dans la série se lit, une
     # colonne manquante se confond avec le mois voisin.
     def mois
-      @mois ||= (0...MOIS).map do |decalage|
+      @mois ||= (0...nombre_de_mois).map do |decalage|
         month = debut + decalage.months
         par_flow = depenses_par_mois_et_flow[month] || {}
         Mois.new(month: month, par_flow: par_flow, total_cents: par_flow.values.sum)
@@ -115,6 +166,17 @@ module MemberAccounts
 
     def ecritures
       @account.account_entries.where(entry_date: debut..fin)
+    end
+
+    def premiere_ecriture
+      @premiere_ecriture ||= @account.account_entries.minimum(:entry_date)
+    end
+
+    def annees_actives
+      @annees_actives ||= begin
+        premiere = premiere_ecriture&.year
+        premiere ? (premiere..@today.year).to_a : []
+      end
     end
 
     # Un seul aller-retour en base pour les douze colonnes ET la répartition :

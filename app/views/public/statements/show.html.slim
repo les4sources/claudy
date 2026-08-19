@@ -51,12 +51,5 @@
   p.mt-2.text-teal-800
     | Une ligne te semble fausse ? Signale-la — le décompte est figé, la correction apparaîtra sur celui du mois suivant.
 
-/  Le décompte dit le mois ; la rétrospective dit l'année. Sans ce lien, la
-   page des douze mois n'existe pour personne — c'est le mail du décompte qui
-   est la seule porte d'entrée d'un habitant.
-p.mt-6.text-center(class="print:hidden")
-  = link_to "Voir mes douze derniers mois →", public_retrospective_path(@statement.token),
-            class: "text-sm text-teal-700 underline hover:text-teal-900"
-
 p.mt-8.text-xs.text-gray-400
   | Les 4 Sources · décompte émis le #{l(@statement.issued_at.to_date, format: :long).squish if @statement.issued_at}

@@ -94,6 +94,63 @@ RSpec.describe MemberAccounts::Retrospective do
     end
   end
 
+  describe "le choix de période" do
+    # Les années proposées vont de la première écriture à aujourd'hui : une
+    # année sans mouvement au milieu reste offerte, sinon la liste sauterait
+    # des trous et se lirait comme une erreur.
+    before do
+      conso(Date.new(2024, 5, 10), 3_000)
+      conso(Date.new(2026, 7, 10), 4_000)
+    end
+
+    it "offre la fenêtre glissante, les années, puis tout l'historique" do
+      expect(bilan.periodes_disponibles).to eq(["12m", "2026", "2025", "2024", "tout"])
+      expect(bilan.periode).to eq("12m")
+    end
+
+    it "cadre une année civile passée sur ses douze mois" do
+      annee = described_class.new(account, periode: "2024", today: today)
+
+      expect(annee.debut).to eq(Date.new(2024, 1, 1))
+      expect(annee.fin).to eq(Date.new(2024, 12, 31))
+      expect(annee.nombre_de_mois).to eq(12)
+      expect(annee.total_depense_cents).to eq(3_000)
+    end
+
+    # Sept colonnes vides diraient « le compte s'est arrêté », pas « l'année
+    # n'est pas finie ».
+    it "arrête l'année en cours au mois courant" do
+      annee = described_class.new(account, periode: "2026", today: today)
+
+      expect(annee.fin).to eq(Date.new(2026, 8, 31))
+      expect(annee.nombre_de_mois).to eq(8)
+    end
+
+    it "part de la première écriture sur tout l'historique" do
+      tout = described_class.new(account, periode: "tout", today: today)
+
+      expect(tout.debut).to eq(Date.new(2024, 5, 1))
+      expect(tout.nombre_de_mois).to eq(28)
+      expect(tout.total_depense_cents).to eq(7_000)
+    end
+
+    # Le paramètre vient de l'URL : il n'a pas à faire tomber la page.
+    it "retombe sur la fenêtre glissante devant une valeur inconnue" do
+      %w[1789 tout-court].each do |bricolage|
+        retombe = described_class.new(account, periode: bricolage, today: today)
+        expect(retombe.periode).to eq("12m")
+        expect(retombe.nombre_de_mois).to eq(12)
+      end
+    end
+
+    it "ne propose pas « tout » quand le compte tient dans une seule année" do
+      neuf = MemberAccount.create!(kind: "entity", name: "Low tech")
+      neuf.account_entries.create!(entry_date: Date.new(2026, 3, 1), amount_cents: 100, label: "X")
+
+      expect(described_class.new(neuf, today: today).periodes_disponibles).to eq(["12m", "2026"])
+    end
+  end
+
   describe "les articles" do
     let!(:biere) { CatalogItem.create!(name: "Moinette", channel: "bar") }
     let!(:cafe) { CatalogItem.create!(name: "Café", channel: "bar") }

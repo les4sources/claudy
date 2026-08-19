@@ -1,6 +1,6 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
-           title: "#{@account.name} — douze mois",
+           title: "#{@account.name} — lecture du compte",
            links: [ \
              link_to("← Retour au compte", finance_account_path(@account), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") \
            ]

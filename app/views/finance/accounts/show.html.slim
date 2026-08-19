@@ -2,7 +2,7 @@
   = render "layouts/components/page_header",
            title: @account.name,
            links: [ \
-             link_to("Douze mois", retrospective_finance_account_path(@account), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"), \
+             link_to("Lecture du compte", retrospective_finance_account_path(@account), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"), \
              link_to("Modifier", edit_finance_account_path(@account), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"), \
              link_to("← Tous les comptes", finance_accounts_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") \
            ]

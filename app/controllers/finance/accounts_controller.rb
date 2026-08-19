@@ -23,13 +23,14 @@ module Finance
       @account = MemberAccountDecorator.new(@account)
     end
 
-    # Douze mois de compte, vus de l'intérieur. La même page qu'un habitant
-    # ouvre depuis son décompte — ici sans jeton, puisqu'on est déjà connecté.
+    # La lecture agrégée d'un compte : le rythme, la répartition, ce qui revient
+    # le plus. `periode` vient de l'URL et se valide dans le service — une URL
+    # bricolée retombe sur la fenêtre glissante, elle ne rend pas une 500.
     def retrospective
       breadcrumb @account.name, finance_account_path(@account), match: :exact
-      breadcrumb "Douze mois", retrospective_finance_account_path(@account), match: :exact
+      breadcrumb "Lecture du compte", retrospective_finance_account_path(@account), match: :exact
 
-      @retrospective = MemberAccounts::Retrospective.new(@account)
+      @retrospective = MemberAccounts::Retrospective.new(@account, periode: params[:periode])
     end
 
     def new

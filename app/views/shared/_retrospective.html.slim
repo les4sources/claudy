@@ -1,9 +1,9 @@
-/  Douze mois de compte, lus par la personne dont c'est le compte.
+/  Un compte lu par la personne dont c'est le compte.
    (Michael, 2026-08-19 — « du reporting utile pour les habitants ».)
 
    La page emprunte l'identité SOUS-BOIS du portail — sable, forêt, cuivre,
-   Fraunces — et non le gris de l'admin : elle s'ouvre sur le téléphone d'un
-   habitant, souvent depuis le mail de son décompte, pas dans un back-office.
+   Fraunces — et non le gris de l'admin : un habitant l'ouvre sur son
+   téléphone pour lire SON compte, pas pour administrer quoi que ce soit.
 
    Règle qui tient toute la lecture : CHAQUE CANAL GARDE SA COULEUR partout.
    Le cuivre est le bar dans le ruban des mois, dans la barre de répartition et
@@ -22,9 +22,22 @@
     p(class="text-xs uppercase tracking-[0.16em] text-sand/60")
       = "#{account.name} · "
       span.font-mono= account.code
-    h1.mt-1.font-fraunces.text-3xl.leading-tight.md:text-4xl Douze mois de compte
+    h1.mt-1.font-fraunces.text-3xl.leading-tight.md:text-4xl Lecture du compte
     p.mt-1.text-sm(class="text-sand/70")
       = "#{l(r.debut, format: '%B %Y')} → #{l(r.fin, format: '%B %Y')}"
+
+    /  Des périodes NOMMÉES, pas deux champs de dates : « du 14 mars au 2
+       septembre » n'est une question que personne ne se pose. Ce qui manque
+       vraiment, c'est comparer une année à la précédente — d'où cette liste.
+       De simples liens : la page reste lisible sans JavaScript, et chaque
+       période a son URL, donc son signet.
+    nav.mt-5.flex.flex-wrap.gap-2(aria-label="Période")
+      - r.periodes_disponibles.each do |valeur|
+        - actif = valeur == r.periode
+        = link_to r.libelle_periode(valeur),
+                  retrospective_finance_account_path(account, periode: valeur),
+                  class: "rounded-full px-3 py-1 text-xs transition-colors #{actif ? 'bg-sand text-forest font-semibold' : 'text-sand/70 ring-1 ring-sand/25 hover:bg-white/10 hover:text-sand'}",
+                  aria: { current: (actif ? "page" : nil) }
 
     - if r.any?
       .mt-6.grid.grid-cols-3.gap-4(class="border-t border-sand/15 pt-5")
@@ -40,12 +53,12 @@
 
   - unless r.any?
     section class=carte
-      p.text-ink Aucun mouvement sur ce compte depuis douze mois.
+      p.text-ink Aucun mouvement sur ce compte pendant cette période.
       p.mt-1.text-sm.text-moss Le compte existe, il est simplement resté à l'arrêt sur la période.
 
   - if r.any?
     /  LE RYTHME. Un solde ne dit pas si on consomme plus que d'habitude ; une
-       série de douze barres, si. La ligne pointillée est la moyenne : elle
+       série de barres mensuelles, si. La ligne pointillée est la moyenne : elle
        transforme chaque colonne en écart plutôt qu'en valeur absolue.
     section class=carte
       .flex.flex-wrap.items-baseline.justify-between.gap-2
@@ -54,8 +67,14 @@
           - if r.mois_le_plus_charge && r.mois_le_plus_charge.total_cents.positive?
             = "Pic en #{l(r.mois_le_plus_charge.month, format: '%B %Y')}"
 
+      /  La largeur des colonnes se calcule : la période peut valoir douze mois
+         comme cinquante. Au-delà de quatorze, un libellé sur trois — sinon les
+         noms de mois se chevauchent et le ruban devient un bruit gris.
+      - pas = 696.0 / r.mois.size
+      - barre = [(pas * 0.68).round(1), 2].max
+      - pas_label = r.mois.size <= 14 ? 1 : (r.mois.size <= 30 ? 3 : 6)
       .mt-5.overflow-x-auto
-        svg(class="w-full min-w-[600px]" viewBox="0 0 720 215" role="img" aria-label="Consommation mensuelle sur douze mois, par canal")
+        svg(class="w-full min-w-[600px]" viewBox="0 0 720 215" role="img" aria-label="Consommation par mois et par canal, sur la période choisie")
           /  Repère de moyenne, tracé AVANT les barres pour passer dessous.
           - moyenne_y = 165 - (r.moyenne_mensuelle_cents * 130.0 / plafond)
           - if r.moyenne_mensuelle_cents.positive?
@@ -64,12 +83,13 @@
               = "moyenne #{number_to_currency(r.moyenne_mensuelle_cents / 100.0, precision: 0)}"
 
           - r.mois.each_with_index do |m, i|
-            - x = 12 + i * 59
+            - x = (12 + i * pas).round(1)
+            - milieu = (x + barre / 2).round(1)
             g
               title= "#{l(m.month, format: '%B %Y')} — #{number_to_currency(m.total_cents / 100.0)}"
               - if m.total_cents.zero?
                 /  Un mois sans rien n'est pas un trou : c'est une information.
-                line[x1=x x2=(x + 40) y1="164" y2="164" stroke="#DED4BE" stroke-width="2"]
+                line[x1=x x2=(x + barre) y1="164" y2="164" stroke="#DED4BE" stroke-width="2"]
               - else
                 - haut = 165
                 - canaux.each do |canal|
@@ -77,14 +97,15 @@
                   - next if cents.zero?
                   - hauteur = cents * 130.0 / plafond
                   - haut -= hauteur
-                  rect[x=x y=haut width="40" height=hauteur fill=canal.couleur]
+                  rect[x=x y=haut width=barre height=hauteur fill=canal.couleur]
                 - if m.total_cents == r.plafond_cents
-                  text(class="text-[12px]" x=(x + 20) y=(haut - 6) fill="#1C2620" text-anchor="middle" font-weight="600")
+                  text(class="text-[12px]" x=milieu y=(haut - 6) fill="#1C2620" text-anchor="middle" font-weight="600")
                     = number_to_currency(m.total_cents / 100.0, precision: 0)
-              text(class="text-[13px]" x=(x + 20) y="182" fill="#5C6659" text-anchor="middle")
-                = l(m.month, format: "%b").delete(".").capitalize
+              - if (i % pas_label).zero?
+                text(class="text-[13px]" x=milieu y="182" fill="#5C6659" text-anchor="middle")
+                  = l(m.month, format: "%b").delete(".").capitalize
               - if m.month.month == 1 || i.zero?
-                text(class="text-[12px]" x=(x + 20) y="196" fill="#A79D89" text-anchor="middle")= m.month.year
+                text(class="text-[12px]" x=milieu y="196" fill="#A79D89" text-anchor="middle")= m.month.year
 
     /  OÙ PART L'ARGENT. Une seule barre pour la forme d'ensemble, la liste
        pour les montants : la question « le bar, c'est combien au juste ? » ne
@@ -112,7 +133,7 @@
          elle donne la proportion sans ajouter une colonne de pourcentages.
       section class=carte
         h2.font-fraunces.text-xl.text-ink Ce qui revient le plus
-        p.mt-1.text-sm.text-moss Les articles du bar et de l'épicerie, sur les douze mois.
+        p.mt-1.text-sm.text-moss Les articles du bar et de l'épicerie, sur la période.
         - sommet = [r.articles.first.amount_cents, 1].max
         ul.mt-4.space-y-1.5
           - r.articles.each do |article|
