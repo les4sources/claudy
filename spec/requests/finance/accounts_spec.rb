@@ -197,63 +197,107 @@ RSpec.describe "Finances > Comptes", type: :request do
     end
   end
 
-describe "le callout des paiements dûs" do
-      # La table des écritures, en bas de page, porte les mêmes libellés :
-      # une assertion sur la page entière passerait sans que le callout existe.
-      def callout = Nokogiri::HTML(response.body).at_css("#outstanding")&.text.to_s
-  it "décompose le solde mois par mois au lieu de l'afficher nu" do
-    account = create_account(name: "Béné", kind: "household", household: household)
-    account.account_entries.create!(entry_date: Date.new(2026, 1, 31), amount_cents: 17_000,
+  describe "le callout des paiements dûs" do
+    # La table des écritures, en bas de page, porte les mêmes libellés :
+    # une assertion sur la page entière passerait sans que le callout existe.
+    def callout = Nokogiri::HTML(response.body).at_css("#outstanding")&.text.to_s
+    it "décompose le solde mois par mois au lieu de l'afficher nu" do
+      account = create_account(name: "Béné", kind: "household", household: household)
+      account.account_entries.create!(entry_date: Date.new(2026, 1, 31), amount_cents: 17_000,
                                     label: "Charges habitants", flow: "charges")
-    account.account_entries.create!(entry_date: Date.new(2026, 6, 27), amount_cents: 2_500,
+      account.account_entries.create!(entry_date: Date.new(2026, 6, 27), amount_cents: 2_500,
                                     label: "Batchcooking", flow: "meal")
 
-    get finance_account_path(account)
+      get finance_account_path(account)
 
-    expect(callout).to include("À régler")
-    expect(callout).to include("Charges habitants").and include("Batchcooking")
-    expect(callout).to include("Janvier 2026").and include("Juin 2026")
-    # Le total du callout est le solde : les deux nombres de la page doivent
-    # tomber pareil, sinon la décomposition dit le contraire du solde.
-    expect(callout).to include("195,00")
-  end
+      expect(callout).to include("À régler")
+      expect(callout).to include("Charges habitants").and include("Batchcooking")
+      expect(callout).to include("Janvier 2026").and include("Juin 2026")
+      # Le total du callout est le solde : les deux nombres de la page doivent
+      # tomber pareil, sinon la décomposition dit le contraire du solde.
+      expect(callout).to include("195,00")
+    end
 
-  it "ne montre que ce qui reste après imputation des règlements" do
-    account = create_account(name: "Béné", kind: "household", household: household)
-    account.account_entries.create!(entry_date: Date.new(2026, 1, 31), amount_cents: 17_000,
+    it "ne montre que ce qui reste après imputation des règlements" do
+      account = create_account(name: "Béné", kind: "household", household: household)
+      account.account_entries.create!(entry_date: Date.new(2026, 1, 31), amount_cents: 17_000,
                                     label: "Charges de janvier", flow: "charges")
-    account.account_entries.create!(entry_date: Date.new(2026, 3, 31), amount_cents: 5_000,
+      account.account_entries.create!(entry_date: Date.new(2026, 3, 31), amount_cents: 5_000,
                                     label: "Conso bar", flow: "bar")
-    account.account_entries.create!(entry_date: Date.new(2026, 2, 5), amount_cents: -17_000,
+      account.account_entries.create!(entry_date: Date.new(2026, 2, 5), amount_cents: -17_000,
                                     label: "Virement")
 
-    get finance_account_path(account)
+      get finance_account_path(account)
 
-    expect(callout).to include("Conso bar")
-    expect(callout).not_to include("Charges de janvier")
+      expect(callout).to include("Conso bar")
+      expect(callout).not_to include("Charges de janvier")
+    end
+
+    it "se tait quand le compte est à zéro" do
+      account = create_account(name: "Semisto")
+
+      get finance_account_path(account)
+
+      expect(callout).not_to include("À régler")
+    end
+
+    it "annonce une avance plutôt qu'une dette quand le compte est créditeur" do
+      account = create_account(name: "Semisto")
+      account.account_entries.create!(entry_date: Date.current, amount_cents: -4_000, label: "Provision")
+
+      get finance_account_path(account)
+
+      expect(callout).to include("Rien à régler")
+      expect(callout).to include("en avance sur ses consommations")
+    end
   end
 
-  it "se tait quand le compte est à zéro" do
-    account = create_account(name: "Semisto")
+    describe "le grand livre replié" do
+      def livre = Nokogiri::HTML(response.body).css("table").last&.text.to_s
 
-    get finance_account_path(account)
+      it "montre une ligne par canal et par mois plutôt qu'une par bière" do
+        account = create_account(name: "Béné", kind: "household", household: household)
+        3.times { |i| account.account_entries.create!(entry_date: Date.new(2026, 7, 3 + i), amount_cents: 400, flow: "bar", label: "Moinette") }
+        account.account_entries.create!(entry_date: Date.new(2026, 7, 31), amount_cents: 35_000, flow: "charges", label: "Loyer")
 
-    expect(callout).not_to include("À régler")
-  end
+        get finance_account_path(account)
 
-  it "annonce une avance plutôt qu'une dette quand le compte est créditeur" do
-    account = create_account(name: "Semisto")
-    account.account_entries.create!(entry_date: Date.current, amount_cents: -4_000, label: "Provision")
+        expect(livre).to include("Juillet 2026")
+        expect(livre).to include("12,00")   # le total du bar, pas 3 × 4,00
+        expect(livre).to include("Loyer")   # seule sur son canal : affichée telle quelle
+      end
 
-    get finance_account_path(account)
+      # Un virement fondu dans un total mensuel devient introuvable.
+      it "laisse chaque règlement sur sa propre ligne, à sa date" do
+        account = create_account(name: "Béné", kind: "household", household: household)
+        account.account_entries.create!(entry_date: Date.new(2026, 7, 31), amount_cents: -35_000, flow: "other", label: "Règlement — Virement")
+        account.account_entries.create!(entry_date: Date.new(2026, 7, 31), amount_cents: -5_972, flow: "other", label: "Règlement — Virement")
 
-    expect(callout).to include("Rien à régler")
-    expect(callout).to include("en avance sur ses consommations")
-  end
-end
+        get finance_account_path(account)
 
-describe "sans authentification" do
-    it "redirige la liste et la fiche vers la connexion" do
+        expect(response.body.scan("Règlement — Virement").size).to eq(2)
+        expect(livre).to include("350,00").and include("59,72")
+      end
+
+      # Le détail reste atteignable : c'est là que vit la suppression d'une
+      # écriture, et la vérification d'une ligne contestée.
+      it "garde le détail de chaque groupe dans la page, replié" do
+        account = create_account(name: "Béné", kind: "household", household: household)
+        account.account_entries.create!(entry_date: Date.new(2026, 7, 3), amount_cents: 400, flow: "bar", label: "Moinette")
+        account.account_entries.create!(entry_date: Date.new(2026, 7, 4), amount_cents: 250, flow: "bar", label: "Chips")
+
+        get finance_account_path(account)
+        page = Nokogiri::HTML(response.body)
+        detail = page.css("tbody.hidden").first
+
+        expect(detail).to be_present
+        expect(detail.text).to include("Moinette").and include("Chips")
+        expect(detail.css("a").map { |a| a.text }).to all(eq("Supprimer"))
+      end
+    end
+
+    describe "sans authentification" do
+      it "redirige la liste et la fiche vers la connexion" do
       account = create_account
       sign_out user
 
@@ -262,6 +306,6 @@ describe "sans authentification" do
 
       get finance_account_path(account)
       expect(response).to redirect_to(new_user_session_path)
+      end
     end
-  end
 end

@@ -18,7 +18,9 @@ module Finance
       breadcrumb @account.name, finance_account_path(@account), match: :exact
 
       @outstanding = MemberAccounts::Outstanding.new(@account)
-      @entries = AccountEntryDecorator.decorate_collection(@account.account_entries.recent_first)
+      # Le grand livre est REPLIÉ par mois et par canal : cinq cents lignes de
+      # bar déroulées une par une ne se lisent pas.
+      @groupes = MemberAccounts::GroupedLedger.new(@account.account_entries.recent_first).groupes
       @entry = @account.account_entries.new(entry_date: Date.current)
       @account = MemberAccountDecorator.new(@account)
     end
