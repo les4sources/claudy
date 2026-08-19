@@ -26,20 +26,38 @@ module Finance
     end
 
     # L'écran de travail : ce qui reste à affecter, et rien d'autre.
+    # Cet écran est une FILE D'ATTENTE : on y traite quelques lignes, pas dix
+    # mille. Il faisait pourtant, pour CHAQUE ligne en attente, un rapprochement
+    # de séjour qui coûte plus d'une seconde. Tant que le journal tenait en une
+    # poignée de lignes, personne ne l'a vu ; à 10 133 lignes reprises, l'écran
+    # demandait plus de trois heures et tombait en timeout.
+    #
+    # Tout le travail est donc borné à la PAGE affichée. Le compteur, lui, reste
+    # global : savoir combien de lignes attendent est l'information la plus utile
+    # de cet écran, et elle ne coûte qu'un COUNT.
+    PAR_PAGE = 25
+
     def unallocated
+      @pending_total = CashEntry.pending.count
+      @entries = CashEntry.pending.ordered
+                          .includes(:cash_account, :cash_allocations, :allocation_suggestions)
+                          .paginate(page: params[:page], per_page: PAR_PAGE)
+
       # Les suggestions se recalculent à l'ouverture de l'écran : c'est le seul
       # moment où elles servent, et ça évite un job de fond que l'application
-      # n'a pas les moyens de garantir.
-      Finance::SuggestAllocations.new(whodunnit: current_user&.email).run!
-
-      @entries = CashEntry.pending.ordered.includes(:cash_account, :cash_allocations, :allocation_suggestions)
+      # n'a pas les moyens de garantir. Sur les lignes AFFICHÉES seulement — les
+      # recalculer toutes coûtait 38 secondes à chaque page.
+      Finance::SuggestAllocations.new(cash_entries: @entries, whodunnit: current_user&.email).run!
 
       # Le rapprochement de séjour se calcule à l'affichage : il dépend de
       # l'état des soldes, qui bouge à chaque paiement.
+      # Les séjours ouverts et leurs soldes, calculés UNE fois pour la page.
+      stays, soldes = Finance::MatchStay.prechargement(@entries)
+
       @stay_matches = @entries.each_with_object({}) do |entry, hash|
         next if entry.cash_allocations.any?
 
-        correspondance = Finance::MatchStay.new(cash_entry: entry).run!
+        correspondance = Finance::MatchStay.new(cash_entry: entry, open_stays: stays, soldes: soldes).run!
         next if correspondance.nil?
 
         lignes = begin

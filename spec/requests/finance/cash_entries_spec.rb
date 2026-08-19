@@ -27,6 +27,46 @@ RSpec.describe "Finances > Trésorerie", type: :request do
     expect(CashEntry.last.amount_cents).to eq(130_000)
   end
 
+  # Issue #202 — l'écran faisait, pour CHAQUE ligne en attente, un rapprochement
+  # de séjour à plus d'une seconde. À 10 133 lignes reprises, il demandait plus de
+  # trois heures et tombait en timeout. Tout le travail est désormais borné à la
+  # page affichée ; seul le compteur reste global.
+  describe "avec plus d'une page de lignes en attente" do
+    before { 30.times { |n| build_cash_entry(cash_account, amount_cents: 1_000 + n) } }
+
+    it "annonce le TOTAL en attente, pas la taille de la page" do
+      get finance_unallocated_cash_entries_path
+
+      expect(response.body).to include("30 ligne(s) en attente")
+      expect(response.body).to include("page 1 sur 2")
+    end
+
+    it "n'affiche qu'une page de lignes" do
+      get finance_unallocated_cash_entries_path
+
+      # Les montants sont tous distincts (10,00 à 10,29) : on compte combien
+      # apparaissent réellement dans la page.
+      montants = CashEntry.pending.pluck(:amount_cents).map { |c| format("%.2f", c / 100.0).tr(".", ",") }
+      affiches = montants.count { |m| response.body.include?(m) }
+
+      expect(affiches).to eq(25)
+    end
+
+    # Le coût par ligne est ce qui faisait tomber l'écran : il ne doit s'appliquer
+    # qu'aux lignes visibles.
+    it "ne crée pas de suggestion pour les lignes hors page" do
+      expect { get finance_unallocated_cash_entries_path }
+        .to change { AllocationSuggestion.count }.by_at_most(25)
+    end
+
+    it "supporte une page au-delà de la dernière" do
+      get finance_unallocated_cash_entries_path, params: { page: 99 }
+
+      expect(response).to have_http_status(:ok)
+    end
+  end
+
+
   describe "l'écran à affecter" do
     let!(:entry) { build_cash_entry(cash_account, amount_cents: 130_000) }
 
