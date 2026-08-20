@@ -2,7 +2,12 @@
   frame `stay_compose_grids` quand les dates du séjour changent (contrôleur
   stay-grids → GET stays#compose_grids). La facturation espaces vit HORS du
   frame pour ne jamais perdre ses valeurs au rechargement.
-= turbo_frame_tag "stay_compose_grids" do
+/  `block space-y-6` sur le frame (Michael 2026-08-20) : un <turbo-frame> est un
+   élément INLINE par défaut, donc invisible au `space-y-6` de la colonne — ses
+   cartes se collaient les unes aux autres et à la section Hébergement, alors que
+   Repas et Terrasse (hors frame) respiraient. En bloc, le frame prend l'écart de
+   la colonne et le redonne à ses propres sections : un seul rythme vertical.
+= turbo_frame_tag "stay_compose_grids", class: "block space-y-6" do
   /  Sections DÉPLIABLES, comme le reste du formulaire (Michael 2026-07-26) :
      repliées par défaut, ouvertes dès qu'elles contiennent quelque chose. Les
      grilles datées sont les plus hautes du formulaire — ouvertes en permanence,
@@ -18,9 +23,9 @@
   / Parité funnel : le gîte occupé nuit par nuit (lodging_night_ids). Masquée en
   / mode « chambres seules » par stay-form (data-stay-form-target="lodgingGrid").
   / Rechargée avec les autres grilles quand les dates changent.
-  / Ouverte par défaut, comme la section Hébergement : choisir le gîte nuit par
-  / nuit est le geste central de la composition, pas une option à révéler.
-  details(class=grid_box open=true data-stay-form-target="lodgingGrid")
+  / Repliée tant qu'aucune nuit n'est prise (Michael 2026-08-20) : on arrive sur un
+  / formulaire entièrement fermé et on ouvre la grille en cliquant « + ajouter ».
+  details(class=grid_box open=nuits_gite.any? data-stay-form-target="lodgingGrid")
     summary class=grid_summary
       span 🏡 Hébergement — nuit par nuit
       = stay_form_section_marker(nuits_gite.any?, nuits_gite.size)

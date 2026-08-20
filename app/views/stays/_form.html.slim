@@ -197,11 +197,12 @@
       - current_booking_type = (@draft&.rooms_mode? ? "rooms" : "lodging")
       - selected_room_ids = Array(@draft&.room_ids).map(&:to_i)
       - has_lodging = @draft&.lodging_id.present? || selected_room_ids.any? || Array(@draft&.lodging_night_ids).compact_blank.any?
-      /  TOUJOURS OUVERTE (Michael 2026-07-27). Un séjour aux 4 Sources, c'est un
-         gîte : l'hébergement est le chemin par défaut, pas une option à déplier.
-         Toutes les autres sections restent repliées tant qu'elles sont vides —
-         c'est ce contraste qui dit à l'équipe par où commencer.
-      details class=section_box open=true
+      /  REPLIÉE TANT QU'ELLE EST VIDE (Michael 2026-08-20, qui révise le 2026-07-27) :
+         à l'arrivée sur un séjour neuf, TOUTES les sections sont fermées — le
+         formulaire tient dans un écran et on ouvre ce dont on a besoin en cliquant
+         « + ajouter ». L'hébergement suit désormais la même règle que les autres :
+         ouvert d'office seulement s'il contient déjà quelque chose (édition).
+      details class=section_box open=has_lodging
         summary class=section_summary
           span Hébergement
           = stay_form_section_marker(has_lodging)
