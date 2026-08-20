@@ -255,6 +255,11 @@ Rails.application.routes.draw do
       # l'équipe. C'est le seul chemin qui applique la demande au séjour.
       post :approve_change_request
       post :refuse_change_request
+      # Renvoi MANUEL de l'email « votre séjour est confirmé » (Malau,
+      # 2026-08-20). L'envoi nominal est automatique à la confirmation ; ce
+      # bouton sert quand le client a perdu le message ou a changé d'adresse.
+      # Seul chemin qui passe outre l'idempotence `confirmation_email_sent_at`.
+      post :send_confirmation_email
     end
     resources :experience_bookings, only: [:create]
     # Gestion des paiements DEPUIS la modale séjour (issue paiements-secrétaire) :

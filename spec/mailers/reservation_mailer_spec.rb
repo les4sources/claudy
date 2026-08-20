@@ -109,4 +109,58 @@ RSpec.describe ReservationMailer, type: :mailer do
       end
     end
   end
+
+  # Malau, 2026-08-20 — le 3e email du flux : « votre séjour est confirmé ».
+  describe "#stay_confirmed" do
+    subject(:mail) { described_class.stay_confirmed(stay) }
+
+    before { stay.update!(status: "confirmed") }
+
+    it "adresse le mail au Customer" do
+      expect(mail.to).to eq(["guest@example.com"])
+      expect(mail.subject).to include("confirmé")
+    end
+
+    it "porte le lien vers la page séjour (html ET texte)" do
+      html = mail.html_part.body.decoded
+      text = mail.text_part.body.decoded
+
+      [html, text].each do |body|
+        expect(body).to include("/sejour/#{stay.reload.token}")
+      end
+    end
+
+    it "récapitule la composition et le total" do
+      html = mail.html_part.body.decoded
+      expect(html).to include("La Hulotte")
+      expect(html).to include("745")
+    end
+
+    it "récapitule aussi les activités, en marquant celles qui restent à confirmer" do
+      experience = Experience.create!(name: "Balade avec les ânes", fixed_price_cents: 4_500, price_cents: 0)
+      availability = ExperienceAvailability.create!(experience: experience, available_on: Date.today + 31, starts_at: "10:00")
+      ExperienceBooking.create!(experience_availability: availability, stay: stay, participants: 4, status: "pending")
+      stay.recompute_aggregates!
+
+      html = described_class.stay_confirmed(stay.reload).html_part.body.decoded
+      expect(html).to include("Balade avec les ânes")
+      expect(html).to include("à confirmer")
+    end
+
+    it "renvoie vers Tranches de Vie pour le pain et la Pizza Party" do
+      html = mail.html_part.body.decoded
+      text = mail.text_part.body.decoded
+
+      [html, text].each do |body|
+        expect(body).to include("tranchesdevie.les4sources.be")
+      end
+      expect(html).to include("Pizza Party")
+    end
+
+    it "annonce le solde restant dû quand il y en a un" do
+      html = mail.html_part.body.decoded
+      expect(html).to include("Reste à régler")
+    end
+  end
+
 end

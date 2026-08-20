@@ -33,6 +33,13 @@ div id="stay-details-#{@stay.id}"
         = button_to "Confirmer le séjour", update_status_stay_path(@stay, status: "confirmed"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-transparent bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700"
       - if @stay.token.present?
         = link_to "Page web ↗", public_stay_path(@stay.token, donottrack: 1), target: "_blank", rel: "noopener", class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+      /  Renvoi manuel de l'email de confirmation (Malau, 2026-08-20). N'apparaît
+         que sur un séjour CONFIRMÉ d'un client réel : sur un séjour en attente il
+         n'y a rien à confirmer, et sur un fourre-tout l'adresse est une boîte
+         maison. Le libellé dit si un email est déjà parti — sans quoi personne ne
+         sait s'il faut cliquer.
+      - if @stay.can_resend_confirmation_email?
+        = button_to @stay.confirmation_email_button_label, send_confirmation_email_stay_path(@stay), method: :post, title: @stay.confirmation_email_hint, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Envoyer l'email de confirmation au client ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
       = link_to "Dupliquer", new_stay_path(duplicate_from: @stay.id), title: "Dupliquer ce séjour (nouvelles dates à choisir)", class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
       /  « Modifier » est l'ISSUE DE SECOURS de cette modale : tout ce qui touche
          à la composition (dates, gîtes, espaces, activités payantes) se règle

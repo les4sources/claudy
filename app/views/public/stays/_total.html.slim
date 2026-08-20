@@ -1,0 +1,12 @@
+/ Le TOTAL vit hors des cartes de composition, et volontairement APRÈS elles.
+/ Tant qu'il était logé en pied de « Votre séjour », il additionnait des lignes
+/ que la carte ne montrait pas : le total du séjour inclut les activités, qui ont
+/ leur propre carte depuis 2026-08-20. Un séjour à 0 € d'hébergement et 105 €
+/ d'activités affichait donc « Total 105 € » sous une seule ligne à 0 € — un
+/ écart que le client ne pouvait pas expliquer. Ici, le total suit tout ce qui le
+/ compose.
+section.mt-6.rounded-2xl.px-5.py-4.md:px-6(class="bg-sand-deep" data-stay-total="true")
+  .flex.items-center.justify-between.gap-4
+    p.text-base.font-semibold.text-ink = t("public.stays.show.total")
+    p.text-2xl.font-bold.text-forest = @stay.formatted_total
+  p.mt-1.text-xs(class="text-moss") = t("public.stays.show.vat_notice")

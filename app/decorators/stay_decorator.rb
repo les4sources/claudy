@@ -289,6 +289,33 @@ class StayDecorator < ApplicationDecorator
                   class: "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium #{style[:classes]}")
   end
 
+  # --- Email de confirmation (Malau, 2026-08-20) -------------------------
+  # L'envoi nominal est automatique à la bascule vers `confirmed` ; ces trois
+  # méthodes n'habillent que le RENVOI manuel depuis la fiche admin.
+
+  # Le bouton n'a de sens que sur un séjour confirmé, rattaché à un client réel
+  # (un fourre-tout n'a pas d'adresse de client) et pourvu d'un email.
+  def can_resend_confirmation_email?
+    object.status == "confirmed" &&
+      object.customer&.email.present? &&
+      !object.customer.catch_all?
+  end
+
+  # Le libellé porte l'information : « envoyer » quand rien n'est parti,
+  # « renvoyer » quand un email existe déjà. Sans cette distinction, personne ne
+  # sait si cliquer va doubler un message que le client a déjà reçu.
+  def confirmation_email_button_label
+    object.confirmation_email_sent_at.present? ? "Renvoyer l'email ✉" : "Envoyer l'email ✉"
+  end
+
+  # Infobulle : la date d'envoi précise, ou l'absence d'envoi.
+  def confirmation_email_hint
+    sent_at = object.confirmation_email_sent_at
+    return "Aucun email de confirmation n'a encore été envoyé pour ce séjour." if sent_at.blank?
+
+    "Email de confirmation envoyé le #{h.l(sent_at, format: :long)}."
+  end
+
   # Lignes du séjour-composite : un réservable (Booking / SpaceBooking) par ligne,
   # avec ses dates et son montant. Alimente la page client /sejour/:token.
   def item_lines
@@ -298,6 +325,7 @@ class StayDecorator < ApplicationDecorator
 
       {
         kind: item.bookable_type,
+        icon: line_icon(item.bookable_type, bookable),
         name: item_label(bookable),
         date_range: bookable_date_range(bookable),
         amount: h.humanized_money_with_symbol(Money.new(bookable.try(:price_cents).to_i))
@@ -310,11 +338,52 @@ class StayDecorator < ApplicationDecorator
     lines + object.meal_orders.map do |meal|
       {
         kind: "MealOrder",
+        icon: :utensils,
         name: meal_line_label(meal),
         date_range: meal.date.present? ? h.l(meal.date, format: :long) : nil,
         amount: h.humanized_money_with_symbol(Money.new(meal.price_cents.to_i))
       }
     end
+  end
+
+  # Activités du séjour, pour la page client (Michael, 2026-08-20). Elles ne sont
+  # NI des `stay_items` (aucune occupation d'hébergement) NI des repas : la page
+  # publique n'en montrait donc que le MONTANT, dans la ventilation du solde —
+  # jamais lesquelles. Un client qui a réservé une balade avec les ânes doit lire
+  # « balade avec les ânes », pas « activités validées : 30 € ».
+  #
+  # Les `pending` sont affichées mais marquées « à confirmer » : elles ne sont
+  # pas exigibles (cf. `Stay#payable_amount_cents`), et la page ne doit pas
+  # laisser croire qu'un créneau est acquis tant que le porteur ne l'a pas validé.
+  def activity_lines
+    object.experience_bookings.active
+          .includes(experience_availability: :experience)
+          .sort_by { |b| [b.experience_availability&.available_on || Date.new(9999), b.experience_availability&.starts_at.to_s] }
+          .map do |booking|
+      availability = booking.experience_availability
+      {
+        name: availability&.experience&.name.presence || h.t("public.stays.items.activity"),
+        date_range: activity_when(availability),
+        participants: booking.participants.to_i,
+        pending: booking.status == "pending",
+        amount: h.humanized_money_with_symbol(Money.new(booking.price_cents.to_i))
+      }
+    end
+  end
+
+  # Le séjour a-t-il quoi que ce soit à montrer au client ?
+  def any_public_composition?
+    item_lines.any? || activity_lines.any?
+  end
+
+  # Heures d'arrivée / de départ annoncées, quand elles existent. « à partir de
+  # 16 h » est l'information la plus demandée avant un séjour.
+  def arrival_time_label
+    object.arrival_time.presence
+  end
+
+  def departure_time_label
+    object.departure_time.presence
   end
 
   # Total formaté pour la page client. Volontairement PAS nommé `total_amount` :
@@ -425,6 +494,29 @@ class StayDecorator < ApplicationDecorator
     else
       h.t("public.stays.items.other")
     end
+  end
+
+  # Pictogramme d'une ligne de composition (jeu `FunnelIconsHelper`). Le sens
+  # reste porté par le texte à côté — l'icône n'est là que pour donner un rythme
+  # visuel à la liste et rendre un séjour composite lisible d'un coup d'œil.
+  def line_icon(bookable_type, bookable)
+    case bookable_type
+    when "Booking"        then :house
+    when "SpaceBooking"   then :hall
+    when "CampingBooking" then bookable.try(:kind) == "terrasse" ? :leaf : :tent
+    when "VanBooking"     then :van
+    when "HamacBooking"   then :hammock
+    else :sparkles
+    end
+  end
+
+  # « samedi 12 septembre 2026, 14:00 » — la date ET l'heure, parce qu'une
+  # activité se rate à l'heure près.
+  def activity_when(availability)
+    return nil if availability.nil? || availability.available_on.blank?
+
+    jour = h.l(availability.available_on, format: :long)
+    availability.starts_at.present? ? "#{jour} à #{availability.starts_at}" : jour
   end
 
   # Libellé d'une ligne repas (ex. « Repas — Buffet pain-fromages »).

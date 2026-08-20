@@ -1,0 +1,48 @@
+/ Layout de la PAGE CLIENT d'un séjour (/sejour/:token).
+/
+/ Pourquoi elle sort de `public_sheet` (Michael, 2026-08-20) : cette page est
+/ désormais la destination de l'email de confirmation, donc le premier écran
+/ qu'un client voit une fois son séjour acquis — et celui qu'il rouvrira d'ici
+/ son arrivée. Elle portait la peau Tailwind par défaut (panneau blanc, gris,
+/ boutons indigo) alors que le funnel qui l'y a menée est en charte sable et
+/ vert forêt : le client changeait visiblement de maison au moment de payer.
+/
+/ Même structure que `funnel.html.slim` — fond sable porté par le <body> (les
+/ halos `.funnel-page` couvrent la zone de rebond), photo en bandeau, contenu
+/ centré. Le layout du funnel n'est pas réutilisé tel quel parce que le hero est
+/ ici SYSTÉMATIQUE (il n'y a qu'une vue) et que la page n'a aucun formulaire à
+/ étapes : pas de `funnel_hero` à la demande, pas de bandeau d'étape.
+doctype html
+html(lang=I18n.locale)
+  head
+    meta(charset="utf-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1")
+    title
+      - if content_for?(:meta_title)
+        = yield :meta_title
+      | &nbsp;| Les 4 Sources
+    meta(name="robots" content="noindex,nofollow")
+    / Sans elle, iOS coiffe la page sable d'un bandeau blanc.
+    meta(name="theme-color" content="#F7F2E9")
+    = csrf_meta_tags
+    = csp_meta_tag
+    = vite_client_tag
+    = vite_javascript_tag "public", "data-turbo-track": "reload"
+
+  body.funnel-page.min-h-screen.min-w-0
+    = render "layouts/public/components/google_tag"
+    = turbo_frame_tag "modal"
+
+    .relative.w-full.overflow-hidden(style="height: clamp(9rem, 22vw, 16rem)")
+      = vite_image_tag "images/les-4-sources-tiers-lieu-yvoir-vue-drone.avif",
+          class: "w-full h-full object-cover",
+          alt: "Vue aérienne des 4 Sources : les prés, les étangs et les bâtiments du domaine, à Yvoir"
+      / Dégradé vers le sable : la photo se fond dans la page au lieu de
+      / s'arrêter net sur une ligne droite.
+      .absolute.inset-x-0.bottom-0.h-24.pointer-events-none(
+        style="background: linear-gradient(to bottom, rgba(247,242,233,0), var(--p-bg))")
+
+    main.w-full.min-w-0
+      .max-w-3xl.mx-auto.px-4.pb-16.-mt-6.relative
+        = render "layouts/public/components/messages"
+        = yield

@@ -1,60 +1,38 @@
-/ Page client du séjour-composite (epic #26, Phase 1). Toutes les chaînes vivent
-/ dans config/locales/public.*.yml (scope public.stays.*) — la page naît
-/ i18n-ready pour le passage FR/NL/EN de l'issue #15.
+/ Page client du séjour-composite (epic #26, Phase 1 ; refonte Michael 2026-08-20).
+/ Toutes les chaînes vivent dans config/locales/public.*.yml (scope public.stays.*)
+/ — la page reste i18n-ready pour le passage FR/NL/EN de l'issue #15.
+/
+/ ORDRE DES SECTIONS = ordre des questions que le client se pose, dans le temps :
+/ « c'est bien confirmé ? » → « qu'est-ce que j'ai réservé ? » → « qu'est-ce que
+/ j'ai prévu de faire ? » → « qu'est-ce que je dois encore payer ? » → « je peux
+/ préparer quoi ? » → « et mes autres séjours ? » → « comment je vous joins ? ».
 - content_for :meta_title, t(".meta_title")
 
-- content_for :page_header do
-  = render 'layouts/public/components/page_header', title: t(".title")
+= render "public/stays/hero"
 
-.overflow-hidden
-  .py-5
-    .flex.items-center.justify-between.mb-6
-      h3.text-xl.font-bold.leading-6.text-gray-900
-        = t(".composition_heading")
-      = @stay.payment_status_badge
+= render "public/stays/composition"
 
-    dl.grid.grid-cols-1.gap-x-4.gap-y-8.sm:grid-cols-2.mb-8
-      .sm:col-span-1
-        dt.text-base.font-medium.text-gray-500
-          = t(".contact_heading")
-        dd.mt-1.text-gray-900.text-base
-          = @stay.contact_line
-      .sm:col-span-1
-        dt.text-base.font-medium.text-gray-500
-          = t(".dates_heading")
-        dd.mt-1.text-base.text-gray-900
-          = @stay.date_range
+- if @stay.activity_lines.any?
+  = render "public/stays/activities"
 
-    - lines = @stay.item_lines
-    - if lines.empty?
-      p.text-sm.text-gray-500 = t(".empty_composition")
-    - else
-      ul.divide-y.divide-gray-200.border-t.border-b.border-gray-200(data-stay-items="true")
-        - lines.each do |line|
-          li.flex.items-center.justify-between.gap-4.py-4
-            div
-              p.text-base.font-medium.text-gray-900 = line[:name]
-              - if line[:date_range].present?
-                p.text-sm.text-gray-500 = line[:date_range]
-            p.text-base.font-semibold.text-gray-900.whitespace-nowrap = line[:amount]
+/ Le total suit la composition ET les activités — il additionne les deux.
+- if @stay.any_public_composition?
+  = render "public/stays/total"
 
-      .flex.items-center.justify-between.py-4
-        p.text-base.font-semibold.text-gray-900 = t(".total")
-        p.text-lg.font-bold.text-gray-900 = @stay.formatted_total
+/ Note publique du séjour (visible client). JAMAIS la note interne.
+- if @stay.public_notes.present?
+  section.funnel-card.mt-6.p-5.md:p-6
+    h2.funnel-section-title.mb-3 = t(".notes_heading")
+    .content.text-base.text-ink.space-y-4 == @stay.public_notes
 
-    / Note publique du séjour (visible client). JAMAIS la note interne.
-    - if @stay.public_notes.present?
-      .mt-8.bg-slate-50.rounded-lg.px-4.py-5.sm:px-6
-        .content.text-base.text-gray-800.space-y-4 == @stay.public_notes
+section.funnel-card.mt-6.p-5.md:p-6
+  h2.funnel-section-title.mb-4 = t("public.stays.payments.heading")
+  = render "public/stays/balance"
+  = render "public/stays/payments"
 
-    = render "public/stays/balance"
+= render "public/stays/bakery"
 
-    = render "public/stays/payments"
+- if @upcoming_stays.any? || @past_stays.any?
+  = render "public/stays/other_stays"
 
-    / Demande de modification (issue #133). Un séjour déjà parti ne se modifie
-    / plus : pas de bouton quand le départ est passé.
-    - if @stay.departure_date.present? && @stay.departure_date >= Date.current
-      .mt-8.flex.justify-center
-        = link_to t("public.stay_change_requests.cta"),
-                  new_public_stay_change_request_path(@stay.token),
-                  class: "inline-flex items-center rounded-xl border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+= render "public/stays/contact"

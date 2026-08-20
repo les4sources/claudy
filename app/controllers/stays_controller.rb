@@ -3,7 +3,7 @@ class StaysController < BaseController
   # sous-navigation Séjours · Coworking · Reporting · Comptabilité, qui remplace
   # l'ancien dropdown de la barre principale.
   before_action :set_home_view
-  before_action :set_stay, only: %i[edit update destroy update_status update_category update_notes approve_change_request refuse_change_request]
+  before_action :set_stay, only: %i[edit update destroy update_status update_category update_notes approve_change_request refuse_change_request send_confirmation_email]
 
   # Index admin des séjours (epic #81) — le séjour devient le point d'entrée
   # unique. Tableau paginé (30/page) orienté GESTION des réservations et
@@ -112,6 +112,10 @@ class StaysController < BaseController
       # CONCATÉNÉE avec l'éventuelle note auto du Builder (avertissement
       # multi-chiens) — on ne l'écrase jamais. La note publique est posée telle quelle.
       apply_admin_notes(builder.stay, merge_auto: true)
+      # Séjour créé DIRECTEMENT en `confirmed` (réservation prise au téléphone) :
+      # le client n'a reçu aucun email du funnel, c'est donc ici — et une seule
+      # fois — qu'il reçoit sa page de séjour.
+      notify_confirmation(builder.stay)
       flash[:notice] = "Séjour créé."
       flash[:alert]  = combined_warning(builder)
       redirect_to recent_stays_path
@@ -163,6 +167,10 @@ class StaysController < BaseController
   end
 
   def update
+    # Statut AVANT édition : l'email de confirmation ne part que sur la BASCULE
+    # vers `confirmed`, jamais sur un simple ré-enregistrement du formulaire
+    # d'un séjour déjà confirmé (cf. `Stays::ConfirmationNotifier`).
+    was_confirmed = @stay.status == "confirmed"
     @draft  = build_draft
     updater = Stays::AdminUpdater.new(
       stay:                 @stay,
@@ -179,6 +187,7 @@ class StaysController < BaseController
       # À l'édition, le form préremplit les notes courantes : simple écrasement
       # (note interne texte brut + note publique ActionText), pas de concaténation.
       apply_admin_notes(@stay, merge_auto: false)
+      notify_confirmation(@stay) unless was_confirmed
       flash[:notice] = "Séjour mis à jour."
       flash[:alert]  = combined_warning(updater)
       redirect_to recent_stays_path
@@ -343,6 +352,34 @@ class StaysController < BaseController
         render turbo_stream: turbo_stream.replace("stay-details-#{@stay.id}", partial: "stays/details")
       end
       format.html { redirect_to recent_stays_path, notice: (ok ? "Statut mis à jour." : updater.error_message) }
+    end
+  end
+
+  # Renvoi MANUEL de l'email « votre séjour est confirmé » (Malau, 2026-08-20).
+  # Le filet quand le client dit « je n'ai rien reçu » ou a changé d'adresse :
+  # `force: true` passe outre `confirmation_email_sent_at` ET la borne « séjour
+  # déjà terminé ». Les garde-fous qui restent sont ceux qui protègent d'un
+  # envoi ABSURDE : séjour non confirmé, sans email, ou rattaché à un
+  # fourre-tout. Même réponse Turbo Stream que `#update_status` — la modale se
+  # rafraîchit sur place, et l'horodatage d'envoi s'y met à jour.
+  def send_confirmation_email
+    notifier = Stays::ConfirmationNotifier.new(stay: @stay, force: true)
+    sent = notifier.run
+    message = sent ? "Email de confirmation envoyé à #{@stay.customer.email}." : notifier.skip_reason
+
+    @stay = Stay.includes(stay_items: :bookable, customer: []).find(@stay.id).decorate
+    @assignable_availabilities = assignable_availabilities_for(@stay)
+
+    respond_to do |format|
+      format.turbo_stream do
+        sent ? flash.now[:notice] = message : flash.now[:alert] = message
+        render turbo_stream: turbo_stream.replace("stay-details-#{@stay.id}", partial: "stays/details")
+      end
+      format.html do
+        # `stay_path` rend un fragment de modale sans layout : le repli sans JS
+        # retourne à l'index des séjours, comme `#update_status`.
+        redirect_to recent_stays_path, (sent ? { notice: message } : { alert: message })
+      end
     end
   end
 
@@ -965,6 +1002,17 @@ class StaysController < BaseController
 
   def requested_status
     stay_params[:status]
+  end
+
+  # Email « votre séjour est confirmé » (Malau, 2026-08-20). Tous les garde-fous
+  # vivent dans `Stays::ConfirmationNotifier` — idempotence par
+  # `confirmation_email_sent_at`, silence sur un client fourre-tout, sur un
+  # séjour sans email et sur un séjour déjà terminé. On l'appelle donc sans
+  # condition autre que « le séjour est confirmé » ; le service tranche.
+  def notify_confirmation(stay)
+    return if stay.blank?
+
+    Stays::ConfirmationNotifier.call(stay)
   end
 
   # Canal d'attribution du séjour (epic #81, Phase 3). Validé contre `SOURCES`

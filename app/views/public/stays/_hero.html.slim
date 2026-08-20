@@ -1,0 +1,64 @@
+/ En-tête de la page séjour. Il répond en un écran à la seule question que le
+/ client se pose en ouvrant le lien : « est-ce que c'est bien confirmé, et
+/ quand ? ». Le reste de la page peut attendre le défilement.
+section.funnel-card.p-5.md:p-7(data-stay-hero="true")
+  .flex.flex-wrap.items-start.justify-between.gap-3
+    div.min-w-0
+      - if @stay.status == "confirmed"
+        p.inline-flex.items-center.gap-1.5.rounded-full.bg-forest-tint.px-3.py-1.text-sm.font-semibold.text-forest
+          span.text-forest
+            = funnel_icon :check, css_class: "w-4 h-4"
+          = t("public.stays.show.confirmed_pill")
+      - else
+        p.inline-flex.items-center.gap-1.5.rounded-full.bg-ember-tint.px-3.py-1.text-sm.font-semibold(class="text-ember")
+          = t("public.stays.show.pending_pill")
+      h1.funnel-title.mt-3 = t("public.stays.show.title")
+    = @stay.payment_status_badge
+
+  p.mt-2.text-base(class="text-moss")
+    - if @stay.status == "confirmed"
+      = t("public.stays.show.confirmed_intro")
+    - else
+      = t("public.stays.show.pending_intro")
+
+  / Les dates en gros : c'est l'information que le client revient chercher.
+  .mt-5.rounded-xl.bg-sand-deep.p-4.md:p-5
+    .flex.flex-wrap.items-center.gap-x-6.gap-y-3
+      .flex.items-start.gap-3
+        span.text-forest.flex-shrink-0.mt-0.5
+          = funnel_icon :calendar, css_class: "w-6 h-6"
+        div
+          p.text-sm.font-semibold.text-ink = t("public.stays.show.dates_heading")
+          p.text-base.text-ink = @stay.date_range
+          - if @stay.stay_span_label.present?
+            p.text-sm(class="text-moss") = @stay.stay_span_label
+
+      - if @stay.arrival_time_label.present? || @stay.departure_time_label.present?
+        .flex.items-start.gap-3
+          span.text-forest.flex-shrink-0.mt-0.5
+            = funnel_icon :bed, css_class: "w-6 h-6"
+          div
+            - if @stay.arrival_time_label.present?
+              p.text-sm.text-ink
+                strong = "#{t('public.stays.show.arrival')} : "
+                = @stay.arrival_time_label
+            - if @stay.departure_time_label.present?
+              p.text-sm.text-ink
+                strong = "#{t('public.stays.show.departure')} : "
+                = @stay.departure_time_label
+
+  dl.mt-5.grid.grid-cols-1.gap-x-6.gap-y-4.sm:grid-cols-2
+    .sm:col-span-1
+      dt.text-sm.font-semibold(class="text-moss") = t("public.stays.show.contact_heading")
+      dd.mt-0.5.text-base.text-ink = @stay.contact_line
+    - occupants = @stay.occupants
+    - if occupants[:adults].positive? || occupants[:children].positive?
+      .sm:col-span-1
+        dt.text-sm.font-semibold(class="text-moss") = t("public.stays.show.occupants_heading")
+        dd.mt-0.5.text-base.text-ink
+          /  « 0 enfant(s) » est du bruit : on ne mentionne les enfants que s'il
+             y en a.
+          - if occupants[:children].positive?
+            = t("public.stays.show.occupants_line", adults: occupants[:adults], children: occupants[:children])
+          - else
+            = t("public.stays.show.occupants_adults_only", adults: occupants[:adults])

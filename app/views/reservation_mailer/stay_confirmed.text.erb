@@ -1,0 +1,37 @@
+Bonjour <%= @stay.customer.first_name.presence || "" %>,
+
+Bonne nouvelle : votre séjour aux 4 Sources est confirmé. Nous vous attendons !
+<% if @stay.arrival_date && @stay.departure_date %>
+Dates : <%= l(@stay.arrival_date, format: :long) %> → <%= l(@stay.departure_date, format: :long) %>
+<% end %>
+Tout votre séjour tient sur une page — ce qui est réservé, ce qui a été payé,
+ce qu'il reste à régler, et les informations pratiques pour venir :
+
+<%= @stay_url %>
+<% lines = @stay.item_lines %><% if @stay.any_public_composition? %>
+Votre séjour :
+<% lines.each do |line| %>- <%= line[:name] %><%= " (#{line[:date_range]})" if line[:date_range].present? %> — <%= line[:amount] %>
+<% end %><% @stay.activity_lines.each do |activity| %>- <%= activity[:name] %><%= " (à confirmer)" if activity[:pending] %><%= " — #{activity[:date_range]}" if activity[:date_range].present? %> — <%= activity[:amount] %>
+<% end %>Total TVAC : <%= @stay.formatted_total %>
+Tous les prix sont TVAC — pas de TVA en plus.
+<% end %>
+<% if @pending_payment %>
+Il reste un paiement de <%= number_to_currency(@pending_payment.amount_cents / 100.0, unit: "€", format: "%n %u", precision: 2) %> en attente :
+<%= pay_public_payment_url(@pending_payment, host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be")) %>
+<% elsif @balance_due_cents.to_i.positive? %>
+Reste à régler : <%= number_to_currency(@balance_due_cents / 100.0, unit: "€", format: "%n %u", precision: 2) %>.
+Vous pouvez le payer en ligne depuis votre page de séjour, ou sur place à votre arrivée.
+<% end %>
+Pain, épicerie et Pizza Party
+Notre boulangerie-épicerie Tranches de Vie prépare votre arrivée : pain au levain
+et produits du coin à pré-commander, et la possibilité de réserver une Pizza
+Party privée au four à bois.
+https://tranchesdevie.les4sources.be
+
+Si vous constatez une erreur ou qu'un détail a changé, écrivez-nous ou utilisez
+le bouton « Demander une modification » sur votre page de séjour.
+
+Au plaisir de vous accueillir dans notre p'tit coin de paradis :)
+
+Malau & Michael,
+Pour le pôle Accueil des 4 Sources

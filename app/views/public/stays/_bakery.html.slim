@@ -1,0 +1,16 @@
+/ Tranches de Vie — la boulangerie-épicerie du domaine (Michael, 2026-08-20).
+/ Sa place est ICI, sur la page qu'on rouvre avant de partir : c'est le moment où
+/ l'on se demande « qu'est-ce qu'on mange en arrivant ? ». Le funnel la mentionne
+/ déjà à l'étape composition ; la page séjour est la seconde — et la dernière —
+/ occasion utile.
+section.mt-6.rounded-2xl.border.p-5.md:p-6(class="bg-forest-tint border-bark" data-stay-bakery="true")
+  .flex.items-start.gap-3
+    span.text-forest.flex-shrink-0.mt-0.5
+      = funnel_icon :bread, css_class: "w-6 h-6"
+    div.min-w-0
+      h2.funnel-section-title.mb-1 = t("public.stays.bakery.heading")
+      p.text-base.text-ink.mb-1 = t("public.stays.bakery.body")
+      p.text-sm.mb-4(class="text-moss") = t("public.stays.bakery.pizza")
+      = link_to t("public.stays.bakery.cta"), "https://tranchesdevie.les4sources.be",
+                target: "_blank", rel: "noopener",
+                class: "inline-flex items-center gap-2 rounded-xl bg-forest px-5 py-2.5 text-sm font-semibold text-sand shadow-sm hover:bg-forest-soft"
