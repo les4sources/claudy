@@ -1,0 +1,35 @@
+/ Les AUTRES séjours confirmés du même client (Michael, 2026-08-20). Le contrôleur
+/ garantit que rien n'arrive ici pour un client fourre-tout (générique ou OTA) :
+/ ces comptes agrègent des centaines de dossiers sans lien entre eux, et le jeton
+/ d'un séjour ne donne accès qu'à CE séjour. Cf. spec « anti-fuite fourre-tout ».
+section.funnel-card.mt-6.p-5.md:p-6(data-stay-siblings="true")
+  h2.funnel-section-title.mb-1 = t("public.stays.show.other_stays_heading")
+  p.text-sm.mb-4(class="text-moss") = t("public.stays.show.other_stays_intro")
+
+  - if @upcoming_stays.any?
+    h3.text-sm.font-semibold.text-ink.mb-2 = t("public.stays.show.other_stays_upcoming")
+    ul.space-y-2.mb-5
+      - @upcoming_stays.each do |other|
+        li
+          = link_to public_stay_path(other.token), class: "flex items-center justify-between gap-4 rounded-xl border p-3 transition hover:bg-sand-deep #{'border-bark'}" do
+            div.min-w-0
+              p.text-base.font-semibold.text-ink = other.date_range
+              p.text-sm(class="text-moss") = other.composition_summary
+            span.text-forest.flex-shrink-0
+              = funnel_icon :arrow_right, css_class: "w-5 h-5"
+    - if @upcoming_stays_extra.to_i.positive?
+      p.mb-5.text-sm(class="text-moss") = t("public.stays.show.other_stays_upcoming_more", count: @upcoming_stays_extra)
+
+  - if @past_stays.any?
+    h3.text-sm.font-semibold.text-ink.mb-2 = t("public.stays.show.other_stays_past")
+    ul.space-y-2
+      - @past_stays.each do |other|
+        li
+          = link_to public_stay_path(other.token), class: "flex items-center justify-between gap-4 rounded-xl border p-3 opacity-80 transition hover:opacity-100 hover:bg-sand-deep #{'border-bark'}" do
+            div.min-w-0
+              p.text-base.text-ink = other.date_range
+              p.text-sm(class="text-moss") = other.composition_summary
+            span.text-forest.flex-shrink-0
+              = funnel_icon :arrow_right, css_class: "w-5 h-5"
+    - if @past_stays_extra.to_i.positive?
+      p.mt-3.text-sm(class="text-moss") = t("public.stays.show.other_stays_more", count: @past_stays_extra)

@@ -1,0 +1,20 @@
+/ Ce que le client a réservé. `data-stay-items` est le point d'ancrage du spec
+/ de requête : ne pas le retirer.
+section.funnel-card.mt-6.p-5.md:p-6
+  h2.funnel-section-title.mb-4 = t("public.stays.show.composition_heading")
+
+  - lines = @stay.item_lines
+  - if lines.empty?
+    p.text-sm(class="text-moss") = t("public.stays.show.empty_composition")
+  - else
+    ul.divide-y(class="divide-bark" data-stay-items="true")
+      - lines.each do |line|
+        li.flex.items-start.justify-between.gap-4.py-4
+          .flex.items-start.gap-3.min-w-0
+            span.text-forest.flex-shrink-0.mt-0.5
+              = funnel_icon(line[:icon] || :sparkles, css_class: "w-5 h-5")
+            div.min-w-0
+              p.text-base.font-semibold.text-ink = line[:name]
+              - if line[:date_range].present?
+                p.text-sm(class="text-moss") = line[:date_range]
+          p.text-base.font-semibold.text-ink.whitespace-nowrap = line[:amount]

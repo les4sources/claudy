@@ -71,7 +71,12 @@ Rails.application.configure do
   # Set this to true and configure the email server for immediate delivery to raise delivery errors.
   # config.action_mailer.raise_delivery_errors = false
 
-  config.action_mailer.default_url_options = { host: "app.les4sources.be" }
+  # `protocol` explicite (2026-08-20) : sans lui, tous les liens des emails
+  # partaient en `http://app.les4sources.be/...`. Le domaine est servi en HTTPS
+  # par Hatchbox ; le lien fonctionnait donc par redirection, mais certains
+  # clients mail signalent un lien non sécurisé — et l'email de confirmation
+  # d'un séjour n'a qu'un seul CTA, ce lien-là.
+  config.action_mailer.default_url_options = { host: "app.les4sources.be", protocol: "https" }
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
   # the I18n.default_locale when a translation cannot be found).

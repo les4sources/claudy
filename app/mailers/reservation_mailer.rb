@@ -35,7 +35,34 @@ class ReservationMailer < ApplicationMailer
     )
   end
 
+  # Troisième email du flux, et le seul qui manquait (Malau, 2026-08-20) :
+  # « votre séjour est confirmé, voici votre page ». Il tient la promesse faite
+  # par `#deposit_received` (« notre équipe valide votre demande ») et rétablit
+  # ce que l'ancien `BookingMailer#booking_confirmed` faisait avant le passage
+  # stay-first — mais sur le SÉJOUR, avec le lien `/sejour/:token` : un séjour
+  # sans hébergement n'a pas de booking, donc pas de `public_booking_url`.
+  #
+  # L'envoi est piloté par `Stays::ConfirmationNotifier`, qui porte tous les
+  # garde-fous (idempotence, fourre-tout, séjour passé). Ce mailer se contente
+  # de composer.
+  def stay_confirmed(stay)
+    @stay = stay.decorate
+    @stay_url = public_stay_url(stay.token, host: application_host)
+    @balance_due_cents = stay.balance_due_cents
+    @pending_payment = stay.payments.pending.where(payment_method: "card")
+                           .order(:created_at).first
+    mail(
+      to: stay.customer.email,
+      subject: "Votre séjour aux 4 Sources est confirmé 🌿",
+      tag: "stay_confirmed"
+    )
+  end
+
   private
+
+  def application_host
+    ENV.fetch("APPLICATION_HOST", "app.les4sources.be")
+  end
 
   def quote_from(stay)
     draft = Reservations::Draft.new(

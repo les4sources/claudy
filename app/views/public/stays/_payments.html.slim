@@ -6,38 +6,40 @@
 - if pending_payments.any?
   .mt-6.space-y-4(data-stay-payments="pending")
     - pending_payments.each do |payment|
-      .bg-teal-100.sm:rounded-lg
-        .px-4.py-5.sm:p-6
-          .sm:flex.sm:items-start.sm:justify-between
-            div
-              h3.text-base.font-semibold.leading-6.text-gray-900
-                = t("public.stays.payments.pay_online")
-              .mt-2.max-w-xl.text-sm.text-gray-700
-                p
-                  span.font-semibold
-                    = t("public.stays.payments.invitation", amount: payment.amount)
-                  = " "
-                  = t("public.stays.payments.stripe_notice")
-                .mt-4
-                  = render "payments/icons"
+      .rounded-xl.border.p-4.md:p-5(class="bg-forest-tint border-bark")
+        .sm:flex.sm:items-start.sm:justify-between.gap-4
+          div
+            h3.text-base.font-semibold.text-ink
+              = t("public.stays.payments.pay_online")
+            .mt-1.max-w-xl.text-sm.text-ink
+              p
+                span.font-semibold
+                  = t("public.stays.payments.invitation", amount: payment.amount)
+                = " "
+                = t("public.stays.payments.stripe_notice")
+              .mt-3
+                = render "payments/icons"
 
-            .mt-5.sm:ml-6.sm:mt-0.sm:flex.sm:flex-shrink-0.sm:items-center
-              = link_to t("public.stays.payments.pay_cta"),
-                        pay_public_payment_path(payment),
-                        target: "_blank",
-                        class: "inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+          .mt-4.sm:mt-0.sm:flex-shrink-0.sm:flex.sm:items-center
+            = link_to t("public.stays.payments.pay_cta"),
+                      pay_public_payment_path(payment),
+                      target: "_blank",
+                      class: "inline-flex items-center rounded-xl bg-forest px-5 py-2.5 text-sm font-semibold text-sand shadow-sm hover:bg-forest-soft"
 
 - if paid_payments.any?
   .mt-6(data-stay-payments="paid")
-    h4.font-semibold.my-4 = t("public.stays.payments.received_heading")
-    ul.divide-y.divide-gray-100[role="list"]
+    h3.text-sm.font-semibold.text-ink.mb-2 = t("public.stays.payments.received_heading")
+    ul.divide-y(class="divide-bark" role="list")
       - paid_payments.each do |payment|
         li.flex.items-center.justify-between.gap-4.py-3
           .flex.items-center.gap-3
             span.text-2xl = payment.payment_method_emoji
             / `line` ne couvre pas tous les moyens de paiement — on retombe sur le montant.
-            span.text-sm.text-gray-700 = payment.line.presence || payment.amount
-          span.text-sm.text-gray-500 = payment.updated_at
+            span.text-sm.text-ink = payment.line.presence || payment.amount
+          span.text-sm(class="text-moss") = payment.updated_at
 
-- if pending_payments.empty? && paid_payments.empty?
-  p.mt-6.text-sm.text-gray-500 = t("public.stays.show.no_payment")
+/ « Aucun paiement n'est attendu » ne doit PAS s'afficher sous un bouton
+/ « Payer le solde » : la page se contredisait. Le message ne vaut que quand il
+/ n'y a ni paiement enregistré, ni solde à réclamer.
+- if pending_payments.empty? && paid_payments.empty? && !@stay.show_balance_cta?
+  p.mt-4.text-sm(class="text-moss") = t("public.stays.show.no_payment")

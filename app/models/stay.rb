@@ -2,27 +2,28 @@
 #
 # Table name: stays
 #
-#  id                       :bigint           not null, primary key
-#  activity_email_sent_at   :datetime
-#  activity_selection_token :string
-#  arrival_date             :date
-#  arrival_time             :string
-#  balance_reminder_sent_at :datetime
-#  category                 :string
-#  deleted_at               :datetime
-#  departure_date           :date
-#  departure_time           :string
-#  legacy_origin            :string
-#  notes                    :text
-#  payment_status           :string           default("pending"), not null
-#  price_override_cents     :integer
-#  source                   :string           default("reservation"), not null
-#  status                   :string
-#  token                    :string
-#  total_amount_cents       :integer          default(0), not null
-#  created_at               :datetime         not null
-#  updated_at               :datetime         not null
-#  customer_id              :bigint           not null
+#  id                         :bigint           not null, primary key
+#  activity_email_sent_at     :datetime
+#  activity_selection_token   :string
+#  arrival_date               :date
+#  arrival_time               :string
+#  balance_reminder_sent_at   :datetime
+#  category                   :string
+#  confirmation_email_sent_at :datetime
+#  deleted_at                 :datetime
+#  departure_date             :date
+#  departure_time             :string
+#  legacy_origin              :string
+#  notes                      :text
+#  payment_status             :string           default("pending"), not null
+#  price_override_cents       :integer
+#  source                     :string           default("reservation"), not null
+#  status                     :string
+#  token                      :string
+#  total_amount_cents         :integer          default(0), not null
+#  created_at                 :datetime         not null
+#  updated_at                 :datetime         not null
+#  customer_id                :bigint           not null
 #
 # Indexes
 #

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_20_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_20_150954) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1256,6 +1256,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_090000) do
     t.string "arrival_time"
     t.datetime "balance_reminder_sent_at"
     t.string "category"
+    t.datetime "confirmation_email_sent_at"
     t.datetime "created_at", null: false
     t.bigint "customer_id", null: false
     t.datetime "deleted_at"

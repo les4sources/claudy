@@ -1,8 +1,15 @@
 require "rails_helper"
 
 # Issue #76 — action rapide de statut depuis la modale du calendrier. Le passage
-# pending → confirmed propage aux réservables (veto de dispo cohérent) SANS
-# envoyer d'email client, et répond en Turbo Stream (modale rafraîchie).
+# pending → confirmed propage aux réservables (veto de dispo cohérent) et répond
+# en Turbo Stream (modale rafraîchie).
+#
+# EMAIL (mis à jour le 2026-08-20). L'anti-spam d'origine coupait TOUTE
+# notification : la propagation du statut aux `Booking` ne devait pas déclencher
+# `BookingMailer#booking_confirmed` pour chaque réservable. Cette garantie tient
+# toujours — mais elle avait pour effet de bord que le client n'apprenait plus
+# jamais que son séjour était confirmé (signalé par Malau). Le contrat est
+# désormais : AUCUN email de réservable, et EXACTEMENT UN email de séjour.
 RSpec.describe "Stays — action rapide de statut (issue #76)", type: :request do
   include Devise::Test::IntegrationHelpers
 
@@ -27,16 +34,18 @@ RSpec.describe "Stays — action rapide de statut (issue #76)", type: :request d
     Reservations::Builder.new(draft: draft, admin: true, source: "manual", status: "pending").tap(&:run!).stay
   end
 
-  it "confirme le séjour, propage au Booking et rend le veto cohérent — sans email" do
+  it "confirme le séjour, propage au Booking et rend le veto cohérent" do
     stay = create_pending_stay
     booking = stay.stay_items.where(bookable_type: "Booking").first.bookable
     expect(stay.status).to eq("pending")
     expect(hulotte.available_between?(arrival, departure)).to be(true) # pending → libre
+    ActionMailer::Base.deliveries.clear
 
-    expect {
-      patch update_status_stay_path(stay), params: { status: "confirmed" },
-            headers: { "Accept" => "text/vnd.turbo-stream.html" }
-    }.not_to change { ActionMailer::Base.deliveries.count } # anti-spam : aucun email client
+    patch update_status_stay_path(stay), params: { status: "confirmed" },
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    # Un SEUL email, celui du séjour — jamais un `booking_confirmed` par réservable.
+    expect(ActionMailer::Base.deliveries.map { |m| m[:tag]&.value }).to eq(["stay_confirmed"])
 
     expect(response).to have_http_status(:ok)
     expect(response.media_type).to eq("text/vnd.turbo-stream.html")

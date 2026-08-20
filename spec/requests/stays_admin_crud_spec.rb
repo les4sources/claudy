@@ -188,12 +188,27 @@ RSpec.describe "Stays — CRUD admin (epic #66)", type: :request do
       expect(stay.total_amount_cents).to eq(47_500)
     end
 
-    it "bascule le statut en confirmé SANS envoyer d'email au client" do
+    # Mis à jour le 2026-08-20 (signalement de Malau). L'édition d'un séjour ne
+    # doit toujours PAS spammer le client — aucun `booking_confirmed` par
+    # réservable, aucun email sur un simple changement de composition. Mais la
+    # BASCULE vers `confirmed` lui envoie désormais sa page de séjour : c'est le
+    # seul email que cet écran a le droit de produire, et une seule fois.
+    it "bascule le statut en confirmé et envoie AU PLUS l'email de séjour" do
       stay = create_admin_stay
       ActionMailer::Base.deliveries.clear
       patch stay_path(stay), params: update_params(stay, status: "confirmed")
 
       expect(stay.reload.status).to eq("confirmed")
+      expect(ActionMailer::Base.deliveries.map { |m| m[:tag]&.value }).to eq(["stay_confirmed"])
+    end
+
+    it "ne renvoie aucun email quand on ré-enregistre un séjour déjà confirmé" do
+      stay = create_admin_stay
+      patch stay_path(stay), params: update_params(stay, status: "confirmed")
+      ActionMailer::Base.deliveries.clear
+
+      patch stay_path(stay), params: update_params(stay, status: "confirmed")
+
       expect(ActionMailer::Base.deliveries).to be_empty
     end
 
