@@ -8,8 +8,11 @@ RSpec.describe "Admin — paiements sans booking", type: :request do
 
   let(:user) { User.create!(email: "agent@les4sources.be", password: "password123") }
   let(:customer) { Customer.create!(email: "camping@example.com", customer_type: "individual") }
+  # Séjour CONFIRMÉ : depuis le filtre du journal (Michael 2026-08-20), les
+  # paiements d'un séjour encore en attente ne sont plus listés — ce spec teste
+  # l'absence de booking, pas le filtre (cf. payments_journal_filter_spec).
   let(:stay) do
-    Stay.create!(customer: customer, source: "reservation", status: "pending",
+    Stay.create!(customer: customer, source: "reservation", status: "confirmed",
                  arrival_date: Date.today + 10, departure_date: Date.today + 12,
                  total_amount_cents: 12_000)
   end

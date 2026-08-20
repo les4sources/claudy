@@ -11,8 +11,10 @@
 tr(id="#{dom_id payment}" class="#{payment.tr_class} hover:bg-sky-100")
   td.py-4.px-6.text-center
     = payment.payment_method_emoji
-  td.py-4.px-6
-    = payment.created_at(format: :ddmmyyyy)
+  /  Date d'ENCAISSEMENT quand elle a été saisie, date d'encodage sinon : c'est
+     la première qui sert au rapprochement bancaire.
+  td.py-4.px-6 title=payment.payment_date_title
+    = payment.payment_date(format: :ddmmyyyy)
   td.py-4.px-6
     = payment.amount
   td.py-4.px-6

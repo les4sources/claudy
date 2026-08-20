@@ -49,12 +49,15 @@ class StayPaymentsController < BaseController
     @stay = Stay.find(params[:stay_id])
   end
 
+  # `paid_on` (date d'encaissement réelle) est optionnel : un champ date laissé
+  # vide arrive en chaîne vide, qu'ActiveRecord caste en nil — le paiement
+  # retombe alors sur sa date de saisie (cf. `Payment#effective_date`).
   def create_params
-    params.require(:payment).permit(:amount, :payment_method, :status)
+    params.require(:payment).permit(:amount, :payment_method, :status, :paid_on)
   end
 
   def update_params
-    params.require(:payment).permit(:amount, :payment_method, :status)
+    params.require(:payment).permit(:amount, :payment_method, :status, :paid_on)
   end
 
   def set_presenters

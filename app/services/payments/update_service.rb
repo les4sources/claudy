@@ -37,7 +37,8 @@ module Payments
         .require(:payment)
         .permit(
           :amount,
-          :payment_method
+          :payment_method,
+          :paid_on
         )
     end
   end

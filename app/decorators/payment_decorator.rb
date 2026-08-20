@@ -77,6 +77,21 @@ class PaymentDecorator < ApplicationDecorator
     h.l(object.created_at.to_date, format: format)
   end
 
+  # La date QUI FAIT FOI pour l'affichage : l'encaissement saisi, ou à défaut la
+  # saisie. Toutes les vues doivent passer par ici plutôt que par `created_at`,
+  # sinon un virement reçu le 3 et encodé le 17 se lit au 17.
+  def payment_date(format: :default)
+    h.l(object.effective_date, format: format)
+  end
+
+  # Infobulle de traçabilité : quand la date affichée est une date
+  # d'encaissement saisie à la main, on garde la date d'encodage sous la souris.
+  def payment_date_title
+    return nil if object.paid_on.blank?
+
+    "Encodé le #{created_at(format: :ddmmyyyy)}"
+  end
+
   def line
     line_content = case object.payment_method
       when "airbnb"

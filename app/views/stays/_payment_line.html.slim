@@ -14,7 +14,8 @@ li.rounded-md.border.border-gray-200.bg-white.p-2
          l'information qui décide s'il faut relancer.
       .mt-0.5.flex.items-center.gap-2
         = payment.status
-        span.text-xs.text-gray-500 = payment.created_at
+        span.text-xs.text-gray-500 title=payment.payment_date_title
+          = payment.payment_date
     span.shrink-0.text-sm.font-semibold.text-gray-900 = payment.amount
   - if raw_payment.stay_id.present?
     .mt-1.flex.flex-wrap.items-center.gap-2
@@ -31,4 +32,7 @@ li.rounded-md.border.border-gray-200.bg-white.p-2
           label.block.text-xs.text-gray-600
             | Moyen
             = select_tag "payment[payment_method]", options_for_select([["Liquide", "cash"], ["Virement", "bank_transfer"], ["Carte", "card"], ["En ligne", "stripe"]], raw_payment.payment_method), class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
+          label.block.text-xs.text-gray-600
+            | Date du paiement <span class="text-gray-400">(optionnel)</span>
+            = date_field_tag "payment[paid_on]", raw_payment.paid_on, class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
           = submit_tag "Enregistrer", class: "w-full cursor-pointer rounded bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700"
