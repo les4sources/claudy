@@ -5,6 +5,7 @@
 #  id                         :uuid             not null, primary key
 #  amount_cents               :integer          default(0), not null
 #  deleted_at                 :datetime
+#  paid_on                    :date
 #  payment_method             :string
 #  status                     :string
 #  created_at                 :datetime         not null
@@ -62,6 +63,82 @@ RSpec.describe Payment, type: :model do
     expect(payment).not_to be_valid
     expect(payment.errors[:stay]).to be_present
     expect { payment.save! }.to raise_error(ActiveRecord::RecordInvalid)
+  end
+
+  describe "#effective_date" do
+    it "retombe sur la date de saisie quand aucune date d'encaissement n'est posée" do
+      stay = Stay.create!(customer: customer, source: "reservation", status: "confirmed")
+      payment = Payment.create!(stay: stay, amount_cents: 5_000, status: "paid",
+                                payment_method: "cash")
+
+      expect(payment.paid_on).to be_nil
+      expect(payment.effective_date).to eq(payment.created_at.to_date)
+    end
+
+    it "préfère la date d'encaissement dès qu'elle est renseignée" do
+      stay = Stay.create!(customer: customer, source: "reservation", status: "confirmed")
+      payment = Payment.create!(stay: stay, amount_cents: 5_000, status: "paid",
+                                payment_method: "cash", paid_on: Date.new(2026, 8, 3))
+
+      expect(payment.effective_date).to eq(Date.new(2026, 8, 3))
+    end
+  end
+
+  describe ".journalable" do
+    def stay_with(status)
+      Stay.create!(customer: customer, source: "reservation", status: status)
+    end
+
+    def payment_for(stay, status)
+      Payment.create!(stay: stay, amount_cents: 5_000, status: status,
+                      payment_method: "cash")
+    end
+
+    it "écarte tout ce qui pend sous un séjour en attente" do
+      en_attente = stay_with("pending")
+      encaisse = payment_for(en_attente, "paid")
+      pendant = payment_for(en_attente, "pending")
+
+      expect(Payment.journalable).not_to include(encaisse, pendant)
+    end
+
+    it "ne garde d'un séjour annulé que ce qui a été encaissé" do
+      annule = stay_with("canceled")
+      encaisse = payment_for(annule, "paid")
+      pendant = payment_for(annule, "pending")
+
+      expect(Payment.journalable).to include(encaisse)
+      expect(Payment.journalable).not_to include(pendant)
+    end
+
+    it "traite l'orthographe historique « cancelled » comme une annulation" do
+      annule = stay_with("cancelled")
+      pendant = payment_for(annule, "pending")
+
+      expect(Payment.journalable).not_to include(pendant)
+    end
+
+    it "garde tout d'un séjour confirmé" do
+      confirme = stay_with("confirmed")
+      pendant = payment_for(confirme, "pending")
+
+      expect(Payment.journalable).to include(pendant)
+    end
+
+    it "garde un séjour au statut vide ou nul — la règle ne vise que pending et annulé" do
+      vide = payment_for(stay_with(""), "pending")
+      nul = payment_for(stay_with(nil), "pending")
+
+      expect(Payment.journalable).to include(vide, nul)
+    end
+
+    it "n'écarte jamais un paiement sans séjour" do
+      pack = CoworkingPack.create!(customer: customer, days_total: 5, payment_method: "card")
+      sans_sejour = Payment.create!(coworking_pack: pack, amount_cents: 2_000,
+                                    status: "pending", payment_method: "cash")
+
+      expect(Payment.journalable).to include(sans_sejour)
+    end
   end
 
   it "redevient valide dès qu'un séjour est rattaché" do

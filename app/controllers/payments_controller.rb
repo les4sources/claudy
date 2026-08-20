@@ -6,7 +6,12 @@ class PaymentsController < BaseController
   layout "modal"
 
   def index
-    @payments = PaymentDecorator.decorate_collection(Payment.all.order(created_at: :desc))
+    # `journalable` (cf. Payment) écarte le bruit : les séjours encore en
+    # attente, et les paiements jamais encaissés des séjours annulés.
+    payments = Payment.journalable
+                      .includes(:booking, stay: :customer, coworking_pack: :customer)
+                      .order(Arel.sql("COALESCE(payments.paid_on, payments.created_at::date) DESC, payments.created_at DESC"))
+    @payments = PaymentDecorator.decorate_collection(payments)
     render layout: "application"
   end
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_15_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_20_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -975,6 +975,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_100000) do
     t.bigint "coworking_pack_id"
     t.datetime "created_at", null: false
     t.datetime "deleted_at", precision: nil
+    t.date "paid_on"
     t.string "payment_method"
     t.bigint "space_booking_id"
     t.string "status"

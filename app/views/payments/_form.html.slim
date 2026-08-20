@@ -24,6 +24,12 @@
         = radio_button.radio_button
         = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
 
+/  Date d'encaissement réelle — optionnelle, sert au rapprochement bancaire.
+.my-6
+  = f.date_field :paid_on,
+                 label: "Date du paiement (optionnel)",
+                 class: "md:w-1/2"
+
 .border-l-4.border-yellow-400.bg-yellow-50.p-4.mt-4
   .flex
     .flex-shrink-0

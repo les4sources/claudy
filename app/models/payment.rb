@@ -5,6 +5,7 @@
 #  id                         :uuid             not null, primary key
 #  amount_cents               :integer          default(0), not null
 #  deleted_at                 :datetime
+#  paid_on                    :date
 #  payment_method             :string
 #  status                     :string
 #  created_at                 :datetime         not null
@@ -73,12 +74,42 @@ class Payment < ApplicationRecord
   scope :paid, -> { where(status: "paid") }
   scope :pending, -> { where(status: "pending") }
 
+  # Statuts de séjour qui valent « annulé ». Les deux orthographes coexistent
+  # dans l'historique (`canceled` posé par l'app, `cancelled` par des imports).
+  CANCELED_STAY_STATUSES = %w[canceled cancelled].freeze
+
+  # Ce qui mérite d'apparaître dans le journal des paiements (Michael
+  # 2026-08-20). Le journal sert à retrouver de l'ARGENT, pas des intentions :
+  #   * un séjour « en attente » n'a encore rien encaissé de ferme — même un
+  #     paiement marqué payé y reste une écriture provisoire, on masque tout ;
+  #   * un séjour annulé ne garde que ce qui a réellement été encaissé (c'est
+  #     ce qu'il faudra rembourser ou retenir) ; ses paiements en attente n'ont
+  #     plus d'objet.
+  # Un paiement SANS séjour (coworking, canal booking historique) n'est jamais
+  # masqué : la règle ne parle que des séjours.
+  scope :journalable, lambda {
+    left_joins(:stay)
+      .where(<<~SQL.squish, canceled: CANCELED_STAY_STATUSES)
+        stays.id IS NULL
+        OR (COALESCE(stays.status, '') <> 'pending'
+            AND (COALESCE(stays.status, '') NOT IN (:canceled)
+                 OR payments.status = 'paid'))
+      SQL
+  }
+
   def paid?
     self.status == "paid"
   end
 
   def pending?
     self.status == "pending"
+  end
+
+  # Date qui fait FOI pour l'affichage et le rapprochement bancaire : la date
+  # d'encaissement saisie si elle l'a été, la date de saisie sinon. Tout
+  # l'historique n'a que `created_at` — d'où le repli, qui évite un backfill.
+  def effective_date
+    paid_on || created_at.to_date
   end
 
   private

@@ -5,7 +5,10 @@
 - content_for :page_header do
   = render "layouts/components/page_header", title: "Facturation"
 
-.px-4.sm:px-6.lg:px-8.py-6.space-y-8
+/  `stay-details` enveloppe la page : les libellés de séjour des deux files
+   ouvrent la fiche dans le <dialog> posé en bas, au lieu de partir sur le
+   formulaire d'édition.
+.px-4.sm:px-6.lg:px-8.py-6.space-y-8(data-controller="stay-details")
   - requested = @queue.requested
   - sans_tarif = @queue.undefined_tier
 
@@ -36,7 +39,7 @@
         - sans_tarif.each do |line|
           li
             - if line.stay
-              = link_to line.label, edit_stay_path(line.stay), class: "font-medium underline decoration-red-300 hover:decoration-red-600"
+              = link_to line.label, stay_path(line.stay), data: { action: "stay-details#open" }, class: "font-medium underline decoration-red-300 hover:decoration-red-600"
             - else
               span.font-medium = line.label
             - if line.from_date
@@ -61,3 +64,11 @@
       /  Le bouton fait le chemin INVERSE : une facture marquée envoyée par
          erreur se remet dans la file en un clic, sans passer par la console.
       = render "invoicing/table", lines: sent, action_label: "Remettre à fournir", action_status: Invoicing::Queue::REQUESTED, tone: :sent
+
+  /  Modale « fiche séjour », même mécanique que le calendrier, l'index Séjours
+     et la fiche client : le fragment sans layout est chargé en fetch puis
+     injecté ici.
+  dialog.rounded-lg.p-0.shadow-xl.w-full(class="max-w-5xl max-h-[90vh] overflow-y-auto backdrop:bg-black/40" data-stay-details-target="dialog")
+    / La croix de fermeture vit dans l'en-tête du fragment séjour
+      (`stays/_details`), pas sur une ligne à elle au-dessus.
+    div data-stay-details-target="content"

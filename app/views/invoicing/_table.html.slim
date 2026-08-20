@@ -19,8 +19,12 @@
             /  Le lien pointe vers le SÉJOUR quand il existe : c'est le point
                d'entrée unique de l'app. À défaut (réservable orphelin), on
                retombe sur l'ancienne fiche du réservable.
+            /  Il OUVRE LA MODALE plutôt que le formulaire d'édition (Michael
+               2026-08-20) : depuis la file de facturation on veut d'abord LIRE
+               le séjour — montants, composition, paiements. La modale porte son
+               propre lien « Modifier la composition → » pour qui doit corriger.
             - if line.stay
-              = link_to line.label, edit_stay_path(line.stay), class: "font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
+              = link_to line.label, stay_path(line.stay), data: { action: "stay-details#open" }, class: "font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
             - elsif line.kind == "booking"
               = link_to line.label, booking_path(line.record), class: "font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
             - else
