@@ -27,9 +27,33 @@ module CalendarHelper
   # existant sur chaque bloc calendrier. Le contrôleur Stimulus `stay-merge`
   # construit ses chips de bottom bar depuis ces attributs — pas de recalcul.
 
-  # Nom client court pour la chip (le nom du client de la modale est déjà long).
+  # Nom client court pour la chip. Même source que le titre du bloc calendrier
+  # (`stay_display_label`) : la chip de fusion doit nommer le séjour exactement
+  # comme la carte qu'on vient de cliquer.
   def stay_short_label(stay)
-    stay&.customer&.name.presence || "Séjour ##{stay&.id}"
+    stay_display_label(stay)
+  end
+
+  # Nom AFFICHÉ pour un séjour au calendrier (issue nom-client, 2026-08-21).
+  # Le bloc titrait jusqu'ici avec les colonnes brutes du réservable d'origine
+  # (`group_or_name` : `group_name`, sinon `firstname lastname`), qui ne bougent
+  # plus une fois la réservation créée. Un séjour réassigné à un autre client —
+  # 27 % du parc — affichait donc au calendrier le nom saisi au formulaire de
+  # réservation pendant que sa modale affichait le vrai client.
+  #
+  # `StayDecorator#display_name` est la source unique : le nom du client, et sur
+  # un séjour rattaché au client FOURRE-TOUT (où « Client Les 4 Sources » ne dit
+  # rien) le nom porté par la réservation d'origine — exactement l'ancien
+  # comportement pour ces séjours-là.
+  #
+  # MÉMOÏSÉ PAR REQUÊTE : un séjour de 5 nuits rend 5 blocs, et `display_name`
+  # relit les `stay_items` sur un séjour fourre-tout. Une seule fois par séjour.
+  def stay_display_label(stay)
+    return nil if stay.nil?
+
+    @_stay_display_labels ||= {}
+    @_stay_display_labels[stay.id] ||=
+      stay.decorate.display_name.presence || "Séjour ##{stay.id}"
   end
 
   # Dates compactes, ex. « 12–15 sept. » (même mois) ou « 30 août – 2 sept. ».

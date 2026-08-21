@@ -17,9 +17,10 @@ module Calendar
       :terrace_bookings, :hamac_bookings,
       keyword_init: true
     ) do
-      # Le bookable « nommé » (Booking ou SpaceBooking, tous deux décorés et
-      # porteurs de `group_or_name`) qui donne le titre du bloc. Priorité à
-      # l'hébergement, puis aux espaces.
+      # Le bookable « nommé » (Booking ou SpaceBooking décoré) du séjour, priorité
+      # à l'hébergement puis aux espaces. Il ne donne PLUS le titre du bloc — le
+      # nom vient du séjour (`CalendarHelper#stay_display_label`) — il sert à
+      # barrer ce titre quand le réservable d'origine est soft-deleté.
       def named_bookable
         booking_groups.first&.booking || space_groups.first&.space_booking
       end
@@ -32,13 +33,6 @@ module Calendar
       def overnight?
         booking_groups.any? || camping_bookings.any? || van_bookings.any? ||
           hamac_bookings.any?
-      end
-
-      # Repli quand le séjour n'a que du camping / van / terrasse (pas de
-      # bookable nommé).
-      def fallback_bookable
-        camping_bookings.first || van_bookings.first || hamac_bookings.first ||
-          terrace_bookings.first
       end
     end
 

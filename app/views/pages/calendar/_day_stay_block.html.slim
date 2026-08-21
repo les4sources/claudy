@@ -9,7 +9,6 @@
 - stay = block.stay
 - confirmed = stay.status.to_s == "confirmed"
 - named = block.named_bookable
-- fallback = block.fallback_bookable
 - counter = stay_nights_counter(stay, date)
 div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min-w-0 shadow border-l-4 #{"opacity-50" unless confirmed}" style=stay_block_style(stay.id) data-stay-id=stay.id data-stay-label=stay_short_label(stay) data-stay-dates=stay_short_dates(stay))
   / Nuitée sur place cette nuit-là : 💤 en débord du coin haut-droit.
@@ -18,11 +17,12 @@ div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min
   .block.min-w-0.w-full
     div.min-w-0
       strong.block.min-w-0.break-words
-        / Titre = nom du groupe/client (comme avant). Le lien ouvre la modale séjour.
-        - if named
-          = link_to named.group_or_name.html_safe, stay_path(stay), data: { action: "stay-details#open" }, class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
-        - else
-          = link_to (fallback&.group_name.presence || fallback&.name.presence || stay_short_label(stay)), stay_path(stay), data: { action: "stay-details#open" }, class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
+        / Titre = LE CLIENT DU SÉJOUR, la même source que la modale
+        / (`StayDecorator#display_name`, via `stay_display_label`). Avant, le titre
+        / venait des colonnes brutes du réservable d'origine : un séjour réassigné
+        / gardait au calendrier le nom du formulaire de réservation. Le barré
+        / signale toujours un réservable soft-deleté. Le lien ouvre la modale.
+        = link_to stay_display_label(stay), stay_path(stay), data: { action: "stay-details#open" }, class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words #{"line-through" if named&.deleted?}"
       - if counter
         span.text-gray-500 =< counter
 

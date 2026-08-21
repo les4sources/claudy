@@ -142,7 +142,9 @@ RSpec.describe "Calendrier — regroupement par séjour (epic #66, Phase 4)", ty
       # la chip camping agrégée (avant : un bloc « Camping » distinct par nuit).
       expect(response.body.scan("data-stay-id=\"#{stay.id}\"").size).to eq(2)
       expect(response.body).to include("hsl(#{hue_for(stay.id)}, 65%, 45%)")
-      expect(response.body).to include("Groupe Camping")
+      # Titre = le CLIENT du séjour (2026-08-21), plus le `group_name` figé sur la
+      # réservation de camping — cf. spec/requests/calendar_stay_client_name_spec.rb.
+      expect(response.body).to include("Cam")
       expect(response.body).to include("⛺️ 4 pers.")
     end
   end

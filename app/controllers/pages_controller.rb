@@ -21,17 +21,20 @@ class PagesController < BaseController
       # group space reservations by day
       # Le calendrier bascule sur les SÉJOURS (epic #66, Phase 4) : on précharge
       # `space_booking.stay` (via `stay_item`, has_one through) pour colorer et
-      # regrouper les occupations par `stay_id` sans requête N+1.
+      # regrouper les occupations par `stay_id` sans requête N+1. Les
+      # `stay_items` et leurs réservables viennent avec : le titre du bloc est
+      # `StayDecorator#display_name`, qui les relit sur un séjour rattaché au
+      # client FOURRE-TOUT pour retrouver le nom de la réservation d'origine.
       @space_reservations = SpaceReservation.all
         .includes(:space_booking)
-        .preload(:space, space_booking: [:event, :space_reservations, { stay: :customer }])
+        .preload(:space, space_booking: [:event, :space_reservations, { stay: [:customer, { stay_items: :bookable }] }])
         .where.not(space_booking: { status: ["declined", "canceled"] })
         .between_times(@first, @last, field: :date)
       @grouped_space_reservations = @space_reservations.to_a.group_by { |sr| sr.date }
       # group reservations by day (préchargement du séjour porteur, cf. supra)
       @reservations = Reservation.all
         .includes(:booking)
-        .preload(:room, booking: [:lodging, :reservations, { stay: :customer }])
+        .preload(:room, booking: [:lodging, :reservations, { stay: [:customer, { stay_items: :bookable }] }])
         .where.not(booking: { status: ["declined", "canceled"] })
         .between_times(@first, @last, field: :date)
       @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
@@ -41,7 +44,7 @@ class PagesController < BaseController
       # séjour. Préchargement du séjour (anti-N+1).
       @grouped_camping_bookings = nights_grouped_by_day(
         CampingBooking
-          .includes(stay: :customer)
+          .includes(stay: [:customer, { stay_items: :bookable }])
           .where.not(status: ["declined", "canceled"])
           .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
       )
@@ -55,7 +58,7 @@ class PagesController < BaseController
         .group_by(&:date)
       @grouped_van_bookings = nights_grouped_by_day(
         VanBooking
-          .includes(stay: :customer)
+          .includes(stay: [:customer, { stay_items: :bookable }])
           .where.not(status: ["declined", "canceled"])
           .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
       )
@@ -63,7 +66,7 @@ class PagesController < BaseController
       # comptent dans le bloc du séjour (chip 🛌) et dans la nuitée (💤).
       @grouped_hamac_bookings = nights_grouped_by_day(
         HamacBooking
-          .includes(stay: :customer)
+          .includes(stay: [:customer, { stay_items: :bookable }])
           .where.not(status: ["declined", "canceled"])
           .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
       )
