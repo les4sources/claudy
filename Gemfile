@@ -89,9 +89,6 @@ gem "validates_email_format_of"
 gem "will_paginate", "~> 3.3"
 # gem "tailwindcss-rails"
 
-# A native development UI for ViewComponent (https://github.com/ViewComponent/lookbook)
-gem "lookbook"
-
 # A framework for building reusable, testable & encapsulated view components in Ruby on Rails. (https://viewcomponent.org)
 gem "view_component"
 
@@ -113,6 +110,13 @@ end
 
 group :development do
   gem "annotaterb"
+
+  # UI de prévisualisation des ViewComponent, montée sur /lookbook (routes.rb).
+  # STRICTEMENT development : hors de ce groupe, son moteur boote AUSSI en
+  # production, y parse les previews de `spec/components/previews` — absentes des
+  # chemins d'autoload en prod — et loggue « uninitialized constant
+  # …ComponentPreview » à chaque démarrage de Puma.
+  gem "lookbook"
   
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"

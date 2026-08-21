@@ -1,0 +1,52 @@
+name: Deploy
+# Déclencheur de déploiement Hatchbox.
+#
+# Le « Deploy on push » natif de Hatchbox ne s'est jamais déclenché : le dépôt
+# n'avait AUCUN webhook GitHub (vérifié le 2026-08-21, `gh api …/hooks` → []).
+# Le déclencheur vit donc ici, où il est versionné, lisible, et surtout GARDÉ :
+# on ne déploie qu'après une CI verte sur `main`. Un webhook GitHub classique,
+# lui, part sur TOUTES les branches et sans regarder les tests — les branches
+# poussées chaque nuit par l'agent redéploieraient la prod pour rien.
+#
+# `HATCHBOX_DEPLOY_HOOK` (secret du dépôt) = l'URL du deploy hook de l'app
+# Hatchbox. Elle vaut jeton de déploiement : elle ne doit jamais atterrir en
+# clair dans ce dépôt, qui est public.
+#
+# Déploiement à la demande : l'onglet Actions → Deploy → « Run workflow ».
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    name: Déclencher Hatchbox
+    runs-on: ubuntu-latest
+    # Sur `workflow_run`, ne déployer QUE si la CI est verte. Le déclenchement
+    # manuel (workflow_dispatch) n'a pas de `workflow_run` et passe toujours.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Commit déployé
+        run: |
+          echo "SHA   : ${{ github.event.workflow_run.head_sha || github.sha }}"
+          echo "Auteur: ${{ github.event.workflow_run.head_commit.author.name || github.actor }}"
+
+      - name: Appeler le deploy hook
+        env:
+          HOOK: ${{ secrets.HATCHBOX_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::Le secret HATCHBOX_DEPLOY_HOOK est absent — rien à appeler."
+            exit 1
+          fi
+          # -f : un code HTTP >= 400 fait échouer l'étape au lieu de passer en vert.
+          curl -fsS -X POST "$HOOK" -o response.txt -w 'HTTP %{http_code}\n'
+          cat response.txt
