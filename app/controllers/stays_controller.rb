@@ -501,7 +501,7 @@ class StaysController < BaseController
   # 18-19/07 n'a aucun sens (retour Michael 2026-07-21). Un séjour sans dates
   # retombe sur tous les créneaux à venir.
   def assignable_availabilities_for(stay)
-    assignable_availabilities_between(stay.arrival_date, stay.departure_date)
+    ExperienceAvailability.assignable_for(current_user, stay)
   end
 
   # Créneaux proposables DANS LE FORM. Deux différences avec la version fiche :

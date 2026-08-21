@@ -1,0 +1,67 @@
+/ Panneau PAIEMENTS de la fiche séjour, dans sa propre partial pour que le CRUD
+/ des activités puisse le rafraîchir en même temps que la liste (epic #55).
+/ Avant l'extraction, ajouter une activité mettait la liste à jour mais laissait
+/ « Total séjour » et « Solde dû » sur leurs anciens montants jusqu'au prochain
+/ rechargement complet — l'écran contredisait la base.
+/ Les montants se dérivent tous de `@stay` : la partial se rend seule.
+- paiements = @stay.payments.order(:created_at)
+- encaisse = @stay.amount_paid_cents
+- total = @stay.total_amount_cents.to_i
+- avancement = total.positive? ? [[(encaisse * 100.0 / total).round, 0].max, 100].min : 0
+= turbo_frame_tag "stay_#{@stay.id}_payments" do
+  .border-t.border-gray-200.pt-4
+    .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Paiements
+    dl.mt-2.space-y-1.text-sm
+      .flex.items-baseline.justify-between
+        dt.text-gray-600 Total séjour
+        dd.font-semibold.text-gray-900 = humanized_money_with_symbol(@stay.total_amount)
+      .flex.items-baseline.justify-between
+        dt.text-gray-600 Encaissé
+        dd.text-gray-900 = humanized_money_with_symbol(Money.new(encaisse))
+
+    - if paiements.any?
+      ul.mt-3.space-y-2
+        - paiements.each do |payment|
+          = render "stays/payment_line", payment: payment.decorate, raw_payment: payment
+    - else
+      p.mt-3.text-sm.text-gray-500 Aucun paiement enregistré.
+
+    /  Jauge d'encaissement : le rapport encaissé/total se lit d'un coup
+       d'œil, là où deux montants demandent un calcul mental.
+    /  La jauge reprend le code couleur du solde juste en dessous : ambre
+       tant qu'il reste à encaisser, vert une fois le séjour soldé. Le
+       rouge reste réservé au montant dû, qui est l'alerte.
+    - if total.positive?
+      - teinte_jauge = @stay.payable_now? ? "bg-amber-500" : "bg-emerald-500"
+      .mt-3.h-2.w-full.overflow-hidden.rounded-full.bg-gray-200(role="img" aria-label="#{avancement}% encaissé")
+        .h-full.rounded-full(class=teinte_jauge style="width: #{avancement}%")
+
+    .mt-3.flex.items-baseline.justify-between
+      span.text-sm.font-semibold(class=(@stay.payable_now? ? "text-red-700" : "text-green-700"))
+        = @stay.payable_now? ? "Solde dû" : "Soldé"
+      span.text-lg.font-bold(class=(@stay.payable_now? ? "text-red-700" : "text-green-700"))
+        = humanized_money_with_symbol(Money.new([@stay.balance_due_cents, 0].max))
+
+    /  Enregistrer un paiement — REPLIÉ mais à un clic. C'est l'action la
+       plus fréquente du poste, d'où sa place en bas de colonne, sous le
+       solde qu'elle vient réduire.
+    details.mt-3(open=(@stay.payable_now? && paiements.empty?))
+      summary.w-full.cursor-pointer.select-none.rounded-md.bg-indigo-600.px-3.py-2.text-center.text-sm.font-medium.text-white.hover:bg-indigo-700
+        | Enregistrer un paiement
+      = form_with url: stay_payments_path(@stay), method: :post, class: "mt-2 space-y-2 rounded-md border border-gray-200 bg-white p-3" do |f|
+        label.block.text-xs.text-gray-600
+          | Montant (€)
+          = number_field_tag "payment[amount]", nil, step: "0.01", min: "0.01", required: true, class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
+        label.block.text-xs.text-gray-600
+          | Moyen
+          = select_tag "payment[payment_method]", options_for_select([["Liquide", "cash"], ["Virement", "bank_transfer"], ["En ligne", "stripe"]], "bank_transfer"), class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
+        label.block.text-xs.text-gray-600
+          | Statut
+          = select_tag "payment[status]", options_for_select([["Encaissé", "paid"], ["En attente", "pending"]], "paid"), class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
+        /  Date d'ENCAISSEMENT — optionnelle. Le compte bancaire se pointe
+           avec du retard : sans elle, un virement reçu le 3 et encodé le
+           17 se lit au 17, et le rapprochement administratif est faux.
+        label.block.text-xs.text-gray-600
+          | Date du paiement <span class="text-gray-400">(optionnel)</span>
+          = date_field_tag "payment[paid_on]", nil, class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
+        = f.submit "Ajouter le paiement", class: "w-full cursor-pointer rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"

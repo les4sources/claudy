@@ -81,10 +81,21 @@ class ExperienceBooking < ApplicationRecord
   # porteur. Centralisé ici pour que contrôleur admin ET canal jeton partagent
   # exactement la même règle de scoping.
   def self.for_user(user)
-    return all if user.nil? || user.global_admin?
+    base = with_visible_stay
+    return base if user.nil? || user.global_admin?
 
-    for_carrier(user.human)
+    base.for_carrier(user.human)
   end
+
+  # Un séjour peut disparaître en laissant ses activités derrière lui : son
+  # `deleted_at` est alors posé sans que le `dependent: :destroy` ne joue (c'est
+  # le cas de trois réservations en production ; `Stay#destroy`, lui, les emporte
+  # bien). Le `default_scope` de `soft_deletion` rend ensuite `booking.stay` nil,
+  # et la page de validation — qui affiche le client du séjour — plantait en 500
+  # pour TOUS les porteurs à cause d'une seule réservation orpheline.
+  # Le `joins` hérite du `default_scope` de `Stay` : les orphelines sortent de
+  # toutes les portées admin — invisibles à l'index, 404 sur une action ciblée.
+  scope :with_visible_stay, -> { joins(:stay) }
 
   # Jeton signé, à portée d'UN seul `ExperienceBooking` et à durée limitée,
   # transporté dans le lien de l'email au porteur. On s'appuie sur `signed_id`

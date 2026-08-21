@@ -92,6 +92,14 @@ class PaymentDecorator < ApplicationDecorator
     "Encodé le #{created_at(format: :ddmmyyyy)}"
   end
 
+  # `card` est le moyen posé par TOUT paiement en ligne du funnel natif — acompte
+  # comme solde (`Reservations::Builder`, `Payments::CreateBalanceService`) — et
+  # proposé au clavier dans l'admin. Son absence ici affichait une ligne vide sur
+  # la page client dès qu'un séjour était payé en ligne.
+  #
+  # Un moyen inconnu renvoie `nil` plutôt qu'un `<p>` vide : les appelants
+  # retombent alors sur le montant (`payment.line.presence || payment.amount`),
+  # ce que le paragraphe vide empêchait — il était « présent » sans rien dire.
   def line
     line_content = case object.payment_method
       when "airbnb"
@@ -102,9 +110,11 @@ class PaymentDecorator < ApplicationDecorator
         "Payé #{amount} par virement bancaire"
       when "cash"
         "Payé #{amount} en liquide"
-      when "stripe"
+      when "card", "stripe"
         "Payé #{amount} en ligne"
       end
+    return nil if line_content.nil?
+
     h.content_tag(:p, line_content, class: "text-sm text-gray-900")
   end
 
@@ -118,7 +128,7 @@ class PaymentDecorator < ApplicationDecorator
       "Virement"
     when "cash"
       "Liquide"
-    when "stripe"
+    when "card", "stripe"
       "En ligne"
     end
   end
@@ -129,7 +139,7 @@ class PaymentDecorator < ApplicationDecorator
       h.content_tag(:div, "💶", class: "ml-1")
     when "bank_transfer"
       h.content_tag(:div, "🏦", class: "ml-1")
-    when "stripe"
+    when "card", "stripe"
       h.content_tag(:div, "💳", class: "ml-1")
     when "airbnb"
       h.render("shared/airbnb_icon")

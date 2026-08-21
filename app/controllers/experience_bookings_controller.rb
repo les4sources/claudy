@@ -46,8 +46,13 @@ class ExperienceBookingsController < BaseController
 
     if booking.save
       refresh_stay_totals!(@stay)
-      redirect_to stay_path(@stay),
-                  notice: "Activité « #{availability.experience.name} » ajoutée au séjour."
+      respond_to do |format|
+        format.turbo_stream { render_stay_panels(@stay) }
+        format.html do
+          redirect_to stay_path(@stay),
+                      notice: "Activité « #{availability.experience.name} » ajoutée au séjour."
+        end
+      end
     else
       redirect_to stay_path(@stay),
                   alert: booking.errors.full_messages.to_sentence.presence || "Ajout impossible."
@@ -61,6 +66,7 @@ class ExperienceBookingsController < BaseController
     if @booking.update(booking_update_params)
       refresh_stay_totals!(@booking.stay)
       respond_to do |format|
+        format.turbo_stream { render_stay_panels(@booking.stay) }
         format.html { redirect_to stay_path(@booking.stay), notice: "Activité mise à jour." }
         format.any  { head :ok }
       end
@@ -82,6 +88,7 @@ class ExperienceBookingsController < BaseController
     @booking.update!(status: "cancelled")
     refresh_stay_totals!(@booking.stay)
     respond_to do |format|
+      format.turbo_stream { render_stay_panels(@booking.stay) }
       format.html { redirect_to stay_path(@booking.stay), notice: "Activité retirée du séjour." }
       format.any  { head :ok }
     end
@@ -155,6 +162,21 @@ class ExperienceBookingsController < BaseController
   def refresh_stay_totals!(stay)
     stay.recompute_aggregates!
     stay.set_payment_status
+  end
+
+  # Une mutation d'activité change DEUX zones de la fiche séjour : la liste des
+  # activités et les montants (total, encaissé, solde). Un simple redirect ne
+  # remplace que la frame d'où part la soumission — l'admin voyait donc sa
+  # nouvelle activité apparaître au-dessus d'un total resté faux jusqu'au
+  # rechargement suivant. On répond en Turbo Stream pour rafraîchir les deux.
+  def render_stay_panels(stay)
+    @stay = stay.reload
+    @assignable_availabilities = ExperienceAvailability.assignable_for(current_user, @stay)
+
+    render turbo_stream: [
+      turbo_stream.replace("stay_#{@stay.id}_activities") { render_to_string(partial: "stays/activities") },
+      turbo_stream.replace("stay_#{@stay.id}_payments")   { render_to_string(partial: "stays/payments_panel") }
+    ]
   end
 
   def deny_out_of_scope
