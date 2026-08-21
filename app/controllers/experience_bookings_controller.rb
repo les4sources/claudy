@@ -43,9 +43,18 @@ class ExperienceBookingsController < BaseController
       participants: create_params[:participants],
       status: chosen_status
     )
+    # L'équipe passe outre la capacité en connaissance de cause (décision
+    # Michael 2026-08-21) : les canaux client, eux, restent bornés.
+    booking.capacity_override = true
 
     if booking.save
       refresh_stay_totals!(@stay)
+      # Une activité posée « déjà validée » entre AUSSITÔT dans le solde dû : le
+      # client l'apprend par mail, pas en relisant sa page (décision Michael
+      # 2026-08-21). Posée « à valider », elle suivra le flux du porteur, dont la
+      # validation porte déjà sa propre notification.
+      ActivitySelectionMailer.booking_added_by_team(booking).deliver_later if booking.confirmed?
+
       respond_to do |format|
         format.turbo_stream { render_stay_panels(@stay) }
         format.html do
@@ -63,6 +72,8 @@ class ExperienceBookingsController < BaseController
   # historique de statut (Phase 1), conservé. Le modèle interdit de passer en
   # `refused` sans raison. Toute modification recalcule le total du séjour.
   def update
+    @booking.capacity_override = true
+
     if @booking.update(booking_update_params)
       refresh_stay_totals!(@booking.stay)
       respond_to do |format|

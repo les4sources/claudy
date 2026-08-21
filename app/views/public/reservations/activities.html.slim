@@ -24,6 +24,13 @@ div(data-controller="public--reservation-quote"
         strong = l(@draft.departure_date, format: :long)
         = link_to "Modifier", public_reservation_compose_path, class: "ml-2 text-xs text-moss hover:text-moss underline"
 
+    / Même bandeau que l'erreur de dates (étape 1) : le visiteur reconnaît la
+    / forme, et aucune classe Tailwind nouvelle n'est introduite ici.
+    - if @activities_error.present?
+      p.mb-6.rounded-xl.bg-red-50.border.border-red-200.text-red-800.text-sm.p-3.flex.items-start.gap-2(role="alert" data-activities-error="true")
+        = funnel_icon :alert, css_class: "w-5 h-5 flex-shrink-0 mt-px"
+        span = @activities_error
+
     - if @availabilities.empty?
       / ── Aucun créneau dans la fenêtre — étape franchissable ──
       .rounded-2xl.border.border-bark.bg-white.p-8.text-center
@@ -56,13 +63,18 @@ div(data-controller="public--reservation-quote"
               - slots.each do |av|
                 - selected_entry = @draft.experiences.find { |e| e[:availability_id].to_s == av.id.to_s }
                 - selected_participants = selected_entry&.dig(:participants).to_i
+                /  Places encore libres, pas la capacité brute : un créneau de 4
+                   places dont 2 sont prises n'en offre que 2. Le champ affichait
+                   « max 4 » et laissait saisir 4 — le client payait, puis
+                   l'activité était écartée à la création du séjour, sans un mot.
+                - spots_left = av.available_spots(ignoring: nil)
                 label.flex.items-center.gap-3.rounded-lg.border.border-bark.p-3
                   input(
                     type="number"
                     name="reservation[experiences][#{idx}][participants]"
                     value="#{selected_participants > 0 ? selected_participants : ''}"
                     min="#{experience.min_participants.presence || 1}"
-                    max="#{av.effective_max_participants || ''}"
+                    max="#{spots_left || ''}"
                     placeholder="0"
                     class="w-20 rounded border-bark text-center shrink-0"
                   )
@@ -75,8 +87,8 @@ div(data-controller="public--reservation-quote"
                       span.font-medium = av.starts_at
                       - if av.ends_at
                         | → #{av.ends_at}
-                      - if av.effective_max_participants
-                        span.text-moss.ml-2 = "(max #{av.effective_max_participants} pers.)"
+                      - if spots_left
+                        span.text-moss.ml-2 = spots_left.zero? ? "(complet)" : "(#{spots_left} place#{'s' if spots_left > 1} restante#{'s' if spots_left > 1})"
                 - idx += 1
 
         .mt-6.flex.justify-between.items-center

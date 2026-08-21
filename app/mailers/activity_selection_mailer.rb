@@ -25,6 +25,26 @@ class ActivitySelectionMailer < ApplicationMailer
     )
   end
 
+  # Notification au client quand l'ÉQUIPE ajoute elle-même une activité déjà
+  # validée sur son séjour (décision Michael 2026-08-21). Distinct de
+  # `booking_confirmed`, qui annonce une validation par l'animateur·ice : ici
+  # personne n'a rien validé, l'équipe a posé l'activité — et surtout elle entre
+  # aussitôt dans le solde à payer, ce que le client doit apprendre autrement
+  # qu'en relisant sa page de séjour.
+  # Une activité ajoutée « à valider » ne déclenche rien : le client recevra le
+  # mail de validation du porteur, et deux courriers pour une seule activité
+  # feraient du bruit pour rien.
+  def booking_added_by_team(experience_booking)
+    @booking = experience_booking
+    @stay = experience_booking.stay
+    @experience = experience_booking.experience
+    @stay_url = public_stay_url(@stay.token, host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be"))
+    mail(
+      to: @stay.customer.email,
+      subject: "Une activité a été ajoutée à votre séjour : « #{@experience.name} »"
+    )
+  end
+
   # Notification au client quand le porteur VALIDE son activité (epic #55, Phase 2).
   def booking_confirmed(experience_booking)
     @booking = experience_booking

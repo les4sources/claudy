@@ -49,11 +49,17 @@ class ExperienceBooking < ApplicationRecord
 
   delegate :experience, to: :experience_availability
 
+  # L'équipe garde la main : depuis l'admin, on peut ajouter une place de plus en
+  # connaissance de cause (décision Michael 2026-08-21). Les canaux CLIENT — le
+  # funnel et le rail email — n'y touchent pas et restent bornés.
+  attr_accessor :capacity_override
+
   validates :participants, numericality: { greater_than: 0 }
   validates :status, inclusion: { in: STATUSES }
   # Un refus n'existe jamais sans motif — c'est l'information que le client
   # reçoit et qui justifie l'invitation à re-choisir un créneau.
   validates :refusal_reason, presence: true, if: :refused?
+  validate :participants_fit_in_availability
 
   before_validation :set_default_status
 
@@ -130,6 +136,23 @@ class ExperienceBooking < ApplicationRecord
   end
 
   private
+
+  # Un créneau sans capacité déclarée n'en borne aucune. Sinon on refuse ce qui
+  # dépasse — c'est ce qui ferme la course entre deux clients qui visent la
+  # dernière place, là où le funnel se contentait de masquer les créneaux pleins
+  # à l'affichage. Une réservation morte (annulée, refusée) ne bloque personne, et
+  # l'édition ne se compte pas elle-même.
+  def participants_fit_in_availability
+    return if capacity_override
+    return if experience_availability.blank? || participants.to_i <= 0
+    return if cancelled? || refused?
+
+    spots = experience_availability.available_spots(ignoring: id)
+    return if spots.nil? || participants.to_i <= spots
+
+    errors.add(:participants,
+               spots.zero? ? "— ce créneau est complet" : "— il ne reste que #{spots} place(s) sur ce créneau")
+  end
 
   def set_default_status
     self.status ||= "pending"

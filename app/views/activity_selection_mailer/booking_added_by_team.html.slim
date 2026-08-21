@@ -1,0 +1,26 @@
+p Bonjour #{@stay.customer.first_name.presence || ""},
+
+p
+  | Nous avons ajouté l'activité «&nbsp;
+  strong = @experience.name
+  | &nbsp;» à votre séjour. Elle est confirmée&nbsp;: rien à valider de votre côté.
+
+p
+  strong Créneau&nbsp;:
+  = " #{@booking.experience_availability.available_on.strftime('%-d/%m/%Y')} à #{@booking.experience_availability.starts_at}"
+  br
+  strong Participants&nbsp;:
+  = " #{@booking.participants}"
+  br
+  strong Montant&nbsp;:
+  = " #{humanized_money_with_symbol(Money.new(@booking.price_cents))}"
+
+p
+  | Ce montant s'ajoute au solde de votre séjour, que vous pouvez régler quand vous le souhaitez depuis votre page&nbsp;:
+
+p
+  = link_to "Voir mon séjour", @stay_url
+
+p
+  | Si cette activité ne vous convient pas, dites-le nous&nbsp;: contactez Malau au +32(0)490/46.77.10 ou à&nbsp;
+  = link_to "sejours@les4sources.be", "mailto:sejours@les4sources.be"

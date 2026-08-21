@@ -85,14 +85,22 @@ class ExperienceAvailability < ApplicationRecord
     max_participants || experience.max_participants
   end
 
-  def booked_participants
-    experience_bookings.where.not(status: "cancelled").sum(:participants)
+  # Places réellement prises. Une activité REFUSÉE par le porteur ne prend
+  # évidemment plus de place — elle était pourtant comptée ici, alors que le
+  # scope `active` d'`ExperienceBooking` l'exclut déjà : un refus rendait le
+  # créneau artificiellement plus plein qu'il n'était.
+  # `ignoring` sert à l'édition : le nombre de participants d'une réservation ne
+  # doit pas se compter lui-même quand on vérifie s'il tient dans le créneau.
+  def booked_participants(ignoring: nil)
+    scope = experience_bookings.where.not(status: %w[cancelled refused])
+    scope = scope.where.not(id: ignoring) if ignoring
+    scope.sum(:participants)
   end
 
-  def available_spots
+  def available_spots(ignoring: nil)
     cap = effective_max_participants
     return nil if cap.nil?
-    [cap - booked_participants, 0].max
+    [cap - booked_participants(ignoring: ignoring), 0].max
   end
 
   def full?

@@ -96,6 +96,18 @@ module Public
     # sont écartées par `merged_draft_params`.
     def advance_activities
       persist_draft(merged_draft_params, overwrite: submitted_collections)
+
+      # Dernier filet avant les coordonnées : un créneau a pu se remplir pendant
+      # que le visiteur composait. Mieux vaut le lui dire ICI, où il peut changer
+      # de créneau, qu'au commit — où l'activité serait écartée en silence, après
+      # paiement de l'acompte.
+      if (plein = overbooked_selection).present?
+        @availabilities     = bookable_availabilities.reject { |av| av.full? && selected_participants_for(av).zero? }
+        @quote              = @draft.quote
+        @activities_error   = "Il ne reste plus assez de places sur ce créneau : #{plein}. Choisissez-en un autre ou réduisez le nombre de participants."
+        return render :activities, status: :unprocessable_entity
+      end
+
       redirect_to public_reservation_contact_path
     end
 
@@ -183,6 +195,26 @@ module Public
         new.nil? || (new.respond_to?(:empty?) && new.empty? && !old.nil?) ? old : new
       end
       Reservations::Draft.new(merged)
+    end
+
+    # Créneaux choisis dont le nombre de participants dépasse les places encore
+    # libres, décrits pour l'affichage. Vide quand tout tient.
+    def overbooked_selection
+      Array(@draft.experiences).filter_map { |entry|
+        av = ExperienceAvailability.find_by(id: entry[:availability_id])
+        next if av.nil?
+
+        wanted = entry[:participants].to_i
+        spots  = av.available_spots
+        next if spots.nil? || wanted <= spots
+
+        "#{av.label} (#{spots} place#{'s' if spots > 1} restante#{'s' if spots > 1})"
+      }.to_sentence.presence
+    end
+
+    def selected_participants_for(availability)
+      entry = Array(@draft.experiences).find { |e| e[:availability_id].to_s == availability.id.to_s }
+      entry&.dig(:participants).to_i
     end
 
     # Collections que le POST courant porte RÉELLEMENT (clé présente dans les
@@ -276,15 +308,19 @@ module Public
     end
 
     # Créneaux d'activité réservables au funnel : ceux qui tombent dans la
-    # fenêtre `[arrivée, départ)` du séjour en cours, hors « Pizza Party » (gérée
-    # à part) et hors activités supprimées. Le tri experience/date/heure permet
+    # fenêtre `[arrivée, départ]` du séjour en cours, JOUR DU DÉPART COMPRIS
+    # (décision Michael 2026-08-21 — une activité en matinée avant de charger la
+    # voiture se vend). C'est aussi ce que faisaient déjà le rail email et la
+    # fiche admin, tous deux sur `for_date_range` : les trois canaux proposent
+    # enfin la même chose. Hors « Pizza Party » (gérée à part) et hors activités
+    # supprimées. Le tri experience/date/heure permet
     # de les regrouper par activité dans la vue. Sans dates, aucune activité.
     def bookable_availabilities
       return ExperienceAvailability.none if @draft.arrival_date.blank? || @draft.departure_date.blank?
 
       ExperienceAvailability
         .includes(:experience, :experience_bookings)
-        .where(available_on: @draft.arrival_date...@draft.departure_date)
+        .where(available_on: @draft.arrival_date..@draft.departure_date)
         .joins(:experience)
         .where(experiences: { deleted_at: nil })
         .where.not(experiences: { name: "Pizza Party" })
