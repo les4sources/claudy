@@ -38,10 +38,13 @@ RSpec.describe "Cartes du jour — badge de paiement", type: :request do
 
     Payment.create!(stay: stay, amount_cents: 17_142, status: "paid",
                     payment_method: "online", paid_on: today)
-    stay.set_payment_status
 
-    expect(stay.reload.payment_status).to eq("paid")
+    # On NE recalcule PAS `stay.payment_status` : tous les chemins d'encaissement
+    # ne l'appellent pas. Le badge doit dire vrai malgré les deux colonnes
+    # périmées, parce qu'il compte l'argent réellement encaissé.
+    expect(stay.reload.payment_status).to eq("pending")
     expect(booking.reload.payment_status).to eq("pending")
+    expect(stay.amount_paid_cents).to eq(17_142)
 
     get "/"
 

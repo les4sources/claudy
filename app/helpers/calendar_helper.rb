@@ -62,28 +62,40 @@ module CalendarHelper
   # à jour quand l'argent entre sur le séjour. Un séjour soldé s'affichait « Non
   # payée » (9 réservables dans ce cas en base au 2026-08-21).
   #
-  # La vérité est sur le séjour : `Stay#set_payment_status` la recalcule à chaque
-  # mouvement à partir des paiements réellement encaissés. Une occupation SANS
-  # séjour n'a que sa propre colonne — on la garde pour elle.
+  # On ne lit pas non plus la colonne `payment_status` DU SÉJOUR, on RECALCULE
+  # sur l'argent encaissé — exactement ce qu'affiche la modale séjour, donc badge
+  # et modale ne peuvent plus se contredire. Le calcul est repris tel quel de
+  # `Stay#set_payment_status`. Mesuré le 2026-08-21 : cette colonne-là ne ment sur
+  # AUCUN des 1378 séjours, le recalcul est donc une ceinture, pas une réparation
+  # — mais tous les chemins d'encaissement ne l'entretiennent pas
+  # (`Payments::UpdateService` et `DestroyService` ne mettent à jour que celle du
+  # BOOKING), et une carte du jour qui contredit la modale est précisément ce
+  # qu'on vient de corriger.
+  #
+  # COÛT : deux requêtes par carte, et seulement pour une occupation RATTACHÉE à
+  # un séjour — c.-à-d. les quelques cartes du bandeau du jour. Les popovers du
+  # calendrier ne sont rendus que pour les occupations SANS séjour, qui gardent
+  # leur colonne et ne coûtent rien.
   PAYMENT_BADGES = {
     "pending"        => ["Non payée", "bg-red-200 text-red-800"],
     "partially_paid" => ["Payée partiellement", "bg-yellow-200 text-yellow-800"],
     "paid"           => ["Payée", "bg-green-200 text-green-800"]
   }.freeze
 
-  # Rien à afficher quand il n'y a rien à devoir : un séjour à 0 € encore
-  # « pending » (séjour interne, gratuité, prix pas encore posé) n'est pas impayé.
-  # Sans cette garde, la carte gagnerait un « Non payée » rouge là où elle
-  # n'affichait rien — la colonne du réservable y est souvent nulle.
   def occupancy_payment_status(bookable)
     stay = bookable&.stay
-    if stay
-      return nil if stay.payment_status.to_s == "pending" && stay.total_amount_cents.to_i.zero?
+    return bookable&.payment_status if stay.nil?
 
-      return stay.payment_status.presence || bookable.payment_status
-    end
+    encaisse = stay.amount_paid_cents
+    return "paid" if encaisse.positive? && stay.balance_due_cents <= 0
+    return "partially_paid" if encaisse.positive?
 
-    bookable&.payment_status
+    # Rien encaissé ET rien à devoir : ce n'est pas un impayé (séjour interne,
+    # gratuité, prix pas encore posé). Sans cette garde, la carte gagnerait un
+    # « Non payée » rouge là où elle n'affichait rien.
+    return nil if stay.total_amount_cents.to_i.zero?
+
+    "pending"
   end
 
   def occupancy_payment_badge(bookable)
