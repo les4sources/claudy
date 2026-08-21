@@ -40,6 +40,32 @@ RSpec.describe "Calendrier — nom du client sur le bloc séjour", type: :reques
     expect(response.body).to include("data-stay-label=\"Association Cliente\"")
   end
 
+  # Bandeau « infos du jour » (cartes Séjour en cours / Location d'espaces) : il
+  # rend les mêmes popovers que le calendrier, et titrait lui aussi avec le nom
+  # figé sur la réservation.
+  it "titre les cartes du jour avec le client du séjour" do
+    today = Date.today
+
+    customer = Customers::UpsertByEmail.call(
+      email: "jour@example.com",
+      attrs: { customer_type: "organization", organization_name: "Client Du Jour" }
+    )
+    stay = Stay.create!(customer: customer, source: "manual", status: "confirmed",
+                        arrival_date: today, departure_date: today)
+
+    space_booking = SpaceBooking.create!(firstname: "Prénom", lastname: "Formulaire",
+                                         from_date: today, to_date: today, status: "confirmed")
+    SpaceReservation.create!(space: space, space_booking: space_booking, date: today)
+    StayItem.create!(stay: stay, bookable: space_booking)
+
+    get "/"
+
+    expect(response).to have_http_status(:ok)
+    carte = response.body[/Location d'espaces.*?#{Regexp.escape(space_booking_path(space_booking))}[^>]*>[^<]*/m]
+    expect(carte).to include("Client Du Jour")
+    expect(carte).not_to include("Prénom Formulaire")
+  end
+
   it "garde le nom de la réservation d'origine sur un séjour du client FOURRE-TOUT" do
     date = Date.today.next_occurring(:friday)
 

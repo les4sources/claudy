@@ -12,7 +12,10 @@
 .p-3
   .flex.items-center.justify-between.mb-2
     .text-sm.font-semibold.leading-none.text-gray-900
-      = link_to space_booking.decorate.group_or_name.html_safe, 
+      / Nom = le CLIENT du séjour porteur, comme la modale et le bloc calendrier
+      / (cf. CalendarHelper#stay_display_label). Une occupation SANS séjour n'a
+      / pas de client : elle garde le nom porté par sa réservation.
+      = link_to (stay_display_label(space_booking.object.stay) || space_booking.decorate.group_or_name),
                 space_booking_path(space_booking),
                 class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
     div
@@ -40,7 +43,7 @@
       | Cette réservation est annulée
   - if space_booking.confirmed?
     .mb-2
-      = space_booking.payment_status
+      = occupancy_payment_badge(space_booking.object)
   ul.flex.text-base.font-light
     - if space_booking.object.persons.present?
       li.mr-2

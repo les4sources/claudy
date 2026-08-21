@@ -56,6 +56,45 @@ module CalendarHelper
       stay.decorate.display_name.presence || "Séjour ##{stay.id}"
   end
 
+  # --- Statut de paiement des cartes du jour -------------------------------
+  # Même travers que le nom (cf. `stay_display_label`) : les popovers lisaient la
+  # colonne `payment_status` du RÉSERVABLE, figée à la création et jamais remise
+  # à jour quand l'argent entre sur le séjour. Un séjour soldé s'affichait « Non
+  # payée » (9 réservables dans ce cas en base au 2026-08-21).
+  #
+  # La vérité est sur le séjour : `Stay#set_payment_status` la recalcule à chaque
+  # mouvement à partir des paiements réellement encaissés. Une occupation SANS
+  # séjour n'a que sa propre colonne — on la garde pour elle.
+  PAYMENT_BADGES = {
+    "pending"        => ["Non payée", "bg-red-200 text-red-800"],
+    "partially_paid" => ["Payée partiellement", "bg-yellow-200 text-yellow-800"],
+    "paid"           => ["Payée", "bg-green-200 text-green-800"]
+  }.freeze
+
+  # Rien à afficher quand il n'y a rien à devoir : un séjour à 0 € encore
+  # « pending » (séjour interne, gratuité, prix pas encore posé) n'est pas impayé.
+  # Sans cette garde, la carte gagnerait un « Non payée » rouge là où elle
+  # n'affichait rien — la colonne du réservable y est souvent nulle.
+  def occupancy_payment_status(bookable)
+    stay = bookable&.stay
+    if stay
+      return nil if stay.payment_status.to_s == "pending" && stay.total_amount_cents.to_i.zero?
+
+      return stay.payment_status.presence || bookable.payment_status
+    end
+
+    bookable&.payment_status
+  end
+
+  def occupancy_payment_badge(bookable)
+    status = occupancy_payment_status(bookable)
+    label, colors = PAYMENT_BADGES.fetch(status.to_s) { [status.presence, "bg-gray-100 text-gray-800"] }
+    return nil if label.blank?
+
+    content_tag(:span, label,
+                class: "text-xs font-medium mr-2 px-2.5 py-0.5 rounded #{colors}")
+  end
+
   # Dates compactes, ex. « 12–15 sept. » (même mois) ou « 30 août – 2 sept. ».
   def stay_short_dates(stay)
     return nil if stay.nil?
