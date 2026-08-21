@@ -16,6 +16,7 @@ require "rails_helper"
 #  general_account_id  :bigint           not null
 #  legal_entity_id     :bigint           not null
 #  team_id             :bigint
+#  third_party_id      :bigint
 #
 # Indexes
 #
@@ -26,6 +27,7 @@ require "rails_helper"
 #  index_cash_allocations_on_general_account_id             (general_account_id)
 #  index_cash_allocations_on_legal_entity_id                (legal_entity_id)
 #  index_cash_allocations_on_team_id                        (team_id)
+#  index_cash_allocations_on_third_party_id                 (third_party_id)
 #
 # Foreign Keys
 #
@@ -34,6 +36,7 @@ require "rails_helper"
 #  fk_rails_...  (general_account_id => general_accounts.id)
 #  fk_rails_...  (legal_entity_id => legal_entities.id)
 #  fk_rails_...  (team_id => teams.id)
+#  fk_rails_...  (third_party_id => third_parties.id)
 #
 require Rails.root.join("spec/support/finance_builders")
 

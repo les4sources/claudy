@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_20_150954) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_20_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -349,6 +349,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_150954) do
     t.string "label"
     t.bigint "legal_entity_id", null: false
     t.bigint "team_id"
+    t.bigint "third_party_id"
     t.datetime "updated_at", null: false
     t.index ["analytic_account_id"], name: "index_cash_allocations_on_analytic_account_id"
     t.index ["cash_entry_id"], name: "index_cash_allocations_on_cash_entry_id"
@@ -357,6 +358,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_150954) do
     t.index ["general_account_id"], name: "index_cash_allocations_on_general_account_id"
     t.index ["legal_entity_id"], name: "index_cash_allocations_on_legal_entity_id"
     t.index ["team_id"], name: "index_cash_allocations_on_team_id"
+    t.index ["third_party_id"], name: "index_cash_allocations_on_third_party_id"
     t.check_constraint "amount_cents <> 0", name: "cash_allocations_non_zero"
   end
 
@@ -831,13 +833,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_150954) do
     t.bigint "journal_entry_id", null: false
     t.string "label"
     t.bigint "team_id"
+    t.bigint "third_party_id"
     t.datetime "updated_at", null: false
     t.index ["analytic_account_id"], name: "index_journal_lines_on_analytic_account_id"
     t.index ["deleted_at"], name: "index_journal_lines_on_deleted_at"
     t.index ["general_account_id"], name: "index_journal_lines_on_general_account_id"
     t.index ["journal_entry_id"], name: "index_journal_lines_on_journal_entry_id"
     t.index ["team_id"], name: "index_journal_lines_on_team_id"
+    t.index ["third_party_id"], name: "index_journal_lines_on_third_party_id"
     t.check_constraint "debit_cents >= 0 AND credit_cents >= 0 AND (debit_cents = 0 OR credit_cents = 0) AND (debit_cents > 0 OR credit_cents > 0)", name: "journal_lines_one_side_only"
+  end
+
+  create_table "ledger_documents", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "document_date", null: false
+    t.string "external_ref", null: false
+    t.string "label", null: false
+    t.jsonb "payload", default: {}, null: false
+    t.string "source_system", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_ledger_documents_on_deleted_at"
+    t.index ["source_system", "external_ref"], name: "index_ledger_documents_on_source_system_and_external_ref", unique: true
   end
 
   create_table "legal_entities", force: :cascade do |t|
@@ -1371,6 +1388,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_150954) do
     t.index ["parent_id"], name: "index_teams_on_parent_id"
   end
 
+  create_table "third_parties", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.bigint "customer_id"
+    t.datetime "deleted_at"
+    t.bigint "human_id"
+    t.string "kind", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_third_parties_on_code", unique: true
+    t.index ["customer_id"], name: "index_third_parties_on_customer_id"
+    t.index ["deleted_at"], name: "index_third_parties_on_deleted_at"
+    t.index ["human_id"], name: "index_third_parties_on_human_id"
+  end
+
   create_table "unavailabilities", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.date "date"
@@ -1468,6 +1501,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_150954) do
   add_foreign_key "cash_allocations", "general_accounts"
   add_foreign_key "cash_allocations", "legal_entities"
   add_foreign_key "cash_allocations", "teams"
+  add_foreign_key "cash_allocations", "third_parties"
   add_foreign_key "cash_entries", "cash_accounts"
   add_foreign_key "catalog_prices", "catalog_items"
   add_foreign_key "coda_statements", "cash_accounts"
@@ -1503,6 +1537,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_150954) do
   add_foreign_key "journal_lines", "general_accounts"
   add_foreign_key "journal_lines", "journal_entries"
   add_foreign_key "journal_lines", "teams"
+  add_foreign_key "journal_lines", "third_parties"
   add_foreign_key "lodging_compositions", "lodgings", column: "component_lodging_id"
   add_foreign_key "lodging_compositions", "lodgings", column: "composite_lodging_id"
   add_foreign_key "lodging_rooms", "lodgings"
@@ -1540,6 +1575,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_150954) do
   add_foreign_key "team_memberships", "humans"
   add_foreign_key "team_memberships", "teams"
   add_foreign_key "teams", "teams", column: "parent_id"
+  add_foreign_key "third_parties", "customers"
+  add_foreign_key "third_parties", "humans"
   add_foreign_key "unavailabilities", "lodgings"
   add_foreign_key "users", "humans"
 end

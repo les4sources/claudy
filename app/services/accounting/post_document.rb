@@ -20,7 +20,7 @@ module Accounting
 
     # `lines` est un tableau de hash :
     #   { account: <GeneralAccount|code>, debit_cents: / credit_cents:,
-    #     analytic_account:, team:, label: }
+    #     analytic_account:, team:, third_party:, label: }
     def initialize(legal_entity:, journal:, entry_date:, label:, lines:,
                    source: nil, whodunnit: nil)
       @legal_entity = legal_entity
@@ -96,6 +96,7 @@ module Accounting
       {
         general_account: account,
         analytic_account: attributes[:analytic_account],
+        third_party: attributes[:third_party],
         team: attributes[:team],
         debit_cents: attributes[:debit_cents].to_i,
         credit_cents: attributes[:credit_cents].to_i,

@@ -14,6 +14,7 @@ require "rails_helper"
 #  general_account_id  :bigint           not null
 #  journal_entry_id    :bigint           not null
 #  team_id             :bigint
+#  third_party_id      :bigint
 #
 # Indexes
 #
@@ -22,6 +23,7 @@ require "rails_helper"
 #  index_journal_lines_on_general_account_id   (general_account_id)
 #  index_journal_lines_on_journal_entry_id     (journal_entry_id)
 #  index_journal_lines_on_team_id              (team_id)
+#  index_journal_lines_on_third_party_id       (third_party_id)
 #
 # Foreign Keys
 #
@@ -29,6 +31,7 @@ require "rails_helper"
 #  fk_rails_...  (general_account_id => general_accounts.id)
 #  fk_rails_...  (journal_entry_id => journal_entries.id)
 #  fk_rails_...  (team_id => teams.id)
+#  fk_rails_...  (third_party_id => third_parties.id)
 #
 require Rails.root.join("spec/support/finance_builders")
 
