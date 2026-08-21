@@ -7,10 +7,24 @@ export default class extends Controller {
   static targets = ["form"]
   static values  = { url: String, nextUrl: String }
 
+  // Le devis se recalcule TOUJOURS contre `urlValue`, jamais contre l'action du
+  // formulaire : à l'étape composition les deux coïncident, mais à l'étape
+  // activités le formulaire mène à l'étape suivante et doit continuer d'y mener
+  // sans JS. On applique nous-mêmes le Turbo Stream renvoyé.
   refresh() {
-    if (this.hasFormTarget) {
-      this.formTarget.requestSubmit()
-    }
+    if (!this.hasFormTarget) return
+
+    const form = this.formTarget
+    fetch(this.urlValue, {
+      method: "POST",
+      body: new FormData(form),
+      headers: {
+        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content,
+        "Accept": "text/vnd.turbo-stream.html"
+      }
+    })
+      .then(response => response.text())
+      .then(html => { if (html.trim() && window.Turbo) window.Turbo.renderStreamMessage(html) })
   }
 
   // Sauvegarde le draft via quote (même token CSRF que le formulaire) puis

@@ -95,13 +95,13 @@ module Public
     # `participants`) puis passe aux coordonnées. Les entrées sans participant
     # sont écartées par `merged_draft_params`.
     def advance_activities
-      persist_draft(merged_draft_params)
+      persist_draft(merged_draft_params, overwrite: submitted_collections)
       redirect_to public_reservation_contact_path
     end
 
     # Recalcul du panier (Turbo Frame, sans rechargement complet — AC-T2-10).
     def quote
-      persist_draft(merged_draft_params)
+      persist_draft(merged_draft_params, overwrite: submitted_collections)
       @lodgings = bookable_lodgings
       @quote = @draft.quote
       respond_to do |format|
@@ -169,16 +169,35 @@ module Public
     end
 
     # Fusionne des paramètres dans le draft courant sans toucher à la session.
-    def merge_draft(attrs)
+    # Une valeur vide n'écrase JAMAIS une ancienne valeur : c'est ce qui permet à
+    # chaque étape de ne soumettre que SES champs sans effacer le reste du draft.
+    # `overwrite` lève la règle pour les collections que le formulaire courant
+    # soumet vraiment — sans quoi vider un choix serait impossible : le retrait
+    # d'une activité (participants remis à zéro) restait dans le devis et serait
+    # parti en réservation.
+    def merge_draft(attrs, overwrite: [])
       incoming = attrs.to_h.deep_symbolize_keys
-      merged = @draft.to_h.merge(incoming) do |_key, old, new|
+      merged = @draft.to_h.merge(incoming) do |key, old, new|
+        next new if overwrite.include?(key)
+
         new.nil? || (new.respond_to?(:empty?) && new.empty? && !old.nil?) ? old : new
       end
       Reservations::Draft.new(merged)
     end
 
-    def persist_draft(attrs)
-      @draft = merge_draft(attrs)
+    # Collections que le POST courant porte RÉELLEMENT (clé présente dans les
+    # params bruts), par opposition à celles que `merged_draft_params` remplit
+    # d'un tableau vide par défaut. Seules les premières ont le droit de vider
+    # leur pendant dans le draft.
+    def submitted_collections
+      raw = params[:reservation]
+      return [] unless raw.respond_to?(:key?)
+
+      [:experiences].select { |key| raw.key?(key) }
+    end
+
+    def persist_draft(attrs, overwrite: [])
+      @draft = merge_draft(attrs, overwrite: overwrite)
       session[DRAFT_SESSION_KEY] = @draft.to_h
       @draft
     end

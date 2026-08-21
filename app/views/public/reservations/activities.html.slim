@@ -1,6 +1,7 @@
 / Étape 3/4 — Activités
 - content_for :meta_title, "Vos activités"
-div
+div(data-controller="public--reservation-quote"
+  data-public--reservation-quote-url-value=public_reservation_quote_path)
   .max-w-3xl.mx-auto.px-4.pt-10.pb-28
 
     / ── Step indicator ───────────────────────────────────────
@@ -35,7 +36,13 @@ div
             class: "rounded-lg bg-forest text-white px-6 py-3 text-sm font-medium hover:bg-forest-soft"
 
     - else
-      = form_with url: public_reservation_advance_activities_path, method: :post do |f|
+      / Le formulaire garde sa destination — `advance_activities` — pour qu'un
+      / navigateur sans JS avance normalement. Le recalcul du devis passe à côté :
+      / à chaque changement de participants, le contrôleur poste le formulaire au
+      / point de devis et applique le Turbo Stream reçu (panneau + total sticky).
+      = form_with url: public_reservation_advance_activities_path, method: :post,
+          data: { "public--reservation-quote-target": "form",
+                  action: "change->public--reservation-quote#refresh" } do |f|
         - idx = 0
         - @availabilities.group_by(&:experience).each do |experience, slots|
           .rounded-2xl.border.border-bark.bg-white.shadow-sm.p-5.mb-4
