@@ -50,3 +50,29 @@ jobs:
           # -f : un code HTTP >= 400 fait échouer l'étape au lieu de passer en vert.
           curl -fsS -X POST "$HOOK" -o response.txt -w 'HTTP %{http_code}\n'
           cat response.txt
+
+      # Filet de sécurité, tant que Hatchbox construit les assets APRÈS avoir
+      # redémarré l'app (constaté le 2026-08-21 : symlink + restart à 09:18:24,
+      # manifest Vite écrit à 09:18:52). Toute requête servie dans cette fenêtre
+      # fait mémoriser à ViteRuby un manifest incomplet, et le process rend des
+      # 500 JUSQU'AU redémarrage suivant. Sans cette vérification, un déploiement
+      # automatique peut laisser la prod à terre sans que personne le voie.
+      - name: Vérifier que la prod répond après le déploiement
+        env:
+          APP_URL: https://app.les4sources.be/users/sign_in
+        run: |
+          echo "Attente de la fin du déploiement…"
+          sleep 150
+          for i in $(seq 1 10); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$APP_URL" || echo 000)
+            echo "tentative $i : HTTP $code"
+            if [ "$code" = "200" ]; then
+              ok=$((${ok:-0} + 1))
+              [ "$ok" -ge 2 ] && echo "Prod en ligne." && exit 0
+            else
+              ok=0
+            fi
+            sleep 15
+          done
+          echo "::error::La prod ne répond pas 200 après le déploiement. Redémarrer l'app depuis Hatchbox — c'est le symptôme du manifest Vite mémorisé trop tôt."
+          exit 1
