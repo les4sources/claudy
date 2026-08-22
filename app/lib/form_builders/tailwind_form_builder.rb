@@ -65,12 +65,39 @@ module FormBuilders
       text_field(name, *args, &block)
     end
 
-    def file_field(name, *args, &block)
-      args[0].merge!({ 
-        type: 'file',
-        class: 'block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none'
-      }) if args.any?
-      text_field(name, *args, &block)
+    # Ce `file_field` ne rendait PAS un champ fichier : il fusionnait
+    # `type: 'file'` dans les options et déléguait à `text_field`. Le
+    # `file_field` d'ActionView n'était donc JAMAIS appelé — et avec lui
+    # disparaissait `self.multipart = true`, le drapeau qui fait rendre
+    # `enctype="multipart/form-data"` au `form_with` englobant. Le navigateur
+    # postait alors le seul nom du fichier, en texte, et l'affectation
+    # ActiveStorage échouait en silence. En prime, `text_field` remplissait
+    # `value` avec l'objet d'attachement interne
+    # (`#<ActiveStorage::Attached::One:0x…>`), exposé tel quel dans le HTML.
+    #
+    # Les vues qui passent encore `multipart: true` à la main deviennent
+    # redondantes, pas fausses : le drapeau est idempotent.
+    def file_field(method, options = {}) # rubocop:disable Style/OptionHash
+      merged_options = arguments_with_updated_default_class(
+        'block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none',
+        **options
+      )
+      error = merged_options.fetch(:error, any_errors?(method))
+      hint = error ? (errors(method) || merged_options[:hint]) : merged_options[:hint]
+      show_label = merged_options.delete(:label) != false
+      # `hint` et `error` sont des options DU BUILDER, pas des attributs HTML.
+      merged_options.delete(:hint)
+      merged_options.delete(:error)
+
+      tag.div class: 'form-control' do
+        if show_label
+          label(method, class: 'label mb-1') do
+            tag.span(label_text(method, options), class: 'label-text')
+          end + super(method, merged_options) + hint_message(hint, error)
+        else
+          super(method, merged_options) + hint_message(hint, error)
+        end
+      end
     end
 
     def label(attribute_name, *args, &block)

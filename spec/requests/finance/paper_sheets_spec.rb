@@ -105,6 +105,66 @@ RSpec.describe "Finances > Fiches papier", type: :request do
     end
   end
 
+  # Issue #211 — le champ photo ne produisait aucun attachement : le form builder
+  # rendait un `text_field` déguisé, le formulaire partait sans `enctype` et
+  # ActiveStorage ne recevait qu'un nom de fichier, en texte.
+  describe "photo de la fiche" do
+    let(:photo) { fixture_file_upload("fiche.png", "image/png") }
+
+    it "attache la photo à la création" do
+      post finance_paper_sheets_path, params: {
+        paper_sheet: { period_month: "2026-08-15", channel: "bar", entry_mode: "quantity", photo: photo }
+      }
+
+      fiche = PaperSheet.last
+      expect(fiche.photo).to be_attached
+      expect(fiche.photo.filename.to_s).to eq("fiche.png")
+    end
+
+    it "attache la photo à la modification" do
+      patch finance_paper_sheet_path(sheet), params: { paper_sheet: { photo: photo } }
+
+      expect(sheet.reload.photo).to be_attached
+    end
+
+    # Enregistrer la fiche sans re-choisir de fichier ne doit pas la vider :
+    # le navigateur ne poste alors rien pour ce champ.
+    it "conserve la photo quand on ré-enregistre sans en choisir une" do
+      sheet.photo.attach(io: Rails.root.join("spec/fixtures/files/fiche.png").open, filename: "fiche.png", content_type: "image/png")
+
+      patch finance_paper_sheet_path(sheet), params: { paper_sheet: { notes: "Relu" } }
+
+      expect(sheet.reload.photo).to be_attached
+      expect(sheet.notes).to eq("Relu")
+    end
+
+    it "montre la photo sur l'écran d'encodage et sur le formulaire d'édition" do
+      sheet.photo.attach(io: Rails.root.join("spec/fixtures/files/fiche.png").open, filename: "fiche.png", content_type: "image/png")
+
+      get encode_finance_paper_sheet_path(sheet)
+      expect(response.body).to include("Photo de la fiche")
+      expect(response.body).to include(rails_blob_path(sheet.photo, only_path: true))
+
+      get edit_finance_paper_sheet_path(sheet)
+      expect(response.body).to include(rails_blob_path(sheet.photo, only_path: true))
+    end
+
+    it "n'affiche rien de cassé quand la fiche n'a pas de photo" do
+      get encode_finance_paper_sheet_path(sheet)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("rails/active_storage")
+    end
+
+    # Le formulaire doit être multipart de lui-même : les vues des fiches
+    # papier ne passent pas `multipart: true`.
+    it "rend le formulaire de création en multipart" do
+      get new_finance_paper_sheet_path
+
+      expect(response.body).to include('enctype="multipart/form-data"')
+    end
+  end
+
   describe "sans authentification" do
     it "redirige vers la connexion" do
       sign_out user
