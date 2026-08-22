@@ -58,6 +58,18 @@ class ExperienceAvailability < ApplicationRecord
     scope.where(experiences: { human_id: user.human_id })
   end
 
+  # Créneaux proposables à l'ajout d'une activité SUR un séjour (epic #55,
+  # Phase 6) : ceux du périmètre de l'utilisateur, encore à venir, dans la
+  # fenêtre du séjour. Vit ici plutôt que dans un contrôleur pour que la fiche
+  # séjour ET le rafraîchissement turbo du CRUD activités proposent exactement
+  # la même liste. Un séjour sans dates ne borne pas la fenêtre.
+  def self.assignable_for(user, stay)
+    scope = for_user(user).upcoming.includes(:experience)
+    return scope if stay.arrival_date.blank? || stay.departure_date.blank?
+
+    scope.for_date_range(stay.arrival_date, stay.departure_date)
+  end
+
   def ends_at
     return nil unless starts_at.present? && effective_duration.positive?
     h, m = starts_at.split(":").map(&:to_i)
@@ -73,14 +85,22 @@ class ExperienceAvailability < ApplicationRecord
     max_participants || experience.max_participants
   end
 
-  def booked_participants
-    experience_bookings.where.not(status: "cancelled").sum(:participants)
+  # Places réellement prises. Une activité REFUSÉE par le porteur ne prend
+  # évidemment plus de place — elle était pourtant comptée ici, alors que le
+  # scope `active` d'`ExperienceBooking` l'exclut déjà : un refus rendait le
+  # créneau artificiellement plus plein qu'il n'était.
+  # `ignoring` sert à l'édition : le nombre de participants d'une réservation ne
+  # doit pas se compter lui-même quand on vérifie s'il tient dans le créneau.
+  def booked_participants(ignoring: nil)
+    scope = experience_bookings.where.not(status: %w[cancelled refused])
+    scope = scope.where.not(id: ignoring) if ignoring
+    scope.sum(:participants)
   end
 
-  def available_spots
+  def available_spots(ignoring: nil)
     cap = effective_max_participants
     return nil if cap.nil?
-    [cap - booked_participants, 0].max
+    [cap - booked_participants(ignoring: ignoring), 0].max
   end
 
   def full?

@@ -95,13 +95,25 @@ module Public
     # `participants`) puis passe aux coordonnées. Les entrées sans participant
     # sont écartées par `merged_draft_params`.
     def advance_activities
-      persist_draft(merged_draft_params)
+      persist_draft(merged_draft_params, overwrite: submitted_collections)
+
+      # Dernier filet avant les coordonnées : un créneau a pu se remplir pendant
+      # que le visiteur composait. Mieux vaut le lui dire ICI, où il peut changer
+      # de créneau, qu'au commit — où l'activité serait écartée en silence, après
+      # paiement de l'acompte.
+      if (plein = overbooked_selection).present?
+        @availabilities     = bookable_availabilities.reject { |av| av.full? && selected_participants_for(av).zero? }
+        @quote              = @draft.quote
+        @activities_error   = "Il ne reste plus assez de places sur ce créneau : #{plein}. Choisissez-en un autre ou réduisez le nombre de participants."
+        return render :activities, status: :unprocessable_entity
+      end
+
       redirect_to public_reservation_contact_path
     end
 
     # Recalcul du panier (Turbo Frame, sans rechargement complet — AC-T2-10).
     def quote
-      persist_draft(merged_draft_params)
+      persist_draft(merged_draft_params, overwrite: submitted_collections)
       @lodgings = bookable_lodgings
       @quote = @draft.quote
       respond_to do |format|
@@ -169,16 +181,55 @@ module Public
     end
 
     # Fusionne des paramètres dans le draft courant sans toucher à la session.
-    def merge_draft(attrs)
+    # Une valeur vide n'écrase JAMAIS une ancienne valeur : c'est ce qui permet à
+    # chaque étape de ne soumettre que SES champs sans effacer le reste du draft.
+    # `overwrite` lève la règle pour les collections que le formulaire courant
+    # soumet vraiment — sans quoi vider un choix serait impossible : le retrait
+    # d'une activité (participants remis à zéro) restait dans le devis et serait
+    # parti en réservation.
+    def merge_draft(attrs, overwrite: [])
       incoming = attrs.to_h.deep_symbolize_keys
-      merged = @draft.to_h.merge(incoming) do |_key, old, new|
+      merged = @draft.to_h.merge(incoming) do |key, old, new|
+        next new if overwrite.include?(key)
+
         new.nil? || (new.respond_to?(:empty?) && new.empty? && !old.nil?) ? old : new
       end
       Reservations::Draft.new(merged)
     end
 
-    def persist_draft(attrs)
-      @draft = merge_draft(attrs)
+    # Créneaux choisis dont le nombre de participants dépasse les places encore
+    # libres, décrits pour l'affichage. Vide quand tout tient.
+    def overbooked_selection
+      Array(@draft.experiences).filter_map { |entry|
+        av = ExperienceAvailability.find_by(id: entry[:availability_id])
+        next if av.nil?
+
+        wanted = entry[:participants].to_i
+        spots  = av.available_spots
+        next if spots.nil? || wanted <= spots
+
+        "#{av.label} (#{spots} place#{'s' if spots > 1} restante#{'s' if spots > 1})"
+      }.to_sentence.presence
+    end
+
+    def selected_participants_for(availability)
+      entry = Array(@draft.experiences).find { |e| e[:availability_id].to_s == availability.id.to_s }
+      entry&.dig(:participants).to_i
+    end
+
+    # Collections que le POST courant porte RÉELLEMENT (clé présente dans les
+    # params bruts), par opposition à celles que `merged_draft_params` remplit
+    # d'un tableau vide par défaut. Seules les premières ont le droit de vider
+    # leur pendant dans le draft.
+    def submitted_collections
+      raw = params[:reservation]
+      return [] unless raw.respond_to?(:key?)
+
+      [:experiences].select { |key| raw.key?(key) }
+    end
+
+    def persist_draft(attrs, overwrite: [])
+      @draft = merge_draft(attrs, overwrite: overwrite)
       session[DRAFT_SESSION_KEY] = @draft.to_h
       @draft
     end
@@ -257,15 +308,19 @@ module Public
     end
 
     # Créneaux d'activité réservables au funnel : ceux qui tombent dans la
-    # fenêtre `[arrivée, départ)` du séjour en cours, hors « Pizza Party » (gérée
-    # à part) et hors activités supprimées. Le tri experience/date/heure permet
+    # fenêtre `[arrivée, départ]` du séjour en cours, JOUR DU DÉPART COMPRIS
+    # (décision Michael 2026-08-21 — une activité en matinée avant de charger la
+    # voiture se vend). C'est aussi ce que faisaient déjà le rail email et la
+    # fiche admin, tous deux sur `for_date_range` : les trois canaux proposent
+    # enfin la même chose. Hors « Pizza Party » (gérée à part) et hors activités
+    # supprimées. Le tri experience/date/heure permet
     # de les regrouper par activité dans la vue. Sans dates, aucune activité.
     def bookable_availabilities
       return ExperienceAvailability.none if @draft.arrival_date.blank? || @draft.departure_date.blank?
 
       ExperienceAvailability
         .includes(:experience, :experience_bookings)
-        .where(available_on: @draft.arrival_date...@draft.departure_date)
+        .where(available_on: @draft.arrival_date..@draft.departure_date)
         .joins(:experience)
         .where(experiences: { deleted_at: nil })
         .where.not(experiences: { name: "Pizza Party" })

@@ -452,12 +452,26 @@ module Reservations
         participants = entry[:participants].to_i
         next 0 if avail_id.blank? || participants < 1
 
-        booking = ExperienceBooking.create!(
+        booking = ExperienceBooking.new(
           stay_id: stay.id,
           experience_availability_id: avail_id,
           participants: participants,
           status: "pending"
         )
+
+        # Le créneau a pu se remplir entre l'étape « Activités » et le paiement.
+        # On ne fait PAS échouer le séjour pour autant : l'hébergement est le
+        # cœur de la réservation, l'activité l'accessoire, et elle ne pèse rien
+        # dans l'acompte (calculé hors activités). Le séjour se crée sans elle et
+        # la perte est tracée — mieux qu'une erreur en pleine page de paiement.
+        unless booking.save
+          Rails.logger.warn(
+            "[Reservations::Builder] activité écartée (créneau #{avail_id}, " \
+            "#{participants} pers, stay #{stay.id}) : #{booking.errors.full_messages.to_sentence}"
+          )
+          next 0
+        end
+
         booking.price_cents
       end
     end
