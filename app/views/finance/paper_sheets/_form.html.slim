@@ -21,6 +21,11 @@
 
     = f.file_field :photo, label: "Photo de la fiche", hint: "La fiche papier reste la pièce justificative : la photographier permet de retrouver l'origine d'une ligne contestée."
 
+    /  L'aperçu de la photo déjà attachée : sans lui, rien à l'écran ne dit
+       qu'un fichier est bien arrivé. Choisir un nouveau fichier la remplace ;
+       enregistrer sans rien choisir la conserve.
+    = render "finance/paper_sheets/photo", sheet: f.object
+
     = f.label :notes, "Notes"
     = f.text_area :notes, rows: 3
 

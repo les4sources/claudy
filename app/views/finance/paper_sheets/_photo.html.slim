@@ -1,0 +1,11 @@
+/  Aperçu de la photo déjà attachée. Sans variante : `image_processing` est bien
+   au Gemfile, mais libvips a été retiré du serveur (cf. Gemfile l. 53) — une
+   variante y planterait. On rend donc l'original, borné par du CSS.
+- if sheet.photo.attached?
+  .mt-2
+    - if sheet.photo.image?
+      = link_to url_for(sheet.photo), target: "_blank", rel: "noopener" do
+        = image_tag url_for(sheet.photo), alt: "Photo de la fiche papier", class: "max-h-40 rounded-md border border-gray-200 shadow-sm"
+    - else
+      = link_to sheet.photo.filename.to_s, url_for(sheet.photo), target: "_blank", rel: "noopener", class: "text-blue-600 underline"
+    p.mt-1.text-xs.text-gray-400= sheet.photo.filename.to_s
