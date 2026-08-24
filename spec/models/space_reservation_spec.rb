@@ -15,6 +15,7 @@
 #
 #  index_space_reservations_on_space_booking_id  (space_booking_id)
 #  index_space_reservations_on_space_id          (space_id)
+#  index_space_reservations_unique_live          (space_booking_id,space_id,date) UNIQUE WHERE (deleted_at IS NULL)
 #
 # Foreign Keys
 #

@@ -156,3 +156,60 @@ RSpec.describe Reservations::Builder, "espaces (epic #66, Phase 2)" do
     end
   end
 end
+
+# Un (espace, date) ne décrit qu'UNE occupation (Michael 2026-08-25). Le draft
+# porte deux représentations du besoin d'espace — la grille `space_slots` et les
+# ponctuels `halls` — et rien n'empêchait les deux de désigner la même salle le
+# même jour : on persistait alors deux SpaceReservation jumelles, qui doublaient
+# les badges du calendrier, la ligne de composition, et l'occupation comptée par
+# `Space#available_on?`.
+RSpec.describe Reservations::Builder, "espaces décrits deux fois (Michael 2026-08-25)" do
+  let!(:grande_salle) { Space.create!(name: "Grande Salle", capacity: 1) }
+  let(:arrival)   { Date.today + 30 }
+  let(:departure) { Date.today + 31 }
+
+  def draft(**overrides)
+    Reservations::Draft.new({
+      arrival_date: arrival.iso8601, departure_date: departure.iso8601,
+      dogs_count: 0, first_name: "Camille", last_name: "Martin",
+      email: "camille@example.com", phone: "+32470112233"
+    }.merge(overrides))
+  end
+
+  it "ne crée qu'une réservation quand la grille ET le ponctuel visent la même salle le même jour" do
+    builder = described_class.new(
+      draft: draft(space_slots: { "grande_salle" => ["journee"] },
+                   halls: [{ kind: "grande_salle", date: arrival.iso8601, period: "journee" }]),
+      admin: true, source: "manual"
+    )
+    expect(builder.run).to be(true)
+
+    reservations = builder.space_booking.space_reservations
+    expect(reservations.size).to eq(1)
+    expect(reservations.first.date).to eq(arrival)
+  end
+
+  it "réunit journée et soirée du même jour en une occupation « fullday »" do
+    builder = described_class.new(
+      draft: draft(space_slots: { "grande_salle" => ["journee"] },
+                   halls: [{ kind: "grande_salle", date: arrival.iso8601, period: "soiree" }]),
+      admin: true, source: "manual"
+    )
+    expect(builder.run).to be(true)
+
+    reservations = builder.space_booking.space_reservations
+    expect(reservations.size).to eq(1)
+    expect(reservations.first.duration).to eq("fullday")
+  end
+
+  it "garde deux réservations pour la même salle à des dates différentes" do
+    builder = described_class.new(
+      draft: draft(halls: [{ kind: "grande_salle", date: arrival.iso8601, period: "journee" },
+                           { kind: "grande_salle", date: (arrival + 1).iso8601, period: "journee" }]),
+      admin: true, source: "manual"
+    )
+    expect(builder.run).to be(true)
+
+    expect(builder.space_booking.space_reservations.map(&:date)).to contain_exactly(arrival, arrival + 1)
+  end
+end

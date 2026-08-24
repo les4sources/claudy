@@ -87,12 +87,33 @@ module SpaceComposition
 
   # Specs de réservation d'espace RÉSOLUES : [{ space:, date:, duration: }].
   # Ne contient que les entrées dont la `Space` existe en base.
+  #
+  # UNE SEULE spec par (espace, date) — Michael 2026-08-25. `raw_space_entries`
+  # fusionne DEUX représentations du même besoin (`space_slots`, la grille
+  # nuit-par-nuit, et `halls`, les ponctuels) : quand les deux décrivent la même
+  # salle le même jour, on obtenait deux entrées, donc deux `SpaceReservation`
+  # jumelles. Elles doublaient les badges du calendrier, la ligne de composition,
+  # et surtout l'occupation comptée par `Space#available_on?` — une salle réservée
+  # une fois pouvait s'y compter deux.
   def space_reservation_specs(draft)
-    raw_space_entries(draft).filter_map do |entry|
+    raw_space_entries(draft).filter_map { |entry|
       space = space_for_key(entry[:key])
       next if space.nil?
       { space: space, date: entry[:date], duration: entry[:duration] }
-    end
+    }.group_by { |spec| [spec[:space].id, spec[:date]] }
+     .map { |_key, group| group.first.merge(duration: merge_space_durations(group.map { |s| s[:duration] })) }
+  end
+
+  # Durée d'un (espace, date) décrit plusieurs fois. Le vocabulaire porte déjà la
+  # réunion : journée + soirée = « fullday ». Hors de ce couple (« 2h »,
+  # « see_notes »), aucune somme n'a de sens — on garde la première durée écrite.
+  def merge_space_durations(durations)
+    uniques = durations.compact_blank.uniq
+    return uniques.first if uniques.size <= 1
+    return "fullday" if uniques.include?("fullday")
+    return "fullday" if (uniques & %w[day evening]).size == 2
+
+    uniques.first
   end
 
   # Clés d'espace demandées mais SANS `Space` correspondante en base — utile pour
