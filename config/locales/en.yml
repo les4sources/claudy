@@ -32,6 +32,13 @@
 en:
   hello: "Hello world"
   # Plage de dates d'une réservation (BookingDecorator#date_range) — issue #15.
+  # Plage de dates d'un SÉJOUR (StayDecorator#date_range). L'ordre jour/mois
+  # diffère du français : on garde les deux dates entières plutôt que de
+  # factoriser le mois, qui produirait « 24 → August 27, 2026 ».
+  stay_date_range:
+    same_month: "%{from} → %{to}"
+    same_year: "%{from} → %{to}"
+    different_years: "%{from} → %{to}"
   date_range:
     same_month_current_year: "from %{from_day} to %{to}"
     same_month_other_year: "from %{from_day} to %{to_day} %{month_year}"

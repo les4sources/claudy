@@ -52,6 +52,13 @@ fr:
           has_many: "Vous ne pouvez pas supprimer l'enregistrement parce que les %{record} dépendants existent"
   # Plage de dates d'une réservation (BookingDecorator#date_range). Extrait en i18n
   # pour la page client à jeton multilingue (issue #15) — rendu FR inchangé.
+  # Plage de dates d'un SÉJOUR (StayDecorator#date_range), forme à flèche compactée
+  # (Michael 2026-08-24) : ce qui est commun aux deux bornes ne s'écrit qu'une fois.
+  # Le cas « même jour » ne passe pas par ici — la date s'affiche seule.
+  stay_date_range:
+    same_month: "%{from_day} → %{to}"
+    same_year: "%{from_short} → %{to}"
+    different_years: "%{from} → %{to}"
   date_range:
     same_month_current_year: "du %{from_day} au %{to}"
     same_month_other_year: "du %{from_day} au %{to_day} %{month_year}"

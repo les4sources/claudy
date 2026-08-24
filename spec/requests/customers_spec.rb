@@ -235,7 +235,9 @@ RSpec.describe "Customers (admin Pôle Accueil)", type: :request do
       enriched.stay_items.create!(bookable: booking)
 
       get customer_path(catch_all)
-      expect(response.body).to include("14 février 2026")
+      # Plage compactée (StayDecorator#date_range) : le mois et l'année communs
+      # aux deux bornes ne s'écrivent qu'une fois.
+      expect(response.body).to include("14 → 15 février 2026")
       expect(response.body).to include("Confirmé")
       expect(response.body).to include("bg-green-100") # label coloré, pas gris
       expect(response.body).to include("Jean Dupont")

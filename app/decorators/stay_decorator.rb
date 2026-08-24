@@ -427,13 +427,17 @@ class StayDecorator < ApplicationDecorator
   end
 
   # « 2 nuits · vendredi → dimanche » — le jour de la semaine compte autant que
-  # la date pour qui prépare un accueil.
+  # la date pour qui prépare un accueil. Sur une JOURNÉE, pas de flèche : « lundi
+  # → lundi » faisait chercher une seconde date à l'œil pour lui apprendre
+  # qu'elle valait la première (Michael 2026-08-24).
   def stay_span_label
     nights = nights_count
     return nil if nights.nil?
 
+    return "Journée · #{I18n.l(object.arrival_date, format: '%A')}" if nights.zero?
+
     jours = "#{I18n.l(object.arrival_date, format: '%A')} → #{I18n.l(object.departure_date, format: '%A')}"
-    nights.zero? ? "Journée · #{jours}" : "#{nights} nuit#{'s' if nights > 1} · #{jours}"
+    "#{nights} nuit#{'s' if nights > 1} · #{jours}"
   end
 
   # Occupants agrégés sur TOUS les hébergements du séjour — un groupe réparti
@@ -470,11 +474,48 @@ class StayDecorator < ApplicationDecorator
   end
 
   # Plage de dates au format français long (ex. « 12 février 2026 »).
+  # Plage de dates COMPACTÉE (Michael 2026-08-24) : ce qui est commun aux deux
+  # bornes ne s'écrit qu'une fois — « 24 → 27 août 2026 » plutôt que la même
+  # année et le même mois répétés, et la date seule sur une journée plutôt que
+  # « 24 août 2026 → 24 août 2026 », dont la flèche promettait un intervalle
+  # inexistant. La forme vit dans les YAML (scope `stay_date_range`) : la page
+  # client à jeton s'affiche aussi en NL/EN, où l'ordre jour/mois diffère — ces
+  # locales gardent donc les deux dates entières. On passe TOUS les paramètres à
+  # chaque clé, I18n ignorant ceux qu'elle n'interpole pas.
   def date_range
-    return "—" if arrival_date.blank? && departure_date.blank?
-    from = arrival_date.present? ? h.l(arrival_date, format: :long) : "?"
-    to = departure_date.present? ? h.l(departure_date, format: :long) : "?"
-    "#{from} → #{to}"
+    from_date = object.arrival_date
+    to_date = object.departure_date
+    return "—" if from_date.blank? && to_date.blank?
+
+    # Séjour à moitié daté (import legacy) : forme brute, la borne manquante
+    # reste un « ? » — il n'y a rien de commun à factoriser.
+    if from_date.blank? || to_date.blank?
+      from = from_date.present? ? long_date(from_date) : "?"
+      to = to_date.present? ? long_date(to_date) : "?"
+      return "#{from} → #{to}"
+    end
+
+    return long_date(from_date) if from_date == to_date
+
+    key = if from_date.year != to_date.year
+            :different_years
+          elsif from_date.month == to_date.month
+            :same_month
+          else
+            :same_year
+          end
+
+    h.t("stay_date_range.#{key}",
+        from: long_date(from_date),
+        from_day: from_date.day,
+        from_short: h.l(from_date, format: :short).strip,
+        to: long_date(to_date))
+  end
+
+  # `:long` vaut « %e %B %Y » en FR : %e cale les jours à un chiffre sur deux
+  # colonnes, d'où l'espace de tête à retirer avant de coller la date à une flèche.
+  def long_date(date)
+    h.l(date, format: :long).strip
   end
 
   # Libellé d'une ligne du séjour : ce qui est réservé (hébergement, espace), pas

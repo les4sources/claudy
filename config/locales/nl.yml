@@ -3,6 +3,12 @@
 # faut à `l()` pour ne pas casser quand la locale est :nl.
 nl:
   # Plage de dates d'une réservation (BookingDecorator#date_range) — issue #15.
+  # Plage de dates d'un SÉJOUR (StayDecorator#date_range) : les deux dates
+  # entières, la compaction du mois est propre au rendu français.
+  stay_date_range:
+    same_month: "%{from} → %{to}"
+    same_year: "%{from} → %{to}"
+    different_years: "%{from} → %{to}"
   date_range:
     same_month_current_year: "van %{from_day} tot %{to}"
     same_month_other_year: "van %{from_day} tot %{to_day} %{month_year}"
