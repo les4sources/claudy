@@ -2,11 +2,16 @@
   seule information de la modale qu'on pouvait lire sans pouvoir la corriger :
   il fallait ouvrir le formulaire d'édition complet pour un mot à changer.
   Le turbo-frame permet d'enregistrer sans recharger la modale.
-  Les notes portées par les BOOKABLES (réservation d'origine) restent en
-  lecture seule : elles appartiennent à la résa, pas au séjour.
-- entrees = @stay.internal_notes_entries
+  UNE SEULE NOTE depuis le 2026-08-24 (Michael) : les notes des réservations
+  d'origine ne s'affichent plus dans leur propre bloc en lecture seule — elles
+  sont rapatriées DANS la note du séjour par `Stays::MergeOriginNotes` (à la
+  création du séjour, et rétroactivement par la rake `stays:merge_origin_notes`).
+  Trois blocs à lire pour une même information, dont deux incorrigibles, c'était
+  deux de trop. Le bookable garde sa note : on a copié, pas déplacé.
+  Écriture MANUSCRITE (font-caveat, yellow-600) : la note se lit comme le mot
+  laissé sur le comptoir qu'elle est, et non comme une donnée de plus — même
+  traitement que dans les popovers du calendrier.
 - note_sejour = @stay.notes.to_s
-- autres = entrees.reject { |e| e[:source] == "Séjour" }
 - derniere = @stay.note_last_edit
 = turbo_frame_tag "stay_#{@stay.id}_notes" do
   .bg-yellow-50.px-5.py-4
@@ -17,11 +22,13 @@
     details.mt-2
       summary.cursor-pointer.select-none.list-none
         - if note_sejour.present?
-          .rounded-md.border.border-dashed.border-yellow-300.bg-white.px-3.py-2.text-sm.text-yellow-900
+          .rounded-md.border.border-dashed.border-yellow-300.bg-white.px-3.py-2.space-y-4.font-caveat.text-xl.text-yellow-600
             = simple_format note_sejour
         - else
           .rounded-md.border.border-dashed.border-yellow-300.px-3.py-2.text-sm.text-yellow-700
             | Aucune note interne — cliquer pour en ajouter
+      /  Le champ de SAISIE reste en police courante : on y corrige un texte, la
+         lisibilité y prime sur le caractère manuscrit de l'affichage.
       = form_with url: update_notes_stay_path(@stay), method: :patch, class: "mt-2 space-y-2" do
         = text_area_tag "stay[notes]", note_sejour, rows: 5, class: "block w-full rounded-md border-yellow-300 text-sm", placeholder: "Ce que l'équipe doit savoir sur ce séjour…"
         .flex.items-center.gap-2
@@ -29,15 +36,6 @@
           - if derniere
             span.text-xs.text-yellow-700
               = ["modifiée", (derniere[:by].present? ? "par #{derniere[:by]}" : nil), "· #{l(derniere[:at].to_date, format: :long)}"].compact.join(" ")
-
-    /  Notes de la RÉSERVATION D'ORIGINE — lecture seule, et signalées comme
-       telles pour qu'on ne les cherche pas dans le champ ci-dessus.
-    - if autres.any?
-      .mt-3.space-y-2
-        - autres.each do |entree|
-          .rounded-md.bg-white.px-3.py-2
-            .text-xs.font-medium.text-yellow-700 = "#{entree[:source]} · réservation d'origine"
-            .text-sm.text-yellow-900 = simple_format entree[:text]
 
     - if @stay.public_notes.present?
       .mt-3.rounded-md.bg-white.px-3.py-2

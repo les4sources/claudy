@@ -49,7 +49,10 @@ module Stays
           status: @space_booking.status,
           arrival_date: @space_booking.from_date,
           departure_date: @space_booking.to_date,
-          total_amount_cents: @space_booking.price_cents.to_i
+          total_amount_cents: @space_booking.price_cents.to_i,
+          # Idem hébergement : la note de la réservation d'espaces suit dans le
+          # séjour, seul endroit où la modale l'affiche désormais.
+          notes: @space_booking.notes
         )
         # On n'arrive ici que si live_stay_for est nil (pas de StayItem vivant →
         # Stay vivant). Un StayItem vivant PEUT toutefois subsister en pointant

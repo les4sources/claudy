@@ -37,7 +37,12 @@ module Stays
           status: @booking.status,
           arrival_date: @booking.from_date,
           departure_date: @booking.to_date,
-          total_amount_cents: @booking.price_cents.to_i
+          total_amount_cents: @booking.price_cents.to_i,
+          # La note du client suit sa réservation dans le séjour (Michael
+          # 2026-08-24) : la modale n'affiche plus qu'UNE note, celle du séjour.
+          # Sans cette reprise, un commentaire saisi au formulaire ne serait plus
+          # visible nulle part. Le booking garde la sienne, on ne fait que copier.
+          notes: @booking.notes
         )
         # On n'arrive ici que si live_stay_for est nil (pas de StayItem vivant → Stay
         # vivant). Un StayItem vivant PEUT toutefois subsister en pointant vers un Stay

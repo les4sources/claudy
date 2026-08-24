@@ -94,3 +94,31 @@ def space_bookings_without_live_stay
     .pluck(:bookable_id)
   SpaceBooking.where.not(id: linked_ids).count
 end
+
+namespace :stays do
+  desc "Rapatrie les notes des réservations d'origine dans la note du séjour (idempotent) — Michael 2026-08-24"
+  task merge_origin_notes: :environment do
+    apply = ENV["APPLY"] == "1"
+    seen = 0
+    changed = []
+
+    # Tous les séjours, y compris soft-deleted : une fiche restaurée doit porter
+    # la même note unique que les autres. `stay_items` reste sur son scope vivant.
+    Stay.with_deleted do
+      Stay.unscoped.includes(stay_items: :bookable).find_each do |stay|
+        seen += 1
+        avant = stay.notes.to_s
+        apres = Stays::MergeOriginNotes.merged_text(stay)
+        next if apres == avant
+
+        changed << stay.id
+        Stays::MergeOriginNotes.call(stay) if apply
+      end
+    end
+
+    puts "Séjours parcourus : #{seen}"
+    puts "Notes à rapatrier  : #{changed.size}"
+    puts "Ids                : #{changed.first(50).join(', ')}#{changed.size > 50 ? '…' : ''}" if changed.any?
+    puts apply ? "APPLIQUÉ." : "DRY-RUN — relancer avec APPLY=1 pour écrire."
+  end
+end
