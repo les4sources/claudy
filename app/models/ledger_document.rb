@@ -14,6 +14,25 @@
 # `payload` garde la ligne brute telle qu'elle a été lue. Quand un total ne
 # tombera pas juste dans deux ans, c'est la seule chose qui permettra de savoir
 # si l'erreur vient de la lecture ou de la source.
+# == Schema Information
+#
+# Table name: ledger_documents
+#
+#  id            :bigint           not null, primary key
+#  deleted_at    :datetime
+#  document_date :date             not null
+#  external_ref  :string           not null
+#  label         :string           not null
+#  payload       :jsonb            not null
+#  source_system :string           not null
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#
+# Indexes
+#
+#  index_ledger_documents_on_deleted_at                      (deleted_at)
+#  index_ledger_documents_on_source_system_and_external_ref  (source_system,external_ref) UNIQUE
+#
 class LedgerDocument < ApplicationRecord
   has_paper_trail
   has_soft_deletion default_scope: true
