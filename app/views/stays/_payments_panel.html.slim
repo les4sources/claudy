@@ -36,11 +36,20 @@
       .mt-3.h-2.w-full.overflow-hidden.rounded-full.bg-gray-200(role="img" aria-label="#{avancement}% encaissé")
         .h-full.rounded-full(class=teinte_jauge style="width: #{avancement}%")
 
-    .mt-3.flex.items-baseline.justify-between
-      span.text-sm.font-semibold(class=(@stay.payable_now? ? "text-red-700" : "text-green-700"))
-        = @stay.payable_now? ? "Solde dû" : "Soldé"
-      span.text-lg.font-bold(class=(@stay.payable_now? ? "text-red-700" : "text-green-700"))
-        = humanized_money_with_symbol(Money.new([@stay.balance_due_cents, 0].max))
+    /  RIEN À DEVOIR = UNE PHRASE, PAS UN ZÉRO (Michael 2026-08-24). « Soldé · 0 € »
+       demandait de lire un montant nul pour en déduire qu'il n'y a rien à faire :
+       le chiffre n'apprenait rien, et sur un séjour à 0 € il annonçait un solde
+       sur une dette inexistante. Le solde chiffré ne s'affiche donc que s'il est
+       réellement exigible ; sinon on écrit la conclusion.
+    - if @stay.payable_now?
+      .mt-3.flex.items-baseline.justify-between
+        span.text-sm.font-semibold.text-red-700 Solde dû
+        span.text-lg.font-bold.text-red-700
+          = humanized_money_with_symbol(Money.new(@stay.balance_due_cents))
+    - else
+      .mt-3.flex.items-center.gap-2.rounded-md.bg-green-50.px-3.py-2
+        span.text-base.leading-none.text-green-700 ✓
+        span.text-sm.font-semibold.text-green-800 Tout est en ordre
 
     /  Enregistrer un paiement — REPLIÉ mais à un clic. C'est l'action la
        plus fréquente du poste, d'où sa place en bas de colonne, sous le

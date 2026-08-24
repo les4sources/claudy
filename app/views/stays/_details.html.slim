@@ -84,8 +84,6 @@ div id="stay-details-#{@stay.id}"
         .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Client
         .mt-1
           = link_to @stay.display_name, customer_path(@stay.customer), class: "text-indigo-600 font-medium hover:underline"
-        - if @stay.legacy_origin.present?
-          .text-xs.text-gray-500 Origine · #{@stay.legacy_origin}
         /  Réassignation REPLIÉE : c'est une opération rare (re-ventilation du
            fourre-tout), elle ne doit pas occuper l'écran en permanence.
         details.mt-2
@@ -93,7 +91,7 @@ div id="stay-details-#{@stay.id}"
           .mt-2 = render "stays/reassign_form"
 
       div
-        .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Catégorie
+        .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Type de groupe
         /  Le choix EST la validation : pas de bouton « Enregistrer », le select
            soumet au changement (même mécanique que le tableau des séjours).
         = turbo_frame_tag "stay_#{@stay.id}_category" do

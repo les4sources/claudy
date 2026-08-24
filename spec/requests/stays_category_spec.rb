@@ -60,7 +60,9 @@ RSpec.describe "Stays — catégorie (admin)", type: :request do
     it "montre le libellé FR et le formulaire de changement rapide" do
       stay = create_stay(category: "family")
       get stay_path(stay, modal: 1)
-      expect(response.body).to include("Catégorie")
+      # « Type de groupe » depuis le 2026-08-24 (Michael) : « Catégorie » ne disait
+      # pas ce qu'on catégorise. Le champ et la route ne changent pas.
+      expect(response.body).to include("Type de groupe")
       expect(response.body).to include("Famille")
       expect(response.body).to include(update_category_stay_path(stay))
     end
