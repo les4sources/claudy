@@ -87,6 +87,10 @@
                         .text-gray-500.truncate = stay.contact_line
                         .mt-1.flex.items-center.gap-2.flex-wrap
                           span.font-medium.text-gray-900 = humanized_money_with_symbol(stay.total_amount)
+                          / Statut de paiement du séjour — sur la ligne de l'argent,
+                          / pas avec les badges d'état : « Payé » qualifie le montant.
+                          / Même badge que la page client (`Stay#payment_status`).
+                          = stay.payment_status_badge
                           = stay_composition_icons(stay)
                       = link_to "Détails", stay_path(stay),
                                 data: { action: "stay-details#open" },
