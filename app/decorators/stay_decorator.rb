@@ -283,7 +283,17 @@ class StayDecorator < ApplicationDecorator
 
   # Badge du statut de paiement du séjour (epic #26). Libellé traduit — la page
   # client est destinée à devenir trilingue (issue #15).
+  #
+  # RIEN À PAYER = AUCUN BADGE (Michael 2026-08-24). Un séjour à 0 € reste
+  # `pending` par construction (`Stay#set_payment_status` refuse de basculer en
+  # « payé » sans encaissement) : afficher « En attente de paiement » sur une
+  # ligne à 0 € annonce une dette qui n'existe pas. On lit `payment_status` et
+  # non `amount_paid_cents` — colonne contre requête : la fiche client liste
+  # jusqu'à plusieurs centaines de séjours, un N+1 y coûterait cher. Dès qu'un
+  # euro est encaissé le statut n'est plus `pending`, donc le badge revient.
   def payment_status_badge
+    return if object.total_amount_cents.to_i.zero? && object.payment_status == "pending"
+
     style = PAYMENT_STATUS_STYLES.fetch(object.payment_status, PAYMENT_STATUS_STYLES["pending"])
     h.content_tag(:span, h.t("public.stays.payment_status.#{style[:key]}"),
                   class: "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium #{style[:classes]}")

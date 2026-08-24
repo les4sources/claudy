@@ -41,6 +41,27 @@ RSpec.describe "Customers#show — statut de paiement des séjours", type: :requ
     expect(response.body).to include(I18n.t("public.stays.payment_status.pending"))
   end
 
+  # Rien à payer = rien à annoncer (Michael 2026-08-24) : un séjour à 0 € reste
+  # `pending` par construction, et « En attente de paiement » y annoncerait une
+  # dette qui n'existe pas. Le legacy en compte beaucoup — sans ce silence, la
+  # liste se couvre de badges gris qui ne disent rien.
+  context "séjour à 0 €" do
+    let!(:free) { stay_with(payment_status: "pending", arrival: Date.today + 50, amount_cents: 0) }
+
+    it "n'affiche aucun badge de paiement" do
+      get customer_path(customer)
+      libelles = response.body.scan(/#{Regexp.escape(I18n.t("public.stays.payment_status.pending"))}/).size
+      # Seul le séjour passé non réglé (48 500 c.) porte le badge « en attente ».
+      expect(libelles).to eq(1)
+    end
+
+    it "affiche quand même le badge dès qu'un euro a été encaissé" do
+      free.update!(payment_status: "paid")
+      get customer_path(customer)
+      expect(response.body.scan(/#{Regexp.escape(I18n.t("public.stays.payment_status.paid"))}</).size).to eq(2)
+    end
+  end
+
   it "pose un badge de paiement par séjour listé" do
     badges = response.body.scan(/rounded-full px-2\.5 py-0\.5 text-xs font-medium (?:bg-green-100 text-green-800|bg-amber-100 text-amber-800|bg-gray-100 text-gray-700)">(?:#{Regexp.union(
       I18n.t("public.stays.payment_status.paid"),
