@@ -7,7 +7,11 @@
   - lignes << { titre: b.lodging&.name.presence || "Hébergement", details: [b.decorate.date_range, occupants], montant: @stay.formatted_item_amount(b) }
 - @stay.space_bookings.each do |sb|
   - d = sb.decorate
-  - lignes << { titre: sb.spaces.map(&:name).compact_blank.join(", ").presence || "Espace", details: [d.date_range, d.duration], montant: @stay.formatted_item_amount(sb) }
+  /  Titre via `item_label` (Michael 2026-08-25) : l'association `spaces` rend UNE
+     ligne par jour réservé, d'où le « Grande Salle, Grande Salle, Grande Salle… »
+     qui débordait sur trois lignes. `item_label` agrège déjà par nom avec le
+     nombre de jours — « Grande Salle (3 j) ».
+  - lignes << { titre: @stay.item_label(sb), details: [d.date_range, d.duration], montant: @stay.formatted_item_amount(sb) }
 - @stay.camping_bookings.each do |c|
   - lignes << { titre: "Camping (#{c.kind})", details: ["#{c.people} personne(s)", outdoor_nights_label(c)], montant: @stay.formatted_item_amount(c) }
 - @stay.van_bookings.each do |v|

@@ -36,8 +36,14 @@ div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min
         - else
           = group.booking.lodging_badge
       / Espaces : un badge par espace occupé, suivi de la durée si pertinente.
+      /  `uniq` sur l'espace (Michael 2026-08-25) : la cellule couvre UN jour, un
+         même espace n'y a donc qu'une occupation à montrer. Sans ce garde-fou,
+         deux SpaceReservation en doublon pour un même jour posaient deux badges
+         identiques côte à côte — le symptôme par lequel le doublon en base s'est
+         vu. L'unicité est désormais tenue en base ; le badge ne ment plus pour
+         autant si une donnée ancienne repasse par là.
       - block.space_groups.each do |group|
-        - group.space_reservations.each do |space_reservation|
+        - group.space_reservations.uniq(&:space_id).each do |space_reservation|
           = space_badge(space_reservation.space)
         span.text-xs.text-gray-500.whitespace-nowrap = group.space_booking.duration
       / Camping : capacité globale du terrain (pas de ressource nommée) → chip info.
