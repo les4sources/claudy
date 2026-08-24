@@ -19,8 +19,13 @@
                 space_booking_path(space_booking),
                 class: "text-blue-700 hover:text-blue-900 focus:text-blue-900"
     div
-      = link_to "Détails", 
-                space_booking_path(space_booking),
+      / « Détails » ouvre la MODALE DU SÉJOUR dès qu'il y en a un (Michael 2026-08-24) :
+      / le séjour est le point d'entrée unique de la fiche (epic #81). Sans séjour
+      / rattaché, on retombe sur la fiche location d'espaces.
+      - details_stay = space_booking.object.stay
+      = link_to "Détails",
+                (details_stay ? stay_path(details_stay) : space_booking_path(space_booking)),
+                data: (details_stay ? { action: "stay-details#open" } : {}),
                 class: "text-white bg-orange-700 hover:bg-orange-800 focus:ring-4 focus:ring-orange-300 font-medium rounded-lg text-xs px-3 py-1.5 focus:outline-none"
 
   .grid.grid-cols-6.gap-1.mb-2
