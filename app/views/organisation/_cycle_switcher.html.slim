@@ -1,0 +1,64 @@
+/ Bande de cycles : précédent · affiché · suivant. locals: human, cycle, previous_cycle, next_cycle
+- decorated = CycleDecorator.new(cycle)
+- state = cycle.closed? ? :closed : (cycle.current? ? :current : (cycle.future? ? :future : :past))
+- state_label = { closed: "Clos", current: "En cours", future: "À venir", past: "Terminé, à clôturer" }[state]
+- state_color = { closed: "rose", current: "teal", future: "sky", past: "amber" }[state]
+
+nav.cycle-switcher.mb-6 aria-label="Cycle affiché"
+  .flex.items-stretch.gap-2
+    / Précédent
+    - if previous_cycle
+      = link_to organisation_member_path(human.id, cycle_id: previous_cycle.id),
+                class: "group flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2 text-left hover:border-stone-400 transition-colors min-w-0 w-44",
+                title: "Cycle précédent" do
+        span.text-stone-300.group-hover:text-stone-500.transition-colors ←
+        .min-w-0
+          div class="text-[0.6rem] uppercase tracking-[0.16em] text-stone-400 font-semibold"
+            | Précédent
+          .text-sm.font-medium.text-stone-700.truncate = previous_cycle.name
+    - else
+      .w-44.rounded-xl.border.border-dashed.border-stone-200.px-3.py-2.flex.items-center
+        span class="text-[0.6rem] uppercase tracking-[0.16em] text-stone-300 font-semibold"
+          | Aucun cycle avant
+
+    / Cycle affiché
+    div class="relative flex-1 rounded-xl border-2 border-#{state_color}-200 bg-#{state_color}-50/40 px-4 py-2.5 overflow-hidden"
+      div class="pointer-events-none absolute inset-0 opacity-[0.05]" style="background-image: radial-gradient(circle at 1px 1px, #024442 1px, transparent 0); background-size: 14px 14px;"
+      .relative.flex.items-center.justify-between.gap-4
+        .min-w-0
+          .flex.items-center.gap-2
+            span class="inline-flex h-1.5 w-1.5 rounded-full bg-#{state_color}-500"
+            span class="text-[0.6rem] uppercase tracking-[0.16em] text-#{state_color}-700 font-semibold"
+              = state_label
+          = link_to cycle_path(cycle), class: "block font-averia text-xl leading-tight text-stone-900 hover:text-4s-main transition-colors truncate", title: "Voir le bilan du cycle" do
+            = cycle.name
+          .text-xs.text-stone-500.tabular-nums
+            = decorated.formatted_dates
+            span.text-stone-300.mx-1 ·
+            = decorated.duration_in_weeks
+        .flex.items-center.gap-2.shrink-0
+          - if cycle.closed?
+            span.stamp-closed aria-hidden="true" Clos
+          - elsif cycle.past?
+            = link_to "Clôturer", closing_cycle_path(cycle), class: "inline-flex items-center rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-600 transition-colors"
+          = link_to "Bilan", cycle_path(cycle), class: "inline-flex items-center rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-600 hover:border-stone-400 transition-colors"
+
+    / Suivant
+    - if next_cycle
+      = link_to organisation_member_path(human.id, cycle_id: next_cycle.id),
+                class: "group flex items-center justify-end gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2 text-right hover:border-stone-400 transition-colors min-w-0 w-44",
+                title: "Cycle suivant" do
+        .min-w-0
+          div class="text-[0.6rem] uppercase tracking-[0.16em] text-stone-400 font-semibold"
+            | Suivant
+          .text-sm.font-medium.text-stone-700.truncate = next_cycle.name
+        span.text-stone-300.group-hover:text-stone-500.transition-colors →
+    - else
+      = link_to new_cycle_path,
+                class: "w-44 rounded-xl border border-dashed border-amber-300 bg-amber-50/40 px-3 py-2 flex items-center justify-end gap-2 text-right hover:border-amber-500 transition-colors",
+                title: "Créer le cycle suivant" do
+        .min-w-0
+          div class="text-[0.6rem] uppercase tracking-[0.16em] text-amber-600 font-semibold"
+            | Pas de suivant
+          .text-sm.font-medium.text-amber-700 Créer un cycle
+        span.text-amber-400 +

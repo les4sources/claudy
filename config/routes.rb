@@ -154,11 +154,19 @@ Rails.application.routes.draw do
 
   # Organisation
   get "organisation", to: "organisation#index", as: :organisation
-  resources :cycles
+  resources :cycles do
+    member do
+      get :closing
+      post :close
+    end
+  end
   resources :cycle_actions, except: [:show] do
     member do
       patch :toggle_completed
       patch :defer
+      patch :defer_next
+      patch :undo_defer_next
+      patch :settle
       patch :archive
       patch :unarchive
     end

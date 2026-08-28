@@ -5,17 +5,15 @@ class OrganisationController < BaseController
 
   def index
     humans = Human.cycle_active.roles_enabled.order(:name).to_a
-    @current_cycle = Cycle.covering_date(Date.today).first
+    @current_cycle = Cycle.reference_for
     @cycles = Cycle.chronological
 
-    # Bulk-load category hours and action counts per human (no N+1).
+    # Charge par membre, scopée au cycle de référence (no N+1).
     human_ids = humans.map(&:id)
-    hours_by_human_category = CycleAction.active.where(human_id: human_ids)
-                                         .group(:human_id, :category)
-                                         .sum(:hours)
-    counts_by_human_category = CycleAction.active.where(human_id: human_ids)
-                                          .group(:human_id, :category)
-                                          .count
+    base = CycleAction.live.active.where(human_id: human_ids)
+    base = @current_cycle ? base.for_cycle(@current_cycle) : base.none
+    hours_by_human_category = base.group(:human_id, :category).sum(:hours)
+    counts_by_human_category = base.group(:human_id, :category).count
 
     @member_loads = humans.map do |human|
       cat_hours = {}
@@ -66,10 +64,27 @@ class OrganisationController < BaseController
 
   def member
     @human = Human.find(params[:human_id])
-    @cycle_actions = @human.cycle_actions.not_archived.ordered.group_by(&:category)
-    @demandees = CycleAction.demandee.not_archived.active.where.not(human_id: @human.id)
-    @total_hours = @human.cycle_actions.not_archived.active.where.not(category: :reportee).sum(:hours) || 0
-    @current_cycle = Cycle.covering_date(Date.today).first
+    @cycle = params[:cycle_id].present? ? Cycle.find(params[:cycle_id]) : Cycle.reference_for
+    @current_cycle = @cycle
+
+    if @cycle
+      live = @human.cycle_actions.for_cycle(@cycle).live
+      @cycle_actions = live.ordered.group_by(&:category)
+      @settled_actions = @human.cycle_actions.for_cycle(@cycle).settled.includes(:deferred_to).order(:category, :position)
+      # Cycle ouvert : les archivées ont déjà leur page, on ne montre que les reportées.
+      @settled_actions = @settled_actions.not_archived if @cycle.open?
+      @demandees = CycleAction.for_cycle(@cycle).demandee.live.active.where.not(human_id: @human.id).includes(:human)
+      @total_hours = live.active.engaged.sum(:hours) || 0
+      @next_cycle = @cycle.next_cycle
+      @previous_cycle = @cycle.previous_cycle
+      @report = Cycles::MemberReport.new(human: @human, cycle: @cycle)
+    else
+      @cycle_actions = {}
+      @settled_actions = CycleAction.none
+      @demandees = CycleAction.none
+      @total_hours = 0
+    end
+
     @archives_count = @human.cycle_actions.archived.count
     @cycle_active_humans = Human.cycle_active.roles_enabled.where.not(id: @human.id).order(:name)
     @gathering_actions = @human.gathering_actions
@@ -79,18 +94,13 @@ class OrganisationController < BaseController
 
   def archives
     @human = Human.find(params[:human_id])
-    scope = @human.cycle_actions.archived
+    scope = @human.cycle_actions.archived.includes(:cycle)
     scope = scope.where(category: params[:category]) if params[:category].present?
     if params[:q].present?
       q = "%#{params[:q].downcase}%"
       scope = scope.where("LOWER(label) LIKE ?", q)
     end
-    if params[:cycle_id].present?
-      cycle = Cycle.find_by(id: params[:cycle_id])
-      if cycle
-        scope = scope.where(archived_at: cycle.start_date.beginning_of_day..cycle.end_date.end_of_day)
-      end
-    end
+    scope = scope.where(cycle_id: params[:cycle_id]) if params[:cycle_id].present?
     @archived_actions = scope.order(archived_at: :desc).paginate(page: params[:page], per_page: 25)
 
     archives_all = @human.cycle_actions.archived
@@ -98,15 +108,7 @@ class OrganisationController < BaseController
     @archives_first_at = archives_all.minimum(:archived_at)
     @archives_last_at = archives_all.maximum(:archived_at)
     @archives_per_category = archives_all.group(:category).count
-
-    if @archives_first_at && @archives_last_at
-      @available_cycles = Cycle.where(
-        "(start_date, end_date) OVERLAPS (?, ?)",
-        @archives_first_at.to_date, @archives_last_at.to_date
-      ).order(start_date: :desc)
-    else
-      @available_cycles = []
-    end
+    @available_cycles = Cycle.where(id: archives_all.select(:cycle_id)).order(start_date: :desc)
 
     @current_category = params[:category]
     @current_cycle_id = params[:cycle_id]

@@ -1,0 +1,19 @@
+/ Colonne d'un bilan. locals: title, color, mark, actions
+div
+  .flex.items-center.gap-2.mb-2
+    span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-#{color}-50 text-#{color}-700 text-[0.65rem] font-bold" = mark
+    span class="text-[0.65rem] uppercase tracking-[0.14em] font-semibold text-#{color}-700" = title
+    span class="text-[0.65rem] tabular-nums text-stone-400" = "· #{actions.size}"
+  - if actions.empty?
+    p.text-xs.text-stone-300.italic —
+  - else
+    ul.space-y-1
+      - actions.each do |action|
+        - style = CycleActionDecorator::CATEGORY_STYLES[action.category] || {}
+        li.flex.items-baseline.gap-1.5.text-sm.text-stone-700
+          span.text-xs.shrink-0 title=style[:label] = style[:icon]
+          span.min-w-0.leading-snug = action.label
+          - if action.deferred_before?
+            span.deferral-badge title="Reportée #{action.deferral_count} fois" = "⟳ ×#{action.deferral_count}"
+          - if action.hours.present? && action.hours > 0
+            span.text-xs.text-stone-400.tabular-nums.ml-auto.shrink-0 = "#{format('%g', action.hours.to_f)}h"

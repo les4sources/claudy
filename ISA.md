@@ -574,3 +574,12 @@ Ces points sont sortis de l'observation du 2026-07-28 mais dépassent le périm�
   - **learned** : le bon axe de séparation n'est pas read vs write mais **qui** est l'agent (interne Bee/futurs vs guest en séjour). Les internes peuvent avoir un Bearer token largement scopé (lecture + write tracé) ; les guests auront un token court terme attaché à leur Stay, scopé aux écritures de leur propre panier seul (futur `Api::Guest`). La frontière est l'identité, pas le verbe HTTP.
   - **criterion now** : ISC-14.1 (anti écriture non-authentifiée + tracking PaperTrail obligatoire + pas de hard-delete sur modèles auditables) — remplace ISC-14 tombstoned.
 
+
+### Cycles — bilan, report, clôture (ajout 2026-08-28, PR feat/cycle-bilan)
+
+- [x] Chaque `CycleAction` a un `cycle_id` ; aucune ligne orpheline après migration. Preuve : `SELECT count(*) WHERE cycle_id IS NULL` = 0 sur 342.
+- [x] Une action passée au suivant reste dans le bilan de son cycle d'origine avec l'issue « reportée » ; la copie porte `deferred_from_id` et `deferral_count`. Preuve : `spec/services/cycle_actions/defer_service_spec.rb`.
+- [x] Sans cycle suivant, le report refuse avec un message et un lien de création. Preuve : spec + toast vérifié au navigateur.
+- [x] `GET /cycles/:id` montre par membre planifié / fait / passé au suivant / abandonné. Preuve : `spec/requests/cycles_bilan_spec.rb` + capture.
+- [x] La clôture tranche tout ce qui reste, recrée rituelles et reportées dans le suivant, verrouille le cycle ; un cycle clos refuse toute mutation. Preuve : `spec/services/cycles/close_service_spec.rb` + POST close au navigateur.
+- Anti-claim : `dependent: :nullify` sur une `has_one` de `CycleAction` casse `soft_delete!` (gem soft_deletion) — ne pas le réintroduire.

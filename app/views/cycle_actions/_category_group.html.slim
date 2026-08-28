@@ -4,6 +4,8 @@
 - hours = active_actions.sum { |a| a.hours.to_f }
 - completed_count = actions.count(&:completed)
 - human = local_assigns[:human]
+- cycle = local_assigns[:cycle]
+- readonly = local_assigns[:readonly]
 
 div[id="category_#{category}_group" class="rounded-xl border overflow-hidden"]
   / Category header
@@ -17,8 +19,8 @@ div[id="category_#{category}_group" class="rounded-xl border overflow-hidden"]
         span.text-xs.opacity-60 vers un membre spécifique
       - elsif category == "demandee"
         span.text-xs.opacity-60 au collectif
-      - if completed_count > 0 && human
-        = button_to archive_completed_cycle_actions_path(human_id: human.id, category: category),
+      - if completed_count > 0 && human && cycle && !readonly
+        = button_to archive_completed_cycle_actions_path(human_id: human.id, cycle_id: cycle.id, category: category),
                     method: :patch,
                     data: { turbo_confirm: "Archiver les #{completed_count} action#{'s' if completed_count > 1} cochée#{'s' if completed_count > 1} ?" },
                     class: "inline-flex items-center gap-1 text-xs text-current opacity-70 hover:opacity-100 transition-opacity",
@@ -30,4 +32,4 @@ div[id="category_#{category}_group" class="rounded-xl border overflow-hidden"]
           | Archiver #{completed_count} cochée#{'s' if completed_count > 1}
 
   / Actions list (sortable)
-  = render "cycle_actions/sorted_list", actions: actions, category: category, human: local_assigns[:human]
+  = render "cycle_actions/sorted_list", actions: actions, category: category, human: human, readonly: readonly, next_cycle: cycle&.next_cycle

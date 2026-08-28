@@ -13,6 +13,9 @@ module CycleActions
 
     def run!(params = {})
       cycle_action.attributes = cycle_action_params(params)
+      cycle_action.cycle ||= Cycle.reference_for
+      raise ServiceError, "Aucun cycle n'est configuré : créez-en un d'abord." unless cycle_action.cycle
+      raise ServiceError, "Ce cycle est clos." if cycle_action.cycle.closed?
       cycle_action.save!
       true
     end
@@ -22,7 +25,7 @@ module CycleActions
     def cycle_action_params(params)
       params.require(:cycle_action).permit(
         :label, :hours, :category, :completed,
-        :human_id, :delegate_to_human_id
+        :human_id, :delegate_to_human_id, :cycle_id
       )
     end
   end

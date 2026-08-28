@@ -22,7 +22,7 @@ module CycleActions
     def cycle_action_params(params)
       params.require(:cycle_action).permit(
         :label, :hours, :category, :completed,
-        :human_id, :delegate_to_human_id
+        :human_id, :delegate_to_human_id, :cycle_id
       )
     end
   end

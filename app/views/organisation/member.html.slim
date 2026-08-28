@@ -2,55 +2,93 @@
   = render "layouts/components/page_header",
            title: "Actions de #{@human.name}"
 
-/ Floating toast container (archive undo)
+/ Floating toast container (archive undo, report au suivant, erreurs)
 div id="flash_toasts"
 
-div[data-controller="cycle-actions"]
-  / Hours summary bar
-  .mb-6
-    = render "cycle_actions/hours_total", total_hours: @total_hours, human: @human, cycle: @current_cycle
-    .mt-2.flex.justify-end
-      = render "organisation/archives_link", human: @human, count: @archives_count
+- if @cycle.nil?
+  .rounded-2xl.border.border-dashed.border-amber-300.bg-amber-50/40.p-8.text-center
+    p.font-averia.text-xl.text-stone-800 Aucun cycle n'est configuré.
+    p.text-sm.text-stone-500.mt-1 Les actions vivent dans un cycle : créez-en un pour commencer.
+    = link_to "Créer un cycle", new_cycle_path, class: "mt-4 inline-flex items-center rounded-lg bg-4s-main px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
+- else
+  - readonly = @cycle.closed?
+  = render "organisation/cycle_switcher", human: @human, cycle: @cycle, previous_cycle: @previous_cycle, next_cycle: @next_cycle
 
-  / New action form
-  .mb-8
-    = render "cycle_actions/form", cycle_action: CycleAction.new(human_id: @human.id), human: @human
+  div[data-controller="cycle-actions"]
+    / Hours summary bar
+    .mb-6
+      - if readonly
+        = render "cycles/member_recap", report: @report
+      - else
+        = render "cycle_actions/hours_total", total_hours: @total_hours, human: @human, cycle: @cycle
+      .mt-2.flex.justify-end
+        = render "organisation/archives_link", human: @human, count: @archives_count
 
-  / Category groups
-  .space-y-6
-    - CycleAction.categories.keys.each do |category|
-      - actions = @cycle_actions[category] || []
-      = render "cycle_actions/category_group",
-               category: category,
-               actions: actions,
-               human: @human
+    - if readonly
+      / Cycle clos : le bilan tient lieu de liste
+      .mb-8.rounded-xl.border.border-rose-100.bg-rose-50/40.px-4.py-3.flex.items-center.gap-3
+        span.stamp-closed.stamp-closed--sm aria-hidden="true" Clos
+        .text-sm.text-stone-600
+          | Ce cycle est clos depuis le
+          strong.text-stone-800.ml-1 = l(@cycle.closed_at.to_date, format: :long)
+          | . Ses actions ne se modifient plus —
+          = link_to "voir le bilan", cycle_path(@cycle), class: "text-4s-main underline decoration-teal-300 hover:decoration-teal-600 ml-1"
+          | .
+    - else
+      / New action form
+      .mb-8
+        = render "cycle_actions/form", cycle_action: CycleAction.new(human_id: @human.id, cycle_id: @cycle.id), human: @human, cycle: @cycle
 
-  / Actions décidées en rassemblement
-  - if @gathering_actions.any?
-    .mt-10.pt-6.border-t.border-gray-200
-      .flex.items-center.gap-2.mb-4
-        .w-8.h-8.rounded-full.bg-amber-50.flex.items-center.justify-center
-          span.text-sm ✅
-        h3.text-base.font-semibold.text-gray-700 Actions de rassemblement
-      ul.divide-y.divide-gray-100.bg-white.rounded-lg.border.border-amber-100.px-4
-        - @gathering_actions.each do |action|
-          = render "gathering_actions/member_action", action: action
+    / Category groups
+    .space-y-6
+      - CycleAction.categories.keys.each do |category|
+        - actions = @cycle_actions[category] || []
+        - next if readonly && actions.empty?
+        = render "cycle_actions/category_group",
+                 category: category,
+                 actions: actions,
+                 human: @human,
+                 cycle: @cycle,
+                 readonly: readonly
 
-  / Requests from other members
-  - if @demandees.any?
-    .mt-10.pt-6.border-t.border-gray-200
-      .flex.items-center.gap-2.mb-4
-        .w-8.h-8.rounded-full.bg-rose-50.flex.items-center.justify-center
-          span.text-sm 📣
-        h3.text-base.font-semibold.text-gray-700 Demandes des autres membres
-      .space-y-2
-        - @demandees.group_by(&:human).each do |requester, actions|
-          .bg-white.rounded-lg.border.border-rose-100.p-4
-            .text-sm.font-medium.text-gray-600.mb-2
-              = "De #{requester.name}"
-            - actions.each do |action|
-              .flex.items-end.gap-2.py-1.text-sm.text-gray-700
-                span.text-rose-400 →
-                span = action.label
-                - if action.hours.present? && action.hours > 0
-                  span.text-xs.text-gray-400 = "#{action.hours.to_f}h"
+    / Déjà tranchées dans ce cycle (reportées au suivant, archivées)
+    - if @settled_actions.any?
+      .mt-10.pt-6.border-t.border-stone-200
+        .flex.items-center.gap-2.mb-4
+          .w-8.h-8.rounded-full.bg-stone-100.flex.items-center.justify-center
+            span.text-sm 🗂
+          h3.text-base.font-semibold.text-stone-700 Déjà tranchées dans ce cycle
+          span.text-xs.text-stone-400.tabular-nums = "· #{@settled_actions.size}"
+        ul.divide-y.divide-stone-100.bg-white.rounded-lg.border.border-stone-200
+          - @settled_actions.each do |action|
+            = render "cycle_actions/settled_row", action: action, cycle: @cycle, readonly: readonly
+
+    / Actions décidées en rassemblement
+    - if @gathering_actions.any?
+      .mt-10.pt-6.border-t.border-gray-200
+        .flex.items-center.gap-2.mb-4
+          .w-8.h-8.rounded-full.bg-amber-50.flex.items-center.justify-center
+            span.text-sm ✅
+          h3.text-base.font-semibold.text-gray-700 Actions de rassemblement
+        ul.divide-y.divide-gray-100.bg-white.rounded-lg.border.border-amber-100.px-4
+          - @gathering_actions.each do |action|
+            = render "gathering_actions/member_action", action: action
+
+    / Requests from other members
+    - if @demandees.any?
+      .mt-10.pt-6.border-t.border-gray-200
+        .flex.items-center.gap-2.mb-4
+          .w-8.h-8.rounded-full.bg-rose-50.flex.items-center.justify-center
+            span.text-sm 📣
+          h3.text-base.font-semibold.text-gray-700 Demandes des autres membres
+        .space-y-2
+          - @demandees.group_by(&:human).each do |requester, actions|
+            .bg-white.rounded-lg.border.border-rose-100.p-4
+              .text-sm.font-medium.text-gray-600.mb-2
+                = "De #{requester.name}"
+              - actions.each do |action|
+                .flex.items-end.gap-2.py-1.text-sm.text-gray-700
+                  span.text-rose-400 →
+                  span = action.label
+                  - if action.hours.present? && action.hours > 0
+                    span.text-xs.text-gray-400 = "#{action.hours.to_f}h"

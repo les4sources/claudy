@@ -1,0 +1,19 @@
+div[id="deferred_toast_#{cycle_action.id}"
+    class="archive-toast pointer-events-auto inline-flex items-center gap-3 rounded-full bg-stone-900 text-white pl-4 pr-2 py-2 shadow-xl ring-1 ring-white/10"
+    data-controller="undo-toast"
+    data-undo-toast-duration-value="6000"]
+  svg.w-3.5.h-3.5.text-sky-400 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+    path d="M5 12h14"
+    path d="m12 5 7 7-7 7"
+  span.text-sm
+    | Passée à
+    strong.ml-1 = target_cycle.name
+  = button_to undo_defer_next_cycle_action_path(cycle_action),
+              method: :patch,
+              form: { data: { turbo: "false" } },
+              class: "inline-flex items-center gap-1 rounded-full bg-white/10 hover:bg-white/20 px-3 py-1 text-xs font-medium text-white transition-colors"
+    | Annuler
+  button[type="button" data-action="click->undo-toast#dismiss" class="text-white/60 hover:text-white px-1" aria-label="Fermer"]
+    svg.w-3.h-3 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+      line x1="18" y1="6" x2="6" y2="18"
+      line x1="6" y1="6" x2="18" y2="18"

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_24_220736) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_28_124856) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -530,15 +530,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_220736) do
     t.integer "category", default: 0, null: false
     t.boolean "completed", default: false
     t.datetime "created_at", null: false
+    t.bigint "cycle_id"
+    t.integer "deferral_count", default: 0, null: false
+    t.bigint "deferred_from_id"
     t.bigint "delegate_to_human_id"
     t.datetime "deleted_at"
     t.decimal "hours", precision: 5, scale: 2
     t.bigint "human_id", null: false
     t.string "label", null: false
+    t.integer "outcome"
     t.integer "position", default: 0, null: false
     t.datetime "updated_at", null: false
     t.index ["category"], name: "index_cycle_actions_on_category"
     t.index ["completed"], name: "index_cycle_actions_on_completed"
+    t.index ["cycle_id", "human_id"], name: "index_cycle_actions_on_cycle_id_and_human_id"
+    t.index ["cycle_id"], name: "index_cycle_actions_on_cycle_id"
+    t.index ["deferred_from_id"], name: "index_cycle_actions_on_deferred_from_id"
     t.index ["delegate_to_human_id"], name: "index_cycle_actions_on_delegate_to_human_id"
     t.index ["human_id", "archived_at"], name: "index_cycle_actions_on_human_id_and_archived_at"
     t.index ["human_id", "category", "position"], name: "index_cycle_actions_on_human_id_and_category_and_position"
@@ -546,6 +553,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_220736) do
   end
 
   create_table "cycles", force: :cascade do |t|
+    t.datetime "closed_at"
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
     t.date "end_date", null: false
@@ -1512,6 +1520,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_220736) do
   add_foreign_key "coworking_reservations", "customers"
   add_foreign_key "customer_bank_accounts", "customers"
   add_foreign_key "customers", "humans"
+  add_foreign_key "cycle_actions", "cycle_actions", column: "deferred_from_id"
+  add_foreign_key "cycle_actions", "cycles"
   add_foreign_key "cycle_actions", "humans"
   add_foreign_key "cycle_actions", "humans", column: "delegate_to_human_id"
   add_foreign_key "decisions", "agenda_items", on_delete: :nullify

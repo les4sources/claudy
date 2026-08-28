@@ -12,6 +12,8 @@
         th.py-3.px-6[scope="col"]
           | Nom
         th.py-3.px-6[scope="col"]
+          | État
+        th.py-3.px-6[scope="col"]
           | Début
         th.py-3.px-6[scope="col"]
           | Fin
@@ -21,9 +23,22 @@
     tbody
       - @cycles.each do |cycle|
         - decorated = CycleDecorator.new(cycle)
+        - state = cycle.closed? ? :closed : (cycle.current? ? :current : (cycle.future? ? :future : :past))
         tr.border-b.bg-white
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
-            = cycle.name
+            = link_to cycle.name, cycle_path(cycle), class: "hover:text-4s-main transition-colors"
+          td.py-4.px-6
+            - case state
+            - when :closed
+              span.stamp-closed.stamp-closed--sm aria-hidden="true" Clos
+            - when :current
+              span class="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-700"
+                span.inline-flex.w-1.5.h-1.5.rounded-full.bg-teal-500
+                | En cours
+            - when :future
+              span.text-xs.text-sky-600 À venir
+            - else
+              = link_to "À clôturer →", closing_cycle_path(cycle), class: "text-xs font-semibold text-amber-700 hover:text-amber-900"
           td.py-4.px-6.text-gray-900
             = l(cycle.start_date, format: :long)
           td.py-4.px-6.text-gray-900
@@ -31,6 +46,7 @@
           td.py-4.px-6.text-gray-500
             = decorated.duration_in_weeks
           td.py-4.px-6.text-right.whitespace-nowrap
+            = link_to "Bilan", cycle_path(cycle), class: "text-4s-main hover:text-teal-900 mr-3"
             = link_to "Modifier",
                       edit_cycle_path(cycle),
                       class: "text-blue-500 hover:text-blue-700 mr-3"

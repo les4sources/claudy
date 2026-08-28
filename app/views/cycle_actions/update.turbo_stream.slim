@@ -1,18 +1,20 @@
-- new_cat_scope = @human.cycle_actions.active.where(category: @cycle_action.category)
+- live = @human.cycle_actions.for_cycle(@cycle).live
+- new_cat_scope = live.active.where(category: @cycle_action.category)
+- next_cycle = @cycle.next_cycle
 
 = turbo_stream.replace "category_#{@cycle_action.category}_list" do
-  = render "cycle_actions/sorted_list", actions: @category_actions, category: @cycle_action.category, human: @human
+  = render "cycle_actions/sorted_list", actions: @category_actions, category: @cycle_action.category, human: @human, next_cycle: next_cycle
 
 = turbo_stream.replace "category_#{@cycle_action.category}_count" do
   = render "cycle_actions/category_count", category: @cycle_action.category, count: new_cat_scope.count, hours: new_cat_scope.sum(:hours)
 
 - if @old_category_actions
-  - old_cat_scope = @human.cycle_actions.active.where(category: @old_category)
+  - old_cat_scope = live.active.where(category: @old_category)
   = turbo_stream.replace "category_#{@old_category}_list" do
-    = render "cycle_actions/sorted_list", actions: @old_category_actions, category: @old_category, human: @human
+    = render "cycle_actions/sorted_list", actions: @old_category_actions, category: @old_category, human: @human, next_cycle: next_cycle
 
   = turbo_stream.replace "category_#{@old_category}_count" do
     = render "cycle_actions/category_count", category: @old_category, count: old_cat_scope.count, hours: old_cat_scope.sum(:hours)
 
 = turbo_stream.replace "hours_total" do
-  = render "cycle_actions/hours_total", total_hours: @total_hours, human: @human
+  = render "cycle_actions/hours_total", total_hours: @total_hours, human: @human, cycle: @cycle

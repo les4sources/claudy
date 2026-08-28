@@ -16,3 +16,7 @@ end
 json.created_at cycle_action.created_at
 json.updated_at cycle_action.updated_at
 json.url api_v1_cycle_action_url(cycle_action)
+json.cycle_id cycle_action.cycle_id
+json.outcome cycle_action.outcome
+json.deferred_from_id cycle_action.deferred_from_id
+json.deferral_count cycle_action.deferral_count
