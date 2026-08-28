@@ -1,41 +1,58 @@
+- readonly = local_assigns[:readonly]
+- next_cycle = local_assigns.key?(:next_cycle) ? local_assigns[:next_cycle] : cycle_action.cycle.next_cycle
+
 div[id="cycle_action_#{cycle_action.id}"
     class="cycle-action-row relative flex items-end gap-2 py-2.5 pl-2 pr-4 group hover:bg-gray-50/80 transition-colors duration-150 #{local_assigns[:highlight] ? 'animate-flash-highlight' : ''}"
-    data-cycle-action-sortable-target="item"
+    data-cycle-action-sortable-target=(readonly ? nil : "item")
     data-id=cycle_action.id
     data-hours=(cycle_action.hours.to_f)
     data-completed=cycle_action.completed.to_s
     data-category=cycle_action.category]
 
   / Drag handle
-  button[type="button"
-         tabindex="-1"
-         data-drag-handle=""
-         aria-label="Réorganiser"
-         class="flex-shrink-0 self-stretch flex items-center justify-center w-5 -ml-1 mr-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"]
-    svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
-      circle cx="5" cy="3" r="1.25"
-      circle cx="5" cy="8" r="1.25"
-      circle cx="5" cy="13" r="1.25"
-      circle cx="11" cy="3" r="1.25"
-      circle cx="11" cy="8" r="1.25"
-      circle cx="11" cy="13" r="1.25"
+  - if readonly
+    .flex-shrink-0.w-5.-ml-1.mr-1
+  - else
+    button[type="button"
+           tabindex="-1"
+           data-drag-handle=""
+           aria-label="Réorganiser"
+           class="flex-shrink-0 self-stretch flex items-center justify-center w-5 -ml-1 mr-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"]
+      svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
+        circle cx="5" cy="3" r="1.25"
+        circle cx="5" cy="8" r="1.25"
+        circle cx="5" cy="13" r="1.25"
+        circle cx="11" cy="3" r="1.25"
+        circle cx="11" cy="8" r="1.25"
+        circle cx="11" cy="13" r="1.25"
 
   / Completed checkbox
-  = button_to toggle_completed_cycle_action_path(cycle_action),
-              method: :patch,
-              data: { turbo_stream: true },
-              class: "flex-shrink-0" do
+  - if readonly
     - if cycle_action.completed?
-      .w-5.h-5.rounded.bg-teal-500.flex.items-center.justify-center.transition-all.duration-200
+      .w-5.h-5.rounded.bg-teal-500.flex.items-center.justify-center.flex-shrink-0
         svg.w-3.h-3.text-white xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
           polyline points="20 6 9 17 4 12"
     - else
-      .w-5.h-5.rounded.border-2.border-gray-300.hover:border-teal-400.transition-colors.duration-200.cursor-pointer
+      .w-5.h-5.rounded.border-2.border-gray-200.flex-shrink-0
+  - else
+    = button_to toggle_completed_cycle_action_path(cycle_action),
+                method: :patch,
+                data: { turbo_stream: true },
+                class: "flex-shrink-0" do
+      - if cycle_action.completed?
+        .w-5.h-5.rounded.bg-teal-500.flex.items-center.justify-center.transition-all.duration-200
+          svg.w-3.h-3.text-white xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+            polyline points="20 6 9 17 4 12"
+      - else
+        .w-5.h-5.rounded.border-2.border-gray-300.hover:border-teal-400.transition-colors.duration-200.cursor-pointer
 
   / Label
-  .flex-1.min-w-0
+  .flex-1.min-w-0.flex.items-baseline.gap-2
     span.text-sm class=(cycle_action.completed? ? "line-through text-gray-400" : "text-gray-800")
       = cycle_action.label
+    - if cycle_action.deferred_before?
+      span.deferral-badge title="Reportée #{cycle_action.deferral_count} fois"
+        | ⟳ ×#{cycle_action.deferral_count}
 
   / Hours
   - if cycle_action.hours.present? && cycle_action.hours > 0
@@ -43,42 +60,62 @@ div[id="cycle_action_#{cycle_action.id}"
       = "#{format('%g', cycle_action.hours.to_f)}h"
 
   / Action icons
-  .flex.items-center.gap-0.5.flex-shrink-0
-    - unless cycle_action.reportee?
-      = button_to defer_cycle_action_path(cycle_action),
-                  method: :patch,
-                  data: { turbo_stream: true },
-                  class: "p-1.5 rounded-md text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors",
-                  title: "Reporter" do
+  - unless readonly
+    .flex.items-center.gap-0.5.flex-shrink-0
+      - unless cycle_action.completed?
+        - if next_cycle
+          = button_to defer_next_cycle_action_path(cycle_action),
+                      method: :patch,
+                      data: { turbo_stream: true },
+                      class: "p-1.5 rounded-md text-gray-400 hover:text-sky-700 hover:bg-sky-50 transition-colors",
+                      title: "Passer au cycle suivant (#{next_cycle.name})" do
+            svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              path d="M5 12h14"
+              path d="m12 5 7 7-7 7"
+              path d="M3 5v14"
+        - else
+          = link_to new_cycle_path,
+                    class: "p-1.5 rounded-md text-gray-300 hover:text-amber-600 hover:bg-amber-50 transition-colors",
+                    title: "Aucun cycle suivant configuré — créer un cycle" do
+            svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 2"
+              path d="M5 12h14"
+              path d="m12 5 7 7-7 7"
+              path d="M3 5v14"
+
+        - unless cycle_action.reportee?
+          = button_to defer_cycle_action_path(cycle_action),
+                      method: :patch,
+                      data: { turbo_stream: true },
+                      class: "p-1.5 rounded-md text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors",
+                      title: "Mettre en attente (catégorie reportée)" do
+            svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              polyline points="13 17 18 12 13 7"
+              polyline points="6 17 11 12 6 7"
+
+      = link_to edit_cycle_action_path(cycle_action),
+                data: { turbo_stream: true },
+                class: "p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors",
+                title: "Modifier" do
         svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-          polyline points="13 17 18 12 13 7"
-          polyline points="6 17 11 12 6 7"
+          path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"
+          path d="m15 5 4 4"
 
-    = link_to edit_cycle_action_path(cycle_action),
-              data: { turbo_stream: true },
-              class: "p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors",
-              title: "Modifier" do
-      svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-        path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"
-        path d="m15 5 4 4"
-
-    - if cycle_action.completed?
       = button_to archive_cycle_action_path(cycle_action),
                   method: :patch,
                   data: { turbo_stream: true },
                   class: "p-1.5 rounded-md text-gray-400 hover:text-teal-700 hover:bg-teal-50 transition-colors",
-                  title: "Archiver" do
+                  title: (cycle_action.completed? ? "Archiver (faite)" : "Archiver sans la faire") do
         svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
           path d="M21 8v13H3V8"
           path d="M1 3h22v5H1z"
           line x1="10" y1="12" x2="14" y2="12"
 
-    = button_to cycle_action_path(cycle_action),
-                method: :delete,
-                data: { turbo_stream: true, turbo_confirm: "Supprimer cette action ?" },
-                class: "p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors",
-                title: "Supprimer" do
-      svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-        path d="M3 6h18"
-        path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"
-        path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
+      = button_to cycle_action_path(cycle_action),
+                  method: :delete,
+                  data: { turbo_stream: true, turbo_confirm: "Supprimer cette action ?" },
+                  class: "p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors",
+                  title: "Supprimer" do
+        svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          path d="M3 6h18"
+          path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"
+          path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"

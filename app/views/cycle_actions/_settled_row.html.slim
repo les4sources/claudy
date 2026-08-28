@@ -1,0 +1,25 @@
+/ Action déjà tranchée dans son cycle. locals: action, cycle, readonly
+- style = CycleActionDecorator::CATEGORY_STYLES[action.category] || {}
+- outcome = { "done" => ["Faite", "teal", "✓"], "deferred" => ["Au suivant", "sky", "→"], "dropped" => ["Abandonnée", "stone", "—"] }[action.outcome]
+li class="flex items-center gap-3 px-4 py-2.5"
+  span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-#{outcome[1]}-50 text-#{outcome[1]}-700 text-xs font-bold" title=outcome[0]
+    = outcome[2]
+  span class="inline-flex items-center gap-1 text-[0.7rem] px-2 py-0.5 rounded-full #{style[:bg]} #{style[:text]} whitespace-nowrap"
+    span = style[:icon]
+    span = style[:label]
+  .flex-1.min-w-0
+    span.text-sm.text-stone-600.truncate = action.label
+    - if action.outcome_deferred? && action.deferred_to
+      span.text-xs.text-sky-600.ml-2
+        | → #{action.deferred_to.cycle.name}
+  - if action.hours.present? && action.hours > 0
+    span.text-sm.tabular-nums.text-stone-400 = "#{format('%g', action.hours.to_f)}h"
+  span class="text-[0.65rem] uppercase tracking-wider font-semibold text-#{outcome[1]}-600 w-24 text-right"
+    = outcome[0]
+  - if !readonly && action.outcome_deferred?
+    = button_to undo_defer_next_cycle_action_path(action),
+                method: :patch,
+                form: { data: { turbo: "false" } },
+                class: "text-xs text-stone-400 hover:text-stone-700 underline decoration-stone-300",
+                title: "Ramener dans ce cycle (supprime la copie du cycle suivant)"
+      | Ramener

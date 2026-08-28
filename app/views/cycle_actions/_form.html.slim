@@ -4,6 +4,7 @@
               data: { turbo_stream: true },
               class: "rounded-xl border border-gray-200 p-4 shadow-sm bg-white #{local_assigns[:flash_success] ? 'animate-flash-highlight' : ''}" do |f|
     = f.hidden_field :human_id
+    = f.hidden_field :cycle_id, value: (cycle_action.cycle_id || local_assigns[:cycle]&.id)
 
     .flex.flex-wrap.items-end.gap-3
       .flex-1.min-w-[200px]

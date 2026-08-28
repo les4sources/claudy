@@ -1,0 +1,94 @@
+- decorated = CycleDecorator.new(@cycle)
+- state = @cycle.closed? ? :closed : (@cycle.current? ? :current : (@cycle.future? ? :future : :past))
+- state_label = { closed: "Cycle clos", current: "Cycle en cours", future: "Cycle à venir", past: "Terminé — à clôturer" }[state]
+- state_color = { closed: "rose", current: "teal", future: "sky", past: "amber" }[state]
+- planned = @totals[:planned]
+- pct = ->(v) { planned > 0 ? (v / planned * 100).round(1) : 0 }
+- links = []
+- links << link_to("Modifier", edit_cycle_path(@cycle), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")
+- links << link_to("Clôturer ce cycle", closing_cycle_path(@cycle), class: "inline-flex items-center rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-600") if @cycle.open?
+
+- content_for :page_header do
+  = render "layouts/components/page_header", title: @cycle.name, links: links
+
+/ En-tête : état, dates, navigation entre cycles
+div class="relative overflow-hidden rounded-2xl border border-#{state_color}-100 bg-gradient-to-br from-white via-#{state_color}-50/30 to-#{state_color}-50/60 mb-8"
+  div class="pointer-events-none absolute inset-0 opacity-[0.04]" style="background-image: radial-gradient(circle at 1px 1px, #024442 1px, transparent 0); background-size: 18px 18px;"
+  .relative.p-5.sm:p-6
+    .flex.flex-wrap.items-start.justify-between.gap-4
+      div
+        .flex.items-center.gap-2.5.mb-2
+          span class="relative inline-flex rounded-full h-2 w-2 bg-#{state_color}-500"
+          span class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-#{state_color}-700"
+            = state_label
+        .text-sm.text-stone-600.tabular-nums
+          = decorated.formatted_dates
+          span.text-stone-300.mx-1 ·
+          = decorated.duration_in_weeks
+        - if @cycle.closed?
+          .text-xs.text-stone-500.mt-1
+            = "Clos le #{l(@cycle.closed_at.to_date, format: :long)}"
+      .flex.items-center.gap-3
+        - if @cycle.closed?
+          span.stamp-closed.stamp-closed--lg aria-hidden="true" Clos
+        .flex.items-center.gap-1.text-xs
+          - if @previous_cycle
+            = link_to "← #{@previous_cycle.name}", cycle_path(@previous_cycle), class: "px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white text-stone-600 hover:border-stone-400 transition-colors"
+          - if @next_cycle
+            = link_to "#{@next_cycle.name} →", cycle_path(@next_cycle), class: "px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white text-stone-600 hover:border-stone-400 transition-colors"
+          - else
+            = link_to "Créer le suivant +", new_cycle_path, class: "px-2.5 py-1.5 rounded-lg border border-dashed border-amber-300 bg-amber-50/40 text-amber-700 hover:border-amber-500 transition-colors"
+
+    / Chiffres de l'équipe
+    .grid.grid-cols-2.sm:grid-cols-4.gap-4.mt-6.items-end
+      div
+        div class="text-[0.65rem] uppercase tracking-[0.14em] text-stone-400 font-semibold mb-1" Planifié
+        .flex.items-baseline.gap-1
+          span.font-averia.text-4xl.sm:text-5xl.tabular-nums.tracking-tight.text-stone-900.leading-none = number_with_precision(planned, precision: 1, strip_insignificant_zeros: true)
+          span.text-base.text-stone-500 h
+      div
+        div class="text-[0.65rem] uppercase tracking-[0.14em] text-teal-600 font-semibold mb-1" Fait
+        .flex.items-baseline.gap-1
+          span.font-averia.text-3xl.tabular-nums.text-teal-800.leading-none = number_with_precision(@totals[:done], precision: 1, strip_insignificant_zeros: true)
+          span.text-sm.text-teal-600 h
+          span.text-xs.text-teal-600.ml-1.tabular-nums = "#{pct.(@totals[:done])} %"
+      div
+        div class="text-[0.65rem] uppercase tracking-[0.14em] text-amber-600 font-semibold mb-1" Passé au suivant
+        .flex.items-baseline.gap-1
+          span.font-averia.text-3xl.tabular-nums.text-amber-800.leading-none = number_with_precision(@totals[:deferred], precision: 1, strip_insignificant_zeros: true)
+          span.text-sm.text-amber-600 h
+      div
+        div class="text-[0.65rem] uppercase tracking-[0.14em] text-stone-500 font-semibold mb-1" Abandonné
+        .flex.items-baseline.gap-1
+          span.font-averia.text-3xl.tabular-nums.text-stone-600.leading-none = number_with_precision(@totals[:dropped], precision: 1, strip_insignificant_zeros: true)
+          span.text-sm.text-stone-400 h
+
+    .bilan-bar.mt-5 role="img" aria-label="Répartition des heures planifiées"
+      span.seg-done style="width: #{pct.(@totals[:done])}%"
+      span.seg-deferred style="width: #{pct.(@totals[:deferred])}%"
+      span.seg-dropped style="width: #{pct.(@totals[:dropped])}%"
+      span.seg-pending style="width: #{pct.(@totals[:pending])}%"
+    .flex.flex-wrap.gap-x-4.gap-y-1.mt-2 class="text-[0.65rem] text-stone-500"
+      span.inline-flex.items-center.gap-1
+        span.inline-block.w-2.h-2.rounded-full.bg-teal-500
+        | Fait
+      span.inline-flex.items-center.gap-1
+        span.inline-block.w-2.h-2.rounded-full.bg-amber-500
+        | Passé au suivant
+      span.inline-flex.items-center.gap-1
+        span.inline-block.w-2.h-2.rounded-full.bg-stone-400
+        | Abandonné
+      - if @totals[:pending] > 0
+        span.inline-flex.items-center.gap-1
+          span.inline-block.w-2.h-2.rounded-full.bg-stone-200
+          = "Encore en jeu · #{number_with_precision(@totals[:pending], precision: 1, strip_insignificant_zeros: true)} h"
+
+/ Bilan par membre
+- if @reports.all?(&:empty?)
+  .text-center.py-12.rounded-2xl.border.border-dashed.border-stone-200
+    p.font-averia.text-xl.text-stone-700 Aucune action dans ce cycle.
+    p.text-sm.text-stone-400.mt-1 Les membres ajoutent leurs actions depuis leur page.
+- else
+  .space-y-3
+    - @reports.each do |report|
+      = render "cycles/bilan_member", report: report, cycle: @cycle

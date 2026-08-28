@@ -40,3 +40,7 @@ class ServiceBase
     @report_level || "error"
   end
 end
+
+# Erreur métier levée par un service quand une règle refuse l'opération. Le
+# message est destiné à l'utilisateur.
+class ServiceError < StandardError; end

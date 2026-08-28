@@ -1,0 +1,38 @@
+/ Une ligne du registre : le bilan d'un membre sur le cycle. locals: report, cycle
+- human = report.human
+- planned = report.planned_hours
+- pct = ->(v) { planned > 0 ? (v / planned * 100).round(1) : 0 }
+- done_pct = (report.completion_ratio * 100).round
+- accent = planned <= 0 ? "stone" : (done_pct >= 80 ? "teal" : (done_pct >= 50 ? "amber" : "rose"))
+
+details.bilan-row.group.bg-white.rounded-xl.border.border-stone-100.open:border-stone-200.open:shadow-sm.transition-all id="bilan_member_#{human.id}"
+  summary.list-none.cursor-pointer.px-4.py-4.flex.items-center.gap-4 class="[&::-webkit-details-marker]:hidden"
+    = render "humans/avatar", human: human, size: "w-10 h-10", ring: "ring-1 ring-stone-100 group-open:ring-#{accent}-200"
+    .w-36.flex-shrink-0.min-w-0
+      .font-semibold.text-stone-800.truncate = link_to human.name, organisation_member_path(human.id, cycle_id: cycle.id), class: "hover:text-4s-main transition-colors", data: { turbo_prefetch: false }
+      div class="text-[0.65rem] text-stone-400 tabular-nums mt-0.5"
+        = "#{report.actions.size} action#{'s' if report.actions.size != 1}"
+    .flex-1.min-w-0
+      - if report.empty?
+        .text-xs.text-stone-300.italic Rien de planifié
+      - else
+        .bilan-bar
+          span.seg-done style="width: #{pct.(report.done_hours)}%"
+          span.seg-deferred style="width: #{pct.(report.deferred_hours)}%"
+          span.seg-dropped style="width: #{pct.(report.dropped_hours)}%"
+          span.seg-pending style="width: #{pct.(report.pending_hours)}%"
+    .w-28.flex-shrink-0.text-right
+      .flex.items-baseline.justify-end.gap-1
+        span class="font-averia text-2xl tabular-nums text-#{accent}-800 leading-none" = number_with_precision(report.done_hours, precision: 1, strip_insignificant_zeros: true)
+        span.text-xs.text-stone-400 = "/ #{number_with_precision(planned, precision: 1, strip_insignificant_zeros: true)} h"
+      div class="text-[0.65rem] tabular-nums text-#{accent}-600 font-semibold mt-0.5" = "#{done_pct} % fait"
+    span.text-stone-300.group-open:rotate-90.transition-transform.text-xs ▶
+
+  - unless report.empty?
+    .border-t.border-stone-100.px-4.py-4.grid.grid-cols-1.md:grid-cols-3.gap-4
+      = render "cycles/bilan_list", title: "Fait", color: "teal", mark: "✓", actions: report.done_actions
+      = render "cycles/bilan_list", title: "Passé au suivant", color: "amber", mark: "→", actions: report.deferred_actions
+      = render "cycles/bilan_list", title: "Abandonné", color: "stone", mark: "—", actions: report.dropped_actions
+    - if report.pending_actions.any?
+      .border-t.border-dashed.border-stone-200.px-4.py-3
+        = render "cycles/bilan_list", title: "Encore en jeu", color: "sky", mark: "·", actions: report.pending_actions

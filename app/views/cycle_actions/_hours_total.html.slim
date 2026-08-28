@@ -1,11 +1,12 @@
 - weekly_capacity = 16.0
 - engaged = (total_hours || 0).to_f
-- cycle = local_assigns[:cycle] || ::Cycle.covering_date(Date.today).first
+- cycle = local_assigns[:cycle] || ::Cycle.reference_for
 - human = local_assigns[:human]
-- completed_hours = human ? human.cycle_actions.active.where(completed: true).where.not(category: :reportee).sum(:hours).to_f : 0
+- scope = (human && cycle) ? human.cycle_actions.for_cycle(cycle).live : ::CycleAction.none
+- completed_hours = scope.where(completed: true).engaged.sum(:hours).to_f
 - remaining_hours = [engaged - completed_hours, 0].max
-- rituelle_hours = human ? human.cycle_actions.active.where(category: :rituelle).sum(:hours).to_f : 0
-- ponctuelle_hours = human ? human.cycle_actions.active.where(category: :ponctuelle).sum(:hours).to_f : 0
+- rituelle_hours = scope.active.where(category: :rituelle).sum(:hours).to_f
+- ponctuelle_hours = scope.active.where(category: :ponctuelle).sum(:hours).to_f
 - other_hours = [engaged - rituelle_hours - ponctuelle_hours, 0].max
 
 - if cycle

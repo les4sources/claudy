@@ -1,0 +1,35 @@
+/ Bilan compact d'un membre sur un cycle clos — remplace la jauge de charge. locals: report
+- planned = report.planned_hours
+- pct = ->(v) { planned > 0 ? (v / planned * 100).round(1) : 0 }
+- done_pct = (report.completion_ratio * 100).round
+div id="hours_total" class="relative overflow-hidden rounded-2xl border border-stone-200 bg-gradient-to-br from-white via-stone-50/40 to-stone-100/60"
+  div class="pointer-events-none absolute inset-0 opacity-[0.04]" style="background-image: radial-gradient(circle at 1px 1px, #024442 1px, transparent 0); background-size: 18px 18px;"
+  .relative.p-5.sm:p-6
+    .flex.items-center.gap-2.5.mb-5
+      span.relative.inline-flex.rounded-full.h-2.w-2.bg-stone-400
+      span class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-stone-600" Bilan du cycle
+    .grid.grid-cols-2.sm:grid-cols-4.gap-4.items-end
+      div
+        div class="text-[0.65rem] uppercase tracking-[0.14em] text-stone-400 font-semibold mb-1" Planifié
+        .flex.items-baseline.gap-1
+          span.font-averia.text-4xl.tabular-nums.text-stone-900.leading-none = number_with_precision(planned, precision: 1, strip_insignificant_zeros: true)
+          span.text-sm.text-stone-500 h
+      div
+        div class="text-[0.65rem] uppercase tracking-[0.14em] text-teal-600 font-semibold mb-1" Fait
+        .flex.items-baseline.gap-1
+          span.font-averia.text-2xl.tabular-nums.text-teal-800.leading-none = number_with_precision(report.done_hours, precision: 1, strip_insignificant_zeros: true)
+          span.text-xs.text-teal-600 = "h · #{done_pct} %"
+      div
+        div class="text-[0.65rem] uppercase tracking-[0.14em] text-amber-600 font-semibold mb-1" Passé au suivant
+        .flex.items-baseline.gap-1
+          span.font-averia.text-2xl.tabular-nums.text-amber-800.leading-none = number_with_precision(report.deferred_hours, precision: 1, strip_insignificant_zeros: true)
+          span.text-xs.text-amber-600 h
+      div
+        div class="text-[0.65rem] uppercase tracking-[0.14em] text-stone-500 font-semibold mb-1" Abandonné
+        .flex.items-baseline.gap-1
+          span.font-averia.text-2xl.tabular-nums.text-stone-600.leading-none = number_with_precision(report.dropped_hours, precision: 1, strip_insignificant_zeros: true)
+          span.text-xs.text-stone-400 h
+    .bilan-bar.mt-4
+      span.seg-done style="width: #{pct.(report.done_hours)}%"
+      span.seg-deferred style="width: #{pct.(report.deferred_hours)}%"
+      span.seg-dropped style="width: #{pct.(report.dropped_hours)}%"

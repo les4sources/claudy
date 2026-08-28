@@ -11,8 +11,9 @@
     .relative
       .flex.items-center.justify-between
         div
-          p.text-teal-200.text-sm.font-medium.tracking-wide.uppercase.mb-1 Cycle en cours
-          h2.text-2xl.font-bold.tracking-tight = current_cycle.name
+          p.text-teal-200.text-sm.font-medium.tracking-wide.uppercase.mb-1 = current_cycle.current? ? "Cycle en cours" : (current_cycle.future? ? "Prochain cycle" : "Dernier cycle")
+          h2.text-2xl.font-bold.tracking-tight
+            = link_to current_cycle.name, cycle_path(current_cycle), class: "hover:underline decoration-teal-300 underline-offset-4"
           - decorated = CycleDecorator.new(current_cycle)
           p.text-teal-100.mt-1
             = "#{l(current_cycle.start_date, format: :long)} — #{l(current_cycle.end_date, format: :long)}"
@@ -20,8 +21,10 @@
               = "(#{decorated.duration_in_weeks})"
         .text-right
           - days_left = (current_cycle.end_date - Date.today).to_i
-          .text-4xl.font-bold.tabular-nums = days_left
-          p.text-teal-200.text-sm jours restants
+          .text-4xl.font-bold.tabular-nums = days_left.abs
+          p.text-teal-200.text-sm = days_left >= 0 ? "jours restants" : "jours depuis la fin"
+          - if current_cycle.past? && current_cycle.open?
+            = link_to "Clôturer →", closing_cycle_path(current_cycle), class: "mt-2 inline-flex items-center rounded-lg bg-amber-400 px-3 py-1 text-xs font-semibold text-stone-900 hover:bg-amber-300 transition-colors"
 
 / Dashboard cards (Next moment + Recent decisions)
 .grid.grid-cols-1.lg:grid-cols-2.gap-4.mb-8
