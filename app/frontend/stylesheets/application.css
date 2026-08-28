@@ -459,3 +459,118 @@ input:checked ~ .ui-switch-label-on { display: inline; }
 .bilan-row:nth-child(8) { animation-delay: 390ms; }
 .bilan-row:nth-child(n+9) { animation-delay: 440ms; }
 @media (prefers-reduced-motion: reduce) { .bilan-row { animation: none; } .stamp-closed { transform: none; } }
+
+/* ---------------------------------------------------------------------------
+   Clôture — célébration d'une action « Fait »
+   (motifs transitions.dev : success check + burst de particules)
+   --------------------------------------------------------------------------- */
+:root {
+  --celebrate-dur: 500ms;
+  --celebrate-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --celebrate-ease-bob: cubic-bezier(0.34, 1.35, 0.64, 1);
+  --celebrate-particle-dur: 620ms;
+}
+
+.celebrate-row { position: relative; }
+.celebrate-row .celebrate-check { display: none; }
+.celebrate-row .celebrate-label { position: relative; display: inline-block; }
+/* Trait de barrure : une ligne qui s'étire de gauche à droite. */
+.celebrate-row .celebrate-label::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 55%;
+  height: 2px;
+  background: #0f766e;
+  transform: scaleX(0);
+  transform-origin: left center;
+  border-radius: 2px;
+}
+
+/* --- État célébrant --- */
+.celebrate-row.is-celebrating {
+  animation: celebrate-glow var(--celebrate-dur) var(--celebrate-ease-out) forwards;
+}
+@keyframes celebrate-glow {
+  0%   { background: transparent; }
+  25%  { background: #ccfbf1; }
+  100% { background: #f0fdfa; }
+}
+.celebrate-row.is-celebrating .celebrate-label {
+  color: #64748b;
+  transition: color var(--celebrate-dur) var(--celebrate-ease-out);
+}
+.celebrate-row.is-celebrating .celebrate-label::after {
+  animation: celebrate-strike 380ms var(--celebrate-ease-out) 120ms forwards;
+}
+@keyframes celebrate-strike { to { transform: scaleX(1); } }
+
+/* Le bouton : le texte s'efface, la coche se dessine à la place. */
+.celebrate-row.is-celebrating .celebrate-button {
+  position: relative;
+  background: #0d9488;
+  color: #fff;
+  transition: background 200ms var(--celebrate-ease-out), color 200ms var(--celebrate-ease-out);
+  overflow: visible;
+}
+.celebrate-row.is-celebrating .celebrate-button .celebrate-text { visibility: hidden; }
+.celebrate-row.is-celebrating .celebrate-check {
+  display: block;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 16px; height: 16px;
+  opacity: 0;
+  transform-origin: center;
+  will-change: transform, opacity, filter;
+  animation:
+    celebrate-fade   var(--celebrate-dur) var(--celebrate-ease-out) forwards,
+    celebrate-rotate var(--celebrate-dur) var(--celebrate-ease-out) forwards,
+    celebrate-blur   var(--celebrate-dur) var(--celebrate-ease-out) forwards,
+    celebrate-bob    var(--celebrate-dur) var(--celebrate-ease-bob) forwards;
+}
+.celebrate-check svg { display: block; overflow: visible; }
+/* Longueur mesurée du tracé « 4 12 → 9 17 → 20 6 » ≈ 22.6 → 24. */
+.celebrate-check svg path { stroke-dasharray: 24; stroke-dashoffset: 24; }
+.celebrate-row.is-celebrating .celebrate-check svg path {
+  animation: celebrate-draw var(--celebrate-dur) var(--celebrate-ease-out) 80ms forwards;
+}
+@keyframes celebrate-fade   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes celebrate-rotate { from { transform: rotate(80deg); } to { transform: rotate(0deg); } }
+@keyframes celebrate-blur   { from { filter: blur(6px); } to { filter: blur(0); } }
+@keyframes celebrate-bob    { from { translate: 0 14px; } to { translate: 0 0; } }
+@keyframes celebrate-draw   { to { stroke-dashoffset: 0; } }
+
+/* Burst : douze points lancés depuis le centre du bouton. */
+.celebrate-burst {
+  position: absolute; left: 50%; top: 50%;
+  width: 0; height: 0;
+  pointer-events: none;
+  color: #14b8a6;
+}
+.celebrate-burst i {
+  position: absolute;
+  left: calc(3px * var(--psize, 1) / -2);
+  top: calc(3px * var(--psize, 1) / -2);
+  width: calc(3px * var(--psize, 1));
+  height: calc(3px * var(--psize, 1));
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  animation: celebrate-burst var(--celebrate-particle-dur) ease-out var(--pdelay, 0ms) forwards;
+}
+.celebrate-burst i.is-amber { color: #f59e0b; }
+@keyframes celebrate-burst {
+  0%   { opacity: 0; transform: translate(0, 0) scale(0.4); }
+  20%  { opacity: 1; transform: translate(calc(var(--px) * 0.25), calc(var(--py) * 0.25)) scale(1); }
+  100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(0.5); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .celebrate-row.is-celebrating,
+  .celebrate-row.is-celebrating .celebrate-label::after,
+  .celebrate-row.is-celebrating .celebrate-check,
+  .celebrate-row.is-celebrating .celebrate-check svg path,
+  .celebrate-burst i { animation: none !important; }
+  .celebrate-row.is-celebrating .celebrate-check { opacity: 1; }
+  .celebrate-row.is-celebrating .celebrate-check svg path { stroke-dashoffset: 0 !important; }
+}

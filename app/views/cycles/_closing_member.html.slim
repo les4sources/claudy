@@ -23,12 +23,13 @@ div.bg-white.rounded-xl.border.border-stone-100 id="closing_member_#{human.id}"
       - pending.each do |action|
         - style = CycleActionDecorator::CATEGORY_STYLES[action.category] || {}
         - auto = action.rituelle? ? "recréée dans le suivant" : (action.reportee? ? "passera au suivant" : "sera archivée")
-        li.flex.items-center.gap-3.px-4.py-2.5 id="closing_action_#{action.id}"
+        li.celebrate-row.flex.items-center.gap-3.px-4.py-2.5 id="closing_action_#{action.id}" data-controller="celebrate"
           span class="inline-flex items-center gap-1 text-[0.7rem] px-2 py-0.5 rounded-full #{style[:bg]} #{style[:text]} whitespace-nowrap shrink-0"
             span = style[:icon]
             span = style[:label]
           .flex-1.min-w-0
-            .text-sm.text-stone-800.leading-snug = action.label
+            .text-sm.text-stone-800.leading-snug
+              span.celebrate-label data-celebrate-target="label" = action.label
             div class="text-[0.65rem] text-stone-400"
               = "Par défaut : #{auto}"
               - if action.deferred_before?
@@ -36,8 +37,11 @@ div.bg-white.rounded-xl.border.border-stone-100 id="closing_member_#{human.id}"
           - if action.hours.present? && action.hours > 0
             span.text-sm.tabular-nums.text-stone-400.shrink-0 = "#{format('%g', action.hours.to_f)}h"
           .flex.items-center.gap-1.shrink-0
-            = button_to settle_cycle_action_path(action, as: "done"), method: :patch, data: { turbo_stream: true }, class: "px-2.5 py-1 rounded-md text-xs font-medium text-teal-700 bg-teal-50 hover:bg-teal-100 transition-colors", title: "Marquer comme faite"
-              | ✓ Fait
+            = button_to settle_cycle_action_path(action, as: "done"), method: :patch, data: { turbo_stream: true, action: "click->celebrate#fire", celebrate_target: "button" }, class: "celebrate-button px-2.5 py-1 rounded-md text-xs font-medium text-teal-700 bg-teal-50 hover:bg-teal-100 transition-colors", title: "Marquer comme faite"
+              span.celebrate-text ✓ Fait
+              span.celebrate-check aria-hidden="true"
+                svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                  path d="M4 12l5 5L20 6"| ✓ Fait
             - if next_cycle
               = button_to settle_cycle_action_path(action, as: "next"), method: :patch, data: { turbo_stream: true }, class: "px-2.5 py-1 rounded-md text-xs font-medium text-sky-700 bg-sky-50 hover:bg-sky-100 transition-colors", title: "Passer au cycle suivant"
                 | → Suivant
