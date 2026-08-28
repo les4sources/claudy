@@ -82,9 +82,10 @@ module CalendarHelper
     "paid"           => ["Payée", "bg-green-200 text-green-800"]
   }.freeze
 
-  def occupancy_payment_status(bookable)
-    stay = bookable&.stay
-    return bookable&.payment_status if stay.nil?
+  # Statut d'argent AU NIVEAU DU SÉJOUR — la source unique depuis que le bandeau
+  # du jour rend une carte par séjour et non par réservable.
+  def stay_payment_status(stay)
+    return nil if stay.nil?
 
     encaisse = stay.amount_paid_cents
     return "paid" if encaisse.positive? && stay.balance_due_cents <= 0
@@ -98,13 +99,27 @@ module CalendarHelper
     "pending"
   end
 
-  def occupancy_payment_badge(bookable)
-    status = occupancy_payment_status(bookable)
+  def occupancy_payment_status(bookable)
+    stay = bookable&.stay
+    return bookable&.payment_status if stay.nil?
+
+    stay_payment_status(stay)
+  end
+
+  def payment_status_badge_tag(status)
     label, colors = PAYMENT_BADGES.fetch(status.to_s) { [status.presence, "bg-gray-100 text-gray-800"] }
     return nil if label.blank?
 
     content_tag(:span, label,
                 class: "text-xs font-medium mr-2 px-2.5 py-0.5 rounded #{colors}")
+  end
+
+  def occupancy_payment_badge(bookable)
+    payment_status_badge_tag(occupancy_payment_status(bookable))
+  end
+
+  def stay_payment_badge(stay)
+    payment_status_badge_tag(stay_payment_status(stay))
   end
 
   # Dates compactes, ex. « 12–15 sept. » (même mois) ou « 30 août – 2 sept. ».
@@ -163,6 +178,26 @@ module CalendarHelper
       ongoing:  ["🛏️ Séjour en cours", "bg-cyan-200 text-cyan-700"],
       past:     ["Séjour passé",       "bg-gray-200 text-gray-600"]
     }.fetch(state)
+  end
+
+  # --- Bandeau d'état des cartes SÉJOUR du bandeau « Aujourd'hui » ----------
+  # Même vocabulaire que les popovers réservable (`booking_popover_band`), mais
+  # adossé aux dates DU SÉJOUR : c'est lui l'unité de la carte désormais. Deux
+  # écarts assumés :
+  # · `dayuse` — arrivée et départ le même jour — n'existait pas côté booking ;
+  #   c'est la location de salle à la journée, que le popover espace nommait
+  #   déjà « (arrivée et départ) ».
+  # · `ongoing` distingue une nuitée d'une occupation de jour : dire « Séjour en
+  #   cours » avec un lit à un groupe qui n'a qu'une salle serait faux.
+  def stay_day_band(state, overnight: true)
+    case state
+    when :checkout then ["🧳 Check-out",              "bg-amber-200 text-amber-800"]
+    when :dayuse   then ["🛎️ Arrivée et départ",      "bg-orange-200 text-orange-800"]
+    when :checkin  then ["🛎️ Check-in",               "bg-emerald-200 text-emerald-800"]
+    else
+      overnight ? ["🛏️ Séjour en cours", "bg-cyan-200 text-cyan-700"]
+                : ["📍 Sur place aujourd'hui", "bg-cyan-200 text-cyan-700"]
+    end
   end
 
   def button_to_next_month(current_date, data = {}, options = {})

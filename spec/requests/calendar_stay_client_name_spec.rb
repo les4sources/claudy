@@ -40,9 +40,10 @@ RSpec.describe "Calendrier — nom du client sur le bloc séjour", type: :reques
     expect(response.body).to include("data-stay-label=\"Association Cliente\"")
   end
 
-  # Bandeau « infos du jour » (cartes Séjour en cours / Location d'espaces) : il
-  # rend les mêmes popovers que le calendrier, et titrait lui aussi avec le nom
-  # figé sur la réservation.
+  # Bandeau « infos du jour ». Il rendait les mêmes popovers que le calendrier et
+  # titrait lui aussi avec le nom figé sur la réservation. Depuis le 2026-08-28 il
+  # rend UNE carte par SÉJOUR (`data-today-stay-card`) : l'ancrage change, pas ce
+  # qu'on vérifie.
   it "titre les cartes du jour avec le client du séjour" do
     today = Date.today
 
@@ -61,7 +62,7 @@ RSpec.describe "Calendrier — nom du client sur le bloc séjour", type: :reques
     get "/"
 
     expect(response).to have_http_status(:ok)
-    carte = response.body[/Location d'espaces.*?#{Regexp.escape(space_booking_path(space_booking))}[^>]*>[^<]*/m]
+    carte = response.body[/data-today-stay-card="#{stay.id}".{0,1600}/m]
     expect(carte).to include("Client Du Jour")
     expect(carte).not_to include("Prénom Formulaire")
   end

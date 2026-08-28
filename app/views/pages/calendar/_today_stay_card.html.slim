@@ -1,0 +1,93 @@
+/ Carte du bandeau « Aujourd'hui » — UNE par SÉJOUR (2026-08-28).
+  Avant : une carte par Booking, puis une seconde boucle sur les SpaceBooking.
+  Un séjour qui loue un gîte ET des salles s'affichait deux fois, sous deux
+  bandeaux, sans que rien ne relie les deux cartes — c'est ce que Michael a
+  signalé. L'agrégation vient de `Calendar::TodayStayCards`, qui s'appuie sur le
+  même `DayStayBlocks` que les cellules du calendrier : le haut de page et la
+  grille ne peuvent donc plus se contredire.
+  Le nom et « Détails » ouvrent la MODALE SÉJOUR (point d'entrée unique, epic
+  #81) — mêmes attributs `data-action` que les blocs de la grille.
+  Locals : `card` (Calendar::TodayStayCards::Card).
+- block = card.block
+- stay = block.stay
+- band = stay_day_band(card.state, overnight: card.overnight?)
+- occupants = stay.decorate.occupants
+div class="p-1 text-center text-xs font-bold rounded-t-lg #{band.last}"
+  = band.first
+.p-3
+  .flex.items-center.justify-between.mb-2.gap-2
+    .text-sm.font-semibold.leading-none.text-gray-900.min-w-0
+      = link_to stay_display_label(stay), stay_path(stay), data: { action: "stay-details#open" }, class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 break-words"
+      - if (dates = stay_short_dates(stay))
+        .mt-1.text-xs.font-normal.text-gray-500 = dates
+    div
+      = link_to "Détails", stay_path(stay), data: { action: "stay-details#open" }, class: "text-white bg-cyan-700 hover:bg-cyan-800 focus:ring-4 focus:ring-cyan-300 font-medium rounded-lg text-xs px-3 py-1.5 focus:outline-none whitespace-nowrap"
+
+  / Composition du jour : les MÊMES badges que le bloc du calendrier, dans le
+  / même ordre — hébergement, espaces, extérieur. `uniq` sur l'espace pour la
+  / même raison que là-bas : une salle n'a qu'une occupation à montrer par jour.
+  .flex.flex-wrap.items-center.gap-1.mb-2
+    - block.booking_groups.each do |group|
+      - if group.booking.lodging.nil?
+        - group.reservations.each do |reservation|
+          = room_badge(reservation.room)
+      - else
+        = group.booking.lodging_badge
+    - block.space_groups.each do |group|
+      - group.space_reservations.uniq(&:space_id).each do |space_reservation|
+        = space_badge(space_reservation.space)
+    - block.camping_bookings.each do |camping|
+      span.text-xs.text-gray-600.whitespace-nowrap ⛺️ #{camping.people} pers.
+    - block.van_bookings.each do |van|
+      span.text-xs.text-gray-600.whitespace-nowrap 🚐 #{van.vehicles} véhicule#{"s" if van.vehicles.to_i > 1}
+    - block.hamac_bookings.each do |hamac|
+      span.text-xs.text-gray-600.whitespace-nowrap 🛌 #{hamac.label} × #{hamac.count}
+    - block.terrace_bookings.each do |terrace|
+      span.text-xs.text-gray-600.whitespace-nowrap 🪑 Terrasse · #{terrace.people} pers.
+
+  - if card.space_durations.any?
+    .mb-2.block.text-gray-500 = card.space_durations.map(&:capitalize).join(" · ")
+
+  - if card.phone.present?
+    p.mb-2.text-sm.font-normal
+      | Tél: #{card.phone}
+  - if card.arrival_time.present?
+    p.mb-2.text-sm.font-light
+      | Heure d'arrivée: #{card.arrival_time}
+  - if card.departure_time.present?
+    p.mb-2.text-sm.font-light
+      | Heure de départ: #{card.departure_time}
+  - unless stay.status.to_s == "confirmed"
+    .mb-2.text-sm.font-semibold.text-red-700
+      = stay.status.to_s == "pending" ? "Séjour en attente de confirmation" : "Ce séjour est annulé"
+  - if (badge = stay_payment_badge(stay))
+    .mb-2 = badge
+
+  ul.flex.text-base.font-light
+    - if occupants[:adults].positive?
+      li.mr-2
+        span.font-semibold.text-gray-900 = "#{occupants[:adults]}x"
+        span.ml-1 🧑
+    - if occupants[:children].positive?
+      li.mr-2
+        span.font-semibold.text-gray-900 = "#{occupants[:children]}x"
+        span.ml-1 👧
+    / Location de salle sans nuitée : l'effectif ne vit que sur la location.
+    - if occupants[:adults].zero? && occupants[:children].zero? && card.persons.positive?
+      li.mr-2
+        span.font-semibold.text-gray-900 = "#{card.persons}x"
+        span.ml-1 🙋
+
+  .mt-2.text-base
+    - block.booking_groups.each do |group|
+      = group.booking.options_emojis
+      = group.booking.wifi_emoji
+    - block.space_groups.each do |group|
+      = group.space_booking.options_emojis
+
+  / Note interne UNIQUE du séjour : depuis `Stays::MergeOriginNotes`, elle porte
+  / déjà les notes des réservations d'origine. Écriture manuscrite, comme partout
+  / ailleurs — c'est le mot laissé sur le comptoir.
+  - if stay.notes.present?
+    .mt-2.space-y-4.text-yellow-600.font-caveat.text-lg
+      = simple_format "📝 " + stay.notes.truncate(200)

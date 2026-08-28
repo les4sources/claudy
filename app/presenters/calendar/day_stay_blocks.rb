@@ -102,6 +102,14 @@ module Calendar
       @booking_groups.select { |group| group.booking.stay.nil? }
     end
 
+    # Espaces SANS séjour : [SpaceGroup, ...]. La cellule du calendrier les rend
+    # déjà par un autre chemin (bloc + popover historiques, dans `_bookings`) ;
+    # cet accesseur sert au bandeau « Aujourd'hui », qui doit lui aussi les
+    # garder maintenant qu'il ne boucle plus sur les SpaceBooking bruts.
+    def no_stay_space_groups
+      @space_groups.select { |group| group.space_booking.stay.nil? }
+    end
+
     # Camping / van SANS séjour : gardent leur bloc informatif « Camping » / « Van ».
     # La terrasse (kind "terrasse") en est exclue (jamais un bloc « Camping »).
     def no_stay_camping

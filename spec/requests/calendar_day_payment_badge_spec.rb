@@ -12,10 +12,17 @@ RSpec.describe "Cartes du jour — badge de paiement", type: :request do
 
   before { sign_in user }
 
-  # Le popover de la carte : on part du lien vers la réservation et on prend la
-  # suite, où vit le badge. Le bandeau varie (check-in / séjour en cours), pas ce
-  # lien.
-  def carte_du_jour(booking)
+  # Le bandeau du jour rend UNE carte par SÉJOUR depuis le 2026-08-28 : on
+  # s'accroche à `data-today-stay-card`, posé pour ça, et non plus au chemin du
+  # réservable — qui n'y figure plus. Ce que la spec vérifie n'a pas bougé : le
+  # badge doit dire l'argent DU SÉJOUR, pas la colonne figée de la réservation.
+  def carte_du_jour(stay)
+    response.body[/data-today-stay-card="#{stay.id}".{0,1600}/m]
+  end
+
+  # Une occupation SANS séjour garde son popover historique : elle n'a pas de
+  # carte séjour, on s'accroche donc toujours au chemin de la réservation.
+  def carte_orpheline(booking)
     response.body[/#{Regexp.escape(booking_path(booking))}.{0,900}/m]
   end
 
@@ -49,7 +56,7 @@ RSpec.describe "Cartes du jour — badge de paiement", type: :request do
     get "/"
 
     expect(response).to have_http_status(:ok)
-    carte = carte_du_jour(booking)
+    carte = carte_du_jour(stay)
     expect(carte).to include("Payée")
     expect(carte).not_to include("Non payée")
   end
@@ -72,7 +79,7 @@ RSpec.describe "Cartes du jour — badge de paiement", type: :request do
     get "/"
 
     expect(response).to have_http_status(:ok)
-    carte = carte_du_jour(booking)
+    carte = carte_du_jour(stay)
     expect(carte).not_to include("Non payée")
     expect(carte).not_to include("Payée")
   end
@@ -90,6 +97,6 @@ RSpec.describe "Cartes du jour — badge de paiement", type: :request do
     get "/"
 
     expect(response).to have_http_status(:ok)
-    expect(carte_du_jour(booking)).to include("Non payée")
+    expect(carte_orpheline(booking)).to include("Non payée")
   end
 end

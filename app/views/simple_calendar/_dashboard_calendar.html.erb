@@ -29,36 +29,44 @@
       </div>
     <% end %>
 
+    <%# Bandeau du jour — UNE CARTE PAR SÉJOUR (2026-08-28). Il listait jusqu'ici
+        les RÉSERVABLES : une boucle sur les Booking, puis une autre sur les
+        SpaceBooking. Un séjour qui loue un gîte ET des salles y apparaissait
+        deux fois, sous deux bandeaux différents. L'agrégation par séjour vit
+        dans Calendar::TodayStayCards, qui réutilise le DayStayBlocks des
+        cellules — haut de page et grille disent donc la même chose.
+        Le départ du jour (dernière nuit = hier) et les occupations sans séjour
+        rattaché sont traités par le presenter, pas ici. %>
+    <% today_panel = Calendar::TodayStayCards.new(
+         date: Date.today,
+         grouped_reservations: @grouped_reservations,
+         grouped_space_reservations: @grouped_space_reservations,
+         grouped_camping_bookings: @grouped_camping_bookings,
+         grouped_van_bookings: @grouped_van_bookings,
+         grouped_hamac_bookings: @grouped_hamac_bookings
+       ) %>
     <div class="flex mb-4 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <%# Section veilleur (2026-07-20) : les CHECK-OUT du jour n'apparaissaient
-          jamais — un départ du jour n'a pas de nuitée aujourd'hui (nuits
-          [arrivée, départ)), sa dernière réservation date d'HIER. On les
-          récupère donc depuis la veille, et on ordonne selon le flux du
-          veilleur : départs, puis arrivées, puis séjours en cours. %>
-      <% today_res    = (@grouped_reservations[Date.today] || []) %>
-      <% checkout_res = (@grouped_reservations[Date.today - 1] || []).select { |r| r.booking.to_date == Date.today } %>
-      <% all_res = (checkout_res + today_res) %>
-      <% if all_res.any? %>
-        <% state_order = { checkout: 0, checkin: 1, ongoing: 2 } %>
-        <% groups = all_res.sort_by { |r| r.start_time }.group_by { |r| r.booking.id }.values %>
-        <% groups = groups.sort_by { |rs| b = rs.first.booking; [state_order.fetch(booking_popover_state(b), 3), b.from_date.to_s] } %>
-        <% groups.each do |grouped_reservations| %>
-          <% reservation = grouped_reservations.first %>
-          <% booking = BookingDecorator.new(reservation.booking) %>
-          <div class="place-self-stretch text-sm font-light text-gray-500 bg-white border border-gray-200 rounded-lg shadow-xl">
-            <%= render "bookings/popover", booking: booking %>
-          </div>
-        <% end %>
+      <%# `data-today-stay-card` : prise stable pour les specs de requête (et pour
+          qui inspecte la page). Le bandeau ne portait aucun repère nommé — les
+          specs s'accrochaient au chemin du RÉSERVABLE, qui n'y figure plus. %>
+      <% today_panel.cards.each do |card| %>
+        <div class="place-self-stretch text-sm font-light text-gray-500 bg-white border border-gray-200 rounded-lg shadow-xl" data-today-stay-card="<%= card.stay.id %>">
+          <%= render "pages/calendar/today_stay_card", card: card %>
+        </div>
       <% end %>
 
-      <% if !@grouped_space_reservations[Date.today].nil? %>
-        <% @grouped_space_reservations[Date.today].sort_by {|r| r.start_time }.group_by { |r| r.space_booking.id }.each do |grouped_space_reservations| %>
-          <% space_reservation = grouped_space_reservations.last.first %>
-          <% space_booking = SpaceBookingDecorator.new(space_reservation.space_booking) %>
-          <div class="place-self-stretch text-sm font-light text-gray-500 bg-white border border-gray-200 rounded-lg shadow-xl">
-            <%= render "space_bookings/popover", space_booking: space_booking %>
-          </div>
-        <% end %>
+      <%# Occupations SANS séjour rattaché (bookings legacy / OTA, locations
+          d'espaces orphelines) : elles gardent leur popover historique — le
+          bandeau ne peut pas les perdre au motif qu'elles n'ont pas de séjour. %>
+      <% today_panel.orphan_booking_groups.each do |group| %>
+        <div class="place-self-stretch text-sm font-light text-gray-500 bg-white border border-gray-200 rounded-lg shadow-xl">
+          <%= render "bookings/popover", booking: group.booking %>
+        </div>
+      <% end %>
+      <% today_panel.orphan_space_groups.each do |group| %>
+        <div class="place-self-stretch text-sm font-light text-gray-500 bg-white border border-gray-200 rounded-lg shadow-xl">
+          <%= render "space_bookings/popover", space_booking: group.space_booking %>
+        </div>
       <% end %>
     </div>
   </div>
