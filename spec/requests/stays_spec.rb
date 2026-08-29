@@ -51,6 +51,36 @@ RSpec.describe "Stays (détails admin)", type: :request do
       expect(response.body).not_to match(/>\s*Airbnb\s*</)
     end
 
+    # Adresse du client sous son nom (Michael 2026-08-29) : on répond au client
+    # depuis la modale, sans détour par la fiche client.
+    it "affiche l'adresse du client en lien mailto sous son nom" do
+      get stay_path(stay)
+      expect(response.body).to include('href="mailto:stayshow@example.com"')
+    end
+
+    it "ne propose jamais l'adresse du fourre-tout en mailto" do
+      catch_all = Customer.create!(email: Customer::CATCH_ALL_EMAIL, customer_type: "individual")
+      orphan = Stay.create!(customer: catch_all, arrival_date: Date.new(2026, 4, 1),
+                            departure_date: Date.new(2026, 4, 2), status: "confirmed")
+
+      get stay_path(orphan)
+      expect(response.body).not_to include("mailto:#{Customer::CATCH_ALL_EMAIL}")
+    end
+
+    # Sur un fourre-tout, la seule adresse qui joint vraiment quelqu'un est celle
+    # portée par la réservation d'origine.
+    it "affiche l'adresse de la réservation d'origine sur un séjour fourre-tout" do
+      catch_all = Customer.create!(email: Customer::OTA_CATCH_ALL_EMAILS["airbnb"], customer_type: "individual")
+      legacy = Stay.create!(customer: catch_all, arrival_date: Date.new(2026, 5, 1),
+                            departure_date: Date.new(2026, 5, 2), status: "confirmed")
+      legacy.stay_items.create!(bookable: Booking.create!(firstname: "Freya", email: "freya@example.com",
+                                                          from_date: Date.new(2026, 5, 1), to_date: Date.new(2026, 5, 2),
+                                                          adults: 2, status: "confirmed", platform: "airbnb"))
+
+      get stay_path(legacy)
+      expect(response.body).to include('href="mailto:freya@example.com"')
+    end
+
     it "includes a reassign form prefilled from the booking (name + group, email blank)" do
       get stay_path(stay)
       expect(response.body).to include("Réassigner le client")
