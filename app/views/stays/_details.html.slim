@@ -84,6 +84,14 @@ div id="stay-details-#{@stay.id}"
         .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Client
         .mt-1
           = link_to @stay.display_name, customer_path(@stay.customer), class: "text-indigo-600 font-medium hover:underline"
+        /  L'adresse à laquelle écrire, sous le nom : qui prépare un accueil
+           répond au client depuis cette modale, sans passer par la fiche
+           client. Rien ne s'affiche quand on n'a pas d'adresse réelle (séjour
+           fourre-tout sans contact d'origine) — cf. `StayDecorator#contact_email`.
+        - contact_email = @stay.contact_email
+        - if contact_email.present?
+          .text-sm.truncate(class="mt-0.5")
+            = mail_to contact_email, class: "text-gray-600 hover:text-gray-900 hover:underline", title: "Écrire à #{contact_email}"
         /  Réassignation REPLIÉE : c'est une opération rare (re-ventilation du
            fourre-tout), elle ne doit pas occuper l'écran en permanence.
         details.mt-2

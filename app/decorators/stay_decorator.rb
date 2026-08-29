@@ -129,6 +129,20 @@ class StayDecorator < ApplicationDecorator
     origin_label.presence || object.customer&.name
   end
 
+  # Adresse email à laquelle ÉCRIRE AU CLIENT, quand on en a une (Michael
+  # 2026-08-29). Affichée sous le nom dans la modale séjour, en lien `mailto:`.
+  #
+  # Sur un séjour FOURRE-TOUT, `customer.email` est une boîte MAISON
+  # (`client@les4sources.be` ou son équivalent OTA) : la proposer en mailto
+  # écrirait aux 4 Sources elles-mêmes. On lui préfère alors l'adresse portée par
+  # la réservation d'origine — la seule qui joigne vraiment la personne. nil
+  # quand il n'y a rien à écrire : mieux vaut aucun lien qu'un lien trompeur.
+  def contact_email
+    return object.customer&.email.presence unless catch_all_customer?
+
+    origin_contacts.filter_map { |contact| contact[:email] }.first
+  end
+
   # Nom porté par la réservation d'origine : le NOM DE GROUPE d'abord, à défaut
   # le nom de la personne (`firstname` / `lastname`). Les résas OTA n'ont pas de
   # nom de groupe mais bien un prénom — le séjour 1440 (Airbnb) affiche « Freya »
