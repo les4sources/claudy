@@ -15,6 +15,7 @@ require "rails_helper"
 #  deleted_at                 :datetime
 #  departure_date             :date
 #  departure_time             :string
+#  invoice_status             :string
 #  legacy_origin              :string
 #  notes                      :text
 #  payment_status             :string           default("pending"), not null
@@ -31,6 +32,7 @@ require "rails_helper"
 #
 #  index_stays_on_activity_selection_token   (activity_selection_token)
 #  index_stays_on_customer_id                (customer_id)
+#  index_stays_on_invoice_status_present     (invoice_status) WHERE (invoice_status IS NOT NULL)
 #  index_stays_on_legacy_origin_unique_live  (legacy_origin) UNIQUE WHERE ((legacy_origin IS NOT NULL) AND (deleted_at IS NULL))
 #  index_stays_on_source                     (source)
 #  index_stays_on_token                      (token) UNIQUE

@@ -13,6 +13,7 @@
 #  deleted_at                 :datetime
 #  departure_date             :date
 #  departure_time             :string
+#  invoice_status             :string
 #  legacy_origin              :string
 #  notes                      :text
 #  payment_status             :string           default("pending"), not null
@@ -29,6 +30,7 @@
 #
 #  index_stays_on_activity_selection_token   (activity_selection_token)
 #  index_stays_on_customer_id                (customer_id)
+#  index_stays_on_invoice_status_present     (invoice_status) WHERE (invoice_status IS NOT NULL)
 #  index_stays_on_legacy_origin_unique_live  (legacy_origin) UNIQUE WHERE ((legacy_origin IS NOT NULL) AND (deleted_at IS NULL))
 #  index_stays_on_source                     (source)
 #  index_stays_on_token                      (token) UNIQUE
@@ -50,6 +52,18 @@ class Stay < ApplicationRecord
   # modèle, lui, continue d'accepter toute valeur de `SOURCES` (édition d'un
   # séjour issu d'un canal automatique : sa source d'origine est préservée).
   ADMIN_SELECTABLE_SOURCES = %w[manual ota].freeze
+
+  # Statut de FACTURE du séjour (Michael 2026-09-02). Même vocabulaire que les
+  # colonnes homonymes de `Booking` / `SpaceBooking`, pour que la file de
+  # facturation n'ait qu'un seul jeu de valeurs à connaître :
+  #   nil / ""    → aucune facture demandée (la grande majorité) ;
+  #   "requested" → Malau a coché « facture à fournir » ; c'est la file de Manon ;
+  #   "sent"      → Manon a facturé.
+  # Nullable : tout l'historique et tout séjour ordinaire n'en portent pas.
+  INVOICE_STATUSES = {
+    "requested" => "À fournir",
+    "sent"      => "Facturée"
+  }.freeze
 
   # Statut de paiement du séjour (epic #26, Phase 1). Le séjour devient l'ancre
   # de paiement ; Booking garde le sien tant que la colonne existe.
@@ -120,6 +134,9 @@ class Stay < ApplicationRecord
   # chemin (import, console, futur canal) ne doit pouvoir imposer un prix < 0.
   validates :price_override_cents, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :payment_status, inclusion: { in: PAYMENT_STATUSES, message: "Statut de paiement invalide" }
+  # Chaîne vide tolérée : c'est ce que renvoie un `<select>` laissé sur son
+  # option neutre, et elle vaut « pas de facture » exactement comme nil.
+  validates :invoice_status, inclusion: { in: INVOICE_STATUSES.keys + [""], message: "Statut de facture invalide" }, allow_nil: true
   # Catégorie : nil permis (historique + funnel optionnel), toute valeur posée
   # doit appartenir à la liste stable.
   validates :category, inclusion: { in: CATEGORIES.keys, message: "Catégorie invalide" }, allow_nil: true
@@ -139,6 +156,16 @@ class Stay < ApplicationRecord
   scope :past, -> { where("departure_date < ?", Date.today).order(arrival_date: :desc) }
   scope :from_source, ->(value) { value.present? ? where(source: value) : all }
   scope :recent, -> { order(created_at: :desc) }
+
+  # Une facture est-elle attendue sur ce séjour (à fournir OU déjà envoyée) ?
+  def invoice_expected?
+    invoice_status.in?(INVOICE_STATUSES.keys)
+  end
+
+  # Libellé FR du statut de facture. « Non requise » couvre nil et "".
+  def invoice_status_label
+    INVOICE_STATUSES.fetch(invoice_status, "Non requise")
+  end
 
   # Libellé FR de la catégorie (nil → nil). Présentation légère partagée par les
   # vues admin/public ; le badge stylé vit dans le décorateur.

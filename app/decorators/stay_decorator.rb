@@ -431,6 +431,22 @@ class StayDecorator < ApplicationDecorator
                   class: "inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700")
   end
 
+  INVOICE_BADGE_STYLES = {
+    "requested" => "bg-amber-100 text-amber-800",
+    "sent"      => "bg-green-100 text-green-800"
+  }.freeze
+
+  # Badge de FACTURE (Michael 2026-09-02). Rien à afficher sur l'immense
+  # majorité des séjours, qui ne demandent aucune facture — le badge n'apparaît
+  # donc que quand une facture est attendue ou déjà partie.
+  def invoice_badge
+    return unless object.invoice_expected?
+
+    h.content_tag(:span, object.invoice_status_label,
+                  class: "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium #{INVOICE_BADGE_STYLES[object.invoice_status]}",
+                  title: "Facture #{object.invoice_status_label.downcase}")
+  end
+
   # --- Données d'en-tête de la modale (Michael 2026-07-26) ------------------
 
   # Nombre de NUITS. nil si le séjour n'est pas daté (journée sèche, import).

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_28_124856) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_02_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1288,6 +1288,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_124856) do
     t.datetime "deleted_at"
     t.date "departure_date"
     t.string "departure_time"
+    t.string "invoice_status"
     t.string "legacy_origin"
     t.text "notes"
     t.string "payment_status", default: "pending", null: false
@@ -1299,6 +1300,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_124856) do
     t.datetime "updated_at", null: false
     t.index ["activity_selection_token"], name: "index_stays_on_activity_selection_token"
     t.index ["customer_id"], name: "index_stays_on_customer_id"
+    t.index ["invoice_status"], name: "index_stays_on_invoice_status_present", where: "(invoice_status IS NOT NULL)"
     t.index ["legacy_origin"], name: "index_stays_on_legacy_origin_unique_live", unique: true, where: "((legacy_origin IS NOT NULL) AND (deleted_at IS NULL))"
     t.index ["source"], name: "index_stays_on_source"
     t.index ["token"], name: "index_stays_on_token", unique: true

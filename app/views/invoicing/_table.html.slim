@@ -35,7 +35,9 @@
             - else
               span.text-gray-400 —
           td.px-3.py-2.text-sm.text-gray-600
-            = line.kind == "booking" ? "Hébergement" : "Espaces"
+            /  Trois provenances depuis 2026-09-02 : le SÉJOUR (demande posée par
+               l'équipe dans son formulaire) et les deux réservables historiques.
+            = Invoicing::Queue::KIND_LABELS.fetch(line.kind, line.kind)
           td.px-3.py-2.text-sm.text-right.whitespace-nowrap
             - if line.priceless?
               span.text-xs.font-medium.text-red-600(title="Aucun montant : la facture ne peut pas être émise") montant à définir

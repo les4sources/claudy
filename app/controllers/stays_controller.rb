@@ -112,6 +112,7 @@ class StaysController < BaseController
       # CONCATÉNÉE avec l'éventuelle note auto du Builder (avertissement
       # multi-chiens) — on ne l'écrase jamais. La note publique est posée telle quelle.
       apply_admin_notes(builder.stay, merge_auto: true)
+      apply_invoice_status(builder.stay)
       # Séjour créé DIRECTEMENT en `confirmed` (réservation prise au téléphone) :
       # le client n'a reçu aucun email du funnel, c'est donc ici — et une seule
       # fois — qu'il reçoit sa page de séjour.
@@ -187,6 +188,7 @@ class StaysController < BaseController
       # À l'édition, le form préremplit les notes courantes : simple écrasement
       # (note interne texte brut + note publique ActionText), pas de concaténation.
       apply_admin_notes(@stay, merge_auto: false)
+      apply_invoice_status(@stay)
       notify_confirmation(@stay) unless was_confirmed
       flash[:notice] = "Séjour mis à jour."
       flash[:alert]  = combined_warning(updater)
@@ -717,6 +719,23 @@ class StaysController < BaseController
 
     stay.public_notes = stay_params[:public_notes] if stay_params.key?(:public_notes)
     stay.save!
+  end
+
+  # Demande de facture posée depuis le formulaire séjour (Michael 2026-09-02).
+  # Appliquée APRÈS la création / mise à jour, comme les notes : le Builder et
+  # l'AdminUpdater ne connaissent que la composition, pas la facturation.
+  #
+  # Le champ est un `<select>` à trois valeurs. Une valeur forgée est IGNORÉE
+  # (on ne touche pas au statut existant) plutôt que refusée : ce champ ne doit
+  # jamais faire échouer l'enregistrement d'un séjour.
+  def apply_invoice_status(stay)
+    return if stay.nil?
+    return unless stay_params.key?(:invoice_status)
+
+    submitted = stay_params[:invoice_status].to_s
+    return unless submitted.blank? || Stay::INVOICE_STATUSES.key?(submitted)
+
+    stay.update!(invoice_status: submitted.presence)
   end
 
   # Concatène l'avertissement de disponibilité (force-dispo) et celui des espaces

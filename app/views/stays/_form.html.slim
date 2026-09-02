@@ -323,6 +323,20 @@
           = check_box_tag "stay[force_availability]", "1", false
           | Forcer la disponibilité (surbooking / saisie a posteriori)
 
+      / --- Facturation --------------------------------------------------------
+      /  Michael 2026-09-02 : c'est ICI que Malau dit « ce client veut une
+         facture ». Le séjour bascule alors dans la file Accueil > Facturation,
+         où Manon la marque envoyée. Le troisième état (« Facturée ») n'est là
+         que pour corriger sans passer par la file — la bascule normale se fait
+         d'un clic depuis la file elle-même.
+      - current_invoice_status = (@stay&.invoice_status.presence || "")
+      section.bg-white.rounded-2xl.ring-1.ring-gray-200.p-5.space-y-4
+        h2.text-base.font-semibold.text-gray-900 Facturation
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 for="stay_invoice_status" Facture
+          = select_tag "stay[invoice_status]", options_for_select([["Non requise", ""]] + Stay::INVOICE_STATUSES.map { |v, l| [l, v] }, current_invoice_status), id: "stay_invoice_status", class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          p.text-xs.text-gray-500 « À fournir » place le séjour dans la file Accueil > Facturation.
+
       / --- Notes --------------------------------------------------------------
       / Note interne (texte brut, jamais visible du client) + note publique
       / (ActionText, affichée sur /sejour/:token). À la création, la note interne
