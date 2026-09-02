@@ -56,9 +56,15 @@ class Stay < ApplicationRecord
   PAYMENT_STATUSES = %w[pending partially_paid paid].freeze
 
   # Statuts qu'un admin peut POSER à la création d'un séjour (epic #66, Phase 1).
-  # `status` reste une chaîne libre au niveau modèle (valeurs historiques :
-  # pending / confirmed / canceled) ; on borne seulement ce que le CRUD admin
-  # accepte de créer — jamais un `canceled` par le formulaire de création.
+  # `status` reste une chaîne libre au niveau modèle (valeurs : pending /
+  # pre_confirmed / confirmed / canceled) ; on borne seulement ce que le CRUD
+  # admin accepte de créer — jamais un `canceled` par le formulaire de création,
+  # et jamais un `pre_confirmed` non plus : il ne se POSE pas, il se GAGNE.
+  #
+  # `pre_confirmed` (issue #215, 2026-08-31) : le Pôle Accueil a regardé la
+  # demande, l'accepte et a demandé l'acompte. État d'attente de paiement, entre
+  # `pending` (demande non regardée) et `confirmed` (acompte encaissé). Il naît
+  # uniquement de `Stays::PreConfirmer` — d'où son absence de cette liste.
   STATUSES_ADMIN_CREATABLE = %w[pending confirmed].freeze
 
   # Catégorie de séjour (Michael 2026-07-21). Clé STABLE anglaise persistée en

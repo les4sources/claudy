@@ -11,7 +11,7 @@
   disponibilité.
   Le partial garde son `id` : il est remplacé sur place par Turbo Stream après
   une action rapide (statut, catégorie, paiement, note).
-- statut_teinte = { "confirmed" => "bg-green-50 border-green-200", "pending" => "bg-amber-50 border-amber-200" }.fetch(@stay.status.to_s, "bg-red-50 border-red-200")
+- statut_teinte = { "confirmed" => "bg-green-50 border-green-200", "pre_confirmed" => "bg-indigo-50 border-indigo-200", "pending" => "bg-amber-50 border-amber-200" }.fetch(@stay.status.to_s, "bg-red-50 border-red-200")
 - occupants = @stay.occupants
 div id="stay-details-#{@stay.id}"
   /  En-tête TEINTÉ PAR LE STATUT : la couleur dit l'état du dossier avant même
@@ -34,6 +34,13 @@ div id="stay-details-#{@stay.id}"
          n'y a rien à confirmer, et sur un fourre-tout l'adresse est une boîte
          maison. Le libellé dit si un email est déjà parti — sans quoi personne ne
          sait s'il faut cliquer.
+      /  Pré-confirmation par le Pôle Accueil (issue #215). N'apparaît que sur une
+         demande ENCORE EN ATTENTE d'un client réel joignable : une fois
+         pré-confirmée, l'acompte est déjà demandé et rejouer l'action créerait un
+         second Payment. C'est un lien (pas un button_to) : l'action ouvre un
+         écran où l'on ajuste le montant avant d'envoyer quoi que ce soit.
+      - if @stay.can_pre_confirm?
+        = link_to "Pré-confirmer et demander l'acompte", pre_confirm_stay_path(@stay), class: "rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
       - if @stay.can_resend_confirmation_email?
         = button_to @stay.confirmation_email_button_label, send_confirmation_email_stay_path(@stay), method: :post, title: @stay.confirmation_email_hint, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Envoyer l'email de confirmation au client ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
       = link_to "Dupliquer", new_stay_path(duplicate_from: @stay.id), title: "Dupliquer ce séjour (nouvelles dates à choisir)", class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"

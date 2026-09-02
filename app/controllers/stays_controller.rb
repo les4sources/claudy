@@ -3,7 +3,7 @@ class StaysController < BaseController
   # sous-navigation Séjours · Coworking · Reporting · Comptabilité, qui remplace
   # l'ancien dropdown de la barre principale.
   before_action :set_home_view
-  before_action :set_stay, only: %i[edit update destroy update_status update_category update_notes approve_change_request refuse_change_request send_confirmation_email]
+  before_action :set_stay, only: %i[edit update destroy update_status update_category update_notes approve_change_request refuse_change_request send_confirmation_email pre_confirm create_pre_confirmation]
 
   # Index admin des séjours (epic #81) — le séjour devient le point d'entrée
   # unique. Tableau paginé (30/page) orienté GESTION des réservations et
@@ -383,6 +383,33 @@ class StaysController < BaseController
     end
   end
 
+  # --- Pré-confirmation par le Pôle Accueil (issue #215) --------------------
+  # L'acompte n'est plus demandé à la soumission du funnel : il l'est ICI, après
+  # qu'un humain a regardé la demande. L'action est donc en DEUX temps — un écran
+  # qui montre le total et propose un montant, puis l'envoi. Le montant est
+  # ajustable : 50 % n'est qu'un préremplissage, l'équipe décide.
+
+  def pre_confirm
+    @suggested_amount_cents = Stays::PreConfirmer.suggested_amount_cents(@stay)
+    @deposit_amount = format_amount_field(@suggested_amount_cents)
+  end
+
+  def create_pre_confirmation
+    service = Stays::PreConfirmer.new(stay: @stay, amount_cents: pre_confirmation_amount_cents)
+
+    if service.run
+      message = "Séjour pré-confirmé. Demande d'acompte envoyée à #{@stay.customer.email}."
+      # L'email peut avoir échoué SANS annuler la pré-confirmation (envoi hors
+      # transaction) : on le dit plutôt que de laisser croire à un envoi réussi.
+      redirect_to stay_path(@stay), (service.email_error ? { alert: service.email_error } : { notice: message })
+    else
+      @suggested_amount_cents = Stays::PreConfirmer.suggested_amount_cents(@stay)
+      @deposit_amount = params[:deposit_amount]
+      flash.now[:alert] = service.error_message
+      render :pre_confirm, status: :unprocessable_entity
+    end
+  end
+
   # Changement rapide de catégorie depuis la modale séjour (Michael 2026-07-21),
   # sans ouvrir le form d'édition. Le `<select>` + bouton vivent dans un
   # turbo-frame de la modale ; on redirige vers `stay_path` et Turbo remplace le
@@ -736,7 +763,10 @@ class StaysController < BaseController
     # du 7/08 sur un séjour du 18-19/07 n'a aucun sens. Cette liste vit dans le
     # frame `stay_compose_grids`, donc elle se rafraîchit quand les dates bougent.
     @assignable_availabilities = form_assignable_availabilities(@draft)
-    @statuses = Stay::STATUSES_ADMIN_CREATABLE
+    # Le statut COURANT est ajouté à la liste s'il n'en fait pas partie (issue
+    # #215) : un séjour `pre_confirmed` ne doit pas retomber en `pending` à la
+    # simple ouverture-enregistrement du form. Cf. le bloc « Statut » de `_form`.
+    @statuses = (Stay::STATUSES_ADMIN_CREATABLE + [@stay&.status]).compact_blank.uniq
     # Grille espaces date-par-date : les colonnes-nuits du séjour. Vide si pas de
     # dates → le form retombe sur les lignes `halls` (journée sèche / espaces
     # seuls sans dates), qui restent la seule saisie possible hors fenêtre.
@@ -1063,6 +1093,26 @@ class StaysController < BaseController
     cents.positive? ? cents : nil
   rescue ArgumentError
     nil
+  end
+
+  # Montant de l'acompte saisi à la pré-confirmation (€) → cents. Même
+  # normalisation FR que `#initial_payment_amount_cents` (virgule décimale).
+  # Une saisie vide ou illisible donne 0 : c'est `Stays::PreConfirmer` qui
+  # refuse et rend le message — le contrôleur ne double pas la validation.
+  def pre_confirmation_amount_cents
+    raw = params[:deposit_amount].to_s.strip
+    return 0 if raw.blank?
+    normalized = raw.tr(",", ".").delete("^0-9.-")
+    return 0 if normalized.blank?
+    (BigDecimal(normalized) * 100).round
+  rescue ArgumentError
+    0
+  end
+
+  # Cents → valeur du `number_field` (€, point décimal). `%g` évite le « 372.50 »
+  # traînant sur un montant rond.
+  def format_amount_field(cents)
+    cents.to_i.positive? ? format("%g", cents / 100.0) : nil
   end
 
   def safe_quote(draft)

@@ -308,17 +308,32 @@
       / Switch accessible (issue parité funnel) : bascule En attente ↔ Confirmé.
       / Un hidden `stay[status]=pending` précède le checkbox `stay[status]=confirmed`
       / (Rack retient la DERNIÈRE valeur) : coché → confirmed, décoché → pending.
+      /
+      / …SAUF quand le séjour porte un statut HORS de cette bascule à deux états
+      / (`pre_confirmed`, issue #215). Le switch ne sait pas le représenter :
+      / décoché il aurait renvoyé `pending` et fait retomber en silence un séjour
+      / pré-confirmé, à la simple ouverture-enregistrement du form. Dans ce cas on
+      / rend un `<select>` qui inclut le statut courant, présélectionné — enregistrer
+      / sans y toucher ne change donc rien.
       - status_confirmed = (current_status == "confirmed")
+      / La liste des statuts POSABLES à la création est la référence : `@statuses`
+      / contient déjà le statut courant (le contrôleur l'y ajoute pour alimenter
+      / les options du select) et ne peut donc pas servir de test.
+      - status_off_switch = Stay::STATUSES_ADMIN_CREATABLE.exclude?(current_status)
+      - status_options = (Array(@statuses) + [current_status]).uniq.map { |v| [stay_status_label(v), v] }
       section.bg-white.rounded-2xl.ring-1.ring-gray-200.p-5.space-y-4
         h2.text-base.font-semibold.text-gray-900 Statut
         .space-y-1
           span.block.text-sm.font-medium.text-gray-700 Statut du séjour
-          = hidden_field_tag "stay[status]", "pending", id: nil
-          label class="inline-flex items-center gap-3 cursor-pointer"
-            input id="stay_status_toggle" type="checkbox" name="stay[status]" value="confirmed" checked=status_confirmed role="switch" aria-label="Séjour confirmé" class="sr-only peer"
-            span.ui-switch aria-hidden="true"
-            span.ui-switch-label-off class="text-sm font-medium text-gray-500" En attente
-            span.ui-switch-label-on class="text-sm font-medium text-emerald-700" Confirmé
+          - if status_off_switch
+            = select_tag "stay[status]", options_for_select(status_options, current_status), id: "stay_status", class: "mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          - else
+            = hidden_field_tag "stay[status]", "pending", id: nil
+            label class="inline-flex items-center gap-3 cursor-pointer"
+              input id="stay_status_toggle" type="checkbox" name="stay[status]" value="confirmed" checked=status_confirmed role="switch" aria-label="Séjour confirmé" class="sr-only peer"
+              span.ui-switch aria-hidden="true"
+              span.ui-switch-label-off class="text-sm font-medium text-gray-500" En attente
+              span.ui-switch-label-on class="text-sm font-medium text-emerald-700" Confirmé
         label.flex.items-center.gap-2.text-sm.text-gray-700
           = check_box_tag "stay[force_availability]", "1", false
           | Forcer la disponibilité (surbooking / saisie a posteriori)

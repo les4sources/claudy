@@ -85,21 +85,18 @@ RSpec.describe "Public::Reservations (/reservation)", type: :request, queue_adap
     end
   end
 
-  describe "soumission → Stripe (Q5 — AC-T2-19) avec Stripe stubbé" do
-    before do
-      session_double = OpenStruct.new(url: "https://checkout.stripe.test/session/abc")
-      allow(StripeService.instance).to receive(:create_checkout_session).and_return(session_double)
-    end
-
-    it "crée un Stay pending et redirige vers Stripe (pas d'auto-confirm)" do
+  # Issue #215 — la soumission n'appelle plus Stripe : elle enregistre une
+  # demande que le Pôle Accueil pré-confirmera.
+  describe "soumission (Q5 — AC-T2-19)" do
+    it "crée un Stay pending sans paiement et renvoie sur la page séjour" do
       expect {
         post "/reservation/coordonnees", params: contact_params
-      }.to change(Stay, :count).by(1)
+      }.to change(Stay, :count).by(1).and change(Payment, :count).by(0)
 
       stay = Stay.last
       expect(stay.status).to eq("pending")
       expect(stay.source).to eq("reservation")
-      expect(response).to redirect_to("https://checkout.stripe.test/session/abc")
+      expect(response).to redirect_to("/sejour/#{stay.token}")
     end
 
     it "enqueue l'email de récap avec lien token (AC-T2-21)" do
@@ -116,17 +113,20 @@ RSpec.describe "Public::Reservations (/reservation)", type: :request, queue_adap
     end
   end
 
-  describe "webhook Stripe → reste pending (AC-T2-19/20, ISC-4)" do
-    before do
-      session_double = OpenStruct.new(url: "https://checkout.stripe.test/session/abc")
-      allow(StripeService.instance).to receive(:create_checkout_session).and_return(session_double)
-    end
-
-    it "le paiement validé ne passe JAMAIS le Stay en confirmed automatiquement" do
+  # AC-T2-19/20 réécrit par l'issue #215. La règle « le paiement ne confirme
+  # jamais » tenait tant que le client pouvait payer AVANT tout regard humain :
+  # il fallait bien que quelqu'un valide ensuite. Depuis l'inversion de l'ordre,
+  # le regard humain a déjà eu lieu (c'est la pré-confirmation), et c'est
+  # l'encaissement qui confirme.
+  describe "webhook Stripe → confirmation automatique (issue #215)" do
+    it "le paiement de l'acompte confirme le séjour pré-confirmé" do
       post "/reservation/coordonnees", params: contact_params
       stay = Stay.last
-      payment = stay.payments.first
-      expect(payment).to be_present
+      expect(stay.payments).to be_empty # rien n'est dû tant que le Pôle Accueil n'a pas regardé
+
+      expect(Stays::PreConfirmer.new(stay: stay, amount_cents: 20_000).run).to be(true)
+      payment = stay.reload.payments.first
+      expect(stay.status).to eq("pre_confirmed")
 
       # Simule l'effet du webhook (checkout.session.completed) sans signature.
       Stripe::CompletedCheckoutService.new(payment: payment).run!(
@@ -134,10 +134,8 @@ RSpec.describe "Public::Reservations (/reservation)", type: :request, queue_adap
         stripe_payment_intent_id: "pi_test_123"
       )
 
-      payment.reload
-      stay.reload
-      expect(payment.status).to eq("paid")
-      expect(stay.status).to eq("pending") # validation manuelle Malau requise
+      expect(payment.reload.status).to eq("paid")
+      expect(stay.reload.status).to eq("confirmed")
     end
   end
 end

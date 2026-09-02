@@ -38,8 +38,11 @@ RSpec.describe Reservations::Builder, "funnel public — persistance à total co
     stay = builder.stay
 
     # INVARIANT #79 : total et acompte strictement inchangés (== devis).
+    # L'acompte se lit désormais sur le DEVIS et non sur un Payment : depuis
+    # l'issue #215, le funnel public n'en crée plus (c'est la pré-confirmation).
     expect(stay.total_amount_cents).to eq(quote.total_excluding_experiences_cents)
-    expect(builder.payment.amount_cents).to eq(quote.deposit_cents)
+    expect(builder.quote.deposit_cents).to eq(quote.deposit_cents)
+    expect(stay.payments).to be_empty
 
     # Camping / repas désormais PERSISTÉS (avant : noyés dans le Booking).
     camping = stay.stay_items.where(bookable_type: "CampingBooking").first&.bookable

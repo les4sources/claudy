@@ -78,7 +78,10 @@ RSpec.describe "Persistance des hamacs sur le séjour (issue #138)" do
       stay = builder.stay
 
       expect(stay.total_amount_cents).to eq(quote.total_excluding_experiences_cents)
-      expect(builder.payment.amount_cents).to eq(quote.deposit_cents)
+      # L'acompte se lit sur le DEVIS depuis l'issue #215 : le funnel public ne
+      # crée plus de Payment, c'est la pré-confirmation du Pôle Accueil qui le fait.
+      expect(builder.quote.deposit_cents).to eq(quote.deposit_cents)
+      expect(stay.payments).to be_empty
 
       # Le Booking d'hébergement ne porte plus la part hamac.
       booking = stay.stay_items.where(bookable_type: "Booking").first.bookable

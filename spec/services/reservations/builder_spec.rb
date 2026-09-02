@@ -33,14 +33,17 @@ RSpec.describe Reservations::Builder do
   # ------------------------------------------------------------------------
   describe "#run — Stay-first (epic #26)" do
     context "séjour AVEC hébergement" do
-      it "crée un Booking d'occupation (le calendrier reste bloqué) et rattache le paiement au Stay" do
+      it "crée un Booking d'occupation (le calendrier reste bloqué), sans aucun paiement" do
         builder = described_class.new(draft: draft)
         expect(builder.run).to be(true)
 
         expect(builder.booking).to be_persisted
         expect(builder.booking.lodging_id).to eq(hulotte.id)
         expect(builder.stay.stay_items.map(&:bookable)).to include(builder.booking)
-        expect(builder.payment.stay).to eq(builder.stay)
+        # Issue #215 : l'acompte n'est plus créé à la soumission — il naît de la
+        # pré-confirmation du Pôle Accueil (`Stays::PreConfirmer`).
+        expect(builder.payment).to be_nil
+        expect(builder.stay.payments).to be_empty
       end
     end
 
@@ -60,14 +63,12 @@ RSpec.describe Reservations::Builder do
         expect(builder.stay.stay_items.where(bookable_type: "CampingBooking").count).to eq(1)
       end
 
-      it "rattache quand même le paiement au Stay" do
+      it "ne crée aucun paiement non plus (issue #215)" do
         builder = described_class.new(draft: camping_draft)
         builder.run
 
-        expect(builder.payment).to be_persisted
-        expect(builder.payment.booking).to be_nil
-        expect(builder.payment.stay).to eq(builder.stay)
-        expect(builder.stay.payments).to include(builder.payment)
+        expect(builder.payment).to be_nil
+        expect(builder.stay.payments).to be_empty
       end
     end
 
@@ -102,18 +103,25 @@ RSpec.describe Reservations::Builder do
       expect(customers.first.stays.count).to eq(2)
     end
 
-    it "crée un Booking item + un Payment pending = acompte 50 % (réutilise l'infra Stripe)" do
+    # Issue #215 — inversion de l'ordre : le funnel public n'encaisse plus rien.
+    # L'acompte (et son montant, ajustable) est créé par la pré-confirmation.
+    it "crée un Booking item SANS aucun Payment" do
       builder = described_class.new(draft: draft)
       builder.run
 
       expect(builder.booking).to be_persisted
       expect(builder.stay.stay_items.map(&:bookable)).to include(builder.booking)
-      expect(builder.payment.status).to eq("pending")
+      expect(builder.payment).to be_nil
+      expect(builder.stay.payments).to be_empty
+      expect(Payment.count).to eq(0)
+    end
+
+    # Le DEVIS, lui, continue de porter l'acompte : c'est ce montant qui
+    # préremplit l'écran de pré-confirmation. Seul le MOMENT de la demande change.
+    it "expose toujours l'acompte 50 % dans le devis" do
+      builder = described_class.new(draft: draft)
       # Hulotte 2 nuits = 485 + 260 = 745 € ; acompte 50 % = 372,50 €.
-      expect(builder.payment.amount_cents).to eq(37_250)
-      # issue #26 : le Payment porte aussi le lien direct vers le Stay.
-      expect(builder.payment.stay).to eq(builder.stay)
-      expect(builder.stay.payments).to include(builder.payment)
+      expect(builder.quote.deposit_cents).to eq(37_250)
     end
   end
 
@@ -170,8 +178,9 @@ RSpec.describe Reservations::Builder do
       expect(builder.stay.experience_bookings).to be_empty
       # Hulotte 2 nuits = 485 + 260 = 745 € ; les activités (8 000 c) n'y entrent pas.
       expect(builder.stay.total_amount_cents).to eq(74_500)
-      # Acompte 50 % HORS activités = 372,50 €.
-      expect(builder.payment.amount_cents).to eq(37_250)
+      # Acompte 50 % HORS activités = 372,50 € — porté par le DEVIS depuis
+      # l'issue #215 (plus aucun Payment créé ici).
+      expect(builder.quote.deposit_cents).to eq(37_250)
     end
 
     it "expose néanmoins le total complet (activités comprises) via le devis funnel" do
@@ -214,8 +223,9 @@ RSpec.describe Reservations::Builder do
 
       # Hulotte 2 nuits = 745 € ; activité = 2 000 + 1 000×3 = 5 000 c.
       expect(builder.stay.total_amount_cents).to eq(74_500 + 5_000)
-      # Acompte 50 % HORS activités = 372,50 € (inchangé Phase 1).
-      expect(builder.payment.amount_cents).to eq(37_250)
+      # Acompte 50 % HORS activités = 372,50 € (inchangé Phase 1), porté par le
+      # devis depuis l'issue #215.
+      expect(builder.quote.deposit_cents).to eq(37_250)
     end
 
     it "ignore une entrée sans créneau (rétrocompat de l'ancienne forme experiences)" do
