@@ -67,8 +67,9 @@ module Reservations
       @skip_availability = skip_availability
       @requested_price_override_cents = price_override_cents
       @requested_platform = platform
-      # Paiement initial en attente (canal admin uniquement, refonte 2026-07-22) :
-      # le funnel public garde son propre acompte Stripe (`build_payment!`).
+      # Paiement initial en attente (canal admin uniquement, refonte 2026-07-22).
+      # Depuis l'issue #215, c'est le SEUL paiement que le Builder crée : le
+      # funnel public n'en crée plus aucun.
       @create_initial_payment = create_initial_payment
       @requested_initial_payment_amount_cents = initial_payment_amount_cents
       @report_errors = true
@@ -171,20 +172,18 @@ module Reservations
         elsif experiences_total.positive?
           @stay.update!(total_amount_cents: quote.total_excluding_experiences_cents + experiences_total)
         end
-        # Le paiement est rattaché au Stay dans tous les cas ; le booking n'est
-        # plus qu'une référence de commodité pour le canal historique. Son montant
-        # reste l'acompte HORS activités (`quote.deposit_cents`).
+        # Canal PUBLIC (issue #215, 2026-08-31) : plus AUCUN paiement à la
+        # soumission. On inverse l'ordre — le client déposait un acompte avant
+        # que qui que ce soit aux 4 Sources ait regardé sa demande, alors que le
+        # séjour reste `pending` et que l'équipe peut devoir refuser, décaler ou
+        # réajuster. L'acompte est désormais créé par `Stays::PreConfirmer`, à la
+        # pré-confirmation manuelle du Pôle Accueil.
         #
         # Canal admin (epic #66) : AUCUN paiement automatique — le solde se règle
         # après coup depuis la page client /sejour/:token. Exception (refonte
         # 2026-07-22) : si l'admin a coché « Créer un paiement initial en attente »,
         # on crée UN Payment `pending` du montant saisi (prérempli à l'acompte).
-        @payment =
-          if @admin
-            build_initial_payment!(quote) if @create_initial_payment
-          else
-            build_payment!(quote)
-          end
+        @payment = build_initial_payment!(quote) if @admin && @create_initial_payment
       end
       # Séjour activités-seules / repas-seuls SANS dates saisies (issue #80) :
       # dériver arrivée/départ de l'élément présent. `recompute_aggregates!`
@@ -546,16 +545,6 @@ module Reservations
     # les canaux (issue #79) — camping/van/repas vivent sur leurs propres modèles.
     def lodging_price_cents(quote)
       quote.lodging_only_cents
-    end
-
-    def build_payment!(quote)
-      Payment.create!(
-        booking: @booking,
-        stay: @stay,
-        amount_cents: quote.deposit_cents,
-        status: "pending",
-        payment_method: "card"
-      )
     end
 
     # Paiement initial admin (refonte 2026-07-22) : Payment `pending` rattaché au

@@ -1,0 +1,40 @@
+/ Écran de PRÉ-CONFIRMATION (issue #215). Le Pôle Accueil a regardé la demande ;
+  cet écran est le moment où il décide du montant de l'acompte et le demande au
+  client. Il montre d'abord ce que coûte le séjour — décider d'un acompte sans
+  voir le total n'aurait pas de sens.
+- suggested = @suggested_amount_cents.to_i
+.px-4.sm:px-6.lg:px-8.py-6
+  .max-w-2xl.mx-auto
+    .mb-6
+      h1.text-xl.font-semibold.text-gray-900 = "Pré-confirmer le séjour ##{@stay.id}"
+      p.mt-1.text-sm.text-gray-600
+        | Le client recevra un email de pré-confirmation avec le montant ci-dessous et son lien de paiement. C'est le règlement de cet acompte qui confirmera définitivement le séjour.
+
+    section.bg-white.rounded-2xl.ring-1.ring-gray-200.p-5.space-y-4
+      dl.divide-y.divide-gray-100.text-sm
+        .flex.items-center.justify-between.py-2
+          dt.text-gray-600 Client
+          dd.font-medium.text-gray-900 = "#{@stay.customer.display_name} · #{@stay.customer.email}"
+        - if @stay.arrival_date && @stay.departure_date
+          .flex.items-center.justify-between.py-2
+            dt.text-gray-600 Dates
+            dd.font-medium.text-gray-900 = "#{l(@stay.arrival_date, format: :long)} → #{l(@stay.departure_date, format: :long)}"
+        .flex.items-center.justify-between.py-2
+          dt.text-gray-600 Total du séjour
+          dd.font-semibold.text-gray-900 = number_to_currency(@stay.total_amount_cents.to_i / 100.0, unit: "€", format: "%n %u", precision: 2)
+        .flex.items-center.justify-between.py-2
+          dt.text-gray-600 Reste dû
+          dd.font-medium.text-gray-900 = number_to_currency(@stay.balance_due_cents.to_i / 100.0, unit: "€", format: "%n %u", precision: 2)
+
+      = form_with url: pre_confirm_stay_path(@stay), method: :post, class: "space-y-4" do
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 for="deposit_amount" Montant de l'acompte (€)
+          = number_field_tag :deposit_amount, @deposit_amount, id: "deposit_amount", step: "0.01", min: 0, required: true, class: "block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          p.text-xs.text-gray-500
+            - if suggested.positive?
+              = "Prérempli à #{(Pricing::Catalog.default_deposit_rate * 100).round} % du séjour hors activités. Ajustez librement."
+            - else
+              | Aucun montant n'a pu être proposé pour ce séjour — saisissez l'acompte à demander.
+        .flex.items-center.justify-end.gap-3.pt-2
+          = link_to "Annuler", stay_path(@stay), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          = submit_tag "Pré-confirmer et envoyer la demande d'acompte", class: "inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 cursor-pointer"

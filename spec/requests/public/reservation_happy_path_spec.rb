@@ -19,7 +19,7 @@ RSpec.describe "Parcours /reservation complet (happy-path B2C)", type: :request 
       .and_return(OpenStruct.new(url: "https://checkout.stripe.test/session/happy"))
   end
 
-  it "déroule entrée → devis → coordonnées → Stripe → Stay pending + email" do
+  it "déroule entrée → devis → coordonnées → Stay pending + email (sans Stripe, issue #215)" do
     get "/reservation"
     expect(response).to redirect_to("/reservation/sejour")
 
@@ -45,15 +45,17 @@ RSpec.describe "Parcours /reservation complet (happy-path B2C)", type: :request 
       }.to change(Stay, :count).by(1)
     end
 
-    expect(response).to redirect_to("https://checkout.stripe.test/session/happy")
-
     stay = Stay.last
+    # Issue #215 : le funnel n'encaisse plus rien — il enregistre une demande et
+    # renvoie le client sur sa page de séjour. L'acompte viendra de la
+    # pré-confirmation du Pôle Accueil.
+    expect(response).to redirect_to("/sejour/#{stay.token}")
     expect(stay.status).to eq("pending")        # PAS d'auto-confirm (Q5)
     expect(stay.source).to eq("reservation")    # canal (Q9)
     expect(stay.customer.email).to eq("happy@example.com")
     expect(stay.stay_items.count).to eq(1)
     # Hulotte 3 nuits (485 + 2×260 = 1005) + repas (4×15 = 60) + chien 50 = 1115 €
     expect(stay.total_amount_cents).to eq(111_500)
-    expect(stay.payments.first.amount_cents).to eq(55_750)
+    expect(stay.payments).to be_empty
   end
 end

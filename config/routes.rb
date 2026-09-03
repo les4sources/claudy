@@ -268,6 +268,11 @@ Rails.application.routes.draw do
       # bouton sert quand le client a perdu le message ou a changé d'adresse.
       # Seul chemin qui passe outre l'idempotence `confirmation_email_sent_at`.
       post :send_confirmation_email
+      # Pré-confirmation par le Pôle Accueil (issue #215) : l'écran de demande
+      # d'acompte (GET) puis son envoi (POST). Un seul chemin, deux verbes —
+      # `as: nil` sur le POST, sinon Rails refuserait le nom de route en double.
+      get  :pre_confirm
+      post :pre_confirm, action: :create_pre_confirmation, as: nil
     end
     resources :experience_bookings, only: [:create]
     # Gestion des paiements DEPUIS la modale séjour (issue paiements-secrétaire) :

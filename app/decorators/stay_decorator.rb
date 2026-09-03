@@ -11,11 +11,16 @@ class StayDecorator < ApplicationDecorator
   # `ExperienceBooking.active`), filtrés EN MÉMOIRE pour éviter tout N+1.
   DEAD_EXPERIENCE_STATUSES = %w[cancelled refused].freeze
 
+  # `pre_confirmed` (issue #215) : le Pôle Accueil a validé la demande et attend
+  # l'acompte. Teinte INDIGO — délibérément distincte de l'ambre de `pending` et
+  # du vert de `confirmed` : au coup d'œil sur l'index, on doit voir la
+  # différence entre « personne n'a encore regardé » et « on attend l'argent ».
   STATUS_STYLES = {
-    "confirmed" => { label: "Confirmé", classes: "bg-green-100 text-green-800" },
-    "pending"   => { label: "En attente", classes: "bg-amber-100 text-amber-800" },
-    "canceled"  => { label: "Annulé", classes: "bg-red-100 text-red-800" },
-    "cancelled" => { label: "Annulé", classes: "bg-red-100 text-red-800" }
+    "confirmed"     => { label: "Confirmé", classes: "bg-green-100 text-green-800" },
+    "pre_confirmed" => { label: "Pré-confirmé", classes: "bg-indigo-100 text-indigo-800" },
+    "pending"       => { label: "En attente", classes: "bg-amber-100 text-amber-800" },
+    "canceled"      => { label: "Annulé", classes: "bg-red-100 text-red-800" },
+    "cancelled"     => { label: "Annulé", classes: "bg-red-100 text-red-800" }
   }.freeze
 
   # `classes` : ancien badge texte, encore utilisé par d'autres vues.
@@ -311,6 +316,17 @@ class StayDecorator < ApplicationDecorator
     style = PAYMENT_STATUS_STYLES.fetch(object.payment_status, PAYMENT_STATUS_STYLES["pending"])
     h.content_tag(:span, h.t("public.stays.payment_status.#{style[:key]}"),
                   class: "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium #{style[:classes]}")
+  end
+
+  # --- Pré-confirmation (issue #215) -------------------------------------
+  # Le bouton n'a de sens que sur une demande ENCORE EN ATTENTE, rattachée à un
+  # client réel et joignable. Sur un séjour déjà `pre_confirmed`, l'acompte est
+  # posé : le proposer à nouveau créerait un second Payment (le service refuse
+  # de toute façon, mais un bouton qui ne peut qu'échouer n'a rien à faire là).
+  def can_pre_confirm?
+    object.status == "pending" &&
+      object.customer&.email.present? &&
+      !object.customer.catch_all?
   end
 
   # --- Email de confirmation (Malau, 2026-08-20) -------------------------

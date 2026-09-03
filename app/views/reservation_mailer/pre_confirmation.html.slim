@@ -1,0 +1,40 @@
+/ Email de PRÉ-CONFIRMATION (issue #215). Envoyé quand le Pôle Accueil a regardé
+  la demande et l'a acceptée. C'est le seul email du flux qui porte un montant
+  d'acompte et un lien de paiement : avant ce regard humain, on ne réclame rien.
+/ NB Slim : deux lignes `|` consécutives se concatènent SANS espace — toujours
+  une seule barre avec continuation indentée pour la prose multi-ligne.
+- deposit_amount = number_to_currency(@payment.amount_cents / 100.0, unit: "€", format: "%n %u", precision: 2)
+p Bonjour #{@stay.customer.first_name.presence || ""},
+
+p
+  | Bonne nouvelle : notre Pôle Accueil a examiné votre demande et la
+    pré-confirme. Il ne reste qu'une étape.
+
+- if @stay.arrival_date && @stay.departure_date
+  p
+    strong Dates :
+    = " #{l(@stay.arrival_date, format: :long)} → #{l(@stay.departure_date, format: :long)}"
+
+p
+  | Pour réserver définitivement votre séjour, il vous reste à régler un acompte
+    de #{deposit_amount} :
+p
+  = link_to "Régler mon acompte de #{deposit_amount}", @pay_url
+p
+  = link_to @pay_url, @pay_url
+
+p
+  strong
+    | C'est le règlement de cet acompte qui confirme définitivement votre
+      réservation.
+  |  Tant qu'il n'est pas reçu, les dates ne vous sont pas garanties. Dès qu'il
+    l'est, vous recevez la confirmation de votre séjour.
+
+p
+  | Vous pouvez consulter votre séjour à tout moment sur votre page :
+  br
+  = link_to @stay_url, @stay_url
+
+p À très bientôt aux 4 Sources !
+
+= render "shared/email_signature"

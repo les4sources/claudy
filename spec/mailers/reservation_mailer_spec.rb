@@ -59,53 +59,70 @@ RSpec.describe ReservationMailer, type: :mailer do
       expect(html).not_to match(/Dates\s*:=/)
     end
 
-    context "avec un acompte encore dû (paiement pending)" do
+    # Issue #215 — cet email part AVANT tout regard humain : il ne doit plus
+    # porter ni montant d'acompte ni lien de paiement. Même quand un Payment
+    # pending traîne sur le séjour (saisie admin), rien ne doit fuir ici.
+    describe "aucune demande d'acompte (issue #215)" do
       let!(:deposit) do
         Payment.create!(stay: stay, booking: booking, amount_cents: 37_250,
                         status: "pending", payment_method: "card")
       end
 
-      it "annonce le montant de l'acompte et le lien de paiement direct" do
+      it "ne porte ni montant d'acompte ni lien de paiement (html ET texte)" do
         html = mail.html_part.body.decoded.gsub(/\s+/, " ")
         text = mail.text_part.body.decoded
 
-        expect(html).to include("372,50 €")
-        expect(html).to include("Régler mon acompte")
         [html, text].each do |body|
-          expect(body).to include("/payments/#{deposit.id}/pay")
+          expect(body).not_to include("/payments/#{deposit.id}/pay")
+          expect(body).not_to match(/acompte de/i)
+          expect(body).not_to match(/Régler mon acompte/i)
+        end
+      end
+
+      it "annonce la pré-confirmation par le Pôle Accueil (html ET texte)" do
+        html = mail.html_part.body.decoded.gsub(/\s+/, " ")
+        text = mail.text_part.body.decoded.gsub(/\s+/, " ")
+
+        [html, text].each do |body|
+          expect(body).to include("Pôle Accueil")
+          expect(body).to include("pré-confirmation")
         end
       end
     end
-
-    it "sans acompte dû, replie sur la mention de validation par l'équipe" do
-      html = mail.html_part.body.decoded.gsub(/\s+/, " ")
-
-      expect(html).not_to include("Régler mon acompte")
-      expect(html).to include("validée par notre équipe")
-    end
   end
 
-  describe "#deposit_received (email post-acompte, décision 2026-07-20)" do
+  # Issue #215 — le SEUL email du flux qui demande de l'argent, envoyé après que
+  # le Pôle Accueil a regardé la demande.
+  describe "#pre_confirmation" do
     let!(:deposit) do
       Payment.create!(stay: stay, booking: booking, amount_cents: 37_250,
-                      status: "paid", payment_method: "card")
+                      status: "pending", payment_method: "card")
     end
 
-    subject(:mail) { described_class.deposit_received(deposit) }
+    subject(:mail) { described_class.pre_confirmation(deposit) }
 
-    it "adresse le mail au Customer avec le bon sujet" do
+    it "adresse le mail au Customer avec un sujet parlant" do
       expect(mail.to).to eq(["guest@example.com"])
-      expect(mail.subject).to include("Acompte bien reçu")
+      expect(mail.subject).to match(/pré-confirmée/i)
     end
 
-    it "confirme le montant reçu et la validation à venir (html ET texte)" do
+    it "porte le montant de l'acompte, le lien de paiement et le lien séjour (html ET texte)" do
       html = mail.html_part.body.decoded.gsub(/\s+/, " ")
-      text = mail.text_part.body.decoded
+      text = mail.text_part.body.decoded.gsub(/\s+/, " ")
 
       [html, text].each do |body|
         expect(body).to include("372,50 €")
-        expect(body).to include("validation par")
+        expect(body).to include("/payments/#{deposit.id}/pay")
         expect(body).to include("/sejour/#{stay.reload.token}")
+      end
+    end
+
+    it "dit explicitement que le paiement de l'acompte confirme la réservation" do
+      html = mail.html_part.body.decoded.gsub(/\s+/, " ")
+      text = mail.text_part.body.decoded.gsub(/\s+/, " ")
+
+      [html, text].each do |body|
+        expect(body).to match(/règlement de cet acompte qui confirme/i)
       end
     end
   end

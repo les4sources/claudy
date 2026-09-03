@@ -128,23 +128,25 @@ module Public
       @quote = @draft.quote
     end
 
-    # Étape finale — commit + redirection Stripe Checkout.
+    # Étape finale — commit de la DEMANDE. Plus aucun encaissement ici.
+    #
+    # Inversion de l'ordre (issue #215, décision Michael du 2026-08-31) : le
+    # funnel n'appelle plus Stripe. Il enregistre une demande, point. Le Pôle
+    # Accueil la regarde, la pré-confirme depuis la fiche séjour et c'est CETTE
+    # pré-confirmation qui envoie l'acompte et son lien de paiement. Demander
+    # l'argent avant tout regard humain n'avait pas de sens : le séjour reste
+    # `pending` et l'équipe peut très bien devoir refuser ou ajuster.
     def create
       persist_draft(merged_draft_params)
       builder = Reservations::Builder.new(draft: @draft)
       if builder.run
         ReservationMailer.confirmation_request(builder.stay).deliver_later
-        pay = Payments::PayService.new(payment_id: builder.payment.id)
         clear_draft
-        if pay.run
-          redirect_to pay.checkout_session_url, allow_other_host: true
-        else
-          # Stay-first : le Booking n'existe pas pour un séjour sans hébergement
-          # classique (camping/espaces seuls) — seul le Stay est garanti. Même
-          # cible que le lien du mail de confirmation (/sejour/:token).
-          redirect_to public_stay_path(builder.stay.token),
-                      notice: "Votre demande est enregistrée. Nous vous recontactons pour le paiement."
-        end
+        # Stay-first : le Booking n'existe pas pour un séjour sans hébergement
+        # classique (camping/espaces seuls) — seul le Stay est garanti. Même
+        # cible que le lien du mail de confirmation (/sejour/:token).
+        redirect_to public_stay_path(builder.stay.token),
+                    notice: "Votre demande est bien enregistrée. Notre Pôle Accueil l'examine et vous envoie une pré-confirmation par email."
       else
         @lodgings = bookable_lodgings
         @quote = @draft.quote
