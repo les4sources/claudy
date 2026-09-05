@@ -14,7 +14,7 @@
 #   - #campings       => [ { kind: "tente"|"hamac", people: Integer, nights: Integer }, ... ]
 #   - #vans           => [ { nights: Integer }, ... ] (ou Integer count via #vans_count)
 #   - #halls          => [ { kind: "grande_salle"|..., days: Integer }, ... ]
-#   - #meals          => [ { kind: "repas_vege_midi"|..., people: Integer }, ... ]
+#   - #meals          => [ { kind: "repas"|"trio"|"buffet_vege"|"buffet_viande"|"apero", people: Integer }, ... ]
 #   - #pizza_parties  => [ { people: Integer }, ... ]
 # Toute méthode absente est traitée comme vide / zéro — le draft minimal n'a
 # besoin que de #lodging + #nights.
@@ -320,7 +320,7 @@ class PricingModel
       next if unit.nil?
       people = entry[:people].to_i
       next if people < 1
-      Line.new(label: "#{humanize(entry[:kind])} — #{people} pers",
+      Line.new(label: "#{MealOrder.label_for(entry[:kind])} — #{people} pers",
                amount_cents: unit * people, category: :meal)
     end
   end

@@ -973,7 +973,9 @@ class StaysController < BaseController
     Array.new(vehicles) { { nights: nights } }
   end
 
-  # Repas datés {kind, date, people} — on écarte les lignes incomplètes.
+  # Lignes de cuisine {id, kind, date, moment, people, notes} — on écarte les
+  # lignes incomplètes. L'`id` (champ caché du form) permet la réconciliation en
+  # place : sans lui, éditer un séjour effacerait la validation de la cuisine.
   def meal_entries(p)
     rows = p[:meals]
     rows = rows.respond_to?(:values) ? rows.values : Array(rows)
@@ -981,7 +983,12 @@ class StaysController < BaseController
       kind   = row[:kind].to_s
       people = row[:people].to_i
       next if kind.blank? || people < 1
-      { kind: kind, date: row[:date].to_s.presence, people: people }
+      { id:     row[:id].presence,
+        kind:   kind,
+        date:   row[:date].to_s.presence,
+        moment: row[:moment].to_s.presence,
+        people: people,
+        notes:  row[:notes].to_s.presence }
     end
   end
 

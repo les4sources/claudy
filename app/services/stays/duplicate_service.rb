@@ -50,10 +50,12 @@ module Stays
       draft.meals = strip_dates(draft.meals)
     end
 
+    # Les dates partent, et l'`id` avec (#219) : les lignes du séjour source ne
+    # doivent pas être « reconnues » comme celles de la copie.
     def strip_dates(rows)
       Array(rows).map do |row|
         row = row.symbolize_keys if row.respond_to?(:symbolize_keys)
-        row.merge(date: nil)
+        row.merge(date: nil).except(:id)
       end
     end
   end

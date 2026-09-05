@@ -24,7 +24,7 @@ RSpec.describe "Parcours /reservation complet (happy-path B2C)", type: :request 
     expect(response).to redirect_to("/reservation/sejour")
 
     post "/reservation/devis",
-         params: { reservation: { lodging_id: hulotte.id, arrival_date: arrival, departure_date: departure, meals: { "0" => { kind: "repas_vege_midi", people: "4" } } } },
+         params: { reservation: { lodging_id: hulotte.id, arrival_date: arrival, departure_date: departure, meals: { "0" => { kind: "repas", people: "4" } } } },
          headers: { "Accept" => "text/vnd.turbo-stream.html" }
     expect(response.media_type).to eq("text/vnd.turbo-stream.html")
     expect(response.body).to include("Total TVAC")
@@ -39,7 +39,7 @@ RSpec.describe "Parcours /reservation complet (happy-path B2C)", type: :request 
             lodging_id: hulotte.id, arrival_date: arrival, departure_date: departure,
             dogs_count: 1, first_name: "Happy", last_name: "Path",
             email: "happy@example.com", phone: "+32470999888",
-            meals: { "0" => { kind: "repas_vege_midi", people: "4" } }
+            meals: { "0" => { kind: "repas", people: "4" } }
           }
         }
       }.to change(Stay, :count).by(1)

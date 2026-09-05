@@ -18,8 +18,13 @@
   - lignes << { titre: "Van (#{v.vehicles} véhicule(s))", details: [outdoor_nights_label(v)], montant: @stay.formatted_item_amount(v) }
 - @stay.hamac_bookings.each do |h|
   - lignes << { titre: "#{h.label} × #{h.count}", details: [outdoor_nights_label(h)], montant: @stay.formatted_item_amount(h) }
+/ Cuisine (#219) : les lignes ACTIVES s'affichent, mais une demande d'info ne
+  compte pas dans le total du séjour — on le dit sur la ligne plutôt que de
+  laisser un écart inexpliqué entre les lignes et le total.
 - @stay.meals.each do |m|
-  - lignes << { titre: m.label, details: [(m.date ? l(m.date, format: :long) : nil), "#{m.people} personne(s)"], montant: @stay.formatted_item_amount(m) }
+  - details = [(m.date ? l(m.date, format: :long) : nil), m.moment_label, "#{m.people} personne(s)", m.notes.presence]
+  - details << "#{m.status_label} — hors total" unless m.billable?
+  - lignes << { titre: m.label, details: details, montant: @stay.formatted_item_amount(m) }
 
 - if lignes.any?
   ul.space-y-2
