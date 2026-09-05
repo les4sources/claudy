@@ -661,7 +661,11 @@ class StayDecorator < ApplicationDecorator
   # Faut-il afficher le bloc de ventilation du solde ? Dès qu'il y a quelque
   # chose à dire : un exigible à régler, un encaissé à créditer, ou des
   # activités en attente à signaler.
+  # Séjour ANNULÉ : plus rien d'exigible — la section ne sert qu'à montrer ce
+  # qui a déjà été encaissé (à rembourser ou retenir), sinon elle disparaît.
   def show_balance_section?
+    return object.amount_paid_cents.positive? if object.canceled?
+
     object.payable_now? ||
       object.amount_paid_cents.positive? ||
       has_pending_experiences?
@@ -670,8 +674,9 @@ class StayDecorator < ApplicationDecorator
   # Bouton « Payer le solde » : un exigible strictement positif ET aucun
   # paiement `pending` déjà en cours (l'acompte non réglé, par exemple, est déjà
   # couvert par son propre CTA — on n'empile pas deux boutons pour la même dette).
+  # Jamais sur un séjour ANNULÉ : plus rien d'exigible, même si le total le dit.
   def show_balance_cta?
-    object.payable_now? && object.payments.pending.none?
+    !object.canceled? && object.payable_now? && object.payments.pending.none?
   end
 
   private

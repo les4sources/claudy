@@ -25,9 +25,11 @@
           dt = t("public.stays.balance.amount_paid")
           dd.whitespace-nowrap = "− #{@stay.formatted_amount_paid}"
 
-      .flex.items-center.justify-between.border-t.pt-3.mt-3(class="border-bark")
-        dt.text-base.font-semibold.text-ink = t("public.stays.balance.balance_due")
-        dd.text-xl.font-bold.text-forest.whitespace-nowrap(data-balance-due="true") = @stay.formatted_balance_due
+      /  Séjour annulé : le « reste dû » n'a plus d'objet — seul l'encaissé compte.
+      - unless @stay.canceled?
+        .flex.items-center.justify-between.border-t.pt-3.mt-3(class="border-bark")
+          dt.text-base.font-semibold.text-ink = t("public.stays.balance.balance_due")
+          dd.text-xl.font-bold.text-forest.whitespace-nowrap(data-balance-due="true") = @stay.formatted_balance_due
 
     - if @stay.show_balance_cta?
       .mt-5(data-stay-balance-cta="true")

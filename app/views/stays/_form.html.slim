@@ -309,16 +309,27 @@
       / Un hidden `stay[status]=pending` précède le checkbox `stay[status]=confirmed`
       / (Rack retient la DERNIÈRE valeur) : coché → confirmed, décoché → pending.
       - status_confirmed = (current_status == "confirmed")
+      - status_canceled = Stay::CANCELED_STATUSES.include?(current_status)
       section.bg-white.rounded-2xl.ring-1.ring-gray-200.p-5.space-y-4
         h2.text-base.font-semibold.text-gray-900 Statut
         .space-y-1
           span.block.text-sm.font-medium.text-gray-700 Statut du séjour
-          = hidden_field_tag "stay[status]", "pending", id: nil
-          label class="inline-flex items-center gap-3 cursor-pointer"
-            input id="stay_status_toggle" type="checkbox" name="stay[status]" value="confirmed" checked=status_confirmed role="switch" aria-label="Séjour confirmé" class="sr-only peer"
-            span.ui-switch aria-hidden="true"
-            span.ui-switch-label-off class="text-sm font-medium text-gray-500" En attente
-            span.ui-switch-label-on class="text-sm font-medium text-emerald-700" Confirmé
+          - if status_canceled
+            /  Séjour ANNULÉ : pas de toggle. Le hidden `pending` + checkbox
+               décochée renverrait `pending` à la première sauvegarde — un séjour
+               annulé qui ressuscite parce qu'on a corrigé une note. On renvoie
+               le statut courant tel quel (`Stays::AdminUpdater` le conserve) ; la
+               réactivation se fait depuis la fiche du séjour.
+            = hidden_field_tag "stay[status]", current_status, id: nil
+            p.inline-flex.items-center.rounded-full.bg-red-100.px-3.py-1.text-sm.font-medium.text-red-800(data-stay-status-canceled="true") Séjour annulé
+            p.text-xs.text-gray-500 Pour le remettre en attente, utilisez « Réactiver le séjour » depuis la fiche du séjour.
+          - else
+            = hidden_field_tag "stay[status]", "pending", id: nil
+            label class="inline-flex items-center gap-3 cursor-pointer"
+              input id="stay_status_toggle" type="checkbox" name="stay[status]" value="confirmed" checked=status_confirmed role="switch" aria-label="Séjour confirmé" class="sr-only peer"
+              span.ui-switch aria-hidden="true"
+              span.ui-switch-label-off class="text-sm font-medium text-gray-500" En attente
+              span.ui-switch-label-on class="text-sm font-medium text-emerald-700" Confirmé
         label.flex.items-center.gap-2.text-sm.text-gray-700
           = check_box_tag "stay[force_availability]", "1", false
           | Forcer la disponibilité (surbooking / saisie a posteriori)

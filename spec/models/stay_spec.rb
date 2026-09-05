@@ -411,4 +411,21 @@ RSpec.describe Stay, type: :model do
       expect(Stay.new(customer: customer, source: "manual", price_override_cents: nil)).to be_valid
     end
   end
+
+  describe "#canceled?" do
+    let(:customer) { Customer.create!(email: "statut@example.com", customer_type: "individual") }
+
+    it "reconnaît les deux orthographes et rien d'autre" do
+      expect(Stay.new(customer: customer, status: "canceled")).to be_canceled
+      expect(Stay.new(customer: customer, status: "cancelled")).to be_canceled
+      expect(Stay.new(customer: customer, status: "confirmed")).not_to be_canceled
+      expect(Stay.new(customer: customer, status: "pending")).not_to be_canceled
+      expect(Stay.new(customer: customer, status: nil)).not_to be_canceled
+    end
+
+    it "est le seul statut posable d'un clic qui ne soit pas créable" do
+      expect(Stay::STATUSES_QUICK_SETTABLE - Stay::STATUSES_ADMIN_CREATABLE).to eq(%w[canceled])
+      expect(Payment::CANCELED_STAY_STATUSES).to equal(Stay::CANCELED_STATUSES)
+    end
+  end
 end

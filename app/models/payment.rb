@@ -74,9 +74,9 @@ class Payment < ApplicationRecord
   scope :paid, -> { where(status: "paid") }
   scope :pending, -> { where(status: "pending") }
 
-  # Statuts de séjour qui valent « annulé ». Les deux orthographes coexistent
-  # dans l'historique (`canceled` posé par l'app, `cancelled` par des imports).
-  CANCELED_STAY_STATUSES = %w[canceled cancelled].freeze
+  # Statuts de séjour qui valent « annulé » — source unique `Stay::CANCELED_STATUSES`
+  # (`canceled` posé par l'app, `cancelled` par des imports).
+  CANCELED_STAY_STATUSES = Stay::CANCELED_STATUSES
 
   # Ce qui mérite d'apparaître dans le journal des paiements (Michael
   # 2026-08-20). Le journal sert à retrouver de l'ARGENT, pas des intentions :

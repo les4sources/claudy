@@ -11,6 +11,13 @@ module Public
 
     def create
       stay = Stay.find_by!(token: params[:token])
+      # Séjour ANNULÉ : plus rien d'exigible — ni Payment ni session Stripe. Le
+      # bouton est déjà masqué sur la page ; ceci ferme le POST direct.
+      if stay.canceled?
+        return redirect_to public_stay_path(stay.token),
+                           alert: "Ce séjour est annulé : il n'y a plus de solde à payer."
+      end
+
       service = Payments::CreateBalanceService.new(stay: stay)
 
       if service.run

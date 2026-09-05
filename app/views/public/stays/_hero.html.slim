@@ -4,7 +4,10 @@
 section.funnel-card.p-5.md:p-7(data-stay-hero="true")
   .flex.flex-wrap.items-start.justify-between.gap-3
     div.min-w-0
-      - if @stay.status == "confirmed"
+      - if @stay.canceled?
+        p.inline-flex.items-center.gap-1.5.rounded-full.bg-ember-tint.px-3.py-1.text-sm.font-semibold(class="text-ember" data-stay-canceled="true")
+          = t("public.stays.show.canceled_pill")
+      - elsif @stay.status == "confirmed"
         p.inline-flex.items-center.gap-1.5.rounded-full.bg-forest-tint.px-3.py-1.text-sm.font-semibold.text-forest
           span.text-forest
             = funnel_icon :check, css_class: "w-4 h-4"
@@ -13,10 +16,13 @@ section.funnel-card.p-5.md:p-7(data-stay-hero="true")
         p.inline-flex.items-center.gap-1.5.rounded-full.bg-ember-tint.px-3.py-1.text-sm.font-semibold(class="text-ember")
           = t("public.stays.show.pending_pill")
       h1.funnel-title.mt-3 = t("public.stays.show.title")
-    = @stay.payment_status_badge
+    /  Un séjour annulé n'attend plus de paiement : le badge se tait.
+    = @stay.payment_status_badge unless @stay.canceled?
 
   p.mt-2.text-base(class="text-moss")
-    - if @stay.status == "confirmed"
+    - if @stay.canceled?
+      = t("public.stays.show.canceled_intro")
+    - elsif @stay.status == "confirmed"
       = t("public.stays.show.confirmed_intro")
     - else
       = t("public.stays.show.pending_intro")

@@ -19,6 +19,8 @@ en:
         pending_pill: "Request pending"
         confirmed_intro: "It is official: we are expecting you. Everything you need to know is on this page — keep the link, it stays valid until you leave."
         pending_intro: "Your request has been received. Our team is reviewing it and will write to you as soon as it is confirmed."
+        canceled_pill: "Stay cancelled"
+        canceled_intro: "This stay has been cancelled. If this is a mistake, write to us: we will check availability and get back to you quickly."
         arrival: "Arrival"
         departure: "Departure"
         occupants_heading: "Your party"

@@ -75,6 +75,18 @@ class Stay < ApplicationRecord
   # accepte de créer — jamais un `canceled` par le formulaire de création.
   STATUSES_ADMIN_CREATABLE = %w[pending confirmed].freeze
 
+  # Statuts qui valent « annulé » (Michael 2026-09-05). L'app POSE `canceled`
+  # (orthographe des réservables et des filtres du calendrier) ; `cancelled`
+  # survit dans l'historique importé et reste reconnu en LECTURE. Tout filtre
+  # « hors séjours annulés » passe par cette constante — un `%w[cancelled]` seul
+  # laissait passer un séjour annulé depuis l'UI (relances, invitations).
+  CANCELED_STATUSES = %w[canceled cancelled].freeze
+
+  # Statuts qu'un admin peut POSER d'un clic depuis la fiche du séjour
+  # (`Stays::QuickStatusUpdater`) : les deux statuts vivants + l'annulation.
+  # L'annulation n'est jamais proposée à la CRÉATION (cf. ci-dessus).
+  STATUSES_QUICK_SETTABLE = (STATUSES_ADMIN_CREATABLE + %w[canceled]).freeze
+
   # Catégorie de séjour (Michael 2026-07-21). Clé STABLE anglaise persistée en
   # base → libellé FR à l'affichage. Nullable au niveau modèle : tout
   # l'historique importé n'a pas de catégorie, et le funnel public la laisse
@@ -310,6 +322,12 @@ class Stay < ApplicationRecord
 
   def paid?
     payment_status == "paid"
+  end
+
+  # Séjour annulé : un STATUT de dossier (badge rouge, toujours listé), distinct
+  # de la suppression. Reconnaît les deux orthographes (cf. `CANCELED_STATUSES`).
+  def canceled?
+    CANCELED_STATUSES.include?(status)
   end
 
   # Le séjour porte-t-il un prix imposé (epic #81, Phase 3) ? Quand oui, le total

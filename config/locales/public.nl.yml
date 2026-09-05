@@ -19,6 +19,8 @@ nl:
         pending_pill: "Aanvraag in behandeling"
         confirmed_intro: "Het is officieel: we verwachten u. Alles wat u moet weten staat op deze pagina — bewaar de link, hij blijft geldig tot uw vertrek."
         pending_intro: "Uw aanvraag is goed geregistreerd. Ons team bekijkt ze en schrijft u zodra ze bevestigd is."
+        canceled_pill: "Verblijf geannuleerd"
+        canceled_intro: "Dit verblijf werd geannuleerd. Is dit een vergissing? Schrijf ons: we bekijken de beschikbaarheid en antwoorden u snel."
         arrival: "Aankomst"
         departure: "Vertrek"
         occupants_heading: "U komt met"

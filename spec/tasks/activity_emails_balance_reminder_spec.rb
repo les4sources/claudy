@@ -59,8 +59,17 @@ RSpec.describe "activity_emails:balance_reminder", type: :task, queue_adapter: :
     expect(stay.reload.balance_reminder_sent_at).to be_nil
   end
 
+  # Les deux orthographes : `cancelled` (imports historiques) et `canceled` (posé
+  # par l'app depuis « Annuler le séjour », 2026-09-05).
   it "ignore les séjours annulés même avec un solde" do
     stay = build_stay(email: "cancel@example.com", arrival_offset: 14, status: "cancelled")
+
+    expect { run_task }.not_to have_enqueued_mail(StayBalanceReminderMailer, :reminder)
+    expect(stay.reload.balance_reminder_sent_at).to be_nil
+  end
+
+  it "ignore aussi un séjour annulé depuis l'UI (statut `canceled`)" do
+    stay = build_stay(email: "canceled-ui@example.com", arrival_offset: 14, status: "canceled")
 
     expect { run_task }.not_to have_enqueued_mail(StayBalanceReminderMailer, :reminder)
     expect(stay.reload.balance_reminder_sent_at).to be_nil

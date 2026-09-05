@@ -11,8 +11,9 @@ section.mt-6.rounded-2xl.border.p-5.md:p-6(class="bg-sand-deep border-bark")
              phone: link_to("+32 455 13 61 42", "tel:+32455136142", class: "underline"))
 
       /  Demande de modification (issue #133). Un séjour déjà parti ne se modifie
-         plus : pas de bouton quand le départ est passé.
-      - if @stay.departure_date.present? && @stay.departure_date >= Date.current
+         plus : pas de bouton quand le départ est passé. Ni sur un séjour annulé :
+         l'en-tête invite déjà à nous écrire.
+      - if !@stay.canceled? && @stay.departure_date.present? && @stay.departure_date >= Date.current
         .mt-4
           = link_to t("public.stay_change_requests.cta"),
                     new_public_stay_change_request_path(@stay.token),
