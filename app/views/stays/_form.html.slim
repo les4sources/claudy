@@ -246,22 +246,37 @@
 
       = render "stays/compose_grids"
 
-      / --- Repas --------------------------------------------------------------
-      - meal_kind_options = [["Repas végé (midi)", "repas_vege_midi"], ["Buffet pain-fromages", "buffet"]]
+      / --- Cuisine ------------------------------------------------------------
+      / Le champ caché `id` porte la réconciliation en place (epic Cuisine #219) :
+      / sans lui, chaque édition du séjour recréerait les lignes et effacerait la
+      / validation de la cuisine, le responsable et les coûts. Ce formulaire ne
+      / pilote QUE la prestation — prix, responsable et statuts vivent dans Cuisine.
+      - meal_kind_options = MealOrder::KIND_LABELS.map { |kind, label| [label, kind] }
+      - meal_moment_options = MealOrder::MOMENT_LABELS.map { |moment, label| [label, moment] }
+      - meal_field_class = "w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
       - existing_meals = Array(@draft&.meals).map { |m| m.respond_to?(:symbolize_keys) ? m.symbolize_keys : m }
       - meal_rows = existing_meals + Array.new([3 - existing_meals.size, 1].max) { {} }
       details class=section_box open=existing_meals.any?
         summary class=section_summary
-          span 🍽️ Repas
+          span 🍽️ Cuisine
           = stay_form_section_marker(existing_meals.any?, existing_meals.size)
         .px-5.pb-5.space-y-4
-          p.text-sm.text-gray-500 Ajoutez un repas (type + date + nombre de convives). Les repas n'occupent pas le calendrier.
+          p.text-sm.text-gray-500 Repas, buffets et apéros du séjour (type + moment + date + convives). Ils n'occupent pas le calendrier. Le suivi — qui s'en charge, où en est la demande — se tient dans Cuisine.
           ul.divide-y.divide-gray-100
             - meal_rows.each_with_index do |row, index|
-              li.py-2.grid.grid-cols-3.gap-2
-                = select_tag "stay[meals][#{index}][kind]", options_for_select(meal_kind_options, row[:kind]), include_blank: "— Repas —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-                = date_field_tag "stay[meals][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-                = number_field_tag "stay[meals][#{index}][people]", row[:people], min: 0, placeholder: "Convives", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+              li.py-3.grid.grid-cols-2.gap-2.sm:grid-cols-12
+                - if row[:id].present?
+                  = hidden_field_tag "stay[meals][#{index}][id]", row[:id]
+                .col-span-2.sm:col-span-4
+                  = select_tag "stay[meals][#{index}][kind]", options_for_select(meal_kind_options, row[:kind]), include_blank: "— Type —", class: meal_field_class
+                .sm:col-span-2
+                  = select_tag "stay[meals][#{index}][moment]", options_for_select(meal_moment_options, row[:moment]), include_blank: "— Moment —", class: meal_field_class
+                .sm:col-span-3
+                  = date_field_tag "stay[meals][#{index}][date]", row[:date], class: meal_field_class
+                .col-span-2.sm:col-span-3
+                  = number_field_tag "stay[meals][#{index}][people]", row[:people], min: 0, placeholder: "Convives", class: meal_field_class
+                .col-span-2.sm:col-span-12
+                  = text_field_tag "stay[meals][#{index}][notes]", row[:notes], placeholder: "Intolérances, précisions…", class: meal_field_class
 
       / --- Terrasse (ADMIN uniquement) ---------------------------------------
       / Groupes occupant UNIQUEMENT la terrasse (ex. randonneurs / BBQ) : forfait

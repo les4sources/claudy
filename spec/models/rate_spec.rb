@@ -49,7 +49,7 @@ RSpec.describe Rate, type: :model do
 
   describe ".grouped" do
     it "range chaque tarif dans son domaine, groupes dans l'ordre" do
-      Rate.create!(key: "meal.buffet.per_person", amount_cents: 1_200)
+      Rate.create!(key: "meal.buffet_vege.per_person", amount_cents: 1_200)
       Rate.create!(key: "lodging.la_hulotte.first_night", amount_cents: 48_500)
       Rate.create!(key: "dog.supplement", amount_cents: 5_000)
 

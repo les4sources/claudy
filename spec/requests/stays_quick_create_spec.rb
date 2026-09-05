@@ -51,7 +51,7 @@ RSpec.describe "Stays — saisie rapide datée & duplication (epic #81, Phase 7)
         email:          "alice@example.com",
         phone:          "0470111222",
         halls:          [{ kind: "grande_salle", date: date.iso8601, period: "journee" }],
-        meals:          [{ kind: "buffet", date: date.iso8601, people: 3 }]
+        meals:          [{ kind: "buffet_vege", date: date.iso8601, people: 3 }]
       )
       builder = Reservations::Builder.new(draft: draft, admin: true, source: "manual", price_override_cents: 88_800)
       builder.run!

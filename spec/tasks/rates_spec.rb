@@ -75,7 +75,7 @@ RSpec.describe "rates rake tasks", type: :task do
     end
 
     it "range les nouvelles clés dans le groupe « Sourciers » sans déplacer les repas" do
-      Rate.create!(key: "meal.buffet.per_person", amount_cents: 1_200)
+      Rate.create!(key: "meal.buffet_vege.per_person", amount_cents: 1_200)
       run_task("rates:seed_sourciers")
 
       groups = Rate.grouped.to_h
@@ -83,7 +83,7 @@ RSpec.describe "rates rake tasks", type: :task do
         .to match_array(%w[bar.member_markup grocery.member_ratio grocery.public_ratio
                            pot.monthly_per_adult pot.swing_share dome.monthly_flat
                            dome.daily pet.balthazar_monthly])
-      expect(groups["Repas"].map(&:key)).to include("meal.buffet.per_person",
+      expect(groups["Repas"].map(&:key)).to include("meal.buffet_vege.per_person",
                                                     "meal.batchcooking.per_person")
     end
 

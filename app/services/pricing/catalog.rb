@@ -127,10 +127,14 @@ module Pricing
     # Alias rétrocompatible — rate du forfait journée par kind.
     HALL_PER_DAY_CENTS = HALL_RATES.transform_values { |r| r["journee"] }.freeze
 
-    # Repas : €/pers.
+    # Cuisine : €/pers (epic Cuisine #219). Les libellés vivent dans
+    # `MealOrder::KIND_LABELS` — source unique pour les vues comme pour le seed.
     MEAL_PER_PERSON_CENTS = {
-      "repas_vege_midi" => 1_500, # 15 €/pers
-      "buffet"          => 1_200, # buffet pain-fromages 12 €/pers
+      "repas"         => 1_500, # un repas, midi ou soir
+      "trio"          => 3_500, # midi + goûter + soir
+      "buffet_vege"   => 1_200,
+      "buffet_viande" => 1_400,
+      "apero"         => 500    # provisoire, à ajuster dans Paramètres > Tarifs
     }.freeze
 
     # Pizza Party : forfait + €/pers (40 € allumage + 7 €/pers patons).

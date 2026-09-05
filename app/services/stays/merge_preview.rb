@@ -68,7 +68,7 @@ module Stays
     def computed_total_cents(stay)
       stay.bookables.sum { |b| b.try(:price_cents).to_i } +
         stay.experience_bookings.active.sum(&:price_cents) +
-        stay.meal_orders.sum { |m| m.price_cents.to_i }
+        stay.meal_orders.billable.sum { |m| m.price_cents.to_i }
     end
 
     # --- Déjà payé : mirror de `Stay#amount_paid_cents` post-fusion -----------
@@ -115,7 +115,7 @@ module Stays
         decorator.camping_bookings.each { |b| items << item(:camping, decorator.item_label(b), stay, from_target, b.try(:price_cents)) }
         decorator.van_bookings.each    { |b| items << item(:van,     decorator.item_label(b), stay, from_target, b.try(:price_cents)) }
         stay.experience_bookings.active.each { |eb| items << item(:activity, eb.experience.name, stay, from_target, eb.price_cents) }
-        stay.meal_orders.each          { |m| items << item(:meal, m.label, stay, from_target, m.price_cents) }
+        stay.meal_orders.active.each   { |m| items << item(:meal, m.label, stay, from_target, m.price_cents) }
       end
       items
     end

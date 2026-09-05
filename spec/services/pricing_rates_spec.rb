@@ -16,7 +16,7 @@ RSpec.describe "Tarifs paramétrés (Pricing::Rates)" do
       campings: [{ kind: "tente", people: 3, nights: 2 }],
       vans: [{ nights: 2 }],
       halls: [{ kind: "grande_salle", date: "2026-09-08", period: "journee" }],
-      meals: [{ kind: "buffet", people: 4 }],
+      meals: [{ kind: "buffet_vege", people: 4 }],
       terrasses: [{ date: "2026-09-09", people: 5 }],
       pizza_parties: [{ people: 6 }]
     )
@@ -55,8 +55,11 @@ RSpec.describe "Tarifs paramétrés (Pricing::Rates)" do
         van.per_night
         terrace.per_person_day
         hamac.simple
-        meal.repas_vege_midi.per_person
-        meal.buffet.per_person
+        meal.repas.per_person
+        meal.trio.per_person
+        meal.buffet_vege.per_person
+        meal.buffet_viande.per_person
+        meal.apero.per_person
         coworking.pack_1
         dog.supplement
         deposit.default_rate
@@ -123,7 +126,7 @@ RSpec.describe "Tarifs paramétrés (Pricing::Rates)" do
 
       Rate.find_by(key: "dog.supplement").update!(amount_cents: 6_000)
       Rate.find_by(key: "camping.tente_per_person_night").update!(amount_cents: 850)
-      Rate.find_by(key: "meal.buffet.per_person").update!(amount_cents: 1_300)
+      Rate.find_by(key: "meal.buffet_vege.per_person").update!(amount_cents: 1_300)
       Rate.find_by(key: "terrace.per_person_day").update!(amount_cents: 350)
       Pricing::Rates.reset!
 

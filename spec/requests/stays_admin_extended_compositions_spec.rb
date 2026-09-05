@@ -53,7 +53,7 @@ RSpec.describe "Stays — compositions élargies (issue #80)", type: :request do
   describe "POST /stays — repas seuls" do
     it "crée un séjour sans hébergement, daté du repas, au bon total" do
       expect {
-        post stays_path, params: base_params(meals: { "0" => { kind: "buffet", date: day.iso8601, people: 3 } })
+        post stays_path, params: base_params(meals: { "0" => { kind: "buffet_vege", date: day.iso8601, people: 3 } })
       }.to change(Stay, :count).by(1)
        .and change(MealOrder, :count).by(1)
        .and change(Booking, :count).by(0)
