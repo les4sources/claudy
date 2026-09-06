@@ -65,7 +65,11 @@ class MealOrderDecorator < ApplicationDecorator
 
   def responsible_label = object.responsible_human&.name.presence || "Personne"
 
-  def responsible_missing? = object.responsible_human_id.blank?
+  # On lit l'ASSOCIATION, pas la colonne : `Human` porte un `default_scope` sur
+  # `status: "active"`, donc un membre désactivé laisse `responsible_human_id`
+  # rempli et `responsible_human` à nil. Lire la colonne masquerait le bouton
+  # « Je m'en charge » sur une ligne que plus personne ne porte vraiment.
+  def responsible_missing? = object.responsible_human.nil?
 
   # Notes tronquées pour la ligne ; le texte complet vit dans le `title`.
   def notes_short

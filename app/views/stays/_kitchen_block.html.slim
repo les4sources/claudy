@@ -1,7 +1,7 @@
 / Bloc Cuisine (epic #219, phase 3). La composition dit CE QUI est commandé ;
   ce bloc dit OÙ EN EST chaque demande et qui s'en charge — le suivi lui-même
   se tient sur /kitchen.
-- kitchen_orders = MealOrderDecorator.decorate_collection(@stay.meal_orders.chronological.to_a)
+- kitchen_orders = MealOrderDecorator.decorate_collection(@stay.meal_orders.includes(:responsible_human).chronological.to_a)
 .border-t.border-gray-200.px-5.py-4
   .flex.items-baseline.justify-between.gap-3
     .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Cuisine

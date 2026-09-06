@@ -99,8 +99,12 @@ module Kitchen
 
       @order.responsible_human = human
       accept_when_someone_takes_it(@order)
-      @order.save!
-      redirect_to kitchen_orders_path, notice: "#{human.name} s'en charge."
+
+      if @order.save
+        redirect_to kitchen_orders_path, notice: "#{human.name} s'en charge."
+      else
+        redirect_to kitchen_orders_path, alert: @order.errors.full_messages.to_sentence
+      end
     end
 
     # Canal ADMIN de la validation (phase 4), en miroir du canal jeton. Les

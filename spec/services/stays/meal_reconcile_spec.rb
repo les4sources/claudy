@@ -130,6 +130,19 @@ RSpec.describe "Cuisine — réconciliation des lignes à l'édition du séjour"
     expect(intruder.people).to eq(4)
   end
 
+  it "recrée une ligne du séjour annulée pendant que le formulaire était ouvert" do
+    # Édition concurrente : Malau ouvre le séjour, quelqu'un annule la ligne
+    # depuis la page Cuisine, Malau enregistre. Sa saisie ne doit pas partir en
+    # silence sous un flash « Séjour mis à jour ».
+    stay = build_stay!(meals: [{ kind: "repas", date: day.iso8601, people: 12 }])
+    rows = draft_rows(stay)
+    stay.meal_orders.sole.update!(status: "cancelled", cancellation_reason: "annulé ailleurs")
+
+    update!(stay, meals: [rows[0].merge(people: 15)])
+
+    expect(stay.meal_orders.active.map(&:people)).to eq([15])
+  end
+
   it "exclut une demande d'info du total du séjour" do
     stay = build_stay!(meals: [{ kind: "repas", date: day.iso8601, people: 12 }])
     expect(stay.total_amount_cents).to eq(18_000)

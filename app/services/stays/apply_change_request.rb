@@ -19,7 +19,7 @@ module Stays
 
     def run
       stay = @change_request.stay
-      draft = @change_request.proposed_draft
+      draft = refresh_untouched_composition(@change_request.proposed_draft, stay)
 
       # Re-vérification de dispo à la validation : le monde a pu bouger depuis
       # la soumission du client. Le forçage reste possible côté équipe.
@@ -60,6 +60,25 @@ module Stays
     end
 
     private
+
+    # Le snapshot du client date de sa SOUMISSION ; l'approbation peut venir
+    # des jours plus tard. Entre les deux, l'équipe a pu ajouter un buffet,
+    # corriger des convives, poser une activité. Rejouer le snapshot tel quel
+    # annulerait tout ça en silence (`reconcile_meals!` annule ce qui manque au
+    # draft) et remettrait des validations de cuisine en attente pour un
+    # changement que personne n'a demandé.
+    #
+    # Le formulaire client ne porte ni les repas, ni les activités, ni la
+    # terrasse : on les relit donc du séjour au moment de l'appliquer, pas au
+    # moment de la demande. Ce que le client a réellement demandé — dates,
+    # hébergement, occupants — vient bien de son snapshot.
+    def refresh_untouched_composition(draft, stay)
+      current = Stays::DraftReconstructor.call(stay)
+      draft.meals       = current.meals
+      draft.experiences = current.experiences
+      draft.terrasses   = current.terrasses
+      draft
+    end
 
     def append_refund_note!(stay)
       line = "Remboursement à effectuer — IBAN #{@change_request.refund_iban}. " \

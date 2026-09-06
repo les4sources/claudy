@@ -47,6 +47,17 @@ RSpec.describe "Cuisine — envois planifiés" do
       expect(ActionMailer::Base.deliveries).to be_empty
     end
 
+    it "pose son garde-fou avant d'envoyer, pour qu'un échec ne fasse pas doublon" do
+      line
+      allow(KitchenMailer).to receive(:weekly_digest).and_raise(StandardError, "file indisponible")
+
+      expect { described_class.new.run }.to raise_error(StandardError)
+      expect(Setting["kitchen.digest_last_sent_on"]).to eq(Date.current.iso8601)
+
+      allow(KitchenMailer).to receive(:weekly_digest).and_call_original
+      expect(described_class.new.run).to include("déjà envoyé")
+    end
+
     it "ne renvoie pas deux fois dans la même semaine, sauf FORCE" do
       line
       described_class.new.run
@@ -73,14 +84,35 @@ RSpec.describe "Cuisine — envois planifiés" do
       expect(described_class.new.run).to include("aucune prestation")
     end
 
-    it "laisse tranquille ce qui n'est ni à J-5 ni accepté" do
-      line(date: Date.current + 4, validation: "accepted", status: "confirmed")
+    it "laisse tranquille ce qui n'est pas encore accepté ou pas engagé" do
       line(date: Date.current + 5, validation: "pending", status: "confirmed")
       line(date: Date.current + 5, validation: "accepted", status: "inquiry")
+      line(date: Date.current + 9, validation: "accepted", status: "confirmed")
 
       described_class.new.run
 
       expect(ActionMailer::Base.deliveries).to be_empty
+    end
+
+    it "rattrape une prestation dont le rappel a été manqué" do
+      # Un jour de cron sauté (déploiement, redémarrage) ne doit pas faire
+      # perdre le rappel pour toujours : la fenêtre va jusqu'à J-5, elle n'est
+      # pas la date exacte.
+      order = line(date: Date.current + 2, status: "confirmed", validation: "accepted")
+
+      described_class.new.run
+
+      expect(ActionMailer::Base.deliveries.last.subject).to include("Pain à commander")
+      expect(order.reload.bread_reminder_sent_at).to be_present
+    end
+
+    it "revient au responsable par défaut quand la ligne n'a personne de joignable" do
+      Setting.set("kitchen.repas.default_human_id", michael.id)
+      line(date: Date.current + 5, status: "confirmed", validation: "accepted", responsible_human: nil)
+
+      described_class.new.run
+
+      expect(ActionMailer::Base.deliveries.last.to).to eq(["michael@les4sources.be"])
     end
 
     it "garde éligible une ligne dont le responsable n'a pas d'email" do

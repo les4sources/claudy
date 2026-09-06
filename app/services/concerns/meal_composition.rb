@@ -59,8 +59,9 @@ module MealComposition
   # moment, convives, notes. Le prix unitaire surchargé, le responsable, le
   # statut client, la validation et les coûts ne sont jamais écrasés par lui.
   def reconcile_meals!(stay, draft)
-    existing = stay.meal_orders.active.index_by(&:id)
-    kept     = []
+    existing  = stay.meal_orders.active.index_by(&:id)
+    own_ids   = stay.meal_orders.pluck(:id).to_set
+    kept      = []
 
     draft_meal_entries(draft).each do |entry|
       order = entry[:id] && existing[entry[:id]]
@@ -68,11 +69,16 @@ module MealComposition
       if order
         order.update!(entry.slice(:kind, :date, :moment, :people, :notes))
         kept << order.id
-      elsif entry[:id].nil?
-        # Ligne neuve. Une entrée qui porte un `id` étranger au séjour est
-        # ignorée : params forgés ou draft recopié d'un autre séjour.
+      elsif entry[:id].nil? || own_ids.include?(entry[:id])
+        # Sans `id` : ligne neuve. Avec un `id` du séjour mais absent des lignes
+        # ACTIVES : quelqu'un l'a annulée ou refusée pendant que le formulaire
+        # était ouvert. On recrée plutôt que d'ignorer — la saisie qu'on a sous
+        # les yeux est la plus récente, et la jeter en silence sous un flash
+        # « Séjour mis à jour » est le pire des deux.
         kept << create_meal_order!(stay, entry).id
       end
+      # `id` étranger au séjour : ignoré. Ça ne vient jamais de l'interface —
+      # params forgés, ou draft recopié d'un autre séjour.
     end
 
     (existing.keys - kept).each do |id|

@@ -18,16 +18,22 @@ module Kitchen
     private
 
     def scope
+      # Fenêtre OUVERTE jusqu'à J-5, pas la date exacte : un jour de cron manqué
+      # (déploiement, redémarrage) faisait perdre le rappel pour toujours.
+      # `bread_reminder_sent_at` porte seul l'anti-doublon, la fenêtre large est
+      # donc sans risque.
       MealOrder.billable
-               .where(validation: "accepted", bread_reminder_sent_at: nil,
-                      date: Date.current + LEAD_DAYS)
+               .where(validation: "accepted", bread_reminder_sent_at: nil)
+               .where(date: Date.current..(Date.current + LEAD_DAYS))
                .includes(:responsible_human, stay: :customer)
     end
 
     # Sans email, pas d'horodatage : la ligne reste éligible au prochain passage,
     # au cas où l'adresse serait renseignée entre-temps.
     def remind(order)
-      email = order.responsible_human&.email
+      # Même repli que le notifier et le digest : une ligne sans responsable
+      # joignable revient au responsable par défaut de sa famille.
+      email = (order.responsible_human || Kitchen::Config.default_human(order.family))&.email
       return false if email.blank?
 
       KitchenMailer.bread_reminder(order, email).deliver_later

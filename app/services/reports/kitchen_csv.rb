@@ -27,7 +27,7 @@ module Reports
       [
         line.date&.iso8601,
         line.moment_label,
-        line.stay&.customer&.name,
+        safe(line.stay&.customer&.name),
         line.label,
         line.people,
         euros(line.price_cents),
@@ -35,10 +35,18 @@ module Reports
         line.cost_cents.nil? ? nil : euros(line.margin_cents),
         line.responsible_human&.name,
         line.status_label,
-        line.notes
+        safe(line.notes)
       ]
     end
 
     def euros(cents) = format("%.2f", cents.to_i / 100.0).tr(".", ",")
+
+    # Excel interprète comme une FORMULE toute cellule qui commence par =, +, -
+    # ou @. Le nom du client vient du funnel public : on le neutralise d'une
+    # apostrophe, qu'Excel avale sans l'afficher.
+    def safe(value)
+      text = value.to_s
+      text.start_with?("=", "+", "-", "@") ? "'#{text}" : text
+    end
   end
 end

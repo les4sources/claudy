@@ -20,8 +20,12 @@ module Kitchen
       orders = scope.to_a
       return "aucune prestation dans les #{HORIZON_DAYS} prochains jours." if orders.empty?
 
-      sent = deliver_to_each(orders)
+      # Le garde-fou se pose AVANT les envois : posé après, un échec en cours de
+      # route (adresse invalide, file indisponible) le laissait absent et la
+      # relance renvoyait le digest à ceux qui l'avaient déjà reçu. Un digest
+      # perdu vaut mieux qu'un digest en double, et `FORCE=1` rattrape.
       Setting.set(LAST_SENT_KEY, Date.current.iso8601)
+      sent = deliver_to_each(orders)
       "#{sent} email(s) envoyé(s) pour #{orders.size} prestation(s)."
     end
 

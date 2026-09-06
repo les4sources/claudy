@@ -30,6 +30,12 @@ module KitchenHelper
   }.freeze
 
   def kitchen_history_entries(order)
+    # Une commande éditée trente fois, c'est trente requêtes `User.find_by` et
+    # autant de `Human.find_by` si on les résout ligne à ligne. On mémoïse le
+    # temps du rendu.
+    @kitchen_history_users  = {}
+    @kitchen_history_humans = {}
+
     order.versions.reorder(created_at: :desc, id: :desc).filter_map do |version|
       changes = (version.changeset || {}).slice(*HISTORY_FIELDS.keys)
       next if changes.empty? && version.event != "create"
@@ -50,10 +56,14 @@ module KitchenHelper
   def kitchen_history_author(whodunnit)
     return "—" if whodunnit.blank?
 
-    user = User.find_by(id: whodunnit)
+    user = (@kitchen_history_users ||= {}).fetch(whodunnit.to_s) { |key| @kitchen_history_users[key] = User.find_by(id: key) }
     return whodunnit.to_s if user.nil?
 
     user.human&.name.presence || user.email
+  end
+
+  def kitchen_history_human(id)
+    (@kitchen_history_humans ||= {}).fetch(id.to_s) { |key| @kitchen_history_humans[key] = Human.find_by(id: key) }
   end
 
   def kitchen_history_value(field, value)
@@ -64,7 +74,7 @@ module KitchenHelper
     when "moment"               then MealOrder::MOMENT_LABELS[value.to_s]
     when "status"               then MealOrder::STATUS_LABELS[value.to_s]
     when "validation"           then MealOrder::VALIDATION_LABELS[value.to_s]
-    when "responsible_human_id" then Human.find_by(id: value)&.name || "##{value}"
+    when "responsible_human_id" then kitchen_history_human(value)&.name || "##{value}"
     when "unit_price_cents"     then humanized_money_with_symbol(Money.new(value.to_i))
     when "date"                 then l(value.to_date, format: :long)
     else value.to_s

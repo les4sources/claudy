@@ -45,6 +45,18 @@ RSpec.describe MealOrderDecorator do
     expect(decorated.responsible_label).to eq("Personne")
   end
 
+  it "redevient à prendre quand son responsable a quitté le collectif" do
+    # `Human` porte un default_scope sur les membres actifs : désactiver
+    # quelqu'un laisse `responsible_human_id` rempli et l'association à nil. La
+    # ligne doit redevenir proposable, pas rester bloquée sur un fantôme.
+    parti = Human.create!(name: "Parti", email: "parti@les4sources.be", status: "active")
+    line = decorated(responsible_human: parti)
+    expect(line).not_to be_responsible_missing
+
+    parti.update!(status: "inactive")
+    expect(decorated(responsible_human_id: parti.id)).to be_responsible_missing
+  end
+
   it "expose le motif qui a sorti la ligne du jeu" do
     expect(decorated(status: "cancelled", cancellation_reason: "Groupe annulé").reason).to eq("Groupe annulé")
     expect(decorated(validation: "refused", refusal_reason: "Pas dispo").reason).to eq("Pas dispo")
