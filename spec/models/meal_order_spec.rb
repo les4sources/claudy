@@ -3,6 +3,45 @@ require "rails_helper"
 # Ligne de CUISINE (epic #66 phase 3, étendue par l'epic Cuisine #219 phase 1) :
 # une demande datée rattachée directement au séjour, hors calendrier, qui porte
 # désormais deux états indépendants — celui du client et celui de la cuisine.
+# == Schema Information
+#
+# Table name: meal_orders
+#
+#  id                     :bigint           not null, primary key
+#  bread_reminder_sent_at :datetime
+#  cancellation_reason    :text
+#  cost_cents             :integer
+#  cost_notes             :text
+#  date                   :date
+#  deleted_at             :datetime
+#  kind                   :string
+#  moment                 :string
+#  notes                  :text
+#  people                 :integer          default(1), not null
+#  price_cents            :integer
+#  refusal_reason         :text
+#  status                 :string           default("requested"), not null
+#  unit_price_cents       :integer
+#  validated_at           :datetime
+#  validation             :string           default("pending"), not null
+#  created_at             :datetime         not null
+#  updated_at             :datetime         not null
+#  responsible_human_id   :bigint
+#  stay_id                :bigint           not null
+#
+# Indexes
+#
+#  index_meal_orders_on_deleted_at            (deleted_at)
+#  index_meal_orders_on_responsible_human_id  (responsible_human_id)
+#  index_meal_orders_on_status                (status)
+#  index_meal_orders_on_stay_id               (stay_id)
+#  index_meal_orders_on_validation            (validation)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (responsible_human_id => humans.id)
+#  fk_rails_...  (stay_id => stays.id)
+#
 RSpec.describe MealOrder do
   let(:customer) { Customer.create!(email: "meal@example.com", first_name: "Meal", last_name: "Test") }
   let(:stay) { Stay.create!(customer: customer, source: "manual", status: "pending") }

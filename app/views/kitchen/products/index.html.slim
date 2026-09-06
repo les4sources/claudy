@@ -28,7 +28,7 @@
         - @products.each do |product|
           tr.border-t.border-gray-100
             td.px-4.py-3.font-medium.text-gray-900 = product.name
-            td.px-4.py-3.text-gray-700 = "#{product.quantity_per_person} #{product.unit_label}"
+            td.px-4.py-3.text-gray-700 = product.quantity_label
             td.px-4.py-3.text-gray-500 = product.kind_labels.join(", ").presence || "—"
             td.px-4.py-3.text-gray-500 = product.note.presence || "—"
             td.px-4.py-3

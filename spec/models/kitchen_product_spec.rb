@@ -2,6 +2,25 @@ require "rails_helper"
 
 # Produit de buffet paramétré (epic #219, phase 6) : ce que Kitchen::ShoppingList
 # lit pour calculer une liste de courses.
+# == Schema Information
+#
+# Table name: kitchen_products
+#
+#  id                  :bigint           not null, primary key
+#  active              :boolean          default(TRUE), not null
+#  kinds               :jsonb            not null
+#  name                :string           not null
+#  note                :string
+#  position            :integer
+#  quantity_per_person :decimal(8, 2)    not null
+#  unit                :string           not null
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#
+# Indexes
+#
+#  index_kitchen_products_on_kinds  (kinds) USING gin
+#
 RSpec.describe KitchenProduct do
   def product(**attrs)
     described_class.create!({ name: "Fromage", unit: "g", quantity_per_person: 80,
