@@ -60,6 +60,7 @@ Rails.application.routes.draw do
   namespace :kitchen do
     root to: "orders#index"
     resource :settings, only: [:show, :update]
+    resources :products, except: [:show]
     resources :orders, only: [:index, :new, :create, :edit, :update] do
       member do
         patch :status
@@ -67,6 +68,7 @@ Rails.application.routes.draw do
         patch :accept
         get   :new_refusal
         patch :refuse
+        get   :shopping_list
       end
     end
   end

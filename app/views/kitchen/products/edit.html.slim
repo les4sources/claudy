@@ -1,0 +1,7 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Modifier #{@product.name}"
+
+= render "kitchen/settings_tabs"
+
+.max-w-2xl
+  = render "form"
