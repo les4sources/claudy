@@ -1,0 +1,10 @@
+json.id note.id
+json.type "note"
+json.body note.body
+json.date note.date
+json.color note.color
+json.type_label note.type_label
+json.external_ref note.external_ref
+json.created_at note.created_at
+json.updated_at note.updated_at
+json.url api_v1_note_url(note)

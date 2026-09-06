@@ -428,6 +428,13 @@ Rails.application.routes.draw do
       resources :tasks, only: [:index, :show, :update, :destroy]
       resources :payments, only: [:index, :show, :update, :destroy]
 
+      # Notes du calendrier (#217). POST est exposé — et c'est le point : le
+      # calendrier est la vue partagée du Domaine, et ce qui se réserve
+      # ailleurs (une pizza party sur la boulangerie) doit pouvoir venir s'y
+      # poser tout seul. UPSERT sur `external_ref` : un appelant qui rejoue son
+      # appel ne colle pas deux fois le même post-it.
+      resources :notes, only: [:index, :show, :create, :update, :destroy]
+
       # Finances internes (#155-#158). Seul endroit de l'API où POST existe :
       # le catalogue du bar et les fiches papier se remontent depuis des
       # documents papier, et ces données d'exploitation n'ont pas à passer par
