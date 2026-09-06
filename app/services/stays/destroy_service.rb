@@ -43,6 +43,7 @@ module Stays
       Stay.transaction do
         soft_delete_bookables!
         cancel_experience_bookings!
+        cancel_meal_orders!
         @stay.soft_delete!(validate: false)
       end
       true
@@ -60,6 +61,17 @@ module Stays
         # cache d'association périmé (leçon du MergeService).
         bookable.space_reservations.destroy_all if bookable.respond_to?(:space_reservations)
         bookable.soft_delete!(validate: false)
+      end
+    end
+
+    # Prestations de cuisine encore actives → `cancelled` AVANT le soft-delete du
+    # séjour (epic #219, phase 4). Deux raisons de ne pas se contenter de la
+    # cascade de soft-delete : la personne qui cuisine doit être PRÉVENUE (c'est
+    # le passage en `cancelled` qui déclenche son email), et une ligne
+    # simplement soft-deletée disparaîtrait sans que personne ne sache pourquoi.
+    def cancel_meal_orders!
+      @stay.meal_orders.active.find_each do |order|
+        order.update!(status: "cancelled", cancellation_reason: "Séjour supprimé")
       end
     end
 

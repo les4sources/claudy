@@ -156,5 +156,7 @@ div id="stay-details-#{@stay.id}"
           = link_to "Modifier la composition →", edit_stay_path(@stay), class: "text-xs text-indigo-600 hover:underline"
         .mt-3 = render "stays/composition_lines"
 
+      = render "stays/kitchen_block"
+
       .px-5.py-4
         = render "stays/activities"

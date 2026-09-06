@@ -368,7 +368,7 @@ class Stay < ApplicationRecord
     else
       items.sum { |b| b.try(:price_cents).to_i } +
         experience_bookings.active.sum(&:price_cents) +
-        meal_orders.sum(:price_cents).to_i
+        meal_orders.billable.sum(:price_cents).to_i
     end
     # Séjour SANS hébergement (epic #66, Phase 2) : les dates viennent des
     # SpaceBooking (Booking ET SpaceBooking exposent from_date/to_date), donc un
@@ -398,6 +398,6 @@ class Stay < ApplicationRecord
   # via leur créneau, repas via leur date) — pour dater un séjour sans bookable.
   def activity_and_meal_dates
     experience_bookings.active.filter_map { |eb| eb.experience_availability&.available_on } +
-      meal_orders.filter_map(&:date)
+      meal_orders.active.filter_map(&:date)
   end
 end

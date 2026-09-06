@@ -1,0 +1,5 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Nouvelle demande"
+
+.max-w-3xl
+  = render "kitchen/orders/form", order: @order, url: kitchen_orders_path, method: :post, submit_label: "Créer la demande"

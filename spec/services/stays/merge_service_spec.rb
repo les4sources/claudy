@@ -151,7 +151,7 @@ RSpec.describe Stays::MergeService, type: :service do
       source = make_stay(customer: customer)
       attach(target, make_booking)
 
-      meal = MealOrder.create!(stay: source, kind: "buffet", date: Date.new(2026, 8, 5), people: 4, price_cents: 4_000)
+      meal = MealOrder.create!(stay: source, kind: "buffet_vege", date: Date.new(2026, 8, 5), people: 4, price_cents: 4_000)
       exp_booking = ExperienceBooking.create!(experience_availability: availability, stay: source, participants: 2, status: "confirmed")
 
       expect(described_class.new(target: target, sources: [source]).run).to be_truthy

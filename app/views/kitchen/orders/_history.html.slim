@@ -1,0 +1,25 @@
+/ Historique de la ligne. Le tableau de Malau ne gardait aucune trace des
+  changements pris par téléphone — c'est précisément ce qui avait fait diverger
+  sa note (« buffet ») et Claudy (« repas »).
+- entries = kitchen_history_entries(order)
+section.rounded-2xl.bg-white.ring-1.ring-gray-200.px-5.py-4
+  h2.text-sm.font-semibold.text-gray-900 Historique
+  - if entries.empty?
+    p.mt-1.text-sm.text-gray-500 Aucun changement enregistré.
+  - else
+    ol.mt-3.space-y-3
+      - entries.each do |entry|
+        li.border-l-2.border-gray-200.pl-3
+          .text-xs.text-gray-500
+            = l(entry[:at], format: :long)
+            span.mx-1 ·
+            = entry[:author]
+          - if entry[:event] == "create"
+            .text-sm.text-gray-700 Demande créée.
+          - else
+            - entry[:changes].each do |change|
+              .flex.flex-wrap.items-center.gap-x-1.text-sm.text-gray-700
+                span.font-medium = "#{change[:label]} :"
+                span.text-gray-500 = change[:before]
+                span.text-gray-400 →
+                span.font-medium = change[:after]

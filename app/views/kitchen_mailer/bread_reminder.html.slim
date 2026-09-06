@@ -1,0 +1,11 @@
+p Bonjour,
+
+p
+  | Pensez à commander le pain — la prestation est dans cinq jours.
+
+= render "kitchen_mailer/demand"
+
+p
+  = link_to "Commander chez Tranches de Vie", "https://tranchesdevie.les4sources.be"
+  | &nbsp;·&nbsp;
+  = link_to "Voir la page Cuisine", @kitchen_url

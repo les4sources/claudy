@@ -71,7 +71,7 @@ class StayDecorator < ApplicationDecorator
   end
 
   def meals
-    object.meal_orders.to_a
+    object.meal_orders.active.to_a
   end
 
   # Le séjour a-t-il au moins un élément de composition à afficher ?
@@ -375,7 +375,7 @@ class StayDecorator < ApplicationDecorator
     # Repas (issue #79) : ce ne sont PAS des `stay_items` (has_many direct), mais
     # ils comptent dans le total — on les ajoute aux lignes pour que la
     # décomposition somme bien au total affiché (aucun écart lignes ≠ total).
-    lines + object.meal_orders.map do |meal|
+    lines + object.meal_orders.billable.map do |meal|
       {
         kind: "MealOrder",
         icon: :utensils,

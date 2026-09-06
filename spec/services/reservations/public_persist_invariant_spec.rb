@@ -23,7 +23,7 @@ RSpec.describe Reservations::Builder, "funnel public — persistance à total co
       dogs_count: 0, first_name: "Camille", last_name: "Martin",
       email: "camille@example.com", phone: "+32470112233",
       per_night_resources: { "tente" => ["2", "2"] }, # 2 pers, 2 nuits
-      meals: [{ kind: "buffet", people: 3 }]           # public : sans date
+      meals: [{ kind: "buffet_vege", people: 3 }]           # public : sans date
     )
   end
 

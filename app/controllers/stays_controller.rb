@@ -119,6 +119,7 @@ class StaysController < BaseController
       notify_confirmation(builder.stay)
       flash[:notice] = "Séjour créé."
       flash[:alert]  = combined_warning(builder)
+      flash[:info]   = kitchen_warnings(builder.stay)
       redirect_to recent_stays_path
     else
       @stay  = Stay.new(status: requested_status.presence || "pending")
@@ -192,6 +193,7 @@ class StaysController < BaseController
       notify_confirmation(@stay) unless was_confirmed
       flash[:notice] = "Séjour mis à jour."
       flash[:alert]  = combined_warning(updater)
+      flash[:info]   = kitchen_warnings(@stay)
       redirect_to recent_stays_path
     else
       @quote = safe_quote(@draft)
@@ -767,6 +769,21 @@ class StaysController < BaseController
 
   # Concatène l'avertissement de disponibilité (force-dispo) et celui des espaces
   # non enregistrables (issue #75), pour un flash unique. nil si aucun des deux.
+  # Avertissements de cuisine (epic #219, phase 2) : plafond de convives dépassé,
+  # délai trop court. Ils s'affichent APRÈS la sauvegarde, en jaune, une ligne
+  # par avertissement — la saisie reste toujours acceptée.
+  def kitchen_warnings(stay)
+    return nil if stay.nil?
+
+    stay.meal_orders.active.chronological.flat_map { |line| line.warnings.map { |w| "#{kitchen_line_prefix(line)} : #{w}." } }.presence
+  end
+
+  def kitchen_line_prefix(line)
+    return line.label if line.date.blank?
+
+    "#{line.label} du #{I18n.l(line.date, format: :long)}"
+  end
+
   def combined_warning(service)
     [service.availability_warning, service.space_warning].compact.join(" ").presence
   end
@@ -973,7 +990,9 @@ class StaysController < BaseController
     Array.new(vehicles) { { nights: nights } }
   end
 
-  # Repas datés {kind, date, people} — on écarte les lignes incomplètes.
+  # Lignes de cuisine {id, kind, date, moment, people, notes} — on écarte les
+  # lignes incomplètes. L'`id` (champ caché du form) permet la réconciliation en
+  # place : sans lui, éditer un séjour effacerait la validation de la cuisine.
   def meal_entries(p)
     rows = p[:meals]
     rows = rows.respond_to?(:values) ? rows.values : Array(rows)
@@ -981,7 +1000,12 @@ class StaysController < BaseController
       kind   = row[:kind].to_s
       people = row[:people].to_i
       next if kind.blank? || people < 1
-      { kind: kind, date: row[:date].to_s.presence, people: people }
+      { id:     row[:id].presence,
+        kind:   kind,
+        date:   row[:date].to_s.presence,
+        moment: row[:moment].to_s.presence,
+        people: people,
+        notes:  row[:notes].to_s.presence }
     end
   end
 

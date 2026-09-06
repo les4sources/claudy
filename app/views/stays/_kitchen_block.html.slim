@@ -1,0 +1,38 @@
+/ Bloc Cuisine (epic #219, phase 3). La composition dit CE QUI est commandé ;
+  ce bloc dit OÙ EN EST chaque demande et qui s'en charge — le suivi lui-même
+  se tient sur /kitchen.
+- kitchen_orders = MealOrderDecorator.decorate_collection(@stay.meal_orders.includes(:responsible_human).chronological.to_a)
+.border-t.border-gray-200.px-5.py-4
+  .flex.items-baseline.justify-between.gap-3
+    .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Cuisine
+    = link_to "Ajouter une demande →", new_kitchen_order_path(stay_id: @stay.id), class: "text-xs text-indigo-600 hover:underline"
+
+  - if kitchen_orders.empty?
+    p.mt-2.text-sm.text-gray-500 Aucun repas, buffet ni apéro sur ce séjour.
+  - else
+    ul.mt-3.space-y-2
+      - kitchen_orders.each do |order|
+        li.rounded-lg.border.border-gray-200.bg-white.px-3.py-2
+          .flex.flex-wrap.items-center.gap-2
+            span.text-sm.font-semibold.text-gray-900 = order.label
+            = order.status_badge
+            = order.validation_badge
+            / Seuls les buffets et les apéros ont des produits paramétrés
+              (epic #219, phase 6).
+            - if %w[buffet apero].include?(order.family)
+              = link_to "Liste de courses", shopping_list_kitchen_order_path(order), class: "ml-auto text-xs text-indigo-600 hover:underline", target: "_blank", rel: "noopener"
+          / Ni la date complète, ni les convives, ni le prix : la composition
+            juste au-dessus les porte déjà. Ce bloc ne dit que ce qu'elle ne sait
+            pas dire — où en est la demande, et qui s'en charge.
+          .mt-0.5.text-sm.text-gray-500 = order.date_label
+          .mt-0.5.text-xs.text-gray-500
+            - if order.responsible_missing?
+              span.text-amber-700 Personne ne s'en charge
+            - else
+              = "#{order.responsible_label} s'en charge"
+          - if order.notes.present?
+            p.mt-1.text-sm.text-gray-500 = order.notes
+          - if order.reason.present?
+            p.mt-1.text-sm.text-red-700 = order.reason
+    .mt-2
+      = link_to "Suivre dans Cuisine →", kitchen_orders_path, class: "text-xs text-indigo-600 hover:underline"
