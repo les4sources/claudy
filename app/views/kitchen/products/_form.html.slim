@@ -1,0 +1,34 @@
+= form_with model: @product, url: (@product.persisted? ? kitchen_product_path(@product) : kitchen_products_path), class: "space-y-5" do |f|
+  .rounded-2xl.bg-white.ring-1.ring-gray-200.p-5.space-y-4
+    = f.text_field :name, label: "Nom", required: true
+
+    .grid.grid-cols-1.gap-4.sm:grid-cols-2
+      div
+        = f.label :unit, "Unité", class: "block text-sm font-medium text-gray-700"
+        = f.select :unit, KitchenProduct::UNITS.map { |unit| [KitchenProduct::UNIT_LABELS[unit], unit] },
+                   {}, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      div
+        = f.number_field :quantity_per_person, label: "Quantité par personne", step: "0.01", min: "0.01", required: true
+
+    div
+      label.block.text-sm.font-medium.text-gray-700 Types concernés
+      .mt-2.flex.flex-wrap.gap-4
+        = hidden_field_tag "kitchen_product[kinds][]", ""
+        - KitchenProduct::KINDS.each do |kind|
+          label.flex.items-center.gap-2.text-sm.text-gray-700
+            = check_box_tag "kitchen_product[kinds][]", kind, @product.kinds.include?(kind),
+                            id: "kitchen_product_kinds_#{kind}",
+                            class: "h-4 w-4 rounded border-gray-300 text-4s-main focus:ring-4s-main"
+            span = MealOrder.label_for(kind)
+
+    = f.text_field :note, label: "Note", placeholder: "Ex. « boulangerie », « d'ici »"
+    = f.number_field :position, label: "Position", min: 0
+
+    label.flex.items-center.gap-2.text-sm.font-medium.text-gray-700
+      = f.check_box :active, class: "h-4 w-4 rounded border-gray-300 text-4s-main focus:ring-4s-main"
+      span Actif
+
+  .flex.justify-end.gap-2
+    = link_to "Annuler", kitchen_products_path, class: "rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
+    button.inline-flex.items-center.rounded-md.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.bg-4s-main(class="hover:opacity-90" type="submit")
+      | Enregistrer

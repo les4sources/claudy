@@ -7,7 +7,7 @@ module Kitchen
   class OrdersController < BaseController
     breadcrumb "Cuisine", :kitchen_orders_path, match: :exact
 
-    before_action :set_order, only: [:edit, :update, :status, :assign, :accept, :new_refusal, :refuse]
+    before_action :set_order, only: [:edit, :update, :status, :assign, :accept, :new_refusal, :refuse, :shopping_list]
 
     # Sections de l'index, dans l'ordre de lecture. Une ligne tombe dans la
     # PREMIÈRE qui la reçoit : une demande d'info en attente de validation est un
@@ -122,6 +122,13 @@ module Kitchen
       flash.now[:alert] = "Un motif est nécessaire pour refuser."
       prepare_form
       render :new_refusal, status: :unprocessable_entity
+    end
+
+    # Liste de courses imprimable (epic #219, phase 6). Le gabarit `print`
+    # n'affiche aucune navigation — inutile de la masquer nous-mêmes.
+    def shopping_list
+      @shopping_list = Kitchen::ShoppingList.new(@order)
+      render layout: "print"
     end
 
     private

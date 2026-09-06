@@ -1,0 +1,39 @@
+/ Liste de courses imprimable (epic #219, phase 6). Gabarit `print` : aucune
+  navigation à masquer, elle n'est simplement pas rendue.
+- order = @order.decorate
+- content_for :title do
+  | Liste de courses — #{[order.stay&.customer&.name, order.label].compact.join(" · ")}
+
+.mb-6.flex.items-start.justify-between.gap-4
+  div
+    h1.text-2xl.font-semibold.text-gray-900 Liste de courses
+    p.mt-1.text-sm.text-gray-500
+      = [order.stay&.customer&.name, order.date_label, order.label, order.people_label].compact_blank.join(" · ")
+  button.shrink-0.text-sm.text-gray-500.underline(class="print:hidden" type="button" onclick="window.print()")
+    | Imprimer
+
+- if @shopping_list.empty?
+  p.text-sm.text-gray-500
+    | Aucun produit n'est paramétré pour ce type de prestation.
+    = link_to " Paramétrer les produits du buffet →", kitchen_products_path, class: "text-indigo-600 hover:underline"
+- else
+  table.w-full.text-sm.border-collapse
+    thead
+      tr.border-b.border-gray-300.text-left.text-xs.uppercase.tracking-wide.text-gray-400
+        th.py-2.pr-3.w-8
+        th.py-2.pr-3 Produit
+        th.py-2.pr-3.text-right Quantité
+        th.py-2 Note
+    tbody
+      - @shopping_list.lines.each do |line|
+        tr.border-b.border-gray-100
+          td.py-2.pr-3
+            span.inline-block.h-4.w-4.rounded.border.border-gray-500
+          td.py-2.pr-3.text-gray-900 = line.product.name
+          td.py-2.pr-3.text-right.font-medium.text-gray-900 = line.display
+          td.py-2.text-gray-500 = line.product.note
+
+  - if order.notes.present?
+    p.mt-6.text-sm.text-gray-600
+      strong Notes de la ligne ·
+      |  #{order.notes}

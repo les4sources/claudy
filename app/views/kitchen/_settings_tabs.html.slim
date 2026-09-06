@@ -1,0 +1,9 @@
+/ Onglets entre les deux écrans de Paramètres > Cuisine (epic #219, phase 6) :
+  les réglages de l'offre, et les produits qui alimentent la liste de courses.
+nav.mb-4.flex.gap-1.text-sm
+  = link_to "Réglages",
+            kitchen_settings_path,
+            class: "px-3 py-1.5 rounded-md font-medium transition-colors #{controller_name == 'settings' ? 'bg-4s-main text-white' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50'}"
+  = link_to "Produits du buffet",
+            kitchen_products_path,
+            class: "px-3 py-1.5 rounded-md font-medium transition-colors #{controller_name == 'products' ? 'bg-4s-main text-white' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50'}"

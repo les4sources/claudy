@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_06_090100) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_06_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -850,6 +850,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_06_090100) do
     t.index ["team_id"], name: "index_journal_lines_on_team_id"
     t.index ["third_party_id"], name: "index_journal_lines_on_third_party_id"
     t.check_constraint "debit_cents >= 0 AND credit_cents >= 0 AND (debit_cents = 0 OR credit_cents = 0) AND (debit_cents > 0 OR credit_cents > 0)", name: "journal_lines_one_side_only"
+  end
+
+  create_table "kitchen_products", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.jsonb "kinds", default: [], null: false
+    t.string "name", null: false
+    t.string "note"
+    t.integer "position"
+    t.decimal "quantity_per_person", precision: 8, scale: 2, null: false
+    t.string "unit", null: false
+    t.datetime "updated_at", null: false
+    t.index ["kinds"], name: "index_kitchen_products_on_kinds", using: :gin
   end
 
   create_table "ledger_documents", force: :cascade do |t|

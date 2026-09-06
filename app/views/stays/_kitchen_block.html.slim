@@ -17,6 +17,10 @@
             span.text-sm.font-semibold.text-gray-900 = order.label
             = order.status_badge
             = order.validation_badge
+            / Seuls les buffets et les apéros ont des produits paramétrés
+              (epic #219, phase 6).
+            - if %w[buffet apero].include?(order.family)
+              = link_to "Liste de courses", shopping_list_kitchen_order_path(order), class: "ml-auto text-xs text-indigo-600 hover:underline", target: "_blank", rel: "noopener"
           / Ni la date complète, ni les convives, ni le prix : la composition
             juste au-dessus les porte déjà. Ce bloc ne dit que ce qu'elle ne sait
             pas dire — où en est la demande, et qui s'en charge.
