@@ -78,6 +78,8 @@ Rails.application.routes.draw do
   get  "kitchen/refuse/:token",   to: "kitchen/validations#refuse",  as: :kitchen_validation_refuse
   resources :rates, only: [:index, :update]
   resources :rental_items
+  # Déclarée AVANT `resources :reports`, sinon « kitchen » serait pris pour un id.
+  get "reports/kitchen", to: "reports#kitchen", as: :kitchen_reports
   resources :reports
   resources :roles
   resources :rooms

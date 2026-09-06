@@ -1,0 +1,16 @@
+table.mt-3.min-w-full.text-sm
+  thead.text-xs.uppercase.tracking-wide.text-gray-400
+    tr
+      th.py-1.text-left = label
+      th.py-1.text-right Lignes
+      th.py-1.text-right Prix
+      th.py-1.text-right Coût
+      th.py-1.text-right Marge
+  tbody.divide-y.divide-gray-100
+    - rows.each do |name, totals|
+      tr
+        td.py-2.text-gray-700 = name
+        td.py-2.text-right.text-gray-500 = totals.count
+        td.py-2.text-right.font-medium.text-gray-900 = humanized_money_with_symbol(Money.new(totals.price_cents))
+        td.py-2.text-right.text-gray-700 = humanized_money_with_symbol(Money.new(totals.cost_cents))
+        td.py-2.text-right.text-gray-700 = humanized_money_with_symbol(Money.new(totals.margin_cents))

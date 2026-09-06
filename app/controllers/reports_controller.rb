@@ -10,6 +10,9 @@ class ReportsController < BaseController
       from_date: Date.new(@year, 1, 1).beginning_of_year..Date.new(@year, 1, 1).end_of_year
     )
     set_revenues_statistics(bookings, space_bookings)
+    # Cuisine (epic #219, phase 5) : le CA des repas, buffets et apéros entre
+    # dans le reporting mensuel à côté des hébergements et des espaces.
+    @revenues_by_month_for_meals = Reports::KitchenRevenue.revenue_by_month(@year)
     set_beds_statistics(bookings)
     set_coworking_statistics(@year)
     @lodgings = LodgingDecorator.decorate_collection(
@@ -20,6 +23,24 @@ class ReportsController < BaseController
     )
   end
 
+  # Reporting > Cuisine (epic #219, phase 5) : ce que la compta doit lire chaque
+  # mois pour savoir ce qu'elle doit à qui, sur la plage de son choix.
+  def kitchen
+    @from = parse_report_date(params[:from], Date.current.beginning_of_month)
+    @to   = parse_report_date(params[:to], Date.current.end_of_month)
+    @to, @from = @from, @to if @to < @from
+    @report = Reports::KitchenRevenue.new(from: @from, to: @to)
+
+    respond_to do |format|
+      format.html
+      format.csv do
+        send_data Reports::KitchenCsv.new(@report).to_csv,
+                  filename: "cuisine-#{@from.iso8601}-#{@to.iso8601}.csv",
+                  type: "text/csv; charset=utf-8"
+      end
+    end
+  end
+
   def lodging
     @lodging = LodgingDecorator.new(Lodging.find(params[:id]))
     @year = params.fetch(:year, Time.now.year).to_i
@@ -27,6 +48,12 @@ class ReportsController < BaseController
   end
 
   private
+
+  def parse_report_date(value, fallback)
+    Date.parse(value.to_s)
+  rescue ArgumentError, TypeError
+    fallback
+  end
 
   def set_beds_statistics(bookings)
     @beds_used_per_month = {}
