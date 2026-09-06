@@ -57,6 +57,17 @@ module Kitchen
       end
     end
 
+    # Autocomplete JSON du champ « Séjour ». Un sélecteur natif de 300 entrées
+    # triées par date d'arrivée est illisible : on cherche sur ce qu'on a sous la
+    # main quand le client est au téléphone — son nom, le nom du groupe porté par
+    # sa réservation, son email, son numéro.
+    def stay_search
+      stays = Stays::Search.new(assignable_stays, params[:q]).call
+      stays = stays.none if params[:q].to_s.strip.length < Stays::Search::MIN_LENGTH
+
+      render json: stays.limit(10).map { |stay| stay_search_result(stay) }
+    end
+
     def edit
       prepare_form
     end
@@ -172,11 +183,15 @@ module Kitchen
       (raw.to_s.tr(",", ".").to_f * 100).round
     end
 
+    # Ni type ni responsable préremplis. Le type l'était par le premier type
+    # activé, et le responsable par le défaut de CE type : basculer le type sans
+    # toucher au responsable laissait un buffet au nom de Stéphanie — et, comme
+    # `accept_when_someone_takes_it` voit un responsable nommé, ACCEPTÉ par la
+    # cuisine sans que personne ne l'ait accepté. Le type se coche donc
+    # explicitement, et `MealOrder#assign_default_responsible` affecte le
+    # responsable à partir de la famille réellement choisie.
     def new_order_defaults
-      stay_id = params[:stay_id].presence
-      kind    = Kitchen::Config.enabled_kinds.first
-      { stay_id: stay_id, kind: kind, people: 1, status: "requested",
-        responsible_human_id: Kitchen::Config.default_human(MealOrder::KIND_FAMILIES[kind])&.id }
+      { stay_id: params[:stay_id].presence, people: 1, status: "requested" }
     end
 
     # Se charger d'un buffet ou d'un apéro vaut acceptation (décision Michael) —
@@ -208,10 +223,21 @@ module Kitchen
     # d'un mois. Au-delà, la liste devient illisible pour rien.
     def assignable_stays
       Stay.includes(:customer)
-          .where.not(status: "cancelled")
+          .where.not(status: %w[canceled declined])
           .where("departure_date >= ? OR departure_date IS NULL", Date.current - 30)
           .order(Arel.sql("arrival_date ASC NULLS LAST"))
           .limit(300)
+    end
+
+    # Ce que la liste de résultats affiche : le nom d'abord, puis de quoi
+    # distinguer deux séjours du même client fidèle — les dates — et de quoi
+    # confirmer qu'on tient le bon dossier — le groupe et le contact.
+    def stay_search_result(stay)
+      customer = stay.customer
+      { id: stay.id,
+        label: helpers.stay_choice_label(stay),
+        group: customer&.organization_name.presence,
+        contact: [customer&.email, customer&.phone].compact_blank.join(" · ") }
     end
 
     def base_scope

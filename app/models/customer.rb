@@ -87,10 +87,22 @@ class Customer < ApplicationRecord
             presence: { message: "Veuillez préciser le nom de l'organisation" },
             if: :organization?
 
+  # Cherche sur tout ce qu'on a sous la main quand on a le client au téléphone :
+  # son nom (y compris tapé en entier, « Jean Dupont »), son organisation, son
+  # email, son numéro. Le téléphone se compare sur ses SEULS CHIFFRES — « 0455 13
+  # 61 42 » en base doit se trouver en tapant « 0455136142 », et l'inverse.
   scope :search, ->(query) {
     return all if query.blank?
-    q = "%#{query.strip}%"
-    where("email ILIKE :q OR first_name ILIKE :q OR last_name ILIKE :q OR organization_name ILIKE :q", q: q)
+
+    # `%` et `_` saisis sont échappés : une organisation « 100% Bio » se cherche
+    # littéralement.
+    q = "%#{sanitize_sql_like(query.strip)}%"
+    digits = query.gsub(/\D/, "")
+    sql = "email ILIKE :q OR first_name ILIKE :q OR last_name ILIKE :q " \
+          "OR organization_name ILIKE :q OR (first_name || ' ' || last_name) ILIKE :q"
+    sql += " OR regexp_replace(COALESCE(phone, ''), '\\D', '', 'g') ILIKE :digits" if digits.length >= 3
+
+    where(sql, q: q, digits: "%#{digits}%")
   }
 
   # Compteurs de séjours calculés EN SQL (aucun N+1) pour la liste admin :
