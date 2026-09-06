@@ -89,11 +89,15 @@ module Kitchen
 
     # « Je m'en charge » / « Réassigner ». Pour un buffet ou un apéro, se charger
     # d'une demande VAUT validation : il n'y a personne d'autre à attendre.
+    #
+    # La personne est TOUJOURS nommée : les postes sont partagés sous un compte
+    # commun, et retomber sur `current_user` désignerait le poste, pas la
+    # personne devant l'écran.
     def assign
-      human = params[:human_id].present? ? Human.find_by(id: params[:human_id]) : current_user&.human
+      human = Human.find_by(id: params[:human_id])
 
       if human.nil?
-        redirect_to kitchen_orders_path, alert: "Choisissez qui s'en charge — votre compte n'est rattaché à aucun membre."
+        redirect_to kitchen_orders_path, alert: "Choisissez qui s'en charge."
         return
       end
 

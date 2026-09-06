@@ -124,6 +124,22 @@ RSpec.describe "Cuisine — page et actions", type: :request do
     end
   end
 
+  describe "GET /kitchen/orders — qui s'en charge" do
+    # Le raccourci qui assignait le membre du compte connecté a disparu : sur un
+    # poste partagé il désignait le poste, pas la personne. « Je m'en charge »
+    # ouvre la liste des membres.
+    it "propose de se nommer au lieu de déduire du compte connecté" do
+      user.update!(human: michael)
+      line
+
+      get kitchen_orders_path
+
+      expect(response).to have_http_status(:ok)
+      expect(CGI.unescapeHTML(response.body)).to include("Je m'en charge")
+      expect(response.body).not_to include(%(name="human_id" value="#{michael.id}"))
+    end
+  end
+
   describe "PATCH /kitchen/orders/:id/assign" do
     it "confie la demande et vaut acceptation pour un buffet" do
       order = line(kind: "buffet_vege")
@@ -143,7 +159,10 @@ RSpec.describe "Cuisine — page et actions", type: :request do
       expect(order.validation).to eq("pending")
     end
 
-    it "refuse d'assigner quand personne n'est nommé et que le compte n'a pas de membre" do
+    # Les postes sont partagés sous un compte commun : même quand le compte
+    # connecté est rattaché à un membre, il ne dit pas qui est devant l'écran.
+    it "refuse d'assigner sans nommer personne, même si le compte a un membre" do
+      user.update!(human: michael)
       order = line
 
       patch assign_kitchen_order_path(order)
