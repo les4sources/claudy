@@ -28,7 +28,7 @@ module Invoicing
     # Une ligne facturable, quel que soit le modèle d'origine. `kind` porte la
     # clé technique (« booking » / « space_booking ») attendue par la route de
     # changement de statut.
-    Line = Struct.new(:record, :kind, :label, :from_date, :to_date, :price_cents,
+    Line = Struct.new(:record, :kind, :label, :sublabel, :from_date, :to_date, :price_cents,
                       :status, :invoice_status, :stay, keyword_init: true) do
       def id = record.id
 
@@ -121,7 +121,9 @@ module Invoicing
       lines = kinds.flat_map do |kind, model|
         scope = model.where(conditions)
         scope = without_canceled(scope) if exclude_canceled
-        scope = model == Stay ? scope.includes(:customer, stay_items: :bookable) : scope.includes(:stay)
+        # Le libellé d'un réservable vient de son SÉJOUR (client, ou nom d'origine
+        # sur un fourre-tout) : on précharge ce que `StayDecorator#display_name` lit.
+        scope = model == Stay ? scope.includes(:customer, stay_items: :bookable) : scope.includes(stay: [:customer, { stay_items: :bookable }])
         scope.map { |record| build_line(record, kind) }
       end
       dedupe(lines)
@@ -141,15 +143,27 @@ module Invoicing
       lines.reject { |l| l.kind != "stay" && covered.include?(l.stay&.id) }
     end
 
+    # Ligne d'un RÉSERVABLE. Le libellé est celui du séjour quand il y en a un
+    # (Michael 2026-09-06) : c'est le CLIENT qu'on facture — « Université de
+    # Namur », pas la personne de contact que porte le Booking. Sur un séjour
+    # fourre-tout, `display_name` retombe déjà sur le nom d'origine. Sans séjour
+    # (réservable orphelin), on garde groupe, puis personne. Le nom de groupe du
+    # réservable, s'il diffère du libellé, reste visible en sous-titre.
     def build_line(record, kind)
       return build_stay_line(record) if kind == "stay"
+
+      stay       = record.try(:stay)
+      group_name = record.try(:group_name).presence
+      origin     = group_name ||
+                   [record.try(:firstname), record.try(:lastname)].compact_blank.join(" ").presence ||
+                   "Réservation ##{record.id}"
+      label      = (stay && stay.decorate.display_name.presence) || origin
 
       Line.new(
         record:         record,
         kind:           kind,
-        label:          record.try(:group_name).presence ||
-                        [record.try(:firstname), record.try(:lastname)].compact_blank.join(" ").presence ||
-                        "Réservation ##{record.id}",
+        label:          label,
+        sublabel:       (group_name if group_name && group_name != label),
         from_date:      record.try(:from_date),
         to_date:        record.try(:to_date),
         price_cents:    record.try(:price_cents),

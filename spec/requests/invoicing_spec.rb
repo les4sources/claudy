@@ -136,6 +136,37 @@ RSpec.describe "Facturation (/invoicing)", type: :request do
       get invoicing_path
       expect(response.body).not_to include("Factures envoyées")
     end
+
+    # Michael 2026-09-06 : la file affichait « Sébastien Laoureux » là où le
+    # client facturé est « Université de Namur » — le réservable historique porte
+    # la personne de contact, le séjour porte le client.
+    it "libelle un réservable rattaché à un séjour par le client, organisation comprise" do
+      customer = Customer.create!(email: "unamur@example.com", customer_type: "organization",
+                                  organization_name: "Université de Namur",
+                                  first_name: "Sébastien", last_name: "Laoureux")
+      s  = Stay.create!(customer: customer, source: "manual", status: "confirmed",
+                        arrival_date: Date.today + 3, departure_date: Date.today + 3, total_amount_cents: 14_000)
+      sb = SpaceBooking.create!(firstname: "Sébastien", lastname: "Laoureux", group_name: nil,
+                                from_date: Date.today + 3, to_date: Date.today + 3,
+                                status: "confirmed", invoice_status: "sent", price_cents: 14_000)
+      s.stay_items.create!(bookable: sb)
+
+      get invoicing_path
+      expect(response.body).to include("Université de Namur")
+      expect(response.body).not_to include("Sébastien Laoureux")
+    end
+
+    it "garde le nom de groupe du réservable en sous-titre quand il diffère du client" do
+      customer = Customer.create!(email: "jean@example.com", first_name: "Jean", last_name: "Dupont")
+      s  = Stay.create!(customer: customer, source: "manual", status: "confirmed",
+                        arrival_date: Date.today + 3, departure_date: Date.today + 5, total_amount_cents: 15_000)
+      b  = booking(invoice_status: "sent", group: "Chorale de Dinant")
+      s.stay_items.create!(bookable: b)
+
+      get invoicing_path
+      expect(response.body).to include("Jean Dupont")
+      expect(response.body).to include("Chorale de Dinant")
+    end
   end
 
   describe "réservations sans tarif tranché" do
