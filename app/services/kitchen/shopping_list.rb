@@ -26,7 +26,7 @@ module Kitchen
     private
 
     def line_for(product)
-      quantity = (product.quantity_per_person * @order.people).ceil
+      quantity = (product.quantity_for(@order.kind) * @order.people).ceil
       Line.new(product: product, quantity: quantity, display: display_for(product.unit, quantity))
     end
 
