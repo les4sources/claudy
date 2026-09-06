@@ -140,6 +140,69 @@ RSpec.describe "Cuisine — page et actions", type: :request do
     end
   end
 
+  # Le champ « Séjour » listait jusqu'à 300 entrées dans un sélecteur natif.
+  describe "GET /kitchen/orders/stay_search" do
+    def stay_for(customer, **attrs)
+      Stay.create!({ customer: customer, source: "manual", status: "confirmed",
+                     arrival_date: Date.current + 5, departure_date: Date.current + 7 }.merge(attrs))
+    end
+
+    let!(:scouts) do
+      Customer.create!(email: "scouts@example.com", customer_type: "organization",
+                       organization_name: "Les Scouts de Namur", first_name: "Jean",
+                       last_name: "Dupont", phone: "0455 13 61 42")
+    end
+
+    it "trouve un séjour par le nom, l'organisation, l'email ou le numéro" do
+      target = stay_for(scouts)
+
+      %w[Dupont Scouts scouts@example 0455136142].each do |query|
+        get stay_search_kitchen_orders_path(q: query)
+
+        expect(response).to have_http_status(:ok)
+        expect(JSON.parse(response.body).map { |row| row["id"] }).to include(target.id), "raté sur « #{query} »"
+      end
+    end
+
+    it "rend le nom complet tapé d'un bloc" do
+      target = stay_for(scouts)
+
+      get stay_search_kitchen_orders_path(q: "Jean Dupont")
+
+      expect(JSON.parse(response.body).map { |row| row["id"] }).to eq([target.id])
+    end
+
+    # `Stay` écrit « canceled » (un seul l) et « declined » : le filtre du
+    # sélecteur cherchait « cancelled » et ne retirait donc rien.
+    it "écarte les séjours annulés ou refusés" do
+      stay_for(scouts, status: "canceled")
+      stay_for(scouts, status: "declined")
+
+      get stay_search_kitchen_orders_path(q: "Dupont")
+
+      expect(JSON.parse(response.body)).to be_empty
+    end
+
+    it "ne cherche pas sur un seul caractère" do
+      stay_for(scouts)
+
+      get stay_search_kitchen_orders_path(q: "D")
+
+      expect(JSON.parse(response.body)).to be_empty
+    end
+
+    it "donne de quoi distinguer deux séjours du même client" do
+      stay_for(scouts)
+
+      get stay_search_kitchen_orders_path(q: "Dupont")
+
+      row = JSON.parse(response.body).first
+      expect(row["label"]).to include("du #{(Date.current + 5).strftime('%-d/%m')}")
+      expect(row["group"]).to eq("Les Scouts de Namur")
+      expect(row["contact"]).to include("scouts@example.com")
+    end
+  end
+
   describe "PATCH /kitchen/orders/:id/assign" do
     it "confie la demande et vaut acceptation pour un buffet" do
       order = line(kind: "buffet_vege")
@@ -197,14 +260,34 @@ RSpec.describe "Cuisine — page et actions", type: :request do
   end
 
   describe "GET /kitchen/orders/new et /:id/edit" do
-    it "présélectionne le séjour et le responsable par défaut de la famille" do
+    # Le type était préréglé sur le premier type activé, et le responsable sur le
+    # défaut de CE type. Basculer le type sans toucher au responsable laissait un
+    # buffet au nom de Stéphanie, et ACCEPTÉ par la cuisine sans que personne ne
+    # l'ait accepté. Plus rien n'est prérempli : le type se coche.
+    it "présélectionne le séjour, mais ni le type ni le responsable" do
       Setting.set("kitchen.repas.default_human_id", steph.id)
 
       get new_kitchen_order_path(stay_id: stay.id)
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Groupe Test")
-      expect(response.body).to include("selected=\"selected\" value=\"#{steph.id}\"")
+      expect(response.body).not_to include(%(selected="selected" value="#{steph.id}"))
+      expect(response.body).not_to include(%(name="meal_order[kind]" checked))
+      expect(response.body).not_to match(/checked="checked"[^>]*name="meal_order\[kind\]"/)
+    end
+
+    it "ne fait plus accepter un buffet au nom du responsable par défaut" do
+      Setting.set("kitchen.buffet.default_human_id", michael.id)
+
+      post kitchen_orders_path, params: {
+        meal_order: { stay_id: stay.id, kind: "buffet_vege", people: 12,
+                      date: Date.current + 20, status: "requested" }
+      }
+
+      order = MealOrder.order(:id).last
+      expect(order.kind).to eq("buffet_vege")
+      expect(order.responsible_human).to eq(michael)
+      expect(order.validation).to eq("pending")
     end
 
     it "affiche l'historique de la ligne" do

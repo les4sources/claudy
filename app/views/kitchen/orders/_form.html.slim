@@ -1,27 +1,53 @@
 / Le même formulaire pour créer et pour modifier. Le séjour ne se change pas
   après coup : déplacer une demande d'un séjour à l'autre, c'est en créer une.
 = form_with model: order, url: url, method: method, class: "space-y-5" do |f|
-  section.rounded-2xl.bg-white.ring-1.ring-gray-200.px-5.py-4.space-y-4
+  section.rounded-2xl.bg-white.ring-1.ring-gray-200.px-5.py-4.space-y-4(data-controller="meal-price-hint" data-meal-price-hint-rates-value=meal_rates_json)
     - if order.persisted?
       div
         .text-xs.font-medium.text-gray-500 Séjour
         - if order.stay
           = link_to order.stay.customer&.name.presence || "Séjour ##{order.stay_id}", stay_path(order.stay), class: "text-sm font-semibold text-gray-900 hover:underline"
     - else
-      div
+      / Le sélecteur natif listait jusqu'à 300 séjours triés par date d'arrivée.
+        Il reste là — c'est lui qui porte la valeur soumise, et il fait le repli
+        sans JS — mais le contrôleur `stay-search` le masque et le pilote. Pas
+        de `required` : un champ masqué et vide fait échouer la soumission dans
+        Chrome sans rien afficher ; `belongs_to :stay` refuse côté serveur.
+      div(data-controller="stay-search" data-stay-search-url-value=stay_search_kitchen_orders_path)
         = f.label :stay_id, "Séjour", class: "block text-sm font-medium text-gray-700"
         = f.select :stay_id,
                    options_from_collection_for_select(@stays, :id, ->(s) { stay_choice_label(s) }, order.stay_id),
                    { include_blank: "— Choisir un séjour —" },
-                   { class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm", required: true }
+                   { class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm",
+                     data: { "stay-search-target": "select" } }
+        .relative.mt-1.space-y-1.hidden(data-stay-search-target="searchWrap")
+          = text_field_tag :stay_query, nil, placeholder: "Nom, groupe, email ou téléphone…", autocomplete: "off",
+                           data: { "stay-search-target": "searchInput",
+                                   action: "input->stay-search#search keydown.enter->stay-search#pickFirst" },
+                           class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          .border.border-gray-100.rounded-md.divide-y.divide-gray-50.bg-white.shadow-sm.max-h-48.overflow-y-auto(data-stay-search-target="results")
+        .mt-1.flex.items-center.justify-between.gap-2.text-sm.hidden(data-stay-search-target="chosen")
+          .min-w-0
+            span.block.truncate.font-medium.text-gray-900(data-stay-search-target="chosenLabel")
+            span.block.truncate.text-xs.text-gray-500(data-stay-search-target="chosenContact")
+          button.shrink-0.text-indigo-600(type="button" data-action="stay-search#clear" class="hover:underline") Changer
 
     / Grille à 6 colonnes : le type prend la moitié de la ligne — « Formule trio
       (midi + goûter + soir) » ne tient pas dans un tiers, et un libellé tronqué
       dans un sélecteur oblige à l'ouvrir pour savoir ce qu'on a choisi.
     .grid.grid-cols-1.gap-4.sm:grid-cols-6
-      .sm:col-span-3
-        = f.label :kind, "Type", class: "block text-sm font-medium text-gray-700"
-        = f.select :kind, options_for_select(@kinds, order.kind), {}, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      / Cinq types de longueur inégale : en puces sur la ligne entière, on les lit
+        tous d'un coup et rien n'est tronqué. Aucun n'est coché au départ — le
+        type conditionne le responsable et le tarif, il se choisit sciemment.
+      .sm:col-span-6
+        fieldset
+          legend.block.text-sm.font-medium.text-gray-700 Type
+          .mt-2.flex.flex-wrap.gap-2
+            - @kinds.each do |kind_label, kind|
+              label.cursor-pointer
+                = f.radio_button :kind, kind, class: "peer sr-only", required: true, data: { action: "change->meal-price-hint#refresh" }
+                span.inline-block.rounded-full.border.border-gray-300.px-3.text-sm.text-gray-700(class="py-1.5 peer-checked:border-4s-main peer-checked:bg-4s-main peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-4s-main peer-focus-visible:ring-offset-1 hover:border-gray-400")
+                  = kind_label
       .sm:col-span-3
         = f.label :moment, "Moment", class: "block text-sm font-medium text-gray-700"
         = f.select :moment, options_for_select(MealOrder::MOMENT_LABELS.map(&:reverse), order.moment), { include_blank: "—" }, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
@@ -34,9 +60,12 @@
       .sm:col-span-2
         = label_tag "meal_order[unit_price]", "Prix par personne", class: "block text-sm font-medium text-gray-700"
         .mt-1.flex.items-center.gap-2
-          = number_field_tag "meal_order[unit_price]", order.unit_price_cents && (order.unit_price_cents / 100.0), step: 0.01, min: 0, placeholder: (Pricing::Catalog.meal_per_person_cents(order.kind).to_i / 100.0).to_s, class: "w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          / Pas de placeholder chiffré : il affichait le tarif du type sélectionné à
+            l'ouverture et ne bougeait plus, si bien qu'après un changement de type
+            il annonçait un prix qui n'était plus le bon.
+          = number_field_tag "meal_order[unit_price]", order.unit_price_cents && (order.unit_price_cents / 100.0), step: 0.01, min: 0, class: "w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
           span.text-sm.text-gray-500 €
-        p.mt-1.text-xs.text-gray-400 Laisser vide pour appliquer le tarif du barème.
+        p.mt-1.text-xs.text-gray-400(data-meal-price-hint-target="hint") Laisser vide pour appliquer le tarif du barème.
       .sm:col-span-3
         = f.label :responsible_human_id, "S'en charge", class: "block text-sm font-medium text-gray-700"
         = f.select :responsible_human_id,
@@ -48,9 +77,14 @@
       = f.label :notes, "Précisions", class: "block text-sm font-medium text-gray-700"
       = f.text_area :notes, rows: 2, label: false, placeholder: "Intolérances, menu souhaité, précisions…", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
-    div
-      = f.label :status, "Où en est le client", class: "block text-sm font-medium text-gray-700"
-      = f.select :status, options_for_select(status_choices(order), order.status), {}, class: "mt-1 w-full sm:max-w-xs rounded-md border-gray-300 shadow-sm sm:text-sm"
+    fieldset
+      legend.block.text-sm.font-medium.text-gray-700 Où en est le client
+      .mt-2.flex.flex-wrap.gap-2
+        - status_choices(order).each do |status_label, status|
+          label.cursor-pointer
+            = f.radio_button :status, status, class: "peer sr-only"
+            span.inline-block.rounded-full.border.border-gray-300.px-3.text-sm.text-gray-700(class="py-1.5 peer-checked:border-4s-main peer-checked:bg-4s-main peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-4s-main peer-focus-visible:ring-offset-1 hover:border-gray-400")
+              = status_label
       - if order.persisted?
         .mt-2
           = f.label :cancellation_reason, "Motif d'annulation", class: "block text-xs font-medium text-gray-500"
@@ -72,4 +106,8 @@
 
   .flex.items-center.justify-end.gap-3
     = link_to "Annuler", kitchen_orders_path, class: "text-sm text-gray-500 hover:underline"
-    = f.submit submit_label, class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+    / `f.submit` passe par Button::Component, qui concatène SES classes après
+      celles de l'appelant : le CTA sortait vert alors que toute la Cuisine est
+      en 4s-main. Un <button> nu garde la couleur demandée.
+    button.inline-flex.items-center.rounded-md.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.bg-4s-main(class="hover:opacity-90" type="submit")
+      = submit_label

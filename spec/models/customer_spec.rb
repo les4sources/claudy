@@ -138,5 +138,32 @@ RSpec.describe Customer, type: :model do
       expect(Customer.search("searchable")).to include(b)
       expect(Customer.search("alice")).not_to include(b)
     end
+
+    # Au téléphone, on tape le numéro comme on l'entend, sans les espaces.
+    it "matches on the phone number, digits only, whatever the formatting" do
+      a = build_customer(email: "phone@example.com", first_name: "Alice",
+                         phone: "0455 13 61 42").tap(&:save!)
+
+      expect(Customer.search("0455136142")).to include(a)
+      expect(Customer.search("136142")).to include(a)
+      expect(Customer.search("0999999999")).not_to include(a)
+    end
+
+    it "matches on the full name typed in one go" do
+      a = build_customer(email: "full@example.com", first_name: "Jean",
+                         last_name: "Dupont").tap(&:save!)
+
+      expect(Customer.search("Jean Dupont")).to include(a)
+    end
+
+    # `%` est un joker SQL : une organisation « 100% Bio » se cherche à la lettre.
+    it "escapes SQL wildcards typed by the user" do
+      a = build_customer(email: "bio@example.com", customer_type: "organization",
+                         organization_name: "100% Bio").tap(&:save!)
+      b = build_customer(email: "other-wildcard@example.com", first_name: "Zoé").tap(&:save!)
+
+      expect(Customer.search("100% Bio")).to include(a)
+      expect(Customer.search("%")).not_to include(b)
+    end
   end
 end

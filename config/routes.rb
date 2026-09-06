@@ -62,6 +62,9 @@ Rails.application.routes.draw do
     resource :settings, only: [:show, :update]
     resources :products, except: [:show]
     resources :orders, only: [:index, :new, :create, :edit, :update] do
+      collection do
+        get :stay_search # autocomplete JSON du champ « Séjour » du formulaire
+      end
       member do
         patch :status
         patch :assign
