@@ -12,7 +12,7 @@ module Kitchen
     end
 
     def new
-      @product = KitchenProduct.new(active: true, kinds: [])
+      @product = KitchenProduct.new(active: true)
     end
 
     def create
@@ -51,7 +51,7 @@ module Kitchen
 
     def product_params
       params.require(:kitchen_product)
-            .permit(:name, :unit, :quantity_per_person, :note, :position, :active, kinds: [])
+            .permit(:name, :unit, :note, :position, :active, quantities: KitchenProduct::KINDS)
     end
 
     def set_presenters

@@ -16,20 +16,26 @@
       thead.text-xs.uppercase.tracking-wide.text-gray-500(class="bg-gray-50/60")
         tr
           th.px-4.py-3.text-left Produit
-          th.px-4.py-3.text-left Quantité / personne
-          th.px-4.py-3.text-left Types
+          th.px-4.py-3.text-left Quantités par type
           th.px-4.py-3.text-left Note
           th.px-4.py-3.text-left Actif
           th.px-4.py-3
       tbody
         - if @products.empty?
           tr
-            td.px-4.py-4.text-gray-500(colspan="6") Aucun produit paramétré pour l'instant.
+            td.px-4.py-4.text-gray-500(colspan="5") Aucun produit paramétré pour l'instant.
         - @products.each do |product|
           tr.border-t.border-gray-100
             td.px-4.py-3.font-medium.text-gray-900 = product.name
-            td.px-4.py-3.text-gray-700 = product.quantity_label
-            td.px-4.py-3.text-gray-500 = product.kind_labels.join(", ").presence || "—"
+            td.px-4.py-3
+              - if product.kinds.empty?
+                span.text-gray-400 —
+              - else
+                .flex.flex-col.gap-0.5
+                  - product.kinds.each do |kind|
+                    .flex.items-baseline.gap-2
+                      span.w-40.shrink-0.text-gray-500 = MealOrder.label_for(kind)
+                      span.font-medium.text-gray-900 = product.quantity_label(kind)
             td.px-4.py-3.text-gray-500 = product.note.presence || "—"
             td.px-4.py-3
               - if product.active

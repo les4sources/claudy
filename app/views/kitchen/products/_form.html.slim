@@ -1,25 +1,28 @@
 = form_with model: @product, url: (@product.persisted? ? kitchen_product_path(@product) : kitchen_products_path), class: "space-y-5" do |f|
-  .rounded-2xl.bg-white.ring-1.ring-gray-200.p-5.space-y-4
+  .rounded-2xl.bg-white.ring-1.ring-gray-200.p-5.space-y-5(data-controller="product-unit")
     = f.text_field :name, label: "Nom", required: true
 
-    .grid.grid-cols-1.gap-4.sm:grid-cols-2
-      div
-        = f.label :unit, "Unité", class: "block text-sm font-medium text-gray-700"
-        = f.select :unit, KitchenProduct::UNITS.map { |unit| [KitchenProduct::UNIT_LABELS[unit], unit] },
-                   {}, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-      div
-        = f.number_field :quantity_per_person, label: "Quantité par personne", step: "0.01", min: "0.01", required: true
+    .sm:w-1/2
+      = f.label :unit, "Unité", class: "block text-sm font-medium text-gray-700"
+      = f.select :unit, KitchenProduct::UNITS.map { |unit| [KitchenProduct::UNIT_LABELS[unit], unit] },
+                 {}, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm",
+                 data: { product_unit_target: "select", action: "change->product-unit#refresh" }
 
     div
-      label.block.text-sm.font-medium.text-gray-700 Types concernés
-      .mt-2.flex.flex-wrap.gap-4
-        = hidden_field_tag "kitchen_product[kinds][]", ""
+      label.block.text-sm.font-medium.text-gray-700 Quantités par personne
+      p.mt-1.text-sm.text-gray-500
+        | Une quantité par type de prestation. Laisser vide les types que ce
+          produit ne concerne pas.
+      .mt-3.space-y-2
         - KitchenProduct::KINDS.each do |kind|
-          label.flex.items-center.gap-2.text-sm.text-gray-700
-            = check_box_tag "kitchen_product[kinds][]", kind, @product.kinds.include?(kind),
-                            id: "kitchen_product_kinds_#{kind}",
-                            class: "h-4 w-4 rounded border-gray-300 text-4s-main focus:ring-4s-main"
-            span = MealOrder.label_for(kind)
+          .flex.items-center.gap-3
+            label.w-48.text-sm.text-gray-700(for="kitchen_product_quantities_#{kind}")
+              = MealOrder.label_for(kind)
+            = number_field_tag "kitchen_product[quantities][#{kind}]", @product.quantities[kind],
+                               id: "kitchen_product_quantities_#{kind}", step: "0.01", min: "0.01",
+                               placeholder: "—",
+                               class: "w-28 rounded-md border-gray-300 shadow-sm sm:text-sm"
+            span.w-16.text-sm.text-gray-500(data-product-unit-target="suffix")
 
     = f.text_field :note, label: "Note", placeholder: "Ex. « boulangerie », « d'ici »"
     = f.number_field :position, label: "Position", min: 0

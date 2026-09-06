@@ -14,8 +14,8 @@ RSpec.describe "Cuisine — liste de courses", type: :request do
   end
 
   it "affiche le client, la date, le type, les convives et les quantités calculées" do
-    KitchenProduct.create!(name: "Fromage", unit: "g", quantity_per_person: 80, kinds: %w[buffet_vege])
-    KitchenProduct.create!(name: "Pain", unit: "piece", quantity_per_person: 0.5, kinds: %w[buffet_vege])
+    KitchenProduct.create!(name: "Fromage", unit: "g", quantities: { "buffet_vege" => "80" })
+    KitchenProduct.create!(name: "Pain", unit: "piece", quantities: { "buffet_vege" => "0.5" })
     line = order(date: Date.current + 10)
 
     get shopping_list_kitchen_order_path(line)
@@ -31,7 +31,7 @@ RSpec.describe "Cuisine — liste de courses", type: :request do
 
   it "n'affiche pas la navigation" do
     line = order
-    KitchenProduct.create!(name: "Fromage", unit: "g", quantity_per_person: 80, kinds: %w[buffet_vege])
+    KitchenProduct.create!(name: "Fromage", unit: "g", quantities: { "buffet_vege" => "80" })
 
     get shopping_list_kitchen_order_path(line)
 

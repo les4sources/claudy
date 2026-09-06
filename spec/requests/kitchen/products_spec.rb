@@ -8,8 +8,8 @@ RSpec.describe "Cuisine — produits du buffet", type: :request do
   before { sign_in user }
 
   def product(**attrs)
-    KitchenProduct.create!({ name: "Fromage", unit: "g", quantity_per_person: 80,
-                              kinds: %w[buffet_vege] }.merge(attrs))
+    KitchenProduct.create!({ name: "Fromage", unit: "g",
+                              quantities: { "buffet_vege" => "80" } }.merge(attrs))
   end
 
   describe "GET /kitchen/products" do
@@ -27,21 +27,32 @@ RSpec.describe "Cuisine — produits du buffet", type: :request do
   describe "POST /kitchen/products" do
     it "crée un produit" do
       post kitchen_products_path, params: {
-        kitchen_product: { name: "Jambon", unit: "g", quantity_per_person: "60",
-                            kinds: ["buffet_viande"], note: "d'ici", position: "1", active: "1" }
+        kitchen_product: { name: "Jambon", unit: "g", note: "d'ici", position: "1", active: "1",
+                            quantities: { buffet_vege: "", buffet_viande: "60", apero: "" } }
       }
 
       expect(response).to redirect_to(kitchen_products_path)
       product = KitchenProduct.find_by(name: "Jambon")
       expect(product).not_to be_nil
-      expect(product.kinds).to eq(["buffet_viande"])
+      expect(product.quantities).to eq("buffet_viande" => "60")
       expect(product.note).to eq("d'ici")
       expect(product.active).to be(true)
     end
 
+    it "refuse un produit sans aucune quantité et le dit en clair" do
+      post kitchen_products_path, params: {
+        kitchen_product: { name: "Olives", unit: "g",
+                           quantities: { buffet_vege: "", buffet_viande: "", apero: "" } }
+      }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include("Il faut une quantité pour au moins un type de prestation")
+      expect(KitchenProduct.count).to eq(0)
+    end
+
     it "refuse un produit invalide et réaffiche le formulaire" do
       post kitchen_products_path, params: {
-        kitchen_product: { name: "", unit: "g", quantity_per_person: "60" }
+        kitchen_product: { name: "", unit: "g", quantities: { buffet_vege: "60" } }
       }
 
       expect(response).to have_http_status(:unprocessable_entity)
@@ -54,15 +65,28 @@ RSpec.describe "Cuisine — produits du buffet", type: :request do
       line = product
 
       patch kitchen_product_path(line), params: {
-        kitchen_product: { name: "Fromage de chèvre", unit: "g", quantity_per_person: "90",
-                            kinds: ["buffet_vege", "buffet_viande"], active: "0" }
+        kitchen_product: { name: "Fromage de chèvre", unit: "g", active: "0",
+                            quantities: { buffet_vege: "90", buffet_viande: "50", apero: "" } }
       }
 
       expect(response).to redirect_to(kitchen_products_path)
       line.reload
       expect(line.name).to eq("Fromage de chèvre")
-      expect(line.kinds).to contain_exactly("buffet_vege", "buffet_viande")
+      expect(line.quantities).to eq("buffet_vege" => "90", "buffet_viande" => "50")
       expect(line.active).to be(false)
+    end
+  end
+
+  describe "PATCH — retrait d'un type" do
+    it "retire le type dont on vide la quantité" do
+      line = product(quantities: { "buffet_vege" => "80", "buffet_viande" => "50" })
+
+      patch kitchen_product_path(line), params: {
+        kitchen_product: { name: "Fromage", unit: "g", active: "1",
+                           quantities: { buffet_vege: "80", buffet_viande: "", apero: "" } }
+      }
+
+      expect(line.reload.kinds).to eq(["buffet_vege"])
     end
   end
 

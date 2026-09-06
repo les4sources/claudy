@@ -13,13 +13,13 @@ RSpec.describe Kitchen::ShoppingList do
   end
 
   def product(**attrs)
-    KitchenProduct.create!({ name: "Fromage", unit: "g", quantity_per_person: 80,
-                              kinds: %w[buffet_vege buffet_viande], active: true }.merge(attrs))
+    KitchenProduct.create!({ name: "Fromage", unit: "g", active: true,
+                              quantities: { "buffet_vege" => "80", "buffet_viande" => "80" } }.merge(attrs))
   end
 
   describe "#lines" do
     it "arrondit vers le haut au gramme et affiche en kilos au-delà de 1000 g" do
-      product(name: "Fromage", unit: "g", quantity_per_person: 80, kinds: %w[buffet_vege])
+      product(name: "Fromage", unit: "g", quantities: { "buffet_vege" => "80" })
 
       list = described_class.new(order(people: 13))
 
@@ -31,7 +31,7 @@ RSpec.describe Kitchen::ShoppingList do
     end
 
     it "arrondit vers le haut à la pièce" do
-      product(name: "Pain", unit: "piece", quantity_per_person: 0.5, kinds: %w[buffet_vege])
+      product(name: "Pain", unit: "piece", quantities: { "buffet_vege" => "0.5" })
 
       line = described_class.new(order(people: 13)).lines.first
 
@@ -40,7 +40,7 @@ RSpec.describe Kitchen::ShoppingList do
     end
 
     it "arrondit vers le haut au millilitre et affiche en litres au-delà de 1000 ml" do
-      product(name: "Jus", unit: "ml", quantity_per_person: 120, kinds: %w[apero])
+      product(name: "Jus", unit: "ml", quantities: { "apero" => "120" })
 
       line = described_class.new(order(kind: "apero", people: 10)).lines.first
 
@@ -49,7 +49,7 @@ RSpec.describe Kitchen::ShoppingList do
     end
 
     it "affiche en dessous du seuil dans l'unité brute" do
-      product(name: "Beurre", unit: "g", quantity_per_person: 10, kinds: %w[buffet_vege])
+      product(name: "Beurre", unit: "g", quantities: { "buffet_vege" => "10" })
 
       line = described_class.new(order(people: 13)).lines.first
 
@@ -58,21 +58,32 @@ RSpec.describe Kitchen::ShoppingList do
     end
 
     it "ignore un produit inactif" do
-      product(active: false, kinds: %w[buffet_vege])
+      product(active: false, quantities: { "buffet_vege" => "80" })
 
       expect(described_class.new(order).lines).to be_empty
     end
 
     it "ignore un produit d'un autre type" do
-      product(kinds: %w[buffet_viande])
+      product(quantities: { "buffet_viande" => "80" })
 
       expect(described_class.new(order(kind: "buffet_vege")).lines).to be_empty
     end
 
+    it "applique la quantité du type demandé, pas celle de l'autre buffet" do
+      product(name: "Fromages", unit: "g",
+              quantities: { "buffet_vege" => "80", "buffet_viande" => "50" })
+
+      vege   = described_class.new(order(kind: "buffet_vege", people: 10)).lines.first
+      viande = described_class.new(order(kind: "buffet_viande", people: 10)).lines.first
+
+      expect(vege.quantity).to eq(800)
+      expect(viande.quantity).to eq(500)
+    end
+
     it "ne propose pas le jambon sur un buffet végé" do
-      product(name: "Fromage", unit: "g", quantity_per_person: 80, kinds: %w[buffet_vege buffet_viande])
-      product(name: "Jambon", unit: "g", quantity_per_person: 60, kinds: %w[buffet_viande])
-      product(name: "Pain", unit: "piece", quantity_per_person: 0.5, kinds: %w[buffet_vege buffet_viande apero])
+      product(name: "Fromage", unit: "g", quantities: { "buffet_vege" => "80", "buffet_viande" => "80" })
+      product(name: "Jambon", unit: "g", quantities: { "buffet_viande" => "60" })
+      product(name: "Pain", unit: "piece", quantities: { "buffet_vege" => "0.5", "buffet_viande" => "0.5", "apero" => "0.5" })
 
       names = described_class.new(order(kind: "buffet_vege", people: 13)).lines.map { |l| l.product.name }
 
@@ -86,7 +97,7 @@ RSpec.describe Kitchen::ShoppingList do
     end
 
     it "est faux dès qu'un produit correspond" do
-      product(kinds: %w[buffet_vege])
+      product(quantities: { "buffet_vege" => "80" })
 
       expect(described_class.new(order).empty?).to be(false)
     end
