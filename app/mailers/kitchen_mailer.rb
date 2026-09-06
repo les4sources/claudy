@@ -41,6 +41,23 @@ class KitchenMailer < ApplicationMailer
     mail(to: recipient, subject: "Refusé par la cuisine — #{demand_label} — #{customer_name} — #{date_label}")
   end
 
+  # Le programme des deux semaines, envoyé le vendredi : Stéphanie fait ses
+  # courses le dimanche, c'est ce jour-là qu'elle a besoin de savoir ce qui
+  # l'attend. Chacun ne reçoit que SES lignes.
+  def weekly_digest(human, orders)
+    @human  = human
+    @orders = MealOrderDecorator.decorate_collection(orders)
+    @days   = @orders.group_by(&:date).sort_by { |date, _| date || Date::Infinity.new }
+    @kitchen_url = kitchen_orders_url(host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be"))
+    mail(to: human.email, subject: "Cuisine — les 14 prochains jours")
+  end
+
+  # Le pain se commande à la boulangerie, et ça s'oublie. Cinq jours avant.
+  def bread_reminder(order, recipient)
+    prepare(order, recipient)
+    mail(to: recipient, subject: "Pain à commander pour le #{date_label} — #{customer_name}")
+  end
+
   private
 
   def prepare(order, recipient)
