@@ -110,6 +110,12 @@ class MealOrder < ApplicationRecord
   scope :billable, -> { where(status: %w[requested confirmed]).where.not(validation: "refused") }
   scope :pending_validation, -> { where(validation: "pending").where.not(status: "cancelled") }
   scope :chronological, -> { order(Arel.sql("date ASC NULLS LAST"), :id) }
+  scope :antichronological, -> { order(Arel.sql("date DESC NULLS LAST"), id: :desc) }
+  # « À venir » inclut les lignes SANS date : une demande dont la date n'est pas
+  # encore fixée est vivante, elle ne doit pas tomber dans les archives.
+  scope :upcoming, -> { where("date >= ? OR date IS NULL", Date.current) }
+  scope :past, -> { where("date < ?", Date.current) }
+  scope :of_family, ->(family) { where(kind: KIND_FAMILIES.select { |_, f| f == family.to_s }.keys) }
 
   before_create :assign_default_responsible
   before_save :reset_validation_on_sensitive_change

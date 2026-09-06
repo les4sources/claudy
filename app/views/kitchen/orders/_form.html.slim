@@ -1,0 +1,75 @@
+/ Le même formulaire pour créer et pour modifier. Le séjour ne se change pas
+  après coup : déplacer une demande d'un séjour à l'autre, c'est en créer une.
+= form_with model: order, url: url, method: method, class: "space-y-5" do |f|
+  section.rounded-2xl.bg-white.ring-1.ring-gray-200.px-5.py-4.space-y-4
+    - if order.persisted?
+      div
+        .text-xs.font-medium.text-gray-500 Séjour
+        - if order.stay
+          = link_to order.stay.customer&.name.presence || "Séjour ##{order.stay_id}", stay_path(order.stay), class: "text-sm font-semibold text-gray-900 hover:underline"
+    - else
+      div
+        = f.label :stay_id, "Séjour", class: "block text-sm font-medium text-gray-700"
+        = f.select :stay_id,
+                   options_from_collection_for_select(@stays, :id, ->(s) { stay_choice_label(s) }, order.stay_id),
+                   { include_blank: "— Choisir un séjour —" },
+                   { class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm", required: true }
+
+    / Grille à 6 colonnes : le type prend la moitié de la ligne — « Formule trio
+      (midi + goûter + soir) » ne tient pas dans un tiers, et un libellé tronqué
+      dans un sélecteur oblige à l'ouvrir pour savoir ce qu'on a choisi.
+    .grid.grid-cols-1.gap-4.sm:grid-cols-6
+      .sm:col-span-3
+        = f.label :kind, "Type", class: "block text-sm font-medium text-gray-700"
+        = f.select :kind, options_for_select(@kinds, order.kind), {}, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      .sm:col-span-3
+        = f.label :moment, "Moment", class: "block text-sm font-medium text-gray-700"
+        = f.select :moment, options_for_select(MealOrder::MOMENT_LABELS.map(&:reverse), order.moment), { include_blank: "—" }, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      .sm:col-span-2
+        = f.label :date, "Date", class: "block text-sm font-medium text-gray-700"
+        = f.date_field :date, label: false, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      .sm:col-span-2
+        = f.label :people, "Convives", class: "block text-sm font-medium text-gray-700"
+        = f.number_field :people, min: 1, label: false, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      .sm:col-span-2
+        = label_tag "meal_order[unit_price]", "Prix par personne", class: "block text-sm font-medium text-gray-700"
+        .mt-1.flex.items-center.gap-2
+          = number_field_tag "meal_order[unit_price]", order.unit_price_cents && (order.unit_price_cents / 100.0), step: 0.01, min: 0, placeholder: (Pricing::Catalog.meal_per_person_cents(order.kind).to_i / 100.0).to_s, class: "w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          span.text-sm.text-gray-500 €
+        p.mt-1.text-xs.text-gray-400 Laisser vide pour appliquer le tarif du barème.
+      .sm:col-span-3
+        = f.label :responsible_human_id, "S'en charge", class: "block text-sm font-medium text-gray-700"
+        = f.select :responsible_human_id,
+                   options_from_collection_for_select(@humans, :id, :name, order.responsible_human_id),
+                   { include_blank: "— Personne —" },
+                   class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+    div
+      = f.label :notes, "Précisions", class: "block text-sm font-medium text-gray-700"
+      = f.text_area :notes, rows: 2, label: false, placeholder: "Intolérances, menu souhaité, précisions…", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+    div
+      = f.label :status, "Où en est le client", class: "block text-sm font-medium text-gray-700"
+      = f.select :status, options_for_select(status_choices(order), order.status), {}, class: "mt-1 w-full sm:max-w-xs rounded-md border-gray-300 shadow-sm sm:text-sm"
+      - if order.persisted?
+        .mt-2
+          = f.label :cancellation_reason, "Motif d'annulation", class: "block text-xs font-medium text-gray-500"
+          = f.text_field :cancellation_reason, label: false, placeholder: "Obligatoire pour annuler", class: "mt-1 w-full sm:max-w-md rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+  - if order.persisted?
+    section.rounded-2xl.bg-white.ring-1.ring-gray-200.px-5.py-4
+      h2.text-sm.font-semibold.text-gray-900 Coûts réels
+      p.mt-0.5.text-sm.text-gray-500 Saisis après coup — ce que la prestation a coûté, pour la compta.
+      .mt-3.grid.grid-cols-1.gap-4.sm:grid-cols-3
+        div
+          = label_tag "meal_order[cost]", "Coût", class: "block text-sm font-medium text-gray-700"
+          .mt-1.flex.items-center.gap-2
+            = number_field_tag "meal_order[cost]", order.cost_cents && (order.cost_cents / 100.0), step: 0.01, min: 0, class: "w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+            span.text-sm.text-gray-500 €
+        .sm:col-span-2
+          = f.label :cost_notes, "Détail", class: "block text-sm font-medium text-gray-700"
+          = f.text_field :cost_notes, label: false, placeholder: "Courses, temps passé…", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+  .flex.items-center.justify-end.gap-3
+    = link_to "Annuler", kitchen_orders_path, class: "text-sm text-gray-500 hover:underline"
+    = f.submit submit_label, class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
