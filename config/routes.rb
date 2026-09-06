@@ -64,9 +64,18 @@ Rails.application.routes.draw do
       member do
         patch :status
         patch :assign
+        patch :accept
+        get   :new_refusal
+        patch :refuse
       end
     end
   end
+
+  # Canal jeton de la cuisine (epic #219, phase 4) : le lien de l'email au
+  # responsable. Hors du namespace `kitchen` — il ne demande pas de connexion.
+  get  "kitchen/validate/:token", to: "kitchen/validations#show",    as: :kitchen_validation
+  post "kitchen/validate/:token", to: "kitchen/validations#confirm", as: :kitchen_validation_confirm
+  get  "kitchen/refuse/:token",   to: "kitchen/validations#refuse",  as: :kitchen_validation_refuse
   resources :rates, only: [:index, :update]
   resources :rental_items
   resources :reports

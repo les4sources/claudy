@@ -24,6 +24,11 @@ li.border-t.border-gray-100(class="first:border-t-0")
         p.mt-1.text-sm.text-red-700 = order.reason
 
     .flex.flex-wrap.items-center.gap-1.5.shrink-0
+      / Répondre pour la cuisine, depuis n'importe quel compte : les comptes sont
+        partagés, et attendre le bon compte ferait attendre le client.
+      - if order.pending? && !order.cancelled?
+        = button_to "C'est possible", accept_kitchen_order_path(order), method: :patch, class: "rounded-md bg-green-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-green-700"
+        = link_to "Pas possible", new_refusal_kitchen_order_path(order), class: "rounded-md bg-white px-2.5 py-1 text-xs font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-50"
       - unless order.cancelled?
         - if order.responsible_missing? && current_user&.human
           = button_to "Je m'en charge", assign_kitchen_order_path(order), method: :patch, params: { human_id: current_user.human_id }, class: "rounded-md bg-4s-main px-2.5 py-1 text-xs font-medium text-white hover:opacity-90"

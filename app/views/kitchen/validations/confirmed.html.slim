@@ -1,0 +1,8 @@
+.max-w-lg.mx-auto.bg-white.p-6.rounded-lg.shadow-sm.mt-6
+  h1.text-xl.font-bold.mb-4.text-green-700 C'est noté
+  p.mb-2
+    | Merci ! «&nbsp;
+    strong = @order.label
+    | &nbsp;» du
+    = " #{@order.date_label}"
+    |  est marqué comme possible. L'accueil le voit dans Claudy.

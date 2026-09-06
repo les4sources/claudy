@@ -1,0 +1,13 @@
+p Bonjour,
+
+p
+  | La prestation dont vous vous chargez a changé. Rien à revalider — c'est
+    seulement pour que vous soyez au courant.
+
+- entry = kitchen_history_entries(@order.object).find { |e| e[:changes].any? }
+- if entry
+  ul
+    - entry[:changes].each do |change|
+      li = "#{change[:label]} : #{change[:before]} → #{change[:after]}"
+
+= render "kitchen_mailer/demand"

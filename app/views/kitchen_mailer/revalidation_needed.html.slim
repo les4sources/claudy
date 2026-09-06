@@ -1,0 +1,14 @@
+p Bonjour,
+
+p
+  | La demande que vous aviez acceptée a changé. Merci de confirmer que c'est
+    toujours possible.
+
+- entry = kitchen_history_entries(@order.object).find { |e| e[:changes].any? }
+- if entry
+  ul
+    - entry[:changes].each do |change|
+      li = "#{change[:label]} : #{change[:before]} → #{change[:after]}"
+
+= render "kitchen_mailer/demand"
+= render "kitchen_mailer/answer_links"

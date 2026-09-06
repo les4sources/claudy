@@ -88,8 +88,17 @@ class MealOrder < ApplicationRecord
   # Le prix, les notes, le responsable et les coûts n'en font PAS partie.
   VALIDATION_SENSITIVE_FIELDS = %w[kind date moment people].freeze
 
+  # Jeton du lien de validation posé dans l'email au responsable (phase 4) :
+  # portée unique, expiration — impossible à forger ni à rejouer ailleurs.
+  TOKEN_PURPOSE = :validate_meal_order
+  TOKEN_TTL = 30.days
+
   belongs_to :stay
   belongs_to :responsible_human, class_name: "Human", optional: true
+
+  # Interrupteur des notifications, pour les migrations de données, les imports
+  # et les specs qui ne testent pas les emails.
+  attr_accessor :skip_notifications
 
   has_paper_trail
   has_soft_deletion default_scope: true
@@ -120,6 +129,7 @@ class MealOrder < ApplicationRecord
   before_create :assign_default_responsible
   before_save :reset_validation_on_sensitive_change
   before_save :recompute_price
+  after_commit :notify_kitchen, on: [:create, :update]
 
   def self.label_for(kind) = KIND_LABELS[kind.to_s] || kind.to_s.tr("_", " ").capitalize
 
@@ -140,6 +150,31 @@ class MealOrder < ApplicationRecord
   # barème (table `rates`, puis constante) ensuite.
   def unit_price_effective_cents
     unit_price_cents || Pricing::Catalog.meal_per_person_cents(kind).to_i
+  end
+
+  def validation_token
+    signed_id(purpose: TOKEN_PURPOSE, expires_in: TOKEN_TTL)
+  end
+
+  # Résout un jeton. nil si invalide, expiré ou émis pour une autre portée —
+  # jamais d'exception.
+  def self.find_by_validation_token(token)
+    find_signed(token, purpose: TOKEN_PURPOSE)
+  end
+
+  # La cuisine accepte. Idempotent : un lien cliqué deux fois ne change rien.
+  def accept!
+    return self if accepted?
+
+    update!(validation: "accepted", validated_at: Time.current, refusal_reason: nil)
+    self
+  end
+
+  # La cuisine refuse ou se désiste. Le motif est obligatoire — la validation du
+  # modèle fait foi, un motif vide lève `RecordInvalid`.
+  def refuse!(reason)
+    update!(validation: "refused", refusal_reason: reason, validated_at: nil)
+    self
   end
 
   # Avertissements d'usage (epic #219, phase 2) : ce que la personne qui
@@ -167,6 +202,14 @@ class MealOrder < ApplicationRecord
   private
 
   def family_plural = FAMILY_PLURALS[family] || family.to_s
+
+  # Les emails de la cuisine (phase 4) : c'est le notifier qui décide lequel
+  # part et vers qui, à partir de ce que cette sauvegarde a réellement changé.
+  def notify_kitchen
+    return if skip_notifications
+
+    Kitchen::Notifier.new(order: self, changes: previous_changes).call
+  end
 
   # Qui s'en charge quand personne n'est nommé : le responsable par défaut de la
   # famille (Paramètres > Cuisine). Vaut pour les deux chemins de saisie, le

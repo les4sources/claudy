@@ -7,7 +7,7 @@ module Kitchen
   class OrdersController < BaseController
     breadcrumb "Cuisine", :kitchen_orders_path, match: :exact
 
-    before_action :set_order, only: [:edit, :update, :status, :assign]
+    before_action :set_order, only: [:edit, :update, :status, :assign, :accept, :new_refusal, :refuse]
 
     # Sections de l'index, dans l'ordre de lecture. Une ligne tombe dans la
     # PREMIÈRE qui la reçoit : une demande d'info en attente de validation est un
@@ -101,6 +101,27 @@ module Kitchen
       accept_when_someone_takes_it(@order)
       @order.save!
       redirect_to kitchen_orders_path, notice: "#{human.name} s'en charge."
+    end
+
+    # Canal ADMIN de la validation (phase 4), en miroir du canal jeton. Les
+    # comptes sont partagés : n'importe quel utilisateur connecté répond, sans
+    # filtrage par personne (décision Michael).
+    def accept
+      @order.accept!
+      redirect_back fallback_location: kitchen_orders_path, notice: "C'est noté comme possible."
+    end
+
+    def new_refusal
+      prepare_form
+    end
+
+    def refuse
+      @order.refuse!(params.dig(:meal_order, :refusal_reason))
+      redirect_to kitchen_orders_path, notice: "Refus enregistré. L'accueil est prévenu."
+    rescue ActiveRecord::RecordInvalid
+      flash.now[:alert] = "Un motif est nécessaire pour refuser."
+      prepare_form
+      render :new_refusal, status: :unprocessable_entity
     end
 
     private

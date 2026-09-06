@@ -1,0 +1,15 @@
+p Bonjour,
+
+p
+  | La cuisine ne peut pas assurer cette prestation. Il faut revenir vers le
+    client — proposer autre chose, ou l'annuler.
+
+- if @order.refusal_reason.present?
+  p
+    strong Motif :
+    = " #{@order.refusal_reason}"
+
+= render "kitchen_mailer/demand"
+
+p
+  = link_to "Ouvrir la page Cuisine", @kitchen_url
