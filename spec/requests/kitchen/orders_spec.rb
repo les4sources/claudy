@@ -235,6 +235,41 @@ RSpec.describe "Cuisine — page et actions", type: :request do
     end
   end
 
+  # Deux métiers se croisent sur la même demande et tout tenait dans une seule
+  # rangée : « chacun se pose la question de savoir sur quoi je dois cliquer »
+  # (retour d'usage Michael). Chaque métier a maintenant sa bande.
+  describe "GET /kitchen/orders — séparation cuisine / accueil" do
+    it "range chaque action dans la bande du métier qui la porte" do
+      line(kind: "buffet_vege", status: "inquiry")
+
+      get kitchen_orders_path
+
+      body = CGI.unescapeHTML(response.body)
+      expect(body).to include(">Cuisine</span>", ">Pôle Accueil</span>")
+
+      cuisine = body.split(">Cuisine</span>", 2).last.split(">Pôle Accueil</span>", 2).first
+      accueil = body.split(">Pôle Accueil</span>", 2).last
+
+      expect(cuisine).to include("C'est possible", "Pas possible", "Je m'en charge", "Liste de courses")
+      expect(cuisine).not_to include("Confirmer", "Modifier")
+
+      expect(accueil).to include("Ferme", "Confirmer", "Modifier", "Annuler")
+      expect(accueil).not_to include("C'est possible", "Liste de courses")
+    end
+
+    # Une demande annulée ne se cuisine plus : la bande cuisine disparaît, seule
+    # la correction reste côté accueil.
+    it "ne montre plus la bande cuisine sur une demande annulée" do
+      line(status: "cancelled", cancellation_reason: "Groupe annulé")
+
+      get kitchen_orders_path(section: "cancelled")
+
+      body = CGI.unescapeHTML(response.body)
+      expect(body).not_to include(">Cuisine</span>")
+      expect(body).to include(">Pôle Accueil</span>", "Modifier")
+    end
+  end
+
   describe "PATCH /kitchen/orders/:id/status" do
     it "passe une demande d'info en ferme puis en confirmé" do
       order = line(status: "inquiry")
