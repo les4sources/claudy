@@ -7,6 +7,10 @@
 class InvoicingController < BaseController
   def index
     @queue = Invoicing::Queue.new
+    # Historique des envois par année (Michael 2026-09-06) : `?year=` choisit
+    # l'année, une valeur inconnue retombe sur la plus récente.
+    @sent_year = @queue.sent_year_for(params[:year])
+    @sent      = @queue.sent_for_year(@sent_year)
   end
 
   # Bascule du statut de facture d'un réservable (« à fournir » ↔ « envoyée »).
