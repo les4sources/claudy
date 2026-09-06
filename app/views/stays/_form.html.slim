@@ -251,7 +251,11 @@
       / sans lui, chaque édition du séjour recréerait les lignes et effacerait la
       / validation de la cuisine, le responsable et les coûts. Ce formulaire ne
       / pilote QUE la prestation — prix, responsable et statuts vivent dans Cuisine.
-      - meal_kind_options = MealOrder::KIND_LABELS.map { |kind, label| [label, kind] }
+      / Une famille retirée de l'offre (Paramètres > Cuisine) disparaît du
+        sélecteur — sauf sur une ligne qui la porte déjà, pour ne pas rendre son
+        édition impossible.
+      - enabled_meal_kinds = Kitchen::Config.enabled_kinds
+      - meal_kind_options_for = ->(current) { MealOrder::KIND_LABELS.filter_map { |kind, label| [label, kind] if enabled_meal_kinds.include?(kind) || kind == current.to_s } }
       - meal_moment_options = MealOrder::MOMENT_LABELS.map { |moment, label| [label, moment] }
       - meal_field_class = "w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
       - existing_meals = Array(@draft&.meals).map { |m| m.respond_to?(:symbolize_keys) ? m.symbolize_keys : m }
@@ -267,15 +271,15 @@
               li.py-3.grid.grid-cols-2.gap-2.sm:grid-cols-12
                 - if row[:id].present?
                   = hidden_field_tag "stay[meals][#{index}][id]", row[:id]
-                .col-span-2.sm:col-span-4
-                  = select_tag "stay[meals][#{index}][kind]", options_for_select(meal_kind_options, row[:kind]), include_blank: "— Type —", class: meal_field_class
-                .sm:col-span-2
-                  = select_tag "stay[meals][#{index}][moment]", options_for_select(meal_moment_options, row[:moment]), include_blank: "— Moment —", class: meal_field_class
+                .col-span-2.sm:col-span-6
+                  = select_tag "stay[meals][#{index}][kind]", options_for_select(meal_kind_options_for.call(row[:kind]), row[:kind]), include_blank: "Type", class: meal_field_class
+                .sm:col-span-3
+                  = select_tag "stay[meals][#{index}][moment]", options_for_select(meal_moment_options, row[:moment]), include_blank: "Moment", class: meal_field_class
                 .sm:col-span-3
                   = date_field_tag "stay[meals][#{index}][date]", row[:date], class: meal_field_class
                 .col-span-2.sm:col-span-3
                   = number_field_tag "stay[meals][#{index}][people]", row[:people], min: 0, placeholder: "Convives", class: meal_field_class
-                .col-span-2.sm:col-span-12
+                .col-span-2.sm:col-span-9
                   = text_field_tag "stay[meals][#{index}][notes]", row[:notes], placeholder: "Intolérances, précisions…", class: meal_field_class
 
       / --- Terrasse (ADMIN uniquement) ---------------------------------------

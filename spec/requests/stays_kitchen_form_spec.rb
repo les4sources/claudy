@@ -61,6 +61,35 @@ RSpec.describe "Séjour — section Cuisine du formulaire", type: :request do
     expect(stay.reload.total_amount_cents).to eq(21_000)
   end
 
+  describe "paramètres de la cuisine (phase 2)" do
+    let!(:steph) { Human.create!(name: "Stéphanie", email: "steph@les4sources.be", status: "active") }
+
+    it "avertit sans bloquer, et pose le responsable par défaut" do
+      Setting.set("kitchen.repas.default_human_id", steph.id)
+
+      post stays_path, params: base_params(
+        meals: { "0" => { kind: "repas", date: (Date.current + 3).iso8601, people: 30 } }
+      )
+
+      line = MealOrder.order(:created_at).last
+      expect(line.people).to eq(30)                     # rien n'a été refusé
+      expect(line.responsible_human).to eq(steph)
+      expect(flash[:info]).to include(
+        a_string_including("Au-delà du plafond de 25 convives"),
+        a_string_including("Date à moins de 7 jours")
+      )
+    end
+
+    it "retire du sélecteur les types d'une famille désactivée" do
+      Setting.set("kitchen.apero.enabled", "0")
+
+      get new_stay_path
+
+      expect(response.body).to include("Buffet végétarien")
+      expect(response.body).not_to include("Apéro produits locaux")
+    end
+  end
+
   it "annule la ligne que le form ne renvoie plus" do
     post stays_path, params: base_params(
       meals: { "0" => { kind: "buffet_viande", date: day.iso8601, people: 6 } }

@@ -56,6 +56,10 @@ Rails.application.routes.draw do
   resources :payments, only: [:index, :show, :destroy]
   resources :products
   resources :projects
+  # Cuisine (epic #219) — URLs admin en anglais, interface en français.
+  namespace :kitchen do
+    resource :settings, only: [:show, :update]
+  end
   resources :rates, only: [:index, :update]
   resources :rental_items
   resources :reports

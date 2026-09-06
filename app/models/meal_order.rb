@@ -77,6 +77,8 @@ class MealOrder < ApplicationRecord
 
   MOMENT_LABELS     = { "midi" => "Midi", "soir" => "Soir", "gouter" => "Goûter" }.freeze
   FAMILY_LABELS     = { "repas" => "Repas", "buffet" => "Buffet", "apero" => "Apéro" }.freeze
+  # Pour les phrases d'avertissement : « … pour les buffets ».
+  FAMILY_PLURALS    = { "repas" => "repas", "buffet" => "buffets", "apero" => "apéros" }.freeze
   STATUS_LABELS     = { "inquiry" => "Demande d'info", "requested" => "Demande ferme",
                         "confirmed" => "Confirmé", "cancelled" => "Annulé" }.freeze
   VALIDATION_LABELS = { "pending" => "En attente", "accepted" => "Acceptée",
@@ -109,6 +111,7 @@ class MealOrder < ApplicationRecord
   scope :pending_validation, -> { where(validation: "pending").where.not(status: "cancelled") }
   scope :chronological, -> { order(Arel.sql("date ASC NULLS LAST"), :id) }
 
+  before_create :assign_default_responsible
   before_save :reset_validation_on_sensitive_change
   before_save :recompute_price
 
@@ -133,6 +136,21 @@ class MealOrder < ApplicationRecord
     unit_price_cents || Pricing::Catalog.meal_per_person_cents(kind).to_i
   end
 
+  # Avertissements d'usage (epic #219, phase 2) : ce que la personne qui
+  # cuisine annonce d'habitude, dépassé par cette ligne. On le DIT, on ne bloque
+  # jamais — un groupe de 35 est déjà passé, et il fallait le servir.
+  def warnings
+    list = []
+    cap = Kitchen::Config.max_people(family)
+    list << "Au-delà du plafond de #{cap} convives pour les #{family_plural}" if cap && people.to_i > cap
+
+    lead = Kitchen::Config.lead_days(family)
+    if lead && date.present? && (date - Date.current).to_i < lead
+      list << "Date à moins de #{lead} jours, délai habituel pour les #{family_plural}"
+    end
+    list
+  end
+
   # Marge de la ligne, une fois le coût réel saisi (phase 5).
   def margin_cents
     return nil if cost_cents.nil?
@@ -141,6 +159,17 @@ class MealOrder < ApplicationRecord
   end
 
   private
+
+  def family_plural = FAMILY_PLURALS[family] || family.to_s
+
+  # Qui s'en charge quand personne n'est nommé : le responsable par défaut de la
+  # famille (Paramètres > Cuisine). Vaut pour les deux chemins de saisie, le
+  # formulaire du séjour comme celui de la page Cuisine.
+  def assign_default_responsible
+    return if responsible_human_id.present?
+
+    self.responsible_human = Kitchen::Config.default_human(family)
+  end
 
   # `price_cents` reste le TOTAL de la ligne. On le recalcule dès qu'un de ses
   # facteurs bouge — jamais sur un simple changement de notes ou de statut, pour
