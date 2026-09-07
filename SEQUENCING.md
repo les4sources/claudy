@@ -60,7 +60,9 @@ Issues rédigées depuis la note vocale « 4S : Admin dans Claudy » (2026-09-07
 - [ ] **E.9 Tiny house** — #247 (issue) : `RevenueShareAgreement` 50 %, relevé trimestriel (confirmé ; mensuel possible par réglage), écriture, page à jeton → « À payer ».
 - [ ] **E.10 Dépôt-vente** — #248 : artisans (commission 20 % confirmée, mode facture ou virement — les membres aussi par virement), déclaration mensuelle par lien à jeton, vérification, règlement. Compensation sur compte sourcier : hors scope.
 
-Déjà couvert, rien à faire : import CODA (#181), réconciliation ligne par ligne et rapprochement assisté (#179/#183), comptes bancaires + Stripe multi-comptes et coût d'encaissement (#187 — les clés du compte Stripe « tranche_de_vie » restent à renseigner par Michael), arrêté du mois (#189). Dépendance transversale : la file « À payer » (E.2 phase 4) est le point de convergence de E.3, E.6, E.7, E.9 et E.10 — leurs dernières phases l'attendent.
+- [ ] **E.11 Stripe — comptes à versements manuels** — #250 : découvert le 2026-09-07 soir en configurant Tranches de Vie (clé restreinte + compte de trésorerie posés) : Stripe refuse `BalanceTransaction.list(payout:)` sur un versement **manuel**, et #187 n'a jamais branché `VentilateStripePayout` sur « À affecter ». Mode `ledger` par compte : le solde Stripe est un compte de trésorerie (une ou deux lignes par transaction, correspondances par catégorie décidées une fois), le versement est un virement interne `580000` ; proposition du versement sur « À affecter » pour les deux modes ; Claudy reste `per_payout`.
+
+Déjà couvert, rien à faire : import CODA (#181), réconciliation ligne par ligne et rapprochement assisté (#179/#183), comptes bancaires + Stripe multi-comptes et coût d'encaissement (#187 — la clé `STRIPE_API_KEY_TRANCHE_DE_VIE` et le compte de trésorerie « Stripe Tranches de Vie » sont en place depuis le 2026-09-07 ; la synchro attend #250), arrêté du mois (#189). Dépendance transversale : la file « À payer » (E.2 phase 4) est le point de convergence de E.3, E.6, E.7, E.9 et E.10 — leurs dernières phases l'attendent.
 
 ## Horizon (ISA, non séquencé)
 
