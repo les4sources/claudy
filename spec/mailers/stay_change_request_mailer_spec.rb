@@ -14,6 +14,32 @@ RSpec.describe StayChangeRequestMailer, type: :mailer do
                                 new_total_cents: 58_000, delta_cents: 8_000 }.merge(attrs))
   end
 
+  # Issue #232 — un client peut vivre sans email : les trois messages qui lui
+  # sont adressés se taisent, celui de l'équipe part quand même.
+  context "quand le client n'a pas d'adresse email" do
+    let(:customer) { Customer.create!(first_name: "Jean", last_name: "Sanmail", email: nil) }
+
+    it "n'envoie aucun des messages client et ne lève pas" do
+      ActionMailer::Base.deliveries.clear
+      demande = change # une seule demande en attente par séjour
+
+      expect {
+        described_class.customer_received(demande).deliver_now
+        described_class.customer_approved(demande).deliver_now
+        described_class.customer_refused(demande).deliver_now
+      }.not_to raise_error
+
+      expect(ActionMailer::Base.deliveries).to be_empty
+    end
+
+    it "prévient toujours l'équipe" do
+      ActionMailer::Base.deliveries.clear
+      described_class.team_new_request(change).deliver_now
+
+      expect(ActionMailer::Base.deliveries.map(&:to).flatten).to eq(["sejours@les4sources.be"])
+    end
+  end
+
   it "prévient l'équipe avec le delta" do
     mail = described_class.team_new_request(change)
 

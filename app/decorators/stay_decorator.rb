@@ -148,6 +148,16 @@ class StayDecorator < ApplicationDecorator
     origin_contacts.filter_map { |contact| contact[:email] }.first
   end
 
+  # Le client de ce séjour n'a-t-il AUCUNE adresse email (issue #232) ? Vrai
+  # seulement pour un vrai client sans email — un séjour fourre-tout est un cas
+  # distinct, déjà signalé par son propre bloc « Contact d'origine », et son
+  # client porte bel et bien une adresse (une boîte maison).
+  def no_contact_email?
+    return false if catch_all_customer?
+
+    object.customer.present? && object.customer.email.blank?
+  end
+
   # Nom porté par la réservation d'origine : le NOM DE GROUPE d'abord, à défaut
   # le nom de la personne (`firstname` / `lastname`). Les résas OTA n'ont pas de
   # nom de groupe mais bien un prénom — le séjour 1440 (Airbnb) affiche « Freya »

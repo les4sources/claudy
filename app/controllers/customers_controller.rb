@@ -32,7 +32,10 @@ class CustomersController < BaseController
   # Autocomplete JSON pour la re-ventilation (recherche dynamique de client cible).
   def search
     customers = Customer.search(params[:q]).order(:first_name, :last_name, :email).limit(10)
-    render json: customers.map { |c| { id: c.id, name: c.name, email: c.email, phone: c.phone } }
+    # `name` est GARANTI non vide (issue #232) : le JS de l'autocomplete s'en sert
+    # comme libellé de repli, et un client sans email n'a plus d'adresse à
+    # afficher à la place.
+    render json: customers.map { |c| { id: c.id, name: c.display_name, email: c.email, phone: c.phone } }
   end
 
   def show
@@ -160,7 +163,7 @@ class CustomersController < BaseController
   def resolve_reassign_target
     if params[:target_id].present?
       [Customer.find(params[:target_id]), nil]
-    elsif params.dig(:new_customer, :email).present?
+    elsif new_customer_identity_present?
       customer = Customer.new(new_customer_params)
       if customer.save
         [customer, nil]
@@ -169,6 +172,15 @@ class CustomersController < BaseController
       end
     else
       [nil, "Choisissez un client existant ou renseignez un nouveau client."]
+    end
+  end
+
+  # Un nouveau client cible se crée dès qu'il porte une IDENTITÉ (issue #232) :
+  # un nom suffit, l'email n'est plus requis. Le modèle refuse de toute façon une
+  # fiche sans nom ni email.
+  def new_customer_identity_present?
+    %i[email first_name last_name organization_name].any? do |field|
+      params.dig(:new_customer, field).present?
     end
   end
 

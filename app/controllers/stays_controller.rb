@@ -886,6 +886,7 @@ class StaysController < BaseController
       # Catégorie de séjour (Michael 2026-07-21) : le `<select>` du form admin
       # circule par le Draft, comme `group_name`, jusqu'au Stay (Builder/Updater).
       category:       p[:category],
+      customer_id:    contact[:customer_id],
       first_name:     contact[:first_name],
       last_name:      contact[:last_name],
       email:          contact[:email],
@@ -1022,16 +1023,18 @@ class StaysController < BaseController
     end
   end
 
-  # Coordonnées client : soit un client existant sélectionné (on lit ses
-  # coordonnées pour que le Builder/Updater le retrouve par email), soit un
-  # nouveau client saisi à la volée.
+  # Coordonnées client : soit un client existant sélectionné — on transmet alors
+  # son `customer_id`, seule identité fiable depuis qu'un client peut vivre sans
+  # email (issue #232) — soit un nouveau client saisi à la volée, sans
+  # `customer_id` pour que Builder/Updater créent bien une fiche neuve.
   def customer_contact(p)
     if p[:customer_mode].to_s == "new"
       nc = p[:new_customer] || {}
       { first_name: nc[:first_name], last_name: nc[:last_name], email: nc[:email], phone: nc[:phone],
         customer_type: nc[:customer_type], organization_name: nc[:organization_name] }
     elsif (customer = Customer.find_by(id: p[:customer_id]))
-      { first_name: customer.first_name, last_name: customer.last_name, email: customer.email, phone: customer.phone,
+      { customer_id: customer.id,
+        first_name: customer.first_name, last_name: customer.last_name, email: customer.email, phone: customer.phone,
         customer_type: customer.customer_type, organization_name: customer.organization_name }
     else
       {}

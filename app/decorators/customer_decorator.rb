@@ -23,8 +23,11 @@ class CustomerDecorator < ApplicationDecorator
                   class: "inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800")
   end
 
+  # `Customer#name` ne renvoie plus jamais vide (issue #232) : il porte déjà le
+  # repli « Client #<id> ». On garde la délégation explicite pour que le
+  # décorateur et le modèle disent la même chose.
   def display_name
-    name.presence || email
+    name
   end
 
   def language_label

@@ -26,6 +26,57 @@ RSpec.describe Reservations::Builder do
     }.merge(overrides))
   end
 
+  # Issue #232 — identité du client : `customer_id` d'abord, email ensuite,
+  # jamais de recherche par email vide. Le funnel public, lui, garde son
+  # garde-fou : c'est le seul canal par lequel on joint un client en ligne.
+  describe "identité du client (issue #232)" do
+    it "exige un email exploitable hors admin (funnel public)" do
+      builder = described_class.new(draft: draft(email: nil))
+
+      expect { builder.run! }
+        .to raise_error(described_class::DraftInvalid, /adresse email valide/)
+    end
+
+    it "accepte un draft admin sans email et crée une fiche neuve" do
+      builder = described_class.new(draft: draft(email: nil), admin: true, status: "pending", source: "manual")
+
+      expect { builder.run! }.to change(Customer, :count).by(1)
+      expect(builder.customer.email).to be_nil
+      expect(builder.customer.first_name).to eq("Camille")
+    end
+
+    it "ne crée AUCUN client quand le draft admin porte un customer_id" do
+      existing = Customer.create!(first_name: "Jean", last_name: "Sanmail")
+
+      builder = described_class.new(
+        draft: draft(email: nil, customer_id: existing.id, first_name: "Camille"),
+        admin: true, status: "pending", source: "manual"
+      )
+
+      expect { builder.run! }.not_to change(Customer, :count)
+      expect(builder.customer).to eq(existing)
+      expect(builder.customer.first_name).to eq("Jean") # jamais écrasé
+    end
+
+    it "ignore customer_id hors admin — le funnel ne désigne aucune fiche" do
+      existing = Customer.create!(first_name: "Jean", last_name: "Sanmail", email: "jean@example.com")
+
+      builder = described_class.new(draft: draft(customer_id: existing.id))
+      builder.run!
+
+      expect(builder.customer).not_to eq(existing)
+      expect(builder.customer.email).to eq("camille@example.com")
+    end
+
+    it "refuse en admin un email saisi mais mal formé" do
+      builder = described_class.new(draft: draft(email: "pas-un-email"), admin: true,
+                                    status: "pending", source: "manual")
+
+      expect { builder.run! }
+        .to raise_error(described_class::DraftInvalid, /adresse email valide/)
+    end
+  end
+
   # ------------------------------------------------------------------------
   # Epic #26, Phase 2 — Stay-first : le Booking redevient une simple OCCUPATION
   # d'hébergement. Un séjour sans hébergement ne crée plus de « Booking fantôme »,
