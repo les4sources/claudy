@@ -1,7 +1,7 @@
 # Claudy — Séquençage d'exécution (vivant)
 
 > Dérivé de `ISA.md` (Features `StayComposite`/`BookingFlow`/`Activities` + Decisions). **Source de vérité de l'avancement du chantier séjour-composite et de sa suite.**
-> Mis à jour : 2026-07-20 (création du fichier — statut consolidé après merge de TOUT le chantier séjour). Statut global : **le pivot Stay-first est TERMINÉ et en prod** — epics #26 (Payment Stay-first) ✅, #55 (activités) ✅, #66 (séjour composable) ✅, #81 (séjour = point d'entrée unique, 9 phases) ✅, #94/#99 (vetos en nuits, retrait édition legacy) ✅, funnel public réparé et enrichi (#104→#107) ✅, calendrier un-bloc-par-séjour (#108) ✅, espaces composés corrigés + migration (#109) ✅. Backfill prod : 0 orphelin (817 bookings, 579 space_bookings rattachés). Suite : **826 ex / 0 failure**. Déploiement Hatchbox fiabilisé (un seul restart — « Deploy on push » activable).
+> Mis à jour : 2026-09-07 (Volet E — Administratif & Finances) · 2026-07-20 (création du fichier — statut consolidé après merge de TOUT le chantier séjour). Statut global : **le pivot Stay-first est TERMINÉ et en prod** — epics #26 (Payment Stay-first) ✅, #55 (activités) ✅, #66 (séjour composable) ✅, #81 (séjour = point d'entrée unique, 9 phases) ✅, #94/#99 (vetos en nuits, retrait édition legacy) ✅, funnel public réparé et enrichi (#104→#107) ✅, calendrier un-bloc-par-séjour (#108) ✅, espaces composés corrigés + migration (#109) ✅. Backfill prod : 0 orphelin (817 bookings, 579 space_bookings rattachés). Suite : **826 ex / 0 failure**. Déploiement Hatchbox fiabilisé (un seul restart — « Deploy on push » activable).
 
 ## Règles d'exécution (non négociables)
 
@@ -44,6 +44,23 @@ fusion depuis la fiche client (retour fiche, sessionStorage scopé) · notes sé
 - [x] **D.2 Nuit du 21/07 (agent nocturne)** — LIVRÉ et mergé le 21/07 matin (main `c964dcb`, 1086 ex / 0 failure) : #124 Tarifs (PR #134) · #127 Coworking Phase 1 (PR #135, conflit #124 résolu — packs raccordés à la façade `Pricing::Rates`, + 4 clés `coworking.pack_*` ajoutées au seed) · #128 Portail OTP + Mes séjours (PR #136) · #133 Modification de séjour client (PR #137). #129/#130 labellisées `agent:ready` pour la nuit suivante.
 - [x] **D.4 Retours du 21/07 matin** — portail : PRG /portail/verification (fix Turbo) + rate-limit 5 codes/h/email + CSP Vite (port) · Pizza Party retirée du seed (app boulangerie) · modification de séjour : grille préremplie (`lodging_night_ids`) + **PRIX PRÉSERVÉ** (delta = recote proposé − recote actuel appliqué au prix existant, imposé à l'approbation) · **paiements depuis la modale séjour** (ajout, bascule pending↔paid, bandeau « Séjour intégralement payé », `set_payment_status` auto, turbo-frame) — tout vérifié navigateur, main `a2b8d13`, 1096 ex / 0 failure.
 - [ ] **D.3 Validations à l'œil (issues des PR nocturnes)** — écrans Paramètres > Coworking + bloc calendrier 💻 (PR #135, zéro capture) · les 3 écrans du portail dont « Mes séjours » (PR #136) · formulaire client de modification (grille nuit par nuit préremplie) + diff admin sur un vrai cas (PR #137). À trancher : portail trilingue ? rate-limit sur POST /portail/code ? repas modifiables par le client ?
+
+## Volet E — Administratif & Finances, lots C et E (CADRÉ le 2026-09-07, agents nocturnes)
+
+Issues rédigées depuis la note vocale « 4S : Admin dans Claudy » (2026-09-07) et le plan `docs/epics/2026-07-27-finances.md` (branche `plan/epic-finances`). Lots A (compte sourcier) et B (partie double, trésorerie, CODA, rapprochement, Stripe multi-comptes) sont livrés ; ce volet couvre ce qui manquait pour que l'administratif tienne dans Claudy. Toutes portent `agent:ready` ; l'agent avance une phase par epic et par nuit. Décisions prises et questions ouvertes : voir chaque issue (tableau « Décisions prises »).
+
+- [ ] **E.1 Pôles** — #239 : Paramètres > Pôles (CRUD + membres), rassemblements ↔ pôles, page du pôle dans Organisation avec bloc financier, fiche humain. Budget 2027 : hors scope, à brainstormer.
+- [ ] **E.2 Factures** — #240 : tiers (écran), factures d'achat (PDF, lignes compte/pôle, statuts `to_process → to_validate → to_pay → paid`, écriture `purchases` à `to_pay`), validation par le pôle par lien signé, file « À payer » + concern `Payable` + rapprochement sur `440000`, justificatif Stripe mensuel, registre des ventes OkiOki (sans écriture — règle B2). Billit : hors epic, à trancher.
+- [ ] **E.3 Notes de frais et de mission** — #241 : `ExpenseReport` (kind frais/mission), IBAN chiffré sur `humans`, tarif `mileage.per_km`, numéro de pièce, écriture, self-service « Mes notes », paiement + email.
+- [ ] **E.4 Commentaires & notifications** — #242 : `Comment` polymorphe (Basecamp-style) + `Notification` + cloche ; branché sur rassemblements/séjours d'abord, puis notes de frais et factures.
+- [ ] **E.5 Caisse** — #243 : motifs (= affectation), feuille de caisse mensuelle mobile-first, comptage avec écart figé. Défaut : UNE caisse comptable (plan C1) — Michael confirme avant la phase 2.
+- [ ] **E.6 Activités : tenue & rémunération des porteurs** — #244 : pôle + tarif `activity.carrier_hourly` (40 €/h, surcharge par activité), `outcome` held/no_show (reprise 2026 en masse), relevé trimestriel par porteur → « À payer ».
+- [ ] **E.7 Événements** — #245 : organisateurs (poids), taux `event.organizer_share` (70 %), frais fixes, recettes par allocation `document`, page comptable, règlement → « À payer ».
+- [ ] **E.8 Batch cooking** — #246 (issue) : portions par ménage (5 €) et crédit cuisiniers (3,50 €/portion) sur le compte du ménage du cuisinier, enfants inclus.
+- [ ] **E.9 Tiny house** — #247 (issue) : `RevenueShareAgreement` 50 %, relevé trimestriel (ou mensuel par réglage), écriture, page à jeton → « À payer ».
+- [ ] **E.10 Dépôt-vente** — #248 : artisans (commission 20 % par défaut, mode facture ou virement), déclaration mensuelle par lien à jeton, vérification, règlement. Compensation sur compte sourcier : hors scope.
+
+Déjà couvert, rien à faire : import CODA (#181), réconciliation ligne par ligne et rapprochement assisté (#179/#183), comptes bancaires + Stripe multi-comptes et coût d'encaissement (#187 — les clés du compte Stripe « tranche_de_vie » restent à renseigner par Michael), arrêté du mois (#189). Dépendance transversale : la file « À payer » (E.2 phase 4) est le point de convergence de E.3, E.6, E.7, E.9 et E.10 — leurs dernières phases l'attendent.
 
 ## Horizon (ISA, non séquencé)
 
