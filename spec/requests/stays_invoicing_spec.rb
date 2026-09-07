@@ -39,6 +39,45 @@ RSpec.describe "Séjours — demande de facture", type: :request do
 
       expect(response.body).to include(%(<option selected="selected" value="requested">))
     end
+
+    # Issue #233 : la facture est une information d'ARGENT. Sa place est le rail
+    # de prix (l'`aside` collant), à côté du « Montant total demandé » — pas la
+    # colonne de gauche, qui ne parle que de composition du séjour.
+    describe "emplacement du champ facture" do
+      it "rend le select dans le rail de prix, en création" do
+        get new_stay_path
+
+        doc = Nokogiri::HTML(response.body)
+        expect(doc.at_css(%(aside select[name="stay[invoice_status]"]))).not_to be_nil
+        expect(doc.css(%(select[name="stay[invoice_status]"])).size).to eq(1)
+      end
+
+      it "rend le select dans le rail de prix, en édition" do
+        get edit_stay_path(stay)
+
+        doc = Nokogiri::HTML(response.body)
+        expect(doc.at_css(%(aside select[name="stay[invoice_status]"]))).not_to be_nil
+        expect(doc.css(%(select[name="stay[invoice_status]"])).size).to eq(1)
+      end
+
+      it "place la facture après le montant total et avant le paiement initial" do
+        get new_stay_path
+
+        doc = Nokogiri::HTML(response.body)
+        ids = doc.css("aside input, aside select").map { |n| n["id"] }.compact
+        expect(ids.index("stay_invoice_status")).to be > ids.index("stay_price_override")
+        expect(ids.index("stay_invoice_status")).to be < ids.index("stay_create_initial_payment")
+      end
+
+      it "ne laisse plus de section « Facturation » dans la colonne de gauche" do
+        get edit_stay_path(stay)
+
+        titres = Nokogiri::HTML(response.body).css("form h2").map { |h| h.text.strip }
+        expect(titres).not_to include("Facturation")
+        # L'aide qui nomme la file reste, elle.
+        expect(response.body).to include("file Accueil > Facturation")
+      end
+    end
   end
 
   # Édition RÉELLE : le formulaire séjour poste toute sa composition, pas le seul
