@@ -15,6 +15,8 @@ fr:
         pending_pill: "Demande en attente"
         confirmed_intro: "C'est officiel : nous vous attendons. Tout ce qu'il faut savoir tient sur cette page — gardez le lien, il reste valable jusqu'à votre départ."
         pending_intro: "Votre demande est bien enregistrée. Notre équipe la valide et vous écrit dès qu'elle est confirmée."
+        canceled_pill: "Séjour annulé"
+        canceled_intro: "Ce séjour a été annulé. S'il s'agit d'une erreur, écrivez-nous : nous vérifions les disponibilités et vous répondons rapidement."
         arrival: "Arrivée"
         departure: "Départ"
         occupants_heading: "Vous serez"

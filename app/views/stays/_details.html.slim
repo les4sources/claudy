@@ -26,10 +26,20 @@ div id="stay-details-#{@stay.id}"
          formulaire d'édition et dans la file de facturation.
       = @stay.invoice_badge
     .flex.flex-wrap.items-center.gap-2
-      - if @stay.status == "confirmed"
+      /  Trois états, trois jeux de boutons. Un séjour ANNULÉ ne se confirme pas
+         d'un clic : on le réactive en attente, puis on confirme — le second clic
+         est l'occasion de revérifier les dates (le veto n'est pas rejoué ici).
+      - if @stay.canceled?
+        = button_to "Réactiver le séjour", update_status_stay_path(@stay, status: "pending"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-transparent bg-amber-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-amber-600"
+      - elsif @stay.status == "confirmed"
         = button_to "Repasser en attente", update_status_stay_path(@stay, status: "pending"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
       - else
         = button_to "Confirmer le séjour", update_status_stay_path(@stay, status: "confirmed"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-transparent bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700"
+      /  L'annulation sort le séjour de l'agenda et libère ses dates, SANS email
+         au client (contrat anti-spam du toggle interne). Le séjour reste listé
+         avec son badge rouge ; le faire disparaître, c'est la suppression.
+      - unless @stay.canceled?
+        = button_to "Annuler le séjour", update_status_stay_path(@stay, status: "canceled"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Vraiment annuler ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
       - if @stay.token.present?
         = link_to "Page web ↗", public_stay_path(@stay.token, donottrack: 1), target: "_blank", rel: "noopener", class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
       /  Renvoi manuel de l'email de confirmation (Malau, 2026-08-20). N'apparaît

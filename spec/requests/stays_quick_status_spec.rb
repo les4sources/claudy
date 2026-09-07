@@ -67,9 +67,11 @@ RSpec.describe "Stays — action rapide de statut (issue #76)", type: :request d
     expect(hulotte.available_between?(arrival, departure)).to be(true)
   end
 
+  # `canceled` est accepté depuis le 2026-09-05 (voir `stays_cancel_spec`) : un
+  # statut hors liste reste refusé.
   it "refuse un statut invalide sans modifier le séjour" do
     stay = create_pending_stay
-    patch update_status_stay_path(stay), params: { status: "canceled" }
+    patch update_status_stay_path(stay), params: { status: "bogus" }
     expect(stay.reload.status).to eq("pending")
   end
 end

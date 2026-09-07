@@ -32,6 +32,35 @@ RSpec.describe "Public /sejour/:token — page client enrichie", type: :request 
     expect(response.body).to include(I18n.t("public.stays.show.confirmed_pill"))
   end
 
+  # Séjour ANNULÉ (2026-09-05) : la page le dit sans détour et ne propose plus
+  # de payer un solde — ni par le bouton, ni par un POST direct.
+  it "annonce l'annulation et n'offre plus le paiement du solde" do
+    stay = build_stay(status: "canceled")
+
+    get "/sejour/#{stay.token}"
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('data-stay-canceled="true"')
+    expect(response.body).to include(I18n.t("public.stays.show.canceled_pill"))
+    expect(response.body).to include(ERB::Util.html_escape(I18n.t("public.stays.show.canceled_intro")))
+    # Plus de « reste dû » ni de badge de paiement : il n'y a plus rien à payer.
+    expect(response.body).not_to include('data-balance-due="true"')
+    expect(response.body).not_to include(I18n.t("public.stays.payment_status.pending"))
+    expect(response.body).not_to include(new_public_stay_change_request_path(stay.token))
+    expect(response.body).not_to include(I18n.t("public.stays.show.confirmed_pill"))
+    expect(response.body).not_to include('data-stay-balance-cta="true"')
+    expect(response.body).not_to include("translation missing")
+  end
+
+  it "refuse le paiement du solde d'un séjour annulé" do
+    stay = build_stay(status: "canceled")
+
+    expect { post "/sejour/#{stay.token}/payer-le-solde" }.not_to change(Payment, :count)
+
+    expect(response).to redirect_to("/sejour/#{stay.token}")
+    expect(flash[:alert]).to include("annulé")
+  end
+
   it "détaille la composition avec son total" do
     get "/sejour/#{build_stay.token}"
 

@@ -86,6 +86,13 @@ class SpaceBooking < ApplicationRecord
             allow_blank: true
 
   before_create :generate_token
+  # Coupe-circuit des emails client (miroir de `Booking`). Posé par les services
+  # qui propagent un statut DEPUIS le séjour (`Stays::QuickStatusUpdater`) : un
+  # toggle interne ne notifie jamais le client — le séjour porte son propre
+  # email de confirmation (`Stays::ConfirmationNotifier`), et l'annulation est
+  # silencieuse par contrat.
+  attr_accessor :skip_customer_notification
+
   after_update :notify_customer_on_update
 
   def self.search(query)
@@ -161,6 +168,7 @@ class SpaceBooking < ApplicationRecord
   end
 
   def notify_customer_on_update
+    return if skip_customer_notification
     notify_on_status_change if saved_change_to_status? || saved_change_to_email?
     # notify_on_payment_status_change if saved_change_to_payment_status? || saved_change_to_email?
   end

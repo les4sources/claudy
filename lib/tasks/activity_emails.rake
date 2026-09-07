@@ -6,7 +6,7 @@ namespace :activity_emails do
 
     stays = Stay.where(activity_email_sent_at: nil)
                 .where(arrival_date: window_start..window_end)
-                .where.not(status: %w[cancelled])
+                .where.not(status: Stay::CANCELED_STATUSES)
                 .includes(:customer)
 
     puts "#{stays.count} séjour(s) éligible(s)."
@@ -42,7 +42,7 @@ namespace :activity_emails do
 
     stays = Stay.where(balance_reminder_sent_at: nil)
                 .where(arrival_date: window_start..window_end)
-                .where.not(status: %w[cancelled])
+                .where.not(status: Stay::CANCELED_STATUSES)
                 .includes(:customer)
 
     # `balance_due_cents` est CALCULÉ en Ruby (barème activités) : on filtre en
