@@ -21,6 +21,23 @@ RSpec.describe ReservationMailer, type: :mailer do
     s
   end
 
+  # Issue #232 — un client peut vivre sans email. Chaque mailer porte sa propre
+  # garde : on ne compte pas sur les seuls appelants.
+  describe "client sans adresse email (issue #232)" do
+    let(:customer) { Customer.create!(email: nil, first_name: "Jean", last_name: "Sanmail") }
+
+    it "n'envoie ni la demande de confirmation ni la confirmation de séjour" do
+      ActionMailer::Base.deliveries.clear
+
+      expect {
+        described_class.confirmation_request(stay).deliver_now
+        described_class.stay_confirmed(stay).deliver_now
+      }.not_to raise_error
+
+      expect(ActionMailer::Base.deliveries).to be_empty
+    end
+  end
+
   describe "#confirmation_request (AC-T2-21 / AC-T2-17)" do
     subject(:mail) { described_class.confirmation_request(stay) }
 

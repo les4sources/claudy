@@ -125,6 +125,22 @@ RSpec.describe "Customers (admin Pôle Accueil)", type: :request do
       expect(response).to redirect_to(customer_path(customer))
       expect(customer.reload.notes.to_plain_text).to include("Note Pôle Accueil")
     end
+
+    # Issue #232 : l'email n'est plus obligatoire — le libellé du formulaire ne
+    # porte donc plus d'astérisque, et le vider est accepté sur un client nommé.
+    it "n'annonce plus l'email comme obligatoire" do
+      get edit_customer_path(customer)
+
+      expect(response.body).to include("Email")
+      expect(response.body).not_to include("Email *")
+    end
+
+    it "accepte de vider l'email d'un client qui porte un nom" do
+      patch customer_path(customer), params: { customer: { email: "" } }
+
+      expect(response).to redirect_to(customer_path(customer))
+      expect(customer.reload.email).to be_nil
+    end
   end
 
   describe "merge flow" do
@@ -266,6 +282,30 @@ RSpec.describe "Customers (admin Pôle Accueil)", type: :request do
       post reassign_customer_path(catch_all), params: { stay_ids: [], target_id: catch_all.id }
       expect(response).to redirect_to(customer_path(catch_all))
       expect(catch_all.stays.reload.count).to eq(2)
+    end
+
+    # Issue #232 : un client cible se crée avec un NOM SEUL, sans email. Une
+    # personne rencontrée au comptoir n'a pas toujours d'adresse à donner.
+    it "crée le client cible avec un nom seul, sans email" do
+      expect {
+        post reassign_customer_path(catch_all),
+             params: { stay_ids: [move.id], mode: "new",
+                       new_customer: { first_name: "Jean", last_name: "Sanmail", customer_type: "individual" } }
+      }.to change(Customer, :count).by(1)
+
+      created = Customer.find_by(first_name: "Jean", last_name: "Sanmail")
+      expect(created.email).to be_nil
+      expect(created.stays).to contain_exactly(move)
+    end
+
+    it "refuse encore un nouveau client totalement vide" do
+      expect {
+        post reassign_customer_path(catch_all),
+             params: { stay_ids: [move.id], mode: "new", new_customer: { customer_type: "individual" } }
+      }.not_to change(Customer, :count)
+
+      expect(move.reload.customer_id).to eq(catch_all.id)
+      expect(flash[:alert]).to be_present
     end
 
     it "transfers nothing when the new customer email is invalid (AC-54 atomic)" do

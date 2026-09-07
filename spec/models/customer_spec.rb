@@ -92,6 +92,53 @@ RSpec.describe Customer, type: :model do
     end
   end
 
+  # Issue #232 : un client peut exister sans email ni téléphone. Ce qui reste
+  # obligatoire, c'est d'être identifiable — un nom, ou une adresse.
+  describe "client sans email (issue #232)" do
+    it "se sauve avec un email nil dès qu'il porte un nom" do
+      customer = build_customer(email: nil, first_name: "Jean")
+
+      expect(customer).to be_valid
+      expect { customer.save! }.not_to raise_error
+      expect(customer.reload.email).to be_nil
+    end
+
+    it "laisse coexister deux clients sans email" do
+      build_customer(email: nil, first_name: "Jean", last_name: "Dupont").save!
+      second = build_customer(email: nil, first_name: "Marie", last_name: "Durand")
+
+      expect { second.save! }.not_to raise_error
+      expect(Customer.where(email: nil).count).to eq(2)
+    end
+
+    it "accepte un email vide sur une organisation nommée" do
+      org = build_customer(email: nil, customer_type: "organization", organization_name: "ACME")
+
+      expect(org).to be_valid
+    end
+
+    it "refuse un client sans email ET sans le moindre nom" do
+      orphelin = build_customer(email: nil, first_name: nil, last_name: nil, organization_name: nil)
+
+      expect(orphelin).not_to be_valid
+      expect(orphelin.errors[:base]).to include("Indiquez au moins un nom ou une adresse email")
+    end
+
+    it "refuse toujours un email présent mais mal formé" do
+      expect(build_customer(email: "pas-un-email", first_name: "Jean")).not_to be_valid
+    end
+
+    it "applique toujours l'unicité quand l'email est présent" do
+      build_customer(email: "unique@example.com").save!
+
+      expect(build_customer(email: "unique@example.com", first_name: "Jean")).not_to be_valid
+    end
+
+    it "ne laisse jamais le téléphone devenir obligatoire" do
+      expect(build_customer(email: nil, first_name: "Jean", phone: nil)).to be_valid
+    end
+  end
+
   describe ".exploitable_email? (AC-49)" do
     it "is false for blank or format-invalid addresses" do
       expect(Customer.exploitable_email?(nil)).to be(false)
@@ -125,6 +172,23 @@ RSpec.describe Customer, type: :model do
 
     it "falls back to the email when no name is present" do
       expect(build_customer(email: "fallback@example.com").name).to eq("fallback@example.com")
+    end
+
+    # Issue #232 : le nom sert d'étiquette dans la liste des clients, le
+    # `<select>` du formulaire séjour et la modale du séjour. Il ne doit JAMAIS
+    # être vide, sinon la fiche devient impossible à désigner.
+    it "retombe sur « Client #<id> » sans nom ni email" do
+      orphelin = build_customer(email: nil, first_name: "Jean")
+      orphelin.save!
+      orphelin.update_columns(first_name: nil, last_name: nil)
+
+      expect(orphelin.reload.name).to eq("Client ##{orphelin.id}")
+      expect(orphelin.display_name).to eq("Client ##{orphelin.id}")
+      expect(orphelin.decorate.display_name).to eq("Client ##{orphelin.id}")
+    end
+
+    it "n'est jamais vide, même sur une fiche pas encore persistée" do
+      expect(build_customer(email: nil, first_name: nil).name).to be_present
     end
   end
 

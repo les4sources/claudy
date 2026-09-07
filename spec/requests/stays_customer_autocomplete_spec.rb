@@ -29,6 +29,29 @@ RSpec.describe "Stays — autocomplete client (issue #74)", type: :request do
       expect(body.first["email"]).to eq("zoe@example.com")
     end
 
+    # Issue #232 : le JS de l'autocomplete affiche `c.name || c.email` comme
+    # libellé. Un client sans email n'a plus d'adresse de repli — le JSON doit
+    # donc garantir un `name` non vide, quoi qu'il arrive.
+    it "renvoie un name non vide pour un client sans nom ni email" do
+      orphelin = Customer.create!(first_name: "Zoé", phone: "0470999888", customer_type: "individual")
+      orphelin.update_columns(first_name: nil) # fiche vidée à la main, cas limite
+
+      get search_customers_path, params: { q: "0470999888" }, headers: { "Accept" => "application/json" }
+
+      body = JSON.parse(response.body)
+      expect(body.first["name"]).to eq("Client ##{orphelin.id}")
+    end
+
+    it "renvoie le nom d'un client sans email" do
+      Customer.create!(first_name: "Jean", last_name: "Sanmail", customer_type: "individual")
+
+      get search_customers_path, params: { q: "Sanmail" }, headers: { "Accept" => "application/json" }
+
+      body = JSON.parse(response.body)
+      expect(body.first["name"]).to eq("Jean Sanmail")
+      expect(body.first["email"]).to be_nil
+    end
+
     it "expose aussi le téléphone (identité client enrichie)" do
       Customer.create!(first_name: "Zoé", last_name: "Dupont", email: "zoe@example.com",
                        phone: "0470111222", customer_type: "individual")

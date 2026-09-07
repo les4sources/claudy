@@ -10,6 +10,10 @@ class ReservationMailer < ApplicationMailer
     # hébergement n'a d'ailleurs pas de booking.
     @token = stay.token
     @quote = quote_from(stay)
+    # Garde issue #232 : un client peut vivre sans email. On ne compte pas sur
+    # les seuls appelants — un mailer sans destinataire lèverait, ici il se tait.
+    return if stay.customer&.email.blank?
+
     mail(
       to: stay.customer.email,
       subject: "Votre demande de réservation aux 4 Sources"
@@ -31,6 +35,10 @@ class ReservationMailer < ApplicationMailer
     @token = @stay.token
     @pay_url = pay_public_payment_url(@payment, host: application_host)
     @stay_url = public_stay_url(@token, host: application_host)
+    # Garde issue #232 : un client peut vivre sans email. On ne compte pas sur
+    # les seuls appelants — un mailer sans destinataire lèverait, ici il se tait.
+    return if @stay.customer&.email.blank?
+
     mail(
       to: @stay.customer.email,
       subject: "Votre demande est pré-confirmée — l'acompte finalise votre réservation",
@@ -54,6 +62,10 @@ class ReservationMailer < ApplicationMailer
     @balance_due_cents = stay.balance_due_cents
     @pending_payment = stay.payments.pending.where(payment_method: "card")
                            .order(:created_at).first
+    # Garde issue #232 : un client peut vivre sans email. On ne compte pas sur
+    # les seuls appelants — un mailer sans destinataire lèverait, ici il se tait.
+    return if stay.customer&.email.blank?
+
     mail(
       to: stay.customer.email,
       subject: "Votre séjour aux 4 Sources est confirmé 🌿",

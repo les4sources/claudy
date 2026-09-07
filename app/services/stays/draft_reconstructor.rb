@@ -48,6 +48,10 @@ module Stays
         # sinon une approbation de modif client l'effacerait. Vit sur le Stay,
         # PAS sur un bookable : source unique = `@stay.category`.
         category:       @stay.category,
+        # Identité du client par son ID (issue #232) : sans lui, l'édition d'un
+        # séjour dont le client n'a PAS d'email recréerait une fiche neuve à
+        # chaque enregistrement.
+        customer_id:    @stay.customer_id,
         first_name:     @stay.customer&.first_name,
         last_name:      @stay.customer&.last_name,
         email:          @stay.customer&.email,
