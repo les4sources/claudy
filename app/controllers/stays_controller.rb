@@ -232,6 +232,7 @@ class StaysController < BaseController
                )
              end
     @stay_nights = stay_nights_for_grid
+    @stay_days   = stay_days_for_spaces
     # La grille hébergement fait partie du frame rechargé : il lui faut les gîtes
     # et leur dispo aux nouvelles dates (l'exclusion du séjour édité passe par
     # `exclude_stay_id`, transmis par le controller stay-grids en édition).
@@ -803,10 +804,12 @@ class StaysController < BaseController
     # #215) : un séjour `pre_confirmed` ne doit pas retomber en `pending` à la
     # simple ouverture-enregistrement du form. Cf. le bloc « Statut » de `_form`.
     @statuses = (Stay::STATUSES_ADMIN_CREATABLE + [@stay&.status]).compact_blank.uniq
-    # Grille espaces date-par-date : les colonnes-nuits du séjour. Vide si pas de
-    # dates → le form retombe sur les lignes `halls` (journée sèche / espaces
-    # seuls sans dates), qui restent la seule saisie possible hors fenêtre.
+    # Nuits du séjour : grilles hébergement / camping / van / hamac.
     @stay_nights = stay_nights_for_grid
+    # Jours du séjour, départ INCLUS : grille espaces (epic #234, Phase 1). Vide
+    # seulement si le séjour n'a pas de dates → le form retombe alors sur les
+    # lignes `halls`, seule saisie possible hors fenêtre.
+    @stay_days   = stay_days_for_spaces
     # Dispo par gîte × nuit pour la grille hébergement (parité funnel). En édition,
     # on EXCLUT les propres Booking du séjour (sinon ses nuits s'affichent occupées).
     @lodging_availability = stay_lodging_availability(@lodgings, @stay_nights)
@@ -821,21 +824,23 @@ class StaysController < BaseController
   # les deux → pas de double-compte). Idempotent : no-op si la grille n'est pas
   # active, ou si le draft porte déjà des `space_slots` (re-render POST grille).
   def apply_space_grid_prefill
-    return if @stay_nights.blank?
+    return if @stay_days.blank?
     return if Array(@draft&.space_slots&.values).flatten.any?(&:present?)
     return if Array(@draft&.halls).blank?
 
-    @draft.space_slots = halls_to_space_slots(@draft.halls, @stay_nights)
+    @draft.space_slots = halls_to_space_slots(@draft.halls, @stay_days)
     @draft.halls = []
   end
 
   # Convertit des lignes `halls` {kind, date, period} en grille `space_slots`
-  # {kind => [period_par_nuit]}, indexée depuis la première nuit. Les lignes hors
-  # fenêtre (date absente / hors [arrivée, départ)) sont ignorées : la grille ne
-  # couvre que les nuits du séjour (limitation assumée, cf. rapport).
-  def halls_to_space_slots(halls, nights)
-    arrival = nights.first
-    count   = nights.size
+  # {kind => [period_par_jour]}, indexée depuis le jour d'arrivée. Depuis l'epic
+  # #234 (Phase 1), la fenêtre est [arrivée, départ] — départ INCLUS : une salle
+  # réservée le jour du départ existait en base (import) mais était jetée ici au
+  # premier enregistrement du formulaire. Les lignes hors fenêtre ou sans date
+  # restent ignorées.
+  def halls_to_space_slots(halls, days)
+    arrival = days.first
+    count   = days.size
     slots   = {}
     Array(halls).each do |raw|
       hall   = raw.respond_to?(:symbolize_keys) ? raw.symbolize_keys : raw
@@ -919,13 +924,26 @@ class StaysController < BaseController
     )
   end
 
-  # Jours-colonnes de la grille espaces date-par-date (nuits [arrivée, départ)),
-  # ou [] si les dates manquent. Pilote l'affichage grille vs lignes `halls`.
+  # Nuits-colonnes des grilles à la NUIT (hébergement, camping, van, hamac) :
+  # [arrivée, départ), départ exclu — on ne dort pas la nuit du départ.
   def stay_nights_for_grid
     arrival   = parse_form_date(@draft&.arrival_date&.to_s)
     departure = parse_form_date(@draft&.departure_date&.to_s)
     return [] if arrival.nil? || departure.nil? || departure <= arrival
     (arrival...departure).to_a
+  end
+
+  # Jours-colonnes de la grille ESPACES (epic #234, Phase 1) : [arrivée, départ],
+  # départ INCLUS. Une salle se loue à la journée — un groupe qui dort 4 nuits du
+  # lundi au vendredi occupe bel et bien la salle le vendredi. Un séjour à la
+  # journée (arrivée = départ, 0 nuit) donne donc UNE colonne, là où la grille par
+  # nuit n'en donnait aucune et faisait retomber le form sur les lignes `halls`.
+  # [] seulement si les dates manquent ou sont incohérentes.
+  def stay_days_for_spaces
+    arrival   = parse_form_date(@draft&.arrival_date&.to_s)
+    departure = parse_form_date(@draft&.departure_date&.to_s)
+    return [] if arrival.nil? || departure.nil? || departure < arrival
+    (arrival..departure).to_a
   end
 
   # Dispo `{ lodging_id => [bool par nuit] }` pour la grille hébergement admin.

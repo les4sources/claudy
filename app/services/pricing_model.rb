@@ -239,32 +239,39 @@ class PricingModel
     end
   end
 
-  # Entrées grille nuit-par-nuit `space_slots` : tarif semaine ou week-end selon
+  # Entrées grille JOUR-par-JOUR `space_slots` : tarif semaine ou week-end selon
   # la date. ven (wday=5) et sam (wday=6) → tarifs week-end ; autres → semaine.
+  #
+  # Epic #234, Phase 1 : la fenêtre est [arrivée, départ], départ INCLUS — une
+  # salle se loue à la journée, et le jour du départ compte. L'index de
+  # `space_slots` est donc un index de JOUR (0 = jour d'arrivée), pas de nuit, et
+  # l'étiquette porte la date réelle plutôt qu'un numéro de nuit. La règle
+  # semaine / week-end et les forfaits multi-jours restent à corriger en Phase 2.
   def slot_space_entries
     slots = read(:space_slots)
     return [] if slots.blank?
 
     arrival   = read(:arrival_date)
     departure = read(:departure_date)
-    stay_dates = (arrival && departure) ? (arrival...departure).to_a : []
+    stay_dates = (arrival && departure && departure >= arrival) ? (arrival..departure).to_a : []
 
     slots.flat_map do |space_key, periods|
       key = space_key.to_s
       next [] unless Pricing::Catalog.hall_kind?(key)
       space_name = SPACE_NAMES[key] || key
 
-      Array(periods).each_with_index.filter_map do |period, night_idx|
+      Array(periods).each_with_index.filter_map do |period, day_idx|
         next if period.blank?
         p       = period.to_s
-        date    = stay_dates[night_idx]
+        date    = stay_dates[day_idx]
         weekend = !!(date && [5, 6].include?(date.wday))
         unit    = Pricing::Catalog.hall_rate_cents(key, p, weekend: weekend)
         next if unit.nil?
         period_label = PERIOD_LABELS[p] || p
+        date_label   = date ? I18n.l(date, format: :long) : "jour #{day_idx + 1}"
         { key: key, date: date, period: p, weekend: weekend,
-          position_label: "nuit #{night_idx + 1}",
-          label: "#{space_name} — nuit #{night_idx + 1}, #{period_label}",
+          position_label: date_label,
+          label: "#{space_name} — #{date_label}, #{period_label}",
           amount_cents: unit }
       end
     end.compact
