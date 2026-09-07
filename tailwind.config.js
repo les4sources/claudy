@@ -96,6 +96,12 @@ module.exports = {
     'border-pink-500',
     'border-blue-500',
     'border-yellow-500',
+    // Types de note (Note::TYPES) — le formulaire et le post-it du calendrier
+    // construisent leurs classes par interpolation depuis la couleur stockée
+    // en base, invisible au scanner. Le pattern générique ci-dessous couvre les
+    // classes de base ; les variantes `hover:` ont besoin de cette entrée
+    // dédiée, sinon la pastille du formulaire perd sa bordure au survol.
+    { pattern: /^(bg|border|text)-(yellow|pink|green|blue|orange)-(200|300|500|900)$/, variants: ['hover'] },
     // Dynamic category colors (GatheringCategory/EventCategory) — full Tailwind palette
     // so any color name stored in DB renders without re-seeding the safelist.
     { pattern: /^(bg|border|text|ring)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(50|100|200|300|400|500|600|700|800|900)$/ },

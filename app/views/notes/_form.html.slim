@@ -1,18 +1,16 @@
 = f.text_area :body,
               rows: 3
 
+/ Les types vivent dans Note::TYPES — ajouter une couleur là-bas suffit.
+- type_choices = Note::TYPES.map { |color, label| [raw(%(<span class="px-2 py-1 bg-#{color}-200 rounded-md border border-white hover:border hover:border-#{color}-500">#{ERB::Util.html_escape(label)}</span>)), color] }
+
 .space-y-2
   = f.label :color,
             "Type de note"
   .space-y-4
     = f.collection_radio_buttons :color,
-                                 [ \
-                                   [raw("<span class=\"px-2 py-1 bg-yellow-200 rounded-md border border-white hover:border hover:border-yellow-500\">Nettoyages</span>"), "yellow"], 
-                                   [raw("<span class=\"px-2 py-1 bg-pink-200 rounded-md border border-white hover:border hover:border-pink-500\">Activités</span>"), "pink"], 
-                                   [raw("<span class=\"px-2 py-1 bg-green-200 rounded-md border border-white hover:border hover:border-green-500\">Locations tente/van</span>"), "green"],
-                                   [raw("<span class=\"px-2 py-1 bg-blue-200 rounded-md border border-white hover:border hover:border-blue-500\">Informations/Autres</span>"), "blue"] \
-                                 ],
-                                 :last, :first, 
+                                 type_choices,
+                                 :last, :first,
                                  required: true do |radio_button|
       .flex.items-center
         = radio_button.radio_button

@@ -30,8 +30,8 @@ module Api
                     "account_entries et les règlements — les données d'exploitation n'ont pas à passer par un script versionné dans un dépôt public.",
             upsert: "POST est un UPSERT partout où une clé naturelle existe : canal + nom pour un article, " \
                     "mois + canal pour une fiche, nom pour un compte membre, `idempotency_key` pour une écriture, " \
-                    "`reference` pour un règlement. Rejouer un import ne duplique donc rien ; `meta.created` dit " \
-                    "si l'enregistrement a été créé ou retrouvé.",
+                    "`reference` pour un règlement, `external_ref` pour une note du calendrier. Rejouer un import " \
+                    "ne duplique donc rien ; `meta.created` dit si l'enregistrement a été créé ou retrouvé.",
             soft_delete: "DELETE effectue une suppression douce (soft-delete) : l'enregistrement disparaît de l'API mais reste auditable."
           },
           resources: [
@@ -49,6 +49,7 @@ module Api
             { name: "human_roles", path: api_v1_human_roles_path, description: "Rôles datés par membre (ex. gardes / Veilleur·euse). Filtres: human_id, role_id, status (selected|backup), from, to." },
             { name: "tasks", path: api_v1_tasks_path, description: "Tâches de l'organisation. Filtres: status, project_id." },
             { name: "payments", path: api_v1_payments_path, description: "Paiements liés aux réservations (identifiants Stripe non exposés)." },
+            { name: "notes", path: api_v1_notes_path, description: "Notes (post-it datés) du calendrier partagé. `color` porte le TYPE de note (yellow=Nettoyages, pink=Activités, green=Locations tente/van, blue=Informations/Autres, orange=Pizza party). Filtres: from, to, color, external_ref, q. POST/PATCH/DELETE exposés ; POST est un upsert sur `external_ref`." },
             { name: "catalog_items", path: api_v1_catalog_items_path, description: "Catalogue bar/cellier/repas. Filtres: channel, q, active, on (date de résolution du prix). POST/PATCH/DELETE exposés." },
             { name: "member_accounts", path: api_v1_member_accounts_path, description: "Comptes courants internes des ménages et personnes, avec leur solde recalculé. POST (upsert sur le nom)/PATCH exposés. Filtres: q, kind, active." },
             { name: "account_entries", path: api_v1_account_entries_path, description: "Écritures de compte courant hors fiche papier (charges, loyers, forfaits, arrondis). POST avec idempotency_key. Filtres: member_account_id, flow, source, from, to." },

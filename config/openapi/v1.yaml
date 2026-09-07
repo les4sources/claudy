@@ -29,7 +29,9 @@ tags:
   - name: Catalogue
     description: Logements, chambres et espaces — données de référence.
   - name: Collectif
-    description: Membres, cycles, actions de cycle et tâches de l'organisation.
+    description: >
+      Membres, cycles, actions de cycle, tâches de l'organisation et notes
+      (post-it datés) du calendrier partagé.
   - name: Finances
     description: Paiements liés aux réservations.
   - name: Bar & comptes internes
@@ -775,6 +777,124 @@ paths:
               schema:
                 type: object
                 properties: { data: { $ref: "#/components/schemas/Task" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /notes:
+    get:
+      tags: [Collectif]
+      summary: Lister les notes du calendrier
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date }, description: "Borne basse sur `date`, incluse." }
+        - { name: to, in: query, schema: { type: string, format: date }, description: "Borne haute sur `date`, incluse." }
+        - { name: color, in: query, schema: { type: string, enum: [yellow, pink, green, blue, orange] }, description: "Type de note." }
+        - { name: external_ref, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string }, description: "Recherche insensible à la casse dans le corps de la note." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de notes, de la plus récente à la plus ancienne.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Note" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    post:
+      tags: [Collectif]
+      summary: Poser une note sur le calendrier
+      description: >
+        Le calendrier est la vue partagée du Domaine : ce qui se décide ailleurs
+        (une pizza party réservée sur la boulangerie, par exemple) vient s'y
+        poser par ici. Claudy ne connaît aucun de ces métiers — il expose des
+        notes, et le texte du post-it est composé par l'appelant.
+        `external_ref` porte l'idempotence : quand une note vivante porte déjà
+        la référence fournie, elle est MISE À JOUR au lieu qu'une seconde soit
+        créée, et `meta.created` dit lequel des deux s'est produit. Sans
+        référence, chaque appel crée une note.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [note]
+              properties:
+                note:
+                  type: object
+                  required: [body, date]
+                  properties:
+                    body: { type: string, description: "Corps du post-it. Les sauts de ligne sont conservés." }
+                    date: { type: string, format: date, description: "Jour du calendrier où la note s'affiche." }
+                    color: { type: string, enum: [yellow, pink, green, blue, orange], description: "Type de note. Vide = sans type (rendu en jaune)." }
+                    external_ref: { type: string, description: "Clé d'idempotence de l'appelant, ex. `tranchesdevie-order-1234`." }
+      responses:
+        "201":
+          description: Note créée (`meta.created` vaut true).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Note" }
+                  meta: { type: object, properties: { created: { type: boolean } } }
+        "200":
+          description: Note retrouvée sur sa référence et mise à jour (`meta.created` vaut false).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Note" }
+                  meta: { type: object, properties: { created: { type: boolean } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /notes/{id}:
+    get:
+      tags: [Collectif]
+      summary: Détail d'une note
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Note.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Note" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Collectif]
+      summary: Éditer une note
+      description: "Porte sur `body`, `date` et `color`. `external_ref` est posée à la création et n'est pas modifiable."
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/WriteBody" }
+      responses:
+        "200":
+          description: Note mise à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Note" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Collectif]
+      summary: Retirer une note du calendrier (soft-delete)
+      description: >
+        La ligne reste en base, `deleted_at` renseignée. Sa référence externe
+        redevient libre : reposer une note portant la même `external_ref` crée
+        bien une nouvelle note.
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
@@ -2182,6 +2302,22 @@ components:
         humans:
           type: array
           items: { $ref: "#/components/schemas/Ref" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string }
+    Note:
+      type: object
+      description: >
+        Post-it daté affiché dans la cellule du jour du calendrier. `color` porte
+        le TYPE de note, pas seulement son apparence.
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "note" }
+        body: { type: string }
+        date: { type: string, format: date }
+        color: { type: string, nullable: true, enum: [yellow, pink, green, blue, orange] }
+        type_label: { type: string, nullable: true, description: "Libellé du type, ex. « Pizza party ». Nul si la couleur est vide ou inconnue." }
+        external_ref: { type: string, nullable: true, description: "Clé d'idempotence de l'appelant qui a posé la note. Nul pour les notes saisies à la main." }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         url: { type: string }
