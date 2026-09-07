@@ -39,18 +39,20 @@
   - existing_halls = Array(@draft&.halls).map { |h| h.respond_to?(:symbolize_keys) ? h.symbolize_keys : h }
   - space_rows = existing_halls + Array.new([3 - existing_halls.size, 1].max) { {} }
   / Grille date-par-date (issue parité funnel) : dès que le séjour a des dates,
-  / on réutilise la grille nuits × espaces du funnel (space_slots) au lieu des
-  / lignes `halls`. Sans dates (journée sèche / espaces seuls non datés), on
+  / on réutilise la grille JOURS × espaces du funnel (space_slots) au lieu des
+  / lignes `halls`. Epic #234, Phase 1 : les colonnes vont du jour d'arrivée au
+  / jour de DÉPART INCLUS — un séjour à la journée (0 nuit) a donc bien UNE
+  / colonne, là où la grille par nuit n'en avait aucune. Sans AUCUNE date, on
   / retombe sur les lignes `halls` — seule saisie possible hors fenêtre.
-  - use_space_grid = @stay_nights.present?
+  - use_space_grid = @stay_days.present?
   details(class=grid_box open=(creneaux_espaces.any? || existing_halls.any?))
     summary class=grid_summary
       span 🏛️ Espaces
       = stay_form_section_marker((creneaux_espaces.any? || existing_halls.any?), creneaux_espaces.size)
     .px-5.pb-5.space-y-4
       - if use_space_grid
-        p.text-sm.text-gray-500 Cliquez une cellule pour réserver un espace — journée, soirée ou les deux — nuit par nuit.
-        = render "public/reservations/spaces_calendar", param_root: "stay", draft: @draft, days: @stay_nights
+        p.text-sm.text-gray-500 Cliquez une cellule pour réserver un espace — journée, soirée ou les deux — pour chaque jour du séjour, du jour d'arrivée au jour de départ.
+        = render "public/reservations/spaces_calendar", param_root: "stay", draft: @draft, days: @stay_days
       - else
         p.text-sm.text-gray-500 Ajoutez une salle ou la cuisine pro (date + période). Un séjour peut être composé d'espaces seuls, sans hébergement.
         ul.divide-y.divide-gray-100

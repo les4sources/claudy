@@ -67,6 +67,7 @@ module Public
       @cal_month             = (@draft.arrival_date&.beginning_of_month || Date.today.beginning_of_month)
       @availability_calendar = build_availability_calendar(@lodgings, month: @cal_month)
       @stay_nights           = build_stay_nights
+      @stay_days             = build_stay_days
       @lodging_availability  = build_stay_availability(@lodgings, @stay_nights)
     end
 
@@ -287,6 +288,16 @@ module Public
     def build_stay_nights
       return [] if @draft.arrival_date.blank? || @draft.departure_date.blank?
       (@draft.arrival_date...@draft.departure_date).to_a
+    end
+
+    # Jours-colonnes de la grille ESPACES (epic #234, Phase 1) : départ INCLUS,
+    # parce qu'une salle se loue à la journée. Même règle qu'en admin
+    # (`StaysController#stay_days_for_spaces`) — ce qui est corrigé côté admin
+    # l'est aussi côté client.
+    def build_stay_days
+      return [] if @draft.arrival_date.blank? || @draft.departure_date.blank?
+      return [] if @draft.departure_date < @draft.arrival_date
+      (@draft.arrival_date..@draft.departure_date).to_a
     end
 
     def build_stay_availability(lodgings, nights)
