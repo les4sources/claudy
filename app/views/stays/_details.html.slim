@@ -102,6 +102,11 @@ div id="stay-details-#{@stay.id}"
         - if contact_email.present?
           .text-sm.truncate(class="mt-0.5")
             = mail_to contact_email, class: "text-gray-600 hover:text-gray-900 hover:underline", title: "Écrire à #{contact_email}"
+        /  Client sans adresse email (issue #232) : c'est un cas NORMAL depuis
+           qu'un séjour se saisit au téléphone. On le dit une fois, discrètement,
+           pour que personne ne cherche pourquoi le client n'a rien reçu.
+        - elsif @stay.no_contact_email?
+          .text-sm.text-gray-500(class="mt-0.5") Pas d'adresse email — aucune notification envoyée
         /  Réassignation REPLIÉE : c'est une opération rare (re-ventilation du
            fourre-tout), elle ne doit pas occuper l'écran en permanence.
         details.mt-2
@@ -155,6 +160,8 @@ div id="stay-details-#{@stay.id}"
              lui qui vérifie la disponibilité.
           = link_to "Modifier la composition →", edit_stay_path(@stay), class: "text-xs text-indigo-600 hover:underline"
         .mt-3 = render "stays/composition_lines"
+
+      = render "stays/kitchen_block"
 
       .px-5.py-4
         = render "stays/activities"

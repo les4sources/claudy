@@ -51,7 +51,7 @@ RSpec.describe "Stays — camping / van / repas (epic #66, Phase 3)", type: :req
         post stays_path, params: base_params(
           lodging_id: lodging.id,
           van: { vehicles: 2 },
-          meals: { "0" => { kind: "buffet", date: arrival.iso8601, people: 3 } }
+          meals: { "0" => { kind: "buffet_vege", date: arrival.iso8601, people: 3 } }
         )
       }.to change(VanBooking, :count).by(1)
        .and change(MealOrder, :count).by(1)
@@ -60,7 +60,7 @@ RSpec.describe "Stays — camping / van / repas (epic #66, Phase 3)", type: :req
       van = stay.stay_items.where(bookable_type: "VanBooking").first.bookable
       expect(van.vehicles).to eq(2)
       meal = stay.meal_orders.first
-      expect(meal.kind).to eq("buffet")
+      expect(meal.kind).to eq("buffet_vege")
       expect(meal.people).to eq(3)
       expect(meal.date).to eq(arrival)
     end

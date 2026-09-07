@@ -71,7 +71,7 @@ class StayDecorator < ApplicationDecorator
   end
 
   def meals
-    object.meal_orders.to_a
+    object.meal_orders.active.to_a
   end
 
   # Le séjour a-t-il au moins un élément de composition à afficher ?
@@ -146,6 +146,16 @@ class StayDecorator < ApplicationDecorator
     return object.customer&.email.presence unless catch_all_customer?
 
     origin_contacts.filter_map { |contact| contact[:email] }.first
+  end
+
+  # Le client de ce séjour n'a-t-il AUCUNE adresse email (issue #232) ? Vrai
+  # seulement pour un vrai client sans email — un séjour fourre-tout est un cas
+  # distinct, déjà signalé par son propre bloc « Contact d'origine », et son
+  # client porte bel et bien une adresse (une boîte maison).
+  def no_contact_email?
+    return false if catch_all_customer?
+
+    object.customer.present? && object.customer.email.blank?
   end
 
   # Nom porté par la réservation d'origine : le NOM DE GROUPE d'abord, à défaut
@@ -375,7 +385,7 @@ class StayDecorator < ApplicationDecorator
     # Repas (issue #79) : ce ne sont PAS des `stay_items` (has_many direct), mais
     # ils comptent dans le total — on les ajoute aux lignes pour que la
     # décomposition somme bien au total affiché (aucun écart lignes ≠ total).
-    lines + object.meal_orders.map do |meal|
+    lines + object.meal_orders.billable.map do |meal|
       {
         kind: "MealOrder",
         icon: :utensils,

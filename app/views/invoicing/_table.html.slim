@@ -29,6 +29,10 @@
               = link_to line.label, booking_path(line.record), class: "font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
             - else
               = link_to line.label, space_booking_path(line.record), class: "font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
+            /  Nom de groupe porté par le réservable quand il diffère du client
+               facturé (particulier venu avec sa chorale) : on ne perd rien.
+            - if line.sublabel
+              .text-xs.text-gray-500 = line.sublabel
           td.px-3.py-2.text-sm.text-gray-700.whitespace-nowrap
             - if line.from_date && line.to_date
               = "#{l(line.from_date, format: :long)} → #{l(line.to_date, format: :long)}"

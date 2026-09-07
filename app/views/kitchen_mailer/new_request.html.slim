@@ -1,0 +1,11 @@
+p Bonjour,
+
+- if @order.inquiry?
+  p
+    | Un·e client·e se renseigne sur une prestation de cuisine. Rien n'est engagé
+      de son côté — on cherche juste à savoir si ce serait possible.
+- else
+  p Un·e client·e demande une prestation de cuisine pour son séjour aux 4 Sources.
+
+= render "kitchen_mailer/demand"
+= render "kitchen_mailer/answer_links"

@@ -26,7 +26,7 @@
     .grid.grid-cols-2.gap-2
       = text_field_tag "new_customer[first_name]", bk&.try(:firstname), placeholder: "Prénom", class: "rounded-md border-gray-300 shadow-sm text-sm"
       = text_field_tag "new_customer[last_name]", bk&.try(:lastname), placeholder: "Nom", class: "rounded-md border-gray-300 shadow-sm text-sm"
-    = email_field_tag "new_customer[email]", nil, placeholder: "Email", class: "block w-full rounded-md border-gray-300 shadow-sm text-sm"
+    = email_field_tag "new_customer[email]", nil, placeholder: "Email (facultatif)", class: "block w-full rounded-md border-gray-300 shadow-sm text-sm"
     = text_field_tag "new_customer[phone]", bk&.try(:phone), placeholder: "Téléphone", class: "block w-full rounded-md border-gray-300 shadow-sm text-sm"
     = text_field_tag "new_customer[organization_name]", group, placeholder: "Nom du groupe", class: "block w-full rounded-md border-gray-300 shadow-sm text-sm"
     = select_tag "new_customer[customer_type]", options_for_select([["Particulier", "individual"], ["Organisation", "organization"]], group.present? ? "organization" : "individual"), class: "block w-full rounded-md border-gray-300 shadow-sm text-sm"

@@ -48,7 +48,7 @@ RSpec.describe "Stays#show — composition complète (epic #66, Phase 5)", type:
                              from_date: from, to_date: to, vehicles: 2, status: "confirmed", price_cents: 6_000)
     stay.stay_items.create!(bookable: van)
 
-    MealOrder.create!(stay: stay, kind: "buffet", date: from + 1, people: 8, price_cents: 8_000)
+    MealOrder.create!(stay: stay, kind: "buffet_vege", date: from + 1, people: 8, price_cents: 8_000)
 
     ExperienceBooking.create!(experience_availability: availability, stay: stay, participants: 4, status: "confirmed")
 
@@ -87,7 +87,7 @@ RSpec.describe "Stays#show — composition complète (epic #66, Phase 5)", type:
 
     it "liste la section REPAS (libellé + convives)" do
       expect(response.body).to include("Repas")
-      expect(response.body).to include("Buffet pain-fromages")
+      expect(response.body).to include("Buffet végétarien")
       expect(response.body).to include("8 personne(s)")
     end
 

@@ -56,8 +56,35 @@ Rails.application.routes.draw do
   resources :payments, only: [:index, :show, :destroy]
   resources :products
   resources :projects
+  # Cuisine (epic #219) — URLs admin en anglais, interface en français.
+  namespace :kitchen do
+    root to: "orders#index"
+    resource :settings, only: [:show, :update]
+    resources :products, except: [:show]
+    resources :orders, only: [:index, :new, :create, :edit, :update] do
+      collection do
+        get :stay_search # autocomplete JSON du champ « Séjour » du formulaire
+      end
+      member do
+        patch :status
+        patch :assign
+        patch :accept
+        get   :new_refusal
+        patch :refuse
+        get   :shopping_list
+      end
+    end
+  end
+
+  # Canal jeton de la cuisine (epic #219, phase 4) : le lien de l'email au
+  # responsable. Hors du namespace `kitchen` — il ne demande pas de connexion.
+  get  "kitchen/validate/:token", to: "kitchen/validations#show",    as: :kitchen_validation
+  post "kitchen/validate/:token", to: "kitchen/validations#confirm", as: :kitchen_validation_confirm
+  get  "kitchen/refuse/:token",   to: "kitchen/validations#refuse",  as: :kitchen_validation_refuse
   resources :rates, only: [:index, :update]
   resources :rental_items
+  # Déclarée AVANT `resources :reports`, sinon « kitchen » serait pris pour un id.
+  get "reports/kitchen", to: "reports#kitchen", as: :kitchen_reports
   resources :reports
   resources :roles
   resources :rooms

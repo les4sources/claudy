@@ -18,11 +18,14 @@
           | Hébergements
         th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-fuchsia-700[scope="col"]
           | Espaces
+        th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-orange-700[scope="col"]
+          | Cuisine
         th.px-3.py-3.5.w-48.text-left.text-sm.font-semibold.text-gray-900[scope="col"]
           | Total Accueil
     tbody.divide-y.divide-gray-200.bg-white
       - bookings_total = 0.0
       - space_bookings_total = 0.0
+      - meals_total = 0.0
       - full_total = 0.0
       - (1..12).each do |month|
         tr(class="#{Date.new(@year, month, 1) > Date.today.end_of_month ? "opacity-70" : nil}")
@@ -58,8 +61,14 @@
             - month_revenues_for_space_bookings = @revenues_by_month_for_space_bookings[month] || 0.0
             - space_bookings_total = space_bookings_total + month_revenues_for_space_bookings
             .font-semibold = number_to_currency(month_revenues_for_space_bookings / 100.0)
+          / Cuisine (epic #219, phase 5) : repas, buffets et apéros facturables du
+            mois, à la date de la prestation (ou, à défaut, de l'arrivée).
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-orange-700.bg-orange-100
+            - month_revenues_for_meals = @revenues_by_month_for_meals[month] || 0.0
+            - meals_total = meals_total + month_revenues_for_meals
+            .font-semibold = number_to_currency(month_revenues_for_meals / 100.0)
           td.whitespace-nowrap.px-3.py-4.text-sm.text-gray-700.bg-gray-100.font-extrabold
-            = number_to_currency((month_revenues_for_bookings + month_revenues_for_space_bookings) / 100.0)
+            = number_to_currency((month_revenues_for_bookings + month_revenues_for_space_bookings + month_revenues_for_meals) / 100.0)
     tfoot.bg-blue-300
       tr.border-t-2.border-t-gray-900
         td
@@ -72,8 +81,10 @@
               | 🛌 #{@beds_used_per_year} #{"lit".pluralize(@beds_used_per_year)} #{"occupé".pluralize(@beds_used_per_year)}
         td.align-top.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
           = number_to_currency(space_bookings_total / 100.0, unit: "€")
+        td.align-top.font-medium.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
+          = number_to_currency(meals_total / 100.0, unit: "€")
         td.align-top.font-extrabold.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
-          = number_to_currency((bookings_total + space_bookings_total) / 100.0)
+          = number_to_currency((bookings_total + space_bookings_total + meals_total) / 100.0)
 
 h2.mt-6.text-lg.font-bold Hébergements: revenus par origine
 

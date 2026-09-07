@@ -1,0 +1,21 @@
+p Bonjour #{@human.name},
+
+p Voici ce qui vous attend en cuisine dans les quatorze prochains jours.
+
+- @days.each do |date, orders|
+  h3 = date ? l(date, format: :long).capitalize : "Sans date"
+  table
+    tbody
+      - orders.sort_by { |o| [o.moment.to_s, o.id] }.each do |order|
+        tr
+          td = order.moment_label || "—"
+          td
+            strong = order.label
+          td = order.people_label
+          td = order.stay&.customer&.name
+          td = "#{order.status_label} · #{order.validation_label}"
+          - if order.notes.present?
+            td = order.notes
+
+p
+  = link_to "Tout voir dans Cuisine", @kitchen_url

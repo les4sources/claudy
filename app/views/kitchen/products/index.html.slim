@@ -1,0 +1,50 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Cuisine",
+           links: [link_to("+ Nouveau produit", new_kitchen_product_path, class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90")]
+
+= render "kitchen/settings_tabs"
+
+.max-w-4xl.space-y-4
+  p.text-sm.text-gray-500
+    | Ces produits alimentent la liste de courses des buffets et des apéros. Un
+      produit inactif, ou dont aucun type ne correspond à la ligne, n'y
+      apparaît pas.
+
+  .overflow-hidden.rounded-2xl.bg-white.ring-1.ring-gray-200
+    table.w-full.text-sm
+      thead.text-xs.uppercase.tracking-wide.text-gray-500(class="bg-gray-50/60")
+        tr
+          th.px-4.py-3.text-left Produit
+          th.px-4.py-3.text-left Quantités par type
+          th.px-4.py-3.text-left Note
+          th.px-4.py-3.text-left Actif
+          th.px-4.py-3
+      tbody
+        - if @products.empty?
+          tr
+            td.px-4.py-4.text-gray-500(colspan="5") Aucun produit paramétré pour l'instant.
+        - @products.each do |product|
+          tr.border-t.border-gray-100
+            td.px-4.py-3.font-medium.text-gray-900 = product.name
+            td.px-4.py-3
+              - if product.kinds.empty?
+                span.text-gray-400 —
+              - else
+                .flex.flex-col.gap-0.5
+                  - product.kinds.each do |kind|
+                    .flex.items-baseline.gap-2
+                      span.w-40.shrink-0.text-gray-500 = MealOrder.label_for(kind)
+                      span.font-medium.text-gray-900 = product.quantity_label(kind)
+            td.px-4.py-3.text-gray-500 = product.note.presence || "—"
+            td.px-4.py-3
+              - if product.active
+                span.inline-flex.items-center.rounded-full.bg-green-100.px-2.py-0.5.text-xs.font-medium.text-green-800 Actif
+              - else
+                span.inline-flex.items-center.rounded-full.bg-gray-100.px-2.py-0.5.text-xs.font-medium.text-gray-500 Inactif
+            td.px-4.py-3.text-right.whitespace-nowrap
+              = link_to "Modifier", edit_kitchen_product_path(product), class: "text-xs font-medium text-gray-700 hover:underline"
+              span.mx-1.text-gray-300 ·
+              = button_to "Supprimer", kitchen_product_path(product), method: :delete,
+                          class: "text-xs font-medium text-red-600 hover:underline",
+                          form: { data: { turbo_confirm: "Supprimer « #{product.name} » ?" } }

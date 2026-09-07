@@ -95,3 +95,19 @@ Générer un jeton : `ruby -rsecurerandom -e 'puts SecureRandom.urlsafe_base64(3
 > il faut un **vrai redémarrage** de l'app, pas un simple déploiement : le
 > hot-reload (SIGUSR2) ne recharge pas l'environnement, et la route continuerait
 > de renvoyer 404 alors que la variable semble bien configurée.
+
+## Tâches planifiées (cron Hatchbox)
+
+Claudy envoie plusieurs emails par des tâches rake idempotentes, lancées par le cron de Hatchbox. Toutes sont sans effet si on les rejoue : elles horodatent ce qu'elles ont envoyé.
+
+| Tâche | Cadence | Ce qu'elle fait |
+|---|---|---|
+| `bundle exec rake activity_emails:send` | quotidienne | Invitation à choisir ses activités, ~30 jours avant l'arrivée. |
+| `bundle exec rake activity_emails:balance_reminder` | quotidienne | Relance du solde exigible, ~14 jours avant l'arrivée. |
+| `bundle exec rake coworking:send_expiry_reminders` | quotidienne | Rappel d'expiration des packs de coworking. |
+| `bundle exec rake kitchen:weekly_digest` | **vendredi 07:00** | Programme cuisine des 14 prochains jours, un email par responsable. |
+| `bundle exec rake kitchen:bread_reminders` | **quotidienne 07:00** | Rappel de commander le pain, 5 jours avant chaque prestation acceptée. |
+
+Fuseau horaire des crons : **Europe/Brussels**.
+
+Le digest se garde d'un double envoi par **semaine ISO** (clé `Setting` `kitchen.digest_last_sent_on`) : le relancer le samedi n'envoie rien. `FORCE=1 bundle exec rake kitchen:weekly_digest` passe outre, pour les essais.

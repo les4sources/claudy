@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Navigation nuit par nuit pour la grille Espaces. Scrolle le conteneur
+// Navigation jour par jour pour la grille Espaces. Scrolle le conteneur
 // overflow-x par incréments de 4 colonnes (4 × 90px). Les cellules restent
 // dans le DOM — les space_slot_controller de chaque cellule sont indépendants.
 export default class extends Controller {

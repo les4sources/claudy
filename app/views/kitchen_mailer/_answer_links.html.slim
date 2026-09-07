@@ -1,0 +1,18 @@
+/ Répondre en un clic. « C'est possible » mène à une page de confirmation (on ne
+  mute jamais sur un GET, qu'un antivirus peut précharger) ; « Pas possible »
+  demande une connexion et un motif — jamais de refus anonyme.
+- if @order.pending? && !@order.cancelled?
+  p
+    - if @order.family == "repas"
+      = link_to "C'est possible", kitchen_validation_url(@token, host: @link_host)
+      | &nbsp;·&nbsp;
+      = link_to "Pas possible", kitchen_validation_refuse_url(@token, host: @link_host)
+    - else
+      = link_to "Je m'en charge", kitchen_validation_url(@token, host: @link_host)
+      | &nbsp;·&nbsp;
+      = link_to "Je ne peux pas", kitchen_validation_refuse_url(@token, host: @link_host)
+  p
+    em
+      | Vous pouvez aussi répondre depuis
+      = link_to "la page Cuisine", @kitchen_url
+      | , avec n'importe quel compte.

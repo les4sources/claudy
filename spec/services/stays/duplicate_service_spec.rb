@@ -29,7 +29,7 @@ RSpec.describe Stays::DuplicateService, type: :service do
       email:          "alice@example.com",
       phone:          "0470111222",
       halls:          [{ kind: "grande_salle", date: arrival.iso8601, period: "journee" }],
-      meals:          [{ kind: "buffet", date: arrival.iso8601, people: 3 }]
+      meals:          [{ kind: "buffet_vege", date: arrival.iso8601, people: 3 }]
     )
     builder = Reservations::Builder.new(
       draft: draft, admin: true, source: "manual",
@@ -67,7 +67,7 @@ RSpec.describe Stays::DuplicateService, type: :service do
 
     it "conserve les repas (type + convives)" do
       meal = draft.meals.first
-      expect(meal[:kind]).to eq("buffet")
+      expect(meal[:kind]).to eq("buffet_vege")
       expect(meal[:people]).to eq(3)
     end
   end

@@ -68,7 +68,7 @@
         / valeur à la sélection d'un résultat.
         .space-y-1(data-stay-form-target="existingPanel" data-controller="customer-search" data-customer-search-url-value=search_customers_path)
           label.block.text-sm.font-medium.text-gray-700 Sélectionner un client
-          = select_tag "stay[customer_id]", options_for_select(@customers.map { |c| [c.name.presence || c.email, c.id] }, selected_customer_id), include_blank: "— Choisir un client —", data: { "customer-search-target": "select" }, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          = select_tag "stay[customer_id]", options_for_select(@customers.map { |c| [c.display_name, c.id] }, selected_customer_id), include_blank: "— Choisir un client —", data: { "customer-search-target": "select" }, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           .relative.space-y-1.hidden(data-customer-search-target="searchWrap")
             = text_field_tag :customer_query, nil, placeholder: "Rechercher un client (nom, email)…", autocomplete: "off", data: { "customer-search-target": "searchInput", action: "input->customer-search#search" }, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             .border.border-gray-100.rounded-md.divide-y.divide-gray-50.bg-white.shadow-sm.max-h-48.overflow-y-auto(data-customer-search-target="results")
@@ -106,7 +106,10 @@
           .grid.grid-cols-2.gap-2
             = text_field_tag "stay[new_customer][first_name]", @draft&.first_name, placeholder: "Prénom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
             = text_field_tag "stay[new_customer][last_name]", @draft&.last_name, placeholder: "Nom", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-          = email_field_tag "stay[new_customer][email]", @draft&.email, placeholder: "Email", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          /  Email FACULTATIF (issue #232) : beaucoup de résas se prennent au
+             téléphone ou au comptoir. Un client sans email ne reçoit simplement
+             aucune notification.
+          = email_field_tag "stay[new_customer][email]", @draft&.email, placeholder: "Email (facultatif)", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
           = telephone_field_tag "stay[new_customer][phone]", @draft&.phone, placeholder: "Téléphone", class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
           / Type de client (addendum) : switch particulier ↔ organisation (même style
           / que le statut). Hidden `individual` de repli avant le checkbox
@@ -246,22 +249,41 @@
 
       = render "stays/compose_grids"
 
-      / --- Repas --------------------------------------------------------------
-      - meal_kind_options = [["Repas végé (midi)", "repas_vege_midi"], ["Buffet pain-fromages", "buffet"]]
+      / --- Cuisine ------------------------------------------------------------
+      / Le champ caché `id` porte la réconciliation en place (epic Cuisine #219) :
+      / sans lui, chaque édition du séjour recréerait les lignes et effacerait la
+      / validation de la cuisine, le responsable et les coûts. Ce formulaire ne
+      / pilote QUE la prestation — prix, responsable et statuts vivent dans Cuisine.
+      / Une famille retirée de l'offre (Paramètres > Cuisine) disparaît du
+        sélecteur — sauf sur une ligne qui la porte déjà, pour ne pas rendre son
+        édition impossible.
+      - enabled_meal_kinds = Kitchen::Config.enabled_kinds
+      - meal_kind_options_for = ->(current) { MealOrder::KIND_LABELS.filter_map { |kind, label| [label, kind] if enabled_meal_kinds.include?(kind) || kind == current.to_s } }
+      - meal_moment_options = MealOrder::MOMENT_LABELS.map { |moment, label| [label, moment] }
+      - meal_field_class = "w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
       - existing_meals = Array(@draft&.meals).map { |m| m.respond_to?(:symbolize_keys) ? m.symbolize_keys : m }
       - meal_rows = existing_meals + Array.new([3 - existing_meals.size, 1].max) { {} }
       details class=section_box open=existing_meals.any?
         summary class=section_summary
-          span 🍽️ Repas
+          span 🍽️ Cuisine
           = stay_form_section_marker(existing_meals.any?, existing_meals.size)
         .px-5.pb-5.space-y-4
-          p.text-sm.text-gray-500 Ajoutez un repas (type + date + nombre de convives). Les repas n'occupent pas le calendrier.
+          p.text-sm.text-gray-500 Repas, buffets et apéros du séjour (type + moment + date + convives). Ils n'occupent pas le calendrier. Le suivi — qui s'en charge, où en est la demande — se tient dans Cuisine.
           ul.divide-y.divide-gray-100
             - meal_rows.each_with_index do |row, index|
-              li.py-2.grid.grid-cols-3.gap-2
-                = select_tag "stay[meals][#{index}][kind]", options_for_select(meal_kind_options, row[:kind]), include_blank: "— Repas —", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-                = date_field_tag "stay[meals][#{index}][date]", row[:date], class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
-                = number_field_tag "stay[meals][#{index}][people]", row[:people], min: 0, placeholder: "Convives", class: "rounded-md border-gray-300 shadow-sm sm:text-sm"
+              li.py-3.grid.grid-cols-2.gap-2.sm:grid-cols-12
+                - if row[:id].present?
+                  = hidden_field_tag "stay[meals][#{index}][id]", row[:id]
+                .col-span-2.sm:col-span-6
+                  = select_tag "stay[meals][#{index}][kind]", options_for_select(meal_kind_options_for.call(row[:kind]), row[:kind]), include_blank: "Type", class: meal_field_class
+                .sm:col-span-3
+                  = select_tag "stay[meals][#{index}][moment]", options_for_select(meal_moment_options, row[:moment]), include_blank: "Moment", class: meal_field_class
+                .sm:col-span-3
+                  = date_field_tag "stay[meals][#{index}][date]", row[:date], class: meal_field_class
+                .col-span-2.sm:col-span-3
+                  = number_field_tag "stay[meals][#{index}][people]", row[:people], min: 0, placeholder: "Convives", class: meal_field_class
+                .col-span-2.sm:col-span-9
+                  = text_field_tag "stay[meals][#{index}][notes]", row[:notes], placeholder: "Intolérances, précisions…", class: meal_field_class
 
       / --- Terrasse (ADMIN uniquement) ---------------------------------------
       / Groupes occupant UNIQUEMENT la terrasse (ex. randonneurs / BBQ) : forfait
@@ -338,20 +360,6 @@
           = check_box_tag "stay[force_availability]", "1", false
           | Forcer la disponibilité (surbooking / saisie a posteriori)
 
-      / --- Facturation --------------------------------------------------------
-      /  Michael 2026-09-02 : c'est ICI que Malau dit « ce client veut une
-         facture ». Le séjour bascule alors dans la file Accueil > Facturation,
-         où Manon la marque envoyée. Le troisième état (« Facturée ») n'est là
-         que pour corriger sans passer par la file — la bascule normale se fait
-         d'un clic depuis la file elle-même.
-      - current_invoice_status = (@stay&.invoice_status.presence || "")
-      section.bg-white.rounded-2xl.ring-1.ring-gray-200.p-5.space-y-4
-        h2.text-base.font-semibold.text-gray-900 Facturation
-        .space-y-1
-          label.block.text-sm.font-medium.text-gray-700 for="stay_invoice_status" Facture
-          = select_tag "stay[invoice_status]", options_for_select([["Non requise", ""]] + Stay::INVOICE_STATUSES.map { |v, l| [l, v] }, current_invoice_status), id: "stay_invoice_status", class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          p.text-xs.text-gray-500 « À fournir » place le séjour dans la file Accueil > Facturation.
-
       / --- Notes --------------------------------------------------------------
       / Note interne (texte brut, jamais visible du client) + note publique
       / (ActionText, affichée sur /sejour/:token). À la création, la note interne
@@ -372,9 +380,10 @@
           = rich_text_area_tag "stay[public_notes]", @stay&.public_notes&.to_trix_html, class: "trix-content"
 
     /  RAIL DE PRIX. Tout ce qui répond à « combien ça coûte et est-ce que je
-       valide ? » : le devis live, le prix imposé qui le court-circuite, le
-       paiement initial à la création, et les deux boutons. Les remonter ici, c'est
-       supprimer l'aller-retour bas-de-page ↔ grille qu'imposait l'ancien form.
+       valide ? » : le devis live, le prix imposé qui le court-circuite, la
+       facture, le paiement initial à la création, et les deux boutons. Les
+       remonter ici, c'est supprimer l'aller-retour bas-de-page ↔ grille
+       qu'imposait l'ancien form.
     aside.space-y-4(class="lg:sticky lg:top-6")
       = render "stays/quote_panel"
 
@@ -389,6 +398,19 @@
             = number_field_tag "stay[price_override]", override_prefill, id: "stay_price_override", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-xl border-gray-300 pr-8 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             span.pointer-events-none.absolute.inset-y-0.right-3.flex.items-center.text-sm.text-gray-400 €
           p.text-xs.text-gray-500 Laisser vide pour appliquer le devis. Un montant remplace le total.
+
+        /  Facture (déplacée de la colonne de gauche le 2026-09-07, issue #233) :
+           c'est une information d'argent, sa place est à côté du montant.
+        - current_invoice_status = (@stay&.invoice_status.presence || "")
+        .space-y-1.pt-3.border-t.border-gray-100
+          label.block.text-sm.font-semibold.text-gray-900 for="stay_invoice_status" Facture
+          = select_tag "stay[invoice_status]", options_for_select([["Non requise", ""]] + Stay::INVOICE_STATUSES.map { |v, l| [l, v] }, current_invoice_status), id: "stay_invoice_status", class: "block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          p.text-xs.text-gray-500 « À fournir » place le séjour dans la file Accueil > Facturation.
+        /  Michael 2026-09-02 : c'est ICI que Malau dit « ce client veut une
+           facture ». Le séjour bascule alors dans la file Accueil > Facturation,
+           où Manon la marque envoyée. Le troisième état (« Facturée ») n'est là
+           que pour corriger sans passer par la file — la bascule normale se fait
+           d'un clic depuis la file elle-même.
 
         / Paiement initial en attente (création uniquement — refonte 2026-07-22).
         / Coché → un Payment `pending` est créé sur le séjour au montant indiqué,

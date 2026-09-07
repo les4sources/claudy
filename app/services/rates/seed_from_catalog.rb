@@ -121,12 +121,8 @@ module Rates
       rows
     end
 
-    MEAL_LABELS = {
-      "repas_vege_midi" => "Repas végétarien (midi)",
-      "buffet"          => "Buffet pain-fromages"
-    }.freeze
-
-    def meal_label(kind) = MEAL_LABELS.fetch(kind, kind.to_s.tr("_", " ").capitalize)
+    # Libellés des types de cuisine : une seule source, le modèle (#219).
+    def meal_label(kind) = MealOrder.label_for(kind)
 
     # Packs coworking (#127) — mergés en parallèle de #124, absents du seed
     # d'origine ; `Pricing::Catalog.coworking_pack_cents` lit ces clés d'abord.

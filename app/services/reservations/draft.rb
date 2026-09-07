@@ -19,6 +19,13 @@ module Reservations
                   :terrasses,
                   :experiences,
                   :first_name, :last_name, :email, :phone, :group_name,
+                  # Identité du client EXISTANT choisi en admin (issue #232).
+                  # Depuis qu'un client peut vivre sans email, l'email n'est plus
+                  # une clé : `Customer.where(email: nil).first_or_initialize`
+                  # rattacherait tous ces séjours à la même personne. Quand ce
+                  # champ est présent, Builder et AdminUpdater résolvent le client
+                  # par son id et ne cherchent JAMAIS par email.
+                  :customer_id,
                   # Client organisation vs particulier (form admin, addendum) :
                   # `customer_type` ("individual"/"organization") + le nom du
                   # groupe/organisation. Portés à la CRÉATION d'un nouveau client.
@@ -77,6 +84,7 @@ module Reservations
       @last_name         = attrs[:last_name].presence
       @email             = attrs[:email].presence
       @phone             = attrs[:phone].presence
+      @customer_id       = attrs[:customer_id].presence
       @group_name        = attrs[:group_name].presence
       @category          = attrs[:category].presence
       @customer_type     = attrs[:customer_type].presence || "individual"

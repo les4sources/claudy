@@ -24,4 +24,17 @@ RSpec.describe StayBalanceReminderMailer, type: :mailer do
   it "rassure explicitement : aucun blocage ni annulation" do
     expect(mail.body.encoded).to match(/rien n'est annulé|reste bien confirmée/)
   end
+
+  # Issue #232 — un client peut vivre sans email : la relance se tait plutôt que
+  # de lever faute de destinataire.
+  context "quand le client n'a pas d'adresse email" do
+    let(:customer) { Customer.create!(email: nil, first_name: "Jean", last_name: "Sanmail") }
+
+    it "n'envoie rien et ne lève pas" do
+      ActionMailer::Base.deliveries.clear
+
+      expect { mail.deliver_now }.not_to raise_error
+      expect(ActionMailer::Base.deliveries).to be_empty
+    end
+  end
 end

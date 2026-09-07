@@ -16,7 +16,7 @@ RSpec.describe Stays::MergePreview, type: :service do
                               to_date: departure, adults: 2, status: "confirmed",
                               booking_type: "lodging", price_cents: lodging_cents)
     stay.stay_items.create!(bookable: booking)
-    MealOrder.create!(stay: stay, kind: "buffet", date: arrival, people: 4, price_cents: meal_cents) if meal_cents
+    MealOrder.create!(stay: stay, kind: "buffet_vege", date: arrival, people: 4, price_cents: meal_cents) if meal_cents
     Payment.create!(stay: stay, amount_cents: paid_cents, status: "paid", payment_method: "card") if paid_cents
     Payment.create!(stay: stay, amount_cents: pending_cents, status: "pending", payment_method: "card") if pending_cents
     stay.recompute_aggregates!

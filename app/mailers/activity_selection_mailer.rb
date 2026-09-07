@@ -7,6 +7,10 @@ class ActivitySelectionMailer < ApplicationMailer
     @booking = stay.bookables.find { |b| b.is_a?(Booking) }
     @selection_url = public_activity_selection_url(stay.activity_selection_token,
                                                    host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be"))
+    # Garde issue #232 : un client peut vivre sans email. On ne compte pas sur
+    # les seuls appelants — un mailer sans destinataire lèverait, ici il se tait.
+    return if stay.customer&.email.blank?
+
     mail(
       to: stay.customer.email,
       subject: "Réservez vos activités pour votre séjour aux 4 Sources"
@@ -19,6 +23,10 @@ class ActivitySelectionMailer < ApplicationMailer
     @bookings = stay.experience_bookings.includes(experience_availability: :experience).active
     @selection_url = public_activity_selection_url(stay.activity_selection_token,
                                                    host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be"))
+    # Garde issue #232 : un client peut vivre sans email. On ne compte pas sur
+    # les seuls appelants — un mailer sans destinataire lèverait, ici il se tait.
+    return if stay.customer&.email.blank?
+
     mail(
       to: stay.customer.email,
       subject: "Vos activités aux 4 Sources — confirmation de demande"
@@ -39,6 +47,10 @@ class ActivitySelectionMailer < ApplicationMailer
     @stay = experience_booking.stay
     @experience = experience_booking.experience
     @stay_url = public_stay_url(@stay.token, host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be"))
+    # Garde issue #232 : un client peut vivre sans email. On ne compte pas sur
+    # les seuls appelants — un mailer sans destinataire lèverait, ici il se tait.
+    return if @stay.customer&.email.blank?
+
     mail(
       to: @stay.customer.email,
       subject: "Une activité a été ajoutée à votre séjour : « #{@experience.name} »"
@@ -50,6 +62,10 @@ class ActivitySelectionMailer < ApplicationMailer
     @booking = experience_booking
     @stay = experience_booking.stay
     @experience = experience_booking.experience
+    # Garde issue #232 : un client peut vivre sans email. On ne compte pas sur
+    # les seuls appelants — un mailer sans destinataire lèverait, ici il se tait.
+    return if @stay.customer&.email.blank?
+
     mail(
       to: @stay.customer.email,
       subject: "Votre activité « #{@experience.name} » est confirmée"
@@ -66,6 +82,10 @@ class ActivitySelectionMailer < ApplicationMailer
     @reason = experience_booking.refusal_reason
     @selection_url = public_activity_selection_url(@stay.activity_selection_token,
                                                    host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be"))
+    # Garde issue #232 : un client peut vivre sans email. On ne compte pas sur
+    # les seuls appelants — un mailer sans destinataire lèverait, ici il se tait.
+    return if @stay.customer&.email.blank?
+
     mail(
       to: @stay.customer.email,
       subject: "Votre activité « #{@experience.name} » n'a pas pu être retenue"

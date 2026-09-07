@@ -1,0 +1,73 @@
+/ Une demande. Lue au téléphone depuis la cuisine autant qu'au bureau : tout
+  s'empile en colonne sur petit écran, les actions passent dessous.
+li.border-t.border-gray-100(class="first:border-t-0")
+  .px-4.py-3
+    .min-w-0
+      .flex.flex-wrap.items-center.gap-2
+        span.text-sm.font-semibold.text-gray-900 = order.date_label
+        = order.status_badge
+        = order.validation_badge
+      .mt-1.flex.flex-wrap.items-center.gap-x-2.text-sm.text-gray-700
+        span = order.label
+        span.text-gray-300 ·
+        span = order.people_label
+        span.text-gray-300 ·
+        span.font-medium = order.price
+      .mt-0.5.text-xs
+        - if order.responsible_missing?
+          span.text-amber-700 Personne ne s'en charge
+        - else
+          span.text-gray-500 = "#{order.responsible_label} s'en charge"
+      - if order.notes_short.present?
+        p.mt-1.text-sm.text-gray-500(title=order.notes) = order.notes_short
+      - if order.reason.present?
+        p.mt-1.text-sm.text-red-700 = order.reason
+
+    / Deux métiers se croisent sur la même demande, et tout tenait dans une seule
+      rangée : personne ne savait plus sur quel bouton il avait la main. Ils ont
+      donc chacun leur bande. CUISINE : celui qui cuisine dit si c'est possible et
+      qui s'en charge, et sort sa liste de courses. PÔLE ACCUEIL : Malau suit où
+      en est le client — demande d'info, ferme, confirmée, annulée — et corrige
+      la demande.
+    .mt-3.space-y-1.5
+      - unless order.cancelled?
+        .flex.flex-wrap.items-start.gap-2.rounded-lg.px-3.py-2(class="bg-teal-50/70")
+          span.shrink-0.py-1.text-xs.font-semibold.uppercase.tracking-wide(class="text-4s-main") Cuisine
+          / Répondre pour la cuisine, depuis n'importe quel compte : les comptes
+            sont partagés, et attendre le bon compte ferait attendre le client.
+          - if order.pending?
+            = button_to "C'est possible", accept_kitchen_order_path(order), method: :patch, class: "rounded-md bg-green-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-green-700"
+            = link_to "Pas possible", new_refusal_kitchen_order_path(order), class: "rounded-md bg-white px-2.5 py-1 text-xs font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-50"
+          / Les comptes sont partagés (décision Michael) : on nomme TOUJOURS la
+            personne, on ne déduit jamais du compte connecté — sur un poste
+            partagé, le compte ne dit pas qui est devant l'écran.
+          details
+            - if order.responsible_missing?
+              summary.cursor-pointer.inline-flex.items-center.rounded-md.bg-4s-main.px-2.5.py-1.text-xs.font-medium.text-white(class="hover:opacity-90 list-none [&::-webkit-details-marker]:hidden") Je m'en charge
+            - else
+              summary.cursor-pointer.inline-flex.items-center.rounded-md.bg-white.px-2.5.py-1.text-xs.font-medium.text-gray-700.ring-1.ring-gray-300(class="hover:bg-gray-50 list-none [&::-webkit-details-marker]:hidden") Confier à quelqu'un d'autre
+            = form_with url: assign_kitchen_order_path(order), method: :patch, class: "mt-2 flex flex-wrap items-center gap-2" do
+              = select_tag :human_id, options_from_collection_for_select(@humans, :id, :name, order.responsible_human_id), include_blank: "— Choisir —", class: "rounded-md border-gray-300 text-sm"
+              = submit_tag "Confier", class: "rounded-md bg-4s-main px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+          / Seuls les buffets et les apéros ont des produits paramétrés — les
+            repas de Stéphanie n'ont pas de liste de courses (epic #219, phase 6).
+          - if %w[buffet apero].include?(order.family)
+            = link_to "Liste de courses", shopping_list_kitchen_order_path(order), class: "rounded-md bg-white px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50", target: "_blank", rel: "noopener"
+
+      .flex.flex-wrap.items-start.gap-2.rounded-lg.bg-gray-50.px-3.py-2
+        span.shrink-0.py-1.text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Pôle Accueil
+        - unless order.cancelled?
+          - if order.inquiry?
+            = button_to "Ferme", status_kitchen_order_path(order), method: :patch, params: { status: "requested" }, class: "rounded-md bg-white px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
+          - unless order.confirmed?
+            = button_to "Confirmer", status_kitchen_order_path(order), method: :patch, params: { status: "confirmed" }, class: "rounded-md bg-white px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
+        = link_to "Modifier", edit_kitchen_order_path(order), class: "rounded-md bg-white px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
+        - unless order.cancelled?
+          details
+            / Geste destructeur : il reste dans sa bande, mais discret. Le lui donner
+              l'allure d'un bouton rouge le rendrait plus tentant qu'avant.
+            summary.cursor-pointer.py-1.text-xs.text-gray-400(class="hover:text-red-600 list-none [&::-webkit-details-marker]:hidden") Annuler cette demande
+            = form_with url: status_kitchen_order_path(order), method: :patch, class: "mt-2 flex flex-wrap items-center gap-2" do
+              = hidden_field_tag :status, "cancelled"
+              = text_field_tag :cancellation_reason, nil, required: true, placeholder: "Motif de l'annulation", class: "min-w-0 flex-1 rounded-md border-gray-300 text-sm"
+              = submit_tag "Annuler", class: "rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"

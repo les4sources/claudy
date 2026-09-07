@@ -12,6 +12,10 @@ class StayChangeRequestMailer < ApplicationMailer
   # Client : accusé de réception.
   def customer_received(change_request)
     assign(change_request)
+    # Garde issue #232 : un client peut vivre sans email — le mailer se tait
+    # plutôt que de lever faute de destinataire.
+    return if @stay.customer&.email.blank?
+
     mail(to: @stay.customer.email,
          subject: "Votre demande de modification a bien été reçue")
   end
@@ -20,6 +24,10 @@ class StayChangeRequestMailer < ApplicationMailer
   def customer_approved(change_request)
     assign(change_request)
     @stay = change_request.stay.reload
+    # Garde issue #232 : un client peut vivre sans email — le mailer se tait
+    # plutôt que de lever faute de destinataire.
+    return if @stay.customer&.email.blank?
+
     mail(to: @stay.customer.email,
          subject: "Votre séjour a été modifié")
   end
@@ -27,6 +35,10 @@ class StayChangeRequestMailer < ApplicationMailer
   # Client : demande refusée — avec le motif.
   def customer_refused(change_request)
     assign(change_request)
+    # Garde issue #232 : un client peut vivre sans email — le mailer se tait
+    # plutôt que de lever faute de destinataire.
+    return if @stay.customer&.email.blank?
+
     mail(to: @stay.customer.email,
          subject: "Votre demande de modification n'a pas pu être acceptée")
   end

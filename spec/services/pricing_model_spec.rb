@@ -190,7 +190,7 @@ RSpec.describe PricingModel do
     end
 
     it "€/pers (repas végé midi) — 10 pers × 15 € = 150 €" do
-      quote = described_class.quote(draft(meals: [{ kind: "repas_vege_midi", people: 10 }]))
+      quote = described_class.quote(draft(meals: [{ kind: "repas", people: 10 }]))
       expect(quote.total_cents).to eq(15_000)
     end
 
@@ -203,7 +203,7 @@ RSpec.describe PricingModel do
       quote = described_class.quote(draft(
         lodging: hulotte, nights: 1,
         campings: [{ kind: "tente", people: 2, nights: 1 }],
-        meals: [{ kind: "repas_vege_midi", people: 2 }],
+        meals: [{ kind: "repas", people: 2 }],
         dogs_count: 1
       ))
       # 485 € + (2×1×7,50) 15 € + (2×15) 30 € + 50 € = 580 €
