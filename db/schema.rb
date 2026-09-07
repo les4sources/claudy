@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_02_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_06_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -852,6 +852,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_120000) do
     t.check_constraint "debit_cents >= 0 AND credit_cents >= 0 AND (debit_cents = 0 OR credit_cents = 0) AND (debit_cents > 0 OR credit_cents > 0)", name: "journal_lines_one_side_only"
   end
 
+  create_table "kitchen_products", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.string "note"
+    t.integer "position"
+    t.jsonb "quantities", default: {}, null: false
+    t.string "unit", null: false
+    t.datetime "updated_at", null: false
+    t.index ["quantities"], name: "index_kitchen_products_on_quantities", using: :gin
+  end
+
   create_table "ledger_documents", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
@@ -912,16 +924,31 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_120000) do
   end
 
   create_table "meal_orders", force: :cascade do |t|
+    t.datetime "bread_reminder_sent_at"
+    t.text "cancellation_reason"
+    t.integer "cost_cents"
+    t.text "cost_notes"
     t.datetime "created_at", null: false
     t.date "date"
     t.datetime "deleted_at"
     t.string "kind"
+    t.string "moment"
+    t.text "notes"
     t.integer "people", default: 1, null: false
     t.integer "price_cents"
+    t.text "refusal_reason"
+    t.bigint "responsible_human_id"
+    t.string "status", default: "requested", null: false
     t.bigint "stay_id", null: false
+    t.integer "unit_price_cents"
     t.datetime "updated_at", null: false
+    t.datetime "validated_at"
+    t.string "validation", default: "pending", null: false
     t.index ["deleted_at"], name: "index_meal_orders_on_deleted_at"
+    t.index ["responsible_human_id"], name: "index_meal_orders_on_responsible_human_id"
+    t.index ["status"], name: "index_meal_orders_on_status"
     t.index ["stay_id"], name: "index_meal_orders_on_stay_id"
+    t.index ["validation"], name: "index_meal_orders_on_validation"
   end
 
   create_table "member_accounts", force: :cascade do |t|
@@ -1555,6 +1582,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_120000) do
   add_foreign_key "lodging_compositions", "lodgings", column: "composite_lodging_id"
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"
+  add_foreign_key "meal_orders", "humans", column: "responsible_human_id"
   add_foreign_key "meal_orders", "stays"
   add_foreign_key "member_accounts", "households"
   add_foreign_key "member_accounts", "humans"

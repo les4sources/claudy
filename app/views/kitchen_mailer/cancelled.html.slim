@@ -1,0 +1,10 @@
+p Bonjour,
+
+p Cette prestation est annulée. Rien à préparer.
+
+- if @order.reason.present?
+  p
+    strong Motif :
+    = " #{@order.reason}"
+
+= render "kitchen_mailer/demand"

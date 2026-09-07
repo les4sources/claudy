@@ -92,6 +92,53 @@ RSpec.describe Customer, type: :model do
     end
   end
 
+  # Issue #232 : un client peut exister sans email ni téléphone. Ce qui reste
+  # obligatoire, c'est d'être identifiable — un nom, ou une adresse.
+  describe "client sans email (issue #232)" do
+    it "se sauve avec un email nil dès qu'il porte un nom" do
+      customer = build_customer(email: nil, first_name: "Jean")
+
+      expect(customer).to be_valid
+      expect { customer.save! }.not_to raise_error
+      expect(customer.reload.email).to be_nil
+    end
+
+    it "laisse coexister deux clients sans email" do
+      build_customer(email: nil, first_name: "Jean", last_name: "Dupont").save!
+      second = build_customer(email: nil, first_name: "Marie", last_name: "Durand")
+
+      expect { second.save! }.not_to raise_error
+      expect(Customer.where(email: nil).count).to eq(2)
+    end
+
+    it "accepte un email vide sur une organisation nommée" do
+      org = build_customer(email: nil, customer_type: "organization", organization_name: "ACME")
+
+      expect(org).to be_valid
+    end
+
+    it "refuse un client sans email ET sans le moindre nom" do
+      orphelin = build_customer(email: nil, first_name: nil, last_name: nil, organization_name: nil)
+
+      expect(orphelin).not_to be_valid
+      expect(orphelin.errors[:base]).to include("Indiquez au moins un nom ou une adresse email")
+    end
+
+    it "refuse toujours un email présent mais mal formé" do
+      expect(build_customer(email: "pas-un-email", first_name: "Jean")).not_to be_valid
+    end
+
+    it "applique toujours l'unicité quand l'email est présent" do
+      build_customer(email: "unique@example.com").save!
+
+      expect(build_customer(email: "unique@example.com", first_name: "Jean")).not_to be_valid
+    end
+
+    it "ne laisse jamais le téléphone devenir obligatoire" do
+      expect(build_customer(email: nil, first_name: "Jean", phone: nil)).to be_valid
+    end
+  end
+
   describe ".exploitable_email? (AC-49)" do
     it "is false for blank or format-invalid addresses" do
       expect(Customer.exploitable_email?(nil)).to be(false)
@@ -126,6 +173,23 @@ RSpec.describe Customer, type: :model do
     it "falls back to the email when no name is present" do
       expect(build_customer(email: "fallback@example.com").name).to eq("fallback@example.com")
     end
+
+    # Issue #232 : le nom sert d'étiquette dans la liste des clients, le
+    # `<select>` du formulaire séjour et la modale du séjour. Il ne doit JAMAIS
+    # être vide, sinon la fiche devient impossible à désigner.
+    it "retombe sur « Client #<id> » sans nom ni email" do
+      orphelin = build_customer(email: nil, first_name: "Jean")
+      orphelin.save!
+      orphelin.update_columns(first_name: nil, last_name: nil)
+
+      expect(orphelin.reload.name).to eq("Client ##{orphelin.id}")
+      expect(orphelin.display_name).to eq("Client ##{orphelin.id}")
+      expect(orphelin.decorate.display_name).to eq("Client ##{orphelin.id}")
+    end
+
+    it "n'est jamais vide, même sur une fiche pas encore persistée" do
+      expect(build_customer(email: nil, first_name: nil).name).to be_present
+    end
   end
 
   describe ".search" do
@@ -137,6 +201,33 @@ RSpec.describe Customer, type: :model do
       expect(Customer.search("ALICE")).to include(a)
       expect(Customer.search("searchable")).to include(b)
       expect(Customer.search("alice")).not_to include(b)
+    end
+
+    # Au téléphone, on tape le numéro comme on l'entend, sans les espaces.
+    it "matches on the phone number, digits only, whatever the formatting" do
+      a = build_customer(email: "phone@example.com", first_name: "Alice",
+                         phone: "0455 13 61 42").tap(&:save!)
+
+      expect(Customer.search("0455136142")).to include(a)
+      expect(Customer.search("136142")).to include(a)
+      expect(Customer.search("0999999999")).not_to include(a)
+    end
+
+    it "matches on the full name typed in one go" do
+      a = build_customer(email: "full@example.com", first_name: "Jean",
+                         last_name: "Dupont").tap(&:save!)
+
+      expect(Customer.search("Jean Dupont")).to include(a)
+    end
+
+    # `%` est un joker SQL : une organisation « 100% Bio » se cherche à la lettre.
+    it "escapes SQL wildcards typed by the user" do
+      a = build_customer(email: "bio@example.com", customer_type: "organization",
+                         organization_name: "100% Bio").tap(&:save!)
+      b = build_customer(email: "other-wildcard@example.com", first_name: "Zoé").tap(&:save!)
+
+      expect(Customer.search("100% Bio")).to include(a)
+      expect(Customer.search("%")).not_to include(b)
     end
   end
 end

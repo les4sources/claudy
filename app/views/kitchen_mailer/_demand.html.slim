@@ -1,0 +1,32 @@
+table
+  tbody
+    tr
+      td
+        strong Client
+      td = @stay&.customer&.name.presence || "—"
+    - if @stay&.arrival_date.present?
+      tr
+        td
+          strong Séjour
+        td = "#{l(@stay.arrival_date, format: :long)} → #{@stay.departure_date ? l(@stay.departure_date, format: :long) : '?'}"
+    tr
+      td
+        strong Prestation
+      td = @order.label
+    tr
+      td
+        strong Quand
+      td = @order.date_label
+    tr
+      td
+        strong Convives
+      td = @order.people_label
+    tr
+      td
+        strong Prix
+      td = @order.price
+    - if @order.notes.present?
+      tr
+        td
+          strong Précisions
+        td = @order.notes

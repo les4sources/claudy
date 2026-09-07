@@ -51,19 +51,29 @@
       h2.text-base.font-semibold.text-gray-900 À fournir
       = render "invoicing/table", lines: requested, action_label: "Marquer envoyée", action_status: Invoicing::Queue::SENT, tone: :requested
 
-  / --- Mémoire courte des envois ------------------------------------------
-  - sent = @queue.recently_sent
-  - if sent.any?
+  / --- Historique des envois, par année -----------------------------------
+  /  Toute la facturation depuis 2023 vit ici (Michael 2026-09-06) — l'ancienne
+     « mémoire courte » de 15 lignes cachait l'historique des réservables
+     importés. Une année à la fois, la plus récente par défaut.
+  - sent_years = @queue.sent_years
+  - if sent_years.any?
     section.space-y-3
-      h2.text-base.font-semibold.text-gray-900
-        | Envoyées récemment
-        /  Le texte passe par `|` : en Slim, une parenthèse qui suit immédiatement
-           un tag est lue comme un bloc d'ATTRIBUTS, pas comme du contenu.
-        span.ml-2.text-sm.font-normal.text-gray-500
-          | (#{sent.size} dernières)
+      .flex.flex-wrap.items-center.gap-x-4.gap-y-2
+        h2.text-base.font-semibold.text-gray-900
+          | Factures envoyées
+          /  Le texte passe par `|` : en Slim, une parenthèse qui suit immédiatement
+             un tag est lue comme un bloc d'ATTRIBUTS, pas comme du contenu.
+          span.ml-2.text-sm.font-normal.text-gray-500
+            | (#{@sent.size} en #{@sent_year || 'sans date'})
+        nav.flex.flex-wrap.gap-1(aria-label="Année des factures envoyées")
+          - sent_years.each do |year, count|
+            - active = (year == @sent_year)
+            = link_to invoicing_path(year: year || Invoicing::Queue::UNDATED_YEAR_PARAM), class: "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset #{active ? 'bg-indigo-600 text-white ring-indigo-600' : 'bg-white text-gray-700 ring-gray-300 hover:bg-gray-50'}", aria: { current: (active ? "page" : nil) } do
+              span = year || "Sans date"
+              span class="#{active ? 'text-indigo-200' : 'text-gray-400'}" = count
       /  Le bouton fait le chemin INVERSE : une facture marquée envoyée par
          erreur se remet dans la file en un clic, sans passer par la console.
-      = render "invoicing/table", lines: sent, action_label: "Remettre à fournir", action_status: Invoicing::Queue::REQUESTED, tone: :sent
+      = render "invoicing/table", lines: @sent, action_label: "Remettre à fournir", action_status: Invoicing::Queue::REQUESTED, tone: :sent
 
   /  Modale « fiche séjour », même mécanique que le calendrier, l'index Séjours
      et la fiche client : le fragment sans layout est chargé en fetch puis

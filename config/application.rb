@@ -34,6 +34,14 @@ module Claudy
     # in config/environments, which are processed later.
     #
     config.time_zone = "Brussels"
+
+    # PaperTrail sérialise `object_changes` en YAML, et Psych refuse par défaut de
+    # relire un horodatage : `version.changeset` retombait silencieusement sur un
+    # hash vide, donc tout historique portant une date ou une heure s'affichait
+    # comme « aucun changement ». On autorise ces classes de valeurs simples.
+    config.active_record.yaml_column_permitted_classes = [
+      Symbol, Date, Time, DateTime, BigDecimal, ActiveSupport::TimeWithZone, ActiveSupport::TimeZone
+    ]
     # config.eager_load_paths << Rails.root.join("extras")
 
     config.i18n.default_locale = :fr

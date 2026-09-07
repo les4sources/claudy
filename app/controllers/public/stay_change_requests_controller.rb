@@ -141,6 +141,7 @@ module Public
     def prepare_form
       @lodgings             = bookable_lodgings
       @stay_nights          = stay_nights
+      @stay_days            = stay_days
       @lodging_availability = build_stay_availability(@lodgings, @stay_nights)
       @quote                = @draft.quote
       # PRIX PRÉSERVÉ (décision 2026-07-21) : beaucoup de séjours portent un
@@ -165,6 +166,16 @@ module Public
       return [] if @draft.arrival_date.blank? || @draft.departure_date.blank?
 
       (@draft.arrival_date...@draft.departure_date).to_a
+    end
+
+    # Jours de la grille ESPACES, départ INCLUS (epic #234, Phase 1) : la
+    # modification client rend le MÊME partial que le funnel et l'admin — ce qui
+    # est corrigé d'un côté l'est des trois.
+    def stay_days
+      return [] if @draft.arrival_date.blank? || @draft.departure_date.blank?
+      return [] if @draft.departure_date < @draft.arrival_date
+
+      (@draft.arrival_date..@draft.departure_date).to_a
     end
 
     def bookable_lodgings

@@ -3,7 +3,7 @@ class StaysController < BaseController
   # sous-navigation Séjours · Coworking · Reporting · Comptabilité, qui remplace
   # l'ancien dropdown de la barre principale.
   before_action :set_home_view
-  before_action :set_stay, only: %i[edit update destroy update_status update_category update_notes approve_change_request refuse_change_request send_confirmation_email]
+  before_action :set_stay, only: %i[edit update destroy update_status update_category update_notes approve_change_request refuse_change_request send_confirmation_email pre_confirm create_pre_confirmation]
 
   # Index admin des séjours (epic #81) — le séjour devient le point d'entrée
   # unique. Tableau paginé (30/page) orienté GESTION des réservations et
@@ -119,6 +119,7 @@ class StaysController < BaseController
       notify_confirmation(builder.stay)
       flash[:notice] = "Séjour créé."
       flash[:alert]  = combined_warning(builder)
+      flash[:info]   = kitchen_warnings(builder.stay)
       redirect_to recent_stays_path
     else
       @stay  = Stay.new(status: requested_status.presence || "pending")
@@ -192,6 +193,7 @@ class StaysController < BaseController
       notify_confirmation(@stay) unless was_confirmed
       flash[:notice] = "Séjour mis à jour."
       flash[:alert]  = combined_warning(updater)
+      flash[:info]   = kitchen_warnings(@stay)
       redirect_to recent_stays_path
     else
       @quote = safe_quote(@draft)
@@ -230,6 +232,7 @@ class StaysController < BaseController
                )
              end
     @stay_nights = stay_nights_for_grid
+    @stay_days   = stay_days_for_spaces
     # La grille hébergement fait partie du frame rechargé : il lui faut les gîtes
     # et leur dispo aux nouvelles dates (l'exclusion du séjour édité passe par
     # `exclude_stay_id`, transmis par le controller stay-grids en édition).
@@ -382,6 +385,33 @@ class StaysController < BaseController
         # retourne à l'index des séjours, comme `#update_status`.
         redirect_to recent_stays_path, (sent ? { notice: message } : { alert: message })
       end
+    end
+  end
+
+  # --- Pré-confirmation par le Pôle Accueil (issue #215) --------------------
+  # L'acompte n'est plus demandé à la soumission du funnel : il l'est ICI, après
+  # qu'un humain a regardé la demande. L'action est donc en DEUX temps — un écran
+  # qui montre le total et propose un montant, puis l'envoi. Le montant est
+  # ajustable : 50 % n'est qu'un préremplissage, l'équipe décide.
+
+  def pre_confirm
+    @suggested_amount_cents = Stays::PreConfirmer.suggested_amount_cents(@stay)
+    @deposit_amount = format_amount_field(@suggested_amount_cents)
+  end
+
+  def create_pre_confirmation
+    service = Stays::PreConfirmer.new(stay: @stay, amount_cents: pre_confirmation_amount_cents)
+
+    if service.run
+      message = "Séjour pré-confirmé. Demande d'acompte envoyée à #{@stay.customer.email}."
+      # L'email peut avoir échoué SANS annuler la pré-confirmation (envoi hors
+      # transaction) : on le dit plutôt que de laisser croire à un envoi réussi.
+      redirect_to stay_path(@stay), (service.email_error ? { alert: service.email_error } : { notice: message })
+    else
+      @suggested_amount_cents = Stays::PreConfirmer.suggested_amount_cents(@stay)
+      @deposit_amount = params[:deposit_amount]
+      flash.now[:alert] = service.error_message
+      render :pre_confirm, status: :unprocessable_entity
     end
   end
 
@@ -740,6 +770,21 @@ class StaysController < BaseController
 
   # Concatène l'avertissement de disponibilité (force-dispo) et celui des espaces
   # non enregistrables (issue #75), pour un flash unique. nil si aucun des deux.
+  # Avertissements de cuisine (epic #219, phase 2) : plafond de convives dépassé,
+  # délai trop court. Ils s'affichent APRÈS la sauvegarde, en jaune, une ligne
+  # par avertissement — la saisie reste toujours acceptée.
+  def kitchen_warnings(stay)
+    return nil if stay.nil?
+
+    stay.meal_orders.active.chronological.flat_map { |line| line.warnings.map { |w| "#{kitchen_line_prefix(line)} : #{w}." } }.presence
+  end
+
+  def kitchen_line_prefix(line)
+    return line.label if line.date.blank?
+
+    "#{line.label} du #{I18n.l(line.date, format: :long)}"
+  end
+
   def combined_warning(service)
     [service.availability_warning, service.space_warning].compact.join(" ").presence
   end
@@ -755,11 +800,16 @@ class StaysController < BaseController
     # du 7/08 sur un séjour du 18-19/07 n'a aucun sens. Cette liste vit dans le
     # frame `stay_compose_grids`, donc elle se rafraîchit quand les dates bougent.
     @assignable_availabilities = form_assignable_availabilities(@draft)
-    @statuses = Stay::STATUSES_ADMIN_CREATABLE
-    # Grille espaces date-par-date : les colonnes-nuits du séjour. Vide si pas de
-    # dates → le form retombe sur les lignes `halls` (journée sèche / espaces
-    # seuls sans dates), qui restent la seule saisie possible hors fenêtre.
+    # Le statut COURANT est ajouté à la liste s'il n'en fait pas partie (issue
+    # #215) : un séjour `pre_confirmed` ne doit pas retomber en `pending` à la
+    # simple ouverture-enregistrement du form. Cf. le bloc « Statut » de `_form`.
+    @statuses = (Stay::STATUSES_ADMIN_CREATABLE + [@stay&.status]).compact_blank.uniq
+    # Nuits du séjour : grilles hébergement / camping / van / hamac.
     @stay_nights = stay_nights_for_grid
+    # Jours du séjour, départ INCLUS : grille espaces (epic #234, Phase 1). Vide
+    # seulement si le séjour n'a pas de dates → le form retombe alors sur les
+    # lignes `halls`, seule saisie possible hors fenêtre.
+    @stay_days   = stay_days_for_spaces
     # Dispo par gîte × nuit pour la grille hébergement (parité funnel). En édition,
     # on EXCLUT les propres Booking du séjour (sinon ses nuits s'affichent occupées).
     @lodging_availability = stay_lodging_availability(@lodgings, @stay_nights)
@@ -774,21 +824,23 @@ class StaysController < BaseController
   # les deux → pas de double-compte). Idempotent : no-op si la grille n'est pas
   # active, ou si le draft porte déjà des `space_slots` (re-render POST grille).
   def apply_space_grid_prefill
-    return if @stay_nights.blank?
+    return if @stay_days.blank?
     return if Array(@draft&.space_slots&.values).flatten.any?(&:present?)
     return if Array(@draft&.halls).blank?
 
-    @draft.space_slots = halls_to_space_slots(@draft.halls, @stay_nights)
+    @draft.space_slots = halls_to_space_slots(@draft.halls, @stay_days)
     @draft.halls = []
   end
 
   # Convertit des lignes `halls` {kind, date, period} en grille `space_slots`
-  # {kind => [period_par_nuit]}, indexée depuis la première nuit. Les lignes hors
-  # fenêtre (date absente / hors [arrivée, départ)) sont ignorées : la grille ne
-  # couvre que les nuits du séjour (limitation assumée, cf. rapport).
-  def halls_to_space_slots(halls, nights)
-    arrival = nights.first
-    count   = nights.size
+  # {kind => [period_par_jour]}, indexée depuis le jour d'arrivée. Depuis l'epic
+  # #234 (Phase 1), la fenêtre est [arrivée, départ] — départ INCLUS : une salle
+  # réservée le jour du départ existait en base (import) mais était jetée ici au
+  # premier enregistrement du formulaire. Les lignes hors fenêtre ou sans date
+  # restent ignorées.
+  def halls_to_space_slots(halls, days)
+    arrival = days.first
+    count   = days.size
     slots   = {}
     Array(halls).each do |raw|
       hall   = raw.respond_to?(:symbolize_keys) ? raw.symbolize_keys : raw
@@ -839,6 +891,7 @@ class StaysController < BaseController
       # Catégorie de séjour (Michael 2026-07-21) : le `<select>` du form admin
       # circule par le Draft, comme `group_name`, jusqu'au Stay (Builder/Updater).
       category:       p[:category],
+      customer_id:    contact[:customer_id],
       first_name:     contact[:first_name],
       last_name:      contact[:last_name],
       email:          contact[:email],
@@ -872,13 +925,26 @@ class StaysController < BaseController
     )
   end
 
-  # Jours-colonnes de la grille espaces date-par-date (nuits [arrivée, départ)),
-  # ou [] si les dates manquent. Pilote l'affichage grille vs lignes `halls`.
+  # Nuits-colonnes des grilles à la NUIT (hébergement, camping, van, hamac) :
+  # [arrivée, départ), départ exclu — on ne dort pas la nuit du départ.
   def stay_nights_for_grid
     arrival   = parse_form_date(@draft&.arrival_date&.to_s)
     departure = parse_form_date(@draft&.departure_date&.to_s)
     return [] if arrival.nil? || departure.nil? || departure <= arrival
     (arrival...departure).to_a
+  end
+
+  # Jours-colonnes de la grille ESPACES (epic #234, Phase 1) : [arrivée, départ],
+  # départ INCLUS. Une salle se loue à la journée — un groupe qui dort 4 nuits du
+  # lundi au vendredi occupe bel et bien la salle le vendredi. Un séjour à la
+  # journée (arrivée = départ, 0 nuit) donne donc UNE colonne, là où la grille par
+  # nuit n'en donnait aucune et faisait retomber le form sur les lignes `halls`.
+  # [] seulement si les dates manquent ou sont incohérentes.
+  def stay_days_for_spaces
+    arrival   = parse_form_date(@draft&.arrival_date&.to_s)
+    departure = parse_form_date(@draft&.departure_date&.to_s)
+    return [] if arrival.nil? || departure.nil? || departure < arrival
+    (arrival..departure).to_a
   end
 
   # Dispo `{ lodging_id => [bool par nuit] }` pour la grille hébergement admin.
@@ -943,7 +1009,9 @@ class StaysController < BaseController
     Array.new(vehicles) { { nights: nights } }
   end
 
-  # Repas datés {kind, date, people} — on écarte les lignes incomplètes.
+  # Lignes de cuisine {id, kind, date, moment, people, notes} — on écarte les
+  # lignes incomplètes. L'`id` (champ caché du form) permet la réconciliation en
+  # place : sans lui, éditer un séjour effacerait la validation de la cuisine.
   def meal_entries(p)
     rows = p[:meals]
     rows = rows.respond_to?(:values) ? rows.values : Array(rows)
@@ -951,7 +1019,12 @@ class StaysController < BaseController
       kind   = row[:kind].to_s
       people = row[:people].to_i
       next if kind.blank? || people < 1
-      { kind: kind, date: row[:date].to_s.presence, people: people }
+      { id:     row[:id].presence,
+        kind:   kind,
+        date:   row[:date].to_s.presence,
+        moment: row[:moment].to_s.presence,
+        people: people,
+        notes:  row[:notes].to_s.presence }
     end
   end
 
@@ -968,16 +1041,18 @@ class StaysController < BaseController
     end
   end
 
-  # Coordonnées client : soit un client existant sélectionné (on lit ses
-  # coordonnées pour que le Builder/Updater le retrouve par email), soit un
-  # nouveau client saisi à la volée.
+  # Coordonnées client : soit un client existant sélectionné — on transmet alors
+  # son `customer_id`, seule identité fiable depuis qu'un client peut vivre sans
+  # email (issue #232) — soit un nouveau client saisi à la volée, sans
+  # `customer_id` pour que Builder/Updater créent bien une fiche neuve.
   def customer_contact(p)
     if p[:customer_mode].to_s == "new"
       nc = p[:new_customer] || {}
       { first_name: nc[:first_name], last_name: nc[:last_name], email: nc[:email], phone: nc[:phone],
         customer_type: nc[:customer_type], organization_name: nc[:organization_name] }
     elsif (customer = Customer.find_by(id: p[:customer_id]))
-      { first_name: customer.first_name, last_name: customer.last_name, email: customer.email, phone: customer.phone,
+      { customer_id: customer.id,
+        first_name: customer.first_name, last_name: customer.last_name, email: customer.email, phone: customer.phone,
         customer_type: customer.customer_type, organization_name: customer.organization_name }
     else
       {}
@@ -1082,6 +1157,26 @@ class StaysController < BaseController
     cents.positive? ? cents : nil
   rescue ArgumentError
     nil
+  end
+
+  # Montant de l'acompte saisi à la pré-confirmation (€) → cents. Même
+  # normalisation FR que `#initial_payment_amount_cents` (virgule décimale).
+  # Une saisie vide ou illisible donne 0 : c'est `Stays::PreConfirmer` qui
+  # refuse et rend le message — le contrôleur ne double pas la validation.
+  def pre_confirmation_amount_cents
+    raw = params[:deposit_amount].to_s.strip
+    return 0 if raw.blank?
+    normalized = raw.tr(",", ".").delete("^0-9.-")
+    return 0 if normalized.blank?
+    (BigDecimal(normalized) * 100).round
+  rescue ArgumentError
+    0
+  end
+
+  # Cents → valeur du `number_field` (€, point décimal). `%g` évite le « 372.50 »
+  # traînant sur un montant rond.
+  def format_amount_field(cents)
+    cents.to_i.positive? ? format("%g", cents / 100.0) : nil
   end
 
   def safe_quote(draft)

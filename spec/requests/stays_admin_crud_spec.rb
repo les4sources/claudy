@@ -162,6 +162,122 @@ RSpec.describe "Stays — CRUD admin (epic #66)", type: :request do
     end
   end
 
+  # Issue #232 — un client peut exister sans email ni téléphone. Une résa prise
+  # au téléphone se saisit telle quelle : le séjour part sur un VRAI client, pas
+  # sur le fourre-tout, et il ne reçoit simplement aucune notification.
+  describe "séjour admin sans adresse email (issue #232)" do
+    def sans_email_params(overrides = {})
+      base_params(
+        customer_mode: "new",
+        new_customer: { first_name: "Jean", last_name: "Sanmail" }
+      ).deep_merge(stay: overrides)
+    end
+
+    it "crée le séjour, son client sans email, et n'envoie RIEN même en confirmé" do
+      ActionMailer::Base.deliveries.clear
+
+      expect {
+        post stays_path, params: sans_email_params(status: "confirmed")
+      }.to change(Stay, :count).by(1).and change(Customer, :count).by(1)
+
+      stay = Stay.order(:created_at).last
+      expect(stay.customer.email).to be_nil
+      expect(stay.customer.name).to eq("Jean Sanmail")
+      expect(stay.customer).not_to be_catch_all
+      expect(ActionMailer::Base.deliveries).to be_empty
+    end
+
+    # Le piège de l'issue : chercher un client par `email: nil` renverrait le
+    # premier client sans email de la base et agglomérerait tous ces séjours sur
+    # la même personne.
+    it "crée DEUX clients distincts pour deux séjours sans email" do
+      expect {
+        post stays_path, params: sans_email_params
+        post stays_path, params: base_params(
+          customer_mode: "new",
+          new_customer: { first_name: "Marie", last_name: "Nimail" },
+          arrival_date: (arrival + 10).iso8601, departure_date: (departure + 10).iso8601
+        )
+      }.to change(Customer, :count).by(2)
+
+      expect(Customer.where(email: nil).pluck(:first_name)).to match_array(%w[Jean Marie])
+    end
+
+    it "rattache un séjour à un client existant SANS email, sans en créer un autre" do
+      client = Customer.create!(first_name: "Jean", last_name: "Sanmail")
+
+      expect {
+        post stays_path, params: base_params(customer_mode: "existing", customer_id: client.id, new_customer: {})
+      }.to change(Stay, :count).by(1).and change(Customer, :count).by(0)
+
+      expect(Stay.order(:created_at).last.customer_id).to eq(client.id)
+    end
+
+    it "conserve le client sans email à l'édition du séjour" do
+      post stays_path, params: sans_email_params
+      stay = Stay.order(:created_at).last
+      client_id = stay.customer_id
+
+      expect {
+        patch stay_path(stay), params: {
+          stay: {
+            customer_mode: "existing", customer_id: client_id, new_customer: {},
+            arrival_date: arrival.iso8601, departure_date: departure.iso8601,
+            adults: 2, children: 0, dogs_count: 0,
+            lodging_id: lodging.id, status: "pending"
+          }
+        }
+      }.not_to change(Customer, :count)
+
+      expect(stay.reload.customer_id).to eq(client_id)
+      expect(stay.customer.email).to be_nil
+    end
+
+    # Un email vide n'est plus une erreur ; un email SAISI et mal formé en reste
+    # une — sans quoi une coquille produirait un client muet en silence.
+    it "refuse toujours un email saisi mais invalide" do
+      expect {
+        post stays_path, params: base_params(
+          customer_mode: "new",
+          new_customer: { first_name: "Jean", last_name: "Sanmail", email: "pas-un-email" }
+        )
+      }.not_to change(Stay, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include("adresse email valide")
+    end
+
+    it "affiche la mention « pas d'adresse email » sur la fiche du séjour" do
+      post stays_path, params: sans_email_params
+      stay = Stay.order(:created_at).last
+
+      get stay_path(stay)
+
+      expect(response.body).to include("Pas d'adresse email")
+    end
+
+    it "n'affiche pas la mention pour un client qui a une adresse" do
+      post stays_path, params: base_params
+
+      get stay_path(Stay.order(:created_at).last)
+
+      expect(response.body).not_to include("Pas d'adresse email")
+    end
+
+    # Un séjour fourre-tout est un cas DISTINCT : son client porte bien une
+    # adresse (une boîte maison), et le bloc « Contact d'origine » le signale
+    # déjà. On ne double pas le message.
+    it "n'affiche pas la mention sur un séjour fourre-tout" do
+      fourre_tout = Customer.create!(email: Customer::CATCH_ALL_EMAIL, first_name: "Client")
+      stay = Stay.create!(customer: fourre_tout, source: "manual", status: "pending",
+                          arrival_date: arrival, departure_date: departure)
+
+      get stay_path(stay)
+
+      expect(response.body).not_to include("Pas d'adresse email")
+    end
+  end
+
   describe "PATCH /stays/:id (update)" do
     let!(:cheveche) { Lodging.create!(name: "La Chevêche", summary: "gîte") }
 

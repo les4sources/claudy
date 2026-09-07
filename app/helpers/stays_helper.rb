@@ -13,6 +13,13 @@ module StaysHelper
     SOURCE_LABELS[value.to_s] || value.to_s
   end
 
+  # Libellé FR d'un statut de séjour. Source unique : `StayDecorator::STATUS_STYLES`,
+  # qui porte déjà les libellés des badges — un second dictionnaire dériverait.
+  # Repli sur la valeur brute pour un statut historique inconnu.
+  def stay_status_label(value)
+    StayDecorator::STATUS_STYLES.dig(value.to_s, :label) || value.to_s
+  end
+
   # Teinte de fond LÉGÈRE d'une ligne de l'index, par statut (Michael
   # 2026-07-26). Palier `-50` plein : c'est la nuance la plus claire de Tailwind,
   # donc déjà discrète, mais PERCEPTIBLE. Une première version à `-50/60`
@@ -22,10 +29,11 @@ module StaysHelper
   # Le `hover:` monte d'un palier (`-100`) et est redéfini par statut, sinon le
   # `hover:bg-gray-50` générique effacerait la teinte au survol.
   ROW_STATUS_CLASSES = {
-    "confirmed" => "bg-green-50 hover:bg-green-100",
-    "pending"   => "bg-amber-50 hover:bg-amber-100",
-    "canceled"  => "bg-red-50 hover:bg-red-100 text-gray-400",
-    "cancelled" => "bg-red-50 hover:bg-red-100 text-gray-400"
+    "confirmed"     => "bg-green-50 hover:bg-green-100",
+    "pre_confirmed" => "bg-indigo-50 hover:bg-indigo-100",
+    "pending"       => "bg-amber-50 hover:bg-amber-100",
+    "canceled"      => "bg-red-50 hover:bg-red-100 text-gray-400",
+    "cancelled"     => "bg-red-50 hover:bg-red-100 text-gray-400"
   }.freeze
 
   def stay_row_classes(stay)

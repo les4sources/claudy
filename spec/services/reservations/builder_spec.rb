@@ -26,6 +26,57 @@ RSpec.describe Reservations::Builder do
     }.merge(overrides))
   end
 
+  # Issue #232 — identité du client : `customer_id` d'abord, email ensuite,
+  # jamais de recherche par email vide. Le funnel public, lui, garde son
+  # garde-fou : c'est le seul canal par lequel on joint un client en ligne.
+  describe "identité du client (issue #232)" do
+    it "exige un email exploitable hors admin (funnel public)" do
+      builder = described_class.new(draft: draft(email: nil))
+
+      expect { builder.run! }
+        .to raise_error(described_class::DraftInvalid, /adresse email valide/)
+    end
+
+    it "accepte un draft admin sans email et crée une fiche neuve" do
+      builder = described_class.new(draft: draft(email: nil), admin: true, status: "pending", source: "manual")
+
+      expect { builder.run! }.to change(Customer, :count).by(1)
+      expect(builder.customer.email).to be_nil
+      expect(builder.customer.first_name).to eq("Camille")
+    end
+
+    it "ne crée AUCUN client quand le draft admin porte un customer_id" do
+      existing = Customer.create!(first_name: "Jean", last_name: "Sanmail")
+
+      builder = described_class.new(
+        draft: draft(email: nil, customer_id: existing.id, first_name: "Camille"),
+        admin: true, status: "pending", source: "manual"
+      )
+
+      expect { builder.run! }.not_to change(Customer, :count)
+      expect(builder.customer).to eq(existing)
+      expect(builder.customer.first_name).to eq("Jean") # jamais écrasé
+    end
+
+    it "ignore customer_id hors admin — le funnel ne désigne aucune fiche" do
+      existing = Customer.create!(first_name: "Jean", last_name: "Sanmail", email: "jean@example.com")
+
+      builder = described_class.new(draft: draft(customer_id: existing.id))
+      builder.run!
+
+      expect(builder.customer).not_to eq(existing)
+      expect(builder.customer.email).to eq("camille@example.com")
+    end
+
+    it "refuse en admin un email saisi mais mal formé" do
+      builder = described_class.new(draft: draft(email: "pas-un-email"), admin: true,
+                                    status: "pending", source: "manual")
+
+      expect { builder.run! }
+        .to raise_error(described_class::DraftInvalid, /adresse email valide/)
+    end
+  end
+
   # ------------------------------------------------------------------------
   # Epic #26, Phase 2 — Stay-first : le Booking redevient une simple OCCUPATION
   # d'hébergement. Un séjour sans hébergement ne crée plus de « Booking fantôme »,
@@ -33,14 +84,17 @@ RSpec.describe Reservations::Builder do
   # ------------------------------------------------------------------------
   describe "#run — Stay-first (epic #26)" do
     context "séjour AVEC hébergement" do
-      it "crée un Booking d'occupation (le calendrier reste bloqué) et rattache le paiement au Stay" do
+      it "crée un Booking d'occupation (le calendrier reste bloqué), sans aucun paiement" do
         builder = described_class.new(draft: draft)
         expect(builder.run).to be(true)
 
         expect(builder.booking).to be_persisted
         expect(builder.booking.lodging_id).to eq(hulotte.id)
         expect(builder.stay.stay_items.map(&:bookable)).to include(builder.booking)
-        expect(builder.payment.stay).to eq(builder.stay)
+        # Issue #215 : l'acompte n'est plus créé à la soumission — il naît de la
+        # pré-confirmation du Pôle Accueil (`Stays::PreConfirmer`).
+        expect(builder.payment).to be_nil
+        expect(builder.stay.payments).to be_empty
       end
     end
 
@@ -60,14 +114,12 @@ RSpec.describe Reservations::Builder do
         expect(builder.stay.stay_items.where(bookable_type: "CampingBooking").count).to eq(1)
       end
 
-      it "rattache quand même le paiement au Stay" do
+      it "ne crée aucun paiement non plus (issue #215)" do
         builder = described_class.new(draft: camping_draft)
         builder.run
 
-        expect(builder.payment).to be_persisted
-        expect(builder.payment.booking).to be_nil
-        expect(builder.payment.stay).to eq(builder.stay)
-        expect(builder.stay.payments).to include(builder.payment)
+        expect(builder.payment).to be_nil
+        expect(builder.stay.payments).to be_empty
       end
     end
 
@@ -102,18 +154,25 @@ RSpec.describe Reservations::Builder do
       expect(customers.first.stays.count).to eq(2)
     end
 
-    it "crée un Booking item + un Payment pending = acompte 50 % (réutilise l'infra Stripe)" do
+    # Issue #215 — inversion de l'ordre : le funnel public n'encaisse plus rien.
+    # L'acompte (et son montant, ajustable) est créé par la pré-confirmation.
+    it "crée un Booking item SANS aucun Payment" do
       builder = described_class.new(draft: draft)
       builder.run
 
       expect(builder.booking).to be_persisted
       expect(builder.stay.stay_items.map(&:bookable)).to include(builder.booking)
-      expect(builder.payment.status).to eq("pending")
+      expect(builder.payment).to be_nil
+      expect(builder.stay.payments).to be_empty
+      expect(Payment.count).to eq(0)
+    end
+
+    # Le DEVIS, lui, continue de porter l'acompte : c'est ce montant qui
+    # préremplit l'écran de pré-confirmation. Seul le MOMENT de la demande change.
+    it "expose toujours l'acompte 50 % dans le devis" do
+      builder = described_class.new(draft: draft)
       # Hulotte 2 nuits = 485 + 260 = 745 € ; acompte 50 % = 372,50 €.
-      expect(builder.payment.amount_cents).to eq(37_250)
-      # issue #26 : le Payment porte aussi le lien direct vers le Stay.
-      expect(builder.payment.stay).to eq(builder.stay)
-      expect(builder.stay.payments).to include(builder.payment)
+      expect(builder.quote.deposit_cents).to eq(37_250)
     end
   end
 
@@ -170,8 +229,9 @@ RSpec.describe Reservations::Builder do
       expect(builder.stay.experience_bookings).to be_empty
       # Hulotte 2 nuits = 485 + 260 = 745 € ; les activités (8 000 c) n'y entrent pas.
       expect(builder.stay.total_amount_cents).to eq(74_500)
-      # Acompte 50 % HORS activités = 372,50 €.
-      expect(builder.payment.amount_cents).to eq(37_250)
+      # Acompte 50 % HORS activités = 372,50 € — porté par le DEVIS depuis
+      # l'issue #215 (plus aucun Payment créé ici).
+      expect(builder.quote.deposit_cents).to eq(37_250)
     end
 
     it "expose néanmoins le total complet (activités comprises) via le devis funnel" do
@@ -214,8 +274,9 @@ RSpec.describe Reservations::Builder do
 
       # Hulotte 2 nuits = 745 € ; activité = 2 000 + 1 000×3 = 5 000 c.
       expect(builder.stay.total_amount_cents).to eq(74_500 + 5_000)
-      # Acompte 50 % HORS activités = 372,50 € (inchangé Phase 1).
-      expect(builder.payment.amount_cents).to eq(37_250)
+      # Acompte 50 % HORS activités = 372,50 € (inchangé Phase 1), porté par le
+      # devis depuis l'issue #215.
+      expect(builder.quote.deposit_cents).to eq(37_250)
     end
 
     it "ignore une entrée sans créneau (rétrocompat de l'ancienne forme experiences)" do

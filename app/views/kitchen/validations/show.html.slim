@@ -1,0 +1,22 @@
+.max-w-lg.mx-auto.bg-white.p-6.rounded-lg.shadow-sm.mt-6
+  h1.text-xl.font-bold.mb-4 = @order.family == "repas" ? "Confirmer ce repas" : "Vous vous en chargez ?"
+
+  - if @order.cancelled?
+    p.text-gray-600 Cette demande a été annulée. Il n'y a plus rien à préparer.
+  - elsif @order.pending?
+    p.mb-2 Vous êtes sur le point de dire que c'est possible&nbsp;:
+    .p-4.bg-gray-50.rounded.mb-4
+      .font-semibold = @order.label
+      .text-sm.text-gray-600 = @order.date_label
+      .text-sm.text-gray-600 = "#{@order.people_label} — #{@order.stay&.customer&.name}"
+      - if @order.notes.present?
+        .mt-2.text-sm.text-gray-600 = @order.notes
+    = button_to "C'est possible", kitchen_validation_confirm_path(params[:token]), method: :post, class: "px-4 py-2 bg-green-600 text-white rounded font-medium hover:bg-green-700"
+    p.mt-4.text-sm.text-gray-500
+      | Si ce n'est pas possible, utilisez le lien « Pas possible » de l'email :
+        une connexion et un motif vous seront demandés, pour que l'accueil puisse
+        revenir vers le client.
+  - elsif @order.accepted?
+    p.text-green-700 C'est déjà noté comme possible. Merci !
+  - elsif @order.refused?
+    p.text-red-700 Cette demande a déjà été refusée.

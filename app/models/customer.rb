@@ -75,10 +75,18 @@ class Customer < ApplicationRecord
   before_validation :normalize_email
   before_validation :normalize_phone
 
+  # Email FACULTATIF depuis l'issue #232 (décision Michael, 2026-09-06) :
+  # beaucoup de réservations se prennent au téléphone ou au comptoir, et ces
+  # clients n'ont pas besoin de notification. Ce qui reste obligatoire, c'est
+  # d'être IDENTIFIABLE — un nom ou un email, sinon la fiche est introuvable
+  # dans l'app. Le format et l'unicité continuent de s'appliquer dès qu'un email
+  # est fourni (`allow_blank` sur le format ; `email_unique_among_live` sort déjà
+  # quand l'email est vide).
   validates :email,
-            presence: { message: "Veuillez préciser une adresse email" },
-            email_format: { message: "L'adresse email fournie ne semble pas valide" }
+            email_format: { message: "L'adresse email fournie ne semble pas valide" },
+            allow_blank: true
   validate :email_unique_among_live
+  validate :identifiable
   validates :customer_type,
             inclusion: { in: CUSTOMER_TYPES, message: "Type de client invalide" }
   validates :language,
@@ -87,10 +95,22 @@ class Customer < ApplicationRecord
             presence: { message: "Veuillez préciser le nom de l'organisation" },
             if: :organization?
 
+  # Cherche sur tout ce qu'on a sous la main quand on a le client au téléphone :
+  # son nom (y compris tapé en entier, « Jean Dupont »), son organisation, son
+  # email, son numéro. Le téléphone se compare sur ses SEULS CHIFFRES — « 0455 13
+  # 61 42 » en base doit se trouver en tapant « 0455136142 », et l'inverse.
   scope :search, ->(query) {
     return all if query.blank?
-    q = "%#{query.strip}%"
-    where("email ILIKE :q OR first_name ILIKE :q OR last_name ILIKE :q OR organization_name ILIKE :q", q: q)
+
+    # `%` et `_` saisis sont échappés : une organisation « 100% Bio » se cherche
+    # littéralement.
+    q = "%#{sanitize_sql_like(query.strip)}%"
+    digits = query.gsub(/\D/, "")
+    sql = "email ILIKE :q OR first_name ILIKE :q OR last_name ILIKE :q " \
+          "OR organization_name ILIKE :q OR (first_name || ' ' || last_name) ILIKE :q"
+    sql += " OR regexp_replace(COALESCE(phone, ''), '\\D', '', 'g') ILIKE :digits" if digits.length >= 3
+
+    where(sql, q: q, digits: "%#{digits}%")
   }
 
   # Compteurs de séjours calculés EN SQL (aucun N+1) pour la liste admin :
@@ -161,12 +181,12 @@ class Customer < ApplicationRecord
     "#{live_stays_count} séjour(s) vivant(s) rattaché(s)"
   end
 
+  # Ne renvoie JAMAIS nil ni une chaîne vide (issue #232) : un client sans nom ni
+  # email — cas limite d'une fiche créée puis vidée — reste nommable dans la
+  # liste, le `<select>` du formulaire séjour et la modale du séjour. Le repli
+  # sur l'`id` n'a de sens qu'une fois la fiche persistée.
   def name
-    if organization? && organization_name.present?
-      organization_name
-    else
-      [first_name, last_name].compact_blank.join(" ").presence || email
-    end
+    explicit_name.presence || fallback_name
   end
 
   # Available on the bare model (not just the decorator) so controllers can use
@@ -177,6 +197,30 @@ class Customer < ApplicationRecord
   end
 
   private
+
+  # Nom RÉELLEMENT porté par la fiche, sans repli. Sert à `#name` comme à la
+  # validation d'identité minimale : les deux doivent parler du même « nom ».
+  def explicit_name
+    if organization? && organization_name.present?
+      organization_name
+    else
+      [first_name, last_name].compact_blank.join(" ").presence
+    end
+  end
+
+  def fallback_name
+    email.presence || (persisted? ? "Client ##{id}" : "Nouveau client")
+  end
+
+  # Une fiche sans email ET sans le moindre nom serait introuvable : ni la
+  # recherche, ni le `<select>`, ni la liste ne pourraient la désigner. On exige
+  # donc au moins une identité — un prénom, un nom ou un nom d'organisation.
+  def identifiable
+    return if email.present?
+    return if [first_name, last_name, organization_name].any?(&:present?)
+
+    errors.add(:base, "Indiquez au moins un nom ou une adresse email")
+  end
 
   def normalize_email
     self.email = self.class.normalize_email(email)

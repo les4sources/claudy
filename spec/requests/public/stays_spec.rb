@@ -122,7 +122,7 @@ RSpec.describe "Public::Stays (/sejour/:token)", type: :request do
                                        to_date: Date.today + 12, people: 3, status: "pending",
                                        kind: "tente", price_cents: 4_500)
       stay.stay_items.create!(bookable: camping)
-      stay.meal_orders.create!(kind: "buffet", people: 4, price_cents: 4_800) # sans date
+      stay.meal_orders.create!(kind: "buffet_vege", people: 4, price_cents: 4_800) # sans date
       stay.update!(total_amount_cents: 48_500 + 4_500 + 4_800)
 
       get "/sejour/#{stay.token}"

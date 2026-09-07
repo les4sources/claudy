@@ -11,11 +11,16 @@ class StayDecorator < ApplicationDecorator
   # `ExperienceBooking.active`), filtrés EN MÉMOIRE pour éviter tout N+1.
   DEAD_EXPERIENCE_STATUSES = %w[cancelled refused].freeze
 
+  # `pre_confirmed` (issue #215) : le Pôle Accueil a validé la demande et attend
+  # l'acompte. Teinte INDIGO — délibérément distincte de l'ambre de `pending` et
+  # du vert de `confirmed` : au coup d'œil sur l'index, on doit voir la
+  # différence entre « personne n'a encore regardé » et « on attend l'argent ».
   STATUS_STYLES = {
-    "confirmed" => { label: "Confirmé", classes: "bg-green-100 text-green-800" },
-    "pending"   => { label: "En attente", classes: "bg-amber-100 text-amber-800" },
-    "canceled"  => { label: "Annulé", classes: "bg-red-100 text-red-800" },
-    "cancelled" => { label: "Annulé", classes: "bg-red-100 text-red-800" }
+    "confirmed"     => { label: "Confirmé", classes: "bg-green-100 text-green-800" },
+    "pre_confirmed" => { label: "Pré-confirmé", classes: "bg-indigo-100 text-indigo-800" },
+    "pending"       => { label: "En attente", classes: "bg-amber-100 text-amber-800" },
+    "canceled"      => { label: "Annulé", classes: "bg-red-100 text-red-800" },
+    "cancelled"     => { label: "Annulé", classes: "bg-red-100 text-red-800" }
   }.freeze
 
   # `classes` : ancien badge texte, encore utilisé par d'autres vues.
@@ -66,7 +71,7 @@ class StayDecorator < ApplicationDecorator
   end
 
   def meals
-    object.meal_orders.to_a
+    object.meal_orders.active.to_a
   end
 
   # Le séjour a-t-il au moins un élément de composition à afficher ?
@@ -141,6 +146,16 @@ class StayDecorator < ApplicationDecorator
     return object.customer&.email.presence unless catch_all_customer?
 
     origin_contacts.filter_map { |contact| contact[:email] }.first
+  end
+
+  # Le client de ce séjour n'a-t-il AUCUNE adresse email (issue #232) ? Vrai
+  # seulement pour un vrai client sans email — un séjour fourre-tout est un cas
+  # distinct, déjà signalé par son propre bloc « Contact d'origine », et son
+  # client porte bel et bien une adresse (une boîte maison).
+  def no_contact_email?
+    return false if catch_all_customer?
+
+    object.customer.present? && object.customer.email.blank?
   end
 
   # Nom porté par la réservation d'origine : le NOM DE GROUPE d'abord, à défaut
@@ -313,6 +328,17 @@ class StayDecorator < ApplicationDecorator
                   class: "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium #{style[:classes]}")
   end
 
+  # --- Pré-confirmation (issue #215) -------------------------------------
+  # Le bouton n'a de sens que sur une demande ENCORE EN ATTENTE, rattachée à un
+  # client réel et joignable. Sur un séjour déjà `pre_confirmed`, l'acompte est
+  # posé : le proposer à nouveau créerait un second Payment (le service refuse
+  # de toute façon, mais un bouton qui ne peut qu'échouer n'a rien à faire là).
+  def can_pre_confirm?
+    object.status == "pending" &&
+      object.customer&.email.present? &&
+      !object.customer.catch_all?
+  end
+
   # --- Email de confirmation (Malau, 2026-08-20) -------------------------
   # L'envoi nominal est automatique à la bascule vers `confirmed` ; ces trois
   # méthodes n'habillent que le RENVOI manuel depuis la fiche admin.
@@ -359,7 +385,7 @@ class StayDecorator < ApplicationDecorator
     # Repas (issue #79) : ce ne sont PAS des `stay_items` (has_many direct), mais
     # ils comptent dans le total — on les ajoute aux lignes pour que la
     # décomposition somme bien au total affiché (aucun écart lignes ≠ total).
-    lines + object.meal_orders.map do |meal|
+    lines + object.meal_orders.billable.map do |meal|
       {
         kind: "MealOrder",
         icon: :utensils,

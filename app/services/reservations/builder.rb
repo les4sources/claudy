@@ -67,8 +67,9 @@ module Reservations
       @skip_availability = skip_availability
       @requested_price_override_cents = price_override_cents
       @requested_platform = platform
-      # Paiement initial en attente (canal admin uniquement, refonte 2026-07-22) :
-      # le funnel public garde son propre acompte Stripe (`build_payment!`).
+      # Paiement initial en attente (canal admin uniquement, refonte 2026-07-22).
+      # Depuis l'issue #215, c'est le SEUL paiement que le Builder crée : le
+      # funnel public n'en crée plus aucun.
       @create_initial_payment = create_initial_payment
       @requested_initial_payment_amount_cents = initial_payment_amount_cents
       @report_errors = true
@@ -171,20 +172,18 @@ module Reservations
         elsif experiences_total.positive?
           @stay.update!(total_amount_cents: quote.total_excluding_experiences_cents + experiences_total)
         end
-        # Le paiement est rattaché au Stay dans tous les cas ; le booking n'est
-        # plus qu'une référence de commodité pour le canal historique. Son montant
-        # reste l'acompte HORS activités (`quote.deposit_cents`).
+        # Canal PUBLIC (issue #215, 2026-08-31) : plus AUCUN paiement à la
+        # soumission. On inverse l'ordre — le client déposait un acompte avant
+        # que qui que ce soit aux 4 Sources ait regardé sa demande, alors que le
+        # séjour reste `pending` et que l'équipe peut devoir refuser, décaler ou
+        # réajuster. L'acompte est désormais créé par `Stays::PreConfirmer`, à la
+        # pré-confirmation manuelle du Pôle Accueil.
         #
         # Canal admin (epic #66) : AUCUN paiement automatique — le solde se règle
         # après coup depuis la page client /sejour/:token. Exception (refonte
         # 2026-07-22) : si l'admin a coché « Créer un paiement initial en attente »,
         # on crée UN Payment `pending` du montant saisi (prérempli à l'acompte).
-        @payment =
-          if @admin
-            build_initial_payment!(quote) if @create_initial_payment
-          else
-            build_payment!(quote)
-          end
+        @payment = build_initial_payment!(quote) if @admin && @create_initial_payment
       end
       # Séjour activités-seules / repas-seuls SANS dates saisies (issue #80) :
       # dériver arrivée/départ de l'élément présent. `recompute_aggregates!`
@@ -221,7 +220,17 @@ module Reservations
       raise_invalid("Veuillez choisir un hébergement, un espace, une activité ou un repas.") unless bookable_content?
       raise_invalid("Veuillez indiquer si vous venez avec un animal (champ obligatoire).") if draft.dogs_count.nil?
       raise_invalid("Veuillez préciser votre prénom.") if draft.first_name.blank?
-      raise_invalid("Veuillez préciser une adresse email valide.") unless Customer.exploitable_email?(draft.email)
+      # Email OBLIGATOIRE au funnel public (issue #232) : c'est le seul canal par
+      # lequel on joint un client qui réserve en ligne. En admin, il devient
+      # facultatif — mais un email SAISI et mal formé reste refusé, sans quoi une
+      # coquille se transformerait en client silencieux.
+      if @admin
+        if draft.email.present? && !Customer.exploitable_email?(draft.email)
+          raise_invalid("Veuillez préciser une adresse email valide.")
+        end
+      elsif !Customer.exploitable_email?(draft.email)
+        raise_invalid("Veuillez préciser une adresse email valide.")
+      end
       # Mode chambres seules (epic #81, Phase 5) : au moins une chambre doit être
       # cochée, sinon il n'y a rien à réserver (on ne retombe pas sur le gîte
       # entier en silence).
@@ -421,9 +430,20 @@ module Reservations
       )
     end
 
+    # Identité du client : `customer_id` d'abord, email ensuite, JAMAIS de
+    # recherche par email vide (issue #232). Un `Customer.where(email: nil)`
+    # renverrait le premier client sans email de la base et agglomérerait tous
+    # les séjours saisis sans email sur la même personne.
     def upsert_customer!
+      customer = find_customer_by_id
+      return update_existing_customer!(customer) if customer
+
       email = Customer.normalize_email(draft.email)
-      customer = Customer.where(email: email).first_or_initialize
+      customer = if email.present?
+                   Customer.where(email: email).first_or_initialize
+                 else
+                   Customer.new
+                 end
       customer.email = email # défensif : garantit l'email même si first_or_initialize ne le porte pas
       customer.first_name = draft.first_name if customer.first_name.blank?
       customer.last_name = draft.last_name if customer.last_name.blank?
@@ -436,6 +456,26 @@ module Reservations
         customer.organization_name = draft.organization_name if draft.organization_name.present?
       end
       customer.save!
+      customer
+    end
+
+    # Client EXISTANT désigné par le formulaire admin. Le funnel public ne porte
+    # jamais `customer_id` : il n'a aucun moyen de désigner une fiche.
+    def find_customer_by_id
+      return nil unless @admin
+      return nil if draft.customer_id.blank?
+
+      Customer.find_by(id: draft.customer_id)
+    end
+
+    # Un client choisi est un client qu'on complète, jamais qu'on écrase : on ne
+    # remplit que les champs encore vides, comme pour un client retrouvé par
+    # email.
+    def update_existing_customer!(customer)
+      customer.first_name = draft.first_name if customer.first_name.blank?
+      customer.last_name  = draft.last_name  if customer.last_name.blank?
+      customer.phone      = draft.phone      if customer.phone.blank?
+      customer.save! if customer.changed?
       customer
     end
 
@@ -546,16 +586,6 @@ module Reservations
     # les canaux (issue #79) — camping/van/repas vivent sur leurs propres modèles.
     def lodging_price_cents(quote)
       quote.lodging_only_cents
-    end
-
-    def build_payment!(quote)
-      Payment.create!(
-        booking: @booking,
-        stay: @stay,
-        amount_cents: quote.deposit_cents,
-        status: "pending",
-        payment_method: "card"
-      )
     end
 
     # Paiement initial admin (refonte 2026-07-22) : Payment `pending` rattaché au

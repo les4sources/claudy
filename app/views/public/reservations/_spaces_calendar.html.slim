@@ -1,14 +1,18 @@
-/ Grille "Espaces" nuit par nuit — remplace les hall slots pour le B2C.
+/ Grille "Espaces" JOUR par JOUR — remplace les hall slots pour le B2C.
 / Chaque cellule cycle : — → Journée → Soirée → J+S via space_slot_controller.
-/ Dépend de : @draft, @stay_nights (instance vars du controller).
+/ Epic #234, Phase 1 : les colonnes sont les JOURS du séjour, du jour d'arrivée
+/ au jour de DÉPART INCLUS. Une salle se loue à la journée — un groupe qui dort
+/ 4 nuits du lundi au vendredi occupe la salle les 5 jours. Les grilles à la
+/ NUIT (hébergement, camping, van, hamac) gardent [arrivée, départ).
+/ Dépend de : @draft, @stay_days (instance vars du controller).
 / RÉUTILISÉ par le form admin (issue parité funnel) via des locals :
 /   - param_root : préfixe des name= (défaut "reservation", le form admin passe "stay") ;
 /   - draft      : le Draft à préremplir (défaut @draft) ;
-/   - days       : les jours-colonnes (défaut @stay_nights).
+/   - days       : les jours-colonnes (défaut @stay_days).
 / Sans locals, le rendu public est STRICTEMENT identique.
 - param_root  = local_assigns.fetch(:param_root, "reservation")
 - draft       = local_assigns.fetch(:draft, @draft)
-- stay_nights = local_assigns.fetch(:days, @stay_nights)
+- stay_days   = local_assigns.fetch(:days, @stay_days)
 - fr_short_days = %w[Dim Lun Mar Mer Jeu Ven Sam]
 - space_kinds   = { "grande_salle" => "Grande Salle", "petite_salle" => "Petite Salle", "cuisine_pro" => "Cuisine pro" }
 - space_hints   = { "grande_salle" => "290€/j · 190€/soir (sem.)", "petite_salle" => "140€/j · 90€/soir (sem.)", "cuisine_pro" => "110€/j · 70€/soir (sem.)" }
@@ -21,36 +25,42 @@
       h2.funnel-section-title.flex.items-center.gap-2
         = funnel_icon :hall, css_class: "w-4 h-4 text-ember flex-shrink-0"
         span Espaces
-      p.text-xs.text-moss.mt-0.5 Cliquez pour réserver — journée, soirée ou les deux. Tarifs semaine (↑ week-end).
+      p.text-xs.text-moss.mt-0.5 Cliquez pour réserver — journée, soirée ou les deux, pour chaque jour du séjour, du jour d'arrivée au jour de départ. Tarifs semaine (↑ week-end).
     .flex.items-center.gap-2.flex-shrink-0.ml-4.mt-0.5
       = link_to "Tarifs →", "https://www.les4sources.be/sejours/tarifs", target: "_blank", rel: "noopener", class: "text-xs text-forest hover:underline"
-      - if stay_nights.size > 4
+      - if stay_days.size > 4
         button(
           type="button"
           data-action="click->public--spaces-calendar#prevNights"
           class="relative before:content-[''] before:absolute before:-inset-2 w-7 h-7 rounded-lg border border-bark bg-white text-moss hover:border-forest hover:text-forest flex items-center justify-center text-sm transition-colors"
-          aria-label="Nuits précédentes")
+          aria-label="Jours précédents")
           | ←
         button(
           type="button"
           data-action="click->public--spaces-calendar#nextNights"
           class="relative before:content-[''] before:absolute before:-inset-2 w-7 h-7 rounded-lg border border-bark bg-white text-moss hover:border-forest hover:text-forest flex items-center justify-center text-sm transition-colors"
-          aria-label="Nuits suivantes")
+          aria-label="Jours suivants")
           | →
 
-  - if stay_nights.empty?
+  - if stay_days.empty?
     p.text-xs.text-moss Choisissez vos dates à l'étape précédente.
   - else
+    /  Sous-titre de colonne : « arrivée » sur le premier jour, « départ » sur le
+       dernier. Sur un séjour d'un seul jour, les deux bornes tombent sur la même
+       colonne — on l'annonce alors « arrivée et départ ».
+    - day_edges = stay_days.size == 1 ? ["arrivée et départ"] : Array.new(stay_days.size) { |i| i.zero? ? "arrivée" : (i == stay_days.size - 1 ? "départ" : nil) }
     .overflow-x-auto.-mx-5.px-5(data-public--spaces-calendar-target="scrollArea")
-      table.border-collapse style="min-width: #{130 + stay_nights.size * 104}px"
+      table.border-collapse style="min-width: #{130 + stay_days.size * 104}px"
 
         thead
           tr
             th.text-left.py-2.pr-4.text-xs.font-normal.text-moss.whitespace-nowrap.sticky.left-5.z-10.bg-white style="width:130px"
-            - stay_nights.each_with_index do |night, i|
+            - stay_days.each_with_index do |day, i|
               th.text-center.py-2.px-1 style="width:104px"
-                p.text-xs.font-bold.text-moss = "Nuit #{i + 1}"
-                p.text-xs.text-moss.font-normal = "#{fr_short_days[night.wday]} #{night.strftime("%-d/%-m")}"
+                p.text-xs.font-bold.text-moss = "Jour #{i + 1}"
+                p.text-xs.text-moss.font-normal = "#{fr_short_days[day.wday]} #{day.strftime("%-d/%-m")}"
+                - if day_edges[i]
+                  p.text-xs.text-moss.font-normal.italic = day_edges[i]
 
         tbody
           - space_kinds.each do |space_key, space_name|
@@ -58,7 +68,7 @@
               td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
                 .text-sm.text-ink.font-medium = space_name
                 p.text-xs.text-moss.leading-tight = space_hints[space_key]
-              - stay_nights.each_with_index do |_night, i|
+              - stay_days.each_with_index do |day, i|
                 - current_period = (draft.space_slots[space_key] || [])[i].to_s
                 td.py-2.px-1.text-center
                   div(
@@ -68,7 +78,7 @@
                       data-action="click->public--space-slot#toggle"
                       data-public--space-slot-target="button"
                       data-slot=current_period
-                      aria-label="#{space_name} — nuit #{i + 1}, #{l(_night, format: :long)}"
+                      aria-label="#{space_name} — jour #{i + 1}, #{l(day, format: :long)}"
                       class="funnel-slot")
                     input(
                       type="hidden"

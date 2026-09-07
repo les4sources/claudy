@@ -185,14 +185,17 @@ module SpaceComposition
   def raw_space_entries(draft)
     entries = []
 
+    # Epic #234, Phase 1 : l'index de `space_slots` est un index de JOUR — 0 = le
+    # jour d'arrivée, N = le jour de départ. La grille couvre [arrivée, départ]
+    # départ inclus, parce qu'une salle se loue à la journée.
     slots   = draft.space_slots
     arrival = draft.arrival_date
     if slots.present? && arrival.present?
       slots.each do |key, periods|
         next unless SPACE_NAMES_BY_KEY.key?(key.to_s)
-        Array(periods).each_with_index do |period, night_idx|
+        Array(periods).each_with_index do |period, day_idx|
           next if period.blank?
-          entries << { key: key.to_s, date: arrival + night_idx, duration: canonical_duration(period) }
+          entries << { key: key.to_s, date: arrival + day_idx, duration: canonical_duration(period) }
         end
       end
     end

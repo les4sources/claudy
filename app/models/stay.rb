@@ -70,9 +70,15 @@ class Stay < ApplicationRecord
   PAYMENT_STATUSES = %w[pending partially_paid paid].freeze
 
   # Statuts qu'un admin peut POSER à la création d'un séjour (epic #66, Phase 1).
-  # `status` reste une chaîne libre au niveau modèle (valeurs historiques :
-  # pending / confirmed / canceled) ; on borne seulement ce que le CRUD admin
-  # accepte de créer — jamais un `canceled` par le formulaire de création.
+  # `status` reste une chaîne libre au niveau modèle (valeurs : pending /
+  # pre_confirmed / confirmed / canceled) ; on borne seulement ce que le CRUD
+  # admin accepte de créer — jamais un `canceled` par le formulaire de création,
+  # et jamais un `pre_confirmed` non plus : il ne se POSE pas, il se GAGNE.
+  #
+  # `pre_confirmed` (issue #215, 2026-08-31) : le Pôle Accueil a regardé la
+  # demande, l'accepte et a demandé l'acompte. État d'attente de paiement, entre
+  # `pending` (demande non regardée) et `confirmed` (acompte encaissé). Il naît
+  # uniquement de `Stays::PreConfirmer` — d'où son absence de cette liste.
   STATUSES_ADMIN_CREATABLE = %w[pending confirmed].freeze
 
   # Statuts qui valent « annulé » (Michael 2026-09-05). L'app POSE `canceled`
@@ -380,7 +386,7 @@ class Stay < ApplicationRecord
     else
       items.sum { |b| b.try(:price_cents).to_i } +
         experience_bookings.active.sum(&:price_cents) +
-        meal_orders.sum(:price_cents).to_i
+        meal_orders.billable.sum(:price_cents).to_i
     end
     # Séjour SANS hébergement (epic #66, Phase 2) : les dates viennent des
     # SpaceBooking (Booking ET SpaceBooking exposent from_date/to_date), donc un
@@ -410,6 +416,6 @@ class Stay < ApplicationRecord
   # via leur créneau, repas via leur date) — pour dater un séjour sans bookable.
   def activity_and_meal_dates
     experience_bookings.active.filter_map { |eb| eb.experience_availability&.available_on } +
-      meal_orders.filter_map(&:date)
+      meal_orders.active.filter_map(&:date)
   end
 end

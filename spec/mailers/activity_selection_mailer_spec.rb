@@ -13,6 +13,28 @@ RSpec.describe ActivitySelectionMailer, type: :mailer do
     ExperienceBooking.create!(experience_availability: availability, stay: stay, participants: 2)
   end
 
+
+  # Issue #232 — un client peut vivre sans email. Le mailer se tait de lui-même
+  # plutôt que de lever faute de destinataire : on ne compte pas sur les seuls
+  # appelants.
+  describe "client sans adresse email (issue #232)" do
+    let(:customer) { Customer.create!(email: nil, first_name: "Jean", last_name: "Sanmail", customer_type: "individual") }
+
+    it "n'envoie rien et ne lève pas, quel que soit le message" do
+      ActionMailer::Base.deliveries.clear
+
+      expect {
+        described_class.booking_added_by_team(booking.tap(&:confirm!)).deliver_now
+        described_class.booking_confirmed(booking).deliver_now
+        described_class.booking_refused(booking.tap { |b| b.refuse!("Complet") }).deliver_now
+        described_class.invitation(stay).deliver_now
+        described_class.confirmation(stay).deliver_now
+      }.not_to raise_error
+
+      expect(ActionMailer::Base.deliveries).to be_empty
+    end
+  end
+
   describe "#booking_refused" do
     subject(:mail) { described_class.booking_refused(booking.tap { |b| b.refuse!("Créneau déjà complet") }) }
 

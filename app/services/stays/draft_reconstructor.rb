@@ -48,6 +48,10 @@ module Stays
         # sinon une approbation de modif client l'effacerait. Vit sur le Stay,
         # PAS sur un bookable : source unique = `@stay.category`.
         category:       @stay.category,
+        # Identité du client par son ID (issue #232) : sans lui, l'édition d'un
+        # séjour dont le client n'a PAS d'email recréerait une fiche neuve à
+        # chaque enregistrement.
+        customer_id:    @stay.customer_id,
         first_name:     @stay.customer&.first_name,
         last_name:      @stay.customer&.last_name,
         email:          @stay.customer&.email,
@@ -206,10 +210,17 @@ module Stays
            .map { |b| { date: b.from_date&.iso8601, people: b.people } }
     end
 
-    # Reconstruit les repas {kind, date, people} depuis les MealOrder du séjour.
+    # Repas ACTIFS du séjour, avec leur `id` : c'est lui qui permet à
+    # `reconcile_meals!` de mettre la ligne à jour en place plutôt que de la
+    # recréer (#219). Les lignes annulées ou refusées ne reviennent pas au form.
     def meals_from_stay
-      @stay.meal_orders.map do |order|
-        { kind: order.kind, date: order.date&.iso8601, people: order.people }
+      @stay.meal_orders.active.chronological.map do |order|
+        { id:     order.id,
+          kind:   order.kind,
+          date:   order.date&.iso8601,
+          moment: order.moment,
+          people: order.people,
+          notes:  order.notes }
       end
     end
 

@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 // Cellule de la grille « Espaces » du funnel B2C. Gère un seul créneau
-// (un espace × une nuit). Clic = cycle — → Journée → Soirée → J+S → —.
+// (un espace × un jour). Clic = cycle — → Journée → Soirée → J+S → —.
 // Un input[type=hidden] synchronisé transmet la valeur au formulaire.
 //
 // L'état est porté par l'attribut `data-slot` du bouton ; tout le dessin vit
@@ -35,7 +35,7 @@ export default class extends Controller {
     btn.dataset.slot = known
     // `aria-pressed` dirait juste « enfoncé / relâché » là où il y a trois états
     // utiles : on laisse le libellé écrit porter le sens, et on complète le nom
-    // accessible (posé côté serveur : espace + nuit) par l'état courant.
+    // accessible (posé côté serveur : espace + jour) par l'état courant.
     const base = btn.getAttribute("data-label-base") || btn.getAttribute("aria-label") || ""
     if (!btn.getAttribute("data-label-base") && base) btn.setAttribute("data-label-base", base)
     const stem = btn.getAttribute("data-label-base")

@@ -32,7 +32,7 @@ RSpec.describe Reservations::Builder, "camping / van / repas (epic #66, Phase 3)
         lodging_id: hulotte.id,
         campings: [{ kind: "tente", people: 3, nights: 2 }],
         vans:     [{ nights: 2 }],
-        meals:    [{ kind: "buffet", date: arrival.iso8601, people: 4 }]
+        meals:    [{ kind: "buffet_vege", date: arrival.iso8601, people: 4 }]
       )
       builder = described_class.new(draft: d, admin: true, source: "manual")
       expect(builder.run).to be(true)
@@ -51,7 +51,7 @@ RSpec.describe Reservations::Builder, "camping / van / repas (epic #66, Phase 3)
       # Repas : has_many direct, PAS de StayItem.
       expect(builder.stay.meal_orders.count).to eq(1)
       meal = builder.stay.meal_orders.first
-      expect(meal.kind).to eq("buffet")
+      expect(meal.kind).to eq("buffet_vege")
       expect(meal.people).to eq(4)
       expect(meal.date).to eq(arrival)
       expect(meal.price_cents).to eq(4_800) # 4 × 12 €
@@ -73,7 +73,7 @@ RSpec.describe Reservations::Builder, "camping / van / repas (epic #66, Phase 3)
         halls:      [{ kind: "grande_salle", date: arrival.iso8601, period: "journee" }],
         campings:   [{ kind: "tente", people: 3, nights: 2 }],
         vans:       [{ nights: 2 }],
-        meals:      [{ kind: "buffet", date: arrival.iso8601, people: 4 }],
+        meals:      [{ kind: "buffet_vege", date: arrival.iso8601, people: 4 }],
         experiences: [{ id: experience.id, availability_id: slot.id, participants: 2 }]
       )
       builder = described_class.new(draft: d, admin: true, source: "manual")
@@ -186,7 +186,7 @@ RSpec.describe Reservations::Builder, "camping / van / repas (epic #66, Phase 3)
       d = draft(
         lodging_id: hulotte.id,
         campings: [{ kind: "tente", people: 3, nights: 2 }],
-        meals:    [{ kind: "buffet", people: 4 }]
+        meals:    [{ kind: "buffet_vege", people: 4 }]
       )
       builder = described_class.new(draft: d) # PAS admin (funnel public)
       expect(builder.run).to be(true)

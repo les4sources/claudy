@@ -68,12 +68,11 @@ module Stays
       relation.where(id: stay_ids_with_bookable_match)
     end
 
+    # Déléguée à `Customer.search` : une seule définition de « ce qui identifie
+    # un client », partagée avec l'autocomplete du formulaire Séjour. Elle couvre
+    # en plus le nom complet tapé d'un bloc et le numéro de téléphone.
     def matching_customer_ids
-      Customer.where(
-        "customers.first_name ILIKE :t OR customers.last_name ILIKE :t " \
-        "OR customers.organization_name ILIKE :t OR customers.email ILIKE :t",
-        t: term
-      ).select(:id)
+      Customer.search(query).select(:id)
     end
 
     # Un `StayItem.where(type, id IN <sous-requête>)` par type de bookable,

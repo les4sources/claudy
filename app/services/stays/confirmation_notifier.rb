@@ -3,9 +3,9 @@ module Stays
   #
   # POURQUOI CE SERVICE EXISTE. Le client recevait « votre demande est
   # enregistrée » (`ReservationMailer#confirmation_request`), puis « acompte bien
-  # reçu, notre équipe valide votre demande » (`#deposit_received`), et plus rien
-  # quand l'équipe validait effectivement. La promesse du 2e email n'était donc
-  # jamais tenue. La cause : depuis le passage stay-first (issue #99, juillet
+  # reçu, notre équipe valide votre demande » (email retiré depuis, issue #215),
+  # et plus rien quand l'équipe validait effectivement. La promesse du 2e email
+  # n'était donc jamais tenue. La cause : depuis le passage stay-first (issue #99, juillet
   # 2026), plus aucun chemin admin ne fait passer un `Booking` en `confirmed`
   # avec sa notification vivante — `Stays::QuickStatusUpdater` et
   # `Stays::AdminUpdater` coupent tous deux l'email client, à raison (ils

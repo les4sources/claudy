@@ -115,7 +115,9 @@ module Stays
              draft_has_terrace?(@draft) || draft_has_hamacs?(@draft)
         raise_invalid("Veuillez sélectionner un hébergement, un espace, un emplacement camping/van, une activité ou un repas.")
       end
-      unless Customer.exploitable_email?(@draft.email)
+      # Email facultatif en admin (issue #232) — mais une adresse SAISIE et mal
+      # formée reste refusée : une coquille ne doit pas devenir un client muet.
+      if @draft.email.present? && !Customer.exploitable_email?(@draft.email)
         raise_invalid("Veuillez préciser une adresse email valide pour le client.")
       end
       # Chambres seules (epic #81, Phase 5) : au moins une chambre cochée.
@@ -239,9 +241,20 @@ module Stays
       sb.space_reservations.map { |r| [r.space_id, r.date] }.to_set
     end
 
+    # Même règle d'identité que `Reservations::Builder#upsert_customer!` (issue
+    # #232) : `customer_id` d'abord, email ensuite, jamais de recherche par email
+    # vide — qui rattacherait tous les séjours sans email au même client.
     def upsert_customer!
+      if (existing = find_customer_by_id)
+        existing.first_name = @draft.first_name if existing.first_name.blank?
+        existing.last_name  = @draft.last_name  if existing.last_name.blank?
+        existing.phone      = @draft.phone      if existing.phone.blank?
+        existing.save! if existing.changed?
+        return existing
+      end
+
       email = Customer.normalize_email(@draft.email)
-      customer = Customer.where(email: email).first_or_initialize
+      customer = email.present? ? Customer.where(email: email).first_or_initialize : Customer.new
       customer.email = email
       customer.first_name = @draft.first_name if customer.first_name.blank?
       customer.last_name  = @draft.last_name  if customer.last_name.blank?
@@ -254,6 +267,12 @@ module Stays
       end
       customer.save!
       customer
+    end
+
+    def find_customer_by_id
+      return nil if @draft.customer_id.blank?
+
+      Customer.find_by(id: @draft.customer_id)
     end
 
     def reconcile_lodging!

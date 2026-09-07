@@ -11,21 +11,15 @@ p
     strong Dates :
     = " #{l(@stay.arrival_date, format: :long)} → #{l(@stay.departure_date, format: :long)}"
 
-- if @pending_deposit
-  - pay_url = pay_public_payment_url(@pending_deposit, host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be"))
-  p
-    | Pour confirmer votre réservation, il reste l'acompte de
-      #{number_to_currency(@pending_deposit.amount_cents / 100.0, unit: "€", format: "%n %u", precision: 2)}
-      à régler — si ce n'est pas déjà fait :
-  p
-    = link_to "Régler mon acompte", pay_url
-  p
-    | Dès l'acompte reçu, notre équipe valide votre demande et vous envoie la
-      confirmation définitive.
-- else
-  p
-    | Votre demande sera validée par notre équipe avant confirmation
-      définitive.
+/ Aucun montant d'acompte, aucun lien de paiement ici (issue #215) : cet email
+/ part AVANT que qui que ce soit aux 4 Sources ait regardé la demande. Réclamer
+/ l'argent à ce moment-là laissait croire au client que sa réservation était
+/ acquise, alors que l'équipe peut devoir refuser, décaler ou réajuster. La
+/ demande d'acompte vit désormais dans `#pre_confirmation`.
+p
+  | Notre Pôle Accueil l'examine et vous envoie une pré-confirmation par
+    email, avec le montant de l'acompte et son lien de paiement. C'est le
+    règlement de cet acompte qui confirmera définitivement votre séjour.
 
 - if @quote && @quote.lines.any?
   h3 Récapitulatif de votre devis

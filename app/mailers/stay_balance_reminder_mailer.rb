@@ -9,6 +9,10 @@ class StayBalanceReminderMailer < ApplicationMailer
     @balance = Money.new(stay.balance_due_cents, "EUR")
     @stay_url = public_stay_url(stay.token,
                                 host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be"))
+    # Garde issue #232 : un client peut vivre sans email. On ne compte pas sur
+    # les seuls appelants — un mailer sans destinataire lèverait, ici il se tait.
+    return if stay.customer&.email.blank?
+
     mail(
       to: stay.customer.email,
       subject: "Il reste un solde à régler pour votre séjour aux 4 Sources"
