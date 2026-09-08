@@ -142,6 +142,12 @@ module Pricing
     PIZZA_PARTY_BASE_CENTS = 4_000
     PIZZA_PARTY_PER_PERSON_CENTS = 700
 
+    # Part d'un événement qui revient à ses organisateurs, une fois les frais
+    # fixes déduits (epic #245). 70 % par défaut, mais le taux est PAR
+    # ÉVÉNEMENT : les 30 % retenus sont contestés, et le disc golf n'en laisse
+    # aucun.
+    EVENT_ORGANIZER_SHARE_PERCENT = 70
+
     # Rémunération d'un porteur d'activité (epic #244) : €/heure de prestation,
     # PAR PRESTATION et non par participant. 40 €/h, tarif horaire uniforme
     # intra-collectif ; une activité peut le surcharger
@@ -181,6 +187,14 @@ module Pricing
       return nil if fallback.nil?
 
       Pricing::Rates.cents_or("coworking.pack_#{days.to_i}", fallback)
+    end
+
+    EVENT_ORGANIZER_SHARE_KEY = "event.organizer_share".freeze
+
+    # Taux par défaut des organisateurs, en POURCENTS entiers (la clé est
+    # stockée en `percent`, comme le taux d'acompte).
+    def event_organizer_share_percent
+      Pricing::Rates.cents_or(EVENT_ORGANIZER_SHARE_KEY, EVENT_ORGANIZER_SHARE_PERCENT)
     end
 
     # Tarif horaire général d'un porteur. Avec `on:`, c'est le tarif EN VIGUEUR

@@ -1,0 +1,41 @@
+.space-y-4
+  / Partage (epic #245, phase 1). Les recettes réelles arrivent en phase 2 : ici
+    on n'affiche que ce qui est déjà décidé — le taux, les organisateurs et les frais.
+  .overflow-hidden.bg-white.shadow.sm:rounded-lg
+    .px-4.py-5.sm:px-6.border-b.border-gray-200
+      h3.text-lg.font-medium.leading-6.text-gray-900 Partage
+    .px-4.py-5.space-y-4
+      .flex.flex-wrap.items-baseline.gap-2
+        span.text-sm.text-gray-500 Part des organisateurs
+        span.text-sm.font-semibold.text-gray-900 = "#{event.effective_organizer_share_percent} %"
+        - if event.organizer_share_overridden?
+          span.inline-flex.items-center.rounded-full.bg-teal-100.px-2.py-0.5.text-xs.font-medium.text-teal-800 taux propre à cet événement
+        - else
+          span.text-xs.text-gray-400 taux général
+      p.text-xs.text-gray-500
+        | Le taux s'applique à la recette encaissée MOINS les frais fixes. La part des 4 Sources est le reste.
+
+      .flex.flex-wrap.items-baseline.gap-2
+        span.text-sm.text-gray-500 Pôle
+        - if event.team
+          span.text-sm.font-medium.text-gray-900 = event.team.name
+        - else
+          span.text-sm.text-gray-400 aucun
+
+      div
+        span.text-sm.text-gray-500 Organisateurs
+        - if event.shareable?
+          ul.mt-2.space-y-1
+            - total = event.organizer_weights_total
+            - event.event_organizers.includes(:human).sort_by { |o| o.human.name.to_s }.each do |organizer|
+              li.flex.items-center.justify-between.text-sm
+                span.text-gray-900 = organizer.human.name
+                span.text-gray-500
+                  = "poids #{organizer.weight}"
+                  span.ml-2.text-gray-400 = "#{(100.0 * organizer.weight / total).round} %"
+        - else
+          .mt-2.rounded-lg.bg-orange-50.px-3.py-2.text-sm.text-orange-800
+            | Aucune répartition possible : cet événement n'a pas d'organisateur, ou leurs poids totalisent zéro. La saisie du reste n'est pas bloquée pour autant.
+            = link_to "Ajouter des organisateurs", edit_event_path(event), class: "ml-1 underline"
+
+  = render "events/costs", event: event, cost: EventCost.new(event: event)

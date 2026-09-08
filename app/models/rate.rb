@@ -40,6 +40,7 @@ class Rate < ApplicationRecord
     "Repas"         => %w[meal. pizza_party.],
     "Sourciers"     => %w[catalog. bar. grocery. pot. dome. pet.],
     "Coworking"     => %w[coworking.],
+    "Événements"    => %w[event.],
     "Activités"     => %w[activity.]
   }.freeze
 

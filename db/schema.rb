@@ -642,6 +642,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
     t.index ["slug"], name: "index_event_categories_on_slug", unique: true
   end
 
+  create_table "event_costs", force: :cascade do |t|
+    t.integer "amount_cents", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "event_id", null: false
+    t.string "kind", default: "other", null: false
+    t.string "label", null: false
+    t.bigint "source_id"
+    t.string "source_type"
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_event_costs_on_deleted_at"
+    t.index ["event_id"], name: "index_event_costs_on_event_id"
+    t.index ["source_type", "source_id"], name: "index_event_costs_on_source"
+  end
+
+  create_table "event_organizers", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "event_id", null: false
+    t.bigint "human_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "weight", default: 1, null: false
+    t.index ["event_id", "human_id"], name: "index_event_organizers_on_event_id_and_human_id", unique: true
+    t.index ["event_id"], name: "index_event_organizers_on_event_id"
+    t.index ["human_id"], name: "index_event_organizers_on_human_id"
+  end
+
   create_table "events", force: :cascade do |t|
     t.integer "attendees"
     t.datetime "created_at", null: false
@@ -651,6 +677,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
     t.string "location"
     t.string "name"
     t.text "notes"
+    t.integer "organizer_share_percent"
     t.string "price_text"
     t.datetime "published_at"
     t.integer "sales_amount_cents"
@@ -658,10 +685,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
     t.datetime "starts_at"
     t.string "status"
     t.string "summary"
+    t.bigint "team_id"
     t.datetime "updated_at", null: false
     t.string "url"
     t.index ["event_category_id"], name: "index_events_on_event_category_id"
     t.index ["slug"], name: "index_events_on_slug", unique: true
+    t.index ["team_id"], name: "index_events_on_team_id"
   end
 
   create_table "experience_availabilities", force: :cascade do |t|
@@ -711,8 +740,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
     t.bigint "team_id"
     t.datetime "updated_at", null: false
     t.index ["human_id"], name: "index_experiences_on_human_id"
-    t.index ["team_id"], name: "index_experiences_on_team_id"
     t.index ["slug"], name: "index_experiences_on_slug", unique: true
+    t.index ["team_id"], name: "index_experiences_on_team_id"
   end
 
   create_table "fiscal_years", force: :cascade do |t|
@@ -1632,7 +1661,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
   add_foreign_key "decisions", "agenda_items", on_delete: :nullify
   add_foreign_key "decisions", "gatherings", on_delete: :nullify
   add_foreign_key "decisions", "humans", column: "recorded_by_id"
+  add_foreign_key "event_costs", "events"
+  add_foreign_key "event_organizers", "events"
+  add_foreign_key "event_organizers", "humans"
   add_foreign_key "events", "event_categories"
+  add_foreign_key "events", "teams"
   add_foreign_key "experience_availabilities", "experiences"
   add_foreign_key "experience_bookings", "experience_availabilities"
   add_foreign_key "experience_bookings", "stays"
