@@ -10,9 +10,13 @@ class EventDecorator < ApplicationDecorator
     classes.join(" ")
   end
 
+  # Pastille de la catégorie : la couleur est un hex en base (plus un nom
+  # Tailwind), donc en style inline — le purge JIT ne voit pas les classes
+  # construites à l'exécution.
   def name_with_color
+    color = object.event_category&.color.presence || EventCategory::DEFAULT_COLOR
     html = ""
-    html << h.content_tag(:div, nil, class: "inline-flex mr-1 w-3 h-3 rounded-full bg-#{object.event_category.color}-300")
+    html << h.content_tag(:div, nil, class: "inline-flex mr-1 w-3 h-3 rounded-full", style: "background-color: #{color};")
     html << object.name
     h.raw(html)
   end

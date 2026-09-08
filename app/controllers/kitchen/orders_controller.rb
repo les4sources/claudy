@@ -13,6 +13,12 @@ module Kitchen
     # PREMIÈRE qui la reçoit : une demande d'info en attente de validation est un
     # travail à faire, pas une ligne à lire deux fois.
     SECTIONS = [
+      # Issue #238 : EN TÊTE, avant tout le reste. Un service refusé dont la date
+      # approche est le seul travail vraiment urgent de la page — il faut prévoir
+      # autre chose. Claudy le signale ; il ne crée aucun buffet de remplacement
+      # à la place de Michael (décision 6).
+      { key: :to_cover,  title: "À couvrir",
+        blurb: "La cuisine s'est désistée et la date approche — il faut prévoir autre chose." },
       { key: :todo,      title: "À traiter",
         blurb: "La cuisine n'a pas encore répondu." },
       { key: :upcoming,  title: "À venir",
@@ -47,6 +53,8 @@ module Kitchen
     def create
       @order = MealOrder.new(order_params.merge(stay_id: params.dig(:meal_order, :stay_id)))
       accept_when_someone_takes_it(@order)
+
+      return create_from_grid if grid_submission?
 
       if @order.save
         redirect_to kitchen_orders_path, notice: "Demande enregistrée."
@@ -211,12 +219,56 @@ module Kitchen
       "Demande mise à jour. La prestation a changé : la cuisine doit revalider."
     end
 
+    # La grille (issue #238) : une soumission par CASES, pas par ligne unique.
+    # Elle n'existe que pour un séjour aux dates connues — sans calendrier, il
+    # n'y a pas de colonnes, et le formulaire retombe sur date + moment.
+    def grid_submission?
+      params[:grid_mode] == "1"
+    end
+
+    def create_from_grid
+      result = Kitchen::GridSubmission.new(
+        stay: @order.stay,
+        attributes: grid_line_attributes,
+        cells: params[:grid]
+      ).run
+
+      if result.success?
+        redirect_to kitchen_orders_path,
+                    notice: "#{result.orders.size} service(s) enregistré(s)."
+      else
+        prepare_form
+        flash.now[:alert] = result.error
+        render :new, status: :unprocessable_entity
+      end
+    end
+
+    # Ce qui se saisit UNE FOIS et s'applique à toutes les lignes créées.
+    def grid_line_attributes
+      @order.attributes
+            .slice("kind", "people", "notes", "status", "unit_price_cents",
+                   "responsible_human_id", "validation", "validated_at")
+            .symbolize_keys
+    end
+
     def prepare_form
       @stays  = assignable_stays
       @humans = Human.where(status: "active").order(:name)
       @kinds  = MealOrder::KIND_LABELS.filter_map do |kind, label|
         [label, kind] if Kitchen::Config.enabled_kinds.include?(kind) || kind == @order.kind
       end
+      @grid_days = grid_days_for(@order)
+    end
+
+    # Les jours de la grille : du jour d'arrivée au jour de départ INCLUS — le
+    # départ porte un midi. Vide quand le séjour n'a pas ses deux dates : le
+    # formulaire retombe alors sur un champ Date et un champ Moment uniques.
+    def grid_days_for(order)
+      stay = order.stay
+      return [] if stay.blank? || stay.arrival_date.blank? || stay.departure_date.blank?
+      return [] if stay.departure_date < stay.arrival_date
+
+      (stay.arrival_date..stay.departure_date).to_a
     end
 
     # Les séjours qu'on peut encore garnir : pas annulés, pas partis depuis plus
@@ -262,8 +314,15 @@ module Kitchen
     end
 
     def build_sections
+      # « À couvrir » se sert la première : une ligne refusée mais encore à venir
+      # ne doit plus se lire dans « Annulés et refusés », où elle passerait pour
+      # une affaire classée.
+      to_cover  = base_scope.to_cover.chronological.to_a
+      claimed   = to_cover.map(&:id)
+
       todo      = base_scope.pending_validation.upcoming.chronological.to_a
-      claimed   = todo.map(&:id)
+                            .reject { |o| claimed.include?(o.id) }
+      claimed  += todo.map(&:id)
 
       upcoming  = base_scope.where(validation: "accepted", status: %w[requested confirmed])
                             .upcoming.chronological.to_a.reject { |o| claimed.include?(o.id) }
@@ -281,7 +340,7 @@ module Kitchen
                             .antichronological.limit(CANCELLED_LIMIT).to_a
                             .reject { |o| claimed.include?(o.id) }
 
-      rows = { todo: todo, upcoming: upcoming, inquiries: inquiries,
+      rows = { to_cover: to_cover, todo: todo, upcoming: upcoming, inquiries: inquiries,
                archives: archives, cancelled: cancelled }
 
       SECTIONS.map { |section| section.merge(groups: group_by_stay(rows.fetch(section[:key]))) }

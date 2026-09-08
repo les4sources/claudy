@@ -9,7 +9,15 @@ Rails.application.routes.draw do
   resources :booking_prices, only: [:create]
   resources :bundles
   resources :event_categories
-  resources :events
+  resources :events do
+    member do
+      # Formulaire de création prérempli depuis cet événement (rien en base).
+      get :duplicate
+      # Publication sur le site les4sources.be.
+      post :publish
+      delete :publish, action: :unpublish, as: :unpublish
+    end
+  end
   resources :gathering_categories
   resources :gatherings do
     collection do
@@ -41,6 +49,11 @@ Rails.application.routes.draw do
   resources :decisions
   get "organisation/decisions", to: "decisions#index", as: :organisation_decisions
   resources :experiences do
+    member do
+      # Publication sur le site les4sources.be (catalogue).
+      post :publish
+      delete :publish, action: :unpublish, as: :unpublish
+    end
     resources :experience_availabilities, only: [:create, :destroy], path: :disponibilites
   end
   resources :lodgings
@@ -94,7 +107,11 @@ Rails.application.routes.draw do
   resources :services
   resources :spaces
   resources :tasks
-  resources :teams
+  # Pôles (epic #239). Les adhésions vivent SOUS le pôle : elles n'existent pas
+  # sans lui, et l'écran d'édition est leur seul point d'entrée.
+  resources :teams do
+    resources :memberships, only: %i[create update destroy], controller: "team_memberships"
+  end
   resources :watchman_notes
 
   # Finances (issue #155, lot A phase 1) — comptes courants internes et grand
@@ -437,6 +454,17 @@ Rails.application.routes.draw do
   # (ENV["AGENT_API_TOKEN"]). Self-documented: GET /api/v1 lists resources and
   # GET /api/v1/openapi serves the OpenAPI 3 spec.
   namespace :api, defaults: { format: :json } do
+    # API PUBLIQUE, sans authentification, lecture seule : ce que le site
+    # les4sources.be lit au build (contrat `docs/CLAUDY.md` du site). Rien
+    # d'autre que GET n'existe ici — toute écriture passe par l'admin.
+    namespace :public do
+      namespace :v1 do
+        resources :events, only: [:index]
+        resources :experiences, only: [:index]
+        resources :event_categories, only: [:index]
+      end
+    end
+
     namespace :v1 do
       get "/", to: "index#show"
       get "openapi", to: "openapi#show"

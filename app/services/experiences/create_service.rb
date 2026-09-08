@@ -40,7 +40,8 @@ module Experiences
           :min_participants,
           :max_participants,
           :duration,
-          :duration_hours
+          :duration_hours,
+          :slug
         )
     end
   end

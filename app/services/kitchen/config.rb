@@ -48,9 +48,17 @@ module Kitchen
       Setting["kitchen.coordinator_email"].presence || DEFAULT_COORDINATOR_EMAIL
     end
 
+    # Types qui ne se proposent PLUS à la saisie (issue #238) : `trio` est
+    # devenu le bouton « Trio » de la grille, qui coche les trois services du
+    # jour, et `gouter` se coche dans la grille plutôt qu'il ne se choisit —
+    # cocher son créneau avec le type « Repas » crée la ligne de goûter.
+    UNPROPOSABLE_KINDS = %w[trio gouter].freeze
+
     # Types proposables aujourd'hui, dans l'ordre du catalogue.
     def enabled_kinds
-      MealOrder::KINDS.select { |kind| enabled?(MealOrder::KIND_FAMILIES[kind]) }
+      MealOrder::KINDS
+        .reject { |kind| UNPROPOSABLE_KINDS.include?(kind) }
+        .select { |kind| enabled?(MealOrder::KIND_FAMILIES[kind]) }
     end
 
     def setting_integer(key, fallback)

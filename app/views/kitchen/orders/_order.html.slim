@@ -13,6 +13,7 @@ li.border-t.border-gray-100(class="first:border-t-0")
         span = order.people_label
         span.text-gray-300 ·
         span.font-medium = order.price
+        = order.trio_badge
       .mt-0.5.text-xs
         - if order.responsible_missing?
           span.text-amber-700 Personne ne s'en charge

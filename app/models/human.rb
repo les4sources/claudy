@@ -52,6 +52,17 @@ class Human < ApplicationRecord
             presence: true,
             uniqueness: true
 
+  # Les humains actifs qu'on peut encore ajouter à ce pôle — ceux qui n'en sont
+  # pas déjà membres. L'index unique de `team_memberships` interdit le doublon ;
+  # le sélecteur évite d'avoir à le découvrir en cliquant.
+  def self.ordered_addable_to(team)
+    return ordered_all if team.blank? || team.new_record?
+
+    where.not(id: TeamMembership.where(team_id: team.id).select(:human_id)).order(:name)
+  end
+
+  def self.ordered_all = order(:name)
+
   def inactive?
     self.status == "inactive"
   end
