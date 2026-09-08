@@ -1,9 +1,16 @@
 module Public
-  # Funnel B2C natif /reservation — 4 étapes (tranche 2 + epic #55 Phase 4).
-  #   1. dates      — dates du séjour + groupe + animal
-  #   2. compose    — composition : hébergement, espaces, camping, hamacs
-  #   3. activities — activités : créneaux datés dans la fenêtre du séjour (Phase 4)
-  #   4. contact    — coordonnées client → commit + Stripe
+  # Funnel B2C natif /reservation — 3 étapes (tranche 2).
+  #   1. dates   — dates du séjour + groupe + animal
+  #   2. compose — composition : hébergement, espaces, camping, hamacs
+  #   3. contact — coordonnées client → commit de la demande
+  #
+  # L'étape « activités » a sauté le 2026-09-08 (décision Michael). Elle
+  # demandait au visiteur de choisir un CRÉNEAU DATÉ au moment de la demande,
+  # alors que l'équipe ne planifie le calendrier des activités qu'un mois avant
+  # le séjour : on faisait trancher sur une offre qui n'existait pas encore, et
+  # le funnel y perdait un écran entier. Le rail email (ActivitySelections) pose
+  # la question au bon moment. Le Draft et le Builder gardent leur champ
+  # `experiences` — l'ADMIN réserve toujours des activités depuis la fiche.
   class ReservationsController < Public::BaseController
     # Layout dédié, pleine largeur (Michael 2026-07-29). `public_sheet` enferme
     # son contenu dans un panneau blanc de 3/4 de large : le fond sable de la
@@ -14,7 +21,7 @@ module Public
     DRAFT_SESSION_KEY = :reservation_draft
     HALL_SLOT_COUNT   = 6
 
-    before_action :load_draft, only: %i[dates advance_dates compose quote advance_compose activities advance_activities contact create]
+    before_action :load_draft, only: %i[dates advance_dates compose quote advance_compose contact create]
     skip_before_action :verify_authenticity_token, only: %i[advance_compose]
 
     def start
@@ -71,44 +78,12 @@ module Public
       @lodging_availability  = build_stay_availability(@lodgings, @stay_nights)
     end
 
-    # Étape 3 — activités (epic #55, Phase 4). Contrairement au rail email
-    # (ActivitySelections), l'utilisateur choisit ici un CRÉNEAU précis
-    # (`ExperienceAvailability`) dans la fenêtre `[arrivée, départ)` de son
-    # séjour : un `ExperienceBooking` exige un créneau daté (NOT NULL). On
-    # n'affiche donc que les Experiences ayant au moins un créneau non complet
-    # dans cette fenêtre. Étape toujours franchissable — la relance email
-    # (Phase 5) couvrira les activités hors fenêtre / ajoutées après coup.
-    def activities
-      @availabilities = bookable_availabilities.reject(&:full?)
-      @quote          = @draft.quote
-    end
-
     # Transition étape 2 → 3 (advance depuis le Stimulus quote controller ou le
     # fallback noscript). Le draft est déjà persisté par le POST /devis à chaque
-    # changement ; on reçoit ici l'ultime état de composition avant les activités.
+    # changement ; on reçoit ici l'ultime état de composition avant les
+    # coordonnées.
     def advance_compose
       persist_draft(merged_draft_params)
-      redirect_to public_reservation_activities_path
-    end
-
-    # Transition étape 3 → 4 : persiste les sélections de créneau (chaque entrée
-    # porte `id` = experience_id, `availability_id` = créneau daté et
-    # `participants`) puis passe aux coordonnées. Les entrées sans participant
-    # sont écartées par `merged_draft_params`.
-    def advance_activities
-      persist_draft(merged_draft_params, overwrite: submitted_collections)
-
-      # Dernier filet avant les coordonnées : un créneau a pu se remplir pendant
-      # que le visiteur composait. Mieux vaut le lui dire ICI, où il peut changer
-      # de créneau, qu'au commit — où l'activité serait écartée en silence, après
-      # paiement de l'acompte.
-      if (plein = overbooked_selection).present?
-        @availabilities     = bookable_availabilities.reject { |av| av.full? && selected_participants_for(av).zero? }
-        @quote              = @draft.quote
-        @activities_error   = "Il ne reste plus assez de places sur ce créneau : #{plein}. Choisissez-en un autre ou réduisez le nombre de participants."
-        return render :activities, status: :unprocessable_entity
-      end
-
       redirect_to public_reservation_contact_path
     end
 
@@ -200,30 +175,15 @@ module Public
       Reservations::Draft.new(merged)
     end
 
-    # Créneaux choisis dont le nombre de participants dépasse les places encore
-    # libres, décrits pour l'affichage. Vide quand tout tient.
-    def overbooked_selection
-      Array(@draft.experiences).filter_map { |entry|
-        av = ExperienceAvailability.find_by(id: entry[:availability_id])
-        next if av.nil?
-
-        wanted = entry[:participants].to_i
-        spots  = av.available_spots
-        next if spots.nil? || wanted <= spots
-
-        "#{av.label} (#{spots} place#{'s' if spots > 1} restante#{'s' if spots > 1})"
-      }.to_sentence.presence
-    end
-
-    def selected_participants_for(availability)
-      entry = Array(@draft.experiences).find { |e| e[:availability_id].to_s == availability.id.to_s }
-      entry&.dig(:participants).to_i
-    end
-
     # Collections que le POST courant porte RÉELLEMENT (clé présente dans les
     # params bruts), par opposition à celles que `merged_draft_params` remplit
     # d'un tableau vide par défaut. Seules les premières ont le droit de vider
     # leur pendant dans le draft.
+    #
+    # Depuis le retrait de l'étape « activités », aucun formulaire du funnel ne
+    # soumet plus `experiences`. On garde la règle parce que le paramètre reste
+    # permis par rétrocompatibilité : un draft de session ouvert avant le
+    # 2026-09-08 peut encore en porter, et doit rester effaçable.
     def submitted_collections
       raw = params[:reservation]
       return [] unless raw.respond_to?(:key?)
@@ -318,26 +278,6 @@ module Public
     def bookable_lodgings
       names = ["La Hulotte", "La Chevêche", "Le Grand-Duc"]
       Lodging.where(name: names).sort_by { |l| names.index(l.name) || 99 }
-    end
-
-    # Créneaux d'activité réservables au funnel : ceux qui tombent dans la
-    # fenêtre `[arrivée, départ]` du séjour en cours, JOUR DU DÉPART COMPRIS
-    # (décision Michael 2026-08-21 — une activité en matinée avant de charger la
-    # voiture se vend). C'est aussi ce que faisaient déjà le rail email et la
-    # fiche admin, tous deux sur `for_date_range` : les trois canaux proposent
-    # enfin la même chose. Hors « Pizza Party » (gérée à part) et hors activités
-    # supprimées. Le tri experience/date/heure permet
-    # de les regrouper par activité dans la vue. Sans dates, aucune activité.
-    def bookable_availabilities
-      return ExperienceAvailability.none if @draft.arrival_date.blank? || @draft.departure_date.blank?
-
-      ExperienceAvailability
-        .includes(:experience, :experience_bookings)
-        .where(available_on: @draft.arrival_date..@draft.departure_date)
-        .joins(:experience)
-        .where(experiences: { deleted_at: nil })
-        .where.not(experiences: { name: "Pizza Party" })
-        .order(:available_on, :starts_at)
     end
 
     # Construit les données pour le Gantt calendrier des disponibilités (1 mois).

@@ -392,17 +392,22 @@ Rails.application.routes.draw do
 
   get "reports/lodging/:id", to: "reports#lodging", as: :lodging_reports
 
-  # Funnel B2C natif /reservation — 4 étapes (tranche 2 + epic #55 Phase 4).
+  # Funnel B2C natif /reservation — 3 étapes (tranche 2 ; l'étape « activités »
+  # a été retirée le 2026-09-08, décision Michael).
   # Étape 1 : dates + groupe + animal  →  Étape 2 : composition  →  Étape 3 :
-  # activités  →  Étape 4 : coordonnées
+  # coordonnées
+  #
+  # Pourquoi plus d'étape « activités » : l'équipe planifie le calendrier des
+  # activités un mois avant le séjour, pas au moment de la demande. Choisir un
+  # créneau daté six mois à l'avance obligeait le visiteur à trancher sur une
+  # offre qui n'existait pas encore, et allongeait le funnel d'un écran pour
+  # rien. Le rail email (ActivitySelections) fait ce travail au bon moment.
   get  "reservation",              to: "public/reservations#start",              as: :public_reservation_start
   get  "reservation/sejour",       to: "public/reservations#dates",              as: :public_reservation_dates
   post "reservation/sejour",       to: "public/reservations#advance_dates",      as: :public_reservation_advance_dates
   get  "reservation/composer",     to: "public/reservations#compose",            as: :public_reservation_compose
   post "reservation/devis",        to: "public/reservations#quote",              as: :public_reservation_quote
   post "reservation/composer",     to: "public/reservations#advance_compose",    as: :public_reservation_advance_compose
-  get  "reservation/activites",    to: "public/reservations#activities",         as: :public_reservation_activities
-  post "reservation/activites",    to: "public/reservations#advance_activities", as: :public_reservation_advance_activities
   get  "reservation/coordonnees",  to: "public/reservations#contact",            as: :public_reservation_contact
   post "reservation/coordonnees",  to: "public/reservations#create",             as: :public_reservation_create
   get  "reservation/calendrier",   to: "public/reservations#availability_calendar", as: :public_reservation_availability_calendar
