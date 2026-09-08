@@ -3,9 +3,14 @@ class TeamsController < BaseController
   
     breadcrumb "Pôles", :teams_path, match: :exact
   
+    # Les pôles racines d'abord, chacun suivi de ses enfants : la hiérarchie à
+    # deux niveaux se lit dans l'ordre de la liste, sans arborescence à replier.
     def index
-      @teams = TeamDecorator
-        .decorate_collection(Team.all.order(name: :asc))
+      teams = Team.includes(:parent, :children, team_memberships: :human).ordered
+      roots, orphans = teams.partition { |team| team.parent_id.nil? }
+      @rows = roots.flat_map { |root| [root] + teams.select { |t| t.parent_id == root.id } }
+      # Filet : un pôle dont le parent a disparu ne doit pas disparaître avec lui.
+      @rows += orphans.reject { |team| @rows.include?(team) }
     end
   
     def show
@@ -29,6 +34,7 @@ class TeamsController < BaseController
     end
   
     def edit
+      load_membership_form
     end
   
     def update
@@ -62,13 +68,24 @@ class TeamsController < BaseController
     def get_team
       @team = Team.find(params[:id])
     end
+
+    # Ce que le bloc « Membres » de l'écran d'édition a besoin de savoir : les
+    # adhésions en place, et les humains actifs qu'on peut encore ajouter.
+    def load_membership_form
+      @memberships = @team.team_memberships.includes(:human).sort_by { |m| m.human.name.to_s }
+      @addable_humans = Human.ordered_addable_to(@team)
+      @membership ||= TeamMembership.new(team: @team, role: "member")
+    end
   
+    # Les pôles se CONFIGURENT dans les Paramètres (epic #239, décision 1). La
+    # page du pôle passera sous Organisation en phase 3 ; d'ici là, `show`
+    # reste dans la même section que le reste du CRUD.
     def set_presenters
       @menu_presenter = Components::MenuPresenter.new(
-        active_primary: "projects",
+        active_primary: "settings",
         active_secondary: "teams"
       )
-      @projects_view = true
+      @settings_view = true
     end
   end
   
