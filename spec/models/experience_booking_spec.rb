@@ -3,6 +3,7 @@
 # Table name: experience_bookings
 #
 #  id                         :bigint           not null, primary key
+#  carrier_fee_cents          :integer
 #  notes                      :text
 #  participants               :integer
 #  refusal_reason             :text

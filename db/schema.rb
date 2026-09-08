@@ -677,6 +677,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
   end
 
   create_table "experience_bookings", force: :cascade do |t|
+    t.integer "carrier_fee_cents"
     t.datetime "created_at", null: false
     t.bigint "experience_availability_id", null: false
     t.text "notes"
@@ -690,6 +691,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
   end
 
   create_table "experiences", force: :cascade do |t|
+    t.integer "carrier_hourly_rate_cents"
     t.string "color"
     t.datetime "created_at", null: false
     t.datetime "deleted_at", precision: nil
@@ -706,8 +708,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
     t.datetime "published_at"
     t.string "slug"
     t.string "summary"
+    t.bigint "team_id"
     t.datetime "updated_at", null: false
     t.index ["human_id"], name: "index_experiences_on_human_id"
+    t.index ["team_id"], name: "index_experiences_on_team_id"
     t.index ["slug"], name: "index_experiences_on_slug", unique: true
   end
 
@@ -1633,6 +1637,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
   add_foreign_key "experience_bookings", "experience_availabilities"
   add_foreign_key "experience_bookings", "stays"
   add_foreign_key "experiences", "humans"
+  add_foreign_key "experiences", "teams"
   add_foreign_key "fiscal_years", "legal_entities"
   add_foreign_key "gathering_action_humans", "gathering_actions"
   add_foreign_key "gathering_action_humans", "humans"

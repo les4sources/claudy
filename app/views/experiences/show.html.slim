@@ -45,6 +45,34 @@
                   span.text-gray-400 = " (#{@experience.duration_hours})"
 
             dt.text-sm.font-medium.text-gray-500
+              | Pôle
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              - if @experience.team
+                = @experience.team.name
+              - else
+                span.text-gray-400 Aucun pôle — la charge du porteur ne sera pas ventilée.
+
+            / Rémunération du porteur (epic #244, phase 1). Le tarif effectif est
+              celui qui sera figé sur chaque réservation à sa confirmation.
+            dt.text-sm.font-medium.text-gray-500
+              | Rémunération du porteur
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              - tarif = @experience.effective_carrier_hourly_cents
+              = "#{number_with_precision(tarif / 100.0, precision: 2, separator: ',')} €/h"
+              - if @experience.carrier_rate_overridden?
+                span.ml-2.inline-flex.items-center.rounded-full.bg-teal-100.px-2.py-0.5.text-xs.font-medium.text-teal-800 tarif propre à cette activité
+              - else
+                span.ml-2.text-xs.text-gray-400 tarif général
+              - fee = @experience.carrier_fee_cents_on
+              - if fee
+                .mt-1.text-sm.text-gray-500
+                  = "Soit #{number_with_precision(fee / 100.0, precision: 2, separator: ',')} € par prestation (#{@experience.duration_hours}), quel que soit le nombre de participants."
+              - else
+                .mt-1.text-sm.text-orange-700
+                  | Sans durée en heures, aucune rémunération n'est calculable — une réservation confirmée restera sans montant.
+                  = link_to "Compléter la durée", edit_experience_path(@experience), class: "ml-1 underline"
+
+            dt.text-sm.font-medium.text-gray-500
               | Résumé
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @experience.summary
