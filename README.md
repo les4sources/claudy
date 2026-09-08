@@ -96,6 +96,22 @@ Générer un jeton : `ruby -rsecurerandom -e 'puts SecureRandom.urlsafe_base64(3
 > hot-reload (SIGUSR2) ne recharge pas l'environnement, et la route continuerait
 > de renvoyer 404 alors que la variable semble bien configurée.
 
+## API publique et publication sur le site les4sources.be
+
+Le site public (repo `les4sources/les4sources-website`, Astro statique) lit Claudy **au build**, sans authentification, sur trois endpoints en lecture seule, cacheables cinq minutes avec ETag, sans aucune donnée personnelle. Le contrat de référence est `docs/CLAUDY.md` du repo du site.
+
+| Endpoint | Contenu |
+|---|---|
+| `GET /api/public/v1/events?from=&to=` | événements publiés (défaut : depuis un an), avec catégorie, résumé, description publique, lieu, prix, lien d'inscription, image |
+| `GET /api/public/v1/experiences` | activités publiées, prix, porteur (prénom seul), créneaux à venir sur six mois avec places restantes |
+| `GET /api/public/v1/event_categories` | catégories avec `slug`, couleur hex et pôle de la charte |
+
+**Publier.** Un événement ou une activité est un brouillon tant que `published_at` est vide : rien n'en sort. Le bouton « Publier sur le site » (fiche de l'événement ou de l'activité) pose `published_at` et le `slug` — proposé depuis le titre et le mois (`pizza-party-septembre-2026`), modifiable dans le formulaire jusqu'à la publication, figé tant que la fiche est en ligne. « Dépublier » retire la fiche du site et garde le slug. Sur une catégorie, le pôle de la charte (sept valeurs) donne la couleur et le pictogramme des cartes ; la couleur est un hex.
+
+**Dupliquer.** « Dupliquer » sur un événement ouvre le formulaire de création prérempli (titre, résumé, description publique, catégorie, lieu, prix, lien, image) sans dates ni slug : rien n'est écrit avant « Enregistrer », et la copie reste un brouillon.
+
+**Reconstruction du site.** Toute sauvegarde d'une fiche publiée (ou sa publication, dépublication, suppression) enfile `WebsiteRebuildJob`, qui regroupe les demandes sur deux minutes puis fait un `POST` sur `WEBSITE_REBUILD_WEBHOOK_URL` (webhook de déploiement Coolify ou `repository_dispatch` GitHub), avec `Authorization: Bearer WEBSITE_REBUILD_WEBHOOK_TOKEN` si le jeton est renseigné. Sans URL, le job journalise et ne fait rien ; hors production il ne fait rien non plus, sauf `WEBSITE_REBUILD_ALLOW_NON_PRODUCTION=1`.
+
 ## Tâches planifiées (cron Hatchbox)
 
 Claudy envoie plusieurs emails par des tâches rake idempotentes, lancées par le cron de Hatchbox. Toutes sont sans effet si on les rejoue : elles horodatent ce qu'elles ont envoyé.

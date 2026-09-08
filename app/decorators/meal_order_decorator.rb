@@ -54,6 +54,14 @@ class MealOrderDecorator < ApplicationDecorator
 
   def status_badge = badge(STATUS_STYLES, object.status)
 
+  # « Formule trio » (issue #238) : le prix du goûter n'est explicable au client
+  # que si la remise est nommée là où elle s'applique.
+  def trio_badge
+    return nil unless object.trio_discounted?
+
+    h.content_tag(:span, "formule trio", class: "#{BADGE_BASE} bg-teal-100 text-teal-800")
+  end
+
   # Une demande annulée par le client n'attend plus rien de la cuisine : garder
   # « À valider » à côté d'« Annulé » ne fait qu'appeler un geste qui n'a plus
   # lieu d'être. Un refus, lui, EST la réponse de la cuisine : il reste affiché.

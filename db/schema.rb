@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_08_042457) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -636,7 +636,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_042457) do
     t.datetime "created_at", null: false
     t.datetime "deleted_at", precision: nil
     t.string "name"
+    t.string "pole"
+    t.string "slug"
     t.datetime "updated_at", null: false
+    t.index ["slug"], name: "index_event_categories_on_slug", unique: true
   end
 
   create_table "events", force: :cascade do |t|
@@ -645,14 +648,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_042457) do
     t.datetime "deleted_at", precision: nil
     t.datetime "ends_at"
     t.bigint "event_category_id", null: false
+    t.string "location"
     t.string "name"
     t.text "notes"
+    t.string "price_text"
+    t.datetime "published_at"
     t.integer "sales_amount_cents"
+    t.string "slug"
     t.datetime "starts_at"
     t.string "status"
+    t.string "summary"
     t.datetime "updated_at", null: false
     t.string "url"
     t.index ["event_category_id"], name: "index_events_on_event_category_id"
+    t.index ["slug"], name: "index_events_on_slug", unique: true
   end
 
   create_table "experience_availabilities", force: :cascade do |t|
@@ -696,11 +705,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_042457) do
     t.string "name"
     t.string "photo"
     t.integer "price_cents"
+    t.datetime "published_at"
+    t.string "slug"
     t.string "summary"
     t.bigint "team_id"
     t.datetime "updated_at", null: false
     t.index ["human_id"], name: "index_experiences_on_human_id"
     t.index ["team_id"], name: "index_experiences_on_team_id"
+    t.index ["slug"], name: "index_experiences_on_slug", unique: true
   end
 
   create_table "fiscal_years", force: :cascade do |t|

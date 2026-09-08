@@ -9,8 +9,28 @@
                    class: "md:w-1/2 lg:w-2/3"
 
     = f.text_field :color,
-                   label: "Couleur (ex: teal)",
-                   class: "md:w-1/2 lg:w-2/3",
-                   hint: link_to("Toutes les couleurs", "https://tailwindcss.com/docs/background-color", target: "_blank")
+                   type: "color",
+                   label: "Couleur",
+                   hint: "Pastille dans Claudy ; couleur de repli sur le site quand aucun pôle n'est choisi.",
+                   value: (f.object.color.presence || EventCategory::DEFAULT_COLOR),
+                   class: "h-10 w-20 cursor-pointer p-1"
+
+    / Pôle de la charte : donne la couleur et le pictogramme des cartes
+    / d'événements sur les4sources.be. Choix de l'éditrice, jamais deviné.
+    div
+      = f.label :pole,
+                "Pôle de la charte (site web)"
+      p.mt-1.mb-2.text-xs.text-gray-500
+        | Donne la couleur et le pictogramme des cartes d'événements sur les4sources.be. Laisse vide si aucun pôle ne convient.
+      = f.select :pole,
+                 EventCategory::POLES.map { |value| [EventCategory::POLE_LABELS[value], value] },
+                 { include_blank: "— Aucun pôle —", label: false },
+                 { class: "block w-full md:w-1/2 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" }
+
+    - if f.object.slug.present?
+      .text-sm.text-gray-700
+        | Identifiant sur le site :
+        = " "
+        code.rounded.bg-gray-100.px-1.5.py-0.5 = f.object.slug
 
 hr

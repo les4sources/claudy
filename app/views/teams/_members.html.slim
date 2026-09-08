@@ -1,0 +1,57 @@
+/ Bloc « Membres » d'un pôle (epic #239, phase 1). Remplacé en entier par les
+  trois gestes du contrôleur des adhésions — l'identifiant est le point d'ancrage.
+section#team-members.rounded-2xl.bg-white.ring-1.ring-gray-200.overflow-hidden
+  .px-6.py-4.border-b.border-gray-100(class="bg-gray-50/60")
+    h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Membres
+    p.mt-1.text-xs.text-gray-500
+      | Qui fait partie de ce pôle, et qui en est référent·e.
+
+  - if memberships.empty?
+    .px-6.py-8.text-center.text-sm.text-gray-500
+      | Personne dans ce pôle pour l'instant.
+  - else
+    ul.divide-y.divide-gray-100
+      - memberships.each do |membership|
+        li.flex.flex-wrap.items-center.justify-between.gap-3.px-6.py-3
+          .flex.items-center.gap-3
+            - if membership.human.photo?
+              = image_tag membership.human.photo_url(:thumb), class: "h-8 w-8 rounded-full object-cover", alt: membership.human.name
+            - else
+              .h-8.w-8.rounded-full.bg-gray-200.text-gray-600.flex.items-center.justify-center.text-xs.font-semibold
+                = membership.human.name.to_s.split(/\s+/).first(2).map { |w| w[0] }.join.upcase
+            span.text-sm.font-medium.text-gray-900 = membership.human.name
+
+          .flex.items-center.gap-2
+            = form_with model: membership, url: team_membership_path(team, membership), method: :patch, class: "flex items-center gap-2", data: { controller: "auto-submit" } do |f|
+              = f.select :role,
+                         TeamMembership::ROLE_LABELS.map { |value, label| [label, value] },
+                         {},
+                         class: "rounded-md border-gray-300 text-xs",
+                         data: { action: "change->auto-submit#submit" }
+              / Repli sans JavaScript : le choix reste validable au clavier.
+              = button_tag "Changer", type: "submit", class: "sr-only"
+            = button_to "Retirer", team_membership_path(team, membership), method: :delete,
+                        class: "text-xs font-medium text-red-600 hover:underline",
+                        form: { class: "inline", data: { turbo_confirm: "Retirer #{membership.human.name} de ce pôle ?" } }
+
+  .border-t.border-gray-100.px-6.py-4(class="bg-gray-50/60")
+    - if membership.errors.any?
+      .mb-3.rounded-lg.bg-red-50.px-3.py-2.text-sm.text-red-700
+        = membership.errors.full_messages.to_sentence
+
+    - if addable_humans.empty?
+      p.text-sm.text-gray-500 Tout le monde est déjà dans ce pôle.
+    - else
+      = form_with model: membership, url: team_memberships_path(team), method: :post, class: "flex flex-wrap items-end gap-3" do |f|
+        div
+          = f.label :human_id, "Ajouter", class: "block text-xs font-medium text-gray-500"
+          = f.collection_select :human_id, addable_humans, :id, :name,
+                                { include_blank: "Choisir une personne…" },
+                                class: "mt-1 rounded-md border-gray-300 text-sm"
+        div
+          = f.label :role, "Rôle", class: "block text-xs font-medium text-gray-500"
+          = f.select :role,
+                     TeamMembership::ROLE_LABELS.map { |value, label| [label, value] },
+                     {},
+                     class: "mt-1 rounded-md border-gray-300 text-sm"
+        = f.submit "Ajouter au pôle"

@@ -48,12 +48,18 @@
                 = f.radio_button :kind, kind, class: "peer sr-only", required: true, data: { action: "change->meal-price-hint#refresh" }
                 span.inline-block.rounded-full.border.border-gray-300.px-3.text-sm.text-gray-700(class="py-1.5 peer-checked:border-4s-main peer-checked:bg-4s-main peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-4s-main peer-focus-visible:ring-offset-1 hover:border-gray-400")
                   = kind_label
-      .sm:col-span-3
-        = f.label :moment, "Moment", class: "block text-sm font-medium text-gray-700"
-        = f.select :moment, options_for_select(MealOrder::MOMENT_LABELS.map(&:reverse), order.moment), { include_blank: "—" }, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-      .sm:col-span-2
-        = f.label :date, "Date", class: "block text-sm font-medium text-gray-700"
-        = f.date_field :date, label: false, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      / Issue #238 : dès que le séjour porte ses deux dates, la grille remplace
+        Moment et Date. Sans dates, pas de colonnes — on retombe sur la saisie
+        d'un service unique.
+      - if grid_days.present?
+        = render "kitchen/orders/grid", days: grid_days
+      - else
+        .sm:col-span-3
+          = f.label :moment, "Moment", class: "block text-sm font-medium text-gray-700"
+          = f.select :moment, options_for_select(MealOrder::MOMENT_LABELS.map(&:reverse), order.moment), { include_blank: "—" }, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        .sm:col-span-2
+          = f.label :date, "Date", class: "block text-sm font-medium text-gray-700"
+          = f.date_field :date, label: false, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
       .sm:col-span-2
         = f.label :people, "Convives", class: "block text-sm font-medium text-gray-700"
         = f.number_field :people, min: 1, label: false, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"

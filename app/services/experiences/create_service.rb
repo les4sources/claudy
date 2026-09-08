@@ -41,6 +41,7 @@ module Experiences
           :max_participants,
           :duration,
           :duration_hours,
+          :slug,
           :team_id,
           :carrier_hourly_rate
         )

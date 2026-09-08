@@ -86,6 +86,46 @@
           == @experience.description
 
   .space-y-4
+    / Publication sur le site les4sources.be (catalogue). Un porteur restreint
+    / voit l'état mais ne publie pas — c'est l'équipe qui décide du catalogue.
+    .overflow-hidden.bg-white.shadow.sm:rounded-lg
+      .px-4.py-5.sm:px-6.flex.items-center.justify-between
+        h3.text-lg.font-medium.leading-6.text-gray-900
+          | Site web
+        - if @experience.published?
+          span.inline-flex.items-center.rounded-md.bg-green-50.px-2.py-1.text-xs.font-medium.text-green-700.ring-1.ring-inset.ring-green-600/20
+            | Publiée
+        - else
+          span.inline-flex.items-center.rounded-md.bg-gray-50.px-2.py-1.text-xs.font-medium.text-gray-600.ring-1.ring-inset.ring-gray-500/10
+            | Brouillon
+      .border-t.border-gray-200.px-4.py-5.sm:px-6.space-y-4.text-sm
+        - if @experience.published?
+          p.text-gray-700
+            | En ligne depuis le #{l(@experience.published_at.to_date)} :
+          p
+            = link_to "www.les4sources.be#{@experience.public_path}",
+                      "https://www.les4sources.be#{@experience.public_path}",
+                      target: "_blank",
+                      class: "claudy-link break-all"
+          - unless current_user&.restricted_to_experiences?
+            = button_to "Dépublier",
+                        unpublish_experience_path(@experience),
+                        method: :delete,
+                        class: "btn-destroy",
+                        form: { data: { turbo_confirm: "Retirer cette activité du site ?" } }
+        - else
+          p.text-gray-700
+            | Cette activité n'est pas visible sur le site.
+          p.text-xs.text-gray-500
+            | Adresse prévue :
+            = " "
+            code.rounded.bg-gray-100.px-1.5.py-0.5 = "/catalogue/#{@experience.suggested_slug}"
+          - unless current_user&.restricted_to_experiences?
+            = button_to "Publier sur le site",
+                        publish_experience_path(@experience),
+                        method: :post,
+                        class: "btn-page-header"
+
     = render "experiences/upcoming_bookings", bookings: @upcoming_bookings
 
     - if @experience.human.presence

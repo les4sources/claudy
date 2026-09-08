@@ -1,0 +1,35 @@
+= form_with model: [:finance, motif], class: "space-y-6" do |f|
+  = render "finance/shared/form_errors", record: motif
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-3.text-sm.font-semibold.text-gray-900 Le motif
+    .grid.gap-4(class="md:grid-cols-3")
+      div
+        = f.text_field :label, label: "Libellé *", required: true, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.select :direction, CashMotif::DIRECTION_LABELS.map { |v, l| [l, v] }, { label: "Sens *" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.number_field :position, label: "Ordre", min: 0, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+    p.mt-2.text-xs.text-gray-500
+      | « Entrée » pour de l'argent qui rentre dans la caisse, « Sortie » pour de l'argent qui en sort. « Les deux » ne s'utilise que si le sens dépend vraiment de la ligne.
+    label.mt-3.flex.items-center.gap-2.text-sm.text-gray-700
+      = f.check_box :active, class: "rounded border-gray-300"
+      |  Actif
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-1.text-sm.font-semibold.text-gray-900 …affecte la ligne ici
+    p.mb-3.text-xs.text-gray-500 Un motif sans compte général est refusé : ce serait un motif qui n'affecte rien.
+    .grid.gap-4(class="md:grid-cols-3")
+      div
+        = f.label :general_account_id, "Compte général *", class: "block text-sm font-medium text-gray-700"
+        = f.collection_select :general_account_id, GeneralAccount.actives.ordered, :id, :to_s, { include_blank: "Choisir…" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :legal_entity_id, "Entité *", class: "block text-sm font-medium text-gray-700"
+        = f.collection_select :legal_entity_id, LegalEntity.actives.ordered, :id, :name, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :team_id, "Pôle", class: "block text-sm font-medium text-gray-700"
+        = f.collection_select :team_id, Team.ordered, :id, :name, { include_blank: "Non affecté" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+
+  .flex.items-center.gap-3
+    = f.submit "Enregistrer", class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+    = link_to "Annuler", finance_cash_motifs_path, class: "text-sm text-gray-500 hover:text-gray-700"

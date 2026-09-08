@@ -15,6 +15,8 @@
 #  name                      :string
 #  photo                     :string
 #  price_cents               :integer
+#  published_at              :datetime
+#  slug                      :string
 #  summary                   :string
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
@@ -24,6 +26,7 @@
 # Indexes
 #
 #  index_experiences_on_human_id  (human_id)
+#  index_experiences_on_slug      (slug) UNIQUE
 #  index_experiences_on_team_id   (team_id)
 #
 # Foreign Keys
@@ -39,6 +42,10 @@ class Experience < ApplicationRecord
     #059669 #2563eb #d97706 #7c3aed #db2777 #0891b2
     #65a30d #dc2626 #4f46e5 #ea580c #0d9488 #9333ea
   ].freeze
+
+  # Publication sur le site les4sources.be (catalogue) : `published_at`,
+  # `slug`, rebuild.
+  include Publishable
 
   belongs_to :human, optional: true
   # Le pôle qui porte la charge de la rémunération (epic #244, décision 6).
@@ -80,6 +87,34 @@ class Experience < ApplicationRecord
     return nil if duration_hours.nil?
 
     (duration_hours * 60).round
+  end
+
+  # Durée affichée au public : le libellé libre s'il existe, sinon la durée
+  # numérique formatée (« 2 h », « 2,5 h »).
+  def public_duration_text
+    return duration if duration.present?
+    return nil if duration_hours.nil?
+
+    formatted = duration_hours.to_d.to_s("F").sub(/\.0+\z/, "").tr(".", ",")
+    "#{formatted} h"
+  end
+
+  # Dimensions [largeur, hauteur] de la photo originale (CarrierWave, sur le
+  # disque), ou nil quand le fichier manque ou qu'ImageMagick ne le lit pas.
+  def photo_dimensions
+    return nil unless photo? && photo.path.present? && File.exist?(photo.path)
+
+    MiniMagick::Image.new(photo.path).dimensions
+  rescue StandardError
+    nil
+  end
+
+  def slug_base
+    name.to_s.parameterize
+  end
+
+  def public_path_prefix
+    "/catalogue"
   end
 
   # --- Rémunération du porteur (epic #244, phase 1) ---

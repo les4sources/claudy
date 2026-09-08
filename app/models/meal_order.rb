@@ -50,7 +50,11 @@
 #  fk_rails_...  (stay_id => stays.id)
 #
 class MealOrder < ApplicationRecord
-  KINDS       = %w[repas trio buffet_vege buffet_viande apero].freeze
+  # `trio` reste dans la liste — d'anciennes lignes pourraient exister — mais il
+  # n'est PLUS proposable (issue #238) : c'est devenu le bouton « Trio » de la
+  # grille, qui coche midi + goûter + soir. `meal.trio.per_person` ne sert plus
+  # qu'à la remise de formule.
+  KINDS       = %w[repas gouter trio buffet_vege buffet_viande apero].freeze
   MOMENTS     = %w[midi soir gouter].freeze
   STATUSES    = %w[inquiry requested confirmed cancelled].freeze
   VALIDATIONS = %w[pending accepted refused].freeze
@@ -60,6 +64,7 @@ class MealOrder < ApplicationRecord
   # par la validation email de Stéphanie ; buffet et apéro par « je m'en charge »).
   KIND_FAMILIES = {
     "repas"         => "repas",
+    "gouter"        => "repas",
     "trio"          => "repas",
     "buffet_vege"   => "buffet",
     "buffet_viande" => "buffet",
@@ -69,6 +74,7 @@ class MealOrder < ApplicationRecord
   # Source UNIQUE des libellés de type — vues admin, page client, fusion, emails.
   KIND_LABELS = {
     "repas"         => "Repas (midi ou soir)",
+    "gouter"        => "Goûter",
     "trio"          => "Formule trio (midi + goûter + soir)",
     "buffet_vege"   => "Buffet végétarien",
     "buffet_viande" => "Buffet avec viande",
@@ -125,11 +131,18 @@ class MealOrder < ApplicationRecord
   scope :upcoming, -> { where("date >= ? OR date IS NULL", Date.current) }
   scope :past, -> { where("date < ?", Date.current) }
   scope :of_family, ->(family) { where(kind: KIND_FAMILIES.select { |_, f| f == family.to_s }.keys) }
+  # Refusées par la cuisine mais encore à servir : Michael doit prévoir autre
+  # chose. Une ligne annulée par le client, elle, n'est plus à couvrir.
+  scope :to_cover, -> { where(validation: "refused").where.not(status: "cancelled").upcoming }
 
   before_create :assign_default_responsible
   before_save :reset_validation_on_sensitive_change
   before_save :recompute_price
   after_commit :notify_kitchen, on: [:create, :update]
+  # La remise de formule est DÉRIVÉE : elle se recalcule dès qu'une des lignes
+  # du jour bouge. Passer par `after_commit` couvre les trois façons de la
+  # rompre — un refus de la cuisine, une annulation client, une suppression.
+  after_commit :refresh_trio_discount, on: %i[create update destroy]
 
   def self.label_for(kind) = KIND_LABELS[kind.to_s] || kind.to_s.tr("_", " ").capitalize
 
@@ -192,6 +205,14 @@ class MealOrder < ApplicationRecord
     list
   end
 
+  # Cette ligne bénéficie-t-elle de la remise de formule (issue #238) ? Dérivé,
+  # pas stocké : c'est l'état des trois lignes du jour qui fait foi.
+  def trio_discounted?
+    return false unless family == "repas" && stay_id.present? && date.present?
+
+    Kitchen::TrioDiscount.new(stay: stay, date: date).forms_trio?
+  end
+
   # Marge de la ligne, une fois le coût réel saisi (phase 5).
   def margin_cents
     return nil if cost_cents.nil?
@@ -200,6 +221,16 @@ class MealOrder < ApplicationRecord
   end
 
   private
+
+  # Le jour touché, et celui qu'on vient de quitter quand la date a changé :
+  # rompre une formule en déplaçant une ligne doit rendre son tarif plein à
+  # l'ancienne journée.
+  def refresh_trio_discount
+    return if stay_id.blank?
+
+    dates = [date, previous_changes["date"]&.first].compact.uniq
+    dates.each { |day| Kitchen::TrioDiscount.new(stay: stay, date: day).apply! }
+  end
 
   def family_plural = FAMILY_PLURALS[family] || family.to_s
 
