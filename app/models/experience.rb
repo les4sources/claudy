@@ -2,30 +2,34 @@
 #
 # Table name: experiences
 #
-#  id                :bigint           not null, primary key
-#  color             :string
-#  deleted_at        :datetime
-#  description       :text
-#  duration          :string
-#  duration_hours    :decimal(4, 2)
-#  fixed_price_cents :integer          default(0)
-#  max_participants  :integer
-#  min_participants  :integer
-#  name              :string
-#  photo             :string
-#  price_cents       :integer
-#  summary           :string
-#  created_at        :datetime         not null
-#  updated_at        :datetime         not null
-#  human_id          :bigint
+#  id                        :bigint           not null, primary key
+#  carrier_hourly_rate_cents :integer
+#  color                     :string
+#  deleted_at                :datetime
+#  description               :text
+#  duration                  :string
+#  duration_hours            :decimal(4, 2)
+#  fixed_price_cents         :integer          default(0)
+#  max_participants          :integer
+#  min_participants          :integer
+#  name                      :string
+#  photo                     :string
+#  price_cents               :integer
+#  summary                   :string
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#  human_id                  :bigint
+#  team_id                   :bigint
 #
 # Indexes
 #
 #  index_experiences_on_human_id  (human_id)
+#  index_experiences_on_team_id   (team_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (human_id => humans.id)
+#  fk_rails_...  (team_id => teams.id)
 #
 class Experience < ApplicationRecord
   # Couleurs du calendrier global des activités (epic #25, Phase 5). Palette fixe

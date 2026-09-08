@@ -141,6 +141,12 @@ module Pricing
     PIZZA_PARTY_BASE_CENTS = 4_000
     PIZZA_PARTY_PER_PERSON_CENTS = 700
 
+    # Part d'un événement qui revient à ses organisateurs, une fois les frais
+    # fixes déduits (epic #245). 70 % par défaut, mais le taux est PAR
+    # ÉVÉNEMENT : les 30 % retenus sont contestés, et le disc golf n'en laisse
+    # aucun.
+    EVENT_ORGANIZER_SHARE_PERCENT = 70
+
     # Packs de coworking (epic #126, Phase 1) : prix par nombre de journées.
     COWORKING_PACKS = {
       1  =>  2_000, # 20 €
@@ -174,6 +180,14 @@ module Pricing
       return nil if fallback.nil?
 
       Pricing::Rates.cents_or("coworking.pack_#{days.to_i}", fallback)
+    end
+
+    EVENT_ORGANIZER_SHARE_KEY = "event.organizer_share".freeze
+
+    # Taux par défaut des organisateurs, en POURCENTS entiers (la clé est
+    # stockée en `percent`, comme le taux d'acompte).
+    def event_organizer_share_percent
+      Pricing::Rates.cents_or(EVENT_ORGANIZER_SHARE_KEY, EVENT_ORGANIZER_SHARE_PERCENT)
     end
 
     def default_deposit_rate

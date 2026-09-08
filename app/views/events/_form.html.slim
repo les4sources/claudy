@@ -65,3 +65,42 @@
     = f.rich_text_area :notes
 
 hr
+
+.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4.mt-8
+  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Partage"
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    = f.collection_select_field :team_id, Team.ordered, :id, :name, { include_blank: "Aucun pôle" }, class: "md:w-1/2 lg:w-2/3"
+    p.mt-1.text-xs.text-gray-500
+      | Le pôle qui porte l'événement.
+
+    - taux_general = Pricing::Catalog.event_organizer_share_percent
+    = f.number_field :organizer_share_percent,
+                     label: "Part des organisateurs (%)",
+                     hint: "Laisser vide pour appliquer le taux général de #{taux_general} %, modifiable dans Paramètres > Tarifs. Ce taux s'applique APRÈS déduction des frais fixes.",
+                     min: "0",
+                     max: "100",
+                     step: "1",
+                     class: "w-24"
+
+    / Organisateurs (epic #245, décision 1). Cocher qui organise ; le poids ne
+      sert qu'à répartir autrement qu'à parts égales.
+    = f.label :organizers, "Organisateurs"
+    p.mt-1.mb-2.text-xs.text-gray-500
+      | La part se répartit au prorata des poids. Laisser tous les poids à 1 donne des parts égales.
+    - poids_par_humain = f.object.event_organizers.index_by(&:human_id)
+    .space-y-2
+      - Human.all.each do |human|
+        - organizer = poids_par_humain[human.id]
+        .flex.items-center.gap-3
+          = check_box_tag "event[organizers][#{human.id}][selected]", "1", organizer.present?,
+                          id: "event_organizers_#{human.id}_selected",
+                          class: "h-4 w-4 rounded border-gray-300"
+          = label_tag "event_organizers_#{human.id}_selected", human.name, class: "flex-1 text-sm text-gray-700"
+          = number_field_tag "event[organizers][#{human.id}][weight]", organizer&.weight || 1,
+                             min: 1, step: 1,
+                             "aria-label" => "Poids de #{human.name}",
+                             class: "w-20 rounded-md border-gray-300 text-sm"
+
+hr

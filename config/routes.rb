@@ -9,7 +9,13 @@ Rails.application.routes.draw do
   resources :booking_prices, only: [:create]
   resources :bundles
   resources :event_categories
-  resources :events
+  # Événements (epic #245). Les frais fixes vivent sous l'événement : ils
+  # n'existent pas sans lui, et l'onglet Comptabilité est leur seul écran.
+  resources :events do
+    resources :costs, only: %i[create update destroy], controller: "event_costs" do
+      collection { post :from_space_booking }
+    end
+  end
   resources :gathering_categories
   resources :gatherings do
     collection do

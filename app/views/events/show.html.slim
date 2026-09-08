@@ -11,57 +11,71 @@
              ) \
            ].compact
 
-.grid.grid-cols-3.gap-4
-  .col-span-2.space-y-4
-    .overflow-hidden.bg-white.shadow.sm:rounded-lg
-      .px-4.py-5.sm:px-6
-        h3.text-lg.font-medium.leading-6.text-gray-900
-          | Informations
-      .border-t.border-gray-200
-        dl
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Catégorie
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = link_to @event.event_category.name,
-                        event_category_path(@event.event_category),
-                        class: "claudy-link"
+/ Deux onglets (epic #245, décision 7) : la fiche telle qu'elle était, et la
+  comptabilité de l'événement. Le choix passe par l'URL — linkable, sans JS.
+- onglet = params[:tab].presence == "comptabilite" ? "comptabilite" : "informations"
+nav.mb-4.flex.gap-1.border-b.border-gray-200
+  - [["informations", "Informations"], ["comptabilite", "Comptabilité"]].each do |value, label|
+    - actif = onglet == value
+    = link_to label,
+              event_path(@event, tab: value),
+              class: "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors #{actif ? 'border-4s-main text-4s-main' : 'border-transparent text-gray-500 hover:text-4s-main'}"
 
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Adresse web
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = link_to(@event.url, @event.url, target: "_blank", class: "claudy-link")
-
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Du
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = l(@event.starts_at, format: :long)
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Au
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = l(@event.ends_at, format: :long)
-
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Nombre de participants
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @event.attendees
-
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Montant des ventes
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @event.sales_amount
-
-    - if @event.notes.presence
-      .overflow-hidden.bg-yellow-200.shadow.sm:rounded-lg
-        .px-4.py-5.sm:px-6.bg-yellow-300
+- if onglet == "comptabilite"
+  .max-w-3xl
+    = render "events/accounting_tab", event: @event.object
+- else
+  .grid.grid-cols-3.gap-4
+    .col-span-2.space-y-4
+      .overflow-hidden.bg-white.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6
           h3.text-lg.font-medium.leading-6.text-gray-900
-            | Notes
-        .border-t.border-yellow-400.px-6.py-4
-          .content.space-y-4.text-sm
-            == @event.notes
+            | Informations
+        .border-t.border-gray-200
+          dl
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Catégorie
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = link_to @event.event_category.name,
+                          event_category_path(@event.event_category),
+                          class: "claudy-link"
+
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Adresse web
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = link_to(@event.url, @event.url, target: "_blank", class: "claudy-link")
+
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Du
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = l(@event.starts_at, format: :long)
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Au
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = l(@event.ends_at, format: :long)
+
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Nombre de participants
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @event.attendees
+
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Montant des ventes
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @event.sales_amount
+
+      - if @event.notes.presence
+        .overflow-hidden.bg-yellow-200.shadow.sm:rounded-lg
+          .px-4.py-5.sm:px-6.bg-yellow-300
+            h3.text-lg.font-medium.leading-6.text-gray-900
+              | Notes
+          .border-t.border-yellow-400.px-6.py-4
+            .content.space-y-4.text-sm
+              == @event.notes
 
