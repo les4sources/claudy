@@ -90,5 +90,15 @@ RSpec.describe "Public::Reservations — soumission de l'étape finale", type: :
         }
       }.to have_enqueued_mail(ReservationMailer, :confirmation_request)
     end
+
+    # Décision Michael du 2026-09-08 : sejours@ ne recevait qu'une copie cachée
+    # de l'accusé de réception client. Le Pôle Accueil a désormais SON email.
+    it "prévient le Pôle Accueil par un email qui lui est destiné", queue_adapter: :test do
+      expect {
+        post "/reservation/coordonnees", params: {
+          reservation: base_contact.merge(lodging_id: hulotte.id)
+        }
+      }.to have_enqueued_mail(ReservationMailer, :team_new_request)
+    end
   end
 end
