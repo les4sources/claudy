@@ -141,6 +141,12 @@ module Pricing
     PIZZA_PARTY_BASE_CENTS = 4_000
     PIZZA_PARTY_PER_PERSON_CENTS = 700
 
+    # Rémunération d'un porteur d'activité (epic #244) : €/heure de prestation,
+    # PAR PRESTATION et non par participant. 40 €/h, tarif horaire uniforme
+    # intra-collectif ; une activité peut le surcharger
+    # (`experiences.carrier_hourly_rate_cents`).
+    ACTIVITY_CARRIER_HOURLY_CENTS = 4_000
+
     # Packs de coworking (epic #126, Phase 1) : prix par nombre de journées.
     COWORKING_PACKS = {
       1  =>  2_000, # 20 €
@@ -175,6 +181,19 @@ module Pricing
 
       Pricing::Rates.cents_or("coworking.pack_#{days.to_i}", fallback)
     end
+
+    # Tarif horaire général d'un porteur. Avec `on:`, c'est le tarif EN VIGUEUR
+    # à cette date (barèmes datés, issue #156) : c'est ce qui permet de figer la
+    # rémunération d'une prestation au tarif du jour du créneau, même si le
+    # tarif a changé depuis. Sans version couvrant la date, on retombe sur le
+    # tarif courant, puis sur la constante.
+    def activity_carrier_hourly_cents(on: nil)
+      dated = on.present? ? Pricing::Rates.cents(ACTIVITY_CARRIER_HOURLY_KEY, on: on) : nil
+
+      dated || Pricing::Rates.cents_or(ACTIVITY_CARRIER_HOURLY_KEY, ACTIVITY_CARRIER_HOURLY_CENTS)
+    end
+
+    ACTIVITY_CARRIER_HOURLY_KEY = "activity.carrier_hourly".freeze
 
     def default_deposit_rate
       Pricing::Rates.rate_or("deposit.default_rate", DEFAULT_DEPOSIT_RATE)

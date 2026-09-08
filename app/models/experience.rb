@@ -2,30 +2,34 @@
 #
 # Table name: experiences
 #
-#  id                :bigint           not null, primary key
-#  color             :string
-#  deleted_at        :datetime
-#  description       :text
-#  duration          :string
-#  duration_hours    :decimal(4, 2)
-#  fixed_price_cents :integer          default(0)
-#  max_participants  :integer
-#  min_participants  :integer
-#  name              :string
-#  photo             :string
-#  price_cents       :integer
-#  summary           :string
-#  created_at        :datetime         not null
-#  updated_at        :datetime         not null
-#  human_id          :bigint
+#  id                        :bigint           not null, primary key
+#  carrier_hourly_rate_cents :integer
+#  color                     :string
+#  deleted_at                :datetime
+#  description               :text
+#  duration                  :string
+#  duration_hours            :decimal(4, 2)
+#  fixed_price_cents         :integer          default(0)
+#  max_participants          :integer
+#  min_participants          :integer
+#  name                      :string
+#  photo                     :string
+#  price_cents               :integer
+#  summary                   :string
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#  human_id                  :bigint
+#  team_id                   :bigint
 #
 # Indexes
 #
 #  index_experiences_on_human_id  (human_id)
+#  index_experiences_on_team_id   (team_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (human_id => humans.id)
+#  fk_rails_...  (team_id => teams.id)
 #
 class Experience < ApplicationRecord
   # Couleurs du calendrier global des activités (epic #25, Phase 5). Palette fixe
@@ -37,6 +41,8 @@ class Experience < ApplicationRecord
   ].freeze
 
   belongs_to :human, optional: true
+  # Le pôle qui porte la charge de la rémunération (epic #244, décision 6).
+  belongs_to :team, optional: true
 
   has_many :experience_availabilities, dependent: :destroy
   has_many :experience_bookings, through: :experience_availabilities
@@ -50,6 +56,10 @@ class Experience < ApplicationRecord
   monetize :fixed_price_cents, allow_nil: true
 
   mount_uploader :photo, PhotoUploader
+
+  validates :carrier_hourly_rate_cents,
+            numericality: { only_integer: true, greater_than: 0 },
+            allow_nil: true
 
   validates :name,
             presence: true,
@@ -72,6 +82,41 @@ class Experience < ApplicationRecord
     (duration_hours * 60).round
   end
 
+  # --- Rémunération du porteur (epic #244, phase 1) ---
+  #
+  # Le tarif horaire effectif : celui de l'activité s'il est posé, sinon le
+  # tarif général `activity.carrier_hourly`. Avec `on:`, on lit le tarif EN
+  # VIGUEUR à cette date — c'est ce qui permet de figer une prestation au tarif
+  # du jour de son créneau plutôt qu'au tarif d'aujourd'hui.
+  def effective_carrier_hourly_cents(on: nil)
+    return carrier_hourly_rate_cents if carrier_hourly_rate_cents.present?
+
+    Pricing::Catalog.activity_carrier_hourly_cents(on: on)
+  end
+
+  # true quand le tarif vient de l'activité et non du barème général.
+  def carrier_rate_overridden? = carrier_hourly_rate_cents.present?
+
+  # Le formulaire saisit des EUROS ; la base tient des cents. La virgule
+  # décimale est acceptée — c'est celle qu'on tape en français.
+  def carrier_hourly_rate
+    carrier_hourly_rate_cents.present? ? carrier_hourly_rate_cents / 100.0 : nil
+  end
+
+  def carrier_hourly_rate=(value)
+    raw = value.to_s.strip.tr(",", ".")
+    self.carrier_hourly_rate_cents = raw.blank? ? nil : (raw.to_f * 100).round
+  end
+
+  # Rémunération d'UNE prestation — par prestation, jamais par participant
+  # (décision 1). nil quand la durée manque : sans durée, pas de montant, et
+  # l'écran doit le dire plutôt que d'inventer un zéro.
+  def carrier_fee_cents_on(date = nil)
+    return nil if duration_hours.blank? || duration_hours.to_d <= 0
+
+    (duration_hours.to_d * effective_carrier_hourly_cents(on: date)).round
+  end
+
   private
 
   # Couleur attribuée à la création : on prend la couleur la moins utilisée de la
@@ -84,4 +129,5 @@ class Experience < ApplicationRecord
     used = Experience.unscoped.where.not(color: nil).group(:color).count
     self.color = PALETTE.min_by { |candidate| used.fetch(candidate, 0) }
   end
+
 end
