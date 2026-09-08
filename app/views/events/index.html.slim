@@ -7,6 +7,14 @@
              link_to("➕ Nouvel événement", new_event_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
            ]
 
+/ Filtre par état de publication sur le site.
+.mb-4.flex.flex-wrap.items-center.gap-2.text-sm
+  - [[nil, "Tous", @counts[:all]], ["published", "Publiés sur le site", @counts[:published]], ["draft", "Brouillons", @counts[:draft]]].each do |value, label, count|
+    = link_to events_path(state: value),
+              class: "inline-flex items-center rounded-full px-3 py-1 font-medium #{@state == value ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'}" do
+      = label
+      span.ml-1.opacity-70 = "(#{count})"
+
 .overflow-x-auto.relative
   table.w-full.text-sm.text-left
     thead.text-xs.text-gray-700.uppercase.bg-gray-50
@@ -14,9 +22,11 @@
         th.py-3.px-6.w-32[scope="col"]
           | Catégorie
         th.py-3.px-6[scope="col"]
-          | Nom 
+          | Nom
         th.py-3.px-6.w-96[scope="col"]
-          | Date 
+          | Date
+        th.py-3.px-6.w-32[scope="col"]
+          | Site web
         th.py-3.px-6.w-32[scope="col"]
           | Participants
         th.py-3.px-6.w-32[scope="col"]
@@ -25,22 +35,30 @@
       - @events.each do |event|
         tr.bg-white
           td.py-4.px-6
-            = event.event_category.name
+            = event.event_category&.name
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
-            = link_to event.name, 
+            = link_to event.name,
                       event_path(event),
                       class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
-            - if event.url.presence
+            - if event.object.url.presence
               .text-xs
-                = link_to event.url,
-                          event.url,
+                = link_to event.object.url,
+                          event.object.url,
                           target: "_blank",
                           class: "text-blue-300 hover:text-blue-500 focus:text-blue-500"
           td.py-4.px-6
             .text-xs.text-gray-500.font-semibold Début
             = l(event.starts_at, format: :long).sub("h00", "h")
-            .text-xs.text-gray-500.font-semibold Fin 
+            .text-xs.text-gray-500.font-semibold Fin
             = l(event.ends_at, format: :long).sub("h00", "h")
+          td.py-4.px-6
+            - if event.published?
+              span.inline-flex.items-center.rounded-md.bg-green-50.px-1.5.py-0.5.text-xs.font-medium.text-green-700.ring-1.ring-inset.ring-green-600/20
+                | Publié
+              .mt-1.text-xs.text-gray-400 = event.public_path
+            - else
+              span.inline-flex.items-center.rounded-md.bg-gray-50.px-1.5.py-0.5.text-xs.font-medium.text-gray-600.ring-1.ring-inset.ring-gray-500/10
+                | Brouillon
           td.py-4.px-6
             = event.attendees
           td.py-4.px-6

@@ -109,8 +109,19 @@ class ExperienceBookingsController < BaseController
   def confirm
     @booking.confirm!
     ActivitySelectionMailer.booking_confirmed(@booking).deliver_later
-    redirect_to experience_bookings_path,
-                notice: "Activité « #{@booking.experience.name} » confirmée. Le client est prévenu."
+
+    notice = "Activité « #{@booking.experience.name} » confirmée. Le client est prévenu."
+    # Epic #244 : sans durée en heures, aucune rémunération n'a pu être figée.
+    # On le dit tout de suite — c'est réparable en une saisie, et découvert au
+    # relevé trimestriel ce serait trop tard.
+    if @booking.carrier_fee_missing?
+      redirect_to experience_bookings_path,
+                  notice: notice,
+                  alert: "Aucune rémunération n'a pu être calculée : l'activité n'a pas de durée en heures. " \
+                         "Complète-la sur la fiche de l'activité, puis relance `rake activities:backfill_carrier_fees`."
+    else
+      redirect_to experience_bookings_path, notice: notice
+    end
   end
 
   # Formulaire de refus (raison obligatoire).

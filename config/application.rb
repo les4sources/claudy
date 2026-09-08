@@ -54,6 +54,28 @@ module Claudy
     # ViewComponent 4 : la config des previews vit sous `previews.*`.
     config.view_component.previews.paths << "#{Rails.root}/spec/components/previews"
 
+    # Chiffrement au repos des données bancaires (Active Record Encryption).
+    # Les clés viennent de l'environnement, comme POSTMARK_API_TOKEN et
+    # STRIPE_API_KEY ci-dessous : les credentials chiffrées de production ne
+    # sont pas éditables depuis ce dépôt (pas de clé maître de production).
+    #
+    # En développement et en test, des clés fixes non secrètes permettent de
+    # travailler sans configuration — aucune donnée réelle n'y transite.
+    # En production, `ENV.fetch` sans repli : mieux vaut un boot qui échoue
+    # bruyamment qu'un IBAN qu'on croit chiffré et qui ne l'est pas.
+    encryption_defaults = Rails.env.local? ? {
+      primary_key:        "claudy_development_primary_key_not_a_secret",
+      deterministic_key:  "claudy_development_deterministic_key_nope",
+      key_derivation_salt: "claudy_development_key_derivation_salt__"
+    } : {}
+
+    config.active_record.encryption.primary_key =
+      ENV.fetch("ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY") { encryption_defaults.fetch(:primary_key) }
+    config.active_record.encryption.deterministic_key =
+      ENV.fetch("ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY") { encryption_defaults.fetch(:deterministic_key) }
+    config.active_record.encryption.key_derivation_salt =
+      ENV.fetch("ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT") { encryption_defaults.fetch(:key_derivation_salt) }
+
     config.action_mailer.delivery_method = :postmark
     config.action_mailer.postmark_settings = { api_token: ENV.fetch('POSTMARK_API_TOKEN') }
     # Journal des emails envoyés aux clients (visible sur la fiche client).

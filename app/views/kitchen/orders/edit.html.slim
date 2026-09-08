@@ -2,5 +2,5 @@
   = render "layouts/components/page_header", title: "Modifier la demande"
 
 .max-w-3xl.space-y-6
-  = render "kitchen/orders/form", order: @order, url: kitchen_order_path(@order), method: :patch, submit_label: "Enregistrer"
+  = render "kitchen/orders/form", order: @order, url: kitchen_order_path(@order), method: :patch, submit_label: "Enregistrer", grid_days: []
   = render "kitchen/orders/history", order: @order

@@ -1,0 +1,68 @@
+section.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidden id=dom_id
+  .px-5.py-4.border-b.border-stone-100.bg-stone-50
+    .font-semibold.uppercase.text-stone-500(class="text-[0.65rem] tracking-[0.2em]") Échanges
+    h2.mt-0.5.text-lg.font-semibold.text-stone-900
+      = title
+      - if comments.any?
+        span.text-sm.font-normal.text-stone-400 =< "(#{comments.size})"
+
+  - if comments.empty?
+    .px-5.py-8.text-center.text-sm.text-stone-500
+      | Aucun commentaire pour l'instant.
+
+  - else
+    ul.divide-y.divide-stone-100
+      - comments.each do |item|
+        li.px-5.py-4(id="comment_#{item.id}" data-controller="comment-editor")
+          .flex.items-start.gap-3
+            - if avatar_url(item)
+              = image_tag avatar_url(item), class: "h-9 w-9 shrink-0 rounded-full object-cover", alt: item.author_label
+            - else
+              .h-9.w-9.shrink-0.rounded-full.bg-stone-200.text-stone-600.flex.items-center.justify-center.text-xs.font-semibold
+                = initials(item)
+
+            .min-w-0.flex-1
+              .flex.flex-wrap.items-baseline.gap-x-2
+                span.text-sm.font-semibold.text-stone-900 = item.author_label
+                span.text-stone-400(class="text-[0.7rem]" title=l(item.created_at, format: :long))
+                  = relative_time(item.created_at)
+                - if item.updated_at > item.created_at + 1.minute
+                  span.text-stone-300(class="text-[0.7rem]") · modifié
+
+              div(data-comment-editor-target="body")
+                .mt-1.prose.prose-sm.max-w-none.text-stone-700
+                  = item.body
+
+                - if item.editable_by?(current_user)
+                  .mt-2.flex.items-center.gap-2(class="text-[0.7rem]")
+                    button.font-medium.text-stone-500.hover:underline(type="button" data-action="comment-editor#edit")
+                      | Modifier
+                    span.text-stone-300 ·
+                    = button_to "Supprimer", helpers.comment_path(item), method: :delete,
+                                class: "font-medium text-red-600 hover:underline",
+                                form: { class: "inline", data: { turbo_confirm: "Supprimer ce commentaire ?" } }
+
+              - if item.editable_by?(current_user)
+                div hidden=true data-comment-editor-target="form"
+                  = form_with model: item, url: helpers.comment_path(item), method: :patch, class: "mt-2" do |f|
+                    .rounded-lg.border.border-stone-200(data-controller="markdown-paste")
+                      = f.rich_text_area :body, class: "trix-content min-h-[6rem]"
+                    .mt-2.flex.items-center.gap-3
+                      = f.submit "Enregistrer", class: "inline-flex items-center rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 cursor-pointer"
+                      button.text-sm.text-stone-500.hover:underline(type="button" data-action="comment-editor#cancel")
+                        | Annuler
+
+  - if signed_in?
+    .border-t.border-stone-100.bg-stone-50.px-5.py-4
+      = form_with model: comment, url: helpers.comments_path, method: :post do |f|
+        = hidden_field_tag "comment[commentable_type]", commentable.class.name
+        = hidden_field_tag "comment[commentable_id]", commentable.id
+
+        - if comment.errors.any?
+          .mb-2.rounded-lg.bg-red-50.px-3.py-2.text-sm.text-red-700
+            = comment.errors.full_messages.to_sentence
+
+        .rounded-lg.border.border-stone-200.bg-white(data-controller="markdown-paste")
+          = f.rich_text_area :body, class: "trix-content min-h-[5rem]", placeholder: "Écrire un commentaire…"
+        .mt-2.flex.justify-end
+          = f.submit "Commenter", class: "inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 cursor-pointer"

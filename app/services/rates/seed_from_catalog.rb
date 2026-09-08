@@ -46,7 +46,7 @@ module Rates
     # Toutes les entrées du catalogue, à plat.
     def entries
       lodging_entries + hall_entries + outdoor_entries + meal_entries +
-        coworking_entries + event_entries + misc_entries
+        coworking_entries + event_entries + activity_entries + misc_entries
     end
 
     private
@@ -140,6 +140,14 @@ module Rates
              Pricing::Catalog::EVENT_ORGANIZER_SHARE_PERCENT,
              "Événement — part des organisateurs (% après frais fixes)",
              unit: "percent")]
+    end
+
+    # Rémunération des porteurs d'activité (epic #244). Une seule clé pour
+    # l'instant : le tarif horaire général, que chaque activité peut surcharger.
+    def activity_entries
+      [entry(Pricing::Catalog::ACTIVITY_CARRIER_HOURLY_KEY,
+             Pricing::Catalog::ACTIVITY_CARRIER_HOURLY_CENTS,
+             "Porteur d'activité — €/heure de prestation")]
     end
 
     def misc_entries

@@ -55,6 +55,8 @@ class ExperienceBooking < ApplicationRecord
   # funnel et le rail email — n'y touchent pas et restent bornés.
   attr_accessor :capacity_override
 
+  before_save :freeze_carrier_fee
+
   validates :participants, numericality: { greater_than: 0 }
   validates :status, inclusion: { in: STATUSES }
   # Un refus n'existe jamais sans motif — c'est l'information que le client
@@ -118,10 +120,37 @@ class ExperienceBooking < ApplicationRecord
     find_signed(token, purpose: TOKEN_PURPOSE)
   end
 
-  # Transition pending → confirmed (validation du porteur).
+  # Transition pending → confirmed (validation du porteur). Le montant dû au
+  # porteur se fige tout seul, par le callback ci-dessous — il n'y a donc pas
+  # deux chemins à tenir à jour (validation porteur ET création admin en
+  # `confirmed`), ce qui est exactement la façon dont un montant finit par
+  # manquer sur l'un des deux.
   def confirm!
     update!(status: "confirmed")
   end
+
+  # --- Rémunération du porteur (epic #244, phase 1) ---
+
+  # Le montant est FIGÉ au moment de la confirmation (décision 2), au tarif en
+  # vigueur à la DATE DU CRÉNEAU : un changement de barème ultérieur ne réécrit
+  # jamais le passé. Un montant déjà posé n'est pas recalculé.
+  def freeze_carrier_fee
+    return unless confirmed?
+    return if carrier_fee_cents.present?
+
+    self.carrier_fee_cents = computed_carrier_fee_cents
+  end
+
+  # Ce que la prestation vaudrait, au tarif de la date de son créneau. nil quand
+  # l'activité n'a pas de durée : sans durée, pas de rémunération calculable —
+  # l'écran le dit et propose de compléter la durée.
+  def computed_carrier_fee_cents
+    experience&.carrier_fee_cents_on(experience_availability&.available_on)
+  end
+
+  # Confirmée mais sans montant : l'activité n'a pas de durée en heures. C'est
+  # le seul cas, et c'est réparable en une saisie.
+  def carrier_fee_missing? = confirmed? && carrier_fee_cents.nil?
 
   # Transition pending → refused. La raison est obligatoire : un motif vide
   # déclenche une `RecordInvalid` (la validation modèle fait foi).
