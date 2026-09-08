@@ -201,26 +201,39 @@ class PricingModel
   SPACE_NAMES = {
     "grande_salle" => "Grande Salle",
     "petite_salle" => "Petite Salle",
-    "cuisine_pro"  => "Cuisine professionnelle"
+    "cuisine_pro"  => "Cuisine professionnelle",
+    "deux_salles"  => "Les 2 salles (duo)"
   }.freeze
 
-  # --- Espaces (salles / cuisine pro) : lignes ponctuelles `halls` + grille
-  # nuit-par-nuit `space_slots`, avec REMISE DUO (décision Michael 2026-07-20).
+  # Libellés des forfaits multi-jours du site (epic #234 phase 2).
+  PACKAGE_LABELS = {
+    "deux_jours"      => "forfait 2 jours",
+    "cinq_jours"      => "forfait 5 jours",
+    "forfait_weekend" => "forfait week-end (ven 18h30 → dim soir)"
+  }.freeze
+
+  # --- Espaces (salles / cuisine pro) : deux canaux ---
   #
-  # Les deux représentations produisent d'abord des ENTRÉES normalisées
-  # ({key, date, period, weekend, position_label, label, amount_cents}), puis un
-  # passage de combinaison remplace chaque paire Grande + Petite salle du MÊME
-  # jour et de la MÊME période par une seule ligne « Les 2 salles (duo) » au tarif
-  # duo (< somme). Périodes différentes le même jour → pas de duo, somme normale.
+  #   1. les lignes ponctuelles `halls` (kind + date + période), qui ne servent
+  #      plus qu'à un séjour SANS dates : tarif semaine à l'unité, remise duo
+  #      par (date, période), aucun forfait — comportement historique intact ;
+  #   2. la grille datée `space_slots`, qui porte le barème du site depuis
+  #      l'epic #234 : grille semaine / week-end, remise duo et forfaits
+  #      multi-jours au moins cher.
+  #
+  # La REMISE DUO (décision Michael 2026-07-20) remplace la paire Grande +
+  # Petite salle du MÊME jour et de la MÊME période par « Les 2 salles » au
+  # tarif duo. Périodes différentes le même jour → pas de duo, somme normale.
   # Vaut au funnel public comme en admin (même moteur, décision figée).
   DUO_KEYS = %w[grande_salle petite_salle].freeze
 
   def space_lines
-    combine_duo(hall_space_entries + slot_space_entries)
+    combine_duo(hall_space_entries) + slot_space_lines
   end
 
   # Entrées ponctuelles `halls` ({kind, date, period}). Tarif SEMAINE (comme
-  # historiquement — pas de logique week-end sur ce canal ponctuel).
+  # historiquement — pas de logique week-end ni de forfait sur ce canal
+  # ponctuel, réservé aux séjours sans dates ; epic #234 phase 2, dernier AC).
   def hall_space_entries
     Array(read(:halls)).filter_map do |entry|
       key = entry[:kind].to_s
@@ -239,15 +252,31 @@ class PricingModel
     end
   end
 
-  # Entrées grille JOUR-par-JOUR `space_slots` : tarif semaine ou week-end selon
-  # la date. ven (wday=5) et sam (wday=6) → tarifs week-end ; autres → semaine.
+  # --- Grille JOUR-par-JOUR `space_slots` (epic #234) ---
   #
-  # Epic #234, Phase 1 : la fenêtre est [arrivée, départ], départ INCLUS — une
-  # salle se loue à la journée, et le jour du départ compte. L'index de
-  # `space_slots` est donc un index de JOUR (0 = jour d'arrivée), pas de nuit, et
-  # l'étiquette porte la date réelle plutôt qu'un numéro de nuit. La règle
-  # semaine / week-end et les forfaits multi-jours restent à corriger en Phase 2.
-  def slot_space_entries
+  # Phase 1 a posé la fenêtre [arrivée, départ], départ INCLUS : l'index de
+  # `space_slots` est un index de JOUR (0 = jour d'arrivée).
+  #
+  # Phase 2 pose le barème : la grille semaine / week-end du site
+  # (`Pricing::HallGrid`), la remise duo « Les deux salles » et les forfaits
+  # multi-jours retenus au moins cher (`Pricing::HallSchedule`).
+  def slot_space_lines
+    dated, undated = slot_space_occupations.partition { |o| o[:date].present? }
+
+    # Décision 6 : Grande + Petite le même jour et la même période valent la
+    # colonne « Les deux salles » des mêmes grilles, forfaits compris. On garde
+    # toutefois le moins cher des deux découpages (décision 5) : fusionner un
+    # jour isolé en duo peut casser un forfait plus avantageux sur l'autre salle.
+    lines = [merge_duo_occupations(dated), dated]
+      .map { |set| package_lines_for(set) }
+      .min_by { |candidate| candidate.sum(&:amount_cents) }
+
+    lines.to_a + undated_slot_lines(undated)
+  end
+
+  # Occupations normalisées de la grille : {key, date, period}, une par case
+  # cochée. Les dates viennent de la fenêtre du séjour, départ inclus.
+  def slot_space_occupations
     slots = read(:space_slots)
     return [] if slots.blank?
 
@@ -258,28 +287,81 @@ class PricingModel
     slots.flat_map do |space_key, periods|
       key = space_key.to_s
       next [] unless Pricing::Catalog.hall_kind?(key)
-      space_name = SPACE_NAMES[key] || key
 
       Array(periods).each_with_index.filter_map do |period, day_idx|
         next if period.blank?
-        p       = period.to_s
-        date    = stay_dates[day_idx]
-        weekend = !!(date && [5, 6].include?(date.wday))
-        unit    = Pricing::Catalog.hall_rate_cents(key, p, weekend: weekend)
-        next if unit.nil?
-        period_label = PERIOD_LABELS[p] || p
-        date_label   = date ? I18n.l(date, format: :long) : "jour #{day_idx + 1}"
-        { key: key, date: date, period: p, weekend: weekend,
-          position_label: date_label,
-          label: "#{space_name} — #{date_label}, #{period_label}",
-          amount_cents: unit }
+        { key: key, date: stay_dates[day_idx], period: period.to_s, day_index: day_idx }
       end
-    end.compact
+    end
   end
 
-  # Combine les entrées d'espaces : chaque paire Grande + Petite salle sur le
-  # MÊME (date, période) → une ligne duo. Le reste passe inchangé. On apparie au
-  # plus UNE grande avec UNE petite par groupe (un éventuel doublon reste séparé).
+  # Remplace chaque paire Grande + Petite du MÊME (jour, période) par une seule
+  # occupation « deux_salles ». Le reste passe inchangé.
+  def merge_duo_occupations(occupations)
+    groups = occupations.group_by { |o| [o[:date], o[:period]] }
+
+    occupations.filter_map do |occupation|
+      keys = groups[[occupation[:date], occupation[:period]]].map { |o| o[:key] }
+      next occupation unless DUO_KEYS.all? { |k| keys.include?(k) } && DUO_KEYS.include?(occupation[:key])
+      next nil unless occupation[:key] == DUO_KEYS.first
+
+      occupation.merge(key: "deux_salles")
+    end
+  end
+
+  # Un espace à la fois : le découpage le moins cher, puis une ligne par segment.
+  def package_lines_for(occupations)
+    occupations.group_by { |o| o[:key] }.flat_map do |key, days|
+      Pricing::HallSchedule.segments_for(key, days).map do |segment|
+        Line.new(label: segment_label(segment), amount_cents: segment.amount_cents,
+                 category: :space)
+      end
+    end
+  end
+
+  # Grille cochée sur un séjour SANS dates : tarif semaine à l'unité, comme
+  # avant l'epic #234 — aucun forfait ne peut s'appliquer sans calendrier.
+  def undated_slot_lines(occupations)
+    occupations.filter_map do |occupation|
+      unit = Pricing::Catalog.hall_rate_cents(occupation[:key], occupation[:period])
+      next if unit.nil?
+
+      name         = SPACE_NAMES[occupation[:key]] || humanize(occupation[:key])
+      period_label = PERIOD_LABELS[occupation[:period]] || occupation[:period]
+      Line.new(label: "#{name} — jour #{occupation[:day_index] + 1}, #{period_label}",
+               amount_cents: unit, category: :space)
+    end
+  end
+
+  def segment_label(segment)
+    name = SPACE_NAMES[segment.key] || humanize(segment.key)
+    return "#{name} — #{I18n.l(segment.from, format: :long)}, " \
+           "#{PERIOD_LABELS[segment.period] || segment.period}" if segment.single_day?
+
+    "#{name} — #{date_range_label(segment.from, segment.to)}, " \
+      "#{PACKAGE_LABELS[segment.package]}#{evenings_suffix(segment.evenings)}"
+  end
+
+  def evenings_suffix(count)
+    return "" if count.to_i.zero?
+
+    " + #{count} soirée#{'s' if count > 1}"
+  end
+
+  # « du lundi 8 au vendredi 12 juin » quand la plage tient dans un mois.
+  def date_range_label(from, to)
+    days   = I18n.t("date.day_names")
+    months = I18n.t("date.month_names")
+    if from.year == to.year && from.month == to.month
+      "du #{days[from.wday]} #{from.day} au #{days[to.wday]} #{to.day} #{months[to.month]}"
+    else
+      "du #{I18n.l(from, format: :long)} au #{I18n.l(to, format: :long)}"
+    end
+  end
+
+  # Combine les entrées ponctuelles `halls` : chaque paire Grande + Petite salle
+  # sur le MÊME (date, période) → une ligne duo. Le reste passe inchangé. On
+  # apparie au plus UNE grande avec UNE petite par groupe.
   def combine_duo(entries)
     duo_groups = entries
       .select { |e| e[:date] && DUO_KEYS.include?(e[:key]) }
