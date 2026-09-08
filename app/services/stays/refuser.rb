@@ -20,14 +20,10 @@ module Stays
   #      LIBÉRATION des dates, essentielle depuis que `pre_confirmed` les
   #      bloque) et l'annulation des activités encore actives ;
   #   2. neutralise les `Payment` encore `pending` — typiquement l'acompte posé
-  #      par une pré-confirmation. On les SOFT-DELETE, comme le fait
-  #      `Payments::DestroyService` : le lien de paiement public résout par
-  #      `Payment.find`, que le `default_scope` de soft-deletion rend
-  #      introuvable — le client ne peut plus payer un séjour qu'on vient de
-  #      refuser. La trace reste en base et dans `PaymentVersion`. On ne touche
-  #      JAMAIS un paiement `paid` : de l'argent réellement encaissé se
-  #      rembourse, il ne s'efface pas (même règle que `Stays::DestroyService`,
-  #      qui préserve les paiements pour cette raison) ;
+  #      par une pré-confirmation. C'est `QuickStatusUpdater` qui le fait, pour
+  #      TOUTE annulation (« Annuler le séjour » compris) : un lien d'acompte
+  #      resté payable après l'annulation aurait reconfirmé le séjour à
+  #      l'encaissement. Soft-delete, jamais un `paid` — voir là-bas ;
   #   3. horodate le refus et son motif dans la note INTERNE du séjour — sans
   #      quoi, trois mois plus tard, personne ne sait pourquoi ce dossier est
   #      rouge.
@@ -74,7 +70,6 @@ module Stays
         updater = Stays::QuickStatusUpdater.new(stay: stay, status: "canceled")
         raise RefusalFailed, updater.error_message unless updater.run
 
-        void_pending_payments!
         append_internal_note!
       end
 
@@ -103,13 +98,6 @@ module Stays
       end
 
       true
-    end
-
-    # Acompte d'une pré-confirmation, ou tout autre paiement encore attendu : il
-    # n'a plus d'objet. `.each` plutôt que `find_each` — `Stay#payments` est une
-    # union `OR` (lien direct + canal booking historique), on la matérialise.
-    def void_pending_payments!
-      stay.payments.pending.to_a.each { |payment| payment.soft_delete!(validate: false) }
     end
 
     # Ligne horodatée dans la note INTERNE (colonne `stays.notes`, texte brut,
