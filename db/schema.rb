@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_08_033938) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -389,6 +389,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_033938) do
     t.check_constraint "amount_cents <> 0", name: "cash_entries_non_zero"
   end
 
+  create_table "cash_motifs", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "direction", default: "both", null: false
+    t.bigint "general_account_id", null: false
+    t.string "label", null: false
+    t.bigint "legal_entity_id", null: false
+    t.integer "position", default: 0, null: false
+    t.bigint "team_id"
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_cash_motifs_on_deleted_at"
+    t.index ["general_account_id"], name: "index_cash_motifs_on_general_account_id"
+    t.index ["legal_entity_id"], name: "index_cash_motifs_on_legal_entity_id"
+    t.index ["position", "id"], name: "index_cash_motifs_on_position_and_id"
+    t.index ["team_id"], name: "index_cash_motifs_on_team_id"
+  end
+
   create_table "catalog_items", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.string "category"
@@ -454,6 +472,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_033938) do
     t.index ["cash_account_id"], name: "index_coda_statements_on_cash_account_id"
     t.index ["coda_import_id"], name: "index_coda_statements_on_coda_import_id"
     t.index ["deleted_at"], name: "index_coda_statements_on_deleted_at"
+  end
+
+  create_table "comments", force: :cascade do |t|
+    t.bigint "author_id", null: false
+    t.bigint "commentable_id", null: false
+    t.string "commentable_type", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.datetime "updated_at", null: false
+    t.index ["author_id"], name: "index_comments_on_author_id"
+    t.index ["commentable_type", "commentable_id", "created_at"], name: "index_comments_on_commentable_and_created_at"
+    t.index ["commentable_type", "commentable_id"], name: "index_comments_on_commentable"
+    t.index ["deleted_at"], name: "index_comments_on_deleted_at"
   end
 
   create_table "consignors", force: :cascade do |t|
@@ -605,7 +636,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_033938) do
     t.datetime "created_at", null: false
     t.datetime "deleted_at", precision: nil
     t.string "name"
+    t.string "pole"
+    t.string "slug"
     t.datetime "updated_at", null: false
+    t.index ["slug"], name: "index_event_categories_on_slug", unique: true
   end
 
   create_table "events", force: :cascade do |t|
@@ -614,14 +648,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_033938) do
     t.datetime "deleted_at", precision: nil
     t.datetime "ends_at"
     t.bigint "event_category_id", null: false
+    t.string "location"
     t.string "name"
     t.text "notes"
+    t.string "price_text"
+    t.datetime "published_at"
     t.integer "sales_amount_cents"
+    t.string "slug"
     t.datetime "starts_at"
     t.string "status"
+    t.string "summary"
     t.datetime "updated_at", null: false
     t.string "url"
     t.index ["event_category_id"], name: "index_events_on_event_category_id"
+    t.index ["slug"], name: "index_events_on_slug", unique: true
   end
 
   create_table "experience_availabilities", force: :cascade do |t|
@@ -637,6 +677,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_033938) do
   end
 
   create_table "experience_bookings", force: :cascade do |t|
+    t.integer "carrier_fee_cents"
     t.datetime "created_at", null: false
     t.bigint "experience_availability_id", null: false
     t.text "notes"
@@ -650,6 +691,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_033938) do
   end
 
   create_table "experiences", force: :cascade do |t|
+    t.integer "carrier_hourly_rate_cents"
     t.string "color"
     t.datetime "created_at", null: false
     t.datetime "deleted_at", precision: nil
@@ -663,9 +705,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_033938) do
     t.string "name"
     t.string "photo"
     t.integer "price_cents"
+    t.datetime "published_at"
+    t.string "slug"
     t.string "summary"
+    t.bigint "team_id"
     t.datetime "updated_at", null: false
     t.index ["human_id"], name: "index_experiences_on_human_id"
+    t.index ["team_id"], name: "index_experiences_on_team_id"
+    t.index ["slug"], name: "index_experiences_on_slug", unique: true
   end
 
   create_table "fiscal_years", force: :cascade do |t|
@@ -1564,9 +1611,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_033938) do
   add_foreign_key "cash_allocations", "teams"
   add_foreign_key "cash_allocations", "third_parties"
   add_foreign_key "cash_entries", "cash_accounts"
+  add_foreign_key "cash_motifs", "general_accounts"
+  add_foreign_key "cash_motifs", "legal_entities"
+  add_foreign_key "cash_motifs", "teams"
   add_foreign_key "catalog_prices", "catalog_items"
   add_foreign_key "coda_statements", "cash_accounts"
   add_foreign_key "coda_statements", "coda_imports"
+  add_foreign_key "comments", "users", column: "author_id"
   add_foreign_key "consignors", "humans"
   add_foreign_key "consignors", "third_parties"
   add_foreign_key "coworking_packs", "customers"
@@ -1586,6 +1637,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_033938) do
   add_foreign_key "experience_bookings", "experience_availabilities"
   add_foreign_key "experience_bookings", "stays"
   add_foreign_key "experiences", "humans"
+  add_foreign_key "experiences", "teams"
   add_foreign_key "fiscal_years", "legal_entities"
   add_foreign_key "gathering_action_humans", "gathering_actions"
   add_foreign_key "gathering_action_humans", "humans"

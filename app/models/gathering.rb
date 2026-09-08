@@ -22,6 +22,8 @@
 #  fk_rails_...  (gathering_category_id => gathering_categories.id)
 #
 class Gathering < ApplicationRecord
+  include Commentable
+
   include PublicActivity::Model
   tracked owner: Proc.new { |controller, _model| controller.current_user rescue nil }
 

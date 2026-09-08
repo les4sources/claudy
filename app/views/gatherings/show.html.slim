@@ -136,3 +136,6 @@
         .px-4.pb-4.flex.justify-end
           = f.submit "Enregistrer le compte-rendu",
                      class: "inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 cursor-pointer"
+
+    / Fil de commentaires (epic #242, phase 1) — même composant partout.
+    = render Comments::ThreadComponent.new(commentable: @gathering.object, current_user: current_user)

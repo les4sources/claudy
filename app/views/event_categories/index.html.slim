@@ -12,13 +12,17 @@
       tr
         th.py-3.px-6[scope="col"]
         th.py-3.px-6[scope="col"]
-          | Nom 
+          | Nom
+        th.py-3.px-6.w-48[scope="col"]
+          | Pôle (site web)
     tbody
       - @event_categories.each do |event_category|
         tr
           td.py-4.px-6.w-6
-            .w-6.h-6.rounded-full(class="bg-#{event_category.color}-300")
+            .w-6.h-6.rounded-full(style="background-color: #{event_category.color};")
           td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
-            = link_to event_category.name, 
+            = link_to event_category.name,
                       event_category_path(event_category),
                       class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+          td.py-4.px-6
+            = event_category.pole_label || "—"

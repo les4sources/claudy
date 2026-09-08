@@ -32,7 +32,10 @@ module Teams
         .require(:team)
         .permit(
           :name,
-          :description
+          :description,
+          :kind,
+          :parent_id,
+          :analytic_code
         )
     end
   end
