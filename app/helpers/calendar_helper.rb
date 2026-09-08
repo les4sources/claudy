@@ -22,6 +22,27 @@ module CalendarHelper
     "border-left-color: hsl(#{hue}, 65%, 45%); background-color: hsl(#{hue}, 70%, 96%);"
   end
 
+  # Opacité + libellé d'état d'un bloc calendrier, par statut de séjour (Michael
+  # 2026-09-08). Trois niveaux, depuis que la pré-confirmation BLOQUE les dates
+  # (`Stay::BLOCKING_STATUSES`) : jusqu'ici le bloc n'en connaissait que deux —
+  # `confirmed` en pleine opacité, TOUT LE RESTE à 50 %. Un séjour pré-confirmé,
+  # dont les dates sont pourtant tenues, s'affichait donc comme une demande que
+  # personne n'avait encore ouverte : impossible de lire un mois d'un coup d'œil.
+  #
+  # Retourne `[classes_tailwind, titre]`. Le titre part en `title=` : c'est la
+  # seule place où l'état s'écrit en toutes lettres sur le bloc lui-même.
+  STAY_BLOCK_STATUS_HINTS = {
+    "confirmed"     => ["",             "Séjour confirmé"],
+    "pre_confirmed" => ["opacity-75",   "Séjour pré-confirmé — dates tenues, acompte en attente"],
+    "pending"       => ["opacity-50",   "Demande en attente — dates non tenues"],
+    "canceled"      => ["opacity-50",   "Séjour annulé"],
+    "cancelled"     => ["opacity-50",   "Séjour annulé"]
+  }.freeze
+
+  def stay_block_status_hint(stay)
+    STAY_BLOCK_STATUS_HINTS.fetch(stay.status.to_s, ["opacity-50", "Séjour"])
+  end
+
   # --- Méta séjour pour les chips de fusion (epic #81) ---------------------
   # Posées en `data-stay-label` / `data-stay-dates` à côté du `data-stay-id`
   # existant sur chaque bloc calendrier. Le contrôleur Stimulus `stay-merge`

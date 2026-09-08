@@ -57,9 +57,16 @@ div class="p-1 text-center text-xs font-bold rounded-t-lg #{band.last}"
   - if card.departure_time.present?
     p.mb-2.text-sm.font-light
       | Heure de départ: #{card.departure_time}
+  / `pre_confirmed` (Michael 2026-09-08) : il manquait à ce ternaire, si bien
+     qu'un séjour pré-confirmé s'annonçait « Ce séjour est annulé » sur la carte
+     du jour. Trois états à nommer, pas deux — et le pré-confirmé n'est pas une
+     alerte rouge : l'équipe s'est engagée, elle attend l'acompte.
   - unless stay.status.to_s == "confirmed"
-    .mb-2.text-sm.font-semibold.text-red-700
-      = stay.status.to_s == "pending" ? "Séjour en attente de confirmation" : "Ce séjour est annulé"
+    - if stay.status.to_s == "pre_confirmed"
+      .mb-2.text-sm.font-semibold.text-indigo-700 Séjour pré-confirmé — acompte en attente
+    - else
+      .mb-2.text-sm.font-semibold.text-red-700
+        = stay.status.to_s == "pending" ? "Séjour en attente de confirmation" : "Ce séjour est annulé"
   - if (badge = stay_payment_badge(stay))
     .mb-2 = badge
 
