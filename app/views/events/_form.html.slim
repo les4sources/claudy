@@ -65,3 +65,63 @@
     = f.rich_text_area :notes
 
 hr
+
+/ Contenu PUBLIC : ce que le site les4sources.be affiche. La fiche n'y paraît
+/ qu'une fois publiée (bouton sur la page de l'événement).
+.border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
+  .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
+    = section_heading_tw heading: "Site web"
+    p.text-xs.text-gray-500.md:mt-2
+      | Ce que le public lit sur les4sources.be. Rien n'apparaît sur le site avant la publication, depuis la page de l'événement.
+
+  .col-span-2.mb-4.space-y-6.sm:space-y-5
+    - if f.object.duplicate_of_id.present?
+      = f.hidden_field :duplicate_of_id
+
+    = f.text_field :summary,
+                   label: "Résumé public",
+                   hint: "Une ou deux phrases (200 caractères max.) : cartes, agenda et description pour les moteurs de recherche.",
+                   maxlength: Event::SUMMARY_MAX_LENGTH,
+                   class: "md:w-1/2 lg:w-2/3"
+
+    = f.text_field :location,
+                   label: "Lieu",
+                   hint: "Ex. « Les 4 Sources, Yvoir » ou « La grange »",
+                   class: "md:w-1/2 lg:w-2/3"
+
+    = f.text_field :price_text,
+                   label: "Prix (texte libre)",
+                   hint: "Ex. « Prix libre », « 15 € / personne, gratuit pour les enfants »",
+                   class: "md:w-1/2 lg:w-2/3"
+
+    .flex.space-x-4
+      - if f.object.image.attached?
+        = image_tag url_for(f.object.image),
+                    class: "inline-block h-24 w-auto rounded-md object-cover",
+                    alt: ""
+      div
+        = f.file_field :image,
+                       label: "Image de couverture",
+                       hint: "JPG, PNG ou WebP, de préférence en paysage (16:10)",
+                       accept: "image/*"
+
+    .sm:space-y-1
+      = f.label :public_description,
+                "Description publique"
+      = f.rich_text_area :public_description
+
+    - if f.object.published?
+      .text-sm.text-gray-700
+        | Adresse publique :
+        = " "
+        code.rounded.bg-gray-100.px-1.5.py-0.5 = f.object.public_path
+        span.ml-2.text-xs.text-gray-500
+          | (figée depuis la publication)
+    - else
+      = f.text_field :slug,
+                     label: "Adresse publique (slug)",
+                     value: (f.object.persisted? ? f.object.suggested_slug : f.object.slug),
+                     hint: "Fin de l'adresse /evenements/… — proposée depuis le titre et le mois ; modifiable jusqu'à la publication, figée ensuite.",
+                     class: "md:w-1/2 lg:w-2/3"
+
+hr

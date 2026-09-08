@@ -30,7 +30,8 @@ module EventCategories
         .require(:event_category)
         .permit(
           :name,
-          :color
+          :color,
+          :pole
         )
     end
   end
