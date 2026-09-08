@@ -73,6 +73,17 @@ RSpec.describe PricingModel, "barème des salles (epic #234 phase 2)" do
     it "Grande Salle un samedi = 455 € (380 + 75)" do
       expect(spaces_cents(SATURDAY, SATURDAY, { "grande_salle" => ["journee_et_soiree"] })).to eq(45_500)
     end
+
+    # À cheval sur les deux grilles : la journée du vendredi est en semaine, sa
+    # soirée au week-end — journée semaine + forfait soir week-end, jamais la
+    # journée week-end entière (tranché le 2026-09-08).
+    it "Grande Salle un vendredi = 365 € (290 + forfait soir week-end 75)" do
+      expect(spaces_cents(FRIDAY, FRIDAY, { "grande_salle" => ["journee_et_soiree"] })).to eq(36_500)
+    end
+
+    it "Cuisine pro un vendredi = 110 € — pas de forfait soir, même au week-end" do
+      expect(spaces_cents(FRIDAY, FRIDAY, { "cuisine_pro" => ["journee_et_soiree"] })).to eq(11_000)
+    end
   end
 
   describe "forfaits multi-jours, décomposition la moins chère (décision 5)" do

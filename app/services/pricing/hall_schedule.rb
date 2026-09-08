@@ -77,9 +77,19 @@ module Pricing
 
     def single(i)
       day    = @days[i]
-      amount = Pricing::Catalog.hall_rate_cents(
-        @key, day[:period], weekend: Pricing::HallGrid.weekend?(day[:date], day[:period])
-      )
+      amount = if Pricing::HallGrid.straddles_weekend?(day[:date], day[:period])
+        # Journée + soirée un VENDREDI : la journée est en semaine, la soirée
+        # au week-end (le site ouvre le week-end à 18h30). On facture donc la
+        # journée semaine plus le « forfait soir » de la grille week-end — la
+        # même règle que pour une soirée posée par-dessus un forfait de journées
+        # (`package`), et jamais plus cher que la journée week-end entière.
+        day_amount = Pricing::Catalog.hall_rate_cents(@key, "journee", weekend: false)
+        day_amount.nil? ? nil : day_amount + Pricing::Catalog.hall_evening_supplement_cents(@key, weekend: true)
+      else
+        Pricing::Catalog.hall_rate_cents(
+          @key, day[:period], weekend: Pricing::HallGrid.weekend?(day[:date], day[:period])
+        )
+      end
       return nil if amount.nil?
 
       [Segment.new(key: @key, package: nil, from: day[:date], to: day[:date],

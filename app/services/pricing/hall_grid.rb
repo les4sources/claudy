@@ -8,8 +8,10 @@ module Pricing
   #   Week-end : soirée du vendredi, samedi et dimanche (journée et soirée).
   #
   # Le seul cas que la décision 4 ne tranche pas est « journée + soirée » un
-  # vendredi, qui chevauche les deux grilles : il est classé en week-end,
-  # puisque l'occupation court après 18h30. À contredire dans l'epic si faux.
+  # vendredi, qui chevauche les deux grilles. Il ne bascule PAS en week-end
+  # plein : la journée reste en semaine et la soirée s'ajoute au « forfait
+  # soir » week-end (`straddles_weekend?`, tranché le 2026-09-08 pour rester
+  # cohérent avec les soirées posées sur un forfait de journées).
   module HallGrid
     module_function
 
@@ -22,6 +24,11 @@ module Pricing
       return true  if WEEKEND_WDAYS.include?(date.wday)
 
       date.wday == FRIDAY && period.to_s != "journee"
+    end
+
+    # « Journée + soirée » un vendredi : à cheval sur les deux grilles.
+    def straddles_weekend?(date, period)
+      !date.nil? && date.wday == FRIDAY && period.to_s == "journee_et_soiree"
     end
 
     # Grille de la JOURNÉE d'une date — celle qui décide des forfaits
