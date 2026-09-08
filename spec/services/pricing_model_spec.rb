@@ -13,6 +13,7 @@ RSpec.describe PricingModel do
 
   let(:grand_duc) { Lodging.create!(name: "Le Grand-Duc", price_night_cents: 75_000) }
   let(:hulotte) { Lodging.create!(name: "La Hulotte", price_night_cents: 48_500) }
+  let(:cheveche) { Lodging.create!(name: "La Chevêche", price_night_cents: 27_500) }
 
   describe ".quote — structure de retour (AC-T2-12)" do
     it "retourne un breakdown ligne par ligne, un total et un acompte 50 % par défaut" do
@@ -48,12 +49,34 @@ RSpec.describe PricingModel do
   end
 
   describe "forfait nommé qui écrase la formule (Q3 hybride — AC-T2-14b)" do
-    it "Grand-Duc 7 nuits = forfait semaine 2 410 € (override, PAS la formule)" do
+    # Le mécanisme d'override reste couvert par La Chevêche, seul barème à porter
+    # encore un forfait nommé. Son montant coïncide avec la formule : c'est le
+    # LIBELLÉ qui prouve que le chemin « forfait » a bien été emprunté.
+    it "La Chevêche 3 nuits passe par le forfait nommé (675 €)" do
+      quote = described_class.quote(draft(lodging: cheveche, nights: 3))
+
+      expect(quote.total_cents).to eq(67_500)
+      expect(quote.breakdown.first[:label]).to include("forfait 3 nuits")
+    end
+
+    # Décision Michael 2026-09-08 : le forfait semaine du Grand-Duc est RETIRÉ.
+    # À 2 410 €, sept nuits coûtaient moins que quatre (2 550 €) — un barème qui
+    # décroît quand le séjour s'allonge. Sept nuits repassent à la formule.
+    it "Grand-Duc 7 nuits = formule 4 350 € (le forfait semaine est retiré)" do
       quote = described_class.quote(draft(lodging: grand_duc, nights: 7))
-      formula = 75_000 + 6 * 60_000 # = 4 350 € si on appliquait la formule
-      expect(quote.total_cents).to eq(241_000) # forfait semaine
-      expect(quote.total_cents).not_to eq(formula)
-      expect(quote.breakdown.first[:label]).to include("forfait semaine")
+
+      expect(quote.total_cents).to eq(75_000 + 6 * 60_000) # 4 350 €
+      expect(quote.total_cents).not_to eq(241_000)
+      expect(quote.breakdown.first[:label]).not_to include("forfait")
+    end
+
+    # Le barème doit rester CROISSANT : c'est l'invariant que le forfait semaine
+    # violait. On le verrouille plutôt que de se contenter du montant à 7 nuits.
+    it "reste croissant de 1 à 10 nuits sur le Grand-Duc" do
+      totals = (1..10).map { |n| described_class.quote(draft(lodging: grand_duc, nights: n)).total_cents }
+
+      expect(totals).to eq(totals.sort)
+      expect(totals.uniq.size).to eq(totals.size)
     end
 
     it "4/5/6 nuits restent calculées par la formule (pas de forfait nommé)" do
