@@ -197,4 +197,128 @@ RSpec.describe ReservationMailer, type: :mailer do
     end
   end
 
+  # Décision Michael du 2026-09-08. Un séjour gîte + salle : la composition la
+  # plus simple qui prend en défaut l'ancien devis de l'email client (rebâti
+  # depuis le seul gîte) ET qui justifie l'email d'équipe — une salle demandée
+  # ne se lit nulle part dans l'accusé de réception client.
+  describe "demande entrante gîte + salle" do
+    let!(:hulotte) do
+      lodging = Lodging.create!(name: "La Hulotte", price_night_cents: 48_500)
+      lodging.rooms << Room.create!(name: "Chambre 1", level: 1)
+      lodging
+    end
+    let!(:petite_salle) { Space.create!(name: "Petite Salle", code: "SAU", capacity: 1) }
+
+    let(:arrival)   { (Date.today + 50).next_occurring(:monday) }
+    let(:departure) { arrival + 2 }
+
+    # On passe par le Builder, pas par des `create!` à la main : c'est LUI qui
+    # écrit la note d'espaces préfixée et rattache le SpaceBooking au séjour. Un
+    # montage manuel testerait une composition que la production ne produit pas.
+    let(:built_stay) do
+      draft = Reservations::Draft.new(
+        lodging_id: hulotte.id,
+        arrival_date: arrival.iso8601, departure_date: departure.iso8601,
+        dogs_count: 0, adults: 2,
+        first_name: "Camille", last_name: "Martin",
+        email: "camille@example.com", phone: "+32470000000",
+        group_name: "Les Copains", category: "friends",
+        spaces_note: "Merci de prévoir la salle pour un atelier.",
+        halls: [{ kind: "petite_salle", date: arrival.iso8601, period: "journee" }]
+      )
+      builder = Reservations::Builder.new(draft: draft)
+      raise builder.error_message(default: "Builder KO") unless builder.run
+
+      builder.stay.reload
+    end
+
+    describe "#team_new_request" do
+      subject(:mail) { described_class.team_new_request(built_stay) }
+
+      it "part vers sejours@, sans le doublon de la copie cachée par défaut" do
+        expect(mail.to).to eq([ReservationMailer::TEAM_EMAIL])
+        expect(mail.bcc).to be_blank
+      end
+
+      it "porte un objet qui suffit à trier la boîte sans ouvrir l'email" do
+        expect(mail.subject).to include("Nouvelle demande de séjour ##{built_stay.id}")
+        expect(mail.subject).to include("Camille Martin (Les Copains)")
+        expect(mail.subject).to include("·")
+      end
+
+      it "détaille client, occupants et composition — ligne de salle comprise" do
+        html = mail.html_part.body.decoded.gsub(/\s+/, " ")
+        text = mail.text_part.body.decoded.gsub(/\s+/, " ")
+
+        [html, text].each do |body|
+          expect(body).to include("camille@example.com")
+          expect(body).to include("+32470000000")
+          expect(body).to include("Groupe d")
+          expect(body).to include("La Hulotte")
+          expect(body).to include("Petite Salle")
+          expect(body).to include("2 adulte(s)")
+        end
+      end
+
+      it "pousse vers la fiche séjour et y renvoie pour TOUTE action" do
+        html = mail.html_part.body.decoded.gsub(/\s+/, " ")
+        text = mail.text_part.body.decoded.gsub(/\s+/, " ")
+
+        [html, text].each do |body|
+          expect(body).to include("/stays/#{built_stay.id}")
+          expect(body).to match(/pré-confirmer/i)
+          expect(body).to match(/refuser/i)
+        end
+        # Un seul bouton : l'email informe, la fiche décide.
+        expect(html.scan("Ouvrir la fiche séjour").size).to eq(1)
+      end
+
+      it "remonte la précision d'espaces laissée par le client" do
+        html = mail.html_part.body.decoded.gsub(/\s+/, " ")
+
+        expect(html).to include("Merci de prévoir la salle pour un atelier.")
+        expect(html).to include(SpaceComposition::SPACES_NOTE_PREFIX.strip)
+      end
+
+      it "remonte la note interne du séjour, dont l'avertissement multi-chiens" do
+        built_stay.update!(notes: "⚠️ Demande multi-chiens (2)")
+        html = described_class.team_new_request(built_stay.reload).html_part.body.decoded
+
+        expect(html).to include("multi-chiens")
+      end
+    end
+
+    # Bug constaté le 2026-09-08 : le devis de l'email client était rebâti depuis
+    # un Draft ne portant QUE `lodging_id` + les dates. Salles, camping, hamacs et
+    # chien en tombaient — 1 265 € annoncés pour un séjour à 1 685 €. On
+    # reconstruit désormais avec `Stays::DraftReconstructor`, la reconstruction de
+    # référence (déjà utilisée par l'édition admin et la modification client).
+    describe "#confirmation_request — récap complet" do
+      subject(:mail) { described_class.confirmation_request(built_stay) }
+
+      # Le devis étiquette la salle depuis sa CLÉ de pricing (« Petite salle »),
+      # là où la fiche et l'email d'équipe affichent le nom de la `Space`
+      # (« Petite Salle ») : deux vocabulaires, une seule salle — d'où le match
+      # insensible à la casse.
+      it "liste la ligne de salle, absente de l'ancien devis" do
+        html = mail.html_part.body.decoded.gsub(/\s+/, " ")
+        text = mail.text_part.body.decoded.gsub(/\s+/, " ")
+
+        [html, text].each { |body| expect(body).to match(/petite salle/i) }
+      end
+
+      it "totalise exactement le montant du séjour persisté" do
+        quote = Stays::DraftReconstructor.call(built_stay).quote
+
+        expect(quote.total_cents).to eq(built_stay.total_amount_cents)
+      end
+
+      it "signe l'email comme les autres du flux" do
+        html = mail.html_part.body.decoded.gsub(/\s+/, " ")
+        text = mail.text_part.body.decoded.gsub(/\s+/, " ")
+
+        [html, text].each { |body| expect(body).to include("Pour le pôle Accueil des 4 Sources") }
+      end
+    end
+  end
 end

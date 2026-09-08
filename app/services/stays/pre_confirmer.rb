@@ -12,15 +12,29 @@ module Stays
   #
   # CE QU'IL POSE. Un `Payment` `pending`/`card` du montant validé par le Pôle
   # Accueil (l'acompte est AJUSTABLE : 50 % n'est qu'un préremplissage), et le
-  # statut `pre_confirmed` sur le séjour. Ce statut est un état d'ATTENTE DE
-  # PAIEMENT, entre `pending` (personne n'a regardé) et `confirmed` (acompte
-  # encaissé) — il ne pose aucun veto de disponibilité, et c'est voulu : tant
-  # que l'argent n'est pas là, les dates ne sont pas garanties.
+  # statut `pre_confirmed` sur le séjour ET sur ses réservables. Ce statut est un
+  # état d'ATTENTE DE PAIEMENT, entre `pending` (personne n'a regardé) et
+  # `confirmed` (acompte encaissé).
+  #
+  # ⚠️ IL BLOQUE DÉSORMAIS LES DATES (décision Michael du 2026-09-08 — renverse
+  # le « il ne pose aucun veto » d'origine). L'ancienne règle « tant que l'argent
+  # n'est pas là, les dates ne sont pas garanties » laissait pré-confirmer DEUX
+  # demandes sur les mêmes dates, puis les confirmer toutes les deux : l'acompte
+  # du second client tombait sur un gîte déjà pris. Une pré-confirmation est un
+  # engagement de l'équipe — cf. `Stay::BLOCKING_STATUSES`.
+  #
+  # Deux conséquences, toutes deux portées ici :
+  #   1. on VÉRIFIE la disponibilité avant de poser l'acompte (le séjour a pu
+  #      dormir des jours dans la file pendant qu'un autre était confirmé) ;
+  #   2. on PROPAGE `pre_confirmed` aux réservables, comme le fait
+  #      `QuickStatusUpdater` — le veto lit le statut des bookables, pas celui
+  #      du séjour, donc sans propagation la constante ne servirait à rien.
   #
   # CE QU'IL NE FAIT PAS. Il ne confirme rien. La bascule vers `confirmed` est
   # déclenchée par l'encaissement Stripe (`Stripe::CompletedCheckoutService`),
-  # qui passe par `Stays::QuickStatusUpdater` pour propager le statut aux
-  # réservables — sans quoi le veto de dispo ne se poserait jamais.
+  # qui passe par `Stays::QuickStatusUpdater` — lequel repropage correctement
+  # depuis `pre_confirmed`, tout comme le retour en `pending` (« Repasser en
+  # attente »), qui LIBÈRE les dates.
   #
   # HORS TRANSACTION. L'email part APRÈS le commit, comme
   # `Stays::ConfirmationNotifier` : un incident Postmark ne doit pas annuler une
@@ -53,6 +67,7 @@ module Stays
           payment_method: "card"
         )
         stay.update!(status: "pre_confirmed")
+        propagate_to_bookables!
       end
 
       deliver_email!
@@ -98,8 +113,114 @@ module Stays
                       "(#{format_euros(max_amount_cents)}).")
       end
 
+      # Dernier filet AVANT de poser l'acompte (Michael 2026-09-08). Une demande
+      # peut avoir attendu des jours dans la file pendant qu'un autre séjour
+      # était confirmé sur les mêmes dates. Puisque la pré-confirmation bloque
+      # désormais le calendrier, la poser sur des dates déjà prises créerait
+      # exactement le double-booking qu'on cherche à empêcher — et le client
+      # recevrait une demande d'acompte pour un gîte qui n'est plus libre.
+      if (pris = unavailable_resources).any?
+        return refuse("Ces dates ne sont plus disponibles pour #{pris.to_sentence} : " \
+                      "pré-confirmer créerait un doublon. Modifiez la composition du séjour, " \
+                      "ou refusez la demande.")
+      end
+
       true
     end
+
+    # Ressources du séjour dont les dates sont déjà tenues par QUELQU'UN D'AUTRE,
+    # décrites pour l'affichage. Vide quand tout passe.
+    #
+    # L'occupation du séjour LUI-MÊME est toujours exclue : ses réservables sont
+    # encore `pending` à cet instant (donc non bloquants), mais on ne s'appuie
+    # pas là-dessus — un séjour dont un bookable aurait déjà été passé à la main
+    # en `confirmed` se bloquerait lui-même, et l'action deviendrait impossible
+    # sans explication.
+    def unavailable_resources
+      (unavailable_lodgings + unavailable_spaces).uniq
+    end
+
+    # Hébergements. On délègue à `Stays::LodgingAvailability` — SOURCE UNIQUE de
+    # la dispo hébergement, déjà utilisée par la validation admin et par la
+    # demande de modification client : elle porte le contrat de dates (issue
+    # #94), le mode chambres seules, les `Unavailability` et l'exclusion des
+    # Booking du séjour. Un séjour peut porter PLUSIEURS Booking (multi-gîtes) :
+    # on construit un draft minimal par Booking plutôt que de ne regarder que le
+    # premier.
+    def unavailable_lodgings
+      lodging_bookings.filter_map do |booking|
+        next if booking.lodging_id.blank? || booking.from_date.blank? || booking.to_date.blank?
+
+        draft = Reservations::Draft.new(
+          lodging_id:     booking.lodging_id,
+          booking_type:   booking.rooms_mode? ? "rooms" : "lodging",
+          room_ids:       booking.rooms_mode? ? booking.reservations.map(&:room_id).uniq : [],
+          arrival_date:   booking.from_date,
+          departure_date: booking.to_date
+        )
+        next if Stays::LodgingAvailability.call(stay: stay, draft: draft)
+
+        "#{booking.lodging&.name.presence || 'l’hébergement'} " \
+          "(#{format_date(booking.from_date)} → #{format_date(booking.to_date)})"
+      end
+    end
+
+    # Espaces, JOUR PAR JOUR (une salle se loue à la journée, et un espace
+    # partagé — camping Bois, pâtures — a une capacité > 1). Même règle que
+    # `Space#booked_on?`, avec exclusion des SpaceBooking du séjour.
+    def unavailable_spaces
+      own_ids = own_space_booking_ids
+
+      space_reservations.filter_map do |reservation|
+        space = reservation.space
+        next if space.nil? || reservation.date.blank?
+
+        scope = SpaceReservation.includes(:space_booking)
+                                .where(date: reservation.date, space: space.id,
+                                       space_booking: { status: Stay::BLOCKING_STATUSES })
+        scope = scope.where.not(space_booking: { id: own_ids }) if own_ids.any?
+        next if scope.count < space.capacity
+
+        "#{space.name} (#{format_date(reservation.date)})"
+      end
+    end
+
+    def lodging_bookings
+      stay.stay_items.select { |item| item.bookable_type == "Booking" }.filter_map(&:bookable)
+    end
+
+    def stay_space_bookings
+      stay.stay_items.select { |item| item.bookable_type == "SpaceBooking" }.filter_map(&:bookable)
+    end
+
+    def own_space_booking_ids
+      stay_space_bookings.map(&:id)
+    end
+
+    def space_reservations
+      stay_space_bookings.flat_map { |sb| sb.space_reservations.to_a }
+    end
+
+    # Propagation du statut aux réservables — miroir de
+    # `Stays::QuickStatusUpdater#propagate_to_bookables!`. Sans elle, le veto
+    # (qui lit le statut des bookables) ne verrait jamais la pré-confirmation.
+    #
+    # `skip_customer_notification` : même contrat anti-spam que le toggle de
+    # statut interne. Aucun callback des bookables ne réagit d'ailleurs à
+    # `pre_confirmed` (Booking et SpaceBooking ne notifient que sur `confirmed`,
+    # `declined`, `canceled`) — le garde-fou est là par principe, pas par
+    # nécessité. Le SEUL email du flux est celui du client, envoyé plus bas,
+    # APRÈS le commit.
+    def propagate_to_bookables!
+      stay.bookables.each do |bookable|
+        next unless bookable.respond_to?(:status)
+
+        bookable.skip_customer_notification = true if bookable.respond_to?(:skip_customer_notification=)
+        bookable.update!(status: "pre_confirmed")
+      end
+    end
+
+    def format_date(date) = I18n.l(date, format: :long).strip
 
     # Plafond = le reste dû EXIGIBLE. On ne demande jamais un acompte supérieur
     # à ce que le séjour coûte — la saisie est libre, pas les invariants.

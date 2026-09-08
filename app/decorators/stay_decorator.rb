@@ -339,6 +339,20 @@ class StayDecorator < ApplicationDecorator
       !object.customer.catch_all?
   end
 
+  # --- Refus d'une demande (Michael 2026-09-08) ---------------------------
+  # Le pendant du bouton ci-dessus. Visible sur une demande EN ATTENTE comme sur
+  # une demande PRÉ-CONFIRMÉE : tant que l'acompte n'est pas payé, rien n'est
+  # acquis — et c'est justement là que le refus est le plus utile, puisque le
+  # séjour bloque désormais des dates qu'il faut rendre.
+  #
+  # Contrairement à `can_pre_confirm?`, on n'exige PAS un client joignable : le
+  # dossier doit pouvoir se fermer même sans adresse. C'est l'écran de refus qui
+  # prévient qu'aucun email ne partira.
+  def can_refuse?
+    Stays::Refuser::REFUSABLE_STATUSES.include?(object.status.to_s) &&
+      object.deleted_at.blank?
+  end
+
   # --- Email de confirmation (Malau, 2026-08-20) -------------------------
   # L'envoi nominal est automatique à la bascule vers `confirmed` ; ces trois
   # méthodes n'habillent que le RENVOI manuel depuis la fiche admin.

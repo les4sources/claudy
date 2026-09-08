@@ -19,13 +19,19 @@ module Pricing
 
     # Barèmes hébergement par nom canonique de Lodging.
     LODGING_RATES = {
+      # Forfait semaine RETIRÉ (décision Michael 2026-09-08) : à 2 410 €, sept
+      # nuits coûtaient MOINS que quatre (2 550 € par la formule). Un forfait
+      # qui fait DÉCROÎTRE le prix quand le séjour s'allonge n'est pas une
+      # remise, c'est un trou dans le barème. Sept nuits repassent donc à la
+      # formule : 750 + 6 × 600 = 4 350 €.
+      #
+      # La ligne `lodging.le_grand_duc.package_7` déjà semée en base devient
+      # INERTE — `Catalog.lodging_rate` ne lit les clés `package_*` que pour les
+      # durées déclarées ICI. Elle peut donc subsister en production sans effet.
       "Le Grand-Duc" => Pricing::LodgingRate.new(
         name: "Le Grand-Duc",
         first_night_cents: 75_000,   # nuit 1 = 750 €
-        extra_night_cents: 60_000,   # nuits suivantes = 600 €
-        named_packages: {
-          7 => { label: "forfait semaine", amount_cents: 241_000 } # 2 410 €
-        }
+        extra_night_cents: 60_000    # nuits suivantes = 600 €
       ),
       "La Hulotte" => Pricing::LodgingRate.new(
         name: "La Hulotte",

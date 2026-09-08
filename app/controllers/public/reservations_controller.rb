@@ -117,6 +117,12 @@ module Public
       builder = Reservations::Builder.new(draft: @draft)
       if builder.run
         ReservationMailer.confirmation_request(builder.stay).deliver_later
+        # Email dédié au Pôle Accueil (décision Michael du 2026-09-08) : sejours@
+        # ne recevait jusqu'ici qu'une copie cachée de l'accusé de réception
+        # client — un email écrit pour le client, sur lequel on ne peut pas
+        # décider. Celui-ci est écrit pour l'équipe et renvoie sur la fiche
+        # séjour, seul endroit où les actions vivent.
+        ReservationMailer.team_new_request(builder.stay).deliver_later
         clear_draft
         # Stay-first : le Booking n'existe pas pour un séjour sans hébergement
         # classique (camping/espaces seuls) — seul le Stay est garanti. Même
@@ -260,6 +266,10 @@ module Public
       (@draft.arrival_date..@draft.departure_date).to_a
     end
 
+    # Grille nuits × gîtes de l'étape 2. Statuts bloquants (Michael 2026-09-08) :
+    # `Stay::BLOCKING_STATUSES` — une nuit tenue par une demande PRÉ-CONFIRMÉE
+    # doit apparaître grisée, sans quoi le funnel vendrait une nuit que l'équipe
+    # a déjà promise à quelqu'un d'autre.
     def build_stay_availability(lodgings, nights)
       return {} if nights.empty?
       start_date = nights.first
@@ -267,7 +277,7 @@ module Public
       lodgings.each_with_object({}) do |lodging, result|
         room_ids = lodging.rooms.pluck(:id)
         reserved = Reservation.includes(:booking)
-          .where(date: start_date..end_date, room: room_ids, booking: { status: "confirmed" })
+          .where(date: start_date..end_date, room: room_ids, booking: { status: Stay::BLOCKING_STATUSES })
           .pluck(:date).to_set
         unavail  = lodging.unavailabilities.where(date: start_date..end_date).pluck(:date).to_set
         occupied = reserved | unavail
@@ -281,6 +291,9 @@ module Public
     end
 
     # Construit les données pour le Gantt calendrier des disponibilités (1 mois).
+    # Statuts bloquants (Michael 2026-09-08) : `Stay::BLOCKING_STATUSES` — ce
+    # calendrier annonce au public ce qui est libre, il doit dire la même chose
+    # que le veto de `Lodging#available_between?`.
     def build_availability_calendar(lodgings, month: nil)
       month   = (month || Date.today).beginning_of_month
       start   = month
@@ -289,7 +302,7 @@ module Public
 
       lodging_rows = lodgings.map do |lodging|
         reserved = Reservation.includes(:booking)
-          .where(date: start..finish, room: lodging.rooms.pluck(:id), booking: { status: "confirmed" })
+          .where(date: start..finish, room: lodging.rooms.pluck(:id), booking: { status: Stay::BLOCKING_STATUSES })
           .pluck(:date).to_set
         unavail = lodging.unavailabilities.where(date: start..finish).pluck(:date).to_set
         { name: lodging.name, occupied: reserved | unavail }
@@ -299,7 +312,7 @@ module Public
         space = Space.find_by(name: space_name)
         next unless space
         booked = SpaceReservation.includes(:space_booking)
-          .where(date: start..finish, space: space, space_booking: { status: "confirmed" })
+          .where(date: start..finish, space: space, space_booking: { status: Stay::BLOCKING_STATUSES })
           .pluck(:date).to_set
         { name: space_name, occupied: booked }
       end

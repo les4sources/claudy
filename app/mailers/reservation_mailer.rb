@@ -1,10 +1,13 @@
 class ReservationMailer < ApplicationMailer
+  # Même boîte que `StayChangeRequestMailer` : le Pôle Accueil lit tout le flux
+  # séjour au même endroit.
+  TEAM_EMAIL = "sejours@les4sources.be".freeze
+
   # Récap post-réservation avec lien token stable de consultation (AC-T2-21).
   # Le breakdown affiché provient du même PricingModel.quote que l'UI (source
   # unique — AC-T2-17), recalculé depuis le Stay persisté.
   def confirmation_request(stay)
     @stay = stay
-    @booking = stay.bookables.find { |b| b.is_a?(Booking) }
     # Stay-first (epic #26, Phase 2) : le lien de consultation envoyé au client
     # pointe sur la page séjour, pas sur la page booking — un séjour sans
     # hébergement n'a d'ailleurs pas de booking.
@@ -18,6 +21,28 @@ class ReservationMailer < ApplicationMailer
       to: stay.customer.email,
       subject: "Votre demande de réservation aux 4 Sources"
     )
+  end
+
+  # Email d'ÉQUIPE à CHAQUE nouvelle demande du funnel (décision Michael du
+  # 2026-09-08). Jusqu'ici sejours@ ne recevait qu'une COPIE CACHÉE de l'accusé
+  # de réception client : un email écrit POUR le client, sans la composition
+  # détaillée, sans la note d'espaces, sans lien vers la fiche. Le Pôle Accueil
+  # doit pouvoir juger une demande depuis sa boîte, puis n'avoir qu'un clic à
+  # faire pour agir.
+  #
+  # Cet email ne porte AUCUNE action. Pré-confirmer et refuser vivent sur la
+  # fiche séjour — seul endroit où l'état du séjour est vrai au moment du clic,
+  # et où les deux flux se croisent (une demande peut avoir bougé entre l'envoi
+  # de cet email et sa lecture).
+  def team_new_request(stay)
+    @stay        = stay.decorate
+    @spaces_note = spaces_note_for(stay)
+    @stay_url    = stay_url(stay, host: application_host)
+
+    # `bcc` par défaut (ApplicationMailer) = sejours@, soit le destinataire même
+    # de cet email : sans ce `nil`, chaque demande arriverait en double dans la
+    # boîte du Pôle Accueil.
+    mail(to: TEAM_EMAIL, bcc: nil, subject: team_new_request_subject)
   end
 
   # Second email du flux depuis l'inversion de l'ordre (issue #215, décision
@@ -73,19 +98,91 @@ class ReservationMailer < ApplicationMailer
     )
   end
 
+  # Le « non » du flux (décision Michael du 2026-09-08) — l'email qui manquait.
+  # L'équipe ne savait dire que oui : pour refuser, elle cliquait « Annuler le
+  # séjour », qui n'écrit RIEN au client (contrat anti-spam du toggle de statut
+  # interne). Le client attendait donc une pré-confirmation qui ne viendrait
+  # jamais.
+  #
+  # Le MOTIF est repris tel quel : c'est la seule chose que le client lira pour
+  # comprendre, et il a été saisi POUR lui. On ferme sur une porte ouverte
+  # (d'autres dates, le téléphone de Malau) plutôt que sur un mur — une demande
+  # refusée reste quelqu'un qui voulait venir.
+  #
+  # L'envoi est piloté par `Stays::Refuser`, qui porte les garde-fous
+  # (fourre-tout, absence d'email, capture Sentry) et appelle APRÈS le commit.
+  def request_refused(stay, reason)
+    @stay = stay
+    @reason = reason.to_s.strip
+    # Garde issue #232 : un client peut vivre sans email. On ne compte pas sur
+    # les seuls appelants — un mailer sans destinataire lèverait, ici il se tait.
+    return if stay.customer&.email.blank?
+
+    mail(
+      to: stay.customer.email,
+      subject: "Votre demande de séjour aux 4 Sources n'a pas pu être retenue",
+      tag: "request_refused"
+    )
+  end
+
   private
 
   def application_host
     ENV.fetch("APPLICATION_HOST", "app.les4sources.be")
   end
 
+  # « Nouvelle demande de séjour #1503 — Camille Martin (Les Copains) ·
+  # 5 → 9 oct. 2026 · 1 685 € » : l'objet doit suffire à trier une boîte en
+  # diagonale, sans ouvrir l'email.
+  def team_new_request_subject
+    who   = @stay.customer&.name.presence || "Client sans nom"
+    group = team_group_name
+    who   = "#{who} (#{group})" if group.present?
+
+    details = [who, short_date_range(@stay), @stay.formatted_total].compact_blank
+    "Nouvelle demande de séjour ##{@stay.id} — #{details.join(' · ')}"
+  end
+
+  # Le nom de groupe vit sur les réservables (Booking, SpaceBooking…), jamais
+  # sur le séjour : on prend le premier renseigné.
+  def team_group_name
+    @stay.bookables.filter_map { |b| b.try(:group_name).presence }.first
+  end
+
+  # Forme COURTE de la plage — « 5 → 9 oct. 2026 » — où ce qui est commun aux
+  # deux bornes ne s'écrit qu'une fois. Le `date_range` du décorateur est fait
+  # pour une fiche ; dans un objet d'email il mange la place de ce qui suit.
+  def short_date_range(stay)
+    from = stay.arrival_date
+    to   = stay.departure_date
+    return nil if from.blank? && to.blank?
+    return short_date(from.presence || to) if from.blank? || to.blank? || from == to
+    return "#{short_date(from)} → #{short_date(to)}" if from.year != to.year
+    return "#{from.day} → #{short_date(to)}" if from.month == to.month
+
+    "#{I18n.l(from, format: '%-d %b')} → #{short_date(to)}"
+  end
+
+  def short_date(date) = I18n.l(date, format: "%-d %b %Y")
+
+  # Précision libre laissée par le client sur son besoin d'espace : elle est
+  # persistée dans la note INTERNE du SpaceBooking, préfixée par
+  # `SPACES_NOTE_PREFIX`. Une note SANS ce préfixe est une note d'équipe — elle
+  # n'a rien à faire dans un email de demande entrante.
+  def spaces_note_for(stay)
+    stay.stay_items
+        .filter_map { |item| item.bookable&.notes.presence if item.bookable_type == "SpaceBooking" }
+        .find { |note| note.start_with?(SpaceComposition::SPACES_NOTE_PREFIX) }
+  end
+
+  # Devis du séjour persisté. La reconstruction COMPLÈTE (décision Michael du
+  # 2026-09-08) remplace un Draft qui ne portait que `lodging_id` et les dates :
+  # salles, camping, hamacs et chien en étaient absents, et le client lisait un
+  # total plus bas que le sien — 1 265 € annoncés pour un séjour à 1 685 €.
+  # `DraftReconstructor` est déjà la reconstruction de référence : l'édition
+  # admin et la modification client s'en servent.
   def quote_from(stay)
-    draft = Reservations::Draft.new(
-      lodging_id: @booking&.lodging_id,
-      arrival_date: stay.arrival_date,
-      departure_date: stay.departure_date
-    )
-    draft.quote
+    Stays::DraftReconstructor.call(stay).quote
   rescue StandardError
     nil
   end

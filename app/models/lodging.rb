@@ -94,13 +94,18 @@ class Lodging < ApplicationRecord
   # Les `Unavailability` (indispos posées à la main) gardent leur sémantique de
   # JOURNÉES PLEINES : `from_date..to_date` INCLUSIF — volontairement différente
   # des nuits (une indispo posée sur le jour de départ d'une fenêtre bloque).
+  #
+  # STATUTS BLOQUANTS (Michael 2026-09-08) : `Stay::BLOCKING_STATUSES`, soit
+  # `confirmed` ET `pre_confirmed`. Une demande pré-confirmée tient ses dates
+  # jusqu'à confirmation, refus ou annulation — sans quoi deux demandes se
+  # pré-confirmaient sur le même gîte aux mêmes dates.
   def self_available_between?(from_date, to_date)
     last_night = [to_date - 1, from_date].max
     Reservation.includes(:booking)
                .where(
                  date: from_date..last_night,
                  room: rooms.pluck(:id),
-                 booking: { status: "confirmed" }
+                 booking: { status: Stay::BLOCKING_STATUSES }
                ).none? && unavailabilities.where(date: from_date..to_date).none?
   end
 
@@ -134,7 +139,7 @@ class Lodging < ApplicationRecord
     # nuit-unique `(d, d)`. Les `Unavailability` restent en journées pleines (inclusif).
     last_night = [to_date - 1, from_date].max
     Reservation.includes(:booking)
-               .where(date: from_date..last_night, room: scoped, booking: { status: "confirmed" })
+               .where(date: from_date..last_night, room: scoped, booking: { status: Stay::BLOCKING_STATUSES })
                .none? && unavailabilities.where(date: from_date..to_date).none?
   end
 
@@ -185,15 +190,24 @@ class Lodging < ApplicationRecord
     end
   end
 
+  # « Ce gîte est-il occupé ce jour-là ? » — question de DISPONIBILITÉ, donc
+  # `Stay::BLOCKING_STATUSES` (confirmé ET pré-confirmé), comme
+  # `self_available_between?`.
   def booked_on?(date)
     Reservation.includes(:booking)
-               .where(  
+               .where(
                  date: date,
                  room: rooms.pluck(:id),
-                 booking: { status: "confirmed" }
+                 booking: { status: Stay::BLOCKING_STATUSES }
                ).exists?
   end
 
+  # ⚠️ STATISTIQUES, PAS DISPONIBILITÉ. Cette portée alimente les écrans
+  # Rapports (`count_bookings`, `count_people`, `average_booking_*`,
+  # `occupied_beds_count`) : elle reste bornée à `confirmed`. Un séjour
+  # pré-confirmé occupe le calendrier mais n'a rien encaissé — il n'a donc rien
+  # à faire dans une moyenne de revenu ni dans un décompte d'activité réalisée
+  # (décision Michael 2026-09-08).
   def bookings_for_date_range(start_date, end_date)
     bookings.where(status: "confirmed", from_date: start_date..end_date)
   end
@@ -234,6 +248,8 @@ class Lodging < ApplicationRecord
   #     .pluck(:date).uniq
   # end
 
+  # ⚠️ STATISTIQUE (écrans Rapports), pas disponibilité : reste bornée à
+  # `confirmed` — cf. `bookings_for_date_range`.
   def occupancy_rate(start_date, end_date, opts={})
     days_count = (end_date - start_date + 1).to_i
     dates = Reservation.includes(:booking)
@@ -249,6 +265,9 @@ class Lodging < ApplicationRecord
     (dates.count.to_f / days_count.to_f * 100).to_i
   end
 
+  # ⚠️ ARGENT ENCAISSABLE, pas disponibilité : `confirmed` uniquement. Compter
+  # ici un séjour pré-confirmé gonflerait le chiffre d'affaires avec des
+  # demandes que l'équipe peut encore refuser.
   def revenues(start_date, end_date)
     bookings
       .where(status: "confirmed", from_date: start_date..end_date)

@@ -1,0 +1,46 @@
+/ Écran de REFUS d'une demande (Michael 2026-09-08), calqué sur `pre_confirm` —
+  c'est la même décision, prise dans l'autre sens, et elle mérite le même soin :
+  on montre d'abord de QUOI on parle (client, dates, total), puis on demande le
+  motif. Refuser sans relire le dossier n'aurait pas de sens.
+  Le motif est OBLIGATOIRE et part TEL QUEL au client : le `required` HTML fait
+  le premier filtre, `Stays::Refuser` porte la vraie règle.
+.px-4.sm:px-6.lg:px-8.py-6
+  .max-w-2xl.mx-auto
+    .mb-6
+      h1.text-xl.font-semibold.text-gray-900 = "Refuser la demande ##{@stay.id}"
+      p.mt-1.text-sm.text-gray-600
+        | Le séjour passera en « annulé », ses dates seront libérées et le client recevra un email reprenant le motif ci-dessous. Toute demande d'acompte encore en attente sera neutralisée.
+
+    section.bg-white.rounded-2xl.ring-1.ring-gray-200.p-5.space-y-4
+      dl.divide-y.divide-gray-100.text-sm
+        .flex.items-center.justify-between.py-2
+          dt.text-gray-600 Client
+          dd.font-medium.text-gray-900 = "#{@stay.customer.display_name} · #{@stay.customer.email.presence || 'sans email'}"
+        - if @stay.arrival_date && @stay.departure_date
+          .flex.items-center.justify-between.py-2
+            dt.text-gray-600 Dates
+            dd.font-medium.text-gray-900 = "#{l(@stay.arrival_date, format: :long)} → #{l(@stay.departure_date, format: :long)}"
+        .flex.items-center.justify-between.py-2
+          dt.text-gray-600 Statut actuel
+          dd = @stay.decorate.status_badge
+        .flex.items-center.justify-between.py-2
+          dt.text-gray-600 Total du séjour
+          dd.font-semibold.text-gray-900 = number_to_currency(@stay.total_amount_cents.to_i / 100.0, unit: "€", format: "%n %u", precision: 2)
+
+      /  Client injoignable : on le dit AVANT le clic. L'action reste possible
+         (le dossier doit pouvoir se fermer), mais personne ne doit croire
+         qu'un email est parti.
+      - if @stay.customer&.email.blank? || @stay.customer&.catch_all?
+        .rounded-lg.border.border-amber-200.bg-amber-50.px-3.py-2
+          p.text-sm.text-amber-800
+            | Ce client n'est pas joignable par email (adresse absente ou fourre-tout) : le refus sera enregistré, mais AUCUN message ne partira. Prévenez-le autrement.
+
+      = form_with url: refuse_stay_path(@stay), method: :post, class: "space-y-4" do
+        .space-y-1
+          label.block.text-sm.font-medium.text-gray-700 for="refusal_reason" Motif (envoyé au client)
+          = text_area_tag :refusal_reason, @refusal_reason, id: "refusal_reason", rows: 4, required: true, class: "block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          p.text-xs.text-gray-500
+            | Écrivez-le pour le client : il le lira tel quel. Ex. « Le gîte est déjà réservé sur ces dates. »
+        .flex.items-center.justify-end.gap-3.pt-2
+          = link_to "Annuler", stay_path(@stay), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          = submit_tag "Refuser la demande et prévenir le client", class: "inline-flex items-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 cursor-pointer"

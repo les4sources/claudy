@@ -51,6 +51,7 @@ module Stays
         @stay.update!(status: @status)
         propagate_to_bookables!
         cancel_experience_bookings! if @status == "canceled"
+        void_pending_payments!      if @status == "canceled"
       end
 
       notify_customer_of_confirmation! unless was_confirmed
@@ -78,6 +79,19 @@ module Stays
         bookable.skip_customer_notification = true if bookable.respond_to?(:skip_customer_notification=)
         bookable.update!(status: @status)
       end
+    end
+
+    # Annulation (décision Michael 2026-09-08) : depuis qu'une pré-confirmation
+    # pose un acompte ET bloque les dates, un lien d'acompte resté `pending`
+    # après « Annuler le séjour » serait encore PAYABLE — et
+    # `Stripe::CompletedCheckoutService` reconfirmerait à l'encaissement un
+    # séjour annulé, sur des dates peut-être reprises. On soft-delete les
+    # `Payment` `pending`, comme `Payments::DestroyService` : le lien public
+    # résout par `Payment.find`, que le `default_scope` rend introuvable ; la
+    # trace reste en base. Jamais un `paid` : l'argent encaissé se rembourse,
+    # il ne s'efface pas. `.to_a` : `Stay#payments` est une union `OR`.
+    def void_pending_payments!
+      @stay.payments.pending.to_a.each { |payment| payment.soft_delete!(validate: false) }
     end
 
     # Activités encore actives (pending/confirmed) → `cancelled`, comme à la
