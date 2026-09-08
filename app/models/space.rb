@@ -27,16 +27,16 @@ class Space < ApplicationRecord
     !booked_on?(date)
   end
 
-  # Occupé = le nombre de groupes confirmés ce jour atteint la capacité.
+  # Occupé = le nombre de groupes BLOQUANTS ce jour atteint la capacité.
   # capacity 1 (défaut) → un seul groupe, comportement historique des salles.
   # capacity >1 → espace multi-groupe (camping : Bois, Pâture est/ouest).
   def booked_on?(date)
-    confirmed_reservations_on(date) >= capacity
+    blocking_reservations_on(date) >= capacity
   end
 
   # Places (groupes) encore disponibles ce jour-là.
   def remaining_capacity_on(date)
-    [capacity - confirmed_reservations_on(date), 0].max
+    [capacity - blocking_reservations_on(date), 0].max
   end
 
   # Espace pouvant accueillir plusieurs groupes simultanément.
@@ -46,12 +46,16 @@ class Space < ApplicationRecord
 
   private
 
-  def confirmed_reservations_on(date)
+  # Renommée depuis `confirmed_reservations_on` (Michael 2026-09-08) : elle ne
+  # compte plus les seuls `confirmed` mais tous les `Stay::BLOCKING_STATUSES`,
+  # `pre_confirmed` compris. Garder l'ancien nom aurait été un mensonge à
+  # chaque relecture.
+  def blocking_reservations_on(date)
     SpaceReservation.includes(:space_booking)
                     .where(
                       date: date,
                       space: self.id,
-                      space_booking: { status: "confirmed" }
+                      space_booking: { status: Stay::BLOCKING_STATUSES }
                     ).count
   end
 end

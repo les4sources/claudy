@@ -36,9 +36,11 @@ module Stays
       # haute excluant le jour de départ) pour ne pas refuser une rotation dos-à-dos.
       # Le `max` garde un intervalle valide même sur une fenêtre dégénérée (0 nuit).
       last_night = [@draft.departure_date - 1, @draft.arrival_date].max
+      # Statuts bloquants (Michael 2026-09-08) : `confirmed` ET `pre_confirmed`.
+      # Source unique `Stay::BLOCKING_STATUSES` — la même que `Lodging#available_between?`.
       scope = Reservation.joins(:booking)
                          .where(date: @draft.arrival_date..last_night,
-                                room_id: ids, bookings: { status: "confirmed" })
+                                room_id: ids, bookings: { status: Stay::BLOCKING_STATUSES })
       own_ids = own_booking_ids
       scope = scope.where.not(bookings: { id: own_ids }) if own_ids.any?
       # Les `Unavailability` gardent leur sémantique de JOURNÉES PLEINES (inclusif

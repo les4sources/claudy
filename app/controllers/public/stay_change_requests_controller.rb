@@ -185,6 +185,7 @@ module Public
 
     # Grille de dispo affichée dans le calendrier d'hébergement : la propre
     # occupation du séjour ne doit PAS s'y compter comme indisponible.
+    # Statuts bloquants (Michael 2026-09-08) : `Stay::BLOCKING_STATUSES`.
     def build_stay_availability(lodgings, nights)
       return {} if nights.empty?
 
@@ -194,7 +195,7 @@ module Public
         room_ids = lodging.rooms.pluck(:id)
         scope = Reservation.includes(:booking)
                            .where(date: nights.first..nights.last, room: room_ids,
-                                  booking: { status: "confirmed" })
+                                  booking: { status: Stay::BLOCKING_STATUSES })
         scope = scope.where.not(booking: { id: own_ids }) if own_ids.any?
         occupied = scope.pluck(:date).to_set |
                    lodging.unavailabilities.where(date: nights.first..nights.last).pluck(:date).to_set

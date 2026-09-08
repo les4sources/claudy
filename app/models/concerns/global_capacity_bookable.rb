@@ -10,14 +10,18 @@
 #
 # Une réservation occupe chaque NUIT de la fenêtre [from_date, to_date). Une nuit
 # `d` est couverte si `from_date <= d < to_date`. La dispo est vérifiée nuit par
-# nuit : pour chaque nuit demandée, (unités déjà confirmées) + (unités demandées)
-# ne doit pas dépasser `TOTAL_CAPACITY`. Seules les réservations `confirmed`
-# comptent contre la capacité (comme `Space#booked_on?`).
+# nuit : pour chaque nuit demandée, (unités déjà retenues) + (unités demandées)
+# ne doit pas dépasser `TOTAL_CAPACITY`. Seules les réservations dont le statut
+# est BLOQUANT comptent contre la capacité (comme `Space#booked_on?`).
 module GlobalCapacityBookable
   extend ActiveSupport::Concern
 
   included do
     scope :confirmed, -> { where(status: "confirmed") }
+    # Statuts qui MOBILISENT une place (Michael 2026-09-08) : `confirmed` ET
+    # `pre_confirmed`. Distinct de `confirmed`, qu'on garde tel quel pour les
+    # lectures qui parlent vraiment de séjours confirmés.
+    scope :blocking, -> { where(status: Stay::BLOCKING_STATUSES) }
     # Réservations couvrant la nuit `date` (from <= date < to).
     scope :covering, ->(date) { where("from_date <= ? AND to_date > ?", date, date) }
   end
@@ -33,10 +37,11 @@ module GlobalCapacityBookable
       Setting.integer(self::CAPACITY_SETTING_KEY, default: self::TOTAL_CAPACITY)
     end
 
-    # Unités déjà CONFIRMÉES pour la nuit `date`, en excluant éventuellement une
-    # réservation donnée (utile à l'édition d'un réservable existant).
+    # Unités déjà RETENUES pour la nuit `date` (statuts bloquants : confirmé et
+    # pré-confirmé), en excluant éventuellement une réservation donnée (utile à
+    # l'édition d'un réservable existant).
     def units_reserved_on(date, excluding_id: nil)
-      scope = confirmed.covering(date)
+      scope = blocking.covering(date)
       scope = scope.where.not(id: excluding_id) if excluding_id
       scope.sum(capacity_units_column)
     end

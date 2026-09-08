@@ -320,8 +320,10 @@ class StaysController < BaseController
     end
 
     last_night = [to - 1, from].max
+    # Statuts bloquants (Michael 2026-09-08) : `Stay::BLOCKING_STATUSES`, la même
+    # source que les méthodes modèle empruntées par la branche sans exclusion.
     scope = Reservation.joins(:booking)
-                       .where(date: from..last_night, room_id: ids, bookings: { status: "confirmed" })
+                       .where(date: from..last_night, room_id: ids, bookings: { status: Stay::BLOCKING_STATUSES })
                        .where.not(bookings: { id: exclude_booking_ids })
     scope.none? && lodging.unavailabilities.where(date: from..to).none?
   end
@@ -958,8 +960,10 @@ class StaysController < BaseController
     exclude_ids = @stay&.persisted? ? @stay.stay_items.where(bookable_type: "Booking").pluck(:bookable_id) : []
     Array(lodgings).each_with_object({}) do |lodging, result|
       room_ids = lodging.rooms.pluck(:id)
+      # Statuts bloquants (Michael 2026-09-08) : parité stricte avec la grille du
+      # funnel (`Public::ReservationsController#build_stay_availability`).
       reserved = Reservation.joins(:booking)
-                            .where(date: start_date..end_date, room_id: room_ids, bookings: { status: "confirmed" })
+                            .where(date: start_date..end_date, room_id: room_ids, bookings: { status: Stay::BLOCKING_STATUSES })
                             .where.not(bookings: { id: exclude_ids })
                             .pluck(:date).to_set
       unavail  = lodging.unavailabilities.where(date: start_date..end_date).pluck(:date).to_set
