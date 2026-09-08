@@ -12,7 +12,11 @@
 / conteneur centré (`max-w-2xl` / `max-w-3xl`) : pleine largeur veut dire « pas
 / de cadre », pas « lignes de texte de 1600 px ».
 doctype html
-html(lang=I18n.locale)
+/ `funnel-root` : la racine est l'élément défilant de la page, et c'est elle qui
+/ doit réserver la bande du bas occupée par la barre récap collante
+/ (`scroll-padding-bottom`, cf. funnel.css). Sans elle, le navigateur pose sous
+/ la barre tout élément qu'il amène « juste au bord » — le bouton d'envoi compris.
+html.funnel-root(lang=I18n.locale)
   head
     meta(charset="utf-8")
     meta(name="viewport" content="width=device-width, initial-scale=1")

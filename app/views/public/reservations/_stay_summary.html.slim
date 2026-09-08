@@ -1,4 +1,86 @@
-/ Récapitulatif lecture seule — affiché sur l'étape coordonnées
+/ Récapitulatif lecture seule — affiché sur l'étape coordonnées.
+/
+/ Il ne montrait que le gîte et les dates. Quelqu'un qui avait réservé la Petite
+/ Salle cinq jours, planté quatre tentes et annoncé douze personnes relisait
+/ « La Hulotte, 5/10 → 9/10 » et envoyait sa demande sans avoir jamais revu le
+/ reste : la dernière occasion de repérer une erreur ne montrait pas ce qu'il y
+/ avait à repérer. Le récap porte maintenant tout ce que le brouillon contient.
+/
+/ ATTENTION AUX INDEX — les grilles ne se lisent pas sur le même axe :
+/   · hébergement / camping / van / hamac sont indexés par NUIT, [arrivée, départ) ;
+/   · les espaces sont indexés par JOUR, départ INCLUS (cf. _spaces_calendar).
+/ Lire les seconds avec l'axe des premiers décalerait toutes les dates d'un cran
+/ et amputerait le séjour de son dernier jour de salle.
+- days = (draft.arrival_date && draft.departure_date && draft.departure_date >= draft.arrival_date) ? (draft.arrival_date..draft.departure_date).to_a : []
+
+/ « 9 oct. » — le mois abrégé vient d'I18n, pas d'une table maison.
+- day_label = ->(d) { "#{d.day} #{I18n.t("date.abbr_month_names")[d.month]}" }
+/ Période couverte par une série de jours : « (5 → 9 oct.) », ou « (5 oct.) »
+/ sur un jour unique. Le mois n'est répété à gauche que s'il change en route.
+- span_for = ->(ds) { ds.empty? ? "" : (ds.min == ds.max ? " (#{day_label.(ds.min)})" : " (#{ds.min.month == ds.max.month ? ds.min.day.to_s : day_label.(ds.min)} → #{day_label.(ds.max)})") }
+
+/ ── Hébergement, nuit par nuit ───────────────────────────────
+/ La grille peut porter DEUX gîtes sur un même séjour (on démarre à la Hulotte,
+/ on finit au Grand-Duc) : une ligne par gîte, dans l'ordre où il apparaît.
+/ Sans grille — brouillon ancien, ou choix posé hors grille — on retombe sur
+/ `draft.lodging`, seule source dans ce cas.
+- lodging_nights = Array(draft.lodging_night_ids).map { |id| id.presence }.compact.tally
+- lodgings_by_id = lodging_nights.any? ? Lodging.where(id: lodging_nights.keys).index_by { |l| l.id.to_s } : {}
+- lodging_lines = lodging_nights.map { |id, count| "#{lodgings_by_id[id.to_s]&.name || "Hébergement"} — #{count} nuit#{"s" if count > 1}" }
+- lodging_lines = [draft.lodging.name] if lodging_lines.empty? && draft.lodging
+
+/ ── Tout le reste, en paires [intitulé, valeur] ──────────────
+/ Une seule boucle de rendu : la variété des lignes vit dans les données, pas
+/ dans huit blocs Slim imbriqués où une indentation de travers sort du <dl> en
+/ silence.
+- rows = []
+
+- adults = draft.adults.to_i
+- children = draft.children.to_i
+- occupants = [("#{adults} adulte#{"s" if adults > 1}" if adults.positive?), ("#{children} enfant#{"s" if children > 1}" if children.positive?)].compact.join(" · ")
+- rows << ["Vous serez", occupants] if occupants.present?
+
+/ Espaces : la grille est un tableau de périodes indexé par JOUR. On regroupe
+/ par salle ET par période — « 5 journées » et « 2 soirées » ne se totalisent
+/ pas, ce sont deux prestations distinctes au tarif.
+- space_names  = { "grande_salle" => "Grande salle", "petite_salle" => "Petite salle", "cuisine_pro" => "Cuisine pro" }
+- period_nouns = { "journee" => ["journée", "journées"], "soiree" => ["soirée", "soirées"], "journee_et_soiree" => ["journée + soirée", "journées + soirées"] }
+- (draft.space_slots || {}).each do |space_key, slots|
+  - space_name = space_names[space_key.to_s] || space_key.to_s.humanize
+  - period_nouns.each do |period, nouns|
+    - indexes = Array(slots).each_with_index.filter_map { |value, i| i if value.to_s == period }
+    - next if indexes.empty?
+    - rows << ["Espaces", "#{space_name} — #{indexes.size} #{indexes.size > 1 ? nouns.last : nouns.first}#{span_for.(indexes.filter_map { |i| days[i] })}"]
+
+/ Camping : `draft.campings` rend UNE ligne par nuit occupée quand la grille
+/ per-nuit est remplie. On les regroupe en personnes × nuits — la version
+/ précédente ne lisait que la PREMIÈRE entrée et annonçait « 4 personnes » pour
+/ quatre campeurs pendant trois nuits, en taisant la durée.
+- Array(draft.campings).map { |c| c.respond_to?(:symbolize_keys) ? c.symbolize_keys : c }.select { |c| c[:people].to_i.positive? }.group_by { |c| [c[:kind].to_s, c[:people].to_i] }.each do |group, lines|
+  - camping_nights = lines.sum { |c| [c[:nights].to_i, 1].max }
+  - rows << ["Camping #{group.first}", "#{group.last} pers. × #{camping_nights} nuit#{"s" if camping_nights > 1}"]
+
+- van_nights = Array(draft.vans).sum { |v| (v.respond_to?(:symbolize_keys) ? v.symbolize_keys : v)[:nights].to_i }
+- rows << ["Van / camping-car", "#{van_nights} nuit#{"s" if van_nights > 1}"] if van_nights.positive?
+
+/ Hamacs : même regroupement que le camping — unités × nuits.
+- Array(draft.hamacs).map { |h| h.respond_to?(:symbolize_keys) ? h.symbolize_keys : h }.select { |h| h[:count].to_i.positive? }.group_by { |h| [h[:kind].to_s, h[:count].to_i] }.each do |group, lines|
+  - hamac_nights = lines.sum { |h| [h[:nights].to_i, 1].max }
+  - rows << ["Hamac #{group.first}", "#{group.last} unité#{"s" if group.last > 1} × #{hamac_nights} nuit#{"s" if hamac_nights > 1}"]
+
+/ Salles datées à l'ancienne (`halls`, sans grille) — le form admin les pose encore.
+- period_labels = { "journee" => "journée", "soiree" => "soirée", "journee_et_soiree" => "j. + soirée" }
+- hall_labels   = { "grande_salle" => "Grande salle", "petite_salle" => "Petite salle", "cuisine_pro" => "Cuisine pro" }
+- Array(draft.halls).each do |h|
+  - next if h[:kind].blank? || h[:date].blank? || h[:period].blank?
+  - date_str = begin; Date.parse(h[:date].to_s).strftime("%-d/%m"); rescue; h[:date].to_s; end
+  - rows << [hall_labels[h[:kind].to_s] || h[:kind].to_s.humanize, "#{date_str} — #{period_labels[h[:period].to_s] || h[:period]}"]
+
+- rows << ["Nom du groupe", draft.group_name] if draft.group_name.present?
+
+- dog_label = { 0 => nil, 1 => "Un chien (+50 €)", 2 => "Plusieurs chiens (sur demande)" }[draft.dogs_count.to_i]
+- rows << ["Animal", dog_label] if dog_label
+
 .rounded-xl.border.border-bark.bg-forest-tint.p-4.mb-0
   .flex.items-center.justify-between.mb-3
     h3.text-sm.font-semibold.text-forest Votre séjour
@@ -6,10 +88,10 @@
 
   dl.space-y-2
 
-    - if draft.lodging
+    - lodging_lines.each do |line|
       .flex.items-start.gap-3
         dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 Hébergement
-        dd.text-sm.font-medium.text-ink = draft.lodging.name
+        dd.text-sm.font-medium.text-ink = line
 
     - if draft.arrival_date && draft.departure_date
       .flex.items-start.gap-3
@@ -18,35 +100,7 @@
           | #{draft.arrival_date.strftime("%-d/%m/%Y")} → #{draft.departure_date.strftime("%-d/%m/%Y")}
           span.ml-1.text-xs.text-forest.font-medium = "(#{draft.nights} nuit#{"s" if draft.nights.to_i > 1})"
 
-    - tente = draft.campings.find { |c| c[:kind].to_s == "tente" }
-    - if tente && tente[:people].to_i > 0
+    - rows.each do |row|
       .flex.items-start.gap-3
-        dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 Camping tente
-        dd.text-sm.text-ink = "#{tente[:people]} personne#{"s" if tente[:people].to_i > 1}"
-
-    - van_nights = draft.vans.sum { |v| v[:nights].to_i }
-    - if van_nights > 0
-      .flex.items-start.gap-3
-        dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 Van / camping-car
-        dd.text-sm.text-ink = "#{van_nights} nuit#{"s" if van_nights > 1}"
-
-    - draft.hamacs.each do |h|
-      - if h[:count].to_i > 0
-        .flex.items-start.gap-3
-          dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 = "Hamac #{h[:kind]}"
-          dd.text-sm.text-ink = "#{h[:count]} unité#{"s" if h[:count].to_i > 1}"
-
-    - period_labels = { "journee" => "journée", "soiree" => "soirée", "journee_et_soiree" => "j. + soirée" }
-    - hall_labels   = { "grande_salle" => "Grande salle", "petite_salle" => "Petite salle", "cuisine_pro" => "Cuisine pro" }
-    - draft.halls.each do |h|
-      - next if h[:kind].blank? || h[:date].blank? || h[:period].blank?
-      - date_str = begin; Date.parse(h[:date].to_s).strftime("%-d/%m"); rescue; h[:date].to_s; end
-      .flex.items-start.gap-3
-        dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 = hall_labels[h[:kind].to_s] || h[:kind].to_s.humanize
-        dd.text-sm.text-ink = "#{date_str} — #{period_labels[h[:period].to_s] || h[:period]}"
-
-    - dog_label = { 0 => nil, 1 => "Un chien (+50 €)", 2 => "Plusieurs chiens (sur demande)" }[draft.dogs_count.to_i]
-    - if dog_label
-      .flex.items-start.gap-3
-        dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 Animal
-        dd.text-sm.text-ink = dog_label
+        dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 = row.first
+        dd.text-sm.text-ink = row.last

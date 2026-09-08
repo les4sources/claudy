@@ -2,10 +2,10 @@ require "rails_helper"
 
 # Garde-fou « panier vide » de l'étape 2 du funnel /reservation.
 #
-# Avant : le bouton « Continuer vers les activités » restait actif à 0,00 €. On
-# pouvait traverser les activités puis les coordonnées et déposer une demande
-# sans la moindre nuit d'hébergement, ni emplacement, ni salle — un lead vide
-# côté équipe, et côté client un « séjour » qui ne contient rien.
+# Avant : le bouton de sortie d'étape restait actif à 0,00 €. On pouvait aller
+# jusqu'aux coordonnées et déposer une demande sans la moindre nuit
+# d'hébergement, ni emplacement, ni salle — un lead vide côté équipe, et côté
+# client un « séjour » qui ne contient rien.
 #
 # L'état du bouton suit le devis : il est rendu par un partial que le Turbo
 # Stream de /reservation/devis remplace au même titre que le total collant, pour
@@ -33,7 +33,7 @@ RSpec.describe "Public::Reservations — CTA de composition", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('id="compose_cta"')
-      expect(response.body).to match(/<button[^>]*disabled[^>]*>(?:(?!<\/button>).)*Continuer vers les activités/m)
+      expect(response.body).to match(/<button[^>]*disabled[^>]*>(?:(?!<\/button>).)*Continuer vers mes coordonnées/m)
       expect(response.body).to include("Choisissez au moins une nuit d'hébergement")
     end
 

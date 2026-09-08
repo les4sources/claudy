@@ -16,8 +16,11 @@ section.funnel-card.p-5.md:p-7(data-stay-hero="true")
         p.inline-flex.items-center.gap-1.5.rounded-full.bg-ember-tint.px-3.py-1.text-sm.font-semibold(class="text-ember")
           = t("public.stays.show.pending_pill")
       h1.funnel-title.mt-3 = t("public.stays.show.title")
-    /  Un séjour annulé n'attend plus de paiement : le badge se tait.
-    = @stay.payment_status_badge unless @stay.canceled?
+    /  Un séjour annulé n'attend plus de paiement, et une demande pas encore
+       examinée n'en attend pas ENCORE : dans les deux cas le badge se tait.
+       « En attente de paiement » sur une demande déposée la veille annonçait
+       une dette que le Pôle Accueil n'avait pas décidé de réclamer.
+    = @stay.payment_status_badge unless @stay.canceled? || @stay.awaiting_review?
 
   p.mt-2.text-base(class="text-moss")
     - if @stay.canceled?
