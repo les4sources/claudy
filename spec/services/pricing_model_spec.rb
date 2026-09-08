@@ -152,21 +152,26 @@ RSpec.describe PricingModel do
         expect(quote.breakdown.size).to eq(1)
       end
 
-      it "duo journée + soirée SEMAINE = 540 € (jour duo + 150 €)" do
+      # Epic #234 phase 2 : le forfait soir des deux salles vaut 90 € sur le
+      # site (et non 150 €), donc 390 + 90 = 480 €.
+      it "duo journée + soirée SEMAINE = 480 € (jour duo + forfait soir 90 €)" do
         quote = described_class.quote(draft(halls: [
           { kind: "grande_salle", date: "2026-09-01", period: "journee_et_soiree" },
           { kind: "petite_salle", date: "2026-09-01", period: "journee_et_soiree" }
         ]))
-        expect(quote.total_cents).to eq(54_000)
+        expect(quote.total_cents).to eq(48_000)
         expect(quote.breakdown.size).to eq(1)
       end
 
-      it "duo WEEK-END (grille un vendredi) — journée = 495 €, soirée = 335 €, jour+soirée = 645 €" do
+      # Epic #234 phase 2 : la grille week-end est celle du site — journée +
+      # forfait soir 115 € = 610 €. La journée du VENDREDI, elle, reste en
+      # semaine (décision 4) ; cf. spec/services/pricing_model_halls_spec.rb.
+      it "duo WEEK-END (grille un samedi) — journée = 495 €, soirée = 335 €, jour+soirée = 610 €" do
         {
-          "journee" => 49_500, "soiree" => 33_500, "journee_et_soiree" => 64_500
+          "journee" => 49_500, "soiree" => 33_500, "journee_et_soiree" => 61_000
         }.each do |period, expected|
           quote = described_class.quote(draft(
-            arrival_date: Date.parse("2026-09-04"),      # vendredi (week-end)
+            arrival_date: Date.parse("2026-09-05"),      # samedi (week-end)
             departure_date: Date.parse("2026-09-05"),
             space_slots: { "grande_salle" => [period], "petite_salle" => [period] }
           ))

@@ -26,6 +26,16 @@ RSpec.describe "Paramètres > Tarifs", type: :request do
       expect(response.body).to include("Expériences")
     end
 
+    # Epic #234 phase 2 : les forfaits multi-jours des salles sont des tarifs
+    # comme les autres — visibles et éditables dans le groupe « Salles ».
+    it "expose les forfaits multi-jours des salles dans le groupe « Salles »" do
+      get rates_path
+
+      expect(response.body).to include("hall.petite_salle.cinq_jours")
+      expect(response.body).to include("hall_weekend.grande_salle.forfait_weekend")
+      expect(response.body).to include("Petite Salle — 5 jours (semaine)")
+    end
+
     it "affiche un montant en euros et un taux en pourcentage" do
       get rates_path
 
