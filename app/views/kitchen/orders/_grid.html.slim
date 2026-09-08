@@ -1,0 +1,46 @@
+/ Grille jours × services (issue #238, décision 1). Le type et les convives se
+  posent une fois ; chaque case cochée deviendra une ligne autonome, seule unité
+  que la cuisine valide ou refuse.
+.sm:col-span-6(data-controller="meal-grid"
+               data-meal-grid-rates-value=meal_rates_cents_json
+               data-meal-grid-trio-value=Pricing::Catalog.meal_per_person_cents("trio"))
+  = hidden_field_tag :grid_mode, "1"
+
+  .flex.flex-wrap.items-center.justify-between.gap-2
+    span.block.text-sm.font-medium.text-gray-700 Services à préparer
+    .flex.flex-wrap.gap-1
+      - [["all", "Tout"], ["midi", "Midis"], ["soir", "Soirs"], ["trio", "Trio"], ["none", "Rien"]].each do |mode, label|
+        button.rounded-full.border.border-gray-300.px-3.text-xs.text-gray-600(type="button" class="py-1 hover:border-4s-main hover:text-4s-main" data-action="meal-grid#fill" data-mode=mode)
+          = label
+
+  .mt-2.overflow-x-auto
+    table.w-full.text-sm(data-meal-grid-target="table")
+      thead
+        tr
+          th.py-2.pr-3.text-left.text-xs.font-medium.text-gray-500
+          - days.each_with_index do |day, index|
+            th.px-1.py-2.text-center.text-xs.font-medium.text-gray-500
+              .capitalize = l(day, format: "%a")
+              .text-gray-400 = l(day, format: "%-d/%-m")
+              - if index.zero?
+                .text-gray-300(class="text-[0.6rem]") arrivée
+              - elsif index == days.size - 1
+                .text-gray-300(class="text-[0.6rem]") départ
+      tbody
+        - Kitchen::GridSubmission::MOMENTS.each do |moment|
+          tr.border-t.border-gray-100(data-meal-grid-target="row" data-moment=moment class=(moment == "gouter" ? "hidden" : nil))
+            td.py-2.pr-3.text-gray-700
+              = MealOrder::MOMENT_LABELS[moment]
+            - days.each do |day|
+              td.px-1.py-2.text-center
+                label.inline-flex.cursor-pointer
+                  = check_box_tag "grid[#{day.iso8601}][#{moment}]", "1", false,
+                                  id: "grid_#{day.iso8601}_#{moment}",
+                                  "aria-label" => "#{MealOrder::MOMENT_LABELS[moment]} du #{l(day, format: :long)}",
+                                  data: { "meal-grid-target": "cell", moment: moment, action: "change->meal-grid#recount" },
+                                  class: "h-5 w-5 rounded border-gray-300 text-4s-main focus:ring-4s-main"
+
+  p.mt-2.text-sm.text-gray-600(data-meal-grid-target="counter")
+    | Aucun service coché.
+  p.mt-1.text-xs.text-gray-400
+    | Le goûter n'existe que pour la famille « Repas ». Une journée complète (midi + goûter + soir) est ramenée au prix de la formule trio.

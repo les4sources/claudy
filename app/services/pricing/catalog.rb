@@ -131,7 +131,8 @@ module Pricing
     # `MealOrder::KIND_LABELS` — source unique pour les vues comme pour le seed.
     MEAL_PER_PERSON_CENTS = {
       "repas"         => 1_500, # un repas, midi ou soir
-      "trio"          => 3_500, # midi + goûter + soir
+      "gouter"        => 700,   # le goûter, service facturable à part (issue #238)
+      "trio"          => 3_500, # midi + goûter + soir — PRIX DE FORMULE, plus un type
       "buffet_vege"   => 1_200,
       "buffet_viande" => 1_400,
       "apero"         => 500    # provisoire, à ajuster dans Paramètres > Tarifs
