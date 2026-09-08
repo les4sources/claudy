@@ -684,12 +684,28 @@ class StayDecorator < ApplicationDecorator
     object.experiences_pending_amount_cents.positive?
   end
 
+  # Demande DÉPOSÉE, pas encore regardée. Depuis l'inversion de l'ordre (issue
+  # #215) le funnel n'encaisse plus rien : il enregistre une demande que le Pôle
+  # Accueil examine, et c'est la PRÉ-CONFIRMATION qui pose l'acompte et son lien
+  # de paiement. Tant que ce regard humain n'a pas eu lieu, rien n'est dû —
+  # l'équipe peut encore ajuster le séjour, ou le refuser.
+  #
+  # La page client réclamait pourtant « Payer le solde de 1 685 € » sous un badge
+  # « En attente de paiement », sur une demande que personne n'avait encore lue :
+  # qui payait là réglait un séjour qui n'existait pas.
+  def awaiting_review?
+    object.status == "pending"
+  end
+
   # Faut-il afficher le bloc de ventilation du solde ? Dès qu'il y a quelque
   # chose à dire : un exigible à régler, un encaissé à créditer, ou des
   # activités en attente à signaler.
+  # Demande EN ATTENTE : rien n'est dû avant la pré-confirmation (cf.
+  # `awaiting_review?`) — ventiler un solde qui n'est pas réclamé n'a rien à dire.
   # Séjour ANNULÉ : plus rien d'exigible — la section ne sert qu'à montrer ce
   # qui a déjà été encaissé (à rembourser ou retenir), sinon elle disparaît.
   def show_balance_section?
+    return false if awaiting_review?
     return object.amount_paid_cents.positive? if object.canceled?
 
     object.payable_now? ||
@@ -700,8 +716,11 @@ class StayDecorator < ApplicationDecorator
   # Bouton « Payer le solde » : un exigible strictement positif ET aucun
   # paiement `pending` déjà en cours (l'acompte non réglé, par exemple, est déjà
   # couvert par son propre CTA — on n'empile pas deux boutons pour la même dette).
-  # Jamais sur un séjour ANNULÉ : plus rien d'exigible, même si le total le dit.
+  # Jamais sur une demande EN ATTENTE ni sur un séjour ANNULÉ : dans les deux cas
+  # plus rien n'est exigible, quoi qu'en dise le total.
   def show_balance_cta?
+    return false if awaiting_review?
+
     !object.canceled? && object.payable_now? && object.payments.pending.none?
   end
 

@@ -9,11 +9,53 @@ RSpec.describe "Public::Stays (/sejour/:token)", type: :request do
                     booking_type: "lodging", price_cents: 48_500)
   end
 
+  # `pre_confirmed`, et non plus `pending` : depuis l'inversion de l'ordre
+  # (issue #215) un séjour ne doit d'argent qu'à partir de la PRÉ-CONFIRMATION
+  # du Pôle Accueil. Une demande encore `pending` n'affiche ni solde ni CTA de
+  # paiement — c'est le sujet du bloc « demande en attente » plus bas ; ces
+  # exemples-ci portent sur l'affichage des paiements, qui suppose une demande
+  # déjà acceptée.
   let(:stay) do
-    s = Stay.create!(customer: customer, status: "pending", total_amount_cents: 48_500,
+    s = Stay.create!(customer: customer, status: "pre_confirmed", total_amount_cents: 48_500,
                      arrival_date: Date.today + 10, departure_date: Date.today + 12)
     s.stay_items.create!(bookable: booking)
     s
+  end
+
+  # Demande DÉPOSÉE, pas encore regardée : la page annonçait « En attente de
+  # paiement » et « Payer le solde de 485 € » alors que rien n'est dû avant la
+  # pré-confirmation. Qui payait là réglait un séjour qui n'existait pas.
+  let(:pending_stay) do
+    s = Stay.create!(customer: customer, status: "pending", total_amount_cents: 48_500,
+                     arrival_date: Date.today + 30, departure_date: Date.today + 32)
+    s.stay_items.create!(bookable: Booking.create!(firstname: "Alex", lastname: "Durand",
+                                                   from_date: Date.today + 30, to_date: Date.today + 32,
+                                                   adults: 2, status: "pending",
+                                                   booking_type: "lodging", price_cents: 48_500))
+    s
+  end
+
+  describe "GET /sejour/:token — demande EN ATTENTE (issue #215)" do
+    before { get "/sejour/#{pending_stay.token}" }
+
+    it "ne réclame aucun paiement" do
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include('data-stay-balance-cta="true"')
+      expect(response.body).not_to include('data-stay-balance="true"')
+      expect(response.body).not_to include(I18n.t("public.stays.payment_status.pending"))
+    end
+
+    it "explique que la pré-confirmation viendra par email" do
+      expect(response.body).to include('data-stay-awaiting-review="true"')
+      # La phrase porte des apostrophes : elle arrive échappée dans le HTML.
+      expect(response.body).to include(ERB::Util.html_escape(I18n.t("public.stays.payments.awaiting_review")))
+    end
+
+    # Le client a le droit de savoir ce qu'il a demandé — ne rien réclamer
+    # n'est pas la même chose que ne rien montrer.
+    it "affiche quand même le total du séjour" do
+      expect(response.body).to include(I18n.t("public.stays.show.total"))
+    end
   end
 
   describe "GET /sejour/:token" do
