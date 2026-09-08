@@ -7,7 +7,10 @@ RSpec.describe Kitchen::Config do
       expect(described_class.enabled?("repas")).to be(true)
       expect(described_class.enabled?("buffet")).to be(true)
       expect(described_class.enabled?("apero")).to be(true)
-      expect(described_class.enabled_kinds).to eq(MealOrder::KINDS)
+      # `trio` et `gouter` ne sont plus PROPOSABLES depuis l'issue #238 : le
+      # premier est devenu le bouton « Trio » de la grille, le second se coche
+      # dans la grille plutôt qu'il ne se choisit.
+      expect(described_class.enabled_kinds).to eq(%w[repas buffet_vege buffet_viande apero])
     end
 
     it "porte les plafonds et délais d'usage" do
@@ -28,7 +31,7 @@ RSpec.describe Kitchen::Config do
       Setting.set("kitchen.apero.enabled", "0")
 
       expect(described_class.enabled?("apero")).to be(false)
-      expect(described_class.enabled_kinds).to eq(%w[repas trio buffet_vege buffet_viande])
+      expect(described_class.enabled_kinds).to eq(%w[repas buffet_vege buffet_viande])
     end
 
     it "lit le responsable par défaut" do

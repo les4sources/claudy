@@ -1,12 +1,8 @@
 - content_for :page_header do
-  = render 'layouts/components/page_header',
-           title: "Nouveau pôle"
+  = render "layouts/components/page_header", title: "Nouveau pôle"
 
-= form_with model: @team,
-            url: teams_path do |f|
-  .space-y-8.divide-y.divide-gray-200.sm:space-y-5
-    .space-y-6.sm:space-y-5
-      = render "form", f: f
-
+= form_with model: @team, url: teams_path do |f|
+  = render "form", f: f
   = f.actions do
     = f.submit "Enregistrer"
+    = link_to "Annuler", teams_path, class: "ml-3 text-sm text-gray-500 hover:underline"

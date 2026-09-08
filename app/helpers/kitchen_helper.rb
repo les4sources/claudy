@@ -18,6 +18,15 @@ module KitchenHelper
     }.to_h.to_json
   end
 
+  # La même table, mais en CENTS : la grille (issue #238) calcule un total, pas
+  # une phrase d'aide, et un total se compte en cents pour ne pas dériver.
+  def meal_rates_cents_json
+    MealOrder::KINDS.filter_map { |kind|
+      cents = Pricing::Catalog.meal_per_person_cents(kind)
+      [kind, cents] if cents
+    }.to_h.to_json
+  end
+
   # À la création, on ne propose que les deux états d'entrée : le client se
   # renseigne, ou il demande fermement. Confirmer et annuler viennent après.
   def status_choices(order)

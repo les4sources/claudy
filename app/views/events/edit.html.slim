@@ -1,6 +1,9 @@
 - content_for :page_header do
   = render 'layouts/components/page_header',
-           title: "Mettre à jour l'événement"
+           title: "Mettre à jour l'événement",
+           links: [ \
+             link_to("Dupliquer", duplicate_event_path(@event), class: "btn-page-header-no-background") \
+           ]
 
 = form_with model: @event,
             url: event_path(@event) do |f|

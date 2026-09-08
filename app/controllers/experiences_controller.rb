@@ -1,5 +1,5 @@
 class ExperiencesController < BaseController
-  before_action :get_experience, only: [:show, :edit, :update, :destroy]
+  before_action :get_experience, only: [:show, :edit, :update, :destroy, :publish, :unpublish]
 
   breadcrumb "Activités", :experiences_path, match: :exact
 
@@ -76,6 +76,26 @@ class ExperiencesController < BaseController
              status: :unprocessable_entity,
              alert: service.error_message
     end
+  end
+
+  # Publication sur le site les4sources.be (catalogue). Le slug (optionnel)
+  # n'est pris en compte qu'à la première publication ; ensuite il est figé.
+  def publish
+    Experiences::PublishService.new(experience: @experience).publish!(slug: params[:slug])
+    redirect_to experience_path(@experience),
+                notice: "L'activité est publiée sur le site : #{@experience.public_path}"
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to experience_path(@experience),
+                alert: "Publication impossible : #{e.record.errors.full_messages.join(', ')}"
+  end
+
+  def unpublish
+    Experiences::PublishService.new(experience: @experience).unpublish!
+    redirect_to experience_path(@experience),
+                notice: "L'activité n'est plus publiée sur le site."
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to experience_path(@experience),
+                alert: "Dépublication impossible : #{e.record.errors.full_messages.join(', ')}"
   end
 
   def destroy
