@@ -17,12 +17,12 @@ RSpec.describe "ExperienceBookings — retour visible dans la modale séjour", t
   let(:stay)     { Stay.create!(customer: customer, arrival_date: Date.today + 20, departure_date: Date.today + 22) }
 
   let(:porteur_a) { Human.create!(name: "Porteuse A", email: "a@example.com") }
-  let(:user_a)    { User.create!(email: "a@example.com", password: "password123", human: porteur_a) }
+  let(:user_a)    { User.create!(email: "a@example.com", password: "password123", human: porteur_a, restricted_to_experiences: true) }
   let(:exp_a)     { Experience.create!(name: "Balade ânes", human: porteur_a, fixed_price_cents: 4000, price_cents: 1500) }
   let(:avail_a)   { ExperienceAvailability.create!(experience: exp_a, available_on: Date.today + 21, starts_at: "10:00") }
 
   let(:porteur_b) { Human.create!(name: "Porteur B", email: "b@example.com") }
-  let(:user_b)    { User.create!(email: "b@example.com", password: "password123", human: porteur_b) }
+  let(:user_b)    { User.create!(email: "b@example.com", password: "password123", human: porteur_b, restricted_to_experiences: true) }
   let(:exp_b)     { Experience.create!(name: "Poterie", human: porteur_b, price_cents: 2000) }
   let(:avail_b)   { ExperienceAvailability.create!(experience: exp_b, available_on: Date.today + 21, starts_at: "14:00") }
 

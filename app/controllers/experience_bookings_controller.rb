@@ -1,13 +1,14 @@
 # Canal ADMIN de validation des activités (epic #55, Phase 2) et CRUD admin
 # d'une activité sur un séjour (epic #55, Phase 6).
 #
-# Scoping d'autorisation : un porteur ne voit et n'agit que sur les
-# `ExperienceBooking` de ses propres `Experience` ; un admin global voit tout.
+# Scoping d'autorisation : un compte « accès restreint aux activités » ne voit
+# et n'agit que sur les `ExperienceBooking` de ses propres `Experience` ;
+# l'équipe et l'accueil voient tout (cf. `User#restricted_to_own_activities?`).
 # Toute la règle est centralisée dans `ExperienceBooking.for_user` (édition /
 # suppression / validation) et `ExperienceAvailability.for_user` (création) — on
-# charge TOUJOURS via ces portées, si bien qu'un porteur qui cible l'ID d'une
-# réservation ou d'un créneau d'un autre porteur obtient un 404 / un refus
-# (jamais une action réussie hors périmètre).
+# charge TOUJOURS via ces portées, si bien qu'un porteur restreint qui cible
+# l'ID d'une réservation ou d'un créneau d'un autre porteur obtient un 404 / un
+# refus (jamais une action réussie hors périmètre).
 class ExperienceBookingsController < BaseController
   before_action :load_scoped_booking, only: [:update, :destroy, :confirm, :new_refusal, :refuse]
 
