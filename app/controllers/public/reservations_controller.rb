@@ -142,6 +142,12 @@ module Public
       builder = Reservations::Builder.new(draft: @draft)
       if builder.run
         ReservationMailer.confirmation_request(builder.stay).deliver_later
+        # Email dédié au Pôle Accueil (décision Michael du 2026-09-08) : sejours@
+        # ne recevait jusqu'ici qu'une copie cachée de l'accusé de réception
+        # client — un email écrit pour le client, sur lequel on ne peut pas
+        # décider. Celui-ci est écrit pour l'équipe et renvoie sur la fiche
+        # séjour, seul endroit où les actions vivent.
+        ReservationMailer.team_new_request(builder.stay).deliver_later
         clear_draft
         # Stay-first : le Booking n'existe pas pour un séjour sans hébergement
         # classique (camping/espaces seuls) — seul le Stay est garanti. Même

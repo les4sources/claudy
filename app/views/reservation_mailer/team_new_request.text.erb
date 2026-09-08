@@ -1,0 +1,50 @@
+Nouvelle demande de séjour reçue via le funnel public.
+
+CLIENT
+Nom : <%= @stay.customer&.name.presence || "—" %>
+Email : <%= @stay.customer&.email.presence || "— (aucun email)" %>
+Téléphone : <%= @stay.customer&.phone.presence || "—" %>
+<% group = @stay.bookables.filter_map { |b| b.try(:group_name).presence }.first %>
+<% if group.present? %>
+Groupe : <%= group %>
+<% end %>
+<% if @stay.category_label.present? %>
+Type de séjour : <%= @stay.category_label %>
+<% end %>
+
+SÉJOUR
+Dates : <%= @stay.date_range %>
+<% if @stay.nights_count %>
+Nuits : <%= @stay.nights_count %>
+<% end %>
+<% occupants = @stay.occupants %>
+Occupants : <%= occupants[:adults] %> adulte(s)<%= ", #{occupants[:children]} enfant(s)" if occupants[:children].positive? %>
+
+COMPOSITION
+<% lines = @stay.item_lines %>
+<% activities = @stay.activity_lines %>
+<% if lines.empty? && activities.empty? %>
+Aucun élément dans ce séjour.
+<% else %>
+<% lines.each do |line| %>
+- <%= line[:name] %><%= " (#{line[:date_range]})" if line[:date_range].present? %> : <%= line[:amount] %>
+<% end %>
+<% activities.each do |activity| %>
+- <%= activity[:name] %> — <%= activity[:participants] %> participant(s)<%= " (à confirmer)" if activity[:pending] %><%= " (#{activity[:date_range]})" if activity[:date_range].present? %> : <%= activity[:amount] %>
+<% end %>
+Total : <%= @stay.formatted_total %>
+<% end %>
+<% if @spaces_note.present? %>
+
+NOTE DU CLIENT SUR LES ESPACES
+<%= @spaces_note %>
+<% end %>
+<% if @stay.notes.present? %>
+
+NOTE INTERNE
+<%= @stay.notes %>
+<% end %>
+
+Ouvrir la fiche séjour : <%= @stay_url %>
+
+Les actions se font sur la fiche : pré-confirmer et demander l'acompte, ou refuser la demande.
