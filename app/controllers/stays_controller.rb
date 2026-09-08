@@ -3,7 +3,7 @@ class StaysController < BaseController
   # sous-navigation Séjours · Coworking · Reporting · Comptabilité, qui remplace
   # l'ancien dropdown de la barre principale.
   before_action :set_home_view
-  before_action :set_stay, only: %i[edit update destroy update_status update_category update_notes approve_change_request refuse_change_request send_confirmation_email pre_confirm create_pre_confirmation]
+  before_action :set_stay, only: %i[edit update destroy update_status update_category update_notes approve_change_request refuse_change_request send_confirmation_email pre_confirm create_pre_confirmation refuse create_refusal]
 
   # Index admin des séjours (epic #81) — le séjour devient le point d'entrée
   # unique. Tableau paginé (30/page) orienté GESTION des réservations et
@@ -414,6 +414,38 @@ class StaysController < BaseController
       @deposit_amount = params[:deposit_amount]
       flash.now[:alert] = service.error_message
       render :pre_confirm, status: :unprocessable_entity
+    end
+  end
+
+  # --- Refus d'une demande par le Pôle Accueil (Michael 2026-09-08) ---------
+  # Le pendant du « oui » ci-dessus. Deux temps, comme la pré-confirmation : un
+  # écran qui rappelle le séjour et exige un MOTIF, puis son application.
+  # « Annuler le séjour » n'écrit rien au client ; refuser, si — c'est toute la
+  # différence entre les deux boutons.
+
+  def refuse
+    @refusal_reason = params[:refusal_reason]
+  end
+
+  def create_refusal
+    service = Stays::Refuser.new(stay: @stay, reason: params[:refusal_reason], by: current_user)
+
+    if service.run
+      # Trois issues distinctes, trois messages : l'équipe doit savoir si le
+      # client a réellement été prévenu. Annoncer « le client est prévenu » sur
+      # un séjour sans email (ou fourre-tout) serait un mensonge tranquille.
+      if service.email_error
+        redirect_to stay_path(@stay), alert: service.email_error
+      elsif service.email_recipient
+        redirect_to stay_path(@stay), notice: "Demande refusée, le client est prévenu (#{service.email_recipient})."
+      else
+        redirect_to stay_path(@stay),
+                    alert: "Demande refusée. AUCUN email n'a pu être envoyé (client sans adresse ou fourre-tout) — prévenez-le autrement."
+      end
+    else
+      @refusal_reason = params[:refusal_reason]
+      flash.now[:alert] = service.error_message
+      render :refuse, status: :unprocessable_entity
     end
   end
 

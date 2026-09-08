@@ -1,0 +1,29 @@
+/ Email de REFUS d'une demande (décision Michael du 2026-09-08). C'est le seul
+  message du flux qui annonce un « non » : il doit être court, dire le motif tel
+  que l'équipe l'a écrit, et laisser une porte ouverte.
+/ NB Slim : deux lignes `|` consécutives se concatènent SANS espace — toujours
+  une seule barre avec continuation indentée pour la prose multi-ligne.
+p Bonjour #{@stay.customer.first_name.presence || ""},
+
+- if @stay.arrival_date && @stay.departure_date
+  p
+    | Nous ne pouvons malheureusement pas accueillir votre séjour du
+      #{l(@stay.arrival_date, format: :long).strip} au
+      #{l(@stay.departure_date, format: :long).strip}.
+- else
+  p
+    | Nous ne pouvons malheureusement pas accueillir votre demande de séjour.
+
+/ Le motif vient du Pôle Accueil et part TEL QUEL : c'est la seule explication
+  que le client recevra. `simple_format` préserve ses retours à la ligne.
+- if @reason.present?
+  = simple_format(@reason)
+
+p
+  | Si vous souhaitez d'autres dates, écrivez-nous à
+  =< mail_to "sejours@les4sources.be", "sejours@les4sources.be"
+  |  ou appelez Malau au +32 (0)490 46 77 10.
+
+p Merci de votre intérêt pour Les 4 Sources, et à une prochaine fois nous l'espérons.
+
+= render "shared/email_signature"

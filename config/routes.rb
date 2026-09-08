@@ -343,6 +343,12 @@ Rails.application.routes.draw do
       # `as: nil` sur le POST, sinon Rails refuserait le nom de route en double.
       get  :pre_confirm
       post :pre_confirm, action: :create_pre_confirmation, as: nil
+      # Refus d'une demande par le Pôle Accueil (Michael 2026-09-08) : l'écran
+      # de saisie du motif (GET) puis son application (POST). Même forme que la
+      # pré-confirmation ci-dessus — un seul chemin, deux verbes, `as: nil` sur
+      # le POST pour ne pas déclarer le nom de route en double.
+      get  :refuse
+      post :refuse, action: :create_refusal, as: nil
     end
     resources :experience_bookings, only: [:create]
     # Gestion des paiements DEPUIS la modale séjour (issue paiements-secrétaire) :

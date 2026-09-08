@@ -73,6 +73,33 @@ class ReservationMailer < ApplicationMailer
     )
   end
 
+  # Le « non » du flux (décision Michael du 2026-09-08) — l'email qui manquait.
+  # L'équipe ne savait dire que oui : pour refuser, elle cliquait « Annuler le
+  # séjour », qui n'écrit RIEN au client (contrat anti-spam du toggle de statut
+  # interne). Le client attendait donc une pré-confirmation qui ne viendrait
+  # jamais.
+  #
+  # Le MOTIF est repris tel quel : c'est la seule chose que le client lira pour
+  # comprendre, et il a été saisi POUR lui. On ferme sur une porte ouverte
+  # (d'autres dates, le téléphone de Malau) plutôt que sur un mur — une demande
+  # refusée reste quelqu'un qui voulait venir.
+  #
+  # L'envoi est piloté par `Stays::Refuser`, qui porte les garde-fous
+  # (fourre-tout, absence d'email, capture Sentry) et appelle APRÈS le commit.
+  def request_refused(stay, reason)
+    @stay = stay
+    @reason = reason.to_s.strip
+    # Garde issue #232 : un client peut vivre sans email. On ne compte pas sur
+    # les seuls appelants — un mailer sans destinataire lèverait, ici il se tait.
+    return if stay.customer&.email.blank?
+
+    mail(
+      to: stay.customer.email,
+      subject: "Votre demande de séjour aux 4 Sources n'a pas pu être retenue",
+      tag: "request_refused"
+    )
+  end
+
   private
 
   def application_host
