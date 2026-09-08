@@ -67,61 +67,87 @@ module Pricing
     # 2026-07-20). Persisté en `CampingBooking` de `kind: "terrasse"`, un par jour.
     TERRACE_PER_PERSON_DAY_CENTS = 250 # 2,50 €/pers/jour
 
-    # Salles & cuisine pro — tarifs semaine (lun-jeu + ven journée).
-    # Source : https://www.les4sources.be/sejours/tarifs
-    # Périodes : "journee" | "soiree" | "journee_et_soiree"
+    # Salles & cuisine pro — tarifs semaine.
+    # Source de vérité : https://www.les4sources.be/sejours/tarifs (relevé le
+    # 2026-09-06, epic #234 décision 3). Périodes :
+    # "journee" | "soiree" | "journee_et_soiree".
+    #
+    # `journee_et_soiree` = journée + « forfait soir » du site (prolongation
+    # jusqu'à 23 h) : petite +30, grande +60, les deux salles +90. La cuisine pro
+    # n'a PAS de forfait soir sur le site — sa journée + soirée vaut sa journée.
     HALL_RATES = {
       "grande_salle" => {
         "journee"           => 29_000,  # 290 €
         "soiree"            => 19_000,  # 190 €
-        "journee_et_soiree" => 38_000   # 290 + extension soirée 90 €
+        "journee_et_soiree" => 35_000   # 290 + forfait soir 60 €
       }.freeze,
       "petite_salle" => {
         "journee"           => 14_000,  # 140 €
         "soiree"            =>  9_000,  # 90 €
-        "journee_et_soiree" => 20_000   # 140 + extension soirée 60 €
+        "journee_et_soiree" => 17_000   # 140 + forfait soir 30 €
       }.freeze,
       "cuisine_pro" => {
         "journee"           => 11_000,  # 110 €
         "soiree"            =>  7_000,  # 70 €
-        "journee_et_soiree" => 14_000   # 110 + extension soirée 30 €
+        "journee_et_soiree" => 11_000   # 110 — pas de forfait soir cuisine
       }.freeze,
-      # Remise DUO (décision Michael 2026-07-20) : quand Grande Salle ET Petite
-      # Salle sont louées le MÊME jour, la MÊME période, un tarif duo remplace la
-      # somme des deux (< somme). L'ancien espace « Les 2 salles » disparaît au
-      # profit de cette remise automatique. Journée+soirée = jour duo + 150 €
-      # (extensions soirée des deux salles : 90 + 60).
+      # Remise DUO (décision Michael 2026-07-20, reprise par l'epic #234
+      # décision 6) : Grande Salle ET Petite Salle le MÊME jour, la MÊME période,
+      # valent la colonne « Les deux salles » du site — forfaits compris.
       "deux_salles" => {
         "journee"           => 39_000,  # 390 € (au lieu de 290 + 140 = 430)
         "soiree"            => 25_000,  # 250 €
-        "journee_et_soiree" => 54_000   # 390 + 150 = 540 €
+        "journee_et_soiree" => 48_000   # 390 + forfait soir 90 €
       }.freeze
     }.freeze
 
-    # Tarifs week-end (ven soir + sam + dim). Vendredi soir = début week-end.
-    # En B2C, wday=5 (vendredi) et wday=6 (samedi) → tarifs week-end.
+    # Tarifs week-end : soirée du vendredi, samedi et dimanche (epic #234
+    # décision 4 — la JOURNÉE du vendredi reste en semaine, le site ouvrant le
+    # week-end à 18h30). La classification vit dans `Pricing::HallGrid`.
     HALL_RATES_WEEKEND = {
       "grande_salle" => {
         "journee"           => 38_000,  # 380 €
         "soiree"            => 25_000,  # 250 €
-        "journee_et_soiree" => 47_000   # 380 + extension soirée 90 €
+        "journee_et_soiree" => 45_500   # 380 + forfait soir 75 €
       }.freeze,
       "petite_salle" => {
         "journee"           => 19_000,  # 190 €
         "soiree"            => 12_000,  # 120 €
-        "journee_et_soiree" => 25_000   # 190 + extension soirée 60 €
+        "journee_et_soiree" => 23_000   # 190 + forfait soir 40 €
       }.freeze,
       "cuisine_pro" => {
         "journee"           => 15_000,  # 150 €
         "soiree"            =>  9_500,  # 95 €
-        "journee_et_soiree" => 18_000   # 150 + extension soirée 30 €
+        "journee_et_soiree" => 15_000   # 150 — pas de forfait soir cuisine
       }.freeze,
       # Remise DUO week-end (cf. HALL_RATES["deux_salles"]).
       "deux_salles" => {
         "journee"           => 49_500,  # 495 € (au lieu de 380 + 190 = 570)
         "soiree"            => 33_500,  # 335 €
-        "journee_et_soiree" => 64_500   # 495 + 150 = 645 €
+        "journee_et_soiree" => 61_000   # 495 + forfait soir 115 €
       }.freeze
+    }.freeze
+
+    # Forfaits multi-jours du site (epic #234 phase 2). Ils portent la JOURNÉE
+    # des jours couverts ; une soirée ajoutée par-dessus se facture au « forfait
+    # soir » de la grille du jour (dérivé : journée + soirée − journée).
+    #
+    # Semaine : « 2 jours » (deux jours consécutifs) et « 5 jours » (la semaine
+    # complète, retenue dès 3 jours consécutifs entre lundi et vendredi quand
+    # elle est moins chère).
+    HALL_PACKAGES = {
+      "grande_salle" => { "deux_jours" =>  54_000, "cinq_jours" =>  99_000 }.freeze,
+      "petite_salle" => { "deux_jours" =>  27_000, "cinq_jours" =>  52_500 }.freeze,
+      "cuisine_pro"  => { "deux_jours" =>  21_000, "cinq_jours" =>  32_000 }.freeze,
+      "deux_salles"  => { "deux_jours" =>  75_000, "cinq_jours" => 140_000 }.freeze
+    }.freeze
+
+    # Week-end : « 2 jours » et le forfait « du vendredi 18h30 au dimanche soir ».
+    HALL_PACKAGES_WEEKEND = {
+      "grande_salle" => { "deux_jours" => 72_000, "forfait_weekend" => 79_000 }.freeze,
+      "petite_salle" => { "deux_jours" => 36_000, "forfait_weekend" => 39_000 }.freeze,
+      "cuisine_pro"  => { "deux_jours" => 28_500, "forfait_weekend" => 29_000 }.freeze,
+      "deux_salles"  => { "deux_jours" => 94_000, "forfait_weekend" => 99_000 }.freeze
     }.freeze
 
     # Alias rétrocompatible — rate du forfait journée par kind.
@@ -262,6 +288,28 @@ module Pricing
       return nil if fallback.nil?
 
       Pricing::Rates.cents_or(hall_key(kind, period, weekend: weekend), fallback)
+    end
+
+    # Montant d'un forfait multi-jours (« deux_jours », « cinq_jours »,
+    # « forfait_weekend »), table `rates` d'abord comme le reste de la façade.
+    # Retourne nil quand le forfait n'existe pas pour cet espace / cette grille.
+    def hall_package_cents(kind, package, weekend: false)
+      table    = weekend ? HALL_PACKAGES_WEEKEND : HALL_PACKAGES
+      fallback = table.dig(kind.to_s, package.to_s)
+      return nil if fallback.nil?
+
+      Pricing::Rates.cents_or(hall_key(kind, package, weekend: weekend), fallback)
+    end
+
+    # « Forfait soir » du site : le supplément qui prolonge une journée jusqu'à
+    # 23 h. Dérivé du barème plutôt que stocké — il vaut exactement l'écart entre
+    # « journée + soirée » et « journée » (0 pour la cuisine pro).
+    def hall_evening_supplement_cents(kind, weekend: false)
+      day  = hall_rate_cents(kind, "journee", weekend: weekend)
+      both = hall_rate_cents(kind, "journee_et_soiree", weekend: weekend)
+      return 0 if day.nil? || both.nil?
+
+      [both - day, 0].max
     end
 
     # true si l'espace existe au catalogue (semaine — référence structurelle).
