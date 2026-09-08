@@ -1,0 +1,8 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Nouvel artisan en dépôt-vente"
+
+= form_with model: @consignor, url: consignors_path do |f|
+  = render "form", f: f
+  = f.actions do
+    = f.submit "Enregistrer"
+    = link_to "Annuler", consignors_path, class: "ml-3 text-sm text-gray-500 hover:underline"

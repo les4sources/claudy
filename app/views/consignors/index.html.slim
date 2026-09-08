@@ -1,0 +1,62 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Dépôt-vente",
+           links: [link_to("+ Nouvel artisan", new_consignor_path, class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90")]
+
+.max-w-5xl.space-y-4
+  p.text-sm.text-gray-500
+    | Les artisans qui déposent leurs produits dans l'armoire de l'épicerie. Chacun gère son stock ; chaque mois il déclare ses ventes et on lui reverse sa part, moins la commission.
+
+  .overflow-hidden.rounded-2xl.bg-white.ring-1.ring-gray-200
+    table.w-full.text-sm
+      thead.text-xs.uppercase.tracking-wide.text-gray-500(class="bg-gray-50/60")
+        tr
+          th.px-4.py-3.text-left Artisan
+          th.px-4.py-3.text-left Règlement
+          th.px-4.py-3.text-right Commission
+          th.px-4.py-3.text-left Contrat
+          th.px-4.py-3.text-left Statut
+          th.px-4.py-3
+      tbody
+        - if @consignors.empty?
+          tr
+            td.px-4.py-4.text-gray-500(colspan="6") Aucun artisan en dépôt-vente pour l'instant.
+        - @consignors.each do |consignor|
+          tr.border-t.border-gray-100
+            td.px-4.py-3
+              .font-medium.text-gray-900 = consignor.name
+              - if consignor.email.present?
+                .text-xs.text-gray-500 = consignor.email
+            td.px-4.py-3.text-gray-600
+              = consignor.settlement_mode_label
+              - if consignor.transfer? && consignor.iban.present?
+                .text-xs.text-gray-400.font-mono = consignor.iban_masked
+            td.px-4.py-3.text-right.font-medium.text-gray-900
+              = "#{consignor.commission_percent} %"
+            td.px-4.py-3.text-gray-500
+              - if consignor.starts_on.present?
+                = "depuis le #{l(consignor.starts_on, format: :long)}"
+              - else
+                span.text-gray-400 —
+              - if consignor.ends_on.present?
+                .text-xs = "jusqu'au #{l(consignor.ends_on, format: :long)}"
+            td.px-4.py-3
+              - if consignor.active
+                span.inline-flex.items-center.rounded-full.bg-green-100.px-2.py-0.5.text-xs.font-medium.text-green-800 Actif
+              - else
+                span.inline-flex.items-center.rounded-full.bg-gray-100.px-2.py-0.5.text-xs.font-medium.text-gray-500 Inactif
+            td.px-4.py-3.text-right.whitespace-nowrap
+              .flex.items-center.justify-end.gap-2
+                = link_to "Modifier", edit_consignor_path(consignor), class: "text-xs font-medium text-gray-700 hover:underline"
+                span.text-gray-300 ·
+                - if consignor.active
+                  = button_to "Désactiver", deactivate_consignor_path(consignor), method: :patch,
+                              class: "text-xs font-medium text-red-600 hover:underline",
+                              form: { class: "inline", data: { turbo_confirm: "Désactiver le contrat de « #{consignor.name} » ?" } }
+                - else
+                  = button_to "Réactiver", reactivate_consignor_path(consignor), method: :patch,
+                              class: "text-xs font-medium text-4s-main hover:underline",
+                              form: { class: "inline" }
+
+  p.text-xs.text-gray-400
+    | La colonne « dernier relevé » arrive avec les relevés mensuels (phase 2 de l'epic #248).

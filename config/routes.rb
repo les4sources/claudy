@@ -71,6 +71,15 @@ Rails.application.routes.draw do
   # Commentaires polymorphes (epic #242) : le fil vit sur la page de l'objet,
   # ces routes ne servent qu'aux Turbo Streams du composant.
   resources :comments, only: %i[create update destroy]
+
+  # Paramètres > Dépôt-vente (epic #248) : le carnet des artisans déposants.
+  # Pas de `show` — la fiche vit sur les relevés mensuels (phase 2).
+  resources :consignors, except: [:show] do
+    member do
+      patch :deactivate
+      patch :reactivate
+    end
+  end
   resources :projects
   # Cuisine (epic #219) — URLs admin en anglais, interface en français.
   namespace :kitchen do
