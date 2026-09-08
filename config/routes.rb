@@ -68,6 +68,9 @@ Rails.application.routes.draw do
   resources :notes
   resources :payments, only: [:index, :show, :destroy]
   resources :products
+  # Commentaires polymorphes (epic #242) : le fil vit sur la page de l'objet,
+  # ces routes ne servent qu'aux Turbo Streams du composant.
+  resources :comments, only: %i[create update destroy]
   resources :projects
   # Cuisine (epic #219) — URLs admin en anglais, interface en français.
   namespace :kitchen do

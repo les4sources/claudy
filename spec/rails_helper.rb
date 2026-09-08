@@ -7,6 +7,8 @@ require_relative '../config/environment'
 # Prevent database truncation if the environment is production
 abort("The Rails environment is running in production mode!") if Rails.env.production?
 require 'rspec/rails'
+require 'view_component/test_helpers'
+require 'capybara/rspec'
 # Add additional requires below this line. Rails is not loaded until this point!
 
 # Requires supporting ruby files with custom matchers and macros, etc, in
@@ -61,6 +63,15 @@ RSpec.configure do |config|
   # :random`), l'échec ne se reproduit pas d'une fois sur l'autre. Ça a mordu en
   # écrivant #157 ; on le règle ici plutôt que dans chaque fichier.
   config.before { Pricing::Rates.reset! }
+
+  # Specs de composants (`type: :component`, epic #242) : `render_inline` et les
+  # matchers Capybara sur le fragment rendu. Le type est déduit du chemin, comme
+  # pour les specs de requête.
+  config.include ViewComponent::TestHelpers, type: :component
+  config.include Capybara::RSpecMatchers, type: :component
+  config.define_derived_metadata(file_path: %r{/spec/components/}) do |metadata|
+    metadata[:type] ||= :component
+  end
 
   # You can uncomment this line to turn off ActiveRecord support entirely.
   # config.use_active_record = false
