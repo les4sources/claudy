@@ -79,4 +79,19 @@
           span.ml-2 class="inline-flex items-center rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10"
             | compte à créer
 
+    / Adresse publique sur le site (catalogue) — figée à la publication.
+    - if f.object.published?
+      .text-sm.text-gray-700
+        | Adresse publique :
+        = " "
+        code.rounded.bg-gray-100.px-1.5.py-0.5 = f.object.public_path
+        span.ml-2.text-xs.text-gray-500
+          | (figée depuis la publication)
+    - else
+      = f.text_field :slug,
+                     label: "Adresse publique (slug)",
+                     value: (f.object.persisted? ? f.object.suggested_slug : f.object.slug),
+                     hint: "Fin de l'adresse /catalogue/… — proposée depuis le libellé ; modifiable jusqu'à la publication, figée ensuite.",
+                     class: "md:w-1/2 lg:w-2/3"
+
 hr

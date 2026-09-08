@@ -21,5 +21,18 @@
           .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
               | Couleur
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0.flex.items-center.gap-2
+              .w-5.h-5.rounded-full.ring-1.ring-inset.ring-gray-300(style="background-color: #{@event_category.color};")
+              code = @event_category.color
+
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Pôle (site web)
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @event_category.color
+              = @event_category.pole_label || "—"
+
+          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+            dt.text-sm.font-medium.text-gray-500
+              | Identifiant sur le site
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              code = @event_category.slug

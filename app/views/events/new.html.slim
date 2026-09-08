@@ -1,6 +1,10 @@
 - content_for :page_header do
   = render 'layouts/components/page_header',
-           title: "Nouvel événement"
+           title: (@duplicated_from ? "Nouvel événement (copie de « #{@duplicated_from.name} »)" : "Nouvel événement")
+
+- if @duplicated_from
+  .mb-6.rounded-md.bg-blue-50.p-4.text-sm.text-blue-800
+    | Titre, résumé, description publique, catégorie, lieu, prix, lien d'inscription et image sont repris de l'événement d'origine. Choisis les nouvelles dates : rien n'est enregistré avant « Enregistrer », et la copie reste un brouillon jusqu'à sa publication.
 
 = form_with model: @event,
             url: events_path do |f|
