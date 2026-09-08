@@ -6,6 +6,10 @@
 - else
   / Navigation directe (table /stays, /payments, « Annuler » d'édition) : la
   / carte blanche remplace le fond que la modale fournissait.
-  .max-w-5xl.mx-auto.px-4.py-8
+  .max-w-5xl.mx-auto.px-4.py-8.space-y-6
     .bg-white.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg.p-6
       = render "stays/details"
+
+    / Fil de commentaires (epic #242, phase 1). Uniquement sur la fiche pleine
+    / page : la modale du calendrier reste un aperçu, pas un lieu d'échange.
+    = render Comments::ThreadComponent.new(commentable: @stay.object, current_user: current_user)

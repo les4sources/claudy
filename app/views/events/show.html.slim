@@ -3,6 +3,7 @@
            title: @event.name,
            links: [ \
              link_to("🗓 Agenda", root_path(date: @event.object.starts_at.to_date), class: "btn-page-header-no-background"),
+             link_to("Dupliquer", duplicate_event_path(@event), class: "btn-page-header-no-background"),
              delete_link(@event.object),
              link_to( \
                "Mettre à jour",
@@ -11,57 +12,138 @@
              ) \
            ].compact
 
-.grid.grid-cols-3.gap-4
-  .col-span-2.space-y-4
-    .overflow-hidden.bg-white.shadow.sm:rounded-lg
-      .px-4.py-5.sm:px-6
-        h3.text-lg.font-medium.leading-6.text-gray-900
-          | Informations
-      .border-t.border-gray-200
-        dl
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Catégorie
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = link_to @event.event_category.name,
-                        event_category_path(@event.event_category),
-                        class: "claudy-link"
+/ Deux onglets (epic #245, décision 7) : la fiche telle qu'elle était, et la
+  comptabilité de l'événement. Le choix passe par l'URL — linkable, sans JS.
+- onglet = params[:tab].presence == "comptabilite" ? "comptabilite" : "informations"
+nav.mb-4.flex.gap-1.border-b.border-gray-200
+  - [["informations", "Informations"], ["comptabilite", "Comptabilité"]].each do |value, label|
+    - actif = onglet == value
+    = link_to label,
+              event_path(@event, tab: value),
+              class: "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors #{actif ? 'border-4s-main text-4s-main' : 'border-transparent text-gray-500 hover:text-4s-main'}"
 
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Adresse web
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = link_to(@event.url, @event.url, target: "_blank", class: "claudy-link")
-
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Du
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = l(@event.starts_at, format: :long)
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Au
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = l(@event.ends_at, format: :long)
-
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Nombre de participants
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @event.attendees
-
-          .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
-            dt.text-sm.font-medium.text-gray-500
-              | Montant des ventes
-            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
-              = @event.sales_amount
-
-    - if @event.notes.presence
-      .overflow-hidden.bg-yellow-200.shadow.sm:rounded-lg
-        .px-4.py-5.sm:px-6.bg-yellow-300
+- if onglet == "comptabilite"
+  .max-w-3xl
+    = render "events/accounting_tab", event: @event.object
+- else
+  .grid.grid-cols-3.gap-4
+    .col-span-2.space-y-4
+      .overflow-hidden.bg-white.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6
           h3.text-lg.font-medium.leading-6.text-gray-900
-            | Notes
-        .border-t.border-yellow-400.px-6.py-4
-          .content.space-y-4.text-sm
-            == @event.notes
+            | Informations
+        .border-t.border-gray-200
+          dl
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Catégorie
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                - if @event.event_category
+                  = link_to @event.event_category.name,
+                            event_category_path(@event.event_category),
+                            class: "claudy-link"
 
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Adresse web
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                - if @event.object.url.presence
+                  = link_to(@event.object.url, @event.object.url, target: "_blank", class: "claudy-link")
+
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Du
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = l(@event.starts_at, format: :long)
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Au
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = l(@event.ends_at, format: :long)
+
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Nombre de participants
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @event.attendees
+
+            .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
+              dt.text-sm.font-medium.text-gray-500
+                | Montant des ventes
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                = @event.sales_amount
+
+      / Contenu public : ce que le site affiche une fois l'événement publié.
+      - if @event.summary.presence || @event.location.presence || @event.price_text.presence || @event.public_description.present?
+        .overflow-hidden.bg-white.shadow.sm:rounded-lg
+          .px-4.py-5.sm:px-6
+            h3.text-lg.font-medium.leading-6.text-gray-900
+              | Contenu public
+          .border-t.border-gray-200.px-6.py-4.space-y-3.text-sm
+            - if @event.location.presence
+              p.text-gray-500 = "📍 #{@event.location}"
+            - if @event.price_text.presence
+              p.text-gray-500 = "💶 #{@event.price_text}"
+            - if @event.summary.presence
+              p.font-medium.text-gray-900 = @event.summary
+            - if @event.public_description.present?
+              .content.space-y-4
+                == @event.public_description
+
+      - if @event.notes.presence
+        .overflow-hidden.bg-yellow-200.shadow.sm:rounded-lg
+          .px-4.py-5.sm:px-6.bg-yellow-300
+            h3.text-lg.font-medium.leading-6.text-gray-900
+              | Notes
+          .border-t.border-yellow-400.px-6.py-4
+            .content.space-y-4.text-sm
+              == @event.notes
+
+    .space-y-4
+      / Publication sur le site les4sources.be.
+      .overflow-hidden.bg-white.shadow.sm:rounded-lg
+        .px-4.py-5.sm:px-6.flex.items-center.justify-between
+          h3.text-lg.font-medium.leading-6.text-gray-900
+            | Site web
+          - if @event.published?
+            span.inline-flex.items-center.rounded-md.bg-green-50.px-2.py-1.text-xs.font-medium.text-green-700.ring-1.ring-inset.ring-green-600/20
+              | Publié
+          - else
+            span.inline-flex.items-center.rounded-md.bg-gray-50.px-2.py-1.text-xs.font-medium.text-gray-600.ring-1.ring-inset.ring-gray-500/10
+              | Brouillon
+        .border-t.border-gray-200.px-4.py-5.sm:px-6.space-y-4.text-sm
+          - if @event.published?
+            p.text-gray-700
+              | En ligne depuis le #{l(@event.published_at.to_date)} :
+            p
+              = link_to "www.les4sources.be#{@event.public_path}",
+                        "https://www.les4sources.be#{@event.public_path}",
+                        target: "_blank",
+                        class: "claudy-link break-all"
+            p.text-xs.text-gray-500
+              | Le site se reconstruit quelques minutes après chaque modification.
+            = button_to "Dépublier",
+                        unpublish_event_path(@event),
+                        method: :delete,
+                        class: "btn-destroy",
+                        form: { data: { turbo_confirm: "Retirer cet événement du site ?" } }
+          - else
+            p.text-gray-700
+              | Cet événement n'est pas visible sur le site.
+            p.text-xs.text-gray-500
+              | Adresse prévue :
+              = " "
+              code.rounded.bg-gray-100.px-1.5.py-0.5 = "/evenements/#{@event.suggested_slug}"
+            - if @event.summary.blank? || @event.public_description.blank?
+              p.text-xs.text-amber-700
+                | Pense à renseigner le résumé et la description publique avant de publier.
+            = button_to "Publier sur le site",
+                        publish_event_path(@event),
+                        method: :post,
+                        class: "btn-page-header"
+
+      - if @event.image.attached?
+        .overflow-hidden.bg-white.shadow.sm:rounded-lg
+          = image_tag url_for(@event.image),
+                      class: "w-full object-cover",
+                      alt: ""

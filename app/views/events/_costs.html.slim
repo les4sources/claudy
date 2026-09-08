@@ -1,0 +1,66 @@
+/ Frais fixes d'un événement (epic #245, phase 1). Remplacé en entier par les
+  quatre gestes du contrôleur — l'identifiant est le point d'ancrage.
+section#event-costs.overflow-hidden.bg-white.shadow.sm:rounded-lg
+  .px-4.py-5.sm:px-6.border-b.border-gray-200
+    h3.text-lg.font-medium.leading-6.text-gray-900 Frais fixes
+    p.mt-1.text-sm.text-gray-500
+      | Ce qui se déduit de la recette avant le partage avec les organisateurs.
+
+  - if event.event_costs.empty?
+    .px-4.py-8.text-center.text-sm.text-gray-500
+      | Aucun frais fixe pour l'instant.
+  - else
+    ul.divide-y.divide-gray-100
+      - event.event_costs.ordered.each do |line|
+        li.px-4.py-3
+          = form_with model: line, url: event_cost_path(event, line), method: :patch, class: "flex flex-wrap items-center gap-3" do |f|
+            = f.text_field :label, label: false, "aria-label" => "Libellé du frais", class: "flex-1 min-w-40 rounded-md border-gray-300 text-sm"
+            .flex.items-center.gap-1
+              = number_field_tag "event_cost[amount]", format("%.2f", line.amount_cents / 100.0), step: "0.01", min: 0,
+                                 "aria-label" => "Montant de #{line.label}",
+                                 class: "w-28 rounded-md border-gray-300 text-sm"
+              span.text-sm.text-gray-500 €
+            - if line.kind == "space"
+              span.inline-flex.items-center.rounded-full.bg-teal-100.px-2.py-0.5.text-xs.font-medium.text-teal-800
+                = line.kind_label
+            = f.submit "Enregistrer", class: "text-xs"
+            = button_to "Retirer", event_cost_path(event, line), method: :delete,
+                        class: "text-xs font-medium text-red-600 hover:underline",
+                        form: { class: "inline", data: { turbo_confirm: "Retirer « #{line.label} » des frais ?" } }
+
+    .border-t.border-gray-200.px-4.py-3.flex.items-center.justify-between.bg-gray-50
+      span.text-sm.font-medium.text-gray-700 Total des frais fixes
+      span.text-sm.font-semibold.text-gray-900
+        = "#{number_with_precision(event.fixed_costs_cents / 100.0, precision: 2, separator: ',')} €"
+
+  / Les réservations d'espace rattachées à l'événement, reprises avec leur prix
+    PERSISTÉ — la couche Finances ne recalcule jamais un prix.
+  - reprises = event.space_bookings_not_yet_costed
+  - if reprises.any?
+    .border-t.border-gray-200.px-4.py-3.space-y-2
+      p.text-xs.font-medium.uppercase.tracking-wide.text-gray-500 Réservations d'espace rattachées
+      - reprises.each do |booking|
+        .flex.flex-wrap.items-center.justify-between.gap-2
+          .text-sm.text-gray-700
+            = booking.spaces.map(&:name).uniq.join(", ").presence || "Réservation ##{booking.id}"
+            span.ml-2.text-gray-400
+              = "#{number_with_precision(booking.price_cents.to_i / 100.0, precision: 2, separator: ',')} €"
+          = button_to "Ajouter en frais", from_space_booking_event_costs_path(event, space_booking_id: booking.id),
+                      method: :post,
+                      class: "text-xs font-medium text-4s-main hover:underline",
+                      form: { class: "inline" }
+
+  .border-t.border-gray-200.px-4.py-4.bg-gray-50
+    - if cost.errors.any?
+      .mb-3.rounded-lg.bg-red-50.px-3.py-2.text-sm.text-red-700
+        = cost.errors.full_messages.to_sentence
+
+    = form_with model: cost, url: event_costs_path(event), method: :post, class: "flex flex-wrap items-end gap-3" do |f|
+      div
+        = f.label :label, "Nouveau frais", class: "block text-xs font-medium text-gray-500"
+        = f.text_field :label, label: false, class: "mt-1 w-64 rounded-md border-gray-300 text-sm", placeholder: "Matériel, intervenant extérieur…"
+      div
+        = label_tag "event_cost_amount", "Montant (€)", class: "block text-xs font-medium text-gray-500"
+        = number_field_tag "event_cost[amount]", nil, step: "0.01", min: 0, id: "event_cost_amount",
+                           class: "mt-1 w-32 rounded-md border-gray-300 text-sm"
+      = f.submit "Ajouter"

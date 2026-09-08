@@ -1,0 +1,67 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Motifs de caisse",
+           links: [link_to("➕ Nouveau motif", new_finance_cash_motif_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
+  p.text-sm.text-gray-700
+    strong Le motif est l'affectation.
+    |  Il porte le compte général, le pôle et l'entité : une ligne de caisse se saisira en choisissant un motif et un montant, sans second geste d'affectation. L'ordre est celui de la liste de saisie — le plus fréquent en haut.
+  p.mt-2.text-xs.text-gray-500
+    | Modifier un motif ne réécrit jamais une ligne déjà saisie : l'affectation d'une ligne est une copie, pas une référence.
+
+- if @motifs.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucun motif pour l'instant.
+    p.mt-1
+      | Lance
+      code.mx-1.px-1.py-0.5.bg-gray-100.rounded rake finance:seed_cash_motifs
+      | pour poser le vocabulaire de la feuille de caisse (Bar, Épicerie, Dépôt en banque…).
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Ordre
+          th.py-3.px-6[scope="col"] Motif
+          th.py-3.px-6[scope="col"] Sens
+          th.py-3.px-6[scope="col"] Affectation
+          th.py-3.px-6[scope="col"] Statut
+          th.py-3.px-6[scope="col"]
+      tbody
+        - @motifs.each do |motif|
+          tr.border-b.bg-white
+            td.py-4.px-6.align-top
+              = motif.position
+              .mt-1.flex.gap-1
+                = button_to "↑", move_finance_cash_motif_path(motif, direction: "up"), method: :post, class: "text-xs text-gray-400 hover:text-gray-700", form: { class: "inline" }
+                = button_to "↓", move_finance_cash_motif_path(motif, direction: "down"), method: :post, class: "text-xs text-gray-400 hover:text-gray-700", form: { class: "inline" }
+            td.py-4.px-6.font-medium.text-gray-900.align-top
+              = motif.label
+            td.py-4.px-6.align-top
+              - couleur = motif.incoming? ? "bg-green-100 text-green-800" : (motif.outgoing? ? "bg-orange-100 text-orange-800" : "bg-gray-100 text-gray-600")
+              span.inline-flex.items-center.rounded-full.px-2.py-0.5.text-xs.font-medium(class=couleur)
+                = motif.direction_label
+            td.py-4.px-6.align-top
+              = motif.general_account.to_s
+              .text-xs.text-gray-400
+                = motif.team&.name || "Aucun pôle"
+                span.mx-1 ·
+                = motif.legal_entity.name
+            td.py-4.px-6.align-top
+              - if motif.active
+                span.inline-flex.items-center.rounded-full.bg-teal-100.px-2.py-0.5.text-xs.font-medium.text-teal-800 Actif
+              - else
+                span.inline-flex.items-center.rounded-full.bg-gray-100.px-2.py-0.5.text-xs.font-medium.text-gray-500 Inactif
+            td.py-4.px-6.text-right.whitespace-nowrap.align-top
+              .flex.items-center.justify-end.gap-2
+                = link_to "Modifier", edit_finance_cash_motif_path(motif), class: "text-xs font-medium text-gray-700 hover:underline"
+                span.text-gray-300 ·
+                - if motif.active
+                  = button_to "Désactiver", deactivate_finance_cash_motif_path(motif), method: :patch,
+                              class: "text-xs font-medium text-red-600 hover:underline",
+                              form: { class: "inline", data: { turbo_confirm: "Désactiver le motif « #{motif.label} » ?" } }
+                - else
+                  = button_to "Réactiver", reactivate_finance_cash_motif_path(motif), method: :patch,
+                              class: "text-xs font-medium text-4s-main hover:underline",
+                              form: { class: "inline" }

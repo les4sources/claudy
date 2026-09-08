@@ -24,6 +24,9 @@ module Events
       event.starts_at = set_starts_at
       event.ends_at = set_ends_at
       event.save!
+      # Les organisateurs vivent dans leur propre table : le formulaire les
+      # envoie à part, hors des attributs de l'événement.
+      Events::SyncOrganizers.new(event: event).run(params[:event][:organizers])
       true
     end
 
@@ -37,13 +40,21 @@ module Events
           :ends_at_date,
           :ends_at_time,
           :event_category_id,
+          :image,
+          :location,
           :name,
           :notes,
+          :price_text,
+          :public_description,
           :sales_amount,
+          :slug,
           :starts_at_date,
           :starts_at_time,
           :status,
-          :url
+          :summary,
+          :url,
+          :team_id,
+          :organizer_share_percent
         )
     end
 
