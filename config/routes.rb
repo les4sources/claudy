@@ -55,6 +55,14 @@ Rails.application.routes.draw do
   resources :notes
   resources :payments, only: [:index, :show, :destroy]
   resources :products
+  # Paramètres > Dépôt-vente (epic #248) : le carnet des artisans déposants.
+  # Pas de `show` — la fiche vit sur les relevés mensuels (phase 2).
+  resources :consignors, except: [:show] do
+    member do
+      patch :deactivate
+      patch :reactivate
+    end
+  end
   resources :projects
   # Cuisine (epic #219) — URLs admin en anglais, interface en français.
   namespace :kitchen do

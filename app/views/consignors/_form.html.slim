@@ -1,0 +1,57 @@
+.max-w-3xl.space-y-6(data-controller="consignor-human")
+  .rounded-2xl.bg-white.ring-1.ring-gray-200.p-6.space-y-5
+    h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 L'artisan
+
+    = f.select :human_id,
+               options_for_select(@humans.map { |h| [h.name, h.id, { "data-name" => h.name, "data-email" => h.email }] }, f.object.human_id),
+               { include_blank: "— aucun —", label: "Membre de l'équipe (facultatif)" },
+               data: { consignor_human_target: "select", action: "change->consignor-human#fill" }
+    p.text-xs.text-gray-500
+      | Choisir une personne pré-remplit son nom et son email. Un artisan externe se saisit directement ci-dessous.
+
+    = f.text_field :name,
+                   label: "Nom *",
+                   required: true,
+                   class: "md:w-2/3",
+                   data: { consignor_human_target: "name" }
+
+    = f.email_field :email,
+                    label: "Email",
+                    class: "md:w-2/3",
+                    data: { consignor_human_target: "email" }
+
+  .rounded-2xl.bg-white.ring-1.ring-gray-200.p-6.space-y-5
+    h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Le contrat
+
+    = f.number_field :commission_percent,
+                     label: "Commission des 4 Sources (%) *",
+                     required: true,
+                     min: 0,
+                     max: 100,
+                     step: 1,
+                     class: "w-32"
+
+    = f.select :settlement_mode,
+               options_for_select(Consignor::SETTLEMENT_MODE_LABELS.map { |value, label| [label, value] }, f.object.settlement_mode),
+               { label: "Mode de règlement *" },
+               data: { action: "change->consignor-human#toggleIban" }
+    p.text-xs.text-gray-500
+      | « L'artisan facture » : il nous envoie sa facture, traitée comme un achat. « Virement » : on lui vire son net, il faut son IBAN.
+
+    div(data-consignor-human-target="ibanField")
+      = f.text_field :iban,
+                     label: "IBAN",
+                     class: "md:w-2/3 font-mono",
+                     placeholder: "BE68 5390 0754 7034"
+
+    .grid.grid-cols-1.gap-4.md:grid-cols-2
+      = f.date_field :starts_on, label: "Début du contrat"
+      = f.date_field :ends_on, label: "Fin du contrat (facultative)"
+
+    .flex.items-center.gap-2
+      = f.check_box :active
+      = f.label :active, "Contrat actif", class: "text-sm font-medium text-gray-700"
+
+    div
+      = f.label :notes, "Notes", class: "block text-sm font-medium text-gray-700 mb-1"
+      = f.text_area :notes, { rows: 3 }
