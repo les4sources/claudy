@@ -7,6 +7,21 @@
     .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Cuisine
     = link_to "Ajouter une demande →", new_kitchen_order_path(stay_id: @stay.id), class: "text-xs text-indigo-600 hover:underline"
 
+  / Issue #238 : un service refusé par la cuisine dont la date approche est à
+    COUVRIR — il faut prévoir autre chose. Le bloc le dit en tête ; Claudy ne
+    crée aucun remplacement à la place de Michael (décision 6).
+  - to_cover = kitchen_orders.select { |order| order.refused? && !order.cancelled? && (order.date.nil? || order.date >= Date.current) }
+  - if to_cover.any?
+    .mt-2.rounded-lg.border.border-orange-200.bg-orange-50.px-3.py-2
+      .text-xs.font-semibold.uppercase.tracking-wide.text-orange-800
+        = "#{to_cover.size} service#{'s' if to_cover.size > 1} à couvrir"
+      ul.mt-1.space-y-0.5
+        - to_cover.each do |order|
+          li.text-sm.text-orange-900
+            = "#{order.date_label} — #{order.label}"
+            - if order.reason.present?
+              span.text-orange-700 = " (#{order.reason})"
+
   - if kitchen_orders.empty?
     p.mt-2.text-sm.text-gray-500 Aucun repas, buffet ni apéro sur ce séjour.
   - else
@@ -17,6 +32,7 @@
             span.text-sm.font-semibold.text-gray-900 = order.label
             = order.status_badge
             = order.validation_badge
+            = order.trio_badge
             / Seuls les buffets et les apéros ont des produits paramétrés
               (epic #219, phase 6).
             - if %w[buffet apero].include?(order.family)
