@@ -40,6 +40,8 @@
 #  fk_rails_...  (customer_id => customers.id)
 #
 class Stay < ApplicationRecord
+  include Commentable
+
   # Canal d'attribution (Q9 / AC-T2-22). DISTINCT de `legacy_origin` (clé
   # d'import/dédup de la migration legacy). Tout Stay créé via /reservation
   # porte la valeur par défaut "reservation".

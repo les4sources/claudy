@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_06_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_08_035342) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -454,6 +454,40 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_06_150000) do
     t.index ["cash_account_id"], name: "index_coda_statements_on_cash_account_id"
     t.index ["coda_import_id"], name: "index_coda_statements_on_coda_import_id"
     t.index ["deleted_at"], name: "index_coda_statements_on_deleted_at"
+  end
+
+  create_table "comments", force: :cascade do |t|
+    t.bigint "author_id", null: false
+    t.bigint "commentable_id", null: false
+    t.string "commentable_type", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.datetime "updated_at", null: false
+    t.index ["author_id"], name: "index_comments_on_author_id"
+    t.index ["commentable_type", "commentable_id", "created_at"], name: "index_comments_on_commentable_and_created_at"
+    t.index ["commentable_type", "commentable_id"], name: "index_comments_on_commentable"
+    t.index ["deleted_at"], name: "index_comments_on_deleted_at"
+  end
+
+  create_table "consignors", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.integer "commission_percent", default: 20, null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "email"
+    t.date "ends_on"
+    t.bigint "human_id"
+    t.text "iban"
+    t.string "name", null: false
+    t.text "notes"
+    t.string "settlement_mode", default: "transfer", null: false
+    t.date "starts_on"
+    t.bigint "third_party_id"
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_consignors_on_active"
+    t.index ["deleted_at"], name: "index_consignors_on_deleted_at"
+    t.index ["human_id"], name: "index_consignors_on_human_id"
+    t.index ["third_party_id"], name: "index_consignors_on_third_party_id"
   end
 
   create_table "coworking_packs", force: :cascade do |t|
@@ -1546,6 +1580,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_06_150000) do
   add_foreign_key "catalog_prices", "catalog_items"
   add_foreign_key "coda_statements", "cash_accounts"
   add_foreign_key "coda_statements", "coda_imports"
+  add_foreign_key "comments", "users", column: "author_id"
+  add_foreign_key "consignors", "humans"
+  add_foreign_key "consignors", "third_parties"
   add_foreign_key "coworking_packs", "customers"
   add_foreign_key "coworking_reservations", "coworking_packs"
   add_foreign_key "coworking_reservations", "customers"
