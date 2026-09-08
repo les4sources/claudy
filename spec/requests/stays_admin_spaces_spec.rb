@@ -107,14 +107,15 @@ RSpec.describe "Stays — espaces (epic #66, Phase 2)", type: :request do
       stay = create_spaces_only_stay
       expect(stay.total_amount_cents).to eq(grande_salle_journee_cents)
 
-      # journée → journée + soirée = 380 € (38 000 c) pour la grande salle.
+      # journée → journée + soirée = 350 € (35 000 c) pour la grande salle :
+      # 290 € la journée + 60 € le « forfait soir » du site (epic #234 phase 2).
       patch stay_path(stay), params: update_params(stay, halls: hall_param(period: "journee_et_soiree"))
       expect(response).to redirect_to(recent_stays_path)
 
       stay.reload
       sb = stay.stay_items.where(bookable_type: "SpaceBooking").first.bookable
       expect(sb.space_reservations.first.duration).to eq("fullday") # durée canonique (fix 2026-07-20)
-      expect(stay.total_amount_cents).to eq(38_000)
+      expect(stay.total_amount_cents).to eq(35_000)
     end
 
     it "retire l'espace en vidant les lignes → refusé (séjour deviendrait vide)" do

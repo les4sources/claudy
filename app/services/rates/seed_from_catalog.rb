@@ -71,13 +71,22 @@ module Rates
       end
     end
 
+    # Périodes ET forfaits multi-jours (epic #234 phase 2) — même préfixe de clé,
+    # donc même groupe « Salles » dans Paramètres > Tarifs.
     def hall_entries
-      [[Pricing::Catalog::HALL_RATES, "hall", "semaine"],
-       [Pricing::Catalog::HALL_RATES_WEEKEND, "hall_weekend", "week-end"]].flat_map do |table, prefix, period_label|
-        table.flat_map do |kind, periods|
+      [[Pricing::Catalog::HALL_RATES, Pricing::Catalog::HALL_PACKAGES, "hall", "semaine"],
+       [Pricing::Catalog::HALL_RATES_WEEKEND, Pricing::Catalog::HALL_PACKAGES_WEEKEND,
+        "hall_weekend", "week-end"]].flat_map do |periods_table, packages_table, prefix, grid_label|
+        rows = periods_table.flat_map do |kind, periods|
           periods.map do |period, amount|
             entry("#{prefix}.#{kind}.#{period}", amount,
-                  "#{hall_label(kind)} — #{PERIOD_LABELS.fetch(period, period)} (#{period_label})")
+                  "#{hall_label(kind)} — #{PERIOD_LABELS.fetch(period, period)} (#{grid_label})")
+          end
+        end
+        rows + packages_table.flat_map do |kind, packages|
+          packages.map do |package, amount|
+            entry("#{prefix}.#{kind}.#{package}", amount,
+                  "#{hall_label(kind)} — #{PERIOD_LABELS.fetch(package, package)} (#{grid_label})")
           end
         end
       end
@@ -86,7 +95,10 @@ module Rates
     PERIOD_LABELS = {
       "journee"           => "journée",
       "soiree"            => "soirée",
-      "journee_et_soiree" => "journée + soirée"
+      "journee_et_soiree" => "journée + soirée",
+      "deux_jours"        => "2 jours",
+      "cinq_jours"        => "5 jours",
+      "forfait_weekend"   => "forfait vendredi 18h30 → dimanche soir"
     }.freeze
 
     HALL_LABELS = {
