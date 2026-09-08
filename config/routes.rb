@@ -104,7 +104,11 @@ Rails.application.routes.draw do
   resources :services
   resources :spaces
   resources :tasks
-  resources :teams
+  # Pôles (epic #239). Les adhésions vivent SOUS le pôle : elles n'existent pas
+  # sans lui, et l'écran d'édition est leur seul point d'entrée.
+  resources :teams do
+    resources :memberships, only: %i[create update destroy], controller: "team_memberships"
+  end
   resources :watchman_notes
 
   # Finances (issue #155, lot A phase 1) — comptes courants internes et grand

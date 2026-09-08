@@ -1,20 +1,48 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
            title: "Pôles",
-           links: [ \
-             link_to("➕ Nouveau pôle", new_team_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \
-           ]
+           links: [link_to("+ Nouveau pôle", new_team_path, class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90")]
 
-.overflow-x-auto.relative
-  table.w-full.text-sm.text-left.text-gray-500
-    thead.text-xs.text-gray-700.uppercase.bg-gray-50
-      tr
-        th.py-3.px-6[scope="col"]
-          | Nom
-    tbody
-      - @teams.each do |team|
-        tr.border-b.bg-white
-          td.py-4.px-6.font-medium.text-gray-900.whitespace-nowrap[scope="row"]
-            = link_to team.name, 
-                      team_path(team),
-                      class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+.max-w-5xl.space-y-4
+  p.text-sm.text-gray-500
+    | Les pôles sont l'unité d'organisation des 4 Sources. La hiérarchie s'arrête à deux niveaux : des pôles analytiques fins sous des pôles économiques et des services support.
+
+  .overflow-hidden.rounded-2xl.bg-white.ring-1.ring-gray-200
+    table.w-full.text-sm
+      thead.text-xs.uppercase.tracking-wide.text-gray-500(class="bg-gray-50/60")
+        tr
+          th.px-4.py-3.text-left Pôle
+          th.px-4.py-3.text-left Type
+          th.px-4.py-3.text-left Code analytique
+          th.px-4.py-3.text-left Référent·e·s
+          th.px-4.py-3.text-right Membres
+          th.px-4.py-3
+      tbody
+        - if @rows.empty?
+          tr
+            td.px-4.py-4.text-gray-500(colspan="6") Aucun pôle pour l'instant.
+        - @rows.each do |team|
+          tr.border-t.border-gray-100
+            td.px-4.py-3
+              - if team.parent_id
+                .flex.items-center.gap-2
+                  span.text-gray-300 └
+                  = link_to team.name, team_path(team), class: "font-medium text-gray-900 hover:underline"
+                .ml-6.text-xs.text-gray-400 = "sous #{team.parent.name}"
+              - else
+                = link_to team.name, team_path(team), class: "font-semibold text-gray-900 hover:underline"
+            td.px-4.py-3
+              - if team.kind
+                span.inline-flex.items-center.rounded-full.bg-teal-100.px-2.py-0.5.text-xs.font-medium.text-teal-800
+                  = team.kind_label
+              - else
+                span.text-gray-400 —
+            td.px-4.py-3.font-mono.text-xs.text-gray-500
+              = team.analytic_code.presence || "—"
+            td.px-4.py-3.text-gray-600
+              - referents = team.referents
+              = referents.any? ? referents.map(&:name).join(", ") : content_tag(:span, "—", class: "text-gray-400")
+            td.px-4.py-3.text-right.font-medium.text-gray-900
+              = team.team_memberships.size
+            td.px-4.py-3.text-right.whitespace-nowrap
+              = link_to "Modifier", edit_team_path(team), class: "text-xs font-medium text-gray-700 hover:underline"
