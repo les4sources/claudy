@@ -90,7 +90,11 @@ div
             span.text-sm.font-medium.text-ink = dog_label
             - if @draft.dogs_count.to_i > 1
               p.text-xs.text-amber-600.mt-1 Notre équipe vous recontacte pour les chiens supplémentaires.
-          = link_to "Modifier", public_reservation_compose_path, class: "text-xs text-forest hover:underline flex-shrink-0 ml-4 relative before:content-[''] before:absolute before:-inset-y-3.5 before:inset-x-0"
+          / Vers l'ÉTAPE 1, pas la composition : le choix de l'animal se fait
+          / avec les dates et le groupe. Le lien renvoyait vers l'étape 2, où il
+          / n'y a rien à modifier pour un chien — le client y cherchait un champ
+          / qui n'existe pas.
+          = link_to "Modifier", public_reservation_dates_path, class: "text-xs text-forest hover:underline flex-shrink-0 ml-4 relative before:content-[''] before:absolute before:-inset-y-3.5 before:inset-x-0"
 
         / CTA
         button(type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-sand py-4 text-base font-semibold hover:bg-forest-soft shadow-sm cursor-pointer transition-colors")
