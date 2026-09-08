@@ -66,7 +66,7 @@
               - fee = @experience.carrier_fee_cents_on
               - if fee
                 .mt-1.text-sm.text-gray-500
-                  = "Soit #{number_with_precision(fee / 100.0, precision: 2, separator: ',')} € par prestation (#{@experience.duration_hours} h), quel que soit le nombre de participants."
+                  = "Soit #{number_with_precision(fee / 100.0, precision: 2, separator: ',')} € par prestation (#{@experience.duration_hours}), quel que soit le nombre de participants."
               - else
                 .mt-1.text-sm.text-orange-700
                   | Sans durée en heures, aucune rémunération n'est calculable — une réservation confirmée restera sans montant.
