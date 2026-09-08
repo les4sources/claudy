@@ -74,9 +74,9 @@ RSpec.describe "Appartenance des contrôleurs Finance::", type: :model do
   # une décision : « la trésorière, pas les habitants ».
   COMPTABILITE = %w[
     accounting allocation_rules allocation_suggestions analytic_balance
-    cash_allocations cash_entries coda_imports collection_cost cross_check
-    fiscal_years general_accounts ledger legal_entities monthly_close
-    trial_balance
+    cash_allocations cash_entries cash_motifs coda_imports collection_cost
+    cross_check fiscal_years general_accounts ledger legal_entities
+    monthly_close trial_balance
   ].freeze
 
   before { Rails.application.eager_load! }

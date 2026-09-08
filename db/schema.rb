@@ -389,6 +389,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
     t.check_constraint "amount_cents <> 0", name: "cash_entries_non_zero"
   end
 
+  create_table "cash_motifs", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "direction", default: "both", null: false
+    t.bigint "general_account_id", null: false
+    t.string "label", null: false
+    t.bigint "legal_entity_id", null: false
+    t.integer "position", default: 0, null: false
+    t.bigint "team_id"
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_cash_motifs_on_deleted_at"
+    t.index ["general_account_id"], name: "index_cash_motifs_on_general_account_id"
+    t.index ["legal_entity_id"], name: "index_cash_motifs_on_legal_entity_id"
+    t.index ["position", "id"], name: "index_cash_motifs_on_position_and_id"
+    t.index ["team_id"], name: "index_cash_motifs_on_team_id"
+  end
+
   create_table "catalog_items", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.string "category"
@@ -1589,6 +1607,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
   add_foreign_key "cash_allocations", "teams"
   add_foreign_key "cash_allocations", "third_parties"
   add_foreign_key "cash_entries", "cash_accounts"
+  add_foreign_key "cash_motifs", "general_accounts"
+  add_foreign_key "cash_motifs", "legal_entities"
+  add_foreign_key "cash_motifs", "teams"
   add_foreign_key "catalog_prices", "catalog_items"
   add_foreign_key "coda_statements", "cash_accounts"
   add_foreign_key "coda_statements", "coda_imports"

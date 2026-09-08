@@ -1,4 +1,21 @@
 namespace :finance do
+  desc "Sème les motifs de caisse avec le vocabulaire de la feuille papier (epic #243). Idempotent."
+  task seed_cash_motifs: :environment do
+    result = Finance::SeedCashMotifs.new.run
+
+    puts "[finance:seed_cash_motifs] #{result}"
+    puts "  Compte de trésorerie « #{Finance::SeedCashMotifs::CASH_ACCOUNT_NAME} » créé." if result.cash_account_created
+    { "créés" => result.created, "conservés (déjà présents)" => result.kept }.each do |titre, lignes|
+      next if lignes.empty?
+
+      puts "  #{titre} : #{lignes.join(', ')}"
+    end
+    if result.missing_accounts.any?
+      puts "  Comptes absents du référentiel — ajoute-les puis relance :"
+      result.missing_accounts.each { |ligne| puts "    - #{ligne}" }
+    end
+  end
+
   desc "Seed d'un catalogue de départ (bar + cellier) avec son premier palier — idempotent"
   task seed_catalog: :environment do
     # Les deux articles réels servent d'exemples vivants ET de garde-fou contre

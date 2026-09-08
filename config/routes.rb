@@ -168,6 +168,15 @@ Rails.application.routes.draw do
     resources :allocation_rules, except: [:show] do
       member { post :move }
     end
+    # Motifs de caisse (epic #243). Pas de `destroy` : un motif se désactive,
+    # sinon une feuille de caisse passée perdrait son vocabulaire.
+    resources :cash_motifs, path: "cash/motifs", except: %i[show destroy] do
+      member do
+        post :move
+        patch :deactivate
+        patch :reactivate
+      end
+    end
     resources :allocation_suggestions, only: [:update] do
       collection { post :bulk }
     end
