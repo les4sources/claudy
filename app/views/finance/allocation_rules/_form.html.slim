@@ -52,6 +52,11 @@
       div
         = f.label :team_id, "Pôle", class: "block text-sm font-medium text-gray-700"
         = f.collection_select :team_id, Team.ordered, :id, :name, { include_blank: "Non affecté" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :event_id, "Événement", class: "block text-sm font-medium text-gray-700"
+        = f.collection_select :event_id, Event.where("starts_at >= ?", 18.months.ago).order(starts_at: :desc), :id, ->(e) { "#{e.name} — #{l(e.starts_at.to_date, format: :short)}" }, { include_blank: "Aucun" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+        p.mt-1.text-xs.text-gray-500
+          | « La communication contient STAGE LOWTECH » proposera aussi l'événement. La règle propose ; elle n'affecte jamais.
 
   .flex.items-center.gap-3
     = f.submit "Enregistrer", class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"

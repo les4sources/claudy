@@ -23,6 +23,7 @@
 #  allocation_rule_id  :bigint
 #  analytic_account_id :bigint
 #  cash_entry_id       :bigint           not null
+#  event_id            :bigint
 #  general_account_id  :bigint           not null
 #  legal_entity_id     :bigint           not null
 #  team_id             :bigint
@@ -34,6 +35,7 @@
 #  index_allocation_suggestions_on_cash_entry_id             (cash_entry_id)
 #  index_allocation_suggestions_on_cash_entry_id_and_status  (cash_entry_id,status)
 #  index_allocation_suggestions_on_deleted_at                (deleted_at)
+#  index_allocation_suggestions_on_event_id                  (event_id)
 #  index_allocation_suggestions_on_general_account_id        (general_account_id)
 #  index_allocation_suggestions_on_legal_entity_id           (legal_entity_id)
 #  index_allocation_suggestions_on_team_id                   (team_id)
@@ -44,6 +46,7 @@
 #  fk_rails_...  (allocation_rule_id => allocation_rules.id)
 #  fk_rails_...  (analytic_account_id => analytic_accounts.id)
 #  fk_rails_...  (cash_entry_id => cash_entries.id)
+#  fk_rails_...  (event_id => events.id)
 #  fk_rails_...  (general_account_id => general_accounts.id)
 #  fk_rails_...  (legal_entity_id => legal_entities.id)
 #  fk_rails_...  (team_id => teams.id)
@@ -68,6 +71,9 @@ class AllocationSuggestion < ApplicationRecord
   belongs_to :analytic_account, optional: true
   belongs_to :team, optional: true
   belongs_to :legal_entity
+  # L'événement transporté depuis la règle (epic #245, phase 2). La suggestion
+  # ne crée toujours aucune allocation : elle propose, un humain tranche.
+  belongs_to :event, optional: true
 
   monetize :amount_cents
 

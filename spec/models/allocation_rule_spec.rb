@@ -21,6 +21,7 @@ require "rails_helper"
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
 #  analytic_account_id        :bigint
+#  event_id                   :bigint
 #  general_account_id         :bigint           not null
 #  legal_entity_id            :bigint           not null
 #  team_id                    :bigint
@@ -29,6 +30,7 @@ require "rails_helper"
 #
 #  index_allocation_rules_on_analytic_account_id  (analytic_account_id)
 #  index_allocation_rules_on_deleted_at           (deleted_at)
+#  index_allocation_rules_on_event_id             (event_id)
 #  index_allocation_rules_on_general_account_id   (general_account_id)
 #  index_allocation_rules_on_legal_entity_id      (legal_entity_id)
 #  index_allocation_rules_on_position             (position)
@@ -37,6 +39,7 @@ require "rails_helper"
 # Foreign Keys
 #
 #  fk_rails_...  (analytic_account_id => analytic_accounts.id)
+#  fk_rails_...  (event_id => events.id)
 #  fk_rails_...  (general_account_id => general_accounts.id)
 #  fk_rails_...  (legal_entity_id => legal_entities.id)
 #  fk_rails_...  (team_id => teams.id)

@@ -1,6 +1,67 @@
 .space-y-4
-  / Partage (epic #245, phase 1). Les recettes réelles arrivent en phase 2 : ici
-    on n'affiche que ce qui est déjà décidé — le taux, les organisateurs et les frais.
+  / Recettes réelles (epic #245, phase 2). Elles viennent des allocations de
+    trésorerie qui pointent l'événement : c'est de l'argent VU sur un compte, pas
+    une estimation. Dès qu'il y en a une, l'estimation manuelle est barrée — elle
+    n'était là que pour tenir jusqu'ici.
+  - allocations = event.cash_allocations.includes(:general_account, cash_entry: :cash_account).order("cash_entries.entry_date DESC")
+  .overflow-hidden.bg-white.shadow.sm:rounded-lg
+    .px-4.py-5.sm:px-6.border-b.border-gray-200.flex.flex-wrap.items-baseline.justify-between.gap-2
+      h3.text-lg.font-medium.leading-6.text-gray-900 Recettes
+      - if event.sales_amount_cents.present?
+        span.text-sm class=(event.recorded_revenue? ? "text-gray-400 line-through" : "text-gray-500")
+          = "estimation #{humanized_money_with_symbol(event.sales_amount)}"
+    - if allocations.empty?
+      .px-4.py-5.text-sm.text-gray-500
+        p Aucune recette rattachée pour l'instant.
+        p.mt-1.text-xs.text-gray-400
+          | Une recette se rattache depuis
+          = link_to " Comptabilité > Trésorerie", finance_unallocated_cash_entries_path, class: "text-4s-main hover:underline"
+          | , en choisissant cet événement au moment d'affecter la ligne.
+    - else
+      .overflow-x-auto
+        table.w-full.text-sm.text-left.text-gray-500
+          thead.text-xs.text-gray-700.uppercase.bg-gray-50
+            tr
+              th.py-2.px-4[scope="col"] Date
+              th.py-2.px-4[scope="col"] Libellé
+              th.py-2.px-4[scope="col"] Compte
+              th.py-2.px-4.text-right[scope="col"] Montant
+          tbody
+            - allocations.each do |allocation|
+              tr.border-b.bg-white
+                td.py-2.px-4.whitespace-nowrap= l(allocation.cash_entry.entry_date, format: :short)
+                td.py-2.px-4.text-gray-900
+                  = allocation.label.presence || allocation.cash_entry.label
+                  .text-xs.text-gray-400= allocation.cash_entry.cash_account.name
+                td.py-2.px-4= allocation.general_account.to_s
+                td.py-2.px-4.text-right.whitespace-nowrap.font-medium.text-gray-900= number_to_currency(allocation.amount_cents / 100.0)
+          tfoot
+            tr.bg-gray-50
+              td.py-2.px-4.font-semibold.text-gray-900(colspan="3") Total encaissé
+              td.py-2.px-4.text-right.font-semibold.text-gray-900= number_to_currency(event.recorded_revenue_cents / 100.0)
+
+    / Les séjours liés par une réservation d'espace. On SIGNALE, on ne rattache
+      jamais d'office : un séjour peut avoir loué la salle pour autre chose le
+      même jour, et rattacher son argent à l'événement fausserait le partage.
+    - sejours = event.linked_stays.to_a
+    - if sejours.any?
+      - rattaches = allocations.filter_map { |a| a.cash_entry_id }
+      - encaisse = sejours.sum { |s| s.amount_paid_cents.to_i }
+      .px-4.py-3.bg-amber-50.border-t.border-amber-100.text-sm.text-amber-900
+        = "#{sejours.size} séjour#{'s' if sejours.size > 1} lié#{'s' if sejours.size > 1} par une réservation d'espace"
+        - if encaisse.positive?
+          = ", #{number_to_currency(encaisse / 100.0)} encaissés"
+        |  — rien n'est rattaché d'office.
+        ul.mt-2.space-y-1
+          - sejours.each do |sejour|
+            li
+              = link_to (sejour.customer&.name.presence || "Séjour ##{sejour.id}"), stay_path(sejour), class: "underline"
+              - if sejour.amount_paid_cents.to_i.positive?
+                span.ml-1.text-amber-700= "· #{number_to_currency(sejour.amount_paid_cents / 100.0)} encaissés"
+        - if rattaches.blank?
+          p.mt-1.text-xs.text-amber-700 Aucune de leurs lignes de trésorerie n'est encore rattachée à cet événement.
+
+  / Partage (epic #245, phase 1). Le taux, les organisateurs et les frais.
   .overflow-hidden.bg-white.shadow.sm:rounded-lg
     .px-4.py-5.sm:px-6.border-b.border-gray-200
       h3.text-lg.font-medium.leading-6.text-gray-900 Partage

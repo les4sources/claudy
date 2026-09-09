@@ -72,16 +72,18 @@ module Finance
       @general_accounts = GeneralAccount.actives.ordered
       @teams = Team.ordered
       @entities = LegalEntity.actives.ordered
+      @events = recent_events
     end
 
     def show
       breadcrumb @entry.label, finance_cash_entry_path(@entry), match: :exact
 
-      @allocations = @entry.cash_allocations.includes(:general_account, :team, :legal_entity).ordered
+      @allocations = @entry.cash_allocations.includes(:general_account, :team, :legal_entity, :document).ordered
       @allocation = CashAllocation.new(amount_cents: @entry.remaining_cents)
       @general_accounts = GeneralAccount.actives.ordered
       @teams = Team.ordered
       @entities = LegalEntity.actives.ordered
+      @events = recent_events
     end
 
     def new
@@ -198,6 +200,14 @@ module Finance
       amount = permitted.delete(:amount)
       permitted[:amount_cents] = Monetize.parse(amount.to_s).cents if amount.present?
       permitted
+    end
+
+    # Les événements proposables au rattachement d'une recette (epic #245,
+    # phase 2) : dix-huit mois en arrière et l'avenir. Au-delà, la liste devient
+    # une roue interminable pour retrouver un stage de 2023 que plus personne
+    # n'encaisse.
+    def recent_events
+      Event.where("starts_at >= ?", 18.months.ago).order(starts_at: :desc)
     end
 
     def parsed_date(raw)

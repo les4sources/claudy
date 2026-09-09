@@ -30,6 +30,7 @@
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
 #  analytic_account_id        :bigint
+#  event_id                   :bigint
 #  general_account_id         :bigint           not null
 #  legal_entity_id            :bigint           not null
 #  team_id                    :bigint
@@ -38,6 +39,7 @@
 #
 #  index_allocation_rules_on_analytic_account_id  (analytic_account_id)
 #  index_allocation_rules_on_deleted_at           (deleted_at)
+#  index_allocation_rules_on_event_id             (event_id)
 #  index_allocation_rules_on_general_account_id   (general_account_id)
 #  index_allocation_rules_on_legal_entity_id      (legal_entity_id)
 #  index_allocation_rules_on_position             (position)
@@ -46,6 +48,7 @@
 # Foreign Keys
 #
 #  fk_rails_...  (analytic_account_id => analytic_accounts.id)
+#  fk_rails_...  (event_id => events.id)
 #  fk_rails_...  (general_account_id => general_accounts.id)
 #  fk_rails_...  (legal_entity_id => legal_entities.id)
 #  fk_rails_...  (team_id => teams.id)
@@ -64,6 +67,11 @@ class AllocationRule < ApplicationRecord
   belongs_to :analytic_account, optional: true
   belongs_to :team, optional: true
   belongs_to :legal_entity
+  # L'événement que la règle propose de rattacher (epic #245, phase 2). Ce n'est
+  # PAS un critère de reconnaissance : c'est une conséquence, au même titre que
+  # le compte et le pôle. « La communication contient STAGE LOWTECH » propose
+  # alors le compte, le pôle ET l'événement d'un seul geste.
+  belongs_to :event, optional: true
   has_many :allocation_suggestions, dependent: :nullify
 
   validates :label, presence: true

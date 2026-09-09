@@ -46,6 +46,10 @@ module Finance
           analytic_account: @suggestion.analytic_account,
           team: @suggestion.team,
           legal_entity: @suggestion.legal_entity,
+          # L'événement proposé devient le `document` de l'allocation (epic
+          # #245, phase 2) : c'est par lui que la page comptable de l'événement
+          # retrouvera ses recettes.
+          document: @suggestion.event,
           amount_cents: montant,
           label: "Suggestion acceptée"
         )

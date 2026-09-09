@@ -36,7 +36,7 @@ module Finance
     private
 
     def suggest
-      rules = AllocationRule.actives.ordered.includes(:general_account, :team, :legal_entity).to_a
+      rules = AllocationRule.actives.ordered.includes(:general_account, :team, :legal_entity, :event).to_a
       created = 0
 
       @entries.each do |entry|
@@ -86,10 +86,11 @@ module Finance
           analytic_account: rule.analytic_account,
           team: rule.team,
           legal_entity: rule.legal_entity,
+          event: rule.event,
           amount_cents: entry.remaining_cents,
           confidence: rule.confidence,
           source: "rule",
-          rationale: motif
+          rationale: rule.event ? "#{motif} — événement « #{rule.event.name} »" : motif
         )
       end
 

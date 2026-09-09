@@ -79,7 +79,7 @@
               = button_to "Accepter", finance_allocation_suggestion_path(suggestion, decision: "accept"), method: :patch, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
               = button_to "Refuser", finance_allocation_suggestion_path(suggestion, decision: "reject"), method: :patch, class: "text-xs text-gray-500 hover:text-gray-700", form: { class: "inline" }
 
-      = render "allocation_form", entry: entry, general_accounts: @general_accounts, teams: @teams, entities: @entities, from_unallocated: true
+      = render "allocation_form", entry: entry, general_accounts: @general_accounts, teams: @teams, entities: @entities, events: @events, from_unallocated: true
 
   - if @entries.total_pages > 1
     .mt-6.flex.justify-center

@@ -12,6 +12,13 @@
   div
     = f.label :legal_entity_id, "Entité", class: "block text-xs font-medium text-gray-500"
     = f.collection_select :legal_entity_id, entities, :id, :name, {}, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  / L'événement (epic #245, phase 2) est FACULTATIF : c'est ce qui rattache une
+    recette à sa page comptable. Proposé pour une ligne entrante comme sortante —
+    un remboursement est une recette négative, et il doit se retrouver au même
+    endroit que ce qu'il annule.
+  div
+    = label_tag "cash_allocation[event_id]", "Événement", class: "block text-xs font-medium text-gray-500"
+    = select_tag "cash_allocation[event_id]", options_from_collection_for_select(events, :id, ->(e) { "#{e.name} — #{l(e.starts_at.to_date, format: :short)}" }), include_blank: "Aucun", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
   div
     = f.label :amount, "Montant (€)", class: "block text-xs font-medium text-gray-500"
     / Deux décimales toujours : « -450,0 » se lit comme un montant tronqué et

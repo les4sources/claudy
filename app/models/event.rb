@@ -2,7 +2,7 @@
 #
 # Table name: events
 #
-#  id                      :bigint          not null, primary key
+#  id                      :bigint           not null, primary key
 #  attendees               :integer
 #  deleted_at              :datetime
 #  ends_at                 :datetime
@@ -18,9 +18,9 @@
 #  status                  :string
 #  summary                 :string
 #  url                     :string
-#  created_at              :datetime        not null
-#  updated_at              :datetime        not null
-#  event_category_id       :bigint          not null
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#  event_category_id       :bigint           not null
 #  team_id                 :bigint
 #
 # Indexes
@@ -58,6 +58,12 @@ class Event < ApplicationRecord
   has_paper_trail
   has_soft_deletion default_scope: true
 
+  # Les allocations de trésorerie qui pointent CET événement (epic #245,
+  # phase 2). C'est par elles que les recettes réelles arrivent — le montant
+  # saisi à la main (`sales_amount_cents`) n'était qu'une estimation en
+  # attendant.
+  has_many :cash_allocations, as: :document, dependent: :nullify
+
   monetize :sales_amount_cents, allow_nil: true
 
   has_rich_text :notes
@@ -84,6 +90,22 @@ class Event < ApplicationRecord
   attr_accessor :duplicate_of_id
 
   before_validation :rehydrate_form_dates
+
+  # --- Recettes réelles (epic #245, phase 2) ---
+
+  # Ce qui a été encaissé et rattaché. Un remboursement est une allocation
+  # négative : la somme est donc le NET, pas le brut.
+  def recorded_revenue_cents = cash_allocations.sum(:amount_cents)
+
+  def recorded_revenue? = cash_allocations.exists?
+
+  # Les séjours qui touchent l'événement par une réservation d'espace, SANS que
+  # leur argent lui soit rattaché. On les signale, on ne rattache rien d'office :
+  # un séjour peut très bien avoir loué la salle pour autre chose le même jour.
+  def linked_stays
+    stay_ids = space_bookings.includes(stay_item: :stay).filter_map { |booking| booking.stay&.id }.uniq
+    Stay.where(id: stay_ids)
+  end
 
   by_star_field :starts_at, :ends_at
 

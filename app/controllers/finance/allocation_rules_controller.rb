@@ -70,7 +70,7 @@ module Finance
         :label, :position, :active, :counterparty_iban, :counterparty_name_contains,
         :communication_contains, :transaction_code, :direction, :confidence,
         :general_account_id, :analytic_account_id, :team_id, :legal_entity_id,
-        :min_amount, :max_amount
+        :event_id, :min_amount, :max_amount
       )
       %w[min max].each do |borne|
         valeur = permitted.delete(:"#{borne}_amount")

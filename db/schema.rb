@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_09_080001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -176,6 +176,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
     t.string "direction"
+    t.bigint "event_id"
     t.bigint "general_account_id", null: false
     t.string "label", null: false
     t.bigint "legal_entity_id", null: false
@@ -188,6 +189,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
     t.datetime "updated_at", null: false
     t.index ["analytic_account_id"], name: "index_allocation_rules_on_analytic_account_id"
     t.index ["deleted_at"], name: "index_allocation_rules_on_deleted_at"
+    t.index ["event_id"], name: "index_allocation_rules_on_event_id"
     t.index ["general_account_id"], name: "index_allocation_rules_on_general_account_id"
     t.index ["legal_entity_id"], name: "index_allocation_rules_on_legal_entity_id"
     t.index ["position"], name: "index_allocation_rules_on_position"
@@ -204,6 +206,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
     t.datetime "decided_at"
     t.string "decided_by"
     t.datetime "deleted_at"
+    t.bigint "event_id"
     t.bigint "general_account_id", null: false
     t.bigint "legal_entity_id", null: false
     t.text "rationale", null: false
@@ -217,6 +220,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
     t.index ["cash_entry_id"], name: "index_allocation_suggestions_on_cash_entry_id"
     t.index ["cash_entry_id"], name: "index_one_pending_suggestion_per_entry", unique: true, where: "(((status)::text = 'pending'::text) AND (deleted_at IS NULL))"
     t.index ["deleted_at"], name: "index_allocation_suggestions_on_deleted_at"
+    t.index ["event_id"], name: "index_allocation_suggestions_on_event_id"
     t.index ["general_account_id"], name: "index_allocation_suggestions_on_general_account_id"
     t.index ["legal_entity_id"], name: "index_allocation_suggestions_on_legal_entity_id"
     t.index ["team_id"], name: "index_allocation_suggestions_on_team_id"
@@ -366,6 +370,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
     t.datetime "allocated_at"
     t.bigint "amount_cents", null: false
     t.bigint "cash_account_id", null: false
+    t.bigint "cash_motif_id"
     t.string "communication"
     t.string "counterparty_iban"
     t.string "counterparty_name"
@@ -375,6 +380,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
     t.string "excluded_reason"
     t.string "external_ref"
     t.string "label", null: false
+    t.text "notes"
     t.string "statement_ref"
     t.string "status", default: "pending", null: false
     t.string "transaction_code"
@@ -382,6 +388,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
     t.date "value_date"
     t.index ["cash_account_id", "external_ref"], name: "index_cash_entries_on_external_ref", unique: true, where: "(external_ref IS NOT NULL)"
     t.index ["cash_account_id"], name: "index_cash_entries_on_cash_account_id"
+    t.index ["cash_motif_id"], name: "index_cash_entries_on_cash_motif_id"
     t.index ["deleted_at"], name: "index_cash_entries_on_deleted_at"
     t.index ["entry_date"], name: "index_cash_entries_on_entry_date"
     t.index ["status"], name: "index_cash_entries_on_status"
@@ -710,12 +717,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
     t.datetime "created_at", null: false
     t.bigint "experience_availability_id", null: false
     t.text "notes"
+    t.string "outcome"
+    t.datetime "outcome_recorded_at"
+    t.bigint "outcome_recorded_by_id"
     t.integer "participants"
     t.text "refusal_reason"
     t.string "status"
     t.bigint "stay_id", null: false
     t.datetime "updated_at", null: false
     t.index ["experience_availability_id"], name: "index_experience_bookings_on_experience_availability_id"
+    t.index ["outcome"], name: "index_experience_bookings_on_outcome"
+    t.index ["outcome_recorded_by_id"], name: "index_experience_bookings_on_outcome_recorded_by_id"
     t.index ["stay_id"], name: "index_experience_bookings_on_stay_id"
   end
 
@@ -790,6 +802,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
     t.datetime "deleted_at"
     t.string "name", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "gathering_teams", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "gathering_id", null: false
+    t.bigint "team_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["gathering_id", "team_id"], name: "index_gathering_teams_on_gathering_id_and_team_id", unique: true
+    t.index ["gathering_id"], name: "index_gathering_teams_on_gathering_id"
+    t.index ["team_id"], name: "index_gathering_teams_on_team_id"
   end
 
   create_table "gatherings", force: :cascade do |t|
@@ -1256,6 +1278,66 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
     t.index ["team_id"], name: "index_revenue_mappings_on_team_id"
   end
 
+  create_table "revenue_share_agreements", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "beneficiary_email"
+    t.text "beneficiary_iban"
+    t.string "beneficiary_name", null: false
+    t.bigint "beneficiary_third_party_id"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "ends_on"
+    t.bigint "lodging_id", null: false
+    t.string "period", default: "quarterly", null: false
+    t.integer "share_percent", default: 50, null: false
+    t.date "starts_on", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_revenue_share_agreements_on_active"
+    t.index ["beneficiary_third_party_id"], name: "index_revenue_share_agreements_on_beneficiary_third_party_id"
+    t.index ["deleted_at"], name: "index_revenue_share_agreements_on_deleted_at"
+    t.index ["lodging_id"], name: "index_revenue_share_agreements_on_lodging_id"
+  end
+
+  create_table "revenue_share_statement_lines", force: :cascade do |t|
+    t.bigint "amount_cents", default: 0, null: false
+    t.bigint "booking_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "from_date"
+    t.string "kind", default: "booking", null: false
+    t.string "label"
+    t.bigint "origin_line_id"
+    t.bigint "revenue_share_statement_id", null: false
+    t.date "to_date"
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_revenue_share_statement_lines_on_booking_id"
+    t.index ["booking_id"], name: "index_rssl_unique_booking_once", unique: true, where: "(((kind)::text = 'booking'::text) AND (deleted_at IS NULL))"
+    t.index ["deleted_at"], name: "index_revenue_share_statement_lines_on_deleted_at"
+    t.index ["origin_line_id"], name: "index_revenue_share_statement_lines_on_origin_line_id"
+    t.index ["revenue_share_statement_id"], name: "index_rssl_on_statement_id"
+  end
+
+  create_table "revenue_share_statements", force: :cascade do |t|
+    t.bigint "base_cents", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.datetime "issued_at"
+    t.date "paid_on"
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.datetime "posted_at"
+    t.bigint "revenue_share_agreement_id", null: false
+    t.datetime "sent_at"
+    t.bigint "share_cents", default: 0, null: false
+    t.string "status", default: "draft", null: false
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_revenue_share_statements_on_deleted_at"
+    t.index ["revenue_share_agreement_id", "period_from"], name: "index_rss_on_agreement_and_period", unique: true
+    t.index ["revenue_share_agreement_id"], name: "index_rss_on_agreement_id"
+    t.index ["token"], name: "index_revenue_share_statements_on_token", unique: true
+  end
+
   create_table "roles", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
@@ -1617,12 +1699,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
   add_foreign_key "agenda_items", "humans", column: "author_id"
   add_foreign_key "agenda_items", "humans", column: "carrier_id"
   add_foreign_key "allocation_rules", "analytic_accounts"
+  add_foreign_key "allocation_rules", "events"
   add_foreign_key "allocation_rules", "general_accounts"
   add_foreign_key "allocation_rules", "legal_entities"
   add_foreign_key "allocation_rules", "teams"
   add_foreign_key "allocation_suggestions", "allocation_rules"
   add_foreign_key "allocation_suggestions", "analytic_accounts"
   add_foreign_key "allocation_suggestions", "cash_entries"
+  add_foreign_key "allocation_suggestions", "events"
   add_foreign_key "allocation_suggestions", "general_accounts"
   add_foreign_key "allocation_suggestions", "legal_entities"
   add_foreign_key "allocation_suggestions", "teams"
@@ -1640,6 +1724,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
   add_foreign_key "cash_allocations", "teams"
   add_foreign_key "cash_allocations", "third_parties"
   add_foreign_key "cash_entries", "cash_accounts"
+  add_foreign_key "cash_entries", "cash_motifs"
   add_foreign_key "cash_motifs", "general_accounts"
   add_foreign_key "cash_motifs", "legal_entities"
   add_foreign_key "cash_motifs", "teams"
@@ -1668,6 +1753,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
   add_foreign_key "events", "teams"
   add_foreign_key "experience_availabilities", "experiences"
   add_foreign_key "experience_bookings", "experience_availabilities"
+  add_foreign_key "experience_bookings", "humans", column: "outcome_recorded_by_id"
   add_foreign_key "experience_bookings", "stays"
   add_foreign_key "experiences", "humans"
   add_foreign_key "experiences", "teams"
@@ -1675,6 +1761,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
   add_foreign_key "gathering_action_humans", "gathering_actions"
   add_foreign_key "gathering_action_humans", "humans"
   add_foreign_key "gathering_actions", "gatherings"
+  add_foreign_key "gathering_teams", "gatherings"
+  add_foreign_key "gathering_teams", "teams"
   add_foreign_key "gatherings", "gathering_categories"
   add_foreign_key "household_members", "households"
   add_foreign_key "household_members", "humans"
@@ -1710,6 +1798,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_050226) do
   add_foreign_key "reservations", "rooms"
   add_foreign_key "revenue_mappings", "general_accounts"
   add_foreign_key "revenue_mappings", "teams"
+  add_foreign_key "revenue_share_agreements", "lodgings"
+  add_foreign_key "revenue_share_agreements", "third_parties", column: "beneficiary_third_party_id"
+  add_foreign_key "revenue_share_statement_lines", "bookings"
+  add_foreign_key "revenue_share_statement_lines", "revenue_share_statement_lines", column: "origin_line_id"
+  add_foreign_key "revenue_share_statement_lines", "revenue_share_statements"
+  add_foreign_key "revenue_share_statements", "revenue_share_agreements"
   add_foreign_key "sent_emails", "customers"
   add_foreign_key "services", "humans"
   add_foreign_key "space_bookings", "events"
