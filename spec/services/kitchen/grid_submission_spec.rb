@@ -94,6 +94,85 @@ RSpec.describe Kitchen::GridSubmission do
     expect(stay.meal_orders.where(kind: "buffet_viande").count).to eq(2)
   end
 
+  # Issue #266 — la saisie prévient elle-même la cuisine, une fois commitée :
+  # un seul email par destinataire, jamais un par ligne.
+  describe "les emails de la saisie" do
+    let!(:steph) { Human.create!(name: "Stéphanie", email: "steph@les4sources.be", status: "active") }
+    let!(:michael) { Human.create!(name: "Michael", email: "michael@les4sources.be", status: "active") }
+
+    before { ActionMailer::Base.deliveries.clear }
+
+    def deliveries = ActionMailer::Base.deliveries
+
+    it "n'envoie qu'UN email pour les six services d'une même personne" do
+      result = run(block(index: 0, kind: "repas", responsible_human_id: steph.id,
+                         cells: { lundi.iso8601 => { "midi" => "1", "soir" => "1" },
+                                  (lundi + 1).iso8601 => { "midi" => "1", "soir" => "1" },
+                                  (lundi + 2).iso8601 => { "midi" => "1", "soir" => "1" } }))
+
+      expect(result.orders.size).to eq(6)
+      expect(deliveries.size).to eq(1)
+      expect(deliveries.last.to).to eq(["steph@les4sources.be"])
+      expect(deliveries.last.subject).to start_with("6 services — Groupe Blocs —")
+    end
+
+    it "envoie un email à chacun quand les blocs visent deux personnes" do
+      run(
+        block(index: 0, kind: "repas", responsible_human_id: steph.id,
+              cells: { lundi.iso8601 => { "midi" => "1", "soir" => "1" } }),
+        block(index: 1, kind: "buffet_vege", responsible_human_id: michael.id,
+              cells: { (lundi + 1).iso8601 => { "midi" => "1", "soir" => "1" } })
+      )
+
+      expect(deliveries.size).to eq(2)
+      expect(deliveries.map { |m| m.to.first })
+        .to match_array(%w[steph@les4sources.be michael@les4sources.be])
+
+      chez_steph = deliveries.find { |m| m.to == ["steph@les4sources.be"] }
+      expect(chez_steph.body.encoded).not_to include("Buffet végétarien")
+    end
+
+    it "repart sur l'email individuel quand la saisie ne crée qu'une ligne" do
+      run(block(index: 0, kind: "apero", responsible_human_id: michael.id,
+                cells: { lundi.iso8601 => { "soir" => "1" } }))
+
+      expect(deliveries.size).to eq(1)
+      expect(deliveries.last.subject).to start_with("Apéro — Groupe Blocs —")
+    end
+
+    it "n'envoie RIEN quand la saisie échoue" do
+      expect {
+        run(
+          block(index: 0, kind: "repas", responsible_human_id: steph.id,
+                cells: { lundi.iso8601 => { "midi" => "1" } }),
+          block(index: 1, kind: "n_importe_quoi", responsible_human_id: steph.id,
+                cells: { lundi.iso8601 => { "soir" => "1" } })
+        )
+      }.not_to change { deliveries.size }
+    end
+
+    it "n'écrit jamais au client" do
+      run(block(index: 0, kind: "repas", responsible_human_id: steph.id,
+                cells: { lundi.iso8601 => { "midi" => "1", "soir" => "1" } }))
+
+      recipients = deliveries.flat_map { |m| Array(m.to) + Array(m.cc) }
+      expect(recipients).not_to include(stay.customer.email)
+    end
+
+    # Le prix affiché doit être celui d'APRÈS la remise : elle se pose en
+    # `after_commit`, donc après que la saisie a construit ses objets.
+    it "annonce le prix de formule quand la journée forme un trio" do
+      run(block(index: 0, kind: "repas", people: 10, responsible_human_id: steph.id,
+                cells: { lundi.iso8601 => { "midi" => "1", "gouter" => "1", "soir" => "1" } }))
+
+      total = stay.meal_orders.of_family("repas").where(date: lundi).sum(:price_cents)
+      expect(total).to eq(Pricing::Catalog.meal_per_person_cents("trio") * 10)
+      expect(deliveries.last.body.encoded).to include(ActionController::Base.helpers.strip_tags(
+        MealOrder.where(kind: "gouter").sole.decorate.price
+      ))
+    end
+  end
+
   # La remise trio est recalculée en `after_commit` : elle voit donc l'état
   # APRÈS la transaction, toutes lignes confondues. C'est ce qui la rend juste
   # quand la journée est garnie par plusieurs blocs à la fois.

@@ -47,19 +47,18 @@ module Kitchen
         return
       end
 
-      lines = chronological(refreshed(lines))
+      lines = chronological(lines)
       mail = if lines.one?
                KitchenMailer.new_request(lines.first, recipient)
              else
                KitchenMailer.grouped_request(lines, recipient)
              end
+      # `deliver_later` sérialise les lignes en GlobalID : le gabarit les relit
+      # depuis la base. C'est ce qui fait annoncer le prix d'APRÈS la remise de
+      # formule, réécrite en `update_columns` pendant le commit — les objets que
+      # la saisie tient en mémoire, eux, sont déjà périmés.
       mail.deliver_later
     end
-
-    # La remise de formule réécrit `price_cents` en `update_columns` pendant le
-    # commit : les objets que la saisie tient en mémoire sont déjà périmés quand
-    # on arrive ici, et l'email annoncerait le tarif plein.
-    def refreshed(lines) = lines.map(&:reload)
 
     # L'email se lit dans l'ordre du séjour, pas dans celui des blocs du
     # formulaire : le mercredi midi vient après le mardi soir.

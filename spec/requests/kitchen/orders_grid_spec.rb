@@ -209,6 +209,63 @@ RSpec.describe "Cuisine — grille jours × services", type: :request do
     end
   end
 
+  # Issue #266 — la saisie prévient la cuisine une seule fois, quel que soit le
+  # nombre de cases cochées.
+  describe "les emails d'une saisie" do
+    let!(:steph) { Human.create!(name: "Stéphanie", email: "steph@les4sources.be", status: "active") }
+    let!(:michael) { Human.create!(name: "Michael", email: "michael@les4sources.be", status: "active") }
+
+    before { ActionMailer::Base.deliveries.clear }
+
+    def deliveries = ActionMailer::Base.deliveries
+
+    it "n'en envoie qu'UN pour les treize services de la semaine" do
+      expect {
+        post kitchen_orders_path,
+             params: grid_params(tous_les_services, responsible_human_id: steph.id)
+      }.to change { deliveries.size }.by(1)
+
+      expect(deliveries.last.to).to eq(["steph@les4sources.be"])
+      expect(deliveries.last.subject).to start_with("13 services — Groupe Semaine —")
+    end
+
+    it "en envoie un par destinataire distinct, et rien de plus" do
+      expect {
+        post kitchen_orders_path, params: prestation_params([
+          { kind: "repas", responsible_human_id: steph.id,
+            cells: { lundi.iso8601 => { "midi" => "1", "soir" => "1" } } },
+          { kind: "buffet_vege", responsible_human_id: michael.id,
+            cells: { (lundi + 1).iso8601 => { "midi" => "1", "soir" => "1" } } }
+        ])
+      }.to change { deliveries.size }.by(2)
+
+      expect(deliveries.map { |m| m.to.first })
+        .to match_array(%w[steph@les4sources.be michael@les4sources.be])
+    end
+
+    it "n'en envoie AUCUN quand la saisie est refusée" do
+      expect {
+        post kitchen_orders_path, params: prestation_params([
+          { kind: "repas", responsible_human_id: steph.id,
+            cells: { lundi.iso8601 => { "midi" => "1" } } },
+          { kind: "buffet_vege", responsible_human_id: michael.id, cells: {} }
+        ])
+      }.not_to change { deliveries.size }
+    end
+
+    # Hors saisie groupée — la ligne créée seule garde son email individuel.
+    it "laisse une ligne créée hors grille partir en email individuel" do
+      expect {
+        post kitchen_orders_path, params: {
+          meal_order: { stay_id: stay.id, kind: "repas", moment: "midi", date: lundi.iso8601,
+                        people: 4, status: "requested", responsible_human_id: steph.id }
+        }
+      }.to change { deliveries.size }.by(1)
+
+      expect(deliveries.last.subject).to start_with("Repas — Groupe Semaine —")
+    end
+  end
+
   describe "la saisie d'un service unique" do
     it "reste possible et n'est pas passée par la grille" do
       expect {
