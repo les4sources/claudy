@@ -1,16 +1,18 @@
-/ Repère d'étapes du funnel /reservation — 4 étapes (epic #55, Phase 4).
-/ `current` = numéro de l'étape active (1..4). Les étapes déjà franchies sont
+/ Repère d'étapes du funnel /reservation — 3 étapes. L'étape « Activités » a été
+/ retirée le 2026-09-08 : l'équipe planifie les activités un mois avant le séjour
+/ et les propose alors par email, pas au moment de la demande.
+/ `current` = numéro de l'étape active (1..3). Les étapes déjà franchies sont
 / cliquables (retour en arrière) ; l'étape active et les suivantes ne le sont pas.
 /
 / Sémantique : <nav> + <ol>, parce que c'est une liste ordonnée de repères de
 / navigation. `aria-current="step"` désigne l'étape active — sans lui, un lecteur
-/ d'écran énumère quatre pastilles sans dire où on en est.
+/ d'écran énumère les pastilles sans dire où on en est.
 /
 / Mobile : les libellés étaient tous en `hidden sm:inline`, donc sous 640 px le
-/ client ne voyait que « 1 2 3 4 » — quatre ronds muets. Le libellé de l'étape
+/ client ne voyait que « 1 2 3 » — des ronds muets. Le libellé de l'étape
 / COURANTE reste maintenant visible à toute largeur ; seuls les autres se
-/ replient. Un « Étape n sur 4 » en sr-only donne le compte à la voix.
-- steps = [{ n: 1, label: "Votre séjour", path: public_reservation_dates_path }, { n: 2, label: "Composition", path: public_reservation_compose_path }, { n: 3, label: "Activités", path: public_reservation_activities_path }, { n: 4, label: "Coordonnées", path: public_reservation_contact_path }]
+/ replient. Un « Étape n sur 3 » en sr-only donne le compte à la voix.
+- steps = [{ n: 1, label: "Votre séjour", path: public_reservation_dates_path }, { n: 2, label: "Composition", path: public_reservation_compose_path }, { n: 3, label: "Coordonnées", path: public_reservation_contact_path }]
 
 nav.mb-8.md:mb-10 aria-label="Étapes de la réservation"
   p.sr-only = "Étape #{current} sur #{steps.size} — #{steps.find { |s| s[:n] == current }&.dig(:label)}"

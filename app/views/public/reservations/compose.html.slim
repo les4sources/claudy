@@ -1,9 +1,9 @@
-/ Étape 2/4 — Composition du séjour
+/ Étape 2/3 — Composition du séjour
 - content_for :meta_title, "Composez votre séjour"
 div(data-controller="public--avail-modal")
   .max-w-5xl.mx-auto.px-4.sm:px-6.pt-8.md:pt-10.pb-28(data-controller="public--reservation-quote"
     data-public--reservation-quote-url-value=public_reservation_quote_path
-    data-public--reservation-quote-next-url-value=public_reservation_activities_path)
+    data-public--reservation-quote-next-url-value=public_reservation_contact_path)
 
     / ── Step indicator ───────────────────────────────────────
     = render "public/reservations/step_indicator", current: 2
@@ -78,6 +78,11 @@ div(data-controller="public--avail-modal")
                 = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline"
 
         / ── Activités ───────────────────────────────────────
+        / Bloc purement informatif depuis le retrait de l'étape « Activités »
+        / (2026-09-08). Il disait deux choses à la fois — « réservez » et
+        / « on vous recontactera » — et le visiteur ne savait pas s'il devait
+        / agir maintenant. Une seule promesse ici : l'équipe revient vers vous.
+        / Le besoin « Activités » de l'étape 1 ne fait plus que déplier ce bloc.
         .bg-forest-tint.rounded-2xl.border.border-bark.p-6(data-needs-block="activites")
           .flex.items-start.gap-3
             span.text-forest.flex-shrink-0.mt-0.5
@@ -86,9 +91,7 @@ div(data-controller="public--avail-modal")
               h2.funnel-section-title.mb-1 Activités aux 4 Sources
               p.text-sm.text-ink.mb-1 Balades avec les ânes, ateliers créatifs, forge, golf et bien d'autres…
               p.text-sm.text-moss
-                | Les activités se réservent
-                strong  1 mois avant votre arrivée.
-                |  Vous recevrez un email avec un calendrier pour sélectionner ce qui vous tente.
+                | Notre équipe planifie les activités un mois avant votre séjour. Vous recevrez alors un email avec le calendrier pour choisir ce qui vous tente.
 
         noscript
           = f.submit "Mettre à jour le devis", class: "rounded-lg bg-forest text-sand px-4 py-2 text-sm font-semibold"

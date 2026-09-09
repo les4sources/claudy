@@ -1,0 +1,76 @@
+/ Un bloc de prestation (issue #265, décisions 2 et 3). Le séjour est en tête du
+  formulaire ; TOUT le reste se saisit ici, bloc par bloc — un client peut se
+  renseigner sur un buffet tout en commandant fermement ses repas.
+
+  `index_token` est ce qui part dans les `name` : un entier pour un bloc rendu,
+  le jeton `__INDEX__` pour le gabarit que le « + » clone. `position` n'est que
+  le numéro affiché, renuméroté par le contrôleur Stimulus après un retrait.
+- name_prefix = "prestations[#{index_token}]"
+- id_prefix = "prestation_#{index_token}"
+section.rounded-2xl.bg-white.ring-1.ring-gray-200.px-5.py-4.space-y-4(
+  data-meal-prestations-target="block"
+  data-controller="meal-price-hint"
+  data-meal-price-hint-rates-value=meal_rates_json)
+  .flex.items-center.justify-between.gap-3
+    h2.text-sm.font-semibold.text-gray-900(data-meal-prestations-target="label")
+      = "Prestation #{position}"
+    button.text-sm.text-red-600.hidden(type="button" class="hover:underline"
+                                       data-meal-prestations-target="removeButton"
+                                       data-action="meal-prestations#remove")
+      | Retirer
+
+  .grid.grid-cols-1.gap-4.sm:grid-cols-6
+    / Cinq types de longueur inégale : en puces sur la ligne entière, on les lit
+      tous d'un coup et rien n'est tronqué. Aucun n'est coché au départ — le
+      type conditionne le responsable et le tarif, il se choisit sciemment.
+    .sm:col-span-6
+      fieldset
+        legend.block.text-sm.font-medium.text-gray-700 Type
+        .mt-2.flex.flex-wrap.gap-2
+          - @kinds.each do |kind_label, kind|
+            label.cursor-pointer
+              = radio_button_tag "#{name_prefix}[kind]", kind, block.value(:kind).to_s == kind, id: "#{id_prefix}_kind_#{kind}", required: true, class: "peer sr-only", data: { action: "change->meal-price-hint#refresh" }
+              span.inline-block.rounded-full.border.border-gray-300.px-3.text-sm.text-gray-700(class="py-1.5 peer-checked:border-4s-main peer-checked:bg-4s-main peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-4s-main peer-focus-visible:ring-offset-1 hover:border-gray-400")
+                = kind_label
+
+    / Issue #238 : dès que le séjour porte ses deux dates, la grille remplace
+      Moment et Date. Sans dates, pas de colonnes — on retombe sur la saisie
+      d'un service unique.
+    - if grid_days.present?
+      = render "kitchen/orders/grid", days: grid_days, name_prefix: name_prefix, id_prefix: id_prefix, checked_cells: block.cells_hash
+    - else
+      .sm:col-span-3
+        = label_tag "#{id_prefix}_moment", "Moment", class: "block text-sm font-medium text-gray-700"
+        = select_tag "#{name_prefix}[moment]", options_for_select(MealOrder::MOMENT_LABELS.map(&:reverse), block.value(:moment)), include_blank: "—", id: "#{id_prefix}_moment", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      .sm:col-span-2
+        = label_tag "#{id_prefix}_date", "Date", class: "block text-sm font-medium text-gray-700"
+        = date_field_tag "#{name_prefix}[date]", block.value(:date), id: "#{id_prefix}_date", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+    .sm:col-span-2
+      = label_tag "#{id_prefix}_people", "Convives", class: "block text-sm font-medium text-gray-700"
+      = number_field_tag "#{name_prefix}[people]", block.value(:people) || 1, min: 1, id: "#{id_prefix}_people", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+    .sm:col-span-2
+      = label_tag "#{id_prefix}_unit_price", "Prix par personne", class: "block text-sm font-medium text-gray-700"
+      .mt-1.flex.items-center.gap-2
+        / Pas de placeholder chiffré : il affichait le tarif du type sélectionné à
+          l'ouverture et ne bougeait plus, si bien qu'après un changement de type
+          il annonçait un prix qui n'était plus le bon.
+        = number_field_tag "#{name_prefix}[unit_price]", block.value(:unit_price_cents) && (block.value(:unit_price_cents) / 100.0), step: 0.01, min: 0, id: "#{id_prefix}_unit_price", class: "w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        span.text-sm.text-gray-500 €
+      p.mt-1.text-xs.text-gray-400(data-meal-price-hint-target="hint") Laisser vide pour appliquer le tarif du barème.
+    .sm:col-span-2
+      = label_tag "#{id_prefix}_responsible", "S'en charge", class: "block text-sm font-medium text-gray-700"
+      = select_tag "#{name_prefix}[responsible_human_id]", options_from_collection_for_select(@humans, :id, :name, block.value(:responsible_human_id)), include_blank: "— Personne —", id: "#{id_prefix}_responsible", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+  div
+    = label_tag "#{id_prefix}_notes", "Précisions", class: "block text-sm font-medium text-gray-700"
+    = text_area_tag "#{name_prefix}[notes]", block.value(:notes), rows: 2, id: "#{id_prefix}_notes", placeholder: "Intolérances, menu souhaité, précisions…", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+  fieldset
+    legend.block.text-sm.font-medium.text-gray-700 Où en est le client
+    .mt-2.flex.flex-wrap.gap-2
+      - status_choices(MealOrder.new).each do |status_label, status|
+        label.cursor-pointer
+          = radio_button_tag "#{name_prefix}[status]", status, (block.value(:status) || "requested") == status, id: "#{id_prefix}_status_#{status}", class: "peer sr-only"
+          span.inline-block.rounded-full.border.border-gray-300.px-3.text-sm.text-gray-700(class="py-1.5 peer-checked:border-4s-main peer-checked:bg-4s-main peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-4s-main peer-focus-visible:ring-offset-1 hover:border-gray-400")
+            = status_label

@@ -90,6 +90,32 @@ class Stay < ApplicationRecord
   # laissait passer un séjour annulé depuis l'UI (relances, invitations).
   CANCELED_STATUSES = %w[canceled cancelled].freeze
 
+  # Statuts qui BLOQUENT le calendrier (décision Michael 2026-09-08). SOURCE
+  # UNIQUE du veto de disponibilité : tout filtre qui répond à « ces dates
+  # sont-elles prises ? » passe par ici — `Lodging#available_between?`,
+  # `Space#available_on?`, les capacités plein air, le funnel public et les
+  # grilles de composition admin.
+  #
+  # POURQUOI `pre_confirmed` EN FAIT PARTIE. Jusqu'ici seul `confirmed` bloquait,
+  # au motif que « tant que l'acompte n'est pas là, les dates ne sont pas
+  # garanties ». En pratique cela laissait le Pôle Accueil pré-confirmer DEUX
+  # demandes sur les mêmes dates, puis les confirmer toutes les deux : l'acompte
+  # du second client arrivait sur un gîte déjà pris. Une demande pré-confirmée
+  # est un engagement de l'équipe — elle tient les dates jusqu'à ce que le séjour
+  # soit confirmé, refusé ou annulé.
+  #
+  # CE QUI RESTE VOLONTAIREMENT HORS DE CETTE CONSTANTE : tout ce qui compte de
+  # l'ARGENT ou de l'activité RÉALISÉE (écrans Rapports — `occupancy_rate`,
+  # `revenues`, `bookings_for_date_range`, les barres mensuelles des
+  # décorateurs). Un séjour pré-confirmé occupe le calendrier ; il n'a rien
+  # encaissé et n'a donc rien à faire dans un chiffre d'affaires.
+  #
+  # ⚠️ Le veto lit le statut des RÉSERVABLES, pas celui du séjour :
+  # `Stays::PreConfirmer` et `Stays::QuickStatusUpdater` PROPAGENT le statut du
+  # séjour à ses bookables — sans cette propagation, la constante ne servirait
+  # à rien.
+  BLOCKING_STATUSES = %w[confirmed pre_confirmed].freeze
+
   # Statuts qu'un admin peut POSER d'un clic depuis la fiche du séjour
   # (`Stays::QuickStatusUpdater`) : les deux statuts vivants + l'annulation.
   # L'annulation n'est jamais proposée à la CRÉATION (cf. ci-dessus).

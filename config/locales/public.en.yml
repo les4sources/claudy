@@ -18,7 +18,7 @@ en:
         confirmed_pill: "Stay confirmed"
         pending_pill: "Request pending"
         confirmed_intro: "It is official: we are expecting you. Everything you need to know is on this page — keep the link, it stays valid until you leave."
-        pending_intro: "Your request has been received. Our team is reviewing it and will write to you as soon as it is confirmed."
+        pending_intro: "Your request has been received. Our Welcome Desk is reviewing it and will send you a pre-confirmation by email, with the deposit amount and its payment link."
         canceled_pill: "Stay cancelled"
         canceled_intro: "This stay has been cancelled. If this is a mistake, write to us: we will check availability and get back to you quickly."
         arrival: "Arrival"
@@ -54,6 +54,7 @@ en:
         paid: "Paid"
       payments:
         heading: "Payment"
+        awaiting_review: "Our Welcome Desk is reviewing your request. No payment is required for now: you will receive a pre-confirmation by email, with the deposit amount and its payment link."
         pay_online: "Pay online"
         invitation: "We invite you to pay the amount of %{amount} online."
         stripe_notice: "This payment is handled by Stripe: we never have access to your payment details."

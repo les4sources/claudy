@@ -1,0 +1,94 @@
+/ Email d'ÉQUIPE (décision Michael du 2026-09-08). Il s'adresse au Pôle Accueil,
+  pas au client : il porte tout ce qu'il faut pour juger une demande — client,
+  dates, occupants, composition ligne par ligne, notes — et UN SEUL bouton, vers
+  la fiche. Les actions (pré-confirmer et demander l'acompte, refuser) vivent
+  là-bas, où l'état du séjour est vrai au moment du clic.
+/ NB Slim : deux lignes `|` consécutives se concatènent SANS espace — toujours
+  une seule barre avec continuation indentée pour la prose multi-ligne.
+p
+  strong Nouvelle demande de séjour reçue via le funnel public.
+
+h3 Client
+ul
+  li
+    strong Nom :
+    = " #{@stay.customer&.name.presence || '—'}"
+  li
+    strong Email :
+    = " #{@stay.customer&.email.presence || '— (aucun email)'}"
+  li
+    strong Téléphone :
+    = " #{@stay.customer&.phone.presence || '—'}"
+  - group = @stay.bookables.filter_map { |b| b.try(:group_name).presence }.first
+  - if group.present?
+    li
+      strong Groupe :
+      = " #{group}"
+  - if @stay.category_label.present?
+    li
+      strong Type de séjour :
+      = " #{@stay.category_label}"
+
+h3 Séjour
+ul
+  li
+    strong Dates :
+    = " #{@stay.date_range}"
+  - if @stay.nights_count
+    li
+      strong Nuits :
+      = " #{@stay.nights_count}"
+  - occupants = @stay.occupants
+  li
+    strong Occupants :
+    = " #{occupants[:adults]} adulte(s)#{occupants[:children].positive? ? ", #{occupants[:children]} enfant(s)" : ''}"
+
+h3 Composition
+- lines = @stay.item_lines
+- activities = @stay.activity_lines
+- if lines.empty? && activities.empty?
+  p Aucun élément dans ce séjour.
+- else
+  table
+    tbody
+      - lines.each do |line|
+        tr
+          td
+            = line[:name]
+            - if line[:date_range].present?
+              br
+              small = line[:date_range]
+          td = line[:amount]
+      - activities.each do |activity|
+        tr
+          td
+            = "#{activity[:name]} — #{activity[:participants]} participant(s)#{activity[:pending] ? ' (à confirmer)' : ''}"
+            - if activity[:date_range].present?
+              br
+              small = activity[:date_range]
+          td = activity[:amount]
+      tr
+        td
+          strong Total
+        td
+          strong = @stay.formatted_total
+
+/ Les deux notes que le funnel dépose et que personne ne voit sans ouvrir la
+  fiche : la précision libre du client sur les espaces, et la note interne du
+  séjour (aujourd'hui l'avertissement multi-chiens posé par le Builder).
+- if @spaces_note.present?
+  h3 Note du client sur les espaces
+  p = @spaces_note
+
+- if @stay.notes.present?
+  h3 Note interne
+  p = @stay.notes
+
+p
+  = link_to "Ouvrir la fiche séjour", @stay_url
+p
+  = link_to @stay_url, @stay_url
+
+p
+  | Les actions se font sur la fiche : pré-confirmer et demander l'acompte, ou
+    refuser la demande.

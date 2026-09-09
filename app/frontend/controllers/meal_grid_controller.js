@@ -6,16 +6,27 @@ import { Controller } from "@hotwired/stimulus"
 // n'apparaît que pour la famille « Repas », et le compteur qui annonce en
 // direct ce que la demande va coûter — remise de formule comprise, parce que
 // c'est le montant que le client verra.
+//
+// Issue #265 : une instance PAR BLOC de prestation. Le type, les convives et le
+// prix se cherchent donc dans le bloc, jamais dans le formulaire — sinon la
+// grille du bloc 2 lirait le type du bloc 1 et annoncerait un total faux. Les
+// sélecteurs visent la FIN du `name` (`[kind]`, `[people]`, `[unit_price]`) :
+// elle est la même que le champ s'appelle `meal_order[kind]` ou
+// `prestations[3][kind]`.
 export default class extends Controller {
   static targets = ["cell", "row", "counter"]
   static values = { rates: Object, trio: Number }
 
   connect() {
-    this.kindInputs = Array.from(
-      this.element.closest("form").querySelectorAll('input[name="meal_order[kind]"]')
-    )
-    this.peopleInput = this.element.closest("form").querySelector('input[name="meal_order[people]"]')
-    this.unitInput = this.element.closest("form").querySelector('input[name="meal_order[unit_price]"]')
+    // `blockScope`, pas `scope` : Stimulus définit déjà un getter `scope` sur
+    // Controller, et l'écraser fait échouer la connexion en silence — la grille
+    // reste à l'écran, inerte.
+    this.blockScope =
+      this.element.closest("[data-meal-prestations-target='block']") || this.element.closest("form")
+
+    this.kindInputs = Array.from(this.blockScope.querySelectorAll('input[type="radio"][name$="[kind]"]'))
+    this.peopleInput = this.blockScope.querySelector('input[name$="[people]"]')
+    this.unitInput = this.blockScope.querySelector('input[name$="[unit_price]"]')
 
     this.onChange = () => this.syncFamily()
     this.kindInputs.forEach((input) => input.addEventListener("change", this.onChange))
@@ -72,6 +83,7 @@ export default class extends Controller {
 
     if (checked.length === 0) {
       this.counterTarget.textContent = "Aucun service coché."
+      this.publishTotal(0)
       return
     }
 
@@ -81,6 +93,17 @@ export default class extends Controller {
     const convives = `${people} convive${people > 1 ? "s" : ""}`
 
     this.counterTarget.textContent = `${services} · ${convives} · ${euros} €`
+    this.publishTotal(total)
+  }
+
+  // Le bloc porte son total sur lui, puis prévient : c'est le contrôleur parent
+  // qui somme, et il n'a pas à savoir comment une grille compte.
+  publishTotal(cents) {
+    if (this.blockScope) this.blockScope.dataset.totalCents = String(cents)
+
+    this.element.dispatchEvent(
+      new CustomEvent("meal-grid:total", { bubbles: true, detail: { cents } })
+    )
   }
 
   // Le même calcul que la remise côté serveur : une journée dont les trois
@@ -89,9 +112,13 @@ export default class extends Controller {
     const kind = this.kindInputs.find((input) => input.checked)?.value
     const forced = this.unitInput?.value ? Math.round(parseFloat(this.unitInput.value.replace(",", ".")) * 100) : null
 
+    // Le jour se lit sur la case (`data-day`), plus dans son `name` : depuis
+    // l'issue #265 celui-ci est préfixé par le bloc (`prestations[2][grid][…]`)
+    // et l'expression régulière qui cherchait `grid[` n'y trouvait plus rien —
+    // le total tombait à zéro sans un mot.
     const byDay = {}
     checked.forEach((cell) => {
-      const day = cell.name.match(/grid\[([^\]]+)\]/)[1]
+      const day = cell.dataset.day
       byDay[day] = byDay[day] || []
       byDay[day].push(cell.dataset.moment)
     })
