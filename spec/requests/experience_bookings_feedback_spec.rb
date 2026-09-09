@@ -56,17 +56,11 @@ RSpec.describe "ExperienceBookings — retour visible dans la modale séjour", t
       expect(booking.reload.participants).to eq(2)
     end
 
-    it "explique à un porteur qu'il ne peut pas modifier l'activité d'un autre porteur" do
-      target = ExperienceBooking.create!(experience_availability: avail_b, stay: stay, participants: 1, status: "pending")
-      sign_in user_a
-      patch experience_booking_path(target), params: { experience_booking: { participants: 9 } }, headers: TURBO
-
-      expect(response).to have_http_status(:not_found)
-      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
-      expect(response.body).to include(frame)
-      expect(response.body).to include("portée par quelqu&#39;un d&#39;autre")
-      expect(target.reload.participants).to eq(1)
-    end
+    # L'exemple qui vérifiait ici que le panneau du séjour et son message
+    # d'explication partaient à `user_a` a été RETIRÉ : depuis cette PR, `user_a`
+    # est un compte cloisonné, et lui rendre le panneau lui livrerait le total du
+    # séjour, l'encaissé et le solde dû — d'un séjour qu'il ne peut pas ouvrir.
+    # Le cas est désormais couvert juste en dessous, avec la bonne attente.
 
     # Le compte cloisonné n'a pas accès à la fiche séjour : le panneau, qui porte
     # le total du séjour, l'encaissé et le solde dû, ne doit jamais lui parvenir —
