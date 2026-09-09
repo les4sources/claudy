@@ -44,7 +44,7 @@ RSpec.describe "Cuisine — validation depuis la page", type: :request do
 
     get kitchen_orders_path
 
-    expect(response.body).to include("C'est possible".gsub("'", "&#39;"))
+    expect(response.body).to include("Ok !")
     expect(response.body).to include(new_refusal_kitchen_order_path(order))
   end
 end

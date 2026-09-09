@@ -4,19 +4,52 @@
            links: [link_to("Reporting", kitchen_reporting_path, class: "btn-page-header-with-icon"),
                    link_to("Nouvelle demande", new_kitchen_order_path, class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90")]
 
-.space-y-6
-  = render "kitchen/orders/filters"
+/ Une table, une ligne par service, groupée par séjour. Les onglets sont des
+  FILTRES sur la même table : « Cuisine » et « Accueil » ne montrent que les
+  lignes où ce métier a la main, et c'est là que chacun vient travailler.
+- columns = @show_money ? 8 : 7
+.space-y-4
+  nav.flex.gap-1.overflow-x-auto.border-b.border-gray-200.text-sm(aria-label="Vues")
+    - Kitchen::OrdersController::VIEWS.each do |view|
+      - active = view[:key] == @view
+      = link_to kitchen_orders_path(view: view[:key]),
+                class: "-mb-px inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 font-medium #{active ? 'border-4s-main text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700'}" do
+        - if view[:key] == :kitchen
+          span.h-2.w-2.rounded-full.bg-4s-main
+        - elsif view[:key] == :reception
+          span.h-2.w-2.rounded-full.bg-indigo-400
+        = view[:title]
+        span.rounded-full.px-2.text-xs.font-semibold(class="py-0.5 #{active ? 'bg-teal-50 text-4s-main' : 'bg-gray-100 text-gray-600'}")
+          = @counts[view[:key]]
 
-  - @sections.each do |section|
-    section
-      .flex.items-baseline.justify-between.gap-3
-        h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-700 = section[:title]
-        span.text-xs.text-gray-400 = section[:blurb]
+  .overflow-x-auto.rounded-xl.bg-white.ring-1.ring-gray-200
+    table.w-full.text-sm(class="min-w-[880px]")
+      thead
+        tr.bg-gray-50.text-left.text-xs.font-semibold.uppercase.tracking-wide.text-gray-500
+          th.px-3.py-2.pl-4 Date
+          th.px-3.py-2 Type
+          th.px-3.py-2.text-right Conv.
+          - if @show_money
+            th.px-3.py-2.text-right Prix
+          th.px-3.py-2 S'en charge
+          th.px-3.py-2.text-4s-main Cuisine
+          th.px-3.py-2.text-indigo-800 Client
+          th.px-3.py-2
+      tbody.divide-y.divide-gray-100
+        - if @groups.empty?
+          tr
+            td.px-4.py-6.text-center.text-gray-500(colspan=columns) Rien ici.
+        - else
+          - @groups.each do |group|
+            = render "kitchen/orders/stay_row", group: group, columns: columns
+            - group[:orders].each do |order|
+              = render "kitchen/orders/row", order: order
 
-      - if section[:groups].empty?
-        p.mt-2.rounded-lg.border.border-dashed.border-gray-300.px-4.py-4.text-sm.text-gray-500
-          | Rien ici.
-      - else
-        .mt-2.space-y-3
-          - section[:groups].each do |group|
-            = render "kitchen/orders/group", group: group
+  .flex.items-center.justify-between.text-xs.text-gray-500
+    div
+      - if @view == :past && !@old_archives
+        = link_to "Voir les archives de plus de 12 mois", kitchen_orders_path(view: :past, old_archives: 1), class: "hover:underline"
+    - if @show_money
+      div
+        | Total facturable :
+        strong.ml-1.text-gray-900 = humanized_money_with_symbol(Money.new(@total_cents))
