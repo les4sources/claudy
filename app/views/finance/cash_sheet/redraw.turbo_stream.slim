@@ -1,0 +1,6 @@
+/ Un seul flux : la feuille entière. Les soldes courants de toutes les lignes
+  changent dès qu'une ligne s'ajoute au milieu du mois — remplacer la seule
+  ligne neuve laisserait le reste du tableau mentir.
+= turbo_stream.replace "cash-sheet" do
+  = render "finance/cash_sheet/sheet", sheet: @sheet, motifs: @motifs, accounts: @accounts,
+           default_date: (@last_date.presence || Date.current.to_s)

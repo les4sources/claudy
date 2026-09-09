@@ -49,6 +49,22 @@ RSpec.describe Finance::SeedCashMotifs do
     expect(caisse.general_account.code).to eq("570000")
   end
 
+  # Note de Michael (2026-09-08) : la production tient sa caisse dans « Caisse du
+  # domaine ». Chercher un NOM y a créé un doublon vide, que la feuille de caisse
+  # aurait ensuite garni pendant que l'argent dormait dans l'autre.
+  it "ne crée AUCUNE caisse quand une caisse active existe déjà" do
+    seed_referentiel
+    entite = LegalEntity.ordered.first
+    CashAccount.create!(name: "Caisse du domaine", kind: "cash", legal_entity: entite,
+                        general_account: GeneralAccount.find_by(code: "570000"))
+
+    result = described_class.new.run
+
+    expect(result.cash_account_created).to be(false)
+    expect(CashAccount.where(kind: "cash").count).to eq(1)
+    expect(CashAccount.find_by(name: described_class::CASH_ACCOUNT_NAME)).to be_nil
+  end
+
   it "est idempotent : relancer ne crée rien et n'écrase rien" do
     seed_referentiel
     described_class.new.run
