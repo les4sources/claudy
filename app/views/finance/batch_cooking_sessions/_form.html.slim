@@ -1,0 +1,127 @@
+/  Epic #246 — la saisie du batch cooking. Elle se fait EN CUISINE, sur un
+   téléphone, pendant que les plats refroidissent : une colonne, des cibles
+   tactiles larges, aucun tableau qui déborde. Le clavier numérique s'ouvre de
+   lui-même (`inputmode`), et l'aperçu des totaux se recalcule à la frappe —
+   c'est ce qu'on compare à ce qu'on a sous les yeux avant d'enregistrer.
+
+- panel = "mb-6 p-5 bg-white rounded-2xl ring-1 ring-gray-200"
+- panel_title = "text-base font-semibold text-gray-900 mb-1"
+- panel_hint = "text-xs text-gray-500 mb-4"
+- field_label = "block text-sm font-medium text-gray-700 mb-1"
+- field_input = "block w-full rounded-md border-gray-300 shadow-sm text-sm focus:border-indigo-500 focus:ring-indigo-500"
+- portions_input = "block w-20 rounded-md border-gray-300 shadow-sm text-sm text-right tabular-nums focus:border-indigo-500 focus:ring-indigo-500"
+- primary_button = "w-full md:w-auto inline-flex items-center justify-center rounded-md bg-green-700 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2"
+- row = "flex items-center justify-between gap-3 border-b border-gray-100 py-3"
+
+= form_with model: @session,
+            url: (@session.persisted? ? finance_batch_cooking_session_path(@session) : finance_batch_cooking_sessions_path),
+            method: (@session.persisted? ? :patch : :post),
+            data: { controller: "batch-cooking", \
+                    batch_cooking_serving_price_cents_value: @serving_price_cents.to_i, \
+                    batch_cooking_cook_price_cents_value: @cook_price_cents.to_i } do |f|
+
+  - if @serving_price_cents.blank? || @cook_price_cents.blank?
+    .mb-6.p-4.rounded-lg.text-sm(class="bg-amber-50 text-amber-900")
+      | Aucun barème batch cooking ne couvre cette date. Ajoute une version dans Paramètres > Tarifs avant d'enregistrer.
+
+  div(class=panel)
+    h3(class=panel_title) La session
+    .grid.grid-cols-1.gap-4(class="md:grid-cols-12 md:gap-3")
+      div(class="md:col-span-3")
+        = label_tag "batch_cooking_session[cooked_on]", "Date *", class: field_label
+        = date_field_tag "batch_cooking_session[cooked_on]",
+                         (@session.cooked_on || Date.current),
+                         required: true,
+                         id: "batch_cooking_session_cooked_on",
+                         class: field_input
+      div(class="md:col-span-4")
+        = label_tag "batch_cooking_session[label]", "Nom du plat", class: field_label
+        = text_field_tag "batch_cooking_session[label]",
+                         @session.label,
+                         placeholder: "Chili, soupe de courge…",
+                         id: "batch_cooking_session_label",
+                         class: field_input
+      div(class="md:col-span-5")
+        = label_tag "batch_cooking_session[notes]", "Notes", class: field_label
+        = text_field_tag "batch_cooking_session[notes]",
+                         @session.notes,
+                         id: "batch_cooking_session_notes",
+                         class: field_input
+
+  / Les familles servies. Une ligne par compte de ménage actif : on descend la
+    liste et on tape ce qu'on a donné, sans rien chercher.
+  div(class=panel)
+    h3(class=panel_title) Les familles servies
+    p(class=panel_hint)
+      = "#{number_to_currency(@serving_price_cents.to_i / 100.0)} la portion — laisse vide une famille qui n'a rien reçu."
+
+    - if @accounts.blank?
+      p.text-sm.text-gray-500 Aucun compte de ménage actif.
+    - else
+      - @accounts.each do |account|
+        div(class=row)
+          .min-w-0
+            .text-sm.font-medium.text-gray-900.truncate= account.name
+            .text-xs.text-gray-400.font-mono= account.code
+          = number_field_tag "servings[#{account.id}]",
+                             @selected_servings[account.id],
+                             min: 0,
+                             step: 1,
+                             inputmode: "numeric",
+                             placeholder: "0",
+                             class: portions_input,
+                             data: { batch_cooking_target: "serving", action: "input->batch-cooking#recompute" }
+
+      .flex.items-center.justify-between.pt-4.text-sm
+        span.text-gray-500 Total facturé
+        span.text-lg.font-semibold.text-gray-900.tabular-nums(data-batch-cooking-target="billedTotal") —
+
+  / Qui a cuisiné. Les MEMBRES DE MÉNAGE, enfants compris : c'est la liste que
+    Stéphanie a en tête. Un membre sans personne ne peut pas être payé — on le
+    dit sur sa ligne, avec le lien qui règle le problème.
+  div(class=panel)
+    h3(class=panel_title) Qui a cuisiné
+    p(class=panel_hint)
+      = "#{number_to_currency(@cook_price_cents.to_i / 100.0)} la portion préparée, partagée à parts égales entre les cuisiniers — chaque part reste modifiable."
+
+    - if @members.blank?
+      p.text-sm.text-gray-500 Aucun membre de ménage présent à cette date.
+    - else
+      - @members.each do |member|
+        - selected = @selected_cooks.key?(member.id)
+        div(class=row data-batch-cooking-target="cookRow")
+          label.flex.items-center.gap-3.min-w-0.flex-1.cursor-pointer
+            = check_box_tag "cooks[#{member.id}][selected]",
+                            "1",
+                            selected,
+                            disabled: member.human_id.blank?,
+                            class: "h-5 w-5 rounded border-gray-300 text-green-700 focus:ring-green-600",
+                            data: { batch_cooking_target: "cookToggle", action: "change->batch-cooking#toggleCook" }
+            .min-w-0
+              .text-sm.font-medium.text-gray-900.truncate
+                = member.name
+                - if member.kind == "child"
+                  span.ml-2.text-xs.text-gray-400 enfant
+              .text-xs.text-gray-400.truncate= member.household&.name
+              - if member.human_id.blank?
+                .text-xs.text-amber-700
+                  | à créer comme personne —
+                  = link_to " crée #{member.name}", new_human_path(name: member.name), class: "underline"
+          .flex.items-center.gap-3.flex-shrink-0
+            span.text-xs.text-gray-500.tabular-nums.w-16.text-right(data-batch-cooking-target="cookDue") —
+            = text_field_tag "cooks[#{member.id}][portions]",
+                             (@selected_cooks[member.id] && number_with_precision(@selected_cooks[member.id], precision: 3, strip_insignificant_zeros: true)),
+                             inputmode: "decimal",
+                             placeholder: "0",
+                             disabled: member.human_id.blank?,
+                             class: portions_input,
+                             data: { batch_cooking_target: "cookPortions", action: "input->batch-cooking#touchCook" }
+
+      .flex.items-center.justify-between.pt-4.text-sm
+        span.text-gray-500 Total dû aux cuisiniers
+        span.text-lg.font-semibold.text-gray-900.tabular-nums(data-batch-cooking-target="dueTotal") —
+
+  .flex.flex-col.gap-3(class="md:flex-row md:items-center md:justify-between")
+    p.text-xs.text-gray-500(class="md:max-w-xl")
+      | Enregistrer écrit les charges des familles et les crédits des cuisiniers. Revenir sur la session les met à jour — sauf celles qu'un décompte émis a figées.
+    button(class=primary_button type="submit") Enregistrer la session

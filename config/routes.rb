@@ -161,6 +161,10 @@ Rails.application.routes.draw do
         post :save_encoding
       end
     end
+    # Batch cooking (epic #246). Saisissable par tout utilisateur connecté : les
+    # cuisiniers ont un accès Claudy, et c'est en cuisine, sur un téléphone, que
+    # la session se note.
+    resources :batch_cooking_sessions, except: [:show]
     # Comptabilité en partie double (issue #177). Le référentiel et les deux
     # lectures — grand livre et balance. Aucune route ne permet de SAISIR une
     # écriture : elles se génèrent, elles ne se saisissent jamais.
