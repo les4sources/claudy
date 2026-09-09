@@ -1,11 +1,13 @@
 / Grille jours × services (issue #238, décision 1). Le type et les convives se
-  posent une fois ; chaque case cochée deviendra une ligne autonome, seule unité
-  que la cuisine valide ou refuse.
+  posent une fois par PRESTATION (issue #265) ; chaque case cochée deviendra une
+  ligne autonome, seule unité que la cuisine valide ou refuse.
+
+  `name_prefix` et `id_prefix` sont indexés par bloc : deux grilles dans le même
+  formulaire qui porteraient le même `name` verraient Rails ne garder que la
+  dernière — un bloc entier disparaîtrait sans un mot.
 .sm:col-span-6(data-controller="meal-grid"
                data-meal-grid-rates-value=meal_rates_cents_json
                data-meal-grid-trio-value=Pricing::Catalog.meal_per_person_cents("trio"))
-  = hidden_field_tag :grid_mode, "1"
-
   .flex.flex-wrap.items-center.justify-between.gap-2
     span.block.text-sm.font-medium.text-gray-700 Services à préparer
     .flex.flex-wrap.gap-1
@@ -34,10 +36,10 @@
             - days.each do |day|
               td.px-1.py-2.text-center
                 label.inline-flex.cursor-pointer
-                  = check_box_tag "grid[#{day.iso8601}][#{moment}]", "1", false,
-                                  id: "grid_#{day.iso8601}_#{moment}",
+                  = check_box_tag "#{name_prefix}[grid][#{day.iso8601}][#{moment}]", "1", checked_cells.dig(day.iso8601, moment).present?,
+                                  id: "#{id_prefix}_grid_#{day.iso8601}_#{moment}",
                                   "aria-label" => "#{MealOrder::MOMENT_LABELS[moment]} du #{l(day, format: :long)}",
-                                  data: { "meal-grid-target": "cell", moment: moment, action: "change->meal-grid#recount" },
+                                  data: { "meal-grid-target": "cell", moment: moment, day: day.iso8601, action: "change->meal-grid#recount" },
                                   class: "h-5 w-5 rounded border-gray-300 text-4s-main focus:ring-4s-main"
 
   p.mt-2.text-sm.text-gray-600(data-meal-grid-target="counter")
