@@ -81,9 +81,11 @@ class BatchCookingSession < ApplicationRecord
 
   def cooks_count = cooks.size
 
-  def title
-    label.presence || "Batch cooking du #{I18n.l(cooked_on, format: :ddmmyyyy)}"
-  end
+  # Une session se nomme par sa DATE. Le nom de plat a été retiré de la saisie
+  # (décision de Michael) : un batch cooking prépare plusieurs plats d'un coup,
+  # et Steph les annonce sur Slack. La colonne `label` reste en base, sans
+  # interface — rien ne l'écrit plus.
+  def title = "Batch cooking du #{I18n.l(cooked_on, format: :ddmmyyyy)}"
 
   # Répartition à parts égales des portions servies entre les cuisiniers. Sert
   # de proposition à la saisie : chaque ligne reste modifiable.
