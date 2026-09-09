@@ -14,9 +14,12 @@ RSpec.describe BatchCookingSession, type: :model do
     expect(described_class.new).not_to be_valid
   end
 
-  it "se nomme toute seule quand aucun libellé n'est donné" do
+  # Le nom de plat a été retiré de la saisie : un batch cooking prépare plusieurs
+  # plats d'un coup, et Steph les annonce sur Slack. Une session se nomme donc
+  # toujours par sa date, même si la colonne `label` porte encore une valeur.
+  it "se nomme toujours par sa date" do
     expect(session.title).to eq("Batch cooking du 12/09/2026")
-    expect(session(label: "Chili").title).to eq("Chili")
+    expect(session(label: "Chili").title).to eq("Batch cooking du 12/09/2026")
   end
 
   describe "portions servies" do

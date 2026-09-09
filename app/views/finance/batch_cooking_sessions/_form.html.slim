@@ -27,24 +27,21 @@
   div(class=panel)
     h3(class=panel_title) La session
     .grid.grid-cols-1.gap-4(class="md:grid-cols-12 md:gap-3")
-      div(class="md:col-span-3")
+      / Pas de « nom du plat » : un batch cooking prépare PLUSIEURS plats d'un
+        coup, et c'est Steph qui les annonce sur Slack. Une date, une note
+        libre, rien de plus à taper en cuisine.
+      div(class="md:col-span-4")
         = label_tag "batch_cooking_session[cooked_on]", "Date *", class: field_label
         = date_field_tag "batch_cooking_session[cooked_on]",
                          (@session.cooked_on || Date.current),
                          required: true,
                          id: "batch_cooking_session_cooked_on",
                          class: field_input
-      div(class="md:col-span-4")
-        = label_tag "batch_cooking_session[label]", "Nom du plat", class: field_label
-        = text_field_tag "batch_cooking_session[label]",
-                         @session.label,
-                         placeholder: "Chili, soupe de courge…",
-                         id: "batch_cooking_session_label",
-                         class: field_input
-      div(class="md:col-span-5")
-        = label_tag "batch_cooking_session[notes]", "Notes", class: field_label
+      div(class="md:col-span-8")
+        = label_tag "batch_cooking_session[notes]", "Note", class: field_label
         = text_field_tag "batch_cooking_session[notes]",
                          @session.notes,
+                         placeholder: "Facultatif",
                          id: "batch_cooking_session_notes",
                          class: field_input
 

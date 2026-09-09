@@ -206,7 +206,7 @@ module Finance
     end
 
     def session_params
-      params.require(:batch_cooking_session).permit(:cooked_on, :label, :notes)
+      params.require(:batch_cooking_session).permit(:cooked_on, :notes)
     end
 
     def finance_secondary = "batch_cooking"

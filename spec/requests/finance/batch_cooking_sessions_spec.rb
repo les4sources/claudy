@@ -35,8 +35,8 @@ RSpec.describe "Finances > Batch cooking", type: :request do
     rate.rate_versions.create!(amount_cents: cents, active_from: RateVersion::ORIGIN)
   end
 
-  def payload(servings: {}, cooks: {}, cooked_on: "2026-09-12", label: nil)
-    { batch_cooking_session: { cooked_on: cooked_on, label: label },
+  def payload(servings: {}, cooks: {}, cooked_on: "2026-09-12", notes: nil)
+    { batch_cooking_session: { cooked_on: cooked_on, notes: notes },
       servings: servings, cooks: cooks }
   end
 
@@ -163,13 +163,13 @@ RSpec.describe "Finances > Batch cooking", type: :request do
   describe "GET /finance/batch_cooking_sessions" do
     it "liste les sessions avec leurs totaux facturé et dû" do
       post finance_batch_cooking_sessions_path,
-           params: payload(servings: { compte_cheveche.id => "3" }, label: "Chili",
+           params: payload(servings: { compte_cheveche.id => "3" }, notes: "Soupes et curry",
                            cooks: { membre_stephanie.id => { selected: "1", portions: "3" } })
 
       get finance_batch_cooking_sessions_path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Chili")
+      expect(response.body).to include("Soupes et curry")
       expect(response.body).to include("15,00")
       expect(response.body).to include("10,50")
     end
