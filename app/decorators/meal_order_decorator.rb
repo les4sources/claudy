@@ -43,15 +43,6 @@ class MealOrderDecorator < ApplicationDecorator
 
   def unit_price = h.humanized_money_with_symbol(Money.new(object.unit_price_effective_cents))
 
-  def cost = object.cost_cents.nil? ? "—" : h.humanized_money_with_symbol(Money.new(object.cost_cents))
-
-  def margin
-    value = object.margin_cents
-    return "—" if value.nil?
-
-    h.humanized_money_with_symbol(Money.new(value))
-  end
-
   def status_badge = badge(STATUS_STYLES, object.status)
 
   # « Formule trio » (issue #238) : le prix du goûter n'est explicable au client
