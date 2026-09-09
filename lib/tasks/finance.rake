@@ -286,4 +286,20 @@ namespace :finance do
          "total #{format('%.2f', report.total_cents / 100.0)} €"
     puts "[finance:generate_recurring] Rien n'a été écrit — relance avec APPLY=1." unless apply
   end
+
+  desc "Rattache les membres de ménage à la personne du même nom (epic #246). Dry-run par défaut, APPLY=1 pour écrire."
+  task link_household_members_to_humans: :environment do
+    apply  = ENV["APPLY"].present?
+    result = Households::LinkMembersToHumans.new(dry_run: !apply).run
+
+    puts "[finance:link_household_members_to_humans] #{result.summary}"
+    { "rattachés" => result.linked, "ambigus, laissés tels quels" => result.ambiguous,
+      "sans personne connue" => result.unmatched }.each do |title, rows|
+      next if rows.empty?
+
+      puts "  #{title} :"
+      rows.each { |row| puts "    - #{row}" }
+    end
+    puts "[finance:link_household_members_to_humans] Rien n'a été écrit — relance avec APPLY=1." unless apply
+  end
 end
