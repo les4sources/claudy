@@ -25,10 +25,19 @@
     h2.funnel-section-title.mb-3 = t(".notes_heading")
     .content.text-base.text-ink.space-y-4 == @stay.public_notes
 
+/ Paiement. Sur une demande ENCORE EN ATTENTE, la section ne réclame rien : elle
+/ explique. Elle affichait jusqu'ici la ventilation du solde et un « Payer le
+/ solde de 1 685 € » sur une demande que le Pôle Accueil n'avait pas encore
+/ regardée — alors que c'est la pré-confirmation, et elle seule, qui pose
+/ l'acompte et son lien de paiement (issue #215). Le TOTAL du séjour, lui, reste
+/ affiché plus haut : le client a le droit de savoir ce qu'il a demandé.
 section.funnel-card.mt-6.p-5.md:p-6
   h2.funnel-section-title.mb-4 = t("public.stays.payments.heading")
-  = render "public/stays/balance"
-  = render "public/stays/payments"
+  - if @stay.awaiting_review?
+    p.text-base(class="text-moss" data-stay-awaiting-review="true") = t("public.stays.payments.awaiting_review")
+  - else
+    = render "public/stays/balance"
+    = render "public/stays/payments"
 
 = render "public/stays/bakery"
 

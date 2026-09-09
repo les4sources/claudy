@@ -47,7 +47,7 @@ RSpec.describe "Tarifs paramétrés (Pricing::Rates)" do
 
       %w[
         lodging.la_hulotte.first_night
-        lodging.le_grand_duc.package_7
+        lodging.la_cheveche.package_3
         hall.grande_salle.journee
         hall_weekend.grande_salle.journee
         hall.deux_salles.journee

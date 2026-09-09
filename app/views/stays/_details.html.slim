@@ -54,6 +54,14 @@ div id="stay-details-#{@stay.id}"
          écran où l'on ajuste le montant avant d'envoyer quoi que ce soit.
       - if @stay.can_pre_confirm?
         = link_to "Pré-confirmer et demander l'acompte", pre_confirm_stay_path(@stay), class: "rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+      /  Refus d'une demande (Michael 2026-09-08) — le pendant du bouton
+         ci-dessus, à ne pas confondre avec « Annuler le séjour » juste à
+         gauche : celui-là est un toggle interne SILENCIEUX, celui-ci exige un
+         motif et l'ENVOIE au client. Visible tant que la demande n'est pas
+         payée (en attente OU pré-confirmée). Un lien, pas un button_to :
+         l'action ouvre l'écran de saisie du motif, rien ne part au clic.
+      - if @stay.can_refuse?
+        = link_to "Refuser la demande", refuse_stay_path(@stay), class: "rounded-md border border-transparent bg-red-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-red-700"
       - if @stay.can_resend_confirmation_email?
         = button_to @stay.confirmation_email_button_label, send_confirmation_email_stay_path(@stay), method: :post, title: @stay.confirmation_email_hint, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Envoyer l'email de confirmation au client ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
       = link_to "Dupliquer", new_stay_path(duplicate_from: @stay.id), title: "Dupliquer ce séjour (nouvelles dates à choisir)", class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"

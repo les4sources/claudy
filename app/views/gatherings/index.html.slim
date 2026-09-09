@@ -6,6 +6,16 @@
              link_to("➕ Nouveau rassemblement", new_gathering_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2") \
            ]
 
+/ Filtre par pôle (epic #239, phase 2). En puces plutôt qu'en sélecteur : les
+  pôles se comptent sur les doigts d'une main, et on veut voir d'un coup ceux
+  qui existent.
+- if @teams.any?
+  .mb-4.flex.flex-wrap.items-center.gap-2
+    span.text-xs.font-semibold.uppercase.text-gray-500 Pôle
+    = link_to "Tous", gatherings_path, class: "rounded-full border px-3 py-1 text-sm #{@team ? 'border-gray-300 text-gray-600 hover:border-emerald-400' : 'border-emerald-500 bg-emerald-50 text-emerald-800 font-medium'}"
+    - @teams.each do |team|
+      = link_to team.name, gatherings_path(team_id: team.id), class: "rounded-full border px-3 py-1 text-sm #{@team&.id == team.id ? 'border-emerald-500 bg-emerald-50 text-emerald-800 font-medium' : 'border-gray-300 text-gray-600 hover:border-emerald-400'}"
+
 .overflow-x-auto.relative
   table.w-full.text-sm.text-left
     thead.text-xs.text-gray-700.uppercase.bg-gray-50
@@ -14,6 +24,8 @@
           | Catégorie
         th.py-3.px-6[scope="col"]
           | Nom
+        th.py-3.px-6.w-64[scope="col"]
+          | Pôles
         th.py-3.px-6.w-80[scope="col"]
           | Quand
         th.py-3.px-6.w-48[scope="col"]
@@ -21,7 +33,7 @@
     tbody
       - if @gatherings.empty?
         tr
-          td.py-10.px-6.text-center.text-gray-500.italic[colspan="4"]
+          td.py-10.px-6.text-center.text-gray-500.italic[colspan="5"]
             | Aucun rassemblement pour le moment.
             = link_to "Créer le premier →", new_gathering_path, class: "ml-2 text-emerald-700 hover:text-emerald-900 underline"
       - @gatherings.each do |gathering|
@@ -34,6 +46,8 @@
             = link_to gathering.display_name,
                       gathering_path(gathering),
                       class: "text-emerald-700 border-b-2 border-emerald-200 hover:text-emerald-900 focus:text-emerald-900"
+          td.py-4.px-6
+            = render "gatherings/team_badges", gathering: gathering.object
           td.py-4.px-6
             .text-xs.text-gray-500.font-semibold Début
             = l(gathering.starts_at, format: :long).sub("h00", "h")

@@ -61,6 +61,9 @@ class HamacBooking < ApplicationRecord
   before_create :generate_token
 
   scope :confirmed, -> { where(status: "confirmed") }
+  # Statuts qui MOBILISENT un hamac (Michael 2026-09-08) : `confirmed` ET
+  # `pre_confirmed` — même vocabulaire que `GlobalCapacityBookable#blocking`.
+  scope :blocking, -> { where(status: Stay::BLOCKING_STATUSES) }
   # Réservations couvrant la nuit `date` (from <= date < to) — même convention
   # `[from, to)` que `GlobalCapacityBookable`.
   scope :covering, ->(date) { where("from_date <= ? AND to_date > ?", date, date) }
@@ -74,10 +77,10 @@ class HamacBooking < ApplicationRecord
       RentalItem.find_by(name: RENTAL_ITEM_NAMES[kind.to_s])&.stock
     end
 
-    # Unités déjà CONFIRMÉES pour la nuit `date` (toutes réservations vivantes
-    # confondues), en excluant éventuellement des réservations données (édition).
+    # Unités déjà RETENUES pour la nuit `date` (statuts bloquants : confirmé et
+    # pré-confirmé), en excluant éventuellement des réservations données (édition).
     def units_reserved_on(kind, date, excluding_id: nil)
-      scope = of_kind(kind).confirmed.covering(date)
+      scope = of_kind(kind).blocking.covering(date)
       scope = scope.where.not(id: excluding_id) if excluding_id.present?
       scope.sum(:count)
     end

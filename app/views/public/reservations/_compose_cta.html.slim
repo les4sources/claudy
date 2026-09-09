@@ -2,8 +2,8 @@
 / du devis (quote.turbo_stream.slim), au même titre que le total de la barre
 / collante. Sans ça, l'état du bouton resterait figé au premier rendu.
 /
-/ Garde-fou panier vide : le bouton restait actif à 0,00 € — on pouvait traverser
-/ les activités puis les coordonnées et déposer une demande sans le moindre
+/ Garde-fou panier vide : le bouton restait actif à 0,00 € — on pouvait aller
+/ jusqu'aux coordonnées et déposer une demande sans le moindre
 / hébergement ni emplacement. Un lead vide côté équipe, et côté client la
 / mauvaise surprise d'un « séjour » qui ne contient rien. Le bouton n'est donc
 / actif qu'à partir du moment où le devis porte quelque chose ; l'explication est
@@ -24,6 +24,6 @@ div id="compose_cta" class="mt-2 flex flex-col sm:flex-row sm:items-center sm:ju
     data-action="public--reservation-quote#advance"
     disabled=empty
     aria-describedby=(empty ? "compose_cta_reason" : nil)
-    class="inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-sand px-8 py-3.5 text-base font-semibold shadow-sm transition-colors #{empty ? 'opacity-40 cursor-not-allowed' : 'hover:bg-forest-soft'}")
-    | Continuer vers les activités
+    class="funnel-submit-cta inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-sand px-8 py-3.5 text-base font-semibold shadow-sm transition-colors #{empty ? 'opacity-40 cursor-not-allowed' : 'hover:bg-forest-soft'}")
+    | Continuer vers mes coordonnées
     = funnel_icon :arrow_right, css_class: "w-4 h-4"

@@ -80,20 +80,23 @@ class PagesController < BaseController
     @activities = PublicActivity::Activity.where("created_at > ?", 14.days.ago).order(created_at: :desc)
   end
 
-  # details for a specific day
+  # Fiche du JOUR (occupation des chambres et des espaces, assignation des
+  # rôles). Vue d'OCCUPATION, donc `Stay::BLOCKING_STATUSES` (Michael
+  # 2026-09-08) : un séjour pré-confirmé tient ses dates, la personne qui
+  # prépare l'accueil doit le voir arriver.
   def day
     @date = Date.parse(params[:date])
     @rooms = RoomDecorator.decorate_collection(Room.all.order(level: :asc, id: :asc))
     @room_reservations = ReservationDecorator.decorate_collection(
       Reservation
         .includes(:booking)
-        .where(date: @date, booking: { status: "confirmed" })
+        .where(date: @date, booking: { status: Stay::BLOCKING_STATUSES })
     )
     @spaces = SpaceDecorator.decorate_collection(Space.all.order(id: :asc))
     @space_reservations = SpaceReservationDecorator.decorate_collection(
       SpaceReservation
         .includes(:space_booking)
-        .where(date: @date, space_booking: { status: "confirmed" })
+        .where(date: @date, space_booking: { status: Stay::BLOCKING_STATUSES })
     )
     @roles = Role.all
     # Écran d'assignation des rôles (veilleur, nourrissage…) : on n'y liste que
@@ -108,10 +111,12 @@ class PagesController < BaseController
     @projects_view = true
   end
 
+  # « Qui d'autre est sur place pendant cette réservation ? » — vue d'OCCUPATION
+  # elle aussi : `Stay::BLOCKING_STATUSES` (Michael 2026-09-08).
   def other_bookings
     @reservations = Reservation.all
       .includes(:booking)
-      .where(booking: { status: "confirmed" })
+      .where(booking: { status: Stay::BLOCKING_STATUSES })
       .where.not(booking_id: params[:booking_id])
       .between_times(Date.parse(params[:from_date]), Date.parse(params[:to_date]) - 1.day, field: :date)
       .order(date: :asc)

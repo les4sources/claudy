@@ -14,7 +14,7 @@ fr:
         confirmed_pill: "Séjour confirmé"
         pending_pill: "Demande en attente"
         confirmed_intro: "C'est officiel : nous vous attendons. Tout ce qu'il faut savoir tient sur cette page — gardez le lien, il reste valable jusqu'à votre départ."
-        pending_intro: "Votre demande est bien enregistrée. Notre équipe la valide et vous écrit dès qu'elle est confirmée."
+        pending_intro: "Votre demande est bien enregistrée. Notre Pôle Accueil l'examine et vous envoie une pré-confirmation par email, avec le montant de l'acompte et son lien de paiement."
         canceled_pill: "Séjour annulé"
         canceled_intro: "Ce séjour a été annulé. S'il s'agit d'une erreur, écrivez-nous : nous vérifions les disponibilités et vous répondons rapidement."
         arrival: "Arrivée"
@@ -50,6 +50,7 @@ fr:
         paid: "Payé"
       payments:
         heading: "Paiement"
+        awaiting_review: "Notre Pôle Accueil examine votre demande. Aucun paiement n'est demandé pour l'instant : vous recevrez par email une pré-confirmation avec le montant de l'acompte et son lien de paiement."
         pay_online: "Payer en ligne"
         invitation: "Nous vous invitons à payer en ligne le montant de %{amount}."
         stripe_notice: "Ce paiement est géré par Stripe : nous n'avons à aucun moment accès à vos données de paiement."

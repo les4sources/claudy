@@ -1,0 +1,9 @@
+/ Les pôles concernés, en badges (epic #239, phase 2). « Transversal » est dit
+  explicitement : une case vide laisserait croire à un oubli de saisie.
+- if gathering.teams.any?
+  .flex.flex-wrap.gap-1
+    - gathering.teams.each do |team|
+      span.inline-flex.items-center.rounded-full.bg-emerald-50.px-2.py-0.5.text-xs.font-medium.text-emerald-800.ring-1(class="ring-emerald-200")
+        = team.name
+- else
+  span.text-xs.text-gray-400.italic Transversal

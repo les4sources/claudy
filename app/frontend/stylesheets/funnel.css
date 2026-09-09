@@ -543,3 +543,30 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* --- La barre récap collante, et ce qu'elle recouvrait ---------------------- */
+
+/* La barre récap du devis (`_quote_drawer`, `fixed bottom-0`) occupe en
+   permanence le bas du viewport, ~5rem de haut. Le navigateur, lui, ne la voit
+   pas : dès qu'il amène un élément « juste au bord » — passage au clavier,
+   ancre, `scrollIntoView()` — il le pose SOUS la barre, qui le recouvre. Le
+   bouton « Envoyer ma demande de réservation » se retrouvait à moitié masqué,
+   au point qu'un clic en son centre atterrissait sur la barre.
+
+   `scroll-padding-bottom` déclare cette bande comme inutilisable pour le
+   défilement : c'est le navigateur qui compense de lui-même, pour tous les
+   modes de navigation à la fois. Posé sur la RACINE, l'élément défilant de la
+   page. 7rem = la hauteur de la barre plus une marge de confort.
+
+   Le layout de la page séjour (`public_stay.html.slim`) ne porte AUCUNE barre
+   collante — vérifié : il n'a donc pas besoin de cette compensation. */
+.funnel-root {
+  scroll-padding-bottom: 7rem;
+}
+
+/* Ceinture et bretelles pour les CTA de soumission, qui sont par nature en fin
+   de page : `scroll-padding` ne peut plus rien quand le document est déjà
+   défilé au maximum ; la marge propre à l'élément, si. */
+.funnel-submit-cta {
+  scroll-margin-bottom: 7rem;
+}

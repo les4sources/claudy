@@ -191,17 +191,16 @@ RSpec.describe "Séjours — grille Espaces par jour (epic #234, Phase 1)", type
   end
 
   describe "devis" do
-    it "facture les 5 journées, jour du départ compris" do
-      # Barème actuel (Phase 1 ne touche PAS aux tarifs) : petite salle journée
-      # semaine = 140 €. Le vendredi est encore classé week-end par
-      # `PricingModel` (190 €) — la Phase 2 corrigera cette règle.
+    it "facture les 5 journées au forfait 5 jours, jour du départ compris" do
+      # Phase 2 : la journée du vendredi est de la grille SEMAINE, et une suite
+      # de cinq journées vaut le forfait « 5 jours » du site — 525 €, contre
+      # 5 × 140 € = 700 € à l'unité.
       post stays_path, params: base_params(lodging_id: "", space_slots: cinq_journees)
 
       stay = Stay.order(:created_at).last
-      attendu = Array.new(5) { |i| lundi + i }.sum do |date|
-        Pricing::Catalog.hall_rate_cents("petite_salle", "journee", weekend: [5, 6].include?(date.wday))
-      end
-      expect(stay.total_amount_cents).to eq(attendu)
+      expect(stay.total_amount_cents)
+        .to eq(Pricing::Catalog.hall_package_cents("petite_salle", "cinq_jours"))
+      expect(stay.total_amount_cents).to eq(52_500)
     end
 
     it "étiquette chaque ligne du devis par sa DATE, plus par un numéro de nuit" do

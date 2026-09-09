@@ -7,10 +7,17 @@
 / un seul bloc sélectionnable par séjour et par jour. Agrégation : voir
 / Calendar::DayStayBlocks. Locals : `block` (StayBlock), `date`.
 - stay = block.stay
-- confirmed = stay.status.to_s == "confirmed"
 - named = block.named_bookable
 - counter = stay_nights_counter(stay, date)
-div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min-w-0 shadow border-l-4 #{"opacity-50" unless confirmed}" style=stay_block_style(stay.id) data-stay-id=stay.id data-stay-label=stay_short_label(stay) data-stay-dates=stay_short_dates(stay))
+/ TROIS niveaux d'opacité depuis que la pré-confirmation bloque les dates
+  (Michael 2026-09-08). Avant, tout ce qui n'était pas `confirmed` était rendu à
+  50 % : un séjour pré-confirmé — dates TENUES par un engagement de l'équipe —
+  s'affichait exactement comme une demande que personne n'avait encore regardée.
+  Au coup d'œil sur le mois, on ne pouvait pas distinguer « c'est pris » de
+  « c'est à traiter ». `opacity-75` pour le pré-confirmé : présent, mais pas
+  encore acquis. Le titre porte l'état en toutes lettres, pour qui survole.
+- opacite, etat = stay_block_status_hint(stay)
+div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min-w-0 shadow border-l-4 #{opacite}" title=etat style=stay_block_style(stay.id) data-stay-id=stay.id data-stay-label=stay_short_label(stay) data-stay-dates=stay_short_dates(stay))
   / Nuitée sur place cette nuit-là : 💤 en débord du coin haut-droit.
   - if block.overnight?
     span(class="absolute -top-2 -right-1 text-sm leading-none pointer-events-none select-none" title="Nuitée sur place" aria-label="Nuitée sur place") 💤

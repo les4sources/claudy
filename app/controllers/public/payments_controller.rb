@@ -1,6 +1,14 @@
 class Public::PaymentsController < Public::BaseController
   def pay
     payment = Payment.find(params[:uuid])
+    # Séjour annulé ou refusé : le lien d'acompte n'a plus d'objet. Les
+    # paiements `pending` sont soft-deletés à l'annulation (donc introuvables
+    # ici, 404) ; ce garde-fou couvre les paiements antérieurs à cette règle.
+    if payment.stay&.canceled?
+      return redirect_to failure_path(payment),
+                         alert: "Ce séjour a été annulé : ce lien de paiement n'est plus valable. " \
+                                "Écrivez-nous à sejours@les4sources.be."
+    end
     service = Payments::PayService.new(payment_id: payment.id)
     if service.run
       redirect_to service.checkout_session_url,

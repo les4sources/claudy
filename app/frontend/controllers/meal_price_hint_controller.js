@@ -14,7 +14,10 @@ export default class extends Controller {
   }
 
   refresh() {
-    const kind = this.element.querySelector("input[name='meal_order[kind]']:checked")?.value
+    // Suffixe du `name` plutôt que son nom complet : le champ s'appelle
+    // `meal_order[kind]` à l'édition et `prestations[2][kind]` à la saisie
+    // (issue #265), et l'aide doit suivre le type de SON bloc.
+    const kind = this.element.querySelector('input[type="radio"][name$="[kind]"]:checked')?.value
     const rate = kind && this.ratesValue[kind]
     this.hintTarget.textContent = rate
       ? `Laisser vide pour appliquer le barème : ${rate} €/pers.`
