@@ -362,6 +362,10 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
                       finance_analytic_balance_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/analytic_balance' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
+            = link_to "Partages de revenus",
+                      finance_revenue_share_agreements_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{%w[finance/revenue_share_agreements finance/revenue_share_statements].include?(controller_path) ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
             = link_to "Balance",
                       finance_trial_balance_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/trial_balance' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"

@@ -220,6 +220,22 @@ Rails.application.routes.draw do
         post :mark_settled
       end
     end
+
+    # Partages de revenus (issue #247). Pas de `destroy` sur l'accord : il se
+    # désactive, sinon les relevés déjà reversés perdraient leur contrepartie.
+    resources :revenue_share_agreements, path: "revenue_shares", except: %i[destroy] do
+      member do
+        patch :deactivate
+        patch :reactivate
+      end
+      resources :statements, only: %i[create], controller: "revenue_share_statements"
+    end
+    resources :revenue_share_statements, path: "revenue_share_statements", only: %i[show destroy] do
+      member do
+        post :issue
+        patch :mark_paid
+      end
+    end
   end
 
   # Organisation
@@ -447,6 +463,7 @@ Rails.application.routes.draw do
   # Décompte sourcier à jeton (issue #160) — sans session, sans Devise : le lien
   # du mail doit s'ouvrir sur le téléphone d'un sourcier qui n'a pas de compte.
   get "decompte/:token", to: "public/statements#show", as: :public_statement
+  get "reversement/:token", to: "public/revenue_share_statements#show", as: :public_revenue_share_statement
 
   # Paiement du solde exigible du séjour (epic #55, Phase 3) — POST scellé par le
   # même jeton que la page client ; crée/rafraîchit le paiement puis part sur
