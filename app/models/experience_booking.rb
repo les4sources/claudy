@@ -5,22 +5,28 @@
 #  id                         :bigint           not null, primary key
 #  carrier_fee_cents          :integer
 #  notes                      :text
+#  outcome                    :string
+#  outcome_recorded_at        :datetime
 #  participants               :integer
 #  refusal_reason             :text
 #  status                     :string
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
 #  experience_availability_id :bigint           not null
+#  outcome_recorded_by_id     :bigint
 #  stay_id                    :bigint           not null
 #
 # Indexes
 #
 #  index_experience_bookings_on_experience_availability_id  (experience_availability_id)
+#  index_experience_bookings_on_outcome                     (outcome)
+#  index_experience_bookings_on_outcome_recorded_by_id      (outcome_recorded_by_id)
 #  index_experience_bookings_on_stay_id                     (stay_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (experience_availability_id => experience_availabilities.id)
+#  fk_rails_...  (outcome_recorded_by_id => humans.id)
 #  fk_rails_...  (stay_id => stays.id)
 #
 class ExperienceBooking < ApplicationRecord
@@ -34,13 +40,25 @@ class ExperienceBooking < ApplicationRecord
   # directement un `refused` (raison obligatoire, flux dédié) ni un `cancelled`.
   ADMIN_CREATABLE_STATUSES = %w[pending confirmed].freeze
 
+  # La tenue de l'activité (epic #244, phase 2). Confirmée n'est pas tenue :
+  # entre les deux il y a le jour J, et parfois personne ne vient. La phase 3
+  # ne paiera que ce qui a eu lieu.
+  OUTCOMES = %w[held no_show].freeze
+  OUTCOME_LABELS = { "held" => "A eu lieu", "no_show" => "N'a pas eu lieu" }.freeze
+
   # Portée du jeton signé embarqué dans l'email au porteur : il ne vaut QUE
   # pour la validation d'UN `ExperienceBooking` précis (cf. `#validation_token`).
   TOKEN_PURPOSE = :validate_experience_booking
   TOKEN_TTL = 30.days
 
+  # Portée du jeton du rappel de tenue : un jeton de validation ne doit jamais
+  # pouvoir servir à déclarer une tenue, ni l'inverse.
+  OUTCOME_TOKEN_PURPOSE = :record_experience_booking_outcome
+  OUTCOME_TOKEN_TTL = 60.days
+
   belongs_to :experience_availability
   belongs_to :stay
+  belongs_to :outcome_recorded_by, class_name: "Human", optional: true
 
   # Audit (epic #81) : seul modèle rapatrié par la fusion de séjours qui n'avait
   # pas encore d'historique (Stay/StayItem/MealOrder/Payment l'ont déjà). Un
@@ -62,6 +80,7 @@ class ExperienceBooking < ApplicationRecord
   # Un refus n'existe jamais sans motif — c'est l'information que le client
   # reçoit et qui justifie l'invitation à re-choisir un créneau.
   validates :refusal_reason, presence: true, if: :refused?
+  validates :outcome, inclusion: { in: OUTCOMES }, allow_nil: true
   validate :participants_fit_in_availability
 
   before_validation :set_default_status
@@ -72,6 +91,15 @@ class ExperienceBooking < ApplicationRecord
   scope :pending,   -> { where(status: "pending") }
   scope :confirmed, -> { where(status: "confirmed") }
   scope :refused,   -> { where(status: "refused") }
+
+  # Ce qui attend une réponse « ça a eu lieu ? » : confirmée, passée, sans
+  # verdict. C'est la file de travail de l'écran « À confirmer » et du rappel.
+  scope :awaiting_outcome, -> {
+    confirmed.where(outcome: nil)
+             .joins(:experience_availability)
+             .where(experience_availabilities: { available_on: ...Date.current })
+  }
+  scope :held, -> { where(outcome: "held") }
 
   # Réservations rattachées aux activités d'un porteur donné (via
   # `experience.human`). Base du scoping d'autorisation du canal admin.
@@ -84,6 +112,11 @@ class ExperienceBooking < ApplicationRecord
   def confirmed? = status == "confirmed"
   def refused?   = status == "refused"
   def cancelled? = status == "cancelled"
+
+  def held?   = outcome == "held"
+  def no_show? = outcome == "no_show"
+  def outcome_recorded? = outcome.present?
+  def outcome_label = OUTCOMES.include?(outcome) ? OUTCOME_LABELS.fetch(outcome) : nil
 
   # Réservations visibles/actionnables par un utilisateur : tout pour un admin
   # global (staff sans activité rattachée), seulement les siennes pour un
@@ -156,6 +189,51 @@ class ExperienceBooking < ApplicationRecord
   # déclenche une `RecordInvalid` (la validation modèle fait foi).
   def refuse!(reason)
     update!(status: "refused", refusal_reason: reason)
+  end
+
+  # --- Tenue de l'activité (epic #244, phase 2) ---
+
+  class OutcomeNotRecordable < StandardError; end
+
+  def mark_held!(by: nil) = record_outcome!("held", by: by)
+  def mark_no_show!(by: nil) = record_outcome!("no_show", by: by)
+
+  # Deux gardes, et les deux comptent.
+  #
+  # Une réservation NON CONFIRMÉE n'a rien à tenir : une `pending` attend encore
+  # le porteur, une `refused` ou une `cancelled` est morte. Déclarer leur tenue
+  # les ferait entrer dans le relevé de rémunération par une porte dérobée.
+  #
+  # Un créneau À VENIR ne peut pas avoir eu lieu. Sans cette garde, un porteur
+  # pressé solderait sa saison en janvier — et le relevé paierait des heures que
+  # personne n'a faites.
+  def record_outcome!(value, by: nil)
+    raise ArgumentError, "Verdict inconnu : #{value}" unless OUTCOMES.include?(value.to_s)
+
+    unless confirmed?
+      raise OutcomeNotRecordable,
+            "Seule une activité confirmée peut être déclarée tenue ou non tenue."
+    end
+    if slot_in_the_future?
+      raise OutcomeNotRecordable,
+            "Ce créneau n'a pas encore eu lieu — reviens après le #{I18n.l(slot_date, format: :long)}."
+    end
+
+    update!(outcome: value.to_s, outcome_recorded_at: Time.current, outcome_recorded_by: by)
+  end
+
+  def slot_date = experience_availability&.available_on
+
+  def slot_in_the_future? = slot_date.blank? || slot_date >= Date.current
+
+  # Jeton du rappel de tenue — portée et durée propres, distinctes de celles du
+  # jeton de validation.
+  def outcome_token
+    signed_id(purpose: OUTCOME_TOKEN_PURPOSE, expires_in: OUTCOME_TOKEN_TTL)
+  end
+
+  def self.find_by_outcome_token(token)
+    find_signed(token, purpose: OUTCOME_TOKEN_PURPOSE)
   end
 
   # Montant TVAC de l'activité réservée (epic #55, Phase 1). Délègue au service

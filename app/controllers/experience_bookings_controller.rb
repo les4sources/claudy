@@ -9,13 +9,60 @@
 # réservation ou d'un créneau d'un autre porteur obtient un 404 / un refus
 # (jamais une action réussie hors périmètre).
 class ExperienceBookingsController < BaseController
-  before_action :load_scoped_booking, only: [:update, :destroy, :confirm, :new_refusal, :refuse]
+  before_action :load_scoped_booking,
+                only: [:update, :destroy, :confirm, :new_refusal, :refuse, :record_outcome]
 
   def index
     @experience_bookings = ExperienceBooking.for_user(current_user)
                                             .includes(experience_availability: :experience, stay: :customer)
                                             .order(created_at: :desc)
                                             .limit(100)
+    @awaiting_outcome_count = awaiting_outcome_scope.count
+  end
+
+  # « À confirmer » (epic #244, phase 2) : ce qui a été confirmé, est passé, et
+  # n'a pas encore dit s'il a eu lieu.
+  #
+  # Un porteur n'y voit que ses créneaux ; un admin global voit tout et peut
+  # trancher en masse — après une saison, la file se solde en un geste, pas en
+  # quarante clics.
+  def outcomes
+    @bookings = awaiting_outcome_scope
+                .includes(experience_availability: :experience, stay: :customer)
+                .order("experience_availabilities.available_on ASC, experience_availabilities.starts_at ASC")
+                .to_a
+    @bulk_allowed = current_user&.global_admin?
+  end
+
+  # Un verdict sur UNE réservation.
+  def record_outcome
+    @booking.record_outcome!(params[:outcome], by: current_user&.human)
+    redirect_back fallback_location: outcomes_experience_bookings_path,
+                  notice: "« #{@booking.experience.name} » — #{@booking.outcome_label.downcase}."
+  rescue ExperienceBooking::OutcomeNotRecordable, ArgumentError => e
+    redirect_back fallback_location: outcomes_experience_bookings_path, alert: e.message
+  end
+
+  # Le geste en masse de l'admin global. Un porteur qui tenterait l'URL n'a de
+  # toute façon accès qu'à ses propres réservations (`for_user`) — la garde
+  # ci-dessous ne fait qu'éviter de lui proposer un écran qu'il ne comprendrait
+  # pas.
+  def bulk_outcome
+    ids = Array(params[:experience_booking_ids]).compact_blank
+    bookings = ExperienceBooking.for_user(current_user).where(id: ids)
+
+    posés = 0
+    refusés = []
+    bookings.each do |booking|
+      booking.record_outcome!(params[:outcome], by: current_user&.human)
+      posés += 1
+    rescue ExperienceBooking::OutcomeNotRecordable, ArgumentError => e
+      refusés << "#{booking.experience.name} : #{e.message}"
+    end
+
+    flash[:alert] = refusés.join(" · ") if refusés.any?
+    redirect_to outcomes_experience_bookings_path,
+                notice: "#{posés} activité(s) mise(s) à jour."
   end
 
   # Ajout admin d'une activité SUR un séjour donné (epic #55, Phase 6).
@@ -141,6 +188,10 @@ class ExperienceBookingsController < BaseController
   end
 
   private
+
+  def awaiting_outcome_scope
+    ExperienceBooking.for_user(current_user).awaiting_outcome
+  end
 
   def load_scoped_booking
     @booking = ExperienceBooking.for_user(current_user).find(params[:id])

@@ -1,0 +1,45 @@
+- content_for :page_header do
+  h1.text-2xl.font-bold À confirmer
+
+.max-w-4xl.mx-auto
+  .mb-5.rounded-lg.border.border-amber-200.bg-amber-50.px-4.py-3.text-sm.text-amber-900
+    strong Confirmée n'est pas tenue.
+    |  Ces créneaux ont été validés et sont passés — dites s'ils ont eu lieu. Seuls ceux qui ont eu lieu entreront dans le relevé de rémunération.
+
+  - if @bookings.empty?
+    .rounded-lg.border.border-dashed.border-gray-200.bg-white.px-4.py-8.text-center.text-sm.text-gray-500
+      | Rien à confirmer. Tout est à jour.
+  - else
+    / Les boutons de ligne sont des formulaires (`button_to`) : ils ne peuvent
+      donc PAS vivre à l'intérieur du formulaire de sélection multiple — un
+      formulaire imbriqué est du HTML invalide, et le navigateur jette
+      silencieusement l'intérieur. Les cases sont rattachées au formulaire du
+      bas par l'attribut `form`, qui existe exactement pour ça.
+    .space-y-3
+      - @bookings.each do |booking|
+        .flex.items-start.justify-between.gap-4.p-4.bg-white.rounded-lg.shadow-sm.border.border-gray-100
+          .flex.items-start.gap-3.min-w-0
+            - if @bulk_allowed
+              = check_box_tag "experience_booking_ids[]", booking.id, false, id: "booking_#{booking.id}", form: "bulk-outcomes", class: "mt-1 rounded border-gray-300"
+            .min-w-0
+              .font-semibold = booking.experience.name
+              .text-sm.text-gray-600
+                = booking.experience_availability.available_on&.strftime("%-d/%m/%Y")
+                | &nbsp;à&nbsp;
+                = booking.experience_availability.starts_at
+                | &nbsp;—&nbsp;
+                = "#{booking.participants} participant#{'s' if booking.participants.to_i > 1}"
+              .text-sm.text-gray-500 = booking.stay&.customer&.name
+          .flex.items-center.gap-2.shrink-0
+            = button_to "A eu lieu", record_outcome_experience_booking_path(booking, outcome: "held"), method: :patch, class: "px-3 py-1.5 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700", form: { class: "inline" }
+            = button_to "N'a pas eu lieu", record_outcome_experience_booking_path(booking, outcome: "no_show"), method: :patch, class: "px-3 py-1.5 bg-red-100 text-red-700 rounded text-sm font-medium hover:bg-red-200", form: { class: "inline" }
+
+    / La confirmation en masse n'est offerte qu'à l'admin global : un porteur n'a
+      qu'une poignée de créneaux, et l'écran de sélection multiple lui coûterait
+      plus d'attention qu'il ne lui en ferait gagner.
+    - if @bulk_allowed
+      = form_with url: bulk_outcome_experience_bookings_path, method: :post, id: "bulk-outcomes", class: "mt-4" do
+        .flex.flex-wrap.items-center.gap-3.rounded-lg.bg-gray-50.px-4.py-3
+          span.text-sm.text-gray-600 Sélection multiple :
+          button.px-3.py-1.5.bg-green-600.text-white.rounded.text-sm.font-medium(type="submit" name="outcome" value="held" class="hover:bg-green-700") Tout marquer « a eu lieu »
+          button.px-3.py-1.5.bg-red-100.text-red-700.rounded.text-sm.font-medium(type="submit" name="outcome" value="no_show" class="hover:bg-red-200") Tout marquer « n'a pas eu lieu »
