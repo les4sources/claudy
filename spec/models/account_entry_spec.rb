@@ -171,4 +171,19 @@ RSpec.describe AccountEntry, type: :model do
       expect(entry.reverse!.label).to include("Contre-écriture")
     end
   end
+
+  # Epic #246 — le batch cooking pose deux natures d'écriture dans le MÊME flux
+  # « Repas » : ce que la famille doit, et ce que le cuisinier a gagné.
+  describe "nature de l'écriture" do
+    it "nomme les deux natures du batch cooking" do
+      expect(AccountEntry::KINDS).to include("batchcooking", "cook_fee")
+      expect(entry(kind: "batchcooking", flow: "meal").kind_label).to eq("Batch cooking")
+      expect(entry(kind: "cook_fee", flow: "meal", amount_cents: -875).kind_label)
+        .to eq("Batch cooking — cuisine")
+    end
+
+    it "affiche telle quelle une nature qu'elle ne connaît pas" do
+      expect(entry(kind: "reprise_2023").kind_label).to eq("reprise_2023")
+    end
+  end
 end

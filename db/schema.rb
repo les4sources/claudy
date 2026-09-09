@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_09_060001) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_09_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -233,6 +233,44 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_09_060001) do
     t.index ["code"], name: "index_analytic_accounts_on_code", unique: true
     t.index ["deleted_at"], name: "index_analytic_accounts_on_deleted_at"
     t.index ["team_id"], name: "index_analytic_accounts_on_team_id"
+  end
+
+  create_table "batch_cooking_cooks", force: :cascade do |t|
+    t.bigint "batch_cooking_session_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "human_id", null: false
+    t.decimal "portions", precision: 12, scale: 3, default: "0.0", null: false
+    t.datetime "updated_at", null: false
+    t.index ["batch_cooking_session_id", "human_id"], name: "index_bc_cooks_unique", unique: true
+    t.index ["batch_cooking_session_id"], name: "index_bc_cooks_on_session"
+    t.index ["human_id"], name: "index_batch_cooking_cooks_on_human_id"
+    t.check_constraint "portions >= 0::numeric", name: "bc_cooks_portions_not_negative"
+  end
+
+  create_table "batch_cooking_servings", force: :cascade do |t|
+    t.bigint "batch_cooking_session_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "member_account_id", null: false
+    t.integer "portions", null: false
+    t.datetime "updated_at", null: false
+    t.index ["batch_cooking_session_id", "member_account_id"], name: "index_bc_servings_unique", unique: true
+    t.index ["batch_cooking_session_id"], name: "index_bc_servings_on_session"
+    t.index ["member_account_id"], name: "index_batch_cooking_servings_on_member_account_id"
+    t.check_constraint "portions > 0", name: "bc_servings_portions_positive"
+  end
+
+  create_table "batch_cooking_sessions", force: :cascade do |t|
+    t.date "cooked_on", null: false
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.string "label"
+    t.text "notes"
+    t.integer "total_portions", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["cooked_on"], name: "index_batch_cooking_sessions_on_cooked_on"
+    t.index ["created_by_id"], name: "index_batch_cooking_sessions_on_created_by_id"
+    t.index ["deleted_at"], name: "index_batch_cooking_sessions_on_deleted_at"
   end
 
   create_table "booking_page_views", force: :cascade do |t|
@@ -1637,6 +1675,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_09_060001) do
   add_foreign_key "allocation_suggestions", "legal_entities"
   add_foreign_key "allocation_suggestions", "teams"
   add_foreign_key "analytic_accounts", "teams"
+  add_foreign_key "batch_cooking_cooks", "batch_cooking_sessions"
+  add_foreign_key "batch_cooking_cooks", "humans"
+  add_foreign_key "batch_cooking_servings", "batch_cooking_sessions"
+  add_foreign_key "batch_cooking_servings", "member_accounts"
+  add_foreign_key "batch_cooking_sessions", "users", column: "created_by_id"
   add_foreign_key "booking_page_views", "bookings"
   add_foreign_key "bookings", "lodgings"
   add_foreign_key "bundles", "projects"

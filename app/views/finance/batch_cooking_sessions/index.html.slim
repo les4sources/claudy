@@ -1,0 +1,50 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Batch cooking",
+           links: [ \
+             link_to("➕ Nouvelle session", new_finance_batch_cooking_session_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") \
+           ]
+
+- if @sessions.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucune session de batch cooking.
+    p.mt-1
+      | Une session, c'est ce qu'on a cuisiné un jour donné : les portions par famille, et qui était en cuisine.
+- else
+  / `stacked-table` étiquette chaque cellule avec l'intitulé de sa colonne :
+    sous `md`, chaque ligne devient une carte. C'est ce qui rend la liste
+    lisible sur le téléphone où la session vient d'être saisie.
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-4[scope="col"] Date
+          th.py-3.px-4[scope="col"] Plat
+          th.py-3.px-4.text-right[scope="col"] Portions
+          th.py-3.px-4.text-right[scope="col"] Familles
+          th.py-3.px-4.text-right[scope="col"] Cuisiniers
+          th.py-3.px-4.text-right[scope="col"] Facturé
+          th.py-3.px-4.text-right[scope="col"] Dû
+          th.py-3.px-4[scope="col"]
+      tbody
+        - @sessions.each do |session|
+          - lignes = @entries.fetch(session.id, [])
+          - facture = lignes.select { |entry| entry.amount_cents.positive? }.sum(&:amount_cents)
+          - du = lignes.select { |entry| entry.amount_cents.negative? }.sum(&:amount_cents).abs
+          tr.border-b.bg-white
+            td.py-4.px-4.whitespace-nowrap.font-medium.text-gray-900[scope="row"]
+              = l(session.cooked_on, format: :ddmmyyyy)
+            td.py-4.px-4= session.label.presence || "—"
+            td.py-4.px-4.text-right.tabular-nums= session.total_portions
+            td.py-4.px-4.text-right.tabular-nums= session.servings.size
+            td.py-4.px-4.text-right.tabular-nums= session.cooks.size
+            td.py-4.px-4.text-right.tabular-nums.text-red-600= number_to_currency(facture / 100.0)
+            td.py-4.px-4.text-right.tabular-nums.text-emerald-700= number_to_currency(du / 100.0)
+            td.py-4.px-4.text-right.whitespace-nowrap
+              = link_to "Modifier",
+                        edit_finance_batch_cooking_session_path(session),
+                        class: "text-xs text-gray-600 hover:text-gray-900"
+              = link_to "Supprimer",
+                        finance_batch_cooking_session_path(session),
+                        data: { turbo_method: :delete, turbo_confirm: "Supprimer cette session et ses écritures ?" },
+                        class: "ml-3 text-xs text-red-600 hover:text-red-800"
