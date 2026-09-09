@@ -51,10 +51,10 @@ module Kitchen
     end
 
     def create
+      return create_prestations if params[:prestations].present?
+
       @order = MealOrder.new(order_params.merge(stay_id: params.dig(:meal_order, :stay_id)))
       accept_when_someone_takes_it(@order)
-
-      return create_from_grid if grid_submission?
 
       if @order.save
         redirect_to kitchen_orders_path, notice: "Demande enregistrée."
@@ -219,36 +219,68 @@ module Kitchen
       "Demande mise à jour. La prestation a changé : la cuisine doit revalider."
     end
 
-    # La grille (issue #238) : une soumission par CASES, pas par ligne unique.
-    # Elle n'existe que pour un séjour aux dates connues — sans calendrier, il
-    # n'y a pas de colonnes, et le formulaire retombe sur date + moment.
-    def grid_submission?
-      params[:grid_mode] == "1"
-    end
-
-    def create_from_grid
-      result = Kitchen::GridSubmission.new(
-        stay: @order.stay,
-        attributes: grid_line_attributes,
-        cells: params[:grid]
-      ).run
+    # La saisie à plusieurs prestations (issue #265). Le séjour est en tête du
+    # formulaire, les blocs derrière : un apéro, un buffet et des repas partent
+    # ensemble, chacun avec son type et son statut, et la transaction est unique
+    # — si une ligne est invalide, aucune n'est créée.
+    def create_prestations
+      blocks = submitted_blocks
+      result = Kitchen::GridSubmission.new(stay: submitted_stay, blocks: blocks).run
 
       if result.success?
         redirect_to kitchen_orders_path,
                     notice: "#{result.orders.size} service(s) enregistré(s)."
       else
+        # On réaffiche CE QUI A ÉTÉ SAISI, blocs compris : refaire trois blocs
+        # parce que le deuxième manquait une case est le genre de punition qui
+        # fait retourner Malau à son tableau papier.
+        @order = MealOrder.new(stay_id: submitted_stay&.id)
+        @prestations = blocks
         prepare_form
         flash.now[:alert] = result.error
         render :new, status: :unprocessable_entity
       end
     end
 
-    # Ce qui se saisit UNE FOIS et s'applique à toutes les lignes créées.
-    def grid_line_attributes
-      @order.attributes
-            .slice("kind", "people", "notes", "status", "unit_price_cents",
-                   "responsible_human_id", "validation", "validated_at")
-            .symbolize_keys
+    def submitted_stay
+      Stay.find_by(id: params.dig(:meal_order, :stay_id).presence || params[:stay_id].presence)
+    end
+
+    # Les blocs postés, dans l'ordre des index. Rails rend `prestations[0][…]`
+    # comme un HASH à clés-chaînes : après un retrait de bloc les index sautent
+    # (0, 2, 3), d'où le tri numérique plutôt qu'une confiance dans l'ordre.
+    def submitted_blocks
+      params[:prestations].to_unsafe_h.sort_by { |index, _| index.to_i }
+                          .each_with_index.map { |(_, raw), position| block_from(raw, position) }
+    end
+
+    def block_from(raw, position)
+      attributes = raw.slice("kind", "moment", "date", "people", "notes", "status",
+                             "responsible_human_id")
+                      .symbolize_keys.compact_blank
+      attributes[:unit_price_cents] = price_cents(raw["unit_price"])
+      attributes.compact!
+      apply_kitchen_acceptance(attributes)
+
+      Kitchen::GridSubmission::Block.new(index: position, attributes: attributes,
+                                         cells: raw["grid"])
+    end
+
+    # Se charger d'un buffet ou d'un apéro vaut acceptation — bloc par bloc,
+    # puisque chaque bloc a son type et son responsable. La famille `repas`
+    # garde sa validation par Stéphanie, elle seule cuisine.
+    def apply_kitchen_acceptance(attributes)
+      return if attributes[:responsible_human_id].blank?
+      return if MealOrder::KIND_FAMILIES[attributes[:kind].to_s] == "repas"
+
+      attributes[:validation] = "accepted"
+      attributes[:validated_at] = Time.current
+    end
+
+    def price_cents(raw)
+      return nil if raw.to_s.strip.blank?
+
+      (raw.to_s.tr(",", ".").to_f * 100).round
     end
 
     def prepare_form
@@ -258,6 +290,7 @@ module Kitchen
         [label, kind] if Kitchen::Config.enabled_kinds.include?(kind) || kind == @order.kind
       end
       @grid_days = grid_days_for(@order)
+      @prestations ||= [Kitchen::GridSubmission::Block.new(index: 0, attributes: {}, cells: {})]
     end
 
     # Les jours de la grille : du jour d'arrivée au jour de départ INCLUS — le
