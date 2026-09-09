@@ -16,11 +16,21 @@ RSpec.describe "Cuisine — grille jours × services", type: :request do
 
   before { sign_in user }
 
+  # Issue #265 : la saisie passe par des BLOCS de prestation. Un bloc unique
+  # reproduit exactement la grille de l'issue #238 — c'est ce que ce fichier
+  # continue de vérifier, plus le cas à plusieurs blocs.
   def grid_params(cells, overrides = {})
-    { grid_mode: "1",
-      grid: cells,
-      meal_order: { stay_id: stay.id, kind: "repas", people: 8,
-                    status: "requested", notes: "Sans gluten" }.merge(overrides) }
+    prestation_params([{ cells: cells }.merge(overrides)])
+  end
+
+  def prestation_params(blocks)
+    { meal_order: { stay_id: stay.id },
+      prestations: blocks.each_with_index.to_h { |block, index|
+        cells = block.fetch(:cells, {})
+        attrs = { kind: "repas", people: 8, status: "requested",
+                  notes: "Sans gluten" }.merge(block.except(:cells))
+        [index.to_s, attrs.merge(grid: cells)]
+      } }
   end
 
   # Le cas réel de Michael : lundi midi → vendredi midi, tous les services.
@@ -74,8 +84,9 @@ RSpec.describe "Cuisine — grille jours × services", type: :request do
       get new_kitchen_order_path(stay_id: sans_dates.id)
 
       expect(response.body).not_to include("Services à préparer")
-      expect(response.body).to include("meal_order_moment")
-      expect(response.body).to include("meal_order_date")
+      # Les champs sont indexés par bloc depuis l'issue #265.
+      expect(response.body).to include("prestation_0_moment")
+      expect(response.body).to include("prestation_0_date")
     end
 
     it "ne propose plus le type « trio »" do
@@ -126,7 +137,7 @@ RSpec.describe "Cuisine — grille jours × services", type: :request do
         .not_to change(MealOrder, :count)
 
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.body).to include("Coche au moins un service")
+      expect(response.body).to include("Prestation 1 : coche au moins un service")
     end
 
     it "n'invente pas de goûter pour un buffet" do
@@ -135,6 +146,66 @@ RSpec.describe "Cuisine — grille jours × services", type: :request do
       )
 
       expect(stay.meal_orders.pluck(:kind).uniq).to eq(["buffet_vege"])
+    end
+  end
+
+  describe "POST /kitchen/orders à plusieurs prestations (issue #265)" do
+    it "crée les lignes des trois blocs en une seule saisie" do
+      expect {
+        post kitchen_orders_path, params: prestation_params([
+          { kind: "apero", people: 12, status: "requested",
+            cells: { (lundi + 4).iso8601 => { "soir" => "1" } } },
+          { kind: "buffet_vege", people: 30, status: "inquiry",
+            cells: { (lundi + 1).iso8601 => { "midi" => "1", "soir" => "1" } } },
+          { kind: "repas", people: 8, status: "requested",
+            cells: { (lundi + 2).iso8601 => { "midi" => "1", "soir" => "1" } } }
+        ])
+      }.to change(MealOrder, :count).by(5)
+
+      expect(response).to redirect_to(kitchen_orders_path)
+      expect(flash[:notice]).to eq("5 service(s) enregistré(s).")
+      expect(stay.meal_orders.where(kind: "apero").pluck(:people)).to eq([12])
+      expect(stay.meal_orders.where(kind: "buffet_vege").pluck(:status).uniq).to eq(["inquiry"])
+      expect(stay.meal_orders.where(kind: "repas").count).to eq(2)
+    end
+
+    it "réaffiche le formulaire sans perdre les autres blocs quand l'un est vide" do
+      expect {
+        post kitchen_orders_path, params: prestation_params([
+          { kind: "apero", people: 12, notes: "Bulles locales",
+            cells: { (lundi + 4).iso8601 => { "soir" => "1" } } },
+          { kind: "buffet_vege", people: 30, cells: {} }
+        ])
+      }.not_to change(MealOrder, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include("Prestation 2 : coche au moins un service")
+      # Ce qui avait été saisi est toujours là.
+      expect(response.body).to include("Bulles locales")
+      expect(response.body).to include("prestation_0_kind_apero")
+      expect(response.body).to include("prestation_1_kind_buffet_vege")
+    end
+
+    it "vaut acceptation cuisine bloc par bloc pour un buffet, jamais pour un repas" do
+      steph = Human.create!(name: "Stéphanie", status: "active")
+
+      post kitchen_orders_path, params: prestation_params([
+        { kind: "buffet_vege", responsible_human_id: steph.id,
+          cells: { (lundi + 1).iso8601 => { "midi" => "1" } } },
+        { kind: "repas", responsible_human_id: steph.id,
+          cells: { (lundi + 2).iso8601 => { "midi" => "1" } } }
+      ])
+
+      expect(stay.meal_orders.where(kind: "buffet_vege").pluck(:validation)).to eq(["accepted"])
+      expect(stay.meal_orders.where(kind: "repas").pluck(:validation)).to eq(["pending"])
+    end
+
+    it "offre le bouton d'ajout et le gabarit d'un bloc vide" do
+      get new_kitchen_order_path(stay_id: stay.id)
+
+      expect(response.body).to include("Ajouter une prestation")
+      expect(response.body).to include("__INDEX__")
+      expect(response.body).to include("meal-prestations")
     end
   end
 
