@@ -93,20 +93,6 @@
           = f.label :cancellation_reason, "Motif d'annulation", class: "block text-xs font-medium text-gray-500"
           = f.text_field :cancellation_reason, label: false, placeholder: "Obligatoire pour annuler", class: "mt-1 w-full sm:max-w-md rounded-md border-gray-300 shadow-sm sm:text-sm"
 
-  - if order.persisted?
-    section.rounded-2xl.bg-white.ring-1.ring-gray-200.px-5.py-4
-      h2.text-sm.font-semibold.text-gray-900 Coûts réels
-      p.mt-0.5.text-sm.text-gray-500 Saisis après coup — ce que la prestation a coûté, pour la compta.
-      .mt-3.grid.grid-cols-1.gap-4.sm:grid-cols-3
-        div
-          = label_tag "meal_order[cost]", "Coût", class: "block text-sm font-medium text-gray-700"
-          .mt-1.flex.items-center.gap-2
-            = number_field_tag "meal_order[cost]", order.cost_cents && (order.cost_cents / 100.0), step: 0.01, min: 0, class: "w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-            span.text-sm.text-gray-500 €
-        .sm:col-span-2
-          = f.label :cost_notes, "Détail", class: "block text-sm font-medium text-gray-700"
-          = f.text_field :cost_notes, label: false, placeholder: "Courses, temps passé…", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-
   .flex.items-center.justify-end.gap-3
     = link_to "Annuler", kitchen_orders_path, class: "text-sm text-gray-500 hover:underline"
     / `f.submit` passe par Button::Component, qui concatène SES classes après

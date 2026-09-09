@@ -114,13 +114,17 @@ RSpec.describe "Cuisine — page et actions", type: :request do
       expect(flash[:notice]).not_to include("revalider")
     end
 
-    it "enregistre les coûts réels saisis en euros" do
-      order = line
+    # Le coût par prestation ne se saisit plus (epic #269) : les courses se font
+    # par lot, la dépense s'affecte en comptabilité. Les colonnes restent en
+    # base, mais plus rien ne les écrit — pas même une vieille page ouverte.
+    it "ignore un coût envoyé malgré tout" do
+      order = line(cost_cents: 1_500, cost_notes: "ancien relevé")
 
-      patch kitchen_order_path(order), params: { meal_order: { cost: "42,10", cost_notes: "courses" } }
+      patch kitchen_order_path(order), params: { meal_order: { cost: "42,10", cost_notes: "courses", notes: "table ronde" } }
 
-      expect(order.reload.cost_cents).to eq(4_210)
-      expect(order.cost_notes).to eq("courses")
+      expect(order.reload.notes).to eq("table ronde")
+      expect(order.cost_cents).to eq(1_500)
+      expect(order.cost_notes).to eq("ancien relevé")
     end
   end
 

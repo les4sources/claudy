@@ -164,12 +164,13 @@ module Kitchen
       @order = MealOrder.find(params[:id])
     end
 
+    # Plus de coût par prestation (epic #269) : les courses se font par lot, pour
+    # plusieurs services à la fois, et la dépense s'affecte en comptabilité. Un
+    # `cost` envoyé par une vieille page ne modifie donc plus rien.
     def order_params
       params.require(:meal_order).permit(:kind, :moment, :date, :people, :notes, :status,
-                                         :cancellation_reason, :responsible_human_id,
-                                         :cost_notes)
-            .merge(unit_price_cents: submitted_unit_price_cents,
-                   cost_cents: submitted_cost_cents)
+                                         :cancellation_reason, :responsible_human_id)
+            .merge(unit_price_cents: submitted_unit_price_cents)
             .compact
     end
 
@@ -179,14 +180,6 @@ module Kitchen
       raw = params.dig(:meal_order, :unit_price)
       return nil if raw.nil?
       return "" if raw.to_s.strip.blank? # `compact` ne l'enlève pas : on veut bien effacer l'override
-
-      (raw.to_s.tr(",", ".").to_f * 100).round
-    end
-
-    def submitted_cost_cents
-      raw = params.dig(:meal_order, :cost)
-      return nil if raw.nil?
-      return "" if raw.to_s.strip.blank?
 
       (raw.to_s.tr(",", ".").to_f * 100).round
     end
