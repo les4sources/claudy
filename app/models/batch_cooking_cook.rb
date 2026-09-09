@@ -3,7 +3,7 @@
 # Table name: batch_cooking_cooks
 #
 #  id                       :bigint           not null, primary key
-#  portions                 :integer          default(0), not null
+#  portions                 :decimal(12, 3)   default(0.0), not null
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
 #  batch_cooking_session_id :bigint           not null
@@ -39,10 +39,11 @@ class BatchCookingCook < ApplicationRecord
                        inverse_of: :cooks
   belongs_to :human
 
-  # Zéro est permis : quelqu'un a donné un coup de main sans qu'on lui attribue
-  # de part. Il reste dans la liste, il ne gagne simplement rien.
+  # Décimal, et zéro permis : cinq portions partagées entre deux cuisiniers
+  # font deux parts et demie, et quelqu'un qui a donné un coup de main sans
+  # part reste dans la liste — il ne gagne simplement rien.
   validates :portions, presence: true,
-                       numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+                       numericality: { greater_than_or_equal_to: 0 }
   validates :human_id, uniqueness: { scope: :batch_cooking_session_id,
                                      message: "cuisine déjà sur cette session" }
 

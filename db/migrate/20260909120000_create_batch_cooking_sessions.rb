@@ -49,14 +49,17 @@ class CreateBatchCookingSessions < ActiveRecord::Migration[8.1]
     add_check_constraint :batch_cooking_servings, "portions > 0",
                          name: "bc_servings_portions_positive"
 
-    # Qui a cuisiné, et pour combien de portions. `portions` peut valoir zéro :
-    # quelqu'un qui a donné un coup de main sans qu'on lui attribue de part
-    # reste dans la liste, il ne gagne simplement rien.
+    # Qui a cuisiné, et pour combien de portions. DÉCIMAL, contrairement aux
+    # portions servies : cinq portions partagées entre deux cuisiniers font
+    # deux parts et demie, et arrondir à l'entier ferait perdre 1,75 € à
+    # quelqu'un. `portions` peut valoir zéro — quelqu'un qui a donné un coup de
+    # main sans qu'on lui attribue de part reste dans la liste, il ne gagne
+    # simplement rien.
     create_table :batch_cooking_cooks do |t|
       t.references :batch_cooking_session, null: false, foreign_key: true,
                                            index: { name: "index_bc_cooks_on_session" }
       t.references :human, null: false, foreign_key: true
-      t.integer :portions, null: false, default: 0
+      t.decimal :portions, precision: 12, scale: 3, null: false, default: 0
 
       t.timestamps
     end

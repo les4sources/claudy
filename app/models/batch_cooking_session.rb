@@ -85,14 +85,21 @@ class BatchCookingSession < ApplicationRecord
     label.presence || "Batch cooking du #{I18n.l(cooked_on, format: :ddmmyyyy)}"
   end
 
-  # Répartition à parts égales des portions servies entre les cuisiniers, le
-  # reste allant aux premiers. Sert de proposition à la saisie : chaque ligne
-  # reste modifiable.
+  # Répartition à parts égales des portions servies entre les cuisiniers. Sert
+  # de proposition à la saisie : chaque ligne reste modifiable.
+  #
+  # Le partage se fait au MILLIÈME de portion, pas à l'entier : cinq portions
+  # entre deux personnes font deux parts et demie, et arrondir en ferait perdre
+  # 1,75 € à quelqu'un. Le reliquat va aux premiers, si bien que la somme des
+  # parts vaut toujours exactement le total.
   def self.even_split(total_portions, cooks_count)
-    return [] if cooks_count.to_i <= 0
+    count = cooks_count.to_i
+    return [] if count <= 0
 
-    base, remainder = total_portions.to_i.divmod(cooks_count.to_i)
-    Array.new(cooks_count.to_i) { |index| base + (index < remainder ? 1 : 0) }
+    milli = (BigDecimal(total_portions.to_s) * 1_000).round
+    base, remainder = milli.divmod(count)
+
+    Array.new(count) { |index| (BigDecimal(base + (index < remainder ? 1 : 0)) / 1_000) }
   end
 
   # Recompté depuis les lignes, jamais incrémenté : un compteur qu'on incrémente

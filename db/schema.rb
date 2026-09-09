@@ -239,12 +239,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_09_120000) do
     t.bigint "batch_cooking_session_id", null: false
     t.datetime "created_at", null: false
     t.bigint "human_id", null: false
-    t.integer "portions", default: 0, null: false
+    t.decimal "portions", precision: 12, scale: 3, default: "0.0", null: false
     t.datetime "updated_at", null: false
     t.index ["batch_cooking_session_id", "human_id"], name: "index_bc_cooks_unique", unique: true
     t.index ["batch_cooking_session_id"], name: "index_bc_cooks_on_session"
     t.index ["human_id"], name: "index_batch_cooking_cooks_on_human_id"
-    t.check_constraint "portions >= 0", name: "bc_cooks_portions_not_negative"
+    t.check_constraint "portions >= 0::numeric", name: "bc_cooks_portions_not_negative"
   end
 
   create_table "batch_cooking_servings", force: :cascade do |t|

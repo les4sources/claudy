@@ -61,6 +61,12 @@ RSpec.describe BatchCookingSession, type: :model do
         .to raise_error(ActiveRecord::RecordInvalid)
     end
 
+    it "accepte une demi-portion — cinq portions pour deux cuisiniers" do
+      cuisinier = session.cooks.create!(human: stephanie, portions: 2.5)
+
+      expect(cuisinier.reload.portions).to eq(2.5)
+    end
+
     it "refuse deux fois la même personne sur une session" do
       seance = session
       seance.cooks.create!(human: stephanie, portions: 5)
@@ -82,9 +88,15 @@ RSpec.describe BatchCookingSession, type: :model do
       expect(described_class.even_split(10, 2)).to eq([5, 5])
     end
 
-    it "donne le reste aux premiers plutôt que de perdre une portion" do
-      expect(described_class.even_split(5, 2)).to eq([3, 2])
-      expect(described_class.even_split(7, 3)).to eq([3, 2, 2])
+    it "partage au millième plutôt que de perdre une demi-portion" do
+      expect(described_class.even_split(5, 2).map(&:to_f)).to eq([2.5, 2.5])
+    end
+
+    it "donne le reliquat aux premiers, et la somme retombe sur le total" do
+      parts = described_class.even_split(7, 3)
+
+      expect(parts.map(&:to_f)).to eq([2.334, 2.333, 2.333])
+      expect(parts.sum).to eq(7)
     end
 
     it "ne divise pas par zéro cuisinier" do
