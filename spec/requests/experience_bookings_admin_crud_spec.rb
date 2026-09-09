@@ -14,13 +14,13 @@ RSpec.describe "ExperienceBookings — CRUD admin sur un séjour", type: :reques
 
   # Porteuse A + son compte + une activité tarifée (40 € + 15 €/pers).
   let(:porteur_a) { Human.create!(name: "Porteuse A", email: "a@example.com") }
-  let(:user_a)    { User.create!(email: "a@example.com", password: "password123", human: porteur_a) }
+  let(:user_a)    { User.create!(email: "a@example.com", password: "password123", human: porteur_a, restricted_to_experiences: true) }
   let(:exp_a)     { Experience.create!(name: "Balade ânes", human: porteur_a, fixed_price_cents: 4000, price_cents: 1500) }
   let(:avail_a)   { ExperienceAvailability.create!(experience: exp_a, available_on: Date.today + 21, starts_at: "10:00") }
 
   # Porteur B + son compte + son créneau (pour prouver le cloisonnement).
   let(:porteur_b) { Human.create!(name: "Porteur B", email: "b@example.com") }
-  let(:user_b)    { User.create!(email: "b@example.com", password: "password123", human: porteur_b) }
+  let(:user_b)    { User.create!(email: "b@example.com", password: "password123", human: porteur_b, restricted_to_experiences: true) }
   let(:exp_b)     { Experience.create!(name: "Poterie", human: porteur_b, price_cents: 2000) }
   let(:avail_b)   { ExperienceAvailability.create!(experience: exp_b, available_on: Date.today + 21, starts_at: "14:00") }
 
@@ -90,11 +90,26 @@ RSpec.describe "ExperienceBookings — CRUD admin sur un séjour", type: :reques
       }.not_to change(ExperienceBooking, :count)
     end
 
-    it "un porteur PEUT ajouter sur SON propre créneau" do
+    # Un compte « accès restreint aux activités » vit sur son planning : la fiche
+    # séjour ne fait pas partie de son allowlist (`BaseController`), il est
+    # renvoyé vers ses activités sans rien créer — même sur SON propre créneau.
+    it "un porteur restreint est renvoyé vers son planning, sans ajout" do
       sign_in user_a
       expect {
         post stay_experience_bookings_path(stay), params: {
           experience_booking: { experience_availability_id: avail_a.id, participants: 3, status: "pending" }
+        }
+      }.not_to change(ExperienceBooking, :count)
+      expect(response).to redirect_to(experiences_path)
+    end
+
+    it "un membre d'équipe lié à un Human, non restreint, ajoute sur le créneau d'un autre porteur" do
+      membre = User.create!(email: "membre@les4sources.be", password: "password123",
+                            human: Human.create!(name: "Membre", email: "membre@les4sources.be"))
+      sign_in membre
+      expect {
+        post stay_experience_bookings_path(stay), params: {
+          experience_booking: { experience_availability_id: avail_b.id, participants: 3, status: "pending" }
         }
       }.to change(ExperienceBooking, :count).by(1)
     end
@@ -119,6 +134,18 @@ RSpec.describe "ExperienceBookings — CRUD admin sur un séjour", type: :reques
       sign_in user_a
       patch experience_booking_path(target), params: { experience_booking: { participants: 9 } }
       expect(target.reload.participants).to eq(1)
+    end
+
+    # Règle du 2026-09-08 : le cloisonnement suit l'interrupteur « accès restreint
+    # aux activités », plus le simple rattachement à un Human. Un membre de
+    # l'équipe qui porte ses propres activités (Michael) édite celles des autres.
+    it "un membre d'équipe lié à un Human mais NON restreint édite l'activité d'un autre porteur" do
+      target = ExperienceBooking.create!(experience_availability: avail_b, stay: stay, participants: 1, status: "pending")
+      membre = User.create!(email: "membre@les4sources.be", password: "password123",
+                            human: Human.create!(name: "Membre", email: "membre@les4sources.be"))
+      sign_in membre
+      patch experience_booking_path(target), params: { experience_booking: { participants: 4 } }
+      expect(target.reload.participants).to eq(4)
     end
   end
 

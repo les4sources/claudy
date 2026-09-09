@@ -31,19 +31,27 @@ class User < ApplicationRecord
 
   belongs_to :human, optional: true
 
-  # Distinction porteur / admin global pour le scoping de la validation
-  # d'activités (epic #55, Phase 2). Le repo n'a PAS de rôle « admin » dédié
-  # (ni Pundit/CanCan), et le compte d'accueil générique n'est rattaché à aucun
-  # `Human` (cf. le fallback `current_user&.human || Human.first` de
-  # BaseController). On s'appuie donc sur ce fait établi :
-  #   * utilisateur SANS `human` = staff/accueil = admin global (voit tout) ;
-  #   * utilisateur AVEC `human` = porteur, cloisonné à SES activités.
-  # Règle « fail-closed » : un porteur ne voit jamais que les siennes, même s'il
-  # n'en porte aucune (liste vide) — jamais toutes par accident.
-  def porteur?
-    human_id.present?
+  # Cloisonnement des ACTIVITÉS (validation, édition, retrait, ajout sur un
+  # séjour — `ExperienceBooking.for_user`, `ExperienceAvailability.for_user`).
+  # Deux populations :
+  #   * compte « Accès restreint aux activités » (interrupteur de la fiche
+  #     membre, epic #25) = porteur externe : ne voit et n'agit que sur SES
+  #     activités. Fail-closed : jamais toutes par accident, même s'il n'en
+  #     porte aucune ou si son membre a été désactivé ;
+  #   * tout autre compte = équipe / accueil : voit et édite tout.
+  # Jusqu'au 2026-09-08 la règle était « compte AVEC `human` = porteur
+  # cloisonné » (epic #55 phase 2, antérieure de quatre jours à
+  # l'interrupteur) : toute l'équipe, Michael compris, tombait dans le
+  # cloisonnement et ne pouvait rien faire depuis la modale séjour sur
+  # l'activité d'un collègue.
+  def restricted_to_own_activities?
+    restricted_to_experiences?
   end
 
+  # Compte sans membre d'équipe rattaché (accueil générique, compta). Le repo
+  # n'a PAS de rôle « admin » dédié (ni Pundit/CanCan) : c'est ce fait établi
+  # qui sert aux commentaires (`Comment#editable_by?`). Il ne gouverne PLUS le
+  # cloisonnement des activités — cf. `#restricted_to_own_activities?`.
   def global_admin?
     human_id.blank?
   end

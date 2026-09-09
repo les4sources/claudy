@@ -85,13 +85,16 @@ class ExperienceBooking < ApplicationRecord
   def refused?   = status == "refused"
   def cancelled? = status == "cancelled"
 
-  # Réservations visibles/actionnables par un utilisateur : tout pour un admin
-  # global (staff sans activité rattachée), seulement les siennes pour un
-  # porteur. Centralisé ici pour que contrôleur admin ET canal jeton partagent
-  # exactement la même règle de scoping.
+  # Réservations visibles/actionnables par un utilisateur : tout pour l'équipe
+  # et l'accueil, seulement les siennes pour un compte « accès restreint aux
+  # activités » (cf. `User#restricted_to_own_activities?`). Centralisé ici pour
+  # que contrôleur admin ET canal jeton partagent exactement la même règle.
+  # Un compte restreint sans membre (ou dont le membre est désactivé) ne voit
+  # rien : fail-closed.
   def self.for_user(user)
     base = with_visible_stay
-    return base if user.nil? || user.global_admin?
+    return base if user.nil? || !user.restricted_to_own_activities?
+    return base.none if user.human.nil?
 
     base.for_carrier(user.human)
   end
