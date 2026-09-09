@@ -56,7 +56,13 @@ module Kitchen
 
       MealOrder.transaction { pairs.each { |(_, order)| order.save! } }
 
-      Result.new(orders: pairs.map(&:last))
+      orders = pairs.map(&:last)
+      # APRÈS le commit, jamais dedans : une saisie qui échoue n'envoie rien.
+      # Les callbacks de ligne se sont tus (`skip_notifications`), c'est ici que
+      # part l'email — un seul par destinataire (issue #266).
+      Kitchen::GroupedNotifier.new(orders: orders).call
+
+      Result.new(orders: orders)
     rescue ActiveRecord::RecordInvalid => e
       faulty = pairs.find { |(_, order)| order.equal?(e.record) }&.first
       message = e.record.errors.full_messages.to_sentence
@@ -89,7 +95,9 @@ module Kitchen
     end
 
     def build(block, date, moment)
-      @stay.meal_orders.new(
+      # La ligne ne prévient plus la cuisine toute seule : c'est la SAISIE qui
+      # prévient, une fois entière et commitée (issue #266).
+      order = @stay.meal_orders.new(
         block.attributes.except(:date, :moment).merge(
           kind: kind_for(block, moment),
           # Le moment du goûter vit dans son type ; le champ reste renseigné
@@ -98,6 +106,8 @@ module Kitchen
           date: date
         )
       )
+      order.skip_notifications = true
+      order
     end
 
     # Le goûter n'existe que dans la famille `repas` : cocher son créneau avec

@@ -22,6 +22,14 @@ module Kitchen
       deliver(mailer)
     end
 
+    # Le destinataire NORMAL d'une ligne : la personne qui s'en charge, ou à
+    # défaut la responsable par défaut de la famille. Exposé en méthode de
+    # classe pour que la notification groupée (issue #266) range ses lignes par
+    # la même règle, sans la redire.
+    def self.responsible_email_for(order)
+      (order.responsible_human || Kitchen::Config.default_human(order.family))&.email
+    end
+
     private
 
     attr_reader :order, :changes
@@ -63,7 +71,7 @@ module Kitchen
     def recipient_for(mailer)
       return Kitchen::Config.coordinator_email if mailer == :refused
 
-      (order.responsible_human || Kitchen::Config.default_human(order.family))&.email
+      self.class.responsible_email_for(order)
     end
 
     def deliver(mailer)
