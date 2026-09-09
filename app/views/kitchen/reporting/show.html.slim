@@ -1,0 +1,175 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Reporting cuisine",
+           links: [link_to("Exporter les prestations", kitchen_reporting_path(from: @from, to: @to, format: :csv), class: "btn-page-header-with-icon"),
+                   link_to("Exporter les dépenses", kitchen_reporting_expenses_path(from: @from, to: @to, format: :csv), class: "btn-page-header-with-icon")]
+
+.space-y-6
+  / La période prime sur tout le reste : c'est elle qu'on change en arrivant.
+    Par défaut l'année en cours — la rentabilité de la cuisine ne se lit pas sur
+    un mois isolé.
+  = form_with url: kitchen_reporting_path, method: :get, class: "flex flex-wrap items-end gap-3 rounded-xl bg-white p-4 ring-1 ring-gray-200" do
+    div
+      = label_tag :from, "Du", class: "block text-xs font-medium text-gray-500"
+      = date_field_tag :from, @from, class: "mt-1 rounded-md border-gray-300 text-sm"
+    div
+      = label_tag :to, "Au", class: "block text-xs font-medium text-gray-500"
+      = date_field_tag :to, @to, class: "mt-1 rounded-md border-gray-300 text-sm"
+    = submit_tag "Afficher", class: "rounded-md bg-4s-main px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+    .flex.flex-wrap.items-center.gap-2.text-xs
+      = link_to "Année en cours", kitchen_reporting_path(from: Date.current.beginning_of_year, to: Date.current.end_of_year), class: "rounded-md bg-gray-100 px-2.5 py-1.5 text-gray-700 hover:bg-gray-200"
+      = link_to "Année précédente", kitchen_reporting_path(from: 1.year.ago.beginning_of_year.to_date, to: 1.year.ago.end_of_year.to_date), class: "rounded-md bg-gray-100 px-2.5 py-1.5 text-gray-700 hover:bg-gray-200"
+      = link_to "Mois en cours", kitchen_reporting_path(from: Date.current.beginning_of_month, to: Date.current.end_of_month), class: "rounded-md bg-gray-100 px-2.5 py-1.5 text-gray-700 hover:bg-gray-200"
+      = link_to "Mois précédent", kitchen_reporting_path(from: 1.month.ago.beginning_of_month.to_date, to: 1.month.ago.end_of_month.to_date), class: "rounded-md bg-gray-100 px-2.5 py-1.5 text-gray-700 hover:bg-gray-200"
+
+  .grid.grid-cols-1.gap-4.lg:grid-cols-3
+    / Deux chiffres de recette, jamais un seul : le facturé est ce que la
+      cuisine a produit, l'encaissé ce qui est rentré en banque. Les acomptes et
+      les soldes les font diverger, et c'est normal.
+    section.rounded-2xl.bg-white.ring-1.ring-gray-200.px-5.py-4
+      h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Recettes
+      dl.mt-3.space-y-2.text-sm
+        .flex.items-baseline.justify-between
+          dt.text-gray-500 Facturé
+          dd.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(@revenue.totals.price_cents))
+        .flex.items-baseline.justify-between
+          dt.text-gray-500 Encaissé
+          - if @accounting.revenue_account?
+            dd.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(@accounting.collected_cents))
+          - else
+            dd.text-gray-400 —
+        .flex.items-baseline.justify-between.border-t.border-gray-100.pt-2
+          dt.text-gray-500 Écart
+          - if @accounting.revenue_account?
+            dd.font-medium.text-gray-700 = humanized_money_with_symbol(Money.new(@revenue.totals.price_cents - @accounting.collected_cents))
+          - else
+            dd.text-gray-400 —
+      - if @accounting.revenue_account?
+        p.mt-3.text-xs.text-gray-400
+          | L'écart vient des acomptes et des soldes : une prestation facturée
+            dans la période peut avoir été encaissée avant (acompte) ou après
+            (solde). L'encaissé est lu au grand livre, sur le compte
+            #{@accounting.revenue_account}.
+      - else
+        p.mt-3.text-xs.text-gray-500
+          | Aucun compte de recette n'est rattaché à la catégorie « Repas » :
+            l'encaissé ne peut pas être lu.
+
+    / La dépense se lit en comptabilité, sur les comptes que désigne Paramètres
+      > Cuisine. Sans réglage, on le dit — un 0 € ressemblerait à une cuisine
+      qui n'a rien coûté.
+    section.rounded-2xl.bg-white.ring-1.ring-gray-200.px-5.py-4
+      h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Dépenses
+      - if @accounting.configured?
+        p.mt-3.text-2xl.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(@accounting.expenses_cents))
+        p.mt-3.text-xs.text-gray-400
+          | Mouvements débiteurs de la période sur
+            #{@accounting.expense_accounts.map(&:to_s).to_sentence}.
+      - else
+        p.mt-3.text-sm.text-gray-700 Aucun compte de charge n'est configuré pour la cuisine.
+        p.mt-1.text-xs.text-gray-500
+          | Tant qu'aucun compte n'est désigné, les dépenses ne peuvent pas être
+            lues — et un total de 0 € mentirait.
+        p.mt-2
+          = link_to "Paramètres > Cuisine", kitchen_settings_path, class: "text-sm font-medium text-indigo-600 hover:underline"
+
+    section.rounded-2xl.bg-white.ring-1.ring-gray-200.px-5.py-4
+      h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Résultat
+      - if @accounting.configured?
+        dl.mt-3.space-y-2.text-sm
+          .flex.items-baseline.justify-between
+            dt.text-gray-500 Encaissé − dépenses
+            dd.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(@accounting.collected_cents - @accounting.expenses_cents))
+          .flex.items-baseline.justify-between
+            dt.text-gray-500 Facturé − dépenses
+            dd.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(@revenue.totals.price_cents - @accounting.expenses_cents))
+      - else
+        p.mt-3.text-sm.text-gray-500
+          | Disponible dès qu'un compte de charge est configuré pour la cuisine.
+
+  / Le détail des dépenses : d'où vient le total, ligne par ligne, avec le
+    chemin vers l'écriture au grand livre.
+  section.overflow-hidden.rounded-2xl.bg-white.ring-1.ring-gray-200
+    .flex.flex-wrap.items-baseline.justify-between.gap-2.px-5.py-4
+      h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Détail des dépenses
+      - if @accounting.any?
+        = link_to "Exporter en CSV", kitchen_reporting_expenses_path(from: @from, to: @to, format: :csv), class: "text-sm font-medium text-indigo-600 hover:underline"
+    - if !@accounting.configured?
+      p.px-5.pb-5.text-sm.text-gray-500
+        | Rien à détailler tant qu'aucun compte de charge n'est configuré.
+    - elsif @accounting.expense_lines.empty?
+      p.px-5.pb-5.text-sm.text-gray-500 Aucune dépense de cuisine sur cette période.
+    - else
+      .overflow-x-auto
+        table.min-w-full.divide-y.divide-gray-200.text-sm
+          thead.bg-gray-50.text-xs.uppercase.tracking-wide.text-gray-500
+            tr
+              th.px-4.py-3.text-left Date
+              th.px-4.py-3.text-left Libellé
+              th.px-4.py-3.text-left Compte
+              th.px-4.py-3.text-left Tiers
+              th.px-4.py-3.text-right Montant
+              th.px-4.py-3.text-left Écriture
+          tbody.divide-y.divide-gray-100
+            - @accounting.expense_lines.each do |line|
+              tr
+                td.whitespace-nowrap.px-4.py-3.text-gray-900 = l(line.journal_entry.entry_date, format: :short)
+                td.px-4.py-3.text-gray-700 = line.label.presence || line.journal_entry.label
+                td.whitespace-nowrap.px-4.py-3.text-gray-500 = line.general_account.to_s
+                td.px-4.py-3.text-gray-500 = line.third_party&.name || "—"
+                td.whitespace-nowrap.px-4.py-3.text-right.font-medium.text-gray-900 = humanized_money_with_symbol(Money.new(line.signed_cents))
+                td.whitespace-nowrap.px-4.py-3
+                  = link_to line.journal_entry.reference,
+                            finance_ledger_path(general_account_id: line.general_account_id,
+                                                legal_entity_id: line.journal_entry.legal_entity_id,
+                                                from: line.journal_entry.entry_date,
+                                                to: line.journal_entry.entry_date),
+                            class: "text-indigo-600 hover:underline"
+          tfoot.bg-gray-50.font-semibold.text-gray-900
+            tr
+              td.px-4.py-3(colspan="4") Total des dépenses
+              td.whitespace-nowrap.px-4.py-3.text-right = humanized_money_with_symbol(Money.new(@accounting.expenses_cents))
+              td
+
+  - if !@revenue.any?
+    p.rounded-lg.border.border-dashed.border-gray-300.px-4.py-6.text-center.text-sm.text-gray-500
+      | Aucune prestation de cuisine sur cette période.
+  - else
+    .grid.grid-cols-1.gap-4.sm:grid-cols-2
+      section.rounded-2xl.bg-white.ring-1.ring-gray-200.px-5.py-4
+        h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Par famille
+        = render "kitchen/reporting/totals", rows: @revenue.by_family, label: "Famille"
+      section.rounded-2xl.bg-white.ring-1.ring-gray-200.px-5.py-4
+        h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Par personne
+        = render "kitchen/reporting/totals", rows: @revenue.by_responsible, label: "S'en charge"
+
+    section.overflow-hidden.rounded-2xl.bg-white.ring-1.ring-gray-200
+      .overflow-x-auto
+        table.min-w-full.divide-y.divide-gray-200.text-sm
+          thead.bg-gray-50.text-xs.uppercase.tracking-wide.text-gray-500
+            tr
+              th.px-4.py-3.text-left Date
+              th.px-4.py-3.text-left Séjour
+              th.px-4.py-3.text-left Type
+              th.px-4.py-3.text-right Convives
+              th.px-4.py-3.text-right Prix
+              th.px-4.py-3.text-left S'en charge
+              th.px-4.py-3.text-left Statut
+          tbody.divide-y.divide-gray-100
+            - @revenue.lines.each do |line|
+              tr
+                td.whitespace-nowrap.px-4.py-3.text-gray-900 = line.short_date_label
+                td.px-4.py-3
+                  - if line.stay
+                    = link_to line.stay.customer&.name.presence || "Séjour ##{line.stay_id}", stay_path(line.stay), class: "text-indigo-600 hover:underline"
+                td.px-4.py-3.text-gray-700 = line.label
+                td.whitespace-nowrap.px-4.py-3.text-right.text-gray-700 = line.people
+                td.whitespace-nowrap.px-4.py-3.text-right.font-medium.text-gray-900 = line.price
+                td.px-4.py-3.text-gray-700 = line.responsible_label
+                td.px-4.py-3 = line.status_badge
+          tfoot.bg-gray-50.font-semibold.text-gray-900
+            tr
+              td.px-4.py-3(colspan="3") Total
+              td.whitespace-nowrap.px-4.py-3.text-right = @revenue.totals.people
+              td.whitespace-nowrap.px-4.py-3.text-right = humanized_money_with_symbol(Money.new(@revenue.totals.price_cents))
+              td(colspan="2")

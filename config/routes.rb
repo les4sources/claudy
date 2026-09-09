@@ -90,6 +90,12 @@ Rails.application.routes.draw do
   namespace :kitchen do
     root to: "orders#index"
     resource :settings, only: [:show, :update]
+    # Reporting de la cuisine (epic #269, phase 2) : sous Cuisine et non sous
+    # Reporting — c'est Malau qui le lit, au même endroit que ses services.
+    get "reporting", to: "reporting#show", as: :reporting
+    # L'export des dépenses a sa propre adresse : la page en livre deux, et un
+    # seul `format.csv` ne saurait pas lequel des deux produire.
+    get "reporting/expenses", to: "reporting#expenses", as: :reporting_expenses
     resources :products, except: [:show]
     resources :orders, only: [:index, :new, :create, :edit, :update] do
       collection do
@@ -114,7 +120,13 @@ Rails.application.routes.draw do
   resources :rates, only: [:index, :update]
   resources :rental_items
   # Déclarée AVANT `resources :reports`, sinon « kitchen » serait pris pour un id.
-  get "reports/kitchen", to: "reports#kitchen", as: :kitchen_reports
+  # Le reporting cuisine a déménagé sous Cuisine (epic #269, phase 2) : cette
+  # adresse redirige, en conservant la période et le format demandés — des liens
+  # et des favoris pointent encore dessus.
+  get "reports/kitchen", to: redirect { |params, request|
+    target = params[:format].present? ? "/kitchen/reporting.#{params[:format]}" : "/kitchen/reporting"
+    [target, request.query_string.presence].compact.join("?")
+  }, as: :legacy_kitchen_reports
   resources :reports
   resources :roles
   resources :rooms
