@@ -21,7 +21,7 @@ RSpec.describe "Reporting > Cuisine", type: :request do
     order.tap(&:save!)
   end
 
-  it "affiche le détail, les totaux et la marge sur la plage demandée" do
+  it "affiche le détail et les totaux sur la plage demandée" do
     line
 
     get kitchen_reports_path(from: "2026-10-01", to: "2026-10-31")
@@ -29,7 +29,21 @@ RSpec.describe "Reporting > Cuisine", type: :request do
     expect(response).to have_http_status(:ok)
     body = CGI.unescapeHTML(response.body)
     expect(body).to include("Groupe Compta", "Repas (midi ou soir)", "Stéphanie")
-    expect(body).to include("150", "60", "90") # prix, coût, marge en euros
+    expect(body).to include("150") # le prix facturé, en euros
+  end
+
+  # La rentabilité de la cuisine se lit sur une période, dans la comptabilité
+  # (epic #269) : plus une colonne, plus un avertissement, plus une marge.
+  it "ne parle plus ni de coût ni de marge" do
+    line
+    line(cost_cents: nil)
+
+    get kitchen_reports_path(from: "2026-10-01", to: "2026-10-31")
+
+    body = CGI.unescapeHTML(response.body)
+    expect(body).not_to include("Coût")
+    expect(body).not_to include("Marge")
+    expect(body).not_to include("sans coût saisi")
   end
 
   it "borne la plage et se rabat sur le mois en cours sans paramètres" do
@@ -42,14 +56,6 @@ RSpec.describe "Reporting > Cuisine", type: :request do
     expect(response).to have_http_status(:ok)
   end
 
-  it "signale les lignes dont le coût manque" do
-    line(cost_cents: nil)
-
-    get kitchen_reports_path(from: "2026-10-01", to: "2026-10-31")
-
-    expect(CGI.unescapeHTML(response.body)).to include("sans coût saisi")
-  end
-
   it "exporte le détail en CSV lisible par Excel" do
     line
 
@@ -59,7 +65,11 @@ RSpec.describe "Reporting > Cuisine", type: :request do
     expect(response.headers["Content-Disposition"]).to include("cuisine-2026-10-01-2026-10-31.csv")
     expect(response.body).to start_with("﻿") # BOM : sans lui, Excel casse les accents
     expect(response.body).to include("Date;Moment;Client")
-    expect(response.body).to include("Groupe Compta", "150,00", "60,00", "90,00")
+    expect(response.body).to include("Groupe Compta", "150,00")
+    # Ni coût ni marge : la colonne qui suit le prix est celle de la personne.
+    expect(response.body).not_to include("Coût")
+    expect(response.body).not_to include("Marge")
+    expect(response.body).to include("150,00;Stéphanie")
   end
 
   describe "reporting mensuel" do

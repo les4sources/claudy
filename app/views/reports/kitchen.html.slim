@@ -30,10 +30,6 @@
         h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Par personne
         = render "reports/kitchen_totals", rows: @report.by_responsible, label: "S'en charge"
 
-    - if @report.missing_costs_count.positive?
-      p.rounded-lg.bg-amber-50.px-4.py-3.text-sm.text-amber-800
-        = "#{@report.missing_costs_count} ligne#{'s' if @report.missing_costs_count > 1} sans coût saisi : la marge affichée est donc incomplète."
-
     section.overflow-hidden.rounded-2xl.bg-white.ring-1.ring-gray-200
       .overflow-x-auto
         table.min-w-full.divide-y.divide-gray-200.text-sm
@@ -44,8 +40,6 @@
               th.px-4.py-3.text-left Type
               th.px-4.py-3.text-right Convives
               th.px-4.py-3.text-right Prix
-              th.px-4.py-3.text-right Coût
-              th.px-4.py-3.text-right Marge
               th.px-4.py-3.text-left S'en charge
               th.px-4.py-3.text-left Statut
           tbody.divide-y.divide-gray-100
@@ -58,12 +52,6 @@
                 td.px-4.py-3.text-gray-700 = line.label
                 td.whitespace-nowrap.px-4.py-3.text-right.text-gray-700 = line.people
                 td.whitespace-nowrap.px-4.py-3.text-right.font-medium.text-gray-900 = line.price
-                td.whitespace-nowrap.px-4.py-3.text-right
-                  - if line.cost_cents.nil?
-                    = link_to "à saisir", edit_kitchen_order_path(line), class: "text-amber-700 hover:underline"
-                  - else
-                    = line.cost
-                td.whitespace-nowrap.px-4.py-3.text-right.text-gray-700 = line.margin
                 td.px-4.py-3.text-gray-700 = line.responsible_label
                 td.px-4.py-3 = line.status_badge
           tfoot.bg-gray-50.font-semibold.text-gray-900
@@ -71,6 +59,4 @@
               td.px-4.py-3(colspan="3") Total
               td.whitespace-nowrap.px-4.py-3.text-right = @report.totals.people
               td.whitespace-nowrap.px-4.py-3.text-right = humanized_money_with_symbol(Money.new(@report.totals.price_cents))
-              td.whitespace-nowrap.px-4.py-3.text-right = humanized_money_with_symbol(Money.new(@report.totals.cost_cents))
-              td.whitespace-nowrap.px-4.py-3.text-right = humanized_money_with_symbol(Money.new(@report.totals.margin_cents))
               td(colspan="2")
