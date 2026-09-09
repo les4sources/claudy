@@ -164,6 +164,14 @@ class ExperienceBookingsController < BaseController
   # déjà, rien n'est divulgué — avec l'explication. Un id inexistant reste un 404
   # nu, comme avant.
   def render_out_of_scope_booking
+    # Un compte CLOISONNÉ n'a pas accès à la fiche séjour : lui rendre les
+    # panneaux lui livrerait les activités ET les paiements — total, encaissé,
+    # solde dû — d'un séjour qu'il ne peut pas ouvrir. Il n'atteint d'ailleurs
+    # jamais cette branche depuis l'interface, la modale séjour lui étant
+    # fermée : seul un appel direct y mène. Le message amical reste pour les
+    # comptes qui, eux, voient déjà ce séjour.
+    return head :not_found if current_user&.restricted_to_experiences?
+
     stay = ExperienceBooking.with_visible_stay.find_by(id: params[:id])&.stay
     return head :not_found unless stay
 

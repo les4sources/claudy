@@ -68,6 +68,21 @@ RSpec.describe "ExperienceBookings — retour visible dans la modale séjour", t
       expect(target.reload.participants).to eq(1)
     end
 
+    # Le compte cloisonné n'a pas accès à la fiche séjour : le panneau, qui porte
+    # le total du séjour, l'encaissé et le solde dû, ne doit jamais lui parvenir —
+    # pas même par un appel direct en Turbo Stream.
+    it "ne livre RIEN du séjour à un compte cloisonné" do
+      restreint = User.create!(email: "cloisonne@example.com", password: "password123",
+                               human: porteur_a, restricted_to_experiences: true)
+      target = ExperienceBooking.create!(experience_availability: avail_b, stay: stay, participants: 1, status: "pending")
+      sign_in restreint
+      patch experience_booking_path(target), params: { experience_booking: { participants: 9 } }, headers: TURBO
+
+      expect(response).to have_http_status(:not_found)
+      expect(response.body).to be_blank
+      expect(target.reload.participants).to eq(1)
+    end
+
     it "reste un 404 nu pour un id inexistant" do
       sign_in admin
       patch experience_booking_path(id: 999_999), params: { experience_booking: { participants: 3 } }, headers: TURBO
