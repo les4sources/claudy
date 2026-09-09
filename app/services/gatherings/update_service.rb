@@ -20,6 +20,9 @@ module Gatherings
       gathering.starts_at = parsed_starts_at
       gathering.ends_at = parsed_ends_at
       gathering.save!
+      # Après la sauvegarde : un rassemblement neuf n'a pas d'id avant, et un
+      # rattachement à un rassemblement invalide n'aurait rien à quoi se lier.
+      Gatherings::SyncTeams.new(gathering: gathering).run!(submitted_team_ids(params))
       true
     end
 
@@ -38,6 +41,12 @@ module Gatherings
           :ends_at_date,
           :ends_at_time
         )
+    end
+
+    # `nil` quand la clé est absente : seule une soumission du formulaire des
+    # pôles a le droit d'en détacher un (cf. `Gatherings::SyncTeams`).
+    def submitted_team_ids(params)
+      params.require(:gathering).permit(team_ids: [])[:team_ids]
     end
 
     def parsed_starts_at

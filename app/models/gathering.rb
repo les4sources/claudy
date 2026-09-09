@@ -31,6 +31,10 @@ class Gathering < ApplicationRecord
   has_many :agenda_items, -> { ordered }, dependent: :destroy
   has_many :gathering_actions, -> { ordered }, dependent: :destroy
   has_many :decisions, dependent: :nullify
+  # Les pôles concernés (epic #239, phase 2). Aucun pôle = rassemblement
+  # transversal : la réunion du collectif entier n'appartient à personne.
+  has_many :gathering_teams, dependent: :destroy
+  has_many :teams, through: :gathering_teams
 
   has_paper_trail
   has_soft_deletion default_scope: true
@@ -46,6 +50,9 @@ class Gathering < ApplicationRecord
   by_star_field :starts_at, :ends_at
 
   scope :upcoming, -> { where("ends_at >= ?", Time.current).order(:starts_at) }
+  scope :for_team, ->(team_id) { joins(:gathering_teams).where(gathering_teams: { team_id: team_id }) }
+
+  def transversal? = teams.empty?
 
   private
 
