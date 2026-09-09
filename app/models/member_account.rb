@@ -120,6 +120,35 @@ class MemberAccount < ApplicationRecord
     format("#{CODE_PREFIX}%04d", (highest || 0) + 1)
   end
 
+  # Le compte PERSONNEL d'un humain — retrouvé s'il existe, créé sinon
+  # (epic #246). Un cuisinier de batch cooking est payé sur SON compte, pas sur
+  # celui de son ménage : un enfant qui cuisine gagne 3,50 € par portion, et
+  # cet argent est le sien.
+  #
+  # Idempotent : deux appels rendent le même compte, sans jamais en créer un
+  # second. Les autres epics (porteurs, artisans) s'appuieront dessus.
+  #
+  # La recherche IGNORE les comptes soft-deletés : un compte supprimé l'a été
+  # exprès, le ressusciter par un effet de bord serait pire que d'en créer un
+  # neuf. Elle ignore aussi `active` — un compte désactivé reste le compte de
+  # cette personne, et son solde doit continuer à s'y écrire.
+  def self.for_human!(human)
+    raise ArgumentError, "Un compte personnel a besoin d'une personne" if human.nil?
+
+    existing = find_by(human_id: human.id)
+    return existing if existing
+
+    create!(
+      kind: "human",
+      human_id: human.id,
+      # `name` est porté par le compte, jamais dérivé de l'association : `Human`
+      # a un `default_scope` sur `status: "active"`, et le compte d'une personne
+      # partie doit rester lisible avec son solde.
+      name: human.name.presence || "Compte personnel ##{human.id}",
+      contact_email: human.email.presence
+    )
+  end
+
   private
 
   def assign_code
