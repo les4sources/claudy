@@ -209,6 +209,66 @@ RSpec.describe "Cuisine > Reporting", type: :request do
     end
   end
 
+  describe "l'export des dépenses" do
+    it "livre le détail comptable de la période" do
+      decor = build_accounting
+      antargaz = ThirdParty.create!(code: "COLRUYT", name: "Colruyt", kind: "supplier")
+      entry = post_simple_entry(entity: decor[:entity], debit_account: decor[:expense],
+                                credit_account: decor[:bank], amount_cents: 4_250,
+                                entry_date: Date.new(2026, 3, 12), journal: "purchases",
+                                label: "Courses buffet")
+      entry.journal_lines.find_by(general_account_id: decor[:expense].id)
+           .update_columns(third_party_id: antargaz.id)
+
+      get kitchen_reporting_expenses_path(from: "2026-01-01", to: "2026-12-31", format: :csv)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.headers["Content-Disposition"]).to include("cuisine-depenses-2026-01-01-2026-12-31.csv")
+      expect(response.body).to start_with("\uFEFF") # BOM : sans lui, Excel casse les accents
+      body = response.body.delete_prefix("\uFEFF")
+      rows = CSV.parse(body, col_sep: ";")
+      expect(rows.first).to eq(Kitchen::ExpensesCsv::HEADERS)
+      expect(rows.size).to eq(2) # l'en-tête et la seule ligne de charge
+      expect(rows.last).to eq(["2026-03-12", entry.reference, "Courses buffet",
+                               "600005", "Achats cuisine — repas", "Colruyt", "42,50"])
+    end
+
+    it "ne livre que ses en-têtes sur une période sans dépense" do
+      build_accounting
+
+      get kitchen_reporting_expenses_path(from: "2026-01-01", to: "2026-12-31", format: :csv)
+
+      expect(response).to have_http_status(:ok)
+      rows = CSV.parse(response.body.delete_prefix("\uFEFF"), col_sep: ";")
+      expect(rows.size).to eq(1)
+    end
+
+    it "ne livre rien de plus qu'un en-tête tant qu'aucun compte n'est configuré" do
+      decor = build_accounting(configure: false)
+      post_simple_entry(entity: decor[:entity], debit_account: decor[:expense],
+                        credit_account: decor[:bank], amount_cents: 4_250,
+                        entry_date: Date.new(2026, 3, 12), journal: "purchases", label: "Courses")
+
+      get kitchen_reporting_expenses_path(from: "2026-01-01", to: "2026-12-31", format: :csv)
+
+      rows = CSV.parse(response.body.delete_prefix("\uFEFF"), col_sep: ";")
+      expect(rows.size).to eq(1)
+    end
+
+    it "propose les deux exports depuis la page" do
+      decor = build_accounting
+      post_simple_entry(entity: decor[:entity], debit_account: decor[:expense],
+                        credit_account: decor[:bank], amount_cents: 4_250,
+                        entry_date: Date.new(2026, 3, 12), journal: "purchases", label: "Courses")
+
+      get kitchen_reporting_path(from: "2026-01-01", to: "2026-12-31")
+
+      body = CGI.unescapeHTML(response.body)
+      expect(body).to include("Exporter les prestations", "Exporter les dépenses")
+      expect(body).to include(kitchen_reporting_expenses_path(from: "2026-01-01", to: "2026-12-31", format: :csv))
+    end
+  end
+
   describe "reporting mensuel" do
     it "porte une colonne Cuisine dont le total mensuel tient compte" do
       line

@@ -28,6 +28,17 @@ module Kitchen
       end
     end
 
+    # Le second export : le détail comptable des dépenses de la période, celui
+    # qui répond « d'où vient ce total » sans rouvrir le grand livre.
+    def expenses
+      set_period
+      report = Kitchen::AccountingReport.new(from: @from, to: @to)
+
+      send_data Kitchen::ExpensesCsv.new(report).to_csv,
+                filename: "cuisine-depenses-#{@from.iso8601}-#{@to.iso8601}.csv",
+                type: "text/csv; charset=utf-8"
+    end
+
     private
 
     # Une plage à l'envers est retournée plutôt que refusée : c'est une faute de

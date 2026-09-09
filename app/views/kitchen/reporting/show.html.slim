@@ -1,7 +1,8 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
            title: "Reporting cuisine",
-           links: [link_to("Exporter les prestations", kitchen_reporting_path(from: @from, to: @to, format: :csv), class: "btn-page-header-with-icon")]
+           links: [link_to("Exporter les prestations", kitchen_reporting_path(from: @from, to: @to, format: :csv), class: "btn-page-header-with-icon"),
+                   link_to("Exporter les dépenses", kitchen_reporting_expenses_path(from: @from, to: @to, format: :csv), class: "btn-page-header-with-icon")]
 
 .space-y-6
   / La période prime sur tout le reste : c'est elle qu'on change en arrivant.
@@ -91,6 +92,8 @@
   section.overflow-hidden.rounded-2xl.bg-white.ring-1.ring-gray-200
     .flex.flex-wrap.items-baseline.justify-between.gap-2.px-5.py-4
       h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Détail des dépenses
+      - if @accounting.any?
+        = link_to "Exporter en CSV", kitchen_reporting_expenses_path(from: @from, to: @to, format: :csv), class: "text-sm font-medium text-indigo-600 hover:underline"
     - if !@accounting.configured?
       p.px-5.pb-5.text-sm.text-gray-500
         | Rien à détailler tant qu'aucun compte de charge n'est configuré.

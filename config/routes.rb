@@ -93,6 +93,9 @@ Rails.application.routes.draw do
     # Reporting de la cuisine (epic #269, phase 2) : sous Cuisine et non sous
     # Reporting — c'est Malau qui le lit, au même endroit que ses services.
     get "reporting", to: "reporting#show", as: :reporting
+    # L'export des dépenses a sa propre adresse : la page en livre deux, et un
+    # seul `format.csv` ne saurait pas lequel des deux produire.
+    get "reporting/expenses", to: "reporting#expenses", as: :reporting_expenses
     resources :products, except: [:show]
     resources :orders, only: [:index, :new, :create, :edit, :update] do
       collection do
