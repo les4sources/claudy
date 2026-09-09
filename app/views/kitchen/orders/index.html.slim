@@ -1,7 +1,8 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
            title: "Cuisine",
-           links: [link_to("Nouvelle demande", new_kitchen_order_path, class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90")]
+           links: [link_to("Reporting", kitchen_reporting_path, class: "btn-page-header-with-icon"),
+                   link_to("Nouvelle demande", new_kitchen_order_path, class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90")]
 
 .space-y-6
   = render "kitchen/orders/filters"

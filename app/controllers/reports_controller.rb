@@ -23,23 +23,8 @@ class ReportsController < BaseController
     )
   end
 
-  # Reporting > Cuisine (epic #219, phase 5) : ce que la compta doit lire chaque
-  # mois pour savoir ce qu'elle doit à qui, sur la plage de son choix.
-  def kitchen
-    @from = parse_report_date(params[:from], Date.current.beginning_of_month)
-    @to   = parse_report_date(params[:to], Date.current.end_of_month)
-    @to, @from = @from, @to if @to < @from
-    @report = Reports::KitchenRevenue.new(from: @from, to: @to)
-
-    respond_to do |format|
-      format.html
-      format.csv do
-        send_data Reports::KitchenCsv.new(@report).to_csv,
-                  filename: "cuisine-#{@from.iso8601}-#{@to.iso8601}.csv",
-                  type: "text/csv; charset=utf-8"
-      end
-    end
-  end
+  # Le reporting cuisine vit désormais sous Cuisine (epic #269, phase 2) :
+  # `Kitchen::ReportingController`. `/reports/kitchen` y redirige.
 
   def lodging
     @lodging = LodgingDecorator.new(Lodging.find(params[:id]))
@@ -48,12 +33,6 @@ class ReportsController < BaseController
   end
 
   private
-
-  def parse_report_date(value, fallback)
-    Date.parse(value.to_s)
-  rescue ArgumentError, TypeError
-    fallback
-  end
 
   def set_beds_statistics(bookings)
     @beds_used_per_month = {}
