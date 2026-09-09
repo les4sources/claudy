@@ -1,0 +1,119 @@
+/ Une ligne de la table : un service. Deux métiers y ont chacun leur colonne —
+  CUISINE dit si c'est possible et qui s'en charge, CLIENT est tenu par le Pôle
+  Accueil. Le bord gauche dit qui a la main, le fond dit où en est la ligne.
+
+  Les menus (note, « je m'en charge », statut client, ⋯) sont des popovers en
+  `position: fixed` : la table défile horizontalement, et un menu absolu y
+  serait rogné par le conteneur.
+- dom  = "order-#{order.id}"
+- past = order.past?
+- muted = order.cancelled? || past
+- btn_go  = "rounded-md bg-4s-main px-2.5 py-1 text-xs font-medium text-white hover:opacity-90"
+- btn_no  = "rounded-md bg-white px-2.5 py-1 text-xs font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-50"
+- btn_alt = "rounded-md bg-white px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
+- item    = "block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+- panel   = "absolute left-0 top-0 z-40 invisible opacity-0 transition-opacity rounded-lg bg-white shadow-lg ring-1 ring-gray-200 text-left font-normal"
+- pop     = ->(target, placement) { { "controller" => "popover", "action" => "click->popover#toggle click@window->popover#hideOnClickOutside", "popover-target-value" => target, "popover-strategy-value" => "fixed", "popover-placement-value" => placement } }
+
+tr(id=dom class="#{order.row_tone_class} #{muted ? 'text-gray-500' : 'text-gray-800'}")
+  td.whitespace-nowrap.border-l-4.py-2.pl-3.pr-3(class=order.actor_stripe_class)
+    span.font-semibold(class=(muted ? '' : 'text-gray-900')) = order.day_label
+    - if order.moment_label.present?
+      span.ml-1.text-gray-500 = order.moment_label
+
+  td.whitespace-nowrap.px-3.py-2.font-medium
+    .flex.items-center.gap-1
+      span = order.label
+      = order.trio_badge
+      - if !past && order.warnings.any?
+        span.text-amber-600(title=order.warnings.join(". ")) ⚠
+      / Les précisions du client et, le cas échéant, le motif d'un refus ou
+        d'une annulation : derrière un picto, lues au clic. Rien d'inline —
+        une phrase en pleine ligne élargissait toute la colonne.
+      - if order.notes.present? || order.reason.present?
+        button.rounded.p-1(type="button" aria-label="Note" class="#{order.reason.present? ? 'text-red-600 hover:bg-red-50' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'}" data=pop.call("#{dom}-note", "bottom"))
+          svg.h-4.w-4(viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true")
+            path d="M4 2.5h6.5L13 5v8.5H4z"
+            path d="M6 7h4M6 9.5h4"
+        .w-64.space-y-2.whitespace-normal.p-3.text-sm.text-gray-700(id="#{dom}-note" role="tooltip" class=panel)
+          - if order.reason.present?
+            p.text-red-700 = order.reason
+          - if order.notes.present?
+            p = order.notes
+
+  td.whitespace-nowrap.px-3.py-2.text-right.tabular-nums
+    = order.people
+    span.ml-1
+      = render "kitchen/orders/meal_icon"
+
+  - if @show_money
+    td.whitespace-nowrap.px-3.py-2.text-right.tabular-nums = order.price
+
+  td.whitespace-nowrap.px-3.py-2
+    - if order.responsible_missing?
+      span.inline-flex.items-center.gap-2.text-amber-700
+        span.inline-grid.h-6.w-6.place-items-center.rounded-full.border.border-dashed.border-amber-400.bg-amber-50.text-xs.font-bold ?
+        | Personne
+    - else
+      span.inline-flex.items-center.gap-2
+        span.inline-grid.h-6.w-6.place-items-center.rounded-full.bg-teal-50.text-xs.font-bold.text-4s-main = order.responsible_initials
+        = order.responsible_label
+
+  / CUISINE. Répondre depuis n'importe quel compte : les comptes sont partagés,
+    et attendre le bon compte ferait attendre le client. La personne qui s'en
+    charge est TOUJOURS nommée, jamais déduite du compte connecté.
+  td.whitespace-nowrap.px-3.py-2
+    - if order.cancelled?
+      span.text-gray-400 —
+    - else
+      .flex.items-center(class="gap-1.5")
+        span(title=order.reason) = order.validation_badge
+        - if order.pending? && !past
+          = button_to "Ok !", accept_kitchen_order_path(order), method: :patch, class: btn_go
+          = link_to "Pas possible", new_refusal_kitchen_order_path(order), class: btn_no
+        - if order.accepted? && order.responsible_missing? && !past
+          button(type="button" class=btn_go data=pop.call("#{dom}-assign", "bottom-start")) Je m'en charge
+          .p-3(id="#{dom}-assign" class=panel)
+            = form_with url: assign_kitchen_order_path(order), method: :patch, class: "flex items-center gap-2" do
+              = select_tag :human_id, options_from_collection_for_select(@humans, :id, :name), include_blank: "— Choisir —", id: nil, class: "rounded-md border-gray-300 text-sm"
+              = submit_tag "Confier", class: "rounded-md bg-4s-main px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+
+  / CLIENT. Où en est la demande côté client, tenu par le Pôle Accueil : la
+    pastille s'ouvre sur les autres états. Annuler demande un motif.
+  td.whitespace-nowrap.px-3.py-2
+    - if order.cancelled?
+      = order.status_badge
+    - else
+      button.inline-flex.items-center.gap-1(type="button" aria-haspopup="menu" data=pop.call("#{dom}-status", "bottom-start"))
+        = order.status_badge
+        svg.h-3.w-3.text-gray-400(viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true")
+          path d="M2.5 4.5 6 8l3.5-3.5"
+      .w-56.py-1(id="#{dom}-status" role="menu" class=panel)
+        - %w[inquiry requested confirmed].each do |status|
+          - next if status == order.status
+          = button_to MealOrder::STATUS_LABELS[status], status_kitchen_order_path(order), method: :patch, params: { status: status }, class: item
+        .my-1.border-t.border-gray-100
+        = form_with url: status_kitchen_order_path(order), method: :patch, class: "space-y-2 px-3 py-2" do
+          = hidden_field_tag :status, "cancelled", id: nil
+          = text_field_tag :cancellation_reason, nil, required: true, id: nil, placeholder: "Motif de l'annulation", class: "block w-full rounded-md border-gray-300 text-sm"
+          = submit_tag "Annuler la demande", class: "rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+
+  / Le reste : ce qui ne se fait pas tous les jours.
+  td.py-2.pl-2.pr-3.text-right
+    button.rounded.px-2.py-1.text-gray-400(type="button" aria-label="Plus d'actions" aria-haspopup="menu" class="hover:bg-gray-100 hover:text-gray-700" data=pop.call("#{dom}-menu", "bottom-end")) ⋯
+    .w-60.py-1(id="#{dom}-menu" role="menu" class=panel)
+      = link_to "Modifier la demande", edit_kitchen_order_path(order), class: item
+      - if order.stay
+        = link_to "Ouvrir le séjour", stay_path(order.stay), class: item
+      - if %w[buffet apero].include?(order.family)
+        = link_to "Liste de courses", shopping_list_kitchen_order_path(order), target: "_blank", rel: "noopener", class: item
+      - unless order.cancelled? || past
+        .my-1.border-t.border-gray-100
+        .px-3.py-2
+          p.mb-1.text-xs.font-medium.text-gray-500 = order.responsible_missing? ? "Je m'en charge" : "Confier à quelqu'un d'autre"
+          = form_with url: assign_kitchen_order_path(order), method: :patch, class: "flex items-center gap-2" do
+            = select_tag :human_id, options_from_collection_for_select(@humans, :id, :name, order.responsible_human_id), include_blank: "— Choisir —", id: nil, class: "rounded-md border-gray-300 text-sm"
+            = submit_tag "Confier", class: "rounded-md bg-4s-main px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+      - if order.accepted? && !past
+        .my-1.border-t.border-gray-100
+        = link_to "Se désister…", new_refusal_kitchen_order_path(order), class: "#{item} text-red-700"

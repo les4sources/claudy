@@ -39,6 +39,44 @@ class MealOrderDecorator < ApplicationDecorator
 
   def people_label = "#{object.people} pers."
 
+  # La date en tête de ligne du tableau : le jour en court, l'année seulement
+  # quand elle n'est pas celle en cours, le moment à part pour être grisé.
+  def day_label
+    return "Sans date" if object.date.blank?
+
+    format = object.date.year == Date.current.year ? "%-d %b" : "%-d %b %Y"
+    h.l(object.date, format: format)
+  end
+
+  # Les deux lettres de l'avatar « S'en charge ».
+  def responsible_initials
+    name = object.responsible_human&.name.to_s
+    return "?" if name.blank?
+
+    name.split(/[\s-]+/).map { |part| part[0] }.join[0, 2].upcase
+  end
+
+  # Le bord gauche de la ligne dit qui a la main : vert cuisine, bleu accueil,
+  # rouge quand il faut prévoir autre chose. Rien quand rien n'attend personne.
+  ACTOR_STRIPES = {
+    kitchen:   "border-l-4s-main",
+    reception: "border-l-indigo-400",
+    to_cover:  "border-l-red-500"
+  }.freeze
+
+  def actor_stripe_class
+    ACTOR_STRIPES.fetch(object.next_actor, "border-l-transparent")
+  end
+
+  # Le fond de la ligne : rouge léger et estompé pour un refus, vert clair pour
+  # ce que le client a confirmé, rien sinon.
+  def row_tone_class
+    return "bg-red-50/70 opacity-[.85]" if object.refused?
+    return "bg-green-50/70" if object.confirmed?
+
+    ""
+  end
+
   def price = h.humanized_money_with_symbol(Money.new(object.price_cents.to_i))
 
   def unit_price = h.humanized_money_with_symbol(Money.new(object.unit_price_effective_cents))

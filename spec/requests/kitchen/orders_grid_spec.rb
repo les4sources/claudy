@@ -292,51 +292,50 @@ RSpec.describe "Cuisine — grille jours × services", type: :request do
     end
   end
 
-  describe "la section « À couvrir »" do
-    # Chaque section de la page est un <section> avec son titre en <h2>.
-    def section_named(title)
-      Nokogiri::HTML(response.body).css("section").find { |node| node.at_css("h2")&.text&.strip == title }
+  # Un service refusé par la cuisine mais encore à venir est « à couvrir » :
+  # il reste dans « À venir » et dans la vue Accueil, avec un bord rouge, et ne
+  # tombe dans « Annulés » qu'une fois passé.
+  describe "un service à couvrir" do
+    def row_for(order)
+      Nokogiri::HTML(response.body).at_css("#order-#{order.id}")
     end
 
-    it "vient en tête, avant « À traiter »" do
-      get kitchen_orders_path
-
-      corps = response.body
-      expect(corps.index("À couvrir")).to be < corps.index("À traiter")
-    end
-
-    it "liste un service refusé encore à venir, avec son motif et son jour" do
+    it "se lit dans la vue Accueil, avec son motif, son jour et un bord rouge" do
       order = MealOrder.create!(stay: stay, kind: "repas", moment: "midi", date: lundi,
                                 people: 4, status: "requested", skip_notifications: true)
       order.refuse!("Steph n'est pas là ce mercredi")
 
-      get kitchen_orders_path
+      get kitchen_orders_path(view: :reception)
 
-      texte = section_named("À couvrir").text
-      expect(texte).to include("Steph n'est pas là ce mercredi")
-      expect(texte).to include(I18n.l(lundi, format: :long))
+      row = row_for(order)
+      expect(row).to be_present
+      expect(CGI.unescapeHTML(row.to_html)).to include("Steph n'est pas là ce mercredi", "border-l-red-500")
+      expect(row.text).to include(I18n.l(lundi, format: "%-d %b"))
     end
 
-    it "le retire d'« Annulés et refusés » tant qu'il est à venir" do
+    it "ne tombe pas dans « Annulés » tant qu'il est à venir" do
       order = MealOrder.create!(stay: stay, kind: "repas", moment: "midi", date: lundi,
                                 people: 4, status: "requested", skip_notifications: true)
       order.refuse!("indisponible")
 
-      get kitchen_orders_path
+      get kitchen_orders_path(view: :out)
+      expect(row_for(order)).to be_nil
 
-      expect(section_named("Annulés et refusés").text).not_to include("indisponible")
-      expect(section_named("À couvrir").text).to include("indisponible")
+      get kitchen_orders_path
+      expect(row_for(order)).to be_present
     end
 
-    it "n'y liste pas un service que le client a annulé" do
+    it "n'est plus à couvrir quand le client a annulé" do
       order = MealOrder.create!(stay: stay, kind: "repas", moment: "midi", date: lundi,
                                 people: 4, status: "requested", skip_notifications: true)
       order.refuse!("indisponible")
       order.update!(status: "cancelled", cancellation_reason: "groupe annulé")
 
-      get kitchen_orders_path
+      get kitchen_orders_path(view: :reception)
+      expect(row_for(order)).to be_nil
 
-      expect(section_named("À couvrir").text).to include("Rien ici")
+      get kitchen_orders_path(view: :out)
+      expect(row_for(order)).to be_present
     end
   end
 

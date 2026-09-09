@@ -20,21 +20,49 @@ RSpec.describe "Cuisine — page et actions", type: :request do
   end
 
   describe "GET /kitchen/orders" do
-    it "range chaque demande dans une seule section" do
+    def ids_on(view)
+      get kitchen_orders_path(view: view)
+      expect(response).to have_http_status(:ok)
+      Nokogiri::HTML(response.body).css("tr[id^=order-]").map { |tr| tr["id"].delete_prefix("order-").to_i }
+    end
+
+    it "range chaque demande dans sa vue, et compte les onglets" do
       todo      = line
-      upcoming  = line(validation: "accepted", status: "confirmed", date: Date.current + 21)
-      inquiry   = line(status: "inquiry", validation: "accepted", date: Date.current + 22)
+      upcoming  = line(validation: "accepted", status: "confirmed", date: Date.current + 21, responsible_human: steph)
+      inquiry   = line(status: "inquiry", validation: "accepted", date: Date.current + 22, responsible_human: steph)
       archived  = line(validation: "accepted", date: Date.current - 5)
       cancelled = line(status: "cancelled", cancellation_reason: "Groupe annulé")
 
-      get kitchen_orders_path
+      expect(ids_on(:all)).to contain_exactly(todo.id, upcoming.id)
+      expect(ids_on(:kitchen)).to contain_exactly(todo.id)
+      # Une demande d'info acceptée par la cuisine attend le client : l'accueil
+      # la suit, elle se lit donc aussi dans sa vue.
+      expect(ids_on(:reception)).to contain_exactly(inquiry.id)
+      expect(ids_on(:info)).to contain_exactly(inquiry.id)
+      expect(ids_on(:past)).to contain_exactly(archived.id)
+      expect(ids_on(:out)).to contain_exactly(cancelled.id)
 
-      expect(response).to have_http_status(:ok)
-      expect(CGI.unescapeHTML(response.body))
-        .to include("À traiter", "À venir", "Demandes d'info", "Archives", "Annulés et refusés")
-      # Chaque ligne existe, et la page les groupe sous le nom du client.
-      [todo, upcoming, inquiry, archived, cancelled].each { |o| expect(o.reload).to be_persisted }
-      expect(response.body).to include("Groupe Test")
+      body = CGI.unescapeHTML(response.body)
+      expect(body).to include("À venir", "Cuisine", "Accueil", "Info", "Archives", "Annulés", "Groupe Test")
+    end
+
+    it "donne la main à l'accueil une fois la cuisine d'accord" do
+      firm = line(validation: "accepted", responsible_human: steph)
+      nobody = line(validation: "accepted", date: Date.current + 21)
+
+      expect(ids_on(:reception)).to contain_exactly(firm.id)
+      expect(ids_on(:kitchen)).to contain_exactly(nobody.id)
+    end
+
+    it "ne montre les montants que dans la vue Accueil" do
+      line(validation: "accepted", responsible_human: steph, unit_price_cents: 1500)
+
+      get kitchen_orders_path(view: :reception)
+      expect(response.body).to include("Prix", "Total facturable")
+
+      get kitchen_orders_path
+      expect(response.body).not_to include("Total facturable")
+      expect(Nokogiri::HTML(response.body).css("th").map(&:text)).not_to include("Prix")
     end
 
     it "filtre par famille et par responsable" do
@@ -243,34 +271,39 @@ RSpec.describe "Cuisine — page et actions", type: :request do
   # rangée : « chacun se pose la question de savoir sur quoi je dois cliquer »
   # (retour d'usage Michael). Chaque métier a maintenant sa bande.
   describe "GET /kitchen/orders — séparation cuisine / accueil" do
-    it "range chaque action dans la bande du métier qui la porte" do
-      line(kind: "buffet_vege", status: "inquiry")
-
-      get kitchen_orders_path
-
-      body = CGI.unescapeHTML(response.body)
-      expect(body).to include(">Cuisine</span>", ">Pôle Accueil</span>")
-
-      cuisine = body.split(">Cuisine</span>", 2).last.split(">Pôle Accueil</span>", 2).first
-      accueil = body.split(">Pôle Accueil</span>", 2).last
-
-      expect(cuisine).to include("C'est possible", "Pas possible", "Je m'en charge", "Liste de courses")
-      expect(cuisine).not_to include("Confirmer", "Modifier")
-
-      expect(accueil).to include("Ferme", "Confirmer", "Modifier", "Annuler")
-      expect(accueil).not_to include("C'est possible", "Liste de courses")
+    def row_html(order)
+      CGI.unescapeHTML(Nokogiri::HTML(response.body).at_css("#order-#{order.id}").to_html)
     end
 
-    # Une demande annulée ne se cuisine plus : la bande cuisine disparaît, seule
-    # la correction reste côté accueil.
-    it "ne montre plus la bande cuisine sur une demande annulée" do
-      line(status: "cancelled", cancellation_reason: "Groupe annulé")
+    it "met les réponses de la cuisine dans sa colonne et le statut client dans la sienne" do
+      order = line(kind: "buffet_vege", status: "inquiry")
 
-      get kitchen_orders_path(section: "cancelled")
+      get kitchen_orders_path(view: :kitchen)
 
-      body = CGI.unescapeHTML(response.body)
-      expect(body).not_to include(">Cuisine</span>")
-      expect(body).to include(">Pôle Accueil</span>", "Modifier")
+      cells = Nokogiri::HTML(response.body).css("#order-#{order.id} td").map { |td| CGI.unescapeHTML(td.to_html) }
+      cuisine = cells[4]
+      client  = cells[5]
+      menu    = cells[6]
+
+      expect(cuisine).to include("Ok !", "Pas possible")
+      expect(cuisine).not_to include("Confirmé", "Modifier")
+
+      expect(client).to include("Demande ferme", "Confirmé", "Annuler la demande")
+      expect(client).not_to include("Ok !")
+
+      expect(menu).to include("Modifier la demande", "Liste de courses", "Ouvrir le séjour", "Je m'en charge")
+    end
+
+    # Une demande annulée ne se cuisine plus : plus aucune réponse cuisine, plus
+    # de changement de statut — seule la correction reste.
+    it "ne propose plus rien à la cuisine sur une demande annulée" do
+      order = line(status: "cancelled", cancellation_reason: "Groupe annulé")
+
+      get kitchen_orders_path(view: :out)
+
+      html = row_html(order)
+      expect(html).not_to include("Ok !", "Pas possible", "Je m'en charge", "Annuler la demande")
+      expect(html).to include("Modifier la demande", "Groupe annulé")
     end
   end
 

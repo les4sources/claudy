@@ -158,6 +158,23 @@ class MealOrder < ApplicationRecord
 
   def active?   = !cancelled? && !refused?
   def billable? = %w[requested confirmed].include?(status.to_s) && !refused?
+  def past?     = date.present? && date < Date.current
+
+  # Qui a la main sur la ligne (page Cuisine). La cuisine tant qu'elle n'a pas
+  # répondu ou que personne ne s'en charge ; l'accueil ensuite, pour suivre le
+  # client ; « à couvrir » quand la cuisine s'est désistée avant la date. nil
+  # quand il n'y a plus rien à faire — ligne passée, annulée, ou prête.
+  #
+  # On lit l'ASSOCIATION `responsible_human`, pas la colonne : un membre
+  # désactivé laisse l'id rempli et l'association à nil.
+  def next_actor
+    return nil if cancelled? || past?
+    return :to_cover if refused?
+    return :kitchen if pending? || responsible_human.nil?
+    return :reception if inquiry? || requested?
+
+    nil
+  end
 
   # Tarif €/pers effectivement appliqué : l'override de la ligne d'abord, le
   # barème (table `rates`, puis constante) ensuite.
