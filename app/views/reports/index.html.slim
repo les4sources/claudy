@@ -86,6 +86,13 @@
         td.align-top.font-extrabold.whitespace-nowrap.px-3.py-4.text-sm.text-gray-900
           = number_to_currency((bookings_total + space_bookings_total + meals_total) / 100.0)
 
+/ Les deux graphes de l'année (issue #276) : quel gîte porte quel mois, et ce
+  que pèse chaque activité d'accueil. Ils s'ajoutent au tableau, ils ne le
+  remplacent pas.
+.mt-6.grid.grid-cols-1.gap-6
+  = render Charts::StackedBarsComponent.new(series: @annual_breakdown.lodging_series, year: @year)
+  = render Charts::DonutComponent.new(slices: @annual_breakdown.activity_slices, year: @year)
+
 h2.mt-6.text-lg.font-bold Hébergements: revenus par origine
 
 .overflow-hidden.shadow.ring-1.ring-black.ring-opacity-5.sm:rounded-lg.mt-4

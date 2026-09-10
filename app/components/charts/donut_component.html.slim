@@ -1,0 +1,42 @@
+section.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidden
+  .px-5.py-4.border-b.border-stone-100.bg-stone-50
+    h2.text-lg.font-semibold.text-stone-900 = title
+    .mt-0.5.text-sm.text-stone-500
+      = "Ce que pèse chaque activité d'accueil dans le chiffre d'affaires #{year}."
+
+  - if empty?
+    .px-5.py-10.text-center.text-sm.text-stone-500
+      | Aucun chiffre d'affaires enregistré pour cette année.
+    ul.px-5.pb-5.space-y-2.text-sm
+      - legend_rows.each do |row|
+        li.flex.flex-wrap.items-center.gap-2
+          span.inline-block.h-3.w-3.shrink-0.rounded-sm style="background-color: #{row[:color]};"
+          span.font-medium.text-stone-800 = row[:label]
+          - if row[:note]
+            span.text-xs.italic.text-stone-500 = "— #{row[:note]}"
+
+  - else
+    .px-5.py-5.flex.flex-col.gap-6.sm:flex-row.sm:items-center
+      .shrink-0.self-center
+        svg role="img" aria-label=description viewBox="0 0 #{size} #{size}" style="width: #{size}px; max-width: 100%; height: auto;"
+          title = title
+          desc = description
+          circle cx=center cy=center r=radius fill="none" stroke="#f5f5f4" stroke-width=stroke_width
+          g transform="rotate(-90 #{center} #{center})"
+            - arcs.each do |arc|
+              circle cx=center cy=center r=radius fill="none" stroke=arc[:color] stroke-width=stroke_width stroke-dasharray="#{arc[:length]} #{circumference}" stroke-dashoffset=arc[:offset]
+                title = arc[:label]
+          text x=center y=(center - 4) text-anchor="middle" font-size="12" fill="#78716c"
+            = "Total #{year}"
+          text x=center y=(center + 16) text-anchor="middle" font-size="17" font-weight="700" fill="#1c1917"
+            = total_amount
+
+      ul.min-w-0.flex-1.space-y-2.text-sm.sm:max-w-xl
+        - legend_rows.each do |row|
+          li.flex.flex-wrap.items-center.gap-x-2.gap-y-1
+            span.inline-block.h-3.w-3.shrink-0.rounded-sm style="background-color: #{row[:color]};"
+            span.font-medium.text-stone-800 = row[:label]
+            span.ml-auto.tabular-nums.text-stone-600 = row[:amount]
+            span.w-14.text-right.tabular-nums.text-stone-400 = row[:share]
+            - if row[:note]
+              span.w-full.text-xs.italic.text-stone-500 = row[:note]
