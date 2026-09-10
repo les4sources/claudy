@@ -1,0 +1,23 @@
+p Bonjour #{@human.name},
+
+p
+  | Ces créneaux sont passés et vous n'avez pas encore dit s'ils ont eu lieu.
+  |  Seuls ceux qui ont eu lieu entreront dans votre relevé de rémunération.
+
+table(cellpadding="6" style="border-collapse: collapse; margin: 16px 0; font-size: 14px;")
+  - @bookings.each do |booking|
+    tr
+      td
+        strong= booking.experience.name
+        br
+        = booking.experience_availability.available_on&.strftime("%-d/%m/%Y")
+        |  à
+        = " #{booking.experience_availability.starts_at}"
+        br
+        = "#{booking.participants} participant#{'s' if booking.participants.to_i > 1}"
+      td
+        = link_to "A eu lieu", activity_outcome_url(booking.outcome_token, host: @host)
+        br
+        = link_to "N'a pas eu lieu", activity_outcome_no_show_url(booking.outcome_token, host: @host)
+
+p Merci — c'est ce qui permet de vous payer juste.

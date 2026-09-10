@@ -757,12 +757,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
     t.datetime "created_at", null: false
     t.bigint "experience_availability_id", null: false
     t.text "notes"
+    t.string "outcome"
+    t.datetime "outcome_recorded_at"
+    t.bigint "outcome_recorded_by_id"
     t.integer "participants"
     t.text "refusal_reason"
     t.string "status"
     t.bigint "stay_id", null: false
     t.datetime "updated_at", null: false
     t.index ["experience_availability_id"], name: "index_experience_bookings_on_experience_availability_id"
+    t.index ["outcome"], name: "index_experience_bookings_on_outcome"
+    t.index ["outcome_recorded_by_id"], name: "index_experience_bookings_on_outcome_recorded_by_id"
     t.index ["stay_id"], name: "index_experience_bookings_on_stay_id"
   end
 
@@ -1797,6 +1802,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
   add_foreign_key "events", "teams"
   add_foreign_key "experience_availabilities", "experiences"
   add_foreign_key "experience_bookings", "experience_availabilities"
+  add_foreign_key "experience_bookings", "humans", column: "outcome_recorded_by_id"
   add_foreign_key "experience_bookings", "stays"
   add_foreign_key "experiences", "humans"
   add_foreign_key "experiences", "teams"

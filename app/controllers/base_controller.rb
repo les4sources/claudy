@@ -17,7 +17,12 @@ class BaseController < ActionController::Base
   RESTRICTED_ALLOWLIST = {
     "experiences" => %w[index show],
     "experience_availabilities" => %w[create destroy],
-    "experience_bookings" => %w[index update confirm new_refusal refuse]
+    # `outcomes` / `record_outcome` (epic #244, phase 2) : le rappel de tenue
+    # mène le porteur sur cet écran, et « n'a pas eu lieu » exige une session —
+    # sans eux, un compte cloisonné rebondissait sur son planning et ne pouvait
+    # jamais déclarer la tenue de ses propres créneaux. Le geste en masse
+    # (`bulk_outcome`) reste hors allowlist : il n'est offert qu'à l'accueil.
+    "experience_bookings" => %w[index update confirm new_refusal refuse outcomes record_outcome]
   }.freeze
 
   # breadcrumb "Calendrier", :root_path

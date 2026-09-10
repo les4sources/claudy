@@ -5,22 +5,28 @@
 #  id                         :bigint           not null, primary key
 #  carrier_fee_cents          :integer
 #  notes                      :text
+#  outcome                    :string
+#  outcome_recorded_at        :datetime
 #  participants               :integer
 #  refusal_reason             :text
 #  status                     :string
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
 #  experience_availability_id :bigint           not null
+#  outcome_recorded_by_id     :bigint
 #  stay_id                    :bigint           not null
 #
 # Indexes
 #
 #  index_experience_bookings_on_experience_availability_id  (experience_availability_id)
+#  index_experience_bookings_on_outcome                     (outcome)
+#  index_experience_bookings_on_outcome_recorded_by_id      (outcome_recorded_by_id)
 #  index_experience_bookings_on_stay_id                     (stay_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (experience_availability_id => experience_availabilities.id)
+#  fk_rails_...  (outcome_recorded_by_id => humans.id)
 #  fk_rails_...  (stay_id => stays.id)
 #
 require "rails_helper"

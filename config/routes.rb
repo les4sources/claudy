@@ -408,10 +408,17 @@ Rails.application.routes.draw do
     resources :payments, only: [:create, :update], controller: "stay_payments"
   end
   resources :experience_bookings, only: [:index, :update, :destroy] do
+    collection do
+      # Tenue de l'activité (epic #244, phase 2) : la file de ce qui attend un
+      # verdict, et le geste en masse de l'admin global.
+      get  :outcomes
+      post :bulk_outcome
+    end
     member do
       patch :confirm         # validation par le porteur (canal admin)
       get   :new_refusal     # formulaire de refus (raison obligatoire)
       patch :refuse          # application du refus avec raison
+      patch :record_outcome  # « a eu lieu » / « n'a pas eu lieu »
     end
   end
 
@@ -422,6 +429,14 @@ Rails.application.routes.draw do
   get  "activites/valider/:token",  to: "experience_booking_validations#show",    as: :activity_validation
   post "activites/valider/:token",  to: "experience_booking_validations#confirm", as: :activity_validation_confirm
   get  "activites/refuser/:token",  to: "experience_booking_validations#refuse",  as: :activity_validation_refuse
+
+  # Canal jeton — déclaration de tenue depuis le rappel (epic #244, phase 2).
+  # Même partage que la validation : « a eu lieu » se confirme sur une page puis
+  # POSTe (jamais de mutation sur un GET préchargeable), « n'a pas eu lieu »
+  # exige une connexion et renvoie vers l'écran admin.
+  get  "activites/tenue/:token",     to: "experience_booking_outcomes#show",    as: :activity_outcome
+  post "activites/tenue/:token",     to: "experience_booking_outcomes#held",    as: :activity_outcome_held
+  get  "activites/non-tenue/:token", to: "experience_booking_outcomes#no_show", as: :activity_outcome_no_show
 
   # Espace client activités (token-based, sans Devise).
   get  "mon-sejour/:token/activites", to: "public/activity_selections#show",   as: :public_activity_selection

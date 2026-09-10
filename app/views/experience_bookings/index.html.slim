@@ -2,6 +2,13 @@
   h1.text-2xl.font-bold Activités réservées
 
 .max-w-4xl.mx-auto
+  / Le badge « À confirmer » (epic #244, phase 2) : la file de ce qui est passé
+    et n'a pas dit s'il a eu lieu. Sans lui, on ne découvre l'oubli qu'au relevé
+    de rémunération — trois mois trop tard.
+  - if @awaiting_outcome_count.to_i.positive?
+    .mb-4
+      = link_to outcomes_experience_bookings_path, class: "inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-200" do
+        | À confirmer (#{@awaiting_outcome_count})
   - if @experience_bookings.empty?
     p.text-gray-500 Aucune activité réservée pour le moment.
   - else
@@ -26,7 +33,12 @@
               = button_to "Valider", confirm_experience_booking_path(booking), method: :patch, class: "px-3 py-1.5 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700"
               = link_to "Refuser", new_refusal_experience_booking_path(booking), class: "px-3 py-1.5 bg-red-100 text-red-700 rounded text-sm font-medium hover:bg-red-200"
             - elsif booking.confirmed?
-              span.px-3.py-1.5.bg-green-100.text-green-800.rounded.text-sm.font-medium Confirmée
+              - if booking.held?
+                span.px-3.py-1.5.bg-emerald-100.text-emerald-800.rounded.text-sm.font-medium A eu lieu
+              - elsif booking.no_show?
+                span.px-3.py-1.5.bg-gray-200.text-gray-700.rounded.text-sm.font-medium N'a pas eu lieu
+              - else
+                span.px-3.py-1.5.bg-green-100.text-green-800.rounded.text-sm.font-medium Confirmée
             - elsif booking.refused?
               span.px-3.py-1.5.bg-red-100.text-red-800.rounded.text-sm.font-medium Refusée
             - else
