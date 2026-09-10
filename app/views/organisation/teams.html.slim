@@ -1,0 +1,35 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Pôles"
+
+.max-w-5xl.space-y-6
+  p.text-sm.text-gray-500
+    | Les pôles sont l'unité d'organisation des 4 Sources. Cliquez sur un pôle pour lire ce qu'il fait, qui en est, et ce qu'il produit.
+
+  - if @rows.empty?
+    .rounded-2xl.bg-white.px-6.py-10.text-center.text-sm.text-gray-500.ring-1.ring-gray-200
+      | Aucun pôle pour l'instant.
+  - else
+    .grid.grid-cols-1.gap-4.sm:grid-cols-2.lg:grid-cols-3
+      - @rows.each do |team|
+        = link_to team_path(team), class: "block rounded-2xl bg-white p-5 ring-1 ring-gray-200 transition hover:ring-4s-main" do
+          - if team.parent_id && team.parent
+            .text-xs.text-gray-400 = "sous #{team.parent.name}"
+          h2.mt-0.5.text-base.font-semibold.text-gray-900 = team.name
+          - if team.kind
+            span.mt-2.inline-flex.items-center.rounded-full.bg-teal-100.px-2.py-0.5.text-xs.font-medium.text-teal-800
+              = team.kind_label
+
+          - referents = team.referents
+          .mt-3.text-sm.text-gray-600
+            - if referents.any?
+              span.text-gray-400 Référent·e·s :
+              =< referents.map(&:name).join(", ")
+            - else
+              span.text-gray-400 Pas de référent·e
+
+          .mt-3.flex.items-center.gap-2.text-xs.text-gray-500
+            span.font-medium.text-gray-900 = team.team_memberships.size
+            = "#{"membre".pluralize(team.team_memberships.size)}"
+            - if team.analytic_code.present?
+              span.text-gray-300 ·
+              span.font-mono = team.analytic_code

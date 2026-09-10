@@ -383,6 +383,12 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
             = link_to "Cycles",
                       cycles_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'cycles' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          / Les pôles se LISENT ici (epic #239, phase 3) ; ils se configurent
+            dans Paramètres > Pôles.
+          li
+            = link_to "Pôles",
+                      organisation_teams_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{(controller_name == 'organisation' && action_name == 'teams') || controller_name == 'teams' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           - Human.cycle_active.roles_enabled.each do |human|
             li
               = link_to human.name,

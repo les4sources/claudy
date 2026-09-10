@@ -240,6 +240,9 @@ Rails.application.routes.draw do
 
   # Organisation
   get "organisation", to: "organisation#index", as: :organisation
+  # L'annuaire des pôles, côté lecture (epic #239, phase 3). Le CRUD reste dans
+  # les Paramètres : ici on cherche un pôle pour le lire, pas pour le régler.
+  get "organisation/poles", to: "organisation#teams", as: :organisation_teams
   resources :cycles do
     member do
       get :closing

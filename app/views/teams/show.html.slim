@@ -1,21 +1,108 @@
 - content_for :page_header do
-  = render 'layouts/components/page_header',
+  = render "layouts/components/page_header",
            title: @team.name,
-           links: [ \
-             delete_link(@team.object),
-             link_to( \
-               "Mettre à jour",
-               edit_team_path(@team),
-               class: "btn-page-header" \
-             ) \
-           ].compact
+           links: [link_to("Configurer ce pôle", edit_team_path(@team), class: "btn-page-header")]
 
-.grid.grid-cols-3.gap-4
-  .col-span-2.space-y-4
-    .overflow-hidden.bg-white.shadow.sm:rounded-lg
-      .px-4.py-5.sm:px-6
-        h3.text-lg.font-medium.leading-6.text-gray-900
-          | Description
-      .border-t.border-gray-200
-        .p-6
+/ Emplacement « À valider » (epic #239, phase 3) : l'epic Factures (#240) y
+  branchera son callout. Rien d'autre ne doit y entrer ici.
+= render partial: "teams/pending_validations", locals: { team: @team }
+
+.max-w-5xl.space-y-6
+  section.rounded-2xl.bg-white.p-6.ring-1.ring-gray-200
+    .flex.flex-wrap.items-start.justify-between.gap-4
+      div
+        .flex.flex-wrap.items-center.gap-2
+          - if @team.kind
+            span.inline-flex.items-center.rounded-full.bg-teal-100.px-2.py-0.5.text-xs.font-medium.text-teal-800
+              = @team.kind_label
+          - else
+            / Le classement des pôles appartient au collectif : tant qu'il n'a
+              pas tranché, on le dit plutôt que de laisser un blanc.
+            span.inline-flex.items-center.rounded-full.bg-gray-100.px-2.py-0.5.text-xs.font-medium.text-gray-500
+              | Pôle non classé
+          - if @team.analytic_code.present?
+            span.font-mono.text-xs.text-gray-500 = @team.analytic_code
+          - else
+            span.text-xs.text-gray-400 Pas de code analytique
+        - if @team.parent
+          .mt-2.text-sm.text-gray-500
+            | Rattaché à
+            =< link_to @team.parent.name, team_path(@team.parent), class: "font-medium text-gray-700 hover:underline"
+        - if @team.children.any?
+          .mt-2.text-sm.text-gray-500
+            | Regroupe
+            =< safe_join(@team.children.map { |child| link_to(child.name, team_path(child), class: "font-medium text-gray-700 hover:underline") }, ", ")
+
+      div
+        .text-xs.uppercase.tracking-wide.text-gray-400 Référent·e·s
+        .mt-1.text-sm.font-medium.text-gray-900
+          - referents = @team.referents
+          = referents.any? ? referents.map(&:name).join(", ") : content_tag(:span, "Pas de référent·e", class: "font-normal text-gray-400")
+
+    .mt-5.border-t.border-gray-100.pt-5
+      - if @team.description.present?
+        .prose.prose-sm.max-w-none
           == @team.description
+      - else
+        p.text-sm.text-gray-400
+          | Ce pôle n'a pas encore de description.
+          =< link_to "En écrire une", edit_team_path(@team), class: "font-medium text-gray-600 hover:underline"
+
+  .grid.grid-cols-1.gap-6.lg:grid-cols-2
+    section.rounded-2xl.bg-white.ring-1.ring-gray-200.overflow-hidden
+      .px-6.py-4.border-b.border-gray-100(class="bg-gray-50/60")
+        h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Membres
+      - if @memberships.empty?
+        .px-6.py-8.text-center.text-sm.text-gray-500 Personne dans ce pôle pour l'instant.
+      - else
+        ul.divide-y.divide-gray-100
+          - @memberships.each do |membership|
+            li.flex.items-center.justify-between.gap-3.px-6.py-3
+              .flex.items-center.gap-3
+                - if membership.human.photo?
+                  = image_tag membership.human.photo_url(:thumb), class: "h-8 w-8 rounded-full object-cover", alt: membership.human.name
+                - else
+                  .h-8.w-8.rounded-full.bg-gray-200.text-gray-600.flex.items-center.justify-center.text-xs.font-semibold
+                    = membership.human.name.to_s.split(/\s+/).first(2).map { |w| w[0] }.join.upcase
+                span.text-sm.font-medium.text-gray-900 = membership.human.name
+              span.text-xs.text-gray-500 = membership.role_label
+
+    section.rounded-2xl.bg-white.ring-1.ring-gray-200.overflow-hidden
+      .px-6.py-4.border-b.border-gray-100(class="bg-gray-50/60")
+        h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Rassemblements
+      - if @upcoming_gatherings.empty? && @past_gatherings.empty?
+        .px-6.py-8.text-center.text-sm.text-gray-500 Aucun rassemblement rattaché à ce pôle.
+      - else
+        - if @upcoming_gatherings.any?
+          .px-6.pt-4.text-xs.uppercase.tracking-wide.text-gray-400 À venir
+          ul.divide-y.divide-gray-100
+            - @upcoming_gatherings.each do |gathering|
+              li.px-6.py-3
+                = link_to gathering.display_name, gathering_path(gathering), class: "text-sm font-medium text-gray-900 hover:underline"
+                .text-xs.text-gray-500 = l(gathering.starts_at, format: :long)
+        - if @past_gatherings.any?
+          .px-6.pt-4.text-xs.uppercase.tracking-wide.text-gray-400 Les 5 derniers
+          ul.divide-y.divide-gray-100
+            - @past_gatherings.each do |gathering|
+              li.px-6.py-3
+                = link_to gathering.display_name, gathering_path(gathering), class: "text-sm font-medium text-gray-700 hover:underline"
+                .text-xs.text-gray-500 = l(gathering.starts_at, format: :long)
+
+  section.rounded-2xl.bg-white.ring-1.ring-gray-200.overflow-hidden
+    .px-6.py-4.border-b.border-gray-100(class="bg-gray-50/60")
+      h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Décisions
+      p.mt-1.text-xs.text-gray-500 Prises lors des rassemblements de ce pôle.
+    - if @decisions.empty?
+      .px-6.py-8.text-center.text-sm.text-gray-500 Aucune décision enregistrée pour l'instant.
+    - else
+      ul.divide-y.divide-gray-100
+        - @decisions.each do |decision|
+          li.px-6.py-3
+            .text-sm.text-gray-900 = decision.title
+            .mt-0.5.text-xs.text-gray-500
+              = l(decision.taken_at, format: :long) if decision.taken_at
+              - if decision.gathering
+                span.text-gray-300 =< "·"
+                = link_to GatheringDecorator.new(decision.gathering).display_name, gathering_path(decision.gathering), class: "hover:underline"
+
+  = render partial: "teams/finances", locals: { team: @team, finances: @finances, from: @from, to: @to }
