@@ -346,6 +346,10 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
                       finance_cash_motifs_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/cash_motifs' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
+            = link_to "Tiers",
+                      finance_third_parties_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/third_parties' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
             = link_to "Grand livre",
                       finance_ledger_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/ledger' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"

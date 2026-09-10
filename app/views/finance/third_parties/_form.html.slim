@@ -1,0 +1,54 @@
+= form_with model: [:finance, third_party], class: "space-y-6" do |f|
+  = render "finance/shared/form_errors", record: third_party
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-3.text-sm.font-semibold.text-gray-900 Le tiers
+    .grid.gap-4(class="md:grid-cols-2")
+      div
+        = f.text_field :name, label: "Nom *", required: true, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :kind, "Type *", class: "block text-sm font-medium text-gray-700"
+        = f.select :kind, ThirdParty::KIND_LABELS.map { |v, l| [l, v] }, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+    - if third_party.persisted?
+      p.mt-2.text-xs.text-gray-500
+        | Code comptable :
+        code.ml-1.px-1.py-0.5.bg-gray-100.rounded = third_party.code
+        |  — dérivé du nom à la création, il ne change plus : des écritures le portent.
+    - else
+      p.mt-2.text-xs.text-gray-500
+        | Le code comptable sera dérivé du nom, comme dans la reprise Winbooks (« Antargaz Belgium » → ANTARGAZBE).
+    label.mt-3.flex.items-center.gap-2.text-sm.text-gray-700
+      = f.check_box :active, class: "rounded border-gray-300"
+      |  Actif
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-1.text-sm.font-semibold.text-gray-900 Coordonnées
+    p.mb-3.text-xs.text-gray-500
+      | L'IBAN sert à payer ses factures ; il est chiffré au repos et ne s'affiche qu'ici. Un numéro de TVA manquant ne bloque jamais rien — il est simplement signalé sur la liste.
+    .grid.gap-4(class="md:grid-cols-3")
+      div
+        = f.text_field :iban, label: "IBAN", placeholder: "BE68 5390 0754 7034", class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.text_field :vat_number, label: "N° de TVA", placeholder: "BE0123.456.789", class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.email_field :email, label: "Email", class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-1.text-sm.font-semibold.text-gray-900 Rattachement
+    p.mb-3.text-xs.text-gray-500
+      | Facultatif, et il le reste : la reprise Winbooks a créé les tiers depuis un code, sans savoir à qui il correspondait dans Claudy.
+    .grid.gap-4(class="md:grid-cols-2")
+      div
+        = f.label :human_id, "Membre", class: "block text-sm font-medium text-gray-700"
+        = f.collection_select :human_id, Human.order(:name), :id, :name, { include_blank: "Aucun" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :customer_id, "Client", class: "block text-sm font-medium text-gray-700"
+        = f.collection_select :customer_id, Customer.order(:last_name, :first_name), :id, :name, { include_blank: "Aucun" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+
+    .mt-4
+      = f.label :notes, "Notes", class: "block text-sm font-medium text-gray-700"
+      = f.text_area :notes, rows: 3, placeholder: "Ce qu'il faut savoir avant de payer ou de facturer ce tiers.", class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+
+  .flex.items-center.gap-3
+    = f.submit "Enregistrer", class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+    = link_to "Annuler", finance_third_parties_path, class: "text-sm text-gray-500 hover:text-gray-700"

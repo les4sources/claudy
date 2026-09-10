@@ -1,0 +1,87 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Tiers",
+           links: [link_to("➕ Nouveau tiers", new_finance_third_party_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
+  p.text-sm.text-gray-700
+    strong Un tiers, c'est celui à qui on doit ou qui nous doit.
+    |  Il porte le nom, le code repris de Winbooks, l'IBAN qui servira à payer ses factures et son numéro de TVA. Le code se dérive du nom à la création : deux personnes ne peuvent pas créer deux fois le même fournisseur sous deux orthographes.
+  p.mt-2.text-xs.text-gray-500
+    | On ne supprime pas un tiers — des écritures le portent. On le désactive : il quitte les listes de saisie, ses écritures restent lisibles.
+
+= form_with url: finance_third_parties_path, method: :get, class: "mb-4 flex flex-wrap items-end gap-3" do
+  label.text-xs.text-gray-500
+    | Rechercher
+    = text_field_tag :q, params[:q], placeholder: "Nom ou code…", class: "mt-1 block rounded-md border-gray-300 text-sm"
+  label.text-xs.text-gray-500
+    | Type
+    = select_tag :kind,
+                 options_for_select([["Tous", ""]] + ThirdParty::KIND_LABELS.map { |v, l| [l, v] }, params[:kind]),
+                 class: "mt-1 block rounded-md border-gray-300 text-sm"
+  label.text-xs.text-gray-500
+    | Statut
+    = select_tag :active,
+                 options_for_select([["Actifs", ""], ["Tous", "all"]], params[:active]),
+                 class: "mt-1 block rounded-md border-gray-300 text-sm"
+  = submit_tag "Filtrer", class: "rounded-md bg-4s-main px-3 py-2 text-sm font-medium text-white hover:opacity-90", data: { disable_with: false }
+  - if params[:q].present? || params[:kind].present? || params[:active].present?
+    = link_to "Effacer", finance_third_parties_path, class: "text-sm text-gray-500 hover:text-gray-700"
+
+- if @third_parties.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucun tiers ne correspond.
+    p.mt-1 Élargissez la recherche, ou créez le tiers manquant.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Tiers
+          th.py-3.px-6[scope="col"] Type
+          th.py-3.px-6[scope="col"] Coordonnées
+          th.py-3.px-6[scope="col"] Rattachement
+          th.py-3.px-6[scope="col"] Statut
+          th.py-3.px-6[scope="col"]
+      tbody
+        - @third_parties.each do |third_party|
+          tr.border-b.bg-white
+            td.py-4.px-6.align-top
+              .font-medium.text-gray-900 = third_party.name
+              .font-mono.text-xs.text-gray-400 = third_party.code
+            td.py-4.px-6.align-top
+              span.inline-flex.items-center.rounded-full.bg-gray-100.px-2.py-0.5.text-xs.font-medium.text-gray-700
+                = third_party.kind_label
+            td.py-4.px-6.align-top.text-xs
+              - if third_party.iban.present?
+                .text-gray-700 = third_party.iban_masked
+              - if third_party.vat_number.present?
+                .text-gray-500 = third_party.vat_number
+              - else
+                .text-amber-600 Pas de n° de TVA
+              - if third_party.email.present?
+                .text-gray-500 = third_party.email
+            td.py-4.px-6.align-top.text-xs.text-gray-500
+              - if third_party.human
+                = "Membre : #{third_party.human.name}"
+              - elsif third_party.customer
+                = "Client : #{third_party.customer.name}"
+              - else
+                span.text-gray-300 —
+            td.py-4.px-6.align-top
+              - if third_party.active
+                span.inline-flex.items-center.rounded-full.bg-teal-100.px-2.py-0.5.text-xs.font-medium.text-teal-800 Actif
+              - else
+                span.inline-flex.items-center.rounded-full.bg-gray-100.px-2.py-0.5.text-xs.font-medium.text-gray-500 Inactif
+            td.py-4.px-6.text-right.whitespace-nowrap.align-top
+              .flex.items-center.justify-end.gap-2
+                = link_to "Modifier", edit_finance_third_party_path(third_party), class: "text-xs font-medium text-gray-700 hover:underline"
+                span.text-gray-300 ·
+                - if third_party.active
+                  = button_to "Désactiver", deactivate_finance_third_party_path(third_party), method: :patch,
+                              class: "text-xs font-medium text-red-600 hover:underline",
+                              form: { class: "inline", data: { turbo_confirm: "Désactiver le tiers « #{third_party.name} » ?" } }
+                - else
+                  = button_to "Réactiver", reactivate_finance_third_party_path(third_party), method: :patch,
+                              class: "text-xs font-medium text-4s-main hover:underline",
+                              form: { class: "inline" }
