@@ -57,7 +57,7 @@ h3.mb-3.text-lg.font-semibold.text-gray-900 Affectations
 - unless @entry.posted? || @entry.status == "excluded"
   .p-4.bg-white.rounded-lg.border.border-gray-100
     h4.mb-3.text-sm.font-semibold.text-gray-900 Affecter le reste
-    = render "allocation_form", entry: @entry, general_accounts: @general_accounts, teams: @teams, entities: @entities, from_unallocated: false
+    = render "allocation_form", entry: @entry, general_accounts: @general_accounts, teams: @teams, entities: @entities, events: @events, from_unallocated: false
 
   - if @entry.fully_allocated?
     .mt-4

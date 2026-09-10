@@ -59,9 +59,15 @@ module Finance
 
     def allocation_params
       permitted = params.require(:cash_allocation).permit(:general_account_id, :analytic_account_id, :team_id,
-                                                          :legal_entity_id, :label, :amount)
+                                                          :legal_entity_id, :label, :amount, :event_id)
       amount = permitted.delete(:amount)
       permitted[:amount_cents] = Monetize.parse(amount.to_s).cents if amount.present?
+
+      # L'événement devient le `document` de l'allocation (epic #245, phase 2).
+      # On ne pose PAS le couple polymorphe depuis les paramètres : `document_type`
+      # soumis par le client laisserait choisir la classe à instancier.
+      event_id = permitted.delete(:event_id)
+      permitted[:document] = Event.find_by(id: event_id) if event_id.present?
       permitted
     end
   end

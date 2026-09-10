@@ -176,6 +176,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
     t.string "direction"
+    t.bigint "event_id"
     t.bigint "general_account_id", null: false
     t.string "label", null: false
     t.bigint "legal_entity_id", null: false
@@ -188,6 +189,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
     t.datetime "updated_at", null: false
     t.index ["analytic_account_id"], name: "index_allocation_rules_on_analytic_account_id"
     t.index ["deleted_at"], name: "index_allocation_rules_on_deleted_at"
+    t.index ["event_id"], name: "index_allocation_rules_on_event_id"
     t.index ["general_account_id"], name: "index_allocation_rules_on_general_account_id"
     t.index ["legal_entity_id"], name: "index_allocation_rules_on_legal_entity_id"
     t.index ["position"], name: "index_allocation_rules_on_position"
@@ -204,6 +206,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
     t.datetime "decided_at"
     t.string "decided_by"
     t.datetime "deleted_at"
+    t.bigint "event_id"
     t.bigint "general_account_id", null: false
     t.bigint "legal_entity_id", null: false
     t.text "rationale", null: false
@@ -217,6 +220,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
     t.index ["cash_entry_id"], name: "index_allocation_suggestions_on_cash_entry_id"
     t.index ["cash_entry_id"], name: "index_one_pending_suggestion_per_entry", unique: true, where: "(((status)::text = 'pending'::text) AND (deleted_at IS NULL))"
     t.index ["deleted_at"], name: "index_allocation_suggestions_on_deleted_at"
+    t.index ["event_id"], name: "index_allocation_suggestions_on_event_id"
     t.index ["general_account_id"], name: "index_allocation_suggestions_on_general_account_id"
     t.index ["legal_entity_id"], name: "index_allocation_suggestions_on_legal_entity_id"
     t.index ["team_id"], name: "index_allocation_suggestions_on_team_id"
@@ -1734,12 +1738,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
   add_foreign_key "agenda_items", "humans", column: "author_id"
   add_foreign_key "agenda_items", "humans", column: "carrier_id"
   add_foreign_key "allocation_rules", "analytic_accounts"
+  add_foreign_key "allocation_rules", "events"
   add_foreign_key "allocation_rules", "general_accounts"
   add_foreign_key "allocation_rules", "legal_entities"
   add_foreign_key "allocation_rules", "teams"
   add_foreign_key "allocation_suggestions", "allocation_rules"
   add_foreign_key "allocation_suggestions", "analytic_accounts"
   add_foreign_key "allocation_suggestions", "cash_entries"
+  add_foreign_key "allocation_suggestions", "events"
   add_foreign_key "allocation_suggestions", "general_accounts"
   add_foreign_key "allocation_suggestions", "legal_entities"
   add_foreign_key "allocation_suggestions", "teams"
