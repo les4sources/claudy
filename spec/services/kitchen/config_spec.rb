@@ -49,4 +49,43 @@ RSpec.describe Kitchen::Config do
       expect(described_class.max_people("repas")).to eq(40)
     end
   end
+
+  # Les dépenses de la cuisine s'imputent en compta, sur des comptes dédiés
+  # (epic #269, phase 1). C'est ce réglage que lira le reporting de période.
+  describe "comptes de charge" do
+    let!(:repas) { GeneralAccount.create!(code: "600005", name: "Achats cuisine — repas") }
+    let!(:buffets) { GeneralAccount.create!(code: "600006", name: "Achats cuisine — buffets et apéros") }
+
+    it "ne retourne aucun compte tant que rien n'est configuré" do
+      expect(described_class.expense_accounts).to eq([])
+      expect(described_class.expense_account_ids).to eq([])
+    end
+
+    it "retourne les comptes configurés, dans l'ordre du plan comptable" do
+      Setting.set(described_class::EXPENSE_ACCOUNTS_KEY, "#{buffets.id},#{repas.id}")
+
+      expect(described_class.expense_accounts).to eq([repas, buffets])
+    end
+
+    it "retourne un tableau vide sur un réglage vidé" do
+      Setting.set(described_class::EXPENSE_ACCOUNTS_KEY, "")
+
+      expect(described_class.expense_accounts).to eq([])
+    end
+
+    # On relit la base plutôt que de croire les identifiants stockés : un compte
+    # supprimé depuis disparaît de la liste au lieu de faire planter la lecture.
+    it "ignore un identifiant qui ne désigne plus rien" do
+      Setting.set(described_class::EXPENSE_ACCOUNTS_KEY, "#{repas.id},999999,pas-un-id")
+
+      expect(described_class.expense_accounts).to eq([repas])
+    end
+
+    it "ne propose au choix que les charges actives" do
+      GeneralAccount.create!(code: "700200", name: "Repas")
+      GeneralAccount.create!(code: "600007", name: "Compte retiré", active: false)
+
+      expect(described_class.selectable_expense_accounts.to_a).to eq([repas, buffets])
+    end
+  end
 end

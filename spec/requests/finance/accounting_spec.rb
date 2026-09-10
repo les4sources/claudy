@@ -36,6 +36,19 @@ RSpec.describe "Finances > Comptabilité", type: :request do
       expect(response.body).not_to include(">550000<")
     end
 
+    # Les comptes de la cuisine (epic #269) n'ont rien de particulier : ce sont
+    # des charges de classe 6, listées et imputables comme les autres.
+    it "liste les comptes de charge de la cuisine avec les autres charges" do
+      build_general_account(code: "600005", name: "Achats cuisine — repas", klass: 6, nature: "expense")
+
+      get finance_general_accounts_path(klass: 6)
+
+      expect(response).to have_http_status(:ok)
+      expect(CGI.unescapeHTML(response.body)).to include("600005", "Achats cuisine — repas")
+      # La même portée que celle des sélecteurs d'imputation d'une dépense.
+      expect(GeneralAccount.actives.ordered.map(&:code)).to include("600005")
+    end
+
     it "crée un compte" do
       expect {
         post finance_general_accounts_path,

@@ -42,10 +42,11 @@ class ExperienceAvailability < ApplicationRecord
 
   # Créneaux sur lesquels un utilisateur a le droit d'agir (créer une activité
   # sur un séjour — epic #55, Phase 6). MÊME mécanisme de cloisonnement que
-  # `ExperienceBooking.for_user` : tout pour un admin global, seulement les
-  # créneaux de SES propres `Experience` pour un porteur. Centralisé ici pour
-  # qu'un porteur qui cible le créneau d'un autre porteur obtienne un `nil`
-  # (jamais une création réussie hors périmètre).
+  # `ExperienceBooking.for_user` : tout pour l'équipe et l'accueil, seulement
+  # les créneaux de SES propres `Experience` pour un compte « accès restreint
+  # aux activités » (cf. `User#restricted_to_own_activities?`). Centralisé ici
+  # pour qu'un porteur restreint qui cible le créneau d'un autre porteur
+  # obtienne un `nil` (jamais une création réussie hors périmètre).
   def self.for_user(user)
     # Toujours borné aux Experience VIVANTES : un créneau dont l'activité a été
     # supprimée (soft-delete, `has_soft_deletion default_scope: true`) ne doit
@@ -53,7 +54,8 @@ class ExperienceAvailability < ApplicationRecord
     # plante le rendu de la modale séjour (epic #55 Phase 6). Même filtre que le
     # funnel `bookable_availabilities`.
     scope = joins(:experience).where(experiences: { deleted_at: nil })
-    return scope if user.nil? || user.global_admin?
+    return scope if user.nil? || !user.restricted_to_own_activities?
+    return scope.none if user.human_id.blank?
 
     scope.where(experiences: { human_id: user.human_id })
   end

@@ -1,0 +1,29 @@
+/ Le formulaire de saisie, EN TÊTE : la feuille se remplit en descendant, et sur
+  un téléphone un formulaire en pied oblige à traverser trente lignes avant de
+  pouvoir écrire la trente-et-unième.
+= form_with url: finance_cash_sheet_lines_path, method: :post, class: "space-y-3" do
+  = hidden_field_tag :month, sheet.month.strftime("%Y-%m")
+  = hidden_field_tag :cash_account_id, sheet.account.id
+
+  .grid.grid-cols-2.gap-3(class="sm:grid-cols-6")
+    div
+      = label_tag "cash_line[entry_date]", "Date", class: "block text-xs font-medium text-gray-600"
+      = date_field_tag "cash_line[entry_date]", default_date, required: true, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm"
+    div
+      = label_tag "cash_line[amount]", "Montant", class: "block text-xs font-medium text-gray-600"
+      = number_field_tag "cash_line[amount]", nil, step: 0.01, min: 0, required: true, inputmode: "decimal", placeholder: "0,00", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm"
+    .col-span-2(class="sm:col-span-2")
+      = label_tag "cash_line[cash_motif_id]", "Motif", class: "block text-xs font-medium text-gray-600"
+      = select_tag "cash_line[cash_motif_id]", options_from_collection_for_select(motifs, :id, ->(m) { "#{m.label} · #{m.direction_label}" }), include_blank: "— Choisir —", required: true, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm"
+    .col-span-2(class="sm:col-span-2")
+      = label_tag "cash_line[label]", "Libellé", class: "block text-xs font-medium text-gray-600"
+      = text_field_tag "cash_line[label]", nil, required: true, placeholder: "Recette du bar, chèques ALE…", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm"
+    .col-span-2(class="sm:col-span-5")
+      = label_tag "cash_line[notes]", "Note", class: "block text-xs font-medium text-gray-600"
+      = text_field_tag "cash_line[notes]", nil, placeholder: "Ce qu'on écrirait dans la marge", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm"
+    .col-span-2.flex.items-end(class="sm:col-span-1")
+      button.w-full.inline-flex.items-center.justify-center.rounded-md.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.bg-4s-main(class="hover:opacity-90" type="submit")
+        | Ajouter
+
+  p.text-xs.text-gray-400
+    | Le sens vient du motif : « Bar » fait entrer, « Volontariat » fait sortir. Pas de signe à taper.

@@ -1,6 +1,6 @@
 / CRUD admin des activités d'un séjour (epic #55, Phase 6). Enveloppé dans un
-/ turbo-frame : après ajout / édition / retrait, le contrôleur redirige vers
-/ stay_path et Turbo remplace CE fragment en place, sans recharger la modale.
+/ turbo-frame : après ajout / édition / retrait, le contrôleur répond en Turbo
+/ Stream et remplace CE fragment en place, sans recharger la modale.
 = turbo_frame_tag "stay_#{@stay.id}_activities" do
   / Pas de filet au-dessus du titre : « Activités » ferme la colonne droite, et
   / le trait y coupait la modale au lieu de la conclure (Michael 2026-07-28).
@@ -12,6 +12,17 @@
       - a_confirmer = @stay.experience_bookings.awaiting_outcome.count
       - if a_confirmer.positive?
         = link_to "À confirmer (#{a_confirmer})", outcomes_experience_bookings_path, class: "rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 hover:bg-amber-200"
+    /  Retour de l'action (ajout / édition / retrait). La modale est un <dialog>
+       en top-layer : un flash posé dans le layout resterait sous son voile, et
+       une édition qui ne change rien à l'écran passait pour un bouton mort
+       (Michael 2026-09-08). Le message vit donc DANS la frame — la confirmation
+       s'efface seule (contrôleur undo-toast des cycles), l'erreur reste lisible.
+    - if local_assigns[:notice].present?
+      p.archive-toast.mb-2.text-xs.font-medium.text-green-700(role="status" data-controller="undo-toast" data-undo-toast-duration-value="4000")
+        = local_assigns[:notice]
+    - if local_assigns[:alert].present?
+      p.mb-2.rounded.bg-red-50.px-2.py-1.text-xs.font-medium.text-red-700(role="alert")
+        = local_assigns[:alert]
     - active_bookings = @stay.experience_bookings.active.includes(experience_availability: :experience).to_a
     - if active_bookings.empty?
       p.text-sm.text-gray-500.mb-2 Aucune activité sur ce séjour.
@@ -35,8 +46,9 @@
                 span.inline-block.mt-1.px-2.py-0.5.rounded.text-xs.font-medium.bg-green-100.text-green-800 Validée
             .flex.items-center.gap-2.shrink-0
               = form_with url: experience_booking_path(booking), method: :patch, class: "flex items-center gap-1" do |f|
-                = number_field_tag "experience_booking[participants]", booking.participants, min: 1, class: "w-14 rounded border-gray-300 text-sm py-1"
-                = f.submit "OK", class: "px-2 py-1 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700"
+                / w-16 : en w-14, « 20 » se tronquait derrière les flèches du champ.
+                = number_field_tag "experience_booking[participants]", booking.participants, min: 1, required: true, title: "Nombre de participants", class: "w-16 rounded border-gray-300 text-sm py-1"
+                = f.submit "OK", title: "Enregistrer le nombre de participants", class: "px-2 py-1 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700"
               = button_to "Retirer", experience_booking_path(booking), method: :delete, class: "px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium hover:bg-red-200"
 
     / Ajout d'une activité au séjour.

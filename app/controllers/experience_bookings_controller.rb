@@ -1,13 +1,14 @@
 # Canal ADMIN de validation des activités (epic #55, Phase 2) et CRUD admin
 # d'une activité sur un séjour (epic #55, Phase 6).
 #
-# Scoping d'autorisation : un porteur ne voit et n'agit que sur les
-# `ExperienceBooking` de ses propres `Experience` ; un admin global voit tout.
+# Scoping d'autorisation : un compte « accès restreint aux activités » ne voit
+# et n'agit que sur les `ExperienceBooking` de ses propres `Experience` ;
+# l'équipe et l'accueil voient tout (cf. `User#restricted_to_own_activities?`).
 # Toute la règle est centralisée dans `ExperienceBooking.for_user` (édition /
 # suppression / validation) et `ExperienceAvailability.for_user` (création) — on
-# charge TOUJOURS via ces portées, si bien qu'un porteur qui cible l'ID d'une
-# réservation ou d'un créneau d'un autre porteur obtient un 404 / un refus
-# (jamais une action réussie hors périmètre).
+# charge TOUJOURS via ces portées, si bien qu'un porteur restreint qui cible
+# l'ID d'une réservation ou d'un créneau d'un autre porteur obtient un 404 / un
+# refus (jamais une action réussie hors périmètre).
 class ExperienceBookingsController < BaseController
   before_action :load_scoped_booking,
                 only: [:update, :destroy, :confirm, :new_refusal, :refuse, :record_outcome]
@@ -102,16 +103,17 @@ class ExperienceBookingsController < BaseController
       # validation porte déjà sa propre notification.
       ActivitySelectionMailer.booking_added_by_team(booking).deliver_later if booking.confirmed?
 
+      notice = "Activité « #{availability.experience.name} » ajoutée au séjour."
       respond_to do |format|
-        format.turbo_stream { render_stay_panels(@stay) }
-        format.html do
-          redirect_to stay_path(@stay),
-                      notice: "Activité « #{availability.experience.name} » ajoutée au séjour."
-        end
+        format.turbo_stream { render_stay_panels(@stay, notice: notice) }
+        format.html { redirect_to stay_path(@stay), notice: notice }
       end
     else
-      redirect_to stay_path(@stay),
-                  alert: booking.errors.full_messages.to_sentence.presence || "Ajout impossible."
+      alert = booking.errors.full_messages.to_sentence.presence || "Ajout impossible."
+      respond_to do |format|
+        format.turbo_stream { render_stay_panels(@stay, alert: alert, status: :unprocessable_entity) }
+        format.html { redirect_to stay_path(@stay), alert: alert }
+      end
     end
   end
 
@@ -124,17 +126,19 @@ class ExperienceBookingsController < BaseController
     if @booking.update(booking_update_params)
       refresh_stay_totals!(@booking.stay)
       respond_to do |format|
-        format.turbo_stream { render_stay_panels(@booking.stay) }
+        format.turbo_stream do
+          render_stay_panels(@booking.stay,
+                             notice: "Nombre de participants enregistré : #{@booking.participants}.")
+        end
         format.html { redirect_to stay_path(@booking.stay), notice: "Activité mise à jour." }
         format.any  { head :ok }
       end
     else
+      alert = @booking.errors.full_messages.to_sentence.presence || "Modification impossible."
       respond_to do |format|
-        format.html do
-          redirect_to stay_path(@booking.stay),
-                      alert: @booking.errors.full_messages.to_sentence.presence || "Modification impossible."
-        end
-        format.any { head :unprocessable_entity }
+        format.turbo_stream { render_stay_panels(@booking.stay, alert: alert, status: :unprocessable_entity) }
+        format.html { redirect_to stay_path(@booking.stay), alert: alert }
+        format.any  { head :unprocessable_entity }
       end
     end
   end
@@ -145,9 +149,10 @@ class ExperienceBookingsController < BaseController
   def destroy
     @booking.update!(status: "cancelled")
     refresh_stay_totals!(@booking.stay)
+    notice = "Activité « #{@booking.experience.name} » retirée du séjour."
     respond_to do |format|
-      format.turbo_stream { render_stay_panels(@booking.stay) }
-      format.html { redirect_to stay_path(@booking.stay), notice: "Activité retirée du séjour." }
+      format.turbo_stream { render_stay_panels(@booking.stay, notice: notice) }
+      format.html { redirect_to stay_path(@booking.stay), notice: notice }
       format.any  { head :ok }
     end
   end
@@ -199,9 +204,33 @@ class ExperienceBookingsController < BaseController
     # Réservation inexistante OU hors du périmètre du porteur : même réponse,
     # on ne divulgue pas l'existence de la réservation d'un autre porteur.
     respond_to do |format|
+      format.turbo_stream { render_out_of_scope_booking }
       format.html { redirect_to experience_bookings_path, alert: "Réservation introuvable." }
       format.any  { head :not_found }
     end
+  end
+
+  # Depuis la modale séjour, un porteur VOIT toutes les activités du séjour mais
+  # n'agit que sur les siennes. Un `head :not_found` sans corps y passait pour un
+  # bouton mort (Michael 2026-09-08) : on rend le panneau — que la modale affiche
+  # déjà, rien n'est divulgué — avec l'explication. Un id inexistant reste un 404
+  # nu, comme avant.
+  def render_out_of_scope_booking
+    # Un compte CLOISONNÉ n'a pas accès à la fiche séjour : lui rendre les
+    # panneaux lui livrerait les activités ET les paiements — total, encaissé,
+    # solde dû — d'un séjour qu'il ne peut pas ouvrir. Il n'atteint d'ailleurs
+    # jamais cette branche depuis l'interface, la modale séjour lui étant
+    # fermée : seul un appel direct y mène. Le message amical reste pour les
+    # comptes qui, eux, voient déjà ce séjour.
+    return head :not_found if current_user&.restricted_to_experiences?
+
+    stay = ExperienceBooking.with_visible_stay.find_by(id: params[:id])&.stay
+    return head :not_found unless stay
+
+    render_stay_panels(stay,
+                       alert: "Cette activité est portée par quelqu'un d'autre : seul son porteur " \
+                              "(ou l'accueil) peut la modifier.",
+                       status: :not_found)
   end
 
   def create_params
@@ -242,18 +271,27 @@ class ExperienceBookingsController < BaseController
   # remplace que la frame d'où part la soumission — l'admin voyait donc sa
   # nouvelle activité apparaître au-dessus d'un total resté faux jusqu'au
   # rechargement suivant. On répond en Turbo Stream pour rafraîchir les deux.
-  def render_stay_panels(stay)
+  #
+  # `notice` / `alert` s'affichent DANS la frame des activités : la modale est un
+  # <dialog> en top-layer, un flash du layout resterait sous son voile — et un
+  # remplacement à l'identique (même nombre de participants) passait pour un
+  # clic sans effet. Turbo applique un flux même en 404/422 : l'échec est donc
+  # visible lui aussi, là où `head` laissait l'écran muet.
+  def render_stay_panels(stay, notice: nil, alert: nil, status: :ok)
     @stay = stay.reload
     @assignable_availabilities = ExperienceAvailability.assignable_for(current_user, @stay)
 
     render turbo_stream: [
-      turbo_stream.replace("stay_#{@stay.id}_activities") { render_to_string(partial: "stays/activities") },
-      turbo_stream.replace("stay_#{@stay.id}_payments")   { render_to_string(partial: "stays/payments_panel") }
-    ]
+      turbo_stream.replace("stay_#{@stay.id}_activities") do
+        render_to_string(partial: "stays/activities", locals: { notice: notice, alert: alert })
+      end,
+      turbo_stream.replace("stay_#{@stay.id}_payments") { render_to_string(partial: "stays/payments_panel") }
+    ], status: status
   end
 
   def deny_out_of_scope
     respond_to do |format|
+      format.turbo_stream { render_stay_panels(@stay, alert: "Créneau introuvable.", status: :not_found) }
       format.html { redirect_to stay_path(@stay), alert: "Créneau introuvable." }
       format.any  { head :not_found }
     end

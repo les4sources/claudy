@@ -44,6 +44,25 @@
       p.mt-0.5.text-sm.text-gray-500 Prévenu quand la cuisine refuse une demande ou se désiste.
       = email_field_tag "kitchen[coordinator_email]", Kitchen::Config.coordinator_email, class: "mt-2 w-full sm:max-w-sm rounded-md border-gray-300 shadow-sm sm:text-sm"
 
+    / Ce que la cuisine coûte se lit dans la compta, pas prestation par
+      prestation : les courses se font par lot, pour plusieurs services à la
+      fois. Ce réglage dit sur quels comptes ces dépenses ont été rangées.
+    - selected_account_ids = Kitchen::Config.expense_account_ids
+    section.bg-white.rounded-2xl.ring-1.ring-gray-200.px-5.py-4
+      h2.block.text-sm.font-medium.text-gray-700 Comptes de charge de la cuisine
+      p.mt-1.text-sm.text-gray-500 Où atterrissent les dépenses de la cuisine au plan comptable. C'est ce périmètre que lit le reporting.
+      / Le champ vide part quand même : sans lui, tout décocher n'enverrait
+        rien du tout et le réglage garderait son ancienne valeur.
+      = hidden_field_tag "kitchen[expense_account_ids][]", "", id: nil
+      - if @expense_accounts.any?
+        .mt-3.grid.grid-cols-1.gap-2.sm:grid-cols-2
+          - @expense_accounts.each do |account|
+            label.flex.items-center.gap-2.text-sm.text-gray-700.cursor-pointer
+              = check_box_tag "kitchen[expense_account_ids][]", account.id, selected_account_ids.include?(account.id), id: "kitchen_expense_account_#{account.id}", class: "h-4 w-4 rounded border-gray-300 text-4s-main focus:ring-4s-main"
+              span = account.to_s
+      - else
+        p.mt-3.text-sm.text-gray-500 Aucun compte de charge actif au plan comptable. Lance « rake finance:seed_kitchen_accounts » pour poser ceux de la cuisine.
+
     .flex.justify-end
       button.inline-flex.items-center.rounded-md.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.bg-4s-main(class="hover:opacity-90" type="submit")
         | Enregistrer

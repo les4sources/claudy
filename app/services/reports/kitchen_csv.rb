@@ -5,7 +5,7 @@ module Reports
   # dictés par Excel en Belgique : séparateur point-virgule, BOM UTF-8 (sans
   # lui, Excel lit les accents de travers), virgule décimale.
   class KitchenCsv
-    HEADERS = ["Date", "Moment", "Client", "Type", "Convives", "Prix", "Coût", "Marge",
+    HEADERS = ["Date", "Moment", "Client", "Type", "Convives", "Prix",
                "S'en charge", "Statut", "Précisions"].freeze
 
     BOM = "﻿".freeze
@@ -31,8 +31,6 @@ module Reports
         line.label,
         line.people,
         euros(line.price_cents),
-        line.cost_cents.nil? ? nil : euros(line.cost_cents),
-        line.cost_cents.nil? ? nil : euros(line.margin_cents),
         line.responsible_human&.name,
         line.status_label,
         safe(line.notes)

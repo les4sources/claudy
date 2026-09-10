@@ -149,7 +149,7 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
           li
             = link_to "Cuisine",
                       kitchen_orders_path,
-                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path.start_with?('kitchen/orders') ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+                      class: "px-3 py-1.5 rounded-md transition-colors #{%w[kitchen/orders kitchen/reporting].include?(controller_path) ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
             = link_to "Coworking",
                       coworking_packs_path,
@@ -205,8 +205,8 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
                       class: "px-2.5 py-1 rounded transition-colors #{(controller_name == 'reports' && action_name == 'index') ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
             = link_to "Cuisine",
-                      kitchen_reports_path,
-                      class: "px-2.5 py-1 rounded transition-colors #{(controller_name == 'reports' && action_name == 'kitchen') ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+                      kitchen_reporting_path,
+                      class: "px-2.5 py-1 rounded transition-colors #{controller_path == 'kitchen/reporting' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
             = link_to "La Chevêche",
                       lodging_reports_path(1),
@@ -308,6 +308,10 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
                       finance_recurring_charges_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/recurring_charges' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
+            = link_to "Batch cooking",
+                      finance_batch_cooking_sessions_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/batch_cooking_sessions' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
             = link_to "Fiches papier",
                       finance_paper_sheets_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/paper_sheets' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
@@ -338,9 +342,15 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
                       finance_cash_entries_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/cash_entries' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
+            / La feuille du mois est la porte d'entrée de la caisse (epic #243,
+              phase 2) ; les motifs restent accessibles depuis elle.
             = link_to "Caisse",
-                      finance_cash_motifs_path,
-                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/cash_motifs' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+                      finance_cash_sheet_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{%w[finance/cash_sheet finance/cash_motifs].include?(controller_path) ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
+            = link_to "Tiers",
+                      finance_third_parties_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/third_parties' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
             = link_to "Grand livre",
                       finance_ledger_path,
@@ -362,6 +372,10 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
                       finance_analytic_balance_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/analytic_balance' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
+            = link_to "Partages de revenus",
+                      finance_revenue_share_agreements_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{%w[finance/revenue_share_agreements finance/revenue_share_statements].include?(controller_path) ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
             = link_to "Balance",
                       finance_trial_balance_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/trial_balance' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
@@ -379,6 +393,12 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
             = link_to "Cycles",
                       cycles_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'cycles' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          / Les pôles se LISENT ici (epic #239, phase 3) ; ils se configurent
+            dans Paramètres > Pôles.
+          li
+            = link_to "Pôles",
+                      organisation_teams_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{(controller_name == 'organisation' && action_name == 'teams') || controller_name == 'teams' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           - Human.cycle_active.roles_enabled.each do |human|
             li
               = link_to human.name,

@@ -1,0 +1,26 @@
+/ Une saisie, un email (issue #266). Les services se lisent à la suite, chacun
+  avec SES liens de réponse : la ligne reste l'unité de validation, « je prends
+  la semaine, sauf le mercredi midi » doit rester possible.
+p Bonjour,
+
+- if @all_inquiries
+  p
+    | Un·e client·e se renseigne sur plusieurs prestations de cuisine. Rien n'est
+      engagé de son côté — on cherche juste à savoir si ce serait possible.
+- else
+  p
+    | Un·e client·e demande #{@orders.size} prestations de cuisine pour son séjour
+      aux 4 Sources.
+
+p
+  em Répondez service par service : chacun a ses propres liens ci-dessous.
+
+- @orders.each do |order|
+  - @order = order
+  - @token = order.validation_token
+  hr
+  / Une saisie peut mêler du ferme et de l'info : le dire ici, sinon rien ne
+    distingue les deux dans la liste.
+  h3 = [order.date_label, order.label, (order.inquiry? && !@all_inquiries ? "demande d'info" : nil)].compact.join(" — ")
+  = render "kitchen_mailer/demand"
+  = render "kitchen_mailer/answer_links"

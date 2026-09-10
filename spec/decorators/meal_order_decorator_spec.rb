@@ -23,13 +23,10 @@ RSpec.describe MealOrderDecorator do
     expect(decorated.validation_badge).to include("À valider")
   end
 
-  it "formate le prix, le coût et la marge" do
-    line = decorated(price_cents: 6_000, cost_cents: 2_500)
-    expect(line.price).to include("60")
-    expect(line.cost).to include("25")
-    expect(line.margin).to include("35")
-    expect(decorated.cost).to eq("—")
-    expect(decorated.margin).to eq("—")
+  # Ni coût ni marge par prestation (epic #269) : la rentabilité de la cuisine
+  # se lit sur une période, dans la comptabilité.
+  it "formate le prix" do
+    expect(decorated(price_cents: 6_000).price).to include("60")
   end
 
   it "tronque les notes et garde le texte complet" do

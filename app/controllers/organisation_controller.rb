@@ -3,6 +3,16 @@ class OrganisationController < BaseController
 
   breadcrumb "Organisation", :organisation_path, match: :exact
 
+  # L'annuaire des pôles (epic #239, phase 3) : des cartes qui mènent à la page
+  # du pôle. Les enfants sont rangés sous leur parent, comme dans les Paramètres.
+  def teams
+    breadcrumb "Pôles", :organisation_teams_path, match: :exact
+    teams = Team.includes(:parent, :children, team_memberships: :human).ordered
+    roots, orphans = teams.partition { |team| team.parent_id.nil? }
+    @rows = roots.flat_map { |root| [root] + teams.select { |t| t.parent_id == root.id } }
+    @rows += orphans.reject { |team| @rows.include?(team) }
+  end
+
   def index
     humans = Human.cycle_active.roles_enabled.order(:name).to_a
     @current_cycle = Cycle.reference_for

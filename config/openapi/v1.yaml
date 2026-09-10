@@ -1686,9 +1686,13 @@ paths:
       description: >
         Passe par le même service que l'écran, et de façon SYNCHRONE : un import
         bancaire qui échoue en silence dans un job est une panne qu'on découvre
-        trois mois plus tard, à la clôture. Un fichier déjà déposé rend 200 avec
-        le statut `already_imported` et ne crée rien — rejouer un import est une
-        opération normale. Un fichier refusé rend 422 avec le motif chiffré :
+        trois mois plus tard, à la clôture. Un fichier qui a déjà créé des
+        lignes rend 200 avec le statut `already_imported` et ne crée rien —
+        rejouer un import est une opération normale. Un dépôt antérieur qui
+        n'avait rien créé, lui, est repris sur place. Deux fichiers qui se
+        recouvrent n'importent chacun que leur part nouvelle : la déduplication
+        porte sur le mouvement, jamais sur le numéro de relevé, que certaines
+        banques n'incrémentent pas. Un fichier refusé rend 422 avec le motif :
         relevé qui ne se referme pas, chaînage rompu, ou compte inconnu. Le
         rapprochement du compte se fait sur les chiffres du numéro de compte, ce
         qui permet à une BBAN belge de retrouver son IBAN. Aucune allocation

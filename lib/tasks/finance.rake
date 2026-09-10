@@ -107,6 +107,42 @@ namespace :finance do
     end
   end
 
+  desc "Seed des deux comptes de charge de la cuisine et du réglage qui les désigne — idempotent"
+  task seed_kitchen_accounts: :environment do
+    # La rentabilité de la cuisine se lit dans la compta, pas prestation par
+    # prestation (epic #269) : les courses se font par lot, pour plusieurs
+    # services à la fois. Il faut donc un compte de charge où ranger le ticket.
+    #
+    # `600004 Petite restauration` existe déjà mais ne porte AUCUNE écriture, et
+    # c'est le vocabulaire du bar, pas celui de la cuisine : on ne le réutilise
+    # pas. La classe et la nature se déduisent du code — rien à forcer ici.
+    crees = []
+    comptes = Kitchen::Config::DEFAULT_EXPENSE_ACCOUNTS.map do |code, name|
+      compte = GeneralAccount.find_or_initialize_by(code: code)
+      if compte.new_record?
+        compte.update!(name: name)
+        crees << compte
+      end
+      compte
+    end
+
+    puts "[finance:seed_kitchen_accounts] #{crees.size} compte(s) créé(s), " \
+         "#{comptes.size - crees.size} déjà présent(s)."
+    comptes.each { |compte| puts "  #{compte.code}  #{compte.name}" }
+
+    # Le réglage n'est prérempli qu'à la PREMIÈRE pose : une fois qu'il a été
+    # édité — vidé compris — un second passage ne doit pas ressusciter un
+    # périmètre que quelqu'un a retiré à la main.
+    if Setting[Kitchen::Config::EXPENSE_ACCOUNTS_KEY].nil?
+      Setting.set(Kitchen::Config::EXPENSE_ACCOUNTS_KEY, comptes.map(&:id).join(","))
+      puts "  Réglage « Comptes de charge de la cuisine » prérempli avec ces #{comptes.size} comptes."
+    else
+      configures = Kitchen::Config.expense_accounts
+      etat = configures.any? ? configures.map(&:code).join(", ") : "aucun compte"
+      puts "  Réglage déjà posé, laissé tel quel : #{etat}."
+    end
+  end
+
   desc "Seed du forfait charges habitants — 65 €/personne à partir du 01/02/2026"
   task seed_housing_charges: :environment do
     rate = Rate.find_or_initialize_by(key: "charges.per_person_monthly")
@@ -249,5 +285,21 @@ namespace :finance do
          "#{report.existing.size} déjà présente(s), #{report.skipped.size} ignorée(s), " \
          "total #{format('%.2f', report.total_cents / 100.0)} €"
     puts "[finance:generate_recurring] Rien n'a été écrit — relance avec APPLY=1." unless apply
+  end
+
+  desc "Rattache les membres de ménage à la personne du même nom (epic #246). Dry-run par défaut, APPLY=1 pour écrire."
+  task link_household_members_to_humans: :environment do
+    apply  = ENV["APPLY"].present?
+    result = Households::LinkMembersToHumans.new(dry_run: !apply).run
+
+    puts "[finance:link_household_members_to_humans] #{result.summary}"
+    { "rattachés" => result.linked, "ambigus, laissés tels quels" => result.ambiguous,
+      "sans personne connue" => result.unmatched }.each do |title, rows|
+      next if rows.empty?
+
+      puts "  #{title} :"
+      rows.each { |row| puts "    - #{row}" }
+    end
+    puts "[finance:link_household_members_to_humans] Rien n'a été écrit — relance avec APPLY=1." unless apply
   end
 end

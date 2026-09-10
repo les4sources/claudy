@@ -47,6 +47,13 @@ class GeneralAccount < ApplicationRecord
   # ou faire disparaître la dette. Son solde est ce qu'une entité doit à l'autre.
   INTER_ENTITY_CODE = "416100".freeze
 
+  # Les reversements aux propriétaires d'un hébergement partagé (issue #247).
+  # La tiny house est à une famille tierce : la moitié de ce qu'elle rapporte
+  # n'appartient pas à la maison, c'est une charge — pas une recette en moins.
+  # Ne pas la comptabiliser gonflerait le résultat de la Fondation d'un argent
+  # qui ne lui revient pas.
+  REVENUE_SHARE_CODE = "619000".freeze
+
   has_paper_trail
   has_soft_deletion default_scope: true
 

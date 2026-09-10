@@ -8,7 +8,7 @@ RSpec.describe "ExperienceBookingValidations — canal jeton", type: :request, q
   let(:stay)     { Stay.create!(customer: customer, arrival_date: Date.today + 20, departure_date: Date.today + 22) }
 
   let(:porteur_a) { Human.create!(name: "Porteuse A", email: "a@example.com") }
-  let(:user_a)    { User.create!(email: "a@example.com", password: "password123", human: porteur_a) }
+  let(:user_a)    { User.create!(email: "a@example.com", password: "password123", human: porteur_a, restricted_to_experiences: true) }
   let(:exp_a)     { Experience.create!(name: "Balade ânes", human: porteur_a) }
   let(:avail_a)   { ExperienceAvailability.create!(experience: exp_a, available_on: Date.today + 21, starts_at: "10:00") }
   let(:booking)   { ExperienceBooking.create!(experience_availability: avail_a, stay: stay, participants: 2) }
@@ -59,7 +59,7 @@ RSpec.describe "ExperienceBookingValidations — canal jeton", type: :request, q
 
     it "connecté mais NON propriétaire : accès refusé" do
       autre = Human.create!(name: "Autre", email: "autre@example.com")
-      autre_user = User.create!(email: "autre@example.com", password: "password123", human: autre)
+      autre_user = User.create!(email: "autre@example.com", password: "password123", human: autre, restricted_to_experiences: true)
       sign_in autre_user
       get activity_validation_refuse_path(booking.validation_token)
       expect(response).to have_http_status(:forbidden)
