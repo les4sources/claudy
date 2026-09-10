@@ -13,7 +13,21 @@ class TeamsController < BaseController
       @rows += orphans.reject { |team| @rows.include?(team) }
     end
   
+    # La page du pôle (epic #239, phase 3). Elle vit sous **Organisation** : on y
+    # vient pour lire le pôle — qui en est, ce qu'il décide, ce qu'il produit —
+    # pas pour le configurer. La configuration reste dans les Paramètres.
     def show
+      @from = parsed_date(params[:from]) || Date.current.beginning_of_year
+      @to = parsed_date(params[:to]) || Date.current.end_of_year
+      @memberships = @team.team_memberships.includes(:human).sort_by { |m| [m.role == "referent" ? 0 : 1, m.human.name.to_s] }
+      upcoming = @team.gatherings.upcoming.includes(:gathering_category).limit(5).to_a
+      past = @team.gatherings.where("ends_at < ?", Time.current)
+                  .includes(:gathering_category).order(starts_at: :desc).limit(5).to_a
+      @upcoming_gatherings = GatheringDecorator.decorate_collection(upcoming)
+      @past_gatherings = GatheringDecorator.decorate_collection(past)
+      @decisions = Decision.where(gathering_id: (upcoming + past).map(&:id))
+                           .includes(:recorded_by, :gathering).recent.limit(10)
+      @finances = Teams::FinanceSummary.new(team: @team, from: @from, to: @to)
       @team = TeamDecorator.new(@team)
     end
   
@@ -69,6 +83,12 @@ class TeamsController < BaseController
       @team = Team.find(params[:id])
     end
 
+    def parsed_date(raw)
+      raw.present? ? Date.parse(raw) : nil
+    rescue Date::Error
+      nil
+    end
+
     # Ce que le bloc « Membres » de l'écran d'édition a besoin de savoir : les
     # adhésions en place, et les humains actifs qu'on peut encore ajouter.
     def load_membership_form
@@ -77,15 +97,23 @@ class TeamsController < BaseController
       @membership ||= TeamMembership.new(team: @team, role: "member")
     end
   
-    # Les pôles se CONFIGURENT dans les Paramètres (epic #239, décision 1). La
-    # page du pôle passera sous Organisation en phase 3 ; d'ici là, `show`
-    # reste dans la même section que le reste du CRUD.
+    # Les pôles se CONFIGURENT dans les Paramètres et se LISENT dans
+    # Organisation (epic #239, décision 1). Deux sections, deux intentions :
+    # `show` est la page du pôle, tout le reste est du réglage.
     def set_presenters
-      @menu_presenter = Components::MenuPresenter.new(
-        active_primary: "settings",
-        active_secondary: "teams"
-      )
-      @settings_view = true
+      if action_name == "show"
+        @menu_presenter = Components::MenuPresenter.new(
+          active_primary: "organisation",
+          active_secondary: "teams"
+        )
+        @organisation_view = true
+      else
+        @menu_presenter = Components::MenuPresenter.new(
+          active_primary: "settings",
+          active_secondary: "teams"
+        )
+        @settings_view = true
+      end
     end
   end
   
