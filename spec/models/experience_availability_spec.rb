@@ -121,6 +121,22 @@ RSpec.describe ExperienceAvailability, type: :model do
       expect(described_class.for_user(admin)).to include(avail)
     end
 
+    it "propose TOUS les créneaux à un membre d'équipe lié à un Human, non restreint" do
+      membre = User.create!(email: "membre@example.com", password: "password123",
+                            human: Human.create!(name: "Membre", email: "membre@example.com"))
+      expect(described_class.for_user(membre)).to include(avail)
+    end
+
+    it "ne propose que SES créneaux à un compte restreint, et aucun sans Human" do
+      autre = Human.create!(name: "Autre", email: "autre@example.com")
+      restreint = User.create!(email: "autre@example.com", password: "password123",
+                               human: autre, restricted_to_experiences: true)
+      orphelin  = User.create!(email: "orphelin@example.com", password: "password123", restricted_to_experiences: true)
+
+      expect(described_class.for_user(restreint)).not_to include(avail)
+      expect(described_class.for_user(orphelin)).to be_empty
+    end
+
     it "EXCLUT les créneaux d'une activité supprimée (soft-delete) — #label ne plante pas" do
       experience.destroy
       expect(described_class.for_user(admin)).not_to include(avail)

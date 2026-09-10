@@ -1,0 +1,69 @@
+/ Finances du pôle (epic #239, phase 3). Les chiffres viennent des écritures
+  portant le `team_id` du pôle — jamais d'une répartition au prorata.
+section.rounded-2xl.bg-white.ring-1.ring-gray-200.overflow-hidden
+  .px-6.py-4.border-b.border-gray-100(class="bg-gray-50/60")
+    .flex.flex-wrap.items-end.justify-between.gap-4
+      div
+        h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Finances du pôle
+        p.mt-1.text-xs.text-gray-500 Ce que le pôle a produit et ce qu'il a coûté sur la période.
+
+      = form_with url: team_path(team), method: :get, class: "flex flex-wrap items-end gap-2" do
+        label.text-xs.text-gray-500
+          | Du
+          = date_field_tag :from, from, class: "mt-1 block rounded-md border-gray-300 text-xs"
+        label.text-xs.text-gray-500
+          | au
+          = date_field_tag :to, to, class: "mt-1 block rounded-md border-gray-300 text-xs"
+        = submit_tag "Voir", class: "rounded-md bg-4s-main px-3 py-1.5 text-xs font-medium text-white hover:opacity-90", data: { disable_with: false }
+
+  .grid.grid-cols-1.gap-px.bg-gray-100.sm:grid-cols-3
+    .bg-white.px-6.py-4
+      .text-xs.uppercase.tracking-wide.text-gray-400 Produits
+      .mt-1.text-xl.font-bold.text-teal-700 = number_to_currency(finances.revenue_cents / 100.0, unit: "€")
+    .bg-white.px-6.py-4
+      .text-xs.uppercase.tracking-wide.text-gray-400 Charges
+      .mt-1.text-xl.font-bold.text-rose-700 = number_to_currency(finances.expense_cents / 100.0, unit: "€")
+    .bg-white.px-6.py-4
+      .text-xs.uppercase.tracking-wide.text-gray-400 Net
+      .mt-1.text-xl.font-extrabold(class="#{finances.net_cents.negative? ? 'text-rose-700' : 'text-gray-900'}")
+        = number_to_currency(finances.net_cents / 100.0, unit: "€")
+
+  / Sans ce rappel, les chiffres ci-dessus ont l'air complets alors qu'une part
+    de l'argent n'a été rattachée à aucun pôle.
+  - if finances.unallocated_entries_count.positive?
+    - count = finances.unallocated_entries_count
+    .border-t.border-amber-100.bg-amber-50.px-6.py-3.text-sm.text-amber-800
+      = "#{count} #{"ligne".pluralize(count)} de trésorerie #{count > 1 ? "attendent" : "attend"} encore d'être #{"affectée".pluralize(count)} : ces montants ne sont dans aucun pôle."
+      = link_to "Les affecter", finance_unallocated_cash_entries_path, class: "ml-1 font-medium underline"
+
+  .border-t.border-gray-100.px-6.py-4
+    .flex.flex-wrap.items-center.justify-between.gap-2
+      h3.text-xs.uppercase.tracking-wide.text-gray-400
+        = "Dernières affectations de trésorerie (#{Teams::FinanceSummary::ALLOCATIONS_LIMIT} max)"
+      = link_to "Balance analytique de la période →",
+                finance_analytic_balance_path(from: from, to: to),
+                class: "text-xs font-medium text-4s-main hover:underline"
+
+  - if finances.recent_allocations.empty?
+    .px-6.py-8.text-center.text-sm.text-gray-500
+      | Aucune affectation de trésorerie sur ce pôle pour la période.
+  - else
+    .overflow-x-auto
+      table.w-full.text-sm
+        thead.text-xs.uppercase.tracking-wide.text-gray-500(class="bg-gray-50/60")
+          tr
+            th.px-6.py-2.text-left Date
+            th.px-6.py-2.text-left Libellé
+            th.px-6.py-2.text-left Compte
+            th.px-6.py-2.text-right Montant
+        tbody
+          - finances.recent_allocations.each do |allocation|
+            tr.border-t.border-gray-100
+              td.px-6.py-2.whitespace-nowrap.text-gray-600 = l(allocation.cash_entry.entry_date)
+              td.px-6.py-2.text-gray-900
+                = allocation.label.presence || allocation.cash_entry.label
+              td.px-6.py-2.whitespace-nowrap.text-xs.text-gray-500
+                span.font-mono = allocation.general_account.code
+                =< allocation.general_account.name
+              td.px-6.py-2.text-right.whitespace-nowrap.font-medium.text-gray-900
+                = number_to_currency(allocation.amount_cents / 100.0, unit: "€")

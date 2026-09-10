@@ -13,9 +13,11 @@ module Reports
     REFERENCE_DATE = "COALESCE(meal_orders.date, stays.arrival_date)".freeze
     IN_RANGE = "#{REFERENCE_DATE} BETWEEN ? AND ?".freeze
 
-    Totals = Struct.new(:price_cents, :cost_cents, :people, :count, keyword_init: true) do
-      def margin_cents = price_cents.to_i - cost_cents.to_i
-    end
+    # Ce que la cuisine a FACTURÉ, rien de plus. Le coût ne se totalise plus ici
+    # (epic #269) : les courses se font par lot, pour plusieurs services à la
+    # fois, et une marge par ligne mentait. La dépense se lit en comptabilité,
+    # sur les comptes de charge que désigne Paramètres > Cuisine.
+    Totals = Struct.new(:price_cents, :people, :count, keyword_init: true)
 
     def initialize(from:, to:)
       @from = from
@@ -48,10 +50,6 @@ module Reports
                                .map { |name, group| [name, totals_for(group)] }
     end
 
-    # Combien de lignes attendent encore leur coût : sans ce chiffre, une marge
-    # flatteuse se lirait comme un résultat alors qu'elle n'est qu'incomplète.
-    def missing_costs_count = lines.count { |line| line.cost_cents.nil? }
-
     # Chiffre d'affaires cuisine par mois, pour le reporting annuel.
     def self.revenue_by_month(year)
       MealOrder.billable
@@ -74,7 +72,6 @@ module Reports
     def totals_for(group)
       Totals.new(
         price_cents: group.sum { |line| line.price_cents.to_i },
-        cost_cents:  group.sum { |line| line.cost_cents.to_i },
         people:      group.sum { |line| line.people.to_i },
         count:       group.size
       )

@@ -10,14 +10,14 @@ RSpec.describe "ExperienceBookings — canal admin", type: :request, queue_adapt
 
   # Porteuse A + son compte
   let(:porteur_a)  { Human.create!(name: "Porteuse A", email: "a@example.com") }
-  let(:user_a)     { User.create!(email: "a@example.com", password: "password123", human: porteur_a) }
+  let(:user_a)     { User.create!(email: "a@example.com", password: "password123", human: porteur_a, restricted_to_experiences: true) }
   let(:exp_a)      { Experience.create!(name: "Balade ânes", human: porteur_a) }
   let(:avail_a)    { ExperienceAvailability.create!(experience: exp_a, available_on: Date.today + 21, starts_at: "10:00") }
   let(:booking_a)  { ExperienceBooking.create!(experience_availability: avail_a, stay: stay, participants: 2) }
 
   # Porteur B + son compte (pour prouver le cloisonnement)
   let(:porteur_b)  { Human.create!(name: "Porteur B", email: "b@example.com") }
-  let(:user_b)     { User.create!(email: "b@example.com", password: "password123", human: porteur_b) }
+  let(:user_b)     { User.create!(email: "b@example.com", password: "password123", human: porteur_b, restricted_to_experiences: true) }
   let(:exp_b)      { Experience.create!(name: "Poterie", human: porteur_b) }
   let(:avail_b)    { ExperienceAvailability.create!(experience: exp_b, available_on: Date.today + 21, starts_at: "14:00") }
   let(:booking_b)  { ExperienceBooking.create!(experience_availability: avail_b, stay: stay, participants: 1) }

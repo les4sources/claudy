@@ -102,15 +102,27 @@ RSpec.describe ExperienceBooking, type: :model do
       expect(ExperienceBooking.for_carrier(porteur)).not_to include(theirs)
     end
 
-    it ".for_user renvoie tout pour un admin global, ses activités pour un porteur" do
+    it ".for_user renvoie tout à l'équipe, ses activités à un compte restreint" do
       mine   = booking
       theirs = ExperienceBooking.create!(experience_availability: autre_avail, stay: stay, participants: 1)
 
-      admin_user   = User.create!(email: "staff@les4sources.be", password: "password123")
-      porteur_user = User.create!(email: "porteuse@example.com", password: "password123", human: porteur)
+      accueil = User.create!(email: "staff@les4sources.be", password: "password123")
+      # Membre d'équipe rattaché à un Human mais PAS restreint (cas de Michael,
+      # qui porte lui-même des activités) : il voit tout.
+      membre = User.create!(email: "membre@example.com", password: "password123",
+                            human: Human.create!(name: "Membre", email: "membre@example.com"))
+      restreinte = User.create!(email: "porteuse@example.com", password: "password123",
+                                human: porteur, restricted_to_experiences: true)
 
-      expect(ExperienceBooking.for_user(admin_user)).to include(mine, theirs)
-      expect(ExperienceBooking.for_user(porteur_user)).to contain_exactly(mine)
+      expect(ExperienceBooking.for_user(accueil)).to include(mine, theirs)
+      expect(ExperienceBooking.for_user(membre)).to include(mine, theirs)
+      expect(ExperienceBooking.for_user(restreinte)).to contain_exactly(mine)
+    end
+
+    it ".for_user ne renvoie RIEN à un compte restreint sans membre rattaché (fail-closed)" do
+      booking
+      orphelin = User.create!(email: "orphelin@example.com", password: "password123", restricted_to_experiences: true)
+      expect(ExperienceBooking.for_user(orphelin)).to be_empty
     end
   end
 

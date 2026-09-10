@@ -41,6 +41,45 @@ RSpec.describe MemberAccount, type: :model do
     MemberAccount.new({ kind: "entity", name: "Semisto" }.merge(attrs))
   end
 
+  # Epic #246 — le compte personnel d'un cuisinier. Les autres epics (porteurs,
+  # artisans) s'appuieront sur la même porte : elle doit être idempotente.
+  describe ".for_human!" do
+    it "crée le compte personnel d'une personne qui n'en a pas" do
+      compte = MemberAccount.for_human!(Human.create!(name: "Stéphanie", email: "steph@les4sources.be"))
+
+      expect(compte.kind).to eq("human")
+      expect(compte.name).to eq("Stéphanie")
+      expect(compte.contact_email).to eq("steph@les4sources.be")
+      expect(compte.code).to match(/\ASRC-\d{4}\z/)
+    end
+
+    it "est idempotent : deux appels rendent le même compte" do
+      premier = MemberAccount.for_human!(human)
+
+      expect { MemberAccount.for_human!(human) }.not_to change(MemberAccount, :count)
+      expect(MemberAccount.for_human!(human).id).to eq(premier.id)
+    end
+
+    it "attribue un code distinct à chaque personne" do
+      codes = [human, Human.create!(name: "Malau")].map { |h| MemberAccount.for_human!(h).code }
+
+      expect(codes.uniq.size).to eq(2)
+    end
+
+    it "retrouve le compte d'une personne désactivée sans en créer un second" do
+      compte = MemberAccount.for_human!(human)
+      human.update_column(:status, "inactive")
+      partie = Human.unscoped.find(human.id)
+
+      expect { MemberAccount.for_human!(partie) }.not_to change(MemberAccount, :count)
+      expect(MemberAccount.for_human!(partie).id).to eq(compte.id)
+    end
+
+    it "refuse de fabriquer un compte sans personne" do
+      expect { MemberAccount.for_human!(nil) }.to raise_error(ArgumentError)
+    end
+  end
+
   describe "ancrage" do
     it "accepte les trois formes valides" do
       expect(account(kind: "household", name: "Chevêche", household_id: household.id)).to be_valid

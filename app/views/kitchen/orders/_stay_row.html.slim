@@ -1,0 +1,17 @@
+/ L'en-tête d'un séjour dans la table : le client, ses dates, et — pour le
+  Pôle Accueil seulement — le sous-total de ses lignes facturables.
+- stay = group[:stay]
+tr.bg-gray-50
+  td.px-4.py-2.font-semibold.text-gray-900(colspan=(@show_money ? columns - 1 : columns))
+    - if stay
+      = link_to stay.customer&.name.presence || "Séjour ##{stay.id}", stay_path(stay), class: "hover:underline"
+      - if stay.arrival_date.present?
+        span.ml-2.text-xs.font-normal.text-gray-500
+          = "#{l(stay.arrival_date, format: '%-d/%m')} → #{stay.departure_date ? l(stay.departure_date, format: '%-d/%m/%Y') : '?'}"
+    - else
+      span.text-gray-500 Séjour supprimé
+  - if @show_money
+    td.px-3.py-2.text-right.font-semibold.text-gray-900
+      / Un groupe qui n'a que des demandes d'info n'engage rien : pas de « 0 € ».
+      - if group[:subtotal_cents].positive?
+        = humanized_money_with_symbol(Money.new(group[:subtotal_cents]))

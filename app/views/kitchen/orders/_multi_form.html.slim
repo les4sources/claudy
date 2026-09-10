@@ -1,0 +1,56 @@
+/ La saisie de cuisine (issue #265) : UN séjour, N prestations.
+  Le séjour est la seule chose partagée — tout le reste se saisit bloc par bloc,
+  parce que chaque ligne créée sera validée, refusée ou prise en charge
+  indépendamment des autres.
+= form_with url: kitchen_orders_path, method: :post, class: "space-y-5", data: { controller: "meal-prestations" } do
+  section.rounded-2xl.bg-white.ring-1.ring-gray-200.px-5.py-4
+    / Le sélecteur natif listait jusqu'à 300 séjours triés par date d'arrivée.
+      Il reste là — c'est lui qui porte la valeur soumise, et il fait le repli
+      sans JS — mais le contrôleur `stay-search` le masque et le pilote. Pas
+      de `required` : un champ masqué et vide fait échouer la soumission dans
+      Chrome sans rien afficher ; `belongs_to :stay` refuse côté serveur.
+    div(data-controller="stay-search" data-stay-search-url-value=stay_search_kitchen_orders_path)
+      = label_tag "meal_order_stay_id", "Séjour", class: "block text-sm font-medium text-gray-700"
+      = select_tag "meal_order[stay_id]",
+                   options_from_collection_for_select(@stays, :id, ->(s) { stay_choice_label(s) }, order.stay_id),
+                   include_blank: "— Choisir un séjour —",
+                   id: "meal_order_stay_id",
+                   class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm",
+                   data: { "stay-search-target": "select" }
+      .relative.mt-1.space-y-1.hidden(data-stay-search-target="searchWrap")
+        = text_field_tag :stay_query, nil, placeholder: "Nom, groupe, email ou téléphone…", autocomplete: "off",
+                         data: { "stay-search-target": "searchInput",
+                                 action: "input->stay-search#search keydown.enter->stay-search#pickFirst" },
+                         class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        .border.border-gray-100.rounded-md.divide-y.divide-gray-50.bg-white.shadow-sm.max-h-48.overflow-y-auto(data-stay-search-target="results")
+      .mt-1.flex.items-center.justify-between.gap-2.text-sm.hidden(data-stay-search-target="chosen")
+        .min-w-0
+          span.block.truncate.font-medium.text-gray-900(data-stay-search-target="chosenLabel")
+          span.block.truncate.text-xs.text-gray-500(data-stay-search-target="chosenContact")
+        button.shrink-0.text-indigo-600(type="button" data-action="stay-search#clear" class="hover:underline") Changer
+    - if grid_days.blank?
+      p.mt-2.text-xs.text-gray-400
+        | Ce séjour n'a pas ses deux dates : chaque prestation se saisit avec un moment et une date uniques, sans grille.
+
+  .space-y-5(data-meal-prestations-target="list")
+    - prestations.each_with_index do |block, position|
+      = render "kitchen/orders/prestation", block: block, index_token: block.index, position: position + 1, grid_days: grid_days
+
+  / Le gabarit du « + ». Son contenu est inerte tant qu'il vit dans le <template>
+    (aucun contrôleur Stimulus ne s'y connecte, aucun champ n'est soumis) : c'est
+    le clonage qui lui donne vie, une fois `__INDEX__` remplacé par un index neuf.
+  template(data-meal-prestations-target="template")
+    = render "kitchen/orders/prestation", block: Kitchen::GridSubmission::Block.new(index: "__INDEX__", attributes: {}, cells: {}), index_token: "__INDEX__", position: "__POSITION__", grid_days: grid_days
+
+  .flex.flex-wrap.items-center.justify-between.gap-3
+    button.inline-flex.items-center.gap-1.rounded-md.border.border-dashed.border-gray-300.px-4.py-2.text-sm.font-medium.text-gray-600(type="button" class="hover:border-4s-main hover:text-4s-main" data-action="meal-prestations#add")
+      | + Ajouter une prestation
+    p.text-sm.font-medium.text-gray-700(data-meal-prestations-target="total")
+
+  .flex.items-center.justify-end.gap-3
+    = link_to "Annuler", kitchen_orders_path, class: "text-sm text-gray-500 hover:underline"
+    / `f.submit` passe par Button::Component, qui concatène SES classes après
+      celles de l'appelant : le CTA sortait vert alors que toute la Cuisine est
+      en 4s-main. Un <button> nu garde la couleur demandée.
+    button.inline-flex.items-center.rounded-md.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.bg-4s-main(class="hover:opacity-90" type="submit")
+      = submit_label

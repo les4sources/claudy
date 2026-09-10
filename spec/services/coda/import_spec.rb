@@ -53,16 +53,110 @@ RSpec.describe Coda::Import do
     end
 
     # Le cas courant : les banques renvoient volontiers des fichiers qui se
-    # chevauchent. Le relevé, pas seulement le fichier, doit être idempotent.
-    it "ignore un relevé déjà importé arrivé dans un autre fichier" do
+    # chevauchent. C'est le MOUVEMENT, et non le relevé, qui doit être idempotent
+    # — un relevé peut arriver deux fois en portant la seconde fois des lignes
+    # nouvelles, et c'est même la règle chez Triodos.
+    it "ignore les mouvements déjà importés arrivés dans un autre fichier" do
       import("nominal")
       autre = fixture("nominal").sub("TESTFILE01", "TESTFILE02")
 
       report = described_class.new(content: autre, filename: "bis.cod").run!
 
       expect(report.entries_created).to eq(0)
-      expect(report.statements_skipped).to eq(1)
+      expect(report.entries_skipped).to eq(2)
       expect(CashEntry.count).to eq(2)
+    end
+
+    # Le piège dans lequel le premier export Triodos est tombé : refusé pour un
+    # doublon qui n'en était pas un, il devenait ensuite impossible à redéposer
+    # une fois le refus corrigé. Un dépôt sans effet doit rester rejouable.
+    it "reprend un dépôt antérieur qui n'avait créé aucune ligne" do
+      import("nominal")
+      sterile = fixture("nominal").sub("TESTFILE01", "TESTFILE02")
+      described_class.new(content: sterile, filename: "sterile.cod").run!
+      expect(CodaImport.count).to eq(2)
+
+      report = described_class.new(content: sterile, filename: "sterile.cod").run!
+
+      expect(report.status).to eq("imported")
+      expect(CodaImport.count).to eq(2)
+      expect(report.to_text).to include("repris")
+    end
+
+    it "refuse le redépôt d'un fichier qui, lui, avait créé des lignes" do
+      import("nominal")
+
+      report = import("nominal")
+
+      expect(report.status).to eq("already_imported")
+      expect(CashEntry.count).to eq(2)
+    end
+  end
+
+  # Triodos n'expose pas de relevés numérotés : chaque export « mutations » porte
+  # le relevé 000 et renumérote ses mouvements à partir de 1. Deux exports
+  # successifs sont donc indiscernables pour qui regarde le numéro de relevé —
+  # et c'est exactement ce que l'import regardait.
+  describe "les exports qui se recouvrent" do
+    it "n'importe que la part nouvelle du second export" do
+      premier = import("triodos_1")
+      expect(premier.entries_created).to eq(3)
+
+      second = import("triodos_2")
+
+      expect(second.entries_created).to eq(2)
+      expect(second.entries_skipped).to eq(3)
+      expect(CashEntry.count).to eq(5)
+      expect(CashEntry.sum(:amount_cents)).to eq(32_950)
+    end
+
+    it "garde le second relevé 000 malgré le numéro déjà vu" do
+      import("triodos_1")
+      import("triodos_2")
+
+      expect(CodaStatement.count).to eq(2)
+      expect(CodaStatement.pluck(:sequence_number)).to eq(%w[000 000])
+      expect(CodaStatement.last_for(cash_account).new_balance_cents).to eq(132_950)
+    end
+
+    # Le reproche exact de l'ancien import : il refusait tout ce qui n'était pas
+    # bout à bout, alors qu'aucune période ne manquait.
+    it "accepte un ancien solde antérieur au dernier relevé importé" do
+      import("triodos_1")
+
+      expect { import("triodos_2") }.not_to raise_error
+    end
+
+    it "refuse un fichier dont la zone commune ne décrit plus les mêmes mouvements" do
+      import("triodos_1")
+
+      expect {
+        expect { import("recouvrement_altere") }.to raise_error(described_class::Rejected, /doublon/)
+      }.not_to change { CashEntry.count }
+    end
+  end
+
+  # Deux mouvements peuvent être identiques en tout point : même jour, même
+  # montant, même communication. Les confondre perdrait un encaissement réel.
+  describe "les mouvements identiques du même jour" do
+    it "les garde tous les deux" do
+      report = import("doublons_jour")
+
+      expect(report.entries_created).to eq(2)
+      expect(CashEntry.sum(:amount_cents)).to eq(11_000)
+    end
+
+    # Un export pris en cours de journée arrête le solde au milieu des mouvements
+    # du jour. Le lendemain, la même date en porte un autre — sans que rien soit
+    # faux. C'est pourquoi la continuité ne reconstitue aucun solde.
+    it "ajoute le troisième tombé après le premier export, sans rejouer les deux autres" do
+      import("doublons_jour")
+
+      report = import("doublons_jour_suite")
+
+      expect(report.entries_created).to eq(1)
+      expect(report.entries_skipped).to eq(2)
+      expect(CashEntry.count).to eq(3)
     end
   end
 

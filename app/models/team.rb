@@ -41,6 +41,9 @@ class Team < ApplicationRecord
   has_many :team_memberships, dependent: :destroy
   has_many :humans, through: :team_memberships
   has_many :analytic_accounts, dependent: :nullify
+  # Les rassemblements du pôle (epic #239, phase 2).
+  has_many :gathering_teams, dependent: :destroy
+  has_many :gatherings, through: :gathering_teams
   has_many :children, class_name: "Team", foreign_key: :parent_id, dependent: :nullify
 
   belongs_to :parent, class_name: "Team", optional: true
