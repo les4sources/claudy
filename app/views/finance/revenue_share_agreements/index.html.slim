@@ -1,0 +1,66 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Partages de revenus",
+           links: [link_to("➕ Nouvel accord", new_finance_revenue_share_agreement_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
+  p.text-sm.text-gray-700
+    strong Un hébergement partagé, un accord.
+    |  La tiny house appartient à une famille tierce : les 4 Sources encaissent la location et lui reversent sa part. L'accord dit à qui, quel pourcentage, et à quel rythme — c'est lui qui décide, jamais le code.
+  p.mt-2.text-xs.text-gray-500
+    | La base d'un relevé est le montant persisté à l'encodage de la réservation. Il n'est jamais recalculé : ce qui a été encodé est ce qui sera reversé.
+
+- if @agreements.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucun accord de partage pour l'instant.
+    p.mt-1 Crée le premier pour l'hébergement dont les recettes se partagent.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Hébergement
+          th.py-3.px-6[scope="col"] Bénéficiaire
+          th.py-3.px-6[scope="col"] Part
+          th.py-3.px-6[scope="col"] Rythme
+          th.py-3.px-6[scope="col"] Relevés
+          th.py-3.px-6[scope="col"] Statut
+          th.py-3.px-6[scope="col"]
+      tbody
+        - @agreements.each do |agreement|
+          tr.border-b.bg-white
+            td.py-4.px-6.font-medium.text-gray-900.align-top
+              = link_to agreement.lodging&.name || "Hébergement supprimé",
+                        finance_revenue_share_agreement_path(agreement),
+                        class: "hover:underline"
+              .text-xs.font-normal.text-gray-400
+                = "depuis le #{l(agreement.starts_on, format: :short)}" if agreement.starts_on
+                = " · jusqu'au #{l(agreement.ends_on, format: :short)}" if agreement.ends_on
+            td.py-4.px-6.align-top
+              = agreement.beneficiary_name
+              .text-xs.text-gray-400
+                = agreement.beneficiary_email.presence || "Aucun email"
+                - if agreement.iban_masked
+                  span.mx-1 ·
+                  = agreement.iban_masked
+            td.py-4.px-6.align-top= "#{agreement.share_percent} %"
+            td.py-4.px-6.align-top= agreement.period_label
+            td.py-4.px-6.align-top= agreement.revenue_share_statements.size
+            td.py-4.px-6.align-top
+              - if agreement.active
+                span.inline-flex.items-center.rounded-full.bg-teal-100.px-2.py-0.5.text-xs.font-medium.text-teal-800 Actif
+              - else
+                span.inline-flex.items-center.rounded-full.bg-gray-100.px-2.py-0.5.text-xs.font-medium.text-gray-500 Inactif
+            td.py-4.px-6.text-right.whitespace-nowrap.align-top
+              .flex.items-center.justify-end.gap-2
+                = link_to "Ouvrir", finance_revenue_share_agreement_path(agreement), class: "text-xs font-medium text-gray-700 hover:underline"
+                span.text-gray-300 ·
+                = link_to "Modifier", edit_finance_revenue_share_agreement_path(agreement), class: "text-xs font-medium text-gray-700 hover:underline"
+                span.text-gray-300 ·
+                - if agreement.active
+                  = button_to "Désactiver", deactivate_finance_revenue_share_agreement_path(agreement), method: :patch,
+                              class: "text-xs font-medium text-red-600 hover:underline",
+                              form: { class: "inline", data: { turbo_confirm: "Désactiver l'accord de #{agreement.beneficiary_name} ?" } }
+                - else
+                  = button_to "Réactiver", reactivate_finance_revenue_share_agreement_path(agreement), method: :patch,
+                              class: "text-xs font-medium text-4s-main hover:underline", form: { class: "inline" }
