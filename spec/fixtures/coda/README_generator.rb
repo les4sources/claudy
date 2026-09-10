@@ -1,7 +1,7 @@
 # Construit les fixtures CODA en plaçant chaque champ à sa position, typée
 # depuis docs/coda-layout.md — indépendamment du parseur, pour que les deux ne
 # partagent pas une même erreur de décalage.
-DIR = "/Users/michael/code/claudy/spec/fixtures/coda"
+DIR = __dir__
 
 def blank_record = " " * 128
 
@@ -209,5 +209,89 @@ trou = [
   trailer(records: 3, debit: 0.0, credit: 1.0)
 ]
 File.write(File.join(DIR, "trou_continuite.cod"), trou.join("\n") + "\n")
+
+# --- Les exports « mutations » de Triodos ---
+#
+# Triodos n'expose pas de relevés numérotés. On lui demande une période, il rend
+# un fichier dont le relevé porte TOUJOURS le numéro 000 et dont les mouvements
+# sont renumérotés à partir de 1. Deux téléchargements successifs se recouvrent
+# donc largement, et ne se distinguent par aucun des champs sur lesquels
+# reposait l'idempotence d'origine.
+
+def triodos_movement(seq:, amount_eur:, date:, communication:)
+  movement(seq: seq, amount_eur: amount_eur, value_date: date, entry_date: date,
+           communication: communication, bank_ref: "")
+end
+
+# 7 — premier téléchargement : du 31/07 au 10/08, solde 1000 → 1105
+triodos_1 = [
+  header(reference: "TRIODOS001"),
+  old_balance(iban: IBAN, sequence: "000", balance: 1000.0, date: "310726"),
+  triodos_movement(seq: "0001", amount_eur: 130.0, date: "010826", communication: "VIREMENT DUPONT"),
+  triodos_movement(seq: "0002", amount_eur: -45.0, date: "050826", communication: "FACTURE BRICO YVOIR"),
+  triodos_movement(seq: "0003", amount_eur: 20.0, date: "100826", communication: "DON ANONYME"),
+  new_balance(iban: IBAN, balance: 1105.0, date: "100826"),
+  trailer(records: 6, debit: 45.0, credit: 150.0)
+]
+File.write(File.join(DIR, "triodos_1.cod"), triodos_1.join("\n") + "\n")
+
+# 8 — second téléchargement : même relevé 000, même point de départ, période
+# prolongée jusqu'au 20/08. Les trois premiers mouvements sont ceux du fichier
+# précédent, renumérotés à l'identique ; seuls les deux derniers sont nouveaux.
+triodos_2 = [
+  header(reference: "TRIODOS002"),
+  old_balance(iban: IBAN, sequence: "000", balance: 1000.0, date: "310726"),
+  triodos_movement(seq: "0001", amount_eur: 130.0, date: "010826", communication: "VIREMENT DUPONT"),
+  triodos_movement(seq: "0002", amount_eur: -45.0, date: "050826", communication: "FACTURE BRICO YVOIR"),
+  triodos_movement(seq: "0003", amount_eur: 20.0, date: "100826", communication: "DON ANONYME"),
+  triodos_movement(seq: "0004", amount_eur: -75.5, date: "120826", communication: "FRAIS BANCAIRES"),
+  triodos_movement(seq: "0005", amount_eur: 300.0, date: "200826", communication: "VIREMENT GROUPE MARTIN"),
+  new_balance(iban: IBAN, balance: 1329.5, date: "200826"),
+  trailer(records: 8, debit: 120.5, credit: 450.0)
+]
+File.write(File.join(DIR, "triodos_2.cod"), triodos_2.join("\n") + "\n")
+
+# 9 — même recouvrement, mais un montant de la ZONE COMMUNE a changé : le
+# journal et le fichier ne décrivent plus les mêmes mouvements. La ligne altérée
+# entre comme une nouvelle, et le contrôle de couverture doit le voir.
+recouvrement_altere = [
+  header(reference: "TRIODOS003"),
+  old_balance(iban: IBAN, sequence: "000", balance: 1000.0, date: "310726"),
+  triodos_movement(seq: "0001", amount_eur: 130.0, date: "010826", communication: "VIREMENT DUPONT"),
+  triodos_movement(seq: "0002", amount_eur: -50.0, date: "050826", communication: "FACTURE BRICO YVOIR"),
+  triodos_movement(seq: "0003", amount_eur: 20.0, date: "100826", communication: "DON ANONYME"),
+  triodos_movement(seq: "0004", amount_eur: -75.5, date: "120826", communication: "FRAIS BANCAIRES"),
+  triodos_movement(seq: "0005", amount_eur: 300.0, date: "200826", communication: "VIREMENT GROUPE MARTIN"),
+  new_balance(iban: IBAN, balance: 1324.5, date: "200826"),
+  trailer(records: 8, debit: 125.5, credit: 450.0)
+]
+File.write(File.join(DIR, "recouvrement_altere.cod"), recouvrement_altere.join("\n") + "\n")
+
+# 10 — deux mouvements RÉELLEMENT identiques le même jour. Ils ne diffèrent que
+# par leur numéro de séquence, que l'empreinte ignore volontairement : seul le
+# rang d'occurrence les sépare. Les fusionner perdrait un vrai encaissement.
+doublons = [
+  header(reference: "TRIODOS004"),
+  old_balance(iban: IBAN, sequence: "000", balance: 0.0, date: "310726"),
+  triodos_movement(seq: "0001", amount_eur: 55.0, date: "030826", communication: "LOYER CHAMBRE"),
+  triodos_movement(seq: "0002", amount_eur: 55.0, date: "030826", communication: "LOYER CHAMBRE"),
+  new_balance(iban: IBAN, balance: 110.0, date: "030826"),
+  trailer(records: 5, debit: 0.0, credit: 110.0)
+]
+File.write(File.join(DIR, "doublons_jour.cod"), doublons.join("\n") + "\n")
+
+# 11 — le même jour retéléchargé plus tard : un TROISIÈME mouvement identique est
+# tombé après le premier export. Le solde du 03/08 a donc changé sans que rien
+# soit faux — c'est pourquoi la continuité ne reconstitue aucun solde.
+doublons_suite = [
+  header(reference: "TRIODOS005"),
+  old_balance(iban: IBAN, sequence: "000", balance: 0.0, date: "310726"),
+  triodos_movement(seq: "0001", amount_eur: 55.0, date: "030826", communication: "LOYER CHAMBRE"),
+  triodos_movement(seq: "0002", amount_eur: 55.0, date: "030826", communication: "LOYER CHAMBRE"),
+  triodos_movement(seq: "0003", amount_eur: 55.0, date: "030826", communication: "LOYER CHAMBRE"),
+  new_balance(iban: IBAN, balance: 165.0, date: "030826"),
+  trailer(records: 6, debit: 0.0, credit: 165.0)
+]
+File.write(File.join(DIR, "doublons_jour_suite.cod"), doublons_suite.join("\n") + "\n")
 
 puts Dir[File.join(DIR, "*.cod")].map { |f| "#{File.basename(f)}: #{File.readlines(f).map(&:chomp).map(&:length).uniq.inspect}" }
