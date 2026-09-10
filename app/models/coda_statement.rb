@@ -25,10 +25,10 @@
 #
 # Indexes
 #
-#  index_coda_statements_on_account_and_sequence  (cash_account_id,period_year,sequence_number) UNIQUE
 #  index_coda_statements_on_cash_account_id       (cash_account_id)
 #  index_coda_statements_on_coda_import_id        (coda_import_id)
 #  index_coda_statements_on_deleted_at            (deleted_at)
+#  index_coda_statements_on_import_and_sequence   (coda_import_id,cash_account_id,sequence_number) UNIQUE
 #
 # Foreign Keys
 #
@@ -43,7 +43,10 @@ class CodaStatement < ApplicationRecord
   belongs_to :cash_account
 
   validates :sequence_number, :period_year, presence: true
-  validates :sequence_number, uniqueness: { scope: [:cash_account_id, :period_year] }
+  # L'unicité porte sur le relevé DANS SON FICHIER, pas sur l'année civile :
+  # Triodos numérote `000` chacun de ses exports « mutations », et l'unicité par
+  # année faisait passer le second export pour un doublon du premier.
+  validates :sequence_number, uniqueness: { scope: [:coda_import_id, :cash_account_id] }
 
   scope :ordered, -> { order(:new_balance_date, :sequence_number) }
 

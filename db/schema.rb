@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_10_050000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -412,6 +412,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_050000) do
     t.date "entry_date", null: false
     t.string "excluded_reason"
     t.string "external_ref"
+    t.string "fingerprint"
     t.string "label", null: false
     t.string "statement_ref"
     t.string "status", default: "pending", null: false
@@ -419,6 +420,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_050000) do
     t.datetime "updated_at", null: false
     t.date "value_date"
     t.index ["cash_account_id", "external_ref"], name: "index_cash_entries_on_external_ref", unique: true, where: "(external_ref IS NOT NULL)"
+    t.index ["cash_account_id", "fingerprint"], name: "index_cash_entries_on_fingerprint", unique: true, where: "(fingerprint IS NOT NULL)"
     t.index ["cash_account_id"], name: "index_cash_entries_on_cash_account_id"
     t.index ["deleted_at"], name: "index_cash_entries_on_deleted_at"
     t.index ["entry_date"], name: "index_cash_entries_on_entry_date"
@@ -506,8 +508,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_050000) do
     t.integer "period_year", null: false
     t.string "sequence_number", null: false
     t.datetime "updated_at", null: false
-    t.index ["cash_account_id", "period_year", "sequence_number"], name: "index_coda_statements_on_account_and_sequence", unique: true
     t.index ["cash_account_id"], name: "index_coda_statements_on_cash_account_id"
+    t.index ["coda_import_id", "cash_account_id", "sequence_number"], name: "index_coda_statements_on_import_and_sequence", unique: true
     t.index ["coda_import_id"], name: "index_coda_statements_on_coda_import_id"
     t.index ["deleted_at"], name: "index_coda_statements_on_deleted_at"
   end
