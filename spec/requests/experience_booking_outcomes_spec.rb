@@ -6,7 +6,13 @@ RSpec.describe "Tenue des activités", type: :request do
 
   let(:porteuse) { Human.create!(name: "Ada", email: "ada@les4sources.be", status: "active") }
   let(:autre) { Human.create!(name: "Bob", email: "bob@les4sources.be", status: "active") }
-  let(:user_porteuse) { User.create!(email: "ada@les4sources.be", password: "password123", human: porteuse) }
+  # Porteuse externe : le cloisonnement tient à l'interrupteur « accès restreint
+  # aux activités » (main, 2026-09-08), plus au simple fait d'avoir un membre
+  # rattaché — sans lui, l'équipe entière verrait tout.
+  let(:user_porteuse) do
+    User.create!(email: "ada@les4sources.be", password: "password123", human: porteuse,
+                 restricted_to_experiences: true)
+  end
   let(:admin) { User.create!(email: "admin@les4sources.be", password: "password123") }
 
   let(:experience) { Experience.create!(name: "Atelier vannerie", human: porteuse, duration_hours: 2) }
