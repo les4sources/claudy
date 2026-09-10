@@ -8,6 +8,7 @@ if @report
     json.status @report.status
     json.statements @report.statements
     json.entries_created @report.entries_created
+    json.entries_skipped @report.entries_skipped
     json.statements_skipped @report.statements_skipped
     json.messages @report.messages
   end

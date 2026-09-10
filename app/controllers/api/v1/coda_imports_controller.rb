@@ -8,11 +8,12 @@ module Api
     # échoue en silence dans un job est une panne qu'on découvre trois mois plus
     # tard, à la clôture.
     #
-    # Un fichier déjà déposé rend **200**, pas une erreur : rejouer un import est
-    # une opération normale, et c'est ce qui rend une reprise en plusieurs passes
-    # possible. Un fichier refusé rend 422 avec le motif chiffré du service — il
-    # porte le relevé et l'écart, c'est ce dont la compta a besoin pour savoir
-    # quoi demander à la banque.
+    # Un fichier qui a déjà créé des lignes rend **200**, pas une erreur :
+    # rejouer un import est une opération normale, et c'est ce qui rend une
+    # reprise en plusieurs passes possible. Un dépôt antérieur resté sans effet
+    # est repris sur place et rend **201**. Un fichier refusé rend 422 avec le
+    # motif chiffré du service — il porte le relevé et l'écart, c'est ce dont la
+    # compta a besoin pour savoir quoi demander à la banque.
     class CodaImportsController < BaseController
       def index
         @coda_imports = paginate(CodaImport.ordered.includes(:coda_statements))

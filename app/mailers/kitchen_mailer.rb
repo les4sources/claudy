@@ -12,6 +12,22 @@ class KitchenMailer < ApplicationMailer
     mail(to: recipient, subject: "#{inquiry_prefix}#{demand_label} — #{customer_name} — #{date_label}")
   end
 
+  # Une SAISIE, un email (issue #266). Cocher douze services envoyait douze
+  # « Nouvelle demande » ; il en part désormais un seul par destinataire, qui
+  # LISTE les services — chacun avec ses propres liens de réponse, parce que
+  # c'est la ligne qui s'accepte ou se refuse, pas la saisie.
+  def grouped_request(orders, recipient)
+    @orders      = MealOrderDecorator.decorate_collection(Array(orders))
+    @recipient   = recipient
+    @stay        = @orders.first&.stay
+    @link_host   = ENV.fetch("APPLICATION_HOST", "app.les4sources.be")
+    @kitchen_url = kitchen_orders_url(host: @link_host)
+    @all_inquiries = @orders.all?(&:inquiry?)
+
+    mail(to: recipient,
+         subject: "#{grouped_prefix}#{@orders.size} services — #{customer_name} — #{period_label}")
+  end
+
   # La prestation a changé sur une ligne que la cuisine avait acceptée.
   def revalidation_needed(order, recipient)
     prepare(order, recipient)
@@ -76,4 +92,20 @@ class KitchenMailer < ApplicationMailer
   def date_label = @order.date.present? ? l(@order.date, format: "%-d/%m/%Y") : "date à fixer"
 
   def inquiry_prefix = @order.inquiry? ? "[Info] " : ""
+
+  # Le préfixe de l'email groupé ne se pose que si TOUT est demande d'info :
+  # une saisie mixte engage bel et bien la cuisine sur une partie des services.
+  def grouped_prefix = @all_inquiries ? "[Info] " : ""
+
+  # La période couverte par la saisie. Une seule date se nomme telle quelle ;
+  # deux dates du même mois partagent leur mois — « du 8 au 12/09/2026 ».
+  def period_label
+    dates = @orders.filter_map(&:date).uniq.sort
+    return "dates à fixer" if dates.empty?
+    return l(dates.first, format: "%-d/%m/%Y") if dates.size == 1
+
+    first, last = dates.first, dates.last
+    same_month = first.month == last.month && first.year == last.year
+    "du #{l(first, format: same_month ? '%-d' : '%-d/%m/%Y')} au #{l(last, format: '%-d/%m/%Y')}"
+  end
 end

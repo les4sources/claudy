@@ -1,5 +1,6 @@
 require "digest"
 require Rails.root.join("lib/coda/parser")
+require Rails.root.join("lib/coda/fingerprint")
 
 module Coda
   # Importe un fichier CODA dans le journal de trésorerie (issue #181).
@@ -18,9 +19,17 @@ module Coda
   # 2. **Chaînage entre relevés** — l'ancien solde d'un relevé doit égaler le
   #    nouveau solde du précédent. C'est ce contrôle qui attrape le relevé
   #    manquant quand l'export bancaire en saute un.
-  # 3. **Continuité applicative** — l'ancien solde du premier relevé doit égaler
-  #    le dernier nouveau solde déjà importé pour ce compte. Le trou entre deux
-  #    imports se voit là, et nulle part ailleurs.
+  # 3. **Continuité applicative** — le fichier doit se raccorder à ce qui est
+  #    déjà importé pour ce compte, soit bout à bout, soit par recouvrement. Le
+  #    trou entre deux imports se voit là, et nulle part ailleurs.
+  # 4. **Couverture du relevé** — une fois les lignes créées, le journal doit
+  #    porter exactement les mouvements du relevé sur sa période, en nombre et en
+  #    somme. C'est le filet sous la déduplication : une ligne prise à tort pour
+  #    un doublon disparaîtrait sans lui, et rien ne le dirait.
+  #
+  # Le recouvrement n'est pas un cas tordu, c'est le cas NORMAL chez Triodos, qui
+  # n'expose pas de relevés numérotés mais un export « mutations » libre : on
+  # redemande la période en cours, et elle ressort en entier à chaque fois.
   #
   # L'import ne crée AUCUNE allocation : les lignes arrivent en attente, et c'est
   # un humain qui ventile. Un compte analytique deviné serait exactement le
@@ -28,8 +37,11 @@ module Coda
   class Import < ServiceBase
     class Rejected < StandardError; end
 
-    Report = Struct.new(:status, :statements, :entries_created, :statements_skipped,
-                        :messages, :coda_import, keyword_init: true) do
+    # `statements_skipped` vaut désormais toujours zéro : plus aucun relevé n'est
+    # sauté, c'est le mouvement qui se déduplique. Le champ reste parce que l'API
+    # publique le rend, et le retirer casserait un appelant pour rien.
+    Report = Struct.new(:status, :statements, :entries_created, :entries_skipped,
+                        :statements_skipped, :messages, :coda_import, keyword_init: true) do
       def to_text = messages.join("\n")
     end
 
@@ -55,9 +67,17 @@ module Coda
     def import
       sha = Digest::SHA256.hexdigest(@content)
       deja = CodaImport.find_by(sha256: sha)
-      if deja
+
+      # Un dépôt qui n'a RIEN créé n'est pas un import : c'est une tentative. La
+      # refuser au motif qu'elle a déjà eu lieu enferme celui qui la rejoue —
+      # c'est exactement ce qui est arrivé au premier export Triodos, refusé pour
+      # doublon puis impossible à redéposer une fois le refus corrigé. On la
+      # reprend donc sur place. Un dépôt qui a créé des lignes, lui, garde son
+      # refus : la déduplication le rendrait inoffensif, mais un second dépôt du
+      # même fichier reste un geste qu'on signale plutôt qu'on exécute.
+      if deja&.entries_count&.positive?
         return Report.new(status: "already_imported", statements: 0, entries_created: 0,
-                          statements_skipped: 0, coda_import: deja,
+                          entries_skipped: 0, statements_skipped: 0, coda_import: deja,
                           messages: ["Ce fichier a déjà été déposé le #{I18n.l(deja.created_at.to_date)} " \
                                      "sous le nom « #{deja.filename} ». Rien n'a été créé."])
       end
@@ -67,24 +87,14 @@ module Coda
       validate!(file, accounts)
 
       entries_created = 0
-      skipped = 0
+      entries_skipped = 0
       coda_import = nil
 
       ApplicationRecord.transaction do
-        coda_import = CodaImport.create!(
-          filename: @filename, sha256: sha, content: @content,
-          creation_date: file.creation_date, file_reference: file.file_reference,
-          status: "imported", whodunnit: @whodunnit, imported_at: Time.current
-        )
+        coda_import = reprendre_ou_creer(deja, file, sha)
 
         file.statements.each do |statement|
           account = accounts.fetch(normalize(statement.account_number))
-
-          if already_imported?(statement, account)
-            skipped += 1
-            @messages << "Relevé #{statement.label} déjà importé — ignoré."
-            next
-          end
 
           coda_statement = CodaStatement.create!(
             coda_import: coda_import, cash_account: account,
@@ -96,19 +106,44 @@ module Coda
             new_balance_date: statement.new_balance_date
           )
 
-          created = create_entries(statement, account, coda_statement)
+          created, ignored = create_entries(statement, account, coda_statement)
           coda_statement.update!(entries_count: created)
           entries_created += created
+          entries_skipped += ignored
+
+          verify_coverage!(statement, account)
+
+          @messages << "Relevé #{statement.label} : #{created} ligne(s) créée(s)" +
+                       (ignored.positive? ? ", #{ignored} déjà présente(s) et ignorée(s)." : ".")
         end
 
-        coda_import.update!(statements_count: file.statements.size - skipped,
+        coda_import.update!(statements_count: file.statements.size,
                             entries_count: entries_created,
                             report: @messages.join("\n"))
       end
 
-      @messages.unshift("#{entries_created} ligne(s) créée(s) sur #{file.statements.size} relevé(s) lus.")
+      @messages.unshift("#{entries_created} ligne(s) créée(s) et #{entries_skipped} déjà présente(s), " \
+                        "sur #{file.statements.size} relevé(s) lus.")
       Report.new(status: "imported", statements: file.statements.size, entries_created: entries_created,
-                 statements_skipped: skipped, messages: @messages, coda_import: coda_import)
+                 entries_skipped: entries_skipped, statements_skipped: 0,
+                 messages: @messages, coda_import: coda_import)
+    end
+
+    # Reprendre un dépôt stérile plutôt qu'en créer un second : l'unicité du
+    # sha256 reste vraie, et l'historique ne se remplit pas de tentatives.
+    def reprendre_ou_creer(deja, file, sha)
+      attributs = { filename: @filename, creation_date: file.creation_date,
+                    file_reference: file.file_reference, status: "imported",
+                    whodunnit: @whodunnit, imported_at: Time.current, report: nil }
+
+      return CodaImport.create!(sha256: sha, content: @content, **attributs) if deja.nil?
+
+      # Ces relevés n'ont produit aucune ligne : ils ne portent aucun fait, et
+      # les garder ferait buter le nouveau relevé sur l'unicité par fichier.
+      CodaStatement.with_deleted { CodaStatement.where(coda_import_id: deja.id).delete_all }
+      deja.update!(**attributs)
+      @messages << "Dépôt du #{I18n.l(deja.created_at.to_date)} repris : il n'avait créé aucune ligne."
+      deja
     end
 
     # Deux dépôts simultanés du même fichier passent tous deux le `find_by` : le
@@ -116,7 +151,7 @@ module Coda
     def already_imported_report(sha)
       deja = CodaImport.find_by(sha256: sha)
       Report.new(status: "already_imported", statements: 0, entries_created: 0,
-                 statements_skipped: 0, coda_import: deja,
+                 entries_skipped: 0, statements_skipped: 0, coda_import: deja,
                  messages: ["Ce fichier a déjà été déposé sous le nom « #{deja&.filename} ». Rien n'a été créé."])
     end
 
@@ -211,18 +246,73 @@ module Coda
         dernier = CodaStatement.last_for(account)
         next if dernier.nil?
 
-        # Le premier relevé RÉELLEMENT nouveau, pas le premier du fichier : un
-        # relevé déjà importé, placé en tête, servirait sinon de pont et ferait
-        # entrer le suivant sans que son ancien solde soit confronté à la base.
-        premier = statements.find { |s| !already_imported?(s, account) }
-        next if premier.nil?
-        next if premier.old_balance_cents == dernier.new_balance_cents
-
-        raise Rejected,
-              "Relevé #{premier.label} : son ancien solde (#{money(premier.old_balance_cents)}) ne suit pas " \
-              "le dernier relevé importé #{dernier.label} (#{money(dernier.new_balance_cents)}). " \
-              "Un relevé manque entre les deux. Rien n'a été importé."
+        validate_continuity!(statements.first, dernier)
       end
+    end
+
+    # Deux raccords sont légitimes, et un seul l'était jusqu'ici.
+    #
+    # BOUT À BOUT — l'ancien solde du fichier reprend le dernier solde connu.
+    # C'est le relevé numéroté classique, celui que la banque découpe pour nous.
+    #
+    # PAR RECOUVREMENT — le fichier repart plus tôt et rejoue une période déjà
+    # importée. Il n'y a alors aucun solde à raccorder : ce qu'on vérifie est
+    # qu'aucune période ne manque ENTRE les deux, c'est-à-dire que le fichier
+    # commence au plus tard là où le journal s'arrête. La cohérence des montants
+    # sur la partie commune, elle, est jugée par `verify_coverage!` sur les
+    # lignes réelles, ce qui est à la fois plus fin et plus sûr qu'une
+    # comparaison de soldes.
+    #
+    # Une reconstitution du solde à la date de reprise serait tentante et serait
+    # fausse : un export pris en cours de journée arrête son solde au milieu des
+    # mouvements du jour, et le lendemain la même date porte un autre solde. Le
+    # contrôle refuserait alors un fichier parfaitement sain, ce qui est la
+    # panne la plus coûteuse pour un contrôle — celle qui pousse à le désactiver.
+    #
+    # Refuser le recouvrement, comme on le faisait, revenait à exiger de la
+    # banque un découpage qu'elle ne propose pas. Triodos n'expose pas de relevés
+    # numérotés : on lui demande une période, il la rend en entier.
+    # Le recouvrement se reconnaît à une date d'ouverture STRICTEMENT antérieure.
+    # À date égale, on exige l'égalité des soldes : un fichier qui rouvre le
+    # journal là où il s'arrête, sur un autre montant, ne recouvre rien — il
+    # contredit. C'est le cas du relevé sauté par la banque, celui qu'aucun
+    # contrôle intra-fichier ne voit.
+    def validate_continuity!(premier, dernier)
+      return if premier.old_balance_cents == dernier.new_balance_cents
+      return if premier.old_balance_date && dernier.new_balance_date &&
+                premier.old_balance_date < dernier.new_balance_date
+
+      repere = dernier.new_balance_date ? " au #{I18n.l(dernier.new_balance_date)}" : ""
+
+      raise Rejected,
+            "Relevé #{premier.label} : son ancien solde (#{money(premier.old_balance_cents)}) ne suit pas " \
+            "le dernier relevé importé #{dernier.label} (#{money(dernier.new_balance_cents)}), et sa période " \
+            "ne le recouvre pas. Un relevé manque entre les deux. Redemande l'export à partir d'une date " \
+            "antérieure#{repere} : le recouvrement, lui, est accepté. Rien n'a été importé."
+    end
+
+    # Après création, le journal doit porter EXACTEMENT le relevé sur sa période.
+    #
+    # C'est le filet sous la déduplication. Si une empreinte appariait deux
+    # mouvements distincts, la ligne réelle ne serait jamais créée et rien
+    # d'autre ne le dirait : les soldes du fichier, eux, resteraient justes.
+    def verify_coverage!(statement, account)
+      mouvements = statement.main_movements
+      dates = mouvements.filter_map { |m| m.entry_date || statement.new_balance_date }
+      return if dates.empty?
+
+      nombre, somme = CashEntry.with_deleted do
+        portee = CashEntry.where(cash_account_id: account.id, entry_date: dates.min..dates.max)
+        [portee.count, portee.sum(:amount_cents)]
+      end
+      return if nombre == mouvements.size && somme == mouvements.sum(&:amount_cents)
+
+      raise Rejected,
+            "Relevé #{statement.label} : entre le #{I18n.l(dates.min)} et le #{I18n.l(dates.max)}, le journal " \
+            "porterait #{nombre} ligne(s) pour #{money(somme)}, alors que le relevé en compte " \
+            "#{mouvements.size} pour #{money(mouvements.sum(&:amount_cents))}. " \
+            "Une ligne a été prise pour un doublon, ou le journal en portait déjà d'ailleurs. " \
+            "Rien n'a été importé."
     end
 
     # L'enregistrement de fin porte le nombre d'enregistrements et les totaux
@@ -247,45 +337,60 @@ module Coda
             "somme des mouvements lus : #{money(credits)}. Rien n'a été importé."
     end
 
-    def already_imported?(statement, account)
-      annee = (statement.new_balance_date || Date.current).year
-      CodaStatement.exists?(cash_account_id: account.id, period_year: annee,
-                            sequence_number: statement.sequence_number)
-    end
-
     def create_entries(statement, account, coda_statement)
       created = 0
+      ignored = 0
+      occurrences = Hash.new(0)
 
       statement.main_movements.each do |movement|
-        reference = external_ref(coda_statement, movement)
-        next if CashEntry.exists?(cash_account_id: account.id, external_ref: reference)
+        champs = fingerprint_fields(movement, statement)
+        empreinte_base = Fingerprint.digest(**champs)
+        occurrences[empreinte_base] += 1
+        empreinte = Fingerprint.call(occurrence: occurrences[empreinte_base], **champs)
+
+        if CashEntry.with_deleted { CashEntry.exists?(cash_account_id: account.id, fingerprint: empreinte) }
+          ignored += 1
+          next
+        end
 
         CashEntry.create!(
+          **champs,
           cash_account: account,
-          entry_date: movement.entry_date || statement.new_balance_date,
-          value_date: movement.value_date,
-          amount_cents: movement.amount_cents,
           label: label_for(movement),
-          counterparty_name: movement.counterparty_name.presence,
-          counterparty_iban: movement.counterparty_account.presence,
-          communication: movement.communication.presence,
-          transaction_code: movement.transaction_code.presence,
-          external_ref: reference,
+          fingerprint: empreinte,
+          external_ref: external_ref(coda_statement, movement),
           statement_ref: coda_statement.label
         )
         created += 1
       end
 
-      created
+      [created, ignored]
     end
 
-    # Stable d'un import à l'autre : c'est ce qui rend le troisième niveau
-    # d'idempotence effectif même si la banque renvoie le même relevé dans un
-    # fichier différent.
+    # Les champs qui composent l'empreinte sont EXACTEMENT ceux qu'on stocke sur
+    # la ligne. C'est ce qui rend l'empreinte d'une ligne déjà importée
+    # recalculable sans son fichier d'origine, et c'est ce dont vit la reprise de
+    # l'existant : sans cette égalité, aucun journal déjà rempli ne pourrait
+    # rejoindre le nouveau régime d'idempotence.
+    def fingerprint_fields(movement, statement)
+      {
+        entry_date: movement.entry_date || statement.new_balance_date,
+        value_date: movement.value_date,
+        amount_cents: movement.amount_cents,
+        counterparty_iban: movement.counterparty_account.presence,
+        counterparty_name: movement.counterparty_name.presence,
+        communication: movement.communication.presence,
+        transaction_code: movement.transaction_code.presence
+      }
+    end
+
+    # Une référence lisible qui pointe le relevé et la ligne DANS CE FICHIER-CI.
+    # Elle ne porte plus l'idempotence — l'empreinte la porte — parce que le rang
+    # d'un mouvement dans un export change d'un téléchargement à l'autre.
+    # L'identifiant du relevé la rend unique sans lui demander d'être stable.
     def external_ref(coda_statement, movement)
-      format("CODA:%<year>d:%<statement>s:%<seq>04d:%<detail>04d",
-             year: coda_statement.period_year, statement: coda_statement.sequence_number,
-             seq: movement.sequence, detail: movement.detail)
+      format("CODA-S%<statement>d-%<seq>04d-%<detail>04d",
+             statement: coda_statement.id, seq: movement.sequence, detail: movement.detail)
     end
 
     def label_for(movement)

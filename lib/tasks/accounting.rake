@@ -58,6 +58,7 @@ namespace :accounting do
       ["614000", "Assurances", 6, "expense"],
       ["615000", "Frais de bureau et télécommunications", 6, "expense"],
       ["618000", "Frais bancaires et commissions", 6, "expense"],
+      [GeneralAccount::REVENUE_SHARE_CODE, "Reversements aux propriétaires", 6, "expense"],
       ["620000", "Rémunérations", 6, "expense"],
       ["630000", "Amortissements", 6, "expense"],
       ["640000", "Charges diverses", 6, "expense"],
@@ -297,6 +298,34 @@ namespace :accounting do
     end
 
     report("verify_stripe_payouts", ecarts, "#{StripePayout.count} versement(s) vérifié(s)")
+  end
+
+  desc "Vérifie les partages de revenus — exit 1 si une nuitée est relevée deux fois ou une part fausse"
+  task verify_revenue_shares: :environment do
+    ecarts = []
+
+    # Une nuitée relevée deux fois, c'est un reversement payé deux fois. La
+    # régularisation est le SEUL doublon légitime : elle porte une différence,
+    # pas un second relevé de la même somme.
+    RevenueShareStatementLine.bookings.group(:booking_id).having("COUNT(*) > 1").count.each do |booking_id, count|
+      ecarts << "Réservation ##{booking_id} relevée #{count} fois sans régularisation"
+    end
+
+    RevenueShareStatement.where.not(status: "draft").includes(:revenue_share_agreement).find_each do |statement|
+      if JournalEntry.find_by(source: statement, journal: "purchases").blank?
+        ecarts << "Relevé ##{statement.id} (#{statement.period_label}) émis sans écriture"
+      end
+
+      attendu = statement.revenue_share_agreement.share_of(statement.base_cents)
+      next if statement.share_cents == attendu
+
+      ecarts << "Relevé ##{statement.id} : part de #{statement.share_cents} cents " \
+                "pour une base de #{statement.base_cents} à #{statement.revenue_share_agreement.share_percent} % " \
+                "(attendu #{attendu})"
+    end
+
+    report("verify_revenue_shares", ecarts,
+           "#{RevenueShareStatement.count} relevé(s) de partage vérifié(s)")
   end
 
   def report(name, ecarts, resume)

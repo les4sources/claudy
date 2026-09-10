@@ -1,0 +1,3 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Modifier l'accord — #{@agreement.lodging&.name}"
+= render "form", agreement: @agreement

@@ -90,6 +90,12 @@ Rails.application.routes.draw do
   namespace :kitchen do
     root to: "orders#index"
     resource :settings, only: [:show, :update]
+    # Reporting de la cuisine (epic #269, phase 2) : sous Cuisine et non sous
+    # Reporting — c'est Malau qui le lit, au même endroit que ses services.
+    get "reporting", to: "reporting#show", as: :reporting
+    # L'export des dépenses a sa propre adresse : la page en livre deux, et un
+    # seul `format.csv` ne saurait pas lequel des deux produire.
+    get "reporting/expenses", to: "reporting#expenses", as: :reporting_expenses
     resources :products, except: [:show]
     resources :orders, only: [:index, :new, :create, :edit, :update] do
       collection do
@@ -114,7 +120,13 @@ Rails.application.routes.draw do
   resources :rates, only: [:index, :update]
   resources :rental_items
   # Déclarée AVANT `resources :reports`, sinon « kitchen » serait pris pour un id.
-  get "reports/kitchen", to: "reports#kitchen", as: :kitchen_reports
+  # Le reporting cuisine a déménagé sous Cuisine (epic #269, phase 2) : cette
+  # adresse redirige, en conservant la période et le format demandés — des liens
+  # et des favoris pointent encore dessus.
+  get "reports/kitchen", to: redirect { |params, request|
+    target = params[:format].present? ? "/kitchen/reporting.#{params[:format]}" : "/kitchen/reporting"
+    [target, request.query_string.presence].compact.join("?")
+  }, as: :legacy_kitchen_reports
   resources :reports
   resources :roles
   resources :rooms
@@ -161,6 +173,10 @@ Rails.application.routes.draw do
         post :save_encoding
       end
     end
+    # Batch cooking (epic #246). Saisissable par tout utilisateur connecté : les
+    # cuisiniers ont un accès Claudy, et c'est en cuisine, sur un téléphone, que
+    # la session se note.
+    resources :batch_cooking_sessions, except: [:show]
     # Comptabilité en partie double (issue #177). Le référentiel et les deux
     # lectures — grand livre et balance. Aucune route ne permet de SAISIR une
     # écriture : elles se génèrent, elles ne se saisissent jamais.
@@ -200,6 +216,15 @@ Rails.application.routes.draw do
     resources :allocation_suggestions, only: [:update] do
       collection { post :bulk }
     end
+    # Les tiers (epic #240, phase 1) : on les désactive, on ne les détruit pas —
+    # des écritures les portent.
+    resources :third_parties, except: %i[show destroy] do
+      member do
+        patch :deactivate
+        patch :reactivate
+      end
+    end
+
     resources :cash_entries do
       member do
         post :post_entry
@@ -226,10 +251,29 @@ Rails.application.routes.draw do
         post :mark_settled
       end
     end
+
+    # Partages de revenus (issue #247). Pas de `destroy` sur l'accord : il se
+    # désactive, sinon les relevés déjà reversés perdraient leur contrepartie.
+    resources :revenue_share_agreements, path: "revenue_shares", except: %i[destroy] do
+      member do
+        patch :deactivate
+        patch :reactivate
+      end
+      resources :statements, only: %i[create], controller: "revenue_share_statements"
+    end
+    resources :revenue_share_statements, path: "revenue_share_statements", only: %i[show destroy] do
+      member do
+        post :issue
+        patch :mark_paid
+      end
+    end
   end
 
   # Organisation
   get "organisation", to: "organisation#index", as: :organisation
+  # L'annuaire des pôles, côté lecture (epic #239, phase 3). Le CRUD reste dans
+  # les Paramètres : ici on cherche un pôle pour le lire, pas pour le régler.
+  get "organisation/poles", to: "organisation#teams", as: :organisation_teams
   resources :cycles do
     member do
       get :closing
@@ -453,6 +497,7 @@ Rails.application.routes.draw do
   # Décompte sourcier à jeton (issue #160) — sans session, sans Devise : le lien
   # du mail doit s'ouvrir sur le téléphone d'un sourcier qui n'a pas de compte.
   get "decompte/:token", to: "public/statements#show", as: :public_statement
+  get "reversement/:token", to: "public/revenue_share_statements#show", as: :public_revenue_share_statement
 
   # Paiement du solde exigible du séjour (epic #55, Phase 3) — POST scellé par le
   # même jeton que la page client ; crée/rafraîchit le paiement puis part sur

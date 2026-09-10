@@ -11,8 +11,12 @@ class HumansController < BaseController
   def show
   end
 
+  # `name` pré-rempli : l'écran Batch cooking (epic #246) envoie ici quand un
+  # membre de ménage — souvent un enfant qui a cuisiné — n'existe pas encore
+  # comme personne. Retaper un nom qu'on vient de lire à l'écran est exactement
+  # le genre de friction qui fait rouvrir un tableur.
   def new
-    @human = Human.new
+    @human = Human.new(name: params[:name])
   end
 
   def create

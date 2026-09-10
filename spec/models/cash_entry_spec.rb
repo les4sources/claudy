@@ -13,6 +13,7 @@ require "rails_helper"
 #  entry_date        :date             not null
 #  excluded_reason   :string
 #  external_ref      :string
+#  fingerprint       :string
 #  label             :string           not null
 #  notes             :text
 #  statement_ref     :string
@@ -31,6 +32,7 @@ require "rails_helper"
 #  index_cash_entries_on_deleted_at        (deleted_at)
 #  index_cash_entries_on_entry_date        (entry_date)
 #  index_cash_entries_on_external_ref      (cash_account_id,external_ref) UNIQUE WHERE (external_ref IS NOT NULL)
+#  index_cash_entries_on_fingerprint       (cash_account_id,fingerprint) UNIQUE WHERE (fingerprint IS NOT NULL)
 #  index_cash_entries_on_status            (status)
 #  index_cash_entries_on_transaction_code  (transaction_code)
 #

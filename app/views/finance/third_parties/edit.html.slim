@@ -1,0 +1,5 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: @third_party.name
+
+.max-w-4xl
+  = render "form", third_party: @third_party

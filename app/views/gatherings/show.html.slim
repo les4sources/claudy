@@ -47,6 +47,12 @@
               dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
                 = @gathering.object.location
 
+          / Les pôles concernés (epic #239, phase 2).
+          .px-4.py-4.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6(class=(@gathering.object.location.present? ? nil : "bg-gray-50"))
+            dt.text-sm.font-medium.text-gray-500 Pôles
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = render "gatherings/team_badges", gathering: @gathering.object
+
     - if @gathering.notes.presence
       .overflow-hidden.bg-yellow-200.shadow.sm:rounded-lg
         .px-4.py-5.sm:px-6.bg-yellow-300

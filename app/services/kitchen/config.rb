@@ -22,6 +22,19 @@ module Kitchen
     DEFAULT_LEAD_DAYS  = { "repas" => 7, "buffet" => 5, "apero" => 5 }.freeze
     DEFAULT_COORDINATOR_EMAIL = "malau@les4sources.be".freeze
 
+    # Les comptes de charge dédiés à la cuisine (epic #269, phase 1), posés par
+    # `rake finance:seed_kitchen_accounts`. Deux comptes et non un : les repas et
+    # les buffets sont deux économies différentes, tenues par des personnes
+    # différentes, et le choix se fait une seule fois, à l'encodage.
+    DEFAULT_EXPENSE_ACCOUNTS = {
+      "600005" => "Achats cuisine — repas",
+      "600006" => "Achats cuisine — buffets et apéros"
+    }.freeze
+
+    # Clé du réglage « Comptes de charge de la cuisine ». `Setting` ne stocke que
+    # des chaînes : la liste d'identifiants s'y sérialise séparée par des virgules.
+    EXPENSE_ACCOUNTS_KEY = "kitchen.expense_account_ids".freeze
+
     def families = FAMILIES
 
     def family_keys = FAMILIES.map { |f| f[:key] }
@@ -47,6 +60,28 @@ module Kitchen
     def coordinator_email
       Setting["kitchen.coordinator_email"].presence || DEFAULT_COORDINATOR_EMAIL
     end
+
+    # Les comptes de charge sur lesquels s'imputent les dépenses de la cuisine.
+    # C'est cette liste que lira le reporting de période (phase 2) : Michael
+    # ajoute un compte depuis Paramètres > Cuisine, sans toucher au code.
+    #
+    # On relit les comptes en base à chaque appel plutôt que de faire confiance
+    # aux identifiants stockés : un compte supprimé depuis disparaît de la liste
+    # au lieu de faire planter la lecture. Aucun réglage = tableau vide, jamais
+    # « tous les comptes » — un reporting qui invente son périmètre ment.
+    def expense_accounts
+      ids = expense_account_ids
+      return [] if ids.empty?
+
+      GeneralAccount.where(id: ids).ordered.to_a
+    end
+
+    def expense_account_ids
+      Setting[EXPENSE_ACCOUNTS_KEY].to_s.split(",").filter_map { |id| Integer(id, exception: false) }
+    end
+
+    # Ce qui peut être coché dans le réglage : les charges actives du plan.
+    def selectable_expense_accounts = GeneralAccount.actives.in_class(6).ordered
 
     # Types qui ne se proposent PLUS à la saisie (issue #238) : `trio` est
     # devenu le bouton « Trio » de la grille, qui coche les trois services du

@@ -9,40 +9,37 @@ module Kitchen
 
     before_action :set_order, only: [:edit, :update, :status, :assign, :accept, :new_refusal, :refuse, :shopping_list]
 
-    # Sections de l'index, dans l'ordre de lecture. Une ligne tombe dans la
-    # PREMIÈRE qui la reçoit : une demande d'info en attente de validation est un
-    # travail à faire, pas une ligne à lire deux fois.
-    SECTIONS = [
-      # Issue #238 : EN TÊTE, avant tout le reste. Un service refusé dont la date
-      # approche est le seul travail vraiment urgent de la page — il faut prévoir
-      # autre chose. Claudy le signale ; il ne crée aucun buffet de remplacement
-      # à la place de Michael (décision 6).
-      { key: :to_cover,  title: "À couvrir",
-        blurb: "La cuisine s'est désistée et la date approche — il faut prévoir autre chose." },
-      { key: :todo,      title: "À traiter",
-        blurb: "La cuisine n'a pas encore répondu." },
-      { key: :upcoming,  title: "À venir",
-        blurb: "Acceptées par la cuisine, à servir." },
-      { key: :inquiries, title: "Demandes d'info",
-        blurb: "Le client se renseigne, rien n'est engagé." },
-      { key: :archives,  title: "Archives",
-        blurb: "Déjà passées." },
-      { key: :cancelled, title: "Annulés et refusés",
-        blurb: "Retirées du jeu, gardées pour mémoire." }
+    # Les vues de la page, en onglets. Une table unique, une ligne par service ;
+    # ce qui change d'un onglet à l'autre, c'est le filtre. « Cuisine » et
+    # « Accueil » sont les deux vues de travail : chacune ne montre que les
+    # lignes où ce métier a la main (`MealOrder#next_actor`).
+    VIEWS = [
+      { key: :all,       title: "À venir" },
+      { key: :kitchen,   title: "Cuisine" },
+      { key: :reception, title: "Accueil" },
+      { key: :info,      title: "Info" },
+      { key: :past,      title: "Archives" },
+      { key: :out,       title: "Annulés" }
     ].freeze
+    VIEW_KEYS = VIEWS.map { |v| v[:key] }.freeze
 
     ARCHIVE_LIMIT   = 100
     CANCELLED_LIMIT = 50
     RECENT_ARCHIVE_MONTHS = 12
 
     def index
-      @families    = Kitchen::Config.families
-      @responsible = responsible_filter
-      @family      = family_filter
+      @view         = view_param
+      @family       = family_filter
+      @responsible  = responsible_filter
       @old_archives = params[:old_archives] == "1"
-      @responsible_options = responsible_options
-      @humans   = Human.where(status: "active").order(:name)
-      @sections = build_sections
+      @humans       = Human.where(status: "active").order(:name)
+      @rows         = rows_for(@view)
+      @counts       = view_counts
+      @groups       = group_by_stay(@rows)
+      # Les montants n'intéressent que le Pôle Accueil : ils ne s'affichent que
+      # dans sa vue.
+      @show_money   = @view == :reception
+      @total_cents  = @rows.select(&:billable?).sum { |o| o.price_cents.to_i }
     end
 
     def new
@@ -51,10 +48,10 @@ module Kitchen
     end
 
     def create
+      return create_prestations if params[:prestations].present?
+
       @order = MealOrder.new(order_params.merge(stay_id: params.dig(:meal_order, :stay_id)))
       accept_when_someone_takes_it(@order)
-
-      return create_from_grid if grid_submission?
 
       if @order.save
         redirect_to kitchen_orders_path, notice: "Demande enregistrée."
@@ -164,12 +161,13 @@ module Kitchen
       @order = MealOrder.find(params[:id])
     end
 
+    # Plus de coût par prestation (epic #269) : les courses se font par lot, pour
+    # plusieurs services à la fois, et la dépense s'affecte en comptabilité. Un
+    # `cost` envoyé par une vieille page ne modifie donc plus rien.
     def order_params
       params.require(:meal_order).permit(:kind, :moment, :date, :people, :notes, :status,
-                                         :cancellation_reason, :responsible_human_id,
-                                         :cost_notes)
-            .merge(unit_price_cents: submitted_unit_price_cents,
-                   cost_cents: submitted_cost_cents)
+                                         :cancellation_reason, :responsible_human_id)
+            .merge(unit_price_cents: submitted_unit_price_cents)
             .compact
     end
 
@@ -179,14 +177,6 @@ module Kitchen
       raw = params.dig(:meal_order, :unit_price)
       return nil if raw.nil?
       return "" if raw.to_s.strip.blank? # `compact` ne l'enlève pas : on veut bien effacer l'override
-
-      (raw.to_s.tr(",", ".").to_f * 100).round
-    end
-
-    def submitted_cost_cents
-      raw = params.dig(:meal_order, :cost)
-      return nil if raw.nil?
-      return "" if raw.to_s.strip.blank?
 
       (raw.to_s.tr(",", ".").to_f * 100).round
     end
@@ -219,36 +209,68 @@ module Kitchen
       "Demande mise à jour. La prestation a changé : la cuisine doit revalider."
     end
 
-    # La grille (issue #238) : une soumission par CASES, pas par ligne unique.
-    # Elle n'existe que pour un séjour aux dates connues — sans calendrier, il
-    # n'y a pas de colonnes, et le formulaire retombe sur date + moment.
-    def grid_submission?
-      params[:grid_mode] == "1"
-    end
-
-    def create_from_grid
-      result = Kitchen::GridSubmission.new(
-        stay: @order.stay,
-        attributes: grid_line_attributes,
-        cells: params[:grid]
-      ).run
+    # La saisie à plusieurs prestations (issue #265). Le séjour est en tête du
+    # formulaire, les blocs derrière : un apéro, un buffet et des repas partent
+    # ensemble, chacun avec son type et son statut, et la transaction est unique
+    # — si une ligne est invalide, aucune n'est créée.
+    def create_prestations
+      blocks = submitted_blocks
+      result = Kitchen::GridSubmission.new(stay: submitted_stay, blocks: blocks).run
 
       if result.success?
         redirect_to kitchen_orders_path,
                     notice: "#{result.orders.size} service(s) enregistré(s)."
       else
+        # On réaffiche CE QUI A ÉTÉ SAISI, blocs compris : refaire trois blocs
+        # parce que le deuxième manquait une case est le genre de punition qui
+        # fait retourner Malau à son tableau papier.
+        @order = MealOrder.new(stay_id: submitted_stay&.id)
+        @prestations = blocks
         prepare_form
         flash.now[:alert] = result.error
         render :new, status: :unprocessable_entity
       end
     end
 
-    # Ce qui se saisit UNE FOIS et s'applique à toutes les lignes créées.
-    def grid_line_attributes
-      @order.attributes
-            .slice("kind", "people", "notes", "status", "unit_price_cents",
-                   "responsible_human_id", "validation", "validated_at")
-            .symbolize_keys
+    def submitted_stay
+      Stay.find_by(id: params.dig(:meal_order, :stay_id).presence || params[:stay_id].presence)
+    end
+
+    # Les blocs postés, dans l'ordre des index. Rails rend `prestations[0][…]`
+    # comme un HASH à clés-chaînes : après un retrait de bloc les index sautent
+    # (0, 2, 3), d'où le tri numérique plutôt qu'une confiance dans l'ordre.
+    def submitted_blocks
+      params[:prestations].to_unsafe_h.sort_by { |index, _| index.to_i }
+                          .each_with_index.map { |(_, raw), position| block_from(raw, position) }
+    end
+
+    def block_from(raw, position)
+      attributes = raw.slice("kind", "moment", "date", "people", "notes", "status",
+                             "responsible_human_id")
+                      .symbolize_keys.compact_blank
+      attributes[:unit_price_cents] = price_cents(raw["unit_price"])
+      attributes.compact!
+      apply_kitchen_acceptance(attributes)
+
+      Kitchen::GridSubmission::Block.new(index: position, attributes: attributes,
+                                         cells: raw["grid"])
+    end
+
+    # Se charger d'un buffet ou d'un apéro vaut acceptation — bloc par bloc,
+    # puisque chaque bloc a son type et son responsable. La famille `repas`
+    # garde sa validation par Stéphanie, elle seule cuisine.
+    def apply_kitchen_acceptance(attributes)
+      return if attributes[:responsible_human_id].blank?
+      return if MealOrder::KIND_FAMILIES[attributes[:kind].to_s] == "repas"
+
+      attributes[:validation] = "accepted"
+      attributes[:validated_at] = Time.current
+    end
+
+    def price_cents(raw)
+      return nil if raw.to_s.strip.blank?
+
+      (raw.to_s.tr(",", ".").to_f * 100).round
     end
 
     def prepare_form
@@ -258,6 +280,7 @@ module Kitchen
         [label, kind] if Kitchen::Config.enabled_kinds.include?(kind) || kind == @order.kind
       end
       @grid_days = grid_days_for(@order)
+      @prestations ||= [Kitchen::GridSubmission::Block.new(index: 0, attributes: {}, cells: {})]
     end
 
     # Les jours de la grille : du jour d'arrivée au jour de départ INCLUS — le
@@ -309,48 +332,54 @@ module Kitchen
       value.presence && (Human.exists?(id: value) ? value : nil)
     end
 
-    def responsible_options
-      Human.where(id: MealOrder.distinct.pluck(:responsible_human_id).compact).order(:name)
+    def view_param
+      key = params[:view].to_s.to_sym
+      VIEW_KEYS.include?(key) ? key : :all
     end
 
-    def build_sections
-      # « À couvrir » se sert la première : une ligne refusée mais encore à venir
-      # ne doit plus se lire dans « Annulés et refusés », où elle passerait pour
-      # une affaire classée.
-      to_cover  = base_scope.to_cover.chronological.to_a
-      claimed   = to_cover.map(&:id)
-
-      todo      = base_scope.pending_validation.upcoming.chronological.to_a
-                            .reject { |o| claimed.include?(o.id) }
-      claimed  += todo.map(&:id)
-
-      upcoming  = base_scope.where(validation: "accepted", status: %w[requested confirmed])
-                            .upcoming.chronological.to_a.reject { |o| claimed.include?(o.id) }
-      claimed  += upcoming.map(&:id)
-
-      inquiries = base_scope.where(status: "inquiry").upcoming.chronological.to_a
-                            .reject { |o| claimed.include?(o.id) }
-      claimed  += inquiries.map(&:id)
-
-      archives  = archive_scope.antichronological.limit(ARCHIVE_LIMIT).to_a
-                               .reject { |o| claimed.include?(o.id) }
-      claimed  += archives.map(&:id)
-
-      cancelled = base_scope.where(status: "cancelled").or(base_scope.where(validation: "refused"))
-                            .antichronological.limit(CANCELLED_LIMIT).to_a
-                            .reject { |o| claimed.include?(o.id) }
-
-      rows = { to_cover: to_cover, todo: todo, upcoming: upcoming, inquiries: inquiries,
-               archives: archives, cancelled: cancelled }
-
-      SECTIONS.map { |section| section.merge(groups: group_by_stay(rows.fetch(section[:key]))) }
+    # Tout ce qui est encore à venir et pas annulé par le client — y compris ce
+    # que la cuisine a refusé, qu'il faut couvrir. Chargé une fois, filtré en
+    # mémoire : les vues de travail se recoupent, et `next_actor` lit une
+    # association.
+    def live_rows
+      @live_rows ||= base_scope.upcoming.where.not(status: "cancelled").chronological.to_a
     end
 
+    def rows_for(view)
+      case view
+      when :all       then live_rows.reject(&:inquiry?)
+      when :kitchen   then live_rows.select { |o| o.next_actor == :kitchen }
+      when :reception then live_rows.select { |o| %i[reception to_cover].include?(o.next_actor) }
+      when :info      then live_rows.select(&:inquiry?)
+      when :past      then archive_scope.antichronological.limit(ARCHIVE_LIMIT).to_a
+      when :out       then out_scope.antichronological.limit(CANCELLED_LIMIT).to_a
+      end
+    end
+
+    # Les compteurs des onglets. Les vues vivantes se comptent sur ce qui est
+    # déjà chargé ; les deux autres par une requête, sans la limite d'affichage.
+    def view_counts
+      VIEWS.to_h do |v|
+        count = case v[:key]
+                when :past then archive_scope.count
+                when :out  then out_scope.count
+                else rows_for(v[:key]).size
+                end
+        [v[:key], count]
+      end
+    end
+
+    # Déjà servi. Un refus passé n'a rien été servi : il va dans « Annulés ».
     def archive_scope
-      scope = base_scope.past.where.not(status: "cancelled")
+      scope = base_scope.past.where.not(status: "cancelled").where.not(validation: "refused")
       return scope if @old_archives
 
       scope.where("date >= ?", RECENT_ARCHIVE_MONTHS.months.ago.to_date)
+    end
+
+    # Retiré du jeu : annulé par le client, ou refusé par la cuisine et passé.
+    def out_scope
+      base_scope.where(status: "cancelled").or(base_scope.past.where(validation: "refused"))
     end
 
     # Groupé par séjour, comme le tableau de Malau : un en-tête par client, et le

@@ -1,0 +1,20 @@
+/  Un solde NÉGATIF veut dire que Les 4 Sources doit de l'argent à ce compte —
+   c'est le cas normal du compte personnel d'un cuisinier de batch cooking
+   (epic #246), qui accumule 3,50 € par portion préparée jusqu'au virement.
+   Le chiffre en haut de page le disait déjà, mais en vert et sans un mot : un
+   enfant qui vient voir ce qu'il a gagné ne devrait pas avoir à connaître la
+   convention de signe du grand livre.
+
+   Le vert, pas l'ambre : il n'y a rien à régler ici, c'est une bonne nouvelle.
+- if account.balance_cents.negative?
+  section#credit.mb-6.rounded-2xl.ring-1.p-5(class="bg-emerald-50/70 ring-emerald-200")
+    .flex.flex-wrap.items-baseline.justify-between.gap-x-6.gap-y-1
+      div
+        h2.text-base.font-semibold.text-emerald-900 En sa faveur
+        p.text-sm.text-emerald-800
+          - if account.kind == "human"
+            | Les 4 Sources doit cette somme à #{account.name} — elle se règle par virement.
+          - else
+            | Ce compte est créditeur : Les 4 Sources lui doit cette somme.
+      .text-2xl.font-bold.text-emerald-900.tabular-nums
+        = number_to_currency(account.balance_cents.abs / 100.0)

@@ -52,6 +52,87 @@ RSpec.describe KitchenMailer do
     expect(mail.body.encoded).to include("Je suis en congé")
   end
 
+  # Issue #266 — l'email d'une SAISIE : la liste des services, chacun avec ses
+  # propres liens de réponse.
+  describe "#grouped_request" do
+    def grouped(orders) = described_class.grouped_request(orders, steph.email)
+
+    let(:midi) do
+      o = MealOrder.new(stay: stay, kind: "repas", moment: "midi", people: 12,
+                        date: Date.new(2026, 10, 2), notes: "deux véganes", responsible_human: steph)
+      o.skip_notifications = true
+      o.tap(&:save!)
+    end
+    let(:soir) do
+      o = MealOrder.new(stay: stay, kind: "repas", moment: "soir", people: 12,
+                        date: Date.new(2026, 10, 4), notes: "un sans gluten", responsible_human: steph)
+      o.skip_notifications = true
+      o.tap(&:save!)
+    end
+    let(:apero) do
+      o = MealOrder.new(stay: stay, kind: "apero", moment: "soir", people: 20,
+                        date: Date.new(2026, 10, 3), responsible_human: steph)
+      o.skip_notifications = true
+      o.tap(&:save!)
+    end
+
+    it "nomme le nombre de services, le client et la période dans l'objet" do
+      expect(grouped([midi, apero, soir]).subject).to eq("3 services — Groupe Mailer — du 2 au 4/10/2026")
+    end
+
+    it "garde les dates entières quand la période change de mois" do
+      soir.update_columns(date: Date.new(2026, 11, 3))
+
+      expect(grouped([midi, soir.reload]).subject).to eq("2 services — Groupe Mailer — du 2/10/2026 au 3/11/2026")
+    end
+
+    it "préfixe [Info] seulement quand TOUS les services sont des demandes d'info" do
+      midi.update_columns(status: "inquiry")
+      expect(grouped([midi.reload, soir]).subject).not_to start_with("[Info]")
+
+      soir.update_columns(status: "inquiry")
+      expect(grouped([midi.reload, soir.reload]).subject).to start_with("[Info] ")
+    end
+
+    it "liste chaque service avec ses précisions et ses convives" do
+      body = grouped([midi, apero, soir]).body.encoded
+
+      expect(body).to include("deux véganes", "un sans gluten")
+      expect(body).to include("12 pers.", "20 pers.")
+      expect(body).to include("Repas (midi ou soir)", "Apéro produits locaux")
+    end
+
+    # Chaque ligne porte SON jeton : c'est la ligne qui s'accepte ou se refuse,
+    # jamais la saisie entière. Les jetons portent leur date d'expiration, donc
+    # ils changent à chaque appel — on compare leur NOMBRE et leur unicité, pas
+    # leur valeur.
+    it "donne à CHAQUE service sa propre paire de liens de réponse" do
+      body = grouped([midi, soir]).body.encoded
+
+      valides = body.scan(%r{/kitchen/validate/([\w\-]+)})
+      refus   = body.scan(%r{/kitchen/refuse/([\w\-]+)})
+      expect(valides.size).to eq(2)
+      expect(refus.size).to eq(2)
+      expect(valides.uniq.size).to eq(2)
+    end
+
+    it "ne propose pas de réponse sur une ligne déjà tranchée, et garde les autres" do
+      midi.update_columns(validation: "accepted")
+
+      body = grouped([midi.reload, soir]).body.encoded
+
+      # Le service accepté reste LISTÉ — il n'attend simplement plus de réponse.
+      expect(body.scan(%r{/kitchen/validate/}).size).to eq(1)
+      expect(body).to include("deux véganes", "un sans gluten")
+    end
+
+    it "n'écrit jamais au client" do
+      mail = grouped([midi, soir])
+
+      expect(Array(mail.to) + Array(mail.cc)).not_to include(customer.email)
+    end
+  end
+
   it "n'écrit jamais au client, sur aucun des six emails" do
     %i[new_request revalidation_needed changed confirmed cancelled refused].each do |kind|
       mail = described_class.public_send(kind, order, steph.email)
