@@ -210,6 +210,15 @@ Rails.application.routes.draw do
     resources :allocation_suggestions, only: [:update] do
       collection { post :bulk }
     end
+    # Les tiers (epic #240, phase 1) : on les désactive, on ne les détruit pas —
+    # des écritures les portent.
+    resources :third_parties, except: %i[show destroy] do
+      member do
+        patch :deactivate
+        patch :reactivate
+      end
+    end
+
     resources :cash_entries do
       member do
         post :post_entry
