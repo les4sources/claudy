@@ -13,7 +13,9 @@ require "rails_helper"
 #  entry_date        :date             not null
 #  excluded_reason   :string
 #  external_ref      :string
+#  fingerprint       :string
 #  label             :string           not null
+#  notes             :text
 #  statement_ref     :string
 #  status            :string           default("pending"), not null
 #  transaction_code  :string
@@ -21,19 +23,23 @@ require "rails_helper"
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null
 #  cash_account_id   :bigint           not null
+#  cash_motif_id     :bigint
 #
 # Indexes
 #
 #  index_cash_entries_on_cash_account_id   (cash_account_id)
+#  index_cash_entries_on_cash_motif_id     (cash_motif_id)
 #  index_cash_entries_on_deleted_at        (deleted_at)
 #  index_cash_entries_on_entry_date        (entry_date)
 #  index_cash_entries_on_external_ref      (cash_account_id,external_ref) UNIQUE WHERE (external_ref IS NOT NULL)
+#  index_cash_entries_on_fingerprint       (cash_account_id,fingerprint) UNIQUE WHERE (fingerprint IS NOT NULL)
 #  index_cash_entries_on_status            (status)
 #  index_cash_entries_on_transaction_code  (transaction_code)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (cash_account_id => cash_accounts.id)
+#  fk_rails_...  (cash_motif_id => cash_motifs.id)
 #
 require Rails.root.join("spec/support/finance_builders")
 

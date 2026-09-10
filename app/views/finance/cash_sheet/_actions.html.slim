@@ -1,0 +1,19 @@
+/ Corriger ou retirer. Les deux gestes dé-passent l'écriture, la corrigent et la
+  repassent — la contre-passation reste au grand livre.
+details.inline-block.text-left
+  summary.cursor-pointer.text-xs.font-medium.text-gray-500(class="hover:underline") Corriger
+  .mt-2.w-64.rounded-lg.border.border-gray-200.bg-white.p-3.shadow-sm.space-y-2
+    = form_with url: finance_cash_sheet_line_path(entry), method: :patch, class: "space-y-2" do
+      = hidden_field_tag :month, sheet.month.strftime("%Y-%m")
+      = hidden_field_tag :cash_account_id, sheet.account.id
+      = date_field_tag "cash_line[entry_date]", entry.entry_date, class: "w-full rounded-md border-gray-300 text-sm"
+      = text_field_tag "cash_line[label]", entry.label, class: "w-full rounded-md border-gray-300 text-sm"
+      = select_tag "cash_line[cash_motif_id]", options_from_collection_for_select(motifs, :id, :label, entry.cash_motif_id), class: "w-full rounded-md border-gray-300 text-sm"
+      = number_field_tag "cash_line[amount]", (entry.amount_cents.abs / 100.0), step: 0.01, min: 0, class: "w-full rounded-md border-gray-300 text-sm"
+      = text_field_tag "cash_line[notes]", entry.notes, placeholder: "Note", class: "w-full rounded-md border-gray-300 text-sm"
+      button.w-full.rounded-md.bg-4s-main.px-3.py-1.5.text-sm.font-medium.text-white(type="submit") Enregistrer
+    = form_with url: finance_exclude_cash_sheet_line_path(entry), method: :post, class: "space-y-2 border-t border-gray-100 pt-2" do
+      = hidden_field_tag :month, sheet.month.strftime("%Y-%m")
+      = hidden_field_tag :cash_account_id, sheet.account.id
+      = text_field_tag :reason, nil, placeholder: "Motif du retrait", class: "w-full rounded-md border-gray-300 text-sm"
+      button.w-full.rounded-md.border.border-red-200.px-3.py-1.5.text-sm.font-medium.text-red-600(type="submit" class="hover:bg-red-50") Retirer la ligne

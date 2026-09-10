@@ -73,9 +73,15 @@ module Finance
       result.created << label
     end
 
-    # « Caisse centrale » est créée si elle manque — c'est le compte sur lequel
-    # la feuille de caisse de la phase 2 viendra écrire.
+    # « Caisse centrale » n'est créée que s'il n'existe AUCUNE caisse active.
+    #
+    # La production tient la sienne dans « Caisse du domaine » (1 285 lignes
+    # reprises) : chercher un NOM en dur y a créé une seconde caisse, vide, que
+    # la feuille de caisse aurait ensuite garnie pendant que l'argent réel
+    # dormait dans l'autre. On cherche donc un compte de type `cash` actif —
+    # décision 1, une seule caisse comptable.
     def ensure_cash_account!(entity)
+      return false if CashAccount.actives.exists?(kind: "cash")
       return false if CashAccount.exists?(name: CASH_ACCOUNT_NAME)
 
       general = GeneralAccount.find_by(code: CASH_GENERAL_CODE)

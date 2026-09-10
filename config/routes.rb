@@ -198,6 +198,12 @@ Rails.application.routes.draw do
     resources :allocation_rules, except: [:show] do
       member { post :move }
     end
+    # Feuille de caisse mensuelle (epic #243, phase 2). Nommée AVANT les motifs
+    # pour que `/finance/cash/motifs` reste lisible à côté de `/finance/cash`.
+    get "cash", to: "cash_sheet#show", as: :cash_sheet
+    post "cash/lines", to: "cash_sheet#create", as: :cash_sheet_lines
+    patch "cash/lines/:id", to: "cash_sheet#update", as: :cash_sheet_line
+    post "cash/lines/:id/exclude", to: "cash_sheet#exclude", as: :exclude_cash_sheet_line
     # Motifs de caisse (epic #243). Pas de `destroy` : un motif se désactive,
     # sinon une feuille de caisse passée perdrait son vocabulaire.
     resources :cash_motifs, path: "cash/motifs", except: %i[show destroy] do

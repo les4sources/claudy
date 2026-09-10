@@ -1,0 +1,103 @@
+/ La feuille du mois. Un seul bloc — tableau, soldes et formulaire repartent
+  ensemble à chaque geste, parce que le solde courant de CHAQUE ligne change dès
+  qu'une ligne s'ajoute au milieu du mois.
+#cash-sheet
+  / Les messages vivent DANS la feuille : elle est remplacée en entier à chaque
+    geste, et le `#messages` du gabarit n'existe pas quand il n'y a rien à dire —
+    un flux Turbo qui le viserait échouerait en silence une fois sur deux.
+  - if flash[:alert].present?
+    .mb-4.rounded-lg.border.border-red-200.bg-red-50.px-4.py-3.text-sm.text-red-800= flash[:alert]
+  - elsif flash[:notice].present?
+    .mb-4.rounded-lg.border.border-blue-200.bg-blue-50.px-4.py-3.text-sm.text-blue-800= flash[:notice]
+
+  .mb-4.flex.flex-wrap.items-center.justify-between.gap-3
+    .flex.items-center.gap-2
+      = link_to "←", finance_cash_sheet_path(month: sheet.previous_month.strftime("%Y-%m"), cash_account_id: sheet.account.id), class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+      span.text-sm.font-semibold.text-gray-900.capitalize= l(sheet.month, format: "%B %Y")
+      = link_to "→", finance_cash_sheet_path(month: sheet.next_month.strftime("%Y-%m"), cash_account_id: sheet.account.id), class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+    .flex.flex-wrap.items-center.gap-3.text-sm
+      - if accounts.size > 1
+        = form_with url: finance_cash_sheet_path, method: :get, class: "inline" do
+          = hidden_field_tag :month, sheet.month.strftime("%Y-%m")
+          = select_tag :cash_account_id, options_from_collection_for_select(accounts, :id, :name, sheet.account.id), onchange: "this.form.requestSubmit()", class: "rounded-md border-gray-300 shadow-sm text-sm"
+      = link_to "Motifs", finance_cash_motifs_path, class: "text-gray-500 hover:underline"
+
+  .grid.grid-cols-2.gap-3.mb-4(class="sm:grid-cols-4")
+    .rounded-lg.bg-white.ring-1.ring-gray-200.px-4.py-3
+      p.text-xs.uppercase.tracking-wide.text-gray-400 Solde d'ouverture
+      p.mt-1.text-lg.font-semibold.text-gray-900= number_to_currency(sheet.opening_cents / 100.0)
+    .rounded-lg.bg-white.ring-1.ring-gray-200.px-4.py-3
+      p.text-xs.uppercase.tracking-wide.text-gray-400 Entrées
+      p.mt-1.text-lg.font-semibold.text-emerald-700= number_to_currency(sheet.incoming_cents / 100.0)
+    .rounded-lg.bg-white.ring-1.ring-gray-200.px-4.py-3
+      p.text-xs.uppercase.tracking-wide.text-gray-400 Sorties
+      p.mt-1.text-lg.font-semibold.text-orange-700= number_to_currency(sheet.outgoing_cents.abs / 100.0)
+    .rounded-lg.bg-white.ring-1.ring-4s-main.px-4.py-3
+      p.text-xs.uppercase.tracking-wide.text-gray-400 Solde de clôture
+      p.mt-1.text-lg.font-semibold.text-gray-900= number_to_currency(sheet.closing_cents / 100.0)
+
+  - if sheet.closed?
+    .mb-4.rounded-lg.border.border-amber-200.bg-amber-50.px-4.py-3.text-sm.text-amber-900
+      strong Mois arrêté.
+      |  Les lignes de #{l(sheet.month, format: '%B %Y')} sont en lecture seule. Une correction s'y fait par écriture, pas en réécrivant la feuille.
+  - else
+    .mb-5.rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+      = render "finance/cash_sheet/form", sheet: sheet, motifs: motifs, default_date: default_date
+
+  - if sheet.rows.empty?
+    .rounded-lg.border.border-dashed.border-gray-200.bg-white.px-4.py-6.text-sm.text-gray-500
+      | Aucune ligne pour ce mois.
+  - else
+    / Mobile : une ligne = une carte, lisible en vertical. La feuille se saisit
+      au bar, sur un téléphone — un tableau qui défile horizontalement y est
+      inutilisable.
+    .space-y-2(class="sm:hidden")
+      - sheet.rows.each do |row|
+        = render "finance/cash_sheet/card", row: row, sheet: sheet, motifs: motifs
+    .hidden.overflow-x-auto(class="sm:block")
+      table.w-full.text-sm.text-left.text-gray-500
+        thead.text-xs.text-gray-700.uppercase.bg-gray-50
+          tr
+            th.py-3.px-4[scope="col"] Date
+            th.py-3.px-4[scope="col"] Libellé
+            th.py-3.px-4[scope="col"] Motif
+            th.py-3.px-4.text-right[scope="col"] Entrée
+            th.py-3.px-4.text-right[scope="col"] Sortie
+            th.py-3.px-4.text-right[scope="col"] Solde
+            th.py-3.px-4[scope="col"]
+        tbody
+          - sheet.rows.each do |row|
+            tr.border-b.bg-white
+              td.py-3.px-4.whitespace-nowrap.align-top= l(row.entry.entry_date, format: :short)
+              td.py-3.px-4.align-top
+                .font-medium.text-gray-900= row.entry.label
+                - if row.entry.notes.present?
+                  .text-xs.text-gray-400= row.entry.notes
+              td.py-3.px-4.align-top
+                = row.entry.cash_motif&.label || "—"
+                .text-xs.text-gray-400= row.entry.cash_allocations.first&.general_account&.code
+              td.py-3.px-4.text-right.whitespace-nowrap.align-top.text-emerald-700
+                = number_to_currency(row.entry.amount_cents / 100.0) if row.entry.amount_cents.positive?
+              td.py-3.px-4.text-right.whitespace-nowrap.align-top.text-orange-700
+                = number_to_currency(row.entry.amount_cents.abs / 100.0) if row.entry.amount_cents.negative?
+              td.py-3.px-4.text-right.whitespace-nowrap.align-top.font-medium.text-gray-900= number_to_currency(row.balance_cents / 100.0)
+              td.py-3.px-4.text-right.whitespace-nowrap.align-top
+                - unless sheet.closed?
+                  = render "finance/cash_sheet/actions", entry: row.entry, sheet: sheet, motifs: motifs
+        tfoot
+          tr.bg-gray-50
+            td.py-3.px-4.font-semibold.text-gray-900(colspan="5") Solde de clôture
+            td.py-3.px-4.text-right.font-semibold.text-gray-900= number_to_currency(sheet.closing_cents / 100.0)
+            td
+
+  - if sheet.excluded_entries.any?
+    .mt-6
+      h3.text-xs.uppercase.tracking-wide.text-gray-400.mb-2 Lignes retirées, et pourquoi
+      ul.space-y-1.text-sm.text-gray-500
+        - sheet.excluded_entries.each do |entry|
+          li
+            span.text-gray-400= l(entry.entry_date, format: :short)
+            span.mx-1 ·
+            span.line-through= entry.label
+            span.mx-1 ·
+            = entry.excluded_reason

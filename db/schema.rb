@@ -404,6 +404,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
     t.datetime "allocated_at"
     t.bigint "amount_cents", null: false
     t.bigint "cash_account_id", null: false
+    t.bigint "cash_motif_id"
     t.string "communication"
     t.string "counterparty_iban"
     t.string "counterparty_name"
@@ -414,6 +415,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
     t.string "external_ref"
     t.string "fingerprint"
     t.string "label", null: false
+    t.text "notes"
     t.string "statement_ref"
     t.string "status", default: "pending", null: false
     t.string "transaction_code"
@@ -422,6 +424,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
     t.index ["cash_account_id", "external_ref"], name: "index_cash_entries_on_external_ref", unique: true, where: "(external_ref IS NOT NULL)"
     t.index ["cash_account_id", "fingerprint"], name: "index_cash_entries_on_fingerprint", unique: true, where: "(fingerprint IS NOT NULL)"
     t.index ["cash_account_id"], name: "index_cash_entries_on_cash_account_id"
+    t.index ["cash_motif_id"], name: "index_cash_entries_on_cash_motif_id"
     t.index ["deleted_at"], name: "index_cash_entries_on_deleted_at"
     t.index ["entry_date"], name: "index_cash_entries_on_entry_date"
     t.index ["status"], name: "index_cash_entries_on_status"
@@ -1759,6 +1762,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
   add_foreign_key "cash_allocations", "teams"
   add_foreign_key "cash_allocations", "third_parties"
   add_foreign_key "cash_entries", "cash_accounts"
+  add_foreign_key "cash_entries", "cash_motifs"
   add_foreign_key "cash_motifs", "general_accounts"
   add_foreign_key "cash_motifs", "legal_entities"
   add_foreign_key "cash_motifs", "teams"

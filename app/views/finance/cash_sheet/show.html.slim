@@ -1,0 +1,15 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Caisse"
+
+- if @sheet.blank?
+  .rounded-lg.border.border-dashed.border-gray-200.bg-white.px-4.py-6.text-sm.text-gray-500
+    p.font-medium.text-gray-700 Aucune caisse active.
+    p.mt-1
+      | La feuille de caisse écrit sur le compte de trésorerie de type « Caisse ». Crée-le dans
+      = link_to " Entités et comptes", finance_general_accounts_path, class: "text-4s-main hover:underline"
+      | , ou lance
+      code.mx-1.px-1.py-0.5.bg-gray-100.rounded rake finance:seed_cash_motifs
+      | .
+- else
+  = render "finance/cash_sheet/sheet", sheet: @sheet, motifs: @motifs, accounts: @accounts,
+           default_date: (@last_date.presence || Date.current.to_s)
