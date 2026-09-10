@@ -21,6 +21,10 @@ class ReportsController < BaseController
     @spaces = SpaceDecorator.decorate_collection(
       Space.all
     )
+    # Les deux graphes de l'année (issue #276). Le calcul vit dans le service :
+    # une action qui empile douze mois × n hébergements + six activités finirait
+    # par ne plus se relire.
+    @annual_breakdown = Reports::AnnualBreakdown.new(year: @year)
   end
 
   # Le reporting cuisine vit désormais sous Cuisine (epic #269, phase 2) :
