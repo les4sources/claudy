@@ -122,7 +122,7 @@ RSpec.describe MealOrder do
     it "ne rouvre rien sur un changement de notes, de prix ou de responsable" do
       line = order(kind: "repas", people: 4, validation: "accepted", validated_at: Time.current)
 
-      line.update!(notes: "deux véganes", unit_price_cents: 1_800, cost_cents: 2_000)
+      line.update!(notes: "deux véganes", unit_price_cents: 1_800)
 
       expect(line.validation).to eq("accepted")
       expect(line.validated_at).to be_present

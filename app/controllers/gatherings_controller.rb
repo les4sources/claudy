@@ -5,9 +5,13 @@ class GatheringsController < BaseController
   breadcrumb "Rassemblements", :gatherings_path, match: :exact
 
   def index
-    @gatherings = GatheringDecorator.decorate_collection(
-      Gathering.all.includes(:gathering_category).order(starts_at: :desc)
-    )
+    @teams = Team.ordered
+    @team = Team.find_by(id: params[:team_id])
+
+    scope = Gathering.all.includes(:gathering_category, :teams).order(starts_at: :desc)
+    scope = scope.for_team(@team.id) if @team
+
+    @gatherings = GatheringDecorator.decorate_collection(scope)
   end
 
   def show

@@ -48,18 +48,15 @@
                 = f.radio_button :kind, kind, class: "peer sr-only", required: true, data: { action: "change->meal-price-hint#refresh" }
                 span.inline-block.rounded-full.border.border-gray-300.px-3.text-sm.text-gray-700(class="py-1.5 peer-checked:border-4s-main peer-checked:bg-4s-main peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-4s-main peer-focus-visible:ring-offset-1 hover:border-gray-400")
                   = kind_label
-      / Issue #238 : dès que le séjour porte ses deux dates, la grille remplace
-        Moment et Date. Sans dates, pas de colonnes — on retombe sur la saisie
-        d'un service unique.
-      - if grid_days.present?
-        = render "kitchen/orders/grid", days: grid_days
-      - else
-        .sm:col-span-3
-          = f.label :moment, "Moment", class: "block text-sm font-medium text-gray-700"
-          = f.select :moment, options_for_select(MealOrder::MOMENT_LABELS.map(&:reverse), order.moment), { include_blank: "—" }, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-        .sm:col-span-2
-          = f.label :date, "Date", class: "block text-sm font-medium text-gray-700"
-          = f.date_field :date, label: false, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      / Une prestation existante se modifie ligne à ligne : un moment, une date.
+        La grille appartient à la SAISIE (issue #265), pas à la correction —
+        modifier une ligne ne doit jamais en créer douze autres.
+      .sm:col-span-3
+        = f.label :moment, "Moment", class: "block text-sm font-medium text-gray-700"
+        = f.select :moment, options_for_select(MealOrder::MOMENT_LABELS.map(&:reverse), order.moment), { include_blank: "—" }, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      .sm:col-span-2
+        = f.label :date, "Date", class: "block text-sm font-medium text-gray-700"
+        = f.date_field :date, label: false, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
       .sm:col-span-2
         = f.label :people, "Convives", class: "block text-sm font-medium text-gray-700"
         = f.number_field :people, min: 1, label: false, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
@@ -95,20 +92,6 @@
         .mt-2
           = f.label :cancellation_reason, "Motif d'annulation", class: "block text-xs font-medium text-gray-500"
           = f.text_field :cancellation_reason, label: false, placeholder: "Obligatoire pour annuler", class: "mt-1 w-full sm:max-w-md rounded-md border-gray-300 shadow-sm sm:text-sm"
-
-  - if order.persisted?
-    section.rounded-2xl.bg-white.ring-1.ring-gray-200.px-5.py-4
-      h2.text-sm.font-semibold.text-gray-900 Coûts réels
-      p.mt-0.5.text-sm.text-gray-500 Saisis après coup — ce que la prestation a coûté, pour la compta.
-      .mt-3.grid.grid-cols-1.gap-4.sm:grid-cols-3
-        div
-          = label_tag "meal_order[cost]", "Coût", class: "block text-sm font-medium text-gray-700"
-          .mt-1.flex.items-center.gap-2
-            = number_field_tag "meal_order[cost]", order.cost_cents && (order.cost_cents / 100.0), step: 0.01, min: 0, class: "w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-            span.text-sm.text-gray-500 €
-        .sm:col-span-2
-          = f.label :cost_notes, "Détail", class: "block text-sm font-medium text-gray-700"
-          = f.text_field :cost_notes, label: false, placeholder: "Courses, temps passé…", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 
   .flex.items-center.justify-end.gap-3
     = link_to "Annuler", kitchen_orders_path, class: "text-sm text-gray-500 hover:underline"

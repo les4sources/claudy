@@ -61,6 +61,29 @@ class AccountEntry < ApplicationRecord
 
   FLOWS = %w[bar grocery meal pot dome pet charges other].freeze
 
+  # Le KIND dit D'OÙ vient l'écriture ; le FLOW dit à QUEL POSTE elle se
+  # rattache. Deux axes distincts : la portion facturée à un ménage
+  # (`batchcooking`) et le crédit du cuisinier (`cook_fee`) tombent tous deux
+  # dans le flux « Repas », mais ne se lisent pas pareil sur un décompte.
+  #
+  # La liste n'est PAS une validation d'inclusion : `RecurringCharge#kind` est
+  # un champ libre, et quatre ans d'historique repris portent des valeurs qu'on
+  # ne réécrira pas. Elle sert à NOMMER ce qu'on sait nommer — le reste
+  # s'affiche tel quel.
+  KINDS = %w[bar grocery meal batchcooking cook_fee recurring settlement payout reversal].freeze
+
+  KIND_LABELS = {
+    "bar"          => "Bar",
+    "grocery"      => "Épicerie",
+    "meal"         => "Repas",
+    "batchcooking" => "Batch cooking",
+    "cook_fee"     => "Batch cooking — cuisine",
+    "recurring"    => "Charge récurrente",
+    "settlement"   => "Règlement",
+    "payout"       => "Virement",
+    "reversal"     => "Contre-écriture"
+  }.freeze
+
   FLOW_LABELS = {
     "bar"     => "Bar",
     "grocery" => "Épicerie",
@@ -101,6 +124,8 @@ class AccountEntry < ApplicationRecord
   def locked? = account_statement_id.present? || locked_at.present?
 
   def flow_label = FLOW_LABELS.fetch(flow, flow)
+
+  def kind_label = KIND_LABELS.fetch(kind, kind)
 
   # Contre-écriture : montant opposé, datée d'aujourd'hui, qui pointe vers
   # l'originale. L'originale n'est JAMAIS modifiée — c'est tout l'intérêt.

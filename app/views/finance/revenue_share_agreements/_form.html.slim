@@ -1,0 +1,47 @@
+= form_with model: [:finance, agreement], class: "space-y-6" do |f|
+  = render "finance/shared/form_errors", record: agreement
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-3.text-sm.font-semibold.text-gray-900 L'hébergement partagé
+    .grid.gap-4(class="md:grid-cols-3")
+      div
+        = f.label :lodging_id, "Hébergement *", class: "block text-sm font-medium text-gray-700"
+        = f.collection_select :lodging_id, Lodging.order(:name), :id, :name, { include_blank: "Choisir…" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.number_field :share_percent, label: "Part reversée (%) *", min: 1, max: 100, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :period, "Périodicité *", class: "block text-sm font-medium text-gray-700"
+        = f.select :period, RevenueShareAgreement::PERIOD_LABELS.map { |v, l| [l, v] }, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+    p.mt-2.text-xs.text-gray-500
+      | La périodicité décide de ce que « Générer le relevé » propose : le dernier trimestre clos, ou le dernier mois clos. La changer ne touche à aucun relevé déjà émis.
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-3.text-sm.font-semibold.text-gray-900 Le bénéficiaire
+    .grid.gap-4(class="md:grid-cols-3")
+      div
+        = f.text_field :beneficiary_name, label: "Nom *", required: true, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.email_field :beneficiary_email, label: "Email", class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.text_field :beneficiary_iban, label: "IBAN", class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+    .grid.gap-4.mt-4(class="md:grid-cols-3")
+      div
+        = f.label :beneficiary_third_party_id, "Tiers comptable", class: "block text-sm font-medium text-gray-700"
+        = f.collection_select :beneficiary_third_party_id, ThirdParty.actives.ordered, :id, :name, { include_blank: "Créé à la première émission" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+    p.mt-2.text-xs.text-gray-500
+      | Sans email, le relevé s'émet quand même : la page à jeton reste partageable à la main. Le tiers comptable est celui du 440000 — laissé vide, il est créé à la première émission et mémorisé ici.
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-3.text-sm.font-semibold.text-gray-900 La durée de l'accord
+    .grid.gap-4(class="md:grid-cols-3")
+      div
+        = f.date_field :starts_on, label: "Début *", required: true, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.date_field :ends_on, label: "Fin", class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+    label.mt-3.flex.items-center.gap-2.text-sm.text-gray-700
+      = f.check_box :active, class: "rounded border-gray-300"
+      |  Actif
+
+  .flex.items-center.gap-3
+    = f.submit "Enregistrer", class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+    = link_to "Annuler", finance_revenue_share_agreements_path, class: "text-sm text-gray-500 hover:text-gray-700"

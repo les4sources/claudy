@@ -44,13 +44,11 @@ RSpec.describe Reports::KitchenRevenue do
   end
 
   it "totalise par famille et par personne" do
-    line(stay, cost_cents: 6_000)
+    line(stay)
     line(stay, kind: "buffet_vege", people: 5, responsible_human: michael)
 
     families = report.by_family.to_h
     expect(families["Repas"].price_cents).to eq(15_000)
-    expect(families["Repas"].cost_cents).to eq(6_000)
-    expect(families["Repas"].margin_cents).to eq(9_000)
     expect(families["Buffet"].price_cents).to eq(6_000)
 
     people = report.by_responsible.to_h
@@ -58,12 +56,16 @@ RSpec.describe Reports::KitchenRevenue do
     expect(people["Michael"].count).to eq(1)
   end
 
-  it "compte un coût nul comme zéro, et le signale" do
-    line(stay, cost_cents: nil)
+  # Le coût ne se totalise plus ici (epic #269) : les courses se font par lot,
+  # pour plusieurs services à la fois, et une marge par ligne mentait. Le
+  # rapport ne dit plus que ce qu'il sait — le facturé.
+  it "ne totalise ni coût ni marge, même sur une ligne qui en porte encore un" do
+    line(stay, cost_cents: 6_000)
 
-    expect(report.totals.cost_cents).to eq(0)
-    expect(report.totals.margin_cents).to eq(report.totals.price_cents)
-    expect(report.missing_costs_count).to eq(1)
+    expect(report.totals.price_cents).to eq(15_000)
+    expect(report.totals).not_to respond_to(:cost_cents)
+    expect(report.totals).not_to respond_to(:margin_cents)
+    expect(report).not_to respond_to(:missing_costs_count)
   end
 
   it "ventile le chiffre d'affaires par mois pour le reporting annuel" do

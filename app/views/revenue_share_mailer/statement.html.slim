@@ -1,0 +1,39 @@
+p Bonjour,
+
+p
+  | Voici le relevé de
+  strong = " #{@agreement.lodging&.name}"
+  |  pour
+  strong = " #{@statement.period_label}"
+  | .
+
+table(cellpadding="6" style="border-collapse: collapse; margin: 16px 0;")
+  tr
+    td Recettes de la période
+    td(align="right")= number_to_currency(@statement.base_cents / 100.0)
+  tr
+    td
+      strong= "Votre part (#{@agreement.share_percent} %)"
+    td(align="right")
+      strong= number_to_currency(@statement.share_cents / 100.0)
+
+- if @lines.any?
+  p
+    strong Le détail :
+  table(cellpadding="4" style="border-collapse: collapse; font-size: 14px;")
+    - @lines.each do |line|
+      tr
+        td= line.from_date ? "#{l(line.from_date, format: :short)} → #{l(line.to_date, format: :short)}" : ""
+        td= line.label
+        td(align="right")= number_to_currency(line.amount_cents / 100.0)
+
+p
+  | Le relevé complet, imprimable :
+  = link_to " le consulter", @statement_url
+
+p
+  | Le virement partira sur le compte que vous nous avez communiqué, avec
+  strong = " #{@statement.reference}"
+  |  en communication.
+
+p Merci, et à bientôt aux 4 Sources.

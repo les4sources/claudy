@@ -1,0 +1,91 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Relevé #{@statement.period_label} — #{@agreement.lodging&.name}",
+           links: [link_to("← L'accord", finance_revenue_share_agreement_path(@agreement), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.grid.gap-4.mb-6(class="md:grid-cols-4")
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.tracking-wide.text-gray-400 Base de la période
+    p.mt-1.text-xl.font-semibold.text-gray-900= number_to_currency(@statement.base_cents / 100.0)
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.tracking-wide.text-gray-400= "Part reversée (#{@agreement.share_percent} %)"
+    p.mt-1.text-xl.font-semibold.text-gray-900= number_to_currency(@statement.share_cents / 100.0)
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.tracking-wide.text-gray-400 Statut
+    p.mt-1.text-sm.font-medium.text-gray-900= @statement.status_label
+    p.text-xs.text-gray-500
+      - if @statement.issued_at
+        = "Émis le #{l(@statement.issued_at.to_date, format: :short)}"
+      - if @statement.sent_at
+        = " · envoyé"
+      - if @statement.paid_on
+        = " · payé le #{l(@statement.paid_on, format: :short)}"
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.tracking-wide.text-gray-400 Communication
+    p.mt-1.font-mono.text-sm.text-gray-900= @statement.reference
+    - if @statement.issued? || @statement.paid?
+      = link_to "Page à jeton", public_revenue_share_statement_path(@statement.token), target: "_blank", rel: "noopener", class: "mt-2 inline-block text-xs font-medium text-4s-main hover:underline"
+
+.flex.flex-wrap.items-center.gap-3.mb-6
+  - if @statement.draft?
+    = button_to "Émettre le relevé", issue_finance_revenue_share_statement_path(@statement), method: :post,
+                class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90",
+                form: { data: { turbo_confirm: "Émettre fige les montants, passe l'écriture et envoie le mail. Continuer ?" } }
+    = button_to "Supprimer le brouillon", finance_revenue_share_statement_path(@statement), method: :delete,
+                class: "text-sm text-red-600 hover:underline",
+                form: { data: { turbo_confirm: "Supprimer ce brouillon ?" } }
+  - elsif @statement.issued?
+    = button_to "Marquer payé", mark_paid_finance_revenue_share_statement_path(@statement), method: :patch,
+                class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50",
+                form: { data: { turbo_confirm: "Le virement est parti ? Le relevé passera à « payé »." } }
+
+- if @statement.draft?
+  .mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
+    p.text-sm.text-gray-700
+      strong Brouillon.
+      |  Relis les lignes : à l'émission, les montants sont figés, l'écriture part au journal des achats et le mail au bénéficiaire. Une réservation modifiée après coup ne réécrira pas ce relevé — l'écart reviendra au suivant en régularisation.
+
+h2.text-sm.uppercase.tracking-wide.text-gray-400.mb-2 Lignes retenues
+
+.overflow-x-auto.relative.mb-8
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-6[scope="col"] Dates
+        th.py-3.px-6[scope="col"] Client
+        th.py-3.px-6[scope="col"] Nature
+        th.py-3.px-6.text-right[scope="col"] Montant
+    tbody
+      - @lines.each do |line|
+        tr.border-b.bg-white
+          td.py-3.px-6.whitespace-nowrap
+            - if line.from_date
+              = "#{l(line.from_date, format: :short)} → #{l(line.to_date, format: :short)}"
+          td.py-3.px-6.text-gray-900= line.label
+          td.py-3.px-6
+            - couleur = line.adjustment? ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-600"
+            span.inline-flex.items-center.rounded-full.px-2.py-0.5.text-xs.font-medium(class=couleur)= line.kind_label
+          td.py-3.px-6.text-right.whitespace-nowrap.font-medium.text-gray-900= number_to_currency(line.amount_cents / 100.0)
+      tr.bg-gray-50
+        td.py-3.px-6.font-semibold.text-gray-900(colspan="3") Base
+        td.py-3.px-6.text-right.font-semibold.text-gray-900= number_to_currency(@statement.base_cents / 100.0)
+
+- if @excluded.any?
+  h2.text-sm.uppercase.tracking-wide.text-gray-400.mb-2 Écartées, et pourquoi
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Dates
+          th.py-3.px-6[scope="col"] Réservation
+          th.py-3.px-6[scope="col"] Raison
+          th.py-3.px-6.text-right[scope="col"] Montant encodé
+      tbody
+        - @excluded.each do |item|
+          tr.border-b.bg-white
+            td.py-3.px-6.whitespace-nowrap
+              - if item.booking.from_date
+                = "#{l(item.booking.from_date, format: :short)} → #{l(item.booking.to_date, format: :short)}"
+            td.py-3.px-6.text-gray-700= item.booking.group_name.presence || [item.booking.firstname, item.booking.lastname].compact_blank.join(" ").presence || "Réservation ##{item.booking.id}"
+            td.py-3.px-6= item.reason
+            td.py-3.px-6.text-right.whitespace-nowrap.text-gray-400= number_to_currency(item.booking.price_cents.to_i / 100.0)

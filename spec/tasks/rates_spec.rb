@@ -95,6 +95,19 @@ RSpec.describe "rates rake tasks", type: :task do
       expect(Pricing::Rates.cents("pot.swing_share", on: Date.new(2027, 5, 1))).to be_nil
     end
 
+    # Epic #246 — le batch cooking LIT ces deux clés à la date de la session,
+    # jamais une constante Ruby. Une version qui ne couvrirait pas la date
+    # rendrait la saisie impossible sans qu'aucune spec de service ne le voie.
+    it "rend les deux clés du batch cooking lisibles à la date d'une session" do
+      run_task("rates:seed_sourciers")
+      Pricing::Rates.reset!
+
+      expect(Pricing::Rates.cents("meal.batchcooking.per_person", on: Date.new(2026, 9, 12)))
+        .to eq(500)
+      expect(Pricing::Rates.cents("meal.batchcooking.cook_volunteering", on: Date.new(2026, 9, 12)))
+        .to eq(350)
+    end
+
     it "est idempotent : deux passages ne modifient ni les montants ni les versions" do
       run_task("rates:seed_sourciers")
       Rate.find_by(key: "dome.daily").update!(amount_cents: 1_500)

@@ -1,0 +1,55 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "#{@agreement.lodging&.name} — partage de revenus",
+           links: [link_to("Modifier l'accord", edit_finance_revenue_share_agreement_path(@agreement), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.grid.gap-4.mb-6(class="md:grid-cols-3")
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.tracking-wide.text-gray-400 Bénéficiaire
+    p.mt-1.text-sm.font-medium.text-gray-900= @agreement.beneficiary_name
+    p.text-xs.text-gray-500= @agreement.beneficiary_email.presence || "Aucun email — le relevé ne partira pas tout seul"
+    p.text-xs.text-gray-500= @agreement.iban_masked || "Aucun IBAN enregistré"
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.tracking-wide.text-gray-400 Part reversée
+    p.mt-1.text-2xl.font-semibold.text-gray-900= "#{@agreement.share_percent} %"
+    p.text-xs.text-gray-500= "Relevé #{@agreement.period_label.downcase}"
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.tracking-wide.text-gray-400 Prochaine période à relever
+    - if @next_period
+      p.mt-1.text-lg.font-semibold.text-gray-900= @agreement.period_label_for(@next_period.first)
+      p.text-xs.text-gray-500= "#{l(@next_period.first, format: :short)} → #{l(@next_period.last, format: :short)}"
+      = button_to "Générer le relevé",
+                  finance_revenue_share_agreement_statements_path(@agreement, period_from: @next_period.first.to_s),
+                  method: :post,
+                  class: "mt-3 inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:opacity-90"
+    - else
+      p.mt-1.text-sm.text-gray-500 Toutes les périodes closes sont relevées.
+
+h2.text-sm.uppercase.tracking-wide.text-gray-400.mb-2 Relevés
+
+- if @statements.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p Aucun relevé pour l'instant. Génère celui de la dernière période close.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Période
+          th.py-3.px-6[scope="col"] Base
+          th.py-3.px-6[scope="col"] Part
+          th.py-3.px-6[scope="col"] Statut
+          th.py-3.px-6[scope="col"]
+      tbody
+        - @statements.each do |statement|
+          tr.border-b.bg-white
+            td.py-4.px-6.font-medium.text-gray-900
+              = link_to statement.period_label, finance_revenue_share_statement_path(statement), class: "hover:underline"
+              .text-xs.font-normal.text-gray-400= "#{l(statement.period_from, format: :short)} → #{l(statement.period_to, format: :short)}"
+            td.py-4.px-6= number_to_currency(statement.base_cents / 100.0)
+            td.py-4.px-6.font-medium.text-gray-900= number_to_currency(statement.share_cents / 100.0)
+            td.py-4.px-6
+              - couleur = statement.paid? ? "bg-teal-100 text-teal-800" : (statement.issued? ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-600")
+              span.inline-flex.items-center.rounded-full.px-2.py-0.5.text-xs.font-medium(class=couleur)= statement.status_label
+            td.py-4.px-6.text-right.whitespace-nowrap
+              = link_to "Ouvrir", finance_revenue_share_statement_path(statement), class: "text-xs font-medium text-gray-700 hover:underline"
