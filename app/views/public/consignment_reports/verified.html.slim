@@ -1,0 +1,7 @@
+.max-w-2xl.mx-auto.py-10.text-center
+  h1.text-2xl.font-semibold.text-gray-900
+    | Votre relevé de #{@report.period_label} est vérifié
+  p.mt-3.text-sm.text-gray-600
+    | Nous avons repris vos ventes : #{number_to_currency(@report.displayed_gross_cents / 100.0)} vendus, dont #{number_to_currency(@report.displayed_net_cents / 100.0)} pour vous.
+  p.mt-2.text-sm.text-gray-500
+    | Il n'est plus modifiable depuis cette page. Si quelque chose vous semble faux, écrivez-nous — on corrigera ensemble.
