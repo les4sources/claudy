@@ -4,8 +4,10 @@ class HumansController < BaseController
   breadcrumb "Équipe", :humans_path, match: :exact
 
   def index
+    # `includes` sur les appartenances : sans lui, la colonne « Pôles »
+    # (epic #239, phase 4) refait deux requêtes par ligne du tableau.
     @humans = HumanDecorator
-      .decorate_collection(Human.unscoped.all.order(name: :asc))
+      .decorate_collection(Human.unscoped.all.includes(team_memberships: :team).order(name: :asc))
   end
 
   def show
@@ -105,7 +107,7 @@ class HumansController < BaseController
   private
 
   def get_human
-    @human = Human.unscoped.find(params[:id])
+    @human = Human.unscoped.includes(team_memberships: :team).find(params[:id])
   end
 
   def set_presenters
