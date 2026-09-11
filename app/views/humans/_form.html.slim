@@ -26,6 +26,20 @@
                        hint: "Un fichier au format JPG, PNG ou GIF"
         = f.hidden_field :photo_cache
 
+    / Coordonnées bancaires (epic #246, phase 2). Un cuisinier de batch cooking —
+      un enfant compris — se fait payer par virement : sans IBAN, son compte
+      créditeur reste un chiffre qu'on ne peut pas solder. Pour un enfant,
+      l'IBAN est celui d'un parent, d'où le titulaire.
+    = f.text_field :iban,
+                   label: "IBAN",
+                   hint: "Pour être payé·e par virement (batch cooking, rémunérations). Laisse vide s'il n'y en a pas.",
+                   class: "md:w-1/2 lg:w-2/3"
+
+    = f.text_field :iban_holder_name,
+                   label: "Titulaire du compte",
+                   hint: "Seulement si le compte n'est pas au nom de la personne — celui d'un parent, par exemple.",
+                   class: "md:w-1/2 lg:w-2/3"
+
     = f.label :description,
               "Présentation complète"
     = f.rich_text_area :description

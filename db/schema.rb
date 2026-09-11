@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_11_060000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_11_070000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1010,6 +1010,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_060000) do
     t.datetime "deleted_at", precision: nil
     t.text "description"
     t.string "email"
+    t.text "iban"
+    t.string "iban_holder_name"
     t.string "name"
     t.string "photo"
     t.boolean "roles_enabled", default: true, null: false
