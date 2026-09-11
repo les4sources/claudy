@@ -54,6 +54,12 @@ class GeneralAccount < ApplicationRecord
   # qui ne lui revient pas.
   REVENUE_SHARE_CODE = "619000".freeze
 
+  # Les écarts de caisse (epic #243, phase 3). Un comptage qui ne tombe pas
+  # juste et dont on n'a pas retrouvé l'origine s'écrit ICI, jamais en lissant
+  # le solde : une caisse qu'on ajuste en silence ne dit plus rien du tout.
+  # Une caisse en moins est une charge, une caisse en plus vient la créditer.
+  CASH_DIFFERENCE_CODE = "658000".freeze
+
   has_paper_trail
   has_soft_deletion default_scope: true
 

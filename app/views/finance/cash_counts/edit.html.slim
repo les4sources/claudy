@@ -1,0 +1,9 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Reprendre le comptage"
+
+.mb-4.rounded-lg.border.border-amber-200.bg-amber-50.px-4.py-3.text-sm.text-amber-900
+  strong Brouillon.
+  |  Ce comptage n'est pas validé : son écart n'est pas figé et rien n'a été écrit en comptabilité. Recompte le tiroir, ou assume l'écart.
+
+= render "finance/cash_counts/form", count: @count, account: @account, expected_cents: @expected_cents,
+         url: finance_cash_count_path(@count), method: :patch, submit_label: "Valider le comptage"

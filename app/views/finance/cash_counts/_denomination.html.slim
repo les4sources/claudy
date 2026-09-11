@@ -1,0 +1,13 @@
+/ Une dénomination de la grille. Le champ est vide par défaut, pas à zéro :
+  « 0 » et « pas encore compté » ne disent pas la même chose au moment où on
+  vide le tiroir.
+- key = CashCount.denomination_key(unit_cents)
+- quantity = count.quantity_for(unit_cents)
+div
+  label.block.text-xs.font-medium.text-gray-500(for="cash_count_denominations_#{key.tr('.', '_')}")
+    = unit_cents >= 100 ? "#{unit_cents / 100} €" : "#{unit_cents} c"
+  = number_field_tag "cash_count[denominations][#{key}]", (quantity.positive? ? quantity : nil),
+                     id: "cash_count_denominations_#{key.tr('.', '_')}", min: 0, step: 1, inputmode: "numeric",
+                     placeholder: "0",
+                     class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm",
+                     data: { cash_count_target: "quantity", unit_cents: unit_cents, action: "input->cash-count#refresh" }

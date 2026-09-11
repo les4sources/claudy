@@ -54,24 +54,25 @@ module Finance
     end
 
     def opening_cents
-      @opening_cents ||= accounting_balance_before(from)
+      @opening_cents ||= self.class.accounting_balance(cash_account: @account, up_to: from, inclusive: false)
+    end
+
+    # Le solde comptable de la caisse à une date. Sorti de la feuille parce que
+    # le comptage (phase 3) a besoin du MÊME solde théorique : deux façons de le
+    # calculer donneraient deux vérités, et l'écart serait une illusion.
+    def self.accounting_balance(cash_account:, up_to:, inclusive: true)
+      periode = inclusive ? (..up_to) : (...up_to)
+      lines = JournalLine.joins(:journal_entry)
+                         .where(general_account_id: cash_account.general_account_id)
+                         .where(journal_entries: { legal_entity_id: cash_account.legal_entity_id })
+                         .where(journal_entries: { entry_date: periode })
+
+      lines.sum(:debit_cents) - lines.sum(:credit_cents)
     end
 
     def closing_cents = opening_cents + entries.sum(&:amount_cents)
 
     def incoming_cents = entries.select { |e| e.amount_cents.positive? }.sum(&:amount_cents)
     def outgoing_cents = entries.select { |e| e.amount_cents.negative? }.sum(&:amount_cents)
-
-    private
-
-    # Le solde du compte général de la caisse, pour son entité, avant une date.
-    def accounting_balance_before(date)
-      lines = JournalLine.joins(:journal_entry)
-                         .where(general_account_id: @account.general_account_id)
-                         .where(journal_entries: { legal_entity_id: @account.legal_entity_id })
-                         .where(journal_entries: { entry_date: ...date })
-
-      lines.sum(:debit_cents) - lines.sum(:credit_cents)
-    end
   end
 end

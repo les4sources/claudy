@@ -20,6 +20,8 @@
         = form_with url: finance_cash_sheet_path, method: :get, class: "inline" do
           = hidden_field_tag :month, sheet.month.strftime("%Y-%m")
           = select_tag :cash_account_id, options_from_collection_for_select(accounts, :id, :name, sheet.account.id), onchange: "this.form.requestSubmit()", class: "rounded-md border-gray-300 shadow-sm text-sm"
+      = link_to "Comptages", finance_cash_counts_path, class: "text-gray-500 hover:underline"
+      = link_to "🧮 Compter la caisse", new_finance_cash_count_path, class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
       = link_to "Motifs", finance_cash_motifs_path, class: "text-gray-500 hover:underline"
 
   .grid.grid-cols-2.gap-3.mb-4(class="sm:grid-cols-4")

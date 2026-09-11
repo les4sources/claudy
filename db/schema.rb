@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -402,6 +402,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
     t.index ["team_id"], name: "index_cash_allocations_on_team_id"
     t.index ["third_party_id"], name: "index_cash_allocations_on_third_party_id"
     t.check_constraint "amount_cents <> 0", name: "cash_allocations_non_zero"
+  end
+
+  create_table "cash_counts", force: :cascade do |t|
+    t.bigint "adjustment_cash_entry_id"
+    t.bigint "cash_account_id", null: false
+    t.text "comment"
+    t.bigint "counted_by_id"
+    t.integer "counted_cents", default: 0, null: false
+    t.date "counted_on", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.jsonb "denominations", default: {}, null: false
+    t.integer "difference_cents", default: 0, null: false
+    t.integer "expected_cents", default: 0, null: false
+    t.string "resolution"
+    t.string "status", default: "draft", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "validated_at"
+    t.index ["adjustment_cash_entry_id"], name: "index_cash_counts_on_adjustment_cash_entry_id"
+    t.index ["cash_account_id", "counted_on"], name: "index_cash_counts_on_cash_account_id_and_counted_on"
+    t.index ["cash_account_id"], name: "index_cash_counts_on_cash_account_id"
+    t.index ["counted_by_id"], name: "index_cash_counts_on_counted_by_id"
+    t.index ["deleted_at"], name: "index_cash_counts_on_deleted_at"
   end
 
   create_table "cash_entries", force: :cascade do |t|
@@ -1772,6 +1795,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
   add_foreign_key "cash_allocations", "legal_entities"
   add_foreign_key "cash_allocations", "teams"
   add_foreign_key "cash_allocations", "third_parties"
+  add_foreign_key "cash_counts", "cash_accounts"
+  add_foreign_key "cash_counts", "cash_entries", column: "adjustment_cash_entry_id"
+  add_foreign_key "cash_counts", "users", column: "counted_by_id"
   add_foreign_key "cash_entries", "cash_accounts"
   add_foreign_key "cash_entries", "cash_motifs"
   add_foreign_key "cash_motifs", "general_accounts"
