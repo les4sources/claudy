@@ -20,6 +20,11 @@ module Finance
                                      .limit(60)
                                      .to_a
       @entries = entries_by_session(@sessions)
+      # Les cuisiniers à payer (epic #246, phase 2). La file « À payer » de
+      # l'epic #240 (phase 4) n'existe pas encore : en attendant, la dette vit
+      # ICI, là où les sessions se saisissent. Un cuisinier qu'on oublie de
+      # payer est le meilleur moyen de ne plus en avoir.
+      @payables = Finance::MemberPayables.new
     end
 
     def new

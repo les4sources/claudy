@@ -1,0 +1,86 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Dépôt-vente",
+           links: [link_to("Les artisans", consignors_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.mb-4.flex.flex-wrap.items-center.justify-between.gap-3
+  .flex.items-center.gap-2
+    = link_to "←", finance_consignment_reports_path(month: (@month - 1.month).strftime("%Y-%m")), class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+    span.text-sm.font-semibold.text-gray-900.capitalize= l(@month, format: "%B %Y")
+    = link_to "→", finance_consignment_reports_path(month: (@month + 1.month).strftime("%Y-%m")), class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+
+.mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
+  p.text-sm.text-gray-700
+    strong C'est l'artisan qui déclare.
+    |  Chacun reçoit un lien pour le mois écoulé et liste ses ventes depuis son téléphone. La vérification et le règlement arrivent en phase 3 de l'epic #248.
+  p.mt-2.text-xs.text-gray-500
+    | Les demandes du mois s'envoient avec
+    code.mx-1.px-1.py-0.5.bg-gray-100.rounded rake consignment:request MONTH=#{@month.strftime('%Y-%m')} APPLY=1
+    | . Sans
+    code.mx-1.px-1.py-0.5.bg-gray-100.rounded
+      | APPLY=1
+    | , rien n'est écrit ni envoyé.
+
+- if @reports.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucun relevé pour #{l(@month, format: '%B %Y')}.
+- else
+  - total_brut = @reports.sum(&:displayed_gross_cents)
+  - total_net = @reports.sum(&:displayed_net_cents)
+  .grid.grid-cols-2.gap-3.mb-4(class="sm:grid-cols-4")
+    .rounded-lg.bg-white.ring-1.ring-gray-200.px-4.py-3
+      p.text-xs.uppercase.tracking-wide.text-gray-400 Relevés
+      p.mt-1.text-lg.font-semibold.text-gray-900= @reports.size
+    .rounded-lg.bg-white.ring-1.ring-gray-200.px-4.py-3
+      p.text-xs.uppercase.tracking-wide.text-gray-400 Déclarés
+      p.mt-1.text-lg.font-semibold.text-gray-900= @reports.count { |r| !r.requested? }
+    .rounded-lg.bg-white.ring-1.ring-gray-200.px-4.py-3
+      p.text-xs.uppercase.tracking-wide.text-gray-400 Total vendu
+      p.mt-1.text-lg.font-semibold.text-gray-900= number_to_currency(total_brut / 100.0)
+    .rounded-lg.bg-white.ring-1.ring-4s-main.px-4.py-3
+      p.text-xs.uppercase.tracking-wide.text-gray-400 Part des artisans
+      p.mt-1.text-lg.font-semibold.text-gray-900= number_to_currency(total_net / 100.0)
+
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Artisan
+          th.py-3.px-6[scope="col"] État
+          th.py-3.px-6.text-right[scope="col"] Vendu
+          th.py-3.px-6.text-right[scope="col"] Commission
+          th.py-3.px-6.text-right[scope="col"] Net
+          th.py-3.px-6[scope="col"] Règlement
+          th.py-3.px-6[scope="col"]
+      tbody
+        - @reports.each do |report|
+          tr.border-b.bg-white
+            td.py-4.px-6.font-medium.text-gray-900.align-top
+              = report.consignor.name
+              .text-xs.text-gray-400= report.reference
+            td.py-4.px-6.align-top
+              - couleur = { "requested" => "bg-amber-100 text-amber-800", "declared" => "bg-blue-100 text-blue-800", "verified" => "bg-teal-100 text-teal-800", "settled" => "bg-emerald-100 text-emerald-800" }[report.status]
+              span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium #{couleur}"
+                = report.status_label
+              - if report.declared_at
+                .mt-1.text-xs.text-gray-400 déclaré le #{l(report.declared_at.to_date, format: :short)}
+              - elsif report.requested_at
+                .mt-1.text-xs.text-gray-400 sollicité le #{l(report.requested_at.to_date, format: :short)}
+              - else
+                .mt-1.text-xs.text-gray-400 pas encore sollicité
+            td.py-4.px-6.text-right.whitespace-nowrap.align-top= number_to_currency(report.displayed_gross_cents / 100.0)
+            td.py-4.px-6.text-right.whitespace-nowrap.align-top.text-gray-400= number_to_currency(report.displayed_commission_cents / 100.0)
+            td.py-4.px-6.text-right.whitespace-nowrap.align-top.font-medium.text-gray-900= number_to_currency(report.displayed_net_cents / 100.0)
+            td.py-4.px-6.align-top.text-xs= report.consignor.settlement_mode_label
+            td.py-4.px-6.text-right.align-top
+              - if report.editable_by_consignor?
+                = button_to "Renvoyer la demande", resend_finance_consignment_report_path(report), method: :post, class: "text-xs text-blue-500 border-b-2 border-blue-200 hover:text-blue-700", form: { class: "inline" }
+
+- if @missing.any?
+  .mt-6.rounded-lg.border.border-amber-200.px-4.py-3(class="bg-amber-50/60")
+    p.text-sm.font-semibold.text-amber-900
+      | #{@missing.size} artisan(s) sans relevé pour ce mois
+    p.mt-1.text-sm.text-amber-900
+      = @missing.map(&:name).to_sentence
+    p.mt-1.text-xs.text-amber-800
+      | Leur contrat court pourtant sur ce mois : la demande n'a pas encore été lancée.
