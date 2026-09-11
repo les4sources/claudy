@@ -9,9 +9,13 @@
   div
     = f.label :team_id, "Pôle", class: "block text-xs font-medium text-gray-500"
     = f.collection_select :team_id, teams, :id, :name, { include_blank: "Non affecté" }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  / L'entité est PRÉSÉLECTIONNÉE sur celle du compte de la ligne (issue #289) :
+    un compte de la Fondation ne peut pas raisonnablement proposer le Domaine
+    par défaut, simplement parce qu'il vient en premier par ordre alphabétique.
+    Ça reste un défaut, pas une contrainte — la liste s'ouvre toujours.
   div
     = f.label :legal_entity_id, "Entité", class: "block text-xs font-medium text-gray-500"
-    = f.collection_select :legal_entity_id, entities, :id, :name, {}, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+    = f.collection_select :legal_entity_id, entities, :id, :name, { selected: entry.cash_account.legal_entity_id }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
   / L'événement (epic #245, phase 2) est FACULTATIF : c'est ce qui rattache une
     recette à sa page comptable. Proposé pour une ligne entrante comme sortante —
     un remboursement est une recette négative, et il doit se retrouver au même
@@ -23,6 +27,8 @@
     = f.label :amount, "Montant (€)", class: "block text-xs font-medium text-gray-500"
     / Deux décimales toujours : « -450,0 » se lit comme un montant tronqué et
       fait douter de ce qu'on est en train de valider.
-    = f.text_field :amount, value: number_with_precision(entry.remaining_cents / 100.0, precision: 2, separator: ","), class: "mt-1 w-28 rounded-md border-gray-300 text-sm shadow-sm"
+    / `label: false` : le builder pose sinon SON propre libellé sous le nôtre,
+      et faute de traduction pour `amount` il s'affichait « Amount ».
+    = f.text_field :amount, value: number_with_precision(entry.remaining_cents / 100.0, precision: 2, separator: ","), label: false, class: "mt-1 w-28 rounded-md border-gray-300 text-sm shadow-sm"
   button.inline-flex.items-center.rounded-md.border.border-transparent.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90" type="submit")
     | Affecter

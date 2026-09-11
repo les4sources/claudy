@@ -1,7 +1,8 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
            title: "À affecter",
-           links: [link_to("Tout le journal", finance_cash_entries_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+           links: [link_to("Règles d'affectation", finance_allocation_rules_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
+                   link_to("Tout le journal", finance_cash_entries_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
 
 - if @entries.blank?
   .p-8.text-center.bg-green-50.rounded-lg.border.border-green-100
@@ -13,6 +14,14 @@
     - if @entries.total_pages > 1
       |  — page #{@entries.current_page} sur #{@entries.total_pages}
     |  . Une ligne entièrement affectée se comptabilise toute seule.
+  / L'invitation ne se montre QUE quand la pile est haute : à cinq lignes, écrire
+    une règle coûte plus cher que les classer à la main.
+  - if @pending_total >= 20
+    p.mb-4.text-sm.text-gray-600
+      | Beaucoup de lignes se ressemblent d'un mois à l'autre.
+      = " "
+      = link_to "Écrire une règle d'affectation", finance_allocation_rules_path, class: "font-medium text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+      |  évite de reclasser la même dépense chaque mois — et propose d'un coup toutes les lignes qui lui correspondent.
 
   - @entries.each do |entry|
     .mb-4.p-4.bg-white.rounded-lg.border.border-gray-100

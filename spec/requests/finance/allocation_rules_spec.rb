@@ -39,6 +39,18 @@ RSpec.describe "Finances > Rapprochement assisté", type: :request do
     end
   end
 
+  # Issue #289 — l'écran existait sans porte d'entrée. La sous-navigation
+  # Comptabilité doit le lister, et le marquer actif quand on y est.
+  describe "la place dans la navigation" do
+    it "marque l'entrée active sur l'écran des règles" do
+      get finance_allocation_rules_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to match(/Règles d(?:&#39;|')affectation/)
+      expect(response.body).to match(%r{<a[^>]+class="[^"]*bg-teal-50 font-medium[^"]*"[^>]*href="#{Regexp.escape(finance_allocation_rules_path)}"|<a[^>]+href="#{Regexp.escape(finance_allocation_rules_path)}"[^>]*class="[^"]*bg-teal-50 font-medium[^"]*"})
+    end
+  end
+
   describe "l'acceptation" do
     let!(:rule) do
       AllocationRule.create!(label: "Énergie", general_account: energie, legal_entity: entity,
