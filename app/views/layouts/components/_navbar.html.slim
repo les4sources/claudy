@@ -342,6 +342,15 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
                       finance_cash_entries_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/cash_entries' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
+            / Les règles d'affectation (issue #289) se rangent juste après la
+              trésorerie : c'est depuis l'écran « À affecter » qu'on se rend
+              compte qu'une règle éviterait de reclasser la même ligne chaque
+              mois. Sans cette entrée, l'écran n'était atteignable par aucun
+              lien de l'application.
+            = link_to "Règles d'affectation",
+                      finance_allocation_rules_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/allocation_rules' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
             / La feuille du mois est la porte d'entrée de la caisse (epic #243,
               phase 2) ; les motifs restent accessibles depuis elle.
             = link_to "Caisse",

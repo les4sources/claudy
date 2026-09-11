@@ -104,6 +104,86 @@ RSpec.describe "Finances > Trésorerie", type: :request do
     end
   end
 
+  # Issue #289 — le formulaire proposait la PREMIÈRE entité par ordre
+  # alphabétique, sur toutes les lignes. Le compte de trésorerie porte pourtant
+  # déjà son entité : c'est elle le défaut juste.
+  describe "le formulaire d'affectation" do
+    # « Ahinvaux » passe AVANT « Fondation de test » : sans présélection, c'est
+    # lui que le navigateur retiendrait.
+    let!(:autre_entite) { build_legal_entity(name: "Ahinvaux SRL", form: "srl") }
+    let!(:entry) { build_cash_entry(cash_account, amount_cents: 130_000) }
+
+    it "présélectionne l'entité du compte sur l'écran à affecter" do
+      get finance_unallocated_cash_entries_path
+
+      expect(response.body).to include(%(<option selected="selected" value="#{entity.id}">#{entity.name}</option>))
+      expect(response.body).not_to include(%(<option selected="selected" value="#{autre_entite.id}">))
+    end
+
+    it "présélectionne l'entité du compte sur la page de détail" do
+      get finance_cash_entry_path(entry)
+
+      expect(response.body).to include(%(<option selected="selected" value="#{entity.id}">#{entity.name}</option>))
+    end
+
+    it "laisse le choix des autres entités" do
+      get finance_unallocated_cash_entries_path
+
+      expect(response.body).to include(%(<option value="#{autre_entite.id}">#{autre_entite.name}</option>))
+    end
+
+    # Deviner le pôle serait une affectation déguisée.
+    it "laisse le pôle sur « Non affecté » et le compte sur « Choisir… »" do
+      get finance_unallocated_cash_entries_path
+
+      expect(response.body).to include("Non affecté")
+      expect(response.body).to include("Choisir…")
+      expect(response.body).not_to include(%(<option selected="selected" value="#{accueil.id}">))
+      expect(response.body).not_to include(%(<option selected="selected" value="#{revenue.id}">))
+    end
+
+    # Le builder Tailwind posait son propre libellé sous le nôtre, et faute de
+    # traduction pour `amount` il s'affichait en anglais.
+    it "n'affiche qu'un libellé français pour le montant" do
+      get finance_unallocated_cash_entries_path
+
+      expect(response.body).to include("Montant (€)")
+      expect(response.body).not_to include(">Amount<")
+    end
+  end
+
+  # Issue #289 — l'écran des règles n'était atteignable par aucun lien de
+  # l'application. Le moteur tournait pour personne.
+  describe "l'accès aux règles d'affectation" do
+    let!(:entry) { build_cash_entry(cash_account) }
+
+    it "propose les règles depuis l'écran à affecter" do
+      get finance_unallocated_cash_entries_path
+
+      expect(response.body).to include(finance_allocation_rules_path)
+    end
+
+    it "invite à écrire une règle quand la pile est haute" do
+      30.times { |n| build_cash_entry(cash_account, amount_cents: 2_000 + n) }
+
+      get finance_unallocated_cash_entries_path
+
+      expect(response.body).to match(/Écrire une règle d(?:&#39;|')affectation/)
+    end
+
+    it "n'invite pas quand il ne reste qu'une poignée de lignes" do
+      get finance_unallocated_cash_entries_path
+
+      expect(response.body).not_to match(/Écrire une règle d(?:&#39;|')affectation/)
+    end
+
+    it "liste les règles dans la sous-navigation Comptabilité" do
+      get finance_unallocated_cash_entries_path
+
+      expect(response.body).to match(/Règles d(?:&#39;|')affectation/)
+    end
+  end
+
   describe "la passation" do
     let!(:entry) do
       e = build_cash_entry(cash_account, amount_cents: 60_000)
