@@ -24,6 +24,12 @@ class Human < ApplicationRecord
 
   has_one :user
 
+  # Les pôles de la personne (epic #239, phase 4). La fiche et l'index en ont
+  # besoin pour montrer où chacun s'engage ; l'appartenance elle-même continue
+  # de se modifier depuis l'écran du pôle, pas ici.
+  has_many :team_memberships, dependent: :destroy
+  has_many :teams, through: :team_memberships
+
   has_and_belongs_to_many :tasks
   has_and_belongs_to_many :gathering_actions, join_table: :gathering_action_humans
   has_many :carried_agenda_items, class_name: "AgendaItem", foreign_key: :carrier_id, dependent: :nullify
