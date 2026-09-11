@@ -1,0 +1,135 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: @invoice.reference.presence || "Facture ##{@invoice.id}",
+           links: [(link_to("Modifier", edit_finance_purchase_invoice_path(@invoice), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") unless @invoice.frozen_content?),
+                   link_to("Toutes les factures", finance_purchase_invoices_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")].compact
+
+/ Le garde des 5 000 € est une INFORMATION, jamais un blocage (décision 7) :
+  bloquer ferait rentrer la facture par un autre chemin, et on ne la verrait
+  plus du tout.
+- if @invoice.double_signature?
+  .mb-4.rounded-lg.border.border-amber-200.bg-amber-50.px-4.py-3.text-sm.text-amber-900
+    strong Double signature Triodos requise.
+    |  Au-delà de #{number_to_currency(PurchaseInvoice::DOUBLE_SIGNATURE_CENTS / 100.0)}, la banque demande deux signatures pour exécuter le virement.
+
+- if @invoice.disputed?
+  .mb-4.rounded-lg.border.border-red-200.bg-red-50.px-4.py-3.text-sm.text-red-800
+    strong Facture contestée.
+    = " #{@invoice.dispute_reason}"
+
+.grid.gap-4(class="lg:grid-cols-3")
+  .lg:col-span-2.space-y-4
+    .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+      .flex.flex-wrap.items-start.justify-between.gap-3
+        div
+          p.text-2xl.font-semibold.text-gray-900= number_to_currency(@invoice.total_cents / 100.0)
+          p.mt-1.text-sm.text-gray-500
+            = @invoice.third_party.name
+            - if @invoice.number.present?
+              = " · facture #{@invoice.number}"
+            = " · #{l(@invoice.issued_on, format: :short)}"
+          - if @invoice.due_on
+            p.text-xs.text-gray-400 Échéance le #{l(@invoice.due_on, format: :short)}
+          p.mt-1.text-xs.text-gray-400= @invoice.legal_entity.name
+        = render "finance/purchase_invoices/status_badge", invoice: @invoice
+
+      - if @invoice.to_pay? || @invoice.paid?
+        .mt-4.border-t.border-gray-100.pt-3.text-sm
+          .flex.items-center.justify-between
+            span.text-gray-500 Rapproché
+            span.font-medium.text-gray-900= number_to_currency(@invoice.allocated_cents / 100.0)
+          .flex.items-center.justify-between
+            span.text-gray-500 Reste dû
+            span.font-semibold.text-gray-900= number_to_currency(@invoice.remaining_cents / 100.0)
+          p.mt-2.text-xs.text-gray-400
+            | Le paiement est un rapprochement : la facture passera « Payée » quand une ligne de trésorerie affectée sur le 440000 la désignera pour son montant.
+
+    .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+      h3.text-xs.uppercase.tracking-wide.text-gray-400.mb-3 Ventilation
+      - if @invoice.purchase_invoice_lines.empty?
+        p.text-sm.text-gray-400 Aucune ligne — la facture ne peut pas quitter « À traiter ».
+      - else
+        table.w-full.text-sm.text-left.text-gray-500
+          tbody
+            - @invoice.purchase_invoice_lines.each do |line|
+              tr.border-b.border-gray-100
+                td.py-2.pr-3
+                  .font-medium.text-gray-900= line.general_account.to_s
+                  - if line.label.present?
+                    .text-xs.text-gray-400= line.label
+                td.py-2.px-3.text-xs.text-gray-500= line.team&.name || "sans pôle"
+                td.py-2.pl-3.text-right.font-medium.text-gray-900= number_to_currency(line.amount_cents / 100.0)
+          tfoot
+            tr
+              td.py-2.pr-3.font-semibold.text-gray-900(colspan="2") Total ventilé
+              td.py-2.pl-3.text-right.font-semibold class="#{@invoice.balanced? ? 'text-gray-900' : 'text-orange-700'}"
+                = number_to_currency(@invoice.lines_total_cents / 100.0)
+        - unless @invoice.balanced?
+          p.mt-2.text-sm.text-orange-700
+            | Il reste #{number_to_currency((@invoice.total_cents - @invoice.lines_total_cents) / 100.0)} à ventiler.
+
+    - if @journal_entry
+      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+        h3.text-xs.uppercase.tracking-wide.text-gray-400.mb-2 Écriture comptable
+        p.text-sm.text-gray-700
+          = link_to @journal_entry.reference, finance_ledger_path(q: @journal_entry.reference), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+          = " · journal des achats · #{l(@journal_entry.entry_date, format: :short)}"
+        p.mt-1.text-xs.text-gray-400
+          | Passée le #{l(@invoice.posted_at.to_date, format: :short)}. Pour la défaire, on contre-passe — on ne réécrit pas.
+
+  .space-y-4
+    .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+      h3.text-xs.uppercase.tracking-wide.text-gray-400.mb-2 Pièce justificative
+      - if @invoice.document.attached?
+        - if @invoice.document.content_type == "application/pdf"
+          object.w-full.rounded-lg.border.border-gray-200(data=url_for(@invoice.document) type="application/pdf" height="420")
+            p.p-3.text-sm.text-gray-500
+              = link_to "Ouvrir la pièce", url_for(@invoice.document), class: "text-blue-500 underline"
+        - else
+          = image_tag url_for(@invoice.document), class: "w-full rounded-lg border border-gray-200"
+        p.mt-2.text-xs.text-gray-400= @invoice.document.filename.to_s
+      - else
+        p.text-sm.text-gray-400 Aucune pièce déposée.
+
+    .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.space-y-3
+      h3.text-xs.uppercase.tracking-wide.text-gray-400 Et maintenant ?
+      - if @invoice.to_process? || @invoice.disputed?
+        = button_to "Envoyer au paiement", submit_finance_purchase_invoice_path(@invoice), method: :post, class: "w-full rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
+        - if @invoice.requires_validation?
+          p.text-xs.text-gray-400
+            | Cette facture demande l'aval du pôle #{@invoice.validation_team&.name || "concerné"} : elle s'arrêtera à « À valider ».
+      - elsif @invoice.to_validate?
+        p.text-sm.text-gray-600
+          | En attente du pôle #{@invoice.validation_team&.name || "concerné"}. L'écran de validation arrive en phase 3 de l'epic #240.
+      - elsif @invoice.to_pay?
+        p.text-sm.text-gray-600
+          | Prête à payer. La file « À payer » et le virement arrivent en phase 4 de l'epic #240.
+      - else
+        p.text-sm.text-gray-600 Payée le #{l(@invoice.paid_on, format: :short)}.
+
+      - unless @invoice.frozen_content?
+        - if @invoice.disputed?
+          = button_to "Remettre en traitement", reopen_finance_purchase_invoice_path(@invoice), method: :post, class: "w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+        - else
+          = form_with url: dispute_finance_purchase_invoice_path(@invoice), method: :post, class: "space-y-2" do
+            label.block.text-xs.font-medium.text-gray-500 Contester cette facture
+            = text_field_tag :reason, nil, placeholder: "Pourquoi ?", class: "w-full rounded-md border-gray-300 text-sm shadow-sm"
+            button.w-full.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(type="submit") Contester
+
+    - if @invoice.notes.present?
+      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+        h3.text-xs.uppercase.tracking-wide.text-gray-400.mb-2 Notes
+        p.text-sm.text-gray-700= @invoice.notes
+
+    .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+      h3.text-xs.uppercase.tracking-wide.text-gray-400.mb-2 Historique
+      ul.space-y-1.text-xs.text-gray-500
+        - @versions.each do |version|
+          li
+            = l(version.created_at.to_date, format: :short)
+            = " · #{version.event}"
+            - if version.whodunnit.present?
+              = " · #{version.whodunnit}"
+            - statut = version.changeset["status"] if version.respond_to?(:changeset)
+            - if statut.present?
+              = " · #{PurchaseInvoice::STATUS_LABELS[statut.last] || statut.last}"

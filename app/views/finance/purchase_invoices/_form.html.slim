@@ -1,0 +1,85 @@
+/ Le formulaire d'une facture d'achat. Le « reste à ventiler » se calcule
+  pendant qu'on tape : sur une facture à vingt lignes, découvrir le déséquilibre
+  à la validation veut dire tout relire.
+= form_with model: invoice, url: url, method: method, html: { class: "space-y-6" },
+            data: { controller: "purchase-invoice-form" } do |f|
+
+  .grid.gap-4(class="lg:grid-cols-3")
+    .lg:col-span-2.space-y-4
+      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.space-y-4
+        .grid.gap-3(class="sm:grid-cols-2")
+          div
+            label.block.text-xs.font-medium.text-gray-500 Fournisseur
+            = f.collection_select :third_party_id, third_parties, :id, :name, { include_blank: "Choisir…" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+          div
+            label.block.text-xs.font-medium.text-gray-500 Entité juridique
+            = f.collection_select :legal_entity_id, entities, :id, :name, {}, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+          div
+            label.block.text-xs.font-medium.text-gray-500 Numéro de facture
+            = f.text_field :number, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+          div
+            label.block.text-xs.font-medium.text-gray-500 Montant total (€)
+            = text_field_tag "purchase_invoice[total_euros]", (invoice.total_cents.to_i.positive? ? format("%.2f", invoice.total_cents / 100.0) : nil),
+                             inputmode: "decimal", placeholder: "0,00",
+                             class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm",
+                             data: { purchase_invoice_form_target: "total", action: "input->purchase-invoice-form#refresh" }
+          div
+            label.block.text-xs.font-medium.text-gray-500 Date de la facture
+            = f.date_field :issued_on, value: invoice.issued_on || Date.current, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+          div
+            label.block.text-xs.font-medium.text-gray-500 Échéance
+            = f.date_field :due_on, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+
+      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+        .flex.items-center.justify-between.mb-3
+          h3.text-xs.uppercase.tracking-wide.text-gray-400 Ventilation
+          button.text-sm.text-blue-500(type="button" data-action="purchase-invoice-form#add") ➕ Ajouter une ligne
+
+        #lignes.space-y-3(data-purchase-invoice-form-target="rows")
+          - invoice.purchase_invoice_lines.each_with_index do |line, index|
+            = f.fields_for :purchase_invoice_lines, line, child_index: index do |lf|
+              = render "finance/purchase_invoices/line", lf: lf, general_accounts: general_accounts, teams: teams
+
+        template(data-purchase-invoice-form-target="template")
+          = f.fields_for :purchase_invoice_lines, PurchaseInvoiceLine.new, child_index: "NEW_RECORD" do |lf|
+            = render "finance/purchase_invoices/line", lf: lf, general_accounts: general_accounts, teams: teams
+
+        .mt-4.border-t.border-gray-100.pt-3.space-y-1
+          .flex.items-center.justify-between.text-sm
+            span.text-gray-500 Ventilé
+            span.font-medium.text-gray-900(data-purchase-invoice-form-target="allocated") —
+          .flex.items-center.justify-between.text-sm
+            span.text-gray-500 Reste à ventiler
+            span.font-semibold.text-gray-900(data-purchase-invoice-form-target="remaining") —
+          p(data-purchase-invoice-form-target="verdict")
+
+    .space-y-4
+      / La pièce. Elle arrive par email : on la fait glisser depuis l'onglet
+        d'à côté plutôt que de la chercher dans l'arborescence.
+      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+        h3.text-xs.uppercase.tracking-wide.text-gray-400.mb-2 Pièce justificative
+        label.block.cursor-pointer.rounded-xl.border-2.border-dashed.border-gray-300.px-4.py-6.text-center(data-purchase-invoice-form-target="dropzone" data-action="dragover->purchase-invoice-form#dragover dragleave->purchase-invoice-form#dragleave drop->purchase-invoice-form#drop")
+          p.text-sm.text-gray-600 Glissez le PDF ici, ou cliquez pour le choisir.
+          p.mt-1.text-xs.text-gray-400(data-purchase-invoice-form-target="filename")
+            = invoice.document.attached? ? invoice.document.filename.to_s : "Aucune pièce choisie"
+          = file_field_tag "purchase_invoice[document]", accept: "application/pdf,image/*", class: "hidden",
+                           data: { purchase_invoice_form_target: "file", action: "change->purchase-invoice-form#showFilename" }
+
+      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.space-y-3
+        h3.text-xs.uppercase.tracking-wide.text-gray-400 Validation par un pôle
+        label.flex.items-start.gap-2.text-sm.text-gray-700
+          = f.check_box :requires_validation, class: "mt-1"
+          span Un pôle doit dire oui avant que cette facture soit payable.
+        div
+          label.block.text-xs.font-medium.text-gray-500 Pôle concerné
+          = f.collection_select :validation_team_id, teams, :id, :name, { include_blank: "Aucun" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+        p.text-xs.text-gray-400
+          | La validation elle-même arrive en phase 3 de l'epic #240. Ici, la case décide seulement où la facture s'arrête.
+
+      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+        label.block.text-xs.font-medium.text-gray-500 Notes
+        = f.text_area :notes, rows: 3, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+
+  .flex.flex-wrap.items-center.gap-3
+    = f.submit submit_label, class: "inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
+    = link_to "Annuler", finance_purchase_invoices_path, class: "text-sm text-gray-500 hover:underline"

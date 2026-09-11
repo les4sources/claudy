@@ -1,0 +1,22 @@
+/ Une ligne de ventilation : le compte de charge, le pôle, le montant.
+.rounded-xl.bg-gray-50.px-3.py-3(data-purchase-invoice-form-target="row")
+  = lf.hidden_field :id
+  = lf.hidden_field :_destroy, value: "0"
+  .grid.gap-2(class="sm:grid-cols-12")
+    .sm:col-span-4
+      label.block.text-xs.font-medium.text-gray-500 Compte
+      = lf.collection_select :general_account_id, general_accounts, :id, :to_s, { include_blank: "Choisir…" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+    .sm:col-span-3
+      label.block.text-xs.font-medium.text-gray-500 Pôle
+      = lf.collection_select :team_id, teams, :id, :name, { include_blank: "Non affecté" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+    .sm:col-span-3
+      label.block.text-xs.font-medium.text-gray-500 Libellé
+      = lf.text_field :label, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+    .sm:col-span-2
+      label.block.text-xs.font-medium.text-gray-500 Montant (€)
+      = text_field_tag "#{lf.object_name}[amount_euros]", (lf.object.amount_cents.to_i.nonzero? ? format("%.2f", lf.object.amount_cents / 100.0) : nil),
+                       inputmode: "decimal", placeholder: "0,00",
+                       class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm",
+                       data: { role: "amount", action: "input->purchase-invoice-form#refresh" }
+  .mt-2.text-right
+    button.text-xs.text-gray-400(type="button" data-action="purchase-invoice-form#remove") Retirer cette ligne

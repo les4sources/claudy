@@ -1,0 +1,73 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Achats",
+           links: [link_to("➕ Nouvelle facture", new_finance_purchase_invoice_path, class: "inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90")]
+
+/ Les totaux en tête portent sur TOUTES les factures, pas sur le filtre courant :
+  c'est une boussole, et une boussole qui suit le filtre ne sert à rien.
+.grid.grid-cols-2.gap-3.mb-5(class="lg:grid-cols-5")
+  - PurchaseInvoice::STATUSES.each do |status|
+    - donnees = @totals[status]
+    - actif = params[:status] == status
+    = link_to finance_purchase_invoices_path(request.query_parameters.merge(status: actif ? nil : status).compact), class: "rounded-lg bg-white px-4 py-3 ring-1 #{actif ? 'ring-4s-main' : 'ring-gray-200'} hover:ring-4s-main transition" do
+      p.text-xs.uppercase.tracking-wide.text-gray-400= PurchaseInvoice::STATUS_LABELS[status]
+      p.mt-1.text-lg.font-semibold.text-gray-900= number_to_currency(donnees[:cents] / 100.0)
+      p.text-xs.text-gray-400= "#{donnees[:count]} facture(s)"
+
+= form_with url: finance_purchase_invoices_path, method: :get, class: "mb-5 flex flex-wrap items-end gap-3" do
+  = hidden_field_tag :status, params[:status] if params[:status].present?
+  div
+    label.block.text-xs.font-medium.text-gray-500 Fournisseur
+    = select_tag :third_party_id, options_from_collection_for_select(@third_parties, :id, :name, params[:third_party_id]), include_blank: "Tous", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  div
+    label.block.text-xs.font-medium.text-gray-500 Entité
+    = select_tag :legal_entity_id, options_from_collection_for_select(@entities, :id, :name, params[:legal_entity_id]), include_blank: "Toutes", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  div
+    label.block.text-xs.font-medium.text-gray-500 Pôle
+    = select_tag :team_id, options_from_collection_for_select(@teams, :id, :name, params[:team_id]), include_blank: "Tous", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  div
+    label.block.text-xs.font-medium.text-gray-500 Du
+    = date_field_tag :from, params[:from], class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  div
+    label.block.text-xs.font-medium.text-gray-500 Au
+    = date_field_tag :to, params[:to], class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  button.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(type="submit") Filtrer
+  = link_to "Tout voir", finance_purchase_invoices_path, class: "text-sm text-gray-500 hover:underline"
+
+- if @invoices.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucune facture ne correspond.
+    p.mt-1 Déposez la première pièce : le PDF, le fournisseur, le montant, et la ventilation par compte et par pôle.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Date
+          th.py-3.px-6[scope="col"] Fournisseur
+          th.py-3.px-6[scope="col"] Statut
+          th.py-3.px-6[scope="col"] Ventilation
+          th.py-3.px-6.text-right[scope="col"] Total
+      tbody
+        - @invoices.each do |invoice|
+          tr.border-b.bg-white
+            td.py-4.px-6.whitespace-nowrap.align-top
+              = link_to l(invoice.issued_on, format: :short), finance_purchase_invoice_path(invoice), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+              - if invoice.due_on
+                .text-xs.text-gray-400 échéance #{l(invoice.due_on, format: :short)}
+            td.py-4.px-6.align-top
+              .font-medium.text-gray-900= invoice.third_party.name
+              .text-xs.text-gray-400= invoice.number.presence || "sans numéro"
+              - if invoice.legal_entity
+                .text-xs.text-gray-400= invoice.legal_entity.name
+            td.py-4.px-6.align-top
+              = render "finance/purchase_invoices/status_badge", invoice: invoice
+            td.py-4.px-6.align-top.text-xs
+              - if invoice.balanced?
+                span.text-gray-400= invoice.purchase_invoice_lines.map { |l| l.team&.name }.compact.uniq.to_sentence.presence || "sans pôle"
+              - else
+                span.text-orange-700= "reste #{number_to_currency((invoice.total_cents - invoice.lines_total_cents) / 100.0)}"
+            td.py-4.px-6.text-right.whitespace-nowrap.align-top.font-medium.text-gray-900
+              = number_to_currency(invoice.total_cents / 100.0)
+              - if invoice.double_signature?
+                .text-xs.text-amber-700 double signature
