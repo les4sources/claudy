@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_11_050000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -555,6 +555,43 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
     t.index ["commentable_type", "commentable_id", "created_at"], name: "index_comments_on_commentable_and_created_at"
     t.index ["commentable_type", "commentable_id"], name: "index_comments_on_commentable"
     t.index ["deleted_at"], name: "index_comments_on_deleted_at"
+  end
+
+  create_table "consignment_report_lines", force: :cascade do |t|
+    t.integer "amount_cents", default: 0, null: false
+    t.bigint "consignment_report_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "label", null: false
+    t.integer "position", default: 0, null: false
+    t.integer "quantity", default: 1, null: false
+    t.integer "unit_price_cents", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["consignment_report_id"], name: "index_consignment_lines_on_report"
+    t.index ["deleted_at"], name: "index_consignment_lines_on_deleted_at"
+  end
+
+  create_table "consignment_reports", force: :cascade do |t|
+    t.integer "commission_cents", default: 0, null: false
+    t.bigint "consignor_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "declared_at"
+    t.datetime "deleted_at"
+    t.integer "gross_cents", default: 0, null: false
+    t.integer "net_cents", default: 0, null: false
+    t.text "notes"
+    t.date "period_month", null: false
+    t.datetime "requested_at"
+    t.string "status", default: "requested", null: false
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "verified_at"
+    t.bigint "verified_by_id"
+    t.index ["consignor_id", "period_month"], name: "index_consignment_reports_on_consignor_and_month", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["consignor_id"], name: "index_consignment_reports_on_consignor_id"
+    t.index ["deleted_at"], name: "index_consignment_reports_on_deleted_at"
+    t.index ["token"], name: "index_consignment_reports_on_token", unique: true
+    t.index ["verified_by_id"], name: "index_consignment_reports_on_verified_by_id"
   end
 
   create_table "consignors", force: :cascade do |t|
@@ -1807,6 +1844,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
   add_foreign_key "coda_statements", "cash_accounts"
   add_foreign_key "coda_statements", "coda_imports"
   add_foreign_key "comments", "users", column: "author_id"
+  add_foreign_key "consignment_report_lines", "consignment_reports"
+  add_foreign_key "consignment_reports", "consignors"
+  add_foreign_key "consignment_reports", "users", column: "verified_by_id"
   add_foreign_key "consignors", "humans"
   add_foreign_key "consignors", "third_parties"
   add_foreign_key "coworking_packs", "customers"

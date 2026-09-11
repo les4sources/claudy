@@ -208,6 +208,11 @@ Rails.application.routes.draw do
     # lit dans la liste, il n'a pas assez à dire pour mériter sa page. Pas de
     # `destroy` non plus — un comptage est un fait daté.
     resources :cash_counts, path: "cash/counts", only: %i[index new create edit update]
+    # Dépôt-vente (epic #248, phase 2) : le tableau de bord mensuel des relevés.
+    # La fiche d'un relevé et son règlement arrivent en phase 3.
+    resources :consignment_reports, path: "consignments", only: %i[index] do
+      member { post :resend }
+    end
     # Motifs de caisse (epic #243). Pas de `destroy` : un motif se désactive,
     # sinon une feuille de caisse passée perdrait son vocabulaire.
     resources :cash_motifs, path: "cash/motifs", except: %i[show destroy] do
@@ -528,6 +533,11 @@ Rails.application.routes.draw do
   get  "sejour/:token/modification",       to: "public/stay_change_requests#new",    as: :new_public_stay_change_request
   post "sejour/:token/modification/devis", to: "public/stay_change_requests#quote",  as: :public_stay_change_request_quote
   post "sejour/:token/modification",       to: "public/stay_change_requests#create", as: :public_stay_change_requests
+
+  # Déclaration de dépôt-vente par l'artisan (epic #248, phase 2) — canal jeton,
+  # sans connexion. Le jeton EST l'authentification : il est long et non devinable.
+  get   "depot-vente/:token", to: "public/consignment_reports#show",   as: :public_consignment_report
+  patch "depot-vente/:token", to: "public/consignment_reports#update"
 
   namespace :public do
     # Épic #81, Phase 9 — demande de réservation publique legacy retirée
