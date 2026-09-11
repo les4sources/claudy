@@ -204,6 +204,10 @@ Rails.application.routes.draw do
     post "cash/lines", to: "cash_sheet#create", as: :cash_sheet_lines
     patch "cash/lines/:id", to: "cash_sheet#update", as: :cash_sheet_line
     post "cash/lines/:id/exclude", to: "cash_sheet#exclude", as: :exclude_cash_sheet_line
+    # Comptages de caisse (epic #243, phase 3). Pas de `show` : un comptage se
+    # lit dans la liste, il n'a pas assez à dire pour mériter sa page. Pas de
+    # `destroy` non plus — un comptage est un fait daté.
+    resources :cash_counts, path: "cash/counts", only: %i[index new create edit update]
     # Motifs de caisse (epic #243). Pas de `destroy` : un motif se désactive,
     # sinon une feuille de caisse passée perdrait son vocabulaire.
     resources :cash_motifs, path: "cash/motifs", except: %i[show destroy] do

@@ -6,6 +6,27 @@
     strong La double écriture se génère, elle ne se saisit jamais.
     |  On encode un fait — une ligne bancaire ventilée, un décompte, un règlement — et l'application produit les deux côtés. Aucun écran ne permet de taper un débit et un crédit à la main.
 
+/ Le rappel de comptage de caisse (epic #243, phase 3). Il ne crie qu'au-delà
+  de sept jours : un rappel permanent devient du décor, et on cesse de le lire.
+- if @days_since_cash_count.nil? || @days_since_cash_count > 7
+  .mb-6.p-4.rounded-lg.border.border-amber-200(class="bg-amber-50/70")
+    .flex.flex-wrap.items-center.justify-between.gap-3
+      div
+        p.text-sm.font-semibold.text-amber-900
+          - if @days_since_cash_count.nil?
+            | La caisse n'a jamais été comptée.
+          - else
+            | Dernier comptage de caisse il y a #{@days_since_cash_count} jours.
+        p.mt-1.text-sm.text-amber-900
+          | Retrouver l'origine d'un écart sur trente jours est impossible ; sur sept, c'est une question qu'on pose au bar.
+      = link_to "🧮 Compter maintenant", new_finance_cash_count_path, class: "inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
+- else
+  .mb-6.p-4.rounded-lg.border.border-emerald-100(class="bg-emerald-50/60")
+    p.text-sm.text-emerald-900
+      | Caisse comptée il y a #{@days_since_cash_count} jour(s) —
+      = link_to "voir les comptages", finance_cash_counts_path, class: "underline hover:no-underline"
+      | .
+
 .grid.gap-4.mb-8(class="md:grid-cols-3")
   .p-5.bg-white.rounded-lg.border.border-gray-100
     p.text-xs.uppercase.text-gray-400 Plan comptable

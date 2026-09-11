@@ -1,0 +1,69 @@
+/ La grille de comptage. Billets d'un côté, pièces de l'autre, dans l'ordre où
+  on vide un tiroir. Le solde théorique est affiché AVANT la validation, et
+  l'écart se met à jour pendant qu'on tape : découvrir l'écart après coup, sur
+  l'écran suivant, est ce qui fait qu'on ne recompte pas.
+- expected = expected_cents
+= form_with model: count, url: url, method: method, html: { class: "space-y-6" },
+            data: { controller: "cash-count", cash_count_expected_cents_value: expected } do |f|
+
+  .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+    .flex.flex-wrap.items-end.gap-4
+      div
+        label.block.text-xs.font-medium.text-gray-500(for="cash_count_counted_on") Compté le
+        / `label: false` : le builder pose sinon SON propre libellé sous le nôtre,
+          et faute de traduction pour `counted_on` il s'affiche « Counted on ».
+        = f.date_field :counted_on, value: count.counted_on || Date.current, label: false, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+      div
+        p.text-xs.font-medium.text-gray-500 Caisse
+        p.mt-1.text-sm.font-medium.text-gray-900= account.name
+
+  .grid.gap-4(class="lg:grid-cols-2")
+    .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+      h3.text-xs.uppercase.tracking-wide.text-gray-400.mb-3 Billets
+      .grid.grid-cols-2.gap-3(class="sm:grid-cols-3")
+        - CashCount::NOTES.each do |unit_cents|
+          = render "finance/cash_counts/denomination", f: f, count: count, unit_cents: unit_cents
+    .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+      h3.text-xs.uppercase.tracking-wide.text-gray-400.mb-3 Pièces
+      .grid.grid-cols-2.gap-3(class="sm:grid-cols-4")
+        - CashCount::COINS.each do |unit_cents|
+          = render "finance/cash_counts/denomination", f: f, count: count, unit_cents: unit_cents
+
+  .grid.grid-cols-1.gap-3(class="sm:grid-cols-3")
+    .rounded-lg.bg-white.ring-1.ring-gray-200.px-4.py-3
+      p.text-xs.uppercase.tracking-wide.text-gray-400 Compté
+      p.mt-1.text-lg.font-semibold.text-gray-900(data-cash-count-target="total") —
+    .rounded-lg.bg-white.ring-1.ring-gray-200.px-4.py-3
+      p.text-xs.uppercase.tracking-wide.text-gray-400 Solde théorique
+      p.mt-1.text-lg.font-semibold.text-gray-900= number_to_currency(expected / 100.0)
+    .rounded-lg.bg-white.ring-1.ring-4s-main.px-4.py-3
+      p.text-xs.uppercase.tracking-wide.text-gray-400 Écart
+      p.mt-1.text-lg.font-semibold.text-gray-900(data-cash-count-target="difference") —
+      p.mt-1(data-cash-count-target="verdict")
+
+  / Le choix forcé. Deux issues, jamais une troisième : on part chercher
+    l'origine (le comptage reste brouillon, rien n'est écrit) ou on assume
+    l'écart (écriture d'ajustement). Lisser en silence n'est pas une option.
+  div(data-cash-count-target="resolution" hidden=true)
+    .rounded-2xl.border.border-amber-200.px-4.py-4(class="bg-amber-50/60")
+      h3.text-sm.font-semibold.text-amber-900 La caisse ne tombe pas juste.
+      p.mt-1.text-sm.text-amber-900
+        | Écris ce que tu sais — même « je ne sais pas » est une information quand c'est daté — puis choisis quoi en faire.
+      .mt-3
+        label.block.text-xs.font-medium.text-gray-600(for="cash_count_comment") Commentaire
+        = f.text_area :comment, rows: 2, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+      .mt-3.space-y-2
+        label.flex.items-start.gap-2.text-sm.text-gray-800
+          = f.radio_button :resolution, "investigate", class: "mt-1"
+          span
+            strong Je retrouve l'origine.
+            |  Le comptage reste en brouillon, rien n'est écrit en comptabilité, et on repart sur la feuille du mois pour saisir la ligne qui manque.
+        label.flex.items-start.gap-2.text-sm.text-gray-800
+          = f.radio_button :resolution, "unexplained", class: "mt-1"
+          span
+            strong Écart inexpliqué.
+            |  Le comptage est validé et une ligne d'ajustement est écrite sur le compte des écarts de caisse, à la date du comptage.
+
+  .flex.flex-wrap.items-center.gap-3
+    = f.submit submit_label, class: "inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
+    = link_to "Annuler", finance_cash_counts_path, class: "text-sm text-gray-500 hover:underline"

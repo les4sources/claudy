@@ -62,6 +62,7 @@ namespace :accounting do
       ["620000", "Rémunérations", 6, "expense"],
       ["630000", "Amortissements", 6, "expense"],
       ["640000", "Charges diverses", 6, "expense"],
+      [GeneralAccount::CASH_DIFFERENCE_CODE, "Écarts de caisse", 6, "expense"],
       # Classe 7 — produits
       ["700000", "Locations d'hébergement", 7, "revenue"],
       ["700100", "Locations de salles", 7, "revenue"],
@@ -326,6 +327,48 @@ namespace :accounting do
 
     report("verify_revenue_shares", ecarts,
            "#{RevenueShareStatement.count} relevé(s) de partage vérifié(s)")
+  end
+
+  desc "Vérifie les comptages de caisse — exit 1 si écart"
+  task verify_cash_counts: :environment do
+    ecarts = []
+
+    CashCount.validated.includes(:adjustment_cash_entry).find_each do |count|
+      date = count.counted_on
+
+      if count.difference_cents.nonzero? && count.comment.blank?
+        ecarts << "Comptage du #{date} : écart de #{count.difference_cents} cents sans commentaire"
+      end
+
+      if count.resolution == "unexplained" && count.adjustment_cash_entry.blank?
+        ecarts << "Comptage du #{date} : écart inexpliqué sans écriture d'ajustement"
+      end
+
+      if count.difference_cents.nonzero? && count.resolution.blank?
+        ecarts << "Comptage du #{date} : validé avec un écart mais sans suite donnée"
+      end
+
+      # `expected_cents` est figé (décision 3). PaperTrail est la seule trace qui
+      # permette de le vérifier : si une version postérieure à la validation l'a
+      # touché, l'écart raconté par ce comptage n'est plus celui qu'on a constaté.
+      reecrit = count.versions.any? do |version|
+        version.event == "update" && count.validated_at.present? &&
+          version.created_at > count.validated_at && version.changeset.key?("expected_cents")
+      end
+      ecarts << "Comptage du #{date} : son solde théorique a été réécrit après validation" if reecrit
+
+      entry = count.adjustment_cash_entry
+      next if entry.blank?
+
+      if entry.amount_cents != count.difference_cents
+        ecarts << "Comptage du #{date} : l'ajustement porte #{entry.amount_cents} cents " \
+                  "pour un écart de #{count.difference_cents}"
+      end
+
+      ecarts << "Comptage du #{date} : l'ajustement n'est pas comptabilisé" unless entry.posted?
+    end
+
+    report("verify_cash_counts", ecarts, "#{CashCount.validated.count} comptage(s) validé(s) vérifié(s)")
   end
 
   def report(name, ecarts, resume)

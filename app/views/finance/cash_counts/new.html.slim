@@ -1,0 +1,10 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Compter la caisse"
+
+- if @account.blank?
+  .rounded-lg.border.border-dashed.border-gray-200.bg-white.px-4.py-6.text-sm.text-gray-500
+    p.font-medium.text-gray-700 Aucune caisse active.
+    p.mt-1 Le comptage porte sur le compte de trésorerie de type « Caisse ».
+- else
+  = render "finance/cash_counts/form", count: @count, account: @account, expected_cents: @expected_cents,
+           url: finance_cash_counts_path, method: :post, submit_label: "Valider le comptage"

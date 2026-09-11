@@ -1,0 +1,58 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Comptages de caisse",
+           links: [link_to("La feuille du mois", finance_cash_sheet_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
+                   link_to("🧮 Compter maintenant", new_finance_cash_count_path, class: "inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90")]
+
+.mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
+  p.text-sm.text-gray-700
+    strong L'écart se fige au comptage.
+    |  Le solde théorique et l'écart sont écrits à la validation et ne bougent plus, même si une ligne arrive après coup. Un écart qu'on recalcule à l'affichage se dissout tout seul — et c'est comme ça qu'on se réveille à −628 €.
+  p.mt-2.text-xs.text-gray-500
+    | Un comptage validé ne se modifie plus. Pour corriger, on en refait un.
+
+- if @counts.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucun comptage pour l'instant.
+    p.mt-1 Vingt secondes suffisent : on vide le tiroir, on tape les quantités, l'écran dit si la caisse est juste.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Date
+          th.py-3.px-6.text-right[scope="col"] Compté
+          th.py-3.px-6.text-right[scope="col"] Théorique
+          th.py-3.px-6.text-right[scope="col"] Écart
+          th.py-3.px-6[scope="col"] Suite donnée
+          th.py-3.px-6[scope="col"] Par
+      tbody
+        - @counts.each do |count|
+          tr.border-b.bg-white
+            td.py-4.px-6.whitespace-nowrap.align-top
+              = l(count.counted_on, format: :short)
+              - if count.draft?
+                .mt-1
+                  span.inline-flex.items-center.rounded-full.bg-amber-100.px-2.py-0.5.text-xs.font-medium.text-amber-800 Brouillon
+            td.py-4.px-6.text-right.whitespace-nowrap.align-top= number_to_currency(count.counted_cents / 100.0)
+            td.py-4.px-6.text-right.whitespace-nowrap.align-top= number_to_currency(count.expected_cents / 100.0)
+            td.py-4.px-6.text-right.whitespace-nowrap.align-top
+              - if count.balanced?
+                span.font-medium.text-emerald-700 juste
+              - else
+                span.font-medium.text-orange-700
+                  = "#{count.surplus? ? '+' : '−'}#{number_to_currency(count.difference_cents.abs / 100.0)}"
+            td.py-4.px-6.align-top
+              - if count.balanced?
+                span.text-gray-400 —
+              - else
+                .font-medium.text-gray-900= count.resolution_label
+                - if count.comment.present?
+                  .text-xs.text-gray-500= count.comment
+                - if count.adjustment_cash_entry
+                  .mt-1
+                    = link_to "Voir l'écriture d'ajustement", finance_cash_entry_path(count.adjustment_cash_entry), class: "text-xs text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+                - if count.draft?
+                  .mt-1
+                    = link_to "Reprendre ce comptage", edit_finance_cash_count_path(count), class: "text-xs text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+            td.py-4.px-6.align-top.text-xs.text-gray-500= count.counted_by&.email || "—"
