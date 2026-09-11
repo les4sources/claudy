@@ -215,6 +215,15 @@ Rails.application.routes.draw do
     end
     # Motifs de caisse (epic #243). Pas de `destroy` : un motif se désactive,
     # sinon une feuille de caisse passée perdrait son vocabulaire.
+    # Factures d'achat (epic #240, phase 2). Pas de `destroy` : une pièce
+    # comptable ne se supprime pas, elle se conteste ou se contre-passe.
+    resources :purchase_invoices, path: "purchases", except: %i[destroy] do
+      member do
+        post :submit
+        post :dispute
+        post :reopen
+      end
+    end
     resources :cash_motifs, path: "cash/motifs", except: %i[show destroy] do
       member do
         post :move
