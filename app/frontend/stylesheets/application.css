@@ -28,6 +28,10 @@
 @import 'trix';
 @import 'portal.css';
 @import 'finance_tables.css';
+/* Grille « Espaces » du formulaire séjour admin — le MÊME partial que le funnel
+   (`public/reservations/_spaces_calendar`). Sans cet import, les créneaux se
+   rendaient ici en boutons nus (epic #234, phase 3). */
+@import 'spaces_grid.css';
 
 /* --- Averia Serif Libre ---------------------------------------------------
    PLACÉ APRÈS LES @import : en CSS, `@import` doit précéder toute autre règle.

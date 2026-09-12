@@ -858,35 +858,7 @@ class StaysController < BaseController
   # les deux → pas de double-compte). Idempotent : no-op si la grille n'est pas
   # active, ou si le draft porte déjà des `space_slots` (re-render POST grille).
   def apply_space_grid_prefill
-    return if @stay_days.blank?
-    return if Array(@draft&.space_slots&.values).flatten.any?(&:present?)
-    return if Array(@draft&.halls).blank?
-
-    @draft.space_slots = halls_to_space_slots(@draft.halls, @stay_days)
-    @draft.halls = []
-  end
-
-  # Convertit des lignes `halls` {kind, date, period} en grille `space_slots`
-  # {kind => [period_par_jour]}, indexée depuis le jour d'arrivée. Depuis l'epic
-  # #234 (Phase 1), la fenêtre est [arrivée, départ] — départ INCLUS : une salle
-  # réservée le jour du départ existait en base (import) mais était jetée ici au
-  # premier enregistrement du formulaire. Les lignes hors fenêtre ou sans date
-  # restent ignorées.
-  def halls_to_space_slots(halls, days)
-    arrival = days.first
-    count   = days.size
-    slots   = {}
-    Array(halls).each do |raw|
-      hall   = raw.respond_to?(:symbolize_keys) ? raw.symbolize_keys : raw
-      key    = hall[:kind].to_s
-      period = hall[:period].to_s
-      date   = parse_form_date(hall[:date].to_s)
-      next if key.blank? || period.blank? || date.nil?
-      idx = (date - arrival).to_i
-      next if idx.negative? || idx >= count
-      (slots[key] ||= Array.new(count, ""))[idx] = period
-    end
-    slots
+    Stays::SpaceGridPrefill.apply!(@draft, @stay_days)
   end
 
   # Hébergements tarifables (barème B2C forfaitaire, `Pricing::Catalog`), dans
