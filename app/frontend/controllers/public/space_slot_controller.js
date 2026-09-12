@@ -22,9 +22,19 @@ export default class extends Controller {
   toggle() {
     const current = this.inputTarget.value || ""
     const idx = PERIODS.indexOf(current)
-    const next = PERIODS[(idx + 1) % PERIODS.length]
-    this.inputTarget.value = next
-    this.updateDisplay(next)
+    this.write(PERIODS[(idx + 1) % PERIODS.length])
+  }
+
+  // Écriture depuis l'extérieur (« Tous les jours », « Effacer » — epic #234
+  // phase 3). Même chemin que `toggle` : on passe par `write`, donc le devis
+  // reçoit son `change` et l'état ne s'écrit jamais à deux endroits.
+  set(event) {
+    this.write(event?.detail?.period || "")
+  }
+
+  write(period) {
+    this.inputTarget.value = period
+    this.updateDisplay(period)
     this.element.dispatchEvent(new Event("change", { bubbles: true }))
   }
 

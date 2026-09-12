@@ -142,6 +142,12 @@ module Public
       @lodgings             = bookable_lodgings
       @stay_nights          = stay_nights
       @stay_days            = stay_days
+      # La grille ESPACES lit `space_slots` ; le séjour reconstruit, lui, rend
+      # des lignes `halls`. Sans cette conversion, le client ouvrait « modifier
+      # mon séjour » sur une grille VIDE — et sa demande, une fois approuvée,
+      # retirait ses salles sans un mot (epic #234, phase 3). Même service que
+      # le formulaire admin : un seul préremplissage pour les deux écrans.
+      Stays::SpaceGridPrefill.apply!(@draft, @stay_days)
       @lodging_availability = build_stay_availability(@lodgings, @stay_nights)
       @quote                = @draft.quote
       # PRIX PRÉSERVÉ (décision 2026-07-21) : beaucoup de séjours portent un
@@ -158,8 +164,27 @@ module Public
     # Recote de la composition ACTUELLE du séjour, au barème du jour — le point
     # de référence du delta.
     def baseline_quote_cents
-      @baseline_quote_cents ||=
-        Stays::DraftReconstructor.call(@stay).quote.total_excluding_experiences_cents
+      @baseline_quote_cents ||= begin
+        current = Stays::DraftReconstructor.call(@stay)
+        # MÊME représentation des espaces des deux côtés du delta : le
+        # formulaire soumet une grille `space_slots`, la référence doit donc en
+        # être une aussi. Sans cela, un formulaire intact affichait un delta —
+        # les lignes `halls` et la grille ne se tarifent pas pareil depuis les
+        # forfaits multi-jours (epic #234, phase 2).
+        # Fenêtre du séjour ACTUEL, pas celle du formulaire : si le client
+        # déplace ses dates, la référence reste ce qu'il a réservé.
+        Stays::SpaceGridPrefill.apply!(current, days_of(current))
+        current.quote.total_excluding_experiences_cents
+      end
+    end
+
+    # Jours [arrivée, départ] d'un draft quelconque — départ inclus, comme la
+    # grille Espaces.
+    def days_of(draft)
+      return [] if draft.arrival_date.blank? || draft.departure_date.blank?
+      return [] if draft.departure_date < draft.arrival_date
+
+      (draft.arrival_date..draft.departure_date).to_a
     end
 
     def stay_nights
@@ -172,10 +197,7 @@ module Public
     # modification client rend le MÊME partial que le funnel et l'admin — ce qui
     # est corrigé d'un côté l'est des trois.
     def stay_days
-      return [] if @draft.arrival_date.blank? || @draft.departure_date.blank?
-      return [] if @draft.departure_date < @draft.arrival_date
-
-      (@draft.arrival_date..@draft.departure_date).to_a
+      days_of(@draft)
     end
 
     def bookable_lodgings
