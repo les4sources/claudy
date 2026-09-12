@@ -151,6 +151,15 @@ class Stay < ApplicationRecord
     CATEGORIES.except(*PRIVATE_CATEGORIES)
   end
 
+  # Nom du séjour dans le titre d'une notification de commentaire (epic #242,
+  # phase 2) : « … a commenté le séjour de Martin, du 3 au 7 mars ».
+  def comment_label
+    who   = customer&.display_name.presence
+    dates = arrival_date.present? ? " du #{I18n.l(arrival_date, format: :short)}" : ""
+
+    who.present? ? "le séjour de #{who}#{dates}" : "le séjour#{dates}"
+  end
+
   belongs_to :customer
   has_many :stay_items, dependent: :destroy
   # Demandes de modification par le client (issue #133). Elles ne modifient

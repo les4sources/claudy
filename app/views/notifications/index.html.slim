@@ -1,0 +1,60 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Notifications"
+
+.space-y-6
+  / Sur un téléphone, « Marquer tout lu » passe SOUS le compteur : côte à côte,
+  / le bouton sortait de l'écran (l'admin de Claudy est dessiné pour le bureau,
+  / la barre du haut déborde déjà à 390 px — on ne rajoute pas un geste perdu).
+  .flex.flex-col.gap-3(class="sm:flex-row sm:items-center sm:justify-between")
+    p.text-sm.text-gray-500
+      - if @unread_count.zero?
+        | Tout est lu.
+      - else
+        = "#{@unread_count} notification#{'s' if @unread_count > 1} non lue#{'s' if @unread_count > 1}."
+    - if @unread_count.positive?
+      = button_to "Marquer tout lu", read_all_notifications_path,
+                  method: :post,
+                  class: "self-start px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+
+  / Préférence d'envoi (décision 3). Elle vit ici plutôt que sur une page
+  / « Mes préférences » à elle seule : c'est le seul réglage personnel de
+  / l'epic, et c'est ici qu'on se pose la question « pourquoi je reçois ça ? ».
+  = form_with url: preferences_notifications_path, method: :patch, class: "bg-white rounded-xl border border-gray-100 p-4" do |f|
+    label.flex.items-start.gap-3.cursor-pointer
+      = check_box_tag "user[notify_by_email]", "1", current_user.notify_by_email?,
+                      class: "mt-0.5 rounded border-gray-300 text-4s-main focus:ring-4s-main",
+                      onchange: "this.form.requestSubmit()"
+      = hidden_field_tag "user[notify_by_email]", "0", id: nil
+      span
+        span.text-sm.font-medium.text-gray-900 Recevoir aussi mes notifications par email
+        p.text-xs.text-gray-500 Un email par notification, au moment où elle arrive. Aucun résumé quotidien.
+    noscript
+      = f.submit "Enregistrer", class: "mt-2 px-3 py-1.5 text-sm rounded-lg bg-4s-main text-white"
+
+  - if @notifications.empty?
+    .p-6.text-sm.text-gray-500.bg-white.rounded-xl.border.border-gray-100
+      p.font-medium.text-gray-700 Aucune notification.
+      p.mt-1 Vous serez prévenu ici quand quelqu'un commentera un objet qui vous concerne.
+  - else
+    ul.bg-white.rounded-xl.border.border-gray-100.divide-y.divide-gray-100.overflow-hidden
+      - @notifications.each do |notification|
+        li
+          = link_to notification_path(notification),
+                    class: "flex items-start gap-3 px-4 py-3 hover:bg-teal-50/60 transition-colors #{'bg-teal-50/40' unless notification.read?}" do
+            / Pastille de non-lu : un point plein, doublé par la graisse du
+            / titre — jamais la couleur seule.
+            span(class="mt-1.5 w-2 h-2 rounded-full flex-shrink-0 #{notification.read? ? 'bg-transparent' : 'bg-amber-400'}")
+            .min-w-0.flex-1
+              p(class="text-sm leading-snug #{notification.read? ? 'text-gray-600' : 'text-gray-900 font-semibold'}")
+                = notification.title
+              - if notification.body.present?
+                p.text-xs.text-gray-500(class="mt-0.5") = notification.body
+              p.text-xs.text-gray-400.mt-1
+                = l(notification.created_at, format: :long)
+                - unless notification.read?
+                  span.ml-2.text-amber-600.font-medium non lu
+
+    - if @notifications.total_pages > 1
+      .mt-4
+        = will_paginate @notifications

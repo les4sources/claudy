@@ -1,0 +1,25 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Notifications"
+
+.max-w-2xl.space-y-4
+  .bg-white.rounded-xl.border.border-gray-100.p-5
+    h2.text-sm.font-semibold.text-gray-900 Destinataires comptables
+    p.text-xs.text-gray-500.mt-1
+      | Les adresses qui reçoivent les notifications de la comptabilité : facture à valider,
+      |  information demandée sur une note de frais. Une adresse par ligne, ou séparées par des virgules.
+      |  Seules les adresses qui correspondent à un compte Claudy recevront une notification dans l'application.
+
+    = form_with url: notification_settings_path, method: :patch, class: "mt-4 space-y-3" do |f|
+      = text_area_tag "notification_settings[accounting_notification_emails]", @emails,
+                      rows: 4,
+                      class: "w-full rounded-lg border-gray-200 text-sm focus:border-4s-main focus:ring-4s-main",
+                      placeholder: "compta@les4sources.be, tresorerie@les4sources.be"
+      = f.submit "Enregistrer", class: "px-4 py-2 text-sm rounded-lg bg-4s-main text-white hover:opacity-90 transition-opacity cursor-pointer"
+
+  .bg-white.rounded-xl.border.border-gray-100.p-5
+    h2.text-sm.font-semibold.text-gray-900 Et pour moi ?
+    p.text-xs.text-gray-500.mt-1
+      | Le choix « recevoir aussi par email » est personnel : il se règle sur
+      =< link_to "vos notifications", notifications_path, class: "text-4s-main hover:underline"
+      | .
