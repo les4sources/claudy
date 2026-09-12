@@ -18,7 +18,7 @@ RSpec.describe "Stays — espaces (epic #66, Phase 2)", type: :request do
   let(:arrival)       { (Date.today + 30).next_occurring(:monday) }
   let(:departure)     { arrival + 2 }
   let(:grande_salle_journee_cents) { 29_000 }
-  let(:hulotte_two_nights_cents)   { 74_500 }
+  let(:hulotte_two_nights_cents)   { 80_000 } # 2 nuits semaine × 400 € (barème du site, epic #260)
 
   def base_params(overrides = {})
     {
@@ -161,7 +161,7 @@ RSpec.describe "Stays — espaces (epic #66, Phase 2)", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("stay-quote-panel")
       # Hulotte 2 nuits (745 €) + grande salle journée (290 €) = 1 035 €.
-      expect(response.body).to include("1 035").or include("1035")
+      expect(response.body).to include("1 090").or include("1090")
     end
   end
 

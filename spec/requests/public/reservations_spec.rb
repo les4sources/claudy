@@ -7,8 +7,12 @@ RSpec.describe "Public::Reservations (/reservation)", type: :request, queue_adap
     lodging
   end
 
-  let(:arrival) { (Date.today + 40).iso8601 }
-  let(:departure) { (Date.today + 42).iso8601 }
+  # Ancré sur un LUNDI depuis l'epic #260 : hors du 15 novembre au 14 mars, le
+  # funnel REFUSE une nuit de vendredi ou de samedi isolée. Une date flottante
+  # ferait donc échouer ces specs un jour sur deux.
+  let(:monday) { (Date.today + 40).next_occurring(:monday) }
+  let(:arrival) { monday.iso8601 }
+  let(:departure) { (monday + 2).iso8601 }
 
   let(:contact_params) do
     {

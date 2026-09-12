@@ -256,9 +256,27 @@ module Reservations
           raise_invalid("Ces dates ne sont plus disponibles pour cet hébergement.")
         end
       end
+      check_weekend_night_rule!
       check_space_availability!
       check_outdoor_capacity!
       check_hamac_stock!
+    end
+
+    # Nuit de week-end SEULE (epic #260, décision 3). La règle, son périmètre et
+    # son message vivent dans `Reservations::WeekendNightRule` — le funnel dit
+    # exactement la même chose au même moment.
+    #
+    # En ADMIN, elle n'est qu'un AVERTISSEMENT : Malau saisit ce qu'elle a
+    # accepté au téléphone, et l'app n'a pas à lui interdire son exception.
+    def check_weekend_night_rule!
+      message = Reservations::WeekendNightRule.message_for(draft)
+      return if message.nil?
+
+      if @admin
+        @availability_warning = [@availability_warning, message].compact.join(" ")
+      else
+        raise_invalid(message)
+      end
     end
 
     # Stock hamacs (issue #138) : vérifié dans TOUS les canaux — contrairement au

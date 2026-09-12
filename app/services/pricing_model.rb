@@ -127,41 +127,112 @@ class PricingModel
               deposit_cents: deposit, deposit_rate: @deposit_rate)
   end
 
+  # Les nuits qu'aucune brique du barème ne sait vendre — en pratique, une nuit
+  # de vendredi ou de samedi SEULE hors du 15 novembre – 14 mars (epic #260,
+  # décision 3). Le devis ne les facture pas ; c'est le Builder qui refuse la
+  # composition, et le funnel qui l'explique.
+  def unpriceable_lodging_nights
+    lodging_nights.flat_map do |lodging, dates|
+      next [] unless Pricing::Catalog.site_lodging?(lodging.name)
+
+      Pricing::LodgingSchedule.call(lodging.name, dates).unpriceable
+    end
+  end
+
   private
 
-  # --- Hébergement : formule fermée dégressive + forfait nommé override (Q3) ---
-  # Supporte le multi-hébergement via lodging_night_ids (Array indexé par nuit).
-  # Fallback sur lodging + nights si lodging_night_ids absent (backward compat).
+  # --- Hébergement -----------------------------------------------------------
+  #
+  # Les trois gîtes du site (La Chevêche, La Hulotte, Le Grand-Duc) suivent
+  # depuis l'epic #260 le barème PUBLIÉ : cinq briques datées, composées au plus
+  # juste par `Pricing::LodgingSchedule`. La formule « première nuit + nuits
+  # suivantes » ne sert plus qu'aux hébergements hors site (Tiny house).
+  #
+  # Supporte le multi-hébergement via `lodging_night_ids` (indexé par nuit), et
+  # retombe sur `lodging` + `nights` pour un draft sans grille.
   def lodging_lines
-    # Chambres seules (epic #81, Phase 5) : le barème B2C (`LODGING_RATES`) est un
-    # FORFAIT par gîte entier — il n'existe pas de tarif par chambre exploitable.
-    # En mode "rooms", on ne facture donc AUCUN forfait d'hébergement automatique ;
-    # le total du séjour vient du Prix total imposé (override, Phase 3). L'UI
-    # l'annonce explicitement dans le panneau devis.
+    # Chambres seules (epic #81, Phase 5) : le barème B2C est un FORFAIT par gîte
+    # entier — il n'existe pas de tarif par chambre exploitable. En mode "rooms",
+    # on ne facture donc AUCUN forfait d'hébergement automatique ; le total du
+    # séjour vient du Prix total imposé (override, Phase 3).
     return [] if read(:rooms_mode?)
 
-    night_ids = Array(read(:lodging_night_ids)).map { |id| id.presence }
-
-    if night_ids.any?(&:present?)
-      nights_by_id = Hash.new(0)
-      night_ids.each { |id| nights_by_id[id] += 1 if id }
-      nights_by_id.filter_map do |lodging_id, night_count|
-        lodging = Lodging.find_by(id: lodging_id)
-        next unless lodging
-        rate = Pricing::Catalog.lodging_rate(lodging.name)
-        next unless rate
-        q = rate.quote_for(night_count)
-        Line.new(label: q[:label], amount_cents: q[:amount_cents])
+    lodging_nights.flat_map do |lodging, dates|
+      if Pricing::Catalog.site_lodging?(lodging.name)
+        schedule_lodging_lines(lodging, dates)
+      else
+        formula_lodging_lines(lodging, dates.size)
       end
-    else
-      lodging = read(:lodging)
-      nights  = read(:nights).to_i
-      return [] if lodging.nil? || nights < 1
-      rate = Pricing::Catalog.lodging_rate(lodging.name)
-      return [] if rate.nil?
-      q = rate.quote_for(nights)
-      [Line.new(label: q[:label], amount_cents: q[:amount_cents])]
     end
+  end
+
+  # { Lodging => [dates des nuits] }, dans l'ordre des nuits.
+  #
+  # Sans dates de séjour (draft en cours de saisie), les nuits sont ancrées sur
+  # un LUNDI de référence : le barème a besoin de savoir quel jour tombe chaque
+  # nuit, et « la semaine à partir du lundi » est le cas nominal du site. Le
+  # devis reste donc défini et stable tant que le client n'a pas choisi ses
+  # dates, puis se recalcule sur les vraies dates dès qu'il les pose.
+  MONDAY_ANCHOR = Date.new(2026, 1, 5).freeze # un lundi
+
+  def lodging_nights
+    @lodging_nights ||= begin
+      arrival   = read(:arrival_date)
+      night_ids = Array(read(:lodging_night_ids)).map { |id| id.presence }
+
+      pairs = if night_ids.any?(&:present?)
+        night_ids.each_with_index.filter_map do |id, index|
+          next if id.blank?
+
+          [id, night_date(arrival, index)]
+        end
+      else
+        lodging = read(:lodging)
+        count   = read(:nights).to_i
+        lodging.nil? || count < 1 ? [] : (0...count).map { |index| [lodging.id, night_date(arrival, index)] }
+      end
+
+      pairs.group_by(&:first).filter_map { |id, entries|
+        lodging = Lodging.find_by(id: id)
+        next if lodging.nil?
+
+        [lodging, entries.map(&:last)]
+      }.to_h
+    end
+  end
+
+  def night_date(arrival, index)
+    (arrival.presence || MONDAY_ANCHOR) + index
+  end
+
+  # Une ligne par segment du découpage le moins cher, datée et nommée.
+  def schedule_lodging_lines(lodging, dates)
+    Pricing::LodgingSchedule.call(lodging.name, dates).segments.map do |segment|
+      Line.new(label: lodging_segment_label(lodging, segment), amount_cents: segment.amount_cents)
+    end
+  end
+
+  # « La Hulotte — du lundi 5 au vendredi 9 octobre, forfait 4 nuits »
+  # « La Chevêche — nuit du jeudi 15 octobre »
+  def lodging_segment_label(lodging, segment)
+    if segment.single_night?
+      "#{lodging.name} — nuit du #{I18n.l(segment.from, format: :long)}"
+    else
+      brick = Pricing::Catalog::LODGING_BRICK_LABELS[segment.brick] || segment.brick
+      "#{lodging.name} — du #{I18n.l(segment.from, format: :long)} " \
+        "au #{I18n.l(segment.to + 1, format: :long)}, #{brick}"
+    end
+  end
+
+  # Hébergements hors barème du site (Tiny house) : la formule d'origine.
+  def formula_lodging_lines(lodging, night_count)
+    return [] if night_count < 1
+
+    rate = Pricing::Catalog.lodging_rate(lodging.name)
+    return [] if rate.nil?
+
+    quote = rate.quote_for(night_count)
+    [Line.new(label: quote[:label], amount_cents: quote[:amount_cents])]
   end
 
   # --- Camping / bivouac : €/pers/nuit ---

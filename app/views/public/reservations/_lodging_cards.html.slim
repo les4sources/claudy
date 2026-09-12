@@ -17,7 +17,8 @@
 
     .grid.grid-cols-1.sm:grid-cols-3.gap-4
       - cards.each do |lodging|
-        - rate  = Pricing::Catalog.lodging_rate(lodging.name)
+        / « dès X €/nuit » = la nuit en SEMAINE du site (epic #260, décision 4).
+        - from_night = Pricing::Catalog.lodging_from_night_cents(lodging.name)
         - rooms = lodging.rooms.size
         - shots = lodging_gallery(lodging.name).size
         button(
@@ -44,9 +45,9 @@
             - if lodging.summary.present? || rooms.positive?
               p.funnel-hint.mt-0.5
                 = [lodging.summary.presence, ("#{rooms} chambre#{'s' if rooms > 1}" if rooms.positive?)].compact.join(" · ")
-            - if rate
-              p.mt-1.5.text-sm.font-semibold.text-forest
-                = "dès #{number_to_currency(rate.extra_night_cents / 100.0, unit: '€', format: '%n %u', precision: 0)}/nuit"
+            - if from_night
+              p.text-sm.font-semibold.text-forest(class="mt-1.5")
+                = "dès #{number_to_currency(from_night / 100.0, unit: '€', format: '%n %u', precision: 0)}/nuit"
 
     / Modale galerie — un seul turbo-frame, rempli à la demande.
     = render "public/reservations/gallery_modal"

@@ -12,8 +12,12 @@ RSpec.describe "Funnel /reservation — type de séjour (catégorie)", type: :re
     l
   end
 
-  let(:arrival)   { (Date.today + 60).iso8601 }
-  let(:departure) { (Date.today + 63).iso8601 }
+  # Ancré sur un LUNDI depuis l'epic #260 : hors du 15 novembre au 14 mars, le
+  # funnel REFUSE une nuit de vendredi ou de samedi isolée. Une date flottante
+  # ferait donc échouer ces specs un jour sur deux.
+  let(:monday)    { (Date.today + 60).next_occurring(:monday) }
+  let(:arrival)   { monday.iso8601 }
+  let(:departure) { (monday + 3).iso8601 }
 
   before do
     allow(StripeService.instance).to receive(:create_checkout_session)

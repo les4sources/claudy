@@ -53,6 +53,57 @@ module Pricing
       )
     }.freeze
 
+    # Barème des GÎTES tel qu'il est publié sur https://www.les4sources.be/sejours/tarifs
+    # (relevé le 2026-09-08, epic #260 décision 1). Il remplace la formule
+    # « première nuit + nuits suivantes » pour les trois gîtes : sur les cinq
+    # durées nommées par le site, l'ancienne formule n'était juste qu'une fois.
+    #
+    # Cinq briques, et rien d'autre. `Pricing::LodgingSchedule` compose la suite
+    # de nuits la moins chère avec elles (décision 2) — on ne paie jamais plus
+    # pour moins.
+    #
+    #   weeknight                : nuit du dimanche au jeudi ;
+    #   weekend_night_low_season : nuit du vendredi ou du samedi, vendue à
+    #                              l'unité UNIQUEMENT du 15 novembre au 14 mars ;
+    #   weekend_2_nights         : la paire vendredi + samedi, toute l'année ;
+    #   package_4_nights         : 4 nuits semaine consécutives (lundi → vendredi) ;
+    #   package_6_nights         : 4 nuits semaine + la paire week-end (lundi → dimanche).
+    #
+    # La Tiny house n'est pas sur le site : elle garde sa formule linéaire dans
+    # `LODGING_RATES`.
+    LODGING_SITE_RATES = {
+      "La Chevêche" => {
+        "weeknight"                =>  20_000, # 200 €
+        "weekend_night_low_season" =>  26_000, # 260 €
+        "weekend_2_nights"         =>  48_000, # 480 €
+        "package_4_nights"         =>  78_000, # 780 €
+        "package_6_nights"         =>  99_500  # 995 €
+      }.freeze,
+      "La Hulotte" => {
+        "weeknight"                =>  40_000, # 400 €
+        "weekend_night_low_season" =>  48_500, # 485 €
+        "weekend_2_nights"         =>  91_000, # 910 €
+        "package_4_nights"         => 149_000, # 1 490 €
+        "package_6_nights"         => 190_000  # 1 900 €
+      }.freeze,
+      "Le Grand-Duc" => {
+        "weeknight"                =>  65_000, # 650 €
+        "weekend_night_low_season" =>  75_000, # 750 €
+        "weekend_2_nights"         => 135_000, # 1 350 €
+        "package_4_nights"         => 241_000, # 2 410 €
+        "package_6_nights"         => 290_000  # 2 900 €
+      }.freeze
+    }.freeze
+
+    # Libellés lisibles des briques, pour Paramètres > Tarifs et le devis.
+    LODGING_BRICK_LABELS = {
+      "weeknight"                => "nuit en semaine",
+      "weekend_night_low_season" => "nuit de week-end (15 nov – 14 mars)",
+      "weekend_2_nights"         => "forfait week-end (2 nuits)",
+      "package_4_nights"         => "forfait du lundi au vendredi (4 nuits)",
+      "package_6_nights"         => "forfait du lundi au dimanche (6 nuits)"
+    }.freeze
+
     # Camping / bivouac : €/pers/nuit (tente uniquement — hamac géré via RentalItem).
     CAMPING_PER_PERSON_NIGHT_CENTS = {
       "tente" => 750  # 7,50 €/pers/nuit
@@ -345,6 +396,33 @@ module Pricing
           )]
         }
       )
+    end
+
+    # Une brique du barème d'un gîte, table `rates` d'abord (donc Paramètres >
+    # Tarifs), constante du site en repli. nil quand le gîte n'est pas au site
+    # (Tiny house) ou quand la brique n'existe pas.
+    def lodging_brick_cents(name, brick)
+      fallback = LODGING_SITE_RATES.dig(name.to_s, brick.to_s)
+      return nil if fallback.nil?
+
+      Pricing::Rates.cents_or(lodging_brick_key(name, brick), fallback)
+    end
+
+    def lodging_brick_key(name, brick)
+      "lodging.#{lodging_key(name)}.#{brick}"
+    end
+
+    # true si ce gîte suit le barème du site (les trois gîtes, pas la Tiny house).
+    def site_lodging?(name) = LODGING_SITE_RATES.key?(name.to_s)
+
+    # « dès X €/nuit » des cartes et de la grille (décision 4) : la nuit en
+    # SEMAINE du site, plus jamais l'ancien `extra_night_cents`. Repli sur la
+    # formule pour un hébergement hors site (Tiny house).
+    def lodging_from_night_cents(name)
+      site = lodging_brick_cents(name, "weeknight")
+      return site if site
+
+      lodging_rate(name)&.extra_night_cents
     end
 
     # Prix d'un hamac (RentalItem) pour une nuit. Tarif paramétré d'abord, puis

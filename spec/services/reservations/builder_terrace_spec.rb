@@ -11,8 +11,10 @@ RSpec.describe Reservations::Builder, "terrasse (ADMIN uniquement)" do
     lodging
   end
 
-  let(:day1) { Date.today + 30 }
-  let(:day2) { Date.today + 31 }
+  # Ancré sur un LUNDI depuis l'epic #260 : le barème des gîtes dépend du jour
+  # de chaque nuit, une date flottante rendrait ces montants instables.
+  let(:day1) { (Date.today + 30).next_occurring(:monday) }
+  let(:day2) { day1 + 1 }
 
   def draft(**overrides)
     Reservations::Draft.new({
@@ -73,7 +75,7 @@ RSpec.describe Reservations::Builder, "terrasse (ADMIN uniquement)" do
       terrace_cents = CampingBooking.where(kind: "terrasse").sum(:price_cents)
       expect(terrace_cents).to eq(1_000)              # 4 × 2,50 €
       # Hébergement PUR = 2 nuits Hulotte (48 500 + 26 000), SANS la terrasse.
-      expect(builder.booking.price_cents).to eq(74_500)
+      expect(builder.booking.price_cents).to eq(80_000)
       expect(builder.booking.price_cents + terrace_cents).to eq(builder.stay.total_amount_cents)
     end
   end
@@ -90,8 +92,8 @@ RSpec.describe Reservations::Builder, "terrasse (ADMIN uniquement)" do
 
       expect(CampingBooking.where(kind: "terrasse")).to be_empty
       # Total inchangé = 2 nuits Hulotte, la terrasse forgée n'est jamais facturée.
-      expect(builder.stay.total_amount_cents).to eq(74_500)
-      expect(builder.booking.price_cents).to eq(74_500)
+      expect(builder.stay.total_amount_cents).to eq(80_000)
+      expect(builder.booking.price_cents).to eq(80_000)
     end
   end
 end
@@ -115,7 +117,7 @@ RSpec.describe PricingModel, "terrasse" do
     quote = described_class.quote(draft(lodging: grand_duc, nights: 1,
                                         terrasses: [{ date: "2026-08-12", people: 4 }]))
     expect(quote.terrace_cents).to eq(1_000)
-    expect(quote.lodging_only_cents).to eq(75_000) # 1 nuit Grand-Duc, hors terrasse
+    expect(quote.lodging_only_cents).to eq(65_000) # 1 nuit semaine Grand-Duc, hors terrasse
     expect(quote.lodging_only_cents + quote.terrace_cents).to eq(quote.total_excluding_experiences_cents)
   end
 end
