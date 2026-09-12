@@ -55,8 +55,26 @@ module Rates
       { key: key, amount_cents: amount_cents, label: label, unit: unit }
     end
 
+    # Les trois gîtes du site portent les CINQ BRIQUES du barème publié (epic
+    # #260) ; la Tiny house, absente du site, garde sa formule « première nuit +
+    # nuits suivantes ». Les deux jeux de clés ne se recouvrent pas.
     def lodging_entries
-      Pricing::Catalog::LODGING_RATES.flat_map do |name, rate|
+      site_lodging_entries + formula_lodging_entries
+    end
+
+    def site_lodging_entries
+      Pricing::Catalog::LODGING_SITE_RATES.flat_map do |name, bricks|
+        bricks.map do |brick, amount_cents|
+          entry(Pricing::Catalog.lodging_brick_key(name, brick),
+                amount_cents,
+                "#{name} — #{Pricing::Catalog::LODGING_BRICK_LABELS.fetch(brick, brick)}")
+        end
+      end
+    end
+
+    def formula_lodging_entries
+      Pricing::Catalog::LODGING_RATES.reject { |name, _| Pricing::Catalog.site_lodging?(name) }
+                                     .flat_map do |name, rate|
         slug = Pricing::Catalog.lodging_key(name)
         rows = [
           entry("lodging.#{slug}.first_night", rate.first_night_cents, "#{name} — première nuit"),

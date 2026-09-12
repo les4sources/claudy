@@ -46,8 +46,10 @@ RSpec.describe "Tarifs paramétrés (Pricing::Rates)" do
       Rates::SeedFromCatalog.new.run
 
       %w[
-        lodging.la_hulotte.first_night
-        lodging.la_cheveche.package_3
+        lodging.la_hulotte.weeknight
+        lodging.la_hulotte.package_4_nights
+        lodging.la_cheveche.weekend_2_nights
+        lodging.tiny_house.first_night
         hall.grande_salle.journee
         hall_weekend.grande_salle.journee
         hall.deux_salles.journee
@@ -93,13 +95,16 @@ RSpec.describe "Tarifs paramétrés (Pricing::Rates)" do
       expect(PricingModel.quote(composite_draft).total_cents).to eq(base + 2_000)
     end
 
-    it "hébergement : la première nuit paramétrée est utilisée" do
+    # Depuis l'epic #260, le gîte se tarifie par BRIQUES du site : c'est la
+    # « nuit en semaine » qui est paramétrée, plus la « première nuit ».
+    it "hébergement : la nuit en semaine paramétrée est utilisée" do
       base = PricingModel.quote(composite_draft).total_cents
 
-      Rate.find_by(key: "lodging.la_hulotte.first_night").update!(amount_cents: 50_000)
+      Rate.find_by(key: "lodging.la_hulotte.weeknight").update!(amount_cents: 41_000)
       Pricing::Rates.reset!
 
-      expect(PricingModel.quote(composite_draft).total_cents).to eq(base + 1_500)
+      # 3 nuits semaine (lundi → jeudi) × (410 − 400) € = +30 €
+      expect(PricingModel.quote(composite_draft).total_cents).to eq(base + 3_000)
     end
 
     it "salle : le tarif journée paramétré est utilisé" do

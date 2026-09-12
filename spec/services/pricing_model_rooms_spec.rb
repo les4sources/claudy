@@ -10,15 +10,17 @@ RSpec.describe PricingModel, "mode chambres seules (epic #81, Phase 5)" do
   def draft(**overrides)
     Reservations::Draft.new({
       lodging_id: hulotte.id,
-      arrival_date: "2026-08-01",
-      departure_date: "2026-08-03"
+      # Lundi → mercredi : deux nuits SEMAINE. Le barème du site (epic #260)
+      # dépend du jour de chaque nuit, la date ne peut plus être quelconque.
+      arrival_date: "2026-08-03",
+      departure_date: "2026-08-05"
     }.merge(overrides))
   end
 
   it "facture le forfait gîte entier en mode lodging (comportement historique)" do
     quote = PricingModel.quote(draft(booking_type: "lodging"))
-    # La Hulotte = 485 € + 260 € = 745 € sur 2 nuits.
-    expect(quote.total_cents).to eq(74_500)
+    # La Hulotte = 2 nuits semaine × 400 € = 800 € (barème du site, epic #260).
+    expect(quote.total_cents).to eq(80_000)
   end
 
   it "ne facture AUCUN forfait d'hébergement en mode rooms" do

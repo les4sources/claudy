@@ -13,11 +13,13 @@ RSpec.describe Reservations::Builder, "espaces (epic #66, Phase 2)" do
   # Grande Salle → grande_salle (grille de pricing). Capacity 1 = salle exclusive.
   let!(:grande_salle) { Space.create!(name: "Grande Salle", capacity: 1) }
 
-  let(:arrival)   { Date.today + 30 }
-  let(:departure) { Date.today + 32 }
+  # Ancré sur un LUNDI depuis l'epic #260 : le barème des gîtes dépend du jour
+  # de chaque nuit, une date flottante rendrait ces montants instables.
+  let(:arrival)   { (Date.today + 30).next_occurring(:monday) }
+  let(:departure) { arrival + 2 }
   # grande_salle / journée (barème semaine des salles) = 290 €.
   let(:grande_salle_journee_cents) { 29_000 }
-  let(:hulotte_two_nights_cents)   { 74_500 }
+  let(:hulotte_two_nights_cents)   { 80_000 } # 2 × 400 € (barème du site)
 
   def draft(**overrides)
     Reservations::Draft.new({
@@ -165,8 +167,8 @@ end
 # `Space#available_on?`.
 RSpec.describe Reservations::Builder, "espaces décrits deux fois (Michael 2026-08-25)" do
   let!(:grande_salle) { Space.create!(name: "Grande Salle", capacity: 1) }
-  let(:arrival)   { Date.today + 30 }
-  let(:departure) { Date.today + 31 }
+  let(:arrival)   { (Date.today + 30).next_occurring(:monday) }
+  let(:departure) { arrival + 1 }
 
   def draft(**overrides)
     Reservations::Draft.new({
