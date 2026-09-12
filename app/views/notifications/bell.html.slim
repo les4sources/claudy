@@ -1,0 +1,4 @@
+/ La réponse du Turbo Frame de la cloche. Le cadre DOIT porter le même `id` que
+/ celui de la navbar, sinon Turbo ne remplace rien.
+= turbo_frame_tag "notifications-bell" do
+  = render "notifications/bell", unread_count: @unread_count, notifications: @notifications

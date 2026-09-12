@@ -54,6 +54,14 @@ class Gathering < ApplicationRecord
 
   def transversal? = teams.empty?
 
+  # Nom de l'objet dans le titre d'une notification de commentaire (epic #242,
+  # phase 2) : « … a commenté le rassemblement du 3 mars ».
+  def comment_label
+    return "le rassemblement" if starts_at.blank?
+
+    "le rassemblement du #{I18n.l(starts_at.to_date, format: :long)}"
+  end
+
   private
 
   def ends_after_starts

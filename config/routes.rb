@@ -77,6 +77,20 @@ Rails.application.routes.draw do
   # ces routes ne servent qu'aux Turbo Streams du composant.
   resources :comments, only: %i[create update destroy]
 
+  # Centre de notifications (epic #242, phase 2). `show` est le point d'entrée
+  # de TOUS les liens (cloche, email) : il marque la notification lue puis
+  # redirige vers l'objet — une seule mécanique, jamais dupliquée.
+  resources :notifications, only: %i[index show] do
+    collection do
+      get :bell
+      post :read_all
+      patch :preferences
+    end
+  end
+
+  # Paramètres > Notifications : qui reçoit les notifications comptables.
+  resource :notification_settings, only: %i[show update], path: "parametres/notifications"
+
   # Paramètres > Dépôt-vente (epic #248) : le carnet des artisans déposants.
   # Pas de `show` — la fiche vit sur les relevés mensuels (phase 2).
   resources :consignors, except: [:show] do

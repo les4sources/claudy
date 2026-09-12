@@ -1,0 +1,15 @@
+p Bonjour,
+
+p= @notification.title
+
+- if @notification.body.present?
+  p= @notification.body
+
+p
+  = link_to "Voir dans Claudy", notification_url(@notification, host: @host)
+
+p(style="color: #6B7568; font-size: 12px;")
+  | Vous recevez cet email parce que vos notifications Claudy sont aussi envoyées par email.
+  |  Vous pouvez couper cet envoi depuis
+  =< link_to "vos notifications", notifications_url(host: @host)
+  | .
