@@ -361,6 +361,12 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
                       finance_third_parties_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/third_parties' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
+            / Les notes de frais (epic #241) se rangent après les tiers : c'est
+              le même circuit — une dette au 440000 qui attend son virement.
+            = link_to "Notes de frais",
+                      finance_expense_reports_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/expense_reports' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
             = link_to "Grand livre",
                       finance_ledger_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/ledger' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"

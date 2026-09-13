@@ -1,0 +1,54 @@
+= form_with model: [:finance, report], class: "space-y-6" do |f|
+  = render "finance/shared/form_errors", record: report
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-1.text-sm.font-semibold.text-gray-900 La note
+    p.mb-3.text-xs.text-gray-500
+      | Le bénéficiaire est celui à qui on doit l'argent ; l'entité est la structure qui le doit. Une note qui mêle deux structures = deux notes.
+    .grid.gap-4(class="md:grid-cols-4")
+      div
+        = f.label :human_id, "Bénéficiaire *", class: "mb-1 block text-sm font-medium text-gray-700"
+        = f.collection_select :human_id, humans, :id, :name, { include_blank: "Choisir une personne…" }, class: "block w-full rounded-md border-gray-300 shadow-sm", required: true
+      div
+        = f.label :legal_entity_id, "Entité *", class: "mb-1 block text-sm font-medium text-gray-700"
+        = f.collection_select :legal_entity_id, entities, :id, :name, {}, class: "block w-full rounded-md border-gray-300 shadow-sm", required: true
+      div
+        = f.date_field :submitted_on, label: "Remise le", class: "w-full"
+      div
+        = f.label :kind, "Type", class: "mb-1 block text-sm font-medium text-gray-700"
+        = f.select :kind,
+                   ExpenseReport::KIND_LABELS.map { |value, label| [label, value] },
+                   {},
+                   class: "block w-full rounded-md border-gray-300 shadow-sm"
+
+    .mt-4
+      = f.label :notes, "Notes", class: "mb-1 block text-sm font-medium text-gray-700"
+      = f.text_area :notes, rows: 2, placeholder: "Ce qu'il faut savoir avant de traiter cette note.", class: "block w-full rounded-md border-gray-300 shadow-sm"
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100(data-controller="expense-lines")
+    .mb-3.flex.flex-wrap.items-baseline.justify-between.gap-2
+      div
+        h3.text-sm.font-semibold.text-gray-900 Les dépenses
+        p.text-xs.text-gray-500
+          | Une ligne par ticket. La ligne suivante hérite de la date, du compte et du pôle de la précédente.
+      .text-right
+        .text-xs.uppercase.tracking-wide.text-gray-400 Total de la note
+        .text-2xl.font-semibold.tabular-nums.text-gray-900(data-expense-lines-target="total") 0,00 €
+        .text-xs.text-gray-500(data-expense-lines-target="count")
+
+    .space-y-3(data-expense-lines-target="rows")
+      = f.fields_for :expense_lines do |line_form|
+        = render "finance/expense_reports/line_fields", line_form: line_form, accounts: accounts, teams: teams
+
+    / Gabarit d'une ligne vierge : `child_index: "NEW_RECORD"` produit des noms
+      de champs que le contrôleur Stimulus réindexe à chaque insertion.
+    template data-expense-lines-target="template"
+      = f.fields_for :expense_lines, ExpenseLine.new(spent_on: Date.current), child_index: "NEW_RECORD" do |line_form|
+        = render "finance/expense_reports/line_fields", line_form: line_form, accounts: accounts, teams: teams
+
+    button.mt-4.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(type="button" class="hover:bg-gray-50" data-action="expense-lines#add")
+      | ➕ Ajouter une ligne
+
+  .flex.items-center.gap-3
+    = f.submit "Enregistrer la note", class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+    = link_to "Annuler", (report.persisted? ? finance_expense_report_path(report) : finance_expense_reports_path), class: "text-sm text-gray-500 hover:text-gray-700"

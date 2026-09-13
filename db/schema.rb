@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_13_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -763,6 +763,58 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
     t.index ["team_id"], name: "index_events_on_team_id"
   end
 
+  create_table "expense_lines", force: :cascade do |t|
+    t.bigint "amount_cents", default: 0, null: false
+    t.bigint "analytic_account_id"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.decimal "distance_km", precision: 8, scale: 1
+    t.string "doc_kind"
+    t.bigint "expense_report_id", null: false
+    t.bigint "general_account_id"
+    t.string "label", null: false
+    t.integer "position", default: 0, null: false
+    t.integer "rate_cents_per_km"
+    t.date "spent_on", null: false
+    t.string "supplier_name"
+    t.bigint "team_id"
+    t.datetime "updated_at", null: false
+    t.index ["analytic_account_id"], name: "index_expense_lines_on_analytic_account_id"
+    t.index ["deleted_at"], name: "index_expense_lines_on_deleted_at"
+    t.index ["expense_report_id"], name: "index_expense_lines_on_expense_report_id"
+    t.index ["general_account_id"], name: "index_expense_lines_on_general_account_id"
+    t.index ["team_id"], name: "index_expense_lines_on_team_id"
+  end
+
+  create_table "expense_reports", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.bigint "fiscal_year_id"
+    t.bigint "human_id", null: false
+    t.string "kind", default: "expenses", null: false
+    t.bigint "legal_entity_id", null: false
+    t.text "notes"
+    t.datetime "paid_notified_at"
+    t.date "paid_on"
+    t.datetime "posted_at"
+    t.date "processed_on"
+    t.string "reference"
+    t.text "rejection_reason"
+    t.integer "sequence_number"
+    t.string "status", default: "recorded", null: false
+    t.date "submitted_on"
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_expense_reports_on_created_by_id"
+    t.index ["deleted_at"], name: "index_expense_reports_on_deleted_at"
+    t.index ["fiscal_year_id", "kind", "sequence_number"], name: "index_expense_reports_on_sequence", unique: true
+    t.index ["fiscal_year_id"], name: "index_expense_reports_on_fiscal_year_id"
+    t.index ["human_id"], name: "index_expense_reports_on_human_id"
+    t.index ["legal_entity_id"], name: "index_expense_reports_on_legal_entity_id"
+    t.index ["reference"], name: "index_expense_reports_on_reference", unique: true
+    t.index ["status"], name: "index_expense_reports_on_status"
+  end
+
   create_table "experience_availabilities", force: :cascade do |t|
     t.date "available_on"
     t.datetime "created_at", null: false
@@ -973,6 +1025,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
     t.datetime "deleted_at", precision: nil
     t.text "description"
     t.string "email"
+    t.string "iban"
     t.string "name"
     t.string "photo"
     t.boolean "roles_enabled", default: true, null: false
@@ -1826,6 +1879,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
   add_foreign_key "event_organizers", "humans"
   add_foreign_key "events", "event_categories"
   add_foreign_key "events", "teams"
+  add_foreign_key "expense_lines", "analytic_accounts"
+  add_foreign_key "expense_lines", "expense_reports"
+  add_foreign_key "expense_lines", "general_accounts"
+  add_foreign_key "expense_lines", "teams"
+  add_foreign_key "expense_reports", "fiscal_years"
+  add_foreign_key "expense_reports", "humans"
+  add_foreign_key "expense_reports", "legal_entities"
+  add_foreign_key "expense_reports", "users", column: "created_by_id"
   add_foreign_key "experience_availabilities", "experiences"
   add_foreign_key "experience_bookings", "experience_availabilities"
   add_foreign_key "experience_bookings", "humans", column: "outcome_recorded_by_id"

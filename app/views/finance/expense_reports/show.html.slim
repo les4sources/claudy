@@ -1,0 +1,157 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "#{@report.kind_label} #{@report.reference.presence || "##{@report.id}"}",
+           links: [(@report.editable? ? link_to("Modifier", edit_finance_expense_report_path(@report), class: "btn-page-header") : nil)].compact
+
+.grid.grid-cols-1.gap-4(class="lg:grid-cols-3")
+  .space-y-4(class="lg:col-span-2")
+    .overflow-hidden.bg-white.rounded-lg.border.border-gray-100
+      .flex.flex-wrap.items-start.justify-between.gap-3.px-4.py-4
+        div
+          .text-xs.uppercase.tracking-wide.text-gray-400 Bénéficiaire
+          .text-lg.font-semibold.text-gray-900 = @report.human&.name
+          .mt-1.text-xs.text-gray-500
+            - if @report.human&.iban.present?
+              = "IBAN #{@report.human.iban_masked}"
+            - else
+              span.text-amber-600 Pas d'IBAN sur la fiche — impossible de virer sans savoir où.
+        .text-right
+          .text-xs.uppercase.tracking-wide.text-gray-400 Total
+          .text-2xl.font-semibold.tabular-nums.text-gray-900 = expense_amount(@report.total_cents)
+          .mt-1 = render "finance/expense_reports/status_badge", report: @report
+
+      dl.grid.grid-cols-2.gap-px.border-t.border-gray-100.bg-gray-100(class="sm:grid-cols-4")
+        - [["Entité", @report.legal_entity&.name], \
+           ["Remise le", @report.submitted_on && l(@report.submitted_on, format: :long)], \
+           ["Traitée le", @report.processed_on && l(@report.processed_on, format: :long)], \
+           ["Payée le", @report.paid_on && l(@report.paid_on, format: :long)]].each do |label, value|
+          .bg-white.px-4.py-3
+            dt.text-xs.uppercase.tracking-wide.text-gray-400 = label
+            dd.mt-1.text-sm.text-gray-900 = value.presence || "—"
+
+      - if @report.notes.present?
+        .border-t.border-gray-100.px-4.py-3
+          .text-xs.uppercase.tracking-wide.text-gray-400 Notes
+          p.mt-1.text-sm.text-gray-700 = simple_format(@report.notes)
+
+      - if @report.rejected? && @report.rejection_reason.present?
+        .border-t.border-red-100.bg-red-50.px-4.py-3
+          .text-xs.font-medium.uppercase.tracking-wide.text-red-700 Motif du rejet
+          p.mt-1.text-sm.text-red-800 = @report.rejection_reason
+
+    .overflow-hidden.bg-white.rounded-lg.border.border-gray-100
+      .px-4.py-3.border-b.border-gray-100
+        h3.text-sm.font-semibold.text-gray-900 Les dépenses
+      table.w-full.text-sm.text-left.text-gray-500
+        thead.text-xs.text-gray-700.uppercase.bg-gray-50
+          tr
+            th.py-2.px-4[scope="col"] Date
+            th.py-2.px-4[scope="col"] Dépense
+            th.py-2.px-4[scope="col"] Compte / pôle
+            th.py-2.px-4[scope="col"] Pièce
+            th.py-2.px-4.text-right[scope="col"] Montant
+        tbody
+          - @lines.each do |line|
+            tr.border-b.bg-white
+              td.py-3.px-4.align-top.whitespace-nowrap.text-xs.text-gray-500 = l(line.spent_on, format: :long)
+              td.py-3.px-4.align-top
+                .font-medium.text-gray-900 = line.label
+                - if line.supplier_name.present?
+                  .text-xs.text-gray-400 = line.supplier_name
+              td.py-3.px-4.align-top.text-xs.text-gray-500
+                = line.general_account&.to_s
+                - if line.team
+                  .text-gray-400 = line.team.name
+              td.py-3.px-4.align-top.text-xs
+                - if line.receipt.attached?
+                  = link_to (line.doc_kind_label || "Pièce"), rails_blob_path(line.receipt, disposition: "inline"), target: "_blank", rel: "noopener", class: "text-4s-main hover:underline"
+                - elsif line.doc_kind.present?
+                  span.text-amber-600 = "#{line.doc_kind_label} — non déposé"
+                - else
+                  span.text-gray-300 —
+              td.py-3.px-4.align-top.text-right.font-medium.tabular-nums.text-gray-900 = expense_amount(line.amount_cents)
+        tfoot
+          tr.bg-gray-50
+            td.py-3.px-4.text-xs.font-medium.uppercase.tracking-wide.text-gray-500[colspan="4"] Total
+            td.py-3.px-4.text-right.font-semibold.tabular-nums.text-gray-900 = expense_amount(@report.total_cents)
+
+  .space-y-4
+    .overflow-hidden.bg-white.rounded-lg.border.border-gray-100
+      .px-4.py-3.border-b.border-gray-100
+        h3.text-sm.font-semibold.text-gray-900 Ce qu'on peut faire
+      .space-y-4.px-4.py-4
+        - if @report.recorded?
+          = form_with url: start_processing_finance_expense_report_path(@report), method: :post, class: "space-y-2" do
+            label.block.text-xs.text-gray-500
+              | Date de la pièce
+              = date_field_tag :processed_on, Date.current, class: "mt-1 block w-full rounded-md border-gray-300 text-sm"
+            = submit_tag "Passer en traitement", class: "w-full rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+            p.text-xs.text-gray-500
+              | Attribue le numéro de pièce et génère l'écriture d'achat. Après ça, la note ne se modifie plus.
+
+          hr.border-gray-100
+
+          = form_with url: reject_finance_expense_report_path(@report), method: :post, class: "space-y-2" do
+            label.block.text-xs.text-gray-500
+              | Motif du rejet
+              = text_area_tag :rejection_reason, nil, rows: 2, placeholder: "Ticket illisible, dépense hors budget…", class: "mt-1 block w-full rounded-md border-gray-300 text-sm"
+            = submit_tag "Rejeter la note", class: "w-full rounded-md border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50", data: { turbo_confirm: "Rejeter cette note ?" }
+
+        - elsif @report.processing?
+          = form_with url: pay_in_cash_finance_expense_report_path(@report), method: :post, class: "space-y-2" do
+            label.block.text-xs.text-gray-500
+              | Date du paiement
+              = date_field_tag :paid_on, Date.current, class: "mt-1 block w-full rounded-md border-gray-300 text-sm"
+            = submit_tag "Marquer payée en espèces", class: "w-full rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white hover:opacity-90", data: { turbo_confirm: "Sortir #{expense_amount(@report.total_cents)} de la caisse ?" }
+            p.text-xs.text-gray-500
+              | Crée la sortie de caisse, affectée sur le 440000 avec cette note en document.
+
+          hr.border-gray-100
+
+          p.text-xs.text-gray-500
+            | Le virement bancaire, lui, se rapprochera depuis « À affecter » (phase 3 de l'epic #241).
+
+          = button_to "Contre-passer l'écriture",
+                      unprocess_finance_expense_report_path(@report), method: :post,
+                      class: "w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50",
+                      form: { data: { turbo_confirm: "Contre-passer l'écriture et rouvrir la note ? Elle garde son numéro de pièce." } }
+
+        - elsif @report.paid?
+          p.text-sm.text-gray-700 Cette note est réglée. Son écriture et son règlement restent au grand livre.
+        - else
+          p.text-sm.text-gray-700 Cette note est rejetée. Elle garde ses lignes et son motif.
+
+        - if @report.editable? || @report.rejected?
+          hr.border-gray-100
+          = button_to "Supprimer la note",
+                      finance_expense_report_path(@report), method: :delete,
+                      class: "w-full text-xs font-medium text-red-600 hover:underline",
+                      form: { data: { turbo_confirm: "Supprimer définitivement cette note ?" } }
+
+    .overflow-hidden.bg-white.rounded-lg.border.border-gray-100
+      .px-4.py-3.border-b.border-gray-100
+        h3.text-sm.font-semibold.text-gray-900 Pièce comptable
+      .px-4.py-4.space-y-2.text-sm
+        - if @entry
+          .text-gray-700
+            = link_to @entry.reference, finance_ledger_path(entry_id: @entry.id), class: "font-medium text-4s-main hover:underline"
+            = " — journal #{@entry.journal}, #{l(@entry.entry_date, format: :long)}"
+          .text-xs.text-gray-500 = "#{@entry.journal_lines.size} ligne(s) d'écriture"
+        - else
+          p.text-gray-500 Aucune écriture — la note n'est pas encore passée en traitement.
+
+        - if @report.settled_cents.positive?
+          hr.border-gray-100
+          .text-xs.uppercase.tracking-wide.text-gray-400 Réglé
+          .text-sm.font-medium.tabular-nums.text-gray-900
+            = "#{expense_amount(@report.settled_cents)} sur #{expense_amount(@report.total_cents)}"
+
+    .overflow-hidden.bg-white.rounded-lg.border.border-gray-100
+      .px-4.py-3.border-b.border-gray-100
+        h3.text-sm.font-semibold.text-gray-900 Historique
+      ul.divide-y.divide-gray-100
+        - @report.versions.reverse.first(8).each do |version|
+          li.px-4.py-2.text-xs.text-gray-500
+            = "#{version.event} — #{l(version.created_at, format: :long)}"
+            - if version.whodunnit.present?
+              .text-gray-400 = version.whodunnit
