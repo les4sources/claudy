@@ -11,6 +11,7 @@
 #  account_key     :string           not null
 #  amount_cents    :bigint           not null
 #  arrival_date    :date
+#  automatic       :boolean
 #  currency        :string           default("EUR"), not null
 #  deleted_at      :datetime
 #  status          :string
@@ -45,8 +46,16 @@ class StripePayout < ApplicationRecord
 
   scope :ordered, -> { order(arrival_date: :desc, id: :desc) }
   scope :for_account, ->(key) { where(account_key: key.to_s) }
+  scope :manual, -> { where(automatic: false) }
 
   def account_label = StripeService.label_for(account_key)
+
+  # Un compte en mode `ledger` n'a PAS de composantes : Stripe refuse de dire
+  # quelles ventes un versement manuel couvre. Tous les contrôles qui reposent
+  # sur « la somme des transactions referme le net » n'ont donc rien à vérifier
+  # ici — le versement est un virement interne, et c'est `580000` qui le tient
+  # (epic #250, décision 2).
+  def ledger? = cash_account&.ledger? || false
 
   # Le contrôle qui vaut d'être fait : la somme des transactions doit refermer
   # le net versé. Un versement qui ne se referme pas est un versement qu'on n'a
@@ -54,9 +63,14 @@ class StripePayout < ApplicationRecord
   # La transaction de type `payout` est la contrepartie du versement lui-même,
   # pas une de ses composantes : la compter reviendrait à soustraire le
   # versement de lui-même.
-  def component_transactions = stripe_balance_transactions.where.not(kind: "payout")
+  def component_transactions
+    return StripeBalanceTransaction.none if ledger?
+
+    stripe_balance_transactions.where.not(kind: "payout")
+  end
+
   def transactions_net_cents = component_transactions.sum(:net_cents)
-  def balanced? = transactions_net_cents == amount_cents
+  def balanced? = ledger? || transactions_net_cents == amount_cents
   def gross_cents = component_transactions.revenue.sum(:gross_cents)
   def unbalanced_reason
     return nil if balanced?

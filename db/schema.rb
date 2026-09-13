@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_13_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -371,6 +371,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
     t.bigint "legal_entity_id", null: false
     t.string "name", null: false
     t.string "stripe_account_key"
+    t.string "stripe_mode", default: "per_payout", null: false
     t.datetime "updated_at", null: false
     t.index ["deleted_at"], name: "index_cash_accounts_on_deleted_at"
     t.index ["general_account_id"], name: "index_cash_accounts_on_general_account_id"
@@ -443,6 +444,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
     t.string "fingerprint"
     t.string "label", null: false
     t.text "notes"
+    t.bigint "source_id"
+    t.string "source_type"
     t.string "statement_ref"
     t.string "status", default: "pending", null: false
     t.string "transaction_code"
@@ -454,6 +457,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
     t.index ["cash_motif_id"], name: "index_cash_entries_on_cash_motif_id"
     t.index ["deleted_at"], name: "index_cash_entries_on_deleted_at"
     t.index ["entry_date"], name: "index_cash_entries_on_entry_date"
+    t.index ["source_type", "source_id"], name: "index_cash_entries_on_source"
     t.index ["status"], name: "index_cash_entries_on_status"
     t.index ["transaction_code"], name: "index_cash_entries_on_transaction_code"
     t.check_constraint "amount_cents <> 0", name: "cash_entries_non_zero"
@@ -1578,6 +1582,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
   end
 
   create_table "stripe_balance_transactions", force: :cascade do |t|
+    t.string "account_key"
+    t.date "available_on"
+    t.bigint "cash_account_id"
     t.string "category"
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
@@ -1589,12 +1596,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
     t.datetime "occurred_at"
     t.uuid "payment_id"
     t.string "stripe_id", null: false
-    t.bigint "stripe_payout_id", null: false
+    t.bigint "stripe_payout_id"
     t.datetime "updated_at", null: false
+    t.index ["account_key", "occurred_at"], name: "idx_on_account_key_occurred_at_d76b62d952"
+    t.index ["cash_account_id"], name: "index_stripe_balance_transactions_on_cash_account_id"
     t.index ["deleted_at"], name: "index_stripe_balance_transactions_on_deleted_at"
     t.index ["payment_id"], name: "index_stripe_balance_transactions_on_payment_id"
     t.index ["stripe_id"], name: "index_stripe_transactions_on_stripe_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["stripe_payout_id"], name: "index_stripe_balance_transactions_on_stripe_payout_id"
+  end
+
+  create_table "stripe_category_mappings", force: :cascade do |t|
+    t.string "account_key", null: false
+    t.string "category"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "general_account_id", null: false
+    t.bigint "legal_entity_id"
+    t.text "notes"
+    t.bigint "team_id"
+    t.datetime "updated_at", null: false
+    t.index ["account_key", "category"], name: "index_stripe_category_mappings_on_account_and_category", unique: true, where: "((category IS NOT NULL) AND (deleted_at IS NULL))"
+    t.index ["account_key"], name: "index_stripe_category_mappings_on_account_without_category", unique: true, where: "((category IS NULL) AND (deleted_at IS NULL))"
+    t.index ["deleted_at"], name: "index_stripe_category_mappings_on_deleted_at"
+    t.index ["general_account_id"], name: "index_stripe_category_mappings_on_general_account_id"
+    t.index ["legal_entity_id"], name: "index_stripe_category_mappings_on_legal_entity_id"
+    t.index ["team_id"], name: "index_stripe_category_mappings_on_team_id"
   end
 
   create_table "stripe_events", force: :cascade do |t|
@@ -1609,6 +1636,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
     t.string "account_key", null: false
     t.bigint "amount_cents", null: false
     t.date "arrival_date"
+    t.boolean "automatic"
     t.bigint "cash_account_id"
     t.datetime "created_at", null: false
     t.string "currency", default: "EUR", null: false
@@ -1887,8 +1915,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
   add_foreign_key "stay_change_requests", "stays"
   add_foreign_key "stay_items", "stays"
   add_foreign_key "stays", "customers"
+  add_foreign_key "stripe_balance_transactions", "cash_accounts"
   add_foreign_key "stripe_balance_transactions", "payments"
   add_foreign_key "stripe_balance_transactions", "stripe_payouts"
+  add_foreign_key "stripe_category_mappings", "general_accounts"
+  add_foreign_key "stripe_category_mappings", "legal_entities"
+  add_foreign_key "stripe_category_mappings", "teams"
   add_foreign_key "stripe_payouts", "cash_accounts"
   add_foreign_key "tasks", "bundles"
   add_foreign_key "tasks", "projects"

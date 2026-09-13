@@ -13,6 +13,9 @@ module FinanceHelper
     when :coda then finance_coda_imports_path
     when :cash_entries then finance_cash_entries_path
     when :unallocated then finance_unallocated_cash_entries_path
+    # « À affecter », restreint aux comptes Stripe : c'est là qu'atterrit une
+    # recette dont la catégorie n'a pas encore de correspondance (epic #250).
+    when :stripe_unallocated then finance_unallocated_cash_entries_path(kind: "stripe")
     when :recurring then finance_recurring_charges_path(month: periode)
     when :statements then finance_statements_path(month: periode)
     when :trial_balance

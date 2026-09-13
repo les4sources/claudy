@@ -49,6 +49,7 @@ module Finance
         statements_issued_step,
         statements_sent_step,
         settlements_step,
+        stripe_step,
         controls_step,
         closing_step
       ]
@@ -170,7 +171,41 @@ module Finance
       end
     end
 
-    # 7 — les invariants. Les mêmes que les rakes, calculés ici pour que
+    # 7 — Stripe. La question n'est pas la même selon le mode du compte
+    # (epic #250) : en `per_payout`, un versement se referme ou ne se referme
+    # pas ; en `ledger`, le solde Stripe est un compte de trésorerie comme un
+    # autre, et ce qui doit tomber à zéro c'est le nombre de lignes en attente.
+    def stripe_step
+      comptes = CashAccount.actives.stripe.to_a
+      return stripe_absent_step if comptes.empty?
+
+      ledgers = comptes.select(&:ledger?)
+      en_attente = CashEntry.pending.in_period(@from, @to)
+                            .where(cash_account_id: ledgers.map(&:id))
+      nombre = ledgers.any? ? en_attente.count : 0
+
+      if nombre.positive?
+        Step.new(key: :stripe, title: "Les flux Stripe du mois sont rangés", status: :todo,
+                 detail: "#{nombre} ligne(s) Stripe en attente d'affectation sur le mois, pour " \
+                         "#{money(en_attente.sum(:amount_cents))}. Une catégorie sans correspondance " \
+                         "laisse sa recette ici.",
+                 action_label: "Les affecter", action_path: :stripe_unallocated)
+      elsif unbalanced_payouts?
+        Step.new(key: :stripe, title: "Les flux Stripe du mois sont rangés", status: :todo,
+                 detail: "Des versements Stripe du mois ne se referment pas : il manque des transactions.",
+                 action_label: "Ouvrir la balance", action_path: :trial_balance)
+      else
+        Step.new(key: :stripe, title: "Les flux Stripe du mois sont rangés", status: :done,
+                 detail: ledgers.any? ? "Aucune ligne Stripe en attente sur le mois." : "Les versements du mois se referment.")
+      end
+    end
+
+    def stripe_absent_step
+      Step.new(key: :stripe, title: "Les flux Stripe du mois sont rangés", status: :done,
+               detail: "Aucun compte Stripe actif.")
+    end
+
+    # 8 — les invariants. Les mêmes que les rakes, calculés ici pour que
     # personne n'ait à ouvrir un terminal pour savoir si la compta se tient.
     def controls_step
       ecarts = []
@@ -229,9 +264,17 @@ module Finance
                     .present?
     end
 
+    # Les comptes en mode grand livre sont hors de ce contrôle : leurs versements
+    # n'ont pas de composantes, par construction (epic #250).
     def unbalanced_payouts?
+      # `NOT IN` écarte aussi les lignes dont la colonne est NULL : un versement
+      # sans compte de trésorerie sortirait du contrôle sans qu'on l'ait décidé.
+      # D'où la condition explicite sur le NULL.
       StripeBalanceTransaction.joins(:stripe_payout)
                               .where(stripe_payouts: { arrival_date: @from..@to })
+                              .where("stripe_payouts.cash_account_id IS NULL OR " \
+                                     "stripe_payouts.cash_account_id NOT IN (?)",
+                                     CashAccount.with_deleted { CashAccount.stripe_ledger.pluck(:id) }.presence || [-1])
                               .where.not(kind: "payout")
                               .group("stripe_payouts.id", "stripe_payouts.amount_cents")
                               .having("SUM(stripe_balance_transactions.net_cents) <> stripe_payouts.amount_cents")
