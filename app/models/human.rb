@@ -7,6 +7,7 @@
 #  deleted_at    :datetime
 #  description   :text
 #  email         :string
+#  iban          :string
 #  name          :string
 #  photo         :string
 #  roles_enabled :boolean          default(TRUE), not null
@@ -50,6 +51,16 @@ class Human < ApplicationRecord
 
   has_rich_text :description
 
+  # L'IBAN du membre (epic #241) : c'est par lui que partira le virement d'une
+  # note de frais. Chiffré au repos, comme celui d'un tiers — une coordonnée
+  # bancaire n'a pas à être lisible dans un dump de base. Il ne sort jamais dans
+  # l'API agent.
+  encrypts :iban
+
+  before_validation :normalize_iban
+
+  validates :iban, iban: true, allow_blank: true
+
   mount_uploader :photo, HumanAvatarUploader
 
   default_scope -> { where(status: "active").order(:name) }
@@ -82,5 +93,19 @@ class Human < ApplicationRecord
   # n'existe encore).
   def account_possible?
     email.present? && user.blank?
+  end
+
+  # L'IBAN ne s'affiche jamais en entier hors du formulaire : quatre caractères
+  # suffisent à reconnaître le compte sans l'exposer.
+  def iban_masked
+    return nil if iban.blank?
+
+    "•••• #{iban.last(4)}"
+  end
+
+  private
+
+  def normalize_iban
+    self.iban = iban.to_s.gsub(/\s+/, "").upcase.presence
   end
 end

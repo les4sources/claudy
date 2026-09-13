@@ -371,6 +371,67 @@ namespace :accounting do
     report("verify_cash_counts", ecarts, "#{CashCount.validated.count} comptage(s) validé(s) vérifié(s)")
   end
 
+  desc "Vérifie les notes de frais — exit 1 si écart"
+  task verify_expense_reports: :environment do
+    ecarts = []
+
+    ExpenseReport.includes(:expense_lines, :journal_entries, :cash_allocations, :human)
+                 .find_each do |note|
+      libelle = "Note #{note.reference.presence || "##{note.id}"} (#{note.human&.name})"
+
+      if %w[processing paid].include?(note.status)
+        ecarts << "#{libelle} : #{note.status_label.downcase} sans numéro de pièce" if note.reference.blank?
+
+        # `journal_entries` et non `posted_at` : la colonne est une commodité
+        # d'affichage, l'écriture est le fait.
+        ecarts << "#{libelle} : #{note.status_label.downcase} sans écriture au grand livre" if note.journal_entries.empty?
+
+        total = note.expense_lines.sum(&:amount_cents)
+        entry = note.journal_entries.find { |e| e.journal == "purchases" }
+        if entry.present? && entry.journal_lines.sum(&:debit_cents) != total
+          ecarts << "#{libelle} : l'écriture porte #{entry.journal_lines.sum(&:debit_cents)} pour un total de lignes de #{total}"
+        end
+      end
+
+      if note.status == "paid"
+        total = note.expense_lines.sum(&:amount_cents)
+        regle = note.cash_allocations.sum(&:amount_cents).abs
+        ecarts << "#{libelle} : payée mais seulement #{regle} affecté sur #{total}" if regle < total
+      end
+
+      if note.status == "recorded" && note.journal_entries.any?
+        ecarts << "#{libelle} : encore enregistrée alors qu'une écriture la référence"
+      end
+
+      if note.expense_lines.any? { |line| line.general_account_id.blank? }
+        ecarts << "#{libelle} : une ligne au moins n'a pas de compte de charge"
+      end
+    end
+
+    # Les trous de séquence. Un numéro attribué ne se réattribue jamais (et une
+    # note contre-passée garde le sien) : la suite doit donc être 1..n, sans
+    # manque, par exercice ET par type.
+    ExpenseReport.with_deleted do
+      ExpenseReport.where.not(sequence_number: nil)
+                   .group(:fiscal_year_id, :kind)
+                   .pluck(:fiscal_year_id, :kind, Arel.sql("array_agg(sequence_number ORDER BY sequence_number)"))
+                   .each do |fiscal_year_id, kind, numeros|
+        attendus = (1..numeros.max).to_a
+        manquants = attendus - numeros
+        doublons = numeros.tally.select { |_, count| count > 1 }.keys
+
+        if manquants.any?
+          ecarts << "Séquence #{kind} exercice ##{fiscal_year_id} : numéro(s) manquant(s) #{manquants.join(', ')}"
+        end
+        if doublons.any?
+          ecarts << "Séquence #{kind} exercice ##{fiscal_year_id} : numéro(s) en double #{doublons.join(', ')}"
+        end
+      end
+    end
+
+    report("verify_expense_reports", ecarts, "#{ExpenseReport.count} note(s) vérifiée(s)")
+  end
+
   def report(name, ecarts, resume)
     if ecarts.empty?
       puts "[accounting:#{name}] Aucun écart — #{resume}."

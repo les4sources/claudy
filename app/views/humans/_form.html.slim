@@ -16,6 +16,15 @@
                    label: "Résumé",
                    class: "md:w-1/2 lg:w-2/3"
 
+    / L'IBAN (epic #241) : c'est par lui que part le virement d'une note de
+      frais. Chiffré au repos, il ne se relit qu'ici — la fiche n'en montre que
+      les quatre derniers caractères.
+    = f.text_field :iban,
+                   label: "IBAN",
+                   placeholder: "BE68 5390 0754 7034",
+                   hint: "Sert à payer les notes de frais. Chiffré en base, jamais exposé dans l'API.",
+                   class: "md:w-1/2 lg:w-2/3"
+
     .flex.space-x-4
       - if @human.photo?
         = image_tag @human.photo_url(:thumb),
