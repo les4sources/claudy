@@ -26,6 +26,7 @@
 #  fingerprint       :string
 #  label             :string           not null
 #  notes             :text
+#  source_type       :string
 #  statement_ref     :string
 #  status            :string           default("pending"), not null
 #  transaction_code  :string
@@ -34,6 +35,7 @@
 #  updated_at        :datetime         not null
 #  cash_account_id   :bigint           not null
 #  cash_motif_id     :bigint
+#  source_id         :bigint
 #
 # Indexes
 #
@@ -43,6 +45,7 @@
 #  index_cash_entries_on_entry_date        (entry_date)
 #  index_cash_entries_on_external_ref      (cash_account_id,external_ref) UNIQUE WHERE (external_ref IS NOT NULL)
 #  index_cash_entries_on_fingerprint       (cash_account_id,fingerprint) UNIQUE WHERE (fingerprint IS NOT NULL)
+#  index_cash_entries_on_source            (source_type,source_id)
 #  index_cash_entries_on_status            (status)
 #  index_cash_entries_on_transaction_code  (transaction_code)
 #
@@ -73,6 +76,13 @@ class CashEntry < ApplicationRecord
   # une autre entité : celle du mouvement, et son miroir chez l'entité tierce.
   # Un `has_one` en choisirait une au hasard.
   has_many :journal_entries, as: :source, dependent: :restrict_with_error
+
+  # D'où vient la ligne — aujourd'hui une `StripeBalanceTransaction` (epic
+  # #250), demain autre chose. À ne pas confondre avec le `source` des écritures
+  # ci-dessus, qui pointe dans l'autre sens : une écriture désigne la ligne qui
+  # l'a produite, une ligne désigne le fait qui l'a produite. Facultatif : une
+  # ligne CODA ou une ligne de caisse n'en a pas.
+  belongs_to :source, polymorphic: true, optional: true
 
   monetize :amount_cents
 

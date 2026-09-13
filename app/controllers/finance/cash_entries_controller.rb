@@ -39,9 +39,22 @@ module Finance
 
     def unallocated
       @pending_total = CashEntry.pending.count
-      @entries = CashEntry.pending.ordered
-                          .includes(:cash_account, :cash_allocations, :allocation_suggestions)
-                          .paginate(page: params[:page], per_page: PAR_PAGE)
+
+      # La file se restreint à un compte, ou à une famille de comptes : l'arrêté
+      # du mois renvoie ici filtré sur Stripe quand une recette Stripe attend sa
+      # correspondance de catégorie (epic #250). Sans filtre, on retombe sur la
+      # file entière — comportement inchangé.
+      scope = CashEntry.pending.ordered
+      scope = scope.where(cash_account_id: params[:cash_account_id]) if params[:cash_account_id].present?
+      if params[:kind].present? && CashAccount::KINDS.include?(params[:kind])
+        scope = scope.where(cash_account_id: CashAccount.where(kind: params[:kind]).select(:id))
+      end
+      @filtered_total = scope.count
+      @filter_kind = params[:kind].presence
+      @filter_account = CashAccount.find_by(id: params[:cash_account_id])
+
+      @entries = scope.includes(:cash_account, :cash_allocations, :allocation_suggestions)
+                      .paginate(page: params[:page], per_page: PAR_PAGE)
 
       # Les suggestions se recalculent à l'ouverture de l'écran : c'est le seul
       # moment où elles servent, et ça évite un job de fond que l'application
