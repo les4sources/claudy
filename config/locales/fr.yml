@@ -262,6 +262,22 @@ fr:
     precision:
       format:
         delimiter: ''
+  # Issue #306 — connexion par lien e-mail. Chaque message visible passe par ici :
+  # le français est la langue de travail de l'app, mais rien ne doit rester en dur
+  # dans une vue.
+  users:
+    magic_link:
+      title: Se connecter par e-mail
+      intro: Entrez votre adresse, nous vous envoyons un lien de connexion. Pas de mot de passe à retrouver.
+      email_label: Adresse email
+      submit: M'envoyer un lien
+      back_to_password: Se connecter avec un mot de passe
+      ask_again: Demander un nouveau lien
+      sent: Si un compte existe avec cette adresse, un lien de connexion vient d'être envoyé.
+      sent_title: Regardez vos e-mails
+      sent_body: Si un compte existe avec cette adresse, un lien de connexion vient d'être envoyé. Il est valable %{minutes} minutes et ne fonctionne qu'une fois.
+      sent_hint: Rien reçu après quelques minutes ? Vérifiez vos indésirables, ou demandez-en un nouveau.
+      invalid: Ce lien de connexion n'est plus valide. Demandez-en un nouveau.
   support:
     array:
       last_word_connector: " et "

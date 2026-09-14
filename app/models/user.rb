@@ -32,6 +32,11 @@ class User < ApplicationRecord
 
   belongs_to :human, optional: true
 
+  # Les liens de connexion par e-mail (issue #306). `dependent: :destroy` :
+  # supprimer un compte doit emporter ses liens vivants, sinon un lien déjà
+  # envoyé survivrait à son destinataire.
+  has_many :user_login_links, dependent: :destroy
+
   # Centre de notifications (epic #242, phase 2). `dependent: :destroy` : une
   # notification n'a aucun sens sans son destinataire.
   has_many :notifications, foreign_key: :recipient_id, inverse_of: :recipient, dependent: :destroy

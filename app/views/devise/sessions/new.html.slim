@@ -33,7 +33,12 @@
                             autocomplete: "current-password",
                             class: "block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" \
                           }
-            .flex.items-center.justify-end
+            / Deux portes, côte à côte : le mot de passe, ou le lien reçu par
+              e-mail (issue #306). Aucune n'est la « bonne » — c'est à
+              l'utilisateur de choisir.
+            .flex.items-center.justify-between.gap-4
+              .text-sm.leading-6
+                = link_to "Se connecter par e-mail", new_user_magic_link_path, class: "font-semibold text-indigo-600 hover:text-indigo-500"
               .text-sm.leading-6
                 = link_to "Mot de passe oublié ?", new_password_path(resource_name), class: "font-semibold text-indigo-600 hover:text-indigo-500"
             div

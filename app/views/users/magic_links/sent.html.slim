@@ -1,0 +1,21 @@
+/  Issue #306 — la page d'après. Elle ne dit PAS si l'adresse existe : le même
+   écran s'affiche dans les deux cas, c'est tout l'intérêt.
+.flex.min-h-full
+  .flex.flex-1.flex-col.justify-center.px-4.py-12.sm:px-6.lg:flex-none.lg:px-20.xl:px-24
+    .mx-auto.w-full.max-w-sm.lg:w-96
+      div
+        = vite_image_tag "images/les-4-sources-logo-seul.png",
+                         class: "h-10 w-auto",
+                         alt: "Les 4 Sources"
+        h2.mt-8.text-4xl.font-bold.leading-9.tracking-tight.text-4s-main.font-averia
+          = t("users.magic_link.sent_title")
+      .mt-6.space-y-4.text-sm.leading-6.text-gray-600
+        p= t("users.magic_link.sent_body", minutes: UserLoginLink::VALIDITY.to_i / 60)
+        p= t("users.magic_link.sent_hint")
+      .mt-8.flex.flex-col.gap-3.text-sm.leading-6
+        = link_to t("users.magic_link.ask_again"), new_user_magic_link_path, class: "font-semibold text-indigo-600 hover:text-indigo-500"
+        = link_to t("users.magic_link.back_to_password"), new_user_session_path, class: "font-semibold text-indigo-600 hover:text-indigo-500"
+  .relative.hidden.w-0.flex-1.lg:block
+    = vite_image_tag "images/les-4-sources-bar-crepuscule.jpg",
+                     class: "absolute inset-0 h-full w-full object-cover",
+                     alt: ""
