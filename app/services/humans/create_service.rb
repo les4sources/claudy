@@ -37,7 +37,9 @@ module Humans
           :photo,
           :photo_cache,
           :roles_enabled,
-          :status
+          :status,
+          :iban,
+          :iban_holder_name
         )
     end
   end

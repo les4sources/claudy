@@ -1,6 +1,7 @@
 # Rend un modèle commentable (epic #242, décision 1). Ajouter le concern suffit ;
-# la seule chose à surcharger, plus tard, est `comment_recipients` — la liste des
-# `User` à prévenir, que la phase 2 utilisera pour notifier.
+# les deux seules choses à surcharger sont `comment_recipients` — la liste des
+# `User` à prévenir, utilisée par `Notifications::CommentPosted` depuis la phase
+# 2 — et `comment_label`, le nom de l'objet dans le titre de la notification.
 #
 #   class Gathering < ApplicationRecord
 #     include Commentable
@@ -16,8 +17,14 @@ module Commentable
   end
 
   # Destinataires déclarés par le modèle, en plus des auteurs des commentaires
-  # précédents (décision 4). Vide par défaut ; branché en phase 2.
+  # précédents (décision 4). Vide par défaut.
   def comment_recipients
     []
+  end
+
+  # Comment cet objet se nomme dans le titre d'une notification (« a commenté
+  # LE SÉJOUR DE MARTIN »). Surchargeable ; repli sur le nom du modèle.
+  def comment_label
+    self.class.model_name.human.downcase
   end
 end

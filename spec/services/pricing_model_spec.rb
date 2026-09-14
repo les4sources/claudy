@@ -21,68 +21,78 @@ RSpec.describe PricingModel do
 
       expect(quote.breakdown).to be_an(Array)
       expect(quote.breakdown.first).to include(:label, :amount_cents)
-      expect(quote.total_cents).to eq(135_000)         # 2 nuits Grand-Duc
+      expect(quote.total_cents).to eq(130_000)         # 2 nuits semaine Grand-Duc (2 × 650 €)
       expect(quote.deposit_rate).to eq(0.5)
-      expect(quote.deposit_cents).to eq(67_500)        # 50 % du total
+      expect(quote.deposit_cents).to eq(65_000)        # 50 % du total
     end
 
     it "permet de configurer le taux d'acompte (AC-T2-16)" do
       quote = described_class.quote(draft(lodging: grand_duc, nights: 2), deposit_rate: 0.3)
-      expect(quote.deposit_cents).to eq(40_500)        # 30 % de 1 350 €
+      expect(quote.deposit_cents).to eq(39_000)        # 30 % de 1 300 €
     end
   end
 
-  describe "formule fermée dégressive (Q3 — AC-T2-14)" do
-    # Grand-Duc : nuit 1 = 750 €, nuits suivantes = 600 €.
+  # Depuis l'epic #260, les trois gîtes du site suivent le barème PUBLIÉ (cinq
+  # briques datées) et non plus la formule « première nuit + nuits suivantes ».
+  # Un draft sans dates est ancré sur un lundi : les nuits d'un séjour de N
+  # nuits sont donc lundi, mardi… — le cas nominal du site.
+  describe "barème du site, draft sans dates (epic #260)" do
     {
-      2 => 135_000,
-      3 => 195_000,
-      4 => 255_000,
-      5 => 315_000,
-      6 => 375_000
+      1 => 65_000,   # nuit du lundi
+      2 => 130_000,  # 2 nuits semaine
+      3 => 195_000,  # 3 nuits semaine
+      4 => 241_000,  # forfait 4 nuits (lundi → vendredi)
+      6 => 290_000   # forfait 6 nuits (lundi → dimanche)
     }.each do |nights, expected_cents|
-      it "calcule #{nights} nuits = #{expected_cents / 100} € par la formule" do
+      it "Grand-Duc, #{nights} nuits = #{expected_cents / 100} €" do
         quote = described_class.quote(draft(lodging: grand_duc, nights: nights))
         expect(quote.total_cents).to eq(expected_cents)
       end
     end
+
+    it "libelle les forfaits avec leur plage de dates" do
+      quote = described_class.quote(draft(lodging: grand_duc, nights: 4))
+
+      expect(quote.breakdown.first[:label]).to include("forfait du lundi au vendredi (4 nuits)")
+    end
+
+    it "nomme la nuit à l'unité par sa date" do
+      quote = described_class.quote(draft(lodging: grand_duc, nights: 1))
+
+      expect(quote.breakdown.first[:label]).to include("nuit du")
+    end
   end
 
-  describe "forfait nommé qui écrase la formule (Q3 hybride — AC-T2-14b)" do
-    # Le mécanisme d'override reste couvert par La Chevêche, seul barème à porter
-    # encore un forfait nommé. Son montant coïncide avec la formule : c'est le
-    # LIBELLÉ qui prouve que le chemin « forfait » a bien été emprunté.
-    it "La Chevêche 3 nuits passe par le forfait nommé (675 €)" do
-      quote = described_class.quote(draft(lodging: cheveche, nights: 3))
+  describe "le forfait semaine du Grand-Duc reste retiré (décision 2026-09-08)" do
+    # À 2 410 €, sept nuits coûtaient MOINS que quatre (2 550 €) — un barème qui
+    # décroît quand le séjour s'allonge. Le nouveau barème ne le réintroduit pas.
+    it "7 nuits coûtent plus que 4 nuits" do
+      quatre = described_class.quote(draft(lodging: grand_duc, nights: 4)).total_cents
+      sept   = described_class.quote(draft(lodging: grand_duc, nights: 7)).total_cents
 
-      expect(quote.total_cents).to eq(67_500)
-      expect(quote.breakdown.first[:label]).to include("forfait 3 nuits")
+      expect(sept).to be > quatre
+    end
+  end
+
+  # ⚠️ TROU CONNU DU BARÈME PUBLIÉ, en saison basse seulement (15 nov – 14 mars) :
+  # Mon → Sam (5 nuits) = forfait 4 nuits + la nuit du vendredi à l'unité, soit
+  # PLUS cher que Mon → Dim (6 nuits), qui a son forfait. Le site vend les deux
+  # à ces prix ; l'epic #260 ne tranche pas le cas. On le FIGE ici pour qu'il
+  # soit visible plutôt que découvert par un client (cf. commentaire sur #260).
+  describe "5 nuits en saison basse coûtent plus cher que 6" do
+    let(:lundi_basse_saison) { Date.new(2027, 1, 4) } # un lundi, saison basse
+
+    def dated(nights)
+      described_class.quote(draft(lodging: grand_duc, nights: nights,
+                                  arrival_date: lundi_basse_saison,
+                                  departure_date: lundi_basse_saison + nights)).total_cents
     end
 
-    # Décision Michael 2026-09-08 : le forfait semaine du Grand-Duc est RETIRÉ.
-    # À 2 410 €, sept nuits coûtaient moins que quatre (2 550 €) — un barème qui
-    # décroît quand le séjour s'allonge. Sept nuits repassent à la formule.
-    it "Grand-Duc 7 nuits = formule 4 350 € (le forfait semaine est retiré)" do
-      quote = described_class.quote(draft(lodging: grand_duc, nights: 7))
-
-      expect(quote.total_cents).to eq(75_000 + 6 * 60_000) # 4 350 €
-      expect(quote.total_cents).not_to eq(241_000)
-      expect(quote.breakdown.first[:label]).not_to include("forfait")
-    end
-
-    # Le barème doit rester CROISSANT : c'est l'invariant que le forfait semaine
-    # violait. On le verrouille plutôt que de se contenter du montant à 7 nuits.
-    it "reste croissant de 1 à 10 nuits sur le Grand-Duc" do
-      totals = (1..10).map { |n| described_class.quote(draft(lodging: grand_duc, nights: n)).total_cents }
-
-      expect(totals).to eq(totals.sort)
-      expect(totals.uniq.size).to eq(totals.size)
-    end
-
-    it "4/5/6 nuits restent calculées par la formule (pas de forfait nommé)" do
-      expect(described_class.quote(draft(lodging: grand_duc, nights: 4)).total_cents).to eq(255_000)
-      expect(described_class.quote(draft(lodging: grand_duc, nights: 5)).total_cents).to eq(315_000)
-      expect(described_class.quote(draft(lodging: grand_duc, nights: 6)).total_cents).to eq(375_000)
+    it "le constate sur le Grand-Duc" do
+      expect(lundi_basse_saison.wday).to eq(1)
+      expect(dated(5)).to eq(241_000 + 75_000) # 3 160 €
+      expect(dated(6)).to eq(290_000)          # 2 900 €
+      expect(dated(5)).to be > dated(6)
     end
   end
 
@@ -103,9 +113,9 @@ RSpec.describe PricingModel do
   end
 
   describe "chaque structure de prix supportée (AC-T2-13)" do
-    it "forfait/nuit (hébergement) — Hulotte 1 nuit = 485 €" do
+    it "forfait/nuit (hébergement) — Hulotte 1 nuit semaine = 400 € (barème du site, epic #260)" do
       quote = described_class.quote(draft(lodging: hulotte, nights: 1))
-      expect(quote.total_cents).to eq(48_500)
+      expect(quote.total_cents).to eq(40_000)
     end
 
     it "€/pers/nuit (camping tente) — 4 pers × 2 nuits × 7,50 € = 60 €" do
@@ -210,10 +220,10 @@ RSpec.describe PricingModel do
           ]
         ))
         expect(quote.spaces_cents).to eq(50_000)             # duo 390 + cuisine 110
-        expect(quote.lodging_bundle_cents).to eq(48_500)     # Hulotte 485
+        expect(quote.lodging_bundle_cents).to eq(40_000)     # Hulotte, 1 nuit semaine
         expect(quote.lodging_bundle_cents + quote.spaces_cents)
           .to eq(quote.total_excluding_experiences_cents)
-        expect(quote.total_cents).to eq(98_500)
+        expect(quote.total_cents).to eq(90_000)
       end
     end
 
@@ -234,8 +244,8 @@ RSpec.describe PricingModel do
         meals: [{ kind: "repas", people: 2 }],
         dogs_count: 1
       ))
-      # 485 € + (2×1×7,50) 15 € + (2×15) 30 € + 50 € = 580 €
-      expect(quote.total_cents).to eq(58_000)
+      # 400 € + (2×1×7,50) 15 € + (2×15) 30 € + 50 € = 495 €
+      expect(quote.total_cents).to eq(49_500)
       expect(quote.breakdown.size).to eq(4)
     end
   end

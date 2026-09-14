@@ -97,7 +97,7 @@ div(data-controller="public--avail-modal")
           = f.submit "Mettre à jour le devis", class: "rounded-lg bg-forest text-sand px-4 py-2 text-sm font-semibold"
 
         / CTA — partial remplaçable par le Turbo Stream du devis.
-        = render "public/reservations/compose_cta", quote: @quote
+        = render "public/reservations/compose_cta", quote: @quote, draft: @draft
         noscript
           = f.submit "Continuer (sans JS)", formaction: public_reservation_advance_compose_path, formmethod: :post, class: "rounded-xl bg-forest text-white px-8 py-3 text-sm font-semibold"
 

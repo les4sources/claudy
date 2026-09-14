@@ -77,6 +77,20 @@ Rails.application.routes.draw do
   # ces routes ne servent qu'aux Turbo Streams du composant.
   resources :comments, only: %i[create update destroy]
 
+  # Centre de notifications (epic #242, phase 2). `show` est le point d'entrée
+  # de TOUS les liens (cloche, email) : il marque la notification lue puis
+  # redirige vers l'objet — une seule mécanique, jamais dupliquée.
+  resources :notifications, only: %i[index show] do
+    collection do
+      get :bell
+      post :read_all
+      patch :preferences
+    end
+  end
+
+  # Paramètres > Notifications : qui reçoit les notifications comptables.
+  resource :notification_settings, only: %i[show update], path: "parametres/notifications"
+
   # Paramètres > Dépôt-vente (epic #248) : le carnet des artisans déposants.
   # Pas de `show` — la fiche vit sur les relevés mensuels (phase 2).
   resources :consignors, except: [:show] do
@@ -208,8 +222,22 @@ Rails.application.routes.draw do
     # lit dans la liste, il n'a pas assez à dire pour mériter sa page. Pas de
     # `destroy` non plus — un comptage est un fait daté.
     resources :cash_counts, path: "cash/counts", only: %i[index new create edit update]
+    # Dépôt-vente (epic #248, phase 2) : le tableau de bord mensuel des relevés.
+    # La fiche d'un relevé et son règlement arrivent en phase 3.
+    resources :consignment_reports, path: "consignments", only: %i[index] do
+      member { post :resend }
+    end
     # Motifs de caisse (epic #243). Pas de `destroy` : un motif se désactive,
     # sinon une feuille de caisse passée perdrait son vocabulaire.
+    # Factures d'achat (epic #240, phase 2). Pas de `destroy` : une pièce
+    # comptable ne se supprime pas, elle se conteste ou se contre-passe.
+    resources :purchase_invoices, path: "purchases", except: %i[destroy] do
+      member do
+        post :submit
+        post :dispute
+        post :reopen
+      end
+    end
     resources :cash_motifs, path: "cash/motifs", except: %i[show destroy] do
       member do
         post :move
@@ -247,6 +275,9 @@ Rails.application.routes.draw do
         post :unpost
         post :exclude
         post :ventilate
+        # Solder le compte créditeur d'un membre depuis une ligne sortante
+        # (epic #246, phase 2).
+        post :payout
       end
       resources :allocations, only: [:create, :destroy], controller: "cash_allocations"
     end
@@ -540,6 +571,11 @@ Rails.application.routes.draw do
   get  "sejour/:token/modification",       to: "public/stay_change_requests#new",    as: :new_public_stay_change_request
   post "sejour/:token/modification/devis", to: "public/stay_change_requests#quote",  as: :public_stay_change_request_quote
   post "sejour/:token/modification",       to: "public/stay_change_requests#create", as: :public_stay_change_requests
+
+  # Déclaration de dépôt-vente par l'artisan (epic #248, phase 2) — canal jeton,
+  # sans connexion. Le jeton EST l'authentification : il est long et non devinable.
+  get   "depot-vente/:token", to: "public/consignment_reports#show",   as: :public_consignment_report
+  patch "depot-vente/:token", to: "public/consignment_reports#update"
 
   namespace :public do
     # Épic #81, Phase 9 — demande de réservation publique legacy retirée
