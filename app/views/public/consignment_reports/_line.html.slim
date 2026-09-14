@@ -1,0 +1,28 @@
+/ Une ligne de vente. Sur un téléphone, l'article prend toute la largeur et la
+  quantité côtoie le prix : c'est l'ordre dans lequel on les lit sur l'étiquette.
+.rounded-2xl.bg-white.px-4.py-3.ring-1.ring-gray-200.space-y-2(data-public--consignment-lines-target="row")
+  = lf.hidden_field :id
+  = lf.hidden_field :_destroy, value: "0"
+  / `label: false` partout : le `TailwindFormBuilder` est le builder par défaut de
+    l'application et pose SON propre libellé, en anglais faute de traduction —
+    « Label » et « Quantity » apparaissaient au-dessus des nôtres.
+  div
+    label.block.text-xs.font-medium.text-gray-500 Ce que vous avez vendu
+    = lf.text_field :label, placeholder: "Savon, confiture, poterie…", label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+  .flex.items-end.gap-3
+    .w-24
+      label.block.text-xs.font-medium.text-gray-500 Quantité
+      = lf.number_field :quantity, value: (lf.object.quantity || 1), min: 1, step: 1, inputmode: "numeric", label: false,
+                        class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm",
+                        data: { role: "quantity", action: "input->public--consignment-lines#refresh" }
+    .flex-1
+      label.block.text-xs.font-medium.text-gray-500 Prix unitaire (€)
+      = number_field_tag "#{lf.object_name}[unit_price_euros]", (lf.object.unit_price_cents.to_i.positive? ? format("%.2f", lf.object.unit_price_cents / 100.0) : nil),
+                         step: "0.01", min: 0, inputmode: "decimal", placeholder: "0,00",
+                         class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm",
+                         data: { role: "unit-price", action: "input->public--consignment-lines#refresh" }
+    .text-right
+      p.text-xs.text-gray-400 Montant
+      p.text-sm.font-semibold.text-gray-900(data-role="amount") —
+  .text-right
+    button.text-xs.text-gray-400(type="button" data-action="public--consignment-lines#remove") Retirer cette ligne
