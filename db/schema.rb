@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_11_070000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_12_050100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1215,6 +1215,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_070000) do
     t.index ["external_ref"], name: "index_notes_on_external_ref_unique_live", unique: true, where: "((deleted_at IS NULL) AND (external_ref IS NOT NULL))"
   end
 
+  create_table "notifications", force: :cascade do |t|
+    t.bigint "actor_id"
+    t.text "body"
+    t.datetime "created_at", null: false
+    t.datetime "emailed_at"
+    t.string "kind", null: false
+    t.bigint "notifiable_id"
+    t.string "notifiable_type"
+    t.datetime "read_at"
+    t.bigint "recipient_id", null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.string "url", null: false
+    t.index ["actor_id"], name: "index_notifications_on_actor_id"
+    t.index ["notifiable_type", "notifiable_id"], name: "index_notifications_on_notifiable"
+    t.index ["recipient_id", "created_at"], name: "index_notifications_on_recipient_id_and_created_at"
+    t.index ["recipient_id", "read_at"], name: "index_notifications_on_recipient_id_and_read_at"
+    t.index ["recipient_id"], name: "index_notifications_on_recipient_id"
+  end
+
   create_table "paper_sheets", force: :cascade do |t|
     t.string "channel", null: false
     t.datetime "created_at", null: false
@@ -1791,6 +1811,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_070000) do
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
     t.bigint "human_id"
+    t.boolean "notify_by_email", default: true, null: false
     t.datetime "remember_created_at"
     t.datetime "reset_password_sent_at"
     t.string "reset_password_token"
@@ -1950,6 +1971,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_070000) do
   add_foreign_key "meal_orders", "stays"
   add_foreign_key "member_accounts", "households"
   add_foreign_key "member_accounts", "humans"
+  add_foreign_key "notifications", "users", column: "actor_id"
+  add_foreign_key "notifications", "users", column: "recipient_id"
   add_foreign_key "paper_sheets", "member_accounts"
   add_foreign_key "paper_sheets", "users", column: "encoded_by_id"
   add_foreign_key "payments", "bookings"

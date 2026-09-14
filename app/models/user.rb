@@ -5,6 +5,7 @@
 #  id                        :bigint           not null, primary key
 #  email                     :string           default(""), not null
 #  encrypted_password        :string           default(""), not null
+#  notify_by_email           :boolean          default(TRUE), not null
 #  remember_created_at       :datetime
 #  reset_password_sent_at    :datetime
 #  reset_password_token      :string
@@ -31,6 +32,10 @@ class User < ApplicationRecord
 
   belongs_to :human, optional: true
 
+  # Centre de notifications (epic #242, phase 2). `dependent: :destroy` : une
+  # notification n'a aucun sens sans son destinataire.
+  has_many :notifications, foreign_key: :recipient_id, inverse_of: :recipient, dependent: :destroy
+
   # Cloisonnement des ACTIVITÉS (validation, édition, retrait, ajout sur un
   # séjour — `ExperienceBooking.for_user`, `ExperienceAvailability.for_user`).
   # Deux populations :
@@ -54,6 +59,18 @@ class User < ApplicationRecord
   # cloisonnement des activités — cf. `#restricted_to_own_activities?`.
   def global_admin?
     human_id.blank?
+  end
+
+  # Compteur de la cloche. Plafonné à l'affichage par la vue, pas ici : le
+  # nombre exact sert aussi aux specs.
+  def unread_notifications_count
+    notifications.unread.count
+  end
+
+  # Nom affiché dans un fil ou une notification : le membre d'équipe quand il y
+  # en a un, sinon l'adresse email — même règle que `Comment#author_label`.
+  def display_name
+    linked_human&.name.presence || email.to_s
   end
 
   # Membre d'équipe (Human) lié, sans le `default_scope` de Human (qui masque les

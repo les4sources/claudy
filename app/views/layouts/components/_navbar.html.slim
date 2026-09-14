@@ -104,6 +104,19 @@ nav.bg-4s-main.shadow-sm.lg:px-6.relative.z-40
               path[d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"]
             span Comptabilité
 
+        / Cloche des notifications (epic #242, phase 2). Dans un Turbo Frame
+          rechargé à CHAQUE navigation (`loading: :lazy` + `src`) : le compteur
+          suit sans qu'on ait à pousser quoi que ce soit depuis le serveur.
+        li
+          = turbo_frame_tag "notifications-bell", src: bell_notifications_path, loading: :lazy do
+            / Repli pendant le chargement : la cloche éteinte, à la bonne place —
+              aucun saut de mise en page quand le fragment arrive.
+            span.flex.items-center.justify-center.w-9.h-9.rounded-lg(class="text-white/50")
+              svg.w-5.h-5[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+                path[d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"]
+                path[d="M10.3 21a1.94 1.94 0 0 0 3.4 0"]
+              span.sr-only Notifications
+
         / Activité récente — ICÔNE SEULE (Michael 2026-07-26). Sortie du menu
           « Accueil », elle se pose entre les libellés et la roue crantée : c'est
           une consultation ponctuelle, pas une destination de travail.
@@ -278,6 +291,10 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
             = link_to "Dépôt-vente",
                       consignors_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'consignors' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
+            = link_to "Notifications",
+                      notification_settings_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'notification_settings' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
             = link_to "Rôles",
                       roles_path,
