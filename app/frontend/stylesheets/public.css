@@ -11,6 +11,8 @@
 /* Funnel public /reservation — même identité sous-bois, appliquée en amont du
    paiement (portal.css doit précéder : funnel.css consomme ses tokens --p-*). */
 @import 'funnel.css';
+/* Grille « Espaces » — feuille partagée avec l'admin (epic #234, phase 3). */
+@import 'spaces_grid.css';
 
 /* @import '../../components/flow/component.css'; */
 
