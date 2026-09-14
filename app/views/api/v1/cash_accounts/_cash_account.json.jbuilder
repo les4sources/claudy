@@ -8,3 +8,5 @@ json.legal_entity_name cash_account.legal_entity&.name
 json.general_account_code cash_account.general_account&.code
 json.general_account_name cash_account.general_account&.name
 json.active cash_account.active
+json.stripe_account_key cash_account.stripe_account_key
+json.stripe_mode cash_account.stripe_mode
