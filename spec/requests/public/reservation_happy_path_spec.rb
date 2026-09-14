@@ -11,8 +11,12 @@ RSpec.describe "Parcours /reservation complet (happy-path B2C)", type: :request 
     l
   end
 
-  let(:arrival) { (Date.today + 60).iso8601 }
-  let(:departure) { (Date.today + 63).iso8601 }
+  # Ancré sur un LUNDI depuis l'epic #260 : hors du 15 novembre au 14 mars, le
+  # funnel REFUSE une nuit de vendredi ou de samedi isolée. Une date flottante
+  # ferait donc échouer ces specs un jour sur deux.
+  let(:monday) { (Date.today + 60).next_occurring(:monday) }
+  let(:arrival) { monday.iso8601 }
+  let(:departure) { (monday + 3).iso8601 }
 
   before do
     allow(StripeService.instance).to receive(:create_checkout_session)
@@ -54,8 +58,9 @@ RSpec.describe "Parcours /reservation complet (happy-path B2C)", type: :request 
     expect(stay.source).to eq("reservation")    # canal (Q9)
     expect(stay.customer.email).to eq("happy@example.com")
     expect(stay.stay_items.count).to eq(1)
-    # Hulotte 3 nuits (485 + 2×260 = 1005) + repas (4×15 = 60) + chien 50 = 1115 €
-    expect(stay.total_amount_cents).to eq(111_500)
+    # Hulotte, 3 nuits SEMAINE au barème du site (epic #260) : 3 × 400 = 1 200 €
+    # + repas (4 × 15 = 60 €) + chien 50 € = 1 310 €.
+    expect(stay.total_amount_cents).to eq(131_000)
     expect(stay.payments).to be_empty
   end
 end

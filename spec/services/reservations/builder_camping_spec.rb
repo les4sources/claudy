@@ -13,9 +13,11 @@ RSpec.describe Reservations::Builder, "camping / van / repas (epic #66, Phase 3)
   end
   let!(:grande_salle) { Space.create!(name: "Grande Salle", capacity: 1) }
 
-  let(:arrival)   { Date.today + 30 }
-  let(:departure) { Date.today + 32 } # 2 nuits
-  let(:hulotte_two_nights_cents) { 74_500 }
+  # Ancré sur un LUNDI depuis l'epic #260 : le barème des gîtes dépend du jour
+  # de chaque nuit, une date flottante rendrait ces montants instables.
+  let(:arrival)   { (Date.today + 30).next_occurring(:monday) }
+  let(:departure) { arrival + 2 } # 2 nuits SEMAINE
+  let(:hulotte_two_nights_cents) { 80_000 } # 2 × 400 € (barème du site)
   let(:grande_salle_journee_cents) { 29_000 }
 
   def draft(**overrides)
@@ -198,10 +200,10 @@ RSpec.describe Reservations::Builder, "camping / van / repas (epic #66, Phase 3)
       expect(builder.camping_booking.price_cents).to eq(4_500)
       expect(builder.stay.meal_orders.first.price_cents).to eq(4_800)
 
-      # INVARIANT #79 : total prévu STRICTEMENT inchangé = 74 500 + 4 500 + 4 800.
-      expect(builder.stay.total_amount_cents).to eq(83_800)
+      # INVARIANT #79 : total prévu STRICTEMENT inchangé = 80 000 + 4 500 + 4 800.
+      expect(builder.stay.total_amount_cents).to eq(89_300)
       # Le Booking ne porte plus que l'hébergement PUR (extraction sans double-compte).
-      expect(builder.booking.price_cents).to eq(74_500)
+      expect(builder.booking.price_cents).to eq(hulotte_two_nights_cents)
     end
   end
 end

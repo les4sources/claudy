@@ -16,8 +16,11 @@ RSpec.describe "Stays — devis live (issue #73)", type: :request do
     lodging
   end
 
-  let(:arrival)   { Date.today + 30 }
-  let(:departure) { Date.today + 32 } # 2 nuits
+  # Ancré sur un LUNDI depuis l'epic #260 : le barème des gîtes dépend du jour
+  # de chaque nuit — sans ancrage, les montants attendus changeraient avec le
+  # jour où la suite tourne.
+  let(:arrival)   { (Date.today + 30).next_occurring(:monday) }
+  let(:departure) { arrival + 2 } # 2 nuits SEMAINE
 
   def composition_params(overrides = {})
     {
@@ -40,7 +43,7 @@ RSpec.describe "Stays — devis live (issue #73)", type: :request do
     expect(response.body).to include("stay-quote-panel")
     expect(response.body).to include("Total calculé")
     # Hulotte 2 nuits = 745 € : le total apparaît dans le panneau.
-    expect(response.body).to include("745")
+    expect(response.body).to include("800")
   end
 
   it "reflète l'ajout d'un espace dans le total (cohérent avec PricingModel)" do
@@ -51,7 +54,7 @@ RSpec.describe "Stays — devis live (issue #73)", type: :request do
 
     expect(response).to have_http_status(:ok)
     # 745 € héberg + 290 € grande salle journée = 1 035 €.
-    expect(response.body).to include("1 035").or include("1035")
+    expect(response.body).to include("1 090").or include("1090")
   end
 
   it "gère une composition vide sans planter (panneau présent, total à 0)" do
@@ -68,7 +71,7 @@ RSpec.describe "Stays — devis live (issue #73)", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Supplément chien")
     # 745 € héberg + 50 € chien = 795 €.
-    expect(response.body).to include("795")
+    expect(response.body).to include("850")
   end
 
   it "facture les hamacs (parité funnel, devis seul) via per_night_resources" do
@@ -79,6 +82,6 @@ RSpec.describe "Stays — devis live (issue #73)", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Hamac simple")
-    expect(response.body).to include("760")
+    expect(response.body).to include("815")
   end
 end

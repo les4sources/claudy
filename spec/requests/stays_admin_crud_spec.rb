@@ -13,9 +13,12 @@ RSpec.describe "Stays — CRUD admin (epic #66)", type: :request do
   # Hébergement tarifé au barème B2C (Pricing::Catalog) : La Hulotte = 485 € la
   # 1re nuit + 260 € par nuit suivante. 2 nuits → 745 € (74 500 cents).
   let!(:lodging)  { Lodging.create!(name: "La Hulotte", summary: "gîte") }
-  let(:arrival)   { Date.today + 30 }
-  let(:departure) { Date.today + 32 }
-  let(:hulotte_two_nights_cents) { 74_500 }
+  # Ancré sur un LUNDI depuis l'epic #260 : le barème des gîtes dépend du jour
+  # de chaque nuit — sans ancrage, les montants attendus changeraient avec le
+  # jour où la suite tourne.
+  let(:arrival)   { (Date.today + 30).next_occurring(:monday) }
+  let(:departure) { arrival + 2 }
+  let(:hulotte_two_nights_cents) { 80_000 } # 2 nuits semaine × 400 € (barème du site, epic #260)
 
   def base_params(overrides = {})
     {
@@ -108,7 +111,7 @@ RSpec.describe "Stays — CRUD admin (epic #66)", type: :request do
 
       stay = Stay.order(:created_at).last
       expect(stay.experience_bookings.count).to eq(1)
-      # Activité : 40 € forfait + 15 €/pers × 2 = 70 € (7 000 cents). Total = 745 € + 70 €.
+      # Activité : 40 € forfait + 15 €/pers × 2 = 70 € (7 000 cents). Total = 800 € + 70 €.
       expect(stay.total_amount_cents).to eq(hulotte_two_nights_cents + 7_000)
     end
   end
@@ -301,7 +304,7 @@ RSpec.describe "Stays — CRUD admin (epic #66)", type: :request do
       booking = stay.stay_items.where(bookable_type: "Booking").first.bookable
       expect(booking.lodging_id).to eq(cheveche.id)
       # La Chevêche = 275 € + 200 € = 475 € (47 500 cents) sur 2 nuits.
-      expect(stay.total_amount_cents).to eq(47_500)
+      expect(stay.total_amount_cents).to eq(40_000)
     end
 
     # Mis à jour le 2026-08-20 (signalement de Malau). L'édition d'un séjour ne
