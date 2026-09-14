@@ -48,6 +48,11 @@ class Human < ApplicationRecord
   has_paper_trail
   has_soft_deletion default_scope: true
 
+  # Une coordonnée bancaire n'a pas à être lisible dans un dump de base
+  # (epic #246, décision 5). Pour un enfant, l'IBAN est celui d'un parent :
+  # `iban_holder_name` dit alors sur quel compte le virement part vraiment.
+  encrypts :iban
+
   has_rich_text :description
 
   mount_uploader :photo, HumanAvatarUploader
@@ -57,6 +62,10 @@ class Human < ApplicationRecord
 	validates :name,
             presence: true,
             uniqueness: true
+
+  validates :iban, iban: true, allow_blank: true
+
+  before_validation :normalize_iban
 
   # Les humains actifs qu'on peut encore ajouter à ce pôle — ceux qui n'en sont
   # pas déjà membres. L'index unique de `team_memberships` interdit le doublon ;
@@ -73,6 +82,17 @@ class Human < ApplicationRecord
     self.status == "inactive"
   end
 
+  # L'IBAN ne s'affiche jamais en entier hors du formulaire : quatre derniers
+  # caractères suffisent à reconnaître le compte sans l'exposer.
+  def iban_masked
+    return nil if iban.blank?
+
+    "•••• #{iban.last(4)}"
+  end
+
+  # Le nom du titulaire du compte, quand il diffère de la personne payée.
+  def iban_holder = iban_holder_name.presence || name
+
   # A un compte d'accès (User Devise) lié.
   def account?
     user.present?
@@ -82,5 +102,11 @@ class Human < ApplicationRecord
   # n'existe encore).
   def account_possible?
     email.present? && user.blank?
+  end
+
+  private
+
+  def normalize_iban
+    self.iban = iban.to_s.gsub(/\s+/, "").upcase.presence
   end
 end

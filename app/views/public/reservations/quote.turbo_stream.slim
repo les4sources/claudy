@@ -12,4 +12,4 @@
 / Turbo ignore silencieusement une cible absente : ce stream sert aussi les
 / pages où ce bouton n'existe pas.
 = turbo_stream.replace "compose_cta" do
-  = render "public/reservations/compose_cta", quote: @quote
+  = render "public/reservations/compose_cta", quote: @quote, draft: @draft

@@ -1,0 +1,51 @@
+/ La cloche et son menu (epic #242, phase 2, décision 5).
+/ Rendue DANS un Turbo Frame nommé `notifications-bell`, rechargé à chaque
+/ navigation : le compteur suit sans qu'on ait à pousser quoi que ce soit.
+/ Locals : unread_count, notifications (les 10 dernières).
+.relative
+  button(
+    type="button"
+    id="notifications-bell-button"
+    data-controller="dropdown"
+    data-action="click->dropdown#toggle click@window->dropdown#hideOnClickOutside"
+    data-dropdown-toggle-value="notifications-bell-menu"
+    aria-haspopup="true"
+    aria-expanded="false"
+    title="#{unread_count.zero? ? 'Notifications' : "#{unread_count} notification#{'s' if unread_count > 1} non lue#{'s' if unread_count > 1}"}"
+    class="relative flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 text-white/50 hover:text-white hover:bg-white/10")
+    svg.w-5.h-5[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+      path[d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"]
+      path[d="M10.3 21a1.94 1.94 0 0 0 3.4 0"]
+    - if unread_count.positive?
+      / Pastille ambre sur fond vert : la seule tache chaude de la barre, donc
+      / repérable sans lire. Le nombre est aussi écrit — la couleur ne porte
+      / jamais l'information seule.
+      span(class="absolute -top-1 -right-1 w-5 h-5 px-1 rounded-full bg-amber-400 text-xs font-bold text-4s-main flex items-center justify-center leading-none")
+        = unread_count > 9 ? "9+" : unread_count
+    span.sr-only
+      = unread_count.zero? ? "Notifications" : "#{unread_count} notification#{'s' if unread_count > 1} non lue#{'s' if unread_count > 1}"
+
+  #notifications-bell-menu(class="hidden absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden")
+    .px-4.border-b.border-gray-100.flex.items-center.justify-between(class="py-2")
+      span.text-xs.font-semibold.text-gray-700.uppercase.tracking-wide Notifications
+      - if unread_count.positive?
+        = button_to "Tout lu", read_all_notifications_path,
+                    method: :post,
+                    class: "text-xs text-4s-main hover:underline",
+                    form: { data: { turbo: false } }
+    - if notifications.empty?
+      p.px-4.py-6.text-sm.text-gray-500.text-center Rien pour l'instant.
+    - else
+      ul.max-h-80.overflow-y-auto.divide-y.divide-gray-100
+        - notifications.each do |notification|
+          li
+            = link_to notification_path(notification),
+                      data: { turbo: false },
+                      class: "block px-4 py-3 hover:bg-teal-50/60 transition-colors #{'bg-teal-50/40' unless notification.read?}" do
+              p(class="text-sm leading-snug #{notification.read? ? 'text-gray-600' : 'text-gray-900 font-semibold'}")
+                = notification.title
+              - if notification.body.present?
+                p.text-xs.text-gray-500.truncate(class="mt-0.5") = notification.body
+              p.text-xs.text-gray-400.mt-1 = "il y a #{time_ago_in_words(notification.created_at)}"
+    .px-4.border-t.border-gray-100.text-center(class="py-2")
+      = link_to "Tout voir", notifications_path, class: "text-xs text-4s-main hover:underline"

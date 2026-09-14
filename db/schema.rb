@@ -561,6 +561,43 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_010000) do
     t.index ["deleted_at"], name: "index_comments_on_deleted_at"
   end
 
+  create_table "consignment_report_lines", force: :cascade do |t|
+    t.integer "amount_cents", default: 0, null: false
+    t.bigint "consignment_report_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "label", null: false
+    t.integer "position", default: 0, null: false
+    t.integer "quantity", default: 1, null: false
+    t.integer "unit_price_cents", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["consignment_report_id"], name: "index_consignment_lines_on_report"
+    t.index ["deleted_at"], name: "index_consignment_lines_on_deleted_at"
+  end
+
+  create_table "consignment_reports", force: :cascade do |t|
+    t.integer "commission_cents", default: 0, null: false
+    t.bigint "consignor_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "declared_at"
+    t.datetime "deleted_at"
+    t.integer "gross_cents", default: 0, null: false
+    t.integer "net_cents", default: 0, null: false
+    t.text "notes"
+    t.date "period_month", null: false
+    t.datetime "requested_at"
+    t.string "status", default: "requested", null: false
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "verified_at"
+    t.bigint "verified_by_id"
+    t.index ["consignor_id", "period_month"], name: "index_consignment_reports_on_consignor_and_month", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["consignor_id"], name: "index_consignment_reports_on_consignor_id"
+    t.index ["deleted_at"], name: "index_consignment_reports_on_deleted_at"
+    t.index ["token"], name: "index_consignment_reports_on_token", unique: true
+    t.index ["verified_by_id"], name: "index_consignment_reports_on_verified_by_id"
+  end
+
   create_table "consignors", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.integer "commission_percent", default: 20, null: false
@@ -765,6 +802,58 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_010000) do
     t.index ["event_category_id"], name: "index_events_on_event_category_id"
     t.index ["slug"], name: "index_events_on_slug", unique: true
     t.index ["team_id"], name: "index_events_on_team_id"
+  end
+
+  create_table "expense_lines", force: :cascade do |t|
+    t.bigint "amount_cents", default: 0, null: false
+    t.bigint "analytic_account_id"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.decimal "distance_km", precision: 8, scale: 1
+    t.string "doc_kind"
+    t.bigint "expense_report_id", null: false
+    t.bigint "general_account_id"
+    t.string "label", null: false
+    t.integer "position", default: 0, null: false
+    t.integer "rate_cents_per_km"
+    t.date "spent_on", null: false
+    t.string "supplier_name"
+    t.bigint "team_id"
+    t.datetime "updated_at", null: false
+    t.index ["analytic_account_id"], name: "index_expense_lines_on_analytic_account_id"
+    t.index ["deleted_at"], name: "index_expense_lines_on_deleted_at"
+    t.index ["expense_report_id"], name: "index_expense_lines_on_expense_report_id"
+    t.index ["general_account_id"], name: "index_expense_lines_on_general_account_id"
+    t.index ["team_id"], name: "index_expense_lines_on_team_id"
+  end
+
+  create_table "expense_reports", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.bigint "fiscal_year_id"
+    t.bigint "human_id", null: false
+    t.string "kind", default: "expenses", null: false
+    t.bigint "legal_entity_id", null: false
+    t.text "notes"
+    t.datetime "paid_notified_at"
+    t.date "paid_on"
+    t.datetime "posted_at"
+    t.date "processed_on"
+    t.string "reference"
+    t.text "rejection_reason"
+    t.integer "sequence_number"
+    t.string "status", default: "recorded", null: false
+    t.date "submitted_on"
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_expense_reports_on_created_by_id"
+    t.index ["deleted_at"], name: "index_expense_reports_on_deleted_at"
+    t.index ["fiscal_year_id", "kind", "sequence_number"], name: "index_expense_reports_on_sequence", unique: true
+    t.index ["fiscal_year_id"], name: "index_expense_reports_on_fiscal_year_id"
+    t.index ["human_id"], name: "index_expense_reports_on_human_id"
+    t.index ["legal_entity_id"], name: "index_expense_reports_on_legal_entity_id"
+    t.index ["reference"], name: "index_expense_reports_on_reference", unique: true
+    t.index ["status"], name: "index_expense_reports_on_status"
   end
 
   create_table "experience_availabilities", force: :cascade do |t|
@@ -977,6 +1066,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_010000) do
     t.datetime "deleted_at", precision: nil
     t.text "description"
     t.string "email"
+    t.text "iban"
+    t.string "iban_holder_name"
     t.string "name"
     t.string "photo"
     t.boolean "roles_enabled", default: true, null: false
@@ -1180,6 +1271,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_010000) do
     t.index ["external_ref"], name: "index_notes_on_external_ref_unique_live", unique: true, where: "((deleted_at IS NULL) AND (external_ref IS NOT NULL))"
   end
 
+  create_table "notifications", force: :cascade do |t|
+    t.bigint "actor_id"
+    t.text "body"
+    t.datetime "created_at", null: false
+    t.datetime "emailed_at"
+    t.string "kind", null: false
+    t.bigint "notifiable_id"
+    t.string "notifiable_type"
+    t.datetime "read_at"
+    t.bigint "recipient_id", null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.string "url", null: false
+    t.index ["actor_id"], name: "index_notifications_on_actor_id"
+    t.index ["notifiable_type", "notifiable_id"], name: "index_notifications_on_notifiable"
+    t.index ["recipient_id", "created_at"], name: "index_notifications_on_recipient_id_and_created_at"
+    t.index ["recipient_id", "read_at"], name: "index_notifications_on_recipient_id_and_read_at"
+    t.index ["recipient_id"], name: "index_notifications_on_recipient_id"
+  end
+
   create_table "paper_sheets", force: :cascade do |t|
     t.string "channel", null: false
     t.datetime "created_at", null: false
@@ -1261,6 +1372,55 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_010000) do
     t.string "name"
     t.datetime "updated_at", null: false
     t.index ["human_id"], name: "index_projects_on_human_id"
+  end
+
+  create_table "purchase_invoice_lines", force: :cascade do |t|
+    t.integer "amount_cents", default: 0, null: false
+    t.bigint "analytic_account_id"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "general_account_id", null: false
+    t.string "label"
+    t.integer "position", default: 0, null: false
+    t.bigint "purchase_invoice_id", null: false
+    t.bigint "team_id"
+    t.datetime "updated_at", null: false
+    t.index ["analytic_account_id"], name: "index_purchase_lines_on_analytic"
+    t.index ["deleted_at"], name: "index_purchase_lines_on_deleted_at"
+    t.index ["general_account_id"], name: "index_purchase_lines_on_account"
+    t.index ["purchase_invoice_id"], name: "index_purchase_lines_on_invoice"
+    t.index ["team_id"], name: "index_purchase_lines_on_team"
+  end
+
+  create_table "purchase_invoices", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.text "dispute_reason"
+    t.date "due_on"
+    t.date "issued_on", null: false
+    t.bigint "legal_entity_id", null: false
+    t.text "notes"
+    t.string "number"
+    t.date "paid_on"
+    t.string "pdf_sha256"
+    t.datetime "posted_at"
+    t.jsonb "quality_flags", default: [], null: false
+    t.boolean "requires_validation", default: false, null: false
+    t.string "status", default: "to_process", null: false
+    t.bigint "third_party_id", null: false
+    t.integer "total_cents", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.datetime "validated_at"
+    t.bigint "validated_by_id"
+    t.bigint "validation_team_id"
+    t.index ["deleted_at"], name: "index_purchase_invoices_on_deleted_at"
+    t.index ["legal_entity_id"], name: "index_purchase_invoices_on_legal_entity_id"
+    t.index ["pdf_sha256"], name: "index_purchase_invoices_on_pdf_sha256", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["status"], name: "index_purchase_invoices_on_status"
+    t.index ["third_party_id", "number"], name: "index_purchase_invoices_on_third_party_and_number", unique: true, where: "((deleted_at IS NULL) AND (number IS NOT NULL))"
+    t.index ["third_party_id"], name: "index_purchase_invoices_on_third_party_id"
+    t.index ["validated_by_id"], name: "index_purchase_invoices_on_validated_by_id"
+    t.index ["validation_team_id"], name: "index_purchase_invoices_on_validation_team_id"
   end
 
   create_table "rate_versions", force: :cascade do |t|
@@ -1731,6 +1891,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_010000) do
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
     t.bigint "human_id"
+    t.boolean "notify_by_email", default: true, null: false
     t.datetime "remember_created_at"
     t.datetime "reset_password_sent_at"
     t.string "reset_password_token"
@@ -1835,6 +1996,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_010000) do
   add_foreign_key "coda_statements", "cash_accounts"
   add_foreign_key "coda_statements", "coda_imports"
   add_foreign_key "comments", "users", column: "author_id"
+  add_foreign_key "consignment_report_lines", "consignment_reports"
+  add_foreign_key "consignment_reports", "consignors"
+  add_foreign_key "consignment_reports", "users", column: "verified_by_id"
   add_foreign_key "consignors", "humans"
   add_foreign_key "consignors", "third_parties"
   add_foreign_key "coworking_packs", "customers"
@@ -1854,6 +2018,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_010000) do
   add_foreign_key "event_organizers", "humans"
   add_foreign_key "events", "event_categories"
   add_foreign_key "events", "teams"
+  add_foreign_key "expense_lines", "analytic_accounts"
+  add_foreign_key "expense_lines", "expense_reports"
+  add_foreign_key "expense_lines", "general_accounts"
+  add_foreign_key "expense_lines", "teams"
+  add_foreign_key "expense_reports", "fiscal_years"
+  add_foreign_key "expense_reports", "humans"
+  add_foreign_key "expense_reports", "legal_entities"
+  add_foreign_key "expense_reports", "users", column: "created_by_id"
   add_foreign_key "experience_availabilities", "experiences"
   add_foreign_key "experience_bookings", "experience_availabilities"
   add_foreign_key "experience_bookings", "humans", column: "outcome_recorded_by_id"
@@ -1887,6 +2059,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_010000) do
   add_foreign_key "meal_orders", "stays"
   add_foreign_key "member_accounts", "households"
   add_foreign_key "member_accounts", "humans"
+  add_foreign_key "notifications", "users", column: "actor_id"
+  add_foreign_key "notifications", "users", column: "recipient_id"
   add_foreign_key "paper_sheets", "member_accounts"
   add_foreign_key "paper_sheets", "users", column: "encoded_by_id"
   add_foreign_key "payments", "bookings"
@@ -1894,6 +2068,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_010000) do
   add_foreign_key "payments", "space_bookings"
   add_foreign_key "payments", "stays"
   add_foreign_key "projects", "humans"
+  add_foreign_key "purchase_invoice_lines", "analytic_accounts"
+  add_foreign_key "purchase_invoice_lines", "general_accounts"
+  add_foreign_key "purchase_invoice_lines", "purchase_invoices"
+  add_foreign_key "purchase_invoice_lines", "teams"
+  add_foreign_key "purchase_invoices", "legal_entities"
+  add_foreign_key "purchase_invoices", "teams", column: "validation_team_id"
+  add_foreign_key "purchase_invoices", "third_parties"
+  add_foreign_key "purchase_invoices", "users", column: "validated_by_id"
   add_foreign_key "rate_versions", "rates"
   add_foreign_key "recurring_charges", "household_members"
   add_foreign_key "recurring_charges", "member_accounts"

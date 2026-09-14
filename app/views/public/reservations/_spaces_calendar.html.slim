@@ -4,6 +4,9 @@
 / au jour de DÉPART INCLUS. Une salle se loue à la journée — un groupe qui dort
 / 4 nuits du lundi au vendredi occupe la salle les 5 jours. Les grilles à la
 / NUIT (hébergement, camping, van, hamac) gardent [arrivée, départ).
+/ Epic #234, Phase 3 : « Tous les jours » / « Effacer » par ligne, résumé en
+/ clair sous la grille, colonnes d'arrivée et de départ distinguées, indications
+/ de tarif dérivées de `Pricing::Catalog` (donc de Paramètres > Tarifs).
 / Dépend de : @draft, @stay_days (instance vars du controller).
 / RÉUTILISÉ par le form admin (issue parité funnel) via des locals :
 /   - param_root : préfixe des name= (défaut "reservation", le form admin passe "stay") ;
@@ -15,10 +18,21 @@
 - stay_days   = local_assigns.fetch(:days, @stay_days)
 - fr_short_days = %w[Dim Lun Mar Mer Jeu Ven Sam]
 - space_kinds   = { "grande_salle" => "Grande Salle", "petite_salle" => "Petite Salle", "cuisine_pro" => "Cuisine pro" }
-- space_hints   = { "grande_salle" => "290€/j · 190€/soir (sem.)", "petite_salle" => "140€/j · 90€/soir (sem.)", "cuisine_pro" => "110€/j · 70€/soir (sem.)" }
+/ Les tarifs affichés sortent du catalogue (SpacesGridHelper#space_rate_hint) :
+/ une ligne éditée dans Paramètres > Tarifs se voit ici sans redéploiement.
+- space_hints   = space_kinds.keys.index_with { |kind| space_rate_hint(kind) }
+/ La grille tient sans défilement horizontal jusqu'à 7 jours (130 + 7 × 104 =
+/ 858 px) : les flèches n'apparaissent qu'au-delà, là où elles servent vraiment.
+- needs_scroll_arrows = stay_days.size > 7
+/ Largeur de la colonne des noms. Élargie en phase 3 : elle porte désormais
+/ l'indication de tarif complète (forfait 5 jours compris) et les deux gestes de
+/ ligne. 150 + 7 × 104 = 878 px — la grille tient toujours sans défilement
+/ horizontal jusqu'à 7 jours sur un écran de 1280 px.
+- label_column_width = 150
 
 .bg-white.rounded-2xl.shadow-sm.border.border-bark.p-5(
   data-controller="public--spaces-calendar"
+  data-action="change->public--spaces-calendar#slotChanged"
   data-needs-block="salles")
   .flex.items-start.justify-between.mb-4
     div
@@ -28,7 +42,7 @@
       p.text-xs.text-moss.mt-0.5 Cliquez pour réserver — journée, soirée ou les deux, pour chaque jour du séjour, du jour d'arrivée au jour de départ. Tarifs semaine (↑ week-end).
     .flex.items-center.gap-2.flex-shrink-0.ml-4.mt-0.5
       = link_to "Tarifs →", "https://www.les4sources.be/sejours/tarifs", target: "_blank", rel: "noopener", class: "text-xs text-forest hover:underline"
-      - if stay_days.size > 4
+      - if needs_scroll_arrows
         button(
           type="button"
           data-action="click->public--spaces-calendar#prevNights"
@@ -50,13 +64,13 @@
        colonne — on l'annonce alors « arrivée et départ ».
     - day_edges = stay_days.size == 1 ? ["arrivée et départ"] : Array.new(stay_days.size) { |i| i.zero? ? "arrivée" : (i == stay_days.size - 1 ? "départ" : nil) }
     .overflow-x-auto.-mx-5.px-5(data-public--spaces-calendar-target="scrollArea")
-      table.border-collapse style="min-width: #{130 + stay_days.size * 104}px"
+      table.border-collapse style="min-width: #{label_column_width + stay_days.size * 104}px"
 
         thead
           tr
-            th.text-left.py-2.pr-4.text-xs.font-normal.text-moss.whitespace-nowrap.sticky.left-5.z-10.bg-white style="width:130px"
+            th.text-left.py-2.pr-4.text-xs.font-normal.text-moss.sticky.left-5.z-10.bg-white style="width:#{label_column_width}px"
             - stay_days.each_with_index do |day, i|
-              th.text-center.py-2.px-1 style="width:104px"
+              th.text-center.py-2.px-1 class=("spaces-grid-edge" if day_edges[i]) style="width:104px"
                 p.text-xs.font-bold.text-moss = "Jour #{i + 1}"
                 p.text-xs.text-moss.font-normal = "#{fr_short_days[day.wday]} #{day.strftime("%-d/%-m")}"
                 - if day_edges[i]
@@ -65,14 +79,36 @@
         tbody
           - space_kinds.each do |space_key, space_name|
             tr class="border-t border-bark/60"
-              td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
+              td.py-2.pr-4.sticky.left-5.z-10.bg-white.align-top style="width:#{label_column_width}px"
                 .text-sm.text-ink.font-medium = space_name
                 p.text-xs.text-moss.leading-tight = space_hints[space_key]
+                / Un geste pour « la Petite Salle du lundi au vendredi » : le
+                / bouton pose « journée » sur les cases ENCORE VIDES de la ligne
+                / et laisse les soirées déjà choisies telles quelles.
+                .flex.items-center.gap-2.mt-1
+                  button(
+                    type="button"
+                    class="spaces-grid-row-action"
+                    data-action="click->public--spaces-calendar#fillRow"
+                    data-public--spaces-calendar-key-param=space_key
+                    aria-label="#{space_name} — poser la journée sur tous les jours")
+                    | Tous les jours
+                  button(
+                    type="button"
+                    class="spaces-grid-row-action spaces-grid-row-action--quiet"
+                    data-action="click->public--spaces-calendar#clearRow"
+                    data-public--spaces-calendar-key-param=space_key
+                    aria-label="#{space_name} — effacer tous les jours")
+                    | Effacer
               - stay_days.each_with_index do |day, i|
                 - current_period = (draft.space_slots[space_key] || [])[i].to_s
-                td.py-2.px-1.text-center
+                td.py-2.px-1.text-center class=("spaces-grid-edge" if day_edges[i])
                   div(
-                    data-controller="public--space-slot")
+                    data-controller="public--space-slot"
+                    data-action="spaces-calendar:set->public--space-slot#set"
+                    data-public--spaces-calendar-target="cell"
+                    data-space-key=space_key
+                    data-day-label=summary_day_label(day))
                     button(
                       type="button"
                       data-action="click->public--space-slot#toggle"
@@ -85,6 +121,19 @@
                       name="#{param_root}[space_slots][#{space_key}][]"
                       value=current_period
                       data-public--space-slot-target="input")
+
+    / Résumé en clair — ce que le client vient de cocher, dit en français et sans
+    / montant (le montant vit dans le devis). Rendu ici au chargement, recalculé
+    / à chaque clic par le contrôleur.
+    .mt-4.space-y-1(data-public--spaces-calendar-target="summary" aria-live="polite")
+      - space_kinds.each do |space_key, space_name|
+        - line = spaces_summary_line(draft.space_slots[space_key], stay_days)
+        p.text-xs.text-moss(
+          data-summary-for=space_key
+          data-space-name=space_name
+          class=("hidden" if line.blank?))
+          span.font-medium.text-ink = space_name
+          span(data-summary-detail="true") = line.present? ? " · #{line}" : ""
 
     / Légende
     .flex.flex-wrap.items-center.gap-x-4.gap-y-1.mt-4.pt-3.border-t.border-bark/60

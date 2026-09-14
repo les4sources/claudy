@@ -1,0 +1,7 @@
+- couleurs = { "to_process" => "bg-gray-100 text-gray-700", "to_validate" => "bg-amber-100 text-amber-800", "to_pay" => "bg-blue-100 text-blue-800", "paid" => "bg-emerald-100 text-emerald-800", "disputed" => "bg-red-100 text-red-800" }
+span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium #{couleurs[invoice.status]}"
+  = invoice.status_label
+- if invoice.quality_flags.include?("no_vat_number")
+  .mt-1
+    span.inline-flex.items-center.rounded-full.bg-yellow-50.px-2.py-0.5.text-xs.text-yellow-800(title="Le tiers n'a pas de numéro de TVA")
+      | ⚠ TVA manquante
