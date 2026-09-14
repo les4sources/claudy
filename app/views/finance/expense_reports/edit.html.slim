@@ -1,0 +1,5 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Note #{@report.reference.presence || "##{@report.id}"} — #{@report.human&.name}"
+
+.max-w-6xl
+  = render "form", report: @report, humans: @humans, entities: @entities, accounts: @accounts, teams: @teams
