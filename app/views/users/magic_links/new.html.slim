@@ -1,0 +1,40 @@
+/  Issue #306 — demander un lien de connexion. Même gabarit que
+   `devise/sessions/new` : deux colonnes, le logo, la photo à droite. Une
+   seconde porte vers la même maison ne doit pas ressembler à une autre maison.
+.flex.min-h-full
+  .flex.flex-1.flex-col.justify-center.px-4.py-12.sm:px-6.lg:flex-none.lg:px-20.xl:px-24
+    .mx-auto.w-full.max-w-sm.lg:w-96
+      div
+        = vite_image_tag "images/les-4-sources-logo-seul.png",
+                         class: "h-10 w-auto",
+                         alt: "Les 4 Sources"
+        h2.mt-8.text-4xl.font-bold.leading-9.tracking-tight.text-4s-main.font-averia
+          = t("users.magic_link.title")
+        p.mt-3.text-sm.leading-6.text-gray-600
+          = t("users.magic_link.intro")
+      / Le gabarit Devise n'affiche PAS les flash : un lien mort renverrait ici
+        avec un message que personne ne verrait. On le rend donc sur place.
+      - if flash[:alert].present?
+        .mt-6.rounded-md.p-4.text-sm(class="bg-amber-50 text-amber-900")
+          = flash[:alert]
+      .mt-10
+        = form_with url: user_magic_links_path, method: :post, class: "space-y-6" do
+          div
+            label.block.text-sm.font-medium.leading-6.text-gray-900[for="email"]
+              = t("users.magic_link.email_label")
+            .mt-2
+              = email_field_tag :email,
+                                params[:email],
+                                required: true,
+                                autofocus: true,
+                                autocomplete: "email",
+                                class: "block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+          div
+            button.flex.w-full.justify-center.rounded-md.bg-indigo-600.px-3.py-1.5.text-sm.font-semibold.leading-6.text-white.shadow-sm.hover:bg-indigo-500.focus-visible:outline.focus-visible:outline-2.focus-visible:outline-offset-2.focus-visible:outline-indigo-600[type="submit"]
+              = t("users.magic_link.submit")
+        .mt-6.text-sm.leading-6.text-center
+          = link_to t("users.magic_link.back_to_password"), new_user_session_path, class: "font-semibold text-indigo-600 hover:text-indigo-500"
+  .relative.hidden.w-0.flex-1.lg:block
+    = vite_image_tag "images/les-4-sources-bar-crepuscule.jpg",
+                     class: "absolute inset-0 h-full w-full object-cover",
+                     alt: ""

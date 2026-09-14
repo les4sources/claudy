@@ -31,6 +31,11 @@ class User < ApplicationRecord
 
   belongs_to :human, optional: true
 
+  # Les liens de connexion par e-mail (issue #306). `dependent: :destroy` :
+  # supprimer un compte doit emporter ses liens vivants, sinon un lien déjà
+  # envoyé survivrait à son destinataire.
+  has_many :user_login_links, dependent: :destroy
+
   # Cloisonnement des ACTIVITÉS (validation, édition, retrait, ajout sur un
   # séjour — `ExperienceBooking.for_user`, `ExperienceAvailability.for_user`).
   # Deux populations :

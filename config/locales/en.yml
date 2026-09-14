@@ -59,3 +59,16 @@ en:
         precision: 2
         separator: "."
         unit: "€"
+  users:
+    magic_link:
+      title: Sign in by email
+      intro: Enter your address and we will send you a sign-in link. No password to remember.
+      email_label: Email address
+      submit: Send me a link
+      back_to_password: Sign in with a password
+      ask_again: Request a new link
+      sent: If an account exists with this address, a sign-in link has just been sent.
+      sent_title: Check your inbox
+      sent_body: If an account exists with this address, a sign-in link has just been sent. It is valid for %{minutes} minutes and works only once.
+      sent_hint: Nothing after a few minutes? Check your spam folder, or request a new one.
+      invalid: This sign-in link is no longer valid. Please request a new one.

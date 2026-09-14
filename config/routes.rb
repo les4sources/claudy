@@ -1,5 +1,17 @@
 Rails.application.routes.draw do
   devise_for :users
+
+  # Issue #306 — connexion par lien e-mail, en plus du mot de passe. Dans un
+  # `devise_scope` pour que `after_sign_in_path_for` et `resource_name` se
+  # comportent comme dans les contrôleurs Devise. Chemins en ANGLAIS : c'est de
+  # l'admin, pas du public (les URL clients restent en français).
+  devise_scope :user do
+    get  "users/magic_link/new",    to: "users/magic_links#new",    as: :new_user_magic_link
+    get  "users/magic_link/sent",   to: "users/magic_links#sent",   as: :sent_user_magic_link
+    post "users/magic_link",        to: "users/magic_links#create", as: :user_magic_links
+    # En DERNIER : sinon `new` et `sent` seraient avalés comme des jetons.
+    get  "users/magic_link/:token", to: "users/magic_links#show",   as: :user_magic_link
+  end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   if Rails.env.development?

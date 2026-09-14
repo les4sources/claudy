@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_14_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1698,6 +1698,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
     t.index ["lodging_id"], name: "index_unavailabilities_on_lodging_id"
   end
 
+  create_table "user_login_links", force: :cascade do |t|
+    t.datetime "consumed_at"
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.string "token_digest", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["token_digest"], name: "index_user_login_links_on_token_digest"
+    t.index ["user_id", "created_at"], name: "index_user_login_links_on_user_id_and_created_at"
+  end
+
   create_table "users", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email", default: "", null: false
@@ -1898,5 +1909,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_040000) do
   add_foreign_key "third_parties", "customers"
   add_foreign_key "third_parties", "humans"
   add_foreign_key "unavailabilities", "lodgings"
+  add_foreign_key "user_login_links", "users"
   add_foreign_key "users", "humans"
 end
