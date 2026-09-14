@@ -4,13 +4,26 @@
            links: [link_to("Règles d'affectation", finance_allocation_rules_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
                    link_to("Tout le journal", finance_cash_entries_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
 
+/ Le filtre se VOIT. Arriver ici depuis l'arrêté du mois sur une file réduite à
+  Stripe, sans rien qui le dise, c'est croire que la file est vide (epic #250).
+- if @filter_kind.present? || @filter_account.present?
+  - libelle = @filter_account&.name || CashAccount::KIND_LABELS.fetch(@filter_kind, @filter_kind)
+  .mb-4.flex.flex-wrap.items-center.gap-3.rounded-lg.border.border-teal-100.p-3(class="bg-teal-50/50")
+    span.text-sm.text-gray-700
+      | Filtré sur
+      = " "
+      strong = libelle
+      |  — #{@filtered_total} ligne(s) sur #{@pending_total} en attente.
+    = link_to "Voir toute la file", finance_unallocated_cash_entries_path, class: "text-sm font-medium text-4s-main hover:underline"
+
 - if @entries.blank?
   .p-8.text-center.bg-green-50.rounded-lg.border.border-green-100
-    p.text-2xl.font-semibold.text-green-700 ✓ Rien à affecter
+    p.text-2xl.font-semibold.text-green-700
+      = (@filter_kind.present? || @filter_account.present?) ? "✓ Rien à affecter ici" : "✓ Rien à affecter"
     p.mt-2.text-sm.text-gray-600 Tout ce qui est passé en trésorerie est ventilé et comptabilisé. C'est l'état dans lequel on veut finir chaque mois.
 - else
   p.mb-4.text-sm.text-gray-500
-    | #{@pending_total} ligne(s) en attente
+    | #{(@filter_kind.present? || @filter_account.present?) ? @filtered_total : @pending_total} ligne(s) en attente
     - if @entries.total_pages > 1
       |  — page #{@entries.current_page} sur #{@entries.total_pages}
     |  . Une ligne entièrement affectée se comptabilise toute seule.

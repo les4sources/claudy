@@ -7,8 +7,12 @@ RSpec.describe "Demande de modification de séjour (client)", type: :request do
   let(:customer) { Customer.create!(first_name: "Ana", last_name: "Lopez", email: "ana@example.com") }
   let!(:lodging) { Lodging.find_or_create_by!(name: "La Hulotte") { |l| l.price_night_cents = 48_500 } }
 
-  let(:arrival)   { Date.current + 10 }
-  let(:departure) { Date.current + 12 }
+  # Ancré sur un LUNDI depuis l'epic #260 : hors du 15 novembre au 14 mars, le
+  # barème refuse une nuit de vendredi ou de samedi isolée. Une date flottante
+  # rendrait le prix — et donc le delta d'une modification — instable.
+  let(:monday)    { (Date.current + 10).next_occurring(:monday) }
+  let(:arrival)   { monday }
+  let(:departure) { monday + 2 }
 
   let(:stay) do
     s = Stay.create!(customer: customer, source: "manual", status: "confirmed",

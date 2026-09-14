@@ -16,6 +16,9 @@ class CommentsController < BaseController
     @comment = @commentable.comments.build(body: body_param, author: current_user)
 
     if @comment.save
+      # Les destinataires sont prévenus par le service dédié — le contrôleur ne
+      # crée jamais de `Notification` lui-même (epic #242, décision 2).
+      Notifications::CommentPosted.call(@comment)
       render_thread
     else
       render_thread(draft: @comment, status: :unprocessable_entity)

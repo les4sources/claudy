@@ -1,7 +1,8 @@
 module Finance
   # Porte les écritures d'une session de batch cooking (epic #246).
   #
-  # UNE ligne de service = UNE charge sur le compte du ménage (+ portions × 5 €).
+  # UNE ligne de service = UNE charge sur le compte du ménage
+  # (+ personnes × repas × 5 €).
   # UN cuisinier = UN crédit sur SON compte personnel (− portions × 3,50 €) —
   # pas sur celui de son ménage : un enfant qui cuisine gagne cet argent, et
   # c'est le sien. Michael a refusé la compensation sur le décompte du ménage.
@@ -72,18 +73,30 @@ module Finance
       cook_price = price_for(COOK_RATE_KEY)
       wanted = {}
 
+      # Le nombre de repas est lu UNE fois sur la session : la ligne servie le
+      # trouverait par son association, mais chaque `serving.portions` ferait
+      # alors une requête de plus dans la boucle.
+      meals = @session.meals_count.to_i
+
       @session.servings.includes(:member_account).each do |serving|
         account = serving_account(serving)
+        portions = meals * serving.people.to_i
+
         wanted[serving_key(account.id)] = {
           member_account_id: account.id,
-          amount_cents: serving.portions * serving_price,
-          quantity: serving.portions,
+          amount_cents: portions * serving_price,
+          quantity: portions,
           unit_price_cents: serving_price,
           kind: "batchcooking",
-          label: label_for(serving.portions)
+          label: serving_label(serving.people.to_i, meals)
         }
       end
 
+      # LA RÉMUNÉRATION DES CUISINIERS NE SUIT PAS LE NOMBRE DE REPAS
+      # (issue #307). Elle se lit sur `cook.portions`, la colonne stockée, que
+      # le multiplicateur « repas » ne touche pas : rejouer une session
+      # existante ne change donc aucun montant dû à un cuisinier. C'est une
+      # porte laissée ouverte, pas un oubli — la règle sera tranchée ailleurs.
       @session.cooks.each do |cook|
         next if cook.portions.to_i.zero?
 
@@ -97,7 +110,7 @@ module Finance
           quantity: cook.portions,
           unit_price_cents: cook_price,
           kind: "cook_fee",
-          label: label_for(cook.portions)
+          label: cook_label(cook.portions)
         }
       end
 
@@ -219,10 +232,21 @@ module Finance
             "ajoute une version du barème dans Paramètres > Tarifs."
     end
 
-    # « Batch cooking du 12/09 — 5 portions », plus le nom de la session quand
-    # elle en porte un : sur un décompte, « Chili » dit plus que la date.
-    def label_for(portions)
-      base = "Batch cooking du #{@session.cooked_on.strftime('%d/%m')} — #{portions_label(portions)}"
+    # « Batch cooking du 12/09 — 3 personnes × 5 repas ». Un ménage qui relit son
+    # décompte doit pouvoir refaire le calcul de tête : « 15 portions » ne lui
+    # dit rien, « 3 personnes × 5 repas » lui dit tout.
+    # « repas » est invariable : seul « personne » prend la marque du pluriel.
+    def serving_label(people, meals)
+      libelle("#{people} #{people <= 1 ? 'personne' : 'personnes'} × #{meals} repas")
+    end
+
+    # Le cuisinier, lui, reste payé à la portion préparée.
+    def cook_label(portions) = libelle(portions_label(portions))
+
+    # Le nom de la session quand elle en porte un : sur un décompte, « Chili »
+    # dit plus que la date.
+    def libelle(detail)
+      base = "Batch cooking du #{@session.cooked_on.strftime('%d/%m')} — #{detail}"
       @session.label.present? ? "#{base} · #{@session.label}" : base
     end
 

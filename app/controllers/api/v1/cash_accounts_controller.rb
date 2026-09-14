@@ -70,7 +70,8 @@ module Api
 
       def account_params
         params.require(:cash_account).permit(:name, :kind, :iban, :legal_entity_id,
-                                             :general_account_id, :active, :stripe_account_key)
+                                             :general_account_id, :active, :stripe_account_key,
+                                             :stripe_mode)
       end
     end
   end

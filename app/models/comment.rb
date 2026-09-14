@@ -71,6 +71,30 @@ class Comment < ApplicationRecord
     author_human&.name.presence || author&.email.to_s
   end
 
+  # Ancre DOM d'un commentaire dans son fil — l'adresse vers laquelle pointe la
+  # notification (epic #242, phase 2).
+  def dom_anchor = "comment-#{id}"
+
+  # Adresse de la page de l'objet, ancrée sur ce commentaire. Résolue par
+  # `polymorphic_path` sur un type de la LISTE BLANCHE : aucun nom de classe
+  # venu d'ailleurs n'arrive jusqu'ici.
+  def target_path
+    Rails.application.routes.url_helpers.polymorphic_path(commentable, anchor: dom_anchor)
+  rescue NoMethodError, ActionController::UrlGenerationError
+    # Un commentable sans route nommée ne doit pas empêcher le commentaire
+    # d'exister : la notification pointera sur l'accueil plutôt que d'exploser.
+    "/"
+  end
+
+  # « le séjour de Martin », « le rassemblement du 3 mars » — ce que la
+  # notification met dans son titre. Repli sur le nom du modèle quand l'objet
+  # n'a rien de plus parlant à offrir.
+  def commentable_label
+    return commentable.comment_label if commentable.respond_to?(:comment_label)
+
+    commentable_type.underscore.humanize.downcase
+  end
+
   private
 
   def body_must_be_present

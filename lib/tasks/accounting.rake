@@ -290,7 +290,11 @@ namespace :accounting do
   task verify_stripe_payouts: :environment do
     ecarts = []
 
-    StripePayout.includes(:stripe_balance_transactions).find_each do |payout|
+    StripePayout.includes(:stripe_balance_transactions, :cash_account).find_each do |payout|
+      # Un compte en mode grand livre n'a pas de composantes : Stripe refuse de
+      # dire quelles ventes un versement manuel couvre. C'est `verify_stripe_ledger`
+      # qui le contrôle, pas celui-ci (epic #250).
+      next if payout.ledger?
       next if payout.stripe_balance_transactions.empty?
       next if payout.balanced?
 
@@ -299,6 +303,64 @@ namespace :accounting do
     end
 
     report("verify_stripe_payouts", ecarts, "#{StripePayout.count} versement(s) vérifié(s)")
+  end
+
+  desc "Vérifie le grand livre Stripe (comptes en mode ledger) — exit 1 si écart"
+  task verify_stripe_ledger: :environment do
+    ecarts = []
+    comptes = CashAccount.with_deleted { CashAccount.where(kind: "stripe", stripe_mode: "ledger").to_a }
+
+    transactions = StripeBalanceTransaction.ledger.includes(:cash_account, :stripe_payout)
+    transactions.find_each do |transaction|
+      lignes = CashEntry.with_deleted do
+        CashEntry.where(source_type: "StripeBalanceTransaction", source_id: transaction.id).to_a
+      end
+
+      if lignes.empty?
+        ecarts << "Transaction #{transaction.stripe_id} (#{transaction.kind}) : aucune ligne de trésorerie"
+        next
+      end
+
+      # Chaque nature a ses lignes attendues. Une recette sans sa ligne de
+      # commission, c'est une commission qui a disparu du coût d'encaissement.
+      if transaction.revenue? && transaction.fee_cents != 0 && lignes.none? { |l| l.external_ref&.end_with?(":fee") }
+        ecarts << "Transaction #{transaction.stripe_id} : #{transaction.fee_cents} cents de commission sans ligne"
+      end
+      if transaction.revenue? && transaction.gross_cents != 0 && lignes.none? { |l| l.external_ref&.end_with?(":gross") }
+        ecarts << "Transaction #{transaction.stripe_id} : brut de #{transaction.gross_cents} sans ligne de recette"
+      end
+
+      lignes.each do |ligne|
+        next unless ligne.external_ref&.end_with?(":fee") || transaction.kind == "stripe_fee"
+        next if ligne.cash_allocations.any?
+
+        ecarts << "Ligne ##{ligne.id} (#{ligne.label}) : frais Stripe non affectés — le compte 618000 est pourtant fixé"
+      end
+
+      next unless transaction.kind == "payout"
+
+      ligne = lignes.first
+      allocation = ligne&.cash_allocations&.first
+      if allocation.nil? || allocation.general_account&.code != GeneralAccount::INTERNAL_TRANSFER_CODE
+        ecarts << "Versement #{transaction.stripe_id} : sa ligne n'est pas affectée sur #{GeneralAccount::INTERNAL_TRANSFER_CODE}"
+      elsif allocation.document_type != "StripePayout"
+        ecarts << "Versement #{transaction.stripe_id} : son affectation ne porte pas le versement en document"
+      end
+    end
+
+    # Un `external_ref` en double voudrait dire qu'une transaction a été importée
+    # deux fois — donc une recette comptée deux fois.
+    comptes.each do |compte|
+      doublons = CashEntry.with_deleted do
+        CashEntry.where(cash_account_id: compte.id)
+                 .where("external_ref LIKE ?", "stripe:%")
+                 .group(:external_ref).having("COUNT(*) > 1").count
+      end
+      doublons.each_key { |reference| ecarts << "Référence #{reference} présente plusieurs fois sur #{compte.name}" }
+    end
+
+    report("verify_stripe_ledger", ecarts,
+           "#{transactions.count} transaction(s) de grand livre sur #{comptes.size} compte(s)")
   end
 
   desc "Vérifie les partages de revenus — exit 1 si une nuitée est relevée deux fois ou une part fausse"
@@ -369,6 +431,67 @@ namespace :accounting do
     end
 
     report("verify_cash_counts", ecarts, "#{CashCount.validated.count} comptage(s) validé(s) vérifié(s)")
+  end
+
+  desc "Vérifie les notes de frais — exit 1 si écart"
+  task verify_expense_reports: :environment do
+    ecarts = []
+
+    ExpenseReport.includes(:expense_lines, :journal_entries, :cash_allocations, :human)
+                 .find_each do |note|
+      libelle = "Note #{note.reference.presence || "##{note.id}"} (#{note.human&.name})"
+
+      if %w[processing paid].include?(note.status)
+        ecarts << "#{libelle} : #{note.status_label.downcase} sans numéro de pièce" if note.reference.blank?
+
+        # `journal_entries` et non `posted_at` : la colonne est une commodité
+        # d'affichage, l'écriture est le fait.
+        ecarts << "#{libelle} : #{note.status_label.downcase} sans écriture au grand livre" if note.journal_entries.empty?
+
+        total = note.expense_lines.sum(&:amount_cents)
+        entry = note.journal_entries.find { |e| e.journal == "purchases" }
+        if entry.present? && entry.journal_lines.sum(&:debit_cents) != total
+          ecarts << "#{libelle} : l'écriture porte #{entry.journal_lines.sum(&:debit_cents)} pour un total de lignes de #{total}"
+        end
+      end
+
+      if note.status == "paid"
+        total = note.expense_lines.sum(&:amount_cents)
+        regle = note.cash_allocations.sum(&:amount_cents).abs
+        ecarts << "#{libelle} : payée mais seulement #{regle} affecté sur #{total}" if regle < total
+      end
+
+      if note.status == "recorded" && note.journal_entries.any?
+        ecarts << "#{libelle} : encore enregistrée alors qu'une écriture la référence"
+      end
+
+      if note.expense_lines.any? { |line| line.general_account_id.blank? }
+        ecarts << "#{libelle} : une ligne au moins n'a pas de compte de charge"
+      end
+    end
+
+    # Les trous de séquence. Un numéro attribué ne se réattribue jamais (et une
+    # note contre-passée garde le sien) : la suite doit donc être 1..n, sans
+    # manque, par exercice ET par type.
+    ExpenseReport.with_deleted do
+      ExpenseReport.where.not(sequence_number: nil)
+                   .group(:fiscal_year_id, :kind)
+                   .pluck(:fiscal_year_id, :kind, Arel.sql("array_agg(sequence_number ORDER BY sequence_number)"))
+                   .each do |fiscal_year_id, kind, numeros|
+        attendus = (1..numeros.max).to_a
+        manquants = attendus - numeros
+        doublons = numeros.tally.select { |_, count| count > 1 }.keys
+
+        if manquants.any?
+          ecarts << "Séquence #{kind} exercice ##{fiscal_year_id} : numéro(s) manquant(s) #{manquants.join(', ')}"
+        end
+        if doublons.any?
+          ecarts << "Séquence #{kind} exercice ##{fiscal_year_id} : numéro(s) en double #{doublons.join(', ')}"
+        end
+      end
+    end
+
+    report("verify_expense_reports", ecarts, "#{ExpenseReport.count} note(s) vérifiée(s)")
   end
 
   desc "Vérifie les factures d'achat — exit 1 si écart"
