@@ -1,8 +1,13 @@
 module Finance
   # Finances > Batch cooking (epic #246).
   #
-  # L'écran de saisie de Stéphanie : les portions par famille, qui a cuisiné, et
-  # ce que ça fait — en une minute, depuis la cuisine, sur un téléphone.
+  # L'écran de saisie de Stéphanie : le nombre de repas préparés, les PERSONNES
+  # par famille, qui a cuisiné, et ce que ça fait — en une minute, depuis la
+  # cuisine, sur un téléphone.
+  #
+  # Il demande des personnes, pas des portions (issue #307) : c'est ce que
+  # Stéphanie a en tête devant ses bocaux, et lui demander la multiplication
+  # revenait à lui demander de se tromper.
   #
   # Les cuisiniers sont choisis parmi les MEMBRES DE MÉNAGE (adultes et
   # enfants), pas parmi les `Human` : c'est la liste que Stéphanie a en tête. Un
@@ -78,18 +83,18 @@ module Finance
       render(@session.persisted? ? :edit : :new, status: :unprocessable_entity)
     end
 
-    # Les portions par ménage, telles que le formulaire les envoie :
-    # `servings[<member_account_id>] = portions`. Une case vide ou nulle retire
+    # Les PERSONNES par ménage, telles que le formulaire les envoie :
+    # `servings[<member_account_id>] = personnes`. Une case vide ou nulle retire
     # la ligne — c'est le même geste que sur les fiches papier.
     def sync_servings
       voulues = submitted_servings
 
       @session.servings.each do |serving|
-        portions = voulues.delete(serving.member_account_id)
-        portions.to_i.positive? ? serving.update!(portions: portions) : serving.destroy!
+        people = voulues.delete(serving.member_account_id)
+        people.to_i.positive? ? serving.update!(people: people) : serving.destroy!
       end
 
-      voulues.each { |account_id, portions| @session.servings.create!(member_account_id: account_id, portions: portions) }
+      voulues.each { |account_id, people| @session.servings.create!(member_account_id: account_id, people: people) }
       @session.reload
     end
 
@@ -116,8 +121,8 @@ module Finance
 
     def submitted_servings
       raw_hash(params[:servings]).filter_map do |account_id, raw|
-        portions = raw.to_s.strip.to_i
-        [account_id.to_i, portions] if portions.positive?
+        people = raw.to_s.strip.to_i
+        [account_id.to_i, people] if people.positive?
       end.to_h
     end
 
@@ -170,7 +175,7 @@ module Finance
     end
 
     def existing_servings
-      @session.servings.each_with_object({}) { |serving, memo| memo[serving.member_account_id] = serving.portions }
+      @session.servings.each_with_object({}) { |serving, memo| memo[serving.member_account_id] = serving.people }
     end
 
     # Indexé par membre de ménage, pas par humain : c'est ce que le formulaire
@@ -206,7 +211,7 @@ module Finance
     end
 
     def session_params
-      params.require(:batch_cooking_session).permit(:cooked_on, :notes)
+      params.require(:batch_cooking_session).permit(:cooked_on, :notes, :meals_count)
     end
 
     def finance_secondary = "batch_cooking"

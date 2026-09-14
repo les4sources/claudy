@@ -3,8 +3,14 @@ require "rails_helper"
 # Epic #246 — les écritures d'une session de batch cooking.
 #
 # Le scénario de référence est celui de l'issue : deux ménages servis (3 et 2
-# portions) et deux cuisiniers. Les familles doivent 15 € et 10 €, chaque
-# cuisinier gagne 8,75 € — cinq portions à 3,50 € partagées en deux.
+# PERSONNES) et deux cuisiniers, sur une session à UN repas. Les familles
+# doivent 15 € et 10 €, chaque cuisinier gagne 8,75 € — cinq portions à 3,50 €
+# partagées en deux.
+#
+# La session de référence tient volontairement à `meals_count: 1` : c'est ce
+# qui permet de la faire passer à 5 repas et de constater, dans les tests de
+# l'issue #307, que les familles paient cinq fois plus et que les cuisiniers ne
+# gagnent pas un centime de plus.
 RSpec.describe Finance::RecordBatchCooking do
   let(:cheveche) { Household.create!(name: "Chevêche", kind: "resident") }
   let(:merle) { Household.create!(name: "Merle", kind: "resident") }
@@ -14,7 +20,7 @@ RSpec.describe Finance::RecordBatchCooking do
   let(:stephanie) { Human.create!(name: "Stéphanie", email: "steph@les4sources.be") }
   let(:jules) { Human.create!(name: "Jules") }
 
-  let(:session) { BatchCookingSession.create!(cooked_on: Date.new(2026, 9, 12)) }
+  let(:session) { BatchCookingSession.create!(cooked_on: Date.new(2026, 9, 12), meals_count: 1) }
 
   before do
     seed_rate("meal.batchcooking.per_person", 500)
@@ -34,8 +40,8 @@ RSpec.describe Finance::RecordBatchCooking do
 
   # La session de l'issue, prête à enregistrer.
   def session_de_reference
-    session.servings.create!(member_account: compte_cheveche, portions: 3)
-    session.servings.create!(member_account: compte_merle, portions: 2)
+    session.servings.create!(member_account: compte_cheveche, people: 3)
+    session.servings.create!(member_account: compte_merle, people: 2)
     session.cooks.create!(human: stephanie, portions: 2.5)
     session.cooks.create!(human: jules, portions: 2.5)
     session
@@ -72,11 +78,11 @@ RSpec.describe Finance::RecordBatchCooking do
       record
 
       expect(compte_cheveche.account_entries.first.label)
-        .to eq("Batch cooking du 12/09 — 3 portions")
+        .to eq("Batch cooking du 12/09 — 3 personnes × 1 repas")
     end
 
     it "refuse un ménage dont le compte est désactivé" do
-      session.servings.create!(member_account: compte_cheveche, portions: 3)
+      session.servings.create!(member_account: compte_cheveche, people: 3)
       compte_cheveche.update!(active: false)
 
       expect { record }.to raise_error(ServiceError, /désactivé/)
@@ -113,7 +119,7 @@ RSpec.describe Finance::RecordBatchCooking do
     end
 
     it "ignore un cuisinier à zéro portion — un coup de main sans part" do
-      session.servings.create!(member_account: compte_cheveche, portions: 3)
+      session.servings.create!(member_account: compte_cheveche, people: 3)
       session.cooks.create!(human: stephanie, portions: 0)
       record
 
@@ -125,7 +131,7 @@ RSpec.describe Finance::RecordBatchCooking do
     # partie disparaîtrait donc de l'association, et rejouer une session de
     # juin échouerait sur un cuisinier qui a pourtant bien cuisiné.
     it "paie encore un cuisinier qui a quitté le lieu depuis" do
-      session.servings.create!(member_account: compte_cheveche, portions: 3)
+      session.servings.create!(member_account: compte_cheveche, people: 3)
       session.cooks.create!(human: stephanie, portions: 3)
       record
       stephanie.update_column(:status, "inactive")
@@ -145,11 +151,11 @@ RSpec.describe Finance::RecordBatchCooking do
       expect(record.unchanged).to eq(4)
     end
 
-    it "régénère les écritures quand les portions changent" do
+    it "régénère les écritures quand le nombre de personnes change" do
       session_de_reference
       record
 
-      session.servings.find_by(member_account: compte_cheveche).update!(portions: 5)
+      session.servings.find_by(member_account: compte_cheveche).update!(people: 5)
       rapport = record
 
       expect(rapport.updated).to eq(1)
@@ -174,7 +180,7 @@ RSpec.describe Finance::RecordBatchCooking do
       seed_rate("meal.batchcooking.per_person", 600, active_from: Date.new(2026, 10, 1))
       Pricing::Rates.reset!
 
-      session.servings.find_by(member_account: compte_cheveche).update!(portions: 4)
+      session.servings.find_by(member_account: compte_cheveche).update!(people: 4)
       record
 
       charge = compte_cheveche.account_entries.first
@@ -187,7 +193,7 @@ RSpec.describe Finance::RecordBatchCooking do
       record
       compte_cheveche.account_entries.first.update!(locked_at: Time.current)
 
-      session.servings.find_by(member_account: compte_cheveche).update!(portions: 5)
+      session.servings.find_by(member_account: compte_cheveche).update!(people: 5)
 
       expect { record }.to raise_error(ServiceError, /contre-écriture/)
       expect(compte_cheveche.account_entries.first.amount_cents).to eq(1_500)
@@ -202,11 +208,78 @@ RSpec.describe Finance::RecordBatchCooking do
     end
   end
 
+  # Issue #307 — la saisie parle en personnes et en repas.
+  describe "personnes × repas" do
+    it "facture une famille de 3 personnes sur une session à 5 repas au prix de 15 portions" do
+      session.update!(meals_count: 5)
+      session_de_reference
+      record
+
+      charge = compte_cheveche.account_entries.find_by(kind: "batchcooking")
+      expect(charge.quantity).to eq(15)
+      expect(charge.amount_cents).to eq(7_500)
+      expect(charge.unit_price_cents).to eq(500)
+    end
+
+    it "libelle la charge en personnes et en repas, pas en portions" do
+      session.update!(meals_count: 5)
+      session_de_reference
+      record
+
+      expect(compte_cheveche.account_entries.first.label)
+        .to eq("Batch cooking du 12/09 — 3 personnes × 5 repas")
+    end
+
+    it "accorde « personne » au singulier et laisse « repas » invariable" do
+      session.update!(meals_count: 1)
+      session.servings.create!(member_account: compte_cheveche, people: 1)
+      record
+
+      expect(compte_cheveche.account_entries.first.label)
+        .to eq("Batch cooking du 12/09 — 1 personne × 1 repas")
+    end
+
+    # LA CONTRAINTE DURE DE L'ISSUE #307. Passer une session de 1 à 5 repas
+    # multiplie par cinq ce que paient les familles et ne doit RIEN changer à
+    # ce que gagnent les cuisiniers : ni le montant, ni la quantité, ni le prix
+    # unitaire. La règle de rémunération sera tranchée ailleurs ; ici elle est
+    # gelée, et ce test est ce qui l'empêche de bouger par accident.
+    it "ne touche pas d'un centime les écritures cuisiniers quand le nombre de repas change" do
+      session_de_reference
+      record
+
+      avant = AccountEntry.where(kind: "cook_fee").order(:idempotency_key)
+                          .pluck(:idempotency_key, :amount_cents, :quantity, :unit_price_cents, :label)
+      charges_avant = AccountEntry.where(kind: "batchcooking").sum(:amount_cents)
+
+      session.update!(meals_count: 5)
+      record
+
+      apres = AccountEntry.where(kind: "cook_fee").order(:idempotency_key)
+                          .pluck(:idempotency_key, :amount_cents, :quantity, :unit_price_cents, :label)
+
+      expect(apres).to eq(avant)
+      expect(AccountEntry.where(kind: "batchcooking").sum(:amount_cents)).to eq(charges_avant * 5)
+    end
+
+    it "compte le rejeu d'un changement de repas comme une mise à jour par famille" do
+      session_de_reference
+      record
+
+      session.update!(meals_count: 5)
+      rapport = record
+
+      expect(rapport.updated).to eq(2)
+      expect(rapport.unchanged).to eq(2)
+      expect(rapport.created).to eq(0)
+    end
+  end
+
   describe "barème absent" do
     it "refuse plutôt que de facturer zéro" do
       Rate.destroy_all
       Pricing::Rates.reset!
-      session.servings.create!(member_account: compte_cheveche, portions: 3)
+      session.servings.create!(member_account: compte_cheveche, people: 3)
 
       expect { record }.to raise_error(ServiceError, /barème/)
     end
@@ -214,7 +287,7 @@ RSpec.describe Finance::RecordBatchCooking do
 
   describe "#run" do
     it "attrape l'erreur et rend son message plutôt que de lever" do
-      session.servings.create!(member_account: compte_cheveche, portions: 3)
+      session.servings.create!(member_account: compte_cheveche, people: 3)
       compte_cheveche.update!(active: false)
 
       service = described_class.new(session: session)

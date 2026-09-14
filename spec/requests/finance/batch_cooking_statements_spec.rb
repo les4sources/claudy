@@ -10,7 +10,9 @@ RSpec.describe "Batch cooking — décompte et compte personnel", type: :request
   let!(:compte_cheveche) { MemberAccount.create!(kind: "household", household: cheveche, name: "Chevêche") }
   let(:stephanie) { Human.create!(name: "Stéphanie") }
 
-  let(:session) { BatchCookingSession.create!(cooked_on: Date.new(2026, 9, 12), label: "Chili") }
+  let(:session) do
+    BatchCookingSession.create!(cooked_on: Date.new(2026, 9, 12), label: "Chili", meals_count: 5)
+  end
 
   before do
     sign_in user
@@ -21,7 +23,7 @@ RSpec.describe "Batch cooking — décompte et compte personnel", type: :request
       end
     Pricing::Rates.reset!
 
-    session.servings.create!(member_account: compte_cheveche, portions: 3)
+    session.servings.create!(member_account: compte_cheveche, people: 3)
     session.cooks.create!(human: stephanie, portions: 3)
     Finance::RecordBatchCooking.new(session: session).run!
   end
@@ -31,8 +33,9 @@ RSpec.describe "Batch cooking — décompte et compte personnel", type: :request
       statement = Finance::IssueStatement.new(member_account: compte_cheveche,
                                               month: Date.new(2026, 9, 1)).run!
 
-      expect(statement.debits_cents).to eq(1_500)
-      expect(statement.account_entries.map(&:label)).to include("Batch cooking du 12/09 — 3 portions · Chili")
+      expect(statement.debits_cents).to eq(7_500)
+      expect(statement.account_entries.map(&:label))
+        .to include("Batch cooking du 12/09 — 3 personnes × 5 repas · Chili")
     end
 
     it "se lit sur le décompte que le ménage reçoit" do
@@ -42,8 +45,8 @@ RSpec.describe "Batch cooking — décompte et compte personnel", type: :request
       get public_statement_path(token: statement.token)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Batch cooking du 12/09 — 3 portions")
-      expect(response.body).to include("15,00")
+      expect(response.body).to include("Batch cooking du 12/09 — 3 personnes × 5 repas")
+      expect(response.body).to include("75,00")
     end
   end
 

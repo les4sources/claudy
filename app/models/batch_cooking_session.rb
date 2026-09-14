@@ -6,6 +6,7 @@
 #  cooked_on      :date             not null
 #  deleted_at     :datetime
 #  label          :string
+#  meals_count    :integer          default(5), not null
 #  notes          :text
 #  total_portions :integer          default(0), not null
 #  created_at     :datetime         not null
@@ -34,6 +35,15 @@
 # jour-là. Stocker ici un total en euros reviendrait à avoir deux vérités dont
 # une finirait par mentir.
 #
+# LA SAISIE PARLE EN PERSONNES ET EN REPAS (issue #307). Une session prépare
+# `meals_count` repas — 5 en général — et chaque ménage servi déclare son
+# NOMBRE DE PERSONNES. Les portions d'une famille s'en déduisent :
+# `meals_count × people`. On part du constat que chaque famille prend tous les
+# repas de la session, donc le nombre de repas ne se surcharge pas ligne par
+# ligne. Demander des portions revenait à demander une multiplication à
+# quelqu'un qui a les mains dans la farine — et la première session réelle est
+# partie facturée cinq fois trop bas.
+#
 # `total_portions` est la seule redondance assumée : le total des portions
 # SERVIES, tenu à jour depuis les lignes, parce que la liste des sessions
 # l'affiche et qu'un recalcul par ligne d'écran ferait une requête par session.
@@ -52,15 +62,19 @@ class BatchCookingSession < ApplicationRecord
   has_many :member_accounts, through: :servings
   has_many :humans, through: :cooks
 
-  # Une ligne sans portions n'est pas une erreur : c'est un ménage qu'on n'a pas
+  # Une ligne sans personne n'est pas une erreur : c'est un ménage qu'on n'a pas
   # servi, ou un cuisinier qu'on n'a pas retenu. On la jette silencieusement
   # plutôt que de refuser tout le formulaire.
   accepts_nested_attributes_for :servings, allow_destroy: true,
-                                           reject_if: ->(attrs) { attrs["portions"].to_i <= 0 }
+                                           reject_if: ->(attrs) { attrs["people"].to_i <= 0 }
   accepts_nested_attributes_for :cooks, allow_destroy: true,
                                         reject_if: ->(attrs) { attrs["human_id"].blank? }
 
   validates :cooked_on, presence: true
+  # Une session sans repas ne facture rien. Zéro n'est pas une session vide :
+  # c'est une saisie qu'on n'a pas finie, et elle doit se voir.
+  validates :meals_count, presence: true,
+                          numericality: { only_integer: true, greater_than: 0 }
 
   scope :recent_first, -> { order(cooked_on: :desc, id: :desc) }
   scope :chronological, -> { order(cooked_on: :asc, id: :asc) }
@@ -71,7 +85,14 @@ class BatchCookingSession < ApplicationRecord
   # les portions de l'état précédent.
   after_save :refresh_total_portions!
 
-  def portions_served = servings.sum(&:portions)
+  # Les PERSONNES servies, toutes familles confondues. C'est la quantité que
+  # Stéphanie a sous les yeux, et c'est aussi celle que se partagent les
+  # cuisiniers (voir `even_split`) : leur rémunération ne suit PAS le
+  # multiplicateur « repas », décision gelée jusqu'à une issue dédiée.
+  def people_served = servings.sum(:people)
+
+  # Les portions réellement servies : chaque famille prend tous les repas.
+  def portions_served = meals_count.to_i * people_served
 
   def portions_cooked = cooks.sum(&:portions)
 
@@ -109,7 +130,7 @@ class BatchCookingSession < ApplicationRecord
   def refresh_total_portions!
     return if destroyed? || new_record?
 
-    total = servings.reload.sum(:portions)
+    total = meals_count.to_i * servings.reload.sum(:people)
     return if total == total_portions
 
     update_column(:total_portions, total)

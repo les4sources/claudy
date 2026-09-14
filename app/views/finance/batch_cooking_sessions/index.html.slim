@@ -20,6 +20,7 @@
         tr
           th.py-3.px-4[scope="col"] Date
           th.py-3.px-4[scope="col"] Note
+          th.py-3.px-4.text-right[scope="col"] Repas
           th.py-3.px-4.text-right[scope="col"] Portions
           th.py-3.px-4.text-right[scope="col"] Familles
           th.py-3.px-4.text-right[scope="col"] Cuisiniers
@@ -35,6 +36,7 @@
             td.py-4.px-4.whitespace-nowrap.font-medium.text-gray-900[scope="row"]
               = l(session.cooked_on, format: :ddmmyyyy)
             td.py-4.px-4= session.notes.presence || "—"
+            td.py-4.px-4.text-right.tabular-nums= session.meals_count
             td.py-4.px-4.text-right.tabular-nums= session.total_portions
             td.py-4.px-4.text-right.tabular-nums= session.servings.size
             td.py-4.px-4.text-right.tabular-nums= session.cooks.size
