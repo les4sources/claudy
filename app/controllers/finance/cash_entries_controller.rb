@@ -6,7 +6,8 @@ module Finance
   # coup d'œil, si la comptabilité est à jour — et il remplace des heures de
   # rapprochement annuel par un geste mensuel.
   class CashEntriesController < Finance::AccountingBaseController
-    before_action :get_entry, only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate]
+    before_action :get_entry,
+                  only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate, :payout]
     breadcrumb "Trésorerie", :finance_cash_entries_path, match: :exact
 
     def index
@@ -69,6 +70,12 @@ module Finance
 
         hash[entry.id] = { match: correspondance, lines: lignes }
       end
+      # Les virements aux membres (epic #246, phase 2) : une ligne sortante peut
+      # solder le compte créditeur d'un cuisinier. Les soldes se calculent UNE
+      # fois pour la page — les recalculer ligne à ligne est ce qui avait fait
+      # tomber cet écran à l'issue #202.
+      @payout_matches = Finance::MatchMemberPayouts.new.for_entries(@entries)
+
       @general_accounts = GeneralAccount.actives.ordered
       @teams = Team.ordered
       @entities = LegalEntity.actives.ordered
@@ -115,6 +122,29 @@ module Finance
         flash.now[:alert] = @entry.errors.full_messages.to_sentence
         render :edit, status: :unprocessable_entity
       end
+    end
+
+    # Le virement qui solde le compte d'un membre (epic #246, phase 2). Un geste,
+    # pas deux : l'écriture sur son compte et l'affectation de la ligne bancaire
+    # tombent ensemble ou pas du tout.
+    def payout
+      compte = MemberAccount.find(params[:member_account_id])
+      # Sans montant explicite, on solde : c'est le geste courant. Le paramètre
+      # existe pour un virement partiel, et c'est lui qui se fait refuser s'il
+      # dépasse ce que le compte attend.
+      montant = params[:amount].presence && (params[:amount].to_s.tr(",", ".").to_f * 100).round
+
+      Finance::RecordMemberPayout.new(
+        member_account: compte, cash_entry: @entry, amount_cents: montant,
+        whodunnit: current_user&.email
+      ).run!
+
+      redirect_to finance_unallocated_cash_entries_path,
+                  notice: "Virement à #{compte.name} enregistré — son compte est soldé."
+    rescue Finance::RecordMemberPayout::NotCreditor, Finance::RecordMemberPayout::TooMuch,
+           Finance::RecordMemberPayout::MissingAccount, Finance::RecordMemberPayout::WrongDirection,
+           ActiveRecord::RecordInvalid => e
+      redirect_to finance_cash_entry_path(@entry), alert: e.message
     end
 
     # Ventiler un séjour : les lignes viennent du devis reconstruit, la base est

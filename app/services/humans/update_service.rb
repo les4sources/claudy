@@ -53,7 +53,9 @@ module Humans
           :cycle_active,
           :roles_enabled,
           :status,
-          :restricted_to_experiences
+          :restricted_to_experiences,
+          :iban,
+          :iban_holder_name
         )
     end
   end

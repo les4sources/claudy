@@ -10,8 +10,11 @@ RSpec.describe Reservations::Builder do
     lodging
   end
 
-  let(:arrival) { Date.today + 30 }
-  let(:departure) { Date.today + 32 }
+  # Ancré sur un LUNDI depuis l'epic #260 : le barème des gîtes dépend du jour
+  # de chaque nuit (semaine / week-end). Sans ancrage, le montant attendu par ces
+  # specs changerait avec le jour où la suite tourne.
+  let(:arrival) { (Date.today + 30).next_occurring(:monday) }
+  let(:departure) { arrival + 2 }
 
   def draft(**overrides)
     Reservations::Draft.new({
@@ -172,7 +175,7 @@ RSpec.describe Reservations::Builder do
     it "expose toujours l'acompte 50 % dans le devis" do
       builder = described_class.new(draft: draft)
       # Hulotte 2 nuits = 485 + 260 = 745 € ; acompte 50 % = 372,50 €.
-      expect(builder.quote.deposit_cents).to eq(37_250)
+      expect(builder.quote.deposit_cents).to eq(40_000)
     end
   end
 
@@ -228,17 +231,17 @@ RSpec.describe Reservations::Builder do
       # Phase 1 : le Builder ne crée pas encore les ExperienceBooking.
       expect(builder.stay.experience_bookings).to be_empty
       # Hulotte 2 nuits = 485 + 260 = 745 € ; les activités (8 000 c) n'y entrent pas.
-      expect(builder.stay.total_amount_cents).to eq(74_500)
+      expect(builder.stay.total_amount_cents).to eq(80_000)
       # Acompte 50 % HORS activités = 372,50 € — porté par le DEVIS depuis
       # l'issue #215 (plus aucun Payment créé ici).
-      expect(builder.quote.deposit_cents).to eq(37_250)
+      expect(builder.quote.deposit_cents).to eq(40_000)
     end
 
     it "expose néanmoins le total complet (activités comprises) via le devis funnel" do
       builder = described_class.new(draft: draft_with_activity)
       # 745 € hébergement + (5 000 + 1 500×2) = 8 000 c d'activité = 82 500 c affichés.
-      expect(builder.quote.total_cents).to eq(82_500)
-      expect(builder.quote.total_excluding_experiences_cents).to eq(74_500)
+      expect(builder.quote.total_cents).to eq(88_000)
+      expect(builder.quote.total_excluding_experiences_cents).to eq(80_000)
     end
   end
 
@@ -273,10 +276,10 @@ RSpec.describe Reservations::Builder do
       builder.run
 
       # Hulotte 2 nuits = 745 € ; activité = 2 000 + 1 000×3 = 5 000 c.
-      expect(builder.stay.total_amount_cents).to eq(74_500 + 5_000)
+      expect(builder.stay.total_amount_cents).to eq(80_000 + 5_000)
       # Acompte 50 % HORS activités = 372,50 € (inchangé Phase 1), porté par le
       # devis depuis l'issue #215.
-      expect(builder.quote.deposit_cents).to eq(37_250)
+      expect(builder.quote.deposit_cents).to eq(40_000)
     end
 
     it "ignore une entrée sans créneau (rétrocompat de l'ancienne forme experiences)" do
@@ -304,7 +307,7 @@ RSpec.describe Reservations::Builder do
       expect(builder.run).to be(true)
 
       expect(builder.stay.price_override_cents).to be_nil
-      expect(builder.stay.total_amount_cents).to eq(74_500)
+      expect(builder.stay.total_amount_cents).to eq(80_000)
     end
 
     it "IGNORE un override forgé côté public (admin: false)" do
@@ -312,7 +315,7 @@ RSpec.describe Reservations::Builder do
       expect(builder.run).to be(true)
 
       expect(builder.stay.price_override_cents).to be_nil     # jamais persisté hors admin
-      expect(builder.stay.total_amount_cents).to eq(74_500)   # devis appliqué, override ignoré
+      expect(builder.stay.total_amount_cents).to eq(80_000)   # devis appliqué, override ignoré
     end
 
     it "propage la plateforme OTA au Booking d'occupation (admin)" do

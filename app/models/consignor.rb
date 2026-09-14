@@ -7,8 +7,8 @@
 # facture d'achat comme une autre) ; `transfer`, on lui vire son net — d'où
 # l'IBAN, obligatoire dans ce mode et chiffré au repos.
 #
-# Les relevés mensuels (`ConsignmentReport`) arrivent en phase 2 : rien ici ne
-# les référence encore.
+# Les relevés mensuels (`ConsignmentReport`, phase 2) portent ce qui a été vendu
+# chaque mois, déclaré par l'artisan lui-même.
 # == Schema Information
 #
 # Table name: consignors
@@ -56,6 +56,7 @@ class Consignor < ApplicationRecord
 
   belongs_to :human,       optional: true
   belongs_to :third_party, optional: true
+  has_many :consignment_reports, dependent: :destroy
 
   before_validation :normalize_iban
   before_validation :inherit_human_identity, on: :create
@@ -74,6 +75,8 @@ class Consignor < ApplicationRecord
 
   scope :ordered, -> { order(active: :desc, name: :asc) }
   scope :actives, -> { where(active: true) }
+
+  def last_report = consignment_reports.ordered.first
 
   def transfer? = settlement_mode == "transfer"
   def invoice?  = settlement_mode == "invoice"

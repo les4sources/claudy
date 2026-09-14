@@ -9,21 +9,30 @@
 / actif qu'à partir du moment où le devis porte quelque chose ; l'explication est
 / donnée à côté, jamais seulement par le grisé.
 - empty = quote.total_cents.to_i.zero?
+/ Nuit de week-end seule hors saison (epic #260, décision 3) : la composition
+/ est refusée côté serveur, le bouton doit donc l'être aussi — et pour la même
+/ raison, écrite en toutes lettres. `draft` est optionnel : les pages qui ne le
+/ passent pas gardent le comportement d'avant.
+- weekend_issue = local_assigns[:draft] && Reservations::WeekendNightRule.message_for(local_assigns[:draft])
+- blocked = empty || weekend_issue.present?
 
 div id="compose_cta" class="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3"
-  - if empty
-    p#compose_cta_reason.funnel-hint.flex.items-start.gap-2.sm:mr-auto
-      span.text-ember.flex-shrink-0.mt-0.5
+  - if blocked
+    p#compose_cta_reason.funnel-hint.flex.items-start.gap-2(class="sm:mr-auto")
+      span.text-ember.flex-shrink-0(class="mt-0.5")
         = funnel_icon :alert, css_class: "w-4 h-4"
       span
-        | Choisissez au moins une nuit d'hébergement, un emplacement de camping ou une salle
-        |  pour continuer.
+        - if weekend_issue.present?
+          = weekend_issue
+        - else
+          | Choisissez au moins une nuit d'hébergement, un emplacement de camping ou une salle
+          |  pour continuer.
 
   button(
     type="button"
     data-action="public--reservation-quote#advance"
-    disabled=empty
-    aria-describedby=(empty ? "compose_cta_reason" : nil)
-    class="funnel-submit-cta inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-sand px-8 py-3.5 text-base font-semibold shadow-sm transition-colors #{empty ? 'opacity-40 cursor-not-allowed' : 'hover:bg-forest-soft'}")
+    disabled=blocked
+    aria-describedby=(blocked ? "compose_cta_reason" : nil)
+    class="funnel-submit-cta inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-sand px-8 py-3.5 text-base font-semibold shadow-sm transition-colors #{blocked ? 'opacity-40 cursor-not-allowed' : 'hover:bg-forest-soft'}")
     | Continuer vers mes coordonnées
     = funnel_icon :arrow_right, css_class: "w-4 h-4"

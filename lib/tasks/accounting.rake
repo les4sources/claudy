@@ -371,6 +371,38 @@ namespace :accounting do
     report("verify_cash_counts", ecarts, "#{CashCount.validated.count} comptage(s) validé(s) vérifié(s)")
   end
 
+  desc "Vérifie les factures d'achat — exit 1 si écart"
+  task verify_purchase_invoices: :environment do
+    ecarts = []
+
+    PurchaseInvoice.includes(:purchase_invoice_lines, :third_party, :cash_allocations).find_each do |invoice|
+      etiquette = "Facture ##{invoice.id} (#{invoice.third_party&.name})"
+      lignes = invoice.purchase_invoice_lines.sum(&:amount_cents)
+
+      if %w[to_pay paid].include?(invoice.status)
+        ecarts << "#{etiquette} : #{invoice.status_label.downcase} sans écriture d'achat" if invoice.posted_at.blank?
+
+        if JournalEntry.unscoped.find_by(source: invoice, journal: "purchases").blank?
+          ecarts << "#{etiquette} : aucune écriture au journal des achats ne la référence"
+        end
+      end
+
+      if invoice.status != "to_process" && lignes != invoice.total_cents
+        ecarts << "#{etiquette} : lignes à #{lignes} cents pour un total de #{invoice.total_cents}"
+      end
+
+      next unless invoice.paid?
+
+      couvert = invoice.cash_allocations.sum(:amount_cents).abs
+      next if couvert >= invoice.total_cents
+
+      ecarts << "#{etiquette} : marquée payée alors que #{couvert} cents seulement sont rapprochés " \
+                "sur #{invoice.total_cents}"
+    end
+
+    report("verify_purchase_invoices", ecarts, "#{PurchaseInvoice.count} facture(s) d'achat vérifiée(s)")
+  end
+
   def report(name, ecarts, resume)
     if ecarts.empty?
       puts "[accounting:#{name}] Aucun écart — #{resume}."

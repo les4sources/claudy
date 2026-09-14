@@ -1,0 +1,61 @@
+/ La page de déclaration de l'artisan (epic #248, phase 2). Mobile d'abord :
+  elle s'ouvre sur le téléphone, depuis le lien du mail, souvent debout devant
+  l'armoire de l'épicerie. Une ligne = un bloc vertical, jamais un tableau qui
+  défile de côté.
+.max-w-2xl.mx-auto.py-6
+  h1.text-2xl.font-semibold.text-gray-900
+    | Vos ventes de #{@report.period_label}
+  p.mt-1.text-sm.text-gray-500
+    = @consignor.name
+    - if @report.declared?
+      |  · déjà déclaré le #{l(@report.declared_at.to_date, format: :short)} — vous pouvez encore corriger
+
+  - if flash[:alert].present?
+    .mt-4.rounded-lg.border.border-red-200.bg-red-50.px-4.py-3.text-sm.text-red-800= flash[:alert]
+  - if flash[:notice].present?
+    .mt-4.rounded-lg.border.border-emerald-200.bg-emerald-50.px-4.py-3.text-sm.text-emerald-800= flash[:notice]
+
+  = form_with model: @report, url: public_consignment_report_path(@report.token), method: :patch,
+              html: { class: "mt-6 space-y-5" },
+              data: { controller: "public--consignment-lines",
+                      public__consignment_lines_commission_percent_value: @consignor.commission_percent } do |f|
+
+    #lignes.space-y-3(data-public--consignment-lines-target="rows")
+      - @report.consignment_report_lines.each_with_index do |line, index|
+        = f.fields_for :consignment_report_lines, line, child_index: index do |lf|
+          = render "public/consignment_reports/line", lf: lf
+
+    p.text-sm.text-gray-400(data-public--consignment-lines-target="empty" hidden=true)
+      | Aucune ligne pour l'instant — ajoutez votre première vente.
+
+    / Le gabarit d'une ligne vierge. `NEW_RECORD` est remplacé par un index
+      unique à chaque insertion : sans ça, deux lignes ajoutées de suite
+      écraseraient leurs paramètres l'une l'autre.
+    template(data-public--consignment-lines-target="template")
+      = f.fields_for :consignment_report_lines, ConsignmentReportLine.new, child_index: "NEW_RECORD" do |lf|
+        = render "public/consignment_reports/line", lf: lf
+
+    button.w-full.rounded-lg.border.border-dashed.border-gray-300.bg-white.px-4.py-3.text-sm.font-medium.text-gray-600(type="button" data-action="public--consignment-lines#add")
+      | ➕ Ajouter une vente
+
+    .rounded-2xl.bg-white.px-4.py-4.ring-1.ring-gray-200.space-y-2
+      .flex.items-center.justify-between.text-sm
+        span.text-gray-500 Total vendu
+        span.font-semibold.text-gray-900(data-public--consignment-lines-target="gross") —
+      .flex.items-center.justify-between.text-sm
+        span.text-gray-500 Commission des 4 Sources (#{@consignor.commission_percent} %)
+        span.text-gray-700(data-public--consignment-lines-target="commission") —
+      .flex.items-center.justify-between.text-base.border-t.border-gray-100.pt-2
+        span.font-medium.text-gray-700 Votre part
+        span.font-semibold.text-gray-900(data-public--consignment-lines-target="net") —
+
+    div
+      label.block.text-sm.font-medium.text-gray-700(for="consignment_report_notes") Un mot pour nous ?
+      = f.text_area :notes, rows: 2, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+
+    div
+      label.block.text-sm.font-medium.text-gray-700(for="consignment_report_photos") Photos de votre stock (facultatif)
+      p.text-xs.text-gray-400 Début et fin de mois, si ça vous aide à vous y retrouver.
+      = f.file_field :photos, multiple: true, class: "mt-1 w-full text-sm"
+
+    = f.submit "Déclarer mes ventes", class: "w-full rounded-lg border border-transparent bg-4s-main px-4 py-3 text-base font-medium text-white shadow-sm"
