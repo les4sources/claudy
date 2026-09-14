@@ -249,6 +249,9 @@ Rails.application.routes.draw do
         post :unpost
         post :exclude
         post :ventilate
+        # Solder le compte créditeur d'un membre depuis une ligne sortante
+        # (epic #246, phase 2).
+        post :payout
       end
       resources :allocations, only: [:create, :destroy], controller: "cash_allocations"
     end

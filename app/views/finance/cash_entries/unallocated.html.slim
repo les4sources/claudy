@@ -68,6 +68,23 @@
                       = " · #{ligne.team.name}"
             = button_to "Ventiler ce séjour", ventilate_finance_cash_entry_path(entry, stay_id: proposition[:match].stay.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
 
+      / Un virement à un membre (epic #246, phase 2). Une ligne SORTANTE dont le
+        montant ou l'IBAN correspond au compte créditeur d'un cuisinier : accepter
+        écrit le virement sur son compte ET affecte la ligne, en un geste.
+      - payouts = @payout_matches[entry.id]
+      - if payouts.present?
+        - payouts.first(2).each do |match|
+          .mb-3.p-3.rounded-lg.border.border-purple-100(class="bg-purple-50/60")
+            .flex.flex-wrap.items-center.justify-between.gap-2
+              div
+                p.text-sm.text-gray-800
+                  strong Virement à #{match.member_account.name}
+                  = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} en sa faveur"
+                p.mt-0.5.text-xs.text-gray-500
+                  = match.reason
+                  = " (#{match.confidence} % de confiance)"
+              = button_to "Solder son compte", payout_finance_cash_entry_path(entry, member_account_id: match.member_account.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+
       - suggestion = entry.allocation_suggestions.pending.ordered.first
       - if suggestion
         / La suggestion porte TOUJOURS son motif : un humain doit pouvoir juger
