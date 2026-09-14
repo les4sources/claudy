@@ -1,0 +1,6 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Nouvelle facture d'achat"
+
+= render "finance/purchase_invoices/form", invoice: @invoice, third_parties: @third_parties,
+         entities: @entities, teams: @teams, general_accounts: @general_accounts,
+         url: finance_purchase_invoices_path, method: :post, submit_label: "Enregistrer la facture"

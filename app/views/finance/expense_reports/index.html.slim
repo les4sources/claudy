@@ -1,0 +1,85 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Notes de frais",
+           links: [link_to("➕ Nouvelle note", new_finance_expense_report_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
+  p.text-sm.text-gray-700
+    strong Une note de frais, c'est de l'argent que quelqu'un a avancé pour la structure.
+    |  La compta l'encode depuis la feuille papier, la passe en traitement — le numéro de pièce et l'écriture d'achat sortent tout seuls — puis la paie.
+  p.mt-2.text-xs.text-gray-500
+    | Tant que la note est enregistrée, tout se corrige. Passée en traitement, elle porte une pièce comptable : elle ne se réécrit plus, elle se contre-passe.
+
+.mb-4.grid.grid-cols-1.gap-3(class="sm:grid-cols-3")
+  .rounded-lg.border.border-gray-100.bg-white.p-4
+    .text-xs.uppercase.tracking-wide.text-gray-400 Notes affichées
+    .mt-1.text-2xl.font-semibold.tabular-nums.text-gray-900 = @totals[:count]
+  .rounded-lg.border.border-gray-100.bg-white.p-4
+    .text-xs.uppercase.tracking-wide.text-gray-400 Montant total
+    .mt-1.text-2xl.font-semibold.tabular-nums.text-gray-900 = expense_amount(@totals[:total_cents])
+  .rounded-lg.border.border-amber-100.p-4(class="bg-amber-50/50")
+    .text-xs.uppercase.tracking-wide.text-amber-700 Reste à payer
+    .mt-1.text-2xl.font-semibold.tabular-nums.text-amber-900 = expense_amount(@totals[:to_pay_cents])
+
+= form_with url: finance_expense_reports_path, method: :get, class: "mb-4 flex flex-wrap items-end gap-3" do
+  label.text-xs.text-gray-500
+    | Statut
+    = select_tag :status,
+                 options_for_select([["Tous", ""]] + ExpenseReport::STATUS_LABELS.map { |value, label| [label, value] }, params[:status]),
+                 class: "mt-1 block rounded-md border-gray-300 text-sm"
+  label.text-xs.text-gray-500
+    | Type
+    = select_tag :kind,
+                 options_for_select([["Tous", ""]] + ExpenseReport::KIND_LABELS.map { |value, label| [label, value] }, params[:kind]),
+                 class: "mt-1 block rounded-md border-gray-300 text-sm"
+  label.text-xs.text-gray-500
+    | Personne
+    = select_tag :human_id,
+                 options_from_collection_for_select(@humans, :id, :name, params[:human_id]).then { |options| raw("<option value=\"\">Toutes</option>") + options },
+                 class: "mt-1 block rounded-md border-gray-300 text-sm"
+  label.text-xs.text-gray-500
+    | Entité
+    = select_tag :legal_entity_id,
+                 options_from_collection_for_select(@entities, :id, :name, params[:legal_entity_id]).then { |options| raw("<option value=\"\">Toutes</option>") + options },
+                 class: "mt-1 block rounded-md border-gray-300 text-sm"
+  label.text-xs.text-gray-500
+    | Du
+    = date_field_tag :from, params[:from], class: "mt-1 block rounded-md border-gray-300 text-sm"
+  label.text-xs.text-gray-500
+    | Au
+    = date_field_tag :to, params[:to], class: "mt-1 block rounded-md border-gray-300 text-sm"
+  = submit_tag "Filtrer", class: "rounded-md bg-4s-main px-3 py-2 text-sm font-medium text-white hover:opacity-90", data: { disable_with: false }
+  - if params.values_at(:status, :kind, :human_id, :legal_entity_id, :from, :to).any?(&:present?)
+    = link_to "Effacer", finance_expense_reports_path, class: "text-sm text-gray-500 hover:text-gray-700"
+
+- if @reports.blank?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucune note ne correspond.
+    p.mt-1 Élargis les filtres, ou encode la feuille qui est sur le bureau.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Pièce
+          th.py-3.px-6[scope="col"] Bénéficiaire
+          th.py-3.px-6[scope="col"] Entité
+          th.py-3.px-6[scope="col"] Remise le
+          th.py-3.px-6.text-right[scope="col"] Montant
+          th.py-3.px-6[scope="col"] Statut
+      tbody
+        - @reports.each do |report|
+          tr.border-b.bg-white(class="hover:bg-gray-50")
+            td.py-4.px-6.align-top
+              = link_to finance_expense_report_path(report), class: "font-medium text-4s-main hover:underline" do
+                = report.reference.presence || "Note ##{report.id}"
+              .text-xs.text-gray-400 = report.kind_label
+            td.py-4.px-6.align-top.text-gray-900 = report.human&.name
+            td.py-4.px-6.align-top.text-xs.text-gray-500 = report.legal_entity&.name
+            td.py-4.px-6.align-top.text-xs.text-gray-500
+              = report.submitted_on ? l(report.submitted_on, format: :long) : "—"
+            td.py-4.px-6.align-top.text-right.font-medium.tabular-nums.text-gray-900
+              = expense_amount(report.total_cents)
+              .text-xs.font-normal.text-gray-400 = "#{report.expense_lines.size} ligne(s)"
+            td.py-4.px-6.align-top
+              = render "finance/expense_reports/status_badge", report: report

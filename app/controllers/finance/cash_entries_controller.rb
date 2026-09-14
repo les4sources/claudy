@@ -6,7 +6,8 @@ module Finance
   # coup d'œil, si la comptabilité est à jour — et il remplace des heures de
   # rapprochement annuel par un geste mensuel.
   class CashEntriesController < Finance::AccountingBaseController
-    before_action :get_entry, only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate]
+    before_action :get_entry,
+                  only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate, :payout]
     breadcrumb "Trésorerie", :finance_cash_entries_path, match: :exact
 
     def index
@@ -39,9 +40,22 @@ module Finance
 
     def unallocated
       @pending_total = CashEntry.pending.count
-      @entries = CashEntry.pending.ordered
-                          .includes(:cash_account, :cash_allocations, :allocation_suggestions)
-                          .paginate(page: params[:page], per_page: PAR_PAGE)
+
+      # La file se restreint à un compte, ou à une famille de comptes : l'arrêté
+      # du mois renvoie ici filtré sur Stripe quand une recette Stripe attend sa
+      # correspondance de catégorie (epic #250). Sans filtre, on retombe sur la
+      # file entière — comportement inchangé.
+      scope = CashEntry.pending.ordered
+      scope = scope.where(cash_account_id: params[:cash_account_id]) if params[:cash_account_id].present?
+      if params[:kind].present? && CashAccount::KINDS.include?(params[:kind])
+        scope = scope.where(cash_account_id: CashAccount.where(kind: params[:kind]).select(:id))
+      end
+      @filtered_total = scope.count
+      @filter_kind = params[:kind].presence
+      @filter_account = CashAccount.find_by(id: params[:cash_account_id])
+
+      @entries = scope.includes(:cash_account, :cash_allocations, :allocation_suggestions)
+                      .paginate(page: params[:page], per_page: PAR_PAGE)
 
       # Les suggestions se recalculent à l'ouverture de l'écran : c'est le seul
       # moment où elles servent, et ça évite un job de fond que l'application
@@ -69,6 +83,12 @@ module Finance
 
         hash[entry.id] = { match: correspondance, lines: lignes }
       end
+      # Les virements aux membres (epic #246, phase 2) : une ligne sortante peut
+      # solder le compte créditeur d'un cuisinier. Les soldes se calculent UNE
+      # fois pour la page — les recalculer ligne à ligne est ce qui avait fait
+      # tomber cet écran à l'issue #202.
+      @payout_matches = Finance::MatchMemberPayouts.new.for_entries(@entries)
+
       @general_accounts = GeneralAccount.actives.ordered
       @teams = Team.ordered
       @entities = LegalEntity.actives.ordered
@@ -115,6 +135,29 @@ module Finance
         flash.now[:alert] = @entry.errors.full_messages.to_sentence
         render :edit, status: :unprocessable_entity
       end
+    end
+
+    # Le virement qui solde le compte d'un membre (epic #246, phase 2). Un geste,
+    # pas deux : l'écriture sur son compte et l'affectation de la ligne bancaire
+    # tombent ensemble ou pas du tout.
+    def payout
+      compte = MemberAccount.find(params[:member_account_id])
+      # Sans montant explicite, on solde : c'est le geste courant. Le paramètre
+      # existe pour un virement partiel, et c'est lui qui se fait refuser s'il
+      # dépasse ce que le compte attend.
+      montant = params[:amount].presence && (params[:amount].to_s.tr(",", ".").to_f * 100).round
+
+      Finance::RecordMemberPayout.new(
+        member_account: compte, cash_entry: @entry, amount_cents: montant,
+        whodunnit: current_user&.email
+      ).run!
+
+      redirect_to finance_unallocated_cash_entries_path,
+                  notice: "Virement à #{compte.name} enregistré — son compte est soldé."
+    rescue Finance::RecordMemberPayout::NotCreditor, Finance::RecordMemberPayout::TooMuch,
+           Finance::RecordMemberPayout::MissingAccount, Finance::RecordMemberPayout::WrongDirection,
+           ActiveRecord::RecordInvalid => e
+      redirect_to finance_cash_entry_path(@entry), alert: e.message
     end
 
     # Ventiler un séjour : les lignes viennent du devis reconstruit, la base est

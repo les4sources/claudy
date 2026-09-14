@@ -71,10 +71,23 @@ class CashAllocation < ApplicationRecord
   validate :entry_open
 
   before_destroy :refuse_when_posted
+  # Le paiement d'une facture d'achat EST un rapprochement (epic #240,
+  # décision 4) : dès que les allocations qui pointent une facture couvrent son
+  # total, elle est payée. Aucune case à cocher — une case se coche à côté de la
+  # réalité, un rapprochement non.
+  after_commit :refresh_document_payment
 
   scope :ordered, -> { order(:id) }
 
   private
+
+  def refresh_document_payment
+    return unless document.is_a?(PurchaseInvoice)
+
+    PurchaseInvoices::RefreshPayment.new(purchase_invoice: document.reload).run!
+  rescue ActiveRecord::RecordNotFound
+    nil
+  end
 
   # Une allocation de sens contraire transformerait un encaissement en
   # décaissement partiel : ce n'est pas une affectation, c'est une autre ligne.

@@ -1,0 +1,112 @@
+/* --- Grille « Espaces » ------------------------------------------------------
+   PARTAGÉE entre le funnel public, la modification client et le formulaire
+   ADMIN : les trois rendent `public/reservations/_spaces_calendar`. Ces règles
+   vivaient dans `funnel.css`, que seul `public.css` importe — côté admin, les
+   créneaux se rendaient donc en boutons nus, sans couleur ni état visible.
+   Elles sont ici pour être importées des deux côtés (epic #234, phase 3).
+   Elles consomment les tokens `--p-*` de `portal.css`, qui doit précéder. */
+
+
+/* --- Créneaux d'espaces (journée / soirée / les deux) ----------------------- */
+
+/* Même principe que les cellules de nuit : l'état vit dans `data-slot`, le
+   dessin dans le CSS. Il vivait avant en double — une table de classes Tailwind
+   dans `space_slot_controller.js` ET les mêmes couleurs recopiées à la main dans
+   la légende du template, en bleu, violet et sarcelle, trois teintes venues de
+   nulle part.
+   Les trois états se distinguent d'abord par leur VALEUR (clair chaud, clair
+   froid, foncé plein), pas seulement par leur teinte — et chaque cellule porte
+   son libellé écrit (« Jour », « Soir », « J+S »). La couleur ne porte donc
+   jamais l'information seule. */
+.funnel-slot {
+  appearance: none;
+  width: 3.5rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--p-border);
+  border-radius: var(--p-radius-md);
+  background: var(--p-surface);
+  color: var(--p-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms var(--p-ease), border-color 160ms var(--p-ease),
+              color 160ms var(--p-ease);
+}
+.funnel-slot:hover {
+  border-color: var(--p-primary);
+}
+.funnel-slot[data-slot="journee"] {
+  background: var(--p-accent-tint);
+  border-color: var(--p-accent);
+  color: #8A4E1E;
+}
+.funnel-slot[data-slot="soiree"] {
+  background: var(--p-primary-tint);
+  border-color: var(--p-primary);
+  color: var(--p-primary);
+}
+.funnel-slot[data-slot="journee_et_soiree"] {
+  background: var(--p-primary);
+  border-color: var(--p-primary);
+  color: var(--p-primary-contrast);
+}
+/* Pastille de légende — même dessin, plus petite et non cliquable. */
+.funnel-slot--legend {
+  width: 3.5rem;
+  height: 2rem;
+  cursor: default;
+}
+
+
+/* Focus clavier — la grille se parcourt au `Tab`, chaque case se change à
+   `Espace` / `Entrée` (ce sont de vrais `<button>`). Sans anneau visible, on
+   perd le fil dès la deuxième colonne. */
+.funnel-slot:focus-visible {
+  outline: 2px solid var(--p-primary);
+  outline-offset: 2px;
+}
+
+/* Colonnes d'arrivée et de départ — les deux bornes du séjour. Elles portent
+   déjà leur sous-titre écrit ; la teinte ne fait que les rendre repérables d'un
+   coup d'œil, elle ne porte aucune information seule. */
+.spaces-grid-edge {
+  background: var(--p-bg);
+}
+
+/* « Tous les jours » / « Effacer » — un geste par ligne, sous le nom de
+   l'espace. Assez petits pour ne pas concurrencer les cases, assez hauts pour
+   rester cliquables au pouce (cible étendue par le pseudo-élément). */
+.spaces-grid-row-action {
+  position: relative;
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  font-weight: 600;
+  color: var(--p-primary);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.spaces-grid-row-action::before {
+  content: "";
+  position: absolute;
+  inset: -0.5rem -0.25rem;
+}
+.spaces-grid-row-action:hover {
+  color: var(--p-primary-soft);
+}
+.spaces-grid-row-action--quiet {
+  color: var(--p-muted);
+  font-weight: 500;
+}
+.spaces-grid-row-action:focus-visible {
+  outline: 2px solid var(--p-primary);
+  outline-offset: 2px;
+  border-radius: var(--p-radius-sm);
+}

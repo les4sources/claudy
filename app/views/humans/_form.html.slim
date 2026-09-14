@@ -16,6 +16,15 @@
                    label: "Résumé",
                    class: "md:w-1/2 lg:w-2/3"
 
+    / L'IBAN (epic #241) : c'est par lui que part le virement d'une note de
+      frais. Chiffré au repos, il ne se relit qu'ici — la fiche n'en montre que
+      les quatre derniers caractères.
+    = f.text_field :iban,
+                   label: "IBAN",
+                   placeholder: "BE68 5390 0754 7034",
+                   hint: "Sert à payer les notes de frais. Chiffré en base, jamais exposé dans l'API.",
+                   class: "md:w-1/2 lg:w-2/3"
+
     .flex.space-x-4
       - if @human.photo?
         = image_tag @human.photo_url(:thumb),
@@ -25,6 +34,20 @@
                        label: "Photo",
                        hint: "Un fichier au format JPG, PNG ou GIF"
         = f.hidden_field :photo_cache
+
+    / Coordonnées bancaires (epic #246, phase 2). Un cuisinier de batch cooking —
+      un enfant compris — se fait payer par virement : sans IBAN, son compte
+      créditeur reste un chiffre qu'on ne peut pas solder. Pour un enfant,
+      l'IBAN est celui d'un parent, d'où le titulaire.
+    = f.text_field :iban,
+                   label: "IBAN",
+                   hint: "Pour être payé·e par virement (batch cooking, rémunérations). Laisse vide s'il n'y en a pas.",
+                   class: "md:w-1/2 lg:w-2/3"
+
+    = f.text_field :iban_holder_name,
+                   label: "Titulaire du compte",
+                   hint: "Seulement si le compte n'est pas au nom de la personne — celui d'un parent, par exemple.",
+                   class: "md:w-1/2 lg:w-2/3"
 
     = f.label :description,
               "Présentation complète"

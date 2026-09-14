@@ -5,6 +5,47 @@
              link_to("➕ Nouvelle session", new_finance_batch_cooking_session_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") \
            ]
 
+/ « Cuisiniers à payer » — la file locale (epic #246, phase 2). Elle prendra sa
+  place sur Comptabilité > À payer quand l'epic #240 phase 4 sera livrée ; d'ici
+  là, la dette doit être visible quelque part, et c'est ici qu'on la crée.
+- if @payables.any?
+  .mb-6.rounded-2xl.border.border-purple-200.px-4.py-4(class="bg-purple-50/50")
+    .flex.flex-wrap.items-baseline.justify-between.gap-2.mb-3
+      h2.text-sm.font-semibold.text-gray-900 Cuisiniers à payer
+      span.text-sm.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(@payables.total_cents, "EUR"))
+    p.text-xs.text-gray-500.mb-3
+      | Ces comptes sont créditeurs : la maison doit cet argent. Le virement se rapproche ensuite depuis l'écran
+      = link_to " À affecter", finance_unallocated_cash_entries_path, class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+      |  — une ligne bancaire sortante du bon montant, ou au bon IBAN, propose de solder le compte.
+    .overflow-x-auto
+      table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
+        thead.text-xs.text-gray-700.uppercase
+          tr
+            th.py-2.px-3[scope="col"] Cuisinier
+            th.py-2.px-3[scope="col"] IBAN
+            th.py-2.px-3[scope="col"] Communication
+            th.py-2.px-3.text-right[scope="col"] Dû
+        tbody
+          - @payables.rows.each do |row|
+            tr.border-t.border-purple-100
+              td.py-2.px-3.font-medium.text-gray-900
+                - if row.member_account.human
+                  = link_to row.member_account.name, finance_account_path(row.member_account), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+                - else
+                  = row.member_account.name
+              td.py-2.px-3
+                - if row.payable?
+                  span.font-mono.text-xs= row.iban
+                  - if row.iban_holder != row.member_account.name
+                    .text-xs.text-gray-400= "titulaire : #{row.iban_holder}"
+                - else
+                  span.inline-flex.items-center.rounded-full.bg-amber-100.px-2.py-0.5.text-xs.font-medium.text-amber-800
+                    | IBAN manquant
+                  - if row.human
+                    = link_to " renseigner", edit_human_path(row.human), class: "ml-1 text-xs text-blue-500 underline"
+              td.py-2.px-3.font-mono.text-xs= row.communication
+              td.py-2.px-3.text-right.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(row.due_cents, "EUR"))
+
 - if @sessions.blank?
   .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
     p.font-medium.text-gray-700 Aucune session de batch cooking.

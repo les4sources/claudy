@@ -6,7 +6,8 @@ RSpec.describe ReservationMailer, type: :mailer do
 
   let(:booking) do
     b = Booking.new(firstname: "Léa", email: "guest@example.com",
-                    from_date: Date.today + 30, to_date: Date.today + 32, adults: 2,
+                    from_date: (Date.today + 30).next_occurring(:monday),
+                    to_date: (Date.today + 30).next_occurring(:monday) + 2, adults: 2,
                     status: "pending", lodging_id: lodging.id, price_cents: 74_500, shown_price_cents: 74_500)
     b.generate_token
     b.save!
@@ -15,7 +16,8 @@ RSpec.describe ReservationMailer, type: :mailer do
 
   let(:stay) do
     s = Stay.create!(customer: customer, source: "reservation", status: "pending",
-                     arrival_date: Date.today + 30, departure_date: Date.today + 32,
+                     arrival_date: (Date.today + 30).next_occurring(:monday),
+                     departure_date: (Date.today + 30).next_occurring(:monday) + 2,
                      total_amount_cents: 74_500)
     s.stay_items.create!(bookable: booking)
     s
@@ -61,7 +63,8 @@ RSpec.describe ReservationMailer, type: :mailer do
 
     it "affiche le breakdown TVAC issu du même PricingModel que l'UI" do
       expect(mail.body.encoded).to match(/Total TVAC/i)
-      expect(mail.body.encoded).to include("745") # Hulotte 2 nuits = 485 + 260 = 745 €
+      # Hulotte, 2 nuits SEMAINE au barème du site (epic #260) : 2 × 400 = 800 €.
+      expect(mail.body.encoded).to include("800")
       expect(mail.body.encoded).to match(/pas de TVA en plus/i)
     end
 

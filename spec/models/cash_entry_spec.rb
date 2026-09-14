@@ -16,6 +16,7 @@ require "rails_helper"
 #  fingerprint       :string
 #  label             :string           not null
 #  notes             :text
+#  source_type       :string
 #  statement_ref     :string
 #  status            :string           default("pending"), not null
 #  transaction_code  :string
@@ -24,6 +25,7 @@ require "rails_helper"
 #  updated_at        :datetime         not null
 #  cash_account_id   :bigint           not null
 #  cash_motif_id     :bigint
+#  source_id         :bigint
 #
 # Indexes
 #
@@ -33,6 +35,7 @@ require "rails_helper"
 #  index_cash_entries_on_entry_date        (entry_date)
 #  index_cash_entries_on_external_ref      (cash_account_id,external_ref) UNIQUE WHERE (external_ref IS NOT NULL)
 #  index_cash_entries_on_fingerprint       (cash_account_id,fingerprint) UNIQUE WHERE (fingerprint IS NOT NULL)
+#  index_cash_entries_on_source            (source_type,source_id)
 #  index_cash_entries_on_status            (status)
 #  index_cash_entries_on_transaction_code  (transaction_code)
 #

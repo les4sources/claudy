@@ -37,6 +37,14 @@
               dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
                 = @human.summary
 
+              dt.text-sm.font-medium.text-gray-500
+                | IBAN
+              dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+                - if @human.iban.present?
+                  span.font-mono = @human.iban_masked
+                - else
+                  span.text-gray-400 Pas d'IBAN — une note de frais ne pourra pas lui être virée.
+
   .grid.grid-cols-3.gap-4
     .col-span-2.space-y-4
       .overflow-hidden.bg-white.shadow.sm:rounded-lg
