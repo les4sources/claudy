@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_11_050000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_11_060000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1296,6 +1296,55 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_050000) do
     t.index ["human_id"], name: "index_projects_on_human_id"
   end
 
+  create_table "purchase_invoice_lines", force: :cascade do |t|
+    t.integer "amount_cents", default: 0, null: false
+    t.bigint "analytic_account_id"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "general_account_id", null: false
+    t.string "label"
+    t.integer "position", default: 0, null: false
+    t.bigint "purchase_invoice_id", null: false
+    t.bigint "team_id"
+    t.datetime "updated_at", null: false
+    t.index ["analytic_account_id"], name: "index_purchase_lines_on_analytic"
+    t.index ["deleted_at"], name: "index_purchase_lines_on_deleted_at"
+    t.index ["general_account_id"], name: "index_purchase_lines_on_account"
+    t.index ["purchase_invoice_id"], name: "index_purchase_lines_on_invoice"
+    t.index ["team_id"], name: "index_purchase_lines_on_team"
+  end
+
+  create_table "purchase_invoices", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.text "dispute_reason"
+    t.date "due_on"
+    t.date "issued_on", null: false
+    t.bigint "legal_entity_id", null: false
+    t.text "notes"
+    t.string "number"
+    t.date "paid_on"
+    t.string "pdf_sha256"
+    t.datetime "posted_at"
+    t.jsonb "quality_flags", default: [], null: false
+    t.boolean "requires_validation", default: false, null: false
+    t.string "status", default: "to_process", null: false
+    t.bigint "third_party_id", null: false
+    t.integer "total_cents", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.datetime "validated_at"
+    t.bigint "validated_by_id"
+    t.bigint "validation_team_id"
+    t.index ["deleted_at"], name: "index_purchase_invoices_on_deleted_at"
+    t.index ["legal_entity_id"], name: "index_purchase_invoices_on_legal_entity_id"
+    t.index ["pdf_sha256"], name: "index_purchase_invoices_on_pdf_sha256", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["status"], name: "index_purchase_invoices_on_status"
+    t.index ["third_party_id", "number"], name: "index_purchase_invoices_on_third_party_and_number", unique: true, where: "((deleted_at IS NULL) AND (number IS NOT NULL))"
+    t.index ["third_party_id"], name: "index_purchase_invoices_on_third_party_id"
+    t.index ["validated_by_id"], name: "index_purchase_invoices_on_validated_by_id"
+    t.index ["validation_team_id"], name: "index_purchase_invoices_on_validation_team_id"
+  end
+
   create_table "rate_versions", force: :cascade do |t|
     t.date "active_from", null: false
     t.date "active_until"
@@ -1906,6 +1955,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_050000) do
   add_foreign_key "payments", "space_bookings"
   add_foreign_key "payments", "stays"
   add_foreign_key "projects", "humans"
+  add_foreign_key "purchase_invoice_lines", "analytic_accounts"
+  add_foreign_key "purchase_invoice_lines", "general_accounts"
+  add_foreign_key "purchase_invoice_lines", "purchase_invoices"
+  add_foreign_key "purchase_invoice_lines", "teams"
+  add_foreign_key "purchase_invoices", "legal_entities"
+  add_foreign_key "purchase_invoices", "teams", column: "validation_team_id"
+  add_foreign_key "purchase_invoices", "third_parties"
+  add_foreign_key "purchase_invoices", "users", column: "validated_by_id"
   add_foreign_key "rate_versions", "rates"
   add_foreign_key "recurring_charges", "household_members"
   add_foreign_key "recurring_charges", "member_accounts"

@@ -1,0 +1,6 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Modifier la facture"
+
+= render "finance/purchase_invoices/form", invoice: @invoice, third_parties: @third_parties,
+         entities: @entities, teams: @teams, general_accounts: @general_accounts,
+         url: finance_purchase_invoice_path(@invoice), method: :patch, submit_label: "Enregistrer"

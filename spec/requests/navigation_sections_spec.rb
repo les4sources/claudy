@@ -76,7 +76,7 @@ RSpec.describe "Appartenance des contrôleurs Finance::", type: :model do
     accounting allocation_rules allocation_suggestions analytic_balance
     cash_allocations cash_counts cash_entries cash_motifs cash_sheet coda_imports
     collection_cost consignment_reports cross_check fiscal_years general_accounts ledger
-    legal_entities monthly_close revenue_share_agreements
+    legal_entities monthly_close purchase_invoices revenue_share_agreements
     revenue_share_statements third_parties trial_balance
   ].freeze
 
