@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_13_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_14_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -255,12 +255,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_010000) do
     t.bigint "batch_cooking_session_id", null: false
     t.datetime "created_at", null: false
     t.bigint "member_account_id", null: false
-    t.integer "portions", null: false
+    t.integer "people", null: false
     t.datetime "updated_at", null: false
     t.index ["batch_cooking_session_id", "member_account_id"], name: "index_bc_servings_unique", unique: true
     t.index ["batch_cooking_session_id"], name: "index_bc_servings_on_session"
     t.index ["member_account_id"], name: "index_batch_cooking_servings_on_member_account_id"
-    t.check_constraint "portions > 0", name: "bc_servings_portions_positive"
+    t.check_constraint "people > 0", name: "bc_servings_people_positive"
   end
 
   create_table "batch_cooking_sessions", force: :cascade do |t|
@@ -269,6 +269,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_13_010000) do
     t.bigint "created_by_id"
     t.datetime "deleted_at"
     t.string "label"
+    t.integer "meals_count", default: 5, null: false
     t.text "notes"
     t.integer "total_portions", default: 0, null: false
     t.datetime "updated_at", null: false

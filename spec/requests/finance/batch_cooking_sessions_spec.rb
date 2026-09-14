@@ -35,8 +35,8 @@ RSpec.describe "Finances > Batch cooking", type: :request do
     rate.rate_versions.create!(amount_cents: cents, active_from: RateVersion::ORIGIN)
   end
 
-  def payload(servings: {}, cooks: {}, cooked_on: "2026-09-12", notes: nil)
-    { batch_cooking_session: { cooked_on: cooked_on, notes: notes },
+  def payload(servings: {}, cooks: {}, cooked_on: "2026-09-12", notes: nil, meals_count: 1)
+    { batch_cooking_session: { cooked_on: cooked_on, notes: notes, meals_count: meals_count },
       servings: servings, cooks: cooks }
   end
 
@@ -57,6 +57,21 @@ RSpec.describe "Finances > Batch cooking", type: :request do
       expect(response.body).to include("Chevêche")
       expect(response.body).to include("à créer comme personne")
       expect(response.body).to include(new_human_path(name: "Lou"))
+    end
+
+    it "demande le nombre de repas préparés, pré-rempli à 5" do
+      get new_finance_batch_cooking_session_path
+
+      expect(response.body).to include("batch_cooking_session[meals_count]")
+      expect(response.body).to include("Repas préparés")
+      expect(response.body).to include('value="5"')
+    end
+
+    it "demande des PERSONNES, pas des portions" do
+      get new_finance_batch_cooking_session_path
+
+      expect(response.body).to include("par personne et par repas")
+      expect(response.body).not_to include("la portion — laisse vide")
     end
 
     it "câble l'aperçu en direct sur les deux tarifs du jour" do
@@ -88,6 +103,21 @@ RSpec.describe "Finances > Batch cooking", type: :request do
       expect(compte_cheveche.account_entries.sum(:amount_cents)).to eq(1_500)
       expect(compte_merle.account_entries.sum(:amount_cents)).to eq(1_000)
       expect(MemberAccount.find_by(human_id: stephanie.id).balance_cents).to eq(-1_750)
+    end
+
+    # Le scénario de l'issue #307 : 5 repas, deux familles de 3 et 2 personnes.
+    it "multiplie les personnes par le nombre de repas préparés" do
+      post finance_batch_cooking_sessions_path,
+           params: payload(meals_count: "5",
+                           servings: { compte_cheveche.id => "3", compte_merle.id => "2" })
+
+      session = BatchCookingSession.last
+      expect(session.meals_count).to eq(5)
+      expect(session.total_portions).to eq(25)
+      expect(compte_cheveche.account_entries.first.quantity).to eq(15)
+      expect(compte_cheveche.account_entries.sum(:amount_cents)).to eq(7_500)
+      expect(compte_merle.account_entries.first.quantity).to eq(10)
+      expect(compte_merle.account_entries.sum(:amount_cents)).to eq(5_000)
     end
 
     it "ignore une famille laissée vide" do
@@ -129,7 +159,7 @@ RSpec.describe "Finances > Batch cooking", type: :request do
       BatchCookingSession.last
     end
 
-    it "régénère les écritures quand les portions changent" do
+    it "régénère les écritures quand le nombre de personnes change" do
       patch finance_batch_cooking_session_path(session),
             params: payload(servings: { compte_cheveche.id => "5" },
                             cooks: { membre_stephanie.id => { selected: "1", portions: "5" } })
@@ -152,10 +182,17 @@ RSpec.describe "Finances > Batch cooking", type: :request do
       expect(compte_cheveche.account_entries.first.amount_cents).to eq(1_500)
     end
 
-    it "rouvre la session avec ses portions déjà saisies" do
-      get edit_finance_batch_cooking_session_path(session)
+    # La case porte des PERSONNES : rouvrir une session à 5 repas ne doit pas
+    # rendre 15 dans la case, sinon la sauvegarde suivante facture 75 portions.
+    it "rouvre la session avec ses PERSONNES déjà saisies, pas ses portions" do
+      seance = session
+      seance.update!(meals_count: 5)
 
-      expect(response.body).to include("value=\"3\"")
+      get edit_finance_batch_cooking_session_path(seance)
+
+      champ = response.body[/<input[^>]*name="servings\[#{compte_cheveche.id}\]"[^>]*>/]
+      expect(champ).to include('value="3"')
+      expect(champ).not_to include('value="15"')
       expect(response.body).to include("cooks[#{membre_stephanie.id}][selected]")
     end
   end
@@ -172,6 +209,16 @@ RSpec.describe "Finances > Batch cooking", type: :request do
       expect(response.body).to include("Soupes et curry")
       expect(response.body).to include("15,00")
       expect(response.body).to include("10,50")
+    end
+
+    it "montre le nombre de repas de chaque session" do
+      post finance_batch_cooking_sessions_path,
+           params: payload(meals_count: "5", servings: { compte_cheveche.id => "3" })
+
+      get finance_batch_cooking_sessions_path
+
+      expect(response.body).to include("Repas")
+      expect(response.body).to include("75,00")
     end
   end
 

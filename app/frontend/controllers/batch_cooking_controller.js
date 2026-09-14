@@ -7,12 +7,27 @@ import { Controller } from '@hotwired/stimulus';
 // aller-retour serveur pour ça ferait perdre exactement le temps que l'écran
 // est censé faire gagner.
 //
-// LA RÈGLE DU PARTAGE. Les portions cuisinées se répartissent à parts égales
-// entre les cuisiniers cochés — mais dès que quelqu'un corrige une part à la
-// main, sa ligne devient intouchable : on ne réécrit jamais un chiffre que
-// quelqu'un vient de taper. C'est ce que porte `data-touched`.
+// LA RÈGLE DU PARTAGE. Ce que se partagent les cuisiniers, c'est le nombre de
+// PERSONNES servies — pas le total de portions (issue #307). La rémunération
+// ne suit donc pas le multiplicateur « nombre de repas » : la règle sera
+// tranchée dans une issue dédiée, et jusque-là elle est gelée sur ce qu'elle
+// valait. Changer 5 repas en 10 double la facture des familles et ne touche
+// pas d'un centime ce que gagnent les cuisiniers.
+//
+// Dès que quelqu'un corrige une part à la main, sa ligne devient intouchable :
+// on ne réécrit jamais un chiffre que quelqu'un vient de taper. C'est ce que
+// porte `data-touched`.
 export default class extends Controller {
-  static targets = ['serving', 'cookRow', 'cookToggle', 'cookPortions', 'cookDue', 'billedTotal', 'dueTotal'];
+  static targets = [
+    'mealsCount',
+    'serving',
+    'cookRow',
+    'cookToggle',
+    'cookPortions',
+    'cookDue',
+    'billedTotal',
+    'dueTotal',
+  ];
   static values = { servingPriceCents: Number, cookPriceCents: Number };
 
   connect() {
@@ -24,8 +39,8 @@ export default class extends Controller {
     this.recompute();
   }
 
-  // Une portion servie a changé : le total à répartir change, donc les parts
-  // non touchées aussi.
+  // Une personne servie — ou le nombre de repas — a changé : le total facturé
+  // change, et le total à répartir entre cuisiniers avec lui.
   recompute() {
     this.redistribute();
     this.render();
@@ -58,7 +73,9 @@ export default class extends Controller {
 
     // On répartit au MILLIÈME de portion, comme le modèle : cinq portions pour
     // deux cuisiniers font deux parts et demie, pas trois et deux.
-    const restant = Math.max(Math.round((this.totalPortions() - reserve) * 1000), 0);
+    // `peopleServed()`, PAS `totalPortions()` : c'est la ligne qui garantit que
+    // le nombre de repas ne change rien à ce que gagnent les cuisiniers.
+    const restant = Math.max(Math.round((this.peopleServed() - reserve) * 1000), 0);
     const base = Math.floor(restant / libres.length);
     const reliquat = restant - base * libres.length;
 
@@ -85,8 +102,24 @@ export default class extends Controller {
     this.dueTotalTarget.textContent = this.format(du);
   }
 
-  totalPortions() {
+  // Les personnes servies, toutes familles confondues.
+  peopleServed() {
     return this.servingTargets.reduce((sum, input) => sum + this.parse(input.value), 0);
+  }
+
+  // Ce qui est facturé : chaque famille prend tous les repas de la session.
+  totalPortions() {
+    return this.mealsCount() * this.peopleServed();
+  }
+
+  // Une case vidée pendant la frappe ne doit pas faire tomber l'aperçu à zéro
+  // le temps que le chiffre suivant arrive : on retombe sur 1 repas, la seule
+  // valeur qui ne ment pas sur le nombre de personnes saisies.
+  mealsCount() {
+    if (!this.hasMealsCountTarget) return 1;
+
+    const meals = this.parse(this.mealsCountTarget.value);
+    return meals > 0 ? meals : 1;
   }
 
   checkedPortionInputs() {

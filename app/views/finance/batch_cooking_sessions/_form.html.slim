@@ -37,7 +37,20 @@
                          required: true,
                          id: "batch_cooking_session_cooked_on",
                          class: field_input
-      div(class="md:col-span-8")
+      / Le nombre de repas préparés, une fois pour toute la session : chaque
+        famille prend tous les repas, donc rien à redire ligne par ligne.
+      div(class="md:col-span-3")
+        = label_tag "batch_cooking_session[meals_count]", "Repas préparés *", class: field_label
+        = number_field_tag "batch_cooking_session[meals_count]",
+                           (@session.meals_count || 5),
+                           required: true,
+                           min: 1,
+                           step: 1,
+                           inputmode: "numeric",
+                           id: "batch_cooking_session_meals_count",
+                           class: field_input,
+                           data: { batch_cooking_target: "mealsCount", action: "input->batch-cooking#recompute" }
+      div(class="md:col-span-5")
         = label_tag "batch_cooking_session[notes]", "Note", class: field_label
         = text_field_tag "batch_cooking_session[notes]",
                          @session.notes,
@@ -50,7 +63,7 @@
   div(class=panel)
     h3(class=panel_title) Les familles servies
     p(class=panel_hint)
-      = "#{number_to_currency(@serving_price_cents.to_i / 100.0)} la portion — laisse vide une famille qui n'a rien reçu."
+      = "Combien de PERSONNES dans chaque famille — #{number_to_currency(@serving_price_cents.to_i / 100.0)} par personne et par repas. Laisse vide une famille qui n'a rien reçu."
 
     - if @accounts.blank?
       p.text-sm.text-gray-500 Aucun compte de ménage actif.
@@ -66,6 +79,7 @@
                              step: 1,
                              inputmode: "numeric",
                              placeholder: "0",
+                             "aria-label": "Personnes servies — #{account.name}",
                              class: portions_input,
                              data: { batch_cooking_target: "serving", action: "input->batch-cooking#recompute" }
 
@@ -79,7 +93,7 @@
   div(class=panel)
     h3(class=panel_title) Qui a cuisiné
     p(class=panel_hint)
-      = "#{number_to_currency(@cook_price_cents.to_i / 100.0)} la portion préparée, partagée à parts égales entre les cuisiniers — chaque part reste modifiable."
+      = "#{number_to_currency(@cook_price_cents.to_i / 100.0)} la portion préparée. La proposition partage à parts égales le nombre de PERSONNES servies — la rémunération ne suit pas le nombre de repas. Chaque part reste modifiable."
 
     - if @members.blank?
       p.text-sm.text-gray-500 Aucun membre de ménage présent à cette date.
