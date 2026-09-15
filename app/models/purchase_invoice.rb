@@ -35,6 +35,8 @@ class PurchaseInvoice < ApplicationRecord
   # voudrait dire réécrire le grand livre.
   FROZEN_STATUSES = %w[to_pay paid].freeze
 
+  include Commentable
+
   # Jeton du lien de validation posé dans l'email aux membres du pôle (phase 3),
   # même patron que `MealOrder` : portée unique et expiration, donc impossible à
   # forger comme à rejouer sur une autre ressource.
@@ -91,12 +93,38 @@ class PurchaseInvoice < ApplicationRecord
   def double_signature? = total_cents >= DOUBLE_SIGNATURE_CENTS
   def reference = [third_party&.name, number].compact_blank.join(" · ")
 
+  # Les membres du pôle qui ont un COMPTE : ceux qu'on peut notifier dans Claudy
+  # (epic #242, phase 3). Distinct de ceux qu'on peut seulement emailer.
+  def validation_users
+    return User.none if validation_team_id.blank?
+
+    User.where(human_id: TeamMembership.where(team_id: validation_team_id).select(:human_id))
+  end
+
+  # Qui est prévenu d'un commentaire : le pôle qui doit trancher, et la
+  # coordination comptable. Une question posée dans le vide ne sert à rien.
+  def comment_recipients
+    (validation_users.to_a + NotificationSettingsController.accounting_users.to_a).compact.uniq
+  end
+
+  def comment_label = "la facture #{reference.presence || "##{id}"}"
+
+  def comment_path
+    Rails.application.routes.url_helpers.finance_purchase_invoice_path(self)
+  end
+
   # L'étape suivante du parcours, telle que la facture la voit elle-même.
   def next_status
     return "to_validate" if requires_validation? && validated_at.blank?
 
     "to_pay"
   end
+
+  # Le pôle apprend dans Claudy qu'une facture l'attend (epic #242, phase 3).
+  # Posé sur le MODÈLE : la facture peut basculer en `to_validate` depuis le
+  # bouton « Envoyer au paiement », et demain depuis un import — une notification
+  # accrochée à un seul chemin manquerait l'autre.
+  after_update_commit :notify_validation_team, if: :saved_change_to_awaiting_validation?
 
   def validation_token
     signed_id(purpose: TOKEN_PURPOSE, expires_in: TOKEN_TTL)
@@ -127,6 +155,15 @@ class PurchaseInvoice < ApplicationRecord
   end
 
   private
+
+  def saved_change_to_awaiting_validation?
+    before, after = saved_change_to_status
+    after == "to_validate" && before != "to_validate"
+  end
+
+  def notify_validation_team
+    Notifications::PurchaseInvoiceToValidate.call(self)
+  end
 
   # Un défaut de métadonnée ne bloque jamais l'entrée d'une pièce (décision 7) :
   # on la marque, et quelqu'un corrige le tiers quand il a le temps.

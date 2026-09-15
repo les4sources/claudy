@@ -161,3 +161,8 @@
             - statut = version.changeset["status"] if version.respond_to?(:changeset)
             - if statut.present?
               = " · #{PurchaseInvoice::STATUS_LABELS[statut.last] || statut.last}"
+
+/ Fil de commentaires (epic #242, phase 3). Une facture contestée se discute là
+  où elle vit, pas dans une boîte mail — c'est le sens de tout cet epic.
+.mt-6
+  = render Comments::ThreadComponent.new(commentable: @invoice, current_user: current_user)

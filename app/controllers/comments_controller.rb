@@ -19,6 +19,11 @@ class CommentsController < BaseController
       # Les destinataires sont prévenus par le service dédié — le contrôleur ne
       # crée jamais de `Notification` lui-même (epic #242, décision 2).
       Notifications::CommentPosted.call(@comment)
+      # « Demander une info » (phase 3) : en plus du fil, on interpelle
+      # NOMMÉMENT le bénéficiaire. `CommentPosted` le prévient déjà, mais sous
+      # un titre qui dit « quelqu'un a commenté » — pas « on attend quelque
+      # chose de toi ».
+      Notifications::InfoRequested.call(@comment) if params[:info_request] == "1"
       render_thread
     else
       render_thread(draft: @comment, status: :unprocessable_entity)

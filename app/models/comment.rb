@@ -32,7 +32,7 @@ class Comment < ApplicationRecord
   #
   # Les phases suivantes de l'epic l'étendent (`ExpenseReport`,
   # `PurchaseInvoice`, `Event`, `Decision`, `ExperienceBooking`).
-  COMMENTABLE_TYPES = %w[Gathering Stay].freeze
+  COMMENTABLE_TYPES = %w[Gathering Stay ExpenseReport PurchaseInvoice].freeze
 
   has_paper_trail
   has_soft_deletion default_scope: true
@@ -79,6 +79,9 @@ class Comment < ApplicationRecord
   # `polymorphic_path` sur un type de la LISTE BLANCHE : aucun nom de classe
   # venu d'ailleurs n'arrive jusqu'ici.
   def target_path
+    declared = commentable.comment_path if commentable.respond_to?(:comment_path)
+    return "#{declared}##{dom_anchor}" if declared.present?
+
     Rails.application.routes.url_helpers.polymorphic_path(commentable, anchor: dom_anchor)
   rescue NoMethodError, ActionController::UrlGenerationError
     # Un commentable sans route nommée ne doit pas empêcher le commentaire

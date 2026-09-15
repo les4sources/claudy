@@ -27,4 +27,13 @@ module Commentable
   def comment_label
     self.class.model_name.human.downcase
   end
+
+  # Où mène la notification. `Comment#target_path` passe par `polymorphic_path`,
+  # qui ne sait rien des ressources vivant sous un namespace : une note de frais
+  # est à `/finance/expense_reports/:id`, pas à `/expense_reports/:id`. Sans ce
+  # crochet, la notification tombait silencieusement sur `/` (epic #242, phase 3).
+  # nil = comportement par défaut.
+  def comment_path
+    nil
+  end
 end

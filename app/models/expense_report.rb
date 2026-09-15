@@ -93,6 +93,8 @@ class ExpenseReport < ApplicationRecord
   FROZEN_ATTRIBUTES = %w[kind human_id legal_entity_id submitted_on notes reference
                          sequence_number fiscal_year_id].freeze
 
+  include Commentable
+
   has_paper_trail
   has_soft_deletion default_scope: true
 
@@ -156,6 +158,19 @@ class ExpenseReport < ApplicationRecord
     "#{kind_label} #{reference.presence || "##{id}"} — #{human&.name}"
   end
 
+  # Qui est prévenu d'un commentaire (epic #242, phase 3) : le bénéficiaire —
+  # c'est de SON argent qu'on parle — et la coordination comptable, qui traite.
+  # Une question posée dans le vide ne sert à rien.
+  def comment_recipients
+    ([human&.user] + NotificationSettingsController.accounting_users.to_a).compact.uniq
+  end
+
+  def comment_label = label
+
+  def comment_path
+    Rails.application.routes.url_helpers.finance_expense_report_path(self)
+  end
+
   # Le prochain numéro de séquence pour un exercice et un type. L'appelant a
   # verrouillé l'exercice avant d'arriver ici (patron `PostDocument#next_number`) :
   # sans verrou, deux passations concurrentes prennent le même numéro et l'index
@@ -174,7 +189,22 @@ class ExpenseReport < ApplicationRecord
     "#{prefix}-#{year}-#{format('%03d', number)}"
   end
 
+  # Le bénéficiaire apprend que sa note est payée (epic #242, phase 3). Posé sur
+  # le MODÈLE et non sur le service de paiement en espèces : l'epic #241 phase 3
+  # ajoutera un second chemin vers `paid` (le rapprochement bancaire), et une
+  # notification accrochée à un seul des deux chemins manquerait l'autre.
+  after_update_commit :notify_paid, if: :saved_change_to_paid_status?
+
   private
+
+  def saved_change_to_paid_status?
+    before, after = saved_change_to_status
+    after == "paid" && before != "paid"
+  end
+
+  def notify_paid
+    Notifications::ExpenseReportPaid.call(self)
+  end
 
   # Une note passée en traitement porte un numéro de pièce et une écriture :
   # changer son bénéficiaire ou son entité ferait mentir l'une des deux sans que

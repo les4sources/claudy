@@ -155,3 +155,24 @@
             = "#{version.event} — #{l(version.created_at, format: :long)}"
             - if version.whodunnit.present?
               .text-gray-400 = version.whodunnit
+
+/ Fil de commentaires (epic #242, phase 3). Le MÊME composant que partout : une
+  note de frais se discute comme un rassemblement ou un séjour.
+
+  « Demander une info » est un raccourci, pas un autre canal : il poste un
+  commentaire ordinaire, avec un drapeau qui interpelle le bénéficiaire
+  nommément — sans lui, la question se noie dans le fil.
+.mt-6
+  - if @report.human&.user.present?
+    .mb-3.rounded-lg.border.border-amber-100.px-4.py-3(class="bg-amber-50/50")
+      p.text-sm.text-gray-700
+        strong Il manque quelque chose ?
+        |  Écris ta question ci-dessous en cochant « Demander une info » : #{@report.human.name} sera prévenu·e nommément.
+      = form_with url: comments_path, method: :post, class: "mt-3 space-y-2" do
+        = hidden_field_tag "comment[commentable_type]", "ExpenseReport"
+        = hidden_field_tag "comment[commentable_id]", @report.id
+        = hidden_field_tag :info_request, "1"
+        = text_field_tag "comment[body]", nil, placeholder: "Il manque le ticket du 12/08 — tu l'as ?", required: true, class: "block w-full rounded-md border-gray-300 shadow-sm text-sm"
+        button.inline-flex.items-center.rounded-md.border.border-transparent.bg-4s-main.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(type="submit" class="hover:opacity-90")
+          | Demander une info
+  = render Comments::ThreadComponent.new(commentable: @report, current_user: current_user)
