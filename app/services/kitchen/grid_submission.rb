@@ -34,13 +34,19 @@ module Kitchen
 
     MOMENTS = %w[midi gouter soir].freeze
 
-    def initialize(stay:, blocks:)
+    # `contact_label` : le texte libre « Pour qui ? » d'une saisie SANS séjour
+    # (issue #315). L'un des deux est obligatoire, jamais aucun.
+    def initialize(stay:, blocks:, contact_label: nil)
       @stay = stay
+      @contact_label = contact_label.presence
       @blocks = Array(blocks)
     end
 
     def run
-      return Result.new(orders: [], error: "Choisis d'abord un séjour.") if @stay.blank?
+      if @stay.blank? && @contact_label.blank?
+        return Result.new(orders: [],
+                          error: "Choisis un séjour, ou dis pour qui est cette demande.")
+      end
       return Result.new(orders: [], error: "Ajoute au moins une prestation.") if @blocks.empty?
 
       pairs = []
@@ -97,8 +103,13 @@ module Kitchen
     def build(block, date, moment)
       # La ligne ne prévient plus la cuisine toute seule : c'est la SAISIE qui
       # prévient, une fois entière et commitée (issue #266).
-      order = @stay.meal_orders.new(
+      # `MealOrder.new` plutôt que `@stay.meal_orders.new` : une saisie peut ne
+      # pas avoir de séjour (issue #315), et c'est alors `contact_label` qui dit
+      # pour qui elle est.
+      order = MealOrder.new(
         block.attributes.except(:date, :moment).merge(
+          stay: @stay,
+          contact_label: @contact_label,
           kind: kind_for(block, moment),
           # Le moment du goûter vit dans son type ; le champ reste renseigné
           # pour que le tri et l'affichage par journée restent lisibles.

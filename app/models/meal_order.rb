@@ -17,6 +17,7 @@
 #  id                     :bigint           not null, primary key
 #  bread_reminder_sent_at :datetime
 #  cancellation_reason    :text
+#  contact_label          :string
 #  cost_cents             :integer
 #  cost_notes             :text
 #  date                   :date
@@ -34,7 +35,7 @@
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
 #  responsible_human_id   :bigint
-#  stay_id                :bigint           not null
+#  stay_id                :bigint
 #
 # Indexes
 #
@@ -99,7 +100,10 @@ class MealOrder < ApplicationRecord
   TOKEN_PURPOSE = :validate_meal_order
   TOKEN_TTL = 30.days
 
-  belongs_to :stay
+  # Une demande peut naître AVANT le séjour (issue #315) : un groupe téléphone,
+  # Malau pose la question à la cuisine tout de suite. `contact_label` dit alors
+  # pour qui elle est. Voir `client_label` et le scope `orphan`.
+  belongs_to :stay, optional: true
   belongs_to :responsible_human, class_name: "Human", optional: true
 
   # Interrupteur des notifications, pour les migrations de données, les imports
@@ -118,11 +122,21 @@ class MealOrder < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
   validates :validation, inclusion: { in: VALIDATIONS }
   validates :refusal_reason, presence: { message: "est obligatoire pour un refus" }, if: :refused?
+  # Un séjour, ou un texte libre : jamais ni l'un ni l'autre. Une demande dont on
+  # ne sait pas pour qui elle est ne sert à personne.
+  validate :stay_or_contact_label
 
   # Visible partout : tout sauf ce qui est annulé côté client ou refusé côté cuisine.
   scope :active, -> { where.not(status: "cancelled").where.not(validation: "refused") }
-  # Compte dans le total du séjour : une demande d'info ne facture rien.
-  scope :billable, -> { where(status: %w[requested confirmed]).where.not(validation: "refused") }
+  # Compte dans le total du séjour : une demande d'info ne facture rien, et une
+  # demande ORPHELINE non plus — tant qu'elle n'a pas de séjour, il n'y a rien à
+  # facturer ni personne à facturer (décision Michael 2026-09-14, issue #315).
+  scope :billable, lambda {
+    where(status: %w[requested confirmed]).where.not(validation: "refused").where.not(stay_id: nil)
+  }
+  # Sans séjour : l'étape normale entre le premier coup de fil et la réservation.
+  scope :orphan,   -> { where(stay_id: nil) }
+  scope :attached, -> { where.not(stay_id: nil) }
   scope :pending_validation, -> { where(validation: "pending").where.not(status: "cancelled") }
   scope :chronological, -> { order(Arel.sql("date ASC NULLS LAST"), :id) }
   scope :antichronological, -> { order(Arel.sql("date DESC NULLS LAST"), id: :desc) }
@@ -157,8 +171,29 @@ class MealOrder < ApplicationRecord
   VALIDATIONS.each { |v| define_method("#{v}?") { validation.to_s == v } }
 
   def active?   = !cancelled? && !refused?
-  def billable? = %w[requested confirmed].include?(status.to_s) && !refused?
+  def billable? = stay_id.present? && %w[requested confirmed].include?(status.to_s) && !refused?
   def past?     = date.present? && date < Date.current
+  def orphan?   = stay_id.blank?
+
+  # SOURCE UNIQUE du nom à afficher pour une demande — page Cuisine, emails,
+  # liste de courses, reporting. Le client du séjour quand il y en a un, sinon
+  # le texte libre noté au premier contact.
+  #
+  # `contact_label` n'est JAMAIS effacé au rattachement : c'est la trace de ce
+  # que Malau avait sous la main au téléphone, et il peut différer du nom du
+  # client finalement enregistré.
+  def client_label
+    stay&.customer&.name.presence || contact_label.presence || "Sans nom"
+  end
+
+  # Rattache la demande à un séjour, a posteriori. Idempotent côté « déjà
+  # rattachée » : on ne déplace jamais une demande d'un séjour à un autre —
+  # le détachement n'est pas au programme (issue #315, hors périmètre).
+  def attach_to_stay!(target)
+    return false if stay_id.present? || target.blank?
+
+    update!(stay: target)
+  end
 
   # Qui a la main sur la ligne (page Cuisine). La cuisine tant qu'elle n'a pas
   # répondu ou que personne ne s'en charge ; l'accueil ensuite, pour suivre le
@@ -238,6 +273,13 @@ class MealOrder < ApplicationRecord
   end
 
   private
+
+  def stay_or_contact_label
+    return if stay_id.present? || stay.present?
+    return if contact_label.to_s.strip.present?
+
+    errors.add(:contact_label, "est obligatoire tant que la demande n'a pas de séjour")
+  end
 
   # Le jour touché, et celui qu'on vient de quitter quand la date a changé :
   # rompre une formule en déplaçant une ligne doit rendre son tarif plein à

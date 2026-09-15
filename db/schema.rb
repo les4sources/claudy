@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_14_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_15_014019) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1204,6 +1204,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_110000) do
   create_table "meal_orders", force: :cascade do |t|
     t.datetime "bread_reminder_sent_at"
     t.text "cancellation_reason"
+    t.string "contact_label"
     t.integer "cost_cents"
     t.text "cost_notes"
     t.datetime "created_at", null: false
@@ -1217,7 +1218,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_110000) do
     t.text "refusal_reason"
     t.bigint "responsible_human_id"
     t.string "status", default: "requested", null: false
-    t.bigint "stay_id", null: false
+    t.bigint "stay_id"
     t.integer "unit_price_cents"
     t.datetime "updated_at", null: false
     t.datetime "validated_at"

@@ -10,16 +10,50 @@ import { Controller } from "@hotwired/stimulus"
 // <select name="meal_order[stay_id]">, toujours soumis ; le contrôleur le masque
 // quand JS est actif et pilote sa valeur. Sans JS, le <select> reste utilisable.
 export default class extends Controller {
-  static targets = ["select", "searchWrap", "searchInput", "results", "chosen", "chosenLabel", "chosenContact"]
+  static targets = [
+    "select", "searchWrap", "searchInput", "results", "chosen", "chosenLabel", "chosenContact",
+    // Issue #315 — « pas encore de séjour » : le texte libre qui dit pour qui
+    // est la demande. Optionnels : le rattachement a posteriori réutilise ce
+    // contrôleur sans proposer la bascule.
+    "noStayWrap", "noStayToggle", "contactInput",
+  ]
   static values = { url: String }
 
   connect() {
     this.selectTarget.classList.add("hidden")
-    if (this.selectTarget.value) {
+    // Un texte libre déjà saisi (ré-affichage après erreur de validation) rouvre
+    // le mode « sans séjour » plutôt que la recherche.
+    if (this.hasContactInputTarget && this.contactInputTarget.value.trim()) {
+      this.showNoStay()
+    } else if (this.selectTarget.value) {
       this.showChosen(this.selectedLabel())
     } else {
       this.showSearch()
     }
+  }
+
+  // Les deux champs s'excluent : on vide celui qu'on quitte, pour qu'aucune
+  // soumission ne parte avec un séjour ET un texte libre.
+  useNoStay() {
+    this.selectTarget.value = ""
+    this.showNoStay()
+    this.contactInputTarget.focus()
+  }
+
+  useStay() {
+    if (this.hasContactInputTarget) this.contactInputTarget.value = ""
+    this.showSearch()
+    this.searchInputTarget.focus()
+  }
+
+  showNoStay() {
+    if (!this.hasNoStayWrapTarget) return
+
+    this.chosenTarget.classList.add("hidden")
+    this.searchWrapTarget.classList.add("hidden")
+    this.resultsTarget.innerHTML = ""
+    this.noStayWrapTarget.classList.remove("hidden")
+    if (this.hasNoStayToggleTarget) this.noStayToggleTarget.classList.add("hidden")
   }
 
   search() {
@@ -100,12 +134,21 @@ export default class extends Controller {
     if (contact !== null) this.chosenContactTarget.textContent = contact
     this.chosenTarget.classList.remove("hidden")
     this.searchWrapTarget.classList.add("hidden")
+    this.hideNoStay()
   }
 
   showSearch() {
     this.chosenTarget.classList.add("hidden")
     this.searchWrapTarget.classList.remove("hidden")
     this.resultsTarget.innerHTML = ""
+    this.hideNoStay()
+  }
+
+  hideNoStay() {
+    if (!this.hasNoStayWrapTarget) return
+
+    this.noStayWrapTarget.classList.add("hidden")
+    if (this.hasNoStayToggleTarget) this.noStayToggleTarget.classList.remove("hidden")
   }
 
   escape(str) {

@@ -10,6 +10,7 @@ require "rails_helper"
 #  id                     :bigint           not null, primary key
 #  bread_reminder_sent_at :datetime
 #  cancellation_reason    :text
+#  contact_label          :string
 #  cost_cents             :integer
 #  cost_notes             :text
 #  date                   :date
@@ -27,7 +28,7 @@ require "rails_helper"
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
 #  responsible_human_id   :bigint
-#  stay_id                :bigint           not null
+#  stay_id                :bigint
 #
 # Indexes
 #

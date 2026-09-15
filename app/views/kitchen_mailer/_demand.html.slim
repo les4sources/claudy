@@ -3,7 +3,7 @@ table
     tr
       td
         strong Client
-      td = @stay&.customer&.name.presence || "—"
+      td = @order.client_label
     - if @stay&.arrival_date.present?
       tr
         td

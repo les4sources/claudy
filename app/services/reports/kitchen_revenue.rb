@@ -9,6 +9,12 @@ module Reports
   #
   # Seules les lignes `billable` comptent : une demande d'info n'engage rien, et
   # une ligne annulée ou refusée n'a rien produit.
+  #
+  # ⚠️ `joins(:stay)` est une jointure INTERNE, et c'est VOULU : elle exclut les
+  # demandes qui n'ont pas encore de séjour (issue #315), lesquelles sortent du
+  # facturable par décision. Ne pas la transformer en `left_joins` pour « ne
+  # perdre personne » — on perdrait précisément ce qu'on veut perdre. Une demande
+  # orpheline entre dans le chiffre d'affaires dès son rattachement.
   class KitchenRevenue
     REFERENCE_DATE = "COALESCE(meal_orders.date, stays.arrival_date)".freeze
     IN_RANGE = "#{REFERENCE_DATE} BETWEEN ? AND ?".freeze

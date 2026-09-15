@@ -26,6 +26,42 @@ RSpec.describe KitchenMailer do
     expect(body).to include("/kitchen/validate/", "/kitchen/refuse/")
   end
 
+  # Issue #315 — une demande peut exister avant son séjour. L'email doit se
+  # rendre quand même : c'est tout l'objet de la fonctionnalité, Stéphanie doit
+  # pouvoir accepter ou refuser AVANT qu'une réservation existe.
+  context "demande sans séjour" do
+    let(:orphan) do
+      o = MealOrder.new(kind: "repas", moment: "soir", people: 12, date: Date.new(2026, 10, 3),
+                        contact_label: "École de Godinne", responsible_human: steph)
+      o.skip_notifications = true
+      o.tap(&:save!)
+    end
+
+    it "se rend avec le texte libre en guise de nom, et sans lien mort vers un séjour" do
+      mail = described_class.new_request(orphan, steph.email)
+
+      expect(mail.subject).to eq("Repas — École de Godinne — 3/10/2026")
+      body = mail.body.encoded
+      expect(body).to include("École de Godinne").or include("&#201;cole de Godinne")
+      expect(body).to include("/kitchen/validate/", "/kitchen/refuse/")
+      # Pas de ligne « Séjour » : il n'y en a pas, et un intervalle de dates
+      # inventé serait pire qu'une ligne absente.
+      expect(CGI.unescapeHTML(body)).not_to include("/stays/")
+    end
+
+    it "nomme le texte libre dans l'email groupé" do
+      other = MealOrder.new(kind: "apero", people: 8, date: Date.new(2026, 10, 3),
+                            contact_label: "École de Godinne", responsible_human: steph)
+      other.skip_notifications = true
+      other.save!
+
+      mail = described_class.grouped_request([orphan, other], steph.email)
+
+      expect(mail.subject).to include("École de Godinne")
+      expect(mail.body.encoded).to include("École de Godinne").or include("&#201;cole de Godinne")
+    end
+  end
+
   it "propose « je m'en charge » pour un buffet, pas une validation" do
     order.update_columns(kind: "buffet_vege")
 
