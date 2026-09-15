@@ -57,6 +57,9 @@ namespace :accounting do
       ["613000", "Honoraires", 6, "expense"],
       ["614000", "Assurances", 6, "expense"],
       ["615000", "Frais de bureau et télécommunications", 6, "expense"],
+      # Le compte par défaut des notes de MISSION (epic #241, phase 2) : les
+      # kilomètres d'un sourcier qui va chercher des plants ou anime ailleurs.
+      ["617000", "Déplacements", 6, "expense"],
       ["618000", "Frais bancaires et commissions", 6, "expense"],
       [GeneralAccount::REVENUE_SHARE_CODE, "Reversements aux propriétaires", 6, "expense"],
       ["620000", "Rémunérations", 6, "expense"],

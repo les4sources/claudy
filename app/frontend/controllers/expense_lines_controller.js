@@ -19,8 +19,14 @@ import { Controller } from '@hotwired/stimulus';
 // existante coche son `_destroy` caché et s'efface visuellement — Rails ne la
 // supprime qu'à l'enregistrement, et l'annulation reste possible.
 export default class extends Controller {
-  static targets = ['rows', 'template', 'row', 'amount', 'total', 'count'];
-  static values = { placeholder: { type: String, default: 'NEW_RECORD' } };
+  static targets = ['rows', 'template', 'row', 'amount', 'total', 'count', 'distance'];
+  static values = {
+    placeholder: { type: String, default: 'NEW_RECORD' },
+    // Note de MISSION (phase 2) : il n'y a pas de champ montant à additionner,
+    // le total en direct se calcule depuis les kilomètres × ce barème. 0 sur une
+    // note de frais ordinaire, qui garde l'addition des montants saisis.
+    rateCents: { type: Number, default: 0 }
+  };
 
   connect() {
     this.counter = 0;
@@ -65,15 +71,32 @@ export default class extends Controller {
 
   // Appelée à chaque saisie de montant (`data-action="input->expense-lines#refresh"`).
   refresh() {
-    const cents = this.amountTargets
-      .filter((field) => !field.closest('[data-removed="true"]'))
-      .reduce((sum, field) => sum + this.parseCents(field.value), 0);
+    const cents = this.rateCentsValue > 0 ? this.mileageCents() : this.amountCents();
 
     if (this.hasTotalTarget) this.totalTarget.textContent = this.formatEuros(cents);
     if (this.hasCountTarget) {
       const lines = this.rowTargets.filter((row) => row.dataset.removed !== 'true').length;
       this.countTarget.textContent = lines === 1 ? '1 ligne' : `${lines} lignes`;
     }
+  }
+
+  amountCents() {
+    return this.amountTargets
+      .filter((field) => !field.closest('[data-removed="true"]'))
+      .reduce((sum, field) => sum + this.parseCents(field.value), 0);
+  }
+
+  // Kilomètres × barème du jour. Une ESTIMATION : le taux réellement appliqué
+  // est celui du jour de chaque ligne, figé côté serveur à l'enregistrement.
+  mileageCents() {
+    return this.distanceTargets
+      .filter((field) => !field.closest('[data-removed="true"]'))
+      .reduce((sum, field) => sum + Math.round(this.parseNumber(field.value) * this.rateCentsValue), 0);
+  }
+
+  parseNumber(raw) {
+    const value = Number.parseFloat(String(raw || '').replace(/\s/g, '').replace(',', '.'));
+    return Number.isFinite(value) ? value : 0;
   }
 
   // Le pôle, le compte et la date de la dernière ligne visible. Recopiés, pas
