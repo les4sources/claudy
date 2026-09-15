@@ -81,12 +81,22 @@ RSpec.describe "Appartenance des contrôleurs Finance::", type: :model do
     revenue_share_statements third_parties trial_balance
   ].freeze
 
+  # Troisième camp, et il faut le nommer pour qu'il reste un choix : les canaux
+  # à JETON. Ils ne demandent pas de connexion — c'est le lien signé de l'email
+  # qui fait foi — donc ils n'héritent d'aucun des deux socles (patron :
+  # `Kitchen::ValidationsController`). Ajouter un contrôleur ici est une
+  # décision de sécurité, pas une commodité : il sera accessible sans compte.
+  CANAUX_JETON = %w[purchase_invoice_validations].freeze
+
   before { Rails.application.eager_load! }
 
   def controleurs
+    jetons = CANAUX_JETON.map { |n| "Finance::#{n.camelize}Controller" }
+
     Finance.constants.map { |c| Finance.const_get(c) }
            .select { |k| k.is_a?(Class) && k < ActionController::Base }
            .reject { |k| k.name.end_with?("BaseController") }
+           .reject { |k| jetons.include?(k.name) }
   end
 
   it "range chaque écran de comptabilité sous le socle Comptabilité" do
@@ -103,5 +113,18 @@ RSpec.describe "Appartenance des contrôleurs Finance::", type: :model do
     expect(autres.map(&:name)).to include("Finance::AccountsController",
                                           "Finance::StatementsController",
                                           "Finance::PaperSheetsController")
+  end
+
+  # `::BaseController` est le socle authentifié dont héritent les DEUX sections.
+  # Tout ce qui ne passe pas par lui est accessible sans compte.
+  it "n'ouvre sans connexion que les canaux à jeton recensés" do
+    ouverts = Finance.constants.map { |c| Finance.const_get(c) }
+                     .select { |k| k.is_a?(Class) && k < ActionController::Base }
+                     .reject { |k| k.name.end_with?("BaseController") }
+                     .reject { |k| k < ::BaseController }
+
+    attendus = CANAUX_JETON.map { |n| "Finance::#{n.camelize}Controller" }.sort
+
+    expect(ouverts.map(&:name).sort).to eq(attendus)
   end
 end

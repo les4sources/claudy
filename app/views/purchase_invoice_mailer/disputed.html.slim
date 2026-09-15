@@ -1,0 +1,16 @@
+p Bonjour,
+
+p
+  | Une facture d'achat vient d'être contestée
+  - if @invoice.validated_by
+    |  par #{@invoice.validated_by.display_name}
+  | .
+
+p
+  strong Motif :
+  = " #{@invoice.dispute_reason}"
+
+= render "purchase_invoice_mailer/invoice"
+
+p
+  = link_to "Ouvrir la facture dans Claudy", @admin_url

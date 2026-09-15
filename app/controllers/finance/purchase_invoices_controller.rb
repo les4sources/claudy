@@ -6,7 +6,7 @@ module Finance
   # blocage implicite, donc invisible, et on découvrait au moment de payer que
   # personne n'avait dit oui.
   class PurchaseInvoicesController < Finance::AccountingBaseController
-    before_action :get_invoice, only: %i[show edit update submit dispute reopen]
+    before_action :get_invoice, only: %i[show edit update submit dispute reopen validate_by_team]
     before_action :get_form_collections, only: %i[new create edit update]
 
     breadcrumb "Achats", :finance_purchase_invoices_path, match: :exact
@@ -70,8 +70,37 @@ module Finance
       end
     end
 
+    # Valider ou contester depuis la fiche admin (phase 3), en miroir du canal
+    # jeton. Réservé aux membres du pôle désigné et aux comptes sans membre
+    # rattaché (`User#global_admin?`) : une facture que le pôle laisse dormir
+    # doit pouvoir être débloquée, mais pas par n'importe qui.
+    def validate_by_team
+      unless @invoice.validatable_by?(current_user)
+        return redirect_to finance_purchase_invoice_path(@invoice),
+                           alert: "Seuls les membres du pôle #{@invoice.validation_team&.name} peuvent trancher cette facture."
+      end
+
+      service = PurchaseInvoices::Validate.new(purchase_invoice: @invoice, user: current_user)
+
+      if params[:decision] == "reject"
+        service.reject!(params[:reason])
+        redirect_to finance_purchase_invoice_path(@invoice), notice: "Facture contestée, la comptabilité est prévenue."
+      else
+        service.approve!
+        redirect_to finance_purchase_invoice_path(@invoice),
+                    notice: "Facture validée et prête à payer, écriture générée au journal des achats."
+      end
+    rescue PurchaseInvoices::Validate::NotAwaiting, PurchaseInvoices::Validate::MissingReason,
+           PurchaseInvoices::Advance::NotBalanced, PurchaseInvoices::Advance::AlreadyPayable,
+           Accounting::PostPurchaseInvoice::NotBalanced,
+           Accounting::PostPurchaseInvoice::MissingSupplierAccount,
+           Accounting::PostDocument::MissingFiscalYear, ActiveRecord::RecordInvalid => e
+      redirect_to finance_purchase_invoice_path(@invoice), alert: e.message
+    end
+
     def submit
       invoice = PurchaseInvoices::Advance.new(purchase_invoice: @invoice, whodunnit: current_user&.email).submit!
+      notify_validation_team(invoice)
       redirect_to finance_purchase_invoice_path(invoice), notice: notice_for(invoice)
     rescue PurchaseInvoices::Advance::NotBalanced, PurchaseInvoices::Advance::AlreadyPayable,
            Accounting::PostPurchaseInvoice::NotBalanced,
@@ -98,9 +127,30 @@ module Finance
 
     private
 
+    # L'email de demande de validation part À CE MOMENT-LÀ, pas dans un callback
+    # du modèle : c'est le geste d'envoyer au paiement qui sollicite le pôle, et
+    # un `after_commit` aurait aussi tiré sur les imports et les corrections.
+    def notify_validation_team(invoice)
+      return unless invoice.to_validate?
+
+      recipients = invoice.validation_recipients
+      if recipients.empty?
+        Rails.logger.info("[PurchaseInvoices] aucune adresse dans le pôle ##{invoice.validation_team_id} " \
+                          "pour la facture ##{invoice.id}")
+        return
+      end
+
+      recipients.each do |human|
+        PurchaseInvoiceMailer.validation_requested(invoice, human.email).deliver_later
+      end
+    end
+
     def notice_for(invoice)
       if invoice.to_validate?
-        "Facture envoyée en validation — le pôle doit dire oui avant qu'elle soit payable."
+        recipients = invoice.validation_recipients
+        return "Facture envoyée en validation — mais le pôle n'a aucune adresse : préviens-le à la main." if recipients.empty?
+
+        "Facture envoyée en validation — #{recipients.size} membre(s) du pôle viennent d'être prévenus."
       else
         "Facture prête à payer, écriture générée au journal des achats."
       end
