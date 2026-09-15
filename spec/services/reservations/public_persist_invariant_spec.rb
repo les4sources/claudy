@@ -12,8 +12,9 @@ RSpec.describe Reservations::Builder, "funnel public — persistance à total co
     lodging
   end
 
-  let(:arrival)   { Date.today + 30 }
-  let(:departure) { Date.today + 32 } # 2 nuits
+  let(:monday)   { (Date.today + 10).next_occurring(:monday) } # un lundi : la règle week-end (epic #260) refuse une nuit de vendredi/samedi isolée
+  let(:arrival)   { monday }
+  let(:departure) { monday + 2 } # 2 nuits
 
   # Draft PUBLIC : camping par-nuit (per_night_resources) + repas sans date.
   let(:draft) do
