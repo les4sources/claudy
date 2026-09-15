@@ -102,6 +102,18 @@ class MealOrderDecorator < ApplicationDecorator
 
   def responsible_label = object.responsible_human&.name.presence || "Personne"
 
+  # Le nom du client — SOURCE UNIQUE, côté modèle (issue #315) : le client du
+  # séjour, ou le texte libre d'une demande qui n'en a pas encore.
+  def client_label = object.client_label
+
+  # La pastille d'une demande qui n'a pas encore de séjour. Gris et discret :
+  # ce n'est pas une anomalie, c'est une étape normale du cycle.
+  def orphan_badge
+    return nil unless object.orphan?
+
+    h.content_tag(:span, "sans séjour", class: "#{BADGE_BASE} bg-gray-100 text-gray-600")
+  end
+
   # On lit l'ASSOCIATION, pas la colonne : `Human` porte un `default_scope` sur
   # `status: "active"`, donc un membre désactivé laisse `responsible_human_id`
   # rempli et `responsible_human` à nil. Lire la colonne masquerait le bouton

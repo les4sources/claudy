@@ -9,7 +9,7 @@
       span.mx-1 ·
       = @order.decorate.people_label
       span.mx-1 ·
-      = @order.stay&.customer&.name
+      = @order.decorate.client_label
 
   = form_with url: refuse_kitchen_order_path(@order), method: :patch, class: "space-y-4" do
     section.rounded-2xl.bg-white.ring-1.ring-gray-200.px-5.py-4

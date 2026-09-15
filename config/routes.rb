@@ -131,6 +131,8 @@ Rails.application.routes.draw do
         patch :status
         patch :assign
         patch :accept
+        # Rattacher une demande orpheline à un séjour, a posteriori (issue #315).
+        patch :attach
         get   :new_refusal
         patch :refuse
         get   :shopping_list

@@ -162,6 +162,8 @@
                 td.px-4.py-3
                   - if line.stay
                     = link_to line.stay.customer&.name.presence || "Séjour ##{line.stay_id}", stay_path(line.stay), class: "text-indigo-600 hover:underline"
+                  - else
+                    = line.client_label
                 td.px-4.py-3.text-gray-700 = line.label
                 td.whitespace-nowrap.px-4.py-3.text-right.text-gray-700 = line.people
                 td.whitespace-nowrap.px-4.py-3.text-right.font-medium.text-gray-900 = line.price

@@ -81,6 +81,16 @@ module MealComposition
       # params forgés, ou draft recopié d'un autre séjour.
     end
 
+    # Une demande rattachée a posteriori (issue #315) SURVIT à cette
+    # réconciliation : `Stays::DraftReconstructor#meals_from_stay` reconstruit
+    # toutes les lignes ACTIVES du séjour avec leur `id`, donc elle revient dans
+    # le draft et se met à jour ici plutôt que de tomber plus bas. Prouvé par
+    # `spec/services/stays/meal_order_attachment_survives_edit_spec.rb`.
+    #
+    # Cas limite connu, non traité : si quelqu'un rattache une demande pendant
+    # qu'un formulaire d'édition du séjour est DÉJÀ ouvert, la soumission de ce
+    # formulaire périmé annulera la ligne. C'est la même course que celle déjà
+    # commentée plus haut — on ne l'aggrave pas, on la nomme.
     (existing.keys - kept).each do |id|
       existing[id].update!(status: "cancelled", cancellation_reason: "Retirée du séjour")
     end

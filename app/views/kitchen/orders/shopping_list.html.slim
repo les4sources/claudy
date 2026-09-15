@@ -2,13 +2,13 @@
   navigation à masquer, elle n'est simplement pas rendue.
 - order = @order.decorate
 - content_for :title do
-  | Liste de courses — #{[order.stay&.customer&.name, order.label].compact.join(" · ")}
+  | Liste de courses — #{[order.client_label, order.label].compact.join(" · ")}
 
 .mb-6.flex.items-start.justify-between.gap-4
   div
     h1.text-2xl.font-semibold.text-gray-900 Liste de courses
     p.mt-1.text-sm.text-gray-500
-      = [order.stay&.customer&.name, order.date_label, order.label, order.people_label].compact_blank.join(" · ")
+      = [order.client_label, order.date_label, order.label, order.people_label].compact_blank.join(" · ")
   button.shrink-0.text-sm.text-gray-500.underline(class="print:hidden" type="button" onclick="window.print()")
     | Imprimer
 

@@ -1,0 +1,25 @@
+/ « Pas encore de séjour » (issue #315). Le Pôle Accueil reçoit des demandes de
+  repas avant toute réservation : on note alors POUR QUI, en texte libre, et on
+  pose la question à la cuisine tout de suite.
+
+  Un seul des deux champs vaut à la fois — c'est `stay_search_controller` qui
+  bascule, et qui vide celui qu'on quitte pour qu'aucune soumission ne parte
+  avec un séjour ET un texte libre en conflit. Sans JS, les deux restent
+  visibles et le modèle tranche (l'un des deux suffit).
+  Les `name` sont écrits à la main plutôt que passés par le form builder : ce
+  partial sert au formulaire simple comme au formulaire multi-prestations, qui
+  n'a pas de builder.
+.mt-2
+  button.text-sm.text-indigo-600(type="button" data-stay-search-target="noStayToggle"
+                                 data-action="stay-search#useNoStay" class="hover:underline")
+    | Pas encore de séjour
+.mt-1.hidden(data-stay-search-target="noStayWrap")
+  = label_tag "meal_order[contact_label]", "Pour qui ?", class: "block text-sm font-medium text-gray-700"
+  = text_field_tag "meal_order[contact_label]", order&.contact_label, autocomplete: "off",
+                   placeholder: "Nom du groupe, de la personne, de l'école…",
+                   data: { "stay-search-target": "contactInput" },
+                   class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+  .mt-1.flex.items-center.justify-between.gap-2
+    p.text-xs.text-gray-400 Elle ne sera pas facturable tant qu'elle n'est pas rattachée à un séjour.
+    button.shrink-0.text-sm.text-indigo-600(type="button" data-action="stay-search#useStay" class="hover:underline")
+      | Choisir un séjour
