@@ -14,37 +14,49 @@
         = f.collection_select :legal_entity_id, entities, :id, :name, {}, class: "block w-full rounded-md border-gray-300 shadow-sm", required: true
       div
         = f.date_field :submitted_on, label: "Remise le", class: "w-full"
+      / Le type ne se change plus dans le formulaire (phase 2) : une note de
+        mission et une note de frais n'ont pas les mêmes lignes, et basculer
+        au milieu d'une saisie laisserait des lignes orphelines de leur nature.
+        Il se choisit à la création, depuis la liste.
       div
         = f.label :kind, "Type", class: "mb-1 block text-sm font-medium text-gray-700"
-        = f.select :kind,
-                   ExpenseReport::KIND_LABELS.map { |value, label| [label, value] },
-                   {},
-                   class: "block w-full rounded-md border-gray-300 shadow-sm"
+        = f.hidden_field :kind
+        .mt-1.inline-flex.items-center.rounded-md.bg-gray-100.px-3.py-2.text-sm.font-medium.text-gray-700
+          = report.kind_label
 
     .mt-4
       = f.label :notes, "Notes", class: "mb-1 block text-sm font-medium text-gray-700"
       = f.text_area :notes, rows: 2, placeholder: "Ce qu'il faut savoir avant de traiter cette note.", class: "block w-full rounded-md border-gray-300 shadow-sm"
 
-  .p-4.bg-white.rounded-lg.border.border-gray-100(data-controller="expense-lines")
+  / `rate-cents` n'est posé que sur une note de mission : c'est lui qui permet au
+    total en direct de se calculer depuis les kilomètres, puisqu'il n'y a pas de
+    champ montant à additionner. Sa valeur est le barème DU JOUR — le total
+    affiché est donc une estimation tant qu'on n'a pas enregistré, et le montant
+    figé sur chaque ligne fait foi ensuite.
+  .p-4.bg-white.rounded-lg.border.border-gray-100(data-controller="expense-lines" data-expense-lines-rate-cents-value=(report.mileage? ? Pricing::Catalog.mileage_per_km_cents : 0))
     .mb-3.flex.flex-wrap.items-baseline.justify-between.gap-2
       div
-        h3.text-sm.font-semibold.text-gray-900 Les dépenses
+        h3.text-sm.font-semibold.text-gray-900 = report.mileage? ? "Les trajets" : "Les dépenses"
         p.text-xs.text-gray-500
-          | Une ligne par ticket. La ligne suivante hérite de la date, du compte et du pôle de la précédente.
+          - if report.mileage?
+            | Une ligne par trajet. Le montant est calculé : kilomètres × indemnité du jour de la ligne, figée à l'enregistrement.
+          - else
+            | Une ligne par ticket. La ligne suivante hérite de la date, du compte et du pôle de la précédente.
       .text-right
         .text-xs.uppercase.tracking-wide.text-gray-400 Total de la note
         .text-2xl.font-semibold.tabular-nums.text-gray-900(data-expense-lines-target="total") 0,00 €
         .text-xs.text-gray-500(data-expense-lines-target="count")
 
+    - line_partial = report.mileage? ? "finance/expense_reports/mileage_line_fields" : "finance/expense_reports/line_fields"
     .space-y-3(data-expense-lines-target="rows")
       = f.fields_for :expense_lines do |line_form|
-        = render "finance/expense_reports/line_fields", line_form: line_form, accounts: accounts, teams: teams
+        = render line_partial, line_form: line_form, accounts: accounts, teams: teams
 
     / Gabarit d'une ligne vierge : `child_index: "NEW_RECORD"` produit des noms
       de champs que le contrôleur Stimulus réindexe à chaque insertion.
     template data-expense-lines-target="template"
       = f.fields_for :expense_lines, ExpenseLine.new(spent_on: Date.current), child_index: "NEW_RECORD" do |line_form|
-        = render "finance/expense_reports/line_fields", line_form: line_form, accounts: accounts, teams: teams
+        = render line_partial, line_form: line_form, accounts: accounts, teams: teams
 
     button.mt-4.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(type="button" class="hover:bg-gray-50" data-action="expense-lines#add")
       | ➕ Ajouter une ligne

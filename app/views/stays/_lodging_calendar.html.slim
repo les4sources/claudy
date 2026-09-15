@@ -24,12 +24,12 @@
     p.text-sm.text-gray-500 Choisissez d'abord les dates du séjour pour composer l'hébergement nuit par nuit.
   - else
     .overflow-x-auto.-mx-4.px-4(data-public--stay-calendar-target="scrollArea")
-      table.border-collapse style="min-width: #{150 + nights_count * 96}px"
+      table.border-collapse style="min-width: #{150 + nights_count * 104}px"
         thead
           tr
             th.text-left.py-2.pr-4.text-xs.font-normal.text-gray-400.whitespace-nowrap.sticky.left-4.z-10.bg-white style="width:150px"
             - days.each_with_index do |night, i|
-              th.text-center.py-2.px-1(data-wday=night.wday.to_s style="width:96px")
+              th.text-center.py-2.px-1(data-wday=night.wday.to_s style="width:104px")
                 p.text-xs.font-bold.text-gray-600 = "Nuit #{i + 1}"
                 p.text-xs.text-gray-400.font-normal = "#{fr_short_days[night.wday]} #{night.strftime("%-d/%-m")}"
         tbody
@@ -42,15 +42,20 @@
                 - sel   = selected_ids.at(i).to_s == lodging.id.to_s
                 td.py-2.px-1.text-center
                   - if avail || sel
+                    / Le dessin de l'état vit dans `night_cells.css`, révélé par
+                    / `aria-pressed` — le contrôleur Stimulus n'écrit QUE cet
+                    / attribut. Les classes Tailwind recopiées ici cochaient donc
+                    / dans le DOM sans que rien ne change à l'écran.
                     button(
                       type="button"
                       aria-pressed=sel.to_s
+                      aria-label="#{lodging.form_label.presence || lodging.name} — nuit du #{l(night, format: :long)}"
                       data-action="click->public--stay-calendar#toggleLodging"
                       data-type="lodging"
                       data-lodging-id=lodging.id.to_s
                       data-night-index=i.to_s
-                      class=(sel ? "appearance-none w-12 h-10 rounded-lg border-2 text-sm font-bold transition-all focus:outline-none bg-emerald-500 border-emerald-500 text-white shadow-sm" : "appearance-none w-12 h-10 rounded-lg border-2 text-sm font-bold transition-all focus:outline-none bg-white border-gray-200 text-gray-300 hover:border-emerald-400 hover:bg-emerald-50"))
-                      = sel ? "✓" : ""
+                      class="funnel-night-cell")
+                      = funnel_icon :check, css_class: "w-5 h-5 funnel-night-cell__check", stroke_width: 3
                   - else
                     button(
                       type="button"
@@ -61,7 +66,7 @@
                       data-unavail-name=lodging.name
                       data-unavail-date=l(night, format: :long)
                       aria-label="#{lodging.name} occupé le #{l(night, format: :long)}"
-                      class="w-12 h-10 rounded-lg border-2 text-sm font-bold bg-gray-50 border-gray-100 text-gray-300 hover:border-gray-300 hover:text-gray-500 cursor-pointer transition-colors focus:outline-none")
+                      class="funnel-night-cell funnel-night-cell--off")
                       | —
 
     p.mt-3.text-xs.text-gray-400 Une cellule = un gîte pour cette nuit. Occupé (—) : forçable via « Forcer la disponibilité » ; le gîte du séjour sert de référence de facturation.

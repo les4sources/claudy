@@ -35,7 +35,11 @@ module Finance
         legal_entity: default_entity,
         submitted_on: Date.current
       )
-      @report.expense_lines.build(spent_on: Date.current)
+      # Le compte de charge par défaut d'une note de mission : « Déplacements ».
+      # Une indemnité kilométrique n'achète rien, elle rembourse un trajet — et
+      # c'est cette ligne-là que le conseil regarde (epic #241, phase 2).
+      @report.expense_lines.build(spent_on: Date.current,
+                                  general_account: default_line_account(@report))
       load_form_collections
     end
 
@@ -55,7 +59,10 @@ module Finance
     def edit
       return refuse_edit unless @report.editable?
 
-      @report.expense_lines.build(spent_on: Date.current) if @report.expense_lines.empty?
+      if @report.expense_lines.empty?
+        @report.expense_lines.build(spent_on: Date.current,
+                                    general_account: default_line_account(@report))
+      end
       load_form_collections
     end
 
@@ -133,6 +140,12 @@ module Finance
 
     def get_report = @report = ExpenseReport.includes(:expense_lines).find(params[:id])
 
+    def default_line_account(report)
+      return nil unless report.mileage?
+
+      GeneralAccount.find_by(code: GeneralAccount::TRAVEL_CODE)
+    end
+
     def refuse_edit
       redirect_to finance_expense_report_path(@report),
                   alert: "Cette note n'est plus modifiable — sa pièce comptable existe."
@@ -186,7 +199,7 @@ module Finance
         :kind, :human_id, :legal_entity_id, :submitted_on, :notes,
         expense_lines_attributes: %i[id spent_on label supplier_name doc_kind amount_in_euros
                                      general_account_id team_id analytic_account_id
-                                     distance_km position receipt _destroy]
+                                     distance_km distance_in_km position receipt _destroy]
       )
     end
 

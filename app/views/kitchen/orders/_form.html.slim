@@ -7,6 +7,15 @@
         .text-xs.font-medium.text-gray-500 Séjour
         - if order.stay
           = link_to order.stay.customer&.name.presence || "Séjour ##{order.stay_id}", stay_path(order.stay), class: "text-sm font-semibold text-gray-900 hover:underline"
+        - else
+          / Demande née avant son séjour (issue #315) : le texte libre reste
+            corrigeable tant qu'elle est orpheline. Le rattachement, lui, se fait
+            depuis la page Cuisine — pas ici : le séjour ne se change pas au
+            formulaire, déplacer une demande c'est en créer une.
+          = f.label :contact_label, "Pour qui ?", class: "sr-only"
+          = f.text_field :contact_label, label: false, placeholder: "Nom du groupe, de la personne, de l'école…",
+                         class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          p.mt-1.text-xs.text-gray-400 Pas encore de séjour. Rattachez-la depuis la page Cuisine quand la réservation existera.
     - else
       / Le sélecteur natif listait jusqu'à 300 séjours triés par date d'arrivée.
         Il reste là — c'est lui qui porte la valeur soumise, et il fait le repli
@@ -31,6 +40,7 @@
             span.block.truncate.font-medium.text-gray-900(data-stay-search-target="chosenLabel")
             span.block.truncate.text-xs.text-gray-500(data-stay-search-target="chosenContact")
           button.shrink-0.text-indigo-600(type="button" data-action="stay-search#clear" class="hover:underline") Changer
+        = render "kitchen/orders/no_stay", order: order
 
     / Grille à 6 colonnes : le type prend la moitié de la ligne — « Formule trio
       (midi + goûter + soir) » ne tient pas dans un tiers, et un libellé tronqué

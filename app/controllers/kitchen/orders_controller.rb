@@ -7,7 +7,9 @@ module Kitchen
   class OrdersController < BaseController
     breadcrumb "Cuisine", :kitchen_orders_path, match: :exact
 
-    before_action :set_order, only: [:edit, :update, :status, :assign, :accept, :new_refusal, :refuse, :shopping_list]
+    before_action :set_order,
+                  only: [:edit, :update, :status, :assign, :accept, :new_refusal, :refuse,
+                         :shopping_list, :attach]
 
     # Les vues de la page, en onglets. Une table unique, une ligne par service ;
     # ce qui change d'un onglet à l'autre, c'est le filtre. « Cuisine » et
@@ -33,6 +35,9 @@ module Kitchen
       @responsible  = responsible_filter
       @old_archives = params[:old_archives] == "1"
       @humans       = Human.where(status: "active").order(:name)
+      # Le menu d'une demande orpheline propose de la rattacher (issue #315) :
+      # il lui faut la même liste de séjours que le formulaire de création.
+      @stays        = assignable_stays
       @rows         = rows_for(@view)
       @counts       = view_counts
       @groups       = group_by_stay(@rows)
@@ -50,7 +55,7 @@ module Kitchen
     def create
       return create_prestations if params[:prestations].present?
 
-      @order = MealOrder.new(order_params.merge(stay_id: params.dig(:meal_order, :stay_id)))
+      @order = MealOrder.new(order_params.merge(stay_id: params.dig(:meal_order, :stay_id).presence))
       accept_when_someone_takes_it(@order)
 
       if @order.save
@@ -75,6 +80,32 @@ module Kitchen
 
     def edit
       prepare_form
+    end
+
+    # Rattacher une demande orpheline à un séjour, une fois celui-ci créé
+    # (issue #315). Sens unique : on ne détache pas, et on ne déplace pas d'un
+    # séjour à l'autre — déplacer une demande, c'est en créer une.
+    #
+    # `contact_label` est CONSERVÉ : c'est ce que Malau avait noté au premier
+    # contact, et il peut différer du nom du client finalement enregistré.
+    def attach
+      stay = Stay.find_by(id: params[:stay_id].presence)
+
+      if stay.nil?
+        redirect_back fallback_location: kitchen_orders_path, alert: "Choisissez un séjour."
+      elsif @order.stay_id.present?
+        redirect_back fallback_location: kitchen_orders_path,
+                      alert: "Cette demande est déjà rattachée à un séjour."
+      elsif @order.attach_to_stay!(stay)
+        redirect_back fallback_location: kitchen_orders_path,
+                      notice: "Demande rattachée au séjour de #{stay.customer&.name.presence || "##{stay.id}"}."
+      else
+        redirect_back fallback_location: kitchen_orders_path,
+                      alert: @order.errors.full_messages.to_sentence
+      end
+    rescue ActiveRecord::RecordInvalid => e
+      redirect_back fallback_location: kitchen_orders_path,
+                    alert: e.record.errors.full_messages.to_sentence
     end
 
     def update
@@ -166,7 +197,8 @@ module Kitchen
     # `cost` envoyé par une vieille page ne modifie donc plus rien.
     def order_params
       params.require(:meal_order).permit(:kind, :moment, :date, :people, :notes, :status,
-                                         :cancellation_reason, :responsible_human_id)
+                                         :cancellation_reason, :responsible_human_id,
+                                         :contact_label)
             .merge(unit_price_cents: submitted_unit_price_cents)
             .compact
     end
@@ -192,6 +224,12 @@ module Kitchen
       { stay_id: params[:stay_id].presence, people: 1, status: "requested" }
     end
 
+    # Le texte libre « Pour qui ? » d'une saisie sans séjour. Vide dès qu'un
+    # séjour est choisi : le nom du client fait alors foi.
+    def submitted_contact_label
+      params.dig(:meal_order, :contact_label).to_s.strip.presence
+    end
+
     # Se charger d'un buffet ou d'un apéro vaut acceptation (décision Michael) —
     # la famille `repas` garde sa validation par Stéphanie, elle seule cuisine.
     def accept_when_someone_takes_it(order)
@@ -215,7 +253,9 @@ module Kitchen
     # — si une ligne est invalide, aucune n'est créée.
     def create_prestations
       blocks = submitted_blocks
-      result = Kitchen::GridSubmission.new(stay: submitted_stay, blocks: blocks).run
+      stay   = submitted_stay
+      label  = submitted_contact_label
+      result = Kitchen::GridSubmission.new(stay: stay, contact_label: label, blocks: blocks).run
 
       if result.success?
         redirect_to kitchen_orders_path,
@@ -224,7 +264,7 @@ module Kitchen
         # On réaffiche CE QUI A ÉTÉ SAISI, blocs compris : refaire trois blocs
         # parce que le deuxième manquait une case est le genre de punition qui
         # fait retourner Malau à son tableau papier.
-        @order = MealOrder.new(stay_id: submitted_stay&.id)
+        @order = MealOrder.new(stay_id: stay&.id, contact_label: label)
         @prestations = blocks
         prepare_form
         flash.now[:alert] = result.error
@@ -384,9 +424,17 @@ module Kitchen
 
     # Groupé par séjour, comme le tableau de Malau : un en-tête par client, et le
     # sous-total de ce qui compte vraiment (les lignes facturables).
+    #
+    # Les demandes SANS séjour (issue #315) se groupent par leur texte libre, une
+    # entête par « pour qui » : les mettre toutes dans un même groupe vide
+    # mélangerait l'école du mardi et le groupe d'anniversaire du samedi.
     def group_by_stay(orders)
-      orders.group_by(&:stay).map do |stay, lines|
+      orders.group_by { |order| order.stay || [:orphan, order.contact_label.to_s] }
+            .map do |key, lines|
+        stay = key.is_a?(Array) ? nil : key
         { stay: stay&.decorate,
+          orphan: stay.nil? && lines.all?(&:orphan?),
+          label: stay ? nil : lines.first.client_label,
           orders: MealOrderDecorator.decorate_collection(lines),
           subtotal_cents: lines.select(&:billable?).sum { |o| o.price_cents.to_i } }
       end

@@ -1,7 +1,8 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
            title: "Notes de frais",
-           links: [link_to("➕ Nouvelle note", new_finance_expense_report_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+           links: [link_to("➕ Note de frais", new_finance_expense_report_path(kind: "expenses"), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
+                   link_to("➕ Note de mission", new_finance_expense_report_path(kind: "mileage"), class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90")]
 
 .mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
   p.text-sm.text-gray-700

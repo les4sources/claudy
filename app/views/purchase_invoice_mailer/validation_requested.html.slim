@@ -1,0 +1,24 @@
+p Bonjour,
+
+p
+  | Une facture d'achat attend l'aval de ton pôle
+  - if @invoice.validation_team
+    |  (#{@invoice.validation_team.name})
+  | . Tant que personne n'a répondu, elle n'est pas payable.
+
+= render "purchase_invoice_mailer/invoice"
+
+- if @invoice.notes.present?
+  p
+    strong Note :
+    = " #{@invoice.notes}"
+
+p
+  = link_to "Valider cette facture", finance_purchase_invoice_validation_url(@token, host: @link_host)
+
+p
+  | Si elle te paraît fausse, clique sur le même lien : le refus demande une
+    connexion et un motif, pour que la comptabilité sache quoi dire au fournisseur.
+
+p
+  = link_to "Ouvrir la facture dans Claudy", @admin_url

@@ -60,6 +60,13 @@ class GeneralAccount < ApplicationRecord
   # Une caisse en moins est une charge, une caisse en plus vient la créditer.
   CASH_DIFFERENCE_CODE = "658000".freeze
 
+  # Le compte par défaut d'une note de MISSION (epic #241, phase 2) : les
+  # kilomètres d'un sourcier. Séparé des autres charges parce qu'une indemnité
+  # kilométrique n'achète rien — elle rembourse un déplacement, et c'est cette
+  # ligne-là que le conseil regarde quand il se demande ce que les allers-retours
+  # coûtent au collectif.
+  TRAVEL_CODE = "617000".freeze
+
   has_paper_trail
   has_soft_deletion default_scope: true
 

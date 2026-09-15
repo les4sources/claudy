@@ -105,6 +105,31 @@ tr(id=dom class="#{order.row_tone_class} #{muted ? 'text-gray-500' : 'text-gray-
       = link_to "Modifier la demande", edit_kitchen_order_path(order), class: item
       - if order.stay
         = link_to "Ouvrir le séjour", stay_path(order.stay), class: item
+      / Une demande née avant son séjour (issue #315) : on la rattache ici, avec
+        la même recherche que le formulaire de création. Sens unique — une
+        demande déjà rattachée ne propose plus rien.
+      - elsif order.orphan?
+        .my-1.border-t.border-gray-100
+        .px-3.py-2(data-controller="stay-search" data-stay-search-url-value=stay_search_kitchen_orders_path)
+          p.mb-1.text-xs.font-medium.text-gray-500 Rattacher à un séjour
+          = form_with url: attach_kitchen_order_path(order), method: :patch, class: "space-y-2" do
+            = select_tag :stay_id,
+                         options_from_collection_for_select(@stays || [], :id, ->(s) { stay_choice_label(s) }),
+                         include_blank: "— Choisir un séjour —", id: nil,
+                         class: "block w-full rounded-md border-gray-300 text-sm",
+                         data: { "stay-search-target": "select" }
+            .relative.space-y-1.hidden(data-stay-search-target="searchWrap")
+              = text_field_tag :stay_query, nil, placeholder: "Nom, groupe, email ou téléphone…", autocomplete: "off", id: nil,
+                               data: { "stay-search-target": "searchInput",
+                                       action: "input->stay-search#search keydown.enter->stay-search#pickFirst" },
+                               class: "block w-full rounded-md border-gray-300 text-sm"
+              .border.border-gray-100.rounded-md.divide-y.divide-gray-50.bg-white.shadow-sm.max-h-48.overflow-y-auto(data-stay-search-target="results")
+            .flex.items-center.justify-between.gap-2.text-sm.hidden(data-stay-search-target="chosen")
+              .min-w-0
+                span.block.truncate.font-medium.text-gray-900(data-stay-search-target="chosenLabel")
+                span.block.truncate.text-xs.text-gray-500(data-stay-search-target="chosenContact")
+              button.shrink-0.text-indigo-600(type="button" data-action="stay-search#clear" class="hover:underline") Changer
+            = submit_tag "Rattacher", class: "rounded-md bg-4s-main px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
       - if %w[buffet apero].include?(order.family)
         = link_to "Liste de courses", shopping_list_kitchen_order_path(order), target: "_blank", rel: "noopener", class: item
       - unless order.cancelled? || past

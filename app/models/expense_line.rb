@@ -67,7 +67,14 @@ class ExpenseLine < ApplicationRecord
   validates :amount_cents, numericality: { only_integer: true, greater_than: 0 }
   validates :doc_kind, inclusion: { in: DOC_KINDS }, allow_blank: true
   validates :general_account, presence: { message: "est obligatoire — c'est lui qui porte la charge" }
+  validates :distance_km, numericality: { greater_than: 0 }, allow_nil: true
   validate :report_still_editable
+  validate :mileage_needs_distance
+
+  # Le montant d'une ligne kilométrique est DÉRIVÉ, jamais tapé : kilomètres ×
+  # taux du jour de la ligne. Le taux est figé ici même, pour qu'un changement
+  # de barème ne réécrive pas une note passée.
+  before_validation :price_mileage
 
   before_destroy :refuse_when_report_frozen
 
@@ -75,6 +82,26 @@ class ExpenseLine < ApplicationRecord
   scope :chronological, -> { order(:spent_on, :id) }
 
   def doc_kind_label = DOC_KIND_LABELS[doc_kind]
+
+  def mileage? = expense_report&.mileage?
+
+  # Les kilomètres tels qu'ils se tapent, virgule décimale comprise.
+  def distance_in_km
+    return nil if distance_km.blank?
+
+    format("%g", distance_km).tr(".", ",")
+  end
+
+  def distance_in_km=(value)
+    self.distance_km = value.present? ? value.to_s.tr(",", ".").to_f : nil
+  end
+
+  # Le taux appliqué à CETTE ligne, en euros — pour l'afficher à côté du montant.
+  def rate_per_km_money
+    return nil if rate_cents_per_km.blank?
+
+    Money.new(rate_cents_per_km, "EUR")
+  end
 
   # Le montant tel qu'il se tape : « 24,90 ». Money-rails accepte déjà `amount=`,
   # mais pas la virgule décimale d'un clavier belge — et c'est comme ça que la
@@ -92,6 +119,34 @@ class ExpenseLine < ApplicationRecord
   end
 
   private
+
+  # Kilomètres × taux du jour, arrondi au cent. Le taux vient des barèmes datés
+  # (`Pricing::Catalog#mileage_per_km_cents(on:)`) et se fige sur la ligne : une
+  # note de mars reste payée au barème de mars, même relue en décembre.
+  #
+  # Un taux déjà posé sur une ligne enregistrée n'est PAS rafraîchi : seule une
+  # ligne neuve, ou dont la date ou la distance change, va rechercher le barème.
+  def price_mileage
+    return unless mileage?
+    return if distance_km.blank?
+
+    self.rate_cents_per_km = Pricing::Catalog.mileage_per_km_cents(on: spent_on) if refresh_rate?
+    self.amount_cents = (distance_km.to_d * rate_cents_per_km.to_i).round
+  end
+
+  def refresh_rate?
+    rate_cents_per_km.blank? || new_record? || will_save_change_to_spent_on?
+  end
+
+  # Une ligne de note de mission SANS kilomètres n'a pas de montant : elle
+  # tomberait sur la validation de montant avec un message qui parle d'euros,
+  # alors que ce qui manque, ce sont des kilomètres.
+  def mileage_needs_distance
+    return unless mileage?
+    return if distance_km.present?
+
+    errors.add(:distance_km, "est obligatoire sur une note de mission")
+  end
 
   # `validate` ne couvre pas la suppression : sans ce garde-fou, retirer une
   # ligne d'une note déjà comptabilisée passerait sans un mot.

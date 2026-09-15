@@ -131,12 +131,24 @@ Rails.application.routes.draw do
         patch :status
         patch :assign
         patch :accept
+        # Rattacher une demande orpheline à un séjour, a posteriori (issue #315).
+        patch :attach
         get   :new_refusal
         patch :refuse
         get   :shopping_list
       end
     end
   end
+
+  # Canal jeton des factures d'achat (epic #240, phase 3) : le lien de l'email
+  # aux membres du pôle. Hors du namespace `finance` — il ne demande pas de
+  # connexion, sauf pour contester (motif nominatif).
+  get  "achats/valider/:token",  to: "finance/purchase_invoice_validations#show",
+                                 as: :finance_purchase_invoice_validation
+  post "achats/valider/:token",  to: "finance/purchase_invoice_validations#confirm",
+                                 as: :finance_purchase_invoice_validation_confirm
+  get  "achats/contester/:token", to: "finance/purchase_invoice_validations#dispute",
+                                  as: :finance_purchase_invoice_validation_dispute
 
   # Canal jeton de la cuisine (epic #219, phase 4) : le lien de l'email au
   # responsable. Hors du namespace `kitchen` — il ne demande pas de connexion.
@@ -248,6 +260,9 @@ Rails.application.routes.draw do
         post :submit
         post :dispute
         post :reopen
+        # Validation par le pôle depuis la fiche admin (phase 3), en miroir du
+        # canal jeton : mêmes règles, même trace.
+        post :validate_by_team
       end
     end
     resources :cash_motifs, path: "cash/motifs", except: %i[show destroy] do

@@ -37,6 +37,12 @@ class PurchaseInvoice < ApplicationRecord
 
   include Commentable
 
+  # Jeton du lien de validation posé dans l'email aux membres du pôle (phase 3),
+  # même patron que `MealOrder` : portée unique et expiration, donc impossible à
+  # forger comme à rejouer sur une autre ressource.
+  TOKEN_PURPOSE = :validate_purchase_invoice
+  TOKEN_TTL = 30.days
+
   has_paper_trail
   has_soft_deletion default_scope: true
 
@@ -70,6 +76,8 @@ class PurchaseInvoice < ApplicationRecord
   scope :ordered, -> { order(issued_on: :desc, id: :desc) }
   scope :with_status, ->(status) { where(status: status) }
   scope :payable, -> { where(status: "to_pay") }
+  # Ce que le pôle doit trancher (phase 3) : le callout de sa page s'en sert.
+  scope :awaiting_validation_by, ->(team) { where(status: "to_validate", validation_team_id: team) }
 
   STATUSES.each do |state|
     define_method("#{state}?") { status == state }
@@ -117,6 +125,34 @@ class PurchaseInvoice < ApplicationRecord
   # bouton « Envoyer au paiement », et demain depuis un import — une notification
   # accrochée à un seul chemin manquerait l'autre.
   after_update_commit :notify_validation_team, if: :saved_change_to_awaiting_validation?
+
+  def validation_token
+    signed_id(purpose: TOKEN_PURPOSE, expires_in: TOKEN_TTL)
+  end
+
+  # Résout un jeton. nil si invalide, expiré, ou émis pour une autre portée —
+  # jamais d'exception, jamais une autre ressource.
+  def self.find_by_validation_token(token)
+    find_signed(token, purpose: TOKEN_PURPOSE)
+  end
+
+  # Qui peut trancher : les membres du pôle désigné, et les comptes sans membre
+  # rattaché (accueil générique, comptabilité — cf. `User#global_admin?`), qui
+  # doivent pouvoir débloquer une facture quand le pôle ne répond pas.
+  def validatable_by?(user)
+    return false if user.blank?
+    return true if user.global_admin?
+    return false if validation_team.blank?
+
+    validation_team.team_memberships.where(human_id: user.human_id).exists?
+  end
+
+  # Les membres du pôle qui ont une adresse : les destinataires du lien.
+  def validation_recipients
+    return [] if validation_team.blank?
+
+    validation_team.humans.where.not(email: [nil, ""]).distinct
+  end
 
   private
 

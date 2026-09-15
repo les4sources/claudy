@@ -1,5 +1,22 @@
-/ Emplacement « À valider » de la page du pôle (epic #239, phase 3).
-  DÉLIBÉRÉMENT VIDE : l'epic Factures (#240) y branchera son callout « factures
-  en attente de validation pour ce pôle ». Le partial existe dès maintenant pour
-  que cette greffe soit un ajout et pas une refonte de la page.
-  Tant qu'il ne rend rien, la page n'affiche rien — pas de cadre vide.
+/ Callout « À valider » de la page du pôle (epic #239 phase 3 → greffe de
+  l'epic #240 phase 3).
+  Ne rend RIEN quand il n'y a rien à trancher : un cadre vide qui dit « 0 »
+  apprend à ignorer l'emplacement, et le jour où il compte on ne le voit plus.
+- pending = PurchaseInvoice.awaiting_validation_by(team).ordered.includes(:third_party)
+- if pending.any?
+  .mb-4.rounded-xl.border.border-amber-200.bg-amber-50.px-4.py-3
+    .flex.flex-wrap.items-center.justify-between.gap-3
+      div
+        p.text-sm.font-semibold.text-amber-900
+          = pluralize(pending.size, "facture", "factures")
+          |  en attente de validation par ce pôle
+        p.text-xs.text-amber-800
+          | Tant que personne n'a répondu, elles ne sont pas payables.
+      = link_to "Voir les factures", finance_purchase_invoices_path(status: "to_validate", team_id: team.id), class: "inline-flex items-center rounded-md border border-amber-300 bg-white px-3 py-1.5 text-sm font-medium text-amber-900 shadow-sm hover:bg-amber-100"
+    ul.mt-3.space-y-1
+      - pending.first(5).each do |invoice|
+        li.text-sm.text-amber-900
+          = link_to finance_purchase_invoice_path(invoice), class: "hover:underline" do
+            = invoice.third_party&.name.presence || "Fournisseur"
+            span.text-amber-700  · #{humanized_money_with_symbol(Money.new(invoice.total_cents))}
+            span.text-xs.text-amber-700  · #{l(invoice.issued_on, format: '%-d/%m/%Y')}

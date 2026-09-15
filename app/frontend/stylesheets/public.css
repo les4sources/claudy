@@ -13,6 +13,8 @@
 @import 'funnel.css';
 /* Grille « Espaces » — feuille partagée avec l'admin (epic #234, phase 3). */
 @import 'spaces_grid.css';
+/* Cellules « nuit » — feuille partagée avec le formulaire séjour admin. */
+@import 'night_cells.css';
 
 /* @import '../../components/flow/component.css'; */
 

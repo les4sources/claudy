@@ -94,7 +94,7 @@ RSpec.describe "Customer show — fusion de séjours + coordonnées/notes", type
       customer = Customer.create!(email: "empty@example.com", customer_type: "individual", first_name: "Vide")
       get customer_path(customer)
       expect(response.body).not_to include("Notes internes")
-      expect(response.body).not_to include("trix-content")
+      expect(response.body).not_to include("lexxy-content")
     end
   end
 end

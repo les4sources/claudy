@@ -266,6 +266,11 @@ module FormBuilders
       super(name, *args, &block)
     end
 
+    # ⚠️ `merge!` ÉCRASE la classe passée par l'appelant : `f.rich_text_area :body, class: "…"`
+    # n'a aucun effet, seule la classe ci-dessous arrive dans le DOM. Constaté lors de la bascule
+    # Lexxy (issue #312) et laissé tel quel volontairement — le « réparer » changerait l'allure de
+    # tous les éditeurs de l'application d'un coup. Pour poser une hauteur minimale ou une classe
+    # de rendu sur un éditeur, la mettre sur le CONTENEUR, pas sur l'appel.
     def rich_text_area(name, *args, &block)
       args[0] ||= {}
       args[0].merge!({ class: 'prose block w-full bg-white rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm' })

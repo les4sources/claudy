@@ -14,14 +14,25 @@ RSpec.describe ExpenseReports::Process do
   let(:team) { Team.create!(name: "Pôle Technique") }
   let(:human) { Human.create!(name: "Sébastien Test", iban: "BE68539007547034") }
 
+  # Une note de MISSION se remplit en kilomètres, jamais en euros (epic #241,
+  # phase 2) : son montant est dérivé, et le modèle refuse une ligne sans
+  # distance.
   def build_report(kind: "expenses")
     report = ExpenseReport.create!(kind: kind, human: human, legal_entity: entity,
                                    submitted_on: Date.new(2026, 6, 1))
-    report.expense_lines.create!(spent_on: Date.new(2026, 5, 28), label: "Visserie",
-                                 supplier_name: "Brico Yvoir", amount_cents: 2_490,
-                                 general_account: expense_account, team: team)
-    report.expense_lines.create!(spent_on: Date.new(2026, 5, 30), label: "Terreau",
-                                 amount_cents: 6_250, general_account: expense_account)
+    if kind == "mileage"
+      report.expense_lines.create!(spent_on: Date.new(2026, 5, 28), label: "Yvoir → Gembloux",
+                                   supplier_name: "CRA-W", distance_km: 84,
+                                   general_account: expense_account, team: team)
+      report.expense_lines.create!(spent_on: Date.new(2026, 5, 30), label: "Yvoir → Namur",
+                                   distance_km: 40, general_account: expense_account)
+    else
+      report.expense_lines.create!(spent_on: Date.new(2026, 5, 28), label: "Visserie",
+                                   supplier_name: "Brico Yvoir", amount_cents: 2_490,
+                                   general_account: expense_account, team: team)
+      report.expense_lines.create!(spent_on: Date.new(2026, 5, 30), label: "Terreau",
+                                   amount_cents: 6_250, general_account: expense_account)
+    end
     report.reload
   end
 

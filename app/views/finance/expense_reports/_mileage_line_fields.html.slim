@@ -1,0 +1,52 @@
+/ Une ligne de note de MISSION (epic #241, phase 2) : des kilomètres, pas des
+  euros. Le montant n'est PAS saisi — c'est km × taux du jour de la ligne,
+  calculé et figé côté modèle. L'afficher en champ modifiable inviterait à le
+  corriger à la main, et une indemnité corrigée à la main ne s'explique plus.
+
+  Le taux appliqué se lit à côté : un barème qui change en cours d'année doit
+  se voir sur la ligne, pas seulement dans Paramètres > Tarifs.
+.rounded-lg.border.border-gray-200.bg-white.p-4(data-expense-lines-target="row")
+  .grid.grid-cols-1.gap-3(class="md:grid-cols-12")
+    .md:col-span-2
+      = line_form.date_field :spent_on, label: "Date *", class: "w-full", data: { expense_field: "spent_on" }
+    .md:col-span-4
+      = line_form.text_field :label, label: "Trajet ou motif *", placeholder: "Yvoir → Gembloux, pépinière", class: "w-full", data: { expense_field: "label" }
+    .md:col-span-3
+      = line_form.text_field :supplier_name, label: "Structure", placeholder: "CRA-W, Semisto…", class: "w-full"
+    .md:col-span-2
+      = line_form.label :distance_in_km, "Kilomètres *", class: "mb-1 block text-sm font-medium text-gray-700"
+      = text_field_tag "#{line_form.object_name}[distance_in_km]", line_form.object&.distance_in_km,
+                       inputmode: "decimal", placeholder: "84", required: true,
+                       class: "block w-full rounded-md border-gray-300 shadow-sm text-right tabular-nums",
+                       data: { expense_lines_target: "distance", action: "input->expense-lines#refresh" }
+    .md:col-span-1.flex.items-end.justify-end.pb-1
+      button.text-xs.font-medium.text-red-600(type="button" class="hover:underline" data-action="expense-lines#remove" aria-label="Retirer cette ligne")
+        | Retirer
+
+  .mt-3.grid.grid-cols-1.gap-3(class="md:grid-cols-12")
+    .md:col-span-4
+      = line_form.label :general_account_id, "Compte de charge *", class: "mb-1 block text-sm font-medium text-gray-700"
+      = line_form.collection_select :general_account_id, accounts, :id, :to_s,
+                                    { include_blank: "Choisir un compte…" },
+                                    class: "block w-full rounded-md border-gray-300 shadow-sm text-sm",
+                                    data: { expense_field: "general_account_id" }
+    .md:col-span-3
+      = line_form.label :team_id, "Pôle", class: "mb-1 block text-sm font-medium text-gray-700"
+      = line_form.collection_select :team_id, teams, :id, :name,
+                                    { include_blank: "Aucun" },
+                                    class: "block w-full rounded-md border-gray-300 shadow-sm text-sm",
+                                    data: { expense_field: "team_id" }
+    .md:col-span-5.flex.items-end.pb-1
+      .text-sm.text-gray-500
+        - if line_form.object&.rate_per_km_money
+          | Indemnité figée à
+          strong.text-gray-900 =<> humanized_money_with_symbol(line_form.object.rate_per_km_money)
+          | /km —
+          strong.text-gray-900 =<> expense_amount(line_form.object.amount_cents)
+        - else
+          | Indemnité au barème du jour de la ligne :
+          strong.text-gray-900 =<> humanized_money_with_symbol(Money.new(Pricing::Catalog.mileage_per_km_cents))
+          | /km.
+
+  - if line_form.object&.persisted?
+    = line_form.hidden_field :_destroy, value: "0"

@@ -87,7 +87,13 @@ class KitchenMailer < ApplicationMailer
 
   def demand_label = @order.family_label
 
-  def customer_name = @stay&.customer&.name.presence || "Séjour"
+  # Le nom affiché dans l'objet des emails. `client_label` gère les deux cas :
+  # le client du séjour, ou le texte libre d'une demande qui n'en a pas encore
+  # (issue #315). `@order` est absent de l'email groupé, qui passe par sa
+  # première ligne.
+  def customer_name
+    (@order || @orders&.first)&.client_label.presence || "Séjour"
+  end
 
   def date_label = @order.date.present? ? l(@order.date, format: "%-d/%m/%Y") : "date à fixer"
 

@@ -16,6 +16,17 @@
   .mb-4.rounded-lg.border.border-red-200.bg-red-50.px-4.py-3.text-sm.text-red-800
     strong Facture contestée.
     = " #{@invoice.dispute_reason}"
+    - if @invoice.validated_by
+      = " — #{@invoice.validated_by.display_name}"
+
+/ Qui a dit oui, et quand. Une validation sans nom ne vaut pas grand-chose le
+  jour où quelqu'un demande qui a engagé la dépense.
+- if @invoice.validated_at.present?
+  .mb-4.rounded-lg.border.border-green-200.bg-green-50.px-4.py-3.text-sm.text-green-900
+    strong Validée
+    - if @invoice.validated_by
+      = " par #{@invoice.validated_by.display_name}"
+    = " le #{l(@invoice.validated_at, format: :short)}."
 
 .grid.gap-4(class="lg:grid-cols-3")
   .lg:col-span-2.space-y-4
@@ -98,16 +109,33 @@
         - if @invoice.requires_validation?
           p.text-xs.text-gray-400
             | Cette facture demande l'aval du pôle #{@invoice.validation_team&.name || "concerné"} : elle s'arrêtera à « À valider ».
+      / Validation par le pôle (phase 3). Miroir exact du lien de l'email : mêmes
+        règles, même trace. Un compte qui n'est pas du pôle voit l'attente, mais
+        pas les boutons — inutile de proposer un geste qui sera refusé.
       - elsif @invoice.to_validate?
-        p.text-sm.text-gray-600
-          | En attente du pôle #{@invoice.validation_team&.name || "concerné"}. L'écran de validation arrive en phase 3 de l'epic #240.
+        - if @invoice.validatable_by?(current_user)
+          = button_to "Je valide cette facture", validate_by_team_finance_purchase_invoice_path(@invoice), method: :post, params: { decision: "approve" }, class: "w-full rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
+          = form_with url: validate_by_team_finance_purchase_invoice_path(@invoice), method: :post, class: "space-y-2" do
+            = hidden_field_tag :decision, "reject"
+            label.block.text-xs.font-medium.text-gray-500 Elle ne va pas ?
+            = text_field_tag :reason, nil, placeholder: "Pourquoi ?", class: "w-full rounded-md border-gray-300 text-sm shadow-sm"
+            button.w-full.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(type="submit") Contester
+          p.text-xs.text-gray-400
+            | Valider la fait passer « À payer » et génère l'écriture au journal des achats.
+        - else
+          p.text-sm.text-gray-600
+            | En attente du pôle #{@invoice.validation_team&.name || "concerné"}. Ses membres ont reçu un lien par email.
       - elsif @invoice.to_pay?
         p.text-sm.text-gray-600
           | Prête à payer. La file « À payer » et le virement arrivent en phase 4 de l'epic #240.
       - else
         p.text-sm.text-gray-600 Payée le #{l(@invoice.paid_on, format: :short)}.
 
-      - unless @invoice.frozen_content?
+      / Une facture « À valider » a déjà ses deux réponses juste au-dessus : le
+        formulaire de contestation générique ferait un SECOND bouton « Contester »
+        au sens différent (il ne prévient pas la comptabilité et ne trace pas qui
+        a répondu). Un seul geste par intention.
+      - unless @invoice.frozen_content? || @invoice.to_validate?
         - if @invoice.disputed?
           = button_to "Remettre en traitement", reopen_finance_purchase_invoice_path(@invoice), method: :post, class: "w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
         - else

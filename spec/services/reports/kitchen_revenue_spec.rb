@@ -34,6 +34,22 @@ RSpec.describe Reports::KitchenRevenue do
     expect(report.lines.map(&:id)).to include(dated_nowhere.id)
   end
 
+  # Issue #315 — une demande sans séjour sort du facturable par décision. La
+  # jointure interne sur `stays` l'exclut naturellement ; elle entre dans le
+  # chiffre d'affaires dès qu'elle est rattachée.
+  it "ignore une demande qui n'a pas encore de séjour, puis la compte une fois rattachée" do
+    orpheline = MealOrder.create!(kind: "repas", people: 10, date: Date.new(2026, 10, 11),
+                                  status: "requested", contact_label: "École de Godinne",
+                                  responsible_human: steph, skip_notifications: true)
+
+    expect(report.lines.map(&:id)).not_to include(orpheline.id)
+
+    orpheline.attach_to_stay!(stay)
+
+    expect(described_class.new(from: Date.new(2026, 10, 1), to: Date.new(2026, 10, 31))
+             .lines.map(&:id)).to include(orpheline.id)
+  end
+
   it "ignore les demandes d'info, les annulées et les refusées" do
     billable = line
     line(stay, status: "inquiry")

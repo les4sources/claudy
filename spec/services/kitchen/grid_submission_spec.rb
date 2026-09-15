@@ -72,10 +72,25 @@ RSpec.describe Kitchen::GridSubmission do
     expect(ligne.moment).to eq("soir")
   end
 
-  it "refuse une saisie sans séjour" do
+  # Issue #315 : une saisie sans séjour est désormais possible, à condition de
+  # dire pour qui elle est. Sans séjour NI texte libre, elle reste refusée.
+  it "refuse une saisie sans séjour ni texte libre" do
     result = described_class.new(stay: nil, blocks: [block(index: 0, kind: "repas")]).run
 
-    expect(result.error).to eq("Choisis d'abord un séjour.")
+    expect(result.error).to eq("Choisis un séjour, ou dis pour qui est cette demande.")
+  end
+
+  it "accepte une saisie sans séjour quand le texte libre dit pour qui" do
+    result = described_class.new(
+      stay: nil, contact_label: "École de Godinne",
+      blocks: [block(index: 0, kind: "repas", date: lundi.iso8601, moment: "midi")]
+    ).run
+
+    expect(result).to be_success
+    ligne = result.orders.sole
+    expect(ligne.stay_id).to be_nil
+    expect(ligne.contact_label).to eq("École de Godinne")
+    expect(ligne).not_to be_billable
   end
 
   it "refuse une saisie sans aucune prestation" do

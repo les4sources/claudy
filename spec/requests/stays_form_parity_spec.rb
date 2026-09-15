@@ -144,4 +144,21 @@ RSpec.describe "Stays — rechargement des grilles de composition", type: :reque
     expect(response.body).to match(/<turbo-frame[^>]*id="stay_compose_grids"/)
     expect(response.body).to include("stay-grids#reload")
   end
+
+  # Le contrôleur `public--stay-calendar` n'écrit QUE `aria-pressed` : tout le
+  # dessin de l'état vit dans `.funnel-night-cell` (night_cells.css). Une cellule
+  # admin habillée de classes d'état codées en dur cochait donc dans le DOM sans
+  # que rien ne bouge à l'écran — c'est le bug que cette garde empêche de revenir.
+  it "les cellules de la grille hébergement portent la classe pilotée par aria-pressed" do
+    lodging = Lodging.create!(name: "La Chevêche", summary: "gîte")
+    arrival = Date.today + 30
+    get "/stays/compose_grids", params: { arrival_date: arrival.iso8601, departure_date: (arrival + 2).iso8601 }
+
+    cells = response.body.scan(/<button[^>]*data-type="lodging"[^>]*>/)
+    expect(cells).not_to be_empty
+    expect(cells).to all(include("funnel-night-cell"))
+    expect(cells.select { |c| c.include?("toggleLodging") }).to all(include('aria-pressed='))
+    expect(response.body).to include("funnel-night-cell__check")
+    expect(lodging).to be_persisted
+  end
 end
