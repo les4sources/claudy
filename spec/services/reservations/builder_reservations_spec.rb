@@ -19,8 +19,9 @@ RSpec.describe Reservations::Builder, "occupation room-based (epic #66, Phase 6)
     lodging
   end
 
-  let(:arrival) { Date.today + 30 }    # 2 nuits : [arrival, arrival+2)
-  let(:departure) { Date.today + 32 }
+  let(:monday) { (Date.today + 10).next_occurring(:monday) } # un lundi : la règle week-end (epic #260) refuse une nuit de vendredi/samedi isolée
+  let(:arrival) { monday }    # 2 nuits : [arrival, arrival+2)
+  let(:departure) { monday + 2 }
 
   def draft(**overrides)
     Reservations::Draft.new({

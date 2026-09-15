@@ -12,8 +12,9 @@ RSpec.describe Reservations::Builder, "rotation dos-à-dos (issue #94)" do
   end
 
   # Séjour existant B[+32 → +34] confirmé : occupe les NUITS +32 et +33.
-  let(:later_from) { Date.today + 32 }
-  let(:later_to)   { Date.today + 34 }
+  let(:monday)     { (Date.today + 10).next_occurring(:monday) } # un lundi : la règle week-end (epic #260) refuse une nuit de vendredi/samedi isolée
+  let(:later_from) { monday + 2 }
+  let(:later_to)   { monday + 4 }
   before do
     occ = Booking.create!(firstname: "Occ", from_date: later_from, to_date: later_to, adults: 1, status: "confirmed", lodging: hulotte)
     (later_from...later_to).each { |d| Reservation.create!(booking: occ, room: hulotte.rooms.first, date: d) }
@@ -23,8 +24,8 @@ RSpec.describe Reservations::Builder, "rotation dos-à-dos (issue #94)" do
   def draft(**overrides)
     Reservations::Draft.new({
       lodging_id: hulotte.id,
-      arrival_date: (Date.today + 30).iso8601,
-      departure_date: (Date.today + 32).iso8601,
+      arrival_date: monday.iso8601,
+      departure_date: (monday + 2).iso8601,
       dogs_count: 0,
       first_name: "Camille",
       last_name: "Martin",

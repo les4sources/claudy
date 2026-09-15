@@ -13,8 +13,9 @@ RSpec.describe "Stays — espaces non résolus & mapping stable (issue #75)", ty
   before { sign_in user }
 
   let!(:lodging) { Lodging.create!(name: "La Hulotte", summary: "gîte") }
-  let(:arrival)   { Date.today + 30 }
-  let(:departure) { Date.today + 32 }
+  let(:monday)   { (Date.today + 10).next_occurring(:monday) } # un lundi : la règle week-end (epic #260) refuse une nuit de vendredi/samedi isolée
+  let(:arrival)   { monday }
+  let(:departure) { monday + 2 }
 
   def base_params(overrides = {})
     {
