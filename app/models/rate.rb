@@ -41,7 +41,8 @@ class Rate < ApplicationRecord
     "Sourciers"     => %w[catalog. bar. grocery. pot. dome. pet.],
     "Coworking"     => %w[coworking.],
     "Événements"    => %w[event.],
-    "Activités"     => %w[activity.]
+    "Activités"     => %w[activity.],
+    "Frais"         => %w[mileage.]
   }.freeze
 
   OTHER_GROUP = "Divers".freeze

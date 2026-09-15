@@ -237,6 +237,18 @@ module Pricing
     # (`experiences.carrier_hourly_rate_cents`).
     ACTIVITY_CARRIER_HOURLY_CENTS = 4_000
 
+    # Indemnité kilométrique d'une note de mission (epic #241, phase 2), en
+    # CENTS PAR KILOMÈTRE : 47 cents, soit 0,47 €/km.
+    #
+    # ⚠️ L'epic annonce « 4 700 cents ». Pris au pied de la lettre, ça donne
+    # 47 €/km — un aller-retour Yvoir–Gembloux remboursé 3 948 €. Aucun barème
+    # kilométrique ne ressemble à ça (le barème belge tourne autour de 0,43 €).
+    # On retient donc la lecture arithmétiquement cohérente, et la valeur exacte
+    # est à confirmer par Michael : elle s'édite dans Paramètres > Tarifs sans
+    # redéploiement, c'est bien pour ça qu'elle est un barème et pas une
+    # constante.
+    MILEAGE_PER_KM_CENTS = 47
+
     # Packs de coworking (epic #126, Phase 1) : prix par nombre de journées.
     COWORKING_PACKS = {
       1  =>  2_000, # 20 €
@@ -292,6 +304,18 @@ module Pricing
     end
 
     ACTIVITY_CARRIER_HOURLY_KEY = "activity.carrier_hourly".freeze
+
+    # Indemnité kilométrique EN VIGUEUR à une date (epic #241, phase 2). Le
+    # barème change d'une année à l'autre : une note de mission de mars doit
+    # rester payée au taux de mars, même relue en décembre. Sans version
+    # couvrant la date, on retombe sur le taux courant, puis sur la constante.
+    def mileage_per_km_cents(on: nil)
+      dated = on.present? ? Pricing::Rates.cents(MILEAGE_PER_KM_KEY, on: on) : nil
+
+      dated || Pricing::Rates.cents_or(MILEAGE_PER_KM_KEY, MILEAGE_PER_KM_CENTS)
+    end
+
+    MILEAGE_PER_KM_KEY = "mileage.per_km".freeze
 
     def default_deposit_rate
       Pricing::Rates.rate_or("deposit.default_rate", DEFAULT_DEPOSIT_RATE)

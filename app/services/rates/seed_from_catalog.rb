@@ -46,7 +46,8 @@ module Rates
     # Toutes les entrées du catalogue, à plat.
     def entries
       lodging_entries + hall_entries + outdoor_entries + meal_entries +
-        coworking_entries + event_entries + activity_entries + misc_entries
+        coworking_entries + event_entries + activity_entries + mileage_entries +
+        misc_entries
     end
 
     private
@@ -178,6 +179,13 @@ module Rates
       [entry(Pricing::Catalog::ACTIVITY_CARRIER_HOURLY_KEY,
              Pricing::Catalog::ACTIVITY_CARRIER_HOURLY_CENTS,
              "Porteur d'activité — €/heure de prestation")]
+    end
+
+    # Indemnité kilométrique des notes de mission (epic #241, phase 2).
+    def mileage_entries
+      [entry(Pricing::Catalog::MILEAGE_PER_KM_KEY,
+             Pricing::Catalog::MILEAGE_PER_KM_CENTS,
+             "Note de mission — indemnité par kilomètre")]
     end
 
     def misc_entries
