@@ -1,0 +1,58 @@
+/ Page de validation d'une facture d'achat par le pôle (epic #240, phase 3).
+  Hors Devise : le lien de l'email suffit à valider. Refuser demande un compte
+  et un motif — c'est le seul geste qui engage quelqu'un nommément.
+.max-w-2xl.mx-auto.bg-white.p-6.rounded-lg.shadow-sm.mt-6
+  h1.text-xl.font-bold.mb-4 Valider cette facture ?
+
+  - if @invoice.to_validate?
+    p.mb-4
+      | Tant que personne du pôle n'a répondu, cette facture n'est pas payable.
+
+    .p-4.bg-gray-50.rounded.mb-4.space-y-1
+      .font-semibold = @invoice.third_party&.name.presence || "Fournisseur"
+      - if @invoice.number.present?
+        .text-sm.text-gray-600 = "Facture #{@invoice.number}"
+      .text-sm.text-gray-600 = l(@invoice.issued_on, format: :long)
+      .text-lg.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(@invoice.total_cents))
+      - if @invoice.validation_team
+        .text-sm.text-gray-600 = "Pôle : #{@invoice.validation_team.name}"
+
+    - if @invoice.purchase_invoice_lines.any?
+      .mb-4
+        .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500.mb-1 Ventilation
+        table.w-full.text-sm
+          tbody
+            - @invoice.purchase_invoice_lines.each do |line|
+              tr.border-t.border-gray-100
+                td.py-1.text-gray-700 = [line.general_account&.to_s, line.team&.name].compact_blank.join(" · ")
+                td.py-1.text-gray-500 = line.label
+                td.py-1.text-right.tabular-nums = humanized_money_with_symbol(Money.new(line.amount_cents))
+
+    - if @invoice.notes.present?
+      p.mb-4.text-sm.text-gray-600 = @invoice.notes
+
+    - if @invoice.document.attached?
+      p.mb-4
+        = link_to "Voir la pièce", rails_blob_path(@invoice.document, disposition: "inline"), target: "_blank", rel: "noopener", class: "text-indigo-600 hover:underline"
+
+    - if @invoice.double_signature?
+      p.mb-4.rounded.bg-amber-50.px-3.py-2.text-sm.text-amber-800
+        | Au-delà de 5 000 €, la banque exige deux signatures Triodos.
+
+    = button_to "Je valide", finance_purchase_invoice_validation_confirm_path(params[:token]), method: :post, class: "px-4 py-2 bg-green-600 text-white rounded font-medium hover:bg-green-700"
+
+    p.mt-4.text-sm.text-gray-500
+      | Si elle te paraît fausse,&nbsp;
+      = link_to "conteste-la", finance_purchase_invoice_validation_dispute_path(params[:token]), class: "text-indigo-600 hover:underline"
+      | &nbsp;: une connexion et un motif te seront demandés, pour que la
+        comptabilité sache quoi dire au fournisseur.
+
+  - elsif @invoice.disputed?
+    p.text-red-700 Cette facture a déjà été contestée.
+    - if @invoice.dispute_reason.present?
+      p.mt-2.text-sm.text-gray-600 = @invoice.dispute_reason
+  - elsif @invoice.to_process?
+    p.text-gray-600 Cette facture est repartie en traitement : il n'y a plus rien à valider pour l'instant.
+  - else
+    p.text-green-700
+      | C'est déjà tranché — cette facture est #{@invoice.status_label.downcase}. Merci !

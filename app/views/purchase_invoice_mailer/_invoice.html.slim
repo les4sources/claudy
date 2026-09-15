@@ -1,0 +1,42 @@
+table
+  tbody
+    tr
+      td
+        strong Fournisseur
+      td = @invoice.third_party&.name.presence || "—"
+    - if @invoice.number.present?
+      tr
+        td
+          strong Numéro
+        td = @invoice.number
+    tr
+      td
+        strong Date
+      td = l(@invoice.issued_on, format: :long)
+    - if @invoice.due_on.present?
+      tr
+        td
+          strong Échéance
+        td = l(@invoice.due_on, format: :long)
+    tr
+      td
+        strong Montant
+      td = humanized_money_with_symbol(Money.new(@invoice.total_cents))
+    tr
+      td
+        strong Entité
+      td = @invoice.legal_entity&.name
+
+- if @lines.any?
+  h4 Ventilation
+  table
+    tbody
+      - @lines.each do |line|
+        tr
+          td = [line.general_account&.to_s, line.team&.name].compact_blank.join(" · ")
+          td = line.label
+          td = humanized_money_with_symbol(Money.new(line.amount_cents))
+
+- if @invoice.double_signature?
+  p
+    strong Au-delà de 5 000 €, la banque exige deux signatures Triodos.
