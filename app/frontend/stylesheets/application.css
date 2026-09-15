@@ -18,14 +18,18 @@
 */
 @import 'tailwindcss/utilities';
 
-/* Éditeur riche Trix (note publique du séjour) + identité Portail Clients.
+/* Éditeur riche Lexxy (note publique du séjour, commentaires, comptes-rendus…)
+   + identité Portail Clients.
    REMONTÉS ICI le 2026-07-28. Ils vivaient sous les blocs `@font-face` : en CSS,
    un `@import` placé après une règle est purement IGNORÉ par le navigateur, donc
-   la feuille de Trix n'était plus chargée du tout et l'éditeur se rendait en
+   la feuille de l'éditeur n'était plus chargée du tout et celui-ci se rendait en
    texte brut (barre d'outils « Bold Italic Strikethrough… » à nu). Le projet
    n'a pas `postcss-import` — rien ne rattrape un import mal placé.
    Tout nouvel `@import` va ICI, au-dessus des `@font-face`. */
-@import 'trix';
+/* Chemin relatif vers node_modules, et non le spécificateur de paquet : le champ `exports`
+   de `@37signals/lexxy` ne déclare que `.` et `./helpers`, donc `@37signals/lexxy/dist/…`
+   fait échouer la résolution Vite (« Missing export »). */
+@import '../../../node_modules/@37signals/lexxy/dist/stylesheets/lexxy.css';
 @import 'portal.css';
 @import 'finance_tables.css';
 /* Grille « Espaces » du formulaire séjour admin — le MÊME partial que le funnel

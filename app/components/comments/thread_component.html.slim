@@ -1,4 +1,4 @@
-section.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidden id=dom_id
+section.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidden id=thread_dom_id
   .px-5.py-4.border-b.border-stone-100.bg-stone-50
     .font-semibold.uppercase.text-stone-500(class="text-[0.65rem] tracking-[0.2em]") Échanges
     h2.mt-0.5.text-lg.font-semibold.text-stone-900
@@ -45,8 +45,8 @@ section.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidden id
               - if item.editable_by?(current_user)
                 div hidden=true data-comment-editor-target="form"
                   = form_with model: item, url: helpers.comment_path(item), method: :patch, class: "mt-2" do |f|
-                    .rounded-lg.border.border-stone-200(data-controller="markdown-paste")
-                      = f.rich_text_area :body, class: "trix-content min-h-[6rem]"
+                    .rounded-lg.border.border-stone-200
+                      = f.rich_text_area :body, class: "lexxy-content min-h-[6rem]"
                     .mt-2.flex.items-center.gap-3
                       = f.submit "Enregistrer", class: "inline-flex items-center rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 cursor-pointer"
                       button.text-sm.text-stone-500.hover:underline(type="button" data-action="comment-editor#cancel")
@@ -62,7 +62,7 @@ section.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidden id
           .mb-2.rounded-lg.bg-red-50.px-3.py-2.text-sm.text-red-700
             = comment.errors.full_messages.to_sentence
 
-        .rounded-lg.border.border-stone-200.bg-white(data-controller="markdown-paste")
-          = f.rich_text_area :body, class: "trix-content min-h-[5rem]", placeholder: "Écrire un commentaire…"
+        .rounded-lg.border.border-stone-200.bg-white
+          = f.rich_text_area :body, class: "lexxy-content min-h-[5rem]", placeholder: "Écrire un commentaire…"
         .mt-2.flex.justify-end
           = f.submit "Commenter", class: "inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 cursor-pointer"

@@ -85,4 +85,17 @@ RSpec.describe Comments::ThreadComponent, type: :component do
 
     expect(page).not_to have_button("Commenter")
   end
+
+  # Issue #312 — bascule Trix → Lexxy. Le contrôleur `markdown-paste` a été supprimé :
+  # Lexxy gère nativement les raccourcis Markdown et le collage auto-formaté, et le
+  # contrôleur aurait intercepté l'événement de collage avant lui.
+  it "écrit avec un éditeur Lexxy, sans Trix ni contrôleur de collage Markdown" do
+    comment_by(user, "à moi")
+
+    render_inline(described_class.new(commentable: gathering, current_user: user))
+
+    expect(page).to have_css("lexxy-editor", visible: :all)
+    expect(page).not_to have_css("trix-editor", visible: :all)
+    expect(page).not_to have_css("[data-controller~='markdown-paste']", visible: :all)
+  end
 end

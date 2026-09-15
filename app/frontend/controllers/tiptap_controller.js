@@ -4,7 +4,8 @@ import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
 
 // TipTap rich-text editor that writes HTML into a hidden ActionText field.
-// Replaces Trix for the agenda item "Fiche de préparation" only; the stored
+// Replaced Trix (the default Action Text editor at the time) for the agenda item
+// "Fiche de préparation" only — Action Text now runs on Lexxy; the stored
 // HTML lives in the same `agenda_item[description]` ActionText field, so
 // persistence and rendering are unchanged.
 //

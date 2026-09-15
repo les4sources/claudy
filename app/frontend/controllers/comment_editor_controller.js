@@ -11,7 +11,7 @@ export default class extends Controller {
   edit() {
     this.bodyTarget.hidden = true
     this.formTarget.hidden = false
-    const editor = this.formTarget.querySelector("trix-editor")
+    const editor = this.formTarget.querySelector("lexxy-editor")
     if (editor) editor.focus()
   }
 

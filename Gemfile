@@ -25,6 +25,11 @@ gem "turbo-rails"
 # Hotwire's modest JavaScript framework [https://stimulus.hotwired.dev]
 gem "stimulus-rails"
 
+# Éditeur de texte riche d'Action Text, bâti sur Lexical [https://github.com/basecamp/lexxy]
+# Remplace Trix partout (issue #312). En Rails 8.1, le gem surcharge les helpers d'Action Text :
+# `rich_text_area` rend un `<lexxy-editor>` sans configuration supplémentaire.
+gem "lexxy", "~> 0.9.32"
+
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
 
