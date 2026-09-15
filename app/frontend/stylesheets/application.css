@@ -32,6 +32,10 @@
    (`public/reservations/_spaces_calendar`). Sans cet import, les créneaux se
    rendaient ici en boutons nus (epic #234, phase 3). */
 @import 'spaces_grid.css';
+/* Cellules « nuit » de la grille hébergement — MÊME contrat que le funnel :
+   le contrôleur Stimulus n'écrit que `aria-pressed`, tout le dessin est ici.
+   Sans cet import, cocher une nuit dans le formulaire admin ne se voyait pas. */
+@import 'night_cells.css';
 
 /* --- Averia Serif Libre ---------------------------------------------------
    PLACÉ APRÈS LES @import : en CSS, `@import` doit précéder toute autre règle.

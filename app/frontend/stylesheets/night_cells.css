@@ -1,0 +1,64 @@
+/* Cellules « nuit » des grilles de composition nuit × ressource.
+   PARTAGÉ entre le funnel public (public.css) et le formulaire admin de séjour
+   (application.css) : les deux rendent la même grille et pilotent la même
+   cible Stimulus `public--stay-calendar`. Ces règles vivaient dans funnel.css,
+   donc uniquement dans le bundle public — l'admin, lui, recopiait des classes
+   Tailwind à la main dans le template, que plus personne ne mettait à jour au
+   clic. Extraites ici, elles s'appliquent partout où la grille est rendue.
+   Les tokens `--p-*` viennent de portal.css, importé par les deux bundles. */
+
+/* L'état visuel suit `aria-pressed`, pas une liste de classes recopiée en JS.
+   Avant, l'état vivait en trois exemplaires — les classes du template Slim, les
+   mêmes classes dupliquées dans le contrôleur Stimulus (`setCellState`), et le
+   glyphe « ✓ » écrit via `textContent`. Trois copies à garder d'accord à la main.
+   Ici l'attribut ARIA est la seule source de vérité : il porte le sens pour
+   l'assistance technique ET déclenche le dessin. Une seule chose à changer. */
+.funnel-night-cell {
+  appearance: none;
+  width: 3.5rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--p-border);
+  border-radius: var(--p-radius-md);
+  background: var(--p-surface);
+  color: var(--p-muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms var(--p-ease), border-color 160ms var(--p-ease),
+              color 160ms var(--p-ease), box-shadow 160ms var(--p-ease);
+}
+.funnel-night-cell:hover {
+  border-color: var(--p-primary);
+  background: var(--p-primary-tint);
+}
+.funnel-night-cell__check {
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 140ms var(--p-ease), transform 140ms var(--p-ease);
+}
+.funnel-night-cell[aria-pressed="true"] {
+  background: var(--p-primary);
+  border-color: var(--p-primary);
+  color: var(--p-primary-contrast);
+  box-shadow: var(--p-shadow-sm);
+}
+.funnel-night-cell[aria-pressed="true"] .funnel-night-cell__check {
+  opacity: 1;
+  transform: none;
+}
+
+/* Nuit indisponible : lisible comme « pas ici », jamais comme une panne. Reste
+   cliquable — elle ouvre l'explication et le calendrier. */
+.funnel-night-cell--off {
+  background: var(--p-past-bg);
+  border-color: var(--p-past-border);
+  color: var(--p-muted);
+}
+.funnel-night-cell--off:hover {
+  background: var(--p-past-bg);
+  border-color: var(--p-muted);
+  color: var(--p-text);
+}
