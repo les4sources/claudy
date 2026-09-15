@@ -2,12 +2,13 @@
   "name": "claudy",
   "private": "true",
   "dependencies": {
+    "@37signals/lexxy": "^0.9.32",
     "@hotwired/stimulus": "^3.2.1",
     "@hotwired/turbo": "^7.2.4",
     "@hotwired/turbo-rails": "^7.2.4",
     "@popperjs/core": "^2.11.0",
     "@rails/actioncable": "^7.0.4",
-    "@rails/actiontext": "^7.1.3-4",
+    "@rails/activestorage": "^8.1.301",
     "@rails/request.js": "^0.0.8",
     "@sentry/browser": "^7.41.0",
     "@sentry/tracing": "^7.41.0",
@@ -20,13 +21,11 @@
     "el-transition": "^0.0.7",
     "flowbite": "^1.5.5",
     "foundation-sites": "^6.7.5",
-    "marked": "^12.0.2",
     "moment": "latest",
     "postcss": "^8.4.19",
     "sortablejs": "^1.15.7",
     "tailwindcss": "^3.2.4",
     "tailwindcss-stimulus-components": "^3.0.4",
-    "trix": "^2.1.3",
     "turbo-morph": "^0.1.0"
   },
   "devDependencies": {

@@ -32,7 +32,10 @@ class Comments::ThreadComponent < ViewComponent::Base
 
   attr_reader :commentable, :current_user, :comment, :title
 
-  def dom_id = Comment.thread_dom_id(commentable)
+  # Volontairement PAS nommée `dom_id` : Lexxy appelle `dom_id(record, prefix)` d'Action View
+  # pour identifier son éditeur, et une méthode `dom_id` sans argument définie ici la masquait
+  # — `wrong number of arguments (given 2, expected 0)` à chaque rendu du fil (issue #312).
+  def thread_dom_id = Comment.thread_dom_id(commentable)
 
   def comments = commentable.comments.chronological.includes(author: :human)
 

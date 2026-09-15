@@ -31,8 +31,13 @@ import '@hotwired/turbo-rails';
 import 'flowbite/dist/datepicker';
 import '../utils/datepicker.turbo.min.js';
 
-import 'trix';
-import '@rails/actiontext';
+// Éditeur de texte riche d'Action Text (issue #312) : Lexxy remplace Trix partout.
+// `@rails/activestorage` est la dépendance dont Lexxy se sert pour téléverser les
+// pièces jointes ; `ActiveStorage.start()` est nécessaire car plus rien d'autre ne
+// le démarre depuis la disparition de `@rails/actiontext`.
+import '@37signals/lexxy';
+import * as ActiveStorage from '@rails/activestorage';
+ActiveStorage.start();
 
 import '../utils/setupStimulus';
 

@@ -137,8 +137,8 @@
         p.mt-1.text-xs.text-stone-400
           | Astuce : colle directement du Markdown, il sera mis en forme automatiquement.
       = form_with model: @gathering.object, url: update_report_gathering_path(@gathering.object), method: :patch do |f|
-        .p-4(data-controller="markdown-paste")
-          = f.rich_text_area :report, class: "trix-content min-h-[12rem]"
+        .p-4
+          = f.rich_text_area :report, class: "lexxy-content min-h-[12rem]"
         .px-4.pb-4.flex.justify-end
           = f.submit "Enregistrer le compte-rendu",
                      class: "inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 cursor-pointer"

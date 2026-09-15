@@ -387,7 +387,7 @@
           = text_area_tag "stay[notes]", @stay&.notes, id: "stay_notes", rows: 3, class: "block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
         .space-y-1
           label.block.text-sm.font-medium.text-gray-700 Note publique (visible par le client)
-          = rich_text_area_tag "stay[public_notes]", @stay&.public_notes&.to_trix_html, class: "trix-content"
+          = rich_text_area_tag "stay[public_notes]", @stay&.public_notes&.body&.to_html, class: "lexxy-content"
 
     /  RAIL DE PRIX. Tout ce qui répond à « combien ça coûte et est-ce que je
        valide ? » : le devis live, le prix imposé qui le court-circuite, la
