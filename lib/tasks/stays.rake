@@ -105,11 +105,12 @@ namespace :stays do
     # Tous les séjours, y compris soft-deleted : une fiche restaurée doit porter
     # la même note unique que les autres. `stay_items` reste sur son scope vivant.
     Stay.with_deleted do
-      Stay.unscoped.includes(stay_items: :bookable).find_each do |stay|
+      Stay.unscoped.includes(:rich_text_internal_notes, stay_items: :bookable).find_each do |stay|
         seen += 1
-        avant = stay.notes.to_s
-        apres = Stays::MergeOriginNotes.merged_text(stay)
-        next if apres == avant
+        # Dry-run : `pending?` dit si le rapatriement écrirait quelque chose, en
+        # comparant les TEXTES normalisés — pas le balisage, qui varie sans que la
+        # note change (issue #313).
+        next unless Stays::MergeOriginNotes.pending?(stay)
 
         changed << stay.id
         Stays::MergeOriginNotes.call(stay) if apply

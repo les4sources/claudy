@@ -158,16 +158,21 @@ module Stays
       consolidate_public_notes!
     end
 
-    # Note interne : texte brut. Ordre : note du séjour cible, notes des séjours
-    # sources, PUIS notes internes de tous les bookables (cible + migrés). Ignore
-    # les blancs, déduplique les contenus strictement identiques. Une seule note
-    # → contenu tel quel ; plusieurs → en-têtes de provenance courts + jointure.
+    # Note interne : HTML depuis l'issue #313 (les séjours portent un `ActionText`,
+    # les bookables gardent leur colonne de texte brut, convertie à la volée).
+    # Ordre : note du séjour cible, notes des séjours sources, PUIS notes internes
+    # de tous les bookables (cible + migrés). Ignore les blancs, déduplique sur le
+    # TEXTE (pas sur le balisage). Une seule note → contenu tel quel ; plusieurs →
+    # en-têtes de provenance courts.
     def consolidate_internal_notes!
       entries = []
-      entries << internal_entry("séjour ##{target.id}", target.notes)
-      sources.each { |source| entries << internal_entry("séjour ##{source.id}", source.notes) }
+      entries << internal_entry("séjour ##{target.id}", InternalNote.html_for(target))
+      sources.each do |source|
+        entries << internal_entry("séjour ##{source.id}", InternalNote.html_for(source))
+      end
       target.bookables.each do |bookable|
-        entries << internal_entry(bookable_provenance(bookable), bookable_notes(bookable))
+        entries << internal_entry(bookable_provenance(bookable),
+                                  InternalNote.to_html(bookable_notes(bookable)))
       end
 
       entries = dedup_internal(entries)
@@ -175,12 +180,14 @@ module Stays
 
       consolidated =
         if entries.size == 1
-          entries.first[:content]
+          entries.first[:html]
         else
-          entries.map { |e| "— Note de #{e[:label]} —\n#{e[:content]}" }.join("\n\n")
+          entries.map { |e| "<p>— Note de #{ERB::Util.html_escape(e[:label])} —</p>#{e[:html]}" }.join
         end
 
-      target.update!(notes: consolidated) if consolidated != target.notes
+      return if consolidated == InternalNote.html_for(target)
+
+      target.update!(internal_notes: consolidated)
     end
 
     # Note publique : HTML ActionText. Rassemble les `public_notes` de la cible,
@@ -209,16 +216,18 @@ module Stays
     end
 
     # {label:, content:} d'une note interne, ou nil si le contenu est blanc.
-    def internal_entry(label, content)
-      text = content.to_s.strip
-      return nil if text.blank?
-      { label: label, content: text }
+    def internal_entry(label, html)
+      return nil if InternalNote.blank?(html)
+
+      { label: label, html: html.to_s.strip, plain: InternalNote.plain_text(html) }
     end
 
-    # Retire les nil et déduplique sur le CONTENU strict (garde la 1re provenance).
+    # Retire les nil et déduplique sur le TEXTE (garde la 1re provenance) : la même
+    # note recopiée sur un bookable et sur le séjour n'a aucune raison de porter le
+    # même balisage, seul son contenu compte.
     def dedup_internal(entries)
       seen = {}
-      entries.compact.each { |e| seen[e[:content]] ||= e }
+      entries.compact.each { |e| seen[e[:plain]] ||= e }
       seen.values
     end
 

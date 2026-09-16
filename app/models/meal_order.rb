@@ -139,6 +139,10 @@ class MealOrder < ApplicationRecord
   scope :attached, -> { where.not(stay_id: nil) }
   scope :pending_validation, -> { where(validation: "pending").where.not(status: "cancelled") }
   scope :chronological, -> { order(Arel.sql("date ASC NULLS LAST"), :id) }
+  # Les vues de TRAVAIL trient les lignes sans date EN TÊTE (epic #321, phase 1) :
+  # une demande dont la date n'est pas fixée est la plus urgente à traiter, pas
+  # la moins — c'est celle dont on ne sait encore rien.
+  scope :undated_first, -> { order(Arel.sql("date ASC NULLS FIRST"), :id) }
   scope :antichronological, -> { order(Arel.sql("date DESC NULLS LAST"), id: :desc) }
   # « À venir » inclut les lignes SANS date : une demande dont la date n'est pas
   # encore fixée est vivante, elle ne doit pas tomber dans les archives.

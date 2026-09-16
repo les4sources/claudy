@@ -1,0 +1,19 @@
+/ « EN ATTENTE DU CLIENT » — ce que ce membre a accepté et que le client n'a pas
+  confirmé. C'est le « est-ce que j'ai dit oui, et à quoi ? » de la réunion du
+  2026-09-11 : la ligne dit DEPUIS QUAND elle attend, faute de quoi on ne sait
+  pas laquelle relancer.
+= render layout: "pages/dashboard/section",
+         locals: { title: "En attente du client", count: orders.size,
+                   empty_label: "Rien en attente du client." } do
+  ul.divide-y.divide-gray-100
+    - MealOrderDecorator.decorate_collection(orders).each do |order|
+      li.flex.flex-wrap.items-center.justify-between.gap-3.px-5.py-3
+        .flex.min-w-0.items-start.gap-3
+          span.w-24.shrink-0.text-sm.font-semibold.text-gray-900 = order.day_label
+          = render "pages/dashboard/order_identity", order: order
+        .flex.flex-wrap.items-center.gap-2
+          = order.status_badge
+          span.text-xs.text-gray-500
+            = "en attente depuis le #{l(order.created_at.to_date, format: :long)}"
+          = link_to "Ouvrir", order.stay ? stay_path(order.stay) : kitchen_orders_path(responsible_human_id: human.id),
+                    class: "text-xs text-blue-500 hover:text-blue-700"

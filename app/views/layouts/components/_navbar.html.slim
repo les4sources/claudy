@@ -70,6 +70,21 @@ nav.bg-4s-main.shadow-sm.lg:px-6.relative.z-40
               polyline[points="9 22 9 12 15 12 15 22"]
             span Accueil
 
+        /  Mon tableau de bord (issue #323) — entrée de PREMIER niveau. Elle ne
+           vivait jusqu'ici que dans la sous-navigation « Projets », elle-même
+           sans entrée depuis la barre : la page n'était atteignable qu'en tapant
+           son URL. Or c'est la page qu'une personne ouvre le matin pour savoir
+           ce qui l'attend — elle ne peut pas être la plus cachée de l'app.
+        li
+          = link_to dashboard_path,
+                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{controller_name == 'pages' && action_name == 'dashboard' ? nav_active : nav_idle}" do
+            svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+              rect[width="7" height="9" x="3" y="3" rx="1"]
+              rect[width="7" height="5" x="14" y="3" rx="1"]
+              rect[width="7" height="9" x="14" y="12" rx="1"]
+              rect[width="7" height="5" x="3" y="16" rx="1"]
+            span Mon tableau de bord
+
         / Organisation
         li
           = link_to organisation_path,
@@ -383,6 +398,12 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
             = link_to "Achats",
                       finance_purchase_invoices_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/purchase_invoices' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
+            / « À payer » (epic #240, phase 4) : juste après les achats, parce
+              qu'une facture validée y tombe et que c'est là qu'on la retrouve.
+            = link_to "À payer",
+                      finance_payables_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/payables' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
             = link_to "Tiers",
                       finance_third_parties_path,

@@ -133,7 +133,8 @@ module Reservations
           # est réaligné juste après (voir plus bas) pour que le total reflète
           # l'override dès la création, sans attendre un recompute.
           price_override_cents: admin_price_override,
-          notes: internal_notes
+          # Note interne = texte riche depuis l'issue #313 (`has_rich_text`).
+          internal_notes: internal_notes
         )
         @stay.stay_items.create!(bookable: @booking) if @booking
         # Espaces (epic #66, Phase 2) : les salles / cuisine pro choisies
@@ -650,9 +651,16 @@ module Reservations
     end
 
     # Multi-chiens hors flow auto (Q2) : on consigne pour traitement manuel.
+    # Note auto « multi-chiens », en HTML : la note interne du séjour est du texte
+    # riche depuis l'issue #313. `nil` (et non "") quand il n'y a rien à dire, pour
+    # qu'aucun enregistrement ActionText vide ne soit créé.
     def internal_notes
       return if draft.dogs_count.to_i <= 1
-      "⚠️ Demande multi-chiens (#{draft.dogs_count}) — supplément chien plafonné à 1 dans le flow auto, à traiter manuellement avec le client."
+
+      Stays::InternalNote.to_html(
+        "⚠️ Demande multi-chiens (#{draft.dogs_count}) — supplément chien plafonné à 1 " \
+        "dans le flow auto, à traiter manuellement avec le client."
+      )
     end
 
     def raise_invalid(message)

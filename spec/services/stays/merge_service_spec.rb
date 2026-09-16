@@ -10,8 +10,11 @@ RSpec.describe Stays::MergeService, type: :service do
     Customer.create!({ email: email, customer_type: "individual" }.merge(attrs))
   end
 
-  def make_stay(customer:, **attrs)
+  # `notes:` = la note INTERNE, texte riche depuis l'issue #313. Le helper garde le
+  # mot-clé historique et fait la conversion, pour que les cas restent lisibles.
+  def make_stay(customer:, notes: nil, **attrs)
     Stay.create!({
+      internal_notes: Stays::InternalNote.to_html(notes).presence,
       customer: customer,
       source: "manual",
       status: "confirmed",
@@ -249,11 +252,12 @@ RSpec.describe Stays::MergeService, type: :service do
       target.reload
 
       # Note interne consolidée : tous les contenus + provenance.
-      expect(target.notes).to include("Note du séjour cible")
-      expect(target.notes).to include("Note du séjour source")
-      expect(target.notes).to include("Note interne hébergement")
-      expect(target.notes).to include("Note interne espace")
-      expect(target.notes).to include("La Hulotte") # provenance du bookable
+      internes = target.internal_note_text
+      expect(internes).to include("Note du séjour cible")
+      expect(internes).to include("Note du séjour source")
+      expect(internes).to include("Note interne hébergement")
+      expect(internes).to include("Note interne espace")
+      expect(internes).to include("La Hulotte") # provenance du bookable
 
       # Note publique consolidée (HTML des deux bookables).
       html = target.public_notes.body.to_html
@@ -293,7 +297,7 @@ RSpec.describe Stays::MergeService, type: :service do
       attach(source, make_space_booking)
 
       expect(described_class.new(target: target, sources: [source]).run).to be_truthy
-      expect(target.reload.notes).to be_blank
+      expect(target.reload.internal_note_text).to be_blank
       expect(target.public_notes.body).to be_blank
     end
 
@@ -305,7 +309,7 @@ RSpec.describe Stays::MergeService, type: :service do
       attach(source, make_space_booking)
 
       expect(described_class.new(target: target, sources: [source]).run).to be_truthy
-      expect(target.reload.notes.scan("Même note").size).to eq(1)
+      expect(target.reload.internal_note_text.scan("Même note").size).to eq(1)
     end
   end
 

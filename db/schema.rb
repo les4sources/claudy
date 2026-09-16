@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_15_014019) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_16_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1727,7 +1727,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_014019) do
     t.string "departure_time"
     t.string "invoice_status"
     t.string "legacy_origin"
-    t.text "notes"
     t.string "payment_status", default: "pending", null: false
     t.integer "price_override_cents"
     t.string "source", default: "reservation", null: false

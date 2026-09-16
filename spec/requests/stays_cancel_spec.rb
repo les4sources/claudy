@@ -144,12 +144,13 @@ RSpec.describe "Stays — annulation d'un séjour", type: :request do
         customer_mode: "existing", customer_id: stay.customer_id, new_customer: {},
         arrival_date: arrival.iso8601, departure_date: departure.iso8601,
         adults: 2, children: 0, dogs_count: 0,
-        lodging_id: hulotte.id, status: "canceled", notes: "Note corrigée après annulation"
+        lodging_id: hulotte.id, status: "canceled",
+        internal_notes: "<p>Note corrigée après annulation</p>"
       }
     }
     expect(response).to redirect_to(recent_stays_path)
     expect(stay.reload.status).to eq("canceled")
-    expect(stay.notes).to include("Note corrigée après annulation")
+    expect(stay.internal_note_text).to include("Note corrigée après annulation")
     expect(booking_of(stay).reload.status).to eq("canceled")
     expect(hulotte.available_between?(arrival, departure)).to be(true)
   end

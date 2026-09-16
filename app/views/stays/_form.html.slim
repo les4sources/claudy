@@ -371,7 +371,7 @@
           | Forcer la disponibilité (surbooking / saisie a posteriori)
 
       / --- Notes --------------------------------------------------------------
-      / Note interne (texte brut, jamais visible du client) + note publique
+      / Note interne (texte riche, jamais visible du client) + note publique
       / (ActionText, affichée sur /sejour/:token). À la création, la note interne
       / saisie est concaténée avec l'éventuelle note auto (multi-chiens).
       /  La carte entière était jaune. Ce jaune criait « attention » sur les DEUX
@@ -381,10 +381,10 @@
       section.bg-white.rounded-2xl.ring-1.ring-gray-200.p-5.space-y-4
         h2.text-base.font-semibold.text-gray-900 Notes
         .space-y-1
-          label.flex.items-center.gap-2.text-sm.font-medium.text-gray-700 for="stay_notes"
+          label.flex.items-center.gap-2.text-sm.font-medium.text-gray-700 for="stay_internal_notes"
             | Note interne
             span.rounded-full.bg-amber-50.px-2.py-0.5.text-xs.font-medium.text-amber-700.ring-1.ring-amber-200 jamais visible du client
-          = text_area_tag "stay[notes]", @stay&.notes, id: "stay_notes", rows: 3, class: "block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          = rich_text_area_tag "stay[internal_notes]", @stay&.internal_notes&.body&.to_html, id: "stay_internal_notes", class: "lexxy-content"
         .space-y-1
           label.block.text-sm.font-medium.text-gray-700 Note publique (visible par le client)
           = rich_text_area_tag "stay[public_notes]", @stay&.public_notes&.body&.to_html, class: "lexxy-content"

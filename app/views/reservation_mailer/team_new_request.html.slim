@@ -80,9 +80,9 @@ h3 Composition
   h3 Note du client sur les espaces
   p = @spaces_note
 
-- if @stay.notes.present?
+- if @stay.internal_note?
   h3 Note interne
-  p = @stay.notes
+  .content == @stay.internal_notes.body.to_html
 
 p
   = link_to "Ouvrir la fiche séjour", @stay_url

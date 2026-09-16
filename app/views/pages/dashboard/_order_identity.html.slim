@@ -1,0 +1,13 @@
+/ L'identité d'une ligne de cuisine, partagée par les trois blocs cuisine :
+  le service, pour qui, combien de couverts. Jamais de montant (issue #323).
+.min-w-0
+  .flex.flex-wrap.items-center.gap-x-2.gap-y-1
+    span.font-medium.text-gray-900 = order.label
+    = order.trio_badge
+    = order.orphan_badge
+  p.mt-0.5.truncate.text-sm.text-gray-500
+    = order.client_label
+    span.mx-1 ·
+    = order.people_label
+  - if order.notes_short.present?
+    p.mt-0.5.truncate.text-xs.text-gray-500(title=order.notes) = order.notes_short
