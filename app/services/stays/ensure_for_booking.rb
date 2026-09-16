@@ -42,7 +42,9 @@ module Stays
           # 2026-08-24) : la modale n'affiche plus qu'UNE note, celle du séjour.
           # Sans cette reprise, un commentaire saisi au formulaire ne serait plus
           # visible nulle part. Le booking garde la sienne, on ne fait que copier.
-          notes: @booking.notes
+          # Texte riche depuis l'issue #313 : la note du bookable est du texte brut,
+          # on la convertit ici comme l'a fait la migration.
+          internal_notes: InternalNote.to_html(@booking.notes).presence
         )
         # On n'arrive ici que si live_stay_for est nil (pas de StayItem vivant → Stay
         # vivant). Un StayItem vivant PEUT toutefois subsister en pointant vers un Stay

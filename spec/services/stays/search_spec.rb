@@ -9,9 +9,12 @@ RSpec.describe Stays::Search do
                        customer_type: "individual", first_name: "Jean", last_name: "Dupont" }.merge(attrs))
   end
 
+  # `notes:` = la note INTERNE du séjour, texte riche depuis l'issue #313 : on la
+  # pose sous la forme qu'aurait produite la migration.
   def create_stay(customer, notes: nil)
     Stay.create!(customer: customer, source: "manual", status: "pending",
-                 arrival_date: Date.today + 5, departure_date: Date.today + 7, notes: notes)
+                 arrival_date: Date.today + 5, departure_date: Date.today + 7,
+                 internal_notes: Stays::InternalNote.to_html(notes).presence)
   end
 
   def attach_booking(stay, notes:)
@@ -130,7 +133,7 @@ RSpec.describe Stays::Search do
   end
 
   # Le point qui compte : la majorité des notes privées vivent sur les bookables,
-  # pas sur `stays.notes` — une recherche qui les raterait serait inutile.
+  # pas sur la note du séjour — une recherche qui les raterait serait inutile.
   describe "recherche dans la note interne d'un bookable" do
     let!(:target) { create_stay(create_customer) }
     let!(:other)  { create_stay(create_customer) }

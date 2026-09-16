@@ -8,10 +8,10 @@ module Stays
   #     ET la colonne `group_name` portée par CHAQUE type de bookable — c'est là
   #     que vit le nom de groupe des réservations réelles (« Les Scouts de
   #     Namur » saisi sur l'hébergement, pas sur la fiche client) ;
-  #   - note INTERNE  : `stays.notes` MAIS AUSSI les notes portées par les
+  #   - note INTERNE  : le texte riche `internal_notes` du séjour MAIS AUSSI les notes portées par les
   #     bookables (`notes` sur les 5 types) — c'est là que vit la majorité des
   #     notes privées, exactement comme `StayDecorator#internal_notes_entries`
-  #     les agrège à l'affichage. Chercher uniquement `stays.notes` aurait raté
+  #     les agrège à l'affichage. Chercher uniquement la note du séjour aurait raté
   #     l'essentiel du corpus.
   #
   # IMPLÉMENTATION : trois `where` composés par `.or`, chacun adossé à une
@@ -58,8 +58,20 @@ module Stays
       relation.where(customer_id: matching_customer_ids)
     end
 
+    # La note interne du séjour est un `ActionText` depuis l'issue #313 : plus de
+    # colonne `stays.notes` à filtrer, mais une sous-requête sur le texte riche.
+    # On cherche dans le HTML stocké — un mot coupé par une balise (« gluten » en
+    # gras au milieu d'un mot) échapperait donc à la recherche, cas assez rare pour
+    # ne pas justifier d'extraire le texte en base à chaque requête.
     def by_stay_note
-      relation.where("stays.notes ILIKE ?", term)
+      relation.where(id: stay_ids_with_rich_note_match)
+    end
+
+    def stay_ids_with_rich_note_match
+      ActionText::RichText
+        .where(record_type: "Stay", name: "internal_notes")
+        .where("action_text_rich_texts.body ILIKE ?", term)
+        .select(:record_id)
     end
 
     # Séjours dont AU MOINS UN bookable matche (note interne ou nom de groupe),

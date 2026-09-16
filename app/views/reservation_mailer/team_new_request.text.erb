@@ -39,10 +39,10 @@ Total : <%= @stay.formatted_total %>
 NOTE DU CLIENT SUR LES ESPACES
 <%= @spaces_note %>
 <% end %>
-<% if @stay.notes.present? %>
+<% if @stay.internal_note? %>
 
 NOTE INTERNE
-<%= @stay.notes %>
+<%= @stay.internal_note_text %>
 <% end %>
 
 Ouvrir la fiche séjour : <%= @stay_url %>

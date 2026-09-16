@@ -40,10 +40,6 @@ module Stays
     # les conséquences financières que cela suppose.
     REFUSABLE_STATUSES = %w[pending pre_confirmed].freeze
 
-    # Séparateur de la note interne — même convention que `MergeOriginNotes`,
-    # qui est l'autre écrivain de ce champ.
-    NOTE_SEPARATOR = Stays::MergeOriginNotes::SEPARATOR
-
     # Échec dans la transaction : sert uniquement à la faire rouler en arrière
     # en remontant le message du service appelé.
     class RefusalFailed < StandardError; end
@@ -100,15 +96,16 @@ module Stays
       true
     end
 
-    # Ligne horodatée dans la note INTERNE (colonne `stays.notes`, texte brut,
-    # jamais publique). `update!` et non `update_column` : le refus EST un acte
-    # éditorial, il doit laisser une version PaperTrail.
+    # Ligne horodatée dans la note INTERNE (texte riche `internal_notes` depuis
+    # l'issue #313, jamais publique). `update!` et non une écriture silencieuse :
+    # le refus EST un acte éditorial, il doit laisser une version PaperTrail — sur
+    # l'`ActionText::RichText`, désormais versionné lui aussi.
     def append_internal_note!
       ligne = "⛔ Demande refusée le #{I18n.l(Date.current, format: :long).strip} " \
               "par #{author_label} — motif : #{reason}"
-      parts = [stay.notes.to_s.strip.presence, ligne].compact
+      blocs = [InternalNote.html_for(stay).presence, InternalNote.to_html(ligne)].compact
 
-      stay.update!(notes: parts.join(NOTE_SEPARATOR))
+      stay.update!(internal_notes: blocs.join)
     end
 
     # Prénom de la personne qui refuse. `Human` ne porte qu'une colonne `name`

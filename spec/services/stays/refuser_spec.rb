@@ -119,7 +119,7 @@ RSpec.describe Stays::Refuser do
 
       described_class.new(stay: stay, reason: motif, by: admin).run
 
-      notes = stay.reload.notes.to_s
+      notes = stay.reload.internal_note_text
       expect(notes).to include("⛔ Demande refusée le")
       expect(notes).to include("par Malau")
       expect(notes).to include("motif : #{motif}")
@@ -127,11 +127,11 @@ RSpec.describe Stays::Refuser do
 
     it "conserve la note existante et ajoute la sienne en dessous" do
       stay = demande
-      stay.update!(notes: "⚠️ Demande multi-chiens (2)")
+      stay.update!(internal_notes: Stays::InternalNote.to_html("⚠️ Demande multi-chiens (2)"))
 
       described_class.new(stay: stay, reason: motif, by: admin).run
 
-      notes = stay.reload.notes.to_s
+      notes = stay.reload.internal_note_text
       expect(notes).to start_with("⚠️ Demande multi-chiens (2)")
       expect(notes).to include("⛔ Demande refusée le")
     end
@@ -141,7 +141,7 @@ RSpec.describe Stays::Refuser do
 
       described_class.new(stay: stay, reason: motif, by: admin).run
 
-      expect(stay.reload.notes.to_s).to include("par malau@les4sources.be")
+      expect(stay.reload.internal_note_text).to include("par malau@les4sources.be")
     end
   end
 

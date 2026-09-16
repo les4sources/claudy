@@ -188,7 +188,7 @@ RSpec.describe Reservations::Builder do
 
       expect(many).to eq(one)                       # pas de 3× 50 €
       expect(many_builder.multi_dogs?).to be(true)
-      expect(many_builder.stay.notes).to match(/multi.?chiens/i)
+      expect(many_builder.stay.internal_note_text).to match(/multi.?chiens/i)
     end
   end
 

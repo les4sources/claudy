@@ -11,7 +11,10 @@
   Écriture MANUSCRITE (font-caveat, yellow-600) : la note se lit comme le mot
   laissé sur le comptoir qu'elle est, et non comme une donnée de plus — même
   traitement que dans les popovers du calendrier.
-- note_sejour = @stay.notes.to_s
+/  TEXTE RICHE depuis l'issue #313 : la note n'est plus une colonne de texte brut
+   mais un `ActionText` (`has_rich_text :internal_notes`).
+- note_html = @stay.internal_notes&.body&.to_html
+- note_presente = @stay.internal_note?
 - derniere = @stay.note_last_edit
 = turbo_frame_tag "stay_#{@stay.id}_notes" do
   .bg-yellow-50.px-5.py-4
@@ -21,16 +24,21 @@
        — ou sur l'invite « cliquer pour en ajouter » quand elle est vide.
     details.mt-2
       summary.cursor-pointer.select-none.list-none
-        - if note_sejour.present?
-          .rounded-md.border.border-dashed.border-yellow-300.bg-white.px-3.py-2.space-y-4.font-caveat.text-xl.text-yellow-600
-            = simple_format note_sejour
+        - if note_presente
+          /  L'écriture MANUSCRITE est conservée telle quelle (font-caveat, jaune) :
+             seule la source du contenu change, pas son aspect.
+             PAS la classe `.content` ici : sa règle `ul { text-sm }` écraserait le
+             `text-xl` de l'écriture. On rétablit juste les puces, que le reset
+             Tailwind retire — une liste sans marqueur n'est plus une liste.
+          div class="rounded-md border border-dashed border-yellow-300 bg-white px-3 py-2 space-y-4 font-caveat text-xl text-yellow-600 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6"
+            == note_html
         - else
           .rounded-md.border.border-dashed.border-yellow-300.px-3.py-2.text-sm.text-yellow-700
             | Aucune note interne — cliquer pour en ajouter
       /  Le champ de SAISIE reste en police courante : on y corrige un texte, la
          lisibilité y prime sur le caractère manuscrit de l'affichage.
       = form_with url: update_notes_stay_path(@stay), method: :patch, class: "mt-2 space-y-2" do
-        = text_area_tag "stay[notes]", note_sejour, rows: 5, class: "block w-full rounded-md border-yellow-300 text-sm", placeholder: "Ce que l'équipe doit savoir sur ce séjour…"
+        = rich_text_area_tag "stay[internal_notes]", note_html, id: "stay_#{@stay.id}_internal_notes", class: "lexxy-content", placeholder: "Ce que l'équipe doit savoir sur ce séjour…"
         .flex.items-center.gap-2
           = submit_tag "Enregistrer la note", class: "cursor-pointer rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
           - if derniere

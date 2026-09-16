@@ -79,8 +79,13 @@ module StaysMergeHelper
   # Le séjour porte-t-il une note INTERNE quelque part ? (note du séjour lui-même
   # OU note d'un de ses bookables). Itère sur les `stay_items` PRÉCHARGÉS — pas de
   # requête supplémentaire (le contrôleur précharge `stay_items: :bookable`).
+  #
+  # `stay.internal_note?` et non `internal_notes.present?` : la note du séjour est
+  # un texte riche (issue #313), et `has_rich_text` en construit un à la volée
+  # quand il n'y en a pas — sa présence est donc toujours vraie. Le test porte sur
+  # le TEXTE, qui reconnaît aussi l'éditeur vidé (`<div><br></div>`).
   def stay_has_internal_note?(stay)
-    return true if stay.notes.present?
+    return true if stay.internal_note?
 
     stay.stay_items.any? { |item| item.bookable&.try(:notes).present? }
   end
