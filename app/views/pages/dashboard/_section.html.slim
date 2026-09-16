@@ -1,0 +1,15 @@
+/ L'enveloppe commune des quatre blocs du tableau de bord (issue #323).
+  UN BLOC VIDE NE DISPARAÎT PAS : il dit son vide en une phrase. L'absence est
+  une information — « rien à traiter » se lit, un bloc manquant se devine.
+section.rounded-2xl.bg-white.ring-1.ring-gray-200
+  .flex.flex-wrap.items-center.justify-between.gap-2.border-b.border-gray-100.px-5.py-3
+    h2.text-base.font-semibold.text-gray-900
+      = title
+      - if count.positive?
+        span.ml-2.rounded-full.bg-teal-50.px-2.py-0.5.text-xs.font-medium.text-4s-main = count
+    - if local_assigns[:link].present?
+      = link_to link[:label], link[:url], class: "text-sm text-blue-500 hover:text-blue-700"
+  - if count.zero?
+    p.px-5.py-4.text-sm.text-gray-500 = empty_label
+  - else
+    = yield

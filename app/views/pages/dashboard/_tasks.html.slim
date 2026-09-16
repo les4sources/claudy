@@ -1,0 +1,8 @@
+/ « MES TÂCHES » — ce que la page affichait déjà, conservé tel quel. Seule
+  différence : les tâches sont celles du membre AFFICHÉ, pas du compte connecté.
+= render layout: "pages/dashboard/section",
+         locals: { title: "Mes tâches", count: tasks.size,
+                   empty_label: "Aucune action en cours." } do
+  .space-y-3.px-5.py-4
+    - tasks.each do |task|
+      = render "tasks/card", task: task
