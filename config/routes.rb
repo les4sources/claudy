@@ -233,6 +233,12 @@ Rails.application.routes.draw do
     post "monthly_close/reopen", to: "monthly_close#reopen", as: :reopen_monthly_close
     get "cross_check", to: "cross_check#index"
     get "collection_cost", to: "collection_cost#index"
+    # Stripe (epic #250, phase 2) : l'état de chaque compte et les
+    # correspondances par catégorie. La route nommée passe AVANT la ressource,
+    # sinon `/finance/stripe/mappings/new` serait capté par `stripe#index`.
+    get "stripe", to: "stripe#index", as: :stripe
+    patch "stripe/accounts/:id/mode", to: "stripe#update_mode", as: :stripe_account_mode
+    resources :stripe_category_mappings, path: "stripe/mappings", except: %i[index show]
     resources :allocation_rules, except: [:show] do
       member { post :move }
     end
@@ -305,6 +311,9 @@ Rails.application.routes.draw do
         # Solder le compte créditeur d'un membre depuis une ligne sortante
         # (epic #246, phase 2).
         post :payout
+        # Rapprocher une ligne bancaire entrante de son versement Stripe
+        # (epic #250, phase 2).
+        post :reconcile_payout
       end
       resources :allocations, only: [:create, :destroy], controller: "cash_allocations"
     end

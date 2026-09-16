@@ -98,6 +98,34 @@
                   = " (#{match.confidence} % de confiance)"
               = button_to "Solder son compte", payout_finance_cash_entry_path(entry, member_account_id: match.member_account.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
 
+      / Un versement Stripe (epic #250, phase 2). Une ligne bancaire ENTRANTE du
+        montant exact d'un versement, à trois jours près : c'est le rapprochement
+        qui se faisait de tête, à l'euro près, dans l'interface Stripe.
+        LA PROPOSITION N'A RIEN ÉCRIT — c'est ce bouton qui affecte : sur le
+        580000 en mode grand livre (les recettes sont déjà au journal), ou en
+        ventilation complète en mode par versement.
+      - versements = @stripe_matches[entry.id]
+      - if versements.present?
+        - versements.first(2).each do |match|
+          .mb-3.p-3.rounded-lg.border.border-sky-100(class="bg-sky-50/60")
+            .flex.flex-wrap.items-center.justify-between.gap-2
+              div
+                p.text-sm.text-gray-800
+                  strong = "Versement Stripe #{match.payout.account_label}"
+                  = " — #{humanized_money_with_symbol(Money.new(match.payout.amount_cents, 'EUR'))} arrivés le #{l(match.payout.arrival_date, format: :short)}"
+                p.text-xs.text-gray-500(class="mt-0.5")
+                  = match.reason
+                  = " (#{match.confidence} % de confiance)"
+                  = match.payout.ledger? ? " · mode grand livre : virement interne seul" : nil
+              /  En mode « par versement », le rapprochement demanderait une
+                 ventilation algébrique que `CashAllocation` refuse aujourd'hui
+                 (cf. `RecordStripePayoutReconciliation`). On le DIT plutôt que
+                 d'offrir un bouton qui échouerait.
+              - if match.payout.ledger?
+                = button_to "Rapprocher ce versement", reconcile_payout_finance_cash_entry_path(entry, stripe_payout_id: match.payout.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+              - else
+                span.text-xs.text-gray-500 Compte en mode « par versement » : à affecter à la main.
+
       - suggestion = entry.allocation_suggestions.pending.ordered.first
       - if suggestion
         / La suggestion porte TOUJOURS son motif : un humain doit pouvoir juger

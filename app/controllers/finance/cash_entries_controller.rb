@@ -7,7 +7,7 @@ module Finance
   # rapprochement annuel par un geste mensuel.
   class CashEntriesController < Finance::AccountingBaseController
     before_action :get_entry,
-                  only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate, :payout]
+                  only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate, :payout, :reconcile_payout]
     breadcrumb "Trésorerie", :finance_cash_entries_path, match: :exact
 
     def index
@@ -88,6 +88,10 @@ module Finance
       # fois pour la page — les recalculer ligne à ligne est ce qui avait fait
       # tomber cet écran à l'issue #202.
       @payout_matches = Finance::MatchMemberPayouts.new.for_entries(@entries)
+      # Les versements Stripe (epic #250, phase 2) : une ligne bancaire ENTRANTE
+      # dont le montant et la date correspondent à un versement pas encore
+      # rapproché. Les versements sont chargés UNE fois pour la page.
+      @stripe_matches = Finance::MatchStripePayouts.new.for_entries(@entries)
 
       @general_accounts = GeneralAccount.actives.ordered
       @teams = Team.ordered
@@ -157,6 +161,28 @@ module Finance
     rescue Finance::RecordMemberPayout::NotCreditor, Finance::RecordMemberPayout::TooMuch,
            Finance::RecordMemberPayout::MissingAccount, Finance::RecordMemberPayout::WrongDirection,
            ActiveRecord::RecordInvalid => e
+      redirect_to finance_cash_entry_path(@entry), alert: e.message
+    end
+
+    # Rapprocher une ligne bancaire de son versement Stripe (epic #250, phase 2).
+    # La proposition n'a rien écrit : c'est CE clic qui affecte.
+    def reconcile_payout
+      versement = StripePayout.find(params[:stripe_payout_id])
+
+      Finance::RecordStripePayoutReconciliation.new(
+        stripe_payout: versement, cash_entry: @entry, whodunnit: current_user&.email
+      ).run!
+
+      redirect_to finance_unallocated_cash_entries_path,
+                  notice: "Versement Stripe #{versement.account_label} rapproché de cette ligne."
+    rescue Finance::RecordStripePayoutReconciliation::WrongDirection,
+           Finance::RecordStripePayoutReconciliation::AlreadyReconciled,
+           Finance::RecordStripePayoutReconciliation::AmountMismatch,
+           Finance::RecordStripePayoutReconciliation::PerPayoutUnsupported,
+           Finance::VentilateStripePayout::Unbalanced,
+           Finance::VentilateStripePayout::MissingMapping,
+           Accounting::PostCashEntry::NotFullyAllocated,
+           ActiveRecord::RecordNotFound, ActiveRecord::RecordInvalid => e
       redirect_to finance_cash_entry_path(@entry), alert: e.message
     end
 

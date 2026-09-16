@@ -46,7 +46,14 @@
       tbody
         - @rows.each do |row|
           tr.border-b.bg-white
-            td.py-4.px-6.font-medium.text-gray-900= row[:label]
+            /  La BASE DE CALCUL se dit (epic #250, phase 2) : un compte en mode
+               grand livre se lit par transaction, pas par versement. Sans ce
+               repère, deux lignes du même tableau se compareraient alors
+               qu'elles ne mesurent pas la même chose.
+            td.py-4.px-6.font-medium.text-gray-900
+              = row[:label]
+              span.block.text-xs.font-normal.text-gray-400
+                = row[:basis] == :transaction ? "par transaction" : "par versement"
             td.py-4.px-6.text-right= row[:payouts]
             td.py-4.px-6.text-right= humanized_money_with_symbol(Money.new(row[:gross_cents], "EUR"))
             td.py-4.px-6.text-right.text-red-700= humanized_money_with_symbol(Money.new(row[:fees_cents], "EUR"))

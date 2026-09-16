@@ -1,0 +1,5 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Nouvelle correspondance"
+
+.max-w-xl.rounded-2xl.bg-white.ring-1.ring-gray-200.p-5
+  = render "form", mapping: @mapping, url: finance_stripe_category_mappings_path, method: :post, submit_label: "Enregistrer"

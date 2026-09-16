@@ -1,0 +1,104 @@
+/ COMPTABILITÉ > STRIPE (epic #250, phase 2).
+  Où en est chaque compte Stripe, et où va chaque catégorie de ventes. Le mode
+  se changeait en console, les correspondances se créaient au rake : une
+  décision de gestion derrière un accès SSH.
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Stripe",
+           links: [link_to("À affecter", finance_unallocated_cash_entries_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
+                   link_to("Coût d'encaissement", finance_collection_cost_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+- if @accounts.blank?
+  .rounded-lg.border.border-dashed.border-gray-300.bg-white.px-6.py-10.text-center
+    p.text-sm.text-gray-600 Aucun compte de trésorerie Stripe. Crée-le depuis Comptabilité > Vue d'ensemble.
+- else
+  .space-y-6
+    - @accounts.each do |bloc|
+      - compte = bloc[:account]
+      section.rounded-2xl.bg-white.ring-1.ring-gray-200
+        .flex.flex-wrap.items-start.justify-between.gap-3.border-b.border-gray-100.px-5.py-4
+          div
+            h2.text-base.font-semibold.text-gray-900 = compte.name
+            p.mt-1.text-sm.text-gray-500
+              = compte.stripe_mode_label
+              - if compte.stripe_account_key.present?
+                span.mx-1 ·
+                span.font-mono.text-xs = compte.stripe_account_key
+              - if compte.legal_entity
+                span.mx-1 ·
+                = compte.legal_entity.name
+          /  Changer de mode change la façon dont TOUT ce compte entre en
+             comptabilité : le texte le dit avant le clic, pas après.
+          = form_with url: finance_stripe_account_mode_path(compte), method: :patch, class: "flex flex-wrap items-center gap-2" do
+            = select_tag :stripe_mode,
+                         options_for_select(CashAccount::STRIPE_MODES.map { |m| [CashAccount::STRIPE_MODE_LABELS[m], m] }, compte.stripe_mode),
+                         id: nil, class: "rounded-md border-gray-300 text-sm"
+            = submit_tag "Changer le mode", class: "cursor-pointer rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+
+        .grid.gap-px.bg-gray-100(class="sm:grid-cols-4")
+          - [["Versements", bloc[:payouts_count]], ["Transactions", bloc[:transactions_count]], ["Lignes en attente", bloc[:pending_count]]].each do |libelle, valeur|
+            .bg-white.px-5.py-3
+              p.text-xs.font-medium.uppercase.tracking-wide.text-gray-500 = libelle
+              p.mt-1.text-xl.font-semibold.text-gray-900 = valeur
+          .bg-white.px-5.py-3
+            p.text-xs.font-medium.uppercase.tracking-wide.text-gray-500 Dernier import
+            p.mt-1.text-sm.text-gray-900
+              = bloc[:last_import_at] ? l(bloc[:last_import_at].to_date, format: :long) : "—"
+
+        - if bloc[:pending_count].positive?
+          .border-t.border-gray-100.px-5.py-3.text-sm
+            = link_to "Voir les #{bloc[:pending_count]} ligne(s) en attente de ce compte →",
+                      finance_unallocated_cash_entries_path(cash_account_id: compte.id),
+                      class: "text-blue-500 hover:text-blue-700"
+
+        - if compte.ledger?
+          /  LES CORRESPONDANCES. En mode grand livre, l'affectation se décide une
+             fois par catégorie, jamais transaction par transaction.
+          .border-t.border-gray-100.px-5.py-4
+            .flex.flex-wrap.items-center.justify-between.gap-2
+              h3.text-sm.font-semibold.text-gray-900 Correspondances par catégorie
+              = link_to "Ajouter une correspondance",
+                        new_finance_stripe_category_mapping_path(account_key: compte.stripe_account_key),
+                        class: "text-sm text-blue-500 hover:text-blue-700"
+
+            - if bloc[:mappings].blank?
+              p.mt-2.text-sm.text-gray-500
+                | Aucune correspondance : toutes les recettes de ce compte restent en attente sur « À affecter ».
+            - else
+              table.mt-3.w-full.text-sm
+                thead
+                  tr.text-left.text-xs.font-semibold.uppercase.tracking-wide.text-gray-500
+                    th.py-1.pr-3 Catégorie
+                    th.py-1.px-3 Compte général
+                    th.py-1.px-3 Pôle
+                    th.py-1.px-3 Entité
+                    th.py-1.pl-3
+                tbody.divide-y.divide-gray-100
+                  - bloc[:mappings].each do |mapping|
+                    tr
+                      td.py-2.pr-3.font-medium.text-gray-900 = mapping.category_label
+                      td.py-2.px-3.text-gray-700 = mapping.general_account.to_s
+                      td.py-2.px-3.text-gray-500 = mapping.team&.name || "sans pôle"
+                      td.py-2.px-3.text-gray-500 = mapping.legal_entity&.name || "celle du compte"
+                      td.py-2.pl-3.text-right.whitespace-nowrap
+                        = link_to "Modifier", edit_finance_stripe_category_mapping_path(mapping), class: "text-xs text-blue-500 hover:text-blue-700"
+                        = button_to "Retirer", finance_stripe_category_mapping_path(mapping), method: :delete, class: "ml-2 text-xs text-red-600 hover:text-red-800", form: { class: "inline" }
+
+            /  LES CATÉGORIES RENCONTRÉES SANS CORRESPONDANCE : c'est exactement
+               ce qui laisse une ligne en attente. Un clic mène au formulaire déjà
+               rempli de la catégorie — l'écran dit quoi faire, pas juste quoi voir.
+            - if bloc[:uncovered].any?
+              .mt-4.rounded-lg.border.border-amber-200.px-4.py-3(class="bg-amber-50/60")
+                p.text-sm.font-medium.text-amber-900
+                  = "#{bloc[:uncovered].size} catégorie(s) rencontrée(s) sans correspondance"
+                p.mt-0.5.text-xs.text-amber-800
+                  | Leurs recettes restent en attente sur « À affecter » tant que personne n'a dit où elles vont.
+                ul.mt-2.space-y-1.text-sm
+                  - bloc[:uncovered].each do |row|
+                    li.flex.flex-wrap.items-center.justify-between.gap-2
+                      span.text-gray-800
+                        strong = row[:label]
+                        = " — #{row[:count]} transaction(s), #{humanized_money_with_symbol(Money.new(row[:gross_cents], 'EUR'))}"
+                      = link_to "Créer la correspondance",
+                                new_finance_stripe_category_mapping_path(account_key: compte.stripe_account_key, category: row[:category]),
+                                class: "text-xs font-medium text-blue-500 hover:text-blue-700"
