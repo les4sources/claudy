@@ -38,9 +38,12 @@ module Kitchen
       # Le menu d'une demande orpheline propose de la rattacher (issue #315) :
       # il lui faut la même liste de séjours que le formulaire de création.
       @stays        = assignable_stays
-      @rows         = rows_for(@view)
+      # UNE LIGNE PAR SERVICE, triée par date (epic #321, phase 1). Le groupement
+      # par séjour a disparu : le client est devenu une colonne. Lire la page par
+      # date, c'est lire dans l'ordre où le travail arrive — l'en-tête de séjour
+      # obligeait à parcourir toute la page pour savoir ce qu'on cuisine demain.
+      @rows         = MealOrderDecorator.decorate_collection(rows_for(@view))
       @counts       = view_counts
-      @groups       = group_by_stay(@rows)
       # Les montants n'intéressent que le Pôle Accueil : ils ne s'affichent que
       # dans sa vue.
       @show_money   = @view == :reception
@@ -382,7 +385,7 @@ module Kitchen
     # mémoire : les vues de travail se recoupent, et `next_actor` lit une
     # association.
     def live_rows
-      @live_rows ||= base_scope.upcoming.where.not(status: "cancelled").chronological.to_a
+      @live_rows ||= base_scope.upcoming.where.not(status: "cancelled").undated_first.to_a
     end
 
     def rows_for(view)
@@ -428,18 +431,6 @@ module Kitchen
     # Les demandes SANS séjour (issue #315) se groupent par leur texte libre, une
     # entête par « pour qui » : les mettre toutes dans un même groupe vide
     # mélangerait l'école du mardi et le groupe d'anniversaire du samedi.
-    def group_by_stay(orders)
-      orders.group_by { |order| order.stay || [:orphan, order.contact_label.to_s] }
-            .map do |key, lines|
-        stay = key.is_a?(Array) ? nil : key
-        { stay: stay&.decorate,
-          orphan: stay.nil? && lines.all?(&:orphan?),
-          label: stay ? nil : lines.first.client_label,
-          orders: MealOrderDecorator.decorate_collection(lines),
-          subtotal_cents: lines.select(&:billable?).sum { |o| o.price_cents.to_i } }
-      end
-    end
-
     def set_presenters
       @home_view = true
     end

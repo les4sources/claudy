@@ -280,10 +280,14 @@ RSpec.describe "Cuisine — page et actions", type: :request do
 
       get kitchen_orders_path(view: :kitchen)
 
+      # L'ordre des colonnes depuis l'epic #321 phase 1, vue « Cuisine » (donc
+       # sans la colonne Prix, réservée au Pôle Accueil) :
+      #   0 Demandée le · 1 Date · 2 Client · 3 Type · 4 Conv. ·
+      #   5 S'en charge · 6 Cuisine · 7 Client (statut) · 8 ⋯
       cells = Nokogiri::HTML(response.body).css("#order-#{order.id} td").map { |td| CGI.unescapeHTML(td.to_html) }
-      cuisine = cells[4]
-      client  = cells[5]
-      menu    = cells[6]
+      cuisine = cells[6]
+      client  = cells[7]
+      menu    = cells[8]
 
       expect(cuisine).to include("Ok !", "Pas possible")
       expect(cuisine).not_to include("Confirmé", "Modifier")

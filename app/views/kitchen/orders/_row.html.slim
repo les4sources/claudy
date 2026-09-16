@@ -16,10 +16,28 @@
 - pop     = ->(target, placement) { { "controller" => "popover", "action" => "click->popover#toggle click@window->popover#hideOnClickOutside", "popover-target-value" => target, "popover-strategy-value" => "fixed", "popover-placement-value" => placement } }
 
 tr(id=dom class="#{order.row_tone_class} #{muted ? 'text-gray-500' : 'text-gray-800'}")
+  /  DEMANDÉE LE (epic #321, phase 1) : au-delà de deux semaines sans réponse de
+     la cuisine, la date passe en ambre. Ni une alerte ni une erreur — un signal
+     qu'on remarque en balayant la colonne, pour le « ah zut, elle date d'il y a
+     un petit temps » de Malau.
   td.whitespace-nowrap.border-l-4.py-2.pl-3.pr-3(class=order.actor_stripe_class)
+    span(class=(order.stale_request? ? 'font-semibold text-amber-700' : 'text-gray-500')) = order.requested_at_label
+
+  td.whitespace-nowrap.px-3.py-2
     span.font-semibold(class=(muted ? '' : 'text-gray-900')) = order.day_label
     - if order.moment_label.present?
       span.ml-1.text-gray-500 = order.moment_label
+
+  /  CLIENT : ce qui était l'en-tête du groupe de séjour. Le lien vers le séjour
+     est conservé, comme la pastille « sans séjour » d'une demande orpheline
+     (issue #315) — son menu de rattachement vit dans le « ⋯ » ci-dessous.
+  td.px-3.py-2
+    .flex.items-center.gap-2
+      - if order.stay
+        = link_to order.client_label, stay_path(order.stay), class: "font-medium hover:underline #{muted ? '' : 'text-gray-900'}"
+      - else
+        span(class=(muted ? '' : 'text-gray-900')) = order.client_label
+      = order.orphan_badge
 
   td.whitespace-nowrap.px-3.py-2.font-medium
     .flex.items-center.gap-1

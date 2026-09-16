@@ -39,6 +39,20 @@ class MealOrderDecorator < ApplicationDecorator
 
   def people_label = "#{object.people} pers."
 
+  # « Demandée le » (epic #321, phase 1) : la date de saisie, en format court.
+  # C'est ce qui manquait pour répondre au « ah zut, elle date d'il y a un petit
+  # temps » de Malau — une demande n'a pas d'âge tant qu'on ne l'affiche pas.
+  def requested_at_label = h.l(object.created_at.to_date, format: "%-d/%m/%y")
+
+  # Une demande que la cuisine n'a pas tranchée depuis plus de deux semaines.
+  # Ni une alerte ni une erreur : un signal ambre, qu'on remarque en balayant la
+  # colonne sans qu'il crie.
+  STALE_AFTER = 14.days
+
+  def stale_request?
+    object.pending? && !object.cancelled? && object.created_at < STALE_AFTER.ago
+  end
+
   # La date en tête de ligne du tableau : le jour en court, l'année seulement
   # quand elle n'est pas celle en cours, le moment à part pour être grisé.
   def day_label
