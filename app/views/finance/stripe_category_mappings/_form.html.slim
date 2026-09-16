@@ -1,0 +1,28 @@
+/ Le formulaire d'une correspondance de catégorie (epic #250, phase 2).
+  `category` VIDE vaut « sans catégorie » : c'est une catégorie comme une autre,
+  pas un champ oublié — d'où le texte sous le champ plutôt qu'un `required`.
+= form_with model: mapping, url: url, method: method, class: "space-y-4" do |f|
+  = hidden_field_tag "stripe_category_mapping[account_key]", mapping.account_key
+
+  .space-y-1
+    label.block.text-sm.font-medium.text-gray-700 for="stripe_category_mapping_category" Catégorie
+    = f.text_field :category, id: "stripe_category_mapping_category", class: "block w-full rounded-md border-gray-300 text-sm", placeholder: "pain, légumes, paniers…"
+    p.text-xs.text-gray-500
+      | Telle qu'elle arrive dans la métadonnée du paiement. Laisser vide désigne la correspondance « sans catégorie ».
+
+  .space-y-1
+    label.block.text-sm.font-medium.text-gray-700 for="stripe_category_mapping_general_account_id" Compte général
+    = f.collection_select :general_account_id, @general_accounts, :id, :to_s, { include_blank: "Choisir…" }, id: "stripe_category_mapping_general_account_id", class: "block w-full rounded-md border-gray-300 text-sm"
+
+  .space-y-1
+    label.block.text-sm.font-medium.text-gray-700 for="stripe_category_mapping_team_id" Pôle
+    = f.collection_select :team_id, @teams, :id, :name, { include_blank: "Sans pôle" }, id: "stripe_category_mapping_team_id", class: "block w-full rounded-md border-gray-300 text-sm"
+    p.text-xs.text-gray-500 Sans valeur par défaut : une recette rangée d'office dans le mauvais pôle est pire qu'une recette non ventilée.
+
+  .space-y-1
+    label.block.text-sm.font-medium.text-gray-700 for="stripe_category_mapping_legal_entity_id" Entité
+    = f.collection_select :legal_entity_id, @entities, :id, :name, { include_blank: "Celle du compte de trésorerie" }, id: "stripe_category_mapping_legal_entity_id", class: "block w-full rounded-md border-gray-300 text-sm"
+
+  .flex.items-center.gap-3
+    = f.submit submit_label, class: "cursor-pointer rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+    = link_to "Annuler", finance_stripe_path, class: "text-sm text-gray-500 hover:text-gray-700"

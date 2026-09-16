@@ -236,6 +236,12 @@ Rails.application.routes.draw do
     # qui attend son virement, toutes dettes confondues.
     get "payables", to: "payables#index", as: :payables
     get "collection_cost", to: "collection_cost#index"
+    # Stripe (epic #250, phase 2) : l'état de chaque compte et les
+    # correspondances par catégorie. La route nommée passe AVANT la ressource,
+    # sinon `/finance/stripe/mappings/new` serait capté par `stripe#index`.
+    get "stripe", to: "stripe#index", as: :stripe
+    patch "stripe/accounts/:id/mode", to: "stripe#update_mode", as: :stripe_account_mode
+    resources :stripe_category_mappings, path: "stripe/mappings", except: %i[index show]
     resources :allocation_rules, except: [:show] do
       member { post :move }
     end
@@ -313,6 +319,9 @@ Rails.application.routes.draw do
         # Payer une facture d'achat depuis une ligne sortante (epic #240,
         # phase 4) : même geste, autre dette.
         post :pay_invoice
+        # Rapprocher une ligne bancaire entrante de son versement Stripe
+        # (epic #250, phase 2).
+        post :reconcile_payout
       end
       resources :allocations, only: [:create, :destroy], controller: "cash_allocations"
     end

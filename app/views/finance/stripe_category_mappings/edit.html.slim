@@ -1,0 +1,5 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Correspondance — #{@mapping.category_label}"
+
+.max-w-xl.rounded-2xl.bg-white.ring-1.ring-gray-200.p-5
+  = render "form", mapping: @mapping, url: finance_stripe_category_mapping_path(@mapping), method: :patch, submit_label: "Mettre à jour"
