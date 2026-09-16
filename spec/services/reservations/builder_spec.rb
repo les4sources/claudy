@@ -71,6 +71,48 @@ RSpec.describe Reservations::Builder do
       expect(builder.customer.email).to eq("camille@example.com")
     end
 
+    it "accepte en admin une ORGANISATION sans prénom ni nom" do
+      organisation = Customer.create!(
+        customer_type: "organization",
+        organization_name: "École de Godinne",
+        email: "godinne@example.com"
+      )
+
+      builder = described_class.new(
+        draft: draft(customer_id: organisation.id, first_name: nil, last_name: nil,
+                     email: organisation.email, customer_type: "organization",
+                     organization_name: organisation.organization_name),
+        admin: true, status: "pending", source: "manual"
+      )
+
+      expect(builder.run).to be(true)
+      expect(builder.customer).to eq(organisation)
+      # Le réservable reste NOMMÉ : à défaut de prénom, c'est l'organisation qui
+      # nomme le séjour (sinon la ligne du calendrier s'affiche vide).
+      expect(builder.booking.firstname).to be_nil
+      expect(builder.booking.group_name).to eq("École de Godinne")
+      expect(builder.booking.name).to eq("École de Godinne")
+    end
+
+    it "exige le prénom au funnel public, même avec un nom d'organisation" do
+      builder = described_class.new(
+        draft: draft(first_name: nil, organization_name: "École de Godinne")
+      )
+
+      expect { builder.run! }
+        .to raise_error(described_class::DraftInvalid, /prénom/)
+    end
+
+    it "refuse en admin un séjour sans le moindre élément d'identité" do
+      builder = described_class.new(
+        draft: draft(first_name: nil, last_name: nil, email: nil),
+        admin: true, status: "pending", source: "manual"
+      )
+
+      expect { builder.run! }
+        .to raise_error(described_class::DraftInvalid, /Veuillez préciser un client/)
+    end
+
     it "refuse en admin un email saisi mais mal formé" do
       builder = described_class.new(draft: draft(email: "pas-un-email"), admin: true,
                                     status: "pending", source: "manual")

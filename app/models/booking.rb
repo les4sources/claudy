@@ -99,8 +99,11 @@ class Booking < ApplicationRecord
   # philosophie anti-email que `Stays::AdminUpdater`.
   attr_accessor :skip_customer_notification
 
-  validates_presence_of :firstname,
-                        message: "Veuillez préciser votre prénom"
+  # Identité du réservataire : un PRÉNOM pour un particulier, mais une
+  # organisation (« École de Godinne ») n'en a pas — son identité, c'est son nom
+  # de groupe. On exige donc au moins un des trois champs d'identité plutôt que
+  # d'obliger l'équipe à inventer un prénom pour satisfaire le formulaire.
+  validate :contact_identity_present
   validates_presence_of :from_date,
                         message: "Veuillez préciser votre date d'arrivée"
   validates_presence_of :to_date,
@@ -207,16 +210,33 @@ class Booking < ApplicationRecord
     self.token = generated_token
   end
 
+  # Formule d'appel des emails : « Bonjour Marie, », « Bonjour École de Godinne, »
+  # pour une organisation sans prénom, « Bonjour, » quand on n'a rien — jamais
+  # « Bonjour , ».
+  def greeting
+    contact = [firstname.presence, group_name.presence].compact.first
+    contact.present? ? "Bonjour #{contact}," : "Bonjour,"
+  end
+
   def has_options?
     option_partyhall? || option_pizza_party? || option_bread? || option_babysitting? || option_discgolf?
   end
 
+  # Ne renvoie JAMAIS une chaîne vide : une organisation n'a ni prénom ni nom,
+  # elle se désigne par son nom de groupe (cf. `contact_identity_present`).
   def name
-    "#{firstname} #{lastname}"
+    [firstname, lastname].compact_blank.join(" ").presence ||
+      group_name.presence ||
+      "Réservation"
   end
 
   def nights_count
     (self.to_date - self.from_date).to_i
+  end
+
+  def contact_identity_present
+    return if [firstname, lastname, group_name].any?(&:present?)
+    errors.add(:base, "Veuillez préciser un prénom, un nom ou un nom de groupe")
   end
 
   def notify_customer_on_update

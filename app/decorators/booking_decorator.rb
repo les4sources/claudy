@@ -172,15 +172,18 @@ class BookingDecorator < ApplicationDecorator
     end
   end
 
+  # `Booking#name` (et non « prénom nom » recomposé ici) : une organisation sans
+  # prénom ni nom retombe sur son nom de groupe, sinon la ligne du calendrier
+  # s'affichait vide.
   def name
     if object.from_airbnb?
-      h.raw("#{object.firstname} #{object.lastname}" + h.render("shared/airbnb_icon"))
+      h.raw(h.h(object.name) + h.render("shared/airbnb_icon"))
     elsif object.from_bookingdotcom?
-      h.raw("#{object.firstname} #{object.lastname}" + h.render("shared/bookingdotcom_icon"))
+      h.raw(h.h(object.name) + h.render("shared/bookingdotcom_icon"))
     elsif object.from_web?
-      h.raw("#{object.firstname} #{object.lastname}" + h.render("shared/web_icon"))
+      h.raw(h.h(object.name) + h.render("shared/web_icon"))
     else
-      "#{object.firstname} #{object.lastname}"
+      object.name
     end
   end
 
@@ -324,7 +327,7 @@ class BookingDecorator < ApplicationDecorator
   end
 
   def public__name
-    "#{object.firstname} #{object.lastname}"
+    object.name
   end
 
   def rooms_badges(font_size: "xs")

@@ -220,7 +220,17 @@ module Reservations
       raise_invalid("Veuillez choisir des dates valides.") if requires_nights? && draft.nights < 1
       raise_invalid("Veuillez choisir un hébergement, un espace, une activité ou un repas.") unless bookable_content?
       raise_invalid("Veuillez indiquer si vous venez avec un animal (champ obligatoire).") if draft.dogs_count.nil?
-      raise_invalid("Veuillez préciser votre prénom.") if draft.first_name.blank?
+      # Identité du contact. Au funnel PUBLIC, le prénom reste obligatoire : c'est
+      # ainsi qu'on s'adresse au client, et le formulaire ne connaît que des
+      # particuliers. En ADMIN, l'identité est celle de la FICHE client — une
+      # organisation (« École de Godinne ») n'a ni prénom ni nom, et l'équipe ne
+      # doit pas inventer un prénom pour satisfaire le formulaire. On exige donc
+      # seulement que le séjour soit rattachable à quelqu'un.
+      if @admin
+        raise_invalid("Veuillez préciser un client (prénom, nom, organisation ou email).") unless admin_contact_identified?
+      elsif draft.first_name.blank?
+        raise_invalid("Veuillez préciser votre prénom.")
+      end
       # Email OBLIGATOIRE au funnel public (issue #232) : c'est le seul canal par
       # lequel on joint un client qui réserve en ligne. En admin, il devient
       # facultatif — mais un email SAISI et mal formé reste refusé, sans quoi une
@@ -261,6 +271,14 @@ module Reservations
       check_space_availability!
       check_outdoor_capacity!
       check_hamac_stock!
+    end
+
+    # Client identifié côté admin : soit une fiche existante désignée par le
+    # `<select>`, soit assez de matière pour en créer une identifiable
+    # (cf. `Customer#identifiable`).
+    def admin_contact_identified?
+      return true if draft.customer_id.present?
+      [draft.first_name, draft.last_name, draft.organization_name, draft.email].any?(&:present?)
     end
 
     # Nuit de week-end SEULE (epic #260, décision 3). La règle, son périmètre et

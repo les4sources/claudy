@@ -75,8 +75,9 @@ class SpaceBooking < ApplicationRecord
   attr_accessor :newsletter_subscription
   attr_accessor :duration
 
-  validates_presence_of :firstname,
-                        message: "Veuillez préciser un prénom"
+  # Miroir de `Booking#contact_identity_present` : une organisation n'a pas de
+  # prénom, elle se nomme par son groupe.
+  validate :contact_identity_present
   validates_presence_of :from_date,
                         message: "Veuillez préciser la date d'arrivée"
   validates_presence_of :to_date,
@@ -139,12 +140,29 @@ class SpaceBooking < ApplicationRecord
     self.token = generated_token
   end
 
+  # Formule d'appel des emails : « Bonjour Marie, », « Bonjour École de Godinne, »
+  # pour une organisation sans prénom, « Bonjour, » quand on n'a rien — jamais
+  # « Bonjour , ».
+  def greeting
+    contact = [firstname.presence, group_name.presence].compact.first
+    contact.present? ? "Bonjour #{contact}," : "Bonjour,"
+  end
+
   def has_options?
     option_kitchenware? || option_beamer? || option_wifi? || option_tables?
   end
 
+  # Jamais vide : une organisation n'a ni prénom ni nom, elle se désigne par son
+  # nom de groupe.
   def name
-    "#{firstname} #{lastname}"
+    [firstname, lastname].compact_blank.join(" ").presence ||
+      group_name.presence ||
+      "Réservation d'espace"
+  end
+
+  def contact_identity_present
+    return if [firstname, lastname, group_name].any?(&:present?)
+    errors.add(:base, "Veuillez préciser un prénom, un nom ou un nom de groupe")
   end
 
   def notify_customer_on_update

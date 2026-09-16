@@ -85,10 +85,14 @@ module Reservations
       @email             = attrs[:email].presence
       @phone             = attrs[:phone].presence
       @customer_id       = attrs[:customer_id].presence
-      @group_name        = attrs[:group_name].presence
       @category          = attrs[:category].presence
       @customer_type     = attrs[:customer_type].presence || "individual"
       @organization_name = attrs[:organization_name].presence
+      # Un séjour d'ORGANISATION est un séjour de groupe : sans nom de groupe
+      # saisi, c'est l'organisation qui nomme le séjour. Sans ce repli, les
+      # réservables d'une organisation (qui n'a ni prénom ni nom) s'affichaient
+      # anonymes dans le calendrier et les listes.
+      @group_name        = attrs[:group_name].presence || @organization_name
       @spaces_note       = attrs[:spaces_note].presence
       @needs             = normalize_needs(attrs[:needs])
     end
