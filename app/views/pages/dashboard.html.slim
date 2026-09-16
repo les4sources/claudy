@@ -1,6 +1,35 @@
+/ TABLEAU DE BORD D'UN MEMBRE (issue #323). Réunion Pôle Accueil × Cuisine du
+  2026-09-11 : Stéphanie doit aujourd'hui ouvrir la page Cuisine, choisir le bon
+  onglet et retrouver ses lignes au milieu de celles des autres. Ici, elle ne
+  voit QUE les siennes, dans l'ordre des questions qu'elle se pose.
+  Les comptes Claudy restent PARTAGÉS : d'où le sélecteur de membre, qui permet
+  d'afficher la vue de n'importe qui depuis n'importe quel compte.
+  AUCUN MONTANT sur cette page : les prix sont l'affaire du Pôle Accueil.
 - content_for :page_header do
   = render "layouts/components/page_header",
-           title: "Mon tableau de bord"
+           title: @human ? "Tableau de bord de #{@human.name}" : "Tableau de bord"
 
-- TaskDecorator.decorate_collection(current_user.human.tasks).each do |task|
-  = render "tasks/card", task: task
+.space-y-6
+  / Le sélecteur recharge la page au changement — pas de bouton à cliquer en plus.
+  = form_with url: dashboard_path, method: :get, class: "flex flex-wrap items-center gap-2" do
+    label.text-sm.font-medium.text-gray-700 for="dashboard_human_id" Membre
+    = select_tag :human_id,
+                 options_from_collection_for_select(@humans, :id, :name, @human&.id),
+                 include_blank: "— Choisir un membre —",
+                 id: "dashboard_human_id",
+                 class: "rounded-md border-gray-300 text-sm",
+                 onchange: "this.form.requestSubmit()"
+    noscript
+      = submit_tag "Afficher", class: "rounded-md bg-4s-main px-3 py-1.5 text-sm font-medium text-white"
+
+  - if @human.nil?
+    /  Compte non rattaché à un membre (accueil générique, compta) : le sélecteur
+       seul et une invitation. JAMAIS une erreur — c'est exactement ce que faisait
+       `current_user.human.tasks` avant l'issue #323.
+    .rounded-lg.border.border-dashed.border-gray-300.bg-white.px-6.py-10.text-center
+      p.text-sm.text-gray-600 Choisissez un membre ci-dessus pour voir son tableau de bord.
+  - else
+    = render "pages/dashboard/kitchen_pending", orders: @kitchen_pending, human: @human
+    = render "pages/dashboard/kitchen_upcoming", orders: @kitchen_upcoming, human: @human
+    = render "pages/dashboard/kitchen_unconfirmed", orders: @kitchen_unconfirmed, human: @human
+    = render "pages/dashboard/tasks", tasks: @tasks

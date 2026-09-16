@@ -1,0 +1,29 @@
+/ « À TRAITER » — les demandes dont ce membre est le responsable et que la
+  cuisine n'a pas encore tranchées. C'est la seule raison de venir ici tous les
+  jours, donc le bloc est en tête et porte les deux gestes de la page Cuisine.
+  Les gestes ne sont pas dupliqués : `accept` / `new_refusal` de
+  `Kitchen::OrdersController`. `accept` fait un `redirect_back`, on revient donc
+  ici et non sur la page Cuisine.
+= render layout: "pages/dashboard/section",
+         locals: { title: "À traiter", count: orders.size,
+                   empty_label: "Rien à traiter.",
+                   link: { label: "Voir la page Cuisine →", url: kitchen_orders_path(responsible_human_id: human.id) } } do
+  ul.divide-y.divide-gray-100
+    - MealOrderDecorator.decorate_collection(orders).each do |order|
+      li.flex.flex-wrap.items-center.justify-between.gap-3.px-5.py-3
+        .flex.min-w-0.items-start.gap-3
+          span.w-24.shrink-0.text-sm.font-semibold.text-gray-900
+            = order.day_label
+            - if order.moment_label.present?
+              span.ml-1.font-normal.text-gray-500 = order.moment_label
+          = render "pages/dashboard/order_identity", order: order
+        /  `flex-wrap` et pas de `shrink-0` : à 375 px les gestes passent sous la
+           ligne plutôt que de pousser la page en largeur.
+        .flex.flex-wrap.items-center.gap-2
+          = button_to "Ok !", accept_kitchen_order_path(order),
+                      method: :patch,
+                      class: "rounded-md bg-4s-main px-2.5 py-1 text-xs font-medium text-white hover:opacity-90"
+          = link_to "Pas possible", new_refusal_kitchen_order_path(order),
+                    class: "rounded-md bg-white px-2.5 py-1 text-xs font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-50"
+          = link_to "Ouvrir", order.stay ? stay_path(order.stay) : kitchen_orders_path(responsible_human_id: human.id),
+                    class: "text-xs text-blue-500 hover:text-blue-700"

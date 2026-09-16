@@ -107,8 +107,31 @@ class PagesController < BaseController
     render layout: !turbo_frame_request?
   end
 
+  # Tableau de bord d'UN MEMBRE (issue #323). Réunion Pôle Accueil × Cuisine du
+  # 2026-09-11 : « je ne me souviens jamais d'avoir eu cette demande » — il
+  # manquait un endroit où une personne voit ce qui la concerne, elle, sans
+  # filtrer la page Cuisine.
+  #
+  # Les comptes Claudy sont PARTAGÉS (décision Michael) : la page porte donc un
+  # sélecteur de membre, et `human_id` désigne qui on regarde. Sans paramètre on
+  # ouvre sur le membre du compte connecté — et quand il n'y en a pas, sur le
+  # sélecteur seul. C'est ce dernier cas qui plantait ici (`current_user.human.tasks`
+  # sur `nil`).
+  #
+  # Premier jet limité à la CUISINE : les activités attendent les epics #244 et
+  # #25. Un compte cloisonné sur ses activités (`restricted_to_experiences`)
+  # n'atteint jamais cette action — `BaseController#restrict_experience_carriers`
+  # le renvoie sur son planning, `pages` n'étant pas dans l'allowlist.
   def dashboard
     @projects_view = true
+    @humans = Human.all
+    @human  = dashboard_human
+    return if @human.nil?
+
+    @kitchen_pending     = kitchen_scope.pending_validation.upcoming.chronological.to_a
+    @kitchen_upcoming    = kitchen_upcoming_orders
+    @kitchen_unconfirmed = kitchen_unconfirmed_orders
+    @tasks = TaskDecorator.decorate_collection(@human.tasks)
   end
 
   # « Qui d'autre est sur place pendant cette réservation ? » — vue d'OCCUPATION
@@ -165,6 +188,46 @@ class PagesController < BaseController
   end
 
   private
+
+  # --- Tableau de bord d'un membre (issue #323) -----------------------------
+
+  # Le membre affiché. `human_id` d'abord — le sélecteur permet de regarder la
+  # vue de n'importe qui depuis n'importe quel compte partagé — puis le membre du
+  # compte connecté. `nil` est un état LÉGITIME (compte non rattaché, ou id
+  # inconnu) : la vue montre alors le sélecteur seul, jamais une erreur.
+  def dashboard_human
+    requested = params[:human_id].presence
+    return Human.find_by(id: requested) if requested
+
+    current_user&.human
+  end
+
+  # Toutes les demandes de cuisine dont CE membre est le responsable. Les séjours
+  # et leurs clients sont préchargés : chaque ligne affiche le nom du dossier.
+  def kitchen_scope
+    MealOrder.where(responsible_human_id: @human.id).includes(stay: :customer)
+  end
+
+  # « Mes prochains services » — accepté, non annulé, DATÉ et à partir
+  # d'aujourd'hui. Le scope `upcoming` ne convient pas ici : il garde les lignes
+  # sans date, qui n'ont pas leur place dans un ordre du jour.
+  def kitchen_upcoming_orders
+    kitchen_scope.where(validation: "accepted")
+                 .where.not(status: "cancelled")
+                 .where(date: Date.current..)
+                 .chronological
+                 .to_a
+  end
+
+  # « En attente du client » — ce que le membre a accepté et que le client n'a
+  # pas confirmé. `upcoming` (et non une borne stricte) : une demande sans date
+  # est justement celle dont on attend une réponse.
+  def kitchen_unconfirmed_orders
+    kitchen_scope.where(validation: "accepted", status: %w[inquiry requested])
+                 .upcoming
+                 .chronological
+                 .to_a
+  end
 
   # Étale une collection de réservables « capacité globale » (camping / van), qui
   # ne portent QUE des dates [from_date, to_date), en un hash { jour => [records] }
