@@ -6,7 +6,7 @@ module Finance
   # blocage implicite, donc invisible, et on découvrait au moment de payer que
   # personne n'avait dit oui.
   class PurchaseInvoicesController < Finance::AccountingBaseController
-    before_action :get_invoice, only: %i[show edit update submit dispute reopen validate_by_team]
+    before_action :get_invoice, only: %i[show edit update submit dispute reopen validate_by_team pay_in_cash]
     before_action :get_form_collections, only: %i[new create edit update]
 
     breadcrumb "Achats", :finance_purchase_invoices_path, match: :exact
@@ -29,6 +29,9 @@ module Finance
       breadcrumb(@invoice.reference.presence || "Facture ##{@invoice.id}",
                  finance_purchase_invoice_path(@invoice), match: :exact)
       @journal_entry = JournalEntry.find_by(source: @invoice, journal: "purchases")
+      # Les caisses de l'entité : quand il y en a plusieurs, c'est à l'humain de
+      # dire de laquelle l'argent sort — la première venue serait un choix muet.
+      @cash_accounts = CashAccount.actives.where(kind: "cash", legal_entity_id: @invoice.legal_entity_id).ordered
       @versions = @invoice.versions.reorder(created_at: :desc).limit(20)
     end
 
@@ -68,6 +71,23 @@ module Finance
         flash.now[:alert] = doublon_message(@invoice) || @invoice.errors.full_messages.to_sentence
         render :edit, status: :unprocessable_entity
       end
+    end
+
+    # « Payée en caisse » (epic #240, phase 4) : le fournisseur du marché repart
+    # avec ses billets. Ce n'est pas une case à cocher — ça crée une VRAIE sortie
+    # de caisse affectée sur le 440000, sinon la caisse est fausse d'autant.
+    def pay_in_cash
+      PurchaseInvoices::PayInCash.new(purchase_invoice: @invoice, paid_on: params[:paid_on],
+                                      cash_account: CashAccount.find_by(id: params[:cash_account_id]),
+                                      whodunnit: current_user&.email).run!
+      redirect_to finance_purchase_invoice_path(@invoice),
+                  notice: "Facture payée en espèces — la sortie de caisse est enregistrée."
+    rescue PurchaseInvoices::PayInCash::BadStatus, PurchaseInvoices::PayInCash::NoCashAccount,
+           PurchaseInvoices::PayInCash::MonthClosed, PurchaseInvoices::PayInCash::MissingAccount,
+           Accounting::PostCashEntry::NotFullyAllocated,
+           Accounting::PostDocument::MissingFiscalYear,
+           ActiveRecord::RecordInvalid, Date::Error => e
+      redirect_to finance_purchase_invoice_path(@invoice), alert: e.message
     end
 
     # Valider ou contester depuis la fiche admin (phase 3), en miroir du canal

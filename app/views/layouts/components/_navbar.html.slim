@@ -384,6 +384,12 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
                       finance_purchase_invoices_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/purchase_invoices' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
+            / « À payer » (epic #240, phase 4) : juste après les achats, parce
+              qu'une facture validée y tombe et que c'est là qu'on la retrouve.
+            = link_to "À payer",
+                      finance_payables_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/payables' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
             = link_to "Tiers",
                       finance_third_parties_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/third_parties' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"

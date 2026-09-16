@@ -1,0 +1,79 @@
+/ LA FILE « À PAYER » (epic #240, phase 4).
+  L'écran du mercredi matin, devant l'interface de la banque : qu'est-ce que je
+  vire, à qui, sur quel compte, avec quelle communication. Rien d'autre.
+  Le retard est en évidence, et un payable SANS IBAN reste dans la liste, marqué :
+  faire disparaître une dette parce qu'il manque une coordonnée est la meilleure
+  façon de ne jamais la payer.
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "À payer",
+           links: [link_to("Achats", finance_purchase_invoices_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
+                   link_to("À affecter", finance_unallocated_cash_entries_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+- if @rows.blank?
+  .p-8.text-center.bg-green-50.rounded-lg.border.border-green-100
+    p.text-2xl.font-semibold.text-green-700 ✓ Rien à payer
+    p.mt-2.text-sm.text-gray-600
+      | Aucune facture validée n'attend son virement. Les factures arrivent ici dès qu'un pôle les a validées — ou directement, quand aucune validation n'est requise.
+- else
+  .mb-5.grid.gap-3(class="sm:grid-cols-3")
+    .rounded-xl.bg-white.p-4.ring-1.ring-gray-200
+      p.text-xs.font-medium.uppercase.tracking-wide.text-gray-500 Total à payer
+      p.mt-1.text-2xl.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(@total_cents, "EUR"))
+      p.text-xs.text-gray-500(class="mt-0.5") = "#{@rows.size} ligne(s)"
+    .rounded-xl.p-4.ring-1(class="#{@overdue.any? ? 'bg-red-50 ring-red-200' : 'bg-white ring-gray-200'}")
+      p.text-xs.font-medium.uppercase.tracking-wide(class="#{@overdue.any? ? 'text-red-700' : 'text-gray-500'}") En retard
+      p.mt-1.text-2xl.font-semibold(class="#{@overdue.any? ? 'text-red-700' : 'text-gray-900'}")
+        = humanized_money_with_symbol(Money.new(@overdue.sum(&:payable_amount_cents), "EUR"))
+      p.text-xs(class="mt-0.5 #{@overdue.any? ? 'text-red-700' : 'text-gray-500'}") = "#{@overdue.size} échéance(s) dépassée(s)"
+    .rounded-xl.p-4.ring-1(class="#{@without_iban.any? ? 'bg-amber-50 ring-amber-200' : 'bg-white ring-gray-200'}")
+      p.text-xs.font-medium.uppercase.tracking-wide(class="#{@without_iban.any? ? 'text-amber-800' : 'text-gray-500'}") Sans IBAN
+      p.mt-1.text-2xl.font-semibold(class="#{@without_iban.any? ? 'text-amber-800' : 'text-gray-900'}") = @without_iban.size
+      p.text-xs(class="mt-0.5 #{@without_iban.any? ? 'text-amber-800' : 'text-gray-500'}")
+        | Le virement ne peut pas partir tant que le tiers n'a pas de compte.
+
+  .overflow-hidden.rounded-xl.bg-white.ring-1.ring-gray-200
+    ul.divide-y.divide-gray-100
+      - @rows.each do |row|
+        li.px-5.py-4(class="#{row.payable_overdue? ? 'bg-red-50/60' : ''}")
+          .flex.flex-wrap.items-start.justify-between.gap-4
+            .min-w-0
+              p.flex.flex-wrap.items-center.gap-2
+                = link_to row.payable_beneficiary, row.payable_path, class: "font-medium text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+                - if row.payable_overdue?
+                  span.rounded-full.bg-red-100.text-xs.font-semibold.text-red-700(class="px-2 py-0.5")
+                    = "en retard de #{row.payable_days_late} j"
+                - if row.partially_paid?
+                  span.rounded-full.bg-amber-100.text-xs.font-medium.text-amber-800(class="px-2 py-0.5")
+                    = "déjà rapproché : #{humanized_money_with_symbol(Money.new(row.allocated_cents, 'EUR'))}"
+                - unless row.payable_ready?
+                  span.rounded-full.bg-amber-100.text-xs.font-medium.text-amber-800(class="px-2 py-0.5") sans IBAN
+              p.mt-1.text-sm.text-gray-600
+                = row.payable_label
+                - if row.payable_due_on
+                  span.mx-1 ·
+                  = "échéance le #{l(row.payable_due_on, format: :long)}"
+                - else
+                  span.mx-1 ·
+                  span.text-gray-400 sans échéance
+              / IBAN et communication COPIABLES : on les recopie à l'œil dans
+                l'interface de la banque, et une faute de frappe sur un IBAN
+                envoie l'argent ailleurs.
+              .mt-2.flex.flex-wrap.items-center.gap-x-4.gap-y-2.text-xs
+                - if row.payable_iban.present?
+                  .flex.items-center.gap-2
+                    span.font-mono.text-gray-700 = row.payable_iban
+                    button.rounded-md.bg-gray-100.font-medium.text-gray-700(class="px-2 py-0.5 hover:bg-gray-200" type="button" data-controller="copy" data-copy-value-value=row.payable_iban data-action="copy#copy") Copier l'IBAN
+                - if row.payable_communication.present?
+                  .flex.items-center.gap-2
+                    span.text-gray-700
+                      = "communication : "
+                      span.font-mono = row.payable_communication
+                    button.rounded-md.bg-gray-100.font-medium.text-gray-700(class="px-2 py-0.5 hover:bg-gray-200" type="button" data-controller="copy" data-copy-value-value=row.payable_communication data-action="copy#copy") Copier
+            .text-right
+              p.text-lg.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(row.payable_amount_cents, "EUR"))
+              - if row.partially_paid?
+                p.text-xs.text-amber-700
+                  = "reste #{humanized_money_with_symbol(Money.new(row.remaining_cents, 'EUR'))}"
+              p.mt-1
+                = link_to "Ouvrir", row.payable_path, class: "text-xs text-blue-500 hover:text-blue-700"

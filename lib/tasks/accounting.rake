@@ -4,6 +4,11 @@
 # et en `exit 0`. Une comptabilité qui se contredit toute seule ne vaut que si
 # quelqu'un l'écoute — ces tâches sont cette écoute.
 namespace :accounting do
+  # Les dettes fournisseurs : le compte sur lequel TOUT paiement de dette se
+  # rapproche (epic #240, décision 4). Rapprocher ailleurs compterait la charge
+  # deux fois — une fois au journal des achats, une fois sur la ligne bancaire.
+  SUPPLIER_CODE = "440000".freeze
+
   desc "Seed du référentiel — entités, plan comptable PCMN réduit, exercice courant. Idempotent"
   task seed_reference: :environment do
     created = Hash.new(0)
@@ -501,7 +506,8 @@ namespace :accounting do
   task verify_purchase_invoices: :environment do
     ecarts = []
 
-    PurchaseInvoice.includes(:purchase_invoice_lines, :third_party, :cash_allocations).find_each do |invoice|
+    PurchaseInvoice.includes(:purchase_invoice_lines, :third_party,
+                             cash_allocations: :general_account).find_each do |invoice|
       etiquette = "Facture ##{invoice.id} (#{invoice.third_party&.name})"
       lignes = invoice.purchase_invoice_lines.sum(&:amount_cents)
 
@@ -517,9 +523,31 @@ namespace :accounting do
         ecarts << "#{etiquette} : lignes à #{lignes} cents pour un total de #{invoice.total_cents}"
       end
 
+      # Les ALLOCATIONS elles-mêmes (epic #240, phase 4). Une facture payée est
+      # une facture rapprochée : c'est ce lien qui doit tenir, dans les deux
+      # sens, et sur le bon compte.
+      couvert = invoice.cash_allocations.sum(:amount_cents).abs
+
+      hors_440 = invoice.cash_allocations.reject { |a| a.general_account&.code == SUPPLIER_CODE }
+      if hors_440.any?
+        comptes = hors_440.map { |a| a.general_account&.code }.compact.uniq.join(", ")
+        ecarts << "#{etiquette} : rapprochée sur #{comptes} au lieu du #{SUPPLIER_CODE} — " \
+                  "la charge serait comptée deux fois"
+      end
+
+      if couvert > invoice.total_cents
+        ecarts << "#{etiquette} : #{couvert} cents rapprochés pour un total de #{invoice.total_cents} — surpayée"
+      end
+
+      # Un état qui ne sait que monter est un état faux : une facture couverte
+      # qui reste « À payer » remonterait sur la file et serait payée deux fois.
+      if invoice.to_pay? && couvert >= invoice.total_cents && invoice.total_cents.positive?
+        ecarts << "#{etiquette} : entièrement rapprochée mais toujours « à payer »"
+      end
+
       next unless invoice.paid?
 
-      couvert = invoice.cash_allocations.sum(:amount_cents).abs
+      ecarts << "#{etiquette} : marquée payée sans date de paiement" if invoice.paid_on.blank?
       next if couvert >= invoice.total_cents
 
       ecarts << "#{etiquette} : marquée payée alors que #{couvert} cents seulement sont rapprochés " \

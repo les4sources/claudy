@@ -98,6 +98,26 @@
                   = " (#{match.confidence} % de confiance)"
               = button_to "Solder son compte", payout_finance_cash_entry_path(entry, member_account_id: match.member_account.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
 
+      / Une facture d'achat qui attend son virement (epic #240, phase 4). Même
+        forme que le virement à un membre, juste au-dessus : c'est le même geste
+        sur une autre dette. LA PROPOSITION N'A RIEN ÉCRIT — c'est ce bouton qui
+        crée l'allocation sur le 440000 avec la facture en document.
+      - factures = @invoice_matches[entry.id]
+      - if factures.present?
+        - factures.first(2).each do |match|
+          .mb-3.p-3.rounded-lg.border.border-orange-100(class="bg-orange-50/60")
+            .flex.flex-wrap.items-center.justify-between.gap-2
+              div
+                p.text-sm.text-gray-800
+                  strong = "Paiement de #{match.invoice.payable_label}"
+                  = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus à #{match.third_party&.name}"
+                p.mt-0.5.text-xs.text-gray-500
+                  = match.reason
+                  = " (#{match.confidence} % de confiance)"
+                p.mt-0.5.text-xs
+                  = link_to "Voir la facture", finance_purchase_invoice_path(match.invoice), class: "text-blue-500 hover:text-blue-700"
+              = button_to "Payer cette facture", pay_invoice_finance_cash_entry_path(entry, purchase_invoice_id: match.invoice.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+
       - suggestion = entry.allocation_suggestions.pending.ordered.first
       - if suggestion
         / La suggestion porte TOUJOURS son motif : un humain doit pouvoir juger
