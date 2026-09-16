@@ -55,6 +55,42 @@
           p.mt-2.text-xs.text-gray-400
             | Le paiement est un rapprochement : la facture passera « Payée » quand une ligne de trésorerie affectée sur le 440000 la désignera pour son montant.
 
+          / L'IBAN et la communication COPIABLES (epic #240, phase 4) : on les
+            recopie à l'œil dans l'interface de la banque, et une faute de frappe
+            sur un IBAN envoie l'argent ailleurs.
+          - if @invoice.to_pay?
+            .mt-3.space-y-2.rounded-lg.bg-gray-50.px-3.py-2.text-xs
+              - if @invoice.payable_iban.present?
+                .flex.flex-wrap.items-center.justify-between.gap-2
+                  span.font-mono.text-gray-700 = @invoice.payable_iban
+                  button.rounded-md.bg-white.font-medium.text-gray-700.ring-1.ring-gray-300(class="px-2 py-0.5 hover:bg-gray-100" type="button" data-controller="copy" data-copy-value-value=@invoice.payable_iban data-action="copy#copy") Copier l'IBAN
+              - else
+                p.text-amber-800
+                  | Ce tiers n'a pas d'IBAN — le virement ne peut pas partir.
+                  = " "
+                  = link_to "Le renseigner", edit_finance_third_party_path(@invoice.third_party), class: "font-medium text-blue-500 hover:text-blue-700"
+              .flex.flex-wrap.items-center.justify-between.gap-2
+                span.text-gray-700
+                  = "communication : "
+                  span.font-mono = @invoice.payable_communication
+                button.rounded-md.bg-white.font-medium.text-gray-700.ring-1.ring-gray-300(class="px-2 py-0.5 hover:bg-gray-100" type="button" data-controller="copy" data-copy-value-value=@invoice.payable_communication data-action="copy#copy") Copier
+
+            /  Le règlement en ESPÈCES : le fournisseur du marché repart avec ses
+               billets. Le bouton crée une vraie sortie de caisse affectée sur le
+               440000 — sinon la dette reste au grand livre et la caisse est fausse.
+            .mt-3
+              - if @cash_accounts.size > 1
+                /  Plusieurs caisses dans l'entité : on DIT de laquelle l'argent
+                   sort. Prendre la première venue serait un choix muet, et la
+                   caisse épicerie ne se confond pas avec celle du bar.
+                = form_with url: pay_in_cash_finance_purchase_invoice_path(@invoice), method: :post, class: "space-y-2" do
+                  = select_tag :cash_account_id, options_from_collection_for_select(@cash_accounts, :id, :name), id: nil, class: "block w-full rounded-md border-gray-300 text-xs"
+                  = submit_tag "Payée en caisse", class: "w-full cursor-pointer rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              - else
+                = button_to "Payée en caisse", pay_in_cash_finance_purchase_invoice_path(@invoice), method: :post, class: "w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50", form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Sortir l'argent de la caisse ?" } }, data: { "confirm-click-target": "button" }
+              p.mt-1.text-xs.text-gray-400
+                | À n'utiliser que si l'argent sort réellement de la caisse. Un virement bancaire se rapproche depuis « À affecter ».
+
     .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
       h3.text-xs.uppercase.tracking-wide.text-gray-400.mb-3 Ventilation
       - if @invoice.purchase_invoice_lines.empty?

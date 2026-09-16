@@ -7,7 +7,7 @@ module Finance
   # rapprochement annuel par un geste mensuel.
   class CashEntriesController < Finance::AccountingBaseController
     before_action :get_entry,
-                  only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate, :payout]
+                  only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate, :payout, :pay_invoice]
     breadcrumb "Trésorerie", :finance_cash_entries_path, match: :exact
 
     def index
@@ -88,6 +88,10 @@ module Finance
       # fois pour la page — les recalculer ligne à ligne est ce qui avait fait
       # tomber cet écran à l'issue #202.
       @payout_matches = Finance::MatchMemberPayouts.new.for_entries(@entries)
+      # Les factures d'achat à payer (epic #240, phase 4) : une ligne sortante
+      # dont le montant ou l'IBAN correspond à une facture `to_pay`. Les
+      # factures sont chargées UNE fois pour la page, comme les soldes.
+      @invoice_matches = Finance::MatchPurchaseInvoices.new.for_entries(@entries)
 
       @general_accounts = GeneralAccount.actives.ordered
       @teams = Team.ordered
@@ -156,6 +160,26 @@ module Finance
                   notice: "Virement à #{compte.name} enregistré — son compte est soldé."
     rescue Finance::RecordMemberPayout::NotCreditor, Finance::RecordMemberPayout::TooMuch,
            Finance::RecordMemberPayout::MissingAccount, Finance::RecordMemberPayout::WrongDirection,
+           ActiveRecord::RecordInvalid => e
+      redirect_to finance_cash_entry_path(@entry), alert: e.message
+    end
+
+    # Payer une facture d'achat depuis une ligne sortante (epic #240, phase 4).
+    # La proposition n'a rien écrit : c'est CE clic qui crée l'allocation.
+    def pay_invoice
+      facture = PurchaseInvoice.find(params[:purchase_invoice_id])
+      montant = params[:amount].presence && (params[:amount].to_s.tr(",", ".").to_f * 100).round
+
+      Finance::RecordInvoicePayment.new(
+        purchase_invoice: facture, cash_entry: @entry, amount_cents: montant,
+        whodunnit: current_user&.email
+      ).run!
+
+      redirect_to finance_unallocated_cash_entries_path,
+                  notice: "#{facture.payable_label} rapprochée de cette ligne."
+    rescue Finance::RecordInvoicePayment::NotPayable, Finance::RecordInvoicePayment::TooMuch,
+           Finance::RecordInvoicePayment::WrongDirection, Finance::RecordInvoicePayment::MissingAccount,
+           Accounting::PostCashEntry::NotFullyAllocated,
            ActiveRecord::RecordInvalid => e
       redirect_to finance_cash_entry_path(@entry), alert: e.message
     end

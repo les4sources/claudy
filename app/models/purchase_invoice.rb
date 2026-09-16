@@ -36,6 +36,10 @@ class PurchaseInvoice < ApplicationRecord
   FROZEN_STATUSES = %w[to_pay paid].freeze
 
   include Commentable
+  # Ce que la maison doit (epic #240, phase 4) : `cash_allocations`, le calcul de
+  # ce qui reste dû et la notion de retard viennent de là — pour que la file
+  # « À payer » n'ait pas à connaître les factures d'achat en particulier.
+  include Payable
 
   # Jeton du lien de validation posé dans l'email aux membres du pôle (phase 3),
   # même patron que `MealOrder` : portée unique et expiration, donc impossible à
@@ -51,10 +55,8 @@ class PurchaseInvoice < ApplicationRecord
   belongs_to :validation_team, class_name: "Team", optional: true
   belongs_to :validated_by, class_name: "User", optional: true
   has_many :purchase_invoice_lines, -> { order(:position, :id) }, dependent: :destroy
-  # L'allocation de trésorerie qui la paie pointe la facture par son `document`
-  # polymorphique (décision 4) : c'est ce lien qui fait passer la facture en
-  # `paid` — le paiement est un rapprochement, pas une case à cocher.
-  has_many :cash_allocations, as: :document, dependent: :nullify
+  # `cash_allocations` (le `document` polymorphique de la décision 4) vient du
+  # concern `Payable` : c'est ce lien qui fait passer la facture en `paid`.
   has_one_attached :document
 
   accepts_nested_attributes_for :purchase_invoice_lines, allow_destroy: true
@@ -84,14 +86,28 @@ class PurchaseInvoice < ApplicationRecord
   end
 
   def status_label = STATUS_LABELS.fetch(status, status)
-  def allocated_cents = cash_allocations.sum(:amount_cents).abs
-  def remaining_cents = total_cents - allocated_cents
   def lines_total_cents = purchase_invoice_lines.sum(&:amount_cents)
   def balanced? = lines_total_cents == total_cents
   def posted? = posted_at.present?
   def frozen_content? = FROZEN_STATUSES.include?(status)
   def double_signature? = total_cents >= DOUBLE_SIGNATURE_CENTS
   def reference = [third_party&.name, number].compact_blank.join(" · ")
+
+  # --- Le contrat `Payable` ------------------------------------------------
+  # La communication d'un virement fournisseur, c'est le numéro de SA facture :
+  # c'est ce qu'il cherche pour rapprocher de son côté. À défaut, notre propre
+  # référence, qui vaut mieux qu'un virement muet.
+  def payable_amount_cents = total_cents
+  def payable_beneficiary = third_party&.name
+  def payable_third_party = third_party
+  def payable_communication = number.presence || "Facture ##{id}"
+  def payable_due_on = due_on
+  def payable_reference = reference.presence || "##{id}"
+  def payable_label = "Facture #{payable_reference}"
+
+  def payable_path
+    Rails.application.routes.url_helpers.finance_purchase_invoice_path(self)
+  end
 
   # Les membres du pôle qui ont un COMPTE : ceux qu'on peut notifier dans Claudy
   # (epic #242, phase 3). Distinct de ceux qu'on peut seulement emailer.

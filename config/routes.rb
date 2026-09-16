@@ -232,6 +232,9 @@ Rails.application.routes.draw do
     post "monthly_close/close", to: "monthly_close#close", as: :close_monthly_close
     post "monthly_close/reopen", to: "monthly_close#reopen", as: :reopen_monthly_close
     get "cross_check", to: "cross_check#index"
+    # La file « À payer » (epic #240, phase 4) : tout ce que la maison doit et
+    # qui attend son virement, toutes dettes confondues.
+    get "payables", to: "payables#index", as: :payables
     get "collection_cost", to: "collection_cost#index"
     resources :allocation_rules, except: [:show] do
       member { post :move }
@@ -263,6 +266,8 @@ Rails.application.routes.draw do
         # Validation par le pôle depuis la fiche admin (phase 3), en miroir du
         # canal jeton : mêmes règles, même trace.
         post :validate_by_team
+        # Règlement en espèces depuis la fiche (epic #240, phase 4).
+        post :pay_in_cash
       end
     end
     resources :cash_motifs, path: "cash/motifs", except: %i[show destroy] do
@@ -305,6 +310,9 @@ Rails.application.routes.draw do
         # Solder le compte créditeur d'un membre depuis une ligne sortante
         # (epic #246, phase 2).
         post :payout
+        # Payer une facture d'achat depuis une ligne sortante (epic #240,
+        # phase 4) : même geste, autre dette.
+        post :pay_invoice
       end
       resources :allocations, only: [:create, :destroy], controller: "cash_allocations"
     end
