@@ -4,10 +4,13 @@
            links: [link_to("Reporting", kitchen_reporting_path, class: "btn-page-header-with-icon"),
                    link_to("Nouvelle demande", new_kitchen_order_path, class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90")]
 
-/ Une table, une ligne par service, groupée par séjour. Les onglets sont des
-  FILTRES sur la même table : « Cuisine » et « Accueil » ne montrent que les
-  lignes où ce métier a la main, et c'est là que chacun vient travailler.
-- columns = @show_money ? 8 : 7
+/ Une table, UNE LIGNE PAR SERVICE, triée par date de service (epic #321,
+  phase 1). Le groupement par séjour a disparu : le client est devenu une
+  colonne. On lit la page dans l'ordre où le travail arrive, au lieu de la
+  parcourir entière pour savoir ce qu'on cuisine demain.
+  Les onglets restent des FILTRES sur la même table : « Cuisine » et « Accueil »
+  ne montrent que les lignes où ce métier a la main.
+- columns = @show_money ? 10 : 9
 .space-y-4
   nav.flex.gap-1.overflow-x-auto.border-b.border-gray-200.text-sm(aria-label="Vues")
     - Kitchen::OrdersController::VIEWS.each do |view|
@@ -23,10 +26,15 @@
           = @counts[view[:key]]
 
   .overflow-x-auto.rounded-xl.bg-white.ring-1.ring-gray-200
-    table.w-full.text-sm(class="min-w-[880px]")
+    table.w-full.text-sm(class="min-w-[1080px]")
       thead
+        / L'ORDRE DES COLONNES est celui que Malau a décrit : demandée le · date
+          du service · client · type. On lit de gauche à droite la question
+          qu'elle se pose, dans l'ordre où elle se la pose.
         tr.bg-gray-50.text-left.text-xs.font-semibold.uppercase.tracking-wide.text-gray-500
-          th.px-3.py-2.pl-4 Date
+          th.px-3.py-2.pl-4 Demandée le
+          th.px-3.py-2 Date
+          th.px-3.py-2 Client
           th.px-3.py-2 Type
           th.px-3.py-2.text-right Conv.
           - if @show_money
@@ -36,14 +44,12 @@
           th.px-3.py-2.text-indigo-800 Client
           th.px-3.py-2
       tbody.divide-y.divide-gray-100
-        - if @groups.empty?
+        - if @rows.empty?
           tr
             td.px-4.py-6.text-center.text-gray-500(colspan=columns) Rien ici.
         - else
-          - @groups.each do |group|
-            = render "kitchen/orders/stay_row", group: group, columns: columns
-            - group[:orders].each do |order|
-              = render "kitchen/orders/row", order: order
+          - @rows.each do |order|
+            = render "kitchen/orders/row", order: order
 
   .flex.items-center.justify-between.text-xs.text-gray-500
     div
