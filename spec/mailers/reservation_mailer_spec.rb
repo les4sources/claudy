@@ -284,7 +284,7 @@ RSpec.describe ReservationMailer, type: :mailer do
       end
 
       it "remonte la note interne du séjour, dont l'avertissement multi-chiens" do
-        built_stay.update!(notes: "⚠️ Demande multi-chiens (2)")
+        built_stay.update!(internal_notes: Stays::InternalNote.to_html("⚠️ Demande multi-chiens (2)"))
         html = described_class.team_new_request(built_stay.reload).html_part.body.decoded
 
         expect(html).to include("multi-chiens")

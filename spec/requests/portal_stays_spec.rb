@@ -17,7 +17,8 @@ RSpec.describe "Portail client — Mes séjours", type: :request do
 
   def stay_for(customer, arrival:, departure:, notes: nil)
     Stay.create!(customer: customer, source: "manual", status: "confirmed",
-                 arrival_date: arrival, departure_date: departure, notes: notes)
+                 arrival_date: arrival, departure_date: departure,
+                 internal_notes: Stays::InternalNote.to_html(notes).presence)
   end
 
   it "exige une session portail" do

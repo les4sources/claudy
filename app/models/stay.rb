@@ -15,7 +15,6 @@
 #  departure_time             :string
 #  invoice_status             :string
 #  legacy_origin              :string
-#  notes                      :text
 #  payment_status             :string           default("pending"), not null
 #  price_override_cents       :integer
 #  source                     :string           default("reservation"), not null
@@ -168,8 +167,20 @@ class Stay < ApplicationRecord
   has_many :experience_bookings, dependent: :destroy
   # Note publique du séjour (visible client) — ActionText, PAS de colonne. Consolide
   # à la fusion les `public_notes` des bookables + des stays sources (epic notes).
-  # La note INTERNE reste la colonne `stays.notes` (texte brut, jamais publique).
   has_rich_text :public_notes
+  # Note INTERNE (jamais visible du client) — ActionText depuis l'issue #313. Elle
+  # vivait dans la colonne `stays.notes`, supprimée par la même migration : deux
+  # emplacements pour la même note finissent toujours par diverger.
+  #
+  # ATTENTION `touch:` — `ActionText::RichText belongs_to :record, touch: true`.
+  # Enregistrer la note TOUCHE donc `stays.updated_at`. Ce qui ne doit pas le faire
+  # (le rapatriement automatique de `Stays::MergeOriginNotes`) passe explicitement
+  # par `Stay.no_touching`.
+  #
+  # `store_if_blank: false` : une note vidée EFFACE son enregistrement au lieu de
+  # laisser en base une ligne au corps nul, qui n'est ni une note ni rien. Les
+  # séjours sans note interne — l'immense majorité — n'ont donc aucune ligne.
+  has_rich_text :internal_notes, store_if_blank: false
   # Repas (epic #66, Phase 3) : rattachés en direct (pas d'occupation calendrier),
   # sur le modèle d'`experience_bookings`.
   has_many :meal_orders, dependent: :destroy
@@ -211,6 +222,20 @@ class Stay < ApplicationRecord
   scope :past, -> { where("departure_date < ?", Date.today).order(arrival_date: :desc) }
   scope :from_source, ->(value) { value.present? ? where(source: value) : all }
   scope :recent, -> { order(created_at: :desc) }
+
+  # La note interne porte-t-elle quelque chose ? `internal_notes` construit un
+  # `ActionText::RichText` à la volée quand il n'y en a pas : tester sa simple
+  # présence renverrait toujours `true`. On lit donc le TEXTE, qui est aussi la
+  # seule façon de reconnaître l'éditeur « vide » (`<div><br></div>`).
+  def internal_note?
+    internal_note_text.present?
+  end
+
+  # Texte brut de la note interne — ce que cherchent la recherche, les emails en
+  # texte seul et les comparaisons d'idempotence. Jamais `nil`.
+  def internal_note_text
+    internal_notes.to_plain_text.strip
+  end
 
   # Une facture est-elle attendue sur ce séjour (à fournir OU déjà envoyée) ?
   def invoice_expected?

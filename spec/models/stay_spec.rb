@@ -17,7 +17,6 @@ require "rails_helper"
 #  departure_time             :string
 #  invoice_status             :string
 #  legacy_origin              :string
-#  notes                      :text
 #  payment_status             :string           default("pending"), not null
 #  price_override_cents       :integer
 #  source                     :string           default("reservation"), not null
@@ -409,6 +408,52 @@ RSpec.describe Stay, type: :model do
     it "accepte 0 € (override valide) et nil (pas d'override)" do
       expect(Stay.new(customer: customer, source: "manual", price_override_cents: 0)).to be_valid
       expect(Stay.new(customer: customer, source: "manual", price_override_cents: nil)).to be_valid
+    end
+  end
+
+  # Issue #313 — la note interne est un texte riche (`has_rich_text :internal_notes`,
+  # `store_if_blank: false`), la colonne `stays.notes` a disparu.
+  describe "note interne en texte riche" do
+    let(:customer) { Customer.create!(email: "note@example.com", customer_type: "individual") }
+
+    def make_stay(**attrs)
+      Stay.create!({ customer: customer, source: "manual", status: "pending" }.merge(attrs))
+    end
+
+    it "relit une note enregistrée avec sa mise en forme" do
+      stay = make_stay(internal_notes: "<p>Arrivée <strong>après 17 h</strong>.</p>")
+
+      expect(stay.reload.internal_notes.body.to_html).to include("<strong>après 17 h</strong>")
+      expect(stay.internal_note_text).to eq("Arrivée après 17 h.")
+      expect(stay).to be_internal_note
+    end
+
+    # « Pas de lignes vides en base » : un séjour sans note ne doit PAS porter
+    # d'enregistrement de texte riche au corps nul.
+    it "ne crée aucun enregistrement de texte riche pour une note vide ou nulle" do
+      sans = make_stay
+      nulle = make_stay(internal_notes: nil)
+
+      expect(ActionText::RichText.where(record: [sans, nulle], name: "internal_notes")).to be_empty
+      expect(sans).not_to be_internal_note
+      expect(nulle).not_to be_internal_note
+    end
+
+    it "efface l'enregistrement quand on vide une note existante" do
+      stay = make_stay(internal_notes: "<p>À effacer.</p>")
+      expect(ActionText::RichText.where(record: stay, name: "internal_notes")).to be_present
+
+      stay.update!(internal_notes: nil)
+
+      expect(ActionText::RichText.where(record: stay, name: "internal_notes")).to be_empty
+      expect(stay.reload).not_to be_internal_note
+    end
+
+    it "ne compte pas l'éditeur vidé comme une note" do
+      stay = make_stay
+      stay.update!(internal_notes: Stays::InternalNote.present?("<div><br></div>") ? "<div><br></div>" : nil)
+
+      expect(stay.reload).not_to be_internal_note
     end
   end
 

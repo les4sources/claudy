@@ -80,10 +80,13 @@ module Stays
       draft
     end
 
+    # Note interne = texte riche depuis l'issue #313 : on ajoute un BLOC HTML sous
+    # l'existant, au lieu de concaténer du texte brut.
     def append_refund_note!(stay)
       line = "Remboursement à effectuer — IBAN #{@change_request.refund_iban}. " \
              "#{StayChangeRequest::REFUND_NOTICE}"
-      stay.notes = [stay.notes.presence, line].compact.join("\n")
+      blocs = [InternalNote.html_for(stay).presence, InternalNote.to_html(line)].compact
+      stay.internal_notes = blocs.join
     end
   end
 end

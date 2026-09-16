@@ -16,7 +16,8 @@ RSpec.describe "Index Séjours — refonte du tableau", type: :request do
     # le passage à la pagination trimestrielle. `Date.today + 5` pouvait basculer
     # dans le trimestre suivant selon le jour d'exécution.
     debut = Date.today.beginning_of_quarter
-    Stay.create!(customer: customer, source: "manual", status: status, notes: notes, category: category,
+    Stay.create!(customer: customer, source: "manual", status: status, category: category,
+                 internal_notes: Stays::InternalNote.to_html(notes).presence,
                  arrival_date: debut + 5, departure_date: debut + 7,
                  total_amount_cents: total_cents)
   end

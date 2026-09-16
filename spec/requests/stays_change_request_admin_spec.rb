@@ -85,8 +85,8 @@ RSpec.describe "Demande de modification de séjour (admin)", type: :request do
 
       post approve_change_request_stay_path(stay, change_request_id: change.id)
 
-      expect(stay.reload.notes.to_s).to include("BE68539007547034")
-      expect(stay.notes.to_s).to include(StayChangeRequest::REFUND_NOTICE)
+      expect(stay.reload.internal_note_text).to include("BE68539007547034")
+      expect(stay.internal_note_text).to include(StayChangeRequest::REFUND_NOTICE)
     end
 
     it "re-vérifie la disponibilité à la validation et refuse si elle a sauté" do

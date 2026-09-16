@@ -95,6 +95,8 @@ div class="p-1 text-center text-xs font-bold rounded-t-lg #{band.last}"
   / Note interne UNIQUE du séjour : depuis `Stays::MergeOriginNotes`, elle porte
   / déjà les notes des réservations d'origine. Écriture manuscrite, comme partout
   / ailleurs — c'est le mot laissé sur le comptoir.
-  - if stay.notes.present?
+  / Texte riche depuis l'issue #313 : on rend le TEXTE BRUT tronqué, comme avant —
+  / une carte de calendrier n'a pas à porter la mise en forme de la note.
+  - if stay.internal_note?
     .mt-2.space-y-4.text-yellow-600.font-caveat.text-lg
-      = simple_format "📝 " + stay.notes.truncate(200)
+      = simple_format "📝 " + stay.internal_note_text.truncate(200)

@@ -102,7 +102,7 @@ RSpec.describe "Public::Stays (/sejour/:token)", type: :request do
     end
 
     it "affiche la note PUBLIQUE du séjour et JAMAIS la note interne" do
-      stay.update!(notes: "SECRET INTERNE À NE PAS DIVULGUER")
+      stay.update!(internal_notes: Stays::InternalNote.to_html("SECRET INTERNE À NE PAS DIVULGUER"))
       stay.public_notes = "<div>Bon séjour à vous et à bientôt</div>"
       stay.save!
 

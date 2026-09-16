@@ -476,13 +476,19 @@ class StaysController < BaseController
   end
 
   # Note INTERNE éditée depuis la modale séjour (Michael 2026-07-26). N'écrit QUE
-  # `stays.notes` — jamais la note publique, jamais la composition. Une chaîne
-  # vide efface la note, ce qui est un usage légitime.
+  # `internal_notes` — jamais la note publique, jamais la composition. Une note
+  # vidée efface la note, ce qui est un usage légitime.
+  #
+  # Depuis l'issue #313 le champ est un éditeur de texte riche : vidé, il ne
+  # renvoie PAS une chaîne vide mais du HTML creux (`<div><br></div>`). D'où le
+  # test de vacuité sur le texte extrait, sans lequel « effacer la note » la
+  # remplirait de balises invisibles.
   #
   # NB : les notes portées par les bookables historiques (Booking/SpaceBooking)
   # restent en lecture seule, elles appartiennent à la réservation d'origine.
   def update_notes
-    @stay.update(notes: params.dig(:stay, :notes).to_s.strip.presence)
+    submitted = params.dig(:stay, :internal_notes).to_s
+    @stay.update(internal_notes: Stays::InternalNote.present?(submitted) ? submitted : nil)
     redirect_to stay_path(@stay), notice: "Note enregistrée."
   end
 
@@ -666,7 +672,12 @@ class StaysController < BaseController
   def load_merge_stays
     ids = Array(params[:stay_ids]).map(&:to_i).uniq.reject(&:zero?)
     stays = Stay.where(id: ids)
-                .includes(:customer, :meal_orders, experience_bookings: { experience_availability: :experience }, stay_items: :bookable)
+                # `rich_text_internal_notes` : depuis l'issue #313 l'aperçu de fusion teste
+                # la présence d'une note interne sur le texte riche — sans ce préchargement,
+                # une requête par séjour candidat.
+                .includes(:customer, :meal_orders, :rich_text_internal_notes,
+                          experience_bookings: { experience_availability: :experience },
+                          stay_items: :bookable)
                 .to_a
     preload_public_notes(stays)
     stays
@@ -766,17 +777,27 @@ class StaysController < BaseController
     end
   end
 
-  # Applique la note interne (colonne `notes`, texte brut) et la note publique
-  # (`public_notes`, ActionText) saisies au form. `merge_auto` distingue les deux
-  # canaux : à la CRÉATION, on concatène la note interne saisie avec l'éventuelle
-  # note auto déjà posée par le Builder (multi-chiens) ; à l'ÉDITION, on écrase.
+  # Applique la note interne (`internal_notes`, ActionText depuis l'issue #313) et
+  # la note publique (`public_notes`, ActionText) saisies au form. `merge_auto`
+  # distingue les deux canaux : à la CRÉATION, on concatène la note interne saisie
+  # avec l'éventuelle note auto déjà posée par le Builder (multi-chiens) ; à
+  # l'ÉDITION, on écrase.
+  #
+  # Les deux notes sont désormais du HTML : la concaténation colle deux fragments
+  # bout à bout au lieu de joindre par `\n\n`, et la vacuité se teste sur le TEXTE
+  # (un éditeur vidé renvoie `<div><br></div>`, qui n'est pas une chaîne vide).
   def apply_admin_notes(stay, merge_auto:)
     return if stay.nil?
 
-    admin_internal = stay_params[:notes].to_s.strip.presence
-    stay.notes =
+    submitted = stay_params[:internal_notes].to_s
+    admin_internal = Stays::InternalNote.present?(submitted) ? submitted : nil
+
+    stay.internal_notes =
       if merge_auto
-        [admin_internal, stay.notes.to_s.strip.presence].compact.uniq.join("\n\n").presence
+        auto = Stays::InternalNote.html_for(stay).presence
+        auto = nil if auto && admin_internal &&
+                      Stays::InternalNote.plain_text(auto) == Stays::InternalNote.plain_text(admin_internal)
+        [admin_internal, auto].compact.join.presence
       else
         admin_internal
       end

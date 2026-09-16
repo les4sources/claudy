@@ -235,12 +235,13 @@ class StayDecorator < ApplicationDecorator
   # des notes privées vivent encore là (399 bookings + 255 espaces au
   # 2026-07-21). Chaque entrée = { source:, text: } ; jamais exposé côté client.
   def internal_notes_entries
+    stay_note = object.internal_note_text
     entries = []
-    entries << { source: "Séjour", text: object.notes } if object.notes.present?
+    entries << { source: "Séjour", text: stay_note } if stay_note.present?
     object.stay_items.each do |item|
       bookable = item.bookable
       note = bookable.try(:notes)
-      next if note.blank? || note == object.notes
+      next if note.blank? || note == stay_note
 
       label = item.bookable_type == "SpaceBooking" ? "Espaces" : "Hébergement"
       entries << { source: label, text: note }
@@ -520,18 +521,44 @@ class StayDecorator < ApplicationDecorator
     }
   end
 
-  # Dernière édition de la NOTE interne : qui, quand. Lue dans PaperTrail, qui
-  # versionne déjà le séjour — aucune colonne à ajouter. nil si la note n'a
-  # jamais été touchée (import legacy).
+  # Dernière édition de la NOTE interne : qui, quand. nil si la note n'a jamais
+  # été touchée (import legacy).
+  #
+  # Depuis l'issue #313 la note est un `ActionText::RichText` : la modification se
+  # pose sur CE modèle (versionné par `config/initializers/action_text_paper_trail.rb`),
+  # plus sur `Stay`. D'où les deux lectures, dans cet ordre.
+  #
+  # LE REPLI N'EST PAS DÉCORATIF : toutes les notes écrites AVANT la migration
+  # n'ont de trace que dans les versions du `Stay` (`object_changes LIKE '%notes:%'`,
+  # l'ancienne colonne). Sans lui, elles perdraient toutes leur mention.
   def note_last_edit
-    version = PaperTrail::Version
-              .where(item_type: "Stay", item_id: object.id)
-              .where("object_changes LIKE ?", "%notes:%")
-              .order(created_at: :desc)
-              .first
+    version = rich_note_last_version || legacy_note_last_version
     return nil if version.nil?
 
     { at: version.created_at, by: note_editor_name(version.whodunnit) }
+  end
+
+  # Versions du texte riche `internal_notes` porté par CE séjour.
+  def rich_note_last_version
+    rich_text_id = ActionText::RichText
+                   .where(record_type: "Stay", record_id: object.id, name: "internal_notes")
+                   .pick(:id)
+    return nil if rich_text_id.nil?
+
+    PaperTrail::Version
+      .where(item_type: "ActionText::RichText", item_id: rich_text_id)
+      .order(created_at: :desc)
+      .first
+  end
+
+  # Historique d'AVANT la bascule en texte riche : la colonne `stays.notes`
+  # laissait ses versions sur le `Stay` lui-même.
+  def legacy_note_last_version
+    PaperTrail::Version
+      .where(item_type: "Stay", item_id: object.id)
+      .where("object_changes LIKE ?", "%notes:%")
+      .order(created_at: :desc)
+      .first
   end
 
   # `whodunnit` porte l'id du User. On préfère le nom du Human rattaché, à

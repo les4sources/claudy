@@ -20,7 +20,8 @@ RSpec.describe "Fusion — carte de désignation enrichie (merge_setup)", type: 
                               status: "confirmed", booking_type: "lodging", price_cents: 0,
                               notes: booking_notes, public_notes: public_notes)
     stay = Stay.create!(customer: customer, source: source, status: status,
-                        arrival_date: from, departure_date: to, notes: stay_notes)
+                        arrival_date: from, departure_date: to,
+                        internal_notes: Stays::InternalNote.to_html(stay_notes).presence)
     StayItem.create!(stay: stay, bookable: booking)
     stay
   end
