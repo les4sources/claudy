@@ -706,6 +706,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
     t.bigint "deferred_from_id"
     t.bigint "delegate_to_human_id"
     t.datetime "deleted_at"
+    t.boolean "economic", default: false, null: false
     t.decimal "hours", precision: 5, scale: 2
     t.bigint "human_id", null: false
     t.string "label", null: false
@@ -718,6 +719,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
     t.index ["cycle_id"], name: "index_cycle_actions_on_cycle_id"
     t.index ["deferred_from_id"], name: "index_cycle_actions_on_deferred_from_id"
     t.index ["delegate_to_human_id"], name: "index_cycle_actions_on_delegate_to_human_id"
+    t.index ["economic"], name: "index_cycle_actions_on_economic"
     t.index ["human_id", "archived_at"], name: "index_cycle_actions_on_human_id_and_archived_at"
     t.index ["human_id", "category", "position"], name: "index_cycle_actions_on_human_id_and_category_and_position"
     t.index ["human_id"], name: "index_cycle_actions_on_human_id"
@@ -1173,6 +1175,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
     t.string "vat_regime", default: "exempt", null: false
     t.index ["deleted_at"], name: "index_legal_entities_on_deleted_at"
     t.index ["name"], name: "index_legal_entities_on_name", unique: true
+  end
+
+  create_table "linen_orders", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "kind", null: false
+    t.integer "price_cents"
+    t.integer "quantity", default: 1, null: false
+    t.bigint "stay_id", null: false
+    t.integer "unit_price_cents"
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_linen_orders_on_deleted_at"
+    t.index ["stay_id", "kind"], name: "index_linen_orders_on_stay_and_kind_unique_live", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["stay_id"], name: "index_linen_orders_on_stay_id"
   end
 
   create_table "lodging_compositions", force: :cascade do |t|
@@ -2072,6 +2088,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
   add_foreign_key "journal_lines", "journal_entries"
   add_foreign_key "journal_lines", "teams"
   add_foreign_key "journal_lines", "third_parties"
+  add_foreign_key "linen_orders", "stays"
   add_foreign_key "lodging_compositions", "lodgings", column: "component_lodging_id"
   add_foreign_key "lodging_compositions", "lodgings", column: "composite_lodging_id"
   add_foreign_key "lodging_rooms", "lodgings"

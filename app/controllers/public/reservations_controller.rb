@@ -226,6 +226,9 @@ module Public
         :lodging_id, :arrival_date, :departure_date, :dogs_count,
         :adults, :children, :first_name, :last_name, :email, :phone, :group_name, :category,
         :spaces_note,
+        # Draps (epic #260, phase 2) : deux compteurs, bloc « Options » de
+        # l'étape Composition.
+        :linen_single, :linen_double,
         needs: [],
         lodging_night_ids: [],
         per_night_resources: { tente: [], van: [], hamac_simple: [], hamac_double: [] },

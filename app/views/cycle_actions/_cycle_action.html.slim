@@ -1,11 +1,17 @@
 - readonly = local_assigns[:readonly]
 - next_cycle = local_assigns.key?(:next_cycle) ? local_assigns[:next_cycle] : cycle_action.cycle.next_cycle
 
+/ ACTIVITÉ ÉCONOMIQUE (epic #330, phase 1) : bordure or nettement visible, pour
+  qu'on repère d'un coup d'œil, dans une liste dense, ce qui rapporte au lieu de
+  consommer le budget d'heures du cycle.
+- economic_ring = cycle_action.economic? ? "ring-1 ring-amber-400 bg-amber-50/50 rounded-lg" : ""
+
 div[id="cycle_action_#{cycle_action.id}"
-    class="cycle-action-row relative flex items-end gap-2 py-2.5 pl-2 pr-4 group hover:bg-gray-50/80 transition-colors duration-150 #{local_assigns[:highlight] ? 'animate-flash-highlight' : ''}"
+    class="cycle-action-row relative flex items-end gap-2 py-2.5 pl-2 pr-4 group hover:bg-gray-50/80 transition-colors duration-150 #{economic_ring} #{local_assigns[:highlight] ? 'animate-flash-highlight' : ''}"
     data-cycle-action-sortable-target=(readonly ? nil : "item")
     data-id=cycle_action.id
     data-hours=(cycle_action.hours.to_f)
+    data-economic=cycle_action.economic.to_s
     data-completed=cycle_action.completed.to_s
     data-category=cycle_action.category]
 
@@ -62,6 +68,18 @@ div[id="cycle_action_#{cycle_action.id}"
   / Action icons
   - unless readonly
     .flex.items-center.gap-0.5.flex-shrink-0
+      /  Bascule ACTIVITÉ ÉCONOMIQUE, en première position du groupe (epic #330,
+         phase 1). Visible sur toute action non archivée : une prestation peut
+         se révéler économique après coup, y compris une fois faite.
+      = button_to toggle_economic_cycle_action_path(cycle_action),
+                  method: :patch,
+                  data: { turbo_stream: true },
+                  class: "p-1.5 rounded-md transition-colors #{cycle_action.economic? ? 'text-amber-600 bg-amber-100 hover:bg-amber-200' : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'}",
+                  title: (cycle_action.economic? ? "Retirer le mode activité économique" : "Marquer comme activité économique (hors budget d'heures)") do
+        svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"
+          path d="M12 2v20"
+
       - unless cycle_action.completed?
         - if next_cycle
           = button_to defer_next_cycle_action_path(cycle_action),

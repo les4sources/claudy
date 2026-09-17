@@ -45,6 +45,22 @@ namespace :rates do
     puts "[rates:align_lodgings_with_website] Rien n'a été écrit — relance avec APPLY=1." unless apply
   end
 
+  desc "Aligne le prix des hamacs (rates + RentalItem) sur la page tarifs du site. Dry-run par défaut, APPLY=1 pour écrire."
+  task align_hamacs_with_website: :environment do
+    apply  = ENV["APPLY"].present?
+    result = Rates::AlignHamacsWithWebsite.new(dry_run: !apply).run
+
+    puts "[rates:align_hamacs_with_website] #{result}"
+    { "créées" => result.created, "réalignées" => result.aligned,
+      "conservées (éditées à la main)" => result.kept }.each do |title, rows|
+      next if rows.empty?
+
+      puts "  #{title} :"
+      rows.each { |row| puts "    - #{row}" }
+    end
+    puts "[rates:align_hamacs_with_website] Rien n'a été écrit — relance avec APPLY=1." unless apply
+  end
+
   desc "Crée les clés du barème « Sourciers » (bar, épicerie, repas, cagnotte, dôme, animaux). Idempotent, ne réécrit jamais un montant existant."
   task seed_sourciers: :environment do
     result = Rates::SeedSourciers.new.run

@@ -8,6 +8,7 @@
 #  completed            :boolean          default(FALSE)
 #  deferral_count       :integer          default(0), not null
 #  deleted_at           :datetime
+#  economic             :boolean          default(FALSE), not null
 #  hours                :decimal(5, 2)
 #  label                :string           not null
 #  outcome              :integer
@@ -27,6 +28,7 @@
 #  index_cycle_actions_on_cycle_id_and_human_id               (cycle_id,human_id)
 #  index_cycle_actions_on_deferred_from_id                    (deferred_from_id)
 #  index_cycle_actions_on_delegate_to_human_id                (delegate_to_human_id)
+#  index_cycle_actions_on_economic                            (economic)
 #  index_cycle_actions_on_human_id                            (human_id)
 #  index_cycle_actions_on_human_id_and_archived_at            (human_id,archived_at)
 #  index_cycle_actions_on_human_id_and_category_and_position  (human_id,category,position)
@@ -79,6 +81,15 @@ class CycleAction < ApplicationRecord
   scope :live, -> { not_archived.where(outcome: nil) }
   scope :settled, -> { where.not(outcome: nil) }
   scope :engaged, -> { where.not(category: :reportee) }
+  # ACTIVITÉ ÉCONOMIQUE (epic #330, phase 1) : une prestation qui rapporte au
+  # lieu de consommer le temps collectif. Elle reste visible et comptée, mais à
+  # part — elle ne mange pas le budget d'heures du cycle.
+  #
+  # L'exclusion ne vaut QUE pour le bloc de charge de la page membre
+  # (décision 3) : le bilan de clôture et le récap membre continuent de compter
+  # ces heures comme avant.
+  scope :economic, -> { where(economic: true) }
+  scope :non_economic, -> { where(economic: false) }
 
   before_create :set_default_position
 

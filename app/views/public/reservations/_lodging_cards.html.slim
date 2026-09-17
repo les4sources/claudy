@@ -48,6 +48,13 @@
             - if from_night
               p.text-sm.font-semibold.text-forest(class="mt-1.5")
                 = "dès #{number_to_currency(from_night / 100.0, unit: '€', format: '%n %u', precision: 0)}/nuit"
+            / Brouette de bûches (epic #260, décision 6) : incluse d'office à La
+            / Chevêche et au Grand-Duc. La Hulotte n'a pas de poêle — rien à dire.
+            / Information, jamais une ligne de prix.
+            - if Pricing::Catalog.firewood_included?(lodging.name)
+              p.funnel-hint.mt-1.flex.items-center.gap-1
+                = funnel_icon :flame, css_class: "w-3.5 h-3.5 text-ember flex-shrink-0"
+                span = Pricing::Catalog::FIREWOOD_NOTICE
 
     / Modale galerie — un seul turbo-frame, rempli à la demande.
     = render "public/reservations/gallery_modal"

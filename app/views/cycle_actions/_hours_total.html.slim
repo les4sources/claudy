@@ -2,12 +2,20 @@
 - engaged = (total_hours || 0).to_f
 - cycle = local_assigns[:cycle] || ::Cycle.reference_for
 - human = local_assigns[:human]
-- scope = (human && cycle) ? human.cycle_actions.for_cycle(cycle).live : ::CycleAction.none
+- all_scope = (human && cycle) ? human.cycle_actions.for_cycle(cycle).live : ::CycleAction.none
+/ ACTIVITÉ ÉCONOMIQUE (epic #330, phase 1) : une prestation qui rapporte ne mange
+  pas le budget d'heures du cycle. TOUT ce bloc raisonne donc hors économiques —
+  engagées, complétées, restantes, répartition, ratio de capacité, rythme requis.
+  L'exclusion s'arrête ici (décision 3) : le bilan de clôture et le récap membre
+  continuent de compter ces heures comme avant.
+- scope = all_scope.non_economic
 - completed_hours = scope.where(completed: true).engaged.sum(:hours).to_f
 - remaining_hours = [engaged - completed_hours, 0].max
 - rituelle_hours = scope.active.where(category: :rituelle).sum(:hours).to_f
 - ponctuelle_hours = scope.active.where(category: :ponctuelle).sum(:hours).to_f
 - other_hours = [engaged - rituelle_hours - ponctuelle_hours, 0].max
+/ Les heures économiques, comptées à part : vivantes, non complétées, non reportées.
+- economic_hours = all_scope.economic.active.engaged.sum(:hours).to_f
 
 - if cycle
   - total_days = (cycle.end_date - cycle.start_date).to_i + 1
@@ -93,6 +101,25 @@ div id="hours_total" class="relative overflow-hidden rounded-2xl border border-#
             = load_pct
           span class="text-sm font-medium text-#{accent}-500"
             | %
+
+    /  ÉCONOMIQUES (epic #330, phase 1) — une figure à part, hors du trio
+       engagées / disponibles / capacité, parce qu'elle ne s'y compare pas :
+       elle dit ce que le membre produit, pas ce qu'il consomme. Rien ne
+       s'affiche quand il n'y en a aucune.
+    - if economic_hours > 0
+      .mb-5.flex.items-center.justify-between.gap-3.rounded-xl.border.border-amber-200.bg-amber-50.px-4.py-3
+        .flex.items-center.gap-2
+          span.text-base.leading-none.text-amber-600 €
+          div
+            div class="text-[0.65rem] uppercase tracking-[0.14em] text-amber-700 font-semibold"
+              | Économiques
+            div class="text-[0.65rem] text-amber-600/80"
+              | Hors budget d'heures du cycle
+        .flex.items-baseline.gap-1
+          span.text-2xl.font-semibold.tabular-nums.leading-none.text-amber-800
+            = number_with_precision(economic_hours, precision: 1, strip_insignificant_zeros: true)
+          span.text-sm.font-medium.text-amber-600
+            | h
 
     / Capacity meter
     div.mb-4
