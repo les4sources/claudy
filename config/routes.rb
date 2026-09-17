@@ -374,6 +374,8 @@ Rails.application.routes.draw do
   resources :cycle_actions, except: [:show] do
     member do
       patch :toggle_completed
+      # Activité économique (epic #330, phase 1).
+      patch :toggle_economic
       patch :defer
       patch :defer_next
       patch :undo_defer_next

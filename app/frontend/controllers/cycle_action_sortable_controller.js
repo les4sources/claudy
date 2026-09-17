@@ -145,6 +145,10 @@ export default class extends Controller {
     let total = 0
     items.forEach(el => {
       if (el.dataset.completed === "true") return
+      // Activité économique (epic #330, phase 1) : hors budget d'heures. Sans
+      // ce filtre, le premier glisser-déposer réintégrait ces heures au total
+      // côté client, et l'écran contredisait le serveur jusqu'au rechargement.
+      if (el.dataset.economic === "true") return
       const list = el.closest("[data-cycle-action-sortable-target='list']")
       if (!list) return
       if (list.dataset.cycleActionSortableCategoryValue === "reportee") return
