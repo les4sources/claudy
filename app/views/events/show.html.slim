@@ -147,3 +147,10 @@ nav.mb-4.flex.gap-1.border-b.border-gray-200
           = image_tag url_for(@event.image),
                       class: "w-full object-cover",
                       alt: ""
+
+/ Fil de commentaires (epic #242, phase 4) — même composant que partout ailleurs.
+  Sous l'onglet Informations seulement : la comptabilité d'un événement a son
+  propre langage, ce n'est pas là qu'on discute de l'organisation.
+- if onglet != "comptabilite"
+  .mt-4.max-w-3xl
+    = render Comments::ThreadComponent.new(commentable: @event.object, current_user: current_user)

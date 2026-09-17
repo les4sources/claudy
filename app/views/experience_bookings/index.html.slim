@@ -16,7 +16,9 @@
       - @experience_bookings.each do |booking|
         .flex.items-center.justify-between.gap-4.p-4.bg-white.rounded-lg.shadow-sm border=1
           .min-w-0
-            .font-semibold = booking.experience.name
+            /  La fiche de la réservation (epic #242, phase 4) : c'est là que vit
+               son fil de commentaires, et c'est l'adresse des notifications.
+            .font-semibold = link_to booking.experience.name, experience_booking_path(booking), class: "claudy-link"
             .text-sm.text-gray-600
               = booking.experience_availability.available_on.strftime("%-d/%m/%Y")
               | &nbsp;à&nbsp;
@@ -42,4 +44,4 @@
             - elsif booking.refused?
               span.px-3.py-1.5.bg-red-100.text-red-800.rounded.text-sm.font-medium Refusée
             - else
-              span.px-3.py-1.5.bg-gray-100.text-gray-700.rounded.text-sm.font-medium = booking.status
+              span.px-3.py-1.5.bg-gray-100.text-gray-700.rounded.text-sm.font-medium = booking.status_label

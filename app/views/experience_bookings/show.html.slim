@@ -1,0 +1,51 @@
+/ Fiche admin d'une réservation d'activité (epic #242, phase 4).
+/
+/ Une réservation ne vivait jusqu'ici que dans la liste et dans la modale du
+/ séjour : rien à quoi accrocher un fil de commentaires, et aucune adresse vers
+/ laquelle pointer une notification. Cette page est cette adresse. Elle reste
+/ délibérément sobre — les GESTES (valider, refuser, déclarer la tenue) vivent
+/ là où on les fait déjà, dans la liste et la file « À confirmer ».
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: @booking.experience.name,
+           links: [link_to("← Activités réservées", experience_bookings_path, class: "btn-page-header-no-background")].compact
+
+.max-w-3xl.space-y-4
+  article.overflow-hidden.rounded-xl.border.border-gray-200.bg-white.shadow-sm
+    dl.divide-y.divide-gray-100
+      .grid.grid-cols-3.items-baseline.gap-4.px-5.py-3
+        dt.text-xs.uppercase.tracking-wider.text-gray-400 Créneau
+        dd.col-span-2.text-sm.text-gray-800
+          = l(@booking.experience_availability.available_on, format: :long)
+          - if @booking.experience_availability.starts_at.present?
+            span.ml-1.text-gray-500 = "à #{@booking.experience_availability.starts_at}"
+
+      .grid.grid-cols-3.items-baseline.gap-4.px-5.py-3
+        dt.text-xs.uppercase.tracking-wider.text-gray-400 Participants
+        dd.col-span-2.text-sm.text-gray-800 = @booking.participants
+
+      .grid.grid-cols-3.items-baseline.gap-4.px-5.py-3
+        dt.text-xs.uppercase.tracking-wider.text-gray-400 Séjour
+        dd.col-span-2.text-sm
+          = link_to @booking.stay.customer&.name.presence || "Séjour ##{@booking.stay_id}",
+                    stay_path(@booking.stay), class: "claudy-link"
+
+      - if @booking.experience.human.present?
+        .grid.grid-cols-3.items-baseline.gap-4.px-5.py-3
+          dt.text-xs.uppercase.tracking-wider.text-gray-400 Porteur
+          dd.col-span-2.text-sm.text-gray-800 = @booking.experience.human.name
+
+      .grid.grid-cols-3.items-baseline.gap-4.px-5.py-3
+        dt.text-xs.uppercase.tracking-wider.text-gray-400 Statut
+        dd.col-span-2.text-sm.text-gray-800
+          = @booking.status_label
+          - if @booking.outcome.present?
+            span.ml-2.rounded-full.bg-gray-100.px-2.py-0.5.text-xs.text-gray-700 = @booking.outcome_label
+
+      - if @booking.refusal_reason.present?
+        .grid.grid-cols-3.items-baseline.gap-4.px-5.py-3
+          dt.text-xs.uppercase.tracking-wider.text-gray-400 Motif du refus
+          dd.col-span-2.text-sm.text-red-700 = @booking.refusal_reason
+
+  / Fil de commentaires — même composant que partout ailleurs.
+  = render Comments::ThreadComponent.new(commentable: @booking, current_user: current_user)

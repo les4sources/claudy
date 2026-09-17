@@ -1,0 +1,29 @@
+/ Un commentaire dans le fil « Activité récente » (epic #242, phase 4).
+/
+/ Le fil disait tout ce qui change dans Claudy sauf ce que les gens s'y
+/ écrivent. `trackable` peut être nil — commentaire supprimé depuis (soft-delete
+/ avec `default_scope`) : on ne fait alors rien plutôt que d'exploser.
+- comment = (activity.trackable rescue nil)
+
+- if comment
+  li
+    .relative.pb-8
+      span.absolute.left-4.top-4.-ml-px.h-full.w-0.5.bg-gray-200[aria-hidden="true"]
+      .relative.flex.space-x-6
+        div
+          span.h-8.w-8.rounded-full.bg-sky-600.flex.items-center.justify-center.ring-8.ring-white
+            svg.h-5.w-5.text-white[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"]
+              path[fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.84 8.84 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7z" clip-rule="evenodd"]
+        .flex.min-w-0.flex-1.justify-between.space-x-4.pt-1.5
+          div
+            p.text-sm.text-gray-900
+              = comment.author_label
+              |  a commenté
+              =<> link_to comment.commentable_label, comment.target_path, class: "claudy-link"
+
+            .mt-2.text-sm.text-gray-500
+              = truncate(comment.body.to_plain_text.strip, length: 200)
+
+          .whitespace-nowrap.text-right.text-sm.text-gray-500
+            time[datetime="#{activity.created_at.iso8601}"]
+              = l(activity.created_at, format: :short)

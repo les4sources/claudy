@@ -46,6 +46,11 @@ class ExperienceBooking < ApplicationRecord
   OUTCOMES = %w[held no_show].freeze
   OUTCOME_LABELS = { "held" => "A eu lieu", "no_show" => "N'a pas eu lieu" }.freeze
 
+  # Libellés de statut, en français. Ils n'existaient pas : les vues affichaient
+  # `status` brut en repli (« confirmed » sur une fiche autrement francophone).
+  STATUS_LABELS = { "pending" => "À valider", "confirmed" => "Confirmée",
+                    "refused" => "Refusée", "cancelled" => "Annulée" }.freeze
+
   # Portée du jeton signé embarqué dans l'email au porteur : il ne vaut QUE
   # pour la validation d'UN `ExperienceBooking` précis (cf. `#validation_token`).
   TOKEN_PURPOSE = :validate_experience_booking
@@ -55,6 +60,10 @@ class ExperienceBooking < ApplicationRecord
   # pouvoir servir à déclarer une tenue, ni l'inverse.
   OUTCOME_TOKEN_PURPOSE = :record_experience_booking_outcome
   OUTCOME_TOKEN_TTL = 60.days
+
+  # Commentable (epic #242, phase 4) : ce qui s'échange entre l'équipe et le
+  # porteur au sujet d'un créneau — un horaire à décaler, un participant de plus.
+  include Commentable
 
   belongs_to :experience_availability
   belongs_to :stay
@@ -67,6 +76,21 @@ class ExperienceBooking < ApplicationRecord
   has_paper_trail
 
   delegate :experience, to: :experience_availability
+
+  def status_label = STATUS_LABELS[status.to_s] || status.to_s
+
+  # Le PORTEUR de l'activité : c'est lui qui tient le créneau, donc lui qu'une
+  # question concerne. `Experience#human` peut être absent (activité orpheline) —
+  # on ne prévient alors personne plutôt que de prévenir au hasard.
+  def comment_recipients
+    [experience&.human&.user].compact
+  end
+
+  def comment_label
+    name = experience&.name.presence || "l'activité"
+    date = experience_availability&.available_on
+    date ? "#{name} du #{I18n.l(date, format: :long)}" : name
+  end
 
   # L'équipe garde la main : depuis l'admin, on peut ajouter une place de plus en
   # connaissance de cause (décision Michael 2026-08-21). Les canaux CLIENT — le
