@@ -12,8 +12,11 @@ li class="flex items-center gap-3 px-4 py-2.5"
     - if action.outcome_deferred? && action.deferred_to
       span.text-xs.text-sky-600.ml-2
         | → #{action.deferred_to.cycle.name}
-  - if action.hours.present? && action.hours > 0
-    span.text-sm.tabular-nums.text-stone-400 = "#{format('%g', action.hours.to_f)}h"
+  - if action.decorate.hours_total
+    span.text-sm.tabular-nums.text-stone-400
+      - if action.decorate.hours_detail
+        span.text-xs.text-stone-300.mr-1 = action.decorate.hours_detail
+      = action.decorate.hours_total
   span class="text-[0.65rem] uppercase tracking-wider font-semibold text-#{outcome[1]}-600 w-24 text-right"
     = outcome[0]
   - if !readonly && action.outcome_deferred?

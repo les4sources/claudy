@@ -2,23 +2,26 @@
 #
 # Table name: cycle_actions
 #
-#  id                   :bigint           not null, primary key
-#  archived_at          :datetime
-#  category             :integer          default(0), not null
-#  completed            :boolean          default(FALSE)
-#  deferral_count       :integer          default(0), not null
-#  deleted_at           :datetime
-#  economic             :boolean          default(FALSE), not null
-#  hours                :decimal(5, 2)
-#  label                :string           not null
-#  outcome              :integer
-#  position             :integer          default(0), not null
-#  created_at           :datetime         not null
-#  updated_at           :datetime         not null
-#  cycle_id             :bigint
-#  deferred_from_id     :bigint
-#  delegate_to_human_id :bigint
-#  human_id             :bigint           not null
+#  id                    :bigint           not null, primary key
+#  archived_at           :datetime
+#  category              :integer          default(0), not null
+#  completed             :boolean          default(FALSE)
+#  completed_occurrences :integer          default(0), not null
+#  deferral_count        :integer          default(0), not null
+#  deleted_at            :datetime
+#  economic              :boolean          default(FALSE), not null
+#  hours                 :decimal(5, 2)
+#  label                 :string           not null
+#  occurrences           :integer          default(1), not null
+#  outcome               :integer
+#  position              :integer          default(0), not null
+#  unit_hours            :decimal(5, 2)
+#  created_at            :datetime         not null
+#  updated_at            :datetime         not null
+#  cycle_id              :bigint
+#  deferred_from_id      :bigint
+#  delegate_to_human_id  :bigint
+#  human_id              :bigint           not null
 #
 # Indexes
 #
@@ -70,6 +73,12 @@ class CycleAction < ApplicationRecord
 
   validates :label, presence: true
   validates :category, presence: true
+  # OCCURRENCES (issue #338) : `unit_hours` est la durée d'UNE fois,
+  # `occurrences` combien de fois dans le cycle. `hours` reste le total engagé —
+  # c'est lui que tout le monde additionne, son sens ne change pas.
+  validates :occurrences, numericality: { only_integer: true, greater_than_or_equal_to: 1 }
+  validates :completed_occurrences, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+  validate :completed_occurrences_within_occurrences
 
   scope :active, -> { where(completed: false) }
   scope :for_human, ->(human) { where(human: human) }
@@ -91,6 +100,7 @@ class CycleAction < ApplicationRecord
   scope :economic, -> { where(economic: true) }
   scope :non_economic, -> { where(economic: false) }
 
+  before_validation :normalise_occurrences
   before_create :set_default_position
 
   def archived?
@@ -115,7 +125,73 @@ class CycleAction < ApplicationRecord
     deferral_count.to_i > 0
   end
 
+  # Répétée dans le cycle : la ligne montre alors le détail `3 × 11h`.
+  def multiple?
+    occurrences.to_i > 1
+  end
+
+  # Les heures réellement faites. Pour une action « une fois » c'est `hours` si
+  # cochée et 0 sinon — exactement comme avant.
+  def completed_hours
+    (unit_hours || 0) * completed_occurrences.to_i
+  end
+
+  # Ce qu'il reste à faire dans le cycle courant.
+  def remaining_occurrences
+    [occurrences.to_i - completed_occurrences.to_i, 0].max
+  end
+
+  # Ce que la copie emporte dans le cycle suivant : le reste à faire. Une action
+  # entièrement faite (une rituelle qu'on relance) repart au contraire sur son
+  # nombre de fois complet — sinon un batchcooking rituel 3 × se réduirait à 1 ×
+  # à chaque clôture.
+  def carry_over_occurrences
+    return occurrences.to_i if completed?
+    [remaining_occurrences, 1].max
+  end
+
   private
+
+  # `hours` est dérivé de `unit_hours × occurrences` dès qu'on a une durée
+  # unitaire. Une saisie ancienne (ou l'API) qui ne connaît que `hours` reste
+  # acceptée : on en dérive `unit_hours`. `completed` devient la conséquence des
+  # occurrences cochées, ce qui laisse intact tout le code qui lit `completed?`.
+  def normalise_occurrences
+    self.occurrences = 1 if occurrences.blank?
+    self.completed_occurrences = 0 if completed_occurrences.blank?
+
+    # Chemin historique : `toggle_completed`, `settle`, l'API — tout ce qui
+    # bascule la case unique sans connaître les occurrences. On reporte la
+    # bascule sur le compteur, puis la case se redéduit de lui.
+    if completed_changed? && !completed_occurrences_changed?
+      self.completed_occurrences = completed? ? occurrences.to_i : 0
+    end
+
+    # Réduire le nombre de fois ramène les occurrences faites dans les clous
+    # (édition). Une saisie directe hors bornes, elle, est refusée en validation.
+    if occurrences_changed? && completed_occurrences.to_i > occurrences.to_i
+      self.completed_occurrences = occurrences
+    end
+
+    # Qui pilote le total ? La durée unitaire, dès qu'elle bouge ou que le
+    # nombre de fois bouge. Sinon un `hours` posé directement (API, ancienne
+    # saisie) fait foi et la durée unitaire s'en déduit. Une sauvegarde qui ne
+    # touche à aucun des trois (cocher, archiver…) ne recalcule rien : le total
+    # d'une action existante ne bouge jamais tout seul.
+    if unit_hours.present? && (unit_hours_changed? || occurrences_changed? || hours.blank?)
+      self.hours = (unit_hours * occurrences.to_i).round(2)
+    elsif hours.present? && (unit_hours.blank? || hours_changed?)
+      self.unit_hours = (hours / occurrences.to_i).round(2)
+    end
+
+    self.completed = completed_occurrences.to_i >= occurrences.to_i
+  end
+
+  def completed_occurrences_within_occurrences
+    return if completed_occurrences.blank? || occurrences.blank?
+    return if completed_occurrences.to_i.between?(0, occurrences.to_i)
+    errors.add(:completed_occurrences, "doit être compris entre 0 et #{occurrences}")
+  end
 
   def set_default_position
     return if position.to_i > 0

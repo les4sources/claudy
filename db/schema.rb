@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_18_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -700,6 +700,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
     t.datetime "archived_at"
     t.integer "category", default: 0, null: false
     t.boolean "completed", default: false
+    t.integer "completed_occurrences", default: 0, null: false
     t.datetime "created_at", null: false
     t.bigint "cycle_id"
     t.integer "deferral_count", default: 0, null: false
@@ -710,8 +711,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
     t.decimal "hours", precision: 5, scale: 2
     t.bigint "human_id", null: false
     t.string "label", null: false
+    t.integer "occurrences", default: 1, null: false
     t.integer "outcome"
     t.integer "position", default: 0, null: false
+    t.decimal "unit_hours", precision: 5, scale: 2
     t.datetime "updated_at", null: false
     t.index ["category"], name: "index_cycle_actions_on_category"
     t.index ["completed"], name: "index_cycle_actions_on_completed"

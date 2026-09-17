@@ -9,7 +9,11 @@
   L'exclusion s'arrête ici (décision 3) : le bilan de clôture et le récap membre
   continuent de compter ces heures comme avant.
 - scope = all_scope.non_economic
-- completed_hours = scope.where(completed: true).engaged.sum(:hours).to_f
+/ OCCURRENCES (issue #338) : on compte les occurrences cochées, pas seulement
+  les actions entièrement faites. Une action 3 × 11 h dont 2 sont faites pèse
+  22 h faites et 11 h restantes. Pour une action « une fois » le résultat est
+  identique à avant (heures si cochée, 0 sinon).
+- completed_hours = scope.engaged.to_a.sum { |a| a.completed_hours.to_f }
 - remaining_hours = [engaged - completed_hours, 0].max
 - rituelle_hours = scope.active.where(category: :rituelle).sum(:hours).to_f
 - ponctuelle_hours = scope.active.where(category: :ponctuelle).sum(:hours).to_f

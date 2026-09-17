@@ -1,4 +1,5 @@
 - readonly = local_assigns[:readonly]
+- decorated = cycle_action.decorate
 - next_cycle = local_assigns.key?(:next_cycle) ? local_assigns[:next_cycle] : cycle_action.cycle.next_cycle
 
 / ACTIVITÉ ÉCONOMIQUE (epic #330, phase 1) : bordure or nettement visible, pour
@@ -32,8 +33,11 @@ div[id="cycle_action_#{cycle_action.id}"
         circle cx="11" cy="8" r="1.25"
         circle cx="11" cy="13" r="1.25"
 
-  / Completed checkbox
-  - if readonly
+  / Completed checkbox — remplacée par les pastilles quand l'action se répète
+    dans le cycle (issue #338).
+  - if cycle_action.multiple?
+    = render "cycle_actions/occurrence_marks", cycle_action: cycle_action, readonly: readonly
+  - elsif readonly
     - if cycle_action.completed?
       .w-5.h-5.rounded.bg-teal-500.flex.items-center.justify-center.flex-shrink-0
         svg.w-3.h-3.text-white xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
@@ -60,10 +64,12 @@ div[id="cycle_action_#{cycle_action.id}"
       span.deferral-badge title="Reportée #{cycle_action.deferral_count} fois"
         | ⟳ ×#{cycle_action.deferral_count}
 
-  / Hours
-  - if cycle_action.hours.present? && cycle_action.hours > 0
-    span.text-sm.font-medium.text-gray-400.tabular-nums.flex-shrink-0
-      = "#{format('%g', cycle_action.hours.to_f)}h"
+  / Hours — le total reste le chiffre principal, le détail `3 × 11h` le précède.
+  - if decorated.hours_total
+    div class="flex items-baseline gap-1.5 flex-shrink-0"
+      - if decorated.hours_detail
+        span.text-xs.text-gray-400.tabular-nums = decorated.hours_detail
+      span.text-sm.font-medium.text-gray-400.tabular-nums = decorated.hours_total
 
   / Action icons
   - unless readonly

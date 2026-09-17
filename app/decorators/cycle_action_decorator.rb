@@ -30,4 +30,30 @@ class CycleActionDecorator < ApplicationDecorator
     return nil unless object.hours.present? && object.hours > 0
     "#{object.hours.to_f}h"
   end
+
+  # Le total reste le chiffre principal ; quand l'action se répète, le détail
+  # `3 × 11h` le précède en plus petit (issue #338).
+  def hours_detail
+    return nil unless object.multiple? && object.unit_hours.present? && object.unit_hours > 0
+    "#{object.occurrences} × #{format('%g', object.unit_hours.to_f)}h"
+  end
+
+  def hours_total
+    return nil unless object.hours.present? && object.hours > 0
+    "#{format('%g', object.hours.to_f)}h"
+  end
+
+  # Version texte complète, pour les endroits qui n'ont qu'une seule place :
+  # « 3 × 11h = 33h », ou « 33h » quand l'action ne se fait qu'une fois.
+  def hours_breakdown
+    total = hours_total
+    return nil unless total
+    detail = hours_detail
+    detail ? "#{detail} = #{total}" : total
+  end
+
+  def occurrences_title
+    return nil unless object.multiple?
+    "#{object.completed_occurrences} sur #{object.occurrences} faits"
+  end
 end

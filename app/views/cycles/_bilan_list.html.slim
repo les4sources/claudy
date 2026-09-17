@@ -15,5 +15,5 @@ div
           span.min-w-0.leading-snug = action.label
           - if action.deferred_before?
             span.deferral-badge title="Reportée #{action.deferral_count} fois" = "⟳ ×#{action.deferral_count}"
-          - if action.hours.present? && action.hours > 0
-            span.text-xs.text-stone-400.tabular-nums.ml-auto.shrink-0 = "#{format('%g', action.hours.to_f)}h"
+          - if action.decorate.hours_total
+            span.text-xs.text-stone-400.tabular-nums.ml-auto.shrink-0 = action.decorate.hours_breakdown

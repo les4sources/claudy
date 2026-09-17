@@ -1,0 +1,40 @@
+/ Durée d'UNE fois × nombre de fois dans le cycle (issue #338). Le total reste
+  ce qui est stocké dans `hours` ; le multiplicateur reste discret tant qu'il
+  vaut 1, pour qu'une action « une fois » se saisisse comme avant. locals: f
+.flex.flex-col
+  label.label.mb-1
+    span.label-text Heures
+  div class="flex items-end gap-1.5"
+    .w-20
+      = f.number_field :unit_hours,
+                       label: false,
+                       step: 0.5,
+                       min: 0,
+                       placeholder: "Heures",
+                       class: "w-full rounded-lg border-gray-200 text-sm focus:border-teal-400 focus:ring-teal-400 tabular-nums placeholder:text-gray-300",
+                       data: { cycle_actions_target: "unitHours", action: "input->cycle-actions#refresh" }
+    span.text-sm.text-gray-400.pb-2 h
+    span.text-sm.text-gray-300.pb-2 ×
+    .inline-flex.items-center.rounded-lg.border.border-gray-200.bg-white
+      button[type="button"
+             tabindex="-1"
+             aria-label="Une fois de moins"
+             data-action="cycle-actions#decrement"
+             class="px-2 py-2 text-gray-400 hover:text-teal-700 leading-none cursor-pointer"]
+        | −
+      .w-10
+        = f.number_field :occurrences,
+                         label: false,
+                         step: 1,
+                         min: 1,
+                         value: (f.object.occurrences.presence || 1),
+                         class: "w-full border-0 bg-transparent p-0 text-center text-sm tabular-nums focus:ring-0",
+                         data: { cycle_actions_target: "occurrences", action: "input->cycle-actions#refresh" }
+      button[type="button"
+             tabindex="-1"
+             aria-label="Une fois de plus"
+             data-action="cycle-actions#increment"
+             class="px-2 py-2 text-gray-400 hover:text-teal-700 leading-none cursor-pointer"]
+        | +
+    output[data-cycle-actions-target="total"
+           class="pb-2 text-sm font-medium text-gray-500 tabular-nums whitespace-nowrap"]
