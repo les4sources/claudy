@@ -326,6 +326,8 @@ Rails.application.routes.draw do
         # Payer une facture d'achat depuis une ligne sortante (epic #240,
         # phase 4) : même geste, autre dette.
         post :pay_invoice
+        # Rapprocher une ligne sortante d'une note de frais (epic #241, phase 3).
+        post :pay_expense_report
         # Rapprocher une ligne bancaire entrante de son versement Stripe
         # (epic #250, phase 2).
         post :reconcile_payout
@@ -507,7 +509,7 @@ Rails.application.routes.draw do
     # sans séjour d'attache. URLs admin en anglais.
     resources :payments, only: [:create, :update], controller: "stay_payments"
   end
-  resources :experience_bookings, only: [:index, :update, :destroy] do
+  resources :experience_bookings, only: [:index, :show, :update, :destroy] do
     collection do
       # Tenue de l'activité (epic #244, phase 2) : la file de ce qui attend un
       # verdict, et le geste en masse de l'admin global.

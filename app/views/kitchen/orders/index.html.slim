@@ -25,6 +25,18 @@
         span.rounded-full.px-2.text-xs.font-semibold(class="py-0.5 #{active ? 'bg-teal-50 text-4s-main' : 'bg-gray-100 text-gray-600'}")
           = @counts[view[:key]]
 
+  /  FILTRE PAR ORIGINE (epic #321, phase 2, décision 3) — seulement dans les
+     vues de travail : c'est là qu'on se demande qui relancer. Les archives, les
+     annulés et le plan de charge n'ont pas cette question.
+  - if Kitchen::OrdersController::ORIGIN_FILTER_VIEWS.include?(@view)
+    .flex.flex-wrap.items-center.gap-2.text-sm
+      span.text-xs.font-medium.uppercase.tracking-wide.text-gray-500 Origine
+      - [[nil, "Toutes"]].concat(MealOrder::ORIGINS.map { |o| [o, MealOrder::ORIGIN_LABELS[o]] }).each do |value, label|
+        - active = @origin == value
+        = link_to label,
+                  kitchen_orders_path(view: @view, origin: value, family: @family, responsible_human_id: @responsible),
+                  class: "rounded-full border px-3 py-1 text-xs font-medium #{active ? 'border-4s-main bg-4s-main text-white' : 'border-gray-300 text-gray-600 hover:border-gray-400'}"
+
   .overflow-x-auto.rounded-xl.bg-white.ring-1.ring-gray-200
     table.w-full.text-sm(class="min-w-[1080px]")
       thead

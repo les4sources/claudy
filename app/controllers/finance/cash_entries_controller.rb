@@ -8,7 +8,7 @@ module Finance
   class CashEntriesController < Finance::AccountingBaseController
     before_action :get_entry,
                   only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate, :payout,
-                         :pay_invoice, :reconcile_payout]
+                         :pay_invoice, :pay_expense_report, :reconcile_payout]
     breadcrumb "Trésorerie", :finance_cash_entries_path, match: :exact
 
     def index
@@ -93,6 +93,10 @@ module Finance
       # dont le montant ou l'IBAN correspond à une facture `to_pay`. Les
       # factures sont chargées UNE fois pour la page, comme les soldes.
       @invoice_matches = Finance::MatchPurchaseInvoices.new.for_entries(@entries)
+      # Les notes de frais et de mission à payer (epic #241, phase 3) : même
+      # geste que la facture, sur une autre dette. Les notes `processing` sont
+      # chargées UNE fois pour la page, comme les factures.
+      @expense_report_matches = Finance::MatchExpenseReports.new.for_entries(@entries)
       # Les versements Stripe (epic #250, phase 2) : une ligne bancaire ENTRANTE
       # dont le montant et la date correspondent à un versement pas encore
       # rapproché. Les versements sont chargés UNE fois pour la page.
@@ -184,6 +188,28 @@ module Finance
                   notice: "#{facture.payable_label} rapprochée de cette ligne."
     rescue Finance::RecordInvoicePayment::NotPayable, Finance::RecordInvoicePayment::TooMuch,
            Finance::RecordInvoicePayment::WrongDirection, Finance::RecordInvoicePayment::MissingAccount,
+           Accounting::PostCashEntry::NotFullyAllocated,
+           ActiveRecord::RecordInvalid => e
+      redirect_to finance_cash_entry_path(@entry), alert: e.message
+    end
+
+    # Rapprocher une ligne sortante d'une note de frais ou de mission (epic #241,
+    # phase 3). La proposition n'a rien écrit : c'est CE clic qui affecte.
+    def pay_expense_report
+      note = ExpenseReport.find(params[:expense_report_id])
+      montant = params[:amount].presence && (params[:amount].to_s.tr(",", ".").to_f * 100).round
+
+      Finance::RecordExpenseReportPayment.new(
+        expense_report: note, cash_entry: @entry, amount_cents: montant,
+        whodunnit: current_user&.email
+      ).run!
+
+      redirect_to finance_unallocated_cash_entries_path,
+                  notice: "#{note.payable_label} rapprochée de cette ligne."
+    rescue Finance::RecordExpenseReportPayment::NotPayable,
+           Finance::RecordExpenseReportPayment::TooMuch,
+           Finance::RecordExpenseReportPayment::WrongDirection,
+           Finance::RecordExpenseReportPayment::MissingAccount,
            Accounting::PostCashEntry::NotFullyAllocated,
            ActiveRecord::RecordInvalid => e
       redirect_to finance_cash_entry_path(@entry), alert: e.message

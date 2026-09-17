@@ -18,6 +18,7 @@ require "rails_helper"
 #  kind                   :string
 #  moment                 :string
 #  notes                  :text
+#  origin                 :string           default("client"), not null
 #  people                 :integer          default(1), not null
 #  price_cents            :integer
 #  refusal_reason         :text
@@ -33,6 +34,7 @@ require "rails_helper"
 # Indexes
 #
 #  index_meal_orders_on_deleted_at            (deleted_at)
+#  index_meal_orders_on_origin                (origin)
 #  index_meal_orders_on_responsible_human_id  (responsible_human_id)
 #  index_meal_orders_on_status                (status)
 #  index_meal_orders_on_stay_id               (stay_id)

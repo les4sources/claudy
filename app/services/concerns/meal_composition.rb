@@ -98,8 +98,14 @@ module MealComposition
     stay.meal_orders.billable.sum(:price_cents)
   end
 
+  # `origin` est posé EXPLICITEMENT (epic #321, phase 2, décision 3), jamais
+  # laissé au défaut de la colonne : ce chemin est celui du funnel public et du
+  # formulaire de séjour, où c'est bien le client qui demande. Le jour où la
+  # valeur par défaut changera, ce chemin-ci dira toujours la vérité.
   def create_meal_order!(stay, entry)
-    stay.meal_orders.create!(entry.slice(:kind, :date, :moment, :people, :notes))
+    stay.meal_orders.create!(
+      entry.slice(:kind, :date, :moment, :people, :notes).merge(origin: "client")
+    )
   end
 
   def parse_meal_date(value)

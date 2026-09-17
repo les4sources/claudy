@@ -11,7 +11,7 @@
 # refus (jamais une action réussie hors périmètre).
 class ExperienceBookingsController < BaseController
   before_action :load_scoped_booking,
-                only: [:update, :destroy, :confirm, :new_refusal, :refuse, :record_outcome]
+                only: [:show, :update, :destroy, :confirm, :new_refusal, :refuse, :record_outcome]
 
   def index
     @experience_bookings = ExperienceBooking.for_user(current_user)
@@ -20,6 +20,13 @@ class ExperienceBookingsController < BaseController
                                             .limit(100)
     @awaiting_outcome_count = awaiting_outcome_scope.count
   end
+
+  # La fiche admin d'UNE réservation (epic #242, phase 4). Elle n'existait pas :
+  # une réservation ne vivait que dans la liste et dans la modale du séjour, donc
+  # rien à quoi accrocher un fil de commentaires, et aucune adresse vers laquelle
+  # pointer une notification. Le scoping `for_user` s'applique comme partout —
+  # un porteur ne voit que ses créneaux.
+  def show; end
 
   # « À confirmer » (epic #244, phase 2) : ce qui a été confirmé, est passé, et
   # n'a pas encore dit s'il a eu lieu.

@@ -128,6 +128,22 @@ class MealOrderDecorator < ApplicationDecorator
     h.content_tag(:span, "sans séjour", class: "#{BADGE_BASE} bg-gray-100 text-gray-600")
   end
 
+  # D'OÙ VIENT LA DEMANDE (epic #321, phase 2). Une pastille compacte à côté du
+  # client, pas une colonne de plus : la table est déjà large. Le `title` porte
+  # la phrase entière — c'est elle qui dit à Malau qui relancer trois semaines
+  # plus tard.
+  ORIGIN_STYLES = {
+    "client"    => "bg-indigo-50 text-indigo-700",
+    "reception" => "bg-amber-50 text-amber-800"
+  }.freeze
+
+  def origin_badge
+    style = ORIGIN_STYLES[object.origin.to_s] || "bg-gray-100 text-gray-600"
+
+    h.content_tag(:span, object.origin_short_label,
+                  class: "#{BADGE_BASE} #{style}", title: object.origin_label)
+  end
+
   # On lit l'ASSOCIATION, pas la colonne : `Human` porte un `default_scope` sur
   # `status: "active"`, donc un membre désactivé laisse `responsible_human_id`
   # rempli et `responsible_human` à nil. Lire la colonne masquerait le bouton

@@ -30,6 +30,10 @@ class Decision < ApplicationRecord
   include PublicActivity::Model
   tracked owner: Proc.new { |controller, _model| controller.current_user rescue nil }
 
+  # Commentable (epic #242, phase 4) : une décision se discute après coup, et
+  # cette discussion doit rester attachée à la décision, pas se perdre ailleurs.
+  include Commentable
+
   belongs_to :recorded_by, class_name: "Human"
   belongs_to :gathering, optional: true
   belongs_to :agenda_item, optional: true
@@ -42,6 +46,13 @@ class Decision < ApplicationRecord
   validates :title, :summary, :taken_at, presence: true
 
   scope :recent, -> { order(taken_at: :desc, id: :desc) }
+
+  # Celui qui a consigné la décision : c'est lui qu'une question concerne.
+  def comment_recipients
+    [recorded_by&.user].compact
+  end
+
+  def comment_label = "la décision « #{title} »"
 
   def self.search(query)
     return all if query.blank?
