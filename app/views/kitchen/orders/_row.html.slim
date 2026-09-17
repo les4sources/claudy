@@ -38,6 +38,9 @@ tr(id=dom class="#{order.row_tone_class} #{muted ? 'text-gray-500' : 'text-gray-
       - else
         span(class=(muted ? '' : 'text-gray-900')) = order.client_label
       = order.orphan_badge
+      /  D'OÙ VIENT LA DEMANDE (epic #321, phase 2) : du client par son formulaire,
+         ou proposée par l'accueil. Sans elle, Malau ne sait plus qui relancer.
+      = order.origin_badge
 
   td.whitespace-nowrap.px-3.py-2.font-medium
     .flex.items-center.gap-1

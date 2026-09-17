@@ -1,0 +1,15 @@
+/ Le choix de l'origine d'une demande (epic #321, phase 2, décision 3).
+/
+/ « Proposée par l'accueil » est présélectionné : on est sur le formulaire de
+/ SAISIE MANUELLE, donc par définition celui de Malau au téléphone. Une demande
+/ venue du client arrive par le funnel, qui pose l'origine lui-même.
+/
+/ Locals : name, id, selected.
+fieldset
+  legend.block.text-sm.font-medium.text-gray-700 D'où vient la demande
+  .mt-2.flex.flex-wrap.gap-2
+    - MealOrder::ORIGINS.each do |origin|
+      label.cursor-pointer
+        = radio_button_tag name, origin, selected.to_s == origin, id: "#{id}_#{origin}", class: "peer sr-only"
+        span.inline-block.rounded-full.border.border-gray-300.px-3.text-sm.text-gray-700(class="py-1.5 peer-checked:border-4s-main peer-checked:bg-4s-main peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-4s-main peer-focus-visible:ring-offset-1 hover:border-gray-400")
+          = MealOrder::ORIGIN_LABELS[origin]

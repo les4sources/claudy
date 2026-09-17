@@ -25,6 +25,7 @@
 #  kind                   :string
 #  moment                 :string
 #  notes                  :text
+#  origin                 :string           default("client"), not null
 #  people                 :integer          default(1), not null
 #  price_cents            :integer
 #  refusal_reason         :text
@@ -40,6 +41,7 @@
 # Indexes
 #
 #  index_meal_orders_on_deleted_at            (deleted_at)
+#  index_meal_orders_on_origin                (origin)
 #  index_meal_orders_on_responsible_human_id  (responsible_human_id)
 #  index_meal_orders_on_status                (status)
 #  index_meal_orders_on_stay_id               (stay_id)
@@ -60,6 +62,11 @@ class MealOrder < ApplicationRecord
   STATUSES    = %w[inquiry requested confirmed cancelled].freeze
   VALIDATIONS = %w[pending accepted refused].freeze
   FAMILIES    = %w[repas buffet apero].freeze
+  # D'OÙ VIENT LA DEMANDE (epic #321, phase 2, décision 3). Malau propose souvent
+  # un repas au groupe de sa propre initiative, avant que le client ait rien
+  # demandé ; trois semaines plus tard, devant la ligne, elle ne sait plus qui
+  # relancer. L'origine répond à cette question, et à elle seule.
+  ORIGINS     = %w[client reception].freeze
 
   # Famille = qui cuisine. Elle porte le comportement (la famille `repas` passe
   # par la validation email de Stéphanie ; buffet et apéro par « je m'en charge »).
@@ -90,6 +97,10 @@ class MealOrder < ApplicationRecord
                         "confirmed" => "Confirmé", "cancelled" => "Annulé" }.freeze
   VALIDATION_LABELS = { "pending" => "En attente", "accepted" => "Acceptée",
                         "refused" => "Refusée" }.freeze
+  ORIGIN_LABELS     = { "client" => "Demande du client",
+                        "reception" => "Proposée par l'accueil" }.freeze
+  # Version courte, pour la pastille de la table : la table est déjà large.
+  ORIGIN_SHORT_LABELS = { "client" => "Client", "reception" => "Accueil" }.freeze
 
   # Champs dont le changement invalide un accord déjà donné par la cuisine.
   # Le prix, les notes, le responsable et les coûts n'en font PAS partie.
@@ -121,6 +132,7 @@ class MealOrder < ApplicationRecord
   validates :moment, inclusion: { in: MOMENTS }, allow_blank: true
   validates :status, inclusion: { in: STATUSES }
   validates :validation, inclusion: { in: VALIDATIONS }
+  validates :origin, inclusion: { in: ORIGINS }
   validates :refusal_reason, presence: { message: "est obligatoire pour un refus" }, if: :refused?
   # Un séjour, ou un texte libre : jamais ni l'un ni l'autre. Une demande dont on
   # ne sait pas pour qui elle est ne sert à personne.
@@ -149,6 +161,7 @@ class MealOrder < ApplicationRecord
   scope :upcoming, -> { where("date >= ? OR date IS NULL", Date.current) }
   scope :past, -> { where("date < ?", Date.current) }
   scope :of_family, ->(family) { where(kind: KIND_FAMILIES.select { |_, f| f == family.to_s }.keys) }
+  scope :of_origin, ->(origin) { where(origin: origin.to_s) }
   # Refusées par la cuisine mais encore à servir : Michael doit prévoir autre
   # chose. Une ligne annulée par le client, elle, n'est plus à couvrir.
   scope :to_cover, -> { where(validation: "refused").where.not(status: "cancelled").upcoming }
@@ -164,12 +177,18 @@ class MealOrder < ApplicationRecord
 
   def self.label_for(kind) = KIND_LABELS[kind.to_s] || kind.to_s.tr("_", " ").capitalize
 
+  def self.origin_label_for(origin) = ORIGIN_LABELS[origin.to_s] || origin.to_s
+
   def label = self.class.label_for(kind)
   def moment_label = MOMENT_LABELS[moment.to_s]
   def family = KIND_FAMILIES[kind.to_s]
   def family_label = FAMILY_LABELS[family]
   def status_label = STATUS_LABELS[status.to_s]
   def validation_label = VALIDATION_LABELS[validation.to_s]
+  def origin_label = self.class.origin_label_for(origin)
+  def origin_short_label = ORIGIN_SHORT_LABELS[origin.to_s] || origin.to_s
+  def from_client? = origin.to_s == "client"
+  def from_reception? = origin.to_s == "reception"
 
   STATUSES.each { |s| define_method("#{s}?") { status.to_s == s } }
   VALIDATIONS.each { |v| define_method("#{v}?") { validation.to_s == v } }
