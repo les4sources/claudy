@@ -498,7 +498,7 @@ Rails.application.routes.draw do
     # sans séjour d'attache. URLs admin en anglais.
     resources :payments, only: [:create, :update], controller: "stay_payments"
   end
-  resources :experience_bookings, only: [:index, :update, :destroy] do
+  resources :experience_bookings, only: [:index, :show, :update, :destroy] do
     collection do
       # Tenue de l'activité (epic #244, phase 2) : la file de ce qui attend un
       # verdict, et le geste en masse de l'admin global.

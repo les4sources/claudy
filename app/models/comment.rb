@@ -30,9 +30,20 @@ class Comment < ApplicationRecord
   # PAR CETTE LISTE, jamais par un `constantize` libre : un paramètre de type
   # arbitraire ne doit pas pouvoir instancier une classe au hasard.
   #
-  # Les phases suivantes de l'epic l'étendent (`ExpenseReport`,
-  # `PurchaseInvoice`, `Event`, `Decision`, `ExperienceBooking`).
-  COMMENTABLE_TYPES = %w[Gathering Stay ExpenseReport PurchaseInvoice].freeze
+  # Étendue phase après phase : `Gathering` et `Stay` en phase 1, les deux
+  # objets comptables en phase 3, l'événement, la décision et la réservation
+  # d'activité en phase 4.
+  COMMENTABLE_TYPES = %w[
+    Gathering Stay ExpenseReport PurchaseInvoice Event Decision ExperienceBooking
+  ].freeze
+
+  # Le fil d'activité récente montre aussi les commentaires (epic #242, phase 4).
+  # `only: :create` : publier un commentaire est un événement du collectif, le
+  # corriger trois minutes plus tard n'en est pas un — sans ce garde-fou, une
+  # relecture de sa propre phrase remonterait en tête du fil.
+  include PublicActivity::Model
+  tracked only: [:create],
+          owner: proc { |controller, model| (controller&.current_user rescue nil) || model.author }
 
   has_paper_trail
   has_soft_deletion default_scope: true

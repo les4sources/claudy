@@ -48,3 +48,7 @@
           .font-semibold.uppercase.text-stone-500(class="text-[0.7rem] tracking-[0.2em]") Contenu détaillé
         .px-5.py-4.prose.prose-sm.max-w-none
           == @decision.body
+
+    / Fil de commentaires (epic #242, phase 4) — une décision se discute après
+      coup, et cette discussion reste attachée à la décision.
+    = render Comments::ThreadComponent.new(commentable: @decision.object, current_user: current_user)

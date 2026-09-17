@@ -41,6 +41,9 @@ class Event < ApplicationRecord
 
   # Publication sur le site les4sources.be : `published_at`, `slug`, rebuild.
   include Publishable
+  # Commentable (epic #242, phase 4) : un événement se prépare à plusieurs, et
+  # ce qui s'échange à son sujet n'a aujourd'hui nulle part où vivre.
+  include Commentable
 
   SUMMARY_MAX_LENGTH = 200
 
@@ -70,6 +73,15 @@ class Event < ApplicationRecord
   # Contenu PUBLIC (fiche sur le site), distinct des notes internes.
   has_rich_text :public_description
   has_one_attached :image
+
+  # Ceux que ça concerne : les organisateurs de l'événement, quand ils ont un
+  # compte. Un événement sans organisateur ne prévient personne — plutôt que de
+  # prévenir tout le monde.
+  def comment_recipients
+    organizers.filter_map(&:user).uniq
+  end
+
+  def comment_label = "l'événement #{name}"
 
   validates :name,
             presence: true
