@@ -111,10 +111,48 @@ module Pricing
 
     # Hamacs (RentalItem) : prix/nuit/unité, lookup DB avec fallback.
     # Disponibles mai-octobre ; les objets physiques sont dans rental_items.
+    #
+    # Source de vérité : https://www.les4sources.be/sejours/tarifs — « Location
+    # hamac/tarp/matelas isolant : 10 € » (epic #260, décision 7). Le site ne
+    # distingue pas simple et double : les deux valent 10 €/nuit. Les anciennes
+    # valeurs (750 / 1 500) sont réalignées en base par
+    # `rates:align_hamacs_with_website`.
     HAMAC_FALLBACK_CENTS = {
-      "simple" => 750,   # 7,50 €/nuit fallback si RentalItem absent
-      "double" => 1_500  # 15 €/nuit fallback
+      "simple" => 1_000, # 10 €/nuit fallback si RentalItem absent
+      "double" => 1_000  # 10 €/nuit fallback
     }.freeze
+
+    # Montants d'origine, AVANT l'alignement sur le site. Ils ne servent qu'à la
+    # tâche de réalignement : une ligne `rates` ou un `RentalItem` qui les porte
+    # encore n'a jamais été édité à la main, on peut le corriger sans rien perdre.
+    HAMAC_LEGACY_CENTS = {
+      "simple" => 750,
+      "double" => 1_500
+    }.freeze
+
+    # Nom du `RentalItem` physique pour chaque type de hamac.
+    HAMAC_RENTAL_ITEM_NAMES = {
+      "simple" => "Hamac simple",
+      "double" => "Hamac double"
+    }.freeze
+
+    # Draps (epic #260, décision 6) : option du funnel, facturée par LIT, pas par
+    # nuit — 10 € le lit simple, 20 € le lit double sur la page tarifs du site.
+    LINEN_FALLBACK_CENTS = {
+      "single_bed" => 1_000, # 10 € par lit simple
+      "double_bed" => 2_000  # 20 € par lit double
+    }.freeze
+
+    LINEN_LABELS = {
+      "single_bed" => "Draps pour lit simple",
+      "double_bed" => "Draps pour lit double"
+    }.freeze
+
+    # Brouette de bûches (epic #260, décision 6) : INCLUSE d'office à La Chevêche
+    # et au Grand-Duc. La Hulotte n'a pas de poêle — elle n'affiche rien. Jamais
+    # une ligne de prix ni un champ de saisie : c'est une information.
+    LODGINGS_WITH_FIREWOOD = ["La Chevêche", "Le Grand-Duc"].freeze
+    FIREWOOD_NOTICE = "Brouette de bûches incluse".freeze
 
     # Van / camping-car : forfait/nuit/véhicule.
     VAN_PER_NIGHT_CENTS = 1_500 # 15 €/nuit
@@ -455,8 +493,24 @@ module Pricing
       configured = Pricing::Rates.cents("hamac.#{kind}")
       return configured if configured
 
-      db_name = kind.to_s == "double" ? "Hamac double" : "Hamac simple"
+      db_name = HAMAC_RENTAL_ITEM_NAMES.fetch(kind.to_s, "Hamac simple")
       RentalItem.find_by(name: db_name)&.price_cents || HAMAC_FALLBACK_CENTS[kind.to_s]
+    end
+
+    # Clé `rates` d'un type de draps.
+    def linen_rate_key(kind) = "linen.#{kind}"
+
+    # Prix d'un jeu de draps, par LIT (pas par nuit). Tarif paramétré d'abord
+    # (Paramètres > Tarifs), repli sur le catalogue ensuite.
+    def linen_rate(kind)
+      Pricing::Rates.cents(linen_rate_key(kind)) || LINEN_FALLBACK_CENTS[kind.to_s]
+    end
+
+    def linen_label(kind) = LINEN_LABELS[kind.to_s] || kind.to_s.tr("_", " ").capitalize
+
+    # Ce gîte inclut-il la brouette de bûches ? (décision 6)
+    def firewood_included?(lodging_name)
+      LODGINGS_WITH_FIREWOOD.include?(lodging_name.to_s)
     end
   end
 end

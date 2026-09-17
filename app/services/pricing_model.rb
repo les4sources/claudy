@@ -60,6 +60,9 @@ class PricingModel
     # Hamacs (issue #138) : part extraite du devis pour être portée par les
     # `HamacBooking` persistés — dans TOUS les canaux, comme camping/van.
     def hamac_cents   = category_cents(:hamac)
+    # Draps (epic #260, phase 2) : part extraite du devis pour être portée par
+    # les `LinenOrder` persistés — comme les repas, sans occupation calendrier.
+    def linen_cents   = category_cents(:linen)
 
     # Base hébergement/camping/repas = total hors activités ET hors espaces.
     # INCHANGÉ pour préserver EXACTEMENT le canal public (funnel) : côté public,
@@ -73,7 +76,8 @@ class PricingModel
     # camping/van/repas vivent sur leurs propres modèles. Invariant admin :
     #   lodging_only + spaces + camping + van + meals == total_excluding_experiences.
     def lodging_only_cents
-      lodging_bundle_cents - camping_cents - van_cents - meals_cents - terrace_cents - hamac_cents
+      lodging_bundle_cents - camping_cents - van_cents - meals_cents - terrace_cents -
+        hamac_cents - linen_cents
     end
 
     def category_cents(category)
@@ -108,6 +112,7 @@ class PricingModel
     lines.concat(camping_lines)
     lines.concat(van_lines)
     lines.concat(hamac_lines)
+    lines.concat(linen_lines)
     lines.concat(experience_lines)
     lines.concat(space_lines)
     lines.concat(meal_lines)
@@ -520,6 +525,26 @@ class PricingModel
       label = entry[:kind].to_s == "double" ? "Hamac double" : "Hamac simple"
       Line.new(label: "#{label} × #{count} — #{nights} nuit(s)",
                amount_cents: rate * count * nights, category: :hamac)
+    end
+  end
+
+  # --- Draps (epic #260, phase 2) : forfait par LIT, jamais par nuit ---
+  # Le site vend 10 € le lit simple et 20 € le lit double. Une ligne par type de
+  # lit demandé ; un type à zéro ne produit aucune ligne.
+  def linen_lines
+    Array(read(:linens)).filter_map do |entry|
+      entry = entry.symbolize_keys if entry.respond_to?(:symbolize_keys)
+      kind  = entry[:kind].to_s
+      next unless LinenOrder::KINDS.include?(kind)
+
+      count = entry[:count].to_i
+      next if count < 1
+
+      rate = Pricing::Catalog.linen_rate(kind)
+      next if rate.nil?
+
+      Line.new(label: "#{Pricing::Catalog.linen_label(kind)} × #{count}",
+               amount_cents: rate.to_i * count, category: :linen)
     end
   end
 

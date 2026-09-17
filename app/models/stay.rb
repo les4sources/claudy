@@ -184,6 +184,9 @@ class Stay < ApplicationRecord
   # Repas (epic #66, Phase 3) : rattachés en direct (pas d'occupation calendrier),
   # sur le modèle d'`experience_bookings`.
   has_many :meal_orders, dependent: :destroy
+  # Draps (epic #260, phase 2) : option facturée par LIT, sans occupation
+  # calendrier — rattachée en direct comme les repas, pas via `StayItem`.
+  has_many :linen_orders, dependent: :destroy
 
   has_paper_trail
   has_soft_deletion default_scope: true
@@ -448,7 +451,8 @@ class Stay < ApplicationRecord
     else
       items.sum { |b| b.try(:price_cents).to_i } +
         experience_bookings.active.sum(&:price_cents) +
-        meal_orders.billable.sum(:price_cents).to_i
+        meal_orders.billable.sum(:price_cents).to_i +
+        linen_orders.sum(:price_cents).to_i
     end
     # Séjour SANS hébergement (epic #66, Phase 2) : les dates viennent des
     # SpaceBooking (Booking ET SpaceBooking exposent from_date/to_date), donc un

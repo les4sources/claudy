@@ -84,7 +84,10 @@ class OrganisationController < BaseController
       # Cycle ouvert : les archivées ont déjà leur page, on ne montre que les reportées.
       @settled_actions = @settled_actions.not_archived if @cycle.open?
       @demandees = CycleAction.for_cycle(@cycle).demandee.live.active.where.not(human_id: @human.id).includes(:human)
-      @total_hours = live.active.engaged.sum(:hours) || 0
+      # Hors activités économiques (epic #330, phase 1) : une prestation qui
+      # rapporte ne mange pas le budget d'heures du cycle. Le bloc de charge les
+      # compte à part ; le bilan et le récap, eux, ne changent pas (décision 3).
+      @total_hours = live.active.engaged.non_economic.sum(:hours) || 0
       @next_cycle = @cycle.next_cycle
       @previous_cycle = @cycle.previous_cycle
       @report = Cycles::MemberReport.new(human: @human, cycle: @cycle)

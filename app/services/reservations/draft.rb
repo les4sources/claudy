@@ -12,6 +12,10 @@ module Reservations
                   :arrival_time, :departure_time,
                   :dogs_count,
                   :halls, :space_slots, :meals, :pizza_parties,
+                  # Draps (epic #260, phase 2, décision 6) : option du séjour,
+                  # facturée par LIT et non par nuit. Deux compteurs, portés par
+                  # le funnel public ET le formulaire admin.
+                  :linen_single, :linen_double,
                   # Terrasse (ADMIN uniquement, décision Michael 2026-07-20) :
                   # lignes datées `[{date:, people:}]` — une par JOUR d'occupation,
                   # comme les repas datés. Le funnel public ne la porte JAMAIS
@@ -76,6 +80,8 @@ module Reservations
       @meals             = symbolize_rows(attrs[:meals])
       @terrasses         = symbolize_rows(attrs[:terrasses])
       @pizza_parties     = symbolize_rows(attrs[:pizza_parties])
+      @linen_single      = attrs[:linen_single].to_i
+      @linen_double      = attrs[:linen_double].to_i
       @hamacs            = symbolize_rows(attrs[:hamacs])
       @experiences       = symbolize_rows(attrs[:experiences])
       @booking_type      = attrs[:booking_type].presence
@@ -173,6 +179,17 @@ module Reservations
       result
     end
 
+    # Contrat PricingModel pour les draps : [{kind:, count:}], types à zéro exclus.
+    # Un seul chemin de lecture pour le devis, la persistance et l'édition.
+    def linens
+      { "single_bed" => linen_single.to_i, "double_bed" => linen_double.to_i }
+        .filter_map { |kind, count| { kind: kind, count: count } if count.positive? }
+    end
+
+    def linens?
+      linens.any?
+    end
+
     # --- Sérialisation session --------------------------------------------
 
     def to_h
@@ -195,6 +212,8 @@ module Reservations
         terrasses:          terrasses,
         pizza_parties:      pizza_parties,
         hamacs:             hamacs,
+        linen_single:       linen_single,
+        linen_double:       linen_double,
         experiences:        experiences,
         booking_type:       booking_type,
         room_ids:           room_ids,

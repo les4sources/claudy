@@ -18,3 +18,10 @@ section.funnel-card.mt-6.p-5.md:p-6
               - if line[:date_range].present?
                 p.text-sm(class="text-moss") = line[:date_range]
           p.text-base.font-semibold.text-ink.whitespace-nowrap = line[:amount]
+
+  / Brouette de bûches incluse (epic #260, décision 6) : information, jamais une
+  / ligne de prix — elle n'entre donc pas dans la liste ci-dessus.
+  - if @stay.firewood_included?
+    p.mt-4.flex.items-center.gap-2.text-sm(class="text-moss")
+      = funnel_icon :flame, css_class: "w-4 h-4 text-ember flex-shrink-0"
+      span = "#{Pricing::Catalog::FIREWOOD_NOTICE} (#{@stay.firewood_lodging_names.to_sentence})"

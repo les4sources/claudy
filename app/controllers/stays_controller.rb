@@ -936,6 +936,10 @@ class StaysController < BaseController
       campings:       camping_entries(p),
       vans:           van_entries(p),
       meals:          meal_entries(p),
+      # Draps (epic #260, phase 2) : deux compteurs du bloc « Options », parité
+      # funnel — mêmes clés, même devis, même persistance.
+      linen_single:   p[:linen_single],
+      linen_double:   p[:linen_double],
       # Terrasse (ADMIN uniquement, décision Michael 2026-07-20) : lignes datées
       # {date, people}. Le funnel public ne porte JAMAIS cette clé (non permise
       # dans le contrôleur public) ; ce contrôleur admin la lit du form.
