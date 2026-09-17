@@ -31,6 +31,7 @@ module Kitchen
 
     def index
       @view         = view_param
+      @origin       = origin_filter
       @family       = family_filter
       @responsible  = responsible_filter
       @old_archives = params[:old_archives] == "1"
@@ -201,7 +202,7 @@ module Kitchen
     def order_params
       params.require(:meal_order).permit(:kind, :moment, :date, :people, :notes, :status,
                                          :cancellation_reason, :responsible_human_id,
-                                         :contact_label)
+                                         :contact_label, :origin)
             .merge(unit_price_cents: submitted_unit_price_cents)
             .compact
     end
@@ -223,8 +224,12 @@ module Kitchen
     # cuisine sans que personne ne l'ait accepté. Le type se coche donc
     # explicitement, et `MealOrder#assign_default_responsible` affecte le
     # responsable à partir de la famille réellement choisie.
+    # `origin: "reception"` par défaut (epic #321, phase 2) : on est sur le
+    # formulaire de SAISIE MANUELLE, donc par définition celui de Malau au
+    # téléphone. Les demandes venues du client arrivent par le funnel, jamais ici.
     def new_order_defaults
-      { stay_id: params[:stay_id].presence, people: 1, status: "requested" }
+      { stay_id: params[:stay_id].presence, people: 1, status: "requested",
+        origin: "reception" }
     end
 
     # Le texte libre « Pour qui ? » d'une saisie sans séjour. Vide dès qu'un
@@ -267,7 +272,8 @@ module Kitchen
         # On réaffiche CE QUI A ÉTÉ SAISI, blocs compris : refaire trois blocs
         # parce que le deuxième manquait une case est le genre de punition qui
         # fait retourner Malau à son tableau papier.
-        @order = MealOrder.new(stay_id: stay&.id, contact_label: label)
+        @order = MealOrder.new(stay_id: stay&.id, contact_label: label,
+                               origin: submitted_origin)
         @prestations = blocks
         prepare_form
         flash.now[:alert] = result.error
@@ -277,6 +283,14 @@ module Kitchen
 
     def submitted_stay
       Stay.find_by(id: params.dig(:meal_order, :stay_id).presence || params[:stay_id].presence)
+    end
+
+    # Origine postée par le formulaire de saisie manuelle. Repli sur
+    # « proposée par l'accueil » : c'est ce que ce formulaire est, et une valeur
+    # forgée n'a rien à faire en base.
+    def submitted_origin
+      value = params.dig(:meal_order, :origin).to_s
+      MealOrder::ORIGINS.include?(value) ? value : "reception"
     end
 
     # Les blocs postés, dans l'ordre des index. Rails rend `prestations[0][…]`
@@ -292,6 +306,9 @@ module Kitchen
                              "responsible_human_id")
                       .symbolize_keys.compact_blank
       attributes[:unit_price_cents] = price_cents(raw["unit_price"])
+      # L'origine vaut pour TOUTE la saisie, pas bloc par bloc : un même coup de
+      # fil a une seule origine (epic #321, phase 2).
+      attributes[:origin] = submitted_origin
       attributes.compact!
       apply_kitchen_acceptance(attributes)
 
@@ -362,6 +379,7 @@ module Kitchen
       scope = MealOrder.includes(:responsible_human, stay: :customer)
       scope = scope.of_family(@family) if @family.present?
       scope = scope.where(responsible_human_id: @responsible) if @responsible.present?
+      scope = scope.of_origin(@origin) if @origin.present?
       scope
     end
 
@@ -373,6 +391,19 @@ module Kitchen
     def responsible_filter
       value = params[:responsible_human_id].to_s
       value.presence && (Human.exists?(id: value) ? value : nil)
+    end
+
+    # Filtre par ORIGINE (epic #321, phase 2). Il n'a de sens que dans les vues
+    # de travail : c'est là qu'on se demande qui relancer. Ailleurs — archives,
+    # annulés, plan de charge — un paramètre resté dans l'URL filtrerait une
+    # liste dont l'écran ne montre aucun sélecteur, donc sans rien expliquer.
+    ORIGIN_FILTER_VIEWS = %i[kitchen reception info].freeze
+
+    def origin_filter
+      return nil unless ORIGIN_FILTER_VIEWS.include?(@view)
+
+      value = params[:origin].to_s
+      MealOrder::ORIGINS.include?(value) ? value : nil
     end
 
     def view_param

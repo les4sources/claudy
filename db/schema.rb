@@ -1229,6 +1229,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_120000) do
     t.string "kind"
     t.string "moment"
     t.text "notes"
+    t.string "origin", default: "client", null: false
     t.integer "people", default: 1, null: false
     t.integer "price_cents"
     t.text "refusal_reason"
@@ -1240,6 +1241,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_120000) do
     t.datetime "validated_at"
     t.string "validation", default: "pending", null: false
     t.index ["deleted_at"], name: "index_meal_orders_on_deleted_at"
+    t.index ["origin"], name: "index_meal_orders_on_origin"
     t.index ["responsible_human_id"], name: "index_meal_orders_on_responsible_human_id"
     t.index ["status"], name: "index_meal_orders_on_status"
     t.index ["stay_id"], name: "index_meal_orders_on_stay_id"

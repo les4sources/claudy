@@ -36,6 +36,14 @@
       p.mt-2.text-xs.text-gray-400
         | Ce séjour n'a pas ses deux dates : chaque prestation se saisit avec un moment et une date uniques, sans grille.
 
+    /  D'OÙ VIENT LA DEMANDE (epic #321, phase 2, décision 3). Une seule fois
+       pour toute la saisie : un même coup de fil a une seule origine. Elle est
+       ce qui dira, trois semaines plus tard, qui relancer.
+    .mt-4
+      = render "kitchen/orders/origin_field",
+               name: "meal_order[origin]", id: "meal_order_origin",
+               selected: (order&.origin.presence || "reception")
+
   .space-y-5(data-meal-prestations-target="list")
     - prestations.each_with_index do |block, position|
       = render "kitchen/orders/prestation", block: block, index_token: block.index, position: position + 1, grid_days: grid_days

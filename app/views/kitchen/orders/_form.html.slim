@@ -85,6 +85,13 @@
                    options_from_collection_for_select(@humans, :id, :name, order.responsible_human_id),
                    { include_blank: "— Personne —" },
                    class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      /  D'OÙ VIENT LA DEMANDE (epic #321, phase 2, décision 3) : du client par
+         son formulaire, ou proposée par l'accueil. C'est elle qui dira, trois
+         semaines plus tard, qui relancer.
+      .sm:col-span-3
+        = render "kitchen/orders/origin_field",
+                 name: "meal_order[origin]", id: "meal_order_origin",
+                 selected: (order.origin.presence || "reception")
 
     div
       = f.label :notes, "Précisions", class: "block text-sm font-medium text-gray-700"
