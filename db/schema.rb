@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_17_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_17_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -699,6 +699,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_110000) do
     t.bigint "deferred_from_id"
     t.bigint "delegate_to_human_id"
     t.datetime "deleted_at"
+    t.boolean "economic", default: false, null: false
     t.decimal "hours", precision: 5, scale: 2
     t.bigint "human_id", null: false
     t.string "label", null: false
@@ -711,6 +712,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_110000) do
     t.index ["cycle_id"], name: "index_cycle_actions_on_cycle_id"
     t.index ["deferred_from_id"], name: "index_cycle_actions_on_deferred_from_id"
     t.index ["delegate_to_human_id"], name: "index_cycle_actions_on_delegate_to_human_id"
+    t.index ["economic"], name: "index_cycle_actions_on_economic"
     t.index ["human_id", "archived_at"], name: "index_cycle_actions_on_human_id_and_archived_at"
     t.index ["human_id", "category", "position"], name: "index_cycle_actions_on_human_id_and_category_and_position"
     t.index ["human_id"], name: "index_cycle_actions_on_human_id"
