@@ -94,6 +94,10 @@ class ExpenseReport < ApplicationRecord
                          sequence_number fiscal_year_id].freeze
 
   include Commentable
+  # Ce que la maison doit à quelqu'un (epic #240, phase 4). C'est ce contrat qui
+  # fait entrer la note dans la file « À payer » et dans le rapprochement
+  # bancaire, sans que ni l'un ni l'autre aient à connaître les notes de frais.
+  include Payable
 
   has_paper_trail
   has_soft_deletion default_scope: true
@@ -105,7 +109,8 @@ class ExpenseReport < ApplicationRecord
 
   has_many :expense_lines, -> { ordered }, dependent: :destroy, inverse_of: :expense_report
   has_many :journal_entries, as: :source, dependent: :restrict_with_error
-  has_many :cash_allocations, as: :document, dependent: :restrict_with_error
+  # `cash_allocations` (le `document` polymorphique) vient du concern `Payable` :
+  # c'est ce lien qui fait passer la note en `paid`.
 
   accepts_nested_attributes_for :expense_lines, allow_destroy: true,
                                                 reject_if: ->(attrs) { attrs["label"].blank? && attrs["amount"].blank? && attrs["distance_km"].blank? }
@@ -158,6 +163,29 @@ class ExpenseReport < ApplicationRecord
     "#{kind_label} #{reference.presence || "##{id}"} — #{human&.name}"
   end
 
+  # --- Contrat `Payable` (epic #241, phase 3) ---------------------------------
+  #
+  # Une note de frais se paie à une PERSONNE, pas à un fournisseur : l'IBAN vient
+  # donc de `humans.iban` (décision 7), pas du tiers comptable. Le tiers, lui,
+  # reste ce que porte l'écriture au `440000`.
+
+  def payable_amount_cents = total_cents
+  def payable_beneficiary = human&.name.presence || "Membre ##{human_id}"
+  def payable_iban = human&.iban
+  def payable_communication = reference.presence || "##{id}"
+  def payable_reference = reference.presence || "##{id}"
+  def payable_label = "#{kind_label} #{payable_reference}"
+  def payable_path = comment_path
+
+  # Lecture SEULE : on ne crée pas un tiers en affichant une file. Le tiers est
+  # créé au moment où on en a vraiment besoin — à la passation en traitement et
+  # au paiement, par `ThirdParty.for_human!`.
+  def payable_third_party
+    return nil if human_id.blank?
+
+    @payable_third_party ||= ThirdParty.find_by(human_id: human_id)
+  end
+
   # Qui est prévenu d'un commentaire (epic #242, phase 3) : le bénéficiaire —
   # c'est de SON argent qu'on parle — et la coordination comptable, qui traite.
   # Une question posée dans le vide ne sert à rien.
@@ -202,8 +230,29 @@ class ExpenseReport < ApplicationRecord
     after == "paid" && before != "paid"
   end
 
+  # Deux choses partent au passage en `paid`, et elles ne disent pas la même :
+  # la notification in-app (epic #242) signale l'événement dans Claudy ;
+  # l'email métier (epic #241, phase 3) porte le DÉTAIL — les lignes, la date de
+  # paiement — à quelqu'un qui ne se connectera peut-être jamais. `paid_notified_at`
+  # trace l'envoi pour qu'un aller-retour de statut ne le rejoue pas.
   def notify_paid
-    Notifications::ExpenseReportPaid.call(self)
+    Notifications::ExpenseReportPaid.call(self) unless already_notified_paid?
+    deliver_paid_email
+  end
+
+  # Un aller-retour de statut (on défait le rapprochement, on le refait) repasse
+  # par `paid` : sans cette garde, le bénéficiaire recevrait une seconde fois
+  # « ta note a été payée » pour le même argent.
+  def already_notified_paid?
+    Notification.where(notifiable: self, kind: "expense_report_paid").exists?
+  end
+
+  def deliver_paid_email
+    return if paid_notified_at.present?
+    return if human&.email.blank?
+
+    ExpenseReportMailer.paid(self).deliver_later
+    update_column(:paid_notified_at, Time.current)
   end
 
   # Une note passée en traitement porte un numéro de pièce et une écriture :

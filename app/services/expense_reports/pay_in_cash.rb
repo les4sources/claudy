@@ -8,7 +8,14 @@ module ExpenseReports
   # et la caisse serait fausse de la même somme.
   #
   # Le virement bancaire, lui, se rapproche depuis « À affecter » (phase 3) et
-  # posera exactement le même statut : il n'y aura rien à défaire ici.
+  # pose exactement le même statut.
+  #
+  # Et c'est bien le MÊME chemin depuis la phase 3 : ce service ne coche plus
+  # « payée » lui-même. Il crée la sortie de caisse et son affectation, et c'est
+  # `ExpenseReports::RefreshPayment` — déclenché par le `after_commit` de
+  # `CashAllocation`, comme pour un virement — qui constate la couverture et pose
+  # le statut. Un seul chemin vers `paid`, donc un seul endroit où l'email au
+  # bénéficiaire peut partir, et aucun risque qu'un des deux l'oublie.
   class PayInCash < ServiceBase
     class BadStatus < StandardError; end
     class NoCashAccount < StandardError; end
@@ -68,8 +75,6 @@ module ExpenseReports
             label: entry.label
           )
           Accounting::PostCashEntry.new(cash_entry: entry, whodunnit: @whodunnit).run!
-
-          @report.update!(status: "paid", paid_on: date)
           entry
         end
       end

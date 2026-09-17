@@ -1,0 +1,49 @@
+p Bonjour #{@report.human&.name},
+
+p
+  | Ta #{@report.kind_label.downcase}
+  strong<>  #{@report.payable_reference}
+  |  a été payée
+  - if @report.paid_on.present?
+    |  le #{l(@report.paid_on, format: :long)}
+  | .
+
+table
+  tbody
+    tr
+      td
+        strong Montant
+      td = humanized_money_with_symbol(Money.new(@report.total_cents))
+    tr
+      td
+        strong Entité
+      td = @report.legal_entity&.name
+    - if @report.paid_on.present?
+      tr
+        td
+          strong Payée le
+        td = l(@report.paid_on, format: :long)
+
+- if @lines.any?
+  h3 Le détail
+  table
+    thead
+      tr
+        th Date
+        th Libellé
+        th Montant
+    tbody
+      - @lines.each do |line|
+        tr
+          td = line.spent_on ? l(line.spent_on, format: :short) : "—"
+          td
+            = line.label
+            - if line.supplier_name.present?
+              |  · #{line.supplier_name}
+          td = humanized_money_with_symbol(Money.new(line.amount_cents.to_i))
+
+p
+  = link_to "Voir la note dans Claudy", @admin_url
+
+p
+  | Si quelque chose ne colle pas, réponds à ce message — on regarde ensemble.
