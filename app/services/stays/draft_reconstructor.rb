@@ -67,6 +67,10 @@ module Stays
         # `per_night_resources_from_stay` — c'est elle qui fait foi si présente.
         hamacs:         hamacs_from_stay,
         meals:          meals_from_stay,
+        # Draps (epic #260, phase 2) : deux compteurs, relus depuis les
+        # `LinenOrder` vivants du séjour — c'est l'aller-retour du form admin.
+        linen_single:   linen_quantity_from_stay("single_bed"),
+        linen_double:   linen_quantity_from_stay("double_bed"),
         terrasses:      terrasses_from_stay,
         # Précision libre du besoin d'espace (funnel public) : reconstruite depuis
         # la note interne préfixée du SpaceBooking, PRÉFIXE RETIRÉ, pour que le
@@ -222,6 +226,11 @@ module Stays
           people: order.people,
           notes:  order.notes }
       end
+    end
+
+    # Nombre de jeux de draps d'un type, sur le séjour. 0 quand il n'y en a pas.
+    def linen_quantity_from_stay(kind)
+      @stay.linen_orders.select { |order| order.kind == kind }.sum { |order| order.quantity.to_i }
     end
 
     # Reconstruit les lignes d'espaces {kind, date, period} depuis le SpaceBooking.

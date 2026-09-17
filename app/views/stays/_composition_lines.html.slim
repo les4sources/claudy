@@ -18,6 +18,10 @@
   - lignes << { titre: "Van (#{v.vehicles} véhicule(s))", details: [outdoor_nights_label(v)], montant: @stay.formatted_item_amount(v) }
 - @stay.hamac_bookings.each do |h|
   - lignes << { titre: "#{h.label} × #{h.count}", details: [outdoor_nights_label(h)], montant: @stay.formatted_item_amount(h) }
+/ Draps (epic #260, phase 2) : facturés par LIT, jamais par nuit — la ligne le
+  dit, pour qu'on ne cherche pas une durée dans le montant.
+- @stay.linen_orders.each do |linen|
+  - lignes << { titre: linen.label, details: ["#{linen.quantity} lit(s)"], montant: @stay.formatted_item_amount(linen) }
 / Cuisine (#219) : les lignes ACTIVES s'affichent, mais une demande d'info ne
   compte pas dans le total du séjour — on le dit sur la ligne plutôt que de
   laisser un écart inexpliqué entre les lignes et le total.

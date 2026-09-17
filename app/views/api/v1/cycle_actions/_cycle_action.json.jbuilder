@@ -4,6 +4,8 @@ json.label cycle_action.label
 json.hours cycle_action.hours
 json.category cycle_action.category
 json.completed cycle_action.completed
+# Activité économique (epic #330, phase 1) — exposée en LECTURE seule.
+json.economic cycle_action.economic
 json.position cycle_action.position
 json.archived cycle_action.archived?
 json.archived_at cycle_action.archived_at
