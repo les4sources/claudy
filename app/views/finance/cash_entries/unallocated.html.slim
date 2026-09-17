@@ -118,6 +118,26 @@
                   = link_to "Voir la facture", finance_purchase_invoice_path(match.invoice), class: "text-blue-500 hover:text-blue-700"
               = button_to "Payer cette facture", pay_invoice_finance_cash_entry_path(entry, purchase_invoice_id: match.invoice.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
 
+      / Une note de frais ou de mission qui attend son virement (epic #241,
+        phase 3). Même forme que la facture juste au-dessus : c'est le même geste
+        sur une autre dette. LA PROPOSITION N'A RIEN ÉCRIT — c'est ce bouton qui
+        crée l'allocation sur le 440000 avec la note en document.
+      - notes = @expense_report_matches[entry.id]
+      - if notes.present?
+        - notes.first(2).each do |match|
+          .mb-3.p-3.rounded-lg.border.border-teal-100(class="bg-teal-50/60")
+            .flex.flex-wrap.items-center.justify-between.gap-2
+              div
+                p.text-sm.text-gray-800
+                  strong = "Paiement de #{match.report.payable_label}"
+                  = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus à #{match.beneficiary}"
+                p.mt-0.5.text-xs.text-gray-500
+                  = match.reason
+                  = " (#{match.confidence} % de confiance)"
+                p.mt-0.5.text-xs
+                  = link_to "Voir la note", finance_expense_report_path(match.report), class: "text-blue-500 hover:text-blue-700"
+              = button_to "Payer cette note", pay_expense_report_finance_cash_entry_path(entry, expense_report_id: match.report.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+
       / Un versement Stripe (epic #250, phase 2). Une ligne bancaire ENTRANTE du
         montant exact d'un versement, à trois jours près : c'est le rapprochement
         qui se faisait de tête, à l'euro près, dans l'interface Stripe.

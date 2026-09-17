@@ -319,6 +319,8 @@ Rails.application.routes.draw do
         # Payer une facture d'achat depuis une ligne sortante (epic #240,
         # phase 4) : même geste, autre dette.
         post :pay_invoice
+        # Rapprocher une ligne sortante d'une note de frais (epic #241, phase 3).
+        post :pay_expense_report
         # Rapprocher une ligne bancaire entrante de son versement Stripe
         # (epic #250, phase 2).
         post :reconcile_payout

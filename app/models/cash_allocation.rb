@@ -81,10 +81,16 @@ class CashAllocation < ApplicationRecord
 
   private
 
+  # Deux dettes se rapprochent aujourd'hui : la facture d'achat (epic #240) et
+  # la note de frais ou de mission (epic #241, phase 3). Les suivantes suivront
+  # ici, avec leur propre `RefreshPayment` — le mécanisme est le même.
   def refresh_document_payment
-    return unless document.is_a?(PurchaseInvoice)
-
-    PurchaseInvoices::RefreshPayment.new(purchase_invoice: document.reload).run!
+    case document
+    when PurchaseInvoice
+      PurchaseInvoices::RefreshPayment.new(purchase_invoice: document.reload).run!
+    when ExpenseReport
+      ExpenseReports::RefreshPayment.new(expense_report: document.reload).run!
+    end
   rescue ActiveRecord::RecordNotFound
     nil
   end
