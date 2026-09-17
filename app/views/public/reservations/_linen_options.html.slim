@@ -1,0 +1,28 @@
+/ Options du séjour — draps (epic #260, phase 2, décision Michael 6).
+/
+/ Le site vend les draps 10 € par lit simple et 20 € par lit double ; le funnel
+/ ne les proposait nulle part, et le client découvrait la question à l'arrivée.
+/ Deux compteurs, facturés par LIT et jamais par nuit — un séjour de six nuits
+/ ne paie pas six fois ses draps.
+/
+/ Le bloc suit le besoin « gîte » : il n'a de sens qu'avec un hébergement, et
+/ c'est le même interrupteur qui pilote la grille des gîtes au-dessus.
+/ Locals: draft.
+.bg-white.rounded-2xl.shadow-sm.border.border-bark.p-6(data-needs-block="gite")
+  .flex.items-start.gap-3.mb-4
+    span.text-ember.flex-shrink-0.mt-0.5
+      = funnel_icon :bed, css_class: "w-6 h-6"
+    div
+      h2.funnel-section-title.mb-1 Options
+      p.text-sm.text-moss Draps fournis et lits faits à votre arrivée — facturés une fois par lit, pas par nuit.
+
+  .grid.grid-cols-1.sm:grid-cols-2.gap-3
+    - [["single_bed", :linen_single, draft.linen_single], ["double_bed", :linen_double, draft.linen_double]].each do |kind, field, value|
+      - rate = Pricing::Catalog.linen_rate(kind)
+      .flex.items-center.justify-between.gap-3.rounded-xl.border.border-bark.bg-sand-deep.px-4.py-3
+        div.min-w-0
+          p.text-sm.font-medium.text-ink = Pricing::Catalog.linen_label(kind)
+          - if rate
+            p.text-xs.text-moss.leading-tight.mt-0.5
+              = "#{number_to_currency(rate / 100.0, unit: '€', format: '%n %u', precision: 0)} par lit"
+        = render "public/reservations/stepper_cell", name: "reservation[#{field}]", val: value.to_i, max: 30

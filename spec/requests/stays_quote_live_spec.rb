@@ -75,13 +75,14 @@ RSpec.describe "Stays — devis live (issue #73)", type: :request do
   end
 
   it "facture les hamacs (parité funnel, devis seul) via per_night_resources" do
-    # 2 nuits × 1 hamac simple à 7,50 €/nuit = 15 € → 745 + 15 = 760 €.
+    # Depuis l'alignement sur le site (epic #260, phase 2, décision 7), le hamac
+    # vaut 10 €/nuit, simple comme double : 2 nuits × 1 hamac = 20 €.
     post quote_stays_path, params: composition_params(
       per_night_resources: { hamac_simple: ["1", "1"] }
     ), headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Hamac simple")
-    expect(response.body).to include("815")
+    expect(response.body).to include("820")
   end
 end

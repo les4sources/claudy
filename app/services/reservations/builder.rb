@@ -18,6 +18,7 @@ module Reservations
     include CampingComposition
     # Hamacs (issue #138) : persistés dans TOUS les canaux, comme camping/van.
     include HamacComposition
+    include LinenComposition
     include MealComposition
     include TerraceComposition
     # Reservations de chambres de l'hébergement (epic #66, Phase 6) : on réutilise
@@ -155,6 +156,10 @@ module Reservations
         # par plage contiguë ; leur part (`quote.hamac_cents`) est extraite de
         # `lodging_only_cents` — aucun double-compte, total du séjour inchangé.
         @hamac_bookings  = build_hamac_bookings_for!(@stay, quote)
+        # Draps (epic #260, phase 2) : option facturée par LIT, persistée en
+        # `LinenOrder` rattachés au séjour. Leur part (`quote.linen_cents`) est
+        # extraite de `lodging_only_cents` — aucun double-compte.
+        @linen_orders = build_linen_orders_for!(@stay, quote)
         create_meal_orders!(@stay, draft)
         # Terrasse (décision Michael 2026-07-20) : ADMIN UNIQUEMENT. Une occupation
         # `CampingBooking` de `kind: "terrasse"` par JOUR. Ignorée hors admin, même
@@ -465,6 +470,15 @@ module Reservations
         stay: stay, draft: draft, status: stay_status,
         total_price_cents: quote.hamac_cents
       )
+    end
+
+    # Draps (epic #260, phase 2) : no-op si le draft n'en porte aucun. Une ligne
+    # par TYPE de lit ; leur part de prix vient du devis (`linen_cents`),
+    # ventilée exactement sur les lignes.
+    def build_linen_orders_for!(stay, quote)
+      return [] unless draft_has_linens?(draft)
+
+      persist_linen_orders!(stay: stay, draft: draft, total_price_cents: quote.linen_cents)
     end
 
     # Identité du client : `customer_id` d'abord, email ensuite, JAMAIS de

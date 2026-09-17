@@ -11,8 +11,13 @@ RSpec.describe "Persistance des hamacs sur le séjour (issue #138)" do
     lodging
   end
 
-  let(:arrival)   { Date.today + 30 }
-  let(:departure) { Date.today + 34 } # 4 nuits
+  # Dates ANCRÉES SUR UN LUNDI (epic #260, phase 2). Avec `Date.today + 30`, ce
+  # spec tombait en panne un jour sur sept : depuis la phase 1, une nuit de
+  # vendredi ou de samedi isolée est refusée hors saison, et un séjour de 4 nuits
+  # qui démarre un samedi en contient une. Un lundi → vendredi n'a que des nuits
+  # de semaine, quel que soit le jour où la suite tourne.
+  let(:arrival)   { (Date.today + 30).next_occurring(:monday) }
+  let(:departure) { arrival + 4 } # 4 nuits, lundi → vendredi
 
   def draft(**overrides)
     Reservations::Draft.new({
@@ -37,12 +42,12 @@ RSpec.describe "Persistance des hamacs sur le séjour (issue #138)" do
       expect(hamacs[0].to_date).to eq(arrival + 2)
       expect(hamacs[0].kind).to eq("simple")
       expect(hamacs[0].count).to eq(2)
-      expect(hamacs[0].price_cents).to eq(750 * 2 * 2)
+      expect(hamacs[0].price_cents).to eq(1_000 * 2 * 2)
 
       expect(hamacs[1].from_date).to eq(arrival + 3)
       expect(hamacs[1].to_date).to eq(arrival + 4)
       expect(hamacs[1].count).to eq(3)
-      expect(hamacs[1].price_cents).to eq(750 * 3 * 1)
+      expect(hamacs[1].price_cents).to eq(1_000 * 3 * 1)
 
       expect(hamacs.sum(&:price_cents)).to eq(grid_draft.quote.hamac_cents)
     end
@@ -60,8 +65,11 @@ RSpec.describe "Persistance des hamacs sur le séjour (issue #138)" do
       hamacs = builder.stay.stay_items.where(bookable_type: "HamacBooking")
                       .filter_map(&:bookable).index_by(&:kind)
       expect(hamacs.keys).to match_array(%w[simple double])
-      expect(hamacs["simple"].price_cents).to eq(750 * 1 * 2)
-      expect(hamacs["double"].price_cents).to eq(1_500 * 2 * 2)
+      # Depuis l'alignement sur le site (epic #260, décision 7), simple et double
+      # valent le MÊME tarif : 10 €/nuit. La ventilation reste au prorata du
+      # tarif — elle est simplement devenue proportionnelle aux seuls volumes.
+      expect(hamacs["simple"].price_cents).to eq(1_000 * 1 * 2)
+      expect(hamacs["double"].price_cents).to eq(1_000 * 2 * 2)
       expect(hamacs.values.sum(&:price_cents)).to eq(mixed_draft.quote.hamac_cents)
     end
   end
