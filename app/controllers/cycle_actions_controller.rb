@@ -1,6 +1,6 @@
 class CycleActionsController < BaseController
-  before_action :get_cycle_action, only: [:edit, :update, :destroy, :toggle_completed, :defer, :defer_next, :undo_defer_next, :settle, :archive, :unarchive]
-  before_action :ensure_open_cycle, only: [:edit, :update, :destroy, :toggle_completed, :defer, :defer_next, :settle, :archive, :unarchive]
+  before_action :get_cycle_action, only: [:edit, :update, :destroy, :toggle_completed, :toggle_economic, :defer, :defer_next, :undo_defer_next, :settle, :archive, :unarchive]
+  before_action :ensure_open_cycle, only: [:edit, :update, :destroy, :toggle_completed, :toggle_economic, :defer, :defer_next, :settle, :archive, :unarchive]
 
   def create
     service = CycleActions::CreateService.new
@@ -67,6 +67,18 @@ class CycleActionsController < BaseController
         }
         format.html { redirect_to member_path }
       end
+    end
+  end
+
+  # Bascule « activité économique » (epic #330, phase 1). Même facture que
+  # `toggle_completed` : la ligne, le bloc de charge et le compteur de catégorie
+  # sont remplacés en Turbo Stream.
+  def toggle_economic
+    @cycle_action.update!(economic: !@cycle_action.economic)
+    @total_hours = engaged_hours
+    respond_to do |format|
+      format.turbo_stream { render :toggle_completed }
+      format.html { redirect_to member_path }
     end
   end
 
@@ -278,8 +290,11 @@ class CycleActionsController < BaseController
     @human.cycle_actions.for_cycle(@cycle).live
   end
 
+  # Les heures qui pèsent sur le budget du cycle. Les activités économiques en
+  # sortent (epic #330, phase 1) : ce sont des prestations qui rapportent, elles
+  # n'ont pas à manger la capacité du collectif ni à fausser le ratio de charge.
   def engaged_hours
-    live_scope.active.engaged.sum(:hours) || 0
+    live_scope.active.engaged.non_economic.sum(:hours) || 0
   end
 
   def replace_list(category)
