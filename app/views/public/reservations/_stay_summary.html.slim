@@ -76,6 +76,16 @@
   - date_str = begin; Date.parse(h[:date].to_s).strftime("%-d/%m"); rescue; h[:date].to_s; end
   - rows << [hall_labels[h[:kind].to_s] || h[:kind].to_s.humanize, "#{date_str} — #{period_labels[h[:period].to_s] || h[:period]}"]
 
+/ Draps (epic #260, phase 2) : facturés par LIT, jamais par nuit — le récap le
+/ dit en toutes lettres pour qu'on ne cherche pas la durée dans le montant.
+- Array(draft.linens).each do |linen|
+  - rows << [Pricing::Catalog.linen_label(linen[:kind]), "#{linen[:count]} lit#{"s" if linen[:count] > 1}"]
+
+/ Brouette de bûches incluse (décision 6) : information, pas une ligne de prix.
+/ Elle ne s'affiche que pour les gîtes qui ont un poêle et qui sont au brouillon.
+- firewood_lodgings = (lodgings_by_id.values.map(&:name) + [draft.lodging&.name]).compact.uniq.select { |name| Pricing::Catalog.firewood_included?(name) }
+- rows << ["Inclus", "#{Pricing::Catalog::FIREWOOD_NOTICE} (#{firewood_lodgings.to_sentence})"] if firewood_lodgings.any?
+
 - rows << ["Nom du groupe", draft.group_name] if draft.group_name.present?
 
 - dog_label = { 0 => nil, 1 => "Un chien (+50 €)", 2 => "Plusieurs chiens (sur demande)" }[draft.dogs_count.to_i]

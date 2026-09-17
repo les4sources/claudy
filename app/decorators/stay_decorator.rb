@@ -74,10 +74,15 @@ class StayDecorator < ApplicationDecorator
     object.meal_orders.active.to_a
   end
 
+  # Draps (epic #260, phase 2) — une ligne par type de lit, simple avant double.
+  def linen_orders
+    object.linen_orders.ordered.to_a
+  end
+
   # Le séjour a-t-il au moins un élément de composition à afficher ?
   def any_composition?
     lodging_bookings.any? || space_bookings.any? || camping_bookings.any? ||
-      van_bookings.any? || hamac_bookings.any? || meals.any? ||
+      van_bookings.any? || hamac_bookings.any? || linen_orders.any? || meals.any? ||
       object.experience_bookings.active.any?
   end
 
@@ -93,6 +98,7 @@ class StayDecorator < ApplicationDecorator
       compo_part(camping_bookings.size, "camping", "campings"),
       compo_part(van_bookings.size, "van", "vans"),
       compo_part(hamac_bookings.sum { |h| h.count.to_i }, "hamac", "hamacs"),
+      compo_part(linen_orders.sum { |l| l.quantity.to_i }, "jeu de draps", "jeux de draps"),
       compo_part(active_experiences_count, "activité", "activités"),
       compo_part(object.meal_orders.size, "repas", "repas")
     ].compact
@@ -400,7 +406,7 @@ class StayDecorator < ApplicationDecorator
     # Repas (issue #79) : ce ne sont PAS des `stay_items` (has_many direct), mais
     # ils comptent dans le total — on les ajoute aux lignes pour que la
     # décomposition somme bien au total affiché (aucun écart lignes ≠ total).
-    lines + object.meal_orders.billable.map do |meal|
+    lines += object.meal_orders.billable.map do |meal|
       {
         kind: "MealOrder",
         icon: :utensils,
@@ -409,6 +415,31 @@ class StayDecorator < ApplicationDecorator
         amount: h.humanized_money_with_symbol(Money.new(meal.price_cents.to_i))
       }
     end
+
+    # Draps (epic #260, phase 2) : pas davantage des `stay_items` que les repas,
+    # et ils comptent dans le total — sans eux, les lignes de la page client ne
+    # sommeraient plus au total affiché.
+    lines + object.linen_orders.ordered.map do |linen|
+      {
+        kind: "LinenOrder",
+        icon: :bed,
+        name: "#{linen.label} × #{linen.quantity}",
+        date_range: nil,
+        amount: h.humanized_money_with_symbol(Money.new(linen.price_cents.to_i))
+      }
+    end
+  end
+
+  # Brouette de bûches incluse (epic #260, décision 6) : information portée par
+  # les gîtes qui ont un poêle. Vide quand le séjour n'en occupe aucun.
+  def firewood_lodging_names
+    lodging_bookings.filter_map { |b| b.lodging&.name }
+                    .uniq
+                    .select { |name| Pricing::Catalog.firewood_included?(name) }
+  end
+
+  def firewood_included?
+    firewood_lodging_names.any?
   end
 
   # Activités du séjour, pour la page client (Michael, 2026-08-20). Elles ne sont
