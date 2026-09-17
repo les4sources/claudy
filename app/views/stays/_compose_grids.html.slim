@@ -153,6 +153,27 @@
                   td.py-2.px-1.text-center
                     = render "public/reservations/stepper_cell", name: "stay[per_night_resources][hamac_double][]", val: (pnr["hamac_double"] || [])[i].to_i, max: 10
 
+  / --- Options : draps (epic #260, phase 2, parité funnel) -----------------
+  / Facturés par LIT, pas par nuit : deux compteurs, pas de grille datée.
+  - linen_single = @draft&.linen_single.to_i
+  - linen_double = @draft&.linen_double.to_i
+  - linen_total  = linen_single + linen_double
+  details(class=grid_box open=linen_total.positive?)
+    summary class=grid_summary
+      span 🛏️ Draps
+      = stay_form_section_marker(linen_total.positive?, linen_total)
+    .px-5.pb-5.space-y-4
+      p.text-sm.text-gray-500 Draps fournis et lits faits à l'arrivée — facturés une fois par lit, quelle que soit la durée du séjour.
+      .grid.grid-cols-1.sm:grid-cols-2.gap-4
+        - [["single_bed", "stay[linen_single]", linen_single], ["double_bed", "stay[linen_double]", linen_double]].each do |kind, field, value|
+          - rate = Pricing::Catalog.linen_rate(kind)
+          .flex.items-center.justify-between.gap-3.rounded-lg.border.border-gray-200.px-4.py-3
+            .min-w-0
+              .text-sm.font-medium.text-gray-800 = Pricing::Catalog.linen_label(kind)
+              - if rate
+                .text-xs.text-gray-400 = "#{number_to_currency(rate / 100.0, unit: '€', format: '%n %u', precision: 2)} par lit"
+            = render "public/reservations/stepper_cell", name: field, val: value, max: 30
+
   /  --- Activités ----------------------------------------------------------
      DANS LE FRAME depuis 2026-07-27 : la liste des créneaux dépend des dates du
      séjour (`form_assignable_availabilities`), elle doit donc être re-rendue avec

@@ -1170,6 +1170,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_120000) do
     t.index ["name"], name: "index_legal_entities_on_name", unique: true
   end
 
+  create_table "linen_orders", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "kind", null: false
+    t.integer "price_cents"
+    t.integer "quantity", default: 1, null: false
+    t.bigint "stay_id", null: false
+    t.integer "unit_price_cents"
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_linen_orders_on_deleted_at"
+    t.index ["stay_id", "kind"], name: "index_linen_orders_on_stay_and_kind_unique_live", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["stay_id"], name: "index_linen_orders_on_stay_id"
+  end
+
   create_table "lodging_compositions", force: :cascade do |t|
     t.bigint "component_lodging_id", null: false
     t.bigint "composite_lodging_id", null: false
@@ -2067,6 +2081,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_120000) do
   add_foreign_key "journal_lines", "journal_entries"
   add_foreign_key "journal_lines", "teams"
   add_foreign_key "journal_lines", "third_parties"
+  add_foreign_key "linen_orders", "stays"
   add_foreign_key "lodging_compositions", "lodgings", column: "component_lodging_id"
   add_foreign_key "lodging_compositions", "lodgings", column: "composite_lodging_id"
   add_foreign_key "lodging_rooms", "lodgings"

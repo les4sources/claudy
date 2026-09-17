@@ -25,6 +25,7 @@ module Stays
     include CampingComposition
     # Hamacs (issue #138) : persistés et réconciliés comme le camping/van.
     include HamacComposition
+    include LinenComposition
     include MealComposition
     include TerraceComposition
 
@@ -84,6 +85,7 @@ module Stays
         reconcile_camping!
         reconcile_van!
         reconcile_hamacs!
+        reconcile_linens!
         reconcile_meals!(@stay, @draft)
         # Terrasse (ADMIN uniquement, décision Michael 2026-07-20) : rebuild complet
         # des occupations `CampingBooking` de kind "terrasse", indépendamment du
@@ -496,6 +498,16 @@ module Stays
       persist_hamac_ranges!(
         stay: @stay, draft: @draft, status: @stay.status,
         total_price_cents: @draft.quote.hamac_cents
+      )
+    end
+
+    # Réconcilie les DRAPS du séjour (epic #260, phase 2) : reconstruction
+    # intégrale depuis le draft, comme les hamacs. Plus de draps au draft → tout
+    # est détaché.
+    def reconcile_linens!
+      reconcile_linen_orders!(
+        stay: @stay, draft: @draft,
+        total_price_cents: @draft.quote.linen_cents
       )
     end
 

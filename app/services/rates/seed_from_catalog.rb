@@ -45,7 +45,7 @@ module Rates
 
     # Toutes les entrées du catalogue, à plat.
     def entries
-      lodging_entries + hall_entries + outdoor_entries + meal_entries +
+      lodging_entries + linen_entries + hall_entries + outdoor_entries + meal_entries +
         coworking_entries + event_entries + activity_entries + mileage_entries +
         misc_entries
     end
@@ -141,6 +141,16 @@ module Rates
         rows << entry("hamac.#{kind}", amount, "Hamac #{kind} — €/nuit/unité")
       end
       rows
+    end
+
+    # Draps (epic #260, phase 2) : facturés par LIT, pas par nuit. Clé sous le
+    # préfixe `linen.`, rangée dans le groupe « Hébergements » de Paramètres >
+    # Tarifs — c'est une option du gîte, pas du plein air.
+    def linen_entries
+      Pricing::Catalog::LINEN_FALLBACK_CENTS.map do |kind, amount|
+        entry(Pricing::Catalog.linen_rate_key(kind), amount,
+              "#{Pricing::Catalog.linen_label(kind)} — par lit")
+      end
     end
 
     def meal_entries

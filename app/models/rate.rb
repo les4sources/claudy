@@ -34,7 +34,7 @@ class Rate < ApplicationRecord
   # est le premier dont un préfixe matche, donc les clés `meal.` existantes
   # restent dans « Repas », quoi qu'on ajoute ensuite.
   GROUPS = {
-    "Hébergements"  => %w[lodging.],
+    "Hébergements"  => %w[lodging. linen.],
     "Salles"        => %w[hall. hall_weekend.],
     "Camping & van" => %w[camping. van. terrace. hamac.],
     "Repas"         => %w[meal. pizza_party.],
