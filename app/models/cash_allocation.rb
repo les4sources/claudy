@@ -81,10 +81,16 @@ class CashAllocation < ApplicationRecord
 
   private
 
+  # Deux dettes se rapprochent aujourd'hui : la facture d'achat (epic #240) et
+  # le relevé de dépôt-vente en mode virement (epic #248, phase 3). Les
+  # suivantes suivront ici, avec leur propre service — le mécanisme est le même.
   def refresh_document_payment
-    return unless document.is_a?(PurchaseInvoice)
-
-    PurchaseInvoices::RefreshPayment.new(purchase_invoice: document.reload).run!
+    case document
+    when PurchaseInvoice
+      PurchaseInvoices::RefreshPayment.new(purchase_invoice: document.reload).run!
+    when ConsignmentReport
+      Consignments::RefreshSettlement.new(consignment_report: document.reload).run!
+    end
   rescue ActiveRecord::RecordNotFound
     nil
   end

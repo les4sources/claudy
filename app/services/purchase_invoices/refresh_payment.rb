@@ -32,6 +32,13 @@ module PurchaseInvoices
         @invoice.update_columns(status: "to_pay", paid_on: nil)
       end
 
+      # Un relevé de dépôt-vente en mode « l'artisan facture » est soldé par le
+      # paiement de CETTE facture (epic #248, phase 3). Sans ce relais, le relevé
+      # resterait « vérifié » alors que l'artisan a été payé.
+      @invoice.reload.consignment_reports.each do |report|
+        Consignments::RefreshSettlement.new(consignment_report: report).run!
+      end
+
       @invoice.reload
     end
 

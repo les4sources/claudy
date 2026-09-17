@@ -1,0 +1,48 @@
+/ Le récapitulatif annuel du dépôt-vente (epic #248, phase 3).
+/
+/ Ce que l'administration envoie au comptable en fin d'exercice, et ce que
+/ l'artisan demande pour sa propre déclaration. Les relevés pas encore vérifiés
+/ y entrent avec leurs totaux vivants : taire les mois non traités donnerait un
+/ chiffre faux à qui le lit.
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Dépôt-vente #{@year}",
+           links: [link_to("Le mois", finance_consignment_reports_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
+                   link_to("Exporter en CSV", yearly_finance_consignment_reports_path(year: @year, format: :csv), class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90")]
+
+.mb-4.flex.items-center.gap-2
+  = link_to "←", yearly_finance_consignment_reports_path(year: @year - 1), class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+  span.text-sm.font-semibold.text-gray-900= @year
+  = link_to "→", yearly_finance_consignment_reports_path(year: @year + 1), class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+
+- if @rows.blank?
+  .rounded-lg.border.border-gray-100.bg-white.p-6.text-sm.text-gray-500
+    p Aucun relevé en #{@year}.
+- else
+  .overflow-hidden.rounded-xl.bg-white.ring-1.ring-gray-200
+    table.w-full.text-sm
+      thead.bg-gray-50.text-left.text-xs.uppercase.tracking-wide.text-gray-500
+        tr
+          th.px-5.py-3 Artisan
+          th.px-5.py-3.text-right Relevés
+          th.px-5.py-3.text-right Réglés
+          th.px-5.py-3.text-right Ventes brutes
+          th.px-5.py-3.text-right Commission
+          th.px-5.py-3.text-right Net artisan
+      tbody.divide-y.divide-gray-100
+        - @rows.each do |row|
+          tr
+            td.px-5.py-3.font-medium.text-gray-900= row[:consignor].name
+            td.px-5.py-3.text-right.text-gray-500= row[:reports]
+            td.px-5.py-3.text-right.text-gray-500= row[:settled]
+            td.px-5.py-3.text-right.text-gray-800= humanized_money_with_symbol(Money.new(row[:gross_cents], "EUR"))
+            td.px-5.py-3.text-right.text-gray-500= humanized_money_with_symbol(Money.new(row[:commission_cents], "EUR"))
+            td.px-5.py-3.text-right.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(row[:net_cents], "EUR"))
+      tfoot.bg-gray-50.font-semibold.text-gray-900
+        tr
+          td.px-5.py-3 Total
+          td.px-5.py-3.text-right= @rows.sum { |r| r[:reports] }
+          td.px-5.py-3.text-right= @rows.sum { |r| r[:settled] }
+          td.px-5.py-3.text-right= humanized_money_with_symbol(Money.new(@rows.sum { |r| r[:gross_cents] }, "EUR"))
+          td.px-5.py-3.text-right= humanized_money_with_symbol(Money.new(@rows.sum { |r| r[:commission_cents] }, "EUR"))
+          td.px-5.py-3.text-right= humanized_money_with_symbol(Money.new(@rows.sum { |r| r[:net_cents] }, "EUR"))

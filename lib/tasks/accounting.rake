@@ -566,4 +566,50 @@ namespace :accounting do
       exit 1
     end
   end
+  desc "Vérifie la cohérence des relevés de dépôt-vente. Sort vide et exit 0 quand tout va bien."
+  task verify_consignments: :environment do
+    ecarts = []
+
+    ConsignmentReport.includes(:consignor, :purchase_invoice, :journal_entries,
+                               :cash_allocations, :consignment_report_lines).find_each do |report|
+      ref = "#{report.reference} (#{report.consignor&.name})"
+
+      if report.frozen_totals? && report.net_cents != report.gross_cents - report.commission_cents
+        ecarts << "#{ref} : net #{report.net_cents} ≠ brut #{report.gross_cents} − commission #{report.commission_cents}"
+      end
+
+      next unless report.settled?
+
+      if report.consignor&.invoice?
+        ecarts << "#{ref} : réglé sans facture d'achat liée" if report.purchase_invoice.blank?
+        if report.purchase_invoice && !report.purchase_invoice.paid?
+          ecarts << "#{ref} : réglé alors que la facture liée est #{report.purchase_invoice.status}"
+        end
+      else
+        ecarts << "#{ref} : réglé sans écriture au journal des achats" unless report.posted?
+        couvert = report.cash_allocations.sum(:amount_cents).abs
+        if couvert < report.net_cents.to_i
+          ecarts << "#{ref} : réglé mais les allocations ne couvrent que #{couvert} sur #{report.net_cents}"
+        end
+      end
+    end
+
+    # Un artisan ne peut avoir qu'UN relevé par mois : l'index unique le garantit
+    # sur les lignes vivantes, mais un relevé soft-deleté puis restauré à la main
+    # passerait sous le radar.
+    doublons = ConsignmentReport.group(:consignor_id, :period_month).having("COUNT(*) > 1").count
+    doublons.each_key do |(consignor_id, month)|
+      nom = Consignor.with_deleted { Consignor.find_by(id: consignor_id)&.name } ||
+            "Artisan ##{consignor_id}"
+      ecarts << "#{nom} : plusieurs relevés pour #{month.strftime('%Y-%m')}"
+    end
+
+    if ecarts.any?
+      ecarts.each { |ligne| puts "[accounting:verify_consignments] #{ligne}" }
+      abort "[accounting:verify_consignments] #{ecarts.size} écart(s)."
+    end
+
+    puts "[accounting:verify_consignments] Aucun écart — #{ConsignmentReport.count} relevé(s) vérifié(s)."
+  end
+
 end
