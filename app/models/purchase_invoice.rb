@@ -14,6 +14,50 @@
 # La comptabilisation n'est PAS un statut : c'est `posted_at`. Un statut qui
 # mélangerait l'état administratif et l'état comptable rendrait impossible de
 # dire « payée mais pas encore passée ».
+# == Schema Information
+#
+# Table name: purchase_invoices
+#
+#  id                  :bigint           not null, primary key
+#  deleted_at          :datetime
+#  dispute_reason      :text
+#  due_on              :date
+#  issued_on           :date             not null
+#  notes               :text
+#  number              :string
+#  paid_on             :date
+#  pdf_sha256          :string
+#  posted_at           :datetime
+#  quality_flags       :jsonb            not null
+#  requires_validation :boolean          default(FALSE), not null
+#  status              :string           default("to_process"), not null
+#  total_cents         :integer          default(0), not null
+#  validated_at        :datetime
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  legal_entity_id     :bigint           not null
+#  third_party_id      :bigint           not null
+#  validated_by_id     :bigint
+#  validation_team_id  :bigint
+#
+# Indexes
+#
+#  index_purchase_invoices_on_deleted_at              (deleted_at)
+#  index_purchase_invoices_on_legal_entity_id         (legal_entity_id)
+#  index_purchase_invoices_on_pdf_sha256              (pdf_sha256) UNIQUE WHERE (deleted_at IS NULL)
+#  index_purchase_invoices_on_status                  (status)
+#  index_purchase_invoices_on_third_party_and_number  (third_party_id,number) UNIQUE WHERE ((deleted_at IS NULL) AND (number IS NOT NULL))
+#  index_purchase_invoices_on_third_party_id          (third_party_id)
+#  index_purchase_invoices_on_validated_by_id         (validated_by_id)
+#  index_purchase_invoices_on_validation_team_id      (validation_team_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (legal_entity_id => legal_entities.id)
+#  fk_rails_...  (third_party_id => third_parties.id)
+#  fk_rails_...  (validated_by_id => users.id)
+#  fk_rails_...  (validation_team_id => teams.id)
+#
 class PurchaseInvoice < ApplicationRecord
   # Ordre volontaire : c'est celui du parcours, et l'écran s'en sert pour ses
   # totaux en tête de liste.
@@ -55,6 +99,10 @@ class PurchaseInvoice < ApplicationRecord
   belongs_to :validation_team, class_name: "Team", optional: true
   belongs_to :validated_by, class_name: "User", optional: true
   has_many :purchase_invoice_lines, -> { order(:position, :id) }, dependent: :destroy
+  # Les relevés de dépôt-vente que cette facture solde (epic #248, phase 3).
+  # `nullify` : détacher une facture ne doit jamais effacer le relevé — c'est le
+  # travail de l'artisan, pas une pièce jointe.
+  has_many :consignment_reports, dependent: :nullify
   # `cash_allocations` (le `document` polymorphique de la décision 4) vient du
   # concern `Payable` : c'est ce lien qui fait passer la facture en `paid`.
   has_one_attached :document

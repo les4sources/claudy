@@ -255,10 +255,17 @@ Rails.application.routes.draw do
     # lit dans la liste, il n'a pas assez à dire pour mériter sa page. Pas de
     # `destroy` non plus — un comptage est un fait daté.
     resources :cash_counts, path: "cash/counts", only: %i[index new create edit update]
-    # Dépôt-vente (epic #248, phase 2) : le tableau de bord mensuel des relevés.
-    # La fiche d'un relevé et son règlement arrivent en phase 3.
-    resources :consignment_reports, path: "consignments", only: %i[index] do
-      member { post :resend }
+    # Dépôt-vente : le tableau de bord mensuel des relevés (epic #248, phase 2),
+    # la fiche d'un relevé, sa vérification et son règlement (phase 3).
+    resources :consignment_reports, path: "consignments", only: %i[index show update] do
+      member do
+        post :resend
+        post :verify
+        post :settle
+        post :link_invoice
+        post :unlink_invoice
+      end
+      collection { get :yearly }
     end
     # Motifs de caisse (epic #243). Pas de `destroy` : un motif se désactive,
     # sinon une feuille de caisse passée perdrait son vocabulaire.

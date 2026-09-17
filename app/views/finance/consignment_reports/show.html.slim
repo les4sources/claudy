@@ -1,0 +1,162 @@
+/ La fiche d'un relevé de dépôt-vente (epic #248, phase 3).
+/
+/ Elle répond à trois questions, dans cet ordre : qu'est-ce que l'artisan a
+/ déclaré, combien on lui doit, et qu'est-ce qu'il reste à faire. Le reste — le
+/ mois, les autres artisans — vit sur la liste, pas ici.
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "#{@report.consignor.name} — #{@report.period_label.capitalize}",
+           links: [link_to("← Le mois", finance_consignment_reports_path(month: @report.period_month.strftime("%Y-%m")), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.grid.gap-5(class="lg:grid-cols-3")
+  .space-y-5(class="lg:col-span-2")
+
+    / ── Les lignes déclarées ─────────────────────────────────────
+    section.overflow-hidden.rounded-xl.bg-white.ring-1.ring-gray-200
+      .flex.flex-wrap.items-center.justify-between.gap-2.border-b.border-gray-100.px-5.py-3
+        h2.text-sm.font-semibold.text-gray-900 Ce que l'artisan a déclaré
+        - if @report.editable_by_admin?
+          span.text-xs.text-gray-400 Corrigeable — chaque correction est tracée
+        - else
+          span.text-xs.text-gray-400 Figé le #{@report.verified_at ? l(@report.verified_at.to_date, format: :short) : "—"}
+
+      - if @lines.empty?
+        .px-5.py-6.text-sm.text-gray-500
+          | Rien de déclaré pour l'instant.
+      - elsif @report.editable_by_admin?
+        = form_with model: @report, url: finance_consignment_report_path(@report), method: :patch, class: "px-5 py-4 space-y-3" do |f|
+          /  `label: false` partout : le `TailwindFormBuilder` est le builder par
+             défaut de l'application et pose SON propre libellé, en anglais faute
+             de traduction — « Label » et « Quantity » se seraient ajoutés
+             au-dessus des nôtres.
+          - @lines.each do |line|
+            = f.fields_for :consignment_report_lines, line do |lf|
+              .flex.flex-wrap.items-end.gap-3.rounded-lg.border.border-gray-100.px-3.py-2
+                = lf.hidden_field :id
+                .min-w-0.flex-1
+                  label.block.text-xs.font-medium.text-gray-500 Article
+                  = lf.text_field :label, label: false, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+                .w-20
+                  label.block.text-xs.font-medium.text-gray-500 Qté
+                  = lf.number_field :quantity, min: 1, label: false, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+                .w-32
+                  label.block.text-xs.font-medium.text-gray-500 Prix unitaire (€)
+                  = number_field_tag "consignment_report[consignment_report_lines_attributes][#{line.id}][unit_price]", format("%.2f", line.unit_price_cents.to_i / 100.0), step: "0.01", min: 0, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+                .pb-2
+                  label.inline-flex.cursor-pointer.items-center.gap-1.text-xs.text-red-600
+                    = lf.check_box :_destroy, label: false, class: "rounded border-gray-300 text-red-600"
+                    span Retirer
+          .flex.justify-end
+            button.inline-flex.items-center.rounded-md.bg-4s-main.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="hover:opacity-90" type="submit")
+              | Enregistrer les corrections
+      - else
+        table.w-full.text-sm
+          thead.bg-gray-50.text-left.text-xs.uppercase.tracking-wide.text-gray-500
+            tr
+              th.px-5.py-2 Article
+              th.px-5.py-2.text-right Qté
+              th.px-5.py-2.text-right Prix unitaire
+              th.px-5.py-2.text-right Montant
+          tbody.divide-y.divide-gray-100
+            - @lines.each do |line|
+              tr
+                td.px-5.py-2.text-gray-800= line.label
+                td.px-5.py-2.text-right.text-gray-500= line.quantity
+                td.px-5.py-2.text-right.text-gray-500= humanized_money_with_symbol(Money.new(line.unit_price_cents.to_i, "EUR"))
+                td.px-5.py-2.text-right.font-medium.text-gray-900= humanized_money_with_symbol(Money.new(line.amount_cents.to_i, "EUR"))
+
+    / ── Mode « l'artisan facture » ───────────────────────────────
+    - if @report.consignor.invoice?
+      section.overflow-hidden.rounded-xl.bg-white.ring-1.ring-gray-200
+        .border-b.border-gray-100.px-5.py-3
+          h2.text-sm.font-semibold.text-gray-900 Facture attendue
+          p.mt-0.5.text-xs.text-gray-500
+            | #{@report.consignor.name} facture ses ventes : c'est le paiement de sa facture d'achat qui solde ce relevé.
+
+        - if @report.purchase_invoice
+          - facture = @report.purchase_invoice
+          - ecart = facture.total_cents.to_i - @report.displayed_net_cents
+          .px-5.py-4.space-y-2
+            p.text-sm
+              = link_to facture.payable_label, finance_purchase_invoice_path(facture), class: "font-medium text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+              span.ml-2.text-gray-500= humanized_money_with_symbol(Money.new(facture.total_cents.to_i, "EUR"))
+              span.ml-2.rounded-full.bg-gray-100.px-2.py-0.5.text-xs.text-gray-700= facture.status_label
+            - if ecart != 0
+              / L'écart est DIT, jamais corrigé d'office : c'est une conversation
+                à avoir avec l'artisan, pas un arrondi à faire en silence.
+              p.rounded-lg.border.border-amber-200.px-3.py-2.text-sm.text-amber-900(class="bg-amber-50/70")
+                | Écart de #{humanized_money_with_symbol(Money.new(ecart.abs, "EUR"))} entre le net du relevé et la facture —
+                = ecart.positive? ? " la facture demande plus." : " la facture demande moins."
+            = button_to "Détacher la facture", unlink_invoice_finance_consignment_report_path(@report), method: :post, class: "text-xs text-red-600 hover:underline", form: { class: "inline" }
+        - elsif @candidate_invoices.any?
+          = form_with url: link_invoice_finance_consignment_report_path(@report), method: :post, class: "px-5 py-4 flex flex-wrap items-end gap-3" do
+            .min-w-0.flex-1
+              = label_tag :purchase_invoice_id, "Facture d'achat", class: "block text-xs font-medium text-gray-500"
+              = select_tag :purchase_invoice_id,
+                           options_from_collection_for_select(@candidate_invoices, :id, ->(i) { "#{i.payable_label} — #{humanized_money_with_symbol(Money.new(i.total_cents.to_i, 'EUR'))}" }),
+                           include_blank: "— Choisir —",
+                           class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+            button.inline-flex.items-center.rounded-md.bg-4s-main.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="hover:opacity-90" type="submit")
+              | Lier
+        - else
+          .px-5.py-4.text-sm.text-gray-500
+            | Aucune facture d'achat de cet artisan n'est encore enregistrée.
+            = link_to "Enregistrer une facture →", new_finance_purchase_invoice_path, class: "ml-1 text-blue-500 hover:text-blue-700"
+
+  / ── Colonne de droite : les totaux et ce qu'il reste à faire ───
+  .space-y-5
+    section.overflow-hidden.rounded-xl.bg-white.ring-1.ring-gray-200
+      .border-b.border-gray-100.px-5.py-3
+        h2.text-sm.font-semibold.text-gray-900 Le compte
+        - couleur = { "requested" => "bg-amber-100 text-amber-800", "declared" => "bg-blue-100 text-blue-800", "verified" => "bg-teal-100 text-teal-800", "settled" => "bg-emerald-100 text-emerald-800" }[@report.status]
+        span class="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium #{couleur}"
+          = @report.status_label
+      dl.divide-y.divide-gray-100
+        .flex.items-baseline.justify-between.px-5.py-2.5
+          dt.text-xs.uppercase.tracking-wide.text-gray-400 Ventes brutes
+          dd.text-sm.text-gray-800= humanized_money_with_symbol(Money.new(@report.displayed_gross_cents, "EUR"))
+        .flex.items-baseline.justify-between.px-5.py-2.5
+          dt.text-xs.uppercase.tracking-wide.text-gray-400
+            | Commission (#{@report.applied_commission_percent} %)
+          dd.text-sm.text-gray-500= humanized_money_with_symbol(Money.new(@report.displayed_commission_cents, "EUR"))
+        .flex.items-baseline.justify-between.bg-gray-50.px-5.py-3
+          dt.text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Net artisan
+          dd.text-lg.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(@report.displayed_net_cents, "EUR"))
+        .flex.items-baseline.justify-between.px-5.py-2.5
+          dt.text-xs.uppercase.tracking-wide.text-gray-400 Règlement
+          dd.text-sm.text-gray-800= @report.consignor.settlement_mode_label
+        - if @report.consignor.transfer? && @report.consignor.iban.present?
+          .flex.items-baseline.justify-between.px-5.py-2.5
+            dt.text-xs.uppercase.tracking-wide.text-gray-400 IBAN
+            dd.font-mono.text-xs.text-gray-700= @report.consignor.iban_masked
+        - if @report.settled_on
+          .flex.items-baseline.justify-between.px-5.py-2.5
+            dt.text-xs.uppercase.tracking-wide.text-gray-400 Réglé le
+            dd.text-sm.text-gray-800= l(@report.settled_on, format: :long)
+
+    section.overflow-hidden.rounded-xl.bg-white.ring-1.ring-gray-200
+      .border-b.border-gray-100.px-5.py-3
+        h2.text-sm.font-semibold.text-gray-900 Ce qu'il reste à faire
+      .space-y-3.px-5.py-4
+        - if @report.editable_by_admin?
+          p.text-sm.text-gray-600
+            | Vérifier fige les totaux et le taux de commission. Après, le relevé ne bouge plus : c'est sur lui qu'on paie.
+          = button_to "Vérifier ce relevé", verify_finance_consignment_report_path(@report), method: :post, class: "w-full inline-flex justify-center items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+        - elsif @report.verified? && @report.consignor.transfer?
+          - if @report.posted?
+            p.text-sm.text-gray-600
+              | L'écriture est passée. Le relevé attend son virement :
+              = link_to "voir « À payer »", finance_payables_path, class: "text-blue-500 hover:text-blue-700"
+              | .
+          - else
+            p.text-sm.text-gray-600
+              | Générer l'écriture met le relevé dans la file « À payer ». Le virement, lui, se rapproche depuis le relevé bancaire.
+            = button_to "Régler par virement", settle_finance_consignment_report_path(@report), method: :post, class: "w-full inline-flex justify-center items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+        - elsif @report.verified?
+          p.text-sm.text-gray-600 En attente de la facture de l'artisan.
+        - else
+          p.text-sm.text-emerald-700 Ce relevé est réglé — il n'y a plus rien à faire.
+
+        - if @report.journal_entry
+          p.text-xs
+            = link_to "Voir l'écriture au grand livre", finance_ledger_path(journal: "purchases"), class: "text-blue-500 hover:text-blue-700"
