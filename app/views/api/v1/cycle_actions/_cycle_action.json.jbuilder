@@ -1,7 +1,10 @@
 json.id cycle_action.id
 json.type "cycle_action"
 json.label cycle_action.label
+# `hours` est l'ESTIMÉ engagé ; `actual_hours` le réel (epic #330, phase 2).
+# Le réel est en LECTURE seule : il ne bouge que par add/remove_actual_hour.
 json.hours cycle_action.hours
+json.actual_hours cycle_action.actual_hours
 json.category cycle_action.category
 json.completed cycle_action.completed
 # Activité économique (epic #330, phase 1) — exposée en LECTURE seule.
