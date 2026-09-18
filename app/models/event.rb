@@ -54,6 +54,9 @@ class Event < ApplicationRecord
   has_many :event_organizers, dependent: :destroy
   has_many :organizers, through: :event_organizers, source: :human
   has_many :event_costs, dependent: :destroy
+  # Le règlement (epic #245, phase 3) : un par événement, et son existence FERME
+  # l'événement côté frais et recettes.
+  has_one :event_settlement, dependent: :destroy
   # Les réservations d'espace rattachées : elles se proposent en frais fixes
   # avec leur prix persisté, sans jamais le recalculer.
   has_many :space_bookings, dependent: :nullify
@@ -142,6 +145,13 @@ class Event < ApplicationRecord
   # répartir. L'écran le dit — sans bloquer la saisie, parce qu'on encode
   # souvent l'événement avant de savoir qui le portera.
   def shareable? = event_organizers.any? && organizer_weights_total.positive?
+
+  # --- Règlement (epic #245, phase 3) ---
+
+  # Réglé = la part des organisateurs a été figée et l'écriture passée. À partir
+  # de là, l'événement ne bouge plus : une allocation ou un frais postérieur
+  # déplacerait un chiffre déjà viré.
+  def settled? = event_settlement.present?
 
   # Les réservations d'espace rattachées qui n'ont pas encore été passées en
   # frais — celles qu'on peut encore ajouter en un clic.

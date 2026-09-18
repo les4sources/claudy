@@ -27,6 +27,9 @@ Rails.application.routes.draw do
     resources :costs, only: %i[create update destroy], controller: "event_costs" do
       collection { post :from_space_booking }
     end
+    # Règlement de l'événement (epic #245, phase 3) : fige le partage et passe
+    # l'écriture. Pas de `destroy` — on ne dé-règle pas, on contre-passe.
+    resource :settlement, only: %i[create], controller: "event_settlements"
     member do
       # Formulaire de création prérempli depuis cet événement (rien en base).
       get :duplicate

@@ -1,0 +1,90 @@
+/ Le tableau de répartition (epic #245, phase 3). Tant que l'événement n'est pas
+  réglé, il se RECALCULE à chaque affichage : une recette qui arrive le fait
+  bouger, c'est voulu. Une fois réglé, il relit les chiffres FIGÉS du règlement
+  et ne recalcule plus rien. locals: event
+- settlement = event.event_settlement
+- calcul = settlement ? Events::ShareCalculation.for_settlement(settlement) : Events::ShareCalculation.new(event)
+.overflow-hidden.bg-white.shadow.sm:rounded-lg
+  .px-4.py-5.sm:px-6.border-b.border-gray-200.flex.flex-wrap.items-baseline.justify-between.gap-2
+    h3.text-lg.font-medium.leading-6.text-gray-900 Répartition
+    - if settlement
+      span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium #{settlement.paid? ? 'bg-teal-100 text-teal-800' : 'bg-amber-100 text-amber-800'}"
+        = settlement.paid? ? "Réglé et payé" : "Réglé — en attente de virement"
+    - else
+      span.text-xs.text-gray-400 recalculé à chaque affichage
+
+  .px-4.py-5.space-y-4
+    dl.grid.gap-3(class="sm:grid-cols-2")
+      .flex.items-baseline.justify-between.gap-2
+        dt.text-sm.text-gray-500 Recettes encaissées
+        dd.text-sm.font-medium.text-gray-900 = humanized_money_with_symbol(Money.new(calcul.revenue_cents, "EUR"))
+      .flex.items-baseline.justify-between.gap-2
+        dt.text-sm.text-gray-500 Frais fixes
+        dd.text-sm.font-medium.text-gray-900 = "− #{humanized_money_with_symbol(Money.new(calcul.costs_cents, 'EUR'))}"
+      .flex.items-baseline.justify-between.gap-2.border-t.border-gray-100.pt-2
+        dt.text-sm.font-semibold.text-gray-700 Base de partage
+        dd.text-sm.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(calcul.base_cents, "EUR"))
+      .flex.items-baseline.justify-between.gap-2.border-t.border-gray-100.pt-2
+        dt.text-sm.text-gray-500 Taux organisateurs
+        dd.text-sm.font-medium.text-gray-900 = "#{calcul.share_percent} %"
+
+    - if calcul.base_cents <= 0
+      .rounded-lg.bg-orange-50.px-3.py-2.text-sm.text-orange-800
+        | La base de partage est nulle ou négative : rien ne revient aux organisateurs. Le déficit reste à la maison — on ne leur fait pas payer un événement qui n'a pas couvert ses frais.
+
+    .grid.gap-3(class="sm:grid-cols-2")
+      .rounded-lg.bg-teal-50.px-4.py-3
+        .text-xs.uppercase.tracking-wide.text-teal-700 Part des organisateurs
+        .mt-1.text-xl.font-semibold.text-teal-900 = humanized_money_with_symbol(Money.new(calcul.organizers_cents, "EUR"))
+      .rounded-lg.bg-gray-50.px-4.py-3
+        .text-xs.uppercase.tracking-wide.text-gray-500 Part des 4 Sources
+        .mt-1.text-xl.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(calcul.house_cents, "EUR"))
+
+    - if calcul.lines.any?
+      .overflow-x-auto
+        table.w-full.text-sm.text-left.text-gray-500
+          thead.text-xs.text-gray-700.uppercase.bg-gray-50
+            tr
+              th.py-2.px-4[scope="col"] Organisateur
+              th.py-2.px-4.text-right[scope="col"] Poids
+              th.py-2.px-4.text-right[scope="col"] Part
+              - if settlement
+                th.py-2.px-4[scope="col"] Virement
+          tbody
+            - settlement_lines = settlement ? settlement.event_settlement_lines.includes(:human, :cash_allocations).index_by(&:human_id) : {}
+            - calcul.lines.each do |line|
+              - persisted = settlement_lines[line.human.id]
+              tr.border-b.bg-white
+                td.py-2.px-4.text-gray-900 = line.human.name
+                td.py-2.px-4.text-right = line.weight
+                td.py-2.px-4.text-right.font-medium.text-gray-900 = humanized_money_with_symbol(Money.new(line.amount_cents, "EUR"))
+                - if settlement
+                  td.py-2.px-4
+                    - if persisted&.payable_settled?
+                      span.text-teal-700 ✓ payé
+                    - elsif persisted&.partially_paid?
+                      span.text-amber-700 = "partiel · #{humanized_money_with_symbol(Money.new(persisted.remaining_cents, 'EUR'))} restants"
+                    - else
+                      span.text-gray-500 à virer
+          tfoot
+            tr.bg-gray-50
+              td.py-2.px-4.font-semibold.text-gray-900(colspan="2") Total
+              td.py-2.px-4.text-right.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(calcul.lines_total_cents, "EUR"))
+              - if settlement
+                td.py-2.px-4
+
+    - if settlement
+      p.text-xs.text-gray-500
+        | Les parts sont figées et apparaissent dans
+        = link_to " Comptabilité > À payer", finance_payables_path, class: "text-4s-main hover:underline"
+        | . Elles se soldent par rapprochement bancaire, pas à la main. Pour corriger, passez par une contre-passation.
+    - elsif calcul.lines.empty?
+      p.text-sm.text-gray-500 Ajoutez des organisateurs pour pouvoir régler cet événement.
+    - elsif calcul.organizers_cents.zero?
+      p.text-sm.text-gray-500 Rien à régler tant que la base de partage est nulle.
+    - else
+      = button_to "Régler l'événement",
+                  event_settlement_path(event),
+                  method: :post,
+                  form: { data: { turbo_confirm: "Régler cet événement ? Le partage sera figé, l'écriture passée, et les parts apparaîtront dans « À payer ». Une correction demandera une contre-passation." } },
+                  class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"

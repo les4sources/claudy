@@ -69,6 +69,9 @@ class CashAllocation < ApplicationRecord
   validate :within_entry_amount
   validate :entry_not_posted
   validate :entry_open
+  # Un événement RÉGLÉ ne bouge plus (epic #245, phase 3) : sa part a été figée
+  # et virée. Rattacher une recette après coup déplacerait un chiffre déjà payé.
+  validate :event_not_settled
 
   before_destroy :refuse_when_posted
   # Le paiement d'une facture d'achat EST un rapprochement (epic #240,
@@ -81,10 +84,11 @@ class CashAllocation < ApplicationRecord
 
   private
 
-  # Trois dettes se rapprochent aujourd'hui : la facture d'achat (epic #240), la
-  # note de frais ou de mission (epic #241, phase 3) et le relevé de dépôt-vente
-  # en mode virement (epic #248, phase 3). Les suivantes suivront ici, avec leur
-  # propre service — le mécanisme est le même.
+  # Quatre dettes se rapprochent aujourd'hui : la facture d'achat (epic #240), la
+  # note de frais ou de mission (epic #241, phase 3), le relevé de dépôt-vente en
+  # mode virement (epic #248, phase 3) et la part d'organisateur d'un événement
+  # réglé (epic #245, phase 3). Les suivantes suivront ici, avec leur propre
+  # service — le mécanisme est le même.
   def refresh_document_payment
     case document
     when PurchaseInvoice
@@ -93,9 +97,18 @@ class CashAllocation < ApplicationRecord
       ExpenseReports::RefreshPayment.new(expense_report: document.reload).run!
     when ConsignmentReport
       Consignments::RefreshSettlement.new(consignment_report: document.reload).run!
+    when EventSettlementLine
+      refresh_event_settlement(document.reload)
     end
   rescue ActiveRecord::RecordNotFound
     nil
+  end
+
+  # La part note la date à laquelle le virement a été constaté, et le règlement
+  # passe `paid` quand TOUTES ses parts sont soldées.
+  def refresh_event_settlement(line)
+    line.mark_paid_on!(cash_entry.entry_date) if line.payable_settled?
+    line.event_settlement.reload.refresh_status!
   end
 
   # Une allocation de sens contraire transformerait un encaissement en
@@ -145,5 +158,14 @@ class CashAllocation < ApplicationRecord
 
     errors.add(:base, "Cette ligne est déjà comptabilisée — annule sa passation d'abord")
     throw :abort
+  end
+
+  def event_not_settled
+    return unless document_type == "Event"
+    return if document.nil? || !document.settled?
+
+    errors.add(:document,
+               "cet événement est réglé : son partage est figé. Passez par une contre-passation " \
+               "plutôt que de rattacher une recette après le virement.")
   end
 end

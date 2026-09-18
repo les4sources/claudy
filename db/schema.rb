@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_18_050000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -787,6 +787,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
     t.index ["event_id", "human_id"], name: "index_event_organizers_on_event_id_and_human_id", unique: true
     t.index ["event_id"], name: "index_event_organizers_on_event_id"
     t.index ["human_id"], name: "index_event_organizers_on_human_id"
+  end
+
+  create_table "event_settlement_lines", force: :cascade do |t|
+    t.integer "amount_cents", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.bigint "event_settlement_id", null: false
+    t.bigint "human_id", null: false
+    t.date "paid_on"
+    t.datetime "updated_at", null: false
+    t.integer "weight", default: 1, null: false
+    t.index ["event_settlement_id", "human_id"], name: "index_event_settlement_lines_on_settlement_and_human", unique: true
+    t.index ["event_settlement_id"], name: "index_event_settlement_lines_on_event_settlement_id"
+    t.index ["human_id"], name: "index_event_settlement_lines_on_human_id"
+  end
+
+  create_table "event_settlements", force: :cascade do |t|
+    t.integer "base_cents", default: 0, null: false
+    t.integer "costs_cents", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.bigint "event_id", null: false
+    t.integer "house_cents", default: 0, null: false
+    t.datetime "issued_at"
+    t.integer "organizer_share_percent", default: 0, null: false
+    t.integer "organizers_cents", default: 0, null: false
+    t.datetime "posted_at"
+    t.integer "revenue_cents", default: 0, null: false
+    t.string "status", default: "issued", null: false
+    t.datetime "updated_at", null: false
+    t.index ["event_id"], name: "index_event_settlements_on_event_id", unique: true
+    t.index ["status"], name: "index_event_settlements_on_status"
   end
 
   create_table "events", force: :cascade do |t|
@@ -2055,6 +2085,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
   add_foreign_key "event_costs", "events"
   add_foreign_key "event_organizers", "events"
   add_foreign_key "event_organizers", "humans"
+  add_foreign_key "event_settlement_lines", "event_settlements"
+  add_foreign_key "event_settlement_lines", "humans"
+  add_foreign_key "event_settlements", "events"
   add_foreign_key "events", "event_categories"
   add_foreign_key "events", "teams"
   add_foreign_key "expense_lines", "analytic_accounts"

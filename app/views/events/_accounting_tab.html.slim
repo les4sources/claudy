@@ -100,3 +100,7 @@
             = link_to "Ajouter des organisateurs", edit_event_path(event), class: "ml-1 underline"
 
   = render "events/costs", event: event, cost: EventCost.new(event: event)
+
+  / Répartition et règlement (epic #245, phase 3) : ce qui revient à chacun, et
+    le geste qui le fige.
+  = render "events/settlement", event: event
