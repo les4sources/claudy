@@ -59,6 +59,26 @@
         - if @rows.empty?
           tr
             td.px-4.py-6.text-center.text-gray-500(colspan=columns) Rien ici.
+        - elsif @view == :upcoming
+          /  PLAN DE CHARGE (epic #321, phase 3) : un intertitre par JOUR, avec
+             les convives cumulés du jour. C'est ce que Stéphanie met dans son
+             agenda — « jeudi 26 : 42 convives », pas quatre lignes à additionner
+             de tête.
+          - @rows.group_by { |order| order.object.date }.each do |day, orders_of_day|
+            tr.bg-gray-50
+              td.px-4.py-2(colspan=columns)
+                .flex.flex-wrap.items-baseline.gap-3
+                  /  `capitalize` en Ruby, pas en CSS : `text-transform: capitalize`
+                     mettrait une majuscule à CHAQUE mot (« Samedi 26 Septembre »),
+                     ce que le français n'écrit pas.
+                  span.text-sm.font-semibold.text-gray-900
+                    = l(day, format: "%A %-d %B").capitalize
+                  span.text-xs.font-medium.text-gray-500
+                    = "#{orders_of_day.sum { |o| o.object.people.to_i }} convives"
+                  span.text-xs.text-gray-400
+                    = "#{orders_of_day.size} service#{'s' if orders_of_day.size > 1}"
+            - orders_of_day.each do |order|
+              = render "kitchen/orders/row", order: order
         - else
           - @rows.each do |order|
             = render "kitchen/orders/row", order: order

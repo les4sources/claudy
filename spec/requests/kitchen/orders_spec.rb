@@ -60,7 +60,7 @@ RSpec.describe "Cuisine — page et actions", type: :request do
       get kitchen_orders_path(view: :reception)
       expect(response.body).to include("Prix", "Total facturable")
 
-      get kitchen_orders_path
+      get kitchen_orders_path(view: :all)
       expect(response.body).not_to include("Total facturable")
       expect(Nokogiri::HTML(response.body).css("th").map(&:text)).not_to include("Prix")
     end
@@ -69,16 +69,16 @@ RSpec.describe "Cuisine — page et actions", type: :request do
       repas  = line(responsible_human: steph)
       buffet = line(kind: "buffet_vege", responsible_human: michael, notes: "buffet de michael")
 
-      get kitchen_orders_path(family: "buffet")
+      get kitchen_orders_path(view: :all, family: "buffet")
       expect(response.body).to include("buffet de michael")
 
-      get kitchen_orders_path(family: "repas")
+      get kitchen_orders_path(view: :all, family: "repas")
       expect(response.body).not_to include("buffet de michael")
 
-      get kitchen_orders_path(responsible_human_id: michael.id)
+      get kitchen_orders_path(view: :all, responsible_human_id: michael.id)
       expect(response.body).to include("buffet de michael")
 
-      get kitchen_orders_path(responsible_human_id: steph.id)
+      get kitchen_orders_path(view: :all, responsible_human_id: steph.id)
       expect(response.body).not_to include("buffet de michael")
       expect(repas.reload.responsible_human).to eq(steph)
     end
@@ -164,7 +164,7 @@ RSpec.describe "Cuisine — page et actions", type: :request do
       user.update!(human: michael)
       line
 
-      get kitchen_orders_path
+      get kitchen_orders_path(view: :all)
 
       expect(response).to have_http_status(:ok)
       expect(CGI.unescapeHTML(response.body)).to include("Je m'en charge")

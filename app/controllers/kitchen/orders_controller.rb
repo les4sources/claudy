@@ -16,6 +16,10 @@ module Kitchen
     # « Accueil » sont les deux vues de travail : chacune ne montre que les
     # lignes où ce métier a la main (`MealOrder#next_actor`).
     VIEWS = [
+      # PROCHAINS SERVICES (epic #321, phase 3) — en premier et par défaut :
+      # c'est la question qu'on se pose en arrivant sur la page. Ce qui va
+      # vraiment avoir lieu, pas ce qui reste à traiter.
+      { key: :upcoming,  title: "Prochains services" },
       { key: :all,       title: "À venir" },
       { key: :kitchen,   title: "Cuisine" },
       { key: :reception, title: "Accueil" },
@@ -408,7 +412,7 @@ module Kitchen
 
     def view_param
       key = params[:view].to_s.to_sym
-      VIEW_KEYS.include?(key) ? key : :all
+      VIEW_KEYS.include?(key) ? key : :upcoming
     end
 
     # Tout ce qui est encore à venir et pas annulé par le client — y compris ce
@@ -421,6 +425,7 @@ module Kitchen
 
     def rows_for(view)
       case view
+      when :upcoming  then upcoming_scope.to_a
       when :all       then live_rows.reject(&:inquiry?)
       when :kitchen   then live_rows.select { |o| o.next_actor == :kitchen }
       when :reception then live_rows.select { |o| %i[reception to_cover].include?(o.next_actor) }
@@ -435,12 +440,25 @@ module Kitchen
     def view_counts
       VIEWS.to_h do |v|
         count = case v[:key]
+                when :upcoming then upcoming_scope.count
                 when :past then archive_scope.count
                 when :out  then out_scope.count
                 else rows_for(v[:key]).size
                 end
         [v[:key], count]
       end
+    end
+
+    # CE QUI VA VRAIMENT AVOIR LIEU (epic #321, phase 3) : accepté par la cuisine,
+    # non annulé, daté et à venir. Les lignes SANS DATE en sont exclues — un
+    # service sans date n'aura pas lieu, il est encore à traiter et vit dans
+    # « À venir ». Les deux onglets ne font pas doublon : l'un est une liste de
+    # travail, l'autre un plan de charge.
+    def upcoming_scope
+      base_scope.where(validation: "accepted")
+                .where.not(status: "cancelled")
+                .where("date >= ?", Date.current)
+                .order(:date, :id)
     end
 
     # Déjà servi. Un refus passé n'a rien été servi : il va dans « Annulés ».

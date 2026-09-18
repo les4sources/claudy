@@ -42,7 +42,7 @@ RSpec.describe "Cuisine — validation depuis la page", type: :request do
   it "propose les deux réponses sur une ligne à valider" do
     order
 
-    get kitchen_orders_path
+    get kitchen_orders_path(view: :all)
 
     expect(response.body).to include("Ok !")
     expect(response.body).to include(new_refusal_kitchen_order_path(order))

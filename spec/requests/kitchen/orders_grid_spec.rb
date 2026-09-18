@@ -321,7 +321,7 @@ RSpec.describe "Cuisine — grille jours × services", type: :request do
       get kitchen_orders_path(view: :out)
       expect(row_for(order)).to be_nil
 
-      get kitchen_orders_path
+      get kitchen_orders_path(view: :all)
       expect(row_for(order)).to be_present
     end
 
