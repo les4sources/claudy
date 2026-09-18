@@ -112,6 +112,8 @@ class PaymentDecorator < ApplicationDecorator
         "Payé #{amount} en liquide"
       when "card", "stripe"
         "Payé #{amount} en ligne"
+      when Payment::TRANCHESDEVIE_METHOD
+        "Payé #{amount} sur Tranches de Vie (Pizza Party)"
       end
     return nil if line_content.nil?
 
@@ -130,6 +132,8 @@ class PaymentDecorator < ApplicationDecorator
       "Liquide"
     when "card", "stripe"
       "En ligne"
+    when Payment::TRANCHESDEVIE_METHOD
+      "Tranches de Vie (Pizza Party)"
     end
   end
 
@@ -141,6 +145,8 @@ class PaymentDecorator < ApplicationDecorator
       h.content_tag(:div, "🏦", class: "ml-1")
     when "card", "stripe"
       h.content_tag(:div, "💳", class: "ml-1")
+    when Payment::TRANCHESDEVIE_METHOD
+      h.content_tag(:div, "🍕", class: "ml-1")
     when "airbnb"
       h.render("shared/airbnb_icon")
     when "bookingdotcom"
@@ -155,6 +161,8 @@ class PaymentDecorator < ApplicationDecorator
       h.content_tag(:span, "En attente", class: "#{shared_classes} bg-red-200 text-red-800")
     when "paid"
       h.content_tag(:span, "Payé", class: "#{shared_classes} bg-green-200 text-green-800")
+    when "refunded"
+      h.content_tag(:span, "Remboursé", class: "#{shared_classes} bg-gray-200 text-gray-600 line-through")
     end
   end
 

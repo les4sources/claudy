@@ -112,6 +112,19 @@ Le site public (repo `les4sources/les4sources-website`, Astro statique) lit Clau
 
 **Reconstruction du site.** Toute sauvegarde d'une fiche publiée (ou sa publication, dépublication, suppression) enfile `WebsiteRebuildJob`, qui regroupe les demandes sur deux minutes puis fait un `POST` sur `WEBSITE_REBUILD_WEBHOOK_URL` (webhook de déploiement Coolify ou `repository_dispatch` GitHub), avec `Authorization: Bearer WEBSITE_REBUILD_WEBHOOK_TOKEN` si le jeton est renseigné. Sans URL, le job journalise et ne fait rien ; hors production il ne fait rien non plus, sauf `WEBSITE_REBUILD_ALLOW_NON_PRODUCTION=1`.
 
+## Pizza Party de Tranches de Vie
+
+Une Pizza Party privée réservée et payée sur **Tranches de Vie** (repo `les4sources/tranchesdevie2`) est souvent liée à un séjour de groupe géré ici. Quand le séjour est facturable, la party doit figurer sur sa facture. Depuis la fiche séjour, le bloc « Pizza Party » (sous les paiements) liste les parties privées **payées** autour des dates du séjour et permet d'en rattacher une.
+
+Le rattachement est **manuel** et la relation est en **lecture seule** : Claudy interroge l'API de Tranches de Vie, ne lui écrit jamais. La party s'ajoute au **Total séjour** et le paiement miroir qu'elle crée (moyen `tranchesdevie`) compte dans l'**Encaissé** — un séjour soldé le reste. Ce paiement ne se modifie ni ne se supprime depuis la liste des paiements : on **détache** la party à la place. Une annulation ou un remboursement décidé là-bas est répercuté ici (la party sort du total, son paiement passe `refunded`), par le bouton « Actualiser » du bloc ou par le passage quotidien.
+
+| Variable | Défaut | Rôle |
+|---|---|---|
+| `TRANCHESDEVIE_API_URL` | `https://tranchesdevie.les4sources.be` | Base de l'API de Tranches de Vie. |
+| `TRANCHESDEVIE_API_KEY` | — | Jeton `Authorization: Bearer`. **Sans elle, aucun appel sortant** : le bouton de rattachement est rendu désactivé avec l'explication. |
+
+Contrat de l'API côté Tranches de Vie : `les4sources/tranchesdevie2#290`.
+
 ## Tâches planifiées (cron Hatchbox)
 
 Claudy envoie plusieurs emails par des tâches rake idempotentes, lancées par le cron de Hatchbox. Toutes sont sans effet si on les rejoue : elles horodatent ce qu'elles ont envoyé.
@@ -123,6 +136,7 @@ Claudy envoie plusieurs emails par des tâches rake idempotentes, lancées par l
 | `bundle exec rake coworking:send_expiry_reminders` | quotidienne | Rappel d'expiration des packs de coworking. |
 | `bundle exec rake kitchen:weekly_digest` | **vendredi 07:00** | Programme cuisine des 14 prochains jours, un email par responsable. |
 | `bundle exec rake kitchen:bread_reminders` | **quotidienne 07:00** | Rappel de commander le pain, 5 jours avant chaque prestation acceptée. |
+| `bundle exec rake tranches_de_vie:sync_parties` | quotidienne | Répercute les annulations et remboursements des Pizza Party depuis Tranches de Vie. Sans effet si `TRANCHESDEVIE_API_KEY` est absente. |
 
 Fuseau horaire des crons : **Europe/Brussels**.
 

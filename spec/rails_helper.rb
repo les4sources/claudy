@@ -9,6 +9,12 @@ abort("The Rails environment is running in production mode!") if Rails.env.produ
 require 'rspec/rails'
 require 'view_component/test_helpers'
 require 'capybara/rspec'
+# Appels sortants coupés par défaut (issue #339) : une spec qui sort vraiment sur
+# le réseau n'est pas une spec — elle est lente, dépendante d'un tiers, et verte
+# ou rouge pour de mauvaises raisons. `allow_localhost` laisse passer ce qui
+# parle à l'app elle-même (Capybara, build Vite).
+require 'webmock/rspec'
+WebMock.disable_net_connect!(allow_localhost: true)
 # Add additional requires below this line. Rails is not loaded until this point!
 
 # Requires supporting ruby files with custom matchers and macros, etc, in
@@ -25,6 +31,7 @@ require 'capybara/rspec'
 # require only the support files necessary.
 #
 # Dir[Rails.root.join('spec', 'support', '**', '*.rb')].sort.each { |f| require f }
+require Rails.root.join('spec', 'support', 'tranches_de_vie_helpers')
 
 # Checks for pending migrations and applies them before tests are run.
 # If you are not using ActiveRecord, you can remove these lines.

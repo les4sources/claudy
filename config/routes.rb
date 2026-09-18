@@ -510,6 +510,13 @@ Rails.application.routes.draw do
     # modale. Le paiement porte TOUJOURS le séjour dans l'URL — jamais un paiement
     # sans séjour d'attache. URLs admin en anglais.
     resources :payments, only: [:create, :update], controller: "stay_payments"
+    # Pizza Party privées payées sur Tranches de Vie (issue #339) : rattachement
+    # manuel depuis la fiche séjour, lecture seule de l'API de l'autre app.
+    resources :party_reservations, only: [:index, :create, :destroy], controller: "stay_party_reservations" do
+      collection do
+        post :sync
+      end
+    end
   end
   resources :experience_bookings, only: [:index, :show, :update, :destroy] do
     collection do
@@ -691,6 +698,9 @@ Rails.application.routes.draw do
       resources :humans, only: [:index, :show, :update, :destroy]
       resources :cycles, only: [:index, :show, :update, :destroy]
       resources :cycle_actions, only: [:index, :show, :update, :destroy]
+      # Pizza Party Tranches de Vie (issue #339) — lecture seule : elles se
+      # rattachent et se détachent depuis la fiche séjour, jamais par l'API.
+      resources :party_reservations, only: [:index, :show]
       resources :human_roles, only: [:index, :show]
       resources :tasks, only: [:index, :show, :update, :destroy]
       resources :payments, only: [:index, :show, :update, :destroy]

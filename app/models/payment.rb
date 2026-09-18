@@ -60,6 +60,14 @@ class Payment < ApplicationRecord
   # (un seul Payment `paid` + un seul Payment `pending` par SpaceBooking).
   belongs_to :space_booking, optional: true
 
+  # Miroir d'une Pizza Party Tranches de Vie (issue #339) : le paiement porte la
+  # party pour que la ligne de paiement sache lier vers l'admin de l'autre app.
+  # PAS de `dependent:` — la gem `soft_deletion` cascaderait alors sur cette
+  # association et appellerait `update_all` sur un `has_one` (qui n'en a pas),
+  # ce qui fait tomber tout soft-delete de paiement. Le détachement d'une party
+  # supprime explicitement les deux enregistrements, dans le bon ordre.
+  has_one :party_reservation
+
   monetize :amount_cents, allow_nil: false
 
   # Table de versions dédiée : la PK de Payment est un UUID, incompatible avec
@@ -71,8 +79,14 @@ class Payment < ApplicationRecord
   validates :payment_method, presence: true
   validate :anchored_on_stay_or_coworking_pack
 
+  # Moyen de paiement des Pizza Party privées réglées sur Tranches de Vie
+  # (issue #339). Un paiement qui le porte est un MIROIR : il ne se modifie ni
+  # ne se supprime depuis la fiche séjour — on détache la party à la place.
+  TRANCHESDEVIE_METHOD = "tranchesdevie".freeze
+
   scope :paid, -> { where(status: "paid") }
   scope :pending, -> { where(status: "pending") }
+  scope :refunded, -> { where(status: "refunded") }
 
   # Statuts de séjour qui valent « annulé » — source unique `Stay::CANCELED_STATUSES`
   # (`canceled` posé par l'app, `cancelled` par des imports).
@@ -103,6 +117,17 @@ class Payment < ApplicationRecord
 
   def pending?
     self.status == "pending"
+  end
+
+  # Remboursé : l'argent est reparti. Le paiement sort de l'encaissé
+  # (`scope :paid`) mais reste listé, pour que la compta voie l'historique.
+  def refunded?
+    self.status == "refunded"
+  end
+
+  # Miroir d'une Pizza Party Tranches de Vie : ni éditable ni supprimable ici.
+  def tranchesdevie?
+    payment_method == TRANCHESDEVIE_METHOD
   end
 
   # Date qui fait FOI pour l'affichage et le rapprochement bancaire : la date

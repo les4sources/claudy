@@ -25,6 +25,12 @@ json.items stay.stay_items do |item|
   end
 end
 
+# Pizza Party payées sur Tranches de Vie et rattachées au séjour (issue #339).
+# Elles pèsent sur `total_amount` : sans elles, le total ne s'expliquerait pas.
+json.party_reservations stay.party_reservations.ordered do |party_reservation|
+  json.partial! "api/v1/party_reservations/party_reservation", party_reservation: party_reservation
+end
+
 if detailed
   json.items_count stay.stay_items.size
 end

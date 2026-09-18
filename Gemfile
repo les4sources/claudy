@@ -139,4 +139,9 @@ group :test do
   # Selenium Manager (intégré depuis selenium-webdriver 4.11) remplace la gem `webdrivers`,
   # dépréciée et qui plafonnait selenium-webdriver sous la 4.11.
   gem "selenium-webdriver"
+
+  # Appels sortants sous contrôle (issue #339) : `TranchesDeVie::Client` parle à
+  # une API tierce, et une spec qui sort vraiment sur le réseau n'est pas une
+  # spec. WebMock la coupe et laisse vérifier l'en-tête d'auth et les filtres.
+  gem "webmock"
 end

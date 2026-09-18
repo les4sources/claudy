@@ -676,6 +676,46 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /party_reservations:
+    get:
+      tags: [Réservations]
+      summary: Lister les Pizza Party rattachées aux séjours
+      description: >
+        Lecture seule. Une party se rattache et se détache depuis la fiche
+        séjour de Claudy, jamais par l'API : elle n'a de sens que rapportée à un
+        séjour et au paiement qu'elle crée.
+      parameters:
+        - { name: stay_id, in: query, schema: { type: integer }, description: "Filtre par séjour." }
+        - { name: status, in: query, schema: { type: string, enum: [active, refunded, cancelled] } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de Pizza Party rattachées.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/PartyReservation" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /party_reservations/{id}:
+    get:
+      tags: [Réservations]
+      summary: Détail d'une Pizza Party rattachée
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Pizza Party rattachée.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/PartyReservation" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /human_roles:
     get:
       tags: [Collectif]
@@ -2080,7 +2120,41 @@ components:
               from_date: { type: string, format: date, nullable: true }
               to_date: { type: string, format: date, nullable: true }
               status: { type: string, nullable: true }
+        party_reservations:
+          type: array
+          description: "Pizza Party privées payées sur Tranches de Vie et rattachées au séjour. Elles pèsent sur total_amount."
+          items: { $ref: "#/components/schemas/PartyReservation" }
         items_count: { type: integer, description: "Détail uniquement." }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string, format: uri }
+    PartyReservation:
+      type: object
+      description: >
+        Miroir en lecture seule d'une Pizza Party privée réservée et payée sur
+        Tranches de Vie (les4sources/tranchesdevie2), rattachée à la main à un
+        séjour. Une party active s'ajoute au total du séjour et son paiement
+        compte dans l'encaissé ; remboursée ou annulée, elle en sort tout en
+        restant visible.
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "party_reservation" }
+        source: { type: string, enum: [tranchesdevie] }
+        status: { type: string, enum: [active, refunded, cancelled] }
+        external_id: { type: integer, description: "Identifiant de la commande chez Tranches de Vie." }
+        external_number: { type: string, nullable: true, example: "TV-20261009-0007" }
+        held_on: { type: string, format: date, nullable: true }
+        slot: { type: string, nullable: true, example: "soir" }
+        group_name: { type: string, nullable: true }
+        persons: { type: integer, nullable: true }
+        forfait: { type: boolean }
+        price: { $ref: "#/components/schemas/Money" }
+        external_paid_at: { type: string, format: date-time, nullable: true }
+        external_refunded_at: { type: string, format: date-time, nullable: true }
+        external_admin_url: { type: string, format: uri, nullable: true }
+        synced_at: { type: string, format: date-time, nullable: true }
+        stay_id: { type: integer }
+        payment_id: { type: string, format: uuid, nullable: true }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         url: { type: string, format: uri }
