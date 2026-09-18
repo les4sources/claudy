@@ -1,0 +1,70 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Porteurs d'activité"
+
+p.mb-6.text-sm.text-gray-500
+  | Ce que la maison doit aux personnes qui animent. Une prestation n'est relevée qu'une fois : ce qui apparaît ici n'a encore jamais été mis sur un relevé.
+
+- if @rows.empty?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p Aucune prestation tenue à relever, et aucun relevé.
+    p.mt-1.text-xs.text-gray-400
+      | Une prestation apparaît ici une fois son porteur passé par
+      = link_to " « À confirmer »", outcomes_experience_bookings_path, class: "text-4s-main hover:underline"
+      |  pour dire qu'elle a bien eu lieu.
+- else
+  .space-y-6
+    - @rows.each do |row|
+      - human = row[:human]
+      .overflow-hidden.bg-white.shadow.sm:rounded-lg
+        .px-4.py-4.sm:px-6.border-b.border-gray-200.flex.flex-wrap.items-baseline.justify-between.gap-3
+          div
+            h3.text-lg.font-medium.leading-6.text-gray-900 = human.name
+            - if human.email.blank?
+              p.text-xs.text-amber-700 Pas d'adresse email — le relevé se partagera par son lien.
+          - if row[:pending].any?
+            .text-right
+              .text-xs.uppercase.tracking-wide.text-gray-400 À relever
+              .text-lg.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(row[:pending_cents], "EUR"))
+
+        - if row[:pending].any?
+          .overflow-x-auto
+            table.w-full.text-sm.text-left.text-gray-500
+              thead.text-xs.text-gray-700.uppercase.bg-gray-50
+                tr
+                  th.py-2.px-4[scope="col"] Date
+                  th.py-2.px-4[scope="col"] Activité
+                  th.py-2.px-4.text-right[scope="col"] Rémunération
+              tbody
+                - row[:pending].each do |booking|
+                  tr.border-b.bg-white
+                    td.py-2.px-4.whitespace-nowrap
+                      - if booking.experience_availability&.available_on
+                        = l(booking.experience_availability.available_on, format: :short)
+                    td.py-2.px-4.text-gray-900 = booking.experience&.name
+                    td.py-2.px-4.text-right = humanized_money_with_symbol(Money.new(booking.carrier_fee_cents.to_i, "EUR"))
+
+          .px-4.py-4.bg-gray-50.border-t.border-gray-200
+            = form_with url: finance_carrier_statements_path, method: :post, class: "flex flex-wrap items-end gap-3" do |f|
+              = hidden_field_tag :human_id, human.id
+              label.block.text-xs.text-gray-600
+                | Du
+                = date_field_tag :period_from, @default_from, class: "mt-1 block rounded border-gray-300 text-sm py-1"
+              label.block.text-xs.text-gray-600
+                | Au
+                = date_field_tag :period_to, @default_to, class: "mt-1 block rounded border-gray-300 text-sm py-1"
+              = submit_tag "Générer le relevé", class: "cursor-pointer rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+              span.text-xs.text-gray-500 Un brouillon, qu'on relit avant de l'émettre.
+        - else
+          .px-4.py-4.text-sm.text-gray-500 Rien de neuf à relever.
+
+        - if row[:statements].any?
+          .px-4.py-3.border-t.border-gray-100
+            .text-xs.uppercase.tracking-wide.text-gray-400.mb-2 Relevés
+            ul.space-y-1
+              - row[:statements].each do |statement|
+                li.flex.flex-wrap.items-center.justify-between.gap-2.text-sm
+                  = link_to statement.period_label, finance_carrier_statement_path(statement), class: "text-4s-main hover:underline"
+                  .flex.items-center.gap-3
+                    span.text-gray-900 = humanized_money_with_symbol(statement.total_fee)
+                    span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium #{statement.paid? ? 'bg-teal-100 text-teal-800' : (statement.issued? ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600')}"
+                      = statement.status_label

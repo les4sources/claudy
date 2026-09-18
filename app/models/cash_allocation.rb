@@ -81,10 +81,11 @@ class CashAllocation < ApplicationRecord
 
   private
 
-  # Trois dettes se rapprochent aujourd'hui : la facture d'achat (epic #240), la
-  # note de frais ou de mission (epic #241, phase 3) et le relevé de dépôt-vente
-  # en mode virement (epic #248, phase 3). Les suivantes suivront ici, avec leur
-  # propre service — le mécanisme est le même.
+  # Quatre dettes se rapprochent aujourd'hui : la facture d'achat (epic #240), la
+  # note de frais ou de mission (epic #241, phase 3), le relevé de dépôt-vente en
+  # mode virement (epic #248, phase 3) et le relevé de rémunération d'un porteur
+  # d'activité (epic #244, phase 3). Les suivantes suivront ici, avec leur propre
+  # service — le mécanisme est le même.
   def refresh_document_payment
     case document
     when PurchaseInvoice
@@ -93,6 +94,8 @@ class CashAllocation < ApplicationRecord
       ExpenseReports::RefreshPayment.new(expense_report: document.reload).run!
     when ConsignmentReport
       Consignments::RefreshSettlement.new(consignment_report: document.reload).run!
+    when CarrierStatement
+      refresh_carrier_statement(document.reload)
     end
   rescue ActiveRecord::RecordNotFound
     nil
@@ -145,5 +148,16 @@ class CashAllocation < ApplicationRecord
 
     errors.add(:base, "Cette ligne est déjà comptabilisée — annule sa passation d'abord")
     throw :abort
+  end
+
+  # Le relevé d'un porteur passe `paid` quand les allocations le couvrent, et
+  # note la date à laquelle le virement a été constaté. Un état qui ne sait que
+  # monter ment : si on défait l'affectation, la dette redevient due.
+  def refresh_carrier_statement(statement)
+    if statement.payable_settled?
+      statement.update!(status: "paid", paid_on: statement.paid_on || cash_entry.entry_date)
+    elsif statement.paid?
+      statement.update!(status: "issued", paid_on: nil)
+    end
   end
 end

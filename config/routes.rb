@@ -235,6 +235,12 @@ Rails.application.routes.draw do
     # La file « À payer » (epic #240, phase 4) : tout ce que la maison doit et
     # qui attend son virement, toutes dettes confondues.
     get "payables", to: "payables#index", as: :payables
+    # Relevés de rémunération des porteurs d'activité (epic #244, phase 3) :
+    # générer un brouillon, l'émettre, le voir. Pas d'update — un relevé émis
+    # est figé, une erreur se corrige par contre-passation.
+    resources :carrier_statements, only: %i[index show create destroy] do
+      member { post :issue }
+    end
     get "collection_cost", to: "collection_cost#index"
     # Stripe (epic #250, phase 2) : l'état de chaque compte et les
     # correspondances par catégorie. La route nommée passe AVANT la ressource,
@@ -615,6 +621,9 @@ Rails.application.routes.draw do
   # du mail doit s'ouvrir sur le téléphone d'un sourcier qui n'a pas de compte.
   get "decompte/:token", to: "public/statements#show", as: :public_statement
   get "reversement/:token", to: "public/revenue_share_statements#show", as: :public_revenue_share_statement
+  # La page à jeton du relevé d'un porteur (epic #244, phase 3) : un porteur n'a
+  # pas forcément de compte Claudy, le lien du mail s'ouvre sans session.
+  get "releve-activites/:token", to: "public/carrier_statements#show", as: :public_carrier_statement
 
   # Paiement du solde exigible du séjour (epic #55, Phase 3) — POST scellé par le
   # même jeton que la page client ; crée/rafraîchit le paiement puis part sur

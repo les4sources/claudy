@@ -62,6 +62,9 @@ namespace :accounting do
       ["613000", "Honoraires", 6, "expense"],
       ["614000", "Assurances", 6, "expense"],
       ["615000", "Frais de bureau et télécommunications", 6, "expense"],
+      # Ce qu'on verse à un intervenant non salarié : le relevé d'un porteur
+      # d'activité (epic #244, phase 3), la part d'un organisateur d'événement.
+      [GeneralAccount::CONTRIBUTOR_FEE_CODE, "Rémunérations d'intervenants", 6, "expense"],
       # Le compte par défaut des notes de MISSION (epic #241, phase 2) : les
       # kilomètres d'un sourcier qui va chercher des plants ou anime ailleurs.
       ["617000", "Déplacements", 6, "expense"],
@@ -555,6 +558,50 @@ namespace :accounting do
     end
 
     report("verify_purchase_invoices", ecarts, "#{PurchaseInvoice.count} facture(s) d'achat vérifiée(s)")
+  end
+
+  desc "Vérifie les relevés de rémunération des porteurs — exit 1 si écart"
+  task verify_carrier_statements: :environment do
+    ecarts = []
+
+    # Une prestation n'est relevée qu'UNE fois : c'est l'invariant qui empêche
+    # de payer deux fois le même travail. L'index unique le garantit en base ;
+    # on le revérifie ici, parce qu'un index peut être retiré par mégarde.
+    doublons = CarrierStatementLine.group(:experience_booking_id).having("COUNT(*) > 1").count
+    doublons.each_key do |booking_id|
+      ecarts << "Prestation ##{booking_id} : relevée #{doublons[booking_id]} fois"
+    end
+
+    CarrierStatement.includes(:human, :carrier_statement_lines, :cash_allocations).find_each do |statement|
+      etiquette = "Relevé #{statement.reference} (#{statement.human&.name})"
+      total = statement.carrier_statement_lines.sum(&:fee_cents)
+
+      if total != statement.total_fee_cents
+        ecarts << "#{etiquette} : lignes à #{total} cents pour un total figé de #{statement.total_fee_cents}"
+      end
+
+      next if statement.draft?
+
+      ecarts << "#{etiquette} : émis sans date de passation" if statement.posted_at.blank?
+      if JournalEntry.unscoped.find_by(source: statement, journal: "purchases").blank?
+        ecarts << "#{etiquette} : aucune écriture au journal des achats ne le référence"
+      end
+
+      couvert = statement.cash_allocations.sum(:amount_cents).abs
+      if couvert > statement.total_fee_cents
+        ecarts << "#{etiquette} : #{couvert} cents rapprochés pour un total de #{statement.total_fee_cents} — surpayé"
+      end
+
+      # Un état qui ne sait que monter est un état faux.
+      if statement.issued? && statement.total_fee_cents.positive? && couvert >= statement.total_fee_cents
+        ecarts << "#{etiquette} : entièrement rapproché mais toujours « à payer »"
+      end
+      if statement.paid? && couvert < statement.total_fee_cents
+        ecarts << "#{etiquette} : marqué payé alors que #{couvert} cents seulement sont rapprochés"
+      end
+    end
+
+    report("verify_carrier_statements", ecarts, "#{CarrierStatement.count} relevé(s) de porteur vérifié(s)")
   end
 
   def report(name, ecarts, resume)

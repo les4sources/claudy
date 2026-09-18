@@ -409,6 +409,12 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
                       finance_third_parties_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/third_parties' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
+            / Les porteurs d'activité (epic #244, phase 3) : même circuit que les
+              notes de frais — une dette au 440000 qui attend son virement.
+            = link_to "Porteurs",
+                      finance_carrier_statements_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/carrier_statements' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
             / Les notes de frais (epic #241) se rangent après les tiers : c'est
               le même circuit — une dette au 440000 qui attend son virement.
             = link_to "Notes de frais",

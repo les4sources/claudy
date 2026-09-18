@@ -1,0 +1,33 @@
+p Bonjour #{@human.name},
+
+p
+  | Voici ton relevé d'activités pour
+  strong = " #{@statement.period_label}"
+  | .
+
+table(cellpadding="6" style="border-collapse: collapse; margin: 16px 0;")
+  tr
+    td
+      strong Total à te verser
+    td(align="right")
+      strong= number_to_currency(@statement.total_fee_cents / 100.0)
+
+- if @lines.any?
+  p
+    strong Le détail :
+  table(cellpadding="4" style="border-collapse: collapse; font-size: 14px;")
+    - @lines.each do |line|
+      tr
+        td= line.occurred_on ? l(line.occurred_on, format: :short) : ""
+        td= line.display_label
+        td(align="right")= number_to_currency(line.fee_cents / 100.0)
+
+p
+  = link_to "Voir le relevé en ligne", @statement_url
+
+p.text-sm
+  | Le virement partira avec la prochaine série de paiements. La communication sera
+  strong = " #{@statement.reference}"
+  | .
+
+p Merci pour ce que tu portes.

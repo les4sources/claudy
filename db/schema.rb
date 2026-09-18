@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_18_060000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -360,6 +360,39 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
     t.datetime "updated_at", null: false
     t.index ["deleted_at"], name: "index_camping_bookings_on_deleted_at"
     t.index ["from_date", "to_date"], name: "index_camping_bookings_on_from_date_and_to_date"
+  end
+
+  create_table "carrier_statement_lines", force: :cascade do |t|
+    t.bigint "carrier_statement_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "experience_booking_id", null: false
+    t.integer "fee_cents", default: 0, null: false
+    t.string "label"
+    t.date "occurred_on"
+    t.datetime "updated_at", null: false
+    t.index ["carrier_statement_id"], name: "index_carrier_statement_lines_on_carrier_statement_id"
+    t.index ["experience_booking_id"], name: "index_carrier_statement_lines_on_booking_unique", unique: true
+    t.index ["experience_booking_id"], name: "index_carrier_statement_lines_on_experience_booking_id"
+  end
+
+  create_table "carrier_statements", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "human_id", null: false
+    t.datetime "issued_at"
+    t.date "paid_on"
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.datetime "posted_at"
+    t.datetime "sent_at"
+    t.string "status", default: "draft", null: false
+    t.string "token", null: false
+    t.integer "total_fee_cents", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_carrier_statements_on_deleted_at"
+    t.index ["human_id"], name: "index_carrier_statements_on_human_id"
+    t.index ["status"], name: "index_carrier_statements_on_status"
+    t.index ["token"], name: "index_carrier_statements_on_token", unique: true
   end
 
   create_table "cash_accounts", force: :cascade do |t|
@@ -2013,6 +2046,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
   add_foreign_key "bookings", "lodgings"
   add_foreign_key "bundles", "projects"
   add_foreign_key "bundles", "teams"
+  add_foreign_key "carrier_statement_lines", "carrier_statements"
+  add_foreign_key "carrier_statement_lines", "experience_bookings"
+  add_foreign_key "carrier_statements", "humans"
   add_foreign_key "cash_accounts", "general_accounts"
   add_foreign_key "cash_accounts", "legal_entities"
   add_foreign_key "cash_allocations", "analytic_accounts"
