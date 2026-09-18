@@ -1,0 +1,21 @@
+json.id party_reservation.id
+json.type "party_reservation"
+json.source party_reservation.source
+json.status party_reservation.status
+json.external_id party_reservation.external_id
+json.external_number party_reservation.external_number
+json.held_on party_reservation.held_on
+json.slot party_reservation.slot
+json.group_name party_reservation.group_name
+json.persons party_reservation.persons
+json.forfait party_reservation.forfait
+json.price { json.partial! "api/v1/shared/money", money: party_reservation.price }
+json.external_paid_at party_reservation.external_paid_at
+json.external_refunded_at party_reservation.external_refunded_at
+json.external_admin_url party_reservation.external_admin_url
+json.synced_at party_reservation.synced_at
+json.stay_id party_reservation.stay_id
+json.payment_id party_reservation.payment_id
+json.created_at party_reservation.created_at
+json.updated_at party_reservation.updated_at
+json.url api_v1_party_reservation_url(party_reservation)

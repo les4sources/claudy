@@ -16,8 +16,18 @@ li.rounded-md.border.border-gray-200.bg-white.p-2
         = payment.status
         span.text-xs.text-gray-500 title=payment.payment_date_title
           = payment.payment_date
-    span.shrink-0.text-sm.font-semibold.text-gray-900 = payment.amount
-  - if raw_payment.stay_id.present?
+    span.shrink-0.text-sm.font-semibold.text-gray-900 class=(raw_payment.refunded? ? "line-through text-gray-400" : "") = payment.amount
+  /  Miroir d'une Pizza Party Tranches de Vie (issue #339) : ni éditable ni
+     supprimable ici. On ne le retire qu'en DÉTACHANT la party, dans le bloc
+     juste en dessous — sinon le paiement et le total du séjour divergeraient.
+  - if raw_payment.tranchesdevie?
+    .mt-1.flex.flex-wrap.items-center.gap-2
+      span.rounded.bg-amber-50.px-2.py-0.5.text-xs.font-medium.text-amber-800
+        | 🍕 Pizza Party · Tranches de Vie
+      - admin_url = raw_payment.party_reservation&.external_admin_url
+      - if admin_url.present?
+        = link_to "Voir sur Tranches de Vie", admin_url, target: "_blank", rel: "noopener", class: "text-xs text-indigo-600 hover:text-indigo-800"
+  - elsif raw_payment.stay_id.present?
     .mt-1.flex.flex-wrap.items-center.gap-2
       - if raw_payment.pending?
         = button_to "Marquer payé", stay_payment_path(@stay, raw_payment), method: :patch, params: { payment: { status: "paid" } }, class: "rounded bg-green-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-green-700"

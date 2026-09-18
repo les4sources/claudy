@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_18_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1336,6 +1336,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
     t.index ["period_month", "channel"], name: "index_paper_sheets_on_period_month_and_channel"
   end
 
+  create_table "party_reservations", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "external_admin_url"
+    t.integer "external_id", null: false
+    t.string "external_number"
+    t.datetime "external_paid_at"
+    t.datetime "external_refunded_at"
+    t.boolean "forfait", default: false, null: false
+    t.string "group_name"
+    t.date "held_on"
+    t.jsonb "payload"
+    t.uuid "payment_id"
+    t.integer "persons"
+    t.integer "price_cents", default: 0, null: false
+    t.string "slot"
+    t.string "source", default: "tranchesdevie", null: false
+    t.string "status", default: "active", null: false
+    t.bigint "stay_id", null: false
+    t.datetime "synced_at"
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_party_reservations_on_deleted_at"
+    t.index ["payment_id"], name: "index_party_reservations_on_payment_id"
+    t.index ["source", "external_id"], name: "index_party_reservations_on_source_and_external_id_live", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["status"], name: "index_party_reservations_on_status"
+    t.index ["stay_id"], name: "index_party_reservations_on_stay_id"
+  end
+
   create_table "payment_versions", force: :cascade do |t|
     t.datetime "created_at"
     t.string "event", null: false
@@ -2103,6 +2131,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_130000) do
   add_foreign_key "notifications", "users", column: "recipient_id"
   add_foreign_key "paper_sheets", "member_accounts"
   add_foreign_key "paper_sheets", "users", column: "encoded_by_id"
+  add_foreign_key "party_reservations", "payments"
+  add_foreign_key "party_reservations", "stays"
   add_foreign_key "payments", "bookings"
   add_foreign_key "payments", "coworking_packs"
   add_foreign_key "payments", "space_bookings"

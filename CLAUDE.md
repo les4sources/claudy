@@ -31,6 +31,7 @@ Stack: Rails 8.1 · Ruby 3.4.10 · PostgreSQL · Node 18.8.0 · Vite (via `vite_
 - **Vite full-reload** is configured to watch `config/routes.rb`, views, components, and locale YAMLs (see `vite.config.ts`).
 - **Soft deletion** (`soft_deletion` gem) and **PaperTrail** versioning are in use — prefer these over hard destroys for auditable records.
 - **Authorization** relies on Devise + role models (`Role`, `HumanRole`); no Pundit/CanCan — check controller-level `before_action` patterns.
+- **Tranches de Vie** (issue #339) — `TranchesDeVie::Client` lit l'API de l'app de la boulangerie (`TRANCHESDEVIE_API_URL`, `TRANCHESDEVIE_API_KEY`) pour rattacher une Pizza Party payée à un séjour. Lecture seule, jamais d'écriture sortante ; sans clé le client est `configured? == false` et l'UI désactive le bouton au lieu d'échouer.
 - `nio4r` needs `--with-cflags="-Wno-incompatible-pointer-types"` on macOS Sequoia (see README Quick Start).
 
 ## Deployment

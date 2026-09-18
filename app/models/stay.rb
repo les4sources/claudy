@@ -187,6 +187,10 @@ class Stay < ApplicationRecord
   # Draps (epic #260, phase 2) : option facturée par LIT, sans occupation
   # calendrier — rattachée en direct comme les repas, pas via `StayItem`.
   has_many :linen_orders, dependent: :destroy
+  # Pizza Party privées payées sur Tranches de Vie (issue #339) : rattachées à la
+  # main, sans occupation calendrier — comme les repas et les draps. Elles
+  # s'ajoutent au total du séjour pour que la facture le reflète.
+  has_many :party_reservations, dependent: :destroy
 
   has_paper_trail
   has_soft_deletion default_scope: true
@@ -288,6 +292,12 @@ class Stay < ApplicationRecord
   # --- Montant dû / soldé (epic #55, Phase 1) -----------------------------
   # « Soldé » n'est PAS un 4e statut : c'est simplement le statut `paid`
   # existant (epic #26), exprimé ici en euros via des helpers réutilisables.
+
+  # Montant des Pizza Party rattachées et encore actives (issue #339). Une party
+  # remboursée ou annulée chez Tranches de Vie en sort : elle ne se facture plus.
+  def party_reservations_amount_cents
+    party_reservations.active.sum(:price_cents).to_i
+  end
 
   # Total effectivement encaissé (paiements au statut `paid`).
   def amount_paid_cents
@@ -452,7 +462,8 @@ class Stay < ApplicationRecord
       items.sum { |b| b.try(:price_cents).to_i } +
         experience_bookings.active.sum(&:price_cents) +
         meal_orders.billable.sum(:price_cents).to_i +
-        linen_orders.sum(:price_cents).to_i
+        linen_orders.sum(:price_cents).to_i +
+        party_reservations.active.sum(:price_cents).to_i
     end
     # Séjour SANS hébergement (epic #66, Phase 2) : les dates viennent des
     # SpaceBooking (Booking ET SpaceBooking exposent from_date/to_date), donc un

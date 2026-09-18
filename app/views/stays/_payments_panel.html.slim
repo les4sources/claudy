@@ -74,3 +74,7 @@
           | Date du paiement <span class="text-gray-400">(optionnel)</span>
           = date_field_tag "payment[paid_on]", nil, class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
         = f.submit "Ajouter le paiement", class: "w-full cursor-pointer rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+
+    /  Pizza Party (issue #339) : DANS le même turbo-frame que les paiements,
+       parce qu'un rattachement bouge Total séjour et Encaissé juste au-dessus.
+    = render "stays/party_panel"
