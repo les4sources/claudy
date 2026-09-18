@@ -62,6 +62,9 @@ namespace :accounting do
       ["613000", "Honoraires", 6, "expense"],
       ["614000", "Assurances", 6, "expense"],
       ["615000", "Frais de bureau et télécommunications", 6, "expense"],
+      # Ce qu'on verse à un intervenant non salarié : la part d'un organisateur
+      # d'événement (epic #245, phase 3), demain le relevé d'un porteur.
+      [GeneralAccount::CONTRIBUTOR_FEE_CODE, "Rémunérations d'intervenants", 6, "expense"],
       # Le compte par défaut des notes de MISSION (epic #241, phase 2) : les
       # kilomètres d'un sourcier qui va chercher des plants ou anime ailleurs.
       ["617000", "Déplacements", 6, "expense"],
@@ -555,6 +558,54 @@ namespace :accounting do
     end
 
     report("verify_purchase_invoices", ecarts, "#{PurchaseInvoice.count} facture(s) d'achat vérifiée(s)")
+  end
+
+  desc "Vérifie les règlements d'événements — exit 1 si écart"
+  task verify_event_settlements: :environment do
+    ecarts = []
+
+    EventSettlement.includes(:event, event_settlement_lines: :cash_allocations).find_each do |settlement|
+      etiquette = "Règlement ##{settlement.id} (#{settlement.event&.name})"
+
+      # Un règlement, c'est une écriture. Sans elle, la dette existe à l'écran
+      # mais pas dans les comptes.
+      ecarts << "#{etiquette} : réglé sans date de passation" if settlement.posted_at.blank?
+      if JournalEntry.unscoped.find_by(source: settlement, journal: "purchases").blank?
+        ecarts << "#{etiquette} : aucune écriture au journal des achats ne le référence"
+      end
+
+      lignes = settlement.event_settlement_lines.to_a
+      total = lignes.sum { |l| l.amount_cents.to_i }
+      if total != settlement.organizers_cents
+        ecarts << "#{etiquette} : parts à #{total} cents pour une part organisateurs de #{settlement.organizers_cents}"
+      end
+
+      if settlement.base_cents != settlement.revenue_cents - settlement.costs_cents
+        ecarts << "#{etiquette} : base figée à #{settlement.base_cents} au lieu de " \
+                  "#{settlement.revenue_cents - settlement.costs_cents}"
+      end
+
+      if settlement.organizers_cents + settlement.house_cents != settlement.base_cents
+        ecarts << "#{etiquette} : part organisateurs + part maison ne fait pas la base"
+      end
+
+      # Une allocation POSTÉRIEURE au règlement déplacerait un chiffre déjà viré.
+      if settlement.issued_at.present?
+        tardives = settlement.event.cash_allocations.where("cash_allocations.created_at > ?", settlement.issued_at).count
+        ecarts << "#{etiquette} : #{tardives} recette(s) rattachée(s) APRÈS le règlement" if tardives.positive?
+      end
+
+      # Un état qui ne sait que monter est un état faux.
+      soldees = lignes.count(&:payable_settled?)
+      if settlement.issued? && lignes.any? && soldees == lignes.size
+        ecarts << "#{etiquette} : toutes les parts sont rapprochées mais il reste « à payer »"
+      end
+      if settlement.paid? && soldees < lignes.size
+        ecarts << "#{etiquette} : marqué payé alors que #{lignes.size - soldees} part(s) ne sont pas rapprochées"
+      end
+    end
+
+    report("verify_event_settlements", ecarts, "#{EventSettlement.count} règlement(s) d'événement vérifié(s)")
   end
 
   def report(name, ecarts, resume)
