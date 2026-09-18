@@ -45,7 +45,7 @@ module Rates
 
     # Toutes les entrées du catalogue, à plat.
     def entries
-      lodging_entries + linen_entries + hall_entries + outdoor_entries + meal_entries +
+      lodging_entries + full_package_entries + linen_entries + hall_entries + outdoor_entries + meal_entries +
         coworking_entries + event_entries + activity_entries + mileage_entries +
         misc_entries
     end
@@ -150,6 +150,22 @@ module Rates
       Pricing::Catalog::LINEN_FALLBACK_CENTS.map do |kind, amount|
         entry(Pricing::Catalog.linen_rate_key(kind), amount,
               "#{Pricing::Catalog.linen_label(kind)} — par lit")
+      end
+    end
+
+    # « La totale » (epic #260, phase 3) : quatre tarifs par nuit — deux saisons
+    # × semaine / week-end. Rangés dans « Hébergements » : c'est un forfait de
+    # séjour, pas un tarif de salle.
+    FULL_PACKAGE_LABELS = {
+      "low_season.weeknight"      => "La totale — nuit de semaine, basse saison",
+      "low_season.weekend_night"  => "La totale — nuit de week-end, basse saison",
+      "high_season.weeknight"     => "La totale — nuit de semaine, haute saison",
+      "high_season.weekend_night" => "La totale — nuit de week-end, haute saison"
+    }.freeze
+
+    def full_package_entries
+      Pricing::FullPackage::FALLBACK_CENTS.map do |key, amount|
+        entry("full_package.#{key}", amount, FULL_PACKAGE_LABELS.fetch(key, key))
       end
     end
 
