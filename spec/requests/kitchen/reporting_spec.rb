@@ -107,7 +107,7 @@ RSpec.describe "Cuisine > Reporting", type: :request do
 
   describe "la navigation" do
     it "mène au reporting depuis la page Cuisine" do
-      get kitchen_orders_path
+      get kitchen_orders_path(view: :all)
 
       expect(response.body).to include(kitchen_reporting_path)
     end

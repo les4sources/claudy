@@ -74,7 +74,7 @@ RSpec.describe "Cuisine — la page se lit par date", type: :request do
     let!(:commande) { line(stay, date: Date.current + 6) }
 
     it "n'a plus d'en-tête de séjour : une ligne par service" do
-      get kitchen_orders_path
+      get kitchen_orders_path(view: :all)
 
       lignes = Nokogiri::HTML(response.body).css("tbody tr")
       expect(lignes.size).to eq(1)
@@ -82,14 +82,14 @@ RSpec.describe "Cuisine — la page se lit par date", type: :request do
     end
 
     it "porte les colonnes « Demandée le » et « Client », dans l'ordre décrit" do
-      get kitchen_orders_path
+      get kitchen_orders_path(view: :all)
 
       entetes = Nokogiri::HTML(response.body).css("thead th").map { |th| th.text.strip }
       expect(entetes.first(4)).to eq(["Demandée le", "Date", "Client", "Type"])
     end
 
     it "affiche le client dans sa colonne, en lien vers le séjour" do
-      get kitchen_orders_path
+      get kitchen_orders_path(view: :all)
 
       cellules = Nokogiri::HTML(response.body).css("#order-#{commande.id} td")
       client = cellules[2]
@@ -98,7 +98,7 @@ RSpec.describe "Cuisine — la page se lit par date", type: :request do
     end
 
     it "affiche la date de saisie au format court" do
-      get kitchen_orders_path
+      get kitchen_orders_path(view: :all)
 
       cellules = Nokogiri::HTML(response.body).css("#order-#{commande.id} td")
       expect(cellules[0].text).to include(I18n.l(commande.created_at.to_date, format: "%-d/%m/%y"))
@@ -109,7 +109,7 @@ RSpec.describe "Cuisine — la page se lit par date", type: :request do
     it "signale en ambre une demande que la cuisine n'a pas tranchée depuis 14 jours" do
       commande.update_column(:created_at, 20.days.ago)
 
-      get kitchen_orders_path
+      get kitchen_orders_path(view: :all)
 
       expect(Nokogiri::HTML(response.body).css("#order-#{commande.id} td").first.to_html).to include("text-amber-700")
     end
@@ -118,7 +118,7 @@ RSpec.describe "Cuisine — la page se lit par date", type: :request do
       commande.update!(validation: "accepted")
       commande.update_column(:created_at, 20.days.ago)
 
-      get kitchen_orders_path
+      get kitchen_orders_path(view: :all)
 
       expect(Nokogiri::HTML(response.body).css("#order-#{commande.id} td").first.to_html).not_to include("text-amber-700")
     end
@@ -134,7 +134,7 @@ RSpec.describe "Cuisine — la page se lit par date", type: :request do
     end
 
     it "garde son nom libre, sa pastille et son menu de rattachement" do
-      get kitchen_orders_path
+      get kitchen_orders_path(view: :all)
 
       ligne = Nokogiri::HTML(response.body).at_css("#order-#{orpheline.id}")
       expect(ligne.css("td")[2].text).to include("Comité des fêtes")
