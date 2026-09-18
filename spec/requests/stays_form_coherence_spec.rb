@@ -20,7 +20,13 @@ RSpec.describe "Stays — cohérence composition ↔ devis dans le form", type: 
   let(:nom_gite) { Pricing::Catalog::LODGING_RATES.keys.first }
   let!(:gite) { Lodging.find_or_create_by!(name: nom_gite) { |l| l.price_night_cents = 48_500 } }
 
-  let(:arrivee) { Date.today + 40 }
+  # Ancré sur un DIMANCHE, et pas sur « aujourd'hui + 40 » tout sec : le barème
+  # du site ne vend à l'unité toute l'année que les nuits du dimanche au jeudi.
+  # Une nuit de vendredi ou de samedi seule n'a de brique qu'en saison basse —
+  # hors saison elle sort `unpriceable`, comptée 0 € par le devis. Sans cet
+  # ancrage, « une nuit de plus coûte plus cher » casse les jours de l'année où
+  # la nuit ajoutée tombe un vendredi.
+  let(:arrivee) { (Date.current + 40).next_occurring(:sunday) }
   let(:depart)  { arrivee + 2 }
 
   def base_params(extra = {})

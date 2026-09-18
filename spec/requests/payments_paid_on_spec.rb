@@ -62,6 +62,6 @@ RSpec.describe "Paiements — date d'encaissement", type: :request do
     get payments_path
 
     expect(response.body).to include("03/08/2026")
-    expect(response.body).to include("Encodé le #{Date.today.strftime('%d/%m/%Y')}")
+    expect(response.body).to include("Encodé le #{Date.current.strftime('%d/%m/%Y')}")
   end
 end
