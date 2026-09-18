@@ -1,0 +1,50 @@
+/ Une action répétée se coche occurrence par occurrence (issue #338) : une
+  rangée de pastilles tant qu'elles tiennent, un compteur compact au-delà.
+  Les classes qui contiennent un point (w-3.5) restent en attribut `class="…"` :
+  le raccourci Slim `.w-3.5` couperait la classe en deux.
+  locals: cycle_action, readonly
+- done = cycle_action.completed_occurrences.to_i
+- total = cycle_action.occurrences.to_i
+- summary = "#{done} sur #{total} faits"
+- dot = "block w-3.5 h-3.5 rounded-full transition-colors"
+
+- if total <= 8
+  div class="flex items-center gap-1 flex-shrink-0" title=summary
+    - (1..total).each do |index|
+      - filled = index <= done
+      - if readonly || (filled && index < done)
+        span class="#{dot} #{filled ? 'bg-teal-500' : 'border-2 border-gray-200'}"
+      - elsif filled
+        = button_to complete_occurrence_cycle_action_path(cycle_action, direction: "down"),
+                    method: :patch,
+                    data: { turbo_stream: true },
+                    class: "flex-shrink-0",
+                    title: "Décocher une occurrence (#{summary})" do
+          span class="#{dot} bg-teal-500 hover:bg-teal-600 cursor-pointer"
+      - else
+        = button_to complete_occurrence_cycle_action_path(cycle_action, direction: "up"),
+                    method: :patch,
+                    data: { turbo_stream: true },
+                    class: "flex-shrink-0",
+                    title: "Cocher une occurrence (#{summary})" do
+          span class="#{dot} border-2 border-gray-300 hover:border-teal-400 cursor-pointer"
+- else
+  div class="flex items-center gap-1 flex-shrink-0" title=summary
+    - unless readonly
+      = button_to complete_occurrence_cycle_action_path(cycle_action, direction: "down"),
+                  method: :patch,
+                  data: { turbo_stream: true },
+                  class: "flex-shrink-0",
+                  title: "Décocher une occurrence (#{summary})" do
+        span class="block px-1 text-xs leading-none text-gray-400 hover:text-teal-700 cursor-pointer"
+          | −
+    span class="text-xs tabular-nums #{done >= total ? 'text-teal-600 font-semibold' : 'text-gray-500'}"
+      = "#{done}/#{total}"
+    - unless readonly
+      = button_to complete_occurrence_cycle_action_path(cycle_action, direction: "up"),
+                  method: :patch,
+                  data: { turbo_stream: true },
+                  class: "flex-shrink-0",
+                  title: "Cocher une occurrence (#{summary})" do
+        span class="block px-1 text-xs leading-none text-gray-400 hover:text-teal-700 cursor-pointer"
+          | +

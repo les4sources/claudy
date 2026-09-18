@@ -55,4 +55,34 @@ RSpec.describe Cycles::CloseService do
       expect(described_class.new(cycle: cycle).run).to be(false)
     end
   end
+
+  # Issue #338 — une action répétée ne fait passer au cycle suivant que ce qui
+  # reste à faire ; une rituelle entièrement faite repart au complet.
+  describe "les occurrences (issue #338)" do
+    let!(:next_cycle) { Cycle.create!(name: "C2", start_date: Date.new(2026, 7, 1), end_date: Date.new(2026, 8, 31)) }
+
+    it "ne recrée que le reste d'une rituelle partiellement faite" do
+      action = CycleAction.create!(human: human, cycle: cycle, label: "Batchcooking",
+                                   category: :rituelle, unit_hours: 11, occurrences: 3,
+                                   completed_occurrences: 2)
+      described_class.new(cycle: cycle).run
+
+      copy = action.reload.deferred_to
+      expect(copy.occurrences).to eq(1)
+      expect(copy.unit_hours).to eq(11)
+      expect(copy.hours).to eq(11)
+      expect(copy.completed_occurrences).to eq(0)
+    end
+
+    it "relance une rituelle entièrement faite sur son nombre de fois complet" do
+      action = CycleAction.create!(human: human, cycle: cycle, label: "Batchcooking",
+                                   category: :rituelle, unit_hours: 11, occurrences: 3,
+                                   completed_occurrences: 3)
+      described_class.new(cycle: cycle).run
+
+      copy = action.reload.deferred_to
+      expect(copy.occurrences).to eq(3)
+      expect(copy.hours).to eq(33)
+    end
+  end
 end

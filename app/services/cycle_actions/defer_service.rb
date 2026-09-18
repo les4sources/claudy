@@ -29,7 +29,12 @@ module CycleActions
           human: cycle_action.human,
           delegate_to_human: cycle_action.delegate_to_human,
           label: cycle_action.label,
-          hours: cycle_action.hours,
+          # OCCURRENCES (issue #338) : seul le reste passe au cycle suivant.
+          # Une action 3 × 11 h dont 2 sont faites arrive là-bas en 1 × 11 h.
+          unit_hours: cycle_action.unit_hours,
+          hours: cycle_action.unit_hours.present? ? nil : cycle_action.hours,
+          occurrences: cycle_action.carry_over_occurrences,
+          completed_occurrences: 0,
           category: copy_category,
           completed: false,
           deferred_from: cycle_action,

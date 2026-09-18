@@ -1,6 +1,6 @@
 class CycleActionsController < BaseController
-  before_action :get_cycle_action, only: [:edit, :update, :destroy, :toggle_completed, :toggle_economic, :defer, :defer_next, :undo_defer_next, :settle, :archive, :unarchive]
-  before_action :ensure_open_cycle, only: [:edit, :update, :destroy, :toggle_completed, :toggle_economic, :defer, :defer_next, :settle, :archive, :unarchive]
+  before_action :get_cycle_action, only: [:edit, :update, :destroy, :toggle_completed, :complete_occurrence, :toggle_economic, :defer, :defer_next, :undo_defer_next, :settle, :archive, :unarchive]
+  before_action :ensure_open_cycle, only: [:edit, :update, :destroy, :toggle_completed, :complete_occurrence, :toggle_economic, :defer, :defer_next, :settle, :archive, :unarchive]
 
   def create
     service = CycleActions::CreateService.new
@@ -87,6 +87,21 @@ class CycleActionsController < BaseController
     @total_hours = engaged_hours
     respond_to do |format|
       format.turbo_stream
+      format.html { redirect_to member_path }
+    end
+  end
+
+  # Coche (ou décoche) UNE occurrence d'une action répétée (issue #338). Même
+  # facture Turbo Stream que `toggle_completed` : la ligne, le bloc de charge et
+  # le compteur de catégorie. `toggle_completed` reste le chemin des actions qui
+  # ne se font qu'une fois.
+  def complete_occurrence
+    step = params[:direction].to_s == "down" ? -1 : 1
+    target = (@cycle_action.completed_occurrences.to_i + step).clamp(0, @cycle_action.occurrences.to_i)
+    @cycle_action.update!(completed_occurrences: target)
+    @total_hours = engaged_hours
+    respond_to do |format|
+      format.turbo_stream { render :toggle_completed }
       format.html { redirect_to member_path }
     end
   end

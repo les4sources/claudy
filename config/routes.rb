@@ -383,6 +383,8 @@ Rails.application.routes.draw do
   resources :cycle_actions, except: [:show] do
     member do
       patch :toggle_completed
+      # Occurrences cochées une par une (issue #338).
+      patch :complete_occurrence
       # Activité économique (epic #330, phase 1).
       patch :toggle_economic
       patch :defer

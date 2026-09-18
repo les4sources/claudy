@@ -34,8 +34,11 @@ div.bg-white.rounded-xl.border.border-stone-100 id="closing_member_#{human.id}"
               = "Par défaut : #{auto}"
               - if action.deferred_before?
                 span.deferral-badge.ml-1 = "⟳ ×#{action.deferral_count}"
-          - if action.hours.present? && action.hours > 0
-            span.text-sm.tabular-nums.text-stone-400.shrink-0 = "#{format('%g', action.hours.to_f)}h"
+          - if action.decorate.hours_total
+            span.text-sm.tabular-nums.text-stone-400.shrink-0
+              - if action.decorate.hours_detail
+                span.text-xs.text-stone-300.mr-1 = action.decorate.hours_detail
+              = action.decorate.hours_total
           .flex.items-center.gap-1.shrink-0
             = button_to settle_cycle_action_path(action, as: "done"), method: :patch, data: { turbo_stream: true, action: "click->celebrate#fire", celebrate_target: "button" }, class: "celebrate-button px-2.5 py-1 rounded-md text-xs font-medium text-teal-700 bg-teal-50 hover:bg-teal-100 transition-colors", title: "Marquer comme faite"
               span.celebrate-text ✓ Fait

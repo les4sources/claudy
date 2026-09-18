@@ -60,7 +60,11 @@ module Cycles
         human: action.human,
         delegate_to_human: action.delegate_to_human,
         label: action.label,
-        hours: action.hours,
+        # OCCURRENCES (issue #338) : la copie ne reprend que ce qui reste à faire.
+        unit_hours: action.unit_hours,
+        hours: action.unit_hours.present? ? nil : action.hours,
+        occurrences: action.carry_over_occurrences,
+        completed_occurrences: 0,
         category: action.reportee? ? "ponctuelle" : action.category,
         completed: false,
         deferred_from: action,
