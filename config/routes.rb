@@ -236,6 +236,10 @@ Rails.application.routes.draw do
     # qui attend son virement, toutes dettes confondues.
     get "payables", to: "payables#index", as: :payables
     get "collection_cost", to: "collection_cost#index"
+    # Justificatif mensuel des frais Stripe (epic #240, phase 5) : un PDF par
+    # compte et par mois, déposé depuis la page « Coût d'encaissement ». Aucune
+    # écriture — les frais sont déjà comptabilisés par la ventilation.
+    resources :stripe_fee_invoices, only: [:create, :destroy]
     # Stripe (epic #250, phase 2) : l'état de chaque compte et les
     # correspondances par catégorie. La route nommée passe AVANT la ressource,
     # sinon `/finance/stripe/mappings/new` serait capté par `stripe#index`.

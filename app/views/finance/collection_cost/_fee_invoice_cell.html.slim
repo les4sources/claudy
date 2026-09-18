@@ -1,0 +1,26 @@
+/ La case « Justificatif » d'un mois : le PDF déposé, ou le formulaire pour le
+  déposer. locals: row
+- invoice = row.invoice
+.space-y-2
+  - if row.document?
+    .flex.flex-wrap.items-center.gap-3
+      = link_to "Voir le PDF", rails_blob_path(invoice.document, disposition: "inline"), target: "_blank", rel: "noopener", class: "text-sm text-indigo-600 hover:text-indigo-800"
+      - if invoice.reference.present?
+        span.text-xs.text-gray-500 = invoice.reference
+      = button_to "Retirer", finance_stripe_fee_invoice_path(invoice), method: :delete, form: { data: { turbo_confirm: "Retirer ce justificatif ? Le PDF sera détaché du mois." } }, class: "text-xs text-red-600 hover:text-red-800"
+  - else
+    details
+      summary.cursor-pointer.select-none.text-sm.text-indigo-600 Déposer le justificatif…
+      = form_with url: finance_stripe_fee_invoices_path, method: :post, class: "mt-2 space-y-2 rounded-md border border-gray-200 bg-gray-50 p-3" do |f|
+        = hidden_field_tag :account_key, row.account_key
+        = hidden_field_tag :period_month, row.month.to_s
+        label.block.text-xs.text-gray-600
+          | PDF de la facture Stripe
+          = file_field_tag "stripe_fee_invoice[document]", accept: "application/pdf", class: "mt-1 block w-full text-sm"
+        label.block.text-xs.text-gray-600
+          | Montant déclaré (€)
+          = number_field_tag "stripe_fee_invoice[declared_fee]", (invoice&.declared_fee_cents ? (invoice.declared_fee_cents / 100.0) : nil), step: "0.01", min: 0, class: "mt-1 block w-full rounded border-gray-300 text-sm py-1", placeholder: "ex. 124,30"
+        label.block.text-xs.text-gray-600
+          | Référence Stripe <span class="text-gray-400">(optionnel)</span>
+          = text_field_tag "stripe_fee_invoice[reference]", invoice&.reference, class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
+        = submit_tag "Enregistrer", class: "w-full cursor-pointer rounded bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700"

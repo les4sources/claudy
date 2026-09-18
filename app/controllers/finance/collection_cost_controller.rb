@@ -32,6 +32,10 @@ module Finance
                                  .where(entry_date: @from..@to)
                                  .where("cash_entries.amount_cents > 0")
                                  .sum(:amount_cents)
+
+      # JUSTIFICATIFS MENSUELS (epic #240, phase 5) : la pièce que réclame un
+      # contrôle, face à ce que Claudy a compté. Aucune écriture n'en découle.
+      @fee_months = Finance::StripeFeeMonths.new(from: @from, to: @to).rows
     end
 
     private

@@ -59,3 +59,51 @@
             td.py-4.px-6.text-right.text-red-700= humanized_money_with_symbol(Money.new(row[:fees_cents], "EUR"))
             td.py-4.px-6.text-right.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(row[:net_cents], "EUR"))
             td.py-4.px-6.text-right= row[:rate] ? "#{number_with_precision(row[:rate], precision: 2, separator: ',')} %" : "—"
+
+/  JUSTIFICATIFS MENSUELS DES FRAIS STRIPE (epic #240, phase 5).
+   Ce bloc n'enregistre AUCUNE écriture : les frais sont déjà comptabilisés par
+   la ventilation des versements. Il archive la pièce qu'un contrôle réclame, et
+   montre l'écart avec ce que Claudy a compté — affiché, jamais corrigé d'office.
+section#justificatifs.mt-10
+  h2.text-lg.font-semibold.text-gray-900 Justificatifs Stripe
+  p.mt-1.text-sm.text-gray-500
+    | Les frais sont <strong>déjà comptabilisés</strong> par la ventilation des versements : ce document ne crée aucune écriture, il archive la facture mensuelle téléchargée du Dashboard Stripe pour qu'un contrôle la trouve.
+
+  - if @fee_months.blank?
+    .mt-4.p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+      p Aucun frais compté sur cette période, et aucun justificatif déposé.
+  - else
+    .mt-4.overflow-x-auto
+      table.w-full.text-sm.text-left.text-gray-500
+        thead.text-xs.text-gray-700.uppercase.bg-gray-50
+          tr
+            th.py-3.px-6[scope="col"] Mois
+            th.py-3.px-6[scope="col"] Compte
+            th.py-3.px-6.text-right[scope="col"] Compté par Claudy
+            th.py-3.px-6.text-right[scope="col"] Déclaré par Stripe
+            th.py-3.px-6.text-right[scope="col"] Écart
+            th.py-3.px-6[scope="col"] Justificatif
+        tbody
+          - @fee_months.each do |row|
+            tr.border-b.bg-white
+              td.py-4.px-6.font-medium.capitalize.text-gray-900 = l(row.month, format: "%B %Y")
+              td.py-4.px-6
+                = row.label
+                span.block.text-xs.text-gray-400
+                  = row.basis == :transaction ? "par transaction" : "par versement"
+              td.py-4.px-6.text-right = humanized_money_with_symbol(Money.new(row.counted_fee_cents, "EUR"))
+              td.py-4.px-6.text-right
+                - if row.declared_fee_cents
+                  = humanized_money_with_symbol(Money.new(row.declared_fee_cents, "EUR"))
+                - else
+                  span.text-gray-300 —
+              td.py-4.px-6.text-right
+                - if row.gap_cents.nil?
+                  span.text-gray-300 —
+                - elsif row.gap?
+                  span.font-semibold.text-amber-700
+                    = "#{row.gap_cents.positive? ? '+' : '−'} #{humanized_money_with_symbol(Money.new(row.gap_cents.abs, 'EUR'))}"
+                - else
+                  span.text-teal-700 ✓ identique
+              td.py-4.px-6
+                = render "finance/collection_cost/fee_invoice_cell", row: row

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_18_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_18_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1848,6 +1848,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_030000) do
     t.string "object_id"
     t.datetime "updated_at", null: false
     t.string "webhook_id"
+  end
+
+  create_table "stripe_fee_invoices", force: :cascade do |t|
+    t.string "account_key", null: false
+    t.datetime "created_at", null: false
+    t.integer "declared_fee_cents"
+    t.datetime "deleted_at"
+    t.text "notes"
+    t.date "period_month", null: false
+    t.string "reference"
+    t.datetime "updated_at", null: false
+    t.index ["account_key", "period_month"], name: "index_stripe_fee_invoices_on_account_and_month_live", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["deleted_at"], name: "index_stripe_fee_invoices_on_deleted_at"
   end
 
   create_table "stripe_payouts", force: :cascade do |t|
