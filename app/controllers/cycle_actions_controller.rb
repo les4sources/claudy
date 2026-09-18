@@ -1,6 +1,6 @@
 class CycleActionsController < BaseController
-  before_action :get_cycle_action, only: [:edit, :update, :destroy, :toggle_completed, :complete_occurrence, :toggle_economic, :defer, :defer_next, :undo_defer_next, :settle, :archive, :unarchive]
-  before_action :ensure_open_cycle, only: [:edit, :update, :destroy, :toggle_completed, :complete_occurrence, :toggle_economic, :defer, :defer_next, :settle, :archive, :unarchive]
+  before_action :get_cycle_action, only: [:edit, :update, :destroy, :toggle_completed, :complete_occurrence, :add_actual_hour, :remove_actual_hour, :toggle_economic, :defer, :defer_next, :undo_defer_next, :settle, :archive, :unarchive]
+  before_action :ensure_open_cycle, only: [:edit, :update, :destroy, :toggle_completed, :complete_occurrence, :add_actual_hour, :remove_actual_hour, :toggle_economic, :defer, :defer_next, :settle, :archive, :unarchive]
 
   def create
     service = CycleActions::CreateService.new
@@ -104,6 +104,20 @@ class CycleActionsController < BaseController
       format.turbo_stream { render :toggle_completed }
       format.html { redirect_to member_path }
     end
+  end
+
+  # HEURES RÉELLES (epic #330, phase 2). Une heure de plus, une heure de moins —
+  # rien d'autre ne bouge `actual_hours` : il n'est pas dans les paramètres
+  # permis des formulaires (décision 2). Même facture Turbo Stream que
+  # `toggle_completed` : la ligne et le bloc de charge.
+  def add_actual_hour
+    @cycle_action.add_actual_hour!
+    render_actual_hours
+  end
+
+  def remove_actual_hour
+    @cycle_action.remove_actual_hour!
+    render_actual_hours
   end
 
   # Met l'action dans le sas « reportée » du cycle courant (elle sort du
@@ -294,6 +308,14 @@ class CycleActionsController < BaseController
         )
       }
       format.html { redirect_to member_path, alert: message }
+    end
+  end
+
+  def render_actual_hours
+    @total_hours = engaged_hours
+    respond_to do |format|
+      format.turbo_stream { render :toggle_completed }
+      format.html { redirect_to member_path }
     end
   end
 

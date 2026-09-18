@@ -2341,7 +2341,8 @@ components:
         id: { type: integer }
         type: { type: string, example: "cycle_action" }
         label: { type: string }
-        hours: { type: number, nullable: true }
+        hours: { type: number, nullable: true, description: "Heures ESTIMÉES engagées — la valeur que le bilan du cycle additionne." }
+        actual_hours: { type: number, description: "Heures réellement passées. Lecture seule : elles ne bougent que par les boutons « + h » / « − h » de la ligne d'action." }
         category: { type: string, enum: [rituelle, ponctuelle, reportee, deleguee, demandee, invitee] }
         completed: { type: boolean }
         position: { type: integer }

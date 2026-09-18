@@ -12,6 +12,7 @@ div[id="cycle_action_#{cycle_action.id}"
     data-cycle-action-sortable-target=(readonly ? nil : "item")
     data-id=cycle_action.id
     data-hours=(cycle_action.hours.to_f)
+    data-actual-hours=(cycle_action.actual_hours.to_f)
     data-economic=cycle_action.economic.to_s
     data-completed=cycle_action.completed.to_s
     data-category=cycle_action.category]
@@ -64,12 +65,40 @@ div[id="cycle_action_#{cycle_action.id}"
       span.deferral-badge title="Reportée #{cycle_action.deferral_count} fois"
         | ⟳ ×#{cycle_action.deferral_count}
 
-  / Hours — le total reste le chiffre principal, le détail `3 × 11h` le précède.
-  - if decorated.hours_total
+  /  HEURES RÉELLES (epic #330, phase 2) : le réel se compte au clic, à gauche
+     de l'estimé. Une pastille teal le distingue de l'estimé, resté gris. Tant
+     qu'aucune heure réelle n'est notée, la ligne est exactement celle d'avant.
+  - unless readonly
+    .flex.items-center.gap-0.5.flex-shrink-0
+      - if cycle_action.actual_hours_recorded?
+        = button_to remove_actual_hour_cycle_action_path(cycle_action),
+                    method: :patch,
+                    data: { turbo_stream: true },
+                    class: "flex-shrink-0",
+                    title: "Retirer une heure réelle" do
+          span class="block rounded-md px-1.5 py-1 text-xs font-medium leading-none text-gray-400 hover:text-teal-700 hover:bg-teal-50 cursor-pointer"
+            | − h
+      = button_to add_actual_hour_cycle_action_path(cycle_action),
+                  method: :patch,
+                  data: { turbo_stream: true },
+                  class: "flex-shrink-0",
+                  title: "Ajouter une heure réelle" do
+        span class="block rounded-md px-1.5 py-1 text-xs font-medium leading-none text-gray-400 hover:text-teal-700 hover:bg-teal-50 cursor-pointer"
+          | + h
+
+  / Hours — le réel (pastille teal) devant l'estimé, qui garde son détail
+    « 3 × 11h » quand l'action se répète. Sans heure réelle notée, la ligne est
+    exactement celle d'avant.
+  - if cycle_action.actual_hours_recorded? || decorated.hours_total
     div class="flex items-baseline gap-1.5 flex-shrink-0"
+      - if cycle_action.actual_hours_recorded?
+        span class="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-xs font-semibold text-teal-700 tabular-nums" title="Heures réellement passées"
+          = "#{format('%g', cycle_action.actual_hours.to_f)}h réel"
       - if decorated.hours_detail
         span.text-xs.text-gray-400.tabular-nums = decorated.hours_detail
-      span.text-sm.font-medium.text-gray-400.tabular-nums = decorated.hours_total
+      - if decorated.hours_total
+        span.text-sm.font-medium.text-gray-400.tabular-nums title="Heures estimées"
+          = cycle_action.actual_hours_recorded? ? "#{decorated.hours_total} estimé" : decorated.hours_total
 
   / Action icons
   - unless readonly

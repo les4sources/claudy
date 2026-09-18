@@ -20,6 +20,11 @@
 - other_hours = [engaged - rituelle_hours - ponctuelle_hours, 0].max
 / Les heures économiques, comptées à part : vivantes, non complétées, non reportées.
 - economic_hours = all_scope.economic.active.engaged.sum(:hours).to_f
+/  HEURES RÉELLES (epic #330, phase 2) : le réel face au pari. Il ne remplace
+   jamais l'estimé — le budget du cycle, le bilan et le rythme requis continuent
+   de raisonner sur `hours` (décision 3).
+- actual_hours = scope.engaged.sum(:actual_hours).to_f
+- economic_actual_hours = all_scope.economic.engaged.sum(:actual_hours).to_f
 
 - if cycle
   - total_days = (cycle.end_date - cycle.start_date).to_i + 1
@@ -73,7 +78,7 @@ div id="hours_total" class="relative overflow-hidden rounded-2xl border border-#
             = "#{weeks_remaining.ceil} semaines restantes"
 
     / Main figures
-    .grid.grid-cols-3.gap-4.items-end.mb-5
+    .grid.grid-cols-4.gap-4.items-end.mb-5
       / Engaged
       div
         div class="text-[0.65rem] uppercase tracking-[0.14em] text-gray-400 font-semibold mb-1"
@@ -82,6 +87,17 @@ div id="hours_total" class="relative overflow-hidden rounded-2xl border border-#
           span class="ca-engaged-value text-4xl sm:text-5xl font-bold tabular-nums tracking-tight text-#{accent}-900 leading-none"
             = number_with_precision(engaged, precision: 1, strip_insignificant_zeros: true)
           span class="text-base font-medium text-#{accent}-600"
+            | h
+
+      /  RÉALISÉES (epic #330, phase 2) — le réel face au pari, à hauteur
+         d'« Engagées » parce que c'est à lui qu'il se compare.
+      div
+        div class="text-[0.65rem] uppercase tracking-[0.14em] text-teal-600 font-semibold mb-1"
+          | Réalisées
+        .flex.items-baseline.gap-1
+          span.text-2xl.font-semibold.tabular-nums.text-teal-800.leading-none
+            = number_with_precision(actual_hours, precision: 1, strip_insignificant_zeros: true)
+          span.text-sm.font-medium.text-teal-600
             | h
 
       / Available
@@ -120,10 +136,16 @@ div id="hours_total" class="relative overflow-hidden rounded-2xl border border-#
             div class="text-[0.65rem] text-amber-600/80"
               | Hors budget d'heures du cycle
         .flex.items-baseline.gap-1
-          span.text-2xl.font-semibold.tabular-nums.leading-none.text-amber-800
+          - if economic_actual_hours > 0
+            span.text-2xl.font-semibold.tabular-nums.leading-none.text-teal-700 title="Heures réellement passées"
+              = number_with_precision(economic_actual_hours, precision: 1, strip_insignificant_zeros: true)
+            span.text-sm.font-medium.text-teal-600
+              | h réel
+            span.text-amber-300.mx-1 ·
+          span.text-2xl.font-semibold.tabular-nums.leading-none.text-amber-800 title="Heures estimées"
             = number_with_precision(economic_hours, precision: 1, strip_insignificant_zeros: true)
           span.text-sm.font-medium.text-amber-600
-            | h
+            = economic_actual_hours > 0 ? "h estimé" : "h"
 
     / Capacity meter
     div.mb-4

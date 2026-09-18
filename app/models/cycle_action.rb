@@ -150,6 +150,24 @@ class CycleAction < ApplicationRecord
     [remaining_occurrences, 1].max
   end
 
+  # HEURES RÉELLES (epic #330, phase 2) : `hours` reste l'ESTIMÉ engagé — c'est
+  # lui que le bilan et le budget du cycle additionnent (décision 3). Le réel
+  # vit à côté, alimenté au clic par `add_actual_hour` / `remove_actual_hour`,
+  # et ne descend jamais sous zéro.
+  ACTUAL_HOUR_STEP = 1.0
+
+  def actual_hours_recorded?
+    actual_hours.to_f.positive?
+  end
+
+  def add_actual_hour!(step = ACTUAL_HOUR_STEP)
+    update!(actual_hours: actual_hours.to_f + step)
+  end
+
+  def remove_actual_hour!(step = ACTUAL_HOUR_STEP)
+    update!(actual_hours: [actual_hours.to_f - step, 0].max)
+  end
+
   private
 
   # `hours` est dérivé de `unit_hours × occurrences` dès qu'on a une durée

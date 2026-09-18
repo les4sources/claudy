@@ -385,6 +385,10 @@ Rails.application.routes.draw do
       patch :toggle_completed
       # Occurrences cochées une par une (issue #338).
       patch :complete_occurrence
+      # Heures réelles (epic #330, phase 2) : le réel se compte au clic, jamais
+      # par le formulaire — `actual_hours` n'y figure pas (décision 2).
+      patch :add_actual_hour
+      patch :remove_actual_hour
       # Activité économique (epic #330, phase 1).
       patch :toggle_economic
       patch :defer
