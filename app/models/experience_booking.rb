@@ -97,6 +97,15 @@ class ExperienceBooking < ApplicationRecord
   # funnel et le rail email — n'y touchent pas et restent bornés.
   attr_accessor :capacity_override
 
+  # RELEVÉE = FIGÉE (epic #244, phase 3). Une prestation portée sur un relevé a
+  # été payée, ou est sur le point de l'être : changer son verdict après coup
+  # rendrait le relevé faux sans que rien ne le dise. La correction passe par
+  # une contre-passation du relevé.
+  has_one :carrier_statement_line, dependent: :restrict_with_error
+  has_one :carrier_statement, through: :carrier_statement_line
+
+  validate :outcome_frozen_once_reported
+
   before_save :freeze_carrier_fee
 
   validates :participants, numericality: { greater_than: 0 }
@@ -291,5 +300,14 @@ class ExperienceBooking < ApplicationRecord
 
   def set_default_status
     self.status ||= "pending"
+  end
+
+  def outcome_frozen_once_reported
+    return unless persisted? && will_save_change_to_outcome?
+    return if carrier_statement_line.nil?
+
+    errors.add(:outcome,
+               "cette prestation figure sur un relevé de rémunération : son verdict est figé. " \
+               "Passez par une contre-passation du relevé.")
   end
 end

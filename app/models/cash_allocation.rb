@@ -86,8 +86,9 @@ class CashAllocation < ApplicationRecord
 
   # Quatre dettes se rapprochent aujourd'hui : la facture d'achat (epic #240), la
   # note de frais ou de mission (epic #241, phase 3), le relevé de dépôt-vente en
-  # mode virement (epic #248, phase 3) et la part d'organisateur d'un événement
-  # réglé (epic #245, phase 3). Les suivantes suivront ici, avec leur propre
+  # mode virement (epic #248, phase 3), la part d'organisateur d'un événement
+  # réglé (epic #245, phase 3) et le relevé de rémunération d'un porteur
+  # d'activité (epic #244, phase 3). Les suivantes suivront ici, avec leur propre
   # service — le mécanisme est le même.
   def refresh_document_payment
     case document
@@ -99,6 +100,8 @@ class CashAllocation < ApplicationRecord
       Consignments::RefreshSettlement.new(consignment_report: document.reload).run!
     when EventSettlementLine
       refresh_event_settlement(document.reload)
+    when CarrierStatement
+      refresh_carrier_statement(document.reload)
     end
   rescue ActiveRecord::RecordNotFound
     nil
@@ -167,5 +170,16 @@ class CashAllocation < ApplicationRecord
     errors.add(:document,
                "cet événement est réglé : son partage est figé. Passez par une contre-passation " \
                "plutôt que de rattacher une recette après le virement.")
+  end
+
+  # Le relevé d'un porteur passe `paid` quand les allocations le couvrent, et
+  # note la date à laquelle le virement a été constaté. Un état qui ne sait que
+  # monter ment : si on défait l'affectation, la dette redevient due.
+  def refresh_carrier_statement(statement)
+    if statement.payable_settled?
+      statement.update!(status: "paid", paid_on: statement.paid_on || cash_entry.entry_date)
+    elsif statement.paid?
+      statement.update!(status: "issued", paid_on: nil)
+    end
   end
 end

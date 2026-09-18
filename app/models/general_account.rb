@@ -68,9 +68,9 @@ class GeneralAccount < ApplicationRecord
   TRAVEL_CODE = "617000".freeze
 
   # Ce qu'on verse à quelqu'un qui n'est PAS salarié : la part d'un organisateur
-  # d'événement (epic #245), demain le relevé d'un porteur d'activité. Distinct
-  # de `620000 Rémunérations`, qui est le salaire, et de `613000 Honoraires`,
-  # qui est la prestation facturée par un indépendant.
+  # d'événement (epic #245) et le relevé d'un porteur d'activité (epic #244).
+  # Distinct de `620000 Rémunérations`, qui est le salaire, et de `613000
+  # Honoraires`, qui est la prestation facturée par un indépendant.
   CONTRIBUTOR_FEE_CODE = "616000".freeze
 
   has_paper_trail

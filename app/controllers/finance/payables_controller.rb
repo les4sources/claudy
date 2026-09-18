@@ -9,10 +9,11 @@ module Finance
   # Il liste les factures d'achat `to_pay`, depuis l'epic #241 phase 3 les notes
   # de frais et de mission `processing` — celles dont la pièce est émise et dont
   # l'argent n'est pas encore sorti — et depuis l'epic #248 phase 3 les relevés
-  # de dépôt-vente à virer, et depuis l'epic #245 phase 3 les parts
-  # d'organisateurs d'événements réglés. Les dettes restantes (relevés de
-  # porteurs) se brancheront ICI de la même façon, dans `rows`, sans toucher à
-  # la vue : c'est tout l'intérêt du contrat `Payable`.
+  # de dépôt-vente à virer, et depuis les epics #245 et #244 phase 3 les parts
+  # d'organisateurs d'événements réglés et les relevés de rémunération des
+  # porteurs d'activité. Les dettes restantes se brancheront ICI de la même
+  # façon, dans `rows`, sans toucher à la vue : c'est tout l'intérêt du
+  # contrat `Payable`.
   class PayablesController < AccountingBaseController
     breadcrumb "À payer", :finance_payables_path, match: :exact
 
@@ -28,7 +29,7 @@ module Finance
     # Triées par ÉCHÉANCE, les sans-échéance en dernier : c'est l'ordre dans
     # lequel on paie, pas l'ordre de saisie.
     def rows
-      (invoices + expense_reports + consignment_reports + event_settlement_lines)
+      (invoices + expense_reports + consignment_reports + event_settlement_lines + carrier_statements)
         .sort_by { |row| [row.payable_due_on || Date.new(9999, 1, 1), row.class.name, row.id] }
     end
 
@@ -41,6 +42,15 @@ module Finance
                          .includes(:human, :cash_allocations, event_settlement: :event)
                          .to_a
                          .reject(&:payable_settled?)
+    end
+
+    # Les relevés de porteurs d'activité ÉMIS (epic #244, phase 3). Un relevé
+    # brouillon n'est pas une dette : il n'a ni écriture ni total figé.
+    def carrier_statements
+      CarrierStatement.awaiting_payment
+                      .includes(:human, :cash_allocations)
+                      .to_a
+                      .reject(&:payable_settled?)
     end
 
     def invoices

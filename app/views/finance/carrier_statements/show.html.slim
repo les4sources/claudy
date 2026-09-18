@@ -1,0 +1,59 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Relevé — #{@human.name}"
+
+.space-y-6
+  .overflow-hidden.bg-white.shadow.sm:rounded-lg
+    .px-4.py-5.sm:px-6.border-b.border-gray-200.flex.flex-wrap.items-baseline.justify-between.gap-3
+      div
+        h3.text-lg.font-medium.leading-6.text-gray-900 = @statement.period_label
+        p.text-sm.text-gray-500 = "référence #{@statement.reference}"
+      span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium #{@statement.paid? ? 'bg-teal-100 text-teal-800' : (@statement.issued? ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600')}"
+        = @statement.status_label
+
+    .overflow-x-auto
+      table.w-full.text-sm.text-left.text-gray-500
+        thead.text-xs.text-gray-700.uppercase.bg-gray-50
+          tr
+            th.py-2.px-4[scope="col"] Date
+            th.py-2.px-4[scope="col"] Activité
+            th.py-2.px-4.text-right[scope="col"] Rémunération
+        tbody
+          - @lines.each do |line|
+            tr.border-b.bg-white
+              td.py-2.px-4.whitespace-nowrap
+                - if line.occurred_on
+                  = l(line.occurred_on, format: :short)
+              td.py-2.px-4.text-gray-900 = line.display_label
+              td.py-2.px-4.text-right = humanized_money_with_symbol(line.fee)
+        tfoot
+          tr.bg-gray-50
+            td.py-2.px-4.font-semibold.text-gray-900(colspan="2") Total
+            td.py-2.px-4.text-right.font-semibold.text-gray-900 = humanized_money_with_symbol(@statement.total_fee)
+
+    .px-4.py-4.border-t.border-gray-200.flex.flex-wrap.items-center.gap-3
+      - if @statement.draft?
+        = button_to "Émettre le relevé",
+                    issue_finance_carrier_statement_path(@statement),
+                    method: :post,
+                    form: { data: { turbo_confirm: "Émettre ce relevé ? Le total sera figé, l'écriture passée, et le mail parti. Une correction demandera une contre-passation." } },
+                    class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+        = button_to "Supprimer le brouillon",
+                    finance_carrier_statement_path(@statement),
+                    method: :delete,
+                    form: { data: { turbo_confirm: "Supprimer ce brouillon ? Les prestations redeviendront disponibles pour un prochain relevé." } },
+                    class: "text-sm text-red-600 hover:text-red-800"
+      - else
+        = link_to "Voir la page du porteur", public_carrier_statement_path(@statement.token), target: "_blank", rel: "noopener", class: "text-sm text-4s-main hover:underline"
+        - if @statement.sent_at
+          span.text-xs.text-gray-500 = "envoyé le #{l(@statement.sent_at.to_date, format: :long)}"
+        - elsif @human.email.blank?
+          span.text-xs.text-amber-700 Aucune adresse email — partage le lien à la main.
+
+    - unless @statement.draft?
+      .px-4.py-3.border-t.border-gray-100.text-xs.text-gray-500
+        - if @statement.payable_settled?
+          | Ce relevé est soldé par rapprochement bancaire.
+        - else
+          | Il apparaît dans
+          = link_to " Comptabilité > À payer", finance_payables_path, class: "text-4s-main hover:underline"
+          | , avec la communication #{@statement.reference}. Il se solde par rapprochement, pas à la main.
