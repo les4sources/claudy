@@ -146,6 +146,54 @@ class PricingModel
 
   private
 
+  # --- La totale (epic #260, phase 3) ----------------------------------------
+
+  FULL_PACKAGE_SPACES_LABEL = "Les 2 salles + cuisine pro — compris dans la totale".freeze
+
+  # La composition est-elle celle de la totale ? Détection STRUCTURELLE : on ne
+  # compare pas avec le prix à l'unité pour prendre le moins cher.
+  def full_package?
+    return @full_package if defined?(@full_package)
+
+    @full_package = begin
+      nights = full_package_nights
+      Pricing::FullPackage.applies?(
+        nights: nights,
+        other_lodgings: lodging_nights.keys.any? { |l| l.name != Pricing::FullPackage::LODGING_NAME },
+        stay_days: stay_days,
+        occupied_spaces: occupied_space_days
+      )
+    end
+  end
+
+  def full_package_nights
+    lodging_nights.find { |lodging, _| lodging.name == Pricing::FullPackage::LODGING_NAME }&.last.to_a
+  end
+
+  # La fenêtre du séjour, départ INCLUS — c'est celle des espaces (epic #234).
+  def stay_days
+    @stay_days ||= begin
+      arrival = read(:arrival_date)
+      departure = read(:departure_date)
+      (arrival && departure && departure >= arrival) ? (arrival..departure).to_a : []
+    end
+  end
+
+  # { "grande_salle" => Set[dates occupées], ... } — n'importe quelle période
+  # non vide compte.
+  def occupied_space_days
+    @occupied_space_days ||= slot_space_occupations.each_with_object(Hash.new { |h, k| h[k] = Set.new }) do |occupation, acc|
+      next if occupation[:date].blank?
+
+      acc[occupation[:key]] << occupation[:date]
+    end
+  end
+
+  def full_package_lines
+    quote = Pricing::FullPackage.quote(full_package_nights)
+    [Line.new(label: Pricing::FullPackage.label(quote), amount_cents: quote.amount_cents)]
+  end
+
   # --- Hébergement -----------------------------------------------------------
   #
   # Les trois gîtes du site (La Chevêche, La Hulotte, Le Grand-Duc) suivent
@@ -156,6 +204,12 @@ class PricingModel
   # Supporte le multi-hébergement via `lodging_night_ids` (indexé par nuit), et
   # retombe sur `lodging` + `nights` pour un draft sans grille.
   def lodging_lines
+    # LA TOTALE (epic #260, phase 3) : quand la composition est celle du forfait,
+    # les lignes gîte ET salles disparaissent au profit d'une seule ligne. Elle
+    # est portée ici, du côté hébergement, pour que la ventilation l'affecte au
+    # `Booking` — les espaces gardent une ligne à 0 € qui dit pourquoi.
+    return full_package_lines if full_package?
+
     # Chambres seules (epic #81, Phase 5) : le barème B2C est un FORFAIT par gîte
     # entier — il n'existe pas de tarif par chambre exploitable. En mode "rooms",
     # on ne facture donc AUCUN forfait d'hébergement automatique ; le total du
@@ -304,6 +358,11 @@ class PricingModel
   DUO_KEYS = %w[grande_salle petite_salle].freeze
 
   def space_lines
+    # LA TOTALE (epic #260, phase 3) : les salles et la cuisine sont comprises
+    # dans le forfait. La ligne reste, à 0 €, pour que personne ne croie qu'on
+    # les a oubliées — et pour que la ventilation donne 0 € au `SpaceBooking`.
+    return [Line.new(label: FULL_PACKAGE_SPACES_LABEL, amount_cents: 0, category: :space)] if full_package?
+
     combine_duo(hall_space_entries) + slot_space_lines
   end
 

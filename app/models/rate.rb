@@ -34,7 +34,9 @@ class Rate < ApplicationRecord
   # est le premier dont un préfixe matche, donc les clés `meal.` existantes
   # restent dans « Repas », quoi qu'on ajoute ensuite.
   GROUPS = {
-    "Hébergements"  => %w[lodging. linen.],
+    # « La totale » (epic #260, phase 3) vit avec les hébergements : c'est un
+    # forfait de séjour, pas un tarif de salle.
+    "Hébergements"  => %w[lodging. linen. full_package.],
     "Salles"        => %w[hall. hall_weekend.],
     "Camping & van" => %w[camping. van. terrace. hamac.],
     "Repas"         => %w[meal. pizza_party.],
