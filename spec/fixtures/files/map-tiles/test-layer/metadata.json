@@ -1,0 +1,12 @@
+{
+  "source": "fixture de test — epic #348, phase 1",
+  "title": "Couche de test",
+  "bounds": {
+    "sw": { "lat": 50.3392832, "lng": 4.9031066 },
+    "ne": { "lat": 50.3435344, "lng": 4.9126003 }
+  },
+  "center": [50.3414088, 4.9078535],
+  "zoom": { "min": 12, "max": 20 },
+  "scheme": "tiles stored as XYZ (converted from TMS)",
+  "layers": ["rgb", "dem (color relief)"]
+}

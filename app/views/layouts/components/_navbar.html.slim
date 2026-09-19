@@ -70,6 +70,18 @@ nav.bg-4s-main.shadow-sm.lg:px-6.relative.z-40
               polyline[points="9 22 9 12 15 12 15 22"]
             span Accueil
 
+        / Carte — la carte du domaine (epic #348). Entre « Accueil » (qui pointe
+          sur les séjours) et « Mon tableau de bord » : c'est une destination de
+          travail à part entière, pas une consultation ponctuelle.
+        li
+          = link_to map_path,
+                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{!@map_view.nil? ? nav_active : nav_idle}" do
+            svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+              polygon[points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"]
+              line[x1="8" y1="2" x2="8" y2="18"]
+              line[x1="16" y1="6" x2="16" y2="22"]
+            span Carte
+
         /  Mon tableau de bord (issue #323) — entrée de PREMIER niveau. Elle ne
            vivait jusqu'ici que dans la sous-navigation « Projets », elle-même
            sans entrée depuis la barre : la page n'était atteignable qu'en tapant

@@ -382,6 +382,15 @@ Rails.application.routes.draw do
     end
   end
 
+  # La carte du domaine (epic #348, phase 1). Les tuiles passent par Claudy
+  # plutôt que par un service tiers : celui qui hébergeait l'orthophoto de 2023
+  # n'est plus accessible, et une carte qui dépend d'un compte perdu n'est pas
+  # une carte. La route des tuiles est déclarée AVANT `/map` pour que
+  # `map/tiles/...` ne soit jamais lu comme un paramètre de la page.
+  get "map/tiles/:key/:kind/:z/:x/:y", to: "map_tiles#show", as: :map_tile,
+      constraints: { z: /\d+/, x: /\d+/, y: /\d+/, format: /png/ }
+  get "map", to: "maps#show", as: :map
+
   # Organisation
   get "organisation", to: "organisation#index", as: :organisation
   # L'annuaire des pôles, côté lecture (epic #239, phase 3). Le CRUD reste dans
