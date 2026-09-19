@@ -32,7 +32,7 @@ RSpec.describe MemberAccounts::Outstanding do
   end
 
   it "porte une consommation non réglée sur son mois" do
-    conso(Date.new(2026, 6, 17), 10_000, label: "Batchcooking")
+    conso(Date.new(2026, 6, 17), 10_000, label: "Batchcooking", flow: "meal")
 
     calcul = described_class.new(account)
 
@@ -136,6 +136,50 @@ RSpec.describe MemberAccounts::Outstanding do
     expect(calcul.total_cents).to eq(36_500)
     expect(calcul.postes.map(&:month)).to eq([Date.new(2026, 2, 1), Date.new(2026, 3, 1), Date.new(2026, 6, 1)])
     expect(calcul.postes.last.lignes.sole.flow).to eq("meal")
+    verifie_invariant
+  end
+
+  # Un mois de bar, c'est trente lignes à 1,95 € : déroulées dans « À régler »,
+  # elles enterrent les charges et le loyer, qui sont ce qu'on vient y chercher.
+  it "replie les consommations du bar en une seule ligne par mois" do
+    conso(Date.new(2026, 7, 31), 800, label: "Vin rouge bouteille")
+    conso(Date.new(2026, 7, 31), 195, label: "Cambrée")
+    conso(Date.new(2026, 7, 31), 281, label: "Chips ReBel")
+    conso(Date.new(2026, 7, 31), 35_000, label: "Loyer", flow: "charges")
+
+    poste = described_class.new(account).postes.sole
+
+    expect(poste.lignes.map(&:label)).to contain_exactly("Bar", "Loyer")
+    bar = poste.lignes.find { |ligne| ligne.flow == "bar" }
+    expect(bar.amount_cents).to eq(1_276)
+    expect(bar.detail).to eq("3 consommations")
+    expect(poste.amount_cents).to eq(36_276)
+    verifie_invariant
+  end
+
+  it "ne replie rien quand le mois ne porte qu'une consommation de bar" do
+    conso(Date.new(2026, 7, 31), 195, label: "Cambrée")
+
+    ligne = described_class.new(account).postes.sole.lignes.sole
+
+    expect(ligne.label).to eq("Cambrée")
+    expect(ligne.detail).to eq("Bar")
+    verifie_invariant
+  end
+
+  # Le repli est un affichage, pas un lettrage : il arrive APRÈS l'imputation,
+  # donc une ligne de bar à moitié éteinte compte pour ce qu'il en reste.
+  it "replie les restes après imputation, pas les montants d'origine" do
+    conso(Date.new(2026, 7, 31), 800, label: "Vin rouge bouteille")
+    conso(Date.new(2026, 7, 31), 195, label: "Cambrée")
+    conso(Date.new(2026, 7, 31), 281, label: "Chips ReBel")
+    reglement(Date.new(2026, 8, 2), 900)
+
+    poste = described_class.new(account).postes.sole
+
+    expect(poste.lignes.sole.label).to eq("Bar")
+    expect(poste.lignes.sole.amount_cents).to eq(376)
+    expect(poste.lignes.sole.detail).to eq("2 consommations")
     verifie_invariant
   end
 end

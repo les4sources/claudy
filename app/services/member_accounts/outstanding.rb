@@ -12,10 +12,16 @@ module MemberAccounts
   # personnes qui l'ouvrent voient la même chose, et un règlement encodé demain
   # rebat les cartes sans qu'aucune donnée n'ait à être corrigée.
   class Outstanding
+    BAR_FLOW = "bar".freeze
+
     # Une ligne encore due : ce qu'il en reste après imputation des règlements,
     # pas son montant d'origine.
-    Ligne = Struct.new(:entry_date, :label, :flow, :amount_cents, keyword_init: true) do
+    Ligne = Struct.new(:entry_date, :label, :flow, :amount_cents, :note, keyword_init: true) do
       def flow_label = AccountEntry::FLOW_LABELS[flow]
+
+      # Ce qui se lit en petit à droite du libellé : le canal d'ordinaire, le
+      # nombre de consommations quand la ligne en résume plusieurs.
+      def detail = note.presence || flow_label
     end
 
     # Un mois de consommation non couverte.
@@ -120,8 +126,27 @@ module MemberAccounts
              .sort_by(&:first)
              .map do |month, lignes|
                Poste.new(month: month, amount_cents: lignes.sum(&:amount_cents),
-                         lignes: lignes.sort_by(&:entry_date))
+                         lignes: replier_le_bar(lignes).sort_by(&:entry_date))
              end
+    end
+
+    # Le bar se lit en UNE ligne (Michael, 2026-09-19). Un mois de bar, c'est
+    # trente consommations à 1,95 € ; déroulées ici, elles noient les charges et
+    # le loyer — qui sont ce qu'on vient chercher. Le détail ne disparaît pas :
+    # il reste entier dans le grand livre, juste en dessous sur la même page.
+    #
+    # Une consommation seule n'est pas un groupe : la replier remplacerait
+    # « Chips ReBel » par « Bar » sans rien faire gagner. Même règle que
+    # `GroupedLedger`, pour que les deux blocs de la page se lisent pareil.
+    def replier_le_bar(lignes)
+      bar, reste = lignes.partition { |ligne| ligne.flow == BAR_FLOW }
+      return lignes if bar.size <= 1
+
+      reste << Ligne.new(entry_date: bar.map(&:entry_date).min,
+                         label: AccountEntry::FLOW_LABELS.fetch(BAR_FLOW),
+                         flow: BAR_FLOW,
+                         amount_cents: bar.sum(&:amount_cents),
+                         note: "#{bar.size} consommations")
     end
   end
 end

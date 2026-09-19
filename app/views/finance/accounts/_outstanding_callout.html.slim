@@ -38,8 +38,8 @@
                 li.flex.items-baseline.justify-between.gap-4.py-1.text-sm(class="text-amber-900/80")
                   span
                     = "#{ligne.label} "
-                    - if ligne.flow_label
-                      span.text-xs(class="text-amber-700/70")= ligne.flow_label
+                    - if ligne.detail
+                      span.text-xs(class="text-amber-700/70")= ligne.detail
                   span.tabular-nums.whitespace-nowrap
                     = number_to_currency(ligne.amount_cents / 100.0)
 
