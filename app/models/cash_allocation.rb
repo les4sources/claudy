@@ -102,6 +102,11 @@ class CashAllocation < ApplicationRecord
       refresh_event_settlement(document.reload)
     when CarrierStatement
       refresh_carrier_statement(document.reload)
+    # Une facture de VENTE se solde par le même mécanisme (epic #240, phase 6) :
+    # les allocations qui la pointent couvrent son total, elle passe « payée ».
+    # Aucune écriture de vente n'est générée au passage (décision 8).
+    when SalesInvoice
+      SalesInvoices::RefreshPayment.new(sales_invoice: document.reload).run!
     end
   rescue ActiveRecord::RecordNotFound
     nil

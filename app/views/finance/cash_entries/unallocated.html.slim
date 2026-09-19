@@ -166,6 +166,27 @@
               - else
                 span.text-xs.text-gray-500 Compte en mode « par versement » : à affecter à la main.
 
+      / Une facture de VENTE qui attend son encaissement (epic #240, phase 6).
+        Une ligne ENTRANTE du montant exact d'une facture émise, ou venant de
+        l'IBAN déjà appris pour ce client. LA PROPOSITION N'A RIEN ÉCRIT —
+        c'est ce bouton qui ventile la recette et fait passer la facture en
+        « payée ». Aucune écriture de vente n'est générée (décision 8).
+      - ventes = @sales_invoice_matches[entry.id]
+      - if ventes.present?
+        - ventes.first(2).each do |match|
+          .mb-3.p-3.rounded-lg.border.border-indigo-100(class="bg-indigo-50/60")
+            .flex.flex-wrap.items-center.justify-between.gap-2
+              div
+                p.text-sm.text-gray-800
+                  strong = "Facture de vente #{match.invoice.number}"
+                  = " — #{humanized_money_with_symbol(Money.new(match.invoice.total_cents, 'EUR'))} du #{l(match.invoice.issued_on, format: :short)}"
+                p.mt-0.5.text-xs.text-gray-500
+                  = match.reason
+                  = " (#{match.confidence} % de confiance)"
+                p.mt-0.5.text-xs
+                  = link_to "Voir la facture", finance_sales_invoice_path(match.invoice), class: "text-blue-500 hover:text-blue-700"
+              = button_to "Encaisser cette facture", collect_sales_invoice_finance_cash_entry_path(entry, sales_invoice_id: match.invoice.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+
       - suggestion = entry.allocation_suggestions.pending.ordered.first
       - if suggestion
         / La suggestion porte TOUJOURS son motif : un humain doit pouvoir juger

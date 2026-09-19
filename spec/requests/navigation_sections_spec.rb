@@ -79,7 +79,7 @@ RSpec.describe "Appartenance des contrôleurs Finance::", type: :model do
     collection_cost consignment_reports cross_check expense_reports fiscal_years
     general_accounts ledger legal_entities monthly_close payables purchase_invoices
     revenue_share_agreements
-    revenue_share_statements stripe stripe_category_mappings stripe_fee_invoices
+    revenue_share_statements sales_invoices stripe stripe_category_mappings stripe_fee_invoices
     third_parties trial_balance
   ].freeze
 

@@ -344,9 +344,17 @@ Rails.application.routes.draw do
         # Rapprocher une ligne bancaire entrante de son versement Stripe
         # (epic #250, phase 2).
         post :reconcile_payout
+        # Encaisser une facture de vente depuis une ligne ENTRANTE (epic #240,
+        # phase 6).
+        post :collect_sales_invoice
       end
       resources :allocations, only: [:create, :destroy], controller: "cash_allocations"
     end
+
+    # Comptabilité > Ventes (epic #240, phase 6). `new` et `create` prennent
+    # `kind` + `source_id` : on facture TOUJOURS une chose précise, désignée
+    # depuis la file Facturation — jamais dans le vide.
+    resources :sales_invoices, path: "sales", only: %i[index show new create destroy]
 
     resources :general_accounts, path: "chart_of_accounts", except: [:show]
     resources :legal_entities, path: "entities", except: [:show]

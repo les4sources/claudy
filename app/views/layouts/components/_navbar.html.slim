@@ -399,6 +399,12 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
                       finance_purchase_invoices_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/purchase_invoices' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
+            / Ventes (epic #240, phase 6) : le registre des factures OkiOki,
+              juste après les achats — c'est l'autre moitié du même métier.
+            = link_to "Ventes",
+                      finance_sales_invoices_path,
+                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/sales_invoices' ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
             / « À payer » (epic #240, phase 4) : juste après les achats, parce
               qu'une facture validée y tombe et que c'est là qu'on la retrouve.
             = link_to "À payer",
