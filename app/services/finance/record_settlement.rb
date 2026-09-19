@@ -7,8 +7,13 @@ module Finance
   # métadonnées de paiement (canal de réception, communication brute), l'écriture
   # porte le montant.
   class RecordSettlement < ServiceBase
+    # `idempotency_key` est facultative : la saisie manuelle n'en a pas besoin —
+    # c'est un humain qui tape, il voit ce qu'il a déjà tapé. Elle sert au
+    # rapprochement bancaire (issue #349), où rejouer la même ligne doit être
+    # sans effet plutôt que de créer un second règlement.
     def initialize(member_account:, amount_cents:, received_on:, method: "bank_transfer",
-                   received_channel: "bank", reference: nil, notes: nil, whodunnit: nil)
+                   received_channel: "bank", reference: nil, notes: nil, whodunnit: nil,
+                   idempotency_key: nil)
       @account = member_account
       @amount_cents = amount_cents.to_i
       @received_on = received_on
@@ -17,6 +22,7 @@ module Finance
       @reference = reference
       @notes = notes
       @whodunnit = whodunnit
+      @idempotency_key = idempotency_key
     end
 
     def run
@@ -39,7 +45,8 @@ module Finance
             kind: "settlement",
             flow: "other",
             source: "settlement",
-            label: label_for
+            label: label_for,
+            idempotency_key: @idempotency_key
           )
 
           AccountSettlement.create!(

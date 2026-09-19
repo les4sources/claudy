@@ -8,7 +8,7 @@ module Finance
   class CashEntriesController < Finance::AccountingBaseController
     before_action :get_entry,
                   only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate, :payout,
-                         :pay_invoice, :pay_expense_report, :reconcile_payout]
+                         :pay_invoice, :pay_expense_report, :reconcile_payout, :settle]
     breadcrumb "Trésorerie", :finance_cash_entries_path, match: :exact
 
     def index
@@ -101,6 +101,10 @@ module Finance
       # dont le montant et la date correspondent à un versement pas encore
       # rapproché. Les versements sont chargés UNE fois pour la page.
       @stripe_matches = Finance::MatchStripePayouts.new.for_entries(@entries)
+      # Les règlements des habitants (issue #349) : le miroir des virements
+      # ci-dessus. Une ligne ENTRANTE peut éteindre la dette d'un ménage ou
+      # d'une personne. Les soldes débiteurs sont chargés UNE fois pour la page.
+      @settlement_matches = Finance::MatchMemberSettlements.new.for_entries(@entries)
 
       @general_accounts = GeneralAccount.actives.ordered
       @teams = Team.ordered
@@ -169,6 +173,30 @@ module Finance
                   notice: "Virement à #{compte.name} enregistré — son compte est soldé."
     rescue Finance::RecordMemberPayout::NotCreditor, Finance::RecordMemberPayout::TooMuch,
            Finance::RecordMemberPayout::MissingAccount, Finance::RecordMemberPayout::WrongDirection,
+           ActiveRecord::RecordInvalid => e
+      redirect_to finance_cash_entry_path(@entry), alert: e.message
+    end
+
+    # Le règlement d'un habitant encaissé depuis une ligne ENTRANTE (issue
+    # #349) : le miroir de `payout`. Un geste, pas deux — le règlement sur son
+    # compte courant et l'affectation de la ligne bancaire tombent ensemble ou
+    # pas du tout.
+    def settle
+      compte = MemberAccount.find(params[:member_account_id])
+      # Sans montant explicite, on impute le minimum entre la ligne et la dette :
+      # c'est le geste courant. Le paramètre existe pour un règlement partiel.
+      montant = params[:amount].presence && (params[:amount].to_s.tr(",", ".").to_f * 100).round
+
+      Finance::RecordMemberSettlement.new(
+        member_account: compte, cash_entry: @entry, amount_cents: montant,
+        whodunnit: current_user&.email
+      ).run!
+
+      redirect_to finance_unallocated_cash_entries_path,
+                  notice: "Règlement de #{compte.name} enregistré — sa dette est à jour."
+    rescue Finance::RecordMemberSettlement::NotDebtor, Finance::RecordMemberSettlement::TooMuch,
+           Finance::RecordMemberSettlement::MissingAccount, Finance::RecordMemberSettlement::WrongDirection,
+           Accounting::PostCashEntry::NotFullyAllocated,
            ActiveRecord::RecordInvalid => e
       redirect_to finance_cash_entry_path(@entry), alert: e.message
     end
