@@ -1,0 +1,22 @@
+/ Les targets d'un membre, en LECTURE SEULE, sur la clôture et le bilan
+  (epic #330, phase 3). locals: report
+  Pas de bouton ici : ces écrans racontent ce qui s'est passé, ils ne le
+  changent pas.
+- targets = report.targets
+- if targets.any?
+  .px-4.py-3.border-t.border-stone-100
+    .flex.items-center.gap-2.mb-2
+      span.text-xs 🎯
+      span.text-xs.font-semibold.text-stone-500 Targets
+      span.text-xs.text-stone-400.tabular-nums = "· #{report.targets_achieved.size} / #{targets.size} atteinte#{'s' if report.targets_achieved.size != 1}"
+    ul.space-y-1
+      - targets.each do |target|
+        li.flex.items-center.gap-2
+          - if target.achieved?
+            span.w-4.h-4.rounded.bg-teal-500.flex.items-center.justify-center.flex-shrink-0
+              svg.w-2.5.h-2.5.text-white xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                polyline points="20 6 9 17 4 12"
+          - else
+            span.w-4.h-4.rounded.border-2.border-stone-200.flex-shrink-0
+          span class="text-xs leading-snug #{target.achieved? ? 'text-stone-400 line-through' : 'text-stone-700'}"
+            = target.label

@@ -416,6 +416,13 @@ Rails.application.routes.draw do
       patch :archive_completed
     end
   end
+  # Les targets d'un membre sur un cycle (epic #330, phase 3). Pas d'`index` ni
+  # de `show` : une target ne vit que dans le bloc de la page membre.
+  resources :cycle_targets, only: [:create, :destroy] do
+    member do
+      patch :toggle_achieved
+    end
+  end
   get "organisation/member/:human_id", to: "organisation#member", as: :organisation_member
   get "organisation/member/:human_id/archives", to: "organisation#archives", as: :organisation_member_archives
 

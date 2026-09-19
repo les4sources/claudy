@@ -39,6 +39,10 @@ div id="flash_toasts"
       .mb-8
         = render "cycle_actions/form", cycle_action: CycleAction.new(human_id: @human.id, cycle_id: @cycle.id), human: @human, cycle: @cycle
 
+    / Les targets du cycle (epic #330, phase 3) : ce qu'on VISE, au-dessus de
+      ce qu'on fait — les actions rituelles ouvrent la liste juste en dessous.
+    = render "cycle_targets/block", targets: @targets, human: @human, cycle: @cycle, readonly: readonly
+
     / Category groups
     .space-y-6
       - CycleAction.categories.keys.each do |category|

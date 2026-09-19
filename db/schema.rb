@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_18_060000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_20_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -760,6 +760,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_060000) do
     t.index ["human_id", "archived_at"], name: "index_cycle_actions_on_human_id_and_archived_at"
     t.index ["human_id", "category", "position"], name: "index_cycle_actions_on_human_id_and_category_and_position"
     t.index ["human_id"], name: "index_cycle_actions_on_human_id"
+  end
+
+  create_table "cycle_targets", force: :cascade do |t|
+    t.datetime "achieved_at"
+    t.datetime "created_at", null: false
+    t.bigint "cycle_id", null: false
+    t.bigint "human_id", null: false
+    t.string "label", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["cycle_id"], name: "index_cycle_targets_on_cycle_id"
+    t.index ["human_id", "cycle_id", "position"], name: "index_cycle_targets_on_human_id_and_cycle_id_and_position"
+    t.index ["human_id"], name: "index_cycle_targets_on_human_id"
   end
 
   create_table "cycles", force: :cascade do |t|
@@ -2160,6 +2173,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_060000) do
   add_foreign_key "cycle_actions", "cycles"
   add_foreign_key "cycle_actions", "humans"
   add_foreign_key "cycle_actions", "humans", column: "delegate_to_human_id"
+  add_foreign_key "cycle_targets", "cycles"
+  add_foreign_key "cycle_targets", "humans"
   add_foreign_key "decisions", "agenda_items", on_delete: :nullify
   add_foreign_key "decisions", "gatherings", on_delete: :nullify
   add_foreign_key "decisions", "humans", column: "recorded_by_id"

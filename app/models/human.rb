@@ -20,6 +20,8 @@ class Human < ApplicationRecord
   has_many :experiences
   has_many :services
   has_many :cycle_actions, dependent: :destroy
+  # Les intentions du membre, cycle par cycle (epic #330, phase 3).
+  has_many :cycle_targets, dependent: :destroy
   has_many :delegated_cycle_actions, class_name: "CycleAction", foreign_key: :delegate_to_human_id
 
   has_one :user

@@ -91,11 +91,14 @@ class OrganisationController < BaseController
       @next_cycle = @cycle.next_cycle
       @previous_cycle = @cycle.previous_cycle
       @report = Cycles::MemberReport.new(human: @human, cycle: @cycle)
+      # Les intentions du membre pour ce cycle (epic #330, phase 3).
+      @targets = @human.cycle_targets.for_cycle(@cycle).ordered.to_a
     else
       @cycle_actions = {}
       @settled_actions = CycleAction.none
       @demandees = CycleAction.none
       @total_hours = 0
+      @targets = []
     end
 
     @archives_count = @human.cycle_actions.archived.count
