@@ -20,7 +20,11 @@ module Finance
       @outstanding = MemberAccounts::Outstanding.new(@account)
       # Le grand livre est REPLIÉ par mois et par canal : cinq cents lignes de
       # bar déroulées une par une ne se lisent pas.
-      @groupes = MemberAccounts::GroupedLedger.new(@account.account_entries.recent_first).groupes
+      # `settlement` préchargé : la table affiche la communication de chaque
+      # virement, et sans ça c'est une requête par ligne de règlement.
+      @groupes = MemberAccounts::GroupedLedger.new(
+        @account.account_entries.recent_first.includes(:settlement)
+      ).groupes
       @entry = @account.account_entries.new(entry_date: Date.current)
       @account = MemberAccountDecorator.new(@account)
     end

@@ -32,6 +32,4 @@
             = number_to_currency(@poste.amount_cents / 100.0)
 
   p.mt-4.text-xs.text-gray-500
-    ' Un virement avec le code
-    span.font-mono.font-semibold= @account.code
-    |  en communication éteint ce poste, des lignes les plus anciennes aux plus récentes.
+    | Un règlement affecté à ce poste en éteint les lignes, des plus anciennes aux plus récentes. L'affectation se fait à la main depuis « À affecter » : c'est le choix du poste qui fait la valeur du rapprochement.

@@ -106,6 +106,12 @@ class AccountEntry < ApplicationRecord
   belongs_to :reversal_of, class_name: "AccountEntry", optional: true
   has_one :reversal, class_name: "AccountEntry", foreign_key: :reversal_of_id,
                      inverse_of: :reversal_of
+  # Le règlement que cette écriture matérialise, quand elle en est un. C'est lui
+  # qui porte la COMMUNICATION du virement — « Charges juin 2026 », « Bar avril »
+  # — sans laquelle une ligne « Règlement — Virement » de 345 € ne dit pas de
+  # quoi son auteur parlait (Michael, 2026-09-20).
+  has_one :settlement, class_name: "AccountSettlement", inverse_of: :account_entry,
+                       dependent: nil
 
   monetize :amount_cents
 

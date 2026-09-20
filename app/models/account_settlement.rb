@@ -51,7 +51,7 @@ class AccountSettlement < ApplicationRecord
   has_paper_trail
 
   belongs_to :member_account
-  belongs_to :account_entry, optional: true
+  belongs_to :account_entry, optional: true, inverse_of: :settlement
 
   monetize :amount_cents
 
