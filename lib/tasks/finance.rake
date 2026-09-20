@@ -265,6 +265,23 @@ namespace :finance do
     end
   end
 
+  desc "Repose sur chaque règlement historique le poste qu'il éteint. Dry-run par défaut, APPLY=1 pour écrire."
+  task backfill_settlement_flows: :environment do
+    apply = ENV["APPLY"] == "1"
+    report = Finance::BackfillSettlementFlows.new(dry_run: !apply).run!
+
+    report.updated.group_by { |ligne| ligne[:flow] }.sort.each do |flow, lignes|
+      puts "  #{AccountEntry::FLOW_LABELS.fetch(flow, flow).ljust(10)} #{lignes.size} règlement(s)"
+    end
+    report.skipped.each do |settlement|
+      puts "  ! poste illisible — ##{settlement.id} « #{settlement.reference} » #{settlement.notes.to_s[0, 60]}"
+    end
+
+    puts "[finance:backfill_settlement_flows] #{report.updated.size} à reposer, " \
+         "#{report.skipped.size} illisible(s), #{report.untouched} déjà rangée(s)."
+    puts "[finance:backfill_settlement_flows] Rien n'a été écrit — relance avec APPLY=1." unless apply
+  end
+
   desc "Génère les charges récurrentes d'un mois — MONTH=2026-08, dry-run par défaut, APPLY=1 pour écrire"
   task generate_recurring: :environment do
     month = ENV["MONTH"].presence || Date.current.strftime("%Y-%m")

@@ -191,6 +191,11 @@ Rails.application.routes.draw do
         # Devise comme le reste : tous les habitants ont un accès Claudy, une
         # porte publique par jeton n'achèterait rien de plus.
         get :retrospective
+        # Le détail d'un poste encore dû, ouvert en fenêtre au clic sur son
+        # montant (Michael, 2026-09-20) : « Bar 273,09 € » ne dit pas ce qu'on
+        # a bu. Le poste est dans l'URL parce que la fenêtre doit être un lien
+        # partageable et rechargeable, pas un état de page.
+        get "poste/:flow", action: :poste, as: :poste
       end
       resources :entries, only: [:create, :destroy], controller: "account_entries"
       resources :settlements, only: [:create]

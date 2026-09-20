@@ -7,8 +7,16 @@ module Finance
   # métadonnées de paiement (canal de réception, communication brute), l'écriture
   # porte le montant.
   class RecordSettlement < ServiceBase
+    # `flow` est le POSTE que ce règlement éteint — charges, bar, repas… C'est
+    # lui qui permet à `MemberAccounts::Outstanding` d'imputer poste par poste :
+    # sans lui, un virement de charges part éponger des consommations de bar et
+    # le foyer voit ses charges réclamées alors qu'il vient de les payer
+    # (Michael, 2026-09-20). Il reste facultatif, et vaut alors « Divers » : un
+    # règlement dont on ne sait pas ce qu'il paie ne doit pas être rangé au
+    # hasard dans un poste, il doit se voir.
     def initialize(member_account:, amount_cents:, received_on:, method: "bank_transfer",
-                   received_channel: "bank", reference: nil, notes: nil, whodunnit: nil)
+                   received_channel: "bank", reference: nil, notes: nil, whodunnit: nil,
+                   flow: nil)
       @account = member_account
       @amount_cents = amount_cents.to_i
       @received_on = received_on
@@ -17,6 +25,7 @@ module Finance
       @reference = reference
       @notes = notes
       @whodunnit = whodunnit
+      @flow = flow.presence || "other"
     end
 
     def run
@@ -37,7 +46,7 @@ module Finance
             posted_at: Time.current,
             amount_cents: -@amount_cents.abs,
             kind: "settlement",
-            flow: "other",
+            flow: @flow,
             source: "settlement",
             label: label_for
           )

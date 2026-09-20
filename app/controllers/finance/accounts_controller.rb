@@ -3,7 +3,7 @@ module Finance
   class AccountsController < Finance::BaseController
     FILTERS = %w[active inactive all].freeze
 
-    before_action :get_account, only: [:show, :retrospective, :edit, :update, :destroy]
+    before_action :get_account, only: [:show, :retrospective, :poste, :edit, :update, :destroy]
 
     breadcrumb "Comptes", :finance_accounts_path, match: :exact
 
@@ -23,6 +23,28 @@ module Finance
       @groupes = MemberAccounts::GroupedLedger.new(@account.account_entries.recent_first).groupes
       @entry = @account.account_entries.new(entry_date: Date.current)
       @account = MemberAccountDecorator.new(@account)
+    end
+
+    # Le détail d'un poste encore dû (Michael, 2026-09-20). « Bar 273,09 € »
+    # répond à « combien », pas à « quoi » — et c'est « quoi » qu'on vient
+    # vérifier quand un montant surprend. Le calcul est le MÊME service que
+    # celui du bloc « À régler » : deux chemins de calcul finiraient par
+    # afficher deux vérités.
+    def poste
+      @poste = MemberAccounts::Outstanding.new(@account).poste(params[:flow])
+
+      return redirect_to finance_account_path(@account), alert: "Ce poste n'a plus rien à régler." if @poste.nil?
+
+      @account = MemberAccountDecorator.new(@account)
+      # Le layout `modal`, pas celui de l'application : ce dernier porte déjà un
+      # `turbo_frame_tag "modal"` vide, et Turbo retient le PREMIER cadre du même
+      # identifiant qu'il trouve dans la réponse — la fenêtre restait blanche.
+      # Il se pose ICI et pas en `layout ... only:` : une condition non remplie
+      # laisse Rails SANS layout du tout au lieu de retomber sur celui du parent,
+      # et toutes les autres actions du contrôleur perdaient leur navigation.
+      # Hors requête de cadre, ce layout rend une page autonome — l'URL d'un
+      # poste reste partageable.
+      render layout: "modal"
     end
 
     # La lecture agrégée d'un compte : le rythme, la répartition, ce qui revient

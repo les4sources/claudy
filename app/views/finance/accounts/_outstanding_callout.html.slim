@@ -1,8 +1,11 @@
-/  « Je ne vois pas à quoi correspond le montant impayé » (Michael, 2026-08-19).
-   Le solde affiché juste au-dessus est une somme algébrique : sans
-   décomposition, 665,08 € peut être un mois oublié comme trois ans de dérive.
-   Ce bloc refait le lettrage — les règlements éteignent les dettes les plus
-   anciennes — et montre ce qui reste debout, mois par mois.
+/  « Je ne vois pas à quoi correspond le montant impayé » (Michael, 2026-08-19),
+   puis « quand on paie 345 €, c'est pour nos charges, pas pour régler d'autres
+   dettes bar ou batchcooking » (2026-09-20).
+
+   Ce bloc ne découpe donc plus par MOIS mais par POSTE : Charges, Bar, Repas.
+   C'est la maille dans laquelle un foyer pense sa dette et fait ses virements.
+   Le découpage mensuel donnait des montants incompréhensibles — une charge de
+   350 € coupée en deux par un règlement imputé sur le mois d'avant.
 
    L'ambre plutôt que le rouge : ce n'est pas une alerte, c'est un rappel. Un
    compte de sourcier vit avec un solde ; le rouge crierait à chaque ouverture.
@@ -17,31 +20,36 @@
       .text-2xl.font-bold.text-amber-900.tabular-nums
         = number_to_currency(outstanding.total_cents / 100.0)
 
-    /  Un mois par ligne, dépliable sur ses écritures. Les comptes repris sur
-       quatre ans en portent des dizaines : tout déplier ferait un mur, et
-       n'afficher que les totaux ne répondrait pas à la question posée.
+    /  Un poste par ligne, et son montant ouvre le détail en fenêtre. Le détail
+       vit derrière un clic plutôt que dans la page : les comptes repris sur
+       quatre ans portent des centaines de lignes de bar, et les dérouler ici
+       enterrerait les deux chiffres qu'on vient chercher.
     ul.mt-4.divide-y(class="divide-amber-200/70 border-t border-amber-200/70")
       - outstanding.postes.each do |poste|
-        li
-          details.group
-            summary.flex.cursor-pointer.items-baseline.justify-between.gap-4.px-5.py-3.list-none(class="hover:bg-amber-100/50")
-              span.flex.items-center.gap-2.text-sm.font-medium.text-amber-900
-                svg.h-3.w-3.transition-transform(class="group-open:rotate-90" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round")
-                  polyline[points="9 18 15 12 9 6"]
-                = l(poste.month, format: "%B %Y").capitalize
-                span.text-xs.font-normal(class="text-amber-700/80")
-                  = "#{poste.lignes.size} ligne#{'s' if poste.lignes.size > 1}"
-              span.text-sm.font-semibold.text-amber-900.tabular-nums
-                = number_to_currency(poste.amount_cents / 100.0)
-            ul.px-5.pb-3(class="bg-amber-50/40")
-              - poste.lignes.each do |ligne|
-                li.flex.items-baseline.justify-between.gap-4.py-1.text-sm(class="text-amber-900/80")
-                  span
-                    = "#{ligne.label} "
-                    - if ligne.detail
-                      span.text-xs(class="text-amber-700/70")= ligne.detail
-                  span.tabular-nums.whitespace-nowrap
-                    = number_to_currency(ligne.amount_cents / 100.0)
+        li.flex.items-baseline.justify-between.gap-4.px-5.py-3
+          span.text-sm.font-medium.text-amber-900
+            = poste.label
+            span.ml-2.text-xs.font-normal(class="text-amber-700/80")
+              = "#{poste.lignes.size} ligne#{'s' if poste.lignes.size > 1}"
+          = link_to number_to_currency(poste.amount_cents / 100.0),
+                    poste_finance_account_path(account, flow: poste.flow),
+                    data: { turbo_frame: "modal" },
+                    class: "text-sm font-semibold text-amber-900 tabular-nums underline decoration-amber-300 underline-offset-4 hover:decoration-amber-600"
+
+    /  Une avance n'est PAS déduite des autres postes : un virement de charges
+       n'éteint pas des consommations de bar, c'est tout l'objet du lettrage par
+       poste. Mais elle doit se voir, parce qu'un poste en avance en face d'un
+       poste en dette raconte presque toujours un virement mal ventilé.
+    - if outstanding.avances.any?
+      .px-5.py-3.text-sm(class="bg-emerald-50/70 border-t border-amber-200/70")
+        p.font-medium.text-emerald-900 Déjà versé en avance
+        ul.mt-1.space-y-0.5
+          - outstanding.avances.each do |flow, cents|
+            li.flex.items-baseline.justify-between.gap-4.text-emerald-800
+              span= AccountEntry::FLOW_LABELS.fetch(flow, "Divers")
+              span.tabular-nums= number_to_currency(cents / 100.0)
+        p.mt-1.text-xs.text-emerald-700
+          | Cette avance reste sur son poste — elle n'éteint pas les autres.
 
     /  Le compte à créditer n'est écrit nulle part ailleurs sur cette page : sans
        lui, « à régler » n'indique pas comment régler.
