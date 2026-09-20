@@ -194,6 +194,15 @@ module Finance
 
       redirect_to finance_unallocated_cash_entries_path,
                   notice: "Règlement de #{compte.name} enregistré — sa dette est à jour."
+    # La contrainte d'unicité sur `account_entries.idempotency_key` a tranché :
+    # ce virement est déjà imputé sur ce compte, et la transaction n'a rien
+    # écrit. Ce n'est pas une erreur — sur un écran qui aligne des dizaines de
+    # propositions, le double clic et le retour-arrière sont la règle, pas
+    # l'exception. Le message brut de Postgres ne se montre pas à quelqu'un qui
+    # encode, d'où ce `rescue` distinct des refus métier.
+    rescue ActiveRecord::RecordNotUnique
+      redirect_to finance_unallocated_cash_entries_path,
+                  alert: "Ce virement est déjà imputé sur #{compte.name} — rien n'a été enregistré une seconde fois."
     rescue Finance::RecordMemberSettlement::NotDebtor, Finance::RecordMemberSettlement::TooMuch,
            Finance::RecordMemberSettlement::MissingAccount, Finance::RecordMemberSettlement::WrongDirection,
            Accounting::PostCashEntry::NotFullyAllocated,

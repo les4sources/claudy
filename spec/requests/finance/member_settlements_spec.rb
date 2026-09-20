@@ -66,6 +66,20 @@ RSpec.describe "Finances — rapprocher un virement entrant", type: :request do
       expect(compte.reload.balance_cents).to eq(4_500)
     end
 
+    # Le double clic, ou le retour-arrière puis un second clic. La contrainte
+    # d'unicité empêche le doublon ; c'est au contrôleur de le DIRE plutôt que
+    # de laisser remonter l'erreur Postgres en 500.
+    it "le dit sans rien doubler quand le virement est déjà imputé" do
+      post settle_finance_cash_entry_path(entry, member_account_id: compte.id, amount: "30,00")
+      post settle_finance_cash_entry_path(entry, member_account_id: compte.id, amount: "30,00")
+
+      expect(response).to redirect_to(finance_unallocated_cash_entries_path)
+      expect(flash[:alert]).to include("déjà imputé")
+      expect(compte.reload.balance_cents).to eq(4_500)
+      expect(compte.account_settlements.count).to eq(1)
+      expect(entry.reload.cash_allocations.count).to eq(1)
+    end
+
     it "redirige avec une alerte quand le service refuse" do
       sortante = build_cash_entry(compte_bancaire, amount_cents: -7_500, label: "Virement émis")
 
