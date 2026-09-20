@@ -8,6 +8,9 @@ module Finance
 
     def index
       @entities = LegalEntity.ordered.includes(:fiscal_years, :cash_accounts)
+      # Les écritures se comptent en une requête groupée : les charger pour les
+      # compter ferait remonter toute la comptabilité pour afficher un nombre.
+      @entry_counts = JournalEntry.group(:legal_entity_id).count
     end
 
     def new
@@ -40,8 +43,9 @@ module Finance
       if @entity.destroy
         redirect_to finance_legal_entities_path, notice: "Entité supprimée."
       else
-        redirect_to finance_legal_entities_path,
-                    alert: "Cette entité porte des exercices ou des écritures — désactive-la."
+        # Le motif est construit par le décorateur : il nomme ce qui bloque et,
+        # quand seuls des exercices vides bloquent, mène au geste qui débloque.
+        redirect_to finance_legal_entities_path, alert: @entity.decorate.deletion_refusal
       end
     end
 

@@ -10,7 +10,9 @@
         th.py-3.px-6[scope="col"] Entité
         th.py-3.px-6[scope="col"] Forme
         th.py-3.px-6[scope="col"] Régime TVA
-        th.py-3.px-6[scope="col"] Comptes de trésorerie
+        th.py-3.px-6.text-right[scope="col"] Exercices
+        th.py-3.px-6.text-right[scope="col"] Comptes de trésorerie
+        th.py-3.px-6.text-right[scope="col"] Écritures
         th.py-3.px-6[scope="col"]
     tbody
       - @entities.each do |entity|
@@ -24,7 +26,12 @@
             = entity.vat_regime_label
             - if entity.vat_number.present?
               .text-xs.text-gray-400= entity.vat_number
-          td.py-4.px-6= entity.cash_accounts.size
+          /  Ce que chaque entité porte, à l'écran : une entité à zéro partout
+             se supprime, et c'est ce coup d'œil qui manquait quand il a fallu
+             sortir la console pour savoir pourquoi le bouton rendait la main.
+          td.py-4.px-6.text-right= link_to entity.fiscal_years.size, finance_fiscal_years_path(legal_entity_id: entity.id), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+          td.py-4.px-6.text-right= entity.cash_accounts.size
+          td.py-4.px-6.text-right= @entry_counts.fetch(entity.id, 0)
           td.py-4.px-6.text-right
             = link_to "Modifier", edit_finance_legal_entity_path(entity), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
             /  La route `destroy` existait depuis le début, rien ne la
