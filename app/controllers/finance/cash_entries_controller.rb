@@ -11,6 +11,11 @@ module Finance
                          :pay_invoice, :pay_expense_report, :reconcile_payout, :settle]
     breadcrumb "Trésorerie", :finance_cash_entries_path, match: :exact
 
+    # Le journal se lit, il ne se travaille pas ligne à ligne : ses pages sont
+    # deux fois plus longues que celles de la file « À affecter », où chaque
+    # ligne porte un formulaire.
+    JOURNAL_PAR_PAGE = 50
+
     def index
       @accounts = CashAccount.ordered
       @account = CashAccount.find_by(id: params[:cash_account_id])
@@ -18,10 +23,19 @@ module Finance
       @from = parsed_date(params[:from]) || Date.current.beginning_of_year
       @to = parsed_date(params[:to]) || Date.current.end_of_year
 
+      @query = params[:q].to_s.strip
+
       scope = CashEntry.ordered.in_period(@from, @to).includes(:cash_account, :cash_allocations)
       scope = scope.where(cash_account_id: @account.id) if @account
       scope = scope.where(status: @status) if @status
-      @entries = scope.to_a
+      scope = scope.matching(@query) if @query.present?
+
+      # Le journal se PAGINE (Michael, 2026-09-20). Il rendait l'année entière
+      # d'un coup : 2 445 lignes et 2,7 Mo de HTML sur 2026, et ça grossit de
+      # mois en mois. Le compteur « à affecter » reste global — c'est le
+      # chiffre qui doit tomber à zéro, pas celui de la page qu'on regarde.
+      @total = scope.count
+      @entries = scope.paginate(page: params[:page], per_page: JOURNAL_PAR_PAGE)
 
       @pending_count = CashEntry.pending.count
       @pending_cents = CashEntry.pending.sum(:amount_cents)
