@@ -1,7 +1,7 @@
 class OrganisationController < BaseController
   include CycleLoadHelper
 
-  breadcrumb "Organisation", :organisation_path, match: :exact
+  breadcrumb "Cycles", :organisation_path, match: :exact
 
   # L'annuaire des pôles (epic #239, phase 3) : des cartes qui mènent à la page
   # du pôle. Les enfants sont rangés sous leur parent, comme dans les Paramètres.

@@ -28,10 +28,10 @@ RSpec.describe "Finances > Comptes", type: :request do
       expect(response.body.index("Semisto")).to be < response.body.rindex("Low tech")
     end
 
-    it "affiche l'entrée primaire Finances et sa sous-navigation" do
+    it "affiche l'entrée primaire Comptes et sa sous-navigation" do
       get finance_accounts_path
 
-      expect(response.body).to include("Finances")
+      expect(response.body).to include(">Comptes<")
       expect(response.body).to include(finance_accounts_path)
     end
 

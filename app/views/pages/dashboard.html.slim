@@ -9,27 +9,36 @@
   = render "layouts/components/page_header",
            title: @human ? "Tableau de bord de #{@human.name}" : "Tableau de bord"
 
-.space-y-6
-  / Le sélecteur recharge la page au changement — pas de bouton à cliquer en plus.
-  = form_with url: dashboard_path, method: :get, class: "flex flex-wrap items-center gap-2" do
-    label.text-sm.font-medium.text-gray-700 for="dashboard_human_id" Membre
-    = select_tag :human_id,
-                 options_from_collection_for_select(@humans, :id, :name, @human&.id),
-                 include_blank: "— Choisir un membre —",
-                 id: "dashboard_human_id",
-                 class: "rounded-md border-gray-300 text-sm",
-                 onchange: "this.form.requestSubmit()"
-    noscript
-      = submit_tag "Afficher", class: "rounded-md bg-4s-main px-3 py-1.5 text-sm font-medium text-white"
+/ Deux colonnes dès `lg` : le travail du membre à gauche, les notifications à
+  droite (Michael 2026-09-20). `items-start` empêche la colonne courte de
+  s'étirer à la hauteur de l'autre. Sous `lg`, la colonne repasse dessous — sur
+  un téléphone, ce qui concerne la journée passe avant ce qui s'est passé.
+.gap-6(class="lg:grid lg:grid-cols-3 lg:items-start")
+  .space-y-6(class="lg:col-span-2")
+    / Le sélecteur recharge la page au changement — pas de bouton à cliquer en plus.
+    = form_with url: dashboard_path, method: :get, class: "flex flex-wrap items-center gap-2" do
+      label.text-sm.font-medium.text-gray-700 for="dashboard_human_id" Membre
+      = select_tag :human_id,
+                   options_from_collection_for_select(@humans, :id, :name, @human&.id),
+                   include_blank: "— Choisir un membre —",
+                   id: "dashboard_human_id",
+                   class: "rounded-md border-gray-300 text-sm",
+                   onchange: "this.form.requestSubmit()"
+      noscript
+        = submit_tag "Afficher", class: "rounded-md bg-4s-main px-3 py-1.5 text-sm font-medium text-white"
 
-  - if @human.nil?
-    /  Compte non rattaché à un membre (accueil générique, compta) : le sélecteur
-       seul et une invitation. JAMAIS une erreur — c'est exactement ce que faisait
-       `current_user.human.tasks` avant l'issue #323.
-    .rounded-lg.border.border-dashed.border-gray-300.bg-white.px-6.py-10.text-center
-      p.text-sm.text-gray-600 Choisissez un membre ci-dessus pour voir son tableau de bord.
-  - else
-    = render "pages/dashboard/kitchen_pending", orders: @kitchen_pending, human: @human
-    = render "pages/dashboard/kitchen_upcoming", orders: @kitchen_upcoming, human: @human
-    = render "pages/dashboard/kitchen_unconfirmed", orders: @kitchen_unconfirmed, human: @human
-    = render "pages/dashboard/tasks", tasks: @tasks
+    - if @human.nil?
+      /  Compte non rattaché à un membre (accueil générique, compta) : le sélecteur
+         seul et une invitation. JAMAIS une erreur — c'est exactement ce que faisait
+         `current_user.human.tasks` avant l'issue #323.
+      .rounded-lg.border.border-dashed.border-gray-300.bg-white.px-6.py-10.text-center
+        p.text-sm.text-gray-600 Choisissez un membre ci-dessus pour voir son tableau de bord.
+    - else
+      = render "pages/dashboard/kitchen_pending", orders: @kitchen_pending, human: @human
+      = render "pages/dashboard/kitchen_upcoming", orders: @kitchen_upcoming, human: @human
+      = render "pages/dashboard/kitchen_unconfirmed", orders: @kitchen_unconfirmed, human: @human
+      = render "pages/dashboard/tasks", tasks: @tasks
+
+  = render "pages/dashboard/notifications",
+           notifications: @notifications,
+           unread_count: @notifications_unread_count

@@ -93,11 +93,12 @@ Rails.application.routes.draw do
   resources :comments, only: %i[create update destroy]
 
   # Centre de notifications (epic #242, phase 2). `show` est le point d'entrée
-  # de TOUS les liens (cloche, email) : il marque la notification lue puis
-  # redirige vers l'objet — une seule mécanique, jamais dupliquée.
+  # de TOUS les liens (colonne du tableau de bord, email) : il marque la
+  # notification lue puis redirige vers l'objet — une seule mécanique, jamais
+  # dupliquée. Plus de route `bell` depuis le 2026-09-20 : la cloche a quitté la
+  # barre du haut, les notifications se rendent avec le tableau de bord.
   resources :notifications, only: %i[index show] do
     collection do
-      get :bell
       post :read_all
       patch :preferences
     end

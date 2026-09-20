@@ -38,33 +38,44 @@ RSpec.describe "Notifications", type: :request do
     end
   end
 
-  # La cloche vit dans la navbar, donc sur TOUTES les pages : si le cadre
-  # disparaît du layout, elle ne se recharge plus nulle part.
-  describe "la cloche dans la barre de navigation" do
-    it "pose son cadre Turbo sur une page quelconque" do
-      get notifications_path
+  # Les notifications ont quitté la cloche de la barre pour la colonne du tableau
+  # de bord (Michael 2026-09-20). Ce qui compte ici, c'est qu'elles s'affichent
+  # OUVERTES sur cette page — et qu'elles n'y dépendent pas du membre regardé :
+  # le sélecteur peut pointer n'importe qui, les notifications restent celles du
+  # compte connecté.
+  describe "la colonne du tableau de bord" do
+    it "montre les notifications du compte connecté" do
+      notify(title: "Une notification")
 
-      expect(response.body).to include(%(src="#{bell_notifications_path}"))
-      expect(response.body).to include(%(id="notifications-bell"))
+      get dashboard_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Une notification")
+      expect(response.body).to include("Notifications")
+    end
+
+    it "dit qu'il n'y a rien plutôt que de laisser un trou" do
+      get dashboard_path
+
+      expect(response.body).to include("Rien pour l'instant")
+    end
+
+    it "ne montre pas celles de quelqu'un d'autre" do
+      notify(recipient: autre, title: "Pour quelqu'un d'autre")
+
+      get dashboard_path
+
+      expect(response.body).not_to include("Pour quelqu&#39;un d&#39;autre")
     end
   end
 
-  describe "GET /notifications/bell" do
-    it "rend le cadre de la cloche avec son compteur" do
-      notify(title: "Une notification")
+  # La cloche n'existe plus dans la barre : si elle y revient, c'est une
+  # régression, pas un ajout.
+  describe "la barre de navigation" do
+    it "ne porte plus de cloche" do
+      get notifications_path
 
-      get bell_notifications_path
-
-      expect(response).to have_http_status(:ok)
-      expect(response.body).to include(%(id="notifications-bell"))
-      expect(response.body).to include("1 notification non lue")
-      expect(response.body).to include("Une notification")
-    end
-
-    it "ne montre rien quand il n'y a rien" do
-      get bell_notifications_path
-
-      expect(response.body).to include("Rien pour l'instant")
+      expect(response.body).not_to include(%(id="notifications-bell"))
     end
   end
 

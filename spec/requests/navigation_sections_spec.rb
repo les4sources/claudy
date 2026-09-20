@@ -61,7 +61,7 @@ RSpec.describe "Sections de navigation", type: :request do
   it "propose les deux entrées primaires depuis n'importe quel écran" do
     get finance_accounts_path
 
-    expect(response.body).to include(">Finances<").and include(">Comptabilité<")
+    expect(response.body).to include(">Comptes<").and include(">Comptabilité<")
   end
 end
 
