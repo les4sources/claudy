@@ -27,10 +27,15 @@ module Finance
 
     CUSTOMER_CODE = "400000".freeze
 
-    def initialize(member_account:, cash_entry:, amount_cents: nil, whodunnit: nil)
+    # `flow` est le POSTE que ce virement éteint. Il vient du clic humain sur la
+    # proposition : depuis le lettrage par poste, c'est ce choix qui fait la
+    # valeur du rapprochement, et une machine qui le prend seule se trompe en
+    # silence. Sans lui, le règlement tombe dans « Divers » et n'apure rien.
+    def initialize(member_account:, cash_entry:, amount_cents: nil, flow: nil, whodunnit: nil)
       @account = member_account
       @entry = cash_entry
       @amount_cents = amount_cents&.to_i&.abs
+      @flow = flow.presence
       @whodunnit = whodunnit
     end
 
@@ -69,6 +74,7 @@ module Finance
             reference: @entry.communication.presence,
             notes: "Rapproché de la ligne bancaire ##{@entry.id} du " \
                    "#{I18n.l(@entry.entry_date, format: :short)} (#{@entry.label})",
+            flow: @flow,
             whodunnit: @whodunnit,
             idempotency_key: idempotency_key
           ).run!

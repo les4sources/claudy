@@ -5,6 +5,9 @@ require "rails_helper"
 # L'invariant qui tient tout : quoi qu'il arrive, `total - avance` doit valoir
 # le solde du compte. Une décomposition qui ne se recolle pas au solde affiché
 # juste au-dessus serait pire que pas de décomposition du tout.
+#
+# La règle qui donne son sens au reste : un règlement éteint le POSTE qu'il
+# paie, jamais un autre.
 RSpec.describe MemberAccounts::Outstanding do
   let(:household) { Household.create!(name: "Chevêche", kind: "resident") }
   let(:account) { MemberAccount.create!(kind: "household", household: household, name: "Chevêche") }
@@ -13,8 +16,9 @@ RSpec.describe MemberAccounts::Outstanding do
     account.account_entries.create!(entry_date: date, amount_cents: cents, label: label, flow: flow)
   end
 
-  def reglement(date, cents)
-    account.account_entries.create!(entry_date: date, amount_cents: -cents, label: "Règlement")
+  def reglement(date, cents, flow: "bar")
+    account.account_entries.create!(entry_date: date, amount_cents: -cents, label: "Règlement",
+                                    kind: "settlement", flow: flow)
   end
 
   # Le filet : il tourne sur chaque scénario ci-dessous.
@@ -22,6 +26,8 @@ RSpec.describe MemberAccounts::Outstanding do
     calcul = described_class.new(account.reload)
     expect(calcul.total_cents - calcul.advance_cents).to eq(account.balance_cents)
   end
+
+  def poste(calcul, flow) = calcul.postes.find { |p| p.flow == flow }
 
   it "ne réclame rien sur un compte vierge" do
     calcul = described_class.new(account)
@@ -31,19 +37,19 @@ RSpec.describe MemberAccounts::Outstanding do
     verifie_invariant
   end
 
-  it "porte une consommation non réglée sur son mois" do
+  it "porte une consommation non réglée sur son poste" do
     conso(Date.new(2026, 6, 17), 10_000, label: "Batchcooking", flow: "meal")
 
     calcul = described_class.new(account)
 
     expect(calcul.total_cents).to eq(10_000)
-    expect(calcul.postes.size).to eq(1)
-    expect(calcul.postes.first.month).to eq(Date.new(2026, 6, 1))
-    expect(calcul.postes.first.lignes.map(&:label)).to eq(["Batchcooking"])
+    expect(calcul.postes.sole.flow).to eq("meal")
+    expect(calcul.postes.sole.label).to eq("Repas")
+    expect(calcul.postes.sole.lignes.map(&:label)).to eq(["Batchcooking"])
     verifie_invariant
   end
 
-  it "éteint les dettes les plus anciennes d'abord" do
+  it "éteint les dettes les plus anciennes d'abord, à l'intérieur du poste" do
     conso(Date.new(2026, 4, 30), 5_000)
     conso(Date.new(2026, 5, 31), 8_000)
     reglement(Date.new(2026, 6, 5), 5_000)
@@ -51,36 +57,40 @@ RSpec.describe MemberAccounts::Outstanding do
     calcul = described_class.new(account)
 
     expect(calcul.total_cents).to eq(8_000)
-    expect(calcul.postes.map(&:month)).to eq([Date.new(2026, 5, 1)])
+    expect(poste(calcul, "bar").lignes.sole.entry_date).to eq(Date.new(2026, 5, 31))
     verifie_invariant
   end
 
-  it "entame le mois suivant quand le règlement déborde" do
-    conso(Date.new(2026, 4, 30), 5_000)
-    conso(Date.new(2026, 5, 31), 8_000)
-    reglement(Date.new(2026, 6, 5), 9_000)
+  # LA règle, celle qui a motivé la réécriture : « quand on fait un paiement de
+  # 345 €, c'est pour payer nos charges habitants, pas pour régler d'autres
+  # dettes bar ou batchcooking » (Michael, 2026-09-20).
+  it "n'éteint jamais un poste avec le règlement d'un autre" do
+    conso(Date.new(2026, 6, 30), 6_173, label: "Bières de juin", flow: "bar")
+    conso(Date.new(2026, 7, 31), 34_500, label: "Charges habitants", flow: "charges")
+    reglement(Date.new(2026, 7, 31), 34_500, flow: "charges")
 
     calcul = described_class.new(account)
 
-    expect(calcul.total_cents).to eq(4_000)
-    expect(calcul.postes.sole.month).to eq(Date.new(2026, 5, 1))
-    expect(calcul.postes.sole.lignes.sole.amount_cents).to eq(4_000)
+    expect(poste(calcul, "charges")).to be_nil
+    expect(poste(calcul, "bar").amount_cents).to eq(6_173)
+    expect(calcul.total_cents).to eq(6_173)
     verifie_invariant
   end
 
-  it "ne réclame rien quand tout est réglé" do
-    conso(Date.new(2026, 4, 30), 5_000)
-    reglement(Date.new(2026, 5, 2), 5_000)
+  it "laisse l'excédent en avance SUR SON POSTE, sans déborder" do
+    conso(Date.new(2026, 6, 30), 6_173, label: "Bières de juin", flow: "bar")
+    reglement(Date.new(2026, 7, 31), 40_000, flow: "charges")
 
     calcul = described_class.new(account)
 
-    expect(calcul).not_to be_any
-    expect(calcul.postes).to be_empty
+    expect(calcul.avances).to eq({ "charges" => 40_000 })
+    expect(poste(calcul, "bar").amount_cents).to eq(6_173)
+    expect(calcul.total_cents).to eq(6_173)
+    expect(calcul.advance_cents).to eq(40_000)
     verifie_invariant
   end
 
-  # Un ménage qui verse une provision : le crédit précède la consommation.
-  it "compte une avance, et l'absorbe à la consommation suivante" do
+  it "absorbe une avance à la consommation suivante du même poste" do
     reglement(Date.new(2026, 3, 1), 10_000)
 
     calcul = described_class.new(account)
@@ -96,90 +106,91 @@ RSpec.describe MemberAccounts::Outstanding do
     verifie_invariant
   end
 
-  it "traite le solde d'ouverture comme une dette datée" do
+  it "ne réclame rien quand tout est réglé" do
+    conso(Date.new(2026, 4, 30), 5_000)
+    reglement(Date.new(2026, 5, 2), 5_000)
+
+    calcul = described_class.new(account)
+
+    expect(calcul).not_to be_any
+    expect(calcul.postes).to be_empty
+    verifie_invariant
+  end
+
+  # Un règlement dont personne ne sait ce qu'il paie ne doit pas être rangé au
+  # hasard dans un poste : il tombe dans « Divers », où il se voit.
+  it "range dans « Divers » un règlement sans poste" do
+    conso(Date.new(2026, 6, 30), 5_000, label: "Régularisation", flow: nil)
+    reglement(Date.new(2026, 7, 31), 2_000, flow: nil)
+
+    calcul = described_class.new(account)
+
+    expect(poste(calcul, "other").label).to eq("Divers")
+    expect(poste(calcul, "other").amount_cents).to eq(3_000)
+    verifie_invariant
+  end
+
+  it "traite le solde d'ouverture comme une dette datée, rangée dans « Divers »" do
     account.update!(opening_balance_cents: 24_000, opening_balance_on: Date.new(2022, 2, 1))
     conso(Date.new(2026, 6, 30), 1_000)
 
     calcul = described_class.new(account)
 
     expect(calcul.total_cents).to eq(25_000)
-    expect(calcul.postes.first.month).to eq(Date.new(2022, 2, 1))
-    expect(calcul.postes.first.lignes.sole.label).to include("ouverture")
+    expect(poste(calcul, "other").lignes.sole.label).to include("ouverture")
+    expect(calcul.oldest_month).to eq(Date.new(2022, 2, 1))
     verifie_invariant
   end
 
-  it "sépare les mois et garde l'ordre du plus ancien au plus récent" do
-    conso(Date.new(2026, 6, 30), 1_000)
-    conso(Date.new(2026, 4, 30), 2_000)
-    conso(Date.new(2026, 5, 31), 3_000)
+  it "range les postes dans un ordre stable, « Divers » en dernier" do
+    conso(Date.new(2026, 6, 30), 1_000, label: "Divers", flow: nil)
+    conso(Date.new(2026, 6, 30), 2_000, label: "Batch", flow: "meal")
+    conso(Date.new(2026, 6, 30), 3_000, label: "Bière", flow: "bar")
+    conso(Date.new(2026, 6, 30), 4_000, label: "Charges", flow: "charges")
 
     calcul = described_class.new(account)
 
-    expect(calcul.postes.map(&:month)).to eq([Date.new(2026, 4, 1), Date.new(2026, 5, 1), Date.new(2026, 6, 1)])
-    expect(calcul.oldest_month).to eq(Date.new(2026, 4, 1))
-    expect(calcul.postes.map(&:amount_cents)).to eq([2_000, 3_000, 1_000])
+    expect(calcul.postes.map(&:flow)).to eq(%w[bar meal charges other])
     verifie_invariant
   end
 
-  # Le cas de Béné : des charges de plusieurs mois, un règlement partiel, et
-  # une facturation ponctuelle récente. C'est ce que le callout doit savoir
-  # raconter pour être utile.
-  it "raconte un compte réel : trois mois de charges et un batchcooking" do
-    conso(Date.new(2026, 1, 31), 17_000, label: "Charges habitants", flow: "charges")
-    conso(Date.new(2026, 2, 28), 17_000, label: "Charges habitants", flow: "charges")
-    conso(Date.new(2026, 3, 31), 17_000, label: "Charges habitants", flow: "charges")
-    conso(Date.new(2026, 6, 27), 2_500, label: "Batchcooking", flow: "meal")
-    reglement(Date.new(2026, 2, 10), 17_000)
+  # Le compte de Béné, celui qui a motivé tout ça : des charges payées tous les
+  # mois, un bar qui traîne. Le poste Charges doit être muet.
+  it "raconte un compte réel : charges à jour, bar en retard" do
+    3.times do |i|
+      mois = Date.new(2026, 5 + i, 1).end_of_month
+      conso(mois, 42_500, label: "Charges habitants", flow: "charges")
+      reglement(mois, 42_500, flow: "charges")
+      conso(mois, 2_000 + i, label: "Chips ReBel", flow: "bar")
+    end
 
     calcul = described_class.new(account)
 
-    expect(calcul.total_cents).to eq(36_500)
-    expect(calcul.postes.map(&:month)).to eq([Date.new(2026, 2, 1), Date.new(2026, 3, 1), Date.new(2026, 6, 1)])
-    expect(calcul.postes.last.lignes.sole.flow).to eq("meal")
+    expect(calcul.postes.map(&:flow)).to eq(["bar"])
+    expect(calcul.total_cents).to eq(6_003)
+    expect(calcul.oldest_month).to eq(Date.new(2026, 5, 1))
     verifie_invariant
   end
 
-  # Un mois de bar, c'est trente lignes à 1,95 € : déroulées dans « À régler »,
-  # elles enterrent les charges et le loyer, qui sont ce qu'on vient y chercher.
-  it "replie les consommations du bar en une seule ligne par mois" do
-    conso(Date.new(2026, 7, 31), 800, label: "Vin rouge bouteille")
-    conso(Date.new(2026, 7, 31), 195, label: "Cambrée")
-    conso(Date.new(2026, 7, 31), 281, label: "Chips ReBel")
-    conso(Date.new(2026, 7, 31), 35_000, label: "Loyer", flow: "charges")
+  describe "#poste" do
+    it "rend le détail d'un poste, des lignes les plus anciennes aux plus récentes" do
+      conso(Date.new(2026, 7, 31), 800, label: "Vin rouge")
+      conso(Date.new(2026, 6, 30), 195, label: "Cambrée")
 
-    poste = described_class.new(account).postes.sole
+      detail = described_class.new(account).poste("bar")
 
-    expect(poste.lignes.map(&:label)).to contain_exactly("Bar", "Loyer")
-    bar = poste.lignes.find { |ligne| ligne.flow == "bar" }
-    expect(bar.amount_cents).to eq(1_276)
-    expect(bar.detail).to eq("3 consommations")
-    expect(poste.amount_cents).to eq(36_276)
-    verifie_invariant
-  end
+      expect(detail.lignes.map(&:label)).to eq(["Cambrée", "Vin rouge"])
+      expect(detail.amount_cents).to eq(995)
+      expect(detail.oldest_on).to eq(Date.new(2026, 6, 30))
+    end
 
-  it "ne replie rien quand le mois ne porte qu'une consommation de bar" do
-    conso(Date.new(2026, 7, 31), 195, label: "Cambrée")
+    it "ne rend rien pour un poste soldé ou inconnu" do
+      conso(Date.new(2026, 7, 31), 800)
 
-    ligne = described_class.new(account).postes.sole.lignes.sole
+      calcul = described_class.new(account)
 
-    expect(ligne.label).to eq("Cambrée")
-    expect(ligne.detail).to eq("Bar")
-    verifie_invariant
-  end
-
-  # Le repli est un affichage, pas un lettrage : il arrive APRÈS l'imputation,
-  # donc une ligne de bar à moitié éteinte compte pour ce qu'il en reste.
-  it "replie les restes après imputation, pas les montants d'origine" do
-    conso(Date.new(2026, 7, 31), 800, label: "Vin rouge bouteille")
-    conso(Date.new(2026, 7, 31), 195, label: "Cambrée")
-    conso(Date.new(2026, 7, 31), 281, label: "Chips ReBel")
-    reglement(Date.new(2026, 8, 2), 900)
-
-    poste = described_class.new(account).postes.sole
-
-    expect(poste.lignes.sole.label).to eq("Bar")
-    expect(poste.lignes.sole.amount_cents).to eq(376)
-    expect(poste.lignes.sole.detail).to eq("2 consommations")
-    verifie_invariant
+      expect(calcul.poste("charges")).to be_nil
+      expect(calcul.poste("n-importe-quoi")).to be_nil
+    end
   end
 end

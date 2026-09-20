@@ -157,19 +157,54 @@ RSpec.describe Finance::MatchMemberSettlements do
     end
 
     # C'est le rapprochement ligne à ligne qui avait fait tomber cet écran à
-    # l'issue #202 : les soldes se chargent UNE fois pour toute la page.
-    it "ne recalcule pas les soldes ligne par ligne" do
-      entries = Array.new(5) { |i| entrante(35_000, date: Date.new(2026, 9, 5) + i) }
-      service = described_class.new
-
-      requetes = 0
+    # l'issue #202. Ce qui compte n'est pas un nombre de requêtes absolu — les
+    # soldes et le poste présélectionné en demandent chacun une — mais qu'il ne
+    # GRANDISSE PAS avec le nombre de lignes affichées.
+    def requetes_pour(nombre)
+      entries = Array.new(nombre) { |i| entrante(35_000, date: Date.new(2026, 9, 5) + i) }
+      compte = 0
       souscription = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
-        requetes += 1 if payload[:sql].to_s.include?("account_entries")
+        compte += 1 if payload[:sql].to_s.include?("account_entries")
       end
-      service.for_entries(entries)
+      described_class.new.for_entries(entries)
       ActiveSupport::Notifications.unsubscribe(souscription)
+      compte
+    end
 
-      expect(requetes).to be <= 1
+    it "ne recalcule pas les soldes ligne par ligne" do
+      expect(requetes_pour(20)).to eq(requetes_pour(5))
+      expect(requetes_pour(5)).to be <= 2
     end
   end
+  # Le poste présélectionné : lu dans la communication quand elle le dit, sinon
+  # celui qui doit le plus. Ce n'est qu'une présélection — c'est l'humain qui
+  # tranche depuis l'écran.
+  describe "le poste présélectionné" do
+    def poste_propose(ligne, compte)
+      described_class.new.for_entry(ligne).find { |m| m.member_account == compte }&.flow
+    end
+
+    it "se lit dans la communication quand elle le nomme" do
+      ligne = entrante(35_000, communication: "Bar avril 2026")
+
+      expect(poste_propose(ligne, compte_menage)).to eq("bar")
+    end
+
+    it "reconnaît les charges, le loyer et la participation" do
+      ligne = entrante(35_000, communication: "Participation famille Vanhamme")
+
+      expect(poste_propose(ligne, compte_menage)).to eq("charges")
+    end
+
+    # Le ménage doit 350 € de charges et 500 € de bar : sans indice dans la
+    # communication, c'est le bar qu'on propose d'éteindre.
+    it "retombe sur le poste qui doit le plus quand la communication ne dit rien" do
+      compte_menage.account_entries.create!(entry_date: Date.new(2026, 8, 31), flow: "bar",
+                                            label: "Bar d'août", amount_cents: 50_000)
+      ligne = entrante(85_000, communication: "virement")
+
+      expect(poste_propose(ligne, compte_menage)).to eq("bar")
+    end
+  end
+
 end

@@ -38,6 +38,8 @@ RSpec.describe "Finances — rapprocher un virement entrant", type: :request do
       expect(response.body).to include("Règlement de #{compte.name}")
       expect(response.body).to include("Enregistrer le règlement")
       expect(response.body).to include("95 % de confiance")
+      # Le poste se choisit avant d'enregistrer, et il est présélectionné.
+      expect(response.body).to include("Poste réglé")
     end
 
     it "ne propose rien quand plus personne ne doit rien" do
@@ -51,8 +53,15 @@ RSpec.describe "Finances — rapprocher un virement entrant", type: :request do
   end
 
   describe "POST settle" do
+    it "enregistre le règlement sur le poste choisi et redirige avec un notice" do
+      post settle_finance_cash_entry_path(entry, member_account_id: compte.id, flow: "charges")
+
+      expect(compte.reload.account_entries.where(kind: "settlement").sole.flow).to eq("charges")
+      expect(flash[:notice]).to include("Charges")
+    end
+
     it "enregistre le règlement et redirige avec un notice" do
-      post settle_finance_cash_entry_path(entry, member_account_id: compte.id)
+      post settle_finance_cash_entry_path(entry, member_account_id: compte.id, flow: "charges")
 
       expect(response).to redirect_to(finance_unallocated_cash_entries_path)
       expect(flash[:notice]).to include(compte.name)
@@ -61,7 +70,7 @@ RSpec.describe "Finances — rapprocher un virement entrant", type: :request do
     end
 
     it "accepte un montant partiel" do
-      post settle_finance_cash_entry_path(entry, member_account_id: compte.id, amount: "30,00")
+      post settle_finance_cash_entry_path(entry, member_account_id: compte.id, amount: "30,00", flow: "charges")
 
       expect(compte.reload.balance_cents).to eq(4_500)
     end
@@ -70,8 +79,8 @@ RSpec.describe "Finances — rapprocher un virement entrant", type: :request do
     # d'unicité empêche le doublon ; c'est au contrôleur de le DIRE plutôt que
     # de laisser remonter l'erreur Postgres en 500.
     it "le dit sans rien doubler quand le virement est déjà imputé" do
-      post settle_finance_cash_entry_path(entry, member_account_id: compte.id, amount: "30,00")
-      post settle_finance_cash_entry_path(entry, member_account_id: compte.id, amount: "30,00")
+      post settle_finance_cash_entry_path(entry, member_account_id: compte.id, amount: "30,00", flow: "charges")
+      post settle_finance_cash_entry_path(entry, member_account_id: compte.id, amount: "30,00", flow: "charges")
 
       expect(response).to redirect_to(finance_unallocated_cash_entries_path)
       expect(flash[:alert]).to include("déjà imputé")

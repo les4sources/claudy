@@ -189,11 +189,12 @@ module Finance
 
       Finance::RecordMemberSettlement.new(
         member_account: compte, cash_entry: @entry, amount_cents: montant,
-        whodunnit: current_user&.email
+        flow: params[:flow], whodunnit: current_user&.email
       ).run!
 
       redirect_to finance_unallocated_cash_entries_path,
-                  notice: "Règlement de #{compte.name} enregistré — sa dette est à jour."
+                  notice: "Règlement de #{compte.name} enregistré sur le poste " \
+                          "#{AccountEntry::FLOW_LABELS.fetch(params[:flow], 'Divers')}."
     # La contrainte d'unicité sur `account_entries.idempotency_key` a tranché :
     # ce virement est déjà imputé sur ce compte, et la transaction n'a rien
     # écrit. Ce n'est pas une erreur — sur un écran qui aligne des dizaines de

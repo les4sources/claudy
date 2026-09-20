@@ -51,7 +51,14 @@ class AccountSettlement < ApplicationRecord
   has_paper_trail
 
   belongs_to :member_account
+  # L'écriture PRINCIPALE — la première de la ventilation. Elle reste en place
+  # pour tout ce qui existait avant la ventilation par poste ; la ventilation
+  # complète, elle, vit dans `account_entries`.
   belongs_to :account_entry, optional: true
+  # Une écriture par poste réglé. La somme des écritures vaut le montant du
+  # règlement, au signe près — c'est l'invariant que tiennent
+  # `Finance::RecordSettlement` et `Finance::ReventilateSettlement`.
+  has_many :account_entries, dependent: :nullify, inverse_of: :account_settlement
 
   monetize :amount_cents
 

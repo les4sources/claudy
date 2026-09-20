@@ -24,7 +24,9 @@ module Finance
   # membres — épicerie, pain, cagnotte, pension d'animaux : sans charge en face,
   # pas de proposition.
   class MatchMemberSettlements
-    Match = Struct.new(:member_account, :due_cents, :reason, :confidence, keyword_init: true)
+    Match = Struct.new(:member_account, :due_cents, :reason, :confidence, :flow, keyword_init: true) do
+      def flow_label = AccountEntry::FLOW_LABELS.fetch(flow, "Divers")
+    end
 
     CONFIDENCE_CODE = 95
     CONFIDENCE_IBAN = 85
@@ -68,18 +70,60 @@ module Finance
 
     def match_for(entry, compte, du)
       if code_cite?(entry, compte)
-        build(compte, du, "La communication porte le code du compte (#{compte.code})", CONFIDENCE_CODE)
+        build(entry, compte, du, "La communication porte le code du compte (#{compte.code})", CONFIDENCE_CODE)
       elsif iban_connu?(entry, compte)
-        build(compte, du, "Cet IBAN a déjà servi à régler ce compte", CONFIDENCE_IBAN)
+        build(entry, compte, du, "Cet IBAN a déjà servi à régler ce compte", CONFIDENCE_IBAN)
       elsif (nom = nom_reconnu(entry, compte))
-        build(compte, du, "Le nom de la contrepartie ressemble à #{nom}", CONFIDENCE_NAME)
+        build(entry, compte, du, "Le nom de la contrepartie ressemble à #{nom}", CONFIDENCE_NAME)
       elsif du == entry.amount_cents
-        build(compte, du, "#{compte.name} doit exactement ce montant", CONFIDENCE_AMOUNT)
+        build(entry, compte, du, "#{compte.name} doit exactement ce montant", CONFIDENCE_AMOUNT)
       end
     end
 
-    def build(compte, du, reason, confidence)
-      Match.new(member_account: compte, due_cents: du, reason: reason, confidence: confidence)
+    def build(entry, compte, du, reason, confidence)
+      Match.new(member_account: compte, due_cents: du, reason: reason, confidence: confidence,
+                flow: poste_probable(entry, compte))
+    end
+
+    # Le POSTE que ce virement éteint le plus probablement. Ce n'est qu'une
+    # présélection : depuis le lettrage par poste, c'est le choix du poste qui
+    # fait la valeur du rapprochement, et il revient à un humain. On le lit
+    # d'abord dans la communication — « Bar avril », « Charges juin » sont ce que
+    # les habitants écrivent — puis, à défaut, on propose le poste le plus
+    # ancien encore ouvert, celui qu'un virement vient le plus souvent solder.
+    POSTES_PAR_MOTIF = [
+      [/poulet|épicerie|epicerie/i, "grocery"],
+      [/\bbar\b/i, "bar"],
+      [/batch ?cooking|repas/i, "meal"],
+      [/d[oô]me/i, "dome"],
+      [/cagnotte/i, "pot"],
+      [/loyer|frais|charges|participation/i, "charges"]
+    ].freeze
+
+    def poste_probable(entry, compte)
+      motif = POSTES_PAR_MOTIF.find { |regex, _| entry.communication.to_s.match?(regex) }
+      return motif.last if motif
+
+      poste_le_plus_lourd.fetch(compte.id, "other")
+    end
+
+    # À défaut de motif dans la communication, le poste qui doit le plus. Il se
+    # calcule en UNE requête groupée pour toute la page : passer par
+    # `MemberAccounts::Outstanding` donnerait un lettrage complet par compte et
+    # par ligne, ce qui est précisément ce qui avait fait tomber cet écran à
+    # l'issue #202. C'est une présélection, pas une vérité — l'humain tranche.
+    def poste_le_plus_lourd
+      @poste_le_plus_lourd ||= AccountEntry
+                               .where(member_account_id: debtors.map { |compte, _| compte.id })
+                               .group(:member_account_id, :flow)
+                               .sum(:amount_cents)
+                               .each_with_object({}) do |((account_id, flow), cents), hash|
+                                 next unless cents.positive?
+
+                                 courant = hash[account_id]
+                                 hash[account_id] = [flow || "other", cents] if courant.nil? || cents > courant.last
+                               end
+                               .transform_values(&:first)
     end
 
     # La communication est saisie par l'habitant : elle arrive avec des espaces,
