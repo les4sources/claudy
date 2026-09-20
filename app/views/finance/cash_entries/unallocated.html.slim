@@ -166,6 +166,37 @@
               - else
                 span.text-xs.text-gray-500 Compte en mode « par versement » : à affecter à la main.
 
+      / Le règlement d'un habitant (issue #349). Une ligne ENTRANTE dont la
+        communication, l'IBAN, le nom ou le montant désigne un compte courant
+        DÉBITEUR : accepter écrit le règlement sur son compte ET affecte la
+        ligne, en un geste. C'est le miroir du virement à un membre plus haut.
+        LA PROPOSITION N'A RIEN ÉCRIT — c'est ce bouton qui enregistre.
+      - reglements = @settlement_matches[entry.id]
+      - if reglements.present?
+        - reglements.first(2).each do |match|
+          .mb-3.p-3.rounded-lg.border.border-emerald-100(class="bg-emerald-50/60")
+            .flex.flex-wrap.items-center.justify-between.gap-2
+              div
+                p.text-sm.text-gray-800
+                  strong = "Règlement de #{match.member_account.name}"
+                  = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus"
+                p.mt-0.5.text-xs.text-gray-500
+                  = match.reason
+                  = " (#{match.confidence} % de confiance)"
+                p.mt-0.5.text-xs
+                  = link_to "Voir le compte", finance_account_path(match.member_account), class: "text-blue-500 hover:text-blue-700"
+              /  Le POSTE se choisit ICI, avant d'enregistrer. La proposition le
+                 présélectionne d'après la communication, mais c'est le clic
+                 humain qui tranche : depuis le lettrage par poste, un règlement
+                 rangé au mauvais endroit crée une dette imaginaire d'un côté et
+                 une avance imaginaire de l'autre.
+              = form_with url: settle_finance_cash_entry_path(entry, member_account_id: match.member_account.id), method: :post, class: "flex items-center gap-2" do
+                = select_tag :flow,
+                             options_for_select(AccountEntry::FLOWS.map { |f| [AccountEntry::FLOW_LABELS.fetch(f, f), f] }, match.flow),
+                             class: "rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                             aria: { label: "Poste réglé" }
+                button.inline-flex.items-center.rounded-md.border.border-transparent.px-3.py-1.5.text-xs.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90" type="submit") Enregistrer le règlement
+
       - suggestion = entry.allocation_suggestions.pending.ordered.first
       - if suggestion
         / La suggestion porte TOUJOURS son motif : un humain doit pouvoir juger

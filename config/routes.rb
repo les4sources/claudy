@@ -349,6 +349,9 @@ Rails.application.routes.draw do
         # Rapprocher une ligne bancaire entrante de son versement Stripe
         # (epic #250, phase 2).
         post :reconcile_payout
+        # Éteindre la dette d'un habitant depuis une ligne ENTRANTE (issue
+        # #349) : le miroir de `payout`.
+        post :settle
       end
       resources :allocations, only: [:create, :destroy], controller: "cash_allocations"
     end

@@ -1,11 +1,16 @@
 module Finance
   # Enregistre un règlement reçu (issue #160).
   #
-  # UN règlement = UNE écriture négative + UN `AccountSettlement` qui la
-  # documente. Jamais deux écritures : c'est la règle anti-double-compte du lot,
-  # appliquée ici à l'échelle du compte courant. Le `AccountSettlement` porte les
-  # métadonnées de paiement (canal de réception, communication brute), l'écriture
-  # porte le montant.
+  # UN encaissement = UN `AccountSettlement`. C'est la règle anti-double-compte
+  # du lot, appliquée au compte courant : jamais deux règlements pour un même
+  # virement. Le `AccountSettlement` porte les métadonnées de paiement (canal de
+  # réception, communication brute), les écritures portent les montants.
+  #
+  # UNE ÉCRITURE PAR POSTE RÉGLÉ (2026-09-20). Un virement de 280 € qui paie
+  # 230 € de charges et 50 € de dôme reste un seul paiement, ventilé en deux
+  # écritures — c'est le poste porté par l'écriture qui permet à
+  # `MemberAccounts::Outstanding` d'imputer poste par poste. Sans ventilation,
+  # une seule écriture, comme avant.
   class RecordSettlement < ServiceBase
     # Levée quand la ventilation ne retombe pas sur le montant encaissé : mieux
     # vaut refuser que d'écrire un règlement qui ne vaut pas ce qu'il a coûté.
