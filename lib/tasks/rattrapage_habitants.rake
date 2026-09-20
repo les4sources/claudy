@@ -112,42 +112,64 @@ namespace :rattrapage do
     puts "[rattrapage:reglements] Rien n'a été écrit — relance avec APPLY=1." unless apply
   end
 
-  desc "Le dôme de Seb : redécoupe ses règlements de charges en charges + 50 € de dôme. APPLY=1 pour écrire."
-  task dome_seb: :environment do
+  # Ce que le virement mensuel payait EN PLUS des charges, et que la reprise a
+  # imputé aux charges faute d'un second poste où le mettre.
+  #
+  # Le principe est le même pour le dôme et pour le forfait : on regarde ce que
+  # le mois facturait vraiment, on mesure l'excédent du virement sur cette base,
+  # et on en sort la part du poste visé — jamais plus que ce que ce poste
+  # réclamait ce mois-là. Rien n'est deviné et le solde ne bouge pas : c'est un
+  # redécoupage, pas un paiement.
+  def extraire_du_virement_mensuel(flow_cible, bases, etiquette)
     apply = ENV["APPLY"] == "1"
-    compte = MemberAccount.find_by!(code: "SRC-0003")
-    dome = 5_000
 
-    mois_dome = compte.account_entries.where(flow: "dome").where("amount_cents > 0")
-                      .map { |e| e.entry_date.beginning_of_month }.uniq
-    reglements = compte.account_settlements
-                       .where("reference LIKE 'reprise-charges%' OR reference LIKE '%charges-habitants'")
-                       .index_by { |s| s.received_on.beginning_of_month }
+    MemberAccount.actives.ordered.each do |compte|
+      dus = compte.account_entries.where(flow: flow_cible).where("amount_cents > 0")
+                  .group_by { |e| e.entry_date.beginning_of_month }
+                  .transform_values { |lignes| lignes.sum(&:amount_cents) }
+      next if dus.empty?
 
-    traites = 0
-    manquants = []
+      reglements = compte.account_settlements
+                         .where("reference LIKE 'reprise-charges%' OR reference LIKE '%charges-habitants'")
+                         .index_by { |s| s.received_on.beginning_of_month }
+      sorti = 0
 
-    mois_dome.sort.each do |mois|
-      settlement = reglements[mois]
-      next manquants << mois if settlement.nil?
-      next puts("  = #{mois.strftime('%Y-%m')}  règlement ##{settlement.id} déjà ventilé") if settlement.account_entries.any? { |e| e.flow == "dome" }
+      dus.sort.each do |mois, du|
+        settlement = reglements[mois]
+        next if settlement.nil?
 
-      charges = settlement.amount_cents - dome
-      next manquants << mois if charges <= 0
+        ventilation = settlement.account_entries.group_by(&:flow)
+                                .transform_values { |lignes| lignes.sum(&:amount_cents).abs }
+        next sorti += ventilation[flow_cible].to_i if ventilation[flow_cible].to_i.positive?
 
-      traites += 1
-      puts "  + #{mois.strftime('%Y-%m')}  ##{settlement.id} de #{format('%6.2f', settlement.amount_cents / 100.0)} € → charges #{format('%6.2f', charges / 100.0)} + dôme #{format('%5.2f', dome / 100.0)}"
-      next unless apply
+        facture = compte.account_entries.where(flow: bases)
+                        .where(entry_date: mois..mois.end_of_month).where("amount_cents > 0").sum(:amount_cents)
+        part = [settlement.amount_cents - facture, du].min
+        next unless part.positive?
 
-      Finance::ReventilateSettlement.new(
-        settlement: settlement, ventilation: { "charges" => charges, "dome" => dome },
-        whodunnit: "rattrapage-2026-09"
-      ).run!
+        sorti += part
+        nouvelle = ventilation.dup
+        nouvelle["charges"] = nouvelle["charges"].to_i - part
+        nouvelle[flow_cible] = part
+        puts "  ~ #{mois.strftime('%Y-%m')}  #{compte.code}  #{format('%6.2f', part / 100.0)} € sortis des charges vers #{etiquette} (règlement ##{settlement.id})"
+        next unless apply
+
+        Finance::ReventilateSettlement.new(settlement: settlement, ventilation: nouvelle.reject { |_, c| c.zero? },
+                                           whodunnit: "rattrapage-2026-09").run!
+      end
+
+      puts "  → #{compte.code} #{compte.name.ljust(18)} #{etiquette} #{format('%8.2f', dus.values.sum / 100.0)} € · sorti du mensuel #{format('%8.2f', sorti / 100.0)} € · reste #{format('%8.2f', (dus.values.sum - sorti) / 100.0)} €"
     end
+  end
 
-    puts "[rattrapage:dome_seb] #{traites} règlement(s), #{format('%.2f', dome * traites / 100.0)} € basculés sur le dôme"
-    puts "[rattrapage:dome_seb] ! #{manquants.size} mois sans règlement de charges en face : #{manquants.map { |m| m.strftime('%Y-%m') }.join(', ')}" if manquants.any?
-    puts "[rattrapage:dome_seb] Rien n'a été écrit — relance avec APPLY=1." unless apply
+  # Le dôme : 2 100 € chez Seb de janvier 2023 à juin 2026, 20 € chez Olivier
+  # début 2023. Dans les deux cas le virement mensuel le payait — Seb versait
+  # 310 € pour 200 de charges, 50 de dôme et 60 de forfait — et la reprise a
+  # tout mis sur les charges.
+  desc "Le dôme : le sort du virement mensuel où il était noyé. APPLY=1 pour écrire."
+  task dome: :environment do
+    extraire_du_virement_mensuel("dome", ["charges"], "Dôme")
+    puts "[rattrapage:dome] Rien n'a été écrit — relance avec APPLY=1." unless ENV["APPLY"] == "1"
   end
 
   # Le « Forfait fun et découverte » : 2 540 € facturés de janvier 2023 à juin
@@ -205,47 +227,7 @@ namespace :rattrapage do
       end
     end
 
-    MemberAccount.actives.ordered.each do |compte|
-      forfaits = compte.account_entries.where(label: FORFAIT_LABEL).where("amount_cents > 0")
-                       .group_by { |e| e.entry_date.beginning_of_month }
-                       .transform_values { |lignes| lignes.sum(&:amount_cents) }
-      next if forfaits.empty?
-
-      reglements = compte.account_settlements
-                         .where("reference LIKE 'reprise-charges%' OR reference LIKE '%charges-habitants'")
-                         .index_by { |s| s.received_on.beginning_of_month }
-      sorti = 0
-
-      forfaits.sort.each do |mois, du_forfait|
-        settlement = reglements[mois]
-        next if settlement.nil?
-
-        ventilation = settlement.account_entries.group_by(&:flow)
-                                .transform_values { |lignes| lignes.sum(&:amount_cents).abs }
-        deja = ventilation["other"].to_i
-        next sorti += deja if deja.positive?
-
-        # L'excédent du virement sur les charges du mois : c'est LUI qui payait
-        # le forfait. On n'en sort jamais plus que ce que le forfait réclamait.
-        facture = compte.account_entries.where(flow: %w[charges dome])
-                        .where(entry_date: mois..mois.end_of_month).where("amount_cents > 0").sum(:amount_cents)
-        part = [settlement.amount_cents - facture, du_forfait].min
-        next unless part.positive?
-
-        sorti += part
-        nouvelle = ventilation.dup
-        nouvelle["charges"] = nouvelle["charges"].to_i - part
-        nouvelle["other"] = part
-        puts "  ~ #{mois.strftime('%Y-%m')}  #{compte.code}  #{format('%6.2f', part / 100.0)} € sortis des charges vers Divers (règlement ##{settlement.id})"
-        next unless apply
-
-        Finance::ReventilateSettlement.new(settlement: settlement, ventilation: nouvelle.reject { |_, c| c.zero? },
-                                           whodunnit: "rattrapage-2026-09").run!
-      end
-
-      reste = forfaits.values.sum - sorti
-      puts "  → #{compte.code} #{compte.name.ljust(18)} forfait #{format('%8.2f', forfaits.values.sum / 100.0)} € · sorti du mensuel #{format('%8.2f', sorti / 100.0)} € · reste #{format('%8.2f', reste / 100.0)} €"
-    end
+    extraire_du_virement_mensuel("other", %w[charges dome], "Divers")
 
     # La référence ne porte PAS l'indice dans la liste : retirer une ligne
     # décalerait tous les indices suivants, la garde ne reconnaîtrait plus rien
@@ -271,5 +253,5 @@ namespace :rattrapage do
   end
 
   desc "Les quatre rattrapages, dans l'ordre. APPLY=1 pour écrire."
-  task tout: %i[charges reglements dome_seb forfait]
+  task tout: %i[charges reglements dome forfait]
 end
