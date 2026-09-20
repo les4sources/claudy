@@ -1,0 +1,41 @@
+/  La ligne telle qu'on la SCANNE (Michael, 2026-09-20).
+   « La communication, clairement lisible, puisque c'est ce qu'on va scanner en
+   premier. » Elle est donc le texte principal ; le nom du compte vient juste
+   dessous, à la même taille pour se lire sans effort, en graisse normale et en
+   gris pour que la hiérarchie tienne quand même.
+
+   Le détail — propositions de rapprochement et formulaire de ventilation — ne
+   s'ouvre qu'au clic : déroulé pour les vingt lignes de la page, il enterre ce
+   qu'on vient chercher.
+- principal = libelle_principal(entry)
+- detail_id = "entry-#{entry.id}-detail"
+.flex.items-center.gap-4(class="px-4 py-3 hover:bg-gray-50/70")
+  = render "finance/cash_entries/source_badge", cash_account: entry.cash_account
+
+  .min-w-0.flex-grow.flex.flex-col(style="gap: 3px")
+    - if principal.present?
+      .font-semibold.leading-snug.text-gray-900(style="font-size: 15px")= principal
+    - else
+      .font-semibold.leading-snug.text-gray-400(style="font-size: 15px") Sans communication
+    .font-normal.leading-snug.text-gray-500(style="font-size: 15px")
+      = entry.counterparty_name.presence || entry.cash_account.name
+
+  - if defined?(indice) && indice.present?
+    .flex-shrink-0.inline-flex.items-center.gap-2.rounded-full.border.border-forest-tint.px-2.5(class="bg-forest-tint/60" style="height: 26px")
+      span.rounded-full.bg-forest(style="width: 5px; height: 5px")
+      span.whitespace-nowrap.font-medium.text-forest(style="font-size: 11.5px")= indice
+
+  .flex-shrink-0.text-right(style="width: 132px")
+    /  `number_to_currency` plutôt que `humanized_money_with_symbol` : celui-ci
+       supprime les centimes ronds, et une colonne qui alterne « 40,75 € » et
+       « -2 000 € » cesse de s'aligner. Dans une colonne de montants, les
+       centimes se montrent toujours.
+    .font-semibold.tabular-nums(class="#{entry.incoming? ? 'text-forest' : 'text-[#7A2E1F]'}" style="font-size: 16px")
+      = number_to_currency(entry.amount_cents / 100.0)
+    - if entry.allocated_cents != 0
+      .text-amber-700(style="font-size: 11.5px")
+        | reste #{number_to_currency(entry.remaining_cents / 100.0)}
+
+  .flex-shrink-0.flex.justify-end(style="width: 116px")
+    button.inline-flex.items-center.rounded-lg.border-0.font-semibold.text-white.shadow-sm(type="button" class="bg-4s-main hover:opacity-90" style="height: 34px; padding: 0 16px; font-size: 13px" data-controller="collapse" data-action="click->collapse#toggle" data-collapse-toggle-value=detail_id aria-expanded="false" aria-controls=detail_id)
+      = entry.allocated_cents == 0 ? "Affecter" : "Compléter"
