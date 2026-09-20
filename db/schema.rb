@@ -10,13 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_18_060000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_20_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
 
   create_table "account_entries", force: :cascade do |t|
+    t.bigint "account_settlement_id"
     t.bigint "account_statement_id"
     t.bigint "amount_cents", null: false
     t.bigint "catalog_item_id"
@@ -38,6 +39,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_060000) do
     t.string "source"
     t.integer "unit_price_cents"
     t.datetime "updated_at", null: false
+    t.index ["account_settlement_id"], name: "index_account_entries_on_account_settlement_id"
     t.index ["account_statement_id"], name: "index_account_entries_on_account_statement_id"
     t.index ["catalog_item_id"], name: "index_account_entries_on_catalog_item_id"
     t.index ["client_uuid"], name: "index_account_entries_on_client_uuid", unique: true
@@ -2087,6 +2089,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_060000) do
   end
 
   add_foreign_key "account_entries", "account_entries", column: "reversal_of_id"
+  add_foreign_key "account_entries", "account_settlements"
   add_foreign_key "account_entries", "account_statements"
   add_foreign_key "account_entries", "catalog_items"
   add_foreign_key "account_entries", "member_accounts"
@@ -2146,9 +2149,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_060000) do
   add_foreign_key "comments", "users", column: "author_id"
   add_foreign_key "consignment_report_lines", "consignment_reports"
   add_foreign_key "consignment_reports", "consignors"
-  add_foreign_key "consignment_reports", "users", column: "verified_by_id"
   add_foreign_key "consignment_reports", "legal_entities"
   add_foreign_key "consignment_reports", "purchase_invoices"
+  add_foreign_key "consignment_reports", "users", column: "verified_by_id"
   add_foreign_key "consignors", "humans"
   add_foreign_key "consignors", "third_parties"
   add_foreign_key "coworking_packs", "customers"

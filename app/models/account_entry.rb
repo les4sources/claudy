@@ -2,31 +2,33 @@
 #
 # Table name: account_entries
 #
-#  id                   :bigint           not null, primary key
-#  amount_cents         :bigint           not null
-#  client_uuid          :string
-#  deleted_at           :datetime
-#  entry_date           :date             not null
-#  flow                 :string
-#  idempotency_key      :string
-#  kind                 :string
-#  label                :string
-#  locked_at            :datetime
-#  posted_at            :datetime
-#  price_basis          :string
-#  quantity             :decimal(12, 3)
-#  source               :string
-#  unit_price_cents     :integer
-#  created_at           :datetime         not null
-#  updated_at           :datetime         not null
-#  account_statement_id :bigint
-#  catalog_item_id      :bigint
-#  member_account_id    :bigint           not null
-#  paper_sheet_id       :bigint
-#  reversal_of_id       :bigint
+#  id                    :bigint           not null, primary key
+#  amount_cents          :bigint           not null
+#  client_uuid           :string
+#  deleted_at            :datetime
+#  entry_date            :date             not null
+#  flow                  :string
+#  idempotency_key       :string
+#  kind                  :string
+#  label                 :string
+#  locked_at             :datetime
+#  posted_at             :datetime
+#  price_basis           :string
+#  quantity              :decimal(12, 3)
+#  source                :string
+#  unit_price_cents      :integer
+#  created_at            :datetime         not null
+#  updated_at            :datetime         not null
+#  account_settlement_id :bigint
+#  account_statement_id  :bigint
+#  catalog_item_id       :bigint
+#  member_account_id     :bigint           not null
+#  paper_sheet_id        :bigint
+#  reversal_of_id        :bigint
 #
 # Indexes
 #
+#  index_account_entries_on_account_settlement_id             (account_settlement_id)
 #  index_account_entries_on_account_statement_id              (account_statement_id)
 #  index_account_entries_on_catalog_item_id                   (catalog_item_id)
 #  index_account_entries_on_client_uuid                       (client_uuid) UNIQUE
@@ -38,6 +40,7 @@
 #
 # Foreign Keys
 #
+#  fk_rails_...  (account_settlement_id => account_settlements.id)
 #  fk_rails_...  (account_statement_id => account_statements.id)
 #  fk_rails_...  (catalog_item_id => catalog_items.id)
 #  fk_rails_...  (member_account_id => member_accounts.id)
@@ -106,12 +109,17 @@ class AccountEntry < ApplicationRecord
   belongs_to :reversal_of, class_name: "AccountEntry", optional: true
   has_one :reversal, class_name: "AccountEntry", foreign_key: :reversal_of_id,
                      inverse_of: :reversal_of
-  # Le règlement que cette écriture matérialise, quand elle en est un. C'est lui
-  # qui porte la COMMUNICATION du virement — « Charges juin 2026 », « Bar avril »
+  # Le règlement que cette écriture matérialise, quand elle en est une.
+  #
+  # Il porte la COMMUNICATION du virement — « Charges juin 2026 », « Bar avril »
   # — sans laquelle une ligne « Règlement — Virement » de 345 € ne dit pas de
   # quoi son auteur parlait (Michael, 2026-09-20).
-  has_one :settlement, class_name: "AccountSettlement", inverse_of: :account_entry,
-                       dependent: nil
+  #
+  # Un règlement peut porter PLUSIEURS écritures, une par poste : chez Seb,
+  # 280 € par mois payaient 230 € de charges et 50 € de dôme. La ventilation
+  # vit ici, du côté des écritures, parce que c'est l'écriture qui porte le
+  # poste et que c'est elle que lit le lettrage.
+  belongs_to :account_settlement, optional: true, inverse_of: :account_entries
 
   monetize :amount_cents
 

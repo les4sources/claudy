@@ -201,7 +201,9 @@ RSpec.describe "Finances > Comptes", type: :request do
     # La table des écritures, en bas de page, porte les mêmes libellés :
     # une assertion sur la page entière passerait sans que le callout existe.
     def callout = Nokogiri::HTML(response.body).at_css("#outstanding")&.text.to_s
-    it "décompose le solde mois par mois au lieu de l'afficher nu" do
+    # Par POSTE, plus par mois : c'est la maille dans laquelle un foyer pense sa
+    # dette et fait ses virements (Michael, 2026-09-20).
+    it "décompose le solde poste par poste au lieu de l'afficher nu" do
       account = create_account(name: "Béné", kind: "household", household: household)
       account.account_entries.create!(entry_date: Date.new(2026, 1, 31), amount_cents: 17_000,
                                     label: "Charges habitants", flow: "charges")
@@ -211,11 +213,12 @@ RSpec.describe "Finances > Comptes", type: :request do
       get finance_account_path(account)
 
       expect(callout).to include("À régler")
-      expect(callout).to include("Charges habitants").and include("Batchcooking")
-      expect(callout).to include("Janvier 2026").and include("Juin 2026")
+      expect(callout).to include("Charges").and include("Repas")
       # Le total du callout est le solde : les deux nombres de la page doivent
       # tomber pareil, sinon la décomposition dit le contraire du solde.
       expect(callout).to include("195,00")
+      # Le détail d'un poste s'ouvre en fenêtre — il n'est pas déroulé ici.
+      expect(response.body).to include(poste_finance_account_path(account, flow: "charges"))
     end
 
     it "ne montre que ce qui reste après imputation des règlements" do
@@ -225,12 +228,48 @@ RSpec.describe "Finances > Comptes", type: :request do
       account.account_entries.create!(entry_date: Date.new(2026, 3, 31), amount_cents: 5_000,
                                     label: "Conso bar", flow: "bar")
       account.account_entries.create!(entry_date: Date.new(2026, 2, 5), amount_cents: -17_000,
-                                    label: "Virement")
+                                    label: "Virement", kind: "settlement", flow: "charges")
 
       get finance_account_path(account)
 
-      expect(callout).to include("Conso bar")
-      expect(callout).not_to include("Charges de janvier")
+      expect(callout).to include("Bar").and include("50,00")
+      expect(callout).not_to include("Charges")
+    end
+
+    # Le règlement d'un poste ne touche pas aux autres : c'est toute la raison
+    # d'être du lettrage par poste.
+    it "n'éteint pas le bar avec un virement de charges" do
+      account = create_account(name: "Béné", kind: "household", household: household)
+      account.account_entries.create!(entry_date: Date.new(2026, 1, 31), amount_cents: 5_000,
+                                    label: "Conso bar", flow: "bar")
+      account.account_entries.create!(entry_date: Date.new(2026, 2, 28), amount_cents: 17_000,
+                                    label: "Charges de février", flow: "charges")
+      account.account_entries.create!(entry_date: Date.new(2026, 2, 28), amount_cents: -17_000,
+                                    label: "Virement", kind: "settlement", flow: "charges")
+
+      get finance_account_path(account)
+
+      expect(callout).to include("Bar").and include("50,00")
+      expect(callout).not_to include("Charges")
+    end
+
+    it "ouvre le détail d'un poste en fenêtre" do
+      account = create_account(name: "Béné", kind: "household", household: household)
+      account.account_entries.create!(entry_date: Date.new(2026, 3, 31), amount_cents: 5_000,
+                                    label: "Conso bar", flow: "bar")
+
+      get poste_finance_account_path(account, flow: "bar")
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Conso bar").and include("Bar — 50,00")
+    end
+
+    it "renvoie sur la fiche quand le poste demandé n'a plus rien à régler" do
+      account = create_account(name: "Béné", kind: "household", household: household)
+
+      get poste_finance_account_path(account, flow: "bar")
+
+      expect(response).to redirect_to(finance_account_path(account))
     end
 
     it "se tait quand le compte est à zéro" do

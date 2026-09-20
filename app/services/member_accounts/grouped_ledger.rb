@@ -48,7 +48,7 @@ module MemberAccounts
       # juin 2026 », « Bar avril ». Sans elle, une ligne « Règlement — Virement »
       # de 345 € oblige à rouvrir l'extrait bancaire pour savoir de quoi elle
       # parlait (Michael, 2026-09-20).
-      def communication = entries.one? ? entree.settlement&.reference.presence : nil
+      def communication = entries.one? ? entree.account_settlement&.reference.presence : nil
 
       def date_de_tri = entries.first.entry_date
     end
