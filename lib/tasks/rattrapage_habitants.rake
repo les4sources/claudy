@@ -150,6 +150,126 @@ namespace :rattrapage do
     puts "[rattrapage:dome_seb] Rien n'a été écrit — relance avec APPLY=1." unless apply
   end
 
-  desc "Les trois rattrapages, dans l'ordre. APPLY=1 pour écrire."
-  task tout: %i[charges reglements dome_seb]
+  # Le « Forfait fun et découverte » : 2 540 € facturés de janvier 2023 à juin
+  # 2024 et réputés impayés. Les foyers les ont pourtant bien versés — mais
+  # DANS LEUR VIREMENT MENSUEL, ce que la comparaison mois par mois démontre :
+  # Gaëlle payait 260 € là où claudy facture 200, Olivier 400 là où claudy
+  # facture 310, et l'excédent cumulé vaut EXACTEMENT le forfait facturé
+  # (870,00 € et 930,00 €, au centime). La reprise a imputé tout le virement aux
+  # charges ; d'où un forfait impayé d'un côté et une avance sur charges de
+  # l'autre, pour le même argent.
+  #
+  # On ne crée donc PAS de règlement supplémentaire — ce serait compter deux
+  # fois. On redécoupe le virement mensuel, comme pour le dôme de Seb : la part
+  # du forfait quitte les charges pour « Divers ». Le solde du compte ne bouge
+  # pas d'un centime, seule la ventilation change.
+  #
+  # Vérifié sur les trois : le virement mensuel valait charges + dôme + forfait,
+  # au centime (Seb versait 310 € pour 200 de charges, 50 de dôme et 60 de
+  # forfait). Les virements « fun et découvertes » qu'on voit à côté sur le
+  # Triodos — trimestres, soldes annuels, clôture — ne sont donc PAS ce forfait
+  # mensuel : ils paient les sorties elles-mêmes, que claudy ne facture nulle
+  # part. Les encoder ici mettrait les comptes en faux crédit.
+  #
+  # Chez Michael & Malau, rien n'était facturé alors que 93,34 € ont été versés
+  # à part : on pose les deux charges manquantes à la date du service.
+  FORFAIT_LABEL = "Forfait fun et découverte".freeze
+
+  # Ce qui n'est PAS passé par le virement mensuel, et se règle à part.
+  FORFAIT_REGLEMENTS = [
+    ["SRC-0001", "2024-03-06", 2_579,  "Forfait fun et découverte 2023 — Mael"],
+    ["SRC-0001", "2025-04-04", 6_755,  "Forfait fun et découverte 2024"]
+  ].freeze
+
+  FORFAIT_CHARGES = [
+    ["SRC-0001", "2023-12-31", 2_579],
+    ["SRC-0001", "2024-12-31", 6_755]
+  ].freeze
+
+  desc "Le forfait fun et découverte : sort du virement mensuel où il était noyé. APPLY=1 pour écrire."
+  task forfait: :environment do
+    apply = ENV["APPLY"] == "1"
+
+    FORFAIT_CHARGES.each do |code, date, cents|
+      compte = MemberAccount.find_by!(code: code)
+      cle = "rattrapage:forfait:#{code}:#{date}"
+      next puts("  = #{date}  #{code}  charge déjà présente") if AccountEntry.unscoped.exists?(idempotency_key: cle)
+
+      puts "  + #{date}  #{code}  #{FORFAIT_LABEL.ljust(28)} #{format('%8.2f', cents / 100.0)} € (charge)"
+      next unless apply
+
+      PaperTrail.request(whodunnit: "rattrapage-2026-09") do
+        AccountEntry.create!(member_account: compte, entry_date: Date.parse(date), posted_at: Time.current,
+                             amount_cents: cents, flow: "other", kind: "recurring",
+                             label: FORFAIT_LABEL, source: "reprise", idempotency_key: cle)
+      end
+    end
+
+    MemberAccount.actives.ordered.each do |compte|
+      forfaits = compte.account_entries.where(label: FORFAIT_LABEL).where("amount_cents > 0")
+                       .group_by { |e| e.entry_date.beginning_of_month }
+                       .transform_values { |lignes| lignes.sum(&:amount_cents) }
+      next if forfaits.empty?
+
+      reglements = compte.account_settlements
+                         .where("reference LIKE 'reprise-charges%' OR reference LIKE '%charges-habitants'")
+                         .index_by { |s| s.received_on.beginning_of_month }
+      sorti = 0
+
+      forfaits.sort.each do |mois, du_forfait|
+        settlement = reglements[mois]
+        next if settlement.nil?
+
+        ventilation = settlement.account_entries.group_by(&:flow)
+                                .transform_values { |lignes| lignes.sum(&:amount_cents).abs }
+        deja = ventilation["other"].to_i
+        next sorti += deja if deja.positive?
+
+        # L'excédent du virement sur les charges du mois : c'est LUI qui payait
+        # le forfait. On n'en sort jamais plus que ce que le forfait réclamait.
+        facture = compte.account_entries.where(flow: %w[charges dome])
+                        .where(entry_date: mois..mois.end_of_month).where("amount_cents > 0").sum(:amount_cents)
+        part = [settlement.amount_cents - facture, du_forfait].min
+        next unless part.positive?
+
+        sorti += part
+        nouvelle = ventilation.dup
+        nouvelle["charges"] = nouvelle["charges"].to_i - part
+        nouvelle["other"] = part
+        puts "  ~ #{mois.strftime('%Y-%m')}  #{compte.code}  #{format('%6.2f', part / 100.0)} € sortis des charges vers Divers (règlement ##{settlement.id})"
+        next unless apply
+
+        Finance::ReventilateSettlement.new(settlement: settlement, ventilation: nouvelle.reject { |_, c| c.zero? },
+                                           whodunnit: "rattrapage-2026-09").run!
+      end
+
+      reste = forfaits.values.sum - sorti
+      puts "  → #{compte.code} #{compte.name.ljust(18)} forfait #{format('%8.2f', forfaits.values.sum / 100.0)} € · sorti du mensuel #{format('%8.2f', sorti / 100.0)} € · reste #{format('%8.2f', reste / 100.0)} €"
+    end
+
+    # La référence ne porte PAS l'indice dans la liste : retirer une ligne
+    # décalerait tous les indices suivants, la garde ne reconnaîtrait plus rien
+    # et la tâche créerait des doublons. Elle est faite de ce qui identifie le
+    # virement — le compte, la date, le montant.
+    FORFAIT_REGLEMENTS.each do |code, date, cents, motif|
+      compte = MemberAccount.find_by!(code: code)
+      reference = "forfait-fun:#{code}:#{date}:#{cents}"
+      next puts("  = #{date}  #{code}  règlement déjà encodé") if AccountSettlement.unscoped.exists?(reference: reference)
+
+      puts "  + #{date}  #{code}  #{motif[0, 42].ljust(42)} #{format('%8.2f', cents / 100.0)} € (règlement)"
+      next unless apply
+
+      Finance::RecordSettlement.new(
+        member_account: compte, amount_cents: cents, received_on: Date.parse(date),
+        method: "bank_transfer", received_channel: "bank", reference: reference, flow: "other",
+        notes: "#{motif}. Rattrapage du 2026-09-20 : la reprise avait transcrit la facturation sans les paiements.",
+        whodunnit: "rattrapage-2026-09"
+      ).run!
+    end
+
+    puts "[rattrapage:forfait] Rien n'a été écrit — relance avec APPLY=1." unless apply
+  end
+
+  desc "Les quatre rattrapages, dans l'ordre. APPLY=1 pour écrire."
+  task tout: %i[charges reglements dome_seb forfait]
 end
