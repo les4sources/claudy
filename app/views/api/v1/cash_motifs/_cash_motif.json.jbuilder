@@ -1,0 +1,12 @@
+json.id cash_motif.id
+json.type "cash_motif"
+json.label cash_motif.label
+json.direction cash_motif.direction
+json.direction_label cash_motif.direction_label
+json.position cash_motif.position
+json.active cash_motif.active
+json.general_account_code cash_motif.general_account&.code
+json.general_account_name cash_motif.general_account&.name
+json.team_name cash_motif.team&.name
+json.legal_entity_name cash_motif.legal_entity&.name
+json.url api_v1_cash_motif_url(cash_motif)

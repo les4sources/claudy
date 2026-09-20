@@ -1265,7 +1265,7 @@ paths:
                 properties: { data: { $ref: "#/components/schemas/MemberAccount" } }
         "200": { description: Compte existant retrouvé sur le nom. }
         "401": { $ref: "#/components/responses/Unauthorized" }
-        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
   /member_accounts/{id}:
     get:
       tags: [Bar & comptes internes]
@@ -1308,7 +1308,7 @@ paths:
         "200": { description: Compte mis à jour. }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
-        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
 
   /member_accounts/{member_account_id}/settlements:
     get:
@@ -1354,7 +1354,7 @@ paths:
         "201": { description: Règlement enregistré. }
         "200": { description: Règlement déjà enregistré sous cette référence. }
         "401": { $ref: "#/components/responses/Unauthorized" }
-        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
 
   /account_entries:
     get:
@@ -1409,7 +1409,7 @@ paths:
         "200": { description: Écriture retrouvée sur sa clé d'idempotence et mise à jour. }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "409": { description: "Écriture verrouillée par un décompte émis." }
-        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
   /account_entries/{id}:
     get:
       tags: [Bar & comptes internes]
@@ -1465,7 +1465,7 @@ paths:
         "201": { description: Compte créé. }
         "200": { description: Compte existant retrouvé sur son code. }
         "401": { $ref: "#/components/responses/Unauthorized" }
-        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
   /general_accounts/{id}:
     get:
       tags: [Comptabilité]
@@ -1486,7 +1486,7 @@ paths:
             schema: { type: object, properties: { general_account: { type: object } } }
       responses:
         "200": { description: Compte mis à jour. }
-        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
 
   /analytic_accounts:
     get:
@@ -1525,7 +1525,7 @@ paths:
       responses:
         "201": { description: Axe créé. }
         "200": { description: Axe existant retrouvé sur son code. }
-        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
   /analytic_accounts/{id}:
     patch:
       tags: [Comptabilité]
@@ -1578,7 +1578,7 @@ paths:
         "201": { description: Exercice créé. }
         "200": { description: Exercice existant retrouvé. }
         "409": { description: "Exercice clôturé." }
-        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
   /fiscal_years/{id}:
     get:
       tags: [Comptabilité]
@@ -1690,7 +1690,7 @@ paths:
       responses:
         "201": { description: Compte créé. }
         "200": { description: Compte existant retrouvé sur son nom. }
-        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
   /cash_accounts/{id}:
     get:
       tags: [Comptabilité]
@@ -1812,7 +1812,7 @@ paths:
         "200": { description: Ligne retrouvée sur sa référence et mise à jour. }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "409": { description: "Ligne déjà comptabilisée, donc gelée." }
-        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
   /cash_entries/{id}:
     get:
       tags: [Comptabilité]
@@ -1966,6 +1966,168 @@ paths:
                           ignored: { type: integer, description: "Cellules dont l'article n'appartient pas au canal de la fiche." }
                           summary: { type: string }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
+  /allocation_rules:
+    get:
+      tags: [Comptabilité]
+      summary: Lister les règles d'affectation
+      parameters:
+        - { name: direction, in: query, schema: { type: string, enum: [incoming, outgoing] } }
+        - { name: active, in: query, schema: { type: boolean } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: Liste paginée de règles, dans l'ordre d'application. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Comptabilité]
+      summary: Créer (ou retrouver) une règle d'affectation
+      description: >
+        UPSERT sur le LIBELLÉ. Une règle PROPOSE une affectation motivée, elle
+        ne comptabilise jamais : l'acceptation des suggestions n'est pas exposée
+        par l'API et reste devant un humain. L'ORDRE compte — la première règle
+        qui correspond gagne, ce qui permet de poser un garde très précis avant
+        une règle générale. Une règle sans aucun critère est refusée : elle
+        s'appliquerait à tout. Les critères textuels sont des SOUS-CHAÎNES
+        insensibles à la casse, sans ancrage — `bar` reconnaît « Cabaronde ».
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [allocation_rule]
+              properties:
+                allocation_rule:
+                  type: object
+                  required: [label]
+                  properties:
+                    label: { type: string, description: "Clé d'upsert." }
+                    position: { type: integer, description: "Ordre d'application ; le plus petit gagne." }
+                    confidence: { type: integer, minimum: 0, maximum: 100 }
+                    active: { type: boolean }
+                    direction: { type: string, enum: [incoming, outgoing] }
+                    counterparty_iban: { type: string }
+                    counterparty_name_contains: { type: string }
+                    communication_contains: { type: string }
+                    transaction_code: { type: string }
+                    min_amount_cents: { type: integer }
+                    max_amount_cents: { type: integer }
+                    general_account_code: { type: string, description: "Le compte proposé, adressé par son code." }
+                    team_name: { type: string }
+                    legal_entity_name: { type: string }
+                    general_account_id: { type: integer }
+                    analytic_account_code: { type: string }
+                    team_id: { type: integer }
+                    legal_entity_id: { type: integer }
+                    event_id: { type: integer }
+      responses:
+        "201": { description: Règle créée. }
+        "200": { description: Règle existante retrouvée sur son libellé. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /allocation_rules/{id}:
+    get:
+      tags: [Comptabilité]
+      summary: Détail d'une règle d'affectation
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Règle. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Comptabilité]
+      summary: Modifier une règle d'affectation
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { allocation_rule: { type: object } } }
+      responses:
+        "200": { description: Règle mise à jour. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Comptabilité]
+      summary: Supprimer une règle d'affectation
+      description: "Suppression douce ; les suggestions déjà produites restent, détachées de la règle."
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { description: Règle supprimée. }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /cash_motifs:
+    get:
+      tags: [Comptabilité]
+      summary: Lister les motifs de caisse
+      parameters:
+        - { name: direction, in: query, schema: { type: string, enum: [in, out, both] } }
+        - { name: active, in: query, schema: { type: boolean } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: Liste paginée de motifs, dans l'ordre de saisie. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Comptabilité]
+      summary: Créer (ou retrouver) un motif de caisse
+      description: >
+        UPSERT sur le LIBELLÉ, que le modèle impose déjà unique. LE MOTIF EST
+        L'AFFECTATION : il porte le compte général, le pôle et l'entité, et la
+        ligne de caisse en prend une COPIE à la saisie. Réaffecter un motif ne
+        réécrit donc AUCUNE ligne déjà saisie — l'écriture ici est sans effet
+        sur un exercice en cours. Un motif sans compte général est refusé.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cash_motif]
+              properties:
+                cash_motif:
+                  type: object
+                  required: [label]
+                  properties:
+                    label: { type: string, description: "Clé d'upsert." }
+                    direction: { type: string, enum: [in, out, both], description: "`in` fait entrer l'argent, `out` le fait sortir ; le signe du montant en découle." }
+                    position: { type: integer }
+                    active: { type: boolean }
+                    general_account_code: { type: string }
+                    team_name: { type: string }
+                    legal_entity_name: { type: string }
+                    general_account_id: { type: integer }
+                    team_id: { type: integer }
+                    legal_entity_id: { type: integer }
+      responses:
+        "201": { description: Motif créé. }
+        "200": { description: Motif existant retrouvé sur son libellé. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /cash_motifs/{id}:
+    get:
+      tags: [Comptabilité]
+      summary: Détail d'un motif de caisse
+      description: "S'adresse par le LIBELLÉ (`/cash_motifs/Bar`) ou par l'identifiant technique."
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Motif. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Comptabilité]
+      summary: Modifier un motif de caisse
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { cash_motif: { type: object } } }
+      responses:
+        "200": { description: Motif mis à jour. }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/Unprocessable" }
 
