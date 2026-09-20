@@ -9,10 +9,13 @@
    qu'on vient chercher.
 - principal = libelle_principal(entry)
 - detail_id = "entry-#{entry.id}-detail"
-.flex.items-center.gap-4(class="px-4 py-3 hover:bg-gray-50/70")
+.flex.flex-wrap.items-center.gap-4(class="px-4 py-3 hover:bg-gray-50/70")
   = render "finance/cash_entries/source_badge", cash_account: entry.cash_account
 
-  .min-w-0.flex-grow.flex.flex-col(style="gap: 3px")
+  /  `flex-basis` plutôt qu'une largeur : sur un écran étroit le bloc
+     texte prend la ligne et le montant passe dessous, au lieu de comprimer la
+     communication jusqu'à l'illisible.
+  .min-w-0.flex-grow.flex.flex-col(style="flex-basis: 16rem; gap: 3px")
     - if principal.present?
       .font-semibold.leading-snug.text-gray-900(style="font-size: 15px")= principal
     - else

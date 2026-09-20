@@ -35,26 +35,37 @@
   .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
     p.font-medium.text-gray-700 Aucune ligne de trésorerie sur cette période.
 - else
-  .overflow-x-auto.relative
-    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
-      thead.text-xs.text-gray-700.uppercase.bg-gray-50
-        tr
-          th.py-3.px-6[scope="col"] Date
-          th.py-3.px-6[scope="col"] Compte
-          th.py-3.px-6[scope="col"] Libellé
-          th.py-3.px-6.text-right[scope="col"] Montant
-          th.py-3.px-6[scope="col"] Statut
-      tbody
-        - @entries.each do |entry|
-          tr.border-b.bg-white
-            td.py-4.px-6.whitespace-nowrap= l(entry.entry_date, format: :short)
-            td.py-4.px-6= entry.cash_account.name
-            td.py-4.px-6.font-medium.text-gray-900
-              = link_to entry.label, finance_cash_entry_path(entry), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
-              - if entry.counterparty_name.present?
-                .text-xs.text-gray-400= entry.counterparty_name
-            td.py-4.px-6.text-right.font-semibold class="#{entry.incoming? ? 'text-green-700' : 'text-gray-900'}"
-              = humanized_money_with_symbol(entry.amount)
-            td.py-4.px-6
-              span class="px-2 py-0.5 rounded-full text-xs #{entry.status == 'allocated' ? 'bg-green-100 text-green-700' : entry.status == 'excluded' ? 'bg-gray-100 text-gray-500' : 'bg-amber-100 text-amber-700'}"
+  /  Le même langage que « À affecter » (Michael, 2026-09-20) : une pastille de
+     date par journée, tous ses mouvements à sa droite, et sur chaque ligne le
+     logo du compte de trésorerie d'où elle vient. La table à cinq colonnes
+     répétait la date et le compte à chaque ligne et reléguait la communication
+     dans un libellé tronqué ; ici on lit d'abord ce qu'on cherche.
+
+     Ce journal garde ce que la file n'a pas : le STATUT. C'est justement ce
+     qu'on vient y voir — une ligne affectée disparaît de la file, elle reste
+     ici.
+  - @entries.group_by(&:entry_date).each do |jour, mouvements|
+    .mb-6.flex.items-start.gap-5
+      = render "day_chip", date: jour
+
+      .flex-grow.overflow-hidden.rounded-2xl.border.border-gray-200.bg-white.shadow-sm
+        - mouvements.each_with_index do |entry, rang|
+          .flex.flex-wrap.items-center.gap-4.border-gray-100(class="px-4 py-3 hover:bg-gray-50/70 #{'border-t' if rang.positive?}")
+            = render "source_badge", cash_account: entry.cash_account
+
+            .min-w-0.flex-grow.flex.flex-col(style="flex-basis: 16rem; gap: 3px")
+              - principal = libelle_principal(entry)
+              = link_to(principal.presence || "Sans communication", finance_cash_entry_path(entry), class: "font-semibold leading-snug #{principal.present? ? 'text-gray-900' : 'text-gray-400'} hover:text-4s-main", style: "font-size: 15px")
+              .font-normal.leading-snug.text-gray-500(style="font-size: 15px")
+                = entry.counterparty_name.presence || entry.cash_account.name
+
+            .flex-shrink-0.text-right(style="width: 132px")
+              .font-semibold.tabular-nums(class="#{entry.incoming? ? 'text-forest' : 'text-[#7A2E1F]'}" style="font-size: 16px")
+                = number_to_currency(entry.amount_cents / 100.0)
+              - if entry.status == "pending" && entry.allocated_cents != 0
+                .text-amber-700(style="font-size: 11.5px")
+                  | reste #{number_to_currency(entry.remaining_cents / 100.0)}
+
+            .flex-shrink-0.flex.justify-end(style="width: 116px")
+              span.inline-flex.items-center.rounded-full.px-2.5.font-medium(class="#{entry.status == 'allocated' ? 'bg-forest-tint text-forest' : entry.status == 'excluded' ? 'bg-gray-100 text-gray-500' : 'bg-amber-100 text-amber-800'}" style="height: 26px; font-size: 11.5px")
                 = entry.status_label
