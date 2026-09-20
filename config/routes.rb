@@ -777,6 +777,13 @@ Rails.application.routes.draw do
       resources :paper_sheets, only: [:index, :show, :create, :update] do
         member { post :encode }
       end
+
+      # Configuration du rapprochement assisté (#183, epic #243). Ouvert en
+      # écriture parce qu'un agent doit pouvoir poser lui-même ses règles ; PAS
+      # l'acceptation des suggestions, qui comptabilise et reste devant un
+      # humain. Une règle propose, elle ne décide jamais.
+      resources :allocation_rules, only: [:index, :show, :create, :update, :destroy]
+      resources :cash_motifs, only: [:index, :show, :create, :update]
     end
   end
 

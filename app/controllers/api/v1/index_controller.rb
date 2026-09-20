@@ -61,7 +61,9 @@ module Api
             { name: "cash_accounts", path: api_v1_cash_accounts_path, description: "Comptes de trésorerie (banque, caisse, Stripe) et leur contrepartie générale. POST/PATCH, upsert sur le nom. Filtres: kind, active." },
             { name: "coda_imports", path: api_v1_coda_imports_path, description: "Dépôt d'extraits CODA : POST { filename, content }. Rejouer un fichier déjà déposé rend 200 sans rien créer ; un fichier refusé rend 422 avec le motif chiffré." },
             { name: "cash_entries", path: api_v1_cash_entries_path, description: "Lignes du journal de trésorerie hors CODA (caisse en espèces). POST idempotent sur external_ref ; compte adressable par son nom. Filtres: cash_account_id, status, from, to." },
-            { name: "paper_sheets", path: api_v1_paper_sheets_path, description: "Fiches papier mensuelles et leur encodage matriciel (POST /paper_sheets/:id/encode). Filtres: channel, status, period_month." }
+            { name: "paper_sheets", path: api_v1_paper_sheets_path, description: "Fiches papier mensuelles et leur encodage matriciel (POST /paper_sheets/:id/encode). Filtres: channel, status, period_month." },
+            { name: "allocation_rules", path: api_v1_allocation_rules_path, description: "Règles d'affectation du rapprochement assisté. Une règle PROPOSE, elle ne comptabilise jamais ; l'acceptation des suggestions reste au navigateur. POST/PATCH/DELETE exposés ; POST est un upsert sur le libellé. Compte et pôle adressables par `general_account_code` et `team_name`. Filtres: direction, active." },
+            { name: "cash_motifs", path: api_v1_cash_motifs_path, description: "Motifs de la feuille de caisse — le motif EST l'affectation (compte, pôle, entité). Une ligne déjà saisie en garde une COPIE : réaffecter un motif ne réécrit jamais le passé. POST/PATCH exposés ; POST est un upsert sur le libellé. Filtres: direction, active." }
           ],
           example: "curl -H 'Authorization: Bearer $AGENT_API_TOKEN' #{api_v1_bookings_url}"
         }
