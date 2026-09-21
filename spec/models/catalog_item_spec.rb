@@ -4,24 +4,66 @@ require "rails_helper"
 #
 # Table name: catalog_items
 #
-#  id         :bigint           not null, primary key
-#  active     :boolean          default(TRUE), not null
-#  category   :string
-#  channel    :string           not null
-#  deleted_at :datetime
-#  name       :string           not null
-#  reference  :string
-#  unit       :string           default("piece"), not null
-#  created_at :datetime         not null
-#  updated_at :datetime         not null
+#  id           :bigint           not null, primary key
+#  active       :boolean          default(TRUE), not null
+#  category     :string
+#  channel      :string           not null
+#  deleted_at   :datetime
+#  name         :string           not null
+#  reference    :string
+#  unit         :string           default("piece"), not null
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#  consignor_id :bigint
 #
 # Indexes
 #
 #  index_catalog_items_on_channel_and_name  (channel,name)
+#  index_catalog_items_on_consignor_id      (consignor_id)
 #  index_catalog_items_on_deleted_at        (deleted_at)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (consignor_id => consignors.id)
 #
 RSpec.describe CatalogItem do
   let(:item) { described_class.create!(name: "Moinette", channel: "bar", unit: "piece") }
+
+  # Epic #359, phase 1 — le canal « Artisanat » appartient à un artisan.
+  describe "le canal artisanat" do
+    let(:consignor) { Consignor.create!(name: "Eline", settlement_mode: "invoice") }
+
+    it "accepte les cinq canaux, dont craft et bread" do
+      expect(described_class::CHANNELS).to eq(%w[bar grocery meal craft bread])
+    end
+
+    it "exige un artisan sur un article craft" do
+      article = described_class.new(name: "Savon", channel: "craft", unit: "piece")
+
+      expect(article).not_to be_valid
+      expect(article.errors[:consignor_id].join).to include("artisanat")
+    end
+
+    it "accepte un article craft rattaché à son artisan" do
+      article = described_class.new(name: "Savon", channel: "craft", unit: "piece", consignor: consignor)
+
+      expect(article).to be_valid
+    end
+
+    it "refuse un artisan sur un article d'un autre canal" do
+      article = described_class.new(name: "Moinette", channel: "bar", unit: "piece", consignor: consignor)
+
+      expect(article).not_to be_valid
+      expect(article.errors[:consignor_id].join).to include("ne se pose que")
+    end
+
+    it "retrouve les articles d'un artisan" do
+      savon = described_class.create!(name: "Savon", channel: "craft", unit: "piece", consignor: consignor)
+      described_class.create!(name: "Moinette", channel: "bar", unit: "piece")
+
+      expect(described_class.for_consignor(consignor)).to contain_exactly(savon)
+    end
+  end
 
   describe "#price_on" do
     before do

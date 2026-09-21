@@ -49,6 +49,8 @@
                         class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
               - if item.category.present?
                 .mt-0.5.text-xs.text-gray-400= item.category
+              - if item.consignor.present?
+                .mt-0.5.text-xs.text-violet-700= item.consignor.name
               - unless item.active?
                 .mt-0.5
                   span.px-2.py-0.5.rounded-full.text-xs.bg-gray-100.text-gray-500 Inactif

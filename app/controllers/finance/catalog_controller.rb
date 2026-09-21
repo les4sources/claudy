@@ -6,6 +6,7 @@ module Finance
   # faire sur un mur.
   class CatalogController < Finance::BaseController
     before_action :get_item, only: [:show, :edit, :update, :destroy]
+    before_action :load_consignors, only: [:new, :create, :edit, :update]
 
     breadcrumb "Catalogue", :finance_catalog_index_path, match: :exact
 
@@ -15,7 +16,7 @@ module Finance
       @items = CatalogItem.ordered
                           .for_channel(@channel)
                           .matching(@term)
-                          .includes(:catalog_prices)
+                          .includes(:catalog_prices, :consignor)
       @items = CatalogItemDecorator.decorate_collection(@items)
     end
 
@@ -91,6 +92,14 @@ module Finance
       @item = CatalogItem.find(params[:id])
     end
 
+    # Le sélecteur d'artisan ne sert qu'au canal « Artisanat ». Les artisans
+    # inactifs n'y sont pas, sauf celui déjà rattaché à l'article ouvert — sans
+    # quoi l'éditer le détacherait en silence.
+    def load_consignors
+      @consignors = Consignor.actives.ordered.to_a
+      @consignors |= [@item.consignor].compact if @item
+    end
+
     def cents_from(raw)
       value = raw.to_s.strip.tr(",", ".")
       return nil unless value.match?(/\A\d+(\.\d+)?\z/)
@@ -99,7 +108,7 @@ module Finance
     end
 
     def item_params
-      params.require(:catalog_item).permit(:name, :channel, :category, :unit, :reference, :active)
+      params.require(:catalog_item).permit(:name, :channel, :category, :unit, :reference, :active, :consignor_id)
     end
 
     def finance_secondary = "catalog"

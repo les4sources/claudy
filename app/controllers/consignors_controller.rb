@@ -69,7 +69,8 @@ class ConsignorsController < BaseController
   def consignor_params
     params.require(:consignor).permit(:name, :email, :human_id, :third_party_id,
                                       :commission_percent, :settlement_mode, :iban,
-                                      :starts_on, :ends_on, :active, :notes)
+                                      :starts_on, :ends_on, :active, :notes,
+                                      :portal_enabled)
   end
 
   def set_presenters

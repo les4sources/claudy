@@ -636,6 +636,9 @@ Rails.application.routes.draw do
   post   "portail/connexion",    to: "portal/sessions#create",       as: :portal_login
   delete "portail/deconnexion",  to: "portal/sessions#destroy",      as: :portal_logout
   get    "portail/sejours",      to: "portal/stays#index",           as: :portal_stays
+  # Espace artisan en dépôt-vente (epic #359, phase 1) — cloisonné du contexte
+  # client : un artisan connecté n'atteint ni les séjours ni le coworking.
+  get    "portail/depot-vente",  to: "portal/consignments#show",     as: :portal_consignments
 
   # Coworking (epic #126, Phase 3) — solde, achat de packs (Stripe Checkout) et
   # réservation/annulation de journées, en self-service.
