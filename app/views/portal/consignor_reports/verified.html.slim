@@ -1,0 +1,39 @@
+/ Un relevé vérifié par l'administration ne bouge plus : c'est sur lui qu'on
+  paie. L'artisan le relit, il ne l'édite plus.
+- content_for :meta_title do
+  = "Mes ventes — #{@report.period_label}"
+
+.portal-header
+  div
+    h1.portal-title = "Mes ventes de #{@report.period_label}"
+    p.portal-header__name = "#{@consignor.name} · #{@report.status_label}"
+  .portal-header__actions
+    = link_to "← Mon dépôt-vente", portal_consignments_path, class: "portal-link-muted"
+
+section.portal-block
+  p.text-sm.text-gray-500
+    | Ce relevé est vérifié : il n'est plus modifiable. Si quelque chose vous semble faux, écrivez-nous — on corrigera ensemble.
+
+section.portal-block
+  ul.space-y-2
+    - @report.consignment_report_lines.each do |line|
+      li.flex.justify-between.gap-3.text-sm
+        span
+          = "#{line.quantity} × #{line.label}"
+          - if line.payment_method_label
+            span.text-gray-400 = " · #{line.payment_method_label}"
+        span.tabular-nums = number_to_currency(line.amount_cents / 100.0)
+
+section.portal-block
+  .space-y-1.text-sm
+    .flex.justify-between
+      span.text-gray-500 Total vendu
+      span.tabular-nums = number_to_currency(@report.displayed_gross_cents / 100.0)
+    .flex.justify-between
+      span.text-gray-500 = "Commission (#{@report.applied_commission_percent} %)"
+      span.tabular-nums = number_to_currency(@report.displayed_commission_cents / 100.0)
+    .flex.justify-between.font-semibold
+      span Votre part
+      span.tabular-nums = number_to_currency(@report.displayed_net_cents / 100.0)
+    - if @report.settled_on.present?
+      p.text-gray-500 = "Réglé le #{l(@report.settled_on, format: :short)}."

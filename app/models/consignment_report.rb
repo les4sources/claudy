@@ -75,7 +75,10 @@ class ConsignmentReport < ApplicationRecord
   # solde le relevé — on ne coche jamais « réglé » à côté.
   belongs_to :purchase_invoice, optional: true
   has_many :journal_entries, as: :source, dependent: :restrict_with_error
-  has_many :consignment_report_lines, -> { order(:position, :id) }, dependent: :destroy
+  # `inverse_of` explicite : le scope empêche Rails de le deviner, et un relevé
+  # créé avec ses lignes (espace artisan, epic #359) doit être vu par elles.
+  has_many :consignment_report_lines, -> { order(:position, :id) }, dependent: :destroy,
+                                      inverse_of: :consignment_report
   # Stock de début et de fin de mois : l'artisan photographie son armoire. C'est
   # facultatif, et c'est ce qui permet de lever un doute sans se déplacer.
   has_many_attached :photos

@@ -1,0 +1,46 @@
+/ Encoder une feuille (epic #359, phase 2). Mobile d'abord : l'artisan a sa
+  feuille pleine dans une main et son téléphone dans l'autre. Le formulaire de
+  lignes est celui du lien mensuel à jeton (partial commun).
+- content_for :meta_title do
+  = "Mes ventes — #{@report.period_label}"
+
+.portal-header
+  div
+    h1.portal-title = "Mes ventes de #{@report.period_label}"
+    p.portal-header__name
+      = @consignor.name
+      - if @report.persisted? && @report.declared_at.present?
+        = " · dernier enregistrement le #{l(@report.declared_at.to_date, format: :short)}"
+  .portal-header__actions
+    = link_to "← Mon dépôt-vente", portal_consignments_path, class: "portal-link-muted"
+
+= form_with model: @report, url: portal_consignor_report_path(period: params[:period]), method: :patch,
+            html: { class: "mt-6 space-y-5", multipart: true },
+            data: { controller: "public--consignment-lines",
+                    public__consignment_lines_commission_percent_value: @consignor.commission_percent } do |f|
+
+  - if @products.none?
+    p.text-sm.text-gray-500
+      | Astuce : ajoutez vos produits dans
+      =< link_to "Mes produits", portal_consignor_products_path, class: "portal-link"
+      |  pour que le prix se remplisse tout seul.
+
+  = render "public/consignment_reports/lines", f: f, report: @report, consignor: @consignor, products: @products
+
+  div
+    label.block.text-sm.font-medium.text-gray-700(for="consignment_report_sheet_numbers") N° des feuilles encodées
+    p.text-xs.text-gray-400 Le numéro imprimé en haut de chaque feuille, pour la retrouver en cas de doute.
+    = f.text_field :sheet_numbers, label: false, placeholder: "7, 8", class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+
+  div
+    label.block.text-sm.font-medium.text-gray-700(for="consignment_report_notes") Un mot pour nous ?
+    = f.text_area :notes, rows: 2, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+
+  div
+    label.block.text-sm.font-medium.text-gray-700(for="consignment_report_photos") Photo de la feuille (facultatif)
+    p.text-xs.text-gray-400 Elle s'ajoute aux photos déjà envoyées ce mois-ci.
+    = f.file_field :photos, multiple: true, accept: "image/*", label: false, class: "mt-1 w-full text-sm"
+    - if @report.persisted? && @report.photos.attached?
+      p.mt-1.text-xs.text-gray-500 = "#{@report.photos.count} photo(s) déjà jointe(s)."
+
+  = f.submit "Enregistrer mes ventes", class: "portal-btn portal-btn--block"

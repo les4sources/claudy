@@ -20,34 +20,7 @@
               data: { controller: "public--consignment-lines",
                       public__consignment_lines_commission_percent_value: @consignor.commission_percent } do |f|
 
-    #lignes.space-y-3(data-public--consignment-lines-target="rows")
-      - @report.consignment_report_lines.each_with_index do |line, index|
-        = f.fields_for :consignment_report_lines, line, child_index: index do |lf|
-          = render "public/consignment_reports/line", lf: lf
-
-    p.text-sm.text-gray-400(data-public--consignment-lines-target="empty" hidden=true)
-      | Aucune ligne pour l'instant — ajoutez votre première vente.
-
-    / Le gabarit d'une ligne vierge. `NEW_RECORD` est remplacé par un index
-      unique à chaque insertion : sans ça, deux lignes ajoutées de suite
-      écraseraient leurs paramètres l'une l'autre.
-    template(data-public--consignment-lines-target="template")
-      = f.fields_for :consignment_report_lines, ConsignmentReportLine.new, child_index: "NEW_RECORD" do |lf|
-        = render "public/consignment_reports/line", lf: lf
-
-    button.w-full.rounded-lg.border.border-dashed.border-gray-300.bg-white.px-4.py-3.text-sm.font-medium.text-gray-600(type="button" data-action="public--consignment-lines#add")
-      | ➕ Ajouter une vente
-
-    .rounded-2xl.bg-white.px-4.py-4.ring-1.ring-gray-200.space-y-2
-      .flex.items-center.justify-between.text-sm
-        span.text-gray-500 Total vendu
-        span.font-semibold.text-gray-900(data-public--consignment-lines-target="gross") —
-      .flex.items-center.justify-between.text-sm
-        span.text-gray-500 Commission des 4 Sources (#{@consignor.commission_percent} %)
-        span.text-gray-700(data-public--consignment-lines-target="commission") —
-      .flex.items-center.justify-between.text-base.border-t.border-gray-100.pt-2
-        span.font-medium.text-gray-700 Votre part
-        span.font-semibold.text-gray-900(data-public--consignment-lines-target="net") —
+    = render "public/consignment_reports/lines", f: f, report: @report, consignor: @consignor, products: @products
 
     div
       label.block.text-sm.font-medium.text-gray-700(for="consignment_report_notes") Un mot pour nous ?

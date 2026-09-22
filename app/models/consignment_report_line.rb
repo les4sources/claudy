@@ -58,6 +58,7 @@ class ConsignmentReportLine < ApplicationRecord
   validates :quantity, numericality: { only_integer: true, greater_than: 0 }
   validates :unit_price_cents, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :payment_method, inclusion: { in: PAYMENT_METHODS }, allow_blank: true
+  validate :catalog_item_belongs_to_consignor
 
   scope :ordered, -> { order(:position, :id) }
   scope :paid_in_cash, -> { where(payment_method: "cash") }
@@ -85,6 +86,16 @@ class ConsignmentReportLine < ApplicationRecord
 
     price = catalog_item.price_on(Date.current)
     self.unit_price_cents = price&.public_price_cents || price&.member_price_cents
+  end
+
+  # Cloison (epic #359, phase 2) : une ligne ne pointe que sur un article de
+  # l'artisan du relevé. Le formulaire ne propose que les siens, mais un
+  # identifiant forgé ne doit pas rattacher la vente au savon d'un autre.
+  def catalog_item_belongs_to_consignor
+    return if catalog_item.blank? || consignment_report.blank?
+    return if catalog_item.consignor_id == consignment_report.consignor_id
+
+    errors.add(:catalog_item_id, "n'est pas un de vos produits")
   end
 
   def compute_amount

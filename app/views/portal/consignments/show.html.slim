@@ -1,3 +1,5 @@
+/ Le tableau de bord de l'artisan (epic #359, phase 2). Mobile d'abord : il
+  l'ouvre au téléphone, sa feuille pleine à la main.
 - content_for :meta_title do
   | Mon dépôt-vente
 
@@ -10,30 +12,73 @@
 
 section.portal-block
   .portal-block__head
-    h2.portal-section-title Mon contrat
+    h2.portal-section-title = "Ce mois-ci — #{l(@current_period, format: '%B %Y')}"
   .portal-stack
+    - if @current_report&.consignment_report_lines&.any?
+      p
+        | Ventes encodées :
+        strong = " #{number_to_currency(@current_report.displayed_gross_cents / 100.0)}"
+        |  · votre part :
+        strong = " #{number_to_currency(@current_report.displayed_net_cents / 100.0)}"
+    - else
+      p Aucune vente encodée ce mois-ci.
     p
-      | Commission des 4 Sources :
-      strong = " #{@consignor.commission_percent} %"
-      | . Règlement :
-      strong = " #{@consignor.settlement_mode_label.downcase}"
-      | .
-    - if @last_report.present?
+      | À recevoir, tous relevés non réglés confondus :
+      strong = " #{number_to_currency(@net_due_cents / 100.0)}"
+    - if @last_report.present? && @last_report != @current_report
       p
         | Dernier relevé :
         strong = " #{@last_report.period_label}"
         = " — #{@last_report.status_label}."
+
+section.portal-block
+  .portal-stack
+    - if @current_report.nil? || @current_report.editable_by_consignor?
+      = link_to "Encoder une feuille", portal_consignor_report_path(period: @current_period.strftime("%Y-%m")), class: "portal-btn portal-btn--block"
     - else
-      p Aucun relevé pour l'instant.
+      p.portal-empty Le relevé de ce mois est déjà vérifié : il n'est plus modifiable.
+    = link_to portal_consignor_products_path, class: "portal-link" do
+      = "Mes produits (#{@products_count})"
+    p.text-sm.text-gray-400
+      | Imprimer ma feuille — bientôt disponible.
 
 section.portal-block
   .portal-block__head
-    h2.portal-section-title Ce qui arrive ici
-  .portal-stack
-    p
-      | Vos produits et vos prix, l'encodage de vos feuilles de vente et l'impression de votre feuille avec votre QR de paiement arrivent prochainement dans cet espace.
-    p
-      | En attendant, déclarez vos ventes du mois par le lien que nous vous envoyons par email.
+    h2.portal-section-title Mes relevés
+  - if @reports.empty?
+    p.portal-empty Aucun relevé pour l'instant.
+  - else
+    .overflow-x-auto
+      table.w-full.text-sm
+        thead
+          tr.text-left.text-gray-500
+            th.py-2.pr-3 Mois
+            th.py-2.pr-3.text-right Brut
+            th.py-2.pr-3.text-right Commission
+            th.py-2.pr-3.text-right Net
+            th.py-2 Statut
+        tbody
+          - @reports.each do |report|
+            tr.border-t.border-gray-100
+              td.py-2.pr-3
+                = link_to report.period_label, portal_consignor_report_path(period: report.period_month.strftime("%Y-%m")), class: "portal-link"
+              td.py-2.pr-3.text-right.tabular-nums = number_to_currency(report.displayed_gross_cents / 100.0)
+              td.py-2.pr-3.text-right.tabular-nums = number_to_currency(report.displayed_commission_cents / 100.0)
+              td.py-2.pr-3.text-right.tabular-nums = number_to_currency(report.displayed_net_cents / 100.0)
+              td.py-2
+                = report.status_label
+                - if report.settled_on.present?
+                  = " le #{l(report.settled_on, format: :short)}"
+
+section.portal-block
+  .portal-block__head
+    h2.portal-section-title Mon contrat
+  p
+    | Commission des 4 Sources :
+    strong = " #{@consignor.commission_percent} %"
+    | . Règlement :
+    strong = " #{@consignor.settlement_mode_label.downcase}"
+    | .
 
 .portal-signoff
   span.portal-hand à bientôt sous les arbres !

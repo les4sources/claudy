@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_22_040000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_23_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -632,6 +632,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_040000) do
     t.bigint "purchase_invoice_id"
     t.datetime "requested_at"
     t.date "settled_on"
+    t.string "sheet_numbers"
     t.string "status", default: "requested", null: false
     t.string "token", null: false
     t.datetime "updated_at", null: false

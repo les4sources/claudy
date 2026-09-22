@@ -1,0 +1,10 @@
+- content_for :meta_title do
+  | Nouveau produit
+
+.portal-header
+  div
+    h1.portal-title Nouveau produit
+  .portal-header__actions
+    = link_to "← Mes produits", portal_consignor_products_path, class: "portal-link-muted"
+
+= render "form", product: @product, price_euros: @price_euros
