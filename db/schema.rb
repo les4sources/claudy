@@ -1741,6 +1741,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_040000) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "sales_invoice_sources", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "sales_invoice_id", null: false
+    t.bigint "source_id", null: false
+    t.string "source_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sales_invoice_id"], name: "index_sales_invoice_sources_on_sales_invoice_id"
+    t.index ["source_type", "source_id"], name: "index_sales_invoice_sources_on_source"
+    t.index ["source_type", "source_id"], name: "index_sales_invoice_sources_on_source_uniqueness", unique: true
+  end
+
+  create_table "sales_invoices", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "customer_id"
+    t.datetime "deleted_at"
+    t.date "issued_on", null: false
+    t.bigint "legal_entity_id", null: false
+    t.text "notes"
+    t.string "number", null: false
+    t.date "paid_on"
+    t.string "status", default: "issued", null: false
+    t.bigint "total_cents", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_sales_invoices_on_customer_id"
+    t.index ["deleted_at"], name: "index_sales_invoices_on_deleted_at"
+    t.index ["legal_entity_id", "number"], name: "index_sales_invoices_on_legal_entity_id_and_number", unique: true
+    t.index ["legal_entity_id"], name: "index_sales_invoices_on_legal_entity_id"
+    t.index ["status"], name: "index_sales_invoices_on_status"
+  end
+
   create_table "sent_emails", force: :cascade do |t|
     t.text "body_html"
     t.text "body_text"
@@ -2285,6 +2315,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_040000) do
   add_foreign_key "revenue_share_statement_lines", "revenue_share_statement_lines", column: "origin_line_id"
   add_foreign_key "revenue_share_statement_lines", "revenue_share_statements"
   add_foreign_key "revenue_share_statements", "revenue_share_agreements"
+  add_foreign_key "sales_invoice_sources", "sales_invoices"
+  add_foreign_key "sales_invoices", "customers"
+  add_foreign_key "sales_invoices", "legal_entities"
   add_foreign_key "sent_emails", "customers"
   add_foreign_key "services", "humans"
   add_foreign_key "space_bookings", "events"

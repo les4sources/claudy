@@ -8,7 +8,8 @@ module Finance
   class CashEntriesController < Finance::AccountingBaseController
     before_action :get_entry,
                   only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate, :payout,
-                         :pay_invoice, :pay_expense_report, :reconcile_payout, :settle]
+                         :pay_invoice, :pay_expense_report, :reconcile_payout, :collect_sales_invoice,
+                         :settle]
     breadcrumb "Trésorerie", :finance_cash_entries_path, match: :exact
 
     # Le journal se lit, il ne se travaille pas ligne à ligne : ses pages sont
@@ -115,6 +116,10 @@ module Finance
       # dont le montant et la date correspondent à un versement pas encore
       # rapproché. Les versements sont chargés UNE fois pour la page.
       @stripe_matches = Finance::MatchStripePayouts.new.for_entries(@entries)
+      # Les factures de VENTE (epic #240, phase 6) : une ligne ENTRANTE du
+      # montant exact d'une facture émise, ou venant de l'IBAN déjà appris pour
+      # ce client. Les factures sont chargées UNE fois pour la page.
+      @sales_invoice_matches = Finance::MatchSalesInvoices.new.for_entries(@entries)
       # Les règlements des habitants (issue #349) : le miroir des virements
       # ci-dessus. Une ligne ENTRANTE peut éteindre la dette d'un ménage ou
       # d'une personne. Les soldes débiteurs sont chargés UNE fois pour la page.
@@ -286,6 +291,29 @@ module Finance
            Finance::VentilateStripePayout::MissingMapping,
            Accounting::PostCashEntry::NotFullyAllocated,
            ActiveRecord::RecordNotFound, ActiveRecord::RecordInvalid => e
+      redirect_to finance_cash_entry_path(@entry), alert: e.message
+    end
+
+    # Encaisser une facture de vente depuis une ligne entrante (epic #240,
+    # phase 6). La ventilation en recettes est celle d'aujourd'hui — seul le
+    # `document` des allocations change, et c'est lui qui fait passer la facture
+    # en « payée ». AUCUNE écriture de vente n'est générée (décision 8).
+    def collect_sales_invoice
+      facture = SalesInvoice.find(params[:sales_invoice_id])
+      lignes = Finance::RecordSalesInvoicePayment.new(
+        sales_invoice: facture, cash_entry: @entry, whodunnit: current_user&.email
+      ).run!
+
+      redirect_to finance_unallocated_cash_entries_path,
+                  notice: "Facture #{facture.number} encaissée — #{lignes.size} ligne(s) de recette, " \
+                          "l'IBAN est mémorisé pour ce client."
+    rescue Finance::RecordSalesInvoicePayment::WrongDirection,
+           Finance::RecordSalesInvoicePayment::AlreadyPaid,
+           Finance::RecordSalesInvoicePayment::NoVentilableSource,
+           Finance::VentilateStay::EmptyQuote, Finance::VentilateStay::MissingMapping,
+           Accounting::PostCashEntry::NotFullyAllocated,
+           Accounting::PostDocument::MissingFiscalYear,
+           ActiveRecord::RecordInvalid => e
       redirect_to finance_cash_entry_path(@entry), alert: e.message
     end
 

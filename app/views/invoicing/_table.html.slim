@@ -48,7 +48,17 @@
             - else
               span.font-medium.text-gray-900 = humanized_money_with_symbol(Money.new(line.price_cents))
           td.px-3.py-2.text-sm.text-right.whitespace-nowrap
-            = button_to action_label,
+            /  « Enregistrer la facture » (epic #240, phase 6) remplace le
+               simple marquage : on garde le numéro, la date, le montant et le
+               PDF plutôt qu'une case cochée. Le geste POSE quand même
+               `invoice_status = "sent"`, donc la file, son historique et ses
+               compteurs ne changent pas d'un pouce.
+            - if !muted && SalesInvoiceSource::SOURCE_TYPES.include?(Invoicing::Queue.model_for(line.kind).name)
+              = link_to "Enregistrer la facture",
+                        new_finance_sales_invoice_path(kind: line.kind, source_id: line.id),
+                        class: "inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-indigo-700"
+            - else
+              = button_to action_label,
                         invoicing_status_path(kind: line.kind, id: line.id),
                         method: :patch,
                         params: { invoice_status: action_status },

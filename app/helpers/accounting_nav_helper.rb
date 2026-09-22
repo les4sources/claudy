@@ -41,6 +41,12 @@ module AccountingNavHelper
         ["À payer", finance_payables_path, %w[finance/payables]],
         ["Tiers", finance_third_parties_path, %w[finance/third_parties]]
       ]],
+      # Le miroir de « Fournisseurs » (epic #240, phase 6) : le registre des
+      # factures qu'on ÉMET. Son propre menu plutôt qu'une entrée glissée chez
+      # les fournisseurs — on n'y vient pas pour la même question.
+      ["Clients", "clients", [
+        ["Ventes", finance_sales_invoices_path, %w[finance/sales_invoices]]
+      ]],
       ["Reversements", "reversements", [
         ["Notes de frais", finance_expense_reports_path, %w[finance/expense_reports]],
         ["Porteurs", finance_carrier_statements_path, %w[finance/carrier_statements]],
