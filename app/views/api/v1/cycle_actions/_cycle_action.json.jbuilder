@@ -25,3 +25,5 @@ json.cycle_id cycle_action.cycle_id
 json.outcome cycle_action.outcome
 json.deferred_from_id cycle_action.deferred_from_id
 json.deferral_count cycle_action.deferral_count
+# Copie au cycle suivant (epic #330, phase 4) — exposée en LECTURE seule.
+json.copied_from_id cycle_action.copied_from_id
