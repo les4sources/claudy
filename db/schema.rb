@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_22_040000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_23_030100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1326,6 +1326,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_040000) do
     t.index ["key"], name: "index_map_base_layers_on_key", unique: true
   end
 
+  create_table "map_features", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.jsonb "description_i18n", default: {}, null: false
+    t.string "feature_kind", null: false
+    t.jsonb "geometry", null: false
+    t.bigint "linked_id"
+    t.string "linked_type"
+    t.bigint "map_layer_id", null: false
+    t.jsonb "name_i18n", default: {}, null: false
+    t.integer "position", default: 0, null: false
+    t.jsonb "properties", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_map_features_on_created_by_id"
+    t.index ["deleted_at"], name: "index_map_features_on_deleted_at"
+    t.index ["feature_kind"], name: "index_map_features_on_feature_kind"
+    t.index ["linked_type", "linked_id"], name: "index_map_features_on_linked"
+    t.index ["map_layer_id"], name: "index_map_features_on_map_layer_id"
+  end
+
+  create_table "map_layers", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.string "kind", null: false
+    t.string "name", null: false
+    t.integer "position", default: 0, null: false
+    t.jsonb "settings", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_map_layers_on_created_by_id"
+    t.index ["deleted_at"], name: "index_map_layers_on_deleted_at"
+    t.index ["kind"], name: "index_map_layers_on_kind"
+  end
+
   create_table "meal_orders", force: :cascade do |t|
     t.datetime "bread_reminder_sent_at"
     t.text "cancellation_reason"
@@ -2279,6 +2314,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_040000) do
   add_foreign_key "lodging_compositions", "lodgings", column: "composite_lodging_id"
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"
+  add_foreign_key "map_features", "map_layers"
+  add_foreign_key "map_features", "users", column: "created_by_id"
+  add_foreign_key "map_layers", "users", column: "created_by_id"
   add_foreign_key "meal_orders", "humans", column: "responsible_human_id"
   add_foreign_key "meal_orders", "stays"
   add_foreign_key "member_accounts", "households"

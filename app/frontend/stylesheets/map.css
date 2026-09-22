@@ -1,0 +1,19 @@
+/* La carte du domaine (epic #348, phase 2). Les libellés des objets sont des
+   tooltips Leaflet permanents : sobres, lisibles sur l'ortho, et masqués sous
+   le zoom 18 (classe posée par map_controller.js). */
+.map-feature-label {
+  background: rgba(255, 255, 255, 0.85);
+  border: none;
+  border-radius: 9999px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  color: #0b3d3a;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.1rem 0.5rem;
+}
+.map-feature-label::before {
+  display: none;
+}
+.map-labels-hidden .map-feature-label {
+  display: none;
+}
