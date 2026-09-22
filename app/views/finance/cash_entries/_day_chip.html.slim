@@ -1,0 +1,15 @@
+/  La date, une seule fois par journée, en pastille calendrier (Michael,
+   2026-09-20). Elle était répétée sur chaque ligne, noyée dans une ligne grise
+   avec le compte et la contrepartie ; on la relisait dix fois sans jamais la
+   voir. Sortie à gauche du groupe, elle devient un repère qu'on ne relit plus.
+
+   Le mois en abrégé, sans le point que met la locale française : en petites
+   capitales espacées, « SEPT. » traîne un point qui ne dit rien.
+- mois = l(date, format: "%b").to_s.delete_suffix(".")
+.flex-shrink-0.flex.flex-col.items-center.gap-2(style="width: 76px")
+  .overflow-hidden.rounded-2xl.border.border-gray-200.bg-white.shadow-sm(style="width: 68px")
+    .bg-4s-main(style="height: 5px")
+    .flex.flex-col.items-center.gap-px(style="padding: 9px 0 11px")
+      .font-averia.font-bold.leading-none.text-gray-900(style="font-size: 30px")= date.day
+      .font-semibold.uppercase.text-gray-500(style="font-size: 11.5px; letter-spacing: 0.07em")= mois
+  .text-gray-500(style="font-size: 11px")= l(date, format: "%A")

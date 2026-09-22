@@ -112,4 +112,48 @@ RSpec.describe CashEntry do
     expect(entry.journal).to eq("bank")
     expect(build_cash_entry(caisse).journal).to eq("cash")
   end
+  # La recherche du journal : on cherche une ligne par ce qu'on en retient, et
+  # ce qu'on retient n'est pas toujours dans la même colonne.
+  describe ".matching" do
+    let!(:epicerie) do
+      CashEntry.create!(cash_account: cash_account, entry_date: Date.new(2026, 8, 17),
+                        amount_cents: 20_089, label: "Vanhamme — Épicerie",
+                        communication: "Épicerie", counterparty_name: "Vanhamme - de Tiege")
+    end
+    let!(:bar) do
+      CashEntry.create!(cash_account: cash_account, entry_date: Date.new(2026, 8, 27),
+                        amount_cents: 1_400, label: "Frennet — Bar",
+                        communication: "Bar", counterparty_name: "Frennet - Deheneffe")
+    end
+
+    it "trouve par la communication, sans accents ni casse" do
+      expect(CashEntry.matching("epicerie")).to contain_exactly(epicerie)
+      expect(CashEntry.matching("ÉPICERIE")).to contain_exactly(epicerie)
+    end
+
+    it "trouve par la contrepartie" do
+      expect(CashEntry.matching("frennet")).to contain_exactly(bar)
+    end
+
+    it "trouve par le libellé" do
+      expect(CashEntry.matching("vanhamme")).to contain_exactly(epicerie)
+    end
+
+    it "ne rend rien quand rien ne correspond" do
+      expect(CashEntry.matching("zzzintrouvable")).to be_empty
+    end
+
+    # Le terme vient d'un champ de formulaire : un `%` tapé par erreur ne doit
+    # pas se transformer en joker qui rend tout le journal.
+    it "échappe les jokers SQL" do
+      expect(CashEntry.matching("%")).to be_empty
+    end
+
+    it "supporte une ligne sans communication ni contrepartie" do
+      nue = CashEntry.create!(cash_account: cash_account, entry_date: Date.new(2026, 8, 1),
+                              amount_cents: 500, label: "Régularisation caisse")
+      expect(CashEntry.matching("regularisation")).to contain_exactly(nue)
+    end
+  end
+
 end

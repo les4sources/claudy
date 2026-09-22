@@ -56,6 +56,41 @@ class LegalEntity < ApplicationRecord
   def form_label = FORM_LABELS.fetch(form, form)
   def vat_regime_label = VAT_REGIME_LABELS.fetch(vat_regime, vat_regime)
 
+  # Ce qui empêche la suppression, nommé et compté — pas une catégorie.
+  #
+  # « Cette entité porte des exercices ou des écritures » est littéralement vrai
+  # d'une entité qui ne porte qu'un exercice VIDE, et envoie pourtant
+  # l'utilisateur désactiver là où supprimer l'exercice aurait suffi. Compter
+  # chaque cause séparément est ce qui permet au refus de dire quoi aller
+  # regarder.
+  def deletion_blockers
+    {
+      fiscal_years: fiscal_years.count,
+      cash_accounts: cash_accounts.count,
+      journal_entries: journal_entries.count
+    }.reject { |_kind, count| count.zero? }
+  end
+
+  def deletable? = deletion_blockers.empty?
+
+  # Les exercices que la page des exercices accepte déjà de supprimer : ouverts
+  # et sans écriture. La condition est recopiée d'elle — si elle change là-bas,
+  # les deux doivent bouger ensemble, sinon le refus promet un bouton absent.
+  def removable_fiscal_years
+    fiscal_years.reject { |year| year.closed? || year.journal_entries.any? }
+  end
+
+  def closed_fiscal_years = fiscal_years.select(&:closed?)
+
+  # Le seul obstacle tient-il à des exercices vides ? Alors la désactivation est
+  # le mauvais conseil : trois clics suffisent à supprimer pour de bon.
+  def blocked_only_by_empty_fiscal_years?
+    return false if deletable?
+    return false if cash_accounts.exists? || journal_entries.exists?
+
+    removable_fiscal_years.size == fiscal_years.size
+  end
+
   # L'exercice qui contient une date. C'est par lui que passe toute écriture :
   # sans exercice ouvert, on ne comptabilise pas — on le dit, plutôt que de
   # ranger l'écriture dans un exercice arbitraire.

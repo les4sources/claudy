@@ -93,11 +93,12 @@ Rails.application.routes.draw do
   resources :comments, only: %i[create update destroy]
 
   # Centre de notifications (epic #242, phase 2). `show` est le point d'entrée
-  # de TOUS les liens (cloche, email) : il marque la notification lue puis
-  # redirige vers l'objet — une seule mécanique, jamais dupliquée.
+  # de TOUS les liens (colonne du tableau de bord, email) : il marque la
+  # notification lue puis redirige vers l'objet — une seule mécanique, jamais
+  # dupliquée. Plus de route `bell` depuis le 2026-09-20 : la cloche a quitté la
+  # barre du haut, les notifications se rendent avec le tableau de bord.
   resources :notifications, only: %i[index show] do
     collection do
-      get :bell
       post :read_all
       patch :preferences
     end
@@ -191,6 +192,11 @@ Rails.application.routes.draw do
         # Devise comme le reste : tous les habitants ont un accès Claudy, une
         # porte publique par jeton n'achèterait rien de plus.
         get :retrospective
+        # Le détail d'un poste encore dû, ouvert en fenêtre au clic sur son
+        # montant (Michael, 2026-09-20) : « Bar 273,09 € » ne dit pas ce qu'on
+        # a bu. Le poste est dans l'URL parce que la fenêtre doit être un lien
+        # partageable et rechargeable, pas un état de page.
+        get "poste/:flow", action: :poste, as: :poste
       end
       resources :entries, only: [:create, :destroy], controller: "account_entries"
       resources :settlements, only: [:create]
@@ -344,6 +350,9 @@ Rails.application.routes.draw do
         # Rapprocher une ligne bancaire entrante de son versement Stripe
         # (epic #250, phase 2).
         post :reconcile_payout
+        # Éteindre la dette d'un habitant depuis une ligne ENTRANTE (issue
+        # #349) : le miroir de `payout`.
+        post :settle
       end
       resources :allocations, only: [:create, :destroy], controller: "cash_allocations"
     end
@@ -634,6 +643,9 @@ Rails.application.routes.draw do
   post   "portail/connexion",    to: "portal/sessions#create",       as: :portal_login
   delete "portail/deconnexion",  to: "portal/sessions#destroy",      as: :portal_logout
   get    "portail/sejours",      to: "portal/stays#index",           as: :portal_stays
+  # Espace artisan en dépôt-vente (epic #359, phase 1) — cloisonné du contexte
+  # client : un artisan connecté n'atteint ni les séjours ni le coworking.
+  get    "portail/depot-vente",  to: "portal/consignments#show",     as: :portal_consignments
 
   # Coworking (epic #126, Phase 3) — solde, achat de packs (Stripe Checkout) et
   # réservation/annulation de journées, en self-service.
@@ -775,6 +787,13 @@ Rails.application.routes.draw do
       resources :paper_sheets, only: [:index, :show, :create, :update] do
         member { post :encode }
       end
+
+      # Configuration du rapprochement assisté (#183, epic #243). Ouvert en
+      # écriture parce qu'un agent doit pouvoir poser lui-même ses règles ; PAS
+      # l'acceptation des suggestions, qui comptabilise et reste devant un
+      # humain. Une règle propose, elle ne décide jamais.
+      resources :allocation_rules, only: [:index, :show, :create, :update, :destroy]
+      resources :cash_motifs, only: [:index, :show, :create, :update]
     end
   end
 

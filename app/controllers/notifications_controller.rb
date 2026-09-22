@@ -1,30 +1,19 @@
 # Le centre de notifications (epic #242, phase 2).
 #
-# `show` est le point d'entrée de TOUS les liens — la cloche, la page, l'email :
-# il marque la notification lue, puis redirige vers l'objet. Une seule mécanique
-# « lu + atterrissage », jamais recopiée ailleurs.
+# `show` est le point d'entrée de TOUS les liens — la colonne du tableau de bord,
+# la page, l'email : il marque la notification lue, puis redirige vers l'objet.
+# Une seule mécanique « lu + atterrissage », jamais recopiée ailleurs.
 #
 # Un utilisateur ne voit QUE ses notifications : toutes les lectures partent de
 # `current_user.notifications`, jamais de `Notification.find`.
 class NotificationsController < BaseController
   PER_PAGE = 30
-  # Le menu déroulant de la cloche en montre dix — au-delà, « Tout voir ».
-  MENU_SIZE = 10
 
   breadcrumb "Notifications", :notifications_path, match: :exact
 
   def index
     @notifications = scope.newest_first.paginate(page: params[:page], per_page: PER_PAGE)
     @unread_count  = scope.unread.count
-  end
-
-  # Le fragment de la cloche, rechargé par son Turbo Frame à chaque navigation.
-  # Rendu sans layout : il ne vaut que par son contenu.
-  def bell
-    @unread_count  = scope.unread.count
-    @notifications = scope.newest_first.limit(MENU_SIZE)
-
-    render :bell, layout: false
   end
 
   def show

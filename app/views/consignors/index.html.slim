@@ -45,6 +45,9 @@
                 span.inline-flex.items-center.rounded-full.bg-green-100.px-2.py-0.5.text-xs.font-medium.text-green-800 Actif
               - else
                 span.inline-flex.items-center.rounded-full.bg-gray-100.px-2.py-0.5.text-xs.font-medium.text-gray-500 Inactif
+              - if consignor.portal_enabled?
+                .mt-1
+                  span.inline-flex.items-center.rounded-full.bg-violet-100.px-2.py-0.5.text-xs.font-medium.text-violet-800 Espace artisan
             td.px-4.py-3.text-right.whitespace-nowrap
               .flex.items-center.justify-end.gap-2
                 = link_to "Modifier", edit_consignor_path(consignor), class: "text-xs font-medium text-gray-700 hover:underline"

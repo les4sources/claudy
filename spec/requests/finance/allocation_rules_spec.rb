@@ -47,7 +47,7 @@ RSpec.describe "Finances > Rapprochement assisté", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to match(/Règles d(?:&#39;|')affectation/)
-      expect(response.body).to match(%r{<a[^>]+class="[^"]*bg-teal-50 font-medium[^"]*"[^>]*href="#{Regexp.escape(finance_allocation_rules_path)}"|<a[^>]+href="#{Regexp.escape(finance_allocation_rules_path)}"[^>]*class="[^"]*bg-teal-50 font-medium[^"]*"})
+      expect(response.body).to match(%r{<a[^>]+class="[^"]*bg-teal-100 font-medium[^"]*"[^>]*href="#{Regexp.escape(finance_allocation_rules_path)}"|<a[^>]+href="#{Regexp.escape(finance_allocation_rules_path)}"[^>]*class="[^"]*bg-teal-100 font-medium[^"]*"})
     end
   end
 

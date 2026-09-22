@@ -28,9 +28,28 @@ module Finance
           next unless du.positive?
 
           Row.new(member_account: compte, human: compte.human, due_cents: du,
-                  iban: compte.human&.iban, iban_holder: compte.human&.iban_holder)
+                  iban: iban_de(compte.human), iban_holder: compte.human&.iban_holder)
         end
       end
+    end
+
+    # Un IBAN qu'on n'arrive pas à déchiffrer vaut « pas d'IBAN ».
+    #
+    # Les IBAN sont chiffrés au repos avec les clés de l'environnement. Une
+    # copie locale de la base de production porte donc des IBAN illisibles —
+    # les clés de développement sont fixes et publiques, exprès. Sans ce
+    # filet, `bin/sync-production-database` rendait la file « À affecter »
+    # entièrement inaccessible en local, sur une erreur de déchiffrement qui ne
+    # disait pas son nom.
+    #
+    # Le rattrapage ne masque rien d'important : ici l'IBAN sert à PROPOSER un
+    # rapprochement, et une ligne sans IBAN se propose quand même sur le
+    # montant. Le compte apparaît alors comme « sans IBAN », ce que cet écran
+    # sait déjà montrer.
+    def iban_de(human)
+      human&.iban
+    rescue ActiveRecord::Encryption::Errors::Decryption
+      nil
     end
 
     def total_cents = rows.sum(&:due_cents)

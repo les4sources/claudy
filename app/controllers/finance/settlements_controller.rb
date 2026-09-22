@@ -12,6 +12,9 @@ module Finance
         received_channel: params.dig(:settlement, :received_channel).presence || "bank",
         reference: params.dig(:settlement, :reference),
         notes: params.dig(:settlement, :notes),
+        # Le POSTE que ce règlement éteint. Sans lui, il tombe dans « Divers »
+        # et n'apure rien de ce que le foyer croyait payer.
+        flow: params.dig(:settlement, :flow),
         whodunnit: current_user&.email
       ).run
 

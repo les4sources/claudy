@@ -6,7 +6,12 @@ module Finance
     breadcrumb "Exercices", :finance_fiscal_years_path, match: :exact
 
     def index
+      # Le refus de supprimer une entité pointe ici avec `legal_entity_id` : on
+      # arrive devant ses exercices à elle, pas devant la liste entière à
+      # chercher lesquels la concernent.
+      @entity_filter = LegalEntity.find_by(id: params[:legal_entity_id])
       @years = FiscalYear.includes(:legal_entity, :journal_entries).ordered
+      @years = @years.where(legal_entity_id: @entity_filter.id) if @entity_filter
     end
 
     def new

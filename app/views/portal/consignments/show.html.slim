@@ -1,0 +1,39 @@
+- content_for :meta_title do
+  | Mon dépôt-vente
+
+.portal-header
+  div
+    h1.portal-title Mon dépôt-vente
+    p.portal-header__name = @consignor.name
+  .portal-header__actions
+    = button_to "Me déconnecter", portal_logout_path, method: :delete, class: "portal-link-muted"
+
+section.portal-block
+  .portal-block__head
+    h2.portal-section-title Mon contrat
+  .portal-stack
+    p
+      | Commission des 4 Sources :
+      strong = " #{@consignor.commission_percent} %"
+      | . Règlement :
+      strong = " #{@consignor.settlement_mode_label.downcase}"
+      | .
+    - if @last_report.present?
+      p
+        | Dernier relevé :
+        strong = " #{@last_report.period_label}"
+        = " — #{@last_report.status_label}."
+    - else
+      p Aucun relevé pour l'instant.
+
+section.portal-block
+  .portal-block__head
+    h2.portal-section-title Ce qui arrive ici
+  .portal-stack
+    p
+      | Vos produits et vos prix, l'encodage de vos feuilles de vente et l'impression de votre feuille avec votre QR de paiement arrivent prochainement dans cet espace.
+    p
+      | En attendant, déclarez vos ventes du mois par le lien que nous vous envoyons par email.
+
+.portal-signoff
+  span.portal-hand à bientôt sous les arbres !

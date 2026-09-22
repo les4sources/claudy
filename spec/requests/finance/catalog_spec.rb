@@ -183,6 +183,46 @@ RSpec.describe "Finances > Catalogue", type: :request do
     end
   end
 
+  # Epic #359, phase 1 — le canal « Artisanat » et son artisan.
+  describe "un article d'artisanat" do
+    let!(:eline) { Consignor.create!(name: "Eline", settlement_mode: "invoice") }
+
+    it "offre les cinq canaux et le sélecteur d'artisan au formulaire" do
+      get new_finance_catalog_path
+
+      expect(response.body).to include("Artisanat", "Pain")
+      expect(response.body).to include("catalog_item_consignor_id")
+      expect(response.body).to include("Eline")
+    end
+
+    it "se crée rattaché à son artisan" do
+      post finance_catalog_index_path,
+           params: { catalog_item: { name: "Savon", channel: "craft", unit: "piece", consignor_id: eline.id } }
+
+      article = CatalogItem.find_by(name: "Savon")
+      expect(article.consignor).to eq(eline)
+      expect(response).to redirect_to(finance_catalog_path(article))
+    end
+
+    it "refuse un article d'artisanat sans artisan, et le dit" do
+      post finance_catalog_index_path,
+           params: { catalog_item: { name: "Savon", channel: "craft", unit: "piece" } }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(CatalogItem.find_by(name: "Savon")).to be_nil
+    end
+
+    it "montre l'artisan sur la liste et sur la fiche" do
+      article = CatalogItem.create!(name: "Savon", channel: "craft", unit: "piece", consignor: eline)
+
+      get finance_catalog_index_path(channel: "craft")
+      expect(response.body).to include("Eline")
+
+      get finance_catalog_path(article)
+      expect(response.body).to include("Eline", "commission 20 %")
+    end
+  end
+
   describe "sans authentification" do
     it "redirige vers la connexion" do
       sign_out user

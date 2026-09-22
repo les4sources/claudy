@@ -1,6 +1,39 @@
 require "rails_helper"
 
 # Epic #248, phase 1 — l'artisan déposant et son contrat.
+# == Schema Information
+#
+# Table name: consignors
+#
+#  id                 :bigint           not null, primary key
+#  active             :boolean          default(TRUE), not null
+#  commission_percent :integer          default(20), not null
+#  deleted_at         :datetime
+#  email              :string
+#  ends_on            :date
+#  iban               :text
+#  name               :string           not null
+#  notes              :text
+#  portal_enabled     :boolean          default(FALSE), not null
+#  settlement_mode    :string           default("transfer"), not null
+#  starts_on          :date
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  human_id           :bigint
+#  third_party_id     :bigint
+#
+# Indexes
+#
+#  index_consignors_on_active          (active)
+#  index_consignors_on_deleted_at      (deleted_at)
+#  index_consignors_on_human_id        (human_id)
+#  index_consignors_on_third_party_id  (third_party_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (human_id => humans.id)
+#  fk_rails_...  (third_party_id => third_parties.id)
+#
 RSpec.describe Consignor do
   def build_consignor(**attrs)
     described_class.new({ name: "Eline", settlement_mode: "invoice" }.merge(attrs))
@@ -108,6 +141,56 @@ RSpec.describe Consignor do
 
       expect(consignor.name).to eq("Atelier Eline")
       expect(consignor.email).to eq("atelier@example.com")
+    end
+  end
+
+  # Epic #359, phase 1 — la porte de l'espace artisan.
+  describe "l'accès à l'espace artisan" do
+    it "est fermé par défaut" do
+      expect(described_class.new).not_to be_portal_enabled
+    end
+
+    it "exige un email quand on l'ouvre" do
+      consignor = build_consignor(portal_enabled: true, email: nil)
+
+      expect(consignor).not_to be_valid
+      expect(consignor.errors[:email].join).to include("espace artisan")
+    end
+
+    it "refuse deux artisans ouverts sur la même adresse, quelle que soit la casse" do
+      described_class.create!(name: "Eline", settlement_mode: "invoice",
+                              email: "eline@example.com", portal_enabled: true)
+      doublon = build_consignor(name: "Éline bis", portal_enabled: true, email: "ELINE@example.com")
+
+      expect(doublon).not_to be_valid
+      expect(doublon.errors[:email].join).to include("déjà utilisé")
+    end
+
+    describe ".for_portal_email" do
+      let!(:consignor) do
+        described_class.create!(name: "Eline", settlement_mode: "invoice",
+                                email: "Eline@Example.com", portal_enabled: true)
+      end
+
+      it "retrouve l'artisan sans tenir compte de la casse ni des espaces" do
+        expect(described_class.for_portal_email("  eline@example.com ")).to eq(consignor)
+      end
+
+      it "ignore un artisan dont l'espace n'est pas ouvert" do
+        consignor.update!(portal_enabled: false)
+
+        expect(described_class.for_portal_email("eline@example.com")).to be_nil
+      end
+
+      it "ignore un artisan dont le contrat est désactivé" do
+        consignor.update!(active: false)
+
+        expect(described_class.for_portal_email("eline@example.com")).to be_nil
+      end
+
+      it "ignore une adresse vide" do
+        expect(described_class.for_portal_email("")).to be_nil
+      end
     end
   end
 
