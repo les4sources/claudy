@@ -4,7 +4,7 @@ require "rails_helper"
 RSpec.describe Finance::SeedCashMotifs do
   def seed_referentiel
     LegalEntity.create!(name: described_class::DEFAULT_ENTITY, form: "foundation", vat_regime: "exempt")
-    %w[570000 580000 440000 610000 700000 700200 700300].each do |code|
+    %w[570000 580000 440000 610000 700000 700200 700300 701002].each do |code|
       GeneralAccount.create!(code: code, name: "Compte #{code}",
                              klass: code[0].to_i, nature: GeneralAccount.nature_from(code))
     end
@@ -19,6 +19,16 @@ RSpec.describe Finance::SeedCashMotifs do
     expect(CashMotif.pluck(:label)).to include("Bar", "Épicerie", "Cellier", "Dépôt en banque",
                                                "Retrait bancaire", "Facture payée en espèces")
     expect(result.missing_accounts).to be_empty
+  end
+
+  # Décision 14 de l'epic #359 : l'épicerie sort du fourre-tout « Bar et cellier ».
+  it "envoie l'épicerie sur son propre compte de produit" do
+    seed_referentiel
+
+    described_class.new.run
+
+    expect(CashMotif.find_by(label: "Épicerie").general_account.code).to eq("701002")
+    expect(CashMotif.find_by(label: "Bar").general_account.code).to eq("700300")
   end
 
   it "range les motifs dans l'ordre de la liste, du plus fréquent au plus rare" do

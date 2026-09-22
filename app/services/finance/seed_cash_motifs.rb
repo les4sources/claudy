@@ -19,7 +19,9 @@ module Finance
     # fréquent au plus rare.
     MOTIFS = [
       ["Bar",                                  "in",  "700300"],
-      ["Épicerie",                             "in",  "700300"],
+      # Décision 14 de l'epic #359 : l'épicerie a son compte de produit, elle ne
+      # retombe plus dans le fourre-tout « Bar et cellier ».
+      ["Épicerie",                             "in",  "701002"],
       ["Cellier",                              "in",  "700300"],
       ["Hébergement camping",                  "in",  "700000"],
       ["Pains marché",                         "in",  "700200"],

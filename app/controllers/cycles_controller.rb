@@ -1,8 +1,7 @@
 class CyclesController < BaseController
   before_action :get_cycle, only: [:show, :edit, :update, :destroy, :closing, :close]
 
-  breadcrumb "Organisation", :organisation_path, match: :exact
-  breadcrumb "Cycles", :cycles_path, match: :exact
+  breadcrumb "Cycles", :organisation_path, match: :exact
 
   def index
     @cycles = Cycle.chronological

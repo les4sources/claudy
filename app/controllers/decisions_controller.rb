@@ -1,7 +1,7 @@
 class DecisionsController < BaseController
   before_action :set_decision, only: [:show, :edit, :update, :destroy]
 
-  breadcrumb "Organisation", :organisation_path, match: :exact
+  breadcrumb "Cycles", :organisation_path, match: :exact
   breadcrumb "Registre des décisions", :organisation_decisions_path, match: :exact
 
   def index

@@ -31,6 +31,8 @@ class CatalogItemDecorator < ApplicationDecorator
     case object.channel
     when "bar" then "bg-amber-100 text-amber-800"
     when "grocery" then "bg-emerald-100 text-emerald-800"
+    when "craft" then "bg-violet-100 text-violet-800"
+    when "bread" then "bg-orange-100 text-orange-800"
     else "bg-gray-100 text-gray-700"
     end
   end

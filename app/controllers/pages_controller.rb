@@ -1,4 +1,8 @@
 class PagesController < BaseController
+  # Les dix dernières notifications suffisent à la colonne du tableau de bord ;
+  # au-delà, « Tout voir ».
+  DASHBOARD_NOTIFICATIONS = 10
+
   def calendar
     set_dates
     @calendar_view = params[:view] == "organisation" ? :organisation : :bookings
@@ -122,8 +126,15 @@ class PagesController < BaseController
   # #25. Un compte cloisonné sur ses activités (`restricted_to_experiences`)
   # n'atteint jamais cette action — `BaseController#restrict_experience_carriers`
   # le renvoie sur son planning, `pages` n'étant pas dans l'allowlist.
+  # Les notifications du COMPTE CONNECTÉ (Michael 2026-09-20) : elles ont quitté
+  # la cloche de la barre pour la colonne de droite. Elles ne suivent pas le
+  # sélecteur de membre — on regarde peut-être la journée de quelqu'un d'autre,
+  # mais les notifications restent celles de la personne connectée. Chargées
+  # AVANT la sortie anticipée : un compte sans membre les voit quand même.
   def dashboard
     @projects_view = true
+    @notifications = current_user.notifications.newest_first.limit(DASHBOARD_NOTIFICATIONS)
+    @notifications_unread_count = current_user.notifications.unread.count
     @humans = Human.all
     @human  = dashboard_human
     return if @human.nil?

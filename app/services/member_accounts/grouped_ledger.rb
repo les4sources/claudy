@@ -27,7 +27,28 @@ module MemberAccounts
         libelle_canal
       end
 
-      def libelle_canal = AccountEntry::FLOW_LABELS.fetch(flow, "Divers")
+      # Un règlement n'a PAS de canal. Un virement de 345 € n'est ni du bar ni
+      # des charges : il éteint ce qu'il trouve de plus ancien, et il peut très
+      # bien couvrir trois postes à la fois. `RecordSettlement` lui pose donc
+      # `flow: "other"`, ce qui affichait « Divers » — un mot qui n'apprend rien
+      # là où « Règlement » dit exactement ce qu'on regarde (Michael,
+      # 2026-09-20). On nomme la NATURE de l'écriture quand elle n'a pas de
+      # poste ; pour tout le reste, le canal reste le canal.
+      SANS_CANAL = %w[settlement payout reversal].freeze
+
+      def libelle_canal
+        return AccountEntry::KIND_LABELS.fetch(entree.kind) if sans_canal?
+
+        AccountEntry::FLOW_LABELS.fetch(flow, "Divers")
+      end
+
+      def sans_canal? = entries.one? && SANS_CANAL.include?(entree.kind)
+
+      # La communication du virement, telle que l'habitant l'a tapée : « Charges
+      # juin 2026 », « Bar avril ». Sans elle, une ligne « Règlement — Virement »
+      # de 345 € oblige à rouvrir l'extrait bancaire pour savoir de quoi elle
+      # parlait (Michael, 2026-09-20).
+      def communication = entries.one? ? entree.account_settlement&.reference.presence : nil
 
       def date_de_tri = entries.first.entry_date
     end

@@ -2,9 +2,14 @@
   | Mon espace client
 
 - coworking = @context == "coworking"
+- consignor = @context == "consignor"
 
 header
-  - if coworking
+  - if consignor
+    h1.portal-title Votre espace artisan
+    p.portal-lead
+      | Gérez votre dépôt-vente aux 4 Sources. Entrez l'adresse email de votre fiche d'artisan : nous vous envoyons un code à usage unique — pas de mot de passe, pas de compte à créer.
+  - elsif coworking
     h1.portal-title Votre coworking
     p.portal-lead
       | Achetez vos journées de coworking et réservez en ligne. Entrez votre adresse email : nous vous envoyons un code à usage unique — pas de mot de passe, et votre espace est créé automatiquement.
@@ -15,18 +20,22 @@ header
 
 .portal-panel
   = form_with url: portal_code_path, method: :post do
-    = hidden_field_tag :context, (coworking ? "coworking" : "stays")
+    = hidden_field_tag :context, @context
     .portal-field
       label.portal-label[for="email"] Votre adresse email
       = email_field_tag :email, @email, required: true, autofocus: true,
                         placeholder: "prenom@exemple.be", class: "portal-input"
     = submit_tag "Recevoir mon code", class: "portal-btn portal-btn--block"
 
-  .mt-5.text-center
-    - if coworking
-      = link_to "J'ai plutôt un séjour", portal_path, class: "portal-link"
-    - else
-      = link_to "Acheter du coworking", portal_path(context: "coworking"), class: "portal-link"
+  / Les trois portes du portail. Chacune mène à son propre espace, cloisonné des
+    deux autres : un artisan n'est pas un client, et l'inverse est vrai aussi.
+  .mt-5.text-center.space-y-2
+    - unless @context == "stays"
+      div = link_to "J'ai plutôt un séjour", portal_path, class: "portal-link"
+    - unless coworking
+      div = link_to "Acheter du coworking", portal_path(context: "coworking"), class: "portal-link"
+    - unless consignor
+      div = link_to "Je suis artisan en dépôt-vente", portal_path(context: "consignor"), class: "portal-link"
 
 .portal-signoff
   span.portal-hand à tout de suite sous les arbres

@@ -1,0 +1,35 @@
+/  Le détail d'un poste encore dû, ouvert au clic sur son montant depuis le
+   bloc « À régler ». Les lignes sont celles qui restent APRÈS imputation des
+   règlements : une consommation à moitié payée s'affiche pour ce qu'il en
+   reste, pas pour son prix d'origine — c'est ce qui fait que la colonne
+   s'additionne bien au total du poste.
+= render TurboModal::Component.new(title: "#{@poste.label} — #{number_to_currency(@poste.amount_cents / 100.0)}", width: :md) do
+  /  `pluralize` accorde en anglais : il rendait « 4 ligne encore dues ».
+  - pluriel = "s" if @poste.lignes.size > 1
+  p.mb-4.text-sm.text-gray-600
+    = "#{@account.name} · #{@poste.lignes.size} ligne#{pluriel} encore due#{pluriel}"
+    - if @poste.oldest_on
+      = ", depuis #{l(@poste.oldest_on, format: :ddmmyyyy)}"
+
+  .max-h-96.overflow-y-auto.rounded.border.border-gray-200
+    table.w-full.text-sm
+      thead.bg-gray-50.text-xs.uppercase.text-gray-500
+        tr
+          th.py-2.px-3.text-left[scope="col"] Date
+          th.py-2.px-3.text-left[scope="col"] Libellé
+          th.py-2.px-3.text-right[scope="col"] Montant
+      tbody
+        - @poste.lignes.each do |ligne|
+          tr.border-t.border-gray-100
+            td.py-2.px-3.whitespace-nowrap.text-gray-500= l(ligne.entry_date, format: :ddmmyyyy)
+            td.py-2.px-3.text-gray-900= ligne.label
+            td.py-2.px-3.text-right.tabular-nums.whitespace-nowrap.text-gray-900
+              = number_to_currency(ligne.amount_cents / 100.0)
+      tfoot.bg-gray-50
+        tr.border-t.border-gray-200
+          td.py-2.px-3.font-medium.text-gray-700(colspan="2") Total
+          td.py-2.px-3.text-right.font-semibold.tabular-nums.text-gray-900
+            = number_to_currency(@poste.amount_cents / 100.0)
+
+  p.mt-4.text-xs.text-gray-500
+    | Un règlement affecté à ce poste en éteint les lignes, des plus anciennes aux plus récentes. L'affectation se fait à la main depuis « À affecter » : c'est le choix du poste qui fait la valeur du rapprochement.

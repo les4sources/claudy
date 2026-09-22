@@ -36,157 +36,206 @@
       = link_to "Écrire une règle d'affectation", finance_allocation_rules_path, class: "font-medium text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
       |  évite de reclasser la même dépense chaque mois — et propose d'un coup toutes les lignes qui lui correspondent.
 
-  - @entries.each do |entry|
-    .mb-4.p-4.bg-white.rounded-lg.border.border-gray-100
-      .flex.flex-wrap.items-baseline.justify-between.gap-2.mb-3
-        div
-          = link_to entry.label, finance_cash_entry_path(entry), class: "font-medium text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
-          .text-xs.text-gray-400
-            = l(entry.entry_date, format: :short)
-            |  ·
-            = entry.cash_account.name
-            - if entry.counterparty_name.present?
-              |  ·
-              = entry.counterparty_name
-            - if entry.communication.present?
-              |  ·
-              = entry.communication
-        .text-right
-          .text-lg.font-semibold class="#{entry.incoming? ? 'text-green-700' : 'text-gray-900'}"
-            = humanized_money_with_symbol(entry.amount)
-          - if entry.allocated_cents != 0
-            .text-xs.text-amber-700
-              | reste #{humanized_money_with_symbol(Money.new(entry.remaining_cents, "EUR"))}
-      - proposition = @stay_matches[entry.id]
-      - if proposition
-        / Le DÉTAIL de la ventilation, pas seulement le total : c'est ce qui
-          permet de repérer d'un coup d'œil qu'on s'apprête à ranger une salle
-          dans l'hébergement.
-        .mb-3.p-3.rounded-lg.border.border-green-100(class="bg-green-50/60")
-          .flex.flex-wrap.items-start.justify-between.gap-3
-            div
-              p.text-sm.text-gray-800
-                strong Ce virement paie le séjour ##{proposition[:match].stay.id}
-                - if proposition[:match].stay.customer
-                  = " — #{proposition[:match].stay.customer.try(:organization_name).presence || [proposition[:match].stay.customer.first_name, proposition[:match].stay.customer.last_name].compact.join(' ')}"
-              p.mt-0.5.text-xs.text-gray-500
-                = proposition[:match].rationale
-                = " (#{proposition[:match].confidence} % de confiance)"
-              ul.mt-2.text-xs.text-gray-600
-                - proposition[:lines].each do |ligne|
-                  li
-                    = "#{ligne.general_account.code} #{RevenueMapping::CATEGORY_LABELS.fetch(ligne.category, ligne.category)} : "
-                    strong= humanized_money_with_symbol(Money.new(ligne.amount_cents, "EUR"))
-                    - if ligne.team
-                      = " · #{ligne.team.name}"
-            = button_to "Ventiler ce séjour", ventilate_finance_cash_entry_path(entry, stay_id: proposition[:match].stay.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+  /  Une journée, une pastille de date, et tous ses mouvements à sa droite
+     (Michael, 2026-09-20). La date se lisait sur CHAQUE ligne, noyée dans une
+     ligne grise avec le compte et la contrepartie : on la relisait dix fois
+     sans jamais la voir. Sortie une seule fois à gauche du groupe, elle
+     devient un repère qu'on ne relit plus.
 
-      / Un virement à un membre (epic #246, phase 2). Une ligne SORTANTE dont le
-        montant ou l'IBAN correspond au compte créditeur d'un cuisinier : accepter
-        écrit le virement sur son compte ET affecte la ligne, en un geste.
-      - payouts = @payout_matches[entry.id]
-      - if payouts.present?
-        - payouts.first(2).each do |match|
-          .mb-3.p-3.rounded-lg.border.border-purple-100(class="bg-purple-50/60")
-            .flex.flex-wrap.items-center.justify-between.gap-2
-              div
-                p.text-sm.text-gray-800
-                  strong Virement à #{match.member_account.name}
-                  = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} en sa faveur"
-                p.mt-0.5.text-xs.text-gray-500
-                  = match.reason
-                  = " (#{match.confidence} % de confiance)"
-              = button_to "Solder son compte", payout_finance_cash_entry_path(entry, member_account_id: match.member_account.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+     Le groupement porte sur la page affichée, pas sur toute la file : c'est
+     `will_paginate` qui décide de ce qui est là, et une journée coupée par une
+     fin de page reprend simplement en tête de la suivante.
+  - @entries.group_by(&:entry_date).each do |jour, mouvements|
+    .mb-6.flex.items-start.gap-5
+      = render "day_chip", date: jour
 
-      / Une facture d'achat qui attend son virement (epic #240, phase 4). Même
-        forme que le virement à un membre, juste au-dessus : c'est le même geste
-        sur une autre dette. LA PROPOSITION N'A RIEN ÉCRIT — c'est ce bouton qui
-        crée l'allocation sur le 440000 avec la facture en document.
-      - factures = @invoice_matches[entry.id]
-      - if factures.present?
-        - factures.first(2).each do |match|
-          .mb-3.p-3.rounded-lg.border.border-orange-100(class="bg-orange-50/60")
-            .flex.flex-wrap.items-center.justify-between.gap-2
-              div
-                p.text-sm.text-gray-800
-                  strong = "Paiement de #{match.invoice.payable_label}"
-                  = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus à #{match.third_party&.name}"
-                p.mt-0.5.text-xs.text-gray-500
-                  = match.reason
-                  = " (#{match.confidence} % de confiance)"
-                p.mt-0.5.text-xs
-                  = link_to "Voir la facture", finance_purchase_invoice_path(match.invoice), class: "text-blue-500 hover:text-blue-700"
-              = button_to "Payer cette facture", pay_invoice_finance_cash_entry_path(entry, purchase_invoice_id: match.invoice.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+      .flex-grow.overflow-hidden.rounded-2xl.border.border-gray-200.bg-white.shadow-sm
+        - mouvements.each_with_index do |entry, rang|
+          /  L'indice en pastille sur la ligne repliée : la meilleure piste
+             qu'on ait, dans l'ordre où elle engage de l'argent. Ce n'est qu'un
+             aperçu — la proposition entière, avec sa raison, sa confiance et
+             son bouton, est dans le détail qui s'ouvre au clic.
+          - indice = nil
+          - if (piste = @settlement_matches[entry.id]&.first)
+            - indice = "#{piste.member_account.name} · #{piste.flow_label}"
+          - elsif (piste = @payout_matches[entry.id]&.first)
+            - indice = "Virement à #{piste.member_account.name}"
+          - elsif (piste = @stay_matches[entry.id])
+            - indice = "Séjour ##{piste[:match].stay.id}"
+          - elsif (piste = @invoice_matches[entry.id]&.first)
+            - indice = piste.invoice.payable_label
+          - elsif (piste = @expense_report_matches[entry.id]&.first)
+            - indice = piste.report.payable_label
+          - elsif (piste = @stripe_matches[entry.id]&.first)
+            - indice = "Versement Stripe"
+          .border-gray-100(class=("border-t" if rang.positive?))
+            = render "entry_header", entry: entry, indice: indice
 
-      / Une note de frais ou de mission qui attend son virement (epic #241,
-        phase 3). Même forme que la facture juste au-dessus : c'est le même geste
-        sur une autre dette. LA PROPOSITION N'A RIEN ÉCRIT — c'est ce bouton qui
-        crée l'allocation sur le 440000 avec la note en document.
-      - notes = @expense_report_matches[entry.id]
-      - if notes.present?
-        - notes.first(2).each do |match|
-          .mb-3.p-3.rounded-lg.border.border-teal-100(class="bg-teal-50/60")
-            .flex.flex-wrap.items-center.justify-between.gap-2
-              div
-                p.text-sm.text-gray-800
-                  strong = "Paiement de #{match.report.payable_label}"
-                  = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus à #{match.beneficiary}"
-                p.mt-0.5.text-xs.text-gray-500
-                  = match.reason
-                  = " (#{match.confidence} % de confiance)"
-                p.mt-0.5.text-xs
-                  = link_to "Voir la note", finance_expense_report_path(match.report), class: "text-blue-500 hover:text-blue-700"
-              = button_to "Payer cette note", pay_expense_report_finance_cash_entry_path(entry, expense_report_id: match.report.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+            /  Tout ce qui engage — propositions et ventilation — vit derrière
+               le bouton. Déroulé pour les vingt lignes d'une page, ça enterre
+               la communication, qui est ce qu'on vient lire.
+            .hidden.border-t.border-gray-100.px-4.py-4(class="bg-gray-50/40" id="entry-#{entry.id}-detail")
+              - proposition = @stay_matches[entry.id]
+              - if proposition
+                / Le DÉTAIL de la ventilation, pas seulement le total : c'est ce qui
+                  permet de repérer d'un coup d'œil qu'on s'apprête à ranger une salle
+                  dans l'hébergement.
+                .mb-3.p-3.rounded-lg.border.border-green-100(class="bg-green-50/60")
+                  .flex.flex-wrap.items-start.justify-between.gap-3
+                    div
+                      p.text-sm.text-gray-800
+                        strong Ce virement paie le séjour ##{proposition[:match].stay.id}
+                        - if proposition[:match].stay.customer
+                          = " — #{proposition[:match].stay.customer.try(:organization_name).presence || [proposition[:match].stay.customer.first_name, proposition[:match].stay.customer.last_name].compact.join(' ')}"
+                      p.mt-0.5.text-xs.text-gray-500
+                        = proposition[:match].rationale
+                        = " (#{proposition[:match].confidence} % de confiance)"
+                      ul.mt-2.text-xs.text-gray-600
+                        - proposition[:lines].each do |ligne|
+                          li
+                            = "#{ligne.general_account.code} #{RevenueMapping::CATEGORY_LABELS.fetch(ligne.category, ligne.category)} : "
+                            strong= humanized_money_with_symbol(Money.new(ligne.amount_cents, "EUR"))
+                            - if ligne.team
+                              = " · #{ligne.team.name}"
+                    = button_to "Ventiler ce séjour", ventilate_finance_cash_entry_path(entry, stay_id: proposition[:match].stay.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
 
-      / Un versement Stripe (epic #250, phase 2). Une ligne bancaire ENTRANTE du
-        montant exact d'un versement, à trois jours près : c'est le rapprochement
-        qui se faisait de tête, à l'euro près, dans l'interface Stripe.
-        LA PROPOSITION N'A RIEN ÉCRIT — c'est ce bouton qui affecte : sur le
-        580000 en mode grand livre (les recettes sont déjà au journal), ou en
-        ventilation complète en mode par versement.
-      - versements = @stripe_matches[entry.id]
-      - if versements.present?
-        - versements.first(2).each do |match|
-          .mb-3.p-3.rounded-lg.border.border-sky-100(class="bg-sky-50/60")
-            .flex.flex-wrap.items-center.justify-between.gap-2
-              div
-                p.text-sm.text-gray-800
-                  strong = "Versement Stripe #{match.payout.account_label}"
-                  = " — #{humanized_money_with_symbol(Money.new(match.payout.amount_cents, 'EUR'))} arrivés le #{l(match.payout.arrival_date, format: :short)}"
-                p.text-xs.text-gray-500(class="mt-0.5")
-                  = match.reason
-                  = " (#{match.confidence} % de confiance)"
-                  = match.payout.ledger? ? " · mode grand livre : virement interne seul" : nil
-              /  En mode « par versement », le rapprochement demanderait une
-                 ventilation algébrique que `CashAllocation` refuse aujourd'hui
-                 (cf. `RecordStripePayoutReconciliation`). On le DIT plutôt que
-                 d'offrir un bouton qui échouerait.
-              - if match.payout.ledger?
-                = button_to "Rapprocher ce versement", reconcile_payout_finance_cash_entry_path(entry, stripe_payout_id: match.payout.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
-              - else
-                span.text-xs.text-gray-500 Compte en mode « par versement » : à affecter à la main.
+              / Un virement à un membre (epic #246, phase 2). Une ligne SORTANTE dont le
+                montant ou l'IBAN correspond au compte créditeur d'un cuisinier : accepter
+                écrit le virement sur son compte ET affecte la ligne, en un geste.
+              - payouts = @payout_matches[entry.id]
+              - if payouts.present?
+                - payouts.first(2).each do |match|
+                  .mb-3.p-3.rounded-lg.border.border-purple-100(class="bg-purple-50/60")
+                    .flex.flex-wrap.items-center.justify-between.gap-2
+                      div
+                        p.text-sm.text-gray-800
+                          strong Virement à #{match.member_account.name}
+                          = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} en sa faveur"
+                        p.mt-0.5.text-xs.text-gray-500
+                          = match.reason
+                          = " (#{match.confidence} % de confiance)"
+                      = button_to "Solder son compte", payout_finance_cash_entry_path(entry, member_account_id: match.member_account.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
 
-      - suggestion = entry.allocation_suggestions.pending.ordered.first
-      - if suggestion
-        / La suggestion porte TOUJOURS son motif : un humain doit pouvoir juger
-          sans rouvrir la configuration des règles.
-        .mb-3.p-3.rounded-lg.border.border-blue-100(class="bg-blue-50/60")
-          .flex.flex-wrap.items-center.justify-between.gap-2
-            div
-              p.text-sm.text-gray-800
-                strong Proposition :
-                = " #{suggestion.general_account}"
-                - if suggestion.team
-                  = " · #{suggestion.team.name}"
-                = " · #{humanized_money_with_symbol(suggestion.amount)}"
-              p.mt-0.5.text-xs.text-gray-500
-                = suggestion.rationale
-                = " (#{suggestion.source_label}, #{suggestion.confidence} % de confiance)"
-            .flex.items-center.gap-2
-              = button_to "Accepter", finance_allocation_suggestion_path(suggestion, decision: "accept"), method: :patch, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
-              = button_to "Refuser", finance_allocation_suggestion_path(suggestion, decision: "reject"), method: :patch, class: "text-xs text-gray-500 hover:text-gray-700", form: { class: "inline" }
+              / Une facture d'achat qui attend son virement (epic #240, phase 4). Même
+                forme que le virement à un membre, juste au-dessus : c'est le même geste
+                sur une autre dette. LA PROPOSITION N'A RIEN ÉCRIT — c'est ce bouton qui
+                crée l'allocation sur le 440000 avec la facture en document.
+              - factures = @invoice_matches[entry.id]
+              - if factures.present?
+                - factures.first(2).each do |match|
+                  .mb-3.p-3.rounded-lg.border.border-orange-100(class="bg-orange-50/60")
+                    .flex.flex-wrap.items-center.justify-between.gap-2
+                      div
+                        p.text-sm.text-gray-800
+                          strong = "Paiement de #{match.invoice.payable_label}"
+                          = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus à #{match.third_party&.name}"
+                        p.mt-0.5.text-xs.text-gray-500
+                          = match.reason
+                          = " (#{match.confidence} % de confiance)"
+                        p.mt-0.5.text-xs
+                          = link_to "Voir la facture", finance_purchase_invoice_path(match.invoice), class: "text-blue-500 hover:text-blue-700"
+                      = button_to "Payer cette facture", pay_invoice_finance_cash_entry_path(entry, purchase_invoice_id: match.invoice.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
 
-      = render "allocation_form", entry: entry, general_accounts: @general_accounts, teams: @teams, entities: @entities, events: @events, from_unallocated: true
+              / Une note de frais ou de mission qui attend son virement (epic #241,
+                phase 3). Même forme que la facture juste au-dessus : c'est le même geste
+                sur une autre dette. LA PROPOSITION N'A RIEN ÉCRIT — c'est ce bouton qui
+                crée l'allocation sur le 440000 avec la note en document.
+              - notes = @expense_report_matches[entry.id]
+              - if notes.present?
+                - notes.first(2).each do |match|
+                  .mb-3.p-3.rounded-lg.border.border-teal-100(class="bg-teal-50/60")
+                    .flex.flex-wrap.items-center.justify-between.gap-2
+                      div
+                        p.text-sm.text-gray-800
+                          strong = "Paiement de #{match.report.payable_label}"
+                          = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus à #{match.beneficiary}"
+                        p.mt-0.5.text-xs.text-gray-500
+                          = match.reason
+                          = " (#{match.confidence} % de confiance)"
+                        p.mt-0.5.text-xs
+                          = link_to "Voir la note", finance_expense_report_path(match.report), class: "text-blue-500 hover:text-blue-700"
+                      = button_to "Payer cette note", pay_expense_report_finance_cash_entry_path(entry, expense_report_id: match.report.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+
+              / Un versement Stripe (epic #250, phase 2). Une ligne bancaire ENTRANTE du
+                montant exact d'un versement, à trois jours près : c'est le rapprochement
+                qui se faisait de tête, à l'euro près, dans l'interface Stripe.
+                LA PROPOSITION N'A RIEN ÉCRIT — c'est ce bouton qui affecte : sur le
+                580000 en mode grand livre (les recettes sont déjà au journal), ou en
+                ventilation complète en mode par versement.
+              - versements = @stripe_matches[entry.id]
+              - if versements.present?
+                - versements.first(2).each do |match|
+                  .mb-3.p-3.rounded-lg.border.border-sky-100(class="bg-sky-50/60")
+                    .flex.flex-wrap.items-center.justify-between.gap-2
+                      div
+                        p.text-sm.text-gray-800
+                          strong = "Versement Stripe #{match.payout.account_label}"
+                          = " — #{humanized_money_with_symbol(Money.new(match.payout.amount_cents, 'EUR'))} arrivés le #{l(match.payout.arrival_date, format: :short)}"
+                        p.text-xs.text-gray-500(class="mt-0.5")
+                          = match.reason
+                          = " (#{match.confidence} % de confiance)"
+                          = match.payout.ledger? ? " · mode grand livre : virement interne seul" : nil
+                      /  En mode « par versement », le rapprochement demanderait une
+                         ventilation algébrique que `CashAllocation` refuse aujourd'hui
+                         (cf. `RecordStripePayoutReconciliation`). On le DIT plutôt que
+                         d'offrir un bouton qui échouerait.
+                      - if match.payout.ledger?
+                        = button_to "Rapprocher ce versement", reconcile_payout_finance_cash_entry_path(entry, stripe_payout_id: match.payout.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+                      - else
+                        span.text-xs.text-gray-500 Compte en mode « par versement » : à affecter à la main.
+
+              / Le règlement d'un habitant (issue #349). Une ligne ENTRANTE dont la
+                communication, l'IBAN, le nom ou le montant désigne un compte courant
+                DÉBITEUR : accepter écrit le règlement sur son compte ET affecte la
+                ligne, en un geste. C'est le miroir du virement à un membre plus haut.
+                LA PROPOSITION N'A RIEN ÉCRIT — c'est ce bouton qui enregistre.
+              - reglements = @settlement_matches[entry.id]
+              - if reglements.present?
+                - reglements.first(2).each do |match|
+                  .mb-3.p-3.rounded-lg.border.border-emerald-100(class="bg-emerald-50/60")
+                    .flex.flex-wrap.items-center.justify-between.gap-2
+                      div
+                        p.text-sm.text-gray-800
+                          strong = "Règlement de #{match.member_account.name}"
+                          = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus"
+                        p.mt-0.5.text-xs.text-gray-500
+                          = match.reason
+                          = " (#{match.confidence} % de confiance)"
+                        p.mt-0.5.text-xs
+                          = link_to "Voir le compte", finance_account_path(match.member_account), class: "text-blue-500 hover:text-blue-700"
+                      /  Le POSTE se choisit ICI, avant d'enregistrer. La proposition le
+                         présélectionne d'après la communication, mais c'est le clic
+                         humain qui tranche : depuis le lettrage par poste, un règlement
+                         rangé au mauvais endroit crée une dette imaginaire d'un côté et
+                         une avance imaginaire de l'autre.
+                      = form_with url: settle_finance_cash_entry_path(entry, member_account_id: match.member_account.id), method: :post, class: "flex items-center gap-2" do
+                        = select_tag :flow,
+                                     options_for_select(AccountEntry::FLOWS.map { |f| [AccountEntry::FLOW_LABELS.fetch(f, f), f] }, match.flow),
+                                     class: "rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                                     aria: { label: "Poste réglé" }
+                        button.inline-flex.items-center.rounded-md.border.border-transparent.px-3.py-1.5.text-xs.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90" type="submit") Enregistrer le règlement
+
+              - suggestion = entry.allocation_suggestions.pending.ordered.first
+              - if suggestion
+                / La suggestion porte TOUJOURS son motif : un humain doit pouvoir juger
+                  sans rouvrir la configuration des règles.
+                .mb-3.p-3.rounded-lg.border.border-blue-100(class="bg-blue-50/60")
+                  .flex.flex-wrap.items-center.justify-between.gap-2
+                    div
+                      p.text-sm.text-gray-800
+                        strong Proposition :
+                        = " #{suggestion.general_account}"
+                        - if suggestion.team
+                          = " · #{suggestion.team.name}"
+                        = " · #{humanized_money_with_symbol(suggestion.amount)}"
+                      p.mt-0.5.text-xs.text-gray-500
+                        = suggestion.rationale
+                        = " (#{suggestion.source_label}, #{suggestion.confidence} % de confiance)"
+                    .flex.items-center.gap-2
+                      = button_to "Accepter", finance_allocation_suggestion_path(suggestion, decision: "accept"), method: :patch, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+                      = button_to "Refuser", finance_allocation_suggestion_path(suggestion, decision: "reject"), method: :patch, class: "text-xs text-gray-500 hover:text-gray-700", form: { class: "inline" }
+
+              = render "allocation_form", entry: entry, general_accounts: @general_accounts, teams: @teams, entities: @entities, events: @events, from_unallocated: true
 
   - if @entries.total_pages > 1
     .mt-6.flex.justify-center

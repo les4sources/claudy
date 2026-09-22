@@ -1,0 +1,42 @@
+/ Les notifications, en COLONNE du tableau de bord (Michael 2026-09-20). Elles
+  vivaient dans une cloche de la barre du haut : un menu déroulant de 320 px
+  qu'il fallait ouvrir pour savoir s'il contenait quelque chose, sur toutes les
+  pages de l'application. Le tableau de bord est déjà la page « ce qui me
+  concerne aujourd'hui » — les notifications y sont à leur place, ouvertes,
+  lisibles sans un clic.
+  Locals : notifications (les 10 dernières), unread_count.
+/ `mt-6` sous `lg` : hors grille, les deux colonnes s'empilent sans gouttière —
+  le `gap-6` du parent ne s'applique qu'en mode grille.
+aside.space-y-3.mt-6(class="lg:mt-0")
+  .flex.items-center.justify-between.gap-3
+    h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-700
+      | Notifications
+      - if unread_count.positive?
+        / Le nombre est ÉCRIT, pas seulement coloré : la pastille ambre est un
+          repère, jamais le porteur de l'information.
+        span.ml-2.inline-flex.items-center.justify-center.rounded-full.bg-amber-400.px-2.text-xs.font-bold.text-4s-main(class="py-0.5")
+          = unread_count
+    - if unread_count.positive?
+      = button_to "Tout lu", read_all_notifications_path,
+                  method: :post,
+                  class: "text-xs text-4s-main hover:underline",
+                  form: { data: { turbo: false } }
+
+  - if notifications.empty?
+    .rounded-xl.border.border-gray-100.bg-white.px-4.py-6.text-center.text-sm.text-gray-500
+      | Rien pour l'instant.
+  - else
+    ul.divide-y.divide-gray-100.overflow-hidden.rounded-xl.border.border-gray-100.bg-white
+      - notifications.each do |notification|
+        li
+          = link_to notification_path(notification),
+                    data: { turbo: false },
+                    class: "block px-4 py-3 hover:bg-teal-50/60 transition-colors #{'bg-teal-50/40' unless notification.read?}" do
+            p(class="text-sm leading-snug #{notification.read? ? 'text-gray-600' : 'text-gray-900 font-semibold'}")
+              = notification.title
+            - if notification.body.present?
+              p.truncate.text-xs.text-gray-500(class="mt-0.5") = notification.body
+            p.mt-1.text-xs.text-gray-400 = "il y a #{time_ago_in_words(notification.created_at)}"
+
+  .text-right
+    = link_to "Tout voir", notifications_path, class: "text-xs text-4s-main hover:underline"

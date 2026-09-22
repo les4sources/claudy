@@ -50,4 +50,31 @@ RSpec.describe "Comptabilité — À affecter, filtré", type: :request do
     expect(response.body).to include("Virement Triodos")
     expect(response.body).to include("Vente pain Stripe")
   end
+  # Le journal Trésorerie : recherche et pagination (Michael, 2026-09-20).
+  describe "le journal" do
+    it "cherche dans la communication, la contrepartie et le libellé" do
+      ligne_banque.update!(communication: "Épicerie", counterparty_name: "Vanhamme - de Tiege")
+
+      get finance_cash_entries_path(q: "epicerie", from: "2026-01-01", to: "2026-12-31")
+
+      expect(response.body).to include("Vanhamme - de Tiege")
+      expect(response.body).not_to include("Vente pain Stripe")
+      expect(response.body).to include("pour « epicerie »")
+    end
+
+    it "le dit, et propose d'effacer, quand la recherche ne rend rien" do
+      get finance_cash_entries_path(q: "zzzintrouvable", from: "2026-01-01", to: "2026-12-31")
+
+      expect(response.body).to include("Aucune ligne ne correspond")
+      expect(response.body).to include("Effacer la recherche")
+    end
+
+    it "pagine sans toucher au compteur « à affecter », qui reste global" do
+      get finance_cash_entries_path(from: "2026-01-01", to: "2026-12-31")
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("2 lignes")
+    end
+  end
+
 end

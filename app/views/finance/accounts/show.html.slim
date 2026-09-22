@@ -65,19 +65,26 @@ div(class=panel)
       div(class="md:col-span-2")
         = label_tag "settlement[received_on]", "Reçu le", class: field_label
         = date_field_tag "settlement[received_on]", Date.current, class: field_input
+      /  Le POSTE que ce règlement éteint. Il est en tête des champs parce que
+         c'est la décision du geste : depuis le lettrage par poste, un règlement
+         sans poste tombe dans « Divers » et n'apure rien de ce que le foyer
+         croyait payer.
+      div(class="md:col-span-2")
+        = label_tag "settlement[flow]", "Poste réglé *", class: field_label
+        = select_tag "settlement[flow]", options_for_select(AccountEntry::FLOWS.map { |flow| [AccountEntry::FLOW_LABELS.fetch(flow, flow), flow] }, "charges"), class: field_input
       div(class="md:col-span-2")
         = label_tag "settlement[method]", "Moyen", class: field_label
         = select_tag "settlement[method]", options_for_select(AccountSettlement::METHODS.map { |m| [AccountSettlement::METHOD_LABELS.fetch(m), m] }), class: field_input
-      div(class="md:col-span-3")
+      div(class="md:col-span-2")
         = label_tag "settlement[received_channel]", "Reçu où", class: field_label
         = select_tag "settlement[received_channel]", options_for_select(AccountSettlement::CHANNELS.map { |c| [AccountSettlement::CHANNEL_LABELS.fetch(c), c] }), class: field_input
-      div(class="md:col-span-3")
+      div(class="md:col-span-2")
         = label_tag "settlement[reference]", "Communication", class: field_label
         = text_field_tag "settlement[reference]", nil, placeholder: @account.code, class: field_input
 
     div(class=action_row)
       p(class=action_hint)
-        | Le règlement crée une seule écriture, en faveur du compte. « Reçu où » est l'endroit où l'argent a atterri — pas forcément le compte réglé.
+        | Le règlement crée une seule écriture, en faveur du compte, et éteint le poste choisi — des lignes les plus anciennes aux plus récentes. « Reçu où » est l'endroit où l'argent a atterri, pas forcément le compte réglé.
       button(class=primary_button type="submit") Enregistrer
 
 / Ajout d'une écriture manuelle. Montant SIGNÉ : positif = dû par le compte,
@@ -170,6 +177,9 @@ div(class=panel)
               - else
                 = groupe.entree.label.presence || "—"
                 = AccountEntryDecorator.new(groupe.entree).lock_icon
+                - if groupe.communication
+                  span.ml-2.text-xs.text-gray-400(title="Communication du virement")
+                    = "« #{groupe.communication} »"
             td.py-3.px-4= groupe.libelle_canal
             td.py-3.px-4.text-right.tabular-nums
               = groupe.replie? ? groupe.entries.size : "—"
