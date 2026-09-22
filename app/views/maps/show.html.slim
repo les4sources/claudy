@@ -1,0 +1,81 @@
+/ La carte du domaine (epic #348, phase 1).
+  La page N'A PAS d'en-tête : sous la navbar, tout l'écran est la carte. Un
+  titre et un fil d'Ariane grignoteraient la seule chose qu'on vient regarder.
+
+- if @base_layer.nil?
+  .m-8.rounded-2xl.border.border-dashed.p-8.text-center class="border-amber-300 bg-amber-50/40"
+    p.font-averia.text-xl.text-stone-800 Aucun fond de carte n'est installé.
+    p.mt-2.text-sm.text-stone-500
+      | Les tuiles ne vivent pas dans le dépôt : elles s'installent avec la tâche
+      code.mx-1.rounded.bg-stone-100.px-1.py-0.5.text-xs rake map:base_layer:import
+      | , qui lit un dossier de tuiles et enregistre la couche.
+- else
+  / `h-[calc(100dvh-...)]` plutôt que `100vh` : sur iOS la barre d'adresse
+    mange la différence, et la carte débordait sous elle.
+  div class="relative w-full overflow-hidden" style="height: calc(100dvh - 8.5rem)"
+    div[class="absolute inset-0"
+        data-controller="map"
+        data-map-tiles-url-value="/map/tiles/#{@base_layer.key}/{kind}/{z}/{x}/{y}.png"
+        data-map-layer-key-value=@base_layer.key
+        data-map-bounds-value=(@base_layer.leaflet_bounds || []).to_json
+        data-map-center-value=(@base_layer.center || []).to_json
+        data-map-min-zoom-value=(@base_layer.min_zoom || 12)
+        data-map-max-zoom-value=(@base_layer.max_zoom || 20)
+        data-map-has-relief-value=@base_layer.relief?.to_s]
+
+      / Le fond de la carte hors emprise : uni, couleur `sand` du thème. Pas
+        d'OpenStreetMap ni de Google — aucune clé tierce sur cette page.
+      div.absolute.inset-0.bg-sand data-map-target="canvas"
+
+      / Panneau des couches. C'est le SQUELETTE que les phases suivantes
+        remplissent : aujourd'hui les fonds et le relief, demain les couches
+        typées (gestion, plantes, réseaux…).
+      div[class="absolute left-3 top-3 z-[1000] w-64 max-w-[calc(100vw-1.5rem)] rounded-xl border border-stone-200 bg-white/95 shadow-lg backdrop-blur"
+          data-map-target="panel"]
+        button[type="button"
+               class="flex w-full items-center gap-2 px-3 py-2.5 text-left"
+               data-action="click->map#togglePanel"
+               aria-expanded="true"
+               data-map-target="panelToggle"]
+          svg.h-4.w-4.text-stone-500 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            polygon points="12 2 2 7 12 12 22 7 12 2"
+            polyline points="2 17 12 22 22 17"
+            polyline points="2 12 12 17 22 12"
+          span.flex-1.text-sm.font-semibold.text-stone-700 Couches
+          svg.h-4.w-4.text-stone-400.transition-transform data-map-target="panelChevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            polyline points="6 9 12 15 18 9"
+
+        div.border-t.border-stone-100.px-3.py-3 data-map-target="panelBody"
+          p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Fonds
+          ul.space-y-1
+            - @base_layers.each do |couche|
+              li
+                = link_to map_path(base_layer_id: couche.id), class: "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors #{couche.id == @base_layer.id ? 'bg-teal-50 text-4s-main font-medium' : 'text-stone-600 hover:bg-stone-50'}" do
+                  span class="h-2.5 w-2.5 flex-shrink-0 rounded-full #{couche.id == @base_layer.id ? 'bg-4s-main' : 'border border-stone-300'}"
+                  span.flex-1.truncate = couche.name
+                  - if couche.captured_on
+                    span class="text-[0.65rem] tabular-nums text-stone-400" = l(couche.captured_on, format: "%m/%Y")
+
+          - if @base_layer.relief?
+            .mt-3.border-t.border-stone-100.pt-3
+              label.flex.cursor-pointer.items-center.gap-2.text-sm.text-stone-600
+                input[type="checkbox" class="rounded border-stone-300 text-4s-main focus:ring-teal-400" data-action="change->map#toggleRelief" data-map-target="reliefToggle"]
+                span Relief
+
+      / « Ma position ». 44 px de côté au minimum : cette page se lit sur un
+        téléphone, au milieu du terrain, avec des doigts.
+      button[type="button"
+             class="absolute bottom-6 right-4 z-[1000] flex h-11 w-11 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-lg transition-colors hover:text-4s-main"
+             data-action="click->map#toggleLocate"
+             data-map-target="locateButton"
+             title="Ma position"
+             aria-pressed="false"]
+        svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          circle cx="12" cy="12" r="3"
+          path d="M12 2v3M12 19v3M2 12h3M19 12h3"
+        span.sr-only Ma position
+
+      / Message discret quand la géolocalisation est refusée : un `alert()`
+        bloquerait la carte pour dire quelque chose qui n'est pas grave.
+      div[class="pointer-events-none absolute bottom-6 left-1/2 z-[1000] hidden -translate-x-1/2 rounded-lg bg-stone-800/90 px-3 py-2 text-xs text-white shadow-lg"
+          data-map-target="notice"]

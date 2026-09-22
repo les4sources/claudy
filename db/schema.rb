@@ -1312,6 +1312,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_040000) do
     t.integer "weekend_discount_cents", default: 0, null: false
   end
 
+  create_table "map_base_layers", force: :cascade do |t|
+    t.jsonb "bounds", default: {}, null: false
+    t.date "captured_on"
+    t.datetime "created_at", null: false
+    t.boolean "default", default: false, null: false
+    t.boolean "has_relief", default: false, null: false
+    t.string "key", null: false
+    t.integer "max_zoom"
+    t.integer "min_zoom"
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_map_base_layers_on_key", unique: true
+  end
+
   create_table "meal_orders", force: :cascade do |t|
     t.datetime "bread_reminder_sent_at"
     t.text "cancellation_reason"

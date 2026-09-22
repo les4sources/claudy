@@ -3,6 +3,7 @@
   "private": "true",
   "dependencies": {
     "@37signals/lexxy": "^0.9.32",
+    "@geoman-io/leaflet-geoman-free": "^2.20.1",
     "@hotwired/stimulus": "^3.2.1",
     "@hotwired/turbo": "^7.2.4",
     "@hotwired/turbo-rails": "^7.2.4",
@@ -21,6 +22,7 @@
     "el-transition": "^0.0.7",
     "flowbite": "^1.5.5",
     "foundation-sites": "^6.7.5",
+    "leaflet": "^1.9.4",
     "moment": "latest",
     "postcss": "^8.4.19",
     "sortablejs": "^1.15.7",
