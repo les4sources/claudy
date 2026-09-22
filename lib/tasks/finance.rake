@@ -304,6 +304,71 @@ namespace :finance do
     puts "[finance:generate_recurring] Rien n'a été écrit — relance avec APPLY=1." unless apply
   end
 
+  desc "Charges des comptes membres mois par mois — YEAR=2026, ACCOUNT=SRC-0005 pour un seul. Lecture seule."
+  task audit_member_charges: :environment do
+    year = (ENV["YEAR"].presence || Date.current.year).to_i
+    audits = Finance::MemberChargesAudit.new(year: year, codes: ENV["ACCOUNT"]).run!
+
+    audits.each do |audit|
+      puts ""
+      puts "#{audit.account.code} — #{audit.account.name}"
+      puts "  report des charges d'avant #{year} : #{format('%10.2f', audit.carried_cents / 100.0)} €" unless audit.carried_cents.zero?
+      puts "  mois     #{'facturé'.rjust(10)} #{'réglé'.rjust(10)} #{'écart'.rjust(10)} #{'cumulé'.rjust(10)}"
+      audit.months.each do |month|
+        puts "  #{month.label} #{format('%10.2f', month.billed_cents / 100.0)} " \
+             "#{format('%10.2f', month.settled_cents / 100.0)} " \
+             "#{format('%10.2f', month.delta_cents / 100.0)} " \
+             "#{format('%10.2f', month.cumulative_cents / 100.0)}"
+      end
+
+      # L'écart CONSTANT est la signature d'un décalage d'appariement ; un écart
+      # qui grandit est une dette, et ne se corrige pas de la même façon.
+      run = audit.offset_run
+      if run
+        puts "  ⚠ écart cumulé constant à #{format('%.2f', run.amount_cents / 100.0)} € sur #{run.length} mois " \
+             "(#{run.from.strftime('%Y-%m')} → #{run.to.strftime('%Y-%m')}) — signature d'un décalage d'appariement, " \
+             "pas d'une dette qui grandit."
+      end
+    end
+
+    flagged = audits.select(&:offset?)
+    puts ""
+    puts "[finance:audit_member_charges] #{year} : #{audits.size} compte(s) avec des charges, " \
+         "#{flagged.size} décalage(s) probable(s)#{flagged.any? ? " — #{flagged.map { |a| a.account.code }.join(', ')}" : ''}."
+    puts "[finance:audit_member_charges] Lecture seule — rien n'a été écrit."
+  end
+
+  desc "Corrige le décalage de janvier hérité de la reprise — ACCOUNTS=SRC-0001,SRC-0004, YEAR=2026, APPLY=1 pour écrire"
+  task fix_january_offset: :environment do
+    year = (ENV["YEAR"].presence || Date.current.year).to_i
+    codes = ENV["ACCOUNTS"].to_s.split(",")
+    apply = ENV["APPLY"] == "1"
+
+    if codes.empty?
+      puts "[finance:fix_january_offset] Aucun compte nommé — ACCOUNTS=SRC-0001,SRC-0004."
+      next
+    end
+
+    service = Finance::FixJanuaryOffset.new(codes: codes, year: year, dry_run: !apply)
+    report = service.run!
+
+    report.planned.each do |line|
+      puts "  + #{line.account.code.ljust(10)} #{line.account.name.to_s.ljust(28)} " \
+           "#{format('%8.2f', line.amount_cents / 100.0)} € au #{line.received_on} — #{line.reference}"
+    end
+    report.existing.each do |line|
+      puts "  = #{line.account.code.ljust(10)} déjà corrigé — #{line.reference}"
+    end
+    report.refused.each do |line|
+      puts "  ! #{line.code.ljust(10)} refusé — #{line.reason}"
+    end
+
+    puts "[finance:fix_january_offset] #{year} : #{report.planned.size} correction(s) à écrire, " \
+         "#{report.existing.size} déjà faite(s), #{report.refused.size} refusée(s), " \
+         "total #{format('%.2f', report.total_cents / 100.0)} €"
+    puts "[finance:fix_january_offset] Rien n'a été écrit — relance avec APPLY=1." unless apply
+  end
+
   desc "Rattache les membres de ménage à la personne du même nom (epic #246). Dry-run par défaut, APPLY=1 pour écrire."
   task link_household_members_to_humans: :environment do
     apply  = ENV["APPLY"].present?
