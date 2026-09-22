@@ -9,14 +9,31 @@ module Cycles
     def self.for_cycle(cycle, humans: nil)
       humans ||= Human.cycle_active.roles_enabled.order(:name)
       actions_by_human = cycle.cycle_actions.includes(:delegate_to_human, :deferred_from).group_by(&:human_id)
-      humans.map { |h| new(human: h, cycle: cycle, actions: actions_by_human[h.id] || []) }
+      # Les targets sont chargées pour TOUT le cycle en une requête : la page de
+      # clôture construit un rapport par membre, une requête par membre y
+      # coûterait autant que la page entière (epic #330, phase 3).
+      targets_by_human = cycle.cycle_targets.ordered.group_by(&:human_id)
+      humans.map do |h|
+        new(human: h, cycle: cycle, actions: actions_by_human[h.id] || [],
+            targets: targets_by_human[h.id] || [])
+      end
     end
 
-    def initialize(human:, cycle:, actions: nil)
+    def initialize(human:, cycle:, actions: nil, targets: nil)
       @human = human
       @cycle = cycle
       @actions = actions || cycle.cycle_actions.where(human: human).to_a
+      @targets = targets
     end
+
+    # Les intentions du membre pour ce cycle (epic #330, phase 3). Elles vivent
+    # à côté des heures, jamais dedans : une target n'a pas de durée, et les
+    # compteurs du bilan restent ceux des actions (décision 3).
+    def targets
+      @targets ||= CycleTarget.where(human: human, cycle: cycle).ordered.to_a
+    end
+
+    def targets_achieved = targets.select(&:achieved?)
 
     def engaged_actions = actions.reject(&:reportee?)
     def planned_hours = hours_of(engaged_actions)

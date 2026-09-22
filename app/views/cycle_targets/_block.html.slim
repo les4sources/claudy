@@ -1,0 +1,60 @@
+/ Les targets d'un membre sur un cycle (epic #330, phase 3). locals: targets,
+  human, cycle, readonly
+  Le bloc entier est l'unité de remplacement Turbo : l'état vide, le compteur
+  et l'ordre bougent ensemble.
+- atteintes = targets.count(&:achieved?)
+
+div id="cycle_targets_block" class="mb-6 rounded-xl border border-stone-200 bg-white"
+  .px-4.py-3.flex.items-center.gap-2.border-b.border-stone-100
+    .w-7.h-7.rounded-full.bg-teal-50.flex.items-center.justify-center
+      span.text-sm 🎯
+    h3.text-base.font-semibold.text-stone-700 Mes targets
+    - if targets.any?
+      span.text-xs.text-stone-400.tabular-nums.ml-auto = "#{atteintes} / #{targets.size} atteinte#{'s' if atteintes != 1}"
+
+  - if targets.empty?
+    .px-4.py-4.text-sm.text-stone-400.italic Aucune target pour ce cycle.
+  - else
+    ul.divide-y.divide-stone-50
+      - targets.each do |target|
+        li.flex.items-center.gap-3.px-4.py-2.5.group id="cycle_target_#{target.id}"
+          / Même grammaire que les actions complétées : pastille teal pleine
+            quand c'est atteint, contour gris sinon.
+          - if readonly
+            - if target.achieved?
+              .w-5.h-5.rounded.bg-teal-500.flex.items-center.justify-center.flex-shrink-0
+                svg.w-3.h-3.text-white xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                  polyline points="20 6 9 17 4 12"
+            - else
+              .w-5.h-5.rounded.border-2.border-gray-200.flex-shrink-0
+          - else
+            = button_to toggle_achieved_cycle_target_path(target), method: :patch, data: { turbo_stream: true }, class: "flex-shrink-0", form: { class: "inline" }, aria: { label: target.achieved? ? "Marquer comme non atteinte" : "Marquer comme atteinte" } do
+              - if target.achieved?
+                .w-5.h-5.rounded.bg-teal-500.flex.items-center.justify-center.transition-all.duration-200
+                  svg.w-3.h-3.text-white xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                    polyline points="20 6 9 17 4 12"
+              - else
+                .w-5.h-5.rounded.border-2.border-gray-300.hover:border-teal-400.transition-colors.duration-200.cursor-pointer
+
+          span class="flex-1 min-w-0 text-sm leading-snug #{target.achieved? ? 'text-stone-400 line-through' : 'text-stone-800'}"
+            = target.label
+
+          - unless readonly
+            = button_to cycle_target_path(target), method: :delete, data: { turbo_stream: true, turbo_confirm: "Supprimer cette target ?" }, class: "flex-shrink-0 text-stone-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity", form: { class: "inline" }, aria: { label: "Supprimer la target" } do
+              svg.w-4.h-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                polyline points="3 6 5 6 21 6"
+                path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+
+  - unless readonly
+    / Ajout inline en bas du bloc : une target se pose au fil de l'eau, pas
+      dans un écran à part.
+    = form_with url: cycle_targets_path, method: :post, data: { turbo_stream: true }, class: "px-4 py-3 border-t border-stone-100 flex items-center gap-2" do |f|
+      = f.hidden_field :human_id, value: human.id
+      = f.hidden_field :cycle_id, value: cycle.id
+      / Le builder Tailwind enveloppe chaque champ dans un `.form-control` :
+        c'est LUI qui doit s'étirer, d'où ce conteneur. Et `label: false`, parce
+        que le builder pose sinon un libellé « Label » au-dessus du champ, au
+        milieu d'une ligne qui n'en a pas la place — le placeholder dit tout.
+      .flex-1
+        = f.text_field :label, label: false, placeholder: "Ajouter une target…", class: "w-full rounded-lg border-stone-200 text-sm placeholder:text-stone-300 focus:border-teal-400 focus:ring-teal-400", aria: { label: "Nouvelle target" }
+      = f.submit "Ajouter", class: "rounded-lg bg-4s-main px-3 py-2 text-sm font-medium text-white hover:bg-teal-700 transition-colors cursor-pointer"

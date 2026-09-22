@@ -16,6 +16,8 @@ div.bg-white.rounded-xl.border.border-stone-100 id="closing_member_#{human.id}"
         span.text-stone-300 ·
         span.text-stone-500 = "#{settled.size} tranchée#{'s' if settled.size != 1}"
 
+  = render "cycles/member_targets", report: report
+
   - if pending.empty?
     .px-4.py-4.text-sm.text-stone-400.italic Rien à trancher pour #{human.name}.
   - else

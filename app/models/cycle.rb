@@ -20,6 +20,8 @@ class Cycle < ApplicationRecord
   has_soft_deletion default_scope: true
 
   has_many :cycle_actions
+  # Les intentions des membres sur ce cycle (epic #330, phase 3).
+  has_many :cycle_targets, dependent: :destroy
 
   validates :name, presence: true
   validates :start_date, presence: true
