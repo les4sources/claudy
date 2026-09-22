@@ -1,0 +1,33 @@
+/  D'où vient le mouvement, en un coup d'œil (Michael, 2026-09-20).
+   « Un petit logo Triodos, qui m'informe visuellement qu'il s'agit d'un
+   mouvement sur le compte bancaire de la fondation. » La file mélange la
+   banque, les caisses et Stripe ; sans marque de provenance, il faut lire la
+   ligne grise pour savoir sur quoi on travaille.
+
+   Le logo n'est posé que sur le compte Triodos lui-même, jamais sur « une
+   banque » en général : c'est la fondation qu'il désigne, pas un type de
+   compte. Les autres sources ont un pictogramme tracé, qui se colore comme du
+   texte et reste lisible à 26 px.
+- taille = local_assigns.fetch(:taille, 26)
+- titre = "#{cash_account.name} — #{CashAccount::KIND_LABELS.fetch(cash_account.kind, cash_account.kind)}"
+
+- if cash_account.name.to_s.match?(/triodos/i)
+  = vite_image_tag "images/triodos-symbol.png", class: "block flex-shrink-0", style: "width: #{taille}px; height: #{taille}px", alt: titre, title: titre
+- else
+  span.inline-flex.flex-shrink-0.items-center.justify-center.rounded-lg.bg-gray-50.text-gray-500.ring-1.ring-gray-200(style="width: #{taille}px; height: #{taille}px" title=titre)
+    - case cash_account.kind
+    - when "stripe"
+      svg(xmlns="http://www.w3.org/2000/svg" width=(taille * 0.55) height=(taille * 0.55) viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true")
+        rect(x="2" y="5" width="20" height="14" rx="2")
+        line(x1="2" y1="10" x2="22" y2="10")
+    - when "cash"
+      svg(xmlns="http://www.w3.org/2000/svg" width=(taille * 0.55) height=(taille * 0.55) viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true")
+        rect(x="2" y="6" width="20" height="12" rx="2")
+        circle(cx="12" cy="12" r="2.5")
+    - else
+      svg(xmlns="http://www.w3.org/2000/svg" width=(taille * 0.55) height=(taille * 0.55) viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true")
+        line(x1="3" y1="21" x2="21" y2="21")
+        polyline(points="4 10 4 21")
+        polyline(points="20 10 20 21")
+        polyline(points="12 3 21 8 3 8 12 3")
+    span.sr-only= titre

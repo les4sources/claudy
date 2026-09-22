@@ -1,9 +1,10 @@
 module Finance
-  # Socle de la section Finances (issue #155). Pose `@finance_view`, qui allume
-  # l'entrée primaire « Finances » et sa sous-navigation, exactement comme
-  # `@settings_view` le fait pour Paramètres.
+  # Socle de la section « Comptes » (issue #155), nommée « Finances » jusqu'au
+  # 2026-09-20 : le mot désignait un domaine, pas ce qu'on vient y faire — lire
+  # son compte. Pose `@finance_view`, qui allume l'entrée primaire et sa
+  # sous-navigation, exactement comme `@settings_view` le fait pour Paramètres.
   class BaseController < ::BaseController
-    breadcrumb "Finances", :finance_accounts_path, match: :exact
+    breadcrumb "Comptes", :finance_accounts_path, match: :exact
 
     private
 

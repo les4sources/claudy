@@ -43,7 +43,7 @@ RSpec.describe "Comptabilité > Caisse — le comptage", type: :request do
       expect(response.body).to include("130,00")
       # L'entrée « Caisse » de la sous-navigation reste active sur le comptage.
       expect(response.body).to include("subnav-accounting")
-      expect(response.body).to match(%r{<a[^>]+bg-teal-50 font-medium[^>]+href="#{Regexp.escape(finance_cash_sheet_path)}"})
+      expect(response.body).to match(%r{<a[^>]+bg-teal-100 font-medium[^>]+href="#{Regexp.escape(finance_cash_sheet_path)}"})
       # Les deux issues d'un écart sont dans la page, prêtes à s'afficher.
       expect(response.body).to include("Je retrouve l'origine", "Écart inexpliqué")
     end

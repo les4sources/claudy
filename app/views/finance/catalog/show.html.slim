@@ -25,6 +25,12 @@
   div
     .text-xs.uppercase.text-gray-400 Palier en vigueur
     .text-sm.text-gray-700= item.price_period
+  - if @item.consignor.present?
+    div
+      .text-xs.uppercase.text-gray-400 Artisan
+      .text-sm.text-gray-700
+        = link_to @item.consignor.name, edit_consignor_path(@item.consignor), class: "underline"
+        span.ml-2.text-gray-500 = "commission #{@item.consignor.commission_percent} %"
 
 /  Même vocabulaire que les formulaires en ligne de la fiche d'un compte
    (`finance/accounts/show`) : la section Finances doit se lire comme un seul
@@ -41,7 +47,7 @@
 div(class=panel data-controller="catalog-price" data-catalog-price-url-value=finance_catalog_suggest_price_path data-catalog-price-channel-value=@item.channel)
   h3(class=panel_title) Nouveau palier de prix
 
-  - marge = Pricing::Rates.cents(Catalog::BuildPrice.margin_key(@item.channel)) || Catalog::BuildPrice::DEFAULT_MARGINS[@item.channel]
+  - marge = Pricing::Rates.cents(Catalog::BuildPrice.margin_key(@item.channel)) || Catalog::BuildPrice::DEFAULT_MARGINS.fetch(@item.channel, 0)
   p.mb-4.text-sm.text-gray-500
     | Saisis le prix d'achat : le prix sourcier se calcule tout seul, avec la marge
     strong = " #{@item.channel_label} de #{marge} %"
@@ -50,6 +56,8 @@ div(class=panel data-controller="catalog-price" data-catalog-price-url-value=fin
     | ). Tu peux l'écraser à la main — c'est la valeur du champ qui est enregistrée.
     - if @item.channel == "grocery"
       |  Le prix public se propose depuis le prix de référence, quand il y en a un.
+    - if @item.craft?
+      |  Pour un article d'artisanat, c'est l'artisan qui fixe son prix de vente : pose-le en prix public, sans marge. La part des 4 Sources est la commission de sa fiche.
 
   / Champs nus (`*_tag`) et non `f.text_field` : le builder maison
     (`FormBuilders::TailwindFormBuilder`) génère son propre libellé à partir du

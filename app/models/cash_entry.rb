@@ -100,6 +100,27 @@ class CashEntry < ApplicationRecord
   scope :allocated, -> { where(status: "allocated") }
   scope :in_period, ->(from, to) { where(entry_date: from..to) }
 
+  # La recherche du journal (Michael, 2026-09-20) : on cherche une ligne par ce
+  # qu'on en retient — un nom, un mot de la communication, parfois le libellé.
+  # Les trois colonnes ensemble, sans casse ni accents : « epicerie » doit
+  # trouver « Épicerie », sinon il faut taper juste pour trouver.
+  #
+  # `unaccent` n'est pas installé : `translate` fait le travail sur les
+  # quelques lettres accentuées du français, et reste indexable si le besoin
+  # s'en fait sentir.
+  ACCENTS = "àâäáãåçèéêëìíîïñòóôöõùúûüýÿ".freeze
+  SANS_ACCENTS = "aaaaaaceeeeiiiinooooouuuuyy".freeze
+
+  scope :matching, lambda { |terme|
+    motif = "%#{ActiveRecord::Base.sanitize_sql_like(terme.to_s.strip)}%"
+    plat = ->(colonne) { "translate(lower(coalesce(#{colonne}, '')), :accents, :sans)" }
+    where(
+      "#{plat.call('label')} LIKE :motif OR #{plat.call('communication')} LIKE :motif " \
+      "OR #{plat.call('counterparty_name')} LIKE :motif",
+      motif: I18n.transliterate(motif).downcase, accents: ACCENTS, sans: SANS_ACCENTS
+    )
+  }
+
   def status_label = STATUS_LABELS.fetch(status, status)
   def incoming? = amount_cents.positive?
   def allocated_cents = cash_allocations.sum(:amount_cents)

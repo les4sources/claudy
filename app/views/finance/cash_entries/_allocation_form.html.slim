@@ -3,9 +3,17 @@
 = form_with model: [:finance, entry, CashAllocation.new], url: finance_cash_entry_allocations_path(entry), class: "flex flex-wrap items-end gap-3" do |f|
   - if from_unallocated
     = hidden_field_tag :from_unallocated, "1"
-  div
+  /  Le plan comptable fait plusieurs centaines de lignes : dérouler un <select>
+     natif pour y trouver « 700100 Ventes bar » revient à lire l'annuaire. Le
+     contrôleur `searchable-select` pose un champ de recherche par-dessus et
+     masque le <select>, qui reste la source de vérité et le seul champ soumis.
+     Sans JS, le <select> s'affiche et fonctionne tel quel.
+  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" class="relative")
     = f.label :general_account_id, "Compte", class: "block text-xs font-medium text-gray-500"
-    = f.collection_select :general_account_id, general_accounts, :id, :to_s, { include_blank: "Choisir…" }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+    = f.collection_select :general_account_id, general_accounts, :id, :to_s, { include_blank: "Choisir…" }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+    .hidden.mt-1(data-searchable-select-target="wrap")
+      input.w-64.rounded-md.border-gray-300.text-sm.shadow-sm(type="text" role="combobox" autocomplete="off" aria-expanded="false" aria-label="Chercher un compte" data-searchable-select-target="input" data-action="input->searchable-select#filter focus->searchable-select#open keydown->searchable-select#navigate")
+      ul.hidden.absolute.z-20.mt-1.max-h-64.w-64.overflow-auto.rounded-md.border.border-gray-200.bg-white.py-1.shadow-lg(role="listbox" data-searchable-select-target="list")
   div
     = f.label :team_id, "Pôle", class: "block text-xs font-medium text-gray-500"
     = f.collection_select :team_id, teams, :id, :name, { include_blank: "Non affecté" }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
@@ -20,9 +28,12 @@
     recette à sa page comptable. Proposé pour une ligne entrante comme sortante —
     un remboursement est une recette négative, et il doit se retrouver au même
     endroit que ce qu'il annule.
-  div
+  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un événement…" class="relative")
     = label_tag "cash_allocation[event_id]", "Événement", class: "block text-xs font-medium text-gray-500"
-    = select_tag "cash_allocation[event_id]", options_from_collection_for_select(events, :id, ->(e) { "#{e.name} — #{l(e.starts_at.to_date, format: :short)}" }), include_blank: "Aucun", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+    = select_tag "cash_allocation[event_id]", options_from_collection_for_select(events, :id, ->(e) { "#{e.name} — #{l(e.starts_at.to_date, format: :short)}" }), include_blank: "Aucun", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+    .hidden.mt-1(data-searchable-select-target="wrap")
+      input.w-64.rounded-md.border-gray-300.text-sm.shadow-sm(type="text" role="combobox" autocomplete="off" aria-expanded="false" aria-label="Chercher un événement" data-searchable-select-target="input" data-action="input->searchable-select#filter focus->searchable-select#open keydown->searchable-select#navigate")
+      ul.hidden.absolute.z-20.mt-1.max-h-64.w-64.overflow-auto.rounded-md.border.border-gray-200.bg-white.py-1.shadow-lg(role="listbox" data-searchable-select-target="list")
   div
     = f.label :amount, "Montant (€)", class: "block text-xs font-medium text-gray-500"
     / Deux décimales toujours : « -450,0 » se lit comme un montant tronqué et

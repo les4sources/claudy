@@ -12,14 +12,20 @@ module Portal
   #     doit pouvoir acheter : on émet donc pour TOUTE adresse valide non
   #     fourre-tout, et le `Customer` (individual) est créé à la connexion.
   #     Aucune fuite : le comportement est identique pour toute adresse valide.
+  #
+  #   * « consignor » — espace artisan en dépôt-vente (epic #359, phase 1).
+  #     Anti-énumération STRICTE comme « stays » : un code n'est émis que pour un
+  #     artisan actif dont l'administration a ouvert l'espace. Rien n'est jamais
+  #     créé ici — un artisan existe parce qu'un contrat existe.
   class SessionsController < Portal::BaseController
-    CONTEXTS = %w[stays coworking].freeze
+    CONTEXTS = %w[stays coworking consignor].freeze
 
     def new
+      @context = sanitized_context(params[:context])
+      redirect_to portal_consignments_path and return if portal_consignor_signed_in?
       redirect_to portal_stays_path and return if portal_signed_in?
 
       @email = params[:email].to_s
-      @context = sanitized_context(params[:context])
     end
 
     # POST /portail/code — émet et envoie un code sous les conditions du contexte
@@ -53,6 +59,10 @@ module Portal
       email = params[:email].to_s.strip.downcase
       context = sanitized_context(session[:portal_otp_context])
 
+      if context == "consignor"
+        return sign_in_consignor(email, params[:code], context)
+      end
+
       if PortalOtp.verify(email, params[:code]) && (customer = customer_for(email, context))
         sign_in_portal(customer)
         session.delete(:portal_otp_context)
@@ -76,11 +86,31 @@ module Portal
       CONTEXTS.include?(value.to_s) ? value.to_s : "stays"
     end
 
+    # La porte de l'artisan : même mécanique OTP, autre cookie, autre
+    # destination. Un code valide dont l'email n'est plus celui d'un artisan
+    # ouvert échoue comme un code faux — on ne dit jamais pourquoi.
+    def sign_in_consignor(email, code, context)
+      consignor = PortalOtp.verify(email, code) ? Consignor.for_portal_email(email) : nil
+
+      if consignor
+        sign_in_portal_consignor(consignor)
+        session.delete(:portal_otp_context)
+        return redirect_to(portal_consignments_path)
+      end
+
+      @email = email
+      @context = context
+      flash.now[:alert] = t("portal.session.invalid_code")
+      render :verify, status: :unprocessable_entity
+    end
+
     # Peut-on émettre un code ? En « stays », uniquement pour un client réel.
+    # En « consignor », uniquement pour un artisan dont l'espace est ouvert.
     # En « coworking », pour toute adresse valide non fourre-tout (le compte sera
     # créé à la connexion).
     def otp_eligible?(email, context)
       return deliverable_customer(email).present? if context == "stays"
+      return Consignor.for_portal_email(email).present? if context == "consignor"
 
       Customer.exploitable_email?(email) && !catch_all_email?(email)
     end

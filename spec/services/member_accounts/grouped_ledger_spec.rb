@@ -102,4 +102,25 @@ RSpec.describe MemberAccounts::GroupedLedger do
     expect(livre.groupes).to be_empty
     expect(livre).not_to be_any
   end
+  # « Ce paiement est catégorisé Divers » (Michael, 2026-09-20). Un règlement
+  # n'a pas de poste : il éteint ce qu'il trouve. La colonne Canal doit dire ce
+  # qu'est la ligne, pas répéter le fourre-tout sur lequel elle est rangée.
+  it "nomme un règlement au lieu de l'appeler « Divers »" do
+    account.account_entries.create!(entry_date: Date.new(2026, 8, 31), amount_cents: -34_500,
+                                    kind: "settlement", flow: "other", label: "Règlement — Virement")
+
+    groupe = described_class.new(account.account_entries).groupes.sole
+
+    expect(groupe.libelle_canal).to eq("Règlement")
+  end
+
+  it "garde son canal à une consommation rangée dans « Divers »" do
+    account.account_entries.create!(entry_date: Date.new(2026, 8, 31), amount_cents: 1_200,
+                                    flow: "other", label: "Régularisation")
+
+    groupe = described_class.new(account.account_entries).groupes.sole
+
+    expect(groupe.libelle_canal).to eq("Divers")
+  end
+
 end

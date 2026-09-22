@@ -175,13 +175,22 @@
         .font-fraunces.text-2xl.tabular-nums(class="text-ember")
           = number_to_currency(r.outstanding.total_cents / 100.0)
 
+      /  Un POSTE par ligne, plus un mois : un règlement éteint le poste qu'il
+         paie, c'est donc dans cette maille que la dette se lit et que le
+         virement se fait (Michael, 2026-09-20).
       ul.mt-4.divide-y(class="divide-ember/20 border-t border-ember/20")
         - r.outstanding.postes.each do |poste|
           li.flex.items-baseline.justify-between.gap-4.py-2
-            span.text-sm.text-ink= l(poste.month, format: "%B %Y").capitalize
+            span.text-sm.text-ink
+              = poste.label
+              span.ml-2.text-xs.text-moss= "#{poste.lignes.size} ligne#{'s' if poste.lignes.size > 1}"
             span.text-sm.font-semibold.tabular-nums.text-ink= number_to_currency(poste.amount_cents / 100.0)
 
+      - if r.outstanding.avances.any?
+        p.mt-3.text-xs.text-moss
+          = "Déjà versé en avance : " + r.outstanding.avances.map { |flow, cents| "#{AccountEntry::FLOW_LABELS.fetch(flow, 'Divers')} #{number_to_currency(cents / 100.0)}" }.join(" · ")
+
       p.mt-4.text-xs.text-moss
-        ' Un virement avec le code
+        ' Un virement portant le code
         span.font-mono.font-semibold= account.code
-        |  en communication se rapproche tout seul.
+        |  en communication se retrouve dans « À affecter ». C'est de là qu'on choisit le poste qu'il éteint.
