@@ -123,6 +123,31 @@ RSpec.describe "Paramètres > Dépôt-vente", type: :request do
     end
   end
 
+  # Epic #359, phase 1 — l'interrupteur « accès à l'espace artisan ».
+  describe "l'accès à l'espace artisan" do
+    it "s'ouvre depuis le formulaire" do
+      post consignors_path, params: base_params(portal_enabled: "1")
+
+      expect(Consignor.last.portal_enabled).to be(true)
+    end
+
+    it "refuse l'ouverture sans email" do
+      post consignors_path, params: base_params(portal_enabled: "1", email: "")
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(Consignor.count).to eq(0)
+    end
+
+    it "se voit sur la liste" do
+      Consignor.create!(name: "Eline", settlement_mode: "invoice",
+                        email: "eline@example.com", portal_enabled: true)
+
+      get consignors_path
+
+      expect(response.body).to include("Espace artisan")
+    end
+  end
+
   it "exige une session" do
     sign_out user
 

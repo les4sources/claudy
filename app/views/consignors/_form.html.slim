@@ -20,6 +20,12 @@
                     class: "md:w-2/3",
                     data: { consignor_human_target: "email" }
 
+    .flex.items-center.gap-2
+      = f.check_box :portal_enabled
+      = f.label :portal_enabled, "Accès à l'espace artisan", class: "text-sm font-medium text-gray-700"
+    p.text-xs.text-gray-500
+      | L'artisan se connecte sur /portail par un code envoyé à l'email ci-dessus — il n'a ni mot de passe, ni accès au reste de Claudy. L'email devient alors obligatoire, et unique.
+
   .rounded-2xl.bg-white.ring-1.ring-gray-200.p-6.space-y-5
     h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Le contrat
 

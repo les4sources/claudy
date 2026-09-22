@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_20_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_22_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -521,6 +521,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_20_130000) do
     t.boolean "active", default: true, null: false
     t.string "category"
     t.string "channel", null: false
+    t.bigint "consignor_id"
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
     t.string "name", null: false
@@ -528,6 +529,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_20_130000) do
     t.string "unit", default: "piece", null: false
     t.datetime "updated_at", null: false
     t.index ["channel", "name"], name: "index_catalog_items_on_channel_and_name"
+    t.index ["consignor_id"], name: "index_catalog_items_on_consignor_id"
     t.index ["deleted_at"], name: "index_catalog_items_on_deleted_at"
   end
 
@@ -599,14 +601,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_20_130000) do
 
   create_table "consignment_report_lines", force: :cascade do |t|
     t.integer "amount_cents", default: 0, null: false
+    t.bigint "catalog_item_id"
     t.bigint "consignment_report_id", null: false
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
     t.string "label", null: false
+    t.string "payment_method"
     t.integer "position", default: 0, null: false
     t.integer "quantity", default: 1, null: false
     t.integer "unit_price_cents", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.index ["catalog_item_id"], name: "index_consignment_lines_on_catalog_item"
     t.index ["consignment_report_id"], name: "index_consignment_lines_on_report"
     t.index ["deleted_at"], name: "index_consignment_lines_on_deleted_at"
   end
@@ -652,6 +657,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_20_130000) do
     t.text "iban"
     t.string "name", null: false
     t.text "notes"
+    t.boolean "portal_enabled", default: false, null: false
     t.string "settlement_mode", default: "transfer", null: false
     t.date "starts_on"
     t.bigint "third_party_id"
@@ -2143,10 +2149,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_20_130000) do
   add_foreign_key "cash_motifs", "general_accounts"
   add_foreign_key "cash_motifs", "legal_entities"
   add_foreign_key "cash_motifs", "teams"
+  add_foreign_key "catalog_items", "consignors"
   add_foreign_key "catalog_prices", "catalog_items"
   add_foreign_key "coda_statements", "cash_accounts"
   add_foreign_key "coda_statements", "coda_imports"
   add_foreign_key "comments", "users", column: "author_id"
+  add_foreign_key "consignment_report_lines", "catalog_items"
   add_foreign_key "consignment_report_lines", "consignment_reports"
   add_foreign_key "consignment_reports", "consignors"
   add_foreign_key "consignment_reports", "legal_entities"

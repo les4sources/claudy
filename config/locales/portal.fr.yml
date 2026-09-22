@@ -4,5 +4,6 @@ fr:
     session:
       required: "Connectez-vous pour accéder à votre espace client."
       coworking_required: "Entrez votre email pour acheter et réserver votre coworking."
+      consignor_required: "Connectez-vous pour accéder à votre espace artisan."
       invalid_code: "Ce code est incorrect ou expiré. Demandez-en un nouveau si besoin."
       signed_out: "Vous êtes déconnecté."

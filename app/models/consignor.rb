@@ -22,6 +22,7 @@
 #  iban               :text
 #  name               :string           not null
 #  notes              :text
+#  portal_enabled     :boolean          default(FALSE), not null
 #  settlement_mode    :string           default("transfer"), not null
 #  starts_on          :date
 #  created_at         :datetime         not null
@@ -57,6 +58,10 @@ class Consignor < ApplicationRecord
   belongs_to :human,       optional: true
   belongs_to :third_party, optional: true
   has_many :consignment_reports, dependent: :destroy
+  # Ses articles du catalogue (epic #359, phase 1). `nullify` et non `destroy` :
+  # un article vendu a des lignes et des écritures derrière lui, il ne disparaît
+  # pas parce qu'un contrat s'arrête.
+  has_many :catalog_items, dependent: :nullify
 
   before_validation :normalize_iban
   before_validation :inherit_human_identity, on: :create
@@ -68,6 +73,15 @@ class Consignor < ApplicationRecord
                             greater_than_or_equal_to: 0,
                             less_than_or_equal_to: 100 }
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
+  # L'espace artisan se déverrouille par un code envoyé à cette adresse : sans
+  # email, la porte n'existe pas. Unique, parce que l'adresse EST l'identité —
+  # deux artisans qui la partagent ouvriraient chacun l'espace de l'autre.
+  validates :email,
+            presence: { message: "est obligatoire pour ouvrir l'espace artisan" },
+            uniqueness: { case_sensitive: false,
+                          conditions: -> { where(deleted_at: nil) },
+                          message: "est déjà utilisé par un autre artisan" },
+            if: :portal_enabled?
   validates :iban, iban: true, allow_blank: true
   validates :iban, presence: { message: "est obligatoire pour un règlement par virement" },
                    if: :transfer?
@@ -75,6 +89,16 @@ class Consignor < ApplicationRecord
 
   scope :ordered, -> { order(active: :desc, name: :asc) }
   scope :actives, -> { where(active: true) }
+  scope :with_portal, -> { where(portal_enabled: true) }
+
+  # L'artisan à qui l'on accepte d'ouvrir l'espace : actif, l'interrupteur mis,
+  # et cette adresse exactement (insensible à la casse). Rien d'autre n'entre.
+  def self.for_portal_email(email)
+    normalized = email.to_s.strip.downcase
+    return nil if normalized.blank?
+
+    actives.with_portal.where("LOWER(consignors.email) = ?", normalized).first
+  end
 
   def last_report = consignment_reports.ordered.first
 
