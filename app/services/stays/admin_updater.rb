@@ -14,7 +14,9 @@ module Stays
   #     crée un s'il n'y en a pas. On NE TOUCHE PAS au `status`/`email` du Booking
   #     à l'édition (ces deux changements déclenchent l'email client via
   #     `Booking#notify_customer_on_update`) — l'admin ne doit jamais spammer le
-  #     client en éditant la compo. Le statut fait foi au niveau du Stay.
+  #     client en éditant la compo. Le statut fait foi au niveau du Stay ; il est
+  #     recopié sur les réservables en fin de run, email coupé
+  #     (`propagate_status_to_bookables!`), car le veto de dispo lit le leur.
   #   - Les ACTIVITÉS : réconciliation ensembliste, bornée au périmètre de
   #     l'utilisateur (`ExperienceAvailability.for_user`) — un porteur n'annule et
   #     ne crée que sur SES créneaux, jamais sur ceux d'un autre.
@@ -92,6 +94,7 @@ module Stays
         # camping (tente). Ce canal EST admin — aucun garde-fou public à prévoir.
         reconcile_terrace!(@stay, @draft)
         reconcile_experiences!
+        propagate_status_to_bookables!
         @stay.recompute_aggregates!
       end
       # Espaces DEVISÉS mais non persistables (aucune `Space` correspondante) :
@@ -366,6 +369,26 @@ module Stays
         @draft.lodging.rooms.where(id: @draft.room_ids)
       else
         @draft.lodging.rooms
+      end
+    end
+
+    # Le statut fait foi au niveau du Stay, mais le VETO de disponibilité (et le
+    # calendrier public) lit celui des réservables : `Lodging#available_between?`
+    # ne compte que les `Reservation` d'un Booking `confirmed`/`pre_confirmed`.
+    # Sans propagation, un séjour passé en « confirmé » par ce formulaire gardait
+    # un Booking `pending` → gîte affiché LIBRE et réservable une seconde fois
+    # (Grand-Duc, réveillon 2026, séjour 1506). Même mécanique que
+    # `Stays::QuickStatusUpdater` : `skip_customer_notification` coupe l'email
+    # client du réservable — la confirmation client vit au niveau du séjour.
+    def propagate_status_to_bookables!
+      return if @stay.status.blank?
+
+      @stay.bookables.each do |bookable|
+        next unless bookable.respond_to?(:status)
+        next if bookable.status == @stay.status
+
+        bookable.skip_customer_notification = true if bookable.respond_to?(:skip_customer_notification=)
+        bookable.update!(status: @stay.status)
       end
     end
 
