@@ -27,3 +27,9 @@ json.deferred_from_id cycle_action.deferred_from_id
 json.deferral_count cycle_action.deferral_count
 # Copie au cycle suivant (epic #330, phase 4) — exposée en LECTURE seule.
 json.copied_from_id cycle_action.copied_from_id
+# Pôle de l'action (epic #330, phase 5) — exposé en LECTURE seule.
+if cycle_action.team
+  json.team { json.partial! "api/v1/shared/ref", record: cycle_action.team }
+else
+  json.team nil
+end

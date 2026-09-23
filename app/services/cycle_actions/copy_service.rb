@@ -51,7 +51,7 @@ module CycleActions
 
     private
 
-    # Mêmes libellé, catégorie, heures ESTIMÉES et nature économique ; tout ce
+    # Mêmes libellé, catégorie, heures ESTIMÉES, nature économique et pôle ; tout ce
     # qui mesure l'avancement repart à zéro. La position n'est pas passée :
     # `set_default_position` place la copie en fin de sa catégorie.
     def create_copy!
@@ -66,6 +66,7 @@ module CycleActions
         occurrences: cycle_action.occurrences,
         completed_occurrences: 0,
         economic: cycle_action.economic,
+        team_id: cycle_action.team_id,
         actual_hours: 0,
         completed: false,
         outcome: nil,

@@ -1,0 +1,7 @@
+/ Le pôle dont relève l'action (epic #330, phase 5). Facultatif : l'option vide
+  vient en premier, c'est le cas courant. locals: f
+.w-48
+  = f.select :team_id,
+             grouped_options_for_select(TeamDecorator.grouped_options, f.object.team_id),
+             { include_blank: "—", label: "Pôle (optionnel)" },
+             class: "w-full rounded-lg border-gray-200 text-sm focus:border-teal-400 focus:ring-teal-400"

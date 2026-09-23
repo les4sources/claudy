@@ -64,6 +64,11 @@ div[id="cycle_action_#{cycle_action.id}"
     - if cycle_action.deferred_before?
       span.deferral-badge title="Reportée #{cycle_action.deferral_count} fois"
         | ⟳ ×#{cycle_action.deferral_count}
+    /  PÔLE (epic #330, phase 5) : discret, pour situer l'action sans voler la
+       vedette au libellé. Aucun pôle lié (le cas courant) : rien du tout.
+    - if cycle_action.team
+      span.team-badge title="Pôle : #{cycle_action.team.name}"
+        = cycle_action.team.name
 
   /  HEURES RÉELLES (epic #330, phase 2) : le réel se compte au clic, à gauche
      de l'estimé. Une pastille teal le distingue de l'estimé, resté gris. Tant

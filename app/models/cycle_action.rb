@@ -24,6 +24,7 @@
 #  deferred_from_id      :bigint
 #  delegate_to_human_id  :bigint
 #  human_id              :bigint           not null
+#  team_id               :bigint
 #
 # Indexes
 #
@@ -38,6 +39,7 @@
 #  index_cycle_actions_on_human_id                            (human_id)
 #  index_cycle_actions_on_human_id_and_archived_at            (human_id,archived_at)
 #  index_cycle_actions_on_human_id_and_category_and_position  (human_id,category,position)
+#  index_cycle_actions_on_team_id                             (team_id)
 #
 # Foreign Keys
 #
@@ -46,6 +48,7 @@
 #  fk_rails_...  (deferred_from_id => cycle_actions.id)
 #  fk_rails_...  (delegate_to_human_id => humans.id)
 #  fk_rails_...  (human_id => humans.id)
+#  fk_rails_...  (team_id => teams.id)
 #
 class CycleAction < ApplicationRecord
   belongs_to :human
@@ -61,6 +64,9 @@ class CycleAction < ApplicationRecord
   # vivante par action (index unique sur les lignes non supprimées).
   belongs_to :copied_from, class_name: "CycleAction", optional: true
   has_one :copy_in_next_cycle, class_name: "CycleAction", foreign_key: :copied_from_id
+  # PÔLE (epic #330, phase 5) : de quel pôle relève l'action. Facultatif, et
+  # seulement affiché — aucune agrégation d'heures par pôle (décision 7).
+  belongs_to :team, optional: true
 
   has_paper_trail
   has_soft_deletion default_scope: true

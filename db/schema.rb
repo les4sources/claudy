@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_23_050000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -757,6 +757,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_050000) do
     t.integer "occurrences", default: 1, null: false
     t.integer "outcome"
     t.integer "position", default: 0, null: false
+    t.bigint "team_id"
     t.decimal "unit_hours", precision: 5, scale: 2
     t.datetime "updated_at", null: false
     t.index ["category"], name: "index_cycle_actions_on_category"
@@ -770,6 +771,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_050000) do
     t.index ["human_id", "archived_at"], name: "index_cycle_actions_on_human_id_and_archived_at"
     t.index ["human_id", "category", "position"], name: "index_cycle_actions_on_human_id_and_category_and_position"
     t.index ["human_id"], name: "index_cycle_actions_on_human_id"
+    t.index ["team_id"], name: "index_cycle_actions_on_team_id"
   end
 
   create_table "cycle_targets", force: :cascade do |t|
@@ -2268,6 +2270,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_050000) do
   add_foreign_key "cycle_actions", "cycles"
   add_foreign_key "cycle_actions", "humans"
   add_foreign_key "cycle_actions", "humans", column: "delegate_to_human_id"
+  add_foreign_key "cycle_actions", "teams"
   add_foreign_key "cycle_targets", "cycles"
   add_foreign_key "cycle_targets", "humans"
   add_foreign_key "decisions", "agenda_items", on_delete: :nullify
