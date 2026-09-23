@@ -11,7 +11,9 @@ html(lang="fr")
     link(href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap" rel="stylesheet")
     = vite_client_tag
     = vite_javascript_tag "application", "data-turbo-track": "reload"
-  body.bg-white.overflow-x-clip(id="body-#{controller_name}_#{action_name}")
+  / La carte du domaine (epic #348) occupe toute la fenêtre sous la navbar :
+    colonne flex sur la hauteur de l'écran, sans padding ni pied de page.
+  body.bg-white.overflow-x-clip(id="body-#{controller_name}_#{action_name}" class=("flex h-[100dvh] flex-col overflow-hidden" if @map_view))
     = render "layouts/components/tooltips"
     = render "humans/tooltips"
 
@@ -20,14 +22,19 @@ html(lang="fr")
 
     = render "layouts/components/navbar"
 
-    .p-8
-      / sticky page header
-      - if content_for?(:page_header)
-        .mb-8
-          = yield :page_header
+    - if @map_view
+      main.relative.min-h-0.flex-1
+        = render 'layouts/components/messages'
+        = yield
+    - else
+      .p-8
+        / sticky page header
+        - if content_for?(:page_header)
+          .mb-8
+            = yield :page_header
 
-      / main content
-      = render 'layouts/components/messages'
-      = yield
+        / main content
+        = render 'layouts/components/messages'
+        = yield
 
-      = render 'layouts/components/footer'
+        = render 'layouts/components/footer'
