@@ -13,6 +13,11 @@ class CreateMapLayers < ActiveRecord::Migration[8.1]
       t.timestamps
     end
     add_index :map_layers, :kind
+    # Une seule couche vivante par type unique : sans cet index, deux premiers
+    # affichages simultanés de /map créaient deux couches « Gestion », que la
+    # validation rendait ensuite invalides toutes les deux.
+    add_index :map_layers, :kind, unique: true, name: "index_map_layers_on_kind_unique_live",
+              where: "deleted_at IS NULL AND kind NOT IN ('network', 'sketch')"
     add_index :map_layers, :deleted_at
   end
 end

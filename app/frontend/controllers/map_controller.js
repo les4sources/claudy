@@ -225,13 +225,16 @@ export default class extends Controller {
     this.observePanel();
 
     const visibility = this.readVisibility();
-    await Promise.all(
+    // `allSettled` : une couche qui ne se charge pas (réseau de terrain, session
+    // expirée) ne doit pas empêcher les autres ni la barre d'outils d'arriver.
+    await Promise.allSettled(
       this.layerToggleTargets.map((toggle) => {
         const id = toggle.dataset.layerId;
         toggle.checked = visibility[id] !== false;
         return this.loadLayer(id);
       })
     );
+    if (!this.map) return;
 
     // La couche Gestion est active d'office tant qu'elle est la seule
     // éditable : c'est le seul mode de cette phase.
@@ -246,6 +249,8 @@ export default class extends Controller {
     });
     if (!response.ok) return;
     const collection = await response.json();
+    // La page a pu être quittée pendant le chargement.
+    if (!this.map) return;
 
     if (this.featureLayers[id]) this.map.removeLayer(this.featureLayers[id]);
 
@@ -274,7 +279,15 @@ export default class extends Controller {
       });
     }
     layer.on('click', (event) => {
-      if (this.map.pm?.globalRemovalModeEnabled?.() || this.map.pm?.globalEditModeEnabled?.()) return;
+      // Pendant un tracé, le clic appartient à Geoman (il pose un sommet) : sans
+      // cette sortie, poser un point DANS une zone ouvrait la fiche de la zone.
+      if (
+        this.map.pm?.globalRemovalModeEnabled?.() ||
+        this.map.pm?.globalEditModeEnabled?.() ||
+        this.map.pm?.globalDrawModeEnabled?.()
+      ) {
+        return;
+      }
       L.DomEvent.stopPropagation(event);
       this.selectFeature(feature.id);
     });
@@ -365,6 +378,9 @@ export default class extends Controller {
       this.map.pm.enableGlobalRemovalMode();
     } else {
       this.map.pm.enableDraw(tool, {
+        // Un tracé à la fois : sinon l'outil Point restait armé, et le clic
+        // suivant remplaçait l'objet dont on remplissait la fiche.
+        continueDrawing: false,
         templineStyle: { color: FOREST },
         hintlineStyle: { color: FOREST, dashArray: [5, 5] },
         pathOptions: this.featureStyle({ geometry: { type: { Polygon: 'Polygon', Line: 'LineString' }[tool] || 'Point' } }, false),
@@ -401,6 +417,12 @@ export default class extends Controller {
     this.discardPending();
     this.pendingLayer = event.layer;
     this.pendingGeometry = event.layer.toGeoJSON().geometry;
+    // Un sommet corrigé AVANT « Enregistrer » doit partir avec la fiche.
+    event.layer.on('pm:edit', () => {
+      this.pendingGeometry = event.layer.toGeoJSON().geometry;
+      const field = this.geometryField();
+      if (field) field.value = JSON.stringify(this.pendingGeometry);
+    });
     const kind = { Point: 'point', LineString: 'path', Polygon: 'zone' }[this.pendingGeometry.type] || 'point';
     this.selectedFeatureId = null;
     this.openPanel(
@@ -411,18 +433,27 @@ export default class extends Controller {
   async onFeatureRemoved(event) {
     const id = event.layer?.featureId;
     if (!id) return;
-    await this.request(`${this.featureUrl(id)}.json`, 'DELETE');
+    // Geoman retire l'objet de la carte, pas de son groupe `L.geoJSON` : sans
+    // ceci, décocher puis recocher la couche le faisait réapparaître.
+    const layerId = event.layer.layerId;
+    this.featureLayers?.[layerId]?.removeLayer(event.layer);
+    const response = await this.request(`${this.featureUrl(id)}.json`, 'DELETE');
+    if (!response.ok) this.loadLayer(layerId);
     if (String(this.selectedFeatureId) === String(id)) this.closePanel();
   }
 
-  async saveGeometry(layer) {
-    if (!layer.featureId) return;
+  // Les PATCH d'un même objet partent l'un après l'autre : deux déplacements
+  // rapprochés ne doivent jamais être enregistrés dans le désordre.
+  saveGeometry(layer) {
+    if (!layer.featureId) return Promise.resolve();
     const geometry = JSON.stringify(layer.toGeoJSON().geometry);
-    const field = this.geometryField();
-    if (field && String(this.selectedFeatureId) === String(layer.featureId)) field.value = geometry;
-    await this.request(`${this.featureUrl(layer.featureId)}.json`, 'PATCH', {
-      map_feature: { geometry },
-    });
+    this.geometryQueue ||= {};
+    const previous = this.geometryQueue[layer.featureId] || Promise.resolve();
+    const next = previous
+      .catch(() => {})
+      .then(() => this.request(`${this.featureUrl(layer.featureId)}.json`, 'PATCH', { map_feature: { geometry } }));
+    this.geometryQueue[layer.featureId] = next;
+    return next;
   }
 
   selectFeature(id) {
@@ -477,6 +508,17 @@ export default class extends Controller {
   }
 
   onPanelChange() {
+    // Objet supprimé depuis sa fiche : on le retire de la carte, où il restait
+    // dessiné (et renvoyait une 404 au clic suivant).
+    const deleted = this.featureFrameTarget.querySelector('[data-feature-deleted]');
+    if (deleted) {
+      const layerId = deleted.dataset.layerId;
+      deleted.remove();
+      this.closePanel();
+      if (layerId) this.loadLayer(layerId);
+      return;
+    }
+
     const panel = this.featureFrameTarget.querySelector('[data-feature-panel]');
     if (this.hasPanelContainerTarget) this.panelContainerTarget.classList.toggle('hidden', !panel);
     if (!panel) return;
@@ -491,7 +533,8 @@ export default class extends Controller {
       delete panel.dataset.featureSaved;
       this.discardPending();
       this.selectedFeatureId = id;
-      this.loadLayer(this.activeLayerId).then(() => this.highlightSelection());
+      // La couche de l'objet enregistré, pas forcément la couche active.
+      this.loadLayer(panel.dataset.layerId || this.activeLayerId).then(() => this.highlightSelection());
     }
   }
 

@@ -1361,6 +1361,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_030100) do
     t.index ["created_by_id"], name: "index_map_layers_on_created_by_id"
     t.index ["deleted_at"], name: "index_map_layers_on_deleted_at"
     t.index ["kind"], name: "index_map_layers_on_kind"
+    t.index ["kind"], name: "index_map_layers_on_kind_unique_live", unique: true, where: "((deleted_at IS NULL) AND ((kind)::text <> ALL ((ARRAY['network'::character varying, 'sketch'::character varying])::text[])))"
   end
 
   create_table "meal_orders", force: :cascade do |t|

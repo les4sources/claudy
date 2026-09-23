@@ -11,6 +11,7 @@ class MapFeature < ApplicationRecord
   GEOMETRY_TYPES = %w[Point LineString Polygon].freeze
   LOCALES = %w[fr en nl].freeze
   PHOTO_CONTENT_TYPES = %w[image/jpeg image/png image/heic image/heif].freeze
+  HEIC_CONTENT_TYPES = %w[image/heic image/heif].freeze
 
   has_paper_trail
   has_soft_deletion default_scope: true
@@ -56,6 +57,22 @@ class MapFeature < ApplicationRecord
     rescue LoadError, StandardError
       false
     end
+  end
+
+  # Une photo HEIC d'iPhone ne s'affiche que dans Safari : on ne l'accepte que
+  # si libvips sait la décoder, pour la servir en miniature JPEG. Sinon elle
+  # est refusée avec un message clair (spec de la phase 2), plutôt qu'acceptée
+  # puis cassée sur Chrome, Firefox et Android.
+  def self.heic_supported?
+    return @heic_supported if defined?(@heic_supported)
+
+    @heic_supported = image_variants? && Vips.get_suffixes.include?(".heic")
+  rescue StandardError
+    @heic_supported = false
+  end
+
+  def self.accepted_photo_types
+    heic_supported? ? PHOTO_CONTENT_TYPES : PHOTO_CONTENT_TYPES - HEIC_CONTENT_TYPES
   end
 
   def self.photo_source(photo, variant)
@@ -134,9 +151,15 @@ class MapFeature < ApplicationRecord
 
   def photos_are_images
     photos.each do |photo|
-      next if PHOTO_CONTENT_TYPES.include?(photo.blob.content_type)
+      type = photo.blob.content_type
+      next if MapFeature.accepted_photo_types.include?(type)
 
-      errors.add(:photos, "« #{photo.filename} » n'est pas une photo acceptée (JPEG, PNG ou HEIC)")
+      if HEIC_CONTENT_TYPES.include?(type)
+        errors.add(:photos, "« #{photo.filename} » est au format HEIC, que le serveur ne sait pas convertir : " \
+                            "exportez-la en JPEG (sur iPhone : Réglages › Appareil photo › Formats › « Le plus compatible »)")
+      else
+        errors.add(:photos, "« #{photo.filename} » n'est pas une photo acceptée (#{MapFeature.heic_supported? ? 'JPEG, PNG ou HEIC' : 'JPEG ou PNG'})")
+      end
     end
   end
 end

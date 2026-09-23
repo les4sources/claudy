@@ -57,7 +57,12 @@ class MapFeaturesController < BaseController
     @feature.soft_delete!(validate: false)
     respond_to do |format|
       format.json { head :no_content }
-      format.turbo_stream { render turbo_stream: turbo_stream.update(PANEL_FRAME, "") }
+      # Le marqueur dit à la carte quel objet retirer : vider la fiche ne suffit
+      # pas, le tracé restait dessiné.
+      format.turbo_stream do
+        marker = helpers.tag.div(hidden: true, data: { feature_deleted: @feature.id, layer_id: @feature.map_layer_id })
+        render turbo_stream: turbo_stream.update(PANEL_FRAME, marker)
+      end
       format.html { redirect_to map_path }
     end
   end

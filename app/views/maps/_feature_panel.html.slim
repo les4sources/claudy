@@ -8,6 +8,7 @@
 div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:rounded-xl md:border md:border-stone-200"
     data-feature-panel="true"
     data-feature-id=feature.id
+    data-layer-id=feature.map_layer_id
     data-feature-saved=(saved ? "true" : nil)]
   .flex.items-center.gap-2.border-b.border-stone-100.px-4.py-3
     span class="rounded-full bg-forest-tint px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-forest"
@@ -32,8 +33,12 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
                 html: { class: "space-y-4", data: { map_target: "featureForm" } } do |f|
       = f.hidden_field :map_layer_id, value: feature.map_layer_id
       = f.hidden_field :feature_kind
-      = f.hidden_field :geometry, value: (feature.geometry.presence ? feature.geometry.to_json : ""),
-                       data: { role: "feature-geometry" }
+      / La géométrie ne part avec la fiche que pour un objet NEUF. Celle d'un
+        objet existant s'enregistre au déplacement de ses sommets : la renvoyer
+        à chaque « Enregistrer » pouvait ramener un contour périmé.
+      - unless feature.persisted?
+        = f.hidden_field :geometry, value: (feature.geometry.presence ? feature.geometry.to_json : ""),
+                         data: { role: "feature-geometry" }
 
       div
         = f.label :name, "Nom", class: "block text-xs font-semibold text-stone-600"
@@ -51,7 +56,7 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
                         class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
       div
         = f.label :photos, "Ajouter des photos", class: "block text-xs font-semibold text-stone-600"
-        = f.file_field :photos, multiple: true, direct_upload: true, accept: MapFeature::PHOTO_CONTENT_TYPES.join(","),
+        = f.file_field :photos, multiple: true, direct_upload: true, accept: MapFeature.accepted_photo_types.join(","),
                        class: "mt-1 w-full text-sm text-stone-600"
       = f.submit "Enregistrer", class: "h-11 w-full rounded-lg bg-forest text-sm font-semibold text-white hover:bg-forest-soft"
 

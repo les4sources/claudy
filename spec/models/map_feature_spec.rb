@@ -80,6 +80,13 @@ RSpec.describe MapLayer, type: :model do
     expect(MapLayer.new(kind: "network", name: "Électricité")).to be_valid
   end
 
+  it "garantit en base une seule couche vivante par type unique" do
+    MapLayer.for_kind(:management)
+    duplicate = MapLayer.new(kind: "management", name: "Gestion bis")
+    expect { duplicate.save!(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
+    expect(MapLayer.for_kind(:management)).to be_persisted
+  end
+
   it "refuse un type inconnu" do
     expect { MapLayer.for_kind(:inconnu) }.to raise_error(ArgumentError)
     expect { MapLayer.for_kind(:network) }.to raise_error(ArgumentError)
@@ -97,5 +104,33 @@ RSpec.describe MapFeature, ".photo_source" do
 
     allow(MapFeature).to receive(:image_variants?).and_return(true)
     expect(MapFeature.photo_source(photo, :thumb)).to be_a(ActiveStorage::VariantWithRecord)
+  end
+end
+
+RSpec.describe MapFeature, "photos HEIC" do
+  let(:layer) { MapLayer.for_kind(:management) }
+  let(:point) { { "type" => "Point", "coordinates" => [4.905, 50.340] } }
+
+  def feature_with(content_type, filename)
+    feature = layer.map_features.new(feature_kind: "point", geometry: point)
+    feature.photos.attach(io: StringIO.new("x"), filename: filename, content_type: content_type)
+    feature
+  end
+
+  it "refuse un HEIC avec un message clair quand le serveur ne sait pas le convertir" do
+    allow(MapFeature).to receive(:heic_supported?).and_return(false)
+    feature = feature_with("image/heic", "IMG_0001.HEIC")
+    expect(feature).not_to be_valid
+    expect(feature.errors[:photos].join).to include("IMG_0001.HEIC", "HEIC", "JPEG")
+  end
+
+  it "accepte un HEIC quand libvips sait le décoder" do
+    allow(MapFeature).to receive(:heic_supported?).and_return(true)
+    expect(feature_with("image/heic", "IMG_0001.HEIC")).to be_valid
+  end
+
+  it "accepte toujours le JPEG" do
+    allow(MapFeature).to receive(:heic_supported?).and_return(false)
+    expect(feature_with("image/jpeg", "photo.jpg")).to be_valid
   end
 end

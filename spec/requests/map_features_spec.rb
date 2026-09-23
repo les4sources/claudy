@@ -138,5 +138,23 @@ RSpec.describe "Carte du domaine — objets (epic #348, phase 2)", type: :reques
       expect(MapFeature.where(id: feature.id)).to be_empty
       expect(MapFeature.unscoped.find(feature.id).deleted_at).to be_present
     end
+
+    it "supprimer depuis la fiche renvoie le marqueur qui retire l'objet de la carte" do
+      feature = zone
+      delete map_feature_path(feature), headers: turbo
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(%(data-feature-deleted="#{feature.id}"), %(data-layer-id="#{layer.id}"))
+      expect(MapFeature.where(id: feature.id)).to be_empty
+    end
+
+    it "la fiche d'un objet existant n'envoie pas sa géométrie (seul le déplacement des sommets l'écrit)" do
+      feature = zone
+      get map_feature_path(feature)
+      expect(response.body).not_to include("feature-geometry")
+
+      get new_map_feature_path(layer_id: layer.id, feature_kind: "zone")
+      expect(response.body).to include("feature-geometry")
+    end
   end
 end
