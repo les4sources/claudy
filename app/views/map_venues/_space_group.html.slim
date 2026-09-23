@@ -3,9 +3,7 @@
 - stay = group.stay&.decorate
 - slots = group.reservations.map { |reservation| reservation.decorate.duration }.compact.uniq
 li.rounded-xl.border.border-stone-200.bg-white.p-3.shadow-sm
-  - unless space_booking.status == "confirmed"
-    = stay ? stay.status_badge : space_booking.status
-  p.mt-1.text-base.font-semibold.text-stone-900 = stay ? stay.display_name : space_booking.name
+  p.text-base.font-semibold.text-stone-900 = stay ? stay.display_name : space_booking.name
   dl.mt-2.space-y-1.text-sm.text-stone-600
     .flex.gap-2
       dt.w-20.shrink-0.text-stone-400 Créneau

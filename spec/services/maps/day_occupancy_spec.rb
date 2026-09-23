@@ -70,9 +70,12 @@ RSpec.describe Maps::DayOccupancy do
     expect(groups.map(&:arriving)).to eq([false, true])
   end
 
-  it "compte le pré-confirmé, comme le calendrier et le veto" do
+  it "ne compte que le confirmé : un pré-confirmé ne colore pas le gîte" do
     book(from: today - 1, to: today + 1, status: "pre_confirmed")
-    expect(state_of(hulotte_feature)).to eq("occupied")
+    book_space(date: today, status: "pre_confirmed")
+    expect(state_of(hulotte_feature)).to eq("free")
+    expect(state_of(salle_feature)).to eq("free")
+    expect(described_class.new(today).lodging_groups(hulotte)).to be_empty
   end
 
   it "ignore les réservations en attente, annulées ou supprimées" do

@@ -5,9 +5,9 @@
 # `Booking.lodging_id` + dates, qui ne pose ni l'occupation calendrier ni le
 # veto. Celle d'une salle se lit dans les `SpaceReservation` du jour.
 #
-# Statuts retenus : `Stay::BLOCKING_STATUSES` (confirmé ET pré-confirmé), comme
-# `Lodging#booked_on?` et le veto de disponibilité. Un gîte que le calendrier
-# montre occupé doit l'être aussi sur la carte.
+# Statut retenu : `confirmed` SEULEMENT (décision Michael 2026-09-23). La carte
+# du jour dit qui est vraiment là : un séjour pré-confirmé bloque le calendrier
+# et le veto, mais il n'occupe pas encore le gîte sur la carte.
 #
 # Trois états par objet :
 #   occupied — quelqu'un dort là cette nuit ;
@@ -17,6 +17,7 @@
 module Maps
   class DayOccupancy
     STATES = %w[occupied turnover free].freeze
+    STATUSES = %w[confirmed].freeze
 
     Group = Struct.new(:booking, :arriving, :departing, keyword_init: true) do
       def stay = booking.stay
@@ -60,7 +61,7 @@ module Maps
     # Les séjours présents dans un gîte ce jour-là : ceux qui partent (dernière
     # nuit = la veille) avant ceux qui restent ou arrivent.
     def lodging_groups(lodging)
-      bookings = blocking_bookings_for(lodging.rooms.pluck(:id), [date - 1, date])
+      bookings = confirmed_bookings_for(lodging.rooms.pluck(:id), [date - 1, date])
       bookings.map do |booking|
         Group.new(booking: booking, arriving: booking.from_date == date, departing: booking.to_date == date)
       end.select { |group| group.departing || booking_sleeps_tonight?(group.booking) }
@@ -71,7 +72,7 @@ module Maps
     def next_lodging_booking(lodging)
       booking_id = Reservation.joins(:booking)
                               .where(room_id: lodging.rooms.pluck(:id), date: (date + 1)..)
-                              .merge(blocking_bookings)
+                              .merge(confirmed_bookings)
                               .order(:date).pick(:booking_id)
       booking_id && Booking.find_by(id: booking_id)
     end
@@ -79,7 +80,7 @@ module Maps
     def space_groups(space)
       SpaceReservation.joins(:space_booking)
                       .where(space_id: space.id, date: date)
-                      .merge(blocking_space_bookings)
+                      .merge(confirmed_space_bookings)
                       .includes(space_booking: [:event, { stay: :customer }])
                       .group_by(&:space_booking)
                       .map { |space_booking, reservations| SpaceGroup.new(space_booking: space_booking, reservations: reservations) }
@@ -89,7 +90,7 @@ module Maps
     def next_space_booking(space)
       space_booking_id = SpaceReservation.joins(:space_booking)
                                          .where(space_id: space.id, date: (date + 1)..)
-                                         .merge(blocking_space_bookings)
+                                         .merge(confirmed_space_bookings)
                                          .order(:date).pick(:space_booking_id)
       space_booking_id && SpaceBooking.find_by(id: space_booking_id)
     end
@@ -102,7 +103,7 @@ module Maps
 
       Reservation.joins(:booking)
                  .where(room_id: room_ids, date: [date - 1, date])
-                 .merge(blocking_bookings)
+                 .merge(confirmed_bookings)
                  .pluck(:room_id, :date, "bookings.from_date", "bookings.to_date")
     end
 
@@ -133,14 +134,14 @@ module Maps
 
       SpaceReservation.joins(:space_booking)
                       .where(space_id: space_ids, date: date)
-                      .merge(blocking_space_bookings)
+                      .merge(confirmed_space_bookings)
                       .group(:space_id).count
     end
 
-    def blocking_bookings_for(room_ids, dates)
+    def confirmed_bookings_for(room_ids, dates)
       ids = Reservation.joins(:booking)
                        .where(room_id: room_ids, date: dates)
-                       .merge(blocking_bookings)
+                       .merge(confirmed_bookings)
                        .distinct.pluck(:booking_id)
       Booking.where(id: ids).includes(:lodging, stay: [:customer, :stay_items]).to_a
     end
@@ -151,12 +152,12 @@ module Maps
 
     # `merge` plutôt qu'un `where(bookings: …)` nu : les séjours supprimés
     # (soft-delete) ne doivent jamais colorer un gîte.
-    def blocking_bookings
-      Booking.where(status: Stay::BLOCKING_STATUSES, deleted_at: nil)
+    def confirmed_bookings
+      Booking.where(status: STATUSES, deleted_at: nil)
     end
 
-    def blocking_space_bookings
-      SpaceBooking.where(status: Stay::BLOCKING_STATUSES, deleted_at: nil)
+    def confirmed_space_bookings
+      SpaceBooking.where(status: STATUSES, deleted_at: nil)
     end
   end
 end
