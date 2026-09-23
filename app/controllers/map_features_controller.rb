@@ -15,7 +15,7 @@ class MapFeaturesController < BaseController
   # GET /map/features.json?layer_id=… — une `FeatureCollection` GeoJSON.
   def index
     layer = MapLayer.find(params.require(:layer_id))
-    features = layer.map_features.ordered.with_attached_photos
+    features = layer.map_features.ordered.with_attached_photos.includes(:linked)
     render json: { type: "FeatureCollection", features: features.map(&:as_geojson) }
   end
 
@@ -86,7 +86,7 @@ class MapFeaturesController < BaseController
 
   def feature_params
     params.require(:map_feature).permit(:map_layer_id, :feature_kind, :geometry, :name, :description,
-                                        :management_notes, photos: [])
+                                        :management_notes, :linked_key, photos: [])
   end
 
   # Le nom et la description saisis ici sont le FRANÇAIS : les autres langues
@@ -102,6 +102,8 @@ class MapFeaturesController < BaseController
     if attrs.key?(:management_notes)
       @feature.properties = @feature.properties.to_h.merge("management_notes" => attrs[:management_notes].to_s.strip)
     end
+    # Le gîte ou la salle que l'objet représente (couche des lieux, phase 3).
+    @feature.linked_key = attrs[:linked_key] if attrs.key?(:linked_key)
     photos = Array(attrs[:photos]).compact_blank
     @feature.photos.attach(photos) if photos.any?
   end

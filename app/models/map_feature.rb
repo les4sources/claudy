@@ -12,6 +12,10 @@ class MapFeature < ApplicationRecord
   LOCALES = %w[fr en nl].freeze
   PHOTO_CONTENT_TYPES = %w[image/jpeg image/png image/heic image/heif].freeze
   HEIC_CONTENT_TYPES = %w[image/heic image/heif].freeze
+  # Ce qu'un objet de la carte peut représenter (phase 3). Liste fermée : le
+  # type polymorphe vient d'un formulaire, il ne doit jamais désigner autre
+  # chose qu'un gîte ou une salle.
+  LINKABLE_TYPES = { "Lodging" => "lodging", "Space" => "space" }.freeze
 
   has_paper_trail
   has_soft_deletion default_scope: true
@@ -30,6 +34,8 @@ class MapFeature < ApplicationRecord
   validates :feature_kind, inclusion: { in: FEATURE_KINDS }
   validate :geometry_is_valid_geojson
   validate :photos_are_images
+  validates :linked_type, inclusion: { in: LINKABLE_TYPES.keys }, allow_nil: true
+  validate :linked_only_once
 
   scope :ordered, -> { order(:position, :id) }
 
@@ -86,6 +92,25 @@ class MapFeature < ApplicationRecord
 
   def management_notes = properties.to_h["management_notes"]
 
+  # « Lodging:3 » : la valeur du sélecteur de la fiche. Le setter ne constantize
+  # rien — un type hors de `LINKABLE_TYPES` est ignoré, jamais résolu.
+  def linked_key = linked_type && linked_id ? "#{linked_type}:#{linked_id}" : ""
+
+  def linked_key=(value)
+    type, id = value.to_s.split(":", 2)
+    if LINKABLE_TYPES.key?(type) && id.to_s.match?(/\A\d+\z/)
+      self.linked_type = type
+      self.linked_id = id.to_i
+      self.feature_kind = LINKABLE_TYPES.fetch(type)
+    else
+      self.feature_kind = MapFeature.kind_for_geometry(geometry) if venue?
+      self.linked_type = nil
+      self.linked_id = nil
+    end
+  end
+
+  def venue? = LINKABLE_TYPES.value?(feature_kind)
+
   # Un objet de la carte dans une `FeatureCollection` GeoJSON : la géométrie,
   # et ce dont la carte a besoin pour le dessiner et l'étiqueter.
   def as_geojson
@@ -96,8 +121,10 @@ class MapFeature < ApplicationRecord
       properties: {
         id: id,
         feature_kind: feature_kind,
-        name: name(:fr),
+        name: name(:fr).presence || linked&.name,
         layer_id: map_layer_id,
+        linked_type: linked_type,
+        linked_id: linked_id,
         photos_count: photos.size,
         properties: properties
       }
@@ -147,6 +174,14 @@ class MapFeature < ApplicationRecord
   # première.
   def linear_ring?(ring)
     ring.is_a?(Array) && ring.size >= 4 && ring.all? { |c| position?(c) } && ring.first == ring.last
+  end
+
+  def linked_only_once
+    return if linked_type.blank? || linked_id.blank?
+
+    taken = MapFeature.where(linked_type: linked_type, linked_id: linked_id)
+    taken = taken.where.not(id: id) if persisted?
+    errors.add(:linked, "a déjà son tracé sur la carte") if taken.exists?
   end
 
   def photos_are_images

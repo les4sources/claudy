@@ -1,0 +1,10 @@
+/ Gîtes et salles pas encore tracés sur la carte (epic #348, phase 3).
+= turbo_frame_tag "map_venues_todo" do
+  - if lodgings.any? || spaces.any?
+    .mt-3.rounded-lg.border.border-dashed.border-ember/50.bg-ember-tint/40.px-2.py-2
+      p class="text-[0.65rem] font-semibold uppercase tracking-wide text-ember" À tracer
+      p class="mt-0.5 text-[0.7rem] leading-snug text-stone-500"
+        | Activez « Hébergements et salles », dessinez une zone et reliez-la.
+      ul.mt-1.flex.flex-wrap.gap-1
+        - (lodgings.to_a + spaces.to_a).each do |venue|
+          li class="rounded-full bg-white px-2 py-0.5 text-[0.7rem] text-stone-600 ring-1 ring-stone-200" = venue.name
