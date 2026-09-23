@@ -407,6 +407,13 @@ Rails.application.routes.draw do
   get "map/tiles/:key/:kind/:z/:x/:y", to: "map_tiles#show", as: :map_tile,
       constraints: { z: /\d+/, x: /\d+/, y: /\d+/, format: /png/ }
   get "map", to: "maps#show", as: :map
+  # Les objets de la carte (epic #348, phase 2) : la carte lit et écrit leurs
+  # géométries en JSON, la fiche latérale édite le reste en Turbo Stream.
+  scope "map" do
+    resources :map_features, path: "features", only: %i[index show new create update destroy] do
+      delete "photos/:photo_id", action: :destroy_photo, on: :member, as: :photo
+    end
+  end
 
   # Organisation
   get "organisation", to: "organisation#index", as: :organisation

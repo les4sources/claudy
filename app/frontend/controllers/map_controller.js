@@ -1,6 +1,17 @@
 import { Controller } from '@hotwired/stimulus';
-import L from 'leaflet';
+import L from '~/utils/leaflet_global';
+import '@geoman-io/leaflet-geoman-free';
 import 'leaflet/dist/leaflet.css';
+import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
+import '~/stylesheets/map.css';
+
+// Style de la couche Gestion (phase 2) : polygones `forest` remplis à 25 %,
+// accès en pointillés `bark`, points en marqueur rond. Couleurs du thème
+// Tailwind (`tailwind.config.js`).
+const FOREST = '#0B3D3A';
+const BARK = '#8A6F47';
+const LABEL_MIN_ZOOM = 18;
+const VISIBILITY_KEY = 'claudy.map.layers.visible';
 
 // La carte du domaine (epic #348, phase 1).
 //
@@ -18,6 +29,12 @@ export default class extends Controller {
     'reliefToggle',
     'locateButton',
     'notice',
+    'layerToggle',
+    'layerName',
+    'toolbar',
+    'tool',
+    'panelContainer',
+    'featureFrame',
   ];
 
   static values = {
@@ -28,6 +45,8 @@ export default class extends Controller {
     minZoom: { type: Number, default: 12 },
     maxZoom: { type: Number, default: 20 },
     hasRelief: { type: String, default: 'false' },
+    featuresUrl: String,
+    newFeatureUrl: String,
   };
 
   connect() {
@@ -62,6 +81,8 @@ export default class extends Controller {
     this.map.on('locationfound', (event) => this.onLocationFound(event));
     this.map.on('locationerror', () => this.onLocationError());
 
+    this.setupFeatures();
+
     // Leaflet mesure son conteneur au montage. Dans une page Turbo le conteneur
     // n'a pas toujours sa taille finale à ce moment-là : sans ce recalcul, la
     // carte s'affiche en tuiles grises sur un quart de l'écran.
@@ -69,6 +90,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    this.panelObserver?.disconnect();
     if (this.map) {
       this.map.remove();
       this.map = null;
@@ -138,12 +160,14 @@ export default class extends Controller {
       weight: 2,
       fillColor: '#024442',
       fillOpacity: 1,
+      pmIgnore: true,
     }).addTo(this.map);
     this.locationCircle = L.circle(event.latlng, {
       radius: event.accuracy,
       color: '#024442',
       weight: 1,
       fillOpacity: 0.08,
+      pmIgnore: true,
     }).addTo(this.map);
   }
 
@@ -169,5 +193,390 @@ export default class extends Controller {
     this.noticeTarget.classList.remove('hidden');
     clearTimeout(this.noticeTimer);
     this.noticeTimer = setTimeout(() => this.noticeTarget.classList.add('hidden'), 4000);
+  }
+  // ── Couches et objets (epic #348, phase 2) ────────────────────────────────
+  //
+  // Chaque couche typée est un `L.geoJSON` chargé depuis
+  // `/map/features.json?layer_id=…`. La case du panneau l'affiche ou la masque
+  // (état gardé en `localStorage`) ; le nom la rend ACTIVE, et si elle est de
+  // kind `management`, la barre d'outils Geoman apparaît.
+
+  async setupFeatures() {
+    if (!this.hasFeaturesUrlValue || !this.featuresUrlValue) return;
+
+    this.featureLayers = {};
+    this.activeLayerId = null;
+    this.selectedFeatureId = null;
+    this.pendingLayer = null;
+    this.pendingGeometry = null;
+
+    this.geomanReady = Boolean(this.map?.pm);
+    if (this.geomanReady) {
+      // Pas de barre Geoman par défaut : la nôtre (44 px, au doigt) la remplace.
+      this.map.pm.setGlobalOptions({ snappable: true, snapDistance: 15 });
+      this.map.pm.setLang('fr');
+      this.map.on('pm:create', (event) => this.onDrawCreate(event));
+      this.map.on('pm:remove', (event) => this.onFeatureRemoved(event));
+      this.map.on('pm:drawend', () => this.resetTools());
+    }
+
+    this.map.on('zoomend', () => this.updateLabels());
+    this.updateLabels();
+    this.observePanel();
+
+    const visibility = this.readVisibility();
+    // `allSettled` : une couche qui ne se charge pas (réseau de terrain, session
+    // expirée) ne doit pas empêcher les autres ni la barre d'outils d'arriver.
+    await Promise.allSettled(
+      this.layerToggleTargets.map((toggle) => {
+        const id = toggle.dataset.layerId;
+        toggle.checked = visibility[id] !== false;
+        return this.loadLayer(id);
+      })
+    );
+    if (!this.map) return;
+
+    // La couche Gestion est active d'office tant qu'elle est la seule
+    // éditable : c'est le seul mode de cette phase.
+    const management = this.layerNameTargets.find((b) => b.dataset.layerKind === 'management');
+    if (management) this.setActiveLayer(management.dataset.layerId, management.dataset.layerKind);
+  }
+
+  async loadLayer(id) {
+    const response = await fetch(`${this.featuresUrlValue}?layer_id=${encodeURIComponent(id)}`, {
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin',
+    });
+    if (!response.ok) return;
+    const collection = await response.json();
+    // La page a pu être quittée pendant le chargement.
+    if (!this.map) return;
+
+    if (this.featureLayers[id]) this.map.removeLayer(this.featureLayers[id]);
+
+    const group = L.geoJSON(collection, {
+      style: (feature) => this.featureStyle(feature, false),
+      pointToLayer: (feature, latlng) => L.circleMarker(latlng, this.featureStyle(feature, false)),
+      onEachFeature: (feature, layer) => this.bindFeature(feature, layer, id),
+    });
+    this.featureLayers[id] = group;
+
+    const toggle = this.layerToggleTargets.find((t) => t.dataset.layerId === String(id));
+    if (!toggle || toggle.checked) group.addTo(this.map);
+    this.updateLabels();
+    return group;
+  }
+
+  bindFeature(feature, layer, layerId) {
+    layer.featureId = feature.id;
+    layer.layerId = layerId;
+    const name = feature.properties?.name;
+    if (name) {
+      layer.bindTooltip(name, {
+        permanent: true,
+        direction: 'center',
+        className: 'map-feature-label',
+      });
+    }
+    layer.on('click', (event) => {
+      // Pendant un tracé, le clic appartient à Geoman (il pose un sommet) : sans
+      // cette sortie, poser un point DANS une zone ouvrait la fiche de la zone.
+      if (
+        this.map.pm?.globalRemovalModeEnabled?.() ||
+        this.map.pm?.globalEditModeEnabled?.() ||
+        this.map.pm?.globalDrawModeEnabled?.()
+      ) {
+        return;
+      }
+      L.DomEvent.stopPropagation(event);
+      this.selectFeature(feature.id);
+    });
+    // Sommets déplacés ou objet glissé : la géométrie est enregistrée tout de
+    // suite, et le champ caché de la fiche ouverte suit.
+    layer.on('pm:edit', () => this.saveGeometry(layer));
+  }
+
+  featureStyle(feature, selected) {
+    const type = feature?.geometry?.type;
+    const weight = selected ? 5 : 2;
+    if (type === 'Polygon') {
+      return { color: FOREST, weight, fillColor: FOREST, fillOpacity: 0.25 };
+    }
+    if (type === 'LineString') {
+      return { color: BARK, weight: selected ? 6 : 4, dashArray: '8 8', lineCap: 'round' };
+    }
+    return {
+      radius: selected ? 10 : 8,
+      color: '#ffffff',
+      weight: selected ? 4 : 2,
+      fillColor: FOREST,
+      fillOpacity: 1,
+    };
+  }
+
+  // Les libellés n'apparaissent qu'à partir du zoom 18 : plus loin, ils
+  // recouvrent la carte au lieu de l'expliquer.
+  updateLabels() {
+    const container = this.map.getContainer();
+    container.classList.toggle('map-labels-hidden', this.map.getZoom() < LABEL_MIN_ZOOM);
+  }
+
+  toggleLayer(event) {
+    const id = event.target.dataset.layerId;
+    const group = this.featureLayers?.[id];
+    if (group) {
+      if (event.target.checked) group.addTo(this.map);
+      else this.map.removeLayer(group);
+    }
+    const visibility = this.readVisibility();
+    visibility[id] = event.target.checked;
+    this.writeVisibility(visibility);
+  }
+
+  activateLayer(event) {
+    const button = event.currentTarget;
+    this.setActiveLayer(button.dataset.layerId, button.dataset.layerKind);
+  }
+
+  setActiveLayer(id, kind) {
+    this.activeLayerId = String(id);
+    this.activeLayerKind = kind;
+    this.layerNameTargets.forEach((button) => {
+      const active = button.dataset.layerId === this.activeLayerId;
+      button.classList.toggle('bg-teal-50', active);
+      button.classList.toggle('font-medium', active);
+      button.classList.toggle('text-4s-main', active);
+      button.setAttribute('aria-current', active ? 'true' : 'false');
+    });
+
+    const editable = kind === 'management' && this.geomanReady;
+    if (this.hasToolbarTarget) {
+      this.toolbarTarget.classList.toggle('hidden', !editable);
+      this.toolbarTarget.classList.toggle('flex', editable);
+    }
+    if (!editable) this.disableTools();
+  }
+
+  useTool(event) {
+    const tool = event.currentTarget.dataset.tool;
+    if (!this.geomanReady || !this.activeLayerId) return;
+
+    const wasActive = event.currentTarget.getAttribute('aria-pressed') === 'true';
+    this.disableTools();
+    if (wasActive) return;
+
+    // Une couche masquée ne s'édite pas à l'aveugle : on la rallume.
+    const toggle = this.layerToggleTargets.find((t) => t.dataset.layerId === this.activeLayerId);
+    if (toggle && !toggle.checked) {
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event('change'));
+    }
+
+    if (tool === 'edit') {
+      this.map.pm.enableGlobalEditMode({ allowSelfIntersection: false });
+    } else if (tool === 'remove') {
+      this.map.pm.enableGlobalRemovalMode();
+    } else {
+      this.map.pm.enableDraw(tool, {
+        // Un tracé à la fois : sinon l'outil Point restait armé, et le clic
+        // suivant remplaçait l'objet dont on remplissait la fiche.
+        continueDrawing: false,
+        templineStyle: { color: FOREST },
+        hintlineStyle: { color: FOREST, dashArray: [5, 5] },
+        pathOptions: this.featureStyle({ geometry: { type: { Polygon: 'Polygon', Line: 'LineString' }[tool] || 'Point' } }, false),
+      });
+    }
+    event.currentTarget.setAttribute('aria-pressed', 'true');
+    event.currentTarget.classList.add('bg-forest-tint', 'text-forest');
+  }
+
+  disableTools() {
+    if (this.geomanReady) {
+      this.map.pm.disableDraw();
+      if (this.map.pm.globalEditModeEnabled()) this.map.pm.disableGlobalEditMode();
+      if (this.map.pm.globalRemovalModeEnabled()) this.map.pm.disableGlobalRemovalMode();
+    }
+    this.resetTools();
+  }
+
+  resetTools() {
+    this.toolTargets.forEach((button) => {
+      const mode = button.dataset.tool;
+      const stillOn =
+        (mode === 'edit' && this.map.pm?.globalEditModeEnabled?.()) ||
+        (mode === 'remove' && this.map.pm?.globalRemovalModeEnabled?.());
+      if (stillOn) return;
+      button.setAttribute('aria-pressed', 'false');
+      button.classList.remove('bg-forest-tint', 'text-forest');
+    });
+  }
+
+  // Une géométrie finie : rien n'est encore enregistré. La fiche s'ouvre avec
+  // la géométrie dans son champ caché ; « Enregistrer » crée l'objet.
+  onDrawCreate(event) {
+    this.discardPending();
+    this.pendingLayer = event.layer;
+    this.pendingGeometry = event.layer.toGeoJSON().geometry;
+    // Un sommet corrigé AVANT « Enregistrer » doit partir avec la fiche.
+    event.layer.on('pm:edit', () => {
+      this.pendingGeometry = event.layer.toGeoJSON().geometry;
+      const field = this.geometryField();
+      if (field) field.value = JSON.stringify(this.pendingGeometry);
+    });
+    const kind = { Point: 'point', LineString: 'path', Polygon: 'zone' }[this.pendingGeometry.type] || 'point';
+    this.selectedFeatureId = null;
+    this.openPanel(
+      `${this.newFeatureUrlValue}?layer_id=${encodeURIComponent(this.activeLayerId)}&feature_kind=${kind}`
+    );
+  }
+
+  async onFeatureRemoved(event) {
+    const id = event.layer?.featureId;
+    if (!id) return;
+    // Geoman retire l'objet de la carte, pas de son groupe `L.geoJSON` : sans
+    // ceci, décocher puis recocher la couche le faisait réapparaître.
+    const layerId = event.layer.layerId;
+    this.featureLayers?.[layerId]?.removeLayer(event.layer);
+    const response = await this.request(`${this.featureUrl(id)}.json`, 'DELETE');
+    if (!response.ok) this.loadLayer(layerId);
+    if (String(this.selectedFeatureId) === String(id)) this.closePanel();
+  }
+
+  // Les PATCH d'un même objet partent l'un après l'autre : deux déplacements
+  // rapprochés ne doivent jamais être enregistrés dans le désordre.
+  saveGeometry(layer) {
+    if (!layer.featureId) return Promise.resolve();
+    const geometry = JSON.stringify(layer.toGeoJSON().geometry);
+    this.geometryQueue ||= {};
+    const previous = this.geometryQueue[layer.featureId] || Promise.resolve();
+    const next = previous
+      .catch(() => {})
+      .then(() => this.request(`${this.featureUrl(layer.featureId)}.json`, 'PATCH', { map_feature: { geometry } }));
+    this.geometryQueue[layer.featureId] = next;
+    return next;
+  }
+
+  selectFeature(id) {
+    this.discardPending();
+    this.selectedFeatureId = id;
+    this.highlightSelection();
+    this.openPanel(this.featureUrl(id));
+  }
+
+  highlightSelection() {
+    Object.values(this.featureLayers || {}).forEach((group) => {
+      group.eachLayer((layer) => {
+        const selected = String(layer.featureId) === String(this.selectedFeatureId);
+        if (layer.setStyle) layer.setStyle(this.featureStyle(layer.feature, selected));
+        if (layer.setRadius && layer.feature?.geometry?.type === 'Point') {
+          layer.setRadius(selected ? 10 : 8);
+        }
+      });
+    });
+  }
+
+  openPanel(url) {
+    if (!this.hasFeatureFrameTarget) return;
+    this.featureFrameTarget.src = url;
+  }
+
+  closePanel() {
+    this.discardPending();
+    this.selectedFeatureId = null;
+    this.highlightSelection();
+    if (this.hasFeatureFrameTarget) {
+      this.featureFrameTarget.removeAttribute('src');
+      this.featureFrameTarget.innerHTML = '';
+    }
+  }
+
+  discardPending() {
+    if (this.pendingLayer) this.map.removeLayer(this.pendingLayer);
+    this.pendingLayer = null;
+    this.pendingGeometry = null;
+  }
+
+  // La fiche vit dans une Turbo Frame que le serveur remplit (clic, création)
+  // ou remplace (Turbo Stream à l'enregistrement). On l'observe pour : la
+  // montrer ou la cacher selon qu'elle a du contenu, poser la géométrie d'un
+  // objet neuf, et recharger la couche quand un enregistrement a réussi.
+  observePanel() {
+    if (!this.hasFeatureFrameTarget) return;
+    this.panelObserver = new MutationObserver(() => this.onPanelChange());
+    this.panelObserver.observe(this.featureFrameTarget, { childList: true });
+    this.onPanelChange();
+  }
+
+  onPanelChange() {
+    // Objet supprimé depuis sa fiche : on le retire de la carte, où il restait
+    // dessiné (et renvoyait une 404 au clic suivant).
+    const deleted = this.featureFrameTarget.querySelector('[data-feature-deleted]');
+    if (deleted) {
+      const layerId = deleted.dataset.layerId;
+      deleted.remove();
+      this.closePanel();
+      if (layerId) this.loadLayer(layerId);
+      return;
+    }
+
+    const panel = this.featureFrameTarget.querySelector('[data-feature-panel]');
+    if (this.hasPanelContainerTarget) this.panelContainerTarget.classList.toggle('hidden', !panel);
+    if (!panel) return;
+
+    const field = this.geometryField();
+    if (field && !field.value && this.pendingGeometry) field.value = JSON.stringify(this.pendingGeometry);
+
+    if (panel.dataset.featureSaved === 'true' && panel.dataset.featureId) {
+      // Enregistré : l'objet vit désormais dans la couche rechargée, le tracé
+      // provisoire n'a plus de raison d'être.
+      const id = panel.dataset.featureId;
+      delete panel.dataset.featureSaved;
+      this.discardPending();
+      this.selectedFeatureId = id;
+      // La couche de l'objet enregistré, pas forcément la couche active.
+      this.loadLayer(panel.dataset.layerId || this.activeLayerId).then(() => this.highlightSelection());
+    }
+  }
+
+  geometryField() {
+    return this.hasFeatureFrameTarget
+      ? this.featureFrameTarget.querySelector("[data-role='feature-geometry']")
+      : null;
+  }
+
+  featureUrl(id) {
+    return `${this.featuresUrlValue.replace(/\.json$/, '')}/${id}`;
+  }
+
+  async request(url, method, body) {
+    const token = document.querySelector('meta[name="csrf-token"]')?.content;
+    const response = await fetch(url, {
+      method,
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': token || '',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!response.ok) this.showNotice("L'enregistrement a échoué — rechargez la page.");
+    return response;
+  }
+
+  readVisibility() {
+    try {
+      return JSON.parse(window.localStorage.getItem(VISIBILITY_KEY) || '{}');
+    } catch {
+      return {};
+    }
+  }
+
+  writeVisibility(visibility) {
+    try {
+      window.localStorage.setItem(VISIBILITY_KEY, JSON.stringify(visibility));
+    } catch {
+      // Navigation privée ou stockage plein : l'état ne survit pas, rien de grave.
+    }
   }
 }
