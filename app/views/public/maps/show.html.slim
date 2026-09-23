@@ -1,0 +1,48 @@
+/ La carte du domaine pour les hôtes (epic #348, phase 4). Elle remplace la
+  carte papier : la couche Accueil sur le fond de carte, le gîte du séjour
+  surligné, et « Ma position » pour qui cherche le parking. Aucun outil
+  d'édition, aucune autre couche. Toutes les chaînes vivent dans
+  config/locales/public.*.yml (scope public.maps.*).
+- content_for :meta_title, t(".meta_title")
+
+header.flex.flex-shrink-0.items-center.gap-3.border-b.px-3.py-2(class="bg-sand border-bark/30")
+  = link_to public_stay_path(@stay.token),
+            class: "inline-flex h-11 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-forest hover:bg-forest-tint" do
+    = funnel_icon :arrow_left, css_class: "w-4 h-4"
+    span = t(".back")
+  h1.min-w-0.flex-1.truncate.text-base.font-semibold.text-ink = t(".title")
+
+.relative.min-h-0.flex-1
+  - if @base_layer.nil?
+    .flex.h-full.items-center.justify-center.p-8.text-center
+      p.max-w-sm.text-base.text-ink(data-map-unavailable="true") = t(".unavailable")
+  - else
+    div[class="absolute inset-0"
+        data-controller="public--stay-map"
+        data-public--stay-map-tiles-url-value="/map/tiles/#{@base_layer.key}/{kind}/{z}/{x}/{y}.png?sejour=#{ERB::Util.url_encode(@stay.token)}"
+        data-public--stay-map-bounds-value=(@base_layer.leaflet_bounds || []).to_json
+        data-public--stay-map-center-value=(@base_layer.center || []).to_json
+        data-public--stay-map-min-zoom-value=(@base_layer.min_zoom || 12)
+        data-public--stay-map-max-zoom-value=(@base_layer.max_zoom || 20)
+        data-public--stay-map-welcome-value=@welcome.to_json
+        data-public--stay-map-lodgings-value=@lodgings.to_json
+        data-public--stay-map-locate-error-value=t(".locate_error")]
+      div.absolute.inset-0.bg-sand data-public--stay-map-target="canvas"
+
+      = render "maps/welcome_legend", html_class: "flex absolute bottom-6 left-3 z-[1000]",
+                                      labels: MapFeature::ACCESS_LEVELS.keys.index_with { |access| t(".legend.#{access}") },
+                                      highlight_label: (t(".legend.your_lodging") if @lodgings[:features].any?)
+
+      button[type="button"
+             class="absolute bottom-6 right-4 z-[1000] flex h-11 w-11 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-lg transition-colors hover:text-forest"
+             data-action="click->public--stay-map#toggleLocate"
+             data-public--stay-map-target="locateButton"
+             title=t(".locate")
+             aria-pressed="false"]
+        svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+          circle cx="12" cy="12" r="3"
+          path d="M12 2v3M12 19v3M2 12h3M19 12h3"
+        span.sr-only = t(".locate")
+
+      div[class="pointer-events-none absolute bottom-24 left-1/2 z-[1000] hidden -translate-x-1/2 rounded-lg bg-stone-800/90 px-3 py-2 text-xs text-white shadow-lg"
+          data-public--stay-map-target="notice"]

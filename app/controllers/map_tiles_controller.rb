@@ -10,6 +10,14 @@ class MapTilesController < BaseController
   # donné. Un an de cache, et le navigateur ne redemande plus rien.
   CACHE_CONTROL = "public, max-age=31536000, immutable".freeze
 
+  # La page publique d'un séjour (phase 4) lit les mêmes tuiles, sans compte :
+  # le jeton du séjour, passé en `?sejour=`, tient lieu de session. C'est le
+  # mécanisme le plus simple — pas de cookie à poser, pas de seconde route — et
+  # les tuiles ne deviennent pas publiques pour autant : sans jeton valide, rien
+  # ne change, Devise exige une session.
+  skip_before_action :authenticate_user!, :enforce_active_member, :restrict_experience_carriers,
+                     if: :stay_token_valid?
+
   def show
     layer = MapBaseLayer.find_by(key: params[:key])
     return head :not_found if layer.nil?
@@ -36,6 +44,13 @@ class MapTilesController < BaseController
     return nil if z.negative? || x.negative? || y.negative?
 
     layer.tiles_root.join(params[:kind], z.to_s, x.to_s, "#{y}.png").to_s
+  end
+
+  def stay_token_valid?
+    return @stay_token_valid if defined?(@stay_token_valid)
+
+    token = params[:sejour]
+    @stay_token_valid = token.is_a?(String) && token.present? && Stay.exists?(token: token)
   end
 
   def set_presenters

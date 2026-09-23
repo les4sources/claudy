@@ -108,7 +108,7 @@
                aria-pressed="false"
                data-map-target="tool"
                data-tool="CircleMarker"
-               data-tool-kinds="management"
+               data-tool-kinds="management welcome"
                data-action="click->map#useTool"]
           svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
             circle cx="12" cy="10" r="3"
@@ -120,7 +120,7 @@
                aria-pressed="false"
                data-map-target="tool"
                data-tool="Line"
-               data-tool-kinds="management"
+               data-tool-kinds="management welcome"
                data-action="click->map#useTool"]
           svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
             polyline points="4 18 10 10 14 14 20 6"
@@ -198,6 +198,12 @@
           span.flex.items-center.gap-1
             span class="inline-block h-2.5 w-2.5 rounded-sm border border-forest/40 bg-forest-tint"
             | Libre
+
+      / Légende de la couche Accueil (phase 4), visible quand elle est active :
+        les mêmes couleurs que sur la page publique des hôtes.
+      = render "maps/welcome_legend", html_class: "absolute bottom-6 left-3 z-[1000] hidden",
+                                      data: { "map-target" => "welcomeLegend" },
+                                      labels: MapFeature::ACCESS_LEVELS
 
       / La fiche latérale d'un objet (Turbo Frame). À droite sur grand écran,
         plein écran sous 768 px. Masquée tant qu'elle est vide.

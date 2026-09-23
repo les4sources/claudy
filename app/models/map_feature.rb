@@ -16,6 +16,39 @@ class MapFeature < ApplicationRecord
   # type polymorphe vient d'un formulaire, il ne doit jamais désigner autre
   # chose qu'un gîte ou une salle.
   LINKABLE_TYPES = { "Lodging" => "lodging", "Space" => "space" }.freeze
+  # La couche Accueil (phase 4) : ce que la carte papier disait aux hôtes. Une
+  # zone est publique, privée ou accessible sur demande ; un point utile porte
+  # une icône prise dans une liste courte. Les libellés sont ceux de l'admin, en
+  # français ; ceux des hôtes vivent dans `public.*.yml`.
+  ACCESS_LEVELS = {
+    "public" => "Publique",
+    "private" => "Privée",
+    "on_request" => "Accessible sur demande"
+  }.freeze
+  # Les couleurs des légendes. MÊMES valeurs que `ACCESS_COLORS` dans
+  # `app/frontend/utils/map_welcome.js`, qui peint les zones : les changer des
+  # deux côtés à la fois.
+  ACCESS_COLORS = {
+    "public" => "#2E7D4F",
+    "private" => "#B42318",
+    "on_request" => "#D98E04"
+  }.freeze
+  # Le gîte du séjour, surligné sur la page publique : `ember` du thème, la
+  # couleur de l'occupé sur la carte du jour.
+  STAY_LODGING_COLOR = "#C97B3D".freeze
+  WELCOME_ICONS = {
+    "parking" => "Parking",
+    "trash" => "Poubelles",
+    "wood" => "Bois",
+    "oven" => "Four à bois",
+    "grocery" => "Épicerie",
+    "disc_golf" => "Disc-golf",
+    "meeting_point" => "Point de rendez-vous",
+    "animals" => "Animaux",
+    "toilets" => "Toilettes",
+    "water" => "Eau potable",
+    "info" => "Information"
+  }.freeze
 
   has_paper_trail
   has_soft_deletion default_scope: true
@@ -36,6 +69,7 @@ class MapFeature < ApplicationRecord
   validate :photos_are_images
   validates :linked_type, inclusion: { in: LINKABLE_TYPES.keys }, allow_nil: true
   validate :linked_only_once
+  validate :welcome_properties_are_known
 
   scope :ordered, -> { order(:position, :id) }
 
@@ -91,6 +125,30 @@ class MapFeature < ApplicationRecord
   def geometry_type = geometry.is_a?(Hash) ? geometry["type"] : nil
 
   def management_notes = properties.to_h["management_notes"]
+
+  # Couche Accueil (phase 4).
+  def access = properties.to_h["access"]
+  def icon = properties.to_h["icon"]
+
+  # Les langues des hôtes où le nom ou la description existent en français mais
+  # pas encore dans la langue : c'est l'indicateur discret de la fiche. Le
+  # français, lui, est la langue de repli — il n'est jamais « à traduire ».
+  def missing_translations
+    (LOCALES - ["fr"]).select do |locale|
+      [name_i18n, description_i18n].any? { |values| values.to_h["fr"].present? && values.to_h[locale].blank? }
+    end
+  end
+
+  # Ce qu'un HÔTE voit d'un objet d'accueil, dans sa langue : la géométrie, le
+  # nom, la description, la nature de la zone ou l'icône du point. Rien d'autre
+  # — ni consigne, ni photo, ni identifiant d'un autre modèle.
+  def as_public_geojson(locale = I18n.locale)
+    {
+      type: "Feature",
+      geometry: geometry,
+      properties: { name: name(locale), description: description(locale), access: access, icon: icon }.compact
+    }
+  end
 
   # « Lodging:3 » : la valeur du sélecteur de la fiche. Le setter ne constantize
   # rien — un type hors de `LINKABLE_TYPES` est ignoré, jamais résolu.
@@ -182,6 +240,16 @@ class MapFeature < ApplicationRecord
     taken = MapFeature.where(linked_type: linked_type, linked_id: linked_id)
     taken = taken.where.not(id: id) if persisted?
     errors.add(:linked, "a déjà son tracé sur la carte") if taken.exists?
+  end
+
+  # Une nature de zone ou une icône inconnue casserait la légende des hôtes :
+  # la carte ne saurait pas de quelle couleur la peindre. Et un objet d'accueil
+  # sans nom français n'a rien à dire à un hôte : le français est la langue de
+  # repli de toutes les autres.
+  def welcome_properties_are_known
+    errors.add(:base, "Le type de zone « #{access} » est inconnu") if access.present? && !ACCESS_LEVELS.key?(access)
+    errors.add(:base, "L'icône « #{icon} » est inconnue") if icon.present? && !WELCOME_ICONS.key?(icon)
+    errors.add(:base, "Un objet de la couche Accueil doit avoir un nom en français") if map_layer&.welcome? && name_i18n.to_h["fr"].blank?
   end
 
   def photos_are_images

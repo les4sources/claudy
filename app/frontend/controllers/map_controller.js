@@ -4,6 +4,7 @@ import '@geoman-io/leaflet-geoman-free';
 import 'leaflet/dist/leaflet.css';
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import '~/stylesheets/map.css';
+import { welcomeIcon, welcomeMarker, welcomeProperties, welcomeStyle } from '~/utils/map_welcome';
 
 // Style de la couche Gestion (phase 2) : polygones `forest` remplis à 25 %,
 // accès en pointillés `bark`, points en marqueur rond. Couleurs du thème
@@ -47,6 +48,7 @@ export default class extends Controller {
     'dateInput',
     'todayButton',
     'venuesTodo',
+    'welcomeLegend',
   ];
 
   static values = {
@@ -221,6 +223,7 @@ export default class extends Controller {
     if (!this.hasFeaturesUrlValue || !this.featuresUrlValue) return;
 
     this.featureLayers = {};
+    this.layerKinds = {};
     this.activeLayerId = null;
     this.selectedFeatureId = null;
     this.pendingLayer = null;
@@ -276,11 +279,15 @@ export default class extends Controller {
     if (this.featureLayers[id]) this.map.removeLayer(this.featureLayers[id]);
 
     const nameButton = this.layerNameTargets.find((b) => b.dataset.layerId === String(id));
+    if (nameButton) this.layerKinds[String(id)] = nameButton.dataset.layerKind;
     if (nameButton?.dataset.layerKind === 'venues') this.venuesLayerId = String(id);
 
     const group = L.geoJSON(collection, {
       style: (feature) => this.featureStyle(feature, false),
-      pointToLayer: (feature, latlng) => L.circleMarker(latlng, this.featureStyle(feature, false)),
+      // Un point d'accueil porte son icône (phase 4) ; les autres restent des
+      // pastilles rondes.
+      pointToLayer: (feature, latlng) =>
+        this.isWelcome(feature) ? welcomeMarker(L, feature, latlng) : L.circleMarker(latlng, this.featureStyle(feature, false)),
       onEachFeature: (feature, layer) => this.bindFeature(feature, layer, id),
     });
     this.featureLayers[id] = group;
@@ -326,6 +333,7 @@ export default class extends Controller {
     const type = feature?.geometry?.type;
     const weight = selected ? 5 : 2;
     if (this.isVenue(feature)) return this.venueStyle(feature, selected);
+    if (this.isWelcome(feature)) return welcomeStyle(feature, selected);
     if (type === 'Polygon') {
       return { color: FOREST, weight, fillColor: FOREST, fillOpacity: 0.25 };
     }
@@ -377,7 +385,7 @@ export default class extends Controller {
       button.setAttribute('aria-current', active ? 'true' : 'false');
     });
 
-    const editable = ['management', 'venues'].includes(kind) && this.geomanReady;
+    const editable = ['management', 'venues', 'welcome'].includes(kind) && this.geomanReady;
     // Les gîtes et salles se tracent en zones : point et ligne restent à la
     // Gestion.
     this.toolTargets.forEach((button) => {
@@ -389,6 +397,11 @@ export default class extends Controller {
       this.toolbarTarget.classList.toggle('flex', editable);
     }
     if (!editable) this.disableTools();
+    // La légende des zones d'accueil (phase 4) accompagne la couche active.
+    if (this.hasWelcomeLegendTarget) {
+      this.welcomeLegendTarget.classList.toggle('hidden', kind !== 'welcome');
+      this.welcomeLegendTarget.classList.toggle('flex', kind === 'welcome');
+    }
   }
 
   useTool(event) {
@@ -417,7 +430,13 @@ export default class extends Controller {
         continueDrawing: false,
         templineStyle: { color: FOREST },
         hintlineStyle: { color: FOREST, dashArray: [5, 5] },
-        pathOptions: this.featureStyle({ geometry: { type: { Polygon: 'Polygon', Line: 'LineString' }[tool] || 'Point' } }, false),
+        pathOptions: this.featureStyle(
+          {
+            geometry: { type: { Polygon: 'Polygon', Line: 'LineString' }[tool] || 'Point' },
+            properties: { layer_id: this.activeLayerId },
+          },
+          false
+        ),
       });
     }
     event.currentTarget.setAttribute('aria-pressed', 'true');
@@ -505,6 +524,9 @@ export default class extends Controller {
         if (layer.setStyle) layer.setStyle(this.featureStyle(layer.feature, selected));
         if (layer.setRadius && layer.feature?.geometry?.type === 'Point') {
           layer.setRadius(selected ? 10 : 8);
+        }
+        if (layer.setIcon && this.isWelcome(layer.feature)) {
+          layer.setIcon(welcomeIcon(L, welcomeProperties(layer.feature).icon, selected));
         }
       });
     });
@@ -616,6 +638,13 @@ export default class extends Controller {
 
   isVenue(feature) {
     return VENUE_KINDS.includes(feature?.properties?.feature_kind);
+  }
+
+  // Un objet de la couche Accueil (phase 4) : zone colorée selon l'accès, point
+  // à icône. La couche se reconnaît à son kind, noté au chargement.
+  isWelcome(feature) {
+    const layerId = feature?.properties?.layer_id;
+    return layerId != null && this.layerKinds?.[String(layerId)] === 'welcome';
   }
 
   venueStyle(feature, selected) {
