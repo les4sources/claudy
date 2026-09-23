@@ -168,7 +168,7 @@
             svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
               polyline points="15 18 9 12 15 6"
           label.relative.flex.h-11.cursor-pointer.flex-col.justify-center.px-2.text-center
-            span.text-sm.font-semibold.text-stone-800 data-map-target="dateLabel" = l(@date, format: "%A %-d %B").upcase_first
+            span.whitespace-nowrap.text-sm.font-semibold.text-stone-800 data-map-target="dateLabel" = l(@date, format: "%A %-d %B").upcase_first
             span class="text-[0.65rem] text-stone-400" data-map-target="dateHint" = @date == Date.current ? "aujourd'hui" : ""
             input[type="date"
                   class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
