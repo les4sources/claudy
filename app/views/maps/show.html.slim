@@ -10,9 +10,10 @@
       code.mx-1.rounded.bg-stone-100.px-1.py-0.5.text-xs rake map:base_layer:import
       | , qui lit un dossier de tuiles et enregistre la couche.
 - else
-  / `h-[calc(100dvh-...)]` plutôt que `100vh` : sur iOS la barre d'adresse
-    mange la différence, et la carte débordait sous elle.
-  div class="relative w-full overflow-hidden" style="height: calc(100dvh - 8.5rem)"
+  / La hauteur vient du layout : en mode carte, le corps de page est une colonne
+    flex de `100dvh` (pas `100vh`, que la barre d'adresse d'iOS dépasse) et la
+    carte en occupe tout ce qui reste sous la navbar, bord à bord.
+  div class="relative h-full w-full overflow-hidden"
     div[class="absolute inset-0"
         data-controller="map"
         data-map-tiles-url-value="/map/tiles/#{@base_layer.key}/{kind}/{z}/{x}/{y}.png"
