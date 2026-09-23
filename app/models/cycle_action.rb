@@ -3,6 +3,7 @@
 # Table name: cycle_actions
 #
 #  id                    :bigint           not null, primary key
+#  actual_hours          :decimal(5, 2)    default(0.0), not null
 #  archived_at           :datetime
 #  category              :integer          default(0), not null
 #  completed             :boolean          default(FALSE)
@@ -18,6 +19,7 @@
 #  unit_hours            :decimal(5, 2)
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
+#  copied_from_id        :bigint
 #  cycle_id              :bigint
 #  deferred_from_id      :bigint
 #  delegate_to_human_id  :bigint
@@ -27,6 +29,7 @@
 #
 #  index_cycle_actions_on_category                            (category)
 #  index_cycle_actions_on_completed                           (completed)
+#  index_cycle_actions_on_copied_from_id                      (copied_from_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_cycle_actions_on_cycle_id                            (cycle_id)
 #  index_cycle_actions_on_cycle_id_and_human_id               (cycle_id,human_id)
 #  index_cycle_actions_on_deferred_from_id                    (deferred_from_id)
@@ -38,6 +41,7 @@
 #
 # Foreign Keys
 #
+#  fk_rails_...  (copied_from_id => cycle_actions.id)
 #  fk_rails_...  (cycle_id => cycles.id)
 #  fk_rails_...  (deferred_from_id => cycle_actions.id)
 #  fk_rails_...  (delegate_to_human_id => humans.id)
@@ -51,6 +55,12 @@ class CycleAction < ApplicationRecord
   # cycle avec l'issue « reportée » et la copie pointe vers elle.
   belongs_to :deferred_from, class_name: "CycleAction", optional: true
   has_one :deferred_to, class_name: "CycleAction", foreign_key: :deferred_from_id
+  # COPIE AU CYCLE SUIVANT (epic #330, phase 4) : l'origine reste où elle est,
+  # sans issue ; une copie indépendante démarre au cycle suivant. Lien distinct
+  # de `deferred_from`, qui porte la sémantique du report. Une seule copie
+  # vivante par action (index unique sur les lignes non supprimées).
+  belongs_to :copied_from, class_name: "CycleAction", optional: true
+  has_one :copy_in_next_cycle, class_name: "CycleAction", foreign_key: :copied_from_id
 
   has_paper_trail
   has_soft_deletion default_scope: true
