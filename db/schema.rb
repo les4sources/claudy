@@ -743,6 +743,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_030100) do
     t.integer "category", default: 0, null: false
     t.boolean "completed", default: false
     t.integer "completed_occurrences", default: 0, null: false
+    t.bigint "copied_from_id"
     t.datetime "created_at", null: false
     t.bigint "cycle_id"
     t.integer "deferral_count", default: 0, null: false
@@ -760,6 +761,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_030100) do
     t.datetime "updated_at", null: false
     t.index ["category"], name: "index_cycle_actions_on_category"
     t.index ["completed"], name: "index_cycle_actions_on_completed"
+    t.index ["copied_from_id"], name: "index_cycle_actions_on_copied_from_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["cycle_id", "human_id"], name: "index_cycle_actions_on_cycle_id_and_human_id"
     t.index ["cycle_id"], name: "index_cycle_actions_on_cycle_id"
     t.index ["deferred_from_id"], name: "index_cycle_actions_on_deferred_from_id"
@@ -2259,6 +2261,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_030100) do
   add_foreign_key "coworking_reservations", "customers"
   add_foreign_key "customer_bank_accounts", "customers"
   add_foreign_key "customers", "humans"
+  add_foreign_key "cycle_actions", "cycle_actions", column: "copied_from_id"
   add_foreign_key "cycle_actions", "cycle_actions", column: "deferred_from_id"
   add_foreign_key "cycle_actions", "cycles"
   add_foreign_key "cycle_actions", "humans"

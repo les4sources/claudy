@@ -1,6 +1,6 @@
 class CycleActionsController < BaseController
-  before_action :get_cycle_action, only: [:edit, :update, :destroy, :toggle_completed, :complete_occurrence, :add_actual_hour, :remove_actual_hour, :toggle_economic, :defer, :defer_next, :undo_defer_next, :settle, :archive, :unarchive]
-  before_action :ensure_open_cycle, only: [:edit, :update, :destroy, :toggle_completed, :complete_occurrence, :add_actual_hour, :remove_actual_hour, :toggle_economic, :defer, :defer_next, :settle, :archive, :unarchive]
+  before_action :get_cycle_action, only: [:edit, :update, :destroy, :toggle_completed, :complete_occurrence, :add_actual_hour, :remove_actual_hour, :toggle_economic, :defer, :defer_next, :undo_defer_next, :copy_next, :settle, :archive, :unarchive]
+  before_action :ensure_open_cycle, only: [:edit, :update, :destroy, :toggle_completed, :complete_occurrence, :add_actual_hour, :remove_actual_hour, :toggle_economic, :defer, :defer_next, :copy_next, :settle, :archive, :unarchive]
 
   def create
     service = CycleActions::CreateService.new
@@ -183,6 +183,46 @@ class CycleActionsController < BaseController
       @cycle_action.update!(outcome: nil)
     end
     redirect_to member_path, notice: "Action ramenée dans ce cycle."
+  end
+
+  # Copie l'action au cycle suivant, ou retire la copie si elle existe déjà
+  # (epic #330, phase 4). L'origine ne bouge pas : seule sa ligne est remplacée,
+  # pour que l'icône reflète l'état de la copie.
+  def copy_next
+    service = CycleActions::CopyService.new(cycle_action: @cycle_action)
+    if service.run
+      respond_to do |format|
+        format.turbo_stream {
+          render turbo_stream: [
+            turbo_stream.replace(
+              "cycle_action_#{@cycle_action.id}",
+              partial: "cycle_actions/cycle_action",
+              locals: { cycle_action: @cycle_action.reload }
+            ),
+            turbo_stream.append(
+              "flash_toasts",
+              partial: "cycle_actions/copied_toast",
+              locals: { cycle_action: @cycle_action, target_cycle: service.target_cycle, copied: service.copied? }
+            )
+          ]
+        }
+        format.html {
+          notice = service.copied? ? "Action copiée dans « #{service.target_cycle.name} »." : "Copie retirée de « #{service.target_cycle.name} »."
+          redirect_to member_path, notice: notice
+        }
+      end
+    else
+      respond_to do |format|
+        format.turbo_stream {
+          render turbo_stream: turbo_stream.append(
+            "flash_toasts",
+            partial: "cycle_actions/error_toast",
+            locals: { message: service.error_message, cycle: @cycle }
+          )
+        }
+        format.html { redirect_to member_path, alert: service.error_message }
+      end
+    end
   end
 
   # Triage depuis la page de clôture : fait / suivant / archiver.

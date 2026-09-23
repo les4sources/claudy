@@ -440,6 +440,8 @@ Rails.application.routes.draw do
       patch :defer
       patch :defer_next
       patch :undo_defer_next
+      # Copie au cycle suivant (epic #330, phase 4) — un second appel la retire.
+      patch :copy_next
       patch :settle
       patch :archive
       patch :unarchive

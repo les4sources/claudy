@@ -115,6 +115,38 @@ div[id="cycle_action_#{cycle_action.id}"
           path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"
           path d="M12 2v20"
 
+      /  COPIER AU CYCLE SUIVANT (epic #330, phase 4), juste avant la flèche :
+         la flèche DÉPLACE, cette icône DUPLIQUE — l'action reste ici. Proposée
+         aussi sur une action faite (une action qui revient, justement). Tant
+         qu'une copie vivante existe, l'icône est pleine et teintée, et un second
+         clic retire la copie (décision 6).
+      - copy = cycle_action.copy_in_next_cycle
+      - if copy
+        = button_to copy_next_cycle_action_path(cycle_action),
+                    method: :patch,
+                    data: { turbo_stream: true },
+                    class: "p-1.5 rounded-md text-sky-700 bg-sky-100 hover:bg-sky-200 transition-colors",
+                    title: "Retirer la copie du cycle suivant (#{copy.cycle.name})" do
+          svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.25" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            rect x="9" y="9" width="12" height="12" rx="2" ry="2"
+            path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" fill="none"
+      - elsif next_cycle
+        = button_to copy_next_cycle_action_path(cycle_action),
+                    method: :patch,
+                    data: { turbo_stream: true },
+                    class: "p-1.5 rounded-md text-gray-400 hover:text-sky-700 hover:bg-sky-50 transition-colors",
+                    title: "Copier au cycle suivant (#{next_cycle.name})" do
+          svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            rect x="9" y="9" width="12" height="12" rx="2" ry="2"
+            path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+      - else
+        = link_to new_cycle_path,
+                  class: "p-1.5 rounded-md text-gray-300 hover:text-amber-600 hover:bg-amber-50 transition-colors",
+                  title: "Aucun cycle suivant configuré — créer un cycle" do
+          svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 2"
+            rect x="9" y="9" width="12" height="12" rx="2" ry="2"
+            path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+
       - unless cycle_action.completed?
         - if next_cycle
           = button_to defer_next_cycle_action_path(cycle_action),
