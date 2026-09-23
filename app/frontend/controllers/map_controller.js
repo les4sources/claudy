@@ -10,6 +10,12 @@ import '~/stylesheets/map.css';
 // Tailwind (`tailwind.config.js`).
 const FOREST = '#0B3D3A';
 const BARK = '#8A6F47';
+// Carte du jour (phase 3) : `ember` du thème pour l'occupé, `forest-tint` pour
+// le libre, hachures des deux pour une arrivée ou un départ.
+const EMBER = '#C97B3D';
+const FOREST_TINT = '#E4EEEA';
+const HATCH_ID = 'map-venue-hatch';
+const VENUE_KINDS = ['lodging', 'space'];
 const LABEL_MIN_ZOOM = 18;
 const VISIBILITY_KEY = 'claudy.map.layers.visible';
 
@@ -35,6 +41,12 @@ export default class extends Controller {
     'tool',
     'panelContainer',
     'featureFrame',
+    'dateBar',
+    'dateLabel',
+    'dateHint',
+    'dateInput',
+    'todayButton',
+    'venuesTodo',
   ];
 
   static values = {
@@ -47,6 +59,10 @@ export default class extends Controller {
     hasRelief: { type: String, default: 'false' },
     featuresUrl: String,
     newFeatureUrl: String,
+    occupancyUrl: String,
+    venueUrl: String,
+    date: String,
+    today: String,
   };
 
   connect() {
@@ -236,10 +252,15 @@ export default class extends Controller {
     );
     if (!this.map) return;
 
-    // La couche Gestion est active d'office tant qu'elle est la seule
-    // éditable : c'est le seul mode de cette phase.
-    const management = this.layerNameTargets.find((b) => b.dataset.layerKind === 'management');
-    if (management) this.setActiveLayer(management.dataset.layerId, management.dataset.layerKind);
+    // La carte du jour est la vue par défaut (phase 3) : la couche des lieux
+    // est active en arrivant, la Gestion à défaut.
+    const initial =
+      this.layerNameTargets.find((b) => b.dataset.layerKind === 'venues') ||
+      this.layerNameTargets.find((b) => b.dataset.layerKind === 'management');
+    if (initial) this.setActiveLayer(initial.dataset.layerId, initial.dataset.layerKind);
+
+    this.updateDateBar();
+    await this.loadOccupancy();
   }
 
   async loadLayer(id) {
@@ -254,6 +275,9 @@ export default class extends Controller {
 
     if (this.featureLayers[id]) this.map.removeLayer(this.featureLayers[id]);
 
+    const nameButton = this.layerNameTargets.find((b) => b.dataset.layerId === String(id));
+    if (nameButton?.dataset.layerKind === 'venues') this.venuesLayerId = String(id);
+
     const group = L.geoJSON(collection, {
       style: (feature) => this.featureStyle(feature, false),
       pointToLayer: (feature, latlng) => L.circleMarker(latlng, this.featureStyle(feature, false)),
@@ -263,6 +287,7 @@ export default class extends Controller {
 
     const toggle = this.layerToggleTargets.find((t) => t.dataset.layerId === String(id));
     if (!toggle || toggle.checked) group.addTo(this.map);
+    this.ensureHatchPattern();
     this.updateLabels();
     return group;
   }
@@ -289,7 +314,8 @@ export default class extends Controller {
         return;
       }
       L.DomEvent.stopPropagation(event);
-      this.selectFeature(feature.id);
+      if (this.isVenue(feature)) this.selectVenue(feature.id);
+      else this.selectFeature(feature.id);
     });
     // Sommets déplacés ou objet glissé : la géométrie est enregistrée tout de
     // suite, et le champ caché de la fiche ouverte suit.
@@ -299,6 +325,7 @@ export default class extends Controller {
   featureStyle(feature, selected) {
     const type = feature?.geometry?.type;
     const weight = selected ? 5 : 2;
+    if (this.isVenue(feature)) return this.venueStyle(feature, selected);
     if (type === 'Polygon') {
       return { color: FOREST, weight, fillColor: FOREST, fillOpacity: 0.25 };
     }
@@ -331,6 +358,7 @@ export default class extends Controller {
     const visibility = this.readVisibility();
     visibility[id] = event.target.checked;
     this.writeVisibility(visibility);
+    if (id === this.venuesLayerId) this.updateDateBar();
   }
 
   activateLayer(event) {
@@ -349,7 +377,13 @@ export default class extends Controller {
       button.setAttribute('aria-current', active ? 'true' : 'false');
     });
 
-    const editable = kind === 'management' && this.geomanReady;
+    const editable = ['management', 'venues'].includes(kind) && this.geomanReady;
+    // Les gîtes et salles se tracent en zones : point et ligne restent à la
+    // Gestion.
+    this.toolTargets.forEach((button) => {
+      const kinds = button.dataset.toolKinds?.split(' ');
+      button.classList.toggle('hidden', Boolean(kinds) && !kinds.includes(kind));
+    });
     if (this.hasToolbarTarget) {
       this.toolbarTarget.classList.toggle('hidden', !editable);
       this.toolbarTarget.classList.toggle('flex', editable);
@@ -440,6 +474,7 @@ export default class extends Controller {
     const response = await this.request(`${this.featureUrl(id)}.json`, 'DELETE');
     if (!response.ok) this.loadLayer(layerId);
     if (String(this.selectedFeatureId) === String(id)) this.closePanel();
+    if (event.layer?.layerId === this.venuesLayerId && this.hasVenuesTodoTarget) this.venuesTodoTarget.reload();
   }
 
   // Les PATCH d'un même objet partent l'un après l'autre : deux déplacements
@@ -533,8 +568,16 @@ export default class extends Controller {
       delete panel.dataset.featureSaved;
       this.discardPending();
       this.selectedFeatureId = id;
-      // La couche de l'objet enregistré, pas forcément la couche active.
-      this.loadLayer(panel.dataset.layerId || this.activeLayerId).then(() => this.highlightSelection());
+      // La couche de l'objet enregistré, pas forcément la couche active ; si
+      // c'est celle des lieux, l'occupation et la liste « À tracer » suivent.
+      const layerId = panel.dataset.layerId || this.activeLayerId;
+      this.loadLayer(layerId).then(async () => {
+        if (String(layerId) === this.venuesLayerId) {
+          await this.loadOccupancy();
+          if (this.hasVenuesTodoTarget) this.venuesTodoTarget.reload();
+        }
+        this.highlightSelection();
+      });
     }
   }
 
@@ -562,6 +605,166 @@ export default class extends Controller {
     });
     if (!response.ok) this.showNotice("L'enregistrement a échoué — rechargez la page.");
     return response;
+  }
+
+  // ── Carte du jour (epic #348, phase 3) ────────────────────────────────────
+  //
+  // Les gîtes et salles tracés (couche `venues`) sont colorés selon leur
+  // occupation au jour affiché, lue sur `/map/occupancy.json?date=…`. Le jour
+  // vit dans l'URL (`?date=`) : un rechargement ou un lien partagé retombent
+  // sur le même jour.
+
+  isVenue(feature) {
+    return VENUE_KINDS.includes(feature?.properties?.feature_kind);
+  }
+
+  venueStyle(feature, selected) {
+    const state = this.occupancy?.[feature.id]?.state;
+    const weight = selected ? 5 : 2;
+    if (state === 'occupied') {
+      return { color: EMBER, weight, fillColor: EMBER, fillOpacity: 0.55 };
+    }
+    if (state === 'turnover') {
+      return { color: EMBER, weight, fillColor: `url(#${HATCH_ID})`, fillOpacity: 0.9 };
+    }
+    // Libre, ou pas encore relié à un gîte : le vert pâle du thème.
+    return { color: FOREST, weight, fillColor: FOREST_TINT, fillOpacity: 0.6, dashArray: state ? null : '6 4' };
+  }
+
+  // Leaflet dessine les objets dans UN svg : on y pose une fois le motif de
+  // hachures qu'une arrivée ou un départ utilise comme remplissage.
+  ensureHatchPattern() {
+    const svg = this.map.getPanes().overlayPane.querySelector('svg');
+    if (!svg || svg.querySelector(`#${HATCH_ID}`)) return;
+
+    const ns = 'http://www.w3.org/2000/svg';
+    let defs = svg.querySelector('defs');
+    if (!defs) {
+      defs = document.createElementNS(ns, 'defs');
+      svg.insertBefore(defs, svg.firstChild);
+    }
+    const pattern = document.createElementNS(ns, 'pattern');
+    pattern.setAttribute('id', HATCH_ID);
+    pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+    pattern.setAttribute('width', '10');
+    pattern.setAttribute('height', '10');
+    pattern.setAttribute('patternTransform', 'rotate(45)');
+    const background = document.createElementNS(ns, 'rect');
+    background.setAttribute('width', '10');
+    background.setAttribute('height', '10');
+    background.setAttribute('fill', FOREST_TINT);
+    const stripe = document.createElementNS(ns, 'rect');
+    stripe.setAttribute('width', '5');
+    stripe.setAttribute('height', '10');
+    stripe.setAttribute('fill', EMBER);
+    pattern.append(background, stripe);
+    defs.appendChild(pattern);
+  }
+
+  async loadOccupancy() {
+    if (!this.hasOccupancyUrlValue || !this.occupancyUrlValue) return;
+
+    const date = this.dateValue;
+    const response = await fetch(`${this.occupancyUrlValue}?date=${encodeURIComponent(date)}`, {
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin',
+    });
+    // Un clic rapide sur « jour suivant » : seule la réponse du dernier jour
+    // demandé a le droit de colorer la carte.
+    if (!response.ok || date !== this.dateValue) return;
+    const payload = await response.json();
+    this.occupancy = payload.states || {};
+    this.highlightSelection();
+  }
+
+  selectVenue(id) {
+    this.discardPending();
+    this.selectedFeatureId = id;
+    this.highlightSelection();
+    this.openPanel(this.venueUrl(id));
+  }
+
+  venueUrl(id) {
+    return `${this.venueUrlValue.replace('__ID__', encodeURIComponent(id))}?date=${encodeURIComponent(this.dateValue)}`;
+  }
+
+  previousDay() {
+    this.shiftDate(-1);
+  }
+
+  nextDay() {
+    this.shiftDate(1);
+  }
+
+  goToday() {
+    this.setDate(this.todayValue);
+  }
+
+  pickDate(event) {
+    if (event.target.value) this.setDate(event.target.value);
+  }
+
+  shiftDate(days) {
+    const date = this.parseDate(this.dateValue);
+    date.setUTCDate(date.getUTCDate() + days);
+    this.setDate(date.toISOString().slice(0, 10));
+  }
+
+  setDate(iso) {
+    if (!iso || iso === this.dateValue) return;
+    this.dateValue = iso;
+
+    const url = new URL(window.location.href);
+    if (iso === this.todayValue) url.searchParams.delete('date');
+    else url.searchParams.set('date', iso);
+    window.history.replaceState(window.history.state, '', url);
+
+    this.updateDateBar();
+    this.loadOccupancy();
+
+    // Le panneau d'un gîte ouvert suit le jour affiché.
+    const panel = this.hasFeatureFrameTarget && this.featureFrameTarget.querySelector('[data-venue-panel]');
+    if (panel && this.selectedFeatureId) this.openPanel(this.venueUrl(this.selectedFeatureId));
+  }
+
+  updateDateBar() {
+    if (!this.hasDateBarTarget) return;
+
+    const toggle = this.layerToggleTargets.find((t) => t.dataset.layerId === this.venuesLayerId);
+    const visible = Boolean(this.venuesLayerId) && (!toggle || toggle.checked);
+    this.dateBarTarget.classList.toggle('hidden', !visible);
+    this.dateBarTarget.classList.toggle('flex', visible);
+
+    const date = this.parseDate(this.dateValue);
+    if (this.hasDateLabelTarget) {
+      const label = date.toLocaleDateString('fr-BE', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        timeZone: 'UTC',
+      });
+      // « Samedi 26 septembre » : majuscule au jour seulement, comme le serveur.
+      this.dateLabelTarget.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+    }
+    if (this.hasDateInputTarget) this.dateInputTarget.value = this.dateValue;
+
+    const offset = Math.round((date - this.parseDate(this.todayValue)) / 86400000);
+    if (this.hasDateHintTarget) this.dateHintTarget.textContent = this.relativeDay(offset);
+    if (this.hasTodayButtonTarget) this.todayButtonTarget.classList.toggle('hidden', offset === 0);
+  }
+
+  relativeDay(offset) {
+    if (offset === 0) return "aujourd'hui";
+    if (offset === 1) return 'demain';
+    if (offset === -1) return 'hier';
+    return offset > 0 ? `dans ${offset} jours` : `il y a ${-offset} jours`;
+  }
+
+  // Les dates sont des jours, pas des instants : tout se calcule en UTC pour
+  // qu'un changement d'heure ne fasse jamais sauter ou doubler un jour.
+  parseDate(iso) {
+    const [year, month, day] = iso.split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day));
   }
 
   readVisibility() {

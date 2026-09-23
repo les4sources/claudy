@@ -1,0 +1,12 @@
+/ Gîte ou salle libre au jour choisi, et ce qui vient ensuite.
+.mt-3.rounded-xl.bg-forest-tint.px-3.py-3
+  p.text-base.font-semibold.text-forest Libre
+  - if next_item
+    - stay = next_item.stay&.decorate
+    p.mt-1.text-sm.text-stone-600
+      = "#{next_label} : "
+      span.font-medium.text-stone-800 = stay ? stay.display_name : next_item.name
+    p.text-xs.text-stone-500
+      = stay ? stay.date_range : "#{l(next_item.from_date, format: :short)} → #{l(next_item.to_date, format: :short)}"
+  - else
+    p.mt-1.text-sm.text-stone-500 = "#{next_label} : aucun à venir."

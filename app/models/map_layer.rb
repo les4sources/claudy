@@ -8,10 +8,12 @@
 # crée à la demande) ; les réseaux (une par réseau) et les dessins (un par
 # dessin) en ont plusieurs.
 class MapLayer < ApplicationRecord
-  KINDS = %w[management welcome plants network comments sketch biodiversity].freeze
+  # `venues` (phase 3) vient en tête : c'est la carte du jour, la vue par défaut.
+  KINDS = %w[venues management welcome plants network comments sketch biodiversity].freeze
   MULTIPLE_KINDS = %w[network sketch].freeze
 
   KIND_LABELS = {
+    "venues" => "Hébergements et salles",
     "management" => "Gestion",
     "welcome" => "Accueil",
     "plants" => "Plantes nourricières",
@@ -48,6 +50,10 @@ class MapLayer < ApplicationRecord
 
   def kind_label = KIND_LABELS.fetch(kind, kind)
   def management? = kind == "management"
+  def venues? = kind == "venues"
+
+  # Les couches qu'on trace à la main avec la barre d'outils Geoman.
+  def editable? = management? || venues?
 
   private
 

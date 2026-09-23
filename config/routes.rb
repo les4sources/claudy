@@ -413,6 +413,11 @@ Rails.application.routes.draw do
     resources :map_features, path: "features", only: %i[index show new create update destroy] do
       delete "photos/:photo_id", action: :destroy_photo, on: :member, as: :photo
     end
+    # La carte du jour (phase 3) : occupation au jour choisi, panneau du groupe
+    # présent, gîtes et salles restant à tracer. Lecture seule.
+    get "occupancy", to: "map_venues#occupancy", as: :map_occupancy
+    get "venues/todo", to: "map_venues#todo", as: :map_venues_todo
+    get "venues/:id", to: "map_venues#show", as: :map_venue
   end
 
   # Organisation

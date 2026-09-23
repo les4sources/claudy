@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_23_030100) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_23_050000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1346,6 +1346,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_030100) do
     t.index ["deleted_at"], name: "index_map_features_on_deleted_at"
     t.index ["feature_kind"], name: "index_map_features_on_feature_kind"
     t.index ["linked_type", "linked_id"], name: "index_map_features_on_linked"
+    t.index ["linked_type", "linked_id"], name: "index_map_features_on_linked_unique_live", unique: true, where: "((deleted_at IS NULL) AND (linked_id IS NOT NULL))"
     t.index ["map_layer_id"], name: "index_map_features_on_map_layer_id"
   end
 
