@@ -1,0 +1,25 @@
+= render TurboModal::Component.new(title: "Notes — #{@agenda_item.title}", width: :lg) do
+  p.-mt-2.mb-4.text-sm.text-stone-500
+    | Rassemblement du #{l(@gathering.starts_at.to_date, format: :long)}
+
+  = form_with model: @note,
+              url: gathering_agenda_item_note_path(@gathering, @agenda_item),
+              method: :patch do |f|
+    / Le form builder écrase la classe de l'éditeur (dont `prose`, qui bride la
+    / largeur à 65ch) : la mise en forme passe par le conteneur.
+    div(class="[&_lexxy-editor]:max-w-none [&_lexxy-editor]:[--lexxy-editor-rows:16rem]")
+      = f.rich_text_area :body, placeholder: "Ce qui s'est dit sur ce point…", autofocus: true
+    .mt-4.flex.justify-end
+      = f.submit "Enregistrer les notes",
+                 class: "inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 cursor-pointer"
+
+  - earlier = @agenda_item.earlier_notes(@gathering)
+  - if earlier.any?
+    .mt-6.border-t.border-stone-200.pt-4.space-y-4
+      h2.font-semibold.uppercase.text-stone-500(class="text-[0.65rem] tracking-[0.2em]") Notes des rassemblements précédents
+      - earlier.each do |note|
+        .rounded-lg.bg-stone-50.px-4.py-3
+          .text-xs.font-medium.text-stone-500.mb-1
+            = l(note.gathering.starts_at.to_date, format: :long)
+          .lexxy-content.text-sm.text-stone-700
+            = note.body

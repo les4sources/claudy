@@ -47,6 +47,7 @@ Rails.application.routes.draw do
       patch :update_report
     end
     resources :agenda_items, except: [:index, :show] do
+      resource :note, only: [:edit, :update], controller: "agenda_item_notes"
       member do
         patch :toggle_completed
         patch :move

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_24_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -147,6 +147,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
     t.index ["recipient_type", "recipient_id"], name: "index_activities_on_recipient_type_and_recipient_id"
     t.index ["trackable_id", "trackable_type"], name: "index_activities_on_trackable_id_and_trackable_type"
     t.index ["trackable_type", "trackable_id"], name: "index_activities_on_trackable_type_and_trackable_id"
+  end
+
+  create_table "agenda_item_notes", force: :cascade do |t|
+    t.bigint "agenda_item_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "gathering_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["agenda_item_id", "gathering_id"], name: "index_agenda_item_notes_on_agenda_item_id_and_gathering_id", unique: true
+    t.index ["agenda_item_id"], name: "index_agenda_item_notes_on_agenda_item_id"
+    t.index ["gathering_id"], name: "index_agenda_item_notes_on_gathering_id"
   end
 
   create_table "agenda_items", force: :cascade do |t|
@@ -1365,7 +1375,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
     t.index ["created_by_id"], name: "index_map_layers_on_created_by_id"
     t.index ["deleted_at"], name: "index_map_layers_on_deleted_at"
     t.index ["kind"], name: "index_map_layers_on_kind"
-    t.index ["kind"], name: "index_map_layers_on_kind_unique_live", unique: true, where: "((deleted_at IS NULL) AND ((kind)::text <> ALL ((ARRAY['network'::character varying, 'sketch'::character varying])::text[])))"
+    t.index ["kind"], name: "index_map_layers_on_kind_unique_live", unique: true, where: "((deleted_at IS NULL) AND ((kind)::text <> ALL (ARRAY[('network'::character varying)::text, ('sketch'::character varying)::text])))"
   end
 
   create_table "meal_orders", force: :cascade do |t|
@@ -2204,6 +2214,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
   add_foreign_key "account_statements", "member_accounts"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "agenda_item_notes", "agenda_items"
+  add_foreign_key "agenda_item_notes", "gatherings"
   add_foreign_key "agenda_items", "gatherings"
   add_foreign_key "agenda_items", "humans", column: "author_id"
   add_foreign_key "agenda_items", "humans", column: "carrier_id"

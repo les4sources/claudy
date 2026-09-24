@@ -36,6 +36,7 @@ class AgendaItem < ApplicationRecord
   belongs_to :author, class_name: "Human"
   belongs_to :carrier, class_name: "Human", optional: true
   has_many :decisions, dependent: :nullify
+  has_many :notes, class_name: "AgendaItemNote", dependent: :destroy
 
   has_paper_trail
   has_soft_deletion default_scope: true
@@ -67,6 +68,19 @@ class AgendaItem < ApplicationRecord
   scope :pending, -> { where(completed: false) }
 
   before_create :assign_next_position
+
+  # Les notes prises sur ce point lors d'un rassemblement donné. Passe par
+  # l'association chargée pour que la page du rassemblement puisse précharger.
+  def note_for(gathering)
+    notes.detect { |note| note.gathering_id == gathering.id }
+  end
+
+  # Notes prises lors des rassemblements précédents, quand le point a été reporté.
+  def earlier_notes(gathering)
+    notes.reject { |note| note.gathering_id == gathering.id }
+         .select { |note| note.gathering.present? && note.body.present? }
+         .sort_by { |note| note.gathering.starts_at }
+  end
 
   private
 
