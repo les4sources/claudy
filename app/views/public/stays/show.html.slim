@@ -39,6 +39,12 @@ section.funnel-card.mt-6.p-5.md:p-6
     = render "public/stays/balance"
     = render "public/stays/payments"
 
+/ La carte du domaine (epic #348, phase 4), avant la boulangerie : « où est
+/ quoi » vient avant « qu'est-ce qu'on mange ». Seulement si un fond de carte
+/ est installé — sinon le bouton mènerait à une page vide.
+- if @map_available
+  = render "public/stays/map"
+
 = render "public/stays/bakery"
 
 - if @upcoming_stays.any? || @past_stays.any?

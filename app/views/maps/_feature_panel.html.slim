@@ -15,6 +15,13 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
       = layer&.kind_label
     h2.flex-1.truncate.text-sm.font-semibold.text-stone-800
       = feature.persisted? ? (feature.name(:fr).presence || feature.linked&.name || "Objet sans nom") : "Nouvel objet"
+    / Couche Accueil (phase 4) : les langues des hôtes encore à traduire.
+      Discret — le français fait foi, les autres langues y retombent.
+    - if layer&.welcome? && feature.persisted? && feature.missing_translations.any?
+      span[class="rounded-full bg-amber-50 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-amber-700 ring-1 ring-inset ring-amber-200"
+           title="Traduction manquante : le français s'affiche à la place"
+           data-missing-translations=feature.missing_translations.join(" ")]
+        = "#{feature.missing_translations.map(&:upcase).join(' · ')} à traduire"
     button[type="button" class="flex h-11 w-11 items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-700"
            data-action="click->map#closePanel" aria-label="Fermer la fiche"]
       svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -41,13 +48,42 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
                          data: { role: "feature-geometry" }
 
       div
-        = f.label :name, "Nom", class: "block text-xs font-semibold text-stone-600"
+        = f.label :name, (layer&.welcome? ? "Nom — Français" : "Nom"), class: "block text-xs font-semibold text-stone-600"
         = f.text_field :name, value: feature.name_i18n.to_h["fr"], placeholder: (layer&.venues? ? "Facultatif : le nom du gîte ou de la salle sinon" : "Le verger du haut, l'accès aux gîtes…"),
                        class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
       div
-        = f.label :description, "Description", class: "block text-xs font-semibold text-stone-600"
+        = f.label :description, (layer&.welcome? ? "Description — Français" : "Description"), class: "block text-xs font-semibold text-stone-600"
         = f.text_area :description, value: feature.description_i18n.to_h["fr"], rows: 3,
                       class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+      - if layer&.welcome?
+        / Couche Accueil (phase 4) : ce que lisent les hôtes. Une zone dit si
+          l'on peut y aller ; un point utile porte une icône.
+        - if feature.feature_kind == "zone"
+          div
+            = f.label :access, "Type de zone", class: "block text-xs font-semibold text-stone-600"
+            = f.select :access, MapFeature::ACCESS_LEVELS.map { |key, label| [label, key] },
+                       { selected: feature.access.presence || "public" },
+                       class: "mt-1 h-11 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+        - elsif feature.feature_kind == "point"
+          div
+            = f.label :icon, "Icône", class: "block text-xs font-semibold text-stone-600"
+            = f.select :icon, MapFeature::WELCOME_ICONS.map { |key, label| [label, key] },
+                       { include_blank: "— Sans icône —", selected: feature.icon },
+                       class: "mt-1 h-11 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+        / L'anglais et le néerlandais : facultatifs, repli sur le français.
+          Dépliés d'office tant qu'il en manque, pour qu'on les voie.
+        details.rounded-lg.border.border-stone-200 open=(feature.missing_translations.any? || nil)
+          summary.cursor-pointer.px-3.py-2.text-xs.font-semibold.text-stone-600 Traductions (EN, NL)
+          .space-y-3.border-t.border-stone-100.px-3.py-3
+            - { "en" => "English", "nl" => "Nederlands" }.each do |locale, language|
+              div
+                = f.label "name_#{locale}", "Nom — #{language}", class: "block text-xs font-semibold text-stone-600"
+                = f.text_field "name_#{locale}", value: feature.name_i18n.to_h[locale], placeholder: feature.name_i18n.to_h["fr"],
+                               class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+              div
+                = f.label "description_#{locale}", "Description — #{language}", class: "block text-xs font-semibold text-stone-600"
+                = f.text_area "description_#{locale}", value: feature.description_i18n.to_h[locale], rows: 2,
+                              class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
       - if layer&.venues?
         / Le gîte ou la salle que ce tracé représente (phase 3). Un gîte n'a
           qu'un tracé : ceux déjà tracés ne sont plus proposés.

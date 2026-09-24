@@ -70,6 +70,23 @@ fr:
         body: "Tranches de Vie, notre boulangerie-épicerie, prépare votre arrivée : pain au levain et produits du coin à pré-commander pour le jour où vous posez vos sacs."
         pizza: "Envie d'une soirée mémorable ? Réservez une Pizza Party privée au four à bois."
         cta: "Commander sur Tranches de Vie"
+      map:
+        heading: "La carte du domaine"
+        body: "Quinze hectares à explorer : où se promener, où l'on ne va pas, et où trouver le parking, le bois, le four ou l'épicerie. Elle vous situe aussi sur le terrain."
+        cta: "Ouvrir la carte"
+    maps:
+      show:
+        meta_title: "La carte du domaine"
+        title: "La carte du domaine"
+        back: "Votre séjour"
+        unavailable: "La carte du domaine n'est pas encore disponible. Revenez bientôt !"
+        locate: "Ma position"
+        locate_error: "Position indisponible — la géolocalisation est refusée ou hors de portée."
+        legend:
+          your_lodging: "Votre hébergement"
+          public: "Accès libre"
+          private: "Privé — merci de ne pas y aller"
+          on_request: "Accessible sur demande"
     stay_change_requests:
       cta: "Demander une modification"
       submitted: "Votre demande de modification a bien été envoyée. Notre équipe la valide et vous répond rapidement."

@@ -51,9 +51,10 @@ class MapLayer < ApplicationRecord
   def kind_label = KIND_LABELS.fetch(kind, kind)
   def management? = kind == "management"
   def venues? = kind == "venues"
+  def welcome? = kind == "welcome"
 
   # Les couches qu'on trace à la main avec la barre d'outils Geoman.
-  def editable? = management? || venues?
+  def editable? = management? || venues? || welcome?
 
   private
 

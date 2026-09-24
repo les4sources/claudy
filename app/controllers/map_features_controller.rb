@@ -86,19 +86,28 @@ class MapFeaturesController < BaseController
 
   def feature_params
     params.require(:map_feature).permit(:map_layer_id, :feature_kind, :geometry, :name, :description,
+                                        :name_en, :name_nl, :description_en, :description_nl, :access, :icon,
                                         :management_notes, :linked_key, photos: [])
   end
 
-  # Le nom et la description saisis ici sont le FRANÇAIS : les autres langues
-  # arriveront avec la couche Accueil (phase 4), sans écraser celles-ci.
+  # `name` et `description` sont le FRANÇAIS ; l'anglais et le néerlandais
+  # (couche Accueil, phase 4) arrivent par `name_en`, `description_nl`… Chaque
+  # langue ne touche que sa propre clé : les autres restent en place.
   def assign_feature
     attrs = feature_params
     # Une chaîne illisible reste une chaîne : la validation du modèle la refuse.
     @feature.geometry = parse_json(attrs[:geometry]) || attrs[:geometry] if attrs.key?(:geometry)
     @feature.feature_kind = attrs[:feature_kind].presence || @feature.feature_kind.presence ||
                             MapFeature.kind_for_geometry(@feature.geometry)
-    @feature.name_i18n = @feature.name_i18n.to_h.merge("fr" => attrs[:name].to_s.strip) if attrs.key?(:name)
-    @feature.description_i18n = @feature.description_i18n.to_h.merge("fr" => attrs[:description].to_s.strip) if attrs.key?(:description)
+    MapFeature::LOCALES.each do |locale|
+      suffix = locale == "fr" ? "" : "_#{locale}"
+      assign_translation(:name_i18n, locale, attrs["name#{suffix}"]) if attrs.key?("name#{suffix}")
+      assign_translation(:description_i18n, locale, attrs["description#{suffix}"]) if attrs.key?("description#{suffix}")
+    end
+    # Nature d'une zone et icône d'un point d'accueil : un choix vide les retire.
+    %w[access icon].each do |key|
+      @feature.properties = @feature.properties.to_h.merge(key => attrs[key].presence).compact if attrs.key?(key)
+    end
     if attrs.key?(:management_notes)
       @feature.properties = @feature.properties.to_h.merge("management_notes" => attrs[:management_notes].to_s.strip)
     end
@@ -106,6 +115,10 @@ class MapFeaturesController < BaseController
     @feature.linked_key = attrs[:linked_key] if attrs.key?(:linked_key)
     photos = Array(attrs[:photos]).compact_blank
     @feature.photos.attach(photos) if photos.any?
+  end
+
+  def assign_translation(column, locale, value)
+    @feature.public_send("#{column}=", @feature.public_send(column).to_h.merge(locale => value.to_s.strip))
   end
 
   def parse_json(value)

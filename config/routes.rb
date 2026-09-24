@@ -686,6 +686,9 @@ Rails.application.routes.draw do
   delete "portail/coworking/reservations/:id", to: "portal/coworking_reservations#destroy", as: :portal_coworking_reservation
 
   get "sejour/:token", to: "public/stays#show", as: :public_stay
+  # La carte du domaine pour les hôtes (epic #348, phase 4) : la couche Accueil,
+  # à la place de la carte papier. Même jeton que la page séjour, sans compte.
+  get "sejour/:token/carte", to: "public/maps#show", as: :public_stay_map
 
   # Décompte sourcier à jeton (issue #160) — sans session, sans Devise : le lien
   # du mail doit s'ouvrir sur le téléphone d'un sourcier qui n'a pas de compte.
