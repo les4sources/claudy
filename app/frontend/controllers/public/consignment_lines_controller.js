@@ -42,6 +42,32 @@ export default class extends Controller {
     this.refresh()
   }
 
+  // Un article choisi dans la liste (epic #359, phase 2) : son nom devient le
+  // libellé, son prix du jour pré-remplit le prix — qui reste modifiable.
+  // « Autre » rouvre le libellé libre.
+  pick(event) {
+    const row = event.target.closest("[data-public--consignment-lines-target='row']")
+    if (!row) return
+
+    const option = event.target.selectedOptions[0]
+    const labelField = row.querySelector("[data-role='label-field']")
+    const label = row.querySelector("[data-role='label']")
+    const price = row.querySelector("[data-role='unit-price']")
+
+    if (option && option.value) {
+      if (label) label.value = option.dataset.name || ""
+      if (price && option.dataset.priceCents) {
+        price.value = (parseInt(option.dataset.priceCents, 10) / 100).toFixed(2)
+      }
+      if (labelField) labelField.hidden = true
+    } else {
+      if (label) label.value = ""
+      if (labelField) labelField.hidden = false
+      label?.focus()
+    }
+    this.refresh()
+  }
+
   refresh() {
     let grossCents = 0
 

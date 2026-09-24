@@ -677,6 +677,16 @@ Rails.application.routes.draw do
   # Espace artisan en dépôt-vente (epic #359, phase 1) — cloisonné du contexte
   # client : un artisan connecté n'atteint ni les séjours ni le coworking.
   get    "portail/depot-vente",  to: "portal/consignments#show",     as: :portal_consignments
+  # Ses produits et ses relevés (epic #359, phase 2). Aucun identifiant
+  # d'artisan dans l'URL : tout part de la session de l'artisan connecté.
+  scope "portail/depot-vente", module: :portal, as: :portal_consignor do
+    resources :products, path: "produits", controller: "consignor_products",
+                         only: %i[index new create edit update] do
+      patch :toggle_active, on: :member
+    end
+    get   "releves/:period", to: "consignor_reports#show", as: :report, constraints: { period: /\d{4}-\d{2}/ }
+    patch "releves/:period", to: "consignor_reports#update", constraints: { period: /\d{4}-\d{2}/ }
+  end
 
   # Coworking (epic #126, Phase 3) — solde, achat de packs (Stripe Checkout) et
   # réservation/annulation de journées, en self-service.

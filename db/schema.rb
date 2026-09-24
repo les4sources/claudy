@@ -632,6 +632,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
     t.bigint "purchase_invoice_id"
     t.datetime "requested_at"
     t.date "settled_on"
+    t.string "sheet_numbers"
     t.string "status", default: "requested", null: false
     t.string "token", null: false
     t.datetime "updated_at", null: false

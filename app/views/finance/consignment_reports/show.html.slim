@@ -15,6 +15,10 @@
     section.overflow-hidden.rounded-xl.bg-white.ring-1.ring-gray-200
       .flex.flex-wrap.items-center.justify-between.gap-2.border-b.border-gray-100.px-5.py-3
         h2.text-sm.font-semibold.text-gray-900 Ce que l'artisan a déclaré
+        / Les feuilles papier encodées depuis l'espace artisan (epic #359,
+          phase 2) : de quoi retrouver le carnet si une ligne pose question.
+        - if @report.sheet_numbers.present?
+          span.text-xs.text-gray-500 Feuilles n° #{@report.sheet_numbers}
         - if @report.editable_by_admin?
           span.text-xs.text-gray-400 Corrigeable — chaque correction est tracée
         - else

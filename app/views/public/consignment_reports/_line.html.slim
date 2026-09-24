@@ -1,14 +1,30 @@
-/ Une ligne de vente. Sur un téléphone, l'article prend toute la largeur et la
-  quantité côtoie le prix : c'est l'ordre dans lequel on les lit sur l'étiquette.
+/ Une ligne de vente, commune aux deux portes de l'artisan : le lien mensuel à
+  jeton et son espace du portail (epic #359, phase 2 — une seule saisie à
+  maintenir). Sur un téléphone, l'article prend toute la largeur et la quantité
+  côtoie le prix : c'est l'ordre dans lequel on les lit sur l'étiquette.
+
+  `products` : les articles de l'artisan. Choisir l'un d'eux pré-remplit le prix
+  (modifiable) ; « Autre » garde le libellé libre d'avant.
+- products = local_assigns.fetch(:products, [])
+- free_label = products.empty? || lf.object.catalog_item_id.blank?
 .rounded-2xl.bg-white.px-4.py-3.ring-1.ring-gray-200.space-y-2(data-public--consignment-lines-target="row")
   = lf.hidden_field :id
   = lf.hidden_field :_destroy, value: "0"
+  - if products.any?
+    div
+      label.block.text-xs.font-medium.text-gray-500 Article
+      = lf.select :catalog_item_id,
+                  products.map { |p| [p.name, p.id, { data: { name: p.name, price_cents: p.current_price&.public_price_cents || p.current_price&.member_price_cents } }] },
+                  { include_blank: "Autre (je l'écris)" },
+                  class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm",
+                  data: { role: "product", action: "change->public--consignment-lines#pick" }
   / `label: false` partout : le `TailwindFormBuilder` est le builder par défaut de
     l'application et pose SON propre libellé, en anglais faute de traduction —
     « Label » et « Quantity » apparaissaient au-dessus des nôtres.
-  div
+  div(data-role="label-field" hidden=!free_label)
     label.block.text-xs.font-medium.text-gray-500 Ce que vous avez vendu
-    = lf.text_field :label, placeholder: "Savon, confiture, poterie…", label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+    = lf.text_field :label, placeholder: "Savon, confiture, poterie…", label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm",
+                    data: { role: "label" }
   .flex.items-end.gap-3
     .w-24
       label.block.text-xs.font-medium.text-gray-500 Quantité
@@ -24,5 +40,13 @@
     .text-right
       p.text-xs.text-gray-400 Montant
       p.text-sm.font-semibold.text-gray-900(data-role="amount") —
+  / « Payé par » (décision 6) : c'est ce qui permet, au mois, de confronter les
+    feuilles aux virements reçus et aux espèces.
+  div
+    label.block.text-xs.font-medium.text-gray-500 Payé par
+    = lf.select :payment_method,
+                ConsignmentReportLine::PAYMENT_METHODS.map { |m| [ConsignmentReportLine::PAYMENT_METHOD_LABELS[m], m] },
+                { include_blank: "—" },
+                class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
   .text-right
     button.text-xs.text-gray-400(type="button" data-action="public--consignment-lines#remove") Retirer cette ligne

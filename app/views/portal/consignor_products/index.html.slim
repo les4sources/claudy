@@ -1,0 +1,41 @@
+/ « Mes produits » (epic #359, phase 2, décision 7). Pas de stock, pas de
+  suppression : on ajoute, on change le prix, on retire de la vente.
+- content_for :meta_title do
+  | Mes produits
+
+.portal-header
+  div
+    h1.portal-title Mes produits
+    p.portal-header__name = @consignor.name
+  .portal-header__actions
+    = link_to "← Mon dépôt-vente", portal_consignments_path, class: "portal-link-muted"
+
+section.portal-block
+  .portal-stack
+    p.text-sm.text-gray-500
+      | Un article par type de produit suffit (« Savon » à un prix). Le prix est celui de l'étiquette en rayon ; le changer vaut à partir d'aujourd'hui, vos ventes passées gardent leur prix.
+    = link_to "Ajouter un produit", new_portal_consignor_product_path, class: "portal-btn portal-btn--block"
+
+section.portal-block
+  - if @products.empty?
+    p.portal-empty Aucun produit pour l'instant.
+  - else
+    ul.space-y-3
+      - @products.each do |product|
+        - price = product.current_price
+        li.rounded-2xl.bg-white.px-4.py-3.ring-1.ring-gray-200(id="product_#{product.id}" class=(product.active? ? "" : "opacity-60"))
+          .flex.items-start.justify-between.gap-3
+            div
+              p.font-medium.text-gray-900 = product.name
+              p.text-sm.text-gray-500
+                - if price
+                  = "#{number_to_currency((price.public_price_cents || price.member_price_cents) / 100.0)} / #{product.unit_label}"
+                - else
+                  | Pas de prix en cours
+                - unless product.active?
+                  |  · retiré de la vente
+            .flex.flex-col.items-end.gap-1
+              = link_to "Modifier", edit_portal_consignor_product_path(product), class: "portal-link"
+              = button_to (product.active? ? "Retirer de la vente" : "Remettre en vente"),
+                          toggle_active_portal_consignor_product_path(product),
+                          method: :patch, class: "portal-link-muted text-sm"

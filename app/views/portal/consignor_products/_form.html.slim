@@ -1,0 +1,18 @@
+= form_with model: product, scope: :product,
+            url: (product.persisted? ? portal_consignor_product_path(product) : portal_consignor_products_path),
+            method: (product.persisted? ? :patch : :post),
+            builder: ActionView::Helpers::FormBuilder,
+            class: "portal-panel" do |f|
+  .portal-field
+    = f.label :name, "Nom", class: "portal-label"
+    = f.text_field :name, class: "portal-input", required: true, placeholder: "Savon, confiture, bol en grès…"
+  .portal-field
+    = f.label :unit, "Vendu à la", class: "portal-label"
+    = f.select :unit, CatalogItem::UNITS.map { |u| [CatalogItem::UNIT_LABELS[u], u] }, {}, class: "portal-input"
+  .portal-field
+    = label_tag "product_price_euros", "Prix de vente (€)", class: "portal-label"
+    = text_field_tag "product[price_euros]", price_euros, id: "product_price_euros", class: "portal-input",
+                     inputmode: "decimal", placeholder: "4,50", required: true
+    - if product.persisted?
+      p.mt-1.text-xs.text-gray-400 Un nouveau prix vaut à partir d'aujourd'hui ; vos ventes passées ne changent pas.
+  = f.submit "Enregistrer", class: "portal-btn portal-btn--block"

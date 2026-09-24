@@ -10,6 +10,8 @@ module Public
   # sourciers. On n'ajoute pas de clés sous `public.*` : la parité NL/EN est
   # gardée par une spec, et cette page s'adresse à quatre artisans du coin.
   class ConsignmentReportsController < Public::BaseController
+    include ConsignmentReportForm
+
     before_action :get_report
 
     def show
@@ -21,7 +23,7 @@ module Public
         return render :verified, status: :unprocessable_entity
       end
 
-      if @report.update(report_params.merge(status: "declared", declared_at: Time.current))
+      if @report.update(consignment_report_params.merge(status: "declared", declared_at: Time.current))
         redirect_to public_consignment_report_path(@report.token),
                     notice: "Merci — vos ventes de #{@report.period_label} nous sont bien arrivées."
       else
@@ -37,21 +39,7 @@ module Public
       return render :invalid, status: :not_found if @report.nil?
 
       @consignor = @report.consignor
-    end
-
-    def report_params
-      params.require(:consignment_report).permit(
-        :notes, photos: [],
-        consignment_report_lines_attributes: %i[id label quantity unit_price_euros position _destroy]
-      ).tap do |permitted|
-        lines = permitted[:consignment_report_lines_attributes]
-        next if lines.blank?
-
-        lines.each_value do |line|
-          euros = line.delete(:unit_price_euros)
-          line[:unit_price_cents] = (euros.to_s.tr(",", ".").to_f * 100).round if euros.present?
-        end
-      end
+      @products = consignment_products_for(@consignor, @report)
     end
   end
 end
