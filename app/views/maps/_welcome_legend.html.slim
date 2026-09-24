@@ -1,0 +1,14 @@
+/ Légende des zones de la couche Accueil (epic #348, phase 4). Partagée par la
+  carte de l'équipe et la page publique d'un séjour : une couleur doit dire la
+  même chose des deux côtés.
+  locals: html_class, labels (clé => libellé), data, highlight_label (facultatif :
+  le gîte du séjour, surligné sur la page publique)
+div class="flex-col gap-1 rounded-xl border border-stone-200 bg-white/95 px-3 py-2 text-xs text-stone-700 shadow-lg backdrop-blur #{html_class}" data=local_assigns[:data]
+  - if local_assigns[:highlight_label]
+    span.flex.items-center.gap-2
+      span class="inline-block h-3 w-3 flex-shrink-0 rounded-sm border-2" style="border-color: #{MapFeature::STAY_LODGING_COLOR}; background: #{MapFeature::STAY_LODGING_COLOR}66"
+      = local_assigns[:highlight_label]
+  - labels.each do |access, label|
+    span.flex.items-center.gap-2
+      span class="inline-block h-3 w-3 flex-shrink-0 rounded-sm" style="background: #{MapFeature::ACCESS_COLORS.fetch(access)}"
+      = label

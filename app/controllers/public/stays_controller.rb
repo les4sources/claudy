@@ -25,6 +25,9 @@ module Public
       @stay = stay.decorate
       @payments = PaymentDecorator.decorate_collection(stay.payments.order(created_at: :asc))
       @upcoming_stays, @past_stays, @upcoming_stays_extra, @past_stays_extra = sibling_stays(stay)
+      # Le bouton « Ouvrir la carte » (epic #348, phase 4) n'a de sens qu'avec
+      # un fond de carte installé.
+      @map_available = MapBaseLayer.exists?
     rescue ActiveRecord::RecordNotFound
       raise ActionController::RoutingError, "Not Found"
     end

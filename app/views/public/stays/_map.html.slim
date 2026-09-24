@@ -1,0 +1,13 @@
+/ La carte du domaine (epic #348, phase 4). Elle remplace la carte papier
+  remise à l'arrivée : où l'on peut aller, où l'on ne va pas, les points
+  utiles. Un simple bouton plutôt qu'un aperçu — une image de la carte vieillirait
+  à chaque retouche de la couche Accueil.
+section.funnel-card.mt-6.p-5.md:p-6(data-stay-map="true")
+  .flex.items-start.gap-3
+    span.text-forest.flex-shrink-0.mt-0.5
+      = funnel_icon :map, css_class: "w-6 h-6"
+    div.min-w-0
+      h2.funnel-section-title.mb-1 = t("public.stays.map.heading")
+      p.text-base.text-ink.mb-4 = t("public.stays.map.body")
+      = link_to t("public.stays.map.cta"), public_stay_map_path(@stay.token),
+                class: "inline-flex items-center gap-2 rounded-xl bg-forest px-5 py-2.5 text-sm font-semibold text-sand shadow-sm hover:bg-forest-soft"

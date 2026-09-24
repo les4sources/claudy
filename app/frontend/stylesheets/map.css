@@ -1,0 +1,62 @@
+/* La carte du domaine (epic #348, phase 2). Les libellés des objets sont des
+   tooltips Leaflet permanents : sobres, lisibles sur l'ortho, et masqués sous
+   le zoom 18 (classe posée par map_controller.js). */
+.map-feature-label {
+  background: rgba(255, 255, 255, 0.85);
+  border: none;
+  border-radius: 9999px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  color: #0b3d3a;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.1rem 0.5rem;
+}
+.map-feature-label::before {
+  display: none;
+}
+.map-labels-hidden .map-feature-label {
+  display: none;
+}
+
+/* Couche Accueil (phase 4) : un point utile est une pastille blanche qui porte
+   son icône. Partagé entre la carte de l'équipe et la page publique d'un séjour. */
+.map-welcome-pin-wrapper {
+  background: none;
+  border: none;
+}
+.map-welcome-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 2px solid #0b3d3a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  color: #0b3d3a;
+}
+.map-welcome-pin svg {
+  width: 60%;
+  height: 60%;
+}
+.map-welcome-pin--selected {
+  border-width: 3px;
+  box-shadow: 0 0 0 3px rgba(11, 61, 58, 0.25), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* La bulle d'un objet sur la page publique : le nom, puis la description. */
+.map-welcome-popup .leaflet-popup-content {
+  margin: 0.6rem 0.8rem;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: #1f2a28;
+}
+.map-welcome-popup strong {
+  display: block;
+  font-size: 0.9rem;
+  color: #0b3d3a;
+}
+.map-welcome-popup p {
+  margin: 0.25rem 0 0;
+}

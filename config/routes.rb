@@ -407,6 +407,18 @@ Rails.application.routes.draw do
   get "map/tiles/:key/:kind/:z/:x/:y", to: "map_tiles#show", as: :map_tile,
       constraints: { z: /\d+/, x: /\d+/, y: /\d+/, format: /png/ }
   get "map", to: "maps#show", as: :map
+  # Les objets de la carte (epic #348, phase 2) : la carte lit et écrit leurs
+  # géométries en JSON, la fiche latérale édite le reste en Turbo Stream.
+  scope "map" do
+    resources :map_features, path: "features", only: %i[index show new create update destroy] do
+      delete "photos/:photo_id", action: :destroy_photo, on: :member, as: :photo
+    end
+    # La carte du jour (phase 3) : occupation au jour choisi, panneau du groupe
+    # présent, gîtes et salles restant à tracer. Lecture seule.
+    get "occupancy", to: "map_venues#occupancy", as: :map_occupancy
+    get "venues/todo", to: "map_venues#todo", as: :map_venues_todo
+    get "venues/:id", to: "map_venues#show", as: :map_venue
+  end
 
   # Organisation
   get "organisation", to: "organisation#index", as: :organisation
@@ -433,6 +445,8 @@ Rails.application.routes.draw do
       patch :defer
       patch :defer_next
       patch :undo_defer_next
+      # Copie au cycle suivant (epic #330, phase 4) — un second appel la retire.
+      patch :copy_next
       patch :settle
       patch :archive
       patch :unarchive
@@ -682,6 +696,9 @@ Rails.application.routes.draw do
   delete "portail/coworking/reservations/:id", to: "portal/coworking_reservations#destroy", as: :portal_coworking_reservation
 
   get "sejour/:token", to: "public/stays#show", as: :public_stay
+  # La carte du domaine pour les hôtes (epic #348, phase 4) : la couche Accueil,
+  # à la place de la carte papier. Même jeton que la page séjour, sans compte.
+  get "sejour/:token/carte", to: "public/maps#show", as: :public_stay_map
 
   # Décompte sourcier à jeton (issue #160) — sans session, sans Devise : le lien
   # du mail doit s'ouvrir sur le téléphone d'un sourcier qui n'a pas de compte.

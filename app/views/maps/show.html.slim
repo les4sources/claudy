@@ -10,9 +10,10 @@
       code.mx-1.rounded.bg-stone-100.px-1.py-0.5.text-xs rake map:base_layer:import
       | , qui lit un dossier de tuiles et enregistre la couche.
 - else
-  / `h-[calc(100dvh-...)]` plutôt que `100vh` : sur iOS la barre d'adresse
-    mange la différence, et la carte débordait sous elle.
-  div class="relative w-full overflow-hidden" style="height: calc(100dvh - 8.5rem)"
+  / La hauteur vient du layout : en mode carte, le corps de page est une colonne
+    flex de `100dvh` (pas `100vh`, que la barre d'adresse d'iOS dépasse) et la
+    carte en occupe tout ce qui reste sous la navbar, bord à bord.
+  div class="relative h-full w-full overflow-hidden"
     div[class="absolute inset-0"
         data-controller="map"
         data-map-tiles-url-value="/map/tiles/#{@base_layer.key}/{kind}/{z}/{x}/{y}.png"
@@ -21,7 +22,13 @@
         data-map-center-value=(@base_layer.center || []).to_json
         data-map-min-zoom-value=(@base_layer.min_zoom || 12)
         data-map-max-zoom-value=(@base_layer.max_zoom || 20)
-        data-map-has-relief-value=@base_layer.relief?.to_s]
+        data-map-has-relief-value=@base_layer.relief?.to_s
+        data-map-features-url-value=map_features_path(format: :json)
+        data-map-new-feature-url-value=new_map_feature_path
+        data-map-occupancy-url-value=map_occupancy_path(format: :json)
+        data-map-venue-url-value=map_venue_path(id: "__ID__")
+        data-map-date-value=@date.iso8601
+        data-map-today-value=Date.current.iso8601]
 
       / Le fond de la carte hors emprise : uni, couleur `sand` du thème. Pas
         d'OpenStreetMap ni de Google — aucune clé tierce sur cette page.
@@ -62,6 +69,148 @@
                 input[type="checkbox" class="rounded border-stone-300 text-4s-main focus:ring-teal-400" data-action="change->map#toggleRelief" data-map-target="reliefToggle"]
                 span Relief
 
+          / Les couches typées (phase 2). La case affiche ou masque ; le nom rend
+            la couche ACTIVE — c'est elle que la barre d'outils édite.
+          .mt-3.border-t.border-stone-100.pt-3
+            p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Couches
+            ul.space-y-1
+              - @layers.each do |couche|
+                li.flex.items-center.gap-2 data-layer-id=couche.id data-layer-kind=couche.kind
+                  input[type="checkbox" checked=true
+                        class="h-4 w-4 rounded border-stone-300 text-4s-main focus:ring-teal-400"
+                        aria-label="Afficher #{couche.name}"
+                        data-map-target="layerToggle"
+                        data-layer-id=couche.id
+                        data-action="change->map#toggleLayer"]
+                  button[type="button"
+                         class="flex-1 truncate rounded-lg px-2 py-1.5 text-left text-sm text-stone-600 hover:bg-stone-50"
+                         data-map-target="layerName"
+                         data-layer-id=couche.id
+                         data-layer-kind=couche.kind
+                         data-action="click->map#activateLayer"]
+                    = couche.name
+
+            / Les gîtes et salles pas encore tracés (phase 3) : la carte du jour
+              ne colore que ce qui est dessiné, on n'en oublie aucun. Rechargée
+              par la carte après chaque enregistrement.
+            = turbo_frame_tag "map_venues_todo", src: map_venues_todo_path, data: { map_target: "venuesTodo" }
+
+      / Barre d'outils du mode Gestion (phase 2) : visible quand la couche
+        active est de kind `management`. Les outils sont ceux de Geoman.
+      div[class="absolute left-1/2 top-3 z-[1000] hidden -translate-x-1/2 items-center gap-1 rounded-xl border border-stone-200 bg-white/95 p-1 shadow-lg backdrop-blur"
+          data-map-target="toolbar"
+          role="toolbar"
+          aria-label="Outils de la couche Gestion"]
+        button[type="button"
+               class="flex h-11 w-11 items-center justify-center rounded-lg text-stone-600 transition-colors hover:bg-forest-tint hover:text-forest"
+               title="Point"
+               aria-label="Point"
+               aria-pressed="false"
+               data-map-target="tool"
+               data-tool="CircleMarker"
+               data-tool-kinds="management welcome"
+               data-action="click->map#useTool"]
+          svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            circle cx="12" cy="10" r="3"
+            path d="M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11z"
+        button[type="button"
+               class="flex h-11 w-11 items-center justify-center rounded-lg text-stone-600 transition-colors hover:bg-forest-tint hover:text-forest"
+               title="Ligne (accès)"
+               aria-label="Ligne (accès)"
+               aria-pressed="false"
+               data-map-target="tool"
+               data-tool="Line"
+               data-tool-kinds="management welcome"
+               data-action="click->map#useTool"]
+          svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            polyline points="4 18 10 10 14 14 20 6"
+        button[type="button"
+               class="flex h-11 w-11 items-center justify-center rounded-lg text-stone-600 transition-colors hover:bg-forest-tint hover:text-forest"
+               title="Zone"
+               aria-label="Zone"
+               aria-pressed="false"
+               data-map-target="tool"
+               data-tool="Polygon"
+               data-action="click->map#useTool"]
+          svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            polygon points="5 7 12 3 19 8 17 18 7 18"
+        button[type="button"
+               class="flex h-11 w-11 items-center justify-center rounded-lg text-stone-600 transition-colors hover:bg-forest-tint hover:text-forest"
+               title="Déplacer / éditer les sommets"
+               aria-label="Déplacer / éditer les sommets"
+               aria-pressed="false"
+               data-map-target="tool"
+               data-tool="edit"
+               data-action="click->map#useTool"]
+          svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            path d="M5 9 2 12l3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"
+        button[type="button"
+               class="flex h-11 w-11 items-center justify-center rounded-lg text-stone-600 transition-colors hover:bg-forest-tint hover:text-forest"
+               title="Supprimer"
+               aria-label="Supprimer"
+               aria-pressed="false"
+               data-map-target="tool"
+               data-tool="remove"
+               data-action="click->map#useTool"]
+          svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            path d="M3 6h18"
+            path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"
+            path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
+
+      / La carte du jour (phase 3) : le jour affiché, en bas au centre, à portée
+        de pouce sur un téléphone. Visible tant que la couche des lieux l'est.
+      div[class="absolute bottom-6 left-1/2 z-[1000] hidden -translate-x-1/2 flex-col items-center gap-1.5"
+          data-map-target="dateBar"]
+        .flex.items-center.gap-1.rounded-xl.border.border-stone-200.bg-white/95.p-1.shadow-lg.backdrop-blur
+          button[type="button"
+                 class="flex h-11 w-11 items-center justify-center rounded-lg text-stone-600 hover:bg-stone-100"
+                 aria-label="Jour précédent"
+                 data-action="click->map#previousDay"]
+            svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              polyline points="15 18 9 12 15 6"
+          label.relative.flex.h-11.cursor-pointer.flex-col.justify-center.px-2.text-center
+            span.whitespace-nowrap.text-sm.font-semibold.text-stone-800 data-map-target="dateLabel" = l(@date, format: "%A %-d %B").upcase_first
+            span class="text-[0.65rem] text-stone-400" data-map-target="dateHint" = @date == Date.current ? "aujourd'hui" : ""
+            input[type="date"
+                  class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  aria-label="Choisir le jour"
+                  value=@date.iso8601
+                  data-map-target="dateInput"
+                  data-action="change->map#pickDate"]
+          button[type="button"
+                 class="flex h-11 w-11 items-center justify-center rounded-lg text-stone-600 hover:bg-stone-100"
+                 aria-label="Jour suivant"
+                 data-action="click->map#nextDay"]
+            svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              polyline points="9 18 15 12 9 6"
+        button[type="button"
+               class="hidden rounded-full bg-forest px-3 py-1 text-xs font-semibold text-white shadow"
+               data-map-target="todayButton"
+               data-action="click->map#goToday"]
+          | Aujourd'hui
+        .flex.items-center.gap-3.rounded-full.bg-white/90.px-3.py-1.text-xs.text-stone-600.shadow
+          span.flex.items-center.gap-1
+            span.inline-block.h-2.5.w-2.5.rounded-sm.bg-ember
+            | Occupé
+          span.flex.items-center.gap-1
+            span.inline-block.h-2.5.w-2.5.rounded-sm style="background: repeating-linear-gradient(135deg, #C97B3D 0 2px, #E4EEEA 2px 4px)"
+            | Arrivée / départ
+          span.flex.items-center.gap-1
+            span class="inline-block h-2.5 w-2.5 rounded-sm border border-forest/40 bg-forest-tint"
+            | Libre
+
+      / Légende de la couche Accueil (phase 4), visible quand elle est active :
+        les mêmes couleurs que sur la page publique des hôtes.
+      = render "maps/welcome_legend", html_class: "absolute bottom-6 left-3 z-[1000] hidden",
+                                      data: { "map-target" => "welcomeLegend" },
+                                      labels: MapFeature::ACCESS_LEVELS
+
+      / La fiche latérale d'un objet (Turbo Frame). À droite sur grand écran,
+        plein écran sous 768 px. Masquée tant qu'elle est vide.
+      div[class="fixed inset-0 z-[1100] hidden md:absolute md:inset-auto md:bottom-3 md:right-3 md:top-3 md:w-96"
+          data-map-target="panelContainer"]
+        = turbo_frame_tag "feature_panel", class: "block h-full", data: { map_target: "featureFrame" }
+
       / « Ma position ». 44 px de côté au minimum : cette page se lit sur un
         téléphone, au milieu du terrain, avec des doigts.
       button[type="button"
@@ -77,5 +226,5 @@
 
       / Message discret quand la géolocalisation est refusée : un `alert()`
         bloquerait la carte pour dire quelque chose qui n'est pas grave.
-      div[class="pointer-events-none absolute bottom-6 left-1/2 z-[1000] hidden -translate-x-1/2 rounded-lg bg-stone-800/90 px-3 py-2 text-xs text-white shadow-lg"
+      div[class="pointer-events-none absolute bottom-40 left-1/2 z-[1000] hidden -translate-x-1/2 rounded-lg bg-stone-800/90 px-3 py-2 text-xs text-white shadow-lg"
           data-map-target="notice"]

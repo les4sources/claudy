@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_23_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -744,6 +744,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_020000) do
     t.integer "category", default: 0, null: false
     t.boolean "completed", default: false
     t.integer "completed_occurrences", default: 0, null: false
+    t.bigint "copied_from_id"
     t.datetime "created_at", null: false
     t.bigint "cycle_id"
     t.integer "deferral_count", default: 0, null: false
@@ -757,10 +758,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_020000) do
     t.integer "occurrences", default: 1, null: false
     t.integer "outcome"
     t.integer "position", default: 0, null: false
+    t.bigint "team_id"
     t.decimal "unit_hours", precision: 5, scale: 2
     t.datetime "updated_at", null: false
     t.index ["category"], name: "index_cycle_actions_on_category"
     t.index ["completed"], name: "index_cycle_actions_on_completed"
+    t.index ["copied_from_id"], name: "index_cycle_actions_on_copied_from_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["cycle_id", "human_id"], name: "index_cycle_actions_on_cycle_id_and_human_id"
     t.index ["cycle_id"], name: "index_cycle_actions_on_cycle_id"
     t.index ["deferred_from_id"], name: "index_cycle_actions_on_deferred_from_id"
@@ -769,6 +772,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_020000) do
     t.index ["human_id", "archived_at"], name: "index_cycle_actions_on_human_id_and_archived_at"
     t.index ["human_id", "category", "position"], name: "index_cycle_actions_on_human_id_and_category_and_position"
     t.index ["human_id"], name: "index_cycle_actions_on_human_id"
+    t.index ["team_id"], name: "index_cycle_actions_on_team_id"
   end
 
   create_table "cycle_targets", force: :cascade do |t|
@@ -1325,6 +1329,43 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_020000) do
     t.string "name", null: false
     t.datetime "updated_at", null: false
     t.index ["key"], name: "index_map_base_layers_on_key", unique: true
+  end
+
+  create_table "map_features", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.jsonb "description_i18n", default: {}, null: false
+    t.string "feature_kind", null: false
+    t.jsonb "geometry", null: false
+    t.bigint "linked_id"
+    t.string "linked_type"
+    t.bigint "map_layer_id", null: false
+    t.jsonb "name_i18n", default: {}, null: false
+    t.integer "position", default: 0, null: false
+    t.jsonb "properties", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_map_features_on_created_by_id"
+    t.index ["deleted_at"], name: "index_map_features_on_deleted_at"
+    t.index ["feature_kind"], name: "index_map_features_on_feature_kind"
+    t.index ["linked_type", "linked_id"], name: "index_map_features_on_linked"
+    t.index ["linked_type", "linked_id"], name: "index_map_features_on_linked_unique_live", unique: true, where: "((deleted_at IS NULL) AND (linked_id IS NOT NULL))"
+    t.index ["map_layer_id"], name: "index_map_features_on_map_layer_id"
+  end
+
+  create_table "map_layers", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.string "kind", null: false
+    t.string "name", null: false
+    t.integer "position", default: 0, null: false
+    t.jsonb "settings", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_map_layers_on_created_by_id"
+    t.index ["deleted_at"], name: "index_map_layers_on_deleted_at"
+    t.index ["kind"], name: "index_map_layers_on_kind"
+    t.index ["kind"], name: "index_map_layers_on_kind_unique_live", unique: true, where: "((deleted_at IS NULL) AND ((kind)::text <> ALL ((ARRAY['network'::character varying, 'sketch'::character varying])::text[])))"
   end
 
   create_table "meal_orders", force: :cascade do |t|
@@ -2225,10 +2266,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_020000) do
   add_foreign_key "coworking_reservations", "customers"
   add_foreign_key "customer_bank_accounts", "customers"
   add_foreign_key "customers", "humans"
+  add_foreign_key "cycle_actions", "cycle_actions", column: "copied_from_id"
   add_foreign_key "cycle_actions", "cycle_actions", column: "deferred_from_id"
   add_foreign_key "cycle_actions", "cycles"
   add_foreign_key "cycle_actions", "humans"
   add_foreign_key "cycle_actions", "humans", column: "delegate_to_human_id"
+  add_foreign_key "cycle_actions", "teams"
   add_foreign_key "cycle_targets", "cycles"
   add_foreign_key "cycle_targets", "humans"
   add_foreign_key "decisions", "agenda_items", on_delete: :nullify
@@ -2280,6 +2323,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_23_020000) do
   add_foreign_key "lodging_compositions", "lodgings", column: "composite_lodging_id"
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"
+  add_foreign_key "map_features", "map_layers"
+  add_foreign_key "map_features", "users", column: "created_by_id"
+  add_foreign_key "map_layers", "users", column: "created_by_id"
   add_foreign_key "meal_orders", "humans", column: "responsible_human_id"
   add_foreign_key "meal_orders", "stays"
   add_foreign_key "member_accounts", "households"

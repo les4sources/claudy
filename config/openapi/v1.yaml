@@ -2512,6 +2512,7 @@ components:
         archived_at: { type: string, format: date-time, nullable: true }
         human: { $ref: "#/components/schemas/Ref" }
         delegate_to_human: { allOf: [{ $ref: "#/components/schemas/Ref" }], nullable: true }
+        team: { allOf: [{ $ref: "#/components/schemas/Ref" }], nullable: true, description: "Pôle dont relève l'action (facultatif). Lecture seule." }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         url: { type: string }

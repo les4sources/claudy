@@ -126,7 +126,24 @@ RSpec.describe "finance:fix_january_offset" do
     ENV["ACCOUNTS"] = account.code
     ENV["APPLY"] = "1"
 
-    expect { run_task }.to output(/refusé — écart cumulé.*n'a pas le symptôme/).to_stdout
+    expect { run_task }.to output(/refusé — aucun palier.*n'a pas le symptôme/).to_stdout
+    expect(AccountSettlement.count).to eq(0)
+  end
+
+  # Le cas qui a failli écrire 300 € de créance imaginaire (dry-run du
+  # 2026-09-23) : janvier soldé, un trop-perçu de 45 € en février, et le mois
+  # courant qui attend son virement. Le cumul de fin d'année valait alors la
+  # charge mensuelle entière — assez pour tromper l'ancienne garde.
+  it "refuse un compte à jour dont seul le mois courant n'est pas encore réglé" do
+    charge(1, 30_000)
+    settle(1, 30_000)
+    (2..9).each { |month| charge(month, 34_500) }
+    settle(2, 39_000)
+    (3..8).each { |month| settle(month, 34_500) }
+    ENV["ACCOUNTS"] = account.code
+    ENV["APPLY"] = "1"
+
+    expect { run_task }.to output(/refusé — palier d'écart de .*inférieur à la charge de janvier/).to_stdout
     expect(AccountSettlement.count).to eq(0)
   end
 

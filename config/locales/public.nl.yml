@@ -74,6 +74,23 @@ nl:
         body: "Tranches de Vie, onze bakkerij-kruidenier, bereidt uw aankomst voor: zuurdesembrood en streekproducten die u vooraf kunt bestellen voor de dag dat u uw tassen neerzet."
         pizza: "Zin in een memorabele avond? Reserveer een privé Pizza Party bij de houtoven."
         cta: "Bestellen bij Tranches de Vie"
+      map:
+        heading: "Kaart van het domein"
+        body: "Vijftien hectare om te verkennen: waar u kunt wandelen, waar niet, en waar u de parking, het brandhout, de oven of de kruidenier vindt. De kaart toont ook waar u zich bevindt."
+        cta: "Kaart openen"
+    maps:
+      show:
+        meta_title: "Kaart van het domein"
+        title: "Kaart van het domein"
+        back: "Uw verblijf"
+        unavailable: "De kaart van het domein is nog niet beschikbaar. Kom binnenkort terug!"
+        locate: "Mijn locatie"
+        locate_error: "Locatie niet beschikbaar — geolocatie werd geweigerd of is buiten bereik."
+        legend:
+          your_lodging: "Uw verblijf"
+          public: "Vrij toegankelijk"
+          private: "Privé — gelieve er niet te komen"
+          on_request: "Toegankelijk op aanvraag"
     stay_change_requests:
       cta: "Een wijziging aanvragen"
       submitted: "Uw wijzigingsaanvraag is verzonden. Ons team bekijkt ze en antwoordt u snel."

@@ -74,6 +74,23 @@ en:
         body: "Tranches de Vie, our bakery and grocery, gets ready for your arrival: sourdough bread and local produce to pre-order for the day you drop your bags."
         pizza: "Fancy a memorable evening? Book a private Pizza Party at the wood-fired oven."
         cta: "Order from Tranches de Vie"
+      map:
+        heading: "Map of the estate"
+        body: "Fifteen hectares to explore: where to wander, where not to go, and where to find the car park, firewood, the oven or the grocery. It also shows you where you are on the ground."
+        cta: "Open the map"
+    maps:
+      show:
+        meta_title: "Map of the estate"
+        title: "Map of the estate"
+        back: "Your stay"
+        unavailable: "The map of the estate is not available yet. Check back soon!"
+        locate: "My location"
+        locate_error: "Location unavailable — geolocation was denied or is out of range."
+        legend:
+          your_lodging: "Your accommodation"
+          public: "Open access"
+          private: "Private — please keep out"
+          on_request: "Access on request"
     stay_change_requests:
       cta: "Request a change"
       submitted: "Your change request has been sent. Our team is reviewing it and will get back to you shortly."

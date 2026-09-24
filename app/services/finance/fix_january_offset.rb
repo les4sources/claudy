@@ -14,9 +14,10 @@ module Finance
   #    Passer le montant en paramètre reviendrait à retaper à la main ce que le
   #    livre sait déjà, avec le risque d'un centime d'écart qui créerait un
   #    second trou. Un compte sans exactement une charge de janvier est refusé.
-  # 2. Le compte doit avoir le SYMPTÔME : son écart cumulé de charges doit
-  #    couvrir au moins la charge de janvier. On ne corrige pas un compte à
-  #    jour, même si quelqu'un l'a nommé par erreur sur la ligne de commande.
+  # 2. Le compte doit avoir le SYMPTÔME : le PLATEAU de son écart cumulé — la
+  #    suite de mois où le cumul ne bouge pas, seule signature d'un décalage —
+  #    doit couvrir au moins la charge de janvier. On ne corrige pas un compte
+  #    à jour, même si quelqu'un l'a nommé par erreur sur la ligne de commande.
   # 3. Rejouer ne crée rien : la `reference` sert de garde, doublée de
   #    l'`idempotency_key` de l'écriture, que l'index d'unicité refuse en base.
   #
@@ -95,8 +96,20 @@ module Finance
                "à trancher à la main plutôt qu'à approcher"
       end
 
-      if entry.cumulative_cents < entry.january_charge_cents
-        return "écart cumulé de #{euros(entry.cumulative_cents)} inférieur à la charge de janvier " \
+      # Le PLATEAU, pas le cumul de fin d'année. Le cumul de décembre inclut le
+      # mois courant tant qu'il n'est pas réglé : un compte parfaitement à jour
+      # dont septembre attend son virement affiche un cumul égal à sa charge
+      # mensuelle, et passait ce filtre alors que son janvier est soldé. La
+      # correction lui inventait alors une créance du montant de janvier.
+      run = entry.offset_run
+      if run.nil?
+        return "aucun palier d'écart constant sur #{MemberChargesAudit::RUN_LENGTH} mois ou plus — " \
+               "ce compte n'a pas le symptôme"
+      end
+
+      if run.amount_cents < entry.january_charge_cents
+        return "palier d'écart de #{euros(run.amount_cents)} (#{run.from.strftime('%Y-%m')} → " \
+               "#{run.to.strftime('%Y-%m')}) inférieur à la charge de janvier " \
                "(#{euros(entry.january_charge_cents)}) — ce compte n'a pas le symptôme"
       end
 
