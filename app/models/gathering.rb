@@ -31,6 +31,7 @@ class Gathering < ApplicationRecord
   has_many :agenda_items, -> { ordered }, dependent: :destroy
   has_many :gathering_actions, -> { ordered }, dependent: :destroy
   has_many :decisions, dependent: :nullify
+  has_many :agenda_item_notes, dependent: :destroy
   # Les pôles concernés (epic #239, phase 2). Aucun pôle = rassemblement
   # transversal : la réunion du collectif entier n'appartient à personne.
   has_many :gathering_teams, dependent: :destroy

@@ -1,5 +1,6 @@
 - item = item.is_a?(AgendaItemDecorator) ? item : AgendaItemDecorator.new(item)
 - future_gatherings = local_assigns[:future_gatherings] || item.gathering.gathering_category.gatherings.where("starts_at > ?", item.gathering.starts_at).order(:starts_at).limit(3)
+- note = item.note_for(item.gathering)
 
 li.group.list-none(id="agenda_item_#{item.id}" data-sortable-target="item" data-id=item.id class="rounded-lg border shadow-sm transition-all #{item.status_class}")
   .flex.items-start.gap-3.p-4
@@ -54,6 +55,13 @@ li.group.list-none(id="agenda_item_#{item.id}" data-sortable-target="item" data-
                 polyline points="13 17 17 17"
                 polyline points="15 15 17 17 15 19"
           = render "agenda_items/move_popover", item: item, future_gatherings: future_gatherings
+          / Notes de réunion — formulaire distinct de l'édition du point
+          = link_to edit_gathering_agenda_item_note_path(item.gathering, item), data: { turbo_frame: "modal" }, class: "p-1 rounded hover:bg-stone-50 #{note.present? ? "text-emerald-600 hover:text-emerald-700" : "text-stone-400 hover:text-emerald-700"}", title: (note.present? ? "Notes de réunion" : "Prendre des notes"), aria: { label: "Notes" } do
+            svg.w-4.h-4(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round")
+              path[d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"]
+              polyline[points="14 2 14 8 20 8"]
+              line[x1="8" y1="13" x2="16" y2="13"]
+              line[x1="8" y1="17" x2="13" y2="17"]
           = link_to edit_gathering_agenda_item_path(item.gathering, item), data: { turbo_frame: "modal" }, class: "p-1 text-stone-400 hover:text-emerald-700 rounded hover:bg-stone-50", title: "Éditer" do
             svg.w-4.h-4(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2")
               path[stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"]
@@ -68,3 +76,9 @@ li.group.list-none(id="agenda_item_#{item.id}" data-sortable-target="item" data-
       - if item.description_excerpt.present?
         p.mt-2.text-sm.text-stone-600.leading-snug.line-clamp-2
           = item.description_excerpt
+
+      - if note.present?
+        .mt-3.rounded-md.border-l-2.border-emerald-300.bg-emerald-50.px-3.py-2
+          .font-semibold.uppercase.text-emerald-700.mb-1(class="text-[0.6rem] tracking-[0.2em]") Notes
+          .lexxy-content.text-sm.text-stone-700
+            = note.body
