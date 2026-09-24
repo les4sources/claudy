@@ -26,7 +26,7 @@ module CycleActions
       params.require(:cycle_action).permit(
         :label, :hours, :unit_hours, :occurrences, :completed_occurrences,
         :category, :completed, :economic,
-        :human_id, :delegate_to_human_id, :cycle_id
+        :human_id, :delegate_to_human_id, :cycle_id, :team_id
       )
     end
   end

@@ -45,6 +45,9 @@ class Team < ApplicationRecord
   has_many :gathering_teams, dependent: :destroy
   has_many :gatherings, through: :gathering_teams
   has_many :children, class_name: "Team", foreign_key: :parent_id, dependent: :nullify
+  # Les actions de cycle qui relèvent du pôle (epic #330, phase 5). Pas de
+  # `dependent:` : un pôle se soft-delete, ses actions gardent leur lien.
+  has_many :cycle_actions
 
   belongs_to :parent, class_name: "Team", optional: true
 

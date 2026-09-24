@@ -8,11 +8,11 @@ module Api
         if params[:completed].present?
           scope = scope.where(completed: ActiveModel::Type::Boolean.new.cast(params[:completed]))
         end
-        @cycle_actions = paginate(scope.includes(:human, :delegate_to_human).ordered)
+        @cycle_actions = paginate(scope.includes(:human, :delegate_to_human, :team).ordered)
       end
 
       def show
-        @cycle_action = CycleAction.includes(:human, :delegate_to_human).find(params[:id])
+        @cycle_action = CycleAction.includes(:human, :delegate_to_human, :team).find(params[:id])
       end
 
       def update

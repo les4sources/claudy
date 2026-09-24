@@ -35,6 +35,8 @@ module CycleActions
           hours: cycle_action.unit_hours.present? ? nil : cycle_action.hours,
           occurrences: cycle_action.carry_over_occurrences,
           completed_occurrences: 0,
+          # Le pôle suit l'action d'un cycle à l'autre (epic #330, phase 5).
+          team_id: cycle_action.team_id,
           category: copy_category,
           completed: false,
           deferred_from: cycle_action,

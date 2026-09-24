@@ -19,6 +19,8 @@ div[id="cycle_action_#{cycle_action.id}" data-controller="cycle-actions" class="
                    class: "w-full rounded-lg border-gray-200 text-sm focus:border-teal-400 focus:ring-teal-400",
                    data: { cycle_actions_target: "categorySelect", action: "change->cycle-actions#categoryChanged" }
 
+      = render "cycle_actions/team_select", f: f
+
       = render "cycle_actions/hours_group", f: f
 
 

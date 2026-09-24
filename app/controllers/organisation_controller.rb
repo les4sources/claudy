@@ -79,7 +79,7 @@ class OrganisationController < BaseController
 
     if @cycle
       live = @human.cycle_actions.for_cycle(@cycle).live
-      @cycle_actions = live.ordered.includes(copy_in_next_cycle: :cycle).group_by(&:category)
+      @cycle_actions = live.ordered.includes(:team, copy_in_next_cycle: :cycle).group_by(&:category)
       @settled_actions = @human.cycle_actions.for_cycle(@cycle).settled.includes(:deferred_to).order(:category, :position)
       # Cycle ouvert : les archivées ont déjà leur page, on ne montre que les reportées.
       @settled_actions = @settled_actions.not_archived if @cycle.open?
