@@ -74,8 +74,6 @@ nl:
         payment_heading: "Uw betaling"
         payment_amount: "Bedrag van uw reservering"
         payment_free: "Gratis"
-        payment_on_airbnb: "Beschikbaar op Airbnb"
-        payment_on_bookingdotcom: "Beschikbaar op Booking.com"
         transfer_heading: "Om te betalen via overschrijving"
         transfer_intro: "Gelieve het bedrag van uw reservering over te schrijven op de rekening van Les 4 Sources en ons een betalingsbewijs te bezorgen, zodat wij uw reservering snel kunnen verwerken 👍"
         transfer_communication_html: "Mededeling: <em>Reservering verblijf %{token}</em>"

@@ -20,7 +20,8 @@ section.funnel-card.p-5.md:p-7(data-stay-hero="true")
        examinée n'en attend pas ENCORE : dans les deux cas le badge se tait.
        « En attente de paiement » sur une demande déposée la veille annonçait
        une dette que le Pôle Accueil n'avait pas décidé de réclamer.
-    = @stay.payment_status_badge unless @stay.canceled? || @stay.awaiting_review?
+       Un séjour Airbnb / Booking.com se paie sur la plateforme : rien à dire ici.
+    = @stay.payment_status_badge unless @stay.canceled? || @stay.awaiting_review? || @stay.ota?
 
   p.mt-2.text-base(class="text-moss")
     - if @stay.canceled?

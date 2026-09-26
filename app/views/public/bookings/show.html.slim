@@ -225,7 +225,9 @@
         .text-base.font-medium.text-gray-900.sm:col-span-2
           = t(".wifi_device_note")
 
-- if !@booking.declined?
+/ Réservation Airbnb / Booking.com : tarif et paiement vivent sur la
+/ plateforme, la page n'en dit rien (Michael, 2026-09-26).
+- if !@booking.declined? && !@booking.from_airbnb? && !@booking.from_bookingdotcom?
   .mt-8.overflow-hidden
     .py-5
       h3.mb-4.text-xl.font-bold.leading-6.text-gray-900
@@ -238,10 +240,6 @@
           dd.mt-1.text-base.text-gray-900
             - if @booking.price_cents == 0
               = t(".payment_free")
-            - elsif @booking.from_airbnb?
-              = t(".payment_on_airbnb")
-            - elsif @booking.from_bookingdotcom?
-              = t(".payment_on_bookingdotcom")
             - else
               = @booking.price
 
@@ -269,8 +267,7 @@
               dd.mt-1.text-base.text-gray-900
                 = t(".transfer_pending")
 
-      - if !@booking.from_airbnb? && !@booking.from_bookingdotcom?
-        = render "public/bookings/show/payments", booking: @booking
+      = render "public/bookings/show/payments", booking: @booking
 
       - if @booking.invoice_status == "requested"
         .text-base.font-medium.text-gray-900.sm:col-span-2
