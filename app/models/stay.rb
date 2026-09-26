@@ -264,6 +264,22 @@ class Stay < ApplicationRecord
     activity_email_sent_at.nil? && arrival_date.present? && arrival_date > Date.today
   end
 
+  # Plateformes de réservation tierces (OTA) connues des Booking legacy.
+  OTA_PLATFORMS = %w[airbnb bookingdotcom].freeze
+
+  # Le séjour a-t-il été réservé via Airbnb ou Booking.com ? Le client y a vu et
+  # payé son tarif : la page publique ne lui montre alors ni prix d'hébergement
+  # ni paiement (Michael, 2026-09-26). Trois signaux, le premier qui répond :
+  # le canal d'attribution `ota`, le client fourre-tout d'une OTA, ou un Booking
+  # rattaché dont la plateforme est une OTA.
+  def ota?
+    return @ota if defined?(@ota)
+
+    @ota = source == "ota" ||
+           Customer::OTA_CATCH_ALL_EMAILS.value?(customer&.email) ||
+           bookables.any? { |b| b.is_a?(Booking) && OTA_PLATFORMS.include?(b.platform) }
+  end
+
   # The concrete reservable objects attached to this stay (Booking, SpaceBooking, …).
   def bookables
     stay_items.includes(:bookable).map(&:bookable).compact

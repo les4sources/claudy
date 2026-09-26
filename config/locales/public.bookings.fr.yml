@@ -75,8 +75,6 @@ fr:
         payment_heading: "Votre paiement"
         payment_amount: "Montant de votre réservation"
         payment_free: "Offert"
-        payment_on_airbnb: "Disponible sur Airbnb"
-        payment_on_bookingdotcom: "Disponible sur Booking.com"
         transfer_heading: "Pour effectuer un paiement par virement bancaire"
         transfer_intro: "Merci de régler le montant de votre réservation sur le compte des 4 Sources et de nous envoyer une preuve de paiement pour le traitement rapide de votre réservation 👍"
         transfer_communication_html: "Communication: <em>Réservation hébergement %{token}</em>"

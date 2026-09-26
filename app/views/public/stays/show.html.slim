@@ -16,7 +16,9 @@
   = render "public/stays/activities"
 
 / Le total suit la composition ET les activités — il additionne les deux.
-- if @stay.any_public_composition?
+/ Séjour Airbnb / Booking.com : le client a payé son tarif sur la plateforme,
+/ la page ne montre donc ni total ni paiement (Michael, 2026-09-26).
+- if @stay.any_public_composition? && !@stay.ota?
   = render "public/stays/total"
 
 / Note publique du séjour (visible client). JAMAIS la note interne.
@@ -31,13 +33,14 @@
 / regardée — alors que c'est la pré-confirmation, et elle seule, qui pose
 / l'acompte et son lien de paiement (issue #215). Le TOTAL du séjour, lui, reste
 / affiché plus haut : le client a le droit de savoir ce qu'il a demandé.
-section.funnel-card.mt-6.p-5.md:p-6
-  h2.funnel-section-title.mb-4 = t("public.stays.payments.heading")
-  - if @stay.awaiting_review?
-    p.text-base(class="text-moss" data-stay-awaiting-review="true") = t("public.stays.payments.awaiting_review")
-  - else
-    = render "public/stays/balance"
-    = render "public/stays/payments"
+- unless @stay.ota?
+  section.funnel-card.mt-6.p-5.md:p-6
+    h2.funnel-section-title.mb-4 = t("public.stays.payments.heading")
+    - if @stay.awaiting_review?
+      p.text-base(class="text-moss" data-stay-awaiting-review="true") = t("public.stays.payments.awaiting_review")
+    - else
+      = render "public/stays/balance"
+      = render "public/stays/payments"
 
 / La carte du domaine (epic #348, phase 4), avant la boulangerie : « où est
 / quoi » vient avant « qu'est-ce qu'on mange ». Seulement si un fond de carte

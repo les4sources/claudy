@@ -74,8 +74,6 @@ en:
         payment_heading: "Your payment"
         payment_amount: "Amount of your booking"
         payment_free: "Free of charge"
-        payment_on_airbnb: "Available on Airbnb"
-        payment_on_bookingdotcom: "Available on Booking.com"
         transfer_heading: "To pay by bank transfer"
         transfer_intro: "Please transfer the amount of your booking to the Les 4 Sources account and send us a proof of payment so that we can process your booking quickly 👍"
         transfer_communication_html: "Reference: <em>Accommodation booking %{token}</em>"

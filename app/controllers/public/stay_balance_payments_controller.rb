@@ -18,6 +18,12 @@ module Public
                            alert: "Ce séjour est annulé : il n'y a plus de solde à payer."
       end
 
+      # Séjour Airbnb / Booking.com : payé sur la plateforme, la page ne
+      # propose aucun paiement — ceci ferme aussi le POST direct.
+      if stay.ota?
+        return redirect_to public_stay_path(stay.token)
+      end
+
       service = Payments::CreateBalanceService.new(stay: stay)
 
       if service.run
