@@ -10,8 +10,9 @@ class CreatePlants < ActiveRecord::Migration[8.1]
   def change
     create_table :plants do |t|
       t.references :map_feature, foreign_key: true, index: false
-      # L'`ID` de la base Notion : unique quand il existe.
-      t.integer :number
+      # L'`ID` de la base Notion, unique quand il existe. Décimal : la base
+      # source a des « 9.1 », « 18.1 » — des arbres ajoutés entre deux numéros.
+      t.decimal :number
       t.string :name, null: false
       t.references :plant_species, foreign_key: true
       t.references :plant_variety, foreign_key: true

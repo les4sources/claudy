@@ -45,6 +45,17 @@ RSpec.describe Plant, type: :model do
       expect(plant(number: 42)).to be_valid
     end
 
+    # La base Notion numérote « 9.1 », « 18.1 » les arbres ajoutés entre deux.
+    it "accepte un numéro décimal et l'affiche tel qu'on l'écrit" do
+      intercalated = plant(number: "9.1").tap(&:save!)
+      whole = plant(number: 12).tap(&:save!)
+      expect(intercalated.reload.number_label).to eq("9.1")
+      expect(whole.reload.number_label).to eq("12")
+      expect(Plant.ordered.where(id: [intercalated.id, whole.id])).to eq([intercalated, whole])
+      expect(Plant.search("9.1")).to contain_exactly(intercalated)
+      expect(plant(number: 0)).not_to be_valid
+    end
+
     it "déduit l'espèce de la variété et le nom de l'espèce et de la variété" do
       p = Plant.create!(plant_variety: reinette)
       expect(p.plant_species).to eq(apple)

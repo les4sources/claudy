@@ -90,7 +90,7 @@ class Plant < ApplicationRecord
   validates :stratum, inclusion: { in: STRATA.keys }, allow_nil: true
   validates :population, inclusion: { in: POPULATIONS.keys }, allow_nil: true
   validates :stock_type, inclusion: { in: STOCK_TYPES.keys }, allow_nil: true
-  validates :number, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true,
+  validates :number, numericality: { greater_than: 0 }, allow_nil: true,
                      uniqueness: { conditions: -> { where(deleted_at: nil) }, message: "est déjà pris par une autre plante" }
   validates :plant_count, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validates :purchase_price_cents, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
@@ -109,16 +109,18 @@ class Plant < ApplicationRecord
     known = Array(statuses).map(&:to_s) & STATUSES.keys
     known.empty? ? all : where(status: known)
   }
-  # Nom, numéro (« 42 » ou « #42 »), espèce, nom latin, variété.
+  # Nom, numéro (« 42 », « #42 », « 9.1 »), espèce, nom latin, variété. Le
+  # numéro se compare en nombre : 12 est stocké « 12.0 » dans la colonne décimale.
   scope :search, lambda { |query|
     query = query.to_s.squish
     if query.blank?
       all
     else
+      number = BigDecimal(query.delete_prefix("#"), exception: false)
       left_joins(:plant_species, :plant_variety).where(
         "plants.name ILIKE :q OR plant_species.name ILIKE :q OR plant_species.latin_name ILIKE :q " \
-        "OR plant_varieties.name ILIKE :q OR plants.number::text = :number",
-        q: "%#{sanitize_sql_like(query)}%", number: query.delete_prefix("#")
+        "OR plant_varieties.name ILIKE :q OR plants.number = :number",
+        q: "%#{sanitize_sql_like(query)}%", number: number
       )
     end
   }
@@ -175,6 +177,9 @@ class Plant < ApplicationRecord
   def display_name = name.presence || species_and_variety_name
 
   def species_and_variety_name = [plant_species&.name, plant_variety&.name].compact_blank.join(" ").presence
+
+  # « 12 », « 9.1 » : le numéro tel qu'on l'écrit, sans « 12.0 ».
+  def number_label = number&.to_s("F")&.delete_suffix(".0")
 
   # Les fenêtres propres de la plante si elle en a au moins une, sinon celles de
   # son espèce. Surcharger une partie, c'est donc surcharger tout le calendrier :

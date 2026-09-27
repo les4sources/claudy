@@ -1646,7 +1646,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090400) do
     t.string "name", null: false
     t.text "notes"
     t.string "notion_url"
-    t.integer "number"
+    t.decimal "number"
     t.string "nursery"
     t.integer "plant_count"
     t.bigint "plant_species_id"
