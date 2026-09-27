@@ -38,6 +38,22 @@ class MapsController < BaseController
     @unplaced_count = Plant.alive.to_place.count
   end
 
+  # GET /map/search?mode=<kind>&q=…[&layer_id=…][&date=…][&health=…&status=…
+  #   &stratum=…&zone=…&harvest_month=…&task_month=…]
+  # → { mode, count, feature_ids } (phase 14). Un mode inconnu est un 422 : la
+  # carte n'envoie que les kinds de ses couches.
+  def search
+    mode = params[:mode].to_s
+    unless Maps::Search.supported?(mode)
+      return render json: { error: "Mode de recherche inconnu" }, status: :unprocessable_content
+    end
+
+    filters = params.slice(*Maps::Search::PLANT_FILTERS).permit(*Maps::Search::PLANT_FILTERS).to_h
+    ids = Maps::Search.new(mode: mode, query: params[:q], filters: filters, date: parse_date(params[:date]),
+                           layer_id: params[:layer_id].to_s[/\A\d+\z/]).feature_ids
+    render json: { mode: mode, count: ids.size, feature_ids: ids }
+  end
+
   private
 
   def parse_date(value)

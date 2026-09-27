@@ -19,6 +19,8 @@ import { UnifiStatusPoller, handleUnifiEquipmentChange } from '~/utils/map_unifi
 import { CommentMode, commentMarker, isCommentFeature } from '~/utils/map_comments';
 import { SketchMode } from '~/utils/map_sketches';
 import { BiodiversityMode, isObservationFeature, observationMarker } from '~/utils/map_biodiversity';
+import { MapSearch } from '~/utils/map_search';
+import { MeasureTool } from '~/utils/map_measure';
 
 // Style de la couche Gestion (phase 2) : polygones `forest` remplis à 25 %,
 // accès en pointillés `bark`, points en marqueur rond. Couleurs du thème
@@ -153,6 +155,10 @@ export default class extends Controller {
     this.sketches = new SketchMode(this);
     // Phase 13 : le mode Biodiversité (utils/map_biodiversity.js).
     this.biodiversity = new BiodiversityMode(this);
+    // Phase 14 : la recherche du mode actif (utils/map_search.js).
+    this.search = new MapSearch(this);
+    // Phase 14 : l'outil Mesure, dans tous les modes (utils/map_measure.js).
+    this.measure = new MeasureTool(this, L);
     this.setupFeatures();
 
     // Leaflet mesure son conteneur au montage. Dans une page Turbo le conteneur
@@ -168,6 +174,8 @@ export default class extends Controller {
     this.element.removeEventListener('change', handleUnifiEquipmentChange);
     this.comments?.destroy();
     this.sketches?.destroy();
+    this.search?.destroy();
+    this.measure?.destroy();
     this.biodiversity?.destroy();
     if (this.map) {
       this.map.remove();
@@ -301,11 +309,12 @@ export default class extends Controller {
 
     this.map.on('zoomend', () => this.updateLabels());
     // En mode Placement, toucher la carte pose la plante choisie.
-    this.map.on('click', (event) => this.placement?.onMapClick(event));
+    this.map.on('click', (event) => !this.measure?.active && this.placement?.onMapClick(event));
     // En mode Commentaires, toucher la carte ouvre un nouveau commentaire.
-    this.map.on('click', (event) => this.comments?.onMapClick(event));
+    this.map.on('click', (event) => !this.measure?.active && this.comments?.onMapClick(event));
     // En mode Biodiversité, toucher la carte ouvre un nouveau relevé.
-    this.map.on('click', (event) => this.biodiversity?.onMapClick(event));
+    this.map.on('click', (event) => !this.measure?.active && this.biodiversity?.onMapClick(event));
+    // Pendant une mesure (phase 14), le clic pose un sommet : aucun mode ne le prend.
     this.updateLabels();
     this.observePanel();
 
@@ -403,6 +412,8 @@ export default class extends Controller {
       });
     }
     layer.on('click', (event) => {
+      // L'outil Mesure (phase 14) prend le clic avant tout mode.
+      if (this.measure?.interceptFeatureClick(event)) return;
       // En mode Placement, un objet touché (une zone, un autre arbre) ne
       // s'ouvre pas : la plante choisie se pose là où l'on a touché.
       if (this.placement?.active) {
@@ -526,6 +537,8 @@ export default class extends Controller {
     if (!editable) this.disableTools();
     this.comments?.onActivate(kind);
     this.biodiversity?.onActivate(kind);
+    // Changer de couche change de mode de recherche : la recherche s'efface.
+    this.search?.onActivate(id, kind);
     // La légende des zones d'accueil (phase 4) accompagne la couche active.
     if (this.hasWelcomeLegendTarget) {
       this.welcomeLegendTarget.classList.toggle('hidden', kind !== 'welcome');
@@ -534,6 +547,8 @@ export default class extends Controller {
   }
 
   useTool(event) {
+    // Un outil Geoman éteint la règle (phase 14).
+    this.measure?.stop();
     const tool = event.currentTarget.dataset.tool;
     if (!this.geomanReady || !this.activeLayerId) return;
 
@@ -969,6 +984,8 @@ export default class extends Controller {
         layer.getTooltip?.()?.getElement?.()?.classList.toggle('map-month-dimmed', dimmed);
       });
     });
+    // Mêmes éléments recréés, même besoin pour la recherche (phase 14).
+    this.search?.apply();
   }
 
   // ── Carte du jour (epic #348, phase 3) ────────────────────────────────────
@@ -1092,6 +1109,7 @@ export default class extends Controller {
 
     this.updateDateBar();
     this.loadOccupancy();
+    this.search?.onDateChange();
 
     // Le panneau d'un gîte ouvert suit le jour affiché.
     const panel = this.hasFeatureFrameTarget && this.featureFrameTarget.querySelector('[data-venue-panel]');

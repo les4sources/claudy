@@ -62,7 +62,7 @@ class PlantSpeciesController < BaseController
   def varieties
     scope = PlantSpecies.find(params[:id]).varieties
     query = params[:q].to_s.squish
-    scope = scope.where("plant_varieties.name ILIKE ?", "%#{PlantVariety.sanitize_sql_like(query)}%") if query.present?
+    scope = scope.where("#{AccentFolding.sql('plant_varieties.name')} LIKE ?", AccentFolding.pattern(query)) if query.present?
     render json: scope.limit(LIMIT).map { |v| { id: v.id, name: v.name } }
   end
 

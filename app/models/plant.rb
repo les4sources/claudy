@@ -117,10 +117,11 @@ class Plant < ApplicationRecord
       all
     else
       number = BigDecimal(query.delete_prefix("#"), exception: false)
+      # Casse et accents ignorés : « neflier » trouve « Néflier ».
+      text = %w[plants.name plant_species.name plant_species.latin_name plant_varieties.name]
+             .map { |column| "#{AccentFolding.sql(column)} LIKE :q" }.join(" OR ")
       left_joins(:plant_species, :plant_variety).where(
-        "plants.name ILIKE :q OR plant_species.name ILIKE :q OR plant_species.latin_name ILIKE :q " \
-        "OR plant_varieties.name ILIKE :q OR plants.number = :number",
-        q: "%#{sanitize_sql_like(query)}%", number: number
+        "#{text} OR plants.number = :number", q: AccentFolding.pattern(query), number: number
       )
     end
   }

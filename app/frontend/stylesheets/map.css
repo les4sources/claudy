@@ -156,3 +156,51 @@
 .map-network-labels-hidden .map-network-label {
   display: none;
 }
+
+/* Recherche du mode actif (epic #348, phase 14) : les objets trouvés sont
+   allumés (opacité pleine, halo `ember`, libellé forcé même sous le zoom 18),
+   le reste de la couche s'estompe à 25 %. Posées par utils/map_search.js, sur
+   la mécanique de la vue « ce mois-ci ». */
+.leaflet-container .map-search-dimmed {
+  opacity: 0.25;
+  transition: opacity 150ms ease;
+}
+.leaflet-container .map-search-hit {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px #c97b3d) drop-shadow(0 0 1px #c97b3d);
+}
+.map-labels-hidden .map-feature-label.map-search-label,
+.map-network-labels-hidden .map-network-label.map-search-label {
+  display: block;
+}
+.leaflet-container .map-feature-label.map-search-label {
+  box-shadow: 0 0 0 2px #c97b3d;
+}
+
+/* Outil Mesure (phase 14) : curseur en croix, bulle `ember` qui suit le
+   curseur pendant le tracé, bulle de résultat à la fin. */
+.leaflet-container.map-measuring,
+.leaflet-container.map-measuring .leaflet-interactive {
+  cursor: crosshair;
+}
+.map-measure-tooltip {
+  background: #fff;
+  border: 1px solid #c97b3d;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  color: #7a4520;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+}
+.map-measure-tooltip::before {
+  display: none;
+}
+.map-measure-result {
+  line-height: 1.3;
+  text-align: center;
+}
+.map-measure-result strong {
+  font-size: 0.85rem;
+}
