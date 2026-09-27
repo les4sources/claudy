@@ -49,8 +49,8 @@ class MapFeature < ApplicationRecord
   }.freeze
 
   # Les réseaux (phase 9). Le calibre d'un tracé dit son épaisseur sur la carte
-  # (moyen par défaut) ; l'équipement d'un nœud prépare la phase 10 (statut
-  # UniFi en direct, avec `properties.unifi_device_id`) sans l'exploiter.
+  # (moyen par défaut) ; un nœud d'équipement UniFi se lie par
+  # `properties.unifi_device_id` à son statut en direct (phase 10).
   GAUGES = { "thin" => "Fin", "medium" => "Moyen", "thick" => "Gros" }.freeze
   DEFAULT_GAUGE = "medium".freeze
   EQUIPMENTS = { "unifi" => "UniFi" }.freeze
@@ -128,6 +128,9 @@ class MapFeature < ApplicationRecord
   def instructions = properties.to_h["instructions"].presence
   def equipment = properties.to_h["equipment"].presence
   def gauge = properties.to_h["gauge"].presence
+  # Phase 10 : l'identifiant de l'équipement UniFi (API Site Manager) d'un nœud.
+  def unifi_device_id = properties.to_h["unifi_device_id"].presence
+  def unifi? = equipment == "unifi"
 
   # La longueur d'une ligne en mètres, somme des distances haversine entre
   # sommets consécutifs. Calculée côté serveur (pas de PostGIS, décision 12) :
@@ -235,7 +238,8 @@ class MapFeature < ApplicationRecord
 
     length = length_in_meters
     { network: network, color: map_layer.network_color, node_type: node_type, node_type_label: node_type_label,
-      gauge: (gauge || DEFAULT_GAUGE if line?), equipment: equipment, length_m: length&.round(1) }.compact
+      gauge: (gauge || DEFAULT_GAUGE if line?), equipment: equipment, unifi_device_id: (unifi_device_id if unifi?),
+      length_m: length&.round(1) }.compact
   end
 
   # Un point de plante (phase 7) : de quoi colorer et marquer son cercle sans

@@ -26,6 +26,15 @@ div.flex.items-center.gap-2.text-xs.text-stone-600 data-network-readonly=layer.n
     = f.select :equipment, MapFeature::EQUIPMENTS.map { |key, label| [label, key] },
                { include_blank: "Aucun", selected: feature.equipment },
                class: "mt-1 h-11 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+  / Phase 10 : le statut UniFi en direct, seulement sur le réseau Ethernet. Le
+    client n'est interrogé que pour un nœud déjà marqué UniFi ; sinon un
+    rappel caché, que la carte révèle quand on choisit « UniFi ».
+  - if layer.network == "ethernet"
+    - if feature.unifi?
+      = render "maps/unifi_fields", f: f, feature: feature
+    - else
+      p.text-xs.text-stone-500 hidden=true data-unifi-hint="true"
+        | Enregistrez la fiche pour choisir l'équipement UniFi et voir son statut.
 
 - elsif feature.line?
   div
