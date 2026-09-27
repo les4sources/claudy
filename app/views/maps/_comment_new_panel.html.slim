@@ -1,0 +1,31 @@
+/ La fiche d'un point de commentaire PAS ENCORE créé (phase 11) : la carte a
+  posé un marqueur provisoire là où l'on a touché. Rien n'existe en base avant
+  « Publier » ; fermer la fiche retire le marqueur, sans rien à supprimer.
+- error = local_assigns[:error]
+div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:rounded-xl md:border md:border-stone-200"
+    data-feature-panel="true"
+    data-comment-new="true"]
+  .flex.items-center.gap-2.border-b.border-stone-100.px-4.py-3
+    span class="rounded-full bg-forest-tint px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-forest"
+      | Commentaire
+    h2.flex-1.truncate.text-sm.font-semibold.text-stone-800 Nouveau commentaire
+    button[type="button" class="flex h-11 w-11 items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+           data-action="click->map#closePanel" aria-label="Fermer la fiche"]
+      svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        line x1="18" y1="6" x2="6" y2="18"
+        line x1="6" y1="6" x2="18" y2="18"
+
+  .flex-1.overflow-y-auto.px-4.py-4
+    = form_with url: map_comments_path, scope: :map_comment, class: "space-y-3" do |f|
+      = hidden_field_tag :lat, lat
+      = hidden_field_tag :lng, lng
+      = f.label :body, "Premier message", class: "block text-xs font-semibold text-stone-600"
+      = f.text_area :body, value: local_assigns[:body], rows: 4, required: true, autofocus: true,
+                    placeholder: "Ce qu'il y a à dire de cet endroit…",
+                    class: "w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+      - if error
+        p.text-xs.text-red-700 = error
+      .flex.justify-end.gap-2
+        button[type="button" class="h-11 rounded-lg border border-stone-300 px-4 text-sm font-semibold text-stone-700 hover:bg-stone-50"
+               data-action="click->map#closePanel"] Annuler
+        button.h-11.rounded-lg.bg-forest.px-4.text-sm.font-semibold.text-white type="submit" Publier

@@ -1,0 +1,12 @@
+/ La réponse inline (phase 11). Remplacée, vide, après chaque réponse publiée.
+- error = local_assigns[:error]
+div id=dom_id(root, :reply_form)
+  = form_with url: reply_map_comment_path(root), scope: :map_comment, class: "space-y-2" do |f|
+    = f.label :body, "Répondre", class: "block text-xs font-semibold text-stone-600", for: dom_id(root, :reply_body)
+    = f.text_area :body, rows: 3, id: dom_id(root, :reply_body), required: true,
+                  placeholder: "Votre réponse…",
+                  class: "w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+    - if error
+      p.text-xs.text-red-700 = error
+    .flex.justify-end
+      button.h-11.rounded-lg.bg-forest.px-4.text-sm.font-semibold.text-white type="submit" Répondre
