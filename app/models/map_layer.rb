@@ -23,6 +23,34 @@ class MapLayer < ApplicationRecord
     "biodiversity" => "Biodiversité"
   }.freeze
 
+  # Les réseaux (phase 9) : une couche `network` par réseau, reconnue par
+  # `settings.network`. La couleur est celle des tracés et des pastilles ; la
+  # même valeur par défaut vit dans `app/frontend/utils/map_networks.js`, mais
+  # c'est `settings.color` qui fait foi (la carte le lit dans le JSON).
+  NETWORKS = {
+    "water" => { name: "Eau", color: "#2563EB" },
+    "electric" => { name: "Électricité", color: "#D97706" },
+    "ethernet" => { name: "Ethernet", color: "#7C3AED" }
+  }.freeze
+  # Les types de nœud, par réseau : clés anglaises stables (elles sont en base,
+  # dans `properties.node_type`, et nomment les icônes côté JS), libellés
+  # français. Un compteur d'eau et un compteur électrique partagent la clé
+  # `meter` : c'est la couche qui dit de quel réseau il s'agit.
+  NODE_TYPES = {
+    "water" => {
+      "source" => "Source", "catchment" => "Captage", "cistern" => "Citerne", "valve" => "Vanne",
+      "meter" => "Compteur", "tap" => "Robinet", "manhole" => "Regard"
+    },
+    "electric" => {
+      "panel" => "Tableau", "meter" => "Compteur", "outlet" => "Prise", "breaker" => "Disjoncteur",
+      "lighting" => "Éclairage"
+    },
+    "ethernet" => {
+      "switch" => "Switch", "access_point" => "Borne wifi", "wall_jack" => "Prise murale", "router" => "Routeur",
+      "rack" => "Baie", "fiber_box" => "Boîtier fibre"
+    }
+  }.freeze
+
   has_paper_trail
   has_soft_deletion default_scope: true
 
@@ -48,13 +76,32 @@ class MapLayer < ApplicationRecord
     find_by!(kind: kind)
   end
 
+  # Les trois couches réseau (phase 9), créées si elles manquent, dans l'ordre
+  # de `NETWORKS`. Une couche `network` sans réseau déclaré mais portant le bon
+  # nom est adoptée plutôt que doublée. Une couleur choisie à la main reste.
+  def self.ensure_networks!
+    existing = where(kind: "network").to_a
+    NETWORKS.map do |network, spec|
+      layer = existing.find { |candidate| candidate.network == network } ||
+              existing.find { |candidate| candidate.network.blank? && candidate.name == spec[:name] } ||
+              new(kind: "network", name: spec[:name], position: KINDS.index("network"))
+      layer.settings = { "color" => spec[:color] }.merge(layer.settings.to_h.compact_blank, "network" => network)
+      layer.save! if layer.new_record? || layer.changed?
+      layer
+    end
+  end
+
   def kind_label = KIND_LABELS.fetch(kind, kind)
+  def network? = kind == "network"
+  def network = (settings.to_h["network"].presence if network?)
+  def network_color = settings.to_h["color"].presence || NETWORKS.dig(network, :color)
+  def node_types = NODE_TYPES.fetch(network.to_s, {})
   def management? = kind == "management"
   def venues? = kind == "venues"
   def welcome? = kind == "welcome"
 
   # Les couches qu'on trace à la main avec la barre d'outils Geoman.
-  def editable? = management? || venues? || welcome?
+  def editable? = management? || venues? || welcome? || network?
 
   private
 
