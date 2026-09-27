@@ -1,0 +1,56 @@
+/ Le carnet de gestion (epic #348, phase 6) : la consigne de gestion devenue
+  plan de travail. Douze sections, une par mois ; une tâche de mars et
+  d'octobre apparaît dans les deux. Le mois en cours est ouvert, les autres
+  repliés (`<details>`, sans JavaScript) avec leur nombre de tâches en vue.
+.mx-auto.max-w-3xl.px-4.py-6
+  = link_to map_path, class: "inline-flex items-center gap-1 text-xs font-medium text-stone-500 hover:text-forest" do
+    svg.h-3.5.w-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+      polyline points="15 18 9 12 15 6"
+    | La carte
+  .mt-2.flex.flex-wrap.items-end.justify-between.gap-3
+    div
+      h1.font-averia.text-2xl.text-stone-800 Carnet de gestion
+      p.mt-1.text-sm.text-stone-500 Ce qui revient chaque année sur le domaine, mois par mois.
+    / Le filtre filière : un lien par choix, l'URL garde le filtre (lien
+      partageable, retour arrière fiable).
+    nav.inline-flex.rounded-lg.border.border-stone-200.bg-white.p-0.5 aria-label="Filière"
+      - [[nil, "Toutes"], *MapTask::SECTORS.to_a].each do |key, label|
+        - active = @sector == key
+        = link_to label, map_carnet_path(sector: key),
+                  class: "rounded-md px-3 py-1.5 text-sm #{active ? 'bg-forest font-semibold text-white' : 'text-stone-600 hover:bg-stone-50'}",
+                  aria: { current: (active ? "page" : nil) },
+                  data: { sector_filter: key || "all" }
+
+  .mt-6.space-y-2
+    - @tasks_by_month.each do |month, tasks|
+      - current = month == @current_month
+      details[id="mois-#{month}"
+              class="overflow-hidden rounded-xl border bg-white #{current ? 'border-forest ring-1 ring-forest' : 'border-stone-200'}"
+              open=(current || nil)
+              data-month=month
+              data-current-month=(current ? "true" : nil)]
+        summary.flex.cursor-pointer.items-center.gap-3.px-4.py-3
+          span.flex-1.font-semibold.text-stone-800 = MapTask.month_name(month)
+          - if current
+            span class="rounded-full bg-forest-tint px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-forest" Ce mois-ci
+          span[class="min-w-[1.75rem] rounded-full px-2 py-0.5 text-center text-xs font-semibold tabular-nums #{tasks.any? ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-400'}"
+               data-task-count=tasks.size
+               aria-label="#{tasks.size} tâche#{'s' if tasks.size > 1}"]
+            = tasks.size
+        - if tasks.empty?
+          p.border-t.border-stone-100.px-4.py-3.text-sm.text-stone-400 Aucune tâche ce mois-là.
+        - else
+          ul.divide-y.divide-stone-100.border-t.border-stone-100
+            - tasks.each do |task|
+              = render "map_tasks/carnet_task", task: task
+
+    / Les tâches sans mois (« tous les 2 ans », à placer) : elles ne tombent dans
+      aucune section, on ne les perd pas pour autant.
+    - if @undated.any?
+      details.overflow-hidden.rounded-xl.border.border-dashed.border-stone-300.bg-white data-month="none"
+        summary.flex.cursor-pointer.items-center.gap-3.px-4.py-3
+          span.flex-1.font-semibold.text-stone-600 Sans mois précis
+          span.rounded-full.bg-stone-100.px-2.py-0.5.text-xs.font-semibold.tabular-nums.text-stone-500 data-task-count=@undated.size = @undated.size
+        ul.divide-y.divide-stone-100.border-t.border-stone-100
+          - @undated.each do |task|
+            = render "map_tasks/carnet_task", task: task

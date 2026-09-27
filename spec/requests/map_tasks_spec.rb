@@ -5,6 +5,7 @@ require "rails_helper"
 # et la vue « ce mois-ci ».
 RSpec.describe "Carte du domaine — tâches et carnet (epic #348, phase 6)", type: :request do
   include Devise::Test::IntegrationHelpers
+  include ActiveSupport::Testing::TimeHelpers
 
   let(:user) { User.create!(email: "agent-taches@les4sources.be", password: "password123") }
   let(:layer) { MapLayer.for_kind(:management) }
@@ -85,6 +86,62 @@ RSpec.describe "Carte du domaine — tâches et carnet (epic #348, phase 6)", ty
           map_task: { label: "Taille", months: ["2"], subject_type: "User", subject_id: user.id, sector: "nourricier" }
         }
         expect(MapTask.last).to have_attributes(subject_type: "MapFeature", subject_id: feature.id, sector: "nourricier")
+      end
+    end
+
+    describe "GET /map/carnet" do
+      around { |example| travel_to(Date.new(2026, 3, 15)) { example.run } }
+
+      let!(:fauche) { feature.map_tasks.create!(label: "Fauche des orties", months: [3, 10]) }
+      let!(:taille) { zone("Le verger").map_tasks.create!(label: "Taille des pommiers", months: [3], sector: "nourricier") }
+
+      def month_section(page, month) = page.at_css(%(details[data-month="#{month}"]))
+
+      it "range chaque tâche dans chacun de ses mois, avec le nom de l'objet et un lien vers la carte" do
+        get map_carnet_path
+
+        expect(response).to have_http_status(:ok)
+        page = Nokogiri::HTML(response.body)
+        expect(page.css("details[data-month]").map { |d| d["data-month"] }).to eq((1..12).map(&:to_s))
+        expect(month_section(page, 3).text).to include("Mars", "Fauche des orties", "Taille des pommiers", "La prairie du bas")
+        expect(month_section(page, 10).text).to include("Octobre", "Fauche des orties")
+        expect(month_section(page, 10).text).not_to include("Taille des pommiers")
+        expect(month_section(page, 3).at_css("[data-task-count]").text.strip).to eq("2")
+        expect(month_section(page, 10).at_css("[data-task-count]").text.strip).to eq("1")
+        expect(month_section(page, 3).at_css(%(a[href="#{map_path(feature: feature.id)}"]))).to be_present
+      end
+
+      it "ouvre le mois courant et replie les autres" do
+        get map_carnet_path
+        page = Nokogiri::HTML(response.body)
+        expect(month_section(page, 3)["open"]).not_to be_nil
+        expect(month_section(page, 3)["data-current-month"]).to eq("true")
+        expect(month_section(page, 10)["open"]).to be_nil
+      end
+
+      it "filtre par filière" do
+        get map_carnet_path(sector: "nourricier")
+        page = Nokogiri::HTML(response.body)
+        expect(month_section(page, 3).text).to include("Taille des pommiers")
+        expect(month_section(page, 3).text).not_to include("Fauche des orties")
+
+        get map_carnet_path(sector: "n'importe quoi")
+        expect(response.body).to include("Fauche des orties", "Taille des pommiers")
+      end
+
+      it "écarte les tâches d'un objet supprimé" do
+        feature.soft_delete!(validate: false)
+        get map_carnet_path
+        expect(response).to have_http_status(:ok)
+        expect(response.body).not_to include("Fauche des orties")
+        expect(response.body).to include("Taille des pommiers")
+      end
+
+      it "a son entrée dans le panneau de la carte" do
+        MapBaseLayer.create!(key: "test-layer", name: "Couche de test", min_zoom: 12, max_zoom: 20,
+                             bounds: { "south" => 50.339, "west" => 4.903, "north" => 50.343, "east" => 4.912 })
+        get map_path
+        expect(Nokogiri::HTML(response.body).at_css(%(a[data-map-carnet-link][href="#{map_carnet_path}"]))).to be_present
       end
     end
 
