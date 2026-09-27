@@ -77,17 +77,17 @@ div[id="cycle_action_#{cycle_action.id}"
     .flex.items-center.gap-0.5.flex-shrink-0
       - if cycle_action.actual_hours_recorded?
         = button_to remove_actual_hour_cycle_action_path(cycle_action),
-                    method: :patch,
-                    data: { turbo_stream: true },
-                    class: "flex-shrink-0",
-                    title: "Retirer une heure réelle" do
+                    tooltip_options("Retirer une heure réelle",
+                                    method: :patch,
+                                    data: { turbo_stream: true },
+                                    class: "flex-shrink-0") do
           span class="block rounded-md px-1.5 py-1 text-xs font-medium leading-none text-gray-400 hover:text-teal-700 hover:bg-teal-50 cursor-pointer"
             | − h
       = button_to add_actual_hour_cycle_action_path(cycle_action),
-                  method: :patch,
-                  data: { turbo_stream: true },
-                  class: "flex-shrink-0",
-                  title: "Ajouter une heure réelle" do
+                  tooltip_options("Ajouter une heure réelle",
+                                  method: :patch,
+                                  data: { turbo_stream: true },
+                                  class: "flex-shrink-0") do
         span class="block rounded-md px-1.5 py-1 text-xs font-medium leading-none text-gray-400 hover:text-teal-700 hover:bg-teal-50 cursor-pointer"
           | + h
 
@@ -105,17 +105,18 @@ div[id="cycle_action_#{cycle_action.id}"
         span.text-sm.font-medium.text-gray-400.tabular-nums title="Heures estimées"
           = cycle_action.actual_hours_recorded? ? "#{decorated.hours_total} estimé" : decorated.hours_total
 
-  / Action icons
+  /  Action icons — bulles stylisées (epic #330, phase 6) via `tooltip_options` :
+     pas de `title=` natif, qui doublerait la bulle ; un `aria-label` à la place.
   - unless readonly
     .flex.items-center.gap-0.5.flex-shrink-0
       /  Bascule ACTIVITÉ ÉCONOMIQUE, en première position du groupe (epic #330,
          phase 1). Visible sur toute action non archivée : une prestation peut
          se révéler économique après coup, y compris une fois faite.
       = button_to toggle_economic_cycle_action_path(cycle_action),
-                  method: :patch,
-                  data: { turbo_stream: true },
-                  class: "p-1.5 rounded-md transition-colors #{cycle_action.economic? ? 'text-amber-600 bg-amber-100 hover:bg-amber-200' : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'}",
-                  title: (cycle_action.economic? ? "Retirer le mode activité économique" : "Marquer comme activité économique (hors budget d'heures)") do
+                  tooltip_options(cycle_action.economic? ? "Retirer le mode activité économique" : "Marquer comme activité économique (hors budget d'heures)",
+                                  method: :patch,
+                                  data: { turbo_stream: true },
+                                  class: "p-1.5 rounded-md transition-colors #{cycle_action.economic? ? 'text-amber-600 bg-amber-100 hover:bg-amber-200' : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'}") do
         svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
           path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"
           path d="M12 2v20"
@@ -128,26 +129,26 @@ div[id="cycle_action_#{cycle_action.id}"
       - copy = cycle_action.copy_in_next_cycle
       - if copy
         = button_to copy_next_cycle_action_path(cycle_action),
-                    method: :patch,
-                    data: { turbo_stream: true },
-                    class: "p-1.5 rounded-md text-sky-700 bg-sky-100 hover:bg-sky-200 transition-colors",
-                    title: "Retirer la copie du cycle suivant (#{copy.cycle.name})" do
+                    tooltip_options("Retirer la copie du cycle suivant (#{copy.cycle.name})",
+                                    method: :patch,
+                                    data: { turbo_stream: true },
+                                    class: "p-1.5 rounded-md text-sky-700 bg-sky-100 hover:bg-sky-200 transition-colors") do
           svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.25" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
             rect x="9" y="9" width="12" height="12" rx="2" ry="2"
             path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" fill="none"
       - elsif next_cycle
         = button_to copy_next_cycle_action_path(cycle_action),
-                    method: :patch,
-                    data: { turbo_stream: true },
-                    class: "p-1.5 rounded-md text-gray-400 hover:text-sky-700 hover:bg-sky-50 transition-colors",
-                    title: "Copier au cycle suivant (#{next_cycle.name})" do
+                    tooltip_options("Copier au cycle suivant (#{next_cycle.name})",
+                                    method: :patch,
+                                    data: { turbo_stream: true },
+                                    class: "p-1.5 rounded-md text-gray-400 hover:text-sky-700 hover:bg-sky-50 transition-colors") do
           svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
             rect x="9" y="9" width="12" height="12" rx="2" ry="2"
             path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
       - else
         = link_to new_cycle_path,
-                  class: "p-1.5 rounded-md text-gray-300 hover:text-amber-600 hover:bg-amber-50 transition-colors",
-                  title: "Aucun cycle suivant configuré — créer un cycle" do
+                  tooltip_options("Aucun cycle suivant configuré — créer un cycle",
+                                  class: "p-1.5 rounded-md text-gray-300 hover:text-amber-600 hover:bg-amber-50 transition-colors") do
           svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 2"
             rect x="9" y="9" width="12" height="12" rx="2" ry="2"
             path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
@@ -155,18 +156,18 @@ div[id="cycle_action_#{cycle_action.id}"
       - unless cycle_action.completed?
         - if next_cycle
           = button_to defer_next_cycle_action_path(cycle_action),
-                      method: :patch,
-                      data: { turbo_stream: true },
-                      class: "p-1.5 rounded-md text-gray-400 hover:text-sky-700 hover:bg-sky-50 transition-colors",
-                      title: "Passer au cycle suivant (#{next_cycle.name})" do
+                      tooltip_options("Passer au cycle suivant (#{next_cycle.name})",
+                                      method: :patch,
+                                      data: { turbo_stream: true },
+                                      class: "p-1.5 rounded-md text-gray-400 hover:text-sky-700 hover:bg-sky-50 transition-colors") do
             svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
               path d="M5 12h14"
               path d="m12 5 7 7-7 7"
               path d="M3 5v14"
         - else
           = link_to new_cycle_path,
-                    class: "p-1.5 rounded-md text-gray-300 hover:text-amber-600 hover:bg-amber-50 transition-colors",
-                    title: "Aucun cycle suivant configuré — créer un cycle" do
+                    tooltip_options("Aucun cycle suivant configuré — créer un cycle",
+                                    class: "p-1.5 rounded-md text-gray-300 hover:text-amber-600 hover:bg-amber-50 transition-colors") do
             svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 2"
               path d="M5 12h14"
               path d="m12 5 7 7-7 7"
@@ -174,37 +175,37 @@ div[id="cycle_action_#{cycle_action.id}"
 
         - unless cycle_action.reportee?
           = button_to defer_cycle_action_path(cycle_action),
-                      method: :patch,
-                      data: { turbo_stream: true },
-                      class: "p-1.5 rounded-md text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors",
-                      title: "Mettre en attente (catégorie reportée)" do
+                      tooltip_options("Mettre en attente (catégorie reportée)",
+                                      method: :patch,
+                                      data: { turbo_stream: true },
+                                      class: "p-1.5 rounded-md text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors") do
             svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
               polyline points="13 17 18 12 13 7"
               polyline points="6 17 11 12 6 7"
 
       = link_to edit_cycle_action_path(cycle_action),
-                data: { turbo_stream: true },
-                class: "p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors",
-                title: "Modifier" do
+                tooltip_options("Modifier",
+                                data: { turbo_stream: true },
+                                class: "p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors") do
         svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
           path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"
           path d="m15 5 4 4"
 
       = button_to archive_cycle_action_path(cycle_action),
-                  method: :patch,
-                  data: { turbo_stream: true },
-                  class: "p-1.5 rounded-md text-gray-400 hover:text-teal-700 hover:bg-teal-50 transition-colors",
-                  title: (cycle_action.completed? ? "Archiver (faite)" : "Archiver sans la faire") do
+                  tooltip_options(cycle_action.completed? ? "Archiver (faite)" : "Archiver sans la faire",
+                                  method: :patch,
+                                  data: { turbo_stream: true },
+                                  class: "p-1.5 rounded-md text-gray-400 hover:text-teal-700 hover:bg-teal-50 transition-colors") do
         svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
           path d="M21 8v13H3V8"
           path d="M1 3h22v5H1z"
           line x1="10" y1="12" x2="14" y2="12"
 
       = button_to cycle_action_path(cycle_action),
-                  method: :delete,
-                  data: { turbo_stream: true, turbo_confirm: "Supprimer cette action ?" },
-                  class: "p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors",
-                  title: "Supprimer" do
+                  tooltip_options("Supprimer",
+                                  method: :delete,
+                                  data: { turbo_stream: true, turbo_confirm: "Supprimer cette action ?" },
+                                  class: "p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors") do
         svg.w-3.5.h-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
           path d="M3 6h18"
           path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"
