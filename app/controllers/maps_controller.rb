@@ -17,6 +17,8 @@ class MapsController < BaseController
     MapLayer.for_kind(:welcome)
     # Les plantes nourricières (phase 7).
     MapLayer.for_kind(:plants)
+    # Les réseaux (phase 9) : Eau, Électricité, Ethernet.
+    MapLayer.ensure_networks!
     # Les commentaires en fil (phase 11) : active, la couche fait du clic sur la
     # carte un nouveau commentaire.
     MapLayer.for_kind(:comments)
