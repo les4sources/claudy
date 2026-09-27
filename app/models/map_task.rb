@@ -45,7 +45,11 @@ class MapTask < ApplicationRecord
 
   def self.month_name(month) = I18n.t("date.month_names", locale: :fr)[month].to_s.upcase_first
 
-  # L'initiale du mois, pour les douze pastilles.
+  # « mars », « juil. » : les cases à cocher du formulaire. Pas l'initiale,
+  # juin et juillet la partagent.
+  def self.month_abbr(month) = I18n.t("date.abbr_month_names", locale: :fr)[month].to_s
+
+  # L'initiale du mois, pour les douze pastilles (le nom complet en infobulle).
   def self.month_initial(month) = month_name(month).first
 
   def sector_label = SECTORS.fetch(sector, sector)
