@@ -10,8 +10,6 @@ class MapFeature < ApplicationRecord
   FEATURE_KINDS = %w[zone path point plant node line comment observation lodging space].freeze
   GEOMETRY_TYPES = %w[Point LineString Polygon].freeze
   LOCALES = %w[fr en nl].freeze
-  PHOTO_CONTENT_TYPES = %w[image/jpeg image/png image/heic image/heif].freeze
-  HEIC_CONTENT_TYPES = %w[image/heic image/heif].freeze
   # Ce qu'un objet de la carte peut représenter (phase 3). Liste fermée : le
   # type polymorphe vient d'un formulaire, il ne doit jamais désigner autre
   # chose qu'un gîte ou une salle.
@@ -69,17 +67,19 @@ class MapFeature < ApplicationRecord
   # objet supprimé garde ses tâches en base, le carnet les écarte en ne lisant
   # que les tâches d'un porteur vivant (`MapTask.with_live_subject`).
   has_many :map_tasks, as: :subject, inverse_of: :subject
+  # Les notes datées de l'objet (phase 7), la plus récente d'abord.
+  has_many :map_notes, -> { recent_first }, as: :subject, inverse_of: :subject
+  # La plante que ce point représente (phase 7, `feature_kind` `plant`). Pas de
+  # `dependent:` (piège connu de soft_deletion sur un has_one) : c'est
+  # `release_plant` qui rend la plante « à placer » quand le point disparaît.
+  has_one :plant, inverse_of: :map_feature
 
-  # Miniature pour la galerie, aperçu pour l'agrandissement. `format: :jpeg` :
-  # une photo HEIC d'iPhone n'est pas lisible par tous les navigateurs.
-  has_many_attached :photos do |attachable|
-    attachable.variant :thumb, resize_to_limit: [320, 320], format: :jpeg
-    attachable.variant :preview, resize_to_limit: [1600, 1600], format: :jpeg
-  end
+  # Miniature, aperçu et refus clair des formats illisibles : `HasMapPhotos`,
+  # partagé avec les plantes.
+  include HasMapPhotos
 
   validates :feature_kind, inclusion: { in: FEATURE_KINDS }
   validate :geometry_is_valid_geojson
-  validate :photos_are_images
   validate :venues_traced_once
   validate :welcome_properties_are_known
 
@@ -87,6 +87,7 @@ class MapFeature < ApplicationRecord
 
   before_validation :normalize_geometry
   after_soft_delete :release_venues
+  after_soft_delete :release_plant
 
   # La géométrie dit le type d'objet quand on ne l'a pas précisé : un polygone
   # est une zone, une ligne un accès, un point un point.
@@ -96,40 +97,6 @@ class MapFeature < ApplicationRecord
     when "LineString" then "path"
     else "point"
     end
-  end
-
-  # Les variantes passent par libvips (processeur par défaut de Rails 8.1),
-  # retiré du serveur de production (cf. Gemfile). Sans lui, une miniature
-  # répondrait en erreur : la galerie montre alors l'original, réduit en CSS.
-  def self.image_variants?
-    return @image_variants if defined?(@image_variants)
-
-    @image_variants = begin
-      require "vips"
-      true
-    rescue LoadError, StandardError
-      false
-    end
-  end
-
-  # Une photo HEIC d'iPhone ne s'affiche que dans Safari : on ne l'accepte que
-  # si libvips sait la décoder, pour la servir en miniature JPEG. Sinon elle
-  # est refusée avec un message clair (spec de la phase 2), plutôt qu'acceptée
-  # puis cassée sur Chrome, Firefox et Android.
-  def self.heic_supported?
-    return @heic_supported if defined?(@heic_supported)
-
-    @heic_supported = image_variants? && Vips.get_suffixes.include?(".heic")
-  rescue StandardError
-    @heic_supported = false
-  end
-
-  def self.accepted_photo_types
-    heic_supported? ? PHOTO_CONTENT_TYPES : PHOTO_CONTENT_TYPES - HEIC_CONTENT_TYPES
-  end
-
-  def self.photo_source(photo, variant)
-    image_variants? ? photo.variant(variant) : photo
   end
 
   def name(locale = I18n.locale) = translated(name_i18n, locale)
@@ -201,7 +168,14 @@ class MapFeature < ApplicationRecord
   # « La Chevêche · La Hulotte » : le nom d'un tracé qui n'en a pas en propre.
   def venue_names = venues.map(&:name).join(" · ")
 
-  def display_name = name(:fr).presence || venue_names.presence
+  # Le point d'une plante sans nom propre porte celui de la plante. La plante
+  # n'est lue que pour un point `plant` : `as_geojson` appelle ceci pour chaque
+  # objet de la carte.
+  def display_name
+    name(:fr).presence || venue_names.presence || (plant&.display_name if plant_point?)
+  end
+
+  def plant_point? = feature_kind == "plant"
 
   def venue? = LINKABLE_TYPES.value?(feature_kind)
 
@@ -288,6 +262,17 @@ class MapFeature < ApplicationRecord
     map_feature_venues.destroy_all
   end
 
+  # Un point de plante supprimé depuis la carte rend sa plante « à placer »,
+  # plutôt que de la laisser pointer vers un objet disparu. Sans validation : la
+  # suppression du point ne doit pas buter sur une fiche plante incomplète.
+  def release_plant
+    Plant.where(map_feature_id: id).find_each do |plant|
+      plant.map_feature = nil
+      plant.status = "to_place"
+      plant.save!(validate: false)
+    end
+  end
+
   # Une nature de zone ou une icône inconnue casserait la légende des hôtes :
   # la carte ne saurait pas de quelle couleur la peindre. Et un objet d'accueil
   # sans nom français n'a rien à dire à un hôte : le français est la langue de
@@ -296,19 +281,5 @@ class MapFeature < ApplicationRecord
     errors.add(:base, "Le type de zone « #{access} » est inconnu") if access.present? && !ACCESS_LEVELS.key?(access)
     errors.add(:base, "L'icône « #{icon} » est inconnue") if icon.present? && !WELCOME_ICONS.key?(icon)
     errors.add(:base, "Un objet de la couche Accueil doit avoir un nom en français") if map_layer&.welcome? && name_i18n.to_h["fr"].blank?
-  end
-
-  def photos_are_images
-    photos.each do |photo|
-      type = photo.blob.content_type
-      next if MapFeature.accepted_photo_types.include?(type)
-
-      if HEIC_CONTENT_TYPES.include?(type)
-        errors.add(:photos, "« #{photo.filename} » est au format HEIC, que le serveur ne sait pas convertir : " \
-                            "exportez-la en JPEG (sur iPhone : Réglages › Appareil photo › Formats › « Le plus compatible »)")
-      else
-        errors.add(:photos, "« #{photo.filename} » n'est pas une photo acceptée (#{MapFeature.heic_supported? ? 'JPEG, PNG ou HEIC' : 'JPEG ou PNG'})")
-      end
-    end
   end
 end

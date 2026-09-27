@@ -11,9 +11,9 @@ class MapTask < ApplicationRecord
   SECTORS = { "terrain" => "Terrain", "nourricier" => "Nourricier" }.freeze
   # Ce qui peut porter une tâche, et la filière qu'elle prend par défaut. Liste
   # FERMÉE : le type polymorphe ne vient jamais d'un paramètre, et quand il est
-  # lu (`subject`, `with_live_subject`), c'est forcément l'un de ceux-ci. La
-  # phase 7 ajoutera `"Plant" => "nourricier"`.
-  SUBJECT_TYPES = { "MapFeature" => "terrain" }.freeze
+  # lu (`subject`, `with_live_subject`), c'est forcément l'un de ceux-ci. Une
+  # plante (phase 7) relève du nourricier.
+  SUBJECT_TYPES = { "MapFeature" => "terrain", "Plant" => "nourricier" }.freeze
   MONTHS = (1..12).to_a.freeze
 
   has_paper_trail
