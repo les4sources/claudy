@@ -206,4 +206,22 @@ module UiHelper
       content_tag(:span, content, class: "#{label_class} label", title: title, data: { tooltip: true })
     end
   end
+
+  # Options HTML d'un bouton ou d'un lien à bulle stylisée (epic #330, phase 6),
+  # à passer à `button_to` / `link_to` à la place d'un `title:` natif — qui
+  # doublerait la bulle. Le texte reste lu par les lecteurs d'écran via
+  # l'`aria-label`. Les `data:` déjà présents (turbo_stream, turbo_confirm…)
+  # sont conservés.
+  #
+  #   button_to path, tooltip_options("Modifier", method: :patch, data: { turbo_stream: true })
+  def tooltip_options(text, options = {})
+    options.merge(
+      aria: (options[:aria] || {}).merge(label: text),
+      data: (options[:data] || {}).merge(
+        controller: "tooltip",
+        tooltip_text_value: text,
+        action: "mouseenter->tooltip#show mouseleave->tooltip#hide focus->tooltip#show blur->tooltip#hide click->tooltip#hide"
+      )
+    )
+  end
 end
