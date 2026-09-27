@@ -122,7 +122,7 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
       / Le plan de travail de l'objet (phase 6), pour la couche Gestion. Un objet
         pas encore enregistré n'en a pas : ses tâches n'auraient pas de porteur.
       - if layer&.management?
-        = render "maps/feature_tasks", feature: feature
+        = render "maps/feature_tasks", subject: feature
       - photos = feature.photos.select(&:persisted?)
       - if photos.any?
         .mt-5

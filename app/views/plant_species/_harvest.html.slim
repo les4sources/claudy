@@ -1,0 +1,32 @@
+/ Le calendrier de récolte PAR DÉFAUT d'une espèce (epic #348, phase 7) :
+  la grille en lecture, puis le même éditeur que la fiche plante. Remplacée
+  seule en Turbo Stream (`SpeciesHarvestsController`).
+- errors = local_assigns[:errors] || []
+- draft = local_assigns[:draft]
+- windows = species.harvest_windows.to_a
+- rows = draft || windows
+- following = species.plants.alive.where.missing(:harvest_windows).count
+section[id=dom_id(species, :harvest) class="rounded-xl border border-stone-200 bg-white p-4" data-species-section="harvest"]
+  .mb-3.flex.items-baseline.justify-between.gap-3
+    h2.font-semibold.text-stone-800 Récolte par défaut
+    - if local_assigns[:saved]
+      p.text-xs.font-medium.text-forest role="status" Enregistré.
+  p.mb-3.text-xs.text-stone-500
+    = following.positive? ? "Suivi par #{following} plante#{'s' if following > 1} sans calendrier propre." : "Aucune plante ne le suit pour l'instant."
+  - if windows.any?
+    = render "plants/harvest_grid", windows: windows
+  - else
+    p.text-sm.text-stone-500 Aucun calendrier de récolte.
+  details.group.mt-3.rounded-lg.border.border-dashed.border-stone-300 open=(errors.any? || windows.empty? || nil)
+    summary.flex.cursor-pointer.list-none.items-center.justify-between.px-3.py-2.text-sm.font-medium.text-forest
+      span = windows.any? ? "Modifier le calendrier" : "+ Ajouter une partie"
+      svg.h-4.w-4.text-stone-400.transition-transform.group-open:rotate-180 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+        polyline points="6 9 12 15 18 9"
+    .border-t.border-stone-100.px-3.py-3
+      = render "plants/harvest_editor", url: map_espece_harvest_path(species), rows: rows, errors: errors,
+               prefix: dom_id(species, :harvest_form)
+      - if windows.any?
+        = button_to map_espece_harvest_path(species), method: :delete,
+                    form: { class: "mt-2", data: { turbo_confirm: "Effacer le calendrier de récolte de l'espèce #{species.name} ?" } },
+                    class: "h-11 w-full rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-50"
+          | Effacer le calendrier

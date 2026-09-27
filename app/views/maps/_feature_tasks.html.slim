@@ -2,14 +2,25 @@
   Hors du formulaire de l'objet (deux formulaires ne s'emboîtent pas) et
   remplacée seule en Turbo Stream à chaque enregistrement : la saisie en cours
   dans la fiche n'est pas perdue. Chaque tâche se déplie pour être modifiée.
+
+  Le porteur (`subject`) est un objet de la carte ou une plante (phase 7) :
+  même composant ; la filière par défaut suit le porteur (`MapTask::SUBJECT_TYPES`).
+- subject = local_assigns[:subject] || local_assigns[:feature]
+- plant = subject.is_a?(Plant)
 - invalid = local_assigns[:invalid_task]
-- tasks = feature.map_tasks.ordered.to_a
-section[id=dom_id(feature, :tasks) class="mt-5 border-t border-stone-100 pt-4" data-feature-tasks="true"]
+- tasks = subject.map_tasks.ordered.to_a
+section[id=dom_id(subject, :tasks)
+        class=(plant ? "mt-6" : "mt-5 border-t border-stone-100 pt-4")
+        data-feature-tasks=(plant ? nil : "true")
+        data-plant-section=(plant ? "tasks" : nil)]
   .flex.items-center.justify-between
     p class="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" = "Tâches (#{tasks.size})"
-    = link_to "Carnet", map_carnet_path, class: "text-xs font-medium text-forest hover:underline", data: { turbo_frame: "_top" }
+    = link_to "Carnet", map_carnet_path(sector: (plant ? "nourricier" : nil)), class: "text-xs font-medium text-forest hover:underline", data: { turbo_frame: "_top" }
   - if tasks.empty?
-    p.mt-2.text-xs.text-stone-500 Aucune tâche : la consigne ci-dessus devient un plan de travail en ajoutant ses tâches mois par mois.
+    - if plant
+      p.mt-2.text-xs.text-stone-500 Aucune tâche : taille, paillage, protection, récolte… chaque geste revient au bon mois dans le carnet.
+    - else
+      p.mt-2.text-xs.text-stone-500 Aucune tâche : la consigne ci-dessus devient un plan de travail en ajoutant ses tâches mois par mois.
   - else
     ul.mt-2.space-y-2
       - tasks.each do |task|
@@ -29,7 +40,7 @@ section[id=dom_id(feature, :tasks) class="mt-5 border-t border-stone-100 pt-4" d
               - if task.notes.present?
                 p.mt-1.whitespace-pre-line.text-xs.text-stone-500 = task.notes
             .border-t.border-stone-100.px-3.py-3
-              = render "maps/task_form", feature: feature, task: (editing ? invalid : task)
+              = render "maps/task_form", subject: subject, task: (editing ? invalid : task)
               = button_to map_task_path(task), method: :delete,
                           form: { class: "mt-2", data: { turbo_confirm: "Supprimer la tâche « #{task.label} » ?" } },
                           class: "text-xs font-medium text-red-600 hover:text-red-700"
@@ -37,4 +48,4 @@ section[id=dom_id(feature, :tasks) class="mt-5 border-t border-stone-100 pt-4" d
   details.mt-3.rounded-lg.border.border-dashed.border-stone-300 open=(invalid&.new_record? || nil)
     summary.cursor-pointer.px-3.py-2.text-sm.font-medium.text-forest + Ajouter une tâche
     .border-t.border-stone-100.px-3.py-3
-      = render "maps/task_form", feature: feature, task: (invalid&.new_record? ? invalid : MapTask.new(subject: feature))
+      = render "maps/task_form", subject: subject, task: (invalid&.new_record? ? invalid : MapTask.new(subject: subject))

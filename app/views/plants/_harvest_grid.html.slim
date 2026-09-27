@@ -1,0 +1,28 @@
+/ La grille parties × douze mois d'un calendrier de récolte (epic #348,
+  phase 7), en lecture : fiche plante et fiche espèce. `windows` : les
+  fenêtres à montrer.
+- current_month = Date.current.month
+- columns = "grid-template-columns: 4.25rem repeat(12, minmax(0, 1fr))"
+div[role="table" aria-label="Calendrier de récolte" class="grid items-center gap-x-0.5 gap-y-1" style=columns]
+  div role="row" class="contents"
+    span role="columnheader"
+      span.sr-only Partie
+    - MapTask::MONTHS.each do |month|
+      - now = month == current_month
+      span[role="columnheader"
+           class="flex h-5 items-center justify-center rounded-full text-[0.6rem] font-semibold #{now ? 'bg-forest text-white' : 'text-stone-400'}"
+           title=MapTask.month_name(month)
+           data-current-month=(now ? "true" : nil)]
+        = MapTask.month_initial(month)
+  - windows.each do |window|
+    div role="row" class="contents" data-harvest-part=window.part aria-label="#{window.part_label} : #{window.months.map { |m| MapTask.month_name(m) }.join(', ')}"
+      span.flex.min-w-0.items-center.gap-1.5 role="rowheader"
+        span class="h-2.5 w-2.5 flex-shrink-0 rounded-full #{harvest_part_color(window.part)}" aria-hidden="true"
+        span.truncate.text-xs.font-medium.text-stone-700 = window.part_label
+      - MapTask::MONTHS.each do |month|
+        - on = window.includes_month?(month)
+        span[role="cell"
+             class="h-6 rounded #{on ? harvest_part_color(window.part) : (month == current_month ? 'bg-forest-tint' : 'bg-stone-100')}"
+             title="#{window.part_label} — #{MapTask.month_name(month)}"
+             data-month=month
+             data-active=(on ? "true" : nil)]

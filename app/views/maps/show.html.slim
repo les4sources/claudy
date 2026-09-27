@@ -30,7 +30,12 @@
         data-map-date-value=@date.iso8601
         data-map-today-value=Date.current.iso8601
         data-map-focus-feature-value=@focus_feature_id
-        data-map-current-tasks-url-value=map_tasks_current_path(format: :json)]
+        data-map-current-tasks-url-value=map_tasks_current_path(format: :json)
+        data-map-plant-url-value=plant_path(id: "__ID__")
+        data-map-focus-plant-value=@focus_plant_id
+        data-map-unplaced-url-value=unplaced_plants_path
+        data-map-place-url-value=place_plant_path(id: "__ID__")
+        data-map-unplace-url-value=unplace_plant_path(id: "__ID__")]
 
       / Le fond de la carte hors emprise : uni, couleur `sand` du thème. Pas
         d'OpenStreetMap ni de Google — aucune clé tierce sur cette page.
@@ -97,6 +102,35 @@
               par la carte après chaque enregistrement.
             = turbo_frame_tag "map_venues_todo", src: map_venues_todo_path, data: { map_target: "venuesTodo" }
 
+          / Les plantes nourricières (phase 7) : le mode Placement et les pages
+            annexes (récoltes, liste, espèces).
+          .mt-3.border-t.border-stone-100.pt-3 data-map-plants-section="true"
+            p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Plantes
+            button[type="button"
+                   class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-stone-600 hover:bg-stone-50"
+                   data-action="map#openPlacement"
+                   data-map-placement-link="true"]
+              svg.h-4.w-4.text-stone-500 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                path d="M12 22s7-6.1 7-12a7 7 0 0 0-14 0c0 5.9 7 12 7 12z"
+                path d="M12 7v6M9 10h6"
+              span.flex-1 À placer
+              span[class="min-w-[1.5rem] rounded-full bg-ember px-1.5 py-0.5 text-center text-[0.7rem] font-semibold tabular-nums text-white #{'hidden' if @unplaced_count.zero?}"
+                   data-map-target="unplacedCount"]
+                = @unplaced_count
+            = link_to map_recoltes_path, class: "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-50", data: { map_recoltes_link: true } do
+              svg.h-4.w-4.text-stone-500 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                path d="M12 22c4-2 7-6 7-11a7 7 0 0 0-14 0c0 5 3 9 7 11z"
+                path d="M12 4c0-1 1-2 3-2"
+              span.flex-1 Récoltes
+            = link_to map_plantes_path, class: "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-50", data: { map_plantes_link: true } do
+              svg.h-4.w-4.text-stone-500 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
+              span.flex-1 Toutes les plantes
+            = link_to map_especes_path, class: "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-50", data: { map_especes_link: true } do
+              svg.h-4.w-4.text-stone-500 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"
+                path d="M2 21c0-3 1.85-5.36 5.08-6"
+              span.flex-1 Espèces
           / Le carnet de gestion (phase 6) : les tâches des objets, mois par mois.
           .mt-3.border-t.border-stone-100.pt-3
             p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Gestion
@@ -230,6 +264,66 @@
       div[class="fixed inset-0 z-[1100] hidden md:absolute md:inset-auto md:bottom-3 md:right-3 md:top-3 md:w-96"
           data-map-target="panelContainer"]
         = turbo_frame_tag "feature_panel", class: "block h-full", data: { map_target: "featureFrame" }
+
+      / Le mode Placement (phase 7). Le tiroir liste les plantes à placer : en
+        feuille basse sur un téléphone (la carte reste visible au-dessus), à
+        gauche sur grand écran. Le bandeau dit quelle plante on pose et porte
+        « Je suis devant » (GPS).
+      div[class="fixed inset-x-0 bottom-0 z-[1050] hidden max-h-[42dvh] flex-col rounded-t-2xl border-t border-stone-200 bg-white shadow-2xl md:absolute md:inset-x-auto md:bottom-3 md:left-3 md:top-3 md:max-h-[none] md:w-80 md:rounded-xl md:border"
+          data-map-target="placementDrawer"
+          role="dialog"
+          aria-label="Placer des plantes"]
+        .pt-2.md:hidden aria-hidden="true"
+          span.mx-auto.block.h-1.w-10.rounded-full.bg-stone-200
+        .flex.items-center.gap-2.border-b.border-stone-100.px-3.py-1.md:py-2
+          span.flex-1.font-averia.text-lg.text-stone-800 Placer des plantes
+          span[class="min-w-[1.5rem] rounded-full bg-ember px-1.5 py-0.5 text-center text-xs font-semibold tabular-nums text-white #{'hidden' if @unplaced_count.zero?}"
+               data-map-target="unplacedCount"]
+            = @unplaced_count
+          button[type="button"
+                 class="flex h-11 w-11 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-50"
+                 data-action="map#closePlacement"
+                 aria-label="Fermer le tiroir"]
+            svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              path d="M18 6 6 18M6 6l12 12"
+        .min-h-0.flex-1.overflow-y-auto.overscroll-contain
+          = turbo_frame_tag PlantsController::UNPLACED_FRAME, data: { map_target: "unplacedFrame" } do
+            p.px-4.py-6.text-center.text-sm.text-stone-400 Chargement…
+
+      div[class="absolute left-1/2 top-3 z-[1060] hidden w-[min(94vw,30rem)] -translate-x-1/2 md:left-[21.5rem] md:right-[25.5rem] md:mx-auto md:w-auto md:max-w-[30rem] md:translate-x-0 rounded-xl border border-stone-200 bg-white/95 shadow-xl backdrop-blur"
+          data-map-target="placementBanner"
+          data-placement-banner="true"
+          role="status"
+          aria-live="polite"]
+        .flex.items-start.gap-2.p-3.pb-2
+          .min-w-0.flex-1
+            p.text-sm.leading-snug.text-stone-800 data-map-target="placementMessage"
+            p.mt-0.5.text-xs.text-stone-500 data-map-target="placementHint"
+          button[type="button"
+                 class="-mr-1 -mt-1 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-50"
+                 data-action="map#cancelPlacement"
+                 aria-label="Annuler (Échap)"
+                 title="Annuler (Échap)"]
+            svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              path d="M18 6 6 18M6 6l12 12"
+        .flex.flex-wrap.gap-2.px-3.pb-3
+          button[type="button"
+                 class="flex h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-forest px-3 text-sm font-semibold text-forest hover:bg-forest-tint md:flex-none"
+                 data-map-target="placementGps"
+                 data-action="map#placementGps"]
+            | Je suis devant
+          button[type="button"
+                 class="flex hidden h-11 flex-1 items-center justify-center rounded-lg bg-forest px-3 text-sm font-semibold text-white"
+                 data-map-target="placementGpsConfirm"
+                 data-action="map#confirmGpsPlacement"]
+        / La dernière plante posée : on la corrige, on l'ouvre, ou on annule.
+        div.flex.hidden.flex-wrap.items-center.gap-1.border-t.border-stone-100.px-3.py-2 data-map-target="placementLast"
+          svg.h-4.w-4.text-forest xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+            path d="M20 6 9 17l-5-5"
+          span.min-w-0.flex-1.truncate.text-xs.text-stone-600 data-map-target="placementLastMessage"
+          button.h-9.rounded-md.px-2.text-xs.font-medium.text-stone-600.hover:bg-stone-50 type="button" data-action="map#adjustLastPlaced" Ajuster
+          button.h-9.rounded-md.px-2.text-xs.font-medium.text-stone-600.hover:bg-stone-50 type="button" data-action="map#openLastPlaced" Fiche
+          button.h-9.rounded-md.px-2.text-xs.font-medium.text-ember.hover:bg-stone-50 type="button" data-action="map#undoPlacement" Annuler
 
       / « Ma position ». 44 px de côté au minimum : cette page se lit sur un
         téléphone, au milieu du terrain, avec des doigts.

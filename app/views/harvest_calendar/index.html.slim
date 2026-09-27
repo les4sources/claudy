@@ -1,0 +1,74 @@
+/ Le calendrier des récoltes (epic #348, phase 7) : ce qui se récolte au
+  domaine, mois par mois. Même cadre que le carnet : le mois en cours ouvert et
+  cerclé, les autres repliés (`<details>`, sans JavaScript) avec leur nombre de
+  plantes en vue.
+.mx-auto.max-w-3xl.px-4.py-6
+  = render "maps/subnav", current: :recoltes
+  .mt-4.flex.flex-wrap.items-end.justify-between.gap-3
+    div
+      h1.font-averia.text-2xl.text-stone-800 Calendrier des récoltes
+      p.mt-1.text-sm.text-stone-500 Ce qui se cueille au domaine, mois par mois.
+    - if @zones.any?
+      = form_with url: map_recoltes_path, method: :get, data: { controller: "auto-submit" } do
+        - if @part
+          = hidden_field_tag :part, @part, id: nil
+        label.sr-only for="harvest_zone" Zone
+        select[id="harvest_zone" name="zone" data-action="change->auto-submit#submit"
+               class="h-10 rounded-lg border-stone-300 text-sm text-stone-700 shadow-sm focus:border-forest focus:ring-forest"]
+          option value="" Toutes les zones
+          - @zones.each do |zone|
+            option value=zone selected=(zone == @zone || nil) = zone
+
+  / Le filtre partie : un lien par choix, l'URL garde le filtre.
+  nav.mt-4.flex.flex-wrap.gap-1.5 aria-label="Partie récoltée"
+    - [[nil, "Tout"], *PlantHarvestWindow::PARTS.to_a].each do |key, label|
+      - active = @part == key
+      = link_to map_recoltes_path(part: key, zone: @zone),
+                class: "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm #{active ? 'border-forest bg-forest font-semibold text-white' : 'border-stone-200 bg-white text-stone-600 hover:bg-stone-50'}",
+                aria: { current: (active ? "page" : nil) },
+                data: { part_filter: key || "all" } do
+        - if key
+          span class="h-2.5 w-2.5 rounded-full #{harvest_part_color(key)} #{'ring-1 ring-white' if active}" aria-hidden="true"
+        = label
+
+  .mt-6.space-y-2
+    - @groups_by_month.each do |month, groups|
+      - current = month == @current_month
+      - count = @plant_counts[month]
+      details[id="mois-#{month}"
+              class="overflow-hidden rounded-xl border bg-white #{current ? 'border-forest ring-1 ring-forest' : 'border-stone-200'}"
+              open=(current || nil)
+              data-month=month
+              data-current-month=(current ? "true" : nil)]
+        summary.flex.cursor-pointer.items-center.gap-3.px-4.py-3
+          span.flex-1.font-semibold.text-stone-800 = MapTask.month_name(month)
+          - if current
+            span class="rounded-full bg-forest-tint px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-forest" Ce mois-ci
+          / Les parties du mois, en pastilles : le mois se lit replié.
+          span.hidden.items-center.gap-0.5.sm:flex aria-hidden="true"
+            - groups.map(&:part).uniq.each do |part|
+              span class="h-2 w-2 rounded-full #{harvest_part_color(part)}"
+          span[class="min-w-[1.75rem] rounded-full px-2 py-0.5 text-center text-xs font-semibold tabular-nums #{count.positive? ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-400'}"
+               data-plant-count=count
+               aria-label="#{count} plante#{'s' if count > 1}"]
+            = count
+        - if groups.empty?
+          p.border-t.border-stone-100.px-4.py-3.text-sm.text-stone-400 Rien à récolter ce mois-là.
+        - else
+          ul.divide-y.divide-stone-100.border-t.border-stone-100
+            - groups.each do |group|
+              li data-harvest-group=group.key
+                - if group.single?
+                  = render "harvest_calendar/plant_row", plant: group.plants.first, part: group.part, title: group.title
+                - else
+                  details.group
+                    summary.flex.min-h-[2.75rem].cursor-pointer.list-none.items-center.gap-3.px-4.py-2.hover:bg-stone-50
+                      span class="h-3 w-3 flex-shrink-0 rounded-full #{harvest_part_color(group.part)}" aria-hidden="true"
+                      span.min-w-0.flex-1.truncate.text-sm.text-stone-800
+                        span.font-medium = "#{group.title} ×#{group.plants.size}"
+                        span.text-stone-400 = " — #{group.part_label.downcase}"
+                      svg.h-4.w-4.flex-shrink-0.text-stone-400.transition-transform.group-open:rotate-180 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                        polyline points="6 9 12 15 18 9"
+                    ul.border-t.border-stone-100.bg-stone-50/60.pl-6
+                      - group.plants.each do |plant|
+                        li = render "harvest_calendar/plant_row", plant: plant, part: nil, title: plant.display_name

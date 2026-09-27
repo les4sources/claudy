@@ -428,6 +428,45 @@ Rails.application.routes.draw do
     get "occupancy", to: "map_venues#occupancy", as: :map_occupancy
     get "venues/todo", to: "map_venues#todo", as: :map_venues_todo
     get "venues/:id", to: "map_venues#show", as: :map_venue
+    # Les plantes nourricières (phase 7) : la fiche d'une plante placée s'ouvre
+    # au clic sur son point. Espèces et variétés alimentent l'autocomplétion de
+    # la fiche (JSON) ; elles se créent par leur NOM à l'enregistrement de la
+    # plante, jamais par un id arbitraire.
+    # Le mode Placement : la liste des plantes à placer, chargée dans le tiroir
+    # de la carte. Avant `resources :plants`, qui lirait sinon `unplaced`
+    # comme un `:id`.
+    get "plants/unplaced", to: "plants#unplaced", as: :unplaced_plants
+    resources :plants, only: %i[show update destroy] do
+      member do
+        delete "photos/:photo_id", action: :destroy_photo, as: :photo
+        # Pose ou déplace le point de la plante (clic, GPS, glisser).
+        post :place
+        post :unplace
+      end
+      # Le calendrier de récolte propre à la plante : PATCH remplace toutes ses
+      # fenêtres, DELETE la rend à celui de l'espèce, `customize` copie celui de
+      # l'espèce pour le modifier.
+      resource :harvest, controller: "plant_harvests", only: %i[update destroy] do
+        post :customize
+      end
+      # Les notes datées de la plante : ajout inline et suppression (soft).
+      resources :map_notes, path: "notes", only: %i[create destroy]
+      # Les tâches de la plante (filière `nourricier` par défaut), même
+      # contrôleur que celles des objets : modification et suppression passent
+      # par `/map/tasks/:id`.
+      resources :map_tasks, path: "tasks", only: %i[create]
+    end
+    get "species", to: "plant_species#autocomplete", as: :map_species
+    get "species/:id/varieties", to: "plant_species#varieties", as: :map_species_varieties
+    # Les pages annexes des plantes (phase 7), en français comme le carnet :
+    # le calendrier des récoltes, la liste de toutes les plantes, le catalogue
+    # des espèces (fiche éditable, variétés, fenêtres de récolte par défaut).
+    get "recoltes", to: "harvest_calendar#index", as: :map_recoltes
+    get "plantes", to: "plants#index", as: :map_plantes
+    resources :plant_species, path: "especes", as: :map_especes, only: %i[index show update destroy] do
+      resources :plant_varieties, path: "varietes", as: :varieties, only: %i[create update destroy]
+      resource :harvest, controller: "species_harvests", as: :harvest, only: %i[update destroy]
+    end
   end
 
   # Organisation

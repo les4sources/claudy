@@ -1,0 +1,47 @@
+/ L'éditeur d'un calendrier de récolte (epic #348, phase 7), partagé par la
+  fiche plante et la fiche espèce : les sept parties, celles sans fenêtre
+  cachées ET désactivées (rien n'est envoyé) ; le contrôleur Stimulus
+  `plant-harvest` en révèle ou en retire une. PATCH `url` avec
+  `harvest[parts][<partie>][]` ; `rows` les fenêtres en cours, `errors` les
+  messages du dernier envoi, `prefix` l'id du formulaire.
+= form_with url: url, method: :patch, id: prefix,
+            class: "space-y-3", data: { controller: "plant-harvest" } do
+  - if errors.any?
+    .rounded-lg.border.border-red-200.bg-red-50.px-3.py-2.text-xs.text-red-800 role="alert"
+      - errors.each do |message|
+        p = message
+  p.text-xs.text-stone-500[data-plant-harvest-target="empty" hidden=(rows.any? || nil)]
+    | Aucune partie : choisissez ce qui se récolte sur cette plante.
+  - PlantHarvestWindow::PARTS.each do |part, label|
+    - window = rows.find { |w| w.part == part }
+    - months = window ? Array(window.months).compact_blank.map(&:to_i) : []
+    fieldset[class="rounded-lg border border-stone-200 p-2"
+             data-plant-harvest-target="row" data-part=part
+             hidden=(window ? nil : true) disabled=(window ? nil : true)]
+      legend.sr-only = label
+      .flex.items-center.justify-between.gap-2
+        span.flex.items-center.gap-2.text-sm.font-medium.text-stone-800
+          span class="h-3 w-3 rounded-full #{harvest_part_color(part)}" aria-hidden="true"
+          = label
+        button[type="button" class="rounded px-2 py-1 text-xs font-medium text-stone-500 hover:bg-red-50 hover:text-red-600"
+               data-action="plant-harvest#remove" data-part=part aria-label="Retirer la partie #{label}"]
+          | Retirer
+      / La valeur vide part toujours : une partie sans mois est refusée
+        (lisiblement) plutôt que supprimée en silence.
+      = hidden_field_tag "harvest[parts][#{part}][]", "", id: nil
+      .mt-2.grid.grid-cols-6.gap-1
+        - MapTask::MONTHS.each do |month|
+          label.cursor-pointer title=MapTask.month_name(month)
+            = check_box_tag "harvest[parts][#{part}][]", month, months.include?(month),
+                            id: "#{prefix}_#{part}_#{month}", class: "peer sr-only"
+            span class="flex h-9 items-center justify-center rounded-lg border border-stone-200 text-xs text-stone-600 transition-colors peer-checked:border-forest peer-checked:bg-forest peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-forest"
+              = MapTask.month_abbr(month)
+  div data-plant-harvest-target="adder"
+    label.sr-only for="#{prefix}_add" Ajouter une partie
+    select[id="#{prefix}_add" data-plant-harvest-target="picker" data-action="change->plant-harvest#add"
+           class="h-11 w-full rounded-lg border-stone-300 text-sm text-stone-600 shadow-sm focus:border-forest focus:ring-forest"]
+      option value="" + Ajouter une partie…
+      - PlantHarvestWindow::PARTS.each do |part, label|
+        option value=part disabled=(rows.any? { |w| w.part == part } || nil) = label
+  button type="submit" class="h-11 w-full rounded-lg bg-forest text-sm font-semibold text-white hover:bg-forest-soft"
+    | Enregistrer le calendrier

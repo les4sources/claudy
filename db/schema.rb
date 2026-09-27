@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_27_210000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_28_090400) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1387,6 +1387,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_210000) do
     t.index ["kind"], name: "index_map_layers_on_kind_unique_live", unique: true, where: "((deleted_at IS NULL) AND ((kind)::text <> ALL (ARRAY[('network'::character varying)::text, ('sketch'::character varying)::text])))"
   end
 
+  create_table "map_notes", force: :cascade do |t|
+    t.bigint "author_id"
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "noted_on", default: -> { "CURRENT_DATE" }, null: false
+    t.bigint "subject_id", null: false
+    t.string "subject_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["author_id"], name: "index_map_notes_on_author_id"
+    t.index ["deleted_at"], name: "index_map_notes_on_deleted_at"
+    t.index ["subject_type", "subject_id", "noted_on"], name: "index_map_notes_on_subject_type_and_subject_id_and_noted_on"
+  end
+
   create_table "map_tasks", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "created_by_id"
@@ -1576,6 +1590,85 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_210000) do
     t.index ["id"], name: "index_payments_on_id", unique: true
     t.index ["space_booking_id"], name: "index_payments_on_space_booking_id"
     t.index ["stay_id"], name: "index_payments_on_stay_id"
+  end
+
+  create_table "plant_harvest_windows", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "months", default: [], null: false, array: true
+    t.bigint "owner_id", null: false
+    t.string "owner_type", null: false
+    t.string "part", null: false
+    t.datetime "updated_at", null: false
+    t.index ["months"], name: "index_plant_harvest_windows_on_months", using: :gin
+    t.index ["owner_type", "owner_id", "part"], name: "idx_on_owner_type_owner_id_part_b3dcce28e0", unique: true
+  end
+
+  create_table "plant_species", force: :cascade do |t|
+    t.text "common_names"
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.string "edible_parts", default: [], null: false, array: true
+    t.string "exposure", default: [], null: false, array: true
+    t.string "family"
+    t.string "hardiness"
+    t.string "height"
+    t.string "latin_name"
+    t.string "name", null: false
+    t.text "notes"
+    t.string "spread"
+    t.datetime "updated_at", null: false
+    t.string "wikipedia_url"
+    t.index "lower((name)::text)", name: "index_plant_species_on_lower_name_alive", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["created_by_id"], name: "index_plant_species_on_created_by_id"
+    t.index ["deleted_at"], name: "index_plant_species_on_deleted_at"
+  end
+
+  create_table "plant_varieties", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "name", null: false
+    t.text "notes"
+    t.bigint "plant_species_id", null: false
+    t.datetime "updated_at", null: false
+    t.index "plant_species_id, lower((name)::text)", name: "index_plant_varieties_on_species_and_lower_name_alive", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["deleted_at"], name: "index_plant_varieties_on_deleted_at"
+  end
+
+  create_table "plants", force: :cascade do |t|
+    t.integer "altitude"
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.string "habit"
+    t.string "health"
+    t.bigint "map_feature_id"
+    t.string "name", null: false
+    t.text "notes"
+    t.string "notion_url"
+    t.decimal "number"
+    t.string "nursery"
+    t.integer "plant_count"
+    t.bigint "plant_species_id"
+    t.bigint "plant_variety_id"
+    t.date "planted_on"
+    t.integer "planted_year"
+    t.string "population"
+    t.string "production"
+    t.integer "purchase_price_cents"
+    t.string "status", default: "to_place", null: false
+    t.string "stock_type"
+    t.string "stratum"
+    t.datetime "updated_at", null: false
+    t.string "zone"
+    t.index ["created_by_id"], name: "index_plants_on_created_by_id"
+    t.index ["deleted_at"], name: "index_plants_on_deleted_at"
+    t.index ["map_feature_id"], name: "index_plants_on_map_feature_id_alive", unique: true, where: "((map_feature_id IS NOT NULL) AND (deleted_at IS NULL))"
+    t.index ["number"], name: "index_plants_on_number_alive", unique: true, where: "((number IS NOT NULL) AND (deleted_at IS NULL))"
+    t.index ["plant_species_id"], name: "index_plants_on_plant_species_id"
+    t.index ["plant_variety_id"], name: "index_plants_on_plant_variety_id"
+    t.index ["status"], name: "index_plants_on_status"
+    t.index ["zone"], name: "index_plants_on_zone"
   end
 
   create_table "portal_otps", force: :cascade do |t|
@@ -2367,6 +2460,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_210000) do
   add_foreign_key "map_features", "map_layers"
   add_foreign_key "map_features", "users", column: "created_by_id"
   add_foreign_key "map_layers", "users", column: "created_by_id"
+  add_foreign_key "map_notes", "users", column: "author_id"
   add_foreign_key "map_tasks", "users", column: "created_by_id"
   add_foreign_key "meal_orders", "humans", column: "responsible_human_id"
   add_foreign_key "meal_orders", "stays"
@@ -2382,6 +2476,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_210000) do
   add_foreign_key "payments", "coworking_packs"
   add_foreign_key "payments", "space_bookings"
   add_foreign_key "payments", "stays"
+  add_foreign_key "plant_species", "users", column: "created_by_id"
+  add_foreign_key "plant_varieties", "plant_species", column: "plant_species_id"
+  add_foreign_key "plants", "map_features"
+  add_foreign_key "plants", "plant_species", column: "plant_species_id"
+  add_foreign_key "plants", "plant_varieties"
+  add_foreign_key "plants", "users", column: "created_by_id"
   add_foreign_key "projects", "humans"
   add_foreign_key "purchase_invoice_lines", "analytic_accounts"
   add_foreign_key "purchase_invoice_lines", "general_accounts"

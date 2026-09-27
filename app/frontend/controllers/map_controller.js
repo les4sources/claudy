@@ -5,6 +5,8 @@ import 'leaflet/dist/leaflet.css';
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import '~/stylesheets/map.css';
 import { welcomeIcon, welcomeMarker, welcomeProperties, welcomeStyle } from '~/utils/map_welcome';
+import { isPlantFeature, plantIcon, plantMarker } from '~/utils/map_plants';
+import { PlantPlacement } from '~/utils/map_placement';
 
 // Style de la couche Gestion (phase 2) : polygones `forest` remplis à 25 %,
 // accès en pointillés `bark`, points en marqueur rond. Couleurs du thème
@@ -18,6 +20,8 @@ const FOREST_TINT = '#E4EEEA';
 const HATCH_ID = 'map-venue-hatch';
 const VENUE_KINDS = ['lodging', 'space'];
 const LABEL_MIN_ZOOM = 18;
+// Plantes (phase 7) : le pictogramme de strate apparaît un cran avant les noms.
+const PLANT_GLYPH_MIN_ZOOM = 17;
 const VISIBILITY_KEY = 'claudy.map.layers.visible';
 
 // La carte du domaine (epic #348, phase 1).
@@ -49,6 +53,17 @@ export default class extends Controller {
     'todayButton',
     'venuesTodo',
     'welcomeLegend',
+    // Phase 7 : le mode Placement des plantes (tiroir, bandeau, compteurs).
+    'placementDrawer',
+    'unplacedFrame',
+    'unplacedCount',
+    'placementBanner',
+    'placementMessage',
+    'placementHint',
+    'placementGps',
+    'placementGpsConfirm',
+    'placementLast',
+    'placementLastMessage',
   ];
 
   static values = {
@@ -69,6 +84,16 @@ export default class extends Controller {
     // carnet) et les objets porteurs d'une tâche du mois (vue « ce mois-ci »).
     focusFeature: Number,
     currentTasksUrl: String,
+    // Phase 7 : la fiche d'une plante (`/map/plants/__ID__`), ouverte au clic
+    // sur son point à la place de la fiche générique de l'objet.
+    plantUrl: String,
+    // Le mode Placement : la liste des plantes à placer, la pose (et le
+    // déplacement) d'un point, son annulation. `/map?plant=<id>` ouvre la fiche
+    // d'une plante, placée ou non.
+    unplacedUrl: String,
+    placeUrl: String,
+    unplaceUrl: String,
+    focusPlant: Number,
   };
 
   connect() {
@@ -103,6 +128,7 @@ export default class extends Controller {
     this.map.on('locationfound', (event) => this.onLocationFound(event));
     this.map.on('locationerror', () => this.onLocationError());
 
+    this.placement = new PlantPlacement(this);
     this.setupFeatures();
 
     // Leaflet mesure son conteneur au montage. Dans une page Turbo le conteneur
@@ -113,6 +139,7 @@ export default class extends Controller {
 
   disconnect() {
     this.panelObserver?.disconnect();
+    this.placement?.destroy();
     if (this.map) {
       this.map.remove();
       this.map = null;
@@ -244,6 +271,8 @@ export default class extends Controller {
     }
 
     this.map.on('zoomend', () => this.updateLabels());
+    // En mode Placement, toucher la carte pose la plante choisie.
+    this.map.on('click', (event) => this.placement?.onMapClick(event));
     this.updateLabels();
     this.observePanel();
 
@@ -271,6 +300,7 @@ export default class extends Controller {
     if (!this.map) return;
     // Après la couche active par défaut : l'objet demandé par l'URL l'emporte.
     this.focusFeature();
+    if (this.focusPlantValue && this.hasPlantUrlValue) this.openPanel(this.plantUrl(this.focusPlantValue));
   }
 
   async loadLayer(id) {
@@ -293,8 +323,11 @@ export default class extends Controller {
       style: (feature) => this.featureStyle(feature, false),
       // Un point d'accueil porte son icône (phase 4) ; les autres restent des
       // pastilles rondes.
-      pointToLayer: (feature, latlng) =>
-        this.isWelcome(feature) ? welcomeMarker(L, feature, latlng) : L.circleMarker(latlng, this.featureStyle(feature, false)),
+      pointToLayer: (feature, latlng) => {
+        if (isPlantFeature(feature)) return plantMarker(L, feature, latlng);
+        if (this.isWelcome(feature)) return welcomeMarker(L, feature, latlng);
+        return L.circleMarker(latlng, this.featureStyle(feature, false));
+      },
       onEachFeature: (feature, layer) => this.bindFeature(feature, layer, id),
     });
     this.featureLayers[id] = group;
@@ -314,13 +347,23 @@ export default class extends Controller {
     layer.layerId = layerId;
     const name = feature.properties?.name;
     if (name) {
+      // Le nom d'une plante se pose à droite de sa pastille, pas dessus.
+      const plant = isPlantFeature(feature);
       layer.bindTooltip(name, {
         permanent: true,
-        direction: 'center',
-        className: 'map-feature-label',
+        direction: plant ? 'right' : 'center',
+        offset: plant ? [4, 0] : [0, 0],
+        className: plant ? 'map-feature-label map-plant-label' : 'map-feature-label',
       });
     }
     layer.on('click', (event) => {
+      // En mode Placement, un objet touché (une zone, un autre arbre) ne
+      // s'ouvre pas : la plante choisie se pose là où l'on a touché.
+      if (this.placement?.active) {
+        L.DomEvent.stopPropagation(event);
+        this.placement.onMapClick(event);
+        return;
+      }
       // Pendant un tracé, le clic appartient à Geoman (il pose un sommet) : sans
       // cette sortie, poser un point DANS une zone ouvrait la fiche de la zone.
       if (
@@ -364,6 +407,7 @@ export default class extends Controller {
   updateLabels() {
     const container = this.map.getContainer();
     container.classList.toggle('map-labels-hidden', this.map.getZoom() < LABEL_MIN_ZOOM);
+    container.classList.toggle('map-plant-glyphs-hidden', this.map.getZoom() < PLANT_GLYPH_MIN_ZOOM);
   }
 
   toggleLayer(event) {
@@ -526,7 +570,84 @@ export default class extends Controller {
     this.discardPending();
     this.selectedFeatureId = id;
     this.highlightSelection();
-    this.openPanel(this.featureUrl(id));
+    // Le point d'une plante ouvre la fiche de la plante (phase 7).
+    const plantId = this.findFeatureLayer(String(id))?.layer?.feature?.properties?.plant_id;
+    this.openPanel(plantId && this.hasPlantUrlValue ? this.plantUrl(plantId) : this.featureUrl(id));
+  }
+
+  plantUrl(id) {
+    return this.plantUrlValue.replace('__ID__', encodeURIComponent(id));
+  }
+
+  placeUrl(id) {
+    return this.placeUrlValue.replace('__ID__', encodeURIComponent(id));
+  }
+
+  unplaceUrl(id) {
+    return this.unplaceUrlValue.replace('__ID__', encodeURIComponent(id));
+  }
+
+  // ── Mode Placement (phase 7) : actions du tiroir, du bandeau et de la fiche,
+  // déléguées à `PlantPlacement` (utils/map_placement.js). ─────────────────
+
+  openPlacement() {
+    this.placement.open();
+  }
+
+  closePlacement() {
+    this.placement.close();
+  }
+
+  pickPlant(event) {
+    this.placement.pick(event.currentTarget.dataset);
+  }
+
+  cancelPlacement() {
+    this.placement.cancel();
+  }
+
+  placementGps() {
+    this.placement.startGps();
+  }
+
+  confirmGpsPlacement() {
+    this.placement.confirmGps();
+  }
+
+  undoPlacement() {
+    this.placement.undo();
+  }
+
+  openLastPlaced() {
+    this.placement.openLast();
+  }
+
+  adjustLastPlaced() {
+    this.placement.adjustLast();
+  }
+
+  dismissLastPlaced() {
+    this.placement.dismissLast();
+  }
+
+  // Depuis la fiche : « Déplacer » (glisser) et « Placer ici (GPS) » pour une
+  // plante placée ; « Placer sur la carte » et « Je suis devant » sinon.
+  movePlant(event) {
+    this.placement.startMove(event.currentTarget.dataset);
+  }
+
+  gpsPlacePlant(event) {
+    const { dataset } = event.currentTarget;
+    if (dataset.featureId) {
+      this.placement.startMove(dataset, { gps: true });
+    } else {
+      this.placement.pick(dataset, { fromPanel: true });
+      this.placement.startGps();
+    }
+  }
+
+  placePlantFromPanel(event) {
+    this.placement.pick(event.currentTarget.dataset, { fromPanel: true });
   }
 
   highlightSelection() {
@@ -540,8 +661,18 @@ export default class extends Controller {
         if (layer.setIcon && this.isWelcome(layer.feature)) {
           layer.setIcon(welcomeIcon(L, welcomeProperties(layer.feature).icon, selected));
         }
+        // Seules les pastilles dont l'état change sont redessinées : une couche
+        // de plusieurs centaines de plantes ne se recrée pas à chaque clic.
+        if (layer.setIcon && isPlantFeature(layer.feature) && layer.plantSelected !== selected) {
+          layer.plantSelected = selected;
+          layer.setIcon(plantIcon(L, layer.feature, selected));
+          layer.setZIndexOffset(selected ? 1000 : layer.feature.properties?.dead ? -100 : 0);
+        }
       });
     });
+    // `setIcon` remplace l'élément du marqueur : la vue « ce mois-ci » doit
+    // reposer ses classes.
+    this.applyMonthFocus();
   }
 
   openPanel(url) {
@@ -591,6 +722,17 @@ export default class extends Controller {
     const panel = this.featureFrameTarget.querySelector('[data-feature-panel]');
     if (this.hasPanelContainerTarget) this.panelContainerTarget.classList.toggle('hidden', !panel);
     if (!panel) return;
+
+    // Plante retirée de la carte (phase 7) : la fiche reste ouverte, son point
+    // disparaît de la couche rechargée.
+    if (panel.dataset.layerReload) {
+      const layerId = panel.dataset.layerReload;
+      delete panel.dataset.layerReload;
+      this.selectedFeatureId = null;
+      this.placement?.bumpCount(1);
+      this.loadLayer(layerId).then(() => this.highlightSelection());
+      return;
+    }
 
     const field = this.geometryField();
     if (field && !field.value && this.pendingGeometry) field.value = JSON.stringify(this.pendingGeometry);

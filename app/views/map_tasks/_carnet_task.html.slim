@@ -1,14 +1,18 @@
 / Une tâche dans le carnet : ce qu'il faut faire, où, et quand d'autre dans
-  l'année. Le nom de l'objet ouvre la carte centrée sur lui, fiche ouverte.
-li.px-4.py-3 data-task-id=task.id
+  l'année. Le nom du porteur ouvre la carte centrée sur lui, fiche ouverte —
+  pour une plante, sur son point si elle est placée, sinon sa fiche seule.
+- subject = task.subject
+- feature_id = task.subject_type == "Plant" ? subject.map_feature_id : task.subject_id
+- href = if feature_id then map_path(feature: feature_id) elsif task.subject_type == "Plant" then plant_path(subject) end
+li.px-4.py-3 data-task-id=task.id data-subject-type=task.subject_type
   .flex.flex-wrap.items-start.justify-between.gap-x-3.gap-y-1
     .min-w-0
       p.text-sm.font-medium.text-stone-800 = task.label
       p.text-xs.text-stone-500 = [task.frequency, task.sector_label].compact_blank.join(" · ")
-    - if task.subject_type == "MapFeature"
-      = link_to map_path(feature: task.subject_id),
+    - if href
+      = link_to href,
                 class: "inline-flex items-center gap-1 rounded-full bg-forest-tint px-2.5 py-1 text-xs font-medium text-forest hover:bg-forest hover:text-white",
-                data: { subject_link: task.subject_id } do
+                data: { subject_link: feature_id } do
         svg.h-3.5.w-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
           circle cx="12" cy="10" r="3"
           path d="M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11z"

@@ -1,0 +1,16 @@
+/ Une plante du calendrier des récoltes : vers son point sur la carte, ou sa
+  fiche si elle n'est pas encore placée. `part` nul dans un groupe déplié (la
+  partie est déjà dite par le groupe).
+= link_to plant_on_map_path(plant),
+          class: "flex min-h-[2.75rem] items-center gap-3 px-4 py-2 hover:bg-stone-50",
+          data: { harvest_plant: plant.id } do
+  - if part
+    span class="h-3 w-3 flex-shrink-0 rounded-full #{harvest_part_color(part)}" aria-hidden="true"
+  span.min-w-0.flex-1.truncate.text-sm.text-stone-800
+    span.font-medium = title
+    - if part
+      span.text-stone-400 = " — #{PlantHarvestWindow.part_label(part).downcase}"
+  - if plant.number
+    span.text-xs.tabular-nums.text-stone-400 = "##{plant.number_label}"
+  - unless plant.map_feature_id
+    span class="rounded-full bg-ember-tint px-2 py-0.5 text-[0.65rem] font-semibold text-ember" à placer
