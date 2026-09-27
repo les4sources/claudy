@@ -894,7 +894,18 @@ Rails.application.routes.draw do
       # UPSERT — un import rejoué ne double rien.
       resources :plant_species, only: [:index, :show, :create, :update]
       resources :plant_varieties, only: [:index, :show, :create]
-      resources :plants, only: [:index, :show, :create, :update, :destroy]
+      # `map_notes` / `map_tasks` : les notes et tâches de la CARTE, distinctes
+      # des post-it du calendrier (`notes`) et des tâches du collectif (`tasks`).
+      resources :plants, only: [:index, :show, :create, :update, :destroy] do
+        resources :notes, only: [:create], controller: "map_notes"
+        resources :photos, only: [:create, :destroy], controller: "map_photos"
+      end
+      resources :map_features, only: [:index, :show, :create, :update, :destroy] do
+        resources :notes, only: [:create], controller: "map_notes"
+        resources :photos, only: [:create, :destroy], controller: "map_photos"
+      end
+      resources :map_notes, only: [:update, :destroy]
+      resources :map_tasks, only: [:index, :show, :create, :update, :destroy]
     end
   end
 

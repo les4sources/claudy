@@ -16,6 +16,18 @@ module Api
 
       private
 
+      # Le porteur d'une route imbriquée : `/plants/:plant_id/…` ou
+      # `/map_features/:map_feature_id/…`. Jamais un type lu dans un paramètre.
+      def map_subject
+        if params[:plant_id].present?
+          Plant.find(params[:plant_id])
+        elsif params[:map_feature_id].present?
+          MapFeature.find(params[:map_feature_id])
+        else
+          raise ActiveRecord::RecordNotFound
+        end
+      end
+
       def render_record_invalid(exception)
         render_invalid(exception.record)
       end
