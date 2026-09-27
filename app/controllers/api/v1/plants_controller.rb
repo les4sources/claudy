@@ -67,7 +67,7 @@ module Api
       private
 
       def find_plant(id)
-        Plant.includes(*INCLUDES, :map_tasks, notes: [], photos_attachments: :blob).find(id)
+        Plant.includes(*INCLUDES, :map_tasks, :map_notes, photos_attachments: :blob).find(id)
       end
 
       def save_plant(status)
@@ -85,9 +85,6 @@ module Api
 
         Plant.transaction do
           resolve_species!(body, attributes)
-          # `notes` est À LA FOIS une colonne texte et l'association des notes
-          # datées (`has_many :notes`) : la colonne s'écrit par `[]=`.
-          @plant[:notes] = attributes.delete(:notes) if attributes.key?(:notes)
           @plant.assign_attributes(attributes)
           @plant.save!
           replace_harvest_windows!(@plant, windows)

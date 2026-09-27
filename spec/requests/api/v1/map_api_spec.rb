@@ -37,7 +37,7 @@ RSpec.describe "Api::V1 carte (notes, photos, tâches, objets)", type: :request 
 
       delete "/api/v1/map_notes/#{note_id}", headers: auth
       expect(response).to have_http_status(:no_content)
-      expect(plant.notes.reload).to be_empty
+      expect(plant.map_notes.reload).to be_empty
     end
 
     it "refuse une note vide" do

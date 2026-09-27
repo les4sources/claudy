@@ -21,8 +21,8 @@ json.planted_year plant.planted_year
 json.altitude plant.altitude
 json.nursery plant.nursery
 json.notion_url plant.notion_url
-# La colonne texte : `plant.notes` est l'association des notes datées.
-json.notes plant[:notes]
+# Le texte libre de la fiche ; les notes datées sont `notes_log` (fiche détaillée).
+json.notes plant.notes
 
 json.placed plant.placed?
 json.latitude plant.latitude

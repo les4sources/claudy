@@ -1,6 +1,6 @@
 json.data do
   json.partial! "api/v1/plants/plant", plant: @plant
-  json.notes_log @plant.notes do |note|
+  json.notes_log @plant.map_notes do |note|
     json.partial! "api/v1/map_notes/map_note", map_note: note
   end
   json.photos @plant.photos do |photo|
