@@ -28,7 +28,9 @@
         data-map-occupancy-url-value=map_occupancy_path(format: :json)
         data-map-venue-url-value=map_venue_path(id: "__ID__")
         data-map-date-value=@date.iso8601
-        data-map-today-value=Date.current.iso8601]
+        data-map-today-value=Date.current.iso8601
+        data-map-focus-feature-value=@focus_feature_id
+        data-map-current-tasks-url-value=map_tasks_current_path(format: :json)]
 
       / Le fond de la carte hors emprise : uni, couleur `sand` du thème. Pas
         d'OpenStreetMap ni de Google — aucune clé tierce sur cette page.
@@ -94,6 +96,24 @@
               ne colore que ce qui est dessiné, on n'en oublie aucun. Rechargée
               par la carte après chaque enregistrement.
             = turbo_frame_tag "map_venues_todo", src: map_venues_todo_path, data: { map_target: "venuesTodo" }
+
+          / Le carnet de gestion (phase 6) : les tâches des objets, mois par mois.
+          .mt-3.border-t.border-stone-100.pt-3
+            p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Gestion
+            = link_to map_carnet_path, class: "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-50", data: { map_carnet_link: true } do
+              svg.h-4.w-4.text-stone-500 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                rect x="3" y="4" width="18" height="18" rx="2"
+                path d="M16 2v4M8 2v4M3 10h18"
+              span.flex-1 Carnet
+            / Vue « ce mois-ci » : les objets à travailler ce mois-ci ressortent,
+              les autres s'estompent.
+            label.mt-1.flex.cursor-pointer.items-center.gap-2.px-2.py-1.5.text-sm.text-stone-600
+              input[type="checkbox"
+                    class="h-4 w-4 rounded border-stone-300 text-4s-main focus:ring-teal-400"
+                    data-map-month-toggle="true"
+                    data-action="change->map#toggleMonthFocus"]
+              span.flex-1 Ce mois-ci
+              span class="text-[0.65rem] text-stone-400" = MapTask.month_name(Date.current.month).downcase
 
       / Barre d'outils du mode Gestion (phase 2) : visible quand la couche
         active est de kind `management`. Les outils sont ceux de Geoman.

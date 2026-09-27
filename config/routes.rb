@@ -411,8 +411,17 @@ Rails.application.routes.draw do
   # Les objets de la carte (epic #348, phase 2) : la carte lit et écrit leurs
   # géométries en JSON, la fiche latérale édite le reste en Turbo Stream.
   scope "map" do
+    # Le carnet de gestion (phase 6) : les tâches de l'année, mois par mois.
+    # `carnet` en français, imposé par l'epic. Les routes de tâches précèdent
+    # `resources :map_tasks`, qui lirait sinon `current` comme un `:id`.
+    get "carnet", to: "map_tasks#index", as: :map_carnet
+    get "tasks/current", to: "map_tasks#current", as: :map_tasks_current
+    resources :map_tasks, path: "tasks", only: %i[update destroy]
     resources :map_features, path: "features", only: %i[index show new create update destroy] do
       delete "photos/:photo_id", action: :destroy_photo, on: :member, as: :photo
+      # Une tâche naît sur son porteur : le type polymorphe vient de la route,
+      # jamais d'un paramètre.
+      resources :map_tasks, path: "tasks", only: %i[create]
     end
     # La carte du jour (phase 3) : occupation au jour choisi, panneau du groupe
     # présent, gîtes et salles restant à tracer. Lecture seule.

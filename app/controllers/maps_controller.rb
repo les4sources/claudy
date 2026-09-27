@@ -17,6 +17,10 @@ class MapsController < BaseController
     MapLayer.for_kind(:welcome)
     @date = parse_date(params[:date])
     @layers = MapLayer.ordered.to_a
+    # `/map?feature=<id>` (phase 6, lien du carnet) : la carte s'ouvre centrée
+    # sur l'objet, fiche ouverte. Seul l'id d'un objet VIVANT part vers la page ;
+    # un id inconnu, supprimé ou illisible est ignoré sans erreur.
+    @focus_feature_id = MapFeature.where(id: params[:feature].to_s[/\A\d+\z/]).pick(:id)
   end
 
   private

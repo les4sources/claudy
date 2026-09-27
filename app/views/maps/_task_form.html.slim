@@ -1,0 +1,40 @@
+/ Le formulaire d'une tâche (phase 6), neuve ou existante. Plusieurs vivent
+  dans la même fiche : chaque champ porte un identifiant préfixé, sinon un clic
+  sur un libellé cocherait le mois d'une AUTRE tâche.
+- prefix = task.persisted? ? "map_task_#{task.id}" : "new_map_task_#{feature.id}"
+- url = task.persisted? ? map_task_path(task) : map_feature_map_tasks_path(feature)
+- field = "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+= form_with model: task, scope: :map_task, url: url, method: (task.persisted? ? :patch : :post),
+            builder: ActionView::Helpers::FormBuilder,
+            html: { class: "space-y-3", id: "#{prefix}_form", data: { task_form: true } } do |f|
+  - if task.errors.any?
+    .rounded-lg.border.border-red-200.bg-red-50.px-3.py-2.text-xs.text-red-800
+      = task.errors.full_messages.to_sentence
+  div
+    = f.label :label, "Libellé", for: "#{prefix}_label", class: "block text-xs font-semibold text-stone-600"
+    = f.text_field :label, id: "#{prefix}_label", required: true, placeholder: "Fauche des orties", class: field
+  / La valeur vide part toujours : tout décocher retire tous les mois.
+  fieldset
+    legend.block.text-xs.font-semibold.text-stone-600 Mois
+    = hidden_field_tag "map_task[months][]", "", id: nil
+    .mt-1.grid.grid-cols-6.gap-1
+      - MapTask::MONTHS.each do |month|
+        label.cursor-pointer title=MapTask.month_name(month)
+          = check_box_tag "map_task[months][]", month, task.months.include?(month),
+                          id: "#{prefix}_month_#{month}", class: "peer sr-only"
+          span class="flex h-9 items-center justify-center rounded-lg border border-stone-200 text-xs text-stone-600 transition-colors peer-checked:border-forest peer-checked:bg-forest peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-forest"
+            = MapTask.month_abbr(month)
+  .grid.grid-cols-2.gap-2
+    div
+      = f.label :frequency, "Fréquence", for: "#{prefix}_frequency", class: "block text-xs font-semibold text-stone-600"
+      = f.text_field :frequency, id: "#{prefix}_frequency", placeholder: "tous les 2 ans", class: field
+    div
+      = f.label :sector, "Filière", for: "#{prefix}_sector", class: "block text-xs font-semibold text-stone-600"
+      = f.select :sector, MapTask::SECTORS.map { |key, label| [label, key] },
+                 { selected: task.sector.presence || MapTask::SUBJECT_TYPES.fetch(feature.class.name, "terrain") },
+                 id: "#{prefix}_sector", class: "#{field} h-[2.375rem]"
+  div
+    = f.label :notes, "Notes", for: "#{prefix}_notes", class: "block text-xs font-semibold text-stone-600"
+    = f.text_area :notes, id: "#{prefix}_notes", rows: 2, class: field
+  button type="submit" class="h-11 w-full rounded-lg bg-forest text-sm font-semibold text-white hover:bg-forest-soft"
+    = task.persisted? ? "Enregistrer la tâche" : "Ajouter la tâche"

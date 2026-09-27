@@ -1,0 +1,12 @@
+/ Les douze mois d'une tâche (phase 6), en pastilles : les mois où elle
+  revient en `forest`, les autres en gris. Le nom complet est en infobulle et
+  pour les lecteurs d'écran.
+ol[class="flex flex-wrap gap-0.5" aria-label="Mois : #{months.any? ? months.map { |m| MapTask.month_name(m) }.join(', ') : 'aucun'}"]
+  - MapTask::MONTHS.each do |month|
+    - on = months.include?(month)
+    li[class="flex h-5 w-5 items-center justify-center rounded-full text-[0.6rem] font-semibold #{on ? 'bg-forest text-white' : 'bg-stone-100 text-stone-400'}"
+       title=MapTask.month_name(month)
+       aria-hidden="true"
+       data-month=month
+       data-active=(on ? "true" : nil)]
+      = MapTask.month_initial(month)

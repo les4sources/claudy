@@ -60,3 +60,15 @@
 .map-welcome-popup p {
   margin: 0.25rem 0 0;
 }
+
+/* Vue « ce mois-ci » (epic #348, phase 6) : les objets porteurs d'une tâche
+   du mois ressortent d'un halo `ember`, les autres s'estompent. Des classes
+   plutôt que des styles Leaflet : la sélection réécrit le style d'un tracé,
+   pas ses classes. */
+.leaflet-container .map-month-dimmed {
+  opacity: 0.2;
+  transition: opacity 150ms ease;
+}
+.leaflet-container .map-month-task {
+  filter: drop-shadow(0 0 3px #c97b3d) drop-shadow(0 0 1px #c97b3d);
+}
