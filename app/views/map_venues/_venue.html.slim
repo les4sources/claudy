@@ -1,0 +1,19 @@
+/ L'occupation d'UN gîte ou d'UNE salle au jour choisi : les groupes présents,
+  ou « libre » et ce qui vient ensuite.
+- case venue
+- when Lodging
+  - groups = occupancy.lodging_groups(venue)
+  - if groups.any?
+    ul.mt-3.space-y-3
+      - groups.each do |group|
+        = render "map_venues/lodging_group", group: group, venue: venue
+  - else
+    = render "map_venues/free", next_label: "Prochain séjour", next_item: occupancy.next_lodging_booking(venue)
+- when Space
+  - groups = occupancy.space_groups(venue)
+  - if groups.any?
+    ul.mt-3.space-y-3
+      - groups.each do |group|
+        = render "map_venues/space_group", group: group
+  - else
+    = render "map_venues/free", next_label: "Prochaine réservation", next_item: occupancy.next_space_booking(venue)

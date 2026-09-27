@@ -55,14 +55,14 @@ RSpec.describe "Carte du domaine — carte du jour (epic #348, phase 3)", type: 
 
     it "relie un tracé à un gîte, et un seul" do
       post map_features_path, headers: turbo, params: {
-        map_feature: { map_layer_id: venues.id, geometry: square.to_json, feature_kind: "zone", linked_key: "Lodging:#{hulotte.id}" }
+        map_feature: { map_layer_id: venues.id, geometry: square.to_json, feature_kind: "zone", venue_keys: ["Lodging:#{hulotte.id}"] }
       }
       feature = MapFeature.last
-      expect(feature.linked).to eq(hulotte)
+      expect(feature.venues).to eq([hulotte])
       expect(feature.feature_kind).to eq("lodging")
 
       post map_features_path, headers: turbo, params: {
-        map_feature: { map_layer_id: venues.id, geometry: square.to_json, linked_key: "Lodging:#{hulotte.id}" }
+        map_feature: { map_layer_id: venues.id, geometry: square.to_json, venue_keys: ["Lodging:#{hulotte.id}"] }
       }
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.body).to include("a déjà son tracé")
@@ -70,10 +70,10 @@ RSpec.describe "Carte du domaine — carte du jour (epic #348, phase 3)", type: 
 
     it "n'accepte comme liaison qu'un gîte ou une salle" do
       post map_features_path, headers: turbo, params: {
-        map_feature: { map_layer_id: venues.id, geometry: square.to_json, linked_key: "User:#{user.id}" }
+        map_feature: { map_layer_id: venues.id, geometry: square.to_json, venue_keys: ["User:#{user.id}"] }
       }
       feature = MapFeature.last
-      expect(feature.linked_type).to be_nil
+      expect(feature.venue_keys).to be_empty
       expect(feature.feature_kind).to eq("zone")
     end
 
@@ -88,14 +88,14 @@ RSpec.describe "Carte du domaine — carte du jour (epic #348, phase 3)", type: 
       expect(response.body).to include("À tracer", "La Hulotte", "Grande Salle")
       expect(response.body).not_to include("Le Grand-Duc")
 
-      venues.map_features.create!(geometry: square, linked_key: "Lodging:#{hulotte.id}")
-      venues.map_features.create!(geometry: square, linked_key: "Space:#{grande_salle.id}")
+      venues.map_features.create!(geometry: square, venue_keys: ["Lodging:#{hulotte.id}"])
+      venues.map_features.create!(geometry: square, venue_keys: ["Space:#{grande_salle.id}"])
       get map_venues_todo_path
       expect(response.body).not_to include("À tracer")
     end
 
     it "renvoie l'occupation du jour par objet" do
-      feature = venues.map_features.create!(geometry: square, linked_key: "Lodging:#{hulotte.id}")
+      feature = venues.map_features.create!(geometry: square, venue_keys: ["Lodging:#{hulotte.id}"])
       build_stay(arrival: today - 1, departure: today + 2)
 
       get map_occupancy_path(format: :json, date: today.iso8601)
@@ -112,7 +112,7 @@ RSpec.describe "Carte du domaine — carte du jour (epic #348, phase 3)", type: 
     end
 
     it "le panneau d'un gîte occupé montre le groupe présent et le lien vers le séjour" do
-      feature = venues.map_features.create!(geometry: square, linked_key: "Lodging:#{hulotte.id}")
+      feature = venues.map_features.create!(geometry: square, venue_keys: ["Lodging:#{hulotte.id}"])
       stay = build_stay(arrival: today, departure: today + 2)
       stay.update_columns(notes: "Clé sous le pot de romarin") if stay.has_attribute?(:notes)
 
@@ -123,7 +123,7 @@ RSpec.describe "Carte du domaine — carte du jour (epic #348, phase 3)", type: 
     end
 
     it "le panneau d'un gîte libre annonce le prochain séjour" do
-      feature = venues.map_features.create!(geometry: square, linked_key: "Lodging:#{hulotte.id}")
+      feature = venues.map_features.create!(geometry: square, venue_keys: ["Lodging:#{hulotte.id}"])
       build_stay(arrival: today + 3, departure: today + 5)
 
       get map_venue_path(feature, date: today.iso8601)
@@ -131,7 +131,7 @@ RSpec.describe "Carte du domaine — carte du jour (epic #348, phase 3)", type: 
     end
 
     it "le panneau d'une salle montre la réservation du jour et son créneau" do
-      feature = venues.map_features.create!(geometry: square, linked_key: "Space:#{grande_salle.id}")
+      feature = venues.map_features.create!(geometry: square, venue_keys: ["Space:#{grande_salle.id}"])
       build_stay(arrival: today, departure: today + 1,
                  halls: [{ kind: "grande_salle", date: today.iso8601, period: "journee" }])
 
@@ -140,7 +140,7 @@ RSpec.describe "Carte du domaine — carte du jour (epic #348, phase 3)", type: 
     end
 
     it "ne modifie aucun séjour en consultant la carte" do
-      feature = venues.map_features.create!(geometry: square, linked_key: "Lodging:#{hulotte.id}")
+      feature = venues.map_features.create!(geometry: square, venue_keys: ["Lodging:#{hulotte.id}"])
       stay = build_stay(arrival: today, departure: today + 2)
       expect {
         get map_venue_path(feature, date: today.iso8601)

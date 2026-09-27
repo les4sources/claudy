@@ -15,7 +15,7 @@ class MapFeaturesController < BaseController
   # GET /map/features.json?layer_id=… — une `FeatureCollection` GeoJSON.
   def index
     layer = MapLayer.find(params.require(:layer_id))
-    features = layer.map_features.ordered.with_attached_photos.includes(:linked)
+    features = layer.map_features.ordered.with_attached_photos.includes(map_feature_venues: :venue)
     render json: { type: "FeatureCollection", features: features.map(&:as_geojson) }
   end
 
@@ -87,7 +87,7 @@ class MapFeaturesController < BaseController
   def feature_params
     params.require(:map_feature).permit(:map_layer_id, :feature_kind, :geometry, :name, :description,
                                         :name_en, :name_nl, :description_en, :description_nl, :access, :icon,
-                                        :management_notes, :linked_key, photos: [])
+                                        :management_notes, photos: [], venue_keys: [])
   end
 
   # `name` et `description` sont le FRANÇAIS ; l'anglais et le néerlandais
@@ -111,8 +111,10 @@ class MapFeaturesController < BaseController
     if attrs.key?(:management_notes)
       @feature.properties = @feature.properties.to_h.merge("management_notes" => attrs[:management_notes].to_s.strip)
     end
-    # Le gîte ou la salle que l'objet représente (couche des lieux, phase 3).
-    @feature.linked_key = attrs[:linked_key] if attrs.key?(:linked_key)
+    # Les gîtes et salles que l'objet représente (couche des lieux, phase 3 ;
+    # plusieurs depuis l'issue #370). La fiche envoie toujours une valeur vide
+    # en plus des cases : tout décocher retire tous les lieux.
+    @feature.venue_keys = attrs[:venue_keys] if attrs.key?(:venue_keys)
     photos = Array(attrs[:photos]).compact_blank
     @feature.photos.attach(photos) if photos.any?
   end

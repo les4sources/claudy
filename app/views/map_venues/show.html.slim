@@ -1,6 +1,7 @@
 / Le panneau de la carte du jour (epic #348, phase 3) : qui est dans ce gîte ou
-  cette salle au jour choisi. Il vit dans la même Turbo Frame que la fiche d'un
-  objet ; « Modifier le tracé » y charge la fiche d'édition.
+  cette salle — ou ces gîtes et salles, issue #370 — au jour choisi. Il vit
+  dans la même Turbo Frame que la fiche d'un objet ; « Modifier le tracé » y
+  charge la fiche d'édition.
 = turbo_frame_tag "feature_panel" do
   div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:rounded-xl md:border md:border-stone-200"
       data-feature-panel="true"
@@ -10,7 +11,7 @@
       span class="rounded-full bg-ember-tint px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-ember"
         | Carte du jour
       h2.flex-1.truncate.text-sm.font-semibold.text-stone-800
-        = @venue&.name || @feature.name(:fr).presence || "Objet sans nom"
+        = (@venues.one? ? @venues.first.name : @feature.display_name) || "Objet sans nom"
       button[type="button" class="flex h-11 w-11 items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-700"
              data-action="click->map#closePanel" aria-label="Fermer le panneau"]
         svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -20,26 +21,18 @@
     .flex-1.overflow-y-auto.px-4.py-4
       p.text-xs.font-medium.text-stone-500 = l(@date, format: "%A %-d %B %Y").upcase_first
 
-      - case @venue
-      - when Lodging
-        - groups = @occupancy.lodging_groups(@venue)
-        - if groups.any?
-          ul.mt-3.space-y-3
-            - groups.each do |group|
-              = render "map_venues/lodging_group", group: group, venue: @venue
-        - else
-          = render "map_venues/free", next_label: "Prochain séjour", next_item: @occupancy.next_lodging_booking(@venue)
-      - when Space
-        - groups = @occupancy.space_groups(@venue)
-        - if groups.any?
-          ul.mt-3.space-y-3
-            - groups.each do |group|
-              = render "map_venues/space_group", group: group
-        - else
-          = render "map_venues/free", next_label: "Prochaine réservation", next_item: @occupancy.next_space_booking(@venue)
-      - else
+      - if @venues.empty?
         p.mt-3.rounded-lg.border.border-dashed.border-stone-300.px-3.py-3.text-sm.text-stone-500
           | Cet objet n'est relié à aucun gîte ni aucune salle : reliez-le pour voir son occupation.
+      - elsif @venues.one?
+        = render "map_venues/venue", venue: @venues.first, occupancy: @occupancy
+      - else
+        / Plusieurs lieux sous le même tracé (issue #370) : la Chevêche au
+          rez-de-chaussée, la Hulotte à l'étage. Une section par lieu.
+        - @venues.each do |venue|
+          section.mt-4 data-venue-section=venue.name
+            h3 class="text-[0.7rem] font-semibold uppercase tracking-wide text-stone-500" = venue.name
+            = render "map_venues/venue", venue: venue, occupancy: @occupancy
 
     .border-t.border-stone-100.px-4.py-3
       = link_to "Modifier le tracé et la liaison", map_feature_path(@feature),
