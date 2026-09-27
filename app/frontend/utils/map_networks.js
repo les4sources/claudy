@@ -6,6 +6,8 @@
 // objet (`properties.color`, lue sur `settings.color` de la couche) ; celles-ci
 // ne sont que le repli, les mêmes que `MapLayer::NETWORKS` côté Rails.
 
+import { unifiBadgeHtml } from './map_unifi';
+
 export const NETWORK_COLORS = {
   water: '#2563EB',
   electric: '#D97706',
@@ -77,9 +79,12 @@ export function networkNodeIcon(L, feature, selected = false) {
   return L.divIcon({
     className: 'map-network-pin-wrapper',
     html:
-      `<span class="${classes.join(' ')}" style="--network-color: ${networkColor(props)}">` +
+      // `position: relative` : la pastille de statut UniFi (phase 10) se cale
+      // dans le coin de l'icône.
+      `<span class="${classes.join(' ')}" style="--network-color: ${networkColor(props)}; position: relative">` +
       `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" ` +
-      `stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyph}</svg></span>`,
+      `stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyph}</svg>` +
+      `${unifiBadgeHtml(props)}</span>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
     tooltipAnchor: [size / 2, 0],

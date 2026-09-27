@@ -15,6 +15,7 @@ import {
   networkNodeMarker,
   networkStyle,
 } from '~/utils/map_networks';
+import { UnifiStatusPoller, handleUnifiEquipmentChange } from '~/utils/map_unifi';
 import { CommentMode, commentMarker, isCommentFeature } from '~/utils/map_comments';
 import { BiodiversityMode, isObservationFeature, observationMarker } from '~/utils/map_biodiversity';
 
@@ -104,6 +105,8 @@ export default class extends Controller {
     placeUrl: String,
     unplaceUrl: String,
     focusPlant: Number,
+    // Phase 10 : le statut UniFi des nœuds Ethernet (`utils/map_unifi.js`).
+    unifiDevicesUrl: String,
   };
 
   connect() {
@@ -139,6 +142,10 @@ export default class extends Controller {
     this.map.on('locationerror', () => this.onLocationError());
 
     this.placement = new PlantPlacement(this);
+    this.unifi = new UnifiStatusPoller(this, this.unifiDevicesUrlValue, (feature, selected) =>
+      networkNodeIcon(L, feature, selected)
+    );
+    this.element.addEventListener('change', handleUnifiEquipmentChange);
     // Phase 11 : le mode Commentaires (utils/map_comments.js).
     this.comments = new CommentMode(this);
     // Phase 13 : le mode Biodiversité (utils/map_biodiversity.js).
@@ -154,6 +161,8 @@ export default class extends Controller {
   disconnect() {
     this.panelObserver?.disconnect();
     this.placement?.destroy();
+    this.unifi?.stop();
+    this.element.removeEventListener('change', handleUnifiEquipmentChange);
     this.comments?.destroy();
     this.biodiversity?.destroy();
     if (this.map) {
@@ -362,6 +371,8 @@ export default class extends Controller {
     // Une couche rechargée (enregistrement, suppression) recrée ses tracés : la
     // vue « ce mois-ci » doit les reprendre.
     this.applyMonthFocus();
+    // Phase 10 : la couche Ethernet rechargée reprend ses pastilles UniFi.
+    this.unifi?.sync();
     return group;
   }
 
@@ -471,6 +482,8 @@ export default class extends Controller {
     }
     // Les éléments SVG d'une couche rallumée sont neufs : sans leurs classes.
     this.applyMonthFocus();
+    // Phase 10 : masquer la couche Ethernet arrête la relecture des statuts.
+    this.unifi?.sync();
     const visibility = this.readVisibility();
     visibility[id] = event.target.checked;
     this.writeVisibility(visibility);

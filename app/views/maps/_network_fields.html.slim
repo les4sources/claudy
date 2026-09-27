@@ -5,6 +5,11 @@
   haversine) — elle se met à jour à la réouverture de la fiche après un
   déplacement de sommets.
 - color = layer.network_color
+/ L’exemple de consigne parle du réseau du nœud : couper l’eau, le courant, ou
+  retrouver et redémarrer un équipement.
+- instructions_example = { "water" => "Pour couper l’eau du gîte : vanne rouge sous l’évier, quart de tour vers la droite.",
+                           "electric" => "Disjoncteur du coworking : tableau du hangar, 3e rangée, étiqueté « CW ».",
+                           "ethernet" => "Redémarrer : débrancher l’alimentation 10 s dans la baie du grenier." }[layer.network]
 div.flex.items-center.gap-2.text-xs.text-stone-600 data-network-readonly=layer.network
   span.font-semibold Réseau
   span.inline-block.h-2.5.w-2.5.rounded-full style="background: #{color}"
@@ -19,13 +24,22 @@ div.flex.items-center.gap-2.text-xs.text-stone-600 data-network-readonly=layer.n
   div class="rounded-lg border-2 border-amber-300 bg-amber-50 px-3 py-3" data-network-instructions="true"
     = f.label :instructions, "Consigne — où et comment couper", class: "flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-amber-800"
     = f.text_area :instructions, value: feature.instructions, rows: 4,
-                  placeholder: "Pour couper l'eau du gîte : vanne rouge sous l'évier, quart de tour vers la droite.",
+                  placeholder: instructions_example,
                   class: "mt-1.5 w-full rounded-lg border-amber-300 bg-white text-base text-stone-800 shadow-sm focus:border-amber-500 focus:ring-amber-500"
   div
     = f.label :equipment, "Équipement", class: "block text-xs font-semibold text-stone-600"
     = f.select :equipment, MapFeature::EQUIPMENTS.map { |key, label| [label, key] },
                { include_blank: "Aucun", selected: feature.equipment },
                class: "mt-1 h-11 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+  / Phase 10 : le statut UniFi en direct, seulement sur le réseau Ethernet. Le
+    client n'est interrogé que pour un nœud déjà marqué UniFi ; sinon un
+    rappel caché, que la carte révèle quand on choisit « UniFi ».
+  - if layer.network == "ethernet"
+    - if feature.unifi?
+      = render "maps/unifi_fields", f: f, feature: feature
+    - else
+      p.text-xs.text-stone-500 hidden=true data-unifi-hint="true"
+        | Enregistrez la fiche pour choisir l'équipement UniFi et voir son statut.
 
 - elsif feature.line?
   div
