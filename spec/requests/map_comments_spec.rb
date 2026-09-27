@@ -38,6 +38,9 @@ RSpec.describe "Carte du domaine — commentaires en fil (epic #348, phase 11)",
       with_base_layer
       expect { get map_path }.to change { MapLayer.where(kind: "comments").count }.from(0).to(1)
       expect(html.at_css(%([data-map-target="layerName"][data-layer-kind="comments"]))).to be_present
+      # Le filtre des résolus et l'adresse de la fiche d'un nouveau commentaire.
+      expect(html.at_css(%([data-new-comment-url="#{new_map_comment_path}"] input[data-comments-filter]))).to be_present
+      expect(html.text).to include("Masquer les résolus")
     end
 
     it "sert la fiche d'un point pas encore créé, sans rien créer" do
