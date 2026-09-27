@@ -13,7 +13,35 @@ class PlantsController < BaseController
 
   UNPLACED_FRAME = "plants_unplaced".freeze
 
-  before_action :get_plant, except: :unplaced
+  before_action :get_plant, except: %i[index unplaced]
+
+  # GET /map/plantes — toutes les plantes du domaine, en liste : recherche,
+  # filtres statut, santé, zone, strate, placée ou non ; tri par numéro. Les
+  # compteurs de tête portent sur tout le domaine, pas sur le filtre.
+  def index
+    @counts = {
+      total: Plant.count,
+      placed: Plant.alive.placed.count,
+      to_place: Plant.alive.to_place.count,
+      dead: Plant.where(status: Plant::DEAD).count
+    }
+    @zones = Plant.zones
+    @filters = {
+      q: params[:q].to_s.squish.presence,
+      status: params[:status].presence_in(Plant::STATUSES.keys),
+      health: params[:health].presence_in(Plant::HEALTHS.keys),
+      zone: params[:zone].presence_in(@zones),
+      stratum: params[:stratum].presence_in(Plant::STRATA.keys),
+      placed: params[:placed].presence_in(%w[yes no])
+    }
+    scope = Plant.search(@filters[:q]).in_zone(@filters[:zone])
+    scope = scope.with_status(@filters[:status]) if @filters[:status]
+    scope = scope.where(health: @filters[:health]) if @filters[:health]
+    scope = scope.where(stratum: @filters[:stratum]) if @filters[:stratum]
+    scope = scope.placed if @filters[:placed] == "yes"
+    scope = scope.alive.to_place if @filters[:placed] == "no"
+    @plants = scope.ordered.includes(:plant_species, :plant_variety).with_attached_photos.to_a
+  end
 
   # GET /map/plants/unplaced — le tiroir « Placer des plantes » : les plantes
   # vivantes sans point, filtrables par zone et par recherche, dans l'ordre des
