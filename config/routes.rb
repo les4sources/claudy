@@ -887,6 +887,13 @@ Rails.application.routes.draw do
       # humain. Une règle propose, elle ne décide jamais.
       resources :allocation_rules, only: [:index, :show, :create, :update, :destroy]
       resources :cash_motifs, only: [:index, :show, :create, :update]
+
+      # Carte du domaine et plantes nourricières (epic #348, phase 8). POST est
+      # ouvert : les ~95 plantes vivent dans une base Notion et entrent par un
+      # import agent. Espèces, variétés et plantes (sur `notion_url`) sont des
+      # UPSERT — un import rejoué ne double rien.
+      resources :plant_species, only: [:index, :show, :create, :update]
+      resources :plant_varieties, only: [:index, :show, :create]
     end
   end
 
