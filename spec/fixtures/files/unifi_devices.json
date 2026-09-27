@@ -1,0 +1,72 @@
+{
+  "data": [
+    {
+      "hostId": "900A6F00301100000000074A6BA90000000007A3387E0000000063EC9853:123456789",
+      "hostName": "Les 4 Sources",
+      "devices": [
+        {
+          "id": "F4E2C6C23F13",
+          "mac": "F4E2C6C23F13",
+          "name": "Switch grange",
+          "model": "USW Flex Mini",
+          "shortname": "USMINI",
+          "ip": "192.168.1.21",
+          "productLine": "network",
+          "status": "online",
+          "version": "2.1.6",
+          "firmwareStatus": "upToDate",
+          "updateAvailable": null,
+          "isConsole": false,
+          "isManaged": true,
+          "startupTime": "2026-09-20T08:12:44Z",
+          "adoptionTime": null,
+          "note": null,
+          "uidb": { "guid": "0a1b", "id": "0a1b", "images": {} }
+        },
+        {
+          "id": "E063DA0011AA",
+          "mac": "E063DA0011AA",
+          "name": "AP gîte du Grand-Duc",
+          "model": "U6 Mesh",
+          "shortname": "U6M",
+          "ip": "192.168.1.34",
+          "productLine": "network",
+          "status": "offline",
+          "version": "6.6.77",
+          "firmwareStatus": "updateAvailable",
+          "updateAvailable": "6.7.10",
+          "isConsole": false,
+          "isManaged": true,
+          "startupTime": null,
+          "adoptionTime": null,
+          "note": null,
+          "uidb": { "guid": "0c2d", "id": "0c2d", "images": {} }
+        }
+      ],
+      "updatedAt": "2026-09-28T07:41:02Z"
+    },
+    {
+      "hostId": "700A6F00301100000000074A6BA90000000007A3387E0000000063EC9853:987654321",
+      "hostName": "Cloud Gateway",
+      "devices": [
+        {
+          "id": "D021F9A0B0C1",
+          "mac": "D021F9A0B0C1",
+          "name": "",
+          "model": "UCG Ultra",
+          "shortname": "UCGULTRA",
+          "ip": "192.168.1.1",
+          "productLine": "network",
+          "status": "online",
+          "version": "4.0.6",
+          "firmwareStatus": "upToDate",
+          "isConsole": true,
+          "isManaged": true
+        }
+      ],
+      "updatedAt": "2026-09-28T07:40:10Z"
+    }
+  ],
+  "httpStatusCode": 200,
+  "traceId": "a7dc15e0eb4527142d7823515b15f87d"
+}

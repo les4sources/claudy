@@ -15,8 +15,10 @@ import {
   networkNodeMarker,
   networkStyle,
 } from '~/utils/map_networks';
+import { UnifiStatusPoller, handleUnifiEquipmentChange } from '~/utils/map_unifi';
 import { CommentMode, commentMarker, isCommentFeature } from '~/utils/map_comments';
 import { SketchMode } from '~/utils/map_sketches';
+import { BiodiversityMode, isObservationFeature, observationMarker } from '~/utils/map_biodiversity';
 
 // Style de la couche Gestion (phase 2) : polygones `forest` remplis à 25 %,
 // accès en pointillés `bark`, points en marqueur rond. Couleurs du thème
@@ -104,6 +106,8 @@ export default class extends Controller {
     placeUrl: String,
     unplaceUrl: String,
     focusPlant: Number,
+    // Phase 10 : le statut UniFi des nœuds Ethernet (`utils/map_unifi.js`).
+    unifiDevicesUrl: String,
   };
 
   connect() {
@@ -139,10 +143,16 @@ export default class extends Controller {
     this.map.on('locationerror', () => this.onLocationError());
 
     this.placement = new PlantPlacement(this);
+    this.unifi = new UnifiStatusPoller(this, this.unifiDevicesUrlValue, (feature, selected) =>
+      networkNodeIcon(L, feature, selected)
+    );
+    this.element.addEventListener('change', handleUnifiEquipmentChange);
     // Phase 11 : le mode Commentaires (utils/map_comments.js).
     this.comments = new CommentMode(this);
     // Phase 12 : les notes manuscrites (utils/map_sketches.js).
     this.sketches = new SketchMode(this);
+    // Phase 13 : le mode Biodiversité (utils/map_biodiversity.js).
+    this.biodiversity = new BiodiversityMode(this);
     this.setupFeatures();
 
     // Leaflet mesure son conteneur au montage. Dans une page Turbo le conteneur
@@ -154,8 +164,11 @@ export default class extends Controller {
   disconnect() {
     this.panelObserver?.disconnect();
     this.placement?.destroy();
+    this.unifi?.stop();
+    this.element.removeEventListener('change', handleUnifiEquipmentChange);
     this.comments?.destroy();
     this.sketches?.destroy();
+    this.biodiversity?.destroy();
     if (this.map) {
       this.map.remove();
       this.map = null;
@@ -291,6 +304,8 @@ export default class extends Controller {
     this.map.on('click', (event) => this.placement?.onMapClick(event));
     // En mode Commentaires, toucher la carte ouvre un nouveau commentaire.
     this.map.on('click', (event) => this.comments?.onMapClick(event));
+    // En mode Biodiversité, toucher la carte ouvre un nouveau relevé.
+    this.map.on('click', (event) => this.biodiversity?.onMapClick(event));
     this.updateLabels();
     this.observePanel();
 
@@ -345,6 +360,7 @@ export default class extends Controller {
         if (isPlantFeature(feature)) return plantMarker(L, feature, latlng);
         if (isNetworkFeature(feature)) return networkNodeMarker(L, feature, latlng);
         if (isCommentFeature(feature)) return commentMarker(L, feature, latlng);
+        if (isObservationFeature(feature)) return observationMarker(L, feature, latlng);
         if (this.isWelcome(feature)) return welcomeMarker(L, feature, latlng);
         return L.circleMarker(latlng, this.featureStyle(feature, false));
       },
@@ -359,6 +375,8 @@ export default class extends Controller {
     // Une couche rechargée (enregistrement, suppression) recrée ses tracés : la
     // vue « ce mois-ci » doit les reprendre.
     this.applyMonthFocus();
+    // Phase 10 : la couche Ethernet rechargée reprend ses pastilles UniFi.
+    this.unifi?.sync();
     return group;
   }
 
@@ -369,14 +387,19 @@ export default class extends Controller {
     if (name) {
       // Le nom d'une plante se pose à droite de sa pastille, pas dessus.
       const plant = isPlantFeature(feature);
-      // Un nœud de réseau (phase 9) aussi, et son nom n'apparaît qu'au zoom 19.
+      // Un relevé (phase 13) et un nœud de réseau (phase 9) aussi ; le nom d'un
+      // objet de réseau n'apparaît qu'au zoom 19.
+      const observation = isObservationFeature(feature);
       const node = isNetworkFeature(feature) && feature.geometry?.type === 'Point';
       const network = isNetworkFeature(feature) ? ' map-network-label' : '';
+      const aside = plant || observation || node;
       layer.bindTooltip(name, {
         permanent: true,
-        direction: plant || node ? 'right' : 'center',
-        offset: plant || node ? [4, 0] : [0, 0],
-        className: (plant ? 'map-feature-label map-plant-label' : 'map-feature-label') + network,
+        direction: aside ? 'right' : 'center',
+        offset: aside ? [4, 0] : [0, 0],
+        className:
+          (plant ? 'map-feature-label map-plant-label' : observation ? 'map-feature-label map-observation-label' : 'map-feature-label') +
+          network,
       });
     }
     layer.on('click', (event) => {
@@ -389,6 +412,8 @@ export default class extends Controller {
       }
       // En mode Commentaires, on commente l'endroit touché, même dans une zone.
       if (this.comments?.interceptFeatureClick(event, feature)) return;
+      // En mode Biodiversité, de même : le relevé se pose là où l'on touche.
+      if (this.biodiversity?.interceptFeatureClick(event, feature)) return;
       // Pendant un tracé, le clic appartient à Geoman (il pose un sommet) : sans
       // cette sortie, poser un point DANS une zone ouvrait la fiche de la zone.
       if (
@@ -461,6 +486,8 @@ export default class extends Controller {
     }
     // Les éléments SVG d'une couche rallumée sont neufs : sans leurs classes.
     this.applyMonthFocus();
+    // Phase 10 : masquer la couche Ethernet arrête la relecture des statuts.
+    this.unifi?.sync();
     const visibility = this.readVisibility();
     visibility[id] = event.target.checked;
     this.writeVisibility(visibility);
@@ -498,6 +525,7 @@ export default class extends Controller {
     }
     if (!editable) this.disableTools();
     this.comments?.onActivate(kind);
+    this.biodiversity?.onActivate(kind);
     // La légende des zones d'accueil (phase 4) accompagne la couche active.
     if (this.hasWelcomeLegendTarget) {
       this.welcomeLegendTarget.classList.toggle('hidden', kind !== 'welcome');
@@ -644,6 +672,12 @@ export default class extends Controller {
     this.placement.open();
   }
 
+  // Phase 13 : une ligne de la liste des relevés centre la carte sur le relevé
+  // et ouvre sa fiche.
+  focusObservation(event) {
+    this.biodiversity?.focus(event.currentTarget.dataset.featureId);
+  }
+
   // Phase 11 : « Masquer les résolus », sous la couche Commentaires.
   toggleResolvedComments(event) {
     this.comments?.toggleResolved(event.currentTarget.checked);
@@ -729,6 +763,7 @@ export default class extends Controller {
           layer.setZIndexOffset(selected ? 1000 : 200);
         }
         this.comments?.highlight(layer, selected);
+        this.biodiversity?.highlight(layer, selected);
       });
     });
     // `setIcon` remplace l'élément du marqueur : la vue « ce mois-ci » doit
@@ -777,6 +812,7 @@ export default class extends Controller {
       deleted.remove();
       this.closePanel();
       if (layerId) this.loadLayer(layerId);
+      this.biodiversity?.onDeleted(layerId);
       return;
     }
 
@@ -804,6 +840,7 @@ export default class extends Controller {
       const id = panel.dataset.featureId;
       delete panel.dataset.featureSaved;
       this.discardPending();
+      this.biodiversity?.onSaved(panel);
       this.selectedFeatureId = id;
       // La couche de l'objet enregistré, pas forcément la couche active ; si
       // c'est celle des lieux, l'occupation et la liste « À tracer » suivent.

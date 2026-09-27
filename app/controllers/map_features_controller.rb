@@ -71,7 +71,9 @@ class MapFeaturesController < BaseController
   def destroy_photo
     @feature.photos.find(params[:photo_id]).purge_later
     @feature.reload
-    render turbo_stream: turbo_stream.update(PANEL_FRAME, partial: "maps/feature_panel", locals: { feature: @feature })
+    # Un relevé de biodiversité (phase 13) garde sa propre fiche.
+    partial = @feature.observation_point? ? "maps/observation_panel" : "maps/feature_panel"
+    render turbo_stream: turbo_stream.update(PANEL_FRAME, partial: partial, locals: { feature: @feature })
   end
 
   private
@@ -88,7 +90,7 @@ class MapFeaturesController < BaseController
     params.require(:map_feature).permit(:map_layer_id, :feature_kind, :geometry, :name, :description,
                                         :name_en, :name_nl, :description_en, :description_nl, :access, :icon,
                                         :management_notes, :node_type, :instructions, :equipment, :gauge,
-                                        photos: [], venue_keys: [])
+                                        :unifi_device_id, photos: [], venue_keys: [])
   end
 
   # `name` et `description` sont le FRANÇAIS ; l'anglais et le néerlandais
@@ -109,6 +111,10 @@ class MapFeaturesController < BaseController
     # et équipement d'un réseau (phase 9) : un choix vide les retire.
     %w[access icon node_type gauge equipment].each do |key|
       @feature.properties = @feature.properties.to_h.merge(key => attrs[key].presence).compact if attrs.key?(key)
+    end
+    # L'équipement UniFi lié à un nœud Ethernet (phase 10) : un choix vide le délie.
+    if attrs.key?(:unifi_device_id)
+      @feature.properties = @feature.properties.to_h.merge("unifi_device_id" => attrs[:unifi_device_id].to_s.strip.presence).compact
     end
     # La consigne d'un nœud de réseau (phase 9) : « quart de tour vers la droite ».
     if attrs.key?(:instructions)

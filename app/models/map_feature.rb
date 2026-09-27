@@ -49,8 +49,8 @@ class MapFeature < ApplicationRecord
   }.freeze
 
   # Les réseaux (phase 9). Le calibre d'un tracé dit son épaisseur sur la carte
-  # (moyen par défaut) ; l'équipement d'un nœud prépare la phase 10 (statut
-  # UniFi en direct, avec `properties.unifi_device_id`) sans l'exploiter.
+  # (moyen par défaut) ; un nœud d'équipement UniFi se lie par
+  # `properties.unifi_device_id` à son statut en direct (phase 10).
   GAUGES = { "thin" => "Fin", "medium" => "Moyen", "thick" => "Gros" }.freeze
   DEFAULT_GAUGE = "medium".freeze
   EQUIPMENTS = { "unifi" => "UniFi" }.freeze
@@ -89,6 +89,9 @@ class MapFeature < ApplicationRecord
   # Miniature, aperçu et refus clair des formats illisibles : `HasMapPhotos`,
   # partagé avec les plantes.
   include HasMapPhotos
+  # Un relevé de biodiversité (phase 13) : règne, espèce, date, observateur et
+  # effectif dans les `properties` d'un point `observation`.
+  include MapFeatureObservation
 
   validates :feature_kind, inclusion: { in: FEATURE_KINDS }
   validate :geometry_is_valid_geojson
@@ -132,6 +135,9 @@ class MapFeature < ApplicationRecord
   def instructions = properties.to_h["instructions"].presence
   def equipment = properties.to_h["equipment"].presence
   def gauge = properties.to_h["gauge"].presence
+  # Phase 10 : l'identifiant de l'équipement UniFi (API Site Manager) d'un nœud.
+  def unifi_device_id = properties.to_h["unifi_device_id"].presence
+  def unifi? = equipment == "unifi"
 
   # La longueur d'une ligne en mètres, somme des distances haversine entre
   # sommets consécutifs. Calculée côté serveur (pas de PostGIS, décision 12) :
@@ -206,7 +212,8 @@ class MapFeature < ApplicationRecord
   # n'est lue que pour un point `plant` : `as_geojson` appelle ceci pour chaque
   # objet de la carte.
   def display_name
-    name(:fr).presence || venue_names.presence || (plant&.display_name if plant_point?)
+    name(:fr).presence || venue_names.presence || (plant&.display_name if plant_point?) ||
+      (species_common if observation_point?)
   end
 
   def plant_point? = feature_kind == "plant"
@@ -235,6 +242,7 @@ class MapFeature < ApplicationRecord
         photos_count: photos.size,
         properties: properties
       }.merge(plant_geojson_properties).merge(network_geojson_properties).merge(comment_geojson_properties)
+       .merge(observation_geojson_properties)
     }
   end
 
@@ -245,7 +253,8 @@ class MapFeature < ApplicationRecord
 
     length = length_in_meters
     { network: network, color: map_layer.network_color, node_type: node_type, node_type_label: node_type_label,
-      gauge: (gauge || DEFAULT_GAUGE if line?), equipment: equipment, length_m: length&.round(1) }.compact
+      gauge: (gauge || DEFAULT_GAUGE if line?), equipment: equipment, unifi_device_id: (unifi_device_id if unifi?),
+      length_m: length&.round(1) }.compact
   end
 
   # Un point de commentaire (phase 11) : le nombre de messages de sa bulle, et

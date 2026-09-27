@@ -68,12 +68,12 @@ RSpec.describe "Carte du domaine — liste des plantes (epic #348, phase 7)", ty
       expect(row_ids.size).to eq(3)
     end
 
-    it "partage la barre Carte · Carnet · Récoltes · Plantes · Espèces avec les autres pages annexes" do
+    it "partage la barre Carte · Carnet · Récoltes · Plantes · Espèces · Biodiversité avec les autres pages annexes" do
       { map_carnet_path => "Carnet", map_recoltes_path => "Récoltes", map_plantes_path => "Plantes",
-        map_especes_path => "Espèces" }.each do |path, label|
+        map_especes_path => "Espèces", map_biodiversite_path => "Biodiversité" }.each do |path, label|
         get path
         nav = html.at_css("nav[data-map-subnav]")
-        expect(nav.css("a").map(&:text).map(&:strip)).to eq(%w[Carte Carnet Récoltes Plantes Espèces])
+        expect(nav.css("a").map(&:text).map(&:strip)).to eq(%w[Carte Carnet Récoltes Plantes Espèces Biodiversité])
         expect(nav.at_css("a[aria-current='page']").text.strip).to eq(label)
       end
     end

@@ -1,0 +1,5 @@
+/ La liste des relevés dans le panneau de la carte (epic #348, phase 13) :
+  une Turbo Frame chargée à la demande et rechargée par la carte après chaque
+  enregistrement ou suppression.
+= turbo_frame_tag MapObservationsController::LIST_FRAME do
+  = render "maps/observation_list", on_map: true

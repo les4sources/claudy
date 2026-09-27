@@ -1,8 +1,11 @@
 / La fiche d'un objet, servie dans la Turbo Frame de la carte (epic #348,
   phase 2). Un objet neuf (`new`) passe par la même vue. Un point de
-  commentaire (phase 11) montre son fil à la place.
+  commentaire (phase 11) montre son fil à la place, un relevé de biodiversité
+  (phase 13) sa fiche d'observation.
 = turbo_frame_tag "feature_panel" do
   - if @feature.persisted? && @feature.comment_point?
     = render "maps/comment_panel", feature: @feature
+  - elsif @feature.persisted? && @feature.observation_point?
+    = render "maps/observation_panel", feature: @feature
   - else
     = render "maps/feature_panel", feature: @feature
