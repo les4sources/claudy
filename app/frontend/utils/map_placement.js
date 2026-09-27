@@ -70,8 +70,12 @@ export class PlantPlacement {
     const frame = this.c.unplacedFrameTarget;
     if (!frame.getAttribute('src')) frame.src = this.c.unplacedUrlValue;
     else frame.reload();
-    // Sur un téléphone, la fiche plein écran cacherait la carte.
-    if (!this.wide) this.c.closePanel();
+    // Sur un téléphone, la fiche plein écran et le panneau des couches
+    // cacheraient la carte : on pose au doigt, il faut la voir.
+    if (!this.wide) {
+      this.c.closePanel();
+      if (this.c.hasPanelBodyTarget && !this.c.panelBodyTarget.classList.contains('hidden')) this.c.togglePanel();
+    }
   }
 
   close() {

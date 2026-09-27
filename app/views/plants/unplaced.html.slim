@@ -4,17 +4,17 @@
   rechargent la frame seule ; la carte la recharge après chaque placement.
 = turbo_frame_tag PlantsController::UNPLACED_FRAME do
   div[data-unplaced-list="true" data-unplaced-total=@total data-unplaced-count=@plants.size]
-    = form_with url: unplaced_plants_path, method: :get, class: "space-y-2 px-3 pt-3",
+    = form_with url: unplaced_plants_path, method: :get, class: "flex gap-2 px-3 pt-3 md:block md:space-y-2",
                 data: { controller: "auto-submit", auto_submit_delay_value: 250 } do
       label.sr-only for="unplaced_q" Rechercher
       input[type="search" id="unplaced_q" name="q" value=@query autocomplete="off" enterkeyhint="search"
             placeholder="Nom, espèce, variété, n°…"
-            class="h-11 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+            class="h-11 min-w-0 flex-1 rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest md:w-full"
             data-action="input->auto-submit#submit"]
       - if @zones.any?
         label.sr-only for="unplaced_zone" Zone
         select[id="unplaced_zone" name="zone"
-               class="h-11 w-full rounded-lg border-stone-300 text-sm text-stone-700 shadow-sm focus:border-forest focus:ring-forest"
+               class="h-11 w-32 shrink-0 rounded-lg border-stone-300 text-sm text-stone-700 shadow-sm focus:border-forest focus:ring-forest md:w-full"
                data-action="change->auto-submit#submit"]
           option value="" Toutes les zones
           - @zones.each do |zone|

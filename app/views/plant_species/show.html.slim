@@ -33,7 +33,7 @@
     / ── Fiche botanique ──────────────────────────────────────────────────
     section.rounded-xl.border.border-stone-200.bg-white.p-4 data-species-section="identity"
       h2.mb-3.font-semibold.text-stone-800 Fiche botanique
-      = form_with model: @species, url: map_espece_path(@species), method: :patch, class: "space-y-4" do |f|
+      = form_with model: @species, url: map_espece_path(@species), method: :patch, builder: ActionView::Helpers::FormBuilder, class: "space-y-4" do |f|
         - if errors.any?
           .rounded-lg.border.border-red-200.bg-red-50.px-3.py-2.text-sm.text-red-800 role="alert"
             - errors.full_messages.each do |message|
@@ -96,7 +96,7 @@
           - @varieties.each do |variety|
             - count = @variety_counts[variety.id].to_i
             li.flex.items-center.gap-2.py-2 data-variety-id=variety.id
-              = form_with model: variety, url: map_espece_variety_path(@species, variety), method: :patch,
+              = form_with model: variety, url: map_espece_variety_path(@species, variety), method: :patch, builder: ActionView::Helpers::FormBuilder,
                           class: "flex min-w-0 flex-1 items-center gap-2" do |f|
                 = f.label :name, "Nom de la variété", class: "sr-only", for: "variety_name_#{variety.id}"
                 = f.text_field :name, id: "variety_name_#{variety.id}", required: true,
@@ -112,7 +112,7 @@
                     path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"
       - else
         p.text-sm.text-stone-500 Aucune variété.
-      = form_with model: PlantVariety.new, url: map_espece_varieties_path(@species), method: :post,
+      = form_with model: PlantVariety.new, url: map_espece_varieties_path(@species), method: :post, builder: ActionView::Helpers::FormBuilder,
                   class: "mt-3 flex gap-2" do |f|
         = f.label :name, "Nouvelle variété", class: "sr-only", for: "new_variety_name"
         = f.text_field :name, id: "new_variety_name", required: true, placeholder: "Nouvelle variété (Reinette Hernaut…)",
