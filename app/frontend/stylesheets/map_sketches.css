@@ -1,0 +1,8 @@
+/* Les notes manuscrites de la carte (epic #348, phase 12). */
+
+/* Le volet des dessins ne capte rien : un canvas posé au-dessus des zones
+   avalerait sinon leurs clics. */
+.leaflet-sketchPane-pane,
+.leaflet-sketchPane-pane canvas {
+  pointer-events: none !important;
+}

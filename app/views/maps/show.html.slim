@@ -158,6 +158,11 @@
                     data-action="change->map#toggleMonthFocus"]
               span.flex-1 Ce mois-ci
               span class="text-[0.65rem] text-stone-400" = MapTask.month_name(Date.current.month).downcase
+          / Les notes manuscrites (phase 12).
+          = render "maps/sketches_panel"
+
+      / Barre des notes manuscrites (phase 12), visible quand un dessin est actif.
+      = render "maps/sketch_toolbar"
 
       / Barre d'outils du mode Gestion (phase 2) : visible quand la couche
         active est de kind `management`. Les outils sont ceux de Geoman.

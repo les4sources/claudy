@@ -1,0 +1,34 @@
+/ Les notes manuscrites (epic #348, phase 12) : des dessins à main levée,
+  rangés par dossier. La liste est remplie par `utils/map_sketches.js` depuis
+  `/map/sketches.json` ; la case affiche ou masque un dessin (mémorisé dans ce
+  navigateur), le nom le rend ACTIF pour y dessiner.
+.mt-3.border-t.border-stone-100.pt-3[data-map-sketches="true"
+                                     data-sketches-url=map_sketches_path(format: :json)
+                                     data-sketch-url=map_sketch_path(id: "__ID__", format: :json)
+                                     data-sketch-strokes-url=strokes_map_sketch_path(id: "__ID__", format: :json)]
+  .mb-2.flex.items-center.gap-2
+    p class="flex-1 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Notes manuscrites
+    button[type="button"
+           class="flex h-7 items-center gap-1 rounded-lg px-2 text-xs font-medium text-4s-main hover:bg-teal-50"
+           data-sketch-action="new"
+           title="Nouveau dessin"]
+      svg.h-3.5.w-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+        path d="M12 5v14M5 12h14"
+      | Nouveau
+
+  / Créer, renommer ou changer de dossier : le même petit formulaire, prérempli
+    pour un dessin existant.
+  form.mb-2.hidden.space-y-1.5.rounded-lg.bg-stone-50.p-2 data-sketch-form="true" autocomplete="off"
+    input[type="text" name="name" required=true maxlength="120" placeholder="Nom du dessin"
+          class="w-full rounded-md border-stone-300 px-2 py-1 text-sm focus:border-teal-400 focus:ring-teal-400"]
+    input[type="text" name="folder" maxlength="120" placeholder="Dossier (facultatif)" list="map-sketch-folders"
+          class="w-full rounded-md border-stone-300 px-2 py-1 text-sm focus:border-teal-400 focus:ring-teal-400"]
+    datalist#map-sketch-folders data-sketch-folders="true"
+    p.hidden.text-xs.text-red-700 data-sketch-form-error="true"
+    .flex.items-center.gap-1.pt-0.5
+      button[type="submit" class="rounded-md bg-4s-main px-2.5 py-1 text-xs font-semibold text-white hover:opacity-90"] Enregistrer
+      button[type="button" class="rounded-md px-2 py-1 text-xs text-stone-500 hover:bg-stone-100" data-sketch-action="cancel-form"] Annuler
+      button[type="button" class="ml-auto hidden rounded-md px-2 py-1 text-xs text-red-700 hover:bg-red-50" data-sketch-action="delete"] Supprimer
+
+  ul.space-y-0.5 data-sketch-list="true"
+  p.hidden.px-2.py-1.text-xs.text-stone-400 data-sketch-empty="true" Aucun dessin pour l'instant.

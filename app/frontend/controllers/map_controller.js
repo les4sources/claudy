@@ -8,6 +8,7 @@ import { welcomeIcon, welcomeMarker, welcomeProperties, welcomeStyle } from '~/u
 import { isPlantFeature, plantIcon, plantMarker } from '~/utils/map_plants';
 import { PlantPlacement } from '~/utils/map_placement';
 import { CommentMode, commentMarker, isCommentFeature } from '~/utils/map_comments';
+import { SketchMode } from '~/utils/map_sketches';
 
 // Style de la couche Gestion (phase 2) : polygones `forest` remplis à 25 %,
 // accès en pointillés `bark`, points en marqueur rond. Couleurs du thème
@@ -132,6 +133,8 @@ export default class extends Controller {
     this.placement = new PlantPlacement(this);
     // Phase 11 : le mode Commentaires (utils/map_comments.js).
     this.comments = new CommentMode(this);
+    // Phase 12 : les notes manuscrites (utils/map_sketches.js).
+    this.sketches = new SketchMode(this);
     this.setupFeatures();
 
     // Leaflet mesure son conteneur au montage. Dans une page Turbo le conteneur
@@ -144,6 +147,7 @@ export default class extends Controller {
     this.panelObserver?.disconnect();
     this.placement?.destroy();
     this.comments?.destroy();
+    this.sketches?.destroy();
     if (this.map) {
       this.map.remove();
       this.map = null;
@@ -440,6 +444,8 @@ export default class extends Controller {
   }
 
   setActiveLayer(id, kind) {
+    // Choisir une couche met fin au dessin en cours (phase 12).
+    this.sketches?.onLayerActivated();
     this.activeLayerId = String(id);
     this.activeLayerKind = kind;
     this.layerNameTargets.forEach((button) => {

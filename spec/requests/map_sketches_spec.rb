@@ -21,6 +21,23 @@ RSpec.describe "Carte du domaine — notes manuscrites (epic #348, phase 12)", t
   context "connecté" do
     before { sign_in bob }
 
+    it "montre la section Notes manuscrites et la barre de dessin sur la carte" do
+      MapBaseLayer.create!(key: "test-layer", name: "Couche de test", min_zoom: 12, max_zoom: 20,
+                           bounds: { "south" => 50.339, "west" => 4.903, "north" => 50.343, "east" => 4.912 })
+      get map_path
+
+      doc = Nokogiri::HTML(response.body)
+      section = doc.at_css("[data-map-sketches]")
+      expect(section).to be_present
+      expect(section["data-sketches-url"]).to eq(map_sketches_path(format: :json))
+      expect(section["data-sketch-strokes-url"]).to eq(strokes_map_sketch_path(id: "__ID__", format: :json))
+      expect(section.text).to include("Notes manuscrites")
+      expect(section.at_css("form[data-sketch-form] input[name=name]")).to be_present
+      toolbar = doc.at_css("[data-sketch-toolbar]")
+      expect(%w[pen eraser undo hand done].map { |t| toolbar.at_css(%([data-sketch-tool="#{t}"])) }).to all(be_present)
+      expect(toolbar.at_css("[data-sketch-status]").text.strip).to eq("Enregistré")
+    end
+
     it "liste les dessins rangés, sans leurs tracés" do
       MapSketch.create!(name: "Mare", folder: "Eau", strokes: [stroke])
       MapSketch.create!(name: "Libre")
