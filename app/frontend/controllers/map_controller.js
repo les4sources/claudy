@@ -7,6 +7,14 @@ import '~/stylesheets/map.css';
 import { welcomeIcon, welcomeMarker, welcomeProperties, welcomeStyle } from '~/utils/map_welcome';
 import { isPlantFeature, plantIcon, plantMarker } from '~/utils/map_plants';
 import { PlantPlacement } from '~/utils/map_placement';
+import {
+  NETWORK_LABEL_MIN_ZOOM,
+  applyNetworkFilter,
+  isNetworkFeature,
+  networkNodeIcon,
+  networkNodeMarker,
+  networkStyle,
+} from '~/utils/map_networks';
 import { CommentMode, commentMarker, isCommentFeature } from '~/utils/map_comments';
 import { BiodiversityMode, isObservationFeature, observationMarker } from '~/utils/map_biodiversity';
 
@@ -337,6 +345,7 @@ export default class extends Controller {
       // pastilles rondes.
       pointToLayer: (feature, latlng) => {
         if (isPlantFeature(feature)) return plantMarker(L, feature, latlng);
+        if (isNetworkFeature(feature)) return networkNodeMarker(L, feature, latlng);
         if (isCommentFeature(feature)) return commentMarker(L, feature, latlng);
         if (isObservationFeature(feature)) return observationMarker(L, feature, latlng);
         if (this.isWelcome(feature)) return welcomeMarker(L, feature, latlng);
@@ -363,13 +372,19 @@ export default class extends Controller {
     if (name) {
       // Le nom d'une plante se pose à droite de sa pastille, pas dessus.
       const plant = isPlantFeature(feature);
-      // Un relevé (phase 13) : l'espèce à droite de sa pastille.
+      // Un relevé (phase 13) et un nœud de réseau (phase 9) aussi ; le nom d'un
+      // objet de réseau n'apparaît qu'au zoom 19.
       const observation = isObservationFeature(feature);
+      const node = isNetworkFeature(feature) && feature.geometry?.type === 'Point';
+      const network = isNetworkFeature(feature) ? ' map-network-label' : '';
+      const aside = plant || observation || node;
       layer.bindTooltip(name, {
         permanent: true,
-        direction: plant || observation ? 'right' : 'center',
-        offset: plant || observation ? [4, 0] : [0, 0],
-        className: plant ? 'map-feature-label map-plant-label' : observation ? 'map-feature-label map-observation-label' : 'map-feature-label',
+        direction: aside ? 'right' : 'center',
+        offset: aside ? [4, 0] : [0, 0],
+        className:
+          (plant ? 'map-feature-label map-plant-label' : observation ? 'map-feature-label map-observation-label' : 'map-feature-label') +
+          network,
       });
     }
     layer.on('click', (event) => {
@@ -407,6 +422,10 @@ export default class extends Controller {
     const weight = selected ? 5 : 2;
     if (this.isVenue(feature)) return this.venueStyle(feature, selected);
     if (this.isWelcome(feature)) return welcomeStyle(feature, selected);
+    // Réseaux (phase 9) : la couleur vient du JSON, ou de la couche active
+    // pour ce qu'on dessine.
+    const networkColor = feature?.properties?.color || this.layerNetworkColor(feature?.properties?.layer_id);
+    if (networkColor) return networkStyle(feature, networkColor, selected);
     if (type === 'Polygon') {
       return { color: FOREST, weight, fillColor: FOREST, fillOpacity: 0.25 };
     }
@@ -428,6 +447,19 @@ export default class extends Controller {
     const container = this.map.getContainer();
     container.classList.toggle('map-labels-hidden', this.map.getZoom() < LABEL_MIN_ZOOM);
     container.classList.toggle('map-plant-glyphs-hidden', this.map.getZoom() < PLANT_GLYPH_MIN_ZOOM);
+    container.classList.toggle('map-network-labels-hidden', this.map.getZoom() < NETWORK_LABEL_MIN_ZOOM);
+  }
+
+  // Réseaux (phase 9) : la couleur d'une couche réseau, lue sur son bouton du
+  // panneau (`data-network-color`) ; rien pour une autre couche.
+  layerNetworkColor(layerId) {
+    if (layerId == null) return null;
+    return this.layerNameTargets.find((b) => b.dataset.layerId === String(layerId))?.dataset.networkColor || null;
+  }
+
+  // « N'afficher qu'un réseau » (phase 9) : `utils/map_networks.js`.
+  filterNetwork(event) {
+    applyNetworkFilter(this, event.target.value);
   }
 
   toggleLayer(event) {
@@ -461,7 +493,7 @@ export default class extends Controller {
       button.setAttribute('aria-current', active ? 'true' : 'false');
     });
 
-    const editable = ['management', 'venues', 'welcome'].includes(kind) && this.geomanReady;
+    const editable = ['management', 'venues', 'welcome', 'network'].includes(kind) && this.geomanReady;
     // Les gîtes et salles se tracent en zones : point et ligne restent à la
     // Gestion.
     this.toolTargets.forEach((button) => {
@@ -554,7 +586,12 @@ export default class extends Controller {
       const field = this.geometryField();
       if (field) field.value = JSON.stringify(this.pendingGeometry);
     });
-    const kind = { Point: 'point', LineString: 'path', Polygon: 'zone' }[this.pendingGeometry.type] || 'point';
+    // Sur une couche réseau (phase 9), un point est un nœud et une ligne un tracé.
+    const kinds =
+      this.activeLayerKind === 'network'
+        ? { Point: 'node', LineString: 'line' }
+        : { Point: 'point', LineString: 'path', Polygon: 'zone' };
+    const kind = kinds[this.pendingGeometry.type] || 'point';
     this.selectedFeatureId = null;
     this.openPanel(
       `${this.newFeatureUrlValue}?layer_id=${encodeURIComponent(this.activeLayerId)}&feature_kind=${kind}`
@@ -700,6 +737,11 @@ export default class extends Controller {
           layer.plantSelected = selected;
           layer.setIcon(plantIcon(L, layer.feature, selected));
           layer.setZIndexOffset(selected ? 1000 : layer.feature.properties?.dead ? -100 : 0);
+        }
+        if (layer.setIcon && isNetworkFeature(layer.feature) && layer.networkSelected !== selected) {
+          layer.networkSelected = selected;
+          layer.setIcon(networkNodeIcon(L, layer.feature, selected));
+          layer.setZIndexOffset(selected ? 1000 : 200);
         }
         this.comments?.highlight(layer, selected);
         this.biodiversity?.highlight(layer, selected);

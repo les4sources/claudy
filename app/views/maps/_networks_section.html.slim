@@ -1,0 +1,34 @@
+/ Les réseaux (epic #348, phase 9) : Eau, Électricité, Ethernet, pour qu'un
+  dimanche soir on sache où couper. Comme les autres couches : la case affiche
+  ou masque, le nom rend la couche ACTIVE (la barre d'outils propose alors
+  Nœud et Tracé). Le sélecteur n'affiche qu'un réseau.
+.mt-3.border-t.border-stone-100.pt-3 data-map-networks-section="true"
+  p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Réseaux
+  ul.space-y-1
+    - layers.each do |couche|
+      li.flex.items-center.gap-2 data-layer-id=couche.id data-layer-kind=couche.kind
+        input[type="checkbox" checked=true
+              class="h-4 w-4 rounded border-stone-300 text-4s-main focus:ring-teal-400"
+              aria-label="Afficher #{couche.name}"
+              data-map-target="layerToggle"
+              data-layer-id=couche.id
+              data-network=couche.network
+              data-action="change->map#toggleLayer"]
+        button[type="button"
+               class="flex flex-1 items-center gap-2 truncate rounded-lg px-2 py-1.5 text-left text-sm text-stone-600 hover:bg-stone-50"
+               data-map-target="layerName"
+               data-layer-id=couche.id
+               data-layer-kind=couche.kind
+               data-network=couche.network
+               data-network-color=couche.network_color
+               data-action="click->map#activateLayer"]
+          span.inline-block.h-2.5.w-2.5.flex-shrink-0.rounded-full style="background: #{couche.network_color}" aria-hidden="true"
+          span.truncate = couche.name
+  label.mt-2.block.px-2
+    span.sr-only N'afficher qu'un réseau
+    select[class="h-9 w-full rounded-lg border-stone-300 py-1 text-sm text-stone-600 shadow-sm focus:border-forest focus:ring-forest"
+           data-map-network-filter="true"
+           data-action="change->map#filterNetwork"]
+      option value="all" Tous les réseaux
+      - layers.each do |couche|
+        option value=couche.network = "Seulement : #{couche.name}"
