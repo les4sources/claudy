@@ -65,6 +65,10 @@ export default class extends Controller {
     venueUrl: String,
     date: String,
     today: String,
+    // Phase 6 : l'objet à montrer en arrivant (`/map?feature=<id>`, lien du
+    // carnet) et les objets porteurs d'une tâche du mois (vue « ce mois-ci »).
+    focusFeature: Number,
+    currentTasksUrl: String,
   };
 
   connect() {
@@ -264,6 +268,9 @@ export default class extends Controller {
 
     this.updateDateBar();
     await this.loadOccupancy();
+    if (!this.map) return;
+    // Après la couche active par défaut : l'objet demandé par l'URL l'emporte.
+    this.focusFeature();
   }
 
   async loadLayer(id) {
@@ -296,6 +303,9 @@ export default class extends Controller {
     if (!toggle || toggle.checked) group.addTo(this.map);
     this.ensureHatchPattern();
     this.updateLabels();
+    // Une couche rechargée (enregistrement, suppression) recrée ses tracés : la
+    // vue « ce mois-ci » doit les reprendre.
+    this.applyMonthFocus();
     return group;
   }
 
@@ -363,6 +373,8 @@ export default class extends Controller {
       if (event.target.checked) group.addTo(this.map);
       else this.map.removeLayer(group);
     }
+    // Les éléments SVG d'une couche rallumée sont neufs : sans leurs classes.
+    this.applyMonthFocus();
     const visibility = this.readVisibility();
     visibility[id] = event.target.checked;
     this.writeVisibility(visibility);
@@ -627,6 +639,91 @@ export default class extends Controller {
     });
     if (!response.ok) this.showNotice("L'enregistrement a échoué — rechargez la page.");
     return response;
+  }
+
+  // ── Carnet de gestion (epic #348, phase 6) ────────────────────────────────
+  //
+  // `/map?feature=<id>` : le lien du carnet. La carte se centre sur l'objet,
+  // rallume et active sa couche, et ouvre sa fiche. Le serveur ne transmet que
+  // l'id d'un objet vivant ; un objet absent des couches chargées (couche en
+  // échec réseau) est ignoré sans bruit.
+
+  focusFeature() {
+    const id = this.focusFeatureValue ? String(this.focusFeatureValue) : null;
+    const found = id && this.findFeatureLayer(id);
+    if (!found) return;
+    const { layer, layerId } = found;
+
+    const toggle = this.layerToggleTargets.find((t) => t.dataset.layerId === String(layerId));
+    if (toggle && !toggle.checked) {
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event('change'));
+    }
+    const kind = this.layerKinds[String(layerId)];
+    if (kind) this.setActiveLayer(layerId, kind);
+
+    // Sur grand écran, la fiche couvre la droite de la carte : l'objet se
+    // centre dans ce qui reste visible.
+    const wide = window.matchMedia('(min-width: 768px)').matches;
+    const padding = { paddingTopLeft: [40, 40], paddingBottomRight: wide ? [420, 40] : [40, 40], maxZoom: 19 };
+    if (layer.getBounds) this.map.fitBounds(layer.getBounds(), padding);
+    else if (layer.getLatLng) this.map.setView(layer.getLatLng(), Math.max(this.map.getZoom(), 19));
+
+    if (this.isVenue(layer.feature)) this.selectVenue(layer.featureId);
+    else this.selectFeature(layer.featureId);
+  }
+
+  findFeatureLayer(id) {
+    for (const [layerId, group] of Object.entries(this.featureLayers || {})) {
+      let match = null;
+      group.eachLayer((layer) => {
+        if (String(layer.featureId) === id) match = layer;
+      });
+      if (match) return { layer: match, layerId };
+    }
+    return null;
+  }
+
+  // Vue « ce mois-ci » : les objets porteurs d'une tâche du mois en cours
+  // ressortent, les autres s'estompent (préfigure la recherche, phase 14). Des
+  // classes CSS plutôt que `setStyle` : la sélection d'un objet réécrit son
+  // style, elle ne touche pas à ses classes.
+  async toggleMonthFocus(event) {
+    const checkbox = event.target;
+    this.monthFocus = null;
+    if (checkbox.checked && this.hasCurrentTasksUrlValue) {
+      const response = await fetch(this.currentTasksUrlValue, {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+      if (!response.ok) {
+        checkbox.checked = false;
+        this.showNotice('Les tâches du mois ne se chargent pas — réessayez.');
+        return;
+      }
+      const data = await response.json();
+      // Décochée pendant le chargement : on n'applique rien.
+      if (!checkbox.checked || !this.map) return;
+      this.monthFocus = new Set((data.feature_ids || []).map(String));
+      if (this.monthFocus.size === 0) this.showNotice(`Aucune tâche en ${String(data.month_name).toLowerCase()}.`);
+    }
+    this.applyMonthFocus();
+  }
+
+  applyMonthFocus() {
+    const focus = this.monthFocus;
+    Object.values(this.featureLayers || {}).forEach((group) => {
+      group.eachLayer((layer) => {
+        const inFocus = Boolean(focus) && focus.has(String(layer.featureId));
+        const dimmed = Boolean(focus) && !inFocus;
+        const element = layer.getElement?.();
+        if (element) {
+          element.classList.toggle('map-month-task', inFocus);
+          element.classList.toggle('map-month-dimmed', dimmed);
+        }
+        layer.getTooltip?.()?.getElement?.()?.classList.toggle('map-month-dimmed', dimmed);
+      });
+    });
   }
 
   // ── Carte du jour (epic #348, phase 3) ────────────────────────────────────

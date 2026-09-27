@@ -145,6 +145,50 @@ RSpec.describe "Carte du domaine — tâches et carnet (epic #348, phase 6)", ty
       end
     end
 
+    describe "/map?feature=<id> et la vue « ce mois-ci »" do
+      before do
+        MapBaseLayer.create!(key: "test-layer", name: "Couche de test", min_zoom: 12, max_zoom: 20,
+                             bounds: { "south" => 50.339, "west" => 4.903, "north" => 50.343, "east" => 4.912 })
+      end
+
+      def map_root = Nokogiri::HTML(response.body).at_css("[data-controller='map']")
+
+      it "transmet l'objet à montrer à la carte" do
+        get map_path(feature: feature.id)
+        expect(response).to have_http_status(:ok)
+        expect(map_root["data-map-focus-feature-value"]).to eq(feature.id.to_s)
+        expect(map_root["data-map-current-tasks-url-value"]).to eq(map_tasks_current_path(format: :json))
+      end
+
+      it "ignore sans erreur un id inconnu, supprimé ou illisible" do
+        gone = zone("Disparue").tap { |f| f.soft_delete!(validate: false) }
+        [gone.id, 999_999, "abc", "1 OR 1=1"].each do |value|
+          get map_path(feature: value)
+          expect(response).to have_http_status(:ok)
+          expect(map_root["data-map-focus-feature-value"]).to be_nil
+        end
+      end
+
+      it "propose la case « ce mois-ci » dans le panneau" do
+        get map_path
+        expect(Nokogiri::HTML(response.body).at_css("input[data-map-month-toggle][data-action='change->map#toggleMonthFocus']")).to be_present
+      end
+
+      it "liste en JSON les objets porteurs d'une tâche du mois courant, objets supprimés exclus" do
+        travel_to(Date.new(2026, 10, 2)) do
+          feature.map_tasks.create!(label: "Fauche", months: [3, 10])
+          feature.map_tasks.create!(label: "Broyage", months: [10])
+          zone("Le verger").map_tasks.create!(label: "Taille", months: [2])
+          zone("Disparue").tap { |f| f.map_tasks.create!(label: "Oubliée", months: [10]) }.soft_delete!(validate: false)
+
+          get map_tasks_current_path(format: :json)
+
+          body = JSON.parse(response.body)
+          expect(body).to include("month" => 10, "month_name" => "Octobre", "feature_ids" => [feature.id])
+        end
+      end
+    end
+
     describe "PATCH et DELETE /map/tasks/:id" do
       let!(:task) { feature.map_tasks.create!(label: "Fauche", months: [6]) }
 

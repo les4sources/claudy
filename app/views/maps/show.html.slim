@@ -28,7 +28,9 @@
         data-map-occupancy-url-value=map_occupancy_path(format: :json)
         data-map-venue-url-value=map_venue_path(id: "__ID__")
         data-map-date-value=@date.iso8601
-        data-map-today-value=Date.current.iso8601]
+        data-map-today-value=Date.current.iso8601
+        data-map-focus-feature-value=@focus_feature_id
+        data-map-current-tasks-url-value=map_tasks_current_path(format: :json)]
 
       / Le fond de la carte hors emprise : uni, couleur `sand` du thème. Pas
         d'OpenStreetMap ni de Google — aucune clé tierce sur cette page.
@@ -103,6 +105,15 @@
                 rect x="3" y="4" width="18" height="18" rx="2"
                 path d="M16 2v4M8 2v4M3 10h18"
               span.flex-1 Carnet
+            / Vue « ce mois-ci » : les objets à travailler ce mois-ci ressortent,
+              les autres s'estompent.
+            label.mt-1.flex.cursor-pointer.items-center.gap-2.px-2.py-1.5.text-sm.text-stone-600
+              input[type="checkbox"
+                    class="h-4 w-4 rounded border-stone-300 text-4s-main focus:ring-teal-400"
+                    data-map-month-toggle="true"
+                    data-action="change->map#toggleMonthFocus"]
+              span.flex-1 Ce mois-ci
+              span class="text-[0.65rem] text-stone-400" = MapTask.month_name(Date.current.month).downcase
 
       / Barre d'outils du mode Gestion (phase 2) : visible quand la couche
         active est de kind `management`. Les outils sont ceux de Geoman.
