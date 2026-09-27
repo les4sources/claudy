@@ -117,6 +117,11 @@
               span[class="min-w-[1.5rem] rounded-full bg-ember px-1.5 py-0.5 text-center text-[0.7rem] font-semibold tabular-nums text-white #{'hidden' if @unplaced_count.zero?}"
                    data-map-target="unplacedCount"]
                 = @unplaced_count
+            = link_to map_recoltes_path, class: "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-50", data: { map_recoltes_link: true } do
+              svg.h-4.w-4.text-stone-500 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                path d="M12 22c4-2 7-6 7-11a7 7 0 0 0-14 0c0 5 3 9 7 11z"
+                path d="M12 4c0-1 1-2 3-2"
+              span.flex-1 Récoltes
           / Le carnet de gestion (phase 6) : les tâches des objets, mois par mois.
           .mt-3.border-t.border-stone-100.pt-3
             p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Gestion

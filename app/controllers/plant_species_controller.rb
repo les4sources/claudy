@@ -6,7 +6,7 @@ class PlantSpeciesController < BaseController
   LIMIT = 10
 
   # GET /map/species.json?q=pom
-  def index
+  def autocomplete
     species = PlantSpecies.search(params[:q]).ordered.limit(LIMIT)
     render json: species.map { |s| { id: s.id, name: s.name, latin_name: s.latin_name, label: s.full_name } }
   end

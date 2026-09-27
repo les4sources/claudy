@@ -456,8 +456,17 @@ Rails.application.routes.draw do
       # par `/map/tasks/:id`.
       resources :map_tasks, path: "tasks", only: %i[create]
     end
-    get "species", to: "plant_species#index", as: :map_species
+    get "species", to: "plant_species#autocomplete", as: :map_species
     get "species/:id/varieties", to: "plant_species#varieties", as: :map_species_varieties
+    # Les pages annexes des plantes (phase 7), en français comme le carnet :
+    # le calendrier des récoltes, la liste de toutes les plantes, le catalogue
+    # des espèces (fiche éditable, variétés, fenêtres de récolte par défaut).
+    get "recoltes", to: "harvest_calendar#index", as: :map_recoltes
+    get "plantes", to: "plants#index", as: :map_plantes
+    resources :plant_species, path: "especes", as: :map_especes, only: %i[index show update destroy] do
+      resources :plant_varieties, path: "varietes", as: :varieties, only: %i[create update destroy]
+      resource :harvest, controller: "species_harvests", as: :harvest, only: %i[update destroy]
+    end
   end
 
   # Organisation
