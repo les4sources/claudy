@@ -437,6 +437,12 @@ Rails.application.routes.draw do
         delete "photos/:photo_id", action: :destroy_photo, as: :photo
         post :unplace
       end
+      # Le calendrier de récolte propre à la plante : PATCH remplace toutes ses
+      # fenêtres, DELETE la rend à celui de l'espèce, `customize` copie celui de
+      # l'espèce pour le modifier.
+      resource :harvest, controller: "plant_harvests", only: %i[update destroy] do
+        post :customize
+      end
     end
     get "species", to: "plant_species#index", as: :map_species
     get "species/:id/varieties", to: "plant_species#varieties", as: :map_species_varieties

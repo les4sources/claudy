@@ -251,9 +251,10 @@ div[class="pointer-events-auto flex h-full flex-col overflow-hidden bg-white sha
                                accept: Plant.accepted_photo_types.join(","),
                                onchange: "this.form && this.form.requestSubmit()"
 
-      / TODO phase 7 B2 — Récolte : grille parties × mois, « hérité de l'espèce »
-        tant que la plante n'a pas de fenêtre propre, bouton pour surcharger.
-      section.mt-6 id=dom_id(plant, :harvest) data-plant-section="harvest"
+      / ── Récolte · notes datées · tâches ────────────────────────────────
+        Trois sections hors du formulaire du dossier, remplacées chacune seule
+        en Turbo Stream : la saisie en cours dans le dossier n'est pas perdue.
+      = render "plants/harvest", plant: plant
 
       / TODO phase 7 B2 — Notes datées : liste antéchronologique, ajout inline
         avec la date (`MapNote`, sujet = la plante).

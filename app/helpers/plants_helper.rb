@@ -50,4 +50,23 @@ module PlantsHelper
   def plant_section_summary(*values)
     values.compact_blank.join(" · ").presence
   end
+
+  # La couleur d'une partie dans la grille de récolte : le fruit en `ember`,
+  # la fleur en rose doux, la feuille en vert, graine et racine en brun, la
+  # sève en ambre. Classes complètes (et dans la safelist) pour Tailwind.
+  HARVEST_PART_COLORS = {
+    "fruit" => "bg-ember",
+    "flower" => "bg-rose-300",
+    "leaf" => "bg-green-600",
+    "seed" => "bg-amber-700",
+    "root" => "bg-amber-900",
+    "sap" => "bg-amber-400",
+    "other" => "bg-stone-400"
+  }.freeze
+
+  def harvest_part_color(part) = HARVEST_PART_COLORS.fetch(part.to_s, "bg-stone-400")
+
+  # « 3 mai 2026 » : le format `long` de la locale pose une espace devant les
+  # jours à un chiffre.
+  def plant_note_date(date) = l(date, format: "%-d %B %Y")
 end
