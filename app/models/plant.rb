@@ -73,7 +73,7 @@ class Plant < ApplicationRecord
   # fenêtres, tâches et notes ; les listes les écartent (`with_live_subject`).
   has_many :harvest_windows, -> { ordered }, class_name: "PlantHarvestWindow", as: :owner, inverse_of: :owner
   has_many :map_tasks, as: :subject, inverse_of: :subject
-  has_many :notes, -> { recent_first }, class_name: "MapNote", as: :subject, inverse_of: :subject
+  has_many :map_notes, -> { recent_first }, class_name: "MapNote", as: :subject, inverse_of: :subject
 
   before_validation :normalize
   before_validation :derive_species_from_variety
@@ -248,6 +248,7 @@ class Plant < ApplicationRecord
   def normalize
     self.name = name.to_s.squish.presence
     self.zone = zone.to_s.squish.presence
+    self.notes = notes.to_s.strip.presence
     %i[health production habit stratum population stock_type nursery notion_url].each do |attribute|
       self[attribute] = self[attribute].presence
     end

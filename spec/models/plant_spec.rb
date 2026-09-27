@@ -265,9 +265,9 @@ RSpec.describe Plant, type: :model do
     end
 
     it "liste ses notes de la plus récente à la plus ancienne" do
-      old = p.notes.create!(body: "Plantée", noted_on: Date.new(2024, 11, 25))
-      recent = p.notes.create!(body: "Chancre sur une branche", noted_on: Date.new(2026, 5, 3))
-      expect(p.notes.reload).to eq([recent, old])
+      old = p.map_notes.create!(body: "Plantée", noted_on: Date.new(2024, 11, 25))
+      recent = p.map_notes.create!(body: "Chancre sur une branche", noted_on: Date.new(2026, 5, 3))
+      expect(p.map_notes.reload).to eq([recent, old])
       expect(MapNote.with_live_subject).to contain_exactly(recent, old)
 
       p.soft_delete!(validate: false)

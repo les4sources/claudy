@@ -84,11 +84,8 @@ class PlantsController < BaseController
     @assign_errors = []
     @typed_names = attrs.slice(:species_name, :variety_name).to_h.symbolize_keys
 
-    simple = attrs.except(:species_name, :variety_name, :purchase_price, :photos, :number, :notes)
+    simple = attrs.except(:species_name, :variety_name, :purchase_price, :photos, :number)
     @plant.assign_attributes(simple)
-    # La colonne `notes` (texte libre) est masquée par l’association des notes
-    # datées (`Plant#notes`, `MapNote`) : on l’écrit par l’ttribut brut.
-    @plant[:notes] = attrs[:notes].to_s.strip.presence if attrs.key?(:notes)
     # « #42 » comme « 42 », « 9,1 » comme « 9.1 ».
     @plant.number = attrs[:number].to_s.strip.delete_prefix("#").tr(",", ".").presence if attrs.key?(:number)
     # La date fait foi pour l'année ; l'année seule reste possible (import Notion).

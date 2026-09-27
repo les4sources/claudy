@@ -70,7 +70,7 @@ RSpec.describe "Carte du domaine — plantes (epic #348, phase 7)", type: :reque
                                           production: "high", plant_count: 2, nursery: "Pépinière Bauwens",
                                           planted_on: Date.new(2021, 11, 20), planted_year: 2021, altitude: 185)
         expect(placed.number_label).to eq("7")
-        expect(placed[:notes]).to eq("Taille en février.")
+        expect(placed.notes).to eq("Taille en février.")
         # Le point sur la carte porte le nouveau nom.
         expect(placed.map_feature.reload.name).to eq("Le grand pommier")
       end
