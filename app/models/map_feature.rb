@@ -81,6 +81,9 @@ class MapFeature < ApplicationRecord
   # Miniature, aperçu et refus clair des formats illisibles : `HasMapPhotos`,
   # partagé avec les plantes.
   include HasMapPhotos
+  # Un relevé de biodiversité (phase 13) : règne, espèce, date, observateur et
+  # effectif dans les `properties` d'un point `observation`.
+  include MapFeatureObservation
 
   validates :feature_kind, inclusion: { in: FEATURE_KINDS }
   validate :geometry_is_valid_geojson
@@ -176,7 +179,8 @@ class MapFeature < ApplicationRecord
   # n'est lue que pour un point `plant` : `as_geojson` appelle ceci pour chaque
   # objet de la carte.
   def display_name
-    name(:fr).presence || venue_names.presence || (plant&.display_name if plant_point?)
+    name(:fr).presence || venue_names.presence || (plant&.display_name if plant_point?) ||
+      (species_common if observation_point?)
   end
 
   def plant_point? = feature_kind == "plant"
@@ -204,7 +208,7 @@ class MapFeature < ApplicationRecord
         venue_keys: venue_keys,
         photos_count: photos.size,
         properties: properties
-      }.merge(plant_geojson_properties).merge(comment_geojson_properties)
+      }.merge(plant_geojson_properties).merge(comment_geojson_properties).merge(observation_geojson_properties)
     }
   end
 
