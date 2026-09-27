@@ -93,6 +93,12 @@ RSpec.describe "Api::V1 OpenAPI", type: :request do
       end
     end
 
+    it "les annonce dans l'index de découverte" do
+      get "/api/v1", headers: auth
+      expect(JSON.parse(response.body)["resources"].map { |r| r["name"] })
+        .to include("plant_species", "plant_varieties", "plants", "map_features", "map_notes", "map_tasks")
+    end
+
     it "décrit les schémas des ressources" do
       expect(spec["components"]["schemas"]).to include("Plant", "PlantDetail", "PlantInput", "PlantSpecies",
                                                        "PlantVariety", "HarvestWindow", "MapNote", "MapFeature",
