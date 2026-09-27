@@ -194,8 +194,17 @@ class MapFeature < ApplicationRecord
         venue_keys: venue_keys,
         photos_count: photos.size,
         properties: properties
-      }
+      }.merge(plant_geojson_properties)
     }
+  end
+
+  # Un point de plante (phase 7) : de quoi colorer et marquer son cercle sans
+  # rouvrir la plante. L'index des objets précharge `:plant`.
+  def plant_geojson_properties
+    return {} unless plant_point? && plant
+
+    { plant_id: plant.id, number: plant.number_label, health: plant.health, stratum: plant.stratum,
+      status: plant.status, dead: plant.dead? }
   end
 
   private

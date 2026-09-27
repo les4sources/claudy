@@ -428,6 +428,18 @@ Rails.application.routes.draw do
     get "occupancy", to: "map_venues#occupancy", as: :map_occupancy
     get "venues/todo", to: "map_venues#todo", as: :map_venues_todo
     get "venues/:id", to: "map_venues#show", as: :map_venue
+    # Les plantes nourricières (phase 7) : la fiche d'une plante placée s'ouvre
+    # au clic sur son point. Espèces et variétés alimentent l'autocomplétion de
+    # la fiche (JSON) ; elles se créent par leur NOM à l'enregistrement de la
+    # plante, jamais par un id arbitraire.
+    resources :plants, only: %i[show update destroy] do
+      member do
+        delete "photos/:photo_id", action: :destroy_photo, as: :photo
+        post :unplace
+      end
+    end
+    get "species", to: "plant_species#index", as: :map_species
+    get "species/:id/varieties", to: "plant_species#varieties", as: :map_species_varieties
   end
 
   # Organisation

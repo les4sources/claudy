@@ -15,6 +15,8 @@ class MapsController < BaseController
     MapLayer.for_kind(:venues)
     MapLayer.for_kind(:management)
     MapLayer.for_kind(:welcome)
+    # Les plantes nourricières (phase 7).
+    MapLayer.for_kind(:plants)
     @date = parse_date(params[:date])
     @layers = MapLayer.ordered.to_a
     # `/map?feature=<id>` (phase 6, lien du carnet) : la carte s'ouvre centrée
