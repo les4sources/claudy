@@ -15,10 +15,11 @@ class MapVenuesController < BaseController
   end
 
   # GET /map/venues/:id?date=… — le panneau du groupe présent, dans la Turbo
-  # Frame de la fiche.
+  # Frame de la fiche. Une section par lieu quand le tracé en représente
+  # plusieurs (issue #370), gîtes puis salles.
   def show
-    @feature = MapFeature.find(params[:id])
-    @venue = @feature.linked
+    @feature = MapFeature.includes(map_feature_venues: :venue).find(params[:id])
+    @venues = @feature.venues
     @occupancy = Maps::DayOccupancy.new(@date)
     render :show, layout: false
   end

@@ -1,0 +1,13 @@
+/ Le parcours de disc-golf du domaine (epic #348, phase 5), géré par le club
+  Disc Golf Attitude : l'accès et les initiations se réservent chez lui.
+section.mt-6.rounded-2xl.border.p-5.md:p-6(class="bg-forest-tint border-bark" data-stay-disc-golf="true")
+  .flex.items-start.gap-3
+    span.text-forest.flex-shrink-0.mt-0.5
+      = funnel_icon :disc, css_class: "w-6 h-6"
+    div.min-w-0
+      h2.funnel-section-title.mb-1 = t("public.stays.disc_golf.heading")
+      p.text-base.text-ink.mb-1 = t("public.stays.disc_golf.body")
+      p.text-sm.mb-4(class="text-moss") = t("public.stays.disc_golf.club")
+      = link_to t("public.stays.disc_golf.cta"), Public::StaysController::DISC_GOLF_CLUB_URL,
+                target: "_blank", rel: "noopener",
+                class: "inline-flex items-center gap-2 rounded-xl bg-forest px-5 py-2.5 text-sm font-semibold text-sand shadow-sm hover:bg-forest-soft"

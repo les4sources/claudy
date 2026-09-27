@@ -70,6 +70,21 @@ fr:
         body: "Tranches de Vie, notre boulangerie-épicerie, prépare votre arrivée : pain au levain et produits du coin à pré-commander pour le jour où vous posez vos sacs."
         pizza: "Envie d'une soirée mémorable ? Réservez une Pizza Party privée au four à bois."
         cta: "Commander sur Tranches de Vie"
+        advance: "Pensez à réserver votre pain à l'avance."
+      events:
+        heading: "Pendant votre séjour"
+        intro: "Ce qui se passe au domaine pendant que vous êtes là."
+        datetime: "%A %-d %B, %H:%M"
+        more: "En savoir plus"
+      grocery:
+        heading: "L'épicerie"
+        body: "Une petite épicerie en self-service vous attend sur le domaine : pâtes et riz en vrac, lait, muesli, jus de pommes… De quoi dépanner sans reprendre la voiture."
+        how: "Vous vous servez, vous notez vos achats dans le carnet, et vous payez sur place."
+      disc_golf:
+        heading: "Disc-golf"
+        body: "Le domaine abrite un parcours de disc-golf, à parcourir en famille ou entre amis."
+        club: "Le parcours est géré par le club Disc Golf Attitude : l'accès et les initiations se réservent auprès du club."
+        cta: "Découvrir le club"
       map:
         heading: "La carte du domaine"
         body: "Quinze hectares à explorer : où se promener, où l'on ne va pas, et où trouver le parking, le bois, le four ou l'épicerie. Elle vous situe aussi sur le terrain."

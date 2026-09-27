@@ -19,10 +19,14 @@ RSpec.describe "Public /sejour/:token — séjour Airbnb / Booking.com", type: :
     stay
   end
 
+  # Le prix tel que la page l'afficherait. Pas « 485 » nu : ce motif apparaît
+  # aussi dans le tracé SVG d'une icône (`2.485`), d'où un faux échec.
+  let(:ota_price) { ApplicationController.helpers.humanized_money_with_symbol(Money.new(48_500)) }
+
   def expect_no_pricing_nor_payment
     expect(response).to have_http_status(:ok)
     expect(response.body).to include('data-stay-items="true"')
-    expect(response.body).not_to include("485")
+    expect(response.body).not_to include(ota_price)
     expect(response.body).not_to include('data-stay-total="true"')
     expect(response.body).not_to include(I18n.t("public.stays.payments.heading"))
     expect(response.body).not_to include('data-stay-balance-cta="true"')
@@ -50,6 +54,7 @@ RSpec.describe "Public /sejour/:token — séjour Airbnb / Booking.com", type: :
   it "garde tarif et paiements pour un séjour réservé en direct" do
     get "/sejour/#{build_stay.token}"
 
+    expect(response.body).to include(ota_price)
     expect(response.body).to include('data-stay-total="true"')
     expect(response.body).to include(I18n.t("public.stays.payments.heading"))
   end

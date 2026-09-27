@@ -25,22 +25,29 @@ module Maps
       spaces.where.not(id: traced_ids("Space"))
     end
 
-    # Les choix du sélecteur de la fiche : ce qui n'est pas encore tracé, plus
-    # ce que l'objet affiché représente déjà.
+    # Les cases de la fiche : ce qui n'est pas encore tracé, plus ce que
+    # l'objet affiché représente déjà.
     def options_for(feature)
       lodging_options = lodgings.reject { |l| traced?("Lodging", l.id, feature) }.map { |l| [l.name, "Lodging:#{l.id}"] }
       space_options = spaces.reject { |s| traced?("Space", s.id, feature) }.map { |s| [s.name, "Space:#{s.id}"] }
       { "Gîtes" => lodging_options, "Salles et espaces" => space_options }
     end
 
+    # Un lieu relié à n'importe quel tracé vivant, seul ou avec d'autres
+    # (issue #370). Les liaisons d'un tracé supprimé sont effacées avec lui ; le
+    # filtre sur `deleted_at` n'est qu'une ceinture.
     def traced_ids(type)
-      MapFeature.where(linked_type: type).where.not(linked_id: nil).select(:linked_id)
+      links(type).select(:venue_id)
     end
 
     def traced?(type, id, feature)
-      scope = MapFeature.where(linked_type: type, linked_id: id)
-      scope = scope.where.not(id: feature.id) if feature.persisted?
+      scope = links(type).where(venue_id: id)
+      scope = scope.where.not(map_feature_id: feature.id) if feature.persisted?
       scope.exists?
+    end
+
+    def links(type)
+      MapFeatureVenue.joins(:map_feature).where(venue_type: type, map_features: { deleted_at: nil })
     end
   end
 end

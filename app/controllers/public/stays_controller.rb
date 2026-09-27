@@ -20,6 +20,9 @@ module Public
     UPCOMING_VISIBLE = 4
     PAST_VISIBLE = 3
 
+    # Le club qui gère le parcours de disc-golf du domaine (epic #348, phase 5).
+    DISC_GOLF_CLUB_URL = "https://www.discgolfattitude.be".freeze
+
     def show
       stay = Stay.find_by!(token: params[:token])
       @stay = stay.decorate
@@ -28,11 +31,23 @@ module Public
       # Le bouton « Ouvrir la carte » (epic #348, phase 4) n'a de sens qu'avec
       # un fond de carte installé.
       @map_available = MapBaseLayer.exists?
+      @stay_events = events_during(stay)
     rescue ActiveRecord::RecordNotFound
       raise ActionController::RoutingError, "Not Found"
     end
 
     private
+
+    # Les événements publiés sur le site qui tombent pendant le séjour, de
+    # l'arrivée au départ inclus (epic #348, phase 5). Un brouillon n'a pas
+    # d'adresse publique : il ne sort jamais.
+    def events_during(stay)
+      return Event.none if stay.arrival_date.blank? || stay.departure_date.blank?
+
+      Event.published
+           .where(starts_at: stay.arrival_date.beginning_of_day..stay.departure_date.end_of_day)
+           .order(:starts_at)
+    end
 
     # Les AUTRES séjours confirmés du même client (Michael, 2026-08-20). Un
     # client fidèle des 4 Sources revient : il doit retrouver ses dates depuis

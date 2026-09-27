@@ -74,6 +74,21 @@ en:
         body: "Tranches de Vie, our bakery and grocery, gets ready for your arrival: sourdough bread and local produce to pre-order for the day you drop your bags."
         pizza: "Fancy a memorable evening? Book a private Pizza Party at the wood-fired oven."
         cta: "Order from Tranches de Vie"
+        advance: "Remember to order your bread in advance."
+      events:
+        heading: "During your stay"
+        intro: "What's happening on the estate while you're here."
+        datetime: "%A %-d %B, %H:%M"
+        more: "Find out more"
+      grocery:
+        heading: "The grocery"
+        body: "A small self-service grocery awaits you on the estate: pasta and rice in bulk, milk, muesli, apple juice… Enough to get by without taking the car."
+        how: "Help yourself, write down what you take in the notebook, and pay on site."
+      disc_golf:
+        heading: "Disc golf"
+        body: "The estate is home to a disc golf course, to play with family or friends."
+        club: "The course is run by the Disc Golf Attitude club: access and introductory sessions are booked with the club."
+        cta: "Discover the club"
       map:
         heading: "Map of the estate"
         body: "Fifteen hectares to explore: where to wander, where not to go, and where to find the car park, firewood, the oven or the grocery. It also shows you where you are on the ground."

@@ -1343,6 +1343,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
     t.index ["key"], name: "index_map_base_layers_on_key", unique: true
   end
 
+  create_table "map_feature_venues", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "map_feature_id", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "venue_id", null: false
+    t.string "venue_type", null: false
+    t.index ["map_feature_id"], name: "index_map_feature_venues_on_map_feature_id"
+    t.index ["venue_type", "venue_id"], name: "index_map_feature_venues_on_venue_type_and_venue_id", unique: true
+  end
+
   create_table "map_features", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "created_by_id"
@@ -1361,7 +1371,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
     t.index ["deleted_at"], name: "index_map_features_on_deleted_at"
     t.index ["feature_kind"], name: "index_map_features_on_feature_kind"
     t.index ["linked_type", "linked_id"], name: "index_map_features_on_linked"
-    t.index ["linked_type", "linked_id"], name: "index_map_features_on_linked_unique_live", unique: true, where: "((deleted_at IS NULL) AND (linked_id IS NOT NULL))"
     t.index ["map_layer_id"], name: "index_map_features_on_map_layer_id"
   end
 
@@ -2347,6 +2356,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
   add_foreign_key "lodging_compositions", "lodgings", column: "composite_lodging_id"
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"
+  add_foreign_key "map_feature_venues", "map_features"
   add_foreign_key "map_features", "map_layers"
   add_foreign_key "map_features", "users", column: "created_by_id"
   add_foreign_key "map_layers", "users", column: "created_by_id"
