@@ -20,6 +20,9 @@ class MapsController < BaseController
     # Les commentaires en fil (phase 11) : active, la couche fait du clic sur la
     # carte un nouveau commentaire.
     MapLayer.for_kind(:comments)
+    # La biodiversité (phase 13) : active, la couche fait du clic sur la carte
+    # un nouveau relevé.
+    MapLayer.for_kind(:biodiversity)
     @date = parse_date(params[:date])
     @layers = MapLayer.ordered.to_a
     # `/map?feature=<id>` (phase 6, lien du carnet) : la carte s'ouvre centrée
