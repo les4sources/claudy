@@ -1,0 +1,11 @@
+/ L'épicerie en self-service du domaine (epic #348, phase 5). Même grammaire
+  que le bloc boulangerie : on y pense avant de partir, pour savoir ce qu'on
+  trouvera sur place. Texte en dur, traduit dans public.*.yml.
+section.mt-6.rounded-2xl.border.p-5.md:p-6(class="bg-forest-tint border-bark" data-stay-grocery="true")
+  .flex.items-start.gap-3
+    span.text-forest.flex-shrink-0.mt-0.5
+      = funnel_icon :basket, css_class: "w-6 h-6"
+    div.min-w-0
+      h2.funnel-section-title.mb-1 = t("public.stays.grocery.heading")
+      p.text-base.text-ink.mb-1 = t("public.stays.grocery.body")
+      p.text-sm(class="text-moss") = t("public.stays.grocery.how")

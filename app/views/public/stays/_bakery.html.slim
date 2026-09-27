@@ -9,7 +9,12 @@ section.mt-6.rounded-2xl.border.p-5.md:p-6(class="bg-forest-tint border-bark" da
       = funnel_icon :bread, css_class: "w-6 h-6"
     div.min-w-0
       h2.funnel-section-title.mb-1 = t("public.stays.bakery.heading")
-      p.text-base.text-ink.mb-1 = t("public.stays.bakery.body")
+      p.text-base.text-ink.mb-2 = t("public.stays.bakery.body")
+      / L'avertissement qui compte (epic #348, phase 5) : sans réservation, pas
+        de pain garanti. En pastille, pour qu'on ne le lise pas en diagonale.
+      p.mb-2(data-stay-bakery-advance="true")
+        span.inline-flex.items-center.rounded-full.bg-ember-tint.px-3.py-1.text-sm.font-semibold(class="text-ember")
+          = t("public.stays.bakery.advance")
       p.text-sm.mb-4(class="text-moss") = t("public.stays.bakery.pizza")
       = link_to t("public.stays.bakery.cta"), "https://tranchesdevie.les4sources.be",
                 target: "_blank", rel: "noopener",

@@ -1,0 +1,20 @@
+/ « Pendant votre séjour » (epic #348, phase 5) : les événements publiés sur le
+  site qui tombent entre l'arrivée et le départ, du plus proche au plus loin.
+  Le lien mène à la fiche publique de l'événement sur les4sources.be.
+section.funnel-card.mt-6.p-5.md:p-6(data-stay-events="true")
+  h2.funnel-section-title.mb-1 = t("public.stays.events.heading")
+  p.text-sm.mb-2(class="text-moss") = t("public.stays.events.intro")
+  ul.divide-y(class="divide-bark")
+    - events.each do |event|
+      li.flex.items-start.gap-3.py-4(data-stay-event=event.id)
+        span.text-forest.flex-shrink-0.mt-0.5
+          = funnel_icon :calendar, css_class: "w-5 h-5"
+        div.min-w-0
+          p.text-base.font-semibold.text-ink = event.name
+          p.text-sm(class="text-moss")
+            = l(event.starts_at, format: t("public.stays.events.datetime")).upcase_first
+            - if event.location.present?
+              = " · #{event.location}"
+          - if event.public_url
+            = link_to t("public.stays.events.more"), event.public_url, target: "_blank", rel: "noopener",
+                      class: "mt-1 inline-flex items-center gap-1 text-sm font-semibold text-forest hover:underline"
