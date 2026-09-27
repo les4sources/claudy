@@ -119,3 +119,10 @@
   font-size: 0.68rem;
   padding: 0.05rem 0.45rem;
 }
+
+/* Mode Placement (phase 7) : la plante qu'on déplace se signale, et se saisit. */
+.map-plant-pin-wrapper--moving .map-plant-pin {
+  outline: 3px dashed #1f5f4a;
+  outline-offset: 3px;
+  cursor: grab;
+}

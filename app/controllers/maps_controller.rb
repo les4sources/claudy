@@ -23,6 +23,11 @@ class MapsController < BaseController
     # sur l'objet, fiche ouverte. Seul l'id d'un objet VIVANT part vers la page ;
     # un id inconnu, supprimé ou illisible est ignoré sans erreur.
     @focus_feature_id = MapFeature.where(id: params[:feature].to_s[/\A\d+\z/]).pick(:id)
+    # `/map?plant=<id>` (phase 7, liens des récoltes et de la liste) : la fiche
+    # d'une plante, placée ou non, s'ouvre en arrivant.
+    @focus_plant_id = Plant.where(id: params[:plant].to_s[/\A\d+\z/]).pick(:id)
+    # Le compteur « À placer » du panneau ; la carte le tient ensuite à jour.
+    @unplaced_count = Plant.alive.to_place.count
   end
 
   private

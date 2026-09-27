@@ -68,6 +68,40 @@ RSpec.describe "Carte du domaine — placer les plantes (epic #348, phase 7)", t
       end
     end
 
+    describe "la carte" do
+      before do
+        MapBaseLayer.create!(key: "test-layer", name: "Couche de test", min_zoom: 12, max_zoom: 20,
+                             bounds: { "south" => 50.339, "west" => 4.903, "north" => 50.343, "east" => 4.912 })
+      end
+
+      it "montre le compteur « À placer », le tiroir et le bandeau du mode Placement" do
+        get map_path(plant: medlar.id)
+
+        body = response.body
+        expect(body).to include(%(data-map-placement-link="true"), %(data-action="map#openPlacement"))
+        expect(body).to include(%(data-map-target="unplacedCount"), %(data-map-target="placementDrawer"), %(data-placement-banner="true"))
+        expect(body).to match(%r{data-map-target="unplacedCount">\s*3\s*<})
+        expect(body).to include(%(data-map-focus-plant-value="#{medlar.id}"), %(data-map-place-url-value="/map/plants/__ID__/place"))
+      end
+
+      it "ignore une plante inconnue dans l'URL" do
+        get map_path(plant: "999999")
+        expect(response.body).not_to include("data-map-focus-plant-value=")
+      end
+
+      it "propose « Placer sur la carte » et « Je suis devant » dans la fiche d'une plante à placer" do
+        get plant_path(medlar)
+        expect(response.body).to include("Placer sur la carte", "Je suis devant", %(data-action="map#placePlantFromPanel"))
+      end
+
+      it "propose « Déplacer » et « Placer ici (GPS) » dans la fiche d'une plante placée" do
+        reinette.place!(latitude: 50.34, longitude: 4.905)
+        get plant_path(reinette)
+        expect(response.body).to include("Déplacer", "Placer ici (GPS)", %(data-action="map#movePlant"),
+                                         %(data-feature-id="#{reinette.map_feature_id}"))
+      end
+    end
+
     describe "la pose d'un point" do
       it "crée le point dans la couche Plantes et passe la plante « à placer » à « existante »" do
         expect do

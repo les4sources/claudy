@@ -268,6 +268,30 @@ div[class="pointer-events-auto flex h-full flex-col overflow-hidden bg-white sha
             | Ouvrir la fiche Notion
             svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
               path d="M7 17 17 7M8 7h9v9"
+        / Le mode Placement (phase 7) : poser la plante, ou corriger son point
+          — glisser, toucher la carte, ou la position GPS du téléphone.
+        - placement = { plant_id: plant.id, plant_name: plant.display_name, feature_id: plant.map_feature_id }
+        - if plant.placed?
+          .grid.grid-cols-2.gap-2
+            button[type="button" class="flex h-11 items-center justify-center gap-2 rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50"
+                   data=placement.merge(action: "map#movePlant", plant_move: true)]
+              svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                path d="M5 9 2 12l3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"
+              | Déplacer
+            button[type="button" class="flex h-11 items-center justify-center gap-2 rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50"
+                   data=placement.merge(action: "map#gpsPlacePlant", plant_gps: true)]
+              svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                circle cx="12" cy="12" r="3"
+                path d="M12 2v3M12 19v3M2 12h3M19 12h3"
+              | Placer ici (GPS)
+        - elsif !plant.dead?
+          .grid.grid-cols-2.gap-2
+            button[type="button" class="flex h-11 items-center justify-center rounded-lg bg-forest text-sm font-semibold text-white hover:bg-forest-soft"
+                   data=placement.merge(action: "map#placePlantFromPanel", plant_place: true)]
+              | Placer sur la carte
+            button[type="button" class="flex h-11 items-center justify-center rounded-lg border border-forest text-sm font-semibold text-forest hover:bg-forest-tint"
+                   data=placement.merge(action: "map#gpsPlacePlant", plant_gps: true)]
+              | Je suis devant
         - if plant.placed?
           = button_to unplace_plant_path(plant), method: :post,
                       form: { data: { turbo_confirm: "Retirer « #{plant.display_name} » de la carte ? Elle retournera dans la liste « à placer »." } },
