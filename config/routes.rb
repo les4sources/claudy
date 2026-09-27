@@ -437,6 +437,16 @@ Rails.application.routes.draw do
         post :reopen
       end
     end
+    # Les relevés de biodiversité (phase 13). Même création atomique que les
+    # commentaires : `new` sert la fiche d'un point pas encore créé, `create`
+    # pose le point et le relevé ensemble. `index` est la liste du panneau
+    # (Turbo Frame), `species` l'autocomplétion des espèces déjà saisies,
+    # `biodiversite` la page annexe. Avant `resources`, qui lirait sinon
+    # `species` comme un `:id`.
+    get "observations/new", to: "map_observations#new", as: :new_map_observation
+    get "observations/species", to: "map_observations#species", as: :map_observation_species
+    get "biodiversite", to: "map_observations#page", as: :map_biodiversite
+    resources :map_observations, path: "observations", only: %i[index create update]
     # La carte du jour (phase 3) : occupation au jour choisi, panneau du groupe
     # présent, gîtes et salles restant à tracer. Lecture seule.
     get "occupancy", to: "map_venues#occupancy", as: :map_occupancy

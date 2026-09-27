@@ -1,0 +1,53 @@
+/ Les relevés de biodiversité (epic #348, phase 13), du plus récent au plus
+  ancien, avec leurs filtres (règne, espèce, année) et le nombre d'espèces
+  distinctes. `on_map` : dans le panneau de la carte, une ligne centre la carte
+  sur le relevé et ouvre sa fiche ; en page annexe, elle mène à la carte.
+- url = on_map ? map_observations_path : map_biodiversite_path
+- select_class = "h-9 min-w-0 rounded-lg border-stone-300 py-0 pl-2 pr-7 text-xs shadow-sm focus:border-forest focus:ring-forest"
+div data-observation-list="true"
+  = form_with url: url, method: :get, class: "flex flex-wrap gap-1.5" do
+    label.sr-only for="observations_realm" Règne
+    = select_tag :realm, options_for_select([["Flore et faune", ""]] + MapFeatureObservation::REALMS.map { |k, v| [v, k] }, @filters[:realm]),
+                 id: "observations_realm", onchange: "this.form.requestSubmit()", class: select_class
+    label.sr-only for="observations_species" Espèce
+    = select_tag :species, options_for_select([["Toutes les espèces", ""]] + @species_options, @filters[:species]),
+                 id: "observations_species", onchange: "this.form.requestSubmit()", class: "#{select_class} max-w-[10rem]"
+    label.sr-only for="observations_year" Année
+    = select_tag :year, options_for_select([["Toutes les années", ""]] + @years, @filters[:year]),
+                 id: "observations_year", onchange: "this.form.requestSubmit()", class: select_class
+    noscript
+      button.h-9.rounded-lg.border.border-stone-300.px-3.text-xs type="submit" Filtrer
+
+  p.mt-2.text-xs.text-stone-500 data-species-count=@species_count
+    span.font-semibold.text-stone-700 = species_count_label(@species_count)
+    = " · #{@total_count} relevé#{'s' if @total_count > 1}"
+
+  - if @observations.empty?
+    p.mt-3.text-xs.text-stone-400
+      = @filters.values.any? ? "Aucun relevé pour ce filtre." : "Aucun relevé pour l'instant : activez la couche Biodiversité et touchez la carte."
+  - else
+    ul class=(on_map ? "mt-2 max-h-72 divide-y divide-stone-100 overflow-y-auto" : "mt-3 divide-y divide-stone-100")
+      - @observations.each do |observation|
+        - observer = @observers[observation.observer_id]
+        - line = capture do
+          span.mt-0.5.shrink-0 style="color: #{observation_color(observation.realm)}" title=observation.realm_label
+            = observation_glyph(observation.realm)
+          span.min-w-0.flex-1
+            span.block.truncate.text-sm.font-medium.text-stone-800
+              span data-observation-species="true" = observation.species_common
+              - if observation.observation_count
+                span.ml-1.text-xs.font-normal.text-stone-500 = "× #{observation.observation_count}"
+            - if observation.species_latin.present?
+              span.block.truncate.text-xs.italic.text-stone-500 = observation.species_latin
+            span class="block text-[0.7rem] text-stone-400"
+              = [observation.observed_on && l(observation.observed_on, format: :long), observer&.display_name].compact.join(" · ")
+        - if on_map
+          li
+            button[type="button" class="flex w-full items-start gap-2 px-1 py-2 text-left hover:bg-stone-50"
+                   data-observation-row="true" data-feature-id=observation.id
+                   data-action="click->map#focusObservation"]
+              = line
+        - else
+          li data-observation-row="true" data-feature-id=observation.id
+            = link_to map_path(feature: observation.id), class: "flex items-start gap-2 px-1 py-2.5 hover:bg-stone-50" do
+              = line

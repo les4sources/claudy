@@ -71,7 +71,9 @@ class MapFeaturesController < BaseController
   def destroy_photo
     @feature.photos.find(params[:photo_id]).purge_later
     @feature.reload
-    render turbo_stream: turbo_stream.update(PANEL_FRAME, partial: "maps/feature_panel", locals: { feature: @feature })
+    # Un relevé de biodiversité (phase 13) garde sa propre fiche.
+    partial = @feature.observation_point? ? "maps/observation_panel" : "maps/feature_panel"
+    render turbo_stream: turbo_stream.update(PANEL_FRAME, partial: partial, locals: { feature: @feature })
   end
 
   private
