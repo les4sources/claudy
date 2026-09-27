@@ -435,6 +435,11 @@ Rails.application.routes.draw do
         post :reopen
       end
     end
+    # Les notes manuscrites (phase 12), en JSON. `PATCH strokes` remplace les
+    # tracés d'un bloc (enregistrement automatique, verrou optimiste → 409).
+    resources :map_sketches, path: "sketches", only: %i[index show create update destroy] do
+      patch :strokes, on: :member
+    end
     # La carte du jour (phase 3) : occupation au jour choisi, panneau du groupe
     # présent, gîtes et salles restant à tracer. Lecture seule.
     get "occupancy", to: "map_venues#occupancy", as: :map_occupancy
