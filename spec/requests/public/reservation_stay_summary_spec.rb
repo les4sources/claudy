@@ -12,7 +12,10 @@ RSpec.describe "Public::Reservations — récap de l'étape coordonnées", type:
   end
 
   # 4 nuits → 5 JOURS de grille espaces (départ inclus).
-  let(:arrival)   { Date.today + 60 }
+  # Le 5 d'un mois à venir : arrivée et départ tombent dans le même mois, comme
+  # le suppose le récap attendu (« 5 → 9 nov. »). Avec `Date.today + 60`, la
+  # spec échouait les jours où le séjour chevauchait deux mois.
+  let(:arrival)   { (Date.today + 60).beginning_of_month + 4 }
   let(:departure) { arrival + 4 }
 
   # Le mois abrégé vient d'I18n, comme dans la vue : la spec ne doit pas
