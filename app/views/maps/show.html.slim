@@ -98,6 +98,16 @@
                          data-layer-kind=couche.kind
                          data-action="click->map#activateLayer"]
                     = couche.name
+                / Commentaires (phase 11) : le filtre des fils résolus, et
+                  l'adresse de la fiche d'un nouveau commentaire.
+                - if couche.kind == "comments"
+                  li.pl-6 data-new-comment-url=new_map_comment_path
+                    label.flex.cursor-pointer.items-center.gap-2.py-1.text-xs.text-stone-500
+                      input[type="checkbox"
+                            class="h-4 w-4 rounded border-stone-300 text-4s-main focus:ring-teal-400"
+                            data-comments-filter="true"
+                            data-action="change->map#toggleResolvedComments"]
+                      span Masquer les résolus
 
             / Les gîtes et salles pas encore tracés (phase 3) : la carte du jour
               ne colore que ce qui est dessiné, on n'en oublie aucun. Rechargée

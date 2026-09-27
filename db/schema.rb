@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_090400) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_28_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1341,6 +1341,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090400) do
     t.index ["key"], name: "index_map_base_layers_on_key", unique: true
   end
 
+  create_table "map_comments", force: :cascade do |t|
+    t.bigint "author_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "map_feature_id", null: false
+    t.bigint "parent_id"
+    t.datetime "resolved_at"
+    t.datetime "updated_at", null: false
+    t.index ["author_id"], name: "index_map_comments_on_author_id"
+    t.index ["deleted_at"], name: "index_map_comments_on_deleted_at"
+    t.index ["map_feature_id"], name: "index_map_comments_on_map_feature_id"
+    t.index ["parent_id"], name: "index_map_comments_on_parent_id"
+  end
+
   create_table "map_feature_venues", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "map_feature_id", null: false
@@ -2456,6 +2471,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090400) do
   add_foreign_key "lodging_compositions", "lodgings", column: "composite_lodging_id"
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"
+  add_foreign_key "map_comments", "map_comments", column: "parent_id"
+  add_foreign_key "map_comments", "map_features"
+  add_foreign_key "map_comments", "users", column: "author_id"
   add_foreign_key "map_feature_venues", "map_features"
   add_foreign_key "map_features", "map_layers"
   add_foreign_key "map_features", "users", column: "created_by_id"

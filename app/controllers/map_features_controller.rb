@@ -15,7 +15,7 @@ class MapFeaturesController < BaseController
   # GET /map/features.json?layer_id=… — une `FeatureCollection` GeoJSON.
   def index
     layer = MapLayer.find(params.require(:layer_id))
-    features = layer.map_features.ordered.with_attached_photos.includes(:map_layer, :plant, map_feature_venues: :venue)
+    features = layer.map_features.ordered.with_attached_photos.includes(:map_layer, :plant, :map_comments, map_feature_venues: :venue)
     render json: { type: "FeatureCollection", features: features.map(&:as_geojson) }
   end
 

@@ -425,6 +425,18 @@ Rails.application.routes.draw do
       # jamais d'un paramètre.
       resources :map_tasks, path: "tasks", only: %i[create]
     end
+    # Les commentaires en fil (phase 11). Le point et son premier message
+    # naissent ENSEMBLE (`POST /map/comments` avec lat, lng et le texte) : rien
+    # n'est créé tant que le premier message n'est pas publié. `new` sert la
+    # fiche du point pas encore créé.
+    get "comments/new", to: "map_comments#new", as: :new_map_comment
+    resources :map_comments, path: "comments", only: %i[create destroy] do
+      member do
+        post :reply
+        post :resolve
+        post :reopen
+      end
+    end
     # La carte du jour (phase 3) : occupation au jour choisi, panneau du groupe
     # présent, gîtes et salles restant à tracer. Lecture seule.
     get "occupancy", to: "map_venues#occupancy", as: :map_occupancy
