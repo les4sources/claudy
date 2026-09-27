@@ -411,6 +411,8 @@ Rails.application.routes.draw do
   # Les objets de la carte (epic #348, phase 2) : la carte lit et écrit leurs
   # géométries en JSON, la fiche latérale édite le reste en Turbo Stream.
   scope "map" do
+    # Le statut UniFi en direct des nœuds Ethernet (phase 10), en JSON.
+    get "unifi/devices", to: "map_unifi#devices", as: :map_unifi_devices, defaults: { format: :json }
     # Le carnet de gestion (phase 6) : les tâches de l'année, mois par mois.
     # `carnet` en français, imposé par l'epic. Les routes de tâches précèdent
     # `resources :map_tasks`, qui lirait sinon `current` comme un `:id`.
