@@ -27,8 +27,10 @@ class PlantSpecies < ApplicationRecord
   scope :named, ->(name) { where("lower(plant_species.name) = lower(?)", name.to_s.squish) }
   # L'autocomplétion de la fiche plante : le nom ou le nom latin.
   scope :search, lambda { |query|
-    pattern = "%#{sanitize_sql_like(query.to_s.squish)}%"
-    query.blank? ? all : where("plant_species.name ILIKE :q OR plant_species.latin_name ILIKE :q", q: pattern)
+    # Casse et accents ignorés : « neflier » propose « Néflier ».
+    pattern = AccentFolding.pattern(query.to_s.squish)
+    query.blank? ? all : where("#{AccentFolding.sql('plant_species.name')} LIKE :q " \
+                               "OR #{AccentFolding.sql('plant_species.latin_name')} LIKE :q", q: pattern)
   }
 
   # « créer “Néflier” » depuis la fiche : l'espèce existante, quelle que soit la

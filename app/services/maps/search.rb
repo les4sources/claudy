@@ -9,9 +9,8 @@
 #
 # Décision 10 : chaque mode cherche dans SES champs, jamais de recherche globale.
 #
-# La comparaison est un ILIKE (casse ignorée). Les accents, eux, comptent :
-# l'extension `unaccent` n'est pas installée, « Cheveche » ne trouve pas « la
-# Chevêche » — sauf pour le nom du client présent, comparé en Ruby translittéré.
+# La comparaison ignore la casse ET les accents (`AccentFolding`, `translate()`
+# natif, sans l'extension `unaccent`) : « cheveche » trouve « la Chevêche ».
 module Maps
   class Search
     MODES = %w[management plants network comments biodiversity venues welcome].freeze
@@ -19,7 +18,7 @@ module Maps
 
     # Un nom ou une description traduits (`{fr, en, nl}`) : une langue suffit.
     I18N_MATCH = "EXISTS (SELECT 1 FROM jsonb_each_text(map_features.%<column>s) AS t(locale, value) " \
-                 "WHERE t.value ILIKE :q)".freeze
+                 "WHERE #{AccentFolding.sql('t.value')} LIKE :q)".freeze
 
     attr_reader :mode, :query
 
@@ -65,7 +64,10 @@ module Maps
 
     private
 
-    def like = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
+    def like = AccentFolding.pattern(query)
+
+    # « colonne LIKE motif », casse et accents neutralisés des deux côtés.
+    def folded(expression) = "#{AccentFolding.sql(expression)} LIKE"
 
     # Les objets vivants (default_scope) des couches vivantes du mode.
     def base
@@ -77,8 +79,8 @@ module Maps
     def i18n_match(column) = format(I18N_MATCH, column: column)
 
     def management_scope
-      tasks = MapTask.where(subject_type: "MapFeature").where("map_tasks.label ILIKE ?", like).select(:subject_id)
-      base.where("#{i18n_match(:name_i18n)} OR map_features.properties->>'management_notes' ILIKE :q", q: like)
+      tasks = MapTask.where(subject_type: "MapFeature").where("#{folded('map_tasks.label')} ?", like).select(:subject_id)
+      base.where("#{i18n_match(:name_i18n)} OR #{folded("map_features.properties->>'management_notes'")} :q", q: like)
           .or(base.where(id: tasks))
     end
 
@@ -87,13 +89,13 @@ module Maps
     end
 
     def biodiversity_scope
-      base.where("map_features.properties->>'species_common' ILIKE :q OR map_features.properties->>'species_latin' ILIKE :q",
-                 q: like)
+      base.where("#{folded("map_features.properties->>'species_common'")} :q " \
+                 "OR #{folded("map_features.properties->>'species_latin'")} :q", q: like)
     end
 
     # Le corps de n'importe quel message vivant du fil, racine ou réponse.
     def comments_scope
-      base.where(id: MapComment.where("map_comments.body ILIKE ?", like).select(:map_feature_id))
+      base.where(id: MapComment.where("#{folded('map_comments.body')} ?", like).select(:map_feature_id))
     end
 
     # Le nom, la consigne, et le type de nœud par sa clé ou son libellé
@@ -103,7 +105,7 @@ module Maps
       node_types = MapLayer::NODE_TYPES.values.flat_map do |types|
         types.select { |key, label| fold(key).include?(needle) || fold(label).include?(needle) }.keys
       end.uniq
-      base.where("#{i18n_match(:name_i18n)} OR map_features.properties->>'instructions' ILIKE :q " \
+      base.where("#{i18n_match(:name_i18n)} OR #{folded("map_features.properties->>'instructions'")} :q " \
                  "OR map_features.properties->>'node_type' IN (:node_types)",
                  q: like, node_types: node_types.presence || [""])
     end
@@ -111,8 +113,8 @@ module Maps
     # Le nom du tracé, du gîte ou de la salle qu'il représente, et le nom du
     # client présent ce jour-là (`Maps::DayOccupancy`, statut confirmé seul).
     def venues_scope
-      venue_ids = Lodging.where("lodgings.name ILIKE ?", like).map { |lodging| ["Lodging", lodging.id] } +
-                  Space.where("spaces.name ILIKE ?", like).map { |space| ["Space", space.id] }
+      venue_ids = Lodging.where("#{folded('lodgings.name')} ?", like).map { |lodging| ["Lodging", lodging.id] } +
+                  Space.where("#{folded('spaces.name')} ?", like).map { |space| ["Space", space.id] }
       by_venue = MapFeatureVenue.where(venue_type: "Lodging", venue_id: venue_ids.filter_map { |t, id| id if t == "Lodging" })
                                 .or(MapFeatureVenue.where(venue_type: "Space", venue_id: venue_ids.filter_map { |t, id| id if t == "Space" }))
                                 .select(:map_feature_id)
@@ -140,7 +142,7 @@ module Maps
     def plants_scope
       plants = Plant.placed
       if query.present?
-        ids = Plant.search(query).pluck(:id) | Plant.where("plants.zone ILIKE ?", like).pluck(:id)
+        ids = Plant.search(query).pluck(:id) | Plant.where("#{folded('plants.zone')} ?", like).pluck(:id)
         plants = plants.where(id: ids)
       end
       plants = apply_plant_filters(plants)
@@ -163,6 +165,6 @@ module Maps
       plants
     end
 
-    def fold(text) = I18n.transliterate(text.to_s).downcase
+    def fold(text) = AccentFolding.fold(text)
   end
 end

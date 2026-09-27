@@ -236,6 +236,14 @@ RSpec.describe "Carte du domaine — recherche par mode (epic #348, phase 14)", 
         expect(search(mode: "venues", q: "martin", date: Date.current.iso8601)["feature_ids"]).to eq([trace_hulotte.id])
         expect(search(mode: "venues", q: "martin", date: (Date.current + 10).iso8601)["feature_ids"]).to be_empty
       end
+
+      it "ignore les accents : « cheveche » trouve « La Chevêche »" do
+        cheveche = Lodging.create!(name: "La Chevêche", price_night_cents: 42_000)
+        trace = feature(venues, kind: "zone", geometry: square, venue_keys: ["Lodging:#{cheveche.id}"])
+
+        expect(search(mode: "venues", q: "cheveche")["feature_ids"]).to eq([trace.id])
+        expect(search(mode: "venues", q: "CHEVÊCHE")["feature_ids"]).to eq([trace.id])
+      end
     end
   end
 end
