@@ -5,7 +5,8 @@
 # carte), le carnet `/map/carnet` (douze mois, une section par mois), et la
 # vue « ce mois-ci » de la carte, qui lit les objets concernés en JSON.
 #
-# Le porteur d'une tâche vient TOUJOURS de la route (`/map/features/:id/tasks`)
+# Le porteur d’une tâche — objet de la carte ou plante (phase 7) — vient
+# TOUJOURS de la route (`/map/features/:id/tasks`, `/map/plants/:id/tasks`)
 # ou de la tâche existante : `subject_type` n'est jamais lu dans les
 # paramètres, donc jamais constantizé depuis une saisie.
 class MapTasksController < BaseController
@@ -26,15 +27,20 @@ class MapTasksController < BaseController
   # cours, pour la vue « ce mois-ci » de la carte.
   def current
     month = Date.current.month
-    ids = MapTask.with_live_subject.in_month(month).where(subject_type: "MapFeature").distinct.pluck(:subject_id)
-    render json: { month: month, month_name: MapTask.month_name(month), feature_ids: ids }
+    tasks = MapTask.with_live_subject.in_month(month)
+    ids = tasks.where(subject_type: "MapFeature").distinct.pluck(:subject_id)
+    # Une plante n'a de point sur la carte que placée : c'est lui qu'on signale.
+    ids |= Plant.placed.where(id: tasks.where(subject_type: "Plant").select(:subject_id)).pluck(:map_feature_id)
+    render json: { month: month, month_name: MapTask.month_name(month), feature_ids: ids.sort }
   end
 
+  # POST /map/features/:map_feature_id/tasks ou /map/plants/:plant_id/tasks :
+  # le TYPE du porteur vient de la route, jamais d'un paramètre.
   def create
-    feature = MapFeature.find(params[:map_feature_id])
-    @task = feature.map_tasks.new(created_by: current_user)
+    subject = params[:plant_id] ? Plant.find(params[:plant_id]) : MapFeature.find(params[:map_feature_id])
+    @task = subject.map_tasks.new(created_by: current_user)
     @task.assign_attributes(task_params)
-    respond(@task.save, feature)
+    respond(@task.save, subject)
   end
 
   def update
@@ -62,18 +68,20 @@ class MapTasksController < BaseController
   end
 
   # Seule la section « Tâches » est remplacée : re-rendre toute la fiche
-  # effacerait ce qu'on est en train de saisir dans le formulaire de l'objet.
-  def respond(saved, feature)
+  # effacerait ce qu'on est en train de saisir dans le formulaire du porteur
+  # (`dom_id(feature, :tasks)` ou `dom_id(plant, :tasks)`).
+  def respond(saved, subject)
     invalid = saved ? nil : @task
     respond_to do |format|
       format.turbo_stream do
-        render turbo_stream: turbo_stream.replace(helpers.dom_id(feature, :tasks),
+        render turbo_stream: turbo_stream.replace(helpers.dom_id(subject, :tasks),
                                                   partial: "maps/feature_tasks",
-                                                  locals: { feature: feature, invalid_task: invalid }),
+                                                  locals: { subject: subject, invalid_task: invalid }),
                status: saved ? :ok : :unprocessable_content
       end
       format.html do
-        redirect_to map_path(feature: feature.id), alert: (saved ? nil : @task.errors.full_messages.to_sentence)
+        feature_id = subject.is_a?(Plant) ? subject.map_feature_id : subject.id
+        redirect_to map_path(feature: feature_id), alert: (saved ? nil : @task.errors.full_messages.to_sentence)
       end
     end
   end

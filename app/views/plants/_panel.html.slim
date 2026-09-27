@@ -258,9 +258,7 @@ div[class="pointer-events-auto flex h-full flex-col overflow-hidden bg-white sha
 
       = render "plants/notes", plant: plant
 
-      / TODO phase 7 B2 — Tâches : `MapTask` de filière `nourricier` par défaut,
-        même composant qu'en phase 6 (`maps/_feature_tasks`).
-      section.mt-6 id=dom_id(plant, :tasks) data-plant-section="tasks"
+      = render "maps/feature_tasks", subject: plant
 
       / ── Actions ────────────────────────────────────────────────────────
       .mt-8.space-y-2.border-t.border-stone-100.pt-4

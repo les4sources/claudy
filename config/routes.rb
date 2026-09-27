@@ -445,6 +445,10 @@ Rails.application.routes.draw do
       end
       # Les notes datées de la plante : ajout inline et suppression (soft).
       resources :map_notes, path: "notes", only: %i[create destroy]
+      # Les tâches de la plante (filière `nourricier` par défaut), même
+      # contrôleur que celles des objets : modification et suppression passent
+      # par `/map/tasks/:id`.
+      resources :map_tasks, path: "tasks", only: %i[create]
     end
     get "species", to: "plant_species#index", as: :map_species
     get "species/:id/varieties", to: "plant_species#varieties", as: :map_species_varieties
