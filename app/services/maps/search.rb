@@ -32,15 +32,30 @@ module Maps
       raise ArgumentError, "#{mode} n'est pas un mode de recherche" unless self.class.supported?(@mode)
 
       @query = query.to_s.squish
-      @filters = filters.to_h.stringify_keys.slice(*PLANT_FILTERS).transform_values { |value| value.to_s.strip }
-                        .compact_blank
+      @filters = @mode == "plants" ? known_plant_filters(filters) : {}
       @date = date
       @layer_id = layer_id
     end
 
     # Rien à chercher (ni texte, ni filtre du mode) : aucun résultat, la carte
     # reste telle quelle.
-    def criteria? = query.present? || (mode == "plants" && @filters.any?)
+    def criteria? = query.present? || @filters.any?
+
+    # Les filtres du mode Plantes dont la valeur existe : une santé, un statut
+    # ou une strate des listes fermées, une zone, un mois de 1 à 12. Une valeur
+    # inconnue est ignorée — elle ne doit pas rallumer toute la couche.
+    def known_plant_filters(filters)
+      raw = filters.to_h.stringify_keys.slice(*PLANT_FILTERS).transform_values { |value| value.to_s.strip }
+      raw.select do |key, value|
+        case key
+        when "health" then Plant::HEALTHS.key?(value)
+        when "status" then Plant::STATUSES.key?(value)
+        when "stratum" then Plant::STRATA.key?(value)
+        when "zone" then value.present?
+        else MapTask::MONTHS.include?(Integer(value, exception: false))
+        end
+      end
+    end
 
     def feature_ids
       return [] unless criteria?
@@ -134,24 +149,18 @@ module Maps
 
     def apply_plant_filters(plants)
       f = @filters
-      plants = plants.where(health: f["health"]) if Plant::HEALTHS.key?(f["health"])
-      plants = plants.where(status: f["status"]) if Plant::STATUSES.key?(f["status"])
-      plants = plants.where(stratum: f["stratum"]) if Plant::STRATA.key?(f["stratum"])
-      plants = plants.in_zone(f["zone"]) if f["zone"].present?
-      if (month = month_filter("harvest_month"))
-        plants = plants.where(id: Plant.harvestable_in(month).select(:id))
-      end
-      if (month = month_filter("task_month"))
-        tasks = MapTask.in_month(month)
+      plants = plants.where(health: f["health"]) if f["health"]
+      plants = plants.with_status(f["status"]) if f["status"]
+      plants = plants.where(stratum: f["stratum"]) if f["stratum"]
+      plants = plants.in_zone(f["zone"]) if f["zone"]
+      plants = plants.where(id: Plant.harvestable_in(f["harvest_month"].to_i).select(:id)) if f["harvest_month"]
+      if f["task_month"]
+        # Une tâche posée sur la plante (nourricier) ou sur son point.
+        tasks = MapTask.in_month(f["task_month"].to_i)
         plants = plants.where(id: tasks.where(subject_type: "Plant").select(:subject_id))
                        .or(plants.where(map_feature_id: tasks.where(subject_type: "MapFeature").select(:subject_id)))
       end
       plants
-    end
-
-    def month_filter(key)
-      month = Integer(@filters[key].to_s, exception: false)
-      month if MapTask::MONTHS.include?(month)
     end
 
     def fold(text) = I18n.transliterate(text.to_s).downcase

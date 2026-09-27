@@ -90,6 +90,49 @@ RSpec.describe "Carte du domaine — recherche par mode (epic #348, phase 14)", 
         expect(search(mode: "plants", q: "verger")["feature_ids"]).to eq([noisetier.id])
         expect(search(mode: "plants", q: "pommier")["feature_ids"]).to eq([reinette.id])
       end
+
+      describe "filtres" do
+        let(:verger_ids) { [@saine[1].id, @malade[1].id] }
+
+        before do
+          @saine = placed_plant(name: "Pommier sain", plant_species: pommier, health: "healthy", stratum: "tree", zone: "Verger")
+          @malade = placed_plant(name: "Poirier malade", health: "sick", stratum: "tree", zone: "Verger", status: "to_move")
+          @arbuste = placed_plant(name: "Cassis", health: "healthy", stratum: "shrub", zone: "Potager")
+        end
+
+        it "filtre par santé, statut, strate et zone, combinables avec le texte" do
+          expect(search(mode: "plants", health: "healthy")["feature_ids"]).to contain_exactly(@saine[1].id, @arbuste[1].id)
+          expect(search(mode: "plants", status: "to_move")["feature_ids"]).to eq([@malade[1].id])
+          expect(search(mode: "plants", stratum: "shrub")["feature_ids"]).to eq([@arbuste[1].id])
+          expect(search(mode: "plants", zone: "Verger")["feature_ids"]).to match_array(verger_ids)
+          expect(search(mode: "plants", zone: "Verger", health: "healthy")["feature_ids"]).to eq([@saine[1].id])
+          expect(search(mode: "plants", q: "poirier", stratum: "tree")["feature_ids"]).to eq([@malade[1].id])
+          expect(search(mode: "plants", q: "poirier", stratum: "shrub")["feature_ids"]).to be_empty
+        end
+
+        it "« se récolte en » suit les fenêtres de la plante, sinon celles de son espèce" do
+          pommier.harvest_windows.create!(part: "fruit", months: [9, 10])
+          @arbuste[0].harvest_windows.create!(part: "fruit", months: [7])
+
+          expect(search(mode: "plants", harvest_month: 9)["feature_ids"]).to eq([@saine[1].id])
+          expect(search(mode: "plants", harvest_month: 7)["feature_ids"]).to eq([@arbuste[1].id])
+          expect(search(mode: "plants", harvest_month: 7, zone: "Verger")["feature_ids"]).to be_empty
+        end
+
+        it "« a une tâche en » lit les tâches de la plante et de son point" do
+          MapTask.create!(subject: @malade[0], label: "Tailler", months: [2])
+          MapTask.create!(subject: @arbuste[1], label: "Pailler", months: [2, 11])
+
+          expect(search(mode: "plants", task_month: 2)["feature_ids"]).to contain_exactly(@malade[1].id, @arbuste[1].id)
+          expect(search(mode: "plants", task_month: 11, q: "cassis")["feature_ids"]).to eq([@arbuste[1].id])
+          expect(search(mode: "plants", task_month: 5)["feature_ids"]).to be_empty
+        end
+
+        it "ignore une valeur de filtre inconnue plutôt que de tout rendre" do
+          expect(search(mode: "plants", health: "radieuse", task_month: 13)["feature_ids"]).to be_empty
+          expect(search(mode: "management", health: "healthy")["feature_ids"]).to be_empty
+        end
+      end
     end
 
     describe "mode Réseaux" do
