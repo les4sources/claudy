@@ -33,7 +33,8 @@ RSpec.describe "Index Séjours (/stays)", type: :request do
   describe "rendu et contenu de gestion" do
     let!(:stay) do
       create_stay(email: "cliente@example.com", first: "Alice", last: "Durand",
-                  arrival: Date.today + 5, departure: Date.today + 7, total_cents: 12_345)
+                  arrival: Date.today.beginning_of_quarter + 5, departure: Date.today.beginning_of_quarter + 7,
+                  total_cents: 12_345)
     end
 
     it "répond 200 et affiche client et total" do
