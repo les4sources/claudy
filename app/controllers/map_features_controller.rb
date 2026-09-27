@@ -87,7 +87,8 @@ class MapFeaturesController < BaseController
   def feature_params
     params.require(:map_feature).permit(:map_layer_id, :feature_kind, :geometry, :name, :description,
                                         :name_en, :name_nl, :description_en, :description_nl, :access, :icon,
-                                        :management_notes, photos: [], venue_keys: [])
+                                        :management_notes, :node_type, :instructions, :equipment, :gauge,
+                                        photos: [], venue_keys: [])
   end
 
   # `name` et `description` sont le FRANÇAIS ; l'anglais et le néerlandais
@@ -104,9 +105,14 @@ class MapFeaturesController < BaseController
       assign_translation(:name_i18n, locale, attrs["name#{suffix}"]) if attrs.key?("name#{suffix}")
       assign_translation(:description_i18n, locale, attrs["description#{suffix}"]) if attrs.key?("description#{suffix}")
     end
-    # Nature d'une zone et icône d'un point d'accueil : un choix vide les retire.
-    %w[access icon].each do |key|
+    # Nature d'une zone et icône d'un point d'accueil ; type de nœud, calibre
+    # et équipement d'un réseau (phase 9) : un choix vide les retire.
+    %w[access icon node_type gauge equipment].each do |key|
       @feature.properties = @feature.properties.to_h.merge(key => attrs[key].presence).compact if attrs.key?(key)
+    end
+    # La consigne d'un nœud de réseau (phase 9) : « quart de tour vers la droite ».
+    if attrs.key?(:instructions)
+      @feature.properties = @feature.properties.to_h.merge("instructions" => attrs[:instructions].to_s.strip.presence).compact
     end
     if attrs.key?(:management_notes)
       @feature.properties = @feature.properties.to_h.merge("management_notes" => attrs[:management_notes].to_s.strip)
