@@ -1,0 +1,58 @@
+/ La recherche du mode actif (epic #348, phase 14). Collée en tête du panneau
+  (elle ne défile pas avec la liste) ; `utils/map_search.js` l'anime : le
+  placeholder suit la couche active, les filtres n'apparaissent qu'en mode
+  Plantes, Échap efface, Entrée centre sur le premier résultat.
+div[class="sticky -top-3 z-10 -mx-3 -mt-3 mb-3 border-b border-stone-100 bg-white/95 px-3 pb-3 pt-3"
+    data-map-search=""
+    data-url=map_search_path]
+  div.relative
+    svg class="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+      circle cx="11" cy="11" r="7"
+      line x1="21" y1="21" x2="16.65" y2="16.65"
+    input[type="search"
+          class="w-full rounded-lg border border-stone-200 bg-white py-1.5 pl-8 pr-7 text-sm text-stone-700 placeholder:text-stone-400 focus:border-teal-400 focus:outline-none focus:ring-1 focus:ring-teal-400 disabled:bg-stone-50"
+          placeholder="Choisissez une couche pour chercher"
+          aria-label="Chercher dans la couche active"
+          autocomplete="off"
+          disabled=true
+          data-map-search-input=""]
+    button[type="button"
+           class="absolute right-1.5 top-1/2 hidden -translate-y-1/2 rounded p-0.5 text-stone-400 hover:text-stone-600"
+           aria-label="Effacer la recherche"
+           data-map-search-clear=""]
+      svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        line x1="18" y1="6" x2="6" y2="18"
+        line x1="6" y1="6" x2="18" y2="18"
+
+  div class="mt-1.5 flex items-center gap-2"
+    span.hidden.flex-1.text-xs.tabular-nums.text-stone-500 data-map-search-count="" aria-live="polite"
+    div.hidden.items-center.gap-1 data-map-search-nav=""
+      button[type="button" class="rounded-md border border-stone-200 px-2 py-0.5 text-sm text-stone-600 hover:bg-stone-50"
+             aria-label="Résultat précédent" data-map-search-step="-1"] ‹
+      button[type="button" class="rounded-md border border-stone-200 px-2 py-0.5 text-sm text-stone-600 hover:bg-stone-50"
+             aria-label="Résultat suivant" data-map-search-step="1"] ›
+
+  / Les filtres du mode Plantes : combinables entre eux et avec le texte.
+  details.mt-1.hidden.group data-map-search-filters=""
+    summary.cursor-pointer.select-none.text-xs.font-medium.text-stone-500 Filtres des plantes
+    - select_class = "w-full rounded-md border border-stone-200 bg-white px-1.5 py-1 text-xs text-stone-700 focus:border-teal-400 focus:ring-teal-400"
+    - months = MapTask::MONTHS.map { |month| [MapTask.month_name(month), month] }
+    div.mt-2.grid.grid-cols-2.gap-1.5
+      label class="text-[0.65rem] text-stone-400"
+        | Santé
+        = select_tag "map_search_health", options_for_select(Plant::HEALTHS.invert), include_blank: "Toutes", class: select_class, data: { map_search_filter: "health" }
+      label class="text-[0.65rem] text-stone-400"
+        | Statut
+        = select_tag "map_search_status", options_for_select(Plant::STATUSES.invert), include_blank: "Tous", class: select_class, data: { map_search_filter: "status" }
+      label class="text-[0.65rem] text-stone-400"
+        | Strate
+        = select_tag "map_search_stratum", options_for_select(Plant::STRATA.invert), include_blank: "Toutes", class: select_class, data: { map_search_filter: "stratum" }
+      label class="text-[0.65rem] text-stone-400"
+        | Zone
+        = select_tag "map_search_zone", options_for_select(Plant.zones), include_blank: "Toutes", class: select_class, data: { map_search_filter: "zone" }
+      label class="text-[0.65rem] text-stone-400"
+        | Se récolte en
+        = select_tag "map_search_harvest_month", options_for_select(months), include_blank: "—", class: select_class, data: { map_search_filter: "harvest_month" }
+      label class="text-[0.65rem] text-stone-400"
+        | A une tâche en
+        = select_tag "map_search_task_month", options_for_select(months), include_blank: "—", class: select_class, data: { map_search_filter: "task_month" }

@@ -156,3 +156,23 @@
 .map-network-labels-hidden .map-network-label {
   display: none;
 }
+
+/* Recherche du mode actif (epic #348, phase 14) : les objets trouvés sont
+   allumés (opacité pleine, halo `ember`, libellé forcé même sous le zoom 18),
+   le reste de la couche s'estompe à 25 %. Posées par utils/map_search.js, sur
+   la mécanique de la vue « ce mois-ci ». */
+.leaflet-container .map-search-dimmed {
+  opacity: 0.25;
+  transition: opacity 150ms ease;
+}
+.leaflet-container .map-search-hit {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px #c97b3d) drop-shadow(0 0 1px #c97b3d);
+}
+.map-labels-hidden .map-feature-label.map-search-label,
+.map-network-labels-hidden .map-network-label.map-search-label {
+  display: block;
+}
+.leaflet-container .map-feature-label.map-search-label {
+  box-shadow: 0 0 0 2px #c97b3d;
+}

@@ -19,6 +19,7 @@ import { UnifiStatusPoller, handleUnifiEquipmentChange } from '~/utils/map_unifi
 import { CommentMode, commentMarker, isCommentFeature } from '~/utils/map_comments';
 import { SketchMode } from '~/utils/map_sketches';
 import { BiodiversityMode, isObservationFeature, observationMarker } from '~/utils/map_biodiversity';
+import { MapSearch } from '~/utils/map_search';
 
 // Style de la couche Gestion (phase 2) : polygones `forest` remplis à 25 %,
 // accès en pointillés `bark`, points en marqueur rond. Couleurs du thème
@@ -153,6 +154,8 @@ export default class extends Controller {
     this.sketches = new SketchMode(this);
     // Phase 13 : le mode Biodiversité (utils/map_biodiversity.js).
     this.biodiversity = new BiodiversityMode(this);
+    // Phase 14 : la recherche du mode actif (utils/map_search.js).
+    this.search = new MapSearch(this);
     this.setupFeatures();
 
     // Leaflet mesure son conteneur au montage. Dans une page Turbo le conteneur
@@ -168,6 +171,7 @@ export default class extends Controller {
     this.element.removeEventListener('change', handleUnifiEquipmentChange);
     this.comments?.destroy();
     this.sketches?.destroy();
+    this.search?.destroy();
     this.biodiversity?.destroy();
     if (this.map) {
       this.map.remove();
@@ -526,6 +530,8 @@ export default class extends Controller {
     if (!editable) this.disableTools();
     this.comments?.onActivate(kind);
     this.biodiversity?.onActivate(kind);
+    // Changer de couche change de mode de recherche : la recherche s'efface.
+    this.search?.onActivate(id, kind);
     // La légende des zones d'accueil (phase 4) accompagne la couche active.
     if (this.hasWelcomeLegendTarget) {
       this.welcomeLegendTarget.classList.toggle('hidden', kind !== 'welcome');
@@ -969,6 +975,8 @@ export default class extends Controller {
         layer.getTooltip?.()?.getElement?.()?.classList.toggle('map-month-dimmed', dimmed);
       });
     });
+    // Mêmes éléments recréés, même besoin pour la recherche (phase 14).
+    this.search?.apply();
   }
 
   // ── Carte du jour (epic #348, phase 3) ────────────────────────────────────
@@ -1092,6 +1100,7 @@ export default class extends Controller {
 
     this.updateDateBar();
     this.loadOccupancy();
+    this.search?.onDateChange();
 
     // Le panneau d'un gîte ouvert suit le jour affiché.
     const panel = this.hasFeatureFrameTarget && this.featureFrameTarget.querySelector('[data-venue-panel]');

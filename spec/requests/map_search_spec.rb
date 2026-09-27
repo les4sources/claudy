@@ -33,6 +33,16 @@ RSpec.describe "Carte du domaine — recherche par mode (epic #348, phase 14)", 
   context "connecté" do
     before { sign_in user }
 
+    it "la page carte porte le champ de recherche et les filtres des plantes" do
+      MapBaseLayer.create!(key: "test-layer", name: "Couche de test", min_zoom: 12, max_zoom: 20,
+                           bounds: { "south" => 50.339, "west" => 4.903, "north" => 50.343, "east" => 4.912 })
+      Plant.create!(name: "Cassis", status: "planted", zone: "Potager")
+      get map_path
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("data-map-search", %(data-url="#{map_search_path}"), "data-map-search-input")
+      expect(response.body).to include("Filtres des plantes", "Se récolte en", "A une tâche en", "Potager", "Inquiétante")
+    end
+
     it "refuse un mode inconnu (422) et rend une liste vide sans critère" do
       get map_search_path, params: { mode: "globale", q: "x" }, headers: { "Accept" => "application/json" }
       expect(response).to have_http_status(:unprocessable_content)
