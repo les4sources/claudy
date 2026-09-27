@@ -1,0 +1,49 @@
+/ Le tiroir « Placer des plantes » de la carte (epic #348, phase 7) : les
+  plantes vivantes sans point. Un clic en choisit une (`map#pickPlant`), puis
+  un clic sur la carte — ou « Je suis devant » — la pose. Les filtres
+  rechargent la frame seule ; la carte la recharge après chaque placement.
+= turbo_frame_tag PlantsController::UNPLACED_FRAME do
+  div[data-unplaced-list="true" data-unplaced-total=@total data-unplaced-count=@plants.size]
+    = form_with url: unplaced_plants_path, method: :get, class: "space-y-2 px-3 pt-3",
+                data: { controller: "auto-submit", auto_submit_delay_value: 250 } do
+      label.sr-only for="unplaced_q" Rechercher
+      input[type="search" id="unplaced_q" name="q" value=@query autocomplete="off" enterkeyhint="search"
+            placeholder="Nom, espèce, variété, n°…"
+            class="h-11 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+            data-action="input->auto-submit#submit"]
+      - if @zones.any?
+        label.sr-only for="unplaced_zone" Zone
+        select[id="unplaced_zone" name="zone"
+               class="h-11 w-full rounded-lg border-stone-300 text-sm text-stone-700 shadow-sm focus:border-forest focus:ring-forest"
+               data-action="change->auto-submit#submit"]
+          option value="" Toutes les zones
+          - @zones.each do |zone|
+            option value=zone selected=(zone == @zone || nil) = zone
+
+    - if @total.zero?
+      .px-4.py-8.text-center
+        p.font-averia.text-lg.text-forest Toutes les plantes sont sur la carte.
+        p.mt-1.text-sm.text-stone-500 Plus rien à placer : bravo.
+    - elsif @plants.empty?
+      p.px-4.py-6.text-center.text-sm.text-stone-500 Aucune plante à placer ne correspond.
+    - else
+      p class="px-4 pb-1 pt-3 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400"
+        = @plants.size == @total ? "#{@total} à placer" : "#{@plants.size} sur #{@total} à placer"
+      ul.space-y-0.5.px-1.5.pb-3 role="list"
+        - @plants.each do |plant|
+          li
+            button[type="button"
+                   class="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-stone-50 aria-pressed:bg-forest-tint aria-pressed:ring-1 aria-pressed:ring-forest"
+                   aria-pressed=(plant.id == @selected_id).to_s
+                   data-unplaced-item="true"
+                   data-plant-id=plant.id
+                   data-plant-name=plant.display_name
+                   data-action="click->map#pickPlant"]
+              = plant_thumbnail(plant)
+              span.min-w-0.flex-1
+                span.flex.items-baseline.gap-1.5
+                  - if plant.number
+                    span.text-xs.font-semibold.tabular-nums.text-stone-400 = "##{plant.number_label}"
+                  span.truncate.text-sm.font-medium.text-stone-800 = plant.display_name
+                span.block.truncate.text-xs.text-stone-500
+                  = [plant.plant_species&.name, plant.plant_variety&.name, plant.zone].compact_blank.join(" · ").presence || "Espèce inconnue"

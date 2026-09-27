@@ -11,7 +11,25 @@
 class PlantsController < BaseController
   PANEL_FRAME = MapFeaturesController::PANEL_FRAME
 
-  before_action :get_plant
+  UNPLACED_FRAME = "plants_unplaced".freeze
+
+  before_action :get_plant, except: :unplaced
+
+  # GET /map/plants/unplaced — le tiroir « Placer des plantes » : les plantes
+  # vivantes sans point, filtrables par zone et par recherche, dans l'ordre des
+  # numéros. `selected` garde la plante en cours de placement en surbrillance
+  # quand la liste se recharge.
+  def unplaced
+    base = Plant.alive.to_place
+    @total = base.count
+    @zones = base.zones
+    @zone = params[:zone].to_s.squish.presence
+    @query = params[:q].to_s.squish.presence
+    @selected_id = params[:selected].to_s[/\A\d+\z/]&.to_i
+    @plants = base.in_zone(@zone).search(@query).ordered
+                  .includes(:plant_species, :plant_variety).with_attached_photos.to_a
+    render layout: false
+  end
 
   def show
     render :show, layout: false
@@ -34,11 +52,34 @@ class PlantsController < BaseController
     end
   end
 
+  # POST /map/plants/:id/place — pose la plante sur la carte, ou déplace son
+  # point (clic sur la carte, « Je suis devant », glisser). La carte appelle en
+  # JSON et enchaîne elle-même ; en Turbo Stream, la fiche se rouvre placée.
+  # Une position illisible ou hors du globe répond 422 sans rien écrire.
+  def place
+    latitude = coordinate(params[:latitude])
+    longitude = coordinate(params[:longitude])
+    unless latitude&.between?(-90, 90) && longitude&.between?(-180, 180)
+      return placement_error("Position illisible : il faut une latitude et une longitude.")
+    end
+
+    moved = @plant.placed?
+    @plant.place!(latitude: latitude, longitude: longitude, user: current_user)
+    return render(json: placement_json.merge(moved: moved)) if request.format.json?
+
+    render_panel(saved: true)
+  rescue ActiveRecord::RecordInvalid => e
+    placement_error(e.record.errors.full_messages.to_sentence)
+  end
+
   # « Retirer de la carte » : le point disparaît, la plante redevient à placer.
-  # La fiche reste ouverte et dit à la carte quelle couche recharger.
+  # La fiche reste ouverte et dit à la carte quelle couche recharger. En JSON :
+  # l'« Annuler » du mode Placement.
   def unplace
     layer_id = @plant.map_feature&.map_layer_id
     @plant.unplace!
+    return render(json: placement_json.merge(layer_id: layer_id)) if request.format.json?
+
     render_panel(unplaced_layer_id: layer_id)
   end
 
@@ -126,6 +167,26 @@ class PlantsController < BaseController
     else
       @plant.plant_variety = nil
       @assign_errors << "Une variété appartient à une espèce : indiquez d'abord l'espèce de « #{variety_name} »"
+    end
+  end
+
+  # « 50,34 » comme « 50.34 » ; rien d'infini ni de NaN.
+  def coordinate(value)
+    number = Float(value.to_s.strip.tr(",", "."), exception: false)
+    number if number&.finite?
+  end
+
+  def placement_json
+    { plant_id: @plant.id, name: @plant.display_name, status: @plant.status,
+      map_feature_id: @plant.map_feature_id, layer_id: @plant.map_feature&.map_layer_id,
+      latitude: @plant.latitude, longitude: @plant.longitude,
+      remaining: Plant.alive.to_place.count }
+  end
+
+  def placement_error(message)
+    respond_to do |format|
+      format.json { render json: { error: message }, status: :unprocessable_content }
+      format.any { render plain: message, status: :unprocessable_content }
     end
   end
 

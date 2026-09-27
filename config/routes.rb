@@ -432,9 +432,15 @@ Rails.application.routes.draw do
     # au clic sur son point. Espèces et variétés alimentent l'autocomplétion de
     # la fiche (JSON) ; elles se créent par leur NOM à l'enregistrement de la
     # plante, jamais par un id arbitraire.
+    # Le mode Placement : la liste des plantes à placer, chargée dans le tiroir
+    # de la carte. Avant `resources :plants`, qui lirait sinon `unplaced`
+    # comme un `:id`.
+    get "plants/unplaced", to: "plants#unplaced", as: :unplaced_plants
     resources :plants, only: %i[show update destroy] do
       member do
         delete "photos/:photo_id", action: :destroy_photo, as: :photo
+        # Pose ou déplace le point de la plante (clic, GPS, glisser).
+        post :place
         post :unplace
       end
       # Le calendrier de récolte propre à la plante : PATCH remplace toutes ses

@@ -69,4 +69,24 @@ module PlantsHelper
   # « 3 mai 2026 » : le format `long` de la locale pose une espace devant les
   # jours à un chiffre.
   def plant_note_date(date) = l(date, format: "%-d %B %Y")
+
+  # Où mène une plante depuis les pages annexes (récoltes, liste, espèce) : son
+  # point sur la carte si elle est placée, sinon sa fiche ouverte sur la carte.
+  def plant_on_map_path(plant)
+    plant.map_feature_id ? map_path(feature: plant.map_feature_id) : map_path(plant: plant.id)
+  end
+
+  # La vignette d'une liste : la première photo, sinon le pictogramme de strate
+  # sur la couleur de santé. Les pièces jointes doivent être préchargées
+  # (`with_attached_photos`).
+  def plant_thumbnail(plant, css: "h-11 w-11")
+    thumb = plant.photos.any? && plant.first_photo_thumb
+    if thumb
+      image_tag url_for(thumb), alt: "", loading: "lazy", class: "#{css} flex-shrink-0 rounded-lg object-cover"
+    else
+      tag.span(plant_stratum_glyph(plant.stratum, css: "h-1/2 w-1/2"),
+               class: "#{css} flex flex-shrink-0 items-center justify-center rounded-lg text-white",
+               style: "background-color: #{plant_health_style(plant)[:dot]}", "aria-hidden": true)
+    end
+  end
 end
