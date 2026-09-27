@@ -662,10 +662,15 @@ export default class extends Controller {
     const kind = this.layerKinds[String(layerId)];
     if (kind) this.setActiveLayer(layerId, kind);
 
-    // Sur grand écran, la fiche couvre la droite de la carte : l'objet se
-    // centre dans ce qui reste visible.
+    // Sur grand écran, le panneau des couches couvre la gauche, la barre
+    // d'outils le haut, la barre de date le bas et la fiche la droite : l'objet
+    // se centre dans ce qui reste visible.
     const wide = window.matchMedia('(min-width: 768px)').matches;
-    const padding = { paddingTopLeft: [40, 40], paddingBottomRight: wide ? [420, 40] : [40, 40], maxZoom: 19 };
+    const padding = {
+      paddingTopLeft: wide ? [300, 90] : [40, 40],
+      paddingBottomRight: wide ? [420, 110] : [40, 40],
+      maxZoom: 19,
+    };
     if (layer.getBounds) this.map.fitBounds(layer.getBounds(), padding);
     else if (layer.getLatLng) this.map.setView(layer.getLatLng(), Math.max(this.map.getZoom(), 19));
 
