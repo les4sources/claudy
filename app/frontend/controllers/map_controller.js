@@ -7,6 +7,7 @@ import '~/stylesheets/map.css';
 import { welcomeIcon, welcomeMarker, welcomeProperties, welcomeStyle } from '~/utils/map_welcome';
 import { isPlantFeature, plantIcon, plantMarker } from '~/utils/map_plants';
 import { PlantPlacement } from '~/utils/map_placement';
+import { CommentMode, commentMarker, isCommentFeature } from '~/utils/map_comments';
 
 // Style de la couche Gestion (phase 2) : polygones `forest` remplis à 25 %,
 // accès en pointillés `bark`, points en marqueur rond. Couleurs du thème
@@ -129,6 +130,8 @@ export default class extends Controller {
     this.map.on('locationerror', () => this.onLocationError());
 
     this.placement = new PlantPlacement(this);
+    // Phase 11 : le mode Commentaires (utils/map_comments.js).
+    this.comments = new CommentMode(this);
     this.setupFeatures();
 
     // Leaflet mesure son conteneur au montage. Dans une page Turbo le conteneur
@@ -140,6 +143,7 @@ export default class extends Controller {
   disconnect() {
     this.panelObserver?.disconnect();
     this.placement?.destroy();
+    this.comments?.destroy();
     if (this.map) {
       this.map.remove();
       this.map = null;
@@ -273,6 +277,8 @@ export default class extends Controller {
     this.map.on('zoomend', () => this.updateLabels());
     // En mode Placement, toucher la carte pose la plante choisie.
     this.map.on('click', (event) => this.placement?.onMapClick(event));
+    // En mode Commentaires, toucher la carte ouvre un nouveau commentaire.
+    this.map.on('click', (event) => this.comments?.onMapClick(event));
     this.updateLabels();
     this.observePanel();
 
@@ -325,6 +331,7 @@ export default class extends Controller {
       // pastilles rondes.
       pointToLayer: (feature, latlng) => {
         if (isPlantFeature(feature)) return plantMarker(L, feature, latlng);
+        if (isCommentFeature(feature)) return commentMarker(L, feature, latlng);
         if (this.isWelcome(feature)) return welcomeMarker(L, feature, latlng);
         return L.circleMarker(latlng, this.featureStyle(feature, false));
       },
@@ -364,6 +371,8 @@ export default class extends Controller {
         this.placement.onMapClick(event);
         return;
       }
+      // En mode Commentaires, on commente l'endroit touché, même dans une zone.
+      if (this.comments?.interceptFeatureClick(event, feature)) return;
       // Pendant un tracé, le clic appartient à Geoman (il pose un sommet) : sans
       // cette sortie, poser un point DANS une zone ouvrait la fiche de la zone.
       if (
@@ -453,6 +462,7 @@ export default class extends Controller {
       this.toolbarTarget.classList.toggle('flex', editable);
     }
     if (!editable) this.disableTools();
+    this.comments?.onActivate(kind);
     // La légende des zones d'accueil (phase 4) accompagne la couche active.
     if (this.hasWelcomeLegendTarget) {
       this.welcomeLegendTarget.classList.toggle('hidden', kind !== 'welcome');
@@ -594,6 +604,11 @@ export default class extends Controller {
     this.placement.open();
   }
 
+  // Phase 11 : « Masquer les résolus », sous la couche Commentaires.
+  toggleResolvedComments(event) {
+    this.comments?.toggleResolved(event.currentTarget.checked);
+  }
+
   closePlacement() {
     this.placement.close();
   }
@@ -668,6 +683,7 @@ export default class extends Controller {
           layer.setIcon(plantIcon(L, layer.feature, selected));
           layer.setZIndexOffset(selected ? 1000 : layer.feature.properties?.dead ? -100 : 0);
         }
+        this.comments?.highlight(layer, selected);
       });
     });
     // `setIcon` remplace l'élément du marqueur : la vue « ce mois-ci » doit

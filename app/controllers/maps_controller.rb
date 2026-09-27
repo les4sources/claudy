@@ -17,6 +17,9 @@ class MapsController < BaseController
     MapLayer.for_kind(:welcome)
     # Les plantes nourricières (phase 7).
     MapLayer.for_kind(:plants)
+    # Les commentaires en fil (phase 11) : active, la couche fait du clic sur la
+    # carte un nouveau commentaire.
+    MapLayer.for_kind(:comments)
     @date = parse_date(params[:date])
     @layers = MapLayer.ordered.to_a
     # `/map?feature=<id>` (phase 6, lien du carnet) : la carte s'ouvre centrée

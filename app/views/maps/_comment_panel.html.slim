@@ -1,0 +1,47 @@
+/ La fiche d'un point de commentaire (epic #348, phase 11) : le fil, la
+  réponse inline, « Marquer comme résolu » / « Rouvrir ». Même enveloppe que
+  la fiche d'un objet (`_feature_panel`) : la carte la montre, la cache, et
+  recharge la bulle du point quand `data-feature-saved` est posé.
+- saved = local_assigns[:saved]
+- root = feature.map_comments.roots.first
+div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:rounded-xl md:border md:border-stone-200"
+    data-feature-panel="true"
+    data-comment-panel="true"
+    data-feature-id=feature.id
+    data-layer-id=feature.map_layer_id
+    data-feature-saved=(saved ? "true" : nil)]
+  .flex.items-center.gap-2.border-b.border-stone-100.px-4.py-3
+    span class="rounded-full bg-forest-tint px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-forest"
+      | Commentaire
+    h2.flex-1.truncate.text-sm.font-semibold.text-stone-800
+      = root ? "Fil de #{root.author.display_name}" : "Commentaire"
+    - if root&.resolved_at
+      span[class="rounded-full bg-stone-100 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-600"
+           data-comment-resolved="true"
+           title="Résolu le #{map_comment_exact_time(root.resolved_at)}"]
+        | Résolu
+    button[type="button" class="flex h-11 w-11 items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+           data-action="click->map#closePanel" aria-label="Fermer la fiche"]
+      svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        line x1="18" y1="6" x2="6" y2="18"
+        line x1="6" y1="6" x2="18" y2="18"
+
+  .flex-1.overflow-y-auto.px-4.py-4
+    - if root
+      ol.space-y-4 id=dom_id(root, :messages) data-comment-thread=root.id
+        = render partial: "maps/comment_message", collection: root.thread.to_a, as: :comment
+      .mt-5
+        = render "maps/comment_reply_form", root: root
+    - else
+      p.text-sm.text-stone-500 Ce point n'a plus de message.
+
+  - if root
+    .flex.items-center.gap-2.border-t.border-stone-100.px-4.py-3
+      - if root.resolved_at
+        = button_to "Rouvrir", reopen_map_comment_path(root),
+                    class: "h-11 rounded-lg border border-stone-300 px-4 text-sm font-semibold text-stone-700 hover:bg-stone-50",
+                    data: { comment_action: "reopen" }
+      - else
+        = button_to "Marquer comme résolu", resolve_map_comment_path(root),
+                    class: "h-11 rounded-lg bg-forest px-4 text-sm font-semibold text-white hover:opacity-90",
+                    data: { comment_action: "resolve" }

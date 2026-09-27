@@ -73,6 +73,10 @@ class MapFeature < ApplicationRecord
   # `dependent:` (piège connu de soft_deletion sur un has_one) : c'est
   # `release_plant` qui rend la plante « à placer » quand le point disparaît.
   has_one :plant, inverse_of: :map_feature
+  # Le fil d'un point de commentaire (phase 11) : la racine et ses réponses. Pas
+  # de `dependent:` : c'est `MapComment#remove!` qui efface le fil et son point
+  # ensemble.
+  has_many :map_comments, inverse_of: :map_feature
 
   # Miniature, aperçu et refus clair des formats illisibles : `HasMapPhotos`,
   # partagé avec les plantes.
@@ -177,6 +181,12 @@ class MapFeature < ApplicationRecord
 
   def plant_point? = feature_kind == "plant"
 
+  def comment_point? = feature_kind == "comment"
+
+  # Le premier message du fil d'un point de commentaire. Lu dans l'association
+  # (préchargée par l'index des objets) plutôt que par une requête dédiée.
+  def comment_root = map_comments.find(&:root?)
+
   def venue? = LINKABLE_TYPES.value?(feature_kind)
 
   # Un objet de la carte dans une `FeatureCollection` GeoJSON : la géométrie,
@@ -194,8 +204,16 @@ class MapFeature < ApplicationRecord
         venue_keys: venue_keys,
         photos_count: photos.size,
         properties: properties
-      }.merge(plant_geojson_properties)
+      }.merge(plant_geojson_properties).merge(comment_geojson_properties)
     }
+  end
+
+  # Un point de commentaire (phase 11) : le nombre de messages de sa bulle, et
+  # s'il est résolu (estompé, masquable par le filtre du panneau).
+  def comment_geojson_properties
+    return {} unless comment_point?
+
+    { comments_count: map_comments.size, resolved: comment_root&.resolved_at.present? }
   end
 
   # Un point de plante (phase 7) : de quoi colorer et marquer son cercle sans
