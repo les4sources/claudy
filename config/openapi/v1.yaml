@@ -13,6 +13,8 @@ info:
     La création (POST) n'est exposée que sur le catalogue interne (catalog_items,
     leurs prices) et les fiches papier (paper_sheets) : ces données se remontent
     depuis des documents papier et n'ont pas à transiter par un script versionné.
+    La carte du domaine et ses plantes (tag « Carte & plantes ») ont aussi leur
+    POST : les plantes entrent par un import agent depuis Notion.
     Sur ces deux ressources, POST est un UPSERT sur la clé naturelle — canal + nom
     pour un article, mois + canal pour une fiche — et `meta.created` dit si
     l'enregistrement a été créé ou simplement retrouvé.
@@ -40,6 +42,17 @@ tags:
       comptes courants des ménages, et fiches papier mensuelles avec leur encodage.
   - name: Clients
     description: Clients (particuliers et organisations) et leurs séjours.
+  - name: Comptabilité
+    description: >
+      Référentiel comptable (comptes généraux et analytiques, exercices,
+      à-nouveaux), trésorerie (comptes, imports CODA, caisse) et rapprochement
+      assisté (règles d'affectation, motifs).
+  - name: Carte & plantes
+    description: >
+      Carte du domaine et plantes nourricières (epic #348) : espèces, variétés,
+      plantes (placement, fenêtres de récolte), objets de la carte en GeoJSON,
+      notes datées, photos et tâches de gestion. POST ouvert : c'est le chemin de
+      l'import Notion. Espèces, variétés et plantes (sur notion_url) sont des UPSERT.
 
 paths:
   /:
@@ -2131,6 +2144,453 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/Unprocessable" }
 
+  # ── Carte du domaine et plantes nourricières (epic #348, phase 8) ──────────
+  /plant_species:
+    get:
+      tags: [Carte & plantes]
+      summary: Lister les espèces nourricières
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: "Recherche sur le nom ou le nom latin." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée d'espèces, avec leurs fenêtres de récolte par défaut et leurs variétés.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/PlantSpecies" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Carte & plantes]
+      summary: Créer une espèce (upsert sur le nom, casse ignorée)
+      description: >
+        Reposter une espèce du même nom (« pommier » = « Pommier ») met sa fiche à
+        jour au lieu d'échouer. `meta.created` dit si elle a été créée.
+        `harvest_windows`, s'il est donné, REMPLACE les fenêtres par défaut de
+        l'espèce (liste vide = aucune).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                plant_species: { $ref: "#/components/schemas/PlantSpeciesInput" }
+      responses:
+        "201": { $ref: "#/components/responses/PlantSpeciesCreated" }
+        "200": { $ref: "#/components/responses/PlantSpeciesCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /plant_species/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    get:
+      tags: [Carte & plantes]
+      summary: Détail d'une espèce
+      responses:
+        "200": { $ref: "#/components/responses/PlantSpeciesCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Carte & plantes]
+      summary: Modifier une espèce (fiche botanique, fenêtres par défaut)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                plant_species: { $ref: "#/components/schemas/PlantSpeciesInput" }
+      responses:
+        "200": { $ref: "#/components/responses/PlantSpeciesCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /plant_varieties:
+    get:
+      tags: [Carte & plantes]
+      summary: Lister les variétés
+      parameters:
+        - { name: plant_species_id, in: query, schema: { type: integer }, description: "Les variétés de cette espèce." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de variétés.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/PlantVariety" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Carte & plantes]
+      summary: Créer une variété (upsert sur espèce + nom)
+      description: L'espèce se donne par `plant_species_id` ou par `species_name` (créée au besoin).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                plant_variety:
+                  type: object
+                  required: [name]
+                  properties:
+                    plant_species_id: { type: integer }
+                    species_name: { type: string, example: "Pommier" }
+                    name: { type: string, example: "Reinette Hernaut" }
+                    notes: { type: string, nullable: true }
+      responses:
+        "201": { $ref: "#/components/responses/PlantVarietyCreated" }
+        "200": { $ref: "#/components/responses/PlantVarietyCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /plant_varieties/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    get:
+      tags: [Carte & plantes]
+      summary: Détail d'une variété
+      responses:
+        "200": { $ref: "#/components/responses/PlantVarietyCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /plants:
+    get:
+      tags: [Carte & plantes]
+      summary: Lister les plantes
+      parameters:
+        - { name: status, in: query, schema: { type: string }, description: "Un statut ou plusieurs séparés par des virgules (clés de PlantStatus)." }
+        - { name: zone, in: query, schema: { type: string }, example: "Verger" }
+        - { name: placed, in: query, schema: { type: boolean }, description: "true = placées sur la carte, false = à placer." }
+        - { name: q, in: query, schema: { type: string }, description: "Nom, numéro (« 9.1 », « #42 »), espèce, nom latin, variété." }
+        - { name: number, in: query, schema: { type: string }, example: "9.1", description: "Numéro exact." }
+        - { name: plant_species_id, in: query, schema: { type: integer } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de plantes, par numéro puis nom.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Plant" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Carte & plantes]
+      summary: Créer une plante (upsert sur notion_url)
+      description: >
+        Le chemin de l'import Notion. Si `notion_url` est donné et qu'une plante le
+        porte déjà, elle est mise à jour (`meta.created` = false) : rejouer un
+        import ne double rien. `species_name` / `variety_name` sont résolus (créés
+        au besoin). `latitude` + `longitude` placent la plante (point dans la
+        couche Plantes) ; sans eux, elle est « à placer ». Numéro déjà pris ou
+        valeur hors liste fermée → 422 qui dit laquelle et liste les valeurs admises.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plant]
+              properties:
+                plant: { $ref: "#/components/schemas/PlantInput" }
+      responses:
+        "201": { $ref: "#/components/responses/PlantDetail" }
+        "200": { $ref: "#/components/responses/PlantDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /plants/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    get:
+      tags: [Carte & plantes]
+      summary: Fiche d'une plante (avec notes datées, photos et tâches)
+      responses:
+        "200": { $ref: "#/components/responses/PlantDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Carte & plantes]
+      summary: Modifier une plante
+      description: >
+        Mêmes champs que la création. `latitude` + `longitude` déplacent la plante ;
+        `placed: false` la retire de la carte (elle redevient « à placer ») ;
+        `harvest_windows` remplace ses fenêtres propres (liste vide = retour à
+        l'héritage de l'espèce).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                plant: { $ref: "#/components/schemas/PlantInput" }
+      responses:
+        "200": { $ref: "#/components/responses/PlantDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Carte & plantes]
+      summary: Supprimer une plante (suppression douce, son point disparaît de la carte)
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /plants/{plant_id}/notes:
+    parameters:
+      - { name: plant_id, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Carte & plantes]
+      summary: Ajouter une note datée à une plante
+      requestBody: { $ref: "#/components/requestBodies/MapNoteBody" }
+      responses:
+        "201": { $ref: "#/components/responses/MapNoteDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /plants/{plant_id}/photos:
+    parameters:
+      - { name: plant_id, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Carte & plantes]
+      summary: Ajouter des photos à une plante
+      requestBody: { $ref: "#/components/requestBodies/PhotosUpload" }
+      responses:
+        "201": { $ref: "#/components/responses/PhotosCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /plants/{plant_id}/photos/{id}:
+    parameters:
+      - { name: plant_id, in: path, required: true, schema: { type: integer } }
+      - { $ref: "#/components/parameters/Id" }
+    delete:
+      tags: [Carte & plantes]
+      summary: Retirer une photo d'une plante (définitif)
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /map_features:
+    get:
+      tags: [Carte & plantes]
+      summary: Lister les objets de la carte
+      parameters:
+        - { name: layer_id, in: query, schema: { type: integer } }
+        - { name: layer_kind, in: query, schema: { $ref: "#/components/schemas/MapLayerKind" } }
+        - { name: kind, in: query, schema: { type: string }, description: "feature_kind, un ou plusieurs séparés par des virgules (clés de MapFeatureKind)." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée d'objets de la carte.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/MapFeature" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Carte & plantes]
+      summary: Créer un objet de la carte
+      description: >
+        La couche se donne par `layer_id` ou `layer_kind` (couches uniques
+        seulement). Sans `feature_kind`, la géométrie le dit (Polygon → zone,
+        LineString → path, Point → point). Un point de plante ne se crée pas ici :
+        voir POST /plants.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                map_feature: { $ref: "#/components/schemas/MapFeatureInput" }
+      responses:
+        "201": { $ref: "#/components/responses/MapFeatureDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /map_features/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    get:
+      tags: [Carte & plantes]
+      summary: Détail d'un objet de la carte (avec notes datées, photos et tâches)
+      responses:
+        "200": { $ref: "#/components/responses/MapFeatureDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Carte & plantes]
+      summary: Modifier un objet de la carte
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                map_feature: { $ref: "#/components/schemas/MapFeatureInput" }
+      responses:
+        "200": { $ref: "#/components/responses/MapFeatureDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Carte & plantes]
+      summary: Supprimer un objet de la carte (suppression douce ; un point de plante rend sa plante « à placer »)
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /map_features/{map_feature_id}/notes:
+    parameters:
+      - { name: map_feature_id, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Carte & plantes]
+      summary: Ajouter une note datée à un objet de la carte
+      requestBody: { $ref: "#/components/requestBodies/MapNoteBody" }
+      responses:
+        "201": { $ref: "#/components/responses/MapNoteDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /map_features/{map_feature_id}/photos:
+    parameters:
+      - { name: map_feature_id, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Carte & plantes]
+      summary: Ajouter des photos à un objet de la carte
+      requestBody: { $ref: "#/components/requestBodies/PhotosUpload" }
+      responses:
+        "201": { $ref: "#/components/responses/PhotosCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /map_features/{map_feature_id}/photos/{id}:
+    parameters:
+      - { name: map_feature_id, in: path, required: true, schema: { type: integer } }
+      - { $ref: "#/components/parameters/Id" }
+    delete:
+      tags: [Carte & plantes]
+      summary: Retirer une photo d'un objet de la carte (définitif)
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /map_notes/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    patch:
+      tags: [Carte & plantes]
+      summary: Modifier une note datée
+      requestBody: { $ref: "#/components/requestBodies/MapNoteBody" }
+      responses:
+        "200": { $ref: "#/components/responses/MapNoteDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Carte & plantes]
+      summary: Supprimer une note datée (suppression douce)
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /map_tasks:
+    get:
+      tags: [Carte & plantes]
+      summary: Lister les tâches de gestion de la carte
+      parameters:
+        - { name: subject_type, in: query, schema: { $ref: "#/components/schemas/MapSubjectType" } }
+        - { name: subject_id, in: query, schema: { type: integer } }
+        - { name: month, in: query, schema: { type: integer, minimum: 1, maximum: 12 } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de tâches dont le porteur est vivant.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/MapTask" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Carte & plantes]
+      summary: Créer une tâche sur une plante ou un objet de la carte
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                map_task:
+                  allOf:
+                    - $ref: "#/components/schemas/MapTaskInput"
+                    - type: object
+                      required: [subject_type, subject_id, label]
+                      properties:
+                        subject_type: { $ref: "#/components/schemas/MapSubjectType" }
+                        subject_id: { type: integer }
+      responses:
+        "201": { $ref: "#/components/responses/MapTaskDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /map_tasks/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    get:
+      tags: [Carte & plantes]
+      summary: Détail d'une tâche
+      responses:
+        "200": { $ref: "#/components/responses/MapTaskDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Carte & plantes]
+      summary: Modifier une tâche (le porteur ne change pas)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                map_task: { $ref: "#/components/schemas/MapTaskInput" }
+      responses:
+        "200": { $ref: "#/components/responses/MapTaskDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Carte & plantes]
+      summary: Supprimer une tâche (suppression douce)
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
 components:
   securitySchemes:
     bearerAuth:
@@ -2166,6 +2626,65 @@ components:
         Date à laquelle résoudre le prix (défaut : aujourd'hui). Relire un mois
         clôturé sans ce paramètre afficherait les prix d'aujourd'hui.
   responses:
+    PlantSpeciesCreated:
+      description: Une espèce. `meta.created` (POST seulement) dit si elle a été créée.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: "#/components/schemas/PlantSpecies" }
+              meta: { type: object, properties: { created: { type: boolean } } }
+    PlantVarietyCreated:
+      description: Une variété. `meta.created` (POST seulement) dit si elle a été créée.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: "#/components/schemas/PlantVariety" }
+              meta: { type: object, properties: { created: { type: boolean } } }
+    PlantDetail:
+      description: La fiche d'une plante. `meta.created` (POST seulement) dit si elle a été créée.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: "#/components/schemas/PlantDetail" }
+              meta: { type: object, properties: { created: { type: boolean } } }
+    MapFeatureDetail:
+      description: Un objet de la carte, avec ses notes datées, photos et tâches.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: "#/components/schemas/MapFeatureDetail" }
+    MapNoteDetail:
+      description: Une note datée.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: "#/components/schemas/MapNote" }
+    MapTaskDetail:
+      description: Une tâche de gestion de la carte.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: "#/components/schemas/MapTask" }
+    PhotosCreated:
+      description: Les photos CRÉÉES par cet envoi (pas celles qui existaient déjà).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              photos: { type: array, items: { $ref: "#/components/schemas/Photo" } }
     Unauthorized:
       description: Jeton manquant ou invalide.
       content:
@@ -2184,6 +2703,33 @@ components:
     NoContent:
       description: Suppression effectuée (soft-delete). Pas de corps de réponse.
   requestBodies:
+    MapNoteBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              map_note:
+                type: object
+                properties:
+                  body: { type: string, example: "Bourgeons gelés" }
+                  noted_on: { type: string, format: date, description: "Par défaut : aujourd'hui." }
+    PhotosUpload:
+      required: true
+      description: >
+        multipart/form-data, un ou plusieurs fichiers sous `photos[]`. JPEG ou PNG
+        (HEIC si le serveur sait le convertir) ; un seul fichier refusé refuse tout
+        l'envoi (422), rien n'est attaché.
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required: [photos]
+            properties:
+              photos:
+                type: array
+                items: { type: string, format: binary }
     WriteBody:
       required: true
       description: >
@@ -2204,6 +2750,7 @@ components:
       properties:
         error: { type: string }
         message: { type: string }
+        messages: { type: array, items: { type: string }, description: "Messages de validation (422)." }
     Money:
       type: object
       properties:
@@ -2721,3 +3268,327 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         url: { type: string, format: uri }
+    # ── Carte du domaine et plantes (epic #348, phase 8) ──────────────────────
+    # Listes fermées. En ÉCRITURE, la clé OU le libellé de la base Notion
+    # (« Existante », « Arbre », casse ignorée) sont acceptés ; en lecture, c'est
+    # toujours la clé.
+    PlantStatus:
+      type: string
+      enum: [existing, to_confirm, to_place, on_plan, awaiting_planting, planted, dead, to_move, wild]
+      description: "Existante, À confirmer, À placer, Sur plan, En attente de plantation, Plantée, Morte, À déplacer, Flore sauvage."
+    PlantHealth:
+      type: string
+      enum: [healthy, worrying, sick]
+      description: "Saine, Inquiétante, Malade."
+    PlantProduction:
+      type: string
+      enum: [high, medium, low, none]
+      description: "Élevée, Moyenne, Faible, Ne produit pas."
+    PlantHabit:
+      type: string
+      enum: [standard, half_standard, dwarf]
+      description: "Haute tige, Moyenne tige, Basse tige."
+    PlantStratum:
+      type: string
+      enum: [tree, coppice, pollard, food_pollard, espalier, shrub, subshrub, herbaceous, climber, groundcover, vine, aquatic]
+      description: "Arbre, Arbre en cépée, Arbre trogné, Trogne alimentaire, Palissé, Arbuste, Arbrisseau, Herbacée, Grimpante, Couvre-sol, Liane, Aquatique."
+    PlantPopulation:
+      type: string
+      enum: [strong, medium, rare, single]
+      description: "Forte population, Moyenne, Rare, Un seul individu."
+    PlantStockType:
+      type: string
+      enum: [container, bare_root, b2b, forest_plug]
+      description: "Conteneur, Racines nues, B2B, Mini-motte forestière."
+    HarvestPart:
+      type: string
+      enum: [flower, leaf, fruit, root, seed, sap, other]
+      description: "Fleur, Feuille, Fruit, Racine, Graine, Sève, Autre."
+    MapFeatureKind:
+      type: string
+      enum: [zone, path, point, plant, node, line, comment, observation, lodging, space]
+    MapLayerKind:
+      type: string
+      enum: [venues, management, welcome, plants, network, comments, sketch, biodiversity]
+      description: "network et sketch ont plusieurs couches : les désigner par layer_id."
+    MapTaskSector:
+      type: string
+      enum: [terrain, nourricier]
+    MapSubjectType:
+      type: string
+      enum: [MapFeature, Plant]
+    HarvestWindow:
+      type: object
+      properties:
+        part: { $ref: "#/components/schemas/HarvestPart" }
+        part_label: { type: string, example: "Fruit" }
+        months: { type: array, items: { type: integer, minimum: 1, maximum: 12 }, example: [9, 10] }
+    HarvestWindowInput:
+      type: object
+      required: [part, months]
+      properties:
+        part: { type: string, description: "Clé de HarvestPart ou son libellé (« Fruit »).", example: "fruit" }
+        months: { type: array, items: { type: integer, minimum: 1, maximum: 12 }, example: [9, 10] }
+    PlantSpecies:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "plant_species" }
+        name: { type: string, example: "Pommier" }
+        latin_name: { type: string, nullable: true, example: "Malus domestica" }
+        full_name: { type: string, example: "Pommier (Malus domestica)" }
+        family: { type: string, nullable: true, example: "Rosaceae" }
+        common_names: { type: string, nullable: true }
+        hardiness: { type: string, nullable: true }
+        height: { type: string, nullable: true }
+        spread: { type: string, nullable: true }
+        exposure: { type: array, items: { type: string } }
+        edible_parts: { type: array, items: { type: string } }
+        wikipedia_url: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        harvest_windows:
+          type: array
+          description: Fenêtres de récolte PAR DÉFAUT, héritées par les plantes qui n'en ont pas en propre.
+          items: { $ref: "#/components/schemas/HarvestWindow" }
+        varieties:
+          type: array
+          items: { type: object, properties: { id: { type: integer }, name: { type: string } } }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PlantSpeciesInput:
+      type: object
+      properties:
+        name: { type: string, description: "Obligatoire à la création. Clé de l'upsert (casse ignorée).", example: "Pommier" }
+        latin_name: { type: string, example: "Malus domestica" }
+        family: { type: string }
+        common_names: { type: string }
+        hardiness: { type: string }
+        height: { type: string }
+        spread: { type: string }
+        exposure: { type: array, items: { type: string } }
+        edible_parts: { type: array, items: { type: string } }
+        wikipedia_url: { type: string }
+        notes: { type: string }
+        harvest_windows:
+          type: array
+          description: Remplace les fenêtres par défaut. Absent = inchangées ; liste vide = aucune.
+          items: { $ref: "#/components/schemas/HarvestWindowInput" }
+    PlantVariety:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "plant_variety" }
+        name: { type: string, example: "Reinette Hernaut" }
+        full_name: { type: string, example: "Pommier Reinette Hernaut" }
+        notes: { type: string, nullable: true }
+        plant_species_id: { type: integer }
+        species: { $ref: "#/components/schemas/PlantSpeciesRef" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PlantSpeciesRef:
+      type: object
+      nullable: true
+      properties:
+        id: { type: integer }
+        name: { type: string, example: "Pommier" }
+        latin_name: { type: string, nullable: true, example: "Malus domestica" }
+    Plant:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "plant" }
+        name: { type: string, example: "Pommier Reinette Hernaut cl" }
+        display_name: { type: string }
+        number: { type: number, nullable: true, example: 9.1, description: "Numéro de terrain, décimal (9.1 existe)." }
+        number_label: { type: string, nullable: true, example: "9.1" }
+        status: { $ref: "#/components/schemas/PlantStatus" }
+        status_label: { type: string, example: "Existante" }
+        health: { $ref: "#/components/schemas/PlantHealth" }
+        production: { $ref: "#/components/schemas/PlantProduction" }
+        habit: { $ref: "#/components/schemas/PlantHabit" }
+        stratum: { $ref: "#/components/schemas/PlantStratum" }
+        population: { $ref: "#/components/schemas/PlantPopulation" }
+        stock_type: { $ref: "#/components/schemas/PlantStockType" }
+        zone: { type: string, nullable: true, example: "Verger" }
+        plant_count: { type: integer, nullable: true }
+        purchase_price_cents: { type: integer, nullable: true }
+        planted_on: { type: string, format: date, nullable: true }
+        planted_year: { type: integer, nullable: true }
+        altitude: { type: integer, nullable: true }
+        nursery: { type: string, nullable: true }
+        notion_url: { type: string, nullable: true }
+        notes: { type: string, nullable: true, description: "Texte libre de la fiche. Les notes datées sont dans `notes_log` (fiche détaillée)." }
+        placed: { type: boolean, description: "true = un point sur la carte ; false = « à placer »." }
+        latitude: { type: number, nullable: true, example: 50.3312 }
+        longitude: { type: number, nullable: true, example: 4.8765 }
+        map_feature_id: { type: integer, nullable: true }
+        species: { $ref: "#/components/schemas/PlantSpeciesRef" }
+        variety:
+          type: object
+          nullable: true
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            plant_species_id: { type: integer }
+        harvest_windows:
+          type: array
+          description: Les fenêtres PROPRES de la plante.
+          items: { $ref: "#/components/schemas/HarvestWindow" }
+        harvest_windows_inherited: { type: boolean, description: "true si la plante n'a pas de fenêtre propre et hérite de son espèce." }
+        harvest_windows_effective:
+          type: array
+          description: Les fenêtres qui s'appliquent — propres si elle en a, sinon celles de l'espèce.
+          items:
+            allOf:
+              - $ref: "#/components/schemas/HarvestWindow"
+              - type: object
+                properties:
+                  inherited: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PlantDetail:
+      allOf:
+        - $ref: "#/components/schemas/Plant"
+        - type: object
+          properties:
+            notes_log: { type: array, items: { $ref: "#/components/schemas/MapNote" } }
+            photos: { type: array, items: { $ref: "#/components/schemas/Photo" } }
+            tasks: { type: array, items: { $ref: "#/components/schemas/MapTask" } }
+    PlantInput:
+      type: object
+      description: >
+        Tous les champs sont facultatifs ; sans `name`, la plante prend « espèce
+        variété ». Les listes fermées acceptent la clé ou le libellé Notion.
+      properties:
+        name: { type: string }
+        number: { oneOf: [{ type: number }, { type: string }], example: 9.1, description: "Unique parmi les plantes vivantes ; doublon → 422." }
+        species_name: { type: string, example: "Pommier", description: "Résolu par nom (casse ignorée), créé au besoin." }
+        species_latin_name: { type: string, example: "Malus domestica", description: "Posé seulement si l'espèce est créée." }
+        plant_species_id: { type: integer }
+        variety_name: { type: string, example: "Reinette Hernaut", description: "Variété de l'espèce donnée (ou actuelle), créée au besoin." }
+        plant_variety_id: { type: integer }
+        status: { type: string, description: "Clé de PlantStatus ou libellé." }
+        health: { type: string, description: "Clé de PlantHealth ou libellé." }
+        production: { type: string, description: "Clé de PlantProduction ou libellé." }
+        habit: { type: string, description: "Clé de PlantHabit ou libellé." }
+        stratum: { type: string, description: "Clé de PlantStratum ou libellé." }
+        population: { type: string, description: "Clé de PlantPopulation ou libellé." }
+        stock_type: { type: string, description: "Clé de PlantStockType ou libellé." }
+        zone: { type: string }
+        plant_count: { type: integer }
+        purchase_price_cents: { type: integer }
+        planted_on: { type: string, format: date }
+        planted_year: { type: integer }
+        altitude: { type: integer }
+        nursery: { type: string }
+        notion_url: { type: string, description: "Clé de l'upsert de POST /plants." }
+        notes: { type: string }
+        latitude: { type: number, description: "Avec longitude (WGS84) : place ou déplace la plante." }
+        longitude: { type: number }
+        placed: { type: boolean, description: "false retire la plante de la carte (elle redevient « à placer »)." }
+        harvest_windows:
+          type: array
+          description: Remplace les fenêtres propres. Absent = inchangées ; liste vide = retour à l'héritage de l'espèce.
+          items: { $ref: "#/components/schemas/HarvestWindowInput" }
+      example:
+        name: "Pommier Reinette Hernaut cl"
+        number: 9.1
+        species_name: "Pommier"
+        species_latin_name: "Malus domestica"
+        variety_name: "Reinette Hernaut"
+        status: "Existante"
+        stratum: "Arbre"
+        zone: "Verger"
+        notion_url: "https://www.notion.so/…"
+        latitude: 50.3312
+        longitude: 4.8765
+        harvest_windows: [{ part: "fruit", months: [9, 10] }]
+    MapNote:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "map_note" }
+        subject_type: { $ref: "#/components/schemas/MapSubjectType" }
+        subject_id: { type: integer }
+        body: { type: string, example: "Bourgeons gelés" }
+        noted_on: { type: string, format: date }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Photo:
+      type: object
+      properties:
+        id: { type: integer, description: "Identifiant de la pièce jointe (pour DELETE …/photos/{id})." }
+        filename: { type: string, example: "pommier.jpg" }
+        content_type: { type: string, example: "image/jpeg" }
+        byte_size: { type: integer }
+        url: { type: string, format: uri }
+        created_at: { type: string, format: date-time }
+    MapTask:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "map_task" }
+        subject_type: { $ref: "#/components/schemas/MapSubjectType" }
+        subject_id: { type: integer }
+        label: { type: string, example: "Taille d'hiver" }
+        months: { type: array, items: { type: integer, minimum: 1, maximum: 12 } }
+        sector: { $ref: "#/components/schemas/MapTaskSector" }
+        sector_label: { type: string }
+        frequency: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        position: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    MapTaskInput:
+      type: object
+      properties:
+        label: { type: string }
+        months: { type: array, items: { type: integer, minimum: 1, maximum: 12 } }
+        sector: { type: string, description: "Clé de MapTaskSector ou libellé. Par défaut : terrain pour un objet, nourricier pour une plante." }
+        frequency: { type: string }
+        notes: { type: string }
+    MapFeature:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "map_feature" }
+        feature_kind: { $ref: "#/components/schemas/MapFeatureKind" }
+        layer_id: { type: integer }
+        layer_kind: { $ref: "#/components/schemas/MapLayerKind" }
+        name: { type: string, nullable: true, description: "Nom affiché (français, sinon lieux ou plante)." }
+        name_i18n: { type: object, additionalProperties: { type: string }, example: { fr: "Prairie du bas" } }
+        description_i18n: { type: object, additionalProperties: { type: string } }
+        geometry: { $ref: "#/components/schemas/GeoJSONGeometry" }
+        geometry_type: { type: string, enum: [Point, LineString, Polygon] }
+        properties: { type: object, additionalProperties: true, example: { management_notes: "Fauche tardive" } }
+        position: { type: integer }
+        plant_id: { type: integer, nullable: true, description: "La plante que ce point représente (feature_kind plant)." }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    MapFeatureDetail:
+      allOf:
+        - $ref: "#/components/schemas/MapFeature"
+        - type: object
+          properties:
+            notes_log: { type: array, items: { $ref: "#/components/schemas/MapNote" } }
+            photos: { type: array, items: { $ref: "#/components/schemas/Photo" } }
+            tasks: { type: array, items: { $ref: "#/components/schemas/MapTask" } }
+    MapFeatureInput:
+      type: object
+      properties:
+        layer_id: { type: integer }
+        layer_kind: { type: string, description: "Clé de MapLayerKind (couches uniques seulement)." }
+        feature_kind: { type: string, description: "Clé de MapFeatureKind, sauf plant. Déduit de la géométrie si absent." }
+        geometry: { $ref: "#/components/schemas/GeoJSONGeometry" }
+        name_i18n: { type: object, additionalProperties: { type: string }, description: "Clés fr, en, nl." }
+        description_i18n: { type: object, additionalProperties: { type: string } }
+        properties: { type: object, additionalProperties: true }
+        position: { type: integer }
+    GeoJSONGeometry:
+      type: object
+      description: "GeoJSON Point, LineString ou Polygon, positions en [longitude, latitude] (WGS84)."
+      required: [type, coordinates]
+      properties:
+        type: { type: string, enum: [Point, LineString, Polygon] }
+        coordinates: { type: array, items: {} }
+      example: { type: Point, coordinates: [4.8765, 50.3312] }

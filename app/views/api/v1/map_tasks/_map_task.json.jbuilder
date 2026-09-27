@@ -1,0 +1,13 @@
+json.id map_task.id
+json.type "map_task"
+json.subject_type map_task.subject_type
+json.subject_id map_task.subject_id
+json.label map_task.label
+json.months map_task.months
+json.sector map_task.sector
+json.sector_label map_task.sector_label
+json.frequency map_task.frequency
+json.notes map_task.notes
+json.position map_task.position
+json.created_at map_task.created_at
+json.updated_at map_task.updated_at
