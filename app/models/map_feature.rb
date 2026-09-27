@@ -65,6 +65,10 @@ class MapFeature < ApplicationRecord
   # `dependent:` — un tracé est soft-deleté, et c'est `release_venues` qui
   # efface alors ses liaisons.
   has_many :map_feature_venues, inverse_of: :map_feature, autosave: true
+  # Le plan de travail de l'objet (phase 6). Pas de `dependent:` non plus : un
+  # objet supprimé garde ses tâches en base, le carnet les écarte en ne lisant
+  # que les tâches d'un porteur vivant (`MapTask.with_live_subject`).
+  has_many :map_tasks, as: :subject, inverse_of: :subject
 
   # Miniature pour la galerie, aperçu pour l'agrandissement. `format: :jpeg` :
   # une photo HEIC d'iPhone n'est pas lisible par tous les navigateurs.

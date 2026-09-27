@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_27_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_27_210000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1387,6 +1387,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_010000) do
     t.index ["kind"], name: "index_map_layers_on_kind_unique_live", unique: true, where: "((deleted_at IS NULL) AND ((kind)::text <> ALL (ARRAY[('network'::character varying)::text, ('sketch'::character varying)::text])))"
   end
 
+  create_table "map_tasks", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.string "frequency"
+    t.string "label", null: false
+    t.integer "months", default: [], null: false, array: true
+    t.text "notes"
+    t.integer "position"
+    t.string "sector", null: false
+    t.bigint "subject_id", null: false
+    t.string "subject_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_map_tasks_on_created_by_id"
+    t.index ["deleted_at"], name: "index_map_tasks_on_deleted_at"
+    t.index ["months"], name: "index_map_tasks_on_months", using: :gin
+    t.index ["subject_type", "subject_id"], name: "index_map_tasks_on_subject_type_and_subject_id"
+  end
+
   create_table "meal_orders", force: :cascade do |t|
     t.datetime "bread_reminder_sent_at"
     t.text "cancellation_reason"
@@ -2348,6 +2367,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_010000) do
   add_foreign_key "map_features", "map_layers"
   add_foreign_key "map_features", "users", column: "created_by_id"
   add_foreign_key "map_layers", "users", column: "created_by_id"
+  add_foreign_key "map_tasks", "users", column: "created_by_id"
   add_foreign_key "meal_orders", "humans", column: "responsible_human_id"
   add_foreign_key "meal_orders", "stays"
   add_foreign_key "member_accounts", "households"
