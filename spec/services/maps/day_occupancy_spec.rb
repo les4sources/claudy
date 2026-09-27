@@ -17,8 +17,8 @@ RSpec.describe Maps::DayOccupancy do
     lodging
   end
   let!(:grande_salle) { Space.create!(name: "Grande Salle", capacity: 1) }
-  let!(:hulotte_feature) { venues.map_features.create!(geometry: square, linked_key: "Lodging:#{hulotte.id}") }
-  let!(:salle_feature) { venues.map_features.create!(geometry: square, linked_key: "Space:#{grande_salle.id}") }
+  let!(:hulotte_feature) { venues.map_features.create!(geometry: square, venue_keys: ["Lodging:#{hulotte.id}"]) }
+  let!(:salle_feature) { venues.map_features.create!(geometry: square, venue_keys: ["Space:#{grande_salle.id}"]) }
 
   def book(from:, to:, status: "confirmed", lodging: hulotte, name: "Martin")
     booking = Booking.new(lodging: lodging, from_date: from, to_date: to, status: status, lastname: name,
@@ -107,7 +107,7 @@ RSpec.describe Maps::DayOccupancy do
 
   it "un espace partagé affiche le nombre de groupes" do
     bois = Space.create!(name: "Bois", capacity: 3)
-    feature = venues.map_features.create!(geometry: square, linked_key: "Space:#{bois.id}")
+    feature = venues.map_features.create!(geometry: square, venue_keys: ["Space:#{bois.id}"])
     book_space(date: today, space: bois)
     expect(described_class.new(today).states[feature.id]).to eq(state: "occupied", label: "Occupé (1/3 groupes)")
   end
@@ -116,11 +116,70 @@ RSpec.describe Maps::DayOccupancy do
     5.times do |i|
       lodging = Lodging.create!(name: "Gîte #{i}", price_night_cents: 10_000)
       lodging.rooms << Room.create!(name: "Chambre #{i}", level: 1)
-      venues.map_features.create!(geometry: square, linked_key: "Lodging:#{lodging.id}")
+      venues.map_features.create!(geometry: square, venue_keys: ["Lodging:#{lodging.id}"])
     end
     queries = 0
     counter = ->(*, payload) { queries += 1 unless payload[:name] == "SCHEMA" || payload[:cached] }
     ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { described_class.new(today).states }
     expect(queries).to be <= 6
+  end
+  # Issue #370 — un tracé pour deux gîtes superposés : la Chevêche au
+  # rez-de-chaussée, la Hulotte à l'étage.
+  describe "un tracé qui représente plusieurs lieux" do
+    let!(:cheveche) do
+      lodging = Lodging.create!(name: "La Chevêche", price_night_cents: 42_000)
+      lodging.rooms << Room.create!(name: "Sauge", level: 0)
+      lodging
+    end
+    let(:building) do
+      hulotte_feature.update!(venue_keys: ["Lodging:#{cheveche.id}", "Lodging:#{hulotte.id}"])
+      hulotte_feature
+    end
+
+    it "prend l'état le plus actif, et détaille lieu par lieu" do
+      feature = building
+      book(from: today - 2, to: today + 2, lodging: cheveche)
+      expect(described_class.new(today).states[feature.id])
+        .to eq(state: "occupied", label: "La Chevêche : Occupé · La Hulotte : Libre")
+    end
+
+    it "une arrivée sur l'un et un séjour en cours sur l'autre font une rotation" do
+      feature = building
+      book(from: today - 2, to: today + 2, lodging: cheveche)
+      book(from: today, to: today + 3)
+      expect(described_class.new(today).states[feature.id])
+        .to eq(state: "turnover", label: "La Chevêche : Occupé · La Hulotte : Arrivée")
+    end
+
+    it "libre partout, libre" do
+      feature = building
+      expect(described_class.new(today).states[feature.id][:state]).to eq("free")
+    end
+
+    it "un tracé à un seul lieu garde son libellé" do
+      book(from: today, to: today + 2)
+      expect(described_class.new(today).states[hulotte_feature.id]).to eq(state: "turnover", label: "Arrivée")
+    end
+
+    it "mélange gîtes et salles, les gîtes d'abord" do
+      salle_feature.soft_delete!(validate: false)
+      feature = venues.map_features.create!(geometry: square, venue_keys: ["Space:#{grande_salle.id}", "Lodging:#{cheveche.id}"])
+      book_space(date: today)
+      expect(described_class.new(today).states[feature.id])
+        .to eq(state: "occupied", label: "La Chevêche : Libre · Grande Salle : Occupé")
+    end
+
+    it "garde un nombre fixe de requêtes, quel que soit le nombre de tracés" do
+      4.times do |i|
+        a = Lodging.create!(name: "Bas #{i}", price_night_cents: 10_000)
+        b = Lodging.create!(name: "Haut #{i}", price_night_cents: 10_000)
+        [a, b].each { |l| l.rooms << Room.create!(name: "Chambre #{l.name}", level: 1) }
+        venues.map_features.create!(geometry: square, venue_keys: ["Lodging:#{a.id}", "Lodging:#{b.id}"])
+      end
+      queries = 0
+      counter = ->(*, payload) { queries += 1 unless payload[:name] == "SCHEMA" || payload[:cached] }
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { described_class.new(today).states }
+      expect(queries).to be <= 6
+    end
   end
 end

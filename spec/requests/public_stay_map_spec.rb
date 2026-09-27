@@ -63,8 +63,8 @@ RSpec.describe "Public /sejour/:token/carte — la carte des hôtes (epic #348, 
         properties: { "management_notes" => "Retourner tous les quinze jours" }
       )
       venues = MapLayer.for_kind(:venues)
-      venues.map_features.create!(feature_kind: "lodging", geometry: square, linked: hulotte)
-      venues.map_features.create!(feature_kind: "lodging", geometry: other_square, linked: cheveche)
+      venues.map_features.create!(feature_kind: "lodging", geometry: square, venue_keys: ["Lodging:#{hulotte.id}"])
+      venues.map_features.create!(feature_kind: "lodging", geometry: other_square, venue_keys: ["Lodging:#{cheveche.id}"])
     end
 
     it "sert la couche Accueil, dans la langue du séjour, et le fond par jeton" do

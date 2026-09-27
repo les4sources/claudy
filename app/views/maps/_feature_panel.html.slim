@@ -14,7 +14,7 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
     span class="rounded-full bg-forest-tint px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-forest"
       = layer&.kind_label
     h2.flex-1.truncate.text-sm.font-semibold.text-stone-800
-      = feature.persisted? ? (feature.name(:fr).presence || feature.linked&.name || "Objet sans nom") : "Nouvel objet"
+      = feature.persisted? ? (feature.display_name || "Objet sans nom") : "Nouvel objet"
     / Couche Accueil (phase 4) : les langues des hôtes encore à traduire.
       Discret — le français fait foi, les autres langues y retombent.
     - if layer&.welcome? && feature.persisted? && feature.missing_translations.any?
@@ -85,13 +85,27 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
                 = f.text_area "description_#{locale}", value: feature.description_i18n.to_h[locale], rows: 2,
                               class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
       - if layer&.venues?
-        / Le gîte ou la salle que ce tracé représente (phase 3). Un gîte n'a
-          qu'un tracé : ceux déjà tracés ne sont plus proposés.
-        div
-          = f.label :linked_key, "Gîte ou salle", class: "block text-xs font-semibold text-stone-600"
-          = f.select :linked_key, grouped_options_for_select(Maps::Venues.options_for(feature), feature.linked_key),
-                     { include_blank: "— Aucun —" },
-                     class: "mt-1 h-11 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+        / Les gîtes et salles que ce tracé représente (phase 3) — plusieurs
+          quand ils sont superposés, la Chevêche et la Hulotte (issue #370).
+          Un gîte n'a qu'un tracé : ceux déjà tracés ailleurs ne sont plus
+          proposés. La valeur vide part toujours : tout décocher délie le tracé.
+        - venue_groups = Maps::Venues.options_for(feature).reject { |_, choices| choices.empty? }
+        - checked = feature.venue_keys
+        fieldset data-venue-choices="true"
+          legend.block.text-xs.font-semibold.text-stone-600 Gîtes et salles représentés
+          = hidden_field_tag "map_feature[venue_keys][]", "", id: nil
+          - if venue_groups.empty?
+            p.mt-1.text-xs.text-stone-500 Tous les gîtes et salles ont déjà leur tracé.
+          - venue_groups.each do |group, choices|
+            p class="mt-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" = group
+            ul.mt-1.space-y-0.5
+              - choices.each do |label, key|
+                li
+                  label.flex.cursor-pointer.items-center.gap-2.rounded-lg.px-2.py-1.5.text-sm.text-stone-700.hover:bg-stone-50
+                    = check_box_tag "map_feature[venue_keys][]", key, checked.include?(key),
+                                    id: "map_feature_venue_#{key.parameterize}",
+                                    class: "h-4 w-4 rounded border-stone-300 text-forest focus:ring-forest"
+                    span = label
       - if layer&.management?
         div
           = f.label :management_notes, "Consigne de gestion", class: "block text-xs font-semibold text-stone-600"

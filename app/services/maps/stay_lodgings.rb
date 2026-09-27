@@ -25,22 +25,34 @@ module Maps
       end
     end
 
-    # Les tracés de ces gîtes dans la couche des lieux (phase 3).
+    # Les tracés de ces gîtes dans la couche des lieux (phase 3) : un tracé est
+    # retenu dès qu'UN de ses lieux est un gîte du séjour (issue #370 — le
+    # bâtiment Chevêche + Hulotte pour un séjour à la Hulotte).
     def features
       return MapFeature.none if lodging_ids.empty?
 
-      MapFeature.where(map_layer: MapLayer.where(kind: "venues"), linked_type: "Lodging", linked_id: lodging_ids)
-                .includes(:linked).ordered
+      MapFeature.where(map_layer: MapLayer.where(kind: "venues"))
+                .where(id: MapFeatureVenue.where(venue_type: "Lodging", venue_id: lodging_ids).select(:map_feature_id))
+                .includes(map_feature_venues: :venue).ordered
     end
 
-    # Ce qu'un hôte voit de son gîte : le tracé et le nom du gîte. Rien d'autre.
+    # Ce qu'un hôte voit de son gîte : le tracé et le nom du ou des gîtes DU
+    # SÉJOUR parmi les lieux du tracé — jamais celui de l'autre gîte du
+    # bâtiment. Rien d'autre.
     def as_geojson
       {
         type: "FeatureCollection",
         features: features.map do |feature|
-          { type: "Feature", geometry: feature.geometry, properties: { name: feature.linked&.name || feature.name(:fr) } }
+          { type: "Feature", geometry: feature.geometry, properties: { name: label_for(feature) } }
         end
       }
+    end
+
+    private
+
+    def label_for(feature)
+      mine = feature.venues.select { |venue| venue.is_a?(Lodging) && lodging_ids.include?(venue.id) }
+      mine.map(&:name).join(" · ").presence || feature.name(:fr)
     end
   end
 end

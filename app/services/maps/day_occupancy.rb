@@ -18,6 +18,7 @@ module Maps
   class DayOccupancy
     STATES = %w[occupied turnover free].freeze
     STATUSES = %w[confirmed].freeze
+    STATES_BY_ACTIVITY = %w[turnover occupied free].freeze
 
     Group = Struct.new(:booking, :arriving, :departing, keyword_init: true) do
       def stay = booking.stay
@@ -35,26 +36,41 @@ module Maps
 
     # { feature_id => { state:, label: } } pour tous les objets reliés de la
     # couche des lieux. Un nombre fixe de requêtes, quel que soit le nombre de
-    # gîtes et de salles.
+    # gîtes, de salles et de tracés.
+    #
+    # Un tracé qui représente plusieurs lieux (la Chevêche et la Hulotte,
+    # superposées — issue #370) prend l'état le plus actif de ses lieux, et son
+    # libellé les détaille : « La Chevêche : Arrivée · La Hulotte : Libre ».
     def states
-      features = MapFeature.where(map_layer: MapLayer.where(kind: "venues"))
-                           .where.not(linked_id: nil).to_a
-      lodging_ids = features.select { |f| f.linked_type == "Lodging" }.map(&:linked_id)
-      space_ids = features.select { |f| f.linked_type == "Space" }.map(&:linked_id)
+      links = MapFeatureVenue.joins(:map_feature)
+                             .merge(MapFeature.where(map_layer: MapLayer.where(kind: "venues")))
+                             .pluck(:map_feature_id, :venue_type, :venue_id)
+      lodging_ids = links.select { |_, type, _| type == "Lodging" }.map(&:last).uniq
+      space_ids = links.select { |_, type, _| type == "Space" }.map(&:last).uniq
 
       rooms_by_lodging = LodgingRoom.where(lodging_id: lodging_ids).pluck(:lodging_id, :room_id)
                                     .group_by(&:first).transform_values { |pairs| pairs.map(&:last) }
       nights = room_nights(rooms_by_lodging.values.flatten.uniq)
       spaces = space_counts(space_ids)
-      capacities = Space.unscoped.where(id: space_ids).pluck(:id, :capacity).to_h
+      space_rows = space_ids.empty? ? [] : Space.unscoped.where(id: space_ids).pluck(:id, :name, :capacity)
+      capacities = space_rows.to_h { |id, _, capacity| [id, capacity] }
+      names = {
+        "Lodging" => lodging_ids.empty? ? {} : Lodging.unscoped.where(id: lodging_ids).pluck(:id, :name).to_h,
+        "Space" => space_rows.to_h { |id, name, _| [id, name] }
+      }
 
-      features.each_with_object({}) do |feature, result|
-        result[feature.id] =
-          if feature.linked_type == "Lodging"
-            lodging_state(nights, rooms_by_lodging.fetch(feature.linked_id, []))
-          else
-            space_state(spaces[feature.linked_id].to_i, capacities[feature.linked_id].to_i)
-          end
+      # Les gîtes puis les salles, chacun par nom — l'ordre de la fiche.
+      links.group_by(&:first).transform_values do |feature_links|
+        venue_states = feature_links.sort_by { |_, type, id| [type == "Lodging" ? 0 : 1, names[type][id].to_s] }.map do |_, type, id|
+          state =
+            if type == "Lodging"
+              lodging_state(nights, rooms_by_lodging.fetch(id, []))
+            else
+              space_state(spaces[id].to_i, capacities[id].to_i)
+            end
+          [names[type][id], state]
+        end
+        combine(venue_states)
       end
     end
 
@@ -127,6 +143,15 @@ module Maps
 
       label = capacity > 1 ? "Occupé (#{count}/#{capacity} groupes)" : "Occupé"
       { state: "occupied", label: label }
+    end
+
+    # L'état le plus actif l'emporte : une arrivée sur l'un des lieux se voit
+    # sur le bâtiment entier. Un tracé à un seul lieu garde son libellé.
+    def combine(venue_states)
+      return venue_states.first.last if venue_states.one?
+
+      state = STATES_BY_ACTIVITY.find { |candidate| venue_states.any? { |_, s| s[:state] == candidate } }
+      { state: state, label: venue_states.map { |name, s| "#{name} : #{s[:label]}" }.join(" · ") }
     end
 
     def space_counts(space_ids)

@@ -53,9 +53,18 @@ class MapFeature < ApplicationRecord
   has_paper_trail
   has_soft_deletion default_scope: true
 
+  # L'ancien lien unique vers un gîte ou une salle, remplacé par
+  # `map_feature_venues` (issue #370). Colonnes conservées en base jusqu'à une
+  # migration de suppression séparée ; le code ne les lit ni ne les écrit plus.
+  self.ignored_columns += %w[linked_type linked_id]
+
   belongs_to :map_layer
   belongs_to :created_by, class_name: "User", optional: true
-  belongs_to :linked, polymorphic: true, optional: true
+  # Les gîtes et salles que ce tracé représente (issue #370) : souvent un seul,
+  # parfois plusieurs superposés (la Chevêche et la Hulotte). Pas de
+  # `dependent:` — un tracé est soft-deleté, et c'est `release_venues` qui
+  # efface alors ses liaisons.
+  has_many :map_feature_venues, inverse_of: :map_feature, autosave: true
 
   # Miniature pour la galerie, aperçu pour l'agrandissement. `format: :jpeg` :
   # une photo HEIC d'iPhone n'est pas lisible par tous les navigateurs.
@@ -67,13 +76,13 @@ class MapFeature < ApplicationRecord
   validates :feature_kind, inclusion: { in: FEATURE_KINDS }
   validate :geometry_is_valid_geojson
   validate :photos_are_images
-  validates :linked_type, inclusion: { in: LINKABLE_TYPES.keys }, allow_nil: true
-  validate :linked_only_once
+  validate :venues_traced_once
   validate :welcome_properties_are_known
 
   scope :ordered, -> { order(:position, :id) }
 
   before_validation :normalize_geometry
+  after_soft_delete :release_venues
 
   # La géométrie dit le type d'objet quand on ne l'a pas précisé : un polygone
   # est une zone, une ligne un accès, un point un point.
@@ -150,22 +159,45 @@ class MapFeature < ApplicationRecord
     }
   end
 
-  # « Lodging:3 » : la valeur du sélecteur de la fiche. Le setter ne constantize
-  # rien — un type hors de `LINKABLE_TYPES` est ignoré, jamais résolu.
-  def linked_key = linked_type && linked_id ? "#{linked_type}:#{linked_id}" : ""
+  # Les liaisons retenues, en tenant compte d'un formulaire pas encore
+  # enregistré (liaisons décochées marquées pour suppression).
+  def live_venue_links = map_feature_venues.reject(&:marked_for_destruction?)
 
-  def linked_key=(value)
-    type, id = value.to_s.split(":", 2)
-    if LINKABLE_TYPES.key?(type) && id.to_s.match?(/\A\d+\z/)
-      self.linked_type = type
-      self.linked_id = id.to_i
-      self.feature_kind = LINKABLE_TYPES.fetch(type)
-    else
-      self.feature_kind = MapFeature.kind_for_geometry(geometry) if venue?
-      self.linked_type = nil
-      self.linked_id = nil
+  # ["Lodging:3", "Space:5"] : les cases cochées de la fiche.
+  def venue_keys = live_venue_links.map(&:key)
+
+  # Le setter ne constantize rien — un type hors de `LINKABLE_TYPES` ou un
+  # identifiant illisible est ignoré, jamais résolu. Tout décocher donne un
+  # tracé sans lieu.
+  def venue_keys=(values)
+    wanted = Array(values).filter_map do |value|
+      type, id = value.to_s.split(":", 2)
+      [type, id.to_i] if LINKABLE_TYPES.key?(type) && id.to_s.match?(/\A\d+\z/)
+    end.uniq
+
+    map_feature_venues.each do |link|
+      link.mark_for_destruction unless wanted.include?([link.venue_type, link.venue_id])
     end
+    kept = live_venue_links.map { |link| [link.venue_type, link.venue_id] }
+    (wanted - kept).each { |type, id| map_feature_venues.build(venue_type: type, venue_id: id) }
+
+    self.feature_kind =
+      if wanted.any? { |type, _| type == "Lodging" } then "lodging"
+      elsif wanted.any? then "space"
+      elsif venue? then MapFeature.kind_for_geometry(geometry)
+      else feature_kind
+      end
   end
+
+  # Les gîtes puis les salles, chacun par nom.
+  def venues
+    live_venue_links.filter_map(&:venue).sort_by { |venue| [LINKABLE_TYPES.keys.index(venue.class.name), venue.name.to_s] }
+  end
+
+  # « La Chevêche · La Hulotte » : le nom d'un tracé qui n'en a pas en propre.
+  def venue_names = venues.map(&:name).join(" · ")
+
+  def display_name = name(:fr).presence || venue_names.presence
 
   def venue? = LINKABLE_TYPES.value?(feature_kind)
 
@@ -179,10 +211,9 @@ class MapFeature < ApplicationRecord
       properties: {
         id: id,
         feature_kind: feature_kind,
-        name: name(:fr).presence || linked&.name,
+        name: display_name,
         layer_id: map_layer_id,
-        linked_type: linked_type,
-        linked_id: linked_id,
+        venue_keys: venue_keys,
         photos_count: photos.size,
         properties: properties
       }
@@ -234,12 +265,23 @@ class MapFeature < ApplicationRecord
     ring.is_a?(Array) && ring.size >= 4 && ring.all? { |c| position?(c) } && ring.first == ring.last
   end
 
-  def linked_only_once
-    return if linked_type.blank? || linked_id.blank?
+  # Un gîte ou une salle n'a qu'un tracé vivant : deux tracés afficheraient
+  # deux fois son occupation, et le panneau ne saurait pas lequel ouvrir.
+  # L'index unique en base est le dernier rempart ; ceci est le message clair.
+  def venues_traced_once
+    live_venue_links.select(&:new_record?).each do |link|
+      taken = MapFeatureVenue.where(venue_type: link.venue_type, venue_id: link.venue_id)
+      taken = taken.where.not(map_feature_id: id) if persisted?
+      next unless taken.exists?
 
-    taken = MapFeature.where(linked_type: linked_type, linked_id: linked_id)
-    taken = taken.where.not(id: id) if persisted?
-    errors.add(:linked, "a déjà son tracé sur la carte") if taken.exists?
+      errors.add(:base, "#{link.venue&.name || link.key} a déjà son tracé sur la carte")
+    end
+  end
+
+  # Un tracé supprimé libère ses lieux : ils redeviennent « à tracer » et
+  # peuvent être reliés à un nouveau tracé.
+  def release_venues
+    map_feature_venues.destroy_all
   end
 
   # Une nature de zone ou une icône inconnue casserait la légende des hôtes :
