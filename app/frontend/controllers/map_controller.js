@@ -17,6 +17,7 @@ import {
 } from '~/utils/map_networks';
 import { UnifiStatusPoller, handleUnifiEquipmentChange } from '~/utils/map_unifi';
 import { CommentMode, commentMarker, isCommentFeature } from '~/utils/map_comments';
+import { SketchMode } from '~/utils/map_sketches';
 import { BiodiversityMode, isObservationFeature, observationMarker } from '~/utils/map_biodiversity';
 
 // Style de la couche Gestion (phase 2) : polygones `forest` remplis à 25 %,
@@ -148,6 +149,8 @@ export default class extends Controller {
     this.element.addEventListener('change', handleUnifiEquipmentChange);
     // Phase 11 : le mode Commentaires (utils/map_comments.js).
     this.comments = new CommentMode(this);
+    // Phase 12 : les notes manuscrites (utils/map_sketches.js).
+    this.sketches = new SketchMode(this);
     // Phase 13 : le mode Biodiversité (utils/map_biodiversity.js).
     this.biodiversity = new BiodiversityMode(this);
     this.setupFeatures();
@@ -164,6 +167,7 @@ export default class extends Controller {
     this.unifi?.stop();
     this.element.removeEventListener('change', handleUnifiEquipmentChange);
     this.comments?.destroy();
+    this.sketches?.destroy();
     this.biodiversity?.destroy();
     if (this.map) {
       this.map.remove();
@@ -496,6 +500,8 @@ export default class extends Controller {
   }
 
   setActiveLayer(id, kind) {
+    // Choisir une couche met fin au dessin en cours (phase 12).
+    this.sketches?.onLayerActivated();
     this.activeLayerId = String(id);
     this.activeLayerKind = kind;
     this.layerNameTargets.forEach((button) => {

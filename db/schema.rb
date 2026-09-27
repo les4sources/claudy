@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_28_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1416,6 +1416,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_130000) do
     t.index ["subject_type", "subject_id", "noted_on"], name: "index_map_notes_on_subject_type_and_subject_id_and_noted_on"
   end
 
+  create_table "map_sketches", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.string "folder"
+    t.integer "lock_version", default: 0, null: false
+    t.string "name", null: false
+    t.jsonb "strokes", default: [], null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_map_sketches_on_created_by_id"
+    t.index ["deleted_at"], name: "index_map_sketches_on_deleted_at"
+  end
+
   create_table "map_tasks", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "created_by_id"
@@ -2479,6 +2492,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_130000) do
   add_foreign_key "map_features", "users", column: "created_by_id"
   add_foreign_key "map_layers", "users", column: "created_by_id"
   add_foreign_key "map_notes", "users", column: "author_id"
+  add_foreign_key "map_sketches", "users", column: "created_by_id"
   add_foreign_key "map_tasks", "users", column: "created_by_id"
   add_foreign_key "meal_orders", "humans", column: "responsible_human_id"
   add_foreign_key "meal_orders", "stays"

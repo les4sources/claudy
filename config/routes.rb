@@ -437,6 +437,11 @@ Rails.application.routes.draw do
         post :reopen
       end
     end
+    # Les notes manuscrites (phase 12), en JSON. `PATCH strokes` remplace les
+    # tracés d'un bloc (enregistrement automatique, verrou optimiste → 409).
+    resources :map_sketches, path: "sketches", only: %i[index show create update destroy] do
+      patch :strokes, on: :member
+    end
     # Les relevés de biodiversité (phase 13). Même création atomique que les
     # commentaires : `new` sert la fiche d'un point pas encore créé, `create`
     # pose le point et le relevé ensemble. `index` est la liste du panneau
