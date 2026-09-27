@@ -74,6 +74,21 @@ nl:
         body: "Tranches de Vie, onze bakkerij-kruidenier, bereidt uw aankomst voor: zuurdesembrood en streekproducten die u vooraf kunt bestellen voor de dag dat u uw tassen neerzet."
         pizza: "Zin in een memorabele avond? Reserveer een privé Pizza Party bij de houtoven."
         cta: "Bestellen bij Tranches de Vie"
+        advance: "Denk eraan uw brood vooraf te bestellen."
+      events:
+        heading: "Tijdens uw verblijf"
+        intro: "Wat er op het domein gebeurt terwijl u er bent."
+        datetime: "%A %-d %B, %H:%M"
+        more: "Meer weten"
+      grocery:
+        heading: "De kruidenier"
+        body: "Op het domein wacht u een kleine zelfbedieningswinkel: pasta en rijst in bulk, melk, muesli, appelsap… Genoeg om u te behelpen zonder de auto te nemen."
+        how: "U bedient zich, noteert uw aankopen in het schrift en betaalt ter plaatse."
+      disc_golf:
+        heading: "Discgolf"
+        body: "Op het domein ligt een discgolfparcours, om te spelen met familie of vrienden."
+        club: "Het parcours wordt beheerd door de club Disc Golf Attitude: toegang en initiaties reserveert u bij de club."
+        cta: "Ontdek de club"
       map:
         heading: "Kaart van het domein"
         body: "Vijftien hectare om te verkennen: waar u kunt wandelen, waar niet, en waar u de parking, het brandhout, de oven of de kruidenier vindt. De kaart toont ook waar u zich bevindt."

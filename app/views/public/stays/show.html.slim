@@ -6,6 +6,9 @@
 / « c'est bien confirmé ? » → « qu'est-ce que j'ai réservé ? » → « qu'est-ce que
 / j'ai prévu de faire ? » → « qu'est-ce que je dois encore payer ? » → « je peux
 / préparer quoi ? » → « et mes autres séjours ? » → « comment je vous joins ? ».
+/ Epic #348, phase 5 : hero, composition, activités, pendant votre séjour,
+/ total / solde / paiements, carte, boulangerie, épicerie, disc-golf, autres
+/ séjours, contact.
 - content_for :meta_title, t(".meta_title")
 
 = render "public/stays/hero"
@@ -14,6 +17,11 @@
 
 - if @stay.activity_lines.any?
   = render "public/stays/activities"
+
+/ Ce qui se passe au domaine pendant le séjour (epic #348, phase 5). Rien dans
+/ la fenêtre : pas de bloc du tout.
+- if @stay_events.any?
+  = render "public/stays/events", events: @stay_events
 
 / Le total suit la composition ET les activités — il additionne les deux.
 / Séjour Airbnb / Booking.com : le client a payé son tarif sur la plateforme,
@@ -49,6 +57,12 @@
   = render "public/stays/map"
 
 = render "public/stays/bakery"
+
+/ Ce qu'on trouve sur place (epic #348, phase 5) : l'épicerie en self-service
+/ et le parcours de disc-golf, après la boulangerie.
+= render "public/stays/grocery"
+
+= render "public/stays/disc_golf"
 
 - if @upcoming_stays.any? || @past_stays.any?
   = render "public/stays/other_stays"

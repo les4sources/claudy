@@ -16,6 +16,8 @@ module Publishable
   extend ActiveSupport::Concern
 
   SLUG_FORMAT = /\A[a-z0-9]+(?:-[a-z0-9]+)*\z/
+  # Le site public où vivent les fiches publiées.
+  SITE_URL = "https://www.les4sources.be".freeze
 
   included do
     scope :published, -> { where.not(published_at: nil) }
@@ -69,6 +71,12 @@ module Publishable
     return nil if slug.blank?
 
     "#{public_path_prefix}/#{slug}"
+  end
+
+  # L'adresse complète de la fiche sur le site public.
+  def public_url
+    path = public_path
+    path && "#{SITE_URL}#{path}"
   end
 
   private
