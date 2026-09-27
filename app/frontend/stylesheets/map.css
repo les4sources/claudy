@@ -176,3 +176,31 @@
 .leaflet-container .map-feature-label.map-search-label {
   box-shadow: 0 0 0 2px #c97b3d;
 }
+
+/* Outil Mesure (phase 14) : curseur en croix, bulle `ember` qui suit le
+   curseur pendant le tracé, bulle de résultat à la fin. */
+.leaflet-container.map-measuring,
+.leaflet-container.map-measuring .leaflet-interactive {
+  cursor: crosshair;
+}
+.map-measure-tooltip {
+  background: #fff;
+  border: 1px solid #c97b3d;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  color: #7a4520;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+}
+.map-measure-tooltip::before {
+  display: none;
+}
+.map-measure-result {
+  line-height: 1.3;
+  text-align: center;
+}
+.map-measure-result strong {
+  font-size: 0.85rem;
+}

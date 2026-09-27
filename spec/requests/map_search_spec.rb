@@ -41,6 +41,8 @@ RSpec.describe "Carte du domaine — recherche par mode (epic #348, phase 14)", 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("data-map-search", %(data-url="#{map_search_path}"), "data-map-search-input")
       expect(response.body).to include("Filtres des plantes", "Se récolte en", "A une tâche en", "Potager", "Inquiétante")
+      # L'outil Mesure, présent dans tous les modes.
+      expect(response.body).to include("data-map-measure-toggle", "Surface", "Effacer les mesures")
     end
 
     it "refuse un mode inconnu (422) et rend une liste vide sans critère" do
