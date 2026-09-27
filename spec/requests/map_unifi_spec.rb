@@ -167,6 +167,18 @@ RSpec.describe "Carte du domaine — statut UniFi (epic #348, phase 10)", type: 
     end
   end
 
+  it "donne à la carte l'adresse des statuts UniFi, sans interroger UniFi au rendu" do
+    with_key!
+    MapBaseLayer.create!(key: "test-layer", name: "Couche de test", min_zoom: 12, max_zoom: 20,
+                         bounds: { "south" => 50.339, "west" => 4.903, "north" => 50.343, "east" => 4.912 })
+
+    get map_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(%(data-map-unifi-devices-url-value="/map/unifi/devices"))
+    expect(a_request(:any, //)).not_to have_been_made
+  end
+
   it "expose le lien UniFi dans le GeoJSON de la couche Ethernet" do
     node = unifi_node("unifi_device_id" => "F4E2C6C23F13")
 

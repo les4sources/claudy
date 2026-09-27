@@ -15,6 +15,7 @@ import {
   networkNodeMarker,
   networkStyle,
 } from '~/utils/map_networks';
+import { UnifiStatusPoller, handleUnifiEquipmentChange } from '~/utils/map_unifi';
 
 // Style de la couche Gestion (phase 2) : polygones `forest` remplis à 25 %,
 // accès en pointillés `bark`, points en marqueur rond. Couleurs du thème
@@ -102,6 +103,8 @@ export default class extends Controller {
     placeUrl: String,
     unplaceUrl: String,
     focusPlant: Number,
+    // Phase 10 : le statut UniFi des nœuds Ethernet (`utils/map_unifi.js`).
+    unifiDevicesUrl: String,
   };
 
   connect() {
@@ -137,6 +140,10 @@ export default class extends Controller {
     this.map.on('locationerror', () => this.onLocationError());
 
     this.placement = new PlantPlacement(this);
+    this.unifi = new UnifiStatusPoller(this, this.unifiDevicesUrlValue, (feature, selected) =>
+      networkNodeIcon(L, feature, selected)
+    );
+    this.element.addEventListener('change', handleUnifiEquipmentChange);
     this.setupFeatures();
 
     // Leaflet mesure son conteneur au montage. Dans une page Turbo le conteneur
@@ -148,6 +155,8 @@ export default class extends Controller {
   disconnect() {
     this.panelObserver?.disconnect();
     this.placement?.destroy();
+    this.unifi?.stop();
+    this.element.removeEventListener('change', handleUnifiEquipmentChange);
     if (this.map) {
       this.map.remove();
       this.map = null;
@@ -348,6 +357,8 @@ export default class extends Controller {
     // Une couche rechargée (enregistrement, suppression) recrée ses tracés : la
     // vue « ce mois-ci » doit les reprendre.
     this.applyMonthFocus();
+    // Phase 10 : la couche Ethernet rechargée reprend ses pastilles UniFi.
+    this.unifi?.sync();
     return group;
   }
 
@@ -448,6 +459,8 @@ export default class extends Controller {
     }
     // Les éléments SVG d'une couche rallumée sont neufs : sans leurs classes.
     this.applyMonthFocus();
+    // Phase 10 : masquer la couche Ethernet arrête la relecture des statuts.
+    this.unifi?.sync();
     const visibility = this.readVisibility();
     visibility[id] = event.target.checked;
     this.writeVisibility(visibility);
