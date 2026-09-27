@@ -44,7 +44,7 @@
       / Panneau des couches. C'est le SQUELETTE que les phases suivantes
         remplissent : aujourd'hui les fonds et le relief, demain les couches
         typées (gestion, plantes, réseaux…).
-      div[class="absolute left-3 top-3 z-[1000] w-64 max-w-[calc(100vw-1.5rem)] rounded-xl border border-stone-200 bg-white/95 shadow-lg backdrop-blur"
+      div[class="absolute left-3 top-3 z-[1000] flex max-h-[calc(100%-1.5rem)] w-64 max-w-[calc(100vw-1.5rem)] flex-col rounded-xl border border-stone-200 bg-white/95 shadow-lg backdrop-blur"
           data-map-target="panel"]
         button[type="button"
                class="flex w-full items-center gap-2 px-3 py-2.5 text-left"
@@ -59,7 +59,9 @@
           svg.h-4.w-4.text-stone-400.transition-transform data-map-target="panelChevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
             polyline points="6 9 12 15 18 9"
 
-        div.border-t.border-stone-100.px-3.py-3 data-map-target="panelBody"
+        / La liste défile dans le panneau : plus haute que l’écran, elle faisait
+          défiler toute la page et remonter la carte.
+        div.min-h-0.flex-1.overflow-y-auto.overscroll-contain.border-t.border-stone-100.px-3.py-3 data-map-target="panelBody"
           p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Fonds
           ul.space-y-1
             - @base_layers.each do |couche|
