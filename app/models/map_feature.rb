@@ -48,6 +48,14 @@ class MapFeature < ApplicationRecord
     "info" => "Information"
   }.freeze
 
+  # Les réseaux (phase 9). Le calibre d'un tracé dit son épaisseur sur la carte
+  # (moyen par défaut) ; l'équipement d'un nœud prépare la phase 10 (statut
+  # UniFi en direct, avec `properties.unifi_device_id`) sans l'exploiter.
+  GAUGES = { "thin" => "Fin", "medium" => "Moyen", "thick" => "Gros" }.freeze
+  DEFAULT_GAUGE = "medium".freeze
+  EQUIPMENTS = { "unifi" => "UniFi" }.freeze
+  EARTH_RADIUS_M = 6_371_008.8
+
   has_paper_trail
   has_soft_deletion default_scope: true
 
@@ -86,6 +94,7 @@ class MapFeature < ApplicationRecord
   validate :geometry_is_valid_geojson
   validate :venues_traced_once
   validate :welcome_properties_are_known
+  validate :network_properties_are_known
 
   scope :ordered, -> { order(:position, :id) }
 
@@ -113,6 +122,27 @@ class MapFeature < ApplicationRecord
   # Couche Accueil (phase 4).
   def access = properties.to_h["access"]
   def icon = properties.to_h["icon"]
+
+  # Réseaux (phase 9).
+  def node? = feature_kind == "node"
+  def line? = feature_kind == "line"
+  def network = map_layer&.network
+  def node_type = properties.to_h["node_type"].presence
+  def node_type_label = map_layer&.node_types&.fetch(node_type, nil)
+  def instructions = properties.to_h["instructions"].presence
+  def equipment = properties.to_h["equipment"].presence
+  def gauge = properties.to_h["gauge"].presence
+
+  # La longueur d'une ligne en mètres, somme des distances haversine entre
+  # sommets consécutifs. Calculée côté serveur (pas de PostGIS, décision 12) :
+  # la fiche l'affiche au rendu et le JSON la porte ; elle se recalcule à
+  # chaque réouverture de la fiche après un déplacement de sommets.
+  def length_in_meters
+    coords = geometry.is_a?(Hash) && geometry["type"] == "LineString" ? geometry["coordinates"] : nil
+    return nil unless coords.is_a?(Array) && coords.size >= 2
+
+    coords.each_cons(2).sum { |a, b| haversine(a, b) }
+  end
 
   # Les langues des hôtes où le nom ou la description existent en français mais
   # pas encore dans la langue : c'est l'indicateur discret de la fiche. Le
@@ -204,8 +234,18 @@ class MapFeature < ApplicationRecord
         venue_keys: venue_keys,
         photos_count: photos.size,
         properties: properties
-      }.merge(plant_geojson_properties).merge(comment_geojson_properties)
+      }.merge(plant_geojson_properties).merge(network_geojson_properties).merge(comment_geojson_properties)
     }
+  end
+
+  # Un objet d'une couche réseau (phase 9) : de quoi le dessiner sans relire
+  # la couche — sa couleur, son type de nœud ou son calibre, sa longueur.
+  def network_geojson_properties
+    return {} unless map_layer&.network?
+
+    length = length_in_meters
+    { network: network, color: map_layer.network_color, node_type: node_type, node_type_label: node_type_label,
+      gauge: (gauge || DEFAULT_GAUGE if line?), equipment: equipment, length_m: length&.round(1) }.compact
   end
 
   # Un point de commentaire (phase 11) : le nombre de messages de sa bulle, et
@@ -257,6 +297,29 @@ class MapFeature < ApplicationRecord
       end
 
     errors.add(:geometry, "doit être un Point, une LineString ou un Polygon GeoJSON valide") unless valid
+  end
+
+  def haversine((lng1, lat1), (lng2, lat2))
+    to_rad = Math::PI / 180
+    dlat = (lat2 - lat1) * to_rad
+    dlng = (lng2 - lng1) * to_rad
+    a = Math.sin(dlat / 2)**2 + Math.cos(lat1 * to_rad) * Math.cos(lat2 * to_rad) * Math.sin(dlng / 2)**2
+    2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(a))
+  end
+
+  # Réseaux (phase 9) : un type de nœud doit exister dans le réseau de SA
+  # couche (une « vanne » n'a pas de sens sur l'électricité), un calibre et un
+  # équipement dans leur liste. Un nœud est un point, un tracé une ligne.
+  def network_properties_are_known
+    if node_type.present? && !map_layer&.node_types&.key?(node_type)
+      errors.add(:base, "Le type de nœud « #{node_type} » n'existe pas pour le réseau #{map_layer&.name || 'de la couche'}")
+    end
+    errors.add(:base, "Le calibre « #{gauge} » est inconnu") if gauge.present? && !GAUGES.key?(gauge)
+    errors.add(:base, "L'équipement « #{equipment} » est inconnu") if equipment.present? && !EQUIPMENTS.key?(equipment)
+    return unless geometry.is_a?(Hash)
+
+    errors.add(:geometry, "d'un nœud doit être un point") if node? && geometry_type != "Point"
+    errors.add(:geometry, "d'un tracé doit être une ligne") if line? && geometry_type != "LineString"
   end
 
   def position?(value)

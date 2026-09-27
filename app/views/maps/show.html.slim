@@ -81,7 +81,8 @@
           .mt-3.border-t.border-stone-100.pt-3
             p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Couches
             ul.space-y-1
-              - @layers.each do |couche|
+              / Les couches réseau ont leur propre section (phase 9).
+              - @layers.reject(&:network?).each do |couche|
                 li.flex.items-center.gap-2 data-layer-id=couche.id data-layer-kind=couche.kind
                   input[type="checkbox" checked=true
                         class="h-4 w-4 rounded border-stone-300 text-4s-main focus:ring-teal-400"
@@ -111,6 +112,8 @@
               ne colore que ce qui est dessiné, on n'en oublie aucun. Rechargée
               par la carte après chaque enregistrement.
             = turbo_frame_tag "map_venues_todo", src: map_venues_todo_path, data: { map_target: "venuesTodo" }
+
+          = render "maps/networks_section", layers: @layers.select(&:network?)
 
           / Les plantes nourricières (phase 7) : le mode Placement et les pages
             annexes (récoltes, liste, espèces).
@@ -195,9 +198,35 @@
                aria-pressed="false"
                data-map-target="tool"
                data-tool="Polygon"
+               data-tool-kinds="management venues welcome"
                data-action="click->map#useTool"]
           svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
             polygon points="5 7 12 3 19 8 17 18 7 18"
+        / Mode Réseaux (phase 9) : un nœud (vanne, tableau, switch…) et un
+          tracé (conduite, câble). La couche active dit de quel réseau.
+        button[type="button"
+               class="flex h-11 w-11 items-center justify-center rounded-lg text-stone-600 transition-colors hover:bg-forest-tint hover:text-forest"
+               title="Nœud"
+               aria-label="Nœud"
+               aria-pressed="false"
+               data-map-target="tool"
+               data-tool="CircleMarker"
+               data-tool-kinds="network"
+               data-action="click->map#useTool"]
+          svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            circle cx="12" cy="12" r="4"
+            path d="M12 2v6M12 16v6M2 12h6M16 12h6"
+        button[type="button"
+               class="flex h-11 w-11 items-center justify-center rounded-lg text-stone-600 transition-colors hover:bg-forest-tint hover:text-forest"
+               title="Tracé"
+               aria-label="Tracé"
+               aria-pressed="false"
+               data-map-target="tool"
+               data-tool="Line"
+               data-tool-kinds="network"
+               data-action="click->map#useTool"]
+          svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            path d="M3 17h5l3-10h4l3 10h3"
         button[type="button"
                class="flex h-11 w-11 items-center justify-center rounded-lg text-stone-600 transition-colors hover:bg-forest-tint hover:text-forest"
                title="Déplacer / éditer les sommets"
