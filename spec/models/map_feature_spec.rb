@@ -134,3 +134,22 @@ RSpec.describe MapFeature, "photos HEIC" do
     expect(feature_with("image/jpeg", "photo.jpg")).to be_valid
   end
 end
+
+# Phase 7 : le point d'une plante dit à la carte de quoi colorer sa pastille.
+RSpec.describe MapFeature, "#as_geojson d'une plante" do
+  it "porte la plante (id, numéro, santé, strate, statut, mort)" do
+    plant = Plant.create!(name: "Néflier du bas", number: 9.1, health: "worrying", stratum: "shrub", status: "dead")
+    plant.place!(latitude: 50.34, longitude: 4.905)
+
+    properties = plant.map_feature.as_geojson[:properties]
+    expect(properties).to include(feature_kind: "plant", name: "Néflier du bas", plant_id: plant.id, number: "9.1",
+                                  health: "worrying", stratum: "shrub", status: "dead", dead: true)
+  end
+
+  it "n'ajoute rien aux autres objets" do
+    feature = MapLayer.for_kind(:management).map_features.create!(
+      feature_kind: "point", geometry: { "type" => "Point", "coordinates" => [4.905, 50.34] }
+    )
+    expect(feature.as_geojson[:properties]).not_to have_key(:plant_id)
+  end
+end
