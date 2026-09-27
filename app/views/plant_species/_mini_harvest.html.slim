@@ -1,0 +1,9 @@
+/ Un calendrier de récolte en miniature (liste des espèces) : une ligne fine
+  de douze cases par partie, le mois courant repéré.
+- current_month = Date.current.month
+- summary = windows.map { |w| "#{w.part_label} : #{w.months_label}" }.join(" ; ")
+div.w-full.space-y-0.5 aria-label=summary role="img"
+  - windows.each do |window|
+    div.grid.grid-cols-12.gap-px data-mini-harvest=window.part
+      - MapTask::MONTHS.each do |month|
+        span class="h-1.5 rounded-sm #{window.includes_month?(month) ? harvest_part_color(window.part) : (month == current_month ? 'bg-forest-tint' : 'bg-stone-100')}"

@@ -1,0 +1,154 @@
+/ La fiche d'une espèce (epic #348, phase 7) : son calendrier de récolte par
+  défaut, sa fiche botanique, ses variétés et ses plantes. Une section par
+  carte ; sur un téléphone, tout s'empile.
+- label_css = "block text-xs font-semibold text-stone-600"
+- input_css = "mt-1 h-11 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+- alive = @plants.reject(&:dead?)
+- unplaced = alive.count { |plant| plant.map_feature_id.nil? }
+- errors = @species.errors
+.mx-auto.max-w-3xl.px-4.py-6
+  = render "maps/subnav", current: :especes
+  = link_to map_especes_path, class: "mt-4 inline-flex items-center gap-1 text-xs font-medium text-stone-500 hover:text-forest" do
+    svg.h-3.5.w-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+      polyline points="15 18 9 12 15 6"
+    | Toutes les espèces
+  header.mt-2
+    h1.font-averia.text-3xl.text-stone-800 = @species.name_was || @species.name
+    - if @species.latin_name_was.present?
+      p.mt-0.5.italic.text-stone-500 = @species.latin_name_was
+    p.mt-2.flex.flex-wrap.gap-x-3.gap-y-1.text-sm.text-stone-600
+      span
+        strong.tabular-nums = alive.size
+        = " plante#{'s' if alive.size > 1} vivante#{'s' if alive.size > 1}"
+      - if unplaced.positive?
+        span.text-ember = "#{unplaced} à placer"
+      - if @species.family_was.present?
+        span.text-stone-400 = @species.family_was
+      - if @species.wikipedia_url_was.present?
+        = link_to "Wikipédia ↗", @species.wikipedia_url_was, target: "_blank", rel: "noopener", class: "font-medium text-forest hover:underline"
+
+  .mt-6.space-y-4
+    = render "plant_species/harvest", species: @species
+
+    / ── Fiche botanique ──────────────────────────────────────────────────
+    section.rounded-xl.border.border-stone-200.bg-white.p-4 data-species-section="identity"
+      h2.mb-3.font-semibold.text-stone-800 Fiche botanique
+      = form_with model: @species, url: map_espece_path(@species), method: :patch, class: "space-y-4" do |f|
+        - if errors.any?
+          .rounded-lg.border.border-red-200.bg-red-50.px-3.py-2.text-sm.text-red-800 role="alert"
+            - errors.full_messages.each do |message|
+              p = message
+        .grid.gap-4.sm:grid-cols-2
+          div
+            = f.label :name, "Nom", class: label_css
+            = f.text_field :name, required: true, class: input_css
+          div
+            = f.label :latin_name, "Nom latin", class: label_css
+            = f.text_field :latin_name, class: "#{input_css} italic"
+          div
+            = f.label :family, "Famille", class: label_css
+            = f.text_field :family, placeholder: "Rosacées", class: input_css
+          div
+            = f.label :hardiness, "Rusticité", class: label_css
+            = f.text_field :hardiness, placeholder: "-25 °C", class: input_css
+          div
+            = f.label :height, "Hauteur", class: label_css
+            = f.text_field :height, placeholder: "4 à 6 m", class: input_css
+          div
+            = f.label :spread, "Envergure", class: label_css
+            = f.text_field :spread, placeholder: "3 m", class: input_css
+        div
+          = f.label :common_names, "Noms communs", class: label_css
+          = f.text_area :common_names, rows: 2, placeholder: "Un par ligne, ou séparés par des virgules",
+                        class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+        / Cases à cocher en pastilles ; la valeur vide part toujours, pour
+          pouvoir tout décocher.
+        - chips = { exposure: ["Exposition", (PlantSpeciesController::EXPOSURES + Array(@species.exposure)).uniq],
+                    edible_parts: ["Parties comestibles", (PlantHarvestWindow::PARTS.values + Array(@species.edible_parts)).uniq] }
+        - chips.each do |attribute, (legend, options)|
+          fieldset
+            legend class=label_css = legend
+            = hidden_field_tag "plant_species[#{attribute}][]", "", id: nil
+            .mt-1.flex.flex-wrap.gap-1.5
+              - options.each_with_index do |option, index|
+                label.cursor-pointer
+                  = check_box_tag "plant_species[#{attribute}][]", option, Array(@species.public_send(attribute)).include?(option),
+                                  id: "species_#{attribute}_#{index}", class: "peer sr-only"
+                  span class="inline-flex h-9 items-center rounded-full border border-stone-200 px-3 text-sm text-stone-600 transition-colors peer-checked:border-forest peer-checked:bg-forest peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-forest"
+                    = option
+        div
+          = f.label :wikipedia_url, "Page Wikipédia", class: label_css
+          = f.url_field :wikipedia_url, placeholder: "https://fr.wikipedia.org/wiki/…", class: input_css
+        div
+          = f.label :notes, "Notes", class: label_css
+          = f.text_area :notes, rows: 4,
+                        class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+        button type="submit" class="h-11 w-full rounded-lg bg-forest text-sm font-semibold text-white hover:bg-forest-soft sm:w-auto sm:px-6"
+          | Enregistrer la fiche
+
+    / ── Variétés ─────────────────────────────────────────────────────────
+    section#varietes.rounded-xl.border.border-stone-200.bg-white.p-4 data-species-section="varieties"
+      h2.mb-3.font-semibold.text-stone-800
+        | Variétés
+        span.ml-2.text-sm.font-normal.tabular-nums.text-stone-400 = @varieties.size
+      - if @varieties.any?
+        ul.divide-y.divide-stone-100
+          - @varieties.each do |variety|
+            - count = @variety_counts[variety.id].to_i
+            li.flex.items-center.gap-2.py-2 data-variety-id=variety.id
+              = form_with model: variety, url: map_espece_variety_path(@species, variety), method: :patch,
+                          class: "flex min-w-0 flex-1 items-center gap-2" do |f|
+                = f.label :name, "Nom de la variété", class: "sr-only", for: "variety_name_#{variety.id}"
+                = f.text_field :name, id: "variety_name_#{variety.id}", required: true,
+                               class: "h-10 min-w-0 flex-1 rounded-lg border-transparent text-sm hover:border-stone-200 focus:border-forest focus:ring-forest"
+                button type="submit" class="h-10 rounded-lg px-3 text-xs font-medium text-forest hover:bg-forest-tint" Renommer
+              span class="w-16 flex-shrink-0 text-right text-xs tabular-nums text-stone-400" = "#{count} plante#{'s' if count > 1}"
+              - if count.zero?
+                = button_to map_espece_variety_path(@species, variety), method: :delete,
+                            form: { data: { turbo_confirm: "Supprimer la variété « #{variety.name} » ?" } },
+                            class: "flex h-10 w-10 items-center justify-center rounded-lg text-stone-400 hover:bg-red-50 hover:text-red-600",
+                            title: "Supprimer la variété", "aria-label": "Supprimer la variété #{variety.name}" do
+                  svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                    path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"
+      - else
+        p.text-sm.text-stone-500 Aucune variété.
+      = form_with model: PlantVariety.new, url: map_espece_varieties_path(@species), method: :post,
+                  class: "mt-3 flex gap-2" do |f|
+        = f.label :name, "Nouvelle variété", class: "sr-only", for: "new_variety_name"
+        = f.text_field :name, id: "new_variety_name", required: true, placeholder: "Nouvelle variété (Reinette Hernaut…)",
+                       class: "h-11 min-w-0 flex-1 rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+        button type="submit" class="h-11 rounded-lg border border-forest px-4 text-sm font-semibold text-forest hover:bg-forest-tint" Ajouter
+
+    / ── Plantes ──────────────────────────────────────────────────────────
+    section.rounded-xl.border.border-stone-200.bg-white.p-4 data-species-section="plants"
+      h2.mb-3.font-semibold.text-stone-800
+        | Plantes
+        span.ml-2.text-sm.font-normal.tabular-nums.text-stone-400 = @plants.size
+      - if @plants.any?
+        ul.-mx-2.space-y-0.5
+          - @plants.each do |plant|
+            li
+              = link_to plant_on_map_path(plant), class: "flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-stone-50 #{'opacity-60' if plant.dead?}",
+                        data: { species_plant: plant.id } do
+                = plant_thumbnail(plant, css: "h-10 w-10")
+                span.min-w-0.flex-1
+                  span.flex.items-baseline.gap-1.5
+                    - if plant.number
+                      span.text-xs.font-semibold.tabular-nums.text-stone-400 = "##{plant.number_label}"
+                    span.truncate.text-sm.font-medium.text-stone-800 = plant.display_name
+                  span.block.truncate.text-xs.text-stone-500 = [plant.plant_variety&.name, plant.zone, plant.status_label].compact_blank.join(" · ")
+                - unless plant.map_feature_id
+                  span class="rounded-full bg-ember-tint px-2 py-0.5 text-[0.65rem] font-semibold text-ember" à placer
+      - else
+        p.text-sm.text-stone-500 Aucune plante de cette espèce.
+
+    / ── Suppression ──────────────────────────────────────────────────────
+    .pt-2
+      - if alive.any?
+        p.text-center.text-xs.text-stone-400
+          = "L'espèce ne peut pas être supprimée tant que #{alive.size} plante#{'s' if alive.size > 1} vivante#{'s' if alive.size > 1} en dépend#{'ent' if alive.size > 1}."
+      - else
+        = button_to map_espece_path(@species), method: :delete,
+                    form: { data: { turbo_confirm: "Retirer « #{@species.name} » du catalogue ?" } },
+                    class: "h-11 w-full rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"
+          | Supprimer l'espèce

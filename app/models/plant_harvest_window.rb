@@ -38,6 +38,33 @@ class PlantHarvestWindow < ApplicationRecord
 
   def self.part_label(part) = PARTS.fetch(part.to_s, part.to_s)
 
+  # `harvest[parts]` d'un éditeur de calendrier → { "fruit" => ["", "9"] } :
+  # seules les parties connues, dans l'ordre de `PARTS`.
+  def self.parts_from_params(raw)
+    raw = raw.respond_to?(:to_unsafe_h) ? raw.to_unsafe_h : raw.to_h
+    PARTS.keys.filter_map { |part| [part, Array(raw[part])] if raw.key?(part) }
+  end
+
+  # Remplace TOUTES les fenêtres d'un porteur (plante ou espèce) par celles
+  # soumises. Une partie présente sans mois est refusée plutôt que supprimée en
+  # silence ; rien n'est écrit si une fenêtre est invalide. Rend le brouillon
+  # (pour réafficher la saisie) et les messages d'erreur.
+  def self.replace_for(owner, parts)
+    draft = parts.map { |part, months| new(owner_type: owner.class.name, owner_id: owner.id, part: part, months: months) }
+    errors = draft.select { |window| Array(window.months).compact_blank.empty? }
+                  .map { |window| "#{window.part_label} : cochez au moins un mois, ou retirez la partie." }
+    return [draft, errors] if errors.any?
+
+    transaction do
+      where(owner_type: owner.class.name, owner_id: owner.id).destroy_all
+      errors = draft.reject(&:save).flat_map do |window|
+        window.errors.map { |error| "#{window.part_label} : #{error.attribute == :months ? "les mois #{error.message}" : error.full_message}." }
+      end
+      raise ActiveRecord::Rollback if errors.any?
+    end
+    [draft, errors]
+  end
+
   def part_label = self.class.part_label(part)
 
   def includes_month?(month) = months.include?(month.to_i)
