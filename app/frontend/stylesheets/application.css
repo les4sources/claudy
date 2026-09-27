@@ -605,3 +605,129 @@ input:checked ~ .ui-switch-label-on { display: inline; }
   .celebrate-row.is-celebrating .celebrate-check { opacity: 1; }
   .celebrate-row.is-celebrating .celebrate-check svg path { stroke-dashoffset: 0 !important; }
 }
+
+/* ---------------------------------------------------------------------------
+   Feuilles A4 des carnets de l'épicerie (epic #359, phase 3)
+   À l'écran : une page blanche de 210 × 297 mm sur fond gris. Au papier : la
+   page nommée `sheet` (A4, marges 12 mm) et rien d'autre — pas de barre
+   d'outils, un saut de page entre deux feuilles.
+   --------------------------------------------------------------------------- */
+
+@page sheet {
+  size: A4;
+  margin: 12mm;
+}
+
+.sheet-screen {
+  background: #e7e5e4;
+  min-height: 100vh;
+  padding: 1.5rem 0;
+  color: #1c1917;
+}
+
+.sheet-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+  color: #57534e;
+}
+
+.sheet-toolbar__print {
+  border-radius: 0.5rem;
+  background: #024442;
+  color: #fff;
+  font-weight: 600;
+  padding: 0.5rem 1.25rem;
+}
+
+.sheet-page {
+  page: sheet;
+  box-sizing: border-box;
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto 1.5rem;
+  padding: 12mm;
+  background: #fff;
+  box-shadow: 0 10px 30px -10px rgba(28, 25, 23, 0.35);
+}
+
+.sheet-qr svg,
+.sheet-qr .epc-qr {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* 1 px de moins que la page : à 100 %, la bordure droite d'un tableau tombait
+   hors de la zone imprimable et disparaissait. */
+.sheet-grid {
+  width: calc(100% - 1px);
+  border-collapse: collapse;
+}
+
+.sheet-grid td,
+.sheet-grid th {
+  border: 1px solid #a8a29e;
+  padding: 0 0.4rem;
+  text-align: left;
+}
+
+.sheet-grid th {
+  background: #f5f5f4;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  height: 7mm;
+}
+
+.sheet-grid td {
+  height: 7.4mm;
+}
+
+.sheet-box {
+  display: inline-block;
+  width: 3.2mm;
+  height: 3.2mm;
+  border: 1px solid #57534e;
+  vertical-align: -0.5mm;
+  margin-right: 0.8mm;
+}
+
+@media print {
+  .sheet-screen {
+    background: none;
+    padding: 0;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .sheet-page {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    break-after: page;
+  }
+
+  .sheet-page:last-child {
+    break-after: auto;
+  }
+
+  /* Une feuille dont le pied doit tomber en bas de page (la date des prix) :
+     la hauteur imprimable d'un A4 à marges de 12 mm, à 3 mm près. */
+  .sheet-page--full {
+    min-height: 270mm;
+  }
+
+  .sheet-grid th {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

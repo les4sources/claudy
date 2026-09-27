@@ -39,8 +39,8 @@ section.portal-block
       p.portal-empty Le relevé de ce mois est déjà vérifié : il n'est plus modifiable.
     = link_to portal_consignor_products_path, class: "portal-link" do
       = "Mes produits (#{@products_count})"
-    p.text-sm.text-gray-400
-      | Imprimer ma feuille — bientôt disponible.
+    = link_to "Imprimer ma feuille", portal_consignor_sheet_path, target: "_blank", class: "portal-link"
+    = link_to "Ma photo et ma présentation", portal_consignor_profile_path, class: "portal-link"
 
 section.portal-block
   .portal-block__head

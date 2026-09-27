@@ -78,6 +78,9 @@ gem "devise"
 gem "draper"
 gem "loaf"
 gem "money-rails", "~>1.12"
+
+# QR bancaires EPC des carnets de l'épicerie, en SVG inline (epic #359, phase 3).
+gem "rqrcode", "~> 3.1"
 gem "paper_trail"
 gem "postmark-rails"
 gem "public_activity"

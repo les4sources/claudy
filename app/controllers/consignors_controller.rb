@@ -2,7 +2,7 @@
 # déposent des produits à l'épicerie. Pas de destruction — on désactive, pour
 # que les relevés passés (phase 2) gardent leur artisan.
 class ConsignorsController < BaseController
-  before_action :get_consignor, only: %i[edit update deactivate reactivate]
+  before_action :get_consignor, only: %i[edit update deactivate reactivate sheet]
   before_action :load_humans,   only: %i[new create edit update]
 
   breadcrumb "Dépôt-vente", :consignors_path, match: :exact
@@ -29,6 +29,15 @@ class ConsignorsController < BaseController
 
   def edit
     breadcrumb @consignor.name, edit_consignor_path(@consignor)
+  end
+
+  # Sa feuille du carnet Artisanat (epic #359, phase 3), imprimée depuis
+  # l'admin pour un artisan qui ne passe pas par son espace.
+  def sheet
+    @qr = Shop::EpcQrCode.new(communication: @consignor.sheet_communication)
+    @printed_on = Date.current
+    @number = @consignor.next_sheet_number! if @qr.configured?
+    render "shop/sheets/consignor", layout: "print_sheet"
   end
 
   def update

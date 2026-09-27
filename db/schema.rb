@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_24_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -670,7 +670,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_120000) do
     t.text "notes"
     t.boolean "portal_enabled", default: false, null: false
     t.string "settlement_mode", default: "transfer", null: false
+    t.integer "sheets_printed_count", default: 0, null: false
     t.date "starts_on"
+    t.string "tagline"
     t.bigint "third_party_id"
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_consignors_on_active"
@@ -1860,6 +1862,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_120000) do
     t.datetime "updated_at", null: false
     t.string "value"
     t.index ["key"], name: "index_settings_on_key", unique: true
+  end
+
+  create_table "shop_settings", force: :cascade do |t|
+    t.string "beneficiary_name"
+    t.string "bic"
+    t.integer "bread_sheets_printed_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.integer "grocery_sheets_printed_count", default: 0, null: false
+    t.text "iban"
+    t.datetime "updated_at", null: false
   end
 
   create_table "space_bookings", force: :cascade do |t|

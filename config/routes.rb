@@ -114,7 +114,18 @@ Rails.application.routes.draw do
     member do
       patch :deactivate
       patch :reactivate
+      # Sa feuille du carnet Artisanat, à imprimer (epic #359, phase 3).
+      get :sheet
     end
+  end
+
+  # Les carnets de l'épicerie (epic #359, phase 3) : feuilles A4 à imprimer
+  # depuis le navigateur, et coordonnées bancaires de leurs QR EPC.
+  namespace :shop do
+    get "sheets/grocery",        to: "sheets#grocery",        as: :grocery_sheet
+    get "sheets/bread",          to: "sheets#bread",          as: :bread_sheet
+    get "sheets/grocery_prices", to: "sheets#grocery_prices", as: :grocery_prices_sheet
+    resource :settings, only: %i[show update]
   end
   resources :projects
   # Cuisine (epic #219) — URLs admin en anglais, interface en français.
@@ -686,6 +697,10 @@ Rails.application.routes.draw do
       patch :toggle_active, on: :member
     end
     get   "releves/:period", to: "consignor_reports#show", as: :report, constraints: { period: /\d{4}-\d{2}/ }
+    # Sa feuille à imprimer et ce qui y figure : photo, phrase (phase 3).
+    get   "feuille", to: "consignor_sheets#show", as: :sheet
+    get   "profil",  to: "consignor_profiles#edit", as: :profile
+    patch "profil",  to: "consignor_profiles#update"
     patch "releves/:period", to: "consignor_reports#update", constraints: { period: /\d{4}-\d{2}/ }
   end
 

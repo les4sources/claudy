@@ -1,0 +1,32 @@
+/ La feuille de prix du mur de l'épicerie (epic #359, décision 12) : les
+  articles du cellier au prix du jour, groupés par catégorie. Prix public par
+  défaut, prix habitant avec `?audience=member`. La date d'impression, en gros
+  en pied de page, dit jusqu'à quand la feuille est fiable.
+- member = @audience == "member"
+- content_for :title, "Prix de l'épicerie"
+.sheet-page.sheet-page--full.flex.flex-col(data-sheet="grocery_prices" data-audience=@audience)
+  header.border-b-2.border-stone-800.pb-3
+    p.text-xs.font-semibold.uppercase.tracking-wider.text-stone-500 = member ? "Prix habitant" : "Prix public"
+    h1.text-3xl.font-bold Les prix de l'épicerie
+  .no-print.mt-2.text-sm
+    - if member
+      = link_to "Voir les prix publics", shop_grocery_prices_sheet_path, class: "text-emerald-800 underline"
+    - else
+      = link_to "Voir les prix habitant", shop_grocery_prices_sheet_path(audience: "member"), class: "text-emerald-800 underline"
+
+  .flex-1
+    - if @groups.empty?
+      p.mt-6.text-stone-500 Aucun article du cellier n'a de prix à cette date.
+    - @groups.each do |category, rows|
+      section.mt-5(data-sheet-category=category)
+        h2.border-b.border-stone-300.pb-1.text-lg.font-bold = category
+        table.w-full.text-sm
+          tbody
+            - rows.each do |item, price|
+              tr.border-b.border-stone-100
+                td.py-1.pr-4 = item.name
+                td.py-1.text-right.tabular-nums.font-semibold.whitespace-nowrap
+                  = "#{humanized_money_with_symbol(price, no_cents_if_whole: false)} / #{item.unit_label}"
+
+  footer.mt-6.border-t-2.border-stone-800.pt-3.text-center.text-2xl.font-bold(data-sheet-prices-date="true")
+    = "Prix au #{l(@printed_on, format: '%d/%m/%Y')}"

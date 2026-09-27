@@ -1,0 +1,5 @@
+/ Numéro et date d'impression d'une feuille.
+.text-right.text-xs.text-stone-600
+  - if number
+    p.text-base.font-bold.text-stone-900 = "Feuille n° #{number}"
+  p = "Imprimée le #{l(printed_on, format: '%d/%m/%Y')}"

@@ -1,0 +1,32 @@
+/ La feuille du carnet Boulangerie (epic #359, décision 13) : pour les pains
+  en SURPLUS seulement. Un pain commandé est déjà payé dans Tranches de Vie :
+  le message le dit en haut de page, bien lisible.
+- content_for :title, "Feuille Boulangerie"
+.sheet-page(data-sheet="bread")
+  p.mb-4.rounded-lg.border-2.border-stone-900.px-4.py-3.text-center.text-lg.font-bold(data-sheet-bread-warning="true")
+    | Pain commandé sur Tranches de Vie ? Il est déjà payé : ne le notez pas ici.
+    br
+    span.text-base.font-semibold Ce carnet ne sert qu'aux pains en surplus.
+  header.flex.items-start.justify-between.gap-5.border-b-2.border-stone-800.pb-4
+    div.min-w-0.flex-1
+      p.text-xs.font-semibold.uppercase.tracking-wider.text-stone-500 Carnet Boulangerie
+      h1.text-3xl.font-bold Pain en surplus
+      .mt-3 = render "shop/sheets/qr", qr: @qr
+    = render "shop/sheets/sheet_meta", number: @number, printed_on: @printed_on
+
+  table.sheet-grid.mt-5
+    thead
+      tr
+        th.w-20 Date
+        th Article
+        th.w-16 Quantité
+        th.w-20 Prix
+        th.w-56 Payé par
+    tbody
+      - 20.times do
+        tr
+          td
+          td
+          td
+          td
+          td = render "shop/sheets/paid_by"
