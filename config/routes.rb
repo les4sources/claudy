@@ -894,6 +894,7 @@ Rails.application.routes.draw do
       # UPSERT — un import rejoué ne double rien.
       resources :plant_species, only: [:index, :show, :create, :update]
       resources :plant_varieties, only: [:index, :show, :create]
+      resources :plants, only: [:index, :show, :create, :update, :destroy]
     end
   end
 
