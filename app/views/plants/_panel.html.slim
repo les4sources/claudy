@@ -256,9 +256,7 @@ div[class="pointer-events-auto flex h-full flex-col overflow-hidden bg-white sha
         en Turbo Stream : la saisie en cours dans le dossier n'est pas perdue.
       = render "plants/harvest", plant: plant
 
-      / TODO phase 7 B2 — Notes datées : liste antéchronologique, ajout inline
-        avec la date (`MapNote`, sujet = la plante).
-      section.mt-6 id=dom_id(plant, :notes) data-plant-section="notes"
+      = render "plants/notes", plant: plant
 
       / TODO phase 7 B2 — Tâches : `MapTask` de filière `nourricier` par défaut,
         même composant qu'en phase 6 (`maps/_feature_tasks`).
