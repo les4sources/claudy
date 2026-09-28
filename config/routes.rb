@@ -86,6 +86,10 @@ Rails.application.routes.draw do
     end
   end
   resources :human_roles
+  # Ligne de garde (Twilio) : qui décroche maintenant, heure de bascule, journal.
+  resource :on_call, only: [:show, :update], controller: "on_call" do
+    patch :phone_holder
+  end
   resources :notes
   resources :payments, only: [:index, :show, :destroy]
   resources :products
@@ -829,6 +833,9 @@ Rails.application.routes.draw do
 
   namespace :webhooks do
     resource :stripe_hooks, only: :create
+    # Ligne de garde (Twilio) : appel entrant, puis issue de chaque <Dial>.
+    post "twilio/voice", to: "twilio_voice#incoming", as: :twilio_voice
+    post "twilio/voice/dial_status", to: "twilio_voice#dial_status", as: :twilio_voice_dial_status
   end
 
   # Private read-only API for AI agents. Authenticated by a static bearer token

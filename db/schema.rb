@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_28_200100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1166,6 +1166,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150000) do
     t.datetime "created_at", null: false
     t.date "date"
     t.bigint "human_id", null: false
+    t.boolean "phone_holder", default: false, null: false
     t.bigint "role_id", null: false
     t.integer "status", default: 1, null: false
     t.datetime "updated_at", null: false
@@ -1182,6 +1183,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150000) do
     t.text "iban"
     t.string "iban_holder_name"
     t.string "name"
+    t.string "phone"
     t.string "photo"
     t.boolean "roles_enabled", default: true, null: false
     t.string "status", default: "active"
@@ -1618,6 +1620,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150000) do
     t.index ["id"], name: "index_payments_on_id", unique: true
     t.index ["space_booking_id"], name: "index_payments_on_space_booking_id"
     t.index ["stay_id"], name: "index_payments_on_stay_id"
+  end
+
+  create_table "phone_calls", force: :cascade do |t|
+    t.jsonb "attempts", default: [], null: false
+    t.string "call_sid", null: false
+    t.datetime "created_at", null: false
+    t.integer "dial_call_duration"
+    t.string "dial_call_status"
+    t.date "duty_date"
+    t.text "error"
+    t.string "from_number"
+    t.bigint "on_call_human_id"
+    t.string "outcome"
+    t.datetime "updated_at", null: false
+    t.index ["call_sid"], name: "index_phone_calls_on_call_sid", unique: true
+    t.index ["created_at"], name: "index_phone_calls_on_created_at"
+    t.index ["on_call_human_id"], name: "index_phone_calls_on_on_call_human_id"
   end
 
   create_table "plant_harvest_windows", force: :cascade do |t|
@@ -2508,6 +2527,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_150000) do
   add_foreign_key "payments", "coworking_packs"
   add_foreign_key "payments", "space_bookings"
   add_foreign_key "payments", "stays"
+  add_foreign_key "phone_calls", "humans", column: "on_call_human_id"
   add_foreign_key "plant_species", "users", column: "created_by_id"
   add_foreign_key "plant_varieties", "plant_species", column: "plant_species_id"
   add_foreign_key "plants", "map_features"

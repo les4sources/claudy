@@ -148,6 +148,12 @@ GEM
     dry-cli (1.4.1)
     erb (6.0.6)
     erubi (1.13.1)
+    faraday (2.14.4)
+      faraday-net_http (>= 2.0, < 3.5)
+      json
+      logger
+    faraday-net_http (3.4.4)
+      net-http (~> 0.5)
     ffi (1.17.4-arm64-darwin)
     ffi (1.17.4-x86_64-darwin)
     ffi (1.17.4-x86_64-linux-gnu)
@@ -174,6 +180,8 @@ GEM
       actionview (>= 7.0.0)
       activesupport (>= 7.0.0)
     json (2.21.2)
+    jwt (3.3.0)
+      base64
     lexxy (0.9.32)
       railties (>= 8.0.2)
     loaf (0.10.0)
@@ -218,6 +226,8 @@ GEM
       money (~> 6.13)
       railties (>= 3.0)
     msgpack (1.6.0)
+    net-http (0.9.1)
+      uri (>= 0.11.1)
     net-imap (0.6.6)
       date
       net-protocol
@@ -240,6 +250,7 @@ GEM
       activerecord (>= 7.1)
       request_store (~> 1.4)
     pg (1.4.4)
+    phonelib (0.10.27)
     postmark (1.23.0)
       json
     postmark-rails (0.22.1)
@@ -381,6 +392,10 @@ GEM
       actionpack (>= 6.0.0)
       activejob (>= 6.0.0)
       railties (>= 6.0.0)
+    twilio-ruby (7.11.3)
+      faraday (>= 2.0, < 3.0)
+      jwt (>= 1.5, < 4.0)
+      nokogiri (>= 1.6, < 2.0)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
     uri (1.1.1)
@@ -449,6 +464,7 @@ DEPENDENCIES
   ostruct
   paper_trail
   pg (~> 1.1)
+  phonelib (~> 0.10.27)
   postmark-rails
   public_activity
   puma (~> 7.0)
@@ -466,6 +482,7 @@ DEPENDENCIES
   stimulus-rails
   stripe (~> 10.13)
   turbo-rails
+  twilio-ruby (~> 7.11)
   tzinfo-data
   validates_email_format_of
   view_component

@@ -79,6 +79,7 @@ gem "draper"
 gem "loaf"
 gem "money-rails", "~>1.12"
 gem "paper_trail"
+gem "phonelib", "~> 0.10.27"
 gem "postmark-rails"
 gem "public_activity"
 gem "sentry-ruby"
@@ -90,6 +91,8 @@ gem "soft_deletion"
 # Pinnée volontairement : la montée 10.x -> 19.x touche le chemin des paiements et se fait
 # dans un chantier séparé, pas au fil des `bundle update` de la migration Rails.
 gem "stripe", "~> 10.13"
+# Ligne de garde : le webhook voix répond en TwiML et valide la signature Twilio.
+gem "twilio-ruby", "~> 7.11"
 gem "validates_email_format_of"
 gem "will_paginate", "~> 3.3"
 # gem "tailwindcss-rails"
