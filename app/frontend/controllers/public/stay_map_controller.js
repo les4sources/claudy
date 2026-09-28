@@ -2,6 +2,8 @@ import { Controller } from '@hotwired/stimulus';
 
 // Le gîte du séjour : `ember` du thème (MapFeature::STAY_LODGING_COLOR).
 const EMBER = '#C97B3D';
+// Deux crans au-delà des tuiles les plus fines : Leaflet agrandit les dernières.
+const OVERZOOM = 2;
 const BLANK_TILE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
 // La carte du domaine pour les hôtes (epic #348, phase 4).
@@ -43,7 +45,7 @@ export default class extends Controller {
       center: this.centerValue.length === 2 ? this.centerValue : [50.3414088, 4.9078535],
       zoom: 17,
       minZoom: this.minZoomValue,
-      maxZoom: this.maxZoomValue,
+      maxZoom: this.maxZoomValue + OVERZOOM,
       maxBounds: bounds ? bounds.pad(0.25) : undefined,
       zoomControl: false,
       attributionControl: false,
@@ -52,7 +54,8 @@ export default class extends Controller {
 
     L.tileLayer(this.tilesUrlValue.replace('{kind}', 'rgb'), {
       minZoom: this.minZoomValue,
-      maxZoom: this.maxZoomValue,
+      maxNativeZoom: this.maxZoomValue,
+      maxZoom: this.maxZoomValue + OVERZOOM,
       errorTileUrl: BLANK_TILE,
       bounds: bounds || undefined,
       keepBuffer: 4,

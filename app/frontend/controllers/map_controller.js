@@ -34,6 +34,10 @@ const FOREST_TINT = '#E4EEEA';
 const HATCH_ID = 'map-venue-hatch';
 const VENUE_KINDS = ['lodging', 'space'];
 const LABEL_MIN_ZOOM = 18;
+// Au-delà du zoom le plus fin des tuiles (`max_zoom` du fond, 20 pour
+// l'ortho 2023), Leaflet agrandit les dernières tuiles : deux crans de plus
+// pour poser un point au pied d'un arbre ou d'une prise.
+const OVERZOOM = 2;
 // Plantes (phase 7) : le pictogramme de strate apparaît un cran avant les noms.
 const PLANT_GLYPH_MIN_ZOOM = 17;
 // Une seule couche à la fois (Michael, 2026-09-28 : plusieurs couches
@@ -125,7 +129,7 @@ export default class extends Controller {
       center: this.centerValue.length === 2 ? this.centerValue : [50.3414088, 4.9078535],
       zoom: 17,
       minZoom: this.minZoomValue,
-      maxZoom: this.maxZoomValue,
+      maxZoom: this.maxZoomValue + OVERZOOM,
       // `maxBounds` avec un peu de mou : coller l'emprise au pixel près rend le
       // déplacement élastique et désagréable au doigt.
       maxBounds: bounds ? bounds.pad(0.25) : undefined,
@@ -192,7 +196,8 @@ export default class extends Controller {
   tileLayer(kind) {
     return L.tileLayer(this.tilesUrlValue.replace('{kind}', kind), {
       minZoom: this.minZoomValue,
-      maxZoom: this.maxZoomValue,
+      maxNativeZoom: this.maxZoomValue,
+      maxZoom: this.maxZoomValue + OVERZOOM,
       // Hors de l'emprise il n'y a PAS de tuile, et c'est normal : le fond uni
       // du conteneur reste visible plutôt qu'une grille de carrés cassés.
       errorTileUrl:
