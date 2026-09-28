@@ -20,7 +20,9 @@ RSpec.describe "Carte du domaine — réseaux (epic #348, phase 9)", type: :requ
     get map_path
     expect(response).to have_http_status(:ok)
     expect(MapLayer.where(kind: "network").map(&:network)).to contain_exactly("water", "electric", "ethernet")
-    expect(response.body).to include("data-map-networks-section", "Électricité", "Ethernet", "Tous les réseaux")
+    expect(response.body).to include("data-map-networks-section", "Électricité", "Ethernet")
+    # Une couche à la fois : plus de sélecteur « n'afficher qu'un réseau ».
+    expect(response.body).not_to include("Tous les réseaux")
     expect(response.body).to include('data-network="water"', 'data-network-color="#2563EB"')
   end
 

@@ -9,7 +9,6 @@ import { isPlantFeature, plantIcon, plantMarker } from '~/utils/map_plants';
 import { PlantPlacement } from '~/utils/map_placement';
 import {
   NETWORK_LABEL_MIN_ZOOM,
-  applyNetworkFilter,
   isNetworkFeature,
   networkNodeIcon,
   networkNodeMarker,
@@ -36,7 +35,9 @@ const VENUE_KINDS = ['lodging', 'space'];
 const LABEL_MIN_ZOOM = 18;
 // Plantes (phase 7) : le pictogramme de strate apparaît un cran avant les noms.
 const PLANT_GLYPH_MIN_ZOOM = 17;
-const VISIBILITY_KEY = 'claudy.map.layers.visible';
+// Une seule couche à la fois (Michael, 2026-09-28 : plusieurs couches
+// superposées, « on s'y perd ») : on retient la dernière choisie.
+const ACTIVE_LAYER_KEY = 'claudy.map.layer.active';
 
 // La carte du domaine (epic #348, phase 1).
 //
@@ -283,9 +284,10 @@ export default class extends Controller {
   // ── Couches et objets (epic #348, phase 2) ────────────────────────────────
   //
   // Chaque couche typée est un `L.geoJSON` chargé depuis
-  // `/map/features.json?layer_id=…`. La case du panneau l'affiche ou la masque
-  // (état gardé en `localStorage`) ; le nom la rend ACTIVE, et si elle est de
-  // kind `management`, la barre d'outils Geoman apparaît.
+  // `/map/features.json?layer_id=…`. UNE SEULE couche est affichée à la fois :
+  // la choisir dans le panneau l'affiche, masque les autres et la rend ACTIVE
+  // (la barre d'outils suit son kind). La dernière choisie est retenue en
+  // `localStorage`. Les cases `layerToggle`, invisibles, portent l'état affiché.
 
   async setupFeatures() {
     if (!this.hasFeaturesUrlValue || !this.featuresUrlValue) return;
@@ -318,23 +320,21 @@ export default class extends Controller {
     this.updateLabels();
     this.observePanel();
 
-    const visibility = this.readVisibility();
-    // `allSettled` : une couche qui ne se charge pas (réseau de terrain, session
-    // expirée) ne doit pas empêcher les autres ni la barre d'outils d'arriver.
-    await Promise.allSettled(
-      this.layerToggleTargets.map((toggle) => {
-        const id = toggle.dataset.layerId;
-        toggle.checked = visibility[id] !== false;
-        return this.loadLayer(id);
-      })
-    );
-    if (!this.map) return;
-
-    // La carte du jour est la vue par défaut (phase 3) : la couche des lieux
-    // est active en arrivant, la Gestion à défaut.
+    // La couche choisie la dernière fois ; sinon la carte du jour (phase 3),
+    // vue par défaut, et la Gestion à défaut.
+    const remembered = this.readActiveLayer();
     const initial =
+      this.layerNameTargets.find((b) => b.dataset.layerId === remembered) ||
       this.layerNameTargets.find((b) => b.dataset.layerKind === 'venues') ||
       this.layerNameTargets.find((b) => b.dataset.layerKind === 'management');
+    this.layerToggleTargets.forEach((toggle) => {
+      toggle.checked = Boolean(initial) && toggle.dataset.layerId === initial.dataset.layerId;
+    });
+    // `allSettled` : une couche qui ne se charge pas (réseau de terrain, session
+    // expirée) ne doit pas empêcher les autres ni la barre d'outils d'arriver.
+    await Promise.allSettled(this.layerToggleTargets.map((toggle) => this.loadLayer(toggle.dataset.layerId)));
+    if (!this.map) return;
+
     if (initial) this.setActiveLayer(initial.dataset.layerId, initial.dataset.layerKind);
 
     this.updateDateBar();
@@ -483,26 +483,34 @@ export default class extends Controller {
     return this.layerNameTargets.find((b) => b.dataset.layerId === String(layerId))?.dataset.networkColor || null;
   }
 
-  // « N'afficher qu'un réseau » (phase 9) : `utils/map_networks.js`.
-  filterNetwork(event) {
-    applyNetworkFilter(this, event.target.value);
-  }
-
+  // Une case cochée par le code (placement, lien `?feature=`, outil qui
+  // rallume sa couche) : c'est choisir cette couche, donc masquer les autres.
   toggleLayer(event) {
     const id = event.target.dataset.layerId;
-    const group = this.featureLayers?.[id];
-    if (group) {
-      if (event.target.checked) group.addTo(this.map);
-      else this.map.removeLayer(group);
+    if (event.target.checked) {
+      const button = this.layerNameTargets.find((b) => b.dataset.layerId === String(id));
+      this.setActiveLayer(id, button?.dataset.layerKind || this.layerKinds?.[id]);
+    } else {
+      this.showOnlyLayer(this.activeLayerId);
     }
+  }
+
+  // N'afficher que `id` : les autres groupes quittent la carte, leurs cases
+  // sont décochées.
+  showOnlyLayer(id) {
+    this.layerToggleTargets.forEach((toggle) => {
+      const visible = toggle.dataset.layerId === String(id);
+      toggle.checked = visible;
+      const group = this.featureLayers?.[toggle.dataset.layerId];
+      if (!group || !this.map) return;
+      if (visible) group.addTo(this.map);
+      else this.map.removeLayer(group);
+    });
     // Les éléments SVG d'une couche rallumée sont neufs : sans leurs classes.
     this.applyMonthFocus();
     // Phase 10 : masquer la couche Ethernet arrête la relecture des statuts.
     this.unifi?.sync();
-    const visibility = this.readVisibility();
-    visibility[id] = event.target.checked;
-    this.writeVisibility(visibility);
-    if (id === this.venuesLayerId) this.updateDateBar();
+    this.updateDateBar();
   }
 
   activateLayer(event) {
@@ -522,6 +530,14 @@ export default class extends Controller {
       button.classList.toggle('text-4s-main', active);
       button.setAttribute('aria-current', active ? 'true' : 'false');
     });
+    // Une couche à la fois : la choisie s'affiche, les autres s'effacent, et
+    // les réglages propres à une couche (fils résolus, relevés, « à tracer »)
+    // ne se montrent qu'avec elle.
+    this.showOnlyLayer(this.activeLayerId);
+    this.element.querySelectorAll('[data-layer-extra]').forEach((element) => {
+      element.classList.toggle('hidden', element.dataset.layerExtra !== kind);
+    });
+    this.writeActiveLayer(this.activeLayerId);
 
     const editable = ['management', 'venues', 'welcome', 'network'].includes(kind) && this.geomanReady;
     // Les gîtes et salles se tracent en zones : point et ligne restent à la
@@ -1156,17 +1172,17 @@ export default class extends Controller {
     return new Date(Date.UTC(year, month - 1, day));
   }
 
-  readVisibility() {
+  readActiveLayer() {
     try {
-      return JSON.parse(window.localStorage.getItem(VISIBILITY_KEY) || '{}');
+      return window.localStorage.getItem(ACTIVE_LAYER_KEY);
     } catch {
-      return {};
+      return null;
     }
   }
 
-  writeVisibility(visibility) {
+  writeActiveLayer(id) {
     try {
-      window.localStorage.setItem(VISIBILITY_KEY, JSON.stringify(visibility));
+      window.localStorage.setItem(ACTIVE_LAYER_KEY, String(id));
     } catch {
       // Navigation privée ou stockage plein : l'état ne survit pas, rien de grave.
     }

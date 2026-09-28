@@ -204,3 +204,17 @@
 .map-measure-result strong {
   font-size: 0.85rem;
 }
+
+/* Une couche à la fois (2026-09-28) : un rond de sélection devant chaque
+   couche, plein sur la couche affichée (`aria-current="true"`). */
+.map-layer-radio {
+  flex-shrink: 0;
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 1.5px solid #a8a29e;
+  border-radius: 9999px;
+}
+[aria-current="true"] > .map-layer-radio {
+  border-color: currentColor;
+  background: radial-gradient(circle, currentColor 0 38%, transparent 44%);
+}

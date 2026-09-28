@@ -101,21 +101,3 @@ export function networkNodeMarker(L, feature, latlng) {
     title: [props.name, props.node_type_label].filter(Boolean).join(' — '),
   });
 }
-
-// « N'afficher qu'un réseau » : coche la couche du réseau choisi, décoche les
-// autres (en passant par `toggleLayer`, qui retient la visibilité), et rend
-// la couche choisie active pour que la barre d'outils la dessine. « Tous »
-// rallume les trois.
-export function applyNetworkFilter(controller, network) {
-  controller.layerToggleTargets.forEach((toggle) => {
-    const own = toggle.dataset.network;
-    if (!own) return;
-    const wanted = network === 'all' || own === network;
-    if (toggle.checked === wanted) return;
-    toggle.checked = wanted;
-    toggle.dispatchEvent(new Event('change'));
-  });
-  if (network === 'all') return;
-  const button = controller.layerNameTargets.find((b) => b.dataset.network === network);
-  if (button) controller.setActiveLayer(button.dataset.layerId, button.dataset.layerKind);
-}
