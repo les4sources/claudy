@@ -76,13 +76,13 @@ RSpec.describe "Webhook Twilio voix", type: :request do
   end
 
   describe "appel entrant" do
-    it "compose le mobile du veilleur de garde, 25 s, et journalise l'appel" do
+    it "compose le mobile du veilleur de garde, 18 s, et journalise l'appel" do
       garde(ana)
       incoming
 
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq("application/xml")
-      expect(dial["timeout"]).to eq("25")
+      expect(dial["timeout"]).to eq("18")
       expect(dial["action"]).to eq("/webhooks/twilio/voice/dial_status?step=on_call")
       expect(dial.at_xpath("Number").text).to eq("+32470111111")
 

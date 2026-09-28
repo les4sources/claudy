@@ -14,7 +14,9 @@ module OnCall
   # lui qui fixe le tarif de la jambe sortante. Sans ce numéro configuré, on ne
   # compose rien et on joue le message.
   class CallFlow
-    DIAL_TIMEOUT = 25
+    # 18 s : la messagerie des opérateurs belges décroche vers 20-25 s ; au-delà,
+    # elle « répond » à la place du veilleur et la cascade s'arrête.
+    DIAL_TIMEOUT = 18
     STEPS = %w[on_call backup fallback].freeze
     ANSWERED_STATUSES = %w[completed answered].freeze
     ACTION_PATH = "/webhooks/twilio/voice/dial_status".freeze
