@@ -84,7 +84,7 @@ export function networkNodeIcon(L, feature, selected = false) {
       `<span class="${classes.join(' ')}" style="--network-color: ${networkColor(props)}; position: relative">` +
       `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" ` +
       `stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyph}</svg>` +
-      `${unifiBadgeHtml(props)}</span>`,
+      `${unifiBadgeHtml(props)}${nonPotableBadgeHtml(props)}</span>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
     tooltipAnchor: [size / 2, 0],
@@ -98,16 +98,41 @@ export function networkNodeMarker(L, feature, latlng) {
     riseOnHover: true,
     // Les nœuds passent au-dessus des tracés et des autres points.
     zIndexOffset: 200,
-    title: [props.name, props.node_type_label, props.water_source_label].filter(Boolean).join(' — '),
+    title: [props.name, props.node_type_label, props.water_source_label, props.non_potable && 'non potable']
+      .filter(Boolean)
+      .join(' — '),
   });
 }
 
 // Dans la fiche d'un nœud d'eau, choisir « Robinet » révèle l'origine de
 // l'eau ; un autre type la masque (le serveur l'efface alors).
+// Choisir une eau non potable révèle l'avertissement sous le champ.
 export function handleNodeTypeChange(event) {
   const select = event.target;
-  if (select?.name !== 'map_feature[node_type]') return;
-  select.closest('form')?.querySelectorAll('[data-water-source-field]').forEach((el) => {
-    el.hidden = select.value !== 'tap';
-  });
+  const form = select?.closest('form');
+  if (!form) return;
+  if (select.name === 'map_feature[node_type]') {
+    form.querySelectorAll('[data-water-source-field]').forEach((el) => {
+      el.hidden = select.value !== 'tap';
+    });
+  } else if (select.name === 'map_feature[water_source]') {
+    form.querySelectorAll('[data-non-potable-hint]').forEach((el) => {
+      el.hidden = !el.dataset.nonPotableHint.split(' ').includes(select.value);
+    });
+  }
+}
+
+// Un robinet d'eau non potable (eau de pluie) : pastille rouge barrée dans le
+// coin bas de l'icône, à l'opposé de celle d'UniFi, cerclée de blanc pour se
+// lire sur la photo aérienne.
+export function nonPotableBadgeHtml(properties) {
+  if (!properties?.non_potable) return '';
+  return (
+    '<span class="map-non-potable" title="Eau non potable" ' +
+    'style="position:absolute;bottom:-4px;right:-4px;width:12px;height:12px;border-radius:9999px;' +
+    'background:#DC2626;border:2px solid #ffffff;box-shadow:0 0 2px rgba(0,0,0,0.45);' +
+    'display:flex;align-items:center;justify-content:center">' +
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8" width="6" height="6" aria-hidden="true">' +
+    '<line x1="1" y1="1" x2="7" y2="7" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/></svg></span>'
+  );
 }

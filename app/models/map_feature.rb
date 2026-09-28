@@ -57,6 +57,8 @@ class MapFeature < ApplicationRecord
   # L'origine de l'eau d'un robinet : on ne boit pas l'eau de pluie comme celle
   # du captage.
   WATER_SOURCES = { "rain" => "Eau de pluie", "forest_catchment" => "Captage forestier", "well" => "Eau de puits" }.freeze
+  # Ce qu'on ne boit pas : signalé sur la carte par une pastille rouge.
+  NON_POTABLE_WATER_SOURCES = %w[rain].freeze
   EARTH_RADIUS_M = 6_371_008.8
 
   has_paper_trail
@@ -141,6 +143,7 @@ class MapFeature < ApplicationRecord
   def water_source = properties.to_h["water_source"].presence
   def water_source_label = WATER_SOURCES[water_source]
   def tap? = network == "water" && node_type == "tap"
+  def non_potable? = NON_POTABLE_WATER_SOURCES.include?(water_source)
   # Phase 10 : l'identifiant de l'équipement UniFi (API Site Manager) d'un nœud.
   def unifi_device_id = properties.to_h["unifi_device_id"].presence
   def unifi? = equipment == "unifi"
@@ -259,7 +262,7 @@ class MapFeature < ApplicationRecord
 
     length = length_in_meters
     { network: network, color: map_layer.network_color, node_type: node_type, node_type_label: node_type_label,
-      water_source: water_source, water_source_label: water_source_label,
+      water_source: water_source, water_source_label: water_source_label, non_potable: (true if non_potable?),
       gauge: (gauge || DEFAULT_GAUGE if line?), equipment: equipment, unifi_device_id: (unifi_device_id if unifi?),
       length_m: length&.round(1) }.compact
   end

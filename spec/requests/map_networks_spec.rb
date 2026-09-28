@@ -106,7 +106,22 @@ RSpec.describe "Carte du domaine — réseaux (epic #348, phase 9)", type: :requ
       }
       expect(response).to have_http_status(:created)
       expect(JSON.parse(response.body)["properties"]).to include("water_source" => "rain",
-                                                                 "water_source_label" => "Eau de pluie")
+                                                                 "water_source_label" => "Eau de pluie",
+                                                                 "non_potable" => true)
+    end
+
+    it "ne signale non potable que l'eau de pluie, sur la carte comme dans la fiche" do
+      well = water.map_features.create!(feature_kind: "node", geometry: point,
+                                        properties: { "node_type" => "tap", "water_source" => "well" })
+      rain = water.map_features.create!(feature_kind: "node", geometry: point,
+                                        properties: { "node_type" => "tap", "water_source" => "rain" })
+      expect(well.as_geojson[:properties]).not_to have_key(:non_potable)
+
+      get map_feature_path(well)
+      expect(response.body).to match(/<p(?=[^>]*\bhidden)[^>]*data-non-potable-hint/)
+      get map_feature_path(rain)
+      expect(response.body).to include("Eau non potable")
+      expect(response.body).not_to match(/<p(?=[^>]*\bhidden)[^>]*data-non-potable-hint/)
     end
 
     it "efface l'origine quand le nœud cesse d'être un robinet" do
