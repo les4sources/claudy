@@ -34,6 +34,8 @@ class MapsController < BaseController
     # `/map?plant=<id>` (phase 7, liens des récoltes et de la liste) : la fiche
     # d'une plante, placée ou non, s'ouvre en arrivant.
     @focus_plant_id = Plant.where(id: params[:plant].to_s[/\A\d+\z/]).pick(:id)
+    # `/map?plant=new` : la fiche « Nouvelle plante » (bouton de la liste).
+    @open_new_plant = params[:plant] == "new"
     # Le compteur « À placer » du panneau ; la carte le tient ensuite à jour.
     @unplaced_count = Plant.alive.to_place.count
   end

@@ -5,6 +5,10 @@
   le dossier se replie en sections, ouvertes seulement quand elles ont une
   erreur, pour que les champs vides n'écrasent pas l'écran.
 - saved = local_assigns[:saved]
+/ Une plante pas encore enregistrée (« Nouvelle plante ») : le dossier seul ;
+  photos, récolte, notes datées et tâches viennent une fois la plante créée.
+- fresh = plant.new_record?
+- created = local_assigns[:created]
 - unplaced_layer_id = local_assigns[:unplaced_layer_id]
 - typed = local_assigns[:typed_names] || {}
 - species = plant.plant_species
@@ -23,7 +27,8 @@
 - planted = plant.planted_on ? l(plant.planted_on, format: :long) : plant.planted_year&.to_s
 div[class="pointer-events-auto flex h-full flex-col overflow-hidden bg-white shadow-2xl md:rounded-xl md:border md:border-stone-200"
     data-feature-panel="true"
-    data-plant-panel=plant.id
+    data-plant-panel=(plant.id || "new")
+    data-plant-created=(created ? "true" : nil)
     data-feature-id=plant.map_feature_id
     data-layer-id=plant.map_feature&.map_layer_id
     data-feature-saved=(saved && plant.placed? ? "true" : nil)
@@ -41,7 +46,7 @@ div[class="pointer-events-auto flex h-full flex-col overflow-hidden bg-white sha
             style="color: #{health[:dot]}"]
           = plant_stratum_glyph(plant.stratum, css: "h-14 w-14 opacity-80")
       span class="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-forest shadow-sm"
-        | Plante
+        = fresh ? "Nouvelle plante" : "Plante"
       button[type="button" class="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-stone-500 shadow-sm hover:bg-white hover:text-stone-800"
              data-action="click->map#closePanel" aria-label="Fermer la fiche"]
         svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -51,7 +56,7 @@ div[class="pointer-events-auto flex h-full flex-col overflow-hidden bg-white sha
     .px-4.pt-3
       .flex.items-start.gap-2
         h2.flex-1.text-lg.font-semibold.leading-snug.text-stone-900 class=(plant.dead? ? "line-through decoration-stone-400" : nil)
-          = plant.display_name
+          = plant.display_name.presence || "Nouvelle plante"
         - if plant.number_label
           span class="mt-1 shrink-0 rounded-md bg-stone-100 px-1.5 py-0.5 font-mono text-xs font-semibold text-stone-600" data-plant-number=true
             = "##{plant.number_label}"
@@ -75,7 +80,10 @@ div[class="pointer-events-auto flex h-full flex-col overflow-hidden bg-white sha
             = plant.zone
 
     .px-4.pb-6.pt-4
-      - if saved
+      - if created
+        p.mb-3.rounded-lg.bg-forest-tint.px-3.py-2.text-xs.text-forest data-plant-created-notice=true
+          | Plante créée. Il reste à la poser : « Placer sur la carte », ou « Je suis devant » au pied de l'arbre.
+      - elsif saved
         p.mb-3.rounded-lg.bg-forest-tint.px-3.py-2.text-xs.text-forest Enregistré.
       - if unplaced_layer_id
         p.mb-3.rounded-lg.bg-ember-tint.px-3.py-2.text-xs.text-stone-700
@@ -87,7 +95,7 @@ div[class="pointer-events-auto flex h-full flex-col overflow-hidden bg-white sha
               li = message
 
       / ── Dossier ────────────────────────────────────────────────────────
-      = form_with model: plant, url: plant_path(plant), method: :patch,
+      = form_with model: plant, url: (fresh ? plants_path : plant_path(plant)), method: (fresh ? :post : :patch),
                   builder: ActionView::Helpers::FormBuilder,
                   html: { id: form_id, multipart: true, class: "space-y-2", data: { plant_form: true } } do |f|
 
@@ -111,13 +119,14 @@ div[class="pointer-events-auto flex h-full flex-col overflow-hidden bg-white sha
                 data-plant-autocomplete-url-value=map_species_path(format: :json)]
               = label_tag "plant_species_name", "Espèce", class: label_css
               = text_field_tag "plant[species_name]", species_value, id: "plant_species_name", class: input_css,
-                               placeholder: "Pommier, Néflier…", autocomplete: "off", role: "combobox",
+                               placeholder: "Pommier, Néflier…", autocomplete: "off", role: "combobox", autofocus: fresh,
                                "aria-autocomplete": "list", "aria-expanded": "false", "aria-controls": "plant_species_options",
                                data: { plant_autocomplete_target: "input",
                                        action: "input->plant-autocomplete#search focus->plant-autocomplete#search keydown->plant-autocomplete#navigate blur->plant-autocomplete#close" }
               ul#plant_species_options[class="absolute z-30 mt-1 hidden max-h-64 w-full overflow-y-auto rounded-lg border border-stone-200 bg-white py-1 shadow-lg"
                                        role="listbox" data-plant-autocomplete-target="list"]
-              p.mt-1.min-h-4.text-xs.italic.text-stone-400 data-plant-autocomplete-target="hint" = species&.latin_name
+              p.mt-1.min-h-4.text-xs.italic.text-stone-400 data-plant-autocomplete-target="hint"
+                = species&.latin_name || ("Une espèce absente de la liste se crée à l'enregistrement." if fresh)
             div[class="relative"
                 data-controller="plant-autocomplete"
                 data-plant-autocomplete-kind-value="variety"
@@ -223,86 +232,93 @@ div[class="pointer-events-auto flex h-full flex-col overflow-hidden bg-white sha
 
         / Toujours à portée de pouce pendant la saisie.
         .sticky.bottom-0.z-10.-mx-4.border-t.border-stone-100.bg-white/95.px-4.py-3.backdrop-blur
-          button[type="submit" class="h-11 w-full rounded-lg bg-forest text-sm font-semibold text-white hover:bg-forest-soft"] Enregistrer
+          button[type="submit" class="h-11 w-full rounded-lg bg-forest text-sm font-semibold text-white hover:bg-forest-soft"]
+            = fresh ? "Créer la plante" : "Enregistrer"
 
-      / ── Photos ─────────────────────────────────────────────────────────
-        Le champ appartient au formulaire du dossier (attribut `form`) : choisir
-        des photos les envoie aussitôt, avec la saisie en cours.
-      section.mt-6 data-plant-section="photos"
-        p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" = "Photos (#{photos.size})"
-        ul.grid.grid-cols-3.gap-2
-          - photos.each do |photo|
-            li.group.relative
-              = link_to url_for(Plant.photo_source(photo, :preview)), target: "_blank", rel: "noopener" do
-                = image_tag url_for(Plant.photo_source(photo, :thumb)), alt: photo.filename.to_s, loading: "lazy",
-                            class: "aspect-square w-full rounded-lg object-cover ring-1 ring-stone-200"
-              = button_to photo_plant_path(plant, photo_id: photo.id), method: :delete,
-                          form: { data: { turbo_confirm: "Retirer cette photo ?" } },
-                          class: "absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-stone-500 shadow hover:text-red-600",
-                          "aria-label": "Retirer la photo" do
-                | ×
-          li
-            label class="flex aspect-square w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-stone-300 text-stone-500 hover:border-forest hover:text-forest"
-              svg.h-6.w-6 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-                path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"
-                circle cx="12" cy="13" r="3"
-              span.text-xs.font-medium Ajouter
-              = file_field_tag "plant[photos][]", multiple: true, form: form_id, class: "sr-only",
-                               accept: Plant.accepted_photo_types.join(","),
-                               onchange: "this.form && this.form.requestSubmit()"
+      - if fresh
+        p.mt-4.text-xs.text-stone-400 Photos, récolte, notes datées et tâches s'ajoutent une fois la plante créée.
+      - else
 
-      / ── Récolte · notes datées · tâches ────────────────────────────────
-        Trois sections hors du formulaire du dossier, remplacées chacune seule
-        en Turbo Stream : la saisie en cours dans le dossier n'est pas perdue.
-      = render "plants/harvest", plant: plant
+        / ── Photos ─────────────────────────────────────────────────────────
+          Le champ appartient au formulaire du dossier (attribut `form`) : choisir
+          des photos les envoie aussitôt, avec la saisie en cours.
+        section.mt-6 data-plant-section="photos"
+          p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" = "Photos (#{photos.size})"
+          ul.grid.grid-cols-3.gap-2
+            - photos.each do |photo|
+              li.group.relative
+                = link_to url_for(Plant.photo_source(photo, :preview)), target: "_blank", rel: "noopener" do
+                  = image_tag url_for(Plant.photo_source(photo, :thumb)), alt: photo.filename.to_s, loading: "lazy",
+                              class: "aspect-square w-full rounded-lg object-cover ring-1 ring-stone-200"
+                = button_to photo_plant_path(plant, photo_id: photo.id), method: :delete,
+                            form: { data: { turbo_confirm: "Retirer cette photo ?" } },
+                            class: "absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-stone-500 shadow hover:text-red-600",
+                            "aria-label": "Retirer la photo" do
+                  | ×
+            li
+              label class="flex aspect-square w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-stone-300 text-stone-500 hover:border-forest hover:text-forest"
+                svg.h-6.w-6 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                  path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"
+                  circle cx="12" cy="13" r="3"
+                span.text-xs.font-medium Ajouter
+                = file_field_tag "plant[photos][]", multiple: true, form: form_id, class: "sr-only",
+                                 accept: Plant.accepted_photo_types.join(","),
+                                 onchange: "this.form && this.form.requestSubmit()"
 
-      = render "plants/notes", plant: plant
+        / ── Récolte · notes datées · tâches ────────────────────────────────
+          Trois sections hors du formulaire du dossier, remplacées chacune seule
+          en Turbo Stream : la saisie en cours dans le dossier n'est pas perdue.
+        = render "plants/harvest", plant: plant
 
-      = render "maps/feature_tasks", subject: plant
+        = render "plants/notes", plant: plant
 
-      / ── Actions ────────────────────────────────────────────────────────
-      .mt-8.space-y-2.border-t.border-stone-100.pt-4
-        - if plant.notion_url.present?
-          = link_to plant.notion_url, target: "_blank", rel: "noopener",
-                    class: "flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50" do
-            | Ouvrir la fiche Notion
-            svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-              path d="M7 17 17 7M8 7h9v9"
-        / Le mode Placement (phase 7) : poser la plante, ou corriger son point
-          — glisser, toucher la carte, ou la position GPS du téléphone.
-        - placement = { plant_id: plant.id, plant_name: plant.display_name, feature_id: plant.map_feature_id }
-        - if plant.placed?
-          .grid.grid-cols-2.gap-2
-            button[type="button" class="flex h-11 items-center justify-center gap-2 rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50"
-                   data=placement.merge(action: "map#movePlant", plant_move: true)]
+        = render "maps/feature_tasks", subject: plant
+
+        / ── Actions ────────────────────────────────────────────────────────
+        .mt-8.space-y-2.border-t.border-stone-100.pt-4
+          - if plant.notion_url.present?
+            = link_to plant.notion_url, target: "_blank", rel: "noopener",
+                      class: "flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50" do
+              | Ouvrir la fiche Notion
               svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-                path d="M5 9 2 12l3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"
-              | Déplacer
-            button[type="button" class="flex h-11 items-center justify-center gap-2 rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50"
-                   data=placement.merge(action: "map#gpsPlacePlant", plant_gps: true)]
-              svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-                circle cx="12" cy="12" r="3"
-                path d="M12 2v3M12 19v3M2 12h3M19 12h3"
-              | Placer ici (GPS)
-        - elsif !plant.dead?
-          .grid.grid-cols-2.gap-2
-            button[type="button" class="flex h-11 items-center justify-center rounded-lg bg-forest text-sm font-semibold text-white hover:bg-forest-soft"
-                   data=placement.merge(action: "map#placePlantFromPanel", plant_place: true)]
-              | Placer sur la carte
-            button[type="button" class="flex h-11 items-center justify-center rounded-lg border border-forest text-sm font-semibold text-forest hover:bg-forest-tint"
-                   data=placement.merge(action: "map#gpsPlacePlant", plant_gps: true)]
-              | Je suis devant
-        - if plant.placed?
-          = button_to unplace_plant_path(plant), method: :post,
-                      form: { data: { turbo_confirm: "Retirer « #{plant.display_name} » de la carte ? Elle retournera dans la liste « à placer »." } },
-                      class: "flex h-11 w-full items-center justify-center rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50"
-            | Retirer de la carte
-        = button_to plant_path(plant), method: :delete,
-                    form: { data: { turbo_confirm: "Supprimer « #{plant.display_name} » ? Sa fiche, ses photos et son point disparaissent de la carte." } },
-                    class: "flex h-11 w-full items-center justify-center rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"
-          | Supprimer la plante
+                path d="M7 17 17 7M8 7h9v9"
+          / Le mode Placement (phase 7) : poser la plante, ou corriger son point
+            — glisser, toucher la carte, ou la position GPS du téléphone.
+          / Clés en tirets : Slim garde les `_` d'un hash `data=`, et `dataset.plantId`
+            ne lirait alors rien (le point partait vers `/map/plants/undefined`).
+          - placement = ->(**extra) { { plant_id: plant.id, plant_name: plant.display_name, feature_id: plant.map_feature_id }.merge(extra).transform_keys { |key| key.to_s.dasherize } }
+          - if plant.placed?
+            .grid.grid-cols-2.gap-2
+              button[type="button" class="flex h-11 items-center justify-center gap-2 rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50"
+                     data=placement.(action: "map#movePlant", plant_move: true)]
+                svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                  path d="M5 9 2 12l3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"
+                | Déplacer
+              button[type="button" class="flex h-11 items-center justify-center gap-2 rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50"
+                     data=placement.(action: "map#gpsPlacePlant", plant_gps: true)]
+                svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                  circle cx="12" cy="12" r="3"
+                  path d="M12 2v3M12 19v3M2 12h3M19 12h3"
+                | Placer ici (GPS)
+          - elsif !plant.dead?
+            .grid.grid-cols-2.gap-2
+              button[type="button" class="flex h-11 items-center justify-center rounded-lg bg-forest text-sm font-semibold text-white hover:bg-forest-soft"
+                     data=placement.(action: "map#placePlantFromPanel", plant_place: true)]
+                | Placer sur la carte
+              button[type="button" class="flex h-11 items-center justify-center rounded-lg border border-forest text-sm font-semibold text-forest hover:bg-forest-tint"
+                     data=placement.(action: "map#gpsPlacePlant", plant_gps: true)]
+                | Je suis devant
+          - if plant.placed?
+            = button_to unplace_plant_path(plant), method: :post,
+                        form: { data: { turbo_confirm: "Retirer « #{plant.display_name} » de la carte ? Elle retournera dans la liste « à placer »." } },
+                        class: "flex h-11 w-full items-center justify-center rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50"
+              | Retirer de la carte
+          = button_to plant_path(plant), method: :delete,
+                      form: { data: { turbo_confirm: "Supprimer « #{plant.display_name} » ? Sa fiche, ses photos et son point disparaissent de la carte." } },
+                      class: "flex h-11 w-full items-center justify-center rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"
+            | Supprimer la plante
 
-      .mt-4.text-xs.text-stone-400
-        p = "Ajoutée #{plant.created_by ? "par #{plant.created_by.display_name} " : ''}le #{l(plant.created_at.to_date, format: :long)}"
-        - if plant.updated_at > plant.created_at + 1.second
-          p = "Modifiée le #{l(plant.updated_at.to_date, format: :long)}"
+        .mt-4.text-xs.text-stone-400
+          p = "Ajoutée #{plant.created_by ? "par #{plant.created_by.display_name} " : ''}le #{l(plant.created_at.to_date, format: :long)}"
+          - if plant.updated_at > plant.created_at + 1.second
+            p = "Modifiée le #{l(plant.updated_at.to_date, format: :long)}"

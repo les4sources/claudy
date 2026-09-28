@@ -13,7 +13,7 @@ class PlantsController < BaseController
 
   UNPLACED_FRAME = "plants_unplaced".freeze
 
-  before_action :get_plant, except: %i[index unplaced]
+  before_action :get_plant, except: %i[index unplaced new create]
 
   # GET /map/plantes — toutes les plantes du domaine, en liste : recherche,
   # filtres statut, santé, zone, strate, placée ou non ; tri par numéro. Les
@@ -61,6 +61,32 @@ class PlantsController < BaseController
 
   def show
     render :show, layout: false
+  end
+
+  # GET /map/plants/new — la fiche d'une plante qu'on vient de mettre en terre :
+  # plantée aujourd'hui, à placer ensuite. `zone` pré-remplit la zone.
+  def new
+    @plant = Plant.new(status: "planted", planted_on: Date.current, zone: params[:zone].to_s.squish.presence)
+    render :show, layout: false
+  end
+
+  # POST /map/plants — crée la plante (espèce et variété par leur nom, créées au
+  # besoin). Elle naît sans point : la fiche rouverte propose « Placer sur la
+  # carte » et « Je suis devant ».
+  def create
+    @plant = Plant.new(created_by: current_user)
+    saved = Plant.transaction do
+      assign_plant
+      (@assign_errors.empty? && @plant.save) || raise(ActiveRecord::Rollback)
+    end
+
+    if saved
+      render_panel(saved: true, created: true)
+    else
+      @plant.valid? if @assign_errors.any?
+      @assign_errors.each { |message| @plant.errors.add(:base, message) }
+      render_panel(status: :unprocessable_entity)
+    end
   end
 
   def update

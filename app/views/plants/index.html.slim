@@ -6,9 +6,16 @@
 - filtered = f.values.any?
 .mx-auto.max-w-5xl.px-4.py-6
   = render "maps/subnav", current: :plantes
-  .mt-4
-    h1.font-averia.text-2xl.text-stone-800 Plantes
-    p.mt-1.text-sm.text-stone-500 L'inventaire des plantes nourricières du domaine.
+  .mt-4.flex.flex-wrap.items-start.gap-3
+    .flex-1
+      h1.font-averia.text-2xl.text-stone-800 Plantes
+      p.mt-1.text-sm.text-stone-500 L'inventaire des plantes nourricières du domaine.
+    / La fiche s'ouvre sur la carte : c'est là qu'on pose la plante ensuite.
+    = link_to map_path(plant: "new"), class: "inline-flex h-11 items-center gap-2 rounded-lg bg-forest px-4 text-sm font-semibold text-white hover:bg-forest-soft",
+              data: { new_plant_link: true } do
+      svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+        path d="M12 5v14M5 12h14"
+      | Nouvelle plante
 
   / Les compteurs : total, placées, à placer (vivantes), mortes.
   - tiles = [[:total, "plantes", {}, "text-stone-800"], [:placed, "placées", { placed: "yes" }, "text-forest"],
