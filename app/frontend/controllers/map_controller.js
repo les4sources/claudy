@@ -441,13 +441,16 @@ export default class extends Controller {
       if (this.biodiversity?.interceptFeatureClick(event, feature)) return;
       // Pendant un tracé, le clic appartient à Geoman (il pose un sommet) : sans
       // cette sortie, poser un point DANS une zone ouvrait la fiche de la zone.
-      if (
-        this.map.pm?.globalRemovalModeEnabled?.() ||
-        this.map.pm?.globalEditModeEnabled?.() ||
-        this.map.pm?.globalDrawModeEnabled?.()
-      ) {
+      if (this.map.pm?.globalDrawModeEnabled?.()) {
+        // Un marqueur (nœud de réseau, plante…) ne remonte pas son clic à la
+        // carte, où Geoman l'attend : on le lui passe, au centre du marqueur.
+        // Un tracé commence et finit ainsi SUR un nœud, pas à côté.
+        if (layer.options?.bubblingMouseEvents === false) {
+          this.map.fire('click', { ...event, latlng: layer.getLatLng?.() || event.latlng });
+        }
         return;
       }
+      if (this.map.pm?.globalRemovalModeEnabled?.() || this.map.pm?.globalEditModeEnabled?.()) return;
       L.DomEvent.stopPropagation(event);
       if (this.isVenue(feature)) this.selectVenue(feature.id);
       else this.selectFeature(feature.id);
