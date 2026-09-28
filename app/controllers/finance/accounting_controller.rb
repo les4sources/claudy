@@ -15,6 +15,11 @@ module Finance
       # qu'on n'a pas fini.
       @last_cash_count = CashCount.validated.ordered.first
       @days_since_cash_count = @last_cash_count && (Date.current - @last_cash_count.counted_on).to_i
+      # L'échéancier comptable, en un encart : ce qui est dépassé, ce qui tombe
+      # dans le mois. Le détail vit sur sa page.
+      outstanding = ComplianceDeadline.outstanding.where(due_on: ..(Date.current + 30)).ordered.includes(:compliance_obligation).to_a
+      @deadlines_overdue = outstanding.select(&:overdue?)
+      @deadlines_soon = outstanding.reject(&:overdue?)
     end
   end
 end

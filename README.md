@@ -136,6 +136,7 @@ Claudy envoie plusieurs emails par des tâches rake idempotentes, lancées par l
 | `bundle exec rake coworking:send_expiry_reminders` | quotidienne | Rappel d'expiration des packs de coworking. |
 | `bundle exec rake kitchen:weekly_digest` | **vendredi 07:00** | Programme cuisine des 14 prochains jours, un email par responsable. |
 | `bundle exec rake kitchen:bread_reminders` | **quotidienne 07:00** | Rappel de commander le pain, 5 jours avant chaque prestation acceptée. |
+| `bundle exec rake finance:deadline_reminders` | **quotidienne 07:00** | Échéancier comptable : génère les échéances des 12 prochains mois, puis rappelle chaque échéance ouverte à J-14, J-3 et en retard (chaque semaine). Destinataire : le responsable de l'obligation, à défaut les destinataires comptables des réglages. |
 | `bundle exec rake tranches_de_vie:sync_parties` | quotidienne | Répercute les annulations et remboursements des Pizza Party depuis Tranches de Vie. Sans effet si `TRANCHESDEVIE_API_KEY` est absente. |
 
 Fuseau horaire des crons : **Europe/Brussels**.

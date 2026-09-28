@@ -35,8 +35,13 @@ module Finance
       @versions = @invoice.versions.reorder(created_at: :desc).limit(20)
     end
 
+    # Depuis une échéance de paiement de l'échéancier (« Encoder la facture ») :
+    # l'entité et l'échéance viennent de l'échéance, et la facture s'y lie à
+    # l'enregistrement — c'est ce lien qui la soldera quand elle sera payée.
     def new
-      @invoice = PurchaseInvoice.new(legal_entity: default_entity, issued_on: Date.current)
+      @deadline = linked_deadline
+      @invoice = PurchaseInvoice.new(legal_entity: @deadline&.legal_entity || default_entity,
+                                     issued_on: Date.current, due_on: @deadline&.due_on)
       @invoice.purchase_invoice_lines.build
     end
 
@@ -50,7 +55,9 @@ module Finance
       @invoice = PurchaseInvoice.new(invoice_params)
       attach_document(@invoice)
 
+      @deadline = linked_deadline
       if @invoice.save
+        @deadline&.update(purchase_invoice: @invoice)
         redirect_to finance_purchase_invoice_path(@invoice), notice: "Facture enregistrée."
       else
         @invoice.purchase_invoice_lines.build if @invoice.purchase_invoice_lines.empty?
@@ -200,6 +207,14 @@ module Finance
       raw.present? ? Date.parse(raw) : nil
     rescue Date::Error
       nil
+    end
+
+    # Seule une échéance de paiement encore sans facture se lie : sinon un lien
+    # rejoué remplacerait en silence la facture déjà rattachée.
+    def linked_deadline
+      return nil if params[:compliance_deadline_id].blank?
+
+      ComplianceDeadline.payments.find_by(id: params[:compliance_deadline_id], purchase_invoice_id: nil)
     end
 
     def default_entity
