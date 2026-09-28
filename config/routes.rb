@@ -467,7 +467,9 @@ Rails.application.routes.draw do
     # de la carte. Avant `resources :plants`, qui lirait sinon `unplaced`
     # comme un `:id`.
     get "plants/unplaced", to: "plants#unplaced", as: :unplaced_plants
-    resources :plants, only: %i[show update destroy] do
+    # « Nouvelle plante » : la fiche vide s'ouvre dans le panneau de la carte,
+    # et une espèce encore inconnue se crée par son nom, comme à l'édition.
+    resources :plants, only: %i[new create show update destroy] do
       member do
         delete "photos/:photo_id", action: :destroy_photo, as: :photo
         # Pose ou déplace le point de la plante (clic, GPS, glisser).

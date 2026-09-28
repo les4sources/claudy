@@ -34,6 +34,8 @@
         data-map-current-tasks-url-value=map_tasks_current_path(format: :json)
         data-map-plant-url-value=plant_path(id: "__ID__")
         data-map-focus-plant-value=@focus_plant_id
+        data-map-new-plant-url-value=new_plant_path
+        data-map-open-new-plant-value=(@open_new_plant ? "true" : nil)
         data-map-unplaced-url-value=unplaced_plants_path
         data-map-place-url-value=place_plant_path(id: "__ID__")
         data-map-unplace-url-value=unplace_plant_path(id: "__ID__")]
@@ -134,6 +136,13 @@
             annexes (récoltes, liste, espèces).
           .mt-3.border-t.border-stone-100.pt-3 data-map-plants-section="true"
             p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Plantes
+            button[type="button"
+                   class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm font-medium text-forest hover:bg-forest-tint"
+                   data-action="map#newPlant"
+                   data-map-new-plant-link="true"]
+              svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                path d="M12 5v14M5 12h14"
+              span.flex-1 Nouvelle plante
             button[type="button"
                    class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-stone-600 hover:bg-stone-50"
                    data-action="map#openPlacement"
@@ -336,6 +345,14 @@
           span.mx-auto.block.h-1.w-10.rounded-full.bg-stone-200
         .flex.items-center.gap-2.border-b.border-stone-100.px-3.py-1.md:py-2
           span.flex-1.font-averia.text-lg.text-stone-800 Placer des plantes
+          button[type="button"
+                 class="flex h-11 items-center gap-1 rounded-lg px-2 text-sm font-medium text-forest hover:bg-forest-tint"
+                 data-action="map#newPlant"
+                 data-placement-new-plant="true"
+                 title="Une plante qui n'est pas encore dans la liste"]
+            svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              path d="M12 5v14M5 12h14"
+            | Nouvelle
           span[class="min-w-[1.5rem] rounded-full bg-ember px-1.5 py-0.5 text-center text-xs font-semibold tabular-nums text-white #{'hidden' if @unplaced_count.zero?}"
                data-map-target="unplacedCount"]
             = @unplaced_count

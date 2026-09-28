@@ -109,6 +109,10 @@ export default class extends Controller {
     placeUrl: String,
     unplaceUrl: String,
     focusPlant: Number,
+    // « Nouvelle plante » : la fiche vide, ouverte d'office par
+    // `/map?plant=new` (lien de la liste des plantes).
+    newPlantUrl: String,
+    openNewPlant: Boolean,
     // Phase 10 : le statut UniFi des nœuds Ethernet (`utils/map_unifi.js`).
     unifiDevicesUrl: String,
   };
@@ -343,6 +347,7 @@ export default class extends Controller {
     // Après la couche active par défaut : l'objet demandé par l'URL l'emporte.
     this.focusFeature();
     if (this.focusPlantValue && this.hasPlantUrlValue) this.openPanel(this.plantUrl(this.focusPlantValue));
+    if (this.openNewPlantValue) this.newPlant();
   }
 
   async loadLayer(id) {
@@ -703,6 +708,21 @@ export default class extends Controller {
     this.placement.open();
   }
 
+  // « Nouvelle plante » (panneau des couches, tiroir de placement) : la fiche
+  // vide, dans la zone filtrée du tiroir s'il est ouvert. La couche Plantes
+  // s'affiche : c'est là que la plante sera posée.
+  newPlant() {
+    if (!this.hasNewPlantUrlValue) return;
+    this.placement?.cancel();
+    this.placement?.showPlantsLayer();
+    const url = new URL(this.newPlantUrlValue, window.location.origin);
+    const zone = this.placement?.zone;
+    if (zone) url.searchParams.set('zone', zone);
+    this.selectedFeatureId = null;
+    this.highlightSelection();
+    this.openPanel(url.pathname + url.search);
+  }
+
   // Phase 13 : une ligne de la liste des relevés centre la carte sur le relevé
   // et ouvre sa fiche.
   focusObservation(event) {
@@ -850,6 +870,12 @@ export default class extends Controller {
     const panel = this.featureFrameTarget.querySelector('[data-feature-panel]');
     if (this.hasPanelContainerTarget) this.panelContainerTarget.classList.toggle('hidden', !panel);
     if (!panel) return;
+
+    // Plante créée (« Nouvelle plante ») : une de plus à placer.
+    if (panel.dataset.plantCreated) {
+      delete panel.dataset.plantCreated;
+      this.placement?.bumpCount(1);
+    }
 
     // Plante retirée de la carte (phase 7) : la fiche reste ouverte, son point
     // disparaît de la couche rechargée.

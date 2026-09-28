@@ -61,12 +61,7 @@ export class PlantPlacement {
     if (!this.c.hasPlacementDrawerTarget) return;
     this.c.placementDrawerTarget.classList.remove('hidden');
     this.c.placementDrawerTarget.classList.add('flex');
-    // Une couche Plantes masquée cacherait les points qu'on pose.
-    const toggle = this.c.layerToggleTargets.find((t) => this.c.layerKinds?.[t.dataset.layerId] === 'plants');
-    if (toggle && !toggle.checked) {
-      toggle.checked = true;
-      toggle.dispatchEvent(new Event('change'));
-    }
+    this.showPlantsLayer();
     const frame = this.c.unplacedFrameTarget;
     if (!frame.getAttribute('src')) frame.src = this.c.unplacedUrlValue;
     else frame.reload();
@@ -76,6 +71,21 @@ export class PlantPlacement {
       this.c.closePanel();
       if (this.c.hasPanelBodyTarget && !this.c.panelBodyTarget.classList.contains('hidden')) this.c.togglePanel();
     }
+  }
+
+  // Une couche Plantes masquée cacherait les points qu'on pose.
+  showPlantsLayer() {
+    const toggle = this.c.layerToggleTargets.find((t) => this.c.layerKinds?.[t.dataset.layerId] === 'plants');
+    if (toggle && !toggle.checked) {
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event('change'));
+    }
+  }
+
+  // La zone filtrée dans le tiroir, reprise par « Nouvelle plante ».
+  get zone() {
+    if (!this.drawerOpen) return null;
+    return this.c.unplacedFrameTarget.querySelector('select[name="zone"]')?.value || null;
   }
 
   close() {
