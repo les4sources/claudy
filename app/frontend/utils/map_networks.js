@@ -98,6 +98,16 @@ export function networkNodeMarker(L, feature, latlng) {
     riseOnHover: true,
     // Les nœuds passent au-dessus des tracés et des autres points.
     zIndexOffset: 200,
-    title: [props.name, props.node_type_label].filter(Boolean).join(' — '),
+    title: [props.name, props.node_type_label, props.water_source_label].filter(Boolean).join(' — '),
+  });
+}
+
+// Dans la fiche d'un nœud d'eau, choisir « Robinet » révèle l'origine de
+// l'eau ; un autre type la masque (le serveur l'efface alors).
+export function handleNodeTypeChange(event) {
+  const select = event.target;
+  if (select?.name !== 'map_feature[node_type]') return;
+  select.closest('form')?.querySelectorAll('[data-water-source-field]').forEach((el) => {
+    el.hidden = select.value !== 'tap';
   });
 }

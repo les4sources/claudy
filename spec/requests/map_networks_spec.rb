@@ -87,4 +87,43 @@ RSpec.describe "Carte du domaine — réseaux (epic #348, phase 9)", type: :requ
     expect(response.body).to include("data-network-instructions", "Quart de tour", "Eau")
     expect(response.body).not_to include("Longueur")
   end
+  describe "origine de l'eau d'un robinet" do
+    it "la fiche d'un robinet propose l'origine de l'eau, masquée pour un autre type" do
+      tap = water.map_features.create!(feature_kind: "node", geometry: point, properties: { "node_type" => "tap" })
+      get map_feature_path(tap)
+      expect(response.body).to include("Origine de l’eau", "Eau de pluie", "Captage forestier", "Eau de puits")
+      expect(response.body).not_to match(/<div(?=[^>]*\bhidden)[^>]*data-water-source-field/)
+
+      valve = water.map_features.create!(feature_kind: "node", geometry: point, properties: { "node_type" => "valve" })
+      get map_feature_path(valve)
+      expect(response.body).to match(/<div(?=[^>]*\bhidden)[^>]*data-water-source-field/)
+    end
+
+    it "enregistre l'origine d'un robinet et la porte dans le JSON" do
+      post map_features_path, headers: json, params: {
+        map_feature: { map_layer_id: water.id, feature_kind: "node", geometry: point.to_json, name: "Robinet du potager",
+                       node_type: "tap", water_source: "rain" }
+      }
+      expect(response).to have_http_status(:created)
+      expect(JSON.parse(response.body)["properties"]).to include("water_source" => "rain",
+                                                                 "water_source_label" => "Eau de pluie")
+    end
+
+    it "efface l'origine quand le nœud cesse d'être un robinet" do
+      tap = water.map_features.create!(feature_kind: "node", geometry: point,
+                                       properties: { "node_type" => "tap", "water_source" => "well" })
+      patch map_feature_path(tap), headers: turbo, params: { map_feature: { node_type: "valve", water_source: "well" } }
+      expect(tap.reload.properties).to include("node_type" => "valve")
+      expect(tap.properties).not_to have_key("water_source")
+    end
+
+    it "refuse une origine inconnue" do
+      post map_features_path, headers: json, params: {
+        map_feature: { map_layer_id: water.id, feature_kind: "node", geometry: point.to_json,
+                       node_type: "tap", water_source: "citerne" }
+      }
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(JSON.parse(response.body)["errors"].join).to include("citerne")
+    end
+  end
 end

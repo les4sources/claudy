@@ -9,6 +9,7 @@ import { isPlantFeature, plantIcon, plantMarker } from '~/utils/map_plants';
 import { PlantPlacement } from '~/utils/map_placement';
 import {
   NETWORK_LABEL_MIN_ZOOM,
+  handleNodeTypeChange,
   isNetworkFeature,
   networkNodeIcon,
   networkNodeMarker,
@@ -159,6 +160,7 @@ export default class extends Controller {
       networkNodeIcon(L, feature, selected)
     );
     this.element.addEventListener('change', handleUnifiEquipmentChange);
+    this.element.addEventListener('change', handleNodeTypeChange);
     // Phase 11 : le mode Commentaires (utils/map_comments.js).
     this.comments = new CommentMode(this);
     // Phase 12 : les notes manuscrites (utils/map_sketches.js).
@@ -182,6 +184,7 @@ export default class extends Controller {
     this.placement?.destroy();
     this.unifi?.stop();
     this.element.removeEventListener('change', handleUnifiEquipmentChange);
+    this.element.removeEventListener('change', handleNodeTypeChange);
     this.comments?.destroy();
     this.sketches?.destroy();
     this.search?.destroy();

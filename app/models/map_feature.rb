@@ -54,6 +54,9 @@ class MapFeature < ApplicationRecord
   GAUGES = { "thin" => "Fin", "medium" => "Moyen", "thick" => "Gros" }.freeze
   DEFAULT_GAUGE = "medium".freeze
   EQUIPMENTS = { "unifi" => "UniFi" }.freeze
+  # L'origine de l'eau d'un robinet : on ne boit pas l'eau de pluie comme celle
+  # du captage.
+  WATER_SOURCES = { "rain" => "Eau de pluie", "forest_catchment" => "Captage forestier", "well" => "Eau de puits" }.freeze
   EARTH_RADIUS_M = 6_371_008.8
 
   has_paper_trail
@@ -135,6 +138,9 @@ class MapFeature < ApplicationRecord
   def instructions = properties.to_h["instructions"].presence
   def equipment = properties.to_h["equipment"].presence
   def gauge = properties.to_h["gauge"].presence
+  def water_source = properties.to_h["water_source"].presence
+  def water_source_label = WATER_SOURCES[water_source]
+  def tap? = network == "water" && node_type == "tap"
   # Phase 10 : l'identifiant de l'équipement UniFi (API Site Manager) d'un nœud.
   def unifi_device_id = properties.to_h["unifi_device_id"].presence
   def unifi? = equipment == "unifi"
@@ -253,6 +259,7 @@ class MapFeature < ApplicationRecord
 
     length = length_in_meters
     { network: network, color: map_layer.network_color, node_type: node_type, node_type_label: node_type_label,
+      water_source: water_source, water_source_label: water_source_label,
       gauge: (gauge || DEFAULT_GAUGE if line?), equipment: equipment, unifi_device_id: (unifi_device_id if unifi?),
       length_m: length&.round(1) }.compact
   end
@@ -325,6 +332,10 @@ class MapFeature < ApplicationRecord
     end
     errors.add(:base, "Le calibre « #{gauge} » est inconnu") if gauge.present? && !GAUGES.key?(gauge)
     errors.add(:base, "L'équipement « #{equipment} » est inconnu") if equipment.present? && !EQUIPMENTS.key?(equipment)
+    if water_source.present?
+      errors.add(:base, "L'origine de l'eau « #{water_source} » est inconnue") unless WATER_SOURCES.key?(water_source)
+      errors.add(:base, "Seul un robinet du réseau d'eau a une origine d'eau") unless tap?
+    end
     return unless geometry.is_a?(Hash)
 
     errors.add(:geometry, "d'un nœud doit être un point") if node? && geometry_type != "Point"
