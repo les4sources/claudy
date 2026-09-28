@@ -57,8 +57,9 @@ class MapFeature < ApplicationRecord
   # L'origine de l'eau d'un robinet : on ne boit pas l'eau de pluie comme celle
   # du captage.
   WATER_SOURCES = { "rain" => "Eau de pluie", "forest_catchment" => "Captage forestier", "well" => "Eau de puits" }.freeze
-  # Ce qu'on ne boit pas : signalé sur la carte par une pastille rouge.
-  NON_POTABLE_WATER_SOURCES = %w[rain].freeze
+  # Ce qu’on ne boit pas (pluie, captage forestier ; le puits est potable) :
+  # signalé sur la carte par une pastille rouge.
+  NON_POTABLE_WATER_SOURCES = %w[rain forest_catchment].freeze
   EARTH_RADIUS_M = 6_371_008.8
 
   has_paper_trail

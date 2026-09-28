@@ -110,12 +110,15 @@ RSpec.describe "Carte du domaine — réseaux (epic #348, phase 9)", type: :requ
                                                                  "non_potable" => true)
     end
 
-    it "ne signale non potable que l'eau de pluie, sur la carte comme dans la fiche" do
+    it "signale non potables la pluie et le captage forestier, pas le puits, sur la carte comme dans la fiche" do
       well = water.map_features.create!(feature_kind: "node", geometry: point,
                                         properties: { "node_type" => "tap", "water_source" => "well" })
       rain = water.map_features.create!(feature_kind: "node", geometry: point,
                                         properties: { "node_type" => "tap", "water_source" => "rain" })
+      catchment = water.map_features.create!(feature_kind: "node", geometry: point,
+                                             properties: { "node_type" => "tap", "water_source" => "forest_catchment" })
       expect(well.as_geojson[:properties]).not_to have_key(:non_potable)
+      expect(catchment.as_geojson[:properties]).to include(non_potable: true)
 
       get map_feature_path(well)
       expect(response.body).to match(/<p(?=[^>]*\bhidden)[^>]*data-non-potable-hint/)
