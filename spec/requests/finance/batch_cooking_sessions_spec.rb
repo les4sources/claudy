@@ -81,6 +81,25 @@ RSpec.describe "Finances > Batch cooking", type: :request do
       expect(response.body).to include('data-batch-cooking-cook-price-cents-value="350"')
     end
 
+    it "propose le compte personnel d'une personne sans ménage, sous les ménages" do
+      manon = Human.create!(name: "Manon")
+      compte_manon = MemberAccount.create!(kind: "human", human: manon, name: "Manon")
+
+      get new_finance_batch_cooking_session_path
+
+      expect(response.body).to include("servings[#{compte_manon.id}]")
+      expect(response.body.index("servings[#{compte_merle.id}]"))
+        .to be < response.body.index("servings[#{compte_manon.id}]")
+    end
+
+    it "ne propose pas le compte personnel d'un membre de ménage" do
+      compte_stephanie = MemberAccount.for_human!(stephanie)
+
+      get new_finance_batch_cooking_session_path
+
+      expect(response.body).not_to include("servings[#{compte_stephanie.id}]")
+    end
+
     it "ne propose pas un compte désactivé" do
       compte_merle.update!(active: false)
 
@@ -137,6 +156,17 @@ RSpec.describe "Finances > Batch cooking", type: :request do
       expect(flash.now[:alert]).to include("Lou").and include("pas encore comme personne")
       expect(BatchCookingSession.count).to eq(0)
       expect(AccountEntry.count).to eq(0)
+    end
+
+    it "facture une personne sans ménage sur son compte personnel" do
+      manon = Human.create!(name: "Manon")
+      compte_manon = MemberAccount.create!(kind: "human", human: manon, name: "Manon")
+
+      post finance_batch_cooking_sessions_path,
+           params: payload(servings: { compte_manon.id => "1" })
+
+      expect(response).to redirect_to(finance_batch_cooking_sessions_path)
+      expect(compte_manon.account_entries.sum(:amount_cents)).to eq(500)
     end
 
     it "refuse un ménage servi dont le compte est désactivé" do
