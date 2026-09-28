@@ -22,6 +22,7 @@ module Finance
       @total_cents = @rows.sum(&:payable_amount_cents)
       @overdue = @rows.select(&:payable_overdue?)
       @without_iban = @rows.reject(&:payable_ready?)
+      @expected = expected_payments
     end
 
     private
@@ -55,8 +56,22 @@ module Finance
 
     def invoices
       PurchaseInvoice.payable
-                     .includes(:third_party, :legal_entity, :cash_allocations)
+                     .includes(:third_party, :legal_entity, :cash_allocations, compliance_deadlines: :compliance_obligation)
                      .to_a
+    end
+
+    # Les paiements de l'échéancier comptable dont la pièce n'est pas encore
+    # encodée (le précompte immobilier avant l'avertissement-extrait de rôle).
+    # Ce ne sont PAS des payables : sans facture, ni montant sûr ni écriture — ils
+    # restent donc hors du total, dans leur propre encart. Une fois la facture
+    # encodée et liée, c'est elle qui entre dans la file, avec son échéance.
+    def expected_payments
+      ComplianceDeadline.outstanding.payments
+                        .where(purchase_invoice_id: nil)
+                        .where(due_on: ..(Date.current + ComplianceDeadlinesController::SOON_DAYS * 2))
+                        .includes(compliance_obligation: :legal_entity)
+                        .ordered
+                        .to_a
     end
 
     # Les relevés de dépôt-vente en mode VIREMENT, vérifiés et comptabilisés

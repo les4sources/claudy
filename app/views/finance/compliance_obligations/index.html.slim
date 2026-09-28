@@ -1,0 +1,37 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Obligations",
+           links: [link_to("Échéancier", finance_compliance_deadlines_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
+                   link_to("Nouvelle obligation", new_finance_compliance_obligation_path, class: "inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90")]
+
+p.mb-5.text-sm.text-gray-600
+  | Une obligation s'écrit une fois ; ses échéances se génèrent sur les douze prochains mois. On ne recopie plus « TVA TR3 » à la main.
+
+- if @obligations.empty?
+  .p-8.text-center.bg-white.rounded-lg.border.border-gray-100
+    p.text-sm.text-gray-600 Aucune obligation pour l'instant.
+- else
+  - @obligations.group_by(&:legal_entity).each do |entity, obligations|
+    section.mb-6
+      h3.mb-2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500= entity.name
+      ul.divide-y.divide-gray-100.overflow-hidden.rounded-xl.bg-white.ring-1.ring-gray-200
+        - obligations.each do |obligation|
+          - next_deadline = @next_deadlines[obligation.id]
+          li.flex.flex-wrap.items-center.justify-between.gap-3.px-4.py-3(class="#{obligation.active? ? '' : 'opacity-60'}")
+            div
+              p.flex.flex-wrap.items-center.gap-2
+                = link_to obligation.title, edit_finance_compliance_obligation_path(obligation), class: "font-medium text-gray-900 hover:text-blue-700"
+                - if obligation.payment?
+                  span.rounded-full.bg-blue-100.text-xs.font-medium.text-blue-800(class="px-2 py-0.5") paiement
+                - unless obligation.active?
+                  span.rounded-full.bg-gray-100.text-xs.font-medium.text-gray-500(class="px-2 py-0.5") désactivée
+              p.mt-1.text-xs.text-gray-500
+                = obligation.frequency_label
+                span.mx-1 ·
+                = "rappels : #{obligation.responsible_user&.display_name || 'destinataires comptables'}"
+            .text-right.text-sm
+              - if next_deadline
+                = link_to [next_deadline.period_label, l(next_deadline.due_on, format: :long)].compact.join(" · "), finance_compliance_deadline_path(next_deadline),
+                          class: "#{next_deadline.overdue? ? 'text-red-700 font-semibold' : 'text-gray-700'} hover:text-blue-700"
+              - else
+                span.text-gray-400 aucune échéance ouverte

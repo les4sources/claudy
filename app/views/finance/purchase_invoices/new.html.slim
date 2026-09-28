@@ -1,6 +1,12 @@
 - content_for :page_header do
   = render "layouts/components/page_header", title: "Nouvelle facture d'achat"
 
+- if @deadline
+  .mb-4.rounded-lg.border.border-blue-200.bg-blue-50.px-4.py-3.text-sm.text-blue-900
+    | Cette facture sera liée à l'échéance
+    strong= " #{@deadline.display_title} "
+    | (#{@deadline.legal_entity.name}) : elle la soldera quand elle sera payée.
+
 = render "finance/purchase_invoices/form", invoice: @invoice, third_parties: @third_parties,
          entities: @entities, teams: @teams, general_accounts: @general_accounts,
-         url: finance_purchase_invoices_path, method: :post, submit_label: "Enregistrer la facture"
+         url: finance_purchase_invoices_path(compliance_deadline_id: @deadline&.id), method: :post, submit_label: "Enregistrer la facture"

@@ -2144,6 +2144,130 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/Unprocessable" }
 
+  # ── Échéancier comptable ────────────────────────────────────────────────────
+  /compliance_obligations:
+    get:
+      tags: [Comptabilité]
+      summary: Lister les obligations de l'échéancier comptable
+      parameters:
+        - { name: legal_entity_name, in: query, schema: { type: string } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: Liste paginée d'obligations, chacune avec ses échéances. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Comptabilité]
+      summary: Créer (ou retrouver) une obligation
+      description: >
+        UPSERT sur le couple (title, entité). Chaque écriture régénère les
+        échéances de la règle jusqu'à douze mois devant : la réponse les liste.
+        Une échéance existante n'est jamais réécrite. `first_due_on` est la
+        PREMIÈRE échéance à suivre ; les suivantes s'en déduisent par pas de 1,
+        3 ou 12 mois. `covers` dit quelle période chaque échéance couvre
+        (`previous` : TVA d'avril → T1 ; `current` : précompte d'octobre →
+        l'année). Sans responsable, les rappels vont aux destinataires comptables
+        des réglages.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [compliance_obligation]
+              properties:
+                compliance_obligation:
+                  type: object
+                  required: [title, first_due_on]
+                  properties:
+                    title: { type: string, description: "Sans la période (« Déclaration TVA »). Clé d'upsert avec l'entité." }
+                    legal_entity_name: { type: string, description: "Nom exact de l'entité ; ou `legal_entity_id`." }
+                    legal_entity_id: { type: integer }
+                    frequency: { type: string, enum: [once, monthly, quarterly, yearly] }
+                    first_due_on: { type: string, format: date }
+                    ends_on: { type: string, format: date }
+                    covers: { type: string, enum: [previous, current] }
+                    payment: { type: boolean, description: "Paiement : l'échéance se solde par une facture d'achat liée." }
+                    responsible_email: { type: string, description: "Reçoit les rappels ; ou `responsible_user_id`." }
+                    responsible_user_id: { type: integer }
+                    instructions: { type: string, description: "Mode opératoire." }
+                    active: { type: boolean }
+      responses:
+        "201": { description: Obligation créée, échéances générées. }
+        "200": { description: Obligation existante retrouvée et mise à jour. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /compliance_obligations/{id}:
+    get:
+      tags: [Comptabilité]
+      summary: Détail d'une obligation et de ses échéances
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Obligation. }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Comptabilité]
+      summary: Modifier une obligation (régénère ses échéances)
+      description: >
+        Une échéance future que la règle ne produit plus est retirée SEULEMENT si
+        personne n'y a touché (ni note, ni preuve, ni facture, ni état).
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { compliance_obligation: { type: object } } }
+      responses:
+        "200": { description: Obligation mise à jour. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /compliance_deadlines:
+    get:
+      tags: [Comptabilité]
+      summary: Lister les échéances
+      parameters:
+        - { name: compliance_obligation_id, in: query, schema: { type: integer } }
+        - { name: outstanding, in: query, schema: { type: boolean }, description: "Seulement les échéances ouvertes (ni closes, ni soldées par leur facture)." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: Liste paginée, par date limite. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /compliance_deadlines/{id}:
+    get:
+      tags: [Comptabilité]
+      summary: Détail d'une échéance
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Échéance. `effective_status` vaut `done` dès que la facture liée est payée. }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Comptabilité]
+      summary: Clore, reporter ou annoter une échéance
+      description: >
+        Pas de POST : une échéance naît de sa règle. Pour reprendre l'historique,
+        passer `status: done` et `done_on` à la date réelle du dépôt.
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                compliance_deadline:
+                  type: object
+                  properties:
+                    due_on: { type: string, format: date }
+                    status: { type: string, enum: [todo, in_progress, done, not_applicable] }
+                    done_on: { type: string, format: date }
+                    note: { type: string }
+                    purchase_invoice_id: { type: integer, description: "Seulement pour une échéance de paiement." }
+      responses:
+        "200": { description: Échéance mise à jour. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
   # ── Carte du domaine et plantes nourricières (epic #348, phase 8) ──────────
   /plant_species:
     get:

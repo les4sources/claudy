@@ -249,6 +249,20 @@ Rails.application.routes.draw do
     # La file « À payer » (epic #240, phase 4) : tout ce que la maison doit et
     # qui attend son virement, toutes dettes confondues.
     get "payables", to: "payables#index", as: :payables
+    # L'échéancier comptable (ex-base Notion « Échéancier comptable »). Les
+    # obligations sont nommées AVANT les échéances : sinon
+    # `/finance/deadlines/obligations` serait capté par `deadlines#show`. Pas de
+    # `destroy` sur une obligation : elle se désactive, sinon ses échéances
+    # passées deviendraient orphelines. Pas de `create` sur une échéance : elle
+    # naît de sa règle, jamais d'un formulaire.
+    resources :compliance_obligations, path: "deadlines/obligations", except: %i[show destroy]
+    resources :compliance_deadlines, path: "deadlines", only: %i[index show update] do
+      member do
+        post :start
+        post :close
+        post :reopen
+      end
+    end
     # Relevés de rémunération des porteurs d'activité (epic #244, phase 3) :
     # générer un brouillon, l'émettre, le voir. Pas d'update — un relevé émis
     # est figé, une erreur se corrige par contre-passation.
@@ -927,6 +941,11 @@ Rails.application.routes.draw do
       # humain. Une règle propose, elle ne décide jamais.
       resources :allocation_rules, only: [:index, :show, :create, :update, :destroy]
       resources :cash_motifs, only: [:index, :show, :create, :update]
+      # Échéancier comptable. POST sur les obligations est un UPSERT (titre +
+      # entité) qui génère les échéances ; une échéance ne se crée jamais, elle
+      # se met à jour — c'est par là que l'historique Notion est repris.
+      resources :compliance_obligations, only: [:index, :show, :create, :update]
+      resources :compliance_deadlines, only: [:index, :show, :update]
 
       # Carte du domaine et plantes nourricières (epic #348, phase 8). POST est
       # ouvert : les ~95 plantes vivent dans une base Notion et entrent par un

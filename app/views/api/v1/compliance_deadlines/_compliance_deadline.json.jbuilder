@@ -1,0 +1,13 @@
+json.id compliance_deadline.id
+json.type "compliance_deadline"
+json.compliance_obligation_id compliance_deadline.compliance_obligation_id
+json.title compliance_deadline.display_title
+json.period_start compliance_deadline.period_start
+json.period_label compliance_deadline.period_label
+json.due_on compliance_deadline.due_on
+json.status compliance_deadline.status
+json.effective_status compliance_deadline.effective_status
+json.done_on compliance_deadline.effective_done_on
+json.note compliance_deadline.note
+json.purchase_invoice_id compliance_deadline.purchase_invoice_id
+json.url api_v1_compliance_deadline_url(compliance_deadline)

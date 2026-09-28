@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_200100) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_28_210000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -607,6 +607,48 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_200100) do
     t.index ["commentable_type", "commentable_id", "created_at"], name: "index_comments_on_commentable_and_created_at"
     t.index ["commentable_type", "commentable_id"], name: "index_comments_on_commentable"
     t.index ["deleted_at"], name: "index_comments_on_deleted_at"
+  end
+
+  create_table "compliance_deadlines", force: :cascade do |t|
+    t.bigint "compliance_obligation_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "done_by_user_id"
+    t.date "done_on"
+    t.date "due_on", null: false
+    t.date "last_reminded_on"
+    t.string "last_reminder_stage"
+    t.text "note"
+    t.date "period_start", null: false
+    t.bigint "purchase_invoice_id"
+    t.string "status", default: "todo", null: false
+    t.datetime "updated_at", null: false
+    t.index ["compliance_obligation_id", "period_start"], name: "index_compliance_deadlines_on_obligation_and_period", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["compliance_obligation_id"], name: "index_compliance_deadlines_on_compliance_obligation_id"
+    t.index ["deleted_at"], name: "index_compliance_deadlines_on_deleted_at"
+    t.index ["done_by_user_id"], name: "index_compliance_deadlines_on_done_by_user_id"
+    t.index ["due_on"], name: "index_compliance_deadlines_on_due_on"
+    t.index ["purchase_invoice_id"], name: "index_compliance_deadlines_on_purchase_invoice_id"
+  end
+
+  create_table "compliance_obligations", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "covers", default: "previous", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "ends_on"
+    t.date "first_due_on", null: false
+    t.string "frequency", default: "yearly", null: false
+    t.text "instructions"
+    t.bigint "legal_entity_id", null: false
+    t.boolean "payment", default: false, null: false
+    t.bigint "responsible_user_id"
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_compliance_obligations_on_deleted_at"
+    t.index ["legal_entity_id", "title"], name: "index_compliance_obligations_on_entity_and_title", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["legal_entity_id"], name: "index_compliance_obligations_on_legal_entity_id"
+    t.index ["responsible_user_id"], name: "index_compliance_obligations_on_responsible_user_id"
   end
 
   create_table "consignment_report_lines", force: :cascade do |t|
@@ -2433,6 +2475,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_200100) do
   add_foreign_key "coda_statements", "cash_accounts"
   add_foreign_key "coda_statements", "coda_imports"
   add_foreign_key "comments", "users", column: "author_id"
+  add_foreign_key "compliance_deadlines", "compliance_obligations"
+  add_foreign_key "compliance_deadlines", "purchase_invoices"
+  add_foreign_key "compliance_deadlines", "users", column: "done_by_user_id"
+  add_foreign_key "compliance_obligations", "legal_entities"
+  add_foreign_key "compliance_obligations", "users", column: "responsible_user_id"
   add_foreign_key "consignment_report_lines", "catalog_items"
   add_foreign_key "consignment_report_lines", "consignment_reports"
   add_foreign_key "consignment_reports", "consignors"

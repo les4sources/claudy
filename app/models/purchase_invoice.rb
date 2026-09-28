@@ -103,6 +103,9 @@ class PurchaseInvoice < ApplicationRecord
   # `nullify` : détacher une facture ne doit jamais effacer le relevé — c'est le
   # travail de l'artisan, pas une pièce jointe.
   has_many :consignment_reports, dependent: :nullify
+  # Les échéances de paiement que cette facture solde (échéancier comptable) :
+  # le précompte immobilier est « fait » quand SA facture est payée.
+  has_many :compliance_deadlines, dependent: :nullify
   # `cash_allocations` (le `document` polymorphique de la décision 4) vient du
   # concern `Payable` : c'est ce lien qui fait passer la facture en `paid`.
   has_one_attached :document

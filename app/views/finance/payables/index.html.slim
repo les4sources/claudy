@@ -10,6 +10,27 @@
            links: [link_to("Achats", finance_purchase_invoices_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
                    link_to("À affecter", finance_unallocated_cash_entries_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
 
+/ Les paiements de l'échéancier dont la pièce n'est pas encore encodée. Hors
+  total : sans facture, il n'y a ni montant sûr ni écriture. L'encart dit quoi
+  faire — encoder la facture, qui entrera alors dans la file avec son échéance.
+- if @expected.any?
+  .mb-5.rounded-xl.border.border-blue-200.p-4(class="bg-blue-50/60")
+    p.text-sm.font-semibold.text-blue-900 Paiements attendus — la pièce n'est pas encore encodée
+    p.mt-1.text-xs.text-blue-900
+      | Échéancier comptable. Hors total : encode la facture pour qu'elle rejoigne la file, elle soldera l'échéance une fois payée.
+    ul.mt-3.divide-y.divide-blue-100
+      - @expected.each do |deadline|
+        li.flex.flex-wrap.items-center.justify-between.gap-3.py-2
+          div
+            = link_to deadline.display_title, finance_compliance_deadline_path(deadline), class: "font-medium text-blue-700 hover:text-blue-900"
+            span.ml-2.text-xs.text-gray-600 = deadline.legal_entity.name
+            p.text-xs(class="#{deadline.overdue? ? 'text-red-700 font-semibold' : 'text-gray-600'}")
+              = "échéance le #{l(deadline.due_on, format: :long)}"
+              - if deadline.overdue?
+                = " — en retard de #{-deadline.days_left} j"
+          = link_to "Encoder la facture", new_finance_purchase_invoice_path(compliance_deadline_id: deadline.id),
+                    class: "inline-flex items-center rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs font-medium text-blue-800 hover:bg-blue-50"
+
 - if @rows.blank?
   .p-8.text-center.bg-green-50.rounded-lg.border.border-green-100
     p.text-2xl.font-semibold.text-green-700 ✓ Rien à payer
@@ -48,6 +69,10 @@
                     = "déjà rapproché : #{humanized_money_with_symbol(Money.new(row.allocated_cents, 'EUR'))}"
                 - unless row.payable_ready?
                   span.rounded-full.bg-amber-100.text-xs.font-medium.text-amber-800(class="px-2 py-0.5") sans IBAN
+                - if row.is_a?(PurchaseInvoice)
+                  - row.compliance_deadlines.each do |deadline|
+                    = link_to "échéancier : #{deadline.display_title}", finance_compliance_deadline_path(deadline),
+                              class: "rounded-full bg-blue-100 text-xs font-medium text-blue-800 hover:bg-blue-200 px-2 py-0.5"
               p.mt-1.text-sm.text-gray-600
                 = row.payable_label
                 - if row.payable_due_on
