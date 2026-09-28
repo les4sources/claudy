@@ -19,6 +19,8 @@
 // carte, ses couches (`featureLayers`, `findFeatureLayer`), sa sélection
 // (`selectFeature`, `selectVenue`, `isVenue`) et sa date (`dateValue`).
 
+import { syncPointLabel } from '~/utils/map_labels';
+
 const DEBOUNCE_MS = 250;
 
 // Ce que chaque mode cherche — les mêmes champs que `Maps::Search`.
@@ -235,6 +237,11 @@ export class MapSearch {
         if (element) {
           element.classList.toggle('map-search-hit', hit);
           element.classList.toggle('map-search-dimmed', dimmed);
+        }
+        // Un point trouvé garde son nom affiché, même sans survol.
+        if (layer.labelSearchHit !== hit) {
+          layer.labelSearchHit = hit;
+          syncPointLabel(layer);
         }
         const tooltip = layer.getTooltip?.()?.getElement?.();
         if (tooltip) {

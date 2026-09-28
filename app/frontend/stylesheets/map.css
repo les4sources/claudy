@@ -14,7 +14,9 @@
 .map-feature-label::before {
   display: none;
 }
-.map-labels-hidden .map-feature-label {
+/* Le libellé d'un point ne s'ouvre qu'au survol, au toucher ou épinglé : il
+   s'affiche alors à tout zoom. */
+.map-labels-hidden .map-feature-label:not(.map-hover-label) {
   display: none;
 }
 
@@ -153,7 +155,7 @@
   border-width: 3px;
   box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.3), 0 2px 6px rgba(0, 0, 0, 0.35);
 }
-.map-network-labels-hidden .map-network-label {
+.map-network-labels-hidden .map-network-label:not(.map-hover-label) {
   display: none;
 }
 

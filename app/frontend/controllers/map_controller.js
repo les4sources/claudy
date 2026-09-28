@@ -19,6 +19,7 @@ import { CommentMode, commentMarker, isCommentFeature } from '~/utils/map_commen
 import { SketchMode } from '~/utils/map_sketches';
 import { BiodiversityMode, isObservationFeature, observationMarker } from '~/utils/map_biodiversity';
 import { MapSearch } from '~/utils/map_search';
+import { syncPointLabel } from '~/utils/map_labels';
 import { MeasureTool } from '~/utils/map_measure';
 
 // Style de la couche Gestion (phase 2) : polygones `forest` remplis à 25 %,
@@ -407,14 +408,22 @@ export default class extends Controller {
       const node = isNetworkFeature(feature) && feature.geometry?.type === 'Point';
       const network = isNetworkFeature(feature) ? ' map-network-label' : '';
       const aside = plant || observation || node;
+      // Un point ne montre son nom qu'au survol ou au toucher (et tant qu'il
+      // est sélectionné ou trouvé par la recherche) : serrés, leurs libellés
+      // permanents se recouvraient. Zones et tracés gardent le leur.
+      const point = feature.geometry?.type === 'Point';
       layer.bindTooltip(name, {
-        permanent: true,
+        permanent: !point,
         direction: aside ? 'right' : 'center',
         offset: aside ? [4, 0] : [0, 0],
         className:
           (plant ? 'map-feature-label map-plant-label' : observation ? 'map-feature-label map-observation-label' : 'map-feature-label') +
-          network,
+          network +
+          (point ? ' map-hover-label' : ''),
       });
+      // Leaflet referme le libellé en quittant le point : on le rouvre s'il
+      // est épinglé.
+      if (point) layer.on('mouseout', () => syncPointLabel(layer));
     }
     layer.on('click', (event) => {
       // L'outil Mesure (phase 14) prend le clic avant tout mode.
@@ -794,6 +803,10 @@ export default class extends Controller {
     Object.values(this.featureLayers || {}).forEach((group) => {
       group.eachLayer((layer) => {
         const selected = String(layer.featureId) === String(this.selectedFeatureId);
+        if (layer.labelSelected !== selected) {
+          layer.labelSelected = selected;
+          syncPointLabel(layer);
+        }
         if (layer.setStyle) layer.setStyle(this.featureStyle(layer.feature, selected));
         if (layer.setRadius && layer.feature?.geometry?.type === 'Point') {
           layer.setRadius(selected ? 10 : 8);
