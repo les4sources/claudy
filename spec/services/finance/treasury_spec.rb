@@ -113,6 +113,12 @@ RSpec.describe Finance::Treasury do
       expect(treasury.incoming_cents).to eq(30_000)
     end
 
+    it "ne place pas le point bas au-dessus du solde quand un séjour arrive aujourd'hui" do
+      stay(arrival: today, departure: today + 2, total: 10_500)
+
+      expect(treasury.lowest_point.balance_cents).to eq(0)
+    end
+
     it "liste un séjour au-delà de l'horizon sans le projeter" do
       stay(arrival: Date.new(2027, 3, 1), departure: Date.new(2027, 3, 3), total: 50_000)
 

@@ -149,7 +149,13 @@ module Finance
     def incoming_cents = projected_movements.sum { |_, cents| cents.positive? ? cents : 0 }
     def outgoing_cents = projected_movements.sum { |_, cents| cents.negative? ? -cents : 0 }
 
-    def lowest_point = projection.min_by { |point| [point.balance_cents, point.date] }
+    # Le point bas part du solde AVANT les mouvements du jour : un séjour qui
+    # arrive aujourd'hui ne doit pas afficher un « point bas » au-dessus du
+    # solde disponible.
+    def lowest_point
+      start = Point.new(date: @today, balance_cents: balance_cents, projected: true)
+      ([start] + projection).min_by { |point| [point.balance_cents, point.date] }
+    end
 
     private
 
