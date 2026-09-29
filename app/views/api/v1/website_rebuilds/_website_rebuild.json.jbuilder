@@ -1,0 +1,10 @@
+json.id website_rebuild.id
+json.type "website_rebuild"
+json.status website_rebuild.status
+json.trigger website_rebuild.trigger
+json.requested_at website_rebuild.requested_at
+json.last_requested_at website_rebuild.last_requested_at
+json.requests_count website_rebuild.requests_count
+json.dispatched_at website_rebuild.dispatched_at
+json.response_code website_rebuild.response_code
+json.error_message website_rebuild.error_message

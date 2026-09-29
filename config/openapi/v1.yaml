@@ -898,6 +898,46 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/Unprocessable" }
+  /website_rebuilds:
+    get:
+      tags: [Événements]
+      summary: Dernières reconstructions du site
+      description: >
+        Les 20 dernières demandes de reconstruction du site les4sources.be et
+        leur issue (`pending`, `dispatching`, `sent`, `failed`, `skipped`).
+        Une publication ouvre une demande, envoyée après deux minutes de
+        regroupement. `meta.webhook_configured` dit si le webhook est posé
+        (jamais son URL).
+      responses:
+        "200":
+          description: Demandes, de la plus récente à la plus ancienne.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/WebsiteRebuild" } }
+                  meta:
+                    type: object
+                    properties:
+                      webhook_configured: { type: boolean }
+                      window_seconds: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Événements]
+      summary: Demander une reconstruction tout de suite
+      description: "Sans fenêtre de regroupement. Traitée en arrière-plan : suivre l'issue par GET."
+      responses:
+        "202":
+          description: Demande enregistrée.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/WebsiteRebuild" }
+                  meta: { type: object, properties: { webhook_configured: { type: boolean } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /party_reservations:
     get:
       tags: [Réservations]
@@ -3496,6 +3536,19 @@ components:
         pole: { type: string, nullable: true, enum: [hebergement, convivialite, nature, artisanat, ressourcement, vie-collective, production, null] }
         pole_label: { type: string, nullable: true }
         url: { type: string }
+    WebsiteRebuild:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "website_rebuild" }
+        status: { type: string, enum: [pending, dispatching, sent, failed, skipped] }
+        trigger: { type: string, enum: [publication, api, recovery] }
+        requested_at: { type: string, format: date-time }
+        last_requested_at: { type: string, format: date-time }
+        requests_count: { type: integer, description: "Sauvegardes regroupées dans cette demande." }
+        dispatched_at: { type: string, format: date-time, nullable: true }
+        response_code: { type: string, nullable: true }
+        error_message: { type: string, nullable: true }
     Note:
       type: object
       description: >

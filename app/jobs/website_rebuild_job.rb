@@ -2,27 +2,58 @@ require "net/http"
 
 # Demande au site statique les4sources.be de se reconstruire après une
 # publication. Le site lit l'API publique au build : sans ce signal, une fiche
-# publiée dans Claudy n'apparaît qu'au prochain build manuel.
+# publiée dans Claudy n'apparaît qu'au prochain build planifié.
 #
-# Regroupement : plusieurs sauvegardes dans une fenêtre de deux minutes ne
-# déclenchent qu'UN appel (un verrou en cache pose la fenêtre, le job attend
-# sa fin). L'appel est un `POST` sur `WEBSITE_REBUILD_WEBHOOK_URL` (webhook de
-# déploiement Coolify, ou `repository_dispatch` GitHub — le corps JSON convient
-# aux deux), avec `Authorization: Bearer WEBSITE_REBUILD_WEBHOOK_TOKEN` si le
-# jeton est fourni. Sans URL, le job journalise et ne fait rien ; hors
-# production il ne fait rien non plus, sauf `WEBSITE_REBUILD_ALLOW_NON_PRODUCTION=1`.
+# Regroupement : la première sauvegarde ouvre une demande (`WebsiteRebuild`,
+# en base) et enfile le job pour dans deux minutes ; les suivantes la
+# rejoignent. Le job prend la demande en attente et appelle le webhook : un
+# `POST` sur `WEBSITE_REBUILD_WEBHOOK_URL` (webhook de déploiement Hatchbox,
+# ou `repository_dispatch` GitHub — le corps JSON convient aux deux), avec
+# `Authorization: Bearer WEBSITE_REBUILD_WEBHOOK_TOKEN` si le jeton est fourni.
+#
+# Rattrapage : l'adaptateur de jobs de Claudy vit en mémoire, un redémarrage
+# (déploiement) perd le job différé. La demande, elle, reste en base : elle
+# repart au démarrage suivant (`recover!`, initialiseur) et dès qu'une
+# nouvelle sauvegarde la trouve trop vieille. L'historique se lit par l'API
+# agent (`GET /api/v1/website_rebuilds`).
+#
+# Sans URL, le job marque la demande `skipped` ; hors production il ne fait
+# rien non plus, sauf `WEBSITE_REBUILD_ALLOW_NON_PRODUCTION=1`.
 class WebsiteRebuildJob < ApplicationJob
   queue_as :default
 
   WINDOW = 2.minutes
-  LOCK_KEY = "website_rebuild:scheduled".freeze
+  # Une demande encore en attente au-delà : son job a été perdu.
+  STALE_AFTER = WINDOW + 3.minutes
 
   class << self
-    # Enfile une reconstruction si aucune n'est déjà prévue dans la fenêtre.
-    # Renvoie true quand un job a été enfilé.
-    def request!
-      return false unless Rails.cache.write(LOCK_KEY, Time.current.to_i, unless_exist: true, expires_in: WINDOW)
+    # Ouvre ou rejoint la demande en attente. Renvoie true quand un job a été
+    # enfilé. `immediate` saute la fenêtre (demande explicite par l'API).
+    def request!(trigger: "publication", immediate: false)
+      rebuild, created = WebsiteRebuild.request!(trigger: trigger)
+      if created
+        immediate ? perform_later : enqueue_after_window
+        true
+      elsif rebuild.requested_at < STALE_AFTER.ago
+        perform_later
+        true
+      else
+        false
+      end
+    end
 
+    # Au démarrage : une demande restée en attente a perdu son job avec le
+    # processus précédent. Elle repart, après ce qui restait de sa fenêtre.
+    def recover!
+      waiting = WebsiteRebuild.pending.order(:requested_at).first
+      return false unless waiting
+
+      remaining = (waiting.requested_at + WINDOW) - Time.current
+      remaining.positive? && delayed_enqueue_supported? ? set(wait: remaining).perform_later : perform_later
+      true
+    end
+
+    def enqueue_after_window
       if delayed_enqueue_supported?
         set(wait: WINDOW).perform_later
       else
@@ -30,7 +61,6 @@ class WebsiteRebuildJob < ApplicationJob
         # suite plutôt que de faire planter la sauvegarde qui nous appelle.
         perform_later
       end
-      true
     end
 
     def delayed_enqueue_supported?
@@ -39,6 +69,10 @@ class WebsiteRebuildJob < ApplicationJob
 
     def webhook_url
       ENV["WEBSITE_REBUILD_WEBHOOK_URL"].presence
+    end
+
+    def webhook_configured?
+      webhook_url.present?
     end
 
     def allowed_environment?
@@ -62,20 +96,41 @@ class WebsiteRebuildJob < ApplicationJob
   end
 
   def perform
-    Rails.cache.delete(LOCK_KEY)
+    rebuild = claim
+    return :nothing_pending unless rebuild
 
-    url = self.class.webhook_url
-    unless url
-      Rails.logger.info("[WebsiteRebuildJob] WEBSITE_REBUILD_WEBHOOK_URL absente : aucune reconstruction demandée")
-      return :skipped
+    unless self.class.webhook_url
+      return skip(rebuild, "WEBSITE_REBUILD_WEBHOOK_URL absente : aucune reconstruction demandée")
     end
     unless self.class.allowed_environment?
-      Rails.logger.info("[WebsiteRebuildJob] environnement #{Rails.env} : webhook ignoré (WEBSITE_REBUILD_ALLOW_NON_PRODUCTION=1 pour forcer)")
-      return :skipped
+      return skip(rebuild, "environnement #{Rails.env} : webhook ignoré (WEBSITE_REBUILD_ALLOW_NON_PRODUCTION=1 pour forcer)")
     end
 
-    response = self.class.post(url)
-    Rails.logger.info("[WebsiteRebuildJob] POST #{url} → #{response.code}")
+    response = self.class.post(self.class.webhook_url)
+    ok = response.code.to_i.between?(200, 299)
+    rebuild.update!(status: ok ? "sent" : "failed", response_code: response.code)
+    Rails.logger.info("[WebsiteRebuildJob] demande ##{rebuild.id} (#{rebuild.requests_count} sauvegarde(s)) → #{response.code}")
     response.code
+  rescue StandardError => e
+    rebuild&.update_columns(status: "failed", error_message: e.message.to_s.truncate(250), updated_at: Time.current)
+    Rails.logger.error("[WebsiteRebuildJob] demande ##{rebuild&.id} : #{e.class} #{e.message}")
+    :failed
+  end
+
+  private
+
+  # Prend la demande en attente, une seule fois même si deux jobs se croisent.
+  def claim
+    WebsiteRebuild.transaction do
+      rebuild = WebsiteRebuild.pending.order(:requested_at).lock("FOR UPDATE SKIP LOCKED").first
+      rebuild&.update!(status: "dispatching", dispatched_at: Time.current)
+      rebuild
+    end
+  end
+
+  def skip(rebuild, message)
+    rebuild.update!(status: "skipped", error_message: message)
+    Rails.logger.info("[WebsiteRebuildJob] #{message}")
+    :skipped
   end
 end
