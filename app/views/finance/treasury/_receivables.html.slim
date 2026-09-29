@@ -1,0 +1,29 @@
+- if receivables.empty?
+  .mb-8.p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p= empty
+- else
+  .overflow-x-auto.relative.mb-8
+    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table" data-treasury-list=id)
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Séjour
+          th.py-3.px-6[scope="col"] Dates
+          th.py-3.px-6[scope="col"] Attendu le
+          th.py-3.px-6.text-right[scope="col"] Reste dû
+      tbody
+        - receivables.each do |receivable|
+          - stay = receivable.stay
+          tr.border-b.bg-white(data-stay-id=stay.id)
+            td.py-4.px-6.font-medium.text-gray-900
+              = link_to stay.decorate.display_name.presence || "Séjour ##{stay.id}", stay_path(stay), class: "text-blue-600 hover:text-blue-800"
+            td.py-4.px-6.whitespace-nowrap
+              = [stay.arrival_date, stay.departure_date].compact.map { |date| l(date, format: :short) }.join(" → ")
+            td.py-4.px-6.whitespace-nowrap
+              = l(receivable.due_on, format: :long)
+              - if horizon_end && receivable.due_on > horizon_end
+                span.ml-2.text-xs.text-stone-400 hors horizon
+            td.py-4.px-6.text-right.tabular-nums= number_to_currency(receivable.amount_cents / 100.0, unit: "€")
+      tfoot
+        tr.bg-gray-50.font-semibold.text-gray-900
+          td.py-3.px-6(colspan="3")= "#{receivables.size} séjour(s)"
+          td.py-3.px-6.text-right.tabular-nums= number_to_currency(receivables.sum(&:amount_cents) / 100.0, unit: "€")
