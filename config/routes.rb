@@ -900,9 +900,9 @@ Rails.application.routes.draw do
 
       # Événements (epic #245) : lecture brouillons compris, POST = upsert sur
       # `slug`, publication sur le site par `published`. Les catégories se lisent
-      # et reçoivent leur pôle ; elles ne se créent que dans l'admin.
+      # et reçoivent leur pôle ; POST crée (upsert sur le slug).
       resources :events, only: [:index, :show, :create, :update, :destroy]
-      resources :event_categories, only: [:index, :update]
+      resources :event_categories, only: [:index, :create, :update]
 
       # Finances internes (#155-#158). Seul endroit de l'API où POST existe :
       # le catalogue du bar et les fiches papier se remontent depuis des

@@ -822,11 +822,56 @@ paths:
                 properties:
                   data: { type: array, items: { $ref: "#/components/schemas/EventCategory" } }
         "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Événements]
+      summary: Créer une catégorie (upsert sur le slug)
+      description: >
+        Le slug vient de `slug` s'il est fourni, sinon du nom. Quand une
+        catégorie porte déjà ce slug, elle est MISE À JOUR (`meta.created`
+        vaut false) au lieu qu'une seconde soit créée. Le slug ne change plus
+        ensuite : le site s'en sert comme clé.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_category]
+              properties:
+                event_category:
+                  type: object
+                  required: [name]
+                  properties:
+                    name: { type: string }
+                    slug: { type: string }
+                    color: { type: string, description: "#rrggbb ; teal de la charte par défaut." }
+                    pole: { type: string, enum: [hebergement, convivialite, nature, artisanat, ressourcement, vie-collective, production] }
+      responses:
+        "201":
+          description: Catégorie créée (`meta.created` vaut true).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/EventCategory" }
+                  meta: { type: object, properties: { created: { type: boolean } } }
+        "200":
+          description: Catégorie retrouvée sur son slug et mise à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/EventCategory" }
+                  meta: { type: object, properties: { created: { type: boolean } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
   /event_categories/{id}:
     patch:
       tags: [Événements]
       summary: Poser le pôle (ou le nom, la couleur) d'une catégorie
-      description: "Le slug est la clé du site et n'est pas modifiable. Les catégories se créent dans l'admin."
+      description: "Le slug est la clé du site et n'est pas modifiable."
       parameters: [{ $ref: "#/components/parameters/Id" }]
       requestBody:
         required: true

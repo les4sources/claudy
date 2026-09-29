@@ -239,6 +239,32 @@ RSpec.describe "API v1 — événements", type: :request do
       expect(body["data"]).to include("pole" => "convivialite", "pole_label" => "Convivialité")
     end
 
+    it "se créent, et POST est un upsert sur le slug dérivé du nom" do
+      expect {
+        post "/api/v1/event_categories", params: { event_category: { name: "Projections", pole: "convivialite" } }.to_json,
+                                         headers: headers
+      }.to change(EventCategory, :count).by(1)
+    
+      expect(response).to have_http_status(:created)
+      expect(body["meta"]["created"]).to be(true)
+      expect(body["data"]).to include("slug" => "projections", "pole" => "convivialite", "color" => "#224246")
+    
+      expect {
+        post "/api/v1/event_categories", params: { event_category: { name: "Projections", color: "#0891b2" } }.to_json,
+                                         headers: headers
+      }.not_to change(EventCategory, :count)
+      expect(response).to have_http_status(:ok)
+      expect(body["meta"]["created"]).to be(false)
+      expect(EventCategory.find_by(slug: "projections")).to have_attributes(color: "#0891b2", pole: "convivialite")
+    end
+    
+    it "gardent leur slug quand on les renomme" do
+      patch "/api/v1/event_categories/#{parties.id}", params: { event_category: { name: "Soirées", slug: "soirees" } }.to_json,
+                                                       headers: headers
+    
+      expect(parties.reload).to have_attributes(name: "Soirées", slug: "parties")
+    end
+    
     it "refusent un pôle hors charte" do
       patch "/api/v1/event_categories/#{parties.id}", params: { event_category: { pole: "fête" } }.to_json,
                                                        headers: headers
