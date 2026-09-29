@@ -36,7 +36,7 @@ module Finance
     private
 
     def suggest
-      rules = AllocationRule.actives.ordered.includes(:general_account, :team, :legal_entity, :event).to_a
+      rules = AllocationRule.actives.ordered.includes(:general_account, :team, :legal_entity, :event, :cash_account).to_a
       created = 0
 
       @entries.each do |entry|

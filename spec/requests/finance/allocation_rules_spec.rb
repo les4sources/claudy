@@ -37,6 +37,24 @@ RSpec.describe "Finances > Rapprochement assisté", type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.body).to include("s&#39;appliquerait à tout").or include("s'appliquerait à tout")
     end
+
+    # Issue #392 — le formulaire propose le compte de trésorerie, la liste l'affiche.
+    it "limite une règle à un compte de trésorerie et l'affiche dans la liste" do
+      beobank = build_cash_account(entity, bank_account, name: "Beobank SRL")
+
+      get new_finance_allocation_rule_path
+      expect(response.body).to include("Compte de trésorerie").and include("Beobank SRL")
+
+      post finance_allocation_rules_path,
+           params: { allocation_rule: { label: "Domiciliations SRL", communication_contains: "DOMICILIATION",
+                                        cash_account_id: beobank.id, general_account_id: energie.id,
+                                        legal_entity_id: entity.id, position: 1 } }
+
+      expect(AllocationRule.find_by(label: "Domiciliations SRL").cash_account).to eq(beobank)
+
+      get finance_allocation_rules_path
+      expect(response.body).to include("compte Beobank SRL")
+    end
   end
 
   # Issue #289 — l'écran existait sans porte d'entrée. La sous-navigation

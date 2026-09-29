@@ -2280,6 +2280,20 @@ paths:
                     general_account_code: { type: string, description: "Le compte proposé, adressé par son code." }
                     team_name: { type: string }
                     legal_entity_name: { type: string }
+                    cash_account_name:
+                      type: string
+                      description: >
+                        Limite la règle aux lignes de ce compte de trésorerie,
+                        adressé par son nom. Nom inconnu → 422 « Compte de
+                        trésorerie inconnu : X. ». Ne compte pas comme critère :
+                        une règle limitée à un compte et sans autre critère est
+                        refusée (elle reconnaîtrait tout le compte). Absent =
+                        valable sur tous les comptes. Rendu dans
+                        `criteria.cash_account_name`.
+                    cash_account_id:
+                      type: integer
+                      nullable: true
+                      description: "Même restriction par identifiant ; `null` la lève."
                     general_account_id: { type: integer }
                     analytic_account_code: { type: string }
                     team_id: { type: integer }

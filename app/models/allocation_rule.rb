@@ -8,6 +8,10 @@
 #
 # Une règle sans aucun critère est INVALIDE. Elle matcherait tout, et ce serait
 # exactement le compte par défaut qu'on refuse d'avoir — juste déguisé.
+#
+# Le compte de trésorerie (issue #392) RESTREINT une règle, il ne la fonde pas :
+# « toute ligne du compte Beobank » serait encore un compte par défaut, à
+# l'échelle d'un compte. Il ne compte donc pas comme critère.
 # == Schema Information
 #
 # Table name: allocation_rules
@@ -30,6 +34,7 @@
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
 #  analytic_account_id        :bigint
+#  cash_account_id            :bigint
 #  event_id                   :bigint
 #  general_account_id         :bigint           not null
 #  legal_entity_id            :bigint           not null
@@ -38,6 +43,7 @@
 # Indexes
 #
 #  index_allocation_rules_on_analytic_account_id  (analytic_account_id)
+#  index_allocation_rules_on_cash_account_id      (cash_account_id)
 #  index_allocation_rules_on_deleted_at           (deleted_at)
 #  index_allocation_rules_on_event_id             (event_id)
 #  index_allocation_rules_on_general_account_id   (general_account_id)
@@ -48,6 +54,7 @@
 # Foreign Keys
 #
 #  fk_rails_...  (analytic_account_id => analytic_accounts.id)
+#  fk_rails_...  (cash_account_id => cash_accounts.id)
 #  fk_rails_...  (event_id => events.id)
 #  fk_rails_...  (general_account_id => general_accounts.id)
 #  fk_rails_...  (legal_entity_id => legal_entities.id)
@@ -72,6 +79,9 @@ class AllocationRule < ApplicationRecord
   # le compte et le pôle. « La communication contient STAGE LOWTECH » propose
   # alors le compte, le pôle ET l'événement d'un seul geste.
   belongs_to :event, optional: true
+  # Le compte de trésorerie auquel la règle se limite. Sans lui, elle vaut pour
+  # tous les comptes — le comportement d'avant #392, qu'aucune règle ne perd.
+  belongs_to :cash_account, optional: true
   has_many :allocation_suggestions, dependent: :nullify
 
   validates :label, presence: true
@@ -87,6 +97,8 @@ class AllocationRule < ApplicationRecord
   # Rend le motif du match, ou nil. Le motif n'est pas décoratif : c'est ce qui
   # permet à un humain de juger une proposition sans rouvrir la configuration.
   def match(cash_entry)
+    return nil if cash_account_id.present? && cash_entry.cash_account_id != cash_account_id
+
     raisons = []
 
     if counterparty_iban.present?
@@ -132,7 +144,11 @@ class AllocationRule < ApplicationRecord
       raisons << "au plus #{Money.new(max_amount_cents, 'EUR').format}"
     end
 
+    # Vérifié AVANT d'ajouter le compte : une règle qui ne tiendrait que par son
+    # compte (base invalide, restaurée sans validation) ne doit rien reconnaître.
     return nil if raisons.empty?
+
+    raisons << "compte #{cash_account.name}" if cash_account_id.present?
 
     "Règle « #{label} » : #{raisons.join(', ')}."
   end
@@ -144,7 +160,12 @@ class AllocationRule < ApplicationRecord
   def at_least_one_criterion
     return if CRITERIA.any? { |criterion| public_send(criterion).present? }
 
-    errors.add(:base, "Une règle sans aucun critère s'appliquerait à tout — c'est le compte par défaut " \
-                      "qu'on refuse d'avoir. Ajoute au moins un critère.")
+    message = "Une règle sans aucun critère s'appliquerait à tout — c'est le compte par défaut " \
+              "qu'on refuse d'avoir. Ajoute au moins un critère."
+    if cash_account_id.present?
+      message += " Le compte de trésorerie limite une règle, il ne suffit pas à la définir."
+    end
+
+    errors.add(:base, message)
   end
 end

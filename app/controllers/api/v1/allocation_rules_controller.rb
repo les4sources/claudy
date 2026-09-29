@@ -19,13 +19,14 @@ module Api
         general_account_id: "Compte général inconnu",
         analytic_account_id: "Axe analytique inconnu",
         team_id: "Pôle inconnu",
-        legal_entity_id: "Entité inconnue"
+        legal_entity_id: "Entité inconnue",
+        cash_account_id: "Compte de trésorerie inconnu"
       }.freeze
 
       before_action :get_rule, only: [:show, :update, :destroy]
 
       def index
-        scope = AllocationRule.ordered.includes(:general_account, :analytic_account, :team, :legal_entity)
+        scope = AllocationRule.ordered.includes(:general_account, :analytic_account, :team, :legal_entity, :cash_account)
         scope = scope.where(direction: params[:direction]) if params[:direction].present?
 
         active = ActiveModel::Type::Boolean.new.cast(params[:active])
@@ -77,14 +78,15 @@ module Api
           :label, :position, :confidence, :active, :direction,
           :counterparty_iban, :counterparty_name_contains, :communication_contains,
           :transaction_code, :min_amount_cents, :max_amount_cents,
-          :general_account_id, :analytic_account_id, :team_id, :legal_entity_id, :event_id
+          :general_account_id, :analytic_account_id, :team_id, :legal_entity_id, :event_id,
+          :cash_account_id
         )
       end
 
-      # Un agent connaît un compte par son CODE et un pôle par son NOM — ce sont
-      # les seules clés qui survivent à une restauration de base. Les
-      # identifiants techniques restent acceptés pour les liens rendus par les
-      # autres vues.
+      # Un agent connaît un compte par son CODE, un pôle ou un compte de
+      # trésorerie par son NOM — ce sont les seules clés qui survivent à une
+      # restauration de base. Les identifiants techniques restent acceptés pour
+      # les liens rendus par les autres vues.
       def resolved_associations
         payload = params.require(:allocation_rule)
         resolved = {}
@@ -100,6 +102,9 @@ module Api
         end
         resolve(payload[:legal_entity_name], resolved, :legal_entity_id) do |name|
           LegalEntity.find_by(name: name)
+        end
+        resolve(payload[:cash_account_name], resolved, :cash_account_id) do |name|
+          CashAccount.find_by(name: name)
         end
 
         resolved
