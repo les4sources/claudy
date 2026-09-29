@@ -903,6 +903,8 @@ Rails.application.routes.draw do
       # et reçoivent leur pôle ; POST crée (upsert sur le slug).
       resources :events, only: [:index, :show, :create, :update, :destroy]
       resources :event_categories, only: [:index, :create, :update]
+      # Reconstructions du site : historique (GET) et demande immédiate (POST).
+      resources :website_rebuilds, only: [:index, :create]
 
       # Finances internes (#155-#158). Seul endroit de l'API où POST existe :
       # le catalogue du bar et les fiches papier se remontent depuis des

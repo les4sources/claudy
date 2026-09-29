@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_210000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_29_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -2411,6 +2411,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_210000) do
     t.text "note"
     t.datetime "updated_at", null: false
     t.index ["date"], name: "index_watchman_notes_on_date"
+  end
+
+  create_table "website_rebuilds", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "dispatched_at"
+    t.string "error_message"
+    t.datetime "last_requested_at", null: false
+    t.datetime "requested_at", null: false
+    t.integer "requests_count", default: 1, null: false
+    t.string "response_code"
+    t.string "status", default: "pending", null: false
+    t.string "trigger", default: "publication", null: false
+    t.datetime "updated_at", null: false
+    t.index ["status", "requested_at"], name: "index_website_rebuilds_on_status_and_requested_at"
   end
 
   add_foreign_key "account_entries", "account_entries", column: "reversal_of_id"
