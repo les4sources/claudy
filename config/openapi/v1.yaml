@@ -34,6 +34,10 @@ tags:
     description: >
       Membres, cycles, actions de cycle, tâches de l'organisation et notes
       (post-it datés) du calendrier partagé.
+  - name: Événements
+    description: >
+      Agenda du site les4sources.be : événements (brouillons et publiés) et
+      catégories avec leur pôle. POST est un upsert sur le slug.
   - name: Finances
     description: Paiements liés aux réservations.
   - name: Bar & comptes internes
@@ -689,6 +693,166 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /events:
+    get:
+      tags: [Événements]
+      summary: Lister les événements (brouillons compris)
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date }, description: "Événements qui se terminent à cette date ou après." }
+        - { name: to, in: query, schema: { type: string, format: date }, description: "Événements qui commencent à cette date ou avant." }
+        - { name: published, in: query, schema: { type: boolean }, description: "true = publiés sur le site, false = brouillons." }
+        - { name: category, in: query, schema: { type: string }, description: "Slug de catégorie." }
+        - { name: slug, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string }, description: "Recherche insensible à la casse dans le nom." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée, du plus tôt au plus tard.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Event" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    post:
+      tags: [Événements]
+      summary: Créer ou mettre à jour un événement (upsert sur le slug)
+      description: >
+        Quand un événement vivant porte déjà le `slug` fourni, il est MIS À JOUR
+        au lieu qu'un second soit créé, et `meta.created` dit lequel des deux
+        s'est produit. Le slug est l'adresse de la fiche sur le site
+        (/evenements/<slug>) : il est figé tant que l'événement est publié.
+        Pour publier un brouillon créé dans l'admin, le retrouver (GET avec
+        from/to/q) puis PATCH `published: true` — plutôt qu'un POST qui en
+        créerait un second.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event]
+              properties:
+                event: { $ref: "#/components/schemas/EventWrite" }
+      responses:
+        "201":
+          description: Événement créé (`meta.created` vaut true).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Event" }
+                  meta: { type: object, properties: { created: { type: boolean } } }
+        "200":
+          description: Événement retrouvé sur son slug et mis à jour (`meta.created` vaut false).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Event" }
+                  meta: { type: object, properties: { created: { type: boolean } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /events/{id}:
+    get:
+      tags: [Événements]
+      summary: Détail d'un événement
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Événement.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Event" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Événements]
+      summary: Éditer, publier ou dépublier un événement
+      description: "Mêmes champs que la création. `published: false` retire la fiche du site mais garde le slug."
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event]
+              properties:
+                event: { $ref: "#/components/schemas/EventWrite" }
+      responses:
+        "200":
+          description: Événement mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Event" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Événements]
+      summary: Mettre un événement à la corbeille (soft-delete)
+      description: "La ligne reste en base, `deleted_at` renseignée. Le slug reste réservé."
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /event_categories:
+    get:
+      tags: [Événements]
+      summary: Lister les catégories d'événements et leur pôle
+      responses:
+        "200":
+          description: Toutes les catégories, par nom.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/EventCategory" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /event_categories/{id}:
+    patch:
+      tags: [Événements]
+      summary: Poser le pôle (ou le nom, la couleur) d'une catégorie
+      description: "Le slug est la clé du site et n'est pas modifiable. Les catégories se créent dans l'admin."
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_category]
+              properties:
+                event_category:
+                  type: object
+                  properties:
+                    name: { type: string }
+                    color: { type: string, description: "#rrggbb" }
+                    pole: { type: string, enum: [hebergement, convivialite, nature, artisanat, ressourcement, vie-collective, production] }
+      responses:
+        "200":
+          description: Catégorie mise à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/EventCategory" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
   /party_reservations:
     get:
       tags: [Réservations]
@@ -3217,6 +3381,75 @@ components:
           items: { $ref: "#/components/schemas/Ref" }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+        url: { type: string }
+    Event:
+      type: object
+      description: >
+        Événement de l'agenda. Publié, il a sa fiche sur le site à `public_url`
+        (l'API publique /api/public/v1/events le donne au site au build).
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "event" }
+        name: { type: string }
+        slug: { type: string, nullable: true, description: "Adresse de la fiche : /evenements/<slug>. Figé tant que publié." }
+        summary: { type: string, nullable: true, description: "Accroche, 200 caractères au plus." }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        all_day: { type: boolean, description: "Vrai quand les deux bornes sont à minuit." }
+        location: { type: string, nullable: true }
+        price_text: { type: string, nullable: true }
+        registration_url: { type: string, nullable: true, description: "Lien d'inscription (billetterie, formulaire)." }
+        status: { type: string, nullable: true }
+        public_description: { type: string, nullable: true, description: "Description publique (HTML ActionText)." }
+        event_category_id: { type: integer }
+        category:
+          type: object
+          properties:
+            slug: { type: string }
+            name: { type: string }
+            pole: { type: string, nullable: true }
+        team_id: { type: integer, nullable: true }
+        published: { type: boolean }
+        published_at: { type: string, format: date-time, nullable: true }
+        public_url: { type: string, nullable: true }
+        image_url: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string, description: "Adresse de la ressource dans cette API." }
+    EventWrite:
+      type: object
+      description: >
+        Champs écrits par POST et PATCH. Dates : « AAAA-MM-JJ » = journée entière
+        (minuit), sinon date-heure ISO 8601 (heure de Bruxelles si pas de
+        décalage). `image_url` est téléchargée (https, adresse publique, image,
+        15 Mo au plus) ; `remove_image: true` détache l'image.
+      properties:
+        name: { type: string }
+        summary: { type: string }
+        starts_at: { type: string }
+        ends_at: { type: string }
+        location: { type: string }
+        price_text: { type: string }
+        registration_url: { type: string }
+        status: { type: string }
+        public_description: { type: string, description: "HTML." }
+        category: { type: string, description: "Slug de catégorie (GET /event_categories)." }
+        event_category_id: { type: integer }
+        team_id: { type: integer }
+        slug: { type: string }
+        published: { type: boolean }
+        image_url: { type: string }
+        remove_image: { type: boolean }
+    EventCategory:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "event_category" }
+        slug: { type: string }
+        name: { type: string }
+        color: { type: string }
+        pole: { type: string, nullable: true, enum: [hebergement, convivialite, nature, artisanat, ressourcement, vie-collective, production, null] }
+        pole_label: { type: string, nullable: true }
         url: { type: string }
     Note:
       type: object

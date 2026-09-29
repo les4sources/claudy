@@ -898,6 +898,12 @@ Rails.application.routes.draw do
       # appel ne colle pas deux fois le même post-it.
       resources :notes, only: [:index, :show, :create, :update, :destroy]
 
+      # Événements (epic #245) : lecture brouillons compris, POST = upsert sur
+      # `slug`, publication sur le site par `published`. Les catégories se lisent
+      # et reçoivent leur pôle ; elles ne se créent que dans l'admin.
+      resources :events, only: [:index, :show, :create, :update, :destroy]
+      resources :event_categories, only: [:index, :update]
+
       # Finances internes (#155-#158). Seul endroit de l'API où POST existe :
       # le catalogue du bar et les fiches papier se remontent depuis des
       # documents papier, et ces données d'exploitation n'ont pas à passer par
