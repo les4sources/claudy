@@ -20,6 +20,9 @@ module Finance
       outstanding = ComplianceDeadline.outstanding.where(due_on: ..(Date.current + 30)).ordered.includes(:compliance_obligation).to_a
       @deadlines_overdue = outstanding.select(&:overdue?)
       @deadlines_soon = outstanding.reject(&:overdue?)
+      # La trésorerie en résumé : le solde, ce qui rentre, ce qui sort, la
+      # courbe. Le détail vit sur sa page.
+      @treasury = Finance::Treasury.for_foundation
     end
   end
 end

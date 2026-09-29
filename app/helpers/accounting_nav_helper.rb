@@ -19,7 +19,7 @@ module AccountingNavHelper
   def accounting_nav_direct
     [
       ["Vue d'ensemble", finance_accounting_path,
-       %w[finance/accounting finance/general_accounts finance/legal_entities finance/fiscal_years]],
+       %w[finance/accounting finance/treasury finance/general_accounts finance/legal_entities finance/fiscal_years]],
       ["Trésorerie", finance_cash_entries_path, %w[finance/cash_entries]],
       ["Arrêté du mois", finance_monthly_close_path, %w[finance/monthly_close]],
       ["Échéancier", finance_compliance_deadlines_path, %w[finance/compliance_deadlines finance/compliance_obligations]]

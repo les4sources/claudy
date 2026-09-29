@@ -6,6 +6,9 @@
     strong La double écriture se génère, elle ne se saisit jamais.
     |  On encode un fait — une ligne bancaire ventilée, un décompte, un règlement — et l'application produit les deux côtés. Aucun écran ne permet de taper un débit et un crédit à la main.
 
+- if @treasury
+  = render "finance/treasury/summary", treasury: @treasury, link: true
+
 / Le rappel de comptage de caisse (epic #243, phase 3). Il ne crie qu'au-delà
   de sept jours : un rappel permanent devient du décor, et on cesse de le lire.
 - if @days_since_cash_count.nil? || @days_since_cash_count > 7

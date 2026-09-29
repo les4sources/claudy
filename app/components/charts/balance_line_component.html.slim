@@ -1,0 +1,38 @@
+- if empty?
+  .px-5.py-10.text-center.text-sm.text-stone-500
+    | Aucun solde à afficher : aucun compte de trésorerie n'est encore ancré sur un relevé ou un comptage.
+
+- else
+  .overflow-x-auto
+    svg role="img" aria-label=description viewBox="0 0 #{width} #{height}" preserveAspectRatio="xMinYMin meet" style="min-width: 560px; width: 100%; height: auto;"
+      title = title
+      desc = description
+      - grid_lines.each do |graduation|
+        line x1=axis_width y1=graduation[:y] x2=width y2=graduation[:y] stroke="#e7e5e4" stroke-width="1"
+        text x=(axis_width - 8) y=(graduation[:y] + 4) text-anchor="end" font-size="11" fill="#78716c"
+          = graduation[:label]
+      - if dips_below_zero?
+        line x1=axis_width y1=zero_y x2=width y2=zero_y stroke=negative_color stroke-width="1"
+      - month_ticks.each do |tick|
+        text x=tick[:x] y=(baseline + 16) text-anchor="middle" font-size="11" fill="#57534e"
+          = tick[:label]
+      line x1=today_x y1=8 x2=today_x y2=baseline stroke="#a8a29e" stroke-width="1" stroke-dasharray="2 3"
+      text x=(today_x + 4) y=12 font-size="11" fill="#57534e" aujourd'hui
+      - if history_path
+        polyline points=history_path fill="none" stroke=line_color stroke-width="2" stroke-linejoin="round" stroke-linecap="round"
+      - if projection_path
+        polyline points=projection_path fill="none" stroke=line_color stroke-width="2" stroke-dasharray="6 4" stroke-linejoin="round"
+      - step_markers.each do |marker|
+        circle cx=marker[:x] cy=marker[:y] r="4" fill="white" stroke=line_color stroke-width="2"
+      - hover_points.each do |target|
+        circle cx=target[:x] cy=target[:y] r="9" fill="transparent" data-balance-point=""
+          title = target[:label]
+  p.mt-2.flex.flex-wrap.gap-x-8.gap-y-2.text-xs.text-stone-500
+    span.inline-flex.items-center.gap-2
+      svg width="24" height="6" aria-hidden="true"
+        line x1="0" y1="3" x2="24" y2="3" stroke=line_color stroke-width="2"
+      | Solde réel
+    span.inline-flex.items-center.gap-2
+      svg width="24" height="6" aria-hidden="true"
+        line x1="0" y1="3" x2="24" y2="3" stroke=line_color stroke-width="2" stroke-dasharray="6 4"
+      | Projection

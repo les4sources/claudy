@@ -233,6 +233,8 @@ Rails.application.routes.draw do
     # lectures — grand livre et balance. Aucune route ne permet de SAISIR une
     # écriture : elles se génèrent, elles ne se saisissent jamais.
     get "accounting", to: "accounting#index"
+    # La trésorerie (lecture seule) : le solde, ce qui doit rentrer et sortir.
+    get "treasury", to: "treasury#show"
     get "ledger", to: "ledger#index"
     get "trial_balance", to: "trial_balance#index"
     # Journal de trésorerie (issue #179). `unallocated` est nommée AVANT la
