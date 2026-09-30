@@ -1,0 +1,5 @@
+/ Le nombre de commentaires d'une ligne, dans les listes : une ligne annotée
+  doit se repérer sans l'ouvrir.
+- if count.to_i.positive?
+  = link_to finance_cash_entry_path(entry, anchor: Comment.thread_dom_id(entry)), class: "flex-shrink-0 inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2 text-xs font-medium text-stone-600 hover:bg-stone-100", style: "height: 24px", title: "#{count} commentaire(s)", data: { comments_badge: count } do
+    | 💬 #{count}

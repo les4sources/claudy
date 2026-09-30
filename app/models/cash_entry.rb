@@ -64,6 +64,10 @@ class CashEntry < ApplicationRecord
 
   has_paper_trail
   has_soft_deletion default_scope: true
+  # Un fil de commentaires sur chaque ligne (Michael, 2026-09-30) : « ces
+  # 3 000 € sont un acompte sur le loyer T3, le solde suit ». La ligne est un
+  # fait qui ne se réécrit pas ; ce qu'on en sait, en revanche, se discute.
+  include Commentable
 
   belongs_to :cash_account
   # Mémoire du motif retenu à la saisie (epic #243, phase 2). L'affectation
@@ -122,6 +126,14 @@ class CashEntry < ApplicationRecord
   }
 
   def status_label = STATUS_LABELS.fetch(status, status)
+
+  # Qui apprend qu'une ligne a été commentée : l'équipe compta, la même liste
+  # que pour les factures d'achat.
+  def comment_recipients = NotificationSettingsController.accounting_users.to_a
+
+  def comment_label = "la ligne « #{counterparty_name.presence || label} » du #{I18n.l(entry_date, format: :short)}"
+
+  def comment_path = Rails.application.routes.url_helpers.finance_cash_entry_path(self)
   def incoming? = amount_cents.positive?
   def allocated_cents = cash_allocations.sum(:amount_cents)
   def remaining_cents = amount_cents - allocated_cents
