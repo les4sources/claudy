@@ -87,7 +87,7 @@ class PaperSheet < ApplicationRecord
   # chaque fiche montre exactement ses propres articles.
   def catalog_items
     used_ids = account_entries.where.not(catalog_item_id: nil).distinct.pluck(:catalog_item_id)
-    scope = CatalogItem.for_channel(channel)
+    scope = CatalogItem.for_sheet(channel)
     scope = used_ids.any? ? scope.where(active: true).or(scope.where(id: used_ids)) : scope.active
 
     scope.ordered.includes(:catalog_prices)

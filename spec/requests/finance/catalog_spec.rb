@@ -43,7 +43,17 @@ RSpec.describe "Finances > Catalogue", type: :request do
       expect(response.body).not_to include("Moinette")
     end
 
-    it "cherche par nom" do
+    it "filtre sur le canal DPH" do
+      CatalogItem.create!(name: "Lessive biotop", channel: "dph", unit: "l")
+
+      get finance_catalog_index_path(channel: "dph")
+
+      expect(response.body).to include("Lessive biotop")
+      expect(response.body).not_to include("Moinette")
+      expect(response.body).to include(">DPH<")
+    end
+
+        it "cherche par nom" do
       get finance_catalog_index_path(q: "moin")
 
       expect(response.body).to include("Moinette")

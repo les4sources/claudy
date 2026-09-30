@@ -33,8 +33,8 @@ RSpec.describe CatalogItem do
   describe "le canal artisanat" do
     let(:consignor) { Consignor.create!(name: "Eline", settlement_mode: "invoice") }
 
-    it "accepte les cinq canaux, dont craft et bread" do
-      expect(described_class::CHANNELS).to eq(%w[bar grocery meal craft bread])
+    it "accepte les six canaux, dont craft, bread et dph" do
+      expect(described_class::CHANNELS).to eq(%w[bar grocery dph meal craft bread])
     end
 
     it "exige un artisan sur un article craft" do

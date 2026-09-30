@@ -24,9 +24,13 @@ module Catalog
     # Marges de repli, utilisées seulement si la clé n'est pas paramétrée.
     DEFAULT_MARGINS = { "bar" => 10, "grocery" => 17, "meal" => 0 }.freeze
 
+    # Un canal sans marge propre emprunte celle d'un autre : le DPH se vend au
+    # cellier, il en prend la marge — et elle reste réglable dans Tarifs.
+    MARGIN_SOURCE = { "dph" => "grocery" }.freeze
+
     Proposal = Struct.new(:member_price_cents, :recommended_public_price_cents, keyword_init: true)
 
-    def self.margin_key(channel) = "catalog.margin.#{channel}"
+    def self.margin_key(channel) = "catalog.margin.#{MARGIN_SOURCE.fetch(channel.to_s, channel)}"
 
     def initialize(channel:, purchase_price_cents: nil, on: Date.current)
       @channel = channel.to_s
@@ -50,17 +54,17 @@ module Catalog
       (@purchase_price_cents.to_i * (1 + margin_percent / 100.0)).round
     end
 
+    # Marge du canal, en pourcentage (10 = +10 %), à la date du palier.
+    def margin_percent
+      configured = Pricing::Rates.cents(self.class.margin_key(@channel), on: @on)
+      configured || DEFAULT_MARGINS.fetch(MARGIN_SOURCE.fetch(@channel, @channel), 0)
+    end
+
     private
 
     def build
       Proposal.new(member_price_cents: member_price_cents,
                    recommended_public_price_cents: CatalogPrice.recommended_public_cents(@purchase_price_cents))
-    end
-
-    # Marge du canal, en pourcentage (10 = +10 %).
-    def margin_percent
-      configured = Pricing::Rates.cents(self.class.margin_key(@channel), on: @on)
-      configured || DEFAULT_MARGINS.fetch(@channel, 0)
     end
   end
 end
