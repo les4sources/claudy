@@ -45,6 +45,8 @@ const PLANT_GLYPH_MIN_ZOOM = 17;
 // Une seule couche à la fois (Michael, 2026-09-28 : plusieurs couches
 // superposées, « on s'y perd ») : on retient la dernière choisie.
 const ACTIVE_LAYER_KEY = 'claudy.map.layer.active';
+// Valeur retenue quand on a choisi « Aucune » couche.
+const NO_LAYER = 'none';
 
 // La carte du domaine (epic #348, phase 1).
 //
@@ -66,6 +68,7 @@ export default class extends Controller {
     'notice',
     'layerToggle',
     'layerName',
+    'layerNone',
     'toolbar',
     'tool',
     'panelContainer',
@@ -392,11 +395,14 @@ export default class extends Controller {
 
     // La couche choisie la dernière fois ; sinon la carte du jour (phase 3),
     // vue par défaut, et la Gestion à défaut.
+    // « Aucune » choisie la dernière fois : la carte s'ouvre sans couche.
     const remembered = this.readActiveLayer();
     const initial =
-      this.layerNameTargets.find((b) => b.dataset.layerId === remembered) ||
-      this.layerNameTargets.find((b) => b.dataset.layerKind === 'venues') ||
-      this.layerNameTargets.find((b) => b.dataset.layerKind === 'management');
+      remembered === NO_LAYER
+        ? null
+        : this.layerNameTargets.find((b) => b.dataset.layerId === remembered) ||
+          this.layerNameTargets.find((b) => b.dataset.layerKind === 'venues') ||
+          this.layerNameTargets.find((b) => b.dataset.layerKind === 'management');
     this.layerToggleTargets.forEach((toggle) => {
       toggle.checked = Boolean(initial) && toggle.dataset.layerId === initial.dataset.layerId;
     });
@@ -406,6 +412,7 @@ export default class extends Controller {
     if (!this.map) return;
 
     if (initial) this.setActiveLayer(initial.dataset.layerId, initial.dataset.layerKind);
+    else if (remembered === NO_LAYER) this.setActiveLayer(null, null);
 
     this.updateDateBar();
     await this.loadOccupancy();
@@ -629,13 +636,22 @@ export default class extends Controller {
     this.collapsePanelOnPhone();
   }
 
+  // « Aucune » : la carte sans aucune couche d'objets.
+  clearActiveLayer() {
+    this.setActiveLayer(null, null);
+    this.collapsePanelOnPhone();
+  }
+
+  // `id` nul : aucune couche active, rien d'affiché, aucun mode.
   setActiveLayer(id, kind) {
     // Choisir une couche met fin au dessin en cours (phase 12).
     this.sketches?.onLayerActivated();
-    this.activeLayerId = String(id);
+    this.activeLayerId = id == null ? null : String(id);
     this.activeLayerKind = kind;
-    this.layerNameTargets.forEach((button) => {
-      const active = button.dataset.layerId === this.activeLayerId;
+    const buttons = this.hasLayerNoneTarget ? [...this.layerNameTargets, this.layerNoneTarget] : this.layerNameTargets;
+    buttons.forEach((button) => {
+      const active =
+        button === this.layerNoneTarget ? this.activeLayerId === null : button.dataset.layerId === this.activeLayerId;
       button.classList.toggle('bg-teal-50', active);
       button.classList.toggle('font-medium', active);
       button.classList.toggle('text-4s-main', active);
@@ -648,7 +664,7 @@ export default class extends Controller {
     this.element.querySelectorAll('[data-layer-extra]').forEach((element) => {
       element.classList.toggle('hidden', element.dataset.layerExtra !== kind);
     });
-    this.writeActiveLayer(this.activeLayerId);
+    this.writeActiveLayer(this.activeLayerId ?? NO_LAYER);
     if (this.hasPanelActiveTarget) {
       const name = this.layerNameTargets.find((b) => b.dataset.layerId === this.activeLayerId)?.textContent.trim();
       this.panelActiveTarget.textContent = name ? `· ${name}` : '';
