@@ -40,5 +40,17 @@ RSpec.describe "Carte du domaine — couches du Géoportail de Wallonie", type: 
         'data-geoportail-z-index="13"'
       )
     end
+
+    # L'information au clic : chaque couche sauf l'ortho dit quel service REST
+    # interroger ; les courbes répondent par l'altitude du MNT.
+    it "donne aux couches interrogeables le service à interroger au clic" do
+      MapBaseLayer.create!(key: "test-layer", name: "Couche de test", min_zoom: 12, max_zoom: 20,
+                           bounds: { "south" => 50.339, "west" => 4.903, "north" => 50.343, "east" => 4.912 })
+      get map_path
+
+      expect(response.body.scan("data-geoportail-info-service=").size).to eq(5)
+      expect(response.body).to include('data-geoportail-info-service="RELIEF/WALLONIE_MNT_2021_2022"')
+      expect(response.body).to include("touchez la carte pour en lire le détail")
+    end
   end
 end

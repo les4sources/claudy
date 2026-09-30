@@ -22,6 +22,7 @@ import { BiodiversityMode, isObservationFeature, observationMarker } from '~/uti
 import { MapSearch } from '~/utils/map_search';
 import { syncPointLabel } from '~/utils/map_labels';
 import { MeasureTool } from '~/utils/map_measure';
+import { GeoportailInfo } from '~/utils/map_geoportail';
 
 // Style de la couche Gestion (phase 2) : polygones `forest` remplis à 25 %,
 // accès en pointillés `bark`, points en marqueur rond. Couleurs du thème
@@ -173,6 +174,8 @@ export default class extends Controller {
     this.search = new MapSearch(this);
     // Phase 14 : l'outil Mesure, dans tous les modes (utils/map_measure.js).
     this.measure = new MeasureTool(this, L);
+    // L'information au clic des couches du Géoportail (utils/map_geoportail.js).
+    this.geoportailInfo = new GeoportailInfo(this, L);
     this.setupFeatures();
 
     // Sur un téléphone, le panneau des couches ouvert couvrait les deux tiers
@@ -196,6 +199,7 @@ export default class extends Controller {
     this.search?.destroy();
     this.measure?.destroy();
     this.biodiversity?.destroy();
+    this.geoportailInfo?.destroy();
     if (this.map) {
       this.map.remove();
       this.map = null;
@@ -427,6 +431,17 @@ export default class extends Controller {
     this.comments?.onMapClick(event);
     // En mode Biodiversité, toucher la carte ouvre un nouveau relevé.
     this.biodiversity?.onMapClick(event);
+    // Hors de tout mode et de tout tracé, une couche du Géoportail affichée
+    // répond au clic : ce qu'elle sait de l'endroit touché, dans une bulle.
+    const busy =
+      this.placement?.active ||
+      this.comments?.active ||
+      this.biodiversity?.active ||
+      this.sketches?.activeId ||
+      this.map.pm?.globalDrawModeEnabled?.() ||
+      this.map.pm?.globalEditModeEnabled?.() ||
+      this.map.pm?.globalRemovalModeEnabled?.();
+    if (!busy) this.geoportailInfo?.onMapClick(event);
   }
 
   async loadLayer(id) {
