@@ -32,31 +32,38 @@ RSpec.describe "Finances > Trésorerie", type: :request do
   # trois heures et tombait en timeout. Tout le travail est désormais borné à la
   # page affichée ; seul le compteur reste global.
   describe "avec plus d'une page de lignes en attente" do
-    before { 30.times { |n| build_cash_entry(cash_account, amount_cents: 1_000 + n) } }
+    let(:par_page) { Finance::UnallocatedQueue::PAR_PAGE }
+
+    before { (par_page + 5).times { |n| build_cash_entry(cash_account, amount_cents: 1_000 + n) } }
+
+    # Deux fois les 25 lignes d'origine (Michael, 2026-09-30).
+    it "affiche 50 lignes par page" do
+      expect(par_page).to eq(50)
+    end
 
     it "annonce le TOTAL en attente, pas la taille de la page" do
       get finance_unallocated_cash_entries_path
 
-      expect(response.body).to include("30 ligne(s) en attente")
+      expect(response.body).to include("#{par_page + 5} ligne(s) en attente")
       expect(response.body).to include("page 1 sur 2")
     end
 
     it "n'affiche qu'une page de lignes" do
       get finance_unallocated_cash_entries_path
 
-      # Les montants sont tous distincts (10,00 à 10,29) : on compte combien
+      # Les montants sont tous distincts (10,00, 10,01…) : on compte combien
       # apparaissent réellement dans la page.
       montants = CashEntry.pending.pluck(:amount_cents).map { |c| format("%.2f", c / 100.0).tr(".", ",") }
       affiches = montants.count { |m| response.body.include?(m) }
 
-      expect(affiches).to eq(25)
+      expect(affiches).to eq(par_page)
     end
 
     # Le coût par ligne est ce qui faisait tomber l'écran : il ne doit s'appliquer
     # qu'aux lignes visibles.
     it "ne crée pas de suggestion pour les lignes hors page" do
       expect { get finance_unallocated_cash_entries_path }
-        .to change { AllocationSuggestion.count }.by_at_most(25)
+        .to change { AllocationSuggestion.count }.by_at_most(par_page)
     end
 
     it "supporte une page au-delà de la dernière" do
@@ -101,6 +108,75 @@ RSpec.describe "Finances > Trésorerie", type: :request do
       expect(entry.remaining_cents).to eq(50_000)
       follow_redirect!
       expect(response.body).to include("reste")
+    end
+  end
+
+  # Affecter sans recharger (Michael, 2026-09-30) : un geste fait DEPUIS la file
+  # répond en Turbo Stream. La ligne affectée sort de la page, la fenêtre ne
+  # remonte pas en haut ; hors de la file, la redirection d'avant reste.
+  describe "un geste fait depuis la file" do
+    let!(:entry) { build_cash_entry(cash_account, amount_cents: 130_000) }
+    let(:depuis_la_file) do
+      { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml",
+        "Referer" => "http://www.example.com#{finance_unallocated_cash_entries_path}?page=2" }
+    end
+
+    def affecter(montant, headers: depuis_la_file)
+      post finance_cash_entry_allocations_path(entry),
+           params: { from_unallocated: "1",
+                     cash_allocation: { general_account_id: revenue.id, legal_entity_id: entity.id, amount: montant } },
+           headers: headers
+    end
+
+    it "retire la ligne entièrement affectée, sans redirection" do
+      affecter("1300,00")
+
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include(%(<turbo-stream action="remove" target="file-ligne-#{entry.id}">))
+      expect(response.body).to include(%(<turbo-stream action="update" target="file-compteur">))
+      expect(response.body).to include("0 ligne(s) en attente")
+      expect(response.body).to include("Ligne entièrement affectée et comptabilisée.")
+      expect(entry.reload.status).to eq("allocated")
+    end
+
+    it "redessine en place, déroulée, une ligne encore incomplète" do
+      affecter("800,00")
+
+      expect(response.body).to include(%(<turbo-stream action="replace" target="file-ligne-#{entry.id}">))
+      expect(response.body).to include("reste")
+      expect(response.body).to include(%(aria-expanded="true"))
+      expect(response.body).to include("1 ligne(s) en attente")
+    end
+
+    it "écrit le refus DANS la ligne" do
+      affecter("2000,00")
+
+      expect(response.body).to include(%(<turbo-stream action="replace" target="file-ligne-#{entry.id}">))
+      expect(response.body).to include(%(role="alert"))
+      expect(entry.reload.cash_allocations).to be_empty
+    end
+
+    it "redirige comme avant hors de Turbo" do
+      affecter("1300,00", headers: {})
+
+      expect(response).to redirect_to(finance_unallocated_cash_entries_path)
+    end
+
+    it "redirige comme avant depuis la fiche de la ligne" do
+      post finance_cash_entry_allocations_path(entry),
+           params: { cash_allocation: { general_account_id: revenue.id, legal_entity_id: entity.id, amount: "1300,00" } },
+           headers: depuis_la_file.merge("Referer" => "http://www.example.com#{finance_cash_entry_path(entry)}")
+
+      expect(response).to redirect_to(finance_cash_entry_path(entry))
+    end
+
+    it "rend chaque ligne de la page sous son identifiant" do
+      get finance_unallocated_cash_entries_path
+
+      expect(response.body).to include(%(id="file-ligne-#{entry.id}"))
+      expect(response.body).to include(%(id="file-compteur"))
+      expect(response.body).to include(%(id="messages"))
     end
   end
 

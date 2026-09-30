@@ -6,15 +6,17 @@ module Finance
   # coup d'œil, si la comptabilité est à jour — et il remplace des heures de
   # rapprochement annuel par un geste mensuel.
   class CashEntriesController < Finance::AccountingBaseController
+    include Finance::UnallocatedQueue
+
     before_action :get_entry,
                   only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate, :payout,
                          :pay_invoice, :pay_expense_report, :reconcile_payout, :collect_sales_invoice,
                          :settle, :suggestion]
     breadcrumb "Trésorerie", :finance_cash_entries_path, match: :exact
 
-    # Le journal se lit, il ne se travaille pas ligne à ligne : ses pages sont
-    # deux fois plus longues que celles de la file « À affecter », où chaque
-    # ligne porte un formulaire.
+    # Le journal se lit, il ne se travaille pas ligne à ligne. Ses pages étaient
+    # deux fois plus longues que celles de la file « À affecter » ; la file est
+    # passée à la même longueur quand elle a cessé de se recharger à chaque geste.
     JOURNAL_PAR_PAGE = 50
 
     def index
@@ -50,11 +52,9 @@ module Finance
     # poignée de lignes, personne ne l'a vu ; à 10 133 lignes reprises, l'écran
     # demandait plus de trois heures et tombait en timeout.
     #
-    # Tout le travail est donc borné à la PAGE affichée. Le compteur, lui, reste
-    # global : savoir combien de lignes attendent est l'information la plus utile
-    # de cet écran, et elle ne coûte qu'un COUNT.
-    PAR_PAGE = 25
-
+    # Tout le travail est donc borné à la PAGE affichée (`charger_pistes`). Le
+    # compteur, lui, reste global : savoir combien de lignes attendent est
+    # l'information la plus utile de cet écran, et elle ne coûte qu'un COUNT.
     def unallocated
       @pending_total = CashEntry.pending.count
 
@@ -62,83 +62,19 @@ module Finance
       # du mois renvoie ici filtré sur Stripe quand une recette Stripe attend sa
       # correspondance de catégorie (epic #250). Sans filtre, on retombe sur la
       # file entière — comportement inchangé.
-      scope = CashEntry.pending.ordered
-      scope = scope.where(cash_account_id: params[:cash_account_id]) if params[:cash_account_id].present?
-      if params[:kind].present? && CashAccount::KINDS.include?(params[:kind])
-        scope = scope.where(cash_account_id: CashAccount.where(kind: params[:kind]).select(:id))
-      end
+      scope = file_scope(params)
       @filtered_total = scope.count
       @filter_kind = params[:kind].presence
       @filter_account = CashAccount.find_by(id: params[:cash_account_id])
 
       @entries = scope.includes(:cash_account, :cash_allocations, :allocation_suggestions)
                       .paginate(page: params[:page], per_page: PAR_PAGE)
-      @comment_counts = comment_counts(@entries)
-
-      # Les suggestions se recalculent à l'ouverture de l'écran : c'est le seul
-      # moment où elles servent, et ça évite un job de fond que l'application
-      # n'a pas les moyens de garantir. Sur les lignes AFFICHÉES seulement — les
-      # recalculer toutes coûtait 38 secondes à chaque page.
-      Finance::SuggestAllocations.new(cash_entries: @entries, whodunnit: current_user&.email).run!
-      # Jev, lui, ne se demande pas ici : chaque ligne sans règle charge sa
-      # proposition dans son propre cadre (`suggestion`), en parallèle.
-      @jev_enabled = Jev::Client.new.configured?
-
-      # Le rapprochement de séjour se calcule à l'affichage : il dépend de
-      # l'état des soldes, qui bouge à chaque paiement.
-      # Les séjours ouverts et leurs soldes, calculés UNE fois pour la page.
-      stays, soldes = Finance::MatchStay.prechargement(@entries)
-
-      @stay_matches = @entries.each_with_object({}) do |entry, hash|
-        next if entry.cash_allocations.any?
-
-        correspondance = Finance::MatchStay.new(cash_entry: entry, open_stays: stays, soldes: soldes).run!
-        next if correspondance.nil?
-
-        lignes = begin
-          Finance::VentilateStay.new(stay: correspondance.stay, amount_cents: entry.amount_cents).run!
-        rescue Finance::VentilateStay::EmptyQuote, Finance::VentilateStay::MissingMapping
-          nil
-        end
-        next if lignes.blank?
-
-        hash[entry.id] = { match: correspondance, lines: lignes }
-      end
-      # Les virements aux membres (epic #246, phase 2) : une ligne sortante peut
-      # solder le compte créditeur d'un cuisinier. Les soldes se calculent UNE
-      # fois pour la page — les recalculer ligne à ligne est ce qui avait fait
-      # tomber cet écran à l'issue #202.
-      @payout_matches = Finance::MatchMemberPayouts.new.for_entries(@entries)
-      # Les factures d'achat à payer (epic #240, phase 4) : une ligne sortante
-      # dont le montant ou l'IBAN correspond à une facture `to_pay`. Les
-      # factures sont chargées UNE fois pour la page, comme les soldes.
-      @invoice_matches = Finance::MatchPurchaseInvoices.new.for_entries(@entries)
-      # Les notes de frais et de mission à payer (epic #241, phase 3) : même
-      # geste que la facture, sur une autre dette. Les notes `processing` sont
-      # chargées UNE fois pour la page, comme les factures.
-      @expense_report_matches = Finance::MatchExpenseReports.new.for_entries(@entries)
-      # Les versements Stripe (epic #250, phase 2) : une ligne bancaire ENTRANTE
-      # dont le montant et la date correspondent à un versement pas encore
-      # rapproché. Les versements sont chargés UNE fois pour la page.
-      @stripe_matches = Finance::MatchStripePayouts.new.for_entries(@entries)
-      # Les factures de VENTE (epic #240, phase 6) : une ligne ENTRANTE du
-      # montant exact d'une facture émise, ou venant de l'IBAN déjà appris pour
-      # ce client. Les factures sont chargées UNE fois pour la page.
-      @sales_invoice_matches = Finance::MatchSalesInvoices.new.for_entries(@entries)
-      # Les règlements des habitants (issue #349) : le miroir des virements
-      # ci-dessus. Une ligne ENTRANTE peut éteindre la dette d'un ménage ou
-      # d'une personne. Les soldes débiteurs sont chargés UNE fois pour la page.
-      @settlement_matches = Finance::MatchMemberSettlements.new.for_entries(@entries)
-
-      @general_accounts = GeneralAccount.actives.ordered
-      @teams = Team.ordered
-      @entities = LegalEntity.actives.ordered
-      @events = recent_events
+      charger_pistes(@entries)
     end
 
     # Le cadre de la proposition d'une ligne de la file « À affecter ». Jev
     # répond en environ 300 ms : demandé ligne par ligne, à la volée, il ne
-    # retient jamais l'écran, et une page de 25 lignes se complète en quelques
+    # retient jamais l'écran, et une page de 50 lignes se complète en quelques
     # secondes. La ligne n'est demandée qu'une fois (`jev_checked_at`).
     def suggestion
       Finance::SuggestAllocations.new(cash_entries: [@entry], whodunnit: current_user&.email,
@@ -203,12 +139,12 @@ module Finance
         whodunnit: current_user&.email
       ).run!
 
-      redirect_to finance_unallocated_cash_entries_path,
-                  notice: "Virement à #{compte.name} enregistré — son compte est soldé."
+      apres_affectation(@entry, finance_unallocated_cash_entries_path,
+                        notice: "Virement à #{compte.name} enregistré — son compte est soldé.")
     rescue Finance::RecordMemberPayout::NotCreditor, Finance::RecordMemberPayout::TooMuch,
            Finance::RecordMemberPayout::MissingAccount, Finance::RecordMemberPayout::WrongDirection,
            ActiveRecord::RecordInvalid => e
-      redirect_to finance_cash_entry_path(@entry), alert: e.message
+      apres_affectation(@entry, finance_cash_entry_path(@entry), alert: e.message)
     end
 
     # Le règlement d'un habitant encaissé depuis une ligne ENTRANTE (issue
@@ -226,9 +162,9 @@ module Finance
         flow: params[:flow], whodunnit: current_user&.email
       ).run!
 
-      redirect_to finance_unallocated_cash_entries_path,
-                  notice: "Règlement de #{compte.name} enregistré sur le poste " \
-                          "#{AccountEntry::FLOW_LABELS.fetch(params[:flow], 'Divers')}."
+      apres_affectation(@entry, finance_unallocated_cash_entries_path,
+                        notice: "Règlement de #{compte.name} enregistré sur le poste " \
+                                "#{AccountEntry::FLOW_LABELS.fetch(params[:flow], 'Divers')}.")
     # La contrainte d'unicité sur `account_entries.idempotency_key` a tranché :
     # ce virement est déjà imputé sur ce compte, et la transaction n'a rien
     # écrit. Ce n'est pas une erreur — sur un écran qui aligne des dizaines de
@@ -236,13 +172,13 @@ module Finance
     # l'exception. Le message brut de Postgres ne se montre pas à quelqu'un qui
     # encode, d'où ce `rescue` distinct des refus métier.
     rescue ActiveRecord::RecordNotUnique
-      redirect_to finance_unallocated_cash_entries_path,
-                  alert: "Ce virement est déjà imputé sur #{compte.name} — rien n'a été enregistré une seconde fois."
+      apres_affectation(@entry, finance_unallocated_cash_entries_path,
+                        alert: "Ce virement est déjà imputé sur #{compte.name} — rien n'a été enregistré une seconde fois.")
     rescue Finance::RecordMemberSettlement::NotDebtor, Finance::RecordMemberSettlement::TooMuch,
            Finance::RecordMemberSettlement::MissingAccount, Finance::RecordMemberSettlement::WrongDirection,
            Accounting::PostCashEntry::NotFullyAllocated,
            ActiveRecord::RecordInvalid => e
-      redirect_to finance_cash_entry_path(@entry), alert: e.message
+      apres_affectation(@entry, finance_cash_entry_path(@entry), alert: e.message)
     end
 
     # Payer une facture d'achat depuis une ligne sortante (epic #240, phase 4).
@@ -256,13 +192,13 @@ module Finance
         whodunnit: current_user&.email
       ).run!
 
-      redirect_to finance_unallocated_cash_entries_path,
-                  notice: "#{facture.payable_label} rapprochée de cette ligne."
+      apres_affectation(@entry, finance_unallocated_cash_entries_path,
+                        notice: "#{facture.payable_label} rapprochée de cette ligne.")
     rescue Finance::RecordInvoicePayment::NotPayable, Finance::RecordInvoicePayment::TooMuch,
            Finance::RecordInvoicePayment::WrongDirection, Finance::RecordInvoicePayment::MissingAccount,
            Accounting::PostCashEntry::NotFullyAllocated,
            ActiveRecord::RecordInvalid => e
-      redirect_to finance_cash_entry_path(@entry), alert: e.message
+      apres_affectation(@entry, finance_cash_entry_path(@entry), alert: e.message)
     end
 
     # Rapprocher une ligne sortante d'une note de frais ou de mission (epic #241,
@@ -276,15 +212,15 @@ module Finance
         whodunnit: current_user&.email
       ).run!
 
-      redirect_to finance_unallocated_cash_entries_path,
-                  notice: "#{note.payable_label} rapprochée de cette ligne."
+      apres_affectation(@entry, finance_unallocated_cash_entries_path,
+                        notice: "#{note.payable_label} rapprochée de cette ligne.")
     rescue Finance::RecordExpenseReportPayment::NotPayable,
            Finance::RecordExpenseReportPayment::TooMuch,
            Finance::RecordExpenseReportPayment::WrongDirection,
            Finance::RecordExpenseReportPayment::MissingAccount,
            Accounting::PostCashEntry::NotFullyAllocated,
            ActiveRecord::RecordInvalid => e
-      redirect_to finance_cash_entry_path(@entry), alert: e.message
+      apres_affectation(@entry, finance_cash_entry_path(@entry), alert: e.message)
     end
 
     # Rapprocher une ligne bancaire de son versement Stripe (epic #250, phase 2).
@@ -296,8 +232,8 @@ module Finance
         stripe_payout: versement, cash_entry: @entry, whodunnit: current_user&.email
       ).run!
 
-      redirect_to finance_unallocated_cash_entries_path,
-                  notice: "Versement Stripe #{versement.account_label} rapproché de cette ligne."
+      apres_affectation(@entry, finance_unallocated_cash_entries_path,
+                        notice: "Versement Stripe #{versement.account_label} rapproché de cette ligne.")
     rescue Finance::RecordStripePayoutReconciliation::WrongDirection,
            Finance::RecordStripePayoutReconciliation::AlreadyReconciled,
            Finance::RecordStripePayoutReconciliation::AmountMismatch,
@@ -306,7 +242,7 @@ module Finance
            Finance::VentilateStripePayout::MissingMapping,
            Accounting::PostCashEntry::NotFullyAllocated,
            ActiveRecord::RecordNotFound, ActiveRecord::RecordInvalid => e
-      redirect_to finance_cash_entry_path(@entry), alert: e.message
+      apres_affectation(@entry, finance_cash_entry_path(@entry), alert: e.message)
     end
 
     # Encaisser une facture de vente depuis une ligne entrante (epic #240,
@@ -319,9 +255,9 @@ module Finance
         sales_invoice: facture, cash_entry: @entry, whodunnit: current_user&.email
       ).run!
 
-      redirect_to finance_unallocated_cash_entries_path,
-                  notice: "Facture #{facture.number} encaissée — #{lignes.size} ligne(s) de recette, " \
-                          "l'IBAN est mémorisé pour ce client."
+      apres_affectation(@entry, finance_unallocated_cash_entries_path,
+                        notice: "Facture #{facture.number} encaissée — #{lignes.size} ligne(s) de recette, " \
+                                "l'IBAN est mémorisé pour ce client.")
     rescue Finance::RecordSalesInvoicePayment::WrongDirection,
            Finance::RecordSalesInvoicePayment::AlreadyPaid,
            Finance::RecordSalesInvoicePayment::NoVentilableSource,
@@ -329,7 +265,7 @@ module Finance
            Accounting::PostCashEntry::NotFullyAllocated,
            Accounting::PostDocument::MissingFiscalYear,
            ActiveRecord::RecordInvalid => e
-      redirect_to finance_cash_entry_path(@entry), alert: e.message
+      apres_affectation(@entry, finance_cash_entry_path(@entry), alert: e.message)
     end
 
     # Ventiler un séjour : les lignes viennent du devis reconstruit, la base est
@@ -370,11 +306,11 @@ module Finance
         end
       end
 
-      redirect_to finance_cash_entry_path(@entry),
-                  notice: "Séjour ##{stay.id} ventilé en #{lignes.size} ligne(s) — l'IBAN est mémorisé pour ce client."
+      apres_affectation(@entry, finance_cash_entry_path(@entry),
+                        notice: "Séjour ##{stay.id} ventilé en #{lignes.size} ligne(s) — l'IBAN est mémorisé pour ce client.")
     rescue Finance::VentilateStay::EmptyQuote, Finance::VentilateStay::MissingMapping,
            Accounting::PostDocument::MissingFiscalYear => e
-      redirect_to finance_cash_entry_path(@entry), alert: e.message
+      apres_affectation(@entry, finance_cash_entry_path(@entry), alert: e.message)
     end
 
     def post_entry
@@ -406,13 +342,6 @@ module Finance
 
     private
 
-    # { cash_entry_id => nombre de commentaires } pour les lignes de la page,
-    # en une requête : le badge ne doit pas coûter une requête par ligne.
-    def comment_counts(entries)
-      Comment.where(commentable_type: "CashEntry", commentable_id: entries.map(&:id))
-             .group(:commentable_id).count
-    end
-
     def get_entry = @entry = CashEntry.find(params[:id])
 
     def entry_params
@@ -422,14 +351,6 @@ module Finance
       amount = permitted.delete(:amount)
       permitted[:amount_cents] = Monetize.parse(amount.to_s).cents if amount.present?
       permitted
-    end
-
-    # Les événements proposables au rattachement d'une recette (epic #245,
-    # phase 2) : dix-huit mois en arrière et l'avenir. Au-delà, la liste devient
-    # une roue interminable pour retrouver un stage de 2023 que plus personne
-    # n'encaisse.
-    def recent_events
-      Event.where("starts_at >= ?", 18.months.ago).order(starts_at: :desc)
     end
 
     def parsed_date(raw)

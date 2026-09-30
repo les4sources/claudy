@@ -103,3 +103,10 @@ table[data-stacked-table] th.text-right,
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
+
+/* File « À affecter » — affecter sans recharger (Michael, 2026-09-30).
+   Une ligne affectée sort de la page par Turbo Stream ; la journée qui n'a plus
+   de ligne disparaît avec elle, et une page entièrement vidée annonce la suite. */
+.file-jour:not(:has(.file-ligne)) { display: none; }
+.file-fin { display: none; }
+.file-page:not(:has(.file-ligne)) .file-fin { display: block; }
