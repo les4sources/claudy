@@ -90,22 +90,24 @@
             à la carte comme le relief.
           .mt-3.border-t.border-stone-100.pt-3
             p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Géoportail de Wallonie
-            ul.space-y-1
-              - MapGeoportailLayer.all.each do |couche|
-                li
-                  label.flex.cursor-pointer.items-center.gap-2.py-1.text-sm.text-stone-600
-                    input[type="checkbox" class="rounded border-stone-300 text-4s-main focus:ring-teal-400"
-                          data-action="change->map#toggleGeoportail"
-                          data-geoportail-key=couche.key
-                          data-geoportail-url=couche.url
-                          data-geoportail-layers=couche.layers
-                          data-geoportail-opacity=couche.opacity
-                          data-geoportail-z-index=couche.z_index
-                          data-geoportail-max-native-zoom=couche.max_native_zoom
-                          data-geoportail-name=couche.name
-                          data-geoportail-info-service=couche.info_service
-                          data-geoportail-info-layers=couche.info_layers]
-                    span.truncate = couche.name
+            - MapGeoportailLayer.grouped.each do |intitule, couches|
+              p.mt-2.text-xs.text-stone-400 = intitule
+              ul.space-y-1
+                - couches.each do |couche|
+                  li
+                    label.flex.cursor-pointer.items-center.gap-2.py-1.text-sm.text-stone-600
+                      input[type="checkbox" class="rounded border-stone-300 text-4s-main focus:ring-teal-400"
+                            data-action="change->map#toggleGeoportail"
+                            data-geoportail-key=couche.key
+                            data-geoportail-url=couche.url
+                            data-geoportail-layers=couche.layers
+                            data-geoportail-opacity=couche.opacity
+                            data-geoportail-z-index=couche.z_index
+                            data-geoportail-max-native-zoom=couche.max_native_zoom
+                            data-geoportail-name=couche.name
+                            data-geoportail-info-service=couche.info_service
+                            data-geoportail-info-layers=couche.info_layers]
+                      span.truncate = couche.name
             p.mt-1.text-xs.text-stone-400 Couche affichée : touchez la carte pour en lire le détail.
 
           / Les couches typées (phase 2). La case affiche ou masque ; le nom rend

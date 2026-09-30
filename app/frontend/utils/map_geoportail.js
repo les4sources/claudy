@@ -84,17 +84,90 @@ const FORMATTERS = {
   },
   courbes(results) {
     return results
-      .filter(({ attributes: a }) => present(a['Stretch.Pixel Value']) && a['Stretch.Pixel Value'] !== 'NoData')
-      .map(({ attributes: a }) =>
-        entry(`Altitude ${decimal(a['Stretch.Pixel Value'])} m`, { detail: 'Terrain nu, MNT LiDAR 2021-2022' })
-      );
+      .map(({ attributes: a }) => pixelValue(a))
+      .filter((value) => value !== null)
+      .map((value) => entry(`Altitude ${decimal(value)} m`, { detail: 'Terrain nu, MNT LiDAR 2021-2022' }));
+  },
+  pentes(results) {
+    return results
+      .map(({ attributes: a }) => pixelValue(a))
+      .filter((value) => value !== null)
+      .map((value) => entry(`Pente ${decimal(value, 0)} %`, { detail: 'MNT LiDAR 2013-2014' }));
+  },
+  ruissellement(results) {
+    return results.map(({ layerName, attributes: a }) => {
+      if (present(a.NOMA)) {
+        return entry([a.NOMB, titleCase(a.NOMA)].filter(present).join(' '), { detail: layerName });
+      }
+      if (present(a.arcid)) return entry('Axe de ruissellement concentré', { detail: "L'eau de pluie se concentre ici" });
+      return entry(layerName);
+    });
+  },
+  essences(results) {
+    const labels = {
+      NT_DESC: 'Niveau trophique',
+      NH_DESC: 'Niveau hydrique',
+      SS_DESC: 'Climat',
+      AE_DESC: "Apports d'eau",
+    };
+    return results.flatMap(({ attributes: a }) =>
+      Object.entries(labels)
+        .map(([field, label]) => [label, a[`Raster.${field}`] ?? a[field]])
+        .filter(([, value]) => present(value))
+        .map(([label, value]) => entry(`${label} : ${value}`))
+    );
+  },
+  forets_anciennes(results) {
+    return results.map(({ layerName, attributes: a }) => {
+      const age = a['Ancienneté de la forêt actuelle'];
+      if (present(age)) return entry(capitalize(age), { detail: a['Classification de la forêt actuelle'] });
+      const ferraris = a["Description de l'occupation du sol"];
+      return present(ferraris) ? entry(capitalize(ferraris), { detail: 'Vers 1777' }) : entry(layerName);
+    });
+  },
+  plan_secteur(results) {
+    return results.map(({ layerName, attributes: a }) => {
+      // Le SPW nomme la clé du lien « Lien Wallex » avec une espace finale.
+      const wallexKey = Object.keys(a).find((key) => key.trim() === 'Lien Wallex');
+      const text = present(a['Phrase carto juridique'])
+        ? capitalize(a['Phrase carto juridique'])
+        : present(a.Description)
+          ? a.Description
+          : layerName;
+      return entry(text, {
+        detail: present(a['Article CoDT']) ? `CoDT ${a['Article CoDT']}` : undefined,
+        href: a[wallexKey],
+        hrefLabel: 'Texte sur Wallex',
+      });
+    });
   },
 };
 
-// Les résultats `identify` d'une couche, mis en entrées affichables.
+// La valeur d'un pixel raster (« Stretch.Pixel Value »), ou `null` hors
+// couverture.
+function pixelValue(attributes) {
+  const raw = attributes['Stretch.Pixel Value'];
+  if (!present(raw) || raw === 'NoData') return null;
+  const value = Number(String(raw).replace(',', '.'));
+  return Number.isFinite(value) ? value : null;
+}
+
+const capitalize = (text) => String(text).charAt(0).toUpperCase() + String(text).slice(1);
+
+// « BOCQ » → « Bocq », « RY-DE-VAUX » → « Ry-De-Vaux ».
+const titleCase = (text) => String(text).toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (_, sep, c) => sep + c.toUpperCase());
+
+// Les résultats `identify` d'une couche, mis en entrées affichables. Plusieurs
+// polygones voisins disent souvent la même chose : une entrée par contenu.
 export function formatResults(key, results) {
   const format = FORMATTERS[key] || ((items) => items.map((r) => entry(r.value || r.layerName)));
-  return format(results);
+  const seen = new Set();
+  return format(results).filter(({ text, detail }) => {
+    const id = `${text}|${detail ?? ''}`;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
 }
 
 export class GeoportailInfo {
