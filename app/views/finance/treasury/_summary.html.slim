@@ -25,7 +25,7 @@ section.mb-8.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidd
     .bg-white.px-5.py-4
       p.text-xs.uppercase.text-stone-400 À payer (90 j)
       p.mt-1.text-2xl.font-semibold.tabular-nums.text-stone-900= number_to_currency(treasury.outgoing_cents / 100.0, unit: "€")
-      p.mt-1.text-xs.text-stone-500 file « À payer »
+      p.mt-1.text-xs.text-stone-500 file « À payer » et charges fixes
     .bg-white.px-5.py-4
       p.text-xs.uppercase.text-stone-400 Point bas projeté
       p.mt-1.text-2xl.font-semibold.tabular-nums(class="#{lowest.balance_cents.negative? ? 'text-red-700' : 'text-stone-900'}")= number_to_currency(lowest.balance_cents / 100.0, unit: "€")

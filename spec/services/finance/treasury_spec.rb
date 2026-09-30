@@ -176,6 +176,51 @@ RSpec.describe Finance::Treasury do
       expect(treasury.outflows).to be_empty
     end
 
+    describe "les charges fixes" do
+      def charge(**attributes)
+        RecurringExpense.create!({ legal_entity: entity, label: "Voo", amount_cents: 6_776, frequency: "monthly",
+                                   first_due_on: Date.new(2026, 1, 27), third_party: tiers }.merge(attributes))
+      end
+
+      it "retire chaque occurrence de l'horizon à sa date" do
+        voo = charge
+
+        expect(treasury.outflows.map { |o| [o.recurring_expense, o.due_on, o.amount_cents] }).to eq([
+          [voo, Date.new(2026, 10, 27), 6_776],
+          [voo, Date.new(2026, 11, 27), 6_776],
+          [voo, Date.new(2026, 12, 27), 6_776]
+        ])
+        expect(treasury.outgoing_cents).to eq(3 * 6_776)
+      end
+
+      it "s'efface quand la vraie facture du même tiers couvre la période" do
+        charge
+        facture(total: 7_000, due_on: Date.new(2026, 11, 20))
+
+        expect(treasury.outflows.map { |o| [o.recurring?, o.due_on, o.amount_cents] }).to eq([
+          [true, Date.new(2026, 10, 27), 6_776],
+          [false, Date.new(2026, 11, 20), 7_000],
+          [true, Date.new(2026, 12, 27), 6_776]
+        ])
+      end
+
+      it "reste estimée sans fournisseur, même quand une facture tombe le même mois" do
+        charge(third_party: nil)
+        facture(total: 7_000, due_on: Date.new(2026, 11, 20))
+
+        expect(treasury.outflows.count(&:recurring?)).to eq(3)
+      end
+
+      it "ignore une charge inactive, terminée ou d'une autre entité" do
+        srl = build_legal_entity(name: "Domaine SRL", form: "srl")
+        charge(active: false)
+        charge(label: "Ancien contrat", ends_on: Date.new(2026, 9, 1))
+        charge(label: "SRL", legal_entity: srl)
+
+        expect(treasury.outflows).to be_empty
+      end
+    end
+
     it "dessine des marches et trouve le point bas" do
       facture(total: 150_000, due_on: Date.new(2026, 10, 5))
       stay(arrival: Date.new(2026, 10, 20), departure: Date.new(2026, 10, 22), total: 80_000)

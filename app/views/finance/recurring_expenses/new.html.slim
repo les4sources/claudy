@@ -1,0 +1,5 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Nouvelle charge fixe"
+
+.max-w-4xl
+  = render "form", recurring_expense: @recurring_expense

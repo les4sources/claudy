@@ -24,6 +24,8 @@ module Finance
   #    du 2026-09-29) et retire les dettes à leur échéance — une dette échue ou
   #    sans échéance sort aujourd'hui. Un séjour en RETARD n'y entre pas : un
   #    retard n'est pas une entrée certaine, on le liste sans compter dessus.
+  #    Les charges fixes (`RecurringExpense`, 2026-09-30) sortent à chaque
+  #    occurrence, sauf quand une vraie facture du même tiers couvre la période.
   class Treasury
     HISTORY_MONTHS = 12
     HORIZON_DAYS = 90
@@ -42,7 +44,11 @@ module Finance
 
     Receivable = Struct.new(:stay, :due_on, :amount_cents, keyword_init: true)
 
-    Outflow = Struct.new(:payable, :due_on, :amount_cents, keyword_init: true)
+    # Une sortie attendue : une dette de la file « À payer » (`payable`), ou une
+    # occurrence de charge fixe (`recurring_expense`) — jamais les deux.
+    Outflow = Struct.new(:payable, :recurring_expense, :due_on, :amount_cents, keyword_init: true) do
+      def recurring? = recurring_expense.present?
+    end
 
     def self.for_foundation(today: Date.current)
       entity = LegalEntity.actives.find_by(form: "foundation")
@@ -106,8 +112,24 @@ module Finance
 
     # --- Ce qui doit sortir ------------------------------------------------
 
+    # Les dettes de la file « À payer », puis les charges fixes de l'horizon.
     def outflows
-      @outflows ||= payable_queue.rows.filter_map do |payable|
+      @outflows ||= (payable_outflows + recurring_outflows).sort_by { |o| [o.due_on, o.recurring? ? 1 : 0] }
+    end
+
+    # Chaque occurrence d'une charge fixe entre aujourd'hui et la fin de
+    # l'horizon — sauf celles qu'une vraie facture du même tiers couvre déjà :
+    # la facture encodée dit le montant exact, l'estimation s'efface.
+    def recurring_outflows
+      @recurring_outflows ||= recurring_expenses.flat_map do |expense|
+        expense.occurrences_between(@today, horizon_end)
+               .reject { |due_on| covered_by_invoice?(expense, due_on) }
+               .map { |due_on| Outflow.new(recurring_expense: expense, due_on: due_on, amount_cents: expense.amount_cents) }
+      end
+    end
+
+    def payable_outflows
+      @payable_outflows ||= payable_queue.rows.filter_map do |payable|
         next unless foundation_payable?(payable)
 
         amount = payable.remaining_cents
@@ -250,6 +272,20 @@ module Finance
     # Une dette d'une autre entité (SRL, SSI) ne sort pas du compte de la
     # Fondation. Une dette sans entité (parts d'événements, relevés de
     # porteurs) est payée par la Fondation, seule à avoir des comptes ici.
+    def recurring_expenses
+      RecurringExpense.actives.where(legal_entity_id: @entity.id).includes(:third_party).to_a
+    end
+
+    def covered_by_invoice?(expense, due_on)
+      return false if expense.third_party_id.nil?
+
+      period = expense.period_for(due_on)
+      payable_outflows.any? do |outflow|
+        outflow.payable.payable_third_party&.id == expense.third_party_id &&
+          period.cover?(outflow.payable.payable_due_on || @today)
+      end
+    end
+
     def foundation_payable?(payable)
       entity_id = payable.try(:legal_entity_id)
       entity_id.nil? || entity_id == @entity.id

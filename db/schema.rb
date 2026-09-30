@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_29_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_30_080000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1889,6 +1889,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_150000) do
     t.check_constraint "applies_to::text = 'account'::text AND member_account_id IS NOT NULL OR applies_to::text <> 'account'::text AND member_account_id IS NULL", name: "recurring_charges_scope_check"
   end
 
+  create_table "recurring_expenses", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.bigint "amount_cents", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "ends_on"
+    t.date "first_due_on", null: false
+    t.string "frequency", default: "monthly", null: false
+    t.bigint "general_account_id"
+    t.string "label", null: false
+    t.bigint "legal_entity_id", null: false
+    t.text "notes"
+    t.bigint "third_party_id"
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_recurring_expenses_on_deleted_at"
+    t.index ["general_account_id"], name: "index_recurring_expenses_on_general_account_id"
+    t.index ["legal_entity_id"], name: "index_recurring_expenses_on_legal_entity_id"
+    t.index ["third_party_id"], name: "index_recurring_expenses_on_third_party_id"
+  end
+  
   create_table "rental_items", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
@@ -2607,6 +2627,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_150000) do
   add_foreign_key "rate_versions", "rates"
   add_foreign_key "recurring_charges", "household_members"
   add_foreign_key "recurring_charges", "member_accounts"
+  add_foreign_key "recurring_expenses", "general_accounts"
+  add_foreign_key "recurring_expenses", "legal_entities"
+  add_foreign_key "recurring_expenses", "third_parties"
   add_foreign_key "reservations", "bookings"
   add_foreign_key "reservations", "rooms"
   add_foreign_key "revenue_mappings", "general_accounts"

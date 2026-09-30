@@ -10,7 +10,11 @@ RSpec.describe "Disponibilités d'activité (calendrier mensuel)", type: :reques
   let(:user) { User.create!(email: "porteur@les4sources.be", password: "password123") }
   let(:experience) { Experience.create!(name: "Balade en forêt", duration_hours: 2) }
   let(:month_start) { Date.today.beginning_of_month }
-  let(:month_param) { month_start.strftime("%Y-%m") }
+  # Les créneaux à poser vivent le mois PROCHAIN, dont chaque jour est futur :
+  # « le 15 du mois courant ou demain » tombait hors de la grille affichée le
+  # dernier jour du mois (échec constaté le 2026-09-30).
+  let(:future_month) { Date.today.next_month.beginning_of_month }
+  let(:future_month_param) { future_month.strftime("%Y-%m") }
   let(:turbo_headers) { { "Accept" => "text/vnd.turbo-stream.html" } }
 
   before { sign_in user }
@@ -58,21 +62,21 @@ RSpec.describe "Disponibilités d'activité (calendrier mensuel)", type: :reques
 
     it "marque le créneau posé comme occupé" do
       # Un jour futur du mois courant pour éviter la case "past".
-      future_day = [month_start + 15, Date.today + 1].max
+      future_day = future_month + 15
       experience.experience_availabilities.create!(available_on: future_day, starts_at: "10:00")
 
-      get experience_path(experience, month: month_param)
+      get experience_path(experience, month: future_month_param)
 
       expect(response.body).to include('data-availability-state="taken"')
     end
   end
 
   describe "POST — poser un bloc" do
-    let(:target_day) { [month_start + 20, Date.today + 1].max }
+    let(:target_day) { future_month + 20 }
 
     it "répond en turbo_stream et le frame contient le nouveau créneau (occupé)" do
       expect {
-        post experience_experience_availabilities_path(experience, month: month_param),
+        post experience_experience_availabilities_path(experience, month: future_month_param),
              params: { experience_availability: { available_on: target_day.iso8601, starts_at: "14:00" } },
              headers: turbo_headers
       }.to change(ExperienceAvailability, :count).by(1)
@@ -87,7 +91,7 @@ RSpec.describe "Disponibilités d'activité (calendrier mensuel)", type: :reques
     end
 
     it "repli HTML : redirige vers le mois affiché pour le no-JS" do
-      week_param = month_param
+      week_param = future_month_param
 
       post experience_experience_availabilities_path(experience, month: week_param),
            params: { experience_availability: { available_on: target_day.iso8601, starts_at: "16:00" } },
@@ -100,7 +104,7 @@ RSpec.describe "Disponibilités d'activité (calendrier mensuel)", type: :reques
       experience.experience_availabilities.create!(available_on: target_day, starts_at: "10:00")
 
       expect {
-        post experience_experience_availabilities_path(experience, month: month_param),
+        post experience_experience_availabilities_path(experience, month: future_month_param),
              params: { experience_availability: { available_on: target_day.iso8601, starts_at: "11:00" } }
       }.not_to change(ExperienceAvailability, :count)
 
@@ -109,13 +113,13 @@ RSpec.describe "Disponibilités d'activité (calendrier mensuel)", type: :reques
   end
 
   describe "DELETE — retirer un bloc" do
-    let(:target_day) { [month_start + 22, Date.today + 1].max }
+    let(:target_day) { future_month + 22 }
 
     it "supprime en turbo_stream et remplace le frame" do
       availability = experience.experience_availabilities.create!(available_on: target_day, starts_at: "16:00")
 
       expect {
-        delete experience_experience_availability_path(experience, availability, month: month_param),
+        delete experience_experience_availability_path(experience, availability, month: future_month_param),
                headers: turbo_headers
       }.to change(ExperienceAvailability, :count).by(-1)
 
@@ -127,10 +131,10 @@ RSpec.describe "Disponibilités d'activité (calendrier mensuel)", type: :reques
     it "repli HTML : redirige vers le mois affiché pour le no-JS" do
       availability = experience.experience_availabilities.create!(available_on: target_day, starts_at: "18:00")
 
-      delete experience_experience_availability_path(experience, availability, month: month_param),
+      delete experience_experience_availability_path(experience, availability, month: future_month_param),
              headers: { "Accept" => "text/html" }
 
-      expect(response).to redirect_to(experience_path(experience, month: month_param))
+      expect(response).to redirect_to(experience_path(experience, month: future_month_param))
     end
   end
 end
