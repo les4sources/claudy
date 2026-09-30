@@ -13,6 +13,10 @@ module MailIntake
   # proposition — la file ne dépend pas de l'IA.
   class Analyze
     NONE = "aucun".freeze
+    # Monte quand la lecture apprend quelque chose (v2 : de quoi créer le
+    # fournisseur). Le passage suivant du cron relit alors les mails encore à
+    # traiter — jamais ceux déjà classés ou ignorés.
+    VERSION = 2
     MAX_PDF_PAGES = 5
     MAX_TEXT = 8_000
     MAX_SUPPLIER_OPTIONS = 200
@@ -30,6 +34,10 @@ module MailIntake
                  "publicité, reçu déjà payé."
     }.freeze
 
+    SUPPLIER_NAME_INSTRUCTIONS = "Quel est le nom de l'entreprise ou de la personne qui a émis ce document et qu'il " \
+                                 "faut payer ? Ni le client (Les 4 Sources), ni la plateforme qui a transmis le " \
+                                 "mail (OkiOki, Odoo…).".freeze
+
     NATURE_CRITERIA = {
       "invoice" => "Le mail apporte ou annonce une facture à payer (en pièce jointe ou par un lien).",
       "reminder" => "Le mail rappelle un paiement en retard.",
@@ -45,7 +53,7 @@ module MailIntake
 
     def run!
       @message.mail_attachments.each { |attachment| analyze_attachment(attachment) }
-      @message.update!(triage: triage, analyzed_at: Time.current)
+      @message.update!(triage: triage.merge("version" => VERSION), analyzed_at: Time.current)
       @message
     end
 
@@ -101,7 +109,20 @@ module MailIntake
       end
       supplier ||= suppliers.find { |t| t.email.present? && t.email.casecmp?(@message.from_address.to_s) }
       proposal["third_party_id"] = { "value" => supplier.id, "source" => "code" } if supplier
-      proposal
+      proposal.merge(new_supplier_identifiers(vats, ibans, our_vats))
+    end
+
+    # De quoi créer le fournisseur s'il n'existe pas encore (2026-09-30) : la TVA
+    # qui n'est pas la nôtre, l'IBAN qui passe la clé mod 97 et n'est pas un de
+    # nos comptes. Le nom, lui, se choisit par Jev (`supplier_name`).
+    def new_supplier_identifiers(vats, ibans, our_vats)
+      our_ibans = CashAccount.where.not(iban: [nil, ""]).pluck(:iban).map { |i| InvoiceCandidates.normalize_iban(i) }
+      vat = (vats - our_vats).first
+      iban = ibans.find { |i| our_ibans.exclude?(i) && IbanValidator.valid_iban?(i) }
+      {
+        "supplier_vat" => vat && { "value" => "BE#{vat}", "source" => "code" },
+        "supplier_iban" => iban && { "value" => iban, "source" => "code" }
+      }.compact
     end
 
     def jev_proposal(attachment, text, candidates, known)
@@ -132,6 +153,8 @@ module MailIntake
           criteria: supplier_options.to_h { |t| [t.name, nil] }.merge(NONE => "Aucun de ces fournisseurs : c'est un nouveau tiers.")
         }
       end
+      names = known.key?("third_party_id") ? [] : supplier_name_candidates(text)
+      questions["supplier_name"] = pick(SUPPLIER_NAME_INSTRUCTIONS, names) if names.any?
 
       answers = @jev.ask(state: { "email" => email_state,
                                   "document" => { "fichier" => attachment.filename, "texte" => text.truncate(MAX_TEXT) } },
@@ -144,9 +167,25 @@ module MailIntake
       proposal["number"] = picked(answers["number"], numbers)
       proposal["legal_entity_id"] = picked_record(answers["legal_entity"], entities)
       proposal["third_party_id"] = picked_record(answers["supplier"], supplier_options)
+      proposal["supplier_name"] = picked(answers["supplier_name"], names)
       proposal.compact
     rescue Jev::Client::Error => e
       { "error" => e.message }
+    end
+
+    # Les noms possibles de l'émetteur : l'expéditeur, les morceaux du sujet
+    # (« Vous avez reçu une facture électronique - FRATERNITE DE TIBERIADE -
+    # Réf : 26122 »), et les premières lignes du PDF, où l'en-tête se trouve.
+    # Nos propres noms en sont retirés : le client n'est pas le fournisseur.
+    def supplier_name_candidates(text)
+      ours = LegalEntity.pluck(:name).map { |n| n.downcase[0, 12] } + ["les 4 sources", "ahinvaux"]
+      raw = [@message.from_name.to_s] + @message.subject.to_s.split(/\s+[-–|:]\s+|[()]/) +
+            text.to_s.lines.first(20)
+      raw.map { |l| l.to_s.squish }
+         .select { |l| l.length.between?(3, 70) && l.match?(/[[:alpha:]]{3}/) }
+         .reject { |l| ours.any? { |o| l.downcase.include?(o) } }
+         .uniq.first(40)
+         .map { |l| { raw: l, value: l } }
     end
 
     def pick(instructions, candidates)

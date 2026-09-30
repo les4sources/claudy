@@ -63,7 +63,7 @@
     - elsif attachment.text_content.blank? && proposal.present?
       p.mt-2.text-xs.text-amber-700 Ce PDF ne contient pas de texte (scan ?) : à encoder à la main.
     - apercu = rails_blob_path(attachment.file, disposition: "inline")
-    iframe.mt-3.w-full.rounded-lg.ring-1.ring-gray-200(src=apercu title="Aperçu de #{attachment.filename}" style="height: 70vh")
+    iframe.mt-3.w-full.rounded-lg.ring-1.ring-gray-200(src="#{apercu}#navpanes=0&view=FitH" title="Aperçu de #{attachment.filename}" style="height: 70vh")
   - else
     = image_tag rails_blob_path(attachment.file, disposition: "inline"), alt: "Pièce jointe #{attachment.filename}", class: "mt-3 max-h-[70vh] rounded-lg ring-1 ring-gray-200"
     p.mt-2.text-xs.text-gray-500 Une photo ou un scan : Claudy ne le lit pas encore, à encoder à la main.

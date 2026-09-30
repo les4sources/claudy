@@ -1,16 +1,29 @@
 / Le formulaire d'une facture d'achat. Le « reste à ventiler » se calcule
   pendant qu'on tape : sur une facture à vingt lignes, découvrir le déséquilibre
   à la validation veut dire tout relire.
+
+  Deux colonnes (2026-09-30) : la saisie à gauche, la PIÈCE à droite, qui reste
+  à l'écran pendant qu'on descend dans la ventilation. On relit chaque champ
+  contre le document, pas de mémoire.
+- supplier_draft = local_assigns[:supplier_draft] || {}
+- document_blob = invoice.document.attached? ? invoice.document.blob : nil
 = form_with model: invoice, url: url, method: method, html: { class: "space-y-6" },
             data: { controller: "purchase-invoice-form" } do |f|
 
-  .grid.gap-4(class="lg:grid-cols-3")
-    .lg:col-span-2.space-y-4
+  .grid.gap-4(class="lg:grid-cols-2")
+    .space-y-4.min-w-0
       .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.space-y-4
         .grid.gap-3(class="sm:grid-cols-2")
-          div
-            label.block.text-xs.font-medium.text-gray-500 Fournisseur
-            = f.collection_select :third_party_id, third_parties, :id, :name, { include_blank: "Choisir…" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+          / Le fournisseur se cherche, et se crée ici s'il n'existe pas encore :
+            quitter l'écran pour le créer ferait perdre la facture en cours.
+          div(data-controller="supplier-quick-create" data-supplier-quick-create-url-value=quick_finance_third_parties_path class="sm:col-span-2")
+            .flex.items-center.justify-between
+              label.block.text-xs.font-medium.text-gray-500(for="purchase_invoice_third_party_id") Fournisseur
+              button.text-xs.text-blue-500.hover:underline(type="button" data-action="supplier-quick-create#open") ➕ Nouveau fournisseur
+            div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un fournisseur…" class="relative")
+              = f.collection_select :third_party_id, third_parties, :id, :name, { include_blank: "Choisir…" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select", supplier_quick_create_target: "select" }
+              = render "shared/searchable_select_search", label: "Chercher un fournisseur"
+            = render "finance/purchase_invoices/supplier_dialog", draft: supplier_draft
           div
             label.block.text-xs.font-medium.text-gray-500 Entité juridique
             = f.collection_select :legal_entity_id, entities, :id, :name, {}, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
@@ -53,33 +66,42 @@
             span.font-semibold.text-gray-900(data-purchase-invoice-form-target="remaining") —
           p(data-purchase-invoice-form-target="verdict")
 
-    .space-y-4
-      / La pièce. Elle arrive par email : on la fait glisser depuis l'onglet
-        d'à côté plutôt que de la chercher dans l'arborescence.
-      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
-        h3.text-xs.uppercase.tracking-wide.text-gray-400.mb-2 Pièce justificative
-        label.block.cursor-pointer.rounded-xl.border-2.border-dashed.border-gray-300.px-4.py-6.text-center(data-purchase-invoice-form-target="dropzone" data-action="dragover->purchase-invoice-form#dragover dragleave->purchase-invoice-form#dragleave drop->purchase-invoice-form#drop")
-          p.text-sm.text-gray-600 Glissez le PDF ici, ou cliquez pour le choisir.
+      .grid.gap-4(class="sm:grid-cols-2")
+        .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.space-y-3
+          h3.text-xs.uppercase.tracking-wide.text-gray-400 Validation par un pôle
+          label.flex.items-start.gap-2.text-sm.text-gray-700
+            = f.check_box :requires_validation, class: "mt-1"
+            span Un pôle doit dire oui avant que cette facture soit payable.
+          div
+            label.block.text-xs.font-medium.text-gray-500 Pôle concerné
+            = f.collection_select :validation_team_id, teams, :id, :name, { include_blank: "Aucun" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+
+        .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+          label.block.text-xs.font-medium.text-gray-500 Notes
+          = f.text_area :notes, rows: 4, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+
+      .flex.flex-wrap.items-center.gap-3
+        = f.submit submit_label, class: "inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
+        = link_to "Annuler", finance_purchase_invoices_path, class: "text-sm text-gray-500 hover:underline"
+
+    / La pièce, collée en haut de l'écran pendant qu'on défile. Elle arrive par
+      email : on la fait glisser depuis l'onglet d'à côté plutôt que de la
+      chercher dans l'arborescence — ou elle est déjà là, venue de « Pièces reçues ».
+    .min-w-0.self-start(class="lg:sticky lg:top-4")
+      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.space-y-3
+        h3.text-xs.uppercase.tracking-wide.text-gray-400 Pièce justificative
+        label.block.cursor-pointer.rounded-xl.border-2.border-dashed.border-gray-300.px-4.py-3.text-center(data-purchase-invoice-form-target="dropzone" data-action="dragover->purchase-invoice-form#dragover dragleave->purchase-invoice-form#dragleave drop->purchase-invoice-form#drop")
+          p.text-sm.text-gray-600= document_blob ? "Glissez un autre fichier ici pour remplacer la pièce." : "Glissez le PDF ici, ou cliquez pour le choisir."
           p.mt-1.text-xs.text-gray-400(data-purchase-invoice-form-target="filename")
-            = invoice.document.attached? ? invoice.document.filename.to_s : "Aucune pièce choisie"
+            = document_blob ? document_blob.filename.to_s : "Aucune pièce choisie"
           = file_field_tag "purchase_invoice[document]", accept: "application/pdf,image/*", class: "hidden",
                            data: { purchase_invoice_form_target: "file", action: "change->purchase-invoice-form#showFilename" }
-
-      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.space-y-3
-        h3.text-xs.uppercase.tracking-wide.text-gray-400 Validation par un pôle
-        label.flex.items-start.gap-2.text-sm.text-gray-700
-          = f.check_box :requires_validation, class: "mt-1"
-          span Un pôle doit dire oui avant que cette facture soit payable.
-        div
-          label.block.text-xs.font-medium.text-gray-500 Pôle concerné
-          = f.collection_select :validation_team_id, teams, :id, :name, { include_blank: "Aucun" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
-        p.text-xs.text-gray-400
-          | La validation elle-même arrive en phase 3 de l'epic #240. Ici, la case décide seulement où la facture s'arrête.
-
-      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
-        label.block.text-xs.font-medium.text-gray-500 Notes
-        = f.text_area :notes, rows: 3, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
-
-  .flex.flex-wrap.items-center.gap-3
-    = f.submit submit_label, class: "inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
-    = link_to "Annuler", finance_purchase_invoices_path, class: "text-sm text-gray-500 hover:underline"
+        - image = document_blob&.image?
+        / Sans la colonne des vignettes, pleine largeur : sur une demi-page, la
+          visionneuse de Chrome ne montrait qu'un tiers de la facture.
+        - source = document_blob ? rails_blob_path(document_blob, disposition: "inline") : nil
+        - frame_source = source && "#{source}#navpanes=0&view=FitH"
+        iframe.w-full.rounded-lg.ring-1.ring-gray-200(src=(image ? nil : frame_source) hidden=(source.nil? || image) title="Aperçu de la pièce justificative" style="height: 78vh" data-purchase-invoice-form-target="previewFrame")
+        img.w-full.rounded-lg.ring-1.ring-gray-200(src=(image ? source : nil) hidden=!image alt="Aperçu de la pièce justificative" data-purchase-invoice-form-target="previewImage")
+        - if source.nil?
+          p.text-xs.text-gray-400(data-purchase-invoice-form-target="previewEmpty") La pièce s'affichera ici, à côté des champs, pour les vérifier.

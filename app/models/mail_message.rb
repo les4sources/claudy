@@ -50,7 +50,13 @@ class MailMessage < ApplicationRecord
 
   scope :pending, -> { where(status: "pending") }
   scope :recent_first, -> { order(received_at: :desc, id: :desc) }
-  scope :to_analyze, -> { where(analyzed_at: nil) }
+  # Jamais lu, ou lu par une version plus ancienne de l'analyse et encore à
+  # traiter : la file profite de ce que la lecture a appris depuis.
+  scope :to_analyze, lambda {
+    where(analyzed_at: nil).or(
+      where(status: "pending").where("COALESCE((triage->>'version')::int, 1) < ?", MailIntake::Analyze::VERSION)
+    )
+  }
 
   def pending? = status == "pending"
 

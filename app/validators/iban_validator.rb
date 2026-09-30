@@ -25,14 +25,12 @@ class IbanValidator < ActiveModel::EachValidator
     iban = value.to_s.gsub(/\s+/, "").upcase
     return if iban.blank?
 
-    record.errors.add(attribute, message) unless valid_iban?(iban)
+    record.errors.add(attribute, message) unless self.class.valid_iban?(iban)
   end
 
-  private
-
-  def message = options.fetch(:message, "n'est pas un IBAN valide")
-
-  def valid_iban?(iban)
+  # Aussi hors formulaire : la lecture d'une facture reçue par mail ne propose
+  # comme IBAN du fournisseur qu'une chaîne qui passe la clé mod 97.
+  def self.valid_iban?(iban)
     return false unless iban.match?(FORMAT)
 
     expected = LENGTHS[iban[0, 2]]
@@ -43,9 +41,13 @@ class IbanValidator < ActiveModel::EachValidator
 
   # Mod 97 sur l'IBAN pivoté (les 4 premiers caractères passent à la fin), les
   # lettres remplacées par leur rang + 9 (A = 10 … Z = 35).
-  def checksum(iban)
+  def self.checksum(iban)
     rotated = iban[4..] + iban[0, 4]
     digits  = rotated.each_char.map { |c| c.match?(/\d/) ? c : (c.ord - 55).to_s }.join
     digits.to_i % 97
   end
+
+  private
+
+  def message = options.fetch(:message, "n'est pas un IBAN valide")
 end

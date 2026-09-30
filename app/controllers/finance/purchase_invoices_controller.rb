@@ -234,7 +234,7 @@ module Finance
     # La proposition préremplit, elle ne décide pas : l'humain relit tout avant
     # d'enregistrer. Un fournisseur désactivé depuis n'est pas proposé.
     def prefill_from_mail(invoice, attachment)
-      supplier_id = attachment.proposed(:third_party_id)
+      supplier_id = attachment.proposed(:third_party_id) || supplier_matching_vat(attachment.proposed(:supplier_vat))
       invoice.third_party_id = supplier_id if supplier_id && ThirdParty.actives.suppliers.exists?(id: supplier_id)
       entity_id = attachment.proposed(:legal_entity_id)
       invoice.legal_entity_id = entity_id if entity_id && LegalEntity.actives.exists?(id: entity_id)
@@ -243,6 +243,15 @@ module Finance
         invoice.public_send("#{field}=", value) if value.present?
       end
       invoice.document.attach(attachment.file.blob)
+    end
+
+    # Un fournisseur créé APRÈS la lecture du mail (depuis une facture sœur,
+    # typiquement) se retrouve par la TVA lue dans la pièce.
+    def supplier_matching_vat(raw)
+      vat = MailIntake::InvoiceCandidates.normalize_vat(raw)
+      return nil unless vat
+
+      ThirdParty.actives.suppliers.find { |t| MailIntake::InvoiceCandidates.normalize_vat(t.vat_number) == vat }&.id
     end
 
     # La pièce du mail devient la pièce justificative, sauf si l'humain en a

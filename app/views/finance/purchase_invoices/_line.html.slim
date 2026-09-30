@@ -1,18 +1,23 @@
-/ Une ligne de ventilation : le compte de charge, le pôle, le montant.
+/ Une ligne de ventilation : le compte de charge, le pôle, le montant. Compte
+  et pôle se cherchent (`searchable-select`) : le plan comptable fait des
+  centaines de lignes. Une ligne ajoutée depuis le <template> s'équipe toute
+  seule, Stimulus branche les contrôleurs à l'insertion.
 .rounded-xl.bg-gray-50.px-3.py-3(data-purchase-invoice-form-target="row")
   = lf.hidden_field :id
   = lf.hidden_field :_destroy, value: "0"
   .grid.gap-2(class="sm:grid-cols-12")
-    .sm:col-span-4
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" class="relative sm:col-span-7")
       label.block.text-xs.font-medium.text-gray-500 Compte
-      = lf.collection_select :general_account_id, general_accounts, :id, :to_s, { include_blank: "Choisir…" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
-    .sm:col-span-3
+      = lf.collection_select :general_account_id, general_accounts, :id, :to_s, { include_blank: "Choisir…" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+      = render "shared/searchable_select_search", label: "Chercher un compte"
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Non affecté" data-searchable-select-clearable-value="true" class="relative sm:col-span-5")
       label.block.text-xs.font-medium.text-gray-500 Pôle
-      = lf.collection_select :team_id, teams, :id, :name, { include_blank: "Non affecté" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
-    .sm:col-span-3
+      = lf.collection_select :team_id, teams, :id, :name, { include_blank: "Non affecté" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+      = render "shared/searchable_select_search", label: "Chercher un pôle"
+    .sm:col-span-8
       label.block.text-xs.font-medium.text-gray-500 Libellé
       = lf.text_field :label, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
-    .sm:col-span-2
+    .sm:col-span-4
       label.block.text-xs.font-medium.text-gray-500 Montant (€)
       = text_field_tag "#{lf.object_name}[amount_euros]", (lf.object.amount_cents.to_i.nonzero? ? format("%.2f", lf.object.amount_cents / 100.0) : nil),
                        inputmode: "decimal", placeholder: "0,00",

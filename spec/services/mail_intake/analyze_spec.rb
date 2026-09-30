@@ -10,7 +10,7 @@ RSpec.describe MailIntake::Analyze do
   let(:lines) do
     ["Proximus SA - TVA BE 0202.239.951", "Client : Fondation Les 4 Sources BE0508977707",
      "Facture n° 2026-77812 du 12/09/2026", "Sous-total 69,52", "Total a payer 84,12 EUR",
-     "Echeance 15/10/2026"]
+     "Echeance 15/10/2026", "IBAN BE68 5390 0754 7034"]
   end
   let(:message) do
     imap = MailIntakeHelpers::FakeImap.new({ 1 => raw_mail(message_id: "x@proximus.be", pdf: text_pdf(lines)) })
@@ -85,6 +85,36 @@ RSpec.describe MailIntake::Analyze do
     expect(attachment.proposal["third_party_id"]).to include("source" => "code")
     expect(message.reload.analyzed_at).to be_present
   end
+
+it "fournisseur inconnu : prépare sa création — TVA et IBAN par le code, nom choisi par Jev hors de nos propres noms" do
+  proximus.update!(vat_number: nil)
+  nommeur = MailIntakeHelpers::FakeJev.new { |id, _| { "choice" => "Proximus", "confidence" => 0.91 } if id == "supplier_name" }
+
+  described_class.new(mail_message: message, jev: nommeur).run!
+
+  attachment = message.mail_attachments.first.reload
+  expect(attachment.supplier_draft).to eq(name: "Proximus", vat_number: "BE0202239951", iban: "BE68539007547034")
+  options = nommeur.calls.find { |c| c[:questions].key?("supplier_name") }[:questions]["supplier_name"][:criteria].keys
+  expect(options).to include("Proximus", "Proximus SA - TVA BE 0202.239.951")
+  expect(options.grep(/Fondation Les 4 Sources/)).to be_empty
+end
+
+it "fournisseur reconnu : ne demande pas son nom" do
+  described_class.new(mail_message: message, jev: jev).run!
+
+  expect(jev.calls.flat_map { |c| c[:questions].keys }).not_to include("supplier_name")
+end
+
+it "relit les mails encore à traiter quand l'analyse a progressé, jamais ceux déjà classés" do
+  described_class.new(mail_message: message, jev: jev).run!
+  expect(MailMessage.to_analyze).to be_empty
+
+  message.update!(triage: message.triage.except("version"))
+  expect(MailMessage.to_analyze).to contain_exactly(message)
+
+  message.update!(status: "filed")
+  expect(MailMessage.to_analyze).to be_empty
+end
 
   it "ne crée jamais de facture" do
     expect { described_class.new(mail_message: message, jev: jev).run! }.not_to change(PurchaseInvoice, :count)
