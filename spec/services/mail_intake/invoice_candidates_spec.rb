@@ -16,6 +16,13 @@ RSpec.describe MailIntake::InvoiceCandidates do
       .to eq([["1.234,56", 123_456], ["259,26", 25_926], ["1 493,82", 149_382], ["84.12", 8_412]])
   end
 
+  it "trouve un montant rond quand il porte sa devise, et seulement alors" do
+    rond = described_class.new("Education ânes(2H) 99,17€ 20,83€ 120€\nTotal: 120€\nSéance de 2 heures, 1.250 EUR le forfait")
+
+    expect(rond.amounts.map { |c| [c[:raw], c[:value]] })
+      .to eq([["99,17", 9_917], ["20,83", 2_083], ["120", 12_000], ["1.250", 125_000]])
+  end
+
   it "ne prend pas une date écrite avec des points pour un montant" do
     expect(candidates.amounts.map { |c| c[:raw] }).not_to include("12.10")
   end

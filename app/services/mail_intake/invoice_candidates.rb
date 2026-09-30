@@ -23,6 +23,9 @@ module MailIntake
     SPACES = "[ \\u00A0\\u202F]".freeze
     # 1.234,56 · 1 234,56 · 84,12 · 1,234.56 · 84.12
     AMOUNT_RE = /(?<![\d.,])(?:\d{1,3}(?:(?:#{SPACES}|[.,])\d{3})+|\d+)[.,]\d{2}(?!\d|[.,]\d)/
+    # « Total: 120€ » — un montant rond n'a pas de décimales, mais il porte sa
+    # devise. Sans elle, un entier nu serait n'importe quel nombre du document.
+    WHOLE_AMOUNT_RE = /(?<![\d.,])\d{1,3}(?:(?:#{SPACES}|\.)\d{3})*(?=#{SPACES}?(?:€|EUR\b))/
     NUMERIC_DATE_RE = %r{(?<!\d)(\d{1,2})[/.-](\d{1,2})[/.-](\d{4}|\d{2})(?!\d)}
     ISO_DATE_RE = /(?<!\d)(\d{4})-(\d{2})-(\d{2})(?!\d)/
     TEXT_DATE_RE = /(?<!\d)(\d{1,2})(?:er)?\s+(#{MONTHS.keys.join('|')})\s+(\d{4})/i
@@ -45,10 +48,15 @@ module MailIntake
     end
 
     def amounts
-      uniq_by_raw(@text.scan(AMOUNT_RE).filter_map do |raw|
+      decimal = @text.scan(AMOUNT_RE).filter_map do |raw|
         cents = to_cents(raw)
         { raw: raw, value: cents } if cents&.positive?
-      end)
+      end
+      whole = @text.scan(WHOLE_AMOUNT_RE).filter_map do |raw|
+        euros = raw.gsub(/[^\d]/, "").to_i
+        { raw: raw, value: euros * 100 } if euros.positive?
+      end
+      uniq_by_raw(decimal + whole)
     end
 
     def dates
