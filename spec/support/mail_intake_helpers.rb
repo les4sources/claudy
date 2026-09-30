@@ -48,7 +48,8 @@ module MailIntakeHelpers
 # embarqué. `taux` : [[pourcentage, base HTVA, TVA]].
 def ubl_xml(number: "WIE45/2026/11492", supplier: "BRUYERRE", supplier_vat: "BE0431703151",
             iban: "BE68539007547034", customer_vat: "BE0508977707", taux: [[21, "230.54", "48.41"]],
-            total: "278.95", prepaid: nil, payable: nil, pdf: nil, credit_note: false)
+            total: "278.95", prepaid: nil, payable: nil, pdf: nil, credit_note: false,
+              payment_id: "+++090/1234/56789+++")
   root = credit_note ? "CreditNote" : "Invoice"
   subtotals = taux.map do |pct, base, tax|
     "<cac:TaxSubtotal><cbc:TaxableAmount currencyID=\"EUR\">#{base}</cbc:TaxableAmount>" \
@@ -74,7 +75,7 @@ def ubl_xml(number: "WIE45/2026/11492", supplier: "BRUYERRE", supplier_vat: "BE0
         <cac:PartyTaxScheme><cbc:CompanyID>#{supplier_vat}</cbc:CompanyID></cac:PartyTaxScheme></cac:Party></cac:AccountingSupplierParty>
       <cac:AccountingCustomerParty><cac:Party><cac:PartyLegalEntity><cbc:RegistrationName>Fondation Les 4 Sources</cbc:RegistrationName></cac:PartyLegalEntity>
         <cac:PartyTaxScheme><cbc:CompanyID>#{customer_vat}</cbc:CompanyID></cac:PartyTaxScheme></cac:Party></cac:AccountingCustomerParty>
-      <cac:PaymentMeans><cbc:PaymentMeansCode>30</cbc:PaymentMeansCode><cbc:PaymentID>+++090/1234/56789+++</cbc:PaymentID>
+      <cac:PaymentMeans><cbc:PaymentMeansCode>30</cbc:PaymentMeansCode>#{payment_id ? "<cbc:PaymentID>#{payment_id}</cbc:PaymentID>" : ""}
         <cac:PayeeFinancialAccount><cbc:ID>#{iban}</cbc:ID></cac:PayeeFinancialAccount></cac:PaymentMeans>
       <cac:TaxTotal><cbc:TaxAmount currencyID="EUR">0</cbc:TaxAmount>#{subtotals}</cac:TaxTotal>
       <cac:LegalMonetaryTotal><cbc:TaxInclusiveAmount currencyID="EUR">#{total}</cbc:TaxInclusiveAmount>

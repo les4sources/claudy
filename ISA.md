@@ -647,3 +647,11 @@ Demande de Michael : « Certains emails sur compta@les4sources.be contiennent de
 - [x] ISC-M21: Les deux mails d'une même facture (PDF puis UBL, via OkiOki) ne font pas deux factures : une fois l'une encodée, l'autre affiche « Déjà dans la compta » et sort de la file avec elle. Probe : spec.
   - Évidence 2026-09-30 : specs (par numéro + TVA ; par numéro + total + date quand la TVA du PDF est fausse) ; au navigateur, facture n° 2 créée depuis l'UBL 3 PETITS POIDS → le mail PDF jumeau (n° 31) passe « Classé » avec elle.
 - Anti-claim : l'XML est lu sans résolution d'entités externes ni accès réseau (XXE).
+
+#### Communication de paiement des factures d'achat (ajout 2026-09-30)
+
+Demande de Michael : « pour préparer le paiement d'une facture, est-ce qu'on aura la communication à spécifier ? Je crois qu'elle est dans l'UBL. » Constat : dans l'UBL (`PaymentID`) 2 fois sur 9, dans le seul PDF 4 autres fois, sinon la communication libre est le numéro de facture.
+
+- [ ] ISC-M22: Une facture d'achat porte une communication de paiement, modifiable dans son formulaire. « À payer » l'affiche, copiable, à la place du numéro de facture, qui reste la valeur par défaut. Probe : request specs.
+- [ ] ISC-M23: La communication est pré-remplie depuis le `PaymentID` de l'UBL, sinon depuis une communication structurée `+++…+++` du PDF. Probe : specs + relecture des vraies pièces (Ferme de Grange, Thomas Fabry, BRUYERRE, Moulin de Tongrinne, Fraternité de Tibériade, Manon Lefebvre).
+- Anti-claim : une communication structurée dont la clé de contrôle modulo 97 est fausse n'est jamais proposée. Un virement avec une communication fausse arrive, mais le fournisseur ne sait pas le rapprocher.

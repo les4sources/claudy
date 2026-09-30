@@ -116,4 +116,26 @@ RSpec.describe PurchaseInvoice do
       expect(build_invoice(requires_validation: true, validated_at: Time.current).next_status).to eq("to_pay")
     end
   end
+
+  describe "communication de paiement" do
+    def facture(ref) = PurchaseInvoice.new(legal_entity: entity, third_party: fournisseur, number: "F-9",
+                                           issued_on: Date.current, total_cents: 1_000, payment_reference: ref)
+
+    it "range une communication structurée sous sa forme canonique" do
+      f = facture(" ***000/0024/11862*** ")
+      f.valid?
+      expect(f.payment_reference).to eq("+++000/0024/11862+++")
+    end
+
+    it "refuse douze chiffres dont la clé modulo 97 est fausse" do
+      f = facture("+++090/1234/56789+++")
+      expect(f).not_to be_valid
+      expect(f.errors[:payment_reference].join).to include("clé de contrôle")
+    end
+
+    it "garde une communication libre telle quelle, et retombe sur le numéro sans communication" do
+      expect(facture("Réf. client 4 Sources").tap(&:valid?).payable_communication).to eq("Réf. client 4 Sources")
+      expect(facture("").tap(&:valid?).payable_communication).to eq("F-9")
+    end
+  end
 end

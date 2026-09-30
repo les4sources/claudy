@@ -238,7 +238,7 @@ module Finance
       invoice.third_party_id = supplier_id if supplier_id && ThirdParty.actives.suppliers.exists?(id: supplier_id)
       entity_id = attachment.proposed(:legal_entity_id)
       invoice.legal_entity_id = entity_id if entity_id && LegalEntity.actives.exists?(id: entity_id)
-      %i[number total_cents issued_on due_on].each do |field|
+      %i[number total_cents issued_on due_on payment_reference].each do |field|
         value = attachment.proposed(field)
         invoice.public_send("#{field}=", value) if value.present?
       end
@@ -347,7 +347,7 @@ module Finance
 
     def invoice_params
       params.require(:purchase_invoice).permit(
-        :legal_entity_id, :third_party_id, :number, :issued_on, :due_on, :total_euros,
+        :legal_entity_id, :third_party_id, :number, :issued_on, :due_on, :total_euros, :payment_reference,
         :requires_validation, :validation_team_id, :notes,
         purchase_invoice_lines_attributes: %i[id general_account_id team_id analytic_account_id
                                               amount_euros label position _destroy]
