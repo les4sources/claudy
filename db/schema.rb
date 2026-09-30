@@ -553,9 +553,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_180000) do
     t.integer "public_price_cents"
     t.integer "purchase_price_cents"
     t.integer "reference_price_cents"
+    t.bigint "third_party_id"
     t.datetime "updated_at", null: false
     t.index ["catalog_item_id", "active_from"], name: "index_catalog_prices_on_catalog_item_id_and_active_from", unique: true
     t.index ["catalog_item_id"], name: "index_catalog_prices_on_catalog_item_id"
+    t.index ["third_party_id"], name: "index_catalog_prices_on_third_party_id"
   end
 
   create_table "coda_imports", force: :cascade do |t|
@@ -2560,6 +2562,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_180000) do
   add_foreign_key "cash_motifs", "teams"
   add_foreign_key "catalog_items", "consignors"
   add_foreign_key "catalog_prices", "catalog_items"
+  add_foreign_key "catalog_prices", "third_parties"
   add_foreign_key "coda_statements", "cash_accounts"
   add_foreign_key "coda_statements", "coda_imports"
   add_foreign_key "comments", "users", column: "author_id"
