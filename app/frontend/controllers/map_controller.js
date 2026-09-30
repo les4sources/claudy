@@ -262,8 +262,8 @@ export default class extends Controller {
       // lit encore ce qu'il y a au sol.
       this.demLayer = this.tileLayer('dem');
       this.demLayer.setOpacity(0.6);
-      // Au-dessus de l'ortho du Géoportail (z-index 2), sous ses autres couches.
-      this.demLayer.setZIndex(3);
+      // Au-dessus des photos du Géoportail (z-index 2 à 4), sous ses autres couches.
+      this.demLayer.setZIndex(5);
       this.demLayer.addTo(this.map);
     } else if (this.demLayer) {
       this.map.removeLayer(this.demLayer);
