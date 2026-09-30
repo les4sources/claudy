@@ -24,6 +24,7 @@
 #  excluded_reason   :string
 #  external_ref      :string
 #  fingerprint       :string
+#  jev_checked_at    :datetime
 #  label             :string           not null
 #  notes             :text
 #  source_type       :string
