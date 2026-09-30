@@ -1,5 +1,5 @@
 module Finance
-  # Comptabilité > Pièces reçues (messagerie, phase 1).
+  # Comptabilité > Boite de réception (messagerie, phase 1).
   #
   # La file des mails arrivés sur `compta@`, avec ce que Jev propose d'en
   # faire. On y vient pour vider la file : chaque mail en sort soit par une
@@ -8,7 +8,7 @@ module Finance
   class MailMessagesController < Finance::AccountingBaseController
     before_action :get_message, only: %i[show ignore restore]
 
-    breadcrumb "Pièces reçues", :finance_mail_messages_path, match: :exact
+    breadcrumb "Boite de réception", :finance_mail_messages_path, match: :exact
 
     def index
       @status = MailMessage::STATUSES.include?(params[:status]) ? params[:status] : "pending"

@@ -2,8 +2,8 @@ require "rails_helper"
 require Rails.root.join("spec/support/finance_builders")
 require Rails.root.join("spec/support/mail_intake_helpers")
 
-# Messagerie, phase 1 — Comptabilité > Pièces reçues.
-RSpec.describe "Comptabilité > Pièces reçues", type: :request do
+# Messagerie, phase 1 — Comptabilité > Boite de réception.
+RSpec.describe "Comptabilité > Boite de réception", type: :request do
   include Devise::Test::IntegrationHelpers
   include FinanceBuilders
 
@@ -38,7 +38,7 @@ RSpec.describe "Comptabilité > Pièces reçues", type: :request do
     get finance_mail_messages_path
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Pièces reçues", "Proximus", "Votre facture", "Facture · Proximus · 84,12")
+    expect(response.body).to include("Boite de réception", "Proximus", "Votre facture", "Facture · Proximus · 84,12")
   end
 
   it "montre la proposition, le PDF et l'action « Créer la facture »" do

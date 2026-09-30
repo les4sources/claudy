@@ -222,7 +222,7 @@ module Finance
       ComplianceDeadline.payments.find_by(id: params[:compliance_deadline_id], purchase_invoice_id: nil)
     end
 
-    # Depuis « Pièces reçues » (messagerie, phase 1) : une pièce pas encore
+    # Depuis « Boite de réception » (messagerie, phase 1) : une pièce pas encore
     # encodée. Une pièce déjà liée ne se relie pas, sinon un lien rejoué
     # créerait une seconde facture pour le même PDF.
     def linked_mail_attachment

@@ -38,7 +38,7 @@ module AccountingNavHelper
         ["Coût d'encaissement", finance_collection_cost_path, %w[finance/collection_cost]]
       ]],
       ["Fournisseurs", "fournisseurs", [
-        ["Pièces reçues", finance_mail_messages_path, %w[finance/mail_messages]],
+        ["Boite de réception", finance_mail_messages_path, %w[finance/mail_messages]],
         ["Achats", finance_purchase_invoices_path, %w[finance/purchase_invoices]],
         ["À payer", finance_payables_path, %w[finance/payables]],
         ["Charges fixes", finance_recurring_expenses_path, %w[finance/recurring_expenses]],

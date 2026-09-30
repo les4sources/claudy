@@ -1,6 +1,6 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
-           title: "Pièces reçues",
+           title: "Boite de réception",
            links: [button_to("Relever maintenant", sync_finance_mail_messages_path, method: :post, form_class: "inline", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
 
 / D'où viennent les mails, et quand la boîte a été lue pour la dernière fois.
