@@ -12,7 +12,7 @@
     p
       span.font-medium.text-gray-700= account.address
       - if account.last_synced_at
-        = " · relevée #{time_ago_in_words(account.last_synced_at)} plus tôt"
+        = " · relevée il y a #{time_ago_in_words(account.last_synced_at)}"
       - else
         = " · jamais relevée"
       - if account.last_error.present?

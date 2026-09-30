@@ -17,11 +17,17 @@ module MailIntake
     MAX_TEXT = 8_000
     MAX_SUPPLIER_OPTIONS = 200
 
+    # La question porte sur le DOCUMENT, pas sur le mail : un mail « voici
+    # votre facture » arrive souvent avec les conditions générales en seconde
+    # pièce, et sans cette précision Jev prenait les deux pour des factures.
+    KIND_INSTRUCTIONS = "D'après le texte de `document.texte` seulement (le mail qui l'accompagne ne compte pas), " \
+                        "de quel type de document s'agit-il ?".freeze
     KIND_CRITERIA = {
-      "invoice" => "Une facture à payer, émise par un fournisseur à notre nom.",
+      "invoice" => "Une facture : un numéro de facture, un montant total et une somme à payer.",
       "credit_note" => "Une note de crédit : le fournisseur nous rembourse ou annule une facture.",
       "reminder" => "Un rappel de paiement ou une mise en demeure pour une facture déjà reçue.",
-      "other" => "Autre chose : conditions générales, devis, bon de commande, publicité, reçu déjà payé."
+      "other" => "Tout document sans somme à payer : conditions générales, contrat, devis, bon de commande, " \
+                 "publicité, reçu déjà payé."
     }.freeze
 
     NATURE_CRITERIA = {
@@ -107,7 +113,7 @@ module MailIntake
       entities = known.key?("legal_entity_id") ? [] : LegalEntity.actives.ordered.to_a
       supplier_options = known.key?("third_party_id") ? [] : supplier_options_for(text)
 
-      questions = { "kind" => { type: "choice", instructions: "De quel document s'agit-il ?", criteria: KIND_CRITERIA } }
+      questions = { "kind" => { type: "choice", instructions: KIND_INSTRUCTIONS, criteria: KIND_CRITERIA } }
       questions["total"] = pick("Quel est le montant TOTAL à payer de ce document, TVA comprise ?", amounts) if amounts.any?
       if dates.any?
         questions["issued_on"] = pick("Quelle est la date d'émission du document (date de facture) ?", dates)
