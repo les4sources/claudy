@@ -54,6 +54,12 @@ class MailAttachment < ApplicationRecord
 
   def proposed(field) = proposal.dig(field.to_s, "value")
 
+  # De quoi pré-remplir « Nouveau fournisseur » quand aucun tiers connu ne
+  # correspond : ce que la lecture de la pièce a trouvé, à relire.
+  def supplier_draft
+    { name: proposed(:supplier_name), vat_number: proposed(:supplier_vat), iban: proposed(:supplier_iban) }
+  end
+
   # La facture déjà encodée avec exactement ce fichier, s'il y en a une.
   def existing_invoice
     purchase_invoice || PurchaseInvoice.find_by(pdf_sha256: sha256)

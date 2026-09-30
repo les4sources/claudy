@@ -1,0 +1,25 @@
+/ Créer un fournisseur sans quitter la facture. Pré-remplie avec ce que Claudy
+  a lu dans la pièce reçue par mail (`draft`), à relire avant d'enregistrer.
+  Aucun champ n'a de `name` : ils ne partent pas avec la facture.
+dialog.w-full.max-w-md.rounded-2xl.p-0.shadow-xl(data-supplier-quick-create-target="dialog" aria-labelledby="nouveau-fournisseur-titre" class="backdrop:bg-gray-900/40")
+  .space-y-3.px-5.py-5(data-action="keydown->supplier-quick-create#submitOnEnter")
+    h2#nouveau-fournisseur-titre.text-base.font-semibold.text-gray-900 Nouveau fournisseur
+    - if draft.values.any?(&:present?)
+      p.text-xs.text-gray-500 Pré-rempli depuis la pièce reçue : relisez avant d'enregistrer.
+    div
+      label.block.text-xs.font-medium.text-gray-500(for="nouveau-fournisseur-nom") Nom
+      input#nouveau-fournisseur-nom.mt-1.w-full.rounded-md.border-gray-300.text-sm.shadow-sm(type="text" value=draft[:name] required=true autocomplete="off" data-supplier-quick-create-target="name")
+    .grid.gap-3(class="sm:grid-cols-2")
+      div
+        label.block.text-xs.font-medium.text-gray-500(for="nouveau-fournisseur-tva") N° de TVA
+        input#nouveau-fournisseur-tva.mt-1.w-full.rounded-md.border-gray-300.text-sm.shadow-sm(type="text" value=draft[:vat_number] autocomplete="off" placeholder="BE0123456789" data-supplier-quick-create-target="vat")
+      div
+        label.block.text-xs.font-medium.text-gray-500(for="nouveau-fournisseur-iban") IBAN
+        input#nouveau-fournisseur-iban.mt-1.w-full.rounded-md.border-gray-300.text-sm.shadow-sm(type="text" value=draft[:iban] autocomplete="off" placeholder="BE68 5390 0754 7034" data-supplier-quick-create-target="iban")
+    div
+      label.block.text-xs.font-medium.text-gray-500(for="nouveau-fournisseur-email") Email
+      input#nouveau-fournisseur-email.mt-1.w-full.rounded-md.border-gray-300.text-sm.shadow-sm(type="email" value=draft[:email] autocomplete="off" data-supplier-quick-create-target="email")
+    p.text-sm.text-red-700(role="alert" data-supplier-quick-create-target="error")
+    .flex.items-center.justify-end.gap-3.pt-2
+      button.text-sm.text-gray-500.hover:underline(type="button" data-action="supplier-quick-create#close") Annuler
+      button.inline-flex.items-center.rounded-md.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.bg-4s-main.hover:opacity-90.disabled:opacity-50(type="button" data-action="supplier-quick-create#create" data-supplier-quick-create-target="submit") Créer le fournisseur

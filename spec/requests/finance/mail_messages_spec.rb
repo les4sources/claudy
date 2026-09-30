@@ -59,6 +59,32 @@ RSpec.describe "Comptabilité > Pièces reçues", type: :request do
     expect(response.body).to include("mail_attachment_id=#{attachment.id}")
   end
 
+it "montre la pièce à droite du formulaire, et des listes cherchables pour fournisseur, compte et pôle" do
+  attachment.update!(proposal: attachment.proposal.merge(
+    "supplier_name" => { "value" => "Proximus SA", "source" => "jev", "confidence" => 0.9 },
+    "supplier_vat" => { "value" => "BE0202239951", "source" => "code" }
+  ))
+
+  get new_finance_purchase_invoice_path(mail_attachment_id: attachment.id)
+
+  body = response.body
+  expect(body).to include('data-purchase-invoice-form-target="previewFrame"', "facture.pdf")
+  expect(body).to match(%r{<iframe[^>]+src="/rails/active_storage/blobs/redirect/[^"]+/facture\.pdf\?disposition=inline#navpanes=0&amp;view=FitH"})
+  expect(body).to include('aria-label="Chercher un fournisseur"', 'aria-label="Chercher un compte"', 'aria-label="Chercher un pôle"')
+  expect(body).to include('data-searchable-select-clearable-value="true"')
+  expect(body).to include("Nouveau fournisseur", 'value="Proximus SA"', 'value="BE0202239951"')
+end
+
+it "retrouve par la TVA de la pièce un fournisseur créé après la lecture du mail" do
+  grange = ThirdParty.create!(name: "Ferme de Grange SRL", kind: "supplier", vat_number: "BE0677701485")
+  attachment.update!(proposal: attachment.proposal.except("third_party_id")
+                                         .merge("supplier_vat" => { "value" => "BE0677701485", "source" => "code" }))
+
+  get new_finance_purchase_invoice_path(mail_attachment_id: attachment.id)
+
+  expect(response.body).to include(%(<option selected="selected" value="#{grange.id}">Ferme de Grange SRL</option>))
+end
+
   it "à l'enregistrement, relie la pièce à sa facture, reprend le PDF et classe le mail" do
     post finance_purchase_invoices_path(mail_attachment_id: attachment.id), params: {
       purchase_invoice: { legal_entity_id: entity.id, third_party_id: proximus.id, number: "2026-77812",

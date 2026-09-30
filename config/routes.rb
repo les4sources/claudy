@@ -361,6 +361,8 @@ Rails.application.routes.draw do
     # Les tiers (epic #240, phase 1) : on les désactive, on ne les détruit pas —
     # des écritures les portent.
     resources :third_parties, except: %i[show destroy] do
+      # Création express depuis le formulaire d’une facture (JSON).
+      collection { post :quick }
       member do
         patch :deactivate
         patch :reactivate

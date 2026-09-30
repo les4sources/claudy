@@ -620,3 +620,12 @@ Ce qui produit la satisfaction : ouvrir « Pièces reçues » et lire « Facture
   - Évidence 2026-09-30 : specs — sans Jev, `analyzed_at` posé et proposition vide ; sans mot de passe, `MissingPassword` explicite gardé dans `last_error`.
 
 Hors périmètre de la phase 1 : lecture des scans et photos (une photo envoyée à `compta@` entre dans la file, à encoder à la main), autres boîtes, réponses, résumés par Sonnet.
+
+#### Saisie d'une facture depuis un mail (ajout 2026-09-30, retours de Michael à l'usage)
+
+- [x] ISC-M13: Fournisseur, compte et pôle se choisissent dans des listes cherchables (ordre alphabétique pour les fournisseurs, recherche sans accents, clavier), y compris sur les lignes de ventilation ajoutées. Le pôle peut revenir à « Non affecté ». Probe : request spec + navigateur.
+  - Évidence 2026-09-30 : « pro » → Proximus ; « electri » + Entrée → « 612001 Electricité » sur une ligne ajoutée ; pôle « accu » → Pôle Accueil puis vidé → Non affecté.
+- [x] ISC-M14: « Nouveau fournisseur » se crée depuis le formulaire, pré-rempli depuis la pièce (nom choisi par Jev hors de nos propres noms, TVA et IBAN valides par le code), s'insère à sa place alphabétique et se sélectionne ; une TVA déjà connue renvoie le tiers existant. Probe : specs + navigateur.
+  - Évidence 2026-09-30 : 14 vraies factures, noms justes (Ferme de Grange SRL, BRUYERRE, Moulin de Tongrinne, FRATERNITE DE TIBERIADE…), deux à retoucher (0,76 et 0,77) ; création au navigateur → tiers n° 8, entre Colruyt et Luminus, sélectionné.
+- [x] ISC-M15: La pièce s'affiche à droite du formulaire, collée à l'écran, pleine largeur (sans vignettes) ; une pièce déposée à la main s'affiche aussitôt. Probe : request spec + capture.
+- Anti-claim : les champs de la fenêtre « Nouveau fournisseur » n'ont pas de `name` — ils vivent dans le formulaire de la facture et ne doivent jamais partir avec elle.
