@@ -19,7 +19,10 @@ Rails.application.configure do
       policy.connect_src :self,
                          # Allow @vite/client HMR websocket — the PORT must be
                          # included: "ws://localhost" alone only matches port 80.
-                         "ws://#{ViteRuby.config.host_with_port}"
+                         "ws://#{ViteRuby.config.host_with_port}",
+                         # Information au clic des couches du Géoportail de
+                         # Wallonie sur la carte (utils/map_geoportail.js).
+                         "https://geoservices.wallonie.be"
 
       policy.style_src :self,
                        :https,

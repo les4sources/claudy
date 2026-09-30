@@ -12,10 +12,17 @@
 #
 # `max_native_zoom` : le SPW masque certaines couches sous une échelle donnée
 # (la carte des sols sous le 1:5000, les courbes sous le 1:2500). Au-delà de ce
-# zoom, Leaflet redemande la tuile du zoom plafond et l'agrandit, au lieu d’une
+# zoom, Leaflet redemande la tuile du zoom plafond et l'agrandit, au lieu d'une
 # tuile vide.
-MapGeoportailLayer = Data.define(:key, :name, :service, :layers, :opacity, :z_index, :max_native_zoom) do
-  def initialize(max_native_zoom: nil, **) = super
+#
+# `info_service` / `info_layers` : ce qu'on interroge (identify REST, voir
+# `utils/map_geoportail.js`) quand on touche la carte, couche affichée. Souvent
+# le même service, sauf pour les courbes : l'altitude exacte vient du MNT
+# LiDAR, pas de la courbe la plus proche. Sans `info_service` (l'ortho), la
+# couche ne répond pas au clic.
+MapGeoportailLayer = Data.define(:key, :name, :service, :layers, :opacity, :z_index, :max_native_zoom,
+                                 :info_service, :info_layers) do
+  def initialize(max_native_zoom: nil, info_service: nil, info_layers: nil, **) = super
 end
 
 class MapGeoportailLayer
@@ -27,19 +34,25 @@ class MapGeoportailLayer
     # 0 = trame des planches, sans intérêt à l'échelle du domaine ; 3 = tuile vide
     # sous le 1:5000.
     new(key: "sols", name: "Carte des sols",
-        service: "SOL_SOUS_SOL/CNSW", layers: "1,2", opacity: 1.0, z_index: 10, max_native_zoom: 16),
-    # Unités de gestion (1-7) et périmètres des sites (9-10).
+        service: "SOL_SOUS_SOL/CNSW", layers: "1,2", opacity: 1.0, z_index: 10, max_native_zoom: 16,
+        info_service: "SOL_SOUS_SOL/CNSW", info_layers: "1,2"),
+    # Unités de gestion (1-7) et périmètres des sites (9-10). Au clic : l'unité
+    # de gestion (7) et le site (9).
     new(key: "natura2000", name: "Natura 2000",
-        service: "FAUNE_FLORE/NATURA2000", layers: "1,2,3,4,5,6,7,9,10", opacity: 0.55, z_index: 11),
+        service: "FAUNE_FLORE/NATURA2000", layers: "1,2,3,4,5,6,7,9,10", opacity: 0.55, z_index: 11,
+        info_service: "FAUNE_FLORE/NATURA2000", info_layers: "7,9"),
     # Dernière situation SIGEC : parcelles déclarées (4) et éléments du paysage —
     # haies, arbres isolés, mares (1-3).
     new(key: "parcellaire_agricole", name: "Parcellaire agricole",
-        service: "AGRICULTURE/SIGEC_PARC_AGRI_LAST", layers: "1,2,3,4", opacity: 0.6, z_index: 12),
+        service: "AGRICULTURE/SIGEC_PARC_AGRI_LAST", layers: "1,2,3,4", opacity: 0.6, z_index: 12,
+        info_service: "AGRICULTURE/SIGEC_PARC_AGRI_LAST", info_layers: "1,2,3,4"),
     new(key: "cadastre", name: "Plan cadastral",
-        service: "PLAN_REGLEMENT/CADMAP_PARCELLES", layers: "0", opacity: 1.0, z_index: 13),
-    # Courbes IGN à 1,25 m d'équidistance.
+        service: "PLAN_REGLEMENT/CADMAP_PARCELLES", layers: "0", opacity: 1.0, z_index: 13,
+        info_service: "PLAN_REGLEMENT/CADMAP_PARCELLES", info_layers: "0"),
+    # Courbes IGN à 1,25 m d'équidistance ; au clic, l'altitude du MNT 50 cm.
     new(key: "courbes", name: "Courbes de niveau",
-        service: "IGN/CONTOURLINES", layers: "0,1,2", opacity: 0.9, z_index: 14, max_native_zoom: 17),
+        service: "IGN/CONTOURLINES", layers: "0,1,2", opacity: 0.9, z_index: 14, max_native_zoom: 17,
+        info_service: "RELIEF/WALLONIE_MNT_2021_2022", info_layers: "0"),
   ].freeze
 
   def self.all = ALL
