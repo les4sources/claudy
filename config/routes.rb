@@ -453,6 +453,11 @@ Rails.application.routes.draw do
     get "unifi/devices", to: "map_unifi#devices", as: :map_unifi_devices, defaults: { format: :json }
     # Phase 14 : la recherche du mode actif, en JSON d'identifiants.
     get "search", to: "maps#search", as: :map_search, defaults: { format: :json }
+    # Le relief en 3D et la simulation du ruissellement : la page, puis les
+    # deux fichiers qu'elle lit (MNT en binaire, ortho qui le drape).
+    get "relief", to: "map_reliefs#show", as: :map_relief
+    get "relief/grid", to: "map_reliefs#grid", as: :map_relief_grid
+    get "relief/texture", to: "map_reliefs#texture", as: :map_relief_texture
     # Le carnet de gestion (phase 6) : les tâches de l'année, mois par mois.
     # `carnet` en français, imposé par l'epic. Les routes de tâches précèdent
     # `resources :map_tasks`, qui lirait sinon `current` comme un `:id`.
