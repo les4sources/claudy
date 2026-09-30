@@ -25,6 +25,10 @@
   div
     .text-xs.uppercase.text-gray-400 Palier en vigueur
     .text-sm.text-gray-700= item.price_period
+  - if (supplier = @item.current_price&.third_party)
+    div
+      .text-xs.uppercase.text-gray-400 Fournisseur
+      .text-sm.text-gray-700= supplier.name
   - if @item.consignor.present?
     div
       .text-xs.uppercase.text-gray-400 Artisan
@@ -87,6 +91,13 @@ div(class=panel data-controller="catalog-price" data-catalog-price-url-value=fin
         = label_tag "catalog_price[public_price]", "Public (€)", class: field_label
         = text_field_tag "catalog_price[public_price]", nil, inputmode: "decimal", placeholder: "0,00", data: { catalog_price_target: "public" }, class: money_input
 
+    /  Le fournisseur vient des tiers de la comptabilité (Finances > Tiers) : pas
+       de liste parallèle à tenir. Il est proposé depuis le palier en vigueur.
+    .mt-4.grid.grid-cols-1.gap-4(class="md:grid-cols-12 md:gap-3")
+      div(class="md:col-span-4")
+        = label_tag "catalog_price[third_party_id]", "Fournisseur", class: field_label
+        = select_tag "catalog_price[third_party_id]", options_from_collection_for_select(@suppliers, :id, :name, @price.third_party_id), include_blank: "— Aucun —", class: field_input
+
     div(class=action_row)
       p(class=action_hint)
         | Laisse « Sourcier » vide pour le calcul automatique. Un palier déjà posé ne bouge jamais, même si la marge change ensuite.
@@ -102,6 +113,7 @@ div(class=panel data-controller="catalog-price" data-catalog-price-url-value=fin
       thead.text-xs.text-gray-700.uppercase.bg-gray-50
         tr
           th.py-3.px-6[scope="col"] Période
+          th.py-3.px-6[scope="col"] Fournisseur
           th.py-3.px-6.text-right[scope="col"] Achat
           th.py-3.px-6.text-right[scope="col"] Référence
           th.py-3.px-6.text-right[scope="col"] Sourcier
@@ -119,6 +131,7 @@ div(class=panel data-controller="catalog-price" data-catalog-price-url-value=fin
                 span.ml-2.px-2.py-0.5.rounded-full.text-xs.bg-teal-100.text-teal-800 en vigueur
               - if price.note.present?
                 .mt-0.5.text-xs.text-gray-400= price.note
+            td.py-3.px-6= price.third_party&.name || "—"
             td.py-3.px-6.text-right.text-gray-400= price.purchase_price_cents ? number_to_currency(price.purchase_price_cents / 100.0) : "—"
             td.py-3.px-6.text-right.text-gray-400= price.reference_price_cents ? number_to_currency(price.reference_price_cents / 100.0) : "—"
             td.py-3.px-6.text-right.font-semibold.text-gray-900= number_to_currency(price.member_price_cents / 100.0)

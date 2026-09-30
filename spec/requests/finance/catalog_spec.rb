@@ -115,6 +115,46 @@ RSpec.describe "Finances > Catalogue", type: :request do
     end
   end
 
+  # Le fournisseur d'un prix d'achat vient des tiers de la comptabilité.
+  describe "fournisseur d'un palier" do
+    let!(:agricovert) { ThirdParty.create!(name: "Agricovert", kind: "supplier") }
+    let!(:interbio) { ThirdParty.create!(name: "Interbio", kind: "both") }
+    let!(:client) { ThirdParty.create!(name: "Épicerie de la Gare", kind: "customer") }
+
+    it "enregistre le fournisseur choisi et l'affiche dans l'historique" do
+      post finance_catalog_prices_path(avoine), params: {
+        catalog_price: { active_from: "2026-09-01", purchase_price: "2,00", member_price: "2,34", third_party_id: agricovert.id }
+      }
+
+      expect(avoine.catalog_prices.most_recent_first.first.third_party).to eq(agricovert)
+
+      get finance_catalog_path(avoine)
+      expect(response.body).to include("Agricovert")
+    end
+
+    it "ne propose que les fournisseurs, et préselectionne celui du palier en vigueur" do
+      avoine.catalog_prices.first.update!(third_party: interbio)
+
+      get finance_catalog_path(avoine)
+
+      options = Nokogiri::HTML(response.body).css("select[name='catalog_price[third_party_id]'] option")
+      expect(options.map(&:text)).to include("Agricovert", "Interbio")
+      expect(options.map(&:text)).not_to include("Épicerie de la Gare")
+      expect(options.find { |o| o["selected"] }&.text).to eq("Interbio")
+    end
+
+    it "refuse un tiers client" do
+      expect {
+        post finance_catalog_prices_path(avoine), params: {
+          catalog_price: { active_from: "2026-09-01", member_price: "2,34", third_party_id: client.id }
+        }
+      }.not_to change(CatalogPrice, :count)
+
+      follow_redirect!
+      expect(response.body).to include("doit être un tiers fournisseur")
+    end
+  end
+
   describe "listes imprimables" do
     # La liste sourcier est affichée AU BAR : le prix d'achat n'a rien à y faire.
     it "n'affiche jamais le prix d'achat sur la liste sourcier" do

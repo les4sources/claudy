@@ -10,5 +10,8 @@ json.purchase_price { json.partial! "api/v1/shared/money", money: catalog_price.
 json.reference_price { json.partial! "api/v1/shared/money", money: catalog_price.reference_price }
 json.public_price { json.partial! "api/v1/shared/money", money: catalog_price.public_price }
 json.note catalog_price.note
+# Le fournisseur chez qui ce prix d'achat a été relevé, ou null.
+supplier = catalog_price.third_party
+json.third_party(supplier && { id: supplier.id, name: supplier.name })
 json.created_at catalog_price.created_at
 json.updated_at catalog_price.updated_at

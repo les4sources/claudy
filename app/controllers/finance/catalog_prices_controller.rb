@@ -73,7 +73,7 @@ module Finance
     end
 
     def price_params
-      params.require(:catalog_price).permit(:active_from, :note)
+      params.require(:catalog_price).permit(:active_from, :note, :third_party_id)
             .merge(
               purchase_price_cents: cents_from(params.dig(:catalog_price, :purchase_price)),
               reference_price_cents: cents_from(params.dig(:catalog_price, :reference_price)),

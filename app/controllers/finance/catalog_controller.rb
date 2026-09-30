@@ -23,8 +23,11 @@ module Finance
     def show
       breadcrumb @item.name, finance_catalog_path(@item), match: :exact
 
-      @prices = @item.catalog_prices.most_recent_first
-      @price = CatalogPrice.new(active_from: Date.current)
+      @prices = @item.catalog_prices.most_recent_first.includes(:third_party)
+      # Le fournisseur du palier en vigueur est proposé par défaut : on rachète le
+      # plus souvent au même endroit, et le champ reste modifiable.
+      @price = CatalogPrice.new(active_from: Date.current, third_party_id: @item.current_price&.third_party_id)
+      @suppliers = ThirdParty.suppliers.actives.ordered
     end
 
     def new

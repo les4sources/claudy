@@ -32,6 +32,7 @@ fr:
         active_from: Date de début
         active_until: Date de fin
         member_price_cents: Prix sourcier
+        third_party: Fournisseur
       recurring_charge:
         label: Libellé
         basis: Base de calcul

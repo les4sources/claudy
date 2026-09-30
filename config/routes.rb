@@ -946,6 +946,7 @@ Rails.application.routes.draw do
       # dérive d'aucun document métier de claudy, elle vient d'un bilan produit
       # ailleurs. Tout le reste se génère.
       resources :general_accounts, only: [:index, :show, :create, :update]
+      resources :third_parties, only: [:index]
       resources :analytic_accounts, only: [:index, :show, :create, :update]
       resources :fiscal_years, only: [:index, :show, :create, :update]
       resources :opening_entries, only: [:index, :create]

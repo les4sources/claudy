@@ -52,7 +52,7 @@ module Api
       def price_params
         params.require(:price).permit(:active_from, :active_until, :member_price_cents,
                                       :purchase_price_cents, :reference_price_cents,
-                                      :public_price_cents, :note)
+                                      :public_price_cents, :note, :third_party_id)
       end
     end
   end

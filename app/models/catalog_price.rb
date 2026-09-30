@@ -13,15 +13,18 @@
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #  catalog_item_id       :bigint           not null
+#  third_party_id        :bigint
 #
 # Indexes
 #
 #  index_catalog_prices_on_catalog_item_id                  (catalog_item_id)
 #  index_catalog_prices_on_catalog_item_id_and_active_from  (catalog_item_id,active_from) UNIQUE
+#  index_catalog_prices_on_third_party_id                   (third_party_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (catalog_item_id => catalog_items.id)
+#  fk_rails_...  (third_party_id => third_parties.id)
 #
 # Palier de prix daté d'un article (issue #157).
 #
@@ -36,6 +39,10 @@
 # n'existe pas pour un article qui n'est pas vendu au public.
 class CatalogPrice < ApplicationRecord
   belongs_to :catalog_item, inverse_of: :catalog_prices
+  # Le fournisseur chez qui ce prix d'achat a été relevé — un tiers de la
+  # comptabilité, jamais une liste parallèle. Facultatif : l'historique repris du
+  # fichier Excel du cellier n'en a pas.
+  belongs_to :third_party, optional: true
 
   monetize :member_price_cents
   monetize :purchase_price_cents, allow_nil: true
@@ -48,6 +55,7 @@ class CatalogPrice < ApplicationRecord
             numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :active_until_after_active_from
   validate :no_overlap_with_siblings
+  validate :third_party_is_supplier
 
   scope :chronological, -> { order(active_from: :asc) }
   scope :most_recent_first, -> { order(active_from: :desc) }
@@ -88,6 +96,12 @@ class CatalogPrice < ApplicationRecord
     return unless later.exists?
 
     errors.add(:active_until, "chevauche un palier existant de cet article")
+  end
+
+  def third_party_is_supplier
+    return if third_party.nil? || third_party.kind.in?(%w[supplier both])
+
+    errors.add(:third_party, "doit être un tiers fournisseur, pas un client")
   end
 
   def siblings
