@@ -1,0 +1,89 @@
+require "rails_helper"
+
+# Le relief du domaine en 3D et la simulation du ruissellement. La page ne fait
+# que servir des réglages et deux fichiers (le MNT en binaire, l'ortho) : tout
+# le calcul se joue dans le navigateur.
+RSpec.describe "Carte du domaine — relief 3D", type: :request do
+  include Devise::Test::IntegrationHelpers
+
+  let(:user) { User.create!(email: "agent-relief@les4sources.be", password: "password123") }
+  let(:root) { Pathname(Dir.mktmpdir("map-terrain")) }
+  let(:terrain) { Maps::Terrain.new(root: root) }
+
+  before { allow(Maps::Terrain).to receive(:current).and_return(terrain) }
+  after { FileUtils.rm_rf(root) }
+
+  def install_terrain(texture: true)
+    FileUtils.mkdir_p(root)
+    File.binwrite(terrain.grid_path, [0, 100, 200, 300].pack("v*"))
+    File.binwrite(terrain.texture_path, "\xFF\xD8fake".b) if texture
+    File.write(terrain.metadata_path, {
+      cols: 2, rows: 2, west: 545_000.0, north: 6_506_000.0, step: 1.5669, cell_size_m: 1.0,
+      z_min: 120.0, z_max: 123.0, z_unit: 0.01, nodata: 65_535, fetched_at: "2026-10-01T00:06:15+02:00"
+    }.to_json)
+  end
+
+  it "exige une session" do
+    get map_relief_path
+
+    expect(response).to redirect_to(new_user_session_path)
+  end
+
+  context "connecté" do
+    before { sign_in user }
+
+    it "explique comment installer le relief tant qu'il manque" do
+      get map_relief_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("rake map:terrain:import")
+      expect(response.body).not_to include('data-controller="map-relief"')
+    end
+
+    it "monte la scène avec la grille, l'ortho et les couches à dessiner" do
+      install_terrain
+      management = MapLayer.for_kind(:management)
+      MapLayer.for_kind(:comments)
+
+      get map_relief_path
+
+      expect(response).to have_http_status(:ok)
+      page = Nokogiri::HTML(response.body)
+      scene = page.at_css('[data-controller="map-relief"]')
+      expect(scene["data-map-relief-grid-url-value"]).to start_with("/map/relief/grid?v=")
+      expect(scene["data-map-relief-texture-url-value"]).to start_with("/map/relief/texture?v=")
+      expect(JSON.parse(scene["data-map-relief-meta-value"])).to include("cols" => 2, "rows" => 2, "z_min" => 120.0)
+      layers = JSON.parse(scene["data-map-relief-feature-layers-value"])
+      expect(layers.map { |layer| layer["id"] }).to include(management.id)
+      expect(layers.map { |layer| layer["kind"] }).not_to include("comments")
+    end
+
+    it "sert la grille en binaire et l'ortho en JPEG, avec un long cache" do
+      install_terrain
+
+      get map_relief_grid_path(v: "x")
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("application/octet-stream")
+      expect(response.body.b.unpack("v*")).to eq([0, 100, 200, 300])
+      expect(response.headers["Cache-Control"]).to include("immutable")
+
+      get map_relief_texture_path(v: "x")
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("image/jpeg")
+    end
+
+    it "répond 404, sans erreur, quand les fichiers manquent" do
+      get map_relief_grid_path
+      expect(response).to have_http_status(:not_found)
+
+      install_terrain(texture: false)
+      get map_relief_texture_path
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "se rejoint depuis la carte et depuis la barre des pages annexes" do
+      get map_carnet_path
+      expect(response.body).to include(%(href="#{map_relief_path}"))
+    end
+  end
+end

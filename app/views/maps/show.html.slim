@@ -206,6 +206,11 @@
                 path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"
                 path d="M2 21c0-3 1.85-5.36 5.08-6"
               span.flex-1 Espèces
+            / Le relief en 3D et la simulation du ruissellement.
+            = link_to map_relief_path, class: "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-50", data: { map_relief_link: true } do
+              svg.h-4.w-4.text-stone-500 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                path d="m8 3 4 8 5-5 5 15H2L8 3z"
+              span.flex-1 Relief 3D et ruissellement
           / Le carnet de gestion (phase 6) : les tâches des objets, mois par mois.
           .mt-3.border-t.border-stone-100.pt-3
             p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Gestion
