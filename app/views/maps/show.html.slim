@@ -58,7 +58,10 @@
             polygon points="12 2 2 7 12 12 22 7 12 2"
             polyline points="2 17 12 22 22 17"
             polyline points="2 12 12 17 22 12"
-          span.flex-1.text-sm.font-semibold.text-stone-700 Couches
+          span.text-sm.font-semibold.text-stone-700 Couches
+          / La couche active, lisible panneau replié : sur un téléphone, c'est
+            le seul rappel du mode dans lequel on touche la carte.
+          span.min-w-0.flex-1.truncate.text-sm.text-4s-main data-map-target="panelActive"
           svg.h-4.w-4.text-stone-400.transition-transform data-map-target="panelChevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
             polyline points="6 9 12 15 18 9"
 
@@ -278,6 +281,34 @@
             path d="M3 6h18"
             path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"
             path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
+
+      / La barre du mode actif, sur un téléphone seulement : le panneau des
+        couches y est replié, il faut dire ce que fait un toucher sur la carte
+        et garder à portée de pouce ce qui sert à poser (plantes, commentaires,
+        relevés). Le contenu suit la couche active (`data-mode-kind`).
+      div[class="pointer-events-none absolute bottom-6 left-3 right-20 z-[1000] hidden justify-center md:hidden"
+          data-map-target="modeBar"]
+        div.pointer-events-auto.hidden.items-center.gap-1.rounded-xl.border.border-stone-200.bg-white/95.p-1.shadow-lg.backdrop-blur data-mode-kind="plants"
+          button[type="button"
+                 class="flex h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-forest hover:bg-forest-tint"
+                 data-action="map#newPlant"]
+            svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              path d="M12 5v14M5 12h14"
+            | Nouvelle
+          button[type="button"
+                 class="flex h-11 items-center gap-1.5 rounded-lg bg-forest px-3 text-sm font-semibold text-white"
+                 data-action="map#openPlacement"]
+            svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              path d="M12 22s7-6.1 7-12a7 7 0 0 0-14 0c0 5.9 7 12 7 12z"
+              path d="M12 7v6M9 10h6"
+            | À placer
+            span[class="min-w-[1.5rem] rounded-full bg-ember px-1.5 py-0.5 text-center text-[0.7rem] font-semibold tabular-nums text-white #{'hidden' if @unplaced_count.zero?}"
+                 data-map-target="unplacedCount"]
+              = @unplaced_count
+        p.hidden.items-center.gap-2.rounded-full.bg-stone-800/90.px-3.py-2.text-xs.text-white.shadow-lg data-mode-kind="comments"
+          | Touchez la carte pour commenter cet endroit
+        p.hidden.items-center.gap-2.rounded-full.bg-stone-800/90.px-3.py-2.text-xs.text-white.shadow-lg data-mode-kind="biodiversity"
+          | Touchez la carte pour noter une plante ou un animal
 
       / La carte du jour (phase 3) : le jour affiché, en bas au centre, à portée
         de pouce sur un téléphone. Visible tant que la couche des lieux l'est.

@@ -81,8 +81,9 @@ export class PlantPlacement {
     // cacheraient la carte : on pose au doigt, il faut la voir.
     if (!this.wide) {
       this.c.closePanel();
-      if (this.c.hasPanelBodyTarget && !this.c.panelBodyTarget.classList.contains('hidden')) this.c.togglePanel();
+      this.c.collapsePanelOnPhone();
     }
+    this.c.updateModeBar();
   }
 
   // Une couche Plantes masquée cacherait les points qu'on pose.
@@ -105,6 +106,7 @@ export class PlantPlacement {
     if (!this.c.hasPlacementDrawerTarget) return;
     this.c.placementDrawerTarget.classList.add('hidden');
     this.c.placementDrawerTarget.classList.remove('flex');
+    this.c.updateModeBar();
   }
 
   get drawerOpen() {

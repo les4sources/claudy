@@ -58,6 +58,8 @@ export default class extends Controller {
     'panelToggle',
     'panelBody',
     'panelChevron',
+    'panelActive',
+    'modeBar',
     'reliefToggle',
     'locateButton',
     'notice',
@@ -173,6 +175,10 @@ export default class extends Controller {
     this.measure = new MeasureTool(this, L);
     this.setupFeatures();
 
+    // Sur un téléphone, le panneau des couches ouvert couvrait les deux tiers
+    // de la carte : il démarre replié, la couche active lisible dans son titre.
+    if (this.narrow) this.setPanelOpen(false);
+
     // Leaflet mesure son conteneur au montage. Dans une page Turbo le conteneur
     // n'a pas toujours sa taille finale à ce moment-là : sans ce recalcul, la
     // carte s'affiche en tuiles grises sur un quart de l'écran.
@@ -210,9 +216,28 @@ export default class extends Controller {
     });
   }
 
+  get narrow() {
+    return !window.matchMedia('(min-width: 768px)').matches;
+  }
+
+  get panelOpen() {
+    return this.hasPanelBodyTarget && !this.panelBodyTarget.classList.contains('hidden');
+  }
+
   togglePanel() {
-    const open = !this.panelBodyTarget.classList.toggle('hidden');
+    this.setPanelOpen(!this.panelOpen);
+  }
+
+  setPanelOpen(open) {
+    if (!this.hasPanelBodyTarget) return;
+    this.panelBodyTarget.classList.toggle('hidden', !open);
     this.panelToggleAria(open);
+  }
+
+  // Sur un téléphone, le panneau se replie dès qu'on a choisi : c'est la carte
+  // qu'on vient toucher.
+  collapsePanelOnPhone() {
+    if (this.narrow && this.panelOpen) this.setPanelOpen(false);
   }
 
   panelToggleAria(open) {
@@ -323,13 +348,7 @@ export default class extends Controller {
     }
 
     this.map.on('zoomend', () => this.updateLabels());
-    // En mode Placement, toucher la carte pose la plante choisie.
-    this.map.on('click', (event) => !this.measure?.active && this.placement?.onMapClick(event));
-    // En mode Commentaires, toucher la carte ouvre un nouveau commentaire.
-    this.map.on('click', (event) => !this.measure?.active && this.comments?.onMapClick(event));
-    // En mode Biodiversité, toucher la carte ouvre un nouveau relevé.
-    this.map.on('click', (event) => !this.measure?.active && this.biodiversity?.onMapClick(event));
-    // Pendant une mesure (phase 14), le clic pose un sommet : aucun mode ne le prend.
+    this.map.on('click', (event) => this.onMapClick(event));
     this.updateLabels();
     this.observePanel();
 
@@ -357,6 +376,23 @@ export default class extends Controller {
     this.focusFeature();
     if (this.focusPlantValue && this.hasPlantUrlValue) this.openPanel(this.plantUrl(this.focusPlantValue));
     if (this.openNewPlantValue) this.newPlant();
+  }
+
+  onMapClick(event) {
+    // Sur un téléphone, toucher la carte panneau ouvert le replie, et rien
+    // d'autre : on voulait retrouver la carte, pas y poser un commentaire.
+    if (this.narrow && this.panelOpen) {
+      this.setPanelOpen(false);
+      return;
+    }
+    // Pendant une mesure (phase 14), le clic pose un sommet : aucun mode ne le prend.
+    if (this.measure?.active) return;
+    // En mode Placement, toucher la carte pose la plante choisie.
+    this.placement?.onMapClick(event);
+    // En mode Commentaires, toucher la carte ouvre un nouveau commentaire.
+    this.comments?.onMapClick(event);
+    // En mode Biodiversité, toucher la carte ouvre un nouveau relevé.
+    this.biodiversity?.onMapClick(event);
   }
 
   async loadLayer(id) {
@@ -541,6 +577,7 @@ export default class extends Controller {
   activateLayer(event) {
     const button = event.currentTarget;
     this.setActiveLayer(button.dataset.layerId, button.dataset.layerKind);
+    this.collapsePanelOnPhone();
   }
 
   setActiveLayer(id, kind) {
@@ -563,6 +600,11 @@ export default class extends Controller {
       element.classList.toggle('hidden', element.dataset.layerExtra !== kind);
     });
     this.writeActiveLayer(this.activeLayerId);
+    if (this.hasPanelActiveTarget) {
+      const name = this.layerNameTargets.find((b) => b.dataset.layerId === this.activeLayerId)?.textContent.trim();
+      this.panelActiveTarget.textContent = name ? `· ${name}` : '';
+    }
+    this.updateModeBar();
 
     const editable = ['management', 'venues', 'welcome', 'network'].includes(kind) && this.geomanReady;
     // Les gîtes et salles se tracent en zones : point et ligne restent à la
@@ -585,6 +627,22 @@ export default class extends Controller {
       this.welcomeLegendTarget.classList.toggle('hidden', kind !== 'welcome');
       this.welcomeLegendTarget.classList.toggle('flex', kind === 'welcome');
     }
+  }
+
+  // La barre du mode actif (téléphone) : ce qu'elle propose suit la couche
+  // active, et elle s'efface devant le tiroir de placement.
+  updateModeBar() {
+    if (!this.hasModeBarTarget) return;
+    let shown = false;
+    this.modeBarTarget.querySelectorAll('[data-mode-kind]').forEach((element) => {
+      const match = element.dataset.modeKind === this.activeLayerKind;
+      element.classList.toggle('hidden', !match);
+      element.classList.toggle('flex', match);
+      shown ||= match;
+    });
+    const visible = shown && !this.placement?.drawerOpen;
+    this.modeBarTarget.classList.toggle('hidden', !visible);
+    this.modeBarTarget.classList.toggle('flex', visible);
   }
 
   useTool(event) {
@@ -848,6 +906,9 @@ export default class extends Controller {
 
   openPanel(url) {
     if (!this.hasFeatureFrameTarget) return;
+    // La fiche prend tout l'écran d'un téléphone : à sa fermeture, on retrouve
+    // la carte, pas le panneau des couches.
+    this.collapsePanelOnPhone();
     this.featureFrameTarget.src = url;
   }
 
