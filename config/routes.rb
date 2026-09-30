@@ -309,6 +309,15 @@ Rails.application.routes.draw do
     end
     # Motifs de caisse (epic #243). Pas de `destroy` : un motif se désactive,
     # sinon une feuille de caisse passée perdrait son vocabulaire.
+    # Pièces reçues (messagerie, phase 1) : la file des mails de `compta@`.
+    # Pas de `destroy` : un mail s'ignore, il ne se supprime pas.
+    resources :mail_messages, path: "inbox", only: %i[index show] do
+      member do
+        post :ignore
+        post :restore
+      end
+      collection { post :sync }
+    end
     # Factures d'achat (epic #240, phase 2). Pas de `destroy` : une pièce
     # comptable ne se supprime pas, elle se conteste ou se contre-passe.
     resources :purchase_invoices, path: "purchases", except: %i[destroy] do

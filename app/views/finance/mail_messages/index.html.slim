@@ -1,0 +1,64 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Pièces reçues",
+           links: [button_to("Relever maintenant", sync_finance_mail_messages_path, method: :post, form_class: "inline", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+/ D'où viennent les mails, et quand la boîte a été lue pour la dernière fois.
+  Une boîte en panne doit se voir ici, pas dans un journal que personne ne lit.
+.mb-4.space-y-1.text-xs.text-gray-500
+  - if @accounts.empty?
+    p Aucune boîte déclarée — bin/rails mail:add_account ADDRESS=compta@les4sources.be
+  - @accounts.each do |account|
+    p
+      span.font-medium.text-gray-700= account.address
+      - if account.last_synced_at
+        = " · relevée #{time_ago_in_words(account.last_synced_at)} plus tôt"
+      - else
+        = " · jamais relevée"
+      - if account.last_error.present?
+        span.ml-1.text-red-700= "· #{account.last_error}"
+
+nav.mb-5.flex.gap-2
+  - MailMessage::STATUSES.each do |status|
+    - actif = @status == status
+    = link_to finance_mail_messages_path(status: status), class: "rounded-full px-3 py-1 text-sm ring-1 #{actif ? 'bg-4s-main text-white ring-4s-main' : 'bg-white text-gray-700 ring-gray-200 hover:ring-4s-main'}" do
+      = MailMessage::STATUS_LABELS[status]
+      span.ml-1.opacity-70= @counts[status].to_i
+
+- if @messages.empty?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    - if @status == "pending"
+      p.font-medium.text-gray-700 La file est vide.
+      p.mt-1 Chaque facture reçue sur la boîte compta apparaîtra ici, avec ce que Claudy a déjà reconnu.
+    - else
+      p Rien ici.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-4[scope="col"] Reçu
+          th.py-3.px-4[scope="col"] Expéditeur
+          th.py-3.px-4[scope="col"] Sujet
+          th.py-3.px-4[scope="col"] Pièces
+      tbody
+        - @messages.each do |message|
+          tr.border-b.bg-white
+            td.py-3.px-4.whitespace-nowrap.align-top= l(message.received_at, format: :short)
+            td.py-3.px-4.align-top
+              .font-medium.text-gray-900= message.sender_label
+              - if message.from_name.present?
+                .text-xs.text-gray-400= message.from_address
+            td.py-3.px-4.align-top
+              = link_to (message.subject.presence || "(sans sujet)"), finance_mail_message_path(message), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+              - if (nature = mail_nature_label(message))
+                span.ml-2.inline-flex.rounded-full.bg-gray-100.px-2.text-xs.text-gray-600= nature
+            td.py-3.px-4.align-top
+              - if message.mail_attachments.empty?
+                span.text-xs.text-gray-400 aucune pièce jointe
+              - message.mail_attachments.each do |attachment|
+                .text-xs
+                  - if attachment.purchase_invoice
+                    = link_to "✓ facture ##{attachment.purchase_invoice_id}", finance_purchase_invoice_path(attachment.purchase_invoice), class: "text-green-700 hover:underline"
+                  - else
+                    span.text-gray-700= mail_attachment_summary(attachment, @third_parties)
