@@ -3,6 +3,8 @@ module Finance
   # geste humain : il n'existe aucun compte par défaut, aucune règle qui affecte
   # d'office. C'est le défaut de Winbooks éliminé par le schéma.
   class CashAllocationsController < Finance::AccountingBaseController
+    include Finance::UnallocatedQueue
+
     before_action :get_entry
 
     # Le verrou sérialise les affectations concurrentes : deux saisies
@@ -19,7 +21,7 @@ module Finance
       if allocation.persisted?
         maybe_post(allocation)
       else
-        redirect_to redirect_target, alert: allocation.errors.full_messages.to_sentence
+        apres_affectation(@entry, redirect_target, alert: allocation.errors.full_messages.to_sentence)
       end
     end
 
@@ -42,15 +44,15 @@ module Finance
     # la meilleure façon de laisser des lignes affectées mais non passées.
     def maybe_post(allocation)
       unless @entry.reload.fully_allocated?
-        return redirect_to redirect_target,
-                           notice: "Affectation enregistrée — il reste #{Money.new(@entry.remaining_cents, 'EUR').format} à affecter."
+        return apres_affectation(@entry, redirect_target,
+                                 notice: "Affectation enregistrée — il reste #{Money.new(@entry.remaining_cents, 'EUR').format} à affecter.")
       end
 
       Accounting::PostCashEntry.new(cash_entry: @entry, whodunnit: current_user&.email).run!
-      redirect_to redirect_target, notice: "Ligne entièrement affectée et comptabilisée."
+      apres_affectation(@entry, redirect_target, notice: "Ligne entièrement affectée et comptabilisée.")
     rescue Accounting::PostDocument::MissingFiscalYear => e
-      redirect_to redirect_target,
-                  alert: "Affectation enregistrée, mais la ligne n'a pas pu être comptabilisée : #{e.message}"
+      apres_affectation(@entry, redirect_target,
+                        alert: "Affectation enregistrée, mais la ligne n'a pas pu être comptabilisée : #{e.message}")
     end
 
     def redirect_target
