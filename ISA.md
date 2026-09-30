@@ -652,6 +652,8 @@ Demande de Michael : « Certains emails sur compta@les4sources.be contiennent de
 
 Demande de Michael : « pour préparer le paiement d'une facture, est-ce qu'on aura la communication à spécifier ? Je crois qu'elle est dans l'UBL. » Constat : dans l'UBL (`PaymentID`) 2 fois sur 9, dans le seul PDF 4 autres fois, sinon la communication libre est le numéro de facture.
 
-- [ ] ISC-M22: Une facture d'achat porte une communication de paiement, modifiable dans son formulaire. « À payer » l'affiche, copiable, à la place du numéro de facture, qui reste la valeur par défaut. Probe : request specs.
-- [ ] ISC-M23: La communication est pré-remplie depuis le `PaymentID` de l'UBL, sinon depuis une communication structurée `+++…+++` du PDF. Probe : specs + relecture des vraies pièces (Ferme de Grange, Thomas Fabry, BRUYERRE, Moulin de Tongrinne, Fraternité de Tibériade, Manon Lefebvre).
+- [x] ISC-M22: Une facture d'achat porte une communication de paiement, modifiable dans son formulaire. « À payer » l'affiche, copiable, à la place du numéro de facture, qui reste la valeur par défaut. Probe : request specs.
+  - Évidence 2026-09-30 : request specs (enregistrée normalisée, « À payer » copie +++000/0024/11862+++ au lieu de F-1, retombe sur le numéro sans communication) + spec modèle (clé fausse refusée) ; au navigateur, champ « Communication du paiement » pré-rempli.
+- [x] ISC-M23: La communication est pré-remplie depuis le `PaymentID` de l'UBL, sinon depuis une communication structurée `+++…+++` du PDF. Probe : specs + relecture des vraies pièces (Ferme de Grange, Thomas Fabry, BRUYERRE, Moulin de Tongrinne, Fraternité de Tibériade, Manon Lefebvre).
+  - Évidence 2026-09-30 : relecture v4 des vraies pièces → UBL Ferme de Grange et Thomas Fabry ; PDF BRUYERRE, Moulin de Tongrinne, Fraternité de Tibériade, Manon Lefebvre ; les 6 passent le modulo 97. 3 PETITS POIDS, Épicerie des Massennes et Delphine Guillaume retombent sur le numéro.
 - Anti-claim : une communication structurée dont la clé de contrôle modulo 97 est fausse n'est jamais proposée. Un virement avec une communication fausse arrive, mais le fournisseur ne sait pas le rapprocher.
