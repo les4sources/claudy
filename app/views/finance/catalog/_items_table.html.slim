@@ -1,0 +1,37 @@
+.overflow-x-auto.relative
+  /  Largeurs fixées sur écran large : la section des inactifs réutilise ce
+     tableau, et ses colonnes doivent tomber sous celles des actifs.
+  table.w-full.text-sm.text-left.text-gray-500(class="md:table-fixed" data-controller="stacked-table")
+    colgroup
+      col(class="md:w-[30%]")
+      col(class="md:w-[11%]")
+      col(class="md:w-[12%]")
+      col(class="md:w-[12%]")
+      col(class="md:w-[12%]")
+      col(class="md:w-[23%]")
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-6[scope="col"] Article
+        th.py-3.px-6[scope="col"] Canal
+        th.py-3.px-6.text-right[scope="col"] Achat
+        th.py-3.px-6.text-right[scope="col"] Sourcier
+        th.py-3.px-6.text-right[scope="col"] Public
+        th.py-3.px-6[scope="col"] Palier en vigueur
+    tbody
+      - items.each do |item|
+        tr.border-b.bg-white
+          td.py-4.px-6.font-medium.text-gray-900[scope="row"]
+            = link_to item.name,
+                      finance_catalog_path(item),
+                      class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+            - if item.category.present?
+              .mt-0.5.text-xs.text-gray-400= item.category
+            - if item.consignor.present?
+              .mt-0.5.text-xs.text-violet-700= item.consignor.name
+          td.py-4.px-6
+            span class="px-2 py-0.5 rounded-full text-xs #{item.channel_badge_css}"
+              = item.channel_label
+          td.py-4.px-6.text-right.text-gray-400= item.purchase_price
+          td.py-4.px-6.text-right.font-semibold.text-gray-900= item.member_price
+          td.py-4.px-6.text-right= item.public_price
+          td.py-4.px-6.text-xs.text-gray-500= item.price_period

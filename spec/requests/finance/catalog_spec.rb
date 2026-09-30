@@ -49,6 +49,32 @@ RSpec.describe "Finances > Catalogue", type: :request do
       expect(response.body).to include("Moinette")
       expect(response.body).not_to include("Avoine bio")
     end
+
+    # Les inactifs ne se mêlent plus aux actifs : ils passent dans une section
+    # à part, sous la liste.
+    it "range les articles inactifs dans une section sous les actifs" do
+      CatalogItem.create!(name: "Grosse Bertha", channel: "bar", unit: "piece", active: false)
+
+      get finance_catalog_index_path(channel: "bar")
+
+      body = response.body
+      expect(body).to include("Articles inactifs (1)")
+      expect(body.index("Moinette")).to be < body.index("Articles inactifs")
+      expect(body.index("Grosse Bertha")).to be > body.index("Articles inactifs")
+    end
+
+    it "n'affiche pas de section inactifs quand il n'y en a pas" do
+      get finance_catalog_index_path(channel: "bar")
+
+      expect(response.body).not_to include("Articles inactifs")
+    end
+
+    it "n'affiche pas le libellé « Q » au-dessus de la recherche" do
+      get finance_catalog_index_path
+
+      expect(response.body).not_to match(%r{<label[^>]*>\s*Q\s*</label>})
+      expect(response.body).to include('placeholder="Chercher un article…"')
+    end
   end
 
   describe "paliers de prix" do
