@@ -44,6 +44,58 @@ module MailIntakeHelpers
     mail.to_s
   end
 
+# Une facture électronique UBL (Peppol BIS 3) de synthèse, avec son PDF
+# embarqué. `taux` : [[pourcentage, base HTVA, TVA]].
+def ubl_xml(number: "WIE45/2026/11492", supplier: "BRUYERRE", supplier_vat: "BE0431703151",
+            iban: "BE68539007547034", customer_vat: "BE0508977707", taux: [[21, "230.54", "48.41"]],
+            total: "278.95", prepaid: nil, payable: nil, pdf: nil, credit_note: false)
+  root = credit_note ? "CreditNote" : "Invoice"
+  subtotals = taux.map do |pct, base, tax|
+    "<cac:TaxSubtotal><cbc:TaxableAmount currencyID=\"EUR\">#{base}</cbc:TaxableAmount>" \
+      "<cbc:TaxAmount currencyID=\"EUR\">#{tax}</cbc:TaxAmount><cac:TaxCategory><cbc:ID>S</cbc:ID>" \
+      "<cbc:Percent>#{pct}</cbc:Percent></cac:TaxCategory></cac:TaxSubtotal>"
+  end.join
+  embedded = pdf ? "<cac:AdditionalDocumentReference><cbc:ID>1</cbc:ID><cac:Attachment>" \
+                   "<cbc:EmbeddedDocumentBinaryObject mimeCode=\"application/pdf\" filename=\"facture.pdf\">" \
+                   "#{Base64.strict_encode64(pdf)}</cbc:EmbeddedDocumentBinaryObject></cac:Attachment>" \
+                   "</cac:AdditionalDocumentReference>" : ""
+  <<~XML
+    <?xml version="1.0" encoding="UTF-8"?>
+    <#{root} xmlns="urn:oasis:names:specification:ubl:schema:xsd:#{root}-2"
+      xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+      xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+      <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0</cbc:CustomizationID>
+      <cbc:ID>#{number}</cbc:ID>
+      <cbc:IssueDate>2026-09-18</cbc:IssueDate>
+      <cbc:DueDate>2026-10-18</cbc:DueDate>
+      <cbc:#{root}TypeCode>#{credit_note ? 381 : 380}</cbc:#{root}TypeCode>
+      #{embedded}
+      <cac:AccountingSupplierParty><cac:Party><cac:PartyName><cbc:Name>#{supplier}</cbc:Name></cac:PartyName>
+        <cac:PartyTaxScheme><cbc:CompanyID>#{supplier_vat}</cbc:CompanyID></cac:PartyTaxScheme></cac:Party></cac:AccountingSupplierParty>
+      <cac:AccountingCustomerParty><cac:Party><cac:PartyLegalEntity><cbc:RegistrationName>Fondation Les 4 Sources</cbc:RegistrationName></cac:PartyLegalEntity>
+        <cac:PartyTaxScheme><cbc:CompanyID>#{customer_vat}</cbc:CompanyID></cac:PartyTaxScheme></cac:Party></cac:AccountingCustomerParty>
+      <cac:PaymentMeans><cbc:PaymentMeansCode>30</cbc:PaymentMeansCode><cbc:PaymentID>+++090/1234/56789+++</cbc:PaymentID>
+        <cac:PayeeFinancialAccount><cbc:ID>#{iban}</cbc:ID></cac:PayeeFinancialAccount></cac:PaymentMeans>
+      <cac:TaxTotal><cbc:TaxAmount currencyID="EUR">0</cbc:TaxAmount>#{subtotals}</cac:TaxTotal>
+      <cac:LegalMonetaryTotal><cbc:TaxInclusiveAmount currencyID="EUR">#{total}</cbc:TaxInclusiveAmount>
+        #{prepaid ? "<cbc:PrepaidAmount currencyID=\"EUR\">#{prepaid}</cbc:PrepaidAmount>" : ""}
+        <cbc:PayableAmount currencyID="EUR">#{payable || total}</cbc:PayableAmount></cac:LegalMonetaryTotal>
+    </#{root}>
+  XML
+end
+
+def raw_ubl_mail(message_id:, xml:, subject: "Fondation Les 4 Sources UBL Invoice - BRUYERRE - WIE45/2026/11492 [Purchase]")
+  mail = Mail.new
+  mail.from = "noreply@okioki.be"
+  mail.to = "compta@les4sources.be"
+  mail.subject = subject
+  mail.message_id = message_id
+  mail.date = Time.zone.parse("2026-09-18 12:10")
+  mail.text_part = Mail::Part.new { body "Facture électronique en annexe." }
+  mail.add_file(filename: "20260918_facture.xml", content: xml, mime_type: "text/xml")
+  mail.to_s
+end
+
   # Un serveur IMAP en mémoire. Il note chaque commande reçue : c'est la
   # preuve que la synchro ne pose aucun flag et ne déplace rien.
   class FakeImap

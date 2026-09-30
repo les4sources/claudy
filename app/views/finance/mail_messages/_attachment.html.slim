@@ -1,69 +1,86 @@
 / Une pièce et ce qu'on en propose. Le PDF est affiché à côté : on relit la
   proposition contre la pièce, pas de mémoire.
-.rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
-  .flex.flex-wrap.items-start.justify-between.gap-3
-    div
-      p.text-sm.font-medium.text-gray-900= attachment.filename
-      p.text-xs.text-gray-400
-        = MailAttachment::KIND_LABELS[attachment.kind] || (attachment.pdf? ? "PDF" : "Image")
-        = mail_confidence_badge(attachment.proposal["kind"])
-    .flex.flex-wrap.items-center.gap-2
-      = link_to "Ouvrir", rails_blob_path(attachment.file, disposition: "inline"), target: "_blank", rel: "noopener", class: "text-sm text-blue-500 hover:underline"
-      - if attachment.purchase_invoice
-        = link_to "Voir la facture ##{attachment.purchase_invoice_id}", finance_purchase_invoice_path(attachment.purchase_invoice), class: "inline-flex items-center rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-sm font-medium text-green-800"
-      - elsif (existante = attachment.existing_invoice)
-        = link_to "Déjà dans la compta : facture ##{existante.id}", finance_purchase_invoice_path(existante), class: "inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-900"
-      - else
-        = link_to "Créer la facture", new_finance_purchase_invoice_path(mail_attachment_id: attachment.id), class: "inline-flex items-center rounded-md border border-transparent px-3 py-1.5 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
 
-  - proposal = attachment.proposal
-  - if attachment.pdf?
-    dl.mt-3.grid.grid-cols-2.gap-x-4.gap-y-2.text-sm(class="sm:grid-cols-3")
+  Le XML d'une facture électronique qui embarque son PDF n'est qu'une source :
+  une ligne suffit, la carte est celle du PDF.
+- if attachment.kind == "ubl_data"
+  .rounded-2xl.bg-green-50.ring-1.ring-green-200.px-4.py-3.text-sm.text-green-900
+    | Facture électronique (UBL) lue :
+    span.font-medium= " #{attachment.filename}"
+    | . Les valeurs de la pièce ci-dessous en viennent, exactes.
+- else
+  .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+    .flex.flex-wrap.items-start.justify-between.gap-3
       div
-        dt.text-xs.text-gray-400 Fournisseur
-        dd.text-gray-900
-          - if (tiers = third_parties[attachment.proposed(:third_party_id)])
-            = tiers.name
-            = mail_confidence_badge(proposal["third_party_id"])
-          - else
-            span.text-gray-400 inconnu — à choisir
-      div
-        dt.text-xs.text-gray-400 Entité
-        dd.text-gray-900
-          - if (entite = entities[attachment.proposed(:legal_entity_id)])
-            = entite.name
-            = mail_confidence_badge(proposal["legal_entity_id"])
-          - else
-            span.text-gray-400 —
-      div
-        dt.text-xs.text-gray-400 Total
-        dd.text-gray-900
-          - if attachment.proposed(:total_cents)
-            = number_to_currency(attachment.proposed(:total_cents) / 100.0)
-            = mail_confidence_badge(proposal["total_cents"])
-          - else
-            span.text-gray-400 —
-      div
-        dt.text-xs.text-gray-400 Numéro
-        dd.text-gray-900
-          = attachment.proposed(:number) || "—"
-          = mail_confidence_badge(proposal["number"])
-      div
-        dt.text-xs.text-gray-400 Date
-        dd.text-gray-900
-          = attachment.proposed(:issued_on) ? l(Date.parse(attachment.proposed(:issued_on))) : "—"
-          = mail_confidence_badge(proposal["issued_on"])
-      div
-        dt.text-xs.text-gray-400 Échéance
-        dd.text-gray-900
-          = attachment.proposed(:due_on) ? l(Date.parse(attachment.proposed(:due_on))) : "—"
-          = mail_confidence_badge(proposal["due_on"])
-    - if proposal["error"].present?
-      p.mt-2.text-xs.text-amber-700= "Proposition incomplète : #{proposal['error']}"
-    - elsif attachment.text_content.blank? && proposal.present?
-      p.mt-2.text-xs.text-amber-700 Ce PDF ne contient pas de texte (scan ?) : à encoder à la main.
-    - apercu = rails_blob_path(attachment.file, disposition: "inline")
-    iframe.mt-3.w-full.rounded-lg.ring-1.ring-gray-200(src="#{apercu}#navpanes=0&view=FitH" title="Aperçu de #{attachment.filename}" style="height: 70vh")
-  - else
-    = image_tag rails_blob_path(attachment.file, disposition: "inline"), alt: "Pièce jointe #{attachment.filename}", class: "mt-3 max-h-[70vh] rounded-lg ring-1 ring-gray-200"
-    p.mt-2.text-xs.text-gray-500 Une photo ou un scan : Claudy ne le lit pas encore, à encoder à la main.
+        p.text-sm.font-medium.text-gray-900= attachment.filename
+        p.text-xs.text-gray-400
+          = MailAttachment::KIND_LABELS[attachment.kind] || (attachment.pdf? ? "PDF" : "Image")
+          = mail_confidence_badge(attachment.proposal["kind"])
+      .flex.flex-wrap.items-center.gap-2
+        = link_to "Ouvrir", rails_blob_path(attachment.file, disposition: "inline"), target: "_blank", rel: "noopener", class: "text-sm text-blue-500 hover:underline"
+        - if attachment.purchase_invoice
+          = link_to "Voir la facture ##{attachment.purchase_invoice_id}", finance_purchase_invoice_path(attachment.purchase_invoice), class: "inline-flex items-center rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-sm font-medium text-green-800"
+        - elsif (existante = attachment.existing_invoice)
+          = link_to "Déjà dans la compta : facture ##{existante.id}", finance_purchase_invoice_path(existante), class: "inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-900"
+        - elsif attachment.kind == "sales"
+          span.text-xs.text-gray-500 Émise par nous : rien à encoder en achat.
+        - else
+          = link_to "Créer la facture", new_finance_purchase_invoice_path(mail_attachment_id: attachment.id), class: "inline-flex items-center rounded-md border border-transparent px-3 py-1.5 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
+
+    - proposal = attachment.proposal
+    - if attachment.proposed(:fully_prepaid)
+      p.mt-3.rounded-lg.bg-green-50.px-3.py-2.text-sm.text-green-900 Déjà payée selon la facture électronique : il ne reste rien à payer.
+    - if attachment.pdf? || attachment.ubl?
+      dl.mt-3.grid.grid-cols-2.gap-x-4.gap-y-2.text-sm(class="sm:grid-cols-3")
+        div
+          dt.text-xs.text-gray-400 Fournisseur
+          dd.text-gray-900
+            - if (tiers = third_parties[attachment.proposed(:third_party_id)])
+              = tiers.name
+              = mail_confidence_badge(proposal["third_party_id"])
+            - elsif attachment.proposed(:supplier_name)
+              = attachment.proposed(:supplier_name)
+              span.ml-1.text-xs.text-gray-400 nouveau fournisseur
+            - else
+              span.text-gray-400 inconnu — à choisir
+        div
+          dt.text-xs.text-gray-400 Entité
+          dd.text-gray-900
+            - if (entite = entities[attachment.proposed(:legal_entity_id)])
+              = entite.name
+              = mail_confidence_badge(proposal["legal_entity_id"])
+            - else
+              span.text-gray-400 —
+        div
+          dt.text-xs.text-gray-400 Total
+          dd.text-gray-900
+            - if attachment.proposed(:total_cents)
+              = number_to_currency(attachment.proposed(:total_cents) / 100.0)
+              = mail_confidence_badge(proposal["total_cents"])
+            - else
+              span.text-gray-400 —
+        div
+          dt.text-xs.text-gray-400 Numéro
+          dd.text-gray-900
+            = attachment.proposed(:number) || "—"
+            = mail_confidence_badge(proposal["number"])
+        div
+          dt.text-xs.text-gray-400 Date
+          dd.text-gray-900
+            = attachment.proposed(:issued_on) ? l(Date.parse(attachment.proposed(:issued_on))) : "—"
+            = mail_confidence_badge(proposal["issued_on"])
+        div
+          dt.text-xs.text-gray-400 Échéance
+          dd.text-gray-900
+            = attachment.proposed(:due_on) ? l(Date.parse(attachment.proposed(:due_on))) : "—"
+            = mail_confidence_badge(proposal["due_on"])
+      - if proposal["error"].present?
+        p.mt-2.text-xs.text-amber-700= "Proposition incomplète : #{proposal['error']}"
+      - elsif attachment.pdf? && !attachment.from_ubl? && attachment.text_content.blank? && proposal.present?
+        p.mt-2.text-xs.text-amber-700 Ce PDF ne contient pas de texte (scan ?) : à encoder à la main.
+      - if attachment.pdf?
+        - apercu = rails_blob_path(attachment.file, disposition: "inline")
+        iframe.mt-3.w-full.rounded-lg.ring-1.ring-gray-200(src="#{apercu}#navpanes=0&view=FitH" title="Aperçu de #{attachment.filename}" style="height: 70vh")
+    - else
+      = image_tag rails_blob_path(attachment.file, disposition: "inline"), alt: "Pièce jointe #{attachment.filename}", class: "mt-3 max-h-[70vh] rounded-lg ring-1 ring-gray-200"
+      p.mt-2.text-xs.text-gray-500 Une photo ou un scan : Claudy ne le lit pas encore, à encoder à la main.

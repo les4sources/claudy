@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_30_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_30_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1389,6 +1389,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_140000) do
   create_table "mail_attachments", force: :cascade do |t|
     t.string "content_type", null: false
     t.datetime "created_at", null: false
+    t.bigint "embedded_in_id"
     t.string "filename", null: false
     t.bigint "mail_message_id", null: false
     t.jsonb "proposal", default: {}, null: false
@@ -1396,6 +1397,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_140000) do
     t.string "sha256", null: false
     t.text "text_content"
     t.datetime "updated_at", null: false
+    t.index ["embedded_in_id"], name: "index_mail_attachments_on_embedded_in_id"
     t.index ["mail_message_id"], name: "index_mail_attachments_on_mail_message_id"
     t.index ["purchase_invoice_id"], name: "index_mail_attachments_on_purchase_invoice_id"
     t.index ["sha256"], name: "index_mail_attachments_on_sha256"
@@ -2636,6 +2638,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_140000) do
   add_foreign_key "lodging_compositions", "lodgings", column: "composite_lodging_id"
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"
+  add_foreign_key "mail_attachments", "mail_attachments", column: "embedded_in_id"
   add_foreign_key "mail_attachments", "mail_messages"
   add_foreign_key "mail_attachments", "purchase_invoices"
   add_foreign_key "mail_messages", "mail_accounts"
