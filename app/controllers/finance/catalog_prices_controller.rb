@@ -8,10 +8,13 @@ module Finance
     before_action :get_item
     before_action :get_price, only: [:destroy]
 
+    # Clore le palier précédent et enregistrer le nouveau vont ENSEMBLE : si le
+    # nouveau est refusé, le précédent ne doit pas rester clos — l'article se
+    # retrouverait sans prix en vigueur. Et un refus se dit toujours à l'écran :
+    # une 500 sur un formulaire Turbo n'affiche rien (CLAUDY-7X, 2026-09-30).
     def create
       @price = @item.catalog_prices.new(price_params)
       apply_automatic_member_price
-      close_previous_period
 
       if @price.member_price_cents.blank?
         return redirect_to finance_catalog_path(@item),
@@ -19,11 +22,16 @@ module Finance
                                   "saisis l'un ou l'autre."
       end
 
-      if @price.save
-        redirect_to finance_catalog_path(@item), notice: "Le palier de prix a été ajouté."
-      else
-        redirect_to finance_catalog_path(@item), alert: @price.errors.full_messages.to_sentence
+      same_day = @price.active_from && @item.catalog_prices.find_by(active_from: @price.active_from)
+      return correct_same_day(same_day) if same_day
+
+      CatalogPrice.transaction do
+        close_previous_period
+        @price.save!
       end
+      redirect_to finance_catalog_path(@item), notice: "Le palier de prix a été ajouté."
+    rescue ActiveRecord::RecordInvalid => e
+      redirect_to finance_catalog_path(@item), alert: e.record.errors.full_messages.to_sentence
     end
 
     def destroy
@@ -63,6 +71,19 @@ module Finance
 
       previous = @item.catalog_prices.covering(@price.active_from).first
       previous&.update!(active_until: @price.active_from - 1.day)
+    end
+
+    # Un second palier à la MÊME date corrige celui du jour au lieu d'échouer : clore
+    # l'existant « la veille » lui donnerait une fin antérieure à son début. La
+    # note et la référence, que le formulaire ne saisit pas, sont gardées.
+    def correct_same_day(existing)
+      attributes = @price.attributes.slice("purchase_price_cents", "member_price_cents",
+                                           "public_price_cents", "third_party_id")
+      attributes["note"] = @price.note if @price.note.present?
+      existing.update!(attributes)
+
+      redirect_to finance_catalog_path(@item),
+                  notice: "Le palier du #{I18n.l(existing.active_from, format: :long).squish} a été corrigé."
     end
 
     # Supprimer le dernier palier rouvre celui qui le précédait, sinon l'article
