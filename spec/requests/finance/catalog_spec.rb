@@ -215,6 +215,44 @@ RSpec.describe "Finances > Catalogue", type: :request do
 
       expect(JSON.parse(response.body)["member_price"]).to eq(2.10)
     end
+
+    it "renvoie le prix de vente conseillé à 30 % de marge, sans proposer de prix public" do
+      get finance_catalog_suggest_price_path(channel: "grocery", purchase: "2,00")
+
+      json = JSON.parse(response.body)
+      expect(json["recommended_public_price"]).to eq(2.60)
+      expect(json).not_to have_key("public_price")
+    end
+  end
+
+  # Marge sur coût : (public − achat) ÷ achat. Rouge sous 25 %, orange jusqu'à
+  # 28 %, vert au-delà (Michael, 2026-09-30).
+  describe "marge" do
+    it "affiche la marge colorée dans la liste" do
+      get finance_catalog_index_path(channel: "grocery")
+
+      # Avoine bio : achat 2,40, public 3,10 → 29 %, vert.
+      marge = Nokogiri::HTML(response.body).at_css("[data-margin-level]")
+      expect(marge.text).to eq("29 %")
+      expect(marge["data-margin-level"]).to eq("good")
+      expect(marge["class"]).to include("text-green-700")
+    end
+
+    it "affiche la marge dans l'en-tête et l'historique d'un article" do
+      get finance_catalog_path(moinette)
+
+      # Moinette : achat 1,91, public 4,00 → 109 %.
+      expect(Nokogiri::HTML(response.body).css("[data-margin-level]").map(&:text)).to all(eq("109 %"))
+    end
+
+    it "retire le champ Référence et rend le fournisseur cherchable" do
+      get finance_catalog_path(avoine)
+
+      doc = Nokogiri::HTML(response.body)
+      expect(doc.at_css("input[name='catalog_price[reference_price]']")).to be_nil
+      expect(doc.at_css("[data-controller~='searchable-select'] select[name='catalog_price[third_party_id]']")).to be_present
+      expect(response.body).to include("Prix de vente conseillé (marge 30 %)")
+    end
   end
 
   describe "suppression" do

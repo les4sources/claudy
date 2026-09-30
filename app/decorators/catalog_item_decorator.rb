@@ -18,6 +18,11 @@ class CatalogItemDecorator < ApplicationDecorator
     format_cents(price_on(on)&.reference_price_cents)
   end
 
+  # Marge sur coût du palier en vigueur, colorée (voir CatalogHelper).
+  def margin(on: Date.current)
+    h.catalog_margin_tag(price_on(on))
+  end
+
   # « depuis le 1 septembre 2026 », ou l'absence de palier dite franchement.
   def price_period(on: Date.current)
     price = price_on(on)
