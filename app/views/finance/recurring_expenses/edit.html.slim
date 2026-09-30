@@ -1,0 +1,7 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Modifier « #{@recurring_expense.label} »"
+
+.max-w-4xl
+  = render "form", recurring_expense: @recurring_expense
+  .mt-8.pt-6.border-t.border-gray-200
+    = button_to "Supprimer cette charge", finance_recurring_expense_path(@recurring_expense), method: :delete, form: { data: { turbo_confirm: "Supprimer « #{@recurring_expense.label} » ? La trésorerie ne la projettera plus." } }, class: "text-sm text-red-600 hover:text-red-800"

@@ -40,6 +40,7 @@ module AccountingNavHelper
       ["Fournisseurs", "fournisseurs", [
         ["Achats", finance_purchase_invoices_path, %w[finance/purchase_invoices]],
         ["À payer", finance_payables_path, %w[finance/payables]],
+        ["Charges fixes", finance_recurring_expenses_path, %w[finance/recurring_expenses]],
         ["Tiers", finance_third_parties_path, %w[finance/third_parties]]
       ]],
       # Le miroir de « Fournisseurs » (epic #240, phase 6) : le registre des

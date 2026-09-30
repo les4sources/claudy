@@ -345,6 +345,10 @@ Rails.application.routes.draw do
       end
     end
 
+    # Les charges fixes (2026-09-30) : des prévisions pour la trésorerie, pas
+    # des dettes — elles se suppriment sans laisser d'écriture orpheline.
+    resources :recurring_expenses, except: [:show]
+
     # Les tiers (epic #240, phase 1) : on les désactive, on ne les détruit pas —
     # des écritures les portent.
     resources :third_parties, except: %i[show destroy] do
