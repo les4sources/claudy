@@ -46,6 +46,22 @@ RSpec.describe "Comptabilité > Boite de réception — factures UBL", type: :re
     expect(response.body).to include('value="TVA 6 %"', 'value="416.06"')
   end
 
+it "pré-remplit la communication, l'enregistre, et « À payer » la propose à copier" do
+  xml = ubl_xml(payment_id: "+++000/0024/11862+++", pdf: pdf)
+  message = relever_et_analyser(raw_ubl_mail(message_id: "comm@okioki.be", xml: xml)).first
+
+  get new_finance_purchase_invoice_path(mail_attachment_id: piece_ubl(message).id)
+  expect(response.body).to include('value="+++000/0024/11862+++"')
+
+  post finance_purchase_invoices_path(mail_attachment_id: piece_ubl(message).id), params: {
+    purchase_invoice: { legal_entity_id: entity.id, third_party_id: bruyerre.id, number: "WIE45/2026/11492",
+                        issued_on: "2026-09-18", total_euros: "278.95", payment_reference: "000002411862" }
+  }
+  invoice = PurchaseInvoice.last
+  expect(invoice.payment_reference).to eq("+++000/0024/11862+++")
+  expect(invoice.payable_communication).to eq("+++000/0024/11862+++")
+end
+
   it "note qu'une facture est déjà payée quand l'UBL le dit" do
     message = relever_et_analyser(raw_ubl_mail(message_id: "b@okioki.be", xml: ubl_xml(prepaid: "278.95", payable: "0.00", pdf: pdf))).first
 

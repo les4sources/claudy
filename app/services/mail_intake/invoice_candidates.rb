@@ -43,6 +43,8 @@ module MailIntake
 
     def self.normalize_iban(raw) = raw.to_s.gsub(/\s/, "").upcase.presence
 
+    attr_reader :text
+
     def initialize(text)
       @text = text.to_s
     end

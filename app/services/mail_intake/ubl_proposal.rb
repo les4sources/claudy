@@ -24,7 +24,7 @@ module MailIntake
         "supplier_name" => ubl_value(supplier.name),
         "supplier_vat" => ubl_value(supplier.vat),
         "supplier_iban" => ubl_value(IbanValidator.valid_iban?(supplier.iban.to_s) ? supplier.iban : nil),
-        "payment_reference" => ubl_value(@ubl.payment_reference),
+        "payment_reference" => ubl_value(payment_reference),
         "prepaid_cents" => ubl_value(@ubl.prepaid_cents&.nonzero?),
         "payable_cents" => ubl_value(@ubl.payable_cents),
         "fully_prepaid" => ubl_value(@ubl.fully_prepaid? || nil),
@@ -34,6 +34,17 @@ module MailIntake
     end
 
     private
+
+    # Une communication structurée est normalisée (et écartée si sa clé de
+    # contrôle est fausse) ; une communication libre est reprise telle quelle,
+    # puisque c'est le fournisseur qui la demande.
+    def payment_reference
+      raw = @ubl.payment_reference
+      return nil if raw.blank?
+      return StructuredCommunication.normalize(raw) if raw.match?(%r{\A[\s\d+*/]+\z})
+
+      raw
+    end
 
     def kind
       return "sales" if our_vats.include?(InvoiceCandidates.normalize_vat(@ubl.supplier.vat))

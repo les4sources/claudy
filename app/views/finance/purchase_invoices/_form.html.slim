@@ -42,6 +42,11 @@
           div
             label.block.text-xs.font-medium.text-gray-500 Échéance
             = f.date_field :due_on, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+          / La communication du virement. Vide, « À payer » propose le numéro de
+            la facture — ce qu'un fournisseur sans communication structurée cherche.
+          div
+            label.block.text-xs.font-medium.text-gray-500(for="purchase_invoice_payment_reference") Communication du paiement
+            = f.text_field :payment_reference, label: false, placeholder: "+++000/0000/00097+++ ou vide = n° de facture", autocomplete: "off", class: "mt-1 w-full rounded-md border-gray-300 font-mono text-sm shadow-sm"
 
       .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
         .flex.items-center.justify-between.mb-3

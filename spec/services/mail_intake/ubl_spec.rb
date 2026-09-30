@@ -94,6 +94,28 @@ RSpec.describe MailIntake::Ubl do
       expect(message.reload.triage.dig("nature", "value")).to eq("invoice")
     end
 
+    it "reprend la communication structurée de l'UBL, et sinon celle du PDF embarqué" do
+      pdf_avec_comm = text_pdf(["BRUYERRE", "Communication +++000/1223/35386+++"])
+      avec, sans = relever([
+                             raw_ubl_mail(message_id: "c1@okioki.be", xml: ubl_xml(payment_id: "+++000/0024/11862+++", pdf: pdf)),
+                             raw_ubl_mail(message_id: "c2@okioki.be", xml: ubl_xml(number: "X-2", payment_id: nil, pdf: pdf_avec_comm))
+                           ])
+      [avec, sans].each { |m| MailIntake::Analyze.new(mail_message: m, jev: jev).run! }
+
+      expect(avec.mail_attachments.find_by(content_type: "application/pdf").proposal["payment_reference"])
+        .to eq("value" => "+++000/0024/11862+++", "source" => "ubl")
+      expect(sans.mail_attachments.find_by(content_type: "application/pdf").proposal["payment_reference"])
+        .to eq("value" => "+++000/1223/35386+++", "source" => "code")
+    end
+
+    it "écarte une communication structurée dont la clé est fausse" do
+      message = relever([raw_ubl_mail(message_id: "c3@okioki.be", xml: ubl_xml(pdf: pdf))]).first
+
+      MailIntake::Analyze.new(mail_message: message, jev: jev).run!
+
+      expect(message.mail_attachments.find_by(content_type: "application/pdf").proposal).not_to have_key("payment_reference")
+    end
+
     it "reconnaît nos propres factures de vente, qui ne proposent pas d'achat" do
       xml = ubl_xml(supplier: "Fondation Les 4 Sources", supplier_vat: "BE0508977707", customer_vat: "BE0881260539", pdf: pdf)
       message = relever([raw_ubl_mail(message_id: "u3@okioki.be", xml: xml, subject: "UBL Invoice - SOLIDARCITE - 2026-093 [Sales]")]).first

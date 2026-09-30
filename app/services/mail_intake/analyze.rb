@@ -14,10 +14,10 @@ module MailIntake
   class Analyze
     NONE = "aucun".freeze
     # Monte quand la lecture apprend quelque chose (v2 : de quoi créer le
-    # fournisseur ; v3 : les factures électroniques UBL). Le passage suivant du
-    # cron relit alors les mails encore à traiter — jamais ceux déjà classés ou
-    # ignorés.
-    VERSION = 3
+    # fournisseur ; v3 : les factures électroniques UBL ; v4 : la communication
+    # de paiement). Le passage suivant du cron relit alors les mails encore à
+    # traiter — jamais ceux déjà classés ou ignorés.
+    VERSION = 4
     MAX_PDF_PAGES = 5
     MAX_TEXT = 8_000
     MAX_SUPPLIER_OPTIONS = 200
@@ -110,6 +110,13 @@ module MailIntake
       ubl = Ubl.new(attachment.file.download)
       proposal = UblProposal.new(ubl, from_address: @message.from_address).to_h
       pdf = attachment.embedded.first
+      # Sans `PaymentID` dans l'UBL, la communication structurée n'est souvent
+      # QUE sur le PDF (BRUYERRE, Fraternité de Tibériade…).
+      if pdf && !proposal.key?("payment_reference")
+        pdf.text_content ||= extract_text(pdf)
+        communication = StructuredCommunication.scan(pdf.text_content).first
+        proposal["payment_reference"] = { "value" => communication, "source" => "code" } if communication
+      end
       if pdf
         pdf.update!(proposal: proposal)
         attachment.update!(proposal: proposal.merge("kind" => { "value" => "ubl_data", "source" => "ubl" }))
@@ -145,6 +152,8 @@ module MailIntake
       end
       supplier ||= suppliers.find { |t| t.email.present? && t.email.casecmp?(@message.from_address.to_s) }
       proposal["third_party_id"] = { "value" => supplier.id, "source" => "code" } if supplier
+      communication = StructuredCommunication.scan(candidates.text).first
+      proposal["payment_reference"] = { "value" => communication, "source" => "code" } if communication
       proposal.merge(new_supplier_identifiers(vats, ibans, our_vats))
     end
 
