@@ -140,6 +140,48 @@ RSpec.describe "Finances > Catalogue", type: :request do
       expect(response.body).to include("ne peut pas être calculé")
     end
 
+    # CLAUDY-7X : un second palier à la date d'un palier existant faisait une
+    # 500 (le précédent se voyait clore la veille de son propre début), sans rien
+    # afficher. Il corrige désormais le palier du jour.
+    it "corrige le palier du jour au lieu d'échouer quand on en pose un second à la même date" do
+      post finance_catalog_prices_path(moinette), params: {
+        catalog_price: { active_from: "2026-09-30", purchase_price: "2,00", member_price: "2,20", public_price: "4,00" }
+      }
+      post finance_catalog_prices_path(moinette), params: {
+        catalog_price: { active_from: "2026-09-30", purchase_price: "2,10", member_price: "2,31", public_price: "4,20" }
+      }
+
+      expect(response).to redirect_to(finance_catalog_path(moinette))
+      paliers = moinette.catalog_prices.chronological.to_a
+      expect(paliers.size).to eq(2)
+      expect(paliers.first.active_until).to eq(Date.new(2026, 9, 29))
+      expect(paliers.last).to have_attributes(active_from: Date.new(2026, 9, 30), active_until: nil,
+                                              purchase_price_cents: 210, member_price_cents: 231,
+                                              public_price_cents: 420)
+      follow_redirect!
+      expect(response.body).to include("a été corrigé")
+    end
+
+    it "ne clôt pas le palier en vigueur quand le nouveau est refusé faute de prix" do
+      post finance_catalog_prices_path(moinette), params: { catalog_price: { active_from: "2026-10-01" } }
+
+      expect(moinette.catalog_prices.sole.active_until).to be_nil
+    end
+
+    it "ne clôt pas le palier en vigueur quand le nouveau chevauche un palier futur, et le dit" do
+      moinette.catalog_prices.first.update!(active_until: Date.new(2026, 11, 30))
+      moinette.catalog_prices.create!(active_from: Date.new(2026, 12, 1), member_price_cents: 240)
+
+      post finance_catalog_prices_path(moinette), params: {
+        catalog_price: { active_from: "2026-10-01", member_price: "2,30" }
+      }
+
+      expect(moinette.catalog_prices.chronological.first.active_until).to eq(Date.new(2026, 11, 30))
+      expect(moinette.catalog_prices.count).to eq(2)
+      follow_redirect!
+      expect(response.body).to include("chevauche un palier existant")
+    end
+
     it "accepte la virgule décimale et laisse vides les prix non saisis" do
       post finance_catalog_prices_path(avoine), params: {
         catalog_price: { active_from: "2026-09-01", member_price: "2,85" }
