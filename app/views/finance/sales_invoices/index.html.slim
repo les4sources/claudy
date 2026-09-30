@@ -29,7 +29,7 @@
     = date_field_tag :to, params[:to], class: "rounded-lg border-stone-200 text-sm"
   div
     label class="block text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Numéro
-    = text_field_tag :q, params[:q], placeholder: "2026-", class: "rounded-lg border-stone-200 text-sm"
+    = text_field_tag :q, params[:q], placeholder: "2026-", autocomplete: "off", autocorrect: "off", autocapitalize: "off", spellcheck: "false", class: "rounded-lg border-stone-200 text-sm"
   = submit_tag "Filtrer", class: "rounded-lg bg-4s-main px-3 py-2 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer"
 
 - if @invoices.empty?

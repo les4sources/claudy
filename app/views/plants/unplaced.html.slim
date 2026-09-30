@@ -7,7 +7,7 @@
     = form_with url: unplaced_plants_path, method: :get, class: "flex gap-2 px-3 pt-3 md:block md:space-y-2",
                 data: { controller: "auto-submit", auto_submit_delay_value: 250 } do
       label.sr-only for="unplaced_q" Rechercher
-      input[type="search" id="unplaced_q" name="q" value=@query autocomplete="off" enterkeyhint="search"
+      input[type="search" id="unplaced_q" name="q" value=@query autocomplete="off" enterkeyhint="search" autocorrect="off" autocapitalize="off" spellcheck="false"
             placeholder="Nom, espèce, variété, n°…"
             class="h-11 min-w-0 flex-1 rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest md:w-full"
             data-action="input->auto-submit#submit"]

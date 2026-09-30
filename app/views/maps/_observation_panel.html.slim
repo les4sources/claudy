@@ -57,7 +57,7 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
       div[data-controller="observation-species"
           data-observation-species-url-value=map_observation_species_path(format: :json)]
         = f.label :species_common, "Espèce — nom commun", class: "block text-xs font-semibold text-stone-600"
-        = f.text_field :species_common, value: feature.species_common, required: true, autocomplete: "off",
+        = f.text_field :species_common, value: feature.species_common, required: true, autocomplete: "off", autocorrect: "off", spellcheck: "false",
                        maxlength: MapFeatureObservation::SPECIES_MAX_LENGTH, autofocus: !persisted,
                        list: "observation-species-suggestions", placeholder: "Ail des ours, chevreuil…",
                        data: { observation_species_target: "common", action: "input->observation-species#search change->observation-species#pick" },

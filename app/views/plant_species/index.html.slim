@@ -12,7 +12,7 @@
     = form_with url: map_especes_path, method: :get, class: "w-full sm:w-64",
                 data: { controller: "auto-submit", auto_submit_delay_value: 250, turbo_frame: "species-results" } do
       label.sr-only for="species_q" Rechercher une espèce
-      input[type="search" id="species_q" name="q" value=@query autocomplete="off" enterkeyhint="search"
+      input[type="search" id="species_q" name="q" value=@query autocomplete="off" enterkeyhint="search" autocorrect="off" autocapitalize="off" spellcheck="false"
             placeholder="Nom ou nom latin…"
             class="h-10 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
             data-action="input->auto-submit#submit"]

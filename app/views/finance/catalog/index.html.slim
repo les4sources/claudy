@@ -26,7 +26,7 @@
   = f.text_field :q,
                  value: @term,
                  placeholder: "Chercher un article…",
-                 autocomplete: "off",
+                 autocomplete: "off", autocorrect: "off", autocapitalize: "off", spellcheck: "false",
                  data: { action: "input->auto-submit#submit" },
                  class: "rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
 
