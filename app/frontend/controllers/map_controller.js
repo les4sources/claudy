@@ -152,7 +152,13 @@ export default class extends Controller {
     this.rgbLayer = this.tileLayer('rgb').addTo(this.map);
     this.demLayer = null;
 
-    if (bounds) this.map.fitBounds(bounds);
+    // Vue d'arrivée : l'emprise du fond, un cran plus près (Michael,
+    // 2026-09-30) — le domaine entier à l'écran laissait les objets trop petits.
+    // Sans animation : la carte naît au zoom 17, un zoom animé à l'ouverture
+    // (et figé dans un onglet en arrière-plan) laisserait les tuiles invisibles.
+    if (bounds) {
+      this.map.setView(bounds.getCenter(), this.map.getBoundsZoom(bounds) + 1, { animate: false });
+    }
 
     this.locating = false;
     this.locationMarker = null;
