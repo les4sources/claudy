@@ -56,7 +56,7 @@ nav.mb-5.flex.gap-2
             td.py-3.px-4.align-top
               - if message.mail_attachments.empty?
                 span.text-xs.text-gray-400 aucune pièce jointe
-              - message.mail_attachments.each do |attachment|
+              - message.mail_attachments.reject { |a| a.kind == "ubl_data" }.each do |attachment|
                 .text-xs
                   - if attachment.purchase_invoice
                     = link_to "✓ facture ##{attachment.purchase_invoice_id}", finance_purchase_invoice_path(attachment.purchase_invoice), class: "text-green-700 hover:underline"

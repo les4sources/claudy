@@ -16,9 +16,6 @@ module MailIntake
     FIRST_SYNC_DAYS = 90
     BATCH_SIZE = 20
     PORT = 993
-    # Un logo en signature n'est pas une pièce : les images ne comptent que
-    # jointes pour de vrai, et au-delà de ce poids.
-    MIN_IMAGE_BYTES = 20_000
 
     class MissingPassword < StandardError; end
 
@@ -106,7 +103,7 @@ module MailIntake
       message.raw.attach(io: StringIO.new(raw), filename: "message-#{data.attr['UID']}.eml",
                          content_type: "message/rfc822")
       message.save!
-      attachments_of(mail).each { |part| store_attachment(message, part) }
+      Attachments.store_all(message, mail)
       @created << message
     end
 
@@ -127,31 +124,6 @@ module MailIntake
       text.to_s.encode("UTF-8", invalid: :replace, undef: :replace).squeeze("\n").strip.truncate(20_000)
     rescue StandardError
       nil
-    end
-
-    def attachments_of(mail)
-      mail.attachments.select do |part|
-        type = part.mime_type.to_s
-        if type == "application/pdf" || part.filename.to_s.downcase.end_with?(".pdf")
-          true
-        elsif type.start_with?("image/")
-          !part.inline? && part.body.decoded.bytesize >= MIN_IMAGE_BYTES
-        else
-          false
-        end
-      end
-    end
-
-    def store_attachment(message, part)
-      bytes = part.body.decoded
-      type = part.filename.to_s.downcase.end_with?(".pdf") ? "application/pdf" : part.mime_type.to_s
-      attachment = message.mail_attachments.new(
-        filename: part.filename.presence || "piece-jointe",
-        content_type: type,
-        sha256: Digest::SHA256.hexdigest(bytes)
-      )
-      attachment.file.attach(io: StringIO.new(bytes), filename: attachment.filename, content_type: type)
-      attachment.save!
     end
   end
 end

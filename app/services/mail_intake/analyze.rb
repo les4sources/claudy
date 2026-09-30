@@ -14,9 +14,10 @@ module MailIntake
   class Analyze
     NONE = "aucun".freeze
     # Monte quand la lecture apprend quelque chose (v2 : de quoi créer le
-    # fournisseur). Le passage suivant du cron relit alors les mails encore à
-    # traiter — jamais ceux déjà classés ou ignorés.
-    VERSION = 2
+    # fournisseur ; v3 : les factures électroniques UBL). Le passage suivant du
+    # cron relit alors les mails encore à traiter — jamais ceux déjà classés ou
+    # ignorés.
+    VERSION = 3
     MAX_PDF_PAGES = 5
     MAX_TEXT = 8_000
     MAX_SUPPLIER_OPTIONS = 200
@@ -52,8 +53,13 @@ module MailIntake
     end
 
     def run!
-      @message.mail_attachments.each { |attachment| analyze_attachment(attachment) }
-      @message.update!(triage: triage.merge("version" => VERSION), analyzed_at: Time.current)
+      # Un mail relevé avant que Claudy sache garder l'UBL en récupère les
+      # pièces depuis son .eml.
+      Attachments.backfill(@message)
+      attachments = @message.mail_attachments.reload.to_a
+      # L'UBL d'abord : il fixe aussi la proposition du PDF qu'il embarque.
+      attachments.sort_by { |a| a.ubl? ? 0 : 1 }.each { |attachment| analyze_attachment(attachment) }
+      @message.update!(triage: ubl_triage(attachments) || triage.merge("version" => VERSION), analyzed_at: Time.current)
       @message
     end
 
@@ -73,7 +79,19 @@ module MailIntake
       { "error" => e.message }
     end
 
+    # Un mail qui porte une facture électronique se passe de Jev : l'UBL dit
+    # s'il s'agit d'un achat, d'une note de crédit ou d'une de nos ventes.
+    def ubl_triage(attachments)
+      kinds = attachments.select { |a| a.ubl? || a.embedded_in_id }.map { |a| a.reload.kind }.compact - ["ubl_data"]
+      return nil if kinds.empty?
+
+      nature = kinds.include?("sales") && kinds.none? { |k| %w[invoice credit_note].include?(k) } ? "sales" : "invoice"
+      { "nature" => { "value" => nature, "source" => "ubl" }, "version" => VERSION }
+    end
+
     def analyze_attachment(attachment)
+      return analyze_ubl(attachment) if attachment.ubl?
+      return if attachment.embedded_in_id # sa proposition vient de l'UBL
       return unless attachment.pdf?
 
       text = attachment.text_content || extract_text(attachment)
@@ -82,6 +100,24 @@ module MailIntake
       proposal = code_proposal(candidates)
       proposal.merge!(jev_proposal(attachment, text, candidates, proposal)) if text.present?
       attachment.update!(proposal: proposal)
+    end
+
+    # Tout vient du fichier : aucune valeur devinée, aucune question à Jev. La
+    # proposition est recopiée sur le PDF embarqué, qui est la pièce qu'on
+    # consulte et qu'on joint à la facture ; le XML ne garde alors qu'un rôle
+    # de source.
+    def analyze_ubl(attachment)
+      ubl = Ubl.new(attachment.file.download)
+      proposal = UblProposal.new(ubl, from_address: @message.from_address).to_h
+      pdf = attachment.embedded.first
+      if pdf
+        pdf.update!(proposal: proposal)
+        attachment.update!(proposal: proposal.merge("kind" => { "value" => "ubl_data", "source" => "ubl" }))
+      else
+        attachment.update!(proposal: proposal)
+      end
+    rescue ArgumentError, Nokogiri::XML::SyntaxError => e
+      attachment.update!(proposal: { "error" => "UBL illisible (#{e.class})" })
     end
 
     def extract_text(attachment)

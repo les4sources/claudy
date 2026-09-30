@@ -629,3 +629,21 @@ Hors périmètre de la phase 1 : lecture des scans et photos (une photo envoyée
   - Évidence 2026-09-30 : 14 vraies factures, noms justes (Ferme de Grange SRL, BRUYERRE, Moulin de Tongrinne, FRATERNITE DE TIBERIADE…), deux à retoucher (0,76 et 0,77) ; création au navigateur → tiers n° 8, entre Colruyt et Luminus, sélectionné.
 - [x] ISC-M15: La pièce s'affiche à droite du formulaire, collée à l'écran, pleine largeur (sans vignettes) ; une pièce déposée à la main s'affiche aussitôt. Probe : request spec + capture.
 - Anti-claim : les champs de la fenêtre « Nouveau fournisseur » n'ont pas de `name` — ils vivent dans le formulaire de la facture et ne doivent jamais partir avec elle.
+
+#### Factures électroniques UBL (ajout 2026-09-30)
+
+Demande de Michael : « Certains emails sur compta@les4sources.be contiennent des pièces jointes UBL, ça peut être utile pour nous ? » → oui, lire l'UBL.
+
+- [x] ISC-M16: La relève garde les pièces UBL (XML), y compris dans les mails déjà relevés, relus depuis leur .eml. Probe : spec + prod (les 9 mails « UBL Invoice » ne disent plus « aucune pièce jointe »).
+  - Évidence 2026-09-30 : specs (XML UBL gardé, PDF extrait et relié, XML non-UBL ignoré, relecture depuis le .eml) + base locale : les UBL des mails OkiOki et Odoo récupérées depuis leur .eml.
+- [x] ISC-M17: Une pièce UBL donne sa proposition sans Jev : fournisseur (nom, TVA, IBAN), entité cliente, numéro, dates, total TVAC, communication, tout marqué « reconnu ». Le PDF embarqué devient la pièce à consulter et à joindre à la facture. Probe : spec sur une UBL de synthèse + lecture des 9 vraies.
+  - Évidence 2026-09-30 : spec « sans une seule question à Jev » ; sur les 9 vraies UBL d'OkiOki, fournisseur, TVA, total et taux sont justes. L'UBL corrige la TVA de Delphine Guillaume, que la lecture du PDF avait mal retenue.
+- [x] ISC-M18: « Créer la facture » depuis une UBL pré-remplit une ligne de ventilation par taux de TVA (montant TVAC du taux), compte et pôle à choisir. Probe : request spec.
+  - Évidence 2026-09-30 : request specs (0 % + 6 % → deux lignes ; un taux à 0,00 € ne fait pas de ligne) ; au navigateur, 3 PETITS POIDS → une ligne « TVA 6 % = 416.06 », reste à ventiler 0,00 €.
+- [x] ISC-M19: Une UBL qui dit « 0,00 à payer » est signalée « déjà payée selon la facture électronique ». Probe : spec.
+  - Évidence 2026-09-30 : spec ; BRUYERRE réelle (payable 0,00 sur 278,95) marquée payée.
+- [x] ISC-M20: Une UBL émise par une de nos entités (les « [Sales] » d'OkiOki) est reconnue comme facture de vente et ne propose pas de facture d'achat. Probe : spec.
+  - Évidence 2026-09-30 : spec ; SOLIDARCITE et CIEP réelles → « Vente émise », sans bouton d'achat.
+- [x] ISC-M21: Les deux mails d'une même facture (PDF puis UBL, via OkiOki) ne font pas deux factures : une fois l'une encodée, l'autre affiche « Déjà dans la compta » et sort de la file avec elle. Probe : spec.
+  - Évidence 2026-09-30 : specs (par numéro + TVA ; par numéro + total + date quand la TVA du PDF est fausse) ; au navigateur, facture n° 2 créée depuis l'UBL 3 PETITS POIDS → le mail PDF jumeau (n° 31) passe « Classé » avec elle.
+- Anti-claim : l'XML est lu sans résolution d'entités externes ni accès réseau (XXE).
