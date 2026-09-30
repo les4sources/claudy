@@ -85,6 +85,25 @@
                 input[type="checkbox" class="rounded border-stone-300 text-4s-main focus:ring-teal-400" data-action="change->map#toggleRelief" data-map-target="reliefToggle"]
                 span Relief
 
+          / Les couches publiques du SPW, servies en direct par le Géoportail
+            (MapGeoportailLayer) : rien n'est stocké ici, elles se superposent
+            à la carte comme le relief.
+          .mt-3.border-t.border-stone-100.pt-3
+            p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Géoportail de Wallonie
+            ul.space-y-1
+              - MapGeoportailLayer.all.each do |couche|
+                li
+                  label.flex.cursor-pointer.items-center.gap-2.py-1.text-sm.text-stone-600
+                    input[type="checkbox" class="rounded border-stone-300 text-4s-main focus:ring-teal-400"
+                          data-action="change->map#toggleGeoportail"
+                          data-geoportail-key=couche.key
+                          data-geoportail-url=couche.url
+                          data-geoportail-layers=couche.layers
+                          data-geoportail-opacity=couche.opacity
+                          data-geoportail-z-index=couche.z_index
+                          data-geoportail-max-native-zoom=couche.max_native_zoom]
+                    span.truncate = couche.name
+
           / Les couches typées (phase 2). La case affiche ou masque ; le nom rend
             la couche ACTIVE — c'est elle que la barre d'outils édite.
           .mt-3.border-t.border-stone-100.pt-3

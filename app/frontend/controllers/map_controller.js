@@ -255,10 +255,44 @@ export default class extends Controller {
       // lit encore ce qu'il y a au sol.
       this.demLayer = this.tileLayer('dem');
       this.demLayer.setOpacity(0.6);
+      // Au-dessus de l'ortho du Géoportail (z-index 2), sous ses autres couches.
+      this.demLayer.setZIndex(3);
       this.demLayer.addTo(this.map);
     } else if (this.demLayer) {
       this.map.removeLayer(this.demLayer);
       this.demLayer = null;
+    }
+  }
+
+  // Une couche WMS du Géoportail de Wallonie (MapGeoportailLayer) : tout ce
+  // qu'il faut pour la construire est dans les `data-geoportail-*` de la case.
+  // Le SPW dessine chaque tuile à la demande, à n'importe quel zoom, sauf les
+  // couches qu'il masque sous une échelle : celles-là portent un zoom plafond,
+  // au-delà duquel Leaflet agrandit la dernière tuile dessinée.
+  toggleGeoportail(event) {
+    const input = event.target;
+    const { geoportailKey: key, geoportailMaxNativeZoom: maxNativeZoom } = input.dataset;
+    this.geoportailLayers ||= {};
+
+    if (input.checked) {
+      this.geoportailLayers[key] = L.tileLayer
+        .wms(input.dataset.geoportailUrl, {
+          layers: input.dataset.geoportailLayers,
+          styles: '',
+          format: 'image/png',
+          transparent: true,
+          version: '1.3.0',
+          opacity: Number(input.dataset.geoportailOpacity),
+          zIndex: Number(input.dataset.geoportailZIndex),
+          minZoom: this.minZoomValue,
+          maxZoom: this.maxZoomValue + OVERZOOM,
+          maxNativeZoom: maxNativeZoom ? Number(maxNativeZoom) : undefined,
+          keepBuffer: 4,
+        })
+        .addTo(this.map);
+    } else if (this.geoportailLayers[key]) {
+      this.map.removeLayer(this.geoportailLayers[key]);
+      delete this.geoportailLayers[key];
     }
   }
 
