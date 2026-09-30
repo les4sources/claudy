@@ -37,6 +37,7 @@ module Finance
       # chiffre qui doit tomber à zéro, pas celui de la page qu'on regarde.
       @total = scope.count
       @entries = scope.paginate(page: params[:page], per_page: JOURNAL_PAR_PAGE)
+      @comment_counts = comment_counts(@entries)
 
       @pending_count = CashEntry.pending.count
       @pending_cents = CashEntry.pending.sum(:amount_cents)
@@ -72,6 +73,7 @@ module Finance
 
       @entries = scope.includes(:cash_account, :cash_allocations, :allocation_suggestions)
                       .paginate(page: params[:page], per_page: PAR_PAGE)
+      @comment_counts = comment_counts(@entries)
 
       # Les suggestions se recalculent à l'ouverture de l'écran : c'est le seul
       # moment où elles servent, et ça évite un job de fond que l'application
@@ -390,6 +392,13 @@ module Finance
     end
 
     private
+
+    # { cash_entry_id => nombre de commentaires } pour les lignes de la page,
+    # en une requête : le badge ne doit pas coûter une requête par ligne.
+    def comment_counts(entries)
+      Comment.where(commentable_type: "CashEntry", commentable_id: entries.map(&:id))
+             .group(:commentable_id).count
+    end
 
     def get_entry = @entry = CashEntry.find(params[:id])
 

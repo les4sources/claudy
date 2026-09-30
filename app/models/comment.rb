@@ -34,7 +34,7 @@ class Comment < ApplicationRecord
   # objets comptables en phase 3, l'événement, la décision et la réservation
   # d'activité en phase 4.
   COMMENTABLE_TYPES = %w[
-    Gathering Stay ExpenseReport PurchaseInvoice Event Decision ExperienceBooking
+    Gathering Stay ExpenseReport PurchaseInvoice Event Decision ExperienceBooking CashEntry
   ].freeze
 
   # Le fil d'activité récente montre aussi les commentaires (epic #242, phase 4).

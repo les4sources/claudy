@@ -77,6 +77,8 @@
               .font-normal.leading-snug.text-gray-500(style="font-size: 15px")
                 = entry.counterparty_name.presence || entry.cash_account.name
 
+            = render "comments_badge", entry: entry, count: @comment_counts[entry.id]
+
             .flex-shrink-0.text-right(style="width: 132px")
               .font-semibold.tabular-nums(class="#{entry.incoming? ? 'text-forest' : 'text-[#7A2E1F]'}" style="font-size: 16px")
                 = number_to_currency(entry.amount_cents / 100.0)
