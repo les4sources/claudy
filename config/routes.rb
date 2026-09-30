@@ -392,6 +392,9 @@ Rails.application.routes.draw do
         # Éteindre la dette d'un habitant depuis une ligne ENTRANTE (issue
         # #349) : le miroir de `payout`.
         post :settle
+        # La proposition de Jev d'une ligne sans règle, chargée à la volée dans
+        # la file « À affecter » pour ne jamais retenir l'écran.
+        get :suggestion
       end
       resources :allocations, only: [:create, :destroy], controller: "cash_allocations"
     end

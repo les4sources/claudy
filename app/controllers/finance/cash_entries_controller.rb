@@ -9,7 +9,7 @@ module Finance
     before_action :get_entry,
                   only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate, :payout,
                          :pay_invoice, :pay_expense_report, :reconcile_payout, :collect_sales_invoice,
-                         :settle]
+                         :settle, :suggestion]
     breadcrumb "Trésorerie", :finance_cash_entries_path, match: :exact
 
     # Le journal se lit, il ne se travaille pas ligne à ligne : ses pages sont
@@ -80,6 +80,9 @@ module Finance
       # n'a pas les moyens de garantir. Sur les lignes AFFICHÉES seulement — les
       # recalculer toutes coûtait 38 secondes à chaque page.
       Finance::SuggestAllocations.new(cash_entries: @entries, whodunnit: current_user&.email).run!
+      # Jev, lui, ne se demande pas ici : chaque ligne sans règle charge sa
+      # proposition dans son propre cadre (`suggestion`), en parallèle.
+      @jev_enabled = Jev::Client.new.configured?
 
       # Le rapprochement de séjour se calcule à l'affichage : il dépend de
       # l'état des soldes, qui bouge à chaque paiement.
@@ -131,6 +134,16 @@ module Finance
       @teams = Team.ordered
       @entities = LegalEntity.actives.ordered
       @events = recent_events
+    end
+
+    # Le cadre de la proposition d'une ligne de la file « À affecter ». Jev
+    # répond en environ 300 ms : demandé ligne par ligne, à la volée, il ne
+    # retient jamais l'écran, et une page de 25 lignes se complète en quelques
+    # secondes. La ligne n'est demandée qu'une fois (`jev_checked_at`).
+    def suggestion
+      Finance::SuggestAllocations.new(cash_entries: [@entry], whodunnit: current_user&.email,
+                                      jev: Jev::Client.new).run!
+      render partial: "suggestion", locals: { entry: @entry, suggestion: @entry.allocation_suggestions.pending.ordered.first }
     end
 
     def show

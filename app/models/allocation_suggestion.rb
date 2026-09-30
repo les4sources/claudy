@@ -59,8 +59,10 @@ class AllocationSuggestion < ApplicationRecord
     "rejected" => "Refusée"
   }.freeze
 
-  SOURCES = %w[rule iban_history].freeze
-  SOURCE_LABELS = { "rule" => "Règle", "iban_history" => "Précédent" }.freeze
+  # `iban_history` n'est plus produit (2026-09-30) : il reste valide pour les
+  # suggestions déjà décidées qui le portent.
+  SOURCES = %w[rule jev iban_history].freeze
+  SOURCE_LABELS = { "rule" => "Règle", "jev" => "Jev", "iban_history" => "Précédent" }.freeze
 
   has_paper_trail
   has_soft_deletion default_scope: true
