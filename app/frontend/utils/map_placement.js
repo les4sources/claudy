@@ -17,6 +17,17 @@ export const GPS_MAX_ACCURACY = 25;
 const GPS_WATCH_MS = 45000;
 const GPS_COLOR = '#1F5F4A';
 const GPS_WEAK_COLOR = '#C97B3D';
+// Marge pour l'horloge : une position datée d'une seconde avant l'appui est
+// bien celle qu'on vient de demander.
+const GPS_STALE_SLACK_MS = 1000;
+
+// Malgré `maximumAge: 0`, un téléphone (Safari surtout) renvoie d'abord sa
+// dernière position en cache : celle de l'appui précédent, souvent précise.
+// Comme on garde la meilleure position vue, elle bloquait toutes les
+// suivantes et on restait « relocalisé » au premier endroit. On l'écarte.
+export function isFreshFix(position, startedAt) {
+  return !position?.timestamp || position.timestamp >= startedAt - GPS_STALE_SLACK_MS;
+}
 
 export class PlantPlacement {
   constructor(controller) {
@@ -361,6 +372,7 @@ export class PlantPlacement {
     this.forceArmed = false;
     this.setHint('Recherche de la position… restez à côté de la plante.');
     this.renderGpsConfirm();
+    this.gpsStartedAt = Date.now();
     this.watchId = navigator.geolocation.watchPosition(
       (position) => this.onGpsFix(position),
       (error) => this.onGpsError(error),
@@ -370,6 +382,7 @@ export class PlantPlacement {
   }
 
   onGpsFix(position) {
+    if (!isFreshFix(position, this.gpsStartedAt)) return;
     const { latitude, longitude, accuracy } = position.coords;
     if (this.fix && accuracy > this.fix.accuracy) return;
     const first = !this.fix;
