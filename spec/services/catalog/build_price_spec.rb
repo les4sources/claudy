@@ -70,27 +70,16 @@ RSpec.describe Catalog::BuildPrice do
     expect(described_class.new(channel: "bar").member_price_cents).to be_nil
   end
 
-  describe "prix public" do
-    # Le public n'est pas une marge : au bar c'est une décision commerciale
-    # (4,00 € pour une bière achetée 1,91 €), on ne le fixe jamais d'office.
-    it "n'est pas proposé au bar" do
-      seed_margin("bar", 10)
-
-      expect(described_class.new(channel: "bar", purchase_price_cents: 191).run!.public_price_cents).to be_nil
+  # Le prix public reste une décision humaine : le service ne fait que le
+  # conseiller, à 30 % de marge sur le prix d'achat (Michael, 2026-09-30).
+  describe "prix public conseillé" do
+    it "applique 30 % de marge au prix d'achat, sur tous les canaux" do
+      expect(described_class.new(channel: "grocery", purchase_price_cents: 200).run!.recommended_public_price_cents).to eq(260)
+      expect(described_class.new(channel: "bar", purchase_price_cents: 183).run!.recommended_public_price_cents).to eq(238)
     end
 
-    it "se propose au cellier depuis le prix de référence" do
-      Rate.create!(key: "grocery.public_ratio", amount_cents: 105, unit: "percent")
-          .rate_versions.create!(amount_cents: 105, active_from: Date.new(2023, 1, 1))
-
-      proposal = described_class.new(channel: "grocery", purchase_price_cents: 240,
-                                     reference_price_cents: 295).run!
-
-      expect(proposal.public_price_cents).to eq(310)
-    end
-
-    it "ne propose rien au cellier sans prix de référence" do
-      expect(described_class.new(channel: "grocery", purchase_price_cents: 240).run!.public_price_cents).to be_nil
+    it "ne conseille rien sans prix d'achat" do
+      expect(described_class.new(channel: "grocery").run!.recommended_public_price_cents).to be_nil
     end
   end
 end

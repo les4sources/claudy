@@ -84,13 +84,12 @@ module Finance
       proposal = Catalog::BuildPrice.new(
         channel: params[:channel],
         purchase_price_cents: cents_from(params[:purchase]),
-        reference_price_cents: cents_from(params[:reference]),
         on: params[:on].presence&.to_date || Date.current
       ).run!
 
       render json: {
         member_price: proposal.member_price_cents&./(100.0),
-        public_price: proposal.public_price_cents&./(100.0)
+        recommended_public_price: proposal.recommended_public_price_cents&./(100.0)
       }
     end
 

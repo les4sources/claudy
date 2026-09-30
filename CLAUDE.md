@@ -25,6 +25,7 @@ Stack: Rails 8.1 · Ruby 3.4.10 · PostgreSQL · Node 18.8.0 · Vite (via `vite_
 - **ViewComponent + Lookbook** for reusable UI — `app/components/` with previews browsable at `/lookbook`. Presenters for components live in `app/presenters/components/`.
 - **Services** — `app/services/<resource>/` holds resource-specific service objects (e.g. `bookings/`, `booking_prices/`, `cycle_actions/`).
 - **Slim** is the template engine — views are `.html.slim`, not `.erb`.
+- **Listes déroulantes = toujours cherchables** (Michael, 2026-09-30) : tout choix dans une liste passe par le contrôleur Stimulus `searchable-select` (`app/frontend/controllers/searchable_select_controller.js`) posé sur le `<select>`, avec le champ de recherche `shared/_searchable_select_search`. Jamais de `<select>` nu. Le `<select>` reste la source de vérité soumise par le formulaire ; `data-searchable-select-clearable-value="true"` pour un choix facultatif.
 - **Public namespace** (`namespace :public`) is the guest-facing (token-based) booking/payment flow; everything outside it requires Devise auth.
 - **Stripe webhooks** land at `webhooks/stripe_hooks#create`; `StripeEvent` model persists them.
 - **Calendar** uses the `simple_calendar` gem with custom overrides in `app/calendars/simple_calendar/`. The root route `pages#calendar` is the primary UI.

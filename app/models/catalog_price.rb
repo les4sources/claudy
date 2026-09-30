@@ -57,6 +57,13 @@ class CatalogPrice < ApplicationRecord
   validate :no_overlap_with_siblings
   validate :third_party_is_supplier
 
+  # Marge sur le COÛT : (public − achat) ÷ achat (Michael, 2026-09-30). Objectif
+  # 30 % ; sous 25 % elle s'affiche en rouge, jusqu'à 28 % en orange, au-delà
+  # en vert. Le prix de vente conseillé applique l'objectif au prix d'achat.
+  MARGIN_TARGET = 30
+  MARGIN_MINIMUM = 25
+  MARGIN_COMFORT = 28
+
   scope :chronological, -> { order(active_from: :asc) }
   scope :most_recent_first, -> { order(active_from: :desc) }
 
@@ -74,6 +81,29 @@ class CatalogPrice < ApplicationRecord
   def current? = covers?(Date.current)
 
   def open_ended? = active_until.nil?
+
+  def self.recommended_public_cents(purchase_cents)
+    return nil if purchase_cents.blank? || purchase_cents.to_i <= 0
+
+    (purchase_cents.to_i * (1 + MARGIN_TARGET / 100.0)).round
+  end
+
+  # En pourcentage entier, arrondi — c'est ce nombre-là qu'on lit, c'est donc
+  # lui qui décide de la couleur. Nil sans prix d'achat ou sans prix public.
+  def margin_percent
+    return nil if purchase_price_cents.blank? || purchase_price_cents <= 0 || public_price_cents.blank?
+
+    ((public_price_cents - purchase_price_cents) * 100.0 / purchase_price_cents).round
+  end
+
+  def margin_level
+    percent = margin_percent
+    return nil if percent.nil?
+    return :low if percent < MARGIN_MINIMUM
+    return :medium if percent < MARGIN_COMFORT
+
+    :good
+  end
 
   private
 
