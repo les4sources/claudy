@@ -16,7 +16,7 @@
   .relative.space-y-1(data-reassign-form-target="existingPanel")
     = text_field_tag :customer_query, nil,
                      placeholder: "Rechercher un client…",
-                     autocomplete: "off",
+                     autocomplete: "off", autocorrect: "off", autocapitalize: "off", spellcheck: "false",
                      data: { "reassign-form-target": "searchInput", action: "input->reassign-form#search" },
                      class: "block w-full rounded-md border-gray-300 shadow-sm text-sm"
     = hidden_field_tag "target_id", nil, data: { "reassign-form-target": "targetId" }

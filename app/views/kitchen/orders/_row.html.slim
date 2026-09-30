@@ -140,7 +140,7 @@ tr(id=dom class="#{order.row_tone_class} #{muted ? 'text-gray-500' : 'text-gray-
                          class: "block w-full rounded-md border-gray-300 text-sm",
                          data: { "stay-search-target": "select" }
             .relative.space-y-1.hidden(data-stay-search-target="searchWrap")
-              = text_field_tag :stay_query, nil, placeholder: "Nom, groupe, email ou téléphone…", autocomplete: "off", id: nil,
+              = text_field_tag :stay_query, nil, placeholder: "Nom, groupe, email ou téléphone…", autocomplete: "off", id: nil, autocorrect: "off", autocapitalize: "off", spellcheck: "false",
                                data: { "stay-search-target": "searchInput",
                                        action: "input->stay-search#search keydown.enter->stay-search#pickFirst" },
                                class: "block w-full rounded-md border-gray-300 text-sm"

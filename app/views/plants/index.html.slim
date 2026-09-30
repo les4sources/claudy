@@ -32,7 +32,7 @@
               data: { controller: "auto-submit", auto_submit_delay_value: 250, turbo_frame: "plants-results" } do
     .col-span-2.sm:col-span-3.lg:col-span-1
       label.sr-only for="plants_q" Rechercher
-      input[type="search" id="plants_q" name="q" value=f[:q] autocomplete="off" enterkeyhint="search"
+      input[type="search" id="plants_q" name="q" value=f[:q] autocomplete="off" enterkeyhint="search" autocorrect="off" autocapitalize="off" spellcheck="false"
             placeholder="Nom, espèce, n°…" class=select_css data-action="input->auto-submit#submit"]
     - selects = [[:status, "Tous statuts", Plant::STATUSES], [:health, "Toute santé", Plant::HEALTHS],
                  [:zone, "Toutes zones", @zones.index_with(&:itself)], [:stratum, "Toutes strates", Plant::STRATA],

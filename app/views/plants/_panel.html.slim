@@ -119,7 +119,7 @@ div[class="pointer-events-auto flex h-full flex-col overflow-hidden bg-white sha
                 data-plant-autocomplete-url-value=map_species_path(format: :json)]
               = label_tag "plant_species_name", "Espèce", class: label_css
               = text_field_tag "plant[species_name]", species_value, id: "plant_species_name", class: input_css,
-                               placeholder: "Pommier, Néflier…", autocomplete: "off", role: "combobox", autofocus: fresh,
+                               placeholder: "Pommier, Néflier…", autocomplete: "off", role: "combobox", autocorrect: "off", spellcheck: "false", autofocus: fresh,
                                "aria-autocomplete": "list", "aria-expanded": "false", "aria-controls": "plant_species_options",
                                data: { plant_autocomplete_target: "input",
                                        action: "input->plant-autocomplete#search focus->plant-autocomplete#search keydown->plant-autocomplete#navigate blur->plant-autocomplete#close" }
@@ -135,7 +135,7 @@ div[class="pointer-events-auto flex h-full flex-col overflow-hidden bg-white sha
                 data-action="plant-autocomplete:picked@window->plant-autocomplete#rescope"]
               = label_tag "plant_variety_name", "Variété", class: label_css
               = text_field_tag "plant[variety_name]", variety_value, id: "plant_variety_name", class: input_css,
-                               placeholder: "Reinette Hernaut", autocomplete: "off", role: "combobox",
+                               placeholder: "Reinette Hernaut", autocomplete: "off", role: "combobox", autocorrect: "off", spellcheck: "false",
                                "aria-autocomplete": "list", "aria-expanded": "false", "aria-controls": "plant_variety_options",
                                data: { plant_autocomplete_target: "input",
                                        action: "input->plant-autocomplete#search focus->plant-autocomplete#search keydown->plant-autocomplete#navigate blur->plant-autocomplete#close" }

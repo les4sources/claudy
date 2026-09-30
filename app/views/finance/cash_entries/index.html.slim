@@ -13,7 +13,7 @@
      la contrepartie à la fois, sans casse ni accents.
   div
     = f.label :q, "Rechercher", class: "block text-sm font-medium text-gray-700"
-    = f.search_field :q, value: @query, placeholder: "nom, communication…", class: "mt-1 w-64 rounded-md border-gray-300 text-sm shadow-sm"
+    = f.search_field :q, value: @query, placeholder: "nom, communication…", autocomplete: "off", autocorrect: "off", autocapitalize: "off", spellcheck: "false", class: "mt-1 w-64 rounded-md border-gray-300 text-sm shadow-sm"
   div
     = f.label :cash_account_id, "Compte", class: "block text-sm font-medium text-gray-700"
     = f.collection_select :cash_account_id, @accounts, :id, :name, { include_blank: "Tous", selected: @account&.id }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
