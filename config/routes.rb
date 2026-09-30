@@ -502,6 +502,9 @@ Rails.application.routes.draw do
     # de la carte. Avant `resources :plants`, qui lirait sinon `unplaced`
     # comme un `:id`.
     get "plants/unplaced", to: "plants#unplaced", as: :unplaced_plants
+    # « Quelle est cette plante ? » : les photos partent chez Pl@ntNet, les
+    # espèces probables reviennent dans la fiche, à valider ou refuser.
+    post "plants/identify", to: "plants#identify", as: :identify_plants
     # « Nouvelle plante » : la fiche vide s'ouvre dans le panneau de la carte,
     # et une espèce encore inconnue se crée par son nom, comme à l'édition.
     resources :plants, only: %i[new create show update destroy] do

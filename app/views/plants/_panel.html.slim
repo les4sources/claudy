@@ -113,6 +113,23 @@ div[class="pointer-events-auto flex h-full flex-col overflow-hidden bg-white sha
                 = f.label :number, "N°", class: label_css
                 = f.number_field :number, step: "any", min: 0, value: plant.number_label, inputmode: "decimal",
                                  class: input_css, placeholder: "42"
+            / « Quelle est cette plante ? » : une à cinq photos du même individu,
+              Pl@ntNet propose des espèces, on valide ou refuse (`plant-identify`).
+            div[data-controller="plant-identify" data-plant-identify-url-value=identify_plants_path data-plant-identify-section="true"]
+              - if PlantNet::Client.configured?
+                label class="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-forest text-sm font-medium text-forest hover:bg-forest-tint"
+                  svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                    path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"
+                    circle cx="12" cy="13" r="3"
+                  span data-plant-identify-target="label" Identifier l'espèce par photo
+                  input[type="file" multiple=true accept="image/jpeg,image/png" class="sr-only"
+                        data-plant-identify-target="input" data-action="change->plant-identify#identify"]
+                p.mt-1.text-xs.text-stone-400 Jusqu'à 5 photos du même individu : feuille, fleur, fruit, écorce.
+              - else
+                p.text-xs.text-stone-400 Identification par photo indisponible : clé Pl@ntNet absente (PLANTNET_API_KEY).
+              = hidden_field_tag "plant[species_latin_name]", nil, id: "plant_species_latin_name", data: { plant_identify_target: "latinName" }
+              = hidden_field_tag "plant[species_family]", nil, id: "plant_species_family", data: { plant_identify_target: "family" }
+              .mt-2 data-plant-identify-target="results" aria-live="polite"
             div[class="relative"
                 data-controller="plant-autocomplete"
                 data-plant-autocomplete-kind-value="species"
