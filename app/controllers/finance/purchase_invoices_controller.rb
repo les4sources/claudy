@@ -42,6 +42,8 @@ module Finance
       @deadline = linked_deadline
       @invoice = PurchaseInvoice.new(legal_entity: @deadline&.legal_entity || default_entity,
                                      issued_on: Date.current, due_on: @deadline&.due_on)
+      @mail_attachment = linked_mail_attachment
+      prefill_from_mail(@invoice, @mail_attachment) if @mail_attachment
       @invoice.purchase_invoice_lines.build
     end
 
@@ -54,10 +56,13 @@ module Finance
     def create
       @invoice = PurchaseInvoice.new(invoice_params)
       attach_document(@invoice)
+      @mail_attachment = linked_mail_attachment
+      attach_mail_document(@invoice, @mail_attachment)
 
       @deadline = linked_deadline
       if @invoice.save
         @deadline&.update(purchase_invoice: @invoice)
+        settle_mail_attachment(@mail_attachment, @invoice)
         redirect_to finance_purchase_invoice_path(@invoice), notice: "Facture enregistrée."
       else
         @invoice.purchase_invoice_lines.build if @invoice.purchase_invoice_lines.empty?
@@ -215,6 +220,45 @@ module Finance
       return nil if params[:compliance_deadline_id].blank?
 
       ComplianceDeadline.payments.find_by(id: params[:compliance_deadline_id], purchase_invoice_id: nil)
+    end
+
+    # Depuis « Pièces reçues » (messagerie, phase 1) : une pièce pas encore
+    # encodée. Une pièce déjà liée ne se relie pas, sinon un lien rejoué
+    # créerait une seconde facture pour le même PDF.
+    def linked_mail_attachment
+      return nil if params[:mail_attachment_id].blank?
+
+      MailAttachment.find_by(id: params[:mail_attachment_id], purchase_invoice_id: nil)
+    end
+
+    # La proposition préremplit, elle ne décide pas : l'humain relit tout avant
+    # d'enregistrer. Un fournisseur désactivé depuis n'est pas proposé.
+    def prefill_from_mail(invoice, attachment)
+      supplier_id = attachment.proposed(:third_party_id)
+      invoice.third_party_id = supplier_id if supplier_id && ThirdParty.actives.suppliers.exists?(id: supplier_id)
+      entity_id = attachment.proposed(:legal_entity_id)
+      invoice.legal_entity_id = entity_id if entity_id && LegalEntity.actives.exists?(id: entity_id)
+      %i[number total_cents issued_on due_on].each do |field|
+        value = attachment.proposed(field)
+        invoice.public_send("#{field}=", value) if value.present?
+      end
+      invoice.document.attach(attachment.file.blob)
+    end
+
+    # La pièce du mail devient la pièce justificative, sauf si l'humain en a
+    # déposé une autre. Le sha256 est celui calculé à l'arrivée du mail.
+    def attach_mail_document(invoice, attachment)
+      return if attachment.nil? || params.dig(:purchase_invoice, :document).present?
+
+      invoice.document.attach(attachment.file.blob)
+      invoice.pdf_sha256 = attachment.sha256
+    end
+
+    def settle_mail_attachment(attachment, invoice)
+      return if attachment.nil?
+
+      attachment.update!(purchase_invoice: invoice)
+      attachment.mail_message.settle_if_complete!(current_user)
     end
 
     def default_entity

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_30_080000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_30_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1371,6 +1371,58 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_080000) do
     t.integer "weekend_discount_cents", default: 0, null: false
   end
 
+  create_table "mail_accounts", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "address", null: false
+    t.datetime "created_at", null: false
+    t.string "folder", default: "INBOX", null: false
+    t.string "imap_host", default: "box.les4sources.be", null: false
+    t.text "last_error"
+    t.datetime "last_synced_at"
+    t.bigint "last_uid", default: 0, null: false
+    t.string "purpose", null: false
+    t.bigint "uid_validity"
+    t.datetime "updated_at", null: false
+    t.index ["address"], name: "index_mail_accounts_on_address", unique: true
+  end
+
+  create_table "mail_attachments", force: :cascade do |t|
+    t.string "content_type", null: false
+    t.datetime "created_at", null: false
+    t.string "filename", null: false
+    t.bigint "mail_message_id", null: false
+    t.jsonb "proposal", default: {}, null: false
+    t.bigint "purchase_invoice_id"
+    t.string "sha256", null: false
+    t.text "text_content"
+    t.datetime "updated_at", null: false
+    t.index ["mail_message_id"], name: "index_mail_attachments_on_mail_message_id"
+    t.index ["purchase_invoice_id"], name: "index_mail_attachments_on_purchase_invoice_id"
+    t.index ["sha256"], name: "index_mail_attachments_on_sha256"
+  end
+
+  create_table "mail_messages", force: :cascade do |t|
+    t.datetime "analyzed_at"
+    t.text "body_text"
+    t.datetime "created_at", null: false
+    t.string "from_address"
+    t.string "from_name"
+    t.datetime "handled_at"
+    t.bigint "handled_by_id"
+    t.bigint "imap_uid"
+    t.bigint "mail_account_id", null: false
+    t.string "message_id", null: false
+    t.datetime "received_at", null: false
+    t.string "status", default: "pending", null: false
+    t.string "subject"
+    t.jsonb "triage", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.index ["handled_by_id"], name: "index_mail_messages_on_handled_by_id"
+    t.index ["mail_account_id", "message_id"], name: "index_mail_messages_on_mail_account_id_and_message_id", unique: true
+    t.index ["mail_account_id"], name: "index_mail_messages_on_mail_account_id"
+    t.index ["status", "received_at"], name: "index_mail_messages_on_status_and_received_at"
+  end
+
   create_table "map_base_layers", force: :cascade do |t|
     t.jsonb "bounds", default: {}, null: false
     t.date "captured_on"
@@ -1908,7 +1960,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_080000) do
     t.index ["legal_entity_id"], name: "index_recurring_expenses_on_legal_entity_id"
     t.index ["third_party_id"], name: "index_recurring_expenses_on_third_party_id"
   end
-  
+
   create_table "rental_items", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
@@ -2584,6 +2636,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_080000) do
   add_foreign_key "lodging_compositions", "lodgings", column: "composite_lodging_id"
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"
+  add_foreign_key "mail_attachments", "mail_messages"
+  add_foreign_key "mail_attachments", "purchase_invoices"
+  add_foreign_key "mail_messages", "mail_accounts"
+  add_foreign_key "mail_messages", "users", column: "handled_by_id"
   add_foreign_key "map_comments", "map_comments", column: "parent_id"
   add_foreign_key "map_comments", "map_features"
   add_foreign_key "map_comments", "users", column: "author_id"

@@ -148,3 +148,5 @@ group :test do
   # spec. WebMock la coupe et laisse vérifier l'en-tête d'auth et les filtres.
   gem "webmock"
 end
+
+gem "pdf-reader", "~> 2.14"

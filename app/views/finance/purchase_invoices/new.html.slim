@@ -1,6 +1,16 @@
 - content_for :page_header do
   = render "layouts/components/page_header", title: "Nouvelle facture d'achat"
 
+- if @mail_attachment
+  - courriel = @mail_attachment.mail_message
+  .mb-4.rounded-lg.border.border-blue-200.bg-blue-50.px-4.py-3.text-sm.text-blue-900
+    | Pré-remplie depuis le mail de
+    strong= " #{courriel.sender_label} "
+    | (#{l(courriel.received_at, format: :short)}), pièce
+    strong= " #{@mail_attachment.filename}"
+    | . Relisez chaque champ : c'est une proposition, pas une vérification.
+    = link_to " Revoir le mail", finance_mail_message_path(courriel), class: "underline"
+
 - if @deadline
   .mb-4.rounded-lg.border.border-blue-200.bg-blue-50.px-4.py-3.text-sm.text-blue-900
     | Cette facture sera liée à l'échéance
@@ -9,4 +19,4 @@
 
 = render "finance/purchase_invoices/form", invoice: @invoice, third_parties: @third_parties,
          entities: @entities, teams: @teams, general_accounts: @general_accounts,
-         url: finance_purchase_invoices_path(compliance_deadline_id: @deadline&.id), method: :post, submit_label: "Enregistrer la facture"
+         url: finance_purchase_invoices_path(compliance_deadline_id: @deadline&.id, mail_attachment_id: @mail_attachment&.id), method: :post, submit_label: "Enregistrer la facture"
