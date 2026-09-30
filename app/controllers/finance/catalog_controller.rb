@@ -17,7 +17,12 @@ module Finance
                           .for_channel(@channel)
                           .matching(@term)
                           .includes(:catalog_prices, :consignor)
-      @items = CatalogItemDecorator.decorate_collection(@items)
+      # Les inactifs vont dans une section à part, sous la liste : la vue
+      # principale ne montre que ce qui se vend encore. Ils restent consultables
+      # parce que les fiches passées les portent.
+      active, inactive = @items.partition(&:active?)
+      @active_items = CatalogItemDecorator.decorate_collection(active)
+      @inactive_items = CatalogItemDecorator.decorate_collection(inactive)
     end
 
     def show

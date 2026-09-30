@@ -23,48 +23,33 @@
              class="px-3 py-1.5 rounded-md transition-colors #{@channel == value ? 'text-4s-main bg-teal-50 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"]
         = label
 
-  = f.text_field :q,
-                 value: @term,
-                 placeholder: "Chercher un article…",
-                 autocomplete: "off", autocorrect: "off", autocapitalize: "off", spellcheck: "false",
-                 data: { action: "input->auto-submit#submit" },
-                 class: "rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+  / Champ nu (`text_field_tag`) et non `f.text_field` : le builder maison
+    (`FormBuilders::TailwindFormBuilder`) ajoute un libellé tiré du nom du
+    champ, qui affichait un « Q » au-dessus de la recherche.
+  = text_field_tag :q, @term,
+                   placeholder: "Chercher un article…",
+                   aria: { label: "Chercher un article" },
+                   autocomplete: "off", autocorrect: "off", autocapitalize: "off", spellcheck: "false",
+                   data: { action: "input->auto-submit#submit" },
+                   class: "rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
 
 = turbo_frame_tag "catalog-results", target: "_top", data: { turbo_action: "advance" } do
-  - if @items.blank?
+  - if @active_items.blank? && @inactive_items.blank?
     .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
       p.font-medium.text-gray-700 Aucun article pour ce filtre.
       p.mt-1
         | Crée un article, puis pose-lui un premier palier de prix.
   - else
-    .overflow-x-auto.relative
-      table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
-        thead.text-xs.text-gray-700.uppercase.bg-gray-50
-          tr
-            th.py-3.px-6[scope="col"] Article
-            th.py-3.px-6[scope="col"] Canal
-            th.py-3.px-6.text-right[scope="col"] Achat
-            th.py-3.px-6.text-right[scope="col"] Sourcier
-            th.py-3.px-6.text-right[scope="col"] Public
-            th.py-3.px-6[scope="col"] Palier en vigueur
-        tbody
-          - @items.each do |item|
-            tr.border-b.bg-white
-              td.py-4.px-6.font-medium.text-gray-900[scope="row"]
-                = link_to item.name,
-                          finance_catalog_path(item),
-                          class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
-                - if item.category.present?
-                  .mt-0.5.text-xs.text-gray-400= item.category
-                - if item.consignor.present?
-                  .mt-0.5.text-xs.text-violet-700= item.consignor.name
-                - unless item.active?
-                  .mt-0.5
-                    span.px-2.py-0.5.rounded-full.text-xs.bg-gray-100.text-gray-500 Inactif
-              td.py-4.px-6
-                span class="px-2 py-0.5 rounded-full text-xs #{item.channel_badge_css}"
-                  = item.channel_label
-              td.py-4.px-6.text-right.text-gray-400= item.purchase_price
-              td.py-4.px-6.text-right.font-semibold.text-gray-900= item.member_price
-              td.py-4.px-6.text-right= item.public_price
-              td.py-4.px-6.text-xs.text-gray-500= item.price_period
+    - if @active_items.any?
+      = render "items_table", items: @active_items
+    - else
+      p.p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100 Aucun article actif pour ce filtre.
+
+    /  Les inactifs sous la liste, jamais mêlés aux actifs : ils ne se vendent
+       plus, mais les fiches passées les portent et on doit pouvoir les rouvrir.
+    - if @inactive_items.any?
+      section.mt-10(aria-labelledby="catalog-inactive-heading")
+        h3#catalog-inactive-heading.mb-3.text-base.font-semibold.text-gray-500
+          = "Articles inactifs (#{@inactive_items.size})"
+        .opacity-75
+          = render "items_table", items: @inactive_items
