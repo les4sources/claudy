@@ -1268,7 +1268,7 @@ paths:
       tags: [Bar & comptes internes]
       summary: Lister les articles du catalogue
       parameters:
-        - { name: channel, in: query, schema: { type: string, enum: [bar, grocery, meal] } }
+        - { name: channel, in: query, schema: { type: string, enum: [bar, grocery, dph, meal, craft, bread] } }
         - { name: q, in: query, schema: { type: string }, description: "Recherche sur le nom." }
         - { name: active, in: query, schema: { type: boolean }, description: "true pour n'obtenir que les articles actifs." }
         - { $ref: "#/components/parameters/PriceOn" }
@@ -1305,7 +1305,7 @@ paths:
                   required: [name, channel]
                   properties:
                     name: { type: string, example: "Taras Boulba" }
-                    channel: { type: string, enum: [bar, grocery, meal] }
+                    channel: { type: string, enum: [bar, grocery, dph, meal, craft, bread], description: "dph = droguerie, parfumerie, hygiène ; ses articles figurent sur la fiche papier du cellier." }
                     category: { type: string, example: "Bières" }
                     unit: { type: string, enum: [piece, kg, l, portion, day] }
                     reference: { type: string, nullable: true }
@@ -3674,7 +3674,7 @@ components:
         id: { type: integer }
         type: { type: string, example: catalog_item }
         name: { type: string, example: "Taras Boulba" }
-        channel: { type: string, enum: [bar, grocery, meal] }
+        channel: { type: string, enum: [bar, grocery, dph, meal, craft, bread] }
         channel_label: { type: string, example: "Bar" }
         category: { type: string, nullable: true, example: "Bières" }
         unit: { type: string, enum: [piece, kg, l, portion, day] }

@@ -54,7 +54,7 @@
 div(class=panel data-controller="catalog-price" data-catalog-price-url-value=finance_catalog_suggest_price_path data-catalog-price-channel-value=@item.channel)
   h3(class=panel_title) Nouveau palier de prix
 
-  - marge = Pricing::Rates.cents(Catalog::BuildPrice.margin_key(@item.channel)) || Catalog::BuildPrice::DEFAULT_MARGINS.fetch(@item.channel, 0)
+  - marge = Catalog::BuildPrice.new(channel: @item.channel).margin_percent
   p.mb-4.text-sm.text-gray-500
     | Saisis le prix d'achat : le prix sourcier se calcule tout seul, avec la marge
     strong = " #{@item.channel_label} de #{marge} %"
