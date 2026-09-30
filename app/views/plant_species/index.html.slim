@@ -10,39 +10,43 @@
       p.mt-1.text-sm.text-stone-500
         = "#{@species.size} espèce#{'s' if @species.size > 1}. Les plantes sans calendrier propre suivent celui de leur espèce."
     = form_with url: map_especes_path, method: :get, class: "w-full sm:w-64",
-                data: { controller: "auto-submit", auto_submit_delay_value: 250, turbo_action: "replace" } do
+                data: { controller: "auto-submit", auto_submit_delay_value: 250, turbo_frame: "species-results" } do
       label.sr-only for="species_q" Rechercher une espèce
       input[type="search" id="species_q" name="q" value=@query autocomplete="off" enterkeyhint="search"
             placeholder="Nom ou nom latin…"
             class="h-10 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
             data-action="input->auto-submit#submit"]
 
-  - if @species.empty?
-    .mt-6.rounded-xl.border.border-dashed.border-stone-300.bg-white.px-4.py-8.text-center
-      p.text-sm.text-stone-500
-        = @query ? "Aucune espèce ne correspond à « #{@query} »." : "Aucune espèce pour l'instant : elles se créent depuis la fiche d'une plante."
-  - else
-    ul.mt-6.divide-y.divide-stone-100.overflow-hidden.rounded-xl.border.border-stone-200.bg-white
-      - @species.each do |species|
-        - count = @plant_counts[species.id].to_i
-        - unplaced = @unplaced_counts[species.id].to_i
-        li data-species-id=species.id
-          = link_to map_espece_path(species), class: "flex items-center gap-4 px-4 py-3 hover:bg-stone-50" do
-            .min-w-0.flex-1
-              p.truncate
-                span.font-medium.text-stone-800 = species.name
-                - if species.latin_name
-                  span.ml-1.5.text-sm.italic.text-stone-500 = species.latin_name
-              p.mt-0.5.truncate.text-xs.text-stone-400
-                = [species.family, (unplaced.positive? ? "#{unplaced} à placer" : nil)].compact_blank.join(" · ").presence || " "
-            .hidden.w-28.flex-shrink-0.sm:block
-              - if species.harvest_windows.any?
-                = render "plant_species/mini_harvest", windows: species.harvest_windows
-              - else
-                p.text-right.text-xs.text-stone-300 Pas de calendrier
-            span[class="min-w-[2.5rem] flex-shrink-0 text-right text-sm tabular-nums #{count.positive? ? 'font-semibold text-stone-700' : 'text-stone-300'}"
-                 data-plant-count=count
-                 title="#{count} plante#{'s' if count > 1} vivante#{'s' if count > 1}"]
-              = count
-            svg.h-4.w-4.flex-shrink-0.text-stone-300 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-              polyline points="9 18 15 12 9 6"
+  / La recherche ne recharge que cette frame : le champ reste en place et, sur
+    iPad ou iPhone, le clavier ne se ferme plus à chaque lettre. Les liens
+    ouvrent une page entière (`_top`).
+  = turbo_frame_tag "species-results", target: "_top", data: { turbo_action: "replace" } do
+    - if @species.empty?
+      .mt-6.rounded-xl.border.border-dashed.border-stone-300.bg-white.px-4.py-8.text-center
+        p.text-sm.text-stone-500
+          = @query ? "Aucune espèce ne correspond à « #{@query} »." : "Aucune espèce pour l'instant : elles se créent depuis la fiche d'une plante."
+    - else
+      ul.mt-6.divide-y.divide-stone-100.overflow-hidden.rounded-xl.border.border-stone-200.bg-white
+        - @species.each do |species|
+          - count = @plant_counts[species.id].to_i
+          - unplaced = @unplaced_counts[species.id].to_i
+          li data-species-id=species.id
+            = link_to map_espece_path(species), class: "flex items-center gap-4 px-4 py-3 hover:bg-stone-50" do
+              .min-w-0.flex-1
+                p.truncate
+                  span.font-medium.text-stone-800 = species.name
+                  - if species.latin_name
+                    span.ml-1.5.text-sm.italic.text-stone-500 = species.latin_name
+                p.mt-0.5.truncate.text-xs.text-stone-400
+                  = [species.family, (unplaced.positive? ? "#{unplaced} à placer" : nil)].compact_blank.join(" · ").presence || " "
+              .hidden.w-28.flex-shrink-0.sm:block
+                - if species.harvest_windows.any?
+                  = render "plant_species/mini_harvest", windows: species.harvest_windows
+                - else
+                  p.text-right.text-xs.text-stone-300 Pas de calendrier
+              span[class="min-w-[2.5rem] flex-shrink-0 text-right text-sm tabular-nums #{count.positive? ? 'font-semibold text-stone-700' : 'text-stone-300'}"
+                   data-plant-count=count
+                   title="#{count} plante#{'s' if count > 1} vivante#{'s' if count > 1}"]
+                = count
+              svg.h-4.w-4.flex-shrink-0.text-stone-300 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                polyline points="9 18 15 12 9 6"
