@@ -35,6 +35,7 @@ export class PlantPlacement {
     document.addEventListener('keydown', this.onKeydown);
     if (this.c.hasUnplacedFrameTarget) {
       this.c.unplacedFrameTarget.addEventListener('turbo:frame-load', () => this.onListLoad());
+      this.c.unplacedFrameTarget.addEventListener('turbo:before-frame-render', (event) => this.keepSearchFocus(event));
     }
   }
 
@@ -109,6 +110,26 @@ export class PlantPlacement {
     const list = this.c.unplacedFrameTarget.querySelector('[data-unplaced-list]');
     if (list) this.setCount(Number(list.dataset.unplacedTotal));
     this.markSelection();
+  }
+
+  // Sur iPad et iPhone, remplacer le champ de recherche à chaque lettre ferme
+  // le clavier. Tant qu'un champ des filtres a le focus, on ne remplace donc
+  // que les résultats : le formulaire, vivant, ne quitte jamais la page.
+  keepSearchFocus(event) {
+    const form = this.c.unplacedFrameTarget.querySelector('form');
+    if (!form?.contains(document.activeElement)) return;
+    event.detail.render = (current, next) => {
+      const list = current.querySelector('[data-unplaced-list]');
+      const nextList = next.querySelector('[data-unplaced-list]');
+      const results = current.querySelector('[data-unplaced-results]');
+      const nextResults = next.querySelector('[data-unplaced-results]');
+      if (!list || !nextList || !results || !nextResults) {
+        current.replaceChildren(...next.childNodes);
+        return;
+      }
+      [...nextList.attributes].forEach(({ name, value }) => list.setAttribute(name, value));
+      results.replaceWith(nextResults);
+    };
   }
 
   markSelection() {
