@@ -113,6 +113,16 @@
           .mt-3.border-t.border-stone-100.pt-3
             p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Couches
             ul.space-y-1
+              / Aucune couche : la carte seule, sans objets, sans mode ni barre
+                d'outils. Le choix se retient comme les autres.
+              li
+                button[type="button"
+                       class="flex w-full items-center gap-2 truncate rounded-lg px-2 py-1.5 text-left text-sm text-stone-600 hover:bg-stone-50"
+                       data-map-target="layerNone"
+                       data-action="click->map#clearActiveLayer"
+                       aria-current="false"]
+                  span.map-layer-radio aria-hidden="true"
+                  span.truncate Aucune
               / Les couches réseau ont leur propre section (phase 9).
               - @layers.reject(&:network?).each do |couche|
                 / Une couche à la fois : choisir son nom l'affiche seule. La
