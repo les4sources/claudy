@@ -1,0 +1,32 @@
+/ Corriger une facture de vente déjà enregistrée : numéro, date, montant, PDF.
+  Ce qu'elle facture ne se change pas ici — c'est ce lien qui empêche une
+  réservation de partir deux fois en facture.
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Modifier la facture #{@invoice.number_was}"
+
+.max-w-2xl
+  - if @invoice.cash_allocations.any?
+    .mb-6.rounded-xl.border.border-amber-200.p-4 class="bg-amber-50/60"
+      p.text-sm.text-amber-900
+        strong Des lignes bancaires sont affectées sur cette facture.
+        = " Si tu changes le montant, le statut payée/émise se recalcule sur ces affectations."
+
+  = form_with model: @invoice, url: finance_sales_invoice_path(@invoice), method: :patch, class: "space-y-4" do |f|
+    .rounded-xl.border.border-stone-200.bg-white.p-4.space-y-4
+      label.block.text-sm.font-medium.text-stone-700(for="sales_invoice_legal_entity_id") Entité
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une entité…" class="relative")
+        = f.select :legal_entity_id, options_from_collection_for_select(@entities, :id, :name, @invoice.legal_entity_id), {}, { class: "block w-full rounded-lg border-stone-200 text-sm", data: { searchable_select_target: "select" } }
+        = render "shared/searchable_select_search", label: "Chercher une entité"
+      = f.text_field :number, label: "Numéro OkiOki", class: "block w-full rounded-lg border-stone-200 text-sm"
+      = f.date_field :issued_on, label: "Date d'émission", class: "block w-full rounded-lg border-stone-200 text-sm"
+      = f.text_field :total, label: "Montant TTC (€)", value: number_with_precision(@invoice.total_cents.to_f / 100, precision: 2, separator: ","), class: "block w-full rounded-lg border-stone-200 text-sm"
+      div
+        = f.file_field :document, label: (@invoice.document.attached? ? "Remplacer le PDF" : "PDF de la facture"), accept: "application/pdf", class: "block w-full text-sm"
+        - if @invoice.document.attached?
+          p class="mt-1 text-[0.65rem] text-stone-400" = "PDF actuel : #{@invoice.document.filename} — laisse vide pour le garder."
+      label.block.text-sm.font-medium.text-stone-700(for="sales_invoice_notes") Notes (facultatif)
+      = f.text_area :notes, label: false, rows: 2, class: "block w-full rounded-lg border-stone-200 text-sm"
+
+    .flex.items-center.gap-3
+      = f.submit "Enregistrer les modifications", class: "inline-flex items-center rounded-lg bg-4s-main px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer"
+      = link_to "Annuler", finance_sales_invoice_path(@invoice), class: "text-sm text-stone-500 hover:text-stone-700"

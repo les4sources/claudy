@@ -402,7 +402,9 @@ Rails.application.routes.draw do
     # Comptabilité > Ventes (epic #240, phase 6). `new` et `create` prennent
     # `kind` + `source_id` : on facture TOUJOURS une chose précise, désignée
     # depuis la file Facturation — jamais dans le vide.
-    resources :sales_invoices, path: "sales", only: %i[index show new create destroy]
+    # `edit`/`update` corrigent ce qui a été mal saisi (numéro, date, montant,
+    # PDF) sans toucher au lien vers ce qu'elle facture.
+    resources :sales_invoices, path: "sales", only: %i[index show new create edit update destroy]
 
     resources :general_accounts, path: "chart_of_accounts", except: [:show]
     resources :legal_entities, path: "entities", except: [:show]

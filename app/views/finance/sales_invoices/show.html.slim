@@ -78,5 +78,7 @@
         p class="mt-2 text-[0.65rem] text-stone-400"
           | Une réservation ne peut être rattachée qu'à UNE facture : c'est ce qui l'empêche d'être facturée deux fois.
 
+    = link_to "Modifier la facture", edit_finance_sales_invoice_path(@invoice), class: "block w-full rounded-lg border border-stone-200 px-3 py-2 text-center text-sm text-stone-600 hover:text-stone-800 hover:border-stone-300"
+
     - if @invoice.cash_allocations.empty?
       = button_to "Retirer du registre", finance_sales_invoice_path(@invoice), method: :delete, data: { turbo_confirm: "Retirer la facture #{@invoice.number} du registre ?" }, class: "w-full rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-500 hover:text-rose-600 hover:border-rose-200"

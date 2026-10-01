@@ -5,6 +5,11 @@ fr:
     # validation s'affiche « Name doit être rempli(e) » — un mot anglais au
     # milieu d'une phrase française, sur un écran destiné à la comptabilité.
     attributes:
+      sales_invoice:
+        number: Numéro
+        issued_on: Date d'émission
+        total_cents: Montant
+        legal_entity: Entité
       household:
         name: Nom du ménage
         kind: Type
