@@ -165,11 +165,34 @@ class ExperienceBookingsController < BaseController
   end
 
   # Validation (pending → confirmed) + notification au client.
+  #
+  # Créneau DÉJÀ PASSÉ (Michael 2026-10-01) : tant que les porteurs ne valident
+  # pas eux-mêmes, l'admin régularise après coup. Valider, c'est alors constater
+  # que l'activité a eu lieu — on pose la tenue dans la foulée, et on ne prévient
+  # pas le client d'une confirmation qui n'a plus d'objet.
   def confirm
-    @booking.confirm!
-    ActivitySelectionMailer.booking_confirmed(@booking).deliver_later
+    after_the_fact = !@booking.slot_in_the_future?
+    ExperienceBooking.transaction do
+      @booking.confirm!
+      @booking.mark_held!(by: current_user&.human) if after_the_fact
+    end
+    refresh_stay_totals!(@booking.stay)
 
-    notice = "Activité « #{@booking.experience.name} » confirmée. Le client est prévenu."
+    if after_the_fact
+      notice = "Activité « #{@booking.experience.name} » validée : elle a eu lieu."
+    else
+      ActivitySelectionMailer.booking_confirmed(@booking).deliver_later
+      notice = "Activité « #{@booking.experience.name} » confirmée. Le client est prévenu."
+    end
+
+    # Depuis la fiche séjour : on rafraîchit activités ET montants en place.
+    if params[:from] == "stay"
+      respond_to do |format|
+        format.turbo_stream { render_stay_panels(@booking.stay, notice: notice) }
+        format.html { redirect_to stay_path(@booking.stay), notice: notice }
+      end
+      return
+    end
     # Epic #244 : sans durée en heures, aucune rémunération n'a pu être figée.
     # On le dit tout de suite — c'est réparable en une saisie, et découvert au
     # relevé trimestriel ce serait trop tard.

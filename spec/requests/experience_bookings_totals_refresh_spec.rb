@@ -82,4 +82,20 @@ RSpec.describe "ExperienceBookings — rafraîchissement des montants", type: :r
 
     expect(response).to redirect_to(stay_path(stay))
   end
+
+  # 2026-10-01 : « Total − Encaissé » ne retombait pas sur le « Solde dû », qui
+  # exclut les activités à valider sans le dire. La ligne rend l'écart lisible.
+  it "montre les activités à valider, déduites du solde dû" do
+    add_activity(status: "pending")
+
+    expect(response.body).to include("Activités à valider")
+    expect(response.body).to include("− 80 €") # 5 000 + 1 500 × 2
+    expect(stay.reload.balance_due_cents).to eq(60_000)
+  end
+
+  it "n'affiche pas la ligne quand aucune activité n'est à valider" do
+    add_activity(status: "confirmed")
+
+    expect(response.body).not_to include("Activités à valider")
+  end
 end

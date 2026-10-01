@@ -56,6 +56,36 @@ RSpec.describe "ExperienceBookings — canal admin", type: :request, queue_adapt
       patch confirm_experience_booking_path(target)
       expect(target.reload).to be_pending # inchangé
     end
+
+    # Michael 2026-10-01 : les porteurs ne valident pas encore eux-mêmes ; l'admin
+    # régularise depuis la fiche séjour des activités déjà passées.
+    context "depuis la fiche séjour, sur un créneau déjà passé" do
+      let(:admin) { User.create!(email: "staff@les4sources.be", password: "password123") }
+      let(:past_avail) { ExperienceAvailability.create!(experience: exp_a, available_on: Date.today - 5, starts_at: "10:00") }
+      let(:past_booking) { ExperienceBooking.create!(experience_availability: past_avail, stay: stay, participants: 2) }
+
+      before { sign_in admin }
+
+      it "confirme, pose « a eu lieu », ne prévient pas le client et rafraîchit les panneaux" do
+        expect {
+          patch confirm_experience_booking_path(past_booking, from: "stay"),
+                headers: { "Accept" => "text/vnd.turbo-stream.html" }
+        }.not_to have_enqueued_mail(ActivitySelectionMailer, :booking_confirmed)
+
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        expect(response.body).to include("stay_#{stay.id}_activities", "stay_#{stay.id}_payments")
+        expect(response.body).to include("elle a eu lieu")
+        past_booking.reload
+        expect(past_booking).to be_confirmed
+        expect(past_booking).to be_held
+      end
+
+      it "montre le bouton Valider sur la fiche séjour pour une activité à valider" do
+        past_booking
+        get stay_path(stay)
+        expect(response.body).to include(confirm_experience_booking_path(past_booking, from: "stay"))
+      end
+    end
   end
 
   describe "refus (formulaire + application)" do
