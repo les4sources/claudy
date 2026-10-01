@@ -59,6 +59,10 @@ RSpec.describe "Carte du domaine — relief 3D", type: :request do
       expect(JSON.parse(scene["data-map-relief-surface-meta-value"])).to eq("z_min" => 120.0, "z_unit" => 0.01)
       expect(page.at_css('[data-choice-group="sunMode"]')).to be_present
       expect(page.at_css('[data-map-relief-value-param="canopy"]')).to be_present
+      # Les fonds de station, pour placer les espèces.
+      %w[aspect wetness frost].each do |kind|
+        expect(page.at_css(%([data-map-relief-value-param="#{kind}"]))).to be_present
+      end
       layers = JSON.parse(scene["data-map-relief-feature-layers-value"])
       expect(layers.map { |layer| layer["id"] }).to include(management.id)
       expect(layers.map { |layer| layer["kind"] }).not_to include("comments")

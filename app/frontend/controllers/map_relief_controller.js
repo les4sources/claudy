@@ -1,6 +1,9 @@
 import { Controller } from '@hotwired/stimulus'
 import { decodeGrid, downsample, analyzeDrainage, RainSimulation } from '../utils/map_relief_hydro'
 import { sunPosition, shadowMask, sunHours } from '../utils/map_relief_sun'
+import {
+  slopeAspect, spreadAccumulation, wetnessIndex, frostRisk, boxBlur, towards, wetnessClass, frostClass,
+} from '../utils/map_relief_station'
 
 // La vue 3D du relief et du ruissellement (`/map/relief`).
 //
@@ -53,6 +56,26 @@ const CANOPY_RAMP = [
 ]
 const CANOPY_MAX = 30
 
+// Les fonds de « station » : de quoi placer les espèces.
+const WETNESS_RAMP = [
+  [0, [236, 224, 190]],
+  [0.35, [200, 210, 140]],
+  [0.55, [110, 175, 100]],
+  [0.75, [40, 140, 140]],
+  [1, [30, 70, 160]],
+]
+const FROST_RAMP = [
+  [0, [244, 239, 228]],
+  [0.33, [205, 222, 240]],
+  [0.66, [130, 160, 225]],
+  [1, [70, 60, 170]],
+]
+const BASE_LEGENDS = {
+  aspect: 'Orangé : pentes tournées vers le sud, chaudes. Bleu : vers le nord, fraîches. Gris : à plat.',
+  wetness: 'Indice topographique (indicatif) : où le relief rassemble l\'eau. Beige sec, vert frais, bleu humide.',
+  frost: 'Indice d\'air froid (indicatif) : la nuit, l\'air froid coule comme l\'eau et stagne dans les fonds. Plus c\'est violet, plus le risque de gelée est fort.',
+}
+
 const LAYER_COLORS = 
 { venues: '#f59e0b', management: '#fafaf9', welcome: '#a3e635' }
 
@@ -60,7 +83,7 @@ export default class extends Controller {
   static targets = [
     'viewport', 'loading', 'panel', 'panelBody', 'exaggeration', 'exaggerationLabel',
     'playButton', 'playLabel', 'clock', 'rainState', 'stats', 'probe',
-    'sunSection', 'sunHour', 'sunHourLabel', 'sunHourRow', 'sunStatus', 'sunLegend', 'sunLegendMax', 'dayButton', 'dayLabel', 'surfaceToggle',
+    'baseLegend', 'sunSection', 'sunHour', 'sunHourLabel', 'sunHourRow', 'sunStatus', 'sunLegend', 'sunLegendMax', 'dayButton', 'dayLabel', 'surfaceToggle',
   ]
 
   static values = {
@@ -150,6 +173,17 @@ export default class extends Controller {
   }
 
   async applyBase() {
+    const base = this.settings.base
+    if (this.hasBaseLegendTarget) {
+      this.baseLegendTarget.textContent = BASE_LEGENDS[base] || ''
+      this.baseLegendTarget.classList.toggle('hidden', !BASE_LEGENDS[base])
+    }
+    if (BASE_LEGENDS[base]) {
+      await this.ensureStation()
+      this.stationTextures ||= {}
+      this.stationTextures[base] ||= this.scene.canvasTexture(this.stationCanvas(base))
+      return this.scene.setBaseTexture(this.stationTextures[base])
+    }
     if (this.settings.base === 'canopy' && this.surface) {
       this.canopyTexture ||= this.scene.canvasTexture(this.canopyCanvas())
       return this.scene.setBaseTexture(this.canopyTexture)
@@ -159,6 +193,57 @@ export default class extends Controller {
       if (this.orthoTexture) return this.scene.setBaseTexture(this.orthoTexture)
     }
     this.scene.setBaseTexture(this.hypsometryTexture)
+  }
+
+  // Pente, exposition, humidité et gel : ~1 s de calcul, fait une fois, à la
+  // première demande (un fond de station ou un clic sur le terrain).
+  async ensureStation() {
+    if (this.station) return this.station
+    this.setLoading('Calcul de la station (pente, humidité, gel)…')
+    await nextPaint()
+    const { heights, cols, rows } = this.full
+    const cell = this.metaValue.cell_size_m
+    const { slope, aspect } = slopeAspect(heights, cols, rows, cell)
+    const spread = spreadAccumulation(this.drainage, cols, rows, cell)
+    const wetness = boxBlur(wetnessIndex(spread, slope, cell), cols, rows, 2)
+    const frost = boxBlur(frostRisk(heights, this.drainage), cols, rows, 2)
+    this.station = { slope, aspect, wetness, frost, spread }
+    this.setLoading(null)
+    return this.station
+  }
+
+  stationCanvas(kind) {
+    const { cols, rows } = this.full
+    const { slope, aspect, wetness, frost } = this.station
+    const canvas = document.createElement('canvas')
+    canvas.width = cols
+    canvas.height = rows
+    const context = canvas.getContext('2d')
+    const image = context.createImageData(cols, rows)
+    const data = image.data
+    for (let i = 0; i < cols * rows; i++) {
+      let color
+      if (kind === 'aspect') {
+        // Du nord (bleu) au sud (orangé) en passant par l'est et l'ouest
+        // (neutres) ; une pente faible tire vers le gris.
+        const southness = -Math.cos(aspect[i])
+        const strength = Math.min(1, Math.tan(slope[i]) / 0.25)
+        const tone = southness >= 0 ? [232, 119, 46] : [59, 111, 182]
+        const neutral = [222, 216, 200]
+        const t = Math.abs(southness) * strength
+        color = neutral.map((v, j) => Math.round(v + (tone[j] - v) * t))
+      } else if (kind === 'wetness') {
+        color = ramp((wetness[i] - 3) / 9, WETNESS_RAMP)
+      } else {
+        color = ramp(frost[i], FROST_RAMP)
+      }
+      data[i * 4] = color[0]
+      data[i * 4 + 1] = color[1]
+      data[i * 4 + 2] = color[2]
+      data[i * 4 + 3] = 255
+    }
+    context.putImageData(image, 0, 0)
+    return canvas
   }
 
   setExaggeration() {
@@ -599,16 +684,23 @@ export default class extends Controller {
     })
   }
 
-  probe(event) {
+  async probe(event) {
     const hit = this.scene.pick(event)
     if (!hit) {
       this.probeTarget.classList.add('hidden')
       return
     }
+    await this.ensureStation()
     const col = Math.min(this.full.cols - 1, hit.col * this.meshFactor)
     const row = Math.min(this.full.rows - 1, hit.row * this.meshFactor)
     const i = row * this.full.cols + col
     const lines = [`<p class="font-semibold text-stone-800">Altitude ${formatNumber(this.full.heights[i], 1)} m</p>`]
+    if (this.station) {
+      const { slope, aspect, wetness, frost } = this.station
+      const percent = Math.tan(slope[i]) * 100
+      const facing = percent < 2 ? 'à plat' : `pente ${formatNumber(percent)} % tournée ${towards(aspect[i])}`
+      lines.push(`<p>Station : ${facing} · sol ${wetnessClass(wetness[i])} · gel ${frostClass(frost[i])} <span class="text-stone-400">(indices)</span></p>`)
+    }
     const above = this.surface ? this.surface[i] - this.full.heights[i] : 0
     if (above > 0.5) lines.push(`<p>Arbre, haie ou toit : ${formatNumber(above, 1)} m au-dessus du sol</p>`)
     if (this.settings.sunMode === 'hours' && this.dayHours) {
@@ -616,7 +708,9 @@ export default class extends Controller {
     } else if (this.settings.sunMode === 'instant' && this.lastMask) {
       lines.push(`<p>À ${this.sunHourLabelTarget.textContent} : ${this.lastMask[i] ? 'au soleil' : 'à l\'ombre'}</p>`)
     }
-    const drained = this.drainage?.accumulation[i] || 0
+    // L'écoulement réparti dit ce qui arrive vraiment sur une pente ; l'axe
+    // unique ne compte que la maille elle-même hors des talwegs.
+    const drained = this.station?.spread[i] || this.drainage?.accumulation[i] || 0
     lines.push(`<p>Surface drainée en amont : <span class="tabular-nums">${formatArea(drained)}</span></p>`)
     const hollow = this.drainage?.depression[i] || 0
     if (hollow > 0.05) lines.push(`<p>Dans une cuvette : l'eau peut y monter de ${formatDepth(hollow)}</p>`)
