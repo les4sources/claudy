@@ -18,6 +18,18 @@ module Maps
     # toits). Moins le terrain, il donne la hauteur de la végétation et porte les
     # ombres.
     MNS_URL = "https://geoservices.wallonie.be/arcgis/rest/services/RELIEF/WALLONIE_MNS_2021_2022/MapServer".freeze
+    # L'occupation du sol 2023 (WalOUS, IA) : une classe par pixel, qui dit
+    # combien le sol boit dans la simulation de pluie.
+    OCS_URL = "https://geoservices.wallonie.be/arcgis/rest/services/SOL_SOUS_SOL/WAL_OCS_IA__2023/MapServer".freeze
+    # Codes WalOUS, déduits en croisant 2 500 points avec la hauteur de la
+    # végétation (la légende du service ne les donne pas) : 7 prairie à 0 m,
+    # 8 résineux à 23 m, 9 feuillus à 10 m…
+    LANDCOVER = {
+      1 => "Revêtement artificiel", 2 => "Bâti", 3 => "Rail", 4 => "Sol nu", 5 => "Eau",
+      6 => "Culture annuelle", 7 => "Prairie permanente", 8 => "Résineux (> 3 m)", 9 => "Feuillus (> 3 m)",
+      80 => "Résineux (≤ 3 m)", 90 => "Feuillus (≤ 3 m)"
+    }.freeze
+    LANDCOVER_NODATA = 255
     ORTHO_URL = "https://geoservices.wallonie.be/arcgis/rest/services/IMAGERIE/ORTHO_2026_PRINTEMPS/MapServer".freeze
     CELL_SIZE_M = 1.0
     MARGIN_M = 150.0
@@ -71,9 +83,10 @@ module Maps
 
     # Les trois pièces s'importent ensemble, ou à part (`terrain: false` pour
     # n'ajouter que la surface à un relief déjà installé).
-    def call(terrain: true, surface: true, texture: true)
+    def call(terrain: true, surface: true, texture: true, landcover: true)
       write_grid(fetch_heights(MNT_URL)) if terrain
       write_surface(fetch_heights(MNS_URL)) if surface
+      write_landcover(fetch_heights(OCS_URL, parser: method(:parse_class))) if landcover
       download_texture if texture
       @terrain
     end
@@ -81,7 +94,7 @@ module Maps
     # Les altitudes en mètres (Float, `nil` = pas de donnée), dans l'ordre de la
     # grille. Les paquets partent sur quelques fils : le SPW répond en ~9 s par
     # paquet, séquentiellement l'import prendrait six minutes.
-    def fetch_heights(url = MNT_URL)
+    def fetch_heights(url = MNT_URL, parser: method(:parse_height))
       total = extent.cols * extent.rows
       chunks = (0...total).each_slice(@chunk).to_a
       heights = Array.new(total)
@@ -99,7 +112,7 @@ module Maps
             rescue ThreadError
               break
             end
-            values = fetch_chunk(indexes, url)
+            values = fetch_chunk(indexes, url, parser)
             mutex.synchronize do
               indexes.each_with_index { |index, j| heights[index] = values[j] }
               done += 1
@@ -117,7 +130,7 @@ module Maps
       heights
     end
 
-    def fetch_chunk(indexes, url = MNT_URL)
+    def fetch_chunk(indexes, url = MNT_URL, parser = method(:parse_height))
       points = indexes.map { |index| extent.point(index).map { |v| v.round(3) } }
       params = {
         f: "json", geometryType: "esriGeometryMultipoint", sr: "3857", layers: "all:0", tolerance: "0",
@@ -136,7 +149,7 @@ module Maps
         # décalerait toute la grille, on refuse plutôt que de deviner.
         raise Error, "#{results.size} altitudes pour #{points.size} points" unless results.size == points.size
 
-        results.map { |result| parse_height(result["attributes"]) }
+        results.map { |result| parser.call(result["attributes"]) }
       rescue Error, JSON::ParserError, Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNRESET => e
         raise if attempt >= ATTEMPTS
 
@@ -160,6 +173,20 @@ module Maps
       update_metadata(surface: stats.merge(z_unit: 0.01, source: "SPW, MNS LiDAR 2021-2022 (50 cm, arbres et toits)"))
     end
 
+    # L'occupation du sol sur la grille du relief : un octet par maille (code
+    # WalOUS, 255 = inconnu).
+    def write_landcover(classes)
+      raise Error, "installer d'abord le relief (sans ONLY=landcover)" unless same_extent?
+
+      known = classes.compact
+      raise Error, "aucune classe reçue" if known.empty?
+
+      File.binwrite(@terrain.landcover_path, classes.map { |c| c.nil? || c > 254 ? LANDCOVER_NODATA : c }.pack("C*"))
+      counts = known.tally.transform_keys(&:to_s)
+      update_metadata(landcover: { source: "SPW, occupation du sol WalOUS 2023 (IA)", nodata: LANDCOVER_NODATA,
+                                   classes: LANDCOVER.transform_keys(&:to_s), counts: counts })
+    end
+
     # L'ortho de printemps 2026 sur l'emprise exacte des centres de mailles. Le
     # rapport largeur/hauteur de l'image suit celui de l'emprise : ArcGIS
     # élargirait sinon la boîte demandée, et la photo glisserait sur le relief.
@@ -178,6 +205,10 @@ module Maps
     end
 
     private
+
+    def parse_class(attributes)
+      Integer(attributes.to_h.values.first.to_s, exception: false)
+    end
 
     def parse_height(attributes)
       value = attributes.to_h.values.first

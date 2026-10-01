@@ -22,6 +22,7 @@
       data-map-relief-texture-url-value=(@terrain.texture? ? map_relief_texture_path(v: @version) : "")
       data-map-relief-surface-url-value=(@terrain.surface? ? map_relief_surface_path(v: @version) : "")
       data-map-relief-surface-meta-value=(@meta["surface"] || {}).slice("z_min", "z_unit").to_json
+      data-map-relief-landcover-url-value=(@terrain.landcover? ? map_relief_landcover_path(v: @version) : "")
       data-map-relief-meta-value=@meta.slice("cols", "rows", "west", "north", "step", "cell_size_m", "z_min", "z_unit", "nodata").to_json
       data-map-relief-features-url-value=map_features_path(format: :json)
       data-map-relief-feature-layers-value=@feature_layers.to_json
@@ -60,6 +61,8 @@
           button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setBase" data-map-relief-value-param="aspect" title="Vers où regarde chaque pente" Exposition
           button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setBase" data-map-relief-value-param="wetness" title="Où le relief rassemble l'eau (indice)" Humidité
           button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setBase" data-map-relief-value-param="frost" title="Où l'air froid stagne la nuit (indice)" Gel
+          - if @terrain.landcover?
+            button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setBase" data-map-relief-value-param="landcover" title="Forêt, prairie, bâti… (SPW 2023)" Occupation
         p.mt-1.hidden.text-xs.text-stone-500 data-map-relief-target="baseLegend"
 
         .mt-3
@@ -189,22 +192,59 @@
 
         .mt-4.border-t.border-stone-100.pt-3
           p class=section_title_css Pluie
-          p class=label_css Intensité
-          div class=group_css data-choice-group="intensity"
-            - [[10, "Pluie"], [30, "Forte"], [60, "Orage"]].each do |value, label|
-              button type="button" class=choice_css aria-pressed=(value == 30).to_s data-action="map-relief#setRain" data-map-relief-key-param="intensity" data-map-relief-value-param=value
-                = label
-                span class="block text-[0.65rem] opacity-70" = "#{value} mm/h"
-          p class="#{label_css} mt-2" Durée de l'averse
-          div class=group_css data-choice-group="duration"
-            - [[15, "15 min"], [30, "30 min"], [60, "1 h"], [120, "2 h"]].each do |value, label|
-              button type="button" class=choice_css aria-pressed=(value == 60).to_s data-action="map-relief#setRain" data-map-relief-key-param="duration" data-map-relief-value-param=value = label
-          p class="#{label_css} mt-2" Le sol boit
-          div class=group_css data-choice-group="infiltration"
-            - [[2, "Tassé"], [10, "Prairie"], [40, "Forêt"]].each do |value, label|
-              button type="button" class=choice_css aria-pressed=(value == 10).to_s data-action="map-relief#setRain" data-map-relief-key-param="infiltration" data-map-relief-value-param=value
-                = label
-                span class="block text-[0.65rem] opacity-70" = "#{value} mm/h"
+          / Une averse type, d'intensité constante, ou une pluie mesurée, heure par
+            heure (Open-Meteo).
+          div class=group_css data-choice-group="rainSource"
+            button type="button" class=choice_css aria-pressed="true" data-action="map-relief#setRainSource" data-map-relief-value-param="typical" Averse type
+            button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setRainSource" data-map-relief-value-param="real" Pluie réelle
+          div data-map-relief-target="rainTypical"
+            p class="#{label_css} mt-2" Intensité
+            div class=group_css data-choice-group="intensity"
+              - [[10, "Pluie"], [30, "Forte"], [60, "Orage"]].each do |value, label|
+                button type="button" class=choice_css aria-pressed=(value == 30).to_s data-action="map-relief#setRain" data-map-relief-key-param="intensity" data-map-relief-value-param=value
+                  = label
+                  span class="block text-[0.65rem] opacity-70" = "#{value} mm/h"
+            p class="#{label_css} mt-2" Durée de l'averse
+            div class=group_css data-choice-group="duration"
+              - [[15, "15 min"], [30, "30 min"], [60, "1 h"], [120, "2 h"]].each do |value, label|
+                button type="button" class=choice_css aria-pressed=(value == 60).to_s data-action="map-relief#setRain" data-map-relief-key-param="duration" data-map-relief-value-param=value = label
+          .hidden data-map-relief-target="rainReal"
+            button[type="button"
+                   class="mt-2 w-full rounded-lg border border-sky-200 bg-sky-50 px-2 py-1.5 text-left text-xs text-sky-900 hover:bg-sky-100"
+                   data-action="map-relief#setRealPreset"
+                   data-map-relief-date-param="2021-07-13"
+                   data-map-relief-days-param="3"]
+              span.font-semibold 13-15 juillet 2021
+              span.block.text-sky-700 Les pluies des inondations de la Vesdre et de l'Ourthe
+            .mt-2.flex.items-end.gap-2
+              div.flex-1
+                label class=label_css for="relief-rain-date" Ou à partir du
+                input#relief-rain-date[type="date" value="2021-07-13" min="1990-01-01" max=Date.current.iso8601
+                                       class="mt-1 w-full rounded-lg border-stone-200 px-2 py-1 text-xs"
+                                       data-map-relief-target="rainDate"
+                                       data-action="change->map-relief#reloadRealRain"]
+              div class=group_css data-choice-group="realDays"
+                - [[1, "1 j"], [3, "3 j"], [7, "7 j"]].each do |value, label|
+                  button type="button" class=choice_css aria-pressed=(value == 3).to_s data-action="map-relief#setRealDays" data-map-relief-value-param=value = label
+            .mt-2 data-map-relief-target="rainChart"
+            p.mt-1.text-xs.text-stone-500 data-map-relief-target="rainRealStatus"
+            p.mt-1.text-xs.text-stone-400 Réanalyse horaire (Open-Meteo, ERA5) : les intensités sont lissées, les averses réelles tombent plus fort sur de courts moments. Simulation sur une grille de 4 m.
+          p class="#{label_css} mt-2" Le sol au départ
+          div class=group_css data-choice-group="soilState"
+            - [["dry", "Sec"], ["normal", "Normal"], ["wet", "Détrempé"]].each do |value, label|
+              button type="button" class=choice_css aria-pressed=(value == "normal").to_s data-action="map-relief#setSoilState" data-map-relief-value-param=value = label
+          p.mt-1.text-xs.text-stone-400
+            - if @terrain.landcover?
+              | Le sol boit selon ce qui le couvre (occupation 2023) jusqu'à ce que sa réserve soit pleine ; après, l'eau ruisselle.
+            - else
+              | Sans l'occupation du sol, il boit partout au même rythme jusqu'à 50 mm de réserve.
+          div data-map-relief-target="soilUniform"
+            p class="#{label_css} mt-2" Le sol boit
+            div class=group_css data-choice-group="infiltration"
+              - [[2, "Tassé"], [10, "Prairie"], [40, "Forêt"]].each do |value, label|
+                button type="button" class=choice_css aria-pressed=(value == 10).to_s data-action="map-relief#setRain" data-map-relief-key-param="infiltration" data-map-relief-value-param=value
+                  = label
+                  span class="block text-[0.65rem] opacity-70" = "#{value} mm/h"
           p class="#{label_css} mt-2" Vitesse
           div class=group_css data-choice-group="speed"
             - [[1, "Lente"], [4, "Normale"], [16, "Rapide"]].each do |value, label|

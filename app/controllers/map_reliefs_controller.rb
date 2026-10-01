@@ -42,6 +42,15 @@ class MapReliefsController < BaseController
     send_file @terrain.surface_path, type: "application/octet-stream", disposition: "inline"
   end
 
+  # L'occupation du sol (un octet par maille) : ce que la pluie trouve en
+  # tombant, et donc ce que le sol boit.
+  def landcover
+    return head :not_found unless @terrain.landcover?
+
+    response.set_header("Cache-Control", CACHE_CONTROL)
+    send_file @terrain.landcover_path, type: "application/octet-stream", disposition: "inline"
+  end
+
   def texture
     return head :not_found unless @terrain.texture?
 

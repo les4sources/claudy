@@ -18,10 +18,12 @@ RSpec.describe "Carte du domaine — relief 3D", type: :request do
     File.binwrite(terrain.grid_path, [0, 100, 200, 300].pack("v*"))
     File.binwrite(terrain.texture_path, "\xFF\xD8fake".b) if texture
     File.binwrite(terrain.surface_path, [500, 600, 700, 800].pack("v*")) if surface
+    File.binwrite(terrain.landcover_path, [7, 7, 9, 2].pack("C*")) if surface
     File.write(terrain.metadata_path, {
       cols: 2, rows: 2, west: 545_000.0, north: 6_506_000.0, step: 1.5669, cell_size_m: 1.0,
       z_min: 120.0, z_max: 123.0, z_unit: 0.01, nodata: 65_535, fetched_at: "2026-10-01T00:06:15+02:00",
-      surface: (surface ? { z_min: 120.0, z_max: 128.0, z_unit: 0.01, nodata_count: 0 } : nil)
+      surface: (surface ? { z_min: 120.0, z_max: 128.0, z_unit: 0.01, nodata_count: 0 } : nil),
+      landcover: (surface ? { nodata: 255, classes: { "7" => "Prairie permanente" } } : nil)
     }.compact.to_json)
   end
 
@@ -59,6 +61,10 @@ RSpec.describe "Carte du domaine — relief 3D", type: :request do
       expect(JSON.parse(scene["data-map-relief-surface-meta-value"])).to eq("z_min" => 120.0, "z_unit" => 0.01)
       expect(page.at_css('[data-choice-group="sunMode"]')).to be_present
       expect(page.at_css('[data-map-relief-value-param="canopy"]')).to be_present
+      expect(scene["data-map-relief-landcover-url-value"]).to start_with("/map/relief/landcover?v=")
+      expect(page.at_css('[data-map-relief-value-param="landcover"]')).to be_present
+      expect(page.at_css('[data-choice-group="rainSource"]')).to be_present
+      expect(page.at_css('[data-choice-group="soilState"]')).to be_present
       # Les fonds de station, pour placer les espèces.
       %w[aspect wetness frost].each do |kind|
         expect(page.at_css(%([data-map-relief-value-param="#{kind}"]))).to be_present
@@ -84,6 +90,10 @@ RSpec.describe "Carte du domaine — relief 3D", type: :request do
       get map_relief_surface_path(v: "x")
       expect(response).to have_http_status(:ok)
       expect(response.body.b.unpack("v*")).to eq([500, 600, 700, 800])
+
+      get map_relief_landcover_path(v: "x")
+      expect(response).to have_http_status(:ok)
+      expect(response.body.b.unpack("C*")).to eq([7, 7, 9, 2])
     end
 
     it "répond 404, sans erreur, quand les fichiers manquent" do

@@ -22,7 +22,9 @@ Rails.application.configure do
                          "ws://#{ViteRuby.config.host_with_port}",
                          # Information au clic des couches du Géoportail de
                          # Wallonie sur la carte (utils/map_geoportail.js).
-                         "https://geoservices.wallonie.be"
+                         "https://geoservices.wallonie.be",
+                         "https://archive-api.open-meteo.com",
+                         "https://api.open-meteo.com"
 
       policy.style_src :self,
                        :https,

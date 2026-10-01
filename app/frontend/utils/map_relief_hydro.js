@@ -210,6 +210,17 @@ export function analyzeDrainage(heights, cols, rows, cellSize = 1) {
 // `heights` : le terrain (m), `cellSize` : le côté d'une maille (m). Les options
 // se changent en cours de route (`setOptions`) : intensité et infiltration en
 // mm/h, durée de l'averse en minutes (0 = sans fin).
+//
+// Trois options rendent la pluie et le sol réels :
+// - `infiltrationMap` (mm/h par maille, selon l'occupation du sol) remplace
+//   l'infiltration uniforme ;
+// - `storageMap` (mm par maille) : la RÉSERVE du sol. Tant qu'elle n'est pas
+//   pleine, le sol boit à son rythme ; pleine, il ne laisse plus passer que la
+//   percolation lente (`percolation`, mm/h), qui la vide aussi entre deux
+//   averses. `initialFill` (0 à 1) dit l'état du sol au départ : sec, normal,
+//   détrempé. Sans réserve, une pluie de trois jours s'infiltrerait en entier ;
+// - `series` (mm/h heure par heure, une pluie mesurée) remplace l'averse
+//   d'intensité constante : la pluie s'arrête après la dernière heure.
 export class RainSimulation {
   constructor(heights, cols, rows, cellSize, options = {}) {
     this.ground = Float32Array.from(heights)
@@ -227,7 +238,10 @@ export class RainSimulation {
     // Vitesse moyenne de l'eau dans chaque maille (m/s), pour les traceurs.
     this.velX = new Float32Array(n)
     this.velY = new Float32Array(n)
-    this.options = { intensity: 30, infiltration: 5, duration: 60, friction: 0.5 }
+    this.options = { intensity: 30, infiltration: 5, duration: 60, friction: 0.5, infiltrationMap: null,
+                     storageMap: null, initialFill: 0.5, percolation: 0.5, series: null }
+    // Ce que le sol de chaque maille contient déjà (m d'eau).
+    this.soil = new Float32Array(n)
     this.setOptions(options)
     this.reset()
   }
@@ -244,15 +258,32 @@ export class RainSimulation {
     this.fluxT.fill(0)
     this.velX.fill(0)
     this.velY.fill(0)
+    this.fillSoil()
     this.time = 0
     this.rained = 0
     this.infiltrated = 0
     this.outflow = 0
   }
 
+  // Le sol au départ : rempli à `initialFill` de sa réserve.
+  fillSoil() {
+    const storage = this.options.storageMap
+    if (!storage) { this.soil.fill(0); return }
+    const fill = this.options.initialFill ?? 0.5
+    for (let i = 0; i < this.soil.length; i++) this.soil[i] = (storage[i] / 1000) * fill
+  }
+
   get raining() {
+    if (this.options.series) return this.time < this.options.series.length * 3600
     const minutes = this.options.duration
     return !(minutes > 0) || this.time < minutes * 60
+  }
+
+  // L'intensité de la pluie en cours (mm/h).
+  get intensity() {
+    if (!this.raining) return 0
+    const { series } = this.options
+    return series ? series[Math.floor(this.time / 3600)] || 0 : this.options.intensity
   }
 
   // Le volume d'eau présent sur la grille (m³).
@@ -268,8 +299,13 @@ export class RainSimulation {
     const { cols, rows, cellSize, ground, depth, fluxR, fluxL, fluxB, fluxT } = this
     const n = cols * rows
     const area = cellSize * cellSize
-    const rain = this.raining ? (this.options.intensity / 1000 / 3600) * dt : 0
-    const infiltration = (this.options.infiltration / 1000 / 3600) * dt
+    const rain = (this.intensity / 1000 / 3600) * dt
+    const map = this.options.infiltrationMap
+    const storage = this.options.storageMap
+    const soil = this.soil
+    const toDepth = dt / 1000 / 3600
+    const infiltrationUniform = this.options.infiltration * toDepth
+    const percolation = (this.options.percolation ?? 0.5) * toDepth
     // Le frottement amortit les débits d'une fraction par seconde : sans lui,
     // l'eau accélérerait sans fin dans la pente.
     const keep = Math.max(0, 1 - this.options.friction * dt)
@@ -281,7 +317,18 @@ export class RainSimulation {
     for (let i = 0; i < n; i++) {
       let d = depth[i] + rain
       rainedStep += rain
+      let infiltration = map ? map[i] * toDepth : infiltrationUniform
+      if (storage) {
+        // Réserve pleine : seule la percolation passe. Elle vide aussi le sol.
+        const room = storage[i] / 1000 - soil[i]
+        if (room <= 0) infiltration = Math.min(infiltration, percolation)
+        else if (infiltration > room + percolation) infiltration = room + percolation
+      }
       const soaked = d < infiltration ? d : infiltration
+      if (storage) {
+        const after = soil[i] + soaked - percolation
+        soil[i] = after > 0 ? after : 0
+      }
       d -= soaked
       infiltratedStep += soaked
       depth[i] = d

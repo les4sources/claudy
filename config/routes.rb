@@ -461,6 +461,7 @@ Rails.application.routes.draw do
     get "relief/grid", to: "map_reliefs#grid", as: :map_relief_grid
     get "relief/texture", to: "map_reliefs#texture", as: :map_relief_texture
     get "relief/surface", to: "map_reliefs#surface", as: :map_relief_surface
+    get "relief/landcover", to: "map_reliefs#landcover", as: :map_relief_landcover
     # Les aménagements à l'essai (baissières, keylines, mares) de la vue 3D.
     resources :map_designs, path: "relief/designs", only: %i[index create destroy], defaults: { format: :json }
     # Le carnet de gestion (phase 6) : les tâches de l'année, mois par mois.
