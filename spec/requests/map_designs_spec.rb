@@ -39,6 +39,19 @@ RSpec.describe "Carte du domaine — aménagements à l'essai", type: :request d
       expect(feature.created_by).to eq(user)
     end
 
+    it "enregistre une haie sur courbe, en ligne, avec sa largeur et son bourrelet" do
+      post_design(type: "hedge", geometry: line.to_json, width: 5, berm: 0.2, grade: 0)
+
+      expect(response).to have_http_status(:created)
+      feature = MapFeature.last
+      expect(feature.display_name).to eq("Haie sur courbe 1")
+      expect(feature.feature_kind).to eq("path")
+      expect(feature.design).to include("type" => "hedge", "width" => 5.0, "berm" => 0.2)
+
+      post_design(type: "hedge", geometry: circle.to_json, width: 5)
+      expect(response).to have_http_status(:unprocessable_content)
+    end
+
     it "numérote les mares et garde leur centre" do
       2.times { post_design(type: "pond", geometry: circle.to_json, radius: 5, depth: 1.5, berm: 0.3, center: [4.9078, 50.3414]) }
 
