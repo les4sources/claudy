@@ -19,6 +19,8 @@ class MapReliefsController < BaseController
   def show
     @meta = @terrain.metadata
     @version = @meta["fetched_at"].to_s
+    # L'emprise du domaine (le fond de carte), pour compter l'eau qu'on y garde.
+    @domain_bounds = MapBaseLayer.default_layer&.bounds || {}
     @feature_layers = MapLayer.where(kind: OVERLAY_KINDS).ordered.map do |layer|
       { id: layer.id, kind: layer.kind, name: layer.name }
     end
