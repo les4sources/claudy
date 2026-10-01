@@ -43,6 +43,9 @@ module Kitchen
 
     # Un seul email par sauvegarde, dans l'ordre de ce qui compte le plus.
     def mailer_for
+      # Un service passé ne se prépare plus : corriger un séjour terminé est de
+      # la tenue de registre, pas une demande à la cuisine.
+      return nil if order.past?
       return :new_request if created?
       return :cancelled if changed_to("status", "cancelled")
       return :refused   if changed_to("validation", "refused")

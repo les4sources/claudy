@@ -350,8 +350,12 @@ class MealOrder < ApplicationRecord
   # déjà acceptée rouvre la question côté cuisine : elle repasse en attente et la
   # phase 4 en préviendra le responsable. Un accord ou un refus posé dans la même
   # sauvegarde a le dernier mot.
+  #
+  # Sauf pour un service PASSÉ : corriger après coup un séjour terminé (convives
+  # réels, date mal saisie) ne redemande rien à une cuisine qui a déjà servi.
   def reset_validation_on_sensitive_change
     return unless validation == "accepted"
+    return if past?
     return if will_save_change_to_validation?
     return unless VALIDATION_SENSITIVE_FIELDS.any? { |f| will_save_change_to_attribute?(f) }
 
