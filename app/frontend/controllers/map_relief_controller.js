@@ -789,21 +789,30 @@ export default class extends Controller {
       // Une haie : une bande verte de sa largeur, ponctuée d'arbres tous les 3 m.
       if (design.type === 'hedge') {
         const band = Math.max(4, (design.width || 5) * sx)
-        context.globalAlpha = 0.55
-        context.lineWidth = band
+        // Un liseré clair d'abord : vert sur vert, la bande se perdait dans la prairie.
+        const trace = () => {
+          context.beginPath()
+          design.points.forEach((point, k) => {
+            if (k === 0) context.moveTo(point.x * sx, point.y * sy)
+            else context.lineTo(point.x * sx, point.y * sy)
+          })
+        }
+        context.globalAlpha = 0.85
+        context.strokeStyle = '#fef9c3'
+        context.lineWidth = band + 5
+        trace()
+        context.stroke()
+        context.globalAlpha = 0.85
         context.strokeStyle = DESIGN_COLORS.hedge
-        context.beginPath()
-        design.points.forEach((point, k) => {
-          if (k === 0) context.moveTo(point.x * sx, point.y * sy)
-          else context.lineTo(point.x * sx, point.y * sy)
-        })
+        context.lineWidth = band
+        trace()
         context.stroke()
         context.globalAlpha = 1
         context.fillStyle = '#14532d'
         design.points.forEach((point, k) => {
           if (k % 3) return
           context.beginPath()
-          context.arc(point.x * sx, point.y * sy, Math.max(2.5, band * 0.22), 0, Math.PI * 2)
+          context.arc(point.x * sx, point.y * sy, Math.max(3, band * 0.3), 0, Math.PI * 2)
           context.fill()
         })
         continue
