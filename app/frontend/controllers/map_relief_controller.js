@@ -4,7 +4,7 @@ import { sunPosition, shadowMask, sunHours } from '../utils/map_relief_sun'
 import {
   slopeAspect, spreadAccumulation, wetnessIndex, frostRisk, boxBlur, towards, wetnessClass, frostClass,
 } from '../utils/map_relief_station'
-import { traceContour, applyDesigns, downsampleDesigned } from '../utils/map_relief_design'
+import { traceContour, applyDesigns, downsampleDesigned, HEDGE_SOIL } from '../utils/map_relief_design'
 
 // La vue 3D du relief et du ruissellement (`/map/relief`).
 //
@@ -104,12 +104,13 @@ const LANDCOVER_UNKNOWN = { label: 'inconnu', rate: 15, storage: 50, color: [210
 const SOIL_STATES = { dry: 0.1, normal: 0.5, wet: 0.9 }
 
 // Les aménagements à l'essai : libellés, couleurs sur le terrain, cotes par défaut.
-const DESIGN_LABELS = { swale: 'Baissière', keyline: 'Keyline', pond: 'Mare' }
-const DESIGN_COLORS = { swale: '#0284c7', keyline: '#7c3aed', pond: '#0369a1' }
+const DESIGN_LABELS = { swale: 'Baissière', keyline: 'Keyline', pond: 'Mare', hedge: 'Haie sur courbe' }
+const DESIGN_COLORS = { swale: '#0284c7', keyline: '#7c3aed', pond: '#0369a1', hedge: '#15803d' }
 const DESIGN_HINTS = {
   swale: 'Clique le début de la baissière sur le terrain, puis vers où elle doit s\'étendre : elle suit la courbe de niveau.',
   keyline: 'Clique le départ (le point haut), puis vers où l\'eau doit aller : la ligne descend doucement le long de la pente.',
   pond: 'Clique le centre de la mare sur le terrain.',
+  hedge: 'Clique le début de la haie, puis vers où elle s\'étend : elle suit la courbe de niveau. Sur une pente raide, elle freine et boit l\'eau sans terrassement.',
 }
 
 const LAYER_COLORS = 
@@ -120,7 +121,7 @@ export default class extends Controller {
   static targets = [
     'viewport', 'loading', 'panel', 'panelBody', 'exaggeration', 'exaggerationLabel',
     'playButton', 'playLabel', 'clock', 'rainState', 'stats', 'probe',
-    'baseLegend', 'designHint', 'designList', 'designSwaleOptions', 'designPondOptions', 'designGradeOptions', 'rainTypical', 'rainReal', 'rainDate', 'rainChart', 'rainRealStatus', 'soilUniform', 'sunSection', 'sunHour', 'sunHourLabel', 'sunHourRow', 'sunStatus', 'sunLegend', 'sunLegendMax', 'dayButton', 'dayLabel', 'surfaceToggle',
+    'baseLegend', 'designHint', 'designList', 'designSwaleOptions', 'designPondOptions', 'designGradeOptions', 'designHedgeOptions', 'rainTypical', 'rainReal', 'rainDate', 'rainChart', 'rainRealStatus', 'soilUniform', 'sunSection', 'sunHour', 'sunHourLabel', 'sunHourRow', 'sunStatus', 'sunLegend', 'sunLegendMax', 'dayButton', 'dayLabel', 'surfaceToggle',
   ]
 
   static values = {
@@ -141,7 +142,7 @@ export default class extends Controller {
       base: 'ortho', contour: 5, axes: true, hollows: true, features: true, particles: true,
       intensity: 30, duration: 60, infiltration: 10, speed: 4,
       sunMode: 'off', sunDate: '06-21', solidSurface: false,
-      width: 2, depth: 0.5, berm: 0.4, grade: 1, radius: 5, pondDepth: 1.5,
+      width: 2, depth: 0.5, berm: 0.4, grade: 1, radius: 5, pondDepth: 1.5, hedgeWidth: 5, hedgeBerm: 0,
       soilState: 'normal', rainSource: 'typical', realDays: 3,
     }
     this.playing = false
@@ -524,6 +525,7 @@ export default class extends Controller {
         if (!design) return
         design.capacity = footprint.capacity
         design.cells = footprint.cells
+        design.hedge = !!footprint.hedge
         design.simCells = null
       })
     } else {
@@ -547,11 +549,12 @@ export default class extends Controller {
     const cell = this.metaValue.cell_size_m * factor
     const base = downsample(heights, cols, rows, factor)
     const designed = this.designs.length ? downsampleDesigned(heights, this.ground, cols, rows, factor) : base.heights
-    this.soilMaps = this.buildSoilMaps(base.cols, base.rows, factor)
+    this.baseSoilMaps = this.buildSoilMaps(base.cols, base.rows, factor, null)
+    this.soilMaps = this.buildSoilMaps(base.cols, base.rows, factor, this.hedgeMask())
     this.domainCells = null
     this.designs.forEach((design) => { design.simCells = design.cells ? this.toSimCells(design.cells) : [] })
     this.simulation = new RainSimulation(designed, base.cols, base.rows, cell, this.simOptions())
-    this.baseline = this.designs.length ? new RainSimulation(base.heights, base.cols, base.rows, cell, this.simOptions()) : null
+    this.baseline = this.designs.length ? new RainSimulation(base.heights, base.cols, base.rows, cell, this.simOptions(true)) : null
     // Le relief a changé : la pluie repart de zéro, à la main.
     this.playing = false
     if (this.hasPlayLabelTarget) this.playLabelTarget.textContent = 'Faire pleuvoir'
@@ -593,6 +596,7 @@ export default class extends Controller {
     this.designSwaleOptionsTarget.classList.toggle('hidden', !['swale', 'keyline'].includes(this.tool))
     this.designGradeOptionsTarget.classList.toggle('hidden', this.tool !== 'keyline')
     this.designPondOptionsTarget.classList.toggle('hidden', this.tool !== 'pond')
+    if (this.hasDesignHedgeOptionsTarget) this.designHedgeOptionsTarget.classList.toggle('hidden', this.tool !== 'hedge')
     this.drawOverlay()
   }
 
@@ -614,7 +618,9 @@ export default class extends Controller {
       design = { type: 'pond', center: point, radius: this.settings.radius, depth: this.settings.pondDepth, berm: 0.3 }
     } else if (!this.pending) {
       this.pending = point
-      this.designHintTarget.textContent = this.tool === 'keyline'
+      this.designHintTarget.textContent = this.tool === 'hedge'
+        ? 'Maintenant, clique vers où la haie doit s\'étendre.'
+        : this.tool === 'keyline'
         ? 'Maintenant, clique vers où l\'eau doit aller.'
         : 'Maintenant, clique vers où la baissière doit s\'étendre.'
       this.drawOverlay()
@@ -628,8 +634,11 @@ export default class extends Controller {
         this.drawOverlay()
         return
       }
-      design = { type: this.tool, points: trace.points, width: this.settings.width, depth: this.settings.depth,
-                 berm: this.settings.berm, grade, length: trace.length }
+      design = this.tool === 'hedge'
+        ? { type: 'hedge', points: trace.points, width: this.settings.hedgeWidth, berm: this.settings.hedgeBerm, grade: 0,
+            length: trace.length }
+        : { type: this.tool, points: trace.points, width: this.settings.width, depth: this.settings.depth,
+            berm: this.settings.berm, grade, length: trace.length }
     }
     this.designHintTarget.textContent = 'Enregistrement…'
     try {
@@ -777,6 +786,28 @@ export default class extends Controller {
         context.stroke()
         continue
       }
+      // Une haie : une bande verte de sa largeur, ponctuée d'arbres tous les 3 m.
+      if (design.type === 'hedge') {
+        const band = Math.max(4, (design.width || 5) * sx)
+        context.globalAlpha = 0.55
+        context.lineWidth = band
+        context.strokeStyle = DESIGN_COLORS.hedge
+        context.beginPath()
+        design.points.forEach((point, k) => {
+          if (k === 0) context.moveTo(point.x * sx, point.y * sy)
+          else context.lineTo(point.x * sx, point.y * sy)
+        })
+        context.stroke()
+        context.globalAlpha = 1
+        context.fillStyle = '#14532d'
+        design.points.forEach((point, k) => {
+          if (k % 3) return
+          context.beginPath()
+          context.arc(point.x * sx, point.y * sy, Math.max(2.5, band * 0.22), 0, Math.PI * 2)
+          context.fill()
+        })
+        continue
+      }
       // Un liseré blanc sous le trait : lisible sur l'ortho comme sur les fonds
       // de station.
       const width = Math.max(6, (design.width || 2) * sx)
@@ -830,14 +861,16 @@ export default class extends Controller {
     }
     const raining = this.simulation && this.simulation.time > 0
     this.designListTarget.innerHTML = this.designs.map((design) => {
-      const size = design.type === 'pond'
+      const size = design.type === 'hedge'
+        ? `${formatNumber(design.length || 0, 0)} m × ${formatNumber(design.width || 5, 0)} m`
+        : design.type === 'pond'
         ? `r ${formatNumber(design.radius, 0)} m, ${formatNumber(design.depth, 1)} m`
         : `${formatNumber(design.length || 0, 0)} m${design.grade ? `, ${formatNumber(design.grade, 1)} %` : ''}`
       const water = raining ? ` · ${formatVolume(this.designWater(design))} d'eau` : ''
       return `<li class="flex items-center gap-2 text-xs">
         <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background:${DESIGN_COLORS[design.type]}"></span>
         <span class="min-w-0 flex-1 truncate text-stone-700">${escapeHtml(design.name || DESIGN_LABELS[design.type])} <span class="text-stone-400">(${size})</span></span>
-        <span class="shrink-0 tabular-nums text-stone-500">${design.type === 'keyline' ? 'mène l\'eau' : `${formatVolume(design.capacity || 0)} max`}${water}</span>
+        <span class="shrink-0 tabular-nums text-stone-500">${design.type === 'keyline' ? 'mène l\'eau' : design.type === 'hedge' ? `boit ~${HEDGE_SOIL.rate} mm/h` : `${formatVolume(design.capacity || 0)} max`}${water}</span>
         <button type="button" class="shrink-0 rounded px-1 text-stone-400 hover:bg-stone-100 hover:text-red-700"
                 data-action="map-relief#removeDesign" data-map-relief-id-param="${design.id}" aria-label="Retirer ${escapeHtml(design.name || '')}">×</button>
       </li>`
@@ -852,16 +885,18 @@ export default class extends Controller {
     // Sans occupation du sol, le rythme choisi est celui de toutes les mailles.
     if (event.params.key === 'infiltration' && this.simulation) this.buildSimulations()
     this.simulation?.setOptions(this.simOptions())
-    this.baseline?.setOptions(this.simOptions())
+    this.baseline?.setOptions(this.simOptions(true))
     this.renderStats()
   }
 
-  simOptions() {
+  // `baseline` : les options du terrain actuel, sans le sol des haies.
+  simOptions(baseline = false) {
     const { intensity, duration, infiltration, soilState, rainSource } = this.settings
+    const maps = baseline ? this.baseSoilMaps : this.soilMaps
     return {
       intensity, duration, infiltration,
-      infiltrationMap: this.soilMaps?.rate || null,
-      storageMap: this.soilMaps?.storage || null,
+      infiltrationMap: maps?.rate || null,
+      storageMap: maps?.storage || null,
       initialFill: SOIL_STATES[soilState] ?? 0.5,
       series: rainSource === 'real' ? this.realRain?.series || [] : null,
     }
@@ -873,7 +908,16 @@ export default class extends Controller {
   // Ce que le sol boit et peut contenir, par maille de simulation : la
   // moyenne des classes d'occupation du bloc. Sans occupation du sol, le
   // rythme choisi à la main partout et une réserve de 50 mm.
-  buildSoilMaps(simCols, simRows, factor) {
+  // Les mailles (1 m) plantées en haie sur courbe.
+  hedgeMask() {
+    const hedges = this.designs.filter((design) => design.hedge && design.cells)
+    if (!hedges.length) return null
+    const mask = new Uint8Array(this.full.cols * this.full.rows)
+    hedges.forEach((design) => design.cells.forEach((i) => { mask[i] = 1 }))
+    return mask
+  }
+
+  buildSoilMaps(simCols, simRows, factor, hedges = null) {
     const n = simCols * simRows
     const rate = new Float32Array(n)
     const storage = new Float32Array(n)
@@ -884,7 +928,9 @@ export default class extends Controller {
         let storageSum = 0
         for (let dr = 0; dr < factor; dr++) {
           for (let dc = 0; dc < factor; dc++) {
-            const kind = this.landcover ? LANDCOVER[this.landcover[(r * factor + dr) * cols + c * factor + dc]] || LANDCOVER_UNKNOWN : null
+            const i = (r * factor + dr) * cols + c * factor + dc
+            const kind = hedges?.[i] ? HEDGE_SOIL
+              : this.landcover ? LANDCOVER[this.landcover[i]] || LANDCOVER_UNKNOWN : null
             rateSum += kind ? kind.rate : this.settings.infiltration
             storageSum += kind ? kind.storage : 50
           }

@@ -405,7 +405,7 @@ class MapFeature < ApplicationRecord
   # Les cotes admises d'un aménagement à l'essai (en mètres, pente en %). Assez
   # larges pour tout ce qu'on creuse à la main ou à la pelle, assez serrées pour
   # qu'une faute de frappe ne creuse pas un lac de 300 m de profondeur.
-  DESIGN_TYPES = { "swale" => "Baissière", "keyline" => "Keyline", "pond" => "Mare" }.freeze
+  DESIGN_TYPES = { "swale" => "Baissière", "keyline" => "Keyline", "pond" => "Mare", "hedge" => "Haie sur courbe" }.freeze
   DESIGN_RANGES = { "width" => 0.5..10, "depth" => 0.1..3, "berm" => 0..2, "grade" => 0..5, "radius" => 1..40 }.freeze
 
   def design_properties_are_known

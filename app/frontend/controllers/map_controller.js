@@ -577,6 +577,7 @@ export default class extends Controller {
     if (design === 'pond') return { color: '#0369a1', weight, fillColor: '#38bdf8', fillOpacity: 0.35 };
     if (design === 'swale') return { color: '#0284c7', weight: selected ? 6 : 4, lineCap: 'round' };
     if (design === 'keyline') return { color: '#7c3aed', weight: selected ? 6 : 4, dashArray: '8 6', lineCap: 'round' };
+    if (design === 'hedge') return { color: '#15803d', weight: selected ? 9 : 7, opacity: 0.8, lineCap: 'round' };
     // Réseaux (phase 9) : la couleur vient du JSON, ou de la couche active
     // pour ce qu'on dessine.
     const networkColor = feature?.properties?.color || this.layerNetworkColor(feature?.properties?.layer_id);

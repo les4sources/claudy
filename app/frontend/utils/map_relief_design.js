@@ -200,6 +200,44 @@ function digPond(out, base, cols, rows, cellSize, design) {
   return { touched, level }
 }
 
+// Une haie sur courbe : une bande plantée de `width` m le long de la ligne. Elle
+// ne creuse rien ; ce qu'elle change, c'est le sol (il boit comme sous des
+// arbres, voir `HEDGE_SOIL`), et, avec `berm` > 0, le bourrelet de terre et de
+// litière qu'une haie forme au fil des ans en retenant ce qui descend.
+function plantHedge(out, base, cols, rows, cellSize, design) {
+  const { points } = design
+  const half = Math.max((design.width ?? 5) / 2, cellSize * 0.75)
+  const berm = design.berm ?? 0
+  const cells = []
+  if (!points || points.length < 2) return cells
+  let minX = Infinity; let minY = Infinity; let maxX = -Infinity; let maxY = -Infinity
+  for (const p of points) {
+    minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x)
+    minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y)
+  }
+  const c0 = Math.max(0, Math.floor((minX - half) / cellSize))
+  const c1 = Math.min(cols - 1, Math.ceil((maxX + half) / cellSize))
+  const r0 = Math.max(0, Math.floor((minY - half) / cellSize))
+  const r1 = Math.min(rows - 1, Math.ceil((maxY + half) / cellSize))
+  for (let r = r0; r <= r1; r++) {
+    for (let c = c0; c <= c1; c++) {
+      let nearest = Infinity
+      for (let k = 0; k < points.length - 1; k++) {
+        const d = segmentDistance(c * cellSize, r * cellSize, points[k], points[k + 1]).distance
+        if (d < nearest) nearest = d
+      }
+      if (nearest > half) continue
+      const i = r * cols + c
+      cells.push(i)
+      if (berm > 0) out[i] = Math.max(out[i], base[i] + berm)
+    }
+  }
+  return cells
+}
+
+// Le sol sous une haie établie (après ~5 ans) : il boit comme sous des feuillus.
+export const HEDGE_SOIL = { rate: 50, storage: 80 }
+
 // Le relief avec les aménagements creusés, et pour chacun ses mailles et sa
 // capacité (m³ d'eau qu'il retient avant de déborder).
 export function applyDesigns(base, cols, rows, cellSize, designs) {
@@ -209,11 +247,15 @@ export function applyDesigns(base, cols, rows, cellSize, designs) {
     if (design.type === 'pond') {
       const { touched } = digPond(out, base, cols, rows, cellSize, design)
       footprints.push({ id: design.id, cells: touched })
+    } else if (design.type === 'hedge') {
+      footprints.push({ id: design.id, cells: plantHedge(out, base, cols, rows, cellSize, design), hedge: true })
     } else {
       footprints.push({ id: design.id, cells: digSwale(out, base, cols, rows, cellSize, design) })
     }
   }
-  for (const footprint of footprints) footprint.capacity = capacity(out, cols, rows, cellSize, footprint.cells)
+  for (const footprint of footprints) {
+    footprint.capacity = footprint.hedge ? 0 : capacity(out, cols, rows, cellSize, footprint.cells)
+  }
   return { heights: out, footprints }
 }
 
