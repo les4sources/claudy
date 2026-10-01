@@ -24,7 +24,9 @@
       data-map-relief-surface-meta-value=(@meta["surface"] || {}).slice("z_min", "z_unit").to_json
       data-map-relief-meta-value=@meta.slice("cols", "rows", "west", "north", "step", "cell_size_m", "z_min", "z_unit", "nodata").to_json
       data-map-relief-features-url-value=map_features_path(format: :json)
-      data-map-relief-feature-layers-value=@feature_layers.to_json]
+      data-map-relief-feature-layers-value=@feature_layers.to_json
+      data-map-relief-designs-url-value=map_designs_path(format: nil)
+      data-map-relief-domain-value=@domain_bounds.to_json]
     div.absolute.inset-0 data-map-relief-target="viewport"
 
     p[class="pointer-events-none absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 text-center text-sm text-stone-600"
@@ -140,6 +142,50 @@
           p.mt-2.text-xs.text-stone-500 data-map-relief-target="sunStatus" aria-live="polite"
           - unless @terrain.surface?
             p.mt-1.text-xs.text-amber-700 Sans le modèle de surface, seules les ombres du relief comptent : arbres et toits n'en portent pas.
+
+        / Les aménagements à l'essai : baissières, keylines et mares, tracés sur
+          le terrain, enregistrés (couche « Aménagements à l'essai » de la carte)
+          et creusés dans le relief simulé. La pluie les compare au terrain actuel.
+        .mt-4.border-t.border-stone-100.pt-3
+          p class=section_title_css Aménagements à l'essai
+          div class=group_css data-choice-group="designTool"
+            - [["swale", "Baissière"], ["keyline", "Keyline"], ["pond", "Mare"]].each do |value, label|
+              button type="button" class=choice_css aria-pressed="false" data-action="map-relief#chooseTool" data-map-relief-value-param=value = label
+          p.mt-2.text-xs.text-stone-600 data-map-relief-target="designHint" aria-live="polite"
+          .mt-2.hidden.space-y-2 data-map-relief-target="designSwaleOptions"
+            div
+              p class=label_css Largeur
+              div class=group_css data-choice-group="width"
+                - [[1, "1 m"], [2, "2 m"], [3, "3 m"]].each do |value, label|
+                  button type="button" class=choice_css aria-pressed=(value == 2).to_s data-action="map-relief#setDesignOption" data-map-relief-key-param="width" data-map-relief-value-param=value = label
+            div
+              p class=label_css Profondeur
+              div class=group_css data-choice-group="depth"
+                - [[0.3, "0,3 m"], [0.5, "0,5 m"], [0.8, "0,8 m"]].each do |value, label|
+                  button type="button" class=choice_css aria-pressed=(value == 0.5).to_s data-action="map-relief#setDesignOption" data-map-relief-key-param="depth" data-map-relief-value-param=value = label
+            div
+              p class=label_css Butte côté aval
+              div class=group_css data-choice-group="berm"
+                - [[0, "Aucune"], [0.4, "0,4 m"], [0.8, "0,8 m"]].each do |value, label|
+                  button type="button" class=choice_css aria-pressed=(value == 0.4).to_s data-action="map-relief#setDesignOption" data-map-relief-key-param="berm" data-map-relief-value-param=value = label
+            .hidden data-map-relief-target="designGradeOptions"
+              p class=label_css Pente de la keyline
+              div class=group_css data-choice-group="grade"
+                - [[0.5, "0,5 %"], [1, "1 %"], [2, "2 %"]].each do |value, label|
+                  button type="button" class=choice_css aria-pressed=(value == 1).to_s data-action="map-relief#setDesignOption" data-map-relief-key-param="grade" data-map-relief-value-param=value = label
+          .mt-2.hidden.space-y-2 data-map-relief-target="designPondOptions"
+            div
+              p class=label_css Rayon
+              div class=group_css data-choice-group="radius"
+                - [[3, "3 m"], [5, "5 m"], [8, "8 m"], [12, "12 m"]].each do |value, label|
+                  button type="button" class=choice_css aria-pressed=(value == 5).to_s data-action="map-relief#setDesignOption" data-map-relief-key-param="radius" data-map-relief-value-param=value = label
+            div
+              p class=label_css Profondeur au centre
+              div class=group_css data-choice-group="pondDepth"
+                - [[0.8, "0,8 m"], [1.5, "1,5 m"], [2, "2 m"]].each do |value, label|
+                  button type="button" class=choice_css aria-pressed=(value == 1.5).to_s data-action="map-relief#setDesignOption" data-map-relief-key-param="pondDepth" data-map-relief-value-param=value = label
+          ul.mt-3.space-y-1 data-map-relief-target="designList"
+          p.mt-2.text-xs.text-stone-400 Une keyline qui finit au bord d'une mare la remplit. Lance la pluie pour comparer avec le terrain actuel.
 
         .mt-4.border-t.border-stone-100.pt-3
           p class=section_title_css Pluie

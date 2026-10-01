@@ -9,7 +9,9 @@
 # dessin) en ont plusieurs.
 class MapLayer < ApplicationRecord
   # `venues` (phase 3) vient en tête : c'est la carte du jour, la vue par défaut.
-  KINDS = %w[venues management welcome plants network comments sketch biodiversity].freeze
+  # `design` : les aménagements à l'essai dessinés sur le relief 3D (baissières,
+  # keylines, mares), qu'on simule avant de creuser.
+  KINDS = %w[venues management welcome plants network comments sketch biodiversity design].freeze
   MULTIPLE_KINDS = %w[network sketch].freeze
 
   KIND_LABELS = {
@@ -20,7 +22,8 @@ class MapLayer < ApplicationRecord
     "network" => "Réseau",
     "comments" => "Commentaires",
     "sketch" => "Notes manuscrites",
-    "biodiversity" => "Biodiversité"
+    "biodiversity" => "Biodiversité",
+    "design" => "Aménagements à l'essai"
   }.freeze
 
   # Les réseaux (phase 9) : une couche `network` par réseau, reconnue par
@@ -99,6 +102,7 @@ class MapLayer < ApplicationRecord
   def management? = kind == "management"
   def venues? = kind == "venues"
   def welcome? = kind == "welcome"
+  def design? = kind == "design"
 
   # Les couches qu'on trace à la main avec la barre d'outils Geoman.
   def editable? = management? || venues? || welcome? || network?

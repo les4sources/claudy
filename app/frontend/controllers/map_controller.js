@@ -571,6 +571,12 @@ export default class extends Controller {
     const weight = selected ? 5 : 2;
     if (this.isVenue(feature)) return this.venueStyle(feature, selected);
     if (this.isWelcome(feature)) return welcomeStyle(feature, selected);
+    // Les aménagements à l'essai du relief 3D : l'eau, en bleu ; une keyline en
+    // tirets violets, comme dans la vue 3D.
+    const design = feature?.properties?.design?.type;
+    if (design === 'pond') return { color: '#0369a1', weight, fillColor: '#38bdf8', fillOpacity: 0.35 };
+    if (design === 'swale') return { color: '#0284c7', weight: selected ? 6 : 4, lineCap: 'round' };
+    if (design === 'keyline') return { color: '#7c3aed', weight: selected ? 6 : 4, dashArray: '8 6', lineCap: 'round' };
     // Réseaux (phase 9) : la couleur vient du JSON, ou de la couche active
     // pour ce qu'on dessine.
     const networkColor = feature?.properties?.color || this.layerNetworkColor(feature?.properties?.layer_id);
