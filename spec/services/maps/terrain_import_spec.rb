@@ -28,6 +28,8 @@ RSpec.describe Maps::TerrainImport do
           # La surface (MNS) dépasse le terrain de 5 m partout : des arbres.
           lift = url.include?("WALLONIE_MNS") ? 5 : 0
           value = nodata_every && (i % nodata_every).zero? ? "NoData" : format("%.6f", height_at(x, y) + lift)
+          # L'occupation du sol : prairie à l'ouest, feuillus à l'est.
+          value = (x < 546_300 ? "7" : "9") if url.include?("WAL_OCS")
           { "layerId" => 0, "attributes" => { "Stretch.Pixel Value" => value } }
         end
         { results: results }.to_json
@@ -104,6 +106,20 @@ RSpec.describe Maps::TerrainImport do
     expect(terrain).not_to be_surface
     importer.call(terrain: false, texture: false)
     expect(terrain).to be_surface
+  end
+
+  it "pose l'occupation du sol sur la même grille, un octet par maille" do
+    import = importer
+    import.call(texture: false)
+
+    classes = File.binread(terrain.landcover_path).unpack("C*")
+    meta = terrain.metadata
+    expect(classes.size).to eq(meta["cols"] * meta["rows"])
+    x, = import.extent.point(0)
+    expect(classes.first).to eq(x < 546_300 ? 7 : 9)
+    expect(classes.uniq.sort).to eq([7, 9])
+    expect(meta["landcover"]["classes"]).to include("7" => "Prairie permanente", "9" => "Feuillus (> 3 m)")
+    expect(terrain).to be_landcover
   end
 
   it "télécharge l'ortho sur la même emprise et le note dans les métadonnées" do

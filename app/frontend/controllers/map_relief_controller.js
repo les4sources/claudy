@@ -22,6 +22,10 @@ import { traceContour, applyDesigns, downsampleDesigned } from '../utils/map_rel
 // secondes, et la lame d'eau reste fine à l'échelle d'un talweg.
 
 const SIM_FACTOR = 2
+// Une pluie réelle dure des heures, voire des jours : sa simulation tourne sur une
+// grille de 4 m et des pas de 1 s, seize fois plus vite qu'à 2 m.
+const SIM_FACTOR_LONG = 4
+const SIM_DT_LONG = 1
 const SIM_DT = 0.5
 // Seuil des axes d'écoulement : une maille qui draine au moins 0,2 ha.
 const AXIS_THRESHOLD = 2000
@@ -73,9 +77,31 @@ const FROST_RAMP = [
 ]
 const BASE_LEGENDS = {
   aspect: 'Orangé : pentes tournées vers le sud, chaudes. Bleu : vers le nord, fraîches. Gris : à plat.',
+  landcover: 'Occupation du sol 2023 (SPW, WalOUS) : feuillus, résineux, prairie, revêtement, bâti, eau. C\'est elle qui dit combien la pluie s\'infiltre.',
   wetness: 'Indice topographique (indicatif) : où le relief rassemble l\'eau. Beige sec, vert frais, bleu humide.',
   frost: 'Indice d\'air froid (indicatif) : la nuit, l\'air froid coule comme l\'eau et stagne dans les fonds. Plus c\'est violet, plus le risque de gelée est fort.',
 }
+
+// L'occupation du sol (codes WalOUS 2023) : ce que le sol boit (mm/h) et ce
+// qu'il peut contenir avant d'être saturé (mm). Ordres de grandeur des modèles
+// de ruissellement (sols limoneux à limono-caillouteux du Condroz), pas des
+// mesures sur le domaine.
+const LANDCOVER = {
+  1: { label: 'revêtement', rate: 1, storage: 1, color: [120, 120, 120] },
+  2: { label: 'bâti', rate: 0, storage: 0, color: [190, 70, 60] },
+  3: { label: 'rail', rate: 10, storage: 30, color: [90, 80, 90] },
+  4: { label: 'sol nu', rate: 5, storage: 25, color: [196, 160, 110] },
+  5: { label: 'eau', rate: 0, storage: 0, color: [40, 110, 200] },
+  6: { label: 'culture', rate: 8, storage: 40, color: [230, 200, 90] },
+  7: { label: 'prairie', rate: 15, storage: 50, color: [150, 200, 100] },
+  8: { label: 'résineux', rate: 30, storage: 70, color: [30, 90, 60] },
+  9: { label: 'feuillus', rate: 50, storage: 80, color: [60, 130, 60] },
+  80: { label: 'jeunes résineux', rate: 20, storage: 60, color: [90, 140, 100] },
+  90: { label: 'jeunes feuillus', rate: 30, storage: 60, color: [120, 170, 90] },
+}
+const LANDCOVER_UNKNOWN = { label: 'inconnu', rate: 15, storage: 50, color: [210, 205, 190] }
+// L'état du sol au départ : part de la réserve déjà pleine.
+const SOIL_STATES = { dry: 0.1, normal: 0.5, wet: 0.9 }
 
 // Les aménagements à l'essai : libellés, couleurs sur le terrain, cotes par défaut.
 const DESIGN_LABELS = { swale: 'Baissière', keyline: 'Keyline', pond: 'Mare' }
@@ -94,7 +120,7 @@ export default class extends Controller {
   static targets = [
     'viewport', 'loading', 'panel', 'panelBody', 'exaggeration', 'exaggerationLabel',
     'playButton', 'playLabel', 'clock', 'rainState', 'stats', 'probe',
-    'baseLegend', 'designHint', 'designList', 'designSwaleOptions', 'designPondOptions', 'designGradeOptions', 'sunSection', 'sunHour', 'sunHourLabel', 'sunHourRow', 'sunStatus', 'sunLegend', 'sunLegendMax', 'dayButton', 'dayLabel', 'surfaceToggle',
+    'baseLegend', 'designHint', 'designList', 'designSwaleOptions', 'designPondOptions', 'designGradeOptions', 'rainTypical', 'rainReal', 'rainDate', 'rainChart', 'rainRealStatus', 'soilUniform', 'sunSection', 'sunHour', 'sunHourLabel', 'sunHourRow', 'sunStatus', 'sunLegend', 'sunLegendMax', 'dayButton', 'dayLabel', 'surfaceToggle',
   ]
 
   static values = {
@@ -102,6 +128,7 @@ export default class extends Controller {
     textureUrl: String,
     surfaceUrl: String,
     surfaceMeta: Object,
+    landcoverUrl: String,
     meta: Object,
     featuresUrl: String,
     featureLayers: Array,
@@ -115,6 +142,7 @@ export default class extends Controller {
       intensity: 30, duration: 60, infiltration: 10, speed: 4,
       sunMode: 'off', sunDate: '06-21', solidSurface: false,
       width: 2, depth: 0.5, berm: 0.4, grade: 1, radius: 5, pondDepth: 1.5,
+      soilState: 'normal', rainSource: 'typical', realDays: 3,
     }
     this.playing = false
     this.features = []
@@ -136,9 +164,10 @@ export default class extends Controller {
 
   async load() {
     this.setLoading('Chargement du relief…')
-    const [response, surfaceResponse, { ReliefScene }] = await Promise.all([
+    const [response, surfaceResponse, landcoverResponse, { ReliefScene }] = await Promise.all([
       fetch(this.gridUrlValue, { credentials: 'same-origin' }),
       this.surfaceUrlValue ? fetch(this.surfaceUrlValue, { credentials: 'same-origin' }).catch(() => null) : null,
+      this.landcoverUrlValue ? fetch(this.landcoverUrlValue, { credentials: 'same-origin' }).catch(() => null) : null,
       import('../utils/map_relief_scene'),
     ])
     if (!response.ok) throw new Error(`grille indisponible (${response.status})`)
@@ -148,6 +177,10 @@ export default class extends Controller {
     this.surface = surfaceResponse?.ok
       ? decodeGrid(await surfaceResponse.arrayBuffer(), { ...meta, ...this.surfaceMetaValue })
       : null
+    // L'occupation du sol (un octet par maille) : sans elle, le sol boit
+    // partout pareil, au rythme choisi à la main.
+    this.landcover = landcoverResponse?.ok ? new Uint8Array(await landcoverResponse.arrayBuffer()) : null
+    if (this.landcover && this.hasSoilUniformTarget) this.soilUniformTarget.classList.add('hidden')
     if (this.disposed) return
     if (!this.surface && this.hasSurfaceToggleTarget) this.surfaceToggleTarget.closest('label').classList.add('hidden')
 
@@ -250,6 +283,8 @@ export default class extends Controller {
         const neutral = [222, 216, 200]
         const t = Math.abs(southness) * strength
         color = neutral.map((v, j) => Math.round(v + (tone[j] - v) * t))
+      } else if (kind === 'landcover') {
+        color = this.landcover ? (LANDCOVER[this.landcover[i]] || LANDCOVER_UNKNOWN).color : LANDCOVER_UNKNOWN.color
       } else if (kind === 'wetness') {
         color = ramp((wetness[i] - 3) / 9, WETNESS_RAMP)
       } else {
@@ -486,7 +521,8 @@ export default class extends Controller {
         const design = this.designs.find((d) => d.id === footprint.id)
         if (!design) return
         design.capacity = footprint.capacity
-        design.simCells = this.toSimCells(footprint.cells)
+        design.cells = footprint.cells
+        design.simCells = null
       })
     } else {
       this.ground = heights
@@ -505,9 +541,13 @@ export default class extends Controller {
   // pour comparer (seulement s'il y a des aménagements).
   buildSimulations() {
     const { heights, cols, rows } = this.full
-    const cell = this.metaValue.cell_size_m * SIM_FACTOR
-    const base = downsample(heights, cols, rows, SIM_FACTOR)
-    const designed = this.designs.length ? downsampleDesigned(heights, this.ground, cols, rows, SIM_FACTOR) : base.heights
+    const factor = this.simFactor
+    const cell = this.metaValue.cell_size_m * factor
+    const base = downsample(heights, cols, rows, factor)
+    const designed = this.designs.length ? downsampleDesigned(heights, this.ground, cols, rows, factor) : base.heights
+    this.soilMaps = this.buildSoilMaps(base.cols, base.rows, factor)
+    this.domainCells = null
+    this.designs.forEach((design) => { design.simCells = design.cells ? this.toSimCells(design.cells) : [] })
     this.simulation = new RainSimulation(designed, base.cols, base.rows, cell, this.simOptions())
     this.baseline = this.designs.length ? new RainSimulation(base.heights, base.cols, base.rows, cell, this.simOptions()) : null
     // Le relief a changé : la pluie repart de zéro, à la main.
@@ -519,12 +559,13 @@ export default class extends Controller {
 
   toSimCells(cells) {
     const { cols } = this.full
-    const simCols = Math.floor(cols / SIM_FACTOR)
+    const factor = this.simFactor
+    const simCols = Math.floor(cols / factor)
     const set = new Set()
     for (const i of cells) {
       const c = i % cols
       const r = (i - c) / cols
-      set.add(Math.floor(r / SIM_FACTOR) * simCols + Math.floor(c / SIM_FACTOR))
+      set.add(Math.floor(r / factor) * simCols + Math.floor(c / factor))
     }
     return [...set]
   }
@@ -803,14 +844,142 @@ export default class extends Controller {
   setRain(event) {
     this.settings[event.params.key] = Number(event.params.value)
     this.markChoice(event)
+    // Sans occupation du sol, le rythme choisi est celui de toutes les mailles.
+    if (event.params.key === 'infiltration' && this.simulation) this.buildSimulations()
     this.simulation?.setOptions(this.simOptions())
     this.baseline?.setOptions(this.simOptions())
     this.renderStats()
   }
 
   simOptions() {
-    const { intensity, duration, infiltration } = this.settings
-    return { intensity, duration, infiltration }
+    const { intensity, duration, infiltration, soilState, rainSource } = this.settings
+    return {
+      intensity, duration, infiltration,
+      infiltrationMap: this.soilMaps?.rate || null,
+      storageMap: this.soilMaps?.storage || null,
+      initialFill: SOIL_STATES[soilState] ?? 0.5,
+      series: rainSource === 'real' ? this.realRain?.series || [] : null,
+    }
+  }
+
+  get simFactor() { return this.settings.rainSource === 'real' ? SIM_FACTOR_LONG : SIM_FACTOR }
+  get simDt() { return this.settings.rainSource === 'real' ? SIM_DT_LONG : SIM_DT }
+
+  // Ce que le sol boit et peut contenir, par maille de simulation : la
+  // moyenne des classes d'occupation du bloc. Sans occupation du sol, le
+  // rythme choisi à la main partout et une réserve de 50 mm.
+  buildSoilMaps(simCols, simRows, factor) {
+    const n = simCols * simRows
+    const rate = new Float32Array(n)
+    const storage = new Float32Array(n)
+    const { cols } = this.full
+    for (let r = 0; r < simRows; r++) {
+      for (let c = 0; c < simCols; c++) {
+        let rateSum = 0
+        let storageSum = 0
+        for (let dr = 0; dr < factor; dr++) {
+          for (let dc = 0; dc < factor; dc++) {
+            const kind = this.landcover ? LANDCOVER[this.landcover[(r * factor + dr) * cols + c * factor + dc]] || LANDCOVER_UNKNOWN : null
+            rateSum += kind ? kind.rate : this.settings.infiltration
+            storageSum += kind ? kind.storage : 50
+          }
+        }
+        rate[r * simCols + c] = rateSum / (factor * factor)
+        storage[r * simCols + c] = storageSum / (factor * factor)
+      }
+    }
+    return { rate, storage }
+  }
+
+  // L'état du sol au départ change la réserve : la pluie repart de zéro.
+  setSoilState(event) {
+    this.settings.soilState = event.params.value
+    this.markChoice(event)
+    if (this.simulation) this.buildSimulations()
+    this.scene?.clearWater()
+  }
+
+  // Averse type (intensité constante) ou pluie réelle (heure par heure) : la
+  // grille de simulation change, la pluie repart de zéro.
+  async setRainSource(event) {
+    this.settings.rainSource = event.params.value
+    this.markChoice(event)
+    const real = this.settings.rainSource === 'real'
+    this.rainTypicalTarget.classList.toggle('hidden', real)
+    this.rainRealTarget.classList.toggle('hidden', !real)
+    if (real && !this.realRain) await this.loadRealRain()
+    if (this.simulation) this.buildSimulations()
+    this.scene?.clearWater()
+  }
+
+  async setRealPreset(event) {
+    this.rainDateTarget.value = event.params.date
+    this.settings.realDays = Number(event.params.days)
+    this.element.querySelectorAll('[data-choice-group="realDays"] [aria-pressed]').forEach((button) => {
+      button.setAttribute('aria-pressed', String(Number(button.dataset.mapReliefValueParam) === this.settings.realDays))
+    })
+    await this.reloadRealRain()
+  }
+
+  async setRealDays(event) {
+    this.settings.realDays = Number(event.params.value)
+    this.markChoice(event)
+    await this.reloadRealRain()
+  }
+
+  async reloadRealRain() {
+    await this.loadRealRain()
+    if (this.simulation) this.buildSimulations()
+    this.scene?.clearWater()
+  }
+
+  // La pluie heure par heure d'Open-Meteo (gratuit, sans clé) : l'archive
+  // (réanalyse ERA5) au-delà d'une semaine, les prévisions récentes sinon.
+  async loadRealRain() {
+    const start = this.rainDateTarget.value
+    const days = this.settings.realDays
+    if (!start) return
+    const end = new Date(`${start}T12:00:00`)
+    end.setDate(end.getDate() + days - 1)
+    const endDate = end.toISOString().slice(0, 10)
+    const recent = (Date.now() - new Date(`${start}T00:00:00`).valueOf()) / 86400000 < 7
+    const host = recent ? 'https://api.open-meteo.com/v1/forecast' : 'https://archive-api.open-meteo.com/v1/archive'
+    const url = `${host}?latitude=${SITE.lat}&longitude=${SITE.lng}&start_date=${start}&end_date=${endDate}&hourly=precipitation&timezone=Europe%2FBrussels`
+    this.rainRealStatusTarget.textContent = 'Chargement de la pluie mesurée…'
+    try {
+      const response = await fetch(url)
+      const json = await response.json()
+      if (!response.ok) throw new Error(json.reason || response.status)
+      const series = json.hourly.precipitation.map((v) => v || 0)
+      this.realRain = { series, start: json.hourly.time[0], total: series.reduce((a, b) => a + b, 0) }
+      this.renderRainChart()
+      this.rainRealStatusTarget.textContent = `${formatNumber(this.realRain.total, 1)} mm en ${series.length} h, au plus ${formatNumber(Math.max(...series), 1)} mm/h.`
+    } catch (error) {
+      this.realRain = { series: [], start: null, total: 0 }
+      this.rainRealStatusTarget.textContent = `Pluie indisponible : ${error.message}`
+    }
+  }
+
+  // L'histogramme de la pluie heure par heure, et le curseur du temps simulé.
+  renderRainChart() {
+    const series = this.realRain?.series || []
+    if (!series.length) { this.rainChartTarget.innerHTML = ''; return }
+    const max = Math.max(1, ...series)
+    const width = 100 / series.length
+    const bars = series.map((v, k) => `<rect x="${k * width}" y="${40 - (v / max) * 40}" width="${Math.max(width * 0.85, 0.3)}" height="${(v / max) * 40}" fill="#0284c7"/>`).join('')
+    const time = this.simulation && this.settings.rainSource === 'real' ? this.simulation.time / 3600 : 0
+    const cursor = `<line x1="${time * width}" x2="${time * width}" y1="0" y2="40" stroke="#ea580c" stroke-width="0.6"/>`
+    this.rainChartTarget.innerHTML = `<svg viewBox="0 0 100 40" preserveAspectRatio="none" class="h-12 w-full rounded bg-stone-50">${bars}${cursor}</svg>`
+  }
+
+  // La part du domaine dont le sol est plein : là, la pluie ruisselle.
+  saturatedShare(sim) {
+    const storage = sim.options.storageMap
+    if (!storage) return null
+    this.domainWater(sim)
+    let full = 0
+    for (const i of this.domainCells) if (sim.soil[i] * 1000 >= storage[i] * 0.98) full++
+    return this.domainCells.length ? full / this.domainCells.length : 0
   }
 
   togglePlay() {
@@ -839,8 +1008,8 @@ export default class extends Controller {
     const start = performance.now()
     const steps = this.settings.speed * 2
     for (let s = 0; s < steps; s++) {
-      sim.step(SIM_DT)
-      this.baseline?.step(SIM_DT)
+      sim.step(this.simDt)
+      this.baseline?.step(this.simDt)
       if (performance.now() - start > FRAME_BUDGET_MS) break
     }
     this.scene.updateWater(sim)
@@ -857,11 +1026,23 @@ export default class extends Controller {
     const time = sim ? sim.time : 0
     this.clockTarget.textContent = formatDuration(time)
     if (!sim || time === 0) {
-      this.rainStateTarget.textContent = `${this.settings.intensity} mm/h pendant ${formatMinutes(this.settings.duration)}`
+      this.rainStateTarget.textContent = this.settings.rainSource === 'real'
+        ? `Pluie mesurée : ${formatNumber(this.realRain?.total || 0, 0)} mm en ${this.realRain?.series.length || 0} h`
+        : `${this.settings.intensity} mm/h pendant ${formatMinutes(this.settings.duration)}`
       this.statsTarget.innerHTML = ''
       return
     }
-    this.rainStateTarget.textContent = sim.raining ? `Il pleut : ${this.settings.intensity} mm/h` : 'La pluie a cessé, l\'eau s\'écoule'
+    if (this.settings.rainSource === 'real' && this.realRain?.start) {
+      const at = new Date(new Date(this.realRain.start).valueOf() + sim.time * 1000)
+      const fallen = this.realRain.series.slice(0, Math.floor(sim.time / 3600)).reduce((a, b) => a + b, 0)
+      const label = at.toLocaleString('fr-BE', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+      this.rainStateTarget.textContent = sim.raining
+        ? `${label} : ${formatNumber(sim.intensity, 1)} mm/h, ${formatNumber(fallen, 0)} mm tombés`
+        : `Fin de la pluie mesurée (${formatNumber(this.realRain.total, 0)} mm) : l'eau s'écoule`
+      this.renderRainChart()
+    } else {
+      this.rainStateTarget.textContent = sim.raining ? `Il pleut : ${this.settings.intensity} mm/h` : 'La pluie a cessé, l\'eau s\'écoule'
+    }
     let deepest = 0
     for (const d of sim.depth) if (d > deepest) deepest = d
     const rows = [
@@ -870,9 +1051,10 @@ export default class extends Controller {
       ['Partie hors de la zone', sim.outflow],
       ['Encore sur le terrain', sim.stored()],
     ]
+    const saturated = this.saturatedShare(sim)
     this.statsTarget.innerHTML = rows.map(([label, volume]) => (
       `<div class="flex justify-between gap-2"><dt class="text-stone-500">${label}</dt><dd class="tabular-nums text-stone-800">${formatVolume(volume)}</dd></div>`
-    )).join('') + `<div class="flex justify-between gap-2"><dt class="text-stone-500">Lame d'eau la plus profonde</dt><dd class="tabular-nums text-stone-800">${formatDepth(deepest)}</dd></div>`
+    )).join('') + `<div class="flex justify-between gap-2"><dt class="text-stone-500">Lame d'eau la plus profonde</dt><dd class="tabular-nums text-stone-800">${formatDepth(deepest)}</dd></div>` + (saturated == null ? '' : `<div class="flex justify-between gap-2"><dt class="text-stone-500">Sol plein sur le domaine</dt><dd class="tabular-nums text-stone-800">${formatNumber(saturated * 100, 0)} %</dd></div>`)
     this.statsTarget.innerHTML += this.comparisonHtml()
     this.renderDesignList()
   }
@@ -1091,6 +1273,10 @@ export default class extends Controller {
       const facing = percent < 2 ? 'à plat' : `pente ${formatNumber(percent)} % tournée ${towards(aspect[i])}`
       lines.push(`<p>Station : ${facing} · sol ${wetnessClass(wetness[i])} · gel ${frostClass(frost[i])} <span class="text-stone-400">(indices)</span></p>`)
     }
+    if (this.landcover) {
+      const kind = LANDCOVER[this.landcover[i]] || LANDCOVER_UNKNOWN
+      lines.push(`<p>Occupation : ${kind.label} — boit ~${kind.rate} mm/h, réserve ~${kind.storage} mm</p>`)
+    }
     const above = this.surface ? this.surface[i] - this.full.heights[i] : 0
     if (above > 0.5) lines.push(`<p>Arbre, haie ou toit : ${formatNumber(above, 1)} m au-dessus du sol</p>`)
     if (this.settings.sunMode === 'hours' && this.dayHours) {
@@ -1106,8 +1292,8 @@ export default class extends Controller {
     if (hollow > 0.05) lines.push(`<p>Dans une cuvette : l'eau peut y monter de ${formatDepth(hollow)}</p>`)
     const sim = this.simulation
     if (sim && sim.time > 0) {
-      const sc = Math.min(sim.cols - 1, Math.floor(col / SIM_FACTOR))
-      const sr = Math.min(sim.rows - 1, Math.floor(row / SIM_FACTOR))
+      const sc = Math.min(sim.cols - 1, Math.floor(col / this.simFactor))
+      const sr = Math.min(sim.rows - 1, Math.floor(row / this.simFactor))
       const k = sr * sim.cols + sc
       const speed = Math.hypot(sim.velX[k], sim.velY[k])
       lines.push(`<p>Eau : ${formatDepth(sim.depth[k])}${speed > 0.01 ? `, ${formatNumber(speed, 2)} m/s` : ''}</p>`)

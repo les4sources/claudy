@@ -32,11 +32,13 @@ module Maps
     def grid_path = root.join("#{KEY}.bin")
     def texture_path = root.join("#{KEY}-ortho.jpg")
     def surface_path = root.join("#{KEY}-surface.bin")
+    def landcover_path = root.join("#{KEY}-landcover.bin")
     def metadata_path = root.join("#{KEY}.json")
 
     def installed? = grid_path.file? && metadata_path.file?
     def texture? = texture_path.file?
     def surface? = surface_path.file? && metadata["surface"].present?
+    def landcover? = landcover_path.file? && metadata["landcover"].present?
 
     # Les métadonnées telles qu'écrites par l'import ; `{}` tant que rien n'est
     # installé ou que le fichier est illisible — la page dit alors quoi faire.
