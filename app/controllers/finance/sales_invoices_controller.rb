@@ -7,7 +7,7 @@ module Finance
   # sur un séjour : ni numéro, ni PDF, ni montant, ni moyen de savoir si
   # l'argent était arrivé.
   class SalesInvoicesController < Finance::AccountingBaseController
-    before_action :get_invoice, only: %i[show destroy]
+    before_action :get_invoice, only: %i[show edit update destroy]
 
     breadcrumb "Ventes", :finance_sales_invoices_path, match: :exact
 
@@ -81,6 +81,42 @@ module Finance
       render :new, status: :unprocessable_entity
     rescue KeyError, ActiveRecord::RecordNotFound
       redirect_to invoicing_path, alert: "Réservation introuvable."
+    end
+
+    # Corriger une facture mal saisie. Le lien vers ce qu'elle facture ne bouge
+    # pas — c'est lui qui empêche la double facturation. Un nouveau PDF remplace
+    # l'ancien ; sans fichier, l'ancien reste.
+    def edit
+      breadcrumb @invoice.label, finance_sales_invoice_path(@invoice)
+      breadcrumb "Modifier", edit_finance_sales_invoice_path(@invoice), match: :exact
+      @entities = LegalEntity.actives.ordered
+    end
+
+    def update
+      attrs = params.require(:sales_invoice)
+      @invoice.assign_attributes(
+        legal_entity_id: attrs[:legal_entity_id],
+        number: attrs[:number].to_s.strip,
+        issued_on: attrs[:issued_on],
+        total_cents: cents_from(attrs[:total]),
+        notes: attrs[:notes].presence
+      )
+
+      PaperTrail.request(whodunnit: current_user&.email) do
+        ApplicationRecord.transaction do
+          @invoice.save!
+          @invoice.document.attach(attrs[:document]) if attrs[:document].present?
+        end
+      end
+      # Le montant a pu changer : le statut payé/émise se recalcule sur les
+      # affectations bancaires, jamais d'après l'ancien total.
+      SalesInvoices::RefreshPayment.new(sales_invoice: @invoice).run!
+
+      redirect_to finance_sales_invoice_path(@invoice), notice: "Facture #{@invoice.number} mise à jour."
+    rescue ActiveRecord::RecordInvalid => e
+      @entities = LegalEntity.actives.ordered
+      flash.now[:alert] = e.record.errors.full_messages.to_sentence
+      render :edit, status: :unprocessable_entity
     end
 
     # Soft-delete : une facture retirée du registre a existé, et son numéro
