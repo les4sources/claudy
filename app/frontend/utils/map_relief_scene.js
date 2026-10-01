@@ -2,7 +2,8 @@
 // de l'ortho ou d'une teinte d'altitude, avec courbes de niveau, axes
 // d'écoulement, cuvettes et objets de la carte en surimpression, et l'eau de la
 // simulation (lame d'eau teintée sur le terrain + traceurs qui suivent le
-// courant).
+// courant), et le soleil (ombres à une heure donnée ou heures de soleil sur la
+// journée, teintées sur le terrain, avec la lumière de la scène à sa place).
 //
 // Ce module est le SEUL à importer three.js, et le contrôleur Stimulus le
 // charge en `import()` dynamique : les autres pages ne paient pas ses 600 Ko.
@@ -49,9 +50,9 @@ export class ReliefScene {
     // Le soleil vient du nord-ouest, comme sur tous les ombrages de relief :
     // c'est la convention que l'œil lit comme « en creux / en bosse ».
     this.scene.add(new THREE.HemisphereLight('#f4f7fb', '#5b5140', 1.1))
-    const sun = new THREE.DirectionalLight('#fffaf0', 1.9)
-    sun.position.set(-width, width * 0.9, -depth)
-    this.scene.add(sun)
+    this.sunLight = new THREE.DirectionalLight('#fffaf0', 1.9)
+    this.scene.add(this.sunLight)
+    this.setSun(null)
 
     this.buildTerrain()
     this.buildParticles()
@@ -118,11 +119,16 @@ export class ReliefScene {
     this.waterData = new Uint8Array(4)
     this.waterTexture = new THREE.DataTexture(this.waterData, 1, 1)
     this.waterTexture.needsUpdate = true
+    // Le soleil : même principe, à la résolution du MNT (ombres ou heures).
+    this.sunData = new Uint8Array(4)
+    this.sunTexture = new THREE.DataTexture(this.sunData, 1, 1)
+    this.sunTexture.needsUpdate = true
 
     this.uniforms = {
       uContour: { value: 5 },
       uOverlay: { value: this.overlayTexture },
       uWater: { value: this.waterTexture },
+      uSun: { value: this.sunTexture },
     }
     const placeholder = new THREE.DataTexture(new Uint8Array([200, 200, 190, 255]), 1, 1)
     placeholder.needsUpdate = true
@@ -137,6 +143,7 @@ export class ReliefScene {
 uniform float uContour;
 uniform sampler2D uOverlay;
 uniform sampler2D uWater;
+uniform sampler2D uSun;
 varying float vElevation;
 varying vec2 vGridUv;
 float contourLine(float value, float width) {
@@ -144,6 +151,8 @@ float contourLine(float value, float width) {
   return 1.0 - min(f / width, 1.0);
 }`)
         .replace('#include <map_fragment>', `#include <map_fragment>
+vec4 sunTint = texture2D(uSun, vGridUv);
+diffuseColor.rgb = mix(diffuseColor.rgb, sunTint.rgb, sunTint.a);
 vec4 water = texture2D(uWater, vGridUv);
 diffuseColor.rgb = mix(diffuseColor.rgb, water.rgb, water.a);
 if (uContour > 0.0) {
@@ -191,6 +200,63 @@ diffuseColor.rgb = mix(diffuseColor.rgb, overlay.rgb, overlay.a);`)
   setExaggeration(value) {
     this.exaggeration = value
     this.world.scale.y = value
+  }
+
+  // Remplace les hauteurs du maillage (terrain nu ↔ arbres et toits) sans
+  // reconstruire la géométrie.
+  setHeights(heights) {
+    const { zBase } = this.grid
+    const geometry = this.terrain.geometry
+    const positions = geometry.attributes.position.array
+    const elevation = geometry.attributes.elevation.array
+    for (let i = 0; i < heights.length; i++) {
+      positions[i * 3 + 1] = heights[i] - zBase
+      elevation[i] = heights[i]
+    }
+    geometry.attributes.position.needsUpdate = true
+    geometry.attributes.elevation.needsUpdate = true
+    geometry.computeVertexNormals()
+    geometry.computeBoundingSphere()
+  }
+
+  // La lumière de la scène vient du vrai soleil (`{ azimuth, altitude }`,
+  // azimut depuis le nord) ; sans soleil, du nord-ouest, la convention des
+  // ombrages de relief.
+  setSun(sun) {
+    const distance = this.size.width * 1.5
+    if (!sun || sun.altitude <= 0) {
+      this.sunLight.position.set(-this.size.width, this.size.width * 0.9, -this.size.depth)
+      this.sunLight.intensity = 1.9
+      return
+    }
+    const horizontal = Math.cos(sun.altitude) * distance
+    this.sunLight.position.set(Math.sin(sun.azimuth) * horizontal, Math.sin(sun.altitude) * distance,
+                               -Math.cos(sun.azimuth) * horizontal)
+    this.sunLight.intensity = 2.2
+  }
+
+  // Une teinte RGBA par maille du MNT (lignes du nord au sud), posée sur le
+  // terrain : ombres ou heures de soleil. `null` l'efface.
+  setSunTint(rgba, cols, rows) {
+    if (!rgba) {
+      this.sunData.fill(0)
+      this.sunTexture.needsUpdate = true
+      return
+    }
+    if (this.sunTexture.image.width !== cols || this.sunTexture.image.height !== rows) {
+      this.sunTexture.dispose()
+      this.sunData = new Uint8Array(cols * rows * 4)
+      this.sunTexture = new THREE.DataTexture(this.sunData, cols, rows)
+      this.sunTexture.magFilter = THREE.LinearFilter
+      this.sunTexture.minFilter = THREE.LinearFilter
+      this.sunTexture.colorSpace = THREE.SRGBColorSpace
+      this.uniforms.uSun.value = this.sunTexture
+    }
+    // Une DataTexture se lit de bas en haut : la ligne nord va en dernier.
+    for (let r = 0; r < rows; r++) {
+      this.sunData.set(rgba.subarray(r * cols * 4, (r + 1) * cols * 4), (rows - 1 - r) * cols * 4)
+    }
+    this.sunTexture.needsUpdate = true
   }
 
   setContourInterval(meters) {
@@ -385,6 +451,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, overlay.rgb, overlay.a);`)
     this.particles.geometry.dispose()
     this.overlayTexture.dispose()
     this.waterTexture.dispose()
+    this.sunTexture.dispose()
     this.renderer.dispose()
     this.renderer.domElement.remove()
   }

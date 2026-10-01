@@ -458,6 +458,7 @@ Rails.application.routes.draw do
     get "relief", to: "map_reliefs#show", as: :map_relief
     get "relief/grid", to: "map_reliefs#grid", as: :map_relief_grid
     get "relief/texture", to: "map_reliefs#texture", as: :map_relief_texture
+    get "relief/surface", to: "map_reliefs#surface", as: :map_relief_surface
     # Le carnet de gestion (phase 6) : les tâches de l'année, mois par mois.
     # `carnet` en français, imposé par l'epic. Les routes de tâches précèdent
     # `resources :map_tasks`, qui lirait sinon `current` comme un `:id`.

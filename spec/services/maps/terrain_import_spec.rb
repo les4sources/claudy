@@ -25,7 +25,9 @@ RSpec.describe Maps::TerrainImport do
         points = JSON.parse(params[:geometry])["points"]
         points = points[0...-1] if drop_last
         results = points.each_with_index.map do |(x, y), i|
-          value = nodata_every && (i % nodata_every).zero? ? "NoData" : format("%.6f", height_at(x, y))
+          # La surface (MNS) dépasse le terrain de 5 m partout : des arbres.
+          lift = url.include?("WALLONIE_MNS") ? 5 : 0
+          value = nodata_every && (i % nodata_every).zero? ? "NoData" : format("%.6f", height_at(x, y) + lift)
           { "layerId" => 0, "attributes" => { "Stretch.Pixel Value" => value } }
         end
         { results: results }.to_json
@@ -80,6 +82,28 @@ RSpec.describe Maps::TerrainImport do
 
     expect { importer(drop_last: true).call(texture: false) }.to raise_error(described_class::Error, /altitudes pour/)
     expect(terrain).not_to be_installed
+  end
+
+  it "pose la surface (arbres et toits) sur la même grille, avec son propre minimum" do
+    importer.call(texture: false)
+
+    meta = terrain.metadata
+    expect(terrain).to be_surface
+    expect(meta["surface"]).to include("z_unit" => 0.01, "nodata_count" => 0)
+    ground = File.binread(terrain.grid_path).unpack("v*")
+    surface = File.binread(terrain.surface_path).unpack("v*")
+    index = meta["cols"] * 2 + 3
+    above = (meta["surface"]["z_min"] + surface[index] * 0.01) - (meta["z_min"] + ground[index] * 0.01)
+    expect(above).to be_within(0.02).of(5)
+  end
+
+  it "n'ajoute la surface seule qu'à un relief de même emprise" do
+    expect { importer.call(terrain: false, texture: false) }.to raise_error(described_class::Error, /relief/)
+
+    importer.call(surface: false, texture: false)
+    expect(terrain).not_to be_surface
+    importer.call(terrain: false, texture: false)
+    expect(terrain).to be_surface
   end
 
   it "télécharge l'ortho sur la même emprise et le note dans les métadonnées" do

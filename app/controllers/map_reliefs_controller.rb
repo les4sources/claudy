@@ -31,6 +31,15 @@ class MapReliefsController < BaseController
     send_file @terrain.grid_path, type: "application/octet-stream", disposition: "inline"
   end
 
+  # Le modèle de surface : arbres, haies et toits compris. Il porte les ombres
+  # et, moins le terrain, donne la hauteur de la végétation.
+  def surface
+    return head :not_found unless @terrain.surface?
+
+    response.set_header("Cache-Control", CACHE_CONTROL)
+    send_file @terrain.surface_path, type: "application/octet-stream", disposition: "inline"
+  end
+
   def texture
     return head :not_found unless @terrain.texture?
 

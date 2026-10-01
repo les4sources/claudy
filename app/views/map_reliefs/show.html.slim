@@ -20,6 +20,8 @@
       data-controller="map-relief"
       data-map-relief-grid-url-value=map_relief_grid_path(v: @version)
       data-map-relief-texture-url-value=(@terrain.texture? ? map_relief_texture_path(v: @version) : "")
+      data-map-relief-surface-url-value=(@terrain.surface? ? map_relief_surface_path(v: @version) : "")
+      data-map-relief-surface-meta-value=(@meta["surface"] || {}).slice("z_min", "z_unit").to_json
       data-map-relief-meta-value=@meta.slice("cols", "rows", "west", "north", "step", "cell_size_m", "z_min", "z_unit", "nodata").to_json
       data-map-relief-features-url-value=map_features_path(format: :json)
       data-map-relief-feature-layers-value=@feature_layers.to_json]
@@ -50,6 +52,8 @@
         div class=group_css data-choice-group="base"
           button type="button" class=choice_css aria-pressed="true" data-action="map-relief#setBase" data-map-relief-value-param="ortho" Ortho 2026
           button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setBase" data-map-relief-value-param="altitudes" Altitudes
+          - if @terrain.surface?
+            button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setBase" data-map-relief-value-param="canopy" title="Hauteur au-dessus du sol : herbe, arbustes, arbres" Végétation
 
         .mt-3
           .flex.items-center.justify-between
@@ -81,9 +85,56 @@
                 span.block = label
                 span.block.text-xs.text-stone-400 = hint
 
+        - if @terrain.surface?
+          label class="mt-1.5 flex cursor-pointer items-start gap-2 text-sm text-stone-700"
+            input[type="checkbox"
+                  class="mt-0.5 h-4 w-4 rounded border-stone-300 text-forest focus:ring-teal-400"
+                  data-map-relief-target="surfaceToggle"
+                  data-action="change->map-relief#toggleSurface"]
+            span
+              span.block Arbres et toits en relief
+              span.block.text-xs.text-stone-400 La canopée du LiDAR en volume, à sa vraie hauteur même sur un relief exagéré.
+
         button[type="button"
                class="mt-3 text-xs font-medium text-forest hover:underline"
                data-action="map-relief#resetView"] Recentrer la vue
+
+        / Le soleil : l'ombre à une heure donnée, ou les heures de soleil direct
+          d'une journée, calculées sur les arbres et les toits.
+        .mt-4.border-t.border-stone-100.pt-3 data-map-relief-target="sunSection"
+          p class=section_title_css Soleil
+          div class=group_css data-choice-group="sunMode"
+            - [["off", "Éteint"], ["instant", "Ombres"], ["hours", "Heures de soleil"]].each do |value, label|
+              button type="button" class=choice_css aria-pressed=(value == "off").to_s data-action="map-relief#setSunMode" data-map-relief-value-param=value = label
+          p class="#{label_css} mt-2" Jour
+          div class=group_css data-choice-group="sunDate"
+            - [["12-21", "21 déc."], ["03-20", "20 mars"], ["06-21", "21 juin"], ["today", "Aujourd'hui"]].each do |value, label|
+              button type="button" class=choice_css aria-pressed=(value == "06-21").to_s data-action="map-relief#setSunDate" data-map-relief-value-param=value = label
+          .mt-2.hidden data-map-relief-target="sunHourRow"
+            .flex.items-center.justify-between
+              label.text-xs.font-medium.text-stone-500 for="relief-sun-hour" Heure
+              span.text-xs.font-semibold.tabular-nums.text-stone-700 data-map-relief-target="sunHourLabel" 14 h 00
+            input#relief-sun-hour[type="range" min="300" max="1320" step="5" value="840"
+                                  class="mt-1 w-full accent-forest"
+                                  data-map-relief-target="sunHour"
+                                  data-action="input->map-relief#setSunHour"]
+          button[type="button"
+                 class="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-stone-200 px-3 py-1.5 text-xs text-stone-700 hover:bg-stone-50"
+                 data-map-relief-target="dayButton"
+                 data-action="map-relief#toggleDay"]
+            svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              circle cx="12" cy="12" r="4"
+              path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+            span data-map-relief-target="dayLabel" Faire passer la journée
+          .mt-2.hidden data-map-relief-target="sunLegend"
+            div class="h-2 rounded-full" style="background: linear-gradient(to right, rgb(30,27,75), rgb(109,40,217), rgb(245,158,11), rgb(253,224,71))"
+            .mt-1.flex.justify-between.text-xs.text-stone-500
+              span 0 h
+              span data-map-relief-target="sunLegendMax"
+            p.mt-1.text-xs.text-stone-400 En forêt, la valeur est celle du sommet des arbres ; le relief au-delà de 150 m autour du domaine n'est pas compté.
+          p.mt-2.text-xs.text-stone-500 data-map-relief-target="sunStatus" aria-live="polite"
+          - unless @terrain.surface?
+            p.mt-1.text-xs.text-amber-700 Sans le modèle de surface, seules les ombres du relief comptent : arbres et toits n'en portent pas.
 
         .mt-4.border-t.border-stone-100.pt-3
           p class=section_title_css Pluie
@@ -130,7 +181,7 @@
             dl.mt-2.space-y-0.5 data-map-relief-target="stats"
 
         p class="mt-4 text-[0.7rem] leading-snug text-stone-400"
-          | Terrain nu du MNT LiDAR 2021-2022 du SPW, 1 m, sur le domaine et 150 m autour. La simulation est une illustration : un sol uniforme, sans fossés busés ni bâtiments.
+          | Terrain nu (MNT) et surface (MNS) LiDAR 2021-2022 du SPW, 1 m, sur le domaine et 150 m autour. L'eau coule sur le terrain nu, les ombres tombent des arbres et des toits. La pluie est une illustration : un sol uniforme, sans fossés busés.
           - if @meta["fetched_at"].present?
             = " Relief téléchargé le #{l(Time.zone.parse(@meta['fetched_at']).to_date, format: :long)}."
 
