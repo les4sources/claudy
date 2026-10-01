@@ -9,6 +9,12 @@ class ExperienceAvailabilitiesController < ApplicationController
   # (redirect) pour le no-JS.
   def create
     @availability = @experience.experience_availabilities.build(availability_params)
+    # Poser un créneau dans le passé est un rattrapage d'équipe ; un porteur
+    # restreint ne gère que ce qui vient (sa grille ne lui propose pas ces cases).
+    if current_user&.restricted_to_experiences? && @availability.available_on&.past?
+      return redirect_to experience_month_path, alert: "Impossible de poser un créneau à une date passée."
+    end
+
     if @availability.save
       @calendar = build_month_calendar
       respond_to do |format|

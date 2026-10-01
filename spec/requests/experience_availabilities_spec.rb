@@ -112,6 +112,53 @@ RSpec.describe "Disponibilités d'activité (calendrier mensuel)", type: :reques
     end
   end
 
+  # Rattraper une activité tenue sans créneau posé : l'équipe peut poser un
+  # bloc dans le passé ; un porteur restreint, non.
+  describe "jours passés" do
+    let(:past_month) { Date.today.prev_month.beginning_of_month }
+    let(:past_month_param) { past_month.strftime("%Y-%m") }
+    let(:past_day) { past_month + 10 }
+
+    it "propose des cases libres sur les jours passés à l'équipe" do
+      get experience_path(experience, month: past_month_param)
+
+      expect(response.body).to include(%(data-availability-slot="#{past_day.iso8601} 08:00" data-availability-state="free"))
+      expect(response.body).not_to include('data-availability-state="past"')
+    end
+
+    it "laisse l'équipe poser un créneau à une date passée" do
+      expect {
+        post experience_experience_availabilities_path(experience, month: past_month_param),
+             params: { experience_availability: { available_on: past_day.iso8601, starts_at: "10:00" } },
+             headers: turbo_headers
+      }.to change(ExperienceAvailability, :count).by(1)
+    end
+
+    context "porteur restreint" do
+      let(:carrier) { Human.create!(name: "Porteur") }
+      let(:user) do
+        User.create!(email: "porteur@les4sources.be", password: "password123",
+                     human: carrier, restricted_to_experiences: true)
+      end
+      let(:experience) { Experience.create!(name: "Balade en forêt", duration_hours: 2, human: carrier) }
+
+      it "verrouille les jours passés de sa grille" do
+        get experience_path(experience, month: past_month_param)
+
+        expect(response.body).to include('data-availability-state="past"')
+      end
+
+      it "refuse un créneau à une date passée" do
+        expect {
+          post experience_experience_availabilities_path(experience, month: past_month_param),
+               params: { experience_availability: { available_on: past_day.iso8601, starts_at: "10:00" } }
+        }.not_to change(ExperienceAvailability, :count)
+
+        expect(flash[:alert]).to match(/date passée/)
+      end
+    end
+  end
+
   describe "DELETE — retirer un bloc" do
     let(:target_day) { future_month + 22 }
 
