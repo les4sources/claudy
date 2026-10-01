@@ -45,6 +45,11 @@
               - else
                 span.inline-block.mt-1.px-2.py-0.5.rounded.text-xs.font-medium.bg-green-100.text-green-800 Validée
             .flex.items-center.gap-2.shrink-0
+              / Valider sans quitter la fiche (Michael 2026-10-01). Sur un créneau
+                passé, le contrôleur pose aussi « a eu lieu » et ne prévient pas
+                le client.
+              - if booking.pending?
+                = button_to "Valider", confirm_experience_booking_path(booking, from: "stay"), method: :patch, title: (booking.slot_in_the_future? ? "Confirmer l'activité (le client est prévenu)" : "Confirmer qu'elle a eu lieu"), class: "px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium hover:bg-green-200"
               = form_with url: experience_booking_path(booking), method: :patch, class: "flex items-center gap-1" do |f|
                 / w-16 : en w-14, « 20 » se tronquait derrière les flèches du champ.
                 = number_field_tag "experience_booking[participants]", booking.participants, min: 1, required: true, title: "Nombre de participants", class: "w-16 rounded border-gray-300 text-sm py-1"
