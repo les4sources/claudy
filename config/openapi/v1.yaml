@@ -3795,7 +3795,7 @@ components:
       enum: [zone, path, point, plant, node, line, comment, observation, lodging, space]
     MapLayerKind:
       type: string
-      enum: [venues, management, welcome, plants, network, comments, sketch, biodiversity]
+      enum: [venues, management, welcome, plants, network, comments, sketch, biodiversity, design]
       description: "network et sketch ont plusieurs couches : les désigner par layer_id."
     MapTaskSector:
       type: string
