@@ -286,16 +286,31 @@ class ExperienceBooking < ApplicationRecord
   # dernière place, là où le funnel se contentait de masquer les créneaux pleins
   # à l'affichage. Une réservation morte (annulée, refusée) ne bloque personne, et
   # l'édition ne se compte pas elle-même.
+  #
+  # On ne contrôle que ce qui PREND des places : une création, un créneau ou un
+  # nombre de participants qui change, une réservation morte qui revit. Valider
+  # ou déclarer la tenue d'une activité déjà posée (souvent au-delà de la
+  # capacité, par l'équipe) ne la remet pas en cause — la validation d'une
+  # activité de 43 personnes répondait 422 (Michael 2026-10-01, CLAUDY-7Z).
   def participants_fit_in_availability
     return if capacity_override
     return if experience_availability.blank? || participants.to_i <= 0
     return if cancelled? || refused?
+    return unless takes_new_spots?
 
     spots = experience_availability.available_spots(ignoring: id)
     return if spots.nil? || participants.to_i <= spots
 
     errors.add(:participants,
                spots.zero? ? "— ce créneau est complet" : "— il ne reste que #{spots} place(s) sur ce créneau")
+  end
+
+  def takes_new_spots?
+    return true if new_record?
+    return true if will_save_change_to_experience_availability_id?
+    return true if will_save_change_to_participants? && participants.to_i > participants_in_database.to_i
+
+    will_save_change_to_status? && %w[cancelled refused].include?(status_in_database)
   end
 
   def set_default_status
