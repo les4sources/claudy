@@ -144,7 +144,9 @@ const NEIGHBORS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [
 // les surfaces drainées en un seul passage.
 //
 // Renvoie `accumulation` (m² drainés par maille), `depression` (profondeur de
-// cuvette en m) et `receiver` (maille aval, -1 sur les bords).
+// cuvette en m), `receiver` (maille aval, -1 sur les bords) et `order` (de
+// l'aval vers l'amont, chaque receveur avant ses donneurs) et `filled` (le
+// relief aux cuvettes remplies).
 export function analyzeDrainage(heights, cols, rows, cellSize = 1) {
   const n = cols * rows
   const filled = new Float64Array(n)
@@ -200,7 +202,7 @@ export function analyzeDrainage(heights, cols, rows, cellSize = 1) {
     depression[i] = depth > 0.01 ? depth : 0
   }
 
-  return { accumulation, depression, receiver }
+  return { accumulation, depression, receiver, order, filled }
 }
 
 // La pluie sur le relief, pas à pas.
