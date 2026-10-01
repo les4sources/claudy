@@ -14,6 +14,10 @@ module Maps
   # la ferait naître au milieu d'un champ.
   class TerrainImport
     MNT_URL = "https://geoservices.wallonie.be/arcgis/rest/services/RELIEF/WALLONIE_MNT_2021_2022/MapServer".freeze
+    # Le modèle numérique de SURFACE : le sol plus ce qui s'y dresse (arbres, haies,
+    # toits). Moins le terrain, il donne la hauteur de la végétation et porte les
+    # ombres.
+    MNS_URL = "https://geoservices.wallonie.be/arcgis/rest/services/RELIEF/WALLONIE_MNS_2021_2022/MapServer".freeze
     ORTHO_URL = "https://geoservices.wallonie.be/arcgis/rest/services/IMAGERIE/ORTHO_2026_PRINTEMPS/MapServer".freeze
     CELL_SIZE_M = 1.0
     MARGIN_M = 150.0
@@ -65,9 +69,11 @@ module Maps
 
     attr_reader :extent
 
-    def call(texture: true)
-      heights = fetch_heights
-      write_grid(heights)
+    # Les trois pièces s'importent ensemble, ou à part (`terrain: false` pour
+    # n'ajouter que la surface à un relief déjà installé).
+    def call(terrain: true, surface: true, texture: true)
+      write_grid(fetch_heights(MNT_URL)) if terrain
+      write_surface(fetch_heights(MNS_URL)) if surface
       download_texture if texture
       @terrain
     end
@@ -75,7 +81,7 @@ module Maps
     # Les altitudes en mètres (Float, `nil` = pas de donnée), dans l'ordre de la
     # grille. Les paquets partent sur quelques fils : le SPW répond en ~9 s par
     # paquet, séquentiellement l'import prendrait six minutes.
-    def fetch_heights
+    def fetch_heights(url = MNT_URL)
       total = extent.cols * extent.rows
       chunks = (0...total).each_slice(@chunk).to_a
       heights = Array.new(total)
@@ -93,7 +99,7 @@ module Maps
             rescue ThreadError
               break
             end
-            values = fetch_chunk(indexes)
+            values = fetch_chunk(indexes, url)
             mutex.synchronize do
               indexes.each_with_index { |index, j| heights[index] = values[j] }
               done += 1
@@ -111,7 +117,7 @@ module Maps
       heights
     end
 
-    def fetch_chunk(indexes)
+    def fetch_chunk(indexes, url = MNT_URL)
       points = indexes.map { |index| extent.point(index).map { |v| v.round(3) } }
       params = {
         f: "json", geometryType: "esriGeometryMultipoint", sr: "3857", layers: "all:0", tolerance: "0",
@@ -122,7 +128,7 @@ module Maps
       attempt = 0
       begin
         attempt += 1
-        body = JSON.parse(@http.call("#{MNT_URL}/identify", params))
+        body = JSON.parse(@http.call("#{url}/identify", params))
         raise Error, body["error"].to_json if body["error"]
 
         results = body["results"] || []
@@ -141,15 +147,17 @@ module Maps
     end
 
     def write_grid(heights)
-      known = heights.compact
-      raise Error, "aucune altitude reçue" if known.empty?
+      stats = pack(heights, @terrain.grid_path)
+      write_metadata(**stats)
+    end
 
-      z_min = known.min.floor(2)
-      z_max = known.max
-      packed = heights.map { |z| z.nil? ? Terrain::NODATA : ((z - z_min) * 100).round.clamp(0, Terrain::NODATA - 1) }
-      FileUtils.mkdir_p(@terrain.root)
-      File.binwrite(@terrain.grid_path, packed.pack("v*"))
-      write_metadata(z_min: z_min, z_max: z_max, nodata_count: heights.size - known.size)
+    # La surface se pose sur la grille du relief : même emprise, même pas. Sans
+    # relief installé sur cette emprise, elle n'aurait rien à quoi se comparer.
+    def write_surface(heights)
+      raise Error, "installer d'abord le relief (sans ONLY=surface)" unless same_extent?
+
+      stats = pack(heights, @terrain.surface_path)
+      update_metadata(surface: stats.merge(z_unit: 0.01, source: "SPW, MNS LiDAR 2021-2022 (50 cm, arbres et toits)"))
     end
 
     # L'ortho de printemps 2026 sur l'emprise exacte des centres de mailles. Le
@@ -166,7 +174,7 @@ module Maps
       raise Error, "l'ortho n'est pas une image JPEG" unless image.to_s.b.start_with?("\xFF\xD8".b)
 
       File.binwrite(@terrain.texture_path, image)
-      write_metadata(**metadata_base, texture: { width: width, height: height, source: "SPW, ortho printemps 2026" })
+      update_metadata(texture: { width: width, height: height, source: "SPW, ortho printemps 2026" })
     end
 
     private
@@ -178,19 +186,39 @@ module Maps
       nil
     end
 
-    def metadata_base
-      @terrain.metadata.symbolize_keys.slice(:z_min, :z_max, :nodata_count)
+    # Uint16 en cm au-dessus du minimum de la grille ; renvoie de quoi la relire.
+    def pack(heights, path)
+      known = heights.compact
+      raise Error, "aucune altitude reçue" if known.empty?
+
+      z_min = known.min.floor(2)
+      packed = heights.map { |z| z.nil? ? Terrain::NODATA : ((z - z_min) * 100).round.clamp(0, Terrain::NODATA - 1) }
+      FileUtils.mkdir_p(@terrain.root)
+      File.binwrite(path, packed.pack("v*"))
+      { z_min: z_min, z_max: known.max, nodata_count: heights.size - known.size }
     end
 
-    def write_metadata(z_min:, z_max:, nodata_count:, texture: nil)
+    def same_extent?
+      meta = @terrain.metadata
+      meta["cols"] == extent.cols && meta["rows"] == extent.rows &&
+        (meta["west"].to_f - extent.west).abs < 0.01 && (meta["north"].to_f - extent.north).abs < 0.01
+    end
+
+    def update_metadata(**changes)
+      File.write(@terrain.metadata_path, JSON.pretty_generate(@terrain.metadata.merge(changes.deep_stringify_keys)))
+    end
+
+    # Le relief réécrit l'en-tête ; la surface et l'ortho déjà installées sont
+    # gardées si l'emprise n'a pas bougé, oubliées sinon.
+    def write_metadata(z_min:, z_max:, nodata_count:)
+      kept = same_extent? ? @terrain.metadata.slice("surface", "texture") : {}
       data = {
         key: Terrain::KEY, source: "SPW, MNT LiDAR 2021-2022 (50 cm, terrain nu)", source_url: MNT_URL,
         fetched_at: Time.current.iso8601, crs: "EPSG:3857",
         west: extent.west, north: extent.north, step: extent.step, cols: extent.cols, rows: extent.rows,
         cell_size_m: @cell_size_m, lat0: extent.lat0, z_min: z_min, z_max: z_max, z_unit: 0.01,
-        nodata: Terrain::NODATA, nodata_count: nodata_count,
-        texture: texture || @terrain.metadata["texture"]
-      }.compact
+        nodata: Terrain::NODATA, nodata_count: nodata_count
+      }.deep_stringify_keys.merge(kept)
       File.write(@terrain.metadata_path, JSON.pretty_generate(data))
     end
 

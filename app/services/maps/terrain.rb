@@ -11,6 +11,9 @@ module Maps
   # tombe donc pixel pour pixel sur le relief sans reprojection. Le pas en 3857
   # est `1 m / cos(latitude)` — à Yvoir, 1,56 unité de Mercator pour un mètre.
   #
+  # `-surface.bin` : même grille, le modèle de SURFACE (arbres et toits
+  # compris), avec son propre minimum dans `metadata["surface"]`.
+  #
   # `grid.bin` : des Uint16 little-endian, ligne par ligne du nord au sud, ouest
   # vers est, en centimètres au-dessus de `z_min`. 65535 = pas de donnée.
   class Terrain
@@ -28,10 +31,12 @@ module Maps
 
     def grid_path = root.join("#{KEY}.bin")
     def texture_path = root.join("#{KEY}-ortho.jpg")
+    def surface_path = root.join("#{KEY}-surface.bin")
     def metadata_path = root.join("#{KEY}.json")
 
     def installed? = grid_path.file? && metadata_path.file?
     def texture? = texture_path.file?
+    def surface? = surface_path.file? && metadata["surface"].present?
 
     # Les métadonnées telles qu'écrites par l'import ; `{}` tant que rien n'est
     # installé ou que le fichier est illisible — la page dit alors quoi faire.

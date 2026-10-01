@@ -13,14 +13,16 @@ RSpec.describe "Carte du domaine — relief 3D", type: :request do
   before { allow(Maps::Terrain).to receive(:current).and_return(terrain) }
   after { FileUtils.rm_rf(root) }
 
-  def install_terrain(texture: true)
+  def install_terrain(texture: true, surface: true)
     FileUtils.mkdir_p(root)
     File.binwrite(terrain.grid_path, [0, 100, 200, 300].pack("v*"))
     File.binwrite(terrain.texture_path, "\xFF\xD8fake".b) if texture
+    File.binwrite(terrain.surface_path, [500, 600, 700, 800].pack("v*")) if surface
     File.write(terrain.metadata_path, {
       cols: 2, rows: 2, west: 545_000.0, north: 6_506_000.0, step: 1.5669, cell_size_m: 1.0,
-      z_min: 120.0, z_max: 123.0, z_unit: 0.01, nodata: 65_535, fetched_at: "2026-10-01T00:06:15+02:00"
-    }.to_json)
+      z_min: 120.0, z_max: 123.0, z_unit: 0.01, nodata: 65_535, fetched_at: "2026-10-01T00:06:15+02:00",
+      surface: (surface ? { z_min: 120.0, z_max: 128.0, z_unit: 0.01, nodata_count: 0 } : nil)
+    }.compact.to_json)
   end
 
   it "exige une session" do
@@ -53,6 +55,10 @@ RSpec.describe "Carte du domaine — relief 3D", type: :request do
       expect(scene["data-map-relief-grid-url-value"]).to start_with("/map/relief/grid?v=")
       expect(scene["data-map-relief-texture-url-value"]).to start_with("/map/relief/texture?v=")
       expect(JSON.parse(scene["data-map-relief-meta-value"])).to include("cols" => 2, "rows" => 2, "z_min" => 120.0)
+      expect(scene["data-map-relief-surface-url-value"]).to start_with("/map/relief/surface?v=")
+      expect(JSON.parse(scene["data-map-relief-surface-meta-value"])).to eq("z_min" => 120.0, "z_unit" => 0.01)
+      expect(page.at_css('[data-choice-group="sunMode"]')).to be_present
+      expect(page.at_css('[data-map-relief-value-param="canopy"]')).to be_present
       layers = JSON.parse(scene["data-map-relief-feature-layers-value"])
       expect(layers.map { |layer| layer["id"] }).to include(management.id)
       expect(layers.map { |layer| layer["kind"] }).not_to include("comments")
@@ -70,15 +76,35 @@ RSpec.describe "Carte du domaine — relief 3D", type: :request do
       get map_relief_texture_path(v: "x")
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq("image/jpeg")
+
+      get map_relief_surface_path(v: "x")
+      expect(response).to have_http_status(:ok)
+      expect(response.body.b.unpack("v*")).to eq([500, 600, 700, 800])
     end
 
     it "répond 404, sans erreur, quand les fichiers manquent" do
       get map_relief_grid_path
       expect(response).to have_http_status(:not_found)
 
-      install_terrain(texture: false)
+      install_terrain(texture: false, surface: false)
       get map_relief_texture_path
       expect(response).to have_http_status(:not_found)
+      get map_relief_surface_path
+      expect(response).to have_http_status(:not_found)
+    end
+
+    # Sans modèle de surface, la page tient : pas de « Végétation », pas
+    # d'arbres en relief, et un mot pour dire que les ombres ne viennent que du
+    # relief.
+    it "se passe du modèle de surface quand il manque" do
+      install_terrain(surface: false)
+
+      get map_relief_path
+
+      page = Nokogiri::HTML(response.body)
+      expect(page.at_css('[data-controller="map-relief"]')["data-map-relief-surface-url-value"]).to eq("")
+      expect(page.at_css('[data-map-relief-value-param="canopy"]')).to be_nil
+      expect(response.body).to include("seules les ombres du relief comptent")
     end
 
     it "se rejoint depuis la carte et depuis la barre des pages annexes" do
