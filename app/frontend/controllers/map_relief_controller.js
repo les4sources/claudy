@@ -207,6 +207,8 @@ export default class extends Controller {
     this.designs = await this.fetchDesigns()
     await nextPaint()
     this.reshape({ keepMesh: !this.designs.length })
+    // Après `reshape` : les capacités des ouvrages sont calculées.
+    this.renderDesignList()
     this.hypsometryTexture = this.scene.canvasTexture(this.hypsometryCanvas())
     await this.applyBase()
     this.drawOverlay()
@@ -663,6 +665,9 @@ export default class extends Controller {
     this.setLoading(null)
   }
 
+  // La liste du panneau se dessine APRÈS que l'appelant a rangé le résultat
+  // dans `this.designs` : la dessiner ici montrait « Aucun aménagement » au
+  // chargement alors que les ouvrages étaient bien tracés sur le relief.
   async fetchDesigns() {
     if (!this.designsUrlValue) return []
     try {
@@ -670,8 +675,8 @@ export default class extends Controller {
       if (!response.ok) return []
       const collection = await response.json()
       return (collection.features || []).map((feature) => this.fromFeature(feature)).filter(Boolean)
-    } finally {
-      this.renderDesignList()
+    } catch {
+      return []
     }
   }
 
