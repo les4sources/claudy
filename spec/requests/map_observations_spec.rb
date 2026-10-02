@@ -48,7 +48,7 @@ RSpec.describe "Carte du domaine — relevés de biodiversité (epic #348, phase
         form = html.at_css("[data-observation-panel] form")
         expect(form["action"]).to eq(map_observations_path)
         expect(form.at_css("input[name=lat]")["value"]).to eq("50.3414")
-        expect(form.css("input[name='observation[realm]']").map { |i| i["value"] }).to eq(%w[flora fauna])
+        expect(form.css("input[name='observation[realm]']").map { |i| i["value"] }).to eq(%w[flora fauna fungi])
         expect(form.at_css("input[name='observation[observed_on]']")["value"]).to eq("2026-09-28")
         expect(form.at_css("select[name='observation[observer_id]'] option[selected]")["value"]).to eq(bob.id.to_s)
       end
@@ -82,7 +82,7 @@ RSpec.describe "Carte du domaine — relevés de biodiversité (epic #348, phase
                                     params: { lat: 50.3414, lng: 4.9078, observation: { realm: "", species_common: "" } }
       end.not_to(change { MapFeature.count })
       expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("Choisissez Flore ou Faune.")
+      expect(response.body).to include("Choisissez Flore, Faune ou Fonge.")
       expect(html.at_css("[data-observation-panel] input[name=lat]")["value"]).to eq("50.3414")
     end
 

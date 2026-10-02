@@ -29,8 +29,9 @@ export const OBSERVATION_GLYPHS = {
   fauna:
     '<circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/>' +
     '<path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/>',
+  fungi: '<path d="M12 3C7 3 3 6.5 3 10.5c0 .8.7 1.5 1.5 1.5h15c.8 0 1.5-.7 1.5-1.5C21 6.5 17 3 12 3Z"/><path d="M9.5 12v6a2.5 2.5 0 0 0 5 0v-6"/>',
 };
-export const OBSERVATION_COLORS = { flora: '#2E7D4F', fauna: '#8A6F47' };
+export const OBSERVATION_COLORS = { flora: '#2E7D4F', fauna: '#8A6F47', fungi: '#B4532A' };
 const PENDING_COLOR = '#0B3D3A';
 const GPS_COLOR = '#1F5F4A';
 const GPS_WEAK_COLOR = '#C97B3D';
