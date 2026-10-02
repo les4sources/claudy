@@ -34,6 +34,16 @@
   box-shadow: 0 0 0 3px rgba(11, 61, 58, 0.25), 0 2px 8px rgba(28, 25, 23, 0.4);
 }
 
+/* Un relevé importé d'observations.be : à 60 %, plein au survol ou
+   sélectionné ; les relevés saisis dans Claudy passent devant l'œil. */
+.map-observation-pin--imported {
+  opacity: 0.6;
+}
+.leaflet-marker-icon:hover .map-observation-pin--imported,
+.map-observation-pin--imported.map-observation-pin--selected {
+  opacity: 1;
+}
+
 .map-observation-pin--pending {
   border-style: dashed;
 }
