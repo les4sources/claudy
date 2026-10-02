@@ -2622,6 +2622,73 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/Unprocessable" }
+  /bioindicator_species:
+    get:
+      tags: [Carte & plantes]
+      summary: Lister les fiches des plantes bio-indicatrices
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: "Recherche sur le nom ou le nom latin." }
+        - { name: latin_name, in: query, schema: { type: string }, description: "La fiche de ce nom latin exact (casse ignorée)." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de fiches.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/BioindicatorSpecies" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Carte & plantes]
+      summary: Créer une fiche bio-indicatrice (upsert sur le nom latin)
+      description: >
+        Reposter une fiche du même nom latin (casse ignorée) la met à jour au lieu
+        d'échouer. `meta.created` dit si elle a été créée. Une analyse de relevé
+        (point `bioindicator` de la couche `bioindicators`) cite ensuite la fiche
+        par son `id` dans `properties.analysis.species[].species_id`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bioindicator_species: { $ref: "#/components/schemas/BioindicatorSpeciesInput" }
+      responses:
+        "201": { $ref: "#/components/responses/BioindicatorSpeciesCreated" }
+        "200": { $ref: "#/components/responses/BioindicatorSpeciesCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /bioindicator_species/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    get:
+      tags: [Carte & plantes]
+      summary: Détail d'une fiche bio-indicatrice
+      responses:
+        "200": { $ref: "#/components/responses/BioindicatorSpeciesCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Carte & plantes]
+      summary: Modifier une fiche bio-indicatrice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bioindicator_species: { $ref: "#/components/schemas/BioindicatorSpeciesInput" }
+      responses:
+        "200": { $ref: "#/components/responses/BioindicatorSpeciesCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
   /plant_varieties:
     get:
       tags: [Carte & plantes]
@@ -3045,6 +3112,15 @@ components:
             type: object
             properties:
               data: { $ref: "#/components/schemas/PlantSpecies" }
+              meta: { type: object, properties: { created: { type: boolean } } }
+    BioindicatorSpeciesCreated:
+      description: Une fiche bio-indicatrice. `meta.created` (POST seulement) dit si elle a été créée.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: "#/components/schemas/BioindicatorSpecies" }
               meta: { type: object, properties: { created: { type: boolean } } }
     PlantVarietyCreated:
       description: Une variété. `meta.created` (POST seulement) dit si elle a été créée.
@@ -3806,10 +3882,10 @@ components:
       description: "Fleur, Feuille, Fruit, Racine, Graine, Sève, Autre."
     MapFeatureKind:
       type: string
-      enum: [zone, path, point, plant, node, line, comment, observation, lodging, space]
+      enum: [zone, path, point, plant, node, line, comment, observation, lodging, space, bioindicator]
     MapLayerKind:
       type: string
-      enum: [venues, management, welcome, plants, network, comments, sketch, biodiversity, design]
+      enum: [venues, management, welcome, plants, network, comments, sketch, biodiversity, design, bioindicators]
       description: "network et sketch ont plusieurs couches : les désigner par layer_id."
     MapTaskSector:
       type: string
@@ -3829,6 +3905,47 @@ components:
       properties:
         part: { type: string, description: "Clé de HarvestPart ou son libellé (« Fruit »).", example: "fruit" }
         months: { type: array, items: { type: integer, minimum: 1, maximum: 12 }, example: [9, 10] }
+    BioindicatorIndicator:
+      type: object
+      required: [key, strength]
+      properties:
+        key: { type: string, enum: [waterlogging, drought, compaction, nitrogen_excess, nitrogen_poor, organic_excess, organic_poor, carbon_excess, acidic, basic, base_rich, overgrazing, disturbance, erosion, biological_activity] }
+        strength: { type: integer, enum: [1, 2, 3], description: "1 léger, 2 net, 3 fort." }
+    BioindicatorSpecies:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "bioindicator_species" }
+        name: { type: string, example: "Renoncule rampante" }
+        latin_name: { type: string, example: "Ranunculus repens" }
+        full_name: { type: string, example: "Renoncule rampante (Ranunculus repens)" }
+        family: { type: string, nullable: true, example: "Ranunculaceae" }
+        common_names: { type: string, nullable: true }
+        description: { type: string, nullable: true, description: "Comment la reconnaître." }
+        biotope_primary: { type: string, nullable: true }
+        biotope_secondary: { type: string, nullable: true }
+        indicator_traits: { type: string, nullable: true, description: "Caractères indicateurs : ce qui lève la dormance de la graine, donc ce que la plante dit du sol." }
+        agronomy: { type: string, nullable: true, enum: [degraded, degrading, balanced] }
+        ecology: { type: string, nullable: true, enum: [anthropized, degrading, preserved] }
+        indicators: { type: array, items: { $ref: "#/components/schemas/BioindicatorIndicator" } }
+        notes: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    BioindicatorSpeciesInput:
+      type: object
+      properties:
+        latin_name: { type: string, description: "Obligatoire à la création. Clé de l'upsert (casse ignorée).", example: "Ranunculus repens" }
+        name: { type: string, description: "Nom français. Obligatoire à la création." }
+        family: { type: string }
+        common_names: { type: string }
+        description: { type: string }
+        biotope_primary: { type: string }
+        biotope_secondary: { type: string }
+        indicator_traits: { type: string }
+        agronomy: { type: string, enum: [degraded, degrading, balanced] }
+        ecology: { type: string, enum: [anthropized, degrading, preserved] }
+        indicators: { type: array, items: { $ref: "#/components/schemas/BioindicatorIndicator" } }
+        notes: { type: string }
     PlantSpecies:
       type: object
       properties:

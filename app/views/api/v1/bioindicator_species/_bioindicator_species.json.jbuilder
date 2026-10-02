@@ -1,0 +1,17 @@
+json.id bioindicator_species.id
+json.type "bioindicator_species"
+json.name bioindicator_species.name
+json.latin_name bioindicator_species.latin_name
+json.full_name bioindicator_species.full_name
+json.family bioindicator_species.family
+json.common_names bioindicator_species.common_names
+json.description bioindicator_species.description
+json.biotope_primary bioindicator_species.biotope_primary
+json.biotope_secondary bioindicator_species.biotope_secondary
+json.indicator_traits bioindicator_species.indicator_traits
+json.agronomy bioindicator_species.agronomy
+json.ecology bioindicator_species.ecology
+json.indicators bioindicator_species.indicators
+json.notes bioindicator_species.notes
+json.created_at bioindicator_species.created_at
+json.updated_at bioindicator_species.updated_at

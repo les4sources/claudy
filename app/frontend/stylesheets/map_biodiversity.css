@@ -56,9 +56,19 @@
     align-items: flex-end;
     gap: 0.375rem;
   }
+
+  /* Au-dessus de la barre du mode (en bas) et à gauche de la colonne des
+     boutons ronds (mesure, ma position) : sans ce décalage, le bouton restait
+     caché dessous, au bord de l'écran. */
+  .leaflet-bottom.leaflet-right .map-observation-gps {
+    margin-bottom: 5rem;
+    margin-right: 4.5rem;
+  }
 }
 
-.map-observation-gps__button {
+/* Doublé : la remise à zéro des boutons (Tailwind, `[type=button]`) a la même
+   force qu'une classe et passait après — le bouton était transparent. */
+.map-observation-gps .map-observation-gps__button {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -74,11 +84,11 @@
   cursor: pointer;
 }
 
-.map-observation-gps__button--weak {
+.map-observation-gps .map-observation-gps__button--weak {
   background: #c97b3d;
 }
 
-.map-observation-gps__cancel {
+.map-observation-gps .map-observation-gps__cancel {
   min-height: 2.75rem;
   padding: 0 0.875rem;
   border: 1px solid #d6d3d1;

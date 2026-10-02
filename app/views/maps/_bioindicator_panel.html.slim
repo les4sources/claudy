@@ -1,0 +1,172 @@
+/ La fiche d'un relevé de plantes bio-indicatrices. Même enveloppe que la fiche
+  d'un relevé de biodiversité : la carte la montre, la cache, et recharge la
+  couche quand `data-feature-saved` est posé. Un relevé PAS ENCORE créé porte
+  ses coordonnées en champs cachés : rien n'existe en base avant « Enregistrer ».
+  Une fois analysé (par Claude, via l'API), la fiche montre le diagnostic, les
+  indicateurs et les espèces vues avec leur fiche.
+- saved = local_assigns[:saved]
+- persisted = feature.persisted?
+- lng, lat = Array(feature.geometry.to_h["coordinates"])
+- analysis = feature.analysis
+- sheets = analysis ? feature.analysis_species_sheets : {}
+div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:rounded-xl md:border md:border-stone-200"
+    data-feature-panel="true"
+    data-bioindicator-panel="true"
+    data-bioindicator-new=(persisted ? nil : "true")
+    data-feature-id=feature.id
+    data-layer-id=feature.map_layer_id
+    data-feature-saved=(saved ? "true" : nil)]
+  .flex.items-center.gap-2.border-b.border-stone-100.px-4.py-3
+    span class="rounded-full bg-forest-tint px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-forest"
+      | Bio-indicatrices
+    h2.flex-1.truncate.text-sm.font-semibold.text-stone-800
+      = persisted ? feature.bioindicator_title : "Nouveau relevé"
+    button[type="button" class="flex h-11 w-11 items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+           data-action="click->map#closePanel" aria-label="Fermer la fiche"]
+      svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        line x1="18" y1="6" x2="6" y2="18"
+        line x1="6" y1="6" x2="18" y2="18"
+
+  .flex-1.overflow-y-auto.px-4.py-4
+    - if saved
+      p.mb-3.rounded-lg.bg-forest-tint.px-3.py-2.text-xs.text-forest Enregistré.
+    - if feature.errors.any?
+      .mb-3.rounded-lg.border.border-red-200.bg-red-50.px-3.py-2.text-xs.text-red-800 data-bioindicator-errors="true"
+        = feature.errors.full_messages.to_sentence
+
+    / Le statut : à analyser, ou analysé (avec l'état du sol).
+    - if persisted
+      .mb-4.flex.items-center.gap-2.rounded-lg.px-3.py-2.text-xs data-bioindicator-status=feature.bioindicator_status style="background: #{bioindicator_color(feature.analysis_agronomy)}14"
+        = bioindicator_glyph(feature, css_class: "h-5 w-5 shrink-0")
+        span.flex-1
+          - if feature.to_analyze?
+            span.font-semibold.text-stone-700 À analyser
+            - if analysis
+              span.text-stone-500 = " — nouvelle analyse demandée ; la précédente reste ci-dessous."
+            - else
+              span.text-stone-500 = " — Claude l'analysera à la prochaine demande."
+          - else
+            span.font-semibold style="color: #{bioindicator_color(feature.analysis_agronomy)}"
+              = BioindicatorVocabulary::AGRONOMY[feature.analysis_agronomy] || "Analysé"
+            - if analysis["analyzed_on"].present?
+              span.text-stone-500 = " — analysé le #{l(Date.iso8601(analysis['analyzed_on']), format: :long)}"
+        - if feature.bioindicator_status == "analyzed"
+          = button_to "Redemander", request_analysis_map_bioindicator_path(feature), method: :post,
+                      class: "rounded-md border border-stone-300 bg-white px-2 py-1 font-medium text-stone-600 hover:bg-stone-50",
+                      title: "Le relevé repasse « À analyser » (nouvelles photos, doute…)"
+
+    / L'analyse : le diagnostic, les indicateurs, les espèces vues.
+    - if analysis
+      section.mb-5 data-bioindicator-analysis="true"
+        p class="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Diagnostic du sol
+        .text-sm.leading-relaxed.text-stone-800 = simple_format(analysis["summary"], class: "mb-2")
+        - indicators = feature.analysis_indicators
+        - if indicators.any?
+          ul.mt-2.flex.flex-wrap.gap-1.5 data-bioindicator-indicators="true"
+            - indicators.each do |indicator|
+              li.flex.items-center.gap-1.rounded-full.bg-stone-100.px-2.py-0.5.text-xs.text-stone-700 data-indicator=indicator[:key]
+                span = indicator[:label]
+                span.text-stone-400 = bioindicator_strength(indicator[:strength])
+        - if analysis["advice"].present?
+          .mt-3.rounded-lg.bg-forest-tint.px-3.py-2.text-xs.text-forest
+            p.font-semibold Pistes
+            = simple_format(analysis["advice"], class: "mt-1")
+
+        p class="mb-1 mt-4 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" = "Espèces vues (#{feature.analysis_species.size})"
+        ul.divide-y.divide-stone-100 data-bioindicator-species="true"
+          - feature.analysis_species.each do |seen|
+            - sheet = sheets[seen["species_id"]]
+            li.py-2
+              details.group
+                summary.flex.cursor-pointer.list-none.items-start.gap-2
+                  span.mt-1.shrink-0 = bioindicator_glyph(sheet&.agronomy, css_class: "h-3.5 w-3.5")
+                  span.min-w-0.flex-1
+                    span.block.text-sm.font-medium.text-stone-800 = seen["name"]
+                    - if seen["latin_name"].present?
+                      span.block.text-xs.italic.text-stone-500 = seen["latin_name"]
+                    span class="block text-[0.7rem] text-stone-400"
+                      = [MapFeatureBioindicator::ABUNDANCES[seen["abundance"]], ("identification #{MapFeatureBioindicator::CONFIDENCES[seen['confidence']].downcase}" if seen["confidence"])].compact.join(" · ")
+                  - if sheet
+                    span class="mt-1 shrink-0 text-xs text-stone-400 group-open:rotate-90" aria-hidden="true" ›
+                - if seen["note"].present?
+                  p.ml-6.mt-1.text-xs.text-stone-600 = seen["note"]
+                - if sheet
+                  .ml-6.mt-2.space-y-2.rounded-lg.bg-stone-50.px-3.py-2.text-xs.text-stone-700 data-bioindicator-sheet=sheet.id
+                    - if sheet.indicator_traits.present?
+                      div
+                        p.font-semibold.text-stone-600 Caractères indicateurs
+                        = simple_format(sheet.indicator_traits, class: "mt-0.5")
+                    - if sheet.biotope_primary.present?
+                      div
+                        p.font-semibold.text-stone-600 Biotope primaire
+                        p.mt-0.5 = sheet.biotope_primary
+                    - if sheet.biotope_secondary.present?
+                      div
+                        p.font-semibold.text-stone-600 Biotope secondaire
+                        p.mt-0.5 = sheet.biotope_secondary
+                    - if sheet.agronomy_label || sheet.ecology_label
+                      p.text-stone-500 = [sheet.agronomy_label && "Agronomie : #{sheet.agronomy_label.downcase}", sheet.ecology_label && "Écologie : #{sheet.ecology_label.downcase}"].compact.join(" · ")
+                    - if sheet.notes.present?
+                      p.text-stone-500 = sheet.notes
+
+        p class="mt-3 text-[0.7rem] leading-snug text-stone-400"
+          = analysis["caution"].presence || "Diagnostic établi par Claude d'après les photos : une hypothèse à confirmer sur le terrain et par les analyses de sol."
+
+    = form_with url: (persisted ? map_bioindicator_path(feature) : map_bioindicators_path), scope: :bioindicator,
+                method: (persisted ? :patch : :post), builder: ActionView::Helpers::FormBuilder,
+                html: { class: "space-y-4" } do |f|
+      - unless persisted
+        = hidden_field_tag :lat, lat
+        = hidden_field_tag :lng, lng
+
+      / Les photos d'abord : c'est tout le relevé. Sur un iPhone, le choix
+        propose l'appareil photo ou la photothèque ; JPEG ou PNG seulement, pour
+        que Safari convertisse les photos HEIC.
+      div
+        = f.label :photos, (persisted ? "Ajouter des photos" : "Photos des plantes"), class: "block text-xs font-semibold text-stone-600"
+        = f.file_field :photos, multiple: true, direct_upload: true, accept: "image/jpeg,image/png", required: !persisted,
+                       class: "mt-1 block w-full text-sm text-stone-600 file:mr-3 file:h-11 file:rounded-lg file:border-0 file:bg-forest file:px-4 file:text-sm file:font-semibold file:text-white"
+        - unless persisted
+          p.mt-1.text-xs.text-stone-500 Une vue d'ensemble et des gros plans (feuilles, fleurs) aident l'identification.
+
+      .grid.grid-cols-2.gap-3
+        div
+          = f.label :observed_on, "Date", class: "block text-xs font-semibold text-stone-600"
+          = f.date_field :observed_on, value: feature.properties.to_h["observed_on"], max: Date.current.iso8601, required: true,
+                         class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+      div
+        = f.label :description, "Notes", class: "block text-xs font-semibold text-stone-600"
+        = f.text_area :description, value: feature.description_i18n.to_h["fr"], rows: 3,
+                      placeholder: "Sol piétiné, bas de pente, après la pluie…",
+                      class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+      .flex.justify-end.gap-2
+        - unless persisted
+          button[type="button" class="h-11 rounded-lg border border-stone-300 px-4 text-sm font-semibold text-stone-700 hover:bg-stone-50"
+                 data-action="click->map#closePanel"] Annuler
+        button[type="submit" class="h-11 flex-1 rounded-lg bg-forest px-4 text-sm font-semibold text-white hover:bg-forest-soft"] Enregistrer
+
+    - if persisted
+      - photos = feature.photos.select(&:persisted?)
+      - if photos.any?
+        .mt-5
+          p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" = "Photos (#{photos.size})"
+          ul.grid.grid-cols-3.gap-2
+            - photos.each do |photo|
+              li.group.relative
+                = link_to url_for(MapFeature.photo_source(photo, :preview)), target: "_blank", rel: "noopener" do
+                  = image_tag url_for(MapFeature.photo_source(photo, :thumb)), alt: photo.filename.to_s, loading: "lazy",
+                              class: "aspect-square w-full rounded-lg object-cover ring-1 ring-stone-200"
+                = button_to photo_map_feature_path(feature, photo_id: photo.id), method: :delete,
+                            form: { data: { turbo_confirm: "Retirer cette photo ?" } },
+                            class: "absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-stone-500 shadow hover:text-red-600",
+                            "aria-label": "Retirer la photo" do
+                  | ×
+
+      .mt-5.border-t.border-stone-100.pt-3.text-xs.text-stone-400
+        p
+          = "Relevé #{feature.created_by ? "pris par #{feature.created_by.display_name} " : ''}le #{l(feature.created_at.to_date, format: :long)}"
+      .mt-3
+        = button_to map_feature_path(feature), method: :delete,
+                    form: { data: { turbo_confirm: "Supprimer ce relevé ?" } },
+                    class: "text-xs font-medium text-red-600 hover:text-red-700"
+          | Supprimer ce relevé

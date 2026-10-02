@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -290,6 +290,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_140000) do
     t.index ["cooked_on"], name: "index_batch_cooking_sessions_on_cooked_on"
     t.index ["created_by_id"], name: "index_batch_cooking_sessions_on_created_by_id"
     t.index ["deleted_at"], name: "index_batch_cooking_sessions_on_deleted_at"
+  end
+
+  create_table "bioindicator_species", force: :cascade do |t|
+    t.string "agronomy"
+    t.text "biotope_primary"
+    t.text "biotope_secondary"
+    t.text "common_names"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.text "description"
+    t.string "ecology"
+    t.string "family"
+    t.text "indicator_traits"
+    t.jsonb "indicators", default: [], null: false
+    t.string "latin_name", null: false
+    t.string "name", null: false
+    t.text "notes"
+    t.datetime "updated_at", null: false
+    t.index "lower((latin_name)::text)", name: "index_bioindicator_species_on_lower_latin_name_alive", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["deleted_at"], name: "index_bioindicator_species_on_deleted_at"
   end
 
   create_table "booking_page_views", force: :cascade do |t|

@@ -7,5 +7,7 @@
     = render "maps/comment_panel", feature: @feature
   - elsif @feature.persisted? && @feature.observation_point?
     = render "maps/observation_panel", feature: @feature
+  - elsif @feature.persisted? && @feature.bioindicator_point?
+    = render "maps/bioindicator_panel", feature: @feature
   - else
     = render "maps/feature_panel", feature: @feature
