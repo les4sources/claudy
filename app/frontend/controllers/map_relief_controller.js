@@ -122,6 +122,7 @@ export default class extends Controller {
     'viewport', 'loading', 'panel', 'panelBody', 'exaggeration', 'exaggerationLabel',
     'playButton', 'playLabel', 'clock', 'rainState', 'stats', 'probe',
     'baseLegend', 'designHint', 'designList', 'designSwaleOptions', 'designPondOptions', 'designGradeOptions', 'designHedgeOptions', 'plantStatus', 'rainTypical', 'rainReal', 'rainDate', 'rainChart', 'rainRealStatus', 'soilUniform', 'sunSection', 'sunHour', 'sunHourLabel', 'sunHourRow', 'sunStatus', 'sunLegend', 'sunLegendMax', 'dayButton', 'dayLabel', 'surfaceToggle',
+    'hint', 'nivaButton', 'nivaLabel', 'nivaHint', 'nivaOptions', 'nivaHud', 'nivaSpeed', 'nivaInfo', 'nivaStatus', 'nivaKeys', 'nivaPad',
   ]
 
   static values = {
@@ -161,12 +162,13 @@ export default class extends Controller {
   disconnect() {
     this.disposed = true
     clearInterval(this.dayTimer)
+    this.unbindNivaKeys()
     this.scene?.dispose()
   }
 
   async load() {
     this.setLoading('Chargement du relief…')
-    const [response, surfaceResponse, landcoverResponse, { ReliefScene }] = await Promise.all([
+    const [response, surfaceResponse, landcoverResponse, { ReliefScene, createNivaState, stepNiva }] = await Promise.all([
       fetch(this.gridUrlValue, { credentials: 'same-origin' }),
       this.surfaceUrlValue ? fetch(this.surfaceUrlValue, { credentials: 'same-origin' }).catch(() => null) : null,
       this.landcoverUrlValue ? fetch(this.landcoverUrlValue, { credentials: 'same-origin' }).catch(() => null) : null,
@@ -202,6 +204,7 @@ export default class extends Controller {
     })
     this.scene.setExaggeration(Number(this.exaggerationTarget.value))
     this.scene.setContourInterval(this.settings.contour)
+    this.nivaApi = { createNivaState, stepNiva }
     this.scene.onFrame = () => this.tick()
     this.bindPicking()
 
@@ -1236,6 +1239,7 @@ export default class extends Controller {
   // Appelé à chaque image par la scène : autant de pas que le budget en permet,
   // plafonné par la vitesse choisie.
   tick() {
+    this.tickNiva()
     const sim = this.simulation
     if (!sim || !this.playing) return
     const start = performance.now()
@@ -1476,6 +1480,240 @@ export default class extends Controller {
     return canvas
   }
 
+  // ---- La Niva : la voiture du domaine, aux flèches ----------------------------
+  //
+  // On la prend, on clique où la poser, on la conduit. Elle roule sur le relief
+  // vrai (pente, dévers, bâtiments, eau, sous-bois) et la scène la pose sur le
+  // relief exagéré qu'on voit. La nuit, ses phares et sa rampe éclairent le
+  // terrain.
+
+  toggleNiva() {
+    if (!this.scene) return
+    if (this.niva || this.nivaPlacing) return this.parkNiva()
+    if (this.tool) this.chooseTool({ params: { value: this.tool } })
+    this.nivaPlacing = true
+    this.bindNivaKeys()
+    this.renderNivaControls()
+  }
+
+  placeNiva(event) {
+    const hit = this.scene.pick(event)
+    if (!hit) return
+    const cell = this.metaValue.cell_size_m * this.meshFactor
+    // Elle regarde là où regarde la caméra.
+    const camera = this.scene.camera.position
+    const target = this.scene.controls.target
+    const heading = Math.atan2(target.x - camera.x, -(target.z - camera.z))
+    this.niva = this.nivaApi.createNivaState(hit.col * cell, hit.row * cell, heading)
+    this.nivaPlacing = false
+    this.lastNivaTick = null
+    this.scene.showNiva(true)
+    this.nivaLights ||= { low: this.scene.night, bar: false }
+    this.scene.setNivaLights(this.nivaLights)
+    this.renderNivaControls()
+  }
+
+  parkNiva() {
+    this.niva = null
+    this.nivaPlacing = false
+    this.scene.showNiva(false)
+    this.resetNivaInput()
+    this.renderNivaControls()
+  }
+
+  // Reposer la Niva ailleurs, sans la ranger.
+  moveNiva() {
+    this.nivaPlacing = true
+    this.renderNivaControls()
+  }
+
+  setLighting(event) {
+    this.applyNight(event.params.value === 'night')
+  }
+
+  applyNight(on) {
+    this.scene.setNight(on)
+    // La nuit, les phares s'allument d'office.
+    if (on && this.nivaLights) this.nivaLights = { ...this.nivaLights, low: true }
+    if (this.nivaLights) this.scene.setNivaLights(this.nivaLights)
+    this.syncChoice('lighting', on ? 'night' : 'day')
+    this.renderNivaControls()
+  }
+
+  toggleNivaLight(event) {
+    this.switchNivaLight(event.params.value)
+  }
+
+  switchNivaLight(which) {
+    this.nivaLights = { low: false, bar: false, ...this.nivaLights }
+    this.nivaLights[which] = !this.nivaLights[which]
+    this.scene.setNivaLights(this.nivaLights)
+    this.renderNivaControls()
+  }
+
+  setNivaCamera(event) {
+    this.switchNivaCamera(event.params.value)
+  }
+
+  switchNivaCamera(mode) {
+    this.scene.setCameraMode(mode)
+    this.syncChoice('nivaCamera', mode)
+  }
+
+  // Le pavé tactile : maintenir une flèche, comme une touche.
+  nivaPadDown(event) {
+    event.preventDefault()
+    this.nivaInput[event.params.key] = true
+  }
+
+  nivaPadUp(event) {
+    this.nivaInput[event.params.key] = false
+  }
+
+  resetNivaInput() {
+    this.nivaInput = { up: false, down: false, left: false, right: false, brake: false }
+  }
+
+  bindNivaKeys() {
+    if (this.onNivaKey) return
+    this.resetNivaInput()
+    const keys = {
+      ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down',
+      ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', Space: 'brake',
+    }
+    this.onNivaKey = (event) => {
+      if (!this.niva && !this.nivaPlacing) return
+      if (event.target.closest?.('input, textarea, select, [contenteditable]')) return
+      const down = event.type === 'keydown'
+      if (down && event.code === 'Escape' && this.nivaPlacing) {
+        if (this.niva) { this.nivaPlacing = false; this.renderNivaControls() } else this.parkNiva()
+        return
+      }
+      if (!this.niva) return
+      const key = keys[event.code]
+      if (key) {
+        event.preventDefault()
+        this.nivaInput[key] = down
+        return
+      }
+      if (!down || event.repeat || event.metaKey || event.ctrlKey || event.altKey) return
+      if (event.code === 'KeyH') this.switchNivaLight('low')
+      else if (event.code === 'KeyL') this.switchNivaLight('bar')
+      else if (event.code === 'KeyN') this.applyNight(!this.scene.night)
+      else if (event.code === 'KeyC') this.switchNivaCamera(this.scene.cameraMode === 'chase' ? 'orbit' : 'chase')
+    }
+    // Une fenêtre qui perd le focus ne doit pas laisser l'accélérateur enfoncé.
+    this.onNivaBlur = () => this.resetNivaInput()
+    window.addEventListener('keydown', this.onNivaKey)
+    window.addEventListener('keyup', this.onNivaKey)
+    window.addEventListener('blur', this.onNivaBlur)
+  }
+
+  unbindNivaKeys() {
+    if (!this.onNivaKey) return
+    window.removeEventListener('keydown', this.onNivaKey)
+    window.removeEventListener('keyup', this.onNivaKey)
+    window.removeEventListener('blur', this.onNivaBlur)
+    this.onNivaKey = null
+  }
+
+  tickNiva() {
+    if (!this.niva || this.nivaPlacing) return
+    const now = performance.now()
+    const dt = this.lastNivaTick ? (now - this.lastNivaTick) / 1000 : 0
+    this.lastNivaTick = now
+    const keys = this.nivaInput
+    const input = {
+      throttle: (keys.up ? 1 : 0) - (keys.down ? 1 : 0),
+      steer: (keys.right ? 1 : 0) - (keys.left ? 1 : 0),
+      brake: keys.brake,
+    }
+    this.nivaApi.stepNiva(this.niva, input, this.nivaTerrain(), dt)
+    this.scene.updateNiva(this.niva, dt)
+    if (!this.lastNivaHud || now - this.lastNivaHud > 120) {
+      this.lastNivaHud = now
+      this.renderNivaHud()
+    }
+  }
+
+  // Le relief que la Niva lit : le terrain nu à 1 m, creusé des aménagements
+  // actifs, l'occupation du sol et la hauteur de ce qui dépasse (arbres, toits).
+  nivaTerrain() {
+    const ground = this.ground || this.full.heights
+    if (this.nivaTerrainCache?.ground === ground) return this.nivaTerrainCache
+    const { cols, rows, heights: original } = this.full
+    const cell = this.metaValue.cell_size_m
+    const { surface, landcover } = this
+    this.nivaTerrainCache = {
+      ground,
+      width: (cols - 1) * cell,
+      depth: (rows - 1) * cell,
+      height(x, z) {
+        const fx = Math.min(cols - 1.001, Math.max(0, x / cell))
+        const fz = Math.min(rows - 1.001, Math.max(0, z / cell))
+        const c = Math.floor(fx)
+        const r = Math.floor(fz)
+        const tx = fx - c
+        const tz = fz - r
+        const i = r * cols + c
+        const north = ground[i] * (1 - tx) + ground[i + 1] * tx
+        const south = ground[i + cols] * (1 - tx) + ground[i + cols + 1] * tx
+        return north * (1 - tz) + south * tz
+      },
+      cell(x, z) {
+        const c = Math.round(x / cell)
+        const r = Math.round(z / cell)
+        if (c < 0 || r < 0 || c >= cols || r >= rows) return null
+        const i = r * cols + c
+        return {
+          landcover: landcover ? landcover[i] : null,
+          above: surface ? surface[i] - original[i] : 0,
+          dug: original[i] - ground[i],
+        }
+      },
+    }
+    return this.nivaTerrainCache
+  }
+
+  renderNivaControls() {
+    if (!this.hasNivaButtonTarget) return
+    const active = Boolean(this.niva)
+    this.nivaButtonTarget.setAttribute('aria-pressed', String(active || Boolean(this.nivaPlacing)))
+    this.nivaLabelTarget.textContent = active ? 'Ranger la Niva' : (this.nivaPlacing ? 'Annuler' : 'Prendre la Niva')
+    this.nivaHintTarget.classList.toggle('hidden', !this.nivaPlacing)
+    this.nivaOptionsTarget.classList.toggle('hidden', !active)
+    this.nivaHudTarget.classList.toggle('hidden', !active)
+    this.nivaPadTarget.classList.toggle('hidden', !active)
+    this.nivaKeysTarget.classList.toggle('hidden', !active)
+    if (this.hasHintTarget) this.hintTarget.classList.toggle('md:block', !active)
+    this.scene.renderer.domElement.classList.toggle('cursor-crosshair', Boolean(this.nivaPlacing))
+    const lights = this.nivaLights || {}
+    this.element.querySelectorAll('[data-niva-light]').forEach((button) => {
+      button.setAttribute('aria-pressed', String(Boolean(lights[button.dataset.nivaLight])))
+    })
+    if (!active) return
+    this.syncChoice('nivaCamera', this.scene.cameraMode)
+  }
+
+  renderNivaHud() {
+    const state = this.niva
+    this.nivaSpeedTarget.textContent = formatNumber(Math.abs(state.speed) * 3.6, 0)
+    const pitch = Math.round(state.pitch * 100)
+    this.nivaInfoTarget.textContent =
+      `Pente ${pitch > 0 ? '+' : ''}${pitch} % · dévers ${Math.round(Math.abs(state.roll) * 100)} % · ${formatNumber(state.ground, 0)} m`
+    const message = state.status || state.warning || ''
+    this.nivaStatusTarget.textContent = message
+    this.nivaStatusTarget.classList.toggle('hidden', !message)
+    this.nivaStatusTarget.classList.toggle('text-red-300', Boolean(state.status))
+    this.nivaStatusTarget.classList.toggle('text-amber-300', !state.status)
+  }
+
+  syncChoice(group, value) {
+    this.element.querySelectorAll(`[data-choice-group="${group}"] [aria-pressed]`).forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.mapReliefValueParam === value))
+    })
+  }
+
   // ---- La sonde : ce qu'on sait du point touché ------------------------------
 
   bindPicking() {
@@ -1484,7 +1722,8 @@ export default class extends Controller {
     element.addEventListener('pointerup', (event) => {
       const start = this.pointerStart
       if (!start || Math.hypot(event.clientX - start[0], event.clientY - start[1]) > 5) return
-      if (this.tool) this.placeDesign(event)
+      if (this.nivaPlacing) this.placeNiva(event)
+      else if (this.tool) this.placeDesign(event)
       else this.probe(event)
     })
   }
