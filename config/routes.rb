@@ -514,6 +514,13 @@ Rails.application.routes.draw do
     get "observations/species", to: "map_observations#species", as: :map_observation_species
     get "biodiversite", to: "map_observations#page", as: :map_biodiversite
     resources :map_observations, path: "observations", only: %i[index create update]
+    # Les relevés de plantes bio-indicatrices : même création atomique, et
+    # `request_analysis` qui en redemande une (l'analyse elle-même passe par
+    # l'API agent).
+    get "bioindicators/new", to: "map_bioindicators#new", as: :new_map_bioindicator
+    resources :map_bioindicators, path: "bioindicators", only: %i[index create update] do
+      post :request_analysis, on: :member
+    end
     # La carte du jour (phase 3) : occupation au jour choisi, panneau du groupe
     # présent, gîtes et salles restant à tracer. Lecture seule.
     get "occupancy", to: "map_venues#occupancy", as: :map_occupancy
@@ -1010,6 +1017,9 @@ Rails.application.routes.draw do
       # import agent. Espèces, variétés et plantes (sur `notion_url`) sont des
       # UPSERT — un import rejoué ne double rien.
       resources :plant_species, only: [:index, :show, :create, :update]
+      # Les fiches des plantes bio-indicatrices : POST est un UPSERT sur le nom
+      # latin, une analyse rejouée complète la fiche au lieu de la doubler.
+      resources :bioindicator_species, only: [:index, :show, :create, :update]
       resources :plant_varieties, only: [:index, :show, :create]
       # `map_notes` / `map_tasks` : les notes et tâches de la CARTE, distinctes
       # des post-it du calendrier (`notes`) et des tâches du collectif (`tasks`).

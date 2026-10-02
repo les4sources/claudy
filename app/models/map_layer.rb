@@ -10,8 +10,9 @@
 class MapLayer < ApplicationRecord
   # `venues` (phase 3) vient en tête : c'est la carte du jour, la vue par défaut.
   # `design` : les aménagements à l'essai dessinés sur le relief 3D (baissières,
-  # keylines, mares), qu'on simule avant de creuser.
-  KINDS = %w[venues management welcome plants network comments sketch biodiversity design].freeze
+  # keylines, mares), qu'on simule avant de creuser. `bioindicators` : les
+  # relevés photo de plantes bio-indicatrices, analysés ensuite par Claude.
+  KINDS = %w[venues management welcome plants network comments sketch biodiversity design bioindicators].freeze
   MULTIPLE_KINDS = %w[network sketch].freeze
 
   KIND_LABELS = {
@@ -23,7 +24,8 @@ class MapLayer < ApplicationRecord
     "comments" => "Commentaires",
     "sketch" => "Notes manuscrites",
     "biodiversity" => "Biodiversité",
-    "design" => "Aménagements à l'essai"
+    "design" => "Aménagements à l'essai",
+    "bioindicators" => "Bio-indicatrices"
   }.freeze
 
   # Les réseaux (phase 9) : une couche `network` par réseau, reconnue par

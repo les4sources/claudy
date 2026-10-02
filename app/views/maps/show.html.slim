@@ -157,6 +157,11 @@
                 / Biodiversité (phase 13) : l'adresse de la fiche d'un nouveau
                   relevé, et la liste filtrée des relevés, chargée à la demande
                   et rechargée par la carte après chaque enregistrement.
+                / Bio-indicatrices : l'adresse de la fiche d'un nouveau relevé
+                  photo, et la liste filtrable (statut, indicateur de sol).
+                - if couche.kind == "bioindicators"
+                  li.hidden.pl-6 data-new-bioindicator-url=new_map_bioindicator_path data-layer-extra="bioindicators"
+                    = turbo_frame_tag MapBioindicatorsController::LIST_FRAME, src: map_bioindicators_path, loading: :lazy
                 - if couche.kind == "biodiversity"
                   li.hidden.pl-6 data-new-observation-url=new_map_observation_path data-layer-extra="biodiversity"
                     = turbo_frame_tag MapObservationsController::LIST_FRAME, src: map_observations_path, loading: :lazy
@@ -349,6 +354,8 @@
           | Touchez la carte pour commenter cet endroit
         p.hidden.items-center.gap-2.rounded-full.bg-stone-800/90.px-3.py-2.text-xs.text-white.shadow-lg data-mode-kind="biodiversity"
           | Touchez la carte pour noter une plante ou un animal
+        p.hidden.items-center.gap-2.rounded-full.bg-stone-800/90.px-3.py-2.text-xs.text-white.shadow-lg data-mode-kind="bioindicators"
+          | Touchez la carte, ou « À ma position », pour photographier des bio-indicatrices
 
       / La carte du jour (phase 3) : le jour affiché, en bas au centre, à portée
         de pouce sur un téléphone. Visible tant que la couche des lieux l'est.

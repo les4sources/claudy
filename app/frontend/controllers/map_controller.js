@@ -19,6 +19,7 @@ import { UnifiStatusPoller, handleUnifiEquipmentChange } from '~/utils/map_unifi
 import { CommentMode, commentMarker, isCommentFeature } from '~/utils/map_comments';
 import { SketchMode } from '~/utils/map_sketches';
 import { BiodiversityMode, isObservationFeature, observationMarker } from '~/utils/map_biodiversity';
+import { bioindicatorMarker, bioindicatorMode, isBioindicatorFeature } from '~/utils/map_bioindicators';
 import { MapSearch } from '~/utils/map_search';
 import { syncPointLabel } from '~/utils/map_labels';
 import { MeasureTool } from '~/utils/map_measure';
@@ -179,6 +180,8 @@ export default class extends Controller {
     this.sketches = new SketchMode(this);
     // Phase 13 : le mode Biodiversité (utils/map_biodiversity.js).
     this.biodiversity = new BiodiversityMode(this);
+    // Les plantes bio-indicatrices : la même mécanique, sa propre couche.
+    this.bioindicators = bioindicatorMode(this);
     // Phase 14 : la recherche du mode actif (utils/map_search.js).
     this.search = new MapSearch(this);
     // Phase 14 : l'outil Mesure, dans tous les modes (utils/map_measure.js).
@@ -208,6 +211,7 @@ export default class extends Controller {
     this.search?.destroy();
     this.measure?.destroy();
     this.biodiversity?.destroy();
+    this.bioindicators?.destroy();
     this.geoportailInfo?.destroy();
     if (this.map) {
       this.map.remove();
@@ -444,12 +448,14 @@ export default class extends Controller {
     this.comments?.onMapClick(event);
     // En mode Biodiversité, toucher la carte ouvre un nouveau relevé.
     this.biodiversity?.onMapClick(event);
+    this.bioindicators?.onMapClick(event);
     // Hors de tout mode et de tout tracé, une couche du Géoportail affichée
     // répond au clic : ce qu'elle sait de l'endroit touché, dans une bulle.
     const busy =
       this.placement?.active ||
       this.comments?.active ||
       this.biodiversity?.active ||
+      this.bioindicators?.active ||
       this.sketches?.activeId ||
       this.map.pm?.globalDrawModeEnabled?.() ||
       this.map.pm?.globalEditModeEnabled?.() ||
@@ -482,6 +488,7 @@ export default class extends Controller {
         if (isNetworkFeature(feature)) return networkNodeMarker(L, feature, latlng);
         if (isCommentFeature(feature)) return commentMarker(L, feature, latlng);
         if (isObservationFeature(feature)) return observationMarker(L, feature, latlng);
+        if (isBioindicatorFeature(feature)) return bioindicatorMarker(L, feature, latlng);
         if (this.isWelcome(feature)) return welcomeMarker(L, feature, latlng);
         return L.circleMarker(latlng, this.featureStyle(feature, false));
       },
@@ -510,7 +517,7 @@ export default class extends Controller {
       const plant = isPlantFeature(feature);
       // Un relevé (phase 13) et un nœud de réseau (phase 9) aussi ; le nom d'un
       // objet de réseau n'apparaît qu'au zoom 19.
-      const observation = isObservationFeature(feature);
+      const observation = isObservationFeature(feature) || isBioindicatorFeature(feature);
       const node = isNetworkFeature(feature) && feature.geometry?.type === 'Point';
       const network = isNetworkFeature(feature) ? ' map-network-label' : '';
       const aside = plant || observation || node;
@@ -545,6 +552,7 @@ export default class extends Controller {
       if (this.comments?.interceptFeatureClick(event, feature)) return;
       // En mode Biodiversité, de même : le relevé se pose là où l'on touche.
       if (this.biodiversity?.interceptFeatureClick(event, feature)) return;
+      if (this.bioindicators?.interceptFeatureClick(event, feature)) return;
       // Pendant un tracé, le clic appartient à Geoman (il pose un sommet) : sans
       // cette sortie, poser un point DANS une zone ouvrait la fiche de la zone.
       if (this.map.pm?.globalDrawModeEnabled?.()) {
@@ -700,6 +708,7 @@ export default class extends Controller {
     if (!editable) this.disableTools();
     this.comments?.onActivate(kind);
     this.biodiversity?.onActivate(kind);
+    this.bioindicators?.onActivate(kind);
     // Changer de couche change de mode de recherche : la recherche s'efface.
     this.search?.onActivate(id, kind);
     // La légende des zones d'accueil (phase 4) accompagne la couche active.
@@ -887,6 +896,11 @@ export default class extends Controller {
     this.biodiversity?.focus(event.currentTarget.dataset.featureId);
   }
 
+  // Une ligne de la liste des bio-indicatrices, de même.
+  focusBioindicator(event) {
+    this.bioindicators?.focus(event.currentTarget.dataset.featureId);
+  }
+
   // Phase 11 : « Masquer les résolus », sous la couche Commentaires.
   toggleResolvedComments(event) {
     this.comments?.toggleResolved(event.currentTarget.checked);
@@ -977,6 +991,7 @@ export default class extends Controller {
         }
         this.comments?.highlight(layer, selected);
         this.biodiversity?.highlight(layer, selected);
+        this.bioindicators?.highlight(layer, selected);
       });
     });
     // `setIcon` remplace l'élément du marqueur : la vue « ce mois-ci » doit
@@ -1029,6 +1044,7 @@ export default class extends Controller {
       this.closePanel();
       if (layerId) this.loadLayer(layerId);
       this.biodiversity?.onDeleted(layerId);
+      this.bioindicators?.onDeleted(layerId);
       return;
     }
 
@@ -1063,6 +1079,7 @@ export default class extends Controller {
       delete panel.dataset.featureSaved;
       this.discardPending();
       this.biodiversity?.onSaved(panel);
+      this.bioindicators?.onSaved(panel);
       this.selectedFeatureId = id;
       // La couche de l'objet enregistré, pas forcément la couche active ; si
       // c'est celle des lieux, l'occupation et la liste « À tracer » suivent.

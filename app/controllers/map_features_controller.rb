@@ -72,7 +72,10 @@ class MapFeaturesController < BaseController
     @feature.photos.find(params[:photo_id]).purge_later
     @feature.reload
     # Un relevé de biodiversité (phase 13) garde sa propre fiche.
-    partial = @feature.observation_point? ? "maps/observation_panel" : "maps/feature_panel"
+    partial = if @feature.observation_point? then "maps/observation_panel"
+              elsif @feature.bioindicator_point? then "maps/bioindicator_panel"
+              else "maps/feature_panel"
+              end
     render turbo_stream: turbo_stream.update(PANEL_FRAME, partial: partial, locals: { feature: @feature })
   end
 

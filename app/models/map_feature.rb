@@ -7,7 +7,7 @@
 # données (`{fr, en, nl}`, décision 4) avec repli sur le français : seuls les
 # objets vus par les hôtes (couche Accueil, phase 4) auront besoin des trois.
 class MapFeature < ApplicationRecord
-  FEATURE_KINDS = %w[zone path point plant node line comment observation lodging space].freeze
+  FEATURE_KINDS = %w[zone path point plant node line comment observation lodging space bioindicator].freeze
   GEOMETRY_TYPES = %w[Point LineString Polygon].freeze
   LOCALES = %w[fr en nl].freeze
   # Ce qu'un objet de la carte peut représenter (phase 3). Liste fermée : le
@@ -98,6 +98,9 @@ class MapFeature < ApplicationRecord
   # Un relevé de biodiversité (phase 13) : règne, espèce, date, observateur et
   # effectif dans les `properties` d'un point `observation`.
   include MapFeatureObservation
+  # Un relevé de plantes bio-indicatrices : photos, date, statut d'analyse et
+  # analyse dans les `properties` d'un point `bioindicator`.
+  include MapFeatureBioindicator
 
   validates :feature_kind, inclusion: { in: FEATURE_KINDS }
   validate :geometry_is_valid_geojson
@@ -224,7 +227,7 @@ class MapFeature < ApplicationRecord
   # objet de la carte.
   def display_name
     name(:fr).presence || venue_names.presence || (plant&.display_name if plant_point?) ||
-      (species_common if observation_point?)
+      (species_common if observation_point?) || (bioindicator_title if bioindicator_point?)
   end
 
   def plant_point? = feature_kind == "plant"
@@ -253,7 +256,7 @@ class MapFeature < ApplicationRecord
         photos_count: photos.size,
         properties: properties
       }.merge(plant_geojson_properties).merge(network_geojson_properties).merge(comment_geojson_properties)
-       .merge(observation_geojson_properties).merge(design_geojson_properties)
+       .merge(observation_geojson_properties).merge(design_geojson_properties).merge(bioindicator_geojson_properties)
     }
   end
 

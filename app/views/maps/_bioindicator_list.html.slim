@@ -1,0 +1,39 @@
+/ Les relevés de bio-indicatrices, du plus récent au plus ancien, filtrables
+  par statut (à analyser, analysé) et par indicateur de sol (« où le sol
+  est-il engorgé ? »). Une ligne centre la carte sur le relevé et ouvre sa
+  fiche.
+- select_class = "h-9 min-w-0 rounded-lg border-stone-300 py-0 pl-2 pr-7 text-xs shadow-sm focus:border-forest focus:ring-forest"
+div data-bioindicator-list="true"
+  = form_with url: map_bioindicators_path, method: :get, class: "flex flex-wrap gap-1.5" do
+    label.sr-only for="bioindicators_status" Statut
+    = select_tag :status, options_for_select([["Tous les relevés", ""]] + MapFeatureBioindicator::BIOINDICATOR_STATUSES.map { |k, v| [v, k] }, @filters[:status]),
+                 id: "bioindicators_status", onchange: "this.form.requestSubmit()", class: select_class
+    label.sr-only for="bioindicators_indicator" Indicateur
+    = select_tag :indicator, options_for_select([["Tous les indicateurs", ""]] + BioindicatorVocabulary::INDICATORS.map { |k, v| [v, k] }, @filters[:indicator]),
+                 id: "bioindicators_indicator", onchange: "this.form.requestSubmit()", class: "#{select_class} max-w-[12rem]"
+    noscript
+      button.h-9.rounded-lg.border.border-stone-300.px-3.text-xs type="submit" Filtrer
+
+  p.mt-2.text-xs.text-stone-500
+    span.font-semibold.text-stone-700 = "#{@total_count} relevé#{'s' if @total_count != 1}"
+    - if @to_analyze_count.positive?
+      = " · #{@to_analyze_count} à analyser"
+
+  - if @records.empty?
+    p.mt-3.text-xs.text-stone-400
+      = @filters.values.any? ? "Aucun relevé pour ce filtre." : "Aucun relevé pour l'instant : touchez la carte, ou « À ma position », et photographiez les plantes."
+  - else
+    ul class="mt-2 max-h-72 divide-y divide-stone-100 overflow-y-auto"
+      - @records.each do |record|
+        li
+          button[type="button" class="flex w-full items-start gap-2 px-1 py-2 text-left hover:bg-stone-50"
+                 data-bioindicator-row="true" data-feature-id=record.id
+                 data-action="click->map#focusBioindicator"]
+            span.mt-0.5.shrink-0 = bioindicator_glyph(record)
+            span.min-w-0.flex-1
+              span.block.truncate.text-sm.font-medium.text-stone-800 = record.bioindicator_title
+              - top = record.analysis_indicators.first(2)
+              - if top.any?
+                span.block.truncate.text-xs.text-stone-500 = top.map { |indicator| indicator[:label] }.join(" · ")
+              span class="block text-[0.7rem] text-stone-400"
+                = [record.properties.to_h["observed_on"] && l(Date.iso8601(record.properties["observed_on"]), format: :long), record.bioindicator_status_label, "#{record.photos.size} photo#{'s' if record.photos.size > 1}"].compact.join(" · ")

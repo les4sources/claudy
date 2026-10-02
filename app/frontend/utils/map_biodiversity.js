@@ -97,9 +97,24 @@ const GpsControl = L.Control.extend({
   },
 });
 
+// Le mode Biodiversité par défaut ; la couche Bio-indicatrices
+// (`utils/map_bioindicators.js`) en réutilise toute la mécanique (GPS,
+// marqueur provisoire, liste) avec ses propres réglages.
+export const BIODIVERSITY_MODE = {
+  kind: 'biodiversity',
+  newUrlKey: 'newObservationUrl',
+  listFrame: 'map_observations',
+  panelFlag: 'observationPanel',
+  notice: 'Touchez la carte pour y noter une plante ou un animal.',
+  isFeature: isObservationFeature,
+  icon: (leaflet, feature, selected) => observationIcon(leaflet, feature?.properties?.realm, selected),
+  pendingIcon: (leaflet) => observationIcon(leaflet, null, true),
+};
+
 export class BiodiversityMode {
-  constructor(controller) {
+  constructor(controller, options = BIODIVERSITY_MODE) {
     this.c = controller;
+    this.o = options;
     this.control = null;
     this.watchId = null;
     this.fix = null;
@@ -113,20 +128,21 @@ export class BiodiversityMode {
   }
 
   get active() {
-    return this.c.activeLayerKind === 'biodiversity';
+    return this.c.activeLayerKind === this.o.kind;
   }
 
   layerId() {
-    return this.c.layerNameTargets.find((button) => button.dataset.layerKind === 'biodiversity')?.dataset.layerId;
+    return this.c.layerNameTargets.find((button) => button.dataset.layerKind === this.o.kind)?.dataset.layerId;
   }
 
   newUrl() {
-    return this.c.element.querySelector('[data-new-observation-url]')?.dataset.newObservationUrl;
+    const attribute = this.o.newUrlKey.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+    return this.c.element.querySelector(`[data-${attribute}]`)?.dataset[this.o.newUrlKey];
   }
 
   onActivate(kind) {
-    if (kind === 'biodiversity') {
-      this.c.showNotice('Touchez la carte pour y noter une plante ou un animal.');
+    if (kind === this.o.kind) {
+      this.c.showNotice(this.o.notice);
       this.addControl();
     } else {
       this.stopGps();
@@ -138,7 +154,7 @@ export class BiodiversityMode {
   // touché ne s'ouvre pas : le relevé se pose là où l'on a touché. Un relevé
   // existant, lui, s'ouvre.
   interceptFeatureClick(event, feature) {
-    if (!this.active || isObservationFeature(feature)) return false;
+    if (!this.active || this.o.isFeature(feature)) return false;
     L.DomEvent.stopPropagation(event);
     this.onMapClick(event);
     return true;
@@ -168,7 +184,7 @@ export class BiodiversityMode {
     // `pendingLayer` : retiré par `discardPending` à la fermeture de la fiche
     // comme à l'enregistrement (la couche rechargée montre alors le vrai point).
     this.c.pendingLayer = L.marker(latlng, {
-      icon: observationIcon(L, null, true),
+      icon: this.o.pendingIcon(L),
       interactive: false,
       zIndexOffset: 1000,
     }).addTo(this.c.map);
@@ -191,15 +207,15 @@ export class BiodiversityMode {
 
   // Seules les pastilles dont l'état change sont redessinées.
   highlight(layer, selected) {
-    if (!layer.setIcon || !isObservationFeature(layer.feature) || layer.observationSelected === selected) return;
+    if (!layer.setIcon || !this.o.isFeature(layer.feature) || layer.observationSelected === selected) return;
     layer.observationSelected = selected;
-    layer.setIcon(observationIcon(L, layer.feature.properties?.realm, selected));
+    layer.setIcon(this.o.icon(L, layer.feature, selected));
     layer.setZIndexOffset(selected ? 1000 : 150);
   }
 
   // La liste du panneau suit chaque enregistrement et chaque suppression.
   onSaved(panel) {
-    if (panel?.dataset.observationPanel) this.refreshList();
+    if (panel?.dataset[this.o.panelFlag]) this.refreshList();
   }
 
   onDeleted(layerId) {
@@ -207,7 +223,7 @@ export class BiodiversityMode {
   }
 
   refreshList() {
-    const frame = this.c.element.querySelector('turbo-frame#map_observations');
+    const frame = this.c.element.querySelector(`turbo-frame#${this.o.listFrame}`);
     if (frame?.getAttribute('src')) frame.reload();
   }
 
