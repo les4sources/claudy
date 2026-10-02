@@ -136,4 +136,17 @@ namespace :map do
            "#{terrain.surface? ? ", surface jusqu'à #{meta.dig('surface', 'z_max').to_f.round(2)} m" : ''}."
     end
   end
+
+  # Les observations d'observations.be (lieu « Fonds d'Ahinvaux », 241623) dans
+  # la couche Biodiversité. Rejouable : met à jour ce qui existe, ajoute le reste.
+  namespace :biodiversity do
+    desc "Importer les observations d'observations.be dans la couche Biodiversité [LOCATION=241623]"
+    task import_observations_be: :environment do
+      location = ENV.fetch("LOCATION", "241623")
+      result = Maps::ObservationsBeImport.new(location_id: location, logger: ->(message) { puts "  #{message}" }).call
+      puts "observations.be (lieu #{location}) : #{result.created} créées, #{result.updated} mises à jour, " \
+           "#{result.skipped} ignorées, #{result.errors.size} en erreur."
+      result.errors.first(20).each { |error| puts "  ! #{error}" }
+    end
+  end
 end

@@ -28,9 +28,10 @@ RSpec.describe MapFeatureObservation, type: :model do
     expect(record.observation_count).to eq(12)
   end
 
-  it "exige le règne, parmi flore et faune" do
+  it "exige le règne, parmi flore, faune et fonge" do
     expect(observation("realm" => nil)).not_to be_valid
-    expect(observation("realm" => "fungi")).not_to be_valid
+    expect(observation("realm" => "minéral")).not_to be_valid
+    expect(observation("realm" => "fungi")).to be_valid
     expect(observation("realm" => "fauna")).to be_valid
   end
 

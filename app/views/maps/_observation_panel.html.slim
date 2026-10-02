@@ -33,6 +33,22 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
       .mb-3.rounded-lg.border.border-red-200.bg-red-50.px-3.py-2.text-xs.text-red-800 data-observation-errors="true"
         = feature.errors.full_messages.to_sentence
 
+    / Un relevé importé d'observations.be : d'où il vient, qui l'a fait, et le
+      lien vers sa fiche d'origine (photos, validation). Une réimportation
+      remplace ce qu'on aurait modifié ici.
+    - if feature.imported?
+      .mb-4.rounded-lg.border.border-sky-200.bg-sky-50.px-3.py-2.text-xs.text-sky-900 data-observation-source="true"
+        p
+          | Importé d'observations.be
+          - if feature.observer_name.present?
+            = " — observé par #{feature.observer_name}"
+          - if (photos = feature.properties.to_h["photos_count"].to_i).positive?
+            = " — #{photos} photo#{photos > 1 ? 's' : ''}"
+        - if feature.source_url.present?
+          = link_to "Voir la fiche d'origine sur observations.be", feature.source_url, target: "_blank", rel: "noopener",
+                    class: "mt-1 inline-block font-semibold text-sky-800 underline hover:text-sky-950"
+        p.mt-1.text-sky-700 Une nouvelle importation remplacera les changements faits ici.
+
     = form_with url: (persisted ? map_observation_path(feature) : map_observations_path), scope: :observation,
                 method: (persisted ? :patch : :post), builder: ActionView::Helpers::FormBuilder,
                 html: { class: "space-y-4" } do |f|
@@ -43,7 +59,7 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
       / Le règne : deux gros boutons, un seul choisi.
       fieldset
         legend.block.text-xs.font-semibold.text-stone-600 Règne
-        .mt-1.grid.grid-cols-2.gap-2
+        .mt-1.grid.grid-cols-3.gap-2
           - MapFeatureObservation::REALMS.each do |realm, label|
             label.relative.block.cursor-pointer
               = f.radio_button :realm, realm, checked: feature.realm == realm, required: true, class: "peer sr-only",
@@ -78,11 +94,18 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
           = f.label :count, "Effectif", class: "block text-xs font-semibold text-stone-600"
           = f.number_field :count, value: feature.observation_count, min: 1, step: 1, inputmode: "numeric", placeholder: "Facultatif",
                            class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
-      div
-        = f.label :observer_id, "Observateur", class: "block text-xs font-semibold text-stone-600"
-        = f.select :observer_id, options_for_select(users.map { |user| [user.display_name, user.id] }, feature.observer_id),
-                   { include_blank: false },
-                   class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+      / L'observateur d'un relevé importé n'a pas de compte Claudy : son nom
+        s'affiche, sans menu (l'enregistrer l'attribuerait à quelqu'un d'autre).
+      - if feature.imported?
+        div
+          p.block.text-xs.font-semibold.text-stone-600 Observateur
+          p.mt-1.text-sm.text-stone-800 data-observation-external-observer="true" = feature.observer_name.presence || "Inconnu"
+      - else
+        div
+          = f.label :observer_id, "Observateur", class: "block text-xs font-semibold text-stone-600"
+          = f.select :observer_id, options_for_select(users.map { |user| [user.display_name, user.id] }, feature.observer_id),
+                     { include_blank: false },
+                     class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
       div
         = f.label :description, "Notes", class: "block text-xs font-semibold text-stone-600"
         = f.text_area :description, value: feature.description_i18n.to_h["fr"], rows: 3,

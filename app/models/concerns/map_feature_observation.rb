@@ -20,8 +20,15 @@
 module MapFeatureObservation
   extend ActiveSupport::Concern
 
-  REALMS = { "flora" => "Flore", "fauna" => "Faune" }.freeze
+  # La fonge (champignons) n'est ni flore ni faune : observations.be la compte à
+  # part, et ses relevés y arrivent par l'import.
+  REALMS = { "flora" => "Flore", "fauna" => "Faune", "fungi" => "Fonge" }.freeze
   OBSERVATION_KEYS = %w[realm species_common species_latin observed_on observer_id count].freeze
+  # Un relevé venu d'ailleurs (observations.be) : sa source, son identifiant
+  # là-bas (clé de l'import, jamais deux fois le même), le lien vers sa fiche,
+  # l'observateur (qui n'a pas de compte Claudy), la précision du point (m), le
+  # nombre de photos et le statut de validation là-bas.
+  SOURCE_KEYS = %w[source source_id source_url observer_name accuracy photos_count validation].freeze
   SPECIES_MAX_LENGTH = 120
 
   included do
@@ -99,6 +106,10 @@ module MapFeatureObservation
     nil
   end
 
+  def source_url = properties.to_h["source_url"]
+  def observer_name = properties.to_h["observer_name"]
+  def imported? = properties.to_h["source"].present?
+
   def observer
     User.find_by(id: observer_id) if observer_id.present?
   end
@@ -114,7 +125,8 @@ module MapFeatureObservation
   def observation_geojson_properties
     return {} unless observation_point?
 
-    { realm: realm, species: species_common, species_latin: species_latin, observed_on: properties.to_h["observed_on"] }
+    { realm: realm, species: species_common, species_latin: species_latin, observed_on: properties.to_h["observed_on"],
+      source: properties.to_h["source"], source_url: properties.to_h["source_url"] }.compact
   end
 
   private
@@ -136,7 +148,10 @@ module MapFeatureObservation
 
   def observation_properties_are_valid
     errors.add(:base, "Un relevé est un point de la carte.") unless geometry_type == "Point"
-    errors.add(:base, "Choisissez Flore ou Faune.") unless REALMS.key?(realm)
+    errors.add(:base, "Choisissez Flore, Faune ou Fonge.") unless REALMS.key?(realm)
+    if (url = properties.to_h["source_url"]).present? && !url.to_s.match?(%r{\Ahttps?://\S+\z})
+      errors.add(:base, "Le lien vers la source doit être une adresse web.")
+    end
     if species_common.blank?
       errors.add(:base, "Indiquez l'espèce observée.")
     elsif species_common.length > SPECIES_MAX_LENGTH || species_latin.to_s.length > SPECIES_MAX_LENGTH

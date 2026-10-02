@@ -7,7 +7,7 @@
 div data-observation-list="true"
   = form_with url: url, method: :get, class: "flex flex-wrap gap-1.5" do
     label.sr-only for="observations_realm" Règne
-    = select_tag :realm, options_for_select([["Flore et faune", ""]] + MapFeatureObservation::REALMS.map { |k, v| [v, k] }, @filters[:realm]),
+    = select_tag :realm, options_for_select([["Tous les règnes", ""]] + MapFeatureObservation::REALMS.map { |k, v| [v, k] }, @filters[:realm]),
                  id: "observations_realm", onchange: "this.form.requestSubmit()", class: select_class
     label.sr-only for="observations_species" Espèce
     = select_tag :species, options_for_select([["Toutes les espèces", ""]] + @species_options, @filters[:species]),
@@ -40,7 +40,7 @@ div data-observation-list="true"
             - if observation.species_latin.present?
               span.block.truncate.text-xs.italic.text-stone-500 = observation.species_latin
             span class="block text-[0.7rem] text-stone-400"
-              = [observation.observed_on && l(observation.observed_on, format: :long), observer&.display_name].compact.join(" · ")
+              = [observation.observed_on && l(observation.observed_on, format: :long), observer&.display_name || observation.observer_name, ("observations.be" if observation.imported?)].compact.join(" · ")
         - if on_map
           li
             button[type="button" class="flex w-full items-start gap-2 px-1 py-2 text-left hover:bg-stone-50"
