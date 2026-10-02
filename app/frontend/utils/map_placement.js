@@ -17,6 +17,17 @@ export const GPS_MAX_ACCURACY = 25;
 const GPS_WATCH_MS = 45000;
 const GPS_COLOR = '#1F5F4A';
 const GPS_WEAK_COLOR = '#C97B3D';
+// Marge pour l'horloge : une position datée d'une seconde avant l'appui est
+// bien celle qu'on vient de demander.
+const GPS_STALE_SLACK_MS = 1000;
+
+// Malgré `maximumAge: 0`, un téléphone (Safari surtout) renvoie d'abord sa
+// dernière position en cache : celle de l'appui précédent, souvent précise.
+// Comme on garde la meilleure position vue, elle bloquait toutes les
+// suivantes et on restait « relocalisé » au premier endroit. On l'écarte.
+export function isFreshFix(position, startedAt) {
+  return !position?.timestamp || position.timestamp >= startedAt - GPS_STALE_SLACK_MS;
+}
 
 export class PlantPlacement {
   constructor(controller) {
@@ -35,6 +46,7 @@ export class PlantPlacement {
     document.addEventListener('keydown', this.onKeydown);
     if (this.c.hasUnplacedFrameTarget) {
       this.c.unplacedFrameTarget.addEventListener('turbo:frame-load', () => this.onListLoad());
+      this.c.unplacedFrameTarget.addEventListener('turbo:before-frame-render', (event) => this.keepSearchFocus(event));
     }
   }
 
@@ -69,8 +81,9 @@ export class PlantPlacement {
     // cacheraient la carte : on pose au doigt, il faut la voir.
     if (!this.wide) {
       this.c.closePanel();
-      if (this.c.hasPanelBodyTarget && !this.c.panelBodyTarget.classList.contains('hidden')) this.c.togglePanel();
+      this.c.collapsePanelOnPhone();
     }
+    this.c.updateModeBar();
   }
 
   // Une couche Plantes masquée cacherait les points qu'on pose.
@@ -93,6 +106,7 @@ export class PlantPlacement {
     if (!this.c.hasPlacementDrawerTarget) return;
     this.c.placementDrawerTarget.classList.add('hidden');
     this.c.placementDrawerTarget.classList.remove('flex');
+    this.c.updateModeBar();
   }
 
   get drawerOpen() {
@@ -109,6 +123,26 @@ export class PlantPlacement {
     const list = this.c.unplacedFrameTarget.querySelector('[data-unplaced-list]');
     if (list) this.setCount(Number(list.dataset.unplacedTotal));
     this.markSelection();
+  }
+
+  // Sur iPad et iPhone, remplacer le champ de recherche à chaque lettre ferme
+  // le clavier. Tant qu'un champ des filtres a le focus, on ne remplace donc
+  // que les résultats : le formulaire, vivant, ne quitte jamais la page.
+  keepSearchFocus(event) {
+    const form = this.c.unplacedFrameTarget.querySelector('form');
+    if (!form?.contains(document.activeElement)) return;
+    event.detail.render = (current, next) => {
+      const list = current.querySelector('[data-unplaced-list]');
+      const nextList = next.querySelector('[data-unplaced-list]');
+      const results = current.querySelector('[data-unplaced-results]');
+      const nextResults = next.querySelector('[data-unplaced-results]');
+      if (!list || !nextList || !results || !nextResults) {
+        current.replaceChildren(...next.childNodes);
+        return;
+      }
+      [...nextList.attributes].forEach(({ name, value }) => list.setAttribute(name, value));
+      results.replaceWith(nextResults);
+    };
   }
 
   markSelection() {
@@ -340,6 +374,7 @@ export class PlantPlacement {
     this.forceArmed = false;
     this.setHint('Recherche de la position… restez à côté de la plante.');
     this.renderGpsConfirm();
+    this.gpsStartedAt = Date.now();
     this.watchId = navigator.geolocation.watchPosition(
       (position) => this.onGpsFix(position),
       (error) => this.onGpsError(error),
@@ -349,6 +384,7 @@ export class PlantPlacement {
   }
 
   onGpsFix(position) {
+    if (!isFreshFix(position, this.gpsStartedAt)) return;
     const { latitude, longitude, accuracy } = position.coords;
     if (this.fix && accuracy > this.fix.accuracy) return;
     const first = !this.fix;

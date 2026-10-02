@@ -1,0 +1,40 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: (@message.subject.presence || "(sans sujet)"),
+           links: [(button_to("Ignorer", ignore_finance_mail_message_path(@message), method: :post, form_class: "inline", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") if @message.pending?),
+                   (button_to("Remettre dans la file", restore_finance_mail_message_path(@message), method: :post, form_class: "inline", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") unless @message.pending?),
+                   link_to("Toute la file", finance_mail_messages_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")].compact
+
+- unless @message.pending?
+  .mb-4.rounded-lg.border.border-gray-200.bg-gray-50.px-4.py-3.text-sm.text-gray-700
+    strong= MailMessage::STATUS_LABELS[@message.status]
+    - if @message.handled_by
+      = " par #{@message.handled_by.try(:display_name) || @message.handled_by.email}"
+    - if @message.handled_at
+      = " le #{l(@message.handled_at, format: :short)}"
+    | .
+
+.grid.gap-4(class="lg:grid-cols-5")
+  .space-y-4(class="lg:col-span-2")
+    .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+      p.text-sm.font-medium.text-gray-900= @message.sender_label
+      p.text-xs.text-gray-400
+        = @message.from_address
+        = " · #{l(@message.received_at, format: :long)}"
+        = " · #{@message.mail_account.address}"
+      - if (nature = mail_nature_label(@message))
+        p.mt-2.text-xs.text-gray-500
+          | Jev y voit :
+          span.ml-1.inline-flex.rounded-full.bg-gray-100.px-2.text-gray-700= nature
+      - if @message.triage["error"].present?
+        p.mt-2.text-xs.text-amber-700= "Pas de proposition : #{@message.triage['error']}"
+      .mt-3.border-t.border-gray-100.pt-3.text-sm.text-gray-700.whitespace-pre-line.break-words= @message.body_text.presence || "(corps vide)"
+
+  .space-y-4(class="lg:col-span-3")
+    - if @message.mail_attachments.empty?
+      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.text-sm.text-gray-500
+        | Aucune pièce jointe. Si la facture est derrière un lien, téléchargez-la puis déposez-la dans
+        = link_to " une nouvelle facture", new_finance_purchase_invoice_path, class: "text-blue-500 hover:underline"
+        | .
+    - @message.mail_attachments.each do |attachment|
+      = render "finance/mail_messages/attachment", attachment: attachment, third_parties: @third_parties, entities: @entities

@@ -22,8 +22,10 @@ module Kitchen
   class GroupedNotifier
     MOMENT_ORDER = %w[midi gouter soir].freeze
 
+    # Les services passés sont écartés : on ne demande pas à la cuisine de
+    # préparer ce qui a déjà eu lieu (saisie a posteriori d'un séjour terminé).
     def initialize(orders:)
-      @orders = Array(orders).compact
+      @orders = Array(orders).compact.reject(&:past?)
     end
 
     def call

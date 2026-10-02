@@ -71,3 +71,9 @@ h3.mb-3.text-lg.font-semibold.text-gray-900 Affectations
         = f.label :reason, "Motif", class: "block text-xs font-medium text-gray-500"
         = f.text_field :reason, class: "mt-1 w-80 rounded-md border-gray-300 text-sm shadow-sm"
       button.text-sm.text-gray-500(class="hover:text-gray-700" type="submit") Exclure
+
+/ Fil de commentaires (Michael, 2026-09-30) : ce qu'on sait d'une ligne sans
+  la réécrire — « acompte sur le loyer T3, le solde suit ». Hors du bloc
+  d'affectation : une ligne comptabilisée ou exclue se commente encore.
+.mt-8
+  = render Comments::ThreadComponent.new(commentable: @entry, current_user: current_user)

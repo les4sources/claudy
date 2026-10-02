@@ -104,6 +104,7 @@ class MapFeature < ApplicationRecord
   validate :venues_traced_once
   validate :welcome_properties_are_known
   validate :network_properties_are_known
+  validate :design_properties_are_known
 
   scope :ordered, -> { order(:position, :id) }
 
@@ -252,9 +253,19 @@ class MapFeature < ApplicationRecord
         photos_count: photos.size,
         properties: properties
       }.merge(plant_geojson_properties).merge(network_geojson_properties).merge(comment_geojson_properties)
-       .merge(observation_geojson_properties)
+       .merge(observation_geojson_properties).merge(design_geojson_properties)
     }
   end
+
+  # Un aménagement à l'essai (vue 3D du relief) : son type et ses cotes, de
+  # quoi le redessiner et le resimuler sans relire la couche.
+  def design_geojson_properties
+    return {} unless map_layer&.design?
+
+    { design: design }
+  end
+
+  def design = properties.to_h["design"].to_h
 
   # Un objet d'une couche réseau (phase 9) : de quoi le dessiner sans relire
   # la couche — sa couleur, son type de nœud ou son calibre, sa longueur.
@@ -391,6 +402,28 @@ class MapFeature < ApplicationRecord
   # la carte ne saurait pas de quelle couleur la peindre. Et un objet d'accueil
   # sans nom français n'a rien à dire à un hôte : le français est la langue de
   # repli de toutes les autres.
+  # Les cotes admises d'un aménagement à l'essai (en mètres, pente en %). Assez
+  # larges pour tout ce qu'on creuse à la main ou à la pelle, assez serrées pour
+  # qu'une faute de frappe ne creuse pas un lac de 300 m de profondeur.
+  DESIGN_TYPES = { "swale" => "Baissière", "keyline" => "Keyline", "pond" => "Mare", "hedge" => "Haie sur courbe" }.freeze
+  DESIGN_RANGES = { "width" => 0.5..10, "depth" => 0.1..3, "berm" => 0..2, "grade" => 0..5, "radius" => 1..40 }.freeze
+
+  def design_properties_are_known
+    return unless map_layer&.design?
+
+    type = design["type"]
+    return errors.add(:base, "Le type d'aménagement « #{type} » est inconnu") unless DESIGN_TYPES.key?(type)
+
+    DESIGN_RANGES.each do |key, range|
+      value = design[key]
+      next if value.nil?
+
+      errors.add(:base, "La cote « #{key} » (#{value}) sort de #{range.min} à #{range.max}") unless value.is_a?(Numeric) && range.cover?(value)
+    end
+    expected = type == "pond" ? "Polygon" : "LineString"
+    errors.add(:geometry, "d'un aménagement « #{DESIGN_TYPES[type]} » doit être un #{expected}") if geometry.is_a?(Hash) && geometry_type != expected
+  end
+
   def welcome_properties_are_known
     errors.add(:base, "Le type de zone « #{access} » est inconnu") if access.present? && !ACCESS_LEVELS.key?(access)
     errors.add(:base, "L'icône « #{icon} » est inconnue") if icon.present? && !WELCOME_ICONS.key?(icon)

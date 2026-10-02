@@ -13,7 +13,7 @@ class PlantsController < BaseController
 
   UNPLACED_FRAME = "plants_unplaced".freeze
 
-  before_action :get_plant, except: %i[index unplaced new create]
+  before_action :get_plant, except: %i[index unplaced new create identify]
 
   # GET /map/plantes — toutes les plantes du domaine, en liste : recherche,
   # filtres statut, santé, zone, strate, placée ou non ; tri par numéro. Les
@@ -106,6 +106,18 @@ class PlantsController < BaseController
     end
   end
 
+  # POST /map/plants/identify — « Quelle est cette plante ? » : une à cinq
+  # photos du même individu, et les espèces probables selon Pl@ntNet, à valider
+  # ou refuser dans la fiche (`plant-identify`). Rien n'est enregistré sur la
+  # plante ici : l'espèce retenue remplit le champ Espèce, les photos gardées
+  # rejoignent la plante à l'enregistrement de la fiche.
+  def identify
+    @identification = PlantNet::Identify.new(files: params[:photos]).run!
+    render partial: "plants/identification", locals: { identification: @identification }
+  rescue PlantNet::Identify::Invalid, PlantNet::Client::Error => e
+    render partial: "plants/identification", locals: { error: e.message }, status: :unprocessable_content
+  end
+
   # POST /map/plants/:id/place — pose la plante sur la carte, ou déplace son
   # point (clic sur la carte, « Je suis devant », glisser). La carte appelle en
   # JSON et enchaîne elle-même ; en Turbo Stream, la fiche se rouvre placée.
@@ -171,7 +183,7 @@ class PlantsController < BaseController
     params.require(:plant).permit(:name, :number, :zone, :status, :health, :production, :habit, :stratum,
                                   :population, :stock_type, :plant_count, :nursery, :purchase_price,
                                   :planted_on, :planted_year, :altitude, :notion_url, :notes,
-                                  :species_name, :variety_name, photos: [])
+                                  :species_name, :species_latin_name, :species_family, :variety_name, photos: [])
   end
 
   def assign_plant
@@ -179,7 +191,7 @@ class PlantsController < BaseController
     @assign_errors = []
     @typed_names = attrs.slice(:species_name, :variety_name).to_h.symbolize_keys
 
-    simple = attrs.except(:species_name, :variety_name, :purchase_price, :photos, :number)
+    simple = attrs.except(:species_name, :species_latin_name, :species_family, :variety_name, :purchase_price, :photos, :number)
     @plant.assign_attributes(simple)
     # « #42 » comme « 42 », « 9,1 » comme « 9.1 ».
     @plant.number = attrs[:number].to_s.strip.delete_prefix("#").tr(",", ".").presence if attrs.key?(:number)
@@ -206,12 +218,15 @@ class PlantsController < BaseController
   end
 
   # L'espèce par son nom (créée si besoin), puis la variété au sein de cette
-  # espèce. Vider l'espèce retire aussi la variété.
+  # espèce. Vider l'espèce retire aussi la variété. Une espèce retenue par
+  # identification photo apporte son nom latin et sa famille : ils ne servent
+  # qu'à créer une espèce nouvelle, jamais à réécrire une existante.
   def assign_species(attrs)
     species_name = attrs.key?(:species_name) ? attrs[:species_name].to_s.squish : @plant.plant_species&.name.to_s
     variety_name = attrs[:variety_name].to_s.squish
+    botany = { latin_name: attrs[:species_latin_name], family: attrs[:species_family] }.transform_values { |v| v.to_s.squish }.compact_blank
 
-    species = species_name.present? ? PlantSpecies.find_or_create_by_name!(species_name, created_by: current_user) : nil
+    species = species_name.present? ? PlantSpecies.find_or_create_by_name!(species_name, created_by: current_user, **botany) : nil
     @plant.plant_species = species
 
     if variety_name.blank?

@@ -18,6 +18,11 @@ class CatalogItemDecorator < ApplicationDecorator
     format_cents(price_on(on)&.reference_price_cents)
   end
 
+  # Marge sur coût du palier en vigueur, colorée (voir CatalogHelper).
+  def margin(on: Date.current)
+    h.catalog_margin_tag(price_on(on))
+  end
+
   # « depuis le 1 septembre 2026 », ou l'absence de palier dite franchement.
   def price_period(on: Date.current)
     price = price_on(on)
@@ -31,6 +36,7 @@ class CatalogItemDecorator < ApplicationDecorator
     case object.channel
     when "bar" then "bg-amber-100 text-amber-800"
     when "grocery" then "bg-emerald-100 text-emerald-800"
+    when "dph" then "bg-sky-100 text-sky-800"
     when "craft" then "bg-violet-100 text-violet-800"
     when "bread" then "bg-orange-100 text-orange-800"
     else "bg-gray-100 text-gray-700"

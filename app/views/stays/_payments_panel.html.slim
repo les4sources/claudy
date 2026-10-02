@@ -6,8 +6,13 @@
 / Les montants se dérivent tous de `@stay` : la partial se rend seule.
 - paiements = @stay.payments.order(:created_at)
 - encaisse = @stay.amount_paid_cents
-- total = @stay.total_amount_cents.to_i
-- avancement = total.positive? ? [[(encaisse * 100.0 / total).round, 0].max, 100].min : 0
+/ Le « Solde dû » se calcule sur l'EXIGIBLE, qui exclut les activités encore à
+/ valider (sauf prix imposé, cf. `Stay#payable_amount_cents`). Sans la ligne qui
+/ les montre, « Total − Encaissé » ne retombait pas sur le solde affiché
+/ (Michael 2026-10-01 : 1 616 − 228 ≠ 668). La jauge suit la même base.
+- en_attente = @stay.total_amount_cents.to_i - @stay.payable_amount_cents
+- exigible = @stay.payable_amount_cents
+- avancement = exigible.positive? ? [[(encaisse * 100.0 / exigible).round, 0].max, 100].min : 0
 = turbo_frame_tag "stay_#{@stay.id}_payments" do
   .border-t.border-gray-200.pt-4
     .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Paiements
@@ -15,6 +20,10 @@
       .flex.items-baseline.justify-between
         dt.text-gray-600 Total séjour
         dd.font-semibold.text-gray-900 = humanized_money_with_symbol(@stay.total_amount)
+      - if en_attente.positive?
+        .flex.items-baseline.justify-between
+          dt.text-gray-600 Activités à valider
+          dd.text-gray-500 = "− #{humanized_money_with_symbol(Money.new(en_attente))}"
       .flex.items-baseline.justify-between
         dt.text-gray-600 Encaissé
         dd.text-gray-900 = humanized_money_with_symbol(Money.new(encaisse))
@@ -31,7 +40,7 @@
     /  La jauge reprend le code couleur du solde juste en dessous : ambre
        tant qu'il reste à encaisser, vert une fois le séjour soldé. Le
        rouge reste réservé au montant dû, qui est l'alerte.
-    - if total.positive?
+    - if exigible.positive?
       - teinte_jauge = @stay.payable_now? ? "bg-amber-500" : "bg-emerald-500"
       .mt-3.h-2.w-full.overflow-hidden.rounded-full.bg-gray-200(role="img" aria-label="#{avancement}% encaissé")
         .h-full.rounded-full(class=teinte_jauge style="width: #{avancement}%")

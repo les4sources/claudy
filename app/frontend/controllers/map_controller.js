@@ -22,6 +22,7 @@ import { BiodiversityMode, isObservationFeature, observationMarker } from '~/uti
 import { MapSearch } from '~/utils/map_search';
 import { syncPointLabel } from '~/utils/map_labels';
 import { MeasureTool } from '~/utils/map_measure';
+import { GeoportailInfo } from '~/utils/map_geoportail';
 
 // Style de la couche Gestion (phase 2) : polygones `forest` remplis à 25 %,
 // accès en pointillés `bark`, points en marqueur rond. Couleurs du thème
@@ -44,6 +45,8 @@ const PLANT_GLYPH_MIN_ZOOM = 17;
 // Une seule couche à la fois (Michael, 2026-09-28 : plusieurs couches
 // superposées, « on s'y perd ») : on retient la dernière choisie.
 const ACTIVE_LAYER_KEY = 'claudy.map.layer.active';
+// Valeur retenue quand on a choisi « Aucune » couche.
+const NO_LAYER = 'none';
 
 // La carte du domaine (epic #348, phase 1).
 //
@@ -58,11 +61,14 @@ export default class extends Controller {
     'panelToggle',
     'panelBody',
     'panelChevron',
+    'panelActive',
+    'modeBar',
     'reliefToggle',
     'locateButton',
     'notice',
     'layerToggle',
     'layerName',
+    'layerNone',
     'toolbar',
     'tool',
     'panelContainer',
@@ -146,7 +152,13 @@ export default class extends Controller {
     this.rgbLayer = this.tileLayer('rgb').addTo(this.map);
     this.demLayer = null;
 
-    if (bounds) this.map.fitBounds(bounds);
+    // Vue d'arrivée : l'emprise du fond, un cran plus près (Michael,
+    // 2026-09-30) — le domaine entier à l'écran laissait les objets trop petits.
+    // Sans animation : la carte naît au zoom 17, un zoom animé à l'ouverture
+    // (et figé dans un onglet en arrière-plan) laisserait les tuiles invisibles.
+    if (bounds) {
+      this.map.setView(bounds.getCenter(), this.map.getBoundsZoom(bounds) + 1, { animate: false });
+    }
 
     this.locating = false;
     this.locationMarker = null;
@@ -171,7 +183,13 @@ export default class extends Controller {
     this.search = new MapSearch(this);
     // Phase 14 : l'outil Mesure, dans tous les modes (utils/map_measure.js).
     this.measure = new MeasureTool(this, L);
+    // L'information au clic des couches du Géoportail (utils/map_geoportail.js).
+    this.geoportailInfo = new GeoportailInfo(this, L);
     this.setupFeatures();
+
+    // Sur un téléphone, le panneau des couches ouvert couvrait les deux tiers
+    // de la carte : il démarre replié, la couche active lisible dans son titre.
+    if (this.narrow) this.setPanelOpen(false);
 
     // Leaflet mesure son conteneur au montage. Dans une page Turbo le conteneur
     // n'a pas toujours sa taille finale à ce moment-là : sans ce recalcul, la
@@ -190,6 +208,7 @@ export default class extends Controller {
     this.search?.destroy();
     this.measure?.destroy();
     this.biodiversity?.destroy();
+    this.geoportailInfo?.destroy();
     if (this.map) {
       this.map.remove();
       this.map = null;
@@ -210,9 +229,28 @@ export default class extends Controller {
     });
   }
 
+  get narrow() {
+    return !window.matchMedia('(min-width: 768px)').matches;
+  }
+
+  get panelOpen() {
+    return this.hasPanelBodyTarget && !this.panelBodyTarget.classList.contains('hidden');
+  }
+
   togglePanel() {
-    const open = !this.panelBodyTarget.classList.toggle('hidden');
+    this.setPanelOpen(!this.panelOpen);
+  }
+
+  setPanelOpen(open) {
+    if (!this.hasPanelBodyTarget) return;
+    this.panelBodyTarget.classList.toggle('hidden', !open);
     this.panelToggleAria(open);
+  }
+
+  // Sur un téléphone, le panneau se replie dès qu'on a choisi : c'est la carte
+  // qu'on vient toucher.
+  collapsePanelOnPhone() {
+    if (this.narrow && this.panelOpen) this.setPanelOpen(false);
   }
 
   panelToggleAria(open) {
@@ -230,10 +268,44 @@ export default class extends Controller {
       // lit encore ce qu'il y a au sol.
       this.demLayer = this.tileLayer('dem');
       this.demLayer.setOpacity(0.6);
+      // Au-dessus des photos du Géoportail (z-index 2 à 4), sous ses autres couches.
+      this.demLayer.setZIndex(5);
       this.demLayer.addTo(this.map);
     } else if (this.demLayer) {
       this.map.removeLayer(this.demLayer);
       this.demLayer = null;
+    }
+  }
+
+  // Une couche WMS du Géoportail de Wallonie (MapGeoportailLayer) : tout ce
+  // qu'il faut pour la construire est dans les `data-geoportail-*` de la case.
+  // Le SPW dessine chaque tuile à la demande, à n'importe quel zoom, sauf les
+  // couches qu'il masque sous une échelle : celles-là portent un zoom plafond,
+  // au-delà duquel Leaflet agrandit la dernière tuile dessinée.
+  toggleGeoportail(event) {
+    const input = event.target;
+    const { geoportailKey: key, geoportailMaxNativeZoom: maxNativeZoom } = input.dataset;
+    this.geoportailLayers ||= {};
+
+    if (input.checked) {
+      this.geoportailLayers[key] = L.tileLayer
+        .wms(input.dataset.geoportailUrl, {
+          layers: input.dataset.geoportailLayers,
+          styles: '',
+          format: 'image/png',
+          transparent: true,
+          version: '1.3.0',
+          opacity: Number(input.dataset.geoportailOpacity),
+          zIndex: Number(input.dataset.geoportailZIndex),
+          minZoom: this.minZoomValue,
+          maxZoom: this.maxZoomValue + OVERZOOM,
+          maxNativeZoom: maxNativeZoom ? Number(maxNativeZoom) : undefined,
+          keepBuffer: 4,
+        })
+        .addTo(this.map);
+    } else if (this.geoportailLayers[key]) {
+      this.map.removeLayer(this.geoportailLayers[key]);
+      delete this.geoportailLayers[key];
     }
   }
 
@@ -323,23 +395,20 @@ export default class extends Controller {
     }
 
     this.map.on('zoomend', () => this.updateLabels());
-    // En mode Placement, toucher la carte pose la plante choisie.
-    this.map.on('click', (event) => !this.measure?.active && this.placement?.onMapClick(event));
-    // En mode Commentaires, toucher la carte ouvre un nouveau commentaire.
-    this.map.on('click', (event) => !this.measure?.active && this.comments?.onMapClick(event));
-    // En mode Biodiversité, toucher la carte ouvre un nouveau relevé.
-    this.map.on('click', (event) => !this.measure?.active && this.biodiversity?.onMapClick(event));
-    // Pendant une mesure (phase 14), le clic pose un sommet : aucun mode ne le prend.
+    this.map.on('click', (event) => this.onMapClick(event));
     this.updateLabels();
     this.observePanel();
 
     // La couche choisie la dernière fois ; sinon la carte du jour (phase 3),
     // vue par défaut, et la Gestion à défaut.
+    // « Aucune » choisie la dernière fois : la carte s'ouvre sans couche.
     const remembered = this.readActiveLayer();
     const initial =
-      this.layerNameTargets.find((b) => b.dataset.layerId === remembered) ||
-      this.layerNameTargets.find((b) => b.dataset.layerKind === 'venues') ||
-      this.layerNameTargets.find((b) => b.dataset.layerKind === 'management');
+      remembered === NO_LAYER
+        ? null
+        : this.layerNameTargets.find((b) => b.dataset.layerId === remembered) ||
+          this.layerNameTargets.find((b) => b.dataset.layerKind === 'venues') ||
+          this.layerNameTargets.find((b) => b.dataset.layerKind === 'management');
     this.layerToggleTargets.forEach((toggle) => {
       toggle.checked = Boolean(initial) && toggle.dataset.layerId === initial.dataset.layerId;
     });
@@ -349,6 +418,7 @@ export default class extends Controller {
     if (!this.map) return;
 
     if (initial) this.setActiveLayer(initial.dataset.layerId, initial.dataset.layerKind);
+    else if (remembered === NO_LAYER) this.setActiveLayer(null, null);
 
     this.updateDateBar();
     await this.loadOccupancy();
@@ -357,6 +427,34 @@ export default class extends Controller {
     this.focusFeature();
     if (this.focusPlantValue && this.hasPlantUrlValue) this.openPanel(this.plantUrl(this.focusPlantValue));
     if (this.openNewPlantValue) this.newPlant();
+  }
+
+  onMapClick(event) {
+    // Sur un téléphone, toucher la carte panneau ouvert le replie, et rien
+    // d'autre : on voulait retrouver la carte, pas y poser un commentaire.
+    if (this.narrow && this.panelOpen) {
+      this.setPanelOpen(false);
+      return;
+    }
+    // Pendant une mesure (phase 14), le clic pose un sommet : aucun mode ne le prend.
+    if (this.measure?.active) return;
+    // En mode Placement, toucher la carte pose la plante choisie.
+    this.placement?.onMapClick(event);
+    // En mode Commentaires, toucher la carte ouvre un nouveau commentaire.
+    this.comments?.onMapClick(event);
+    // En mode Biodiversité, toucher la carte ouvre un nouveau relevé.
+    this.biodiversity?.onMapClick(event);
+    // Hors de tout mode et de tout tracé, une couche du Géoportail affichée
+    // répond au clic : ce qu'elle sait de l'endroit touché, dans une bulle.
+    const busy =
+      this.placement?.active ||
+      this.comments?.active ||
+      this.biodiversity?.active ||
+      this.sketches?.activeId ||
+      this.map.pm?.globalDrawModeEnabled?.() ||
+      this.map.pm?.globalEditModeEnabled?.() ||
+      this.map.pm?.globalRemovalModeEnabled?.();
+    if (!busy) this.geoportailInfo?.onMapClick(event);
   }
 
   async loadLayer(id) {
@@ -473,6 +571,13 @@ export default class extends Controller {
     const weight = selected ? 5 : 2;
     if (this.isVenue(feature)) return this.venueStyle(feature, selected);
     if (this.isWelcome(feature)) return welcomeStyle(feature, selected);
+    // Les aménagements à l'essai du relief 3D : l'eau, en bleu ; une keyline en
+    // tirets violets, comme dans la vue 3D.
+    const design = feature?.properties?.design?.type;
+    if (design === 'pond') return { color: '#0369a1', weight, fillColor: '#38bdf8', fillOpacity: 0.35 };
+    if (design === 'swale') return { color: '#0284c7', weight: selected ? 6 : 4, lineCap: 'round' };
+    if (design === 'keyline') return { color: '#7c3aed', weight: selected ? 6 : 4, dashArray: '8 6', lineCap: 'round' };
+    if (design === 'hedge') return { color: '#15803d', weight: selected ? 9 : 7, opacity: 0.8, lineCap: 'round' };
     // Réseaux (phase 9) : la couleur vient du JSON, ou de la couche active
     // pour ce qu'on dessine.
     const networkColor = feature?.properties?.color || this.layerNetworkColor(feature?.properties?.layer_id);
@@ -541,15 +646,25 @@ export default class extends Controller {
   activateLayer(event) {
     const button = event.currentTarget;
     this.setActiveLayer(button.dataset.layerId, button.dataset.layerKind);
+    this.collapsePanelOnPhone();
   }
 
+  // « Aucune » : la carte sans aucune couche d'objets.
+  clearActiveLayer() {
+    this.setActiveLayer(null, null);
+    this.collapsePanelOnPhone();
+  }
+
+  // `id` nul : aucune couche active, rien d'affiché, aucun mode.
   setActiveLayer(id, kind) {
     // Choisir une couche met fin au dessin en cours (phase 12).
     this.sketches?.onLayerActivated();
-    this.activeLayerId = String(id);
+    this.activeLayerId = id == null ? null : String(id);
     this.activeLayerKind = kind;
-    this.layerNameTargets.forEach((button) => {
-      const active = button.dataset.layerId === this.activeLayerId;
+    const buttons = this.hasLayerNoneTarget ? [...this.layerNameTargets, this.layerNoneTarget] : this.layerNameTargets;
+    buttons.forEach((button) => {
+      const active =
+        button === this.layerNoneTarget ? this.activeLayerId === null : button.dataset.layerId === this.activeLayerId;
       button.classList.toggle('bg-teal-50', active);
       button.classList.toggle('font-medium', active);
       button.classList.toggle('text-4s-main', active);
@@ -562,7 +677,12 @@ export default class extends Controller {
     this.element.querySelectorAll('[data-layer-extra]').forEach((element) => {
       element.classList.toggle('hidden', element.dataset.layerExtra !== kind);
     });
-    this.writeActiveLayer(this.activeLayerId);
+    this.writeActiveLayer(this.activeLayerId ?? NO_LAYER);
+    if (this.hasPanelActiveTarget) {
+      const name = this.layerNameTargets.find((b) => b.dataset.layerId === this.activeLayerId)?.textContent.trim();
+      this.panelActiveTarget.textContent = name ? `· ${name}` : '';
+    }
+    this.updateModeBar();
 
     const editable = ['management', 'venues', 'welcome', 'network'].includes(kind) && this.geomanReady;
     // Les gîtes et salles se tracent en zones : point et ligne restent à la
@@ -585,6 +705,22 @@ export default class extends Controller {
       this.welcomeLegendTarget.classList.toggle('hidden', kind !== 'welcome');
       this.welcomeLegendTarget.classList.toggle('flex', kind === 'welcome');
     }
+  }
+
+  // La barre du mode actif (téléphone) : ce qu'elle propose suit la couche
+  // active, et elle s'efface devant le tiroir de placement.
+  updateModeBar() {
+    if (!this.hasModeBarTarget) return;
+    let shown = false;
+    this.modeBarTarget.querySelectorAll('[data-mode-kind]').forEach((element) => {
+      const match = element.dataset.modeKind === this.activeLayerKind;
+      element.classList.toggle('hidden', !match);
+      element.classList.toggle('flex', match);
+      shown ||= match;
+    });
+    const visible = shown && !this.placement?.drawerOpen;
+    this.modeBarTarget.classList.toggle('hidden', !visible);
+    this.modeBarTarget.classList.toggle('flex', visible);
   }
 
   useTool(event) {
@@ -848,6 +984,9 @@ export default class extends Controller {
 
   openPanel(url) {
     if (!this.hasFeatureFrameTarget) return;
+    // La fiche prend tout l'écran d'un téléphone : à sa fermeture, on retrouve
+    // la carte, pas le panneau des couches.
+    this.collapsePanelOnPhone();
     this.featureFrameTarget.src = url;
   }
 

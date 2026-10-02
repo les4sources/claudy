@@ -52,6 +52,11 @@ RSpec.describe "Carte du domaine — calendrier des récoltes (epic #348, phase 
       expect(september.at_css("[data-plant-count]")["data-plant-count"]).to eq("3")
       apples = september.at_css("[data-harvest-group='species-#{apple.id}-fruit']")
       expect(apples.text).to include("Pommier ×2", "fruit")
+      # Le groupe se replie dans un vrai <summary> : une classe Tailwind à
+      # crochets en notation courte Slim (`summary.min-h-[2.75rem]`) le cassait,
+      # et tout le balisage s'affichait en texte.
+      expect(apples.at_css("details > summary").text).to include("Pommier ×2")
+      expect(apples.text).not_to include("cursor-pointer", "polyline")
       # Dans l'ordre des numéros.
       expect(apples.text.index("Pommier Boskoop")).to be < apples.text.index("Pommier Reinette Hernaut")
 

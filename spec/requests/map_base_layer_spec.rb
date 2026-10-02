@@ -213,11 +213,12 @@ RSpec.describe "Carte du domaine — fond de carte (epic #348, phase 1)", type: 
     it "n'offre le relief que quand la couche en a" do
       build_layer(has_relief: false)
       get map_path
-      expect(response.body).not_to include("Relief")
+      # La case, pas le mot : « Relief, sol et eau » titre un groupe du Géoportail.
+      expect(response.body).not_to include("map#toggleRelief")
 
       MapBaseLayer.update_all(has_relief: true)
       get map_path
-      expect(response.body).to include("Relief")
+      expect(response.body).to include("map#toggleRelief")
     end
 
     # Aucun fond installé n'est pas une erreur : c'est l'état d'une production

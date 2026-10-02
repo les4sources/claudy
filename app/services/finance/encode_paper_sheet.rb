@@ -72,7 +72,7 @@ module Finance
                   .map(&:to_i).uniq
       return {} if ids.empty?
 
-      CatalogItem.for_channel(@sheet.channel).where(id: ids).index_by(&:id)
+      CatalogItem.for_sheet(@sheet.channel).where(id: ids).index_by(&:id)
     end
 
     def apply(account_id, item, raw, report)

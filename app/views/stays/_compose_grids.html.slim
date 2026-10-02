@@ -190,7 +190,9 @@
       = stay_form_section_marker(retenues.positive?, retenues)
     .px-5.pb-5.space-y-4
       - if @assignable_availabilities.blank?
-        - if @stay_nights.present?
+        / `@stay_days` et pas `@stay_nights` : un séjour d'une journée (arrivée =
+          départ) n'a aucune nuit mais a bien des dates.
+        - if @stay_days.present?
           p.text-sm.text-gray-500 Aucun créneau d'activité proposé sur ces dates.
         - else
           p.text-sm.text-gray-500 Choisissez d'abord les dates du séjour pour voir les créneaux disponibles.

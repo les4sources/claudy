@@ -25,15 +25,17 @@ import { Controller } from "@hotwired/stimulus"
 //       ul(data-searchable-select-target="list" class="hidden")
 export default class extends Controller {
   static targets = ["select", "wrap", "input", "list"]
-  static values = { placeholder: { type: String, default: "Chercher…" }, max: { type: Number, default: 50 } }
+  // `clearable` : un champ facultatif (le pôle d'une ligne) doit pouvoir
+  // revenir à vide. Vider le texte puis quitter le champ remet alors le
+  // <select> sur son option vide, au lieu de rétablir l'ancien choix.
+  static values = {
+    placeholder: { type: String, default: "Chercher…" },
+    max: { type: Number, default: 50 },
+    clearable: { type: Boolean, default: false }
+  }
 
   connect() {
-    this.options = Array.from(this.selectTarget.options).map((option, index) => ({
-      index,
-      value: option.value,
-      label: option.text.trim(),
-      cle: this.constructor.normaliser(option.text)
-    }))
+    this.lireLesOptions()
 
     this.selectTarget.classList.add("hidden")
     this.wrapTarget.classList.remove("hidden")
@@ -45,10 +47,30 @@ export default class extends Controller {
       if (!this.element.contains(event.target)) this.close()
     }
     document.addEventListener("click", this.fermerAuClicDehors)
+
+    // Un autre contrôleur peut changer le <select> (un fournisseur créé depuis
+    // l'écran s'y ajoute et s'y sélectionne) : le champ doit le montrer.
+    this.suivreLeSelect = () => {
+      this.lireLesOptions()
+      this.refleterLaSelection()
+    }
+    this.selectTarget.addEventListener("change", this.suivreLeSelect)
   }
 
   disconnect() {
     document.removeEventListener("click", this.fermerAuClicDehors)
+    this.selectTarget.removeEventListener("change", this.suivreLeSelect)
+  }
+
+  // Relue à chaque recherche : la liste peut grandir pendant qu'on est sur
+  // l'écran, et quelques centaines d'options se relisent en un rien de temps.
+  lireLesOptions() {
+    this.options = Array.from(this.selectTarget.options).map((option, index) => ({
+      index,
+      value: option.value,
+      label: option.text.trim(),
+      cle: this.constructor.normaliser(option.text)
+    }))
   }
 
   // Le libellé de l'option retenue, ou rien si c'est l'option vide : le
@@ -67,12 +89,20 @@ export default class extends Controller {
     this.listTarget.classList.add("hidden")
     this.inputTarget.setAttribute("aria-expanded", "false")
     this.actif = -1
+    if (this.clearableValue && this.inputTarget.value.trim() === "" && this.selectTarget.value !== "") {
+      const vide = Array.from(this.selectTarget.options).findIndex((o) => o.value === "")
+      if (vide >= 0) {
+        this.selectTarget.selectedIndex = vide
+        this.selectTarget.dispatchEvent(new Event("change", { bubbles: true }))
+      }
+    }
     // Le champ ne garde jamais un texte qui ne correspond à rien : sinon on
     // croit avoir choisi « Ventes bar » alors que le <select> est resté vide.
     this.refleterLaSelection()
   }
 
   filter() {
+    this.lireLesOptions()
     const requete = this.constructor.normaliser(this.inputTarget.value)
     const visibles = this.options
       .filter((o) => o.value !== "" && (requete === "" || o.cle.includes(requete)))

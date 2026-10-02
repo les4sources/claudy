@@ -17,7 +17,7 @@
 // `highlightSelection`, `showNotice`, `findFeatureLayer`, `focusFeature`).
 
 import L from '~/utils/leaflet_global';
-import { GPS_MAX_ACCURACY } from '~/utils/map_placement';
+import { GPS_MAX_ACCURACY, isFreshFix } from '~/utils/map_placement';
 import '~/stylesheets/map_biodiversity.css';
 
 // MÊMES tracés et couleurs que `MapObservationsHelper` (la liste du panneau) :
@@ -243,6 +243,7 @@ export class BiodiversityMode {
     this.stopGps();
     this.fix = null;
     this.forceArmed = false;
+    this.gpsStartedAt = Date.now();
     this.watchId = navigator.geolocation.watchPosition(
       (position) => this.onGpsFix(position),
       (error) => this.onGpsError(error),
@@ -254,6 +255,8 @@ export class BiodiversityMode {
   }
 
   onGpsFix(position) {
+    // La position en cache de l'appui précédent n'est pas celle d'ici.
+    if (!isFreshFix(position, this.gpsStartedAt)) return;
     const { latitude, longitude, accuracy } = position.coords;
     // On garde la meilleure position vue : une mesure plus floue ne la remplace pas.
     if (this.fix && accuracy > this.fix.accuracy) return;

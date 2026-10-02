@@ -80,4 +80,10 @@ RSpec.describe Kitchen::GroupedNotifier do
   it "ne fait rien du tout sans aucune ligne" do
     expect { described_class.new(orders: []).call }.not_to change { deliveries.size }
   end
+
+  it "écarte les services passés d'une saisie a posteriori" do
+    passees = (1..3).map { |i| build_order(date: Date.current - i) }
+
+    expect { described_class.new(orders: passees).call }.not_to change { deliveries.size }
+  end
 end

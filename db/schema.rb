@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_30_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_30_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -490,6 +490,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_020000) do
     t.string "excluded_reason"
     t.string "external_ref"
     t.string "fingerprint"
+    t.datetime "jev_checked_at"
     t.string "label", null: false
     t.text "notes"
     t.bigint "source_id"
@@ -555,9 +556,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_020000) do
     t.integer "public_price_cents"
     t.integer "purchase_price_cents"
     t.integer "reference_price_cents"
+    t.bigint "third_party_id"
     t.datetime "updated_at", null: false
     t.index ["catalog_item_id", "active_from"], name: "index_catalog_prices_on_catalog_item_id_and_active_from", unique: true
     t.index ["catalog_item_id"], name: "index_catalog_prices_on_catalog_item_id"
+    t.index ["third_party_id"], name: "index_catalog_prices_on_third_party_id"
   end
 
   create_table "coda_imports", force: :cascade do |t|
@@ -1373,6 +1376,60 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_020000) do
     t.integer "weekend_discount_cents", default: 0, null: false
   end
 
+  create_table "mail_accounts", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "address", null: false
+    t.datetime "created_at", null: false
+    t.string "folder", default: "INBOX", null: false
+    t.string "imap_host", default: "box.les4sources.be", null: false
+    t.text "last_error"
+    t.datetime "last_synced_at"
+    t.bigint "last_uid", default: 0, null: false
+    t.string "purpose", null: false
+    t.bigint "uid_validity"
+    t.datetime "updated_at", null: false
+    t.index ["address"], name: "index_mail_accounts_on_address", unique: true
+  end
+
+  create_table "mail_attachments", force: :cascade do |t|
+    t.string "content_type", null: false
+    t.datetime "created_at", null: false
+    t.bigint "embedded_in_id"
+    t.string "filename", null: false
+    t.bigint "mail_message_id", null: false
+    t.jsonb "proposal", default: {}, null: false
+    t.bigint "purchase_invoice_id"
+    t.string "sha256", null: false
+    t.text "text_content"
+    t.datetime "updated_at", null: false
+    t.index ["embedded_in_id"], name: "index_mail_attachments_on_embedded_in_id"
+    t.index ["mail_message_id"], name: "index_mail_attachments_on_mail_message_id"
+    t.index ["purchase_invoice_id"], name: "index_mail_attachments_on_purchase_invoice_id"
+    t.index ["sha256"], name: "index_mail_attachments_on_sha256"
+  end
+
+  create_table "mail_messages", force: :cascade do |t|
+    t.datetime "analyzed_at"
+    t.text "body_text"
+    t.datetime "created_at", null: false
+    t.string "from_address"
+    t.string "from_name"
+    t.datetime "handled_at"
+    t.bigint "handled_by_id"
+    t.bigint "imap_uid"
+    t.bigint "mail_account_id", null: false
+    t.string "message_id", null: false
+    t.datetime "received_at", null: false
+    t.string "status", default: "pending", null: false
+    t.string "subject"
+    t.jsonb "triage", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.index ["handled_by_id"], name: "index_mail_messages_on_handled_by_id"
+    t.index ["mail_account_id", "message_id"], name: "index_mail_messages_on_mail_account_id_and_message_id", unique: true
+    t.index ["mail_account_id"], name: "index_mail_messages_on_mail_account_id"
+    t.index ["status", "received_at"], name: "index_mail_messages_on_status_and_received_at"
+  end
+
   create_table "map_base_layers", force: :cascade do |t|
     t.jsonb "bounds", default: {}, null: false
     t.date "captured_on"
@@ -1823,6 +1880,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_020000) do
     t.text "notes"
     t.string "number"
     t.date "paid_on"
+    t.string "payment_reference"
     t.string "pdf_sha256"
     t.datetime "posted_at"
     t.jsonb "quality_flags", default: [], null: false
@@ -1889,6 +1947,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_020000) do
     t.index ["member_account_id"], name: "index_recurring_charges_on_member_account_id"
     t.check_constraint "amount_cents IS NOT NULL AND rate_key IS NULL OR amount_cents IS NULL AND rate_key IS NOT NULL", name: "recurring_charges_amount_source_check"
     t.check_constraint "applies_to::text = 'account'::text AND member_account_id IS NOT NULL OR applies_to::text <> 'account'::text AND member_account_id IS NULL", name: "recurring_charges_scope_check"
+  end
+
+  create_table "recurring_expenses", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.bigint "amount_cents", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "ends_on"
+    t.date "first_due_on", null: false
+    t.string "frequency", default: "monthly", null: false
+    t.bigint "general_account_id"
+    t.string "label", null: false
+    t.bigint "legal_entity_id", null: false
+    t.text "notes"
+    t.bigint "third_party_id"
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_recurring_expenses_on_deleted_at"
+    t.index ["general_account_id"], name: "index_recurring_expenses_on_general_account_id"
+    t.index ["legal_entity_id"], name: "index_recurring_expenses_on_legal_entity_id"
+    t.index ["third_party_id"], name: "index_recurring_expenses_on_third_party_id"
   end
 
   create_table "rental_items", force: :cascade do |t|
@@ -2489,6 +2567,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_020000) do
   add_foreign_key "cash_motifs", "teams"
   add_foreign_key "catalog_items", "consignors"
   add_foreign_key "catalog_prices", "catalog_items"
+  add_foreign_key "catalog_prices", "third_parties"
   add_foreign_key "coda_statements", "cash_accounts"
   add_foreign_key "coda_statements", "coda_imports"
   add_foreign_key "comments", "users", column: "author_id"
@@ -2567,6 +2646,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_020000) do
   add_foreign_key "lodging_compositions", "lodgings", column: "composite_lodging_id"
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"
+  add_foreign_key "mail_attachments", "mail_attachments", column: "embedded_in_id"
+  add_foreign_key "mail_attachments", "mail_messages"
+  add_foreign_key "mail_attachments", "purchase_invoices"
+  add_foreign_key "mail_messages", "mail_accounts"
+  add_foreign_key "mail_messages", "users", column: "handled_by_id"
   add_foreign_key "map_comments", "map_comments", column: "parent_id"
   add_foreign_key "map_comments", "map_features"
   add_foreign_key "map_comments", "users", column: "author_id"
@@ -2610,6 +2694,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_020000) do
   add_foreign_key "rate_versions", "rates"
   add_foreign_key "recurring_charges", "household_members"
   add_foreign_key "recurring_charges", "member_accounts"
+  add_foreign_key "recurring_expenses", "general_accounts"
+  add_foreign_key "recurring_expenses", "legal_entities"
+  add_foreign_key "recurring_expenses", "third_parties"
   add_foreign_key "reservations", "bookings"
   add_foreign_key "reservations", "rooms"
   add_foreign_key "revenue_mappings", "general_accounts"

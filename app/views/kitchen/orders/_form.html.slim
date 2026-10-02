@@ -30,7 +30,7 @@
                    { class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm",
                      data: { "stay-search-target": "select" } }
         .relative.mt-1.space-y-1.hidden(data-stay-search-target="searchWrap")
-          = text_field_tag :stay_query, nil, placeholder: "Nom, groupe, email ou téléphone…", autocomplete: "off",
+          = text_field_tag :stay_query, nil, placeholder: "Nom, groupe, email ou téléphone…", autocomplete: "off", autocorrect: "off", autocapitalize: "off", spellcheck: "false",
                            data: { "stay-search-target": "searchInput",
                                    action: "input->stay-search#search keydown.enter->stay-search#pickFirst" },
                            class: "block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"

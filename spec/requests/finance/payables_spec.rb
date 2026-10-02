@@ -45,6 +45,15 @@ RSpec.describe "Comptabilité > À payer", type: :request do
     expect(response.body).to include("subnav-accounting")
   end
 
+it "propose la communication structurée de la facture plutôt que son numéro" do
+  facture.update!(payment_reference: "+++000/0024/11862+++")
+
+  get finance_payables_path
+
+  expect(response.body).to include('data-copy-value-value="+++000/0024/11862+++"')
+  expect(response.body).not_to include('data-copy-value-value="F-1"')
+end
+
   it "n'y fait pas figurer une facture qui n'est pas encore validée" do
     facture(number: "BROUILLON", payable: false)
 

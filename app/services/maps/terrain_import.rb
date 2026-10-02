@@ -1,0 +1,272 @@
+require "net/http"
+
+module Maps
+  # Télécharge le relief du domaine depuis le Géoportail (voir `Maps::Terrain`).
+  #
+  # Le SPW ne publie son MNT qu'en MapServer : ni WCS, ni ImageServer, et le
+  # rendu imposé (une rampe de couleurs) refuse tout renderer personnalisé. Mais
+  # l'`identify` accepte un MULTIPOINT et rend une valeur de pixel par point, dans
+  # l'ordre : 20 000 altitudes par requête, ~9 s. Une grille à 1 m du domaine et
+  # de sa marge (~750 000 points) tient en une quarantaine de requêtes.
+  #
+  # La marge (150 m) sert l'amont : l'eau qui ruisselle sur le domaine vient en
+  # partie des pentes voisines, et une simulation coupée au bord de la parcelle
+  # la ferait naître au milieu d'un champ.
+  class TerrainImport
+    MNT_URL = "https://geoservices.wallonie.be/arcgis/rest/services/RELIEF/WALLONIE_MNT_2021_2022/MapServer".freeze
+    # Le modèle numérique de SURFACE : le sol plus ce qui s'y dresse (arbres, haies,
+    # toits). Moins le terrain, il donne la hauteur de la végétation et porte les
+    # ombres.
+    MNS_URL = "https://geoservices.wallonie.be/arcgis/rest/services/RELIEF/WALLONIE_MNS_2021_2022/MapServer".freeze
+    # L'occupation du sol 2023 (WalOUS, IA) : une classe par pixel, qui dit
+    # combien le sol boit dans la simulation de pluie.
+    OCS_URL = "https://geoservices.wallonie.be/arcgis/rest/services/SOL_SOUS_SOL/WAL_OCS_IA__2023/MapServer".freeze
+    # Codes WalOUS, déduits en croisant 2 500 points avec la hauteur de la
+    # végétation (la légende du service ne les donne pas) : 7 prairie à 0 m,
+    # 8 résineux à 23 m, 9 feuillus à 10 m…
+    LANDCOVER = {
+      1 => "Revêtement artificiel", 2 => "Bâti", 3 => "Rail", 4 => "Sol nu", 5 => "Eau",
+      6 => "Culture annuelle", 7 => "Prairie permanente", 8 => "Résineux (> 3 m)", 9 => "Feuillus (> 3 m)",
+      80 => "Résineux (≤ 3 m)", 90 => "Feuillus (≤ 3 m)"
+    }.freeze
+    LANDCOVER_NODATA = 255
+    ORTHO_URL = "https://geoservices.wallonie.be/arcgis/rest/services/IMAGERIE/ORTHO_2026_PRINTEMPS/MapServer".freeze
+    CELL_SIZE_M = 1.0
+    MARGIN_M = 150.0
+    CHUNK = 20_000
+    THREADS = 3
+    TEXTURE_MAX_PX = 4096
+    ATTEMPTS = 3
+
+    class Error < StandardError; end
+
+    Extent = Data.define(:west, :north, :step, :cols, :rows, :lat0) do
+      def east = west + (cols - 1) * step
+      def south = north - (rows - 1) * step
+
+      def point(index)
+        [west + (index % cols) * step, north - (index / cols) * step]
+      end
+    end
+
+    # `bounds` : { "south", "west", "north", "east" } en WGS84, celles du fond de
+    # carte par défaut.
+    def self.extent_for(bounds, cell_size_m: CELL_SIZE_M, margin_m: MARGIN_M)
+      south, west, north, east = bounds.values_at("south", "west", "north", "east").map(&:to_f)
+      lat0 = (south + north) / 2
+      # Le facteur d'échelle de Mercator : une unité 3857 vaut cos(lat) mètre.
+      scale = 1 / Math.cos(lat0 * Math::PI / 180)
+      step = cell_size_m * scale
+      margin = margin_m * scale
+      x0, y0 = Terrain.to_mercator(south, west)
+      x1, y1 = Terrain.to_mercator(north, east)
+      west_m = x0 - margin
+      north_m = y1 + margin
+      cols = (((x1 + margin) - west_m) / step).ceil + 1
+      rows = ((north_m - (y0 - margin)) / step).ceil + 1
+      Extent.new(west: west_m, north: north_m, step: step, cols: cols, rows: rows, lat0: lat0)
+    end
+
+    # `http` : un appelable (url, params) → corps de la réponse ; les specs y
+    # branchent un faux SPW.
+    def initialize(bounds:, terrain: Terrain.current, logger: nil, http: nil, cell_size_m: CELL_SIZE_M,
+                   margin_m: MARGIN_M, chunk: CHUNK)
+      @cell_size_m = cell_size_m
+      @chunk = chunk
+      @extent = self.class.extent_for(bounds, cell_size_m: cell_size_m, margin_m: margin_m)
+      @terrain = terrain
+      @logger = logger
+      @http = http || method(:post_form)
+    end
+
+    attr_reader :extent
+
+    # Les trois pièces s'importent ensemble, ou à part (`terrain: false` pour
+    # n'ajouter que la surface à un relief déjà installé).
+    def call(terrain: true, surface: true, texture: true, landcover: true)
+      write_grid(fetch_heights(MNT_URL)) if terrain
+      write_surface(fetch_heights(MNS_URL)) if surface
+      write_landcover(fetch_heights(OCS_URL, parser: method(:parse_class))) if landcover
+      download_texture if texture
+      @terrain
+    end
+
+    # Les altitudes en mètres (Float, `nil` = pas de donnée), dans l'ordre de la
+    # grille. Les paquets partent sur quelques fils : le SPW répond en ~9 s par
+    # paquet, séquentiellement l'import prendrait six minutes.
+    def fetch_heights(url = MNT_URL, parser: method(:parse_height))
+      total = extent.cols * extent.rows
+      chunks = (0...total).each_slice(@chunk).to_a
+      heights = Array.new(total)
+      queue = Queue.new
+      chunks.each_with_index { |indexes, i| queue << [i, indexes] }
+      done = 0
+      mutex = Mutex.new
+      errors = []
+
+      workers = Array.new([THREADS, chunks.size].min) do
+        Thread.new do
+          loop do
+            i, indexes = begin
+              queue.pop(true)
+            rescue ThreadError
+              break
+            end
+            values = fetch_chunk(indexes, url, parser)
+            mutex.synchronize do
+              indexes.each_with_index { |index, j| heights[index] = values[j] }
+              done += 1
+              log("paquet #{done}/#{chunks.size}")
+            end
+          rescue StandardError => e
+            mutex.synchronize { errors << e }
+            break
+          end
+        end
+      end
+      workers.each(&:join)
+      raise errors.first if errors.any?
+
+      heights
+    end
+
+    def fetch_chunk(indexes, url = MNT_URL, parser = method(:parse_height))
+      points = indexes.map { |index| extent.point(index).map { |v| v.round(3) } }
+      params = {
+        f: "json", geometryType: "esriGeometryMultipoint", sr: "3857", layers: "all:0", tolerance: "0",
+        returnGeometry: "false", imageDisplay: "1000,1000,96",
+        mapExtent: [extent.west, extent.south, extent.east, extent.north].map { |v| v.round(3) }.join(","),
+        geometry: { points: points, spatialReference: { wkid: 3857 } }.to_json
+      }
+      attempt = 0
+      begin
+        attempt += 1
+        body = JSON.parse(@http.call("#{url}/identify", params))
+        raise Error, body["error"].to_json if body["error"]
+
+        results = body["results"] || []
+        # L'ordre des résultats EST l'ordre des points : un paquet incomplet
+        # décalerait toute la grille, on refuse plutôt que de deviner.
+        raise Error, "#{results.size} altitudes pour #{points.size} points" unless results.size == points.size
+
+        results.map { |result| parser.call(result["attributes"]) }
+      rescue Error, JSON::ParserError, Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNRESET => e
+        raise if attempt >= ATTEMPTS
+
+        log("nouvel essai (#{e.class}: #{e.message.to_s[0, 120]})")
+        sleep 2 * attempt
+        retry
+      end
+    end
+
+    def write_grid(heights)
+      stats = pack(heights, @terrain.grid_path)
+      write_metadata(**stats)
+    end
+
+    # La surface se pose sur la grille du relief : même emprise, même pas. Sans
+    # relief installé sur cette emprise, elle n'aurait rien à quoi se comparer.
+    def write_surface(heights)
+      raise Error, "installer d'abord le relief (sans ONLY=surface)" unless same_extent?
+
+      stats = pack(heights, @terrain.surface_path)
+      update_metadata(surface: stats.merge(z_unit: 0.01, source: "SPW, MNS LiDAR 2021-2022 (50 cm, arbres et toits)"))
+    end
+
+    # L'occupation du sol sur la grille du relief : un octet par maille (code
+    # WalOUS, 255 = inconnu).
+    def write_landcover(classes)
+      raise Error, "installer d'abord le relief (sans ONLY=landcover)" unless same_extent?
+
+      known = classes.compact
+      raise Error, "aucune classe reçue" if known.empty?
+
+      File.binwrite(@terrain.landcover_path, classes.map { |c| c.nil? || c > 254 ? LANDCOVER_NODATA : c }.pack("C*"))
+      counts = known.tally.transform_keys(&:to_s)
+      update_metadata(landcover: { source: "SPW, occupation du sol WalOUS 2023 (IA)", nodata: LANDCOVER_NODATA,
+                                   classes: LANDCOVER.transform_keys(&:to_s), counts: counts })
+    end
+
+    # L'ortho de printemps 2026 sur l'emprise exacte des centres de mailles. Le
+    # rapport largeur/hauteur de l'image suit celui de l'emprise : ArcGIS
+    # élargirait sinon la boîte demandée, et la photo glisserait sur le relief.
+    def download_texture
+      width_m = extent.east - extent.west
+      height_m = extent.north - extent.south
+      width = [TEXTURE_MAX_PX, (TEXTURE_MAX_PX * width_m / height_m).round].min
+      height = (width * height_m / width_m).round
+      params = { f: "image", format: "jpg", bboxSR: "3857", imageSR: "3857", size: "#{width},#{height}",
+                 bbox: [extent.west, extent.south, extent.east, extent.north].map { |v| v.round(3) }.join(",") }
+      image = @http.call("#{ORTHO_URL}/export", params)
+      raise Error, "l'ortho n'est pas une image JPEG" unless image.to_s.b.start_with?("\xFF\xD8".b)
+
+      File.binwrite(@terrain.texture_path, image)
+      update_metadata(texture: { width: width, height: height, source: "SPW, ortho printemps 2026" })
+    end
+
+    private
+
+    def parse_class(attributes)
+      Integer(attributes.to_h.values.first.to_s, exception: false)
+    end
+
+    def parse_height(attributes)
+      value = attributes.to_h.values.first
+      Float(value)
+    rescue ArgumentError, TypeError
+      nil
+    end
+
+    # Uint16 en cm au-dessus du minimum de la grille ; renvoie de quoi la relire.
+    def pack(heights, path)
+      known = heights.compact
+      raise Error, "aucune altitude reçue" if known.empty?
+
+      z_min = known.min.floor(2)
+      packed = heights.map { |z| z.nil? ? Terrain::NODATA : ((z - z_min) * 100).round.clamp(0, Terrain::NODATA - 1) }
+      FileUtils.mkdir_p(@terrain.root)
+      File.binwrite(path, packed.pack("v*"))
+      { z_min: z_min, z_max: known.max, nodata_count: heights.size - known.size }
+    end
+
+    def same_extent?
+      meta = @terrain.metadata
+      meta["cols"] == extent.cols && meta["rows"] == extent.rows &&
+        (meta["west"].to_f - extent.west).abs < 0.01 && (meta["north"].to_f - extent.north).abs < 0.01
+    end
+
+    def update_metadata(**changes)
+      File.write(@terrain.metadata_path, JSON.pretty_generate(@terrain.metadata.merge(changes.deep_stringify_keys)))
+    end
+
+    # Le relief réécrit l'en-tête ; la surface et l'ortho déjà installées sont
+    # gardées si l'emprise n'a pas bougé, oubliées sinon.
+    def write_metadata(z_min:, z_max:, nodata_count:)
+      kept = same_extent? ? @terrain.metadata.slice("surface", "texture") : {}
+      data = {
+        key: Terrain::KEY, source: "SPW, MNT LiDAR 2021-2022 (50 cm, terrain nu)", source_url: MNT_URL,
+        fetched_at: Time.current.iso8601, crs: "EPSG:3857",
+        west: extent.west, north: extent.north, step: extent.step, cols: extent.cols, rows: extent.rows,
+        cell_size_m: @cell_size_m, lat0: extent.lat0, z_min: z_min, z_max: z_max, z_unit: 0.01,
+        nodata: Terrain::NODATA, nodata_count: nodata_count
+      }.deep_stringify_keys.merge(kept)
+      File.write(@terrain.metadata_path, JSON.pretty_generate(data))
+    end
+
+    def post_form(url, params)
+      uri = URI(url)
+      Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 10, read_timeout: 90) do |http|
+        request = Net::HTTP::Post.new(uri)
+        request.set_form_data(params)
+        response = http.request(request)
+        raise Error, "HTTP #{response.code} sur #{uri.path}" unless response.is_a?(Net::HTTPSuccess)
+
+        response.body
+      end
+    end
+
+    def log(message)
+      @logger&.call(message)
+    end
+  end
+end

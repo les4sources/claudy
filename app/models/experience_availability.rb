@@ -66,10 +66,18 @@ class ExperienceAvailability < ApplicationRecord
   # séjour ET le rafraîchissement turbo du CRUD activités proposent exactement
   # la même liste. Un séjour sans dates ne borne pas la fenêtre.
   def self.assignable_for(user, stay)
-    scope = for_user(user).upcoming.includes(:experience)
-    return scope if stay.arrival_date.blank? || stay.departure_date.blank?
+    assignable_between(user, stay.arrival_date, stay.departure_date)
+  end
 
-    scope.for_date_range(stay.arrival_date, stay.departure_date)
+  # La fenêtre du séjour suffit à borner la liste : l'équipe qui rattrape un
+  # séjour PASSÉ doit retrouver ses créneaux passés. Seuls un séjour sans dates
+  # (fenêtre ouverte) et un porteur restreint restent limités à l'à-venir.
+  def self.assignable_between(user, from, to)
+    scope = for_user(user).includes(:experience)
+    return scope.upcoming if from.blank? || to.blank?
+
+    scope = scope.upcoming if user&.restricted_to_own_activities?
+    scope.for_date_range(from, to).order(:available_on, :starts_at)
   end
 
   def ends_at

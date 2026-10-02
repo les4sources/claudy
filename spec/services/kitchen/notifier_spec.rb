@@ -126,4 +126,38 @@ RSpec.describe Kitchen::Notifier do
 
     expect { order.save! }.not_to change { ActionMailer::Base.deliveries.size }
   end
+
+  # Corriger un séjour terminé (convives réels, repas oublié) ne doit pas
+  # redemander à la cuisine de préparer ce qu'elle a déjà servi.
+  describe "un service passé" do
+    let(:hier) { Date.current - 1 }
+
+    it "ne prévient personne quand on ajoute un repas passé" do
+      expect { create_order(date: hier) }.not_to change { ActionMailer::Base.deliveries.size }
+    end
+
+    it "ne rouvre pas la validation ni ne redemande rien quand un repas passé change" do
+      order = create_order(date: hier)
+      order.accept!
+
+      expect { order.update!(people: 14) }.not_to change { ActionMailer::Base.deliveries.size }
+      expect(order.reload).to be_accepted
+    end
+
+    it "ne prévient pas non plus d'une annulation après coup" do
+      order = create_order(date: hier)
+
+      expect { order.update!(status: "cancelled") }.not_to change { ActionMailer::Base.deliveries.size }
+    end
+
+    it "redemande toujours quand on déplace un repas passé vers l'avenir" do
+      order = create_order(date: hier)
+      order.accept!
+
+      order.update!(date: Date.current + 5)
+
+      expect(order.reload).to be_pending
+      expect(last_mail.subject).to start_with("À revalider")
+    end
+  end
 end

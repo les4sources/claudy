@@ -309,6 +309,15 @@ Rails.application.routes.draw do
     end
     # Motifs de caisse (epic #243). Pas de `destroy` : un motif se désactive,
     # sinon une feuille de caisse passée perdrait son vocabulaire.
+    # Boite de réception (messagerie, phase 1) : la file des mails de `compta@`.
+    # Pas de `destroy` : un mail s'ignore, il ne se supprime pas.
+    resources :mail_messages, path: "inbox", only: %i[index show] do
+      member do
+        post :ignore
+        post :restore
+      end
+      collection { post :sync }
+    end
     # Factures d'achat (epic #240, phase 2). Pas de `destroy` : une pièce
     # comptable ne se supprime pas, elle se conteste ou se contre-passe.
     resources :purchase_invoices, path: "purchases", except: %i[destroy] do
@@ -345,9 +354,15 @@ Rails.application.routes.draw do
       end
     end
 
+    # Les charges fixes (2026-09-30) : des prévisions pour la trésorerie, pas
+    # des dettes — elles se suppriment sans laisser d'écriture orpheline.
+    resources :recurring_expenses, except: [:show]
+
     # Les tiers (epic #240, phase 1) : on les désactive, on ne les détruit pas —
     # des écritures les portent.
     resources :third_parties, except: %i[show destroy] do
+      # Création express depuis le formulaire d’une facture (JSON).
+      collection { post :quick }
       member do
         patch :deactivate
         patch :reactivate
@@ -377,6 +392,9 @@ Rails.application.routes.draw do
         # Éteindre la dette d'un habitant depuis une ligne ENTRANTE (issue
         # #349) : le miroir de `payout`.
         post :settle
+        # La proposition de Jev d'une ligne sans règle, chargée à la volée dans
+        # la file « À affecter » pour ne jamais retenir l'écran.
+        get :suggestion
       end
       resources :allocations, only: [:create, :destroy], controller: "cash_allocations"
     end
@@ -384,7 +402,9 @@ Rails.application.routes.draw do
     # Comptabilité > Ventes (epic #240, phase 6). `new` et `create` prennent
     # `kind` + `source_id` : on facture TOUJOURS une chose précise, désignée
     # depuis la file Facturation — jamais dans le vide.
-    resources :sales_invoices, path: "sales", only: %i[index show new create destroy]
+    # `edit`/`update` corrigent ce qui a été mal saisi (numéro, date, montant,
+    # PDF) sans toucher au lien vers ce qu'elle facture.
+    resources :sales_invoices, path: "sales", only: %i[index show new create edit update destroy]
 
     resources :general_accounts, path: "chart_of_accounts", except: [:show]
     resources :legal_entities, path: "entities", except: [:show]
@@ -435,6 +455,15 @@ Rails.application.routes.draw do
     get "unifi/devices", to: "map_unifi#devices", as: :map_unifi_devices, defaults: { format: :json }
     # Phase 14 : la recherche du mode actif, en JSON d'identifiants.
     get "search", to: "maps#search", as: :map_search, defaults: { format: :json }
+    # Le relief en 3D et la simulation du ruissellement : la page, puis les
+    # deux fichiers qu'elle lit (MNT en binaire, ortho qui le drape).
+    get "relief", to: "map_reliefs#show", as: :map_relief
+    get "relief/grid", to: "map_reliefs#grid", as: :map_relief_grid
+    get "relief/texture", to: "map_reliefs#texture", as: :map_relief_texture
+    get "relief/surface", to: "map_reliefs#surface", as: :map_relief_surface
+    get "relief/landcover", to: "map_reliefs#landcover", as: :map_relief_landcover
+    # Les aménagements à l'essai (baissières, keylines, mares) de la vue 3D.
+    resources :map_designs, path: "relief/designs", only: %i[index create destroy], defaults: { format: :json }
     # Le carnet de gestion (phase 6) : les tâches de l'année, mois par mois.
     # `carnet` en français, imposé par l'epic. Les routes de tâches précèdent
     # `resources :map_tasks`, qui lirait sinon `current` comme un `:id`.
@@ -487,6 +516,9 @@ Rails.application.routes.draw do
     # de la carte. Avant `resources :plants`, qui lirait sinon `unplaced`
     # comme un `:id`.
     get "plants/unplaced", to: "plants#unplaced", as: :unplaced_plants
+    # « Quelle est cette plante ? » : les photos partent chez Pl@ntNet, les
+    # espèces probables reviennent dans la fiche, à valider ou refuser.
+    post "plants/identify", to: "plants#identify", as: :identify_plants
     # « Nouvelle plante » : la fiche vide s'ouvre dans le panneau de la carte,
     # et une espèce encore inconnue se crée par son nom, comme à l'édition.
     resources :plants, only: %i[new create show update destroy] do
@@ -931,6 +963,7 @@ Rails.application.routes.draw do
       # dérive d'aucun document métier de claudy, elle vient d'un bilan produit
       # ailleurs. Tout le reste se génère.
       resources :general_accounts, only: [:index, :show, :create, :update]
+      resources :third_parties, only: [:index]
       resources :analytic_accounts, only: [:index, :show, :create, :update]
       resources :fiscal_years, only: [:index, :show, :create, :update]
       resources :opening_entries, only: [:index, :create]

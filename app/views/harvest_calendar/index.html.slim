@@ -62,13 +62,13 @@
                   = render "harvest_calendar/plant_row", plant: group.plants.first, part: group.part, title: group.title
                 - else
                   details.group
-                    summary.flex.min-h-[2.75rem].cursor-pointer.list-none.items-center.gap-3.px-4.py-2.hover:bg-stone-50
+                    summary class="flex min-h-[2.75rem] cursor-pointer list-none items-center gap-3 px-4 py-2 hover:bg-stone-50"
                       span class="h-3 w-3 flex-shrink-0 rounded-full #{harvest_part_color(group.part)}" aria-hidden="true"
                       span.min-w-0.flex-1.truncate.text-sm.text-stone-800
                         span.font-medium = "#{group.title} ×#{group.plants.size}"
                         span.text-stone-400 = " — #{group.part_label.downcase}"
                       svg.h-4.w-4.flex-shrink-0.text-stone-400.transition-transform.group-open:rotate-180 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
                         polyline points="6 9 12 15 18 9"
-                    ul.border-t.border-stone-100.bg-stone-50/60.pl-6
+                    ul class="border-t border-stone-100 bg-stone-50/60 pl-6"
                       - group.plants.each do |plant|
                         li = render "harvest_calendar/plant_row", plant: plant, part: nil, title: plant.display_name

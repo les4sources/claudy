@@ -1268,7 +1268,7 @@ paths:
       tags: [Bar & comptes internes]
       summary: Lister les articles du catalogue
       parameters:
-        - { name: channel, in: query, schema: { type: string, enum: [bar, grocery, meal] } }
+        - { name: channel, in: query, schema: { type: string, enum: [bar, grocery, dph, meal, craft, bread] } }
         - { name: q, in: query, schema: { type: string }, description: "Recherche sur le nom." }
         - { name: active, in: query, schema: { type: boolean }, description: "true pour n'obtenir que les articles actifs." }
         - { $ref: "#/components/parameters/PriceOn" }
@@ -1305,7 +1305,7 @@ paths:
                   required: [name, channel]
                   properties:
                     name: { type: string, example: "Taras Boulba" }
-                    channel: { type: string, enum: [bar, grocery, meal] }
+                    channel: { type: string, enum: [bar, grocery, dph, meal, craft, bread], description: "dph = droguerie, parfumerie, hygiène ; ses articles figurent sur la fiche papier du cellier." }
                     category: { type: string, example: "Bières" }
                     unit: { type: string, enum: [piece, kg, l, portion, day] }
                     reference: { type: string, nullable: true }
@@ -1416,6 +1416,13 @@ paths:
                     reference_price_cents: { type: integer, nullable: true }
                     public_price_cents: { type: integer, nullable: true, example: 300 }
                     note: { type: string, nullable: true }
+                    third_party_id:
+                      type: integer
+                      nullable: true
+                      description: >
+                        Fournisseur chez qui ce prix d'achat a été relevé — un tiers
+                        de la comptabilité de genre supplier ou both (GET
+                        /third_parties?kind=supplier&q=…). Un client répond 422.
       responses:
         "201":
           description: Palier créé.
@@ -1750,6 +1757,23 @@ paths:
         "200": { description: Compte mis à jour. }
         "422": { $ref: "#/components/responses/Unprocessable" }
 
+  /third_parties:
+    get:
+      tags: [Comptabilité]
+      summary: Lister les tiers (fournisseurs et clients)
+      description: >
+        Lecture seule. Sert à retrouver un fournisseur existant avant de poser un
+        palier de prix (third_party_id) — la création d'un tiers reste un geste
+        humain dans Finances > Tiers. L'IBAN n'est jamais exposé.
+      parameters:
+        - { name: q, in: query, description: "Recherche sur le nom ou le code.", schema: { type: string } }
+        - { name: kind, in: query, description: "supplier inclut aussi les tiers « both ».", schema: { type: string, enum: [supplier, customer] } }
+        - { name: active, in: query, schema: { type: boolean } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: "Liste paginée de tiers (id, code, name, kind, vat_number, active)." }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /analytic_accounts:
     get:
       tags: [Comptabilité]
@@ -3645,6 +3669,13 @@ components:
         reference_price: { $ref: "#/components/schemas/Money" }
         public_price: { $ref: "#/components/schemas/Money" }
         note: { type: string, nullable: true }
+        third_party:
+          type: object
+          nullable: true
+          description: Fournisseur du prix d'achat, null quand il n'est pas connu.
+          properties:
+            id: { type: integer }
+            name: { type: string }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
     CatalogItem:
@@ -3657,7 +3688,7 @@ components:
         id: { type: integer }
         type: { type: string, example: catalog_item }
         name: { type: string, example: "Taras Boulba" }
-        channel: { type: string, enum: [bar, grocery, meal] }
+        channel: { type: string, enum: [bar, grocery, dph, meal, craft, bread] }
         channel_label: { type: string, example: "Bar" }
         category: { type: string, nullable: true, example: "Bières" }
         unit: { type: string, enum: [piece, kg, l, portion, day] }
@@ -3778,7 +3809,7 @@ components:
       enum: [zone, path, point, plant, node, line, comment, observation, lodging, space]
     MapLayerKind:
       type: string
-      enum: [venues, management, welcome, plants, network, comments, sketch, biodiversity]
+      enum: [venues, management, welcome, plants, network, comments, sketch, biodiversity, design]
       description: "network et sketch ont plusieurs couches : les désigner par layer_id."
     MapTaskSector:
       type: string

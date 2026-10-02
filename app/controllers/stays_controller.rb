@@ -599,10 +599,7 @@ class StaysController < BaseController
   end
 
   def assignable_availabilities_between(from, to)
-    scope = ExperienceAvailability.for_user(current_user).upcoming.includes(:experience)
-    return scope if from.blank? || to.blank?
-
-    scope.for_date_range(from, to)
+    ExperienceAvailability.assignable_between(current_user, from, to)
   end
 
   # Relation de base de l'index selon le filtre actif. « À venir » / « Passés »

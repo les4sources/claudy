@@ -2,6 +2,7 @@
   = render "layouts/components/page_header",
            title: @invoice.reference.presence || "Facture ##{@invoice.id}",
            links: [(link_to("Modifier", edit_finance_purchase_invoice_path(@invoice), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") unless @invoice.frozen_content?),
+                   link_to("🔁 Cette charge revient", new_finance_recurring_expense_path(recurring_expense: RecurringExpense.prefill_from(@invoice)), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
                    link_to("Toutes les factures", finance_purchase_invoices_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")].compact
 
 / Le garde des 5 000 € est une INFORMATION, jamais un blocage (décision 7) :
@@ -41,6 +42,10 @@
             = " · #{l(@invoice.issued_on, format: :short)}"
           - if @invoice.due_on
             p.text-xs.text-gray-400 Échéance le #{l(@invoice.due_on, format: :short)}
+          - if @invoice.payment_reference.present?
+            p.text-xs.text-gray-400
+              | Communication :
+              span.ml-1.font-mono.text-gray-600= @invoice.payment_reference
           p.mt-1.text-xs.text-gray-400= @invoice.legal_entity.name
         = render "finance/purchase_invoices/status_badge", invoice: @invoice
 

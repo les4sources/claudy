@@ -32,7 +32,7 @@ RSpec.describe "Carte du domaine — placer les plantes (epic #348, phase 7)", t
 
         expect(response).to have_http_status(:ok)
         body = response.body
-        expect(body).to include(%(<turbo-frame id="#{PlantsController::UNPLACED_FRAME}"), %(data-unplaced-total="3"))
+        expect(body).to include(%(<turbo-frame id="#{PlantsController::UNPLACED_FRAME}"), %(data-unplaced-total="3"), %(data-unplaced-results="true"))
         expect(body.index("Poirier Conférence")).to be < body.index("Néflier")
         expect(body.index("Néflier")).to be < body.index("Pommier Reinette Hernaut")
         expect(body).to include("#1", "map#pickPlant")

@@ -37,11 +37,17 @@
 class CatalogItem < ApplicationRecord
   CRAFT_CHANNEL = "craft".freeze
 
-  CHANNELS = %w[bar grocery meal craft bread].freeze
+  CHANNELS = %w[bar grocery dph meal craft bread].freeze
   CHANNEL_LABELS = {
-    "bar" => "Bar", "grocery" => "Cellier", "meal" => "Repas",
+    "bar" => "Bar", "grocery" => "Cellier", "dph" => "DPH", "meal" => "Repas",
     CRAFT_CHANNEL => "Artisanat", "bread" => "Pain"
   }.freeze
+
+  # DPH (droguerie, parfumerie, hygiène : savons, lessive, entretien — Michael,
+  # 2026-09-30) est un canal du CATALOGUE, pas une fiche papier : ces articles se
+  # vendent au cellier et se notent sur sa fiche, comme avant. Une fiche liste
+  # donc les articles de tous les canaux qu'elle couvre.
+  SHEET_CHANNELS = { "grocery" => %w[grocery dph] }.freeze
 
   UNITS = %w[piece kg l portion day].freeze
   UNIT_LABELS = {
@@ -68,6 +74,7 @@ class CatalogItem < ApplicationRecord
   scope :ordered, -> { order(:channel, :name) }
   scope :active, -> { where(active: true) }
   scope :for_channel, ->(channel) { where(channel: channel) if channel.present? }
+  scope :for_sheet, ->(sheet_channel) { where(channel: SHEET_CHANNELS.fetch(sheet_channel, [sheet_channel])) }
   scope :matching, ->(term) { where("catalog_items.name ILIKE ?", "%#{term}%") if term.present? }
   scope :for_consignor, ->(consignor) { where(consignor: consignor) }
   scope :craft, -> { where(channel: CRAFT_CHANNEL) }

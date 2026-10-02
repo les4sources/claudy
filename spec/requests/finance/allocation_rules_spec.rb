@@ -110,6 +110,36 @@ RSpec.describe "Finances > Rapprochement assisté", type: :request do
       expect(CashAllocation.count).to eq(0)
     end
 
+    # Depuis la file, la décision répond en place (Michael, 2026-09-30) : la
+    # page ne se recharge pas et ne remonte pas en haut.
+    describe "depuis la file, par Turbo" do
+      let(:depuis_la_file) do
+        { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml",
+          "Referer" => "http://www.example.com#{finance_unallocated_cash_entries_path}" }
+      end
+
+      it "retire la ligne quand la suggestion acceptée l'affecte entièrement" do
+        Finance::SuggestAllocations.new.run!
+        suggestion = AllocationSuggestion.last
+
+        patch finance_allocation_suggestion_path(suggestion, decision: "accept"), headers: depuis_la_file
+
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        expect(response.body).to include(%(<turbo-stream action="remove" target="file-ligne-#{entry.id}">))
+      end
+
+      it "redessine la ligne, sans la suggestion refusée" do
+        Finance::SuggestAllocations.new.run!
+        suggestion = AllocationSuggestion.last
+
+        patch finance_allocation_suggestion_path(suggestion, decision: "reject"), headers: depuis_la_file
+
+        expect(response.body).to include(%(<turbo-stream action="replace" target="file-ligne-#{entry.id}">))
+        expect(response.body).not_to include(finance_allocation_suggestion_path(suggestion, decision: "accept"))
+        expect(suggestion.reload.status).to eq("rejected")
+      end
+    end
+
     # Il n'existe pas d'acceptation « toutes règles confondues » : c'est le geste
     # par lequel une machine finit par décider à notre place.
     it "exige une règle pour l'acceptation en masse" do

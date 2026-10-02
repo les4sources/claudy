@@ -13,7 +13,7 @@
 = form_with url: finance_third_parties_path, method: :get, class: "mb-4 flex flex-wrap items-end gap-3" do
   label.text-xs.text-gray-500
     | Rechercher
-    = text_field_tag :q, params[:q], placeholder: "Nom ou code…", class: "mt-1 block rounded-md border-gray-300 text-sm"
+    = text_field_tag :q, params[:q], placeholder: "Nom ou code…", autocomplete: "off", autocorrect: "off", autocapitalize: "off", spellcheck: "false", class: "mt-1 block rounded-md border-gray-300 text-sm"
   label.text-xs.text-gray-500
     | Type
     = select_tag :kind,

@@ -29,10 +29,10 @@
         span.text-xs.text-stone-500 = label
 
   = form_with url: map_plantes_path, method: :get, class: "mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6",
-              data: { controller: "auto-submit", auto_submit_delay_value: 250, turbo_action: "replace" } do
+              data: { controller: "auto-submit", auto_submit_delay_value: 250, turbo_frame: "plants-results" } do
     .col-span-2.sm:col-span-3.lg:col-span-1
       label.sr-only for="plants_q" Rechercher
-      input[type="search" id="plants_q" name="q" value=f[:q] autocomplete="off" enterkeyhint="search"
+      input[type="search" id="plants_q" name="q" value=f[:q] autocomplete="off" enterkeyhint="search" autocorrect="off" autocapitalize="off" spellcheck="false"
             placeholder="Nom, espèce, n°…" class=select_css data-action="input->auto-submit#submit"]
     - selects = [[:status, "Tous statuts", Plant::STATUSES], [:health, "Toute santé", Plant::HEALTHS],
                  [:zone, "Toutes zones", @zones.index_with(&:itself)], [:stratum, "Toutes strates", Plant::STRATA],
@@ -45,39 +45,43 @@
           - options.each do |value, label|
             option value=value selected=(f[name] == value || nil) = label
 
-  .mt-3.flex.items-center.justify-between.text-xs.text-stone-500
-    span data-plant-result-count=@plants.size = "#{@plants.size} plante#{'s' if @plants.size > 1}#{' (filtrées)' if filtered}"
-    - if filtered
-      = link_to "Effacer les filtres", map_plantes_path, class: "font-medium text-forest hover:underline"
+  / La recherche ne recharge que cette frame : le champ reste en place et, sur
+    iPad ou iPhone, le clavier ne se ferme plus à chaque lettre. Les liens
+    ouvrent une page entière (`_top`).
+  = turbo_frame_tag "plants-results", target: "_top", data: { turbo_action: "replace" } do
+    .mt-3.flex.items-center.justify-between.text-xs.text-stone-500
+      span data-plant-result-count=@plants.size = "#{@plants.size} plante#{'s' if @plants.size > 1}#{' (filtrées)' if filtered}"
+      - if filtered
+        = link_to "Effacer les filtres", map_plantes_path, class: "font-medium text-forest hover:underline"
 
-  - if @plants.empty?
-    .mt-3.rounded-xl.border.border-dashed.border-stone-300.bg-white.px-4.py-8.text-center.text-sm.text-stone-500
-      | Aucune plante ne correspond.
-  - else
-    / Une ligne par plante ; les colonnes zone, statut et santé apparaissent à
-      partir de 640 px, les téléphones gardent l'essentiel sur deux lignes.
-    ul.mt-2.divide-y.divide-stone-100.overflow-hidden.rounded-xl.border.border-stone-200.bg-white role="list"
-      - @plants.each do |plant|
-        - health = plant_health_style(plant)
-        li data-plant-row=plant.id
-          = link_to plant_on_map_path(plant), class: "flex items-center gap-3 px-3 py-2 hover:bg-stone-50 #{'opacity-60' if plant.dead?}" do
-            = plant_thumbnail(plant, css: "h-10 w-10")
-            span.w-10.flex-shrink-0.text-right.text-xs.font-semibold.tabular-nums.text-stone-400
-              = plant.number ? "##{plant.number_label}" : "—"
-            span.min-w-0.flex-1
-              span.block.truncate.text-sm.font-medium.text-stone-800 = plant.display_name
-              span.block.truncate.text-xs.text-stone-500
-                = [plant.species_and_variety_name, plant.zone].compact_blank.join(" · ").presence || "Espèce inconnue"
-            span.hidden.w-28.flex-shrink-0.truncate.text-xs.text-stone-600.md:block = plant.zone
-            span.hidden.w-32.flex-shrink-0.truncate.text-xs.text-stone-600.sm:block = plant.status_label
-            span.hidden.w-24.flex-shrink-0.sm:block
-              - if plant.health_label
-                span class="inline-flex rounded-full px-2 py-0.5 text-[0.7rem] font-medium ring-1 #{health[:pill]}" = plant.health_label
-            span.w-16.flex-shrink-0.text-right
-              - if plant.map_feature_id
-                span.inline-flex.items-center.gap-1.text-xs.font-medium.text-forest title="Placée sur la carte"
-                  svg.h-3.5.w-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-                    path d="M20 6 9 17l-5-5"
-                  | placée
-              - elsif !plant.dead?
-                span class="rounded-full bg-ember-tint px-2 py-0.5 text-[0.65rem] font-semibold text-ember" à placer
+    - if @plants.empty?
+      .mt-3.rounded-xl.border.border-dashed.border-stone-300.bg-white.px-4.py-8.text-center.text-sm.text-stone-500
+        | Aucune plante ne correspond.
+    - else
+      / Une ligne par plante ; les colonnes zone, statut et santé apparaissent à
+        partir de 640 px, les téléphones gardent l'essentiel sur deux lignes.
+      ul.mt-2.divide-y.divide-stone-100.overflow-hidden.rounded-xl.border.border-stone-200.bg-white role="list"
+        - @plants.each do |plant|
+          - health = plant_health_style(plant)
+          li data-plant-row=plant.id
+            = link_to plant_on_map_path(plant), class: "flex items-center gap-3 px-3 py-2 hover:bg-stone-50 #{'opacity-60' if plant.dead?}" do
+              = plant_thumbnail(plant, css: "h-10 w-10")
+              span.w-10.flex-shrink-0.text-right.text-xs.font-semibold.tabular-nums.text-stone-400
+                = plant.number ? "##{plant.number_label}" : "—"
+              span.min-w-0.flex-1
+                span.block.truncate.text-sm.font-medium.text-stone-800 = plant.display_name
+                span.block.truncate.text-xs.text-stone-500
+                  = [plant.species_and_variety_name, plant.zone].compact_blank.join(" · ").presence || "Espèce inconnue"
+              span.hidden.w-28.flex-shrink-0.truncate.text-xs.text-stone-600.md:block = plant.zone
+              span.hidden.w-32.flex-shrink-0.truncate.text-xs.text-stone-600.sm:block = plant.status_label
+              span.hidden.w-24.flex-shrink-0.sm:block
+                - if plant.health_label
+                  span class="inline-flex rounded-full px-2 py-0.5 text-[0.7rem] font-medium ring-1 #{health[:pill]}" = plant.health_label
+              span.w-16.flex-shrink-0.text-right
+                - if plant.map_feature_id
+                  span.inline-flex.items-center.gap-1.text-xs.font-medium.text-forest title="Placée sur la carte"
+                    svg.h-3.5.w-3.5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                      path d="M20 6 9 17l-5-5"
+                    | placée
+                - elsif !plant.dead?
+                  span class="rounded-full bg-ember-tint px-2 py-0.5 text-[0.65rem] font-semibold text-ember" à placer

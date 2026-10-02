@@ -1,0 +1,298 @@
+/ Le relief du domaine en 3D et la simulation du ruissellement. Comme la carte,
+  la page n'a pas d'en-tête : tout l'écran est la scène, les réglages flottent
+  dans un panneau repliable.
+
+- choice_css = "flex-1 whitespace-nowrap rounded-md px-2 py-1.5 text-xs text-stone-600 hover:bg-stone-50 aria-pressed:bg-forest aria-pressed:font-semibold aria-pressed:text-white"
+- group_css = "flex gap-0.5 rounded-lg border border-stone-200 bg-white p-0.5"
+- label_css = "mb-1 text-xs font-medium text-stone-500"
+- section_title_css = "mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400"
+
+- unless @terrain.installed?
+  .m-8.rounded-2xl.border.border-dashed.p-8.text-center class="border-amber-300 bg-amber-50/40"
+    p.font-averia.text-xl.text-stone-800 Le relief n'est pas encore installé.
+    p.mt-2.text-sm.text-stone-500
+      | Le modèle de terrain vient du Géoportail de la Wallonie et ne vit pas dans le dépôt : il s'installe avec la tâche
+      code.mx-1.rounded.bg-stone-100.px-1.py-0.5.text-xs rake map:terrain:import
+      | , qui le télécharge en une minute environ.
+    p.mt-4 = link_to "Retour à la carte", map_path, class: "text-sm font-medium text-forest hover:underline"
+- else
+  div[class="relative h-full w-full overflow-hidden bg-[#dfe9ee]"
+      data-controller="map-relief"
+      data-map-relief-grid-url-value=map_relief_grid_path(v: @version)
+      data-map-relief-texture-url-value=(@terrain.texture? ? map_relief_texture_path(v: @version) : "")
+      data-map-relief-surface-url-value=(@terrain.surface? ? map_relief_surface_path(v: @version) : "")
+      data-map-relief-surface-meta-value=(@meta["surface"] || {}).slice("z_min", "z_unit").to_json
+      data-map-relief-landcover-url-value=(@terrain.landcover? ? map_relief_landcover_path(v: @version) : "")
+      data-map-relief-meta-value=@meta.slice("cols", "rows", "west", "north", "step", "cell_size_m", "z_min", "z_unit", "nodata").to_json
+      data-map-relief-features-url-value=map_features_path(format: :json)
+      data-map-relief-feature-layers-value=@feature_layers.to_json
+      data-map-relief-designs-url-value=map_designs_path(format: nil)
+      data-map-relief-domain-value=@domain_bounds.to_json]
+    div.absolute.inset-0 data-map-relief-target="viewport"
+
+    p[class="pointer-events-none absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 text-center text-sm text-stone-600"
+      data-map-relief-target="loading"] Chargement du relief…
+
+    / Le panneau des réglages.
+    div[class="absolute left-3 top-3 z-20 flex max-h-[calc(100%-1.5rem)] w-72 max-w-[calc(100vw-1.5rem)] flex-col rounded-xl border border-stone-200 bg-white/95 shadow-lg backdrop-blur"
+        data-map-relief-target="panel"]
+      .flex.items-center.gap-2.px-3.py-2.5
+        = link_to map_path, class: "flex h-8 w-8 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-100 hover:text-forest", title: "Retour à la carte", aria: { label: "Retour à la carte" } do
+          svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+            path d="M19 12H5M12 19l-7-7 7-7"
+        h1.flex-1.text-sm.font-semibold.text-stone-800 Relief et ruissellement
+        button[type="button"
+               class="flex h-8 w-8 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-100"
+               aria-expanded="true"
+               aria-label="Replier les réglages"
+               data-action="map-relief#togglePanel"]
+          svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+            path d="M4 6h16M4 12h16M4 18h16"
+
+      div.min-h-0.overflow-y-auto.border-t.border-stone-100.px-3.pb-3.pt-3 data-map-relief-target="panelBody"
+        p class=section_title_css Vue
+        p class=label_css Fond
+        / Trois fonds pour voir, trois pour placer les espèces (station).
+        div class="grid grid-cols-3 gap-0.5 rounded-lg border border-stone-200 bg-white p-0.5" data-choice-group="base"
+          button type="button" class=choice_css aria-pressed="true" data-action="map-relief#setBase" data-map-relief-value-param="ortho" Ortho 2026
+          button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setBase" data-map-relief-value-param="altitudes" Altitudes
+          - if @terrain.surface?
+            button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setBase" data-map-relief-value-param="canopy" title="Hauteur au-dessus du sol : herbe, arbustes, arbres" Végétation
+          button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setBase" data-map-relief-value-param="aspect" title="Vers où regarde chaque pente" Exposition
+          button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setBase" data-map-relief-value-param="wetness" title="Où le relief rassemble l'eau (indice)" Humidité
+          button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setBase" data-map-relief-value-param="frost" title="Où l'air froid stagne la nuit (indice)" Gel
+          - if @terrain.landcover?
+            button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setBase" data-map-relief-value-param="landcover" title="Forêt, prairie, bâti… (SPW 2023)" Occupation
+        p.mt-1.hidden.text-xs.text-stone-500 data-map-relief-target="baseLegend"
+
+        .mt-3
+          .flex.items-center.justify-between
+            label.text-xs.font-medium.text-stone-500 for="relief-exaggeration" Exagération du relief
+            span.text-xs.font-semibold.tabular-nums.text-stone-700 data-map-relief-target="exaggerationLabel" ×2,5
+          input#relief-exaggeration[type="range" min="1" max="5" step="0.5" value="2.5"
+                                    class="mt-1 w-full accent-forest"
+                                    data-map-relief-target="exaggeration"
+                                    data-action="input->map-relief#setExaggeration"]
+
+        .mt-3
+          p class=label_css Courbes de niveau
+          div class=group_css data-choice-group="contour"
+            - [[0, "Aucune"], [1, "1 m"], [2.5, "2,5 m"], [5, "5 m"]].each do |value, label|
+              button type="button" class=choice_css aria-pressed=(value == 5).to_s data-action="map-relief#setContour" data-map-relief-value-param=value = label
+          p.mt-1.text-xs.text-stone-400 Une courbe sur cinq est plus marquée.
+
+        .mt-3.space-y-1.5
+          - [["axes", "Axes d'écoulement", "Là où l'eau se rassemble : du bleu clair (0,2 ha drainé) au bleu profond (tout le vallon)."],
+             ["hollows", "Cuvettes", "Les creux où l'eau stagne avant de déborder."],
+             ["features", "Objets de la carte", "Lieux, gestion, accueil et réseaux."],
+             ["particles", "Traceurs du courant", "Pendant la pluie, des points suivent l'eau."]].each do |key, label, hint|
+            label.flex.cursor-pointer.items-start.gap-2.text-sm.text-stone-700
+              input[type="checkbox" checked=true
+                    class="mt-0.5 h-4 w-4 rounded border-stone-300 text-forest focus:ring-teal-400"
+                    data-action="change->map-relief#toggle"
+                    data-map-relief-key-param=key]
+              span
+                span.block = label
+                span.block.text-xs.text-stone-400 = hint
+
+        - if @terrain.surface?
+          label class="mt-1.5 flex cursor-pointer items-start gap-2 text-sm text-stone-700"
+            input[type="checkbox"
+                  class="mt-0.5 h-4 w-4 rounded border-stone-300 text-forest focus:ring-teal-400"
+                  data-map-relief-target="surfaceToggle"
+                  data-action="change->map-relief#toggleSurface"]
+            span
+              span.block Arbres et toits en relief
+              span.block.text-xs.text-stone-400 La canopée du LiDAR en volume, à sa vraie hauteur même sur un relief exagéré.
+
+        button[type="button"
+               class="mt-3 text-xs font-medium text-forest hover:underline"
+               data-action="map-relief#resetView"] Recentrer la vue
+
+        / Le soleil : l'ombre à une heure donnée, ou les heures de soleil direct
+          d'une journée, calculées sur les arbres et les toits.
+        .mt-4.border-t.border-stone-100.pt-3 data-map-relief-target="sunSection"
+          p class=section_title_css Soleil
+          div class=group_css data-choice-group="sunMode"
+            - [["off", "Éteint"], ["instant", "Ombres"], ["hours", "Heures de soleil"]].each do |value, label|
+              button type="button" class=choice_css aria-pressed=(value == "off").to_s data-action="map-relief#setSunMode" data-map-relief-value-param=value = label
+          p class="#{label_css} mt-2" Jour
+          div class=group_css data-choice-group="sunDate"
+            - [["12-21", "21 déc."], ["03-20", "20 mars"], ["06-21", "21 juin"], ["today", "Aujourd'hui"]].each do |value, label|
+              button type="button" class=choice_css aria-pressed=(value == "06-21").to_s data-action="map-relief#setSunDate" data-map-relief-value-param=value = label
+          .mt-2.hidden data-map-relief-target="sunHourRow"
+            .flex.items-center.justify-between
+              label.text-xs.font-medium.text-stone-500 for="relief-sun-hour" Heure
+              span.text-xs.font-semibold.tabular-nums.text-stone-700 data-map-relief-target="sunHourLabel" 14 h 00
+            input#relief-sun-hour[type="range" min="300" max="1320" step="5" value="840"
+                                  class="mt-1 w-full accent-forest"
+                                  data-map-relief-target="sunHour"
+                                  data-action="input->map-relief#setSunHour"]
+          button[type="button"
+                 class="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-stone-200 px-3 py-1.5 text-xs text-stone-700 hover:bg-stone-50"
+                 data-map-relief-target="dayButton"
+                 data-action="map-relief#toggleDay"]
+            svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              circle cx="12" cy="12" r="4"
+              path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+            span data-map-relief-target="dayLabel" Faire passer la journée
+          .mt-2.hidden data-map-relief-target="sunLegend"
+            div class="h-2 rounded-full" style="background: linear-gradient(to right, rgb(30,27,75), rgb(109,40,217), rgb(245,158,11), rgb(253,224,71))"
+            .mt-1.flex.justify-between.text-xs.text-stone-500
+              span 0 h
+              span data-map-relief-target="sunLegendMax"
+            p.mt-1.text-xs.text-stone-400 En forêt, la valeur est celle du sommet des arbres ; le relief au-delà de 150 m autour du domaine n'est pas compté.
+          p.mt-2.text-xs.text-stone-500 data-map-relief-target="sunStatus" aria-live="polite"
+          - unless @terrain.surface?
+            p.mt-1.text-xs.text-amber-700 Sans le modèle de surface, seules les ombres du relief comptent : arbres et toits n'en portent pas.
+
+        / Les aménagements à l'essai : baissières, keylines et mares, tracés sur
+          le terrain, enregistrés (couche « Aménagements à l'essai » de la carte)
+          et creusés dans le relief simulé. La pluie les compare au terrain actuel.
+        .mt-4.border-t.border-stone-100.pt-3
+          p class=section_title_css Aménagements à l'essai
+          div class=group_css data-choice-group="designTool"
+            - [["swale", "Baissière"], ["keyline", "Keyline"], ["pond", "Mare"], ["hedge", "Haie"]].each do |value, label|
+              button type="button" class=choice_css aria-pressed="false" data-action="map-relief#chooseTool" data-map-relief-value-param=value = label
+          p.mt-2.text-xs.text-stone-600 data-map-relief-target="designHint" aria-live="polite"
+          .mt-2.hidden.space-y-2 data-map-relief-target="designSwaleOptions"
+            div
+              p class=label_css Largeur
+              div class=group_css data-choice-group="width"
+                - [[1, "1 m"], [2, "2 m"], [3, "3 m"]].each do |value, label|
+                  button type="button" class=choice_css aria-pressed=(value == 2).to_s data-action="map-relief#setDesignOption" data-map-relief-key-param="width" data-map-relief-value-param=value = label
+            div
+              p class=label_css Profondeur
+              div class=group_css data-choice-group="depth"
+                - [[0.3, "0,3 m"], [0.5, "0,5 m"], [0.8, "0,8 m"]].each do |value, label|
+                  button type="button" class=choice_css aria-pressed=(value == 0.5).to_s data-action="map-relief#setDesignOption" data-map-relief-key-param="depth" data-map-relief-value-param=value = label
+            div
+              p class=label_css Butte côté aval
+              div class=group_css data-choice-group="berm"
+                - [[0, "Aucune"], [0.4, "0,4 m"], [0.8, "0,8 m"]].each do |value, label|
+                  button type="button" class=choice_css aria-pressed=(value == 0.4).to_s data-action="map-relief#setDesignOption" data-map-relief-key-param="berm" data-map-relief-value-param=value = label
+            .hidden data-map-relief-target="designGradeOptions"
+              p class=label_css Pente de la keyline
+              div class=group_css data-choice-group="grade"
+                - [[0.5, "0,5 %"], [1, "1 %"], [2, "2 %"]].each do |value, label|
+                  button type="button" class=choice_css aria-pressed=(value == 1).to_s data-action="map-relief#setDesignOption" data-map-relief-key-param="grade" data-map-relief-value-param=value = label
+          .mt-2.hidden.space-y-2 data-map-relief-target="designPondOptions"
+            div
+              p class=label_css Rayon
+              div class=group_css data-choice-group="radius"
+                - [[3, "3 m"], [5, "5 m"], [8, "8 m"], [12, "12 m"]].each do |value, label|
+                  button type="button" class=choice_css aria-pressed=(value == 5).to_s data-action="map-relief#setDesignOption" data-map-relief-key-param="radius" data-map-relief-value-param=value = label
+            div
+              p class=label_css Profondeur au centre
+              div class=group_css data-choice-group="pondDepth"
+                - [[0.8, "0,8 m"], [1.5, "1,5 m"], [2, "2 m"]].each do |value, label|
+                  button type="button" class=choice_css aria-pressed=(value == 1.5).to_s data-action="map-relief#setDesignOption" data-map-relief-key-param="pondDepth" data-map-relief-value-param=value = label
+          / La haie sur courbe : sur les pentes raides, elle fait le travail
+            d'une baissière sans terrassement.
+          .mt-2.hidden.space-y-2 data-map-relief-target="designHedgeOptions"
+            div
+              p class=label_css Largeur de la bande plantée
+              div class=group_css data-choice-group="hedgeWidth"
+                - [[3, "3 m"], [5, "5 m"], [8, "8 m"]].each do |value, label|
+                  button type="button" class=choice_css aria-pressed=(value == 5).to_s data-action="map-relief#setDesignOption" data-map-relief-key-param="hedgeWidth" data-map-relief-value-param=value = label
+            div
+              p class=label_css Bourrelet (terre et litière retenues)
+              div class=group_css data-choice-group="hedgeBerm"
+                - [[0, "Aucun"], [0.2, "0,2 m"], [0.4, "0,4 m"]].each do |value, label|
+                  button type="button" class=choice_css aria-pressed=(value == 0).to_s data-action="map-relief#setDesignOption" data-map-relief-key-param="hedgeBerm" data-map-relief-value-param=value = label
+            p.text-xs.text-stone-400 Sous la haie, le sol boit comme sous des arbres (~50 mm/h, réserve 80 mm) : une haie établie, après quelques années.
+          ul.mt-3.space-y-1 data-map-relief-target="designList"
+          p.mt-2.text-xs.text-stone-400 Une keyline qui finit au bord d'une mare la remplit. Lance la pluie pour comparer avec le terrain actuel.
+
+        .mt-4.border-t.border-stone-100.pt-3
+          p class=section_title_css Pluie
+          / Une averse type, d'intensité constante, ou une pluie mesurée, heure par
+            heure (Open-Meteo).
+          div class=group_css data-choice-group="rainSource"
+            button type="button" class=choice_css aria-pressed="true" data-action="map-relief#setRainSource" data-map-relief-value-param="typical" Averse type
+            button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setRainSource" data-map-relief-value-param="real" Pluie réelle
+          div data-map-relief-target="rainTypical"
+            p class="#{label_css} mt-2" Intensité
+            div class=group_css data-choice-group="intensity"
+              - [[10, "Pluie"], [30, "Forte"], [60, "Orage"]].each do |value, label|
+                button type="button" class=choice_css aria-pressed=(value == 30).to_s data-action="map-relief#setRain" data-map-relief-key-param="intensity" data-map-relief-value-param=value
+                  = label
+                  span class="block text-[0.65rem] opacity-70" = "#{value} mm/h"
+            p class="#{label_css} mt-2" Durée de l'averse
+            div class=group_css data-choice-group="duration"
+              - [[15, "15 min"], [30, "30 min"], [60, "1 h"], [120, "2 h"]].each do |value, label|
+                button type="button" class=choice_css aria-pressed=(value == 60).to_s data-action="map-relief#setRain" data-map-relief-key-param="duration" data-map-relief-value-param=value = label
+          .hidden data-map-relief-target="rainReal"
+            button[type="button"
+                   class="mt-2 w-full rounded-lg border border-sky-200 bg-sky-50 px-2 py-1.5 text-left text-xs text-sky-900 hover:bg-sky-100"
+                   data-action="map-relief#setRealPreset"
+                   data-map-relief-date-param="2021-07-13"
+                   data-map-relief-days-param="3"]
+              span.font-semibold 13-15 juillet 2021
+              span.block.text-sky-700 Les pluies des inondations de la Vesdre et de l'Ourthe
+            .mt-2.flex.items-end.gap-2
+              div.flex-1
+                label class=label_css for="relief-rain-date" Ou à partir du
+                input#relief-rain-date[type="date" value="2021-07-13" min="1990-01-01" max=Date.current.iso8601
+                                       class="mt-1 w-full rounded-lg border-stone-200 px-2 py-1 text-xs"
+                                       data-map-relief-target="rainDate"
+                                       data-action="change->map-relief#reloadRealRain"]
+              div class=group_css data-choice-group="realDays"
+                - [[1, "1 j"], [3, "3 j"], [7, "7 j"]].each do |value, label|
+                  button type="button" class=choice_css aria-pressed=(value == 3).to_s data-action="map-relief#setRealDays" data-map-relief-value-param=value = label
+            .mt-2 data-map-relief-target="rainChart"
+            p.mt-1.text-xs.text-stone-500 data-map-relief-target="rainRealStatus"
+            p.mt-1.text-xs.text-stone-400 Réanalyse horaire (Open-Meteo, ERA5) : les intensités sont lissées, les averses réelles tombent plus fort sur de courts moments. Simulation sur une grille de 4 m.
+          p class="#{label_css} mt-2" Le sol au départ
+          div class=group_css data-choice-group="soilState"
+            - [["dry", "Sec"], ["normal", "Normal"], ["wet", "Détrempé"]].each do |value, label|
+              button type="button" class=choice_css aria-pressed=(value == "normal").to_s data-action="map-relief#setSoilState" data-map-relief-value-param=value = label
+          p.mt-1.text-xs.text-stone-400
+            - if @terrain.landcover?
+              | Le sol boit selon ce qui le couvre (occupation 2023) jusqu'à ce que sa réserve soit pleine ; après, l'eau ruisselle.
+            - else
+              | Sans l'occupation du sol, il boit partout au même rythme jusqu'à 50 mm de réserve.
+          div data-map-relief-target="soilUniform"
+            p class="#{label_css} mt-2" Le sol boit
+            div class=group_css data-choice-group="infiltration"
+              - [[2, "Tassé"], [10, "Prairie"], [40, "Forêt"]].each do |value, label|
+                button type="button" class=choice_css aria-pressed=(value == 10).to_s data-action="map-relief#setRain" data-map-relief-key-param="infiltration" data-map-relief-value-param=value
+                  = label
+                  span class="block text-[0.65rem] opacity-70" = "#{value} mm/h"
+          p class="#{label_css} mt-2" Vitesse
+          div class=group_css data-choice-group="speed"
+            - [[1, "Lente"], [4, "Normale"], [16, "Rapide"]].each do |value, label|
+              button type="button" class=choice_css aria-pressed=(value == 4).to_s data-action="map-relief#setRain" data-map-relief-key-param="speed" data-map-relief-value-param=value = label
+
+          .mt-3.flex.gap-2
+            button[type="button"
+                   class="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-forest px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+                   aria-pressed="false"
+                   data-map-relief-target="playButton"
+                   data-action="map-relief#togglePlay"]
+              svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 4 14.9"
+                path d="M16 14v6M8 14v6M12 16v6"
+              span data-map-relief-target="playLabel" Faire pleuvoir
+            button[type="button"
+                   class="rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-600 hover:bg-stone-50"
+                   data-action="map-relief#resetRain"] Réinitialiser
+
+          .mt-3.rounded-lg.bg-stone-50.p-2.text-xs
+            .flex.items-baseline.justify-between
+              span.text-stone-500 Temps simulé
+              span.font-semibold.tabular-nums.text-stone-800 data-map-relief-target="clock" 0 min 00
+            p.mt-0.5.text-stone-500 data-map-relief-target="rainState" 30 mm/h pendant 1 h
+            dl.mt-2.space-y-0.5 data-map-relief-target="stats"
+
+        p class="mt-4 text-[0.7rem] leading-snug text-stone-400"
+          | Terrain nu (MNT) et surface (MNS) LiDAR 2021-2022 du SPW, 1 m, sur le domaine et 150 m autour. L'eau coule sur le terrain nu, les ombres tombent des arbres et des toits. La pluie est une illustration : un sol uniforme, sans fossés busés.
+          - if @meta["fetched_at"].present?
+            = " Relief téléchargé le #{l(Time.zone.parse(@meta['fetched_at']).to_date, format: :long)}."
+
+    div[class="absolute bottom-3 right-3 z-20 hidden max-w-xs space-y-0.5 rounded-xl border border-stone-200 bg-white/95 p-3 text-xs text-stone-600 shadow-lg backdrop-blur"
+        data-map-relief-target="probe"
+        aria-live="polite"]
+
+    p[class="pointer-events-none absolute bottom-3 left-1/2 z-10 hidden -translate-x-1/2 rounded-full bg-white/80 px-3 py-1 text-[0.7rem] text-stone-500 md:block"]
+      | Glisser pour tourner · clic droit pour déplacer · molette pour zoomer · un clic sonde le terrain

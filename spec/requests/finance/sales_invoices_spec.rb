@@ -217,4 +217,84 @@ RSpec.describe "Comptabilité — factures de vente (epic #240, phase 6)", type:
       expect(response.body).to include(">Ventes</a>")
     end
   end
+
+  describe "la modification d'une facture" do
+    it "propose « Modifier la facture » sur la fiche et ouvre le formulaire pré-rempli" do
+      facture = build_invoice(number: "2026-050")
+
+      get finance_sales_invoice_path(facture)
+      expect(response.body).to include(edit_finance_sales_invoice_path(facture))
+
+      get edit_finance_sales_invoice_path(facture)
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("2026-050")
+      expect(response.body).to include("1300,00")
+    end
+
+    it "corrige numéro, date, montant et notes sans toucher au lien facturé" do
+      facture = build_invoice(number: "2026-051")
+      facture.sales_invoice_sources.create!(source: stay)
+
+      patch finance_sales_invoice_path(facture),
+            params: { sales_invoice: { legal_entity_id: entity.id, number: " 2026-052 ", issued_on: "2026-06-12",
+                                       total: "1250,50", notes: "Remise accordée" } }
+
+      expect(response).to redirect_to(finance_sales_invoice_path(facture))
+      facture.reload
+      expect(facture.number).to eq("2026-052")
+      expect(facture.issued_on).to eq(Date.new(2026, 6, 12))
+      expect(facture.total_cents).to eq(125_050)
+      expect(facture.notes).to eq("Remise accordée")
+      expect(facture.sources).to eq([stay])
+    end
+
+    it "remplace le PDF quand on en joint un nouveau, et garde l'ancien sinon" do
+      facture = build_invoice(number: "2026-053")
+      facture.document.attach(io: StringIO.new("%PDF-1.4 ancien"), filename: "ancien.pdf", content_type: "application/pdf")
+      nouveau = Rack::Test::UploadedFile.new(StringIO.new("%PDF-1.4 nouveau"), "application/pdf", original_filename: "nouveau.pdf")
+
+      patch finance_sales_invoice_path(facture),
+            params: { sales_invoice: { legal_entity_id: entity.id, number: "2026-053", issued_on: "2026-06-10",
+                                       total: "1300,00" } }
+      expect(facture.reload.document.filename.to_s).to eq("ancien.pdf")
+
+      patch finance_sales_invoice_path(facture),
+            params: { sales_invoice: { legal_entity_id: entity.id, number: "2026-053", issued_on: "2026-06-10",
+                                       total: "1300,00", document: nouveau } }
+      expect(facture.reload.document.filename.to_s).to eq("nouveau.pdf")
+    end
+
+    it "réaffiche le formulaire avec l'erreur sur un doublon de numéro" do
+      build_invoice(number: "2026-054")
+      facture = build_invoice(number: "2026-055")
+
+      patch finance_sales_invoice_path(facture),
+            params: { sales_invoice: { legal_entity_id: entity.id, number: "2026-054", issued_on: "2026-06-10",
+                                       total: "1300,00" } }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(flash.now[:alert]).to include("existe déjà pour cette entité")
+      expect(facture.reload.number).to eq("2026-055")
+    end
+
+    # Le statut vient du rapprochement : relever le montant au-dessus de ce qui
+    # est affecté ramène une facture payée à « émise ».
+    it "recalcule le statut payé quand le montant change" do
+      build_fiscal_year(entity)
+      compte = build_cash_account(entity, build_general_account(code: "550000", name: "Banque"))
+      recettes = build_general_account(code: "706000", name: "Recettes", klass: 7, nature: "revenue")
+      facture = build_invoice(number: "2026-056")
+      build_cash_entry(compte).cash_allocations.create!(general_account: recettes, legal_entity: entity,
+                                                        document: facture, amount_cents: 130_000)
+      SalesInvoices::RefreshPayment.new(sales_invoice: facture).run!
+      expect(facture.reload).to be_paid
+
+      patch finance_sales_invoice_path(facture),
+            params: { sales_invoice: { legal_entity_id: entity.id, number: "2026-056", issued_on: "2026-06-10",
+                                       total: "1500,00" } }
+
+      expect(facture.reload.status).to eq("issued")
+      expect(facture.paid_on).to be_nil
+    end
+  end
 end
