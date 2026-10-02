@@ -1,0 +1,31 @@
+/ La feuille du carnet Épicerie (epic #359, décision 5) : un bloc par client,
+  six par page, pour qu'un client fasse UN paiement pour SES achats.
+- content_for :title, "Feuille Épicerie"
+.sheet-page(data-sheet="grocery")
+  header.flex.items-start.justify-between.gap-5.border-b-2.border-stone-800.pb-4
+    div.min-w-0.flex-1
+      p.text-xs.font-semibold.uppercase.tracking-wider.text-stone-500 Carnet Épicerie
+      h1.text-3xl.font-bold L'épicerie des 4 Sources
+      p.mt-1.text-sm.text-stone-700 Un bloc par client : notez vos articles, votre total, et payez une fois.
+      .mt-3 = render "shop/sheets/qr", qr: @qr
+    = render "shop/sheets/sheet_meta", number: @number, printed_on: @printed_on
+
+  .mt-4.grid.grid-cols-2.gap-4
+    - 6.times do |index|
+      table.sheet-grid(data-sheet-block=(index + 1))
+        thead
+          tr
+            th Article
+            th.w-14 Qté
+            th.w-16 Prix
+        tbody
+          - 5.times do
+            tr
+              td
+              td
+              td
+          tr
+            td.text-right.text-xs.font-bold(colspan="2") TOTAL
+            td
+          tr
+            td(colspan="3") = render "shop/sheets/paid_by"

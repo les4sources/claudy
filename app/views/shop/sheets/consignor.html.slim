@@ -1,0 +1,33 @@
+/ La feuille d'un artisan dans le carnet Artisanat (epic #359, décision 4) :
+  sa photo, son prénom, son QR, et un tableau de ventes VIDE. Ni liste de
+  produits ni prix : ils sont sur les étiquettes en rayon.
+- content_for :title, "Feuille de #{@consignor.first_name} — Artisanat"
+.sheet-page(data-sheet="consignor")
+  header.flex.items-start.gap-5.border-b-2.border-stone-800.pb-4
+    - if @consignor.portrait.attached?
+      = image_tag url_for(@consignor.portrait), alt: @consignor.first_name,
+                  class: "h-28 w-28 shrink-0 rounded-lg object-cover"
+    div.min-w-0.flex-1
+      p.text-xs.font-semibold.uppercase.tracking-wider.text-stone-500 Carnet Artisanat · dépôt-vente
+      h1.text-3xl.font-bold = @consignor.first_name
+      - if @consignor.tagline.present?
+        p.mt-1.text-base.italic.text-stone-700 = @consignor.tagline
+      .mt-3 = render "shop/sheets/qr", qr: @qr
+    = render "shop/sheets/sheet_meta", number: @number, printed_on: @printed_on
+
+  table.sheet-grid.mt-5
+    thead
+      tr
+        th.w-20 Date
+        th Article
+        th.w-16 Quantité
+        th.w-20 Prix
+        th.w-56 Payé par
+    tbody
+      - 25.times do
+        tr
+          td
+          td
+          td
+          td
+          td = render "shop/sheets/paid_by"

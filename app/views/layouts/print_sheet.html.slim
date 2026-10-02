@@ -1,0 +1,20 @@
+/ Gabarit des feuilles A4 des carnets de l'épicerie (epic #359, phase 3). À
+  l'écran, une feuille blanche sur fond gris et un bouton « Imprimer » ; au
+  papier, rien que la feuille, marges A4, une feuille par page. Les règles
+  d'impression vivent dans application.css (`.sheet-*`).
+doctype html
+html(lang="fr")
+  head
+    meta(charset="utf-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1")
+    meta(name="robots" content="noindex,nofollow")
+    title= yield(:title).presence || "Feuille — Les 4 Sources"
+    = csrf_meta_tags
+    = csp_meta_tag
+    = vite_client_tag
+    = vite_javascript_tag "application", "data-turbo-track": "reload"
+  body.sheet-screen
+    .sheet-toolbar.no-print
+      button.sheet-toolbar__print(type="button" onclick="window.print()") Imprimer
+      span.sheet-toolbar__hint Format A4, marges par défaut, sans en-têtes ni pieds de page.
+    = yield

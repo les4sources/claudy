@@ -13,22 +13,24 @@
 #
 # Table name: consignors
 #
-#  id                 :bigint           not null, primary key
-#  active             :boolean          default(TRUE), not null
-#  commission_percent :integer          default(20), not null
-#  deleted_at         :datetime
-#  email              :string
-#  ends_on            :date
-#  iban               :text
-#  name               :string           not null
-#  notes              :text
-#  portal_enabled     :boolean          default(FALSE), not null
-#  settlement_mode    :string           default("transfer"), not null
-#  starts_on          :date
-#  created_at         :datetime         not null
-#  updated_at         :datetime         not null
-#  human_id           :bigint
-#  third_party_id     :bigint
+#  id                   :bigint           not null, primary key
+#  active               :boolean          default(TRUE), not null
+#  commission_percent   :integer          default(20), not null
+#  deleted_at           :datetime
+#  email                :string
+#  ends_on              :date
+#  iban                 :text
+#  name                 :string           not null
+#  notes                :text
+#  portal_enabled       :boolean          default(FALSE), not null
+#  settlement_mode      :string           default("transfer"), not null
+#  sheets_printed_count :integer          default(0), not null
+#  starts_on            :date
+#  tagline              :string
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  human_id             :bigint
+#  third_party_id       :bigint
 #
 # Indexes
 #
@@ -44,6 +46,7 @@
 #
 class Consignor < ApplicationRecord
   SETTLEMENT_MODES = %w[invoice transfer].freeze
+  PORTRAIT_CONTENT_TYPES = %w[image/jpeg image/png image/webp].freeze
 
   SETTLEMENT_MODE_LABELS = {
     "invoice"  => "L'artisan facture",
@@ -62,6 +65,9 @@ class Consignor < ApplicationRecord
   # un article vendu a des lignes et des écritures derrière lui, il ne disparaît
   # pas parce qu'un contrat s'arrête.
   has_many :catalog_items, dependent: :nullify
+  # La photo en tête de sa feuille imprimée (epic #359, phase 3), téléversée
+  # depuis son espace du portail.
+  has_one_attached :portrait
 
   before_validation :normalize_iban
   before_validation :inherit_human_identity, on: :create
@@ -86,6 +92,8 @@ class Consignor < ApplicationRecord
   validates :iban, presence: { message: "est obligatoire pour un règlement par virement" },
                    if: :transfer?
   validate :ends_after_starts
+  validates :tagline, length: { maximum: 140 }
+  validate :portrait_is_an_image
 
   scope :ordered, -> { order(active: :desc, name: :asc) }
   scope :actives, -> { where(active: true) }
@@ -115,6 +123,21 @@ class Consignor < ApplicationRecord
     "•••• #{iban.last(4)}"
   end
 
+  # Son prénom, tel qu'il apparaît sur sa feuille (« Émilie » pour « Émilie
+  # Dupont »).
+  def first_name = name.to_s.split.first.to_s
+
+  # La communication de son QR (epic #359, décision 3) : « ARTISANAT EMILIE ».
+  # Sans accents ni minuscules — c'est le mot-clé que la banque rapprochera, et
+  # toutes les banques ne transmettent pas les accents.
+  def sheet_communication = "ARTISANAT #{I18n.transliterate(first_name).upcase}".strip
+
+  # Le numéro de la feuille qu'on imprime : le compteur avance d'un cran.
+  def next_sheet_number!
+    self.class.where(id: id).update_all("sheets_printed_count = sheets_printed_count + 1")
+    reload.sheets_printed_count
+  end
+
   # Contrat en cours à cette date : commencé, pas terminé, et actif.
   def running_on?(date = Date.current)
     return false unless active?
@@ -138,6 +161,13 @@ class Consignor < ApplicationRecord
 
     self.name  = human.name  if name.blank?
     self.email = human.email if email.blank?
+  end
+
+  def portrait_is_an_image
+    return unless portrait.attached?
+    return if PORTRAIT_CONTENT_TYPES.include?(portrait.blob.content_type)
+
+    errors.add(:portrait, "doit être une photo (JPEG, PNG ou WebP)")
   end
 
   def ends_after_starts

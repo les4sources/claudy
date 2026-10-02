@@ -1,0 +1,31 @@
+/ Les coordonnées bancaires des QR des carnets de l'épicerie (epic #359,
+  phase 3). Le dépôt est public : elles ne vivent qu'ici.
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Carnets de l'épicerie"
+
+.max-w-2xl.space-y-4
+  p.text-sm.text-gray-500
+    | Le compte vers lequel pointent tous les QR imprimés sur les feuilles des carnets — y compris celles des artisans : la fondation encaisse, puis règle chaque artisan sur son relevé.
+
+  - if @settings.errors.any?
+    .rounded-lg.border.border-red-200.bg-red-50.px-4.py-3.text-sm.text-red-800
+      = @settings.errors.full_messages.to_sentence
+
+  = form_with model: @settings, url: shop_settings_path, method: :patch,
+              builder: ActionView::Helpers::FormBuilder,
+              class: "space-y-4 rounded-2xl bg-white p-5 ring-1 ring-gray-200" do |f|
+    div
+      = f.label :beneficiary_name, "Bénéficiaire", class: "block text-sm font-medium text-gray-700"
+      = f.text_field :beneficiary_name, maxlength: 70, placeholder: "Fondation Les 4 Sources",
+                     class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+    div
+      = f.label :iban, "IBAN", class: "block text-sm font-medium text-gray-700"
+      = f.text_field :iban, value: @settings.formatted_iban.presence, class: "mt-1 w-full rounded-md border-gray-300 font-mono text-sm shadow-sm"
+    div
+      = f.label :bic, "BIC", class: "block text-sm font-medium text-gray-700"
+      = f.text_field :bic, class: "mt-1 w-full rounded-md border-gray-300 font-mono text-sm shadow-sm"
+      p.mt-1.text-xs.text-gray-400 Facultatif pour un virement SEPA, mais certaines applis bancaires le préfèrent.
+    = f.submit "Enregistrer", class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+
+  - unless @settings.bank_configured?
+    p.text-sm.text-amber-700 Tant que le bénéficiaire et l'IBAN manquent, les feuilles s'impriment sans QR.
