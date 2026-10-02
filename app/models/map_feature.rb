@@ -293,7 +293,8 @@ class MapFeature < ApplicationRecord
     return {} unless plant_point? && plant
 
     { plant_id: plant.id, number: plant.number_label, health: plant.health, stratum: plant.stratum,
-      status: plant.status, dead: plant.dead? }
+      status: plant.status, dead: plant.dead?, planned: plant.planned?, species: plant.plant_species&.name,
+      mature: plant.mature_dimensions }
   end
 
   private
@@ -420,6 +421,7 @@ class MapFeature < ApplicationRecord
 
       errors.add(:base, "La cote « #{key} » (#{value}) sort de #{range.min} à #{range.max}") unless value.is_a?(Numeric) && range.cover?(value)
     end
+    errors.add(:base, "« enabled » doit valoir vrai ou faux") unless [nil, true, false].include?(design["enabled"])
     expected = type == "pond" ? "Polygon" : "LineString"
     errors.add(:geometry, "d'un aménagement « #{DESIGN_TYPES[type]} » doit être un #{expected}") if geometry.is_a?(Hash) && geometry_type != expected
   end

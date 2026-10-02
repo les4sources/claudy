@@ -32,6 +32,23 @@ class MapDesignsController < BaseController
     end
   end
 
+  # PATCH : renommer, ou masquer / réafficher (`enabled`) pour faire des essais
+  # sans supprimer. Un aménagement masqué ne creuse plus le relief simulé.
+  def update
+    feature = layer.map_features.find(params[:id])
+    attrs = params.require(:design).permit(:name, :enabled)
+    feature.name_i18n = feature.name_i18n.to_h.merge("fr" => attrs[:name]) if attrs[:name].present?
+    if attrs.key?(:enabled)
+      enabled = ActiveModel::Type::Boolean.new.cast(attrs[:enabled])
+      feature.properties = feature.properties.to_h.merge("design" => feature.design.merge("enabled" => enabled != false))
+    end
+    if feature.save
+      render json: feature.as_geojson
+    else
+      render json: { errors: feature.errors.full_messages }, status: :unprocessable_content
+    end
+  end
+
   def destroy
     layer.map_features.find(params[:id]).soft_delete!(validate: false)
     head :no_content

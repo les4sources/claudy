@@ -3915,6 +3915,8 @@ components:
         planted_on: { type: string, format: date, nullable: true }
         planted_year: { type: integer, nullable: true }
         altitude: { type: integer, nullable: true }
+        mature_height: { type: number, nullable: true, description: "Hauteur adulte (m), saisie pour cette plante. Sinon la vue 3D la déduit de l'espèce et de la strate." }
+        mature_spread: { type: number, nullable: true, description: "Envergure adulte (m), saisie pour cette plante." }
         nursery: { type: string, nullable: true }
         notion_url: { type: string, nullable: true }
         notes: { type: string, nullable: true, description: "Texte libre de la fiche. Les notes datées sont dans `notes_log` (fiche détaillée)." }
@@ -3980,6 +3982,8 @@ components:
         planted_on: { type: string, format: date }
         planted_year: { type: integer }
         altitude: { type: integer }
+        mature_height: { type: number, description: "Hauteur adulte (m), 0 < h ≤ 60." }
+        mature_spread: { type: number, description: "Envergure adulte (m), 0 < e ≤ 60." }
         nursery: { type: string }
         notion_url: { type: string, description: "Clé de l'upsert de POST /plants." }
         notes: { type: string }

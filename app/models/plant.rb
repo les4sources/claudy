@@ -95,6 +95,7 @@ class Plant < ApplicationRecord
   validates :plant_count, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validates :purchase_price_cents, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :planted_year, numericality: { only_integer: true, greater_than: 1800 }, allow_nil: true
+  validates :mature_height, :mature_spread, numericality: { greater_than: 0, less_than_or_equal_to: 60 }, allow_nil: true
   validate :variety_belongs_to_species
   validate :map_feature_is_a_plant_point
 
@@ -173,6 +174,61 @@ class Plant < ApplicationRecord
   def stock_type_label = STOCK_TYPES[stock_type]
 
   def dead? = status == DEAD
+
+  # Une plante qui n'est pas encore en terre : dessinée « en projet » dans la
+  # vue 3D du relief.
+  PLANNED_STATUSES = %w[on_plan awaiting_planting to_place].freeze
+  def planned? = PLANNED_STATUSES.include?(status)
+
+  # Les dimensions adultes (m) pour la vue 3D : `{ height:, spread:, source: }`.
+  #
+  # Dans l'ordre : ce qu'on a saisi pour CETTE plante ; sinon l'espèce, dont la
+  # hauteur et l'envergure sont du texte libre (« 15-30 m », « 5-7 m / 15 m /
+  # 20 à 35 ») — on en garde la médiane ; sinon une valeur type de la strate.
+  # La conduite corrige ensuite : une trogne ou une cépée ne deviennent jamais
+  # l'arbre de la fiche botanique.
+  STRATUM_DEFAULTS = {
+    "tree" => [12, 9], "coppice" => [6, 4], "pollard" => [5, 4], "food_pollard" => [4, 3.5],
+    "espalier" => [2.5, 0.6], "shrub" => [2.5, 2], "subshrub" => [1, 1], "herbaceous" => [0.6, 0.5],
+    "climber" => [3, 1.5], "groundcover" => [0.2, 0.8], "vine" => [4, 2], "aquatic" => [0.5, 0.5]
+  }.freeze
+
+  def mature_dimensions
+    return { height: mature_height.to_f, spread: (mature_spread || mature_height).to_f, source: "plant" } if mature_height.present?
+
+    height = self.class.typical_size(plant_species&.height)
+    spread = self.class.typical_size(plant_species&.spread)
+    default_height, default_spread = STRATUM_DEFAULTS.fetch(stratum.to_s, STRATUM_DEFAULTS["tree"])
+    source = height ? "species" : "stratum"
+    height ||= default_height
+    spread ||= mature_spread&.to_f || [default_spread, height * 0.75].min
+    height, spread = trained(height, spread)
+    spread = mature_spread.to_f if mature_spread.present?
+    { height: height.round(1), spread: spread.round(1), source: source }
+  end
+
+  # La médiane des nombres d'un texte libre de dimension, en mètres ; nil s'il
+  # n'y en a pas. « 5-7 m / 15 m / 30 m / 20 à 35 » → 17,5.
+  def self.typical_size(text)
+    numbers = text.to_s.scan(/\d+(?:[.,]\d+)?/).map { |n| n.tr(",", ".").to_f }.select(&:positive?)
+    return nil if numbers.empty?
+
+    sorted = numbers.sort
+    middle = sorted.size / 2
+    sorted.size.odd? ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2
+  end
+
+  # La conduite plafonne la taille : une trogne repart d'une tête à 2-3 m, une
+  # cépée est recépée tous les 7 à 15 ans, un palissé reste contre son support.
+  def trained(height, spread)
+    case stratum
+    when "pollard" then [[height, 5].min, [spread, 4].min]
+    when "food_pollard" then [[height, 4].min, [spread, 3.5].min]
+    when "coppice" then [(height * 0.4).clamp(3, 8), (spread * 0.6).clamp(2, 6)]
+    when "espalier" then [[height, 2.5].min, 0.6]
+    else [height, spread]
+    end
+  end
 
   # Le nom propre, sinon « Pommier Reinette Hernaut ».
   def display_name = name.presence || species_and_variety_name

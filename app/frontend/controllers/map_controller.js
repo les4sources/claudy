@@ -574,6 +574,8 @@ export default class extends Controller {
     // Les aménagements à l'essai du relief 3D : l'eau, en bleu ; une keyline en
     // tirets violets, comme dans la vue 3D.
     const design = feature?.properties?.design?.type;
+    // Masqué dans la vue 3D : un fantôme pointillé, qu'on sait où il est.
+    if (design && feature.properties.design.enabled === false) return { color: '#a8a29e', weight: 2, opacity: 0.6, dashArray: '4 6', fillOpacity: 0.05 };
     if (design === 'pond') return { color: '#0369a1', weight, fillColor: '#38bdf8', fillOpacity: 0.35 };
     if (design === 'swale') return { color: '#0284c7', weight: selected ? 6 : 4, lineCap: 'round' };
     if (design === 'keyline') return { color: '#7c3aed', weight: selected ? 6 : 4, dashArray: '8 6', lineCap: 'round' };

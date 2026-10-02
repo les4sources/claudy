@@ -89,6 +89,21 @@ RSpec.describe "Carte du domaine — aménagements à l'essai", type: :request d
       expect(MapFeature.unscoped.find(id).deleted_at).to be_present
     end
 
+    it "masque, réaffiche et renomme un aménagement sans le supprimer" do
+      post_design(type: "swale", geometry: line.to_json, width: 2, depth: 0.5, berm: 0.4, grade: 0)
+      id = JSON.parse(response.body)["id"]
+
+      patch map_design_path(id), params: { design: { enabled: false } }, as: :json
+      expect(response).to have_http_status(:ok)
+      expect(MapFeature.find(id).design).to include("enabled" => false, "type" => "swale", "width" => 2.0)
+
+      patch map_design_path(id), params: { design: { enabled: true, name: "Baissière du haut" } }, as: :json
+      feature = MapFeature.find(id)
+      expect(feature.design["enabled"]).to be(true)
+      expect(feature.display_name).to eq("Baissière du haut")
+      expect(JSON.parse(response.body).dig("properties", "design", "enabled")).to be(true)
+    end
+
     it "ne retire que les aménagements, pas un objet d'une autre couche" do
       other = MapLayer.for_kind(:management).map_features.create!(geometry: line.deep_stringify_keys, feature_kind: "path")
 

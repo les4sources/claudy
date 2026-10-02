@@ -182,7 +182,7 @@ class PlantsController < BaseController
   def plant_params
     params.require(:plant).permit(:name, :number, :zone, :status, :health, :production, :habit, :stratum,
                                   :population, :stock_type, :plant_count, :nursery, :purchase_price,
-                                  :planted_on, :planted_year, :altitude, :notion_url, :notes,
+                                  :planted_on, :planted_year, :altitude, :mature_height, :mature_spread, :notion_url, :notes,
                                   :species_name, :species_latin_name, :species_family, :variety_name, photos: [])
   end
 

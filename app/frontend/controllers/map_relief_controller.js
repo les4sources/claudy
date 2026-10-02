@@ -121,7 +121,7 @@ export default class extends Controller {
   static targets = [
     'viewport', 'loading', 'panel', 'panelBody', 'exaggeration', 'exaggerationLabel',
     'playButton', 'playLabel', 'clock', 'rainState', 'stats', 'probe',
-    'baseLegend', 'designHint', 'designList', 'designSwaleOptions', 'designPondOptions', 'designGradeOptions', 'designHedgeOptions', 'rainTypical', 'rainReal', 'rainDate', 'rainChart', 'rainRealStatus', 'soilUniform', 'sunSection', 'sunHour', 'sunHourLabel', 'sunHourRow', 'sunStatus', 'sunLegend', 'sunLegendMax', 'dayButton', 'dayLabel', 'surfaceToggle',
+    'baseLegend', 'designHint', 'designList', 'designSwaleOptions', 'designPondOptions', 'designGradeOptions', 'designHedgeOptions', 'plantStatus', 'rainTypical', 'rainReal', 'rainDate', 'rainChart', 'rainRealStatus', 'soilUniform', 'sunSection', 'sunHour', 'sunHourLabel', 'sunHourRow', 'sunStatus', 'sunLegend', 'sunLegendMax', 'dayButton', 'dayLabel', 'surfaceToggle',
   ]
 
   static values = {
@@ -134,6 +134,7 @@ export default class extends Controller {
     featuresUrl: String,
     featureLayers: Array,
     designsUrl: String,
+    plantsLayer: String,
     domain: Object,
   }
 
@@ -143,7 +144,7 @@ export default class extends Controller {
       intensity: 30, duration: 60, infiltration: 10, speed: 4,
       sunMode: 'off', sunDate: '06-21', solidSurface: false,
       width: 2, depth: 0.5, berm: 0.4, grade: 1, radius: 5, pondDepth: 1.5, hedgeWidth: 5, hedgeBerm: 0,
-      soilState: 'normal', rainSource: 'typical', realDays: 3,
+      soilState: 'normal', rainSource: 'typical', realDays: 3, plantMode: 'off', plantFilter: 'all',
     }
     this.playing = false
     this.features = []
@@ -215,6 +216,7 @@ export default class extends Controller {
     this.drawOverlay()
     this.setLoading(null)
     this.loadFeatures()
+    this.loadPlants()
   }
 
   // ---- Réglages de la vue ---------------------------------------------------
@@ -517,8 +519,15 @@ export default class extends Controller {
   reshape({ keepMesh = false } = {}) {
     const { heights, cols, rows } = this.full
     const cell = this.metaValue.cell_size_m
-    if (this.designs.length) {
-      const result = applyDesigns(heights, cols, rows, cell, this.designs)
+    // Un aménagement masqué ne creuse rien : il reste dans la liste, sans effet.
+    this.designs.filter((design) => design.enabled === false).forEach((design) => {
+      design.cells = null
+      design.simCells = []
+      design.capacity = 0
+    })
+    const active = this.designs.filter((design) => design.enabled !== false)
+    if (active.length) {
+      const result = applyDesigns(heights, cols, rows, cell, active)
       this.ground = result.heights
       result.footprints.forEach((footprint) => {
         const design = this.designs.find((d) => d.id === footprint.id)
@@ -548,19 +557,21 @@ export default class extends Controller {
     const factor = this.simFactor
     const cell = this.metaValue.cell_size_m * factor
     const base = downsample(heights, cols, rows, factor)
-    const designed = this.designs.length ? downsampleDesigned(heights, this.ground, cols, rows, factor) : base.heights
+    const designed = this.activeDesigns.length ? downsampleDesigned(heights, this.ground, cols, rows, factor) : base.heights
     this.baseSoilMaps = this.buildSoilMaps(base.cols, base.rows, factor, null)
     this.soilMaps = this.buildSoilMaps(base.cols, base.rows, factor, this.hedgeMask())
     this.domainCells = null
     this.designs.forEach((design) => { design.simCells = design.cells ? this.toSimCells(design.cells) : [] })
     this.simulation = new RainSimulation(designed, base.cols, base.rows, cell, this.simOptions())
-    this.baseline = this.designs.length ? new RainSimulation(base.heights, base.cols, base.rows, cell, this.simOptions(true)) : null
+    this.baseline = this.activeDesigns.length ? new RainSimulation(base.heights, base.cols, base.rows, cell, this.simOptions(true)) : null
     // Le relief a changé : la pluie repart de zéro, à la main.
     this.playing = false
     if (this.hasPlayLabelTarget) this.playLabelTarget.textContent = 'Faire pleuvoir'
     if (this.hasPlayButtonTarget) this.playButtonTarget.setAttribute('aria-pressed', 'false')
     this.renderStats()
   }
+
+  get activeDesigns() { return this.designs.filter((design) => design.enabled !== false) }
 
   toSimCells(cells) {
     const { cols } = this.full
@@ -713,7 +724,7 @@ export default class extends Controller {
     const props = feature.properties || {}
     const design = props.design || {}
     if (!design.type) return null
-    const base = { id: feature.id, name: props.name, type: design.type, width: design.width, depth: design.depth,
+    const base = { id: feature.id, name: props.name, type: design.type, width: design.width, depth: design.depth, enabled: design.enabled !== false,
                    berm: design.berm, grade: design.grade || 0, radius: design.radius }
     if (design.type === 'pond') {
       const center = design.center || polygonCenter(feature.geometry)
@@ -769,7 +780,11 @@ export default class extends Controller {
     context.save()
     context.lineCap = 'round'
     context.lineJoin = 'round'
+    // Le survolé d'abord, sous les autres : un halo jaune large, même s'il est masqué.
+    const highlighted = this.designs.find((design) => String(design.id) === String(this.highlightId))
+    if (highlighted) this.drawHalo(context, highlighted, sx, sy)
     for (const design of this.designs) {
+      if (design.enabled === false) continue
       context.strokeStyle = DESIGN_COLORS[design.type]
       context.fillStyle = DESIGN_COLORS[design.type]
       if (design.type === 'pond') {
@@ -862,6 +877,79 @@ export default class extends Controller {
     context.restore()
   }
 
+  drawHalo(context, design, sx, sy) {
+    context.save()
+    context.strokeStyle = '#facc15'
+    context.globalAlpha = 0.95
+    context.lineCap = 'round'
+    context.lineJoin = 'round'
+    if (design.type === 'pond') {
+      context.lineWidth = 14
+      context.beginPath()
+      context.ellipse(design.center.x * sx, design.center.y * sy, (design.radius + 2) * sx, (design.radius + 2) * sy, 0, 0, Math.PI * 2)
+      context.stroke()
+    } else {
+      context.lineWidth = Math.max(16, (design.width || 2) * sx + 14)
+      context.beginPath()
+      design.points.forEach((point, k) => {
+        if (k === 0) context.moveTo(point.x * sx, point.y * sy)
+        else context.lineTo(point.x * sx, point.y * sy)
+      })
+      context.stroke()
+    }
+    context.restore()
+  }
+
+  // Le survol d'un aménagement dans la liste : halo sur le terrain et balise.
+  highlightDesign(event) {
+    const id = event.params.id
+    if (String(this.highlightId) === String(id)) return
+    this.highlightId = id
+    const design = this.designs.find((d) => String(d.id) === String(id))
+    if (design) this.scene?.setBeacon(this.designAnchor(design))
+    this.drawOverlay()
+  }
+
+  clearHighlight() {
+    if (this.highlightId == null) return
+    this.highlightId = null
+    this.scene?.setBeacon(null)
+    this.drawOverlay()
+  }
+
+  // Le point où planter la balise : le centre d'une mare, le milieu d'une ligne.
+  designAnchor(design) {
+    const point = design.type === 'pond' ? design.center : design.points[Math.floor(design.points.length / 2)]
+    const { cols, rows } = this.full
+    const cell = this.metaValue.cell_size_m
+    const c = Math.min(cols - 1, Math.max(0, Math.round(point.x / cell)))
+    const r = Math.min(rows - 1, Math.max(0, Math.round(point.y / cell)))
+    return { x: point.x, z: point.y, ground: this.full.heights[r * cols + c], size: design.radius || design.width || 4 }
+  }
+
+  // Masquer / réafficher sans supprimer : enregistré (on le retrouve au
+  // rechargement), et le relief simulé est recalculé sans lui.
+  async toggleDesign(event) {
+    const id = event.params.id
+    const design = this.designs.find((d) => String(d.id) === String(id))
+    if (!design) return
+    const enabled = design.enabled === false
+    const response = await fetch(`${this.designsUrlValue}/${id}`, {
+      method: 'PATCH', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': csrfToken() },
+      body: JSON.stringify({ design: { enabled } }),
+    })
+    if (!response.ok) return
+    design.enabled = enabled
+    this.setLoading('Mise à jour du relief…')
+    await nextPaint()
+    this.reshape()
+    await this.applyBase()
+    this.drawOverlay()
+    this.renderDesignList()
+    this.setLoading(null)
+  }
+
   renderDesignList() {
     if (!this.hasDesignListTarget) return
     if (!this.designs.length) {
@@ -876,14 +964,99 @@ export default class extends Controller {
         ? `r ${formatNumber(design.radius, 0)} m, ${formatNumber(design.depth, 1)} m`
         : `${formatNumber(design.length || 0, 0)} m${design.grade ? `, ${formatNumber(design.grade, 1)} %` : ''}`
       const water = raining ? ` · ${formatVolume(this.designWater(design))} d'eau` : ''
-      return `<li class="flex items-center gap-2 text-xs">
+      const off = design.enabled === false
+      const eye = off
+        ? '<path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 4.5 10 7a12.6 12.6 0 0 1-3.2 4.2M6.6 6.6C4.3 8 2.7 10.2 2 12c1 2.5 5 7 10 7a9.6 9.6 0 0 0 4.5-1.1"/>'
+        : '<path d="M2 12c1-2.5 5-7 10-7s9 4.5 10 7c-1 2.5-5 7-10 7S3 14.5 2 12z"/><circle cx="12" cy="12" r="3"/>'
+      return `<li class="flex items-center gap-2 rounded px-1 text-xs hover:bg-amber-50 ${off ? 'opacity-50' : ''}"
+                  data-action="mouseenter->map-relief#highlightDesign mouseleave->map-relief#clearHighlight"
+                  data-map-relief-id-param="${design.id}">
+        <button type="button" class="shrink-0 rounded p-0.5 text-stone-500 hover:bg-stone-100 hover:text-stone-800"
+                data-action="map-relief#toggleDesign" data-map-relief-id-param="${design.id}"
+                aria-pressed="${off ? 'false' : 'true'}" title="${off ? 'Réafficher' : 'Masquer'}" aria-label="${off ? 'Réafficher' : 'Masquer'} ${escapeHtml(design.name || '')}">
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${eye}</svg>
+        </button>
         <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background:${DESIGN_COLORS[design.type]}"></span>
-        <span class="min-w-0 flex-1 truncate text-stone-700">${escapeHtml(design.name || DESIGN_LABELS[design.type])} <span class="text-stone-400">(${size})</span></span>
+        <span class="min-w-0 flex-1 break-words leading-tight text-stone-700">${escapeHtml(design.name || DESIGN_LABELS[design.type])} <span class="text-stone-400">(${size})</span></span>
         <span class="shrink-0 tabular-nums text-stone-500">${design.type === 'keyline' ? 'mène l\'eau' : design.type === 'hedge' ? `boit ~${HEDGE_SOIL.rate} mm/h` : `${formatVolume(design.capacity || 0)} max`}${water}</span>
         <button type="button" class="shrink-0 rounded px-1 text-stone-400 hover:bg-stone-100 hover:text-red-700"
                 data-action="map-relief#removeDesign" data-map-relief-id-param="${design.id}" aria-label="Retirer ${escapeHtml(design.name || '')}">×</button>
       </li>`
     }).join('')
+  }
+
+  // ---- Les plantes nourricières ----------------------------------------------
+
+  // Les plantes PLACÉES (un point dans la couche Plantes), avec leurs
+  // dimensions adultes calculées côté serveur (espèce + conduite, ou saisie).
+  async loadPlants() {
+    if (!this.plantsLayerValue) return
+    try {
+      const url = `${this.featuresUrlValue}?layer_id=${encodeURIComponent(this.plantsLayerValue)}`
+      const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+      if (!response.ok) return
+      const collection = await response.json()
+      const { cols, rows } = this.full
+      const cell = this.metaValue.cell_size_m
+      this.allPlants = (collection.features || [])
+        .filter((feature) => feature.geometry?.type === 'Point' && !feature.properties?.dead)
+        .map((feature) => {
+          const p = feature.properties
+          const { x, y } = this.toGrid(feature.geometry.coordinates)
+          const c = Math.min(cols - 1, Math.max(0, Math.round(x / cell)))
+          const r = Math.min(rows - 1, Math.max(0, Math.round(y / cell)))
+          return {
+            id: p.plant_id, name: p.name, species: p.species, status: p.status, planned: !!p.planned,
+            stratum: p.stratum, height: p.mature?.height || 8, spread: p.mature?.spread || 6, source: p.mature?.source,
+            x, z: y, ground: this.full.heights[r * cols + c],
+          }
+        })
+        .filter((plant) => plant.x >= 0 && plant.z >= 0 && plant.x <= (cols - 1) * cell && plant.z <= (rows - 1) * cell)
+    } catch {
+      this.allPlants = []
+    }
+    this.applyPlants()
+  }
+
+  setPlantMode(event) {
+    this.settings.plantMode = event.params.value
+    this.markChoice(event)
+    this.applyPlants()
+  }
+
+  setPlantFilter(event) {
+    this.settings.plantFilter = event.params.value
+    this.markChoice(event)
+    this.applyPlants()
+  }
+
+  applyPlants() {
+    if (!this.scene) return
+    const { plantFilter, plantMode } = this.settings
+    const all = this.allPlants || []
+    this.shownPlants = all.filter((plant) => plantFilter === 'all' || (plantFilter === 'planned') === plant.planned)
+    this.scene.setPlants(this.shownPlants, plantMode)
+    if (this.hasPlantStatusTarget) {
+      const planned = all.filter((plant) => plant.planned).length
+      this.plantStatusTarget.textContent = all.length
+        ? `${all.length} plante${all.length > 1 ? 's' : ''} placée${all.length > 1 ? 's' : ''}, dont ${planned} en projet. ${plantMode === 'mature' ? 'Taille adulte : espèce et conduite, ou saisie sur la fiche.' : ''}`
+        : 'Aucune plante placée sur la carte.'
+    }
+  }
+
+  plantProbe(index) {
+    const plant = this.shownPlants?.[index]
+    if (!plant) return false
+    const source = { plant: 'saisie sur la fiche', species: 'd\'après l\'espèce et la conduite', stratum: 'valeur type de la strate' }[plant.source] || ''
+    this.probeTarget.innerHTML = [
+      `<p class="font-semibold text-stone-800">${escapeHtml(plant.name || 'Plante')}</p>`,
+      plant.species ? `<p>${escapeHtml(plant.species)}</p>` : '',
+      `<p>${plant.planned ? 'En projet' : 'En place'} · à maturité ${formatNumber(plant.height, 1)} m de haut, ${formatNumber(plant.spread, 1)} m d'envergure</p>`,
+      source ? `<p class="text-stone-400">${source}</p>` : '',
+      `<p><a class="font-medium text-forest hover:underline" href="/map?plant=${plant.id}">Ouvrir la fiche</a></p>`,
+    ].join('')
+    this.probeTarget.classList.remove('hidden')
+    return true
   }
 
   // ---- La pluie -------------------------------------------------------------
@@ -1124,7 +1297,7 @@ export default class extends Controller {
   comparisonHtml() {
     const sim = this.simulation
     const base = this.baseline
-    if (!sim || !base || !this.designs.length) return ''
+    if (!sim || !base || !this.activeDesigns.length) return ''
     const held = this.designs.reduce((sum, design) => sum + this.designWater(design), 0)
     const kept = this.domainWater(sim)
     const keptBefore = this.domainWater(base)
@@ -1317,6 +1490,9 @@ export default class extends Controller {
   }
 
   async probe(event) {
+    // Une plante sous le clic passe avant le terrain.
+    const plantIndex = this.scene.pickPlant(event)
+    if (plantIndex != null && this.plantProbe(plantIndex)) return
     const hit = this.scene.pick(event)
     if (!hit) {
       this.probeTarget.classList.add('hidden')

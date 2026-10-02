@@ -65,6 +65,7 @@ RSpec.describe "Carte du domaine — relief 3D", type: :request do
       expect(page.at_css('[data-map-relief-value-param="landcover"]')).to be_present
       expect(page.at_css('[data-choice-group="rainSource"]')).to be_present
       expect(page.at_css('[data-choice-group="soilState"]')).to be_present
+      expect(page.at_css('[data-choice-group="plantMode"]')).to be_present
       # Les fonds de station, pour placer les espèces.
       %w[aspect wetness frost].each do |kind|
         expect(page.at_css(%([data-map-relief-value-param="#{kind}"]))).to be_present

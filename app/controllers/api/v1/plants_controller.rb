@@ -21,7 +21,7 @@ module Api
         stock_type: Plant::STOCK_TYPES
       }.freeze
       ATTRIBUTES = %i[name number zone status health production habit stratum population stock_type
-                      plant_count purchase_price_cents planted_on planted_year altitude nursery notion_url
+                      plant_count purchase_price_cents planted_on planted_year altitude mature_height mature_spread nursery notion_url
                       notes plant_species_id plant_variety_id].freeze
       INCLUDES = [:plant_variety, :harvest_windows, { map_feature: [], plant_species: :harvest_windows }].freeze
 

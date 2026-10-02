@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_30_220000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1793,6 +1793,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_220000) do
     t.string "habit"
     t.string "health"
     t.bigint "map_feature_id"
+    t.decimal "mature_height", precision: 5, scale: 1
+    t.decimal "mature_spread", precision: 5, scale: 1
     t.string "name", null: false
     t.text "notes"
     t.string "notion_url"

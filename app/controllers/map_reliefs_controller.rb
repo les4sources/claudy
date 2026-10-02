@@ -21,6 +21,8 @@ class MapReliefsController < BaseController
     @version = @meta["fetched_at"].to_s
     # L'emprise du domaine (le fond de carte), pour compter l'eau qu'on y garde.
     @domain_bounds = MapBaseLayer.default_layer&.bounds || {}
+    # Les plantes nourricières placées, dessinées en 3D (repères ou à maturité).
+    @plants_layer_id = MapLayer.find_by(kind: "plants")&.id
     @feature_layers = MapLayer.where(kind: OVERLAY_KINDS).ordered.map do |layer|
       { id: layer.id, kind: layer.kind, name: layer.name }
     end
