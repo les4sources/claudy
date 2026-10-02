@@ -35,6 +35,17 @@ RSpec.describe "Carte du domaine — objets (epic #348, phase 2)", type: :reques
       expect(response.body).to include("Gestion", "Outils de la couche Gestion", "feature_panel")
     end
 
+    # Michael, 2026-09-30 : pouvoir regarder la carte seule, sans couche active.
+    it "propose « Aucune » en tête des couches" do
+      MapBaseLayer.create!(key: "test-layer", name: "Couche de test", min_zoom: 12, max_zoom: 20,
+                           bounds: { "south" => 50.339, "west" => 4.903, "north" => 50.343, "east" => 4.912 })
+      get map_path
+
+      aucune = Nokogiri::HTML(response.body).at_css('button[data-map-target="layerNone"]')
+      expect(aucune.text.strip).to eq("Aucune")
+      expect(aucune["data-action"]).to eq("click->map#clearActiveLayer")
+    end
+
     it "renvoie une FeatureCollection GeoJSON filtrée par couche" do
       mine = zone(properties: { "management_notes" => "Fauche en juin" })
       other = MapLayer.create!(kind: "network", name: "Eau")

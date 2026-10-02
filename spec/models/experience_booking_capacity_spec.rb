@@ -70,4 +70,38 @@ RSpec.describe ExperienceBooking, "capacité d'un créneau" do
     booking.participants = 5
     expect(booking).not_to be_valid
   end
+
+  # Michael 2026-10-01 (CLAUDY-7Z) : une activité posée par l'équipe au-delà de
+  # la capacité répondait 422 à la validation, qui ne prend pourtant aucune place.
+  context "réservation déjà posée au-delà de la capacité" do
+    # Rechargée comme en production : `capacity_override` ne vit que sur
+    # l'instance qui a créé la réservation.
+    let(:booking) { ExperienceBooking.find(book(43, override: true).tap(&:save!).id) }
+
+    it "se valide" do
+      expect { booking.confirm! }.not_to raise_error
+      expect(booking.reload).to be_confirmed
+    end
+
+    it "se déclare tenue une fois le créneau passé" do
+      booking.confirm!
+      slot.update_column(:available_on, Date.today - 3)
+      expect { booking.reload.mark_held! }.not_to raise_error
+    end
+
+    it "se réenregistre à l'identique et peut baisser" do
+      expect(booking.update(participants: 43)).to be(true)
+      expect(booking.update(participants: 40)).to be(true)
+    end
+
+    it "refuse encore une hausse" do
+      expect(booking.update(participants: 44)).to be(false)
+    end
+
+    it "est recontrôlée quand une annulée revit" do
+      booking.update!(status: "cancelled")
+      booking.reload
+      expect(booking.update(status: "pending")).to be(false)
+    end
+  end
 end

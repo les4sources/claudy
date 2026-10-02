@@ -164,19 +164,34 @@ module Finance
       BigDecimal(value)
     end
 
-    # Ce que le formulaire propose : les comptes de ménage actifs, et les
-    # membres de ménage présents à la date de la session — enfants compris, ce
-    # sont eux qui cuisinent le plus souvent.
+    # Ce que le formulaire propose : les comptes de ménage actifs, puis les
+    # comptes personnels actifs, et les membres de ménage présents à la date de
+    # la session — enfants compris, ce sont eux qui cuisinent le plus souvent.
     def prepare_form
       date = @session.cooked_on || Date.current
 
-      @accounts = MemberAccount.actives.where(kind: "household")
-                               .includes(:household).ordered.to_a
+      @selected_servings = existing_servings
+      @selected_cooks = existing_cooks
+      @accounts = servable_accounts(date)
       @members = HouseholdMember.active_on(date).includes(:household).ordered.to_a
       @serving_price_cents = Pricing::Rates.cents(Finance::RecordBatchCooking::SERVING_RATE_KEY, on: date)
       @cook_price_cents = Pricing::Rates.cents(Finance::RecordBatchCooking::COOK_RATE_KEY, on: date)
-      @selected_servings = existing_servings
-      @selected_cooks = existing_cooks
+    end
+
+    # Une personne sans ménage (Manon, 2026-09-28) mange aussi : son compte
+    # personnel vient sous les ménages. Celui d'un membre de ménage n'y a pas sa
+    # place — sa famille est servie sur le compte du ménage, et chaque cuisinier
+    # reçoit un compte personnel à son premier paiement, qui encombrerait la
+    # liste. Un compte déjà servi par cette session reste toujours proposé, pour
+    # que la rouvrir ne perde pas une ligne.
+    def servable_accounts(date)
+      in_a_household = HouseholdMember.active_on(date).where.not(human_id: nil).select(:human_id)
+      people = MemberAccount.actives.where(kind: "human")
+                            .where.not(human_id: in_a_household)
+                            .or(MemberAccount.actives.where(kind: "human", id: @selected_servings.keys))
+
+      MemberAccount.actives.where(kind: "household").includes(:household).ordered.to_a +
+        people.ordered.to_a
     end
 
     def existing_servings

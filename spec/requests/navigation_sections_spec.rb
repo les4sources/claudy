@@ -76,11 +76,12 @@ RSpec.describe "Appartenance des contrôleurs Finance::", type: :model do
     accounting allocation_rules allocation_suggestions analytic_balance
     carrier_statements
     cash_allocations cash_counts cash_entries cash_motifs cash_sheet coda_imports
-    collection_cost consignment_reports cross_check expense_reports fiscal_years
-    general_accounts ledger legal_entities monthly_close payables purchase_invoices
-    revenue_share_agreements
+    collection_cost compliance_deadlines compliance_obligations
+    consignment_reports cross_check expense_reports fiscal_years
+    general_accounts ledger legal_entities mail_messages monthly_close payables purchase_invoices
+    recurring_expenses revenue_share_agreements
     revenue_share_statements sales_invoices stripe stripe_category_mappings stripe_fee_invoices
-    third_parties trial_balance
+    third_parties treasury trial_balance
   ].freeze
 
   # Troisième camp, et il faut le nommer pour qu'il reste un choix : les canaux

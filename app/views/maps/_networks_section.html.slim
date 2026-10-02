@@ -1,0 +1,26 @@
+/ Les réseaux (epic #348, phase 9) : Eau, Électricité, Ethernet, pour qu'un
+  dimanche soir on sache où couper. Comme les autres couches, une seule à la
+  fois : choisir un réseau l'affiche seul et le rend ACTIF (la barre d'outils
+  propose alors Nœud et Tracé). La case, invisible, porte l'état affiché.
+.mt-3.border-t.border-stone-100.pt-3 data-map-networks-section="true"
+  p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Réseaux
+  ul.space-y-1
+    - layers.each do |couche|
+      li data-layer-id=couche.id data-layer-kind=couche.kind
+        input[type="checkbox" class="sr-only" tabindex="-1" aria-hidden="true"
+              data-map-target="layerToggle"
+              data-layer-id=couche.id
+              data-network=couche.network
+              data-action="change->map#toggleLayer"]
+        button[type="button"
+               class="flex w-full items-center gap-2 truncate rounded-lg px-2 py-1.5 text-left text-sm text-stone-600 hover:bg-stone-50"
+               data-map-target="layerName"
+               data-layer-id=couche.id
+               data-layer-kind=couche.kind
+               data-network=couche.network
+               data-network-color=couche.network_color
+               data-action="click->map#activateLayer"
+               aria-current="false"]
+          span.map-layer-radio aria-hidden="true"
+          span.inline-block.h-2.5.w-2.5.flex-shrink-0.rounded-full style="background: #{couche.network_color}" aria-hidden="true"
+          span.truncate = couche.name

@@ -14,7 +14,9 @@
 .map-feature-label::before {
   display: none;
 }
-.map-labels-hidden .map-feature-label {
+/* Le libellé d'un point ne s'ouvre qu'au survol, au toucher ou épinglé : il
+   s'affiche alors à tout zoom. */
+.map-labels-hidden .map-feature-label:not(.map-hover-label) {
   display: none;
 }
 
@@ -59,4 +61,162 @@
 }
 .map-welcome-popup p {
   margin: 0.25rem 0 0;
+}
+
+/* Vue « ce mois-ci » (epic #348, phase 6) : les objets porteurs d'une tâche
+   du mois ressortent d'un halo `ember`, les autres s'estompent. Des classes
+   plutôt que des styles Leaflet : la sélection réécrit le style d'un tracé,
+   pas ses classes. */
+.leaflet-container .map-month-dimmed {
+  opacity: 0.2;
+  transition: opacity 150ms ease;
+}
+.leaflet-container .map-month-task {
+  filter: drop-shadow(0 0 3px #c97b3d) drop-shadow(0 0 1px #c97b3d);
+}
+
+/* Plantes nourricières (phase 7) : une pastille ronde par plante, couleur de
+   santé (`--plant-color`, posée par utils/map_plants.js), pictogramme de strate
+   blanc à partir du zoom 17. Plus loin, la pastille rétrécit et se tait : sur
+   15 hectares, des centaines de plantes. Une plante morte est petite et grise. */
+.map-plant-pin-wrapper {
+  background: none;
+  border: none;
+}
+.map-plant-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--plant-color, #7c8f86);
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+  transition: transform 120ms ease;
+}
+.map-plant-pin svg {
+  width: 68%;
+  height: 68%;
+}
+.map-plant-pin--dead {
+  border-width: 1.5px;
+  opacity: 0.75;
+}
+.map-plant-pin--dead svg {
+  display: none;
+}
+.map-plant-pin--selected {
+  border-width: 3px;
+  box-shadow: 0 0 0 3px rgba(11, 61, 58, 0.35), 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.map-plant-glyphs-hidden .map-plant-pin:not(.map-plant-pin--selected) {
+  transform: scale(0.6);
+}
+.map-plant-glyphs-hidden .map-plant-pin svg {
+  display: none;
+}
+.map-plant-label {
+  font-size: 0.68rem;
+  padding: 0.05rem 0.45rem;
+}
+
+/* Mode Placement (phase 7) : la plante qu'on déplace se signale, et se saisit. */
+.map-plant-pin-wrapper--moving .map-plant-pin {
+  outline: 3px dashed #1f5f4a;
+  outline-offset: 3px;
+  cursor: grab;
+}
+
+/* Réseaux (phase 9) : un nœud est une pastille de la couleur de son réseau
+   qui porte l'icône de son type ; les noms n'apparaissent qu'au zoom 19. */
+.map-network-pin-wrapper {
+  background: none;
+  border: none;
+}
+.map-network-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--network-color, #475569);
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+}
+.map-network-pin svg {
+  width: 70%;
+  height: 70%;
+}
+.map-network-pin--selected {
+  border-width: 3px;
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.3), 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.map-network-labels-hidden .map-network-label:not(.map-hover-label) {
+  display: none;
+}
+
+/* Recherche du mode actif (epic #348, phase 14) : les objets trouvés sont
+   allumés (opacité pleine, halo `ember`, libellé forcé même sous le zoom 18),
+   le reste de la couche s'estompe à 25 %. Posées par utils/map_search.js, sur
+   la mécanique de la vue « ce mois-ci ». */
+.leaflet-container .map-search-dimmed {
+  opacity: 0.25;
+  transition: opacity 150ms ease;
+}
+.leaflet-container .map-search-hit {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px #c97b3d) drop-shadow(0 0 1px #c97b3d);
+}
+.map-labels-hidden .map-feature-label.map-search-label,
+.map-network-labels-hidden .map-network-label.map-search-label {
+  display: block;
+}
+.leaflet-container .map-feature-label.map-search-label {
+  box-shadow: 0 0 0 2px #c97b3d;
+}
+
+/* Outil Mesure (phase 14) : curseur en croix, bulle `ember` qui suit le
+   curseur pendant le tracé, bulle de résultat à la fin. */
+.leaflet-container.map-measuring,
+.leaflet-container.map-measuring .leaflet-interactive {
+  cursor: crosshair;
+}
+.map-measure-tooltip {
+  background: #fff;
+  border: 1px solid #c97b3d;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  color: #7a4520;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+}
+.map-measure-tooltip::before {
+  display: none;
+}
+.map-measure-result {
+  line-height: 1.3;
+  text-align: center;
+}
+.map-measure-result strong {
+  font-size: 0.85rem;
+}
+
+/* Une couche à la fois (2026-09-28) : un rond de sélection devant chaque
+   couche, plein sur la couche affichée (`aria-current="true"`). */
+.map-layer-radio {
+  flex-shrink: 0;
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 1.5px solid #a8a29e;
+  border-radius: 9999px;
+}
+[aria-current="true"] > .map-layer-radio {
+  border-color: currentColor;
+  background: radial-gradient(circle, currentColor 0 38%, transparent 44%);
 }

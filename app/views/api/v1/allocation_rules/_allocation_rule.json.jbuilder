@@ -14,6 +14,8 @@ json.criteria do
   json.transaction_code allocation_rule.transaction_code
   json.min_amount_cents allocation_rule.min_amount_cents
   json.max_amount_cents allocation_rule.max_amount_cents
+  json.cash_account_id allocation_rule.cash_account_id
+  json.cash_account_name allocation_rule.cash_account&.name
 end
 
 json.general_account_code allocation_rule.general_account&.code

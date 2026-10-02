@@ -1,0 +1,9 @@
+/ Les relevés de biodiversité en page annexe (epic #348, phase 13) : la même
+  liste que le panneau de la carte, chaque ligne menant au relevé sur la carte.
+.mx-auto.max-w-3xl.px-4.py-6
+  = render "maps/subnav", current: :biodiversite
+  .mt-4
+    h1.font-averia.text-2xl.text-stone-800 Biodiversité
+    p.mt-1.text-sm.text-stone-500 Les plantes et les animaux relevés au domaine.
+  .mt-4.rounded-xl.border.border-stone-200.bg-white.p-4.shadow-sm
+    = render "maps/observation_list", on_map: false

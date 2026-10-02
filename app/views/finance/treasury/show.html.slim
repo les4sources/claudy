@@ -1,0 +1,98 @@
+/ LA TRÉSORERIE (lecture seule). Chaque chiffre du résumé a ici sa liste :
+  ce qui doit rentrer, ce qui doit sortir, et ce qu'il faut assainir.
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Solde et prévisions"
+
+- if @treasury.nil?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p Aucune fondation parmi les entités juridiques actives — la trésorerie n'a pas de comptes à lire.
+- else
+  - t = @treasury
+  = render "finance/treasury/summary", treasury: t, link: false
+
+  h3.mb-3.text-lg.font-semibold.text-gray-900 Comptes
+  .overflow-x-auto.relative.mb-8
+    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Compte
+          th.py-3.px-6.text-right[scope="col"] Solde
+          th.py-3.px-6[scope="col"] Solde au
+          th.py-3.px-6[scope="col"] Vérifié par
+      tbody
+        - t.accounts.each do |row|
+          tr.border-b.bg-white(data-treasury-account=row.account.id)
+            td.py-4.px-6.font-medium.text-gray-900= row.account.name
+            td.py-4.px-6.text-right.tabular-nums= number_to_currency(row.balance_cents / 100.0, unit: "€")
+            td.py-4.px-6= row.as_of ? l(row.as_of, format: :long) : "—"
+            td.py-4.px-6
+              - if row.anchored?
+                = "#{row.anchor.source} du #{l(row.anchor.date, format: :long)}"
+              - else
+                span.text-amber-700.font-medium Non vérifié — hors total
+
+  h3.mb-1.text-lg.font-semibold.text-gray-900 À encaisser — séjours à venir
+  p.mb-3.text-sm.text-gray-500
+    | Reste dû des séjours confirmés ou pré-confirmés, attendu à la date d'arrivée. Au-delà de #{Finance::Treasury::HORIZON_DAYS} jours, le séjour est listé mais n'entre pas dans la projection.
+  = render "finance/treasury/receivables", receivables: t.upcoming_receivables, empty: "Aucun solde de séjour à venir.", horizon_end: t.horizon_end, id: "upcoming"
+
+  h3.mb-1.text-lg.font-semibold.text-gray-900 En retard — séjours terminés depuis moins d'un an
+  p.mb-3.text-sm.text-gray-500
+    | Listés, pas comptés dans la projection : un retard n'est pas une entrée certaine. Soit le client doit encore, soit le paiement est arrivé sans être relié au séjour.
+  = render "finance/treasury/receivables", receivables: t.late_receivables, empty: "Aucun séjour en retard.", horizon_end: nil, id: "late"
+
+  h3.mb-1.text-lg.font-semibold.text-gray-900 À payer
+  p.mb-3.text-sm.text-gray-500
+    | La file
+    =< link_to "« À payer »", finance_payables_path, class: "text-blue-500 hover:text-blue-700"
+    |  de la Fondation, et les occurrences des
+    =< link_to "charges fixes", finance_recurring_expenses_path, class: "text-blue-500 hover:text-blue-700"
+    |  sur #{Finance::Treasury::HORIZON_DAYS} jours. Une dette échue ou sans échéance est projetée aujourd'hui ; une charge fixe s'efface quand la vraie facture du même tiers est encodée pour la période.
+  - if t.outflows.empty?
+    .mb-8.p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+      p Rien à payer.
+  - else
+    .overflow-x-auto.relative.mb-8
+      table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table" data-treasury-list="outflows")
+        thead.text-xs.text-gray-700.uppercase.bg-gray-50
+          tr
+            th.py-3.px-6[scope="col"] Dette
+            th.py-3.px-6[scope="col"] Bénéficiaire
+            th.py-3.px-6[scope="col"] Projetée le
+            th.py-3.px-6.text-right[scope="col"] Reste à payer
+        tbody
+          - t.outflows.each do |outflow|
+            - if outflow.recurring?
+              - expense = outflow.recurring_expense
+              tr.border-b.bg-white(data-recurring-expense-id=expense.id)
+                td.py-4.px-6.font-medium.text-gray-900
+                  = link_to expense.label, edit_finance_recurring_expense_path(expense), class: "text-blue-600 hover:text-blue-800"
+                  span.ml-2.inline-flex.rounded-full.bg-stone-100.px-2.py-0.5.text-xs.font-normal.text-stone-600 charge fixe
+                td.py-4.px-6= expense.third_party&.name || "—"
+                td.py-4.px-6= l(outflow.due_on, format: :long)
+                td.py-4.px-6.text-right.tabular-nums= number_to_currency(outflow.amount_cents / 100.0, unit: "€")
+            - else
+              - payable = outflow.payable
+              tr.border-b.bg-white
+                td.py-4.px-6.font-medium.text-gray-900
+                  - if payable.payable_path
+                    = link_to payable.payable_label, payable.payable_path, class: "text-blue-600 hover:text-blue-800"
+                  - else
+                    = payable.payable_label
+                td.py-4.px-6= payable.payable_beneficiary
+                td.py-4.px-6= l(outflow.due_on, format: :long)
+                td.py-4.px-6.text-right.tabular-nums= number_to_currency(outflow.amount_cents / 100.0, unit: "€")
+
+  / À ASSAINIR (décision de Michael du 2026-09-29) : au-delà d'un an, un reste
+    dû est presque toujours un paiement jamais relié au séjour. Affiché à part,
+    replié, pour qu'on le traite sans qu'il pollue ce qui doit rentrer.
+  - stale = t.stale_receivables
+  details.mb-8.rounded-xl.border.border-stone-200.bg-white(data-treasury-stale="")
+    summary.cursor-pointer.px-5.py-4
+      span.font-semibold.text-stone-900 À assainir
+      span.ml-2.text-sm.text-stone-600
+        = "#{stale.size} séjour(s) terminés depuis plus d'un an, #{number_to_currency(stale.sum(&:amount_cents) / 100.0, unit: '€')} de reste dû selon Claudy"
+    .px-5.pb-5
+      p.mb-3.text-sm.text-stone-600
+        | Presque toujours un paiement reçu mais jamais relié au séjour. Relier la ligne bancaire au séjour (écran « À affecter ») le fait sortir de cette liste ; une vraie dette oubliée se relance ou s'abandonne.
+      = render "finance/treasury/receivables", receivables: stale, empty: "Rien à assainir.", horizon_end: nil, id: "stale"

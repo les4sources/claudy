@@ -17,14 +17,22 @@ module Finance
                           .for_channel(@channel)
                           .matching(@term)
                           .includes(:catalog_prices, :consignor)
-      @items = CatalogItemDecorator.decorate_collection(@items)
+      # Les inactifs vont dans une section à part, sous la liste : la vue
+      # principale ne montre que ce qui se vend encore. Ils restent consultables
+      # parce que les fiches passées les portent.
+      active, inactive = @items.partition(&:active?)
+      @active_items = CatalogItemDecorator.decorate_collection(active)
+      @inactive_items = CatalogItemDecorator.decorate_collection(inactive)
     end
 
     def show
       breadcrumb @item.name, finance_catalog_path(@item), match: :exact
 
-      @prices = @item.catalog_prices.most_recent_first
-      @price = CatalogPrice.new(active_from: Date.current)
+      @prices = @item.catalog_prices.most_recent_first.includes(:third_party)
+      # Le fournisseur du palier en vigueur est proposé par défaut : on rachète le
+      # plus souvent au même endroit, et le champ reste modifiable.
+      @price = CatalogPrice.new(active_from: Date.current, third_party_id: @item.current_price&.third_party_id)
+      @suppliers = ThirdParty.suppliers.actives.ordered
     end
 
     def new
@@ -76,13 +84,12 @@ module Finance
       proposal = Catalog::BuildPrice.new(
         channel: params[:channel],
         purchase_price_cents: cents_from(params[:purchase]),
-        reference_price_cents: cents_from(params[:reference]),
         on: params[:on].presence&.to_date || Date.current
       ).run!
 
       render json: {
         member_price: proposal.member_price_cents&./(100.0),
-        public_price: proposal.public_price_cents&./(100.0)
+        recommended_public_price: proposal.recommended_public_price_cents&./(100.0)
       }
     end
 

@@ -13,15 +13,18 @@
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #  catalog_item_id       :bigint           not null
+#  third_party_id        :bigint
 #
 # Indexes
 #
 #  index_catalog_prices_on_catalog_item_id                  (catalog_item_id)
 #  index_catalog_prices_on_catalog_item_id_and_active_from  (catalog_item_id,active_from) UNIQUE
+#  index_catalog_prices_on_third_party_id                   (third_party_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (catalog_item_id => catalog_items.id)
+#  fk_rails_...  (third_party_id => third_parties.id)
 #
 # Palier de prix daté d'un article (issue #157).
 #
@@ -36,6 +39,10 @@
 # n'existe pas pour un article qui n'est pas vendu au public.
 class CatalogPrice < ApplicationRecord
   belongs_to :catalog_item, inverse_of: :catalog_prices
+  # Le fournisseur chez qui ce prix d'achat a été relevé — un tiers de la
+  # comptabilité, jamais une liste parallèle. Facultatif : l'historique repris du
+  # fichier Excel du cellier n'en a pas.
+  belongs_to :third_party, optional: true
 
   monetize :member_price_cents
   monetize :purchase_price_cents, allow_nil: true
@@ -48,6 +55,14 @@ class CatalogPrice < ApplicationRecord
             numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :active_until_after_active_from
   validate :no_overlap_with_siblings
+  validate :third_party_is_supplier
+
+  # Marge sur le COÛT : (public − achat) ÷ achat (Michael, 2026-09-30). Objectif
+  # 30 % ; sous 25 % elle s'affiche en rouge, jusqu'à 28 % en orange, au-delà
+  # en vert. Le prix de vente conseillé applique l'objectif au prix d'achat.
+  MARGIN_TARGET = 30
+  MARGIN_MINIMUM = 25
+  MARGIN_COMFORT = 28
 
   scope :chronological, -> { order(active_from: :asc) }
   scope :most_recent_first, -> { order(active_from: :desc) }
@@ -66,6 +81,29 @@ class CatalogPrice < ApplicationRecord
   def current? = covers?(Date.current)
 
   def open_ended? = active_until.nil?
+
+  def self.recommended_public_cents(purchase_cents)
+    return nil if purchase_cents.blank? || purchase_cents.to_i <= 0
+
+    (purchase_cents.to_i * (1 + MARGIN_TARGET / 100.0)).round
+  end
+
+  # En pourcentage entier, arrondi — c'est ce nombre-là qu'on lit, c'est donc
+  # lui qui décide de la couleur. Nil sans prix d'achat ou sans prix public.
+  def margin_percent
+    return nil if purchase_price_cents.blank? || purchase_price_cents <= 0 || public_price_cents.blank?
+
+    ((public_price_cents - purchase_price_cents) * 100.0 / purchase_price_cents).round
+  end
+
+  def margin_level
+    percent = margin_percent
+    return nil if percent.nil?
+    return :low if percent < MARGIN_MINIMUM
+    return :medium if percent < MARGIN_COMFORT
+
+    :good
+  end
 
   private
 
@@ -88,6 +126,12 @@ class CatalogPrice < ApplicationRecord
     return unless later.exists?
 
     errors.add(:active_until, "chevauche un palier existant de cet article")
+  end
+
+  def third_party_is_supplier
+    return if third_party.nil? || third_party.kind.in?(%w[supplier both])
+
+    errors.add(:third_party, "doit être un tiers fournisseur, pas un client")
   end
 
   def siblings

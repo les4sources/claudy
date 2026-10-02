@@ -7,33 +7,31 @@ module Finance
   # accepter » est le geste par lequel une machine finit par décider à notre
   # place sans qu'on s'en aperçoive.
   class AllocationSuggestionsController < Finance::AccountingBaseController
+    include Finance::UnallocatedQueue
+
     def update
       suggestion = AllocationSuggestion.find(params[:id])
 
       case params[:decision]
       when "accept"
         Finance::AcceptSuggestion.new(suggestion: suggestion, whodunnit: current_user&.email).run!
-        redirect_back fallback_location: finance_unallocated_cash_entries_path,
-                      notice: "Suggestion acceptée — la ligne est affectée."
+        apres_decision(suggestion, notice: "Suggestion acceptée — la ligne est affectée.")
       when "reject"
         # Seule une suggestion encore proposée se refuse : refuser une
         # suggestion déjà acceptée fausserait les compteurs sans rien défaire
         # de l'affectation qu'elle a produite.
         unless suggestion.status == "pending"
-          return redirect_back fallback_location: finance_unallocated_cash_entries_path,
-                               alert: "Cette suggestion a déjà été traitée."
+          return apres_decision(suggestion, alert: "Cette suggestion a déjà été traitée.")
         end
 
         suggestion.update!(status: "rejected", decided_at: Time.current, decided_by: current_user&.email)
         suggestion.allocation_rule&.increment!(:rejected_count)
-        redirect_back fallback_location: finance_unallocated_cash_entries_path,
-                      notice: "Suggestion refusée."
+        apres_decision(suggestion, notice: "Suggestion refusée.")
       else
-        redirect_back fallback_location: finance_unallocated_cash_entries_path,
-                      alert: "Décision inconnue."
+        apres_decision(suggestion, alert: "Décision inconnue.")
       end
     rescue Finance::AcceptSuggestion::AlreadyDecided, Finance::AcceptSuggestion::EntryPosted => e
-      redirect_back fallback_location: finance_unallocated_cash_entries_path, alert: e.message
+      apres_decision(suggestion, alert: e.message)
     end
 
     # Acceptation en masse, bornée par règle et par seuil.
@@ -62,6 +60,18 @@ module Finance
       redirect_to finance_allocation_rules_path,
                   notice: "#{acceptees} suggestion(s) acceptée(s) pour la règle « #{rule.label} » " \
                           "au-dessus de #{seuil} % de confiance."
+    end
+
+    private
+
+    # Depuis la file, la ligne répond en place ; d'ailleurs (fiche d'une
+    # ligne), retour à la page d'où l'on vient, comme avant.
+    def apres_decision(suggestion, notice: nil, alert: nil)
+      if depuis_la_file?
+        repondre_dans_la_file(suggestion.cash_entry, notice: notice, alert: alert)
+      else
+        redirect_back fallback_location: finance_unallocated_cash_entries_path, notice: notice, alert: alert
+      end
     end
   end
 end

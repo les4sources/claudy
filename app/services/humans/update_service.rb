@@ -46,6 +46,7 @@ module Humans
         .permit(
           :name,
           :email,
+          :phone,
           :iban,
           :summary,
           :description,

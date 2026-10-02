@@ -15,7 +15,7 @@ class MapFeaturesController < BaseController
   # GET /map/features.json?layer_id=… — une `FeatureCollection` GeoJSON.
   def index
     layer = MapLayer.find(params.require(:layer_id))
-    features = layer.map_features.ordered.with_attached_photos.includes(map_feature_venues: :venue)
+    features = layer.map_features.ordered.with_attached_photos.includes(:map_layer, :plant, :map_comments, map_feature_venues: :venue)
     render json: { type: "FeatureCollection", features: features.map(&:as_geojson) }
   end
 
@@ -71,7 +71,9 @@ class MapFeaturesController < BaseController
   def destroy_photo
     @feature.photos.find(params[:photo_id]).purge_later
     @feature.reload
-    render turbo_stream: turbo_stream.update(PANEL_FRAME, partial: "maps/feature_panel", locals: { feature: @feature })
+    # Un relevé de biodiversité (phase 13) garde sa propre fiche.
+    partial = @feature.observation_point? ? "maps/observation_panel" : "maps/feature_panel"
+    render turbo_stream: turbo_stream.update(PANEL_FRAME, partial: partial, locals: { feature: @feature })
   end
 
   private
@@ -87,7 +89,8 @@ class MapFeaturesController < BaseController
   def feature_params
     params.require(:map_feature).permit(:map_layer_id, :feature_kind, :geometry, :name, :description,
                                         :name_en, :name_nl, :description_en, :description_nl, :access, :icon,
-                                        :management_notes, photos: [], venue_keys: [])
+                                        :management_notes, :node_type, :instructions, :equipment, :gauge, :water_source,
+                                        :unifi_device_id, photos: [], venue_keys: [])
   end
 
   # `name` et `description` sont le FRANÇAIS ; l'anglais et le néerlandais
@@ -104,9 +107,21 @@ class MapFeaturesController < BaseController
       assign_translation(:name_i18n, locale, attrs["name#{suffix}"]) if attrs.key?("name#{suffix}")
       assign_translation(:description_i18n, locale, attrs["description#{suffix}"]) if attrs.key?("description#{suffix}")
     end
-    # Nature d'une zone et icône d'un point d'accueil : un choix vide les retire.
-    %w[access icon].each do |key|
+    # Nature d'une zone et icône d'un point d'accueil ; type de nœud, calibre
+    # et équipement d'un réseau (phase 9) : un choix vide les retire.
+    %w[access icon node_type gauge equipment water_source].each do |key|
       @feature.properties = @feature.properties.to_h.merge(key => attrs[key].presence).compact if attrs.key?(key)
+    end
+    # Un nœud qui cesse d'être un robinet perd l'origine de son eau (le champ,
+    # masqué, part quand même avec la fiche).
+    @feature.properties = @feature.properties.to_h.except("water_source") if @feature.node? && !@feature.tap?
+    # L'équipement UniFi lié à un nœud Ethernet (phase 10) : un choix vide le délie.
+    if attrs.key?(:unifi_device_id)
+      @feature.properties = @feature.properties.to_h.merge("unifi_device_id" => attrs[:unifi_device_id].to_s.strip.presence).compact
+    end
+    # La consigne d'un nœud de réseau (phase 9) : « quart de tour vers la droite ».
+    if attrs.key?(:instructions)
+      @feature.properties = @feature.properties.to_h.merge("instructions" => attrs[:instructions].to_s.strip.presence).compact
     end
     if attrs.key?(:management_notes)
       @feature.properties = @feature.properties.to_h.merge("management_notes" => attrs[:management_notes].to_s.strip)

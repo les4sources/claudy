@@ -1,0 +1,121 @@
+- obligation = @deadline.compliance_obligation
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: @deadline.display_title,
+           links: [link_to("Modifier la règle", edit_finance_compliance_obligation_path(obligation), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
+                   link_to("Échéancier", finance_compliance_deadlines_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.grid.gap-4(class="lg:grid-cols-3")
+  .space-y-4(class="lg:col-span-2")
+    / L'état et le geste qui le fait avancer, en tête.
+    .rounded-2xl.bg-white.px-5.py-4.ring-1.ring-gray-200
+      .flex.flex-wrap.items-start.justify-between.gap-4
+        div
+          p.text-sm.text-gray-500= "#{@deadline.legal_entity.name} · #{obligation.frequency_label.downcase}"
+          p.mt-1.text-2xl.font-semibold(class="#{@deadline.overdue? ? 'text-red-700' : 'text-gray-900'}")
+            = l(@deadline.due_on, format: :long)
+          p.mt-1.text-sm(class="#{@deadline.overdue? ? 'text-red-700 font-semibold' : 'text-gray-600'}")
+            - days = @deadline.days_left
+            - if @deadline.closed?
+              = @deadline.status_label
+              - if @deadline.effective_done_on
+                = " le #{l(@deadline.effective_done_on, format: :long)}"
+              - if @deadline.done_by_user
+                = " par #{@deadline.done_by_user.display_name}"
+            - elsif days.negative?
+              = "#{@deadline.status_label} — en retard de #{-days} j"
+            - else
+              = "#{@deadline.status_label} — #{days.zero? ? "aujourd'hui" : "dans #{days} j"}"
+        .flex.flex-wrap.items-center.gap-2
+          - if @deadline.closed?
+            - unless @deadline.settled_by_invoice?
+              = button_to "Rouvrir", reopen_finance_compliance_deadline_path(@deadline), method: :post,
+                          class: "rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          - elsif @deadline.purchase_invoice.nil?
+            - if @deadline.status == "todo"
+              = button_to "En cours", start_finance_compliance_deadline_path(@deadline), method: :post,
+                          class: "rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            = button_to "Sans objet", close_finance_compliance_deadline_path(@deadline, status: "not_applicable"), method: :post,
+                        class: "rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            - unless @deadline.payment?
+              = button_to "✓ Fait", close_finance_compliance_deadline_path(@deadline, status: "done"), method: :post,
+                          class: "rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+
+    / LE PAIEMENT. L'échéance se solde par sa facture : on la lie (ou on
+      l'encode d'ici), et c'est le rapprochement bancaire de la facture qui
+      fera passer l'échéance à « fait ».
+    - if @deadline.payment?
+      .rounded-2xl.bg-white.px-5.py-4.ring-1.ring-gray-200
+        h3.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Paiement
+        - invoice = @deadline.purchase_invoice
+        - if invoice
+          .mt-3.flex.flex-wrap.items-center.justify-between.gap-3
+            div
+              = link_to "#{invoice.third_party.name} — #{number_to_currency(invoice.total_cents / 100.0)}", finance_purchase_invoice_path(invoice),
+                        class: "font-medium text-blue-600 hover:text-blue-800"
+              p.text-sm.text-gray-600
+                = "Facture #{invoice.status_label.downcase}"
+                - if invoice.paid? && invoice.paid_on
+                  = " le #{l(invoice.paid_on, format: :long)}"
+                - elsif invoice.due_on
+                  = " · échéance le #{l(invoice.due_on, format: :long)}"
+            - unless invoice.paid?
+              = form_with model: @deadline, url: finance_compliance_deadline_path(@deadline), method: :patch do |f|
+                = f.hidden_field :purchase_invoice_id, value: ""
+                button.rounded-md.border.border-gray-300.bg-white.px-3.py-2.text-sm.text-gray-700(type="submit" class="hover:bg-gray-50") Détacher
+          - unless invoice.paid?
+            p.mt-3.text-sm.text-gray-600
+              | La facture est dans
+              = link_to " « À payer » ", finance_payables_path, class: "text-blue-600 hover:text-blue-800"
+              | : une fois rapprochée de sa ligne bancaire, cette échéance sera faite d'elle-même.
+        - else
+          p.mt-2.text-sm.text-gray-600
+            | Aucune facture liée. Encode l'avertissement ou la facture reçue — elle rejoindra « À payer » et soldera cette échéance une fois payée.
+          .mt-3.flex.flex-wrap.items-end.gap-3
+            = link_to "Encoder la facture", new_finance_purchase_invoice_path(compliance_deadline_id: @deadline.id),
+                      class: "inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
+            - if @invoices.any?
+              = form_with model: @deadline, url: finance_compliance_deadline_path(@deadline), method: :patch, class: "flex flex-wrap items-end gap-2" do |f|
+                div
+                  = label_tag "compliance_deadline_purchase_invoice_id", "…ou lier une facture déjà encodée", class: "block text-xs font-medium text-gray-600"
+                  = f.select :purchase_invoice_id,
+                             @invoices.map { |i| ["#{l(i.issued_on)} · #{i.third_party.name} · #{number_to_currency(i.total_cents / 100.0)} (#{i.status_label.downcase})", i.id] },
+                             { include_blank: "—", label: false },
+                             { class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm" }
+                button.rounded-md.border.border-gray-300.bg-white.px-3.py-2.text-sm.font-medium.text-gray-700(type="submit" class="hover:bg-gray-50") Lier
+
+    / Ce qui s'écarte de la règle : la date, une note, la preuve.
+    .rounded-2xl.bg-white.px-5.py-4.ring-1.ring-gray-200
+      h3.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 Suivi
+      = form_with model: @deadline, url: finance_compliance_deadline_path(@deadline), method: :patch, class: "mt-3 space-y-4" do |f|
+        = f.date_field :due_on, label: "Date limite", hint: "Avancée ou reportée pour cette fois seulement — la règle ne change pas.", class: "md:w-1/3"
+        div
+          = label_tag "compliance_deadline_note", "Note", class: "block text-sm font-medium text-gray-700"
+          = f.text_area :note, { rows: 3 }
+        div
+          = f.file_field :proof, label: "Preuve (accusé de dépôt, récépissé, PV…)"
+          - if @deadline.proof.attached?
+            p.mt-1.text-sm
+              = link_to "📎 #{@deadline.proof.filename}", rails_blob_path(@deadline.proof, disposition: "attachment"), class: "text-blue-600 hover:text-blue-800"
+        button.rounded-md.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.bg-4s-main(type="submit" class="hover:opacity-90") Enregistrer
+
+  / La règle, pour mémoire : d'où vient cette échéance et comment on la fait.
+  .space-y-4
+    .rounded-2xl.bg-white.px-5.py-4.ring-1.ring-gray-200
+      h3.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 La règle
+      dl.mt-3.space-y-2.text-sm
+        div
+          dt.text-gray-500 Obligation
+          dd.text-gray-900= obligation.title
+        div
+          dt.text-gray-500 Rythme
+          dd.text-gray-900= obligation.frequency_label
+        div
+          dt.text-gray-500 Rappels à
+          dd.text-gray-900
+            - recipients = obligation.reminder_recipients
+            = recipients.any? ? recipients.map(&:display_name).to_sentence : "personne — déclare un responsable ou des destinataires comptables"
+      - if obligation.instructions.present?
+        .mt-4.border-t.border-gray-100.pt-3
+          p.text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Mode opératoire
+          .mt-1.whitespace-pre-line.text-sm.text-gray-800= obligation.instructions

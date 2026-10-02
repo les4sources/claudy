@@ -1,0 +1,64 @@
+/ Les champs d'un objet de réseau (epic #348, phase 9), dans la fiche
+  générique. Un nœud dit ce qu'il est et, surtout, comment on s'en sert : la
+  consigne est l'information vitale du dimanche soir. Un tracé dit son calibre
+  et sa longueur, calculée côté serveur (`MapFeature#length_in_meters`,
+  haversine) — elle se met à jour à la réouverture de la fiche après un
+  déplacement de sommets.
+- color = layer.network_color
+/ L’exemple de consigne parle du réseau du nœud : couper l’eau, le courant, ou
+  retrouver et redémarrer un équipement.
+- instructions_example = { "water" => "Pour couper l’eau du gîte : vanne rouge sous l’évier, quart de tour vers la droite.",
+                           "electric" => "Disjoncteur du coworking : tableau du hangar, 3e rangée, étiqueté « CW ».",
+                           "ethernet" => "Redémarrer : débrancher l’alimentation 10 s dans la baie du grenier." }[layer.network]
+div.flex.items-center.gap-2.text-xs.text-stone-600 data-network-readonly=layer.network
+  span.font-semibold Réseau
+  span.inline-block.h-2.5.w-2.5.rounded-full style="background: #{color}"
+  span = layer.name
+
+- if feature.node?
+  div
+    = f.label :node_type, "Type de nœud", class: "block text-xs font-semibold text-stone-600"
+    = f.select :node_type, layer.node_types.map { |key, label| [label, key] },
+               { include_blank: "— Choisir —", selected: feature.node_type },
+               class: "mt-1 h-11 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+  / L’origine de l’eau d’un robinet : révélée par la carte quand on choisit
+    « Robinet » (`handleNodeTypeChange`).
+  - if layer.network == "water"
+    div hidden=!feature.tap? data-water-source-field="true"
+      = f.label :water_source, "Origine de l’eau", class: "block text-xs font-semibold text-stone-600"
+      = f.select :water_source, MapFeature::WATER_SOURCES.map { |key, label| [label, key] },
+                 { include_blank: "— Choisir —", selected: feature.water_source },
+                 class: "mt-1 h-11 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+      p.mt-1.text-xs.font-semibold.text-red-700 hidden=!feature.non_potable? data-non-potable-hint=MapFeature::NON_POTABLE_WATER_SOURCES.join(" ")
+        | Eau non potable — signalée en rouge sur la carte.
+  div class="rounded-lg border-2 border-amber-300 bg-amber-50 px-3 py-3" data-network-instructions="true"
+    = f.label :instructions, "Consigne — où et comment couper", class: "flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-amber-800"
+    = f.text_area :instructions, value: feature.instructions, rows: 4,
+                  placeholder: instructions_example,
+                  class: "mt-1.5 w-full rounded-lg border-amber-300 bg-white text-base text-stone-800 shadow-sm focus:border-amber-500 focus:ring-amber-500"
+  div
+    = f.label :equipment, "Équipement", class: "block text-xs font-semibold text-stone-600"
+    = f.select :equipment, MapFeature::EQUIPMENTS.map { |key, label| [label, key] },
+               { include_blank: "Aucun", selected: feature.equipment },
+               class: "mt-1 h-11 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+  / Phase 10 : le statut UniFi en direct, seulement sur le réseau Ethernet. Le
+    client n'est interrogé que pour un nœud déjà marqué UniFi ; sinon un
+    rappel caché, que la carte révèle quand on choisit « UniFi ».
+  - if layer.network == "ethernet"
+    - if feature.unifi?
+      = render "maps/unifi_fields", f: f, feature: feature
+    - else
+      p.text-xs.text-stone-500 hidden=true data-unifi-hint="true"
+        | Enregistrez la fiche pour choisir l'équipement UniFi et voir son statut.
+
+- elsif feature.line?
+  div
+    = f.label :gauge, "Calibre", class: "block text-xs font-semibold text-stone-600"
+    = f.select :gauge, MapFeature::GAUGES.map { |key, label| [label, key] },
+               { selected: feature.gauge || MapFeature::DEFAULT_GAUGE },
+               class: "mt-1 h-11 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+  - length = feature.length_in_meters
+  - if length
+    p.flex.items-baseline.gap-2.text-sm.text-stone-600 data-network-length=length.round(1)
+      span.text-xs.font-semibold Longueur
+      span.font-semibold.tabular-nums.text-stone-800 = "#{number_with_delimiter(length.round, delimiter: ' ')} m"

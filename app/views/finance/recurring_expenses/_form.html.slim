@@ -1,0 +1,47 @@
+= form_with model: [:finance, recurring_expense], class: "space-y-6" do |f|
+  = render "finance/shared/form_errors", record: recurring_expense
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-3.text-sm.font-semibold.text-gray-900 La charge
+    .grid.gap-4(class="md:grid-cols-2")
+      div
+        = f.text_field :label, label: "Libellé *", required: true, placeholder: "Abonnement internet Voo", class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :third_party_id, "Fournisseur", class: "block text-sm font-medium text-gray-700"
+        = f.collection_select :third_party_id, ThirdParty.actives.suppliers.ordered, :id, :name, { include_blank: "Aucun" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+        p.mt-1.text-xs.text-gray-500 Avec un fournisseur, sa vraie facture remplace l'estimation dès qu'elle est encodée.
+      div
+        = f.text_field :amount, label: "Montant estimé (€) *", required: true, inputmode: "decimal", placeholder: "67,76", value: (recurring_expense.amount && format("%.2f", recurring_expense.amount).tr(".", ",")), class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :legal_entity_id, "Entité *", class: "block text-sm font-medium text-gray-700"
+        = f.collection_select :legal_entity_id, LegalEntity.actives.ordered, :id, :name, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-1.text-sm.font-semibold.text-gray-900 La récurrence
+    p.mb-3.text-xs.text-gray-500
+      | Les échéances suivantes se déduisent de la première : un prélèvement du 27 revient le 27.
+    .grid.gap-4(class="md:grid-cols-3")
+      div
+        = f.label :frequency, "Fréquence *", class: "block text-sm font-medium text-gray-700"
+        = f.select :frequency, RecurringExpense::FREQUENCY_LABELS.map { |v, l| [l, v] }, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.date_field :first_due_on, label: "Première échéance *", required: true, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.date_field :ends_on, label: "Fin (facultatif)", class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+    label.mt-3.flex.items-center.gap-2.text-sm.text-gray-700
+      = f.check_box :active, class: "rounded border-gray-300"
+      |  Active — une charge inactive ne compte plus dans la trésorerie
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-3.text-sm.font-semibold.text-gray-900 Pour la suite
+    .grid.gap-4(class="md:grid-cols-2")
+      div
+        = f.label :general_account_id, "Compte de charge", class: "block text-sm font-medium text-gray-700"
+        = f.collection_select :general_account_id, GeneralAccount.actives.in_class(6).ordered, :id, :to_s, { include_blank: "Aucun" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :notes, "Notes", class: "block text-sm font-medium text-gray-700"
+        = f.text_area :notes, rows: 2, placeholder: "Contrat, n° client, date de renouvellement…", class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+
+  .flex.items-center.gap-3
+    = f.submit "Enregistrer", class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+    = link_to "Annuler", finance_recurring_expenses_path, class: "text-sm text-gray-500 hover:text-gray-700"

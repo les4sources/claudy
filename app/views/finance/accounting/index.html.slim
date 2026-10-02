@@ -6,6 +6,9 @@
     strong La double écriture se génère, elle ne se saisit jamais.
     |  On encode un fait — une ligne bancaire ventilée, un décompte, un règlement — et l'application produit les deux côtés. Aucun écran ne permet de taper un débit et un crédit à la main.
 
+- if @treasury
+  = render "finance/treasury/summary", treasury: @treasury, link: true
+
 / Le rappel de comptage de caisse (epic #243, phase 3). Il ne crie qu'au-delà
   de sept jours : un rappel permanent devient du décor, et on cesse de le lire.
 - if @days_since_cash_count.nil? || @days_since_cash_count > 7
@@ -26,6 +29,25 @@
       | Caisse comptée il y a #{@days_since_cash_count} jour(s) —
       = link_to "voir les comptages", finance_cash_counts_path, class: "underline hover:no-underline"
       | .
+
+/ L'échéancier comptable : l'encart ne crie que s'il y a du retard.
+.mb-6.p-4.rounded-lg.border(class="#{@deadlines_overdue.any? ? 'border-red-200 bg-red-50/70' : 'border-gray-100 bg-white'}")
+  .flex.flex-wrap.items-center.justify-between.gap-3
+    div
+      p.text-sm.font-semibold(class="#{@deadlines_overdue.any? ? 'text-red-800' : 'text-gray-900'}")
+        - if @deadlines_overdue.any?
+          = "#{@deadlines_overdue.size} échéance(s) en retard"
+          - if @deadlines_soon.any?
+            = " · #{@deadlines_soon.size} dans les 30 jours"
+        - elsif @deadlines_soon.any?
+          = "#{@deadlines_soon.size} échéance(s) dans les 30 jours"
+        - else
+          | Aucune échéance dans les 30 jours
+      - next_one = (@deadlines_overdue + @deadlines_soon).first
+      - if next_one
+        p.mt-1.text-sm.text-gray-600
+          = "La plus urgente : #{next_one.display_title}, le #{l(next_one.due_on, format: :long)}"
+    = link_to "📅 Ouvrir l'échéancier", finance_compliance_deadlines_path, class: "text-blue-500 text-sm border-b-2 border-blue-200 hover:text-blue-700"
 
 .grid.gap-4.mb-8(class="md:grid-cols-3")
   .p-5.bg-white.rounded-lg.border.border-gray-100

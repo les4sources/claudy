@@ -1,0 +1,52 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Charges fixes",
+           links: [link_to("➕ Nouvelle charge", new_finance_recurring_expense_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
+  p.text-sm.text-gray-700
+    strong Une charge fixe s'écrit une fois, elle ne se recopie pas chaque mois.
+    |  Montant, fréquence, première échéance : la
+    =< link_to "trésorerie", finance_treasury_path, class: "text-blue-600 hover:text-blue-800"
+    |  en projette les occurrences sur 90 jours. Ce n'est qu'une prévision — rien n'est comptabilisé. Quand la vraie facture du même tiers est encodée, elle remplace l'estimation pour sa période.
+
+- if @recurring_expenses.empty?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucune charge fixe.
+    p.mt-1 Un abonnement internet, une assurance, un remboursement d'emprunt : tout ce qui revient à date fixe.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Charge
+          th.py-3.px-6.text-right[scope="col"] Montant
+          th.py-3.px-6[scope="col"] Fréquence
+          th.py-3.px-6[scope="col"] Prochaine échéance
+          th.py-3.px-6.text-right[scope="col"] Sur un an
+          th.py-3.px-6[scope="col"]
+      tbody
+        - @recurring_expenses.each do |expense|
+          - next_due = expense.next_due_on
+          tr.border-b(class="#{expense.active? ? 'bg-white' : 'bg-gray-50 text-gray-400'}" data-recurring-expense-id=expense.id)
+            td.py-4.px-6
+              .font-medium(class="#{expense.active? ? 'text-gray-900' : 'text-gray-500'}")= expense.label
+              .text-xs.text-gray-500
+                = [expense.third_party&.name, expense.legal_entity.name].compact.join(" · ")
+                - unless expense.active?
+                  |  · inactive
+            td.py-4.px-6.text-right.tabular-nums= number_to_currency(expense.amount, unit: "€")
+            td.py-4.px-6= expense.frequency_label
+            td.py-4.px-6
+              - if next_due
+                = l(next_due, format: :long)
+              - else
+                span.text-gray-400 terminée
+            td.py-4.px-6.text-right.tabular-nums= number_to_currency(expense.yearly_cents / 100.0, unit: "€")
+            td.py-4.px-6.text-right.whitespace-nowrap
+              = link_to "Modifier", edit_finance_recurring_expense_path(expense), class: "text-blue-500 hover:text-blue-700"
+      tfoot
+        tr.bg-gray-50.font-semibold.text-gray-900
+          td.py-3.px-6(colspan="4") Total des charges actives, sur un an
+          td.py-3.px-6.text-right.tabular-nums= number_to_currency(@yearly_cents / 100.0, unit: "€")
+          td

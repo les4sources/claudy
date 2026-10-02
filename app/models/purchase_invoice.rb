@@ -26,6 +26,7 @@
 #  notes               :text
 #  number              :string
 #  paid_on             :date
+#  payment_reference   :string
 #  pdf_sha256          :string
 #  posted_at           :datetime
 #  quality_flags       :jsonb            not null
@@ -103,6 +104,9 @@ class PurchaseInvoice < ApplicationRecord
   # `nullify` : détacher une facture ne doit jamais effacer le relevé — c'est le
   # travail de l'artisan, pas une pièce jointe.
   has_many :consignment_reports, dependent: :nullify
+  # Les échéances de paiement que cette facture solde (échéancier comptable) :
+  # le précompte immobilier est « fait » quand SA facture est payée.
+  has_many :compliance_deadlines, dependent: :nullify
   # `cash_allocations` (le `document` polymorphique de la décision 4) vient du
   # concern `Payable` : c'est ce lien qui fait passer la facture en `paid`.
   has_one_attached :document
@@ -110,6 +114,8 @@ class PurchaseInvoice < ApplicationRecord
   accepts_nested_attributes_for :purchase_invoice_lines, allow_destroy: true
 
   before_validation :flag_quality
+  before_validation :normalize_payment_reference
+  validate :structured_payment_reference_is_valid
   validate :lines_cover_total_when_leaving_to_process
   validate :frozen_once_payable, on: :update
 
@@ -142,13 +148,14 @@ class PurchaseInvoice < ApplicationRecord
   def reference = [third_party&.name, number].compact_blank.join(" · ")
 
   # --- Le contrat `Payable` ------------------------------------------------
-  # La communication d'un virement fournisseur, c'est le numéro de SA facture :
-  # c'est ce qu'il cherche pour rapprocher de son côté. À défaut, notre propre
-  # référence, qui vaut mieux qu'un virement muet.
+  # La communication d'un virement fournisseur : celle qu'il demande sur sa
+  # facture (souvent structurée, +++…+++, qu'il rapproche automatiquement),
+  # sinon le numéro de SA facture, c'est ce qu'il cherche pour rapprocher de son
+  # côté. À défaut, notre propre référence, qui vaut mieux qu'un virement muet.
   def payable_amount_cents = total_cents
   def payable_beneficiary = third_party&.name
   def payable_third_party = third_party
-  def payable_communication = number.presence || "Facture ##{id}"
+  def payable_communication = payment_reference.presence || number.presence || "Facture ##{id}"
   def payable_due_on = due_on
   def payable_reference = reference.presence || "##{id}"
   def payable_label = "Facture #{payable_reference}"
@@ -247,6 +254,23 @@ class PurchaseInvoice < ApplicationRecord
   end
 
   # Une facture dont l'écriture est passée ne se retouche pas : on contre-passe.
+  # Une communication structurée se range sous sa forme canonique
+  # (+++123/4567/89002+++), quelle que soit la façon dont on l'a tapée ou lue.
+  def normalize_payment_reference
+    self.payment_reference = payment_reference.to_s.strip.presence
+    canonique = payment_reference && MailIntake::StructuredCommunication.normalize(payment_reference)
+    self.payment_reference = canonique if canonique
+  end
+
+  # Douze chiffres dont la clé modulo 97 est fausse : c'est une faute de frappe,
+  # et un virement qui la porte ne serait pas rapproché par le fournisseur.
+  def structured_payment_reference_is_valid
+    return if payment_reference.blank? || !payment_reference.match?(%r{\A[\s\d+*/]+\z})
+    return if payment_reference.gsub(/\D/, "").length != 12 || MailIntake::StructuredCommunication.normalize(payment_reference)
+
+    errors.add(:payment_reference, "a une clé de contrôle fausse : vérifiez les deux derniers chiffres")
+  end
+
   def frozen_once_payable
     return unless FROZEN_STATUSES.include?(status_was)
 

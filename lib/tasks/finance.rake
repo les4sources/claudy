@@ -1,4 +1,15 @@
 namespace :finance do
+  # L'échéancier comptable : d'abord générer ce qui manque (la règle a pu
+  # changer, un nouveau mois entre dans l'horizon), puis rappeler. Idempotent :
+  # chaque palier de rappel ne part qu'une fois par échéance.
+  desc "Échéancier comptable : génère les échéances puis envoie les rappels (J-14, J-3, retard). Idempotent."
+  task deadline_reminders: :environment do
+    generated = ComplianceDeadlines::Generate.new.run!
+    reminded = ComplianceDeadlines::SendReminders.new.run!
+
+    puts "[finance:deadline_reminders] #{generated} ; #{reminded} rappel(s) envoyé(s)"
+  end
+
   desc "Sème les motifs de caisse avec le vocabulaire de la feuille papier (epic #243). Idempotent."
   task seed_cash_motifs: :environment do
     result = Finance::SeedCashMotifs.new.run

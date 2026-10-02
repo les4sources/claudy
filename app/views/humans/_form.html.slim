@@ -12,6 +12,13 @@
                    label: "Email",
                    class: "md:w-1/2 lg:w-2/3"
 
+    / Composé par la ligne de garde quand la personne est de garde.
+    = f.text_field :phone,
+                   type: "tel",
+                   label: "Téléphone mobile",
+                   placeholder: "0470 12 34 56",
+                   class: "md:w-1/2 lg:w-2/3"
+
     = f.text_field :summary,
                    label: "Résumé",
                    class: "md:w-1/2 lg:w-2/3"

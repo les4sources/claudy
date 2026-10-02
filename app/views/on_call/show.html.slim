@@ -1,0 +1,135 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Ligne de garde"
+
+- on_call = @resolver.on_call
+- backup = @resolver.backup
+- twilio_number = OnCall::Config.twilio_phone_number
+- fallback_number = OnCall::Config.fallback_number
+- day_label = ->(date) { I18n.l(date, format: "%A %-d %B") }
+
+.max-w-5xl.space-y-6
+  p.text-sm.text-gray-500
+    | Un appel sur le numéro des 4 Sources sonne chez le veilleur de garde, puis
+      chez le suppléant, puis au numéro de secours. La garde du jour court jusqu'au
+      lendemain #{@handover_hour} h. Le planning se modifie depuis le
+    =< link_to "calendrier", root_path, class: "text-4s-main underline"
+    | .
+
+  / En ce moment
+  section#on-call-now.bg-white.rounded-2xl.ring-1.ring-gray-200.overflow-hidden
+    header.px-5.py-4.border-b.border-gray-100(class="bg-gray-50/60")
+      h2.text-base.font-semibold.text-gray-900 En ce moment
+      p.mt-0.5.text-sm.text-gray-500
+        | Garde du #{day_label.call(@resolver.duty_date)}, jusqu'au #{day_label.call(@resolver.duty_date + 1)} à #{@handover_hour} h.
+    dl.px-5.py-4.grid.grid-cols-1.gap-4.sm:grid-cols-3
+      div
+        dt.text-xs.font-medium.uppercase.tracking-wide.text-gray-500 1. Veilleur
+        - if on_call
+          dd.mt-1.text-sm.font-semibold.text-gray-900 = on_call.name
+          dd.text-sm.text-gray-600 = PhoneNumber.display(on_call.phone)
+        - else
+          dd.mt-1.text-sm.text-amber-700 Personne de garde avec un numéro.
+      div
+        dt.text-xs.font-medium.uppercase.tracking-wide.text-gray-500 2. Suppléant
+        - if backup
+          dd.mt-1.text-sm.font-semibold.text-gray-900 = backup.name
+          dd.text-sm.text-gray-600 = PhoneNumber.display(backup.phone)
+        - else
+          dd.mt-1.text-sm.text-gray-400 Aucun
+      div
+        dt.text-xs.font-medium.uppercase.tracking-wide.text-gray-500 3. Secours
+        - if fallback_number
+          dd.mt-1.text-sm.text-gray-900 = PhoneNumber.display(fallback_number)
+        - else
+          dd.mt-1.text-sm.text-gray-400 Aucun — message vocal
+
+  / Réglages
+  section.bg-white.rounded-2xl.ring-1.ring-gray-200.px-5.py-4
+    .grid.grid-cols-1.gap-6.sm:grid-cols-2
+      div
+        h2.text-sm.font-medium.text-gray-700 Twilio
+        ul.mt-2.space-y-1.text-sm
+          li
+            span.text-gray-500 Numéro de la ligne :
+            - if twilio_number
+              span.text-gray-900 = PhoneNumber.display(twilio_number)
+            - else
+              span.text-red-700 manquant (TWILIO_PHONE_NUMBER) — aucun appel n'est transféré
+          li
+            span.text-gray-500 Jeton d'authentification :
+            - if OnCall::Config.auth_token
+              span.text-gray-900 configuré
+            - else
+              span.text-red-700 manquant (TWILIO_AUTH_TOKEN) — le webhook refuse tout
+          li
+            span.text-gray-500 Account SID :
+            - if OnCall::Config.account_sid
+              span.text-gray-900 configuré
+            - else
+              span.text-amber-700 manquant (TWILIO_ACCOUNT_SID)
+      div
+        = form_with url: on_call_path, method: :patch, class: "flex items-end gap-3" do
+          div
+            = label_tag :handover_hour, "Heure de bascule", class: "block text-sm font-medium text-gray-700"
+            = number_field_tag :handover_hour, @handover_hour, min: 0, max: 23, class: "mt-1 w-24 rounded-md border-gray-300 shadow-sm sm:text-sm"
+          button.inline-flex.items-center.rounded-md.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.bg-4s-main(class="hover:opacity-90" type="submit")
+            | Enregistrer
+        p.mt-1.text-xs.text-gray-400 Heure de Bruxelles. Avant cette heure, c'est encore la garde de la veille.
+
+  / Prochains jours
+  section#on-call-days.bg-white.rounded-2xl.ring-1.ring-gray-200.overflow-hidden
+    header.px-5.py-4.border-b.border-gray-100(class="bg-gray-50/60")
+      h2.text-base.font-semibold.text-gray-900 Qui tient le téléphone
+      p.mt-0.5.text-sm.text-gray-500 Quand plusieurs veilleurs sont de garde, un clic désigne celui dont le téléphone sonne.
+    ul.divide-y.divide-gray-100
+      - @days.each do |day|
+        - titulars = day.titulars
+        - ringing = day.on_call
+        li.px-5.py-3.flex.flex-col.gap-2.sm:flex-row.sm:items-center
+          .w-44.shrink-0.text-sm.font-medium.text-gray-900 = day_label.call(day.duty_date).capitalize
+          .flex.flex-wrap.items-center.gap-2.min-w-0
+            - if titulars.empty?
+              span.text-sm.text-gray-400 Aucun veilleur
+            - titulars.each do |human_role|
+              - human = human_role.human
+              - if human == ringing
+                span.inline-flex.items-center.gap-1.rounded-full.bg-teal-50.px-3.py-1.text-sm.font-medium.text-teal-800.ring-1.ring-teal-200 title="Son téléphone sonne"
+                  | 📞 #{human.name}
+              - elsif human.phone.blank?
+                span.inline-flex.items-center.rounded-full.bg-gray-50.px-3.py-1.text-sm.text-gray-400.ring-1.ring-gray-200 title="Pas de numéro sur sa fiche"
+                  = "#{human.name} · sans numéro"
+              - else
+                = button_to "#{human.name}", phone_holder_on_call_path(human_role_id: human_role.id), method: :patch,
+                            class: "inline-flex items-center rounded-full bg-white px-3 py-1 text-sm text-gray-700 ring-1 ring-gray-200 hover:ring-teal-300 hover:text-teal-800",
+                            title: "Faire sonner son téléphone"
+            - if (backup_human = day.backup)
+              span.text-xs.text-gray-500 = "suppléant : #{backup_human.name}"
+
+  / Journal
+  section#on-call-calls.bg-white.rounded-2xl.ring-1.ring-gray-200.overflow-hidden
+    header.px-5.py-4.border-b.border-gray-100(class="bg-gray-50/60")
+      h2.text-base.font-semibold.text-gray-900 Derniers appels
+    - if @calls.empty?
+      p.px-5.py-4.text-sm.text-gray-400 Aucun appel reçu pour l'instant.
+    - else
+      .overflow-x-auto
+        table.min-w-full.text-sm
+          thead.text-left.text-xs.uppercase.tracking-wide.text-gray-500
+            tr
+              th.px-5.py-2.font-medium Reçu le
+              th.px-5.py-2.font-medium Appelant
+              th.px-5.py-2.font-medium De garde
+              th.px-5.py-2.font-medium Issue
+              th.px-5.py-2.font-medium Tentatives
+          tbody.divide-y.divide-gray-100
+            - @calls.each do |call|
+              tr
+                td.px-5.py-2.whitespace-nowrap.text-gray-900 = I18n.l(call.created_at, format: "%d/%m/%Y %H:%M")
+                td.px-5.py-2.whitespace-nowrap.text-gray-700 = PhoneNumber.display(call.from_number) || call.from_number || "Masqué"
+                td.px-5.py-2.whitespace-nowrap.text-gray-700 = call.on_call_human&.name || "—"
+                td.px-5.py-2.text-gray-700 = call.outcome_label
+                td.px-5.py-2.text-gray-500
+                  - call.attempts.each do |attempt|
+                    - who = @attempt_humans[attempt["human_id"]]&.name || PhoneNumber.display(attempt["number"])
+                    - duration = attempt["duration"].to_i.positive? ? " · #{attempt['duration']} s" : ""
+                    div = "#{PhoneCall::STEP_LABELS[attempt['step']]} (#{who}) : #{attempt['status'] || '…'}#{duration}"

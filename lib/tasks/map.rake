@@ -111,4 +111,29 @@ namespace :map do
            "relief #{couche.has_relief ? 'oui' : 'non'}#{couche.default? ? ', par défaut' : ''}."
     end
   end
+
+  # Le relief de la vue 3D (`/map/relief`) : le MNT LiDAR du SPW sur l'emprise
+  # du fond par défaut plus 150 m, et l'ortho 2026 pour le draper. Idempotente :
+  # relancée, elle réécrit les fichiers. Avec le relief vient le modèle de
+  # SURFACE (arbres et toits) qui porte les ombres et l'occupation du sol qui dit
+  # combien la terre boit. `ONLY=surface` ou `ONLY=landcover` n'importe que l'une
+  # des deux sur un relief déjà installé ; `TEXTURE=0` garde l'ortho en place.
+  namespace :terrain do
+    desc "Télécharger le relief du domaine (MNT et MNS LiDAR SPW) pour la vue 3D [ONLY=surface|landcover] [TEXTURE=0]"
+    task import: :environment do
+      couche = MapBaseLayer.default_layer
+      abort "Aucun fond de carte : l'emprise du relief vient du fond par défaut." if couche&.bounds.blank?
+
+      import = Maps::TerrainImport.new(bounds: couche.bounds, logger: ->(message) { puts "  #{message}" })
+      extent = import.extent
+      puts "Relief : grille #{extent.cols} × #{extent.rows} à 1 m (#{extent.cols * extent.rows} points)…"
+      only = ENV["ONLY"].presence
+      terrain = import.call(terrain: only.nil?, surface: only.nil? || only == "surface",
+                            landcover: only.nil? || only == "landcover", texture: only.nil? && ENV["TEXTURE"] != "0")
+      meta = terrain.metadata
+      puts "Relief installé sous #{terrain.root} — altitudes #{meta['z_min']} à #{meta['z_max'].to_f.round(2)} m, " \
+           "#{meta['nodata_count']} point(s) sans donnée#{terrain.texture? ? ', ortho 2026 comprise' : ''}" \
+           "#{terrain.surface? ? ", surface jusqu'à #{meta.dig('surface', 'z_max').to_f.round(2)} m" : ''}."
+    end
+  end
 end

@@ -17,6 +17,9 @@
     .text-xs.uppercase.text-gray-400 Prix public
     .text-xl.text-gray-700= item.public_price
   div
+    .text-xs.uppercase.text-gray-400 Marge
+    .text-xl= item.margin
+  div
     .text-xs.uppercase.text-gray-400 Canal
     .text-sm.text-gray-700
       span class="px-2 py-0.5 rounded-full text-xs #{item.channel_badge_css}"
@@ -25,6 +28,10 @@
   div
     .text-xs.uppercase.text-gray-400 Palier en vigueur
     .text-sm.text-gray-700= item.price_period
+  - if (supplier = @item.current_price&.third_party)
+    div
+      .text-xs.uppercase.text-gray-400 Fournisseur
+      .text-sm.text-gray-700= supplier.name
   - if @item.consignor.present?
     div
       .text-xs.uppercase.text-gray-400 Artisan
@@ -47,15 +54,14 @@
 div(class=panel data-controller="catalog-price" data-catalog-price-url-value=finance_catalog_suggest_price_path data-catalog-price-channel-value=@item.channel)
   h3(class=panel_title) Nouveau palier de prix
 
-  - marge = Pricing::Rates.cents(Catalog::BuildPrice.margin_key(@item.channel)) || Catalog::BuildPrice::DEFAULT_MARGINS.fetch(@item.channel, 0)
+  - marge = Catalog::BuildPrice.new(channel: @item.channel).margin_percent
   p.mb-4.text-sm.text-gray-500
     | Saisis le prix d'achat : le prix sourcier se calcule tout seul, avec la marge
     strong = " #{@item.channel_label} de #{marge} %"
-    |  (modifiable dans
+    '  (modifiable dans
     = link_to "Paramètres > Tarifs", rates_path, class: "underline"
     | ). Tu peux l'écraser à la main — c'est la valeur du champ qui est enregistrée.
-    - if @item.channel == "grocery"
-      |  Le prix public se propose depuis le prix de référence, quand il y en a un.
+    |  Le prix de vente conseillé vise une marge de #{CatalogPrice::MARGIN_TARGET} % sur le prix d'achat : sous #{CatalogPrice::MARGIN_MINIMUM} % la marge s'affiche en rouge, jusqu'à #{CatalogPrice::MARGIN_COMFORT} % en orange, au-delà en vert.
     - if @item.craft?
       |  Pour un article d'artisanat, c'est l'artisan qui fixe son prix de vente : pose-le en prix public, sans marge. La part des 4 Sources est la commission de sa fiche.
 
@@ -65,11 +71,11 @@ div(class=panel data-controller="catalog-price" data-catalog-price-url-value=fin
     « Catalog price[active from] ». Les montants sont de toute façon saisis en
     euros et convertis dans le contrôleur, ils ne collent à aucun attribut.
   = form_with url: finance_catalog_prices_path(@item), method: :post do
-    /  La date ouvre la ligne, puis les quatre montants forment une échelle qu'on
-       lit de gauche à droite — achat, référence, sourcier, public. Ils portent la
-       même largeur parce qu'ils sont la même chose.
-       La rangée n'occupe volontairement que 10 des 12 colonnes : cinq champs
-       courts étirés sur toute la largeur mentent sur ce qu'on y saisit.
+    /  La date ouvre la ligne, puis les trois montants forment une échelle qu'on
+       lit de gauche à droite — achat, sourcier, public — et le prix de vente
+       conseillé la ferme. Le champ « Référence » (le prix 2025 du fichier Excel
+       du cellier) a disparu du formulaire le 2026-09-30 : plus rien ne s'en
+       sert, les paliers qui en ont un le gardent dans l'historique.
     .grid.grid-cols-1.gap-4(class="md:grid-cols-12 md:gap-3")
       div(class="md:col-span-2")
         = label_tag "catalog_price[active_from]", "À partir du", class: field_label
@@ -78,18 +84,28 @@ div(class=panel data-controller="catalog-price" data-catalog-price-url-value=fin
         = label_tag "catalog_price[purchase_price]", "Achat (€)", class: field_label
         = text_field_tag "catalog_price[purchase_price]", nil, inputmode: "decimal", placeholder: "0,00", data: { catalog_price_target: "purchase", action: "input->catalog-price#suggest" }, class: money_input
       div(class="md:col-span-2")
-        = label_tag "catalog_price[reference_price]", "Référence (€)", class: field_label
-        = text_field_tag "catalog_price[reference_price]", nil, inputmode: "decimal", placeholder: "0,00", data: { catalog_price_target: "reference", action: "input->catalog-price#suggest" }, class: money_input
-      div(class="md:col-span-2")
         = label_tag "catalog_price[member_price]", "Sourcier (€)", class: field_label
         = text_field_tag "catalog_price[member_price]", nil, inputmode: "decimal", placeholder: "auto", data: { catalog_price_target: "member" }, class: money_input
       div(class="md:col-span-2")
         = label_tag "catalog_price[public_price]", "Public (€)", class: field_label
-        = text_field_tag "catalog_price[public_price]", nil, inputmode: "decimal", placeholder: "0,00", data: { catalog_price_target: "public" }, class: money_input
+        = text_field_tag "catalog_price[public_price]", nil, inputmode: "decimal", placeholder: "0,00", class: money_input
+      / Pas de conseil pour l'artisanat : c'est l'artisan qui fixe son prix.
+      - unless @item.craft?
+        div(class="md:col-span-3 invisible" data-catalog-price-target="recommended" aria-live="polite")
+          span(class=field_label) = "Prix de vente conseillé (marge #{CatalogPrice::MARGIN_TARGET} %)"
+          p.py-2.text-sm.font-semibold.text-green-700.tabular-nums(data-catalog-price-target="recommendedValue")
+
+    /  Le fournisseur vient des tiers de la comptabilité (Finances > Tiers) : pas
+       de liste parallèle à tenir. Il est proposé depuis le palier en vigueur.
+    .mt-4.grid.grid-cols-1.gap-4(class="md:grid-cols-12 md:gap-3")
+      div(class="md:col-span-4 relative" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un fournisseur…" data-searchable-select-clearable-value="true")
+        = label_tag "catalog_price[third_party_id]", "Fournisseur", class: field_label
+        = select_tag "catalog_price[third_party_id]", options_from_collection_for_select(@suppliers, :id, :name, @price.third_party_id), include_blank: "— Aucun —", class: field_input, data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un fournisseur"
 
     div(class=action_row)
       p(class=action_hint)
-        | Laisse « Sourcier » vide pour le calcul automatique. Un palier déjà posé ne bouge jamais, même si la marge change ensuite.
+        | Laisse « Sourcier » vide pour le calcul automatique. Un palier déjà posé ne bouge jamais, même si la marge change ensuite — sauf si tu en poses un autre à la même date : il le corrige.
       button(class=primary_button type="submit") Ajouter
 
 = section_heading_tw heading: "Historique des paliers"
@@ -102,10 +118,12 @@ div(class=panel data-controller="catalog-price" data-catalog-price-url-value=fin
       thead.text-xs.text-gray-700.uppercase.bg-gray-50
         tr
           th.py-3.px-6[scope="col"] Période
+          th.py-3.px-6[scope="col"] Fournisseur
           th.py-3.px-6.text-right[scope="col"] Achat
           th.py-3.px-6.text-right[scope="col"] Référence
           th.py-3.px-6.text-right[scope="col"] Sourcier
           th.py-3.px-6.text-right[scope="col"] Public
+          th.py-3.px-6.text-right[scope="col"] Marge
           th.py-3.px-6[scope="col"]
       tbody
         - @prices.each do |price|
@@ -119,10 +137,12 @@ div(class=panel data-controller="catalog-price" data-catalog-price-url-value=fin
                 span.ml-2.px-2.py-0.5.rounded-full.text-xs.bg-teal-100.text-teal-800 en vigueur
               - if price.note.present?
                 .mt-0.5.text-xs.text-gray-400= price.note
+            td.py-3.px-6= price.third_party&.name || "—"
             td.py-3.px-6.text-right.text-gray-400= price.purchase_price_cents ? number_to_currency(price.purchase_price_cents / 100.0) : "—"
             td.py-3.px-6.text-right.text-gray-400= price.reference_price_cents ? number_to_currency(price.reference_price_cents / 100.0) : "—"
             td.py-3.px-6.text-right.font-semibold.text-gray-900= number_to_currency(price.member_price_cents / 100.0)
             td.py-3.px-6.text-right= price.public_price_cents ? number_to_currency(price.public_price_cents / 100.0) : "—"
+            td.py-3.px-6.text-right= catalog_margin_tag(price)
             td.py-3.px-6.text-right
               = button_to "Supprimer",
                           finance_catalog_price_path(@item, price),

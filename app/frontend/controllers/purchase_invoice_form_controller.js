@@ -8,7 +8,7 @@ import { Controller } from "@hotwired/stimulus"
 // validation, une fois les vingt lignes tapées.
 export default class extends Controller {
   static targets = ["rows", "template", "row", "total", "allocated", "remaining", "verdict",
-                    "dropzone", "file", "filename"]
+                    "dropzone", "file", "filename", "previewFrame", "previewImage", "previewEmpty"]
 
   connect() {
     this.counter = 0
@@ -96,6 +96,31 @@ export default class extends Controller {
 
     const file = this.fileTarget.files?.[0]
     this.filenameTarget.textContent = file ? file.name : "Aucune pièce choisie"
+    if (file) this.preview(file)
+  }
+
+  // La pièce s'affiche à côté des champs : on relit la saisie contre le
+  // document, pas de mémoire. Une pièce déposée à la main s'affiche tout de
+  // suite, avant tout envoi, depuis le fichier local.
+  preview(file) {
+    if (!this.hasPreviewFrameTarget) return
+
+    if (this.objectUrl) URL.revokeObjectURL(this.objectUrl)
+    this.objectUrl = URL.createObjectURL(file)
+    const image = file.type.startsWith("image/")
+
+    this.previewFrameTarget.hidden = image
+    this.previewImageTarget.hidden = !image
+    if (image) {
+      this.previewImageTarget.src = this.objectUrl
+    } else {
+      this.previewFrameTarget.src = `${this.objectUrl}#navpanes=0&view=FitH`
+    }
+    if (this.hasPreviewEmptyTarget) this.previewEmptyTarget.hidden = true
+  }
+
+  disconnect() {
+    if (this.objectUrl) URL.revokeObjectURL(this.objectUrl)
   }
 
   toCents(value) {

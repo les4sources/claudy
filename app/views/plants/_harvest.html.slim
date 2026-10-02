@@ -1,0 +1,47 @@
+/ La section « Récolte » de la fiche plante (epic #348, phase 7) : une grille
+  parties × douze mois, lisible d'un coup d'œil au verger. Tant que la plante
+  n'a pas de fenêtre propre, elle montre celles de son espèce et propose de les
+  personnaliser (copie, puis édition). Hors du formulaire du dossier, remplacée
+  seule en Turbo Stream (`PlantHarvestsController`).
+
+  L'éditeur rend les sept parties ; celles qui n'ont pas de fenêtre sont des
+  `fieldset` cachés ET désactivés (rien n'est envoyé). Le contrôleur Stimulus
+  `plant-harvest` en révèle une (« Ajouter une partie ») ou en retire une.
+- editing = local_assigns[:editing]
+- errors = local_assigns[:errors] || []
+- draft = local_assigns[:draft]
+- species = plant.plant_species
+- inherited = plant.harvest_windows_inherited?
+- own = plant.harvest_windows.to_a
+- windows = plant.harvest_windows_effective
+- rows = draft || own
+- prefix = dom_id(plant, :harvest_form)
+section[id=dom_id(plant, :harvest) class="mt-6" data-plant-section="harvest" data-harvest-inherited=(inherited ? "true" : nil)]
+  .mb-2.flex.items-baseline.justify-between.gap-3
+    p class="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Récolte
+    - if inherited
+      p.truncate.text-xs.text-stone-400 = "Calendrier de l'espèce #{species.name}"
+
+  - if windows.any?
+    = render "plants/harvest_grid", windows: windows
+  - elsif !editing
+    p.text-sm.text-stone-500 Aucun calendrier de récolte.
+
+  - if inherited
+    = button_to customize_plant_harvest_path(plant), method: :post,
+                form: { class: "mt-3" },
+                class: "flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-stone-200 text-sm font-medium text-forest hover:bg-forest-tint"
+      | Personnaliser pour cette plante
+  - else
+    details.group.mt-3.rounded-lg.border.border-dashed.border-stone-300 open=(editing || nil)
+      summary.flex.cursor-pointer.list-none.items-center.justify-between.px-3.py-2.text-sm.font-medium.text-forest
+        span = rows.any? ? "Modifier le calendrier" : "+ Ajouter une partie"
+        svg.h-4.w-4.text-stone-400.transition-transform.group-open:rotate-180 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+          polyline points="6 9 12 15 18 9"
+      .border-t.border-stone-100.px-3.py-3
+        = render "plants/harvest_editor", url: plant_harvest_path(plant), rows: rows, errors: errors, prefix: prefix
+        - if own.any?
+          = button_to plant_harvest_path(plant), method: :delete,
+                      form: { class: "mt-2", data: { turbo_confirm: species&.harvest_windows&.any? ? "Oublier le calendrier propre à cette plante et reprendre celui de l'espèce #{species.name} ?" : "Effacer le calendrier de récolte de cette plante ?" } },
+                      class: "h-11 w-full rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-50"
+            = species&.harvest_windows&.any? ? "Revenir au calendrier de l'espèce" : "Effacer le calendrier"

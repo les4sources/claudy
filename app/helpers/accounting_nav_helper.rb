@@ -19,9 +19,10 @@ module AccountingNavHelper
   def accounting_nav_direct
     [
       ["Vue d'ensemble", finance_accounting_path,
-       %w[finance/accounting finance/general_accounts finance/legal_entities finance/fiscal_years]],
+       %w[finance/accounting finance/treasury finance/general_accounts finance/legal_entities finance/fiscal_years]],
       ["Trésorerie", finance_cash_entries_path, %w[finance/cash_entries]],
-      ["Arrêté du mois", finance_monthly_close_path, %w[finance/monthly_close]]
+      ["Arrêté du mois", finance_monthly_close_path, %w[finance/monthly_close]],
+      ["Échéancier", finance_compliance_deadlines_path, %w[finance/compliance_deadlines finance/compliance_obligations]]
     ]
   end
 
@@ -37,8 +38,10 @@ module AccountingNavHelper
         ["Coût d'encaissement", finance_collection_cost_path, %w[finance/collection_cost]]
       ]],
       ["Fournisseurs", "fournisseurs", [
+        ["Boite de réception", finance_mail_messages_path, %w[finance/mail_messages]],
         ["Achats", finance_purchase_invoices_path, %w[finance/purchase_invoices]],
         ["À payer", finance_payables_path, %w[finance/payables]],
+        ["Charges fixes", finance_recurring_expenses_path, %w[finance/recurring_expenses]],
         ["Tiers", finance_third_parties_path, %w[finance/third_parties]]
       ]],
       # Le miroir de « Fournisseurs » (epic #240, phase 6) : le registre des

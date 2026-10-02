@@ -1,0 +1,6 @@
+/ Le champ de recherche que `searchable-select` pose par-dessus un <select>
+  (voir le contrôleur). À rendre juste après le <select>, dans l'élément qui
+  porte `data-controller="searchable-select"` et la classe `relative`.
+.hidden.mt-1(data-searchable-select-target="wrap")
+  input.w-full.rounded-md.border-gray-300.text-sm.shadow-sm(type="text" role="combobox" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-expanded="false" aria-label=label data-searchable-select-target="input" data-action="input->searchable-select#filter focus->searchable-select#open keydown->searchable-select#navigate")
+  ul.hidden.absolute.z-20.mt-1.max-h-64.w-full.overflow-auto.rounded-md.border.border-gray-200.bg-white.py-1.shadow-lg(role="listbox" data-searchable-select-target="list")

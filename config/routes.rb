@@ -86,6 +86,10 @@ Rails.application.routes.draw do
     end
   end
   resources :human_roles
+  # Ligne de garde (Twilio) : qui décroche maintenant, heure de bascule, journal.
+  resource :on_call, only: [:show, :update], controller: "on_call" do
+    patch :phone_holder
+  end
   resources :notes
   resources :payments, only: [:index, :show, :destroy]
   resources :products
@@ -240,6 +244,8 @@ Rails.application.routes.draw do
     # lectures — grand livre et balance. Aucune route ne permet de SAISIR une
     # écriture : elles se génèrent, elles ne se saisissent jamais.
     get "accounting", to: "accounting#index"
+    # La trésorerie (lecture seule) : le solde, ce qui doit rentrer et sortir.
+    get "treasury", to: "treasury#show"
     get "ledger", to: "ledger#index"
     get "trial_balance", to: "trial_balance#index"
     # Journal de trésorerie (issue #179). `unallocated` est nommée AVANT la
@@ -256,6 +262,20 @@ Rails.application.routes.draw do
     # La file « À payer » (epic #240, phase 4) : tout ce que la maison doit et
     # qui attend son virement, toutes dettes confondues.
     get "payables", to: "payables#index", as: :payables
+    # L'échéancier comptable (ex-base Notion « Échéancier comptable »). Les
+    # obligations sont nommées AVANT les échéances : sinon
+    # `/finance/deadlines/obligations` serait capté par `deadlines#show`. Pas de
+    # `destroy` sur une obligation : elle se désactive, sinon ses échéances
+    # passées deviendraient orphelines. Pas de `create` sur une échéance : elle
+    # naît de sa règle, jamais d'un formulaire.
+    resources :compliance_obligations, path: "deadlines/obligations", except: %i[show destroy]
+    resources :compliance_deadlines, path: "deadlines", only: %i[index show update] do
+      member do
+        post :start
+        post :close
+        post :reopen
+      end
+    end
     # Relevés de rémunération des porteurs d'activité (epic #244, phase 3) :
     # générer un brouillon, l'émettre, le voir. Pas d'update — un relevé émis
     # est figé, une erreur se corrige par contre-passation.
@@ -300,6 +320,15 @@ Rails.application.routes.draw do
     end
     # Motifs de caisse (epic #243). Pas de `destroy` : un motif se désactive,
     # sinon une feuille de caisse passée perdrait son vocabulaire.
+    # Boite de réception (messagerie, phase 1) : la file des mails de `compta@`.
+    # Pas de `destroy` : un mail s'ignore, il ne se supprime pas.
+    resources :mail_messages, path: "inbox", only: %i[index show] do
+      member do
+        post :ignore
+        post :restore
+      end
+      collection { post :sync }
+    end
     # Factures d'achat (epic #240, phase 2). Pas de `destroy` : une pièce
     # comptable ne se supprime pas, elle se conteste ou se contre-passe.
     resources :purchase_invoices, path: "purchases", except: %i[destroy] do
@@ -336,9 +365,15 @@ Rails.application.routes.draw do
       end
     end
 
+    # Les charges fixes (2026-09-30) : des prévisions pour la trésorerie, pas
+    # des dettes — elles se suppriment sans laisser d'écriture orpheline.
+    resources :recurring_expenses, except: [:show]
+
     # Les tiers (epic #240, phase 1) : on les désactive, on ne les détruit pas —
     # des écritures les portent.
     resources :third_parties, except: %i[show destroy] do
+      # Création express depuis le formulaire d’une facture (JSON).
+      collection { post :quick }
       member do
         patch :deactivate
         patch :reactivate
@@ -368,6 +403,9 @@ Rails.application.routes.draw do
         # Éteindre la dette d'un habitant depuis une ligne ENTRANTE (issue
         # #349) : le miroir de `payout`.
         post :settle
+        # La proposition de Jev d'une ligne sans règle, chargée à la volée dans
+        # la file « À affecter » pour ne jamais retenir l'écran.
+        get :suggestion
       end
       resources :allocations, only: [:create, :destroy], controller: "cash_allocations"
     end
@@ -375,7 +413,9 @@ Rails.application.routes.draw do
     # Comptabilité > Ventes (epic #240, phase 6). `new` et `create` prennent
     # `kind` + `source_id` : on facture TOUJOURS une chose précise, désignée
     # depuis la file Facturation — jamais dans le vide.
-    resources :sales_invoices, path: "sales", only: %i[index show new create destroy]
+    # `edit`/`update` corrigent ce qui a été mal saisi (numéro, date, montant,
+    # PDF) sans toucher au lien vers ce qu'elle facture.
+    resources :sales_invoices, path: "sales", only: %i[index show new create edit update destroy]
 
     resources :general_accounts, path: "chart_of_accounts", except: [:show]
     resources :legal_entities, path: "entities", except: [:show]
@@ -422,14 +462,107 @@ Rails.application.routes.draw do
   # Les objets de la carte (epic #348, phase 2) : la carte lit et écrit leurs
   # géométries en JSON, la fiche latérale édite le reste en Turbo Stream.
   scope "map" do
+    # Le statut UniFi en direct des nœuds Ethernet (phase 10), en JSON.
+    get "unifi/devices", to: "map_unifi#devices", as: :map_unifi_devices, defaults: { format: :json }
+    # Phase 14 : la recherche du mode actif, en JSON d'identifiants.
+    get "search", to: "maps#search", as: :map_search, defaults: { format: :json }
+    # Le relief en 3D et la simulation du ruissellement : la page, puis les
+    # deux fichiers qu'elle lit (MNT en binaire, ortho qui le drape).
+    get "relief", to: "map_reliefs#show", as: :map_relief
+    get "relief/grid", to: "map_reliefs#grid", as: :map_relief_grid
+    get "relief/texture", to: "map_reliefs#texture", as: :map_relief_texture
+    get "relief/surface", to: "map_reliefs#surface", as: :map_relief_surface
+    get "relief/landcover", to: "map_reliefs#landcover", as: :map_relief_landcover
+    # Les aménagements à l'essai (baissières, keylines, mares) de la vue 3D.
+    resources :map_designs, path: "relief/designs", only: %i[index create destroy], defaults: { format: :json }
+    # Le carnet de gestion (phase 6) : les tâches de l'année, mois par mois.
+    # `carnet` en français, imposé par l'epic. Les routes de tâches précèdent
+    # `resources :map_tasks`, qui lirait sinon `current` comme un `:id`.
+    get "carnet", to: "map_tasks#index", as: :map_carnet
+    get "tasks/current", to: "map_tasks#current", as: :map_tasks_current
+    resources :map_tasks, path: "tasks", only: %i[update destroy]
     resources :map_features, path: "features", only: %i[index show new create update destroy] do
       delete "photos/:photo_id", action: :destroy_photo, on: :member, as: :photo
+      # Une tâche naît sur son porteur : le type polymorphe vient de la route,
+      # jamais d'un paramètre.
+      resources :map_tasks, path: "tasks", only: %i[create]
     end
+    # Les commentaires en fil (phase 11). Le point et son premier message
+    # naissent ENSEMBLE (`POST /map/comments` avec lat, lng et le texte) : rien
+    # n'est créé tant que le premier message n'est pas publié. `new` sert la
+    # fiche du point pas encore créé.
+    get "comments/new", to: "map_comments#new", as: :new_map_comment
+    resources :map_comments, path: "comments", only: %i[create destroy] do
+      member do
+        post :reply
+        post :resolve
+        post :reopen
+      end
+    end
+    # Les notes manuscrites (phase 12), en JSON. `PATCH strokes` remplace les
+    # tracés d'un bloc (enregistrement automatique, verrou optimiste → 409).
+    resources :map_sketches, path: "sketches", only: %i[index show create update destroy] do
+      patch :strokes, on: :member
+    end
+    # Les relevés de biodiversité (phase 13). Même création atomique que les
+    # commentaires : `new` sert la fiche d'un point pas encore créé, `create`
+    # pose le point et le relevé ensemble. `index` est la liste du panneau
+    # (Turbo Frame), `species` l'autocomplétion des espèces déjà saisies,
+    # `biodiversite` la page annexe. Avant `resources`, qui lirait sinon
+    # `species` comme un `:id`.
+    get "observations/new", to: "map_observations#new", as: :new_map_observation
+    get "observations/species", to: "map_observations#species", as: :map_observation_species
+    get "biodiversite", to: "map_observations#page", as: :map_biodiversite
+    resources :map_observations, path: "observations", only: %i[index create update]
     # La carte du jour (phase 3) : occupation au jour choisi, panneau du groupe
     # présent, gîtes et salles restant à tracer. Lecture seule.
     get "occupancy", to: "map_venues#occupancy", as: :map_occupancy
     get "venues/todo", to: "map_venues#todo", as: :map_venues_todo
     get "venues/:id", to: "map_venues#show", as: :map_venue
+    # Les plantes nourricières (phase 7) : la fiche d'une plante placée s'ouvre
+    # au clic sur son point. Espèces et variétés alimentent l'autocomplétion de
+    # la fiche (JSON) ; elles se créent par leur NOM à l'enregistrement de la
+    # plante, jamais par un id arbitraire.
+    # Le mode Placement : la liste des plantes à placer, chargée dans le tiroir
+    # de la carte. Avant `resources :plants`, qui lirait sinon `unplaced`
+    # comme un `:id`.
+    get "plants/unplaced", to: "plants#unplaced", as: :unplaced_plants
+    # « Quelle est cette plante ? » : les photos partent chez Pl@ntNet, les
+    # espèces probables reviennent dans la fiche, à valider ou refuser.
+    post "plants/identify", to: "plants#identify", as: :identify_plants
+    # « Nouvelle plante » : la fiche vide s'ouvre dans le panneau de la carte,
+    # et une espèce encore inconnue se crée par son nom, comme à l'édition.
+    resources :plants, only: %i[new create show update destroy] do
+      member do
+        delete "photos/:photo_id", action: :destroy_photo, as: :photo
+        # Pose ou déplace le point de la plante (clic, GPS, glisser).
+        post :place
+        post :unplace
+      end
+      # Le calendrier de récolte propre à la plante : PATCH remplace toutes ses
+      # fenêtres, DELETE la rend à celui de l'espèce, `customize` copie celui de
+      # l'espèce pour le modifier.
+      resource :harvest, controller: "plant_harvests", only: %i[update destroy] do
+        post :customize
+      end
+      # Les notes datées de la plante : ajout inline et suppression (soft).
+      resources :map_notes, path: "notes", only: %i[create destroy]
+      # Les tâches de la plante (filière `nourricier` par défaut), même
+      # contrôleur que celles des objets : modification et suppression passent
+      # par `/map/tasks/:id`.
+      resources :map_tasks, path: "tasks", only: %i[create]
+    end
+    get "species", to: "plant_species#autocomplete", as: :map_species
+    get "species/:id/varieties", to: "plant_species#varieties", as: :map_species_varieties
+    # Les pages annexes des plantes (phase 7), en français comme le carnet :
+    # le calendrier des récoltes, la liste de toutes les plantes, le catalogue
+    # des espèces (fiche éditable, variétés, fenêtres de récolte par défaut).
+    get "recoltes", to: "harvest_calendar#index", as: :map_recoltes
+    get "plantes", to: "plants#index", as: :map_plantes
+    resources :plant_species, path: "especes", as: :map_especes, only: %i[index show update destroy] do
+      resources :plant_varieties, path: "varietes", as: :varieties, only: %i[create update destroy]
+      resource :harvest, controller: "species_harvests", as: :harvest, only: %i[update destroy]
+    end
   end
 
   # Organisation
@@ -763,6 +896,9 @@ Rails.application.routes.draw do
 
   namespace :webhooks do
     resource :stripe_hooks, only: :create
+    # Ligne de garde (Twilio) : appel entrant, puis issue de chaque <Dial>.
+    post "twilio/voice", to: "twilio_voice#incoming", as: :twilio_voice
+    post "twilio/voice/dial_status", to: "twilio_voice#dial_status", as: :twilio_voice_dial_status
   end
 
   # Private read-only API for AI agents. Authenticated by a static bearer token
@@ -811,6 +947,14 @@ Rails.application.routes.draw do
       # appel ne colle pas deux fois le même post-it.
       resources :notes, only: [:index, :show, :create, :update, :destroy]
 
+      # Événements (epic #245) : lecture brouillons compris, POST = upsert sur
+      # `slug`, publication sur le site par `published`. Les catégories se lisent
+      # et reçoivent leur pôle ; POST crée (upsert sur le slug).
+      resources :events, only: [:index, :show, :create, :update, :destroy]
+      resources :event_categories, only: [:index, :create, :update]
+      # Reconstructions du site : historique (GET) et demande immédiate (POST).
+      resources :website_rebuilds, only: [:index, :create]
+
       # Finances internes (#155-#158). Seul endroit de l'API où POST existe :
       # le catalogue du bar et les fiches papier se remontent depuis des
       # documents papier, et ces données d'exploitation n'ont pas à passer par
@@ -834,6 +978,7 @@ Rails.application.routes.draw do
       # dérive d'aucun document métier de claudy, elle vient d'un bilan produit
       # ailleurs. Tout le reste se génère.
       resources :general_accounts, only: [:index, :show, :create, :update]
+      resources :third_parties, only: [:index]
       resources :analytic_accounts, only: [:index, :show, :create, :update]
       resources :fiscal_years, only: [:index, :show, :create, :update]
       resources :opening_entries, only: [:index, :create]
@@ -854,6 +999,30 @@ Rails.application.routes.draw do
       # humain. Une règle propose, elle ne décide jamais.
       resources :allocation_rules, only: [:index, :show, :create, :update, :destroy]
       resources :cash_motifs, only: [:index, :show, :create, :update]
+      # Échéancier comptable. POST sur les obligations est un UPSERT (titre +
+      # entité) qui génère les échéances ; une échéance ne se crée jamais, elle
+      # se met à jour — c'est par là que l'historique Notion est repris.
+      resources :compliance_obligations, only: [:index, :show, :create, :update]
+      resources :compliance_deadlines, only: [:index, :show, :update]
+
+      # Carte du domaine et plantes nourricières (epic #348, phase 8). POST est
+      # ouvert : les ~95 plantes vivent dans une base Notion et entrent par un
+      # import agent. Espèces, variétés et plantes (sur `notion_url`) sont des
+      # UPSERT — un import rejoué ne double rien.
+      resources :plant_species, only: [:index, :show, :create, :update]
+      resources :plant_varieties, only: [:index, :show, :create]
+      # `map_notes` / `map_tasks` : les notes et tâches de la CARTE, distinctes
+      # des post-it du calendrier (`notes`) et des tâches du collectif (`tasks`).
+      resources :plants, only: [:index, :show, :create, :update, :destroy] do
+        resources :notes, only: [:create], controller: "map_notes"
+        resources :photos, only: [:create, :destroy], controller: "map_photos"
+      end
+      resources :map_features, only: [:index, :show, :create, :update, :destroy] do
+        resources :notes, only: [:create], controller: "map_notes"
+        resources :photos, only: [:create, :destroy], controller: "map_photos"
+      end
+      resources :map_notes, only: [:update, :destroy]
+      resources :map_tasks, only: [:index, :show, :create, :update, :destroy]
     end
   end
 

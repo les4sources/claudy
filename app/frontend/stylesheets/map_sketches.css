@@ -1,0 +1,32 @@
+/* Les notes manuscrites de la carte (epic #348, phase 12). */
+
+/* Le volet des dessins ne capte rien : un canvas posé au-dessus des zones
+   avalerait sinon leurs clics. */
+.leaflet-sketchPane-pane,
+.leaflet-sketchPane-pane canvas {
+  pointer-events: none !important;
+}
+
+/* Le calque de saisie du stylo et de la gomme : au-dessus du volet principal
+   de la carte (z-index 400, qui contient tous les autres volets), sous ses
+   contrôles (800+). `touch-action: none` : ni défilement ni zoom du
+   navigateur sous le trait. */
+.map-sketch-capture {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  display: none;
+  touch-action: none;
+  cursor: crosshair;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.map-sketch-capture--on {
+  display: block;
+}
+
+.map-sketch-capture--eraser {
+  cursor: cell;
+}

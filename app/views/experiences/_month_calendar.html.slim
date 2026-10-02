@@ -52,7 +52,11 @@
                   td.sticky.left-0.z-10.bg-white.text-xs.text-gray-400.pr-2.align-middle.whitespace-nowrap = label
                   - calendar.days.each do |day|
                     - availability = calendar.availability_at(day, minutes)
+                    / Un jour passé reste ouvert à l'équipe — rattraper une
+                      activité tenue sans créneau posé — mais pas au porteur
+                      restreint, qui ne gère que ce qui vient.
                     - past = day < Date.today
+                    - locked_past = past && current_user&.restricted_to_experiences?
                     - weekend = day.saturday? || day.sunday?
                     td.align-middle(class="#{weekend ? 'bg-gray-50' : ''}" style="min-width: 2.5rem;")
                       - if availability
@@ -63,7 +67,7 @@
                                     title: "Retirer le créneau du #{l(day, format: '%-d %B')} à #{label}",
                                     class: "w-full rounded-md px-1 py-2 text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-red-100 hover:text-red-800 hover:border-red-300 transition-colors cursor-pointer" do
                           = availability.booked_participants.positive? ? "#{availability.booked_participants}p" : "✓"
-                      - elsif past
+                      - elsif locked_past
                         .w-full.rounded-md.px-1.py-2.text-xs.text-gray-300.text-center.border.border-dashed.border-gray-100(data-availability-slot="#{day.iso8601} #{label}" data-availability-state="past")
                           | —
                       - else
@@ -72,5 +76,5 @@
                                     params: { experience_availability: { available_on: day.iso8601, starts_at: label } },
                                     data: { availability_slot: "#{day.iso8601} #{label}", availability_state: "free" },
                                     title: "Poser un créneau le #{l(day, format: '%-d %B')} à #{label}",
-                                    class: "w-full rounded-md px-1 py-2 text-xs text-gray-400 bg-gray-50 border border-dashed border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 transition-colors cursor-pointer" do
+                                    class: "w-full rounded-md px-1 py-2 text-xs #{past ? 'text-gray-300' : 'text-gray-400'} bg-gray-50 border border-dashed border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 transition-colors cursor-pointer" do
                           | +

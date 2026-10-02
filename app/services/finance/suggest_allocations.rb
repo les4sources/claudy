@@ -12,17 +12,22 @@ module Finance
   # 1. **Les règles**, parcourues dans l'ordre choisi par la compta. La première
   #    qui matche gagne — c'est ce qui rend l'ordre signifiant et permet de
   #    poser une règle très spécifique avant une règle générale.
-  # 2. **Le précédent du même IBAN** : si un humain a déjà affecté une ligne
-  #    venant de ce compte, on le propose. C'est ce qui fait qu'au deuxième
-  #    virement d'un fournisseur récurrent, la ventilation se propose seule sans
-  #    qu'on ait écrit la moindre règle. La confiance est bornée plus bas qu'une
-  #    règle explicite : un précédent n'est pas une intention.
+  # 2. **Jev**, quand on le lui passe et seulement là où aucune règle ne
+  #    s'applique (`JevSuggestion`). Il choisit parmi les comptes où la compta a
+  #    envoyé des lignes semblables, et ne propose qu'au-dessus de son seuil.
+  #    Une ligne n'est demandée qu'UNE fois (`jev_checked_at`) : sans réponse
+  #    assez sûre, elle reste sans proposition plutôt que d'être redemandée à
+  #    chaque ouverture d'écran.
+  #
+  # L'ancien « précédent du même IBAN » n'est plus une source (2026-09-30) :
+  # mesuré sur 2025, il n'était juste qu'une fois sur deux, parce qu'un ménage
+  # paie le bar, l'épicerie, le pain et ses charges depuis le même compte. Il
+  # survit comme indice donné à Jev, qui le pèse avec le reste.
   class SuggestAllocations < ServiceBase
-    IBAN_HISTORY_CONFIDENCE = 60
-
-    def initialize(cash_entries: nil, whodunnit: nil)
+    def initialize(cash_entries: nil, whodunnit: nil, jev: nil)
       @entries = cash_entries || CashEntry.pending.includes(:cash_allocations)
       @whodunnit = whodunnit
+      @jev = jev if jev&.configured?
     end
 
     def run
@@ -36,7 +41,7 @@ module Finance
     private
 
     def suggest
-      rules = AllocationRule.actives.ordered.includes(:general_account, :team, :legal_entity, :event).to_a
+      rules = AllocationRule.actives.ordered.includes(:general_account, :team, :legal_entity, :event, :cash_account).to_a
       created = 0
 
       @entries.each do |entry|
@@ -44,7 +49,7 @@ module Finance
         next if entry.allocation_suggestions.pending.exists?
         next if entry.cash_allocations.any?
 
-        suggestion = from_rules(entry, rules) || from_iban_history(entry)
+        suggestion = from_rules(entry, rules) || from_jev(entry)
         next if suggestion.nil?
 
         # Une proposition déjà refusée ne se represente pas : la reproposer à
@@ -97,33 +102,18 @@ module Finance
       nil
     end
 
-    # Le précédent : la dernière affectation humaine sur une ligne du même IBAN.
-    # On ne remonte que les lignes déjà comptabilisées — une affectation en
-    # cours n'est pas encore une décision.
-    def from_iban_history(entry)
-      return nil if entry.counterparty_iban.blank?
+    # Une réponse de Jev, même trop peu sûre pour être proposée, clôt la
+    # question pour cette ligne. Une panne, elle, ne la clôt pas : la ligne sera
+    # redemandée à la prochaine ouverture.
+    def from_jev(entry)
+      return nil if @jev.nil? || entry.jev_checked_at.present?
 
-      precedente = CashEntry.where(counterparty_iban: entry.counterparty_iban)
-                            .where.not(id: entry.id)
-                            .where(status: "allocated")
-                            .order(entry_date: :desc)
-                            .first
-      return nil if precedente.nil?
-
-      allocation = precedente.cash_allocations.order(:id).first
-      return nil if allocation.nil?
-
-      entry.allocation_suggestions.new(
-        general_account: allocation.general_account,
-        analytic_account: allocation.analytic_account,
-        team: allocation.team,
-        legal_entity: allocation.legal_entity,
-        amount_cents: entry.remaining_cents,
-        confidence: IBAN_HISTORY_CONFIDENCE,
-        source: "iban_history",
-        rationale: "Le #{I18n.l(precedente.entry_date)}, une ligne du même IBAN a été affectée à " \
-                   "#{allocation.general_account} par la compta."
-      )
+      suggestion = JevSuggestion.new(cash_entry: entry, jev: @jev).call
+      entry.update_column(:jev_checked_at, Time.current)
+      suggestion
+    rescue Jev::Client::Error => e
+      Rails.logger.warn("[SuggestAllocations] Jev indisponible pour la ligne ##{entry.id} : #{e.message}")
+      nil
     end
   end
 end

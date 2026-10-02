@@ -584,3 +584,76 @@ Ces points sont sortis de l'observation du 2026-07-28 mais dépassent le périm�
 - [x] `GET /cycles/:id` montre par membre planifié / fait / passé au suivant / abandonné. Preuve : `spec/requests/cycles_bilan_spec.rb` + capture.
 - [x] La clôture tranche tout ce qui reste, recrée rituelles et reportées dans le suivant, verrouille le cycle ; un cycle clos refuse toute mutation. Preuve : `spec/services/cycles/close_service_spec.rb` + POST close au navigateur.
 - Anti-claim : `dependent: :nullify` sur une `has_one` de `CycleAction` casse `soft_delete!` (gem soft_deletion) — ne pas le réintroduire.
+
+### Messagerie — phase 1 : `compta@` → factures d'achat (ajout 2026-09-30, branche `feat/mail-compta`)
+
+Objectif dit par Michael, verbatim : « Rêvons à l'interface mail parfaite à intégrer au sein de Claudy ! » et, pour cette phase, « Les factures pourraient automatiquement être ajoutées dans la compta par l'utilisateur. » Vision complète : chaque mail est rangé là où il sert (un séjour, une facture, un pôle, une tâche) ; Mail-in-a-Box (`box.les4sources.be`) reste le serveur, Claudy lit en IMAP. Modèles : Jev (TypeSafe) pour scanner et proposer le tri, Claude Sonnet 5.5 pour résumer les mails de `sejours@` (phases suivantes). Ordre des phases : 1 `compta@` → factures · 2 `sejours@` en lecture + fil du séjour · 3 carte « ce qu'on a dit au client » · 4 répondre depuis Claudy · 5 tri de `contact@` + adresses des pôles.
+
+Ce qui produit la satisfaction : ouvrir « Pièces reçues » et lire « Facture Proximus · 84,12 € · échéance 15 octobre · Fondation », puis n'avoir qu'à relire et enregistrer.
+
+- [x] ISC-M1: `bin/rails mail:sync` lit `compta@les4sources.be` en IMAP et crée un `MailMessage` par message nouveau, pièces jointes attachées. Probe : spec avec `Net::IMAP` simulé + un passage réel sur la boîte (nombre de messages rapatriés).
+  - Évidence 2026-09-30 : `sync_spec` (IMAP simulé) — 2 mails, pièce PDF, brut .eml, curseur à 9. **Passage réel sur compta@ NON fait** : `MAIL_PASSWORD_COMPTA` manquant.
+  - Évidence 2026-09-30 (relève réelle) : 48 mails et 20 PDF rapatriés de compta@ en 31 s, Jev compris.
+- [x] ISC-M2: Anti — la synchro ne change rien sur le serveur : ouverture en `EXAMINE`, lecture en `BODY.PEEK[]`, aucun flag posé, aucun déplacement ni suppression. Probe : spec sur les commandes IMAP émises + un mail non lu reste non lu dans Roundcube après synchro.
+  - Évidence 2026-09-30 : spec — seules `examine`, `status`, `uid_search`, `uid_fetch` émises, chaque fetch en `BODY.PEEK[]`. Contrôle Roundcube à faire au premier passage réel.
+  - Évidence 2026-09-30 (relève réelle) : `STATUS INBOX` UNSEEN = 29 avant, 29 après deux relèves complètes.
+- [x] ISC-M3: Rejouer la synchro ne crée aucun doublon (curseur UIDVALIDITY + dernier UID, `message_id` unique par boîte). Probe : spec.
+  - Évidence 2026-09-30 : spec — rejouer et changer UIDVALIDITY ne changent pas le nombre de mails.
+- [x] ISC-M4: Chaque PDF reçu est lu en texte ; Jev classe la pièce (facture, note de crédit, rappel, autre) et propose le numéro, la date, l'échéance et le total. Chaque valeur proposée est une copie exacte d'un candidat trouvé dans le texte, jamais une valeur générée. Probe : spec (Jev simulé, la valeur rendue ∈ candidats) + passage réel sur les PDF de la boîte.
+  - Évidence 2026-09-30 : specs (valeur hors candidats écartée, options toutes présentes dans le texte) + Jev réel sur une facture Proximus synthétique : total 84,12 choisi parmi 83,90 / 69,52 / 14,60, échéance et numéro justes, 1,5 s ; conditions générales jointes classées « autre » (100 %) après recadrage de la question sur le document. Pas encore de vrai PDF de la boîte.
+  - Évidence 2026-09-30 (relève réelle) : 17 factures et rappels réels lus. Numéro, date, échéance et total trouvés sur presque tous, à confiance ≥ 0,9 le plus souvent ; les dates ambiguës (rappel Cleanin, 0,44) sortent « à vérifier ». Raté corrigé : « Total: 120€ » sans centimes n'était pas un candidat → montants ronds suivis de €/EUR ajoutés (spec). Un PDF scanné sans texte → à encoder à la main, comme prévu. Fournisseurs non testés : la base de dev n'a pas les tiers de prod.
+- [x] ISC-M5: Le code tranche avant Jev : le numéro de TVA ou l'IBAN d'un tiers connu trouvé dans le PDF identifie le tiers ; le numéro de TVA d'une de nos entités identifie l'entité. Jev ne choisit que ce que le code n'a pas trouvé. Probe : spec.
+  - Évidence 2026-09-30 : spec — TVA fournisseur et entité reconnues par le code, aucune question `supplier`/`legal_entity` posée à Jev.
+- [x] ISC-M6: Un PDF déjà encodé (même `pdf_sha256` qu'une `PurchaseInvoice`) est signalé « déjà dans la compta » avec le lien vers la facture. Probe : spec.
+  - Évidence 2026-09-30 : spec + navigateur — « Déjà dans la compta : facture #1 » à la place de « Créer la facture ».
+- [x] ISC-M7: L'écran « Pièces reçues » (Finance) montre la file des mails non traités de `compta@` : expéditeur, sujet, date, PDF consultable, proposition de Jev et son niveau de confiance. Probe : request spec + navigateur.
+  - Évidence 2026-09-30 : request spec + navigateur (port 3012) — file, nature « Facture » / « Publicité », résumé « Facture · Proximus · 84,12 € », fiche avec badges reconnu/probable.
+- [x] ISC-M8: « Créer la facture » ouvre le formulaire de facture d'achat pré-rempli avec la proposition et le PDF déjà attaché ; à l'enregistrement, le mail passe « traité » et pointe vers sa facture. Probe : request spec + parcours au navigateur.
+  - Évidence 2026-09-30 : request spec + navigateur — formulaire pré-rempli (Proximus, Fondation, 2026-77812, 84.12, 12/09 et 15/10, PDF joint) ; enregistrement → facture #1, sha256 identique, mail « Classé » par bee@local.test, CGV non bloquantes.
+- [x] ISC-M9: « Ignorer » sort un mail de la file sans le supprimer et garde qui et quand. Probe : spec.
+  - Évidence 2026-09-30 : request spec — statut « ignored », `handled_by` posé, visible sous « Ignorés ».
+- [x] ISC-M10: Anti — aucune facture n'est créée sans le clic d'un humain : ni la synchro ni l'extraction ne créent de `PurchaseInvoice`. Probe : `rg "PurchaseInvoice\.(new|create)" app/services/mail*` vide + spec.
+  - Évidence 2026-09-30 : `rg "PurchaseInvoice\.(new|create)" app/services/mail_intake app/services/jev` vide + spec « ne crée jamais de facture ».
+- [x] ISC-M11: Anti — aucun secret dans le dépôt (public) : mot de passe IMAP et clé TypeSafe vivent seulement dans l'ENV. Probe : `rg` sur le diff.
+  - Évidence 2026-09-30 : `rg` sur le diff — ni mot de passe ni clé ; seuls les noms `MAIL_PASSWORD_COMPTA` et `TYPESAFE_API_KEY`.
+- [x] ISC-M12: Sans clé TypeSafe, ou si Jev ne répond pas, le mail entre quand même dans la file, sans proposition et sans erreur. Sans mot de passe IMAP, la synchro s'arrête avec un message clair. Probe : spec.
+  - Évidence 2026-09-30 : specs — sans Jev, `analyzed_at` posé et proposition vide ; sans mot de passe, `MissingPassword` explicite gardé dans `last_error`.
+
+Hors périmètre de la phase 1 : lecture des scans et photos (une photo envoyée à `compta@` entre dans la file, à encoder à la main), autres boîtes, réponses, résumés par Sonnet.
+
+#### Saisie d'une facture depuis un mail (ajout 2026-09-30, retours de Michael à l'usage)
+
+- [x] ISC-M13: Fournisseur, compte et pôle se choisissent dans des listes cherchables (ordre alphabétique pour les fournisseurs, recherche sans accents, clavier), y compris sur les lignes de ventilation ajoutées. Le pôle peut revenir à « Non affecté ». Probe : request spec + navigateur.
+  - Évidence 2026-09-30 : « pro » → Proximus ; « electri » + Entrée → « 612001 Electricité » sur une ligne ajoutée ; pôle « accu » → Pôle Accueil puis vidé → Non affecté.
+- [x] ISC-M14: « Nouveau fournisseur » se crée depuis le formulaire, pré-rempli depuis la pièce (nom choisi par Jev hors de nos propres noms, TVA et IBAN valides par le code), s'insère à sa place alphabétique et se sélectionne ; une TVA déjà connue renvoie le tiers existant. Probe : specs + navigateur.
+  - Évidence 2026-09-30 : 14 vraies factures, noms justes (Ferme de Grange SRL, BRUYERRE, Moulin de Tongrinne, FRATERNITE DE TIBERIADE…), deux à retoucher (0,76 et 0,77) ; création au navigateur → tiers n° 8, entre Colruyt et Luminus, sélectionné.
+- [x] ISC-M15: La pièce s'affiche à droite du formulaire, collée à l'écran, pleine largeur (sans vignettes) ; une pièce déposée à la main s'affiche aussitôt. Probe : request spec + capture.
+- Anti-claim : les champs de la fenêtre « Nouveau fournisseur » n'ont pas de `name` — ils vivent dans le formulaire de la facture et ne doivent jamais partir avec elle.
+
+#### Factures électroniques UBL (ajout 2026-09-30)
+
+Demande de Michael : « Certains emails sur compta@les4sources.be contiennent des pièces jointes UBL, ça peut être utile pour nous ? » → oui, lire l'UBL.
+
+- [x] ISC-M16: La relève garde les pièces UBL (XML), y compris dans les mails déjà relevés, relus depuis leur .eml. Probe : spec + prod (les 9 mails « UBL Invoice » ne disent plus « aucune pièce jointe »).
+  - Évidence 2026-09-30 : specs (XML UBL gardé, PDF extrait et relié, XML non-UBL ignoré, relecture depuis le .eml) + base locale : les UBL des mails OkiOki et Odoo récupérées depuis leur .eml.
+- [x] ISC-M17: Une pièce UBL donne sa proposition sans Jev : fournisseur (nom, TVA, IBAN), entité cliente, numéro, dates, total TVAC, communication, tout marqué « reconnu ». Le PDF embarqué devient la pièce à consulter et à joindre à la facture. Probe : spec sur une UBL de synthèse + lecture des 9 vraies.
+  - Évidence 2026-09-30 : spec « sans une seule question à Jev » ; sur les 9 vraies UBL d'OkiOki, fournisseur, TVA, total et taux sont justes. L'UBL corrige la TVA de Delphine Guillaume, que la lecture du PDF avait mal retenue.
+- [x] ISC-M18: « Créer la facture » depuis une UBL pré-remplit une ligne de ventilation par taux de TVA (montant TVAC du taux), compte et pôle à choisir. Probe : request spec.
+  - Évidence 2026-09-30 : request specs (0 % + 6 % → deux lignes ; un taux à 0,00 € ne fait pas de ligne) ; au navigateur, 3 PETITS POIDS → une ligne « TVA 6 % = 416.06 », reste à ventiler 0,00 €.
+- [x] ISC-M19: Une UBL qui dit « 0,00 à payer » est signalée « déjà payée selon la facture électronique ». Probe : spec.
+  - Évidence 2026-09-30 : spec ; BRUYERRE réelle (payable 0,00 sur 278,95) marquée payée.
+- [x] ISC-M20: Une UBL émise par une de nos entités (les « [Sales] » d'OkiOki) est reconnue comme facture de vente et ne propose pas de facture d'achat. Probe : spec.
+  - Évidence 2026-09-30 : spec ; SOLIDARCITE et CIEP réelles → « Vente émise », sans bouton d'achat.
+- [x] ISC-M21: Les deux mails d'une même facture (PDF puis UBL, via OkiOki) ne font pas deux factures : une fois l'une encodée, l'autre affiche « Déjà dans la compta » et sort de la file avec elle. Probe : spec.
+  - Évidence 2026-09-30 : specs (par numéro + TVA ; par numéro + total + date quand la TVA du PDF est fausse) ; au navigateur, facture n° 2 créée depuis l'UBL 3 PETITS POIDS → le mail PDF jumeau (n° 31) passe « Classé » avec elle.
+- Anti-claim : l'XML est lu sans résolution d'entités externes ni accès réseau (XXE).
+
+#### Communication de paiement des factures d'achat (ajout 2026-09-30)
+
+Demande de Michael : « pour préparer le paiement d'une facture, est-ce qu'on aura la communication à spécifier ? Je crois qu'elle est dans l'UBL. » Constat : dans l'UBL (`PaymentID`) 2 fois sur 9, dans le seul PDF 4 autres fois, sinon la communication libre est le numéro de facture.
+
+- [x] ISC-M22: Une facture d'achat porte une communication de paiement, modifiable dans son formulaire. « À payer » l'affiche, copiable, à la place du numéro de facture, qui reste la valeur par défaut. Probe : request specs.
+  - Évidence 2026-09-30 : request specs (enregistrée normalisée, « À payer » copie +++000/0024/11862+++ au lieu de F-1, retombe sur le numéro sans communication) + spec modèle (clé fausse refusée) ; au navigateur, champ « Communication du paiement » pré-rempli.
+- [x] ISC-M23: La communication est pré-remplie depuis le `PaymentID` de l'UBL, sinon depuis une communication structurée `+++…+++` du PDF. Probe : specs + relecture des vraies pièces (Ferme de Grange, Thomas Fabry, BRUYERRE, Moulin de Tongrinne, Fraternité de Tibériade, Manon Lefebvre).
+  - Évidence 2026-09-30 : relecture v4 des vraies pièces → UBL Ferme de Grange et Thomas Fabry ; PDF BRUYERRE, Moulin de Tongrinne, Fraternité de Tibériade, Manon Lefebvre ; les 6 passent le modulo 97. 3 PETITS POIDS, Épicerie des Massennes et Delphine Guillaume retombent sur le numéro.
+- Anti-claim : une communication structurée dont la clé de contrôle modulo 97 est fausse n'est jamais proposée. Un virement avec une communication fausse arrive, mais le fournisseur ne sait pas le rapprocher.

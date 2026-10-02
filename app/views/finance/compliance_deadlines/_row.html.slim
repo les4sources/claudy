@@ -1,0 +1,51 @@
+/ Une échéance dans la liste. La date à gauche, en gros : c'est ce qu'on
+  cherche des yeux. Le bouton « Fait » est sur la ligne — cocher ne doit pas
+  demander d'ouvrir la fiche. Une échéance de paiement n'en a pas : elle se
+  solde par sa facture.
+- today = Date.current
+li.flex.flex-wrap.items-center.gap-4.px-4.py-3(class="#{deadline.overdue?(today) ? 'bg-red-50/60' : ''}")
+  .w-14.shrink-0.text-center
+    p.text-xl.font-semibold.leading-none(class="#{deadline.overdue?(today) ? 'text-red-700' : 'text-gray-900'}")= deadline.due_on.day
+    p.mt-1.text-xs.uppercase.text-gray-500= l(deadline.due_on, format: "%b %Y")
+  .min-w-0.flex-1
+    p.flex.flex-wrap.items-center.gap-2
+      = link_to deadline.display_title, finance_compliance_deadline_path(deadline), class: "font-medium text-gray-900 hover:text-blue-700"
+      span.rounded-full.bg-gray-100.text-xs.font-medium.text-gray-700(class="px-2 py-0.5")= deadline.legal_entity.name
+      - case deadline.effective_status
+      - when "in_progress"
+        span.rounded-full.bg-amber-100.text-xs.font-medium.text-amber-800(class="px-2 py-0.5") En cours
+      - when "done"
+        span.rounded-full.bg-emerald-100.text-xs.font-medium.text-emerald-800(class="px-2 py-0.5") Fait
+      - when "not_applicable"
+        span.rounded-full.bg-gray-100.text-xs.font-medium.text-gray-500(class="px-2 py-0.5") Sans objet
+      - if deadline.payment?
+        - if deadline.purchase_invoice.nil?
+          span.rounded-full.bg-blue-100.text-xs.font-medium.text-blue-800(class="px-2 py-0.5") paiement · facture à encoder
+        - elsif deadline.settled_by_invoice?
+          span.rounded-full.bg-emerald-100.text-xs.font-medium.text-emerald-800(class="px-2 py-0.5") paiement · facture payée
+        - else
+          span.rounded-full.bg-blue-100.text-xs.font-medium.text-blue-800(class="px-2 py-0.5") paiement · dans « À payer »
+    p.mt-1.text-xs(class="#{deadline.overdue?(today) ? 'text-red-700 font-semibold' : 'text-gray-500'}")
+      - days = deadline.days_left(today)
+      - if deadline.closed?
+        - if deadline.effective_done_on
+          = "#{deadline.status_label} le #{l(deadline.effective_done_on, format: :long)}"
+          - if deadline.done_by_user
+            = " par #{deadline.done_by_user.display_name}"
+      - elsif days.negative?
+        = "en retard de #{-days} j"
+      - elsif days.zero?
+        | aujourd'hui
+      - else
+        = "dans #{days} j"
+  - if deadline.open?
+    .flex.shrink-0.items-center.gap-2
+      - if deadline.payment? && deadline.purchase_invoice.nil?
+        = link_to "Encoder la facture", new_finance_purchase_invoice_path(compliance_deadline_id: deadline.id),
+                  class: "rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs font-medium text-blue-800 hover:bg-blue-50"
+      - elsif !deadline.payment?
+        - if deadline.status == "todo"
+          = button_to "En cours", start_finance_compliance_deadline_path(deadline), method: :post,
+                      class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+        = button_to "✓ Fait", close_finance_compliance_deadline_path(deadline, status: "done"), method: :post,
+                    class: "rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"

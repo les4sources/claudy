@@ -2,18 +2,21 @@
 #
 # Table name: humans
 #
-#  id            :bigint           not null, primary key
-#  cycle_active  :boolean          default(FALSE)
-#  deleted_at    :datetime
-#  description   :text
-#  email         :string
-#  name          :string
-#  photo         :string
-#  roles_enabled :boolean          default(TRUE), not null
-#  status        :string           default("active")
-#  summary       :string
-#  created_at    :datetime         not null
-#  updated_at    :datetime         not null
+#  id               :bigint           not null, primary key
+#  cycle_active     :boolean          default(FALSE)
+#  deleted_at       :datetime
+#  description      :text
+#  email            :string
+#  iban             :text
+#  iban_holder_name :string
+#  name             :string
+#  phone            :string
+#  photo            :string
+#  roles_enabled    :boolean          default(TRUE), not null
+#  status           :string           default("active")
+#  summary          :string
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
 #
 class Human < ApplicationRecord
   has_many :projects
@@ -68,6 +71,11 @@ class Human < ApplicationRecord
   validates :iban, iban: true, allow_blank: true
 
   before_validation :normalize_iban
+  before_validation :normalize_phone
+
+  # Ligne de garde : le webhook Twilio compose ce numéro. Stocké en E.164
+  # (+32…) ; une saisie locale (« 0470 12 34 56 ») est lue comme belge.
+  validate :phone_must_be_valid
 
   # Les humains actifs qu'on peut encore ajouter à ce pôle — ceux qui n'en sont
   # pas déjà membres. L'index unique de `team_memberships` interdit le doublon ;
@@ -110,5 +118,16 @@ class Human < ApplicationRecord
 
   def normalize_iban
     self.iban = iban.to_s.gsub(/\s+/, "").upcase.presence
+  end
+
+  # Un numéro illisible reste tel quel pour que la validation le signale.
+  def normalize_phone
+    self.phone = PhoneNumber.normalize(phone) || phone.to_s.strip.presence
+  end
+
+  def phone_must_be_valid
+    return if phone.blank? || PhoneNumber.normalize(phone) == phone
+
+    errors.add(:phone, "n'est pas un numéro valide (ex. 0470 12 34 56 ou +32 470 12 34 56)")
   end
 end

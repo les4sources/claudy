@@ -1,0 +1,127 @@
+/ La fiche d'un relevé de biodiversité (epic #348, phase 13). Même enveloppe
+  que la fiche d'un objet (`_feature_panel`) : la carte la montre, la cache, et
+  recharge la couche quand `data-feature-saved` est posé.
+  Un relevé PAS ENCORE créé (toucher la carte, « À ma position ») porte ses
+  coordonnées en champs cachés : rien n'existe en base avant « Enregistrer »,
+  fermer la fiche retire le marqueur provisoire sans rien à supprimer.
+- saved = local_assigns[:saved]
+- persisted = feature.persisted?
+- lng, lat = Array(feature.geometry.to_h["coordinates"])
+- users = User.all.to_a.sort_by { |user| I18n.transliterate(user.display_name.downcase) }
+div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:rounded-xl md:border md:border-stone-200"
+    data-feature-panel="true"
+    data-observation-panel="true"
+    data-observation-new=(persisted ? nil : "true")
+    data-feature-id=feature.id
+    data-layer-id=feature.map_layer_id
+    data-feature-saved=(saved ? "true" : nil)]
+  .flex.items-center.gap-2.border-b.border-stone-100.px-4.py-3
+    span class="rounded-full bg-forest-tint px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-forest"
+      | Biodiversité
+    h2.flex-1.truncate.text-sm.font-semibold.text-stone-800
+      = persisted ? feature.species_common : "Nouveau relevé"
+    button[type="button" class="flex h-11 w-11 items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+           data-action="click->map#closePanel" aria-label="Fermer la fiche"]
+      svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        line x1="18" y1="6" x2="6" y2="18"
+        line x1="6" y1="6" x2="18" y2="18"
+
+  .flex-1.overflow-y-auto.px-4.py-4
+    - if saved
+      p.mb-3.rounded-lg.bg-forest-tint.px-3.py-2.text-xs.text-forest Enregistré.
+    - if feature.errors.any?
+      .mb-3.rounded-lg.border.border-red-200.bg-red-50.px-3.py-2.text-xs.text-red-800 data-observation-errors="true"
+        = feature.errors.full_messages.to_sentence
+
+    = form_with url: (persisted ? map_observation_path(feature) : map_observations_path), scope: :observation,
+                method: (persisted ? :patch : :post), builder: ActionView::Helpers::FormBuilder,
+                html: { class: "space-y-4" } do |f|
+      - unless persisted
+        = hidden_field_tag :lat, lat
+        = hidden_field_tag :lng, lng
+
+      / Le règne : deux gros boutons, un seul choisi.
+      fieldset
+        legend.block.text-xs.font-semibold.text-stone-600 Règne
+        .mt-1.grid.grid-cols-2.gap-2
+          - MapFeatureObservation::REALMS.each do |realm, label|
+            label.relative.block.cursor-pointer
+              = f.radio_button :realm, realm, checked: feature.realm == realm, required: true, class: "peer sr-only",
+                               data: { observation_realm: realm }
+              span[class="flex h-14 items-center justify-center gap-2 rounded-xl border-2 border-stone-200 text-sm font-semibold text-stone-600 peer-checked:border-current peer-checked:bg-stone-50 peer-focus-visible:ring-2 peer-focus-visible:ring-forest"
+                   style="color: #{observation_color(realm)}"]
+                = observation_glyph(realm, css_class: "h-6 w-6")
+                span.text-stone-800 = label
+
+      / L'espèce : texte libre, avec les noms déjà saisis en suggestion.
+      div[data-controller="observation-species"
+          data-observation-species-url-value=map_observation_species_path(format: :json)]
+        = f.label :species_common, "Espèce — nom commun", class: "block text-xs font-semibold text-stone-600"
+        = f.text_field :species_common, value: feature.species_common, required: true, autocomplete: "off", autocorrect: "off", spellcheck: "false",
+                       maxlength: MapFeatureObservation::SPECIES_MAX_LENGTH, autofocus: !persisted,
+                       list: "observation-species-suggestions", placeholder: "Ail des ours, chevreuil…",
+                       data: { observation_species_target: "common", action: "input->observation-species#search change->observation-species#pick" },
+                       class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+        datalist#observation-species-suggestions data-observation-species-target="list"
+        = f.label :species_latin, "Nom latin", class: "mt-3 block text-xs font-semibold text-stone-600"
+        = f.text_field :species_latin, value: feature.species_latin, autocomplete: "off",
+                       maxlength: MapFeatureObservation::SPECIES_MAX_LENGTH, placeholder: "Facultatif",
+                       data: { observation_species_target: "latin" },
+                       class: "mt-1 w-full rounded-lg border-stone-300 text-sm italic shadow-sm focus:border-forest focus:ring-forest"
+
+      .grid.grid-cols-2.gap-3
+        div
+          = f.label :observed_on, "Date", class: "block text-xs font-semibold text-stone-600"
+          = f.date_field :observed_on, value: feature.properties.to_h["observed_on"], max: Date.current.iso8601, required: true,
+                         class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+        div
+          = f.label :count, "Effectif", class: "block text-xs font-semibold text-stone-600"
+          = f.number_field :count, value: feature.observation_count, min: 1, step: 1, inputmode: "numeric", placeholder: "Facultatif",
+                           class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+      div
+        = f.label :observer_id, "Observateur", class: "block text-xs font-semibold text-stone-600"
+        = f.select :observer_id, options_for_select(users.map { |user| [user.display_name, user.id] }, feature.observer_id),
+                   { include_blank: false },
+                   class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+      div
+        = f.label :description, "Notes", class: "block text-xs font-semibold text-stone-600"
+        = f.text_area :description, value: feature.description_i18n.to_h["fr"], rows: 3,
+                      placeholder: "Stade, comportement, milieu…",
+                      class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+      div
+        = f.label :photos, "Ajouter des photos", class: "block text-xs font-semibold text-stone-600"
+        = f.file_field :photos, multiple: true, direct_upload: true, accept: MapFeature.accepted_photo_types.join(","),
+                       class: "mt-1 w-full text-sm text-stone-600"
+      .flex.justify-end.gap-2
+        - unless persisted
+          button[type="button" class="h-11 rounded-lg border border-stone-300 px-4 text-sm font-semibold text-stone-700 hover:bg-stone-50"
+                 data-action="click->map#closePanel"] Annuler
+        button[type="submit" class="h-11 flex-1 rounded-lg bg-forest px-4 text-sm font-semibold text-white hover:bg-forest-soft"] Enregistrer
+
+    - if persisted
+      - photos = feature.photos.select(&:persisted?)
+      - if photos.any?
+        .mt-5
+          p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" = "Photos (#{photos.size})"
+          ul.grid.grid-cols-3.gap-2
+            - photos.each do |photo|
+              li.group.relative
+                = link_to url_for(MapFeature.photo_source(photo, :preview)), target: "_blank", rel: "noopener" do
+                  = image_tag url_for(MapFeature.photo_source(photo, :thumb)), alt: photo.filename.to_s, loading: "lazy",
+                              class: "aspect-square w-full rounded-lg object-cover ring-1 ring-stone-200"
+                = button_to photo_map_feature_path(feature, photo_id: photo.id), method: :delete,
+                            form: { data: { turbo_confirm: "Retirer cette photo ?" } },
+                            class: "absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-stone-500 shadow hover:text-red-600",
+                            "aria-label": "Retirer la photo" do
+                  | ×
+
+      .mt-5.border-t.border-stone-100.pt-3.text-xs.text-stone-400
+        p
+          = "Relevé #{feature.created_by ? "saisi par #{feature.created_by.display_name} " : ''}le #{l(feature.created_at.to_date, format: :long)}"
+        - if feature.updated_at > feature.created_at + 1.second
+          p = "Modifié le #{l(feature.updated_at.to_date, format: :long)}"
+      .mt-3
+        = button_to map_feature_path(feature), method: :delete,
+                    form: { data: { turbo_confirm: "Supprimer ce relevé ?" } },
+                    class: "text-xs font-medium text-red-600 hover:text-red-700"
+          | Supprimer ce relevé

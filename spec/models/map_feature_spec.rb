@@ -134,3 +134,44 @@ RSpec.describe MapFeature, "photos HEIC" do
     expect(feature_with("image/jpeg", "photo.jpg")).to be_valid
   end
 end
+
+# Phase 7 : le point d'une plante dit à la carte de quoi colorer sa pastille.
+RSpec.describe MapFeature, "#as_geojson d'une plante" do
+  it "porte la plante (id, numéro, santé, strate, statut, mort)" do
+    plant = Plant.create!(name: "Néflier du bas", number: 9.1, health: "worrying", stratum: "shrub", status: "dead")
+    plant.place!(latitude: 50.34, longitude: 4.905)
+
+    properties = plant.map_feature.as_geojson[:properties]
+    expect(properties).to include(feature_kind: "plant", name: "Néflier du bas", plant_id: plant.id, number: "9.1",
+                                  health: "worrying", stratum: "shrub", status: "dead", dead: true)
+  end
+
+  it "n'ajoute rien aux autres objets" do
+    feature = MapLayer.for_kind(:management).map_features.create!(
+      feature_kind: "point", geometry: { "type" => "Point", "coordinates" => [4.905, 50.34] }
+    )
+    expect(feature.as_geojson[:properties]).not_to have_key(:plant_id)
+  end
+end
+
+# Epic #348, phase 10 — un nœud UniFi porte l'identifiant de son équipement
+# dans le GeoJSON, pour que la carte lui pose sa pastille de statut.
+RSpec.describe MapFeature, "#as_geojson d'un nœud UniFi" do
+  let(:ethernet) { MapLayer.ensure_networks!.find { |layer| layer.network == "ethernet" } }
+  let(:point) { { "type" => "Point", "coordinates" => [4.905, 50.34] } }
+
+  it "porte l'équipement et l'identifiant UniFi" do
+    node = ethernet.map_features.create!(feature_kind: "node", geometry: point,
+                                         properties: { "equipment" => "unifi", "unifi_device_id" => "F4E2C6C23F13" })
+
+    expect(node.unifi_device_id).to eq("F4E2C6C23F13")
+    expect(node.as_geojson[:properties]).to include(network: "ethernet", equipment: "unifi",
+                                                    unifi_device_id: "F4E2C6C23F13")
+  end
+
+  it "n'ajoute rien à un nœud classique" do
+    node = ethernet.map_features.create!(feature_kind: "node", geometry: point, properties: { "node_type" => "switch" })
+
+    expect(node.as_geojson[:properties]).not_to have_key(:unifi_device_id)
+  end
+end

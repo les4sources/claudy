@@ -37,6 +37,27 @@ module Finance
       end
     end
 
+    # Depuis le formulaire d'une facture (2026-09-30) : créer le fournisseur
+    # sans quitter la facture en cours. Répond en JSON au contrôleur
+    # `supplier-quick-create`, qui l'ajoute à la liste et le sélectionne.
+    #
+    # Un fournisseur actif qui porte déjà ce numéro de TVA est RENVOYÉ, pas
+    # recréé : deux tiers pour la même TVA, c'est deux comptes fournisseurs pour
+    # une même dette.
+    def quick
+      attrs = params.require(:third_party).permit(:name, :iban, :vat_number, :email)
+      vat = MailIntake::InvoiceCandidates.normalize_vat(attrs[:vat_number])
+      existing = vat && ThirdParty.actives.suppliers.find { |t| MailIntake::InvoiceCandidates.normalize_vat(t.vat_number) == vat }
+      return render(json: { id: existing.id, name: existing.name, existing: true }) if existing
+
+      third_party = ThirdParty.new(attrs.merge(kind: "supplier"))
+      if third_party.save
+        render json: { id: third_party.id, name: third_party.name }, status: :created
+      else
+        render json: { errors: third_party.errors.full_messages }, status: :unprocessable_entity
+      end
+    end
+
     def edit; end
 
     def update

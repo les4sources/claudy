@@ -39,6 +39,10 @@
       div
         = f.label :max_amount, "Montant maximum (€)", class: "block text-sm font-medium text-gray-700"
         = f.text_field :max_amount, value: rule.max_amount_cents ? number_with_precision(rule.max_amount_cents / 100.0, precision: 2, separator: ",") : nil, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+      div
+        = f.label :cash_account_id, "Compte de trésorerie", class: "block text-sm font-medium text-gray-700"
+        = f.collection_select :cash_account_id, CashAccount.ordered, :id, :name, { include_blank: "Tous" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+        p.mt-1.text-xs.text-gray-500 Limite la règle aux lignes de ce compte. Ne suffit pas seul : ajoute au moins un autre critère.
 
   .p-4.bg-white.rounded-lg.border.border-gray-100
     h3.mb-3.text-sm.font-semibold.text-gray-900 …propose cette affectation

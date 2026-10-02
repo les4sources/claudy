@@ -37,6 +37,24 @@ RSpec.describe "Finances > Rapprochement assisté", type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.body).to include("s&#39;appliquerait à tout").or include("s'appliquerait à tout")
     end
+
+    # Issue #392 — le formulaire propose le compte de trésorerie, la liste l'affiche.
+    it "limite une règle à un compte de trésorerie et l'affiche dans la liste" do
+      beobank = build_cash_account(entity, bank_account, name: "Beobank SRL")
+
+      get new_finance_allocation_rule_path
+      expect(response.body).to include("Compte de trésorerie").and include("Beobank SRL")
+
+      post finance_allocation_rules_path,
+           params: { allocation_rule: { label: "Domiciliations SRL", communication_contains: "DOMICILIATION",
+                                        cash_account_id: beobank.id, general_account_id: energie.id,
+                                        legal_entity_id: entity.id, position: 1 } }
+
+      expect(AllocationRule.find_by(label: "Domiciliations SRL").cash_account).to eq(beobank)
+
+      get finance_allocation_rules_path
+      expect(response.body).to include("compte Beobank SRL")
+    end
   end
 
   # Issue #289 — l'écran existait sans porte d'entrée. La sous-navigation
@@ -90,6 +108,36 @@ RSpec.describe "Finances > Rapprochement assisté", type: :request do
 
       expect(suggestion.reload.status).to eq("rejected")
       expect(CashAllocation.count).to eq(0)
+    end
+
+    # Depuis la file, la décision répond en place (Michael, 2026-09-30) : la
+    # page ne se recharge pas et ne remonte pas en haut.
+    describe "depuis la file, par Turbo" do
+      let(:depuis_la_file) do
+        { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml",
+          "Referer" => "http://www.example.com#{finance_unallocated_cash_entries_path}" }
+      end
+
+      it "retire la ligne quand la suggestion acceptée l'affecte entièrement" do
+        Finance::SuggestAllocations.new.run!
+        suggestion = AllocationSuggestion.last
+
+        patch finance_allocation_suggestion_path(suggestion, decision: "accept"), headers: depuis_la_file
+
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        expect(response.body).to include(%(<turbo-stream action="remove" target="file-ligne-#{entry.id}">))
+      end
+
+      it "redessine la ligne, sans la suggestion refusée" do
+        Finance::SuggestAllocations.new.run!
+        suggestion = AllocationSuggestion.last
+
+        patch finance_allocation_suggestion_path(suggestion, decision: "reject"), headers: depuis_la_file
+
+        expect(response.body).to include(%(<turbo-stream action="replace" target="file-ligne-#{entry.id}">))
+        expect(response.body).not_to include(finance_allocation_suggestion_path(suggestion, decision: "accept"))
+        expect(suggestion.reload.status).to eq("rejected")
+      end
     end
 
     # Il n'existe pas d'acceptation « toutes règles confondues » : c'est le geste

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_30_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -181,6 +181,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
     t.integer "accepted_count", default: 0, null: false
     t.boolean "active", default: true, null: false
     t.bigint "analytic_account_id"
+    t.bigint "cash_account_id"
     t.string "communication_contains"
     t.integer "confidence", default: 80, null: false
     t.string "counterparty_iban"
@@ -200,6 +201,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
     t.string "transaction_code"
     t.datetime "updated_at", null: false
     t.index ["analytic_account_id"], name: "index_allocation_rules_on_analytic_account_id"
+    t.index ["cash_account_id"], name: "index_allocation_rules_on_cash_account_id"
     t.index ["deleted_at"], name: "index_allocation_rules_on_deleted_at"
     t.index ["event_id"], name: "index_allocation_rules_on_event_id"
     t.index ["general_account_id"], name: "index_allocation_rules_on_general_account_id"
@@ -488,6 +490,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
     t.string "excluded_reason"
     t.string "external_ref"
     t.string "fingerprint"
+    t.datetime "jev_checked_at"
     t.string "label", null: false
     t.text "notes"
     t.bigint "source_id"
@@ -553,9 +556,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
     t.integer "public_price_cents"
     t.integer "purchase_price_cents"
     t.integer "reference_price_cents"
+    t.bigint "third_party_id"
     t.datetime "updated_at", null: false
     t.index ["catalog_item_id", "active_from"], name: "index_catalog_prices_on_catalog_item_id_and_active_from", unique: true
     t.index ["catalog_item_id"], name: "index_catalog_prices_on_catalog_item_id"
+    t.index ["third_party_id"], name: "index_catalog_prices_on_third_party_id"
   end
 
   create_table "coda_imports", force: :cascade do |t|
@@ -607,6 +612,48 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
     t.index ["commentable_type", "commentable_id", "created_at"], name: "index_comments_on_commentable_and_created_at"
     t.index ["commentable_type", "commentable_id"], name: "index_comments_on_commentable"
     t.index ["deleted_at"], name: "index_comments_on_deleted_at"
+  end
+
+  create_table "compliance_deadlines", force: :cascade do |t|
+    t.bigint "compliance_obligation_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "done_by_user_id"
+    t.date "done_on"
+    t.date "due_on", null: false
+    t.date "last_reminded_on"
+    t.string "last_reminder_stage"
+    t.text "note"
+    t.date "period_start", null: false
+    t.bigint "purchase_invoice_id"
+    t.string "status", default: "todo", null: false
+    t.datetime "updated_at", null: false
+    t.index ["compliance_obligation_id", "period_start"], name: "index_compliance_deadlines_on_obligation_and_period", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["compliance_obligation_id"], name: "index_compliance_deadlines_on_compliance_obligation_id"
+    t.index ["deleted_at"], name: "index_compliance_deadlines_on_deleted_at"
+    t.index ["done_by_user_id"], name: "index_compliance_deadlines_on_done_by_user_id"
+    t.index ["due_on"], name: "index_compliance_deadlines_on_due_on"
+    t.index ["purchase_invoice_id"], name: "index_compliance_deadlines_on_purchase_invoice_id"
+  end
+
+  create_table "compliance_obligations", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "covers", default: "previous", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "ends_on"
+    t.date "first_due_on", null: false
+    t.string "frequency", default: "yearly", null: false
+    t.text "instructions"
+    t.bigint "legal_entity_id", null: false
+    t.boolean "payment", default: false, null: false
+    t.bigint "responsible_user_id"
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_compliance_obligations_on_deleted_at"
+    t.index ["legal_entity_id", "title"], name: "index_compliance_obligations_on_entity_and_title", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["legal_entity_id"], name: "index_compliance_obligations_on_legal_entity_id"
+    t.index ["responsible_user_id"], name: "index_compliance_obligations_on_responsible_user_id"
   end
 
   create_table "consignment_report_lines", force: :cascade do |t|
@@ -1168,6 +1215,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
     t.datetime "created_at", null: false
     t.date "date"
     t.bigint "human_id", null: false
+    t.boolean "phone_holder", default: false, null: false
     t.bigint "role_id", null: false
     t.integer "status", default: 1, null: false
     t.datetime "updated_at", null: false
@@ -1184,6 +1232,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
     t.text "iban"
     t.string "iban_holder_name"
     t.string "name"
+    t.string "phone"
     t.string "photo"
     t.boolean "roles_enabled", default: true, null: false
     t.string "status", default: "active"
@@ -1329,6 +1378,60 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
     t.integer "weekend_discount_cents", default: 0, null: false
   end
 
+  create_table "mail_accounts", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "address", null: false
+    t.datetime "created_at", null: false
+    t.string "folder", default: "INBOX", null: false
+    t.string "imap_host", default: "box.les4sources.be", null: false
+    t.text "last_error"
+    t.datetime "last_synced_at"
+    t.bigint "last_uid", default: 0, null: false
+    t.string "purpose", null: false
+    t.bigint "uid_validity"
+    t.datetime "updated_at", null: false
+    t.index ["address"], name: "index_mail_accounts_on_address", unique: true
+  end
+
+  create_table "mail_attachments", force: :cascade do |t|
+    t.string "content_type", null: false
+    t.datetime "created_at", null: false
+    t.bigint "embedded_in_id"
+    t.string "filename", null: false
+    t.bigint "mail_message_id", null: false
+    t.jsonb "proposal", default: {}, null: false
+    t.bigint "purchase_invoice_id"
+    t.string "sha256", null: false
+    t.text "text_content"
+    t.datetime "updated_at", null: false
+    t.index ["embedded_in_id"], name: "index_mail_attachments_on_embedded_in_id"
+    t.index ["mail_message_id"], name: "index_mail_attachments_on_mail_message_id"
+    t.index ["purchase_invoice_id"], name: "index_mail_attachments_on_purchase_invoice_id"
+    t.index ["sha256"], name: "index_mail_attachments_on_sha256"
+  end
+
+  create_table "mail_messages", force: :cascade do |t|
+    t.datetime "analyzed_at"
+    t.text "body_text"
+    t.datetime "created_at", null: false
+    t.string "from_address"
+    t.string "from_name"
+    t.datetime "handled_at"
+    t.bigint "handled_by_id"
+    t.bigint "imap_uid"
+    t.bigint "mail_account_id", null: false
+    t.string "message_id", null: false
+    t.datetime "received_at", null: false
+    t.string "status", default: "pending", null: false
+    t.string "subject"
+    t.jsonb "triage", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.index ["handled_by_id"], name: "index_mail_messages_on_handled_by_id"
+    t.index ["mail_account_id", "message_id"], name: "index_mail_messages_on_mail_account_id_and_message_id", unique: true
+    t.index ["mail_account_id"], name: "index_mail_messages_on_mail_account_id"
+    t.index ["status", "received_at"], name: "index_mail_messages_on_status_and_received_at"
+  end
+
   create_table "map_base_layers", force: :cascade do |t|
     t.jsonb "bounds", default: {}, null: false
     t.date "captured_on"
@@ -1341,6 +1444,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
     t.string "name", null: false
     t.datetime "updated_at", null: false
     t.index ["key"], name: "index_map_base_layers_on_key", unique: true
+  end
+
+  create_table "map_comments", force: :cascade do |t|
+    t.bigint "author_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "map_feature_id", null: false
+    t.bigint "parent_id"
+    t.datetime "resolved_at"
+    t.datetime "updated_at", null: false
+    t.index ["author_id"], name: "index_map_comments_on_author_id"
+    t.index ["deleted_at"], name: "index_map_comments_on_deleted_at"
+    t.index ["map_feature_id"], name: "index_map_comments_on_map_feature_id"
+    t.index ["parent_id"], name: "index_map_comments_on_parent_id"
   end
 
   create_table "map_feature_venues", force: :cascade do |t|
@@ -1387,6 +1505,52 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
     t.index ["deleted_at"], name: "index_map_layers_on_deleted_at"
     t.index ["kind"], name: "index_map_layers_on_kind"
     t.index ["kind"], name: "index_map_layers_on_kind_unique_live", unique: true, where: "((deleted_at IS NULL) AND ((kind)::text <> ALL (ARRAY[('network'::character varying)::text, ('sketch'::character varying)::text])))"
+  end
+
+  create_table "map_notes", force: :cascade do |t|
+    t.bigint "author_id"
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "noted_on", default: -> { "CURRENT_DATE" }, null: false
+    t.bigint "subject_id", null: false
+    t.string "subject_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["author_id"], name: "index_map_notes_on_author_id"
+    t.index ["deleted_at"], name: "index_map_notes_on_deleted_at"
+    t.index ["subject_type", "subject_id", "noted_on"], name: "index_map_notes_on_subject_type_and_subject_id_and_noted_on"
+  end
+
+  create_table "map_sketches", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.string "folder"
+    t.integer "lock_version", default: 0, null: false
+    t.string "name", null: false
+    t.jsonb "strokes", default: [], null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_map_sketches_on_created_by_id"
+    t.index ["deleted_at"], name: "index_map_sketches_on_deleted_at"
+  end
+
+  create_table "map_tasks", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.string "frequency"
+    t.string "label", null: false
+    t.integer "months", default: [], null: false, array: true
+    t.text "notes"
+    t.integer "position"
+    t.string "sector", null: false
+    t.bigint "subject_id", null: false
+    t.string "subject_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_map_tasks_on_created_by_id"
+    t.index ["deleted_at"], name: "index_map_tasks_on_deleted_at"
+    t.index ["months"], name: "index_map_tasks_on_months", using: :gin
+    t.index ["subject_type", "subject_id"], name: "index_map_tasks_on_subject_type_and_subject_id"
   end
 
   create_table "meal_orders", force: :cascade do |t|
@@ -1561,6 +1725,102 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
     t.index ["stay_id"], name: "index_payments_on_stay_id"
   end
 
+  create_table "phone_calls", force: :cascade do |t|
+    t.jsonb "attempts", default: [], null: false
+    t.string "call_sid", null: false
+    t.datetime "created_at", null: false
+    t.integer "dial_call_duration"
+    t.string "dial_call_status"
+    t.date "duty_date"
+    t.text "error"
+    t.string "from_number"
+    t.bigint "on_call_human_id"
+    t.string "outcome"
+    t.datetime "updated_at", null: false
+    t.index ["call_sid"], name: "index_phone_calls_on_call_sid", unique: true
+    t.index ["created_at"], name: "index_phone_calls_on_created_at"
+    t.index ["on_call_human_id"], name: "index_phone_calls_on_on_call_human_id"
+  end
+
+  create_table "plant_harvest_windows", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "months", default: [], null: false, array: true
+    t.bigint "owner_id", null: false
+    t.string "owner_type", null: false
+    t.string "part", null: false
+    t.datetime "updated_at", null: false
+    t.index ["months"], name: "index_plant_harvest_windows_on_months", using: :gin
+    t.index ["owner_type", "owner_id", "part"], name: "idx_on_owner_type_owner_id_part_b3dcce28e0", unique: true
+  end
+
+  create_table "plant_species", force: :cascade do |t|
+    t.text "common_names"
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.string "edible_parts", default: [], null: false, array: true
+    t.string "exposure", default: [], null: false, array: true
+    t.string "family"
+    t.string "hardiness"
+    t.string "height"
+    t.string "latin_name"
+    t.string "name", null: false
+    t.text "notes"
+    t.string "spread"
+    t.datetime "updated_at", null: false
+    t.string "wikipedia_url"
+    t.index "lower((name)::text)", name: "index_plant_species_on_lower_name_alive", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["created_by_id"], name: "index_plant_species_on_created_by_id"
+    t.index ["deleted_at"], name: "index_plant_species_on_deleted_at"
+  end
+
+  create_table "plant_varieties", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "name", null: false
+    t.text "notes"
+    t.bigint "plant_species_id", null: false
+    t.datetime "updated_at", null: false
+    t.index "plant_species_id, lower((name)::text)", name: "index_plant_varieties_on_species_and_lower_name_alive", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["deleted_at"], name: "index_plant_varieties_on_deleted_at"
+  end
+
+  create_table "plants", force: :cascade do |t|
+    t.integer "altitude"
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.string "habit"
+    t.string "health"
+    t.bigint "map_feature_id"
+    t.string "name", null: false
+    t.text "notes"
+    t.string "notion_url"
+    t.decimal "number"
+    t.string "nursery"
+    t.integer "plant_count"
+    t.bigint "plant_species_id"
+    t.bigint "plant_variety_id"
+    t.date "planted_on"
+    t.integer "planted_year"
+    t.string "population"
+    t.string "production"
+    t.integer "purchase_price_cents"
+    t.string "status", default: "to_place", null: false
+    t.string "stock_type"
+    t.string "stratum"
+    t.datetime "updated_at", null: false
+    t.string "zone"
+    t.index ["created_by_id"], name: "index_plants_on_created_by_id"
+    t.index ["deleted_at"], name: "index_plants_on_deleted_at"
+    t.index ["map_feature_id"], name: "index_plants_on_map_feature_id_alive", unique: true, where: "((map_feature_id IS NOT NULL) AND (deleted_at IS NULL))"
+    t.index ["number"], name: "index_plants_on_number_alive", unique: true, where: "((number IS NOT NULL) AND (deleted_at IS NULL))"
+    t.index ["plant_species_id"], name: "index_plants_on_plant_species_id"
+    t.index ["plant_variety_id"], name: "index_plants_on_plant_variety_id"
+    t.index ["status"], name: "index_plants_on_status"
+    t.index ["zone"], name: "index_plants_on_zone"
+  end
+
   create_table "portal_otps", force: :cascade do |t|
     t.integer "attempts", default: 0, null: false
     t.string "code_digest", null: false
@@ -1622,6 +1882,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
     t.text "notes"
     t.string "number"
     t.date "paid_on"
+    t.string "payment_reference"
     t.string "pdf_sha256"
     t.datetime "posted_at"
     t.jsonb "quality_flags", default: [], null: false
@@ -1688,6 +1949,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
     t.index ["member_account_id"], name: "index_recurring_charges_on_member_account_id"
     t.check_constraint "amount_cents IS NOT NULL AND rate_key IS NULL OR amount_cents IS NULL AND rate_key IS NOT NULL", name: "recurring_charges_amount_source_check"
     t.check_constraint "applies_to::text = 'account'::text AND member_account_id IS NOT NULL OR applies_to::text <> 'account'::text AND member_account_id IS NULL", name: "recurring_charges_scope_check"
+  end
+
+  create_table "recurring_expenses", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.bigint "amount_cents", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "ends_on"
+    t.date "first_due_on", null: false
+    t.string "frequency", default: "monthly", null: false
+    t.bigint "general_account_id"
+    t.string "label", null: false
+    t.bigint "legal_entity_id", null: false
+    t.text "notes"
+    t.bigint "third_party_id"
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_recurring_expenses_on_deleted_at"
+    t.index ["general_account_id"], name: "index_recurring_expenses_on_general_account_id"
+    t.index ["legal_entity_id"], name: "index_recurring_expenses_on_legal_entity_id"
+    t.index ["third_party_id"], name: "index_recurring_expenses_on_third_party_id"
   end
 
   create_table "rental_items", force: :cascade do |t|
@@ -2224,6 +2505,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
     t.index ["date"], name: "index_watchman_notes_on_date"
   end
 
+  create_table "website_rebuilds", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "dispatched_at"
+    t.string "error_message"
+    t.datetime "last_requested_at", null: false
+    t.datetime "requested_at", null: false
+    t.integer "requests_count", default: 1, null: false
+    t.string "response_code"
+    t.string "status", default: "pending", null: false
+    t.string "trigger", default: "publication", null: false
+    t.datetime "updated_at", null: false
+    t.index ["status", "requested_at"], name: "index_website_rebuilds_on_status_and_requested_at"
+  end
+
   add_foreign_key "account_entries", "account_entries", column: "reversal_of_id"
   add_foreign_key "account_entries", "account_settlements"
   add_foreign_key "account_entries", "account_statements"
@@ -2241,6 +2536,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
   add_foreign_key "agenda_items", "humans", column: "author_id"
   add_foreign_key "agenda_items", "humans", column: "carrier_id"
   add_foreign_key "allocation_rules", "analytic_accounts"
+  add_foreign_key "allocation_rules", "cash_accounts"
   add_foreign_key "allocation_rules", "events"
   add_foreign_key "allocation_rules", "general_accounts"
   add_foreign_key "allocation_rules", "legal_entities"
@@ -2283,9 +2579,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
   add_foreign_key "cash_motifs", "teams"
   add_foreign_key "catalog_items", "consignors"
   add_foreign_key "catalog_prices", "catalog_items"
+  add_foreign_key "catalog_prices", "third_parties"
   add_foreign_key "coda_statements", "cash_accounts"
   add_foreign_key "coda_statements", "coda_imports"
   add_foreign_key "comments", "users", column: "author_id"
+  add_foreign_key "compliance_deadlines", "compliance_obligations"
+  add_foreign_key "compliance_deadlines", "purchase_invoices"
+  add_foreign_key "compliance_deadlines", "users", column: "done_by_user_id"
+  add_foreign_key "compliance_obligations", "legal_entities"
+  add_foreign_key "compliance_obligations", "users", column: "responsible_user_id"
   add_foreign_key "consignment_report_lines", "catalog_items"
   add_foreign_key "consignment_report_lines", "consignment_reports"
   add_foreign_key "consignment_reports", "consignors"
@@ -2356,10 +2658,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
   add_foreign_key "lodging_compositions", "lodgings", column: "composite_lodging_id"
   add_foreign_key "lodging_rooms", "lodgings"
   add_foreign_key "lodging_rooms", "rooms"
+  add_foreign_key "mail_attachments", "mail_attachments", column: "embedded_in_id"
+  add_foreign_key "mail_attachments", "mail_messages"
+  add_foreign_key "mail_attachments", "purchase_invoices"
+  add_foreign_key "mail_messages", "mail_accounts"
+  add_foreign_key "mail_messages", "users", column: "handled_by_id"
+  add_foreign_key "map_comments", "map_comments", column: "parent_id"
+  add_foreign_key "map_comments", "map_features"
+  add_foreign_key "map_comments", "users", column: "author_id"
   add_foreign_key "map_feature_venues", "map_features"
   add_foreign_key "map_features", "map_layers"
   add_foreign_key "map_features", "users", column: "created_by_id"
   add_foreign_key "map_layers", "users", column: "created_by_id"
+  add_foreign_key "map_notes", "users", column: "author_id"
+  add_foreign_key "map_sketches", "users", column: "created_by_id"
+  add_foreign_key "map_tasks", "users", column: "created_by_id"
   add_foreign_key "meal_orders", "humans", column: "responsible_human_id"
   add_foreign_key "meal_orders", "stays"
   add_foreign_key "member_accounts", "households"
@@ -2374,6 +2687,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
   add_foreign_key "payments", "coworking_packs"
   add_foreign_key "payments", "space_bookings"
   add_foreign_key "payments", "stays"
+  add_foreign_key "phone_calls", "humans", column: "on_call_human_id"
+  add_foreign_key "plant_species", "users", column: "created_by_id"
+  add_foreign_key "plant_varieties", "plant_species", column: "plant_species_id"
+  add_foreign_key "plants", "map_features"
+  add_foreign_key "plants", "plant_species", column: "plant_species_id"
+  add_foreign_key "plants", "plant_varieties"
+  add_foreign_key "plants", "users", column: "created_by_id"
   add_foreign_key "projects", "humans"
   add_foreign_key "purchase_invoice_lines", "analytic_accounts"
   add_foreign_key "purchase_invoice_lines", "general_accounts"
@@ -2386,6 +2706,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_020000) do
   add_foreign_key "rate_versions", "rates"
   add_foreign_key "recurring_charges", "household_members"
   add_foreign_key "recurring_charges", "member_accounts"
+  add_foreign_key "recurring_expenses", "general_accounts"
+  add_foreign_key "recurring_expenses", "legal_entities"
+  add_foreign_key "recurring_expenses", "third_parties"
   add_foreign_key "reservations", "bookings"
   add_foreign_key "reservations", "rooms"
   add_foreign_key "revenue_mappings", "general_accounts"

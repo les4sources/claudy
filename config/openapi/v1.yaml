@@ -13,6 +13,8 @@ info:
     La création (POST) n'est exposée que sur le catalogue interne (catalog_items,
     leurs prices) et les fiches papier (paper_sheets) : ces données se remontent
     depuis des documents papier et n'ont pas à transiter par un script versionné.
+    La carte du domaine et ses plantes (tag « Carte & plantes ») ont aussi leur
+    POST : les plantes entrent par un import agent depuis Notion.
     Sur ces deux ressources, POST est un UPSERT sur la clé naturelle — canal + nom
     pour un article, mois + canal pour une fiche — et `meta.created` dit si
     l'enregistrement a été créé ou simplement retrouvé.
@@ -32,6 +34,10 @@ tags:
     description: >
       Membres, cycles, actions de cycle, tâches de l'organisation et notes
       (post-it datés) du calendrier partagé.
+  - name: Événements
+    description: >
+      Agenda du site les4sources.be : événements (brouillons et publiés) et
+      catégories avec leur pôle. POST est un upsert sur le slug.
   - name: Finances
     description: Paiements liés aux réservations.
   - name: Bar & comptes internes
@@ -40,6 +46,17 @@ tags:
       comptes courants des ménages, et fiches papier mensuelles avec leur encodage.
   - name: Clients
     description: Clients (particuliers et organisations) et leurs séjours.
+  - name: Comptabilité
+    description: >
+      Référentiel comptable (comptes généraux et analytiques, exercices,
+      à-nouveaux), trésorerie (comptes, imports CODA, caisse) et rapprochement
+      assisté (règles d'affectation, motifs).
+  - name: Carte & plantes
+    description: >
+      Carte du domaine et plantes nourricières (epic #348) : espèces, variétés,
+      plantes (placement, fenêtres de récolte), objets de la carte en GeoJSON,
+      notes datées, photos et tâches de gestion. POST ouvert : c'est le chemin de
+      l'import Notion. Espèces, variétés et plantes (sur notion_url) sont des UPSERT.
 
 paths:
   /:
@@ -676,6 +693,251 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /events:
+    get:
+      tags: [Événements]
+      summary: Lister les événements (brouillons compris)
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date }, description: "Événements qui se terminent à cette date ou après." }
+        - { name: to, in: query, schema: { type: string, format: date }, description: "Événements qui commencent à cette date ou avant." }
+        - { name: published, in: query, schema: { type: boolean }, description: "true = publiés sur le site, false = brouillons." }
+        - { name: category, in: query, schema: { type: string }, description: "Slug de catégorie." }
+        - { name: slug, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string }, description: "Recherche insensible à la casse dans le nom." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée, du plus tôt au plus tard.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Event" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    post:
+      tags: [Événements]
+      summary: Créer ou mettre à jour un événement (upsert sur le slug)
+      description: >
+        Quand un événement vivant porte déjà le `slug` fourni, il est MIS À JOUR
+        au lieu qu'un second soit créé, et `meta.created` dit lequel des deux
+        s'est produit. Le slug est l'adresse de la fiche sur le site
+        (/evenements/<slug>) : il est figé tant que l'événement est publié.
+        Pour publier un brouillon créé dans l'admin, le retrouver (GET avec
+        from/to/q) puis PATCH `published: true` — plutôt qu'un POST qui en
+        créerait un second.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event]
+              properties:
+                event: { $ref: "#/components/schemas/EventWrite" }
+      responses:
+        "201":
+          description: Événement créé (`meta.created` vaut true).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Event" }
+                  meta: { type: object, properties: { created: { type: boolean } } }
+        "200":
+          description: Événement retrouvé sur son slug et mis à jour (`meta.created` vaut false).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Event" }
+                  meta: { type: object, properties: { created: { type: boolean } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /events/{id}:
+    get:
+      tags: [Événements]
+      summary: Détail d'un événement
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Événement.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Event" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Événements]
+      summary: Éditer, publier ou dépublier un événement
+      description: "Mêmes champs que la création. `published: false` retire la fiche du site mais garde le slug."
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event]
+              properties:
+                event: { $ref: "#/components/schemas/EventWrite" }
+      responses:
+        "200":
+          description: Événement mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/Event" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Événements]
+      summary: Mettre un événement à la corbeille (soft-delete)
+      description: "La ligne reste en base, `deleted_at` renseignée. Le slug reste réservé."
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /event_categories:
+    get:
+      tags: [Événements]
+      summary: Lister les catégories d'événements et leur pôle
+      responses:
+        "200":
+          description: Toutes les catégories, par nom.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/EventCategory" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Événements]
+      summary: Créer une catégorie (upsert sur le slug)
+      description: >
+        Le slug vient de `slug` s'il est fourni, sinon du nom. Quand une
+        catégorie porte déjà ce slug, elle est MISE À JOUR (`meta.created`
+        vaut false) au lieu qu'une seconde soit créée. Le slug ne change plus
+        ensuite : le site s'en sert comme clé.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_category]
+              properties:
+                event_category:
+                  type: object
+                  required: [name]
+                  properties:
+                    name: { type: string }
+                    slug: { type: string }
+                    color: { type: string, description: "#rrggbb ; teal de la charte par défaut." }
+                    pole: { type: string, enum: [hebergement, convivialite, nature, artisanat, ressourcement, vie-collective, production] }
+      responses:
+        "201":
+          description: Catégorie créée (`meta.created` vaut true).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/EventCategory" }
+                  meta: { type: object, properties: { created: { type: boolean } } }
+        "200":
+          description: Catégorie retrouvée sur son slug et mise à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/EventCategory" }
+                  meta: { type: object, properties: { created: { type: boolean } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /event_categories/{id}:
+    patch:
+      tags: [Événements]
+      summary: Poser le pôle (ou le nom, la couleur) d'une catégorie
+      description: "Le slug est la clé du site et n'est pas modifiable."
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_category]
+              properties:
+                event_category:
+                  type: object
+                  properties:
+                    name: { type: string }
+                    color: { type: string, description: "#rrggbb" }
+                    pole: { type: string, enum: [hebergement, convivialite, nature, artisanat, ressourcement, vie-collective, production] }
+      responses:
+        "200":
+          description: Catégorie mise à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { data: { $ref: "#/components/schemas/EventCategory" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /website_rebuilds:
+    get:
+      tags: [Événements]
+      summary: Dernières reconstructions du site
+      description: >
+        Les 20 dernières demandes de reconstruction du site les4sources.be et
+        leur issue (`pending`, `dispatching`, `sent`, `failed`, `skipped`).
+        Une publication ouvre une demande, envoyée après deux minutes de
+        regroupement. `meta.webhook_configured` dit si le webhook est posé
+        (jamais son URL).
+      responses:
+        "200":
+          description: Demandes, de la plus récente à la plus ancienne.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/WebsiteRebuild" } }
+                  meta:
+                    type: object
+                    properties:
+                      webhook_configured: { type: boolean }
+                      window_seconds: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Événements]
+      summary: Demander une reconstruction tout de suite
+      description: "Sans fenêtre de regroupement. Traitée en arrière-plan : suivre l'issue par GET."
+      responses:
+        "202":
+          description: Demande enregistrée.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/WebsiteRebuild" }
+                  meta: { type: object, properties: { webhook_configured: { type: boolean } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /party_reservations:
     get:
       tags: [Réservations]
@@ -1006,7 +1268,7 @@ paths:
       tags: [Bar & comptes internes]
       summary: Lister les articles du catalogue
       parameters:
-        - { name: channel, in: query, schema: { type: string, enum: [bar, grocery, meal] } }
+        - { name: channel, in: query, schema: { type: string, enum: [bar, grocery, dph, meal, craft, bread] } }
         - { name: q, in: query, schema: { type: string }, description: "Recherche sur le nom." }
         - { name: active, in: query, schema: { type: boolean }, description: "true pour n'obtenir que les articles actifs." }
         - { $ref: "#/components/parameters/PriceOn" }
@@ -1043,7 +1305,7 @@ paths:
                   required: [name, channel]
                   properties:
                     name: { type: string, example: "Taras Boulba" }
-                    channel: { type: string, enum: [bar, grocery, meal] }
+                    channel: { type: string, enum: [bar, grocery, dph, meal, craft, bread], description: "dph = droguerie, parfumerie, hygiène ; ses articles figurent sur la fiche papier du cellier." }
                     category: { type: string, example: "Bières" }
                     unit: { type: string, enum: [piece, kg, l, portion, day] }
                     reference: { type: string, nullable: true }
@@ -1154,6 +1416,13 @@ paths:
                     reference_price_cents: { type: integer, nullable: true }
                     public_price_cents: { type: integer, nullable: true, example: 300 }
                     note: { type: string, nullable: true }
+                    third_party_id:
+                      type: integer
+                      nullable: true
+                      description: >
+                        Fournisseur chez qui ce prix d'achat a été relevé — un tiers
+                        de la comptabilité de genre supplier ou both (GET
+                        /third_parties?kind=supplier&q=…). Un client répond 422.
       responses:
         "201":
           description: Palier créé.
@@ -1488,6 +1757,23 @@ paths:
         "200": { description: Compte mis à jour. }
         "422": { $ref: "#/components/responses/Unprocessable" }
 
+  /third_parties:
+    get:
+      tags: [Comptabilité]
+      summary: Lister les tiers (fournisseurs et clients)
+      description: >
+        Lecture seule. Sert à retrouver un fournisseur existant avant de poser un
+        palier de prix (third_party_id) — la création d'un tiers reste un geste
+        humain dans Finances > Tiers. L'IBAN n'est jamais exposé.
+      parameters:
+        - { name: q, in: query, description: "Recherche sur le nom ou le code.", schema: { type: string } }
+        - { name: kind, in: query, description: "supplier inclut aussi les tiers « both ».", schema: { type: string, enum: [supplier, customer] } }
+        - { name: active, in: query, schema: { type: boolean } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: "Liste paginée de tiers (id, code, name, kind, vat_number, active)." }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /analytic_accounts:
     get:
       tags: [Comptabilité]
@@ -2018,6 +2304,20 @@ paths:
                     general_account_code: { type: string, description: "Le compte proposé, adressé par son code." }
                     team_name: { type: string }
                     legal_entity_name: { type: string }
+                    cash_account_name:
+                      type: string
+                      description: >
+                        Limite la règle aux lignes de ce compte de trésorerie,
+                        adressé par son nom. Nom inconnu → 422 « Compte de
+                        trésorerie inconnu : X. ». Ne compte pas comme critère :
+                        une règle limitée à un compte et sans autre critère est
+                        refusée (elle reconnaîtrait tout le compte). Absent =
+                        valable sur tous les comptes. Rendu dans
+                        `criteria.cash_account_name`.
+                    cash_account_id:
+                      type: integer
+                      nullable: true
+                      description: "Même restriction par identifiant ; `null` la lève."
                     general_account_id: { type: integer }
                     analytic_account_code: { type: string }
                     team_id: { type: integer }
@@ -2131,6 +2431,577 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/Unprocessable" }
 
+  # ── Échéancier comptable ────────────────────────────────────────────────────
+  /compliance_obligations:
+    get:
+      tags: [Comptabilité]
+      summary: Lister les obligations de l'échéancier comptable
+      parameters:
+        - { name: legal_entity_name, in: query, schema: { type: string } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: Liste paginée d'obligations, chacune avec ses échéances. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Comptabilité]
+      summary: Créer (ou retrouver) une obligation
+      description: >
+        UPSERT sur le couple (title, entité). Chaque écriture régénère les
+        échéances de la règle jusqu'à douze mois devant : la réponse les liste.
+        Une échéance existante n'est jamais réécrite. `first_due_on` est la
+        PREMIÈRE échéance à suivre ; les suivantes s'en déduisent par pas de 1,
+        3 ou 12 mois. `covers` dit quelle période chaque échéance couvre
+        (`previous` : TVA d'avril → T1 ; `current` : précompte d'octobre →
+        l'année). Sans responsable, les rappels vont aux destinataires comptables
+        des réglages.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [compliance_obligation]
+              properties:
+                compliance_obligation:
+                  type: object
+                  required: [title, first_due_on]
+                  properties:
+                    title: { type: string, description: "Sans la période (« Déclaration TVA »). Clé d'upsert avec l'entité." }
+                    legal_entity_name: { type: string, description: "Nom exact de l'entité ; ou `legal_entity_id`." }
+                    legal_entity_id: { type: integer }
+                    frequency: { type: string, enum: [once, monthly, quarterly, yearly] }
+                    first_due_on: { type: string, format: date }
+                    ends_on: { type: string, format: date }
+                    covers: { type: string, enum: [previous, current] }
+                    payment: { type: boolean, description: "Paiement : l'échéance se solde par une facture d'achat liée." }
+                    responsible_email: { type: string, description: "Reçoit les rappels ; ou `responsible_user_id`." }
+                    responsible_user_id: { type: integer }
+                    instructions: { type: string, description: "Mode opératoire." }
+                    active: { type: boolean }
+      responses:
+        "201": { description: Obligation créée, échéances générées. }
+        "200": { description: Obligation existante retrouvée et mise à jour. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /compliance_obligations/{id}:
+    get:
+      tags: [Comptabilité]
+      summary: Détail d'une obligation et de ses échéances
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Obligation. }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Comptabilité]
+      summary: Modifier une obligation (régénère ses échéances)
+      description: >
+        Une échéance future que la règle ne produit plus est retirée SEULEMENT si
+        personne n'y a touché (ni note, ni preuve, ni facture, ni état).
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { compliance_obligation: { type: object } } }
+      responses:
+        "200": { description: Obligation mise à jour. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /compliance_deadlines:
+    get:
+      tags: [Comptabilité]
+      summary: Lister les échéances
+      parameters:
+        - { name: compliance_obligation_id, in: query, schema: { type: integer } }
+        - { name: outstanding, in: query, schema: { type: boolean }, description: "Seulement les échéances ouvertes (ni closes, ni soldées par leur facture)." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200": { description: Liste paginée, par date limite. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /compliance_deadlines/{id}:
+    get:
+      tags: [Comptabilité]
+      summary: Détail d'une échéance
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Échéance. `effective_status` vaut `done` dès que la facture liée est payée. }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Comptabilité]
+      summary: Clore, reporter ou annoter une échéance
+      description: >
+        Pas de POST : une échéance naît de sa règle. Pour reprendre l'historique,
+        passer `status: done` et `done_on` à la date réelle du dépôt.
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                compliance_deadline:
+                  type: object
+                  properties:
+                    due_on: { type: string, format: date }
+                    status: { type: string, enum: [todo, in_progress, done, not_applicable] }
+                    done_on: { type: string, format: date }
+                    note: { type: string }
+                    purchase_invoice_id: { type: integer, description: "Seulement pour une échéance de paiement." }
+      responses:
+        "200": { description: Échéance mise à jour. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+
+  # ── Carte du domaine et plantes nourricières (epic #348, phase 8) ──────────
+  /plant_species:
+    get:
+      tags: [Carte & plantes]
+      summary: Lister les espèces nourricières
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: "Recherche sur le nom ou le nom latin." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée d'espèces, avec leurs fenêtres de récolte par défaut et leurs variétés.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/PlantSpecies" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Carte & plantes]
+      summary: Créer une espèce (upsert sur le nom, casse ignorée)
+      description: >
+        Reposter une espèce du même nom (« pommier » = « Pommier ») met sa fiche à
+        jour au lieu d'échouer. `meta.created` dit si elle a été créée.
+        `harvest_windows`, s'il est donné, REMPLACE les fenêtres par défaut de
+        l'espèce (liste vide = aucune).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                plant_species: { $ref: "#/components/schemas/PlantSpeciesInput" }
+      responses:
+        "201": { $ref: "#/components/responses/PlantSpeciesCreated" }
+        "200": { $ref: "#/components/responses/PlantSpeciesCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /plant_species/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    get:
+      tags: [Carte & plantes]
+      summary: Détail d'une espèce
+      responses:
+        "200": { $ref: "#/components/responses/PlantSpeciesCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Carte & plantes]
+      summary: Modifier une espèce (fiche botanique, fenêtres par défaut)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                plant_species: { $ref: "#/components/schemas/PlantSpeciesInput" }
+      responses:
+        "200": { $ref: "#/components/responses/PlantSpeciesCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /plant_varieties:
+    get:
+      tags: [Carte & plantes]
+      summary: Lister les variétés
+      parameters:
+        - { name: plant_species_id, in: query, schema: { type: integer }, description: "Les variétés de cette espèce." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de variétés.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/PlantVariety" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Carte & plantes]
+      summary: Créer une variété (upsert sur espèce + nom)
+      description: L'espèce se donne par `plant_species_id` ou par `species_name` (créée au besoin).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                plant_variety:
+                  type: object
+                  required: [name]
+                  properties:
+                    plant_species_id: { type: integer }
+                    species_name: { type: string, example: "Pommier" }
+                    name: { type: string, example: "Reinette Hernaut" }
+                    notes: { type: string, nullable: true }
+      responses:
+        "201": { $ref: "#/components/responses/PlantVarietyCreated" }
+        "200": { $ref: "#/components/responses/PlantVarietyCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /plant_varieties/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    get:
+      tags: [Carte & plantes]
+      summary: Détail d'une variété
+      responses:
+        "200": { $ref: "#/components/responses/PlantVarietyCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /plants:
+    get:
+      tags: [Carte & plantes]
+      summary: Lister les plantes
+      parameters:
+        - { name: status, in: query, schema: { type: string }, description: "Un statut ou plusieurs séparés par des virgules (clés de PlantStatus)." }
+        - { name: zone, in: query, schema: { type: string }, example: "Verger" }
+        - { name: placed, in: query, schema: { type: boolean }, description: "true = placées sur la carte, false = à placer." }
+        - { name: q, in: query, schema: { type: string }, description: "Nom, numéro (« 9.1 », « #42 »), espèce, nom latin, variété." }
+        - { name: number, in: query, schema: { type: string }, example: "9.1", description: "Numéro exact." }
+        - { name: plant_species_id, in: query, schema: { type: integer } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de plantes, par numéro puis nom.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Plant" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Carte & plantes]
+      summary: Créer une plante (upsert sur notion_url)
+      description: >
+        Le chemin de l'import Notion. Si `notion_url` est donné et qu'une plante le
+        porte déjà, elle est mise à jour (`meta.created` = false) : rejouer un
+        import ne double rien. `species_name` / `variety_name` sont résolus (créés
+        au besoin). `latitude` + `longitude` placent la plante (point dans la
+        couche Plantes) ; sans eux, elle est « à placer ». Numéro déjà pris ou
+        valeur hors liste fermée → 422 qui dit laquelle et liste les valeurs admises.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plant]
+              properties:
+                plant: { $ref: "#/components/schemas/PlantInput" }
+      responses:
+        "201": { $ref: "#/components/responses/PlantDetail" }
+        "200": { $ref: "#/components/responses/PlantDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /plants/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    get:
+      tags: [Carte & plantes]
+      summary: Fiche d'une plante (avec notes datées, photos et tâches)
+      responses:
+        "200": { $ref: "#/components/responses/PlantDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Carte & plantes]
+      summary: Modifier une plante
+      description: >
+        Mêmes champs que la création. `latitude` + `longitude` déplacent la plante ;
+        `placed: false` la retire de la carte (elle redevient « à placer ») ;
+        `harvest_windows` remplace ses fenêtres propres (liste vide = retour à
+        l'héritage de l'espèce).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                plant: { $ref: "#/components/schemas/PlantInput" }
+      responses:
+        "200": { $ref: "#/components/responses/PlantDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Carte & plantes]
+      summary: Supprimer une plante (suppression douce, son point disparaît de la carte)
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /plants/{plant_id}/notes:
+    parameters:
+      - { name: plant_id, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Carte & plantes]
+      summary: Ajouter une note datée à une plante
+      requestBody: { $ref: "#/components/requestBodies/MapNoteBody" }
+      responses:
+        "201": { $ref: "#/components/responses/MapNoteDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /plants/{plant_id}/photos:
+    parameters:
+      - { name: plant_id, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Carte & plantes]
+      summary: Ajouter des photos à une plante
+      requestBody: { $ref: "#/components/requestBodies/PhotosUpload" }
+      responses:
+        "201": { $ref: "#/components/responses/PhotosCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /plants/{plant_id}/photos/{id}:
+    parameters:
+      - { name: plant_id, in: path, required: true, schema: { type: integer } }
+      - { $ref: "#/components/parameters/Id" }
+    delete:
+      tags: [Carte & plantes]
+      summary: Retirer une photo d'une plante (définitif)
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /map_features:
+    get:
+      tags: [Carte & plantes]
+      summary: Lister les objets de la carte
+      parameters:
+        - { name: layer_id, in: query, schema: { type: integer } }
+        - { name: layer_kind, in: query, schema: { $ref: "#/components/schemas/MapLayerKind" } }
+        - { name: kind, in: query, schema: { type: string }, description: "feature_kind, un ou plusieurs séparés par des virgules (clés de MapFeatureKind)." }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée d'objets de la carte.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/MapFeature" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Carte & plantes]
+      summary: Créer un objet de la carte
+      description: >
+        La couche se donne par `layer_id` ou `layer_kind` (couches uniques
+        seulement). Sans `feature_kind`, la géométrie le dit (Polygon → zone,
+        LineString → path, Point → point). Un point de plante ne se crée pas ici :
+        voir POST /plants.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                map_feature: { $ref: "#/components/schemas/MapFeatureInput" }
+      responses:
+        "201": { $ref: "#/components/responses/MapFeatureDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /map_features/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    get:
+      tags: [Carte & plantes]
+      summary: Détail d'un objet de la carte (avec notes datées, photos et tâches)
+      responses:
+        "200": { $ref: "#/components/responses/MapFeatureDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Carte & plantes]
+      summary: Modifier un objet de la carte
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                map_feature: { $ref: "#/components/schemas/MapFeatureInput" }
+      responses:
+        "200": { $ref: "#/components/responses/MapFeatureDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Carte & plantes]
+      summary: Supprimer un objet de la carte (suppression douce ; un point de plante rend sa plante « à placer »)
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /map_features/{map_feature_id}/notes:
+    parameters:
+      - { name: map_feature_id, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Carte & plantes]
+      summary: Ajouter une note datée à un objet de la carte
+      requestBody: { $ref: "#/components/requestBodies/MapNoteBody" }
+      responses:
+        "201": { $ref: "#/components/responses/MapNoteDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /map_features/{map_feature_id}/photos:
+    parameters:
+      - { name: map_feature_id, in: path, required: true, schema: { type: integer } }
+    post:
+      tags: [Carte & plantes]
+      summary: Ajouter des photos à un objet de la carte
+      requestBody: { $ref: "#/components/requestBodies/PhotosUpload" }
+      responses:
+        "201": { $ref: "#/components/responses/PhotosCreated" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /map_features/{map_feature_id}/photos/{id}:
+    parameters:
+      - { name: map_feature_id, in: path, required: true, schema: { type: integer } }
+      - { $ref: "#/components/parameters/Id" }
+    delete:
+      tags: [Carte & plantes]
+      summary: Retirer une photo d'un objet de la carte (définitif)
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /map_notes/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    patch:
+      tags: [Carte & plantes]
+      summary: Modifier une note datée
+      requestBody: { $ref: "#/components/requestBodies/MapNoteBody" }
+      responses:
+        "200": { $ref: "#/components/responses/MapNoteDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Carte & plantes]
+      summary: Supprimer une note datée (suppression douce)
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /map_tasks:
+    get:
+      tags: [Carte & plantes]
+      summary: Lister les tâches de gestion de la carte
+      parameters:
+        - { name: subject_type, in: query, schema: { $ref: "#/components/schemas/MapSubjectType" } }
+        - { name: subject_id, in: query, schema: { type: integer } }
+        - { name: month, in: query, schema: { type: integer, minimum: 1, maximum: 12 } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: Liste paginée de tâches dont le porteur est vivant.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/MapTask" } }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Carte & plantes]
+      summary: Créer une tâche sur une plante ou un objet de la carte
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                map_task:
+                  allOf:
+                    - $ref: "#/components/schemas/MapTaskInput"
+                    - type: object
+                      required: [subject_type, subject_id, label]
+                      properties:
+                        subject_type: { $ref: "#/components/schemas/MapSubjectType" }
+                        subject_id: { type: integer }
+      responses:
+        "201": { $ref: "#/components/responses/MapTaskDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /map_tasks/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    get:
+      tags: [Carte & plantes]
+      summary: Détail d'une tâche
+      responses:
+        "200": { $ref: "#/components/responses/MapTaskDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Carte & plantes]
+      summary: Modifier une tâche (le porteur ne change pas)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                map_task: { $ref: "#/components/schemas/MapTaskInput" }
+      responses:
+        "200": { $ref: "#/components/responses/MapTaskDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    delete:
+      tags: [Carte & plantes]
+      summary: Supprimer une tâche (suppression douce)
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
 components:
   securitySchemes:
     bearerAuth:
@@ -2166,6 +3037,65 @@ components:
         Date à laquelle résoudre le prix (défaut : aujourd'hui). Relire un mois
         clôturé sans ce paramètre afficherait les prix d'aujourd'hui.
   responses:
+    PlantSpeciesCreated:
+      description: Une espèce. `meta.created` (POST seulement) dit si elle a été créée.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: "#/components/schemas/PlantSpecies" }
+              meta: { type: object, properties: { created: { type: boolean } } }
+    PlantVarietyCreated:
+      description: Une variété. `meta.created` (POST seulement) dit si elle a été créée.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: "#/components/schemas/PlantVariety" }
+              meta: { type: object, properties: { created: { type: boolean } } }
+    PlantDetail:
+      description: La fiche d'une plante. `meta.created` (POST seulement) dit si elle a été créée.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: "#/components/schemas/PlantDetail" }
+              meta: { type: object, properties: { created: { type: boolean } } }
+    MapFeatureDetail:
+      description: Un objet de la carte, avec ses notes datées, photos et tâches.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: "#/components/schemas/MapFeatureDetail" }
+    MapNoteDetail:
+      description: Une note datée.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: "#/components/schemas/MapNote" }
+    MapTaskDetail:
+      description: Une tâche de gestion de la carte.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: "#/components/schemas/MapTask" }
+    PhotosCreated:
+      description: Les photos CRÉÉES par cet envoi (pas celles qui existaient déjà).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              photos: { type: array, items: { $ref: "#/components/schemas/Photo" } }
     Unauthorized:
       description: Jeton manquant ou invalide.
       content:
@@ -2184,6 +3114,33 @@ components:
     NoContent:
       description: Suppression effectuée (soft-delete). Pas de corps de réponse.
   requestBodies:
+    MapNoteBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              map_note:
+                type: object
+                properties:
+                  body: { type: string, example: "Bourgeons gelés" }
+                  noted_on: { type: string, format: date, description: "Par défaut : aujourd'hui." }
+    PhotosUpload:
+      required: true
+      description: >
+        multipart/form-data, un ou plusieurs fichiers sous `photos[]`. JPEG ou PNG
+        (HEIC si le serveur sait le convertir) ; un seul fichier refusé refuse tout
+        l'envoi (422), rien n'est attaché.
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required: [photos]
+            properties:
+              photos:
+                type: array
+                items: { type: string, format: binary }
     WriteBody:
       required: true
       description: >
@@ -2204,6 +3161,7 @@ components:
       properties:
         error: { type: string }
         message: { type: string }
+        messages: { type: array, items: { type: string }, description: "Messages de validation (422)." }
     Money:
       type: object
       properties:
@@ -2547,6 +3505,88 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         url: { type: string }
+    Event:
+      type: object
+      description: >
+        Événement de l'agenda. Publié, il a sa fiche sur le site à `public_url`
+        (l'API publique /api/public/v1/events le donne au site au build).
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "event" }
+        name: { type: string }
+        slug: { type: string, nullable: true, description: "Adresse de la fiche : /evenements/<slug>. Figé tant que publié." }
+        summary: { type: string, nullable: true, description: "Accroche, 200 caractères au plus." }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        all_day: { type: boolean, description: "Vrai quand les deux bornes sont à minuit." }
+        location: { type: string, nullable: true }
+        price_text: { type: string, nullable: true }
+        registration_url: { type: string, nullable: true, description: "Lien d'inscription (billetterie, formulaire)." }
+        status: { type: string, nullable: true }
+        public_description: { type: string, nullable: true, description: "Description publique (HTML ActionText)." }
+        event_category_id: { type: integer }
+        category:
+          type: object
+          properties:
+            slug: { type: string }
+            name: { type: string }
+            pole: { type: string, nullable: true }
+        team_id: { type: integer, nullable: true }
+        published: { type: boolean }
+        published_at: { type: string, format: date-time, nullable: true }
+        public_url: { type: string, nullable: true }
+        image_url: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        url: { type: string, description: "Adresse de la ressource dans cette API." }
+    EventWrite:
+      type: object
+      description: >
+        Champs écrits par POST et PATCH. Dates : « AAAA-MM-JJ » = journée entière
+        (minuit), sinon date-heure ISO 8601 (heure de Bruxelles si pas de
+        décalage). `image_url` est téléchargée (https, adresse publique, image,
+        15 Mo au plus) ; `remove_image: true` détache l'image.
+      properties:
+        name: { type: string }
+        summary: { type: string }
+        starts_at: { type: string }
+        ends_at: { type: string }
+        location: { type: string }
+        price_text: { type: string }
+        registration_url: { type: string }
+        status: { type: string }
+        public_description: { type: string, description: "HTML." }
+        category: { type: string, description: "Slug de catégorie (GET /event_categories)." }
+        event_category_id: { type: integer }
+        team_id: { type: integer }
+        slug: { type: string }
+        published: { type: boolean }
+        image_url: { type: string }
+        remove_image: { type: boolean }
+    EventCategory:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "event_category" }
+        slug: { type: string }
+        name: { type: string }
+        color: { type: string }
+        pole: { type: string, nullable: true, enum: [hebergement, convivialite, nature, artisanat, ressourcement, vie-collective, production, null] }
+        pole_label: { type: string, nullable: true }
+        url: { type: string }
+    WebsiteRebuild:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "website_rebuild" }
+        status: { type: string, enum: [pending, dispatching, sent, failed, skipped] }
+        trigger: { type: string, enum: [publication, api, recovery] }
+        requested_at: { type: string, format: date-time }
+        last_requested_at: { type: string, format: date-time }
+        requests_count: { type: integer, description: "Sauvegardes regroupées dans cette demande." }
+        dispatched_at: { type: string, format: date-time, nullable: true }
+        response_code: { type: string, nullable: true }
+        error_message: { type: string, nullable: true }
     Note:
       type: object
       description: >
@@ -2629,6 +3669,13 @@ components:
         reference_price: { $ref: "#/components/schemas/Money" }
         public_price: { $ref: "#/components/schemas/Money" }
         note: { type: string, nullable: true }
+        third_party:
+          type: object
+          nullable: true
+          description: Fournisseur du prix d'achat, null quand il n'est pas connu.
+          properties:
+            id: { type: integer }
+            name: { type: string }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
     CatalogItem:
@@ -2641,7 +3688,7 @@ components:
         id: { type: integer }
         type: { type: string, example: catalog_item }
         name: { type: string, example: "Taras Boulba" }
-        channel: { type: string, enum: [bar, grocery, meal] }
+        channel: { type: string, enum: [bar, grocery, dph, meal, craft, bread] }
         channel_label: { type: string, example: "Bar" }
         category: { type: string, nullable: true, example: "Bières" }
         unit: { type: string, enum: [piece, kg, l, portion, day] }
@@ -2721,3 +3768,327 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         url: { type: string, format: uri }
+    # ── Carte du domaine et plantes (epic #348, phase 8) ──────────────────────
+    # Listes fermées. En ÉCRITURE, la clé OU le libellé de la base Notion
+    # (« Existante », « Arbre », casse ignorée) sont acceptés ; en lecture, c'est
+    # toujours la clé.
+    PlantStatus:
+      type: string
+      enum: [existing, to_confirm, to_place, on_plan, awaiting_planting, planted, dead, to_move, wild]
+      description: "Existante, À confirmer, À placer, Sur plan, En attente de plantation, Plantée, Morte, À déplacer, Flore sauvage."
+    PlantHealth:
+      type: string
+      enum: [healthy, worrying, sick]
+      description: "Saine, Inquiétante, Malade."
+    PlantProduction:
+      type: string
+      enum: [high, medium, low, none]
+      description: "Élevée, Moyenne, Faible, Ne produit pas."
+    PlantHabit:
+      type: string
+      enum: [standard, half_standard, dwarf]
+      description: "Haute tige, Moyenne tige, Basse tige."
+    PlantStratum:
+      type: string
+      enum: [tree, coppice, pollard, food_pollard, espalier, shrub, subshrub, herbaceous, climber, groundcover, vine, aquatic]
+      description: "Arbre, Arbre en cépée, Arbre trogné, Trogne alimentaire, Palissé, Arbuste, Arbrisseau, Herbacée, Grimpante, Couvre-sol, Liane, Aquatique."
+    PlantPopulation:
+      type: string
+      enum: [strong, medium, rare, single]
+      description: "Forte population, Moyenne, Rare, Un seul individu."
+    PlantStockType:
+      type: string
+      enum: [container, bare_root, b2b, forest_plug]
+      description: "Conteneur, Racines nues, B2B, Mini-motte forestière."
+    HarvestPart:
+      type: string
+      enum: [flower, leaf, fruit, root, seed, sap, other]
+      description: "Fleur, Feuille, Fruit, Racine, Graine, Sève, Autre."
+    MapFeatureKind:
+      type: string
+      enum: [zone, path, point, plant, node, line, comment, observation, lodging, space]
+    MapLayerKind:
+      type: string
+      enum: [venues, management, welcome, plants, network, comments, sketch, biodiversity, design]
+      description: "network et sketch ont plusieurs couches : les désigner par layer_id."
+    MapTaskSector:
+      type: string
+      enum: [terrain, nourricier]
+    MapSubjectType:
+      type: string
+      enum: [MapFeature, Plant]
+    HarvestWindow:
+      type: object
+      properties:
+        part: { $ref: "#/components/schemas/HarvestPart" }
+        part_label: { type: string, example: "Fruit" }
+        months: { type: array, items: { type: integer, minimum: 1, maximum: 12 }, example: [9, 10] }
+    HarvestWindowInput:
+      type: object
+      required: [part, months]
+      properties:
+        part: { type: string, description: "Clé de HarvestPart ou son libellé (« Fruit »).", example: "fruit" }
+        months: { type: array, items: { type: integer, minimum: 1, maximum: 12 }, example: [9, 10] }
+    PlantSpecies:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "plant_species" }
+        name: { type: string, example: "Pommier" }
+        latin_name: { type: string, nullable: true, example: "Malus domestica" }
+        full_name: { type: string, example: "Pommier (Malus domestica)" }
+        family: { type: string, nullable: true, example: "Rosaceae" }
+        common_names: { type: string, nullable: true }
+        hardiness: { type: string, nullable: true }
+        height: { type: string, nullable: true }
+        spread: { type: string, nullable: true }
+        exposure: { type: array, items: { type: string } }
+        edible_parts: { type: array, items: { type: string } }
+        wikipedia_url: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        harvest_windows:
+          type: array
+          description: Fenêtres de récolte PAR DÉFAUT, héritées par les plantes qui n'en ont pas en propre.
+          items: { $ref: "#/components/schemas/HarvestWindow" }
+        varieties:
+          type: array
+          items: { type: object, properties: { id: { type: integer }, name: { type: string } } }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PlantSpeciesInput:
+      type: object
+      properties:
+        name: { type: string, description: "Obligatoire à la création. Clé de l'upsert (casse ignorée).", example: "Pommier" }
+        latin_name: { type: string, example: "Malus domestica" }
+        family: { type: string }
+        common_names: { type: string }
+        hardiness: { type: string }
+        height: { type: string }
+        spread: { type: string }
+        exposure: { type: array, items: { type: string } }
+        edible_parts: { type: array, items: { type: string } }
+        wikipedia_url: { type: string }
+        notes: { type: string }
+        harvest_windows:
+          type: array
+          description: Remplace les fenêtres par défaut. Absent = inchangées ; liste vide = aucune.
+          items: { $ref: "#/components/schemas/HarvestWindowInput" }
+    PlantVariety:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "plant_variety" }
+        name: { type: string, example: "Reinette Hernaut" }
+        full_name: { type: string, example: "Pommier Reinette Hernaut" }
+        notes: { type: string, nullable: true }
+        plant_species_id: { type: integer }
+        species: { $ref: "#/components/schemas/PlantSpeciesRef" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PlantSpeciesRef:
+      type: object
+      nullable: true
+      properties:
+        id: { type: integer }
+        name: { type: string, example: "Pommier" }
+        latin_name: { type: string, nullable: true, example: "Malus domestica" }
+    Plant:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "plant" }
+        name: { type: string, example: "Pommier Reinette Hernaut cl" }
+        display_name: { type: string }
+        number: { type: number, nullable: true, example: 9.1, description: "Numéro de terrain, décimal (9.1 existe)." }
+        number_label: { type: string, nullable: true, example: "9.1" }
+        status: { $ref: "#/components/schemas/PlantStatus" }
+        status_label: { type: string, example: "Existante" }
+        health: { $ref: "#/components/schemas/PlantHealth" }
+        production: { $ref: "#/components/schemas/PlantProduction" }
+        habit: { $ref: "#/components/schemas/PlantHabit" }
+        stratum: { $ref: "#/components/schemas/PlantStratum" }
+        population: { $ref: "#/components/schemas/PlantPopulation" }
+        stock_type: { $ref: "#/components/schemas/PlantStockType" }
+        zone: { type: string, nullable: true, example: "Verger" }
+        plant_count: { type: integer, nullable: true }
+        purchase_price_cents: { type: integer, nullable: true }
+        planted_on: { type: string, format: date, nullable: true }
+        planted_year: { type: integer, nullable: true }
+        altitude: { type: integer, nullable: true }
+        nursery: { type: string, nullable: true }
+        notion_url: { type: string, nullable: true }
+        notes: { type: string, nullable: true, description: "Texte libre de la fiche. Les notes datées sont dans `notes_log` (fiche détaillée)." }
+        placed: { type: boolean, description: "true = un point sur la carte ; false = « à placer »." }
+        latitude: { type: number, nullable: true, example: 50.3312 }
+        longitude: { type: number, nullable: true, example: 4.8765 }
+        map_feature_id: { type: integer, nullable: true }
+        species: { $ref: "#/components/schemas/PlantSpeciesRef" }
+        variety:
+          type: object
+          nullable: true
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            plant_species_id: { type: integer }
+        harvest_windows:
+          type: array
+          description: Les fenêtres PROPRES de la plante.
+          items: { $ref: "#/components/schemas/HarvestWindow" }
+        harvest_windows_inherited: { type: boolean, description: "true si la plante n'a pas de fenêtre propre et hérite de son espèce." }
+        harvest_windows_effective:
+          type: array
+          description: Les fenêtres qui s'appliquent — propres si elle en a, sinon celles de l'espèce.
+          items:
+            allOf:
+              - $ref: "#/components/schemas/HarvestWindow"
+              - type: object
+                properties:
+                  inherited: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PlantDetail:
+      allOf:
+        - $ref: "#/components/schemas/Plant"
+        - type: object
+          properties:
+            notes_log: { type: array, items: { $ref: "#/components/schemas/MapNote" } }
+            photos: { type: array, items: { $ref: "#/components/schemas/Photo" } }
+            tasks: { type: array, items: { $ref: "#/components/schemas/MapTask" } }
+    PlantInput:
+      type: object
+      description: >
+        Tous les champs sont facultatifs ; sans `name`, la plante prend « espèce
+        variété ». Les listes fermées acceptent la clé ou le libellé Notion.
+      properties:
+        name: { type: string }
+        number: { oneOf: [{ type: number }, { type: string }], example: 9.1, description: "Unique parmi les plantes vivantes ; doublon → 422." }
+        species_name: { type: string, example: "Pommier", description: "Résolu par nom (casse ignorée), créé au besoin." }
+        species_latin_name: { type: string, example: "Malus domestica", description: "Posé seulement si l'espèce est créée." }
+        plant_species_id: { type: integer }
+        variety_name: { type: string, example: "Reinette Hernaut", description: "Variété de l'espèce donnée (ou actuelle), créée au besoin." }
+        plant_variety_id: { type: integer }
+        status: { type: string, description: "Clé de PlantStatus ou libellé." }
+        health: { type: string, description: "Clé de PlantHealth ou libellé." }
+        production: { type: string, description: "Clé de PlantProduction ou libellé." }
+        habit: { type: string, description: "Clé de PlantHabit ou libellé." }
+        stratum: { type: string, description: "Clé de PlantStratum ou libellé." }
+        population: { type: string, description: "Clé de PlantPopulation ou libellé." }
+        stock_type: { type: string, description: "Clé de PlantStockType ou libellé." }
+        zone: { type: string }
+        plant_count: { type: integer }
+        purchase_price_cents: { type: integer }
+        planted_on: { type: string, format: date }
+        planted_year: { type: integer }
+        altitude: { type: integer }
+        nursery: { type: string }
+        notion_url: { type: string, description: "Clé de l'upsert de POST /plants." }
+        notes: { type: string }
+        latitude: { type: number, description: "Avec longitude (WGS84) : place ou déplace la plante." }
+        longitude: { type: number }
+        placed: { type: boolean, description: "false retire la plante de la carte (elle redevient « à placer »)." }
+        harvest_windows:
+          type: array
+          description: Remplace les fenêtres propres. Absent = inchangées ; liste vide = retour à l'héritage de l'espèce.
+          items: { $ref: "#/components/schemas/HarvestWindowInput" }
+      example:
+        name: "Pommier Reinette Hernaut cl"
+        number: 9.1
+        species_name: "Pommier"
+        species_latin_name: "Malus domestica"
+        variety_name: "Reinette Hernaut"
+        status: "Existante"
+        stratum: "Arbre"
+        zone: "Verger"
+        notion_url: "https://www.notion.so/…"
+        latitude: 50.3312
+        longitude: 4.8765
+        harvest_windows: [{ part: "fruit", months: [9, 10] }]
+    MapNote:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "map_note" }
+        subject_type: { $ref: "#/components/schemas/MapSubjectType" }
+        subject_id: { type: integer }
+        body: { type: string, example: "Bourgeons gelés" }
+        noted_on: { type: string, format: date }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Photo:
+      type: object
+      properties:
+        id: { type: integer, description: "Identifiant de la pièce jointe (pour DELETE …/photos/{id})." }
+        filename: { type: string, example: "pommier.jpg" }
+        content_type: { type: string, example: "image/jpeg" }
+        byte_size: { type: integer }
+        url: { type: string, format: uri }
+        created_at: { type: string, format: date-time }
+    MapTask:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "map_task" }
+        subject_type: { $ref: "#/components/schemas/MapSubjectType" }
+        subject_id: { type: integer }
+        label: { type: string, example: "Taille d'hiver" }
+        months: { type: array, items: { type: integer, minimum: 1, maximum: 12 } }
+        sector: { $ref: "#/components/schemas/MapTaskSector" }
+        sector_label: { type: string }
+        frequency: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        position: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    MapTaskInput:
+      type: object
+      properties:
+        label: { type: string }
+        months: { type: array, items: { type: integer, minimum: 1, maximum: 12 } }
+        sector: { type: string, description: "Clé de MapTaskSector ou libellé. Par défaut : terrain pour un objet, nourricier pour une plante." }
+        frequency: { type: string }
+        notes: { type: string }
+    MapFeature:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, example: "map_feature" }
+        feature_kind: { $ref: "#/components/schemas/MapFeatureKind" }
+        layer_id: { type: integer }
+        layer_kind: { $ref: "#/components/schemas/MapLayerKind" }
+        name: { type: string, nullable: true, description: "Nom affiché (français, sinon lieux ou plante)." }
+        name_i18n: { type: object, additionalProperties: { type: string }, example: { fr: "Prairie du bas" } }
+        description_i18n: { type: object, additionalProperties: { type: string } }
+        geometry: { $ref: "#/components/schemas/GeoJSONGeometry" }
+        geometry_type: { type: string, enum: [Point, LineString, Polygon] }
+        properties: { type: object, additionalProperties: true, example: { management_notes: "Fauche tardive" } }
+        position: { type: integer }
+        plant_id: { type: integer, nullable: true, description: "La plante que ce point représente (feature_kind plant)." }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    MapFeatureDetail:
+      allOf:
+        - $ref: "#/components/schemas/MapFeature"
+        - type: object
+          properties:
+            notes_log: { type: array, items: { $ref: "#/components/schemas/MapNote" } }
+            photos: { type: array, items: { $ref: "#/components/schemas/Photo" } }
+            tasks: { type: array, items: { $ref: "#/components/schemas/MapTask" } }
+    MapFeatureInput:
+      type: object
+      properties:
+        layer_id: { type: integer }
+        layer_kind: { type: string, description: "Clé de MapLayerKind (couches uniques seulement)." }
+        feature_kind: { type: string, description: "Clé de MapFeatureKind, sauf plant. Déduit de la géométrie si absent." }
+        geometry: { $ref: "#/components/schemas/GeoJSONGeometry" }
+        name_i18n: { type: object, additionalProperties: { type: string }, description: "Clés fr, en, nl." }
+        description_i18n: { type: object, additionalProperties: { type: string } }
+        properties: { type: object, additionalProperties: true }
+        position: { type: integer }
+    GeoJSONGeometry:
+      type: object
+      description: "GeoJSON Point, LineString ou Polygon, positions en [longitude, latitude] (WGS84)."
+      required: [type, coordinates]
+      properties:
+        type: { type: string, enum: [Point, LineString, Polygon] }
+        coordinates: { type: array, items: {} }
+      example: { type: Point, coordinates: [4.8765, 50.3312] }

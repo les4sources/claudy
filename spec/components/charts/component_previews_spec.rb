@@ -5,7 +5,8 @@ require "rails_helper"
 RSpec.describe "Previews Lookbook des graphes", type: :component do
   {
     Charts::StackedBarsComponentPreview => %i[with_data empty single_series],
-    Charts::DonutComponentPreview => %i[with_data with_missing_accounting empty]
+    Charts::DonutComponentPreview => %i[with_data with_missing_accounting empty],
+    Charts::BalanceLineComponentPreview => %i[with_data below_zero empty]
   }.each do |preview_class, scenarios|
     scenarios.each do |scenario|
       it "rend #{preview_class}##{scenario}" do

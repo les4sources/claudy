@@ -78,6 +78,82 @@ RSpec.describe "API v1 — configuration du rapprochement", type: :request do
       expect(AllocationRule.count).to eq(0)
     end
 
+    # Issue #392 — une règle peut se limiter à un compte de trésorerie, adressé
+    # par son nom comme les autres associations.
+    describe "la restriction à un compte de trésorerie" do
+      let!(:banque) { GeneralAccount.create!(code: "550000", name: "Banque", klass: 5, nature: "asset") }
+      let!(:beobank) do
+        CashAccount.create!(name: "Beobank SRL", kind: "bank", legal_entity: entity, general_account: banque)
+      end
+      let!(:triodos) do
+        CashAccount.create!(name: "Triodos Fondation", kind: "bank", legal_entity: entity, general_account: banque)
+      end
+
+      it "résout le compte par son nom et le rend dans les critères" do
+        post "/api/v1/allocation_rules",
+             params: { allocation_rule: regle[:allocation_rule].merge(cash_account_name: "Beobank SRL") }.to_json,
+             headers: headers
+
+        expect(response).to have_http_status(:created)
+        expect(body.dig("data", "criteria", "cash_account_name")).to eq("Beobank SRL")
+        expect(body.dig("data", "criteria", "cash_account_id")).to eq(beobank.id)
+      end
+
+      it "rend un compte vide pour une règle valable partout" do
+        post "/api/v1/allocation_rules", params: regle.to_json, headers: headers
+
+        expect(body.dig("data", "criteria")).to include("cash_account_id" => nil, "cash_account_name" => nil)
+      end
+
+      it "refuse un compte inconnu, dans la langue de l'agent" do
+        post "/api/v1/allocation_rules",
+             params: { allocation_rule: regle[:allocation_rule].merge(cash_account_name: "Belfius") }.to_json,
+             headers: headers
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(body["message"]).to eq("Compte de trésorerie inconnu : Belfius.")
+        expect(AllocationRule.count).to eq(0)
+      end
+
+      it "refuse une règle qui ne tiendrait que par son compte" do
+        post "/api/v1/allocation_rules",
+             params: { allocation_rule: { label: "Tout Beobank", cash_account_name: "Beobank SRL",
+                                          general_account_code: "701001",
+                                          legal_entity_name: "Fondation Les 4 Sources" } }.to_json,
+             headers: headers
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(body["messages"].join).to include("sans aucun critère")
+      end
+
+      it "met à jour le compte par l'UPSERT sur le libellé" do
+        post "/api/v1/allocation_rules",
+             params: { allocation_rule: regle[:allocation_rule].merge(cash_account_name: "Beobank SRL") }.to_json,
+             headers: headers
+
+        expect {
+          post "/api/v1/allocation_rules",
+               params: { allocation_rule: regle[:allocation_rule].merge(cash_account_name: "Triodos Fondation") }.to_json,
+               headers: headers
+        }.not_to change(AllocationRule, :count)
+
+        expect(response).to have_http_status(:ok)
+        expect(AllocationRule.find_by(label: "Bar — virements").cash_account).to eq(triodos)
+      end
+
+      it "lève la restriction par PATCH avec un identifiant nul" do
+        regle_restreinte = AllocationRule.create!(label: "Bar", communication_contains: "bar ",
+                                                  general_account: bar, legal_entity: entity,
+                                                  cash_account: beobank)
+
+        patch "/api/v1/allocation_rules/#{regle_restreinte.id}",
+              params: { allocation_rule: { cash_account_id: nil } }.to_json, headers: headers
+
+        expect(response).to have_http_status(:ok)
+        expect(regle_restreinte.reload.cash_account).to be_nil
+      end
+    end
+
     it "exige un jeton" do
       post "/api/v1/allocation_rules", params: regle.to_json,
                                        headers: { "CONTENT_TYPE" => "application/json" }

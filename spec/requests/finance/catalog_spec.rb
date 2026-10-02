@@ -43,11 +43,47 @@ RSpec.describe "Finances > Catalogue", type: :request do
       expect(response.body).not_to include("Moinette")
     end
 
-    it "cherche par nom" do
+    it "filtre sur le canal DPH" do
+      CatalogItem.create!(name: "Lessive biotop", channel: "dph", unit: "l")
+
+      get finance_catalog_index_path(channel: "dph")
+
+      expect(response.body).to include("Lessive biotop")
+      expect(response.body).not_to include("Moinette")
+      expect(response.body).to include(">DPH<")
+    end
+
+        it "cherche par nom" do
       get finance_catalog_index_path(q: "moin")
 
       expect(response.body).to include("Moinette")
       expect(response.body).not_to include("Avoine bio")
+    end
+
+    # Les inactifs ne se mêlent plus aux actifs : ils passent dans une section
+    # à part, sous la liste.
+    it "range les articles inactifs dans une section sous les actifs" do
+      CatalogItem.create!(name: "Grosse Bertha", channel: "bar", unit: "piece", active: false)
+
+      get finance_catalog_index_path(channel: "bar")
+
+      body = response.body
+      expect(body).to include("Articles inactifs (1)")
+      expect(body.index("Moinette")).to be < body.index("Articles inactifs")
+      expect(body.index("Grosse Bertha")).to be > body.index("Articles inactifs")
+    end
+
+    it "n'affiche pas de section inactifs quand il n'y en a pas" do
+      get finance_catalog_index_path(channel: "bar")
+
+      expect(response.body).not_to include("Articles inactifs")
+    end
+
+    it "n'affiche pas le libellé « Q » au-dessus de la recherche" do
+      get finance_catalog_index_path
+
+      expect(response.body).not_to match(%r{<label[^>]*>\s*Q\s*</label>})
+      expect(response.body).to include('placeholder="Chercher un article…"')
     end
   end
 
@@ -104,6 +140,48 @@ RSpec.describe "Finances > Catalogue", type: :request do
       expect(response.body).to include("ne peut pas être calculé")
     end
 
+    # CLAUDY-7X : un second palier à la date d'un palier existant faisait une
+    # 500 (le précédent se voyait clore la veille de son propre début), sans rien
+    # afficher. Il corrige désormais le palier du jour.
+    it "corrige le palier du jour au lieu d'échouer quand on en pose un second à la même date" do
+      post finance_catalog_prices_path(moinette), params: {
+        catalog_price: { active_from: "2026-09-30", purchase_price: "2,00", member_price: "2,20", public_price: "4,00" }
+      }
+      post finance_catalog_prices_path(moinette), params: {
+        catalog_price: { active_from: "2026-09-30", purchase_price: "2,10", member_price: "2,31", public_price: "4,20" }
+      }
+
+      expect(response).to redirect_to(finance_catalog_path(moinette))
+      paliers = moinette.catalog_prices.chronological.to_a
+      expect(paliers.size).to eq(2)
+      expect(paliers.first.active_until).to eq(Date.new(2026, 9, 29))
+      expect(paliers.last).to have_attributes(active_from: Date.new(2026, 9, 30), active_until: nil,
+                                              purchase_price_cents: 210, member_price_cents: 231,
+                                              public_price_cents: 420)
+      follow_redirect!
+      expect(response.body).to include("a été corrigé")
+    end
+
+    it "ne clôt pas le palier en vigueur quand le nouveau est refusé faute de prix" do
+      post finance_catalog_prices_path(moinette), params: { catalog_price: { active_from: "2026-10-01" } }
+
+      expect(moinette.catalog_prices.sole.active_until).to be_nil
+    end
+
+    it "ne clôt pas le palier en vigueur quand le nouveau chevauche un palier futur, et le dit" do
+      moinette.catalog_prices.first.update!(active_until: Date.new(2026, 11, 30))
+      moinette.catalog_prices.create!(active_from: Date.new(2026, 12, 1), member_price_cents: 240)
+
+      post finance_catalog_prices_path(moinette), params: {
+        catalog_price: { active_from: "2026-10-01", member_price: "2,30" }
+      }
+
+      expect(moinette.catalog_prices.chronological.first.active_until).to eq(Date.new(2026, 11, 30))
+      expect(moinette.catalog_prices.count).to eq(2)
+      follow_redirect!
+      expect(response.body).to include("chevauche un palier existant")
+    end
+
     it "accepte la virgule décimale et laisse vides les prix non saisis" do
       post finance_catalog_prices_path(avoine), params: {
         catalog_price: { active_from: "2026-09-01", member_price: "2,85" }
@@ -112,6 +190,46 @@ RSpec.describe "Finances > Catalogue", type: :request do
       palier = avoine.catalog_prices.most_recent_first.first
       expect(palier.member_price_cents).to eq(285)
       expect(palier.purchase_price_cents).to be_nil
+    end
+  end
+
+  # Le fournisseur d'un prix d'achat vient des tiers de la comptabilité.
+  describe "fournisseur d'un palier" do
+    let!(:agricovert) { ThirdParty.create!(name: "Agricovert", kind: "supplier") }
+    let!(:interbio) { ThirdParty.create!(name: "Interbio", kind: "both") }
+    let!(:client) { ThirdParty.create!(name: "Épicerie de la Gare", kind: "customer") }
+
+    it "enregistre le fournisseur choisi et l'affiche dans l'historique" do
+      post finance_catalog_prices_path(avoine), params: {
+        catalog_price: { active_from: "2026-09-01", purchase_price: "2,00", member_price: "2,34", third_party_id: agricovert.id }
+      }
+
+      expect(avoine.catalog_prices.most_recent_first.first.third_party).to eq(agricovert)
+
+      get finance_catalog_path(avoine)
+      expect(response.body).to include("Agricovert")
+    end
+
+    it "ne propose que les fournisseurs, et préselectionne celui du palier en vigueur" do
+      avoine.catalog_prices.first.update!(third_party: interbio)
+
+      get finance_catalog_path(avoine)
+
+      options = Nokogiri::HTML(response.body).css("select[name='catalog_price[third_party_id]'] option")
+      expect(options.map(&:text)).to include("Agricovert", "Interbio")
+      expect(options.map(&:text)).not_to include("Épicerie de la Gare")
+      expect(options.find { |o| o["selected"] }&.text).to eq("Interbio")
+    end
+
+    it "refuse un tiers client" do
+      expect {
+        post finance_catalog_prices_path(avoine), params: {
+          catalog_price: { active_from: "2026-09-01", member_price: "2,34", third_party_id: client.id }
+        }
+      }.not_to change(CatalogPrice, :count)
+
+      follow_redirect!
+      expect(response.body).to include("doit être un tiers fournisseur")
     end
   end
 
@@ -148,6 +266,44 @@ RSpec.describe "Finances > Catalogue", type: :request do
       get finance_catalog_suggest_price_path(channel: "bar", purchase: "1,91")
 
       expect(JSON.parse(response.body)["member_price"]).to eq(2.10)
+    end
+
+    it "renvoie le prix de vente conseillé à 30 % de marge, sans proposer de prix public" do
+      get finance_catalog_suggest_price_path(channel: "grocery", purchase: "2,00")
+
+      json = JSON.parse(response.body)
+      expect(json["recommended_public_price"]).to eq(2.60)
+      expect(json).not_to have_key("public_price")
+    end
+  end
+
+  # Marge sur coût : (public − achat) ÷ achat. Rouge sous 25 %, orange jusqu'à
+  # 28 %, vert au-delà (Michael, 2026-09-30).
+  describe "marge" do
+    it "affiche la marge colorée dans la liste" do
+      get finance_catalog_index_path(channel: "grocery")
+
+      # Avoine bio : achat 2,40, public 3,10 → 29 %, vert.
+      marge = Nokogiri::HTML(response.body).at_css("[data-margin-level]")
+      expect(marge.text).to eq("29 %")
+      expect(marge["data-margin-level"]).to eq("good")
+      expect(marge["class"]).to include("text-green-700")
+    end
+
+    it "affiche la marge dans l'en-tête et l'historique d'un article" do
+      get finance_catalog_path(moinette)
+
+      # Moinette : achat 1,91, public 4,00 → 109 %.
+      expect(Nokogiri::HTML(response.body).css("[data-margin-level]").map(&:text)).to all(eq("109 %"))
+    end
+
+    it "retire le champ Référence et rend le fournisseur cherchable" do
+      get finance_catalog_path(avoine)
+
+      doc = Nokogiri::HTML(response.body)
+      expect(doc.at_css("input[name='catalog_price[reference_price]']")).to be_nil
+      expect(doc.at_css("[data-controller~='searchable-select'] select[name='catalog_price[third_party_id]']")).to be_present
+      expect(response.body).to include("Prix de vente conseillé (marge 30 %)")
     end
   end
 

@@ -45,6 +45,7 @@ class LegalEntity < ApplicationRecord
   has_many :fiscal_years, dependent: :restrict_with_error
   has_many :cash_accounts, dependent: :restrict_with_error
   has_many :journal_entries, dependent: :restrict_with_error
+  has_many :compliance_obligations, dependent: :restrict_with_error
 
   validates :name, presence: true, uniqueness: true
   validates :form, inclusion: { in: FORMS }
