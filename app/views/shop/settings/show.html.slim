@@ -25,6 +25,22 @@
       = f.label :bic, "BIC", class: "block text-sm font-medium text-gray-700"
       = f.text_field :bic, class: "mt-1 w-full rounded-md border-gray-300 font-mono text-sm shadow-sm"
       p.mt-1.text-xs.text-gray-400 Facultatif pour un virement SEPA, mais certaines applis bancaires le préfèrent.
+    / La correspondance carnet → compte de produit (epic #359, phase 4) : c'est
+      vers ces comptes que les règles EPICERIE, PAIN et ARTISANAT <PRÉNOM>
+      proposent de ranger les virements. Vide = le compte par défaut du plan.
+    .border-t.border-gray-100.pt-4
+      h2.text-sm.font-semibold.text-gray-900 Comptes de produit des carnets
+      p.mt-0.5.text-xs.text-gray-500 Les règles d'affectation par mot-clé proposent ces comptes. Laissé vide, c'est le compte par défaut qui sert.
+    - ShopSetting::NOTEBOOKS.each do |notebook|
+      - field = :"#{notebook}_account_id"
+      - default_code = ShopSetting::DEFAULT_ACCOUNT_CODES.fetch(notebook)
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" data-searchable-select-clearable-value="true" class="relative")
+        = f.label field, "Carnet #{ShopSetting::NOTEBOOK_LABELS.fetch(notebook)}", class: "block text-sm font-medium text-gray-700"
+        = f.collection_select field, @revenue_accounts, :id, :to_s, { include_blank: "Par défaut (#{default_code})" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un compte"
+        - account = @settings.revenue_account(notebook)
+        p.mt-1.text-xs class=(account ? "text-gray-400" : "text-amber-700")
+          = account ? "Utilisé : #{account}" : "Aucun compte #{default_code} au plan comptable : pas de règle pour ce carnet."
     = f.submit "Enregistrer", class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
 
   - unless @settings.bank_configured?

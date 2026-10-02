@@ -25,6 +25,8 @@ section.portal-block
     p
       | À recevoir, tous relevés non réglés confondus :
       strong = " #{number_to_currency(@net_due_cents / 100.0)}"
+    - if @current_report&.persisted?
+      = render "portal/consignments/bank_check", report: @current_report
     - if @last_report.present? && @last_report != @current_report
       p
         | Dernier relevé :
@@ -40,6 +42,7 @@ section.portal-block
     = link_to portal_consignor_products_path, class: "portal-link" do
       = "Mes produits (#{@products_count})"
     = link_to "Imprimer ma feuille", portal_consignor_sheet_path, target: "_blank", class: "portal-link"
+    = link_to "Mes virements", portal_consignor_transfers_path, class: "portal-link"
     = link_to "Ma photo et ma présentation", portal_consignor_profile_path, class: "portal-link"
 
 section.portal-block

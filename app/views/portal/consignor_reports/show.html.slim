@@ -44,3 +44,12 @@
       p.mt-1.text-xs.text-gray-500 = "#{@report.photos.count} photo(s) déjà jointe(s)."
 
   = f.submit "Enregistrer mes ventes", class: "portal-btn portal-btn--block"
+
+/ Une fois des ventes enregistrées, ce qui est arrivé en face (phase 4).
+- if @report.persisted?
+  section.portal-block.mt-8
+    .portal-block__head
+      h2.portal-section-title Face à la banque
+    = render "portal/consignments/bank_check", report: @report
+    p.mt-2.text-sm
+      = link_to "Voir mes virements", portal_consignor_transfers_path, class: "portal-link"

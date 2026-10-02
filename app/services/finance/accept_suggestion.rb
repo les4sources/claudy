@@ -9,9 +9,14 @@ module Finance
     class AlreadyDecided < StandardError; end
     class EntryPosted < StandardError; end
 
-    def initialize(suggestion:, whodunnit: nil)
+    # `consignor:` — l'artisan choisi sur l'écran quand la suggestion va au
+    # compte artisanat (epic #359, phase 4). Par défaut (`:match`), celui que
+    # désigne le mot-clé de la communication : c'est le cas de l'acceptation en
+    # masse, bornée à une règle « ARTISANAT <PRÉNOM> ». `nil` : personne.
+    def initialize(suggestion:, whodunnit: nil, consignor: :match)
       @suggestion = suggestion
       @whodunnit = whodunnit
+      @consignor = consignor
     end
 
     def run
@@ -54,6 +59,7 @@ module Finance
           label: "Suggestion acceptée"
         )
 
+        link_consignor(entry)
         @suggestion.update!(status: "accepted", decided_at: Time.current, decided_by: @whodunnit)
         @suggestion.allocation_rule&.increment!(:accepted_count)
       end
@@ -66,6 +72,13 @@ module Finance
       end
 
       allocation
+    end
+
+    def link_consignor(entry)
+      transfer = Shop::ConsignorTransfer.new(cash_entry: entry)
+      return unless transfer.craft_allocation?(@suggestion.general_account_id)
+
+      transfer.link!(@consignor == :match ? transfer.suggested_consignor : @consignor)
     end
   end
 end

@@ -10,11 +10,11 @@ module Shop
     layout "print_sheet"
 
     def grocery
-      numbered_sheet(:grocery, "EPICERIE")
+      numbered_sheet(:grocery, ShopSetting::NOTEBOOK_KEYWORDS.fetch(:grocery))
     end
 
     def bread
-      numbered_sheet(:bread, "PAIN")
+      numbered_sheet(:bread, ShopSetting::NOTEBOOK_KEYWORDS.fetch(:bread))
     end
 
     # La feuille de prix du mur (décision 12) : prix public du jour, ou prix

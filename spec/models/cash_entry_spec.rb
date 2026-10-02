@@ -14,6 +14,7 @@ require "rails_helper"
 #  excluded_reason   :string
 #  external_ref      :string
 #  fingerprint       :string
+#  jev_checked_at    :datetime
 #  label             :string           not null
 #  notes             :text
 #  source_type       :string
@@ -25,12 +26,14 @@ require "rails_helper"
 #  updated_at        :datetime         not null
 #  cash_account_id   :bigint           not null
 #  cash_motif_id     :bigint
+#  consignor_id      :bigint
 #  source_id         :bigint
 #
 # Indexes
 #
 #  index_cash_entries_on_cash_account_id   (cash_account_id)
 #  index_cash_entries_on_cash_motif_id     (cash_motif_id)
+#  index_cash_entries_on_consignor_id      (consignor_id)
 #  index_cash_entries_on_deleted_at        (deleted_at)
 #  index_cash_entries_on_entry_date        (entry_date)
 #  index_cash_entries_on_external_ref      (cash_account_id,external_ref) UNIQUE WHERE (external_ref IS NOT NULL)
@@ -43,6 +46,7 @@ require "rails_helper"
 #
 #  fk_rails_...  (cash_account_id => cash_accounts.id)
 #  fk_rails_...  (cash_motif_id => cash_motifs.id)
+#  fk_rails_...  (consignor_id => consignors.id)
 #
 require Rails.root.join("spec/support/finance_builders")
 

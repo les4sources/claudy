@@ -840,6 +840,8 @@ Rails.application.routes.draw do
     # Sa feuille à imprimer et ce qui y figure : photo, phrase (phase 3).
     get   "feuille", to: "consignor_sheets#show", as: :sheet
     get   "profil",  to: "consignor_profiles#edit", as: :profile
+    # Ses virements reçus à la fondation, lecture seule (phase 4).
+    get   "virements", to: "consignor_transfers#index", as: :transfers
     patch "profil",  to: "consignor_profiles#update"
     patch "releves/:period", to: "consignor_reports#update", constraints: { period: /\d{4}-\d{2}/ }
   end

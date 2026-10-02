@@ -36,12 +36,14 @@
 #  updated_at        :datetime         not null
 #  cash_account_id   :bigint           not null
 #  cash_motif_id     :bigint
+#  consignor_id      :bigint
 #  source_id         :bigint
 #
 # Indexes
 #
 #  index_cash_entries_on_cash_account_id   (cash_account_id)
 #  index_cash_entries_on_cash_motif_id     (cash_motif_id)
+#  index_cash_entries_on_consignor_id      (consignor_id)
 #  index_cash_entries_on_deleted_at        (deleted_at)
 #  index_cash_entries_on_entry_date        (entry_date)
 #  index_cash_entries_on_external_ref      (cash_account_id,external_ref) UNIQUE WHERE (external_ref IS NOT NULL)
@@ -54,6 +56,7 @@
 #
 #  fk_rails_...  (cash_account_id => cash_accounts.id)
 #  fk_rails_...  (cash_motif_id => cash_motifs.id)
+#  fk_rails_...  (consignor_id => consignors.id)
 #
 class CashEntry < ApplicationRecord
   STATUSES = %w[pending allocated excluded].freeze
@@ -75,6 +78,11 @@ class CashEntry < ApplicationRecord
   # comptable, elle, est copiée sur l'allocation : modifier un motif ne réécrit
   # jamais une ligne déjà saisie (décision 4).
   belongs_to :cash_motif, optional: true
+  # L'artisan à qui revient un virement du carnet Artisanat (epic #359,
+  # phase 4) : « ARTISANAT EMILIE » encaissé par la fondation, c'est la vente
+  # d'Émilie. Posé quand un humain affecte la ligne au compte artisanat, jamais
+  # par une règle seule — c'est ce qui alimente « reçu en banque » sur son relevé.
+  belongs_to :consignor, optional: true
   has_many :cash_allocations, dependent: :destroy
   has_many :allocation_suggestions, dependent: :destroy
   # Une ligne peut engendrer DEUX écritures quand une allocation appartient à
@@ -95,6 +103,7 @@ class CashEntry < ApplicationRecord
   validates :amount_cents, numericality: { only_integer: true, other_than: 0 }
   validates :status, inclusion: { in: STATUSES }
   validates :excluded_reason, presence: true, if: -> { status == "excluded" }
+  validate :consignor_only_on_incoming
 
   validate :frozen_once_posted, on: :update
 
@@ -166,6 +175,14 @@ class CashEntry < ApplicationRecord
     return if (changed & %w[amount_cents cash_account_id entry_date]).empty?
 
     errors.add(:base, "Cette ligne est comptabilisée — annule sa passation avant de la modifier")
+  end
+
+  # Un virement d'artisan est une vente encaissée : une ligne sortante qui lui
+  # serait rattachée compterait un paiement fait à l'artisan comme une recette.
+  def consignor_only_on_incoming
+    return if consignor_id.blank? || amount_cents.to_i.positive?
+
+    errors.add(:consignor, "ne se rattache qu'à un encaissement")
   end
 
   def refuse_destruction
