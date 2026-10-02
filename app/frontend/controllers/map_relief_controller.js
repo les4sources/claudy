@@ -162,6 +162,7 @@ export default class extends Controller {
   disconnect() {
     this.disposed = true
     clearInterval(this.dayTimer)
+    clearTimeout(this.blocksTimer)
     this.unbindNivaKeys()
     this.scene?.dispose()
   }
@@ -236,6 +237,8 @@ export default class extends Controller {
       this.baseLegendTarget.textContent = BASE_LEGENDS[base] || ''
       this.baseLegendTarget.classList.toggle('hidden', !BASE_LEGENDS[base])
     }
+    if (base === 'blocks') return this.renderBlocks()
+    this.scene.hideBlocks()
     if (BASE_LEGENDS[base]) {
       await this.ensureStation()
       this.stationTextures ||= {}
@@ -251,6 +254,26 @@ export default class extends Controller {
       if (this.orthoTexture) return this.scene.setBaseTexture(this.orthoTexture)
     }
     this.scene.setBaseTexture(this.hypsometryTexture)
+  }
+
+  // Le relief en blocs de 2 m (4 m sur petit écran) : ~0,4 s de construction,
+  // refaite quand le terrain creusé ou l'exagération changent.
+  async renderBlocks() {
+    const cell = this.metaValue.cell_size_m
+    const exaggeration = Number(this.exaggerationTarget.value) || 1
+    const ground = this.ground || this.full.heights
+    if (this.blocksBuilt?.ground === ground && this.blocksBuilt.exaggeration === exaggeration) {
+      return this.scene.showBlocks(this.blocksBuilt.input)
+    }
+    this.setLoading('Construction des blocs…')
+    await nextPaint()
+    const input = {
+      ground, original: this.full.heights, surface: this.surface, landcover: this.landcover,
+      cols: this.full.cols, rows: this.full.rows, cell, block: 2 * this.meshFactor * cell, exaggeration,
+    }
+    this.scene.showBlocks(input)
+    this.blocksBuilt = { ground, exaggeration, input }
+    this.setLoading(null)
   }
 
   // Pente, exposition, humidité et gel : ~1 s de calcul, fait une fois, à la
@@ -312,6 +335,12 @@ export default class extends Controller {
     this.exaggerationLabelTarget.textContent = `×${formatNumber(value, 1)}`
     this.scene?.setExaggeration(value)
     if (this.settings.solidSurface) this.applySurfaceHeights()
+    // Des blocs cubiques à toute exagération : on reconstruit, une fois le
+    // curseur posé.
+    if (this.settings.base === 'blocks') {
+      clearTimeout(this.blocksTimer)
+      this.blocksTimer = setTimeout(() => this.renderBlocks(), 250)
+    }
   }
 
   setContour(event) {
@@ -544,6 +573,7 @@ export default class extends Controller {
       this.ground = heights
     }
     if (!keepMesh) this.applySurfaceHeights()
+    if (this.settings.base === 'blocks') this.renderBlocks()
     this.drainage = analyzeDrainage(this.ground, cols, rows, cell)
     this.station = null
     this.stationTextures = null
