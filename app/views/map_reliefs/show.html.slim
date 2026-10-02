@@ -123,6 +123,37 @@
                class="mt-3 text-xs font-medium text-forest hover:underline"
                data-action="map-relief#resetView"] Recentrer la vue
 
+        / La Niva : la voiture du domaine, posée sur le terrain et conduite aux
+          flèches ; la nuit, ses phares et sa rampe éclairent le relief.
+        .mt-4.border-t.border-stone-100.pt-3
+          p class=section_title_css Niva
+          button[type="button"
+                 class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 aria-pressed:border-forest aria-pressed:bg-forest aria-pressed:text-white"
+                 aria-pressed="false"
+                 data-map-relief-target="nivaButton"
+                 data-action="map-relief#toggleNiva"]
+            svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              path d="M3 15v-3l2-5h9l3 5h2a2 2 0 0 1 2 2v1h-2"
+              path d="M9 15h6"
+              circle cx="7" cy="16" r="2"
+              circle cx="17" cy="16" r="2"
+            span data-map-relief-target="nivaLabel" Prendre la Niva
+          p.mt-1.hidden.text-xs.text-forest data-map-relief-target="nivaHint" Cliquez sur le terrain pour la poser (Échap pour annuler).
+          .hidden data-map-relief-target="nivaOptions"
+            p class="#{label_css} mt-2" Éclairage
+            .flex.gap-1
+              button type="button" class="#{choice_css} rounded-lg border border-stone-200" aria-pressed="false" data-niva-light="low" data-action="map-relief#toggleNivaLight" data-map-relief-value-param="low" title="Touche H" Phares
+              button type="button" class="#{choice_css} rounded-lg border border-stone-200" aria-pressed="false" data-niva-light="bar" data-action="map-relief#toggleNivaLight" data-map-relief-value-param="bar" title="Touche L" Rampe et LED
+            p class="#{label_css} mt-2" Caméra
+            div class=group_css data-choice-group="nivaCamera"
+              button type="button" class=choice_css aria-pressed="true" data-action="map-relief#setNivaCamera" data-map-relief-value-param="chase" title="Touche C" Poursuite
+              button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setNivaCamera" data-map-relief-value-param="orbit" title="Touche C" Libre
+            button[type="button" class="mt-2 text-xs font-medium text-forest hover:underline" data-action="map-relief#moveNiva"] La poser ailleurs
+          p class="#{label_css} mt-2" Moment
+          div class=group_css data-choice-group="lighting"
+            button type="button" class=choice_css aria-pressed="true" data-action="map-relief#setLighting" data-map-relief-value-param="day" Jour
+            button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setLighting" data-map-relief-value-param="night" title="Touche N" Nuit
+
         / Le soleil : l'ombre à une heure donnée, ou les heures de soleil direct
           d'une journée, calculées sur les arbres et les toits.
         .mt-4.border-t.border-stone-100.pt-3 data-map-relief-target="sunSection"
@@ -308,5 +339,27 @@
         data-map-relief-target="probe"
         aria-live="polite"]
 
-    p[class="pointer-events-none absolute bottom-3 left-1/2 z-10 hidden -translate-x-1/2 rounded-full bg-white/80 px-3 py-1 text-[0.7rem] text-stone-500 md:block"]
+    / Le tableau de bord de la Niva, et le pavé tactile pour la conduire au doigt.
+    div[class="pointer-events-none absolute right-3 top-3 z-20 hidden min-w-[11rem] rounded-xl bg-stone-900/75 px-3 py-2 text-white shadow-lg backdrop-blur"
+        data-map-relief-target="nivaHud"
+        aria-live="polite"]
+      p.text-2xl.font-semibold.tabular-nums.leading-none
+        span data-map-relief-target="nivaSpeed" 0
+        span.ml-1.text-xs.font-normal.text-stone-300 km/h
+      p class="mt-1 text-[0.7rem] tabular-nums text-stone-200" data-map-relief-target="nivaInfo"
+      p.mt-1.hidden.text-xs.font-semibold data-map-relief-target="nivaStatus"
+    div.hidden data-map-relief-target="nivaPad"
+      div class="absolute bottom-16 right-3 z-20 hidden select-none grid-cols-3 gap-1 [@media(pointer:coarse)]:grid"
+        - [["up", "↑", "Avancer", "col-start-2"], ["left", "←", "Tourner à gauche", "col-start-1"], ["brake", "■", "Freiner", ""], ["right", "→", "Tourner à droite", ""], ["down", "↓", "Reculer", "col-start-2"]].each do |key, glyph, label, css|
+          button[type="button"
+                 class="#{css} flex h-14 w-14 touch-none items-center justify-center rounded-xl bg-stone-900/70 text-2xl text-white active:bg-forest"
+                 aria-label=label
+                 data-action="pointerdown->map-relief#nivaPadDown pointerup->map-relief#nivaPadUp pointerleave->map-relief#nivaPadUp pointercancel->map-relief#nivaPadUp contextmenu->map-relief#nivaPadUp:prevent"
+                 data-map-relief-key-param=key] = glyph
+    p[class="pointer-events-none absolute bottom-3 left-1/2 z-10 hidden -translate-x-1/2 rounded-full bg-stone-900/70 px-3 py-1 text-[0.7rem] text-white"
+      data-map-relief-target="nivaKeys"]
+      | ↑ ↓ avancer, reculer · ← → tourner · espace freiner · H phares · L rampe · N nuit · C caméra
+
+    p[class="pointer-events-none absolute bottom-3 left-1/2 z-10 hidden -translate-x-1/2 rounded-full bg-white/80 px-3 py-1 text-[0.7rem] text-stone-500 md:block"
+      data-map-relief-target="hint"]
       | Glisser pour tourner · clic droit pour déplacer · molette pour zoomer · un clic sonde le terrain

@@ -5,8 +5,9 @@
 // courant), et le soleil (ombres à une heure donnée ou heures de soleil sur la
 // journée, teintées sur le terrain, avec la lumière de la scène à sa place).
 //
-// Ce module est le SEUL à importer three.js, et le contrôleur Stimulus le
-// charge en `import()` dynamique : les autres pages ne paient pas ses 600 Ko.
+// Ce module (et la Niva qu'il embarque) est le SEUL à importer three.js, et le
+// contrôleur Stimulus le charge en `import()` dynamique : les autres pages ne
+// paient pas ses 600 Ko.
 //
 // Repère : x vers l'est, z vers le sud, y vers le haut, en mètres, centré sur
 // la grille. Le terrain, l'eau et les traceurs vivent dans un même groupe dont
@@ -14,6 +15,10 @@
 
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { NIVA, buildNivaModel, setNivaLights } from './map_relief_niva'
+
+// La conduite passe par ce module : le contrôleur ne charge three.js qu'ici.
+export { createNivaState, stepNiva } from './map_relief_niva'
 
 const OVERLAY_SCALE = 2
 const PARTICLES = 5000
@@ -49,7 +54,10 @@ export class ReliefScene {
 
     // Le soleil vient du nord-ouest, comme sur tous les ombrages de relief :
     // c'est la convention que l'œil lit comme « en creux / en bosse ».
-    this.scene.add(new THREE.HemisphereLight('#f4f7fb', '#5b5140', 1.1))
+    this.night = false
+    this.sunIntensity = 1.9
+    this.hemiLight = new THREE.HemisphereLight('#f4f7fb', '#5b5140', 1.1)
+    this.scene.add(this.hemiLight)
     this.sunLight = new THREE.DirectionalLight('#fffaf0', 1.9)
     this.scene.add(this.sunLight)
     this.setSun(null)
@@ -372,13 +380,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, overlay.rgb, overlay.a);`)
     const distance = this.size.width * 1.5
     if (!sun || sun.altitude <= 0) {
       this.sunLight.position.set(-this.size.width, this.size.width * 0.9, -this.size.depth)
-      this.sunLight.intensity = 1.9
-      return
+      this.sunIntensity = 1.9
+      return this.applyLighting()
     }
     const horizontal = Math.cos(sun.altitude) * distance
     this.sunLight.position.set(Math.sin(sun.azimuth) * horizontal, Math.sin(sun.altitude) * distance,
                                -Math.cos(sun.azimuth) * horizontal)
-    this.sunLight.intensity = 2.2
+    this.sunIntensity = 2.2
+    this.applyLighting()
   }
 
   // Une teinte RGBA par maille du MNT (lignes du nord au sud), posée sur le
@@ -558,6 +567,138 @@ diffuseColor.rgb = mix(diffuseColor.rgb, overlay.rgb, overlay.a);`)
     this.particles.geometry.attributes.position.needsUpdate = true
   }
 
+  // ---- La nuit -------------------------------------------------------------
+  //
+  // Un ciel bleu nuit étoilé, une brume qui avale le lointain, une lune
+  // froide : le terrain ne se voit plus guère que dans les phares.
+  setNight(on) {
+    this.night = on
+    this.scene.background.set(on ? '#0a1220' : '#dfe9ee')
+    this.scene.fog = on ? new THREE.FogExp2('#0a1220', 0.0016) : null
+    if (on && !this.stars) this.buildStars()
+    if (this.stars) this.stars.visible = on
+    this.applyLighting()
+    if (this.niva) this.setNivaLights(this.nivaLights)
+  }
+
+  applyLighting() {
+    this.hemiLight.intensity = this.night ? 0.07 : 1.1
+    this.hemiLight.color.set(this.night ? '#8fa6d6' : '#f4f7fb')
+    this.sunLight.intensity = this.night ? 0.14 : this.sunIntensity
+    this.sunLight.color.set(this.night ? '#9db4ff' : '#fffaf0')
+  }
+
+  buildStars() {
+    const count = 1500
+    const radius = this.size.width * 3
+    const positions = new Float32Array(count * 3)
+    for (let i = 0; i < count; i++) {
+      const azimuth = Math.random() * Math.PI * 2
+      const height = 0.08 + Math.random() * 0.92
+      const ring = Math.sqrt(1 - height * height)
+      positions.set([Math.cos(azimuth) * ring * radius, height * radius, Math.sin(azimuth) * ring * radius], i * 3)
+    }
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    this.stars = new THREE.Points(geometry, new THREE.PointsMaterial({
+      color: '#dbe4ff', size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0.85, fog: false,
+    }))
+    this.stars.frustumCulled = false
+    this.scene.add(this.stars)
+  }
+
+  // ---- La Niva ---------------------------------------------------------------
+  //
+  // La voiture vit hors du groupe exagéré : elle garde sa vraie taille, posée
+  // à la hauteur du relief exagéré et inclinée sur sa pente exagérée, pour
+  // coller au terrain qu'on voit. La caméra la suit (« poursuite ») ou tourne
+  // autour d'elle à la souris (« libre »).
+  showNiva(on) {
+    if (on) {
+      this.niva ||= buildNivaModel()
+      this.scene.add(this.niva)
+      this.nivaLights ||= { low: false, bar: false }
+      this.setNivaLights(this.nivaLights)
+      this.camera.near = 0.3
+      this.controls.minDistance = 4
+      this.chaseDistance ||= 14
+      this.setCameraMode(this.cameraMode || 'chase')
+      if (!this.onWheel) {
+        this.onWheel = (event) => {
+          if (this.cameraMode !== 'chase' || !this.niva?.parent) return
+          event.preventDefault()
+          this.chaseDistance = Math.min(80, Math.max(6, this.chaseDistance * (event.deltaY > 0 ? 1.12 : 0.89)))
+        }
+        this.renderer.domElement.addEventListener('wheel', this.onWheel, { passive: false })
+      }
+    } else if (this.niva) {
+      this.scene.remove(this.niva)
+      this.camera.near = 5
+      this.controls.minDistance = 30
+      this.controls.enabled = true
+    }
+    this.camera.updateProjectionMatrix()
+  }
+
+  setCameraMode(mode) {
+    this.cameraMode = mode
+    this.controls.enabled = mode !== 'chase'
+    this.lastNivaTarget = null
+  }
+
+  // `lights` : { low (phares), bar (pare-buffle et rampe de toit) }.
+  setNivaLights(lights) {
+    this.nivaLights = lights
+    if (this.niva) setNivaLights(this.niva, { ...lights, night: this.night, braking: this.nivaBraking })
+  }
+
+  // `state` : l'état de la conduite (`stepNiva`), en mètres depuis le coin
+  // nord-ouest et en altitudes vraies.
+  updateNiva(state, dt) {
+    const model = this.niva
+    if (!model?.parent || !state.wheels) return
+    const g = this.grid
+    const x0 = ((g.cols - 1) * g.cellSize) / 2
+    const z0 = ((g.rows - 1) * g.cellSize) / 2
+    const ex = this.exaggeration
+    const [fl, fr, rl, rr] = state.wheels
+    const forward = new THREE.Vector3(Math.sin(state.heading), 0, -Math.cos(state.heading))
+    const along = forward.clone().multiplyScalar(NIVA.wheelbase).setY(((fl + fr) - (rl + rr)) / 2 * ex).normalize()
+    const left = new THREE.Vector3(-Math.cos(state.heading), 0, -Math.sin(state.heading))
+      .multiplyScalar(NIVA.track).setY(((fl + rl) - (fr + rr)) / 2 * ex).normalize()
+    const up = new THREE.Vector3().crossVectors(along, left).normalize()
+    left.crossVectors(up, along).normalize()
+    model.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(left, up, along))
+    model.position.set(state.x - x0, (state.ground - g.zBase) * ex, state.z - z0)
+
+    const { wheels, steering } = model.userData
+    for (const wheel of wheels) wheel.rotation.x = state.wheelSpin
+    for (const pivot of steering) pivot.rotation.y = -state.steer
+    if (state.braking !== this.nivaBraking) {
+      this.nivaBraking = state.braking
+      this.setNivaLights(this.nivaLights)
+    }
+
+    const target = model.position.clone().add(new THREE.Vector3(0, 1.4, 0))
+    if (this.cameraMode === 'chase') {
+      const desired = target.clone().addScaledVector(forward, -this.chaseDistance)
+      desired.y += this.chaseDistance * 0.38
+      // Jamais sous le terrain, même derrière une butte.
+      const ground = (this.heightAt(desired.x + x0, desired.z + z0) - g.zBase) * ex + 1.5
+      if (desired.y < ground) desired.y = ground
+      const k = this.lastNivaTarget ? 1 - Math.exp(-dt * 4) : 1
+      this.camera.position.lerp(desired, k)
+      this.controls.target.lerp(target.clone().addScaledVector(forward, 4), Math.min(1, k * 2))
+    } else if (this.lastNivaTarget) {
+      const delta = target.clone().sub(this.lastNivaTarget)
+      this.camera.position.add(delta)
+      this.controls.target.add(delta)
+    } else {
+      this.controls.target.copy(target)
+    }
+    this.lastNivaTarget = target
+  }
+
   // L'altitude (m) sous un point du repère local (x vers l'est, z vers le sud,
   // origine au coin nord-ouest), au plus proche sommet du MNT.
   heightAt(x, z) {
@@ -593,6 +734,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, overlay.rgb, overlay.a);`)
     this.renderer.setAnimationLoop(null)
     this.resizeObserver.disconnect()
     this.controls.dispose()
+    if (this.onWheel) this.renderer.domElement.removeEventListener('wheel', this.onWheel)
     this.terrain.geometry.dispose()
     this.material.dispose()
     this.particles.geometry.dispose()

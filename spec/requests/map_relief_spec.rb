@@ -66,6 +66,11 @@ RSpec.describe "Carte du domaine — relief 3D", type: :request do
       expect(page.at_css('[data-choice-group="rainSource"]')).to be_present
       expect(page.at_css('[data-choice-group="soilState"]')).to be_present
       expect(page.at_css('[data-choice-group="plantMode"]')).to be_present
+      # La Niva : la prendre, l'éclairer, la conduire (au doigt sur mobile), de nuit.
+      expect(page.at_css('[data-map-relief-target="nivaButton"]').text).to include("Prendre la Niva")
+      expect(page.at_css('[data-choice-group="lighting"] [data-map-relief-value-param="night"]')).to be_present
+      expect(page.css("[data-niva-light]").map { |button| button["data-niva-light"] }).to eq(%w[low bar])
+      expect(page.css('[data-map-relief-target="nivaPad"] button').size).to eq(5)
       # Les fonds de station, pour placer les espèces.
       %w[aspect wetness frost].each do |kind|
         expect(page.at_css(%([data-map-relief-value-param="#{kind}"]))).to be_present
