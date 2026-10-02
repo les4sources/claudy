@@ -42,13 +42,15 @@ export function isObservationFeature(feature) {
 }
 
 // `realm` absent = le marqueur provisoire d'un relevé pas encore enregistré.
-export function observationIcon(leaflet, realm, selected = false) {
+// `imported` : un relevé venu d'observations.be, en retrait (60 %).
+export function observationIcon(leaflet, realm, selected = false, imported = false) {
   const size = selected ? 36 : 30;
   const glyph = OBSERVATION_GLYPHS[realm];
   const color = OBSERVATION_COLORS[realm] || PENDING_COLOR;
   const classes = ['map-observation-pin'];
   if (selected) classes.push('map-observation-pin--selected');
   if (!glyph) classes.push('map-observation-pin--pending');
+  if (imported) classes.push('map-observation-pin--imported');
   const inner = glyph
     ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyph}</svg>`
     : '+';
@@ -65,7 +67,7 @@ export function observationIcon(leaflet, realm, selected = false) {
 export function observationMarker(leaflet, feature, latlng) {
   const props = feature?.properties || {};
   return leaflet.marker(latlng, {
-    icon: observationIcon(leaflet, props.realm),
+    icon: observationIcon(leaflet, props.realm, false, Boolean(props.source)),
     riseOnHover: true,
     zIndexOffset: 150,
     title: [props.species, props.observed_on].filter(Boolean).join(' — '),
@@ -107,7 +109,8 @@ export const BIODIVERSITY_MODE = {
   panelFlag: 'observationPanel',
   notice: 'Touchez la carte pour y noter une plante ou un animal.',
   isFeature: isObservationFeature,
-  icon: (leaflet, feature, selected) => observationIcon(leaflet, feature?.properties?.realm, selected),
+  icon: (leaflet, feature, selected) =>
+    observationIcon(leaflet, feature?.properties?.realm, selected, Boolean(feature?.properties?.source)),
   pendingIcon: (leaflet) => observationIcon(leaflet, null, true),
 };
 

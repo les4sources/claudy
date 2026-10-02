@@ -49,6 +49,8 @@ export function plantIcon(L, feature, selected = false) {
   const glyph = STRATUM_GLYPHS[props.stratum] || DEFAULT_GLYPH;
   const classes = ['map-plant-pin'];
   if (dead) classes.push('map-plant-pin--dead');
+  // Pas encore plantée (« Sur plan »…) : en retrait, pleine au survol.
+  if (props.planned && !dead) classes.push('map-plant-pin--planned');
   if (selected) classes.push('map-plant-pin--selected');
   return L.divIcon({
     className: 'map-plant-pin-wrapper',
