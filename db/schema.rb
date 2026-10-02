@@ -181,6 +181,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_220000) do
     t.integer "accepted_count", default: 0, null: false
     t.boolean "active", default: true, null: false
     t.bigint "analytic_account_id"
+    t.bigint "cash_account_id"
     t.string "communication_contains"
     t.integer "confidence", default: 80, null: false
     t.string "counterparty_iban"
@@ -200,6 +201,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_220000) do
     t.string "transaction_code"
     t.datetime "updated_at", null: false
     t.index ["analytic_account_id"], name: "index_allocation_rules_on_analytic_account_id"
+    t.index ["cash_account_id"], name: "index_allocation_rules_on_cash_account_id"
     t.index ["deleted_at"], name: "index_allocation_rules_on_deleted_at"
     t.index ["event_id"], name: "index_allocation_rules_on_event_id"
     t.index ["general_account_id"], name: "index_allocation_rules_on_general_account_id"
@@ -2522,6 +2524,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_220000) do
   add_foreign_key "agenda_items", "humans", column: "author_id"
   add_foreign_key "agenda_items", "humans", column: "carrier_id"
   add_foreign_key "allocation_rules", "analytic_accounts"
+  add_foreign_key "allocation_rules", "cash_accounts"
   add_foreign_key "allocation_rules", "events"
   add_foreign_key "allocation_rules", "general_accounts"
   add_foreign_key "allocation_rules", "legal_entities"

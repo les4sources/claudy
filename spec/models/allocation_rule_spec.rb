@@ -21,6 +21,7 @@ require "rails_helper"
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
 #  analytic_account_id        :bigint
+#  cash_account_id            :bigint
 #  event_id                   :bigint
 #  general_account_id         :bigint           not null
 #  legal_entity_id            :bigint           not null
@@ -29,6 +30,7 @@ require "rails_helper"
 # Indexes
 #
 #  index_allocation_rules_on_analytic_account_id  (analytic_account_id)
+#  index_allocation_rules_on_cash_account_id      (cash_account_id)
 #  index_allocation_rules_on_deleted_at           (deleted_at)
 #  index_allocation_rules_on_event_id             (event_id)
 #  index_allocation_rules_on_general_account_id   (general_account_id)
@@ -39,6 +41,7 @@ require "rails_helper"
 # Foreign Keys
 #
 #  fk_rails_...  (analytic_account_id => analytic_accounts.id)
+#  fk_rails_...  (cash_account_id => cash_accounts.id)
 #  fk_rails_...  (event_id => events.id)
 #  fk_rails_...  (general_account_id => general_accounts.id)
 #  fk_rails_...  (legal_entity_id => legal_entities.id)
@@ -104,6 +107,52 @@ RSpec.describe AllocationRule do
 
     it "compare les IBAN sans se laisser tromper par les espaces" do
       expect(rule(counterparty_iban: "BE11 2222 3333 4444").match(entry)).to be_present
+    end
+  end
+
+  # Issue #392 — une règle propre au compte Beobank de la SRL ne doit plus
+  # recouvrir les lignes de la Fondation.
+  describe "la restriction à un compte de trésorerie" do
+    let(:autre_compte) { build_cash_account(entity, bank_account, name: "Beobank SRL") }
+
+    def ligne(compte)
+      build_cash_entry(compte, amount_cents: -12_000, label: "Domiciliation").tap do |e|
+        e.update!(communication: "DOMICILIATION EUROPEENNE")
+      end
+    end
+
+    it "ne correspond pas à une ligne d'un autre compte" do
+      regle = rule(communication_contains: "domiciliation", cash_account: autre_compte)
+
+      expect(regle.match(ligne(cash_account))).to be_nil
+    end
+
+    it "correspond à une ligne du bon compte et nomme le compte dans le motif" do
+      regle = rule(communication_contains: "domiciliation", cash_account: autre_compte)
+
+      expect(regle.match(ligne(autre_compte))).to include("compte Beobank SRL")
+    end
+
+    it "laisse une règle sans compte valable partout, motif inchangé" do
+      regle = rule(communication_contains: "domiciliation")
+
+      expect(regle.match(ligne(cash_account))).to eq("Règle « Énergie » : la communication contient « domiciliation ».")
+      expect(regle.match(ligne(autre_compte))).to be_present
+    end
+
+    it "refuse une règle qui ne tiendrait que par son compte" do
+      regle = rule(cash_account: autre_compte)
+
+      expect(regle).not_to be_valid
+      expect(regle.errors.full_messages.join).to match(/s'appliquerait à tout/)
+        .and match(/ne suffit pas à la définir/)
+    end
+
+    it "ne reconnaît rien si une telle règle existe malgré tout en base" do
+      regle = rule(cash_account: autre_compte)
+      regle.save!(validate: false)
+
+      expect(regle.match(ligne(autre_compte))).to be_nil
     end
   end
 end

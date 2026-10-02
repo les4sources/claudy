@@ -45,6 +45,7 @@
                 - criteres << "tiers ~ #{rule.counterparty_name_contains}" if rule.counterparty_name_contains.present?
                 - criteres << "communication ~ #{rule.communication_contains}" if rule.communication_contains.present?
                 - criteres << rule.direction_label.downcase if rule.direction.present?
+                - criteres << "compte #{rule.cash_account.name}" if rule.cash_account
                 = criteres.join(" · ")
             td.py-4.px-6
               = rule.general_account.to_s

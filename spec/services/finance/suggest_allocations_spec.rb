@@ -192,4 +192,20 @@ RSpec.describe Finance::SuggestAllocations do
 
     expect { described_class.new.run! }.not_to change { AllocationSuggestion.count }
   end
+
+  # Issue #392 — même communication sur deux comptes, règle limitée au premier.
+  it "ne propose une règle limitée à un compte que sur les lignes de ce compte" do
+    beobank = build_cash_account(entity, bank_account, name: "Beobank SRL")
+    sur_beobank = build_cash_entry(beobank, amount_cents: -12_000, label: "Facture").tap do |e|
+      e.update!(counterparty_name: "ENGIE ELECTRABEL")
+    end
+    build_rule(label: "Énergie SRL", account: energie, position: 1,
+               counterparty_name_contains: "ENGIE", cash_account: beobank)
+
+    described_class.new.run!
+
+    expect(sur_beobank.reload.allocation_suggestions.count).to eq(1)
+    expect(sur_beobank.allocation_suggestions.first.rationale).to include("compte Beobank SRL")
+    expect(entry.reload.allocation_suggestions).to be_empty
+  end
 end

@@ -7,7 +7,7 @@ module Finance
     breadcrumb "Règles d'affectation", :finance_allocation_rules_path, match: :exact
 
     def index
-      @rules = AllocationRule.ordered.includes(:general_account, :team, :legal_entity)
+      @rules = AllocationRule.ordered.includes(:general_account, :team, :legal_entity, :cash_account)
       @pending_suggestions = AllocationSuggestion.pending.count
     end
 
@@ -70,7 +70,7 @@ module Finance
         :label, :position, :active, :counterparty_iban, :counterparty_name_contains,
         :communication_contains, :transaction_code, :direction, :confidence,
         :general_account_id, :analytic_account_id, :team_id, :legal_entity_id,
-        :event_id, :min_amount, :max_amount
+        :event_id, :cash_account_id, :min_amount, :max_amount
       )
       %w[min max].each do |borne|
         valeur = permitted.delete(:"#{borne}_amount")
