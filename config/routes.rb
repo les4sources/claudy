@@ -474,7 +474,7 @@ Rails.application.routes.draw do
     get "relief/surface", to: "map_reliefs#surface", as: :map_relief_surface
     get "relief/landcover", to: "map_reliefs#landcover", as: :map_relief_landcover
     # Les aménagements à l'essai (baissières, keylines, mares) de la vue 3D.
-    resources :map_designs, path: "relief/designs", only: %i[index create destroy], defaults: { format: :json }
+    resources :map_designs, path: "relief/designs", only: %i[index create update destroy], defaults: { format: :json }
     # Le carnet de gestion (phase 6) : les tâches de l'année, mois par mois.
     # `carnet` en français, imposé par l'epic. Les routes de tâches précèdent
     # `resources :map_tasks`, qui lirait sinon `current` comme un `:id`.

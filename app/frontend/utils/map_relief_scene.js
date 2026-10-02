@@ -56,6 +56,8 @@ export class ReliefScene {
 
     this.buildTerrain()
     this.buildParticles()
+    this.buildPlants()
+    this.buildBeacon()
     this.resetView()
 
     this.resizeObserver = new ResizeObserver(() => this.resize())
@@ -200,6 +202,150 @@ diffuseColor.rgb = mix(diffuseColor.rgb, overlay.rgb, overlay.a);`)
   setExaggeration(value) {
     this.exaggeration = value
     this.world.scale.y = value
+    // Les plantes et la balise gardent leur vraie hauteur sur un relief exagéré.
+    if (this.plants?.length) this.layoutPlants()
+    if (this.beacon) this.beacon.scale.y = 1 / value
+  }
+
+  // ---- Les plantes nourricières ---------------------------------------------
+  //
+  // Un tronc et un houppier par plante, en instances (une centaine de plantes
+  // = deux appels de dessin). Les plantes en projet (« Sur plan »…) sont
+  // translucides, les autres pleines. En mode « repères », un simple cône.
+  buildPlants() {
+    const max = 2000
+    const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 6)
+    trunkGeometry.translate(0, 0.5, 0)
+    const crownGeometry = new THREE.SphereGeometry(0.5, 14, 10)
+    const markerGeometry = new THREE.ConeGeometry(0.5, 1, 8)
+    markerGeometry.rotateX(Math.PI)
+    markerGeometry.translate(0, 0.5, 0)
+    const solid = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.9 })
+    const ghost = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.9, transparent: true, opacity: 0.5, depthWrite: false })
+    this.plantMeshes = {
+      trunk: new THREE.InstancedMesh(trunkGeometry, solid('#6b4f2a'), max),
+      trunkPlanned: new THREE.InstancedMesh(trunkGeometry, ghost('#a8865a'), max),
+      crown: new THREE.InstancedMesh(crownGeometry, solid('#2f7d32'), max),
+      crownPlanned: new THREE.InstancedMesh(crownGeometry, ghost('#86efac'), max),
+      marker: new THREE.InstancedMesh(markerGeometry, solid('#16a34a'), max),
+      markerPlanned: new THREE.InstancedMesh(markerGeometry, solid('#f59e0b'), max),
+    }
+    Object.values(this.plantMeshes).forEach((mesh) => {
+      mesh.count = 0
+      mesh.frustumCulled = false
+      this.world.add(mesh)
+    })
+    this.plants = []
+    this.plantMode = 'off'
+  }
+
+  // `plants` : [{ x, z (m, depuis le coin nord-ouest), ground (m), height,
+  // spread, stratum, planned }] ; `mode` : off | markers | mature.
+  setPlants(plants, mode) {
+    this.plants = plants
+    this.plantMode = mode
+    this.layoutPlants()
+  }
+
+  layoutPlants() {
+    const meshes = this.plantMeshes
+    const counts = { trunk: 0, trunkPlanned: 0, crown: 0, crownPlanned: 0, marker: 0, markerPlanned: 0 }
+    const m = new THREE.Matrix4()
+    const q = new THREE.Quaternion()
+    const exaggeration = this.exaggeration
+    const g = this.grid
+    const x0 = ((g.cols - 1) * g.cellSize) / 2
+    const z0 = ((g.rows - 1) * g.cellSize) / 2
+    const put = (key, x, y, z, sx, sy, sz) => {
+      // L'échelle verticale du monde vaut l'exagération : on la défait.
+      m.compose(new THREE.Vector3(x - x0, y, z - z0), q, new THREE.Vector3(sx, sy / exaggeration, sz))
+      meshes[key].setMatrixAt(counts[key]++, m)
+    }
+    this.plantIndex = { crown: [], crownPlanned: [], marker: [], markerPlanned: [] }
+    if (this.plantMode !== 'off') {
+      this.plants.forEach((plant, index) => {
+        const base = plant.ground - g.zBase
+        const suffix = plant.planned ? 'Planned' : ''
+        if (this.plantMode === 'markers') {
+          this.plantIndex[`marker${suffix}`].push(index)
+          put(`marker${suffix}`, plant.x, base, plant.z, 1.4, 2.5, 1.4)
+          return
+        }
+        const { height, spread } = plant
+        // La silhouette selon la conduite : une cépée part du sol, une trogne
+        // porte sa tête sur un tronc court, un arbre libre sur un tronc d'un
+        // tiers de sa hauteur.
+        let trunk = height * 0.35
+        if (plant.stratum === 'coppice' || ['shrub', 'subshrub', 'herbaceous', 'groundcover', 'aquatic'].includes(plant.stratum)) trunk = 0
+        if (plant.stratum === 'pollard' || plant.stratum === 'food_pollard') trunk = Math.min(2.5, height * 0.55)
+        const crown = Math.max(0.3, height - trunk)
+        if (trunk > 0) put(`trunk${suffix}`, plant.x, base, plant.z, Math.max(0.25, spread * 0.06), trunk + crown * 0.3, Math.max(0.25, spread * 0.06))
+        this.plantIndex[`crown${suffix}`].push(index)
+        put(`crown${suffix}`, plant.x, base + (trunk + crown / 2) / exaggeration, plant.z, spread, crown, spread)
+      })
+    }
+    Object.entries(counts).forEach(([key, count]) => {
+      meshes[key].count = count
+      meshes[key].instanceMatrix.needsUpdate = true
+    })
+  }
+
+  // La plante sous un clic : son indice dans la liste donnée à `setPlants`.
+  pickPlant(event) {
+    if (this.plantMode === 'off' || !this.plants.length) return null
+    const rect = this.renderer.domElement.getBoundingClientRect()
+    const pointer = new THREE.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1)
+    const raycaster = new THREE.Raycaster()
+    raycaster.setFromCamera(pointer, this.camera)
+    const keys = Object.keys(this.plantIndex)
+    const hits = raycaster.intersectObjects(keys.map((key) => this.plantMeshes[key]), false)
+    const hit = hits[0]
+    if (!hit) return null
+    const key = keys.find((k) => this.plantMeshes[k] === hit.object)
+    return this.plantIndex[key][hit.instanceId] ?? null
+  }
+
+  // ---- La balise du survol ----------------------------------------------------
+  //
+  // Un faisceau et un anneau qui pulsent au-dessus de l'aménagement survolé dans
+  // la liste : on le retrouve d'un coup d'œil, même masqué ou hors champ.
+  buildBeacon() {
+    const beacon = new THREE.Group()
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.2, 1.2, 60, 16, 1, true).translate(0, 30, 0),
+      new THREE.MeshBasicMaterial({ color: '#facc15', transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide }),
+    )
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(4, 6, 40).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: '#facc15', transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide }),
+    )
+    beacon.add(beam, ring)
+    beacon.visible = false
+    this.beaconRing = ring
+    this.beaconBeam = beam
+    this.beacon = beacon
+    this.world.add(beacon)
+  }
+
+  // `point` : { x, z, ground, size } en mètres (coin nord-ouest), ou null.
+  setBeacon(point) {
+    if (!point) { this.beacon.visible = false; return }
+    const g = this.grid
+    const x0 = ((g.cols - 1) * g.cellSize) / 2
+    const z0 = ((g.rows - 1) * g.cellSize) / 2
+    this.beacon.position.set(point.x - x0, point.ground - g.zBase, point.z - z0)
+    this.beacon.scale.set(1, 1 / this.exaggeration, 1)
+    this.beaconSize = Math.max(6, point.size || 6)
+    this.beacon.visible = true
+  }
+
+  animateBeacon(time) {
+    if (!this.beacon?.visible) return
+    const pulse = (Math.sin(time / 220) + 1) / 2
+    const size = this.beaconSize / 5 * (0.8 + pulse * 0.5)
+    this.beaconRing.scale.set(size, 1, size)
+    this.beaconRing.material.opacity = 0.45 + pulse * 0.5
+    this.beaconBeam.material.opacity = 0.18 + pulse * 0.25
   }
 
   // Remplace les hauteurs du maillage (terrain nu ↔ arbres et toits) sans
@@ -438,6 +584,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, overlay.rgb, overlay.a);`)
 
   frame() {
     this.onFrame?.()
+    this.animateBeacon(performance.now())
     this.controls.update()
     this.renderer.render(this.scene, this.camera)
   }

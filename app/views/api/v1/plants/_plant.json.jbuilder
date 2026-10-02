@@ -19,6 +19,8 @@ json.purchase_price_cents plant.purchase_price_cents
 json.planted_on plant.planted_on
 json.planted_year plant.planted_year
 json.altitude plant.altitude
+json.mature_height plant.mature_height&.to_f
+json.mature_spread plant.mature_spread&.to_f
 json.nursery plant.nursery
 json.notion_url plant.notion_url
 # Le texte libre de la fiche ; les notes datées sont `notes_log` (fiche détaillée).
