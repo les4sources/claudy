@@ -64,6 +64,7 @@
           button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setBase" data-map-relief-value-param="frost" title="Où l'air froid stagne la nuit (indice)" Gel
           - if @terrain.landcover?
             button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setBase" data-map-relief-value-param="landcover" title="Forêt, prairie, bâti… (SPW 2023)" Occupation
+          button type="button" class=choice_css aria-pressed="false" data-action="map-relief#setBase" data-map-relief-value-param="blocks" title="Le domaine en cubes de 2 m, arbres et bâtiments compris" Blocs
         p.mt-1.hidden.text-xs.text-stone-500 data-map-relief-target="baseLegend"
 
         .mt-3

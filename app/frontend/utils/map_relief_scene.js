@@ -16,12 +16,38 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { NIVA, buildNivaModel, setNivaLights } from './map_relief_niva'
+import { ATLAS_COLUMNS, ATLAS_ROWS, blockAtlas, buildBlocks } from './map_relief_blocks'
 
 // La conduite passe par ce module : le contrôleur ne charge three.js qu'ici.
 export { createNivaState, stepNiva } from './map_relief_niva'
 
 const OVERLAY_SCALE = 2
 const PARTICLES = 5000
+
+// Les surimpressions du terrain (soleil, eau, courbes, axes et aménagements),
+// lues aux coordonnées de la grille : partagées par le relief lisse et les blocs.
+const OVERLAY_DECLARATIONS = `uniform float uContour;
+uniform sampler2D uOverlay;
+uniform sampler2D uWater;
+uniform sampler2D uSun;
+varying float vElevation;
+varying vec2 vGridUv;
+float contourLine(float value, float width) {
+  float f = abs(fract(value - 0.5) - 0.5) / max(fwidth(value), 1e-5);
+  return 1.0 - min(f / width, 1.0);
+}`
+const OVERLAY_MIX = `vec4 sunTint = texture2D(uSun, vGridUv);
+diffuseColor.rgb = mix(diffuseColor.rgb, sunTint.rgb, sunTint.a);
+vec4 water = texture2D(uWater, vGridUv);
+diffuseColor.rgb = mix(diffuseColor.rgb, water.rgb, water.a);
+if (uContour > 0.0) {
+  float minor = contourLine(vElevation / uContour, 0.9);
+  float major = contourLine(vElevation / (uContour * 5.0), 1.6);
+  float line = max(minor * 0.35, major * 0.7);
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.28, 0.2, 0.12), line);
+}
+vec4 overlay = texture2D(uOverlay, vGridUv);
+diffuseColor.rgb = mix(diffuseColor.rgb, overlay.rgb, overlay.a);`
 
 export class ReliefScene {
   // `grid` : { heights (Float32Array, m), cols, rows, cellSize, zBase }
@@ -149,33 +175,144 @@ export class ReliefScene {
         .replace('#include <common>', '#include <common>\nattribute float elevation;\nvarying float vElevation;\nvarying vec2 vGridUv;')
         .replace('#include <begin_vertex>', '#include <begin_vertex>\nvElevation = elevation;\nvGridUv = uv;')
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', `#include <common>
-uniform float uContour;
-uniform sampler2D uOverlay;
-uniform sampler2D uWater;
-uniform sampler2D uSun;
-varying float vElevation;
-varying vec2 vGridUv;
-float contourLine(float value, float width) {
-  float f = abs(fract(value - 0.5) - 0.5) / max(fwidth(value), 1e-5);
-  return 1.0 - min(f / width, 1.0);
-}`)
-        .replace('#include <map_fragment>', `#include <map_fragment>
-vec4 sunTint = texture2D(uSun, vGridUv);
-diffuseColor.rgb = mix(diffuseColor.rgb, sunTint.rgb, sunTint.a);
-vec4 water = texture2D(uWater, vGridUv);
-diffuseColor.rgb = mix(diffuseColor.rgb, water.rgb, water.a);
-if (uContour > 0.0) {
-  float minor = contourLine(vElevation / uContour, 0.9);
-  float major = contourLine(vElevation / (uContour * 5.0), 1.6);
-  float line = max(minor * 0.35, major * 0.7);
-  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.28, 0.2, 0.12), line);
-}
-vec4 overlay = texture2D(uOverlay, vGridUv);
-diffuseColor.rgb = mix(diffuseColor.rgb, overlay.rgb, overlay.a);`)
+        .replace('#include <common>', `#include <common>\n${OVERLAY_DECLARATIONS}`)
+        .replace('#include <map_fragment>', `#include <map_fragment>\n${OVERLAY_MIX}`)
     }
     this.terrain = new THREE.Mesh(geometry, this.material)
     this.world.add(this.terrain)
+  }
+
+  // ---- Le relief en blocs -------------------------------------------------------
+  //
+  // Un second maillage, cubique (`map_relief_blocks.js`), qui remplace le
+  // terrain à l'écran. Les surimpressions (eau, soleil, axes, aménagements) y
+  // sont lues aux mêmes coordonnées de grille, déduites de la position ; le
+  // terrain lisse reste en place, caché, pour la sonde et le calage.
+  showBlocks(input) {
+    // Les mêmes données : le maillage déjà construit reparaît tel quel.
+    if (this.blocks && this.blocksInput === input) return this.revealBlocks()
+    const g = this.grid
+    const x0 = ((g.cols - 1) * g.cellSize) / 2
+    const z0 = ((g.rows - 1) * g.cellSize) / 2
+    const built = buildBlocks({ ...input, zBase: g.zBase, x0, z0 })
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute('position', new THREE.BufferAttribute(built.positions, 3))
+    geometry.setAttribute('normal', new THREE.BufferAttribute(built.normals, 3, true))
+    geometry.setAttribute('blockUv', new THREE.BufferAttribute(built.uvs, 2))
+    geometry.setAttribute('tile', new THREE.BufferAttribute(built.tiles, 1))
+    geometry.setIndex(new THREE.BufferAttribute(built.indices, 1))
+    geometry.computeBoundingSphere()
+    // Une fois sur la carte graphique, la mémoire du navigateur est rendue.
+    for (const attribute of Object.values(geometry.attributes)) attribute.onUpload(function () { this.array = null })
+    geometry.index.onUpload(function () { this.array = null })
+
+    if (this.blocks) {
+      this.blocks.geometry.dispose()
+      this.blocks.geometry = geometry
+    } else {
+      this.blocks = new THREE.Mesh(geometry, this.blockMaterial())
+      this.world.add(this.blocks)
+    }
+    this.blocksInput = input
+    this.builtBlocks = { tops: built.groundTops, cols: built.cols, rows: built.rows, size: built.size, cell: input.cell }
+    this.revealBlocks()
+    return built.faces
+  }
+
+  revealBlocks() {
+    this.blockData = this.builtBlocks
+    this.setPlantShape('cubic')
+    this.blocks.visible = true
+    this.terrain.visible = false
+    if (this.plants?.length) this.layoutPlants()
+  }
+
+  hideBlocks() {
+    if (!this.blocks) return
+    this.blocks.visible = false
+    this.terrain.visible = true
+    this.blockData = null
+    this.setPlantShape('round')
+    if (this.plants?.length) this.layoutPlants()
+  }
+
+  // Le dessus du sol en blocs (repère du groupe exagéré) sous un point en mètres
+  // depuis le coin nord-ouest, ou nul hors du mode blocs.
+  blockTop(x, z) {
+    const data = this.blockData
+    if (!data) return null
+    const { cell } = data
+    const i = Math.min(data.cols - 1, Math.max(0, Math.floor((x + cell / 2) / data.size)))
+    const j = Math.min(data.rows - 1, Math.max(0, Math.floor((z + cell / 2) / data.size)))
+    return data.tops[j * data.cols + i]
+  }
+
+  setPlantShape(shape) {
+    const geometries = this.plantShapes?.[shape]
+    if (!geometries) return
+    for (const key of ['trunk', 'trunkPlanned']) this.plantMeshes[key].geometry = geometries.trunk
+    for (const key of ['crown', 'crownPlanned']) this.plantMeshes[key].geometry = geometries.crown
+  }
+
+  blockMaterial() {
+    const { canvas, averages } = blockAtlas()
+    const atlas = new THREE.CanvasTexture(canvas)
+    atlas.colorSpace = THREE.SRGBColorSpace
+    atlas.magFilter = THREE.NearestFilter
+    atlas.minFilter = THREE.NearestFilter
+    atlas.generateMipmaps = false
+    atlas.flipY = false
+    // Les couleurs moyennes, en linéaire comme les texels décodés.
+    const linear = []
+    for (let t = 0; t < averages.length / 3; t++) {
+      linear.push(new THREE.Color().setRGB(averages[t * 3], averages[t * 3 + 1], averages[t * 3 + 2], THREE.SRGBColorSpace))
+    }
+    const g = this.grid
+    const half = new THREE.Vector2(((g.cols - 1) * g.cellSize) / 2, ((g.rows - 1) * g.cellSize) / 2)
+    const uniforms = {
+      ...this.uniforms,
+      uContour: { value: 0 },
+      uAtlas: { value: atlas },
+      uTileAverage: { value: linear },
+      uHalf: { value: half },
+      uSize: { value: half.clone().multiplyScalar(2) },
+    }
+    const material = new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0 })
+    material.onBeforeCompile = (shader) => {
+      Object.assign(shader.uniforms, uniforms)
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', `#include <common>
+attribute vec2 blockUv;
+attribute float tile;
+uniform vec2 uHalf;
+uniform vec2 uSize;
+varying float vElevation;
+varying vec2 vGridUv;
+varying vec2 vBlockUv;
+flat varying int vTile;`)
+        .replace('#include <begin_vertex>', `#include <begin_vertex>
+vElevation = 0.0;
+vGridUv = vec2((position.x + uHalf.x) / uSize.x, 1.0 - (position.z + uHalf.y) / uSize.y);
+vBlockUv = blockUv;
+vTile = int(tile + 0.5);`)
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', `#include <common>
+${OVERLAY_DECLARATIONS}
+uniform sampler2D uAtlas;
+uniform vec3 uTileAverage[${ATLAS_COLUMNS * ATLAS_ROWS}];
+varying vec2 vBlockUv;
+flat varying int vTile;`)
+        .replace('#include <map_fragment>', `vec2 inTile = vec2(fract(vBlockUv.x), 1.0 - fract(vBlockUv.y));
+vec2 cellOf = vec2(float(vTile % ${ATLAS_COLUMNS}), float(vTile / ${ATLAS_COLUMNS}));
+vec3 texel = texture2D(uAtlas, (cellOf + inTile) / vec2(${ATLAS_COLUMNS}.0, ${ATLAS_ROWS}.0)).rgb;
+// Au loin, seize pixels par bloc tombent sous le pixel : la couleur moyenne
+// de la tuile remplace le scintillement.
+vec2 spread = fwidth(vBlockUv) * 16.0;
+texel = mix(texel, uTileAverage[vTile], smoothstep(0.6, 1.6, max(spread.x, spread.y)));
+diffuseColor.rgb *= texel;
+${OVERLAY_MIX}`)
+    }
+    return material
   }
 
   buildParticles() {
@@ -225,6 +362,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, overlay.rgb, overlay.a);`)
     const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 6)
     trunkGeometry.translate(0, 0.5, 0)
     const crownGeometry = new THREE.SphereGeometry(0.5, 14, 10)
+    // En blocs, troncs et houppiers deviennent des cubes.
+    this.plantShapes = {
+      round: { trunk: trunkGeometry, crown: crownGeometry },
+      cubic: { trunk: new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), crown: new THREE.BoxGeometry(1, 1, 1) },
+    }
     const markerGeometry = new THREE.ConeGeometry(0.5, 1, 8)
     markerGeometry.rotateX(Math.PI)
     markerGeometry.translate(0, 0.5, 0)
@@ -272,7 +414,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, overlay.rgb, overlay.a);`)
     this.plantIndex = { crown: [], crownPlanned: [], marker: [], markerPlanned: [] }
     if (this.plantMode !== 'off') {
       this.plants.forEach((plant, index) => {
-        const base = plant.ground - g.zBase
+        // En blocs, la plante se pose sur le dessus du bloc.
+        const base = this.blockTop(plant.x, plant.z) ?? plant.ground - g.zBase
         const suffix = plant.planned ? 'Planned' : ''
         if (this.plantMode === 'markers') {
           this.plantIndex[`marker${suffix}`].push(index)
@@ -669,7 +812,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, overlay.rgb, overlay.a);`)
     const up = new THREE.Vector3().crossVectors(along, left).normalize()
     left.crossVectors(up, along).normalize()
     model.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(left, up, along))
-    model.position.set(state.x - x0, (state.ground - g.zBase) * ex, state.z - z0)
+// En blocs, la Niva roule sur le relief vrai mais se pose sur le plus haut
+// des blocs sous ses roues : jamais enfoncée dans une marche.
+let base = (state.ground - g.zBase) * ex
+if (this.blockData) {
+  const a = NIVA.wheelbase / 2
+  const b = NIVA.track / 2
+  base = -Infinity
+  for (const [f, l] of [[a, b], [a, -b], [-a, b], [-a, -b]]) {
+    const x = state.x + Math.sin(state.heading) * f - Math.cos(state.heading) * l
+    const z = state.z - Math.cos(state.heading) * f - Math.sin(state.heading) * l
+    base = Math.max(base, this.blockTop(x, z) * ex)
+  }
+}
+model.position.set(state.x - x0, base, state.z - z0)
 
     const { wheels, steering } = model.userData
     for (const wheel of wheels) wheel.rotation.x = state.wheelSpin
