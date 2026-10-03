@@ -51,7 +51,12 @@
       - else
         p.text-xs.text-moss.mt-0.5 Cliquez pour réserver — journée, soirée ou les deux, pour chaque jour du séjour, du jour d'arrivée au jour de départ. Tarifs semaine (↑ week-end).
     .flex.items-center.gap-2.flex-shrink-0.ml-4.mt-0.5
-      = link_to "Voir les tarifs", "https://www.les4sources.be/sejours/tarifs", target: "_blank", rel: "noopener", class: "text-sm font-semibold text-forest underline underline-offset-2"
+      / Nouvel onglet, et ça se voit (Michael, 2026-10-03) : le client ne doit
+      / pas quitter le formulaire en cours de remplissage.
+      = link_to "https://www.les4sources.be/sejours/tarifs", target: "_blank", rel: "noopener", class: "inline-flex items-center gap-1 text-sm font-semibold text-forest underline underline-offset-2" do
+        | Voir les tarifs
+        = funnel_icon :external, css_class: "w-4 h-4"
+        span.sr-only (nouvel onglet)
       - if needs_scroll_arrows
         button(
           type="button"

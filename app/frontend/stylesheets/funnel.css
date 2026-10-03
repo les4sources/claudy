@@ -830,3 +830,178 @@
 .funnel-submit-cta {
   scroll-margin-bottom: 7rem;
 }
+
+/* « Rien n'est prélevé aujourd'hui » — étape Coordonnées (Michael,
+   2026-10-03 : « nettement plus lisible, il est important »). Encadré à part,
+   au-dessus du bouton d'envoi, en trois étapes numérotées. */
+.funnel-next-steps {
+  border: 2px solid var(--p-primary);
+  border-radius: var(--p-radius-lg);
+  background: var(--p-surface);
+  padding: 1.25rem;
+}
+.funnel-next-steps__title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--p-primary);
+}
+.funnel-next-steps__list {
+  margin-top: 0.85rem;
+  counter-reset: next-step;
+  display: grid;
+  gap: 0.7rem;
+}
+.funnel-next-steps__list li {
+  counter-increment: next-step;
+  display: grid;
+  grid-template-columns: 1.75rem 1fr;
+  gap: 0.6rem;
+  align-items: start;
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  color: var(--p-text);
+}
+.funnel-next-steps__list li::before {
+  content: counter(next-step);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: var(--p-primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* Ligne du temps de la réservation — étape Coordonnées (Michael, 2026-10-03).
+   Chaque jour = deux demi-colonnes (journée, soirée) : une nuit va de la
+   soirée du jour J à la journée du jour J+1, une salle se pose sur sa
+   demi-journée (cf. FunnelTimelineHelper). Sur mobile, l'intitulé passe
+   au-dessus de sa piste ; au-delà d'une semaine, la piste défile. */
+.stay-timeline__scroll {
+  overflow-x: auto;
+}
+.stay-timeline__row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.25rem;
+  min-width: calc(var(--tl-days) * 4.25rem);
+  padding: 0.35rem 0;
+}
+.stay-timeline__row--head {
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--p-border);
+  margin-bottom: 0.25rem;
+}
+.stay-timeline__label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--p-primary);
+}
+.stay-timeline__row--head .stay-timeline__label {
+  display: none;
+}
+.stay-timeline__track {
+  display: grid;
+  grid-template-columns: repeat(calc(var(--tl-days) * 2), minmax(0, 1fr));
+  column-gap: 0;
+  align-items: center;
+  /* Repères des jours : un trait fin à chaque début de journée. */
+  background-image: linear-gradient(to right, var(--p-border) 1px, transparent 1px);
+  background-size: calc(100% / var(--tl-days)) 100%;
+}
+.stay-timeline__row--head .stay-timeline__track {
+  background-image: none;
+}
+.stay-timeline__day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--p-text);
+  line-height: 1.25;
+}
+.stay-timeline__day-tag {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--p-accent);
+}
+.stay-timeline__bar {
+  margin: 0 2px;
+  min-height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  overflow: hidden;
+}
+.stay-timeline__bar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stay-timeline__bar--lodging {
+  background: var(--p-primary);
+  color: #fff;
+}
+.stay-timeline__bar--space {
+  background: var(--p-accent-tint, #F5E1CF);
+  color: #7A3F12;
+  border: 1px solid #E2B48B;
+  padding: 0.25rem 0.375rem;
+  font-size: 0.8125rem;
+}
+.stay-timeline__text--long {
+  /* Visuellement masqué sur mobile, lu quand même par les lecteurs d'écran. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.stay-timeline__text--short {
+  display: inline-flex;
+  gap: 0.125rem;
+}
+.stay-timeline__legend {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.stay-timeline__bar--outdoor {
+  background: #D3E6DB;
+  color: var(--p-primary);
+}
+@media (min-width: 640px) {
+  .stay-timeline__text--long {
+    position: static;
+    width: auto;
+    height: auto;
+    clip: auto;
+  }
+  .stay-timeline__text--short,
+  .stay-timeline__legend {
+    display: none;
+  }
+  .stay-timeline__row {
+    grid-template-columns: 8.5rem 1fr;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .stay-timeline__row--head .stay-timeline__label {
+    display: block;
+  }
+}

@@ -66,6 +66,32 @@ RSpec.describe "Public::Reservations — finitions du funnel", type: :request do
     expect(response.body).not_to include("Quinze hectares")
   end
 
+  # Retours du 2026-10-03 (soir) : les liens vers le site public s'ouvrent dans
+  # un nouvel onglet, pour ne pas perdre la composition en cours.
+  it "ouvre les tarifs et le catalogue des activités dans un nouvel onglet" do
+    compose
+    html = Nokogiri::HTML(response.body)
+
+    %w[https://www.les4sources.be/sejours/tarifs https://www.les4sources.be/activites].each do |url|
+      link = html.at_css(%(a[href="#{url}"]))
+      expect(link).to be_present, "lien #{url} absent"
+      expect(link["target"]).to eq("_blank")
+      expect(link["rel"]).to include("noopener")
+    end
+  end
+
+  it "met en avant, avant l'envoi, que rien n'est prélevé aujourd'hui" do
+    post "/reservation/sejour", params: { reservation: { arrival_date: arrival.iso8601, departure_date: departure.iso8601, adults: 2 } }
+    get "/reservation/coordonnees"
+    html = Nokogiri::HTML(response.body)
+
+    box = html.at_css(".funnel-next-steps")
+    expect(box.at_css(".funnel-next-steps__title").text).to include("Rien n'est prélevé aujourd'hui")
+    expect(box.css("li").map { |li| li.text.squish }.last).to include("C'est le règlement de cet acompte qui confirme")
+    # La boîte vient AVANT le bouton d'envoi : on la lit avant de cliquer.
+    expect(response.body.index("funnel-next-steps")).to be < response.body.index("funnel-submit-cta")
+  end
+
   it "ne met plus d'espace à l'intérieur du lien email de l'étape 1" do
     get "/reservation/sejour"
     expect(response.body).not_to include("> sejours@les4sources.be</a>")
