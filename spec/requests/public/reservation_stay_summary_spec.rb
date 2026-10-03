@@ -48,26 +48,56 @@ RSpec.describe "Public::Reservations — récap de l'étape coordonnées", type:
     expect(response).to have_http_status(:ok)
   end
 
-  it "regroupe l'hébergement par gîte, en nuits" do
-    expect(response.body).to include("La Hulotte — 4 nuits")
+  # Refait le 2026-10-03 : le détail reprend les lignes du DEVIS (le tiroir
+  # « Voir le devis »), mot pour mot, plutôt qu'un résumé maison.
+  it "reprend les lignes du devis, avec le total et l'acompte" do
+    html = Nokogiri::HTML(response.body)
+    drawer = html.css("#reservation_quote li > span:first-child").map { |s| s.text.squish }
+    recap = html.css(".funnel-recap__lines li > span:first-child").map { |s| s.text.squish }
+
+    expect(drawer).to include(a_string_starting_with("La Hulotte — nuit du"))
+    expect(recap).to eq(drawer)
+    expect(response.body).to include("Total TVAC")
+    expect(response.body).to include("Acompte 50 % à la confirmation")
   end
 
   it "annonce la composition du groupe" do
     expect(response.body).to include("10 adultes · 2 enfants")
   end
 
-  # La grille des espaces est indexée par JOUR, départ inclus : 5 jours pour
-  # 4 nuits. Une lecture sur l'axe des nuits amputerait le dernier jour.
-  it "résume les espaces par salle, période et fenêtre de dates" do
-    expect(response.body).to include("Petite salle — 5 journées (#{arrival.day} → #{jour(departure)})")
-    expect(response.body).to include("Grande salle — 2 soirées")
-  end
+  describe "ligne du temps" do
+    let(:html) { Nokogiri::HTML(response.body) }
+    let(:rows) { html.css(".stay-timeline__row:not(.stay-timeline__row--head)") }
 
-  # Le récap ne lisait que la PREMIÈRE entrée de camping : « 4 personnes », sans
-  # jamais dire combien de nuits.
-  it "compte le camping en personnes-nuits" do
-    expect(response.body).to include("Camping tente")
-    expect(response.body).to include("4 pers. × 3 nuits")
+    def row(label) = rows.find { |r| r.at_css(".stay-timeline__label").text.strip == label }
+    def bars(label) = row(label).css(".stay-timeline__bar")
+
+    # 5 jours, départ inclus : la grille des espaces est indexée par JOUR.
+    it "montre chaque jour, de l'arrivée au départ" do
+      expect(html.css(".stay-timeline__day").size).to eq(5)
+      expect(html.at_css(".stay-timeline")["style"]).to include("--tl-days: 5")
+    end
+
+    # Le gîte part le soir de l'arrivée (colonne 2) et s'arrête le matin du
+    # départ (colonne 10) : 4 nuits identiques ne font qu'une barre.
+    it "pose l'hébergement en une barre, du soir d'arrivée au matin du départ" do
+      expect(bars("Hébergement").map { |b| [b.text.strip, b["style"]] })
+        .to eq([["La Hulotte", "grid-column: 2 / 10"]])
+    end
+
+    it "pose chaque salle sur ses journées ou ses soirées" do
+      expect(bars("Petite Salle").size).to eq(5)
+      expect(bars("Petite Salle").first["title"]).to eq("Journée")
+      expect(bars("Grande Salle").map { |b| [b["title"], b["style"]] })
+        .to eq([["Soirée", "grid-column: 4 / 5"], ["Soirée", "grid-column: 6 / 7"]])
+      expect(row("Cuisine pro")).to be_nil
+    end
+
+    it "compte le camping nuit par nuit" do
+      expect(bars("Camping").map { |b| [b.text.strip, b["style"]] })
+        .to eq([["4 pers.", "grid-column: 2 / 8"]])
+      expect(row("Van")).to be_nil
+    end
   end
 
   it "reprend le nom du groupe" do

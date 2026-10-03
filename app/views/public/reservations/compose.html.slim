@@ -1,8 +1,7 @@
 / Étape 2/3 — Composition du séjour
 - content_for :meta_title, "Composez votre réservation"
-/ Catalogue des activités sur le site public. Pas de page dédiée connue à ce
-/ jour : la page d'accueil, à remplacer par l'URL exacte du catalogue.
-- activities_catalog_url = "https://www.les4sources.be"
+/ Catalogue des activités sur le site public (Michael, 2026-10-03).
+- activities_catalog_url = "https://www.les4sources.be/activites"
 div(data-controller="public--avail-modal")
   .max-w-5xl.mx-auto.px-4.sm:px-6.pt-8.md:pt-10.pb-28(data-controller="public--reservation-quote"
     data-public--reservation-quote-url-value=public_reservation_quote_path
@@ -118,7 +117,10 @@ div(data-controller="public--avail-modal")
             | Activités aux 4 Sources
           p.text-base.text-ink
             | Balades avec les ânes, ateliers créatifs, forge, golf et bien d'autres…
-            =< link_to "Voir le catalogue des activités", activities_catalog_url, target: "_blank", rel: "noopener", class: "font-semibold text-forest underline underline-offset-2"
+            =< link_to activities_catalog_url, target: "_blank", rel: "noopener", class: "inline-flex items-center gap-1 font-semibold text-forest underline underline-offset-2" do
+              | Voir le catalogue des activités
+              = funnel_icon :external, css_class: "w-4 h-4"
+              span.sr-only (nouvel onglet)
           label.block.mt-4(for="reservation_activities_note")
             span.funnel-label Des activités vous intéressent ?
             span.funnel-hint.block.mt-0.5 Facultatif. Dites-nous lesquelles et pour combien de personnes. Notre équipe planifie les activités un mois avant votre venue.
