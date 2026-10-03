@@ -65,176 +65,204 @@
           svg.h-4.w-4.text-stone-400.transition-transform data-map-target="panelChevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
             polyline points="6 9 12 15 18 9"
 
-        / La liste défile dans le panneau : plus haute que l’écran, elle faisait
-          défiler toute la page et remonter la carte.
-        div.min-h-0.flex-1.overflow-y-auto.overscroll-contain.border-t.border-stone-100.px-3.py-3 data-map-target="panelBody"
-          = render "maps/search"
-          p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Fonds
-          ul.space-y-1
-            - @base_layers.each do |couche|
-              li
-                = link_to map_path(base_layer_id: couche.id), class: "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors #{couche.id == @base_layer.id ? 'bg-teal-50 text-4s-main font-medium' : 'text-stone-600 hover:bg-stone-50'}" do
-                  span class="h-2.5 w-2.5 flex-shrink-0 rounded-full #{couche.id == @base_layer.id ? 'bg-4s-main' : 'border border-stone-300'}"
-                  span.flex-1.truncate = couche.name
-                  - if couche.captured_on
-                    span class="text-[0.65rem] tabular-nums text-stone-400" = l(couche.captured_on, format: "%m/%Y")
-
-          - if @base_layer.relief?
-            .mt-3.border-t.border-stone-100.pt-3
-              label.flex.cursor-pointer.items-center.gap-2.text-sm.text-stone-600
-                input[type="checkbox" class="rounded border-stone-300 text-4s-main focus:ring-teal-400" data-action="change->map#toggleRelief" data-map-target="reliefToggle"]
-                span Relief
-
-          / Les couches publiques du SPW, servies en direct par le Géoportail
-            (MapGeoportailLayer) : rien n'est stocké ici, elles se superposent
-            à la carte comme le relief.
-          .mt-3.border-t.border-stone-100.pt-3
-            p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Géoportail de Wallonie
-            - MapGeoportailLayer.grouped.each do |intitule, couches|
-              p.mt-2.text-xs.text-stone-400 = intitule
-              ul.space-y-1
-                - couches.each do |couche|
-                  li
-                    label.flex.cursor-pointer.items-center.gap-2.py-1.text-sm.text-stone-600
-                      input[type="checkbox" class="rounded border-stone-300 text-4s-main focus:ring-teal-400"
-                            data-action="change->map#toggleGeoportail"
-                            data-geoportail-key=couche.key
-                            data-geoportail-url=couche.url
-                            data-geoportail-layers=couche.layers
-                            data-geoportail-opacity=couche.opacity
-                            data-geoportail-z-index=couche.z_index
-                            data-geoportail-max-native-zoom=couche.max_native_zoom
-                            data-geoportail-name=couche.name
-                            data-geoportail-info-service=couche.info_service
-                            data-geoportail-info-layers=couche.info_layers]
-                      span.truncate = couche.name
-            p.mt-1.text-xs.text-stone-400 Couche affichée : touchez la carte pour en lire le détail.
-
-          / Les couches typées (phase 2). La case affiche ou masque ; le nom rend
-            la couche ACTIVE — c'est elle que la barre d'outils édite.
-          .mt-3.border-t.border-stone-100.pt-3
-            p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Couches
-            ul.space-y-1
-              / Aucune couche : la carte seule, sans objets, sans mode ni barre
-                d'outils. Le choix se retient comme les autres.
-              li
+        / Deux onglets (Michael, 2026-10-03 : le panneau mélangeait dans une
+          seule colonne ce qu'on voit, ce sur quoi on travaille et des liens
+          vers d'autres pages). « Travailler » : la couche active et, juste
+          sous elle, ses actions. « Afficher » : fond, relief, Géoportail et
+          filtres. Les pages annexes passent en pied de panneau.
+        div.flex.min-h-0.flex-1.flex-col.border-t.border-stone-100 data-map-target="panelBody" data-controller="map-panel"
+          .px-3.pt-3
+            div.grid.grid-cols-2.gap-1.rounded-lg.bg-stone-100.p-1 role="tablist" aria-label="Panneau de la carte"
+              - [["work", "Travailler"], ["see", "Afficher"]].each do |key, label|
                 button[type="button"
-                       class="flex w-full items-center gap-2 truncate rounded-lg px-2 py-1.5 text-left text-sm text-stone-600 hover:bg-stone-50"
-                       data-map-target="layerNone"
-                       data-action="click->map#clearActiveLayer"
-                       aria-current="false"]
-                  span.map-layer-radio aria-hidden="true"
-                  span.truncate Aucune
-              / Les couches réseau ont leur propre section (phase 9).
-              - @layers.reject(&:network?).each do |couche|
-                / Une couche à la fois : choisir son nom l'affiche seule. La
-                  case, invisible, porte l'état affiché pour le contrôleur.
-                li data-layer-id=couche.id data-layer-kind=couche.kind
-                  input[type="checkbox" class="sr-only" tabindex="-1" aria-hidden="true"
-                        data-map-target="layerToggle"
-                        data-layer-id=couche.id
-                        data-action="change->map#toggleLayer"]
+                       id="map-panel-tab-#{key}"
+                       role="tab"
+                       aria-controls="map-panel-#{key}"
+                       aria-selected=(key == "work").to_s
+                       class="flex h-8 items-center justify-center gap-1.5 rounded-md text-sm transition-colors #{key == 'work' ? 'bg-white font-semibold text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}"
+                       data-map-panel-target="tab"
+                       data-panel-tab=key
+                       data-action="map-panel#select keydown->map-panel#keydown"]
+                  = label
+                  - if key == "see"
+                    / Les surcouches allumées, lisibles sans ouvrir l'onglet.
+                    span[class="hidden min-w-[1.25rem] rounded-full bg-teal-50 px-1.5 text-center text-[0.7rem] font-semibold tabular-nums text-4s-main" data-map-panel-target="seeCount"]
+
+          / La liste défile dans le panneau : plus haute que l’écran, elle faisait
+            défiler toute la page et remonter la carte.
+          div.min-h-0.flex-1.overflow-y-auto.overscroll-contain.px-3.py-3
+            / ── Travailler ─────────────────────────────────────────────────
+            div#map-panel-work role="tabpanel" aria-labelledby="map-panel-tab-work" data-map-panel-target="pane" data-panel-tab="work"
+              = render "maps/search"
+
+              / Les couches typées (phase 2). La case affiche ou masque ; le nom rend
+                la couche ACTIVE — c'est elle que la barre d'outils édite.
+              p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Couches
+              ul.space-y-1
+                / Aucune couche : la carte seule, sans objets, sans mode ni barre
+                  d'outils. Le choix se retient comme les autres.
+                li
                   button[type="button"
                          class="flex w-full items-center gap-2 truncate rounded-lg px-2 py-1.5 text-left text-sm text-stone-600 hover:bg-stone-50"
-                         data-map-target="layerName"
-                         data-layer-id=couche.id
-                         data-layer-kind=couche.kind
-                         data-action="click->map#activateLayer"
+                         data-map-target="layerNone"
+                         data-action="click->map#clearActiveLayer"
                          aria-current="false"]
                     span.map-layer-radio aria-hidden="true"
-                    span.truncate = couche.name
-                / Commentaires (phase 11) : le filtre des fils résolus, et
-                  l'adresse de la fiche d'un nouveau commentaire. Visible avec
-                  sa couche seulement.
-                - if couche.kind == "comments"
-                  li.hidden.pl-6 data-new-comment-url=new_map_comment_path data-layer-extra="comments"
-                    label.flex.cursor-pointer.items-center.gap-2.py-1.text-xs.text-stone-500
-                      input[type="checkbox"
-                            class="h-4 w-4 rounded border-stone-300 text-4s-main focus:ring-teal-400"
-                            data-comments-filter="true"
-                            data-action="change->map#toggleResolvedComments"]
-                      span Masquer les résolus
-                / Biodiversité (phase 13) : l'adresse de la fiche d'un nouveau
-                  relevé, et la liste filtrée des relevés, chargée à la demande
-                  et rechargée par la carte après chaque enregistrement.
-                / Bio-indicatrices : l'adresse de la fiche d'un nouveau relevé
-                  photo, et la liste filtrable (statut, indicateur de sol).
-                - if couche.kind == "bioindicators"
-                  li.hidden.pl-6 data-new-bioindicator-url=new_map_bioindicator_path data-layer-extra="bioindicators"
-                    = turbo_frame_tag MapBioindicatorsController::LIST_FRAME, src: map_bioindicators_path, loading: :lazy
-                - if couche.kind == "biodiversity"
-                  li.hidden.pl-6 data-new-observation-url=new_map_observation_path data-layer-extra="biodiversity"
-                    = turbo_frame_tag MapObservationsController::LIST_FRAME, src: map_observations_path, loading: :lazy
+                    span.truncate Aucune
+                / Les couches réseau ont leur propre section (phase 9).
+                - @layers.reject(&:network?).each do |couche|
+                  / Une couche à la fois : choisir son nom l'affiche seule. La
+                    case, invisible, porte l'état affiché pour le contrôleur.
+                  li data-layer-id=couche.id data-layer-kind=couche.kind
+                    input[type="checkbox" class="sr-only" tabindex="-1" aria-hidden="true"
+                          data-map-target="layerToggle"
+                          data-layer-id=couche.id
+                          data-action="change->map#toggleLayer"]
+                    button[type="button"
+                           class="flex w-full items-center gap-2 truncate rounded-lg px-2 py-1.5 text-left text-sm text-stone-600 hover:bg-stone-50"
+                           data-map-target="layerName"
+                           data-layer-id=couche.id
+                           data-layer-kind=couche.kind
+                           data-action="click->map#activateLayer"
+                           aria-current="false"]
+                      span.map-layer-radio aria-hidden="true"
+                      span.flex-1.truncate = couche.name
+                      / Les plantes à placer se voient même couche éteinte.
+                      - if couche.kind == "plants"
+                        span[class="min-w-[1.5rem] rounded-full bg-ember px-1.5 py-0.5 text-center text-[0.7rem] font-semibold tabular-nums text-white #{'hidden' if @unplaced_count.zero?}"
+                             title="Plantes à placer"
+                             data-map-target="unplacedCount"]
+                          = @unplaced_count
+                  / Plantes nourricières (phase 7) : créer une plante et ouvrir le
+                    mode Placement, sous la couche, avec elle seulement.
+                  - if couche.kind == "plants"
+                    li.hidden.pl-6 data-layer-extra="plants"
+                      button[type="button"
+                             class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm font-medium text-forest hover:bg-forest-tint"
+                             data-action="map#newPlant"
+                             data-map-new-plant-link="true"]
+                        svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                          path d="M12 5v14M5 12h14"
+                        span.flex-1 Nouvelle plante
+                      button[type="button"
+                             class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-stone-600 hover:bg-stone-50"
+                             data-action="map#openPlacement"
+                             data-map-placement-link="true"]
+                        svg.h-4.w-4.text-stone-500 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                          path d="M12 22s7-6.1 7-12a7 7 0 0 0-14 0c0 5.9 7 12 7 12z"
+                          path d="M12 7v6M9 10h6"
+                        span.flex-1 À placer
+                  / Commentaires (phase 11) : le filtre des fils résolus, et
+                    l'adresse de la fiche d'un nouveau commentaire. Visible avec
+                    sa couche seulement.
+                  - if couche.kind == "comments"
+                    li.hidden.pl-6 data-new-comment-url=new_map_comment_path data-layer-extra="comments"
+                      label.flex.cursor-pointer.items-center.gap-2.py-1.text-xs.text-stone-500
+                        input[type="checkbox"
+                              class="h-4 w-4 rounded border-stone-300 text-4s-main focus:ring-teal-400"
+                              data-comments-filter="true"
+                              data-action="change->map#toggleResolvedComments"]
+                        span Masquer les résolus
+                  / Biodiversité (phase 13) : l'adresse de la fiche d'un nouveau
+                    relevé, et la liste filtrée des relevés, chargée à la demande
+                    et rechargée par la carte après chaque enregistrement.
+                  / Bio-indicatrices : l'adresse de la fiche d'un nouveau relevé
+                    photo, et la liste filtrable (statut, indicateur de sol).
+                  - if couche.kind == "bioindicators"
+                    li.hidden.pl-6 data-new-bioindicator-url=new_map_bioindicator_path data-layer-extra="bioindicators"
+                      = turbo_frame_tag MapBioindicatorsController::LIST_FRAME, src: map_bioindicators_path, loading: :lazy
+                  - if couche.kind == "biodiversity"
+                    li.hidden.pl-6 data-new-observation-url=new_map_observation_path data-layer-extra="biodiversity"
+                      = turbo_frame_tag MapObservationsController::LIST_FRAME, src: map_observations_path, loading: :lazy
 
-            / Les gîtes et salles pas encore tracés (phase 3) : la carte du jour
-              ne colore que ce qui est dessiné, on n'en oublie aucun. Rechargée
-              par la carte après chaque enregistrement. Visible avec la couche
-              des lieux seulement.
-            div.hidden data-layer-extra="venues"
-              = turbo_frame_tag "map_venues_todo", src: map_venues_todo_path, data: { map_target: "venuesTodo" }
+              / Les gîtes et salles pas encore tracés (phase 3) : la carte du jour
+                ne colore que ce qui est dessiné, on n'en oublie aucun. Rechargée
+                par la carte après chaque enregistrement. Visible avec la couche
+                des lieux seulement.
+              div.hidden data-layer-extra="venues"
+                = turbo_frame_tag "map_venues_todo", src: map_venues_todo_path, data: { map_target: "venuesTodo" }
 
-          = render "maps/networks_section", layers: @layers.select(&:network?)
+              = render "maps/networks_section", layers: @layers.select(&:network?)
 
-          / Les plantes nourricières (phase 7) : le mode Placement et les pages
-            annexes (récoltes, liste, espèces).
-          .mt-3.border-t.border-stone-100.pt-3 data-map-plants-section="true"
-            p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Plantes
-            button[type="button"
-                   class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm font-medium text-forest hover:bg-forest-tint"
-                   data-action="map#newPlant"
-                   data-map-new-plant-link="true"]
-              svg.h-4.w-4 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-                path d="M12 5v14M5 12h14"
-              span.flex-1 Nouvelle plante
-            button[type="button"
-                   class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-stone-600 hover:bg-stone-50"
-                   data-action="map#openPlacement"
-                   data-map-placement-link="true"]
-              svg.h-4.w-4.text-stone-500 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-                path d="M12 22s7-6.1 7-12a7 7 0 0 0-14 0c0 5.9 7 12 7 12z"
-                path d="M12 7v6M9 10h6"
-              span.flex-1 À placer
-              span[class="min-w-[1.5rem] rounded-full bg-ember px-1.5 py-0.5 text-center text-[0.7rem] font-semibold tabular-nums text-white #{'hidden' if @unplaced_count.zero?}"
-                   data-map-target="unplacedCount"]
-                = @unplaced_count
-            = link_to map_recoltes_path, class: "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-50", data: { map_recoltes_link: true } do
-              svg.h-4.w-4.text-stone-500 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-                path d="M12 22c4-2 7-6 7-11a7 7 0 0 0-14 0c0 5 3 9 7 11z"
-                path d="M12 4c0-1 1-2 3-2"
-              span.flex-1 Récoltes
-            = link_to map_plantes_path, class: "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-50", data: { map_plantes_link: true } do
-              svg.h-4.w-4.text-stone-500 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-                path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
-              span.flex-1 Toutes les plantes
-            = link_to map_especes_path, class: "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-50", data: { map_especes_link: true } do
-              svg.h-4.w-4.text-stone-500 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-                path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"
-                path d="M2 21c0-3 1.85-5.36 5.08-6"
-              span.flex-1 Espèces
-            / Le relief en 3D et la simulation du ruissellement.
-            = link_to map_relief_path, class: "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-50", data: { map_relief_link: true } do
-              svg.h-4.w-4.text-stone-500 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-                path d="m8 3 4 8 5-5 5 15H2L8 3z"
-              span.flex-1 Relief 3D et ruissellement
-          / Le carnet de gestion (phase 6) : les tâches des objets, mois par mois.
-          .mt-3.border-t.border-stone-100.pt-3
-            p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Gestion
-            = link_to map_carnet_path, class: "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-50", data: { map_carnet_link: true } do
-              svg.h-4.w-4.text-stone-500 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-                rect x="3" y="4" width="18" height="18" rx="2"
-                path d="M16 2v4M8 2v4M3 10h18"
-              span.flex-1 Carnet
-            / Vue « ce mois-ci » : les objets à travailler ce mois-ci ressortent,
-              les autres s'estompent.
-            label.mt-1.flex.cursor-pointer.items-center.gap-2.px-2.py-1.5.text-sm.text-stone-600
-              input[type="checkbox"
-                    class="h-4 w-4 rounded border-stone-300 text-4s-main focus:ring-teal-400"
-                    data-map-month-toggle="true"
-                    data-action="change->map#toggleMonthFocus"]
-              span.flex-1 Ce mois-ci
-              span class="text-[0.65rem] text-stone-400" = MapTask.month_name(Date.current.month).downcase
-          / Les notes manuscrites (phase 12).
-          = render "maps/sketches_panel"
+              / Les notes manuscrites (phase 12).
+              = render "maps/sketches_panel"
+
+            / ── Afficher ───────────────────────────────────────────────────
+            div#map-panel-see.hidden[role="tabpanel"
+                                     aria-labelledby="map-panel-tab-see"
+                                     data-map-panel-target="pane"
+                                     data-panel-tab="see"
+                                     data-action="change->map-panel#updateCounts"]
+              p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Fonds
+              ul.space-y-1
+                - @base_layers.each do |couche|
+                  li
+                    = link_to map_path(base_layer_id: couche.id), class: "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors #{couche.id == @base_layer.id ? 'bg-teal-50 text-4s-main font-medium' : 'text-stone-600 hover:bg-stone-50'}" do
+                      span class="h-2.5 w-2.5 flex-shrink-0 rounded-full #{couche.id == @base_layer.id ? 'bg-4s-main' : 'border border-stone-300'}"
+                      span.flex-1.truncate = couche.name
+                      - if couche.captured_on
+                        span class="text-[0.65rem] tabular-nums text-stone-400" = l(couche.captured_on, format: "%m/%Y")
+                - if @base_layer.relief?
+                  li
+                    label class="flex cursor-pointer items-center gap-2 px-2 py-1.5 text-sm text-stone-600"
+                      input[type="checkbox" class="rounded border-stone-300 text-4s-main focus:ring-teal-400" data-action="change->map#toggleRelief" data-map-target="reliefToggle"]
+                      span Relief
+
+              / Les couches publiques du SPW, servies en direct par le Géoportail
+                (MapGeoportailLayer) : rien n'est stocké ici, elles se superposent
+                à la carte comme le relief. Un groupe replié par thème, avec ce
+                qui y est allumé (« 1 / 3 ») : on en allume rarement plus d'une.
+              .mt-3.border-t.border-stone-100.pt-3
+                p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Géoportail de Wallonie
+                .space-y-1
+                  - MapGeoportailLayer.grouped.each do |intitule, couches|
+                    details.group.rounded-lg.border.border-stone-200
+                      summary class="flex cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-50 [&::-webkit-details-marker]:hidden"
+                        svg class="h-3.5 w-3.5 flex-shrink-0 text-stone-400 transition-transform group-open:rotate-90" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                          polyline points="9 6 15 12 9 18"
+                        span.flex-1.truncate = intitule
+                        span[class="text-[0.7rem] tabular-nums text-stone-400" data-map-panel-target="groupCount"] = "0 / #{couches.size}"
+                      ul class="space-y-0.5 px-2 pb-1.5 pl-7"
+                        - couches.each do |couche|
+                          li
+                            label.flex.cursor-pointer.items-center.gap-2.py-1.text-sm.text-stone-600
+                              input[type="checkbox" class="rounded border-stone-300 text-4s-main focus:ring-teal-400"
+                                    data-action="change->map#toggleGeoportail"
+                                    data-geoportail-key=couche.key
+                                    data-geoportail-url=couche.url
+                                    data-geoportail-layers=couche.layers
+                                    data-geoportail-opacity=couche.opacity
+                                    data-geoportail-z-index=couche.z_index
+                                    data-geoportail-max-native-zoom=couche.max_native_zoom
+                                    data-geoportail-name=couche.name
+                                    data-geoportail-info-service=couche.info_service
+                                    data-geoportail-info-layers=couche.info_layers]
+                              span.truncate = couche.name
+                p.mt-1.text-xs.text-stone-400 Couche affichée : touchez la carte pour en lire le détail.
+
+              / Vue « ce mois-ci » (phase 6) : les objets à travailler ce mois-ci
+                ressortent, les autres s'estompent, quelle que soit la couche.
+              .mt-3.border-t.border-stone-100.pt-3
+                p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Filtres
+                label class="flex cursor-pointer items-center gap-2 px-2 py-1.5 text-sm text-stone-600"
+                  input[type="checkbox"
+                        class="h-4 w-4 rounded border-stone-300 text-4s-main focus:ring-teal-400"
+                        data-map-month-toggle="true"
+                        data-action="change->map#toggleMonthFocus"]
+                  span.flex-1 Ce mois-ci
+                  span class="text-[0.65rem] text-stone-400" = MapTask.month_name(Date.current.month).downcase
+
+          / Les pages annexes de la carte (phases 6, 7, 13), en pied de panneau :
+            ce sont des liens, pas des couches. Les mêmes que la barre de ces
+            pages (`maps/_subnav`).
+          nav class="border-t border-stone-100 px-2 py-1.5" aria-label="Pages de la carte" data-map-pages="true"
+            ul class="flex flex-wrap gap-x-0.5"
+              - [["Carnet", map_carnet_path, :carnet], ["Récoltes", map_recoltes_path, :recoltes], ["Plantes", map_plantes_path, :plantes],
+                 ["Espèces", map_especes_path, :especes], ["Biodiversité", map_biodiversite_path, :biodiversite], ["Relief 3D", map_relief_path, :relief]].each do |label, path, key|
+                li
+                  = link_to label, path,
+                            class: "flex h-7 items-center rounded-md px-1.5 text-xs text-stone-600 hover:bg-stone-100 hover:text-forest",
+                            data: { "map_#{key}_link": true }
 
       / Barre des notes manuscrites (phase 12), visible quand un dessin est actif.
       = render "maps/sketch_toolbar"
