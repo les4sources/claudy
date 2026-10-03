@@ -48,7 +48,8 @@ class MapLayer < ApplicationRecord
   NODE_TYPES = {
     "water" => {
       "source" => "Source", "catchment" => "Captage", "cistern" => "Citerne", "valve" => "Vanne",
-      "manifold" => "Répartiteur", "meter" => "Compteur", "tap" => "Robinet", "manhole" => "Regard"
+      "manifold" => "Répartiteur", "meter" => "Compteur", "tap" => "Robinet", "trough" => "Abreuvoir",
+      "manhole" => "Regard"
     },
     "electric" => {
       "panel" => "Tableau", "meter" => "Compteur", "outlet" => "Prise", "breaker" => "Disjoncteur",

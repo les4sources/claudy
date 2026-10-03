@@ -63,6 +63,17 @@ RSpec.describe "Carte du domaine — réseaux (epic #348, phase 9)", type: :requ
     expect(node.node_type_label).to eq("Répartiteur")
   end
 
+  it "crée un abreuvoir sur le réseau d'eau" do
+    post map_features_path, headers: turbo, params: {
+      map_feature: { map_layer_id: water.id, feature_kind: "node", geometry: point.to_json, name: "Abreuvoir des chèvres",
+                     node_type: "trough" }
+    }
+    expect(response).to have_http_status(:ok)
+    node = MapFeature.last
+    expect(node.properties).to include("node_type" => "trough")
+    expect(node.node_type_label).to eq("Abreuvoir")
+  end
+
   it "refuse un type de nœud d'un autre réseau" do
     post map_features_path, headers: json, params: {
       map_feature: { map_layer_id: water.id, feature_kind: "node", geometry: point.to_json, node_type: "breaker" }
