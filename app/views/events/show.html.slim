@@ -120,6 +120,7 @@ nav.mb-4.flex.gap-1.border-b.border-gray-200
                         "https://www.les4sources.be#{@event.public_path}",
                         target: "_blank",
                         class: "claudy-link break-all"
+            = render "site_stats/page_summary", path: @event.public_path
             p.text-xs.text-gray-500
               | Le site se reconstruit quelques minutes après chaque modification.
             = button_to "Dépublier",

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_03_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_03_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -2192,6 +2192,38 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_010000) do
     t.index ["bread_account_id"], name: "index_shop_settings_on_bread_account_id"
     t.index ["craft_account_id"], name: "index_shop_settings_on_craft_account_id"
     t.index ["grocery_account_id"], name: "index_shop_settings_on_grocery_account_id"
+  end
+
+  create_table "site_hits", force: :cascade do |t|
+    t.string "browser"
+    t.string "country"
+    t.datetime "created_at", null: false
+    t.date "day", null: false
+    t.string "device"
+    t.string "kind", null: false
+    t.string "name"
+    t.datetime "occurred_at", null: false
+    t.string "os"
+    t.string "path", null: false
+    t.string "referrer_host"
+    t.string "source"
+    t.string "target"
+    t.datetime "updated_at", null: false
+    t.string "utm_campaign"
+    t.string "utm_medium"
+    t.string "utm_source"
+    t.string "visitor_hash", null: false
+    t.index ["day", "visitor_hash"], name: "index_site_hits_on_day_and_visitor_hash"
+    t.index ["kind", "name"], name: "index_site_hits_on_kind_and_name"
+    t.index ["occurred_at"], name: "index_site_hits_on_occurred_at"
+  end
+
+  create_table "site_visit_salts", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.date "day", null: false
+    t.string "salt", null: false
+    t.datetime "updated_at", null: false
+    t.index ["day"], name: "index_site_visit_salts_on_day", unique: true
   end
 
   create_table "space_bookings", force: :cascade do |t|

@@ -1,0 +1,31 @@
+section.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidden
+  .px-5.py-4.border-b.border-stone-100.bg-stone-50.flex.flex-wrap.items-center.gap-x-6.gap-y-1
+    h2.text-lg.font-semibold.text-stone-900 Jour par jour
+    .flex.items-center.gap-4.text-sm.text-stone-600
+      span.flex.items-center.gap-1.5
+        span.inline-block.h-3.w-3.rounded-sm style="background-color: #{visits_color};"
+        | Visites
+      span.flex.items-center.gap-1.5
+        span.inline-block.h-3.w-3.rounded-sm style="background-color: #{pageviews_color};"
+        | Pages vues
+
+  - if empty?
+    .px-5.py-10.text-center.text-sm.text-stone-500
+      | Aucune visite enregistrée sur cette période.
+  - else
+    .px-5.py-5
+      svg role="img" aria-label=description viewBox="0 0 #{width} #{height}" preserveAspectRatio="xMinYMin meet" style="width: 100%; height: auto;"
+        title Trafic quotidien du site
+        desc = description
+        - grid_lines.each do |graduation|
+          line x1=axis_width y1=graduation[:y] x2=width y2=graduation[:y] stroke="#e7e5e4" stroke-width="1"
+          text x=(axis_width - 6) y=(graduation[:y] + 4) text-anchor="end" font-size="11" fill="#78716c"
+            = graduation[:label]
+        - bars.each do |bar|
+          g
+            title = bar[:label]
+            rect x=bar[:x] y=bar[:pageviews_y] width=bar[:width] height=bar[:pageviews_height] fill=pageviews_color
+            rect x=bar[:x] y=bar[:visits_y] width=bar[:width] height=bar[:visits_height] fill=visits_color
+        - date_labels.each do |label|
+          text x=label[:x] y=(baseline + 16) text-anchor="middle" font-size="11" fill="#57534e"
+            = label[:label]

@@ -107,6 +107,7 @@
                       "https://www.les4sources.be#{@experience.public_path}",
                       target: "_blank",
                       class: "claudy-link break-all"
+          = render "site_stats/page_summary", path: @experience.public_path
           - unless current_user&.restricted_to_experiences?
             = button_to "Dépublier",
                         unpublish_experience_path(@experience),

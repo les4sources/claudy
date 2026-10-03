@@ -31,6 +31,7 @@ module Public
     # Étape 1 — dates, groupe, animal.
     def dates
       prepare_dates_view
+      track_funnel("funnel_dates")
     end
 
     # Transition étape 1 → 2. Un départ antérieur ou égal à l'arrivée re-rend
@@ -102,6 +103,7 @@ module Public
     def contact
       persist_draft(merged_draft_params)
       @quote = @draft.quote
+      track_funnel("funnel_contact")
     end
 
     # Étape finale — commit de la DEMANDE. Plus aucun encaissement ici.
@@ -123,6 +125,7 @@ module Public
         # décider. Celui-ci est écrit pour l'équipe et renvoie sur la fiche
         # séjour, seul endroit où les actions vivent.
         ReservationMailer.team_new_request(builder.stay).deliver_later
+        track_funnel("funnel_request")
         clear_draft
         # Stay-first : le Booking n'existe pas pour un séjour sans hébergement
         # classique (camping/espaces seuls) — seul le Stay est garanti. Même
@@ -159,6 +162,16 @@ module Public
     end
 
     private
+
+    # Statistiques du site (2026-10-03) : chaque étape franchie compte dans
+    # l'entonnoir, avec la même empreinte du jour que les pages vues du site —
+    # c'est ce qui relie une demande à la source de la visite. Ne lève jamais :
+    # la mesure ne doit pas gêner une réservation.
+    def track_funnel(name)
+      SiteStats::Tracker.new(request).record(kind: "event", name: name, path: request.path)
+    rescue StandardError => error
+      Rails.logger.warn("[site_stats] #{name} non enregistré : #{error.class}")
+    end
 
     def load_draft
       @draft = Reservations::Draft.new(session[DRAFT_SESSION_KEY] || {})

@@ -1,0 +1,32 @@
+/ Classement des fiches événement ou activité vues sur la période.
+  title, rows (SiteStats::Report#event_pages / #experience_pages), empty.
+section.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidden
+  .px-5.py-3.border-b.border-stone-100.bg-stone-50
+    h2.text-base.font-semibold.text-stone-900 = title
+    p.mt-0.5.text-xs.text-stone-500 Visites de chaque fiche, et ce qu'elles déclenchent : clics d'inscription ou de contact, formulaires Tally envoyés.
+  - if rows.empty?
+    p.px-5.py-6.text-sm.text-stone-500 = empty
+  - else
+    .overflow-x-auto
+      table.min-w-full.text-sm
+        thead
+          tr.text-xs.uppercase.tracking-wide.text-stone-500
+            th.px-5.py-2.text-left.font-medium(scope="col") Fiche
+            th.px-3.py-2.text-right.font-medium(scope="col") Visites
+            th.px-3.py-2.text-right.font-medium(scope="col") Vues
+            th.px-3.py-2.text-right.font-medium(scope="col" title="Clics d'inscription ou de contact") Clics
+            th.px-5.py-2.text-right.font-medium(scope="col" title="Formulaires Tally envoyés") Formulaires
+        tbody.divide-y.divide-stone-100
+          - rows.each do |row|
+            tr
+              td.px-5.py-2
+                - if row[:record]
+                  = link_to row[:label], row[:record], class: "claudy-link"
+                - else
+                  span.text-stone-800 = row[:label]
+                = link_to row[:path], "https://www.les4sources.be#{row[:path]}", target: "_blank", rel: "noopener",
+                          class: "block text-xs text-stone-400 hover:text-stone-600 break-all"
+              td.px-3.py-2.text-right.tabular-nums.text-stone-800 = number_with_delimiter(row[:visits])
+              td.px-3.py-2.text-right.tabular-nums.text-stone-500 = number_with_delimiter(row[:pageviews])
+              td.px-3.py-2.text-right.tabular-nums.text-stone-700 = number_with_delimiter(row[:clicks])
+              td.px-5.py-2.text-right.tabular-nums.text-stone-700 = number_with_delimiter(row[:submissions])
