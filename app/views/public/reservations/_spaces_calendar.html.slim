@@ -29,19 +29,29 @@
 / ligne. 150 + 7 × 104 = 878 px — la grille tient toujours sans défilement
 / horizontal jusqu'à 7 jours sur un écran de 1280 px.
 - label_column_width = 150
+/ Funnel public (Michael, 2026-10-03 : « trop d'info ») : pas de tarif sous
+/ chaque salle (le devis le donne en direct, la page Tarifs reste à un clic),
+/ pas de légende (chaque case écrit son état), pas de bouton « Effacer » (un clic
+/ de plus sur la case la vide), « Tous les jours » seulement à partir de trois
+/ jours, et la précision libre repliée. L'admin garde la grille complète.
+- public_mode = param_root == "reservation"
+- show_fill   = !public_mode || stay_days.size >= 3
 
-.bg-white.rounded-2xl.shadow-sm.border.border-bark.p-5(
+.bg-white.rounded-2xl.shadow-sm.border.border-bark.p-5(class=("sm:p-6" if public_mode)
   data-controller="public--spaces-calendar"
   data-action="change->public--spaces-calendar#slotChanged"
   data-needs-block="salles")
   .flex.items-start.justify-between.mb-4
     div
       h2.funnel-section-title.flex.items-center.gap-2
-        = funnel_icon :hall, css_class: "w-4 h-4 text-ember flex-shrink-0"
-        span Espaces
-      p.text-xs.text-moss.mt-0.5 Cliquez pour réserver — journée, soirée ou les deux, pour chaque jour du séjour, du jour d'arrivée au jour de départ. Tarifs semaine (↑ week-end).
+        = funnel_icon :hall, css_class: "w-5 h-5 text-ember flex-shrink-0"
+        span Salles et cuisine
+      - if public_mode
+        p.funnel-hint.mt-1 Touchez une case : journée, puis soirée, puis les deux.
+      - else
+        p.text-xs.text-moss.mt-0.5 Cliquez pour réserver — journée, soirée ou les deux, pour chaque jour du séjour, du jour d'arrivée au jour de départ. Tarifs semaine (↑ week-end).
     .flex.items-center.gap-2.flex-shrink-0.ml-4.mt-0.5
-      = link_to "Tarifs →", "https://www.les4sources.be/sejours/tarifs", target: "_blank", rel: "noopener", class: "text-xs text-forest hover:underline"
+      = link_to "Voir les tarifs", "https://www.les4sources.be/sejours/tarifs", target: "_blank", rel: "noopener", class: "text-sm font-semibold text-forest underline underline-offset-2"
       - if needs_scroll_arrows
         button(
           type="button"
@@ -68,9 +78,9 @@
 
         thead
           tr
-            th.text-left.py-2.pr-4.text-xs.font-normal.text-moss.sticky.left-5.z-10.bg-white style="width:#{label_column_width}px"
+            th.text-left.py-2.pr-4.text-xs.font-normal.text-moss.sticky.left-0.z-10.bg-white style="width:#{label_column_width}px"
             - stay_days.each_with_index do |day, i|
-              th.text-center.py-2.px-1 class=("spaces-grid-edge" if day_edges[i]) style="width:104px"
+              th.text-center.py-2.px-1 class=("spaces-grid-edge" if day_edges[i]) style="width:104px;min-width:104px"
                 p.text-xs.font-bold.text-moss = "Jour #{i + 1}"
                 p.text-xs.text-moss.font-normal = "#{fr_short_days[day.wday]} #{day.strftime("%-d/%-m")}"
                 - if day_edges[i]
@@ -79,13 +89,14 @@
         tbody
           - space_kinds.each do |space_key, space_name|
             tr class="border-t border-bark/60"
-              td.py-2.pr-4.sticky.left-5.z-10.bg-white.align-top style="width:#{label_column_width}px"
-                .text-sm.text-ink.font-medium = space_name
-                p.text-xs.text-moss.leading-tight = space_hints[space_key]
+              td.py-2.pr-4.sticky.left-0.z-10.bg-white.align-top style="width:#{label_column_width}px"
+                .text-ink.font-medium(class=(public_mode ? "text-base font-semibold" : "text-sm")) = space_name
+                - unless public_mode
+                  p.text-xs.text-moss.leading-tight = space_hints[space_key]
                 / Un geste pour « la Petite Salle du lundi au vendredi » : le
                 / bouton pose « journée » sur les cases ENCORE VIDES de la ligne
                 / et laisse les soirées déjà choisies telles quelles.
-                .flex.items-center.gap-2.mt-1
+                .flex.items-center.gap-2.mt-1(hidden=!show_fill)
                   button(
                     type="button"
                     class="spaces-grid-row-action"
@@ -95,6 +106,7 @@
                     | Tous les jours
                   button(
                     type="button"
+                    hidden=public_mode
                     class="spaces-grid-row-action spaces-grid-row-action--quiet"
                     data-action="click->public--spaces-calendar#clearRow"
                     data-public--spaces-calendar-key-param=space_key
@@ -135,8 +147,8 @@
           span.font-medium.text-ink = space_name
           span(data-summary-detail="true") = line.present? ? " · #{line}" : ""
 
-    / Légende
-    .flex.flex-wrap.items-center.gap-x-4.gap-y-1.mt-4.pt-3.border-t.border-bark/60
+    / Légende — admin seulement : en public, chaque case écrit son état.
+    .flex.flex-wrap.items-center.gap-x-4.gap-y-1.mt-4.pt-3.border-t.border-bark/60(hidden=public_mode)
       .flex.items-center.gap-1.5
         span.funnel-slot.funnel-slot--legend(data-slot="journee") Jour
         span.text-xs.text-moss Journée
@@ -150,9 +162,17 @@
     / ── Précision libre du besoin d'espace (facultatif) ──────────
     / Rangée à la création dans la note INTERNE du SpaceBooking
     / (préfixe « Demande client espaces : »), visible dans la modale admin.
-    .mt-5.pt-4.border-t.border-bark/60
-      label.block(for="#{param_root}_spaces_note")
-        span.text-sm.font-medium.text-ink Précisez votre besoin
-        p.text-xs.text-moss.mt-0.5 Installation, horaire, matériel, nombre de personnes… (facultatif)
-      textarea id="#{param_root}_spaces_note" name="#{param_root}[spaces_note]" rows="3" class="mt-2 w-full rounded-xl border-bark shadow-sm text-sm focus:border-forest focus:ring-forest" placeholder="Ex. : arrivée vendredi 17h, besoin de 60 chaises et d'un vidéoprojecteur…"
-        = draft.spaces_note
+    - if public_mode
+      details.mt-5.pt-4.border-t.border-bark/60(open=draft.spaces_note.present?)
+        summary.cursor-pointer.text-base.font-semibold.text-forest Ajouter une précision (facultatif)
+        label.block.mt-3(for="#{param_root}_spaces_note")
+          span.funnel-hint Installation, horaires, matériel, nombre de personnes…
+        textarea id="#{param_root}_spaces_note" name="#{param_root}[spaces_note]" rows="3" class="mt-2 w-full rounded-xl border-bark shadow-sm text-base focus:border-forest focus:ring-forest" placeholder="Ex. : arrivée vendredi 17h, besoin de 60 chaises et d'un vidéoprojecteur…"
+          = draft.spaces_note
+    - else
+      .mt-5.pt-4.border-t.border-bark/60
+        label.block(for="#{param_root}_spaces_note")
+          span.text-sm.font-medium.text-ink Précisez votre besoin
+          p.text-xs.text-moss.mt-0.5 Installation, horaire, matériel, nombre de personnes… (facultatif)
+        textarea id="#{param_root}_spaces_note" name="#{param_root}[spaces_note]" rows="3" class="mt-2 w-full rounded-xl border-bark shadow-sm text-sm focus:border-forest focus:ring-forest" placeholder="Ex. : arrivée vendredi 17h, besoin de 60 chaises et d'un vidéoprojecteur…"
+          = draft.spaces_note

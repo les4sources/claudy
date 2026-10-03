@@ -1,108 +1,70 @@
-/ Gantt grille — 1 mois x 6 ressources. Reçoit :calendar.
-/ Libre = vert tendre · Réservé = hachures ambre · Passé = sable · Aujourd'hui = anneau forêt.
-/ L'état n'est JAMAIS porté par la seule couleur (WCAG 1.4.1) : une case réservée
-/ est hachurée, et chaque case porte un `title` qui dit son état en toutes lettres.
-/ Clic sur une cellule → colonne mise en évidence (avail_cal_controller).
+/ Gantt des disponibilités — 1 mois × gîtes et salles. Reçoit :calendar.
+/
+/ Relu le 2026-10-03 (Michael : « fonctionnel mais difficile à lire, il faut
+/ trop se concentrer ») :
+/   · les cases remplissent la largeur de la modale (grille CSS) au lieu de
+/     tenir dans 14 px ;
+/   · les jours RÉSERVÉS consécutifs se soudent en une seule barre pleine,
+/     arrondie à ses bouts : on lit « pris du 9 au 11 », pas trente pastilles ;
+/   · les vendredis et samedis sont repérés dans l'axe, ce sont les nuits qu'on
+/     cherche le plus souvent.
+/ L'état n'est JAMAIS porté par la seule couleur (WCAG 1.4.1) : libre = case
+/ claire, réservé = barre foncée hachurée (écart de luminosité + motif), passé =
+/ case pointillée ; chaque case porte un `title` qui le dit en toutes lettres.
+/ Clic sur une case → sélection de plage (avail_cal_controller, `data-date`).
 - today     = Date.today
 - cal_dates = calendar[:dates]
-- cell_w    = 14
-- cell_sty  = "display:inline-block;width:#{cell_w}px;min-width:#{cell_w}px;margin-right:2px;flex-shrink:0;cursor:pointer"
-/ L'axe ne fixe PAS son `display` en ligne : `.avail-axis` a besoin d'empiler le
-/ numéro et l'initiale, et un `display:inline-block` en style inline gagnerait
-/ sur la classe. Les deux se sont retrouvés côte à côte pour cette raison.
-- axis_sty  = "width:#{cell_w}px;min-width:#{cell_w}px;margin-right:2px;flex-shrink:0;cursor:pointer"
+- dows      = %w[D L M M J V S]
 
-.flex.flex-col
-  / Le contrôleur `public--avail-cal` vit sur le PANNEAU de la modale, pas ici :
-  / ce partial est le contenu d'un turbo-frame remplacé à chaque changement de
-  / mois, et la plage de dates en cours de sélection ne doit pas être perdue en
-  / passant de septembre à octobre.
+/ Jour sélectionné — affiché après un clic, en mode consultation (étape 2).
+p.hidden.mb-3.text-base.font-medium.text-forest.bg-forest-tint.border.border-forest/30.rounded-xl.px-3.py-2.w-fit(
+  data-public--avail-cal-target="dayLabel")
 
-  / Jour sélectionné — affiché après un clic
-  p.hidden.mb-3.text-sm.font-medium.text-forest.bg-forest-tint.border.border-forest/30.rounded-xl.px-3.py-2.w-fit(
-    data-public--avail-cal-target="dayLabel")
+.avail-grid(style="--avail-days: #{cal_dates.size}")
+  / Axe des dates — numéro du jour ET initiale dans une seule cellule. La plage
+  / sélectionnée s'y dessine en une bande continue (cf. `.avail-axis`).
+  .avail-grid__row.avail-grid__row--axis
+    .avail-grid__label
+    - cal_dates.each do |date|
+      span.avail-axis(
+        class=[("avail-axis--today" if date == today), ("avail-axis--weekend" if [5, 6].include?(date.wday))].compact.join(" ")
+        data-date=date.iso8601
+        data-action="click->public--avail-cal#selectDay"
+        title=(date == today ? "Aujourd'hui, #{l(date, format: :long)}" : l(date, format: :long)))
+        span.avail-axis__day = date.day
+        span.avail-axis__dow = dows[date.wday]
 
-  / Axe des dates — numéro du jour ET initiale dans UNE seule cellule.
-  / Ils vivaient sur deux rangées séparées : la plage sélectionnée devait donc
-  / être dessinée deux fois, et se lisait comme deux séries de marques au lieu
-  / d'une travée. Réunis, ils portent une bande continue (cf. `.avail-axis`
-  / dans funnel.css), qui est le seul endroit où la sélection s'exprime — les
-  / cases de ressources en dessous gardent leur unique métier : libre ou pris.
-  .flex.mb-3
-    .w-36.flex-shrink-0
-    .flex
-      - cal_dates.each do |date|
-        - dow = %w[D L M M J V S][date.wday]
-        span.avail-axis(
-          class=("avail-axis--today" if date == today)
-          data-date=date.iso8601
-          data-action="click->public--avail-cal#selectDay"
-          title=(date == today ? "Aujourd'hui, #{l(date, format: :long)}" : l(date, format: :long))
-          style=axis_sty)
-          span.avail-axis__day = date.day
-          span.avail-axis__dow = dow
-
-  / Section Hébergements
-  .flex.items-center.mb-2
-    .w-36.flex-shrink-0
-    span.inline-flex.items-center.gap-1.5.text-xs.font-bold.text-moss.uppercase.tracking-widest
-      = funnel_icon :house, css_class: "w-4 h-4 text-ember flex-shrink-0"
-      span Hébergements
-
-  - calendar[:lodging_rows].each do |row|
-    .flex.items-center.mb-2
-      span.text-xs.font-medium.text-ink.w-36.pr-3.text-right.truncate.flex-shrink-0 = row[:name]
-      .flex
-        - cal_dates.each do |date|
+  - [["Hébergements", :house, calendar[:lodging_rows]], ["Salles", :hall, calendar[:hall_rows]]].each do |section, icon, rows|
+    .avail-grid__section
+      = funnel_icon icon, css_class: "w-5 h-5 text-ember flex-shrink-0"
+      span = section
+    - rows.each do |row|
+      .avail-grid__row
+        .avail-grid__label = row[:name]
+        - cal_dates.each_with_index do |date, i|
           - past     = date < today
-          - occupied = row[:occupied].include?(date)
-          - is_today = date == today
-          - bg    = past ? "avail-cell--past" : (occupied ? "avail-cell--busy" : "avail-cell--free")
+          - occupied = !past && row[:occupied].include?(date)
+          - joined_left  = occupied && i.positive? && cal_dates[i - 1] >= today && row[:occupied].include?(cal_dates[i - 1])
+          - joined_right = occupied && i < cal_dates.size - 1 && row[:occupied].include?(cal_dates[i + 1])
           - state = past ? "passé" : (occupied ? "réservé" : "libre")
-          - ring = is_today ? "ring-2 ring-forest" : ""
-          span.h-7.rounded(
+          - css = ["avail-cell", (past ? "avail-cell--past" : (occupied ? "avail-cell--busy" : "avail-cell--free")), ("avail-cell--join-left" if joined_left), ("avail-cell--join-right" if joined_right), ("avail-cell--today" if date == today)]
+          span(
             title="#{row[:name]} — #{l(date, format: :long)} : #{state}"
             data-date=date.iso8601
             data-action="click->public--avail-cal#selectDay"
-            class="#{bg} #{ring}"
-            style=cell_sty)
-
-  / Section Espaces
-  .flex.items-center.mt-4.mb-2
-    .w-36.flex-shrink-0
-    span.inline-flex.items-center.gap-1.5.text-xs.font-bold.text-moss.uppercase.tracking-widest
-      = funnel_icon :hall, css_class: "w-4 h-4 text-ember flex-shrink-0"
-      span Espaces
-
-  - calendar[:hall_rows].each do |row|
-    .flex.items-center.mb-2
-      span.text-xs.text-moss.w-36.pr-3.text-right.truncate.flex-shrink-0 = row[:name]
-      .flex
-        - cal_dates.each do |date|
-          - past     = date < today
-          - occupied = row[:occupied].include?(date)
-          - is_today = date == today
-          - bg    = past ? "avail-cell--past" : (occupied ? "avail-cell--busy" : "avail-cell--free")
-          - state = past ? "passé" : (occupied ? "réservé" : "libre")
-          - ring = is_today ? "ring-2 ring-forest" : ""
-          span.h-7.rounded(
-            title="#{row[:name]} — #{l(date, format: :long)} : #{state}"
-            data-date=date.iso8601
-            data-action="click->public--avail-cal#selectDay"
-            class="#{bg} #{ring}"
-            style=cell_sty)
+            class=css.compact.join(" "))
 
   / Légende
-  .flex.flex-wrap.items-center.gap-x-6.gap-y-1.mt-5.pt-4.border-t.border-bark
-    .flex.items-center.gap-1.5
-      span.w-4.h-4.rounded.avail-cell--free.flex-shrink-0
-      span.text-xs.text-moss Disponible
-    .flex.items-center.gap-1.5
-      span.w-4.h-4.rounded.avail-cell--busy.flex-shrink-0
-      span.text-xs.text-moss Réservé
-    .flex.items-center.gap-1.5
-      span.w-4.h-4.rounded.avail-cell--past.flex-shrink-0
-      span.text-xs.text-moss Passé
-    .flex.items-center.gap-1.5
-      span.w-4.h-4.rounded.avail-cell--free.ring-2.ring-forest.flex-shrink-0
-      span.text-xs.text-moss Aujourd'hui
+  .flex.flex-wrap.items-center.gap-x-6.gap-y-2.mt-6.pt-4.border-t.border-bark
+    .flex.items-center.gap-2
+      span.avail-legend.avail-cell--free
+      span.text-sm.text-ink Libre
+    .flex.items-center.gap-2
+      span.avail-legend.avail-cell--busy
+      span.text-sm.text-ink Réservé
+    .flex.items-center.gap-2
+      span.avail-legend.avail-cell--past
+      span.text-sm.text-ink Passé
+    .flex.items-center.gap-2
+      span.avail-legend.avail-cell--free.avail-cell--today
+      span.text-sm.text-ink Aujourd'hui

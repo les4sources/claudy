@@ -22,10 +22,9 @@ div(data-controller="public--avail-modal")
 
     / ── Titre ────────────────────────────────────────────────
     .mb-8.funnel-rise
-      h1.funnel-title Votre séjour aux 4 Sources
-      p.mt-3.text-base.leading-relaxed.text-moss.max-w-lg
-        | Quinze hectares en bord de Meuse, des gîtes, des ânes et un four à pain.
-        |  Dites-nous quand vous venez — on s'occupe du reste.
+      / « Réservation », pas « séjour » (Michael, 2026-10-03) : certains
+      / clients ne viennent qu'une journée, pour une salle. Accroche retirée.
+      h1.funnel-title Votre réservation aux 4 Sources
 
     / ── Formulaire ───────────────────────────────────────────
     .funnel-card.p-5.sm:p-8.funnel-rise style="animation-delay:80ms"
@@ -85,7 +84,7 @@ div(data-controller="public--avail-modal")
             = funnel_icon :bed, css_class: "w-5 h-5 text-ember flex-shrink-0 mt-0.5"
             p.text-sm.text-ink.leading-relaxed
               | En semaine, des <strong>chambres et lits</strong> se louent aussi à l'unité, dès 35 € par personne (15 € par enfant) —
-              = link_to " appelez-nous", "tel:+32455136142", class: "font-semibold underline underline-offset-2 hover:text-ember"
+              =< link_to "appelez-nous", "tel:+32455136142", class: "font-semibold underline underline-offset-2 hover:text-ember"
               |  pour réserver une chambre seule.
 
         / ══ Groupe ════════════════════════════════════════════
@@ -119,18 +118,18 @@ div(data-controller="public--avail-modal")
                   inputmode: "numeric",
                   class: "mt-1.5 w-full rounded-xl border-bark bg-white text-base text-ink shadow-sm focus:border-forest focus:ring-forest"
 
+          / `=<` pose l'espace AVANT le lien, hors de lui : écrit `link_to " adresse"`,
+          / le soulignement démarrait sur l'espace.
           p.funnel-hint.mt-3
-            | Moins de 3 ans : gratuit. Nuitée individuelle en semaine :
-            strong.text-ink  35 € par adulte, 15 € par enfant
-            | . Une question ?
-            = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline underline-offset-2 hover:text-forest"
+            | Moins de 3 ans : gratuit. Une question ?
+            =< link_to "sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline underline-offset-2 hover:text-forest"
 
         / ══ Animal ════════════════════════════════════════════
         section.mb-9
           h2.funnel-section-title.flex.items-center.gap-2.mb-1
             = funnel_icon :paw, css_class: "w-5 h-5 text-ember"
             | Un animal vous accompagne ?
-          p.funnel-hint.mb-4 Supplément de 50 € par séjour pour un chien, deux au maximum.
+          p.funnel-hint.mb-4 Supplément de 50 € par réservation pour un chien, deux au maximum.
           .space-y-2
             - [["Non, pas d'animal", "0"], ["Un chien (+50 €)", "1"], ["Plusieurs chiens (sur demande)", "2"]].each do |label_text, val|
               label.funnel-choice
@@ -179,9 +178,9 @@ div(data-controller="public--avail-modal")
     .mt-6.text-center.funnel-rise style="animation-delay:160ms"
       p.text-sm.text-moss
         | Une question ? Appelez Malau au
-        = link_to " +32 (0)490 46 77 10", "tel:+32490467710", class: "font-semibold text-ink underline underline-offset-2 hover:text-forest"
+        =< link_to "+32 (0)490 46 77 10", "tel:+32490467710", class: "font-semibold text-ink underline underline-offset-2 hover:text-forest"
         |  ou écrivez à
-        = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline underline-offset-2 hover:text-forest"
+        =< link_to "sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline underline-offset-2 hover:text-forest"
 
   / ── Modale calendrier disponibilités ─────────────────────
   = render "public/reservations/avail_modal"

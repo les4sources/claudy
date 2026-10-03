@@ -39,14 +39,16 @@ export default class extends Controller {
       el.hidden = !this.visibleFor(tokens)
     })
 
-    let anyAdd = false
+    // Une puce par bloc, toujours visible : pleine (aria-pressed) quand le bloc
+    // fait partie du séjour, « + » sinon. On masquait les puces actives avec
+    // l'attribut `hidden`, que la classe `inline-flex` écrasait : « + Gîte »
+    // restait affiché alors que le gîte était déjà là, et le clic ne faisait
+    // rien. La zone reste masquée quand rien n'a été coché (tout est visible).
     this.addButtons().forEach((btn) => {
-      const token = btn.dataset.needsAddToken
-      const show = !this.empty && !this.selected.has(token)
-      btn.hidden = !show
-      if (show) anyAdd = true
+      const active = this.empty || this.selected.has(btn.dataset.needsAddToken)
+      btn.setAttribute("aria-pressed", active ? "true" : "false")
     })
-    if (this.hasAddZoneTarget) this.addZoneTarget.hidden = !anyAdd
+    if (this.hasAddZoneTarget) this.addZoneTarget.hidden = this.empty
 
     this.syncFields()
   }
@@ -55,8 +57,19 @@ export default class extends Controller {
     event.preventDefault()
     const token = event.currentTarget.dataset.needsAddToken
     if (!token) return
-    this.selected.add(token)
-    this.apply()
+    if (!this.selected.has(token)) {
+      this.selected.add(token)
+      this.apply()
+    }
+    this.reveal(token)
+  }
+
+  // Amène le bloc du besoin à l'écran : on voit tout de suite où il est.
+  reveal(token) {
+    const block = this.element.querySelector(`[data-needs-block~="${token}"]:not([hidden])`)
+    if (!block) return
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    block.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" })
   }
 
   // Champs cachés `reservation[needs][]` reconstruits à chaque changement — la

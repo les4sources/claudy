@@ -52,6 +52,15 @@ RSpec.describe Lodging, type: :model do
     grand_duc.rooms << cheveche_room
   end
 
+  it "ne compte pas la mezzanine comme une chambre" do
+    hulotte.rooms << Room.create!(name: "Mezzanine", code: "MEZ", level: 2)
+    grand_duc.rooms << hulotte.rooms.last
+
+    expect(hulotte.rooms.size).to eq(2)
+    expect(hulotte.bedrooms_count).to eq(1)
+    expect(grand_duc.bedrooms_count).to eq(2)
+  end
+
   it "knows which lodgings are composite vs component" do
     expect(grand_duc).to be_composite
     expect(hulotte).to be_component

@@ -115,7 +115,21 @@ module Public
     # l'argent avant tout regard humain n'avait pas de sens : le séjour reste
     # `pending` et l'équipe peut très bien devoir refuser ou ajuster.
     def create
-      persist_draft(merged_draft_params)
+      persist_draft(merged_draft_params, overwrite: submitted_billing_fields)
+      @phone_error = !Reservations::PhoneFormat.valid?(@draft.phone)
+      billing = Reservations::BillingCheck.new(@draft)
+      billing_ok = billing.valid?
+      @billing_errors = billing.errors
+      # Numéro de TVA réécrit sous sa forme compacte, verdict VIES : la session
+      # garde le draft tel que BillingCheck l'a laissé.
+      session[DRAFT_SESSION_KEY] = @draft.to_h
+      if @phone_error || !billing_ok
+        @lodgings = bookable_lodgings
+        @quote = @draft.quote
+        flash.now[:alert] = @phone_error ? "Le numéro de téléphone ne semble pas valide." : "Vérifiez les coordonnées de facturation."
+        return render :contact, status: :unprocessable_entity
+      end
+
       builder = Reservations::Builder.new(draft: @draft)
       if builder.run
         ReservationMailer.confirmation_request(builder.stay).deliver_later
@@ -203,6 +217,19 @@ module Public
     # soumet plus `experiences`. On garde la règle parce que le paramètre reste
     # permis par rétrocompatibilité : un draft de session ouvert avant le
     # 2026-09-08 peut encore en porter, et doit rester effaçable.
+    # Un champ de facturation VIDÉ doit rester vide : la fusion par défaut
+    # garderait l'ancienne valeur, et un numéro de TVA refusé ne s'effacerait
+    # jamais (c'est pourtant ce que le message d'erreur propose).
+    BILLING_FIELDS = %i[invoice_requested billing_name billing_vat billing_no_vat billing_address
+                        billing_zip billing_city billing_country].freeze
+
+    def submitted_billing_fields
+      raw = params[:reservation]
+      return [] unless raw.respond_to?(:key?)
+
+      BILLING_FIELDS.select { |key| raw.key?(key) }
+    end
+
     def submitted_collections
       raw = params[:reservation]
       return [] unless raw.respond_to?(:key?)
@@ -238,7 +265,11 @@ module Public
       permitted = params.fetch(:reservation, {}).permit(
         :lodging_id, :arrival_date, :departure_date, :dogs_count,
         :adults, :children, :first_name, :last_name, :email, :phone, :group_name, :category,
-        :spaces_note,
+        :spaces_note, :activities_note,
+        # Facture (Michael 2026-10-03). Le verdict VIES n'est PAS permis : seul
+        # Reservations::BillingCheck le pose.
+        :invoice_requested, :billing_name, :billing_vat, :billing_no_vat, :billing_address,
+        :billing_zip, :billing_city, :billing_country,
         # Draps (epic #260, phase 2) : deux compteurs, bloc « Options » de
         # l'étape Composition.
         :linen_single, :linen_double,

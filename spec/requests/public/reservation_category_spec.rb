@@ -31,11 +31,11 @@ RSpec.describe "Funnel /reservation — type de séjour (catégorie)", type: :re
   end
 
   describe "étape coordonnées" do
-    it "affiche le champ Type de séjour SANS l'option interne « Les 4 Sources »" do
+    it "affiche le champ Type de réservation SANS l'option interne « Les 4 Sources »" do
       compose!
       get "/reservation/coordonnees"
       expect(response.body).to include("reservation[category]")
-      expect(response.body).to include("Type de séjour")
+      expect(response.body).to include("Type de réservation")
       expect(response.body).to include("Mariage")
       # La catégorie interne ne doit JAMAIS être une option du select public
       # (« Les 4 Sources » figure ailleurs dans la page — branding —, on cible
