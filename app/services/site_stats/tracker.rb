@@ -88,7 +88,8 @@ module SiteStats
         os: os,
         country: country
       )
-    rescue ActiveRecord::RecordInvalid
+    rescue ActiveRecord::ActiveRecordError, ArgumentError => error
+      Rails.logger.warn("[site_stats] hit ignoré : #{error.class}")
       nil
     end
 
@@ -96,10 +97,37 @@ module SiteStats
       Digest::SHA256.hexdigest([SiteVisitSalt.for(day), client_ip, user_agent].join("|"))
     end
 
-    # Cloudflare est devant Hatchbox : l'adresse du visiteur arrive dans
-    # CF-Connecting-IP, `remote_ip` ne verrait que le relais Cloudflare.
     def client_ip
-      @request.headers["CF-Connecting-IP"].presence || @request.remote_ip
+      self.class.client_ip(@request)
+    end
+
+    # Plages publiées par Cloudflare (https://www.cloudflare.com/ips/).
+    CLOUDFLARE_RANGES = %w[
+      173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18
+      108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17
+      162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22
+      2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32
+      2a06:98c0::/29 2c0f:f248::/32
+    ].map { |range| IPAddr.new(range) }.freeze
+
+    # Cloudflare est devant Hatchbox : l'adresse du visiteur arrive dans
+    # CF-Connecting-IP, `remote_ip` ne voit que le relais Cloudflare. On ne
+    # croit cet en-tête que s'il vient VRAIMENT d'un relais Cloudflare — le
+    # serveur répond aussi en direct, et n'importe qui peut écrire l'en-tête.
+    def self.client_ip(request)
+      header = request.headers["CF-Connecting-IP"].to_s.strip
+      return request.remote_ip if header.empty? || !cloudflare?(request.remote_ip)
+
+      IPAddr.new(header).to_s
+    rescue IPAddr::InvalidAddressError
+      request.remote_ip
+    end
+
+    def self.cloudflare?(ip)
+      address = IPAddr.new(ip.to_s)
+      CLOUDFLARE_RANGES.any? { |range| range.family == address.family && range.include?(address) }
+    rescue IPAddr::InvalidAddressError
+      false
     end
 
     def device

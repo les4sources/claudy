@@ -7,6 +7,7 @@ class SiteStatsController < BaseController
   breadcrumb "Site web", :site_stats_path, match: :force
 
   def show
+    SiteVisitSalt.purge_before!(Time.zone.today)
     @report = SiteStats::Report.new(period: params[:period])
   end
 

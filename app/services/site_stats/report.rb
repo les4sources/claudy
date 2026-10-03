@@ -66,7 +66,7 @@ module SiteStats
     def bounce_rate
       return 0.0 if visits.zero?
 
-      single = pageview_scope.group(:visitor_hash).having("COUNT(*) = 1").count.size
+      single = SiteHit.from(pageview_scope.group(:visitor_hash).having("COUNT(*) = 1").select(:visitor_hash), :single_page_visits).count
       (single * 100.0 / visits).round(0)
     end
 

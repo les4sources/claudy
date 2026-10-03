@@ -20,12 +20,20 @@ class SiteVisitSalt < ApplicationRecord
   validates :day, presence: true, uniqueness: true
   validates :salt, presence: true
 
+  # Chaque appel purge aussi les sels des jours passés : un sel ne survit pas
+  # au premier passage du lendemain (visite du site ou ouverture du tableau de
+  # bord). Une sauvegarde de la base faite dans la journée contient, elle, le
+  # sel du jour.
   def self.for(day)
+    purge_before!(day)
     where(day: day).pick(:salt) || rotate!(day)
   end
 
+  def self.purge_before!(day)
+    where(day: ...day).delete_all
+  end
+
   def self.rotate!(day)
-    where.not(day: day).delete_all
     create!(day: day, salt: SecureRandom.hex(32)).salt
   rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
     # Deux premières visites simultanées : l'autre requête a gagné.

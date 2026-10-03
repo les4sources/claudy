@@ -8,11 +8,12 @@ RSpec.describe "Api::Public::V1::Hits", type: :request do
   HITS_SITE = "https://www.les4sources.be".freeze
   HITS_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1".freeze
 
-  def beacon(payload = {}, origin: HITS_SITE, user_agent: HITS_UA, ip: "203.0.113.7", country: "BE", **fields)
+  def beacon(payload = {}, origin: HITS_SITE, user_agent: HITS_UA, ip: "203.0.113.7", country: "BE", remote_addr: "172.64.0.10", **fields)
     post "/api/public/v1/hits",
          params: payload.merge(fields).to_json,
          headers: { "Content-Type" => "text/plain;charset=UTF-8", "Origin" => origin,
-                    "User-Agent" => user_agent, "CF-Connecting-IP" => ip, "CF-IPCountry" => country }
+                    "User-Agent" => user_agent, "CF-Connecting-IP" => ip, "CF-IPCountry" => country,
+                    "REMOTE_ADDR" => remote_addr }
   end
 
   it "enregistre une page vue avec sa source, sa campagne, son appareil et son pays" do
@@ -95,5 +96,28 @@ RSpec.describe "Api::Public::V1::Hits", type: :request do
     beacon(k: "event", n: "inconnu", u: "#{HITS_SITE}/")
     expect(response).to have_http_status(:no_content)
     expect(SiteHit.count).to eq(0)
+  end
+
+  it "refuse les étapes du funnel, qui ne s'écrivent que côté serveur" do
+    beacon(k: "event", n: "funnel_request", u: "#{HITS_SITE}/")
+
+    expect(response).to have_http_status(:no_content)
+    expect(SiteHit.count).to eq(0)
+  end
+
+  it "refuse un octet nul et un corps trop gros, sans erreur serveur" do
+    beacon(k: "pageview", u: "#{HITS_SITE}/", t: "a\u0000b")
+    expect(response).to have_http_status(:bad_request)
+
+    beacon(k: "pageview", u: "#{HITS_SITE}/", r: "x" * 5_000)
+    expect(response).to have_http_status(:content_too_large)
+    expect(SiteHit.count).to eq(0)
+  end
+
+  it "ne croit CF-Connecting-IP que s'il vient d'un relais Cloudflare" do
+    beacon({ k: "pageview", u: "#{HITS_SITE}/" }, ip: "198.51.100.1", remote_addr: "192.0.2.50")
+    beacon({ k: "pageview", u: "#{HITS_SITE}/" }, ip: "198.51.100.2", remote_addr: "192.0.2.50")
+
+    expect(SiteHit.distinct.count(:visitor_hash)).to eq(1)
   end
 end
