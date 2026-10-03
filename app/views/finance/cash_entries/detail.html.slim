@@ -1,0 +1,70 @@
+/  Le détail d'une ligne, ouvert depuis la file « À affecter » (epic #288,
+   phase 5). Il répond à « qu'est-ce que c'est, au juste ? » quand les quatre
+   colonnes de la file ne suffisent pas : d'où le mouvement en entier, avec
+   les champs que la file et la page pleine taisent (date de valeur, code
+   opération, IBAN, référence du relevé). Rien ne s'y modifie : on affecte
+   dans la file, la modale montre.
+/  Le titre nomme QUI ; la communication, souvent longue, se lit en entier
+   plus bas plutôt que de remplir l'en-tête.
+- titre = @entry.counterparty_name.presence || @entry.label
+- reste = @entry.remaining_cents
+= render TurboModal::Component.new(title: titre, width: :md) do
+  .flex.flex-wrap.items-baseline.justify-between.gap-3
+    p.text-sm.text-gray-600
+      = l(@entry.entry_date, format: :ddmmyyyy)
+      = " · #{@entry.cash_account.name}"
+    p.text-2xl.font-semibold.tabular-nums(class="#{@entry.incoming? ? 'text-forest' : 'text-[#7A2E1F]'}")
+      = number_to_currency(@entry.amount_cents / 100.0)
+
+  dl.mt-4.grid.grid-cols-1.gap-x-6.gap-y-3.text-sm(class="sm:grid-cols-2")
+    div
+      dt.text-xs.uppercase.text-gray-400 Contrepartie
+      dd.mt-0.5.text-gray-900= @entry.counterparty_name.presence || "—"
+    div
+      dt.text-xs.uppercase.text-gray-400 IBAN de la contrepartie
+      dd.mt-0.5.font-mono.text-gray-900= @entry.counterparty_iban.presence || "—"
+    div
+      dt.text-xs.uppercase.text-gray-400 Date de valeur
+      dd.mt-0.5.text-gray-900= @entry.value_date ? l(@entry.value_date, format: :ddmmyyyy) : "—"
+    div
+      dt.text-xs.uppercase.text-gray-400 Code opération
+      dd.mt-0.5.font-mono.text-gray-900= @entry.transaction_code.presence || "—"
+    div
+      dt.text-xs.uppercase.text-gray-400 Référence du relevé
+      dd.mt-0.5.font-mono.text-gray-900= @entry.statement_ref.presence || "—"
+    div
+      dt.text-xs.uppercase.text-gray-400 Statut
+      dd.mt-0.5.text-gray-900= @entry.status_label
+    / La communication ENTIÈRE, retours à la ligne compris : c'est souvent
+      la fin, coupée dans la file, qui dit à quoi sert le virement.
+    div(class="sm:col-span-2")
+      dt.text-xs.uppercase.text-gray-400 Communication
+      dd.mt-0.5.whitespace-pre-line.break-words.text-gray-900= @entry.communication.presence || "—"
+    - if @entry.label.present? && @entry.label != titre && @entry.label != @entry.communication
+      div(class="sm:col-span-2")
+        dt.text-xs.uppercase.text-gray-400 Libellé
+        dd.mt-0.5.break-words.text-gray-900= @entry.label
+
+  h2.mt-6.mb-2.text-sm.font-semibold.text-gray-900 Affectations
+  - if @allocations.empty?
+    p.text-sm.text-gray-500 Rien d'affecté pour l'instant.
+  - else
+    / Une liste plutôt qu'un tableau : quatre colonnes ne tiennent pas dans
+      une modale sur téléphone.
+    ul.divide-y.divide-gray-100.border-y.border-gray-100.text-sm
+      - @allocations.each do |allocation|
+        li.flex.items-baseline.justify-between.gap-4.py-2
+          div.min-w-0
+            p.text-gray-900= allocation.general_account.to_s
+            p.text-xs.text-gray-500
+              = allocation.team&.name || "— non affecté"
+              = " · #{allocation.legal_entity.name}"
+          p.flex-shrink-0.tabular-nums.text-gray-900= number_to_currency(allocation.amount_cents / 100.0)
+  p.mt-3.text-sm
+    | Reste à affecter :
+    strong.ml-1.tabular-nums(class=(reste.zero? ? "text-forest" : "text-amber-700"))= number_to_currency(reste / 100.0)
+
+  .mt-6.flex.justify-end
+    = link_to "Ouvrir la page de la ligne", finance_cash_entry_path(@entry),
+              data: { turbo_frame: "_top" },
+              class: "text-sm text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"

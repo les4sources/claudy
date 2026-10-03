@@ -406,6 +406,9 @@ Rails.application.routes.draw do
         # La proposition de Jev d'une ligne sans règle, chargée à la volée dans
         # la file « À affecter » pour ne jamais retenir l'écran.
         get :suggestion
+        # Le détail d'une ligne en modale, depuis la file « À affecter » (epic
+        # #288, phase 5) : on le consulte sans quitter sa page ni son rythme.
+        get :detail
       end
       resources :allocations, only: [:create, :destroy], controller: "cash_allocations"
     end
