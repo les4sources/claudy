@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_03_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_04_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -2178,6 +2178,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_200000) do
     t.index ["key"], name: "index_settings_on_key", unique: true
   end
 
+  create_table "shop_monthly_checks", force: :cascade do |t|
+    t.bigint "bank_received_cents"
+    t.bigint "cash_total_cents", default: 0, null: false
+    t.string "channel", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "gap_cents"
+    t.text "notes"
+    t.date "period_month", null: false
+    t.string "sheet_numbers"
+    t.bigint "sheets_total_cents", default: 0, null: false
+    t.string "status", default: "draft", null: false
+    t.bigint "transfer_total_cents", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.datetime "validated_at"
+    t.bigint "validated_by_id"
+    t.index ["channel", "period_month"], name: "index_shop_monthly_checks_on_channel_and_month", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["deleted_at"], name: "index_shop_monthly_checks_on_deleted_at"
+    t.index ["validated_by_id"], name: "index_shop_monthly_checks_on_validated_by_id"
+  end
+
   create_table "shop_settings", force: :cascade do |t|
     t.string "beneficiary_name"
     t.string "bic"
@@ -2787,6 +2808,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_200000) do
   add_foreign_key "sales_invoices", "legal_entities"
   add_foreign_key "sent_emails", "customers"
   add_foreign_key "services", "humans"
+  add_foreign_key "shop_monthly_checks", "users", column: "validated_by_id"
   add_foreign_key "shop_settings", "general_accounts", column: "bread_account_id"
   add_foreign_key "shop_settings", "general_accounts", column: "craft_account_id"
   add_foreign_key "shop_settings", "general_accounts", column: "grocery_account_id"

@@ -1,0 +1,46 @@
+/ L'historique du contrôle mensuel des carnets (epic #359, phase 5) : un mois
+  par ligne, l'écart figé de chaque carnet, et le cumul pour mesurer la fuite.
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Contrôle mensuel des carnets",
+           links: [link_to("Contrôler #{l(Date.current.prev_month, format: '%B %Y')}", shop_monthly_check_path(Date.current.prev_month.strftime("%Y-%m")), class: "inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90")]
+
+.mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
+  p.text-sm.text-gray-700
+    strong Une minute par mois et par carnet.
+    |  On additionne les feuilles Épicerie et Boulangerie, on saisit trois totaux, et Claudy met en face ce que la banque a reçu. L'écart se fige à la validation : il ne se dissout pas quand un virement arrive après coup.
+  p.mt-2.text-xs.text-gray-500
+    | L'artisanat se contrôle sur le relevé de chaque artisan (déclaré, reçu, espèces).
+
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-6[scope="col"] Mois
+        - ShopMonthlyCheck::CHANNELS.each do |channel|
+          th.py-3.px-6.text-right[scope="col"]= ShopSetting::NOTEBOOK_LABELS.fetch(channel.to_sym)
+        th.py-3.px-6[scope="col"]
+    tbody
+      - @months.each do |month|
+        - checks = (@checks_by_month[month] || []).index_by(&:channel)
+        tr.border-b.bg-white
+          td.py-4.px-6.whitespace-nowrap.font-medium.text-gray-900= l(month, format: "%B %Y").capitalize
+          - ShopMonthlyCheck::CHANNELS.each do |channel|
+            - check = checks[channel]
+            td.py-4.px-6.text-right.whitespace-nowrap
+              - if check.nil?
+                span.text-gray-400 à faire
+              - elsif check.draft?
+                span.inline-flex.items-center.rounded-full.bg-amber-100.px-2.py-0.5.text-xs.font-medium.text-amber-800 Brouillon
+              - else
+                span.font-medium(class=shop_gap_class(check.gap_cents))= shop_gap(check.gap_cents)
+          td.py-4.px-6.text-right
+            = link_to "Ouvrir", shop_monthly_check_path(month.strftime("%Y-%m")), class: "text-sm text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+    tfoot
+      tr.bg-gray-50
+        td.py-3.px-6.text-xs.font-semibold.uppercase.text-gray-700 Écarts cumulés
+        - ShopMonthlyCheck::CHANNELS.each do |channel|
+          td.py-3.px-6.text-right.font-semibold(class=shop_gap_class(@cumulative[channel]))= shop_gap(@cumulative[channel])
+        td
+p.mt-2.text-xs.text-gray-500
+  | Écart positif : noté plus que ce qui est entré (impayé, mauvais QR, espèces manquantes). Négatif : entré plus que noté. Seuls les mois validés comptent dans le cumul.

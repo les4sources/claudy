@@ -43,5 +43,8 @@
           = account ? "Utilisé : #{account}" : "Aucun compte #{default_code} au plan comptable : pas de règle pour ce carnet."
     = f.submit "Enregistrer", class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
 
+  p.text-sm
+    = link_to "Contrôle mensuel des carnets →", shop_monthly_checks_path, class: "text-4s-main hover:underline"
+
   - unless @settings.bank_configured?
     p.text-sm.text-amber-700 Tant que le bénéficiaire et l'IBAN manquent, les feuilles s'impriment sans QR.
