@@ -26,10 +26,35 @@ RSpec.describe "Carte du domaine — réseaux (epic #348, phase 9)", type: :requ
     expect(response.body).to include('data-network="water"', 'data-network-color="#2563EB"')
   end
 
-  it "sert la fiche d'un nouveau nœud avec les types du réseau et la consigne" do
+  it "sert la fiche d'un nouveau nœud avec les types du réseau et la consigne, sans exemple" do
     get new_map_feature_path(layer_id: water.id, feature_kind: "node")
-    expect(response.body).to include("Type de nœud", "Vanne", "Regard", "Consigne", "UniFi")
+    expect(response.body).to include("Type de nœud", "Vanne", "Regard", "Consigne")
     expect(response.body).not_to include("Disjoncteur")
+    consigne = Nokogiri::HTML(response.body).at_css("textarea[name='map_feature[instructions]']")
+    expect(consigne["placeholder"]).to be_nil
+  end
+
+  it "ne propose l'équipement (UniFi) que sur le réseau Ethernet" do
+    get new_map_feature_path(layer_id: water.id, feature_kind: "node")
+    expect(response.body).not_to include("map_feature[equipment]", "UniFi")
+
+    ethernet = MapLayer.ensure_networks!.find { |layer| layer.network == "ethernet" }
+    get new_map_feature_path(layer_id: ethernet.id, feature_kind: "node")
+    expect(response.body).to include("map_feature[equipment]", "UniFi")
+  end
+
+  it "montre les photos d'un nœud en carousel en tête de fiche, avec le plein écran" do
+    node = water.map_features.create!(feature_kind: "node", geometry: point, name_i18n: { "fr" => "Vanne du gîte" },
+                                      properties: { "node_type" => "valve" })
+    get map_feature_path(node)
+    expect(response.body).not_to include("data-photo-carousel")
+
+    2.times { node.photos.attach(Rack::Test::UploadedFile.new(Rails.root.join("spec/fixtures/files/capture.png"), "image/png")) }
+    get map_feature_path(node)
+    carousel = Nokogiri::HTML(response.body).at_css("[data-controller='photo-carousel']")
+    expect(carousel.css("[data-photo-carousel-target='track'] img").size).to eq(2)
+    expect(carousel.at_css("dialog[data-photo-carousel-target='dialog']").css("img").size).to eq(2)
+    expect(carousel.at_css("[data-photo-carousel-target='counter']").text).to eq("1 / 2")
   end
 
   it "crée un nœud avec son type, sa consigne et son équipement" do
