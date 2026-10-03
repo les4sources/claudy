@@ -137,6 +137,9 @@ class MapObservationsController < BaseController
     @species_count = MapFeature.distinct_species_count(scope)
     @total_count = scope.count
     @observations = scope.limit(LIST_LIMIT).to_a
+    # Un filtre posé : la carte ne montre que ces relevés (tous, pas seulement
+    # les LIST_LIMIT de la liste).
+    @filtered_ids = scope.unscope(:order).pluck(:id) if @filters.values.any?
     @observers = User.where(id: @observations.map(&:observer_id).compact.uniq).index_by(&:id)
     @years = MapFeature.observations.distinct.pluck(Arel.sql("left(properties->>'observed_on', 4)"))
                        .compact.select { |year| year.match?(/\A\d{4}\z/) }.sort.reverse

@@ -164,6 +164,20 @@ RSpec.describe "Carte du domaine — relevés de biodiversité (epic #348, phase
         expect(html.css("select[name=year] option").map { |o| o["value"] }).to eq(["", "2026", "2025"])
       end
 
+      # La carte ne montre que les relevés retenus : la liste les lui donne.
+      it "donne à la carte les relevés retenus par le filtre, et rien sans filtre" do
+        get map_observations_path
+        expect(html.at_css("[data-observation-list]")["data-filter-ids"]).to be_nil
+
+        get map_observations_path(realm: "fauna")
+        ids = JSON.parse(html.at_css("[data-observation-list]")["data-filter-ids"])
+        expect(ids).to match_array(rows.map { |r| r["data-feature-id"].to_i })
+        expect(ids.size).to eq(2)
+
+        get map_biodiversite_path(realm: "fauna")
+        expect(html.at_css("[data-observation-list]")["data-filter-ids"]).to be_nil
+      end
+
       it "a sa page annexe, dont chaque ligne mène au relevé sur la carte" do
         get map_biodiversite_path
         expect(response).to have_http_status(:ok)

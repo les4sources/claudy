@@ -2,9 +2,11 @@
   ancien, avec leurs filtres (règne, espèce, année) et le nombre d'espèces
   distinctes. `on_map` : dans le panneau de la carte, une ligne centre la carte
   sur le relevé et ouvre sa fiche ; en page annexe, elle mène à la carte.
+  `data-filter-ids` : les relevés retenus par le filtre, que la carte est seule
+  à montrer (absent sans filtre).
 - url = on_map ? map_observations_path : map_biodiversite_path
 - select_class = "h-9 min-w-0 rounded-lg border-stone-300 py-0 pl-2 pr-7 text-xs shadow-sm focus:border-forest focus:ring-forest"
-div data-observation-list="true"
+div data-observation-list="true" data-filter-ids=(@filtered_ids.to_json if on_map && @filtered_ids)
   = form_with url: url, method: :get, class: "flex flex-wrap gap-1.5" do
     label.sr-only for="observations_realm" Règne
     = select_tag :realm, options_for_select([["Tous les règnes", ""]] + MapFeatureObservation::REALMS.map { |k, v| [v, k] }, @filters[:realm]),

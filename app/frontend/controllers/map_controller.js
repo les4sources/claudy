@@ -1208,8 +1208,11 @@ export default class extends Controller {
         layer.getTooltip?.()?.getElement?.()?.classList.toggle('map-month-dimmed', dimmed);
       });
     });
-    // Mêmes éléments recréés, même besoin pour la recherche (phase 14).
+    // Mêmes éléments recréés, même besoin pour la recherche (phase 14) et
+    // pour le filtre des listes de relevés.
     this.search?.apply();
+    this.biodiversity?.applyFilter();
+    this.bioindicators?.applyFilter();
   }
 
   // ── Carte du jour (epic #348, phase 3) ────────────────────────────────────

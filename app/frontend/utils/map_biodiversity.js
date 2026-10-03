@@ -123,11 +123,19 @@ export class BiodiversityMode {
     this.fix = null;
     this.fixCircle = null;
     this.forceArmed = false;
+    // Les relevés retenus par le filtre de la liste (règne, espèce, année…) :
+    // la carte ne montre qu'eux. `null` : aucun filtre.
+    this.filterIds = null;
+    this.onFrameLoad = (event) => {
+      if (event.target.id === this.o.listFrame) this.readFilter(event.target);
+    };
+    this.c.element.addEventListener('turbo:frame-load', this.onFrameLoad);
   }
 
   destroy() {
     this.stopGps();
     this.removeControl();
+    this.c.element.removeEventListener('turbo:frame-load', this.onFrameLoad);
   }
 
   get active() {
@@ -228,6 +236,37 @@ export class BiodiversityMode {
   refreshList() {
     const frame = this.c.element.querySelector(`turbo-frame#${this.o.listFrame}`);
     if (frame?.getAttribute('src')) frame.reload();
+  }
+
+  // ── Le filtre de la liste, sur la carte ────────────────────────────────────
+
+  // La liste (re)chargée porte les relevés retenus par son filtre : la
+  // sélection vient du serveur, la carte n'en refait pas le calcul.
+  readFilter(frame) {
+    const raw = frame.querySelector('[data-filter-ids]')?.dataset.filterIds;
+    let ids = null;
+    try {
+      ids = raw ? JSON.parse(raw) : null;
+    } catch (_error) {
+      ids = null;
+    }
+    this.filterIds = Array.isArray(ids) ? new Set(ids.map(String)) : null;
+    this.applyFilter();
+  }
+
+  // Masque les pastilles hors filtre. Des classes plutôt que retirer les
+  // marqueurs du groupe : la sélection et la recherche les retrouvent, et
+  // `applyMonthFocus` rappelle ceci chaque fois que les éléments sont recréés
+  // (couche rechargée ou rallumée, pastille redessinée).
+  applyFilter() {
+    const group = this.c.featureLayers?.[this.layerId()];
+    if (!group) return;
+    const ids = this.filterIds;
+    group.eachLayer((layer) => {
+      const hidden = Boolean(ids) && !ids.has(String(layer.featureId));
+      layer.getElement?.()?.classList.toggle('map-filtered-out', hidden);
+      layer.getTooltip?.()?.getElement?.()?.classList.toggle('map-filtered-out', hidden);
+    });
   }
 
   // ── « À ma position » (téléphone) ──────────────────────────────────────────
