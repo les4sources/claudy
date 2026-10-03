@@ -5,11 +5,12 @@
   haversine) — elle se met à jour à la réouverture de la fiche après un
   déplacement de sommets.
 - color = layer.network_color
-/ L’exemple de consigne parle du réseau du nœud : couper l’eau, le courant, ou
-  retrouver et redémarrer un équipement.
+/ L’exemple de consigne parle du réseau du nœud : couper l’eau, le courant, le
+  gaz, ou retrouver et redémarrer un équipement.
 - instructions_example = { "water" => "Pour couper l’eau du gîte : vanne rouge sous l’évier, quart de tour vers la droite.",
                            "electric" => "Disjoncteur du coworking : tableau du hangar, 3e rangée, étiqueté « CW ».",
-                           "ethernet" => "Redémarrer : débrancher l’alimentation 10 s dans la baie du grenier." }[layer.network]
+                           "ethernet" => "Redémarrer : débrancher l’alimentation 10 s dans la baie du grenier.",
+                           "gas" => "Couper le gaz : vanne jaune au pied de la citerne, quart de tour (poignée en travers du tuyau)." }[layer.network]
 div.flex.items-center.gap-2.text-xs.text-stone-600 data-network-readonly=layer.network
   span.font-semibold Réseau
   span.inline-block.h-2.5.w-2.5.rounded-full style="background: #{color}"

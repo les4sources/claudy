@@ -131,6 +131,6 @@ RentalItem.find_or_create_by!(name: "Hamac double") do |r|
   r.description = "Hamac 2 personnes, disponible de mai à octobre."
 end
 
-# Carte du domaine (epic #348, phase 9) — les trois couches réseau : Eau,
-# Électricité, Ethernet. Aussi garanties à l'ouverture de la carte.
+# Carte du domaine (epic #348, phase 9) — les couches réseau : Eau,
+# Électricité, Ethernet, Gaz. Aussi garanties à l'ouverture de la carte.
 MapLayer.ensure_networks!

@@ -1,17 +1,17 @@
 require "rails_helper"
 
-# Epic #348, phase 9 — les réseaux : eau, électricité, ethernet. Qu'un dimanche
-# soir on sache où couper l'eau ou le courant.
+# Epic #348, phase 9 — les réseaux : eau, électricité, ethernet, gaz. Qu'un
+# dimanche soir on sache où couper l'eau, le courant ou le gaz.
 RSpec.describe "Carte du domaine — réseaux (epic #348, phase 9)", type: :model do
   let(:point) { { "type" => "Point", "coordinates" => [4.905, 50.340] } }
   let(:line) { { "type" => "LineString", "coordinates" => [[4.905, 50.340], [4.906, 50.340]] } }
 
   describe "MapLayer.ensure_networks!" do
-    it "crée les trois couches réseau, une seule fois, avec leur réseau et leur couleur" do
+    it "crée les quatre couches réseau, une seule fois, avec leur réseau et leur couleur" do
       layers = MapLayer.ensure_networks!
-      expect(layers.map(&:name)).to eq(%w[Eau Électricité Ethernet])
-      expect(layers.map(&:network)).to eq(%w[water electric ethernet])
-      expect(layers.map(&:network_color)).to eq(%w[#2563EB #D97706 #7C3AED])
+      expect(layers.map(&:name)).to eq(%w[Eau Électricité Ethernet Gaz])
+      expect(layers.map(&:network)).to eq(%w[water electric ethernet gas])
+      expect(layers.map(&:network_color)).to eq(%w[#2563EB #D97706 #7C3AED #CA8A04])
       expect(layers).to all(be_network)
 
       expect { MapLayer.ensure_networks! }.not_to change(MapLayer, :count)
@@ -19,7 +19,7 @@ RSpec.describe "Carte du domaine — réseaux (epic #348, phase 9)", type: :mode
 
     it "adopte une couche réseau existante sans réseau déclaré plutôt que de la doubler" do
       water = MapLayer.create!(kind: "network", name: "Eau")
-      expect { MapLayer.ensure_networks! }.to change(MapLayer, :count).by(2)
+      expect { MapLayer.ensure_networks! }.to change(MapLayer, :count).by(3)
       expect(water.reload.network).to eq("water")
     end
 
@@ -36,6 +36,7 @@ RSpec.describe "Carte du domaine — réseaux (epic #348, phase 9)", type: :mode
       expect(MapLayer::NODE_TYPES["water"].values).to eq(%w[Source Captage Citerne Vanne Compteur Robinet Regard])
       expect(MapLayer::NODE_TYPES["electric"].values).to eq(%w[Tableau Compteur Prise Disjoncteur Éclairage])
       expect(MapLayer::NODE_TYPES["ethernet"].values).to eq(["Switch", "Borne wifi", "Prise murale", "Routeur", "Baie", "Boîtier fibre"])
+      expect(MapLayer::NODE_TYPES["gas"].values).to eq(%w[Citerne Bouteille Détendeur Vanne Compteur Chaudière Cuisinière])
       expect(MapLayer::NODE_TYPES.values.flat_map(&:keys)).to all(match(/\A[a-z_]+\z/))
     end
 
@@ -51,6 +52,13 @@ RSpec.describe "Carte du domaine — réseaux (epic #348, phase 9)", type: :mode
       node = water.map_features.new(feature_kind: "node", geometry: point, properties: { "node_type" => "breaker" })
       expect(node).not_to be_valid
       expect(node.errors.full_messages.join).to include("breaker", "Eau")
+    end
+
+    it "accepte une vanne et une citerne sur le gaz, refuse un robinet" do
+      gas = MapLayer.ensure_networks!.find { |layer| layer.network == "gas" }
+      expect(gas.map_features.new(feature_kind: "node", geometry: point, properties: { "node_type" => "valve" })).to be_valid
+      expect(gas.map_features.new(feature_kind: "node", geometry: point, properties: { "node_type" => "tank" }).node_type_label).to eq("Citerne")
+      expect(gas.map_features.new(feature_kind: "node", geometry: point, properties: { "node_type" => "tap" })).not_to be_valid
     end
 
     it "refuse un calibre ou un équipement inconnu" do
