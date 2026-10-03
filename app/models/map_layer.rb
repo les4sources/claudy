@@ -35,12 +35,15 @@ class MapLayer < ApplicationRecord
   NETWORKS = {
     "water" => { name: "Eau", color: "#2563EB" },
     "electric" => { name: "Électricité", color: "#D97706" },
-    "ethernet" => { name: "Ethernet", color: "#7C3AED" }
+    "ethernet" => { name: "Ethernet", color: "#7C3AED" },
+    # Jaune comme les conduites et le grillage avertisseur du gaz.
+    "gas" => { name: "Gaz", color: "#CA8A04" }
   }.freeze
   # Les types de nœud, par réseau : clés anglaises stables (elles sont en base,
   # dans `properties.node_type`, et nomment les icônes côté JS), libellés
-  # français. Un compteur d'eau et un compteur électrique partagent la clé
-  # `meter` : c'est la couche qui dit de quel réseau il s'agit.
+  # français. Un compteur d'eau, électrique ou de gaz partage la clé `meter`
+  # (une vanne d'eau ou de gaz, `valve`) : c'est la couche qui dit de quel
+  # réseau il s'agit.
   NODE_TYPES = {
     "water" => {
       "source" => "Source", "catchment" => "Captage", "cistern" => "Citerne", "valve" => "Vanne",
@@ -53,6 +56,10 @@ class MapLayer < ApplicationRecord
     "ethernet" => {
       "switch" => "Switch", "access_point" => "Borne wifi", "wall_jack" => "Prise murale", "router" => "Routeur",
       "rack" => "Baie", "fiber_box" => "Boîtier fibre"
+    },
+    "gas" => {
+      "tank" => "Citerne", "cylinder" => "Bouteille", "regulator" => "Détendeur", "valve" => "Vanne",
+      "meter" => "Compteur", "boiler" => "Chaudière", "cooker" => "Cuisinière"
     }
   }.freeze
 
@@ -81,7 +88,7 @@ class MapLayer < ApplicationRecord
     find_by!(kind: kind)
   end
 
-  # Les trois couches réseau (phase 9), créées si elles manquent, dans l'ordre
+  # Les couches réseau (phase 9), créées si elles manquent, dans l'ordre
   # de `NETWORKS`. Une couche `network` sans réseau déclaré mais portant le bon
   # nom est adoptée plutôt que doublée. Une couleur choisie à la main reste.
   def self.ensure_networks!

@@ -1,4 +1,4 @@
-// Les réseaux sur la carte (epic #348, phase 9) : eau, électricité, ethernet.
+// Les réseaux sur la carte (epic #348, phase 9) : eau, électricité, ethernet, gaz.
 //
 // Un tracé prend la couleur de son réseau et une épaisseur selon son calibre ;
 // un nœud est une pastille ronde de la couleur du réseau qui porte l'icône de
@@ -12,6 +12,7 @@ export const NETWORK_COLORS = {
   water: '#2563EB',
   electric: '#D97706',
   ethernet: '#7C3AED',
+  gas: '#CA8A04',
 };
 // Les noms des nœuds et des tracés n'apparaissent qu'à partir du zoom 19 : un
 // réseau, c'est beaucoup de petits objets serrés.
@@ -20,7 +21,8 @@ export const NETWORK_LABEL_MIN_ZOOM = 19;
 const GAUGE_WEIGHTS = { thin: 2, medium: 4, thick: 7 };
 
 // Tracés 24 × 24, trait `currentColor`. Clés = `MapLayer::NODE_TYPES` côté
-// Rails (le compteur `meter` sert à l'eau et à l'électricité).
+// Rails (le compteur `meter` sert à l'eau, à l'électricité et au gaz ; la vanne
+// `valve` à l'eau et au gaz).
 const NODE_GLYPHS = {
   // Eau
   source: '<path d="M12 3c-3 4-5 6.5-5 9a5 5 0 0 0 10 0c0-2.5-2-5-5-9z"/><path d="M3 21c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0"/>',
@@ -42,6 +44,12 @@ const NODE_GLYPHS = {
   router: '<rect x="3" y="12" width="18" height="7" rx="1.5"/><path d="M7 12V6M17 12V6M7 15.5h1M11 15.5h1"/>',
   rack: '<rect x="5" y="3" width="14" height="18" rx="1"/><path d="M5 8h14M5 13h14M5 18h14M8 5.5h.01M8 10.5h.01M8 15.5h.01"/>',
   fiber_box: '<rect x="4" y="6" width="16" height="12" rx="2"/><path d="M8 12c2-3 6-3 8 0"/><circle cx="12" cy="12" r="1"/>',
+  // Gaz
+  tank: '<rect x="3" y="7" width="18" height="9" rx="4.5"/><path d="M12 7V4M10 4h4M7 16v3M17 16v3"/>',
+  cylinder: '<path d="M7 11a5 5 0 0 1 10 0v8a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2z"/><path d="M10 6V3h4v3"/>',
+  regulator: '<circle cx="12" cy="9" r="5"/><path d="M12 9l2.5-2.5M12 14v3M3 17h18"/>',
+  boiler: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 8c-1.5 2-2.5 3.2-2.5 4.8a2.5 2.5 0 0 0 5 0C14.5 11.2 13.5 10 12 8z"/>',
+  cooker: '<rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9" cy="9" r="2"/><circle cx="15" cy="9" r="2"/><path d="M7 15.5h10"/>',
 };
 const DEFAULT_GLYPH = '<circle cx="12" cy="12" r="3"/>';
 

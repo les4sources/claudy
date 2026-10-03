@@ -14,13 +14,13 @@ RSpec.describe "Carte du domaine — réseaux (epic #348, phase 9)", type: :requ
 
   before { sign_in user }
 
-  it "la page carte garantit les trois couches réseau et les liste dans la section Réseaux" do
+  it "la page carte garantit les quatre couches réseau et les liste dans la section Réseaux" do
     MapBaseLayer.create!(key: "test-layer", name: "Couche de test", min_zoom: 12, max_zoom: 20,
                          bounds: { "south" => 50.339, "west" => 4.903, "north" => 50.343, "east" => 4.912 })
     get map_path
     expect(response).to have_http_status(:ok)
-    expect(MapLayer.where(kind: "network").map(&:network)).to contain_exactly("water", "electric", "ethernet")
-    expect(response.body).to include("data-map-networks-section", "Électricité", "Ethernet")
+    expect(MapLayer.where(kind: "network").map(&:network)).to contain_exactly("water", "electric", "ethernet", "gas")
+    expect(response.body).to include("data-map-networks-section", "Électricité", "Ethernet", "Gaz")
     # Une couche à la fois : plus de sélecteur « n'afficher qu'un réseau ».
     expect(response.body).not_to include("Tous les réseaux")
     expect(response.body).to include('data-network="water"', 'data-network-color="#2563EB"')
