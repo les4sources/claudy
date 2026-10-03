@@ -2,7 +2,9 @@ require "rails_helper"
 
 # Toute fiche de la carte qui a des photos les montre en carousel en tête de
 # fiche, avec le plein écran (`shared/_photo_carousel`) : objets de toutes les
-# couches, relevés, plantes nourricières.
+# couches, relevés de bio-indicatrices, plantes nourricières. Le relevé de
+# biodiversité a le sien, photos d'observations.be comprises
+# (`map_observations_imported_spec`).
 RSpec.describe "Carte du domaine — carousel des photos", type: :request do
   include Devise::Test::IntegrationHelpers
 
@@ -35,16 +37,6 @@ RSpec.describe "Carte du domaine — carousel des photos", type: :request do
     attach_photos(feature, 2)
     get map_feature_path(feature)
     expect_carousel_of(2)
-  end
-
-  it "un relevé de biodiversité" do
-    observation = MapLayer.for_kind(:biodiversity).map_features.create!(
-      feature_kind: "observation", created_by: user, geometry: point,
-      properties: { "realm" => "flora", "species_common" => "Ail des ours", "observed_on" => "2026-04-12" }
-    )
-    attach_photos(observation, 1)
-    get map_feature_path(observation)
-    expect_carousel_of(1)
   end
 
   it "un relevé de bio-indicatrices" do
