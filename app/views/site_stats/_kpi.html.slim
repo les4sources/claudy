@@ -1,0 +1,13 @@
+/ Une carte d'indicateur : label, value, change (pour cent ou nil), hint.
+  inverse : une hausse est une mauvaise nouvelle (taux de rebond).
+.rounded-xl.border.border-stone-200.bg-white.px-4.py-3.shadow-sm
+  .text-xs.font-medium.uppercase.tracking-wide.text-stone-500 = label
+  .mt-1.flex.items-baseline.gap-2
+    span.text-2xl.font-semibold.tabular-nums.text-stone-900 = value
+    - change = local_assigns[:change]
+    - unless change.nil?
+      - good = local_assigns[:inverse] ? change <= 0 : change >= 0
+      span.text-xs.font-medium.tabular-nums(class="#{good ? 'text-emerald-700' : 'text-rose-700'}")
+        = "#{change.positive? ? '+' : ''}#{change} %"
+  - if local_assigns[:hint]
+    .mt-0.5.text-xs.text-stone-400 = hint

@@ -185,6 +185,8 @@ Rails.application.routes.draw do
     target = params[:format].present? ? "/kitchen/reporting.#{params[:format]}" : "/kitchen/reporting"
     [target, request.query_string.presence].compact.join("?")
   }, as: :legacy_kitchen_reports
+  # Statistiques du site (2026-10-03), avant `resources :reports` pour la même raison.
+  get "reports/site-web", to: "site_stats#show", as: :site_stats
   resources :reports
   resources :roles
   resources :rooms
@@ -922,6 +924,7 @@ Rails.application.routes.draw do
         resources :events, only: [:index]
         resources :experiences, only: [:index]
         resources :event_categories, only: [:index]
+        resources :hits, only: [:create]
       end
     end
 

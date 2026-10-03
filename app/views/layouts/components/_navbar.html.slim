@@ -217,7 +217,7 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
           li
             = link_to "Reporting",
                       reports_path,
-                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'reports' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+                      class: "px-3 py-1.5 rounded-md transition-colors #{%w[reports site_stats].include?(controller_name) ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
 
 - if !@projects_view.nil?
   nav.border-b#subnav-projects.lg:px-6(class="bg-teal-50/70 border-teal-100")
@@ -245,8 +245,8 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
 - if !@reports_view.nil?
   nav.border-b#subnav-reports.lg:px-6(class="bg-white border-gray-100")
     .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
-      .flex.items-center
-        ul.flex.flex-row.font-medium.mt-0.gap-1.text-xs
+      .flex.items-center.overflow-x-auto
+        ul.flex.flex-row.font-medium.mt-0.gap-1.text-xs.whitespace-nowrap
           li
             = link_to "Finances",
                       reports_path,
@@ -255,6 +255,10 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
             = link_to "Cuisine",
                       kitchen_reporting_path,
                       class: "px-2.5 py-1 rounded transition-colors #{controller_path == 'kitchen/reporting' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
+            = link_to "Site web",
+                      site_stats_path,
+                      class: "px-2.5 py-1 rounded transition-colors #{controller_name == 'site_stats' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
             = link_to "La Chevêche",
                       lodging_reports_path(1),

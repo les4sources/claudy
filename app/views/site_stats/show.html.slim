@@ -1,0 +1,68 @@
+- period_switch = content_tag(:div, class: "inline-flex rounded-lg border border-stone-200 bg-white p-0.5 shadow-sm", role: "group", aria: { label: "Période" }) do
+  = safe_join(SiteStats::Report::PERIODS.map { |key, label| link_to(label, site_stats_path(period: key), class: "rounded-md px-3 py-1.5 text-sm font-medium transition-colors #{key == @report.period ? 'bg-4s-main text-white' : 'text-stone-600 hover:bg-stone-100'}", aria: { current: (key == @report.period ? 'page' : nil) }) })
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Statistiques du site web", links: [period_switch]
+
+- report = @report
+p.mt-4.text-sm.text-stone-600
+  = "www.les4sources.be, du #{l(report.from, format: :long)} au #{l(report.to, format: :long)} — comparé aux #{report.period_label} précédents. "
+  | Mesuré sans cookie : une visite, c'est un visiteur sur une journée.
+
+.mt-4.grid.grid-cols-2.gap-3.md:grid-cols-3.xl:grid-cols-6
+  = render "site_stats/kpi", label: "Visites", value: number_with_delimiter(report.visits), change: report.change(:visits)
+  = render "site_stats/kpi", label: "Pages vues", value: number_with_delimiter(report.pageviews), change: report.change(:pageviews)
+  = render "site_stats/kpi", label: "Pages par visite", value: number_with_precision(report.pages_per_visit, precision: 1), change: report.change(:pages_per_visit)
+  = render "site_stats/kpi", label: "Rebond", value: "#{report.bounce_rate.to_i} %", change: report.change(:bounce_rate), inverse: true, hint: "visites d'une seule page"
+  = render "site_stats/kpi", label: "Demandes de réservation", value: number_with_delimiter(report.requests), change: report.change(:requests), hint: "envoyées via le funnel"
+  = render "site_stats/kpi", label: "En ce moment", value: number_with_delimiter(report.current_visitors), hint: "visiteurs, 30 dernières minutes"
+
+.mt-6
+  = render Charts::DailyTrafficComponent.new(days: report.daily)
+
+.mt-6.grid.grid-cols-1.gap-6.lg:grid-cols-2
+  = render "site_stats/table", title: "Pages les plus vues", rows: report.top_pages,
+           columns: [[:label, "Page", :text], [:visits, "Visites", :number], [:pageviews, "Vues", :number]]
+  = render "site_stats/table", title: "Pages d'arrivée", note: "La première page vue de chaque visite.", rows: report.entry_pages,
+           columns: [[:label, "Page", :text], [:visits, "Visites", :number]]
+
+  = render "site_stats/table", title: "Sources", note: "D'où arrivent les visiteurs : moteur de recherche, réseau social, lien, accès direct.", rows: report.sources,
+           columns: [[:label, "Source", :text], [:visits, "Visites", :number]]
+  = render "site_stats/table", title: "Campagnes", note: "Liens marqués utm_campaign / utm_source (newsletter, publication…).", rows: report.campaigns,
+           empty: "Aucune visite arrivée par un lien de campagne.",
+           columns: [[:campaign, "Campagne", :text], [:source, "Source", :text], [:medium, "Support", :text], [:visits, "Visites", :number]]
+
+  = render "site_stats/table", title: "Entonnoir de réservation", note: "Visiteurs distincts à chaque étape, en part des visites du site.", rows: report.funnel,
+           columns: [[:label, "Étape", :text], [:count, "Visiteurs", :number], [:share, "Part", :percent]]
+  = render "site_stats/table", title: "Demandes par source", note: "La source de la visite du site qui a précédé la demande, le même jour.", rows: report.requests_by_source,
+           empty: "Aucune demande de réservation sur cette période.",
+           columns: [[:label, "Source", :text], [:count, "Demandes", :number]]
+
+  = render "site_stats/table", title: "Clics clés", rows: report.events,
+           columns: [[:label, "Action", :text], [:visits, "Visiteurs", :number], [:count, "Clics", :number]]
+  = render "site_stats/table", title: "D'où part le clic « Réserver »", rows: report.reservation_pages,
+           empty: "Aucun clic « Réserver » sur cette période.",
+           columns: [[:label, "Page", :text], [:count, "Clics", :number]]
+
+  = render "site_stats/table", title: "Appareils", rows: report.devices,
+           columns: [[:label, "Appareil", :text], [:visits, "Visites", :number], [:share, "Part", :percent]]
+  = render "site_stats/table", title: "Pays", rows: report.countries,
+           columns: [[:label, "Pays", :text], [:visits, "Visites", :number], [:share, "Part", :percent]]
+
+  = render "site_stats/table", title: "Navigateurs", rows: report.browsers,
+           columns: [[:label, "Navigateur", :text], [:visits, "Visites", :number], [:share, "Part", :percent]]
+  = render "site_stats/table", title: "Systèmes", rows: report.operating_systems,
+           columns: [[:label, "Système", :text], [:visits, "Visites", :number], [:share, "Part", :percent]]
+
+  = render "site_stats/table", title: "Formulaires Tally envoyés", rows: report.tally_forms,
+           empty: "Aucun formulaire Tally envoyé depuis le site sur cette période.",
+           columns: [[:label, "Formulaire", :text], [:count, "Envois", :number]]
+  = render "site_stats/table", title: "Pages introuvables (404)", note: "Adresses demandées qui n'existent pas : liens cassés à corriger ou à rediriger.", rows: report.not_found_pages,
+           empty: "Aucune page introuvable visitée sur cette période.",
+           columns: [[:label, "Adresse", :text], [:count, "Vues", :number]]
+
+details.mt-8.mb-10.rounded-xl.border.border-stone-200.bg-white.px-5.py-4.text-sm.text-stone-600
+  summary.cursor-pointer.font-medium.text-stone-800 Comment c'est mesuré
+  .mt-3.space-y-2
+    p Le site ne dépose aucun cookie et n'écrit rien dans le navigateur du visiteur. À chaque page, il envoie à Claudy l'adresse de la page et le site d'où vient le visiteur.
+    p Claudy en tire une empreinte du jour : un calcul à partir de l'adresse IP, du navigateur et d'une clé secrète renouvelée chaque jour. L'adresse IP n'est jamais enregistrée et la clé de la veille est détruite : impossible de reconnaître quelqu'un d'un jour à l'autre. Un visiteur qui revient trois jours compte donc trois visites.
+    p Les robots et les membres connectés à Claudy ne sont pas comptés. Le pays vient de Cloudflare. Un visiteur dont le navigateur bloque les scripts n'est pas compté.
