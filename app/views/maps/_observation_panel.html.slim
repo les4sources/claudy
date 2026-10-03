@@ -27,6 +27,13 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
         line x1="6" y1="6" x2="18" y2="18"
 
   .flex-1.overflow-y-auto.px-4.py-4
+    / Les photos en carousel en tête de fiche, plein écran au toucher
+      (`shared/_photo_carousel`).
+    - carousel_photos = feature.photos.select(&:persisted?)
+    - if carousel_photos.any?
+      div class="-mx-4 -mt-4 mb-4"
+        = render "shared/photo_carousel", photos: carousel_photos, source: MapFeature,
+                                          alt: (feature.display_name || "Relevé de biodiversité")
     - if saved
       p.mb-3.rounded-lg.bg-forest-tint.px-3.py-2.text-xs.text-forest Enregistré.
     - if feature.errors.any?
