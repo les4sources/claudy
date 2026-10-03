@@ -119,10 +119,9 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
           = f.text_area :management_notes, value: feature.management_notes, rows: 3,
                         placeholder: "Désherbage régulier. Apport de cailloux tous les 2 ans.",
                         class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
-      div
-        = f.label :photos, "Ajouter des photos", class: "block text-xs font-semibold text-stone-600"
+      = render layout: "shared/photo_picker", locals: { label: "Ajouter des photos", accept: MapFeature.accepted_photo_types.join(",") } do
         = f.file_field :photos, multiple: true, direct_upload: true, accept: MapFeature.accepted_photo_types.join(","),
-                       class: "mt-1 w-full text-sm text-stone-600"
+                       class: "sr-only", tabindex: -1, data: { photo_picker_target: "field" }
       = render "maps/save_button"
 
     - if feature.persisted?
