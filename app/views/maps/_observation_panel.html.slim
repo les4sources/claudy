@@ -27,6 +27,19 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
         line x1="6" y1="6" x2="18" y2="18"
 
   .flex-1.overflow-y-auto.px-4.py-4
+    / Les photos du relevé en carousel en tête de fiche, plein écran au toucher
+      (`shared/_photo_carousel`) : celles ajoutées ici, puis celles d'un relevé
+      importé, restées sur observations.be et créditées à leur auteur. Les
+      vignettes du bas (avec la croix) ne montrent que les premières.
+    - carousel_photos = persisted ? feature.photos.select(&:persisted?) : []
+    - remote_photos = persisted ? feature.remote_photo_urls : []
+    - if carousel_photos.any? || remote_photos.any?
+      div class="-mx-4 -mt-4 mb-4"
+        = render "shared/photo_carousel", photos: carousel_photos, remote_urls: remote_photos, source: MapFeature,
+                                          alt: (feature.species_common || "Relevé")
+        - if remote_photos.any?
+          p class="px-4 pt-1 text-[0.65rem] text-stone-400" data-observation-photo-credit="true"
+            = "Photos observations.be#{" — © #{feature.observer_name}" if feature.observer_name.present?}"
     - if saved
       p.mb-3.rounded-lg.bg-forest-tint.px-3.py-2.text-xs.text-forest Enregistré.
     - if feature.errors.any?
@@ -122,19 +135,10 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
 
     - if persisted
       - photos = feature.photos.select(&:persisted?)
-      - remote_photos = feature.remote_photo_urls
-      - if photos.any? || remote_photos.any?
+      - if photos.any?
         .mt-5
-          p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" = "Photos (#{photos.size + remote_photos.size})"
+          p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" = "Photos (#{photos.size})"
           ul.grid.grid-cols-3.gap-2
-            / Les photos d'un relevé importé restent sur observations.be : la
-              fiche les montre de là-bas, avec le nom de leur auteur, sans bouton
-              pour les retirer (la prochaine importation les remettrait).
-            - remote_photos.each do |url|
-              li.relative data-observation-remote-photo="true"
-                = link_to url, target: "_blank", rel: "noopener noreferrer" do
-                  = image_tag url, alt: "Photo de #{feature.species_common}", loading: "lazy", referrerpolicy: "no-referrer",
-                              class: "aspect-square w-full rounded-lg object-cover ring-1 ring-stone-200"
             - photos.each do |photo|
               li.group.relative
                 = link_to url_for(MapFeature.photo_source(photo, :preview)), target: "_blank", rel: "noopener" do
@@ -145,9 +149,6 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
                             class: "absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-stone-500 shadow hover:text-red-600",
                             "aria-label": "Retirer la photo" do
                   | ×
-          - if remote_photos.any?
-            p.mt-2.text-xs.text-stone-400 data-observation-photo-credit="true"
-              = "Photos observations.be#{" — © #{feature.observer_name}" if feature.observer_name.present?}"
 
       .mt-5.border-t.border-stone-100.pt-3.text-xs.text-stone-400
         p

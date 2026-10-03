@@ -35,17 +35,29 @@ RSpec.describe "Carte du domaine — relevé importé d'observations.be", type: 
     expect(page.css("input[name='observation[realm]']").map { |input| input["value"] }).to include("fungi")
   end
 
-  it "montre les photos d'observations.be depuis leur adresse d'origine, créditées, sans bouton pour les retirer" do
+  it "montre les photos d'observations.be en carousel, depuis leur adresse d'origine, créditées" do
     get map_feature_path(record)
 
     page = Nokogiri::HTML(response.body)
-    remote = page.css("[data-observation-remote-photo] img")
-    expect(remote.map { |img| img["src"] }).to eq(["https://observations.be/media/photo/78263003.jpg",
+    carousel = page.at_css("[data-controller='photo-carousel']")
+    slides = carousel.css("[data-photo-carousel-target='track'] img")
+    expect(slides.map { |img| img["src"] }).to eq(["https://observations.be/media/photo/78263003.jpg",
                                                    "https://observations.be/media/photo/78263004.jpg"])
-    expect(remote.first["referrerpolicy"]).to eq("no-referrer")
-    expect(page.css("[data-observation-remote-photo] form")).to be_empty
-    expect(page.text).to include("Photos (2)")
+    expect(slides.map { |img| img["referrerpolicy"] }).to all(eq("no-referrer"))
+    expect(carousel.at_css("dialog[data-photo-carousel-target='dialog']").css("img").size).to eq(2)
+    expect(carousel.at_css("[data-photo-carousel-target='counter']").text).to eq("1 / 2")
     expect(page.at_css("[data-observation-photo-credit]").text).to include("observations.be", "François Hela")
+  end
+
+  it "met les photos ajoutées ici avant celles d'observations.be, sans referrerpolicy" do
+    record.photos.attach(Rack::Test::UploadedFile.new(Rails.root.join("spec/fixtures/files/capture.png"), "image/png"))
+
+    get map_feature_path(record)
+
+    slides = Nokogiri::HTML(response.body).css("[data-photo-carousel-target='track'] img")
+    expect(slides.size).to eq(3)
+    expect(slides.first["src"]).not_to include("observations.be")
+    expect(slides.first["referrerpolicy"]).to be_nil
   end
 
   it "ignore une adresse de photo qui n'est pas https" do
@@ -53,7 +65,7 @@ RSpec.describe "Carte du domaine — relevé importé d'observations.be", type: 
 
     get map_feature_path(record)
 
-    expect(Nokogiri::HTML(response.body).css("[data-observation-remote-photo]")).to be_empty
+    expect(response.body).not_to include("data-photo-carousel", "javascript:alert")
   end
 
   it "refuse un lien de source qui n'est pas une adresse web" do
