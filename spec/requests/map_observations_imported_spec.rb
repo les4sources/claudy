@@ -13,7 +13,9 @@ RSpec.describe "Carte du domaine — relevé importé d'observations.be", type: 
       properties: { "realm" => "fungi", "species_common" => "Lépiote élevée", "species_latin" => "Macrolepiota procera",
                     "observed_on" => "2023-09-30", "count" => 12, "source" => "observations.be", "source_id" => "289302713",
                     "source_url" => "https://observations.be/observation/289302713/", "observer_name" => "François Hela",
-                    "photos_count" => 5 }
+                    "photos_count" => 2,
+                    "photo_urls" => ["https://observations.be/media/photo/78263003.jpg",
+                                     "https://observations.be/media/photo/78263004.jpg"] }
     )
   end
 
@@ -24,13 +26,46 @@ RSpec.describe "Carte du domaine — relevé importé d'observations.be", type: 
 
     page = Nokogiri::HTML(response.body)
     source = page.at_css("[data-observation-source]")
-    expect(source.text).to include("Importé d'observations.be", "François Hela", "5 photos")
+    expect(source.text).to include("Importé d'observations.be", "François Hela", "2 photos")
     link = source.at_css("a")
     expect(link["href"]).to eq("https://observations.be/observation/289302713/")
     expect(link["target"]).to eq("_blank")
     expect(page.at_css("[data-observation-external-observer]").text).to eq("François Hela")
     expect(page.at_css("select[name='observation[observer_id]']")).to be_nil
     expect(page.css("input[name='observation[realm]']").map { |input| input["value"] }).to include("fungi")
+  end
+
+  it "montre les photos d'observations.be en carousel, depuis leur adresse d'origine, créditées" do
+    get map_feature_path(record)
+
+    page = Nokogiri::HTML(response.body)
+    carousel = page.at_css("[data-controller='photo-carousel']")
+    slides = carousel.css("[data-photo-carousel-target='track'] img")
+    expect(slides.map { |img| img["src"] }).to eq(["https://observations.be/media/photo/78263003.jpg",
+                                                   "https://observations.be/media/photo/78263004.jpg"])
+    expect(slides.map { |img| img["referrerpolicy"] }).to all(eq("no-referrer"))
+    expect(carousel.at_css("dialog[data-photo-carousel-target='dialog']").css("img").size).to eq(2)
+    expect(carousel.at_css("[data-photo-carousel-target='counter']").text).to eq("1 / 2")
+    expect(page.at_css("[data-observation-photo-credit]").text).to include("observations.be", "François Hela")
+  end
+
+  it "met les photos ajoutées ici avant celles d'observations.be, sans referrerpolicy" do
+    record.photos.attach(Rack::Test::UploadedFile.new(Rails.root.join("spec/fixtures/files/capture.png"), "image/png"))
+
+    get map_feature_path(record)
+
+    slides = Nokogiri::HTML(response.body).css("[data-photo-carousel-target='track'] img")
+    expect(slides.size).to eq(3)
+    expect(slides.first["src"]).not_to include("observations.be")
+    expect(slides.first["referrerpolicy"]).to be_nil
+  end
+
+  it "ignore une adresse de photo qui n'est pas https" do
+    record.update!(properties: record.properties.merge("photo_urls" => ["javascript:alert(1)"]))
+
+    get map_feature_path(record)
+
+    expect(response.body).not_to include("data-photo-carousel", "javascript:alert")
   end
 
   it "refuse un lien de source qui n'est pas une adresse web" do

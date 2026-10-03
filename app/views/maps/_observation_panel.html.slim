@@ -27,6 +27,19 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
         line x1="6" y1="6" x2="18" y2="18"
 
   .flex-1.overflow-y-auto.px-4.py-4
+    / Les photos du relevé en carousel en tête de fiche, plein écran au toucher
+      (`shared/_photo_carousel`) : celles ajoutées ici, puis celles d'un relevé
+      importé, restées sur observations.be et créditées à leur auteur. Les
+      vignettes du bas (avec la croix) ne montrent que les premières.
+    - carousel_photos = persisted ? feature.photos.select(&:persisted?) : []
+    - remote_photos = persisted ? feature.remote_photo_urls : []
+    - if carousel_photos.any? || remote_photos.any?
+      div class="-mx-4 -mt-4 mb-4"
+        = render "shared/photo_carousel", photos: carousel_photos, remote_urls: remote_photos, source: MapFeature,
+                                          alt: (feature.species_common || "Relevé")
+        - if remote_photos.any?
+          p class="px-4 pt-1 text-[0.65rem] text-stone-400" data-observation-photo-credit="true"
+            = "Photos observations.be#{" — © #{feature.observer_name}" if feature.observer_name.present?}"
     - if saved
       p.mb-3.rounded-lg.bg-forest-tint.px-3.py-2.text-xs.text-forest Enregistré.
     - if feature.errors.any?
