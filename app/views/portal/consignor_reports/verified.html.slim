@@ -37,3 +37,6 @@ section.portal-block
       span.tabular-nums = number_to_currency(@report.displayed_net_cents / 100.0)
     - if @report.settled_on.present?
       p.text-gray-500 = "Réglé le #{l(@report.settled_on, format: :short)}."
+
+section.portal-block
+  = render "portal/consignments/bank_check", report: @report

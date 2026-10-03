@@ -21,6 +21,7 @@ class ConsignorsController < BaseController
     @consignor = Consignor.new(consignor_params)
 
     if @consignor.save
+      seed_allocation_rule
       redirect_to consignors_path, notice: "L'artisan « #{@consignor.name} » a été ajouté."
     else
       render :new, status: :unprocessable_entity
@@ -42,6 +43,7 @@ class ConsignorsController < BaseController
 
   def update
     if @consignor.update(consignor_params)
+      seed_allocation_rule
       redirect_to consignors_path, notice: "L'artisan « #{@consignor.name} » a été mis à jour."
     else
       render :edit, status: :unprocessable_entity
@@ -59,6 +61,15 @@ class ConsignorsController < BaseController
   end
 
   private
+
+  # Un artisan avec accès à l'espace a sa règle « ARTISANAT <PRÉNOM> » (epic
+  # #359, phase 4) : ses virements se proposent d'eux-mêmes au rapprochement.
+  # Idempotent — à la modification, rien ne bouge si la règle existe déjà.
+  def seed_allocation_rule
+    return unless @consignor.active? && @consignor.portal_enabled?
+
+    Shop::SeedAllocationRules.new.for_consignor(@consignor)
+  end
 
   def get_consignor
     @consignor = Consignor.find(params[:id])

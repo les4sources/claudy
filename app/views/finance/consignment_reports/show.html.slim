@@ -138,6 +138,45 @@
             dt.text-xs.uppercase.tracking-wide.text-gray-400 Réglé le
             dd.text-sm.text-gray-800= l(@report.settled_on, format: :long)
 
+    / ── Déclaré face à la banque (epic #359, phase 4) ─────────────
+      La banque sert de contrôle : ce qui est déclaré doit se retrouver en
+      virements « ARTISANAT <PRÉNOM> » plus les espèces notées. Un écart
+      n'empêche rien — il se voit, et on en parle.
+    - transfers = @report.bank_transfers.ordered.to_a
+    - gap = @report.bank_gap_cents
+    section.overflow-hidden.rounded-xl.bg-white.ring-1.ring-gray-200
+      .border-b.border-gray-100.px-5.py-3
+        h2.text-sm.font-semibold.text-gray-900 Déclaré face à la banque
+        p.mt-0.5.text-xs.text-gray-500 Virements rattachés à l'artisan au rapprochement, sur le mois du relevé.
+      dl.divide-y.divide-gray-100
+        .flex.items-baseline.justify-between.px-5.py-2.5
+          dt.text-xs.uppercase.tracking-wide.text-gray-400 Déclaré
+          dd.text-sm.text-gray-800= humanized_money_with_symbol(Money.new(@report.displayed_gross_cents, "EUR"))
+        .flex.items-baseline.justify-between.px-5.py-2.5
+          dt.text-xs.uppercase.tracking-wide.text-gray-400 Reçu en banque
+          dd.text-sm.text-gray-800= humanized_money_with_symbol(Money.new(@report.received_cents, "EUR"))
+        .flex.items-baseline.justify-between.px-5.py-2.5
+          dt.text-xs.uppercase.tracking-wide.text-gray-400 Espèces déclarées
+          dd.text-sm.text-gray-800= humanized_money_with_symbol(Money.new(@report.cash_declared_cents, "EUR"))
+        .flex.items-baseline.justify-between.bg-gray-50.px-5.py-3
+          dt.text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Écart
+          dd class="text-lg font-semibold #{gap.zero? ? 'text-gray-900' : 'text-amber-700'}"
+            = humanized_money_with_symbol(Money.new(gap, "EUR"))
+      - if !gap.zero?
+        p.px-5.pb-3.text-xs.text-amber-700
+          - if gap.positive?
+            | Déclaré plus que ce qui est entré : un virement pas encore rattaché, un impayé, ou un mauvais QR.
+          - else
+            | Entré plus que ce qui a été déclaré : une vente oubliée sur la feuille, ou un virement rattaché au mauvais mois.
+      - if transfers.any?
+        ul.divide-y.divide-gray-100.border-t.border-gray-100
+          - transfers.each do |transfer|
+            li.flex.items-baseline.justify-between.gap-3.px-5.py-2.text-sm
+              span.min-w-0.truncate
+                = link_to l(transfer.entry_date, format: :short), finance_cash_entry_path(transfer), class: "text-blue-500 hover:text-blue-700"
+                span.ml-2.text-xs.text-gray-500= transfer.communication
+              span.tabular-nums.text-gray-800= humanized_money_with_symbol(transfer.amount)
+
     section.overflow-hidden.rounded-xl.bg-white.ring-1.ring-gray-200
       .border-b.border-gray-100.px-5.py-3
         h2.text-sm.font-semibold.text-gray-900 Ce qu'il reste à faire

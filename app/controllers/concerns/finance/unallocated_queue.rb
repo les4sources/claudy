@@ -30,11 +30,20 @@ module Finance
       scope
     end
 
+    # Le compte artisanat et les artisans, UNE fois pour la page : une ligne
+    # affectée à l'artisanat demande à qui revient le virement (epic #359,
+    # phase 4), pré-rempli par le mot-clé de la communication.
+    def charger_artisans
+      @shop_settings = ShopSetting.current
+      @consignors = Consignor.ordered.to_a
+    end
+
     # Tout ce qu'une ligne de la file affiche : propositions de rapprochement,
     # suggestion, listes du formulaire. Calculé pour les lignes DONNÉES
     # seulement — la page à l'ouverture, une seule ligne après un geste.
     def charger_pistes(entries)
       @comment_counts = comment_counts(entries)
+      charger_artisans
 
       # Les suggestions se recalculent à l'ouverture de l'écran : c'est le seul
       # moment où elles servent, et ça évite un job de fond que l'application

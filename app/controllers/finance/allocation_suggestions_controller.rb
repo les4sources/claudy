@@ -14,7 +14,8 @@ module Finance
 
       case params[:decision]
       when "accept"
-        Finance::AcceptSuggestion.new(suggestion: suggestion, whodunnit: current_user&.email).run!
+        Finance::AcceptSuggestion.new(suggestion: suggestion, whodunnit: current_user&.email,
+                                      consignor: chosen_consignor).run!
         apres_decision(suggestion, notice: "Suggestion acceptée — la ligne est affectée.")
       when "reject"
         # Seule une suggestion encore proposée se refuse : refuser une
@@ -63,6 +64,15 @@ module Finance
     end
 
     private
+
+    # L'artisan choisi sur la carte d'une suggestion au compte artisanat (epic
+    # #359, phase 4). Le champ absent (autres suggestions), on laisse le
+    # mot-clé décider ; présent mais vide, l'humain a dit « personne ».
+    def chosen_consignor
+      return :match unless params.key?(:consignor_id)
+
+      Consignor.find_by(id: params[:consignor_id].presence)
+    end
 
     # Depuis la file, la ligne répond en place ; d'ailleurs (fiche d'une
     # ligne), retour à la page d'où l'on vient, comme avant.

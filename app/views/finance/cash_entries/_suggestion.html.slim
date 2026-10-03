@@ -16,6 +16,14 @@
           p.mt-0.5.text-xs.text-gray-500
             = suggestion.rationale
             = " (#{suggestion.source_label}, #{suggestion.confidence} % de confiance)"
+        - transfer = Shop::ConsignorTransfer.new(cash_entry: entry, settings: @shop_settings || ShopSetting.current, consignors: @consignors)
         .flex.items-center.gap-2
-          = button_to "Accepter", finance_allocation_suggestion_path(suggestion, decision: "accept"), method: :patch, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+          / Vers le compte artisanat, accepter demande À QUI revient le virement
+            (epic #359, phase 4) — pré-rempli par le mot-clé, modifiable.
+          - if transfer.craft_allocation?(suggestion.general_account_id)
+            = form_with url: finance_allocation_suggestion_path(suggestion, decision: "accept"), method: :patch, class: "flex items-end gap-2" do
+              = render "finance/cash_entries/consignor_field", entry: entry, transfer: transfer, consignors: @consignors || Consignor.ordered.to_a, field_id: dom_id(suggestion, :consignor)
+              button.inline-flex.items-center.rounded-md.border.border-transparent.bg-4s-main.px-3.py-1.5.text-xs.font-medium.text-white.shadow-sm(class="hover:opacity-90" type="submit") Accepter
+          - else
+            = button_to "Accepter", finance_allocation_suggestion_path(suggestion, decision: "accept"), method: :patch, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
           = button_to "Refuser", finance_allocation_suggestion_path(suggestion, decision: "reject"), method: :patch, class: "text-xs text-gray-500 hover:text-gray-700", form: { class: "inline" }

@@ -65,6 +65,9 @@ class Consignor < ApplicationRecord
   # un article vendu a des lignes et des écritures derrière lui, il ne disparaît
   # pas parce qu'un contrat s'arrête.
   has_many :catalog_items, dependent: :nullify
+  # Les virements « ARTISANAT <PRÉNOM> » reçus pour lui (epic #359, phase 4).
+  # `nullify` : une ligne bancaire est un fait, elle survit à l'artisan.
+  has_many :cash_entries, dependent: :nullify
   # La photo en tête de sa feuille imprimée (epic #359, phase 3), téléversée
   # depuis son espace du portail.
   has_one_attached :portrait

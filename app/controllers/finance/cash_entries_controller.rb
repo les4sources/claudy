@@ -79,6 +79,7 @@ module Finance
     def suggestion
       Finance::SuggestAllocations.new(cash_entries: [@entry], whodunnit: current_user&.email,
                                       jev: Jev::Client.new).run!
+      charger_artisans
       render partial: "suggestion", locals: { entry: @entry, suggestion: @entry.allocation_suggestions.pending.ordered.first }
     end
 
@@ -91,6 +92,7 @@ module Finance
       @teams = Team.ordered
       @entities = LegalEntity.actives.ordered
       @events = recent_events
+      charger_artisans
     end
 
     def new

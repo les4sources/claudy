@@ -1,0 +1,39 @@
+/ Ses virements reçus (epic #359, phase 4). Mobile d'abord, lecture seule.
+- content_for :meta_title do
+  | Mes virements
+
+.portal-header
+  div
+    h1.portal-title Mes virements
+    p.portal-header__name = @consignor.name
+  .portal-header__actions
+    = link_to "← Mon dépôt-vente", portal_consignments_path, class: "portal-link-muted"
+
+section.portal-block
+  p.text-sm.text-gray-500
+    = "Les paiements faits avec le QR de votre feuille (communication « #{@consignor.sheet_communication} »), reçus sur le compte de la fondation. Ils apparaissent ici une fois rapprochés par notre comptabilité, souvent quelques jours après."
+
+- if @transfers.empty?
+  section.portal-block
+    p.portal-empty Aucun virement rapproché pour l'instant.
+- else
+  - @months.each do |month, transfers|
+    section.portal-block
+      .portal-block__head
+        h2.portal-section-title = l(month, format: "%B %Y").capitalize
+      table.w-full.text-sm
+        thead
+          tr.text-left.text-gray-500
+            th.py-2.pr-3 Date
+            th.py-2.pr-3 Communication
+            th.py-2.text-right Montant
+        tbody
+          - transfers.each do |transfer|
+            tr.border-t.border-gray-100
+              td.py-2.pr-3.whitespace-nowrap = l(transfer.entry_date, format: :short)
+              td.py-2.pr-3.text-gray-500 = transfer.communication
+              td.py-2.text-right.tabular-nums = number_to_currency(transfer.amount_cents / 100.0)
+        tfoot
+          tr.border-t.border-gray-200.font-semibold
+            td.py-2.pr-3(colspan="2") Total
+            td.py-2.text-right.tabular-nums = number_to_currency(transfers.sum(&:amount_cents) / 100.0)

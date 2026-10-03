@@ -19,6 +19,7 @@ module Finance
       end
 
       if allocation.persisted?
+        link_consignor(allocation)
         maybe_post(allocation)
       else
         apres_affectation(@entry, redirect_target, alert: allocation.errors.full_messages.to_sentence)
@@ -29,6 +30,7 @@ module Finance
       allocation = @entry.cash_allocations.find(params[:id])
 
       if allocation.destroy
+        Shop::ConsignorTransfer.new(cash_entry: @entry.reload).unlink_if_orphan!
         redirect_to redirect_target, notice: "Affectation retirée."
       else
         redirect_to redirect_target, alert: allocation.errors.full_messages.to_sentence
@@ -38,6 +40,16 @@ module Finance
     private
 
     def get_entry = @entry = CashEntry.find(params[:cash_entry_id])
+
+    # Une affectation au compte artisanat dit À QUI revient le virement (epic
+    # #359, phase 4) : l'artisan choisi dans le formulaire, pré-rempli par le
+    # mot-clé. Vers un autre compte, le champ est ignoré.
+    def link_consignor(allocation)
+      transfer = Shop::ConsignorTransfer.new(cash_entry: @entry)
+      return unless transfer.craft_allocation?(allocation.general_account_id)
+
+      transfer.link!(Consignor.find_by(id: params[:consignor_id].presence))
+    end
 
     # Une ligne entièrement affectée se comptabilise dans la foulée : demander
     # un second clic pour un geste qui n'a plus aucune décision à prendre, c'est

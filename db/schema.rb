@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_03_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -502,6 +502,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_170000) do
     t.bigint "cash_account_id", null: false
     t.bigint "cash_motif_id"
     t.string "communication"
+    t.bigint "consignor_id"
     t.string "counterparty_iban"
     t.string "counterparty_name"
     t.datetime "created_at", null: false
@@ -524,6 +525,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_170000) do
     t.index ["cash_account_id", "fingerprint"], name: "index_cash_entries_on_fingerprint", unique: true, where: "(fingerprint IS NOT NULL)"
     t.index ["cash_account_id"], name: "index_cash_entries_on_cash_account_id"
     t.index ["cash_motif_id"], name: "index_cash_entries_on_cash_motif_id"
+    t.index ["consignor_id"], name: "index_cash_entries_on_consignor_id"
     t.index ["deleted_at"], name: "index_cash_entries_on_deleted_at"
     t.index ["entry_date"], name: "index_cash_entries_on_entry_date"
     t.index ["source_type", "source_id"], name: "index_cash_entries_on_source"
@@ -2179,11 +2181,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_170000) do
   create_table "shop_settings", force: :cascade do |t|
     t.string "beneficiary_name"
     t.string "bic"
+    t.bigint "bread_account_id"
     t.integer "bread_sheets_printed_count", default: 0, null: false
+    t.bigint "craft_account_id"
     t.datetime "created_at", null: false
+    t.bigint "grocery_account_id"
     t.integer "grocery_sheets_printed_count", default: 0, null: false
     t.text "iban"
     t.datetime "updated_at", null: false
+    t.index ["bread_account_id"], name: "index_shop_settings_on_bread_account_id"
+    t.index ["craft_account_id"], name: "index_shop_settings_on_craft_account_id"
+    t.index ["grocery_account_id"], name: "index_shop_settings_on_grocery_account_id"
   end
 
   create_table "space_bookings", force: :cascade do |t|
@@ -2596,6 +2604,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_170000) do
   add_foreign_key "cash_counts", "users", column: "counted_by_id"
   add_foreign_key "cash_entries", "cash_accounts"
   add_foreign_key "cash_entries", "cash_motifs"
+  add_foreign_key "cash_entries", "consignors"
   add_foreign_key "cash_motifs", "general_accounts"
   add_foreign_key "cash_motifs", "legal_entities"
   add_foreign_key "cash_motifs", "teams"
@@ -2746,6 +2755,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_170000) do
   add_foreign_key "sales_invoices", "legal_entities"
   add_foreign_key "sent_emails", "customers"
   add_foreign_key "services", "humans"
+  add_foreign_key "shop_settings", "general_accounts", column: "bread_account_id"
+  add_foreign_key "shop_settings", "general_accounts", column: "craft_account_id"
+  add_foreign_key "shop_settings", "general_accounts", column: "grocery_account_id"
   add_foreign_key "space_bookings", "events"
   add_foreign_key "space_reservations", "space_bookings"
   add_foreign_key "space_reservations", "spaces"

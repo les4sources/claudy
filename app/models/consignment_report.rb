@@ -138,6 +138,31 @@ class ConsignmentReport < ApplicationRecord
     commission_percent.presence || consignor&.commission_percent
   end
 
+  # --- Déclaré face à la banque (epic #359, phase 4) -------------------------
+  #
+  # Calculé, jamais stocké : un virement rattaché après coup doit se voir tout
+  # de suite. La banque sert de contrôle (décision 8) — ce que l'artisan a
+  # déclaré doit se retrouver en virements à son mot-clé plus les espèces qu'il
+  # a notées. Un écart n'empêche rien : il se voit, et on en parle.
+
+  # Ses virements du mois, rattachés à la main depuis le rapprochement.
+  def bank_transfers
+    consignor.cash_entries.where.not(status: "excluded")
+             .in_period(period_month, period_month.end_of_month)
+  end
+
+  def received_cents = bank_transfers.sum(:amount_cents)
+
+  # Les lignes payées en espèces : cet argent est dans la caisse du domaine,
+  # pas sur le compte en banque (décision 16).
+  def cash_declared_cents
+    consignment_report_lines.select { |line| line.payment_method == "cash" }.sum(&:amount_cents)
+  end
+
+  # Positif : déclaré plus que ce qui est entré. Négatif : entré plus que ce
+  # qui a été déclaré (un virement sans ligne en face, une feuille oubliée).
+  def bank_gap_cents = displayed_gross_cents - received_cents - cash_declared_cents
+
   # Modifiable par l'administration tant que rien n'est figé ni comptabilisé.
   def editable_by_admin? = requested? || declared?
 

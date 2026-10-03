@@ -21,6 +21,17 @@
     - if @entry.excluded_reason.present?
       p.mt-1.text-xs.text-gray-500= @entry.excluded_reason
 
+/ Un virement du carnet Artisanat sait à qui il revient (epic #359, phase 4) :
+  il compte dans le « reçu en banque » de son relevé du mois.
+- if @entry.consignor
+  - report = @entry.consignor.consignment_reports.for_month(@entry.entry_date).first
+  .mb-6.p-4.rounded-lg.border.border-gray-100.bg-white
+    p.text-sm.text-gray-700
+      | Virement pour l'artisan
+      strong.ml-1= @entry.consignor.name
+      - if report
+        = link_to "voir son relevé de #{report.period_label}", finance_consignment_report_path(report), class: "ml-2 text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+
 - if @entry.posted?
   .mb-6.p-4.rounded-lg.border.border-green-100(class="bg-green-50/60")
     p.text-sm.text-gray-700

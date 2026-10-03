@@ -1,0 +1,9 @@
+/ À qui revient un encaissement du carnet Artisanat (epic #359, phase 4).
+  Pré-rempli par le mot-clé « ARTISANAT <PRÉNOM> » de la communication, ou par
+  l'artisan déjà rattaché ; c'est l'humain qui valide en affectant. Facultatif :
+  vide, la ligne va bien en artisanat mais ne compte chez personne.
+- selected = entry.consignor_id || transfer.suggested_consignor&.id
+div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un artisan…" data-searchable-select-clearable-value="true" class="relative w-56")
+  = label_tag field_id, "Artisan", class: "block text-xs font-medium text-gray-500"
+  = select_tag "consignor_id", options_from_collection_for_select(consignors, :id, :name, selected), include_blank: "Aucun", id: field_id, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+  = render "shared/searchable_select_search", label: "Chercher un artisan"

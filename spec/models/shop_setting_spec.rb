@@ -14,6 +14,21 @@ require "rails_helper"
 #  iban                         :text
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
+#  bread_account_id             :bigint
+#  craft_account_id             :bigint
+#  grocery_account_id           :bigint
+#
+# Indexes
+#
+#  index_shop_settings_on_bread_account_id    (bread_account_id)
+#  index_shop_settings_on_craft_account_id    (craft_account_id)
+#  index_shop_settings_on_grocery_account_id  (grocery_account_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (bread_account_id => general_accounts.id)
+#  fk_rails_...  (craft_account_id => general_accounts.id)
+#  fk_rails_...  (grocery_account_id => general_accounts.id)
 #
 RSpec.describe ShopSetting, type: :model do
   it "n'a qu'une ligne" do

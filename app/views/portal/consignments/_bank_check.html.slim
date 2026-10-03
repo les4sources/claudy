@@ -1,0 +1,19 @@
+/ Déclaré face à la banque (epic #359, phase 4) : ce que l'artisan a noté,
+  ce qui est arrivé par virement à son mot-clé, ce qu'il a noté en espèces.
+  Un écart n'empêche rien — il se voit, et on en parle.
+- gap = report.bank_gap_cents
+.space-y-1.text-sm
+  .flex.justify-between
+    span.text-gray-500 Déclaré
+    span.tabular-nums = number_to_currency(report.displayed_gross_cents / 100.0)
+  .flex.justify-between
+    span.text-gray-500 Reçu en banque
+    span.tabular-nums = number_to_currency(report.received_cents / 100.0)
+  .flex.justify-between
+    span.text-gray-500 Espèces déclarées
+    span.tabular-nums = number_to_currency(report.cash_declared_cents / 100.0)
+  .flex.justify-between.font-semibold
+    span Écart
+    span.tabular-nums = number_to_currency(gap / 100.0)
+  - unless gap.zero?
+    p.text-xs.text-gray-500 Un virement met souvent quelques jours à être rapproché : un écart en cours de mois est normal.
