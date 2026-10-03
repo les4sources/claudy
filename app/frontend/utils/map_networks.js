@@ -33,6 +33,8 @@ const NODE_GLYPHS = {
   manifold: '<path d="M12 3v5M3 8h18M6 8v9M12 8v9M18 8v9M4.5 17h3M10.5 17h3M16.5 17h3"/>',
   meter: '<circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M8 17h8"/>',
   tap: '<path d="M4 9h9a4 4 0 0 1 4 4v1"/><path d="M8 9V5M5 5h6"/><path d="M17 18v3"/>',
+  // Un bac évasé sur pieds, l'eau dedans.
+  trough: '<path d="M3 9h18l-2 9H5z"/><path d="M6 12.5c2-1 4-1 6 0s4 1 6 0"/><path d="M7 18v3M17 18v3"/>',
   manhole: '<circle cx="12" cy="12" r="8"/><path d="M6 9h12M5 12h14M6 15h12"/>',
   // Électricité
   panel: '<rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 7v4M12 7v4M15 7v4M9 15h6"/>',
