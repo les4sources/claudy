@@ -5,49 +5,90 @@
   quand ce compte est choisi.
 - transfer = Shop::ConsignorTransfer.new(cash_entry: entry, settings: @shop_settings || ShopSetting.current, consignors: @consignors)
 - craft_data = transfer.eligible? ? { controller: "consignor-allocation", consignor_allocation_craft_account_id_value: transfer.craft_account.id } : {}
-= form_with model: [:finance, entry, CashAllocation.new], url: finance_cash_entry_allocations_path(entry), class: "flex flex-wrap items-end gap-3", data: craft_data do |f|
-  - if from_unallocated
-    = hidden_field_tag :from_unallocated, "1"
-  /  Le plan comptable fait plusieurs centaines de lignes : dérouler un <select>
-     natif pour y trouver « 700100 Ventes bar » revient à lire l'annuaire. Le
-     contrôleur `searchable-select` pose un champ de recherche par-dessus et
-     masque le <select>, qui reste la source de vérité et le seul champ soumis.
-     Sans JS, le <select> s'affiche et fonctionne tel quel.
-  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" class="relative")
-    = f.label :general_account_id, "Compte", class: "block text-xs font-medium text-gray-500"
-    = f.collection_select :general_account_id, general_accounts, :id, :to_s, { include_blank: "Choisir…" }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select", consignor_allocation_target: "account", action: "change->consignor-allocation#toggle" }
-    .hidden.mt-1(data-searchable-select-target="wrap")
-      input.w-64.rounded-md.border-gray-300.text-sm.shadow-sm(type="text" role="combobox" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-expanded="false" aria-label="Chercher un compte" data-searchable-select-target="input" data-action="input->searchable-select#filter focus->searchable-select#open keydown->searchable-select#navigate")
-      ul.hidden.absolute.z-20.mt-1.max-h-64.w-64.overflow-auto.rounded-md.border.border-gray-200.bg-white.py-1.shadow-lg(role="listbox" data-searchable-select-target="list")
-  - if transfer.eligible?
-    .hidden(data-consignor-allocation-target="field")
-      = render "finance/cash_entries/consignor_field", entry: entry, transfer: transfer, consignors: @consignors || Consignor.ordered.to_a, field_id: dom_id(entry, :allocation_consignor)
-  div
-    = f.label :team_id, "Pôle", class: "block text-xs font-medium text-gray-500"
-    = f.collection_select :team_id, teams, :id, :name, { include_blank: "Non affecté" }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
-  / L'entité est PRÉSÉLECTIONNÉE sur celle du compte de la ligne (issue #289) :
-    un compte de la Fondation ne peut pas raisonnablement proposer le Domaine
-    par défaut, simplement parce qu'il vient en premier par ordre alphabétique.
-    Ça reste un défaut, pas une contrainte — la liste s'ouvre toujours.
-  div
-    = f.label :legal_entity_id, "Entité", class: "block text-xs font-medium text-gray-500"
-    = f.collection_select :legal_entity_id, entities, :id, :name, { selected: entry.cash_account.legal_entity_id }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
-  / L'événement (epic #245, phase 2) est FACULTATIF : c'est ce qui rattache une
-    recette à sa page comptable. Proposé pour une ligne entrante comme sortante —
-    un remboursement est une recette négative, et il doit se retrouver au même
-    endroit que ce qu'il annule.
-  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un événement…" class="relative")
-    = label_tag "cash_allocation[event_id]", "Événement", class: "block text-xs font-medium text-gray-500"
-    = select_tag "cash_allocation[event_id]", options_from_collection_for_select(events, :id, ->(e) { "#{e.name} — #{l(e.starts_at.to_date, format: :short)}" }), include_blank: "Aucun", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
-    .hidden.mt-1(data-searchable-select-target="wrap")
-      input.w-64.rounded-md.border-gray-300.text-sm.shadow-sm(type="text" role="combobox" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-expanded="false" aria-label="Chercher un événement" data-searchable-select-target="input" data-action="input->searchable-select#filter focus->searchable-select#open keydown->searchable-select#navigate")
-      ul.hidden.absolute.z-20.mt-1.max-h-64.w-64.overflow-auto.rounded-md.border.border-gray-200.bg-white.py-1.shadow-lg(role="listbox" data-searchable-select-target="list")
-  div
-    = f.label :amount, "Montant (€)", class: "block text-xs font-medium text-gray-500"
-    / Deux décimales toujours : « -450,0 » se lit comme un montant tronqué et
-      fait douter de ce qu'on est en train de valider.
-    / `label: false` : le builder pose sinon SON propre libellé sous le nôtre,
-      et faute de traduction pour `amount` il s'affichait « Amount ».
-    = f.text_field :amount, value: number_with_precision(entry.remaining_cents / 100.0, precision: 2, separator: ","), label: false, class: "mt-1 w-28 rounded-md border-gray-300 text-sm shadow-sm"
-  button.inline-flex.items-center.rounded-md.border.border-transparent.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90" type="submit")
-    | Affecter
+/ `allocation-parts` sur une enveloppe plutôt que sur le <form> : le
+  formulaire garde son propre `data-controller` (l'artisan), intact.
+div(data-controller="allocation-parts" data-allocation-parts-remaining-value=entry.remaining_cents)
+ = form_with model: [:finance, entry, CashAllocation.new], url: finance_cash_entry_allocations_path(entry), class: "space-y-3", data: craft_data do |f|
+   - if from_unallocated
+     = hidden_field_tag :from_unallocated, "1"
+   /  La première part, celle de toujours : affecter une ligne à un seul compte
+      ne demande pas un geste de plus qu'avant la répartition (epic #288,
+      phase 6). Elle garde ses noms `cash_allocation[…]` ; les parts suivantes
+      arrivent sous `parts[n][…]`.
+   .flex.flex-wrap.items-end.gap-3
+     /  Le plan comptable fait plusieurs centaines de lignes : dérouler un <select>
+        natif pour y trouver « 700100 Ventes bar » revient à lire l'annuaire. Le
+        contrôleur `searchable-select` pose un champ de recherche par-dessus et
+        masque le <select>, qui reste la source de vérité et le seul champ soumis.
+        Sans JS, le <select> s'affiche et fonctionne tel quel.
+     div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" class="relative")
+       = f.label :general_account_id, "Compte", class: "block text-xs font-medium text-gray-500"
+       = f.collection_select :general_account_id, general_accounts, :id, :to_s, { include_blank: "Choisir…" }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select", consignor_allocation_target: "account", action: "change->consignor-allocation#toggle" }
+       .hidden.mt-1(data-searchable-select-target="wrap")
+         input.w-64.rounded-md.border-gray-300.text-sm.shadow-sm(type="text" role="combobox" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-expanded="false" aria-label="Chercher un compte" data-searchable-select-target="input" data-action="input->searchable-select#filter focus->searchable-select#open keydown->searchable-select#navigate")
+         ul.hidden.absolute.z-20.mt-1.max-h-64.w-64.overflow-auto.rounded-md.border.border-gray-200.bg-white.py-1.shadow-lg(role="listbox" data-searchable-select-target="list")
+     - if transfer.eligible?
+       .hidden(data-consignor-allocation-target="field")
+         = render "finance/cash_entries/consignor_field", entry: entry, transfer: transfer, consignors: @consignors || Consignor.ordered.to_a, field_id: dom_id(entry, :allocation_consignor)
+     div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un pôle…" data-searchable-select-clearable-value="true" class="relative w-48")
+       = f.label :team_id, "Pôle", class: "block text-xs font-medium text-gray-500"
+       = f.collection_select :team_id, teams, :id, :name, { include_blank: "Non affecté" }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+       = render "shared/searchable_select_search", label: "Chercher un pôle"
+     / L'entité est PRÉSÉLECTIONNÉE sur celle du compte de la ligne (issue #289) :
+       un compte de la Fondation ne peut pas raisonnablement proposer le Domaine
+       par défaut, simplement parce qu'il vient en premier par ordre alphabétique.
+       Ça reste un défaut, pas une contrainte — la liste s'ouvre toujours.
+     div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une entité…" class="relative w-48")
+       = f.label :legal_entity_id, "Entité", class: "block text-xs font-medium text-gray-500"
+       = f.collection_select :legal_entity_id, entities, :id, :name, { selected: entry.cash_account.legal_entity_id }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+       = render "shared/searchable_select_search", label: "Chercher une entité"
+     / L'événement (epic #245, phase 2) est FACULTATIF : c'est ce qui rattache une
+       recette à sa page comptable. Proposé pour une ligne entrante comme sortante —
+       un remboursement est une recette négative, et il doit se retrouver au même
+       endroit que ce qu'il annule.
+     div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un événement…" class="relative")
+       = label_tag "cash_allocation[event_id]", "Événement", class: "block text-xs font-medium text-gray-500"
+       = select_tag "cash_allocation[event_id]", options_from_collection_for_select(events, :id, ->(e) { "#{e.name} — #{l(e.starts_at.to_date, format: :short)}" }), include_blank: "Aucun", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+       .hidden.mt-1(data-searchable-select-target="wrap")
+         input.w-64.rounded-md.border-gray-300.text-sm.shadow-sm(type="text" role="combobox" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-expanded="false" aria-label="Chercher un événement" data-searchable-select-target="input" data-action="input->searchable-select#filter focus->searchable-select#open keydown->searchable-select#navigate")
+         ul.hidden.absolute.z-20.mt-1.max-h-64.w-64.overflow-auto.rounded-md.border.border-gray-200.bg-white.py-1.shadow-lg(role="listbox" data-searchable-select-target="list")
+     div
+       = f.label :amount, "Montant (€)", class: "block text-xs font-medium text-gray-500"
+       / Deux décimales toujours : « -450,0 » se lit comme un montant tronqué et
+         fait douter de ce qu'on est en train de valider.
+       / `label: false` : le builder pose sinon SON propre libellé sous le nôtre,
+         et faute de traduction pour `amount` il s'affichait « Amount ».
+       = f.text_field :amount, value: number_with_precision(entry.remaining_cents / 100.0, precision: 2, separator: ","), label: false, class: "mt-1 w-28 rounded-md border-gray-300 text-sm shadow-sm", data: { allocation_parts_target: "amount", action: "input->allocation-parts#recompute" }
+
+   /  Les parts suivantes (epic #288, phase 6), chacune avec son compte, son
+      pôle, son entité et son montant. Elles s'enregistrent avec la première,
+      toutes ou aucune. L'événement reste propre à la première part.
+   div(data-allocation-parts-target="list")
+   template(data-allocation-parts-target="template")
+     .flex.flex-wrap.items-end.gap-3.border-t.border-dashed.border-gray-200.pt-3(data-allocation-parts-target="part")
+       div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" class="relative")
+         = label_tag "parts___INDEX___general_account_id", "Compte", class: "block text-xs font-medium text-gray-500"
+         = select_tag "parts[__INDEX__][general_account_id]", options_from_collection_for_select(general_accounts, :id, :to_s), include_blank: "Choisir…", id: "parts___INDEX___general_account_id", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+         .hidden.mt-1(data-searchable-select-target="wrap")
+           input.w-64.rounded-md.border-gray-300.text-sm.shadow-sm(type="text" role="combobox" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-expanded="false" aria-label="Chercher un compte" data-searchable-select-target="input" data-action="input->searchable-select#filter focus->searchable-select#open keydown->searchable-select#navigate")
+           ul.hidden.absolute.z-20.mt-1.max-h-64.w-64.overflow-auto.rounded-md.border.border-gray-200.bg-white.py-1.shadow-lg(role="listbox" data-searchable-select-target="list")
+       div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un pôle…" data-searchable-select-clearable-value="true" class="relative w-48")
+         = label_tag "parts___INDEX___team_id", "Pôle", class: "block text-xs font-medium text-gray-500"
+         = select_tag "parts[__INDEX__][team_id]", options_from_collection_for_select(teams, :id, :name), include_blank: "Non affecté", id: "parts___INDEX___team_id", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+         = render "shared/searchable_select_search", label: "Chercher un pôle"
+       div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une entité…" class="relative w-48")
+         = label_tag "parts___INDEX___legal_entity_id", "Entité", class: "block text-xs font-medium text-gray-500"
+         = select_tag "parts[__INDEX__][legal_entity_id]", options_from_collection_for_select(entities, :id, :name, entry.cash_account.legal_entity_id), id: "parts___INDEX___legal_entity_id", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+         = render "shared/searchable_select_search", label: "Chercher une entité"
+       div
+         = label_tag "parts___INDEX___amount", "Montant (€)", class: "block text-xs font-medium text-gray-500"
+         = text_field_tag "parts[__INDEX__][amount]", nil, id: "parts___INDEX___amount", class: "mt-1 w-28 rounded-md border-gray-300 text-sm shadow-sm", data: { allocation_parts_target: "amount", action: "input->allocation-parts#recompute" }
+       button.pb-2.text-sm.text-gray-500(type="button" class="hover:text-red-600" data-action="allocation-parts#remove") Retirer
+
+   .flex.flex-wrap.items-center.justify-between.gap-3
+     button.text-sm.font-medium.text-blue-500(type="button" class="hover:text-blue-700" data-action="allocation-parts#add") + Ajouter une part
+     .flex.items-center.gap-3
+       p.hidden.text-sm.tabular-nums(data-allocation-parts-target="summary")
+         span(data-allocation-parts-target="reste")
+       button.inline-flex.items-center.rounded-md.border.border-transparent.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50" type="submit" data-allocation-parts-target="submit")
+         | Affecter

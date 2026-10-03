@@ -68,7 +68,8 @@ module Finance
       scope = @filter.scope
       @filtered_total = scope.count
 
-      @entries = scope.includes(:cash_account, :cash_allocations, :allocation_suggestions)
+      @entries = scope.includes(:cash_account, :allocation_suggestions,
+                                cash_allocations: [:general_account, :team, :legal_entity])
                       .paginate(page: params[:page], per_page: PAR_PAGE)
       charger_pistes(@entries)
     end
