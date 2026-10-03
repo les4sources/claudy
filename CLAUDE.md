@@ -33,6 +33,7 @@ Stack: Rails 8.1 · Ruby 3.4.10 · PostgreSQL · Node 18.8.0 · Vite (via `vite_
 - **Soft deletion** (`soft_deletion` gem) and **PaperTrail** versioning are in use — prefer these over hard destroys for auditable records.
 - **Authorization** relies on Devise + role models (`Role`, `HumanRole`); no Pundit/CanCan — check controller-level `before_action` patterns.
 - **Tranches de Vie** (issue #339) — `TranchesDeVie::Client` lit l'API de l'app de la boulangerie (`TRANCHESDEVIE_API_URL`, `TRANCHESDEVIE_API_KEY`) pour rattacher une Pizza Party payée à un séjour. Lecture seule, jamais d'écriture sortante ; sans clé le client est `configured? == false` et l'UI désactive le bouton au lieu d'échouer.
+- **Panneau de la carte** (Michael, 2026-10-03) : deux onglets (`map_panel_controller.js`). « Travailler » = la couche active (une seule, réseaux compris) et, sous elle, ses actions (`data-layer-extra`) ; « Afficher » = fond, relief, Géoportail replié par groupe, filtres. Les pages annexes sont en pied de panneau, jamais dans les sections. Un nouvel élément va dans l'un de ces trois endroits.
 - **Pl@ntNet** — `PlantNet::Client` identifie une plante à partir de 1 à 5 photos (fiche plante de la carte, « Identifier l'espèce par photo »). Jev ne lit pas d'images : c'est Pl@ntNet qui propose les espèces, rapprochées du catalogue par `PlantNet::Identify` ; l'humain valide ou refuse. Sans `PLANTNET_API_KEY`, le bouton est désactivé.
 - `nio4r` needs `--with-cflags="-Wno-incompatible-pointer-types"` on macOS Sequoia (see README Quick Start).
 
