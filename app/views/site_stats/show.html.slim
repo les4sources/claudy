@@ -20,6 +20,12 @@ p.mt-4.text-sm.text-stone-600
   = render Charts::DailyTrafficComponent.new(days: report.daily)
 
 .mt-6.grid.grid-cols-1.gap-6.lg:grid-cols-2
+  = render "site_stats/content_pages", title: "Événements", rows: report.event_pages,
+           empty: "Aucune fiche événement visitée sur cette période."
+  = render "site_stats/content_pages", title: "Activités", rows: report.experience_pages,
+           empty: "Aucune fiche activité visitée sur cette période."
+
+.mt-6.grid.grid-cols-1.gap-6.lg:grid-cols-2
   = render "site_stats/table", title: "Pages les plus vues", rows: report.top_pages,
            columns: [[:label, "Page", :text], [:visits, "Visites", :number], [:pageviews, "Vues", :number]]
   = render "site_stats/table", title: "Pages d'arrivée", note: "La première page vue de chaque visite.", rows: report.entry_pages,

@@ -1,0 +1,17 @@
+/ Encart « Sur le site » d'une fiche publiée (événement ou activité) :
+  les visites de SA page, mesurées sans cookie. `path` : son public_path.
+- summary = SiteStats::PageSummary.new(path)
+.rounded-md.bg-stone-50.px-3.py-2.text-xs.text-stone-600
+  - if summary.any?
+    p
+      span.font-semibold.text-stone-800 = pluralize(summary.recent_visits, "visite", plural: "visites")
+      = " de la fiche ces #{SiteStats::PageSummary::RECENT_DAYS} derniers jours"
+      = " · #{summary.total_visits} depuis le #{l(summary.tracked_since)}"
+    p.mt-0.5
+      = "#{pluralize(summary.recent_clicks, 'clic', plural: 'clics')} d'inscription ou de contact"
+      - if summary.recent_submissions.positive?
+        = " · #{pluralize(summary.recent_submissions, 'formulaire envoyé', plural: 'formulaires envoyés')}"
+  - else
+    p Aucune visite de la fiche mesurée pour l'instant.
+  - unless current_user&.restricted_to_experiences?
+    p.mt-1 = link_to "Statistiques du site", site_stats_path, class: "claudy-link"

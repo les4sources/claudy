@@ -24,6 +24,9 @@ module SiteStats
       "outbound" => "Lien vers un autre site"
     }.freeze
 
+    # Les clics qui comptent comme « inscription ou contact » sur une fiche.
+    CLICK_EVENTS = %w[reservation tally telephone email outbound].freeze
+
     FUNNEL_STEPS = [
       ["Visites du site", nil],
       ["Clic « Réserver »", "reservation"],
@@ -157,6 +160,15 @@ module SiteStats
       grouped_events("not_found", :path)
     end
 
+    # — Événements et activités —
+
+    # Les fiches événement (/evenements/…) ou activité (/catalogue/…) vues sur
+    # la période, avec le nom et le lien de leur fiche Claudy quand le slug y
+    # correspond (les fiches migrées de l'ancien site n'en ont pas).
+    def event_pages = content_pages("/evenements/", Event)
+
+    def experience_pages = content_pages("/catalogue/", Experience)
+
     # — Entonnoir de réservation —
 
     def funnel
@@ -224,6 +236,25 @@ module SiteStats
                   .limit(TOP)
                   .pluck(column, Arel.sql("COUNT(*)")),
            %i[label count])
+    end
+
+    def content_pages(prefix, model)
+      scope = SiteHit.between(from, to).where("site_hits.path LIKE ?", "#{SiteHit.sanitize_sql_like(prefix)}%")
+      views = scope.pageviews.group(:path).count
+      return [] if views.empty?
+
+      visits = scope.pageviews.group(:path).distinct.count(:visitor_hash)
+      clicks = scope.events(CLICK_EVENTS).group(:path).count
+      submissions = scope.events("tally_submit").group(:path).count
+      slugs = views.keys.map { |path| path.delete_prefix(prefix) }
+      records = model.where(slug: slugs).index_by(&:slug)
+
+      views.keys.map do |path|
+        record = records[path.delete_prefix(prefix)]
+        { path: path, record: record, label: record&.name || path.delete_prefix(prefix).tr("-", " ").capitalize,
+          visits: visits[path].to_i, pageviews: views[path].to_i,
+          clicks: clicks[path].to_i, submissions: submissions[path].to_i }
+      end.sort_by { |row| [-row[:visits], -row[:pageviews], row[:label]] }.first(20)
     end
 
     def rows(tuples, keys)
