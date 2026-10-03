@@ -11,7 +11,7 @@ module Finance
     before_action :get_entry,
                   only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate, :payout,
                          :pay_invoice, :pay_expense_report, :reconcile_payout, :collect_sales_invoice,
-                         :settle, :suggestion]
+                         :settle, :suggestion, :detail]
     breadcrumb "Trésorerie", :finance_cash_entries_path, match: :exact
 
     # Le journal se lit, il ne se travaille pas ligne à ligne. Ses pages étaient
@@ -94,6 +94,19 @@ module Finance
       @entities = LegalEntity.actives.ordered
       @events = recent_events
       charger_artisans
+    end
+
+    # Le détail d'une ligne, ouvert en modale depuis la file « À affecter »
+    # (epic #288, phase 5). Quand les quatre colonnes ne suffisent pas, c'est
+    # ici qu'on lit la date de valeur, le code opération, l'IBAN et la
+    # référence du relevé — sans quitter sa page de la file. La modale montre,
+    # elle ne classe pas : on affecte dans la file. La page pleine (`show`)
+    # reste l'URL qu'on partage.
+    def detail
+      @allocations = @entry.cash_allocations.includes(:general_account, :team, :legal_entity).ordered
+      # Même raison que `Finance::AccountsController#poste` : le layout de
+      # l'application porte déjà un cadre « modal » vide, que Turbo prendrait.
+      render layout: "modal"
     end
 
     def new
