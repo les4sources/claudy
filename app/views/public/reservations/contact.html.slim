@@ -87,9 +87,101 @@ div
         / Type de séjour (Michael 2026-07-21) — optionnel, SANS la catégorie
         / interne « Les 4 Sources » (Stay.public_categories). La valeur circule
         / par le Draft jusqu'au Stay créé.
-        label.block.mb-5
-          span.funnel-label Type de séjour (optionnel)
-          = select_tag "reservation[category]", options_for_select(Stay.public_categories.map(&:reverse), @draft.category), include_blank: "— Non précisé —", class: "mt-1.5 w-full rounded-xl border-bark bg-white text-base text-ink shadow-sm focus:border-forest focus:ring-forest"
+        .mb-5
+          label.funnel-label(for="reservation_category") Type de séjour (optionnel)
+          .relative.mt-1.5(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un type de séjour…" data-searchable-select-clearable-value="true")
+            = select_tag "reservation[category]", options_for_select(Stay.public_categories.map(&:reverse), @draft.category), include_blank: "— Non précisé —", id: "reservation_category", data: { "searchable-select-target": "select" }, class: "w-full rounded-xl border-bark bg-white text-base text-ink shadow-sm focus:border-forest focus:ring-forest"
+            = render "shared/searchable_select_search", label: "Type de séjour"
+
+        / ── Facture (Michael, 2026-10-03) ─────────────────────
+        / « Non » par défaut. « Oui » déplie les coordonnées de facturation
+        / (public--billing). Raison sociale et adresse obligatoires, n° de TVA
+        / facultatif mais contrôlé : format dans le navigateur, puis format et
+        / VIES côté serveur (Reservations::BillingCheck). Le séjour arrive alors
+        / dans la file « facture à fournir ».
+        - billing_errors = @billing_errors || {}
+        - input_class = "mt-1.5 w-full rounded-xl border-bark bg-white text-base text-ink shadow-sm focus:border-forest focus:ring-forest"
+        fieldset.mb-6(data-controller="public--billing")
+          legend.funnel-label Avez-vous besoin d'une facture ?
+          .mt-2.grid.grid-cols-2.gap-3
+            - [["Non", "0"], ["Oui", "1"]].each do |label_text, val|
+              label.funnel-choice
+                = radio_button_tag "reservation[invoice_requested]", val, (@draft.invoice_requested ? "1" : "0") == val,
+                    id: "reservation_invoice_requested_#{val}",
+                    data: { action: "change->public--billing#toggle" }
+                span.funnel-choice__body
+                  span.text-base.font-medium = label_text
+                  span.funnel-choice__check
+                    = funnel_icon :check, css_class: "w-5 h-5", stroke_width: 2.5
+
+          .mt-4.rounded-xl.bg-sand-deep.p-4.sm:p-5.space-y-4(data-public--billing-target="fields" hidden=!@draft.invoice_requested)
+            p.funnel-hint Ces coordonnées figureront sur la facture que notre Pôle Admin vous enverra.
+            div
+              label.funnel-label(for="reservation_billing_name") Raison sociale ou nom *
+              = text_field_tag "reservation[billing_name]", @draft.billing_name,
+                  id: "reservation_billing_name",
+                  autocomplete: "organization",
+                  aria: { invalid: billing_errors[:billing_name].present? || nil },
+                  data: { "public--billing-required": true },
+                  class: input_class
+              - if billing_errors[:billing_name]
+                p.mt-1.5.text-sm.text-red-700(role="alert") = billing_errors[:billing_name]
+
+            .grid.grid-cols-1.sm:grid-cols-2.gap-4
+              div
+                label.funnel-label(for="reservation_billing_vat") Numéro de TVA
+                = text_field_tag "reservation[billing_vat]", @draft.billing_vat,
+                    id: "reservation_billing_vat",
+                    placeholder: "BE0123456789",
+                    autocapitalize: "characters",
+                    spellcheck: "false",
+                    aria: { describedby: "reservation_billing_vat_hint reservation_billing_vat_error", invalid: billing_errors[:billing_vat].present? || nil },
+                    data: { "public--billing-target": "vat", action: "input->public--billing#checkVat" },
+                    class: input_class
+                p#reservation_billing_vat_hint.funnel-hint.mt-1 Facultatif. Vérifié auprès du registre européen.
+                p#reservation_billing_vat_error.mt-1.5.text-sm.text-red-700(role="alert" hidden=billing_errors[:billing_vat].blank? data-public--billing-target="vatError")
+                  = billing_errors[:billing_vat] || "Ce numéro de TVA n'a pas le bon format (ex. : BE0123456789)."
+              div
+                label.funnel-label(for="reservation_billing_country") Pays
+                .relative.mt-1.5(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un pays…")
+                  = select_tag "reservation[billing_country]",
+                      options_for_select(Reservations::BillingCheck::COUNTRIES.map { |code, name| [name, code] }, @draft.billing_country),
+                      id: "reservation_billing_country",
+                      data: { "searchable-select-target": "select", "public--billing-target": "country", action: "change->public--billing#checkVat" },
+                      class: "w-full rounded-xl border-bark bg-white text-base text-ink shadow-sm focus:border-forest focus:ring-forest"
+                  = render "shared/searchable_select_search", label: "Pays"
+
+            div
+              label.funnel-label(for="reservation_billing_address") Adresse *
+              = text_field_tag "reservation[billing_address]", @draft.billing_address,
+                  id: "reservation_billing_address",
+                  autocomplete: "street-address",
+                  placeholder: "Rue et numéro",
+                  aria: { invalid: billing_errors[:billing_address].present? || nil },
+                  data: { "public--billing-required": true },
+                  class: input_class
+              - if billing_errors[:billing_address]
+                p.mt-1.5.text-sm.text-red-700(role="alert") = billing_errors[:billing_address]
+
+            .grid.grid-cols-1.sm:grid-cols-3.gap-4
+              div
+                label.funnel-label(for="reservation_billing_zip") Code postal *
+                = text_field_tag "reservation[billing_zip]", @draft.billing_zip,
+                    id: "reservation_billing_zip",
+                    autocomplete: "postal-code",
+                    aria: { invalid: billing_errors[:billing_zip].present? || nil },
+                    data: { "public--billing-required": true },
+                    class: input_class
+              .sm:col-span-2
+                label.funnel-label(for="reservation_billing_city") Localité *
+                = text_field_tag "reservation[billing_city]", @draft.billing_city,
+                    id: "reservation_billing_city",
+                    autocomplete: "address-level2",
+                    aria: { invalid: billing_errors[:billing_city].present? || nil },
+                    data: { "public--billing-required": true },
+                    class: input_class
+            - if billing_errors[:billing_zip] || billing_errors[:billing_city]
+              p.text-sm.text-red-700(role="alert") = [billing_errors[:billing_zip], billing_errors[:billing_city]].compact.join(" ")
 
         / Animal read-only
         .mb-6.p-4.bg-sand-deep.rounded-xl.flex.items-center.justify-between

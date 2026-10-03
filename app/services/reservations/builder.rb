@@ -138,7 +138,10 @@ module Reservations
           # l'override dès la création, sans attendre un recompute.
           price_override_cents: admin_price_override,
           # Note interne = texte riche depuis l'issue #313 (`has_rich_text`).
-          internal_notes: internal_notes
+          internal_notes: internal_notes,
+          # « Besoin d'une facture ? » coché dans le funnel : le séjour entre
+          # directement dans la file « facture à fournir » (Invoicing::Queue).
+          invoice_status: (Invoicing::Queue::REQUESTED if invoice_requested?)
         )
         @stay.stay_items.create!(bookable: @booking) if @booking
         # Espaces (epic #66, Phase 2) : les salles / cuisine pro choisies
@@ -509,6 +512,7 @@ module Reservations
         customer.customer_type = draft.customer_type if draft.customer_type.present?
         customer.organization_name = draft.organization_name if draft.organization_name.present?
       end
+      fill_billing_details(customer)
       customer.save!
       customer
     end
@@ -529,6 +533,7 @@ module Reservations
       customer.first_name = draft.first_name if customer.first_name.blank?
       customer.last_name  = draft.last_name  if customer.last_name.blank?
       customer.phone      = draft.phone      if customer.phone.blank?
+      fill_billing_details(customer)
       customer.save! if customer.changed?
       customer
     end
@@ -692,6 +697,47 @@ module Reservations
     #
     # Activités souhaitées (texte libre du funnel, Michael 2026-10-03) : rangées
     # ici, préfixées, tant que le module Activités n'est pas ouvert au public.
+    def invoice_requested?
+      draft.respond_to?(:invoice_requested) && draft.invoice_requested
+    end
+
+    # Les coordonnées de facturation complètent la fiche client, sans jamais
+    # écraser ce qui y est déjà : un client qui facture une fois à son
+    # employeur ne doit pas perdre son adresse habituelle. La version exacte de
+    # CETTE demande vit dans la note interne du séjour.
+    def fill_billing_details(customer)
+      return unless invoice_requested?
+
+      {
+        organization_name: draft.billing_name,
+        vat_number:        draft.billing_vat,
+        address_line:      draft.billing_address,
+        address_zip:       draft.billing_zip,
+        address_city:      draft.billing_city,
+        address_country:   draft.billing_country
+      }.each do |field, value|
+        customer.public_send("#{field}=", value) if customer.public_send(field).blank? && value.present?
+      end
+    end
+
+    def billing_note
+      vat = if draft.billing_vat.blank?
+              "TVA : aucun numéro donné"
+            else
+              verdict = case draft.billing_vies_status
+                        when "valid"
+                          ["vérifié dans VIES", draft.billing_vies_name].compact.join(" : ")
+                        when "not_applicable" then "pays hors VIES, non vérifié"
+                        else "non vérifié, VIES était injoignable"
+                        end
+              "TVA : #{draft.billing_vat} (#{verdict})"
+            end
+      country = BillingCheck::COUNTRIES.fetch(draft.billing_country.to_s, draft.billing_country)
+      address = [draft.billing_address, [draft.billing_zip, draft.billing_city].compact.join(" "), country]
+                .compact_blank.join(", ")
+      ["Facture demandée au nom de : #{draft.billing_name}", vat, "Adresse : #{address}"].join("\n")
+    end
+
     def internal_notes
       lines = []
       if draft.dogs_count.to_i > 1
@@ -700,6 +746,7 @@ module Reservations
       end
       note = draft.respond_to?(:activities_note) ? draft.activities_note.to_s.strip : ""
       lines << "#{ACTIVITIES_NOTE_PREFIX}#{note}" if note.present?
+      lines << billing_note if invoice_requested?
       return if lines.empty?
 
       Stays::InternalNote.to_html(lines.join("\n\n"))

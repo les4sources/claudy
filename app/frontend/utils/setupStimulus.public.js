@@ -1,6 +1,9 @@
 import { Application } from '@hotwired/stimulus';
 import { registerControllers } from 'stimulus-vite-helpers';
 import { Alert, Autosave, Modal, Tabs, Toggle, Slideover } from 'tailwindcss-stimulus-components';
+// Listes déroulantes cherchables (règle de CLAUDE.md) : le contrôleur vit avec
+// ceux de l'admin, on l'enregistre aussi côté public pour le funnel.
+import SearchableSelect from '../controllers/searchable_select_controller.js';
 
 // Start Stimulus application
 const application = Application.start();
@@ -17,6 +20,7 @@ application.register('modal', Modal)
 application.register('tabs', Tabs)
 application.register('toggle', Toggle)
 application.register('slideover', Slideover)
+application.register('searchable-select', SearchableSelect)
 
 // Load and register global controllers
 registerControllers(

@@ -758,6 +758,27 @@
   font-size: 1rem;
 }
 
+/* Listes cherchables (searchable-select) et champs refusés dans le funnel :
+   même champ que les autres, en 1rem, coins arrondis et bordure du funnel. */
+.funnel-page [data-searchable-select-target="input"] {
+  border-radius: 0.75rem;
+  border-color: var(--p-border);
+  font-size: 1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  background: #fff;
+}
+.funnel-page [data-searchable-select-target="wrap"] {
+  margin-top: 0;
+}
+.funnel-page [data-searchable-select-target="list"] {
+  font-size: 1rem;
+  border-radius: 0.75rem;
+}
+.funnel-page input[aria-invalid="true"] {
+  border-color: var(--p-danger);
+}
+
 /* --- Mouvement ------------------------------------------------------------- */
 
 /* Une seule respiration à l'arrivée : le contenu de l'étape monte de 8 px.
