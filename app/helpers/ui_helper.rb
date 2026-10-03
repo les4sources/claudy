@@ -224,4 +224,18 @@ module UiHelper
       )
     )
   end
+
+  # Les actions du contrôleur Stimulus `submit-progress`, à poser sur un
+  # formulaire dont le bouton est `maps/save_button` : retour visuel pendant le
+  # téléversement des photos et l'enregistrement, sans double clic.
+  def submit_progress_actions
+    %w[
+      submit->submit-progress#start
+      direct-upload:initialize->submit-progress#track
+      direct-upload:progress->submit-progress#progress
+      direct-uploads:end->submit-progress#uploaded
+      direct-upload:error->submit-progress#reset
+      turbo:submit-end->submit-progress#finish
+    ].join(" ")
+  end
 end
