@@ -4,26 +4,74 @@
            links: [link_to("Règles d'affectation", finance_allocation_rules_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
                    link_to("Tout le journal", finance_cash_entries_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
 
-/ Le filtre se VOIT. Arriver ici depuis l'arrêté du mois sur une file réduite à
-  Stripe, sans rien qui le dise, c'est croire que la file est vide (epic #250).
-- if @filter_kind.present? || @filter_account.present?
-  - libelle = @filter_account&.name || CashAccount::KIND_LABELS.fetch(@filter_kind, @filter_kind)
-  .mb-4.flex.flex-wrap.items-center.gap-3.rounded-lg.border.border-teal-100.p-3(class="bg-teal-50/50")
-    span.text-sm.text-gray-700
-      | Filtré sur
+- field_label = "block text-xs font-medium text-gray-600"
+- field_input = "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+
+/  Chercher et filtrer (epic #288, phase 4). On ne classe pas dix mille lignes
+   dans l'ordre d'arrivée : on les classe par lots qui se ressemblent — tout le
+   bar, tout un compte, un mois à clôturer, les petits montants. Tout passe par
+   l'URL : la vue filtrée se partage, Précédent la retrouve, et un geste fait
+   depuis la file la conserve.
+= form_with url: finance_unallocated_cash_entries_path, method: :get, class: "mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-gray-100 bg-white p-4", data: { turbo_action: "advance" } do
+  - if @filter.kind
+    = hidden_field_tag :kind, @filter.kind
+  div
+    = label_tag :q, "Rechercher", class: field_label
+    = search_field_tag :q, @filter.q, placeholder: "nom, communication…", autocomplete: "off", autocorrect: "off", autocapitalize: "off", spellcheck: "false", class: "#{field_input} w-56"
+  .relative(class="w-48" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" data-searchable-select-clearable-value="true")
+    = label_tag :cash_account_id, "Compte", class: field_label
+    = select_tag :cash_account_id, options_from_collection_for_select(@accounts, :id, :name, @filter.account&.id), include_blank: "Tous", class: "#{field_input} w-full", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher un compte"
+  .relative(class="w-36" data-controller="searchable-select" data-searchable-select-placeholder-value="Entrées, sorties…" data-searchable-select-clearable-value="true")
+    = label_tag :sens, "Sens", class: field_label
+    = select_tag :sens, options_for_select(Finance::QueueFilter::SENS.invert, @filter.sens), include_blank: "Tous", class: "#{field_input} w-full", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher un sens"
+  div
+    = label_tag :from, "Du", class: field_label
+    = date_field_tag :from, @filter.from, class: field_input
+  div
+    = label_tag :to, "Au", class: field_label
+    = date_field_tag :to, @filter.to, class: field_input
+  div
+    = label_tag :min, "Montant de", class: field_label
+    = text_field_tag :min, @filter.to_params[:min], placeholder: "0,00", inputmode: "decimal", autocomplete: "off", class: "#{field_input} w-24"
+  div
+    = label_tag :max, "à", class: field_label
+    = text_field_tag :max, @filter.to_params[:max], placeholder: "∞", inputmode: "decimal", autocomplete: "off", class: "#{field_input} w-24"
+  button.inline-flex.items-center.rounded-md.border.border-transparent.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(type="submit" class="bg-4s-main hover:opacity-90") Filtrer
+
+/  Le filtre se VOIT, et chaque pastille se retire seule. Arriver ici depuis
+   l'arrêté du mois sur une file réduite à Stripe, sans rien qui le dise,
+   c'est croire que la file est vide (epic #250).
+- if @filter.active?
+  .mb-4.flex.flex-wrap.items-center.gap-2.rounded-lg.border.border-teal-100.p-3(class="bg-teal-50/50")
+    span.text-sm.text-gray-700 Filtré sur
+    - @filter.chips.each do |chip|
+      = link_to finance_unallocated_cash_entries_path(@filter.to_params(except: chip[:key])),
+                class: "inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-white px-2.5 py-0.5 text-sm text-gray-800 hover:border-teal-400",
+                title: "Retirer ce filtre", aria: { label: "Retirer le filtre #{chip[:label]}" } do
+        span= chip[:label]
+        span.text-gray-400(aria-hidden="true") ×
+    span.text-sm.text-gray-600
+      | —
       = " "
-      strong = libelle
-      |  — #{@filtered_total} ligne(s) sur #{@pending_total} en attente.
+      span#file-compteur-filtre #{@filtered_total} ligne(s) sur #{@pending_total} en attente.
     = link_to "Voir toute la file", finance_unallocated_cash_entries_path, class: "text-sm font-medium text-4s-main hover:underline"
 
 - if @entries.blank?
-  .p-8.text-center.bg-green-50.rounded-lg.border.border-green-100
-    p.text-2xl.font-semibold.text-green-700
-      = (@filter_kind.present? || @filter_account.present?) ? "✓ Rien à affecter ici" : "✓ Rien à affecter"
-    p.mt-2.text-sm.text-gray-600 Tout ce qui est passé en trésorerie est ventilé et comptabilisé. C'est l'état dans lequel on veut finir chaque mois.
+  - if @filter.active? && @pending_total.positive?
+    .p-8.text-center.rounded-lg.border.border-gray-200.bg-white
+      p.text-lg.font-semibold.text-gray-700 Aucune ligne en attente ne correspond à ces filtres.
+      p.mt-2.text-sm.text-gray-600
+        = link_to "Retirer les filtres", finance_unallocated_cash_entries_path, class: "font-medium text-4s-main hover:underline"
+        |  pour revoir les #{@pending_total} ligne(s) de la file.
+  - else
+    .p-8.text-center.bg-green-50.rounded-lg.border.border-green-100
+      p.text-2xl.font-semibold.text-green-700 ✓ Rien à affecter
+      p.mt-2.text-sm.text-gray-600 Tout ce qui est passé en trésorerie est ventilé et comptabilisé. C'est l'état dans lequel on veut finir chaque mois.
 - else
   p.mb-4.text-sm.text-gray-500
-    span#file-compteur #{(@filter_kind.present? || @filter_account.present?) ? @filtered_total : @pending_total} ligne(s) en attente
+    span#file-compteur #{@filtered_total} ligne(s) en attente
     - if @entries.total_pages > 1
       |  — page #{@entries.current_page} sur #{@entries.total_pages}
     |  . Une ligne entièrement affectée se comptabilise toute seule.

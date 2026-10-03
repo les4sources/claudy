@@ -24,6 +24,8 @@ class MapBioindicatorsController < BaseController
     @total_count = scope.count
     @to_analyze_count = MapFeature.bioindicators.where("properties->>'status' = 'to_analyze'").count
     @records = scope.with_attached_photos.limit(LIST_LIMIT).to_a
+    # Un filtre posé : la carte ne montre que ces relevés.
+    @filtered_ids = scope.unscope(:order).pluck(:id) if @filters.values.any?
     render :index, layout: false
   end
 

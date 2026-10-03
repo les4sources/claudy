@@ -19,16 +19,10 @@ module Finance
 
     private
 
-    # Les lignes en attente, restreintes au compte ou à la famille de comptes
-    # demandés (epic #250). Sans filtre, la file entière.
-    def file_scope(filtres)
-      scope = CashEntry.pending.ordered
-      scope = scope.where(cash_account_id: filtres[:cash_account_id]) if filtres[:cash_account_id].present?
-      if filtres[:kind].present? && CashAccount::KINDS.include?(filtres[:kind])
-        scope = scope.where(cash_account_id: CashAccount.where(kind: filtres[:kind]).select(:id))
-      end
-      scope
-    end
+    # Les lignes en attente, restreintes par les filtres de la file : compte
+    # ou famille de comptes (epic #250), recherche, période, sens et montant
+    # (epic #288, phase 4). Sans filtre, la file entière.
+    def file_scope(filtres) = Finance::QueueFilter.new(filtres).scope
 
     # Le compte artisanat et les artisans, UNE fois pour la page : une ligne
     # affectée à l'artisanat demande à qui revient le virement (epic #359,
@@ -149,16 +143,18 @@ module Finance
     # est hors de vue quand on travaille en bas de page.
     def repondre_dans_la_file(entry, notice: nil, alert: nil)
       entry = CashEntry.includes(:cash_account, :cash_allocations, :allocation_suggestions).find(entry.id)
-      filtres = Rack::Utils.parse_nested_query(referer_uri&.query.to_s).with_indifferent_access
-      filtre = filtres[:cash_account_id].present? || filtres[:kind].present?
-      en_attente = filtre ? file_scope(filtres).count : CashEntry.pending.count
+      # Le compteur suit les filtres de la page d'où part le geste : dans une
+      # vue filtrée, il compte ce qui reste À CET ENDROIT, pas toute la file.
+      filtres = Rack::Utils.parse_nested_query(referer_uri&.query.to_s)
+      en_attente = file_scope(filtres).count
 
       flash.now[:notice] = notice if notice
       flash.now[:alert] = alert if alert
 
       streams = [
         turbo_stream.replace("messages", partial: "layouts/components/messages"),
-        turbo_stream.update("file-compteur", "#{en_attente} ligne(s) en attente")
+        turbo_stream.update("file-compteur", "#{en_attente} ligne(s) en attente"),
+        turbo_stream.update("file-compteur-filtre", "#{en_attente} ligne(s) sur #{CashEntry.pending.count} en attente.")
       ]
       if entry.status == "pending"
         charger_pistes([entry])

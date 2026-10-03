@@ -27,8 +27,8 @@ module MapFeatureObservation
   # Un relevé venu d'ailleurs (observations.be) : sa source, son identifiant
   # là-bas (clé de l'import, jamais deux fois le même), le lien vers sa fiche,
   # l'observateur (qui n'a pas de compte Claudy), la précision du point (m), le
-  # nombre de photos et le statut de validation là-bas.
-  SOURCE_KEYS = %w[source source_id source_url observer_name accuracy photos_count validation].freeze
+  # nombre de photos et leurs adresses là-bas, le statut de validation là-bas.
+  SOURCE_KEYS = %w[source source_id source_url observer_name accuracy photos_count photo_urls validation].freeze
   SPECIES_MAX_LENGTH = 120
 
   included do
@@ -109,6 +109,12 @@ module MapFeatureObservation
   def source_url = properties.to_h["source_url"]
   def observer_name = properties.to_h["observer_name"]
   def imported? = properties.to_h["source"].present?
+
+  # Les photos d'un relevé importé, affichées depuis observations.be (jamais
+  # copiées) : seules les adresses https passent, une valeur douteuse est ignorée.
+  def remote_photo_urls
+    Array(properties.to_h["photo_urls"]).map(&:to_s).select { |url| url.match?(%r{\Ahttps://\S+\z}) }
+  end
 
   def observer
     User.find_by(id: observer_id) if observer_id.present?

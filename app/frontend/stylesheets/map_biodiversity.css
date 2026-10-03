@@ -124,3 +124,9 @@
 .map-observation-gps__status:empty {
   display: none;
 }
+
+/* Hors du filtre de la liste (règne, espèce, année ; statut, indicateur) :
+   la pastille et son libellé quittent la carte. */
+.map-filtered-out {
+  display: none !important;
+}

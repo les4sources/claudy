@@ -2,18 +2,23 @@
   `photo-carousel`). Une photo touchée s'ouvre en plein écran, où l'on continue
   de faire défiler les autres. Locaux : `photos` (pièces jointes enregistrées),
   `source` (la classe qui sert les variantes, `MapFeature.photo_source`) et
-  `alt` (le nom de l'objet).
-- several = photos.size > 1
+  `alt` (le nom de l'objet). Facultatif : `remote_urls`, des photos restées
+  ailleurs (relevés d'observations.be), montrées depuis leur adresse d'origine,
+  après les pièces jointes et sans envoyer de referer.
+- remote_urls = local_assigns.fetch(:remote_urls, [])
+- images = photos.map { |photo| [url_for(source.photo_source(photo, :preview)), nil] } + \
+           remote_urls.map { |url| [url, "no-referrer"] }
+- several = images.size > 1
 - arrow_css = "flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-700 shadow-sm hover:bg-white disabled:opacity-0"
 - big_arrow_css = "flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 disabled:opacity-0"
 - track_css = "flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 div.relative data-controller="photo-carousel" data-photo-carousel="true"
   ul class="#{track_css} h-44 bg-stone-100" data-photo-carousel-target="track" data-action="scroll->photo-carousel#scrolled"
-    - photos.each_with_index do |photo, index|
+    - images.each_with_index do |(url, referrer), index|
       li.h-full.w-full.shrink-0.snap-center
         button[type="button" class="block h-full w-full" data-index=index
                data-action="photo-carousel#open" aria-label="Agrandir la photo #{index + 1}"]
-          = image_tag url_for(source.photo_source(photo, :preview)), alt: "#{alt} — photo #{index + 1}",
+          = image_tag url, alt: "#{alt} — photo #{index + 1}", referrerpolicy: referrer,
                       loading: (index.zero? ? "eager" : "lazy"), class: "h-full w-full object-cover"
   - if several
     div class="pointer-events-none absolute inset-x-2 top-1/2 flex -translate-y-1/2 justify-between"
@@ -26,7 +31,7 @@ div.relative data-controller="photo-carousel" data-photo-carousel="true"
         svg.h-5.w-5 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
           polyline points="9 18 15 12 9 6"
     span[class="pointer-events-none absolute bottom-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium tabular-nums text-white"
-         data-photo-carousel-target="counter"] = "1 / #{photos.size}"
+         data-photo-carousel-target="counter"] = "1 / #{images.size}"
 
   / Le plein écran : un `<dialog>` natif, au-dessus de la carte.
   / Taille posée en ligne : celle du navigateur (`max-height: calc(100% - 2em)`)
@@ -37,12 +42,12 @@ div.relative data-controller="photo-carousel" data-photo-carousel="true"
          data-photo-carousel-target="dialog"
          data-action="close->photo-carousel#closed keydown->photo-carousel#keydown click->photo-carousel#backdrop"]
     ul class="#{track_css} h-full" data-photo-carousel-target="dialogTrack" data-action="scroll->photo-carousel#dialogScrolled"
-      - photos.each_with_index do |photo, index|
+      - images.each_with_index do |(url, referrer), index|
         li.flex.h-full.w-full.shrink-0.snap-center.items-center.justify-center.p-2 data-photo-carousel-backdrop="true"
-          = image_tag url_for(source.photo_source(photo, :preview)), alt: "#{alt} — photo #{index + 1}", loading: "lazy",
+          = image_tag url, alt: "#{alt} — photo #{index + 1}", loading: "lazy", referrerpolicy: referrer,
                       class: "max-h-full max-w-full object-contain"
     div class="absolute inset-x-0 top-0 flex items-center justify-between gap-3 bg-gradient-to-b from-black/60 to-transparent px-3 py-3"
-      span.text-sm.font-medium.tabular-nums data-photo-carousel-target="dialogCounter" = "1 / #{photos.size}"
+      span.text-sm.font-medium.tabular-nums data-photo-carousel-target="dialogCounter" = "1 / #{images.size}"
       button[type="button" class="flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white outline-none hover:bg-black/70 focus-visible:ring-2 focus-visible:ring-white"
              data-action="photo-carousel#close" aria-label="Fermer la photo" autofocus=true]
         svg.h-6.w-6 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"

@@ -10,7 +10,7 @@ RSpec.describe Maps::ObservationsBeImport do
       "point" => { "type" => "Point", "coordinates" => [4.90769, 50.341339] }, "accuracy" => 10,
       "species_detail" => { "name" => name, "scientific_name" => latin, "group" => group },
       "user_detail" => { "name" => "François Hela" }, "permalink" => "https://observations.be/observation/#{id}/",
-      "photos" => ["a.jpg", "b.jpg"], "validation_status" => "J", "notes" => notes
+      "photos" => ["https://observations.be/media/photo/171587232.jpg", "https://observations.be/media/photo/171587233.jpg", "javascript:alert(1)"], "validation_status" => "J", "notes" => notes
     }
   end
 
@@ -37,7 +37,9 @@ RSpec.describe Maps::ObservationsBeImport do
     expect(bird.properties).to include("realm" => "fauna", "species_common" => "Bergeronnette grise", "species_latin" => "Motacilla alba",
                                        "observed_on" => "2026-05-07", "count" => 2, "source" => "observations.be",
                                        "source_url" => "https://observations.be/observation/1/", "observer_name" => "François Hela",
-                                       "photos_count" => 2)
+                                       "photos_count" => 2,
+                                       "photo_urls" => ["https://observations.be/media/photo/171587232.jpg",
+                                                        "https://observations.be/media/photo/171587233.jpg"])
     expect(bird.feature_kind).to eq("observation")
     mushroom = layer.map_features.find_by("properties->>'source_id' = '2'")
     expect(mushroom.realm).to eq("fungi")
