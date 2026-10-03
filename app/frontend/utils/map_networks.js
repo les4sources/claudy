@@ -29,6 +29,8 @@ const NODE_GLYPHS = {
   catchment: '<path d="M4 4v6a8 8 0 0 0 16 0V4"/><path d="M12 8v7M9 12l3 3 3-3"/>',
   cistern: '<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/>',
   valve: '<circle cx="12" cy="12" r="7"/><path d="M12 5v14M5 12h14"/><circle cx="12" cy="12" r="1.5"/>',
+  // Une arrivée, une barre, trois départs.
+  manifold: '<path d="M12 3v5M3 8h18M6 8v9M12 8v9M18 8v9M4.5 17h3M10.5 17h3M16.5 17h3"/>',
   meter: '<circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M8 17h8"/>',
   tap: '<path d="M4 9h9a4 4 0 0 1 4 4v1"/><path d="M8 9V5M5 5h6"/><path d="M17 18v3"/>',
   manhole: '<circle cx="12" cy="12" r="8"/><path d="M6 9h12M5 12h14M6 15h12"/>',

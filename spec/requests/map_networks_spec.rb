@@ -52,6 +52,17 @@ RSpec.describe "Carte du domaine — réseaux (epic #348, phase 9)", type: :requ
                                               "equipment" => "unifi")
   end
 
+  # Les répartiteurs d'abord classés en vannes se reclassent depuis la fiche.
+  it "reclasse une vanne en répartiteur, consigne gardée" do
+    node = water.map_features.create!(feature_kind: "node", geometry: point,
+                                      properties: { "node_type" => "valve", "instructions" => "Trois départs" })
+    get map_feature_path(node)
+    expect(response.body).to include(%(<option value="manifold">Répartiteur</option>))
+    patch map_feature_path(node), headers: turbo, params: { map_feature: { node_type: "manifold" } }
+    expect(node.reload.properties).to include("node_type" => "manifold", "instructions" => "Trois départs")
+    expect(node.node_type_label).to eq("Répartiteur")
+  end
+
   it "refuse un type de nœud d'un autre réseau" do
     post map_features_path, headers: json, params: {
       map_feature: { map_layer_id: water.id, feature_kind: "node", geometry: point.to_json, node_type: "breaker" }
