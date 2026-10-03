@@ -7,7 +7,8 @@ module Maps
   # L'API publique d'observations.be (`/api/v1/locations/:id/observations/`) rend
   # chaque observation avec son espèce (noms en français avec `Accept-Language:
   # fr`), sa date, son effectif, son point et sa précision, son observateur et le
-  # lien vers sa fiche. Aucune clé : ce sont des données publiques.
+  # lien vers sa fiche, et les adresses de ses photos. Aucune clé : ce sont des
+  # données publiques.
   #
   # L'import est REJOUABLE : la clé est l'identifiant observations.be
   # (`properties.source_id`). Une observation déjà importée est mise à jour, une
@@ -69,6 +70,7 @@ module Maps
       return nil if common.blank?
 
       count = Integer(observation["number"].to_s, exception: false)
+      photo_urls = photo_urls_for(observation)
       {
         "realm" => realm_for(group), "species_common" => common.first(MapFeatureObservation::SPECIES_MAX_LENGTH),
         "species_latin" => latin&.first(MapFeatureObservation::SPECIES_MAX_LENGTH),
@@ -76,11 +78,18 @@ module Maps
         "source" => SOURCE, "source_id" => observation["id"].to_s,
         "source_url" => observation["permalink"].presence || "https://observations.be/observation/#{observation['id']}/",
         "observer_name" => observation.dig("user_detail", "name"), "accuracy" => observation["accuracy"],
-        "photos_count" => Array(observation["photos"]).size, "validation" => observation["validation_status"]
+        "photos_count" => photo_urls.size, "photo_urls" => photo_urls, "validation" => observation["validation_status"]
       }.compact
     end
 
     private
+
+    # Les photos d'une observation : l'API les donne en adresses d'images
+    # (`https://observations.be/media/photo/171587232.jpg`), sans licence. On garde
+    # l'adresse et la fiche les affiche de là-bas : rien n'est copié ici.
+    def photo_urls_for(observation)
+      Array(observation["photos"]).map { |url| url.to_s.strip }.select { |url| url.match?(%r{\Ahttps://\S+\z}) }
+    end
 
     def realm_for(group)
       return "flora" if FLORA_GROUPS.include?(group)

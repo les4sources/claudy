@@ -122,10 +122,19 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
 
     - if persisted
       - photos = feature.photos.select(&:persisted?)
-      - if photos.any?
+      - remote_photos = feature.remote_photo_urls
+      - if photos.any? || remote_photos.any?
         .mt-5
-          p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" = "Photos (#{photos.size})"
+          p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" = "Photos (#{photos.size + remote_photos.size})"
           ul.grid.grid-cols-3.gap-2
+            / Les photos d'un relevé importé restent sur observations.be : la
+              fiche les montre de là-bas, avec le nom de leur auteur, sans bouton
+              pour les retirer (la prochaine importation les remettrait).
+            - remote_photos.each do |url|
+              li.relative data-observation-remote-photo="true"
+                = link_to url, target: "_blank", rel: "noopener noreferrer" do
+                  = image_tag url, alt: "Photo de #{feature.species_common}", loading: "lazy", referrerpolicy: "no-referrer",
+                              class: "aspect-square w-full rounded-lg object-cover ring-1 ring-stone-200"
             - photos.each do |photo|
               li.group.relative
                 = link_to url_for(MapFeature.photo_source(photo, :preview)), target: "_blank", rel: "noopener" do
@@ -136,6 +145,9 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
                             class: "absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-stone-500 shadow hover:text-red-600",
                             "aria-label": "Retirer la photo" do
                   | ×
+          - if remote_photos.any?
+            p.mt-2.text-xs.text-stone-400 data-observation-photo-credit="true"
+              = "Photos observations.be#{" — © #{feature.observer_name}" if feature.observer_name.present?}"
 
       .mt-5.border-t.border-stone-100.pt-3.text-xs.text-stone-400
         p
