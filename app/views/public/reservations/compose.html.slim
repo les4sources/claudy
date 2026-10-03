@@ -1,5 +1,5 @@
 / Étape 2/3 — Composition du séjour
-- content_for :meta_title, "Composez votre séjour"
+- content_for :meta_title, "Composez votre réservation"
 / Catalogue des activités sur le site public. Pas de page dédiée connue à ce
 / jour : la page d'accueil, à remplacer par l'URL exacte du catalogue.
 - activities_catalog_url = "https://www.les4sources.be"
@@ -56,7 +56,7 @@ div(data-controller="public--avail-modal")
         / 2026-10-03). Un clic sur une puce active mène au bloc ; sur une puce
         / inactive, il ajoute le bloc et y mène.
         .rounded-2xl.border.border-bark.bg-white.p-4.sm:p-5(data-public--needs-target="addZone")
-          p.text-base.font-semibold.text-ink.mb-3 Votre séjour comprend
+          p.text-base.font-semibold.text-ink.mb-3 Votre réservation comprend
           .flex.flex-wrap.gap-2
             - [["gite", :house, "Gîte"], ["salles", :hall, "Salles & cuisine"], ["camping", :tent, "Camping"], ["van", :van, "Van"], ["repas", :utensils, "Repas"], ["activites", :leaf, "Activités"]].each do |token, icon, label_text|
               button(type="button" data-needs-add-token=token aria-pressed="false" data-action="click->public--needs#add" class="funnel-need-chip")
@@ -66,7 +66,7 @@ div(data-controller="public--avail-modal")
                   = funnel_icon :check, css_class: "w-5 h-5", stroke_width: 2.5
                 span.funnel-need-chip__plus(aria-hidden="true") +
                 span = label_text
-          p.funnel-hint.mt-3 Un clic sur un élément l'ajoute à votre séjour.
+          p.funnel-hint.mt-3 Un clic sur un élément l'ajoute à votre réservation.
 
         / ── Hébergement — calendrier interactif ─────────────
         = render "public/reservations/stay_calendar"
@@ -121,7 +121,7 @@ div(data-controller="public--avail-modal")
             =< link_to "Voir le catalogue des activités", activities_catalog_url, target: "_blank", rel: "noopener", class: "font-semibold text-forest underline underline-offset-2"
           label.block.mt-4(for="reservation_activities_note")
             span.funnel-label Des activités vous intéressent ?
-            span.funnel-hint.block.mt-0.5 Facultatif. Dites-nous lesquelles et pour combien de personnes. Notre équipe planifie les activités un mois avant votre séjour.
+            span.funnel-hint.block.mt-0.5 Facultatif. Dites-nous lesquelles et pour combien de personnes. Notre équipe planifie les activités un mois avant votre venue.
           textarea#reservation_activities_note(name="reservation[activities_note]" rows="3" class="mt-2 w-full rounded-xl border-bark bg-white text-base text-ink shadow-sm focus:border-forest focus:ring-forest" placeholder="Ex. : une balade avec les ânes pour 6 enfants, un atelier forge pour les adultes…")
             = @draft.activities_note
 

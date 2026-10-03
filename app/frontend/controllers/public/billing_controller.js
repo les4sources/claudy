@@ -4,7 +4,9 @@ import { Controller } from "@hotwired/stimulus"
 //
 // « Oui » déplie les coordonnées de facturation et rend leurs champs
 // obligatoires ; « Non » les replie et lève l'obligation (les valeurs restent,
-// ignorées par le serveur). Le numéro de TVA est contrôlé dans le navigateur
+// ignorées par le serveur). Le numéro de TVA est obligatoire aussi, sauf si
+// la case « Sans numéro de TVA » est cochée : le champ est alors grisé et
+// vidé de son obligation. Le numéro est contrôlé dans le navigateur
 // sur son FORMAT seulement, avec les mêmes règles que
 // Reservations::VatNumber ; VIES n'est interrogé que côté serveur.
 //
@@ -41,7 +43,7 @@ export function isValidVat(vat) {
 }
 
 export default class extends Controller {
-  static targets = ["fields", "vat", "vatError", "country"]
+  static targets = ["fields", "vat", "vatError", "country", "noVat"]
 
   connect() {
     this.form = this.element.closest("form")
@@ -66,6 +68,14 @@ export default class extends Controller {
     this.element.querySelectorAll("[data-public--billing-required]").forEach((input) => {
       input.required = on
     })
+    const noVat = this.hasNoVatTarget && this.noVatTarget.checked
+    this.vatTarget.disabled = noVat
+    this.vatTarget.required = on && !noVat
+    if (noVat && this.errorShown) this.clearError()
+  }
+
+  get noVat() {
+    return this.hasNoVatTarget && this.noVatTarget.checked
   }
 
   // Après une première erreur, le message s'efface dès que le numéro est bon.
@@ -75,7 +85,9 @@ export default class extends Controller {
   }
 
   vatAcceptable() {
+    if (this.noVat) return true
     const raw = this.vatTarget.value.trim()
+    // Vide : c'est l'attribut `required` qui le signale, pas ce message.
     if (raw === "") return true
     return isValidVat(normalizeVat(raw, this.hasCountryTarget ? this.countryTarget.value : "BE"))
   }

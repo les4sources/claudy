@@ -22,10 +22,9 @@ div(data-controller="public--avail-modal")
 
     / ── Titre ────────────────────────────────────────────────
     .mb-8.funnel-rise
-      h1.funnel-title Votre séjour aux 4 Sources
-      p.mt-3.text-base.leading-relaxed.text-moss.max-w-lg
-        | Quinze hectares en bord de Meuse, des gîtes, des ânes et un four à pain.
-        |  Dites-nous quand vous venez — on s'occupe du reste.
+      / « Réservation », pas « séjour » (Michael, 2026-10-03) : certains
+      / clients ne viennent qu'une journée, pour une salle. Accroche retirée.
+      h1.funnel-title Votre réservation aux 4 Sources
 
     / ── Formulaire ───────────────────────────────────────────
     .funnel-card.p-5.sm:p-8.funnel-rise style="animation-delay:80ms"
@@ -130,7 +129,7 @@ div(data-controller="public--avail-modal")
           h2.funnel-section-title.flex.items-center.gap-2.mb-1
             = funnel_icon :paw, css_class: "w-5 h-5 text-ember"
             | Un animal vous accompagne ?
-          p.funnel-hint.mb-4 Supplément de 50 € par séjour pour un chien, deux au maximum.
+          p.funnel-hint.mb-4 Supplément de 50 € par réservation pour un chien, deux au maximum.
           .space-y-2
             - [["Non, pas d'animal", "0"], ["Un chien (+50 €)", "1"], ["Plusieurs chiens (sur demande)", "2"]].each do |label_text, val|
               label.funnel-choice

@@ -22,7 +22,7 @@
     .rounded-xl.border.border-orange-200.bg-orange-50.p-4.mb-4
       p.text-sm.text-orange-800.leading-relaxed
         = funnel_icon :alert, css_class: "w-4 h-4 flex-shrink-0 inline-block align-text-bottom"
-        strong  Séjour incluant le 31 décembre
+        strong  Réservation incluant le 31 décembre
         |  — ce type de réservation requiert le Grand-Duc + les 2 salles. Contactez-nous pour valider.
 
   - if quote.lines.empty?
@@ -44,7 +44,7 @@
           span.text-base.font-semibold Total TVAC
           span.text-2xl.font-bold.tabular-nums.whitespace-nowrap = eur.(quote.total_cents)
         .mt-3.pt-3.border-t.border-sand/20.flex.items-baseline.justify-between.gap-4
-          span.text-sm = "Acompte #{(quote.deposit_rate * 100).to_i} % à la réservation"
+          span.text-sm = "Acompte #{(quote.deposit_rate * 100).to_i} % à la confirmation"
           span.text-base.font-semibold.tabular-nums.whitespace-nowrap = eur.(quote.deposit_cents)
       p.funnel-hint.mt-3.text-center Prix TVAC 0 %, aucune TVA supplémentaire. Rien n'est payé aujourd'hui.
 

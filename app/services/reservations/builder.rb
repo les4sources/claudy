@@ -722,7 +722,7 @@ module Reservations
 
     def billing_note
       vat = if draft.billing_vat.blank?
-              "TVA : aucun numéro donné"
+              "TVA : sans numéro de TVA (case cochée par le client)"
             else
               verdict = case draft.billing_vies_status
                         when "valid"

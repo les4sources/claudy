@@ -59,6 +59,13 @@ RSpec.describe "Public::Reservations — finitions du funnel", type: :request do
     expect(response.body).not_to include("pain &amp; épicerie")
   end
 
+  it "parle de réservation, pas de séjour, et n'a plus d'accroche" do
+    get "/reservation/sejour"
+    expect(response.body).to include("Votre réservation aux 4 Sources")
+    expect(response.body).not_to include("Votre séjour aux 4 Sources")
+    expect(response.body).not_to include("Quinze hectares")
+  end
+
   it "ne met plus d'espace à l'intérieur du lien email de l'étape 1" do
     get "/reservation/sejour"
     expect(response.body).not_to include("> sejours@les4sources.be</a>")
@@ -163,13 +170,25 @@ RSpec.describe "Public::Reservations — finitions du funnel", type: :request do
       expect(response.body).to include("inconnu du registre européen")
     end
 
-    it "exige la raison sociale et l'adresse, pas le numéro de TVA" do
+    it "exige la raison sociale, l'adresse et le numéro de TVA" do
       expect { request_stay(invoice_requested: "1", billing_name: "", billing_vat: "") }.not_to change(Stay, :count)
       expect(response.body).to include("Indiquez la raison sociale")
       expect(response.body).to include("Indiquez l&#39;adresse de facturation.")
+      expect(response.body).to include("Indiquez le numéro de TVA, ou cochez « Sans numéro de TVA ».")
+    end
 
-      request_stay(**billing, billing_vat: "")
-      expect(Stay.last.internal_notes.to_plain_text).to include("TVA : aucun numéro donné")
+    it "accepte une facture sans numéro quand la case est cochée" do
+      request_stay(**billing, billing_vat: "", billing_no_vat: "1")
+
+      expect(Stay.last.internal_notes.to_plain_text).to include("TVA : sans numéro de TVA (case cochée par le client)")
+      expect(a_request(:get, /ec\.europa\.eu/)).not_to have_been_made
+    end
+
+    it "annonce l'acompte à la confirmation, pas à la réservation" do
+      post "/reservation/devis", params: { reservation: { lodging_night_ids: [hulotte.id], arrival_date: arrival.iso8601, departure_date: departure.iso8601 } },
+                                 headers: { "Accept" => "text/vnd.turbo-stream.html" }
+      expect(response.body).to include("% à la confirmation")
+      expect(response.body).not_to include("% à la réservation")
     end
 
     it "ignore les coordonnées quand aucune facture n'est demandée" do

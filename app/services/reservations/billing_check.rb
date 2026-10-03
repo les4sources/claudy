@@ -2,9 +2,9 @@ module Reservations
   # Coordonnées de facturation du funnel (« Besoin d'une facture ? », Michael,
   # 2026-10-03), vérifiées avant d'enregistrer la demande.
   #
-  # Raison sociale et adresse sont obligatoires dès qu'une facture est demandée.
-  # Le numéro de TVA reste FACULTATIF (une école, une ASBL non assujettie, un
-  # particulier qui veut une facture n'en ont pas) mais, s'il est donné :
+  # Raison sociale, adresse et numéro de TVA sont obligatoires dès qu'une
+  # facture est demandée. Seule la case « Sans numéro de TVA » (une école, une
+  # ASBL non assujettie n'en ont pas) dispense du numéro. Le numéro donné :
   #   1. son format est contrôlé (Reservations::VatNumber) ;
   #   2. VIES le confirme. Un « inconnu de VIES » bloque, avec un message ; un
   #      VIES injoignable ne bloque JAMAIS : la demande part, marquée « non
@@ -56,7 +56,14 @@ module Reservations
     def check_vat
       @draft.billing_vies_status = nil
       @draft.billing_vies_name = nil
-      return if @draft.billing_vat.blank?
+      if @draft.billing_no_vat
+        @draft.billing_vat = nil
+        return
+      end
+      if @draft.billing_vat.blank?
+        @errors[:billing_vat] = "Indiquez le numéro de TVA, ou cochez « Sans numéro de TVA »."
+        return
+      end
 
       vat = VatNumber.normalize(@draft.billing_vat, country: @draft.billing_country)
       @draft.billing_vat = vat
@@ -69,7 +76,7 @@ module Reservations
       result = @vies.check(vat)
       if result.invalid?
         @errors[:billing_vat] = "Ce numéro de TVA est inconnu du registre européen (VIES). " \
-                                "Vérifiez-le, ou laissez le champ vide et précisez-le-nous par email."
+                                "Vérifiez-le, ou cochez « Sans numéro de TVA » et précisez-le-nous par email."
       else
         @draft.billing_vies_status = result.status.to_s
         @draft.billing_vies_name = result.name

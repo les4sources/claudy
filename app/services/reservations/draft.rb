@@ -61,7 +61,7 @@ module Reservations
                   # facturation, vérifiées par Reservations::BillingCheck. À la
                   # création, le séjour passe en « facture à fournir » et ces
                   # coordonnées vont dans sa note interne.
-                  :invoice_requested, :billing_name, :billing_vat,
+                  :invoice_requested, :billing_name, :billing_vat, :billing_no_vat,
                   :billing_address, :billing_zip, :billing_city, :billing_country,
                   # Verdict VIES posé par BillingCheck (« valid »,
                   # « unavailable », « not_applicable ») et la raison sociale
@@ -121,6 +121,9 @@ module Reservations
       @invoice_requested = ActiveModel::Type::Boolean.new.cast(attrs[:invoice_requested]) || false
       @billing_name      = attrs[:billing_name].presence
       @billing_vat       = attrs[:billing_vat].presence
+      # « Sans numéro de TVA » (une école, une ASBL non assujettie) : seule
+      # façon de passer outre le numéro, obligatoire sinon (Michael 2026-10-03).
+      @billing_no_vat    = ActiveModel::Type::Boolean.new.cast(attrs[:billing_no_vat]) || false
       @billing_address   = attrs[:billing_address].presence
       @billing_zip       = attrs[:billing_zip].presence
       @billing_city      = attrs[:billing_city].presence
@@ -257,6 +260,7 @@ module Reservations
         invoice_requested:  invoice_requested,
         billing_name:       billing_name,
         billing_vat:        billing_vat,
+        billing_no_vat:     billing_no_vat,
         billing_address:    billing_address,
         billing_zip:        billing_zip,
         billing_city:       billing_city,

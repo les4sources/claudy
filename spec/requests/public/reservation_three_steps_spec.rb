@@ -70,6 +70,6 @@ RSpec.describe "Public::Reservations — funnel à trois étapes", type: :reques
     get "/reservation/composer"
 
     expect(response.body).to include("Activités aux 4 Sources")
-    expect(response.body).to include("Notre équipe planifie les activités un mois avant votre séjour.")
+    expect(response.body).to include("Notre équipe planifie les activités un mois avant votre venue.")
   end
 end

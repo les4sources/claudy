@@ -12,7 +12,7 @@
 / client ne voyait que « 1 2 3 » — des ronds muets. Le libellé de l'étape
 / COURANTE reste maintenant visible à toute largeur ; seuls les autres se
 / replient. Un « Étape n sur 3 » en sr-only donne le compte à la voix.
-- steps = [{ n: 1, label: "Votre séjour", path: public_reservation_dates_path }, { n: 2, label: "Composition", path: public_reservation_compose_path }, { n: 3, label: "Coordonnées", path: public_reservation_contact_path }]
+- steps = [{ n: 1, label: "Vos dates", path: public_reservation_dates_path }, { n: 2, label: "Composition", path: public_reservation_compose_path }, { n: 3, label: "Coordonnées", path: public_reservation_contact_path }]
 
 nav.mb-8.md:mb-10 aria-label="Étapes de la réservation"
   p.sr-only = "Étape #{current} sur #{steps.size} — #{steps.find { |s| s[:n] == current }&.dig(:label)}"

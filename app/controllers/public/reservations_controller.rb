@@ -207,7 +207,7 @@ module Public
     # Un champ de facturation VIDÉ doit rester vide : la fusion par défaut
     # garderait l'ancienne valeur, et un numéro de TVA refusé ne s'effacerait
     # jamais (c'est pourtant ce que le message d'erreur propose).
-    BILLING_FIELDS = %i[invoice_requested billing_name billing_vat billing_address
+    BILLING_FIELDS = %i[invoice_requested billing_name billing_vat billing_no_vat billing_address
                         billing_zip billing_city billing_country].freeze
 
     def submitted_billing_fields
@@ -255,7 +255,7 @@ module Public
         :spaces_note, :activities_note,
         # Facture (Michael 2026-10-03). Le verdict VIES n'est PAS permis : seul
         # Reservations::BillingCheck le pose.
-        :invoice_requested, :billing_name, :billing_vat, :billing_address,
+        :invoice_requested, :billing_name, :billing_vat, :billing_no_vat, :billing_address,
         :billing_zip, :billing_city, :billing_country,
         # Draps (epic #260, phase 2) : deux compteurs, bloc « Options » de
         # l'étape Composition.

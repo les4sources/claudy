@@ -88,10 +88,10 @@ div
         / interne « Les 4 Sources » (Stay.public_categories). La valeur circule
         / par le Draft jusqu'au Stay créé.
         .mb-5
-          label.funnel-label(for="reservation_category") Type de séjour (optionnel)
-          .relative.mt-1.5(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un type de séjour…" data-searchable-select-clearable-value="true")
+          label.funnel-label(for="reservation_category") Type de réservation (optionnel)
+          .relative.mt-1.5(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un type de réservation…" data-searchable-select-clearable-value="true")
             = select_tag "reservation[category]", options_for_select(Stay.public_categories.map(&:reverse), @draft.category), include_blank: "— Non précisé —", id: "reservation_category", data: { "searchable-select-target": "select" }, class: "w-full rounded-xl border-bark bg-white text-base text-ink shadow-sm focus:border-forest focus:ring-forest"
-            = render "shared/searchable_select_search", label: "Type de séjour"
+            = render "shared/searchable_select_search", label: "Type de réservation"
 
         / ── Facture (Michael, 2026-10-03) ─────────────────────
         / « Non » par défaut. « Oui » déplie les coordonnées de facturation
@@ -129,18 +129,29 @@ div
 
             .grid.grid-cols-1.sm:grid-cols-2.gap-4
               div
-                label.funnel-label(for="reservation_billing_vat") Numéro de TVA
+                label.funnel-label(for="reservation_billing_vat") Numéro de TVA *
                 = text_field_tag "reservation[billing_vat]", @draft.billing_vat,
                     id: "reservation_billing_vat",
                     placeholder: "BE0123456789",
                     autocapitalize: "characters",
                     spellcheck: "false",
                     aria: { describedby: "reservation_billing_vat_hint reservation_billing_vat_error", invalid: billing_errors[:billing_vat].present? || nil },
+                    disabled: @draft.billing_no_vat,
                     data: { "public--billing-target": "vat", action: "input->public--billing#checkVat" },
-                    class: input_class
-                p#reservation_billing_vat_hint.funnel-hint.mt-1 Facultatif. Vérifié auprès du registre européen.
+                    class: "#{input_class} disabled:opacity-50"
+                p#reservation_billing_vat_hint.funnel-hint.mt-1 Vérifié auprès du registre européen.
                 p#reservation_billing_vat_error.mt-1.5.text-sm.text-red-700(role="alert" hidden=billing_errors[:billing_vat].blank? data-public--billing-target="vatError")
                   = billing_errors[:billing_vat] || "Ce numéro de TVA n'a pas le bon format (ex. : BE0123456789)."
+                / Une école ou une ASBL non assujettie n'a pas de numéro : la case
+                / lève l'obligation (Michael, 2026-10-03). Le champ caché envoie
+                / « 0 » quand elle est décochée.
+                label.mt-2.flex.items-start.gap-2.cursor-pointer
+                  = hidden_field_tag "reservation[billing_no_vat]", "0", id: nil
+                  = check_box_tag "reservation[billing_no_vat]", "1", @draft.billing_no_vat,
+                      id: "reservation_billing_no_vat",
+                      data: { "public--billing-target": "noVat", action: "change->public--billing#toggle" },
+                      class: "mt-1 h-4 w-4 rounded border-bark text-forest focus:ring-forest"
+                  span.text-base.text-ink Sans numéro de TVA
               div
                 label.funnel-label(for="reservation_billing_country") Pays
                 .relative.mt-1.5(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un pays…")
