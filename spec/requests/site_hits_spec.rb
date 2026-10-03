@@ -2,14 +2,14 @@ require "rails_helper"
 
 # Statistiques du site sans cookie (2026-10-03) — le point d'entrée des pages
 # vues et événements envoyés par www.les4sources.be.
-RSpec.describe "Api::Public::V1::Hits", type: :request do
+RSpec.describe "SiteHits", type: :request do
   include Devise::Test::IntegrationHelpers
 
   HITS_SITE = "https://www.les4sources.be".freeze
   HITS_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1".freeze
 
   def beacon(payload = {}, origin: HITS_SITE, user_agent: HITS_UA, ip: "203.0.113.7", country: "BE", remote_addr: "172.64.0.10", **fields)
-    post "/api/public/v1/hits",
+    post "/site-stats/hits",
          params: payload.merge(fields).to_json,
          headers: { "Content-Type" => "text/plain;charset=UTF-8", "Origin" => origin,
                     "User-Agent" => user_agent, "CF-Connecting-IP" => ip, "CF-IPCountry" => country,
@@ -89,7 +89,7 @@ RSpec.describe "Api::Public::V1::Hits", type: :request do
   end
 
   it "refuse un corps illisible et ignore un événement inconnu" do
-    post "/api/public/v1/hits", params: "pas du json",
+    post "/site-stats/hits", params: "pas du json",
                                 headers: { "Content-Type" => "text/plain", "Origin" => HITS_SITE, "User-Agent" => HITS_UA }
     expect(response).to have_http_status(:forbidden).or have_http_status(:bad_request)
 

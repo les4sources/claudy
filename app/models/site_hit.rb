@@ -1,5 +1,5 @@
 # Une page vue ou un événement sur le site www.les4sources.be (statistiques
-# sans cookie, 2026-10-03). Écrit par `Api::Public::V1::HitsController` pour le
+# sans cookie, 2026-10-03). Écrit par `SiteHitsController` pour le
 # site et par le funnel `/reservation` pour ses étapes ; lu par
 # `SiteStats::Report`.
 #
