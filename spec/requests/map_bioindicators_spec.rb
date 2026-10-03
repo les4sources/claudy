@@ -126,7 +126,13 @@ RSpec.describe "Carte du domaine — plantes bio-indicatrices", type: :request d
       expect(rows.first.text).to include("Renoncule rampante", "Engorgement, hydromorphie")
 
       get map_bioindicators_path(status: "to_analyze")
-      expect(html.css("[data-bioindicator-row]").size).to eq(1)
+      rows = html.css("[data-bioindicator-row]")
+      expect(rows.size).to eq(1)
+      # La carte ne montre que les relevés retenus par le filtre.
+      expect(JSON.parse(html.at_css("[data-bioindicator-list]")["data-filter-ids"])).to eq([rows.first["data-feature-id"].to_i])
+
+      get map_bioindicators_path
+      expect(html.at_css("[data-bioindicator-list]")["data-filter-ids"]).to be_nil
     end
   end
 

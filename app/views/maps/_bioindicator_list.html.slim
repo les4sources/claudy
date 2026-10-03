@@ -1,9 +1,10 @@
 / Les relevés de bio-indicatrices, du plus récent au plus ancien, filtrables
   par statut (à analyser, analysé) et par indicateur de sol (« où le sol
   est-il engorgé ? »). Une ligne centre la carte sur le relevé et ouvre sa
-  fiche.
+  fiche. `data-filter-ids` : les relevés retenus par le filtre, que la carte
+  est seule à montrer (absent sans filtre).
 - select_class = "h-9 min-w-0 rounded-lg border-stone-300 py-0 pl-2 pr-7 text-xs shadow-sm focus:border-forest focus:ring-forest"
-div data-bioindicator-list="true"
+div data-bioindicator-list="true" data-filter-ids=@filtered_ids&.to_json
   = form_with url: map_bioindicators_path, method: :get, class: "flex flex-wrap gap-1.5" do
     label.sr-only for="bioindicators_status" Statut
     = select_tag :status, options_for_select([["Tous les relevés", ""]] + MapFeatureBioindicator::BIOINDICATOR_STATUSES.map { |k, v| [v, k] }, @filters[:status]),
