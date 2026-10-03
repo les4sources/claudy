@@ -43,11 +43,12 @@ class MapLayer < ApplicationRecord
   # dans `properties.node_type`, et nomment les icônes côté JS), libellés
   # français. Un compteur d'eau, électrique ou de gaz partage la clé `meter`
   # (une vanne d'eau ou de gaz, `valve`) : c'est la couche qui dit de quel
-  # réseau il s'agit.
+  # réseau il s'agit. Un répartiteur (`manifold`) distribue l'eau vers
+  # plusieurs branches ; une vanne la coupe.
   NODE_TYPES = {
     "water" => {
       "source" => "Source", "catchment" => "Captage", "cistern" => "Citerne", "valve" => "Vanne",
-      "meter" => "Compteur", "tap" => "Robinet", "manhole" => "Regard"
+      "manifold" => "Répartiteur", "meter" => "Compteur", "tap" => "Robinet", "manhole" => "Regard"
     },
     "electric" => {
       "panel" => "Tableau", "meter" => "Compteur", "outlet" => "Prise", "breaker" => "Disjoncteur",

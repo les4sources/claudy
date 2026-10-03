@@ -33,7 +33,7 @@ RSpec.describe "Carte du domaine — réseaux (epic #348, phase 9)", type: :mode
 
   describe "types de nœud" do
     it "a des clés anglaises stables et des libellés français, par réseau" do
-      expect(MapLayer::NODE_TYPES["water"].values).to eq(%w[Source Captage Citerne Vanne Compteur Robinet Regard])
+      expect(MapLayer::NODE_TYPES["water"].values).to eq(%w[Source Captage Citerne Vanne Répartiteur Compteur Robinet Regard])
       expect(MapLayer::NODE_TYPES["electric"].values).to eq(%w[Tableau Compteur Prise Disjoncteur Éclairage])
       expect(MapLayer::NODE_TYPES["ethernet"].values).to eq(["Switch", "Borne wifi", "Prise murale", "Routeur", "Baie", "Boîtier fibre"])
       expect(MapLayer::NODE_TYPES["gas"].values).to eq(%w[Citerne Bouteille Détendeur Vanne Compteur Chaudière Cuisinière])
