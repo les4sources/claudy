@@ -51,7 +51,7 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
 
     = form_with url: (persisted ? map_observation_path(feature) : map_observations_path), scope: :observation,
                 method: (persisted ? :patch : :post), builder: ActionView::Helpers::FormBuilder,
-                html: { class: "space-y-4" } do |f|
+                html: { class: "space-y-4", data: { controller: "submit-progress", action: submit_progress_actions } } do |f|
       - unless persisted
         = hidden_field_tag :lat, lat
         = hidden_field_tag :lng, lng
@@ -111,15 +111,14 @@ div[class="pointer-events-auto flex h-full flex-col bg-white shadow-2xl md:round
         = f.text_area :description, value: feature.description_i18n.to_h["fr"], rows: 3,
                       placeholder: "Stade, comportement, milieu…",
                       class: "mt-1 w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
-      div
-        = f.label :photos, "Ajouter des photos", class: "block text-xs font-semibold text-stone-600"
+      = render layout: "shared/photo_picker", locals: { label: "Ajouter des photos", accept: MapFeature.accepted_photo_types.join(",") } do
         = f.file_field :photos, multiple: true, direct_upload: true, accept: MapFeature.accepted_photo_types.join(","),
-                       class: "mt-1 w-full text-sm text-stone-600"
+                       class: "sr-only", tabindex: -1, data: { photo_picker_target: "field" }
       .flex.justify-end.gap-2
         - unless persisted
           button[type="button" class="h-11 rounded-lg border border-stone-300 px-4 text-sm font-semibold text-stone-700 hover:bg-stone-50"
                  data-action="click->map#closePanel"] Annuler
-        button[type="submit" class="h-11 flex-1 rounded-lg bg-forest px-4 text-sm font-semibold text-white hover:bg-forest-soft"] Enregistrer
+        = render "maps/save_button", classes: "flex-1"
 
     - if persisted
       - photos = feature.photos.select(&:persisted?)

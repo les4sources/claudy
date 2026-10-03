@@ -5,8 +5,8 @@
   le dossier se replie en sections, ouvertes seulement quand elles ont une
   erreur, pour que les champs vides n'écrasent pas l'écran.
 - saved = local_assigns[:saved]
-/ Une plante pas encore enregistrée (« Nouvelle plante ») : le dossier seul ;
-  photos, récolte, notes datées et tâches viennent une fois la plante créée.
+/ Une plante pas encore enregistrée (« Nouvelle plante ») : le dossier et ses
+  photos ; récolte, notes datées et tâches viennent une fois la plante créée.
 - fresh = plant.new_record?
 - created = local_assigns[:created]
 - unplaced_layer_id = local_assigns[:unplaced_layer_id]
@@ -266,15 +266,14 @@ div[class="pointer-events-auto flex h-full flex-col overflow-hidden bg-white sha
           button[type="submit" class="h-11 w-full rounded-lg bg-forest text-sm font-semibold text-white hover:bg-forest-soft"]
             = fresh ? "Créer la plante" : "Enregistrer"
 
-      - if fresh
-        p.mt-4.text-xs.text-stone-400 Photos, récolte, notes datées et tâches s'ajoutent une fois la plante créée.
-      - else
-
-        / ── Photos ─────────────────────────────────────────────────────────
-          Le champ appartient au formulaire du dossier (attribut `form`) : choisir
-          des photos les envoie aussitôt, avec la saisie en cours.
-        section.mt-6 data-plant-section="photos"
-          p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" = "Photos (#{photos.size})"
+      / ── Photos ───────────────────────────────────────────────────────────
+        Le champ appartient au formulaire du dossier (attribut `form`) : les
+        photos prises s'ajoutent l'une après l'autre et partent ensemble, avec la
+        saisie en cours (« Créer la plante » pour une nouvelle plante, sinon
+        « Enregistrer les n photos »).
+      section.mt-6 data-plant-section="photos"
+        p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" = "Photos (#{photos.size})"
+        - if photos.any?
           ul.grid.grid-cols-3.gap-2
             - photos.each do |photo|
               li.group.relative
@@ -286,15 +285,14 @@ div[class="pointer-events-auto flex h-full flex-col overflow-hidden bg-white sha
                             class: "absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-stone-500 shadow hover:text-red-600",
                             "aria-label": "Retirer la photo" do
                   | ×
-            li
-              label class="flex aspect-square w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-stone-300 text-stone-500 hover:border-forest hover:text-forest"
-                svg.h-6.w-6 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-                  path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"
-                  circle cx="12" cy="13" r="3"
-                span.text-xs.font-medium Ajouter
-                = file_field_tag "plant[photos][]", multiple: true, form: form_id, class: "sr-only",
-                                 accept: Plant.accepted_photo_types.join(","),
-                                 onchange: "this.form && this.form.requestSubmit()"
+        - picker = fresh ? { save_label: "Créer la plante" } : { submit_form: form_id }
+        = render layout: "shared/photo_picker", locals: picker.merge(accept: Plant.accepted_photo_types.join(",")) do
+          = file_field_tag "plant[photos][]", multiple: true, form: form_id, id: nil, class: "sr-only", tabindex: -1,
+                           accept: Plant.accepted_photo_types.join(","), data: { photo_picker_target: "field" }
+
+      - if fresh
+        p.mt-4.text-xs.text-stone-400 Récolte, notes datées et tâches s'ajoutent une fois la plante créée.
+      - else
 
         / ── Récolte · notes datées · tâches ────────────────────────────────
           Trois sections hors du formulaire du dossier, remplacées chacune seule

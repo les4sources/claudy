@@ -27,7 +27,36 @@ RSpec.describe "Carte du domaine — nouvelle plante", type: :request do
       expect(body).to include(%(data-plant-panel="new"), "Nouvelle plante", "Créer la plante")
       expect(body).to include(%(action="#{plants_path}"), %(value="#{Date.current.iso8601}"), %(value="Verger"))
       expect(body).to include("Une espèce absente de la liste se crée à l&#39;enregistrement.")
-      expect(body).not_to include("Supprimer la plante", %(data-plant-section="photos"))
+      expect(body).not_to include("Supprimer la plante")
+    end
+
+    # Sur iPhone, « Prendre une photo » n'en rend qu'une : les photos s'ajoutent
+    # l'une après l'autre (`photo-picker`) et partent avec « Créer la plante ».
+    it "propose d'ajouter plusieurs photos dès la création, envoyées avec « Créer la plante »" do
+      get new_plant_path
+      html = Nokogiri::HTML(response.body)
+      section = html.at_css(%([data-plant-section="photos"]))
+      picker = section.at_css(%([data-controller="photo-picker"]))
+      expect(picker["data-photo-picker-save-label-value"]).to eq("Créer la plante")
+
+      field = picker.at_css(%(input[type=file][data-photo-picker-target="field"]))
+      expect(field["name"]).to eq("plant[photos][]")
+      expect(field["form"]).to eq(html.at_css("form[data-plant-form]")["id"])
+      expect(field["multiple"]).to be_present
+
+      # Le champ qu'ouvre le bouton n'a pas de `name` : seul `field` part.
+      button = picker.at_css(%(input[type=file][data-photo-picker-target="picker"]))
+      expect(button["name"]).to be_nil
+      expect(button["multiple"]).not_to be_nil
+      expect(button["data-action"]).to eq("change->photo-picker#add")
+    end
+
+    it "crée la plante avec ses photos, envoyées ensemble" do
+      png = fixture_file_upload(Rails.root.join("spec/fixtures/files/map-tiles/test-layer/rgb/12/2103/1383.png"), "image/png")
+      post plants_path, headers: turbo, params: { plant: { species_name: "Kaki", status: "planted", photos: [png, png, png] } }
+
+      expect(response).to have_http_status(:ok)
+      expect(Plant.last.photos.count).to eq(3)
     end
 
     it "crée la plante et son espèce inconnue par leur nom, sans point sur la carte" do

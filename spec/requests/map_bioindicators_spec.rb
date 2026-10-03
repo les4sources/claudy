@@ -52,6 +52,13 @@ RSpec.describe "Carte du domaine — plantes bio-indicatrices", type: :request d
         file = form.at_css("input[type=file][name='bioindicator[photos][]']")
         expect(file["accept"]).to eq("image/jpeg,image/png")
         expect(file["multiple"]).to be_present
+        expect(file["required"]).to be_present
+        # Plusieurs photos prises l'une après l'autre, puis un seul envoi.
+        expect(file["data-photo-picker-target"]).to eq("field")
+        expect(file["data-direct-upload-url"]).to be_present
+        picker = form.at_css(%(input[type=file][data-photo-picker-target="picker"]))
+        expect(picker["name"]).to be_nil
+        expect(picker["accept"]).to eq("image/jpeg,image/png")
         expect(form.at_css("input[name='bioindicator[observed_on]']")["value"]).to eq("2026-10-02")
         expect(form.at_css("textarea[name='bioindicator[description]']")).to be_present
       end
