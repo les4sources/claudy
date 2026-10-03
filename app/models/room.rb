@@ -18,6 +18,13 @@ class Room < ApplicationRecord
 
   has_soft_deletion default_scope: true
 
+  # La mezzanine de la Hulotte (code MEZ, « Laurier (mezzanine) ») porte deux
+  # lits mais ne compte pas comme une chambre pour le client (Michael,
+  # 2026-10-03) : la Hulotte s'annonce 5 chambres, le Grand-Duc 7.
+  def mezzanine?
+    code.to_s.casecmp?("MEZ") || name.to_s.match?(/mezzanine/i)
+  end
+
   def name_with_level
     case level
     when -1

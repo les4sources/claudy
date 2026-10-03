@@ -2,7 +2,7 @@
 / On rafraîchit à la fois le contenu du drawer (frame « reservation_quote »)
 / et le total affiché dans la barre récap sticky (« quote_sticky_total »).
 = turbo_stream.replace "reservation_quote" do
-  = turbo_frame_tag "reservation_quote"
+  = turbo_frame_tag "reservation_quote", class: "flex-1 flex flex-col"
     = render "public/reservations/quote_panel", quote: @quote, draft: @draft, continue_path: nil
 
 = turbo_stream.replace "quote_sticky_total" do

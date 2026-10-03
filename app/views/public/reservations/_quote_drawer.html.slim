@@ -33,13 +33,15 @@ div data-controller="public--quote-drawer" data-action="keydown.esc@window->publ
     data-public--quote-drawer-target="panel")
 
     / En-tête
-    .flex-shrink-0.flex.items-center.justify-between.border-b.border-bark.px-5.py-4
+    .flex-shrink-0.flex.items-center.justify-between.border-b.border-bark.px-5.sm:px-6.py-4
       h2.funnel-section-title Votre devis
-      button type="button" data-action="public--quote-drawer#close" aria-label="Fermer le devis" class="text-moss hover:text-moss transition-colors rounded-lg p-1 focus:outline-none focus:ring-2 focus:ring-forest"
+      button type="button" data-action="public--quote-drawer#close" aria-label="Fermer le devis" class="text-moss hover:text-ink hover:bg-sand-deep transition-colors rounded-lg p-2"
         svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"
           path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"
 
     / Contenu scrollable — le quote panel complet
-    .flex-1.overflow-y-auto.overscroll-contain.px-5.py-5(class="[-webkit-overflow-scrolling:touch]")
-      = turbo_frame_tag "reservation_quote"
+    / Le turbo-frame est un élément en ligne : `flex flex-col` + `min-h-full` sur
+    / le panneau lui permettent de caler le total en bas du drawer.
+    .flex-1.overflow-y-auto.overscroll-contain.px-5.sm:px-6.py-5.flex.flex-col(class="[-webkit-overflow-scrolling:touch]")
+      = turbo_frame_tag "reservation_quote", class: "flex-1 flex flex-col"
         = render "public/reservations/quote_panel", quote: quote, draft: draft, continue_path: nil

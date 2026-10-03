@@ -86,6 +86,7 @@
 - firewood_lodgings = (lodgings_by_id.values.map(&:name) + [draft.lodging&.name]).compact.uniq.select { |name| Pricing::Catalog.firewood_included?(name) }
 - rows << ["Inclus", "#{Pricing::Catalog::FIREWOOD_NOTICE} (#{firewood_lodgings.to_sentence})"] if firewood_lodgings.any?
 
+- rows << ["Activités", draft.activities_note] if draft.activities_note.present?
 - rows << ["Nom du groupe", draft.group_name] if draft.group_name.present?
 
 - dog_label = { 0 => nil, 1 => "Un chien (+50 €)", 2 => "Plusieurs chiens (sur demande)" }[draft.dogs_count.to_i]
@@ -93,24 +94,24 @@
 
 .rounded-xl.border.border-bark.bg-forest-tint.p-4.mb-0
   .flex.items-center.justify-between.mb-3
-    h3.text-sm.font-semibold.text-forest Votre séjour
-    = link_to "Modifier", public_reservation_compose_path, class: "text-xs text-forest hover:underline"
+    h3.text-base.font-semibold.text-forest Votre séjour
+    = link_to "Modifier", public_reservation_compose_path, class: "text-sm text-forest hover:underline"
 
   dl.space-y-2
 
     - lodging_lines.each do |line|
       .flex.items-start.gap-3
-        dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 Hébergement
-        dd.text-sm.font-medium.text-ink = line
+        dt.text-sm.text-forest.w-32.shrink-0.pt-0.5 Hébergement
+        dd.text-base.font-medium.text-ink = line
 
     - if draft.arrival_date && draft.departure_date
       .flex.items-start.gap-3
-        dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 Dates
-        dd.text-sm.text-ink
-          | #{draft.arrival_date.strftime("%-d/%m/%Y")} → #{draft.departure_date.strftime("%-d/%m/%Y")}
-          span.ml-1.text-xs.text-forest.font-medium = "(#{draft.nights} nuit#{"s" if draft.nights.to_i > 1})"
+        dt.text-sm.text-forest.w-32.shrink-0.pt-0.5 Dates
+        dd.text-base.text-ink
+          = stay_dates_label(draft.arrival_date, draft.departure_date)
+          span.ml-1.text-sm.text-forest.font-medium = "(#{draft.nights} nuit#{"s" if draft.nights.to_i > 1})"
 
     - rows.each do |row|
       .flex.items-start.gap-3
-        dt.text-xs.text-forest.w-28.shrink-0.pt-0.5 = row.first
-        dd.text-sm.text-ink = row.last
+        dt.text-sm.text-forest.w-32.shrink-0.pt-0.5 = row.first
+        dd.text-base.text-ink = row.last

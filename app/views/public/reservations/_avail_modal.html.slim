@@ -21,7 +21,7 @@
   data-public--avail-modal-target="overlay"
   data-action="click->public--avail-modal#close reservation:open-avail@window->public--avail-modal#open")
 
-/ Panneau — centré, largeur adaptée au Gantt (~48rem)
+/ Panneau — centré, assez large pour que chaque jour du mois ait sa vraie case (~64rem)
 div(
   role="dialog"
   aria-modal="true"
@@ -30,7 +30,7 @@ div(
   data-controller="public--avail-cal"
   data-action="reservation:cal-navigated@window->public--avail-cal#render"
   class="funnel-page fixed top-4 bottom-4 left-1/2 -translate-x-1/2 z-50 rounded-2xl shadow-2xl overflow-hidden flex flex-col hidden md:top-8 md:bottom-8"
-  style="width: min(calc(100vw - 2rem), 48rem)"
+  style="width: min(calc(100vw - 2rem), 64rem)"
   data-public--avail-modal-target="modal")
 
   .flex.items-center.justify-between.gap-4.px-5.sm:px-6.py-4.border-b.border-bark.flex-shrink-0.bg-white/70

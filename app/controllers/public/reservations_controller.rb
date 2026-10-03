@@ -114,6 +114,14 @@ module Public
     # `pending` et l'équipe peut très bien devoir refuser ou ajuster.
     def create
       persist_draft(merged_draft_params)
+      unless Reservations::PhoneFormat.valid?(@draft.phone)
+        @lodgings = bookable_lodgings
+        @quote = @draft.quote
+        @phone_error = true
+        flash.now[:alert] = "Le numéro de téléphone ne semble pas valide."
+        return render :contact, status: :unprocessable_entity
+      end
+
       builder = Reservations::Builder.new(draft: @draft)
       if builder.run
         ReservationMailer.confirmation_request(builder.stay).deliver_later
@@ -225,7 +233,7 @@ module Public
       permitted = params.fetch(:reservation, {}).permit(
         :lodging_id, :arrival_date, :departure_date, :dogs_count,
         :adults, :children, :first_name, :last_name, :email, :phone, :group_name, :category,
-        :spaces_note,
+        :spaces_note, :activities_note,
         # Draps (epic #260, phase 2) : deux compteurs, bloc « Options » de
         # l'étape Composition.
         :linen_single, :linen_double,

@@ -1059,6 +1059,11 @@ has@^1.0.3:
   dependencies:
     function-bind "^1.1.1"
 
+intl-tel-input@^25:
+  version "25.15.1"
+  resolved "https://registry.yarnpkg.com/intl-tel-input/-/intl-tel-input-25.15.1.tgz#52d8275c4c6e51bedd77d42ea67dbee8a416fed6"
+  integrity sha512-v3E/Cr3vjfcw43LxsEYRJ8kDHk96ByB5d0asU9zTYgDuLivLbYymOwcISaoZibqZVB1tndzfYWxtSrmFVumFSg==
+
 is-binary-path@~2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/is-binary-path/-/is-binary-path-2.1.0.tgz#ea1f7f3b80f064236e83470f86c09c254fb45b09"

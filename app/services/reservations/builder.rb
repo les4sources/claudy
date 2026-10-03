@@ -31,6 +31,9 @@ module Reservations
 
     class DraftInvalid < StandardError; end
 
+    # Préfixe de la demande d'activités du client dans la note interne du séjour.
+    ACTIVITIES_NOTE_PREFIX = "Activités qui intéressent le groupe : ".freeze
+
     attr_reader :draft, :stay, :customer, :booking, :space_booking,
                 :camping_booking, :van_booking, :hamac_bookings, :payment,
                 :availability_warning, :space_warning
@@ -686,13 +689,20 @@ module Reservations
     # Note auto « multi-chiens », en HTML : la note interne du séjour est du texte
     # riche depuis l'issue #313. `nil` (et non "") quand il n'y a rien à dire, pour
     # qu'aucun enregistrement ActionText vide ne soit créé.
+    #
+    # Activités souhaitées (texte libre du funnel, Michael 2026-10-03) : rangées
+    # ici, préfixées, tant que le module Activités n'est pas ouvert au public.
     def internal_notes
-      return if draft.dogs_count.to_i <= 1
+      lines = []
+      if draft.dogs_count.to_i > 1
+        lines << "⚠️ Demande multi-chiens (#{draft.dogs_count}) — supplément chien plafonné à 1 " \
+                 "dans le flow auto, à traiter manuellement avec le client."
+      end
+      note = draft.respond_to?(:activities_note) ? draft.activities_note.to_s.strip : ""
+      lines << "#{ACTIVITIES_NOTE_PREFIX}#{note}" if note.present?
+      return if lines.empty?
 
-      Stays::InternalNote.to_html(
-        "⚠️ Demande multi-chiens (#{draft.dogs_count}) — supplément chien plafonné à 1 " \
-        "dans le flow auto, à traiter manuellement avec le client."
-      )
+      Stays::InternalNote.to_html(lines.join("\n\n"))
     end
 
     def raise_invalid(message)

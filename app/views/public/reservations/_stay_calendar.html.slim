@@ -10,101 +10,91 @@
 - hamac_d_rate  = Pricing::Catalog.hamac_rate("double")
 - tente_rate    = Pricing::Catalog.camping_per_person_night_cents("tente")
 - total_cols    = nights_count + 1
+- van_rate      = Pricing::Catalog.van_per_night_cents
+- eur           = ->(cents, precision = 0) { number_to_currency(cents / 100.0, unit: "€", format: "%n %u", precision: precision) }
 - avail_json    = @lodging_availability.to_json
 
-.bg-white.rounded-2xl.shadow-sm.border.border-bark.p-5(
+/ Mise en page (Michael, 2026-10-03) : la plupart des séjours font 1 à 4 nuits.
+/ La colonne des libellés était bridée à 150 px pour laisser la place à vingt
+/ colonnes qui n'existent presque jamais : sur une nuit, le texte s'empilait sur
+/ cinq lignes à côté d'un grand vide. Elle est maintenant large (`.stay-grid`,
+/ funnel.css) et ne porte que le nom et la capacité ; prix et bûches restent sur
+/ les cartes du haut. Chaque case dit son état EN TOUTES LETTRES (« Libre »,
+/ « Choisi », « Complet ») : il fallait jusqu'ici cliquer un tiret pour
+/ apprendre qu'un gîte était pris.
+.bg-white.rounded-2xl.shadow-sm.border.border-bark.p-5.sm:p-6(
   data-controller="public--stay-calendar public--unavail"
   data-needs-block="gite camping van"
   data-public--stay-calendar-nights-value=nights_count.to_s
   data-public--stay-calendar-avail-value=avail_json)
 
-  .flex.items-start.justify-between.mb-4
+  .flex.items-start.justify-between.gap-4.mb-1
     h2.funnel-section-title.flex.items-center.gap-2
       = funnel_icon :bed, css_class: "w-5 h-5 text-ember flex-shrink-0"
       | Composition nuit par nuit
-    - if @stay_nights.present?
-      .flex.items-center.gap-2.flex-shrink-0.ml-4.mt-0.5
-        .text-xs.text-moss
-          = "#{nights_count} nuit#{nights_count > 1 ? 's' : ''}"
-        - if nights_count > 4
-          button(
-            type="button"
-            data-action="click->public--stay-calendar#prevNights"
-            class="relative before:content-[''] before:absolute before:-inset-2 w-7 h-7 rounded-lg border border-bark bg-white text-moss hover:border-forest hover:text-forest flex items-center justify-center text-sm transition-colors"
-            aria-label="Nuits précédentes")
-            | ←
-          button(
-            type="button"
-            data-action="click->public--stay-calendar#nextNights"
-            class="relative before:content-[''] before:absolute before:-inset-2 w-7 h-7 rounded-lg border border-bark bg-white text-moss hover:border-forest hover:text-forest flex items-center justify-center text-sm transition-colors"
-            aria-label="Nuits suivantes")
-            | →
+    - if @stay_nights.present? && nights_count > 4
+      .flex.items-center.gap-2.flex-shrink-0
+        button(
+          type="button"
+          data-action="click->public--stay-calendar#prevNights"
+          class="relative before:content-[''] before:absolute before:-inset-2 w-9 h-9 rounded-lg border border-bark bg-white text-moss hover:border-forest hover:text-forest flex items-center justify-center transition-colors"
+          aria-label="Nuits précédentes")
+          = funnel_icon :arrow_left, css_class: "w-4 h-4"
+        button(
+          type="button"
+          data-action="click->public--stay-calendar#nextNights"
+          class="relative before:content-[''] before:absolute before:-inset-2 w-9 h-9 rounded-lg border border-bark bg-white text-moss hover:border-forest hover:text-forest flex items-center justify-center transition-colors"
+          aria-label="Nuits suivantes")
+          = funnel_icon :arrow_right, css_class: "w-4 h-4"
 
   - if @stay_nights.empty?
-    p.text-xs.text-moss Choisissez vos dates à l'étape précédente.
+    p.funnel-hint.mt-2 Choisissez vos dates à l'étape précédente.
   - else
-    / Scroll horizontal — libellés gauche collants (left-5 aligne avec le padding px-5)
-    .overflow-x-auto.-mx-5.px-5(data-public--stay-calendar-target="scrollArea")
-      table.border-collapse style="min-width: #{150 + nights_count * 104}px"
+    p.funnel-hint.mb-5 Choisissez un gîte pour chaque nuit, puis ajoutez campeurs ou véhicules si besoin.
+
+    .overflow-x-auto(data-public--stay-calendar-target="scrollArea")
+      table.stay-grid
 
         thead
           tr
-            th.text-left.py-2.pr-4.text-xs.font-normal.text-moss.whitespace-nowrap.sticky.left-5.z-10.bg-white style="width:150px"
+            th.stay-grid__label
             - @stay_nights.each_with_index do |night, i|
-              th.text-center.py-2.px-1(data-wday=night.wday.to_s style="width:104px")
-                p.text-xs.font-bold.text-moss = "Nuit #{i + 1}"
-                p.text-xs.text-moss.font-normal = "#{fr_short_days[night.wday]} #{night.strftime("%-d/%-m")}"
+              th.stay-grid__night(data-wday=night.wday.to_s)
+                span.block.text-base.font-semibold.text-ink = "#{fr_short_days[night.wday]} #{night.day} #{I18n.t("date.abbr_month_names")[night.month]}"
+                span.block.funnel-hint = "nuit #{i + 1}"
 
         tbody
 
           / ══ Hébergements ══════════════════════════════════════════════
           tr data-needs-block="gite"
-            td(class="pt-3 pb-1 pr-4" colspan=total_cols.to_s)
-              span.text-xs.font-semibold.text-moss.uppercase.tracking-wide Hébergement
+            td.stay-grid__section(colspan=total_cols.to_s)
+              span Hébergement
           - @lodgings.each do |lodging|
-            / « dès X €/nuit » = la nuit en SEMAINE du site (epic #260, décision 4),
-              plus jamais l'ancien `extra_night_cents` qui annonçait 200/260/600.
-            - lodging_from_night = Pricing::Catalog.lodging_from_night_cents(lodging.name)
-            tr(class="border-t border-bark/60" data-needs-block="gite")
-              / Capacité et nombre de chambres — on choisissait entre trois NOMS,
-              / sans savoir lequel loge huit personnes et lequel en vingt-cinq.
-              / `Lodging#summary` porte déjà la fourchette (« 9 à 16 personnes »)
-              / et les chambres se comptent : l'information existait, elle n'était
-              / simplement jamais montrée au client.
-              - rooms_count = lodging.rooms.size
-              - capacity_bits = [lodging.summary.presence, ("#{rooms_count} chambre#{'s' if rooms_count > 1}" if rooms_count.positive?)].compact
-              td.py-2.pr-4.sticky.left-5.z-10.bg-white(style="width:150px")
-                .flex.items-center.gap-2
+            / Capacité et chambres : on choisissait entre trois NOMS sans savoir
+            / lequel loge huit personnes et lequel vingt-cinq. Les chambres se
+            / comptent hors mezzanine (`Lodging#bedrooms_count`).
+            - rooms_count = lodging.bedrooms_count
+            - capacity_bits = [lodging.summary.presence, ("#{rooms_count} chambre#{'s' if rooms_count > 1}" if rooms_count.positive?)].compact
+            tr.stay-grid__row(data-needs-block="gite")
+              td.stay-grid__label
+                .flex.items-center.gap-3
                   / Vignette : relie la ligne à la carte photo du haut de page.
-                  / Décorative — le nom juste à côté porte déjà l'information.
                   - if lodging_thumb_path(lodging.name)
                     = vite_image_tag lodging_thumb_path(lodging.name), alt: "", loading: "lazy", decoding: "async", class: "funnel-lodging-thumb"
-                  span.text-sm.text-ink.font-medium.whitespace-nowrap = short_names[lodging.name] || lodging.name
-                - if capacity_bits.any?
-                  p.text-xs.text-moss.leading-tight.mt-0.5 = capacity_bits.join(" · ")
-                - if lodging_from_night
-                  p.text-xs.font-semibold.text-forest.leading-tight.whitespace-nowrap(class="mt-0.5")
-                    = "dès #{number_to_currency(lodging_from_night / 100.0, unit: '€', format: '%n %u', precision: 0)}/nuit"
-                / Brouette de bûches incluse (epic #260, décision 6) — Chevêche et
-                / Grand-Duc seulement, La Hulotte n'a pas de poêle.
-                - if Pricing::Catalog.firewood_included?(lodging.name)
-                  p.text-xs.text-moss.leading-tight.mt-0.5 = Pricing::Catalog::FIREWOOD_NOTICE
+                  div.min-w-0
+                    p.text-base.font-semibold.text-ink.leading-tight = short_names[lodging.name] || lodging.name
+                    - if capacity_bits.any?
+                      p.funnel-hint.leading-snug.mt-0.5 = capacity_bits.join(" · ")
               - @stay_nights.each_with_index do |night, i|
                 - avail = (@lodging_availability.dig(lodging.id, i) != false)
                 - sel   = selected_ids.at(i).to_s == lodging.id.to_s
-                / Autres gîtes libres CETTE nuit-là. Lu dans @lodging_availability, déjà
-                / calculé pour la grille : pas de requête de plus. Sert la mini-modale
-                / d'indisponibilité, qui se contentait jusqu'ici de constater le refus.
+                / Autres gîtes libres CETTE nuit-là, lus dans @lodging_availability
+                / (pas de requête de plus) : la mini-modale propose une issue.
                 - alts = @lodgings.reject { |o| o.id == lodging.id }.select { |o| @lodging_availability.dig(o.id, i) != false }.map { |o| short_names[o.name] || o.name }
-                td.py-2.px-1.text-center
+                td.stay-grid__cell
                   - if avail
-                    / Cellule disponible — la cible de clic principale de l'étape 2.
-                    / `aria-label` OBLIGATOIRE : ces boutons n'ont aucun contenu
-                    / textuel, ils étaient donc annoncés « bouton » tout court —
-                    / une grille de 3 gîtes × N nuits devenait un mur de boutons
-                    / anonymes à la voix. La coche est un SVG permanent révélé par
-                    / CSS sur `aria-pressed="true"` (cf. funnel.css) : le contrôleur
-                    / Stimulus n'a ainsi plus à réécrire le contenu de la cellule.
+                    / `aria-label` OBLIGATOIRE ; l'état visuel suit `aria-pressed`
+                    / (night_cells.css + funnel.css), le contrôleur ne réécrit rien.
                     button(
                       type="button"
                       aria-pressed=sel.to_s
@@ -113,11 +103,13 @@
                       data-type="lodging"
                       data-lodging-id=lodging.id.to_s
                       data-night-index=i.to_s
-                      class="funnel-night-cell")
-                      = funnel_icon :check, css_class: "w-5 h-5 funnel-night-cell__check", stroke_width: 3
+                      class="funnel-night-cell stay-cell")
+                      = funnel_icon :check, css_class: "w-4 h-4 funnel-night-cell__check", stroke_width: 3
+                      span.stay-cell__free(aria-hidden="true") Libre
+                      span.stay-cell__on(aria-hidden="true") Choisi
                   - else
-                    / Indisponible — cliquable : ouvre une mini-modale explicative
-                    / (feature 1) avec un lien vers le calendrier de disponibilités.
+                    / Indisponible — reste cliquable : la mini-modale explique et
+                    / propose les autres gîtes libres.
                     button(
                       type="button"
                       data-type="lodging"
@@ -128,103 +120,73 @@
                       data-unavail-date=l(night, format: :long)
                       data-unavail-alternatives=alts.to_json
                       aria-label="#{lodging.name} n'est pas libre le #{l(night, format: :long)} — voir les disponibilités"
-                      class="funnel-night-cell funnel-night-cell--off")
-                      span(aria-hidden="true") —
+                      class="funnel-night-cell funnel-night-cell--off stay-cell")
+                      span(aria-hidden="true") Complet
 
           / ══ Camping ════════════════════════════════════════════════════
           tr data-needs-block="camping van"
-            td(class="pt-4 pb-1 pr-4" colspan=total_cols.to_s)
-              span.text-xs.font-semibold.text-moss.uppercase.tracking-wide Camping
-          / Campeurs (tentes) — la saisie est un nombre de PERSONNES, pas de
-          / tentes (source de confusion levée, feature 2).
-          tr(class="border-t border-bark/60" data-needs-block="camping")
-            td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
-              .flex.items-center.gap-1.5
-                svg.w-4.h-4.text-moss.flex-shrink-0(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true")
-                  path(fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clip-rule="evenodd")
-                .text-sm.text-ink.font-medium Campeurs (tentes)
-              p.text-xs.text-moss.leading-tight.mt-0.5
-                | nombre de
-                strong.text-moss  personnes
-                |  sous tente
-                - if tente_rate
-                  = " — #{number_to_currency(tente_rate / 100.0, unit: '€', format: '%n %u', precision: 2)}/pers/nuit"
+            td.stay-grid__section(colspan=total_cols.to_s)
+              span Camping et vans
+          / Campeurs : la saisie est un nombre de PERSONNES, pas de tentes.
+          tr.stay-grid__row(data-needs-block="camping")
+            td.stay-grid__label
+              .flex.items-center.gap-3
+                span.stay-grid__icon
+                  = funnel_icon :tent, css_class: "w-5 h-5"
+                div.min-w-0
+                  p.text-base.font-semibold.text-ink.leading-tight Campeurs sous tente
+                  p.funnel-hint.leading-snug.mt-0.5
+                    | Nombre de personnes
+                    - if tente_rate
+                      = " · #{eur.(tente_rate, 2)} par nuit"
             - @stay_nights.each_with_index do |night, i|
               - val = (pnr["tente"] || [])[i].to_i
-              td.py-2.px-1.text-center
+              td.stay-grid__cell
                 = render "public/reservations/stepper_cell", name: "reservation[per_night_resources][tente][]", val: val, max: 50
 
-          tr(class="border-t border-bark/60" data-needs-block="van")
-            td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
-              .flex.items-center.gap-1.5
-                svg.w-4.h-4.text-moss.flex-shrink-0(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true")
-                  path d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"
-                .text-sm.text-ink.font-medium Vans / camping-cars
-              p.text-xs.text-moss.leading-tight.mt-0.5
-                | nombre de
-                strong.text-moss  véhicules
+          tr.stay-grid__row(data-needs-block="van")
+            td.stay-grid__label
+              .flex.items-center.gap-3
+                span.stay-grid__icon
+                  = funnel_icon :van, css_class: "w-5 h-5"
+                div.min-w-0
+                  p.text-base.font-semibold.text-ink.leading-tight Vans et camping-cars
+                  p.funnel-hint.leading-snug.mt-0.5
+                    | Nombre de véhicules
+                    - if van_rate
+                      = " · #{eur.(van_rate, 2)} par nuit"
             - @stay_nights.each_with_index do |night, i|
               - val = (pnr["van"] || [])[i].to_i
-              td.py-2.px-1.text-center
+              td.stay-grid__cell
                 = render "public/reservations/stepper_cell", name: "reservation[per_night_resources][van][]", val: val, max: 20
 
           / ══ Location de hamacs (mai-octobre) ════════════════════════════
           / On LOUE les hamacs — fournis et posés sur place (feature 3).
           - if show_hamacs
             tr data-needs-block="camping"
-              td(class="pt-4 pb-1 pr-4" colspan=total_cols.to_s)
-                span.text-xs.font-semibold.text-moss.uppercase.tracking-wide Location de hamacs
-                p.text-xs.text-moss.font-normal.normal-case.tracking-normal.mt-0.5 Hamac fourni et posé dans les arbres du domaine — rien à apporter.
+              td.stay-grid__section(colspan=total_cols.to_s)
+                span Hamacs à louer
+                p.funnel-hint.font-normal.mt-0.5 Fournis et posés dans les arbres du domaine, rien à apporter.
 
-            tr(class="border-t border-bark/60" data-needs-block="camping")
-              td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
-                .flex.items-center.gap-1.5
-                  svg.w-4.h-4.text-moss.flex-shrink-0(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true")
-                    line x1="4" y1="4" x2="4" y2="20"
-                    line x1="20" y1="4" x2="20" y2="20"
-                    line x1="4" y1="8" x2="20" y2="8"
-                    path d="M4 15 Q12 21 20 15"
-                  .text-sm.text-ink.font-medium Hamac simple
-                - if hamac_s_rate
-                  p.text-xs.text-moss.leading-tight.mt-0.5 = "location #{number_to_currency(hamac_s_rate / 100.0, unit: '€', format: '%n %u', precision: 2)}/nuit"
-              - @stay_nights.each_with_index do |night, i|
-                - val = (pnr["hamac_simple"] || [])[i].to_i
-                td.py-2.px-1.text-center
-                  = render "public/reservations/stepper_cell", name: "reservation[per_night_resources][hamac_simple][]", val: val, max: 10
+            - [["hamac_simple", "Hamac simple", hamac_s_rate], ["hamac_double", "Hamac double", hamac_d_rate]].each do |key, label_text, rate|
+              tr.stay-grid__row(data-needs-block="camping")
+                td.stay-grid__label
+                  .flex.items-center.gap-3
+                    span.stay-grid__icon
+                      = funnel_icon :hammock, css_class: "w-5 h-5"
+                    div.min-w-0
+                      p.text-base.font-semibold.text-ink.leading-tight = label_text
+                      - if rate
+                        p.funnel-hint.leading-snug.mt-0.5 = "#{eur.(rate, 2)} par nuit"
+                - @stay_nights.each_with_index do |night, i|
+                  - val = (pnr[key] || [])[i].to_i
+                  td.stay-grid__cell
+                    = render "public/reservations/stepper_cell", name: "reservation[per_night_resources][#{key}][]", val: val, max: 10
 
-            tr(class="border-t border-bark/60" data-needs-block="camping")
-              td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
-                .flex.items-center.gap-1.5
-                  svg.w-4.h-4.text-moss.flex-shrink-0(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true")
-                    line x1="4" y1="4" x2="4" y2="20"
-                    line x1="20" y1="4" x2="20" y2="20"
-                    line x1="4" y1="8" x2="20" y2="8"
-                    path d="M4 15 Q12 21 20 15"
-                  .text-sm.text-ink.font-medium Hamac double
-                - if hamac_d_rate
-                  p.text-xs.text-moss.leading-tight.mt-0.5 = "location #{number_to_currency(hamac_d_rate / 100.0, unit: '€', format: '%n %u', precision: 2)}/nuit"
-              - @stay_nights.each_with_index do |night, i|
-                - val = (pnr["hamac_double"] || [])[i].to_i
-                td.py-2.px-1.text-center
-                  = render "public/reservations/stepper_cell", name: "reservation[per_night_resources][hamac_double][]", val: val, max: 10
-
-    / Légende
-    - if @stay_nights.present?
-      .flex.flex-wrap.items-center.gap-x-4.gap-y-1.mt-4.pt-3.border-t.border-bark
-        .flex.items-center.gap-1.5
-          .w-5.h-5.rounded-lg.bg-forest.text-sand.flex.items-center.justify-center.flex-shrink-0
-            = funnel_icon :check, css_class: "w-3.5 h-3.5", stroke_width: 3
-          span.text-xs.text-moss Sélectionné
-        .flex.items-center.gap-1.5
-          .w-5.h-5.rounded-lg.border-2.border-bark.bg-white.flex-shrink-0
-          span.text-xs.text-moss Disponible
-        .flex.items-center.gap-1.5
-          .w-5.h-5.rounded-lg.bg-sand-deep.border-2.border-bark.flex-shrink-0
-          span.text-xs.text-moss Indisponible
-      / Règle week-end
-      .mt-2.text-xs.text-ember.bg-ember-tint.border.border-ember/30.rounded-lg.px-3.py-2.flex.items-start.gap-2
-        = funnel_icon :calendar, css_class: "w-4 h-4 flex-shrink-0 mt-px"
-        span Les hébergements se louent pour 2 nuits minimum le week-end (vendredi + samedi).
+    / Règle week-end — les cases parlent d'elles-mêmes, plus besoin de légende.
+    .mt-5.text-sm.text-ink.bg-ember-tint.border.border-ember/30.rounded-xl.px-4.py-3.flex.items-start.gap-2
+      = funnel_icon :calendar, css_class: "w-5 h-5 text-ember flex-shrink-0"
+      span Le week-end, les gîtes se louent pour 2 nuits minimum (vendredi et samedi).
 
   / Champs cachés hébergements — un par nuit, gérés par Stimulus
   div data-public--stay-calendar-target="hiddenFields"

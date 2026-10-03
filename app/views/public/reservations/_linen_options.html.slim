@@ -23,6 +23,6 @@
         div.min-w-0
           p.text-sm.font-medium.text-ink = Pricing::Catalog.linen_label(kind)
           - if rate
-            p.text-xs.text-moss.leading-tight.mt-0.5
+            p.text-sm.text-moss.leading-tight.mt-0.5
               = "#{number_to_currency(rate / 100.0, unit: '€', format: '%n %u', precision: 0)} par lit"
         = render "public/reservations/stepper_cell", name: "reservation[#{field}]", val: value.to_i, max: 30

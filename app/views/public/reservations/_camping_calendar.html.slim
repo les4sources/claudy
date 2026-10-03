@@ -34,7 +34,7 @@
       table.border-collapse style="min-width: #{130 + stay_nights.size * 104}px"
         thead
           tr
-            th.text-left.py-2.pr-4.text-xs.font-normal.text-moss.whitespace-nowrap.sticky.left-5.z-10.bg-white style="width:130px"
+            th.text-left.py-2.pr-4.text-xs.font-normal.text-moss.whitespace-nowrap.sticky.left-0.z-10.bg-white style="width:130px"
             - stay_nights.each_with_index do |night, i|
               th.text-center.py-2.px-1 style="width:104px"
                 p.text-xs.font-bold.text-moss = "Nuit #{i + 1}"
@@ -42,7 +42,7 @@
 
         tbody
           tr class="border-t border-bark/60"
-            td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
+            td.py-2.pr-4.whitespace-nowrap.sticky.left-0.z-10.bg-white
               .text-sm.text-ink.font-medium.flex.items-center.gap-2
                 = funnel_icon :tent, css_class: "w-4 h-4 text-ember flex-shrink-0"
                 span Campeurs (tentes)
@@ -58,7 +58,7 @@
                 = render "public/reservations/stepper_cell", name: "#{param_root}[per_night_resources][tente][]", val: val, max: 50
 
           tr class="border-t border-bark/60"
-            td.py-2.pr-4.whitespace-nowrap.sticky.left-5.z-10.bg-white
+            td.py-2.pr-4.whitespace-nowrap.sticky.left-0.z-10.bg-white
               .text-sm.text-ink.font-medium.flex.items-center.gap-2
                 = funnel_icon :van, css_class: "w-4 h-4 text-ember flex-shrink-0"
                 span Vans / camping-cars

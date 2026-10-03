@@ -11,16 +11,19 @@
 
 - if cards.any?
   section.mb-6(data-controller="public--gallery")
-    .flex.items-baseline.justify-between.gap-4.mb-3
-      h2.funnel-section-title Nos gîtes
-      p.funnel-hint.hidden.sm:block Cliquez pour voir les photos
+    h2.funnel-section-title.mb-3 Nos gîtes
 
     .grid.grid-cols-1.sm:grid-cols-3.gap-4
       - cards.each do |lodging|
         / « dès X €/nuit » = la nuit en SEMAINE du site (epic #260, décision 4).
         - from_night = Pricing::Catalog.lodging_from_night_cents(lodging.name)
-        - rooms = lodging.rooms.size
+        - rooms = lodging.bedrooms_count
         - shots = lodging_gallery(lodging.name).size
+        / Disponibilité aux dates choisies, lue dans @lodging_availability (déjà
+        / calculé pour la grille). Dit d'emblée qu'un gîte est pris, au lieu de
+        / le laisser découvrir case par case.
+        - nights_avail = Array(@lodging_availability&.dig(lodging.id))
+        - free_nights = nights_avail.count { |v| v != false }
         button(
           type="button"
           data-action="public--gallery#open"
@@ -37,24 +40,31 @@
                 decoding: "async",
                 class: "funnel-lodging-card__img"
             span.funnel-lodging-card__count
-              = funnel_icon :sparkles, css_class: "w-3.5 h-3.5"
+              = funnel_icon :sparkles, css_class: "w-4 h-4"
               = "#{shots} photos"
 
-          .p-3.5
-            h3.funnel-section-title.text-base = lodging.name
+          .funnel-lodging-card__body
+            h3.funnel-section-title = lodging.name
             - if lodging.summary.present? || rooms.positive?
-              p.funnel-hint.mt-0.5
+              p.funnel-hint.mt-1
                 = [lodging.summary.presence, ("#{rooms} chambre#{'s' if rooms > 1}" if rooms.positive?)].compact.join(" · ")
             - if from_night
-              p.text-sm.font-semibold.text-forest(class="mt-1.5")
+              p.text-base.font-semibold.text-forest.mt-2
                 = "dès #{number_to_currency(from_night / 100.0, unit: '€', format: '%n %u', precision: 0)}/nuit"
             / Brouette de bûches (epic #260, décision 6) : incluse d'office à La
             / Chevêche et au Grand-Duc. La Hulotte n'a pas de poêle — rien à dire.
             / Information, jamais une ligne de prix.
             - if Pricing::Catalog.firewood_included?(lodging.name)
-              p.funnel-hint.mt-1.flex.items-center.gap-1
-                = funnel_icon :flame, css_class: "w-3.5 h-3.5 text-ember flex-shrink-0"
+              p.funnel-hint.mt-1.flex.items-center.gap-1.5
+                = funnel_icon :flame, css_class: "w-4 h-4 text-ember flex-shrink-0"
                 span = Pricing::Catalog::FIREWOOD_NOTICE
+            - unless nights_avail.empty?
+              - if free_nights.zero?
+                p.funnel-avail-badge.funnel-avail-badge--off Complet à vos dates
+              - elsif free_nights < nights_avail.size
+                p.funnel-avail-badge.funnel-avail-badge--partial = "Libre #{free_nights} nuit#{'s' if free_nights > 1} sur #{nights_avail.size}"
+              - else
+                p.funnel-avail-badge Libre à vos dates
 
     / Modale galerie — un seul turbo-frame, rempli à la demande.
     = render "public/reservations/gallery_modal"

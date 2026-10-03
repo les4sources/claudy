@@ -49,9 +49,10 @@ RSpec.describe "Funnel — options draps et bûches (epic #260, phase 2)", type:
       get "/reservation/composer"
 
       expect(response.body).to include("Brouette de bûches incluse")
-      # Une seule mention par écran de carte + grille pour le seul gîte concerné :
-      # La Hulotte n'a pas de poêle, elle ne doit rien annoncer.
-      expect(response.body.scan("Brouette de bûches incluse").size).to eq(2)
+      # Une seule mention, sur la carte du seul gîte concerné : la grille nuit
+      # par nuit ne parle plus des bûches (Michael, 2026-10-03), et La Hulotte
+      # n'a pas de poêle, elle ne doit rien annoncer.
+      expect(response.body.scan("Brouette de bûches incluse").size).to eq(1)
     end
   end
 

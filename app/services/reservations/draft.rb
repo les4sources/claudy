@@ -50,6 +50,12 @@ module Reservations
                   # INTERNE du SpaceBooking (préfixe « Demande client espaces : »)
                   # pour que l'équipe la voie dans la modale admin. Optionnelle.
                   :spaces_note,
+                  # Activités qui intéressent le groupe (bloc « Activités » de
+                  # l'étape Composition, texte libre — Michael 2026-10-03). Le
+                  # module Activités de Claudy n'est pas encore ouvert au public :
+                  # la demande est rangée dans la note INTERNE du séjour, que
+                  # l'équipe lit aussi dans l'email de nouvelle demande.
+                  :activities_note,
                   # Besoins pré-sélectionnés à l'étape 1 du funnel (cards
                   # cochables : gite, camping, van, salles, repas, activites).
                   # Purement UI — pilote le masquage/affichage des blocs à
@@ -100,6 +106,7 @@ module Reservations
       # anonymes dans le calendrier et les listes.
       @group_name        = attrs[:group_name].presence || @organization_name
       @spaces_note       = attrs[:spaces_note].presence
+      @activities_note   = attrs[:activities_note].presence
       @needs             = normalize_needs(attrs[:needs])
     end
 
@@ -226,6 +233,7 @@ module Reservations
         customer_type:      customer_type,
         organization_name:  organization_name,
         spaces_note:        spaces_note,
+        activities_note:    activities_note,
         needs:              needs
       }
     end

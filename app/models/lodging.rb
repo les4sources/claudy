@@ -44,6 +44,12 @@ class Lodging < ApplicationRecord
 
   has_soft_deletion default_scope: true
 
+  # Nombre de chambres annoncé au client — la mezzanine n'en est pas une
+  # (cf. Room#mezzanine?). `rooms` reste la vérité pour la disponibilité.
+  def bedrooms_count
+    rooms.reject(&:mezzanine?).size
+  end
+
   def composite?
     composed_of_lodgings.any?
   end

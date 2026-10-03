@@ -62,13 +62,22 @@ div
 
         / Téléphone + Groupe
         .grid.grid-cols-1.sm:grid-cols-2.gap-4.mb-5
-          label.block
-            span.funnel-label Téléphone
-            = telephone_field_tag "reservation[phone]", @draft.phone,
-                autocomplete: "tel",
-                inputmode: "tel",
-                placeholder: "+32 ...",
-                class: "mt-1.5 w-full rounded-xl border-bark bg-white text-base text-ink shadow-sm focus:border-forest focus:ring-forest"
+          / Téléphone (Michael, 2026-10-03) : intl-tel-input — Belgique par
+          / défaut, drapeau et indicatif, mise en forme et validation à la frappe
+          / (cf. phone_input_controller.js). Le serveur revérifie
+          / (Reservations::PhoneFormat).
+          div(data-controller="public--phone-input")
+            label.funnel-label(for="reservation_phone") Téléphone
+            .mt-1.5.funnel-phone
+              = telephone_field_tag "reservation[phone]", @draft.phone,
+                  id: "reservation_phone",
+                  autocomplete: "tel",
+                  inputmode: "tel",
+                  aria: { describedby: "reservation_phone_error" },
+                  data: { "public--phone-input-target": "input", action: "input->public--phone-input#check countrychange->public--phone-input#check" },
+                  class: "w-full rounded-xl border-bark bg-white text-base text-ink shadow-sm focus:border-forest focus:ring-forest"
+            p#reservation_phone_error.mt-1.5.text-sm.text-red-700(hidden=!@phone_error data-public--phone-input-target="error" role="alert")
+              | Ce numéro ne semble pas complet. Vérifiez le pays et les chiffres.
           label.block
             span.funnel-label Nom du groupe
             = text_field_tag "reservation[group_name]", @draft.group_name,
@@ -89,12 +98,12 @@ div
             - dog_label = { 0 => "Pas d'animal", 1 => "Un chien (+50 €)", 2 => "Plusieurs chiens (sur demande)" }[@draft.dogs_count.to_i] || "Pas d'animal"
             span.text-sm.font-medium.text-ink = dog_label
             - if @draft.dogs_count.to_i > 1
-              p.text-xs.text-amber-600.mt-1 Notre équipe vous recontacte pour les chiens supplémentaires.
+              p.text-sm.text-amber-700.mt-1 Notre équipe vous recontacte pour les chiens supplémentaires.
           / Vers l'ÉTAPE 1, pas la composition : le choix de l'animal se fait
           / avec les dates et le groupe. Le lien renvoyait vers l'étape 2, où il
           / n'y a rien à modifier pour un chien — le client y cherchait un champ
           / qui n'existe pas.
-          = link_to "Modifier", public_reservation_dates_path, class: "text-xs text-forest hover:underline flex-shrink-0 ml-4 relative before:content-[''] before:absolute before:-inset-y-3.5 before:inset-x-0"
+          = link_to "Modifier", public_reservation_dates_path, class: "text-sm text-forest hover:underline flex-shrink-0 ml-4 relative before:content-[''] before:absolute before:-inset-y-3.5 before:inset-x-0"
 
         / CTA
         / `funnel-submit-cta` : marge de défilement réservée sous le bouton — la

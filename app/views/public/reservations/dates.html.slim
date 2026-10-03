@@ -85,7 +85,7 @@ div(data-controller="public--avail-modal")
             = funnel_icon :bed, css_class: "w-5 h-5 text-ember flex-shrink-0 mt-0.5"
             p.text-sm.text-ink.leading-relaxed
               | En semaine, des <strong>chambres et lits</strong> se louent aussi à l'unité, dès 35 € par personne (15 € par enfant) —
-              = link_to " appelez-nous", "tel:+32455136142", class: "font-semibold underline underline-offset-2 hover:text-ember"
+              =< link_to "appelez-nous", "tel:+32455136142", class: "font-semibold underline underline-offset-2 hover:text-ember"
               |  pour réserver une chambre seule.
 
         / ══ Groupe ════════════════════════════════════════════
@@ -119,11 +119,11 @@ div(data-controller="public--avail-modal")
                   inputmode: "numeric",
                   class: "mt-1.5 w-full rounded-xl border-bark bg-white text-base text-ink shadow-sm focus:border-forest focus:ring-forest"
 
+          / `=<` pose l'espace AVANT le lien, hors de lui : écrit `link_to " adresse"`,
+          / le soulignement démarrait sur l'espace.
           p.funnel-hint.mt-3
-            | Moins de 3 ans : gratuit. Nuitée individuelle en semaine :
-            strong.text-ink  35 € par adulte, 15 € par enfant
-            | . Une question ?
-            = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline underline-offset-2 hover:text-forest"
+            | Moins de 3 ans : gratuit. Une question ?
+            =< link_to "sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline underline-offset-2 hover:text-forest"
 
         / ══ Animal ════════════════════════════════════════════
         section.mb-9
@@ -179,9 +179,9 @@ div(data-controller="public--avail-modal")
     .mt-6.text-center.funnel-rise style="animation-delay:160ms"
       p.text-sm.text-moss
         | Une question ? Appelez Malau au
-        = link_to " +32 (0)490 46 77 10", "tel:+32490467710", class: "font-semibold text-ink underline underline-offset-2 hover:text-forest"
+        =< link_to "+32 (0)490 46 77 10", "tel:+32490467710", class: "font-semibold text-ink underline underline-offset-2 hover:text-forest"
         |  ou écrivez à
-        = link_to " sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline underline-offset-2 hover:text-forest"
+        =< link_to "sejours@les4sources.be", "mailto:sejours@les4sources.be", class: "underline underline-offset-2 hover:text-forest"
 
   / ── Modale calendrier disponibilités ─────────────────────
   = render "public/reservations/avail_modal"
