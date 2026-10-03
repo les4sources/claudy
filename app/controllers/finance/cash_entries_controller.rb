@@ -58,14 +58,15 @@ module Finance
     def unallocated
       @pending_total = CashEntry.pending.count
 
-      # La file se restreint à un compte, ou à une famille de comptes : l'arrêté
-      # du mois renvoie ici filtré sur Stripe quand une recette Stripe attend sa
-      # correspondance de catégorie (epic #250). Sans filtre, on retombe sur la
-      # file entière — comportement inchangé.
-      scope = file_scope(params)
+      # La file se FILTRE (epic #288, phase 4) : recherche, compte ou famille
+      # de comptes, période, sens, montant. L'arrêté du mois y renvoie filtré
+      # sur Stripe quand une recette attend sa correspondance (epic #250).
+      # Sans filtre, on retombe sur la file entière. Le calcul des pistes reste
+      # borné à la page affichée : filtrer ne le fait jamais porter sur tout.
+      @filter = Finance::QueueFilter.new(queue_filter_params)
+      @accounts = CashAccount.ordered
+      scope = @filter.scope
       @filtered_total = scope.count
-      @filter_kind = params[:kind].presence
-      @filter_account = CashAccount.find_by(id: params[:cash_account_id])
 
       @entries = scope.includes(:cash_account, :cash_allocations, :allocation_suggestions)
                       .paginate(page: params[:page], per_page: PAR_PAGE)
@@ -353,6 +354,10 @@ module Finance
       amount = permitted.delete(:amount)
       permitted[:amount_cents] = Monetize.parse(amount.to_s).cents if amount.present?
       permitted
+    end
+
+    def queue_filter_params
+      params.slice(*Finance::QueueFilter::KEYS).permit(*Finance::QueueFilter::KEYS)
     end
 
     def parsed_date(raw)

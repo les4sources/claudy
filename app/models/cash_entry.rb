@@ -113,6 +113,18 @@ class CashEntry < ApplicationRecord
   scope :pending, -> { where(status: "pending") }
   scope :allocated, -> { where(status: "allocated") }
   scope :in_period, ->(from, to) { where(entry_date: from..to) }
+  scope :incoming, -> { where("cash_entries.amount_cents > 0") }
+  scope :outgoing, -> { where("cash_entries.amount_cents < 0") }
+
+  # Une fourchette de montant se lit en VALEUR ABSOLUE (epic #288, phase 4) :
+  # « les petits montants » sont petits qu'ils entrent ou qu'ils sortent. Une
+  # borne absente laisse le côté ouvert.
+  scope :amount_between, lambda { |min_cents, max_cents|
+    scope = all
+    scope = scope.where("ABS(cash_entries.amount_cents) >= ?", min_cents) if min_cents
+    scope = scope.where("ABS(cash_entries.amount_cents) <= ?", max_cents) if max_cents
+    scope
+  }
 
   # La recherche du journal (Michael, 2026-09-20) : on cherche une ligne par ce
   # qu'on en retient — un nom, un mot de la communication, parfois le libellé.
