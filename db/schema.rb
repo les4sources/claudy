@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_04_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_04_210000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -514,6 +514,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_010000) do
     t.datetime "jev_checked_at"
     t.string "label", null: false
     t.text "notes"
+    t.virtual "search_text", type: :text, as: "translate(lower((((((COALESCE(label, ''::character varying))::text || chr(10)) || (COALESCE(communication, ''::character varying))::text) || chr(10)) || (COALESCE(counterparty_name, ''::character varying))::text)), 'àâäáãåçèéêëìíîïñòóôöõùúûüýÿ'::text, 'aaaaaaceeeeiiiinooooouuuuyy'::text)", stored: true
     t.bigint "source_id"
     t.string "source_type"
     t.string "statement_ref"
