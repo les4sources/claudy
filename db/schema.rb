@@ -10,10 +10,11 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_04_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_04_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
+  enable_extension "pg_trgm"
   enable_extension "pgcrypto"
 
   create_table "account_entries", force: :cascade do |t|
@@ -521,6 +522,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_010000) do
     t.string "transaction_code"
     t.datetime "updated_at", null: false
     t.date "value_date"
+    t.index "translate(lower((COALESCE(communication, ''::character varying))::text), 'àâäáãåçèéêëìíîïñòóôöõùúûüýÿ'::text, 'aaaaaaceeeeiiiinooooouuuuyy'::text) gin_trgm_ops", name: "index_cash_entries_on_communication_trgm", using: :gin
+    t.index "translate(lower((COALESCE(counterparty_name, ''::character varying))::text), 'àâäáãåçèéêëìíîïñòóôöõùúûüýÿ'::text, 'aaaaaaceeeeiiiinooooouuuuyy'::text) gin_trgm_ops", name: "index_cash_entries_on_counterparty_name_trgm", using: :gin
+    t.index "translate(lower((COALESCE(label, ''::character varying))::text), 'àâäáãåçèéêëìíîïñòóôöõùúûüýÿ'::text, 'aaaaaaceeeeiiiinooooouuuuyy'::text) gin_trgm_ops", name: "index_cash_entries_on_label_trgm", using: :gin
     t.index ["cash_account_id", "external_ref"], name: "index_cash_entries_on_external_ref", unique: true, where: "(external_ref IS NOT NULL)"
     t.index ["cash_account_id", "fingerprint"], name: "index_cash_entries_on_fingerprint", unique: true, where: "(fingerprint IS NOT NULL)"
     t.index ["cash_account_id"], name: "index_cash_entries_on_cash_account_id"
