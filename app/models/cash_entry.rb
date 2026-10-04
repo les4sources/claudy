@@ -27,7 +27,6 @@
 #  jev_checked_at    :datetime
 #  label             :string           not null
 #  notes             :text
-#  search_text       :virtual(text)
 #  source_type       :string
 #  statement_ref     :string
 #  status            :string           default("pending"), not null
@@ -67,9 +66,7 @@ class CashEntry < ApplicationRecord
     "excluded" => "Exclue"
   }.freeze
 
-  # `search_text` est dérivé du libellé, de la communication et de la
-  # contrepartie : le versionner doublerait chaque version pour rien.
-  has_paper_trail skip: [:search_text]
+  has_paper_trail
   has_soft_deletion default_scope: true
   # Un fil de commentaires sur chaque ligne (Michael, 2026-09-30) : « ces
   # 3 000 € sont un acompte sur le loyer T3, le solde suit ». La ligne est un
@@ -135,13 +132,19 @@ class CashEntry < ApplicationRecord
   # trouver « Épicerie », sinon il faut taper juste pour trouver.
   #
   # `unaccent` n'est pas installé : `translate` fait le travail sur les
-  # quelques lettres accentuées du français. Les trois colonnes sont aplaties
-  # UNE fois, à l'écriture, dans la colonne générée `search_text` (Postgres la
-  # tient à jour seul) : les aplatir à chaque requête coûtait ~200 ms sur le
-  # volume réel, la file « À affecter » en faisant deux par recherche.
+  # quelques lettres accentuées du français, et reste indexable si le besoin
+  # s'en fait sentir.
+  ACCENTS = "àâäáãåçèéêëìíîïñòóôöõùúûüýÿ".freeze
+  SANS_ACCENTS = "aaaaaaceeeeiiiinooooouuuuyy".freeze
+
   scope :matching, lambda { |terme|
     motif = "%#{ActiveRecord::Base.sanitize_sql_like(terme.to_s.strip)}%"
-    where("cash_entries.search_text LIKE ?", I18n.transliterate(motif).downcase)
+    plat = ->(colonne) { "translate(lower(coalesce(#{colonne}, '')), :accents, :sans)" }
+    where(
+      "#{plat.call('label')} LIKE :motif OR #{plat.call('communication')} LIKE :motif " \
+      "OR #{plat.call('counterparty_name')} LIKE :motif",
+      motif: I18n.transliterate(motif).downcase, accents: ACCENTS, sans: SANS_ACCENTS
+    )
   }
 
   def status_label = STATUS_LABELS.fetch(status, status)
