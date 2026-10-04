@@ -130,6 +130,16 @@ Rails.application.routes.draw do
     get "sheets/bread",          to: "sheets#bread",          as: :bread_sheet
     get "sheets/grocery_prices", to: "sheets#grocery_prices", as: :grocery_prices_sheet
     resource :settings, only: %i[show update]
+    # Le contrôle mensuel des carnets Épicerie et Boulangerie (phase 5) : trois
+    # totaux par carnet, l'écart figé, et la ventilation de la « Caisse
+    # épicerie » du mois.
+    get   "monthly_checks",                    to: "monthly_checks#index",     as: :monthly_checks
+    get   "monthly_checks/:month",             to: "monthly_checks#show",      as: :monthly_check,
+                                               constraints: { month: /\d{4}-\d{2}/ }
+    post  "monthly_checks/:month/ventilation", to: "monthly_checks#ventilate", as: :monthly_check_ventilation,
+                                               constraints: { month: /\d{4}-\d{2}/ }
+    patch "monthly_checks/:month/:channel",    to: "monthly_checks#update",    as: :monthly_check_notebook,
+                                               constraints: { month: /\d{4}-\d{2}/, channel: /grocery|bread/ }
   end
   resources :projects
   # Cuisine (epic #219) — URLs admin en anglais, interface en français.

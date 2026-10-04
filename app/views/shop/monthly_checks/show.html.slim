@@ -1,0 +1,37 @@
+/ Le contrôle d'un mois (epic #359, phase 5) : un bloc par carnet, puis la
+  ventilation de la « Caisse épicerie » et les comptages de caisse du mois.
+- previous_month = @month.prev_month.strftime("%Y-%m")
+- next_month = @month.next_month.strftime("%Y-%m")
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Carnets — #{l(@month, format: '%B %Y')}",
+           links: [link_to("← #{l(@month.prev_month, format: '%B')}", shop_monthly_check_path(previous_month), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
+                   link_to("#{l(@month.next_month, format: '%B')} →", shop_monthly_check_path(next_month), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
+                   link_to("Historique", shop_monthly_checks_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.grid.gap-4.lg:grid-cols-2
+  - @checks.each_value do |check|
+    = render "notebook", check: check
+
+= render "ventilation", ventilation: @ventilation, consignment_reports: @consignment_reports
+
+/ Le comptage hebdomadaire de la caisse du domaine reste le garde-fou : ce
+  que les carnets disent des espèces doit être tombé dans une caisse juste.
+section.mt-8
+  h2.text-base.font-semibold.text-gray-900 Comptages de la caisse du domaine
+  p.mt-0.5.text-xs.text-gray-500 Le garde-fou des espèces : les lignes « Caisse épicerie » ci-dessus sont tombées dans cette caisse.
+  - if @cash_counts.empty?
+    p.mt-2.text-sm.text-gray-500
+      | Aucun comptage ce mois-ci.
+      =< link_to "Compter la caisse", new_finance_cash_count_path, class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+  - else
+    ul.mt-2.divide-y.divide-gray-100.rounded-2xl.bg-white.ring-1.ring-gray-200.text-sm
+      - @cash_counts.each do |count|
+        li.flex.items-center.justify-between.px-4.py-2
+          span
+            = l(count.counted_on, format: :short)
+            - if count.draft?
+              span.ml-2.inline-flex.items-center.rounded-full.bg-amber-100.px-2.py-0.5.text-xs.font-medium.text-amber-800 Brouillon
+          span.font-medium(class=shop_gap_class(count.difference_cents))= shop_gap(count.difference_cents)
+    p.mt-1.text-xs
+      = link_to "Tous les comptages", finance_cash_counts_path, class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"

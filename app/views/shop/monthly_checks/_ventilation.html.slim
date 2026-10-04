@@ -1,0 +1,58 @@
+/ La « Caisse épicerie » du mois (décision 15) : vidée dans la caisse du
+  domaine, elle mélange les trois carnets. Les espèces déclarées font la clé
+  de répartition ; Claudy propose, un humain valide.
+- declared = ventilation.declared_cash
+section.mt-8
+  h2.text-base.font-semibold.text-gray-900 Ventiler la caisse épicerie
+  p.mt-0.5.text-xs.text-gray-500 Les lignes « Caisse épicerie » de la caisse du domaine, réparties entre les carnets au prorata des espèces déclarées.
+
+  .mt-3.grid.gap-4.lg:grid-cols-3
+    .rounded-2xl.bg-white.p-4.ring-1.ring-gray-200.text-sm
+      p.text-xs.font-semibold.uppercase.text-gray-500 Espèces déclarées
+      dl.mt-2.space-y-1
+        - ShopSetting::NOTEBOOKS.each do |notebook|
+          .flex.justify-between
+            dt.text-gray-500= ShopSetting::NOTEBOOK_LABELS.fetch(notebook)
+            dd.text-gray-900= shop_euros(declared[notebook])
+        .flex.justify-between.border-t.border-gray-100.pt-1
+          dt.font-medium.text-gray-900 Total
+          dd.font-medium.text-gray-900= shop_euros(ventilation.declared_total_cents)
+      - with_cash = consignment_reports.select { |report| report.cash_declared_cents.positive? }
+      - if with_cash.any?
+        ul.mt-2.space-y-0.5.text-xs.text-gray-500
+          - with_cash.each do |report|
+            li.flex.justify-between
+              = link_to report.consignor.name, finance_consignment_report_path(report), class: "hover:underline"
+              span= shop_euros(report.cash_declared_cents)
+
+    .rounded-2xl.bg-white.p-4.ring-1.ring-gray-200.text-sm.lg:col-span-2
+      - if ventilation.lines.empty?
+        p.text-gray-500 Aucune ligne « Caisse épicerie » dans la caisse du domaine ce mois-ci.
+      - elsif !ventilation.ready?
+        p.text-amber-700= ventilation.blocker
+        ul.mt-2.divide-y.divide-gray-100
+          - ventilation.lines.each do |entry|
+            li.flex.justify-between.py-1.5
+              = link_to "#{l(entry.entry_date, format: :short)} — #{entry.label}", finance_cash_entry_path(entry), class: "text-gray-700 hover:underline"
+              span.text-gray-900= shop_euros(entry.amount_cents)
+      - else
+        - proposals = ventilation.proposals
+        ul.divide-y.divide-gray-100
+          - proposals.each do |proposal|
+            - entry = proposal.entry
+            li.py-2
+              .flex.justify-between
+                = link_to "#{l(entry.entry_date, format: :short)} — #{entry.label}", finance_cash_entry_path(entry), class: "font-medium text-gray-900 hover:underline"
+                span.font-medium.text-gray-900= shop_euros(entry.amount_cents)
+              .mt-1.flex.flex-wrap.items-center.gap-x-3.text-xs.text-gray-500
+                - proposal.parts.each do |part|
+                  span #{part.label} #{shop_euros(part.cents)}
+                - if proposal.applied?
+                  span.inline-flex.items-center.rounded-full.bg-emerald-100.px-2.py-0.5.font-medium.text-emerald-800 Ventilée
+        - pending = proposals.count { |proposal| !proposal.applied? }
+        - if pending.positive?
+          = button_to "Ventiler #{pending} ligne(s)", shop_monthly_check_ventilation_path(@month.strftime("%Y-%m")),
+                      method: :post, form: { class: "mt-3", data: { turbo_confirm: "Réaffecter #{pending} ligne(s) de caisse selon cette répartition ? Une ligne comptabilisée est contre-passée puis repassée." } },
+                      class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+        - else
+          p.mt-3.text-xs.text-emerald-700 Toute la caisse épicerie du mois est ventilée.

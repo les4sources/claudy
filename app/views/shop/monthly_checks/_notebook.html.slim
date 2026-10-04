@@ -1,0 +1,83 @@
+/ Un carnet sur un mois : le formulaire tant que c'est un brouillon, les
+  chiffres figés une fois validé.
+- account = ShopSetting.current.revenue_account(check.channel)
+- received = check.displayed_bank_received_cents
+section.rounded-2xl.bg-white.p-5.ring-1.ring-gray-200(id="notebook-#{check.channel}")
+  .flex.items-start.justify-between.gap-2
+    div
+      h2.text-base.font-semibold.text-gray-900 Carnet #{check.notebook_label}
+      p.mt-0.5.text-xs.text-gray-500
+        | Mot-clé #{check.keyword} →
+        =< account ? account.to_s : "aucun compte de produit"
+    - if check.validated?
+      span.inline-flex.items-center.rounded-full.bg-emerald-100.px-2.py-0.5.text-xs.font-medium.text-emerald-800 Validé
+    - elsif check.persisted?
+      span.inline-flex.items-center.rounded-full.bg-amber-100.px-2.py-0.5.text-xs.font-medium.text-amber-800 Brouillon
+
+  - if account.nil?
+    p.mt-3.text-sm.text-amber-700
+      | Sans compte de produit, la banque ne peut rien dire de ce carnet.
+      =< link_to "Régler les comptes", shop_settings_path, class: "underline"
+
+  - if check.validated?
+    dl.mt-4.space-y-1.text-sm
+      .flex.justify-between
+        dt.text-gray-500 Total des feuilles
+        dd.font-medium.text-gray-900= shop_euros(check.sheets_total_cents)
+      .flex.justify-between
+        dt.text-gray-500 Noté payé par QR ou virement
+        dd.text-gray-900= shop_euros(check.transfer_total_cents)
+      .flex.justify-between
+        dt.text-gray-500 Noté payé en espèces
+        dd.text-gray-900= shop_euros(check.cash_total_cents)
+      .flex.justify-between
+        dt.text-gray-500 Reçu en banque (figé)
+        dd.text-gray-900= shop_euros(received)
+      .flex.justify-between.border-t.border-gray-100.pt-2
+        dt.font-medium.text-gray-900 Écart (feuilles − banque − espèces)
+        dd.font-semibold(class=shop_gap_class(check.gap_cents))= shop_gap(check.gap_cents)
+    - unless check.unmarked_cents.zero?
+      p.mt-2.text-xs.text-gray-500 Dont #{shop_euros(check.unmarked_cents)} noté sans case « payé par » cochée.
+    - unless check.transfer_gap_cents.zero?
+      p.mt-1.text-xs.text-gray-500 QR et virements notés face à la banque : #{shop_gap(check.transfer_gap_cents)}.
+    p.mt-3.text-xs.text-gray-400
+      | Validé le #{l(check.validated_at, format: :short)}
+      = " par #{check.validated_by.email}" if check.validated_by
+      = " · feuilles n° #{check.sheet_numbers}" if check.sheet_numbers.present?
+    - if check.notes.present?
+      p.mt-1.text-xs.text-gray-600= check.notes
+  - else
+    = form_with model: check, url: shop_monthly_check_notebook_path(@month.strftime("%Y-%m"), check.channel), method: :patch,
+                builder: ActionView::Helpers::FormBuilder, class: "mt-4 space-y-3" do |f|
+      .grid.grid-cols-3.gap-3
+        div
+          = f.label :sheets_total, "Total des feuilles", for: "#{check.channel}_sheets_total", class: "block text-xs font-medium text-gray-700"
+          = f.text_field :sheets_total, id: "#{check.channel}_sheets_total", value: shop_euros_field(check.sheets_total_cents), inputmode: "decimal", placeholder: "0,00", class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+        div
+          = f.label :transfer_total, "Dont QR / virement", for: "#{check.channel}_transfer_total", class: "block text-xs font-medium text-gray-700"
+          = f.text_field :transfer_total, id: "#{check.channel}_transfer_total", value: shop_euros_field(check.transfer_total_cents), inputmode: "decimal", placeholder: "0,00", class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+        div
+          = f.label :cash_total, "Dont espèces", for: "#{check.channel}_cash_total", class: "block text-xs font-medium text-gray-700"
+          = f.text_field :cash_total, id: "#{check.channel}_cash_total", value: shop_euros_field(check.cash_total_cents), inputmode: "decimal", placeholder: "0,00", class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+      div
+        = f.label :sheet_numbers, "N° des feuilles", for: "#{check.channel}_sheet_numbers", class: "block text-xs font-medium text-gray-700"
+        = f.text_field :sheet_numbers, id: "#{check.channel}_sheet_numbers", placeholder: "12, 13, 14", class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+      div
+        = f.label :notes, "Notes", for: "#{check.channel}_notes", class: "block text-xs font-medium text-gray-700"
+        = f.text_area :notes, id: "#{check.channel}_notes", rows: 2, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+
+      .rounded-lg.bg-gray-50.px-3.py-2.text-sm
+        .flex.justify-between
+          span.text-gray-500 Reçu en banque à ce jour
+          span.text-gray-900= shop_euros(received)
+        - if check.persisted?
+          .flex.justify-between
+            span.text-gray-500 Écart provisoire
+            span.font-medium(class=shop_gap_class(check.displayed_gap_cents))= shop_gap(check.displayed_gap_cents)
+        p.mt-1.text-xs.text-gray-400 Ces chiffres bougent tant que le contrôle n'est pas validé.
+
+      .flex.flex-wrap.gap-2
+        = f.submit "Enregistrer", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+        = f.submit "Valider et figer l'écart", name: "validate", value: "Valider et figer l'écart",
+                   data: { turbo_confirm: "Valider le carnet #{check.notebook_label} de #{check.period_label} ? L'écart ne bougera plus." },
+                   class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
