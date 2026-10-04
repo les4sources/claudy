@@ -1,16 +1,16 @@
 p Bonjour #{@stay.customer.first_name.presence || ""},
 
 p
-  | Votre séjour aux 4 Sources approche. Il reste
+  | Votre venue aux 4 Sources approche. Il reste
   strong = " #{@balance.format(symbol: '€')} "
   | à régler pour finaliser votre réservation.
 
 - if @stay.arrival_date && @stay.departure_date
   p
-    strong Votre séjour :
+    strong Vos dates :
     | = " #{l(@stay.arrival_date, format: :long)} → #{l(@stay.departure_date, format: :long)}"
 
-p = link_to "→ Régler le solde de mon séjour", @stay_url
+p = link_to "→ Régler le solde de ma réservation", @stay_url
 
 p
   | Votre réservation reste bien confirmée : ce message est un simple rappel,

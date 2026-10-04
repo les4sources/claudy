@@ -5,13 +5,13 @@ Bonne nouvelle : notre Pôle Accueil a examiné votre demande et la pré-confirm
 <% if @stay.arrival_date && @stay.departure_date %>
 Dates : <%= l(@stay.arrival_date, format: :long) %> -> <%= l(@stay.departure_date, format: :long) %>
 <% end %>
-Pour réserver définitivement votre séjour, il vous reste à régler un acompte de <%= deposit_amount %> :
+Pour confirmer définitivement votre réservation, il vous reste à régler un acompte de <%= deposit_amount %> :
 
 <%= @pay_url %>
 
-C'est le règlement de cet acompte qui confirme définitivement votre réservation. Tant qu'il n'est pas reçu, les dates ne vous sont pas garanties. Dès qu'il l'est, vous recevez la confirmation de votre séjour.
+C'est le règlement de cet acompte qui confirme définitivement votre réservation. Tant qu'il n'est pas reçu, les dates ne vous sont pas garanties. Dès qu'il l'est, vous recevez la confirmation de votre réservation.
 
-Consultez votre séjour : <%= @stay_url %>
+Consultez votre réservation : <%= @stay_url %>
 
 À très bientôt aux 4 Sources !
 

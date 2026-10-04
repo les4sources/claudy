@@ -26,10 +26,10 @@ ul
       = " #{group}"
   - if @stay.category_label.present?
     li
-      strong Type de séjour :
+      strong Type de réservation :
       = " #{@stay.category_label}"
 
-h3 Séjour
+h3 Réservation
 ul
   li
     strong Dates :
@@ -47,7 +47,7 @@ h3 Composition
 - lines = @stay.item_lines
 - activities = @stay.activity_lines
 - if lines.empty? && activities.empty?
-  p Aucun élément dans ce séjour.
+  p Aucun élément dans cette réservation.
 - else
   table
     tbody

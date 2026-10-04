@@ -7,12 +7,12 @@ p Bonjour #{@stay.customer.first_name.presence || ""},
 
 - if @stay.arrival_date && @stay.departure_date
   p
-    | Nous ne pouvons malheureusement pas accueillir votre séjour du
+    | Nous ne pouvons malheureusement pas donner suite à votre demande de réservation du
       #{l(@stay.arrival_date, format: :long).strip} au
       #{l(@stay.departure_date, format: :long).strip}.
 - else
   p
-    | Nous ne pouvons malheureusement pas accueillir votre demande de séjour.
+    | Nous ne pouvons malheureusement pas donner suite à votre demande de réservation.
 
 / Le motif vient du Pôle Accueil et part TEL QUEL : c'est la seule explication
   que le client recevra. `simple_format` préserve ses retours à la ligne.

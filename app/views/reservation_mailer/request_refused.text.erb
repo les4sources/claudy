@@ -1,9 +1,9 @@
 Bonjour <%= @stay.customer.first_name.presence || "" %>,
 
 <% if @stay.arrival_date && @stay.departure_date %>
-Nous ne pouvons malheureusement pas accueillir votre séjour du <%= l(@stay.arrival_date, format: :long).strip %> au <%= l(@stay.departure_date, format: :long).strip %>.
+Nous ne pouvons malheureusement pas donner suite à votre demande de réservation du <%= l(@stay.arrival_date, format: :long).strip %> au <%= l(@stay.departure_date, format: :long).strip %>.
 <% else %>
-Nous ne pouvons malheureusement pas accueillir votre demande de séjour.
+Nous ne pouvons malheureusement pas donner suite à votre demande de réservation.
 <% end %>
 <% if @reason.present? %>
 <%= @reason %>

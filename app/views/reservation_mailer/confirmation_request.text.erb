@@ -5,7 +5,7 @@ Merci pour votre demande de réservation aux 4 Sources. Elle est bien enregistr�
 <% if @stay.arrival_date && @stay.departure_date %>
 Dates : <%= l(@stay.arrival_date, format: :long) %> -> <%= l(@stay.departure_date, format: :long) %>
 <% end %>
-Notre Pôle Accueil l'examine et vous envoie une pré-confirmation par email, avec le montant de l'acompte et son lien de paiement. C'est le règlement de cet acompte qui confirmera définitivement votre séjour.
+Notre Pôle Accueil l'examine et vous envoie une pré-confirmation par email, avec le montant de l'acompte et son lien de paiement. C'est le règlement de cet acompte qui confirmera définitivement votre réservation.
 <% if @quote && @quote.lines.any? %>
 Récapitulatif de votre devis :
 <% @quote.lines.each do |line| %>
@@ -15,7 +15,7 @@ Total TVAC : <%= number_to_currency(@quote.total_cents / 100.0, unit: "€", for
 Tous les prix sont TVAC — pas de TVA en plus.
 <% end %>
 <% if @token %>
-Consultez votre séjour : <%= public_stay_url(@token, host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be")) %>
+Consultez votre réservation : <%= public_stay_url(@token, host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be")) %>
 <% end %>
 
 À très bientôt aux 4 Sources !

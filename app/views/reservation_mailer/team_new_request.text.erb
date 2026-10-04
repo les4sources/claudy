@@ -9,7 +9,7 @@ Téléphone : <%= @stay.customer&.phone.presence || "—" %>
 Groupe : <%= group %>
 <% end %>
 <% if @stay.category_label.present? %>
-Type de séjour : <%= @stay.category_label %>
+Type de réservation : <%= @stay.category_label %>
 <% end %>
 
 SÉJOUR
@@ -24,7 +24,7 @@ COMPOSITION
 <% lines = @stay.item_lines %>
 <% activities = @stay.activity_lines %>
 <% if lines.empty? && activities.empty? %>
-Aucun élément dans ce séjour.
+Aucun élément dans cette réservation.
 <% else %>
 <% lines.each do |line| %>
 - <%= line[:name] %><%= " (#{line[:date_range]})" if line[:date_range].present? %> : <%= line[:amount] %>
