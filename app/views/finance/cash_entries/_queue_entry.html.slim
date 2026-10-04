@@ -206,4 +206,19 @@
       = turbo_frame_tag dom_id(entry, :suggestion), src: suggestion_finance_cash_entry_path(entry), loading: :lazy, target: "_top"
         p.mb-3.text-xs.text-gray-400 Jev cherche une proposition…
 
+    / Ce qui est déjà posé sur la ligne (epic #288, phase 6) : on complète
+      un découpage en voyant ses parts, pas à l'aveugle. Les aides du dessus
+      (séjour, règle) ne se proposent plus dès la première part — elles
+      raisonnent sur la ligne entière.
+    - deja = entry.cash_allocations.to_a
+    - if deja.any?
+      .mb-3.rounded-lg.border.border-gray-100.bg-white.px-3.py-2
+        p.mb-1.text-xs.font-medium.uppercase.text-gray-400 Déjà affecté
+        ul.text-sm
+          - deja.each do |allocation|
+            li.flex.items-baseline.justify-between.gap-4
+              span.text-gray-700
+                = allocation.general_account.to_s
+                span.text-xs.text-gray-500= " · #{allocation.team&.name || 'non affecté'} · #{allocation.legal_entity.name}"
+              span.whitespace-nowrap.tabular-nums.text-gray-900= number_to_currency(allocation.amount_cents / 100.0)
     = render "finance/cash_entries/allocation_form", entry: entry, general_accounts: @general_accounts, teams: @teams, entities: @entities, events: @events, from_unallocated: true

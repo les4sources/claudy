@@ -10,19 +10,39 @@ module Finance
     # Le verrou sérialise les affectations concurrentes : deux saisies
     # simultanées liraient sinon le même solde restant et passeraient toutes les
     # deux le contrôle de couverture, créant de l'argent qui n'existe pas.
+    #
+    # Une ligne peut se répartir en PLUSIEURS parts d'un coup (epic #288,
+    # phase 6) : une nuitée et des consommations au bar, une salle et un repas.
+    # Les parts s'enregistrent ensemble ou pas du tout — un découpage à moitié
+    # posé est pire qu'un découpage refusé. Le cas simple (une seule part,
+    # `cash_allocation`) passe par le même chemin.
     def create
-      allocation = nil
+      allocations = []
+      erreur = nil
 
       @entry.with_lock do
-        allocation = @entry.cash_allocations.new(allocation_params)
-        allocation.save
+        # `CashAllocation.new` plutôt que `@entry.cash_allocations.new` : une
+        # part refusée ne doit pas rester dans l'association et se voir
+        # « déjà affectée » quand la ligne se redessine avec son erreur.
+        allocations = parts_params.map { |attrs| CashAllocation.new(attrs.merge(cash_entry: @entry)) }
+        erreur = depassement(allocations)
+        next if erreur
+
+        ActiveRecord::Base.transaction(requires_new: true) do
+          allocations.each_with_index do |allocation, index|
+            next if allocation.save
+
+            erreur = message_de_part(allocation, index, allocations.size)
+            raise ActiveRecord::Rollback
+          end
+        end
       end
 
-      if allocation.persisted?
-        link_consignor(allocation)
-        maybe_post(allocation)
+      if erreur.nil?
+        allocations.each { |allocation| link_consignor(allocation) }
+        maybe_post
       else
-        apres_affectation(@entry, redirect_target, alert: allocation.errors.full_messages.to_sentence)
+        apres_affectation(@entry.reload, redirect_target, alert: erreur)
       end
     end
 
@@ -54,7 +74,7 @@ module Finance
     # Une ligne entièrement affectée se comptabilise dans la foulée : demander
     # un second clic pour un geste qui n'a plus aucune décision à prendre, c'est
     # la meilleure façon de laisser des lignes affectées mais non passées.
-    def maybe_post(allocation)
+    def maybe_post
       unless @entry.reload.fully_allocated?
         return apres_affectation(@entry, redirect_target,
                                  notice: "Affectation enregistrée — il reste #{Money.new(@entry.remaining_cents, 'EUR').format} à affecter.")
@@ -71,9 +91,17 @@ module Finance
       params[:from_unallocated].present? ? finance_unallocated_cash_entries_path : finance_cash_entry_path(@entry)
     end
 
-    def allocation_params
-      permitted = params.require(:cash_allocation).permit(:general_account_id, :analytic_account_id, :team_id,
-                                                          :legal_entity_id, :label, :amount, :event_id)
+    # La première part arrive sous `cash_allocation` — c'est le formulaire de
+    # toujours — et les suivantes sous `parts[n]`, ajoutées dans la file.
+    def parts_params
+      premiere = params.require(:cash_allocation)
+      suivantes = params[:parts].respond_to?(:values) ? params[:parts].values : []
+      [premiere, *suivantes].map { |part| part_attributes(part) }
+    end
+
+    def part_attributes(part)
+      permitted = part.permit(:general_account_id, :analytic_account_id, :team_id,
+                              :legal_entity_id, :label, :amount, :event_id)
       amount = permitted.delete(:amount)
       permitted[:amount_cents] = Monetize.parse(amount.to_s).cents if amount.present?
 
@@ -83,6 +111,28 @@ module Finance
       event_id = permitted.delete(:event_id)
       permitted[:document] = Event.find_by(id: event_id) if event_id.present?
       permitted
+    end
+
+    # La somme des parts se contrôle AVANT d'en enregistrer une seule. Le
+    # garde-fou du modèle (`within_entry_amount`) ne voit qu'une part à la fois :
+    # sur la troisième, il dirait « il ne reste que 20 € », ce qui laisse croire
+    # que les deux premières sont passées.
+    def depassement(allocations)
+      return nil if allocations.size < 2
+
+      total = allocations.sum { |a| a.amount_cents.to_i }
+      reste = @entry.remaining_cents
+      return nil if total.abs <= reste.abs
+
+      "Les #{allocations.size} parts font #{Money.new(total, 'EUR').format}, " \
+        "il ne reste que #{Money.new(reste, 'EUR').format} à affecter. Rien n'a été enregistré."
+    end
+
+    def message_de_part(allocation, index, total)
+      message = allocation.errors.full_messages.to_sentence
+      return message if total == 1
+
+      "Part #{index + 1} : #{message}. Rien n'a été enregistré."
     end
   end
 end
