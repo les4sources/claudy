@@ -158,6 +158,20 @@ RSpec.describe CashEntry do
                               amount_cents: 500, label: "Régularisation caisse")
       expect(CashEntry.matching("regularisation")).to contain_exactly(nue)
     end
+
+    # Le texte cherché est une colonne générée par Postgres : il suit la ligne
+    # quand on la corrige, sans rien recalculer côté Ruby.
+    it "suit une ligne modifiée" do
+      bar.update!(communication: "Café du Bocq")
+      expect(CashEntry.matching("cafe du bocq")).to contain_exactly(bar)
+      expect(CashEntry.matching("deheneffe")).to contain_exactly(bar)
+    end
+
+    it "ne fait pas chevaucher deux colonnes" do
+      # Libellé « Frennet — Bar » puis communication « Bar » : « bar bar » ne
+      # figure dans aucune des deux.
+      expect(CashEntry.matching("bar bar")).to be_empty
+    end
   end
 
 end

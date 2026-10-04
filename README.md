@@ -141,4 +141,6 @@ Claudy envoie plusieurs emails par des tâches rake idempotentes, lancées par l
 
 Fuseau horaire des crons : **Europe/Brussels**.
 
+Ces tâches mettent leurs emails en file (`deliver_later`) sur l'adaptateur `:async` : le processus attend que la file soit vide avant de sortir (`config/initializers/active_job_async_drain.rb`). Sans cette attente, les derniers emails d'un passage partaient avec le processus, déjà horodatés comme envoyés.
+
 Le digest se garde d'un double envoi par **semaine ISO** (clé `Setting` `kitchen.digest_last_sent_on`) : le relancer le samedi n'envoie rien. `FORCE=1 bundle exec rake kitchen:weekly_digest` passe outre, pour les essais.
