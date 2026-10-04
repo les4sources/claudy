@@ -15,7 +15,7 @@ class StayBalanceReminderMailer < ApplicationMailer
 
     mail(
       to: stay.customer.email,
-      subject: "Il reste un solde à régler pour votre séjour aux 4 Sources"
+      subject: "Il reste un solde à régler pour votre réservation aux 4 Sources"
     )
   end
 end

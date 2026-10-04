@@ -16,7 +16,7 @@ p
     = " #{l(@stay.arrival_date, format: :long)} → #{l(@stay.departure_date, format: :long)}"
 
 p
-  | Pour réserver définitivement votre séjour, il vous reste à régler un acompte
+  | Pour confirmer définitivement votre réservation, il vous reste à régler un acompte
     de #{deposit_amount} :
 p
   = link_to "Régler mon acompte de #{deposit_amount}", @pay_url
@@ -28,10 +28,10 @@ p
     | C'est le règlement de cet acompte qui confirme définitivement votre
       réservation.
   |  Tant qu'il n'est pas reçu, les dates ne vous sont pas garanties. Dès qu'il
-    l'est, vous recevez la confirmation de votre séjour.
+    l'est, vous recevez la confirmation de votre réservation.
 
 p
-  | Vous pouvez consulter votre séjour à tout moment sur votre page :
+  | Vous pouvez consulter votre réservation à tout moment sur votre page :
   br
   = link_to @stay_url, @stay_url
 

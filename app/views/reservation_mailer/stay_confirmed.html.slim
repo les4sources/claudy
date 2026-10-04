@@ -3,7 +3,7 @@
 p Bonjour #{@stay.customer.first_name.presence || ""},
 
 p
-  | Bonne nouvelle : votre séjour aux 4 Sources est confirmé. Nous vous
+  | Bonne nouvelle : votre réservation aux 4 Sources est confirmée. Nous vous
     attendons !
 
 - if @stay.arrival_date && @stay.departure_date
@@ -12,10 +12,10 @@ p
     = " #{l(@stay.arrival_date, format: :long)} → #{l(@stay.departure_date, format: :long)}"
 
 p
-  | Tout votre séjour tient sur une page — ce qui est réservé, ce qui a été
+  | Toute votre réservation tient sur une page — ce qui est réservé, ce qui a été
     payé, ce qu'il reste à régler, et les informations pratiques pour venir :
 p
-  = link_to "Voir ma page de séjour", @stay_url
+  = link_to "Voir ma réservation", @stay_url
 p
   = link_to @stay_url, @stay_url
 
@@ -30,7 +30,7 @@ p
 / Le récapitulatif suit `any_public_composition?` et non `lines.any?` : un séjour
 / « activités seules » (aucun réservable) a bien un total à annoncer.
 - if @stay.any_public_composition?
-  h3 Votre séjour
+  h3 Votre réservation
   table(style="width: 100%; max-width: 480px; border-collapse: collapse;")
     tbody
       - lines.each do |line|
@@ -71,7 +71,7 @@ p
   p
     | Reste à régler :
       #{number_to_currency(@balance_due_cents / 100.0, unit: "€", format: "%n %u", precision: 2)}.
-      Vous pouvez le payer en ligne depuis votre page de séjour, ou sur place à
+      Vous pouvez le payer en ligne depuis votre page de réservation, ou sur place à
       votre arrivée.
 
 h3 Pain, épicerie et Pizza Party
@@ -84,7 +84,7 @@ p
 
 p
   | Si vous constatez une erreur ou qu'un détail a changé, écrivez-nous ou
-    utilisez le bouton « Demander une modification » sur votre page de séjour —
+    utilisez le bouton « Demander une modification » sur votre page de réservation —
     nous ajusterons tout ça.
 
 p Au plaisir de vous accueillir dans notre p'tit coin de paradis 🙂

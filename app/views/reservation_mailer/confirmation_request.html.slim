@@ -19,7 +19,7 @@ p
 p
   | Notre Pôle Accueil l'examine et vous envoie une pré-confirmation par
     email, avec le montant de l'acompte et son lien de paiement. C'est le
-    règlement de cet acompte qui confirmera définitivement votre séjour.
+    règlement de cet acompte qui confirmera définitivement votre réservation.
 
 - if @quote && @quote.lines.any?
   h3 Récapitulatif de votre devis
@@ -39,7 +39,7 @@ p
 - if @token
   - consultation_url = public_stay_url(@token, host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be"))
   p
-    | Vous pouvez consulter votre séjour à tout moment via ce lien :
+    | Vous pouvez consulter votre réservation à tout moment via ce lien :
     br
     = link_to consultation_url, consultation_url
 

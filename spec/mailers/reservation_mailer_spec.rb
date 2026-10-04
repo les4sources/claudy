@@ -155,7 +155,7 @@ RSpec.describe ReservationMailer, type: :mailer do
 
     it "adresse le mail au Customer" do
       expect(mail.to).to eq(["guest@example.com"])
-      expect(mail.subject).to include("confirmé")
+      expect(mail.subject).to eq("Votre réservation aux 4 Sources est confirmée 🌿")
     end
 
     it "porte le lien vers la page séjour (html ET texte)" do
@@ -244,7 +244,7 @@ RSpec.describe ReservationMailer, type: :mailer do
       end
 
       it "porte un objet qui suffit à trier la boîte sans ouvrir l'email" do
-        expect(mail.subject).to include("Nouvelle demande de séjour ##{built_stay.id}")
+        expect(mail.subject).to include("Nouvelle demande de réservation ##{built_stay.id}")
         expect(mail.subject).to include("Camille Martin (Les Copains)")
         expect(mail.subject).to include("·")
       end

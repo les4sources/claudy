@@ -93,7 +93,7 @@ class ReservationMailer < ApplicationMailer
 
     mail(
       to: stay.customer.email,
-      subject: "Votre séjour aux 4 Sources est confirmé 🌿",
+      subject: "Votre réservation aux 4 Sources est confirmée 🌿",
       tag: "stay_confirmed"
     )
   end
@@ -120,7 +120,7 @@ class ReservationMailer < ApplicationMailer
 
     mail(
       to: stay.customer.email,
-      subject: "Votre demande de séjour aux 4 Sources n'a pas pu être retenue",
+      subject: "Votre demande de réservation aux 4 Sources n'a pas pu être retenue",
       tag: "request_refused"
     )
   end
@@ -131,7 +131,10 @@ class ReservationMailer < ApplicationMailer
     ENV.fetch("APPLICATION_HOST", "app.les4sources.be")
   end
 
-  # « Nouvelle demande de séjour #1503 — Camille Martin (Les Copains) ·
+  # Objets des emails : « réservation », jamais « séjour » — certains clients ne
+  # viennent qu'une journée pour une salle (Michael, 2026-10-04).
+  #
+  # « Nouvelle demande de réservation #1503 — Camille Martin (Les Copains) ·
   # 5 → 9 oct. 2026 · 1 685 € » : l'objet doit suffire à trier une boîte en
   # diagonale, sans ouvrir l'email.
   def team_new_request_subject
@@ -140,7 +143,7 @@ class ReservationMailer < ApplicationMailer
     who   = "#{who} (#{group})" if group.present?
 
     details = [who, short_date_range(@stay), @stay.formatted_total].compact_blank
-    "Nouvelle demande de séjour ##{@stay.id} — #{details.join(' · ')}"
+    "Nouvelle demande de réservation ##{@stay.id} — #{details.join(' · ')}"
   end
 
   # Le nom de groupe vit sur les réservables (Booking, SpaceBooking…), jamais

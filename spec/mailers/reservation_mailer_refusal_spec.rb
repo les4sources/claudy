@@ -18,7 +18,7 @@ RSpec.describe ReservationMailer, "#request_refused", type: :mailer do
 
   it "adresse le mail au client, avec un objet qui ne laisse pas de doute" do
     expect(mail.to).to eq(["guest@example.com"])
-    expect(mail.subject).to match(/n'a pas pu être retenue/i)
+    expect(mail.subject).to eq("Votre demande de réservation aux 4 Sources n'a pas pu être retenue")
   end
 
   it "reprend les dates et le motif TEL QUEL (html ET texte)" do
@@ -64,7 +64,7 @@ RSpec.describe ReservationMailer, "#request_refused", type: :mailer do
   it "rend une prose propre (pas de mots collés ni de `= \"` littéral)" do
     html = mail.html_part.body.decoded.gsub(/\s+/, " ")
 
-    expect(html).to include("Nous ne pouvons malheureusement pas accueillir votre séjour du 5 octobre 2026 au 9 octobre 2026.")
+    expect(html).to include("Nous ne pouvons malheureusement pas donner suite à votre demande de réservation du 5 octobre 2026 au 9 octobre 2026.")
     expect(html).not_to include('= "')
   end
 
@@ -75,7 +75,7 @@ RSpec.describe ReservationMailer, "#request_refused", type: :mailer do
 
     it "se replie sur une formule sans dates plutôt que de lever" do
       expect { mail.text_part }.not_to raise_error
-      expect(mail.text_part.body.decoded).to include("votre demande de séjour")
+      expect(mail.text_part.body.decoded).to include("votre demande de réservation")
     end
   end
 
