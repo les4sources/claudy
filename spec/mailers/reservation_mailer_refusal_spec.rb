@@ -18,7 +18,7 @@ RSpec.describe ReservationMailer, "#request_refused", type: :mailer do
 
   it "adresse le mail au client, avec un objet qui ne laisse pas de doute" do
     expect(mail.to).to eq(["guest@example.com"])
-    expect(mail.subject).to match(/n'a pas pu être retenue/i)
+    expect(mail.subject).to eq("Votre demande de réservation aux 4 Sources n'a pas pu être retenue")
   end
 
   it "reprend les dates et le motif TEL QUEL (html ET texte)" do

@@ -16,6 +16,11 @@ RSpec.describe StayBalanceReminderMailer, type: :mailer do
     expect(mail.to).to eq(["solde@example.com"])
   end
 
+  # « Réservation », jamais « séjour », dans les objets (Michael, 2026-10-04).
+  it "parle de réservation dans l'objet" do
+    expect(mail.subject).to eq("Il reste un solde à régler pour votre réservation aux 4 Sources")
+  end
+
   it "pointe vers la page séjour à jeton (paiement du solde)" do
     # Le lien de la relance porte le jeton public du séjour → /sejour/:token.
     expect(mail.body.encoded).to include(stay.token)
