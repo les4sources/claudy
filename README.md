@@ -96,6 +96,19 @@ Générer un jeton : `ruby -rsecurerandom -e 'puts SecureRandom.urlsafe_base64(3
 > hot-reload (SIGUSR2) ne recharge pas l'environnement, et la route continuerait
 > de renvoyer 404 alors que la variable semble bien configurée.
 
+### Orthophoto partagée avec Semisto Designer
+
+Semisto Designer affiche l'orthophoto du domaine comme « vue drone » de la carte
+des 4 Sources. Son navigateur lit les tuiles chez Claudy, sans session, avec le
+jeton `?partage=…` comparé en temps constant à `MAP_TILES_SHARE_TOKEN`. Le jeton
+n'ouvre que la photo (`rgb`), jamais le relief ni la page Carte ; sans variable,
+rien n'est ouvert, et la vider révoque le partage. L'en-tête CORS n'est posé que
+pour les origines de `MAP_TILES_SHARE_ORIGINS` (défaut `https://designer.semisto.org`).
+
+Adresse à coller dans Designer (`/admin/drone-views`, format « Tuiles XYZ ») :
+`https://<hôte de Claudy>/map/tiles/<clé de la couche>/rgb/{z}/{x}/{y}.png?partage=<jeton>`.
+Même remarque que plus haut : un vrai redémarrage sur Hatchbox après avoir posé la variable.
+
 ## API publique et publication sur le site les4sources.be
 
 Le site public (repo `les4sources/les4sources-website`, Astro statique) lit Claudy **au build**, sans authentification, sur trois endpoints en lecture seule, cacheables cinq minutes avec ETag, sans aucune donnée personnelle. Le contrat de référence est `docs/CLAUDY.md` du repo du site.

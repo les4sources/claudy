@@ -18,6 +18,20 @@ class MapTilesController < BaseController
   skip_before_action :authenticate_user!, :enforce_active_member, :restrict_experience_carriers,
                      if: :stay_token_valid?
 
+  # Semisto Designer (designer.semisto.org) affiche l'orthophoto du domaine
+  # comme « vue drone » de la carte des 4 Sources : le navigateur y lit les
+  # tuiles ici, sans session Claudy. Un jeton de partage, passé en `?partage=`,
+  # ouvre la PHOTO (`rgb`) et rien d'autre — ni le relief, ni la page Carte.
+  # Comparé en temps constant à `ENV["MAP_TILES_SHARE_TOKEN"]` ; sans variable,
+  # rien n'est ouvert, et vider la variable révoque le partage. MapLibre lit
+  # les tuiles par `fetch` : l'en-tête CORS est posé pour les origines de
+  # `MAP_TILES_SHARE_ORIGINS` (défaut : Designer).
+  SHARE_ORIGINS = "https://designer.semisto.org".freeze
+
+  skip_before_action :authenticate_user!, :enforce_active_member, :restrict_experience_carriers,
+                     if: :share_token_valid?
+  before_action :allow_shared_origin, if: :share_token_valid?
+
   def show
     layer = MapBaseLayer.find_by(key: params[:key])
     return head :not_found if layer.nil?
@@ -44,6 +58,24 @@ class MapTilesController < BaseController
     return nil if z.negative? || x.negative? || y.negative?
 
     layer.tiles_root.join(params[:kind], z.to_s, x.to_s, "#{y}.png").to_s
+  end
+
+  def share_token_valid?
+    return @share_token_valid if defined?(@share_token_valid)
+
+    expected = ENV["MAP_TILES_SHARE_TOKEN"].to_s
+    provided = params[:partage].to_s
+    @share_token_valid = params[:kind] == "rgb" && expected.present? && provided.present? &&
+                         ActiveSupport::SecurityUtils.secure_compare(provided, expected)
+  end
+
+  def allow_shared_origin
+    allowed = ENV.fetch("MAP_TILES_SHARE_ORIGINS", SHARE_ORIGINS).split(",").map(&:strip)
+    origin = request.headers["Origin"].to_s
+    return unless allowed.include?(origin)
+
+    response.set_header("Access-Control-Allow-Origin", origin)
+    response.set_header("Vary", "Origin")
   end
 
   def stay_token_valid?
