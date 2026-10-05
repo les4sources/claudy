@@ -158,6 +158,22 @@ RSpec.describe CashEntry do
                               amount_cents: 500, label: "Régularisation caisse")
       expect(CashEntry.matching("regularisation")).to contain_exactly(nue)
     end
+
+    # Les index trigrammes portent sur l'expression EXACTE de la requête :
+    # toucher à `ACCENTS` ou à la forme du `translate` sans refaire la
+    # migration les rendrait muets, et la file relirait toute la table.
+    it "passe par les index trigrammes" do
+      plan = CashEntry.transaction do
+        # Trois lignes en test : sans ça, relire la table gagne toujours.
+        CashEntry.connection.execute("SET LOCAL enable_seqscan = off")
+        CashEntry.connection.execute("SET LOCAL enable_indexscan = off")
+        CashEntry.unscoped.matching("epicerie").explain.inspect
+      end
+
+      %w[label communication counterparty_name].each do |colonne|
+        expect(plan).to include("index_cash_entries_on_#{colonne}_trgm")
+      end
+    end
   end
 
 end
