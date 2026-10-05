@@ -48,7 +48,19 @@ module Mcp
       Tools::Activites::CreerCreneau,
       Tools::Activites::SupprimerCreneau,
       Tools::Activites::EnregistrerActivite,
-      Tools::Activites::PublierActivite
+      Tools::Activites::PublierActivite,
+      Tools::Cuisine::PrestationsCuisine,
+      Tools::Cuisine::FichePrestation,
+      Tools::Cuisine::BilanCuisine,
+      Tools::Cuisine::ReglagesCuisine,
+      Tools::Cuisine::CommanderPrestations,
+      Tools::Cuisine::ModifierPrestation,
+      Tools::Cuisine::ChangerStatutPrestation,
+      Tools::Cuisine::RepondrePrestation,
+      Tools::Cuisine::ConfierPrestation,
+      Tools::Cuisine::RattacherPrestation,
+      Tools::Cuisine::EnregistrerProduitCuisine,
+      Tools::Cuisine::ModifierReglagesCuisine
     ].freeze
 
     INSTRUCTIONS = <<~TEXT.freeze
@@ -69,6 +81,15 @@ module Mcp
       valider » par le porteur puis confirmée. Après le créneau, on déclare sa
       tenue (a eu lieu / n'a pas eu lieu), ce qui ouvre la rémunération du
       porteur. File de travail : reservations_activites.
+
+      CUISINE. Une prestation (#123) est UN service : un repas (midi ou soir,
+      cuisiné par Stéphanie), un goûter, un buffet ou un apéro, pour un séjour
+      ou pour quelqu'un sans séjour. Deux états : le statut côté client (demande
+      d'info, demande ferme, confirmé, annulé) et la réponse de la cuisine (en
+      attente, acceptée, refusée). Pour un buffet ou un apéro, se charger vaut
+      acceptation. Files de travail : prestations_cuisine vue « cuisine » (la
+      cuisine doit répondre) et vue « accueil » (client à relancer, refus à
+      couvrir). Les emails de la cuisine vont à l'équipe, jamais au client.
 
       COMPTES COURANTS des familles et des personnes (SRC-0001…). Le grand
       livre : chaque ligne a un montant SIGNÉ (positif = dû par le compte,
