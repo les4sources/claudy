@@ -30,35 +30,41 @@
       div
         = f.label :communication_contains, "La communication contient", class: "block text-sm font-medium text-gray-700"
         = f.text_field :communication_contains, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-      div
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Les deux sens" data-searchable-select-clearable-value="true" class="relative")
         = f.label :direction, "Sens", class: "block text-sm font-medium text-gray-700"
-        = f.select :direction, AllocationRule::DIRECTION_LABELS.map { |v, l| [l, v] }, { include_blank: "Les deux" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+        = f.select :direction, AllocationRule::DIRECTION_LABELS.map { |v, l| [l, v] }, { include_blank: "Les deux" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un sens"
       div
         = f.label :min_amount, "Montant minimum (€)", class: "block text-sm font-medium text-gray-700"
         = f.text_field :min_amount, value: rule.min_amount_cents ? number_with_precision(rule.min_amount_cents / 100.0, precision: 2, separator: ",") : nil, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
       div
         = f.label :max_amount, "Montant maximum (€)", class: "block text-sm font-medium text-gray-700"
         = f.text_field :max_amount, value: rule.max_amount_cents ? number_with_precision(rule.max_amount_cents / 100.0, precision: 2, separator: ",") : nil, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-      div
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Tous les comptes" data-searchable-select-clearable-value="true" class="relative")
         = f.label :cash_account_id, "Compte de trésorerie", class: "block text-sm font-medium text-gray-700"
-        = f.collection_select :cash_account_id, CashAccount.ordered, :id, :name, { include_blank: "Tous" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+        = f.collection_select :cash_account_id, CashAccount.ordered, :id, :name, { include_blank: "Tous" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un compte de trésorerie"
         p.mt-1.text-xs.text-gray-500 Limite la règle aux lignes de ce compte. Ne suffit pas seul : ajoute au moins un autre critère.
 
   .p-4.bg-white.rounded-lg.border.border-gray-100
     h3.mb-3.text-sm.font-semibold.text-gray-900 …propose cette affectation
     .grid.gap-4(class="md:grid-cols-2")
-      div
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" class="relative")
         = f.label :general_account_id, "Compte général *", class: "block text-sm font-medium text-gray-700"
-        = f.collection_select :general_account_id, GeneralAccount.actives.ordered, :id, :to_s, { include_blank: "Choisir…" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-      div
+        = f.collection_select :general_account_id, GeneralAccount.actives.ordered, :id, :to_s, { include_blank: "Choisir…" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un compte général"
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une entité…" class="relative")
         = f.label :legal_entity_id, "Entité *", class: "block text-sm font-medium text-gray-700"
-        = f.collection_select :legal_entity_id, LegalEntity.actives.ordered, :id, :name, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-      div
+        = f.collection_select :legal_entity_id, LegalEntity.actives.ordered, :id, :name, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher une entité"
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Non affecté" data-searchable-select-clearable-value="true" class="relative")
         = f.label :team_id, "Pôle", class: "block text-sm font-medium text-gray-700"
-        = f.collection_select :team_id, Team.ordered, :id, :name, { include_blank: "Non affecté" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-      div
+        = f.collection_select :team_id, Team.ordered, :id, :name, { include_blank: "Non affecté" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un pôle"
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucun événement" data-searchable-select-clearable-value="true" class="relative")
         = f.label :event_id, "Événement", class: "block text-sm font-medium text-gray-700"
-        = f.collection_select :event_id, Event.where("starts_at >= ?", 18.months.ago).order(starts_at: :desc), :id, ->(e) { "#{e.name} — #{l(e.starts_at.to_date, format: :short)}" }, { include_blank: "Aucun" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+        = f.collection_select :event_id, Event.where("starts_at >= ?", 18.months.ago).order(starts_at: :desc), :id, ->(e) { "#{e.name} — #{l(e.starts_at.to_date, format: :short)}" }, { include_blank: "Aucun" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un événement"
         p.mt-1.text-xs.text-gray-500
           | « La communication contient STAGE LOWTECH » proposera aussi l'événement. La règle propose ; elle n'affecte jamais.
 
