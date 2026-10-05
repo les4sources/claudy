@@ -30,6 +30,11 @@ module Mcp
 
       def self.read_only? = false
 
+      # Un outil qui prévient quelqu'un (email au client, à la cuisine) laisse
+      # le service métier tenir SA transaction : l'email ne part qu'une fois
+      # l'écriture validée, jamais pour une écriture ensuite annulée.
+      def self.transactionnel? = true
+
       def self.tool(name, title:, description:, schema:)
         schema = schema.deep_dup
         schema[:properties] = { motif: MOTIF }.merge(schema.fetch(:properties, {})).merge(confirmation: CONFIRMATION)
@@ -48,7 +53,7 @@ module Mcp
 
         verifier!(code, plan)
         resultat = PaperTrail.request(whodunnit: whodunnit) do
-          ApplicationRecord.transaction { appliquer(plan) }
+          self.class.transactionnel? ? ApplicationRecord.transaction { appliquer(plan) } : appliquer(plan)
         end
         "#{resultat}\n\nÉcrit dans Claudy. Historique signé « #{whodunnit} »."
       end
@@ -80,6 +85,21 @@ module Mcp
           end
         end
         apres
+      end
+
+      # Joue `yield` pour de faux : dans un point de sauvegarde annulé, sans
+      # historique. Sert aux aperçus qui doivent montrer le RÉSULTAT (total
+      # recalculé, avertissements). À réserver aux services qui n'envoient pas
+      # d'email : un email parti ne s'annule pas avec la transaction.
+      def simuler
+        resultat = nil
+        PaperTrail.request(enabled: false) do
+          ApplicationRecord.transaction(requires_new: true) do
+            resultat = yield
+            raise ActiveRecord::Rollback
+          end
+        end
+        resultat
       end
 
       def postes_dus(compte)

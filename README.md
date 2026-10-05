@@ -140,9 +140,11 @@ Contrat de l'API côté Tranches de Vie : `les4sources/tranchesdevie2#290`.
 
 ## Connecteur Claude (serveur MCP)
 
-Claudy expose un serveur MCP à `https://app.les4sources.be/mcp` : branché comme connecteur dans Claude, il remplace les scripts collés dans la console Rails pour diagnostiquer et corriger les comptes des familles.
+Claudy expose un serveur MCP à `https://app.les4sources.be/mcp` : branché comme connecteur dans Claude, il fait ce que fait l'interface, domaine par domaine, avec des outils métier écrits à la main (`app/services/mcp/tools/`). Pas d'exécution de code arbitraire.
 
-**Outils.** En lecture : `chercher_comptes`, `diagnostic_compte`, `lignes_compte`, `poste_par_mois`, `virements_recus`, `historique_ligne`. En écriture : `supprimer_lignes` (suppression douce), `contre_passer_lignes`, `passer_ecriture`, `abandonner_dette`, `encoder_reglement`. Pas d'exécution de code arbitraire.
+**Comptes courants.** En lecture : `chercher_comptes`, `diagnostic_compte`, `lignes_compte`, `poste_par_mois`, `virements_recus`, `historique_ligne`. En écriture : `supprimer_lignes` (suppression douce), `contre_passer_lignes`, `passer_ecriture`, `abandonner_dette`, `encoder_reglement`.
+
+**Séjours et clients** (`tools/sejours/`). En lecture : `chercher_sejours`, `fiche_sejour`, `disponibilites`, `devis_sejour`, `chercher_clients`, `fiche_client`. En écriture : `creer_sejour`, `modifier_sejour`, `changer_statut_sejour`, `preconfirmer_sejour`, `refuser_sejour`, `renvoyer_confirmation`, `traiter_demande_modification`, `noter_sejour`, `enregistrer_paiement_sejour`, `modifier_paiement_sejour`, `supprimer_sejour`, `modifier_client`. Ils passent par les mêmes services que les écrans (`Reservations::Builder`, `Stays::AdminUpdater`, `Stays::QuickStatusUpdater`…) ; ceux qui envoient un email au client le disent dans leur description et dans leur aperçu.
 
 **Aperçu puis confirmation.** Un outil d'écriture n'écrit jamais au premier appel : il décrit ce qu'il ferait, avec ce que le compte devra encore après, et rend un code de confirmation signé (15 minutes). Rappelé avec ce code, il recalcule le plan et refuse s'il a changé. Tout est signé dans PaperTrail `claude:<e-mail> — <motif>`.
 
