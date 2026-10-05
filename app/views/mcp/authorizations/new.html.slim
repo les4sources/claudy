@@ -1,0 +1,17 @@
+.flex.min-h-full.items-center.justify-center.px-4.py-12
+  .w-full.max-w-md.space-y-6
+    = vite_image_tag "images/les-4-sources-logo-seul.png", class: "h-10 w-auto", alt: "Les 4 Sources"
+    h1.text-2xl.font-bold.text-4s-main.font-averia Brancher Claude sur Claudy
+    p.text-sm.text-gray-700
+      | « #{@client.display_name} » demande à agir dans Claudy en ton nom (#{current_user.email}).
+    ul.list-disc.space-y-1.pl-5.text-sm.text-gray-700
+      li Lire les comptes des familles : soldes, postes dus, lignes, virements reçus.
+      li
+        | Corriger ces comptes (supprimer ou contre-passer une ligne, passer une écriture, encoder un règlement).
+        |  Chaque correction montre d'abord un aperçu et n'est écrite qu'après ton accord.
+      li Tout ce qu'il écrit est signé de ton compte dans l'historique.
+    = form_with url: mcp_authorization_path, method: :post, data: { turbo: false }, class: "flex gap-3" do
+      - @oauth.each do |key, value|
+        = hidden_field_tag key, value
+      button.rounded-md.bg-4s-main.px-4.py-2.text-sm.font-semibold.text-white(type="submit" name="decision" value="allow") Autoriser
+      button.rounded-md.px-4.py-2.text-sm.font-semibold.text-gray-700.ring-1.ring-inset.ring-gray-300(type="submit" name="decision" value="deny") Refuser

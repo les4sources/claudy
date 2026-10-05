@@ -1054,6 +1054,22 @@ Rails.application.routes.draw do
     end
   end
 
+  # Serveur MCP (Michael, 2026-10-05) : Claude branché sur Claudy comme
+  # connecteur claude.ai. `/mcp` parle JSON-RPC ; le reste est le serveur OAuth
+  # qui l'authentifie (découverte, enregistrement du client, consentement,
+  # jetons). Voir `app/services/mcp/server.rb`.
+  scope module: :mcp do
+    post "mcp", to: "server#handle", as: :mcp
+    match "mcp", to: "server#unsupported", via: %i[get delete]
+    get ".well-known/oauth-protected-resource(/*resource)", to: "oauth#protected_resource", format: false
+    get ".well-known/oauth-authorization-server(/*issuer)", to: "oauth#authorization_server", format: false
+    get ".well-known/openid-configuration", to: "oauth#authorization_server"
+    post "oauth/register", to: "oauth#register", as: :mcp_oauth_register
+    post "oauth/token", to: "oauth#token", as: :mcp_oauth_token
+    get "oauth/authorize", to: "authorizations#new", as: :mcp_authorization
+    post "oauth/authorize", to: "authorizations#create"
+  end
+
   # Defines the root path route ("/")
   root "pages#calendar"
 end

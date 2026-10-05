@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_04_220000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_05_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1579,6 +1579,47 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_220000) do
     t.index ["subject_type", "subject_id"], name: "index_map_tasks_on_subject_type_and_subject_id"
   end
 
+  create_table "mcp_clients", force: :cascade do |t|
+    t.string "client_id", null: false
+    t.datetime "created_at", null: false
+    t.string "name"
+    t.string "redirect_uris", default: [], null: false, array: true
+    t.datetime "updated_at", null: false
+    t.index ["client_id"], name: "index_mcp_clients_on_client_id", unique: true
+  end
+
+  create_table "mcp_grants", force: :cascade do |t|
+    t.string "code_challenge", null: false
+    t.string "code_digest", null: false
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.bigint "mcp_client_id", null: false
+    t.string "redirect_uri", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "used_at"
+    t.bigint "user_id", null: false
+    t.index ["code_digest"], name: "index_mcp_grants_on_code_digest", unique: true
+    t.index ["mcp_client_id"], name: "index_mcp_grants_on_mcp_client_id"
+    t.index ["user_id"], name: "index_mcp_grants_on_user_id"
+  end
+
+  create_table "mcp_tokens", force: :cascade do |t|
+    t.string "access_digest", null: false
+    t.datetime "access_expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "last_used_at"
+    t.bigint "mcp_client_id", null: false
+    t.string "refresh_digest", null: false
+    t.datetime "refresh_expires_at", null: false
+    t.datetime "revoked_at"
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["access_digest"], name: "index_mcp_tokens_on_access_digest", unique: true
+    t.index ["mcp_client_id"], name: "index_mcp_tokens_on_mcp_client_id"
+    t.index ["refresh_digest"], name: "index_mcp_tokens_on_refresh_digest", unique: true
+    t.index ["user_id"], name: "index_mcp_tokens_on_user_id"
+  end
+
   create_table "meal_orders", force: :cascade do |t|
     t.datetime "bread_reminder_sent_at"
     t.text "cancellation_reason"
@@ -2761,6 +2802,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_220000) do
   add_foreign_key "map_notes", "users", column: "author_id"
   add_foreign_key "map_sketches", "users", column: "created_by_id"
   add_foreign_key "map_tasks", "users", column: "created_by_id"
+  add_foreign_key "mcp_grants", "mcp_clients"
+  add_foreign_key "mcp_grants", "users"
+  add_foreign_key "mcp_tokens", "mcp_clients"
+  add_foreign_key "mcp_tokens", "users"
   add_foreign_key "meal_orders", "humans", column: "responsible_human_id"
   add_foreign_key "meal_orders", "stays"
   add_foreign_key "member_accounts", "households"

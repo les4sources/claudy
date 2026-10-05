@@ -138,6 +138,23 @@ Le rattachement est **manuel** et la relation est en **lecture seule** : Claudy 
 
 Contrat de l'API côté Tranches de Vie : `les4sources/tranchesdevie2#290`.
 
+## Connecteur Claude (serveur MCP)
+
+Claudy expose un serveur MCP à `https://app.les4sources.be/mcp` : branché comme connecteur dans Claude, il remplace les scripts collés dans la console Rails pour diagnostiquer et corriger les comptes des familles.
+
+**Outils.** En lecture : `chercher_comptes`, `diagnostic_compte`, `lignes_compte`, `poste_par_mois`, `virements_recus`, `historique_ligne`. En écriture : `supprimer_lignes` (suppression douce), `contre_passer_lignes`, `passer_ecriture`, `abandonner_dette`, `encoder_reglement`. Pas d'exécution de code arbitraire.
+
+**Aperçu puis confirmation.** Un outil d'écriture n'écrit jamais au premier appel : il décrit ce qu'il ferait, avec ce que le compte devra encore après, et rend un code de confirmation signé (15 minutes). Rappelé avec ce code, il recalcule le plan et refuse s'il a changé. Tout est signé dans PaperTrail `claude:<e-mail> — <motif>`.
+
+**Connexion.** OAuth 2.1 avec PKCE et enregistrement dynamique du client : Claude ouvre la page « Brancher Claude sur Claudy », on s'y connecte avec son compte Claudy et on autorise. Seules les adresses de retour de Claude (`claude.ai`, `claude.com`, `localhost`) sont acceptées. Jeton d'accès d'une heure, rafraîchissement de trente jours qui tourne à chaque usage ; supprimer les lignes de `mcp_tokens` coupe l'accès.
+
+| Variable | Défaut | Rôle |
+|---|---|---|
+| `MCP_ALLOWED_EMAILS` | — | Comptes Claudy autorisés à brancher Claude, séparés par des virgules. **Vide = personne.** Retirer une adresse coupe ses jetons sur-le-champ. |
+| `MCP_BASE_URL` | `https://<hôte de la requête>` | Adresse publique annoncée dans les métadonnées OAuth, si elle diffère. |
+
+**Ajouter le connecteur** : dans Claude, Personnaliser → Connecteurs → « Ajouter un connecteur personnalisé », URL `https://app.les4sources.be/mcp`, sans identifiants OAuth (Claude s'enregistre seul). En ligne de commande : `claude mcp add --transport http claudy https://app.les4sources.be/mcp`.
+
 ## Tâches planifiées (cron Hatchbox)
 
 Claudy envoie plusieurs emails par des tâches rake idempotentes, lancées par le cron de Hatchbox. Toutes sont sans effet si on les rejoue : elles horodatent ce qu'elles ont envoyé.
