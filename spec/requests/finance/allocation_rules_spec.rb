@@ -55,6 +55,24 @@ RSpec.describe "Finances > Rapprochement assisté", type: :request do
       get finance_allocation_rules_path
       expect(response.body).to include("compte Beobank SRL")
     end
+
+    # Listes déroulantes = toujours cherchables (Michael, 2026-09-30). Les choix
+    # facultatifs doivent pouvoir revenir à « Tous » / « Aucun ».
+    it "rend chaque liste du formulaire cherchable" do
+      get new_finance_allocation_rule_path
+      doc = Nokogiri::HTML(response.body)
+
+      %w[direction cash_account_id general_account_id legal_entity_id team_id event_id].each do |champ|
+        expect(doc.at_css("[data-controller~='searchable-select'] select[name='allocation_rule[#{champ}]']"))
+          .to be_present, "#{champ} n'est pas cherchable"
+      end
+      expect(doc.css("select").size).to eq(6)
+
+      %w[direction cash_account_id team_id event_id].each do |champ|
+        conteneur = doc.at_css("select[name='allocation_rule[#{champ}]']").parent
+        expect(conteneur["data-searchable-select-clearable-value"]).to eq("true"), "#{champ} doit pouvoir se vider"
+      end
+    end
   end
 
   # Issue #289 — l'écran existait sans porte d'entrée. La sous-navigation
