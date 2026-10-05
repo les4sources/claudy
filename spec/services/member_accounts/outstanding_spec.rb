@@ -172,6 +172,51 @@ RSpec.describe MemberAccounts::Outstanding do
     verifie_invariant
   end
 
+  # La famille Vanhamme (2026-10-05) : chaque paiement de bar repris porte le
+  # mois qu'il règle. Imputé au plus ancien, il comblait un trou d'avril 2024
+  # et faisait apparaître mai 2026 impayé — alors que c'est avril 2024 qui
+  # l'était.
+  describe "un règlement qui nomme son mois" do
+    def reglement_repris(date, cents, reference, flow: "bar")
+      Finance::RecordSettlement.new(member_account: account, amount_cents: cents, received_on: date,
+                                    reference: reference, flow: flow).run!
+    end
+
+    before do
+      conso(Date.new(2024, 4, 30), 5_867, label: "Bar avril 2024")
+      conso(Date.new(2026, 5, 31), 8_063, label: "Bar mai 2026")
+    end
+
+    it "éteint le mois qu'il nomme, pas le plus ancien" do
+      reglement_repris(Date.new(2026, 6, 30), 8_063, "reprise-bar:2026-05")
+
+      calcul = described_class.new(account)
+
+      expect(poste(calcul, "bar").lignes.map(&:label)).to eq(["Bar avril 2024"])
+      expect(calcul.total_cents).to eq(5_867)
+      verifie_invariant
+    end
+
+    it "renvoie son reliquat au plus ancien" do
+      reglement_repris(Date.new(2026, 6, 30), 10_000, "reprise-bar:2026-05")
+
+      lignes = poste(described_class.new(account), "bar").lignes
+
+      expect(lignes.map(&:label)).to eq(["Bar avril 2024"])
+      expect(lignes.sole.amount_cents).to eq(5_867 - 1_937)
+      verifie_invariant
+    end
+
+    # « triodos-2026:SRC-0002:2026-08-11:2 » porte la date de réception, pas le
+    # mois réglé : il reste imputé au plus ancien.
+    it "ne lit pas un mois dans une autre référence" do
+      reglement_repris(Date.new(2026, 6, 30), 5_867, "triodos-2026:SRC-0002:2026-05-31:2")
+
+      expect(poste(described_class.new(account), "bar").lignes.map(&:label)).to eq(["Bar mai 2026"])
+      verifie_invariant
+    end
+  end
+
   describe "#poste" do
     it "rend le détail d'un poste, des lignes les plus anciennes aux plus récentes" do
       conso(Date.new(2026, 7, 31), 800, label: "Vin rouge")
