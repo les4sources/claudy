@@ -48,7 +48,10 @@ module Finance
       raise MissingAccount, "Aucun compte membre à créditer." if @account.blank?
       raise WrongDirection, "Un règlement s'encaisse depuis une ligne ENTRANTE." unless @entry.amount_cents.positive?
 
-      du = @account.balance_cents
+      # Ce que le compte doit encore POSTE PAR POSTE, pas son solde global : une
+      # avance sur les charges n'éteint pas une dette de bar, et ne doit pas
+      # empêcher d'encaisser le virement qui la paie.
+      du = MemberAccounts::Outstanding.new(@account).total_cents
       raise NotDebtor, "#{@account.name} ne doit rien — il n'y a pas de dette à éteindre." unless du.positive?
 
       montant = @amount_cents || [@entry.amount_cents, du].min

@@ -18,11 +18,18 @@ module Finance
   # humain, faillible. Le montant exact ne dit rien tout seul — deux ménages
   # peuvent devoir la même somme.
   #
-  # SEULS LES COMPTES DÉBITEURS SONT PROPOSÉS. Un compte à zéro ou créditeur n'a
+  # SEULS LES COMPTES DÉBITEURS SONT PROPOSÉS. Un compte qui ne doit rien n'a
   # pas de dette en face : y imputer un virement le mettrait en faux crédit. Ça
   # borne du même coup les virements qui n'ont rien à faire au grand livre des
   # membres — épicerie, pain, cagnotte, pension d'animaux : sans charge en face,
   # pas de proposition.
+  #
+  # « Débiteur » se lit POSTE PAR POSTE, comme le lettrage (Michael,
+  # 2026-10-05). Un ménage en avance de 310 € sur ses charges et qui doit 120 €
+  # de bar a un solde global créditeur — et c'est pourtant le bar qu'il vient
+  # de payer. Lu au solde global, ce virement n'était jamais proposé, et ses
+  # notes de bar restaient « non payées » alors qu'elles l'étaient (famille
+  # Vanhamme, bar de mai et juin 2026).
   class MatchMemberSettlements
     Match = Struct.new(:member_account, :due_cents, :reason, :confidence, :flow, keyword_init: true) do
       def flow_label = AccountEntry::FLOW_LABELS.fetch(flow, "Divers")
@@ -104,26 +111,18 @@ module Finance
       motif = POSTES_PAR_MOTIF.find { |regex, _| entry.communication.to_s.match?(regex) }
       return motif.last if motif
 
-      poste_le_plus_lourd.fetch(compte.id, "other")
+      poste_le_plus_lourd(compte)
     end
 
     # À défaut de motif dans la communication, le poste qui doit le plus. Il se
-    # calcule en UNE requête groupée pour toute la page : passer par
-    # `MemberAccounts::Outstanding` donnerait un lettrage complet par compte et
-    # par ligne, ce qui est précisément ce qui avait fait tomber cet écran à
-    # l'issue #202. C'est une présélection, pas une vérité — l'humain tranche.
-    def poste_le_plus_lourd
-      @poste_le_plus_lourd ||= AccountEntry
-                               .where(member_account_id: debtors.map { |compte, _| compte.id })
-                               .group(:member_account_id, :flow)
-                               .sum(:amount_cents)
-                               .each_with_object({}) do |((account_id, flow), cents), hash|
-                                 next unless cents.positive?
-
-                                 courant = hash[account_id]
-                                 hash[account_id] = [flow || "other", cents] if courant.nil? || cents > courant.last
-                               end
-                               .transform_values(&:first)
+    # lit dans les soldes par poste déjà chargés pour toute la page : passer par
+    # `MemberAccounts::Outstanding#postes` donnerait un lettrage complet par
+    # compte et par ligne, ce qui est précisément ce qui avait fait tomber cet
+    # écran à l'issue #202. C'est une présélection, pas une vérité — l'humain
+    # tranche.
+    def poste_le_plus_lourd(compte)
+      flow, cents = nets.fetch(compte.id, {}).max_by { |_, montant| montant }
+      cents.to_i.positive? ? flow : "other"
     end
 
     # La communication est saisie par l'habitant : elle arrive avec des espaces,
@@ -157,16 +156,19 @@ module Finance
       [compte.name, *household_names.fetch(compte.household_id, [])].compact_blank.uniq
     end
 
-    # Les comptes DÉBITEURS et leur solde, en une seule requête groupée
-    # (`MemberAccounts::Summary` fait le travail pour l'écran de liste). Sans ça,
-    # calculer le solde de chaque compte pour chaque ligne de la page ferait
-    # exploser le nombre de requêtes.
+    # Les comptes DÉBITEURS et ce qu'ils doivent, poste par poste, en une seule
+    # requête groupée. Sans ça, calculer la dette de chaque compte pour chaque
+    # ligne de la page ferait exploser le nombre de requêtes.
     def debtors
-      @debtors ||= begin
-        comptes = @accounts || MemberAccounts::Summary.new(MemberAccount.actives.ordered).accounts
-        comptes.filter_map { |compte| [compte, compte.balance_cents] if compte.balance_cents.positive? }
+      @debtors ||= comptes.filter_map do |compte|
+        du = MemberAccounts::Outstanding.du(nets.fetch(compte.id, {}))
+        [compte, du] if du.positive?
       end
     end
+
+    def comptes = @comptes ||= (@accounts || MemberAccount.actives.ordered).to_a
+
+    def nets = @nets ||= MemberAccounts::Outstanding.nets_par_poste(comptes)
 
     # Les IBAN déjà rapprochés sur chaque compte, par la trace que laisse
     # `RecordMemberSettlement` : une `CashAllocation` dont le document est le
