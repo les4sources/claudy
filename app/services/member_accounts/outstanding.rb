@@ -30,6 +30,15 @@ module MemberAccounts
   # l'historique a été repris par `rake finance:backfill_settlement_flows`.
   # Un règlement sans poste identifié tombe dans « Divers », où il n'éteint que
   # du « Divers » — visible, donc réparable.
+  #
+  # UN RÈGLEMENT QUI NOMME SON MOIS PAIE CE MOIS-LÀ (Michael, 2026-10-05). La
+  # reprise a laissé sur chaque paiement de bar le mois qu'il réglait
+  # (« reprise-bar:2026-05 »). Imputé au plus ancien, il partait combler un
+  # trou d'avril 2024, et la famille Vanhamme voyait mai et juin 2026 réclamés
+  # alors qu'elle les avait payés — le vrai trou, lui, restait invisible. Ce
+  # règlement éteint donc d'abord les dettes du mois qu'il nomme ; seul son
+  # reliquat repart au plus ancien. Le total dû ne bouge pas : c'est la
+  # DATATION de ce qui reste dû qui devient juste.
   class Outstanding
     # L'ordre d'affichage. Fixe, pas trié par montant : un tableau dont les
     # lignes changent de place d'un compte à l'autre se relit à chaque fois.
@@ -38,9 +47,15 @@ module MemberAccounts
 
     # Une ligne encore due : ce qu'il en reste après imputation des règlements,
     # pas son montant d'origine.
-    Ligne = Struct.new(:entry_date, :label, :flow, :amount_cents, keyword_init: true) do
+    Ligne = Struct.new(:entry_date, :label, :flow, :amount_cents, :mois_vise, keyword_init: true) do
       def flow_label = AccountEntry::FLOW_LABELS[flow]
     end
+
+    # « reprise-bar:2026-05 », « reprise-charges:2025-11 » : la référence que
+    # la reprise comptable pose sur un règlement mensuel. La forme est stricte
+    # exprès — « triodos-2026:SRC-0002:2026-08-11:2 » porte une date de
+    # RÉCEPTION, pas le mois réglé, et ne doit rien viser.
+    MOIS_VISE = /\Areprise-[a-z-]+:(\d{4})-(\d{2})\z/
 
     # Un poste et ce qu'il doit encore. `advance_cents` est son contraire : ce
     # qui a été versé au-delà de ce que le poste réclamait.
@@ -145,17 +160,19 @@ module MemberAccounts
           reste -= impute
           ouverts << mouvement.dup.tap { |m| m.amount_cents = reste } if reste.positive?
         else
-          reserve += eteindre(ouverts, -mouvement.amount_cents)
+          reserve += eteindre(ouverts, -mouvement.amount_cents, mouvement.mois_vise)
         end
       end
 
       reserve
     end
 
-    # Impute un règlement sur les dettes ouvertes les plus anciennes du poste ;
-    # rend ce qui n'a rien trouvé à éteindre.
-    def eteindre(ouverts, montant)
-      ouverts.each do |ligne|
+    # Impute un règlement sur les dettes ouvertes du poste — celles du mois
+    # qu'il nomme d'abord, s'il en nomme un, puis les plus anciennes ; rend ce
+    # qui n'a rien trouvé à éteindre.
+    def eteindre(ouverts, montant, mois_vise = nil)
+      cibles = mois_vise ? ouverts.partition { |ligne| ligne.entry_date.beginning_of_month == mois_vise }.flatten : ouverts
+      cibles.each do |ligne|
         break if montant.zero?
 
         impute = [ligne.amount_cents, montant].min
@@ -192,10 +209,19 @@ module MemberAccounts
                 amount_cents: @account.opening_balance_cents)
     end
 
+    def mois_vise(entry)
+      return nil unless entry.amount_cents.negative?
+
+      annee, mois = entry.account_settlement&.reference.to_s.match(MOIS_VISE)&.captures
+      annee && Date.new(annee.to_i, mois.to_i, 1)
+    rescue Date::Error
+      nil
+    end
+
     def ecritures
-      @account.account_entries.chronological.map do |entry|
+      @account.account_entries.chronological.includes(:account_settlement).map do |entry|
         Ligne.new(entry_date: entry.entry_date, label: entry.label.presence || entry.flow_label,
-                  flow: entry.flow, amount_cents: entry.amount_cents)
+                  flow: entry.flow, amount_cents: entry.amount_cents, mois_vise: mois_vise(entry))
       end
     end
   end
