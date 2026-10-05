@@ -54,6 +54,32 @@ module MemberAccounts
       @account = member_account
     end
 
+    # Ce que doivent PLUSIEURS comptes, poste par poste, en une seule requête
+    # groupée : `{ account_id => { "bar" => 12_000, "charges" => -31_000 } }`.
+    #
+    # Le FIFO d'un poste ne laisse jamais à la fois une dette ouverte et une
+    # avance (cf. `imputer`) : ce que le poste doit encore vaut donc son solde
+    # net s'il est positif, zéro sinon. D'où `.du`, qui rend le même total que
+    # `#total_cents` sans dérouler le lettrage — c'est ce dernier, ligne à ligne
+    # et compte par compte, qui avait fait tomber l'écran « À affecter » à
+    # l'issue #202.
+    def self.nets_par_poste(accounts)
+      nets = accounts.to_h { |compte| [compte.id, Hash.new(0)] }
+      return nets if nets.empty?
+
+      AccountEntry.where(member_account_id: nets.keys).group(:member_account_id, :flow).sum(:amount_cents)
+                  .each { |(id, flow), cents| nets[id][flow.presence || SANS_POSTE] += cents }
+      # Le solde d'ouverture entre dans « Divers », comme dans `ouverture`.
+      accounts.each { |compte| nets[compte.id][SANS_POSTE] += compte.opening_balance_cents }
+      nets
+    end
+
+    # Le total encore dû d'après les soldes nets de `nets_par_poste` : une avance
+    # sur un poste n'éteint PAS la dette d'un autre.
+    def self.du(nets_d_un_compte)
+      nets_d_un_compte.values.sum { |cents| [cents, 0].max }
+    end
+
     # Les postes encore dus, dans l'ordre canonique. Un poste soldé n'y est pas.
     def postes
       calcul[:postes]

@@ -125,11 +125,40 @@ RSpec.describe Finance::RecordMemberSettlement do
 
     it "refuse un compte créditeur" do
       entry = entrante(7_500)
-      compte.account_entries.create!(entry_date: Date.new(2026, 9, 2), kind: "settlement", flow: "other",
+      compte.account_entries.create!(entry_date: Date.new(2026, 9, 2), kind: "settlement", flow: "charges",
                                      label: "Trop-perçu", amount_cents: -20_000)
 
       expect { described_class.new(member_account: compte.reload, cash_entry: entry).run! }
         .to raise_error(described_class::NotDebtor)
+    end
+  end
+
+  # La famille Vanhamme (2026-10-05) : en avance sur ses charges, elle devait
+  # pourtant son bar de mai et juin. Son solde global était créditeur, et le
+  # virement qui payait le bar se faisait refuser — « ne doit rien ».
+  describe "une avance sur un autre poste" do
+    before do
+      compte.account_entries.create!(entry_date: Date.new(2026, 9, 2), kind: "settlement", flow: "charges",
+                                     label: "Charges payées d'avance", amount_cents: -31_000)
+      compte.account_entries.create!(entry_date: Date.new(2026, 6, 30), kind: "bar", flow: "bar",
+                                     label: "Bar mai-juin", amount_cents: 12_000)
+    end
+
+    it "n'empêche pas d'encaisser le poste qui reste dû" do
+      expect(compte.reload.balance_cents).to be_negative
+      entry = entrante(12_000, communication: "Bar mai juin")
+
+      described_class.new(member_account: compte.reload, cash_entry: entry, flow: "bar").run!
+
+      expect(MemberAccounts::Outstanding.new(compte.reload).poste("bar")).to be_nil
+      expect(entry.reload.cash_allocations.sum(:amount_cents)).to eq(12_000)
+    end
+
+    it "ne laisse pas imputer plus que ce qui reste dû" do
+      entry = entrante(20_000, communication: "Bar")
+
+      expect { described_class.new(member_account: compte.reload, cash_entry: entry, amount_cents: 20_000, flow: "bar").run! }
+        .to raise_error(described_class::TooMuch, /ne doit que 120/)
     end
 
     it "refuse sans compte" do

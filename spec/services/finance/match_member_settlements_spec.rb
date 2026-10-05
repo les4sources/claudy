@@ -117,11 +117,29 @@ RSpec.describe Finance::MatchMemberSettlements do
     end
 
     it "ne propose jamais un compte créditeur" do
-      compte_bene.account_entries.create!(entry_date: Date.new(2026, 9, 2), kind: "settlement", flow: "other",
+      compte_bene.account_entries.create!(entry_date: Date.new(2026, 9, 2), kind: "settlement", flow: "charges",
                                           label: "Trop-perçu", amount_cents: -10_000)
 
       expect(described_class.new.for_entry(entrante(1_000, nom: "LAMBERT")).map(&:member_account))
         .not_to include(compte_bene)
+    end
+
+    # La famille Vanhamme (2026-10-05) : en avance sur ses charges, elle devait
+    # son bar de mai et juin. Lu au solde global, son compte était créditeur et
+    # le virement qui payait le bar n'était jamais proposé.
+    it "propose un compte qui doit un poste malgré une avance sur un autre" do
+      compte_menage.account_entries.create!(entry_date: Date.new(2026, 9, 2), kind: "settlement", flow: "charges",
+                                            label: "Charges payées d'avance", amount_cents: -66_000)
+      compte_menage.account_entries.create!(entry_date: Date.new(2026, 6, 30), kind: "bar", flow: "bar",
+                                            label: "Bar mai-juin", amount_cents: 12_000)
+      expect(compte_menage.reload.balance_cents).to be_negative
+
+      match = described_class.new.for_entry(entrante(12_000, communication: "Bar mai juin"))
+                             .find { |m| m.member_account == compte_menage }
+
+      expect(match).to be_present
+      expect(match.due_cents).to eq(12_000)
+      expect(match.flow).to eq("bar")
     end
 
     it "ne propose jamais un compte à zéro" do
