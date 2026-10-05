@@ -35,7 +35,20 @@ module Mcp
       Tools::Sejours::EnregistrerPaiementSejour,
       Tools::Sejours::ModifierPaiementSejour,
       Tools::Sejours::SupprimerSejour,
-      Tools::Sejours::ModifierClient
+      Tools::Sejours::ModifierClient,
+      Tools::Activites::ChercherActivites,
+      Tools::Activites::FicheActivite,
+      Tools::Activites::ReservationsActivites,
+      Tools::Activites::AjouterActiviteSejour,
+      Tools::Activites::ModifierReservationActivite,
+      Tools::Activites::AnnulerReservationActivite,
+      Tools::Activites::ValiderReservationActivite,
+      Tools::Activites::RefuserReservationActivite,
+      Tools::Activites::DeclarerTenue,
+      Tools::Activites::CreerCreneau,
+      Tools::Activites::SupprimerCreneau,
+      Tools::Activites::EnregistrerActivite,
+      Tools::Activites::PublierActivite
     ].freeze
 
     INSTRUCTIONS = <<~TEXT.freeze
@@ -50,6 +63,12 @@ module Mcp
       et devis_sejour. Plusieurs outils ÉCRIVENT AU CLIENT (confirmation,
       pré-confirmation, refus, demande de modification) : leur aperçu le dit,
       dis-le aussi à l'utilisateur avant qu'il accepte.
+
+      ACTIVITÉS. Une activité (#12, balade avec les ânes…) a un porteur et des
+      créneaux (#345) ; un séjour s'y inscrit par une réservation (#678), « à
+      valider » par le porteur puis confirmée. Après le créneau, on déclare sa
+      tenue (a eu lieu / n'a pas eu lieu), ce qui ouvre la rémunération du
+      porteur. File de travail : reservations_activites.
 
       COMPTES COURANTS des familles et des personnes (SRC-0001…). Le grand
       livre : chaque ligne a un montant SIGNÉ (positif = dû par le compte,
@@ -123,7 +142,7 @@ module Mcp
       text = tool.new(user: @user).call(arguments)
       result(id, { content: [{ type: "text", text: text }], isError: false })
     rescue Tools::Base::Error, ActiveRecord::RecordInvalid, AccountEntry::Locked,
-           Finance::RecordSettlement::VentilationMismatch => e
+           Finance::RecordSettlement::VentilationMismatch, ExperienceBooking::OutcomeNotRecordable => e
       result(id, { content: [{ type: "text", text: e.message }], isError: true })
     rescue StandardError => e
       Sentry.capture_exception(e)
