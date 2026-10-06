@@ -60,7 +60,23 @@ module Mcp
       Tools::Cuisine::ConfierPrestation,
       Tools::Cuisine::RattacherPrestation,
       Tools::Cuisine::EnregistrerProduitCuisine,
-      Tools::Cuisine::ModifierReglagesCuisine
+      Tools::Cuisine::ModifierReglagesCuisine,
+      Tools::Collectif::Rassemblements,
+      Tools::Collectif::FicheRassemblement,
+      Tools::Collectif::RegistreDecisions,
+      Tools::Collectif::CycleCollectif,
+      Tools::Collectif::ActionsMembre,
+      Tools::Collectif::RolesDuJour,
+      Tools::Collectif::EnregistrerRassemblement,
+      Tools::Collectif::PointOdj,
+      Tools::Collectif::ActionRassemblement,
+      Tools::Collectif::EnregistrerDecision,
+      Tools::Collectif::Commenter,
+      Tools::Collectif::EnregistrerActionCycle,
+      Tools::Collectif::GesteActionCycle,
+      Tools::Collectif::ObjectifCycle,
+      Tools::Collectif::CloturerCycle,
+      Tools::Collectif::AttribuerRole
     ].freeze
 
     INSTRUCTIONS = <<~TEXT.freeze
@@ -90,6 +106,15 @@ module Mcp
       acceptation. Files de travail : prestations_cuisine vue « cuisine » (la
       cuisine doit répondre) et vue « accueil » (client à relancer, refus à
       couvrir). Les emails de la cuisine vont à l'équipe, jamais au client.
+
+      VIE DU COLLECTIF. Les rassemblements (#45, réunions) ont un ordre du jour
+      en quatre listes (informations, triage, décisions, atelier), des notes
+      prises par point, des actions et un compte rendu ; les décisions vont au
+      registre (decisions). Le travail de chacun se planifie par CYCLE : des
+      actions (#321) par membre, rituelles, ponctuelles, reportées, déléguées,
+      demandées ou invitées, avec heures et nombre de fois, et des objectifs.
+      Vue d'ensemble : cycle_collectif ; détail : actions_membre. Les rôles du
+      jour (veille et ligne de garde) : roles_du_jour.
 
       COMPTES COURANTS des familles et des personnes (SRC-0001…). Le grand
       livre : chaque ligne a un montant SIGNÉ (positif = dû par le compte,
