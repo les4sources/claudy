@@ -99,7 +99,23 @@ module Mcp
       Tools::Finances::GenererChargesRecurrentes,
       Tools::Finances::Decompte,
       Tools::Finances::EnregistrerBatchCooking,
-      Tools::Finances::ArreterMois
+      Tools::Finances::ArreterMois,
+      Tools::Carte::Plantes,
+      Tools::Carte::FichePlante,
+      Tools::Carte::Especes,
+      Tools::Carte::CalendrierRecoltes,
+      Tools::Carte::CarnetTaches,
+      Tools::Carte::ElementsCarte,
+      Tools::Carte::FilsCarte,
+      Tools::Carte::Biodiversite,
+      Tools::Carte::EnregistrerPlante,
+      Tools::Carte::EnregistrerEspece,
+      Tools::Carte::CalendrierRecolte,
+      Tools::Carte::TacheCarte,
+      Tools::Carte::NoteCarte,
+      Tools::Carte::FilCarte,
+      Tools::Carte::ReleveBiodiversite,
+      Tools::Carte::ElementCarte
     ].freeze
 
     INSTRUCTIONS = <<~TEXT.freeze
@@ -150,6 +166,18 @@ module Mcp
       arrete_du_mois. Une écriture passée ne se réécrit pas : on annule la
       passation (contre-passation) ou on contre-passe. Envoyer un décompte ou
       une relance ÉCRIT AUX FAMILLES : dis-le avant qu'il accepte.
+
+      CARTE DU DOMAINE ET PLANTES. Les plantes nourricières (#id, n° de
+      terrain) ont une espèce et une variété du catalogue local (especes) ;
+      placées, elles ont un point GPS sur la carte, sinon elles sont « à
+      placer ». Une plante sans calendrier de récolte propre suit celui de son
+      espèce. Lire : plantes, fiche_plante, especes, calendrier_recoltes,
+      carnet_taches, elements_carte (couches, objets, fiche d'un objet),
+      fils_carte, biodiversite. Les coordonnées sont en WGS84 (latitude,
+      longitude). Répondre dans un fil de la carte NOTIFIE ses participants.
+      Ce qui se dessine (zones, tracés, aménagements, croquis) et ce qui
+      demande une photo (identification Pl@ntNet, bio-indicatrices) se fait
+      dans Claudy.
 
       COMPTES COURANTS des familles et des personnes (SRC-0001…). Le grand
       livre : chaque ligne a un montant SIGNÉ (positif = dû par le compte,
