@@ -47,7 +47,11 @@ module MemberAccounts
 
     # Une ligne encore due : ce qu'il en reste après imputation des règlements,
     # pas son montant d'origine.
-    Ligne = Struct.new(:entry_date, :label, :flow, :amount_cents, :mois_vise, keyword_init: true) do
+    # `quantity` et `unit_price_cents` viennent de la feuille de bar : « Vin
+    # rosé bouteille 40,00 € » se lit comme une bouteille à 40 € tant qu'on ne
+    # voit pas que c'en sont cinq à 8 € (Michael, 2026-10-06).
+    Ligne = Struct.new(:entry_date, :label, :flow, :amount_cents, :mois_vise, :quantity, :unit_price_cents,
+                       keyword_init: true) do
       def flow_label = AccountEntry::FLOW_LABELS[flow]
     end
 
@@ -221,7 +225,8 @@ module MemberAccounts
     def ecritures
       @account.account_entries.chronological.includes(:account_settlement).map do |entry|
         Ligne.new(entry_date: entry.entry_date, label: entry.label.presence || entry.flow_label,
-                  flow: entry.flow, amount_cents: entry.amount_cents, mois_vise: mois_vise(entry))
+                  flow: entry.flow, amount_cents: entry.amount_cents, mois_vise: mois_vise(entry),
+                  quantity: entry.quantity, unit_price_cents: entry.unit_price_cents)
       end
     end
   end
