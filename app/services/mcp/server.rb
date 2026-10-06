@@ -76,7 +76,30 @@ module Mcp
       Tools::Collectif::GesteActionCycle,
       Tools::Collectif::ObjectifCycle,
       Tools::Collectif::CloturerCycle,
-      Tools::Collectif::AttribuerRole
+      Tools::Collectif::AttribuerRole,
+      Tools::Finances::Tresorerie,
+      Tools::Finances::LignesTresorerie,
+      Tools::Finances::FicheLigneTresorerie,
+      Tools::Finances::ReferentielComptable,
+      Tools::Finances::FacturesAchat,
+      Tools::Finances::NotesDeFrais,
+      Tools::Finances::APayer,
+      Tools::Finances::FeuilleDeCaisse,
+      Tools::Finances::Decomptes,
+      Tools::Finances::BatchCooking,
+      Tools::Finances::ArreteDuMois,
+      Tools::Finances::AffecterLigne,
+      Tools::Finances::RapprocherLigne,
+      Tools::Finances::GesteLigneTresorerie,
+      Tools::Finances::EnregistrerFactureAchat,
+      Tools::Finances::GesteFactureAchat,
+      Tools::Finances::EnregistrerNoteDeFrais,
+      Tools::Finances::GesteNoteDeFrais,
+      Tools::Finances::LigneCaisse,
+      Tools::Finances::GenererChargesRecurrentes,
+      Tools::Finances::Decompte,
+      Tools::Finances::EnregistrerBatchCooking,
+      Tools::Finances::ArreterMois
     ].freeze
 
     INSTRUCTIONS = <<~TEXT.freeze
@@ -115,6 +138,18 @@ module Mcp
       demandées ou invitées, avec heures et nombre de fois, et des objectifs.
       Vue d'ensemble : cycle_collectif ; détail : actions_membre. Les rôles du
       jour (veille et ligne de garde) : roles_du_jour.
+
+      FINANCES. Chaque mouvement réel (banque, caisse, Stripe) est une ligne de
+      trésorerie (#5012) : elle entre « à affecter », puis on l'affecte à des
+      comptes du plan (affecter_ligne) ou on la rapproche de ce qu'elle paie
+      (rapprocher_ligne : facture d'achat, note de frais, compte d'un habitant,
+      séjour, facture de vente, versement Stripe) ; entièrement affectée, elle
+      se comptabilise. Commence par tresorerie, puis lignes_tresorerie et
+      fiche_ligne_tresorerie (suggestion et pistes). Les dettes : a_payer,
+      factures_achat, notes_de_frais. Le mois : charges récurrentes, décomptes,
+      arrete_du_mois. Une écriture passée ne se réécrit pas : on annule la
+      passation (contre-passation) ou on contre-passe. Envoyer un décompte ou
+      une relance ÉCRIT AUX FAMILLES : dis-le avant qu'il accepte.
 
       COMPTES COURANTS des familles et des personnes (SRC-0001…). Le grand
       livre : chaque ligne a un montant SIGNÉ (positif = dû par le compte,
