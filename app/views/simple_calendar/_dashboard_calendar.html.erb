@@ -137,6 +137,8 @@
                     <%= render partial: "simple_calendar/day", locals: { date: day } %>
                   </div>
 
+                  <%# Saisies rapides (séjour, note) : réservées à qui peut écrire hors des sections ouvertes aux rôles. %>
+                  <% if section_writable?(:full) %>
                   <div class="flex">
                     <% if Date.today <= day %>
                       <%# Saisie rapide datée : un seul « + » — le séjour est le point d'entrée unique, sa composition se choisit dans le form. %>
@@ -149,6 +151,7 @@
                       </svg>
                     <% end %>
                   </div>
+                  <% end %>
                 </div>
 
                 <div id="human-roles-<%= day.iso8601 %>" class="text-xs isolate flex -space-x-2 px-1 relative inline-block">
