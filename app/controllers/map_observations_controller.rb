@@ -16,6 +16,7 @@
 # même liste en page annexe, `species` l'autocomplétion de la fiche. Aucune
 # liaison externe (décision 9) : on ne propose que ce que l'équipe a déjà saisi.
 class MapObservationsController < BaseController
+  access_section :map
   PANEL_FRAME = MapFeaturesController::PANEL_FRAME
   LIST_FRAME = "map_observations".freeze
   LIST_LIMIT = 500

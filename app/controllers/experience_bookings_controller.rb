@@ -10,6 +10,7 @@
 # l'ID d'une réservation ou d'un créneau d'un autre porteur obtient un 404 / un
 # refus (jamais une action réussie hors périmètre).
 class ExperienceBookingsController < BaseController
+  access_section :events
   before_action :load_scoped_booking,
                 only: [:show, :update, :destroy, :confirm, :new_refusal, :refuse, :record_outcome]
 

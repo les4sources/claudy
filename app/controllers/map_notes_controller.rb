@@ -6,6 +6,7 @@
 # Le porteur vient TOUJOURS de la route (`/map/plants/:plant_id/notes`) : le
 # type polymorphe n'est jamais lu dans les paramètres.
 class MapNotesController < BaseController
+  access_section :map
   before_action :get_plant
 
   def create

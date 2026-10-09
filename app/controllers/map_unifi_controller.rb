@@ -6,6 +6,7 @@
 # (`configured`, `available`) et la carte grise ses pastilles. Le client garde
 # la réponse 60 s en cache, l'API n'est pas interrogée à chaque rafraîchissement.
 class MapUnifiController < BaseController
+  access_section :map
   def devices
     client = Unifi::Client.new
     render json: { configured: client.configured?, available: client.available?, devices: client.devices.as_json }

@@ -199,6 +199,9 @@ Rails.application.routes.draw do
   post "site-stats/hits", to: "site_hits#create", as: :site_hits
   get "reports/site-web", to: "site_stats#show", as: :site_stats
   resources :reports
+  # Paramètres › Accès : les rôles d'accès des comptes (2026-10-09).
+  get "access", to: "access_roles#index", as: :access_roles
+  patch "access", to: "access_roles#update"
   resources :roles
   resources :rooms
   resources :services

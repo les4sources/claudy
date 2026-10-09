@@ -16,7 +16,7 @@
       .block.min-w-0.w-full
         div.min-w-0
           strong.block.min-w-0.break-words
-            = link_to event.name_with_color,
+            = link_to_if section_readable?(:events), event.name_with_color,
                       event_path(event),
                       class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
       .absolute.top-0.left-0.w-full.h-full(data-controller="popover" data-action="click->popover#toggle click@window->popover#hideOnClickOutside" data-popover-target-value="popover-event-#{event.id}" data-popover-trigger-value="click")
@@ -38,7 +38,7 @@
         .block.min-w-0.w-full
           div.min-w-0
             strong.block.min-w-0.break-words
-              = link_to space_booking.decorate.group_or_name.html_safe, space_booking_path(space_booking), class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
+              = link_to_if section_readable?(:full), space_booking.decorate.group_or_name.html_safe, space_booking_path(space_booking), class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
             - if space_booking.event.presence
               .text-gray-500.leading-none.mb-2.font-semibold = space_booking.event.name_with_color
 

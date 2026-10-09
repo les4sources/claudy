@@ -1,0 +1,17 @@
+/ Compte connecté mais sans aucun rôle d'accès (cf. `AccessControl`) : il n'a
+  aucune page où atterrir. On le lui dit, plutôt que de le faire tourner en
+  rond entre deux redirections.
+.flex.min-h-full
+  .flex.flex-1.flex-col.justify-center.px-4.py-12.sm:px-6.lg:flex-none.lg:px-20.xl:px-24
+    .mx-auto.w-full.max-w-sm.lg:w-96
+      = vite_image_tag "images/les-4-sources-logo-seul.png",
+                       class: "h-10 w-auto",
+                       alt: "Les 4 Sources"
+      h2.mt-8.text-3xl.font-bold.leading-9.tracking-tight.text-4s-main.font-averia
+        | Pas encore d'accès
+      p.mt-4.text-sm.text-gray-600
+        | Votre compte (#{current_user.email}) n'a encore aucun rôle dans Claudy. Un Sourcier peut vous en donner un dans Paramètres › Accès.
+      .mt-8
+        = button_to "Me déconnecter",
+                    destroy_user_session_path, method: :delete,
+                    class: "text-sm text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"

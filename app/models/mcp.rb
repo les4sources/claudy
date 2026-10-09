@@ -13,8 +13,10 @@ module Mcp
   # Les comptes Claudy autorisés à brancher Claude, par adresse e-mail
   # (`MCP_ALLOWED_EMAILS`, séparées par des virgules). Vide = personne : un
   # outil qui écrit dans les comptes des familles n'est pas ouvert par défaut.
+  # Les outils couvrent toutes les sections de l'app : il faut en plus être
+  # Sourcier (rôles d'accès, 2026-10-09).
   def self.allowed?(user)
-    return false if user.nil? || user.member_deactivated?
+    return false if user.nil? || user.member_deactivated? || !user.sourcier?
 
     allowed = ENV.fetch("MCP_ALLOWED_EMAILS", "").split(",").map { |email| email.strip.downcase }
     allowed.include?(user.email.to_s.downcase)

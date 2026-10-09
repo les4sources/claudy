@@ -8,6 +8,7 @@
 # Chaque geste répond par un Turbo Stream qui remplace la seule section
 # « Récolte » : la saisie en cours dans le dossier de la plante n'est pas perdue.
 class PlantHarvestsController < BaseController
+  access_section :map
   before_action :get_plant
 
   # POST /map/plants/:plant_id/harvest/customize

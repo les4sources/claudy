@@ -56,84 +56,90 @@ nav.bg-4s-main.shadow-sm.lg:px-6.relative.z-40
          `md` où les items reviennent en ligne dans la barre.
       ul.flex.flex-col.items-center.font-medium.p-4.md:p-0.mt-4.rounded-xl.md:flex-row.md:flex-wrap.md:gap-1.md:mt-0.md:border-0(class="border border-white/15 bg-white/10 md:bg-transparent")
         / Agenda
-        li
-          = link_to root_path,
-                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{current_page?(root_path) ? nav_active : nav_idle}" do
-            svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-              rect[width="18" height="18" x="3" y="4" rx="2" ry="2"]
-              line[x1="16" y1="2" x2="16" y2="6"]
-              line[x1="8" y1="2" x2="8" y2="6"]
-              line[x1="3" y1="10" x2="21" y2="10"]
-            span Agenda
+        - if section_readable?(:calendar)
+          li
+            = link_to root_path,
+                      class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{current_page?(root_path) ? nav_active : nav_idle}" do
+              svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+                rect[width="18" height="18" x="3" y="4" rx="2" ry="2"]
+                line[x1="16" y1="2" x2="16" y2="6"]
+                line[x1="8" y1="2" x2="8" y2="6"]
+                line[x1="3" y1="10" x2="21" y2="10"]
+              span Agenda
 
         / Accueil — LIEN de section (Michael 2026-07-26), plus un dropdown : ses
           entrées vivent maintenant dans la sous-navigation ci-dessous, comme
           celles de « Paramètres ». Il pointe sur Séjours, la page de travail
           quotidienne de la section.
-        li
-          = link_to stays_path,
-                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{!@home_view.nil? ? nav_active : nav_idle}" do
-            svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-              path[d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"]
-              polyline[points="9 22 9 12 15 12 15 22"]
-            span Accueil
+        - if section_readable?(:full)
+          li
+            = link_to stays_path,
+                      class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{!@home_view.nil? ? nav_active : nav_idle}" do
+              svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+                path[d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"]
+                polyline[points="9 22 9 12 15 12 15 22"]
+              span Accueil
 
         / Cycles — ex-« Organisation » (Michael 2026-09-20). La section tourne
           autour des cycles du collectif ; « Organisation » ne disait pas de quoi
           elle parlait.
-        li
-          = link_to organisation_path,
-                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{!@organisation_view.nil? ? nav_active : nav_idle}" do
-            / Flèches cycliques et non « personnes » (Michael 2026-09-20) :
-              l'ancien pictogramme venait du temps où la section s'appelait
-              « Organisation » et montrait un trombinoscope.
-            svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-              path[d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"]
-              path[d="M21 3v5h-5"]
-              path[d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"]
-              path[d="M3 21v-5h5"]
-            span Cycles
+        - if section_readable?(:full)
+          li
+            = link_to organisation_path,
+                      class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{!@organisation_view.nil? ? nav_active : nav_idle}" do
+              / Flèches cycliques et non « personnes » (Michael 2026-09-20) :
+                l'ancien pictogramme venait du temps où la section s'appelait
+                « Organisation » et montrait un trombinoscope.
+              svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+                path[d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"]
+                path[d="M21 3v5h-5"]
+                path[d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"]
+                path[d="M3 21v-5h5"]
+              span Cycles
 
         / Finances — comptes courants internes (issue #155). Atterrit sur les
           comptes, la page de travail de la section ; ses autres entrées vivent
           dans la sous-navigation ci-dessous, comme « Paramètres ».
-        li
-          = link_to finance_accounts_path,
-                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{!@finance_view.nil? ? nav_active : nav_idle}" do
-            / Icône EURO et non dollar (Michael 2026-09-20) : la section ne parle
-              que d'euros, et le symbole d'une autre monnaie en tête de menu se
-              lit comme une erreur avant de se lire comme un pictogramme.
-            svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-              path[d="M4 10h12"]
-              path[d="M4 14h9"]
-              path[d="M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12c0 4.4 3.5 8 7.8 8 2 0 3.8-.8 5.2-2"]
-            span Comptes
+        - if section_readable?(:accounts)
+          li
+            = link_to finance_accounts_path,
+                      class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{!@finance_view.nil? ? nav_active : nav_idle}" do
+              / Icône EURO et non dollar (Michael 2026-09-20) : la section ne parle
+                que d'euros, et le symbole d'une autre monnaie en tête de menu se
+                lit comme une erreur avant de se lire comme un pictogramme.
+              svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+                path[d="M4 10h12"]
+                path[d="M4 14h9"]
+                path[d="M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12c0 4.4 3.5 8 7.8 8 2 0 3.8-.8 5.2-2"]
+              span Comptes
 
         / Comptabilité — séparée de Finances le 2026-08-19. « Finances » est ce
           qu'un sourcier ouvre pour lire son compte ; « Comptabilité » est le
           métier de la trésorière. Les mélanger imposait quatorze onglets à qui
           n'en cherchait qu'un.
-        li
-          = link_to finance_accounting_path,
-                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{!@accounting_view.nil? ? nav_active : nav_idle}" do
-            svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-              path[d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"]
-              path[d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"]
-            span Comptabilité
+        - if section_readable?(:accounting)
+          li
+            = link_to finance_accounting_path,
+                      class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{!@accounting_view.nil? ? nav_active : nav_idle}" do
+              svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+                path[d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"]
+                path[d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"]
+              span Comptabilité
 
         / Carte — la carte du domaine (epic #348). En ICÔNE et non en libellé : la
           barre a été allégée le 2026-09-20 parce que six libellés la faisaient
           déborder, et la carte se consulte comme l'activité récente plutôt
           qu'elle ne se travaille toute la journée.
-        li
-          = link_to map_path,
-                    class: "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 #{!@map_view.nil? ? nav_active : 'text-white/50 hover:text-white hover:bg-white/10'}",
-                    title: "Carte du domaine" do
-            svg.w-5.h-5[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-              polygon[points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"]
-              line[x1="8" y1="2" x2="8" y2="18"]
-              line[x1="16" y1="6" x2="16" y2="22"]
-            span.sr-only Carte
+        - if section_readable?(:map)
+          li
+            = link_to map_path,
+                      class: "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 #{!@map_view.nil? ? nav_active : 'text-white/50 hover:text-white hover:bg-white/10'}",
+                      title: "Carte du domaine" do
+              svg.w-5.h-5[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+                polygon[points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"]
+                line[x1="8" y1="2" x2="8" y2="18"]
+                line[x1="16" y1="6" x2="16" y2="22"]
+              span.sr-only Carte
 
         /  Mon tableau de bord (issue #323), en ICÔNE depuis le 2026-09-20 : la
            barre portait six libellés et débordait. Il rejoint donc le groupe des
@@ -141,37 +147,40 @@ nav.bg-4s-main.shadow-sm.lg:px-6.relative.z-40
            roue crantée, parce que c'est une destination quotidienne là où les
            deux autres sont des consultations ponctuelles. C'est aussi la page
            qui porte désormais les notifications, sorties de la barre le même jour.
-        li
-          = link_to dashboard_path,
-                    class: "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 #{controller_name == 'pages' && action_name == 'dashboard' ? nav_active : 'text-white/50 hover:text-white hover:bg-white/10'}",
-                    title: "Mon tableau de bord" do
-            svg.w-5.h-5[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-              rect[width="7" height="9" x="3" y="3" rx="1"]
-              rect[width="7" height="5" x="14" y="3" rx="1"]
-              rect[width="7" height="9" x="14" y="12" rx="1"]
-              rect[width="7" height="5" x="3" y="16" rx="1"]
-            span.sr-only Mon tableau de bord
+        - if section_readable?(:everyone)
+          li
+            = link_to dashboard_path,
+                      class: "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 #{controller_name == 'pages' && action_name == 'dashboard' ? nav_active : 'text-white/50 hover:text-white hover:bg-white/10'}",
+                      title: "Mon tableau de bord" do
+              svg.w-5.h-5[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+                rect[width="7" height="9" x="3" y="3" rx="1"]
+                rect[width="7" height="5" x="14" y="3" rx="1"]
+                rect[width="7" height="9" x="14" y="12" rx="1"]
+                rect[width="7" height="5" x="3" y="16" rx="1"]
+              span.sr-only Mon tableau de bord
 
         / Activité récente — ICÔNE SEULE (Michael 2026-07-26). Sortie du menu
           « Accueil », elle se pose entre les libellés et la roue crantée : c'est
           une consultation ponctuelle, pas une destination de travail.
-        li
-          = link_to recent_activity_path,
-                    class: "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 #{action_name == 'recent_activity' ? nav_active : 'text-white/50 hover:text-white hover:bg-white/10'}",
-                    title: "Activité récente" do
-            svg.w-5.h-5[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-              circle[cx="12" cy="12" r="10"]
-              polyline[points="12 6 12 12 16 14"]
-            span.sr-only Activité récente
+        - if section_readable?(:full)
+          li
+            = link_to recent_activity_path,
+                      class: "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 #{action_name == 'recent_activity' ? nav_active : 'text-white/50 hover:text-white hover:bg-white/10'}",
+                      title: "Activité récente" do
+              svg.w-5.h-5[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+                circle[cx="12" cy="12" r="10"]
+                polyline[points="12 6 12 12 16 14"]
+              span.sr-only Activité récente
 
         / Paramètres (cog icon only) — atterrit sur Expériences (2026-07-20)
-        li
-          = link_to experiences_path,
-                    class: "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 #{!@settings_view.nil? ? nav_active : 'text-white/50 hover:text-white hover:bg-white/10'}",
-                    title: "Paramètres" do
-            svg.w-5.h-5[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
-              path[d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"]
-              circle[cx="12" cy="12" r="3"]
+        - if section_readable?(:full) || section_readable?(:events)
+          li
+            = link_to experiences_path,
+                      class: "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 #{!@settings_view.nil? ? nav_active : 'text-white/50 hover:text-white hover:bg-white/10'}",
+                      title: "Paramètres" do
+              svg.w-5.h-5[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+                path[d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"]
+                circle[cx="12" cy="12" r="3"]
 
 / Liseré d'accent. Il allait auparavant vers `4s-main` — désormais la couleur
   DU header : la moitié droite s'y serait fondue. On l'inverse donc, du vert de
@@ -294,54 +303,72 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
             = link_to "Expériences",
                       experiences_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'experiences' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
-          li
-            = link_to "Cuisine",
-                      kitchen_settings_path,
-                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path.start_with?('kitchen/') ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
-          li
-            = link_to "Tarifs",
-                      rates_path,
-                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'rates' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          - if section_readable?(:full)
+            li
+              = link_to "Cuisine",
+                        kitchen_settings_path,
+                        class: "px-3 py-1.5 rounded-md transition-colors #{controller_path.start_with?('kitchen/') ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          - if section_readable?(:full)
+            li
+              = link_to "Tarifs",
+                        rates_path,
+                        class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'rates' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
             = link_to "Événements",
                       events_path,
                       class: "px-3 py-1.5 rounded-md transition-colors #{(controller_name == 'events' || controller_name == 'events_categories') ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
-          li
-            = link_to "Services",
-                      services_path,
-                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'services' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
-          li
-            = link_to "Espaces",
-                      spaces_path,
-                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'spaces' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
-          li
-            = link_to "Objets à louer",
-                      rental_items_path,
-                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'rental_items' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
-          li
-            = link_to "Produits",
-                      products_path,
-                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'products' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
-          li
-            = link_to "Pôles",
-                      teams_path,
-                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'teams' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
-          li
-            = link_to "Dépôt-vente",
-                      consignors_path,
-                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'consignors' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
-          li
-            = link_to "Notifications",
-                      notification_settings_path,
-                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'notification_settings' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
-          li
-            = link_to "Rôles",
-                      roles_path,
-                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'roles' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
-          li
-            = link_to "Équipe",
-                      humans_path,
-                      class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'humans' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          - if section_readable?(:full)
+            li
+              = link_to "Services",
+                        services_path,
+                        class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'services' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          - if section_readable?(:full)
+            li
+              = link_to "Espaces",
+                        spaces_path,
+                        class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'spaces' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          - if section_readable?(:full)
+            li
+              = link_to "Objets à louer",
+                        rental_items_path,
+                        class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'rental_items' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          - if section_readable?(:full)
+            li
+              = link_to "Produits",
+                        products_path,
+                        class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'products' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          - if section_readable?(:full)
+            li
+              = link_to "Pôles",
+                        teams_path,
+                        class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'teams' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          - if section_readable?(:full)
+            li
+              = link_to "Dépôt-vente",
+                        consignors_path,
+                        class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'consignors' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          - if section_readable?(:full)
+            li
+              = link_to "Notifications",
+                        notification_settings_path,
+                        class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'notification_settings' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          - if section_readable?(:full)
+            li
+              = link_to "Rôles",
+                        roles_path,
+                        class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'roles' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          / Accès (2026-10-09) : les rôles d'accès des comptes. À côté de
+            « Rôles », qui sont les rôles DU JOUR (veilleur…), sans rapport.
+          - if section_readable?(:full)
+            li
+              = link_to "Accès",
+                        access_roles_path,
+                        class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'access_roles' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          - if section_readable?(:full)
+            li
+              = link_to "Équipe",
+                        humans_path,
+                        class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'humans' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
 
 / Sous-navigation Finances. Elle ne porte QUE ce qu'un sourcier ouvre au
   quotidien : son compte, ce qu'il y consomme, et le décompte qu'il reçoit.

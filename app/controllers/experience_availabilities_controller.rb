@@ -1,5 +1,7 @@
 class ExperienceAvailabilitiesController < ApplicationController
   before_action :authenticate_user!
+  include AccessControl
+  access_section :events
   before_action :set_experience
 
   # Dépôt d'un bloc depuis le calendrier mensuel : un clic sur une case suffit —

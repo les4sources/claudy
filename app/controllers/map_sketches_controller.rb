@@ -12,6 +12,7 @@
 #   autre onglet, renommage), on répond 409 avec la version courante, sans rien
 #   écrire, et le client recharge le dessin.
 class MapSketchesController < BaseController
+  access_section :map
   before_action :get_sketch, only: %i[show update destroy strokes]
 
   def index

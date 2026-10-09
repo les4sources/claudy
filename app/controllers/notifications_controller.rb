@@ -7,6 +7,7 @@
 # Un utilisateur ne voit QUE ses notifications : toutes les lectures partent de
 # `current_user.notifications`, jamais de `Notification.find`.
 class NotificationsController < BaseController
+  access_section :everyone
   PER_PAGE = 30
 
   breadcrumb "Notifications", :notifications_path, match: :exact

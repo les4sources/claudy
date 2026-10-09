@@ -73,7 +73,7 @@ class HumansController < BaseController
     service = Humans::CreateAccountService.new(human: @human)
     if service.run
       redirect_to human_path(@human),
-                  notice: "Un compte d'accès a été créé pour #{@human.name}. Un email d'invitation à définir le mot de passe a été envoyé à #{@human.email}."
+                  notice: "Un compte d'accès a été créé pour #{@human.name}. Un email d'invitation à définir le mot de passe a été envoyé à #{@human.email}. Donnez-lui ses rôles dans Paramètres › Accès."
     else
       redirect_to human_path(@human),
                   alert: service.error_message
