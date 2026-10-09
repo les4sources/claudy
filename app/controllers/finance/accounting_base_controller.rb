@@ -6,6 +6,7 @@ module Finance
   # menu. Hériter d'ici, c'est basculer d'une section à l'autre : rien d'autre
   # n'est à déclarer.
   class AccountingBaseController < ::BaseController
+    access_section :accounting
     breadcrumb "Comptabilité", :finance_accounting_path, match: :exact
 
     private

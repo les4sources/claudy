@@ -6,6 +6,8 @@ class BaseController < ActionController::Base
   before_action :authenticate_user!
   before_action :enforce_active_member
   before_action :restrict_experience_carriers
+  # Rôles d'accès : après le cloisonnement des porteurs, qui passe avant.
+  include AccessControl
   before_action :set_paper_trail_whodunnit
 
   helper_method :current_human

@@ -1,4 +1,6 @@
 class PagesController < BaseController
+  access_section :calendar, only: %i[calendar day month_details other_bookings other_space_bookings]
+  access_section :everyone, only: :dashboard
   # Les dix dernières notifications suffisent à la colonne du tableau de bord ;
   # au-delà, « Tout voir ».
   DASHBOARD_NOTIFICATIONS = 10

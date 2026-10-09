@@ -45,8 +45,10 @@
                   <div>
                     <%= render partial: "simple_calendar/day", locals: { date: day } %>
                   </div>
-                  <%= render partial: "pages/calendar/quick_create_button",
-                             locals: { date: day, categories: @gathering_categories } %>
+                  <% if section_writable?(:full) %>
+                    <%= render partial: "pages/calendar/quick_create_button",
+                               locals: { date: day, categories: @gathering_categories } %>
+                  <% end %>
                 </div>
 
                 <%= turbo_frame_tag "day_gatherings_#{day.iso8601}", class: "block mt-1 space-y-1" do %>

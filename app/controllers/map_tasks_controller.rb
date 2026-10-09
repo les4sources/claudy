@@ -10,6 +10,7 @@
 # ou de la tâche existante : `subject_type` n'est jamais lu dans les
 # paramètres, donc jamais constantizé depuis une saisie.
 class MapTasksController < BaseController
+  access_section :map
   before_action :get_task, only: %i[update destroy]
 
   # GET /map/carnet?sector=terrain — les tâches de l'année, mois par mois. Une

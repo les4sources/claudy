@@ -8,6 +8,7 @@
 # Supprimer = soft-delete : un objet effacé par erreur se retrouve dans
 # PaperTrail et dans la table.
 class MapFeaturesController < BaseController
+  access_section :map
   PANEL_FRAME = "feature_panel".freeze
 
   before_action :get_feature, only: %i[show update destroy destroy_photo]

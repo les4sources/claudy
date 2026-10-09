@@ -4,6 +4,7 @@
 # fenêtres ; DELETE les efface. Réponse en Turbo Stream : seule la section
 # « Récolte » de la fiche est remplacée.
 class SpeciesHarvestsController < BaseController
+  access_section :map
   before_action :get_species
 
   def update

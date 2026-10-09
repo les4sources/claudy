@@ -1,0 +1,49 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Accès"
+
+.max-w-5xl.space-y-4
+  .bg-white.rounded-xl.border.border-gray-100.p-5
+    h2.text-sm.font-semibold.text-gray-900 Rôles d'accès
+    p.text-xs.text-gray-500.mt-1
+      | Chaque rôle ouvre des sections de Claudy. Un compte peut en avoir plusieurs, leurs droits s'additionnent.
+      |  Un compte sans rôle ne voit rien.
+    ul.mt-3.grid.gap-2.sm:grid-cols-2
+      - Access::ROLES.each do |_key, role|
+        li.text-xs.text-gray-600
+          span.font-semibold.text-gray-900 = role[:label]
+          |  : #{role[:description]}
+
+  = form_with url: access_roles_path, method: :patch do |f|
+    .overflow-x-auto.bg-white.rounded-xl.border.border-gray-100
+      table.w-full.text-sm.text-left.text-gray-600
+        thead.text-xs.text-gray-700.uppercase.bg-gray-50
+          tr
+            th.py-3.px-4[scope="col"] Compte
+            - Access::ROLES.each do |_key, role|
+              th.py-3.px-4.text-center[scope="col"] = role[:label]
+        tbody
+          - @users.each do |user|
+            tr.border-t.border-gray-100
+              td.py-3.px-4
+                .font-medium.text-gray-900 = user.linked_human&.name || user.email
+                - if user.linked_human
+                  .text-xs.text-gray-500 = user.email
+                - if user.restricted_to_experiences?
+                  span.mt-1.inline-block.rounded.bg-amber-50.px-1.5.py-0.5.text-xs.text-amber-700
+                    | Restreint à ses activités
+                - if user.member_deactivated?
+                  span.mt-1.inline-block.rounded.bg-gray-100.px-1.5.py-0.5.text-xs.text-gray-500
+                    | Membre désactivé
+              / Le champ vide garantit que la ligne part même toutes cases
+                décochées : sans lui, retirer tous les rôles d'un compte ne
+                serait jamais enregistré.
+              = hidden_field_tag "users[#{user.id}][]", "", id: nil
+              - Access::ROLES.each do |key, role|
+                td.py-3.px-4.text-center
+                  = check_box_tag "users[#{user.id}][]", key, user.access_roles.include?(key),
+                                  id: "user_#{user.id}_#{key}",
+                                  "aria-label": "#{role[:label]} pour #{user.email}",
+                                  class: "h-4 w-4 rounded border-gray-300 text-4s-main focus:ring-4s-main"
+    .mt-4
+      = f.submit "Enregistrer", class: "px-4 py-2 text-sm rounded-lg bg-4s-main text-white hover:opacity-90 transition-opacity cursor-pointer"

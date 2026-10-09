@@ -6,6 +6,7 @@
 # celles de son espèce (`Plant.harvest_calendar`, sans N+1). Les plantes mortes
 # ne se récoltent plus. Filtres partie et zone, dans l'URL.
 class HarvestCalendarController < BaseController
+  access_section :map
   # Une ligne du mois : une espèce (ou une plante sans espèce) et une partie.
   Group = Struct.new(:key, :title, :part, :plants, keyword_init: true) do
     def single? = plants.one?

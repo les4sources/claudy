@@ -1,4 +1,5 @@
 class ExperiencesController < BaseController
+  access_section :events
   before_action :get_experience, only: [:show, :edit, :update, :destroy, :publish, :unpublish]
 
   breadcrumb "Activités", :experiences_path, match: :exact

@@ -6,6 +6,7 @@
 # couches typées et leurs objets (phase 2 : la Gestion), la carte du jour
 # (phase 3), phase après phase.
 class MapsController < BaseController
+  access_section :map
   def show
     @base_layers = MapBaseLayer.ordered.to_a
     @base_layer = MapBaseLayer.find_by(id: params[:base_layer_id]) || MapBaseLayer.default_layer

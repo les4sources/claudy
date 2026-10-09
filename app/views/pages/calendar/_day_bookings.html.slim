@@ -25,7 +25,7 @@
     .block.min-w-0.w-full
       div.min-w-0
         strong.block.min-w-0.break-words
-          = link_to booking.decorate.group_or_name.html_safe, booking_path(booking), class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
+          = link_to_if section_readable?(:full), booking.decorate.group_or_name.html_safe, booking_path(booking), class: "text-blue-700 hover:text-blue-900 focus:text-blue-900 text-base/6 break-words"
 
         span.text-gray-500 =< booking.dates_counter(date)
 
