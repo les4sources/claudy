@@ -50,6 +50,10 @@ import UnavailController from '../controllers/public/unavail_controller.js';
 application.register('public--stay-calendar', StayCalendarController);
 application.register('public--unavail', UnavailController);
 
+// Les mêmes grilles, sur téléphone : une colonne à la fois (`public--day-pager`).
+import DayPagerController from '../controllers/public/day_pager_controller.js';
+application.register('public--day-pager', DayPagerController);
+
 // Load and register view_components controllers
 registerControllers(
   application,

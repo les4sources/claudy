@@ -38,7 +38,10 @@
   / ── Ligne du temps ────────────────────────────────────────
   - if timeline
     - days_count = timeline.days.size
-    .stay-timeline.mt-4(style="--tl-days: #{days_count}" aria-label="Ligne du temps de la réservation")
+    / Sur téléphone, la ligne du temps tient dans la largeur de la carte, sans
+    / défilement de côté (Michael, 2026-10-11) : l'en-tête de jour s'y réduit à
+    / « Ven » sur « 22 », et au-delà de cinq jours au seul numéro du jour.
+    .stay-timeline.mt-4(class=("stay-timeline--long" if days_count > 5) style="--tl-days: #{days_count}" aria-label="Ligne du temps de la réservation")
       .stay-timeline__scroll
         .stay-timeline__row.stay-timeline__row--head(aria-hidden="true")
           .stay-timeline__label
@@ -46,6 +49,9 @@
             - timeline.days.each_with_index do |day, i|
               .stay-timeline__day(style="grid-column: #{2 * i + 1} / span 2")
                 span.stay-timeline__day-name = l(day, format: "%a %-d %b").capitalize
+                span.stay-timeline__day-compact
+                  span.stay-timeline__day-wday = l(day, format: "%a").capitalize
+                  span = day.day
                 - if i.zero?
                   span.stay-timeline__day-tag Arrivée
                 - elsif i == days_count - 1
