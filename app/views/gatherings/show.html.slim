@@ -57,9 +57,8 @@
       .overflow-hidden.bg-yellow-200.shadow.sm:rounded-lg
         .px-4.py-5.sm:px-6.bg-yellow-300
           h3.text-lg.font-medium.leading-6.text-gray-900 Notes
-        .border-t.border-yellow-400.px-6.py-4
-          .content.space-y-4.text-sm
-            == @gathering.notes
+        .border-t.border-yellow-400.px-6.py-4.text-sm.text-gray-900
+          = render "gatherings/note_excerpt", rich_text: @gathering.object.notes, url: notes_gathering_path(@gathering), link_class: "text-yellow-900"
 
   / Right column — ODJ + decisions
   .lg:col-span-2.space-y-6
@@ -92,8 +91,8 @@
                     = link_to "Reporté au #{l(target.starts_at.to_date, format: :long)}",
                               gathering_path(target),
                               class: "shrink-0 text-xs text-amber-700 hover:underline"
-                .mt-2.lexxy-content.text-sm.text-stone-700
-                  = note.body
+                .mt-2.text-sm.text-stone-700
+                  = render "gatherings/note_excerpt", rich_text: note.body, url: gathering_agenda_item_note_path(@gathering, note.agenda_item), link_class: "text-emerald-700"
 
     / Actions section — actions décidées, assignées à des membres
     section.rounded-xl.border.border-amber-100.bg-white.shadow-sm.overflow-hidden

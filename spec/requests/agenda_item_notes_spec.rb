@@ -58,6 +58,28 @@ RSpec.describe "Notes des points de l'ODJ", type: :request do
     expect(point.notes).to be_empty
   end
 
+  describe "l'extrait sous le point" do
+    before { save_notes(reunion, point, "<p><strong>Décidé</strong> #{"mot " * 120}</p><p>Fin de la note</p>") }
+
+    it "n'affiche que le début, sans mise en forme, et renvoie vers la note complète" do
+      get gathering_path(reunion)
+
+      expect(response.body).not_to include("<strong>Décidé</strong>")
+      expect(response.body).not_to include("Fin de la note")
+      expect(response.body).to include("Lire la note complète")
+      expect(response.body).to include(gathering_agenda_item_note_path(reunion, point))
+    end
+
+    it "ouvre la note complète, mise en forme, dans la modale" do
+      get gathering_agenda_item_note_path(reunion, point), headers: { "Turbo-Frame" => "modal" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("<strong>Décidé</strong>")
+      expect(response.body).to include("Fin de la note")
+      expect(response.body).not_to include("lexxy-editor")
+    end
+  end
+
   describe "un point reporté" do
     before do
       save_notes(reunion, point, "<p>Discuté à moitié.</p>")
@@ -68,6 +90,13 @@ RSpec.describe "Notes des points de l'ODJ", type: :request do
       get gathering_path(reunion)
 
       expect(response.body).to include("Notes des points reportés")
+      expect(response.body).to include("Discuté à moitié.")
+    end
+
+    it "ouvre sa note complète depuis le rassemblement où elle a été prise" do
+      get gathering_agenda_item_note_path(reunion, point), headers: { "Turbo-Frame" => "modal" }
+
+      expect(response).to have_http_status(:ok)
       expect(response.body).to include("Discuté à moitié.")
     end
 

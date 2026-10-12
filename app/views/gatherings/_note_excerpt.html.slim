@@ -1,0 +1,8 @@
+/ Extrait en texte brut d'une note de rassemblement ; la note mise en forme
+/ s'ouvre dans la modale Turbo du layout.
+/ Locals : rich_text (ActionText), url (la note complète), link_class.
+p = truncate(rich_text.to_plain_text, length: 300, separator: " ")
+= link_to "Lire la note complète",
+          url,
+          data: { turbo_frame: "modal" },
+          class: "mt-1 inline-block font-medium hover:underline #{local_assigns[:link_class]}"
