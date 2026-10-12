@@ -1,5 +1,5 @@
 class GatheringsController < BaseController
-  before_action :get_gathering, only: [:show, :edit, :update, :destroy, :update_report]
+  before_action :get_gathering, only: [:show, :notes, :edit, :update, :destroy, :update_report]
 
   breadcrumb "Organisation", :root_path, match: :exact
   breadcrumb "Rassemblements", :gatherings_path, match: :exact
@@ -16,6 +16,13 @@ class GatheringsController < BaseController
 
   def show
     @gathering = GatheringDecorator.new(@gathering)
+  end
+
+  # Note complète, mise en forme, dans la modale Turbo du layout : la fiche
+  # n'en montre qu'un extrait en texte brut.
+  def notes
+    @gathering = GatheringDecorator.new(@gathering)
+    render layout: "modal"
   end
 
   def new

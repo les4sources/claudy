@@ -4,8 +4,15 @@
 class AgendaItemNotesController < BaseController
   layout "modal"
   before_action :set_gathering
-  before_action :set_agenda_item
-  before_action :set_note
+  before_action :set_agenda_item, except: :show
+  before_action :set_note, except: :show
+
+  # Lecture seule, depuis l'extrait de la fiche. Trouvée par le rassemblement :
+  # un point reporté vit ailleurs, mais sa note est restée ici.
+  def show
+    @note = @gathering.agenda_item_notes.find_by!(agenda_item_id: params[:agenda_item_id])
+    @agenda_item = @note.agenda_item
+  end
 
   def edit
   end

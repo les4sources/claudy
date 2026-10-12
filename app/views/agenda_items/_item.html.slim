@@ -80,5 +80,5 @@ li.group.list-none(id="agenda_item_#{item.id}" data-sortable-target="item" data-
       - if note.present?
         .mt-3.rounded-md.border-l-2.border-emerald-300.bg-emerald-50.px-3.py-2
           .font-semibold.uppercase.text-emerald-700.mb-1(class="text-[0.6rem] tracking-[0.2em]") Notes
-          .lexxy-content.text-sm.text-stone-700
-            = note.body
+          .text-sm.text-stone-700
+            = render "gatherings/note_excerpt", rich_text: note.body, url: gathering_agenda_item_note_path(item.gathering, item), link_class: "text-emerald-700"
