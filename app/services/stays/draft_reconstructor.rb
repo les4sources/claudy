@@ -16,6 +16,23 @@ module Stays
       new(stay).to_draft
     end
 
+    # Draft à TARIFER : les salles passent de lignes `halls` à la grille
+    # `space_slots`, comme dans le funnel et le formulaire admin. Les lignes
+    # ponctuelles se tarifent à l'unité au tarif semaine ; la grille connaît
+    # le week-end et les forfaits. Sans cette conversion, un devis recalculé
+    # depuis un séjour ne retrouvait pas celui que le client avait lu (Michael,
+    # 2026-10-11 : 1 360 € annoncés, 1 220 € recalculés).
+    #
+    # `call` garde les lignes `halls` : la duplication en a besoin pour vider
+    # les dates sans perdre les salles.
+    def self.priced(stay)
+      draft = call(stay)
+      arrival, departure = draft.arrival_date, draft.departure_date
+      days = arrival && departure && departure >= arrival ? (arrival..departure).to_a : []
+      SpaceGridPrefill.apply!(draft, days)
+      draft
+    end
+
     def to_draft
       booking = lodging_booking
       # Chambres seules (epic #81, Phase 5) : rétablit le mode + les chambres
@@ -42,6 +59,9 @@ module Stays
         lodging_night_ids: lodging_night_ids_from_stay,
         adults:         booking&.adults,
         children:       booking&.children,
+        # Chiens (2026-10-12) : sans eux, le devis rouvert perdait son
+        # supplément, et un réenregistrement le retirait du prix.
+        dogs_count:     @stay.dogs_count,
         group_name:     booking&.group_name,
         # Catégorie (Michael 2026-07-21) : reconstruite depuis le Stay pour que
         # l'édition admin ET la modification client (proposed_draft) la portent —

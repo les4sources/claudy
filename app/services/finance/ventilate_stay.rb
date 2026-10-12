@@ -66,7 +66,7 @@ module Finance
     # garde que celles qui portent quelque chose : une catégorie à zéro n'a pas
     # à produire une ligne vide au grand livre.
     def weights
-      quote = PricingModel.quote(Stays::DraftReconstructor.call(@stay))
+      quote = PricingModel.quote(Stays::DraftReconstructor.priced(@stay))
 
       # TOUTES les catégories du devis, sans exception. En omettre une ne perd
       # pas d'argent — c'est pire : sa part est redistribuée aux autres, et la

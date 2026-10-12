@@ -97,6 +97,9 @@ module Public
       attrs[:experiences]   = current.experiences
       attrs[:meals]         = current.meals
       attrs[:terrasses]     = current.terrasses
+      # Le formulaire de modification ne montre pas les chiens : reportés,
+      # sans quoi une demande approuvée retirait le supplément.
+      attrs[:dogs_count]    = current.dogs_count unless attrs.key?(:dogs_count)
       # Heures d'arrivée/départ portées par le SÉJOUR (refonte 2026-07-22) :
       # reportées depuis l'état courant pour qu'une demande approuvée ne les
       # efface pas (le formulaire de modification client ne les affiche pas).
@@ -165,16 +168,14 @@ module Public
     # de référence du delta.
     def baseline_quote_cents
       @baseline_quote_cents ||= begin
-        current = Stays::DraftReconstructor.call(@stay)
         # MÊME représentation des espaces des deux côtés du delta : le
         # formulaire soumet une grille `space_slots`, la référence doit donc en
         # être une aussi. Sans cela, un formulaire intact affichait un delta —
         # les lignes `halls` et la grille ne se tarifent pas pareil depuis les
-        # forfaits multi-jours (epic #234, phase 2).
-        # Fenêtre du séjour ACTUEL, pas celle du formulaire : si le client
-        # déplace ses dates, la référence reste ce qu'il a réservé.
-        Stays::SpaceGridPrefill.apply!(current, days_of(current))
-        current.quote.total_excluding_experiences_cents
+        # forfaits multi-jours (epic #234, phase 2). `priced` convertit sur la
+        # fenêtre du séjour ACTUEL : si le client déplace ses dates, la
+        # référence reste ce qu'il a réservé.
+        Stays::DraftReconstructor.priced(@stay).quote.total_excluding_experiences_cents
       end
     end
 

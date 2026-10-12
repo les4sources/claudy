@@ -192,7 +192,7 @@ class ReservationMailer < ApplicationMailer
   # `DraftReconstructor` est déjà la reconstruction de référence : l'édition
   # admin et la modification client s'en servent.
   def quote_from(stay)
-    Stays::DraftReconstructor.call(stay).quote
+    Stays::DraftReconstructor.priced(stay).quote
   rescue StandardError
     nil
   end

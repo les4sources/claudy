@@ -78,7 +78,7 @@ RSpec.describe Finance::VentilateStripePayout do
     stay = Stay.create!(customer: customer, arrival_date: Date.new(2026, 8, 1),
                         departure_date: Date.new(2026, 8, 3), total_amount_cents: 130_000)
     payment = Payment.create!(stay_id: stay.id, amount_cents: 130_000, status: "paid", payment_method: "card")
-    allow(Stays::DraftReconstructor).to receive(:call).with(stay).and_return(:draft)
+    allow(Stays::DraftReconstructor).to receive(:priced).with(stay).and_return(:draft)
     allow(PricingModel).to receive(:quote).with(:draft).and_return(
       instance_double(PricingModel::Quote, lodging_only_cents: 130_000, spaces_cents: 0, meals_cents: 0,
                                            camping_cents: 0, van_cents: 0, terrace_cents: 0,
