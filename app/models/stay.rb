@@ -13,6 +13,7 @@
 #  deleted_at                 :datetime
 #  departure_date             :date
 #  departure_time             :string
+#  dogs_count                 :integer          default(0), not null
 #  invoice_status             :string
 #  legacy_origin              :string
 #  payment_status             :string           default("pending"), not null

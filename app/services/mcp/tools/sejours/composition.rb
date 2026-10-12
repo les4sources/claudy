@@ -79,7 +79,22 @@ module Mcp
           attrs[:meals] = repas(arguments["repas"], attrs[:meals]) if arguments.key?("repas")
           attrs[:experiences] = activites(arguments["activites"]) if arguments.key?("activites")
 
-          Reservations::Draft.new(attrs)
+          draft = Reservations::Draft.new(attrs)
+          # Salles du séjour reprises telles quelles, aux mêmes dates : en
+          # grille, comme le formulaire, pour qu'une modification ne les
+          # re-tarife pas au tarif semaine sans forfait. Dates déplacées : les
+          # lignes datées restent des lignes, la grille les perdrait.
+          unless arguments.key?("salles") || dates_changees
+            Stays::SpaceGridPrefill.apply!(draft, jours(draft))
+          end
+          draft
+        end
+
+        def jours(draft)
+          return [] if draft.arrival_date.blank? || draft.departure_date.blank?
+          return [] if draft.departure_date < draft.arrival_date
+
+          (draft.arrival_date..draft.departure_date).to_a
         end
 
         def nuits(attrs)

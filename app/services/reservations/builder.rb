@@ -132,6 +132,9 @@ module Reservations
           # Catégorie de séjour (Michael 2026-07-21) — portée par le draft
           # (funnel public ET form admin), posée telle quelle. nil accepté.
           category: draft.category,
+          # Chiens (2026-10-12) : gardés pour que la réouverture du séjour
+          # retrouve le supplément au lieu de le perdre.
+          dogs_count: draft.dogs_count.to_i,
           total_amount_cents: quote.total_excluding_experiences_cents,
           # Prix imposé (epic #81, Phase 3) : persisté d'entrée. `total_amount_cents`
           # est réaligné juste après (voir plus bas) pour que le total reflète
