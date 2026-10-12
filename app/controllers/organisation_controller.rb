@@ -67,6 +67,8 @@ class OrganisationController < BaseController
     @humans = humans
     next_g = Gathering.upcoming.includes(:gathering_category, :agenda_items).first
     @next_gathering = next_g ? GatheringDecorator.new(next_g) : nil
+    previous_g = Gathering.past.includes(:gathering_category).first
+    @previous_gathering = previous_g ? GatheringDecorator.new(previous_g) : nil
     @recent_decisions = DecisionDecorator.decorate_collection(
       Decision.recent.includes(:recorded_by, :gathering).limit(4)
     )
