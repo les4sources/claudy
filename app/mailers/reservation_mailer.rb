@@ -4,15 +4,22 @@ class ReservationMailer < ApplicationMailer
   TEAM_EMAIL = "sejours@les4sources.be".freeze
 
   # Récap post-réservation avec lien token stable de consultation (AC-T2-21).
-  # Le breakdown affiché provient du même PricingModel.quote que l'UI (source
-  # unique — AC-T2-17), recalculé depuis le Stay persisté.
-  def confirmation_request(stay)
+  #
+  # `quote` : le devis que le client vient de lire à l'étape 3 (lignes et total,
+  # cf. `email_quote` du funnel). L'email reprend CES lignes, mot pour mot et au
+  # centime près (Michael, 2026-10-11 : « les prix sont différents »). Les
+  # recalculer depuis le séjour persisté passait par `DraftReconstructor`, qui
+  # rebâtit les salles en lignes ponctuelles au tarif semaine (sans week-end ni
+  # forfait) et ne sait rien du supplément chien : le client lisait un autre
+  # devis que celui qu'il venait d'envoyer. Sans `quote` (appel hors funnel),
+  # repli sur cette reconstruction.
+  def confirmation_request(stay, quote = nil)
     @stay = stay
     # Stay-first (epic #26, Phase 2) : le lien de consultation envoyé au client
     # pointe sur la page séjour, pas sur la page booking — un séjour sans
     # hébergement n'a d'ailleurs pas de booking.
     @token = stay.token
-    @quote = quote_from(stay)
+    @quote = quote.present? ? quote_from_funnel(quote) : quote_from(stay)
     # Garde issue #232 : un client peut vivre sans email. On ne compte pas sur
     # les seuls appelants — un mailer sans destinataire lèverait, ici il se tait.
     return if stay.customer&.email.blank?
@@ -188,5 +195,17 @@ class ReservationMailer < ApplicationMailer
     Stays::DraftReconstructor.call(stay).quote
   rescue StandardError
     nil
+  end
+
+  # Devis sérialisé par `deliver_later` → un `PricingModel::Quote` que
+  # les gabarits lisent comme l'autre.
+  def quote_from_funnel(quote)
+    quote = quote.to_h.with_indifferent_access
+    lines = Array(quote[:lines]).map do |line|
+      line = line.to_h.with_indifferent_access
+      PricingModel::Line.new(label: line[:label], amount_cents: line[:amount_cents].to_i)
+    end
+    PricingModel::Quote.new(lines: lines, total_cents: quote[:total_cents].to_i,
+                            deposit_cents: quote[:deposit_cents].to_i)
   end
 end

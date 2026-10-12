@@ -132,7 +132,8 @@ module Public
 
       builder = Reservations::Builder.new(draft: @draft)
       if builder.run
-        ReservationMailer.confirmation_request(builder.stay).deliver_later
+        # Le devis de l'étape 3, tel quel : l'email ne recalcule rien.
+        ReservationMailer.confirmation_request(builder.stay, email_quote(builder.quote)).deliver_later
         # Email dédié au Pôle Accueil (décision Michael du 2026-09-08) : sejours@
         # ne recevait jusqu'ici qu'une copie cachée de l'accusé de réception
         # client — un email écrit pour le client, sur lequel on ne peut pas
@@ -235,6 +236,14 @@ module Public
       return [] unless raw.respond_to?(:key?)
 
       [:experiences].select { |key| raw.key?(key) }
+    end
+
+    # Lignes et total du devis, sous une forme que `deliver_later` sait
+    # sérialiser (des chaînes et des entiers, pas de Struct).
+    def email_quote(quote)
+      { lines: quote.lines.map { |line| { label: line.label, amount_cents: line.amount_cents } },
+        total_cents: quote.total_cents,
+        deposit_cents: quote.deposit_cents }
     end
 
     def persist_draft(attrs, overwrite: [])

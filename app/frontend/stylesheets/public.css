@@ -15,6 +15,8 @@
 @import 'spaces_grid.css';
 /* Cellules « nuit » — feuille partagée avec le formulaire séjour admin. */
 @import 'night_cells.css';
+/* Grilles nuit / jour sur téléphone, une colonne à la fois — partagée avec l'admin. */
+@import 'day_pager.css';
 
 /* @import '../../components/flow/component.css'; */
 
