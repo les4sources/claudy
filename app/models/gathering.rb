@@ -51,6 +51,8 @@ class Gathering < ApplicationRecord
   by_star_field :starts_at, :ends_at
 
   scope :upcoming, -> { where("ends_at >= ?", Time.current).order(:starts_at) }
+  # Le complément d'upcoming : ce qui est terminé, le plus récent d'abord.
+  scope :past, -> { where("ends_at < ?", Time.current).order(starts_at: :desc) }
   scope :for_team, ->(team_id) { joins(:gathering_teams).where(gathering_teams: { team_id: team_id }) }
 
   def transversal? = teams.empty?

@@ -1,4 +1,5 @@
 - gathering = @next_gathering
+- previous = @previous_gathering
 
 article.rounded-2xl.border.border-emerald-100.bg-white.shadow-sm.overflow-hidden
   - if gathering
@@ -55,8 +56,14 @@ article.rounded-2xl.border.border-emerald-100.bg-white.shadow-sm.overflow-hidden
       .mt-4.rounded-lg.bg-stone-50.border.border-stone-100.p-2.5
         = render "agenda_items/inline_form", gathering: gathering.object, agenda_item: gathering.object.agenda_items.build
 
-    .px-5.py-3.bg-stone-50.border-t.border-stone-100.flex.items-center.justify-end.gap-3.text-sm
-      = link_to gathering_path(gathering), class: "inline-flex items-center gap-1 text-stone-600 hover:text-emerald-700 font-medium" do
+    .px-5.py-3.bg-stone-50.border-t.border-stone-100.flex.items-center.justify-between.gap-3.text-sm
+      - if previous
+        = link_to gathering_path(previous), title: "#{previous.display_name} · #{previous.date_range}", class: "inline-flex items-center gap-1 min-w-0 text-stone-500 hover:text-emerald-700 font-medium" do
+          span ←
+          span.truncate Rassemblement précédent
+      - else
+        span
+      = link_to gathering_path(gathering), class: "shrink-0 inline-flex items-center gap-1 text-stone-600 hover:text-emerald-700 font-medium" do
         | Ouvrir le rassemblement
         span →
 
@@ -67,3 +74,8 @@ article.rounded-2xl.border.border-emerald-100.bg-white.shadow-sm.overflow-hidden
       .mt-1.text-xs.text-stone-500 Ajoute-en un depuis l'agenda.
       = link_to "Aller à l'agenda", root_path(view: "organisation"),
                 class: "mt-4 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+      - if previous
+        .mt-3
+          = link_to gathering_path(previous), title: "#{previous.display_name} · #{previous.date_range}", class: "inline-flex items-center gap-1 text-sm text-stone-500 hover:text-emerald-700 font-medium" do
+            span ←
+            span Rassemblement précédent
