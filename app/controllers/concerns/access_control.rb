@@ -20,7 +20,7 @@ module AccessControl
   included do
     class_attribute :access_sections, instance_writer: false, default: {}
     before_action :authorize_access!
-    helper_method :access_home_path
+    helper_method :access_home_path, :map_read_only_page?
   end
 
   class_methods do
@@ -40,6 +40,12 @@ module AccessControl
   def section_readable?(section) = current_user&.can_read?(section) || false
 
   def section_writable?(section) = current_user&.can_write?(section) || false
+
+  # Page de la carte ouverte en lecture seule : le layout pose `map-read-only`
+  # sur le <body>, qui masque les boutons d'écriture (`map.css`).
+  def map_read_only_page?
+    current_access_section == :map && !section_writable?(:map)
+  end
 
   def authorize_access!
     return if current_user.nil? || current_user.restricted_to_experiences?
