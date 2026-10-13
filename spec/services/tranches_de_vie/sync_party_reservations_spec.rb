@@ -83,6 +83,43 @@ RSpec.describe TranchesDeVie::SyncPartyReservations do
     expect(stay.reload.total_amount_cents).to eq(77_000)
   end
 
+  it "ajoute le paiement d'une party rattachée avant d'être réglée" do
+    LinenOrder.create!(stay: stay, kind: "double_bed", quantity: 1, price_cents: 50_000)
+    stub_tdv_order(tdv_unpaid_order(id: 1234))
+    TranchesDeVie::AttachPartyReservation.new(stay: stay).run(1234)
+    reservation = stay.reload.party_reservations.first
+    expect(stay.amount_paid_cents).to eq(0)
+
+    stub_tdv_order(tdv_order(id: 1234, payment_method: "cash", paid_at: "2026-10-10T21:00:00Z"))
+    service = described_class.new
+    expect(service.run).to be(true)
+    expect(service.changed).to eq(1)
+
+    expect(reservation.reload.paid).to be(true)
+    expect(reservation.payment.status).to eq("paid")
+    expect(reservation.payment.amount_cents).to eq(27_000)
+    expect(reservation.payment.paid_on).to eq(Date.new(2026, 10, 10))
+    expect(stay.reload.total_amount_cents).to eq(77_000)
+    expect(stay.amount_paid_cents).to eq(27_000)
+
+    # Un deuxième passage ne double pas le paiement.
+    described_class.new.run
+    expect(Payment.where(payment_method: Payment::TRANCHESDEVIE_METHOD).count).to eq(1)
+  end
+
+  it "suit le prix revu là-bas, paiement miroir compris" do
+    reservation = attach!
+    stub_tdv_order(tdv_order(id: 1234, total_cents: 30_000))
+
+    service = described_class.new
+    expect(service.run).to be(true)
+    expect(service.changed).to eq(1)
+    expect(reservation.reload.price_cents).to eq(30_000)
+    expect(reservation.payment.amount_cents).to eq(30_000)
+    expect(stay.reload.total_amount_cents).to eq(80_000)
+    expect(stay.amount_paid_cents).to eq(30_000)
+  end
+
   it "ne regarde que le séjour demandé avec for_stay" do
     reservation = attach!
     autre_stay = Stay.create!(customer: customer, status: "confirmed")

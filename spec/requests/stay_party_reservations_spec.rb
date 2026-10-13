@@ -41,6 +41,29 @@ RSpec.describe "Fiche séjour — Pizza Party de Tranches de Vie", type: :reques
       expect(response.body).to include("Rattacher")
     end
 
+    it "propose aussi une party pas encore payée (réglée sur place), et la signale" do
+      stub_tdv_index([tdv_unpaid_order(id: 77)])
+      get stay_party_reservations_path(stay)
+
+      expect(
+        a_request(:get, "#{TranchesDeVieHelpers::BASE_URL}/api/v1/orders")
+          .with(query: hash_excluding("paid"))
+      ).to have_been_made
+      expect(response.body).to include("Scouts de Namur")
+      expect(response.body).to include("Pas encore payée")
+      expect(response.body).to include("Rattacher")
+    end
+
+    it "écarte les parties annulées ou remboursées" do
+      stub_tdv_index([tdv_order(id: 1, cancelled: true, party: tdv_order["party"].merge("group_name" => "Groupe annulé")),
+                      tdv_order(id: 2, refunded: true, party: tdv_order["party"].merge("group_name" => "Groupe remboursé"))])
+      get stay_party_reservations_path(stay)
+
+      expect(response.body).not_to include("Groupe annulé")
+      expect(response.body).not_to include("Groupe remboursé")
+      expect(response.body).to include("Aucune Pizza Party sur cette période.")
+    end
+
     it "remonte les parties du MÊME client en tête" do
       autre = tdv_order(id: 1, customer: { "id" => 9, "full_name" => "Autre", "email" => "autre@example.com", "phone_e164" => "+32499000000" })
       stub_tdv_index([autre, tdv_order(id: 2)])

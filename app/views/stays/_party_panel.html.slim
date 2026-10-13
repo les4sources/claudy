@@ -22,6 +22,8 @@
                     = "#{party.status_label} le #{l(party.external_refunded_at.to_date, format: :short)}"
                   - else
                     = party.status_label
+              - if party.active? && !party.paid?
+                div class="mt-0.5 text-xs font-semibold text-amber-700" Pas encore payée sur Tranches de Vie
               - if party.external_number.present?
                 div class="mt-0.5 text-xs text-gray-500" = party.external_number
             span.shrink-0.text-sm.font-semibold.text-gray-900 = humanized_money_with_symbol(party.price)

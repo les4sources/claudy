@@ -35,8 +35,26 @@ RSpec.describe TranchesDeVie::Client do
       expect(
         a_request(:get, "#{TranchesDeVieHelpers::BASE_URL}/api/v1/orders")
           .with(headers: { "Authorization" => "Bearer #{TranchesDeVieHelpers::API_KEY}" },
-                query: hash_including({ "kind" => "private_party", "paid" => "true",
+                query: hash_including({ "kind" => "private_party",
                                         "held_on_from" => "2026-10-08", "held_on_to" => "2026-10-12" }))
+      ).to have_been_made
+    end
+
+    # Une party saisie en admin se règle sur place : filtrer sur « payée »
+    # la cachait jusqu'au pointage de la caisse, souvent après le séjour.
+    it "ne filtre pas sur le paiement, sauf demande expresse" do
+      stub_tdv_index([tdv_order])
+
+      described_class.new.private_parties(held_on_from: Date.new(2026, 10, 8), held_on_to: Date.new(2026, 10, 12))
+      expect(
+        a_request(:get, "#{TranchesDeVieHelpers::BASE_URL}/api/v1/orders")
+          .with(query: hash_excluding("paid"))
+      ).to have_been_made
+
+      described_class.new.private_parties(held_on_from: Date.new(2026, 10, 8), held_on_to: Date.new(2026, 10, 12), paid: true)
+      expect(
+        a_request(:get, "#{TranchesDeVieHelpers::BASE_URL}/api/v1/orders")
+          .with(query: hash_including({ "paid" => "true" }))
       ).to have_been_made
     end
 

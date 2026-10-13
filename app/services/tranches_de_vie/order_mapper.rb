@@ -15,6 +15,9 @@ module TranchesDeVie
 
     def cancelled? = ActiveModel::Type::Boolean.new.cast(order[:cancelled]).present?
     def refunded?  = ActiveModel::Type::Boolean.new.cast(order[:refunded]).present?
+    # L'argent est-il arrivé chez eux ? Une party saisie en admin se règle sur
+    # place : elle reste non payée tant que la caisse n'est pas pointée.
+    def paid?      = ActiveModel::Type::Boolean.new.cast(order[:payment_received]).present?
 
     # Statut côté Claudy. Une commande annulée prime sur remboursée : c'est
     # l'information la plus forte pour la compta.
@@ -37,6 +40,7 @@ module TranchesDeVie
         forfait: ActiveModel::Type::Boolean.new.cast(party[:forfait]).present?,
         price_cents: order[:total_cents].to_i,
         status: status,
+        paid: paid?,
         external_paid_at: order[:paid_at].presence,
         external_admin_url: party[:admin_url],
         external_refunded_at: order[:refunded_at].presence,

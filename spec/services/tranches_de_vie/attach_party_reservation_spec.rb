@@ -67,6 +67,21 @@ RSpec.describe TranchesDeVie::AttachPartyReservation do
     expect(stay.reload.payable_amount_cents).to eq(77_000)
   end
 
+  it "rattache une party pas encore payée : le total bouge, l'encaissé attend" do
+    stub_tdv_order(tdv_unpaid_order(id: 1234))
+    service = described_class.new(stay: stay)
+
+    expect { expect(service.run(1234)).to be(true) }
+      .to change { stay.reload.total_amount_cents }.by(27_000)
+    expect(stay.amount_paid_cents).to eq(0)
+
+    reservation = service.party_reservation
+    expect(reservation).to be_active
+    expect(reservation.paid).to be(false)
+    expect(reservation.payment).to be_nil
+    expect(Payment.where(payment_method: Payment::TRANCHESDEVIE_METHOD)).to be_empty
+  end
+
   it "refuse de rattacher deux fois la même party" do
     stub_tdv_order(tdv_order(id: 1234))
     described_class.new(stay: stay).run(1234)
@@ -81,7 +96,7 @@ RSpec.describe TranchesDeVie::AttachPartyReservation do
 
     service = described_class.new(stay: stay)
     expect(service.run(1234)).to be(false)
-    expect(service.error_message).to eq(described_class::NOT_PAID)
+    expect(service.error_message).to eq(described_class::NOT_ACTIVE)
     expect(PartyReservation.count).to eq(0)
   end
 
