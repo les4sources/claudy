@@ -17,25 +17,26 @@ module Finance
 
     def create
       @rule = AllocationRule.new(rule_params)
-
-      if @rule.save
-        Finance::SuggestAllocations.new.run!
-        redirect_to finance_allocation_rules_path, notice: "Règle « #{@rule.label} » créée — les suggestions ont été recalculées."
-      else
-        flash.now[:alert] = @rule.errors.full_messages.to_sentence
-        render :new, status: :unprocessable_entity
-      end
+      resultat = Finance::ApplyAllocationRule.new(rule: @rule, whodunnit: current_user&.email).run!
+      redirect_to finance_allocation_rules_path,
+                  notice: "Règle « #{@rule.label} » créée — #{resultat.proposed} ligne(s) reçoivent sa suggestion."
+    rescue ActiveRecord::RecordInvalid
+      flash.now[:alert] = @rule.errors.full_messages.to_sentence
+      render :new, status: :unprocessable_entity
     end
 
     def edit; end
 
+    # Les suggestions encore en attente suivent la règle corrigée : celles
+    # qu'elle ne justifie plus disparaissent, les nouvelles apparaissent.
     def update
-      if @rule.update(rule_params)
-        redirect_to finance_allocation_rules_path, notice: "Règle mise à jour."
-      else
-        flash.now[:alert] = @rule.errors.full_messages.to_sentence
-        render :edit, status: :unprocessable_entity
-      end
+      @rule.assign_attributes(rule_params)
+      resultat = Finance::ApplyAllocationRule.new(rule: @rule, whodunnit: current_user&.email).run!
+      redirect_to finance_allocation_rules_path,
+                  notice: "Règle mise à jour — #{resultat.proposed} ligne(s) reçoivent sa suggestion."
+    rescue ActiveRecord::RecordInvalid
+      flash.now[:alert] = @rule.errors.full_messages.to_sentence
+      render :edit, status: :unprocessable_entity
     end
 
     # L'ordre est signifiant : la première règle qui matche gagne, ce qui permet

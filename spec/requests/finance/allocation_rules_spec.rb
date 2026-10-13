@@ -56,6 +56,25 @@ RSpec.describe "Finances > Rapprochement assisté", type: :request do
       expect(response.body).to include("compte Beobank SRL")
     end
 
+    # Corriger une règle refait ses propositions en attente : celle qu'elle ne
+    # justifie plus disparaît, la nouvelle apparaît. Une règle passe avant Jev.
+    it "refait ses suggestions en attente quand on corrige ses critères" do
+      engie = build_cash_entry(cash_account, amount_cents: -12_000, label: "Facture")
+      engie.update!(counterparty_name: "ENGIE")
+      luminus = build_cash_entry(cash_account, amount_cents: -9_000, label: "Facture")
+      luminus.update!(counterparty_name: "LUMINUS")
+      jev = AllocationSuggestion.create!(cash_entry: luminus, general_account: bank_account, legal_entity: entity,
+                                         amount_cents: -9_000, confidence: 90, source: "jev", rationale: "Jev")
+      regle = AllocationRule.create!(label: "Énergie", counterparty_name_contains: "ENGIE", general_account: energie,
+                                     legal_entity: entity, position: 1)
+      Finance::SuggestAllocations.new(cash_entries: [engie]).run!
+
+      patch finance_allocation_rule_path(regle), params: { allocation_rule: { counterparty_name_contains: "LUMINUS" } }
+
+      expect(AllocationSuggestion.pending.where(allocation_rule: regle).pluck(:cash_entry_id)).to eq([luminus.id])
+      expect(AllocationSuggestion.find_by(id: jev.id)).to be_nil
+    end
+
     # Listes déroulantes = toujours cherchables (Michael, 2026-09-30). Les choix
     # facultatifs doivent pouvoir revenir à « Tous » / « Aucun ».
     it "rend chaque liste du formulaire cherchable" do
