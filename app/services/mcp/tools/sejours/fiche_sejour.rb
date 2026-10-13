@@ -67,6 +67,9 @@ module Mcp
           stay.party_reservations.each do |party|
             lignes << "- Pizza Party #{party.held_on} (#{party.persons} pers., #{party.status}) : #{euros(party.price_cents)}"
           end
+          stay.bar_consumptions.ordered.each do |bar|
+            lignes << "- Bar : #{bar.quantity} × #{bar.label} à #{euros(bar.unit_price_cents)} : #{euros(bar.price_cents)}"
+          end
           return "Composition : vide." if lignes.empty?
 
           "Composition :\n#{lignes.join("\n")}"

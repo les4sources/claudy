@@ -60,9 +60,11 @@ module Stays
     # honore) ; les overrides des SOURCES sont ignorés (leur montant réel a déjà
     # été absorbé dans les items migrés). On projette donc EXACTEMENT cela.
     def projected_total_cents
-      return target.price_override_cents if target.price_overridden?
+      # Le bar s'ajoute au prix imposé, comme dans `recompute_aggregates!`.
+      bar_cents = all_stays.sum(&:bar_amount_cents)
+      return target.price_override_cents + bar_cents if target.price_overridden?
 
-      all_stays.sum { |stay| computed_total_cents(stay) }
+      all_stays.sum { |stay| computed_total_cents(stay) } + bar_cents
     end
 
     def computed_total_cents(stay)
@@ -116,6 +118,7 @@ module Stays
         decorator.van_bookings.each    { |b| items << item(:van,     decorator.item_label(b), stay, from_target, b.try(:price_cents)) }
         stay.experience_bookings.active.each { |eb| items << item(:activity, eb.experience.name, stay, from_target, eb.price_cents) }
         stay.meal_orders.active.each   { |m| items << item(:meal, m.label, stay, from_target, m.price_cents) }
+        stay.bar_consumptions.ordered.each { |c| items << item(:bar, "#{c.label} × #{c.quantity}", stay, from_target, c.price_cents) }
       end
       items
     end

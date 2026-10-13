@@ -36,6 +36,8 @@ module Mcp
       Tools::Sejours::ModifierPaiementSejour,
       Tools::Sejours::SupprimerSejour,
       Tools::Sejours::ModifierClient,
+      Tools::Sejours::ArticlesBar,
+      Tools::Sejours::EncoderFeuilleBar,
       Tools::Activites::ChercherActivites,
       Tools::Activites::FicheActivite,
       Tools::Activites::ReservationsActivites,
@@ -130,6 +132,10 @@ module Mcp
       et devis_sejour. Plusieurs outils ÉCRIVENT AU CLIENT (confirmation,
       pré-confirmation, refus, demande de modification) : leur aperçu le dit,
       dis-le aussi à l'utilisateur avant qu'il accepte.
+      Feuille de bar : quand on te donne la photo de la feuille où un groupe a
+      noté ses consommations, retrouve son séjour, rapporte chaque ligne à un
+      article d'articles_bar, puis encoder_feuille_bar. Ce qui est illisible,
+      demande-le plutôt que de deviner.
 
       ACTIVITÉS. Une activité (#12, balade avec les ânes…) a un porteur et des
       créneaux (#345) ; un séjour s'y inscrit par une réservation (#678), « à

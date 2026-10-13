@@ -1,0 +1,94 @@
+/ Feuille de bar du groupe (Michael, 2026-10-13). À gauche la photo de la
+  feuille rendue par le groupe, à droite les articles du bar : on recopie l'une
+  dans l'autre sans changer d'écran. Une case vide n'écrit rien ; vider une
+  case déjà remplie retire la ligne.
+- stay = @stay.decorate
+- total_cents = @lines.values.sum(&:price_cents)
+.px-4.sm:px-6.lg:px-8.py-6
+  .max-w-7xl.mx-auto
+    .mb-6.flex.flex-wrap.items-start.justify-between.gap-3
+      div
+        h1.text-xl.font-semibold.text-gray-900 = "Feuille de bar · séjour ##{@stay.id}"
+        p.mt-1.text-sm.text-gray-600
+          = [stay.display_name, stay.date_range.presence].compact.join(" · ")
+        p.mt-1.text-sm.text-gray-500
+          | Prix public du catalogue au #{l(@price_date, format: "%-d %B %Y")}. Les consommations s'ajoutent au total du séjour
+          = @stay.price_overridden? ? ", en plus du prix imposé." : "."
+      = link_to "← Retour au séjour", stay_path(@stay), class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+
+    .grid.gap-6(class="grid-cols-1 lg:grid-cols-2")
+      /  === PHOTOS DE LA FEUILLE =========================================
+         Sans variante : libvips n'est pas sur le serveur (cf. la photo des
+         fiches papier). On rend l'original, borné par du CSS ; un clic l'ouvre
+         en grand dans un nouvel onglet.
+      section.space-y-3(class="lg:sticky lg:top-4 lg:self-start")
+        .rounded-lg.bg-white.p-4.ring-1.ring-gray-200
+          .flex.items-baseline.justify-between
+            h2.text-sm.font-semibold.text-gray-900 Photo de la feuille
+            - if @photos.any?
+              span.text-xs.text-gray-500 = "#{@photos.size} photo#{'s' if @photos.size > 1}"
+          - if @photos.any?
+            .mt-3.space-y-3
+              - @photos.each do |photo|
+                figure
+                  = link_to url_for(photo), target: "_blank", rel: "noopener", title: "Ouvrir en grand" do
+                    = image_tag url_for(photo), alt: "Feuille de bar du séjour ##{@stay.id}", class: "w-full max-h-[70vh] object-contain rounded-md border border-gray-200 bg-gray-50"
+                  figcaption.mt-1.flex.items-center.justify-between.gap-2.text-xs.text-gray-500
+                    span.truncate = "#{photo.filename} · ajoutée le #{l(photo.created_at.to_date, format: '%-d %B')}"
+                    = button_to "Retirer", photo_stay_bar_sheet_path(@stay, photo_id: photo.id), method: :delete, form: { data: { turbo_confirm: "Retirer cette photo du séjour ?" } }, class: "text-red-600 hover:text-red-800"
+          - else
+            p.mt-2.text-sm.text-gray-500 Aucune photo pour l'instant. Ajoute celle que le groupe a rendue : elle restera jointe au séjour.
+          = form_with url: photos_stay_bar_sheet_path(@stay), method: :post, multipart: true, data: { controller: "auto-submit", action: "change->auto-submit#submit" }, class: "mt-3" do
+            label.flex.cursor-pointer.items-center.justify-center.gap-2.rounded-md.border.border-dashed.border-indigo-300.bg-indigo-50.px-3.py-2.text-sm.font-medium.text-indigo-700(class="hover:bg-indigo-100")
+              | Ajouter une photo
+              = file_field_tag "photos[]", multiple: true, accept: "image/*", class: "sr-only"
+
+      /  === ARTICLES DU BAR ==============================================
+      section
+        - if @items.empty?
+          .rounded-lg.bg-white.p-6.text-sm.text-gray-500.ring-1.ring-gray-200
+            p.font-medium.text-gray-700 Aucun article actif au bar dans le catalogue.
+            = link_to "Ouvrir le catalogue", finance_catalog_index_path(channel: "bar"), class: "text-indigo-600 underline"
+        - else
+          = form_with url: stay_bar_sheet_path(@stay), method: :patch, data: { controller: "bar-sheet" } do
+            .rounded-lg.bg-white.ring-1.ring-gray-200
+              .flex.flex-wrap.items-center.justify-between.gap-3.border-b.border-gray-200.px-4.py-3
+                input.block.w-full.rounded-md.border-gray-300.text-sm(class="sm:w-64" type="search" placeholder="Chercher un article…" aria-label="Chercher un article" data-action="input->bar-sheet#filter" data-bar-sheet-target="search")
+                .text-sm.text-gray-600
+                  | Total bar
+                  span.ml-2.text-lg.font-semibold.text-gray-900(data-bar-sheet-target="total") = humanized_money_with_symbol(Money.new(total_cents))
+
+              table.w-full.text-sm
+                thead.bg-gray-50.text-xs.uppercase.tracking-wide.text-gray-500
+                  tr
+                    th.px-4.py-2.text-left(scope="col") Article
+                    th.px-2.py-2.text-right(scope="col") Prix
+                    th.px-2.py-2.text-center(scope="col") Quantité
+                    th.px-4.py-2.text-right(scope="col") Montant
+                - @items.group_by { |item| item.category.presence }.each do |category, items|
+                  tbody(data-bar-sheet-target="group")
+                    - if category.present?
+                      tr.bg-gray-50
+                        th.px-4.py-1.text-left.text-xs.font-semibold.uppercase.tracking-wide.text-gray-400(colspan="4" scope="colgroup") = category
+                    - items.each do |item|
+                      - line = @lines[item.id]
+                      - unit_cents = line ? line.unit_price_cents : BarConsumption.unit_price_for(item, on: @price_date)
+                      tr.border-t.border-gray-100(data-bar-sheet-target="row" data-name=item.name.downcase class=("bg-indigo-50/40" if line))
+                        td.px-4.py-1.5
+                          .font-medium.text-gray-900 = item.name
+                          - if unit_cents && line.nil? && !BarConsumption.public_price?(item, on: @price_date)
+                            .text-xs.text-amber-700 Pas de prix public : prix sourcier
+                        td.px-2.py-1.5.text-right.whitespace-nowrap.text-gray-600
+                          - if unit_cents
+                            = humanized_money_with_symbol(Money.new(unit_cents))
+                          - else
+                            span.text-xs.text-red-600 pas de prix
+                        td.px-2.py-1.5.text-center
+                          = number_field_tag "quantities[#{item.id}]", line&.quantity, min: 0, step: 1, inputmode: "numeric", disabled: unit_cents.nil?, "aria-label": "Quantité de #{item.name}", data: { action: "input->bar-sheet#recompute", bar_sheet_target: "quantity", unit_price_cents: unit_cents.to_i }, class: "w-20 rounded border-gray-300 py-1 text-right text-sm"
+                        td.px-4.py-1.5.text-right.whitespace-nowrap.font-medium.text-gray-900(data-bar-sheet-target="amount")
+                          = line ? humanized_money_with_symbol(line.price) : ""
+
+              .flex.flex-wrap.items-center.justify-between.gap-3.border-t.border-gray-200.px-4.py-3
+                p.text-xs.text-gray-500 Une case vide n'écrit rien ; vider une case déjà remplie retire la ligne.
+                button.rounded-md.bg-indigo-600.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="hover:bg-indigo-700" type="submit")
+                  | Enregistrer la feuille

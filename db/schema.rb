@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_12_070000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_13_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -252,6 +252,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_070000) do
     t.index ["code"], name: "index_analytic_accounts_on_code", unique: true
     t.index ["deleted_at"], name: "index_analytic_accounts_on_deleted_at"
     t.index ["team_id"], name: "index_analytic_accounts_on_team_id"
+  end
+
+  create_table "bar_consumptions", force: :cascade do |t|
+    t.bigint "catalog_item_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "label", null: false
+    t.integer "price_cents", null: false
+    t.integer "quantity", null: false
+    t.bigint "stay_id", null: false
+    t.integer "unit_price_cents", null: false
+    t.datetime "updated_at", null: false
+    t.index ["catalog_item_id"], name: "index_bar_consumptions_on_catalog_item_id"
+    t.index ["deleted_at"], name: "index_bar_consumptions_on_deleted_at"
+    t.index ["stay_id", "catalog_item_id"], name: "index_bar_consumptions_on_stay_and_item_live", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["stay_id"], name: "index_bar_consumptions_on_stay_id"
   end
 
   create_table "batch_cooking_cooks", force: :cascade do |t|
@@ -2678,6 +2694,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_070000) do
   add_foreign_key "allocation_suggestions", "legal_entities"
   add_foreign_key "allocation_suggestions", "teams"
   add_foreign_key "analytic_accounts", "teams"
+  add_foreign_key "bar_consumptions", "catalog_items"
+  add_foreign_key "bar_consumptions", "stays"
   add_foreign_key "batch_cooking_cooks", "batch_cooking_sessions"
   add_foreign_key "batch_cooking_cooks", "humans"
   add_foreign_key "batch_cooking_servings", "batch_cooking_sessions"

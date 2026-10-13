@@ -429,7 +429,7 @@ class StayDecorator < ApplicationDecorator
     # Draps (epic #260, phase 2) : pas davantage des `stay_items` que les repas,
     # et ils comptent dans le total — sans eux, les lignes de la page client ne
     # sommeraient plus au total affiché.
-    lines + object.linen_orders.ordered.map do |linen|
+    lines += object.linen_orders.ordered.map do |linen|
       {
         kind: "LinenOrder",
         icon: :bed,
@@ -438,6 +438,20 @@ class StayDecorator < ApplicationDecorator
         amount: h.humanized_money_with_symbol(Money.new(linen.price_cents.to_i))
       }
     end
+
+    # Bar (Michael, 2026-10-13) : une seule ligne pour toute la feuille. Le
+    # détail article par article reste à l'équipe ; le client y lit ce qui
+    # s'ajoute à son total.
+    bar_cents = object.bar_amount_cents
+    return lines unless bar_cents.positive?
+
+    lines + [{
+      kind: "BarConsumption",
+      icon: :utensils,
+      name: "Consommations au bar",
+      date_range: nil,
+      amount: h.humanized_money_with_symbol(Money.new(bar_cents))
+    }]
   end
 
   # Brouette de bûches incluse (epic #260, décision 6) : information portée par

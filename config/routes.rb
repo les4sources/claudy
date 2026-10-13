@@ -750,6 +750,12 @@ Rails.application.routes.draw do
         post :sync
       end
     end
+    # Feuille de bar du groupe (Michael, 2026-10-13) : l'écran d'encodage, à
+    # côté de la photo de la feuille, et les photos elles-mêmes.
+    resource :bar_sheet, only: [:show, :update], controller: "stay_bar_sheets" do
+      post :photos, action: :add_photos
+      delete "photos/:photo_id", action: :remove_photo, as: :photo
+    end
   end
   resources :experience_bookings, only: [:index, :show, :update, :destroy] do
     collection do

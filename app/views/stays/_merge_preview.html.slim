@@ -5,7 +5,7 @@
 - target = preview.target
 - target_hue = stay_hue(target.id)
 - all_ids = [target.id, *preview.sources.map(&:id)]
-- ordered_types = %i[lodging space camping van activity meal]
+- ordered_types = %i[lodging space camping van activity meal bar]
 - grouped = preview.composition.group_by(&:type)
 
 .px-6.py-5(data-merge-step="preview")
