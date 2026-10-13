@@ -119,6 +119,13 @@ module Mcp
       Tools::Finances::ChargeFixe,
       Tools::Finances::FacturesVente,
       Tools::Finances::FactureVente,
+      Tools::Finances::RelevesPorteurs,
+      Tools::Finances::RelevePorteur,
+      Tools::Finances::DepotVente,
+      Tools::Finances::ReleveDepotVente,
+      Tools::Finances::PartagesRevenus,
+      Tools::Finances::AccordPartage,
+      Tools::Finances::RelevePartage,
       Tools::Carte::Plantes,
       Tools::Carte::FichePlante,
       Tools::Carte::Especes,
@@ -190,7 +197,12 @@ module Mcp
       billet (compter_caisse) ; Stripe : comptes_stripe, cout_encaissement.
       Les factures fournisseurs arrivent par mail (boite_compta) : on encode
       une pièce avec enregistrer_facture_achat `piece_mail`. Les ventes
-      (factures émises dans OkiOki) : factures_vente, facture_vente.
+      (factures émises dans OkiOki) : factures_vente, facture_vente. Les
+      reversements : relevés des porteurs d'activité (releves_porteurs,
+      releve_porteur), dépôt-vente des artisans (depot_vente,
+      releve_depot_vente), partages de revenus d'un hébergement
+      (partages_revenus, accord_partage, releve_partage). Émettre un relevé ou
+      renvoyer une demande ÉCRIT au porteur, à l'artisan ou au bénéficiaire.
 
       CARTE DU DOMAINE ET PLANTES. Les plantes nourricières (#id, n° de
       terrain) ont une espèce et une variété du catalogue local (especes) ;
