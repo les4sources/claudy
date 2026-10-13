@@ -44,14 +44,16 @@ module TranchesDeVie
       @api_key.present?
     end
 
-    # Les parties privées PAYÉES tenues entre deux dates. Renvoie la liste des
-    # commandes (hashes bruts), pagination suivie.
-    def private_parties(held_on_from:, held_on_to:, per_page: MAX_PER_PAGE)
+    # Les parties privées tenues entre deux dates, payées ou non : une party
+    # saisie en admin là-bas se règle sur place et reste « non payée » jusqu'au
+    # pointage de la caisse. `paid: true` ne garde que les payées. Renvoie la
+    # liste des commandes (hashes bruts), pagination suivie.
+    def private_parties(held_on_from:, held_on_to:, paid: nil, per_page: MAX_PER_PAGE)
       orders = []
       page = 1
 
       while page <= MAX_PAGES
-        body = get("/api/v1/orders", kind: "private_party", paid: "true",
+        body = get("/api/v1/orders", kind: "private_party", paid: paid.nil? ? nil : paid.to_s,
                                      held_on_from: held_on_from.to_s, held_on_to: held_on_to.to_s,
                                      page: page, per_page: [per_page, MAX_PER_PAGE].min)
         batch = Array(body["data"])

@@ -2,6 +2,7 @@ json.id party_reservation.id
 json.type "party_reservation"
 json.source party_reservation.source
 json.status party_reservation.status
+json.paid party_reservation.paid
 json.external_id party_reservation.external_id
 json.external_number party_reservation.external_number
 json.held_on party_reservation.held_on

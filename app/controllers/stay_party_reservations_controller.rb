@@ -8,8 +8,9 @@
 class StayPartyReservationsController < BaseController
   before_action :set_stay
 
-  # Les candidates : les parties privées PAYÉES tenues autour des dates du
-  # séjour. Rendu dans un turbo-frame, pas de page pleine.
+  # Les candidates : les parties privées tenues autour des dates du séjour,
+  # payées ou non (une party saisie en admin se règle sur place), hors annulées
+  # et remboursées. Rendu dans un turbo-frame, pas de page pleine.
   def index
     @client = TranchesDeVie::Client.new
     @candidates = []
@@ -85,7 +86,7 @@ class StayPartyReservationsController < BaseController
   # Les candidates du MÊME CLIENT d'abord : c'est presque toujours la bonne, et
   # la faire chercher dans une liste de dates est du travail pour rien.
   def sorted_candidates(orders)
-    mappers = orders.map { |order| TranchesDeVie::OrderMapper.new(order) }
+    mappers = orders.map { |order| TranchesDeVie::OrderMapper.new(order) }.select { |m| m.status == "active" }
     mappers.sort_by { |m| [same_customer?(m) ? 0 : 1, m.attributes[:held_on].to_s] }
   end
 
