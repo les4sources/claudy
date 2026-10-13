@@ -195,6 +195,19 @@ module Mcp
           end
         end
 
+        # Une dette ou un litige sans facture (`Liability`) en une ligne.
+        def ligne_dette(dette)
+          fourchette = dette.ranged? ? " · fourchette #{dette.low_cents ? euros(dette.low_cents) : '?'} – #{dette.high_cents ? euros(dette.high_cents) : '?'}" : ""
+          quand = if dette.expected_on.nil? then "sans date (comptée aujourd'hui)"
+                  elsif dette.installments > 1 then "#{dette.installments} mensualités dès le #{dette.expected_on}"
+                  else "le #{dette.expected_on}"
+                  end
+          "Dette ##{dette.id} #{dette.label} (#{dette.kind_label.downcase}, #{dette.legal_entity.name}" \
+            "#{", #{dette.third_party.name}" if dette.third_party}) · #{dette.status_label.downcase}" \
+            "#{" · réclamé #{euros(dette.claimed_cents)}" if dette.claimed_cents}#{fourchette} · retenu #{euros(dette.retained_cents)}" \
+            "#{" · déjà payé #{euros(dette.paid_cents)}" if dette.paid_cents.positive?} · #{quand}"
+        end
+
         def ligne_facture(facture)
           reste = facture.to_pay? || facture.paid? ? " · reste #{euros(facture.remaining_cents)}" : ""
           "Facture ##{facture.id} #{facture.third_party&.name}#{" n° #{facture.number}" if facture.number.present?} · " \

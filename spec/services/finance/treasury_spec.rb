@@ -221,6 +221,31 @@ RSpec.describe Finance::Treasury do
       end
     end
 
+    describe "les dettes et litiges sans facture" do
+      it "retire le montant retenu à sa date probable, et ce qui tombe après l'horizon à part" do
+        Liability.create!(legal_entity: entity, label: "Taxe d'hébergement", kind: "dispute",
+                          claimed_cents: 1_200_000, low_cents: 600_000, high_cents: 1_200_000,
+                          retained_cents: 1_200_000, expected_on: Date.new(2026, 11, 1), installments: 6)
+
+        expect(treasury.outflows.select(&:liability?).map { |o| [o.due_on, o.amount_cents] }).to eq([
+          [Date.new(2026, 11, 1), 200_000], [Date.new(2026, 12, 1), 200_000]
+        ])
+        expect(treasury.liabilities_retained_cents).to eq(1_200_000)
+        expect(treasury.liabilities_beyond_horizon_cents).to eq(800_000)
+        expect(treasury.lowest_point.balance_cents).to eq(100_000 - 400_000)
+      end
+
+      it "retire aujourd'hui une dette sans date, ignore une dette soldée ou d'une autre entité" do
+        Liability.create!(legal_entity: entity, label: "Arriéré", retained_cents: 30_000)
+        Liability.create!(legal_entity: entity, label: "Gagné", retained_cents: 50_000, status: "dropped")
+        Liability.create!(legal_entity: build_legal_entity(name: "Domaine SRL", form: "srl"),
+                          label: "Autre", retained_cents: 70_000)
+
+        expect(treasury.outflows.map { |o| [o.liability&.label, o.due_on, o.amount_cents] })
+          .to eq([["Arriéré", today, 30_000]])
+      end
+    end
+
     it "dessine des marches et trouve le point bas" do
       facture(total: 150_000, due_on: Date.new(2026, 10, 5))
       stay(arrival: Date.new(2026, 10, 20), departure: Date.new(2026, 10, 22), total: 80_000)

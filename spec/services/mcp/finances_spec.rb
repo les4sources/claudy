@@ -44,6 +44,27 @@ RSpec.describe Mcp::Server, "finances" do
     build_cash_entry(compte_bancaire, amount_cents: cents, entry_date: jour, label: label).tap { |e| e.update!(attrs) if attrs.any? }
   end
 
+  it "enregistre la taxe d'Yvoir comme litige, la montre dans À payer et la trésorerie, puis la solde" do
+    ThirdParty.create!(name: "Commune d'Yvoir", kind: "supplier")
+    arguments = { "libelle" => "Taxe communale d'hébergement 2021-2025", "nature" => "litige", "creancier" => "Yvoir",
+                  "reclame" => "12000", "bas" => "6000", "haut" => "12000", "date_probable" => (jour + 60).iso8601,
+                  "motif" => "courrier de la commune" }
+
+    apercu = texte(outil("enregistrer_dette_litige", arguments))
+    expect(apercu).to include("APERÇU", "retenu 12000,00 €", "fourchette 6000,00 € – 12000,00 €")
+    expect(Liability.count).to eq(0)
+
+    confirme("enregistrer_dette_litige", arguments)
+    taxe = Liability.last
+    expect(taxe).to have_attributes(kind: "dispute", retained_cents: 1_200_000, legal_entity: entity)
+    expect(texte(outil("a_payer", {}))).to include("Dettes et litiges sans facture", "Dette ##{taxe.id}")
+    ligne(50_000)
+    expect(texte(outil("tresorerie", {}))).to include("Dont dettes et litiges sans facture : 12000,00 €")
+
+    confirme("enregistrer_dette_litige", { "dette" => taxe.id, "statut" => "soldee", "motif" => "payée" })
+    expect(taxe.reload.status).to eq("settled")
+  end
+
   it "affecte une ligne en deux parts, la comptabilise, puis annule la passation" do
     entry = ligne(15_000, counterparty_name: "Les Amis du Four")
     expect(texte(outil("lignes_tresorerie", {}))).to include("Ligne ##{entry.id}", "Les Amis du Four", "à affecter")

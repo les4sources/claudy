@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_12_070000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_13_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1355,6 +1355,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_070000) do
     t.string "vat_regime", default: "exempt", null: false
     t.index ["deleted_at"], name: "index_legal_entities_on_deleted_at"
     t.index ["name"], name: "index_legal_entities_on_name", unique: true
+  end
+
+  create_table "liabilities", force: :cascade do |t|
+    t.bigint "claimed_cents"
+    t.date "closed_on"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.date "expected_on"
+    t.bigint "general_account_id"
+    t.bigint "high_cents"
+    t.integer "installments", default: 1, null: false
+    t.string "kind", default: "debt", null: false
+    t.string "label", null: false
+    t.bigint "legal_entity_id", null: false
+    t.bigint "low_cents"
+    t.text "notes"
+    t.bigint "paid_cents", default: 0, null: false
+    t.bigint "retained_cents", null: false
+    t.string "status", default: "open", null: false
+    t.bigint "team_id"
+    t.bigint "third_party_id"
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_liabilities_on_deleted_at"
+    t.index ["general_account_id"], name: "index_liabilities_on_general_account_id"
+    t.index ["legal_entity_id"], name: "index_liabilities_on_legal_entity_id"
+    t.index ["status"], name: "index_liabilities_on_status"
+    t.index ["team_id"], name: "index_liabilities_on_team_id"
+    t.index ["third_party_id"], name: "index_liabilities_on_third_party_id"
   end
 
   create_table "linen_orders", force: :cascade do |t|
@@ -2783,6 +2811,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_070000) do
   add_foreign_key "journal_lines", "journal_entries"
   add_foreign_key "journal_lines", "teams"
   add_foreign_key "journal_lines", "third_parties"
+  add_foreign_key "liabilities", "general_accounts"
+  add_foreign_key "liabilities", "legal_entities"
+  add_foreign_key "liabilities", "teams"
+  add_foreign_key "liabilities", "third_parties"
   add_foreign_key "linen_orders", "stays"
   add_foreign_key "lodging_compositions", "lodgings", column: "component_lodging_id"
   add_foreign_key "lodging_compositions", "lodgings", column: "composite_lodging_id"

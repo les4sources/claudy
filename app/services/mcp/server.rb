@@ -94,6 +94,7 @@ module Mcp
       Tools::Finances::EnregistrerFactureAchat,
       Tools::Finances::GesteFactureAchat,
       Tools::Finances::EnregistrerNoteDeFrais,
+      Tools::Finances::EnregistrerDetteLitige,
       Tools::Finances::GesteNoteDeFrais,
       Tools::Finances::LigneCaisse,
       Tools::Finances::GenererChargesRecurrentes,

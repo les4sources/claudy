@@ -1,0 +1,88 @@
+/ Une dette ou un litige sans facture. Les montants se saisissent en euros ;
+  « montant retenu » vide = le haut de la fourchette, sinon le réclamé.
+- money = ->(value) { value && format("%.2f", value).tr(".", ",") }
+- input_class = "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+= form_with model: [:finance, liability], class: "space-y-6" do |f|
+  = render "finance/shared/form_errors", record: liability
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-3.text-sm.font-semibold.text-gray-900 La dette
+    .grid.gap-4(class="md:grid-cols-2")
+      div(class="md:col-span-2")
+        = f.text_field :label, label: "Libellé *", required: true, placeholder: "Taxe communale d'hébergement 2021-2025", class: input_class
+      div
+        = f.label :kind, "Nature *", class: "block text-sm font-medium text-gray-700"
+        div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une nature…" class="relative")
+          = f.select :kind, Liability::KIND_LABELS.map { |v, l| [l, v] }, {}, class: input_class, data: { searchable_select_target: "select" }
+          = render "shared/searchable_select_search", label: "Chercher une nature"
+        ul.mt-1.space-y-0.5.text-xs.text-gray-500
+          - Liability::KIND_HINTS.each do |kind, hint|
+            li
+              strong= Liability::KIND_LABELS[kind]
+              | &nbsp;: #{hint}
+      div
+        = f.label :legal_entity_id, "Entité qui doit *", class: "block text-sm font-medium text-gray-700"
+        div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une entité…" class="relative")
+          = f.collection_select :legal_entity_id, LegalEntity.actives.ordered, :id, :name, {}, class: input_class, data: { searchable_select_target: "select" }
+          = render "shared/searchable_select_search", label: "Chercher une entité"
+      div
+        = f.label :third_party_id, "Créancier", class: "block text-sm font-medium text-gray-700"
+        div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un tiers…" data-searchable-select-clearable-value="true" class="relative")
+          = f.collection_select :third_party_id, ThirdParty.actives.ordered, :id, :name, { include_blank: "Aucun" }, class: input_class, data: { searchable_select_target: "select" }
+          = render "shared/searchable_select_search", label: "Chercher un tiers"
+        p.mt-1.text-xs.text-gray-500 La commune, l'administration, le fournisseur. Facultatif.
+      div
+        = f.label :team_id, "Pôle concerné", class: "block text-sm font-medium text-gray-700"
+        div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucun" data-searchable-select-clearable-value="true" class="relative")
+          = f.collection_select :team_id, Team.ordered, :id, :name, { include_blank: "Aucun" }, class: input_class, data: { searchable_select_target: "select" }
+          = render "shared/searchable_select_search", label: "Chercher un pôle"
+        p.mt-1.text-xs.text-gray-500 Pour que le pôle sache ce qui pèse sur lui (la taxe d'hébergement : l'Accueil).
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-1.text-sm.font-semibold.text-gray-900 Les montants
+    p.mb-3.text-xs.text-gray-500
+      | Le montant retenu est celui que la trésorerie retire. Laissé vide, c'est le haut de la fourchette — sinon le montant réclamé. Retenir moins se justifie en note.
+    .grid.gap-4(class="md:grid-cols-3")
+      div
+        = f.text_field :claimed, label: "Montant réclamé (€)", inputmode: "decimal", placeholder: "12 000", value: money.(liability.claimed), class: input_class
+      div
+        = f.text_field :low, label: "Fourchette : au moins (€)", inputmode: "decimal", placeholder: "6 000", value: money.(liability.low), class: input_class
+      div
+        = f.text_field :high, label: "Fourchette : au plus (€)", inputmode: "decimal", placeholder: "12 000", value: money.(liability.high), class: input_class
+      div
+        = f.text_field :retained, label: "Montant retenu (€)", inputmode: "decimal", placeholder: "le haut de la fourchette", value: money.(liability.retained), class: input_class
+      div
+        = f.text_field :paid, label: "Déjà payé (€)", inputmode: "decimal", placeholder: "0", value: (liability.paid_cents.to_i.positive? ? money.(liability.paid) : nil), class: input_class
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-1.text-sm.font-semibold.text-gray-900 Quand
+    p.mb-3.text-xs.text-gray-500
+      | Sans date, la dette sort de la trésorerie aujourd'hui : ne pas savoir quand on paiera ne dispense pas de payer. Un étalement obtenu se note en mensualités, la première à la date probable.
+    .grid.gap-4(class="md:grid-cols-3")
+      div
+        = f.date_field :expected_on, label: "Date probable de paiement", class: input_class
+      div
+        = f.number_field :installments, label: "Nombre de mensualités", min: 1, max: Liability::MAX_INSTALLMENTS, class: input_class
+      div
+        = f.label :status, "Statut", class: "block text-sm font-medium text-gray-700"
+        div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un statut…" class="relative")
+          = f.select :status, Liability::STATUS_LABELS.map { |v, l| [l, v] }, {}, class: input_class, data: { searchable_select_target: "select" }
+          = render "shared/searchable_select_search", label: "Chercher un statut"
+        p.mt-1.text-xs.text-gray-500 Soldée : payée ou remplacée par une facture encodée. Abandonnée : le créancier a renoncé.
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-3.text-sm.font-semibold.text-gray-900 Pour la suite
+    .grid.gap-4(class="md:grid-cols-2")
+      div
+        = f.label :general_account_id, "Compte de charge", class: "block text-sm font-medium text-gray-700"
+        div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucun" data-searchable-select-clearable-value="true" class="relative")
+          = f.collection_select :general_account_id, GeneralAccount.actives.in_class(6).ordered, :id, :to_s, { include_blank: "Aucun" }, class: input_class, data: { searchable_select_target: "select" }
+          = render "shared/searchable_select_search", label: "Chercher un compte"
+        p.mt-1.text-xs.text-gray-500 Pour le comptable, qui passera la provision à la clôture.
+      div
+        = f.label :notes, "Notes", class: "block text-sm font-medium text-gray-700"
+        = f.text_area :notes, rows: 3, placeholder: "Courrier du…, contestation envoyée le…, ce qu'on conteste et pourquoi", class: input_class
+
+  .flex.items-center.gap-3
+    = f.submit "Enregistrer", class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+    = link_to "Annuler", finance_liabilities_path, class: "text-sm text-gray-500 hover:text-gray-700"
