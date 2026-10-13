@@ -10,6 +10,7 @@
 # seule — une espèce ou une variété nouvelle y naît à l'enregistrement de la
 # plante, par son nom (`PlantsController#assign_species`).
 class PlantSpeciesController < BaseController
+  access_section :map
   LIMIT = 10
   # Les expositions proposées d'office ; une valeur importée hors liste reste
   # affichée et cochée.

@@ -15,6 +15,7 @@
 # On ne supprime que SES messages (403 sinon). Un message inconnu ou déjà
 # supprimé n'existe pas (404).
 class MapCommentsController < BaseController
+  access_section :map
   PANEL_FRAME = MapFeaturesController::PANEL_FRAME
 
   before_action :get_comment, only: %i[reply resolve reopen destroy]

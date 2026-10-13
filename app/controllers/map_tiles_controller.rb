@@ -6,6 +6,7 @@
 # qu'on remplace ici. Elles sont sous `storage/map-tiles/`, dossier qui survit
 # aux déploiements, et Claudy les sert lui-même.
 class MapTilesController < BaseController
+  access_section :map
   # Une tuile est immuable : son contenu ne change jamais pour un (key, z, x, y)
   # donné. Un an de cache, et le navigateur ne redemande plus rien.
   CACHE_CONTROL = "public, max-age=31536000, immutable".freeze

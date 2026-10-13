@@ -2,6 +2,7 @@
 # renommage, suppression tant qu'aucune plante vivante ne la porte. Le nom des
 # plantes n'est pas touché : c'est un texte libre (« Pommier Reinette cl »).
 class PlantVarietiesController < BaseController
+  access_section :map
   before_action :get_species
   before_action :get_variety, only: %i[update destroy]
 

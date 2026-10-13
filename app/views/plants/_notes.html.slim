@@ -13,22 +13,23 @@
 section[id=dom_id(plant, :notes) class="mt-6" data-plant-section="notes"]
   p class="mb-2 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" = "Notes datées (#{notes.size})"
 
-  = form_with model: (invalid || MapNote.new), scope: :map_note, url: plant_map_notes_path(plant), method: :post,
-              builder: ActionView::Helpers::FormBuilder,
-              html: { id: "#{prefix}_form", class: "rounded-xl border border-stone-200 p-3" } do |f|
-    - if messages.any?
-      .mb-2.rounded-lg.border.border-red-200.bg-red-50.px-3.py-2.text-xs.text-red-800 role="alert"
-        = messages.to_sentence
-    = f.label :body, "Nouvelle note", for: "#{prefix}_body", class: "sr-only"
-    = f.text_area :body, id: "#{prefix}_body", rows: 2, required: true,
-                  placeholder: "Bourgeons gelés, première récolte, taille faite…",
-                  class: "w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
-    .mt-2.flex.items-center.gap-2
-      = f.label :noted_on, "Date", for: "#{prefix}_noted_on", class: "sr-only"
-      = f.date_field :noted_on, id: "#{prefix}_noted_on", value: (invalid&.noted_on || Date.current).iso8601,
-                     class: "h-11 min-w-0 flex-1 rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
-      button type="submit" class="h-11 rounded-lg bg-forest px-5 text-sm font-semibold text-white hover:bg-forest-soft"
-        | Ajouter
+  = map_edit_guard do
+    = form_with model: (invalid || MapNote.new), scope: :map_note, url: plant_map_notes_path(plant), method: :post,
+                builder: ActionView::Helpers::FormBuilder,
+                html: { id: "#{prefix}_form", class: "rounded-xl border border-stone-200 p-3" } do |f|
+      - if messages.any?
+        .mb-2.rounded-lg.border.border-red-200.bg-red-50.px-3.py-2.text-xs.text-red-800 role="alert"
+          = messages.to_sentence
+      = f.label :body, "Nouvelle note", for: "#{prefix}_body", class: "sr-only"
+      = f.text_area :body, id: "#{prefix}_body", rows: 2, required: true,
+                    placeholder: "Bourgeons gelés, première récolte, taille faite…",
+                    class: "w-full rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+      .mt-2.flex.items-center.gap-2
+        = f.label :noted_on, "Date", for: "#{prefix}_noted_on", class: "sr-only"
+        = f.date_field :noted_on, id: "#{prefix}_noted_on", value: (invalid&.noted_on || Date.current).iso8601,
+                       class: "h-11 min-w-0 flex-1 rounded-lg border-stone-300 text-sm shadow-sm focus:border-forest focus:ring-forest"
+        button type="submit" class="h-11 rounded-lg bg-forest px-5 text-sm font-semibold text-white hover:bg-forest-soft"
+          | Ajouter
 
   - if notes.empty?
     p.mt-2.text-xs.text-stone-500 Aucune note pour l'instant : ce qu'on observe au fil des saisons s'écrit ici, daté.

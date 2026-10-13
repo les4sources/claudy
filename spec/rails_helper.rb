@@ -32,6 +32,7 @@ WebMock.disable_net_connect!(allow_localhost: true)
 #
 # Dir[Rails.root.join('spec', 'support', '**', '*.rb')].sort.each { |f| require f }
 require Rails.root.join('spec', 'support', 'tranches_de_vie_helpers')
+require Rails.root.join('spec', 'support', 'default_access_roles')
 
 # Checks for pending migrations and applies them before tests are run.
 # If you are not using ActiveRecord, you can remove these lines.

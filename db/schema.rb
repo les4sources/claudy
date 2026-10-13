@@ -2608,6 +2608,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_190000) do
   end
 
   create_table "users", force: :cascade do |t|
+    t.string "access_roles", default: [], null: false, array: true
     t.datetime "created_at", null: false
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false

@@ -36,7 +36,8 @@
     .mt-2.pt-2.border-t.border-gray-100.text-xs.text-gray-600.italic.leading-snug
       = gathering.notes_preview
 
-  .pt-2
-    = link_to "Ouvrir →",
-              gathering_path(gathering),
-              class: "inline-block text-xs font-medium px-3 py-1 rounded-md bg-#{gathering.color}-100 text-#{gathering.color}-800 hover:bg-#{gathering.color}-200"
+  - if section_readable?(:full)
+    .pt-2
+      = link_to "Ouvrir →",
+                gathering_path(gathering),
+                class: "inline-block text-xs font-medium px-3 py-1 rounded-md bg-#{gathering.color}-100 text-#{gathering.color}-800 hover:bg-#{gathering.color}-200"

@@ -3,6 +3,7 @@
 # Table name: users
 #
 #  id                        :bigint           not null, primary key
+#  access_roles              :string           default([]), not null, is an Array
 #  email                     :string           default(""), not null
 #  encrypted_password        :string           default(""), not null
 #  notify_by_email           :boolean          default(TRUE), not null
@@ -40,6 +41,24 @@ class User < ApplicationRecord
   # Centre de notifications (epic #242, phase 2). `dependent: :destroy` : une
   # notification n'a aucun sens sans son destinataire.
   has_many :notifications, foreign_key: :recipient_id, inverse_of: :recipient, dependent: :destroy
+
+  # Rôles d'accès (Michael, 2026-10-09) : ce que le compte peut ouvrir, cf.
+  # `Access`. Plusieurs rôles possibles, leurs droits s'additionnent. Un
+  # compte sans rôle ne voit rien d'autre que la page qui le lui dit.
+  before_validation { self.access_roles = Array(access_roles).map(&:to_s).compact_blank.uniq }
+  validate :access_roles_must_be_known
+
+  scope :with_access_role, ->(role) { where("? = ANY(access_roles)", role.to_s) }
+
+  def sourcier? = access_roles.include?("sourcier")
+
+  # `:write`, `:read` ou `nil` sur une section (`Access::SECTIONS`, ou `:full`
+  # pour ce qui est réservé aux Sourciers).
+  def access_level(section) = Access.level(access_roles, section)
+
+  def can_read?(section) = access_level(section).present?
+
+  def can_write?(section) = access_level(section) == :write
 
   # Cloisonnement des ACTIVITÉS (validation, édition, retrait, ajout sur un
   # séjour — `ExperienceBooking.for_user`, `ExperienceAvailability.for_user`).
@@ -104,5 +123,12 @@ class User < ApplicationRecord
 
   def inactive_message
     member_deactivated? ? :account_deactivated : super
+  end
+
+  private
+
+  def access_roles_must_be_known
+    unknown = access_roles - Access::ROLE_NAMES
+    errors.add(:access_roles, "inconnu : #{unknown.to_sentence}") if unknown.any?
   end
 end
