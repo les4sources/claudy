@@ -208,7 +208,8 @@ module Mcp
       passation (contre-passation) ou on contre-passe. Envoyer un décompte ou
       une relance ÉCRIT AUX FAMILLES : dis-le avant qu'il accepte. Les lignes
       bancaires entrent par un fichier CODA : si l'utilisateur t'en confie un,
-      passe son texte intégral à importer_coda. Les factures d'un ancien
+      passe son texte intégral à importer_coda ; l'export Excel de Beobank
+      (.xlsx) passe en base64 (contenu_base64). Les factures d'un ancien
       logiciel (Winbooks) se reprennent par lots : reprendre_pieces. La
       caisse se compte billet par billet (compter_caisse) ; Stripe :
       comptes_stripe, cout_encaissement.
