@@ -13,6 +13,7 @@ module Mcp
              description: "La file des dettes à payer, triée par échéance : bénéficiaire, montant restant, retard, " \
                           "communication à mettre sur le virement et IBAN connu ou non. Ajoute les échéances de " \
                           "l'échéancier sans facture encodée, et les comptes de membres en crédit à virer. " \
+                          "Ajoute aussi les dettes et litiges sans facture (taxe réclamée, arriéré, contestation). " \
                           "Le paiement lui-même se constate depuis la ligne bancaire (rapprocher_ligne).",
              schema: { properties: {} }
 
@@ -30,6 +31,12 @@ module Mcp
             "#{echeance.compliance_obligation&.title} (#{echeance.compliance_obligation&.legal_entity&.name}) · échéance #{echeance.due_on}"
           end
           blocs << "Échéances sans facture encodée :\n#{attendus.join("\n")}" if attendus.any?
+
+          dettes = Liability.open.includes(:legal_entity, :third_party).ordered.to_a
+          if dettes.any?
+            blocs << "Dettes et litiges sans facture (#{euros(dettes.sum(&:remaining_cents))} retenus, " \
+                     "comptés dans la trésorerie) :\n" + dettes.map { |d| ligne_dette(d) }.join("\n")
+          end
 
           membres = ::Finance::MemberPayables.new
           if membres.any?

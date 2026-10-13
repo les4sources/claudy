@@ -1,0 +1,87 @@
+/ DETTES ET LITIGES (2026-10-13). Ce que la maison doit ou risque de devoir
+  sans facture encodée, entité par entité. Le montant RETENU est celui que la
+  trésorerie retire ; la fourchette dit l'incertitude, sans la masquer.
+- eur = ->(cents) { number_to_currency(cents.to_i / 100.0, unit: "€", precision: 0) }
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Dettes et litiges",
+           links: [link_to("➕ Nouvelle dette ou litige", new_finance_liability_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
+  p.text-sm.text-gray-700
+    strong Ce qu'on doit sans facture pèse autant que ce qu'on doit avec.
+    |  Une taxe réclamée, un arriéré, une contestation : le montant retenu sort de la
+    =< link_to "trésorerie", finance_treasury_path, class: "text-blue-600 hover:text-blue-800"
+    |  à sa date probable (aujourd'hui sans date), en une fois ou par mensualités. Par défaut on retient le haut de la fourchette. Rien n'est comptabilisé : la provision reste un geste du comptable à la clôture.
+
+- if @open.empty?
+  .mb-8.p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucune dette ni aucun litige en cours.
+    p.mt-1 La taxe communale réclamée, un arriéré envers un fournisseur, un remboursement promis : tout ce qu'on doit et qui n'a pas (encore) de facture.
+- else
+  - @by_entity.each do |entity, rows|
+    - retained = rows.sum(&:remaining_cents)
+    - low = rows.sum { |r| [r.low_cents || r.retained_cents, r.paid_cents].max - r.paid_cents }
+    - high = rows.sum { |r| [r.high_cents || r.retained_cents, r.paid_cents].max - r.paid_cents }
+    section.mb-8(data-liabilities-entity=entity.id)
+      .mb-3.flex.flex-wrap.items-baseline.justify-between.gap-2
+        h3.text-lg.font-semibold.text-gray-900= entity.name
+        p.text-sm.text-gray-600
+          | Reste à payer retenu :
+          strong.ml-1.tabular-nums.text-red-700(data-liabilities-total="")= eur.(retained)
+          - if low != high
+            span.ml-2.text-gray-500= "(fourchette #{eur.(low)} – #{eur.(high)})"
+      .overflow-x-auto.relative
+        table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
+          thead.text-xs.text-gray-700.uppercase.bg-gray-50
+            tr
+              th.py-3.px-6[scope="col"] Dette
+              th.py-3.px-6.text-right[scope="col"] Réclamé
+              th.py-3.px-6.text-right[scope="col"] Fourchette
+              th.py-3.px-6.text-right[scope="col"] Retenu
+              th.py-3.px-6.text-right[scope="col"] Reste
+              th.py-3.px-6[scope="col"] Quand
+              th.py-3.px-6[scope="col"]
+          tbody
+            - rows.each do |liability|
+              tr.border-b.bg-white(data-liability-id=liability.id)
+                td.py-4.px-6
+                  .font-medium.text-gray-900
+                    = liability.label
+                    span.ml-2.inline-flex.rounded-full.px-2.py-0.5.text-xs.font-normal(class="#{liability.kind == 'dispute' ? 'bg-amber-100 text-amber-800' : liability.kind == 'risk' ? 'bg-stone-100 text-stone-600' : 'bg-red-100 text-red-800'}")= liability.kind_label
+                  .text-xs.text-gray-500= [liability.third_party&.name, liability.team&.name].compact.join(" · ").presence
+                  - if liability.notes.present?
+                    .mt-1.text-xs.text-gray-500.max-w-md= liability.notes.truncate(160)
+                td.py-4.px-6.text-right.tabular-nums.whitespace-nowrap= liability.claimed_cents ? eur.(liability.claimed_cents) : "—"
+                td.py-4.px-6.text-right.tabular-nums.whitespace-nowrap
+                  - if liability.ranged?
+                    = "#{liability.low_cents ? eur.(liability.low_cents) : '?'} – #{liability.high_cents ? eur.(liability.high_cents) : '?'}"
+                  - else
+                    | —
+                td.py-4.px-6.text-right.tabular-nums.whitespace-nowrap.font-medium.text-gray-900= eur.(liability.retained_cents)
+                td.py-4.px-6.text-right.tabular-nums.whitespace-nowrap
+                  = eur.(liability.remaining_cents)
+                  - if liability.paid_cents.positive?
+                    .text-xs.text-gray-500= "#{eur.(liability.paid_cents)} déjà payés"
+                td.py-4.px-6
+                  - if liability.expected_on.nil?
+                    span.text-amber-700.font-medium sans date — compté aujourd'hui
+                  - elsif liability.installments > 1
+                    = "#{liability.installments} mensualités, de #{l(liability.expected_on, format: '%B %Y')} à #{l(liability.last_due_on, format: '%B %Y')}"
+                  - else
+                    = l(liability.expected_on, format: :long)
+                td.py-4.px-6.text-right.whitespace-nowrap
+                  = link_to "Modifier", edit_finance_liability_path(liability), class: "text-blue-500 hover:text-blue-700"
+
+- if @closed.any?
+  details.rounded-xl.border.border-stone-200.bg-white
+    summary.cursor-pointer.px-5.py-4
+      span.font-semibold.text-stone-900 Soldées ou abandonnées
+      span.ml-2.text-sm.text-stone-600= "#{@closed.size} dette(s) qui ne pèsent plus"
+    ul.px-5.pb-5.space-y-2.text-sm
+      - @closed.each do |liability|
+        li.flex.flex-wrap.items-baseline.justify-between.gap-2(data-liability-id=liability.id)
+          span
+            = link_to liability.label, edit_finance_liability_path(liability), class: "text-blue-600 hover:text-blue-800"
+            span.ml-2.text-xs.text-gray-500= "#{liability.legal_entity.name} · #{liability.status_label.downcase}#{" le #{l(liability.closed_on, format: :long)}" if liability.closed_on}"
+          span.tabular-nums.text-gray-700= eur.(liability.retained_cents)

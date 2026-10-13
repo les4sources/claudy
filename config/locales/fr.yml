@@ -5,6 +5,18 @@ fr:
     # validation s'affiche « Name doit être rempli(e) » — un mot anglais au
     # milieu d'une phrase française, sur un écran destiné à la comptabilité.
     attributes:
+      liability:
+        label: Libellé
+        kind: Nature
+        status: Statut
+        legal_entity: Entité
+        claimed_cents: Montant réclamé
+        low_cents: Bas de la fourchette
+        high_cents: Haut de la fourchette
+        retained_cents: Montant retenu
+        paid_cents: Déjà payé
+        expected_on: Date probable
+        installments: Nombre de mensualités
       sales_invoice:
         number: Numéro
         issued_on: Date d'émission

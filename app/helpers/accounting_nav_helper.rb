@@ -41,6 +41,7 @@ module AccountingNavHelper
         ["Boite de réception", finance_mail_messages_path, %w[finance/mail_messages]],
         ["Achats", finance_purchase_invoices_path, %w[finance/purchase_invoices]],
         ["À payer", finance_payables_path, %w[finance/payables]],
+        ["Dettes et litiges", finance_liabilities_path, %w[finance/liabilities]],
         ["Charges fixes", finance_recurring_expenses_path, %w[finance/recurring_expenses]],
         ["Tiers", finance_third_parties_path, %w[finance/third_parties]]
       ]],

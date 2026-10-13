@@ -23,6 +23,9 @@ module Finance
       # La trésorerie en résumé : le solde, ce qui rentre, ce qui sort, la
       # courbe. Le détail vit sur sa page.
       @treasury = Finance::Treasury.for_foundation
+      # Les dettes et litiges sans facture, TOUTES entités : la trésorerie ne
+      # lit que la Fondation, mais la SRL doit aussi voir ce qui pèse sur elle.
+      @open_liabilities = Liability.open.includes(:legal_entity).to_a
     end
   end
 end
