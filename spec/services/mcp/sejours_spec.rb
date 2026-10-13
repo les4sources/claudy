@@ -100,6 +100,23 @@ RSpec.describe Mcp::Server, "séjours" do
       expect(ActionMailer::Base.deliveries.map(&:to).flatten).to include("camille@example.com")
     end
 
+    it "confirme un séjour passé sans email, sauf si on le demande" do
+      sejour.update_columns(arrival_date: Date.current - 10, departure_date: Date.current - 8)
+
+      apercu = outil("changer_statut_sejour", { "sejour" => sejour.id, "statut" => "confirmed" })
+      expect(texte(apercu)).to include("Aucun email ne partira (séjour terminé")
+      outil("changer_statut_sejour", { "sejour" => sejour.id, "statut" => "confirmed", "confirmation" => code_de(apercu) })
+      expect(sejour.reload.status).to eq("confirmed")
+      expect(ActionMailer::Base.deliveries).to be_empty
+
+      Stays::QuickStatusUpdater.new(stay: sejour, status: "pending").run
+      arguments = { "sejour" => sejour.id, "statut" => "confirmed", "envoyer_email" => true }
+      apercu = outil("changer_statut_sejour", arguments)
+      expect(texte(apercu)).to include("partira quand même à camille@example.com")
+      outil("changer_statut_sejour", arguments.merge("confirmation" => code_de(apercu)))
+      expect(ActionMailer::Base.deliveries.map(&:to).flatten).to eq(["camille@example.com"])
+    end
+
     it "enregistre un paiement, recalcule le reste dû, et ne l'enregistre pas deux fois" do
       montant = (sejour.total_amount_cents / 100.0).round(2)
       arguments = { "sejour" => sejour.id, "montant" => montant, "methode" => "bank_transfer" }
