@@ -24,6 +24,8 @@ module Mcp
                  jev_compte: COMPTE_GENERAL.merge(description: "Le compte proposé par Jev (701001, « bar »). Ou regle, pas les deux."),
                  seuil: { type: %w[integer string], description: "Confiance minimum, 1 à 100. Défaut : 80 pour une règle, 95 pour Jev." },
                  compte_tresorerie: { type: "string", description: "Seulement les lignes de ce compte (Triodos, Beobank…). Facultatif." },
+                 sauf: { type: "array", items: { type: %w[integer string] },
+                         description: "Lignes (#id) à laisser hors du lot : leur suggestion reste en attente, à traiter une par une." },
                  limite: { type: %w[integer string], description: "Au plus ce nombre de suggestions par appel (défaut #{LIMITE}, max #{LIMITE_MAX}), les plus sûres d'abord." }
                }
              }
@@ -37,7 +39,8 @@ module Mcp
         def planifier(arguments)
           lot = lot!(arguments)
           limite = (Integer(arguments["limite"].to_s, exception: false) || LIMITE).clamp(1, LIMITE_MAX)
-          tout = lot.suggestions.includes(:general_account, :team, cash_entry: :cash_account).to_a
+          sauf = Array(arguments["sauf"]).map { |ligne| id!(ligne, "ligne") }
+          tout = lot.suggestions.where.not(cash_entry_id: sauf).includes(:general_account, :team, cash_entry: :cash_account).to_a
           raise Error, "Aucune suggestion en attente dans ce lot (#{borne(arguments, lot)})." if tout.empty?
 
           choisies = tout.first(limite)
@@ -77,6 +80,7 @@ module Mcp
           lignes = ["Accepter #{choisies.size} suggestion(s) : #{borne(arguments, lot)}, " \
                     "#{euros(choisies.sum { |s| s.amount_cents.abs })}."]
           lignes << "#{total - choisies.size} autre(s) restent pour un prochain appel (limite)." if total > choisies.size
+          lignes << "Laissées hors du lot : #{Array(arguments['sauf']).size} ligne(s)." if Array(arguments["sauf"]).any?
           comptes = choisies.group_by { |s| [s.general_account.to_s, s.team&.name].compact.join(" · ") }
           comptes.each { |compte, liste| lignes << "  → #{compte} : #{liste.size}" }
           confiances = choisies.map(&:confidence)

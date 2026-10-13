@@ -132,11 +132,13 @@ RSpec.describe Mcp::Server, "finances" do
     expect(AllocationSuggestion.pending.where(allocation_rule: regle).pluck(:cash_entry_id)).to contain_exactly(premiere.id, seconde.id)
     expect(texte(outil("regles_affectation", {}))).to include("Règle ##{regle.id} « Bar »", "2 suggestion(s) en attente")
 
-    lot = { "regle" => regle.id, "motif" => "bar 2026" }
-    expect(texte(outil("accepter_suggestions", lot))).to include("Accepter 2 suggestion(s)", "700300 Bar et cellier : 2")
+    lot = { "regle" => regle.id, "sauf" => ["##{seconde.id}"], "motif" => "bar 2026" }
+    expect(texte(outil("accepter_suggestions", lot))).to include("Accepter 1 suggestion(s)", "700300 Bar et cellier : 1",
+                                                                 "Laissées hors du lot : 1 ligne(s).")
     confirme("accepter_suggestions", lot)
-    expect([premiere.reload, seconde.reload]).to all(be_posted)
-    expect(regle.reload.accepted_count).to eq(2)
+    expect(premiere.reload).to be_posted
+    expect(seconde.reload).not_to be_posted
+    expect(regle.reload.accepted_count).to eq(1)
   end
 
   it "accepte un lot de Jev borné à un compte, jamais toutes sources confondues" do
