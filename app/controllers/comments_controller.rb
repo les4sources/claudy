@@ -6,8 +6,20 @@
 # BLANCHE `Comment::COMMENTABLE_TYPES`, jamais par un `constantize` libre : un
 # paramètre forgé ne doit pas pouvoir instancier une classe au hasard.
 class CommentsController < BaseController
+  # Un fil appartient à la section de ce qu'il commente (`COMMENTABLE_SECTIONS`) :
+  # on y écrit si on peut écrire dans cette section, pas au-delà.
+  access_section :everyone
+  COMMENTABLE_SECTIONS = {
+    "Event" => :events,
+    "ExperienceBooking" => :events,
+    "ExpenseReport" => :accounting,
+    "PurchaseInvoice" => :accounting,
+    "CashEntry" => :accounting
+  }.freeze
+
   before_action :get_comment, only: %i[update destroy]
   before_action :authorize_author!, only: %i[update destroy]
+  before_action :authorize_commentable_section!
 
   def create
     @commentable = resolve_commentable
@@ -50,6 +62,13 @@ class CommentsController < BaseController
 
   def get_comment
     @comment = Comment.find(params[:id])
+  end
+
+  def authorize_commentable_section!
+    type = @comment&.commentable_type || params.dig(:comment, :commentable_type).to_s
+    return if section_writable?(COMMENTABLE_SECTIONS.fetch(type, :full))
+
+    head :forbidden
   end
 
   # Un utilisateur ne touche qu'à ses commentaires ; un admin global peut

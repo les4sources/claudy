@@ -45,7 +45,8 @@ section[id=dom_id(subject, :tasks)
                           form: { class: "mt-2", data: { turbo_confirm: "Supprimer la tâche « #{task.label} » ?" } },
                           class: "text-xs font-medium text-red-600 hover:text-red-700"
                 | Supprimer la tâche
-  details.mt-3.rounded-lg.border.border-dashed.border-stone-300 open=(invalid&.new_record? || nil)
-    summary.cursor-pointer.px-3.py-2.text-sm.font-medium.text-forest + Ajouter une tâche
-    .border-t.border-stone-100.px-3.py-3
-      = render "maps/task_form", subject: subject, task: (invalid&.new_record? ? invalid : MapTask.new(subject: subject))
+  - if map_editable?
+    details.mt-3.rounded-lg.border.border-dashed.border-stone-300 open=(invalid&.new_record? || nil)
+      summary.cursor-pointer.px-3.py-2.text-sm.font-medium.text-forest + Ajouter une tâche
+      .border-t.border-stone-100.px-3.py-3
+        = render "maps/task_form", subject: subject, task: (invalid&.new_record? ? invalid : MapTask.new(subject: subject))

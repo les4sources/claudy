@@ -5,6 +5,7 @@
 # par `rake map:terrain:import` (voir `Maps::Terrain`), que le navigateur lit en
 # binaire. Axes d'écoulement, cuvettes et pluie se calculent chez lui.
 class MapReliefsController < BaseController
+  access_section :map
   # Les fichiers changent seulement quand on relance l'import : leur URL porte
   # la date du téléchargement (`?v=`), donc un an de cache sans risque.
   CACHE_CONTROL = "private, max-age=31536000, immutable".freeze

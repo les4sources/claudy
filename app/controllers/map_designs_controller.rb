@@ -10,6 +10,7 @@
 # La vue 3D lit et écrit en JSON ; supprimer = soft-delete, comme partout sur la
 # carte.
 class MapDesignsController < BaseController
+  access_section :map
   NUMBERS = %w[width depth berm grade radius].freeze
 
   def index

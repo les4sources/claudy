@@ -13,7 +13,9 @@ html(lang="fr")
     = vite_javascript_tag "application", "data-turbo-track": "reload"
   / La carte du domaine (epic #348) occupe toute la fenêtre sous la navbar :
     colonne flex sur la hauteur de l'écran, sans padding ni pied de page.
-  body.bg-white.overflow-x-clip(id="body-#{controller_name}_#{action_name}" class=("flex h-[100dvh] flex-col overflow-hidden" if @map_view))
+  / `map-read-only` : la carte et ses pages ouvertes en lecture seule (rôle
+    Kid), cf. `AccessControl#map_read_only_page?` et `map.css`.
+  body.bg-white.overflow-x-clip(id="body-#{controller_name}_#{action_name}" class=[("flex h-[100dvh] flex-col overflow-hidden" if @map_view), ("map-read-only" if respond_to?(:map_read_only_page?) && map_read_only_page?)].compact.join(" ").presence)
     = render "layouts/components/tooltips"
     = render "humans/tooltips"
 

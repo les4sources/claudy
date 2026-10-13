@@ -9,6 +9,7 @@
 # fiche propose les existantes en autocomplétion et crée les autres à la volée
 # (« Créer “Néflier” »). Le prix d'achat arrive en euros, la base garde des cents.
 class PlantsController < BaseController
+  access_section :map
   PANEL_FRAME = MapFeaturesController::PANEL_FRAME
 
   UNPLACED_FRAME = "plants_unplaced".freeze

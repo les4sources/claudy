@@ -195,7 +195,7 @@
         / Les aménagements à l'essai : baissières, keylines et mares, tracés sur
           le terrain, enregistrés (couche « Aménagements à l'essai » de la carte)
           et creusés dans le relief simulé. La pluie les compare au terrain actuel.
-        .mt-4.border-t.border-stone-100.pt-3
+        .mt-4.border-t.border-stone-100.pt-3 data-map-edit=(map_editable? ? nil : "true")
           p class=section_title_css Aménagements à l'essai
           div class=group_css data-choice-group="designTool"
             - [["swale", "Baissière"], ["keyline", "Keyline"], ["pond", "Mare"], ["hedge", "Haie"]].each do |value, label|

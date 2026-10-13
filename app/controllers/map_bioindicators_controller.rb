@@ -11,6 +11,7 @@
 # (`/api/v1/map_features`, `/api/v1/bioindicator_species`). Cette page ne fait
 # que la montrer, et `request_analysis` en redemande une.
 class MapBioindicatorsController < BaseController
+  access_section :map
   PANEL_FRAME = MapFeaturesController::PANEL_FRAME
   LIST_FRAME = "map_bioindicators".freeze
   LIST_LIMIT = 500

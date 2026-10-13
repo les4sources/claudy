@@ -4,6 +4,7 @@ module Finance
   # son compte. Pose `@finance_view`, qui allume l'entrée primaire et sa
   # sous-navigation, exactement comme `@settings_view` le fait pour Paramètres.
   class BaseController < ::BaseController
+    access_section :accounts
     breadcrumb "Comptes", :finance_accounts_path, match: :exact
 
     private
