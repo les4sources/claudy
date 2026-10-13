@@ -101,6 +101,16 @@ module Mcp
       Tools::Finances::Decompte,
       Tools::Finances::EnregistrerBatchCooking,
       Tools::Finances::ArreterMois,
+      Tools::Finances::ImportsCoda,
+      Tools::Finances::ImporterCoda,
+      Tools::Finances::ComptagesCaisse,
+      Tools::Finances::CompterCaisse,
+      Tools::Finances::MotifCaisse,
+      Tools::Finances::ComptesStripe,
+      Tools::Finances::ModeStripe,
+      Tools::Finances::CorrespondanceStripe,
+      Tools::Finances::CoutEncaissement,
+      Tools::Finances::JustificatifStripe,
       Tools::Carte::Plantes,
       Tools::Carte::FichePlante,
       Tools::Carte::Especes,
@@ -166,7 +176,10 @@ module Mcp
       factures_achat, notes_de_frais. Le mois : charges récurrentes, décomptes,
       arrete_du_mois. Une écriture passée ne se réécrit pas : on annule la
       passation (contre-passation) ou on contre-passe. Envoyer un décompte ou
-      une relance ÉCRIT AUX FAMILLES : dis-le avant qu'il accepte.
+      une relance ÉCRIT AUX FAMILLES : dis-le avant qu'il accepte. Les lignes
+      bancaires entrent par un fichier CODA : si l'utilisateur t'en confie un,
+      passe son texte intégral à importer_coda. La caisse se compte billet par
+      billet (compter_caisse) ; Stripe : comptes_stripe, cout_encaissement.
 
       CARTE DU DOMAINE ET PLANTES. Les plantes nourricières (#id, n° de
       terrain) ont une espèce et une variété du catalogue local (especes) ;

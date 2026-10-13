@@ -64,9 +64,13 @@ module Mcp
           end
         end
 
+        # Dans l'ordre de la liste de saisie ; les désactivés à la fin, pour
+        # qu'on puisse les réactiver (motif_caisse).
         def motifs_caisse(_)
-          filtre(CashMotif.actives.ordered.includes(:general_account, :team), :label).map do |m|
-            "#{m.label} (##{m.id}, #{m.direction_label.to_s.downcase}) → #{m.general_account}#{" · pôle #{m.team.name}" if m.team}"
+          motifs = filtre(CashMotif.ordered.includes(:general_account, :team, :legal_entity), :label).to_a
+          motifs.sort_by { |m| m.active ? 0 : 1 }.map do |m|
+            "#{m.label} (##{m.id}, #{m.direction_label.to_s.downcase}) → #{m.general_account}#{" · pôle #{m.team.name}" if m.team}" \
+              " · #{m.legal_entity&.name}#{' · DÉSACTIVÉ' unless m.active}"
           end
         end
 
