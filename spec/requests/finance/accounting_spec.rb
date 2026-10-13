@@ -26,6 +26,24 @@ RSpec.describe "Finances > Comptabilité", type: :request do
     end
   end
 
+  describe "les prêts reçus" do
+    it "montre ce qui reste dû à chaque prêteur" do
+      pret = build_general_account(code: "174006", name: "Prêt CT Muriel", klass: 1, nature: "liability")
+      post_simple_entry(entity: entity, debit_account: bank, credit_account: pret, amount_cents: 500_000)
+
+      get finance_accounting_path
+
+      corps = CGI.unescapeHTML(response.body)
+      expect(corps).to include("Prêts reçus").and include("Prêt CT Muriel").and include("174006")
+    end
+
+    it "le dit quand il n'y en a aucun" do
+      get finance_accounting_path
+
+      expect(CGI.unescapeHTML(response.body)).to include("Aucun prêt en cours au grand livre")
+    end
+  end
+
   describe "le plan comptable" do
     it "liste les comptes et filtre par classe" do
       get finance_general_accounts_path

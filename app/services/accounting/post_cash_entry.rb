@@ -54,7 +54,7 @@ module Accounting
                 "Il reste #{Money.new(@entry.remaining_cents, 'EUR').format} à affecter sur cette ligne."
         end
 
-        allocations = @entry.cash_allocations.includes(:general_account, :legal_entity).to_a
+        allocations = @entry.cash_allocations.includes(:general_account, :legal_entity, :third_party).to_a
         raise NotFullyAllocated, "Cette ligne n'a aucune allocation." if allocations.empty?
 
         journal_entry = post_treasury_side(allocations)
@@ -147,6 +147,9 @@ module Accounting
           account: allocation.general_account,
           analytic_account: allocation.analytic_account,
           team: allocation.team,
+          # Le tiers suit la part jusqu'au grand livre : c'est lui qui dit à
+          # quel prêteur, quel habitant ou quel fournisseur la ligne se rapporte.
+          third_party: allocation.third_party,
           label: allocation.label.presence || @entry.label
         }.merge(side)
       end
