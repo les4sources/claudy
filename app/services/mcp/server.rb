@@ -106,6 +106,7 @@ module Mcp
       Tools::Finances::ArreterMois,
       Tools::Finances::ImportsCoda,
       Tools::Finances::ImporterCoda,
+      Tools::Finances::ReprendrePieces,
       Tools::Finances::ComptagesCaisse,
       Tools::Finances::CompterCaisse,
       Tools::Finances::MotifCaisse,
@@ -208,8 +209,10 @@ module Mcp
       une relance ÉCRIT AUX FAMILLES : dis-le avant qu'il accepte. Les lignes
       bancaires entrent par un fichier CODA : si l'utilisateur t'en confie un,
       passe son texte intégral à importer_coda ; l'export Excel de Beobank
-      (.xlsx) passe en base64 (contenu_base64). La caisse se compte billet par
-      billet (compter_caisse) ; Stripe : comptes_stripe, cout_encaissement.
+      (.xlsx) passe en base64 (contenu_base64). Les factures d'un ancien
+      logiciel (Winbooks) se reprennent par lots : reprendre_pieces. La
+      caisse se compte billet par billet (compter_caisse) ; Stripe :
+      comptes_stripe, cout_encaissement.
       Les factures fournisseurs arrivent par mail (boite_compta) : on encode
       une pièce avec enregistrer_facture_achat `piece_mail`. Les ventes
       (factures émises dans OkiOki) : factures_vente, facture_vente. Les
