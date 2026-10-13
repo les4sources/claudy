@@ -776,6 +776,7 @@ Rails.application.routes.draw do
       get   :new_refusal     # formulaire de refus (raison obligatoire)
       patch :refuse          # application du refus avec raison
       patch :record_outcome  # « a eu lieu » / « n'a pas eu lieu »
+      patch :payout          # qui a tenu la prestation, et combien on lui doit
     end
   end
 

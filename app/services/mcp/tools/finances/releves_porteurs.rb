@@ -22,7 +22,7 @@ module Mcp
         def call(arguments)
           return detail(releve_porteur!(arguments["releve"])) if arguments["releve"].present?
 
-          porteurs = Human.where(id: Experience.where.not(human_id: nil).select(:human_id)).order(:name)
+          porteurs = ExperienceBooking.carriers.order(:name)
           porteurs = porteurs.where(id: par_nom!(porteurs, arguments["porteur"], "porteur").id) if arguments["porteur"].present?
           du, au = ::CarrierStatements::Generate.default_period
           blocs = porteurs.filter_map do |porteur|
@@ -30,7 +30,8 @@ module Mcp
             releves = CarrierStatement.where(human: porteur).recent_first.to_a
             next if selection.bookings.empty? && releves.empty?
 
-            lignes = ["#{porteur.name}#{" (#{porteur.email})" if porteur.email.present?} · à relever : " \
+            lignes = ["#{porteur.name}#{" (#{porteur.email})" if porteur.email.present?}" \
+                      "#{" · payé via #{porteur.carrier_payee.name}" if porteur.carrier_payee} · à relever : " \
                       "#{selection.bookings.size} prestation(s), #{euros(selection.total_fee_cents)}"]
             lignes + releves.map { |r| "  #{ligne_releve_porteur(r)}" }
           end
@@ -45,7 +46,8 @@ module Mcp
         def detail(releve)
           lignes = releve.carrier_statement_lines.chronological.includes(experience_booking: { experience_availability: :experience })
           [ligne_releve_porteur(releve),
-           "Porteur : #{releve.human.name}#{releve.human.email.present? ? " · #{releve.human.email}" : ' · sans email'}",
+           "Porteur : #{releve.human.name}#{" · adressé à #{releve.third_party.name}" if releve.paid_through?}" \
+           "#{releve.recipient_email ? " · #{releve.recipient_email}" : ' · sans email'}",
            ("Émis le #{I18n.l(releve.issued_at.to_date)}#{releve.sent_at ? ', envoyé' : ', pas envoyé (aucun email)'}" if releve.issued_at),
            ("Comptabilisé · paiement dans « À payer »" if releve.posted?),
            "Page du porteur : #{lien_public(:public_carrier_statement, releve.token)}",

@@ -170,6 +170,24 @@ RSpec.describe "Porteurs — relevé de rémunération (epic #244, phase 3)", ty
       expect(ActionMailer::Base.deliveries).to be_empty
     end
 
+    it "s'adresse au tiers qui paie le porteur, et met la dette à son nom" do
+      srl = ThirdParty.create!(name: "SPRL Domaine d'Ahinvaux", code: "DOMAINEDAH", kind: "supplier",
+                               email: "srl@example.com")
+      carrier.update!(carrier_payee: srl)
+      ActionMailer::Base.deliveries.clear
+
+      CarrierStatements::Issue.new(statement: statement).run!
+
+      expect(statement.reload.third_party).to eq(srl)
+      expect(statement.payable_third_party).to eq(srl)
+      mail = ActionMailer::Base.deliveries.last
+      expect(mail.to).to eq(["srl@example.com"])
+      expect(mail.body.encoded).to include("tenues par S")
+      credit = JournalEntry.unscoped.find_by(source: statement, journal: "purchases")
+                           .journal_lines.find { |l| l.credit_cents.to_i.positive? }
+      expect(credit.third_party).to eq(srl)
+    end
+
     it "n'échoue pas quand le porteur n'a pas d'email" do
       carrier.update!(email: nil)
       CarrierStatements::Issue.new(statement: statement).run!

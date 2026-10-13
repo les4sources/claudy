@@ -19,7 +19,9 @@ p.mb-6.text-sm.text-gray-500
         .px-4.py-4.sm:px-6.border-b.border-gray-200.flex.flex-wrap.items-baseline.justify-between.gap-3
           div
             h3.text-lg.font-medium.leading-6.text-gray-900 = human.name
-            - if human.email.blank?
+            - if human.carrier_payee
+              p.text-xs.text-gray-500 = "Payé via #{human.carrier_payee.name}"
+            - if (human.carrier_payee ? human.carrier_payee.email : human.email).blank?
               p.text-xs.text-amber-700 Pas d'adresse email — le relevé se partagera par son lien.
           - if row[:pending].any?
             .text-right

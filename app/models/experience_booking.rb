@@ -14,6 +14,7 @@
 #  updated_at                 :datetime         not null
 #  experience_availability_id :bigint           not null
 #  outcome_recorded_by_id     :bigint
+#  performed_by_id            :bigint
 #  stay_id                    :bigint           not null
 #
 # Indexes
@@ -21,12 +22,14 @@
 #  index_experience_bookings_on_experience_availability_id  (experience_availability_id)
 #  index_experience_bookings_on_outcome                     (outcome)
 #  index_experience_bookings_on_outcome_recorded_by_id      (outcome_recorded_by_id)
+#  index_experience_bookings_on_performed_by_id             (performed_by_id)
 #  index_experience_bookings_on_stay_id                     (stay_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (experience_availability_id => experience_availabilities.id)
 #  fk_rails_...  (outcome_recorded_by_id => humans.id)
+#  fk_rails_...  (performed_by_id => humans.id)
 #  fk_rails_...  (stay_id => stays.id)
 #
 class ExperienceBooking < ApplicationRecord
@@ -68,6 +71,10 @@ class ExperienceBooking < ApplicationRecord
   belongs_to :experience_availability
   belongs_to :stay
   belongs_to :outcome_recorded_by, class_name: "Human", optional: true
+  # Qui a TENU la prestation, quand ce n'est pas le porteur de l'activité
+  # (Michael, 2026-10-13 : « il y a un porteur principal, mais d'autres
+  # personnes peuvent faire la prestation »). C'est lui qu'on rémunère.
+  belongs_to :performed_by, class_name: "Human", optional: true
 
   # Audit (epic #81) : seul modèle rapatrié par la fusion de séjours qui n'avait
   # pas encore d'historique (Stay/StayItem/MealOrder/Payment l'ont déjà). Un
@@ -79,11 +86,14 @@ class ExperienceBooking < ApplicationRecord
 
   def status_label = STATUS_LABELS[status.to_s] || status.to_s
 
-  # Le PORTEUR de l'activité : c'est lui qui tient le créneau, donc lui qu'une
-  # question concerne. `Experience#human` peut être absent (activité orpheline) —
-  # on ne prévient alors personne plutôt que de prévenir au hasard.
+  # Celui qui tient la prestation : la personne nommée sur la réservation, sinon
+  # le porteur de l'activité. C'est lui qu'une question concerne et lui que le
+  # relevé paie. `Experience#human` peut être absent (activité orpheline) — on
+  # ne prévient alors personne plutôt que de prévenir au hasard.
+  def carrier = performed_by || experience&.human
+
   def comment_recipients
-    [experience&.human&.user].compact
+    [carrier&.user].compact
   end
 
   def comment_label
@@ -105,6 +115,7 @@ class ExperienceBooking < ApplicationRecord
   has_one :carrier_statement, through: :carrier_statement_line
 
   validate :outcome_frozen_once_reported
+  validate :payout_frozen_once_reported
 
   before_save :freeze_carrier_fee
 
@@ -134,12 +145,27 @@ class ExperienceBooking < ApplicationRecord
   }
   scope :held, -> { where(outcome: "held") }
 
-  # Réservations rattachées aux activités d'un porteur donné (via
-  # `experience.human`). Base du scoping d'autorisation du canal admin.
+  # Réservations qu'un porteur TIENT : celles où il est nommé, et celles de ses
+  # activités où personne d'autre ne l'est. C'est ce qu'un relevé lui paie.
   scope :for_carrier, ->(human) {
     joins(experience_availability: :experience)
-      .where(experiences: { human_id: human.id })
+      .where("COALESCE(experience_bookings.performed_by_id, experiences.human_id) = ?", human.id)
   }
+
+  # Réservations qu'un porteur VOIT : toutes celles de ses activités (il les
+  # valide, même quand quelqu'un d'autre les tient) et celles qu'il tient
+  # ailleurs. Base du scoping d'autorisation du canal admin.
+  scope :visible_to_carrier, ->(human) {
+    joins(experience_availability: :experience)
+      .where("experiences.human_id = :id OR experience_bookings.performed_by_id = :id", id: human.id)
+  }
+
+  # Toutes les personnes qu'un relevé peut payer : les porteurs des activités et
+  # celles qui ont tenu une prestation à leur place.
+  def self.carriers
+    Human.where(id: Experience.where.not(human_id: nil).select(:human_id))
+         .or(Human.where(id: where.not(performed_by_id: nil).select(:performed_by_id)))
+  end
 
   def pending?   = status == "pending"
   def confirmed? = status == "confirmed"
@@ -162,7 +188,7 @@ class ExperienceBooking < ApplicationRecord
     return base if user.nil? || !user.restricted_to_own_activities?
     return base.none if user.human.nil?
 
-    base.for_carrier(user.human)
+    base.visible_to_carrier(user.human)
   end
 
   # Un séjour peut disparaître en laissant ses activités derrière lui : son
@@ -220,6 +246,18 @@ class ExperienceBooking < ApplicationRecord
   # Confirmée mais sans montant : l'activité n'a pas de durée en heures. C'est
   # le seul cas, et c'est réparable en une saisie.
   def carrier_fee_missing? = confirmed? && carrier_fee_cents.nil?
+
+  # Le montant se corrige à la main (une prestation de 4 h sur une activité
+  # d'une heure, un tarif convenu à part) : saisi en EUROS, virgule acceptée.
+  # Vider le champ rend la main au calcul, à la prochaine sauvegarde confirmée.
+  def carrier_fee
+    carrier_fee_cents.present? ? carrier_fee_cents / 100.0 : nil
+  end
+
+  def carrier_fee=(value)
+    raw = value.to_s.strip.tr(",", ".")
+    self.carrier_fee_cents = raw.blank? ? nil : (raw.to_f * 100).round
+  end
 
   # Transition pending → refused. La raison est obligatoire : un motif vide
   # déclenche une `RecordInvalid` (la validation modèle fait foi).
@@ -315,6 +353,17 @@ class ExperienceBooking < ApplicationRecord
 
   def set_default_status
     self.status ||= "pending"
+  end
+
+  # Même règle pour qui est payé et combien : une fois sur un relevé, on ne
+  # réécrit ni la personne ni le montant.
+  def payout_frozen_once_reported
+    return unless persisted? && carrier_statement_line.present?
+    return unless will_save_change_to_performed_by_id? || will_save_change_to_carrier_fee_cents?
+
+    errors.add(:base,
+               "cette prestation figure sur un relevé de rémunération : qui la reçoit et combien sont figés. " \
+               "Passez par une contre-passation du relevé.")
   end
 
   def outcome_frozen_once_reported

@@ -63,8 +63,8 @@ module Accounting
     def supplier_line
       {
         account: supplier_account,
-        third_party: ThirdParty.for_human!(@statement.human),
-        label: @statement.human.name,
+        third_party: @statement.payable_third_party,
+        label: @statement.payee_name,
         credit_cents: @statement.total_fee_cents
       }
     end

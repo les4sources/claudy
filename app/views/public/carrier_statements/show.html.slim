@@ -7,6 +7,8 @@
       | Relevé d'activités — #{@statement.period_label}
     p.text-sm.text-gray-500
       = @human.name
+      - if @statement.paid_through?
+        = " — via #{@statement.third_party.name}"
       span.mx-1 ·
       = "référence #{@statement.reference}"
   button.text-sm.text-gray-500.underline(class="print:hidden" type="button" onclick="window.print()")

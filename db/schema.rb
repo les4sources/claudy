@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_13_200100) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_13_211000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -437,12 +437,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_200100) do
     t.datetime "posted_at"
     t.datetime "sent_at"
     t.string "status", default: "draft", null: false
+    t.bigint "third_party_id"
     t.string "token", null: false
     t.integer "total_fee_cents", default: 0, null: false
     t.datetime "updated_at", null: false
     t.index ["deleted_at"], name: "index_carrier_statements_on_deleted_at"
     t.index ["human_id"], name: "index_carrier_statements_on_human_id"
     t.index ["status"], name: "index_carrier_statements_on_status"
+    t.index ["third_party_id"], name: "index_carrier_statements_on_third_party_id"
     t.index ["token"], name: "index_carrier_statements_on_token", unique: true
   end
 
@@ -1081,6 +1083,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_200100) do
     t.datetime "outcome_recorded_at"
     t.bigint "outcome_recorded_by_id"
     t.integer "participants"
+    t.bigint "performed_by_id"
     t.text "refusal_reason"
     t.string "status"
     t.bigint "stay_id", null: false
@@ -1088,6 +1091,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_200100) do
     t.index ["experience_availability_id"], name: "index_experience_bookings_on_experience_availability_id"
     t.index ["outcome"], name: "index_experience_bookings_on_outcome"
     t.index ["outcome_recorded_by_id"], name: "index_experience_bookings_on_outcome_recorded_by_id"
+    t.index ["performed_by_id"], name: "index_experience_bookings_on_performed_by_id"
     t.index ["stay_id"], name: "index_experience_bookings_on_stay_id"
   end
 
@@ -1266,6 +1270,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_200100) do
   end
 
   create_table "humans", force: :cascade do |t|
+    t.bigint "carrier_payee_id"
     t.datetime "created_at", null: false
     t.boolean "cycle_active", default: false
     t.datetime "deleted_at", precision: nil
@@ -1280,6 +1285,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_200100) do
     t.string "status", default: "active"
     t.string "summary"
     t.datetime "updated_at", null: false
+    t.index ["carrier_payee_id"], name: "index_humans_on_carrier_payee_id"
   end
 
   create_table "humans_tasks", id: false, force: :cascade do |t|
@@ -2738,6 +2744,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_200100) do
   add_foreign_key "carrier_statement_lines", "carrier_statements"
   add_foreign_key "carrier_statement_lines", "experience_bookings"
   add_foreign_key "carrier_statements", "humans"
+  add_foreign_key "carrier_statements", "third_parties"
   add_foreign_key "cash_accounts", "general_accounts"
   add_foreign_key "cash_accounts", "legal_entities"
   add_foreign_key "cash_allocations", "analytic_accounts"
@@ -2809,6 +2816,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_200100) do
   add_foreign_key "experience_availabilities", "experiences"
   add_foreign_key "experience_bookings", "experience_availabilities"
   add_foreign_key "experience_bookings", "humans", column: "outcome_recorded_by_id"
+  add_foreign_key "experience_bookings", "humans", column: "performed_by_id"
   add_foreign_key "experience_bookings", "stays"
   add_foreign_key "experiences", "humans"
   add_foreign_key "experiences", "teams"
@@ -2823,6 +2831,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_200100) do
   add_foreign_key "household_members", "humans"
   add_foreign_key "human_roles", "humans"
   add_foreign_key "human_roles", "roles"
+  add_foreign_key "humans", "third_parties", column: "carrier_payee_id"
   add_foreign_key "journal_entries", "fiscal_years"
   add_foreign_key "journal_entries", "journal_entries", column: "reversal_of_id"
   add_foreign_key "journal_entries", "legal_entities"

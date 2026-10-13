@@ -57,7 +57,8 @@ module Humans
           :status,
           :restricted_to_experiences,
           :iban,
-          :iban_holder_name
+          :iban_holder_name,
+          :carrier_payee_id
         )
     end
   end

@@ -17,6 +17,15 @@
 #  summary          :string
 #  created_at       :datetime         not null
 #  updated_at       :datetime         not null
+#  carrier_payee_id :bigint
+#
+# Indexes
+#
+#  index_humans_on_carrier_payee_id  (carrier_payee_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (carrier_payee_id => third_parties.id)
 #
 class Human < ApplicationRecord
   has_many :projects
@@ -28,6 +37,10 @@ class Human < ApplicationRecord
   has_many :delegated_cycle_actions, class_name: "CycleAction", foreign_key: :delegate_to_human_id
 
   has_one :user
+  # Par qui passe sa rémunération de porteur d'activité, quand ce n'est pas
+  # lui-même (la SPRL Domaine d'Ahinvaux pour Olivier, Seb, Magali). Vide = on
+  # le paie directement.
+  belongs_to :carrier_payee, class_name: "ThirdParty", optional: true
 
   # Les pôles de la personne (epic #239, phase 4). La fiche et l'index en ont
   # besoin pour montrer où chacun s'engage ; l'appartenance elle-même continue

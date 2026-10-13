@@ -36,7 +36,8 @@ module CarrierStatements
       PaperTrail.request(whodunnit: @whodunnit || "carrier_statement") do
         CarrierStatement.transaction do
           @statement = CarrierStatement.create!(
-            human: @human, period_from: @period_from, period_to: @period_to, status: "draft"
+            human: @human, third_party: @human.carrier_payee,
+            period_from: @period_from, period_to: @period_to, status: "draft"
           )
 
           selection.bookings.each do |booking|
