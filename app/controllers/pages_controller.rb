@@ -52,6 +52,20 @@ class PagesController < BaseController
           .where.not(status: ["declined", "canceled"])
           .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
       )
+      # Séjours « activité seule » (Michael, 2026-10-13) : un séjour sans
+      # hébergement, espace, camping, van ni hamac (un atelier pizza pour un
+      # groupe venu à la journée) n'avait aucun réservable à dessiner et
+      # n'apparaissait donc jamais au calendrier. On l'y pose au jour de son
+      # activité. Un séjour qui a déjà un réservable garde son bloc habituel :
+      # ses activités n'y ajoutent rien.
+      @grouped_activity_only_bookings = ExperienceBooking.active.with_visible_stay
+        .joins(:experience_availability)
+        .where(experience_availabilities: { available_on: @first.to_date..@last.to_date })
+        .where.not(stays: { status: "canceled" })
+        .where.not(stay_id: StayItem.select(:stay_id))
+        .preload(:stay, experience_availability: :experience)
+        .to_a
+        .group_by { |experience_booking| experience_booking.experience_availability.available_on }
       # Coworking (epic #126, Phase 1) — domaine INDÉPENDANT des séjours : un
       # bloc agrégé par jour (« 💻 Coworking N/3 »), jamais rattaché à un stay
       # et donc jamais sélectionnable par le mode fusion.

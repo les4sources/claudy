@@ -65,6 +65,10 @@ div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min
       / Terrasse : occupation de JOUR (pas une nuitée) → chip distincte 🪑, pas ⛺️.
       - block.terrace_bookings.each do |terrace|
         span(class="text-xs text-gray-600 whitespace-nowrap") 🪑 Terrasse · #{terrace.people} pers.
+      / Activité d'un séjour « activité seule » (Michael 2026-10-13) : sans elle,
+        le séjour n'aurait aucun bloc. Nom, heure et participants.
+      - block.activity_bookings.each do |activity|
+        span(class="text-xs text-gray-600 break-words") 🎯 #{activity.experience_availability.experience&.name} · #{activity.experience_availability.starts_at} · #{activity.participants} pers.
 
   / Overlay cliquable : ouvre la modale séjour (epic #66, Phase 5) et sert de
   / cible unique au mode fusion pour tout le séjour.
