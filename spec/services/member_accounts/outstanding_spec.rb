@@ -229,6 +229,17 @@ RSpec.describe MemberAccounts::Outstanding do
       expect(detail.oldest_on).to eq(Date.new(2026, 6, 30))
     end
 
+    # « Vin rosé bouteille 40,00 € » : cinq bouteilles à 8 €, pas une à 40 €.
+    it "garde la quantité et le prix unitaire de la feuille de bar" do
+      account.account_entries.create!(entry_date: Date.new(2026, 7, 31), amount_cents: 4_000, flow: "bar",
+                                      label: "Vin rosé bouteille", quantity: 5, unit_price_cents: 800)
+
+      ligne = described_class.new(account).poste("bar").lignes.sole
+
+      expect(ligne.quantity).to eq(5)
+      expect(ligne.unit_price_cents).to eq(800)
+    end
+
     it "ne rend rien pour un poste soldé ou inconnu" do
       conso(Date.new(2026, 7, 31), 800)
 
