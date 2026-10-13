@@ -70,6 +70,42 @@ RSpec.describe Mcp::Server, "finances : banque et caisse" do
     end
   end
 
+  describe "un export Excel de Beobank" do
+    let!(:beobank) do
+      CashAccount.create!(name: "SRL — Beobank", kind: "bank", legal_entity: entity, general_account: banque,
+                          iban: "BE68 5390 0754 7034")
+    end
+    let(:contenu) { Base64.strict_encode64(Rails.root.join("spec/fixtures/beobank/nominal.xlsx").binread) }
+
+    it "le reçoit en base64, montre ce qu'il créerait, puis l'importe à l'accord" do
+      apercu = texte(outil("importer_coda", { "contenu_base64" => contenu, "nom_fichier" => "beobank.xlsx" }))
+      expect(apercu).to include("APERÇU", "5 ligne(s) créée(s)")
+      expect(CashEntry.count).to eq(0)
+      expect(CodaImport.count).to eq(0)
+
+      expect(confirme("importer_coda", { "contenu_base64" => contenu, "nom_fichier" => "beobank.xlsx" })).to include("À affecter")
+      expect(CashEntry.where(cash_account: beobank).pending.count).to eq(5)
+      expect(CodaImport.last).to have_attributes(file_reference: "Beobank (Excel)", whodunnit: "claude:chloe@example.com")
+    end
+
+    it "dit pourquoi un export est refusé, sans rien écrire" do
+      ecart = Base64.strict_encode64(Rails.root.join("spec/fixtures/beobank/ecart.xlsx").binread)
+      resultat = outil("importer_coda", { "contenu_base64" => ecart, "nom_fichier" => "ecart.xlsx" })
+
+      expect(resultat[:isError]).to be(true)
+      expect(texte(resultat)).to include("Fichier refusé", "03/09/2026")
+      expect(CashEntry.count).to eq(0)
+      expect(CodaImport.count).to eq(0)
+    end
+
+    it "refuse un base64 illisible" do
+      resultat = outil("importer_coda", { "contenu_base64" => "pas du base64 !", "nom_fichier" => "x.xlsx" })
+
+      expect(resultat[:isError]).to be(true)
+      expect(texte(resultat)).to include("base64")
+    end
+  end
+
   describe "le comptage de caisse" do
     let!(:motif_bar) { CashMotif.create!(label: "Bar", direction: "in", general_account: bar, legal_entity: entity, position: 1) }
 
