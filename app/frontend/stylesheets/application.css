@@ -40,6 +40,8 @@
    le contrôleur Stimulus n'écrit que `aria-pressed`, tout le dessin est ici.
    Sans cet import, cocher une nuit dans le formulaire admin ne se voyait pas. */
 @import 'night_cells.css';
+/* Mêmes grilles sur téléphone : une colonne à la fois, sans défilement de côté. */
+@import 'day_pager.css';
 
 /* --- Averia Serif Libre ---------------------------------------------------
    PLACÉ APRÈS LES @import : en CSS, `@import` doit précéder toute autre règle.

@@ -14,7 +14,10 @@ module Access
     "sourcier" => { label: "Sourcier", description: "Accès complet" },
     "communication" => { label: "Communication", description: "Événements et activités, calendrier en lecture" },
     "kid" => { label: "Kid", description: "Calendrier et carte, en lecture seule" },
-    "administratif" => { label: "Administratif", description: "Comptes et comptabilité, calendrier en lecture" }
+    "administratif" => { label: "Administratif", description: "Comptes et comptabilité, calendrier en lecture" },
+    # Michael, 2026-10-13 : n'ouvre encore rien ; une prochaine fonctionnalité
+    # lui donnera sa propre section.
+    "anier" => { label: "Ânier·ère", description: "Aucun accès pour l'instant (section à venir)" }
   }.freeze
 
   ROLE_NAMES = ROLES.keys.freeze
@@ -35,20 +38,25 @@ module Access
   GRANTS = {
     "communication" => { calendar: :read, events: :write },
     "kid" => { calendar: :read, map: :read },
-    "administratif" => { calendar: :read, accounts: :write, accounting: :write }
+    "administratif" => { calendar: :read, accounts: :write, accounting: :write },
+    "anier" => {}
   }.freeze
 
   LEVELS = { read: 1, write: 2 }.freeze
 
   # Le niveau d'accès que des rôles donnent sur une section : `:write`, `:read`
-  # ou `nil`. `:everyone` s'ouvre à tout compte qui a au moins un rôle.
+  # ou `nil`. `:everyone` s'ouvre à tout compte dont un rôle ouvre au moins une
+  # section : un rôle qui n'ouvre encore rien (Ânier·ère) ne donne pas non plus
+  # l'espace personnel.
   def self.level(roles, section)
     roles = Array(roles).map(&:to_s) & ROLE_NAMES
     return nil if roles.empty?
     return :write if roles.include?("sourcier")
-    return :write if section.to_sym == :everyone
 
-    roles.filter_map { |role| GRANTS.dig(role, section.to_sym) }.max_by { |level| LEVELS[level] }
+    grants = roles.map { |role| GRANTS.fetch(role, {}) }
+    return (grants.any?(&:present?) ? :write : nil) if section.to_sym == :everyone
+
+    grants.filter_map { |grant| grant[section.to_sym] }.max_by { |level| LEVELS[level] }
   end
 
   def self.label(role) = ROLES.dig(role.to_s, :label) || role.to_s

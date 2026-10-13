@@ -1,0 +1,3 @@
+= render TurboModal::Component.new(title: "Notes — #{@gathering.display_name}", width: :lg) do
+  .content.space-y-4.text-sm
+    == @gathering.notes

@@ -40,6 +40,14 @@ RSpec.describe Access do
       expect(described_class.level([], :calendar)).to be_nil
     end
 
+    it "n'ouvre rien à l'Ânier·ère, pas même l'espace personnel, tant que sa section n'existe pas" do
+      %i[everyone calendar events accounts accounting map full].each do |section|
+        expect(described_class.level(%w[anier], section)).to be_nil
+      end
+      expect(described_class.level(%w[anier kid], :everyone)).to eq(:write)
+      expect(described_class.level(%w[anier kid], :map)).to eq(:read)
+    end
+
     it "ignore un rôle inconnu" do
       expect(described_class.level(%w[pirate], :full)).to be_nil
     end

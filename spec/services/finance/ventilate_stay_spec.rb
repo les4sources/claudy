@@ -28,7 +28,7 @@ RSpec.describe Finance::VentilateStay do
                                                  meals_cents: meals, camping_cents: camping, van_cents: van,
                                                  terrace_cents: terrace, hamac_cents: hamac,
                                                  experiences_cents: experiences)
-    allow(Stays::DraftReconstructor).to receive(:call).with(stay).and_return(:draft)
+    allow(Stays::DraftReconstructor).to receive(:priced).with(stay).and_return(:draft)
     allow(PricingModel).to receive(:quote).with(:draft).and_return(quote)
   end
 

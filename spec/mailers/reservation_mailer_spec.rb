@@ -296,6 +296,67 @@ RSpec.describe ReservationMailer, type: :mailer do
     # chien en tombaient — 1 265 € annoncés pour un séjour à 1 685 €. On
     # reconstruit désormais avec `Stays::DraftReconstructor`, la reconstruction de
     # référence (déjà utilisée par l'édition admin et la modification client).
+    # Michael, 2026-10-11 : « les prix du devis et de l'email sont différents ».
+    # Le funnel réserve les salles par la grille jour par jour (`space_slots`,
+    # tarif week-end et forfaits) et peut porter un chien ; la reconstruction
+    # depuis le séjour persisté ne connaît ni l'un ni l'autre. L'email reprend
+    # donc le devis de l'étape 3, tel quel.
+    describe "#confirmation_request — devis du funnel" do
+      let(:weekend_arrival) { (Date.today + 50).next_occurring(:saturday) }
+      let(:funnel_draft) do
+        Reservations::Draft.new(
+          lodging_id: hulotte.id,
+          arrival_date: (weekend_arrival - 1).iso8601, departure_date: (weekend_arrival + 1).iso8601,
+          dogs_count: 1, adults: 2,
+          first_name: "Camille", last_name: "Martin",
+          email: "camille@example.com", phone: "+32470000000",
+          space_slots: { "petite_salle" => ["", "journee_et_soiree", "journee"] }
+        )
+      end
+      let(:funnel_builder) do
+        builder = Reservations::Builder.new(draft: funnel_draft)
+        raise builder.error_message(default: "Builder KO") unless builder.run
+
+        builder
+      end
+      let(:funnel_quote) do
+        quote = funnel_builder.quote
+        { lines: quote.lines.map { |line| { label: line.label, amount_cents: line.amount_cents } },
+          total_cents: quote.total_cents, deposit_cents: quote.deposit_cents }
+      end
+
+      subject(:mail) { described_class.confirmation_request(funnel_builder.stay.reload, funnel_quote) }
+
+      it "reprend chaque ligne et le total du devis, au centime près" do
+        html = mail.html_part.body.decoded.gsub(/\s+/, " ")
+        text = mail.text_part.body.decoded.gsub(/\s+/, " ")
+        format = ->(cents) { ActiveSupport::NumberHelper.number_to_currency(cents / 100.0, unit: "€", format: "%n %u", precision: 2) }
+
+        expect(funnel_builder.quote.lines.map(&:label)).to include("Supplément chien")
+        [html, text].each do |body|
+          funnel_builder.quote.lines.each do |line|
+            expect(body).to include(CGI.escapeHTML(line.label).gsub(/\s+/, " ")).or include(line.label.gsub(/\s+/, " "))
+            expect(body).to include(format.(line.amount_cents))
+          end
+          expect(body).to include(format.(funnel_builder.quote.total_cents))
+        end
+      end
+
+      it "annonce le montant enregistré sur la réservation" do
+        expect(funnel_quote[:total_cents]).to eq(funnel_builder.stay.reload.total_amount_cents)
+      end
+
+      it "survit à la sérialisation de deliver_later" do
+        roundtrip = ActiveJob::Arguments.deserialize(ActiveJob::Arguments.serialize([funnel_quote])).first
+        text = described_class.confirmation_request(funnel_builder.stay.reload, roundtrip).text_part.body.decoded
+
+        expect(text).to include("Supplément chien")
+        expect(text.gsub(/\s+/, " ")).to include(
+          ActiveSupport::NumberHelper.number_to_currency(funnel_quote[:total_cents] / 100.0, unit: "€", format: "%n %u", precision: 2)
+        )
+      end
+    end
+
     describe "#confirmation_request — récap complet" do
       subject(:mail) { described_class.confirmation_request(built_stay) }
 

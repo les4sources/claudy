@@ -32,8 +32,10 @@
     h2.funnel-section-title.flex.items-center.gap-2
       = funnel_icon :bed, css_class: "w-5 h-5 text-ember flex-shrink-0"
       | Composition nuit par nuit
+    / Flèches de défilement : écran large seulement. Sur téléphone, la grille
+    / montre une nuit à la fois (`public--day-pager`).
     - if @stay_nights.present? && nights_count > 4
-      .flex.items-center.gap-2.flex-shrink-0
+      .day-pager-desktop-only.flex.items-center.gap-2.flex-shrink-0
         button(
           type="button"
           data-action="click->public--stay-calendar#prevNights"
@@ -52,14 +54,18 @@
   - else
     p.funnel-hint.mb-5 Choisissez un gîte pour chaque nuit, puis ajoutez campeurs ou véhicules si besoin.
 
-    .overflow-x-auto(data-public--stay-calendar-target="scrollArea")
+    .overflow-x-auto(data-public--stay-calendar-target="scrollArea"
+      data-controller="public--day-pager"
+      data-public--day-pager-noun-value="Nuit")
       table.stay-grid
 
         thead
           tr
             th.stay-grid__label
             - @stay_nights.each_with_index do |night, i|
-              th.stay-grid__night(data-wday=night.wday.to_s)
+              th.stay-grid__night(data-wday=night.wday.to_s
+                data-day-index=i.to_s
+                data-day-short="#{fr_short_days[night.wday]} #{night.day}")
                 span.block.text-base.font-semibold.text-ink = "#{fr_short_days[night.wday]} #{night.day} #{I18n.t("date.abbr_month_names")[night.month]}"
                 span.block.funnel-hint = "nuit #{i + 1}"
 
@@ -91,7 +97,7 @@
                 / Autres gîtes libres CETTE nuit-là, lus dans @lodging_availability
                 / (pas de requête de plus) : la mini-modale propose une issue.
                 - alts = @lodgings.reject { |o| o.id == lodging.id }.select { |o| @lodging_availability.dig(o.id, i) != false }.map { |o| short_names[o.name] || o.name }
-                td.stay-grid__cell
+                td.stay-grid__cell(data-day-index=i.to_s)
                   - if avail
                     / `aria-label` OBLIGATOIRE ; l'état visuel suit `aria-pressed`
                     / (night_cells.css + funnel.css), le contrôleur ne réécrit rien.
@@ -141,7 +147,7 @@
                       = " · #{eur.(tente_rate, 2)} par nuit"
             - @stay_nights.each_with_index do |night, i|
               - val = (pnr["tente"] || [])[i].to_i
-              td.stay-grid__cell
+              td.stay-grid__cell(data-day-index=i.to_s)
                 = render "public/reservations/stepper_cell", name: "reservation[per_night_resources][tente][]", val: val, max: 50
 
           tr.stay-grid__row(data-needs-block="van")
@@ -157,7 +163,7 @@
                       = " · #{eur.(van_rate, 2)} par nuit"
             - @stay_nights.each_with_index do |night, i|
               - val = (pnr["van"] || [])[i].to_i
-              td.stay-grid__cell
+              td.stay-grid__cell(data-day-index=i.to_s)
                 = render "public/reservations/stepper_cell", name: "reservation[per_night_resources][van][]", val: val, max: 20
 
           / ══ Location de hamacs (mai-octobre) ════════════════════════════
@@ -180,7 +186,7 @@
                         p.funnel-hint.leading-snug.mt-0.5 = "#{eur.(rate, 2)} par nuit"
                 - @stay_nights.each_with_index do |night, i|
                   - val = (pnr[key] || [])[i].to_i
-                  td.stay-grid__cell
+                  td.stay-grid__cell(data-day-index=i.to_s)
                     = render "public/reservations/stepper_cell", name: "reservation[per_night_resources][#{key}][]", val: val, max: 10
 
     / Règle week-end — les cases parlent d'elles-mêmes, plus besoin de légende.

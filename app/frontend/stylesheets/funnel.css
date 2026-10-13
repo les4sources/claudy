@@ -981,6 +981,47 @@
   align-items: center;
   gap: 0.25rem;
 }
+/* Téléphone (Michael, 2026-10-11) : plus de largeur minimale, la ligne du
+   temps tient dans la carte. L'en-tête de jour passe en format compact, et
+   au-delà de cinq jours (`--long`) il ne garde que le numéro du jour. */
+@media (max-width: 639px) {
+  .stay-timeline__scroll {
+    overflow-x: visible;
+  }
+  .stay-timeline__row {
+    min-width: 0;
+  }
+  .stay-timeline__day {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 0.8125rem;
+  }
+  .stay-timeline__day-name {
+    display: none;
+  }
+  .stay-timeline__day-compact {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .stay-timeline__day-tag {
+    font-size: 0.6875rem;
+  }
+  .stay-timeline--long .stay-timeline__day-wday,
+  .stay-timeline--long .stay-timeline__day-tag {
+    display: none;
+  }
+  .stay-timeline__bar {
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+    font-size: 0.8125rem;
+  }
+}
+@media (min-width: 640px) {
+  .stay-timeline__day-compact {
+    display: none;
+  }
+}
 .stay-timeline__bar--outdoor {
   background: #D3E6DB;
   color: var(--p-primary);

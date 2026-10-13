@@ -1,0 +1,6 @@
+= render TurboModal::Component.new(title: "Notes — #{@agenda_item.title}", width: :lg) do
+  p.-mt-2.mb-4.text-sm.text-stone-500
+    | Rassemblement du #{l(@gathering.starts_at.to_date, format: :long)}
+
+  .lexxy-content.text-sm.text-stone-700
+    = @note.body

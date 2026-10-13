@@ -52,7 +52,7 @@ RSpec.describe "Comptabilité — encaisser une facture de vente (epic #240, pha
     quote = instance_double(PricingModel::Quote, lodging_only_cents: lodging, spaces_cents: 0,
                                                  meals_cents: meals, camping_cents: 0, van_cents: 0,
                                                  terrace_cents: 0, hamac_cents: 0, experiences_cents: 0)
-    allow(Stays::DraftReconstructor).to receive(:call).with(stay).and_return(:draft)
+    allow(Stays::DraftReconstructor).to receive(:priced).with(stay).and_return(:draft)
     allow(PricingModel).to receive(:quote).with(:draft).and_return(quote)
   end
 

@@ -80,6 +80,18 @@ RSpec.describe "Rôles d'accès", type: :request do
     end
   end
 
+  context "Ânier·ère (rôle sans section pour l'instant)" do
+    before { sign_in account("anier@les4sources.be", %w[anier]) }
+
+    it "n'ouvre rien, pas même le tableau de bord, et le dit" do
+      [root_path, dashboard_path, map_path].each do |path|
+        get path
+        expect(response).to have_http_status(:forbidden)
+        expect(response.body).to include("Pas encore d'accès", "Ânier·ère")
+      end
+    end
+  end
+
   describe "Paramètres › Accès" do
     let(:sourcier) { account("michael@les4sources.be", %w[sourcier]) }
     let!(:autre) { account("kid@les4sources.be", %w[kid]) }

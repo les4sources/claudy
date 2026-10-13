@@ -1,0 +1,91 @@
+/* Grilles « nuit par nuit » / « jour par jour » sur téléphone — contrôleur
+   `public--day-pager`. PARTAGÉ entre le funnel public (public.css) et le
+   formulaire séjour admin (application.css), qui rendent les mêmes grilles.
+
+   Sous 640 px, une seule colonne est visible : le tableau reprend la largeur
+   de la carte et ne défile plus de côté (Michael, 2026-10-11). Le style en
+   ligne `min-width` des grilles est écrasé ici, d'où les `!important`. */
+.day-pager--on {
+  overflow-x: visible !important;
+}
+.day-pager--on table {
+  width: 100%;
+  min-width: 0 !important;
+}
+/* La colonne des libellés prend ce que la colonne du jour lui laisse. */
+.day-pager--on .stay-grid__label {
+  width: auto;
+  min-width: 0;
+}
+.day-pager__off {
+  display: none !important;
+}
+
+@media (max-width: 639px) {
+  /* Les flèches qui faisaient défiler la grille n'ont plus d'objet. */
+  .day-pager-desktop-only {
+    display: none !important;
+  }
+}
+
+.day-pager {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.day-pager__chips {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.375rem;
+}
+.day-pager__chip,
+.day-pager__arrow {
+  appearance: none;
+  min-height: 2.5rem;
+  border: 2px solid var(--p-border);
+  border-radius: var(--p-radius-md);
+  background: var(--p-surface);
+  color: var(--p-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 160ms var(--p-ease), border-color 160ms var(--p-ease), color 160ms var(--p-ease);
+}
+.day-pager__chip {
+  padding: 0 0.625rem;
+}
+.day-pager__chip[aria-pressed="true"] {
+  border-color: var(--p-primary);
+  background: var(--p-primary);
+  color: var(--p-primary-contrast);
+}
+.day-pager__chip {
+  position: relative;
+}
+/* Pastille d'une colonne déjà composée : un point en coin. */
+.day-pager__chip--filled::after {
+  content: "";
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 9999px;
+  background: var(--p-accent);
+  box-shadow: 0 0 0 2px var(--p-surface);
+}
+.day-pager__arrow {
+  flex: 0 0 auto;
+  width: 2.5rem;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.day-pager__arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}

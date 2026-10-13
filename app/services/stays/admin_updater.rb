@@ -80,6 +80,7 @@ module Stays
           # reconstruit par `DraftReconstructor` à l'ouverture — donc une édition
           # sans y toucher la PRÉSERVE. Vidée → nil.
           category:             @draft.category,
+          dogs_count:           @draft.dogs_count.to_i,
           price_override_cents: @requested_price_override_cents.presence
         )
         reconcile_lodging!
