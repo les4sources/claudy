@@ -12,7 +12,10 @@ module Mcp
           type: "object",
           additionalProperties: false,
           properties: {
-            compte: COMPTE_GENERAL,
+            compte: COMPTE_GENERAL.merge(description: "Compte du plan : code (604000) ou partie du nom (« fournitures »). " \
+                                                      "Un compte archivé (repris de Winbooks) s'accepte sur son code exact."),
+            tiers: { type: "string", description: "Tiers (fournisseur ou client, nom ou #id), facultatif : à qui se rapporte " \
+                                                 "un paiement sur 440000 ou 400000." },
             montant: MONTANT.merge(description: "Montant de la part en euros, sans signe (le sens est celui de la ligne). " \
                                                 "Facultatif pour une part unique : le reste de la ligne."),
             pole: POLE,
@@ -112,7 +115,7 @@ module Mcp
         def part!(part, index, nombre, entry, reste, signe)
           part = part.to_h
           quoi = nombre > 1 ? "part #{index + 1} : " : ""
-          compte = compte_general!(part["compte"])
+          compte = compte_affectation!(part["compte"])
           montant = if part["montant"].present?
                       cents!(part["montant"], "#{quoi}montant").abs
                     elsif nombre == 1
@@ -126,9 +129,18 @@ module Mcp
             team_id: part["pole"].present? ? pole!(part["pole"]).id : nil,
             legal_entity_id: (part["entite"].present? ? entite!(part["entite"]) : entry.cash_account.legal_entity).id,
             analytic_account_id: part["analytique"].present? ? analytique!(part["analytique"]).id : nil,
+            third_party_id: part["tiers"].present? ? tiers!(part["tiers"]).id : nil,
             label: part["libelle"].to_s.strip.presence,
             evenement_id: part["evenement"].present? ? evenement!(part["evenement"]).id : nil
           }
+        end
+
+        # La reprise de Winbooks a laissé des comptes archivés (700002, 601604…)
+        # que les lignes déjà reprises portent. Un code EXACT les retrouve, pour
+        # qu'une ligne oubliée reçoive le même compte que ses voisines ; une
+        # recherche par nom reste limitée aux comptes actifs.
+        def compte_affectation!(reference)
+          GeneralAccount.where(active: false).find_by(code: reference.to_s.strip) || compte_general!(reference)
         end
 
         def evenement!(reference)
@@ -137,7 +149,8 @@ module Mcp
 
         def decrire(attributs)
           compte = GeneralAccount.find(attributs[:general_account_id])
-          details = ["#{euros(attributs[:amount_cents])} → #{compte}"]
+          details = ["#{euros(attributs[:amount_cents])} → #{compte}#{' (compte archivé)' unless compte.active?}"]
+          details << "tiers #{ThirdParty.find(attributs[:third_party_id]).name}" if attributs[:third_party_id]
           details << "pôle #{Team.find(attributs[:team_id]).name}" if attributs[:team_id]
           details << LegalEntity.find(attributs[:legal_entity_id]).name
           details << "analytique #{AnalyticAccount.find(attributs[:analytic_account_id])}" if attributs[:analytic_account_id]
