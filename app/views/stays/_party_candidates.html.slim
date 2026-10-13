@@ -1,15 +1,16 @@
-/ Les candidates au rattachement (issue #339) : les parties privées PAYÉES de
-  Tranches de Vie autour des dates du séjour. locals: stay, candidates, error
+/ Les candidates au rattachement (issue #339) : les parties privées de
+  Tranches de Vie autour des dates du séjour, payées ou non (une party saisie
+  en admin se règle sur place). locals: stay, candidates, error
 = turbo_frame_tag "stay_#{stay.id}_party_candidates", class: "block"
   .mt-2.rounded-md.border.border-gray-200.bg-gray-50.p-3
     .flex.items-baseline.justify-between.gap-2
-      .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Parties payées autour du séjour
+      .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Pizza Parties autour du séjour
       = link_to "Fermer", stay_path(stay), data: { turbo_frame: "_top" }, class: "text-xs text-gray-500 hover:text-gray-800"
 
     - if error.present?
       p.mt-2.text-sm.text-red-700 = error
     - elsif candidates.empty?
-      p.mt-2.text-sm.text-gray-500 Aucune Pizza Party payée sur cette période.
+      p.mt-2.text-sm.text-gray-500 Aucune Pizza Party sur cette période.
     - else
       ul.mt-2.space-y-2
         - candidates.each do |candidate|
@@ -28,6 +29,8 @@
                     span.text-sm.text-gray-700 = attrs[:group_name]
                   - if attrs[:persons].to_i.positive?
                     span.text-xs.text-gray-500 = "#{attrs[:persons]} pers."
+                  - unless candidate.paid?
+                    span.rounded.bg-amber-100.px-2.py-0.5.text-xs.font-medium.text-amber-800 Pas encore payée
                 - if candidate.customer_name.present? || candidate.customer_email.present?
                   div class="mt-0.5 text-xs text-gray-500"
                     = [candidate.customer_name, candidate.customer_email].compact_blank.join(" · ")

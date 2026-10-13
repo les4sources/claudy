@@ -50,10 +50,15 @@ module TranchesDeVieHelpers
 
   def stub_tdv_index(orders, next_link: nil)
     stub_request(:get, "#{BASE_URL}/api/v1/orders")
-      .with(query: hash_including({ "kind" => "private_party", "paid" => "true" }))
+      .with(query: hash_including({ "kind" => "private_party" }))
       .to_return(status: 200,
                  headers: { "Content-Type" => "application/json" },
                  body: { data: orders, meta: { total: orders.size }, _links: { next: next_link } }.to_json)
+  end
+
+  # Une party saisie en admin là-bas : réglée sur place, pas encore pointée.
+  def tdv_unpaid_order(id: 1234, **overrides)
+    tdv_order(id: id, status: "planned", payment_method: nil, payment_received: false, paid_at: nil, **overrides)
   end
 
   def stub_tdv_order(order)

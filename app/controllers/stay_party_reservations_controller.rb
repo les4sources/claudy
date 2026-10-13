@@ -3,13 +3,16 @@
 #
 # Le rattachement est MANUEL et à sens unique : on lit l'API de Tranches de Vie,
 # on n'y écrit jamais. Chaque mutation rejoue `recompute_aggregates!` puis
-# `set_payment_status` et redirige vers `stay_path`, ce qui recharge le
-# turbo-frame des paiements de la modale — même pattern que `StayPaymentsController`.
+# `set_payment_status`. Le bloc Pizza Party vit dans la colonne de droite
+# (frame `stay_<id>_extras`), les montants à gauche (frame `stay_<id>_payments`) :
+# la réponse Turbo Stream remplace les deux, comme pour les activités. Hors
+# Turbo, on redirige vers `stay_path`.
 class StayPartyReservationsController < BaseController
   before_action :set_stay
 
-  # Les candidates : les parties privées PAYÉES tenues autour des dates du
-  # séjour. Rendu dans un turbo-frame, pas de page pleine.
+  # Les candidates : les parties privées tenues autour des dates du séjour,
+  # payées ou non (une party saisie en admin se règle sur place), hors annulées
+  # et remboursées. Rendu dans un turbo-frame, pas de page pleine.
   def index
     @client = TranchesDeVie::Client.new
     @candidates = []
@@ -34,9 +37,9 @@ class StayPartyReservationsController < BaseController
     service = TranchesDeVie::AttachPartyReservation.new(stay: @stay)
 
     if service.run(params.require(:external_id))
-      redirect_to stay_path(@stay), notice: "Pizza Party rattachée au séjour."
+      respond_with_panels(notice: "Pizza Party rattachée au séjour.")
     else
-      redirect_to stay_path(@stay), alert: service.error_message(default: "Rattachement impossible.")
+      respond_with_panels(alert: service.error_message(default: "Rattachement impossible."))
     end
   end
 
@@ -45,9 +48,9 @@ class StayPartyReservationsController < BaseController
     service = TranchesDeVie::DetachPartyReservation.new(party_reservation: reservation)
 
     if service.run
-      redirect_to stay_path(@stay), notice: "Pizza Party détachée du séjour."
+      respond_with_panels(notice: "Pizza Party détachée du séjour.")
     else
-      redirect_to stay_path(@stay), alert: service.error_message(default: "Détachement impossible.")
+      respond_with_panels(alert: service.error_message(default: "Détachement impossible."))
     end
   end
 
@@ -57,9 +60,9 @@ class StayPartyReservationsController < BaseController
     service = TranchesDeVie::SyncPartyReservations.for_stay(@stay)
 
     if service.run
-      redirect_to stay_path(@stay), notice: sync_notice(service)
+      respond_with_panels(notice: sync_notice(service))
     else
-      redirect_to stay_path(@stay), alert: service.error_message(default: "Synchronisation impossible.")
+      respond_with_panels(alert: service.error_message(default: "Synchronisation impossible."))
     end
   end
 
@@ -69,6 +72,23 @@ class StayPartyReservationsController < BaseController
 
   def set_stay
     @stay = Stay.find(params[:stay_id])
+  end
+
+  def respond_with_panels(notice: nil, alert: nil)
+    respond_to do |format|
+      format.turbo_stream do
+        @stay = Stay.find(@stay.id).decorate
+        render turbo_stream: [
+          turbo_stream.replace("stay_#{@stay.id}_extras") do
+            render_to_string(partial: "stays/extras_panel", formats: [:html], locals: { notice: notice, alert: alert })
+          end,
+          turbo_stream.replace("stay_#{@stay.id}_payments") do
+            render_to_string(partial: "stays/payments_panel", formats: [:html])
+          end
+        ]
+      end
+      format.html { redirect_to stay_path(@stay), notice: notice, alert: alert }
+    end
   end
 
   # Fenêtre de recherche : les dates du séjour à un jour près (une party se tient
@@ -85,7 +105,7 @@ class StayPartyReservationsController < BaseController
   # Les candidates du MÊME CLIENT d'abord : c'est presque toujours la bonne, et
   # la faire chercher dans une liste de dates est du travail pour rien.
   def sorted_candidates(orders)
-    mappers = orders.map { |order| TranchesDeVie::OrderMapper.new(order) }
+    mappers = orders.map { |order| TranchesDeVie::OrderMapper.new(order) }.select { |m| m.status == "active" }
     mappers.sort_by { |m| [same_customer?(m) ? 0 : 1, m.attributes[:held_on].to_s] }
   end
 

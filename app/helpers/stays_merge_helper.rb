@@ -108,7 +108,8 @@ module StaysMergeHelper
     camping:  "Camping",
     van:      "Van",
     activity: "Activités",
-    meal:     "Repas"
+    meal:     "Repas",
+    bar:      "Bar"
   }.freeze
 
   def merge_type_label(type)

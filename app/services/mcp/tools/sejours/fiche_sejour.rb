@@ -65,7 +65,10 @@ module Mcp
           end
           stay.linen_orders.each { |draps| lignes << "- #{draps.label} × #{draps.quantity} : #{euros(draps.price_cents)}" }
           stay.party_reservations.each do |party|
-            lignes << "- Pizza Party #{party.held_on} (#{party.persons} pers., #{party.status}) : #{euros(party.price_cents)}"
+            lignes << "- Pizza Party #{party.held_on} (#{party.persons} pers., #{party.status}#{', pas encore payée' if party.active? && !party.paid?}) : #{euros(party.price_cents)}"
+          end
+          stay.bar_consumptions.ordered.each do |bar|
+            lignes << "- Bar : #{bar.quantity} × #{bar.label} à #{euros(bar.unit_price_cents)} : #{euros(bar.price_cents)}"
           end
           return "Composition : vide." if lignes.empty?
 

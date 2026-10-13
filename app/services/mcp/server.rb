@@ -104,6 +104,31 @@ module Mcp
       Tools::Finances::Decompte,
       Tools::Finances::EnregistrerBatchCooking,
       Tools::Finances::ArreterMois,
+      Tools::Finances::ImportsCoda,
+      Tools::Finances::ImporterCoda,
+      Tools::Finances::ComptagesCaisse,
+      Tools::Finances::CompterCaisse,
+      Tools::Finances::MotifCaisse,
+      Tools::Finances::ComptesStripe,
+      Tools::Finances::ModeStripe,
+      Tools::Finances::CorrespondanceStripe,
+      Tools::Finances::CoutEncaissement,
+      Tools::Finances::JustificatifStripe,
+      Tools::Finances::BoiteCompta,
+      Tools::Finances::GesteMailCompta,
+      Tools::Finances::Tiers,
+      Tools::Finances::EnregistrerTiers,
+      Tools::Finances::ChargesFixes,
+      Tools::Finances::ChargeFixe,
+      Tools::Finances::FacturesVente,
+      Tools::Finances::FactureVente,
+      Tools::Finances::RelevesPorteurs,
+      Tools::Finances::RelevePorteur,
+      Tools::Finances::DepotVente,
+      Tools::Finances::ReleveDepotVente,
+      Tools::Finances::PartagesRevenus,
+      Tools::Finances::AccordPartage,
+      Tools::Finances::RelevePartage,
       Tools::Carte::Plantes,
       Tools::Carte::FichePlante,
       Tools::Carte::Especes,
@@ -169,7 +194,18 @@ module Mcp
       factures_achat, notes_de_frais. Le mois : charges récurrentes, décomptes,
       arrete_du_mois. Une écriture passée ne se réécrit pas : on annule la
       passation (contre-passation) ou on contre-passe. Envoyer un décompte ou
-      une relance ÉCRIT AUX FAMILLES : dis-le avant qu'il accepte.
+      une relance ÉCRIT AUX FAMILLES : dis-le avant qu'il accepte. Les lignes
+      bancaires entrent par un fichier CODA : si l'utilisateur t'en confie un,
+      passe son texte intégral à importer_coda. La caisse se compte billet par
+      billet (compter_caisse) ; Stripe : comptes_stripe, cout_encaissement.
+      Les factures fournisseurs arrivent par mail (boite_compta) : on encode
+      une pièce avec enregistrer_facture_achat `piece_mail`. Les ventes
+      (factures émises dans OkiOki) : factures_vente, facture_vente. Les
+      reversements : relevés des porteurs d'activité (releves_porteurs,
+      releve_porteur), dépôt-vente des artisans (depot_vente,
+      releve_depot_vente), partages de revenus d'un hébergement
+      (partages_revenus, accord_partage, releve_partage). Émettre un relevé ou
+      renvoyer une demande ÉCRIT au porteur, à l'artisan ou au bénéficiaire.
 
       CARTE DU DOMAINE ET PLANTES. Les plantes nourricières (#id, n° de
       terrain) ont une espèce et une variété du catalogue local (especes) ;

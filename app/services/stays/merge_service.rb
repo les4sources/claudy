@@ -106,6 +106,7 @@ module Stays
       move_stay_items!(source)
       move_direct!(source.meal_orders)
       move_direct!(source.experience_bookings)
+      move_bar_consumptions!(source)
       move_payments!(source)
 
       # Source désormais vidée de toutes ses occupations : soft-delete (comme
@@ -131,6 +132,22 @@ module Stays
     def move_direct!(relation)
       relation.find_each do |record|
         record.update!(stay_id: target.id)
+        @items_moved += 1
+      end
+    end
+
+    # Consommations du bar : une ligne par article et par séjour (index
+    # unique). Si la cible a déjà l'article, les quantités s'additionnent sur
+    # SA ligne — au prix déjà figé chez elle — et celle de la source disparaît.
+    def move_bar_consumptions!(source)
+      source.bar_consumptions.find_each do |line|
+        existing = BarConsumption.find_by(stay_id: target.id, catalog_item_id: line.catalog_item_id)
+        if existing
+          existing.update!(quantity: existing.quantity + line.quantity)
+          line.soft_delete!
+        else
+          line.update!(stay_id: target.id)
+        end
         @items_moved += 1
       end
     end

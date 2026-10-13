@@ -1,0 +1,15 @@
+/ Pizza Party et Bar de la fiche séjour, dans la colonne de droite (Michael,
+  2026-10-13). Leur propre turbo-frame : rattacher ou détacher une party bouge
+  aussi le Total séjour de la colonne de gauche, d'où la réponse en Turbo
+  Stream qui remplace les deux frames (`StayPartyReservationsController`).
+  Le message de l'action vit DANS la frame : un flash du layout resterait sous
+  le voile de la modale.
+= turbo_frame_tag "stay_#{@stay.id}_extras" do
+  - if local_assigns[:notice].present?
+    p.archive-toast.mx-5.mt-3.text-xs.font-medium.text-green-700(role="status" data-controller="undo-toast" data-undo-toast-duration-value="4000")
+      = local_assigns[:notice]
+  - if local_assigns[:alert].present?
+    p.mx-5.mt-3.rounded.bg-red-50.px-2.py-1.text-xs.font-medium.text-red-700(role="alert")
+      = local_assigns[:alert]
+  = render "stays/party_panel"
+  = render "stays/bar_panel"

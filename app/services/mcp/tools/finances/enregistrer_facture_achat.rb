@@ -5,8 +5,11 @@ module Mcp
       # #create et #update) : fournisseur, entité, montant, échéance, et les
       # lignes qui la ventilent par compte de charge et par pôle.
       #
-      # La pièce PDF ne passe pas par ici : elle se dépose dans Claudy, et la
-      # facture garde le défaut « no_document » tant qu'elle manque.
+      # La pièce PDF ne transite pas par le connecteur. Pour une pièce arrivée
+      # dans la boite `compta@`, `piece_mail` encode la facture depuis le PDF
+      # déjà en base, comme « Créer la facture » à l'écran
+      # (`PurchaseInvoices::FromMailAttachment`). Sinon la facture garde le
+      # défaut « no_document » tant que le PDF n'est pas déposé dans Claudy.
       class EnregistrerFactureAchat < Ecriture
         include Commun
 
@@ -29,10 +32,13 @@ module Mcp
                           "« à payer ». Les lignes ventilent le total par compte de charge et par pôle ; données en " \
                           "correction, elles REMPLACENT toutes les lignes. `validation` désigne le pôle qui doit dire " \
                           "oui avant le paiement (« aucune » pour retirer). Ensuite : geste_facture_achat soumettre. " \
-                          "La pièce PDF se dépose dans Claudy.",
+                          "Pour une pièce de la boite compta@ (boite_compta) : `piece_mail` reprend ce que la lecture " \
+                          "du mail a trouvé (fournisseur, numéro, total, dates, communication ; les arguments donnés " \
+                          "l'emportent), joint son PDF et classe le mail. Sinon la pièce PDF se dépose dans Claudy.",
              schema: {
                properties: {
                  facture: FACTURE.merge(description: "Pour corriger : la facture (#88). Absente : nouvelle facture."),
+                 piece_mail: { type: %w[integer string], description: "Nouvelle facture depuis une pièce de la boite compta@ (#id de pièce, rendu par boite_compta)." },
                  fournisseur: { type: "string", description: "Le tiers fournisseur (nom ou code), voir referentiel_comptable tiers." },
                  entite: ENTITE.merge(description: "Entité qui doit la facture. Défaut : la fondation."),
                  numero: { type: "string" },
@@ -50,6 +56,9 @@ module Mcp
 
         def planifier(arguments)
           facture = arguments["facture"].present? ? facture!(arguments["facture"]) : nil
+          raise Error, "piece_mail sert à créer une facture, pas à en corriger une." if facture && arguments["piece_mail"].present?
+
+          @piece = piece_mail!(arguments["piece_mail"]) if arguments["piece_mail"].present?
           if facture&.frozen_content?
             raise Error, "Cette facture est #{facture.status_label.downcase} : son écriture est passée, elle se corrige par contre-passation."
           end
@@ -75,10 +84,15 @@ module Mcp
           if (doublon = doublon(brouillon))
             raise Error, "Ce numéro existe déjà pour ce fournisseur : facture ##{doublon.id}."
           end
-          resume << "La pièce PDF est à déposer dans Claudy." unless facture&.document&.attached?
+          if @piece
+            resume << "Pièce : « #{@piece.filename} » du mail de #{@piece.mail_message.sender_label} " \
+                      "(« #{@piece.mail_message.subject} ») ; le mail sera classé."
+          elsif !facture&.document&.attached?
+            resume << "La pièce PDF est à déposer dans Claudy."
+          end
 
-          Plan.new(resume: resume.join("\n"), empreinte: [facture && etat_de(facture), signature(arguments)],
-                   donnees: { id: facture&.id, attributs: attributs })
+          Plan.new(resume: resume.join("\n"), empreinte: [facture && etat_de(facture), @piece && etat_de(@piece), signature(arguments)],
+                   donnees: { id: facture&.id, attributs: attributs, piece: @piece&.id })
         end
 
         def appliquer(plan)
@@ -89,18 +103,23 @@ module Mcp
             existantes = facture.purchase_invoice_lines.map { |l| { id: l.id, _destroy: "1" } }
             facture.purchase_invoice_lines_attributes = existantes + attributs[:lignes].each_with_index.map { |l, i| l.merge(position: i) }
           end
+          piece = plan.donnees[:piece] && ::PurchaseInvoices::FromMailAttachment.new(MailAttachment.find(plan.donnees[:piece]))
+          piece&.attach_document(facture)
           metier! { facture.save! }
-          "Facture enregistrée : #{ligne_facture(facture.reload)}"
+          piece&.settle!(facture, user)
+          "Facture enregistrée : #{ligne_facture(facture.reload)}#{"\nMail classé." if piece&.attachment&.mail_message&.reload&.status == 'filed'}"
         end
 
         def attributs!(arguments, facture)
-          a = {}
+          a = @piece ? depuis_mail(@piece) : {}
           a[:third_party_id] = tiers!(arguments["fournisseur"]).id if arguments["fournisseur"].present?
-          raise Error, "Donne le fournisseur." if facture.nil? && a[:third_party_id].nil?
+          if facture.nil? && a[:third_party_id].nil?
+            raise Error, @piece ? "La lecture du mail n'a pas reconnu le fournisseur : donne-le (créé au besoin avec enregistrer_tiers)." : "Donne le fournisseur."
+          end
 
           if arguments["entite"].present?
             a[:legal_entity_id] = entite!(arguments["entite"]).id
-          elsif facture.nil?
+          elsif facture.nil? && a[:legal_entity_id].nil?
             entite = LegalEntity.actives.ordered.find_by("name ILIKE ?", "%fondation%") || LegalEntity.actives.ordered.first
             a[:legal_entity_id] = entite&.id || raise(Error, "Aucune entité juridique active.")
           end
@@ -122,6 +141,29 @@ module Mcp
           end
           a[:lignes] = lignes!(arguments["lignes"]) if arguments.key?("lignes")
           a
+        end
+
+        # Ce que la lecture du mail propose, pour les champs que l'utilisateur
+        # ne donne pas (les arguments explicites écrasent ensuite ces valeurs).
+        # Les lignes de TVA proposées n'ont pas de compte : elles restent à
+        # ventiler, ici par `lignes` ou à l'écran.
+        def depuis_mail(piece)
+          brouillon = PurchaseInvoice.new
+          ::PurchaseInvoices::FromMailAttachment.new(piece).prefill(brouillon)
+          { third_party_id: brouillon.third_party_id, legal_entity_id: brouillon.legal_entity_id, number: brouillon.number,
+            total_cents: brouillon.total_cents, issued_on: brouillon.issued_on, due_on: brouillon.due_on,
+            payment_reference: brouillon.payment_reference, notes: brouillon.notes }.compact
+        end
+
+        def piece_mail!(reference)
+          piece = MailAttachment.includes(:mail_message).find_by(id: id!(reference, "pièce"))
+          raise Error, "Aucune pièce de mail ##{reference.to_s.delete('#')}." if piece.nil?
+          raise Error, "Cette pièce est déjà encodée : facture ##{piece.purchase_invoice_id}." if piece.purchase_invoice_id
+          if (deja = piece.existing_invoice)
+            raise Error, "Cette pièce correspond déjà à la facture ##{deja.id} (#{deja.third_party&.name} n° #{deja.number})."
+          end
+
+          piece
         end
 
         def lignes!(lignes)

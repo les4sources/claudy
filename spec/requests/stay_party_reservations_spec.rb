@@ -41,6 +41,29 @@ RSpec.describe "Fiche séjour — Pizza Party de Tranches de Vie", type: :reques
       expect(response.body).to include("Rattacher")
     end
 
+    it "propose aussi une party pas encore payée (réglée sur place), et la signale" do
+      stub_tdv_index([tdv_unpaid_order(id: 77)])
+      get stay_party_reservations_path(stay)
+
+      expect(
+        a_request(:get, "#{TranchesDeVieHelpers::BASE_URL}/api/v1/orders")
+          .with(query: hash_excluding("paid"))
+      ).to have_been_made
+      expect(response.body).to include("Scouts de Namur")
+      expect(response.body).to include("Pas encore payée")
+      expect(response.body).to include("Rattacher")
+    end
+
+    it "écarte les parties annulées ou remboursées" do
+      stub_tdv_index([tdv_order(id: 1, cancelled: true, party: tdv_order["party"].merge("group_name" => "Groupe annulé")),
+                      tdv_order(id: 2, refunded: true, party: tdv_order["party"].merge("group_name" => "Groupe remboursé"))])
+      get stay_party_reservations_path(stay)
+
+      expect(response.body).not_to include("Groupe annulé")
+      expect(response.body).not_to include("Groupe remboursé")
+      expect(response.body).to include("Aucune Pizza Party sur cette période.")
+    end
+
     it "remonte les parties du MÊME client en tête" do
       autre = tdv_order(id: 1, customer: { "id" => 9, "full_name" => "Autre", "email" => "autre@example.com", "phone_e164" => "+32499000000" })
       stub_tdv_index([autre, tdv_order(id: 2)])
@@ -98,6 +121,19 @@ RSpec.describe "Fiche séjour — Pizza Party de Tranches de Vie", type: :reques
 
       follow_redirect!
       expect(response.body).to include("déjà rattachée")
+    end
+
+    # Le bloc Pizza Party est à droite, les montants à gauche (Michael,
+    # 2026-10-13) : depuis la modale, la réponse remplace les deux frames.
+    it "rafraîchit en Turbo Stream le bloc de droite ET les paiements" do
+      stub_tdv_order(tdv_order(id: 1234))
+
+      post stay_party_reservations_path(stay), params: { external_id: 1234 }, as: :turbo_stream
+
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include(%(target="stay_#{stay.id}_extras"), %(target="stay_#{stay.id}_payments"))
+      expect(response.body).to include("Pizza Party rattachée au séjour.")
+      expect(response.body).to include(ApplicationController.helpers.humanized_money_with_symbol(Money.new(77_000)))
     end
   end
 

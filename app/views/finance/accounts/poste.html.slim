@@ -22,7 +22,11 @@
         - @poste.lignes.each do |ligne|
           tr.border-t.border-gray-100
             td.py-2.px-3.whitespace-nowrap.text-gray-500= l(ligne.entry_date, format: :ddmmyyyy)
-            td.py-2.px-3.text-gray-900= ligne.label
+            td.py-2.px-3.text-gray-900
+              = ligne.label
+              - if ligne.quantity.present? && ligne.unit_price_cents.present?
+                span.ml-2.text-gray-400
+                  = "#{number_with_precision(ligne.quantity, precision: 3, strip_insignificant_zeros: true)} × #{number_to_currency(ligne.unit_price_cents / 100.0)}"
             td.py-2.px-3.text-right.tabular-nums.whitespace-nowrap.text-gray-900
               = number_to_currency(ligne.amount_cents / 100.0)
       tfoot.bg-gray-50
