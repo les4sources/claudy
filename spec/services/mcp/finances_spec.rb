@@ -235,6 +235,30 @@ RSpec.describe Mcp::Server, "finances" do
     expect(entry.reload).to be_posted
   end
 
+  it "relie un virement dont le règlement est déjà au grand livre, sans le compter deux fois" do
+    compte = MemberAccount.for_human!(Human.create!(name: "Gaëlle de Fays"))
+    compte.account_entries.create!(entry_date: jour, kind: "recurring", flow: "bar", label: "Bar de mars", amount_cents: 4_200)
+    compte.account_entries.create!(entry_date: jour, kind: "settlement", flow: "bar", label: "Règlement bar (reprise)", amount_cents: -4_200)
+    entry = ligne(4_200, label: "Virement Gaëlle")
+
+    apercu = texte(outil("rapprocher_ligne", { "ligne" => entry.id, "avec" => "reglement_deja_encode", "compte" => compte.code }))
+    expect(apercu).to include("Règlement bar (reprise)")
+    expect { confirme("rapprocher_ligne", { "ligne" => entry.id, "avec" => "reglement_deja_encode", "compte" => compte.code }) }
+      .not_to(change { compte.account_entries.count })
+
+    expect(compte.reload.balance_cents).to eq(0)
+    expect(entry.reload).to be_posted
+    expect(entry.cash_allocations.sole).to have_attributes(general_account: clients, document: compte, amount_cents: 4_200)
+  end
+
+  it "prévient quand aucun règlement de ce montant n'est au grand livre" do
+    compte = MemberAccount.for_human!(Human.create!(name: "Manon Lefebvre"))
+    entry = ligne(1_000, label: "Virement Manon")
+
+    apercu = texte(outil("rapprocher_ligne", { "ligne" => entry.id, "avec" => "reglement_deja_encode", "compte" => compte.code }))
+    expect(apercu).to include("aucun règlement de 10,00 €")
+  end
+
   it "génère les charges du mois, émet le décompte et l'envoie" do
     menage = Household.create!(name: "Chevêche", kind: "resident", moved_in_on: Date.new(2023, 1, 1))
     compte = MemberAccount.create!(kind: "household", household: menage, name: "Chevêche", contact_email: "cheveche@example.com")
