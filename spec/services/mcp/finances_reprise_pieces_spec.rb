@@ -74,6 +74,15 @@ RSpec.describe Mcp::Server, "reprise de pièces Winbooks" do
     expect(JournalEntry.count).to eq(2)
   end
 
+  it "trouve un tiers créé pour l'occasion par son nom, quand son code diffère de celui de Winbooks" do
+    croix_rouge = ThirdParty.create!(name: "Croix Rouge de Belgique", kind: "customer")
+    piece = vente.deep_dup.tap { |p| p["lignes"][0]["tiers"] = "croix rouge de belgique" }
+
+    confirme("reprendre_pieces", arguments(piece))
+
+    expect(JournalLine.find_by!(general_account: clients).third_party).to eq(croix_rouge)
+  end
+
   it "refuse tout le lot et liste chaque problème avant d'écrire" do
     inconnue = achat("2022:ACHATS:3").deep_dup.tap { |p| p["lignes"][0]["tiers"] = "INCONNU" }
     bancale = achat("2022:ACHATS:4").deep_dup.tap { |p| p["lignes"][1]["debit"] = "120" }

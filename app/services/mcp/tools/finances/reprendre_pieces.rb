@@ -27,7 +27,7 @@ module Mcp
                           "(Winbooks), par lots de #{LOT_MAX} pièces au plus. Chaque pièce porte sa référence d'origine " \
                           "(exercice, journal, numéro : « 2024:ACHATS:261 »), sa date, son libellé et ses lignes " \
                           "équilibrées (compte du plan par son CODE EXACT, archivé accepté ; tiers par son code sur la " \
-                          "ligne 440000 ou 400000). Une pièce déjà reprise est ignorée. Refus d'ensemble si un compte, " \
+                          "ligne 440000 ou 400000, ou son nom exact). Une pièce déjà reprise est ignorée. Refus d'ensemble si un compte, " \
                           "un tiers ou un exercice ouvert manque, ou si une pièce touche la trésorerie (classe 5).",
              schema: {
                properties: {
@@ -48,7 +48,7 @@ module Mcp
                            type: "object",
                            properties: {
                              compte: { type: "string", description: "Code exact du compte (601601, 440000…)." },
-                             tiers: { type: "string", description: "Code du tiers (ANTARGAZ), sur la ligne 440000 ou 400000." },
+                             tiers: { type: "string", description: "Code du tiers (ANTARGAZ), ou son nom exact, sur la ligne 440000 ou 400000." },
                              debit: MONTANT, credit: MONTANT,
                              libelle: { type: "string" }
                            },
@@ -81,6 +81,7 @@ module Mcp
           deja = LedgerDocument.where(source_system: source, external_ref: lues.map { |p| p[:external_ref] })
                                .joins(:journal_entries).distinct.pluck(:external_ref).to_set
           nouvelles = lues.reject { |p| deja.include?(p[:external_ref]) }
+          tiers_par_code!(nouvelles)
           controler!(nouvelles, entite)
 
           Plan.new(resume: resume(lues, nouvelles, deja, entite, source),
@@ -126,6 +127,19 @@ module Mcp
 
           { account_code: ligne["compte"].to_s.strip, third_party_code: ligne["tiers"].to_s.strip.presence,
             debit_cents: debit, credit_cents: credit, label: ligne["libelle"].to_s.strip.first(250).presence }
+        end
+
+        # Un tiers se donne par son code ; à défaut, par son nom exact. C'est ce
+        # qui permet de reprendre les factures d'un tiers créé pour l'occasion,
+        # dont le code dérivé du nom diffère de celui de l'ancien logiciel.
+        def tiers_par_code!(pieces)
+          references = pieces.flat_map { |p| p[:lignes].filter_map { |l| l[:third_party_code] } }.uniq
+          codes = ThirdParty.where(code: references).pluck(:code).to_set
+          correspondances = (references - codes.to_a).to_h do |reference|
+            trouves = ThirdParty.where("LOWER(name) = ?", reference.downcase).pluck(:code)
+            [reference, trouves.one? ? trouves.first : reference]
+          end
+          pieces.each { |p| p[:lignes].each { |l| l[:third_party_code] = correspondances.fetch(l[:third_party_code], l[:third_party_code]) } }
         end
 
         # Tout ce qui ferait échouer une pièce, pour le lot entier, AVANT
