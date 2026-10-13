@@ -26,6 +26,17 @@ RSpec.describe "Finances > Comptabilité", type: :request do
     end
   end
 
+  describe "peut-on dépenser" do
+    it "donne un verdict par entité qui a un compte de trésorerie" do
+      build_cash_account(entity, bank, name: "Triodos")
+
+      get finance_accounting_path
+
+      corps = CGI.unescapeHTML(response.body)
+      expect(corps).to include("Peut-on dépenser ?").and include("Impossible à dire : aucun solde vérifié.")
+    end
+  end
+
   describe "les prêts reçus" do
     it "montre ce qui reste dû à chaque prêteur" do
       pret = build_general_account(code: "174006", name: "Prêt CT Muriel", klass: 1, nature: "liability")

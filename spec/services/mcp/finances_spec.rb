@@ -59,7 +59,7 @@ RSpec.describe Mcp::Server, "finances" do
     expect(taxe).to have_attributes(kind: "dispute", retained_cents: 1_200_000, legal_entity: entity)
     expect(texte(outil("a_payer", {}))).to include("Dettes et litiges sans facture", "Dette ##{taxe.id}")
     ligne(50_000)
-    expect(texte(outil("tresorerie", {}))).to include("Dont dettes et litiges sans facture : 12000,00 €")
+    expect(texte(outil("tresorerie", {}))).to include("Dont dettes et litiges sans facture : 12000,00 €", "Peut-on dépenser ?")
 
     confirme("enregistrer_dette_litige", { "dette" => taxe.id, "statut" => "soldee", "motif" => "payée" })
     expect(taxe.reload.status).to eq("settled")

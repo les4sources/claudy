@@ -1,0 +1,45 @@
+/ « Peut-on dépenser ? » (2026-10-13) : un verdict franc par entité, et le
+  calcul qui le justifie. Le solde en banque n'est pas ce qu'on peut dépenser.
+- tones = { "non" => "border-red-200 bg-red-50/70", "prudence" => "border-amber-200 bg-amber-50/70",
+            "oui" => "border-emerald-200 bg-emerald-50/60", "inconnu" => "border-stone-200 bg-stone-50" }
+- titles = { "non" => "text-red-800", "prudence" => "text-amber-900", "oui" => "text-emerald-900", "inconnu" => "text-stone-800" }
+- euros = ->(cents) { number_to_currency(cents / 100.0, unit: "€", precision: 0) }
+- if verdicts.any?
+  section.mb-8(data-spending-verdicts="")
+    h2.mb-3.text-lg.font-semibold.text-gray-900 Peut-on dépenser ?
+    .grid.gap-4(class="#{verdicts.size > 1 ? 'lg:grid-cols-2' : ''}")
+      - verdicts.each do |v|
+        - tone = tones.fetch(v.verdict)
+        - title_tone = titles.fetch(v.verdict)
+        .p-5.rounded-lg.border(class=tone data-spending-verdict=v.verdict)
+          p.text-xs.uppercase.text-gray-500= v.entity.name
+          p.mt-1.text-xl.font-semibold(class=title_tone)= v.headline
+          p.mt-1.text-sm.text-gray-700= v.reason
+          - unless v.verdict == "inconnu"
+            dl.mt-4.text-sm.tabular-nums
+              .flex.justify-between.py-1
+                dt.text-gray-600 Solde vérifié
+                dd.text-gray-900= euros.(v.balance_cents)
+              .flex.justify-between.py-1
+                dt.text-gray-600= "+ À encaisser (#{Finance::Treasury::HORIZON_DAYS} j, séjours confirmés)"
+                dd.text-emerald-700= euros.(v.incoming_cents)
+              .flex.justify-between.py-1
+                dt.text-gray-600= "− À payer (#{Finance::Treasury::HORIZON_DAYS} j, factures, charges fixes, dettes)"
+                dd.text-gray-900= euros.(v.outgoing_cents)
+              - if v.liabilities_later_cents.positive?
+                .flex.justify-between.py-1
+                  dt.text-gray-600 − Dettes et litiges plus tard
+                  dd.text-gray-900= euros.(v.liabilities_later_cents)
+              .flex.justify-between.py-1
+                dt.text-gray-600 − Prêts reçus à rendre
+                dd.text-gray-900= euros.(v.loans_cents)
+              .flex.justify-between.py-1.mt-1.border-t.border-gray-200.font-semibold
+                dt.text-gray-900 Marge
+                dd(class="#{v.margin_cents.negative? ? 'text-red-700' : 'text-gray-900'}")= euros.(v.margin_cents)
+              .flex.justify-between.py-1.text-gray-500
+                dt Réserve : un mois de charges fixes
+                dd= euros.(v.reserve_cents)
+          - if v.reserves.any?
+            ul.mt-3.space-y-1.text-xs.text-gray-600.list-disc.pl-4
+              - v.reserves.each do |line|
+                li= line
