@@ -99,6 +99,19 @@ RSpec.describe "Fiche séjour — Pizza Party de Tranches de Vie", type: :reques
       follow_redirect!
       expect(response.body).to include("déjà rattachée")
     end
+
+    # Le bloc Pizza Party est à droite, les montants à gauche (Michael,
+    # 2026-10-13) : depuis la modale, la réponse remplace les deux frames.
+    it "rafraîchit en Turbo Stream le bloc de droite ET les paiements" do
+      stub_tdv_order(tdv_order(id: 1234))
+
+      post stay_party_reservations_path(stay), params: { external_id: 1234 }, as: :turbo_stream
+
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include(%(target="stay_#{stay.id}_extras"), %(target="stay_#{stay.id}_payments"))
+      expect(response.body).to include("Pizza Party rattachée au séjour.")
+      expect(response.body).to include(ApplicationController.helpers.humanized_money_with_symbol(Money.new(77_000)))
+    end
   end
 
   describe "le détachement" do
