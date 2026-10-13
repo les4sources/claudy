@@ -94,10 +94,15 @@
           semaine courante). %>
       <% if index == 0 && @date.beginning_of_month == Date.today.beginning_of_month && date_range.first < Date.today.beginning_of_week %>
         <div class="flex past-weeks-toggler justify-center" data-dashboard-calendar-target="pastWeeksToggler">
-          <%= link_to "Afficher les semaines précédentes",
-                      "#dashboard-calendar",
-                      class: "btn-section my-4",
-                      data: { action: "dashboard-calendar#showPastWeeks" } %>
+          <%# Un BOUTON, pas un lien vers « #dashboard-calendar » (bug 2026-10-13) :
+              une fois l'ancre dans l'URL (premier clic, puis rechargement ou
+              retour sur l'agenda), Turbo ne voyait plus un saut d'ancre mais une
+              visite. Il rechargeait la page, qui re-masquait aussitôt les
+              semaines passées. %>
+          <%= button_tag "Afficher les semaines précédentes",
+                         type: "button",
+                         class: "btn-section my-4",
+                         data: { action: "dashboard-calendar#showPastWeeks" } %>
         </div>
       <% end %>
 

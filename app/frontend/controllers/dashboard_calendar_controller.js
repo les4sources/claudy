@@ -37,7 +37,9 @@ export default class extends Controller {
     })
   }
 
-  showPastWeeks() {
+  showPastWeeks(event) {
+    // Rien à naviguer : on déplie sur place (voir le bouton dans la vue).
+    event?.preventDefault()
     this.pastWeeksTogglerTarget.classList.add('hidden')
     this.weekTargets.forEach((el, i) => {
       el.classList.remove('hidden')
