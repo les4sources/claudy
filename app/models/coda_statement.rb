@@ -54,5 +54,6 @@ class CodaStatement < ApplicationRecord
     where(cash_account_id: cash_account.id).order(:new_balance_date, :sequence_number).last
   end
 
-  def label = "n°#{sequence_number}/#{period_year}"
+  # Un export Excel Beobank n'a pas de numéro de relevé (`Beobank::Import`).
+  def label = sequence_number == "xlsx" ? "Export Excel #{period_year}" : "n°#{sequence_number}/#{period_year}"
 end

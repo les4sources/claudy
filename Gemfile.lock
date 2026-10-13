@@ -488,6 +488,7 @@ DEPENDENCIES
   redis (~> 5.0)
   rqrcode (~> 3.1)
   rspec-rails (~> 8.0)
+  rubyzip (~> 2.3)
   selenium-webdriver
   sentry-rails
   sentry-ruby
