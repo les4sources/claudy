@@ -29,14 +29,23 @@ module Stays
   # que sur la BASCULE vers `confirmed` (pas sur un re-`update!` d'un séjour
   # déjà confirmé), et APRÈS le commit : un incident Postmark ne doit pas
   # annuler un changement de statut.
+  #
+  # SÉJOUR PASSÉ (Michael, 2026-10-13) : confirmer après coup un séjour terminé
+  # (régularisation) ne doit pas écrire au client par défaut — le notifier s'en
+  # charge déjà —, mais l'équipe peut vouloir le faire. La modale le lui
+  # demande et transmet son choix dans `notify_customer` :
+  #   nil   → comportement automatique (le notifier décide) ;
+  #   true  → l'email part, même pour un séjour passé (choix explicite) ;
+  #   false → aucun email.
   class QuickStatusUpdater
     ALLOWED = Stay::STATUSES_QUICK_SETTABLE # %w[pending confirmed canceled]
 
     attr_reader :stay, :error_message
 
-    def initialize(stay:, status:)
+    def initialize(stay:, status:, notify_customer: nil)
       @stay = stay
       @status = status.to_s
+      @notify_customer = notify_customer
     end
 
     def run
@@ -68,8 +77,9 @@ module Stays
     # rattaché à un fourre-tout, sans email, déjà notifié ou déjà terminé.
     def notify_customer_of_confirmation!
       return unless @status == "confirmed"
+      return if @notify_customer == false
 
-      Stays::ConfirmationNotifier.call(@stay)
+      Stays::ConfirmationNotifier.call(@stay, force: @notify_customer == true)
     end
 
     def propagate_to_bookables!

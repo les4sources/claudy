@@ -372,6 +372,16 @@ class StayDecorator < ApplicationDecorator
       !object.customer.catch_all?
   end
 
+  # Confirmer un séjour DÉJÀ PASSÉ (Michael, 2026-10-13) : par défaut aucun email
+  # ne part (`Stays::ConfirmationNotifier` s'arrête au départ), mais l'équipe
+  # peut vouloir prévenir le client. Le bouton ouvre alors une modale qui pose
+  # la question — seulement si un email POURRAIT partir.
+  def ask_email_on_confirm?
+    !object.canceled? && object.status != "confirmed" &&
+      object.departure_date.present? && object.departure_date < Date.current &&
+      object.customer&.email.present? && !object.customer.catch_all?
+  end
+
   # Le libellé porte l'information : « envoyer » quand rien n'est parti,
   # « renvoyer » quand un email existe déjà. Sans cette distinction, personne ne
   # sait si cliquer va doubler un message que le client a déjà reçu.

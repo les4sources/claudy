@@ -33,6 +33,29 @@ div id="stay-details-#{@stay.id}"
         = button_to "Réactiver le séjour", update_status_stay_path(@stay, status: "pending"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-transparent bg-amber-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-amber-600"
       - elsif @stay.status == "confirmed"
         = button_to "Repasser en attente", update_status_stay_path(@stay, status: "pending"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+      /  Séjour DÉJÀ PASSÉ (Michael, 2026-10-13) : confirmer après coup est une
+         régularisation. Une modale demande s'il faut écrire au client ; sans
+         réponse explicite, rien ne part.
+      - elsif @stay.ask_email_on_confirm?
+        div(data-controller="choice-dialog")
+          button.rounded-md.border.border-transparent.bg-green-600.px-3.text-sm.font-medium.text-white.shadow-sm(class="py-1.5 hover:bg-green-700" type="button" data-action="choice-dialog#open")
+            | Confirmer le séjour
+          dialog.rounded-lg.p-0.shadow-xl.w-full.max-w-lg(class="backdrop:bg-black/40" data-choice-dialog-target="dialog" aria-labelledby="past-confirm-title-#{@stay.id}")
+            .p-5.space-y-3
+              h4.text-lg.font-semibold.text-gray-900 id="past-confirm-title-#{@stay.id}"
+                | Ce séjour est déjà passé
+              p.text-sm.text-gray-700
+                | Il s'est terminé le #{l(@stay.departure_date, format: "%-d %B %Y")}. Faut-il envoyer au client l'email « votre séjour est confirmé » ?
+              p.text-sm.text-gray-500
+                | Destinataire : #{@stay.customer.email}
+                - if @stay.confirmation_email_sent_at.present?
+                  br
+                  | Un email de confirmation est déjà parti le #{l(@stay.confirmation_email_sent_at.to_date, format: "%-d %B %Y")}.
+            .flex.flex-wrap.justify-end.gap-2.border-t.bg-gray-50.px-5.py-3
+              button.rounded-md.border.border-gray-300.bg-white.px-3.text-sm.font-medium.text-gray-700(class="py-1.5 hover:bg-gray-50" type="button" data-action="choice-dialog#close")
+                | Retour
+              = button_to "Confirmer et envoyer l'email", update_status_stay_path(@stay, status: "confirmed", notify_customer: 1), method: :patch, class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              = button_to "Confirmer sans email", update_status_stay_path(@stay, status: "confirmed", notify_customer: 0), method: :patch, autofocus: true, class: "rounded-md border border-transparent bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700"
       - else
         = button_to "Confirmer le séjour", update_status_stay_path(@stay, status: "confirmed"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-transparent bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700"
       /  L'annulation sort le séjour de l'agenda et libère ses dates, SANS email

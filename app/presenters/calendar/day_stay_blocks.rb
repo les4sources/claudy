@@ -14,7 +14,7 @@ module Calendar
     # Un bloc unifié : un séjour et ses composants présents ce jour-là.
     StayBlock = Struct.new(
       :stay, :booking_groups, :space_groups, :camping_bookings, :van_bookings,
-      :terrace_bookings, :hamac_bookings,
+      :terrace_bookings, :hamac_bookings, :activity_bookings,
       keyword_init: true
     ) do
       # Le bookable « nommé » (Booking ou SpaceBooking décoré) du séjour, priorité
@@ -43,12 +43,13 @@ module Calendar
 
     def initialize(date, grouped_reservations:, grouped_space_reservations:,
                    grouped_camping_bookings:, grouped_van_bookings:,
-                   grouped_hamac_bookings: nil)
+                   grouped_hamac_bookings: nil, grouped_activity_only_bookings: nil)
       @booking_groups = build_booking_groups(grouped_reservations && grouped_reservations[date])
       @space_groups   = build_space_groups(grouped_space_reservations && grouped_space_reservations[date])
       @camping        = Array(grouped_camping_bookings && grouped_camping_bookings[date])
       @van            = Array(grouped_van_bookings && grouped_van_bookings[date])
       @hamac          = Array(grouped_hamac_bookings && grouped_hamac_bookings[date])
+      @activities     = Array(grouped_activity_only_bookings && grouped_activity_only_bookings[date])
     end
 
     # Blocs unifiés (un par séjour), triés par id de séjour puis date d'arrivée
@@ -94,6 +95,14 @@ module Calendar
         (by_stay[hamac.stay.id] ||= new_block(hamac.stay)).hamac_bookings << hamac
       end
 
+      # Séjours « activité seule » (Michael, 2026-10-13) : le contrôleur ne
+      # charge que les activités des séjours SANS autre réservable, qui
+      # n'auraient sinon aucun bloc ce jour-là.
+      @activities.each do |experience_booking|
+        next if experience_booking.stay.nil?
+        (by_stay[experience_booking.stay.id] ||= new_block(experience_booking.stay)).activity_bookings << experience_booking
+      end
+
       by_stay.values.sort_by { |block| [block.stay.id.to_i, block.stay.arrival_date.to_s] }
     end
 
@@ -125,7 +134,7 @@ module Calendar
     def new_block(stay)
       StayBlock.new(stay: stay, booking_groups: [], space_groups: [],
                     camping_bookings: [], van_bookings: [], terrace_bookings: [],
-                    hamac_bookings: [])
+                    hamac_bookings: [], activity_bookings: [])
     end
 
     # Réplique le regroupement historique des vues : trie par heure, regroupe par

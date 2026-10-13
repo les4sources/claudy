@@ -348,7 +348,10 @@ class StaysController < BaseController
   # pour garder le veto de dispo cohérent (cf. `Stays::QuickStatusUpdater`).
   # Réponse Turbo Stream : rafraîchit le contenu de la modale sur place.
   def update_status
-    updater = Stays::QuickStatusUpdater.new(stay: @stay, status: params[:status])
+    # `notify_customer` n'arrive que de la modale « séjour passé » ; absent, le
+    # notifier garde la main (cf. `Stays::QuickStatusUpdater`).
+    notify = params.key?(:notify_customer) ? ActiveModel::Type::Boolean.new.cast(params[:notify_customer]) : nil
+    updater = Stays::QuickStatusUpdater.new(stay: @stay, status: params[:status], notify_customer: notify)
     ok = updater.run
     @stay = Stay.includes(stay_items: :bookable, customer: []).find(@stay.id).decorate
     @assignable_availabilities = assignable_availabilities_for(@stay)
