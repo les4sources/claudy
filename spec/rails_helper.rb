@@ -15,6 +15,13 @@ require 'capybara/rspec'
 # parle à l'app elle-même (Capybara, build Vite).
 require 'webmock/rspec'
 WebMock.disable_net_connect!(allow_localhost: true)
+
+# Vite : les specs lisent les assets construits (`bin/vite build`), jamais un
+# serveur de dev. Hors CI pourtant, vite_ruby sonde localhost:3037 avant CHAQUE
+# entrée du manifest, rechargé à chaque requête (`autoBuild`) : 2 à 3 s de plus
+# par page rendue (mesuré le 2026-10-13). En CI la sonde est déjà coupée
+# (`ENV["CI"]`) ; on la coupe partout pour que le local aille aussi vite.
+ViteRuby.instance.define_singleton_method(:dev_server_running?) { false }
 # Add additional requires below this line. Rails is not loaded until this point!
 
 # Requires supporting ruby files with custom matchers and macros, etc, in

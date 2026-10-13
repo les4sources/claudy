@@ -16,6 +16,7 @@ Stack: Rails 8.1 · Ruby 3.4.10 · PostgreSQL · Node 18.8.0 · Vite (via `vite_
 - `rails db:create && rails db:migrate && rails db:seed` — bootstrap DB (seeds lodgings/rooms/spaces).
 - `bundle exec rspec` — run tests (RSpec; specs live in `spec/`, currently only `models/` and `components/`).
 - `bundle exec rspec spec/models/booking_spec.rb:42` — run a single test.
+- `bundle exec parallel_rspec spec` — whole suite on every core (as CI does). One-time setup: `bundle exec rake parallel:create parallel:load_schema` (databases `claudy_test`, `claudy_test2`…; never `parallel:setup`, it seeds). Test log is at `warn` level; `RAILS_LOG_LEVEL=debug` brings it back.
 - `bin/sync-production-database` — dumps prod DB via SSH and restores into `claudy_development` (uses Postgres.app 15 binaries, hardcoded SSH host).
 - `/lookbook` — ViewComponent preview UI, mounted in development only.
 
