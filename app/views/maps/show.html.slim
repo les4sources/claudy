@@ -38,7 +38,8 @@
         data-map-open-new-plant-value=(@open_new_plant ? "true" : nil)
         data-map-unplaced-url-value=unplaced_plants_path
         data-map-place-url-value=place_plant_path(id: "__ID__")
-        data-map-unplace-url-value=unplace_plant_path(id: "__ID__")]
+        data-map-unplace-url-value=unplace_plant_path(id: "__ID__")
+        data-map-read-only-value=(!map_editable?).to_s]
 
       / Le fond de la carte hors emprise : uni, couleur `sand` du thème. Pas
         d'OpenStreetMap ni de Google — aucune clé tierce sur cette page.
@@ -136,7 +137,7 @@
                   / Plantes nourricières (phase 7) : créer une plante et ouvrir le
                     mode Placement, sous la couche, avec elle seulement.
                   - if couche.kind == "plants"
-                    li.hidden.pl-6 data-layer-extra="plants"
+                    li.hidden.pl-6 data-layer-extra="plants" data-map-edit=(map_editable? ? nil : "true")
                       button[type="button"
                              class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm font-medium text-forest hover:bg-forest-tint"
                              data-action="map#newPlant"
@@ -156,7 +157,7 @@
                     l'adresse de la fiche d'un nouveau commentaire. Visible avec
                     sa couche seulement.
                   - if couche.kind == "comments"
-                    li.hidden.pl-6 data-new-comment-url=new_map_comment_path data-layer-extra="comments"
+                    li.hidden.pl-6 data-new-comment-url=(new_map_comment_path if map_editable?) data-layer-extra="comments"
                       label.flex.cursor-pointer.items-center.gap-2.py-1.text-xs.text-stone-500
                         input[type="checkbox"
                               class="h-4 w-4 rounded border-stone-300 text-4s-main focus:ring-teal-400"
@@ -169,10 +170,10 @@
                   / Bio-indicatrices : l'adresse de la fiche d'un nouveau relevé
                     photo, et la liste filtrable (statut, indicateur de sol).
                   - if couche.kind == "bioindicators"
-                    li.hidden.pl-6 data-new-bioindicator-url=new_map_bioindicator_path data-layer-extra="bioindicators"
+                    li.hidden.pl-6 data-new-bioindicator-url=(new_map_bioindicator_path if map_editable?) data-layer-extra="bioindicators"
                       = turbo_frame_tag MapBioindicatorsController::LIST_FRAME, src: map_bioindicators_path, loading: :lazy
                   - if couche.kind == "biodiversity"
-                    li.hidden.pl-6 data-new-observation-url=new_map_observation_path data-layer-extra="biodiversity"
+                    li.hidden.pl-6 data-new-observation-url=(new_map_observation_path if map_editable?) data-layer-extra="biodiversity"
                       = turbo_frame_tag MapObservationsController::LIST_FRAME, src: map_observations_path, loading: :lazy
 
               / Les gîtes et salles pas encore tracés (phase 3) : la carte du jour
@@ -361,7 +362,7 @@
         relevés). Le contenu suit la couche active (`data-mode-kind`).
       div[class="pointer-events-none absolute bottom-6 left-3 right-20 z-[1000] hidden justify-center md:hidden"
           data-map-target="modeBar"]
-        div.pointer-events-auto.hidden.items-center.gap-1.rounded-xl.border.border-stone-200.bg-white/95.p-1.shadow-lg.backdrop-blur data-mode-kind="plants"
+        div.pointer-events-auto.hidden.items-center.gap-1.rounded-xl.border.border-stone-200.bg-white/95.p-1.shadow-lg.backdrop-blur data-mode-kind="plants" data-map-edit=(map_editable? ? nil : "true")
           button[type="button"
                  class="flex h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-forest hover:bg-forest-tint"
                  data-action="map#newPlant"]
@@ -378,11 +379,11 @@
             span[class="min-w-[1.5rem] rounded-full bg-ember px-1.5 py-0.5 text-center text-[0.7rem] font-semibold tabular-nums text-white #{'hidden' if @unplaced_count.zero?}"
                  data-map-target="unplacedCount"]
               = @unplaced_count
-        p.hidden.items-center.gap-2.rounded-full.bg-stone-800/90.px-3.py-2.text-xs.text-white.shadow-lg data-mode-kind="comments"
+        p.hidden.items-center.gap-2.rounded-full.bg-stone-800/90.px-3.py-2.text-xs.text-white.shadow-lg data-mode-kind="comments" data-map-edit=(map_editable? ? nil : "true")
           | Touchez la carte pour commenter cet endroit
-        p.hidden.items-center.gap-2.rounded-full.bg-stone-800/90.px-3.py-2.text-xs.text-white.shadow-lg data-mode-kind="biodiversity"
+        p.hidden.items-center.gap-2.rounded-full.bg-stone-800/90.px-3.py-2.text-xs.text-white.shadow-lg data-mode-kind="biodiversity" data-map-edit=(map_editable? ? nil : "true")
           | Touchez la carte pour noter une plante ou un animal
-        p.hidden.items-center.gap-2.rounded-full.bg-stone-800/90.px-3.py-2.text-xs.text-white.shadow-lg data-mode-kind="bioindicators"
+        p.hidden.items-center.gap-2.rounded-full.bg-stone-800/90.px-3.py-2.text-xs.text-white.shadow-lg data-mode-kind="bioindicators" data-map-edit=(map_editable? ? nil : "true")
           | Touchez la carte, ou « À ma position », pour photographier des bio-indicatrices
 
       / La carte du jour (phase 3) : le jour affiché, en bas au centre, à portée

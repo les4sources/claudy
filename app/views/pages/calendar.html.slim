@@ -21,7 +21,8 @@
        une action de fin de consultation, elle n'a pas à occuper le haut de
        l'agenda. Elle reste DANS la portée du contrôleur `stay-merge` — les
        actions Stimulus ne se lient qu'à l'intérieur de l'élément-contrôleur.
-    = render "pages/calendar/merge_toolbar"
+    - if section_writable?(:full)
+      = render "pages/calendar/merge_toolbar"
     = render "pages/calendar/stay_modal"
     = render "stays/merge_dialog"
     = render "stays/merge_bottom_bar"

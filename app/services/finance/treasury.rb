@@ -44,10 +44,12 @@ module Finance
 
     Receivable = Struct.new(:stay, :due_on, :amount_cents, keyword_init: true)
 
-    # Une sortie attendue : une dette de la file « À payer » (`payable`), ou une
-    # occurrence de charge fixe (`recurring_expense`) — jamais les deux.
-    Outflow = Struct.new(:payable, :recurring_expense, :due_on, :amount_cents, keyword_init: true) do
+    # Une sortie attendue : une dette de la file « À payer » (`payable`), une
+    # occurrence de charge fixe (`recurring_expense`) ou une mensualité d'une
+    # dette ou d'un litige sans facture (`liability`) — une seule des trois.
+    Outflow = Struct.new(:payable, :recurring_expense, :liability, :due_on, :amount_cents, keyword_init: true) do
       def recurring? = recurring_expense.present?
+      def liability? = liability.present?
     end
 
     def self.for_foundation(today: Date.current)
@@ -112,10 +114,31 @@ module Finance
 
     # --- Ce qui doit sortir ------------------------------------------------
 
-    # Les dettes de la file « À payer », puis les charges fixes de l'horizon.
+    # Les dettes de la file « À payer », les charges fixes de l'horizon, puis
+    # les mensualités des dettes et litiges qui y tombent.
     def outflows
-      @outflows ||= (payable_outflows + recurring_outflows).sort_by { |o| [o.due_on, o.recurring? ? 1 : 0] }
+      @outflows ||= (payable_outflows + recurring_outflows + liability_outflows.select { |o| o.due_on <= horizon_end })
+                    .sort_by { |o| [o.due_on, outflow_rank(o)] }
     end
+
+    # Toutes les mensualités restantes des dettes et litiges ouverts, horizon
+    # ou pas : ce qui tombe au-delà des 90 jours n'est pas dans la courbe, mais
+    # il est dû quand même — la page le chiffre à part.
+    def liability_outflows
+      @liability_outflows ||= liabilities.flat_map do |liability|
+        liability.schedule(today: @today).map do |installment|
+          Outflow.new(liability: liability, due_on: installment.due_on, amount_cents: installment.amount_cents)
+        end
+      end
+    end
+
+    def liabilities
+      @liabilities ||= Liability.open.where(legal_entity_id: @entity.id)
+                                .includes(:third_party).order(:expected_on, :id).to_a
+    end
+
+    def liabilities_retained_cents = liabilities.sum(&:remaining_cents)
+    def liabilities_beyond_horizon_cents = liability_outflows.sum { |o| o.due_on > horizon_end ? o.amount_cents : 0 }
 
     # Chaque occurrence d'une charge fixe entre aujourd'hui et la fin de
     # l'horizon — sauf celles qu'une vraie facture du même tiers couvre déjà :
@@ -259,6 +282,14 @@ module Finance
     end
 
     def stale?(stay) = stay.departure_date < @today - STALE_AFTER_DAYS
+
+    # À date égale : la vraie dette, puis la charge fixe, puis le litige.
+    def outflow_rank(outflow)
+      if outflow.liability? then 2
+      elsif outflow.recurring? then 1
+      else 0
+      end
+    end
 
     # [[date, centimes signés]] des mouvements attendus dans l'horizon.
     def projected_movements

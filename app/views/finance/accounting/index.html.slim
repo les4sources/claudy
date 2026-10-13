@@ -49,6 +49,25 @@
           = "La plus urgente : #{next_one.display_title}, le #{l(next_one.due_on, format: :long)}"
     = link_to "📅 Ouvrir l'échéancier", finance_compliance_deadlines_path, class: "text-blue-500 text-sm border-b-2 border-blue-200 hover:text-blue-700"
 
+/ Les dettes et litiges sans facture (2026-10-13) : l'encart crie dès qu'il y
+  en a, entité par entité — une dette qu'on ne voit pas est une dette qu'on
+  oublie de compter.
+- if @open_liabilities.any?
+  .mb-6.p-4.rounded-lg.border.border-red-200(class="bg-red-50/70" data-accounting-liabilities="")
+    .flex.flex-wrap.items-center.justify-between.gap-3
+      div
+        p.text-sm.font-semibold.text-red-800
+          = "#{@open_liabilities.size} dette(s) ou litige(s) sans facture : #{number_to_currency(@open_liabilities.sum(&:remaining_cents) / 100.0, unit: '€', precision: 0)} retenus"
+        ul.mt-1.text-sm.text-red-900
+          - @open_liabilities.group_by(&:legal_entity).sort_by { |entity, _| entity.name }.each do |entity, rows|
+            li= "#{entity.name} : #{number_to_currency(rows.sum(&:remaining_cents) / 100.0, unit: '€', precision: 0)} (#{rows.map(&:label).first(3).join(', ')}#{' …' if rows.size > 3})"
+      = link_to "⚖️ Dettes et litiges", finance_liabilities_path, class: "text-blue-500 text-sm border-b-2 border-blue-200 hover:text-blue-700"
+- else
+  .mb-6.p-4.rounded-lg.border.border-gray-100.bg-white
+    .flex.flex-wrap.items-center.justify-between.gap-3
+      p.text-sm.text-gray-700 Aucune dette ni aucun litige sans facture n'est enregistré.
+      = link_to "⚖️ Enregistrer une dette ou un litige", new_finance_liability_path, class: "text-blue-500 text-sm border-b-2 border-blue-200 hover:text-blue-700"
+
 .grid.gap-4.mb-8(class="md:grid-cols-3")
   .p-5.bg-white.rounded-lg.border.border-gray-100
     p.text-xs.uppercase.text-gray-400 Plan comptable

@@ -229,3 +229,23 @@
   border-color: currentColor;
   background: radial-gradient(circle, currentColor 0 38%, transparent 44%);
 }
+
+/* La carte en lecture seule (rôle Kid, 2026-10-12) : le <body> porte
+   `map-read-only` (AccessControl#map_read_only_page?). Tout ce qui écrit
+   disparaît : boutons des formulaires POST (button_to compris, sauf la
+   déconnexion), outils de dessin, création de dessins, gestes marqués
+   `data-map-edit`. Le serveur refuse de toute façon l'écriture. */
+.map-read-only form[method="post"]:not([data-access-keep]) :is(button, [type="submit"]),
+.map-read-only [data-map-read-only] :is(button, [type="submit"]),
+.map-read-only [data-map-edit],
+.map-read-only [data-sketch-toolbar],
+.map-read-only [data-sketch-form],
+.map-read-only [data-sketch-action="new"],
+.map-read-only [data-sketch-action="edit"] {
+  display: none !important;
+}
+
+/* Un dessin se consulte (case « afficher »), il ne s'active pas pour écrire. */
+.map-read-only [data-sketch-action="activate"] {
+  pointer-events: none;
+}

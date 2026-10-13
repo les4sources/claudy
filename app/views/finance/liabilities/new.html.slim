@@ -1,0 +1,5 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Nouvelle dette ou nouveau litige"
+
+.max-w-4xl
+  = render "form", liability: @liability

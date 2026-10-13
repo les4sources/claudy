@@ -1,4 +1,5 @@
 class EventsController < BaseController
+  access_section :events
   before_action :get_event, only: [:show, :edit, :update, :destroy, :duplicate, :publish, :unpublish]
 
   breadcrumb "Événements", :events_path, match: :exact

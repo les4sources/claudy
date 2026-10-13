@@ -25,7 +25,7 @@ section.mb-8.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidd
     .bg-white.px-5.py-4
       p.text-xs.uppercase.text-stone-400 À payer (90 j)
       p.mt-1.text-2xl.font-semibold.tabular-nums.text-stone-900= number_to_currency(treasury.outgoing_cents / 100.0, unit: "€")
-      p.mt-1.text-xs.text-stone-500 file « À payer » et charges fixes
+      p.mt-1.text-xs.text-stone-500 file « À payer », charges fixes, dettes et litiges
     .bg-white.px-5.py-4
       p.text-xs.uppercase.text-stone-400 Point bas projeté
       p.mt-1.text-2xl.font-semibold.tabular-nums(class="#{lowest.balance_cents.negative? ? 'text-red-700' : 'text-stone-900'}")= number_to_currency(lowest.balance_cents / 100.0, unit: "€")
@@ -49,6 +49,14 @@ section.mb-8.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidd
       - if row.account.kind == "cash"
         =< link_to "Compter la caisse", new_finance_cash_count_path, class: "underline hover:no-underline"
         | .
+  - if treasury.liabilities.any?
+    - notes << capture do
+      strong= "Dettes et litiges sans facture : #{number_to_currency(treasury.liabilities_retained_cents / 100.0, unit: '€')} retenus"
+      |  (#{treasury.liabilities.size}), déjà dans la courbe à leur date probable
+      - if treasury.liabilities_beyond_horizon_cents.positive?
+        = ", sauf #{number_to_currency(treasury.liabilities_beyond_horizon_cents / 100.0, unit: '€')} au-delà des #{Finance::Treasury::HORIZON_DAYS} jours"
+      | .
+      =< link_to "Voir", finance_liabilities_path, class: "underline hover:no-underline"
   - if notes.any?
     ul.px-5.pb-4.space-y-1.text-xs.text-amber-900
       - notes.each do |note|

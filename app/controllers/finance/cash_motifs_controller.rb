@@ -44,14 +44,7 @@ module Finance
     # Échange la position avec le motif voisin — le geste minimal pour ranger
     # une liste, sans dépendance de glisser-déposer.
     def move
-      neighbour = neighbour_for(params[:direction])
-
-      if neighbour
-        position = neighbour.position
-        neighbour.update!(position: @motif.position)
-        @motif.update!(position: position)
-      end
-
+      @motif.move!(params[:direction])
       redirect_to finance_cash_motifs_path
     end
 
@@ -68,16 +61,6 @@ module Finance
     private
 
     def get_motif = @motif = CashMotif.find(params[:id])
-
-    def neighbour_for(direction)
-      others = CashMotif.where.not(id: @motif.id)
-
-      if direction == "up"
-        others.where(position: ..@motif.position).order(position: :desc, id: :desc).first
-      else
-        others.where(position: @motif.position..).order(:position, :id).first
-      end
-    end
 
     def motif_params
       params.require(:cash_motif).permit(:label, :direction, :general_account_id,

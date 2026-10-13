@@ -57,6 +57,11 @@ module Mcp
           [
             "Sur 90 jours (jusqu'au #{tresorerie.horizon_end}) : #{euros(tresorerie.incoming_cents)} attendus, " \
             "#{euros(tresorerie.outgoing_cents)} à sortir. Point bas : #{euros(bas.balance_cents)} le #{bas.date}.",
+            (if tresorerie.liabilities.any?
+               "Dont dettes et litiges sans facture : #{euros(tresorerie.liabilities_retained_cents)} retenus " \
+                 "(#{tresorerie.liabilities.map(&:label).join(', ')})" \
+                 "#{", dont #{euros(tresorerie.liabilities_beyond_horizon_cents)} au-delà des 90 jours" if tresorerie.liabilities_beyond_horizon_cents.positive?}."
+             end),
             ("Séjours partis avec un reste dû : #{retards.size} pour #{euros(retards.sum(&:amount_cents))} " \
              "(#{retards.first(5).map { |r| "séjour ##{r.stay.id} #{euros(r.amount_cents)}" }.join(', ')}" \
              "#{' …' if retards.size > 5})." if retards.any?)

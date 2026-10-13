@@ -5,6 +5,7 @@
 # LECTURE SEULE. Aucune action ici ne modifie un séjour, une réservation ou un
 # booking : la carte montre, la fiche séjour édite.
 class MapVenuesController < BaseController
+  access_section :map
   PANEL_FRAME = MapFeaturesController::PANEL_FRAME
 
   before_action :set_date, only: %i[occupancy show]

@@ -4,6 +4,7 @@
 # Quatre gestes — ajouter, modifier, retirer, et reprendre une réservation
 # d'espace — et une seule réponse : le bloc entier, remplacé en Turbo Stream.
 class EventCostsController < BaseController
+  access_section :events
   before_action :get_event
   before_action :get_cost, only: %i[update destroy]
 

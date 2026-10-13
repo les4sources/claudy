@@ -200,6 +200,9 @@ Rails.application.routes.draw do
   post "site-stats/hits", to: "site_hits#create", as: :site_hits
   get "reports/site-web", to: "site_stats#show", as: :site_stats
   resources :reports
+  # Paramètres › Accès : les rôles d'accès des comptes (2026-10-09).
+  get "access", to: "access_roles#index", as: :access_roles
+  patch "access", to: "access_roles#update"
   resources :roles
   resources :rooms
   resources :services
@@ -276,6 +279,10 @@ Rails.application.routes.draw do
     # La file « À payer » (epic #240, phase 4) : tout ce que la maison doit et
     # qui attend son virement, toutes dettes confondues.
     get "payables", to: "payables#index", as: :payables
+    # Dettes et litiges sans facture (2026-10-13) : la taxe d'Yvoir, un
+    # arriéré, une contestation — ce qui pèse sur la trésorerie avant d'avoir
+    # une facture. Pas de `show` : tout tient dans la liste.
+    resources :liabilities, path: "dettes", except: [:show]
     # L'échéancier comptable (ex-base Notion « Échéancier comptable »). Les
     # obligations sont nommées AVANT les échéances : sinon
     # `/finance/deadlines/obligations` serait capté par `deadlines#show`. Pas de

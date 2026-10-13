@@ -128,6 +128,10 @@ export default class extends Controller {
     openNewPlant: Boolean,
     // Phase 10 : le statut UniFi des nœuds Ethernet (`utils/map_unifi.js`).
     unifiDevicesUrl: String,
+    // Lecture seule (rôle Kid, 2026-10-12) : ni outils de dessin, ni pose de
+    // commentaire ou de relevé au toucher, ni placement de plante. Le serveur
+    // refuse de toute façon l'écriture.
+    readOnly: Boolean,
   };
 
   connect() {
@@ -694,7 +698,7 @@ export default class extends Controller {
     }
     this.updateModeBar();
 
-    const editable = ['management', 'venues', 'welcome', 'network'].includes(kind) && this.geomanReady;
+    const editable = !this.readOnlyValue && ['management', 'venues', 'welcome', 'network'].includes(kind) && this.geomanReady;
     // Les gîtes et salles se tracent en zones : point et ligne restent à la
     // Gestion.
     this.toolTargets.forEach((button) => {
@@ -706,9 +710,12 @@ export default class extends Controller {
       this.toolbarTarget.classList.toggle('flex', editable);
     }
     if (!editable) this.disableTools();
-    this.comments?.onActivate(kind);
-    this.biodiversity?.onActivate(kind);
-    this.bioindicators?.onActivate(kind);
+    // En lecture seule, ces modes ne s'allument pas : pas de « touchez la carte
+    // pour… », pas de bouton de relevé.
+    const writableKind = this.readOnlyValue ? null : kind;
+    this.comments?.onActivate(writableKind);
+    this.biodiversity?.onActivate(writableKind);
+    this.bioindicators?.onActivate(writableKind);
     // Changer de couche change de mode de recherche : la recherche s'efface.
     this.search?.onActivate(id, kind);
     // La légende des zones d'accueil (phase 4) accompagne la couche active.
@@ -872,6 +879,7 @@ export default class extends Controller {
   // déléguées à `PlantPlacement` (utils/map_placement.js). ─────────────────
 
   openPlacement() {
+    if (this.readOnlyValue) return;
     this.placement.open();
   }
 
@@ -879,7 +887,7 @@ export default class extends Controller {
   // vide, dans la zone filtrée du tiroir s'il est ouvert. La couche Plantes
   // s'affiche : c'est là que la plante sera posée.
   newPlant() {
-    if (!this.hasNewPlantUrlValue) return;
+    if (this.readOnlyValue || !this.hasNewPlantUrlValue) return;
     this.placement?.cancel();
     this.placement?.showPlantsLayer();
     const url = new URL(this.newPlantUrlValue, window.location.origin);
@@ -911,6 +919,7 @@ export default class extends Controller {
   }
 
   pickPlant(event) {
+    if (this.readOnlyValue) return;
     this.placement.pick(event.currentTarget.dataset);
   }
 
@@ -945,10 +954,12 @@ export default class extends Controller {
   // Depuis la fiche : « Déplacer » (glisser) et « Placer ici (GPS) » pour une
   // plante placée ; « Placer sur la carte » et « Je suis devant » sinon.
   movePlant(event) {
+    if (this.readOnlyValue) return;
     this.placement.startMove(event.currentTarget.dataset);
   }
 
   gpsPlacePlant(event) {
+    if (this.readOnlyValue) return;
     const { dataset } = event.currentTarget;
     if (dataset.featureId) {
       this.placement.startMove(dataset, { gps: true });
@@ -959,6 +970,7 @@ export default class extends Controller {
   }
 
   placePlantFromPanel(event) {
+    if (this.readOnlyValue) return;
     this.placement.pick(event.currentTarget.dataset, { fromPanel: true });
   }
 

@@ -1,0 +1,8 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Modifier « #{@liability.label} »"
+
+.max-w-4xl
+  = render "form", liability: @liability
+  .mt-8.pt-6.border-t.border-gray-200
+    p.mb-2.text-xs.text-gray-500 Une dette payée ou un litige gagné se solde ou s'abandonne (statut ci-dessus) : on garde la trace de ce qui a pesé. Supprimer ne sert qu'à effacer une erreur d'encodage.
+    = button_to "Supprimer (erreur d'encodage)", finance_liability_path(@liability), method: :delete, form: { data: { turbo_confirm: "Supprimer « #{@liability.label} » ? Elle ne pèsera plus dans la trésorerie." } }, class: "text-sm text-red-600 hover:text-red-800"

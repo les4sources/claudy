@@ -1,4 +1,5 @@
 class EventCategoriesController < BaseController
+  access_section :events
   breadcrumb "Événements", :events_path, match: :exact
   breadcrumb "Types d'événements", :event_categories_path, match: :exact
 
