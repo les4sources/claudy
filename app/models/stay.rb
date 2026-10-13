@@ -192,6 +192,13 @@ class Stay < ApplicationRecord
   # main, sans occupation calendrier — comme les repas et les draps. Elles
   # s'ajoutent au total du séjour pour que la facture le reflète.
   has_many :party_reservations, dependent: :destroy
+  # Consommations du bar notées par le groupe sur sa feuille (Michael,
+  # 2026-10-13) : sans occupation calendrier, comme les draps. Elles comptent
+  # dans le total, donc dans la facture du séjour.
+  has_many :bar_consumptions, dependent: :destroy
+  # Photos de la feuille de bar rendue par le groupe : la pièce justificative
+  # des lignes ci-dessus, consultable pendant l'encodage.
+  has_many_attached :bar_sheet_photos
 
   has_paper_trail
   has_soft_deletion default_scope: true
@@ -428,6 +435,11 @@ class Stay < ApplicationRecord
     CANCELED_STATUSES.include?(status)
   end
 
+  # Total des consommations du bar du séjour (Michael, 2026-10-13).
+  def bar_amount_cents
+    bar_consumptions.sum(:price_cents).to_i
+  end
+
   # Le séjour porte-t-il un prix imposé (epic #81, Phase 3) ? Quand oui, le total
   # est FIXÉ par l'admin et court-circuite le devis B2C forfaitaire ; l'exigible
   # (`payable_amount_cents` / `balance_due_cents`) en découle automatiquement,
@@ -473,14 +485,17 @@ class Stay < ApplicationRecord
     # Prix imposé (epic #81, Phase 3) : s'il est présent, il FIXE le total et
     # court-circuite le devis calculé depuis la composition. Les DATES, elles,
     # restent toujours dérivées des bookables (l'override ne borne que le montant).
+    # Le BAR s'ajoute dans les deux cas (Michael, 2026-10-13) : un prix imposé
+    # fixe le prix négocié du séjour, pas ce que le groupe a bu sur place.
     amount = if price_overridden?
-      price_override_cents
+      price_override_cents + bar_amount_cents
     else
       items.sum { |b| b.try(:price_cents).to_i } +
         experience_bookings.active.sum(&:price_cents) +
         meal_orders.billable.sum(:price_cents).to_i +
         linen_orders.sum(:price_cents).to_i +
-        party_reservations.active.sum(:price_cents).to_i
+        party_reservations.active.sum(:price_cents).to_i +
+        bar_amount_cents
     end
     # Séjour SANS hébergement (epic #66, Phase 2) : les dates viennent des
     # SpaceBooking (Booking ET SpaceBooking exposent from_date/to_date), donc un

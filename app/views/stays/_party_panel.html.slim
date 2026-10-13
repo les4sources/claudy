@@ -1,9 +1,9 @@
-/ Bloc « Pizza Party » de la fiche séjour (issue #339). Il vit DANS le
-  turbo-frame des paiements : rattacher une party bouge le Total séjour et
-  l'Encaissé, les trois doivent se rafraîchir ensemble.
+/ Bloc « Pizza Party » de la fiche séjour (issue #339), colonne de droite,
+  dans la frame `stays/extras_panel`. Rattacher une party bouge le Total séjour
+  et l'Encaissé : le contrôleur rafraîchit aussi la frame des paiements.
 - parties = @stay.party_reservations.ordered
 - configure = TranchesDeVie::Client.configured?
-.mt-4.border-t.border-gray-200.pt-4
+.border-t.border-gray-200.px-5.py-4
   .flex.items-baseline.justify-between.gap-2
     .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Pizza Party
     - if parties.any? && configure
