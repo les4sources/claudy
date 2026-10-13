@@ -29,6 +29,9 @@ module Finance
       # Les prêts reçus, par prêteur (2026-10-13) : un prêt de trésorerie
       # gonfle la banque, il ne doit pas passer pour de la marge.
       @loans = Finance::Loans.new
+      # « Peut-on dépenser ? », entité par entité (2026-10-13) : la réponse
+      # franche, en tête de page.
+      @verdicts = Finance::SpendingVerdict.for_all(loans: @loans)
     end
   end
 end

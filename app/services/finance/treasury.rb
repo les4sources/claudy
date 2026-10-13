@@ -300,9 +300,6 @@ module Finance
 
     def payable_queue = @payable_queue ||= Finance::PayableQueue.new
 
-    # Une dette d'une autre entité (SRL, SSI) ne sort pas du compte de la
-    # Fondation. Une dette sans entité (parts d'événements, relevés de
-    # porteurs) est payée par la Fondation, seule à avoir des comptes ici.
     def recurring_expenses
       RecurringExpense.actives.where(legal_entity_id: @entity.id).includes(:third_party).to_a
     end
@@ -317,9 +314,12 @@ module Finance
       end
     end
 
+    # Une dette d'une autre entité (SRL, SSI) ne sort pas du compte de la
+    # Fondation. Une dette sans entité (parts d'événements, relevés de
+    # porteurs) est payée par la Fondation : elle ne pèse pas sur la SRL.
     def foundation_payable?(payable)
       entity_id = payable.try(:legal_entity_id)
-      entity_id.nil? || entity_id == @entity.id
+      entity_id.nil? ? @entity.form == "foundation" : entity_id == @entity.id
     end
   end
 end

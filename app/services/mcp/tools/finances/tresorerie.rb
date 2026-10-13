@@ -10,13 +10,15 @@ module Mcp
              title: "Trésorerie de la fondation",
              description: "Vue d'ensemble : solde de chaque compte (banque, caisse, Stripe) et sa date, ce qui doit " \
                           "rentrer (séjours avec un reste dû) et sortir (file « À payer », charges fixes) sur 90 jours, " \
-                          "le point bas prévu, et les compteurs « À affecter » et « À payer ».",
+                          "le point bas prévu, les compteurs « À affecter » et « À payer », et le verdict « Peut-on " \
+                          "dépenser ? » de chaque entité (solde, moins ce qui est dû, moins les prêts à rendre).",
              schema: { properties: {} }
 
         def call(_arguments)
           blocs = [comptes, files].compact
           blocs << projection if tresorerie&.accounts&.any?
-          blocs.join("\n\n")
+          blocs << verdicts
+          blocs.compact.join("\n\n")
         end
 
         SANS_ANCRE = " — sans solde d'ouverture, chiffre à ne pas croire".freeze
@@ -49,6 +51,25 @@ module Mcp
             "Factures d'achat : #{factures['to_process'].to_i} à traiter, #{factures['to_validate'].to_i} à valider, " \
             "#{factures['disputed'].to_i} contestée(s). Notes de frais enregistrées à traiter : #{notes}."
           ].join("\n")
+        end
+
+        # La même réponse que le tableau de bord comptable, entité par entité.
+        def verdicts
+          liste = ::Finance::SpendingVerdict.for_all
+          return nil if liste.empty?
+
+          lignes = liste.map do |v|
+            detail = if v.verdict == "inconnu" then ""
+                     else
+                       "\n    Solde #{euros(v.balance_cents)} + à encaisser #{euros(v.incoming_cents)} − à payer " \
+                         "#{euros(v.outgoing_cents)} − dettes plus tard #{euros(v.liabilities_later_cents)} − prêts à rendre " \
+                         "#{euros(v.loans_cents)} = marge #{euros(v.margin_cents)} ; réserve (un mois de charges fixes) " \
+                         "#{euros(v.reserve_cents)}."
+                     end
+            reserves = v.reserves.map { |r| "\n    ⚠ #{r}" }.join
+            "  #{v.entity.name} : #{v.headline} #{v.reason}#{detail}#{reserves}"
+          end
+          "Peut-on dépenser ?\n#{lignes.join("\n")}"
         end
 
         def projection

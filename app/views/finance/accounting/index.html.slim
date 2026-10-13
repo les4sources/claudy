@@ -6,6 +6,8 @@
     strong La double écriture se génère, elle ne se saisit jamais.
     |  On encode un fait — une ligne bancaire ventilée, un décompte, un règlement — et l'application produit les deux côtés. Aucun écran ne permet de taper un débit et un crédit à la main.
 
+= render "finance/accounting/spending_verdicts", verdicts: @verdicts
+
 - if @treasury
   = render "finance/treasury/summary", treasury: @treasury, link: true
 
