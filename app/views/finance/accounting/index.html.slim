@@ -68,6 +68,46 @@
       p.text-sm.text-gray-700 Aucune dette ni aucun litige sans facture n'est enregistré.
       = link_to "⚖️ Enregistrer une dette ou un litige", new_finance_liability_path, class: "text-blue-500 text-sm border-b-2 border-blue-200 hover:text-blue-700"
 
+/ Les prêts reçus (2026-10-13), lus au grand livre (comptes 17) : ce qui reste
+  dû à chaque prêteur. Un prêt gonfle la banque sans être de la marge.
+.mb-6.p-4.rounded-lg.border.border-gray-100.bg-white(data-accounting-loans="")
+  - if @loans.any?
+    p.text-sm.font-semibold.text-gray-900
+      = "Prêts reçus : #{number_to_currency(@loans.owed_cents / 100.0, unit: '€', precision: 0)} restent dus"
+    p.mt-1.text-sm.text-gray-600
+      | Lu au grand livre, comptes 17. Un prêt dont la ligne de banque attend encore dans « À affecter » n'y est pas.
+    - @loans.groups.each do |group|
+      .mt-4
+        p.text-xs.uppercase.text-gray-400= "#{group.entity.name} · #{number_to_currency(group.owed_cents / 100.0, unit: '€', precision: 0)}"
+        .overflow-x-auto.relative.mt-2
+          table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
+            thead.text-xs.text-gray-700.uppercase.bg-gray-50
+              tr
+                th.py-2.px-4[scope="col"] Prêteur
+                th.py-2.px-4[scope="col"] Compte
+                th.py-2.px-4.text-right[scope="col"] Emprunté
+                th.py-2.px-4.text-right[scope="col"] Remboursé
+                th.py-2.px-4.text-right[scope="col"] Reste dû
+                th.py-2.px-4[scope="col"] Dernier mouvement
+            tbody
+              - group.lenders.each do |lender|
+                tr.border-b.bg-white
+                  td.py-2.px-4.font-medium.text-gray-900
+                    = lender.name
+                    - unless lender.named?
+                      .text-xs.text-gray-400 Prêteur non nommé sur la ligne
+                  td.py-2.px-4
+                    = link_to "#{lender.account.code} #{lender.account.name}",
+                              finance_ledger_path(general_account_id: lender.account.id, legal_entity_id: group.entity.id),
+                              class: "text-blue-500 hover:text-blue-700"
+                  td.py-2.px-4.text-right= number_to_currency(lender.borrowed_cents / 100.0, unit: "€")
+                  td.py-2.px-4.text-right= number_to_currency(lender.repaid_cents / 100.0, unit: "€")
+                  td.py-2.px-4.text-right.font-semibold(class="#{lender.owed_cents.negative? ? 'text-red-700' : 'text-gray-900'}")
+                    = number_to_currency(lender.owed_cents / 100.0, unit: "€")
+                  td.py-2.px-4= l(lender.last_movement_on)
+  - else
+    p.text-sm.text-gray-700 Aucun prêt en cours au grand livre (comptes 17).
+
 .grid.gap-4.mb-8(class="md:grid-cols-3")
   .p-5.bg-white.rounded-lg.border.border-gray-100
     p.text-xs.uppercase.text-gray-400 Plan comptable

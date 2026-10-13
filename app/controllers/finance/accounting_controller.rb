@@ -26,6 +26,9 @@ module Finance
       # Les dettes et litiges sans facture, TOUTES entités : la trésorerie ne
       # lit que la Fondation, mais la SRL doit aussi voir ce qui pèse sur elle.
       @open_liabilities = Liability.open.includes(:legal_entity).to_a
+      # Les prêts reçus, par prêteur (2026-10-13) : un prêt de trésorerie
+      # gonfle la banque, il ne doit pas passer pour de la marge.
+      @loans = Finance::Loans.new
     end
   end
 end
