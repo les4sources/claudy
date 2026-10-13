@@ -126,6 +126,17 @@ module Mcp
       Tools::Finances::PartagesRevenus,
       Tools::Finances::AccordPartage,
       Tools::Finances::RelevePartage,
+      Tools::Finances::VueComptabilite,
+      Tools::Finances::GrandLivre,
+      Tools::Finances::BalanceComptable,
+      Tools::Finances::ControleCroise,
+      Tools::Finances::Echeancier,
+      Tools::Finances::Echeance,
+      Tools::Finances::Obligation,
+      Tools::Finances::ParametrageCompta,
+      Tools::Finances::CompteGeneral,
+      Tools::Finances::EntiteJuridique,
+      Tools::Finances::Exercice,
       Tools::Carte::Plantes,
       Tools::Carte::FichePlante,
       Tools::Carte::Especes,
@@ -203,6 +214,10 @@ module Mcp
       releve_depot_vente), partages de revenus d'un hébergement
       (partages_revenus, accord_partage, releve_partage). Émettre un relevé ou
       renvoyer une demande ÉCRIT au porteur, à l'artisan ou au bénéficiaire.
+      Vue d'ensemble : vue_comptabilite. États : grand_livre,
+      balance_comptable (générale ou analytique), controle_croise. Échéancier
+      légal : echeancier, echeance, obligation. Paramétrage : parametrage_compta,
+      compte_general, entite_juridique, exercice (clôturer un exercice le fige).
 
       CARTE DU DOMAINE ET PLANTES. Les plantes nourricières (#id, n° de
       terrain) ont une espèce et une variété du catalogue local (especes) ;
