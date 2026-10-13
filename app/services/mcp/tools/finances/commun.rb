@@ -324,6 +324,40 @@ module Mcp
           end
         end
 
+        # Une règle d'affectation en une ligne : ses critères, ce qu'elle propose.
+        def ligne_regle(regle)
+          criteres = []
+          criteres << "IBAN #{regle.counterparty_iban}" if regle.counterparty_iban.present?
+          criteres << "tiers ~ « #{regle.counterparty_name_contains} »" if regle.counterparty_name_contains.present?
+          criteres << "communication ~ « #{regle.communication_contains} »" if regle.communication_contains.present?
+          criteres << "code #{regle.transaction_code}" if regle.transaction_code.present?
+          criteres << regle.direction_label.downcase if regle.direction.present?
+          criteres << "au moins #{euros(regle.min_amount_cents)}" if regle.min_amount_cents
+          criteres << "au plus #{euros(regle.max_amount_cents)}" if regle.max_amount_cents
+          criteres << "compte #{regle.cash_account.name}" if regle.cash_account
+          propose = [regle.general_account.to_s, regle.team&.name, regle.legal_entity&.name,
+                     regle.analytic_account && "analytique #{regle.analytic_account.code}",
+                     regle.event && "événement ##{regle.event_id} #{regle.event.name}"].compact.join(" · ")
+          "Règle ##{regle.id} « #{regle.label} »#{' (inactive)' unless regle.active?} · ordre #{regle.position} · " \
+            "#{criteres.join(', ')} → #{propose} · confiance #{regle.confidence} % · " \
+            "#{regle.accepted_count} acceptée(s) / #{regle.rejected_count} refusée(s)"
+        end
+
+        def regle!(reference)
+          texte = reference.to_s.strip.delete_prefix("#")
+          raise Base::Error, "Donne la règle (identifiant ou nom)." if texte.empty?
+          return AllocationRule.find_by(id: texte) || raise(Base::Error, "Aucune règle ##{texte}.") if texte.match?(/\A\d+\z/)
+
+          trouvees = AllocationRule.where("label ILIKE ?", "%#{AllocationRule.sanitize_sql_like(texte)}%").ordered.to_a
+          exacte = trouvees.find { |r| r.label.casecmp?(texte) }
+          return exacte if exacte
+          return trouvees.first if trouvees.one?
+          raise Base::Error, "Aucune règle ne correspond à « #{texte} »." if trouvees.empty?
+
+          raise Base::Error, "Plusieurs règles correspondent à « #{texte} » : " \
+                             "#{trouvees.first(12).map { |r| "##{r.id} #{r.label}" }.join(', ')}."
+        end
+
         # Une dette ou un litige sans facture (`Liability`) en une ligne.
         def ligne_dette(dette)
           fourchette = dette.ranged? ? " · fourchette #{dette.low_cents ? euros(dette.low_cents) : '?'} – #{dette.high_cents ? euros(dette.high_cents) : '?'}" : ""

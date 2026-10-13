@@ -66,11 +66,12 @@
     p.mb-3.text-xs.text-gray-500
       | Une règle à la fois, au-dessus d'un seuil de confiance. Il n'existe pas d'acceptation « toutes règles confondues ».
     = form_with url: bulk_finance_allocation_suggestions_path, method: :post, class: "flex flex-wrap items-end gap-3" do |f|
-      div
+      div(class="relative w-full sm:w-72" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une règle…")
         = f.label :allocation_rule_id, "Règle", class: "block text-xs font-medium text-gray-500"
-        = f.collection_select :allocation_rule_id, @rules.select(&:active?), :id, :label, { include_blank: "Choisir…" }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+        = f.collection_select :allocation_rule_id, @rules.select(&:active?), :id, :label, { include_blank: "Choisir…" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher une règle"
       div
         = f.label :confidence, "Confiance minimum (%)", class: "block text-xs font-medium text-gray-500"
-        = f.number_field :confidence, value: 80, min: 0, max: 100, class: "mt-1 w-28 rounded-md border-gray-300 text-sm shadow-sm"
+        = f.number_field :confidence, value: 80, min: 0, max: 100, label: false, class: "mt-1 w-28 rounded-md border-gray-300 text-sm shadow-sm"
       button.inline-flex.items-center.rounded-md.border.border-transparent.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90" type="submit")
         | Accepter ces suggestions

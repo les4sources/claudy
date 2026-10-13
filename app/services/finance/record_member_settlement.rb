@@ -31,12 +31,18 @@ module Finance
     # proposition : depuis le lettrage par poste, c'est ce choix qui fait la
     # valeur du rapprochement, et une machine qui le prend seule se trompe en
     # silence. Sans lui, le règlement tombe dans « Divers » et n'apure rien.
-    def initialize(member_account:, cash_entry:, amount_cents: nil, flow: nil, whodunnit: nil)
+    #
+    # `already_recorded: true` — le règlement est DÉJÀ au grand livre du compte
+    # (la reprise de 2025-2026 a encodé bar, repas et charges sans ligne
+    # bancaire en face). Seule l'affectation de la ligne sur le 400000 se fait :
+    # encoder un second règlement compterait le paiement deux fois.
+    def initialize(member_account:, cash_entry:, amount_cents: nil, flow: nil, whodunnit: nil, already_recorded: false)
       @account = member_account
       @entry = cash_entry
       @amount_cents = amount_cents&.to_i&.abs
       @flow = flow.presence
       @whodunnit = whodunnit
+      @already_recorded = already_recorded
     end
 
     def run = catch_error(context: { member_account: @account&.id }) { record }
@@ -47,6 +53,7 @@ module Finance
     def record
       raise MissingAccount, "Aucun compte membre à créditer." if @account.blank?
       raise WrongDirection, "Un règlement s'encaisse depuis une ligne ENTRANTE." unless @entry.amount_cents.positive?
+      return link_only if @already_recorded
 
       # Ce que le compte doit encore POSTE PAR POSTE, pas son solde global : une
       # avance sur les charges n'éteint pas une dette de bar, et ne doit pas
@@ -82,22 +89,42 @@ module Finance
             idempotency_key: idempotency_key
           ).run!
 
-          @entry.cash_allocations.create!(
-            general_account: customer_account,
-            legal_entity: @entry.cash_account.legal_entity,
-            third_party: third_party,
-            document: @account,
-            amount_cents: montant,
-            label: "Règlement de #{@account.name}"
-          )
-
-          if @entry.reload.fully_allocated?
-            Accounting::PostCashEntry.new(cash_entry: @entry, whodunnit: @whodunnit).run!
-          end
+          allocate(montant, "Règlement de #{@account.name}")
         end
       end
 
       @account.reload
+    end
+
+    def link_only
+      PaperTrail.request(whodunnit: @whodunnit || "member_settlement") do
+        ApplicationRecord.transaction do
+          @entry.lock!
+          montant = @amount_cents || @entry.remaining_cents
+          if montant <= 0 || montant > @entry.remaining_cents
+            raise TooMuch, "Il reste #{Money.new(@entry.remaining_cents, 'EUR').format} à affecter sur cette ligne."
+          end
+
+          allocate(montant, "Règlement de #{@account.name}, déjà au grand livre")
+        end
+      end
+
+      @account.reload
+    end
+
+    def allocate(montant, label)
+      @entry.cash_allocations.create!(
+        general_account: customer_account,
+        legal_entity: @entry.cash_account.legal_entity,
+        third_party: third_party,
+        document: @account,
+        amount_cents: montant,
+        label: label
+      )
+
+      return unless @entry.reload.fully_allocated?
+
+      Accounting::PostCashEntry.new(cash_entry: @entry, whodunnit: @whodunnit).run!
     end
 
     # Rejouer la même ligne sur le même compte ne doit pas créer un second

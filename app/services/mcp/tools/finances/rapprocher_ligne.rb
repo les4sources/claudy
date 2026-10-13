@@ -15,6 +15,9 @@ module Mcp
           "virement_membre" => "virer à un membre le crédit de son compte courant (ligne sortante ; `compte`, `montant` facultatif)",
           "reglement_membre" => "encaisser le règlement d'un habitant sur son compte courant (ligne entrante ; `compte`, " \
                                 "`poste` et `montant` facultatifs)",
+          "reglement_deja_encode" => "relier au compte d'un habitant un virement dont le règlement est DÉJÀ au grand " \
+                                     "livre (reprise) : affecte la ligne en 400000 sans second règlement (ligne entrante ; " \
+                                     "`compte`, `montant` facultatif)",
           "sejour" => "ventiler le paiement d'un séjour selon son devis (ligne entrante ; `sejour`)",
           "facture_vente" => "encaisser une facture de vente émise (ligne entrante ; `facture_vente`)",
           "versement_stripe" => "rapprocher un versement Stripe de la banque (ligne entrante ; `versement_stripe`)"
@@ -58,6 +61,7 @@ module Mcp
           apres = simuler { rapprocher(CashEntry.find(entry.id), donnees) }
           resume = [ligne_tresorerie(entry), "Rapprocher de #{quoi}#{" pour #{euros(montant)}" if montant}", "Après : #{apres}"]
           resume << "Un email « note payée » partira au membre une fois la note couverte." if avec == "note_de_frais"
+          resume << deja_au_grand_livre(cible, montant || entry.remaining_cents) if avec == "reglement_deja_encode"
           Plan.new(resume: resume.join("\n"),
                    empreinte: [etat_de(entry), etat_de(cible), entry.cash_allocations.map(&:id).sort, signature(arguments)],
                    donnees: donnees)
@@ -65,6 +69,15 @@ module Mcp
 
         def appliquer(plan)
           rapprocher(CashEntry.find(plan.donnees[:id]), plan.donnees)
+        end
+
+        # Ce mode ne crée pas de règlement : il faut qu'il existe déjà. L'aperçu
+        # montre ceux du même montant, ou prévient qu'il n'y en a aucun.
+        def deja_au_grand_livre(compte, cents)
+          reglements = compte.account_entries.where(amount_cents: -cents).order(:entry_date).to_a
+          return "Attention : aucun règlement de #{euros(cents)} au grand livre de #{compte.code}. Vérifie avant de confirmer." if reglements.empty?
+
+          "Au grand livre : #{reglements.map { |r| "#{I18n.l(r.entry_date)} #{r.flow_label} « #{r.label} »" }.join(' ; ')}"
         end
 
         def cible!(avec, arguments)
@@ -75,7 +88,7 @@ module Mcp
           when "note_de_frais"
             note = note!(arguments["note"])
             [note, ligne_note(note)]
-          when "virement_membre", "reglement_membre"
+          when "virement_membre", "reglement_membre", "reglement_deja_encode"
             compte = compte!(arguments["compte"])
             [compte, "#{compte.code} — #{compte.name} (#{postes_dus(compte)})"]
           when "sejour"
@@ -121,6 +134,11 @@ module Mcp
                                                     amount_cents: d[:montant], flow: d[:poste], whodunnit: whodunnit).run!
               compte = MemberAccount.find(d[:cible])
               "#{ligne_tresorerie(entry.reload)}\n#{compte.code} : #{postes_dus(compte)}"
+            when "reglement_deja_encode"
+              ::Finance::RecordMemberSettlement.new(member_account: MemberAccount.find(d[:cible]), cash_entry: entry,
+                                                    amount_cents: d[:montant], whodunnit: whodunnit,
+                                                    already_recorded: true).run!
+              "#{ligne_tresorerie(entry.reload)}\nRelié à #{MemberAccount.find(d[:cible]).code}, sans nouveau règlement."
             when "sejour" then ventiler_sejour(entry, Stay.find(d[:cible]))
             when "facture_vente"
               lignes = ::Finance::RecordSalesInvoicePayment.new(sales_invoice: SalesInvoice.find(d[:cible]), cash_entry: entry,

@@ -38,29 +38,18 @@ module Finance
     # Acceptation en masse, bornée par règle et par seuil.
     def bulk
       rule = AllocationRule.find_by(id: params[:allocation_rule_id])
-      # Planché à 1 : un seuil de 0 accepterait tout ce que la règle propose, ce
-      # qui vide de son sens la borne qu'on vient de poser.
-      seuil = params[:confidence].to_i.clamp(1, 100)
 
       if rule.nil?
         return redirect_to finance_allocation_rules_path,
                            alert: "Choisis une règle : il n'existe pas d'acceptation « toutes règles confondues »."
       end
 
-      suggestions = AllocationSuggestion.pending.where(allocation_rule_id: rule.id).confident_from(seuil)
-      acceptees = 0
-
-      suggestions.find_each do |suggestion|
-        Finance::AcceptSuggestion.new(suggestion: suggestion, whodunnit: current_user&.email).run!
-        acceptees += 1
-      rescue Finance::AcceptSuggestion::AlreadyDecided, Finance::AcceptSuggestion::EntryPosted,
-             Accounting::PostDocument::MissingFiscalYear
-        next
-      end
+      lot = Finance::BulkAcceptSuggestions.new(rule: rule, threshold: params[:confidence], whodunnit: current_user&.email)
+      resultat = lot.run!
 
       redirect_to finance_allocation_rules_path,
-                  notice: "#{acceptees} suggestion(s) acceptée(s) pour la règle « #{rule.label} » " \
-                          "au-dessus de #{seuil} % de confiance."
+                  notice: "#{resultat.accepted} suggestion(s) acceptée(s) pour la règle « #{rule.label} » " \
+                          "au-dessus de #{lot.threshold} % de confiance."
     end
 
     private

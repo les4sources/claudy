@@ -111,6 +111,52 @@ RSpec.describe Mcp::Server, "finances" do
     expect(entry.cash_allocations.sole).to have_attributes(general_account_id: energie.id, team_id: technique.id)
   end
 
+  it "crée une règle, dit combien de lignes la reçoivent, puis accepte son lot" do
+    premiere = ligne(400, label: "Bar", communication: "Bar 001Dupont")
+    seconde = ligne(700, label: "Bar", communication: "BAR soirée")
+    ligne(-5_000, label: "Bar", communication: "Bar — fournisseur")
+    jev = AllocationSuggestion.create!(cash_entry: seconde, general_account: fournitures, legal_entity: entity,
+                                       amount_cents: 700, confidence: 85, source: "jev", rationale: "Jev : au hasard")
+    arguments = { "libelle" => "Bar", "compte" => "700300", "communication_contient" => "bar", "sens" => "entree",
+                  "compte_tresorerie" => "Belfius", "motif" => "file 2026" }
+
+    apercu = texte(outil("enregistrer_regle_affectation", arguments))
+    expect(apercu).to include("APERÇU", "2 ligne(s)", "11,00 €", "1 proposition(s) de Jev", "Ligne ##{premiere.id}")
+    expect(AllocationRule.count).to eq(0)
+    expect(jev.reload.deleted_at).to be_nil
+
+    confirme("enregistrer_regle_affectation", arguments)
+    regle = AllocationRule.sole
+    expect(regle).to have_attributes(direction: "incoming", communication_contains: "bar", legal_entity_id: entity.id,
+                                     cash_account_id: compte_bancaire.id)
+    expect(AllocationSuggestion.pending.where(allocation_rule: regle).pluck(:cash_entry_id)).to contain_exactly(premiere.id, seconde.id)
+    expect(texte(outil("regles_affectation", {}))).to include("Règle ##{regle.id} « Bar »", "2 suggestion(s) en attente")
+
+    lot = { "regle" => regle.id, "sauf" => ["##{seconde.id}"], "motif" => "bar 2026" }
+    expect(texte(outil("accepter_suggestions", lot))).to include("Accepter 1 suggestion(s)", "700300 Bar et cellier : 1",
+                                                                 "Laissées hors du lot : 1 ligne(s).")
+    confirme("accepter_suggestions", lot)
+    expect(premiere.reload).to be_posted
+    expect(seconde.reload).not_to be_posted
+    expect(regle.reload.accepted_count).to eq(1)
+  end
+
+  it "accepte un lot de Jev borné à un compte, jamais toutes sources confondues" do
+    sure = ligne(900, label: "Tisanes")
+    douteuse = ligne(300, label: "Tisanes")
+    [[sure, 97], [douteuse, 82]].each do |entry, confiance|
+      AllocationSuggestion.create!(cash_entry: entry, general_account: bar, legal_entity: entity, amount_cents: entry.amount_cents,
+                                   confidence: confiance, source: "jev", rationale: "Jev : lignes semblables")
+    end
+
+    expect(texte(outil("regles_affectation", {}))).to include("700300 Bar et cellier : 2 (1 à 95 %+", "Jev")
+    expect(outil("accepter_suggestions", {})[:isError]).to be(true)
+
+    confirme("accepter_suggestions", { "jev_compte" => "700300" })
+    expect(sure.reload).to be_posted
+    expect(douteuse.reload).not_to be_posted
+  end
+
   it "encode une facture d'achat, l'envoie au paiement et la paie depuis la banque" do
     antargaz = ThirdParty.create!(name: "Antargaz", kind: "supplier")
     confirme("enregistrer_facture_achat", { "fournisseur" => "antargaz", "numero" => "F-1", "total" => "120",
@@ -187,6 +233,30 @@ RSpec.describe Mcp::Server, "finances" do
     confirme("rapprocher_ligne", { "ligne" => entry.id, "avec" => "reglement_membre", "compte" => compte.code })
     expect(compte.reload.balance_cents).to eq(0)
     expect(entry.reload).to be_posted
+  end
+
+  it "relie un virement dont le règlement est déjà au grand livre, sans le compter deux fois" do
+    compte = MemberAccount.for_human!(Human.create!(name: "Gaëlle de Fays"))
+    compte.account_entries.create!(entry_date: jour, kind: "recurring", flow: "bar", label: "Bar de mars", amount_cents: 4_200)
+    compte.account_entries.create!(entry_date: jour, kind: "settlement", flow: "bar", label: "Règlement bar (reprise)", amount_cents: -4_200)
+    entry = ligne(4_200, label: "Virement Gaëlle")
+
+    apercu = texte(outil("rapprocher_ligne", { "ligne" => entry.id, "avec" => "reglement_deja_encode", "compte" => compte.code }))
+    expect(apercu).to include("Règlement bar (reprise)")
+    expect { confirme("rapprocher_ligne", { "ligne" => entry.id, "avec" => "reglement_deja_encode", "compte" => compte.code }) }
+      .not_to(change { compte.account_entries.count })
+
+    expect(compte.reload.balance_cents).to eq(0)
+    expect(entry.reload).to be_posted
+    expect(entry.cash_allocations.sole).to have_attributes(general_account: clients, document: compte, amount_cents: 4_200)
+  end
+
+  it "prévient quand aucun règlement de ce montant n'est au grand livre" do
+    compte = MemberAccount.for_human!(Human.create!(name: "Manon Lefebvre"))
+    entry = ligne(1_000, label: "Virement Manon")
+
+    apercu = texte(outil("rapprocher_ligne", { "ligne" => entry.id, "avec" => "reglement_deja_encode", "compte" => compte.code }))
+    expect(apercu).to include("aucun règlement de 10,00 €")
   end
 
   it "génère les charges du mois, émet le décompte et l'envoie" do
