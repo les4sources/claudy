@@ -43,7 +43,7 @@ module Mcp
         end
 
         def planifier_generation(arguments)
-          porteur = par_nom!(Human.where(id: Experience.where.not(human_id: nil).select(:human_id)), arguments["porteur"], "porteur")
+          porteur = par_nom!(ExperienceBooking.carriers, arguments["porteur"], "porteur")
           defaut_du, defaut_au = ::CarrierStatements::Generate.default_period
           du = arguments["du"].present? ? date!(arguments["du"], "du") : defaut_du
           au = arguments["au"].present? ? date!(arguments["au"], "au") : defaut_au
@@ -62,10 +62,10 @@ module Mcp
           raise Error, "Ce relevé est déjà #{releve.status_label.downcase}." unless releve.draft?
           raise Error, "Ce relevé n'a aucune ligne." if releve.carrier_statement_lines.empty?
 
-          email = releve.human.email.presence
+          email = releve.recipient_email
           resume = ["Émettre #{ligne_releve_porteur(releve)}",
                     "Le total est figé, l'écriture est passée et la rémunération entre dans « À payer ».",
-                    email ? "ÉCRIT AU PORTEUR : le relevé part à #{email}." : "#{releve.human.name} n'a pas d'email : rien ne part, le lien de sa page sera à partager à la main."]
+                    email ? "ÉCRIT #{releve.paid_through? ? "À #{releve.payee_name}" : 'AU PORTEUR'} : le relevé part à #{email}." : "#{releve.payee_name} n'a pas d'email : rien ne part, le lien de sa page sera à partager à la main."]
           Plan.new(resume: resume.join("\n"), empreinte: ["emettre", etat_de(releve), email],
                    donnees: { geste: "emettre", id: releve.id })
         end
@@ -87,7 +87,7 @@ module Mcp
             releve = CarrierStatement.find(d[:id])
             metier! { ::CarrierStatements::Issue.new(statement: releve, whodunnit: whodunnit).run! }
             releve.reload
-            envoi = releve.sent_at ? "envoyé à #{releve.human.email}" : "pas d'email : partage #{lien_public(:public_carrier_statement, releve.token)}"
+            envoi = releve.sent_at ? "envoyé à #{releve.recipient_email}" : "pas d'email : partage #{lien_public(:public_carrier_statement, releve.token)}"
             "Relevé émis : #{ligne_releve_porteur(releve)} · #{envoi}."
           when "supprimer"
             releve = CarrierStatement.find(d[:id])

@@ -14,6 +14,9 @@ class CarrierStatement < ApplicationRecord
   STATUS_LABELS = { "draft" => "Brouillon", "issued" => "Émis", "paid" => "Payé" }.freeze
 
   belongs_to :human
+  # Le tiers payé à la place du porteur (`Human#carrier_payee`), figé à la
+  # génération : le relevé lui est adressé, la dette est à son nom.
+  belongs_to :third_party, optional: true
   has_many :carrier_statement_lines, dependent: :destroy
   has_many :experience_bookings, through: :carrier_statement_lines
 
@@ -60,12 +63,18 @@ class CarrierStatement < ApplicationRecord
 
   # --- Contrat `Payable` (epic #240, phase 4) --------------------------------
 
+  # À qui le relevé est adressé et payé : le tiers quand le porteur est payé
+  # par lui, sinon le porteur lui-même.
+  def payee_name = third_party&.name || human.name
+  def recipient_email = third_party ? third_party.email.presence : human.email.presence
+  def paid_through? = third_party.present?
+
   def payable_amount_cents = total_fee_cents.to_i
-  def payable_beneficiary = human.name
-  def payable_third_party = ThirdParty.for_human!(human)
+  def payable_beneficiary = payee_name
+  def payable_third_party = third_party || ThirdParty.for_human!(human)
   def payable_communication = reference
   def payable_reference = reference
-  def payable_label = "Relevé d'activités — #{human.name}"
+  def payable_label = "Relevé d'activités — #{human.name}#{" (via #{third_party.name})" if third_party}"
   def payable_path = Rails.application.routes.url_helpers.finance_carrier_statement_path(self)
 
   private

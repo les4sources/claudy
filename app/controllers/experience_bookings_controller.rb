@@ -12,7 +12,7 @@
 class ExperienceBookingsController < BaseController
   access_section :events
   before_action :load_scoped_booking,
-                only: [:show, :update, :destroy, :confirm, :new_refusal, :refuse, :record_outcome]
+                only: [:show, :update, :destroy, :confirm, :new_refusal, :refuse, :record_outcome, :payout]
 
   def index
     @experience_bookings = ExperienceBooking.for_user(current_user)
@@ -207,6 +207,21 @@ class ExperienceBookingsController < BaseController
     end
   end
 
+  # Qui a tenu la prestation et combien on lui doit (Michael, 2026-10-13 : une
+  # activité a un porteur principal, d'autres peuvent la tenir). Geste de
+  # l'équipe : un porteur ne fixe ni sa propre rémunération ni celle d'un autre.
+  def payout
+    if current_user&.restricted_to_own_activities?
+      return redirect_to(experience_booking_path(@booking), alert: "Ce réglage est réservé à l'équipe.")
+    end
+
+    if @booking.update(payout_params)
+      redirect_to experience_booking_path(@booking), notice: "Rémunération enregistrée."
+    else
+      redirect_to experience_booking_path(@booking), alert: @booking.errors.full_messages.to_sentence
+    end
+  end
+
   # Formulaire de refus (raison obligatoire).
   def new_refusal
   end
@@ -262,6 +277,15 @@ class ExperienceBookingsController < BaseController
                        alert: "Cette activité est portée par quelqu'un d'autre : seul son porteur " \
                               "(ou l'accueil) peut la modifier.",
                        status: :not_found)
+  end
+
+  # Vide = le porteur de l'activité. Désigner le porteur lui-même revient au
+  # même : on ne garde un nom que s'il diffère.
+  def payout_params
+    attrs = params.require(:experience_booking).permit(:performed_by_id, :carrier_fee).to_h
+    attrs["performed_by_id"] = nil if attrs["performed_by_id"].to_s == @booking.experience&.human_id.to_s
+    attrs["performed_by_id"] = attrs["performed_by_id"].presence
+    attrs
   end
 
   def create_params

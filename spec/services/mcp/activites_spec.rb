@@ -54,6 +54,20 @@ RSpec.describe Mcp::Server, "activités" do
     expect(ActionMailer::Base.deliveries.map(&:to).flatten).to include("camille@example.com")
   end
 
+  it "inscrit une prestation tenue par quelqu'un d'autre, au montant convenu, puis la corrige" do
+    autre = Human.create!(name: "Magali Remplaçante", email: "magali@example.com", status: "active")
+    args = { "sejour" => sejour.id, "creneau" => creneau.id, "participants" => 3,
+             "tenue_par" => "Magali", "remuneration" => "60" }
+    expect(texte(outil("ajouter_activite_sejour", args))).to include("Tenue par Magali Remplaçante · rémunération : 60,00 €")
+
+    confirme("ajouter_activite_sejour", args)
+    resa = sejour.experience_bookings.last
+    expect(resa).to have_attributes(performed_by: autre, carrier_fee_cents: 6_000)
+
+    confirme("modifier_reservation_activite", { "reservation" => resa.id, "tenue_par" => "Porteuse Anna", "remuneration" => "" })
+    expect(resa.reload).to have_attributes(performed_by: nil, carrier_fee_cents: nil)
+  end
+
   it "refuse une réservation avec son motif" do
     resa = ExperienceBooking.create!(experience_availability: creneau, stay: sejour, participants: 2)
     confirme("refuser_reservation_activite", { "reservation" => resa.id, "raison_client" => "Les ânes sont malades" })

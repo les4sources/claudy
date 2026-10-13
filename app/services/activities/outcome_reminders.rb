@@ -40,14 +40,15 @@ module Activities
 
     private
 
-    # Groupé par porteur via l'activité. Une activité sans porteur rattaché n'a
-    # personne à relancer : elle reste dans l'écran « À confirmer » de l'admin,
-    # qui est le bon endroit pour la voir.
+    # Groupé par qui tient la prestation (la personne nommée, sinon le porteur
+    # de l'activité). Une activité sans porteur rattaché n'a personne à
+    # relancer : elle reste dans l'écran « À confirmer » de l'admin, qui est le
+    # bon endroit pour la voir.
     def by_carrier
       ExperienceBooking.awaiting_outcome
-                       .includes(experience_availability: { experience: :human }, stay: :customer)
+                       .includes(:performed_by, experience_availability: { experience: :human }, stay: :customer)
                        .order("experience_availabilities.available_on ASC")
-                       .group_by { |booking| booking.experience&.human }
+                       .group_by(&:carrier)
                        .except(nil)
     end
   end

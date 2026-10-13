@@ -48,7 +48,7 @@ module Finance
 
       if service.run
         notice = if @statement.reload.sent_at.present?
-                   "Relevé émis et envoyé à #{@statement.human.email}."
+                   "Relevé émis et envoyé à #{@statement.recipient_email}."
                  else
                    "Relevé émis. Ce porteur n'a pas d'adresse email : partage le lien de la page à la main."
                  end
@@ -84,10 +84,11 @@ module Finance
       @statement = CarrierStatement.find(params[:id])
     end
 
-    # Les humains qui portent au moins une activité. On ne liste pas tout le
-    # collectif : l'écran répond à « qui dois-je payer », pas « qui existe ».
+    # Les humains qui portent une activité ou en ont tenu une prestation. On ne
+    # liste pas tout le collectif : l'écran répond à « qui dois-je payer », pas
+    # « qui existe ».
     def carriers
-      Human.where(id: Experience.where.not(human_id: nil).select(:human_id)).order(:name)
+      ExperienceBooking.carriers.order(:name)
     end
 
     def parsed_date(raw)

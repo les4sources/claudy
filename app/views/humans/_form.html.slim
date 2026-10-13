@@ -56,6 +56,19 @@
                    hint: "Seulement si le compte n'est pas au nom de la personne — celui d'un parent, par exemple.",
                    class: "md:w-1/2 lg:w-2/3"
 
+    / Porteur d'activité payé par un tiers (Michael, 2026-10-13) : la SPRL
+      Domaine d'Ahinvaux facture la Fondation et reverse sa part au porteur.
+      Ses relevés sont alors adressés à ce tiers.
+    div(class="relative md:w-1/2 lg:w-2/3" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un tiers…" data-searchable-select-clearable-value="true")
+      = label_tag "human[carrier_payee_id]", "Rémunération d'activités payée via", class: "block text-sm font-medium text-gray-700"
+      = select_tag "human[carrier_payee_id]",
+                   options_from_collection_for_select(ThirdParty.actives.suppliers.ordered, :id, :name, @human.carrier_payee_id),
+                   include_blank: "— La personne elle-même —",
+                   class: "mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm",
+                   data: { searchable_select_target: "select" }
+      = render "shared/searchable_select_search", label: "Chercher un tiers"
+      p.mt-1.text-sm.text-gray-500 Ses relevés de porteur sont alors adressés à ce tiers, qui le paie.
+
     = f.label :description,
               "Présentation complète"
     = f.rich_text_area :description

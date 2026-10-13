@@ -1,14 +1,22 @@
-p Bonjour #{@human.name},
+- if @statement.paid_through?
+  p Bonjour,
 
-p
-  | Voici ton relevé d'activités pour
-  strong = " #{@statement.period_label}"
-  | .
+  p
+    | Voici le relevé des activités tenues par #{@human.name} pour
+    strong = " #{@statement.period_label}"
+    | , à facturer à la Fondation Les 4 Sources.
+- else
+  p Bonjour #{@human.name},
+
+  p
+    | Voici ton relevé d'activités pour
+    strong = " #{@statement.period_label}"
+    | .
 
 table(cellpadding="6" style="border-collapse: collapse; margin: 16px 0;")
   tr
     td
-      strong Total à te verser
+      strong = @statement.paid_through? ? "Total" : "Total à te verser"
     td(align="right")
       strong= number_to_currency(@statement.total_fee_cents / 100.0)
 
@@ -30,4 +38,5 @@ p.text-sm
   strong = " #{@statement.reference}"
   | .
 
-p Merci pour ce que tu portes.
+- unless @statement.paid_through?
+  p Merci pour ce que tu portes.

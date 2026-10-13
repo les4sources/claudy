@@ -119,4 +119,23 @@ RSpec.describe "ExperienceBookings — canal admin", type: :request, queue_adapt
       expect(target.reload).to be_pending
     end
   end
+  describe "PATCH /experience_bookings/:id/payout" do
+    it "l'équipe nomme qui a tenu la prestation et ce qu'on lui doit" do
+      admin = User.create!(email: "staff@les4sources.be", password: "password123")
+      sign_in admin
+      patch payout_experience_booking_path(booking_a),
+            params: { experience_booking: { performed_by_id: porteur_b.id, carrier_fee: "45,50" } }
+
+      expect(booking_a.reload).to have_attributes(performed_by: porteur_b, carrier_fee_cents: 4_550)
+      get experience_booking_path(booking_a)
+      expect(response.body).to include("Tenue par", "Porteur B")
+    end
+
+    it "un porteur ne fixe pas sa rémunération" do
+      sign_in user_a
+      patch payout_experience_booking_path(booking_a), params: { experience_booking: { carrier_fee: "999" } }
+
+      expect(booking_a.reload.carrier_fee_cents).to be_nil
+    end
+  end
 end

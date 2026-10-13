@@ -46,7 +46,7 @@
         = link_to "Voir la page du porteur", public_carrier_statement_path(@statement.token), target: "_blank", rel: "noopener", class: "text-sm text-4s-main hover:underline"
         - if @statement.sent_at
           span.text-xs.text-gray-500 = "envoyé le #{l(@statement.sent_at.to_date, format: :long)}"
-        - elsif @human.email.blank?
+        - elsif @statement.recipient_email.blank?
           span.text-xs.text-amber-700 Aucune adresse email — partage le lien à la main.
 
     - unless @statement.draft?

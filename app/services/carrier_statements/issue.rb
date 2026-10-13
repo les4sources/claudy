@@ -56,7 +56,7 @@ module CarrierStatements
     # un mail parti dans la nature. Pas d'adresse ? On ne bloque pas l'émission —
     # l'écran le dit, la page à jeton reste partageable à la main.
     def deliver_email
-      return if @statement.human.email.blank?
+      return if @statement.recipient_email.blank?
 
       CarrierStatementMailer.statement(@statement).deliver_now
       @statement.update!(sent_at: Time.current)

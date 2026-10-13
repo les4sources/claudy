@@ -7,6 +7,15 @@ module Mcp
       module Commun
         ACTIVITE = { type: %w[integer string], description: "Activité : identifiant (#12) ou partie de son nom (« ânes »)." }.freeze
         CRENEAU = { type: %w[integer string], description: "Identifiant du créneau (#345), rendu par fiche_activite ou disponibilites." }.freeze
+        TENUE_PAR = {
+          type: "string",
+          description: "Qui tient la prestation, quand ce n'est pas le porteur de l'activité (nom d'un membre). C'est lui que le relevé paie."
+        }.freeze
+        REMUNERATION = {
+          type: %w[number string],
+          description: "Ce qu'on doit pour cette prestation, en euros (« 60 » ou « 60,50 »), quand ce n'est pas " \
+                       "le tarif horaire × la durée de l'activité."
+        }.freeze
         RESERVATION = {
           type: %w[integer string],
           description: "Identifiant de la réservation d'activité (#678), rendu par reservations_activites ou fiche_sejour."
@@ -67,6 +76,27 @@ module Mcp
           raise Base::Error, "Plusieurs membres correspondent à « #{reference} » : #{humains.map(&:name).join(', ')}."
         end
 
+        # Désigner le porteur de l'activité revient à ne nommer personne.
+        def tenue_par!(reference, experience)
+          humain = porteur!(reference)
+          humain && humain.id != experience&.human_id ? humain : nil
+        end
+
+        def remuneration_cents!(valeur)
+          brut = valeur.to_s.strip.tr(",", ".")
+          return nil if brut.empty?
+          raise Base::Error, "Rémunération illisible : « #{valeur} »." unless brut.match?(/\A\d+(\.\d{1,2})?\z/)
+
+          (brut.to_d * 100).round.to_i
+        end
+
+        # Ce que le relevé paiera, et à qui.
+        def ligne_tenue(experience, tenue_par, remuneration_cents)
+          qui = tenue_par&.name || experience&.human&.name || "personne (activité sans porteur)"
+          combien = remuneration_cents ? euros(remuneration_cents) : "tarif horaire × durée, à la validation"
+          "Tenue par #{qui} · rémunération : #{combien}\n"
+        end
+
         def ligne_creneau(creneau)
           places = creneau.available_spots
           reste = if places.nil? then "sans limite" elsif places.zero? then "complet" else "#{places} place(s) libre(s)" end
@@ -79,8 +109,9 @@ module Mcp
           sejour = resa.stay
           client = sejour&.customer&.name
           tenue = resa.outcome_recorded? ? " · #{resa.outcome_label}" : ""
+          par = resa.performed_by ? " · tenue par #{resa.performed_by.name}" : ""
           "Réservation ##{resa.id} #{creneau&.experience&.name} le #{creneau&.available_on} à #{creneau&.starts_at} · " \
-            "#{resa.participants} pers. · #{resa.status_label}#{tenue} · #{euros(resa.price_cents)} · " \
+            "#{resa.participants} pers. · #{resa.status_label}#{tenue}#{par} · #{euros(resa.price_cents)} · " \
             "séjour ##{resa.stay_id}#{" (#{client})" if client}#{" · refus : #{resa.refusal_reason}" if resa.refused?}"
         end
 

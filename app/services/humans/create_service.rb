@@ -40,7 +40,8 @@ module Humans
           :roles_enabled,
           :status,
           :iban,
-          :iban_holder_name
+          :iban_holder_name,
+          :carrier_payee_id
         )
     end
   end

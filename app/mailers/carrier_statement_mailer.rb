@@ -13,6 +13,6 @@ class CarrierStatementMailer < ApplicationMailer
       statement.token, host: ENV.fetch("APPLICATION_HOST", "app.les4sources.be")
     )
 
-    mail(to: @human.email, subject: @statement.mail_subject)
+    mail(to: statement.recipient_email, subject: @statement.mail_subject)
   end
 end
