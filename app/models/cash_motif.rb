@@ -86,4 +86,29 @@ class CashMotif < ApplicationRecord
   end
 
   def self.next_position = (unscoped.maximum(:position) || 0) + 1
+
+  # Le motif voisin dans la liste de saisie (« up » ou « down »), ou nil en
+  # bout de liste.
+  def neighbour(direction)
+    others = self.class.where.not(id: id)
+    if direction.to_s == "up"
+      others.where(position: ..position).order(position: :desc, id: :desc).first
+    else
+      others.where(position: position..).order(:position, :id).first
+    end
+  end
+
+  # Échange la position avec le motif voisin — le geste minimal pour ranger
+  # une liste. Rend le voisin, ou nil en bout de liste.
+  def move!(direction)
+    voisin = neighbour(direction)
+    return nil unless voisin
+
+    transaction do
+      ancienne = voisin.position
+      voisin.update!(position: position)
+      update!(position: ancienne)
+    end
+    voisin
+  end
 end
