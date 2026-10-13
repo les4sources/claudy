@@ -21,7 +21,8 @@ module Mcp
 
         # Les erreurs métier des services de la compta : des refus qu'on
         # explique, pas des pannes. Elles reviennent à Claude telles quelles.
-        ESPACES_METIER = %w[Finance:: Accounting:: PurchaseInvoices:: ExpenseReports:: Shop::].freeze
+        ESPACES_METIER = %w[Finance:: Accounting:: PurchaseInvoices:: ExpenseReports:: Shop:: CarrierStatements:: Consignments::
+                            RevenueShares::].freeze
 
         module Garde
           def call(arguments)
@@ -173,6 +174,82 @@ module Mcp
         end
 
         def nom_mois(mois) = I18n.l(mois, format: "%B %Y")
+
+        # Un relevé par son #id, ou par sa référence (ACT-12-202607,
+        # DV-202608-7, REV-3-202607) : l'identifiant y est toujours.
+        def par_reference!(scope, reference, motif, quoi)
+          texte = reference.to_s.strip
+          raise Base::Error, "Donne #{quoi} (#id ou référence)." if texte.empty?
+
+          id = texte.delete("#")[/\A\d+\z/] || texte[motif, 1]
+          raise Base::Error, "Référence illisible : « #{texte} »." if id.nil?
+
+          scope.find_by(id: id) || raise(Base::Error, "Introuvable : #{quoi} « #{texte} ».")
+        end
+
+        def releve_porteur!(reference)
+          par_reference!(CarrierStatement.includes(:human), reference, /\AACT-(\d+)/i, "le relevé de porteur")
+        end
+
+        def ligne_releve_porteur(r)
+          "Relevé ##{r.id} #{r.reference} · #{r.human&.name} · du #{r.period_from} au #{r.period_to} · " \
+            "#{euros(r.total_fee_cents)} · #{r.status_label.downcase}#{' · envoyé' if r.sent_at}"
+        end
+
+        # Un relevé de dépôt-vente par `releve`, ou par `artisan` et `mois`.
+        def releve_depot_vente!(arguments)
+          scope = ConsignmentReport.includes(:consignor, :purchase_invoice, :consignment_report_lines)
+          return par_reference!(scope, arguments["releve"], /\ADV-\d{6}-(\d+)/i, "le relevé de dépôt-vente") if arguments["releve"].present?
+          raise Base::Error, "Donne le relevé, ou l'artisan et le mois." if arguments["artisan"].blank? || arguments["mois"].blank?
+
+          artisan = par_nom!(Consignor.all, arguments["artisan"], "artisan")
+          mois = mois!(arguments["mois"])
+          scope.find_by(consignor: artisan, period_month: mois) || raise(Base::Error, "#{artisan.name} n'a pas de relevé pour #{nom_mois(mois)}.")
+        end
+
+        def ligne_releve_depot(r)
+          "Relevé ##{r.id} #{r.reference} · #{r.consignor&.name} · #{r.period_label} · #{r.status_label.downcase} · " \
+            "ventes #{euros(r.displayed_gross_cents)} · commission #{euros(r.displayed_commission_cents)} · net #{euros(r.displayed_net_cents)}" \
+            "#{' (totaux du moment)' unless r.frozen_totals?}#{' · demande envoyée' if r.requested? && r.requested_at}"
+        end
+
+        # Un accord de partage : #id, hébergement ou bénéficiaire.
+        def accord_partage!(reference)
+          texte = reference.to_s.strip.delete_prefix("#")
+          raise Base::Error, "Donne l'accord de partage (#id, hébergement ou bénéficiaire)." if texte.empty?
+
+          scope = RevenueShareAgreement.includes(:lodging, :beneficiary_third_party)
+          return scope.find_by(id: texte) || raise(Base::Error, "Aucun accord de partage ##{texte}.") if texte.match?(/\A\d+\z/)
+
+          motif = "%#{RevenueShareAgreement.sanitize_sql_like(texte)}%"
+          trouves = scope.left_joins(:lodging).where("lodgings.name ILIKE :m OR revenue_share_agreements.beneficiary_name ILIKE :m", m: motif).to_a
+          return trouves.first if trouves.one?
+          raise Base::Error, "Aucun accord de partage ne correspond à « #{texte} »." if trouves.empty?
+
+          raise Base::Error, "Plusieurs accords correspondent à « #{texte} » : #{trouves.map { |a| "##{a.id} #{a.lodging&.name} (#{a.beneficiary_name})" }.join(', ')}."
+        end
+
+        def releve_partage!(reference)
+          par_reference!(RevenueShareStatement.includes(revenue_share_agreement: :lodging), reference, /\AREV-(\d+)/i, "le relevé de partage")
+        end
+
+        def ligne_accord(a)
+          "Accord ##{a.id} #{a.lodging&.name || 'hébergement supprimé'} → #{a.beneficiary_name} · #{a.share_percent} % · " \
+            "#{a.period_label.downcase} · dès le #{a.starts_on}#{" jusqu'au #{a.ends_on}" if a.ends_on}#{' · INACTIF' unless a.active?}"
+        end
+
+        def ligne_releve_partage(r)
+          "Relevé ##{r.id} #{r.reference} · #{r.revenue_share_agreement.lodging&.name} · #{r.period_label} · base #{euros(r.base_cents)} · " \
+            "part #{euros(r.share_cents)} · #{r.status_label.downcase}#{" le #{r.paid_on}" if r.paid? && r.paid_on}#{' · envoyé' if r.sent_at}"
+        end
+
+        # La page à jeton d'un relevé (porteur, artisan, bénéficiaire), à
+        # partager à la main quand personne n'a d'adresse email.
+        def lien_public(route, token)
+          options = ActionMailer::Base.default_url_options
+          helpers = Rails.application.routes.url_helpers
+          options[:host].present? ? helpers.public_send("#{route}_url", token, **options) : helpers.public_send("#{route}_path", token)
+        end
 
         def contrepartie(entry)
           [entry.counterparty_name.presence, entry.communication.presence && "« #{entry.communication.to_s.squish.truncate(90)} »"]
