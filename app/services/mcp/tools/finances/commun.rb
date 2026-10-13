@@ -175,6 +175,21 @@ module Mcp
 
         def nom_mois(mois) = I18n.l(mois, format: "%B %Y")
 
+        # Une période `du` / `au`, l'année civile par défaut, comme les états.
+        def periode!(arguments)
+          du = arguments["du"].present? ? date!(arguments["du"], "du") : Date.current.beginning_of_year
+          au = arguments["au"].present? ? date!(arguments["au"], "au") : Date.current.end_of_year
+          raise Base::Error, "La période finit avant de commencer." if au < du
+
+          [du, au]
+        end
+
+        def solde_lisible(cents)
+          return euros(0) if cents.zero?
+
+          "#{euros(cents.abs)} #{cents.positive? ? 'débiteur' : 'créditeur'}"
+        end
+
         # Un relevé par son #id, ou par sa référence (ACT-12-202607,
         # DV-202608-7, REV-3-202607) : l'identifiant y est toujours.
         def par_reference!(scope, reference, motif, quoi)
@@ -241,6 +256,26 @@ module Mcp
         def ligne_releve_partage(r)
           "Relevé ##{r.id} #{r.reference} · #{r.revenue_share_agreement.lodging&.name} · #{r.period_label} · base #{euros(r.base_cents)} · " \
             "part #{euros(r.share_cents)} · #{r.status_label.downcase}#{" le #{r.paid_on}" if r.paid? && r.paid_on}#{' · envoyé' if r.sent_at}"
+        end
+
+        # Le paramétrage se règle aussi sur une entité désactivée.
+        def entite_meme_inactive!(reference) = par_nom!(LegalEntity.all, reference, "entité")
+
+        def ligne_exercice(y)
+          "Exercice ##{y.id} #{y.label} · #{y.legal_entity&.name} · du #{y.starts_on} au #{y.ends_on} · #{y.status_label.downcase}"
+        end
+
+        def echeance!(reference)
+          raise Base::Error, "Donne l'échéance (#id, rendu par echeancier)." if reference.blank?
+
+          ComplianceDeadline.includes(:purchase_invoice, compliance_obligation: :legal_entity).find_by(id: id!(reference, "échéance")) ||
+            raise(Base::Error, "Aucune échéance ##{reference.to_s.delete('#')}.")
+        end
+
+        def ligne_echeance(d)
+          "Échéance ##{d.id} #{d.display_title} · #{d.legal_entity.name} · pour le #{d.due_on} · #{d.status_label.downcase}" \
+            "#{" (le #{d.effective_done_on})" if d.closed? && d.effective_done_on}#{' · EN RETARD' if d.overdue?}" \
+            "#{' · paiement' if d.payment?}#{" · facture ##{d.purchase_invoice_id}" if d.purchase_invoice_id}"
         end
 
         # La page à jeton d'un relevé (porteur, artisan, bénéficiaire), à
