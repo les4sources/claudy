@@ -26,19 +26,31 @@ module Finance
         return redirect_to finance_coda_imports_path, alert: "Choisis un fichier CODA à déposer."
       end
 
-      report = Coda::Import.new(content: fichier.read.force_encoding("UTF-8"),
-                                filename: fichier.original_filename,
-                                whodunnit: current_user&.email).run!
+      report = importer_for(fichier).run!
 
       if report.status == "already_imported"
         redirect_to finance_coda_imports_path, alert: report.to_text
       else
         redirect_to finance_coda_import_path(report.coda_import), notice: report.to_text
       end
-    rescue Coda::Import::Rejected, Coda::ParseError => e
+    rescue Coda::Import::Rejected, Coda::ParseError, Beobank::Import::Rejected, Beobank::ParseError => e
       # Le motif est affiché tel quel : il porte le relevé et l'écart chiffré,
       # et c'est ce qui permet à la compta de savoir quoi demander à la banque.
       redirect_to finance_coda_imports_path, alert: e.message
+    end
+
+    private
+
+    # Un classeur Excel (zip, donc « PK » en tête) est l'export de Beobank, qui
+    # n'a pas de CODA ; tout le reste est lu comme un CODA.
+    def importer_for(fichier)
+      contenu = fichier.read
+      if contenu.start_with?("PK".b)
+        Beobank::Import.new(content: contenu, filename: fichier.original_filename, whodunnit: current_user&.email)
+      else
+        Coda::Import.new(content: contenu.force_encoding("UTF-8"), filename: fichier.original_filename,
+                         whodunnit: current_user&.email)
+      end
     end
   end
 end

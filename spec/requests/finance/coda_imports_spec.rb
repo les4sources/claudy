@@ -68,4 +68,35 @@ RSpec.describe "Finances > Import CODA", type: :request do
     get finance_coda_imports_path
     expect(response.body).to include("nominal.cod").and include("Importé")
   end
+
+  # Beobank n'a pas de CODA : son export Excel passe par le même écran.
+  describe "l'export Excel de Beobank" do
+    let!(:beobank) do
+      CashAccount.create!(name: "SRL — Beobank", kind: "bank", legal_entity: entity,
+                          general_account: bank_account, iban: "BE68539007547034")
+    end
+
+    def classeur(name)
+      Rack::Test::UploadedFile.new(Rails.root.join("spec/fixtures/beobank/#{name}.xlsx"),
+                                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    end
+
+    it "importe le classeur sur le compte Beobank" do
+      expect {
+        post finance_coda_imports_path, params: { file: classeur("nominal") }
+      }.to change { beobank.cash_entries.count }.by(5)
+
+      follow_redirect!
+      expect(response.body).to include("nominal.xlsx").and include("Export Excel 2026")
+    end
+
+    it "affiche pourquoi un classeur est refusé" do
+      expect {
+        post finance_coda_imports_path, params: { file: classeur("ecart") }
+      }.not_to change { CashEntry.count }
+
+      follow_redirect!
+      expect(response.body).to include("ne correspond à aucun solde")
+    end
+  end
 end
