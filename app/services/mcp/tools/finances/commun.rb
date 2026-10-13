@@ -85,6 +85,23 @@ module Mcp
           note || raise(Base::Error, "Aucune note de frais « #{texte} ».")
         end
 
+        # Une facture de vente par son #id, ou par son numéro (unique par entité :
+        # deux entités portant le même numéro, on refuse et on les liste).
+        def facture_vente!(reference)
+          texte = reference.to_s.strip
+          raise Base::Error, "Donne la facture de vente (#id ou numéro)." if texte.empty?
+
+          scope = SalesInvoice.includes(:customer, :legal_entity, sales_invoice_sources: :source)
+          return scope.find_by(id: texte.delete("#")) || raise(Base::Error, "Aucune facture de vente #{texte}.") if texte.start_with?("#")
+
+          trouvees = scope.where(number: texte).to_a
+          trouvees = scope.where(id: texte).to_a if trouvees.empty? && texte.match?(/\A\d+\z/)
+          return trouvees.first if trouvees.one?
+          raise Base::Error, "Aucune facture de vente « #{texte} »." if trouvees.empty?
+
+          raise Base::Error, "Plusieurs factures portent le numéro #{texte} : #{trouvees.map { |f| "##{f.id} (#{f.legal_entity&.name})" }.join(', ')}."
+        end
+
         # Le plan comptable : un code exact d'abord, sinon le nom.
         def compte_general!(reference)
           texte = reference.to_s.strip

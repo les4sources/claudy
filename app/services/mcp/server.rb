@@ -111,6 +111,14 @@ module Mcp
       Tools::Finances::CorrespondanceStripe,
       Tools::Finances::CoutEncaissement,
       Tools::Finances::JustificatifStripe,
+      Tools::Finances::BoiteCompta,
+      Tools::Finances::GesteMailCompta,
+      Tools::Finances::Tiers,
+      Tools::Finances::EnregistrerTiers,
+      Tools::Finances::ChargesFixes,
+      Tools::Finances::ChargeFixe,
+      Tools::Finances::FacturesVente,
+      Tools::Finances::FactureVente,
       Tools::Carte::Plantes,
       Tools::Carte::FichePlante,
       Tools::Carte::Especes,
@@ -180,6 +188,9 @@ module Mcp
       bancaires entrent par un fichier CODA : si l'utilisateur t'en confie un,
       passe son texte intégral à importer_coda. La caisse se compte billet par
       billet (compter_caisse) ; Stripe : comptes_stripe, cout_encaissement.
+      Les factures fournisseurs arrivent par mail (boite_compta) : on encode
+      une pièce avec enregistrer_facture_achat `piece_mail`. Les ventes
+      (factures émises dans OkiOki) : factures_vente, facture_vente.
 
       CARTE DU DOMAINE ET PLANTES. Les plantes nourricières (#id, n° de
       terrain) ont une espèce et une variété du catalogue local (especes) ;
