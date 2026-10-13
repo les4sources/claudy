@@ -113,13 +113,17 @@ nav.bg-4s-main.shadow-sm.lg:px-6.relative.z-40
           qu'un sourcier ouvre pour lire son compte ; « Comptabilité » est le
           métier de la trésorière. Les mélanger imposait quatorze onglets à qui
           n'en cherchait qu'un.
+          En ICÔNE SEULE depuis le 2026-10-13 (Michael) : elle ouvre le groupe des
+          icônes, juste après les libellés. Le livre reste le pictogramme, et le
+          `title` donne l'infobulle comme pour les autres icônes.
         li
           = link_to finance_accounting_path,
-                    class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{!@accounting_view.nil? ? nav_active : nav_idle}" do
-            svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+                    class: "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 #{!@accounting_view.nil? ? nav_active : 'text-white/50 hover:text-white hover:bg-white/10'}",
+                    title: "Comptabilité" do
+            svg.w-5.h-5[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
               path[d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"]
               path[d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"]
-            span Comptabilité
+            span.sr-only Comptabilité
 
         / Carte — la carte du domaine (epic #348). En ICÔNE et non en libellé : la
           barre a été allégée le 2026-09-20 parce que six libellés la faisaient
