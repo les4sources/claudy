@@ -259,6 +259,21 @@ RSpec.describe Finance::Treasury do
       expect(treasury.lowest_point.balance_cents).to eq(-50_000)
       expect(treasury.lowest_point.date).to eq(Date.new(2026, 10, 5))
     end
+
+    it "nomme les mouvements de chaque marche, pour le survol du graphique" do
+      facture(total: 150_000, due_on: Date.new(2026, 10, 5), number: "F-42")
+      RecurringExpense.create!(legal_entity: entity, label: "Voo", amount_cents: 6_776, frequency: "monthly",
+                               first_due_on: Date.new(2026, 10, 5))
+      sejour = stay(arrival: Date.new(2026, 10, 20), departure: Date.new(2026, 10, 22), total: 80_000)
+
+      steps = treasury.projection.index_by(&:date)
+      expect(steps[Date.new(2026, 10, 5)].movements.map { |m| [m.label, m.amount_cents] }).to contain_exactly(
+        ["Facture Antargaz · F-42", -150_000], # le libellé nomme déjà le fournisseur
+        ["Voo (charge fixe)", -6_776]
+      )
+      expect(steps[Date.new(2026, 10, 20)].movements.map(&:label)).to eq(["Séjour ##{sejour.id} — #{sejour.customer.name}"])
+      expect(steps[today].movements).to eq([])
+    end
   end
 
   it "ne trouve rien à lire sans fondation active" do

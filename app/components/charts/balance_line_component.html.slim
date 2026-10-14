@@ -3,8 +3,8 @@
     | Aucun solde à afficher : aucun compte de trésorerie n'est encore ancré sur un relevé ou un comptage.
 
 - else
-  .overflow-x-auto
-    svg role="img" aria-label=description viewBox="0 0 #{width} #{height}" preserveAspectRatio="xMinYMin meet" style="min-width: 560px; width: 100%; height: auto;"
+  .overflow-x-auto data-controller="balance-chart" data-balance-chart-points-value=hover_points.to_json
+    svg role="img" aria-label=description viewBox="0 0 #{width} #{height}" preserveAspectRatio="xMinYMin meet" style="min-width: 560px; width: 100%; height: auto;" data-balance-chart-target="svg" data-action="pointermove->balance-chart#track pointerleave->balance-chart#hide"
       title = title
       desc = description
       - grid_lines.each do |graduation|
@@ -23,10 +23,13 @@
       - if projection_path
         polyline points=projection_path fill="none" stroke=line_color stroke-width="2" stroke-dasharray="6 4" stroke-linejoin="round"
       - step_markers.each do |marker|
-        circle cx=marker[:x] cy=marker[:y] r="4" fill="white" stroke=line_color stroke-width="2"
-      - hover_points.each do |target|
-        circle cx=target[:x] cy=target[:y] r="9" fill="transparent" data-balance-point=""
-          title = target[:label]
+        circle cx=marker[:x] cy=marker[:y] r="3.5" fill="white" stroke=line_color stroke-width="2" data-balance-point=""
+      / Le repère du point survolé, déplacé par `balance-chart`.
+      g visibility="hidden" pointer-events="none" data-balance-chart-target="cursor"
+        line x1="0" y1="8" x2="0" y2=baseline stroke=line_color stroke-width="1" stroke-opacity="0.35" data-balance-chart-target="guide"
+        circle cx="0" cy="0" r="5.5" fill=line_color stroke="white" stroke-width="2" data-balance-chart-target="dot"
+      / Toute la surface du graphe capte la souris : le point visé est le plus proche en abscisse.
+      rect x=axis_width y="0" width=(width - axis_width) height=baseline fill="transparent"
   p.mt-2.flex.flex-wrap.gap-x-8.gap-y-2.text-xs.text-stone-500
     span.inline-flex.items-center.gap-2
       svg width="24" height="6" aria-hidden="true"
@@ -36,3 +39,4 @@
       svg width="24" height="6" aria-hidden="true"
         line x1="0" y1="3" x2="24" y2="3" stroke=line_color stroke-width="2" stroke-dasharray="6 4"
       | Projection
+    span.text-stone-400 Survoler la courbe : solde et mouvements de chaque jour.
