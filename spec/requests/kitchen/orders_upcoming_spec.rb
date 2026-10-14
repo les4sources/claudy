@@ -36,11 +36,11 @@ RSpec.describe "Cuisine — onglet Prochains services (epic #321, phase 3)", typ
       get kitchen_orders_path(view: :upcoming)
       body = response.body
 
-      expect(body).to include("order-#{accepte.id}")
-      expect(body).not_to include("order-#{en_attente.id}")
-      expect(body).not_to include("order-#{refuse.id}")
-      expect(body).not_to include("order-#{annule.id}")
-      expect(body).not_to include("order-#{sans_date.id}")
+      expect(body).to include("id=\"order-#{accepte.id}\"")
+      expect(body).not_to include("id=\"order-#{en_attente.id}\"")
+      expect(body).not_to include("id=\"order-#{refuse.id}\"")
+      expect(body).not_to include("id=\"order-#{annule.id}\"")
+      expect(body).not_to include("id=\"order-#{sans_date.id}\"")
     end
 
     it "laisse le passé dehors" do
@@ -48,8 +48,8 @@ RSpec.describe "Cuisine — onglet Prochains services (epic #321, phase 3)", typ
       aujourdhui = order(date: Date.current, validation: "accepted")
 
       get kitchen_orders_path(view: :upcoming)
-      expect(response.body).not_to include("order-#{passe.id}")
-      expect(response.body).to include("order-#{aujourdhui.id}")
+      expect(response.body).not_to include("id=\"order-#{passe.id}\"")
+      expect(response.body).to include("id=\"order-#{aujourdhui.id}\"")
     end
 
     it "trie par date croissante" do
@@ -57,7 +57,7 @@ RSpec.describe "Cuisine — onglet Prochains services (epic #321, phase 3)", typ
       tot  = order(date: Date.current + 2, validation: "accepted")
 
       get kitchen_orders_path(view: :upcoming)
-      expect(response.body.index("order-#{tot.id}")).to be < response.body.index("order-#{tard.id}")
+      expect(response.body.index("id=\"order-#{tot.id}\"")).to be < response.body.index("id=\"order-#{tard.id}\"")
     end
   end
 
@@ -97,7 +97,7 @@ RSpec.describe "Cuisine — onglet Prochains services (epic #321, phase 3)", typ
       en_attente = order(date: Date.current + 6, validation: "pending")
 
       get kitchen_orders_path(view: :all)
-      expect(response.body).to include("order-#{en_attente.id}")
+      expect(response.body).to include("id=\"order-#{en_attente.id}\"")
     end
   end
 end
