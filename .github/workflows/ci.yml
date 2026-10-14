@@ -79,8 +79,21 @@ jobs:
       - name: Construire les assets Vite
         run: bin/vite build
 
-      - name: Préparer la base de test
-        run: bin/rails db:test:prepare
+      # La suite tourne en parallèle sur les 4 cœurs du runner (parallel_tests) :
+      # une base par processus, claudy_test, claudy_test2… (config/database.yml).
+      - name: Préparer les bases de test
+        run: bundle exec rake parallel:create parallel:load_schema
+
+      # Les durées de la dernière exécution (tmp/parallel_runtime_rspec.log, écrit
+      # par le RuntimeLogger de .rspec_parallel) répartissent les fichiers en lots
+      # de durée égale. Sans elles (premier passage, cache expiré), parallel_tests
+      # répartit par taille de fichier : plus lent, jamais faux.
+      - name: Restaurer les durées des specs
+        uses: actions/cache@v4
+        with:
+          path: tmp/parallel_runtime_rspec.log
+          key: rspec-runtime-${{ github.run_id }}
+          restore-keys: rspec-runtime-
 
       - name: RSpec
-        run: bundle exec rspec
+        run: bundle exec parallel_rspec spec

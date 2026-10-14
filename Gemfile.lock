@@ -253,6 +253,9 @@ GEM
     paper_trail (17.0.0)
       activerecord (>= 7.1)
       request_store (~> 1.4)
+    parallel (2.3.0)
+    parallel_tests (5.8.0)
+      parallel
     pdf-reader (2.16.0)
       Ascii85 (>= 1.0, < 3.0, != 2.0.0)
       afm (>= 0.2.1, < 2)
@@ -477,6 +480,7 @@ DEPENDENCIES
   nio4r (>= 2.5.9)
   ostruct
   paper_trail
+  parallel_tests
   pdf-reader (~> 2.14)
   pg (~> 1.1)
   phonelib (~> 0.10.27)

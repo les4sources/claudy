@@ -74,4 +74,10 @@ Rails.application.configure do
 
   # Annotate rendered view with file names.
   # config.action_view.annotate_rendered_view_with_filenames = true
+
+  # Le journal de test (log/test.log) au niveau :debug coûtait environ 20 % du
+  # temps de la suite (chaque requête SQL formatée et écrite). On ne garde que
+  # les avertissements ; `RAILS_LOG_LEVEL=debug bundle exec rspec …` le rouvre
+  # le temps de déboguer une spec.
+  config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "warn")
 end

@@ -117,6 +117,9 @@ group :development, :test do
   gem "byebug"
   gem "debug", platforms: %i[ mri mingw x64_mingw ]
   gem "rspec-rails", "~> 8.0"
+  # La suite tourne sur tous les cœurs (`bundle exec parallel_rspec spec`, et la CI) : une
+  # base de test par processus, `claudy_test`, `claudy_test2`… (database.yml).
+  gem "parallel_tests"
 end
 
 group :development do
