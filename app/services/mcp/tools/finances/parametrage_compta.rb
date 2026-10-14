@@ -13,8 +13,8 @@ module Mcp
              title: "Plan comptable, entités, exercices",
              description: "Le paramétrage de la compta tel que l'écran le montre, désactivés compris : `comptes` (le " \
                           "plan, par classe ou recherche, avec nature, lettrable, actif), `entites` (forme, régime TVA, " \
-                          "n° de TVA, exercices, comptes de trésorerie, écritures), `exercices` (dates, statut, " \
-                          "écritures, par entité). Modifier : compte_general, entite_juridique, exercice.",
+                          "n° de TVA, exercices, comptes de trésorerie avec leur IBAN, écritures), `exercices` (dates, statut, " \
+                          "écritures, par entité). Modifier : compte_general, entite_juridique, compte_tresorerie, exercice.",
              schema: {
                properties: {
                  quoi: { type: "string", enum: QUOI },
@@ -53,11 +53,19 @@ module Mcp
 
         def entites
           ecritures = JournalEntry.group(:legal_entity_id).count
-          LegalEntity.ordered.includes(:fiscal_years, :cash_accounts).map do |e|
+          LegalEntity.ordered.includes(:fiscal_years, cash_accounts: :general_account).map do |e|
             "##{e.id} #{e.name} · #{e.form_label} · TVA #{e.vat_regime_label.downcase}#{" n° #{e.vat_number}" if e.vat_number.present?}" \
               "#{' · INACTIVE' unless e.active?} · exercices #{e.fiscal_years.sort_by(&:starts_on).map { |y| "#{y.label}#{' (clôturé)' if y.closed?}" }.join(', ').presence || 'aucun'} · " \
-              "#{e.cash_accounts.size} compte(s) de trésorerie · #{ecritures[e.id].to_i} écriture(s)"
+              "#{e.cash_accounts.size} compte(s) de trésorerie · #{ecritures[e.id].to_i} écriture(s)" +
+              e.cash_accounts.sort_by(&:name).map { |c| "\n  #{ligne_tresorerie(c)}" }.join
           end.join("\n").presence || "Aucune entité."
+        end
+
+        # L'IBAN est ce qui relie un relevé au compte : il se lit ici, il se
+        # corrige avec compte_tresorerie.
+        def ligne_tresorerie(c)
+          "Compte de trésorerie ##{c.id} #{c.name} · #{c.kind_label} · IBAN #{c.iban.presence || 'aucun'} · " \
+            "#{c.general_account}#{' · INACTIF' unless c.active?}"
         end
 
         def exercices(arguments)

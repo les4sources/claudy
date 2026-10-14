@@ -176,7 +176,7 @@ module Coda
       if manquants.any?
         raise Rejected,
               "Aucun compte de trésorerie ne porte le numéro de compte #{manquants.uniq.join(', ')}. " \
-              "Crée-le dans Comptabilité > Entités avant de réimporter — un import ne crée pas de compte."
+              "Ajoute cet IBAN au bon compte de trésorerie (connecteur Claude, outil compte_tresorerie) avant de réimporter — un import ne crée pas de compte."
       end
 
       if ambigus.any?

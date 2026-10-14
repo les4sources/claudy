@@ -128,7 +128,7 @@ module Beobank
       if candidats.empty?
         raise Rejected,
               "Aucun compte de trésorerie ne porte l'IBAN #{statement.iban}. " \
-              "Crée-le dans Comptabilité > Entités avant de réimporter — un import ne crée pas de compte."
+              "Ajoute cet IBAN au bon compte de trésorerie (connecteur Claude, outil compte_tresorerie) avant de réimporter — un import ne crée pas de compte."
       end
       if candidats.size > 1
         raise Rejected,
