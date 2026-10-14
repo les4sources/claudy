@@ -53,19 +53,34 @@ module Finance
     end
 
     def process(charge, account, report)
+      # Un foyer déjà facturé à la main ce mois-là (reprise, rattrapage) n'est
+      # pas un foyer oublié : sa ligne couvre déjà la charge, et générer
+      # par-dessus doublerait la facture.
+      if by_hand?(account)
+        return report.skipped << { charge: charge, account: account, cause: :by_hand,
+                                   reason: "#{account.name} : déjà facturé à la main ce mois-là" }
+      end
+
       unit = charge.unit_amount_cents_on(@month)
       if unit.nil?
-        return report.skipped << { charge: charge, account: account,
+        return report.skipped << { charge: charge, account: account, cause: :rate,
                                    reason: "barème « #{charge.rate_key} » non résolu au #{@month}" }
       end
 
       multiplier = charge.multiplier_on(@month, account)
       if multiplier.zero?
-        return report.skipped << { charge: charge, account: account,
+        return report.skipped << { charge: charge, account: account, cause: :nobody,
                                    reason: "aucune personne à compter sur ce mois (#{charge.basis_label.downcase})" }
       end
 
       lines_for(charge, unit, multiplier).each { |line| write(charge, account, line, report) }
+    end
+
+    def by_hand?(account)
+      @by_hand ||= AccountEntry.monthly_lump_by_hand
+                               .where(entry_date: @month..@month.end_of_month)
+                               .distinct.pluck(:member_account_id).to_set
+      @by_hand.include?(account.id)
     end
 
     # Une ou deux lignes selon que la part scindée résout encore quelque chose.

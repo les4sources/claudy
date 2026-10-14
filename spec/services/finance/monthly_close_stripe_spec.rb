@@ -63,6 +63,45 @@ RSpec.describe Finance::MonthlyClose, "son étape Stripe" do
     expect(step).to be_done
   end
 
+  # Le contrôle des versements ne voit que ce qui a été importé : un compte
+  # jamais synchronisé passait au vert alors que ses versements arrivaient en
+  # banque.
+  describe "un virement Stripe arrivé en banque" do
+    let!(:stripe_account) do
+      CashAccount.create!(name: "Stripe Tranches de Vie", kind: "stripe", legal_entity: entity,
+                          general_account: stripe_general, stripe_account_key: "tranche_de_vie")
+    end
+    let(:bank) do
+      CashAccount.create!(name: "Triodos", kind: "bank", legal_entity: entity,
+                          general_account: build_general_account(code: "550000", name: "Banque"))
+    end
+
+    def bank_line
+      CashEntry.create!(cash_account: bank, entry_date: Date.new(2026, 6, 14), amount_cents: 100_000,
+                        label: "STRIPE — TRANCHESDEVIEJUIN", counterparty_name: "STRIPE")
+    end
+
+    it "bloque quand aucun versement synchronisé ne lui correspond" do
+      bank_line
+
+      expect(step).to be_blocking
+      expect(step.detail).to include("sans versement synchronisé")
+      expect(step.action_path).to eq(:stripe)
+    end
+
+    it "ne bloque plus une fois le versement synchronisé" do
+      bank_line
+      payout = StripePayout.create!(account_key: "tranche_de_vie", cash_account: stripe_account, stripe_id: "po_tdv",
+                                    amount_cents: 100_000, arrival_date: Date.new(2026, 6, 13), automatic: false)
+      StripeBalanceTransaction.create!(stripe_payout: payout, cash_account: stripe_account,
+                                       account_key: "tranche_de_vie", stripe_id: "txn_tdv", kind: "charge",
+                                       gross_cents: 100_000, fee_cents: 0, net_cents: 100_000,
+                                       occurred_at: Time.zone.local(2026, 6, 12))
+
+      expect(step).to be_done
+    end
+  end
+
   it "reste sur le contrôle par versement pour un compte en mode par versement" do
     account = CashAccount.create!(name: "Stripe Claudy", kind: "stripe", legal_entity: entity,
                                   general_account: stripe_general, stripe_account_key: "claudy")

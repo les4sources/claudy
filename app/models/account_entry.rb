@@ -135,6 +135,14 @@ class AccountEntry < ApplicationRecord
   scope :recent_first, -> { order(entry_date: :desc, id: :desc) }
   scope :chronological, -> { order(entry_date: :asc, id: :asc) }
 
+  # Le forfait mensuel d'un foyer posé À LA MAIN : la reprise de l'historique,
+  # puis le rattrapage de septembre 2026. Une seule ligne « Charges habitants »
+  # par mois, qui englobe charges, cagnotte et balançoire — vérifié au centime
+  # sur quatre foyers sur cinq le 2026-10-14. Le générateur de charges et
+  # l'arrêté du mois la tiennent pour la facture du mois : générer par-dessus
+  # facturerait deux fois.
+  scope :monthly_lump_by_hand, -> { where(kind: "recurring", source: "reprise") }
+
   def locked? = account_statement_id.present? || locked_at.present?
 
   def flow_label = FLOW_LABELS.fetch(flow, flow)

@@ -88,30 +88,58 @@ module Finance
 
     # 3 — les charges récurrentes du mois. C'est l'étape qui a manqué pendant
     # cinq mois pour la cagnotte.
+    #
+    # La question est posée au générateur lui-même, à blanc : ce qu'il
+    # créerait, c'est ce qui manque. Une seule définition de « généré », donc —
+    # compte par compte pour une règle qui vise un groupe de foyers (un seul
+    # foyer facturé ne suffit pas à couvrir les autres), et un foyer déjà
+    # facturé à la main ce mois-là compte pour facturé.
     def recurring_charges_step
-      attendues = RecurringCharge.active_on(@month).to_a
-      manquantes = attendues.reject { |charge| charge_generated?(charge) }
-
-      if attendues.empty?
-        Step.new(key: :recurring, title: "Les charges récurrentes sont générées", status: :warning,
-                 detail: "Aucune charge récurrente active sur le mois — c'est peut-être normal, vérifie.",
-                 action_label: "Voir les charges", action_path: :recurring)
-      elsif manquantes.empty?
-        Step.new(key: :recurring, title: "Les charges récurrentes sont générées", status: :done,
-                 detail: "#{attendues.size} charge(s) récurrente(s) générée(s).")
-      else
-        Step.new(key: :recurring, title: "Les charges récurrentes sont générées", status: :todo,
-                 detail: "#{manquantes.size} charge(s) pas encore générée(s) : " \
-                         "#{manquantes.map(&:label).join(', ')}.",
-                 action_label: "Les générer", action_path: :recurring)
+      if RecurringCharge.active_on(@month).none?
+        return Step.new(key: :recurring, title: "Les charges récurrentes sont générées", status: :warning,
+                        detail: "Aucune charge récurrente active sur le mois — c'est peut-être normal, vérifie.",
+                        action_label: "Voir les charges", action_path: :recurring)
       end
+
+      rapport = Finance::GenerateRecurringCharges.new(month: @month, dry_run: true).run!
+      baremes = rapport.skipped.select { |ligne| ligne[:cause] == :rate }
+
+      if rapport.created.any?
+        charges = rapport.created.map { |ligne| ligne[:charge].label }.uniq
+        comptes = rapport.created.map { |ligne| ligne[:account].id }.uniq.size
+        Step.new(key: :recurring, title: "Les charges récurrentes sont générées", status: :todo,
+                 detail: "#{rapport.created.size} écriture(s) à générer pour #{money(rapport.total_cents)} " \
+                         "sur #{comptes} compte(s) : #{charges.join(', ')}.",
+                 action_label: "Les générer", action_path: :recurring)
+      elsif baremes.any?
+        Step.new(key: :recurring, title: "Les charges récurrentes sont générées", status: :todo,
+                 detail: "Barème non résolu pour #{baremes.map { |ligne| ligne[:charge].label }.uniq.join(', ')} : " \
+                         "rien n'a pu être généré.",
+                 action_label: "Voir les charges", action_path: :recurring)
+      else
+        Step.new(key: :recurring, title: "Les charges récurrentes sont générées", status: :done,
+                 detail: recurring_done_detail(rapport))
+      end
+    end
+
+    def recurring_done_detail(rapport)
+      a_la_main = rapport.skipped.select { |ligne| ligne[:cause] == :by_hand }.map { |ligne| ligne[:account].id }.uniq
+      parts = []
+      parts << "#{rapport.existing.size} écriture(s) générée(s)" if rapport.existing.any?
+      parts << "#{a_la_main.size} foyer(s) facturé(s) à la main ce mois-là" if a_la_main.any?
+
+      parts.any? ? "Tout est facturé : #{parts.join(', ')}." : "Rien à facturer ce mois-ci."
     end
 
     # 4 — un décompte par compte qui doit quelque chose.
     def statements_issued_step
       emis = AccountStatement.for_month(@month).pluck(:member_account_id)
-      manquants = MemberAccount.actives.reject do |compte|
-        emis.include?(compte.id) || compte.balance_cents.zero?
+      # Le solde À LA FIN DU MOIS, pas celui d'aujourd'hui : sinon une dette
+      # d'octobre réclame un décompte en juillet, et un compte soldé depuis
+      # disparaît d'un mois où il devait bel et bien quelque chose.
+      mouvements = AccountEntry.where(entry_date: ..@to).group(:member_account_id).sum(:amount_cents)
+      manquants = MemberAccount.actives.ordered.reject do |compte|
+        emis.include?(compte.id) || (compte.opening_balance_cents + mouvements.fetch(compte.id, 0)).zero?
       end
 
       if manquants.empty?
@@ -190,6 +218,12 @@ module Finance
                          "#{money(en_attente.sum(:amount_cents))}. Une catégorie sans correspondance " \
                          "laisse sa recette ici.",
                  action_label: "Les affecter", action_path: :stripe_unallocated)
+      elsif (orphelins = unsynced_stripe_credits).any?
+        Step.new(key: :stripe, title: "Les flux Stripe du mois sont rangés", status: :todo,
+                 detail: "#{orphelins.size} virement(s) Stripe reçu(s) en banque sur le mois, pour " \
+                         "#{money(orphelins.sum(&:amount_cents))}, sans versement synchronisé en face. " \
+                         "Lance la synchronisation du compte Stripe concerné.",
+                 action_label: "Voir les comptes Stripe", action_path: :stripe)
       elsif unbalanced_payouts?
         Step.new(key: :stripe, title: "Les flux Stripe du mois sont rangés", status: :todo,
                  detail: "Des versements Stripe du mois ne se referment pas : il manque des transactions.",
@@ -236,10 +270,19 @@ module Finance
       end
     end
 
-    def charge_generated?(charge)
-      AccountEntry.unscoped
-                  .where("idempotency_key LIKE ?", "recurring:#{charge.id}:#{@month.strftime('%Y-%m')}%")
-                  .exists?
+    # Un versement Stripe arrivé en banque sans son pendant synchronisé. Le
+    # contrôle des versements ne peut pas le voir : il ne regarde que ce qui a
+    # été importé, si bien qu'un compte jamais synchronisé passait au vert.
+    # Même critère que le rapprochement (montant exact, date à trois jours) :
+    # une ligne qu'aucun versement importé ne peut éteindre est un trou.
+    def unsynced_stripe_credits
+      rapprochement = Finance::MatchStripePayouts.new
+      CashEntry.pending.in_period(@from, @to)
+               .joins(:cash_account).where(cash_accounts: { kind: "bank" })
+               .where("cash_entries.amount_cents > 0")
+               .where("cash_entries.counterparty_name ILIKE :motif OR cash_entries.label ILIKE :motif",
+                      motif: "%stripe%")
+               .select { |entry| rapprochement.for_entry(entry).empty? }
     end
 
     # Les trois contrôles se font en AGRÉGAT, pas objet par objet. Une requête
