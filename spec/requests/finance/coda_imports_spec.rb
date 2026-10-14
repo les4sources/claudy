@@ -52,7 +52,7 @@ RSpec.describe "Finances > Import CODA", type: :request do
     }.not_to change { CashEntry.count }
 
     follow_redirect!
-    expect(response.body).to include("BE77068011111111").and include("Crée-le")
+    expect(response.body).to include("BE77068011111111").and include("compte_tresorerie")
   end
 
   it "refuse un dépôt sans fichier plutôt que de planter" do

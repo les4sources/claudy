@@ -204,7 +204,7 @@ RSpec.describe Coda::Import do
 
       expect {
         import("nominal")
-      }.to raise_error(described_class::Rejected, /Crée-le/)
+      }.to raise_error(described_class::Rejected, /compte_tresorerie/)
     end
   end
 
