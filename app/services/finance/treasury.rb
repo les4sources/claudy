@@ -40,7 +40,14 @@ module Finance
       def anchored? = anchor.present?
     end
 
-    Point = Struct.new(:date, :balance_cents, :projected, keyword_init: true)
+    # Un point de la courbe. Un point projeté porte les mouvements de son jour
+    # (`movements`) : c'est ce que le graphique montre au survol.
+    Point = Struct.new(:date, :balance_cents, :projected, :movements, keyword_init: true) do
+      def movements = self[:movements] || []
+    end
+
+    # Un mouvement attendu, signé : positif s'il rentre, négatif s'il sort.
+    Movement = Struct.new(:date, :label, :amount_cents, keyword_init: true)
 
     Receivable = Struct.new(:stay, :due_on, :amount_cents, keyword_init: true)
 
@@ -178,21 +185,21 @@ module Finance
     # l'horizon : la courbe est une suite de marches, pas une pente.
     def projection
       @projection ||= begin
-        running = balance_cents
-        by_day = projected_movements.group_by(&:first).transform_values { |pairs| pairs.sum(&:last) }
-        points = [Point.new(date: @today, balance_cents: running + by_day.delete(@today).to_i, projected: true)]
-        running = points.first.balance_cents
-        by_day.sort.each do |date, cents|
-          running += cents
-          points << Point.new(date: date, balance_cents: running, projected: true)
+        by_day = projected_movements.group_by(&:date)
+        today_moves = by_day.delete(@today).to_a
+        running = balance_cents + today_moves.sum(&:amount_cents)
+        points = [Point.new(date: @today, balance_cents: running, projected: true, movements: today_moves)]
+        by_day.sort.each do |date, moves|
+          running += moves.sum(&:amount_cents)
+          points << Point.new(date: date, balance_cents: running, projected: true, movements: moves)
         end
         points << Point.new(date: horizon_end, balance_cents: running, projected: true) unless points.last.date == horizon_end
         points
       end
     end
 
-    def incoming_cents = projected_movements.sum { |_, cents| cents.positive? ? cents : 0 }
-    def outgoing_cents = projected_movements.sum { |_, cents| cents.negative? ? -cents : 0 }
+    def incoming_cents = projected_movements.sum { |move| move.amount_cents.positive? ? move.amount_cents : 0 }
+    def outgoing_cents = projected_movements.sum { |move| move.amount_cents.negative? ? -move.amount_cents : 0 }
 
     # Le point bas part du solde AVANT les mouvements du jour : un séjour qui
     # arrive aujourd'hui ne doit pas afficher un « point bas » au-dessus du
@@ -291,11 +298,33 @@ module Finance
       end
     end
 
-    # [[date, centimes signés]] des mouvements attendus dans l'horizon.
+    # Les mouvements attendus dans l'horizon, signés et nommés.
     def projected_movements
       @projected_movements ||=
-        upcoming_receivables.select { |r| r.due_on <= horizon_end }.map { |r| [r.due_on, r.amount_cents] } +
-        outflows.select { |o| o.due_on <= horizon_end }.map { |o| [o.due_on, -o.amount_cents] }
+        upcoming_receivables.select { |r| r.due_on <= horizon_end }
+                            .map { |r| Movement.new(date: r.due_on, label: receivable_label(r), amount_cents: r.amount_cents) } +
+        outflows.select { |o| o.due_on <= horizon_end }
+                .map { |o| Movement.new(date: o.due_on, label: outflow_label(o), amount_cents: -o.amount_cents) }
+    end
+
+    def receivable_label(receivable)
+      ["Séjour ##{receivable.stay.id}", receivable.stay.customer&.name].compact_blank.join(" — ")
+    end
+
+    # Le libellé de la file « À payer », avec son bénéficiaire quand il ne le
+    # nomme pas déjà ; « charge fixe » ou le genre de la dette sinon, pour
+    # qu'une estimation ne passe pas pour une facture.
+    def outflow_label(outflow)
+      if outflow.recurring?
+        "#{outflow.recurring_expense.label} (charge fixe)"
+      elsif outflow.liability?
+        "#{outflow.liability.label} (#{outflow.liability.kind_label.downcase})"
+      else
+        payable = outflow.payable
+        beneficiary = payable.payable_beneficiary.presence
+        label = payable.payable_label
+        beneficiary.nil? || label.include?(beneficiary) ? label : "#{label} — #{beneficiary}"
+      end
     end
 
     def payable_queue = @payable_queue ||= Finance::PayableQueue.new
