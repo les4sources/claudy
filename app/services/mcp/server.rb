@@ -140,6 +140,7 @@ module Mcp
       Tools::Finances::ParametrageCompta,
       Tools::Finances::CompteGeneral,
       Tools::Finances::EntiteJuridique,
+      Tools::Finances::CompteTresorerie,
       Tools::Finances::Exercice,
       Tools::Carte::Plantes,
       Tools::Carte::FichePlante,
