@@ -83,6 +83,17 @@ RSpec.describe Finance::MatchStripePayouts do
     expect(described_class.new.for_entry(ligne)).to be_empty
   end
 
+  # En grand livre, la moitié Stripe du virement porte le versement dès
+  # l'import : ce n'est pas un rapprochement, la ligne bancaire attend toujours.
+  it "propose un versement dont seule la moitié Stripe est posée" do
+    po = versement
+    cote_stripe = ligne(amount_cents: -126_900, account: stripe)
+    cote_stripe.cash_allocations.create!(general_account: transferts, legal_entity: entity,
+                                         document: po, amount_cents: -126_900)
+
+    expect(described_class.new.for_entry(ligne).map(&:payout)).to eq([po])
+  end
+
   it "n'écrit AUCUNE allocation" do
     versement
 
