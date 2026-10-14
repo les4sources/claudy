@@ -62,9 +62,11 @@ module Finance
     end
 
     # Un versement déjà rapproché ne se propose plus : le proposer une seconde
-    # fois, c'est inviter à l'affecter deux fois.
+    # fois, c'est inviter à l'affecter deux fois. Seul le côté banque compte :
+    # le côté Stripe d'un versement en grand livre le porte dès l'import.
     def rapproche?(payout)
-      @rapproches ||= CashAllocation.where(document_type: "StripePayout").distinct.pluck(:document_id).to_set
+      @rapproches ||= CashAllocation.outside_stripe.where(document_type: "StripePayout")
+                                    .distinct.pluck(:document_id).to_set
 
       @rapproches.include?(payout.id)
     end

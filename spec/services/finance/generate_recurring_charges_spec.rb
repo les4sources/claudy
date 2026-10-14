@@ -267,4 +267,33 @@ RSpec.describe Finance::GenerateRecurringCharges do
 
     expect(AccountEntry.last.source).to eq("recurring")
   end
+
+  # La ligne « Charges habitants » de la reprise englobe déjà charges, cagnotte
+  # et balançoire : générer par-dessus facturerait deux fois le même mois.
+  describe "foyer déjà facturé à la main" do
+    let!(:charge) do
+      RecurringCharge.create!(member_account: account, label: "Forfait dôme", basis: "flat",
+                              amount_cents: 5000, starts_on: Date.new(2023, 1, 1))
+    end
+
+    def bill_by_hand(month)
+      account.account_entries.create!(entry_date: month.end_of_month, amount_cents: 34_500, label: "Charges habitants",
+                                      kind: "recurring", flow: "charges", source: "reprise")
+    end
+
+    it "ne génère rien pour un foyer facturé à la main ce mois-là, et le dit" do
+      bill_by_hand(Date.new(2026, 8, 1))
+
+      report = nil
+      expect { report = described_class.new(month: "2026-08").run! }.not_to change(AccountEntry, :count)
+      expect(report.skipped.map { |l| l[:cause] }).to eq([:by_hand])
+      expect(report.skipped.first[:reason]).to include("à la main")
+    end
+
+    it "génère normalement le mois suivant, que personne n'a facturé" do
+      bill_by_hand(Date.new(2026, 8, 1))
+
+      expect { described_class.new(month: "2026-09").run! }.to change(AccountEntry, :count).by(1)
+    end
+  end
 end

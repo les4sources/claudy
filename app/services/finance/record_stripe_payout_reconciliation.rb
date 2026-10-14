@@ -34,7 +34,9 @@ module Finance
     def reconcile
       raise WrongDirection, "Un versement Stripe arrive sur une ligne ENTRANTE." unless @entry.amount_cents.positive?
 
-      if CashAllocation.where(document: @payout).exists?
+      # Le côté Stripe d'un versement en grand livre le porte déjà en document :
+      # seul un rapprochement côté banque en fait un doublon.
+      if CashAllocation.outside_stripe.where(document: @payout).exists?
         raise AlreadyReconciled, "Ce versement est déjà rapproché d'une ligne de trésorerie."
       end
 

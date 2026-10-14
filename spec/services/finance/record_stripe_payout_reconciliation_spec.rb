@@ -109,5 +109,19 @@ RSpec.describe Finance::RecordStripePayoutReconciliation do
       expect { described_class.new(stripe_payout: po, cash_entry: ligne).run! }
         .to raise_error(described_class::AlreadyReconciled)
     end
+
+    # La moitié Stripe du virement, posée à l'import en grand livre, porte déjà
+    # le versement en document. Ce n'est pas un rapprochement : la refuser
+    # rendait toute ligne bancaire de ce compte impossible à rapprocher.
+    it "accepte un versement dont seule la moitié Stripe est posée" do
+      po = versement(compte)
+      cote_stripe = build_cash_entry(compte, amount_cents: -126_900, entry_date: Date.new(2026, 6, 15),
+                                             label: "Versement Stripe po_1")
+      cote_stripe.cash_allocations.create!(general_account: transferts, legal_entity: entity,
+                                           document: po, amount_cents: -126_900)
+
+      expect { described_class.new(stripe_payout: po, cash_entry: ligne).run! }
+        .to change(CashAllocation, :count).by(1)
+    end
   end
 end

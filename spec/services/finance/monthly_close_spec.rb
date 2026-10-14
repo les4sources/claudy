@@ -44,6 +44,60 @@ RSpec.describe Finance::MonthlyClose do
     expect(step(:statements).detail).to include("Chevêche")
   end
 
+  # Le solde qui compte est celui de la fin du mois arrêté. Le solde
+  # d'aujourd'hui faisait réclamer en juillet un décompte pour une dette
+  # d'octobre, et taisait un compte soldé depuis.
+  describe "le solde regardé pour les décomptes" do
+    it "ignore une dette née après le mois" do
+      account.account_entries.create!(entry_date: Date.new(2026, 10, 3), amount_cents: 12_000, label: "Bar")
+
+      expect(step(:statements)).to be_done
+    end
+
+    it "réclame le décompte d'un compte qui devait à la fin du mois, même soldé depuis" do
+      account.account_entries.create!(entry_date: Date.new(2026, 8, 15), amount_cents: 12_000, label: "Bar")
+      account.account_entries.create!(entry_date: Date.new(2026, 9, 10), amount_cents: -12_000, label: "Règlement")
+
+      expect(step(:statements)).to be_blocking
+      expect(step(:statements).detail).to include("Chevêche")
+    end
+  end
+
+  describe "les charges récurrentes" do
+    let(:other_household) { Household.create!(name: "Hulotte", kind: "resident", moved_in_on: Date.new(2023, 1, 1)) }
+    let!(:other_account) { MemberAccount.create!(kind: "household", household: other_household, name: "Hulotte") }
+    let!(:charge) do
+      RecurringCharge.create!(applies_to: "resident_households", label: "Forfait commun", basis: "flat",
+                              amount_cents: 5_000, flow: "charges", starts_on: Date.new(2026, 1, 1))
+    end
+
+    it "bloque tant qu'un foyer visé n'a pas sa ligne, même si un autre l'a" do
+      Finance::GenerateRecurringCharges.new(month: month).run!
+      AccountEntry.find_by(member_account: other_account).destroy!
+
+      expect(step(:recurring)).to be_blocking
+      expect(step(:recurring).detail).to include("1 compte(s)")
+    end
+
+    it "passe au vert quand chaque foyer a sa ligne" do
+      Finance::GenerateRecurringCharges.new(month: month).run!
+
+      expect(step(:recurring)).to be_done
+    end
+
+    # La reprise et le rattrapage de septembre 2026 ont posé une ligne
+    # « Charges habitants » par foyer et par mois : ce mois-là est facturé.
+    it "tient un foyer facturé à la main pour facturé" do
+      [account, other_account].each do |compte|
+        compte.account_entries.create!(entry_date: month.end_of_month, amount_cents: 28_000, label: "Charges habitants",
+                                       kind: "recurring", flow: "charges", source: "reprise")
+      end
+
+      expect(step(:recurring)).to be_done
+      expect(step(:recurring).detail).to include("2 foyer(s) facturé(s) à la main")
+    end
+  end
+
   # Le trou par lequel deux mois de bar sont restés impayés : le décompte
   # existait, il n'était simplement jamais parti.
   it "distingue « émis » de « envoyé »" do

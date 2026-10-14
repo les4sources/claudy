@@ -82,6 +82,12 @@ class CashAllocation < ApplicationRecord
 
   scope :ordered, -> { order(:id) }
 
+  # Les affectations qui ne sont PAS sur un compte Stripe. En mode grand livre,
+  # la moitié Stripe d'un versement porte déjà le versement en document (sur
+  # 580000) : la compter comme un rapprochement rendait chaque versement « déjà
+  # rapproché » dès l'import, et sa ligne bancaire impossible à rapprocher.
+  scope :outside_stripe, -> { joins(cash_entry: :cash_account).where.not(cash_accounts: { kind: "stripe" }) }
+
   private
 
   # Quatre dettes se rapprochent aujourd'hui : la facture d'achat (epic #240), la
