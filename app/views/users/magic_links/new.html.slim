@@ -34,6 +34,12 @@
               = t("users.magic_link.submit")
         .mt-6.text-sm.leading-6.text-center
           = link_to t("users.magic_link.back_to_password"), new_user_session_path, class: "font-semibold text-indigo-600 hover:text-indigo-500"
+        / Les artisans du dépôt-vente n'ont pas de compte Claudy : leur porte est
+          l'espace artisan du portail, par code. Ils arrivaient ici par erreur.
+        .mt-8.rounded-md.bg-gray-50.p-4.text-sm.leading-6.text-gray-600
+          = t("users.magic_link.consignor_hint")
+          = " "
+          = link_to t("users.magic_link.consignor_link"), portal_path(context: "consignor"), class: "font-semibold text-indigo-600 hover:text-indigo-500"
   .relative.hidden.w-0.flex-1.lg:block
     = vite_image_tag "images/les-4-sources-bar-crepuscule.jpg",
                      class: "absolute inset-0 h-full w-full object-cover",

@@ -296,6 +296,8 @@ fr:
       sent_body: Si un compte existe avec cette adresse, un lien de connexion vient d'être envoyé. Il est valable %{minutes} minutes et ne fonctionne qu'une fois.
       sent_hint: Rien reçu après quelques minutes ? Vérifiez vos indésirables, ou demandez-en un nouveau.
       invalid: Ce lien de connexion n'est plus valide. Demandez-en un nouveau.
+      consignor_hint: Artisan de l'épicerie ?
+      consignor_link: Votre espace artisan est ici.
   support:
     array:
       last_word_connector: " et "

@@ -14,7 +14,7 @@ module Users
   # ANTI-ÉNUMÉRATION. Le `POST` répond RIGOUREUSEMENT la même chose que
   # l'adresse existe ou non : même redirection, même message, même statut. C'est
   # la seule façon de ne pas transformer ce formulaire en annuaire des comptes.
-  # Toute la logique tient donc dans un `if` sans `else`.
+  # Ce qui varie selon l'adresse, c'est seulement le mail qui part (ou non).
   class MagicLinksController < ApplicationController
     # Le gabarit des écrans Devise : pas de barre de navigation, pas de pied de
     # page « Me déconnecter ». Sans lui, Rails retomberait sur `application` et
@@ -30,9 +30,17 @@ module Users
       email = params[:email].to_s.strip.downcase
       user = User.find_by(email: email)
 
-      if eligible?(user) && !UserLoginLink.throttled?(user)
-        link, token = UserLoginLink.issue!(user)
-        UserMailer.magic_link(user: user, token: token, expires_at: link.expires_at).deliver_later
+      if eligible?(user)
+        unless UserLoginLink.throttled?(user)
+          link, token = UserLoginLink.issue!(user)
+          UserMailer.magic_link(user: user, token: token, expires_at: link.expires_at).deliver_later
+        end
+      elsif user.nil? && (consignor = Consignor.for_portal_email(email)) && !artisan_door_throttled?(email)
+        # Un artisan du dépôt-vente n'a pas de compte Claudy : son espace est
+        # sur le portail, par code. Taper son adresse ici ne lui envoyait RIEN,
+        # et rien ne le lui disait (anti-énumération oblige). On lui écrit donc
+        # où est sa porte. La réponse HTTP, elle, ne change pas d'un octet.
+        PortalMailer.consignor_door(email: consignor.email).deliver_later
       end
 
       # PRG : l'adresse saisie ne transite pas dans l'URL, et un rafraîchissement
@@ -75,6 +83,14 @@ module Users
     # sur ce qu'il a trouvé.
     def refuse
       redirect_to new_user_magic_link_path, alert: t("users.magic_link.invalid")
+    end
+
+    # Même plafond que les codes du portail : pas plus de quelques mails par
+    # heure vers une même adresse, sinon ce formulaire servirait à en bombarder.
+    def artisan_door_throttled?(email)
+      key = "magic-link:artisan-door:#{Digest::SHA256.hexdigest(email)}"
+      count = Rails.cache.increment(key, 1, expires_in: 1.hour) || 0
+      count > PortalOtp::MAX_ISSUES_PER_HOUR
     end
 
     def redirect_if_signed_in

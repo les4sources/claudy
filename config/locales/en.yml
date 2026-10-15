@@ -72,3 +72,5 @@ en:
       sent_body: If an account exists with this address, a sign-in link has just been sent. It is valid for %{minutes} minutes and works only once.
       sent_hint: Nothing after a few minutes? Check your spam folder, or request a new one.
       invalid: This sign-in link is no longer valid. Please request a new one.
+      consignor_hint: Selling at the grocery as an artisan?
+      consignor_link: Your artisan space is here.

@@ -26,4 +26,18 @@ RSpec.describe PortalMailer, type: :mailer do
     expect(body).not_to match(/séjour/i)
     expect(body).not_to include("Ana")
   end
+
+  describe "#consignor_door" do
+    let(:mail) { described_class.consignor_door(email: "emilie@example.com") }
+
+    it "montre à l'artisan son espace, adresse déjà remplie" do
+      expect(mail.to).to eq(["emilie@example.com"])
+      expect(mail.subject).to eq("Votre espace artisan — Les 4 Sources")
+      [mail.html_part, mail.text_part].each do |part|
+        body = part.body.decoded
+        expect(body).to include("/portail?context=consignor&amp;email=emilie%40example.com").or include("/portail?context=consignor&email=emilie%40example.com")
+        expect(body).to include("Ouvrir mon espace artisan")
+      end
+    end
+  end
 end
