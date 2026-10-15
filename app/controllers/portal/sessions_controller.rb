@@ -63,10 +63,18 @@ module Portal
         return sign_in_consignor(email, params[:code], context)
       end
 
-      if PortalOtp.verify(email, params[:code]) && (customer = customer_for(email, context))
+      verified = PortalOtp.verify(email, params[:code])
+
+      if verified && (customer = customer_for(email, context))
         sign_in_portal(customer)
         session.delete(:portal_otp_context)
         redirect_to(context == "coworking" ? portal_coworking_path : portal_stays_path)
+      elsif verified && context == "stays" && (consignor = Consignor.for_portal_email(email))
+        # L'artisan arrivé par la porte « séjours » (le simple /portail) : il
+        # n'y est pas client, son code l'emmène donc dans son espace artisan.
+        sign_in_portal_consignor(consignor)
+        session.delete(:portal_otp_context)
+        redirect_to portal_consignments_path
       else
         @email = email
         @context = context
@@ -104,12 +112,17 @@ module Portal
       render :verify, status: :unprocessable_entity
     end
 
-    # Peut-on émettre un code ? En « stays », uniquement pour un client réel.
+    # Peut-on émettre un code ? En « stays », pour un client réel ou un artisan.
     # En « consignor », uniquement pour un artisan dont l'espace est ouvert.
     # En « coworking », pour toute adresse valide non fourre-tout (le compte sera
     # créé à la connexion).
     def otp_eligible?(email, context)
-      return deliverable_customer(email).present? if context == "stays"
+      # En « stays », un artisan ouvert reçoit aussi son code : beaucoup
+      # arrivent par /portail sans cliquer « Je suis artisan », et repartaient
+      # sans rien recevoir (Émilie, 2026-10-15).
+      if context == "stays"
+        return deliverable_customer(email).present? || Consignor.for_portal_email(email).present?
+      end
       return Consignor.for_portal_email(email).present? if context == "consignor"
 
       Customer.exploitable_email?(email) && !catch_all_email?(email)

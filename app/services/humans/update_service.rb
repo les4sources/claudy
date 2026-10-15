@@ -25,14 +25,20 @@ module Humans
       # on l'extrait avant l'assignation des attributs du Human.
       restricted = attrs.key?(:restricted_to_experiences) ? attrs.delete(:restricted_to_experiences) : nil
 
-      human.attributes = attrs
-      human.save!
+      ActiveRecord::Base.transaction do
+        human.attributes = attrs
+        human.save!
 
-      unless restricted.nil?
-        user = human.user
-        user&.update!(
-          restricted_to_experiences: ActiveModel::Type::Boolean.new.cast(restricted)
-        )
+        # L'adresse de connexion suit l'email de la fiche. Dans la même
+        # transaction : si elle est déjà prise, la fiche ne change pas non plus.
+        SyncAccountEmailService.new(human: human).run! if human.saved_change_to_email?
+
+        unless restricted.nil?
+          user = human.user
+          user&.update!(
+            restricted_to_experiences: ActiveModel::Type::Boolean.new.cast(restricted)
+          )
+        end
       end
 
       true

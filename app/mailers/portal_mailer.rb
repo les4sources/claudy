@@ -9,4 +9,13 @@ class PortalMailer < ApplicationMailer
 
     mail(to: email, subject: "Votre code de connexion — Les 4 Sources")
   end
+
+  # L'artisan qui a demandé un lien de connexion à Claudy (la porte de
+  # l'équipe) au lieu de passer par son espace : on lui montre sa porte. Pas de
+  # code ici — il le demande depuis son espace, adresse déjà remplie.
+  def consignor_door(email:)
+    @url = portal_url(context: "consignor", email: email)
+
+    mail(to: email, subject: "Votre espace artisan — Les 4 Sources")
+  end
 end

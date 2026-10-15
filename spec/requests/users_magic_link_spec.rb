@@ -173,4 +173,61 @@ RSpec.describe "Connexion par lien e-mail", type: :request, queue_adapter: :test
       expect(response.body).to include("Se connecter par e-mail")
     end
   end
+
+  # Une artisane de l'épicerie (Émilie, 2026-10-15) a demandé un lien ici et
+  # n'a rien reçu : elle n'a pas de compte Claudy, son espace est sur le portail.
+  describe "un artisan du dépôt-vente qui frappe à cette porte" do
+    let!(:emilie) do
+      Consignor.create!(name: "Émilie", settlement_mode: "invoice",
+                        email: "emilie@example.com", portal_enabled: true)
+    end
+
+    it "reçoit un mail qui lui montre son espace artisan, sans lien de connexion Claudy" do
+      expect { demander(" Emilie@Example.com ") }
+        .to have_enqueued_mail(PortalMailer, :consignor_door)
+        .with(email: "emilie@example.com")
+      expect(UserLoginLink.count).to eq(0)
+    end
+
+    it "répond exactement comme à une adresse inconnue" do
+      demander("emilie@example.com")
+      artisan = [ response.status, response.location, flash[:notice], response.body ]
+
+      demander("inconnu@example.com")
+      inconnue = [ response.status, response.location, flash[:notice], response.body ]
+
+      expect(artisan).to eq(inconnue)
+    end
+
+    it "n'écrit rien si son espace n'est pas ouvert" do
+      emilie.update!(portal_enabled: false)
+
+      demander("emilie@example.com")
+
+      expect(enqueued_jobs).to be_empty
+    end
+
+    it "n'écrit rien à un artisan au contrat désactivé" do
+      emilie.update!(active: false)
+
+      demander("emilie@example.com")
+
+      expect(enqueued_jobs).to be_empty
+    end
+
+    it "laisse le compte Claudy passer d'abord quand l'adresse a les deux" do
+      emilie.update!(email: "steph@les4sources.be")
+
+      expect { demander("steph@les4sources.be") }
+        .to have_enqueued_mail(UserMailer, :magic_link)
+      expect(enqueued_jobs.size).to eq(1)
+    end
+
+    it "est signalé sur le formulaire, avec le chemin de l'espace artisan" do
+      get new_user_magic_link_path
+
+      expect(response.body).to include("Votre espace artisan est ici.")
+      expect(response.body).to include(portal_path(context: "consignor"))
+    end
+  end
 end

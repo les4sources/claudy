@@ -81,6 +81,32 @@ RSpec.describe "Portail — espace artisan", type: :request do
       expect(response.body).to include("Mon dépôt-vente", "Eline")
     end
 
+    # Émilie (2026-10-15) : arrivée par /portail sans cliquer « Je suis
+    # artisan », elle ne recevait rien.
+    it "ouvre aussi l'espace de l'artisan arrivé par la porte « séjours »" do
+      code = request_code("eline@example.com", context: "stays")
+      expect(code).to be_present
+
+      post portal_login_path, params: { email: "eline@example.com", code: code }
+
+      expect(response).to redirect_to(portal_consignments_path)
+    end
+
+    it "garde la porte « séjours » au client quand l'adresse est les deux" do
+      eline.update!(email: "ana@example.com")
+      sign_in_customer("ana@example.com")
+
+      expect(response).to redirect_to(portal_stays_path)
+    end
+
+    it "n'envoie rien par la porte « séjours » à un artisan à l'espace fermé" do
+      eline.update!(portal_enabled: false)
+
+      expect {
+        post portal_code_path, params: { email: "eline@example.com" }
+      }.not_to change { PortalOtp.count }
+    end
+
     it "refuse un code valide dont l'espace a été fermé entre-temps" do
       code = request_code("eline@example.com", context: "consignor")
       eline.update!(portal_enabled: false)
