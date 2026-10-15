@@ -10,7 +10,7 @@ module Finance
 
     before_action :get_entry,
                   only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate, :payout,
-                         :pay_invoice, :pay_expense_report, :reconcile_payout, :collect_sales_invoice,
+                         :pay_invoice, :pay_expense_report, :pay_carrier_statement, :reconcile_payout, :collect_sales_invoice,
                          :settle, :suggestion, :detail]
     breadcrumb "Trésorerie", :finance_cash_entries_path, match: :exact
 
@@ -235,6 +235,29 @@ module Finance
            Finance::RecordExpenseReportPayment::TooMuch,
            Finance::RecordExpenseReportPayment::WrongDirection,
            Finance::RecordExpenseReportPayment::MissingAccount,
+           Accounting::PostCashEntry::NotFullyAllocated,
+           ActiveRecord::RecordInvalid => e
+      apres_affectation(@entry, finance_cash_entry_path(@entry), alert: e.message)
+    end
+
+    # Rapprocher une ligne sortante d'un relevé de porteur d'activité (epic
+    # #244, phase 3). Depuis la proposition de la file, ou depuis la fiche de la
+    # ligne avec le numéro du relevé tapé à la main.
+    def pay_carrier_statement
+      releve = CarrierStatement.find_by(id: params[:carrier_statement_id].to_s.delete("#")[/\d+/])
+      montant = params[:amount].presence && (params[:amount].to_s.tr(",", ".").to_f * 100).round
+
+      Finance::RecordCarrierStatementPayment.new(
+        carrier_statement: releve, cash_entry: @entry, amount_cents: montant,
+        whodunnit: current_user&.email
+      ).run!
+
+      apres_affectation(@entry, finance_unallocated_cash_entries_path,
+                        notice: "#{releve.payable_label} rapproché de cette ligne.")
+    rescue Finance::RecordCarrierStatementPayment::NotPayable,
+           Finance::RecordCarrierStatementPayment::TooMuch,
+           Finance::RecordCarrierStatementPayment::WrongDirection,
+           Finance::RecordCarrierStatementPayment::MissingAccount,
            Accounting::PostCashEntry::NotFullyAllocated,
            ActiveRecord::RecordInvalid => e
       apres_affectation(@entry, finance_cash_entry_path(@entry), alert: e.message)

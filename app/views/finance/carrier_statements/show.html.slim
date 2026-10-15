@@ -57,3 +57,38 @@
           | Il apparaît dans
           = link_to " Comptabilité > À payer", finance_payables_path, class: "text-4s-main hover:underline"
           | , avec la communication #{@statement.reference}. Il se solde par rapprochement, pas à la main.
+
+  - if @payments.any?
+    .bg-white.shadow.sm:rounded-lg.px-4.py-4
+      h4.text-sm.font-medium.text-gray-900 Paiements
+      ul.mt-2.space-y-1.text-sm.text-gray-700
+        - @payments.each do |allocation|
+          - entry = allocation.cash_entry
+          li.flex.flex-wrap.items-baseline.justify-between.gap-2
+            = link_to "#{l(entry.entry_date, format: :short)} · #{entry.counterparty_name.presence || entry.label}", finance_cash_entry_path(entry), class: "text-4s-main hover:underline"
+            span = humanized_money_with_symbol(Money.new(allocation.amount_cents.abs, "EUR"))
+      - if @statement.partially_paid?
+        p.mt-2.text-xs.text-amber-700 = "Reste #{humanized_money_with_symbol(Money.new(@statement.remaining_cents, 'EUR'))} à payer."
+
+  / Le porteur payé sur facture (Manon, octobre 2026) : le virement est déjà
+    parti, souvent en plusieurs fois, sans la référence du relevé. On le
+    retrouve ici et on le rapproche, au lieu de payer une seconde fois. Hors
+    de la carte du relevé : son `overflow-hidden` couperait la recherche.
+  - if @candidate_entries
+    .bg-white.shadow.sm:rounded-lg.px-4.py-4
+      h4.text-sm.font-medium.text-gray-900 Déjà payé ?
+      p.mt-1.text-xs.text-gray-500
+        | Si ce porteur a été payé sur facture, choisis la ligne bancaire qui l'a réglé. Elle sera affectée à ce relevé, qui passera « Payé » une fois couvert. Recommence pour chaque virement s'il y en a plusieurs.
+      = form_with url: pay_finance_carrier_statement_path(@statement), method: :post, class: "mt-3 flex flex-wrap items-end gap-3" do
+        .relative.flex-1(class="min-w-[18rem]" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher par nom, communication ou montant…")
+          = label_tag :cash_entry_id, "Ligne bancaire sortante, à affecter", class: "block text-xs font-medium text-gray-700"
+          = select_tag :cash_entry_id,
+                       options_for_select(@candidate_entries.map { |e| ["#{l(e.entry_date, format: :short)} · #{humanized_money_with_symbol(e.amount)} · #{e.counterparty_name.presence || e.label} · #{e.communication}".truncate(140), e.id] }),
+                       include_blank: "— Choisir une ligne —",
+                       class: "mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm",
+                       data: { searchable_select_target: "select" }
+          = render "shared/searchable_select_search", label: "Chercher une ligne bancaire"
+        div
+          = label_tag :amount, "Montant (facultatif)", class: "block text-xs font-medium text-gray-700"
+          = text_field_tag :amount, nil, placeholder: humanized_money(Money.new(@statement.remaining_cents, "EUR")), inputmode: "decimal", class: "mt-1 block w-32 rounded-md border-gray-300 text-sm shadow-sm"
+        = submit_tag "Rapprocher", class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"

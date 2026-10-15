@@ -3,7 +3,7 @@ module Mcp
     module Finances
       # Les rapprochements de la file « À affecter » (CashEntriesController) :
       # une ligne bancaire qui paie une facture, rembourse une note de frais,
-      # règle le compte d'un habitant, vire à un membre son crédit, paie un
+      # solde un relevé de porteur, règle le compte d'un habitant, vire à un membre son crédit, paie un
       # séjour, une facture de vente ou porte un versement Stripe. Chaque fois,
       # l'affectation et le document avancent ensemble ou pas du tout.
       class RapprocherLigne < Ecriture
@@ -12,6 +12,8 @@ module Mcp
         AVEC = {
           "facture_achat" => "payer une facture d'achat « à payer » (ligne sortante ; `facture`, `montant` facultatif)",
           "note_de_frais" => "rembourser une note en traitement (ligne sortante ; `note`, `montant` facultatif)",
+          "releve_porteur" => "payer un relevé de porteur d'activité émis, aussi quand le porteur a été payé sur " \
+                              "facture, en un ou plusieurs virements (ligne sortante ; `releve`, `montant` facultatif)",
           "virement_membre" => "virer à un membre le crédit de son compte courant (ligne sortante ; `compte`, `montant` facultatif)",
           "reglement_membre" => "encaisser le règlement d'un habitant sur son compte courant (ligne entrante ; `compte`, " \
                                 "`poste` et `montant` facultatifs)",
@@ -34,6 +36,7 @@ module Mcp
                  avec: { type: "string", enum: AVEC.keys },
                  facture: FACTURE,
                  note: NOTE,
+                 releve: { type: %w[integer string], description: "Pour releve_porteur : le relevé (#16 ou ACT-16-202601)." },
                  compte: COMPTE,
                  poste: POSTE.merge(description: "Pour reglement_membre : le poste payé. Défaut : celui que devine Claudy."),
                  montant: MONTANT.merge(description: "Montant à imputer, si ce n'est pas tout ce que la ligne peut porter."),
@@ -88,6 +91,9 @@ module Mcp
           when "note_de_frais"
             note = note!(arguments["note"])
             [note, ligne_note(note)]
+          when "releve_porteur"
+            releve = releve_porteur!(arguments["releve"])
+            [releve, ligne_releve_porteur(releve)]
           when "virement_membre", "reglement_membre", "reglement_deja_encode"
             compte = compte!(arguments["compte"])
             [compte, "#{compte.code} — #{compte.name} (#{postes_dus(compte)})"]
@@ -124,6 +130,11 @@ module Mcp
                                                         amount_cents: d[:montant], whodunnit: whodunnit).run!
               note = ExpenseReport.find(d[:cible])
               "#{ligne_tresorerie(entry.reload)}\n#{note.payable_label} : reste #{euros(note.remaining_cents)}"
+            when "releve_porteur"
+              ::Finance::RecordCarrierStatementPayment.new(carrier_statement: CarrierStatement.find(d[:cible]), cash_entry: entry,
+                                                           amount_cents: d[:montant], whodunnit: whodunnit).run!
+              releve = CarrierStatement.find(d[:cible])
+              "#{ligne_tresorerie(entry.reload)}\n#{releve.payable_label} : reste #{euros(releve.remaining_cents)}#{' · soldé, il passe « payé »' if releve.payable_settled?}"
             when "virement_membre"
               ::Finance::RecordMemberPayout.new(member_account: MemberAccount.find(d[:cible]), cash_entry: entry,
                                                 amount_cents: d[:montant], whodunnit: whodunnit).run!

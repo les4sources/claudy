@@ -264,6 +264,97 @@ RSpec.describe "Porteurs — relevé de rémunération (epic #244, phase 3)", ty
     end
   end
 
+  # Un porteur payé sur facture (Manon, octobre 2026) : le relevé se solde par
+  # les virements déjà partis, en un ou plusieurs, sans être payé deux fois.
+  describe "payer un relevé depuis une ligne bancaire" do
+    let(:statement) do
+      held_booking
+      held_booking(on: Date.current - 20)
+      s = CarrierStatements::Generate.new(human: carrier, period_from: Date.current - 60, period_to: Date.current).run!
+      CarrierStatements::Issue.new(statement: s).run!
+      s.reload
+    end
+
+    def virement(cents, communication: nil)
+      build_cash_entry(cash_account, amount_cents: -cents, label: "Virement Sébastien", entry_date: Date.current).tap do |e|
+        e.update_columns(communication: communication) if communication
+      end
+    end
+
+    it "affecte la ligne sur le 440000, au tiers de l'écriture du relevé, et la comptabilise" do
+      entry = virement(statement.total_fee_cents)
+      Finance::RecordCarrierStatementPayment.new(carrier_statement: statement, cash_entry: entry).run!
+
+      allocation = entry.reload.cash_allocations.sole
+      expect(allocation.general_account).to eq(supplier_account)
+      expect(allocation.document).to eq(statement)
+      expect(allocation.third_party).to eq(ThirdParty.find_by(human: carrier))
+      expect(allocation.legal_entity).to eq(entity)
+      expect(entry).to be_posted
+      expect(statement.reload).to be_paid
+    end
+
+    it "se solde en deux virements, et reste dû entre les deux" do
+      moitie = statement.total_fee_cents / 2
+      Finance::RecordCarrierStatementPayment.new(carrier_statement: statement, cash_entry: virement(moitie)).run!
+      expect(statement.reload).to be_issued
+      expect(statement.remaining_cents).to eq(statement.total_fee_cents - moitie)
+
+      Finance::RecordCarrierStatementPayment.new(carrier_statement: statement,
+                                                 cash_entry: virement(statement.total_fee_cents - moitie)).run!
+      expect(statement.reload).to be_paid
+
+      get finance_payables_path
+      expect(response.body).not_to include(statement.reference)
+    end
+
+    it "refuse un brouillon, une ligne entrante et un surpaiement" do
+      statement
+      held_booking(on: Date.current - 5)
+      brouillon = CarrierStatements::Generate.new(human: carrier, period_from: Date.current - 10, period_to: Date.current).run!
+      expect { Finance::RecordCarrierStatementPayment.new(carrier_statement: brouillon, cash_entry: virement(100)).run! }
+        .to raise_error(Finance::RecordCarrierStatementPayment::NotPayable)
+
+      entrante = build_cash_entry(cash_account, amount_cents: 1_000, label: "Remboursement")
+      expect { Finance::RecordCarrierStatementPayment.new(carrier_statement: statement, cash_entry: entrante).run! }
+        .to raise_error(Finance::RecordCarrierStatementPayment::WrongDirection)
+
+      expect do
+        Finance::RecordCarrierStatementPayment.new(carrier_statement: statement, cash_entry: virement(statement.total_fee_cents + 100),
+                                                   amount_cents: statement.total_fee_cents + 100).run!
+      end.to raise_error(Finance::RecordCarrierStatementPayment::TooMuch)
+    end
+
+    it "propose le relevé dans la file quand la communication porte sa référence" do
+      entry = virement(4_200, communication: "Paiement #{statement.reference}")
+      matches = Finance::MatchCarrierStatements.new.for_entry(entry)
+      expect(matches.map(&:statement)).to eq([statement])
+      expect(matches.first.confidence).to eq(Finance::MatchCarrierStatements::REFERENCE_CONFIDENCE)
+
+      get finance_unallocated_cash_entries_path
+      expect(response.body).to include("Payer ce relevé")
+
+      post pay_carrier_statement_finance_cash_entry_path(entry, carrier_statement_id: statement.id)
+      expect(entry.reload.cash_allocations.sole.document).to eq(statement)
+    end
+
+    it "se rapproche depuis la page du relevé, ligne choisie à la main" do
+      entry = virement(statement.total_fee_cents)
+
+      get finance_carrier_statement_path(statement)
+      expect(response.body).to include("Déjà payé ?")
+      expect(response.body).to include("Virement Sébastien")
+
+      post pay_finance_carrier_statement_path(statement), params: { cash_entry_id: entry.id }
+      expect(response).to redirect_to(finance_carrier_statement_path(statement))
+      expect(statement.reload).to be_paid
+
+      get finance_carrier_statement_path(statement)
+      expect(response.body).to include("Paiements")
+      expect(response.body).not_to include("Déjà payé ?")
+    end
+  end
+
   describe "les écrans" do
     it "liste les porteurs et ce qu'on leur doit" do
       held_booking
