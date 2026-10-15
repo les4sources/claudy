@@ -20,7 +20,7 @@
     frame, donc il conserve le focus et le curseur pendant la frappe (une
     navigation pleine page les perdrait à chaque caractère).
   .mb-4.flex.flex-col.gap-3.lg:flex-row.lg:items-center.lg:justify-between
-    = form_with url: stays_path, method: :get, data: { turbo_frame: "stays-results", controller: "auto-submit", action: "input->auto-submit#submit" }, class: "w-full lg:max-w-md" do |f|
+    = form_with url: stays_path, method: :get, id: "stays-search", data: { turbo_frame: "stays-results", controller: "auto-submit", action: "input->auto-submit#submit" }, class: "w-full lg:max-w-md" do |f|
       .relative
         .pointer-events-none.absolute.inset-y-0.left-0.flex.items-center.pl-3
           svg.w-4.h-4.text-gray-400 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
@@ -28,50 +28,63 @@
         = search_field_tag :q, @query, placeholder: "Rechercher — nom, groupe, email, note interne…", autocomplete: "off", autocorrect: "off", autocapitalize: "off", spellcheck: "false", class: "block w-full rounded-md border-0 py-2 pl-9 pr-3 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 shadow-sm focus:ring-2 focus:ring-inset focus:ring-indigo-500"
 
   = turbo_frame_tag "stays-results", data: { turbo_action: "advance" } do
-    /  SÉLECTEUR DE PÉRIODE (Michael 2026-07-26). Il remplace les deux flèches
-       ← → qui ne permettaient qu'un pas-à-pas : atteindre T1 2024 depuis
-       aujourd'hui demandait huit clics, et rien ne disait où l'on se trouvait
-       dans le temps ni où il y avait de la matière.
-       Ici : un pas d'année, puis les QUATRE trimestres en accès direct. Un
-       trimestre SANS séjour est éteint et non cliquable — on ne propose pas
-       d'aller regarder du vide, et le nombre annoncé sert d'aperçu.
-       Il disparaît pendant une recherche, qui porte sur toute la période.
-    - unless @searching
-      - trimestre_actuel = ((@quarter.month - 1) / 3) + 1
-      - pas_annee = "inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-500 hover:bg-white hover:text-gray-900 transition-colors"
-      .mb-4.flex.flex-wrap.items-center.gap-2.rounded-lg.bg-gray-50.p-1.5(class="ring-1 ring-gray-200" role="group" aria-label="Navigation par trimestre")
-        /  Pas d'année, encadrant l'année en cours de consultation.
-        = link_to stays_path(year: @quarter.year - 1, quarter: trimestre_actuel), class: pas_annee, "aria-label": "Année précédente" do
-          svg.w-4.h-4 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"
-            path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"
-        span.px-1.text-sm.font-semibold.text-gray-900.tabular-nums = @quarter.year
-        = link_to stays_path(year: @quarter.year + 1, quarter: trimestre_actuel), class: pas_annee, "aria-label": "Année suivante" do
-          svg.w-4.h-4 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"
-            path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"
+    /  État de la page rattaché au formulaire de recherche (attribut `form`) : le
+       formulaire vit HORS du frame et ne serait jamais mis à jour, ces champs
+       vivent DEDANS et sont donc toujours à jour. Taper une recherche garde
+       ainsi les filtres, et l'effacer ramène au trimestre qu'on regardait.
+    = hidden_field_tag :year, @quarter.year, id: nil, form: "stays-search"
+    = hidden_field_tag :quarter, ((@quarter.month - 1) / 3) + 1, id: nil, form: "stays-search"
+    - @filter.to_params.each do |name, value|
+      = hidden_field_tag name, value, id: nil, form: "stays-search"
 
-        span.mx-1.h-5.w-px.bg-gray-200(aria-hidden="true")
+    /  Une ligne : la période à gauche, les filtres à droite (Michael 2026-10-15).
+    .mb-4.flex.flex-wrap.items-center.justify-between.gap-3
+      /  SÉLECTEUR DE PÉRIODE (Michael 2026-07-26). Il remplace les deux flèches
+         ← → qui ne permettaient qu'un pas-à-pas : atteindre T1 2024 depuis
+         aujourd'hui demandait huit clics, et rien ne disait où l'on se trouvait
+         dans le temps ni où il y avait de la matière.
+         Ici : un pas d'année, puis les QUATRE trimestres en accès direct. Un
+         trimestre SANS séjour est éteint et non cliquable — on ne propose pas
+         d'aller regarder du vide, et le nombre annoncé sert d'aperçu.
+         Il disparaît pendant une recherche, qui porte sur toute la période.
+      - unless @searching
+        - trimestre_actuel = ((@quarter.month - 1) / 3) + 1
+        - pas_annee = "inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-500 hover:bg-white hover:text-gray-900 transition-colors"
+        .flex.flex-wrap.items-center.gap-2.rounded-lg.bg-gray-50.p-1.5(class="ring-1 ring-gray-200" role="group" aria-label="Navigation par trimestre")
+          /  Pas d'année, encadrant l'année en cours de consultation.
+          = link_to stays_path(year: @quarter.year - 1, quarter: trimestre_actuel, **@filter.to_params), class: pas_annee, "aria-label": "Année précédente" do
+            svg.w-4.h-4 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"
+              path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"
+          span.px-1.text-sm.font-semibold.text-gray-900.tabular-nums = @quarter.year
+          = link_to stays_path(year: @quarter.year + 1, quarter: trimestre_actuel, **@filter.to_params), class: pas_annee, "aria-label": "Année suivante" do
+            svg.w-4.h-4 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"
+              path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"
 
-        /  Les quatre trimestres de l'année affichée, en accès direct.
-        - (1..4).each do |t|
-          - nombre = @quarter_counts[t].to_i
-          - actif = (t == trimestre_actuel)
-          - debut_t = Date.new(@quarter.year, (t - 1) * 3 + 1, 1)
-          - mois = "#{I18n.l(debut_t, format: '%B')} – #{I18n.l(debut_t.end_of_quarter, format: '%B')}"
-          - if nombre.zero? && !actif
-            span.inline-flex.items-center.gap-1.rounded-md.px-2.5.py-1.text-sm.text-gray-300.cursor-not-allowed(title="#{mois} — aucun séjour" aria-disabled="true")
-              | T#{t}
-          - else
-            - tonalite = actif ? "bg-4s-main text-white shadow-sm" : "text-gray-600 hover:bg-white hover:text-gray-900"
-            = link_to stays_path(year: @quarter.year, quarter: t), class: "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-medium transition-colors #{tonalite}", title: mois, "aria-current": (actif ? "page" : nil) do
-              | T#{t}
-              - if nombre.positive?
-                span class="text-xs tabular-nums #{actif ? 'text-white/70' : 'text-gray-400'}"
-                  = nombre
-
-        /  Retour au présent — n'apparaît que si l'on n'y est pas déjà.
-        - unless @quarter == Date.today.beginning_of_quarter
           span.mx-1.h-5.w-px.bg-gray-200(aria-hidden="true")
-          = link_to "Aujourd'hui", stays_path, class: "rounded-md px-2 py-1 text-sm font-medium text-indigo-600 hover:bg-white"
+
+          /  Les quatre trimestres de l'année affichée, en accès direct.
+          - (1..4).each do |t|
+            - nombre = @quarter_counts[t].to_i
+            - actif = (t == trimestre_actuel)
+            - debut_t = Date.new(@quarter.year, (t - 1) * 3 + 1, 1)
+            - mois = "#{I18n.l(debut_t, format: '%B')} – #{I18n.l(debut_t.end_of_quarter, format: '%B')}"
+            - if nombre.zero? && !actif
+              span.inline-flex.items-center.gap-1.rounded-md.px-2.5.py-1.text-sm.text-gray-300.cursor-not-allowed(title="#{mois} — aucun séjour" aria-disabled="true")
+                | T#{t}
+            - else
+              - tonalite = actif ? "bg-4s-main text-white shadow-sm" : "text-gray-600 hover:bg-white hover:text-gray-900"
+              = link_to stays_path(year: @quarter.year, quarter: t, **@filter.to_params), class: "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-medium transition-colors #{tonalite}", title: mois, "aria-current": (actif ? "page" : nil) do
+                | T#{t}
+                - if nombre.positive?
+                  span class="text-xs tabular-nums #{actif ? 'text-white/70' : 'text-gray-400'}"
+                    = nombre
+
+          /  Retour au présent — n'apparaît que si l'on n'y est pas déjà.
+          - unless @quarter == Date.today.beginning_of_quarter
+            span.mx-1.h-5.w-px.bg-gray-200(aria-hidden="true")
+            = link_to "Aujourd'hui", stays_path(**@filter.to_params), class: "rounded-md px-2 py-1 text-sm font-medium text-indigo-600 hover:bg-white"
+
+      = render "stays/index_filters"
 
     - if @query.present?
       p.mb-2.text-sm.text-gray-600
@@ -79,7 +92,7 @@
         span.font-medium.text-gray-900 = @query
         | &nbsp;»
         |  sur toute la période
-        =< link_to "Effacer", stays_path, class: "ml-1 text-indigo-600 hover:underline"
+        =< link_to "Effacer", stays_path(**@filter.to_params), class: "ml-1 text-indigo-600 hover:underline"
 
     /  En-tête COLLANT au défilement (Michael 2026-07-26).
        Piège : `position: sticky` se cale sur le plus proche ancêtre qui DÉFILE.
@@ -188,6 +201,8 @@
               td.px-4.py-6.text-center.text-sm.text-gray-400 colspan="6"
                 - if @query.present?
                   | Aucun séjour ne correspond à cette recherche.
+                - elsif @filter.active?
+                  | Aucun séjour ne correspond à ces filtres.
                 - else
                   | Aucun séjour.
 
@@ -196,6 +211,13 @@
     - if @stays.any?
       p.mt-4.text-sm.text-gray-600
         | #{@stays.size} séjour#{'s' if @stays.size > 1}#{@searching ? '' : ' sur ce trimestre'}
+        /  Sous le filtre « Solde à payer », le total à encaisser de la liste :
+           c'est la question que pose ce filtre.
+        - if @filter.balance_due?
+          - reste = @stays.sum { |stay| @amounts[stay.id].balance_due_cents }
+          |  · 
+          span.font-medium.text-red-600 = humanized_money_with_symbol(Money.new(reste))
+          |  restant dû
 
   / Modale « fiche séjour » ouverte au clic sur une ligne. Même mécanique que le
     calendrier et la fiche client : le fragment sans layout est chargé en fetch

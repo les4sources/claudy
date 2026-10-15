@@ -81,6 +81,9 @@ module Finance
       # geste que la facture, sur une autre dette. Les notes `processing` sont
       # chargées UNE fois pour la page, comme les factures.
       @expense_report_matches = Finance::MatchExpenseReports.new.for_entries(entries)
+      # Les relevés de porteurs émis (epic #244, phase 3) : même geste, autre
+      # dette. Chargés UNE fois pour la page.
+      @carrier_statement_matches = Finance::MatchCarrierStatements.new.for_entries(entries)
       # Les versements Stripe (epic #250, phase 2) : une ligne bancaire ENTRANTE
       # dont le montant et la date correspondent à un versement pas encore
       # rapproché. Les versements sont chargés UNE fois pour la page.

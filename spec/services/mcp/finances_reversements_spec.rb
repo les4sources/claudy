@@ -76,6 +76,32 @@ RSpec.describe Mcp::Server, "finances : reversements" do
       expect(texte(refus)).to include("ne se supprime pas")
     end
 
+    # Manon (octobre 2026) : payée sur facture, en deux virements, sans la
+    # référence du relevé. On rapproche chaque virement du relevé.
+    it "solde un relevé émis par deux virements déjà passés" do
+      held_booking(on: Date.current - 30)
+      held_booking(on: Date.current - 20)
+      releve = CarrierStatements::Generate.new(human: carrier, period_from: Date.current - 60, period_to: Date.current).run!
+      CarrierStatements::Issue.new(statement: releve).run!
+      moitie = releve.reload.total_fee_cents / 2
+      compte = build_cash_account(entity, build_general_account(code: "550000", name: "Banque"))
+      premier = build_cash_entry(compte, amount_cents: -moitie, label: "Facture Sébastien 1")
+      second = build_cash_entry(compte, amount_cents: -(releve.total_fee_cents - moitie), label: "Facture Sébastien 2")
+
+      apercu = texte(outil("rapprocher_ligne", { "ligne" => premier.id, "avec" => "releve_porteur", "releve" => releve.reference }))
+      expect(apercu).to include("Relevé ##{releve.id}", "Sébastien")
+      expect(releve.reload).to be_issued
+
+      confirme("rapprocher_ligne", { "ligne" => premier.id, "avec" => "releve_porteur", "releve" => releve.reference })
+      expect(releve.reload).to be_issued
+      expect(texte(outil("fiche_ligne_tresorerie", { "ligne" => second.id }))).to include("avec: releve_porteur")
+
+      expect(confirme("rapprocher_ligne", { "ligne" => second.id, "avec" => "releve_porteur", "releve" => releve.id }))
+        .to include("reste 0,00 €", "soldé")
+      expect(releve.reload).to be_paid
+      expect([premier.reload, second.reload]).to all(be_posted)
+    end
+
     it "supprime un brouillon et libère ses prestations" do
       held_booking(on: Date.current - 30)
       releve = CarrierStatements::Generate.new(human: carrier, period_from: Date.current - 60, period_to: Date.current).run!

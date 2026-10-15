@@ -130,6 +130,16 @@ class Payment < ApplicationRecord
     payment_method == TRANCHESDEVIE_METHOD
   end
 
+  # Supprimable depuis la fiche séjour (Michael 2026-10-15) : un virement
+  # encodé deux fois ou sur le mauvais séjour doit pouvoir disparaître. Deux
+  # exceptions, qui ont chacune leur propre chemin de sortie :
+  #   * le miroir Tranches de Vie se retire en détachant la party ;
+  #   * un paiement encaissé par Stripe se rembourse depuis Stripe — l'effacer
+  #     ici laisserait l'argent reçu sans paiement en face.
+  def deletable_from_stay?
+    stay_id.present? && !tranchesdevie? && stripe_payment_intent_id.blank?
+  end
+
   # Date qui fait FOI pour l'affichage et le rapprochement bancaire : la date
   # d'encaissement saisie si elle l'a été, la date de saisie sinon. Tout
   # l'historique n'a que `created_at` — d'où le repli, qui évite un backfill.

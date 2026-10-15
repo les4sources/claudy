@@ -43,13 +43,11 @@ RSpec.describe "Stays — créneaux d'activité proposés dans le form", type: :
   end
 
   # L'`availability_id` est rendu en hidden field : sa présence dans le corps dit
-  # que le créneau est proposé à l'écran. On vise CE champ, pas n'importe quel
-  # `value="<id>"` : sous parallel_rspec l'id tombait parfois sur la valeur d'un
-  # autre champ du formulaire (faux positif).
+  # que le créneau est proposé à l'écran. On cible CE champ : un simple
+  # `value="<id>"` matchait aussi d'autres champs (adultes = 2…) quand l'id du
+  # créneau était petit, d'où un test qui échouait au hasard en CI.
   def propose?(availability)
-    response.body.match?(
-      /name="stay\[experiences\]\[\d+\]\[availability_id\]"[^>]*value="#{availability.id}"/
-    )
+    response.body.match?(/name="stay\[experiences\]\[\d+\]\[availability_id\]"[^>]*value="#{availability.id}"/)
   end
 
   it "ne propose que les créneaux disponibles pendant le séjour" do

@@ -3,7 +3,9 @@
 # pouvoir, sans quitter la modale :
 #   * AJOUTER un paiement (montant, moyen, statut) au séjour (`create`) ;
 #   * BASCULER le statut d'un paiement existant, typiquement pending → paid,
-#     directement dans la liste (`update`).
+#     directement dans la liste (`update`) ;
+#   * SUPPRIMER un paiement encodé par erreur (`destroy`, après confirmation
+#     dans le navigateur). Suppression douce : PaperTrail garde la trace.
 #
 # Après CHAQUE mutation, on recalcule le statut de paiement du séjour
 # (`Stay#set_payment_status`, adossé à l'EXIGIBLE) : dès que l'encaissé couvre le
@@ -41,6 +43,19 @@ class StayPaymentsController < BaseController
       redirect_to stay_path(@stay),
                   alert: @payment.errors.full_messages.to_sentence.presence || "Mise à jour du paiement impossible."
     end
+  end
+
+  def destroy
+    @payment = @stay.direct_payments.find(params[:id])
+
+    unless @payment.deletable_from_stay?
+      return redirect_to stay_path(@stay),
+                         alert: "Ce paiement ne se supprime pas d'ici (Pizza Party ou paiement Stripe)."
+    end
+
+    @payment.soft_delete!(validate: false)
+    @stay.set_payment_status
+    redirect_to stay_path(@stay), notice: "Paiement supprimé."
   end
 
   private
