@@ -757,7 +757,7 @@ Rails.application.routes.draw do
     # ajout d'un paiement et bascule de statut (pending ↔ paid), sans quitter la
     # modale. Le paiement porte TOUJOURS le séjour dans l'URL — jamais un paiement
     # sans séjour d'attache. URLs admin en anglais.
-    resources :payments, only: [:create, :update], controller: "stay_payments"
+    resources :payments, only: [:create, :update, :destroy], controller: "stay_payments"
     # Pizza Party privées payées sur Tranches de Vie (issue #339) : rattachement
     # manuel depuis la fiche séjour, lecture seule de l'API de l'autre app.
     resources :party_reservations, only: [:index, :create, :destroy], controller: "stay_party_reservations" do
