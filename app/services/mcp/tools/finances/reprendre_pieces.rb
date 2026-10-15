@@ -14,11 +14,16 @@ module Mcp
       # Les paiements de ces factures sont déjà au grand livre (banque, caisse) :
       # une pièce reprise ne touche donc que ses comptes de charge ou de produit
       # et le tiers (440000, 400000), jamais la trésorerie.
+      #
+      # Le journal « divers » porte les corrections de la reprise elle-même :
+      # l'à-nouveau 2025 recopiait le bilan Winbooks alors que 2022-2024 étaient
+      # déjà au grand livre (Michael, 2026-10-15). On corrige par une opération
+      # diverse, jamais en réécrivant l'à-nouveau.
       class ReprendrePieces < Ecriture
         include Commun
 
         LOT_MAX = 150
-        JOURNAUX = { "achats" => "purchases", "ventes" => "sales" }.freeze
+        JOURNAUX = { "achats" => "purchases", "ventes" => "sales", "divers" => "misc" }.freeze
         TRESORERIE = /\A5/
 
         tool "reprendre_pieces",
@@ -27,7 +32,8 @@ module Mcp
                           "(Winbooks), par lots de #{LOT_MAX} pièces au plus. Chaque pièce porte sa référence d'origine " \
                           "(exercice, journal, numéro : « 2024:ACHATS:261 »), sa date, son libellé et ses lignes " \
                           "équilibrées (compte du plan par son CODE EXACT, archivé accepté ; tiers par son code sur la " \
-                          "ligne 440000 ou 400000, ou son nom exact). Une pièce déjà reprise est ignorée. Refus d'ensemble si un compte, " \
+                          "ligne 440000 ou 400000, ou son nom exact). Le journal « divers » porte une correction de la reprise " \
+                          "(ex. un à-nouveau qui double des soldes déjà repris). Une pièce déjà reprise est ignorée. Refus d'ensemble si un compte, " \
                           "un tiers ou un exercice ouvert manque, ou si une pièce touche la trésorerie (classe 5).",
              schema: {
                properties: {
@@ -111,7 +117,7 @@ module Mcp
           ref = piece["ref"].to_s.strip
           raise Error, "Pièce #{index + 1} : donne sa référence d'origine." if ref.empty?
 
-          journal = JOURNAUX[piece["journal"].to_s] || raise(Error, "#{ref} : journal « achats » ou « ventes ».")
+          journal = JOURNAUX[piece["journal"].to_s] || raise(Error, "#{ref} : journal « achats », « ventes » ou « divers ».")
           libelle = piece["libelle"].to_s.strip.presence || raise(Error, "#{ref} : donne un libellé.")
           lignes = Array(piece["lignes"]).each_with_index.map { |ligne, i| ligne!(ligne, "#{ref}, ligne #{i + 1}") }
           raise Error, "#{ref} : une pièce a au moins deux lignes." if lignes.size < 2
