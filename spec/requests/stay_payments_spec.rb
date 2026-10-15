@@ -105,5 +105,54 @@ RSpec.describe "Stay payments (modale séjour)", type: :request do
         expect(stay.reload.payment_status).to eq("paid")
       end
     end
+
+    describe "suppression d'un paiement" do
+      let!(:payment) { Payment.create!(stay: stay, amount_cents: 10_000, payment_method: "bank_transfer", status: "paid") }
+
+      before { stay.set_payment_status }
+
+      it "propose le bouton, avec une confirmation qui nomme le paiement" do
+        get stay_path(stay)
+        expect(response.body).to include("Supprimer ce paiement (Virement")
+        expect(response.body).to include("data-turbo-confirm")
+      end
+
+      it "retire le virement du séjour (suppression douce) et recalcule son statut" do
+        expect(stay.reload.payment_status).to eq("paid")
+
+        delete stay_payment_path(stay, payment)
+
+        expect(response).to redirect_to(stay_path(stay))
+        expect(stay.direct_payments.count).to eq(0)
+        expect(Payment.with_deleted { Payment.find(payment.id) }.deleted_at).to be_present
+        expect(stay.reload.payment_status).to eq("pending")
+      end
+
+      it "refuse le miroir d'une Pizza Party Tranches de Vie" do
+        payment.update!(payment_method: Payment::TRANCHESDEVIE_METHOD)
+
+        delete stay_payment_path(stay, payment)
+
+        expect(response).to redirect_to(stay_path(stay))
+        expect(stay.direct_payments.count).to eq(1)
+      end
+
+      it "refuse un paiement encaissé par Stripe" do
+        payment.update!(payment_method: "stripe", stripe_payment_intent_id: "pi_test_123")
+
+        delete stay_payment_path(stay, payment)
+
+        expect(stay.direct_payments.count).to eq(1)
+        get stay_path(stay)
+        expect(response.body).not_to include("Supprimer ce paiement")
+      end
+
+      it "ne touche pas au paiement d'un autre séjour" do
+        autre = Stay.create!(customer: customer, source: "manual", status: "confirmed",
+                             arrival_date: from, departure_date: to, total_amount_cents: 5_000)
+        expect { delete stay_payment_path(autre, payment) }.to raise_error(ActiveRecord::RecordNotFound)
+        expect(stay.direct_payments.count).to eq(1)
+      end
+    end
   end
 end
