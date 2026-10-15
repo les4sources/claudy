@@ -5,7 +5,7 @@ module Finance
   # ÉMETTRE en fait un document — figé, comptabilisé, envoyé. Le second est
   # irréversible, d'où le premier. Même forme que les relevés de reversement.
   class CarrierStatementsController < Finance::AccountingBaseController
-    before_action :get_statement, only: %i[show issue destroy]
+    before_action :get_statement, only: %i[show issue pay destroy]
 
     breadcrumb "Porteurs", :finance_carrier_statements_path, match: :exact
 
@@ -23,6 +23,34 @@ module Finance
     def show
       @human = @statement.human
       @lines = @statement.carrier_statement_lines.chronological.includes(experience_booking: :experience_availability)
+      @payments = @statement.cash_allocations.includes(:cash_entry).order(:id)
+      @candidate_entries = candidate_entries if @statement.issued? && @statement.remaining_cents.positive?
+    end
+
+    # Solder le relevé par une ligne bancaire sortante déjà passée (epic #244,
+    # phase 3). Le relevé de Manon (octobre 2026) était déjà réglé par deux de
+    # ses factures, payées en juin et juillet : sans ce geste, il restait dans
+    # « À payer » pour toujours, prêt à être payé une seconde fois.
+    def pay
+      entry = CashEntry.find(params[:cash_entry_id])
+      montant = params[:amount].presence && (params[:amount].to_s.tr(",", ".").to_f * 100).round
+
+      Finance::RecordCarrierStatementPayment.new(
+        carrier_statement: @statement, cash_entry: entry, amount_cents: montant,
+        whodunnit: current_user&.email
+      ).run!
+
+      redirect_to finance_carrier_statement_path(@statement),
+                  notice: "Ligne du #{l(entry.entry_date, format: :short)} rapprochée de ce relevé."
+    rescue ActiveRecord::RecordNotFound
+      redirect_to finance_carrier_statement_path(@statement), alert: "Choisis la ligne bancaire qui paie ce relevé."
+    rescue Finance::RecordCarrierStatementPayment::NotPayable,
+           Finance::RecordCarrierStatementPayment::TooMuch,
+           Finance::RecordCarrierStatementPayment::WrongDirection,
+           Finance::RecordCarrierStatementPayment::MissingAccount,
+           Accounting::PostCashEntry::NotFullyAllocated,
+           ActiveRecord::RecordInvalid => e
+      redirect_to finance_carrier_statement_path(@statement), alert: e.message
     end
 
     def create
@@ -82,6 +110,14 @@ module Finance
 
     def get_statement
       @statement = CarrierStatement.find(params[:id])
+    end
+
+    # Les lignes sortantes encore ouvertes depuis le début de la période : un
+    # porteur qui facture peut être payé avant que le relevé n'existe. La liste
+    # est cherchable (nom, communication), d'où une borne large.
+    def candidate_entries
+      CashEntry.outgoing.pending.where(entry_date: @statement.period_from..)
+               .includes(:cash_account).ordered.limit(500)
     end
 
     # Les humains qui portent une activité ou en ont tenu une prestation. On ne

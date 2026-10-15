@@ -301,7 +301,12 @@ Rails.application.routes.draw do
     # générer un brouillon, l'émettre, le voir. Pas d'update — un relevé émis
     # est figé, une erreur se corrige par contre-passation.
     resources :carrier_statements, only: %i[index show create destroy] do
-      member { post :issue }
+      member do
+        post :issue
+        # Le solder par une ligne bancaire déjà passée (un porteur payé sur
+        # facture, en un ou plusieurs virements).
+        post :pay
+      end
     end
     get "collection_cost", to: "collection_cost#index"
     # Justificatif mensuel des frais Stripe (epic #240, phase 5) : un PDF par
@@ -415,6 +420,9 @@ Rails.application.routes.draw do
         post :pay_invoice
         # Rapprocher une ligne sortante d'une note de frais (epic #241, phase 3).
         post :pay_expense_report
+        # Rapprocher une ligne sortante d'un relevé de porteur (epic #244,
+        # phase 3).
+        post :pay_carrier_statement
         # Rapprocher une ligne bancaire entrante de son versement Stripe
         # (epic #250, phase 2).
         post :reconcile_payout

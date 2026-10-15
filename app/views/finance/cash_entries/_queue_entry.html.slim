@@ -117,6 +117,26 @@
                 = link_to "Voir la note", finance_expense_report_path(match.report), class: "text-blue-500 hover:text-blue-700"
             = button_to "Payer cette note", pay_expense_report_finance_cash_entry_path(entry, expense_report_id: match.report.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
 
+    / Un relevé de porteur d'activité émis qui attend son virement (epic #244,
+      phase 3). Même forme que la note juste au-dessus. LA PROPOSITION N'A RIEN
+      ÉCRIT — c'est ce bouton qui crée l'allocation sur le 440000 avec le
+      relevé en document.
+    - releves = @carrier_statement_matches&.dig(entry.id)
+    - if releves.present?
+      - releves.first(2).each do |match|
+        .mb-3.p-3.rounded-lg.border.border-violet-100(class="bg-violet-50/60")
+          .flex.flex-wrap.items-center.justify-between.gap-2
+            div
+              p.text-sm.text-gray-800
+                strong = "Paiement : #{match.statement.payable_label}"
+                = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus à #{match.beneficiary}"
+              p.mt-0.5.text-xs.text-gray-500
+                = match.reason
+                = " (#{match.confidence} % de confiance)"
+              p.mt-0.5.text-xs
+                = link_to "Voir le relevé", finance_carrier_statement_path(match.statement), class: "text-blue-500 hover:text-blue-700"
+            = button_to "Payer ce relevé", pay_carrier_statement_finance_cash_entry_path(entry, carrier_statement_id: match.statement.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+
     / Un versement Stripe (epic #250, phase 2). Une ligne bancaire ENTRANTE du
       montant exact d'un versement, à trois jours près : c'est le rapprochement
       qui se faisait de tête, à l'euro près, dans l'interface Stripe.
