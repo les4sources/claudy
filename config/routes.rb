@@ -84,6 +84,7 @@ Rails.application.routes.draw do
       patch :toggle_cycle_active
       post :create_account
       post :resend_invitation
+      post :sync_account_email
     end
   end
   resources :human_roles

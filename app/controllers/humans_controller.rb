@@ -87,10 +87,23 @@ class HumansController < BaseController
     if @human.user
       @human.user.send_reset_password_instructions
       redirect_to human_path(@human),
-                  notice: "Invitation renvoyée à #{@human.email} — le lien pour définir/réinitialiser le mot de passe a été envoyé."
+                  notice: "Invitation renvoyée à #{@human.user.email} — le lien pour définir/réinitialiser le mot de passe a été envoyé."
     else
       redirect_to human_path(@human),
                   alert: "#{@human.name} n'a pas encore de compte d'accès — créez-en un d'abord."
+    end
+  end
+
+  # Un compte dont l'adresse de connexion ne suit pas l'email de la fiche (créé
+  # avant que l'une suive l'autre) : on l'aligne d'un clic.
+  def sync_account_email
+    @human = Human.unscoped.find(params[:id])
+    service = Humans::SyncAccountEmailService.new(human: @human)
+    if service.run
+      redirect_to human_path(@human),
+                  notice: "#{@human.name} se connecte désormais avec #{@human.user&.email}."
+    else
+      redirect_to human_path(@human), alert: service.error_message
     end
   end
 
