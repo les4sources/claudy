@@ -36,7 +36,10 @@
             span.text-2xl = payment.payment_method_emoji
             / `line` ne couvre pas tous les moyens de paiement — on retombe sur le montant.
             span.text-sm.text-ink = payment.line.presence || payment.amount
-          span.text-sm(class="text-moss") = payment.updated_at
+          / Un paiement repris sans date (`Payment#date_unknown?`) ne montre pas
+          / au client sa date de reprise, qui n'est pas celle de son paiement.
+          - unless payment.object.date_unknown?
+            span.text-sm(class="text-moss") = payment.updated_at
 
 / « Aucun paiement n'est attendu » ne doit PAS s'afficher sous un bouton
 / « Payer le solde » : la page se contredisait. Le message ne vaut que quand il

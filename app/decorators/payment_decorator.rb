@@ -80,13 +80,21 @@ class PaymentDecorator < ApplicationDecorator
   # La date QUI FAIT FOI pour l'affichage : l'encaissement saisi, ou à défaut la
   # saisie. Toutes les vues doivent passer par ici plutôt que par `created_at`,
   # sinon un virement reçu le 3 et encodé le 17 se lit au 17.
+  # Exception : un paiement repris sans date (`Payment#date_unknown?`) ne montre
+  # pas sa date de reprise, qui passerait pour une date d'encaissement.
   def payment_date(format: :default)
+    return "Date non disponible" if object.date_unknown?
+
     h.l(object.effective_date, format: format)
   end
 
   # Infobulle de traçabilité : quand la date affichée est une date
   # d'encaissement saisie à la main, on garde la date d'encodage sous la souris.
   def payment_date_title
+    if object.date_unknown?
+      return "Repris le #{created_at(format: :ddmmyyyy)} de l'ancienne réservation d'espace, " \
+             "qui ne gardait pas la date du paiement"
+    end
     return nil if object.paid_on.blank?
 
     "Encodé le #{created_at(format: :ddmmyyyy)}"

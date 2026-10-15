@@ -147,6 +147,16 @@ class Payment < ApplicationRecord
     paid_on || created_at.to_date
   end
 
+  # Paiement repris de l'ancienne facturation des espaces par la rake
+  # `space_bookings:billing_to_payments` (passée le 2026-07-21) : l'ancienne
+  # réservation d'espace ne connaissait pas la date du paiement, donc sa date
+  # de saisie (le 21/07) n'est pas une date d'encaissement. On l'affiche
+  # « Date non disponible » tant qu'aucune vraie date n'a été saisie (Michael
+  # 2026-10-15).
+  def date_unknown?
+    space_booking_id.present? && paid_on.blank?
+  end
+
   private
 
   # Un paiement doit toujours savoir CE QU'IL PAIE : un séjour, ou un pack de
