@@ -25,7 +25,12 @@ class StaysController < BaseController
   # groupe, mot dans la note interne — y compris les notes des bookables. Elle
   # s'applique AVANT `.includes` pour que les `.or` du service composent sur une
   # structure de jointures nue (cf. `Stays::Search`), et se combine aux pills.
+  #
+  # Filtres statut et « Solde à payer » (Michael 2026-10-15) : voir
+  # `Stays::IndexFilter`. Ils s'appliquent au trimestre affiché, ou à toute la
+  # période pendant une recherche.
   def index
+    @filter  = Stays::IndexFilter.new(params)
     @query   = params[:q].to_s.strip
     # Une RECHERCHE porte sur TOUTE la période, pas sur le trimestre affiché :
     # chercher « Freya » sans savoir dans quel trimestre elle tombe est le cas
@@ -35,7 +40,7 @@ class StaysController < BaseController
     @quarter   = requested_quarter
 
     scope  = @searching ? Stay.all : quarter_scope
-    @stays = Stays::Search.new(scope, @query).call
+    @stays = @filter.apply_status(Stays::Search.new(scope, @query).call)
              .includes(
                :customer,
                :meal_orders,
@@ -53,6 +58,7 @@ class StaysController < BaseController
     @quarter_counts = quarter_counts_for(@quarter.year)
 
     @amounts = Stays::IndexAmounts.new(@stays).call
+    @stays   = @stays.select { |stay| @filter.keep?(stay, @amounts[stay.id]) } if @filter.balance_due?
     @stays   = StayDecorator.decorate_collection(@stays)
   end
 
@@ -621,12 +627,24 @@ class StaysController < BaseController
   end
 
   # => { 1 => 12, 2 => 151, 3 => 102, 4 => 41 } pour l'année donnée.
+  # Les comptes suivent les filtres actifs : un trimestre sans séjour filtré
+  # s'éteint, au lieu d'annoncer un nombre qui mènerait à une liste vide.
   def quarter_counts_for(year)
     debut = Date.new(year, 1, 1)
-    Stay.where(arrival_date: debut..debut.end_of_year)
-        .group(Arel.sql("EXTRACT(QUARTER FROM arrival_date)"))
-        .count
-        .transform_keys(&:to_i)
+    scope = @filter.apply_status(Stay.where(arrival_date: debut..debut.end_of_year))
+    unless @filter.balance_due?
+      return scope.group(Arel.sql("EXTRACT(QUARTER FROM arrival_date)"))
+                  .count
+                  .transform_keys(&:to_i)
+    end
+
+    # Le solde ne se compte pas en SQL (cf. `Stays::IndexFilter`) : on calcule
+    # les montants de l'année en lot, une requête de paiements pour toutes.
+    stays   = scope.includes(*Stays::IndexFilter::AMOUNT_PRELOADS).to_a
+    amounts = Stays::IndexAmounts.new(stays).call
+    stays.select { |stay| @filter.keep?(stay, amounts[stay.id]) }
+         .group_by { |stay| ((stay.arrival_date.month - 1) / 3) + 1 }
+         .transform_values(&:size)
   end
 
   # Séjours du trimestre affiché, PLUS ceux sans date d'arrivée : ces derniers
