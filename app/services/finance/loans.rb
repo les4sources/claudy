@@ -14,9 +14,10 @@ module Finance
   #
   # Un prêt à long terme (le compte le dit, `long_term`) ne se rend pas dans
   # les 90 jours : « Peut-on dépenser ? » ne le retire pas de la marge
-  # (Michael, 2026-10-16). Un prêteur au solde débiteur (on lui a rendu plus
-  # qu'emprunté, ou le compte porte en fait une créance) n'efface pas ce qu'on
-  # doit aux autres : seul ce qui reste dû compte.
+  # (Michael, 2026-10-16). Le verdict lit ce qui reste dû COMPTE PAR COMPTE :
+  # un remboursement passé sans tiers solde le prêt nommé du même compte, mais
+  # un compte de prêt débiteur (174003, qui porte en fait une créance)
+  # n'efface pas ce qu'on doit sur les autres comptes.
   class Loans
     ACCOUNT_PREFIX = "17".freeze
 
@@ -31,10 +32,13 @@ module Finance
     Group = Struct.new(:entity, :lenders, keyword_init: true) do
       def owed_cents = lenders.sum(&:owed_cents)
 
+      # Ce qui reste dû sur chaque compte de prêt, tous prêteurs confondus.
+      def owed_by_account = lenders.group_by(&:account).transform_values { |rows| rows.sum(&:owed_cents) }
+
       # Ce que le verdict retire : les prêts à rendre bientôt, encore dus.
-      def short_term_owed_cents = lenders.reject(&:long_term?).sum { |lender| [lender.owed_cents, 0].max }
-      def long_term_owed_cents = lenders.select(&:long_term?).sum { |lender| [lender.owed_cents, 0].max }
-      def overdrawn = lenders.select { |lender| lender.owed_cents.negative? }
+      def short_term_owed_cents = owed_by_account.reject { |account, _| account.long_term? }.sum { |_, cents| [cents, 0].max }
+      def long_term_owed_cents = owed_by_account.select { |account, _| account.long_term? }.sum { |_, cents| [cents, 0].max }
+      def overdrawn_accounts = owed_by_account.select { |_, cents| cents.negative? }
     end
 
     # Les prêteurs à qui on doit encore quelque chose, par entité, le plus
