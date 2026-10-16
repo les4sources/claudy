@@ -145,8 +145,8 @@ module Finance
     end
 
     def overdrawn_reserves
-      Array(loans_group&.overdrawn).map do |lender|
-        "#{lender.account.code} #{lender.name} : solde débiteur de #{format_euros(-lender.owed_cents)} sur un compte de prêt, " \
+      (loans_group&.overdrawn_accounts || {}).map do |account, cents|
+        "#{account.code} #{account.name} : solde débiteur de #{format_euros(-cents)} sur un compte de prêt, " \
           "pas déduit des autres prêts, à vérifier."
       end
     end

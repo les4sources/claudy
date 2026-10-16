@@ -70,6 +70,21 @@ RSpec.describe Finance::SpendingVerdict do
     expect(verdict.reserves.join).to include("174003 Prêt SA Noire : solde débiteur de 20 000 €", "à vérifier")
   end
 
+  # En prod, des remboursements sont passés sans tiers sur le compte d'un prêt
+  # nommé : par prêteur, le prêt restait entier et le remboursement disparaissait.
+  it "solde un prêt nommé par un remboursement sans tiers du même compte" do
+    gaelle = ThirdParty.create!(code: "DEFAYS", name: "Gaëlle de Fays", kind: "supplier")
+    coda_statement(bank, balance_cents: 5_624_180)
+    entry = build_cash_entry(bank, amount_cents: 1_000_000, entry_date: Date.new(2026, 4, 7), label: "Prêt")
+    entry.cash_allocations.create!(general_account: prets, amount_cents: 1_000_000, legal_entity: entity, third_party: gaelle)
+    Accounting::PostCashEntry.new(cash_entry: entry).run!
+    post_simple_entry(entity: entity, debit_account: prets, credit_account: bank_general, amount_cents: 600_000,
+                      entry_date: Date.new(2026, 9, 1))
+
+    expect(verdict.loans_cents).to eq(400_000)
+    expect(verdict.reserves.join).not_to include("solde débiteur")
+  end
+
   it "dit oui, et combien, quand il reste plus qu'un mois de charges fixes une fois tout payé" do
     coda_statement(bank, balance_cents: 1_000_000)
     charge_fixe(100_000)
