@@ -14,6 +14,7 @@
 #  code         :string           not null
 #  deleted_at   :datetime
 #  klass        :integer          not null
+#  long_term    :boolean          default(FALSE), not null
 #  name         :string           not null
 #  nature       :string           not null
 #  reconcilable :boolean          default(FALSE), not null

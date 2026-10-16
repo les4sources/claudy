@@ -12,7 +12,8 @@ module Mcp
         tool "compte_general",
              title: "Créer, corriger ou supprimer un compte du plan comptable",
              description: "Un compte du plan : code (3 à 8 chiffres ; la classe et la nature s'en déduisent à la " \
-                          "création), nom, nature, lettrable, actif. `supprimer` le retire s'il ne porte aucune " \
+                          "création), nom, nature, lettrable, long terme (un prêt qui ne se rend pas dans l'année, " \
+                          "hors du verdict « Peut-on dépenser ? »), actif. `supprimer` le retire s'il ne porte aucune " \
                           "écriture ; sinon, désactive-le (`actif: false`). Le plan : parametrage_compta comptes.",
              schema: {
                properties: {
@@ -22,6 +23,7 @@ module Mcp
                  nom: { type: "string" },
                  nature: { type: "string", enum: NATURES.keys },
                  lettrable: { type: "boolean", description: "Ses lignes se rapprochent une à une (fournisseurs, clients…)." },
+                 long_terme: { type: "boolean", description: "Compte de prêt (17) à long terme : il ne pèse plus dans « Peut-on dépenser ? »." },
                  actif: { type: "boolean" }
                }
              }
@@ -67,7 +69,7 @@ module Mcp
         end
 
         def ligne_compte(c)
-          "#{c} · classe #{c.klass} · #{c.nature_label.downcase}#{' · lettrable' if c.reconcilable}#{' · DÉSACTIVÉ' unless c.active}"
+          "#{c} · classe #{c.klass} · #{c.nature_label.downcase}#{' · lettrable' if c.reconcilable}#{' · long terme' if c.long_term}#{' · DÉSACTIVÉ' unless c.active}"
         end
 
         def compte_par_code!(reference)
@@ -85,6 +87,7 @@ module Mcp
           a[:nature] = NATURES[arguments["nature"]] || raise(Error, "nature : #{NATURES.keys.join(', ')}.") if arguments["nature"].present?
           a[:nature] ||= GeneralAccount.nature_from(a[:code]) if compte.nil? && a[:code]
           a[:reconcilable] = arguments["lettrable"] unless arguments["lettrable"].nil?
+          a[:long_term] = arguments["long_terme"] unless arguments["long_terme"].nil?
           a[:active] = arguments["actif"] unless arguments["actif"].nil?
           raise Error, "Pour créer un compte, donne : code, nom." if compte.nil? && (a[:code].blank? || a[:name].blank?)
 

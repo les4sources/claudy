@@ -12,7 +12,7 @@ module Mcp
         tool "parametrage_compta",
              title: "Plan comptable, entités, exercices",
              description: "Le paramétrage de la compta tel que l'écran le montre, désactivés compris : `comptes` (le " \
-                          "plan, par classe ou recherche, avec nature, lettrable, actif), `entites` (forme, régime TVA, " \
+                          "plan, par classe ou recherche, avec nature, lettrable, long terme, actif), `entites` (forme, régime TVA, " \
                           "n° de TVA, exercices, comptes de trésorerie avec leur IBAN, écritures), `exercices` (dates, statut, " \
                           "écritures, par entité). Modifier : compte_general, entite_juridique, compte_tresorerie, exercice.",
              schema: {
@@ -47,7 +47,7 @@ module Mcp
           return "Aucun compte." if comptes.empty?
 
           comptes.map do |c|
-            "#{c} · classe #{c.klass} · #{c.nature_label.downcase}#{' · lettrable' if c.reconcilable}#{' · DÉSACTIVÉ' unless c.active}"
+            "#{c} · classe #{c.klass} · #{c.nature_label.downcase}#{' · lettrable' if c.reconcilable}#{' · long terme' if c.long_term}#{' · DÉSACTIVÉ' unless c.active}"
           end.join("\n")
         end
 

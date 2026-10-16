@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_13_211000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_16_210000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1197,6 +1197,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_211000) do
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
     t.integer "klass", null: false
+    t.boolean "long_term", default: false, null: false
     t.string "name", null: false
     t.string "nature", null: false
     t.boolean "reconcilable", default: false, null: false

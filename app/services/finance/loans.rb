@@ -11,6 +11,12 @@ module Finance
   #
   # Une ligne de banque pas encore comptabilisée n'y est pas : tant qu'elle
   # attend dans la file « À affecter », le prêt n'existe pas pour la compta.
+  #
+  # Un prêt à long terme (le compte le dit, `long_term`) ne se rend pas dans
+  # les 90 jours : « Peut-on dépenser ? » ne le retire pas de la marge
+  # (Michael, 2026-10-16). Un prêteur au solde débiteur (on lui a rendu plus
+  # qu'emprunté, ou le compte porte en fait une créance) n'efface pas ce qu'on
+  # doit aux autres : seul ce qui reste dû compte.
   class Loans
     ACCOUNT_PREFIX = "17".freeze
 
@@ -19,10 +25,16 @@ module Finance
       def owed_cents = borrowed_cents - repaid_cents
       def name = third_party&.name || account.name
       def named? = third_party.present?
+      def long_term? = account.long_term?
     end
 
     Group = Struct.new(:entity, :lenders, keyword_init: true) do
       def owed_cents = lenders.sum(&:owed_cents)
+
+      # Ce que le verdict retire : les prêts à rendre bientôt, encore dus.
+      def short_term_owed_cents = lenders.reject(&:long_term?).sum { |lender| [lender.owed_cents, 0].max }
+      def long_term_owed_cents = lenders.select(&:long_term?).sum { |lender| [lender.owed_cents, 0].max }
+      def overdrawn = lenders.select { |lender| lender.owed_cents.negative? }
     end
 
     # Les prêteurs à qui on doit encore quelque chose, par entité, le plus

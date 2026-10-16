@@ -18,6 +18,9 @@
       = f.check_box :reconcilable, class: "rounded border-gray-300"
       |  Lettrable (suivi ligne à ligne)
     label.flex.items-center.gap-2.text-sm.text-gray-700
+      = f.check_box :long_term, class: "rounded border-gray-300"
+      |  Prêt à long terme (hors de « Peut-on dépenser ? »)
+    label.flex.items-center.gap-2.text-sm.text-gray-700
       = f.check_box :active, class: "rounded border-gray-300"
       |  Actif
   .flex.items-center.gap-3
