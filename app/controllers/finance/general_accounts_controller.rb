@@ -54,7 +54,7 @@ module Finance
     def get_account = @account = GeneralAccount.find(params[:id])
 
     def account_params
-      params.require(:general_account).permit(:code, :name, :klass, :nature, :reconcilable, :active)
+      params.require(:general_account).permit(:code, :name, :klass, :nature, :reconcilable, :long_term, :active)
     end
   end
 end

@@ -9,7 +9,9 @@ module Finance
   #         − ce qui doit sortir dans les 90 jours (file « À payer », charges
   #           fixes, mensualités des dettes et litiges)
   #         − les dettes et litiges qui tombent au-delà
-  #         − les prêts reçus encore dus
+  #         − les prêts reçus encore dus, sauf ceux à long terme (le compte
+  #           le dit : certificats immobiliers…), qui ne se rendent pas dans
+  #           les 90 jours (Michael, 2026-10-16)
   #
   # La réserve est un mois de charges fixes : en dessous, on ne dépense pas
   # sans en parler. Le verdict ne cherche pas à rassurer : le point bas projeté
@@ -41,9 +43,8 @@ module Finance
     def outgoing_cents = treasury.outgoing_cents
     def liabilities_later_cents = treasury.liabilities_beyond_horizon_cents
 
-    def loans_cents
-      @loans_cents ||= [@loans.groups.find { |group| group.entity == @entity }&.owed_cents.to_i, 0].max
-    end
+    def loans_cents = loans_group&.short_term_owed_cents.to_i
+    def long_term_loans_cents = loans_group&.long_term_owed_cents.to_i
 
     # Un mois de charges fixes : la réserve en dessous de laquelle on ne
     # dépense pas sans en parler.
@@ -97,13 +98,19 @@ module Finance
 
     # Ce que le verdict ne sait pas : dit en clair, jamais deviné.
     def reserves
-      @reserves ||= [pending_reserve, *unanchored_reserves, late_reserve].compact
+      @reserves ||= [pending_reserve, *unanchored_reserves, late_reserve, long_term_reserve, *overdrawn_reserves].compact
     end
 
     def pending_count = pending_scope.count
     def pending_net_cents = pending_scope.sum(:amount_cents)
 
     private
+
+    def loans_group
+      return @loans_group if defined?(@loans_group)
+
+      @loans_group = @loans.groups.find { |group| group.entity == @entity }
+    end
 
     def pending_scope
       CashEntry.pending.where(cash_account_id: treasury.accounts.map { |row| row.account.id })
@@ -128,6 +135,20 @@ module Finance
 
       "#{late.size} séjour(s) passé(s) avec un reste dû (#{format_euros(late.sum(&:amount_cents))}) : pas compté, " \
         "un retard n'est pas une entrée certaine."
+    end
+
+    def long_term_reserve
+      return unless long_term_loans_cents.positive?
+
+      "Prêts à long terme : #{format_euros(long_term_loans_cents)} restent dus, hors de la marge : " \
+        "ils ne se rendent pas dans les #{Finance::Treasury::HORIZON_DAYS} jours."
+    end
+
+    def overdrawn_reserves
+      Array(loans_group&.overdrawn).map do |lender|
+        "#{lender.account.code} #{lender.name} : solde débiteur de #{format_euros(-lender.owed_cents)} sur un compte de prêt, " \
+          "pas déduit des autres prêts, à vérifier."
+      end
     end
 
     def format_euros(cents)

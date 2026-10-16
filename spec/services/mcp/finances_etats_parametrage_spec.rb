@@ -96,6 +96,10 @@ RSpec.describe Mcp::Server, "finances : états et paramétrage" do
       expect(compte.reload.reconcilable).to be(true)
       expect(texte(outil("parametrage_compta", { "quoi" => "comptes", "classe" => 6 }))).to include("613500 Honoraires", "lettrable")
 
+      confirme("compte_general", { "compte" => "613500", "long_terme" => true })
+      expect(compte.reload.long_term).to be(true)
+      expect(texte(outil("parametrage_compta", { "quoi" => "comptes", "classe" => 6 }))).to include("long terme")
+
       confirme("compte_general", { "compte" => "613500", "supprimer" => true })
       expect(GeneralAccount.find_by(code: "613500")).to be_nil
 

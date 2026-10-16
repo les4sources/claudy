@@ -48,6 +48,16 @@ RSpec.describe "Finances > Comptabilité", type: :request do
       expect(corps).to include("Prêts reçus").and include("Prêt CT Muriel").and include("174006")
     end
 
+    it "marque un prêt à long terme, hors de « Peut-on dépenser ? »" do
+      certificats = build_general_account(code: "174001", name: "Certificat immobilier", klass: 1, nature: "liability")
+      certificats.update!(long_term: true)
+      post_simple_entry(entity: entity, debit_account: bank, credit_account: certificats, amount_cents: 500_000)
+
+      get finance_accounting_path
+
+      expect(CGI.unescapeHTML(response.body)).to include("Long terme : hors de « Peut-on dépenser ? »")
+    end
+
     it "le dit quand il n'y en a aucun" do
       get finance_accounting_path
 
@@ -83,6 +93,16 @@ RSpec.describe "Finances > Comptabilité", type: :request do
         post finance_general_accounts_path,
              params: { general_account: { code: "613000", name: "Honoraires", klass: 6, nature: "expense" } }
       }.to change { GeneralAccount.count }.by(1)
+    end
+
+    it "marque un compte de prêt à long terme" do
+      certificats = build_general_account(code: "174001", name: "Certificat immobilier", klass: 1, nature: "liability")
+
+      get edit_finance_general_account_path(certificats)
+      expect(CGI.unescapeHTML(response.body)).to include("Prêt à long terme (hors de « Peut-on dépenser ? »)")
+
+      patch finance_general_account_path(certificats), params: { general_account: { long_term: "1" } }
+      expect(certificats.reload.long_term).to be(true)
     end
 
     it "refuse un code en double plutôt que d'échouer en silence" do

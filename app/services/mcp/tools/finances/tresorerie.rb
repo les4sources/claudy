@@ -62,7 +62,7 @@ module Mcp
             detail = if v.verdict == "inconnu" then ""
                      else
                        "\n    Solde #{euros(v.balance_cents)} + à encaisser #{euros(v.incoming_cents)} − à payer " \
-                         "#{euros(v.outgoing_cents)} − dettes plus tard #{euros(v.liabilities_later_cents)} − prêts à rendre " \
+                         "#{euros(v.outgoing_cents)} − dettes plus tard #{euros(v.liabilities_later_cents)} − prêts à rendre (hors long terme) " \
                          "#{euros(v.loans_cents)} = marge #{euros(v.margin_cents)} ; réserve (un mois de charges fixes) " \
                          "#{euros(v.reserve_cents)}."
                      end

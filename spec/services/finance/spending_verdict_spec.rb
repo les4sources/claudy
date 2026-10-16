@@ -43,6 +43,33 @@ RSpec.describe Finance::SpendingVerdict do
     expect(verdict.reason).to include("il manque 3 758 €")
   end
 
+  # Les certificats immobiliers se rendent sur des années : les retirer de la
+  # marge des 90 jours faisait dire « il manque 717 000 € » (2026-10-16).
+  it "ne retire pas un prêt à long terme, mais le dit" do
+    certificats = build_general_account(code: "174001", name: "Certificat immobilier", klass: 1, nature: "liability")
+    certificats.update!(long_term: true)
+    coda_statement(bank, balance_cents: 5_624_180)
+    post_simple_entry(entity: entity, debit_account: bank_general, credit_account: certificats, amount_cents: 75_000_000,
+                      entry_date: Date.new(2026, 2, 28))
+    pret(800_000)
+
+    expect(verdict.loans_cents).to eq(800_000)
+    expect(verdict.long_term_loans_cents).to eq(75_000_000)
+    expect(verdict.margin_cents).to eq(4_824_180)
+    expect(verdict.reserves.join).to include("Prêts à long terme : 750 000 € restent dus, hors de la marge")
+  end
+
+  it "ne laisse pas un compte de prêt débiteur effacer ce qu'on doit aux autres" do
+    noire = build_general_account(code: "174003", name: "Prêt SA Noire", klass: 1, nature: "liability")
+    coda_statement(bank, balance_cents: 5_624_180)
+    pret(800_000)
+    post_simple_entry(entity: entity, debit_account: noire, credit_account: bank_general, amount_cents: 2_000_000,
+                      entry_date: Date.new(2026, 3, 1))
+
+    expect(verdict.loans_cents).to eq(800_000)
+    expect(verdict.reserves.join).to include("174003 Prêt SA Noire : solde débiteur de 20 000 €", "à vérifier")
+  end
+
   it "dit oui, et combien, quand il reste plus qu'un mois de charges fixes une fois tout payé" do
     coda_statement(bank, balance_cents: 1_000_000)
     charge_fixe(100_000)

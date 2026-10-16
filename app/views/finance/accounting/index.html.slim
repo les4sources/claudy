@@ -98,6 +98,8 @@
                     = lender.name
                     - unless lender.named?
                       .text-xs.text-gray-400 Prêteur non nommé sur la ligne
+                    - if lender.long_term?
+                      .text-xs.text-gray-400 Long terme : hors de « Peut-on dépenser ? »
                   td.py-2.px-4
                     = link_to "#{lender.account.code} #{lender.account.name}",
                               finance_ledger_path(general_account_id: lender.account.id, legal_entity_id: group.entity.id),
