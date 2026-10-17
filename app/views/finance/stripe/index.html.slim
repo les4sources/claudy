@@ -30,9 +30,11 @@
           /  Changer de mode change la façon dont TOUT ce compte entre en
              comptabilité : le texte le dit avant le clic, pas après.
           = form_with url: finance_stripe_account_mode_path(compte), method: :patch, class: "flex flex-wrap items-center gap-2" do
-            = select_tag :stripe_mode,
-                         options_for_select(CashAccount::STRIPE_MODES.map { |m| [CashAccount::STRIPE_MODE_LABELS[m], m] }, compte.stripe_mode),
-                         id: nil, class: "rounded-md border-gray-300 text-sm"
+            div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un mode…" class="relative w-64")
+              = select_tag :stripe_mode,
+                           options_for_select(CashAccount::STRIPE_MODES.map { |m| [CashAccount::STRIPE_MODE_LABELS[m], m] }, compte.stripe_mode),
+                           id: nil, class: "rounded-md border-gray-300 text-sm", data: { searchable_select_target: "select" }
+              = render "shared/searchable_select_search", label: "Chercher un mode Stripe"
             = submit_tag "Changer le mode", class: "cursor-pointer rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
 
         .grid.gap-px.bg-gray-100(class="sm:grid-cols-4")

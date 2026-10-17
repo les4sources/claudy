@@ -14,16 +14,20 @@
   label.text-xs.text-gray-500
     | Rechercher
     = text_field_tag :q, params[:q], placeholder: "Nom ou code…", autocomplete: "off", autocorrect: "off", autocapitalize: "off", spellcheck: "false", class: "mt-1 block rounded-md border-gray-300 text-sm"
-  label.text-xs.text-gray-500
-    | Type
+  / Un `div` et non un `label` : le champ de recherche et sa liste ne doivent
+    pas vivre dans le `label` du <select> masqué, qui capterait leurs clics.
+  div.text-xs.text-gray-500(data-controller="searchable-select" data-searchable-select-placeholder-value="Tous les types" data-searchable-select-clearable-value="true" class="relative w-48")
+    = label_tag :kind, "Type"
     = select_tag :kind,
                  options_for_select([["Tous", ""]] + ThirdParty::KIND_LABELS.map { |v, l| [l, v] }, params[:kind]),
-                 class: "mt-1 block rounded-md border-gray-300 text-sm"
-  label.text-xs.text-gray-500
-    | Statut
+                 class: "mt-1 block rounded-md border-gray-300 text-sm", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher un type"
+  div.text-xs.text-gray-500(data-controller="searchable-select" data-searchable-select-placeholder-value="Actifs" data-searchable-select-clearable-value="true" class="relative w-40")
+    = label_tag :active, "Statut"
     = select_tag :active,
                  options_for_select([["Actifs", ""], ["Tous", "all"]], params[:active]),
-                 class: "mt-1 block rounded-md border-gray-300 text-sm"
+                 class: "mt-1 block rounded-md border-gray-300 text-sm", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher un statut"
   = submit_tag "Filtrer", class: "rounded-md bg-4s-main px-3 py-2 text-sm font-medium text-white hover:opacity-90", data: { disable_with: false }
   - if params[:q].present? || params[:kind].present? || params[:active].present?
     = link_to "Effacer", finance_third_parties_path, class: "text-sm text-gray-500 hover:text-gray-700"

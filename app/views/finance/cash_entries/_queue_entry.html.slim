@@ -190,10 +190,13 @@
                rangé au mauvais endroit crée une dette imaginaire d'un côté et
                une avance imaginaire de l'autre.
             = form_with url: settle_finance_cash_entry_path(entry, member_account_id: match.member_account.id), method: :post, class: "flex items-center gap-2" do
-              = select_tag :flow,
-                           options_for_select(AccountEntry::FLOWS.map { |f| [AccountEntry::FLOW_LABELS.fetch(f, f), f] }, match.flow),
-                           class: "rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
-                           aria: { label: "Poste réglé" }
+              div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un poste…" class="relative w-48")
+                = select_tag :flow,
+                             options_for_select(AccountEntry::FLOWS.map { |f| [AccountEntry::FLOW_LABELS.fetch(f, f), f] }, match.flow),
+                             class: "rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                             aria: { label: "Poste réglé" },
+                             data: { searchable_select_target: "select" }
+                = render "shared/searchable_select_search", label: "Chercher un poste réglé"
               button.inline-flex.items-center.rounded-md.border.border-transparent.px-3.py-1.5.text-xs.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90" type="submit") Enregistrer le règlement
 
     / Une facture de VENTE qui attend son encaissement (epic #240, phase 6).

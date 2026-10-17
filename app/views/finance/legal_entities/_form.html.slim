@@ -4,12 +4,14 @@
     div
       = f.label :name, "Nom *", class: "block text-sm font-medium text-gray-700"
       = f.text_field :name, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-    div
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une forme…" class="relative")
       = f.label :form, "Forme *", class: "block text-sm font-medium text-gray-700"
-      = f.select :form, LegalEntity::FORM_LABELS.map { |value, label| [label, value] }, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-    div
+      = f.select :form, LegalEntity::FORM_LABELS.map { |value, label| [label, value] }, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500", data: { searchable_select_target: "select" }
+      = render "shared/searchable_select_search", label: "Chercher une forme juridique"
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un régime…" class="relative")
       = f.label :vat_regime, "Régime TVA *", class: "block text-sm font-medium text-gray-700"
-      = f.select :vat_regime, LegalEntity::VAT_REGIME_LABELS.map { |value, label| [label, value] }, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+      = f.select :vat_regime, LegalEntity::VAT_REGIME_LABELS.map { |value, label| [label, value] }, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500", data: { searchable_select_target: "select" }
+      = render "shared/searchable_select_search", label: "Chercher un régime TVA"
     div
       = f.label :vat_number, "Numéro de TVA", class: "block text-sm font-medium text-gray-700"
       = f.text_field :vat_number, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"

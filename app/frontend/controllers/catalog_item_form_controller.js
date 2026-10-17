@@ -17,6 +17,10 @@ export default class extends Controller {
 
     const craft = this.hasChannelTarget && this.channelTarget.value === "craft"
     this.consignorFieldTarget.hidden = !craft
-    if (!craft && this.hasConsignorTarget) this.consignorTarget.value = ""
+    if (!craft && this.hasConsignorTarget && this.consignorTarget.value !== "") {
+      this.consignorTarget.value = ""
+      // Le champ de recherche de la liste suit le <select> par `change`.
+      this.consignorTarget.dispatchEvent(new Event("change", { bubbles: true }))
+    }
   }
 }
