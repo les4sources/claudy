@@ -261,6 +261,9 @@ Rails.application.routes.draw do
     # lectures — grand livre et balance. Aucune route ne permet de SAISIR une
     # écriture : elles se génèrent, elles ne se saisissent jamais.
     get "accounting", to: "accounting#index"
+    # Le guide de la personne qui démarre (2026-10-17) : circuit, routine,
+    # lexique. L'aide posée sous le titre de chaque écran y renvoie.
+    get "guide", to: "guide#show", as: :guide
     # La trésorerie (lecture seule) : le solde, ce qui doit rentrer et sortir.
     get "treasury", to: "treasury#show"
     get "ledger", to: "ledger#index"

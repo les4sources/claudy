@@ -1,12 +1,9 @@
 - content_for :page_header do
   = render "layouts/components/page_header", title: "Comptabilité"
 
-.mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
-  p.text-sm.text-gray-700
-    strong La double écriture se génère, elle ne se saisit jamais.
-    |  On encode un fait — une ligne bancaire ventilée, un décompte, un règlement — et l'application produit les deux côtés. Aucun écran ne permet de taper un débit et un crédit à la main.
-
 = render "finance/accounting/spending_verdicts", verdicts: @verdicts
+
+= render "finance/accounting/todo", todo: @todo
 
 - if @treasury
   = render "finance/treasury/summary", treasury: @treasury, link: true

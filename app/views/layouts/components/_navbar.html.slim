@@ -427,11 +427,12 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
   nav.border-b#subnav-accounting.lg:px-6.relative.z-30(class="bg-teal-50/70 border-teal-100")
     .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
       .flex.items-center
-        ul.flex.flex-row.flex-wrap.items-center.font-medium.mt-0.gap-1.text-sm
+        ul.flex.flex-1.flex-row.flex-wrap.items-center.font-medium.mt-0.gap-1.text-sm
           - accounting_nav_direct.each do |libelle, chemin, controleurs|
             li
               = link_to libelle,
                         chemin,
+                        title: accounting_nav_hint(libelle),
                         class: "block px-3 py-1.5 rounded-md transition-colors #{accounting_nav_current?(controleurs) ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
 
           - accounting_nav_groups.each do |titre, identifiant, entrees|
@@ -453,12 +454,29 @@ div(class="h-0.5 bg-gradient-to-r from-4s-main via-emerald-400 to-teal-300")
                 = titre
                 svg.w-3.h-3[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"]
                   polyline[points="6 9 12 15 18 9"]
-              ul(id=menu_id class="hidden absolute left-0 mt-2 min-w-[14rem] bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden py-1")
+              /  Chaque entrée porte une ligne d'explication (2026-10-17) : le
+                 libellé seul ne dit rien à la personne qui démarre.
+              ul(id=menu_id class="hidden absolute left-0 mt-2 min-w-[18rem] bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden py-1")
                 - entrees.each do |libelle, chemin, controleurs|
                   li
-                    = link_to libelle,
-                              chemin,
-                              class: "block px-4 py-2 text-sm transition-colors #{accounting_nav_current?(controleurs) ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-600 hover:text-4s-main hover:bg-teal-50/60'}"
+                    = link_to chemin,
+                              class: "block px-4 py-2 text-sm transition-colors #{accounting_nav_current?(controleurs) ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-600 hover:text-4s-main hover:bg-teal-50/60'}" do
+                      span.block= libelle
+                      - if (hint = accounting_nav_hint(libelle))
+                        span.block.text-xs.font-normal.text-gray-400= hint
+
+          /  Le guide (2026-10-17), au bout de la barre : on y revient quand un
+             mot arrête, pas pour travailler.
+          - libelle, chemin, controleurs = accounting_nav_guide
+          li(class="sm:ml-auto")
+            = link_to chemin,
+                      title: accounting_nav_hint(libelle),
+                      class: "flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors #{accounting_nav_current?(controleurs) ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}" do
+              svg.w-4.h-4[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"]
+                circle[cx="12" cy="12" r="10"]
+                path[d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"]
+                line[x1="12" y1="17" x2="12.01" y2="17"]
+              = libelle
 
 - if !@organisation_view.nil?
   nav.border-b#subnav-organisation.lg:px-6(class="bg-teal-50/70 border-teal-100")

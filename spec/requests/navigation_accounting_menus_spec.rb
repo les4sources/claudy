@@ -16,7 +16,9 @@ RSpec.describe "Menus de la sous-navigation Comptabilité", type: :request do
 
   def bouton(titre) = subnav.css("button").find { |b| b.text.include?(titre) }
 
-  def entree(libelle) = subnav.css("a").find { |a| a.text.strip == libelle }
+  # Une entrée de menu porte son libellé PUIS une ligne d'explication
+  # (2026-10-17) : on la reconnaît à son premier `span`.
+  def entree(libelle) = subnav.css("a").find { |a| (a.at_css("span") || a).text.strip == libelle }
 
   describe "l'état « vous êtes ici »" do
     # Le menu refermé, le bouton du groupe est le SEUL repère : s'il ne
@@ -50,6 +52,21 @@ RSpec.describe "Menus de la sous-navigation Comptabilité", type: :request do
     end
   end
 
+  # Le libellé seul ne dit rien à qui démarre (2026-10-17) : chaque entrée de
+  # menu porte une ligne qui dit à quoi elle sert.
+  it "explique chaque entrée de menu en une ligne" do
+    get finance_accounting_path
+
+    sans_explication = subnav.css("ul[id^='subnav-accounting-'] a").reject { |a| a.css("span").size == 2 }
+    expect(sans_explication.map(&:text)).to be_empty
+  end
+
+  it "mène au guide depuis le bout de la barre" do
+    get finance_ledger_path
+
+    expect(entree("Guide")["href"]).to eq(finance_guide_path)
+  end
+
   describe "le recensement des écrans" do
     # Les écrans qu'on atteint DEPUIS un autre écran, jamais depuis la barre.
     # Ajouter un contrôleur ici est une décision : « on ne le cherche pas, on y
@@ -74,6 +91,11 @@ RSpec.describe "Menus de la sous-navigation Comptabilité", type: :request do
 
     def nav = NavProbe.new
 
+    def recenses
+      entrees = nav.accounting_nav_direct + nav.accounting_nav_groups.flat_map(&:last) + [nav.accounting_nav_guide]
+      entrees.flat_map(&:last)
+    end
+
     def ecrans_de_comptabilite
       Finance.constants.map { |c| Finance.const_get(c) }
              .select { |k| k.is_a?(Class) && k < Finance::AccountingBaseController }
@@ -81,16 +103,12 @@ RSpec.describe "Menus de la sous-navigation Comptabilité", type: :request do
     end
 
     it "donne une entrée de barre à chaque écran de comptabilité" do
-      recenses = (nav.accounting_nav_direct + nav.accounting_nav_groups.flat_map(&:last)).flat_map(&:last)
-
       expect(ecrans_de_comptabilite - SANS_ENTREE - recenses).to be_empty
     end
 
     # L'inverse compte autant : une entrée qui pointe un contrôleur disparu
     # laisse un lien mort dans un menu qu'on n'ouvre qu'une fois par mois.
     it "ne recense aucun contrôleur qui n'existe plus" do
-      recenses = (nav.accounting_nav_direct + nav.accounting_nav_groups.flat_map(&:last)).flat_map(&:last)
-
       expect(recenses - ecrans_de_comptabilite).to be_empty
     end
   end
