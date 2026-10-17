@@ -182,4 +182,44 @@ RSpec.describe "Tableau de bord d'un membre", type: :request do
       expect(response).to redirect_to(experiences_path)
     end
   end
+
+  # Rentrer une note de frais ou de mission depuis son tableau de bord (Michael
+  # 2026-10-17). Les boutons suivent le droit d'écrire en Comptabilité.
+  describe "les boutons de notes de frais" do
+    def note_path(kind, human = nil)
+      CGI.escapeHTML(new_finance_expense_report_path(kind: kind, human_id: human&.id))
+    end
+
+    it "propose les deux notes, au nom du membre affiché" do
+      sign_in user_steph
+      get dashboard_path(human_id: malau.id)
+
+      expect(response.body).to include("Note de frais", "Note de mission")
+      expect(response.body).to include(note_path("expenses", malau), note_path("mileage", malau))
+    end
+
+    it "les propose aussi sur un compte non rattaché, sans bénéficiaire" do
+      sign_in user_global
+      get dashboard_path
+
+      expect(response.body).to include(note_path("expenses"), note_path("mileage"))
+    end
+
+    it "les propose à l'Administratif, qui écrit en Comptabilité" do
+      sign_in User.create!(email: "admin-dash@les4sources.be", password: "password123",
+                           human: malau, access_roles: %w[administratif])
+      get dashboard_path
+
+      expect(response.body).to include(note_path("mileage", malau))
+    end
+
+    it "les cache à qui ne peut pas écrire en Comptabilité" do
+      sign_in User.create!(email: "comm-dash@les4sources.be", password: "password123",
+                           human: malau, access_roles: %w[communication])
+      get dashboard_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("/finance/expense_reports/new")
+    end
+  end
 end

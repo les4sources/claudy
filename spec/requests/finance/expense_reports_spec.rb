@@ -79,6 +79,24 @@ RSpec.describe "Comptabilité — Notes de frais", type: :request do
   end
 
   describe "la saisie" do
+    # Depuis le tableau de bord d'un membre (Michael 2026-10-17) : le
+    # bénéficiaire arrive dans l'adresse et le formulaire le présélectionne.
+    it "présélectionne le bénéficiaire venu du tableau de bord" do
+      autre
+      get new_finance_expense_report_path(kind: "mileage", human_id: human.id)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to match(/<option selected="selected" value="#{human.id}">Sébastien Test</)
+    end
+
+    it "laisse le bénéficiaire vide sans human_id, ou quand il ne désigne personne" do
+      human
+      get new_finance_expense_report_path(human_id: 0)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include('selected="selected" value="' + human.id.to_s + '"')
+    end
+
     it "crée une note de trois lignes en une passe" do
       expect {
         post finance_expense_reports_path, params: {
