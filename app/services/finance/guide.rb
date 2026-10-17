@@ -262,7 +262,8 @@ module Finance
       ),
       "finance/mail_messages" => Page.new(
         "Les mails arrivés sur l'adresse de la comptabilité, avec ce que Jev propose d'en faire.",
-        ["Ouvre chaque mail : si c'est une facture, « Créer la facture » la prépare.",
+        ["Ouvre chaque mail : si c'est une facture, le bouton de création prépare la facture d'achat à partir " \
+         "de la pièce.",
          "Sinon, ignore-le. Un mail ne sort de la file que par l'un de ces deux gestes."],
         %w[facture-achat suggestion]
       ),
