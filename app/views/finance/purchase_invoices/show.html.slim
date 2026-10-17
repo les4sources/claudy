@@ -89,7 +89,9 @@
                    sort. Prendre la première venue serait un choix muet, et la
                    caisse épicerie ne se confond pas avec celle du bar.
                 = form_with url: pay_in_cash_finance_purchase_invoice_path(@invoice), method: :post, class: "space-y-2" do
-                  = select_tag :cash_account_id, options_from_collection_for_select(@cash_accounts, :id, :name), id: nil, class: "block w-full rounded-md border-gray-300 text-xs"
+                  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une caisse…" class="relative")
+                    = select_tag :cash_account_id, options_from_collection_for_select(@cash_accounts, :id, :name), id: nil, class: "block w-full rounded-md border-gray-300 text-xs", data: { searchable_select_target: "select" }
+                    = render "shared/searchable_select_search", label: "Chercher une caisse"
                   = submit_tag "Payée en caisse", class: "w-full cursor-pointer rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
               - else
                 = button_to "Payée en caisse", pay_in_cash_finance_purchase_invoice_path(@invoice), method: :post, class: "w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50", form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Sortir l'argent de la caisse ?" } }, data: { "confirm-click-target": "button" }

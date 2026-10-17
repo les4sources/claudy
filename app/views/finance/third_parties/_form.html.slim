@@ -6,9 +6,10 @@
     .grid.gap-4(class="md:grid-cols-2")
       div
         = f.text_field :name, label: "Nom *", required: true, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-      div
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un type…" class="relative")
         = f.label :kind, "Type *", class: "block text-sm font-medium text-gray-700"
-        = f.select :kind, ThirdParty::KIND_LABELS.map { |v, l| [l, v] }, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+        = f.select :kind, ThirdParty::KIND_LABELS.map { |v, l| [l, v] }, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un type de tiers"
     - if third_party.persisted?
       p.mt-2.text-xs.text-gray-500
         | Code comptable :
@@ -38,12 +39,14 @@
     p.mb-3.text-xs.text-gray-500
       | Facultatif, et il le reste : la reprise Winbooks a créé les tiers depuis un code, sans savoir à qui il correspondait dans Claudy.
     .grid.gap-4(class="md:grid-cols-2")
-      div
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucun membre" data-searchable-select-clearable-value="true" class="relative")
         = f.label :human_id, "Membre", class: "block text-sm font-medium text-gray-700"
-        = f.collection_select :human_id, Human.order(:name), :id, :name, { include_blank: "Aucun" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-      div
+        = f.collection_select :human_id, Human.order(:name), :id, :name, { include_blank: "Aucun" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un membre"
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucun client" data-searchable-select-clearable-value="true" class="relative")
         = f.label :customer_id, "Client", class: "block text-sm font-medium text-gray-700"
-        = f.collection_select :customer_id, Customer.order(:last_name, :first_name), :id, :name, { include_blank: "Aucun" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+        = f.collection_select :customer_id, Customer.order(:last_name, :first_name), :id, :name, { include_blank: "Aucun" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un client"
 
     .mt-4
       = f.label :notes, "Notes", class: "block text-sm font-medium text-gray-700"

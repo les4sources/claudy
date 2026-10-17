@@ -13,22 +13,28 @@
                    hint: "Ce nom reste lisible même si la personne quitte l'équipe — il ne dépend pas de la fiche Humain.",
                    class: "md:w-2/3"
 
-    = f.select :kind,
-               MemberAccount::KINDS.map { |kind| [MemberAccount::KIND_LABELS.fetch(kind, kind), kind] },
-               { label: "Type de compte *" },
-               { class: "md:w-1/3" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un type…" class="relative md:w-1/3")
+      = f.select :kind,
+                 MemberAccount::KINDS.map { |kind| [MemberAccount::KIND_LABELS.fetch(kind, kind), kind] },
+                 { label: "Type de compte *" },
+                 { data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher un type de compte"
 
     / Un compte est ancré sur UNE seule chose. Le champ qui ne correspond pas au
       type choisi est ignoré à l'enregistrement (cf. AccountsController).
-    = f.select :household_id,
-               Household.ordered.map { |household| [household.name, household.id] },
-               { label: "Ménage (si type « Ménage »)", include_blank: "—" },
-               { class: "md:w-1/2" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucun ménage" data-searchable-select-clearable-value="true" class="relative md:w-1/2")
+      = f.select :household_id,
+                 Household.ordered.map { |household| [household.name, household.id] },
+                 { label: "Ménage (si type « Ménage »)", include_blank: "—" },
+                 { data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher un ménage"
 
-    = f.select :human_id,
-               Human.all.map { |human| [human.name, human.id] },
-               { label: "Personne (si type « Personne »)", include_blank: "—" },
-               { class: "md:w-1/2" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucune personne" data-searchable-select-clearable-value="true" class="relative md:w-1/2")
+      = f.select :human_id,
+                 Human.all.map { |human| [human.name, human.id] },
+                 { label: "Personne (si type « Personne »)", include_blank: "—" },
+                 { data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher une personne"
 
     = f.text_field :contact_email,
                    label: "Email de contact",

@@ -6,24 +6,27 @@
     .grid.gap-4(class="md:grid-cols-2")
       div
         = f.text_field :label, label: "Libellé *", required: true, placeholder: "Abonnement internet Voo", class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-      div
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucun fournisseur" data-searchable-select-clearable-value="true" class="relative")
         = f.label :third_party_id, "Fournisseur", class: "block text-sm font-medium text-gray-700"
-        = f.collection_select :third_party_id, ThirdParty.actives.suppliers.ordered, :id, :name, { include_blank: "Aucun" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+        = f.collection_select :third_party_id, ThirdParty.actives.suppliers.ordered, :id, :name, { include_blank: "Aucun" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un fournisseur"
         p.mt-1.text-xs.text-gray-500 Avec un fournisseur, sa vraie facture remplace l'estimation dès qu'elle est encodée.
       div
         = f.text_field :amount, label: "Montant estimé (€) *", required: true, inputmode: "decimal", placeholder: "67,76", value: (recurring_expense.amount && format("%.2f", recurring_expense.amount).tr(".", ",")), class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-      div
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une entité…" class="relative")
         = f.label :legal_entity_id, "Entité *", class: "block text-sm font-medium text-gray-700"
-        = f.collection_select :legal_entity_id, LegalEntity.actives.ordered, :id, :name, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+        = f.collection_select :legal_entity_id, LegalEntity.actives.ordered, :id, :name, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher une entité"
 
   .p-4.bg-white.rounded-lg.border.border-gray-100
     h3.mb-1.text-sm.font-semibold.text-gray-900 La récurrence
     p.mb-3.text-xs.text-gray-500
       | Les échéances suivantes se déduisent de la première : un prélèvement du 27 revient le 27.
     .grid.gap-4(class="md:grid-cols-3")
-      div
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une fréquence…" class="relative")
         = f.label :frequency, "Fréquence *", class: "block text-sm font-medium text-gray-700"
-        = f.select :frequency, RecurringExpense::FREQUENCY_LABELS.map { |v, l| [l, v] }, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+        = f.select :frequency, RecurringExpense::FREQUENCY_LABELS.map { |v, l| [l, v] }, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher une fréquence"
       div
         = f.date_field :first_due_on, label: "Première échéance *", required: true, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
       div
@@ -35,9 +38,10 @@
   .p-4.bg-white.rounded-lg.border.border-gray-100
     h3.mb-3.text-sm.font-semibold.text-gray-900 Pour la suite
     .grid.gap-4(class="md:grid-cols-2")
-      div
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucun compte" data-searchable-select-clearable-value="true" class="relative")
         = f.label :general_account_id, "Compte de charge", class: "block text-sm font-medium text-gray-700"
-        = f.collection_select :general_account_id, GeneralAccount.actives.in_class(6).ordered, :id, :to_s, { include_blank: "Aucun" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+        = f.collection_select :general_account_id, GeneralAccount.actives.in_class(6).ordered, :id, :to_s, { include_blank: "Aucun" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un compte de charge"
       div
         = f.label :notes, "Notes", class: "block text-sm font-medium text-gray-700"
         = f.text_area :notes, rows: 2, placeholder: "Contrat, n° client, date de renouvellement…", class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"

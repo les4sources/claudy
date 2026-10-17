@@ -11,10 +11,12 @@
                    hint: "Sans la période : « Déclaration TVA », pas « TVA TR3 26 » — la période s'ajoute d'elle-même à chaque échéance.",
                    class: "md:w-2/3"
 
-    = f.select :legal_entity_id,
-               LegalEntity.ordered.map { |entity| [entity.name, entity.id] },
-               { label: "Entité *" },
-               { class: "md:w-2/3" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une entité…" class="relative md:w-2/3")
+      = f.select :legal_entity_id,
+                 LegalEntity.ordered.map { |entity| [entity.name, entity.id] },
+                 { label: "Entité *" },
+                 { data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher une entité"
 
     div
       .flex.items-center
@@ -28,20 +30,24 @@
     = section_heading_tw heading: "Le rythme"
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
-    = f.select :frequency,
-               ComplianceObligation::FREQUENCIES.map { |frequency| [ComplianceObligation::FREQUENCY_LABELS.fetch(frequency), frequency] },
-               { label: "Fréquence *" },
-               { class: "md:w-1/2" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une fréquence…" class="relative md:w-1/2")
+      = f.select :frequency,
+                 ComplianceObligation::FREQUENCIES.map { |frequency| [ComplianceObligation::FREQUENCY_LABELS.fetch(frequency), frequency] },
+                 { label: "Fréquence *" },
+                 { data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher une fréquence"
 
     = f.date_field :first_due_on,
                    label: "Première échéance à suivre *",
                    hint: "Les suivantes s'en déduisent : même jour, tous les 1, 3 ou 12 mois.",
                    class: "md:w-1/3"
 
-    = f.select :covers,
-               ComplianceObligation::COVERS.map { |covers| [ComplianceObligation::COVERS_LABELS.fetch(covers), covers] },
-               { label: "Chaque échéance couvre" },
-               { class: "md:w-2/3" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une période…" class="relative md:w-2/3")
+      = f.select :covers,
+                 ComplianceObligation::COVERS.map { |covers| [ComplianceObligation::COVERS_LABELS.fetch(covers), covers] },
+                 { label: "Chaque échéance couvre" },
+                 { data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher une période couverte"
 
     = f.date_field :ends_on, label: "Plus d'échéance après le", hint: "Facultatif.", class: "md:w-1/3"
 
@@ -50,10 +56,12 @@
     = section_heading_tw heading: "Qui, et comment"
 
   .col-span-2.mb-4.space-y-6.sm:space-y-5
-    = f.select :responsible_user_id,
-               User.all.sort_by { |user| I18n.transliterate(user.display_name.downcase) }.map { |user| [user.display_name, user.id] },
-               { label: "Reçoit les rappels", include_blank: "— les destinataires comptables des réglages —" },
-               { class: "md:w-2/3" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Les destinataires comptables des réglages" data-searchable-select-clearable-value="true" class="relative md:w-2/3")
+      = f.select :responsible_user_id,
+                 User.all.sort_by { |user| I18n.transliterate(user.display_name.downcase) }.map { |user| [user.display_name, user.id] },
+                 { label: "Reçoit les rappels", include_blank: "— les destinataires comptables des réglages —" },
+                 { data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher une personne"
 
     div
       = label_tag "compliance_obligation_instructions", "Mode opératoire", class: "block text-sm font-medium text-gray-700"
