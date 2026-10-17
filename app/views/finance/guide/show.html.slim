@@ -1,0 +1,47 @@
+/ Le guide de la comptabilité (2026-10-17) : ce qu'il faut à la personne qui
+  démarre. Trois blocs, dans l'ordre où on en a besoin : comprendre le circuit,
+  savoir quoi faire et quand, retrouver un mot.
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Guide de la comptabilité"
+
+p.mb-8.max-w-3xl.text-sm.text-gray-700
+  | Tu démarres en comptabilité ? Cette page explique comment l'argent circule dans Claudy, ce que tu fais chaque semaine et chaque mois, et les mots que tu croiseras. Sur chaque écran de la section, la ligne « À quoi sert cette page ? » sous le titre te redonne l'essentiel.
+
+section.mb-10
+  h2.mb-3.text-lg.font-semibold.text-gray-900 Comment l'argent circule
+  ol.grid.gap-3(class="md:grid-cols-5")
+    - @circuit.each_with_index do |(titre, texte), index|
+      li.relative.rounded-lg.border.border-gray-100.bg-white.p-4
+        .flex.items-center.gap-2
+          span.flex.h-7.w-7.flex-none.items-center.justify-center.rounded-full.bg-teal-100.text-sm.font-semibold.text-teal-800= index + 1
+          p.font-medium.text-gray-900= titre
+        p.mt-2.text-sm.text-gray-600= texte
+  .mt-4.grid.gap-3.text-sm(class="md:grid-cols-3")
+    .rounded-lg.border.border-gray-100.bg-white.p-4
+      p.font-medium.text-gray-900 Tu ne tapes jamais un débit ou un crédit
+      p.mt-1.text-gray-600 Tu décris un fait (ce paiement règle cette facture) et Claudy écrit la comptabilité.
+    .rounded-lg.border.border-gray-100.bg-white.p-4
+      p.font-medium.text-gray-900 Rien ne s'efface
+      p.mt-1.text-gray-600 Une erreur se corrige par l'opération inverse (on contre-passe) : l'historique reste lisible.
+    .rounded-lg.border.border-gray-100.bg-white.p-4
+      p.font-medium.text-gray-900 Dans le doute, commente et passe
+      p.mt-1.text-gray-600 Une ligne qu'on ne comprend pas peut attendre : laisse un commentaire, quelqu'un saura.
+
+section.mb-10
+  h2.mb-3.text-lg.font-semibold.text-gray-900 Ta routine
+  .grid.gap-4(class="md:grid-cols-3")
+    - @routine.each do |rythme, taches|
+      .rounded-lg.border.border-gray-100.bg-white.p-4
+        p.text-xs.font-semibold.uppercase.tracking-wide.text-gray-500= rythme
+        ol.mt-3.space-y-2.text-sm
+          - taches.each do |tache|
+            li
+              = link_to tache.label, public_send(tache.route), class: "text-blue-600 hover:text-blue-800"
+
+section#lexique
+  h2.mb-3.text-lg.font-semibold.text-gray-900 Lexique
+  dl.grid.gap-3(class="md:grid-cols-2")
+    - @terms.each do |term|
+      .scroll-mt-24.rounded-lg.border.border-gray-100.bg-white.p-4(id=term.key)
+        dt.font-medium.text-gray-900= term.word
+        dd.mt-1.text-sm.text-gray-600= term.definition
