@@ -34,11 +34,20 @@ RSpec.describe "Tuiles de la carte partagées avec Semisto Designer", type: :req
     expect(response.headers["Access-Control-Allow-Origin"]).to eq("https://designer.semisto.org")
   end
 
-  it "ne pose pas l'en-tête CORS pour une autre origine" do
+  it "l'ouvre à Terranova, la nouvelle adresse de Designer" do
+    get "#{tile}?partage=#{token}", headers: { "Origin" => "https://terranova.semisto.org" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.headers["Access-Control-Allow-Origin"]).to eq("https://terranova.semisto.org")
+    expect(response.headers["Vary"]).to include("Origin")
+  end
+
+  it "ne pose pas l'en-tête CORS pour une autre origine, mais varie selon elle" do
     get "#{tile}?partage=#{token}", headers: { "Origin" => "https://ailleurs.example" }
 
     expect(response).to have_http_status(:ok)
     expect(response.headers["Access-Control-Allow-Origin"]).to be_nil
+    expect(response.headers["Vary"]).to include("Origin")
   end
 
   it "refuse un mauvais jeton" do

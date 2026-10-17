@@ -103,7 +103,8 @@ des 4 Sources. Son navigateur lit les tuiles chez Claudy, sans session, avec le
 jeton `?partage=…` comparé en temps constant à `MAP_TILES_SHARE_TOKEN`. Le jeton
 n'ouvre que la photo (`rgb`), jamais le relief ni la page Carte ; sans variable,
 rien n'est ouvert, et la vider révoque le partage. L'en-tête CORS n'est posé que
-pour les origines de `MAP_TILES_SHARE_ORIGINS` (défaut `https://designer.semisto.org`).
+pour les origines de `MAP_TILES_SHARE_ORIGINS` (défaut `https://terranova.semisto.org,https://designer.semisto.org` ;
+Terranova est le nouveau nom de Designer).
 
 Adresse à coller dans Designer (`/admin/drone-views`, format « Tuiles XYZ ») :
 `https://<hôte de Claudy>/map/tiles/<clé de la couche>/rgb/{z}/{x}/{y}.png?partage=<jeton>`.
