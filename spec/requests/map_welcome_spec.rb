@@ -69,7 +69,10 @@ RSpec.describe "Carte du domaine — couche Accueil, côté équipe (epic #348, 
       json = feature.as_public_geojson(:en)
       expect(json[:geometry]).to eq(polygon)
       expect(json[:properties]).to eq(name: "The orchard", description: "Cueillette libre", access: "public")
-      expect(json.to_json).not_to include("Tailler en mars", feature.id.to_s)
+      # L'identifiant ne sort pas : on vérifie la CLÉ, pas la chaîne — un id
+      # comme 41 se retrouve par hasard dans les coordonnées (50.341).
+      expect(json.keys).not_to include(:id, "id")
+      expect(json.to_json).not_to include("Tailler en mars", "\"id\"")
     end
   end
 

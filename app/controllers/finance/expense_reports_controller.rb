@@ -32,6 +32,8 @@ module Finance
     def new
       @report = ExpenseReport.new(
         kind: params[:kind].presence_in(ExpenseReport::KINDS) || "expenses",
+        # Venue du tableau de bord d'un membre : le bénéficiaire est déjà connu.
+        human: Human.find_by(id: params[:human_id].presence),
         legal_entity: default_entity,
         submitted_on: Date.current
       )
