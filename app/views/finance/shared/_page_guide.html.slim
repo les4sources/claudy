@@ -1,0 +1,40 @@
+/ L'aide de l'écran (2026-10-17), posée par le layout sous le titre de chaque
+  page de la Comptabilité. Repliée par défaut : la phrase « à quoi sert cette
+  page » se lit toujours, les gestes et les mots ne s'ouvrent qu'à la demande —
+  la personne qui démarre les ouvre, celle qui connaît n'en est pas gênée.
+  Un `<details>` natif : pas de JavaScript, et l'état ouvert ne survit pas à la
+  page suivante, ce qui est voulu.
+- guide = Finance::Guide.page(controller_path, action_name)
+- if guide && controller_path != "finance/guide"
+  - details_any = guide.steps.any? || guide.terms.any?
+  details.group.mb-6.rounded-lg.border.border-teal-100(class="bg-teal-50/40" data-page-guide=controller_path)
+    summary(class="flex items-start gap-2 px-4 py-2.5 text-sm text-gray-700 list-none [&::-webkit-details-marker]:hidden #{details_any ? 'cursor-pointer' : 'pointer-events-none'}")
+      svg.mt-0.5.h-4.w-4.flex-none.text-teal-600[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"]
+        circle[cx="12" cy="12" r="10"]
+        path[d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"]
+        line[x1="12" y1="17" x2="12.01" y2="17"]
+      span.flex-1
+        span.font-medium.text-gray-900 À quoi sert cette page ?
+        = " #{guide.purpose}"
+      - if details_any
+        span(class="flex-none text-xs font-medium text-teal-700 group-open:hidden") Comment faire
+        span(class="hidden flex-none text-xs font-medium text-teal-700 group-open:inline") Refermer
+    - if details_any
+      .grid.gap-6.border-t.border-teal-100.px-4.py-4.text-sm(class="md:grid-cols-2")
+        - if guide.steps.any?
+          div
+            p.mb-2.text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Comment faire
+            ol.list-decimal.space-y-1.pl-5.text-gray-700
+              - guide.steps.each do |step|
+                li= step
+        - if guide.terms.any?
+          div
+            p.mb-2.text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Mots à connaître
+            dl.space-y-2
+              - guide.terms.each do |key|
+                - term = Finance::Guide.term(key)
+                div
+                  dt.font-medium.text-gray-900= term.word
+                  dd.text-gray-600= term.definition
+      .px-4.pb-3.text-xs
+        = link_to "Ouvrir le guide complet : ta routine et tout le lexique", finance_guide_path, class: "text-teal-700 underline hover:no-underline"

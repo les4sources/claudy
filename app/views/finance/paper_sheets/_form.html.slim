@@ -9,15 +9,19 @@
   .col-span-2.mb-4.space-y-6.sm:space-y-5
     = f.date_field :period_month, label: "Mois *", hint: "N'importe quel jour du mois — la fiche se cale sur le 1er.", class: "md:w-1/3"
 
-    = f.select :channel,
-               PaperSheet::CHANNELS.map { |channel| [PaperSheet::CHANNEL_LABELS.fetch(channel, channel), channel] },
-               { label: "Canal *" },
-               { class: "md:w-1/3" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un canal…" class="relative md:w-1/3")
+      = f.select :channel,
+                 PaperSheet::CHANNELS.map { |channel| [PaperSheet::CHANNEL_LABELS.fetch(channel, channel), channel] },
+                 { label: "Canal *" },
+                 { data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher un canal"
 
-    = f.select :entry_mode,
-               PaperSheet::ENTRY_MODES.map { |mode| [PaperSheet::ENTRY_MODE_LABELS.fetch(mode), mode] },
-               { label: "Mode de saisie" },
-               { class: "md:w-1/2" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un mode…" class="relative md:w-1/2")
+      = f.select :entry_mode,
+                 PaperSheet::ENTRY_MODES.map { |mode| [PaperSheet::ENTRY_MODE_LABELS.fetch(mode), mode] },
+                 { label: "Mode de saisie" },
+                 { data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher un mode de saisie"
 
     = f.file_field :photo, label: "Photo de la fiche", hint: "La fiche papier reste la pièce justificative : la photographier permet de retrouver l'origine d'une ligne contestée."
 

@@ -11,6 +11,9 @@ Groupe : <%= group %>
 <% if @stay.category_label.present? %>
 Type de réservation : <%= @stay.category_label %>
 <% end %>
+<% if @stay.referral_label.present? %>
+Apporteur : <%= @stay.referral_label %> (lien partenaire)
+<% end %>
 
 SÉJOUR
 Dates : <%= @stay.date_range %>

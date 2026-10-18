@@ -4,14 +4,16 @@
   .p-4.bg-white.rounded-lg.border.border-gray-100
     h3.mb-3.text-sm.font-semibold.text-gray-900 L'hébergement partagé
     .grid.gap-4(class="md:grid-cols-3")
-      div
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un hébergement…" class="relative")
         = f.label :lodging_id, "Hébergement *", class: "block text-sm font-medium text-gray-700"
-        = f.collection_select :lodging_id, Lodging.order(:name), :id, :name, { include_blank: "Choisir…" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+        = f.collection_select :lodging_id, Lodging.order(:name), :id, :name, { include_blank: "Choisir…" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un hébergement"
       div
         = f.number_field :share_percent, label: "Part reversée (%) *", min: 1, max: 100, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-      div
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une périodicité…" class="relative")
         = f.label :period, "Périodicité *", class: "block text-sm font-medium text-gray-700"
-        = f.select :period, RevenueShareAgreement::PERIOD_LABELS.map { |v, l| [l, v] }, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+        = f.select :period, RevenueShareAgreement::PERIOD_LABELS.map { |v, l| [l, v] }, {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher une périodicité"
     p.mt-2.text-xs.text-gray-500
       | La périodicité décide de ce que « Générer le relevé » propose : le dernier trimestre clos, ou le dernier mois clos. La changer ne touche à aucun relevé déjà émis.
 
@@ -25,9 +27,10 @@
       div
         = f.text_field :beneficiary_iban, label: "IBAN", class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
     .grid.gap-4.mt-4(class="md:grid-cols-3")
-      div
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Créé à la première émission" data-searchable-select-clearable-value="true" class="relative")
         = f.label :beneficiary_third_party_id, "Tiers comptable", class: "block text-sm font-medium text-gray-700"
-        = f.collection_select :beneficiary_third_party_id, ThirdParty.actives.ordered, :id, :name, { include_blank: "Créé à la première émission" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+        = f.collection_select :beneficiary_third_party_id, ThirdParty.actives.ordered, :id, :name, { include_blank: "Créé à la première émission" }, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un tiers comptable"
     p.mt-2.text-xs.text-gray-500
       | Sans email, le relevé s'émet quand même : la page à jeton reste partageable à la main. Le tiers comptable est celui du 440000 — laissé vide, il est créé à la première émission et mémorisé ici.
 

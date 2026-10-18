@@ -110,7 +110,12 @@ export default class extends Controller {
     ['general_account_id', 'team_id', 'spent_on'].forEach((field) => {
       const source = previous.querySelector(`[data-expense-field="${field}"]`);
       const target = row.querySelector(`[data-expense-field="${field}"]`);
-      if (source && target && source.value) target.value = source.value;
+      if (source && target && source.value) {
+        target.value = source.value;
+        // Les listes sont cherchables : leur champ de recherche suit le
+        // <select> par l'événement `change`, pas par sa valeur.
+        target.dispatchEvent(new Event('change', { bubbles: true }));
+      }
     });
   }
 

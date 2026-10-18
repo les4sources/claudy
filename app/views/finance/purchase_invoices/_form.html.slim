@@ -24,9 +24,10 @@
               = f.collection_select :third_party_id, third_parties, :id, :name, { include_blank: "Choisir…" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select", supplier_quick_create_target: "select" }
               = render "shared/searchable_select_search", label: "Chercher un fournisseur"
             = render "finance/purchase_invoices/supplier_dialog", draft: supplier_draft
-          div
+          div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une entité…" class="relative")
             label.block.text-xs.font-medium.text-gray-500 Entité juridique
-            = f.collection_select :legal_entity_id, entities, :id, :name, {}, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+            = f.collection_select :legal_entity_id, entities, :id, :name, {}, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+            = render "shared/searchable_select_search", label: "Chercher une entité juridique"
           div
             label.block.text-xs.font-medium.text-gray-500 Numéro de facture
             = f.text_field :number, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
@@ -77,9 +78,10 @@
           label.flex.items-start.gap-2.text-sm.text-gray-700
             = f.check_box :requires_validation, class: "mt-1"
             span Un pôle doit dire oui avant que cette facture soit payable.
-          div
+          div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucun pôle" data-searchable-select-clearable-value="true" class="relative")
             label.block.text-xs.font-medium.text-gray-500 Pôle concerné
-            = f.collection_select :validation_team_id, teams, :id, :name, { include_blank: "Aucun" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+            = f.collection_select :validation_team_id, teams, :id, :name, { include_blank: "Aucun" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+            = render "shared/searchable_select_search", label: "Chercher un pôle"
 
         .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
           label.block.text-xs.font-medium.text-gray-500 Notes

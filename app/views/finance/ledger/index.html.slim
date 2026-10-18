@@ -2,12 +2,14 @@
   = render "layouts/components/page_header", title: "Grand livre"
 
 = form_with url: finance_ledger_path, method: :get, class: "mb-6 p-4 bg-white rounded-lg border border-gray-100 flex flex-wrap items-end gap-4" do |f|
-  div
+  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" class="relative w-72")
     = f.label :general_account_id, "Compte", class: "block text-sm font-medium text-gray-700"
-    = f.collection_select :general_account_id, @accounts, :id, :to_s, { include_blank: "Choisir un compte…", selected: @account&.id }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-  div
+    = f.collection_select :general_account_id, @accounts, :id, :to_s, { include_blank: "Choisir un compte…", selected: @account&.id }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher un compte"
+  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Toutes les entités" data-searchable-select-clearable-value="true" class="relative w-48")
     = f.label :legal_entity_id, "Entité", class: "block text-sm font-medium text-gray-700"
-    = f.collection_select :legal_entity_id, @entities, :id, :name, { include_blank: "Toutes", selected: @entity&.id }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+    = f.collection_select :legal_entity_id, @entities, :id, :name, { include_blank: "Toutes", selected: @entity&.id }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher une entité"
   div
     = f.label :from, "Du", class: "block text-sm font-medium text-gray-700"
     = f.date_field :from, value: @from, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"

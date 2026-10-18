@@ -69,15 +69,18 @@ div(class=panel)
          c'est la décision du geste : depuis le lettrage par poste, un règlement
          sans poste tombe dans « Divers » et n'apure rien de ce que le foyer
          croyait payer.
-      div(class="md:col-span-2")
+      div(class="relative md:col-span-2" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un poste…")
         = label_tag "settlement[flow]", "Poste réglé *", class: field_label
-        = select_tag "settlement[flow]", options_for_select(AccountEntry::FLOWS.map { |flow| [AccountEntry::FLOW_LABELS.fetch(flow, flow), flow] }, "charges"), class: field_input
-      div(class="md:col-span-2")
+        = select_tag "settlement[flow]", options_for_select(AccountEntry::FLOWS.map { |flow| [AccountEntry::FLOW_LABELS.fetch(flow, flow), flow] }, "charges"), class: field_input, data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un poste"
+      div(class="relative md:col-span-2" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un moyen…")
         = label_tag "settlement[method]", "Moyen", class: field_label
-        = select_tag "settlement[method]", options_for_select(AccountSettlement::METHODS.map { |m| [AccountSettlement::METHOD_LABELS.fetch(m), m] }), class: field_input
-      div(class="md:col-span-2")
+        = select_tag "settlement[method]", options_for_select(AccountSettlement::METHODS.map { |m| [AccountSettlement::METHOD_LABELS.fetch(m), m] }), class: field_input, data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un moyen de paiement"
+      div(class="relative md:col-span-2" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un lieu de réception…")
         = label_tag "settlement[received_channel]", "Reçu où", class: field_label
-        = select_tag "settlement[received_channel]", options_for_select(AccountSettlement::CHANNELS.map { |c| [AccountSettlement::CHANNEL_LABELS.fetch(c), c] }), class: field_input
+        = select_tag "settlement[received_channel]", options_for_select(AccountSettlement::CHANNELS.map { |c| [AccountSettlement::CHANNEL_LABELS.fetch(c), c] }), class: field_input, data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un lieu de réception"
       div(class="md:col-span-2")
         = label_tag "settlement[reference]", "Communication", class: field_label
         = text_field_tag "settlement[reference]", nil, placeholder: @account.code, class: field_input
@@ -110,13 +113,15 @@ div(class=panel)
                          id: "account_entry_label",
                          class: field_input,
                          placeholder: "Bières du vendredi, régularisation…"
-      div(class="md:col-span-2")
+      div(class="relative md:col-span-2" data-controller="searchable-select" data-searchable-select-placeholder-value="Aucun canal" data-searchable-select-clearable-value="true")
         label.block.text-sm.font-medium.text-gray-700.mb-1[for="account_entry_flow"] Canal
         = select_tag "account_entry[flow]",
                      options_for_select(AccountEntry::FLOWS.map { |flow| [AccountEntry::FLOW_LABELS.fetch(flow, flow), flow] }),
                      include_blank: "—",
                      id: "account_entry_flow",
-                     class: field_input
+                     class: field_input,
+                     data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un canal"
       div(class="md:col-span-2")
         label.block.text-sm.font-medium.text-gray-700.mb-1[for="account_entry_amount"] Montant (€)
         = number_field_tag "account_entry[amount]",

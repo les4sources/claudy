@@ -77,7 +77,7 @@ RSpec.describe "Appartenance des contrôleurs Finance::", type: :model do
     carrier_statements
     cash_allocations cash_counts cash_entries cash_motifs cash_sheet coda_imports
     collection_cost compliance_deadlines compliance_obligations
-    consignment_reports cross_check expense_reports fiscal_years
+    consignment_reports cross_check expense_reports fiscal_years guide
     general_accounts ledger legal_entities liabilities mail_messages monthly_close payables purchase_invoices
     recurring_expenses revenue_share_agreements
     revenue_share_statements sales_invoices stripe stripe_category_mappings stripe_fee_invoices

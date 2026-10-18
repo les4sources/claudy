@@ -16,27 +16,35 @@
     /  Une charge vise SOIT un compte, SOIT un groupe de ménages. Le forfait
        charges vaut pour tous les habitants : le recopier ménage par ménage,
        c'est garantir que la prochaine famille arrivée sera oubliée.
-    = f.select :applies_to,
-               RecurringCharge::SCOPES.map { |scope| [RecurringCharge::SCOPE_LABELS.fetch(scope), scope] },
-               { label: "Appliquer à *" },
-               { class: "md:w-2/3" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un périmètre…" class="relative md:w-2/3")
+      = f.select :applies_to,
+                 RecurringCharge::SCOPES.map { |scope| [RecurringCharge::SCOPE_LABELS.fetch(scope), scope] },
+                 { label: "Appliquer à *" },
+                 { class: "md:w-2/3", data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher un périmètre"
 
-    = f.select :member_account_id,
-               MemberAccount.ordered.map { |account| ["#{account.name} (#{account.code})", account.id] },
-               { label: "Compte (si « Un seul compte »)", include_blank: "—" },
-               { class: "md:w-2/3" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucun compte" data-searchable-select-clearable-value="true" class="relative md:w-2/3")
+      = f.select :member_account_id,
+                 MemberAccount.ordered.map { |account| ["#{account.name} (#{account.code})", account.id] },
+                 { label: "Compte (si « Un seul compte »)", include_blank: "—" },
+                 { class: "md:w-2/3", data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher un compte"
     p.-mt-4.mb-2.text-sm.text-gray-500
       | Laisse ce champ vide dès que la charge vise un groupe : le périmètre est recalculé à chaque génération, donc un ménage créé plus tard est couvert sans qu'on y pense.
 
-    = f.select :basis,
-               RecurringCharge::BASES.map { |basis| [RecurringCharge::BASIS_LABELS.fetch(basis, basis), basis] },
-               { label: "Base de calcul *" },
-               { class: "md:w-1/2" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une base de calcul…" class="relative md:w-1/2")
+      = f.select :basis,
+                 RecurringCharge::BASES.map { |basis| [RecurringCharge::BASIS_LABELS.fetch(basis, basis), basis] },
+                 { label: "Base de calcul *" },
+                 { class: "md:w-1/2", data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher une base de calcul"
 
-    = f.select :flow,
-               AccountEntry::FLOWS.map { |flow| [AccountEntry::FLOW_LABELS.fetch(flow, flow), flow] },
-               { label: "Canal", include_blank: "—" },
-               { class: "md:w-1/2" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucun canal" data-searchable-select-clearable-value="true" class="relative md:w-1/2")
+      = f.select :flow,
+                 AccountEntry::FLOWS.map { |flow| [AccountEntry::FLOW_LABELS.fetch(flow, flow), flow] },
+                 { label: "Canal", include_blank: "—" },
+                 { class: "md:w-1/2", data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher un canal"
 
 .border-l-8.border-indigo-700.-ml-4.pl-4.md:p-0.md:m-0.md:border-0.grid.grid-cols-1.md:grid-cols-3.md:gap-4
   .md:border-r-8.md:border-indigo-700.md:pr-4.md:text-right
@@ -52,15 +60,19 @@
                        (f.object.amount_cents ? format("%.2f", f.object.amount_cents / 100.0).tr(".", ",") : nil),
                        class: "mt-1 w-40 rounded-md border-gray-300 shadow-sm text-sm"
 
-    = f.select :rate_key,
-               Rate.ordered.pluck(:key),
-               { label: "…ou clé de barème", include_blank: "—" },
-               { class: "md:w-1/2" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucune clé" data-searchable-select-clearable-value="true" class="relative md:w-1/2")
+      = f.select :rate_key,
+                 Rate.ordered.pluck(:key),
+                 { label: "…ou clé de barème", include_blank: "—" },
+                 { class: "md:w-1/2", data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher une clé de barème"
 
-    = f.select :split_rate_key,
-               Rate.ordered.pluck(:key),
-               { label: "Part scindée (clé)", include_blank: "—" },
-               { class: "md:w-1/2" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucune part scindée" data-searchable-select-clearable-value="true" class="relative md:w-1/2")
+      = f.select :split_rate_key,
+                 Rate.ordered.pluck(:key),
+                 { label: "Part scindée (clé)", include_blank: "—" },
+                 { class: "md:w-1/2", data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher une clé de part scindée"
 
     = f.text_field :split_label,
                    label: "Libellé de la part scindée",

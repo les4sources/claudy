@@ -32,6 +32,9 @@ module Finance
       # « Peut-on dépenser ? », entité par entité (2026-10-13) : la réponse
       # franche, en tête de page.
       @verdicts = Finance::SpendingVerdict.for_all(loans: @loans)
+      # « À faire » (2026-10-17) : les files dans l'ordre du travail, pour que
+      # la personne qui démarre sache par où commencer.
+      @todo = Finance::AccountingTodo.new
     end
   end
 end

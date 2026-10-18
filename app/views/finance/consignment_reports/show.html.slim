@@ -94,12 +94,14 @@
             = button_to "Détacher la facture", unlink_invoice_finance_consignment_report_path(@report), method: :post, class: "text-xs text-red-600 hover:underline", form: { class: "inline" }
         - elsif @candidate_invoices.any?
           = form_with url: link_invoice_finance_consignment_report_path(@report), method: :post, class: "px-5 py-4 flex flex-wrap items-end gap-3" do
-            .min-w-0.flex-1
+            .min-w-0.flex-1(class="relative" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une facture…")
               = label_tag :purchase_invoice_id, "Facture d'achat", class: "block text-xs font-medium text-gray-500"
               = select_tag :purchase_invoice_id,
                            options_from_collection_for_select(@candidate_invoices, :id, ->(i) { "#{i.payable_label} — #{humanized_money_with_symbol(Money.new(i.total_cents.to_i, 'EUR'))}" }),
                            include_blank: "— Choisir —",
-                           class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+                           class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm",
+                           data: { searchable_select_target: "select" }
+              = render "shared/searchable_select_search", label: "Chercher une facture d'achat"
             button.inline-flex.items-center.rounded-md.bg-4s-main.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="hover:opacity-90" type="submit")
               | Lier
         - else

@@ -11,7 +11,8 @@ module Mcp
              title: "Vue d'ensemble de la comptabilité",
              description: "La page d'accueil de la Comptabilité : entités et exercices ouverts, nombre de comptes et " \
                           "d'écritures, dernier comptage de caisse, échéances en retard ou à moins de 30 jours, dettes " \
-                          "et litiges ouverts. Le solde et la projection de trésorerie : tresorerie.",
+                          "et litiges ouverts, et la liste « À faire » (les files à vider, dans l'ordre du travail). " \
+                          "Le solde et la projection de trésorerie : tresorerie.",
              schema: { properties: {} }
 
         def call(_arguments)
@@ -37,6 +38,13 @@ module Mcp
           lignes << "Échéances en retard : #{retard.size}#{retard.any? ? " · #{retard.map { |d| "#{d.display_title} (#{d.due_on})" }.join(', ')}" : ''}"
           lignes << "Échéances à 30 jours : #{bientot.size}#{bientot.any? ? " · #{bientot.map { |d| "#{d.display_title} (#{d.due_on})" }.join(', ')}" : ''}"
           lignes << "Dettes et litiges ouverts : #{dettes.size}#{" · reste #{euros(dettes.sum(&:remaining_cents))}" if dettes.any?}"
+          # « À faire », comme en tête de l'écran (2026-10-17) : les files dans
+          # l'ordre du travail.
+          lignes << "À faire, dans l'ordre :"
+          lignes += Finance::AccountingTodo.new.items.map do |item|
+            etat = { todo: "à faire", waiting: "en attente", done: "fait" }.fetch(item.state)
+            "- #{item.label} (#{etat}) : #{item.detail}"
+          end
           lignes << "Trésorerie et projection : tresorerie. Échéancier : echeancier. Paramétrage : parametrage_compta."
           lignes.join("\n")
         end

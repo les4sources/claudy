@@ -13,27 +13,31 @@
                    hint: "Ex. « Moinette », « Avoine bio »",
                    class: "md:w-2/3"
 
-    = f.select :channel,
-               CatalogItem::CHANNELS.map { |channel| [CatalogItem::CHANNEL_LABELS.fetch(channel, channel), channel] },
-               { label: "Canal *" },
-               { class: "md:w-1/3",
-                 data: { catalog_item_form_target: "channel", action: "change->catalog-item-form#toggle" } }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un canal…" class="relative md:w-1/3")
+      = f.select :channel,
+                 CatalogItem::CHANNELS.map { |channel| [CatalogItem::CHANNEL_LABELS.fetch(channel, channel), channel] },
+                 { label: "Canal *" },
+                 { data: { catalog_item_form_target: "channel", action: "change->catalog-item-form#toggle", searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher un canal"
 
     / Le canal « Artisanat » EXIGE un artisan : un savon appartient à quelqu'un,
       et c'est ce lien qui dit à qui reverser la vente.
-    div(data-catalog-item-form-target="consignorField")
+    div(data-catalog-item-form-target="consignorField" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un artisan…" class="relative")
       = f.select :consignor_id,
                  @consignors.to_a.map { |consignor| [consignor.name, consignor.id] },
                  { include_blank: "— choisir l'artisan —", label: "Artisan *" },
                  { class: "md:w-1/3",
-                   data: { catalog_item_form_target: "consignor" } }
+                   data: { catalog_item_form_target: "consignor", searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher un artisan"
       p.mt-1.text-sm.text-gray-500
         | Obligatoire pour un article d'artisanat, interdit ailleurs. Le prix de vente se pose ensuite en palier ; la commission des 4 Sources se lit sur la fiche de l'artisan.
 
-    = f.select :unit,
-               CatalogItem::UNITS.map { |unit| [CatalogItem::UNIT_LABELS.fetch(unit, unit), unit] },
-               { label: "Unité *" },
-               { class: "md:w-1/3" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une unité…" class="relative md:w-1/3")
+      = f.select :unit,
+                 CatalogItem::UNITS.map { |unit| [CatalogItem::UNIT_LABELS.fetch(unit, unit), unit] },
+                 { label: "Unité *" },
+                 { data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher une unité"
 
     = f.text_field :category,
                    label: "Catégorie",

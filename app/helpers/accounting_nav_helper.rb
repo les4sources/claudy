@@ -67,6 +67,43 @@ module AccountingNavHelper
     ]
   end
 
+  # Le guide (2026-10-17) : à part, au bout de la barre. Ce n'est pas un
+  # circuit de travail mais l'endroit où l'on revient quand un mot arrête.
+  def accounting_nav_guide = ["Guide", finance_guide_path, %w[finance/guide]]
+
+  # Une ligne sous chaque libellé (2026-10-17) : « CODA » ou « Tiers » ne disent
+  # rien à qui démarre. Par libellé plutôt que dans les entrées, pour que leur
+  # forme [libellé, chemin, contrôleurs] reste celle que la spec recense.
+  NAV_HINTS = {
+    "Vue d'ensemble" => "Peut-on dépenser, et ce qui attend",
+    "Trésorerie" => "Tous les mouvements d'argent, et la file À affecter",
+    "Arrêté du mois" => "Vérifier puis fermer le mois",
+    "Échéancier" => "Les dates légales à tenir",
+    "CODA" => "Déposer les relevés de la banque",
+    "Règles d'affectation" => "Les propositions automatiques d'affectation",
+    "Caisse" => "La feuille d'espèces et les comptages",
+    "Stripe" => "Les paiements par carte et leurs catégories",
+    "Coût d'encaissement" => "Ce que coûtent les commissions Stripe",
+    "Boite de réception" => "Les factures reçues par mail, à classer",
+    "Achats" => "Les factures des fournisseurs et leur statut",
+    "À payer" => "Les virements à faire, par échéance",
+    "Dettes et litiges" => "Ce qu'on doit sans facture",
+    "Charges fixes" => "Les dépenses qui reviennent, pour prévoir",
+    "Tiers" => "Fournisseurs, clients et prêteurs",
+    "Ventes" => "Les factures émises et leur paiement",
+    "Notes de frais" => "Rembourser ce qu'une personne a avancé",
+    "Porteurs" => "Rémunérer les porteurs d'activité",
+    "Dépôt-vente" => "Régler les artisans",
+    "Partages de revenus" => "Reverser la part d'un hébergement",
+    "Grand livre" => "Toutes les écritures d'un compte",
+    "Balance" => "Le total de chaque compte",
+    "Analytique" => "Ce que chaque pôle rapporte et coûte",
+    "Contrôle croisé" => "L'argent encaissé face aux séjours facturés",
+    "Guide" => "Le mode d'emploi et le lexique"
+  }.freeze
+
+  def accounting_nav_hint(label) = NAV_HINTS[label]
+
   def accounting_nav_current?(controllers) = controllers.include?(controller_path)
 
   # Un menu s'allume quand on est SUR une de ses entrées : sans ça, ouvrir le

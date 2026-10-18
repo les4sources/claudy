@@ -132,6 +132,9 @@ module Reservations
           # Catégorie de séjour (Michael 2026-07-21) — portée par le draft
           # (funnel public ET form admin), posée telle quelle. nil accepté.
           category: draft.category,
+          # Apporteur (Michael, 2026-10-18) : `?ref=semisto` à l'entrée du
+          # funnel. Le form admin ne le porte pas : nil hors funnel public.
+          referral: draft.referral,
           # Chiens (2026-10-12) : gardés pour que la réouverture du séjour
           # retrouve le supplément au lieu de le perdre.
           dogs_count: draft.dogs_count.to_i,

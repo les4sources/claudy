@@ -10,18 +10,21 @@
     p.text-xs.text-gray-500
       | Telle qu'elle arrive dans la métadonnée du paiement. Laisser vide désigne la correspondance « sans catégorie ».
 
-  .space-y-1
+  .space-y-1(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" class="relative")
     label.block.text-sm.font-medium.text-gray-700 for="stripe_category_mapping_general_account_id" Compte général
-    = f.collection_select :general_account_id, @general_accounts, :id, :to_s, { include_blank: "Choisir…" }, id: "stripe_category_mapping_general_account_id", class: "block w-full rounded-md border-gray-300 text-sm"
+    = f.collection_select :general_account_id, @general_accounts, :id, :to_s, { include_blank: "Choisir…" }, id: "stripe_category_mapping_general_account_id", class: "block w-full rounded-md border-gray-300 text-sm", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher un compte général"
 
-  .space-y-1
+  .space-y-1(data-controller="searchable-select" data-searchable-select-placeholder-value="Sans pôle" data-searchable-select-clearable-value="true" class="relative")
     label.block.text-sm.font-medium.text-gray-700 for="stripe_category_mapping_team_id" Pôle
-    = f.collection_select :team_id, @teams, :id, :name, { include_blank: "Sans pôle" }, id: "stripe_category_mapping_team_id", class: "block w-full rounded-md border-gray-300 text-sm"
+    = f.collection_select :team_id, @teams, :id, :name, { include_blank: "Sans pôle" }, id: "stripe_category_mapping_team_id", class: "block w-full rounded-md border-gray-300 text-sm", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher un pôle"
     p.text-xs.text-gray-500 Sans valeur par défaut : une recette rangée d'office dans le mauvais pôle est pire qu'une recette non ventilée.
 
-  .space-y-1
+  .space-y-1(data-controller="searchable-select" data-searchable-select-placeholder-value="Celle du compte de trésorerie" data-searchable-select-clearable-value="true" class="relative")
     label.block.text-sm.font-medium.text-gray-700 for="stripe_category_mapping_legal_entity_id" Entité
-    = f.collection_select :legal_entity_id, @entities, :id, :name, { include_blank: "Celle du compte de trésorerie" }, id: "stripe_category_mapping_legal_entity_id", class: "block w-full rounded-md border-gray-300 text-sm"
+    = f.collection_select :legal_entity_id, @entities, :id, :name, { include_blank: "Celle du compte de trésorerie" }, id: "stripe_category_mapping_legal_entity_id", class: "block w-full rounded-md border-gray-300 text-sm", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher une entité"
 
   .flex.items-center.gap-3
     = f.submit submit_label, class: "cursor-pointer rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white hover:opacity-90"
