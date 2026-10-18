@@ -44,6 +44,26 @@ RSpec.describe Mcp::Server, "finances" do
     build_cash_entry(compte_bancaire, amount_cents: cents, entry_date: jour, label: label).tap { |e| e.update!(attrs) if attrs.any? }
   end
 
+  it "lit le budget en brouillon, l'enregistre puis corrige une ligne" do
+    technique # le pôle existe
+    annee = jour.year + 1
+    avant = texte(outil("budget", { "annee" => annee }))
+    expect(avant).to include("Budget #{annee} de Fondation Les 4 Sources (BROUILLON")
+
+    apercu = texte(outil("modifier_budget", { "annee" => annee, "motif" => "budget #{annee}",
+                                                "lignes" => [{ "pole" => "Technique", "compte" => "612000", "montant" => "1 800" }] }))
+    expect(apercu).to include("APERÇU", "Pôle Technique · 612000 Énergie : rien → 1800,00 €")
+    expect(BudgetLine.count).to eq(0)
+
+    confirme("modifier_budget", { "annee" => annee, "motif" => "budget #{annee}",
+                                  "lignes" => [{ "pole" => "Technique", "compte" => "612000", "montant" => "1 800" }] })
+    expect(BudgetLine.sole).to have_attributes(team: technique, general_account: energie, amount_cents: 180_000)
+    expect(texte(outil("budget", { "annee" => annee }))).to include("612000 Énergie (charge) : réel 0,00 € · prévu 1800,00 €")
+
+    refus = outil("modifier_budget", { "annee" => annee, "lignes" => [{ "compte" => "550000", "montant" => "10" }] })
+    expect(texte(refus)).to include("n'est pas un compte de charges ou de produits")
+  end
+
   it "enregistre la taxe d'Yvoir comme litige, la montre dans À payer et la trésorerie, puis la solde" do
     ThirdParty.create!(name: "Commune d'Yvoir", kind: "supplier")
     arguments = { "libelle" => "Taxe communale d'hébergement 2021-2025", "nature" => "litige", "creancier" => "Yvoir",

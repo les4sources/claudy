@@ -50,6 +50,7 @@ class Team < ApplicationRecord
   has_many :cycle_actions
   # Le budget annuel du pôle (Michael, 2026-10-18), un par année civile.
   has_many :team_budgets, dependent: :destroy
+  has_many :budget_lines, dependent: :destroy
 
   belongs_to :parent, class_name: "Team", optional: true
 

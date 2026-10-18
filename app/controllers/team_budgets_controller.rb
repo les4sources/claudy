@@ -6,6 +6,11 @@ class TeamBudgetsController < BaseController
   # Un budget neuf part du réel de l'année d'avant : on corrige des chiffres
   # plutôt que de les inventer. Le formulaire le dit.
   def edit
+    if detailed?
+      return redirect_to team_path(@team, year: @budget.year),
+                         notice: "Le budget #{@budget.year} de ce pôle est détaillé : il se modifie dans Comptabilité › Budget."
+    end
+
     breadcrumb "Pôles", :organisation_teams_path
     breadcrumb @team.name, team_path(@team, year: @budget.year)
     return unless @budget.new_record?
@@ -25,6 +30,10 @@ class TeamBudgetsController < BaseController
   end
 
   private
+
+  # Les lignes du budget détaillé priment : deux montants saisis ici seraient
+  # ignorés par la page du pôle.
+  def detailed? = @team.budget_lines.for_year(@budget.year).exists?
 
   def get_team_and_budget
     @team = Team.find(params[:team_id])

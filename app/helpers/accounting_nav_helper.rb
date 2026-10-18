@@ -62,6 +62,7 @@ module AccountingNavHelper
         ["Grand livre", finance_ledger_path, %w[finance/ledger]],
         ["Balance", finance_trial_balance_path, %w[finance/trial_balance]],
         ["Analytique", finance_analytic_balance_path, %w[finance/analytic_balance]],
+        ["Budget", finance_budget_path, %w[finance/budgets]],
         ["Contrôle croisé", finance_cross_check_path, %w[finance/cross_check]]
       ]]
     ]
@@ -98,6 +99,7 @@ module AccountingNavHelper
     "Grand livre" => "Toutes les écritures d'un compte",
     "Balance" => "Le total de chaque compte",
     "Analytique" => "Ce que chaque pôle rapporte et coûte",
+    "Budget" => "Ce qu'on prévoit, pôle par pôle et compte par compte",
     "Contrôle croisé" => "L'argent encaissé face aux séjours facturés",
     "Guide" => "Le mode d'emploi et le lexique"
   }.freeze

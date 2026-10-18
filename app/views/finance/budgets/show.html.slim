@@ -1,0 +1,105 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Budget #{@year}"
+
+- euros = ->(cents) { number_to_currency(cents.to_i / 100.0, unit: "€", precision: 0) }
+- input_value = ->(cents) { cents.nil? ? "" : number_with_precision(cents / 100.0, precision: (cents % 100).zero? ? 0 : 2, delimiter: " ", separator: ",") }
+- budget = @sheet.budget
+- reference = @sheet.reference
+
+= form_with url: finance_budget_path, method: :get, class: "mb-6 p-4 bg-white rounded-lg border border-gray-100 flex flex-wrap items-end gap-4" do |f|
+  div(data-controller="searchable-select" class="relative w-64")
+    = f.label :entity_id, "Entité", class: "block text-sm font-medium text-gray-700"
+    = f.select :entity_id, options_from_collection_for_select(@entities, :id, :name, @entity.id), {}, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher une entité"
+  div(data-controller="searchable-select" class="relative w-32")
+    = f.label :year, "Année", class: "block text-sm font-medium text-gray-700"
+    = f.select :year, options_for_select(((Date.current.year - 1)..(Date.current.year + 1)).to_a, @year), {}, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher une année"
+  button.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(type="submit" class="hover:bg-gray-50") Afficher
+
+- if @sheet.draft?
+  .mb-4.p-4.rounded-lg.border.border-amber-200(class="bg-amber-50/70" data-budget-draft="")
+    p.text-sm.font-semibold.text-amber-900 Brouillon : rien n'est encore enregistré pour #{@entity.name}.
+    p.mt-1.text-sm.text-amber-900
+      | Chaque case propose le #{@sheet.reference_label}, arrondi à l'euro. Corrige ce qui va changer, vide une case pour retirer la ligne, puis enregistre.
+- if @sheet.pending_count.positive?
+  .mb-4.p-4.rounded-lg.border.border-amber-100(class="bg-amber-50/50")
+    p.text-sm.text-gray-700
+      | #{@sheet.pending_count} ligne(s) de trésorerie de #{@entity.name} attendent d'être affectées (#{euros.call(@sheet.pending_cents)} nets) : leur argent n'est dans aucun compte, donc pas dans le réel ci-dessous.
+      = link_to "Les affecter", finance_unallocated_cash_entries_path, class: "ml-1 text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+
+= form_with url: finance_budget_path(entity_id: @entity.id, year: @year), method: :patch, data: { controller: "budget-sheet" } do |f|
+  .mb-6.grid.grid-cols-1.gap-px.overflow-hidden.rounded-xl.border.border-stone-200.bg-stone-100.shadow-sm(class="md:grid-cols-3" data-budget-summary="")
+    .bg-white.px-5.py-4
+      p.text-xs.uppercase.text-stone-400 Produits prévus
+      p.mt-1.text-2xl.font-semibold.tabular-nums.text-emerald-700(data-budget-sheet-target="revenue")= euros.call(budget.revenue_cents)
+      p.mt-1.text-xs.text-stone-500= "#{@sheet.reference_label} : #{euros.call(reference.revenue_cents)}"
+    .bg-white.px-5.py-4
+      p.text-xs.uppercase.text-stone-400 Charges prévues
+      p.mt-1.text-2xl.font-semibold.tabular-nums.text-stone-900(data-budget-sheet-target="expense")= euros.call(budget.expense_cents)
+      p.mt-1.text-xs.text-stone-500= "#{@sheet.reference_label} : #{euros.call(reference.expense_cents)}"
+    .bg-white.px-5.py-4
+      p.text-xs.uppercase.text-stone-400 Résultat prévu
+      p.mt-1.text-2xl.font-semibold.tabular-nums(class="#{budget.net_cents.negative? ? 'text-red-700' : 'text-stone-900'}" data-budget-sheet-target="net" data-budget-result="")= euros.call(budget.net_cents)
+      p.mt-1.text-xs.text-stone-500= "#{@sheet.reference_label} : #{euros.call(reference.net_cents)}"
+
+  - if @sheet.groups.empty?
+    .mb-6.p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+      p Aucune charge ni aucun produit sur la période de référence, et rien de prévu. Ajoute une première ligne ci-dessous.
+
+  - @sheet.groups.each_with_index do |group, index|
+    section.mb-6.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidden(data-budget-group=group.name)
+      .px-5.py-3.border-b.border-stone-100.bg-stone-50.flex.flex-wrap.items-baseline.justify-between.gap-3
+        h2.text-base.font-semibold.text-stone-900= group.name
+        p.text-sm.tabular-nums.text-stone-600
+          | Résultat prévu :
+          span.ml-1.font-semibold(data-budget-sheet-target="groupNet" data-group=index class="#{group.budget.net_cents.negative? ? 'text-red-700' : 'text-stone-900'}")= euros.call(group.budget.net_cents)
+          span.ml-2.text-stone-400= "(#{@sheet.reference_label} : #{euros.call(group.reference.net_cents)})"
+      .overflow-x-auto
+        table.w-full.text-sm
+          thead.text-xs.uppercase.text-stone-500
+            tr
+              th.py-2.px-5.text-left.font-medium Compte
+              th.py-2.px-5.text-right.font-medium.whitespace-nowrap= @sheet.reference_label.sub(/\Aréel/, "Réel")
+              th.py-2.px-5.text-right.font-medium Budget #{@year}
+              th.py-2.px-5.text-right.font-medium Écart
+          tbody
+            - group.rows.each do |row|
+              tr.border-t.border-stone-100(data-budget-row=row.key)
+                td.py-2.px-5
+                  span.font-mono.text-xs.text-stone-400.mr-2= row.account.code
+                  span.text-stone-800= row.account.name
+                  span.ml-2.text-xs(class="#{row.expense? ? 'text-stone-400' : 'text-emerald-700'}")= row.expense? ? "charge" : "produit"
+                td.py-2.px-5.text-right.tabular-nums.text-stone-600= euros.call(row.reference_cents)
+                td.py-1.px-5.text-right
+                  input.w-32.rounded-md.border-gray-300.text-right.text-sm.tabular-nums.shadow-sm(type="text" inputmode="decimal" name="amounts[#{row.key}]" value=input_value.call(row.budget_cents) aria-label="Budget #{@year} #{group.name} #{row.account.code}" data-budget-sheet-target="amount" data-kind=(row.expense? ? "expense" : "revenue") data-group=index data-action="input->budget-sheet#recompute")
+                / L'écart à l'euro : le brouillon arrondit le réel, ses centimes ne
+                  sont pas un écart.
+                - gap = row.budget_cents.nil? ? nil : (row.gap_cents / 100.0).round * 100
+                td.py-2.px-5.text-right.tabular-nums(class="#{gap.to_i.zero? ? 'text-stone-400' : 'text-stone-700'}")
+                  - if gap.nil?
+                    | —
+                  - elsif gap.zero?
+                    | =
+                  - else
+                    = "#{gap.positive? ? '+' : '−'}#{euros.call(gap.abs)}"
+
+  section.mb-6.rounded-xl.border.border-dashed.border-stone-300.bg-white.p-4(data-budget-new-line="")
+    h2.text-sm.font-semibold.text-stone-900 Ajouter une ligne
+    p.mt-0.5.text-xs.text-stone-500 Un compte qui n'a pas bougé sur la période de référence, ou un nouveau pôle.
+    .mt-3.flex.flex-wrap.items-end.gap-4
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Sans pôle" data-searchable-select-clearable-value="true" class="relative w-56")
+        = label_tag "new_line_team_id", "Pôle", class: "block text-sm font-medium text-gray-700"
+        = select_tag "new_line[team_id]", options_from_collection_for_select(@teams, :id, :name), include_blank: "Sans pôle", id: "new_line_team_id", class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un pôle"
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Choisir un compte" data-searchable-select-clearable-value="true" class="relative w-80")
+        = label_tag "new_line_general_account_id", "Compte", class: "block text-sm font-medium text-gray-700"
+        = select_tag "new_line[general_account_id]", options_for_select(@accounts.map { |a| ["#{a.code} #{a.name}", a.id] }), include_blank: "Choisir un compte", id: "new_line_general_account_id", class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un compte"
+      div
+        = label_tag "new_line_amount", "Montant", class: "block text-sm font-medium text-gray-700"
+        = text_field_tag "new_line[amount]", nil, id: "new_line_amount", inputmode: "decimal", placeholder: "1 200", class: "mt-1 w-32 rounded-md border-gray-300 text-right text-sm shadow-sm"
+
+  .sticky.bottom-0.-mx-4.border-t.border-stone-200.bg-white.px-4.py-3.flex.flex-wrap.items-center.justify-between.gap-3(class="bg-white/95")
+    p.text-xs.text-stone-500 Montants annuels, en euros, toujours en positif : c'est le compte qui dit s'il s'agit d'une charge ou d'un produit.
+    = f.submit (@sheet.draft? ? "Enregistrer le budget #{@year}" : "Enregistrer les changements"), class: "inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
