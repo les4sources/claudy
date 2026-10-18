@@ -21,8 +21,15 @@
                 dt.text-gray-600 Solde vérifié
                 dd.text-gray-900= euros.(v.balance_cents)
               .flex.justify-between.py-1
-                dt.text-gray-600= "+ À encaisser (#{Finance::Treasury::HORIZON_DAYS} j, séjours confirmés)"
-                dd.text-emerald-700= euros.(v.incoming_cents)
+                dt.text-gray-600 + À encaisser (séjours confirmés)
+                dd.text-emerald-700(data-spending-incoming="")= euros.(v.incoming_cents)
+              - if v.late_cents.positive?
+                .flex.justify-between.pl-4.text-xs.text-gray-500
+                  dt dont séjours passés pas encore soldés
+                  dd= euros.(v.late_cents)
+                .flex.justify-between.pl-4.pb-1.text-xs.text-gray-500
+                  dt= "dont séjours des #{Finance::Treasury::HORIZON_DAYS} prochains jours"
+                  dd= euros.(v.upcoming_incoming_cents)
               .flex.justify-between.py-1
                 dt.text-gray-600= "− À payer (#{Finance::Treasury::HORIZON_DAYS} j, factures, charges fixes, dettes)"
                 dd.text-gray-900= euros.(v.outgoing_cents)

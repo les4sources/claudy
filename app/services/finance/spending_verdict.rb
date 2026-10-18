@@ -5,7 +5,8 @@ module Finance
   # autre a été prêtée et devra être rendue.
   #
   #   marge = solde disponible
-  #         + ce qui doit rentrer dans les 90 jours (séjours confirmés)
+  #         + ce qui doit rentrer : les séjours confirmés des 90 jours et les
+  #           séjours passés pas encore soldés (Michael, 2026-10-18)
   #         − ce qui doit sortir dans les 90 jours (file « À payer », charges
   #           fixes, mensualités des dettes et litiges)
   #         − les dettes et litiges qui tombent au-delà
@@ -19,7 +20,8 @@ module Finance
   #
   # Ce que le verdict ne sait pas, il le dit (`reserves`) : des lignes « À
   # affecter » peuvent cacher un prêt ou une dette, un compte jamais vérifié
-  # n'est pas dans le solde, un séjour en retard n'est pas une entrée certaine.
+  # n'est pas dans le solde, un séjour passé non soldé a peut-être été payé
+  # sans être relié.
   class SpendingVerdict
     VERDICTS = %w[non prudence oui inconnu].freeze
 
@@ -40,6 +42,8 @@ module Finance
 
     def balance_cents = treasury.balance_cents
     def incoming_cents = treasury.incoming_cents
+    def late_cents = treasury.late_cents
+    def upcoming_incoming_cents = treasury.upcoming_incoming_cents
     def outgoing_cents = treasury.outgoing_cents
     def liabilities_later_cents = treasury.liabilities_beyond_horizon_cents
 
@@ -133,8 +137,8 @@ module Finance
       late = treasury.late_receivables
       return if late.empty?
 
-      "#{late.size} séjour(s) passé(s) avec un reste dû (#{format_euros(late.sum(&:amount_cents))}) : pas compté, " \
-        "un retard n'est pas une entrée certaine."
+      "#{late.size} séjour(s) passé(s) pas encore soldé(s) (#{format_euros(late.sum(&:amount_cents))}) : comptés à " \
+        "encaisser, mais un paiement reçu sans être relié au séjour (virement groupé…) le ferait compter en trop."
     end
 
     def long_term_reserve

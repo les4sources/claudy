@@ -106,6 +106,18 @@ RSpec.describe Finance::SpendingVerdict do
     expect(verdict.spendable_cents).to eq(0)
   end
 
+  it "ajoute à la marge le reste dû des séjours passés pas encore soldés, et prévient qu'il peut être déjà payé" do
+    coda_statement(bank, balance_cents: 100_000)
+    customer = Customer.create!(first_name: "Jeanne", last_name: "Dupont", email: "jeanne@example.test")
+    Stay.create!(customer: customer, arrival_date: Date.new(2026, 9, 1), departure_date: Date.new(2026, 9, 3),
+                 total_amount_cents: 40_000, payment_status: "pending", status: "confirmed")
+
+    expect(verdict.late_cents).to eq(40_000)
+    expect(verdict.incoming_cents).to eq(40_000)
+    expect(verdict.margin_cents).to eq(140_000)
+    expect(verdict.reserves.join).to include("1 séjour(s) passé(s) pas encore soldé(s) (400 €) : comptés à encaisser")
+  end
+
   it "ne tranche pas sans solde vérifié" do
     build_cash_entry(bank, amount_cents: 1_000_000, entry_date: Date.new(2026, 10, 1))
 
