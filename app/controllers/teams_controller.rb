@@ -16,9 +16,13 @@ class TeamsController < BaseController
     # La page du pôle (epic #239, phase 3). Elle vit sous **Organisation** : on y
     # vient pour lire le pôle — qui en est, ce qu'il décide, ce qu'il produit —
     # pas pour le configurer. La configuration reste dans les Paramètres.
+    #
+    # Les comptes passent en tête (Michael, 2026-10-18) : la santé du pôle, son
+    # budget de l'année et les dépenses qui attendent son oui. C'est ce que les
+    # membres du collectif viennent d'abord y chercher.
     def show
-      @from = parsed_date(params[:from]) || Date.current.beginning_of_year
-      @to = parsed_date(params[:to]) || Date.current.end_of_year
+      @year = requested_year
+      @accounts = Teams::Accounts.new(team: @team, year: @year)
       @memberships = @team.team_memberships.includes(:human).sort_by { |m| [m.role == "referent" ? 0 : 1, m.human.name.to_s] }
       upcoming = @team.gatherings.upcoming.includes(:gathering_category).limit(5).to_a
       past = @team.gatherings.where("ends_at < ?", Time.current)
@@ -27,7 +31,6 @@ class TeamsController < BaseController
       @past_gatherings = GatheringDecorator.decorate_collection(past)
       @decisions = Decision.where(gathering_id: (upcoming + past).map(&:id))
                            .includes(:recorded_by, :gathering).recent.limit(10)
-      @finances = Teams::FinanceSummary.new(team: @team, from: @from, to: @to)
       @team = TeamDecorator.new(@team)
     end
   
@@ -83,10 +86,11 @@ class TeamsController < BaseController
       @team = Team.find(params[:id])
     end
 
-    def parsed_date(raw)
-      raw.present? ? Date.parse(raw) : nil
-    rescue Date::Error
-      nil
+    # L'année civile demandée, l'année en cours par défaut. Une valeur absurde
+    # retombe sur l'année en cours plutôt que d'afficher des zéros.
+    def requested_year
+      year = params[:year].to_i
+      (2000..2100).cover?(year) ? year : Date.current.year
     end
 
     # Ce que le bloc « Membres » de l'écran d'édition a besoin de savoir : les

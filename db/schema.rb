@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_18_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_18_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -2568,6 +2568,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_100000) do
     t.index ["project_id"], name: "index_tasks_on_project_id"
   end
 
+  create_table "team_budgets", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "expense_cents", default: 0, null: false
+    t.text "notes"
+    t.bigint "revenue_cents", default: 0, null: false
+    t.bigint "team_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "year", null: false
+    t.index ["team_id", "year"], name: "index_team_budgets_on_team_id_and_year", unique: true
+    t.index ["team_id"], name: "index_team_budgets_on_team_id"
+    t.check_constraint "revenue_cents >= 0 AND expense_cents >= 0", name: "team_budgets_amounts_positive"
+  end
+
   create_table "team_memberships", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
@@ -2941,6 +2954,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_100000) do
   add_foreign_key "stripe_payouts", "cash_accounts"
   add_foreign_key "tasks", "bundles"
   add_foreign_key "tasks", "projects"
+  add_foreign_key "team_budgets", "teams"
   add_foreign_key "team_memberships", "humans"
   add_foreign_key "team_memberships", "teams"
   add_foreign_key "teams", "teams", column: "parent_id"

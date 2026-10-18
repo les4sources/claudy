@@ -11,6 +11,10 @@ class OrganisationController < BaseController
     roots, orphans = teams.partition { |team| team.parent_id.nil? }
     @rows = roots.flat_map { |root| [root] + teams.select { |t| t.parent_id == root.id } }
     @rows += orphans.reject { |team| @rows.include?(team) }
+    # Les comptes de l'année sur chaque carte (Michael, 2026-10-18) : résultat,
+    # budget consommé, factures à valider. Le détail est sur la page du pôle.
+    @year = Date.current.year
+    @snapshots = Teams::Accounts.snapshots(@rows, year: @year)
   end
 
   def index

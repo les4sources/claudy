@@ -24,6 +24,17 @@ RSpec.describe "Organisation — pôles", type: :request do
       expect(response.body).to include(team_path(team))
       expect(response.body).to include("Stéphanie")
     end
+
+    it "montre sur chaque carte le résultat de l'année et le budget" do
+      TeamBudget.create!(team: team, year: Date.current.year, expense_cents: 100_000)
+      Team.create!(name: "Pôle Technique", kind: "support")
+
+      get organisation_teams_path
+
+      body = CGI.unescapeHTML(response.body)
+      expect(body).to include("Résultat #{Date.current.year}", "0 % des charges prévues",
+                              "Pas de budget #{Date.current.year}")
+    end
   end
 
   describe "la page du pôle" do
@@ -72,20 +83,25 @@ RSpec.describe "Organisation — pôles", type: :request do
       expect(response.body).to include("On passe au bio")
     end
 
-    it "réserve l'emplacement « À valider » sans rien y afficher" do
+    it "ouvre sur les comptes : santé, budget, dépenses à valider" do
       get team_path(team)
 
+      body = CGI.unescapeHTML(response.body)
       expect(response).to have_http_status(:ok)
-      expect(response.body).not_to include("À valider")
+      expect(body).to include("Comptes #{Date.current.year}", "Santé financière",
+                              "Budget #{Date.current.year}", "Dépenses à valider")
+      expect(body.index("Santé financière")).to be < body.index("Membres")
+      expect(body).to include("Rien n'attend le oui du pôle.")
+      expect(body).to include(edit_team_budget_path(team, Date.current.year))
     end
 
-    context "le bloc Finances" do
+    context "le bloc Comptes" do
       let(:entity) { build_legal_entity }
       let!(:fiscal_year) { build_fiscal_year(entity, year: Date.current.year) }
       let(:bank) { build_general_account(code: "550000", name: "Banque", klass: 5, nature: "asset") }
       let(:sales) { build_general_account(code: "700000", name: "Ventes", klass: 7, nature: "revenue") }
 
-      it "affiche produits, charges et net sur la période" do
+      it "affiche produits, charges et résultat de l'année" do
         Accounting::PostDocument.new(
           legal_entity: entity, journal: "sales", entry_date: Date.current.beginning_of_year + 2.months,
           label: "Vente cuisine",
@@ -95,8 +111,10 @@ RSpec.describe "Organisation — pôles", type: :request do
 
         get team_path(team)
 
-        expect(response.body).to include("Finances du pôle")
-        expect(response.body).to include(ActiveSupport::NumberHelper.number_to_currency(500.0, unit: "€"))
+        body = CGI.unescapeHTML(response.body)
+        expect(body).to include("Résultat #{Date.current.year}")
+        expect(body).to include("+#{ActiveSupport::NumberHelper.number_to_currency(500, unit: "€", precision: 0)}")
+        expect(body).to include("À l'équilibre")
       end
 
       it "rappelle les lignes de trésorerie non affectées" do
@@ -105,14 +123,32 @@ RSpec.describe "Organisation — pôles", type: :request do
 
         get team_path(team)
 
-        expect(response.body).to include("ne sont dans aucun pôle").or include("attend encore d'être affectée")
+        body = CGI.unescapeHTML(response.body)
+        expect(body).to include("Chiffres incomplets", "attend encore d'être affectée")
       end
 
-      it "suit la période demandée" do
-        get team_path(team, from: "2024-01-01", to: "2024-12-31")
+      it "compare le réel au budget de l'année" do
+        TeamBudget.create!(team: team, year: Date.current.year, revenue_cents: 1_000_000, expense_cents: 400_000,
+                           notes: "Décidé au rassemblement de janvier")
+
+        get team_path(team)
+
+        body = CGI.unescapeHTML(response.body)
+        expect(body).to include("Résultat prévu sur l'année", "Décidé au rassemblement de janvier")
+        expect(body).not_to include("Pas encore de budget")
+      end
+
+      it "suit l'année demandée" do
+        get team_path(team, year: 2024)
 
         expect(response).to have_http_status(:ok)
-        expect(response.body).to include("2024-01-01")
+        expect(response.body).to include("Comptes 2024", "Pas encore de budget pour 2024")
+      end
+
+      it "retombe sur l'année en cours quand l'année demandée n'a pas de sens" do
+        get team_path(team, year: "n'importe quoi")
+
+        expect(response.body).to include("Comptes #{Date.current.year}")
       end
     end
   end
