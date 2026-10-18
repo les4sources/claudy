@@ -94,6 +94,19 @@
         |  sur toute la période
         =< link_to "Effacer", stays_path(**@filter.to_params), class: "ml-1 text-indigo-600 hover:underline"
 
+    /  Commission de l'apporteur filtré (Michael, 2026-10-18) : ce qui lui est
+       dû sur la liste affichée (trimestre, ou toute la période en recherche).
+       Affichage seul : aucun relevé ni paiement n'est émis d'ici.
+    - if @referral_summary
+      .mb-4.rounded-lg.bg-emerald-50.px-4.py-3.text-sm.text-emerald-900(class="ring-1 ring-emerald-200" data-testid="referral-summary")
+        p
+          | Commission #{@referral_summary[:label]} due (#{@referral_summary[:rate_label]} de l'hébergement, séjours confirmés et entièrement payés) :
+          strong<> = humanized_money_with_symbol(Money.new(@referral_summary[:due_cents]))
+          | sur #{@referral_summary[:due_count]} séjour#{'s' if @referral_summary[:due_count] > 1}
+        - if @referral_summary[:pending_count].positive?
+          p.mt-1.text-xs.text-emerald-800
+            | #{@referral_summary[:pending_count]} autre#{'s' if @referral_summary[:pending_count] > 1} séjour#{'s' if @referral_summary[:pending_count] > 1} pas encore confirmé#{'s' if @referral_summary[:pending_count] > 1} ou pas entièrement payé#{'s' if @referral_summary[:pending_count] > 1} : leur commission n'est pas encore due.
+
     /  En-tête COLLANT au défilement (Michael 2026-07-26).
        Piège : `position: sticky` se cale sur le plus proche ancêtre qui DÉFILE.
        `overflow-x-auto` fait de ce conteneur une boîte de défilement (un

@@ -59,6 +59,20 @@ class StaysController < BaseController
 
     @amounts = Stays::IndexAmounts.new(@stays).call
     @stays   = @stays.select { |stay| @filter.keep?(stay, @amounts[stay.id]) } if @filter.balance_due?
+    # Commissions de l'apporteur filtré (Michael, 2026-10-18) : total de ce qui
+    # est DÛ sur la liste affichée, et combien de séjours n'y sont pas encore.
+    # Lecture seule — rien n'est versé ni émis d'ici.
+    if @filter.referral
+      commissions = @stays.map { |stay| Stays::ReferralCommission.new(stay, paid_cents: @amounts[stay.id]&.paid_cents.to_i) }
+      due = commissions.select(&:due?)
+      @referral_summary = {
+        label:         Stay::REFERRALS.dig(@filter.referral, :label),
+        rate_label:    commissions.first&.rate_label || Stays::ReferralCommission.new(Stay.new(referral: @filter.referral)).rate_label,
+        due_cents:     due.sum(&:amount_cents),
+        due_count:     due.size,
+        pending_count: commissions.size - due.size
+      }
+    end
     @stays   = StayDecorator.decorate_collection(@stays)
   end
 

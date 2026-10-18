@@ -24,7 +24,8 @@
   /  Apporteur (Michael, 2026-10-18) : les séjours venus par un lien partenaire
      (`/reservation?ref=semisto`), pour préparer ce qu'on lui reverse.
      Interrupteur, comme « Solde à payer ».
-  - Stay::REFERRALS.each do |cle, nom|
+  - Stay::REFERRALS.each do |cle, apporteur|
+    - nom = apporteur[:label]
     - actif = (@filter.referral == cle)
     - lien_apporteur = base.merge(status: @filter.status, solde: (@filter.balance_due? ? "1" : nil), apporteur: (actif ? nil : cle)).compact
     .rounded-lg.bg-gray-50.p-1.5(class="ring-1 ring-gray-200")

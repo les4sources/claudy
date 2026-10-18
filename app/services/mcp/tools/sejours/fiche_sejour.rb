@@ -37,10 +37,18 @@ module Mcp
           lignes << "Statut : #{statut(stay)} · paiement : #{PAIEMENT_SEJOUR.fetch(stay.payment_status, stay.payment_status)}" \
                     " · facture : #{stay.invoice_status_label}"
           lignes << "Catégorie : #{stay.category_label || 'aucune'} · canal : #{stay.source}#{' (OTA)' if stay.ota?}"
-          lignes << "Apporteur : #{stay.referral_label}" if stay.referral_label
+          lignes << ligne_apporteur(stay) if stay.referral_label
           lignes << "Email de confirmation envoyé le #{I18n.l(stay.confirmation_email_sent_at, format: '%d/%m/%Y %H:%M')}" if stay.confirmation_email_sent_at
           lignes << "Page client : #{page_client(stay)}" if stay.token.present?
           lignes.join("\n")
+        end
+
+        # Commission de l'apporteur (Michael, 2026-10-18) : lecture seule.
+        def ligne_apporteur(stay)
+          commission = Stays::ReferralCommission.new(stay)
+          etat = commission.due? ? "due" : "pas encore due (#{commission.pending_reasons.join(', ')})"
+          "Apporteur : #{commission.label} · commission #{commission.rate_label} de l'hébergement " \
+            "(#{euros(commission.lodging_cents)} TVAC) = #{euros(commission.amount_cents)}, #{etat}"
         end
 
         def heures(stay)

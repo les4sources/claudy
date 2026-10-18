@@ -58,16 +58,19 @@ class Stay < ApplicationRecord
   ADMIN_SELECTABLE_SOURCES = %w[manual ota].freeze
 
   # Apporteurs connus (Michael, 2026-10-18) : la clé est celle du lien
-  # `/reservation?ref=<clé>` que le partenaire publie, la valeur son nom à
-  # l'écran. LISTE FERMÉE : une valeur inconnue dans l'URL est ignorée — un
-  # visiteur ne peut pas inventer un apporteur en tapant l'adresse. Ajouter un
-  # partenaire = une ligne ici. DISTINCT de `source` : un séjour apporté par
-  # Semisto passe par le funnel, son canal reste `reservation`.
+  # `/reservation?ref=<clé>` que le partenaire publie. LISTE FERMÉE : une valeur
+  # inconnue dans l'URL est ignorée — un visiteur ne peut pas inventer un
+  # apporteur en tapant l'adresse. Ajouter un partenaire = une ligne ici.
+  # DISTINCT de `source` : un séjour apporté par Semisto passe par le funnel,
+  # son canal reste `reservation`.
   #
-  # Aucune règle de rétrocession ici : ce que l'on reverse à l'apporteur se
-  # décide ailleurs, ce champ dit seulement d'où vient le séjour.
+  #   label — son nom à l'écran ;
+  #   rate  — sa commission, en part de l'HÉBERGEMENT seul (décision Michael du
+  #           2026-10-18 pour Semisto : 10 %). SEUL endroit où vit le taux : le
+  #           calcul (`Stays::ReferralCommission`), la fiche, l'index et le MCP
+  #           le lisent ici.
   REFERRALS = {
-    "semisto" => "Semisto"
+    "semisto" => { label: "Semisto", rate: BigDecimal("0.10") }
   }.freeze
 
   # Statut de FACTURE du séjour (Michael 2026-09-02). Même vocabulaire que les
@@ -263,7 +266,7 @@ class Stay < ApplicationRecord
   end
 
   def referral_label
-    REFERRALS[referral]
+    REFERRALS.dig(referral, :label)
   end
 
   # La note interne porte-t-elle quelque chose ? `internal_notes` construit un
