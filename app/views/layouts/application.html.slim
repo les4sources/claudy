@@ -35,6 +35,12 @@ html(lang="fr")
           .mb-8
             = yield :page_header
 
+        / L'aide de l'écran, sur toute la Comptabilité (2026-10-17) : sous le
+          titre, avant le contenu, pour que la personne qui démarre sache à quoi
+          sert la page avant d'y agir.
+        - if @accounting_view
+          = render "finance/shared/page_guide"
+
         / main content
         = render 'layouts/components/messages'
         = yield

@@ -1,0 +1,30 @@
+/ « À faire » (2026-10-17) : les files de la comptabilité dans l'ordre du
+  travail. Rien n'est coché à la main, chaque ligne lit la base : une file qui
+  se remplit repasse à faire toute seule. La pastille porte le numéro d'ordre,
+  comme l'arrêté du mois — on suit une séquence.
+section.mb-8(data-accounting-todo="")
+  .mb-3.flex.flex-wrap.items-baseline.justify-between.gap-2
+    h2.text-lg.font-semibold.text-gray-900 À faire
+    p.text-sm.text-gray-500
+      - if todo.todo_count.zero?
+        | Tout est à jour.
+      - else
+        = "#{todo.todo_count} file(s) à vider, dans cet ordre. "
+      = link_to "Comment s'y prendre ?", finance_guide_path, class: "text-blue-500 hover:text-blue-700"
+  ol.overflow-hidden.rounded-lg.border.border-gray-100.bg-white
+    - todo.items.each_with_index do |item, index|
+      li.border-b.border-gray-100(class="last:border-b-0" data-todo-state=item.state)
+        = link_to item.path, class: "flex items-center gap-4 px-4 py-3 transition-colors hover:bg-teal-50/40" do
+          - if item.done?
+            span.flex.h-7.w-7.flex-none.items-center.justify-center.rounded-full.bg-green-100.text-sm.font-semibold.text-green-700 ✓
+          - elsif item.waiting?
+            span.flex.h-7.w-7.flex-none.items-center.justify-center.rounded-full.bg-gray-100.text-sm.font-semibold.text-gray-500 …
+          - else
+            span.flex.h-7.w-7.flex-none.items-center.justify-center.rounded-full.bg-amber-100.text-sm.font-semibold.text-amber-800= index + 1
+          .min-w-0.flex-1
+            p.text-sm.font-medium(class="#{item.done? ? 'text-gray-500' : 'text-gray-900'}")= item.label
+            p.text-sm.text-gray-500= item.detail
+          - if item.count&.positive?
+            span.flex-none.rounded-full.px-2.5.py-0.5.text-xs.font-semibold.tabular-nums(class="#{item.waiting? ? 'bg-gray-100 text-gray-600' : 'bg-amber-100 text-amber-800'}")= item.count
+          svg.h-4.w-4.flex-none.text-gray-300[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"]
+            polyline[points="9 18 15 12 9 6"]
