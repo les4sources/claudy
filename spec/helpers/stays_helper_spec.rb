@@ -85,4 +85,51 @@ RSpec.describe StaysHelper, type: :helper do
 
     expect(arrivee_jalon[:detail]).to eq("La Chevêche")
   end
+
+  # Séjour d'une journée (Michael, 2026-10-18) : arrivée et départ le même jour
+  # ne font plus deux lignes qui répètent la date.
+  describe "séjour sur une seule journée" do
+    let(:stay) do
+      Stay.create!(customer: customer, source: "manual", status: "confirmed",
+                   arrival_date: arrivee, departure_date: arrivee,
+                   arrival_time: "9h30", departure_time: "14h")
+    end
+
+    def deroule = helper.stay_timeline(stay.decorate)
+
+    it "dit la date une seule fois, avec la plage horaire" do
+      expect(deroule.size).to eq(1)
+      expect(deroule.first[:title]).to eq("#{I18n.l(arrivee, format: :long).capitalize} · 9h30 → 14h")
+      expect(deroule.first[:title]).not_to include("Départ")
+    end
+
+    it "garde l'heure de départ seule quand l'arrivée n'en a pas" do
+      stay.update!(arrival_time: nil)
+
+      expect(deroule.first[:title]).to end_with("· jusqu'à 14h")
+    end
+
+    it "nomme la salle occupée" do
+      salle = Space.create!(name: "Grande Salle", capacity: 1)
+      booking = SpaceBooking.create!(firstname: "Client", from_date: arrivee, to_date: arrivee)
+      SpaceReservation.create!(space_booking: booking, space: salle, date: arrivee)
+      StayItem.create!(stay: stay, bookable: booking)
+
+      expect(deroule.first[:detail]).to eq("Grande Salle")
+    end
+
+    it "range activités et repas sous la journée, avec leur heure seule" do
+      MealOrder.create!(stay: stay, kind: "repas", moment: "midi", date: arrivee, people: 12,
+                        status: "requested", skip_notifications: true)
+      experience = Experience.create!(name: "Balade avec les ânes")
+      creneau = ExperienceAvailability.create!(experience: experience, available_on: arrivee, starts_at: "10:30")
+      ExperienceBooking.create!(experience_availability: creneau, stay: stay, participants: 8)
+
+      expect(deroule.map { |j| j[:title] }).to eq([
+        "#{I18n.l(arrivee, format: :long).capitalize} · 9h30 → 14h",
+        "10h30 — Balade avec les ânes",
+        "Repas (midi)"
+      ])
+    end
+  end
 end
