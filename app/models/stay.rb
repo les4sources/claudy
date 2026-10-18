@@ -18,6 +18,7 @@
 #  legacy_origin              :string
 #  payment_status             :string           default("pending"), not null
 #  price_override_cents       :integer
+#  referral                   :string
 #  source                     :string           default("reservation"), not null
 #  status                     :string
 #  token                      :string
@@ -32,6 +33,7 @@
 #  index_stays_on_customer_id                (customer_id)
 #  index_stays_on_invoice_status_present     (invoice_status) WHERE (invoice_status IS NOT NULL)
 #  index_stays_on_legacy_origin_unique_live  (legacy_origin) UNIQUE WHERE ((legacy_origin IS NOT NULL) AND (deleted_at IS NULL))
+#  index_stays_on_referral                   (referral) WHERE (referral IS NOT NULL)
 #  index_stays_on_source                     (source)
 #  index_stays_on_token                      (token) UNIQUE
 #
@@ -54,6 +56,19 @@ class Stay < ApplicationRecord
   # modèle, lui, continue d'accepter toute valeur de `SOURCES` (édition d'un
   # séjour issu d'un canal automatique : sa source d'origine est préservée).
   ADMIN_SELECTABLE_SOURCES = %w[manual ota].freeze
+
+  # Apporteurs connus (Michael, 2026-10-18) : la clé est celle du lien
+  # `/reservation?ref=<clé>` que le partenaire publie, la valeur son nom à
+  # l'écran. LISTE FERMÉE : une valeur inconnue dans l'URL est ignorée — un
+  # visiteur ne peut pas inventer un apporteur en tapant l'adresse. Ajouter un
+  # partenaire = une ligne ici. DISTINCT de `source` : un séjour apporté par
+  # Semisto passe par le funnel, son canal reste `reservation`.
+  #
+  # Aucune règle de rétrocession ici : ce que l'on reverse à l'apporteur se
+  # décide ailleurs, ce champ dit seulement d'où vient le séjour.
+  REFERRALS = {
+    "semisto" => "Semisto"
+  }.freeze
 
   # Statut de FACTURE du séjour (Michael 2026-09-02). Même vocabulaire que les
   # colonnes homonymes de `Booking` / `SpaceBooking`, pour que la file de
@@ -221,6 +236,7 @@ class Stay < ApplicationRecord
   # Catégorie : nil permis (historique + funnel optionnel), toute valeur posée
   # doit appartenir à la liste stable.
   validates :category, inclusion: { in: CATEGORIES.keys, message: "Catégorie invalide" }, allow_nil: true
+  validates :referral, inclusion: { in: REFERRALS.keys, message: "Apporteur inconnu" }, allow_nil: true
   validates :token, uniqueness: true, allow_nil: true
 
   scope :current_and_future, -> { where("departure_date >= ?", Date.today).order(arrival_date: :asc) }
@@ -237,6 +253,18 @@ class Stay < ApplicationRecord
   scope :past, -> { where("departure_date < ?", Date.today).order(arrival_date: :desc) }
   scope :from_source, ->(value) { value.present? ? where(source: value) : all }
   scope :recent, -> { order(created_at: :desc) }
+  scope :referred_by, ->(key) { where(referral: key) }
+
+  # Clé d'apporteur reconnue dans une valeur brute (paramètre `ref` d'une URL),
+  # ou nil. Tolère la casse et les espaces, rien d'autre.
+  def self.referral_key(raw)
+    key = raw.to_s.strip.downcase
+    REFERRALS.key?(key) ? key : nil
+  end
+
+  def referral_label
+    REFERRALS[referral]
+  end
 
   # La note interne porte-t-elle quelque chose ? `internal_notes` construit un
   # `ActionText::RichText` à la volée quand il n'y en a pas : tester sa simple

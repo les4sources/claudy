@@ -22,6 +22,9 @@ div id="stay-details-#{@stay.id}"
         | Séjour ##{@stay.id}
       = @stay.status_badge
       = @stay.platform_badge
+      /  Apporteur (Michael, 2026-10-18) : séjour venu par un lien partenaire
+         (`/reservation?ref=semisto`) — à reverser, donc visible d'emblée.
+      = @stay.referral_badge
       /  Facture attendue : l'en-tête le dit, sinon l'info ne vit que dans le
          formulaire d'édition et dans la file de facturation.
       = @stay.invoice_badge

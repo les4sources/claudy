@@ -40,7 +40,7 @@ class StaysController < BaseController
     @quarter   = requested_quarter
 
     scope  = @searching ? Stay.all : quarter_scope
-    @stays = @filter.apply_status(Stays::Search.new(scope, @query).call)
+    @stays = @filter.apply_scopes(Stays::Search.new(scope, @query).call)
              .includes(
                :customer,
                :meal_orders,
@@ -631,7 +631,7 @@ class StaysController < BaseController
   # s'éteint, au lieu d'annoncer un nombre qui mènerait à une liste vide.
   def quarter_counts_for(year)
     debut = Date.new(year, 1, 1)
-    scope = @filter.apply_status(Stay.where(arrival_date: debut..debut.end_of_year))
+    scope = @filter.apply_scopes(Stay.where(arrival_date: debut..debut.end_of_year))
     unless @filter.balance_due?
       return scope.group(Arel.sql("EXTRACT(QUARTER FROM arrival_date)"))
                   .count

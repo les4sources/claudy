@@ -25,11 +25,14 @@ module Stays
       { experience_bookings: { experience_availability: :experience } }
     ].freeze
 
-    attr_reader :status
+    attr_reader :status, :referral
 
     def initialize(params)
       @status      = params[:status].to_s.presence_in(STATUSES.keys)
       @balance_due = params[:solde].to_s == "1"
+      # Apporteur (Michael, 2026-10-18) : les séjours venus par un lien
+      # partenaire (`Stay::REFERRALS`), pour préparer ce qu'on lui reverse.
+      @referral    = params[:apporteur].to_s.presence_in(Stay::REFERRALS.keys)
     end
 
     def balance_due?
@@ -37,16 +40,19 @@ module Stays
     end
 
     def active?
-      status.present? || balance_due?
+      status.present? || balance_due? || referral.present?
     end
 
     # Paramètres à reporter dans les liens de la page (trimestres, effacer…).
     def to_params
-      { status: status, solde: (balance_due? ? "1" : nil) }.compact
+      { status: status, solde: (balance_due? ? "1" : nil), apporteur: referral }.compact
     end
 
-    def apply_status(relation)
-      status ? relation.where(status: STATUSES.fetch(status)) : relation
+    # Filtres SQL : statut et apporteur.
+    def apply_scopes(relation)
+      relation = relation.where(status: STATUSES.fetch(status)) if status
+      relation = relation.referred_by(referral) if referral
+      relation
     end
 
     # Un séjour annulé ne doit plus rien, même si son total n'a pas été encaissé :
