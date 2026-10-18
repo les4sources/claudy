@@ -84,6 +84,30 @@ class Payment < ApplicationRecord
   # ne se supprime depuis la fiche séjour — on détache la party à la place.
   TRANCHESDEVIE_METHOD = "tranchesdevie".freeze
 
+  # Payé VIA AIRBNB (Michael 2026-10-18) : la plateforme encaisse le client et
+  # reverse aux 4 Sources par versements groupés. Ni virement du client, ni
+  # liquide, ni paiement en ligne Stripe — le dire autrement faussait la fiche.
+  AIRBNB_METHOD = "airbnb".freeze
+
+  # Moyens proposés à la main sur la fiche séjour (ajout d'un paiement). La
+  # carte n'y figure pas : elle est posée par le paiement en ligne du funnel.
+  STAY_METHOD_OPTIONS = [
+    ["Virement", "bank_transfer"], ["Liquide", "cash"], ["En ligne", "stripe"], ["Via Airbnb", AIRBNB_METHOD]
+  ].freeze
+  # À la correction, la carte reste choisissable : c'est le moyen d'un paiement
+  # du funnel qu'on modifie.
+  STAY_METHOD_OPTIONS_WITH_CARD = (STAY_METHOD_OPTIONS.take(3) + [["Carte", "card"]] + STAY_METHOD_OPTIONS.drop(3)).freeze
+
+  # Les options de correction, plus le moyen ACTUEL s'il n'y figure pas (un
+  # paiement « Booking.com » du canal historique). Sans lui, le <select> se
+  # posait sur la première option et l'enregistrement changeait le moyen en
+  # douce.
+  def self.stay_method_options_for(current, label: nil)
+    return STAY_METHOD_OPTIONS_WITH_CARD if current.blank? || STAY_METHOD_OPTIONS_WITH_CARD.any? { |_, value| value == current }
+
+    STAY_METHOD_OPTIONS_WITH_CARD + [[label.presence || current, current]]
+  end
+
   scope :paid, -> { where(status: "paid") }
   scope :pending, -> { where(status: "pending") }
   scope :refunded, -> { where(status: "refunded") }

@@ -82,4 +82,59 @@ namespace :payments do
       puts "OK — plus aucun Payment sans stay rattachable."
     end
   end
+
+  desc "Passe en « Via Airbnb » les paiements des séjours Airbnb (DRY-RUN par défaut, APPLY=1 pour écrire)"
+  task via_airbnb: :environment do
+    apply = ENV["APPLY"] == "1"
+
+    # Un séjour Airbnb = `Stay.airbnb` (Booking rattaché de plateforme airbnb,
+    # ou client fourre-tout Airbnb). On y ajoute les paiements du canal booking
+    # historique dont le Booking est Airbnb, au cas où leur stay_id manquerait.
+    paiements = Payment.where(stay_id: Stay.airbnb.select(:id))
+                       .or(Payment.where(booking_id: Booking.where(platform: "airbnb").select(:id)))
+                       .includes(stay: :customer)
+                       .order(:created_at)
+                       .to_a
+
+    deja = paiements.select { |p| p.payment_method == Payment::AIRBNB_METHOD }
+    # Deux paiements gardent leur moyen : le miroir d'une Pizza Party payée sur
+    # Tranches de Vie, et un vrai paiement Stripe (une activité réglée en ligne
+    # par le client) — ceux-là ne sont pas passés par Airbnb.
+    gardes = (paiements - deja).select { |p| p.tranchesdevie? || p.stripe_payment_intent_id.present? }
+    a_changer = paiements - deja - gardes
+
+    ligne = lambda do |p|
+      sejour = p.stay ? "séjour ##{p.stay_id} #{p.stay.decorate.display_name}" : "booking ##{p.booking_id}"
+      "  #{p.effective_date} · #{format('%.2f', p.amount_cents / 100.0)} € · #{p.payment_method || '—'} · #{p.status} · #{sejour}"
+    end
+
+    puts "=== Paiements des séjours Airbnb → « Via Airbnb » (#{apply ? 'APPLY' : 'DRY-RUN'}) ==="
+    puts "Séjours Airbnb               : #{Stay.airbnb.count}"
+    puts "Paiements trouvés            : #{paiements.size}"
+    puts "Déjà « Via Airbnb »          : #{deja.size}"
+    puts "Gardés (Stripe, Pizza Party) : #{gardes.size}"
+    gardes.each { |p| puts ligne.(p) }
+    puts "À passer en « Via Airbnb »   : #{a_changer.size} " \
+         "(#{format('%.2f', a_changer.sum(&:amount_cents) / 100.0)} €)"
+    a_changer.group_by(&:payment_method).each { |methode, lot| puts "  dont #{methode || '—'} : #{lot.size}" }
+    a_changer.each { |p| puts ligne.(p) }
+
+    unless apply
+      puts "Rien n'est écrit. Relancer avec APPLY=1 pour appliquer."
+      next
+    end
+
+    # PaperTrail trace chaque correction (moyen d'avant compris) ; sans
+    # validation, pour qu'un vieux paiement du canal booking sans stay_id ne
+    # bloque pas le lot — seul le moyen change.
+    PaperTrail.request(whodunnit: "rake payments:via_airbnb") do
+      Payment.transaction do
+        a_changer.each do |p|
+          p.payment_method = Payment::AIRBNB_METHOD
+          p.save!(validate: false)
+        end
+      end
+    end
+    puts "OK — #{a_changer.size} paiement(s) passé(s) en « Via Airbnb »."
+  end
 end
