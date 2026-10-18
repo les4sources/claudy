@@ -61,7 +61,8 @@ module Mcp
           lignes = liste.map do |v|
             detail = if v.verdict == "inconnu" then ""
                      else
-                       "\n    Solde #{euros(v.balance_cents)} + à encaisser #{euros(v.incoming_cents)} − à payer " \
+                       "\n    Solde #{euros(v.balance_cents)} + à encaisser #{euros(v.incoming_cents)} " \
+                         "(dont séjours passés pas encore soldés #{euros(v.late_cents)}) − à payer " \
                          "#{euros(v.outgoing_cents)} − dettes plus tard #{euros(v.liabilities_later_cents)} − prêts à rendre (hors long terme) " \
                          "#{euros(v.loans_cents)} = marge #{euros(v.margin_cents)} ; réserve (un mois de charges fixes) " \
                          "#{euros(v.reserve_cents)}."
@@ -76,14 +77,15 @@ module Mcp
           bas = tresorerie.lowest_point
           retards = tresorerie.late_receivables
           [
-            "Sur 90 jours (jusqu'au #{tresorerie.horizon_end}) : #{euros(tresorerie.incoming_cents)} attendus, " \
+            "Sur 90 jours (jusqu'au #{tresorerie.horizon_end}) : #{euros(tresorerie.incoming_cents)} attendus " \
+            "(dont #{euros(tresorerie.late_cents)} de séjours passés, attendus aujourd'hui), " \
             "#{euros(tresorerie.outgoing_cents)} à sortir. Point bas : #{euros(bas.balance_cents)} le #{bas.date}.",
             (if tresorerie.liabilities.any?
                "Dont dettes et litiges sans facture : #{euros(tresorerie.liabilities_retained_cents)} retenus " \
                  "(#{tresorerie.liabilities.map(&:label).join(', ')})" \
                  "#{", dont #{euros(tresorerie.liabilities_beyond_horizon_cents)} au-delà des 90 jours" if tresorerie.liabilities_beyond_horizon_cents.positive?}."
              end),
-            ("Séjours partis avec un reste dû : #{retards.size} pour #{euros(retards.sum(&:amount_cents))} " \
+            ("Séjours passés pas encore soldés, comptés à encaisser : #{retards.size} pour #{euros(retards.sum(&:amount_cents))} " \
              "(#{retards.first(5).map { |r| "séjour ##{r.stay.id} #{euros(r.amount_cents)}" }.join(', ')}" \
              "#{' …' if retards.size > 5})." if retards.any?)
           ].compact.join("\n")

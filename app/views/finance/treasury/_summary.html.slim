@@ -8,7 +8,7 @@ section.mb-8.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidd
     div
       h2.text-lg.font-semibold.text-stone-900 Trésorerie de la Fondation
       p.mt-0.5.text-sm.text-stone-500
-        = "#{Finance::Treasury::HISTORY_MONTHS} mois de solde réel, puis #{Finance::Treasury::HORIZON_DAYS} jours projetés : les soldes de séjours confirmés à leur arrivée, les dettes à leur échéance."
+        = "#{Finance::Treasury::HISTORY_MONTHS} mois de solde réel, puis #{Finance::Treasury::HORIZON_DAYS} jours projetés : les soldes de séjours confirmés à leur arrivée (aujourd'hui pour un séjour passé), les dettes à leur échéance."
     - if link
       = link_to "Voir le détail", finance_treasury_path, class: "text-blue-500 text-sm border-b-2 border-blue-200 hover:text-blue-700"
 
@@ -19,9 +19,13 @@ section.mb-8.rounded-xl.border.border-stone-200.bg-white.shadow-sm.overflow-hidd
       - if treasury.as_of
         p.mt-1.text-xs(class="#{stale_days > 7 ? 'text-amber-700 font-medium' : 'text-stone-500'}")= "au #{l(treasury.as_of, format: :long)}"
     .bg-white.px-5.py-4
-      p.text-xs.uppercase.text-stone-400 À encaisser (90 j)
+      p.text-xs.uppercase.text-stone-400 À encaisser
       p.mt-1.text-2xl.font-semibold.tabular-nums.text-emerald-700= number_to_currency(treasury.incoming_cents / 100.0, unit: "€")
-      p.mt-1.text-xs.text-stone-500 soldes de séjours
+      p.mt-1.text-xs.text-stone-500
+        - if treasury.late_cents.positive?
+          = "soldes de séjours, dont #{number_to_currency(treasury.late_cents / 100.0, unit: '€', precision: 0)} de séjours passés"
+        - else
+          | soldes de séjours
     .bg-white.px-5.py-4
       p.text-xs.uppercase.text-stone-400 À payer (90 j)
       p.mt-1.text-2xl.font-semibold.tabular-nums.text-stone-900= number_to_currency(treasury.outgoing_cents / 100.0, unit: "€")

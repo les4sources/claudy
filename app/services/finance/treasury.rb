@@ -22,8 +22,10 @@ module Finance
   # 3. LA PROJECTION EST PRUDENTE. Elle part du solde d'aujourd'hui, ajoute le
   #    reste dû des séjours confirmés à leur date d'arrivée (décision de Michael
   #    du 2026-09-29) et retire les dettes à leur échéance — une dette échue ou
-  #    sans échéance sort aujourd'hui. Un séjour en RETARD n'y entre pas : un
-  #    retard n'est pas une entrée certaine, on le liste sans compter dessus.
+  #    sans échéance sort aujourd'hui. Un séjour passé non soldé depuis moins
+  #    d'un an est encore à encaisser (Michael, 2026-10-18) : il entre
+  #    aujourd'hui, comme une dette échue sort aujourd'hui. Au-delà d'un an, il
+  #    va « à assainir » et n'entre pas.
   #    Les charges fixes (`RecurringExpense`, 2026-09-30) sortent à chaque
   #    occurrence, sauf quand une vraie facture du même tiers couvre la période.
   class Treasury
@@ -199,6 +201,8 @@ module Finance
     end
 
     def incoming_cents = projected_movements.sum { |move| move.amount_cents.positive? ? move.amount_cents : 0 }
+    def late_cents = late_receivables.sum(&:amount_cents)
+    def upcoming_incoming_cents = incoming_cents - late_cents
     def outgoing_cents = projected_movements.sum { |move| move.amount_cents.negative? ? -move.amount_cents : 0 }
 
     # Le point bas part du solde AVANT les mouvements du jour : un séjour qui
@@ -264,8 +268,12 @@ module Finance
 
     # Les séjours qui engagent vraiment de l'argent : confirmés ou
     # pré-confirmés. Une demande en attente n'a rien promis, un séjour annulé ou
-    # refusé non plus.
+    # refusé non plus. Un séjour n'a pas d'entité : comme une dette sans
+    # entité, il passe par la Fondation, qui l'encaisse sur son compte — la SRL
+    # ne le compte pas une seconde fois.
     def candidate_stays
+      return [] unless @entity.form == "foundation"
+
       @candidate_stays ||= Stay.where(status: Stay::BLOCKING_STATUSES)
                                .where.not(departure_date: nil)
                                .includes(:customer, { stay_items: :bookable },
@@ -298,9 +306,11 @@ module Finance
       end
     end
 
-    # Les mouvements attendus dans l'horizon, signés et nommés.
+    # Les mouvements attendus dans l'horizon, signés et nommés. Un séjour en
+    # retard est attendu aujourd'hui, pas à son arrivée passée.
     def projected_movements
       @projected_movements ||=
+        late_receivables.map { |r| Movement.new(date: @today, label: receivable_label(r), amount_cents: r.amount_cents) } +
         upcoming_receivables.select { |r| r.due_on <= horizon_end }
                             .map { |r| Movement.new(date: r.due_on, label: receivable_label(r), amount_cents: r.amount_cents) } +
         outflows.select { |o| o.due_on <= horizon_end }

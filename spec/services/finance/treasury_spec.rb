@@ -3,7 +3,7 @@ require Rails.root.join("spec/support/finance_builders")
 
 # La trésorerie de la Fondation (2026-09-29). Trois façons de mentir sont
 # verrouillées ici : additionner un solde que rien ne vérifie, compter deux fois
-# un même montant, et projeter un retard comme une entrée certaine.
+# un même montant, et compter comme à encaisser un reste dû de plus d'un an.
 RSpec.describe Finance::Treasury do
   include FinanceBuilders
 
@@ -126,12 +126,41 @@ RSpec.describe Finance::Treasury do
       expect(treasury.incoming_cents).to eq(0)
     end
 
-    it "liste un retard de moins d'un an sans le projeter" do
+    # En prod, le 2026-10-18 : 1 840 € « à encaisser » alors que les séjours
+    # passés de 2026 laissaient bien plus de soldes dus (Michael).
+    it "compte à encaisser aujourd'hui le reste dû d'un séjour passé depuis moins d'un an" do
       en_retard = stay(arrival: Date.new(2026, 7, 1), departure: Date.new(2026, 7, 3), total: 25_000)
+      pay(en_retard, 5_000)
+      stay(arrival: Date.new(2026, 10, 10), departure: Date.new(2026, 10, 12), total: 30_000)
 
       expect(treasury.late_receivables.map(&:stay)).to eq([en_retard])
-      expect(treasury.incoming_cents).to eq(0)
       expect(treasury.stale_receivables).to be_empty
+      expect(treasury.late_cents).to eq(20_000)
+      expect(treasury.upcoming_incoming_cents).to eq(30_000)
+      expect(treasury.incoming_cents).to eq(50_000)
+      expect(treasury.projection.first.movements.map(&:amount_cents)).to eq([20_000])
+      # Le point bas part du solde d'avant les mouvements du jour : le retard ne le relève pas.
+      expect(treasury.lowest_point.balance_cents).to eq(0)
+    end
+
+    # Un séjour n'a pas d'entité : la Fondation l'encaisse, la SRL ne le
+    # compte pas une seconde fois (en prod, les 1 840 € apparaissaient sur les deux).
+    it "laisse les séjours à la Fondation" do
+      srl = build_legal_entity(name: "Domaine d'Ahinvaux SRL", form: "srl")
+      stay(arrival: Date.new(2026, 10, 10), departure: Date.new(2026, 10, 12), total: 30_000)
+      stay(arrival: Date.new(2026, 7, 1), departure: Date.new(2026, 7, 3), total: 25_000)
+
+      expect(treasury.incoming_cents).to eq(55_000)
+      srl_treasury = described_class.new(legal_entity: srl, today: today)
+      expect(srl_treasury.incoming_cents).to eq(0)
+      expect(srl_treasury.late_receivables).to be_empty
+    end
+
+    it "ne compte pas un séjour passé en attente" do
+      stay(arrival: Date.new(2026, 7, 1), departure: Date.new(2026, 7, 3), total: 25_000, status: "pending")
+
+      expect(treasury.late_receivables).to be_empty
+      expect(treasury.incoming_cents).to eq(0)
     end
 
     it "range à assainir un reste dû de plus d'un an" do
@@ -139,6 +168,7 @@ RSpec.describe Finance::Treasury do
 
       expect(treasury.stale_receivables.map(&:stay)).to eq([vieux])
       expect(treasury.late_receivables).to be_empty
+      expect(treasury.incoming_cents).to eq(0)
     end
   end
 

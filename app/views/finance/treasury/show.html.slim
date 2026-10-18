@@ -36,9 +36,9 @@
     | Reste dû des séjours confirmés ou pré-confirmés, attendu à la date d'arrivée. Au-delà de #{Finance::Treasury::HORIZON_DAYS} jours, le séjour est listé mais n'entre pas dans la projection.
   = render "finance/treasury/receivables", receivables: t.upcoming_receivables, empty: "Aucun solde de séjour à venir.", horizon_end: t.horizon_end, id: "upcoming"
 
-  h3.mb-1.text-lg.font-semibold.text-gray-900 En retard — séjours terminés depuis moins d'un an
+  h3.mb-1.text-lg.font-semibold.text-gray-900 À encaisser — séjours passés pas encore soldés
   p.mb-3.text-sm.text-gray-500
-    | Listés, pas comptés dans la projection : un retard n'est pas une entrée certaine. Soit le client doit encore, soit le paiement est arrivé sans être relié au séjour.
+    | Séjours terminés depuis moins d'un an, comptés à encaisser aujourd'hui. Soit le client doit encore, soit le paiement est arrivé sans être relié au séjour : le relier le fait sortir de cette liste.
   = render "finance/treasury/receivables", receivables: t.late_receivables, empty: "Aucun séjour en retard.", horizon_end: nil, id: "late"
 
   h3.mb-1.text-lg.font-semibold.text-gray-900 À payer
