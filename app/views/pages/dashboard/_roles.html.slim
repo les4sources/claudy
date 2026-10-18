@@ -1,0 +1,22 @@
+/ « MES PROCHAINS RÔLES DU JOUR » (Michael 2026-10-18) — veille, ligne de
+  garde et autres rôles à venir. Dans la colonne de droite, au-dessus des
+  notifications : on le lit d'un coup d'œil, sans le chercher dans l'agenda.
+  Locals : roles.
+section.space-y-3
+  h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-700 Mes prochains rôles du jour
+  - if roles.empty?
+    .rounded-xl.border.border-gray-100.bg-white.px-4.py-6.text-center.text-sm.text-gray-500
+      | Aucun rôle prévu.
+  - else
+    ul.divide-y.divide-gray-100.overflow-hidden.rounded-xl.border.border-gray-100.bg-white
+      - roles.each do |human_role|
+        li.flex.items-center.justify-between.gap-3.px-4.py-3
+          .min-w-0
+            p.text-sm.font-medium.text-gray-900
+              = human_role.date == Date.current ? "Aujourd'hui" : l(human_role.date, format: "%A %-d %B").capitalize
+            p.text-xs.text-gray-500
+              = human_role.role&.name
+              - if human_role.backup?
+                = " · en renfort"
+          - if human_role.phone_holder?
+            span.shrink-0.rounded-full.bg-amber-50.px-2.py-0.5.text-xs.font-medium.text-amber-800 📞 Ligne de garde

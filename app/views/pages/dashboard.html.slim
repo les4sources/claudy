@@ -5,9 +5,22 @@
   Les comptes Claudy restent PARTAGÉS : d'où le sélecteur de membre, qui permet
   d'afficher la vue de n'importe qui depuis n'importe quel compte.
   AUCUN MONTANT sur cette page : les prix sont l'affaire du Pôle Accueil.
+/ Rentrer une note de frais ou de mission depuis son propre tableau de bord
+  (Michael 2026-10-17). Le bénéficiaire est le membre affiché, prérempli dans le
+  formulaire. Les boutons ne s'affichent qu'à qui peut écrire en Comptabilité :
+  le formulaire vit là, et il refuserait les autres.
+- note_links = []
+- if section_writable?(:accounting)
+  - note_links << link_to("➕ Note de frais",
+                          new_finance_expense_report_path(kind: "expenses", human_id: @human&.id),
+                          class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")
+  - note_links << link_to("➕ Note de mission",
+                          new_finance_expense_report_path(kind: "mileage", human_id: @human&.id),
+                          class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90")
 - content_for :page_header do
   = render "layouts/components/page_header",
-           title: @human ? "Tableau de bord de #{@human.name}" : "Tableau de bord"
+           title: @human ? "Tableau de bord de #{@human.name}" : "Tableau de bord",
+           links: note_links.presence
 
 / Deux colonnes dès `lg` : le travail du membre à gauche, les notifications à
   droite (Michael 2026-09-20). `items-start` empêche la colonne courte de
@@ -37,8 +50,21 @@
       = render "pages/dashboard/kitchen_pending", orders: @kitchen_pending, human: @human
       = render "pages/dashboard/kitchen_upcoming", orders: @kitchen_upcoming, human: @human
       = render "pages/dashboard/kitchen_unconfirmed", orders: @kitchen_unconfirmed, human: @human
+      / Le travail dans le collectif (Michael 2026-10-18), réservé aux Sourciers
+        comme les écrans d'où il vient : `@upcoming_roles` n'est chargé que pour eux.
+      - unless @upcoming_roles.nil?
+        = render "pages/dashboard/cycle_actions",
+                 cycle: @cycle, actions: @cycle_actions.to_a,
+                 delegated: @delegated_actions.to_a, human: @human
+        = render "pages/dashboard/gathering_actions",
+                 actions: @gathering_actions, agenda_items: @carried_agenda_items
       = render "pages/dashboard/tasks", tasks: @tasks
 
-  = render "pages/dashboard/notifications",
-           notifications: @notifications,
-           unread_count: @notifications_unread_count
+  / `mt-6` sous `lg` : hors grille, les deux colonnes s'empilent sans gouttière —
+    le `gap-6` du parent ne s'applique qu'en mode grille.
+  .space-y-6.mt-6(class="lg:mt-0")
+    - unless @upcoming_roles.nil?
+      = render "pages/dashboard/roles", roles: @upcoming_roles
+    = render "pages/dashboard/notifications",
+             notifications: @notifications,
+             unread_count: @notifications_unread_count

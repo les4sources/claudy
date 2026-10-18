@@ -182,4 +182,108 @@ RSpec.describe "Tableau de bord d'un membre", type: :request do
       expect(response).to redirect_to(experiences_path)
     end
   end
+
+  # Rentrer une note de frais ou de mission depuis son tableau de bord (Michael
+  # 2026-10-17). Les boutons suivent le droit d'écrire en Comptabilité.
+  describe "les boutons de notes de frais" do
+    def note_path(kind, human = nil)
+      CGI.escapeHTML(new_finance_expense_report_path(kind: kind, human_id: human&.id))
+    end
+
+    it "propose les deux notes, au nom du membre affiché" do
+      sign_in user_steph
+      get dashboard_path(human_id: malau.id)
+
+      expect(response.body).to include("Note de frais", "Note de mission")
+      expect(response.body).to include(note_path("expenses", malau), note_path("mileage", malau))
+    end
+
+    it "les propose aussi sur un compte non rattaché, sans bénéficiaire" do
+      sign_in user_global
+      get dashboard_path
+
+      expect(response.body).to include(note_path("expenses"), note_path("mileage"))
+    end
+
+    it "les propose à l'Administratif, qui écrit en Comptabilité" do
+      sign_in User.create!(email: "admin-dash@les4sources.be", password: "password123",
+                           human: malau, access_roles: %w[administratif])
+      get dashboard_path
+
+      expect(response.body).to include(note_path("mileage", malau))
+    end
+
+    it "les cache à qui ne peut pas écrire en Comptabilité" do
+      sign_in User.create!(email: "comm-dash@les4sources.be", password: "password123",
+                           human: malau, access_roles: %w[communication])
+      get dashboard_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("/finance/expense_reports/new")
+    end
+  end
+
+  # Le travail dans le collectif (Michael 2026-10-18) : actions du cycle,
+  # actions de rassemblement, prochains rôles du jour. Réservé aux Sourciers,
+  # comme les écrans d'où il vient.
+  describe "le travail dans le collectif" do
+    let!(:cycle) { Cycle.create!(name: "Cycle d'automne", start_date: Date.current - 10, end_date: Date.current + 30) }
+    let!(:category) { GatheringCategory.create!(name: "Collectif", color: "emerald") }
+    let!(:gathering) do
+      Gathering.create!(gathering_category: category, name: "Rassemblement de novembre",
+                        starts_at: 3.days.from_now, ends_at: 3.days.from_now + 2.hours)
+    end
+    let!(:veille) { Role.create!(name: "Veilleur·euse") }
+
+    before do
+      CycleAction.create!(human: steph, cycle: cycle, label: "ACTION EN COURS", category: :ponctuelle, hours: 4)
+      CycleAction.create!(human: steph, cycle: cycle, label: "ACTION FAITE", category: :ponctuelle, completed: true)
+      CycleAction.create!(human: steph, cycle: cycle, label: "ACTION ARCHIVEE", category: :ponctuelle,
+                          archived_at: Time.current, outcome: :dropped)
+      CycleAction.create!(human: malau, cycle: cycle, label: "ACTION CONFIEE", category: :deleguee,
+                          delegate_to_human: steph)
+      CycleAction.create!(human: malau, cycle: cycle, label: "ACTION DE MALAU", category: :ponctuelle)
+
+      gathering.gathering_actions.create!(label: "RELANCER LE MENUISIER", assignees: [steph])
+      gathering.gathering_actions.create!(label: "ACTION DEJA COCHEE", assignees: [steph], completed: true)
+      AgendaItem.create!(gathering: gathering, author: malau, carrier: steph, title: "POINT PORTE", list: :triage)
+
+      HumanRole.create!(human: steph, role: veille, date: Date.current + 2, phone_holder: true)
+      HumanRole.create!(human: steph, role: veille, date: Date.current - 2)
+    end
+
+    it "montre au Sourcier ce qui reste à faire, et rien d'autre" do
+      sign_in user_steph
+      get dashboard_path
+
+      expect(response.body).to include("Mes actions du cycle", "Cycle d&#39;automne", "ACTION EN COURS",
+                                       "ACTION CONFIEE", "de Malau Accueil")
+      expect(response.body).not_to include("ACTION FAITE", "ACTION ARCHIVEE", "ACTION DE MALAU")
+
+      expect(response.body).to include("Mes actions de rassemblement", "RELANCER LE MENUISIER", "POINT PORTE")
+      expect(response.body).not_to include("ACTION DEJA COCHEE")
+
+      expect(response.body).to include("Mes prochains rôles du jour", "Veilleur·euse", "Ligne de garde")
+      expect(response.body.scan("Veilleur·euse").size).to eq(1)
+    end
+
+    it "suit le membre affiché par le sélecteur" do
+      sign_in user_steph
+      get dashboard_path(human_id: malau.id)
+
+      expect(response.body).to include("ACTION DE MALAU")
+      expect(response.body).not_to include("ACTION EN COURS", "RELANCER LE MENUISIER")
+      expect(response.body).to include("Aucun rôle prévu.")
+    end
+
+    it "ne montre pas ces blocs à un rôle qui n'ouvre pas les cycles" do
+      sign_in User.create!(email: "comm-collectif@les4sources.be", password: "password123",
+                           human: steph, access_roles: %w[communication])
+      get dashboard_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("Mes actions du cycle", "Mes actions de rassemblement",
+                                           "Mes prochains rôles du jour")
+    end
+  end
 end
