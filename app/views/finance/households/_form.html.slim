@@ -14,10 +14,12 @@
                    hint: "Ex. « Famille Hulet », « Chambre 3 »",
                    class: "md:w-2/3"
 
-    = f.select :kind,
-               Household::KINDS.map { |kind| [Household::KIND_LABELS.fetch(kind, kind), kind] },
-               { label: "Type *" },
-               { class: "md:w-1/3" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un type…" class="relative md:w-1/3")
+      = f.select :kind,
+                 Household::KINDS.map { |kind| [Household::KIND_LABELS.fetch(kind, kind), kind] },
+                 { label: "Type *" },
+                 { data: { searchable_select_target: "select" } }
+      = render "shared/searchable_select_search", label: "Chercher un type de ménage"
     p.-mt-4.mb-2.text-sm.text-gray-500
       | Un ménage habitant vit sur le domaine ; un ménage membre y participe sans y résider.
 

@@ -39,6 +39,14 @@ export default class extends Controller {
 
     this.selectTarget.classList.add("hidden")
     this.wrapTarget.classList.remove("hidden")
+    // Un <select> obligatoire masqué bloquerait l'envoi EN SILENCE : le
+    // navigateur refuse le formulaire mais ne peut pas montrer un champ caché
+    // (« An invalid form control is not focusable »). L'obligation passe donc
+    // au champ de recherche, qui n'est rempli que si une option est retenue.
+    if (this.selectTarget.required) {
+      this.selectTarget.required = false
+      this.inputTarget.required = true
+    }
     this.inputTarget.placeholder = this.placeholderValue
     this.actif = -1
     this.refleterLaSelection()

@@ -76,12 +76,13 @@
                       class: "inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
             - if @invoices.any?
               = form_with model: @deadline, url: finance_compliance_deadline_path(@deadline), method: :patch, class: "flex flex-wrap items-end gap-2" do |f|
-                div
+                div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une facture…" class="relative w-80")
                   = label_tag "compliance_deadline_purchase_invoice_id", "…ou lier une facture déjà encodée", class: "block text-xs font-medium text-gray-600"
                   = f.select :purchase_invoice_id,
                              @invoices.map { |i| ["#{l(i.issued_on)} · #{i.third_party.name} · #{number_to_currency(i.total_cents / 100.0)} (#{i.status_label.downcase})", i.id] },
                              { include_blank: "—", label: false },
-                             { class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm" }
+                             { class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" } }
+                  = render "shared/searchable_select_search", label: "Chercher une facture d'achat"
                 button.rounded-md.border.border-gray-300.bg-white.px-3.py-2.text-sm.font-medium.text-gray-700(type="submit" class="hover:bg-gray-50") Lier
 
     / Ce qui s'écarte de la règle : la date, une note, la preuve.

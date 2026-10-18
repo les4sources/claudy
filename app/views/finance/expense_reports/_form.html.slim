@@ -6,12 +6,14 @@
     p.mb-3.text-xs.text-gray-500
       | Le bénéficiaire est celui à qui on doit l'argent ; l'entité est la structure qui le doit. Une note qui mêle deux structures = deux notes.
     .grid.gap-4(class="md:grid-cols-4")
-      div
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une personne…" class="relative")
         = f.label :human_id, "Bénéficiaire *", class: "mb-1 block text-sm font-medium text-gray-700"
-        = f.collection_select :human_id, humans, :id, :name, { include_blank: "Choisir une personne…" }, class: "block w-full rounded-md border-gray-300 shadow-sm", required: true
-      div
+        = f.collection_select :human_id, humans, :id, :name, { include_blank: "Choisir une personne…" }, class: "block w-full rounded-md border-gray-300 shadow-sm", required: true, data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un bénéficiaire"
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une entité…" class="relative")
         = f.label :legal_entity_id, "Entité *", class: "mb-1 block text-sm font-medium text-gray-700"
-        = f.collection_select :legal_entity_id, entities, :id, :name, {}, class: "block w-full rounded-md border-gray-300 shadow-sm", required: true
+        = f.collection_select :legal_entity_id, entities, :id, :name, {}, class: "block w-full rounded-md border-gray-300 shadow-sm", required: true, data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher une entité"
       div
         = f.date_field :submitted_on, label: "Remise le", class: "w-full"
       / Le type ne se change plus dans le formulaire (phase 2) : une note de

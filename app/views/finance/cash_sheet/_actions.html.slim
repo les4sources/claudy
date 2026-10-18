@@ -8,7 +8,9 @@ details.inline-block.text-left
       = hidden_field_tag :cash_account_id, sheet.account.id
       = date_field_tag "cash_line[entry_date]", entry.entry_date, class: "w-full rounded-md border-gray-300 text-sm"
       = text_field_tag "cash_line[label]", entry.label, class: "w-full rounded-md border-gray-300 text-sm"
-      = select_tag "cash_line[cash_motif_id]", options_from_collection_for_select(motifs, :id, :label, entry.cash_motif_id), class: "w-full rounded-md border-gray-300 text-sm"
+      div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un motif…" class="relative")
+        = select_tag "cash_line[cash_motif_id]", options_from_collection_for_select(motifs, :id, :label, entry.cash_motif_id), class: "w-full rounded-md border-gray-300 text-sm", data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un motif"
       = number_field_tag "cash_line[amount]", (entry.amount_cents.abs / 100.0), step: 0.01, min: 0, class: "w-full rounded-md border-gray-300 text-sm"
       = text_field_tag "cash_line[notes]", entry.notes, placeholder: "Note", class: "w-full rounded-md border-gray-300 text-sm"
       button.w-full.rounded-md.bg-4s-main.px-3.py-1.5.text-sm.font-medium.text-white(type="submit") Enregistrer
