@@ -28,6 +28,10 @@ ul
     li
       strong Type de réservation :
       = " #{@stay.category_label}"
+  - if @stay.referral_label.present?
+    li
+      strong Apporteur :
+      = " #{@stay.referral_label} (lien partenaire)"
 
 h3 Réservation
 ul

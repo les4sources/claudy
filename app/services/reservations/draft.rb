@@ -72,7 +72,12 @@ module Reservations
                   # Purement UI — pilote le masquage/affichage des blocs à
                   # l'étape 2 et survit aux allers-retours via la session. Jamais
                   # persisté en base. Tableau de clés (String).
-                  :needs
+                  :needs,
+                  # Apporteur du séjour (Michael, 2026-10-18) : clé de
+                  # `Stay::REFERRALS` lue dans le `?ref=` de l'URL d'entrée du
+                  # funnel. Jamais soumise par un formulaire : le contrôleur
+                  # public la pose en session, le Builder la recopie sur le Stay.
+                  :referral
 
     # Backing stores pour campings/vans/hamacs (utilisés quand per_night_resources absent)
     attr_writer :campings, :vans, :hamacs
@@ -131,6 +136,7 @@ module Reservations
       @billing_vies_status = attrs[:billing_vies_status].presence
       @billing_vies_name   = attrs[:billing_vies_name].presence
       @needs             = normalize_needs(attrs[:needs])
+      @referral          = Stay.referral_key(attrs[:referral])
     end
 
     # --- Contrat PricingModel ---------------------------------------------
@@ -267,7 +273,8 @@ module Reservations
         billing_country:    billing_country,
         billing_vies_status: billing_vies_status,
         billing_vies_name:  billing_vies_name,
-        needs:              needs
+        needs:              needs,
+        referral:           referral
       }
     end
 

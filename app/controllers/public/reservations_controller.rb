@@ -21,7 +21,11 @@ module Public
     DRAFT_SESSION_KEY = :reservation_draft
     HALL_SLOT_COUNT   = 6
 
-    before_action :load_draft, only: %i[dates advance_dates compose quote advance_compose contact create]
+    before_action :load_draft, only: %i[start dates advance_dates compose quote advance_compose contact create]
+    # Lien d'apporteur (Michael, 2026-10-18) : `/reservation?ref=semisto`. Lu à
+    # chaque page GET du funnel, pour qu'un lien vers n'importe quelle étape
+    # compte aussi.
+    before_action :capture_referral, only: %i[start dates compose contact]
     skip_before_action :verify_authenticity_token, only: %i[advance_compose]
 
     def start
@@ -177,6 +181,21 @@ module Public
     end
 
     private
+
+    # Apporteur du séjour : la clé `ref` de l'URL, si elle figure dans
+    # `Stay::REFERRALS`, va dans le draft de SESSION — c'est la session qui la
+    # transporte d'une étape à l'autre et à travers les erreurs de validation,
+    # sans champ caché qu'un formulaire pourrait oublier. Une valeur inconnue
+    # est ignorée et n'efface pas un apporteur déjà retenu ; un lien d'un autre
+    # apporteur, lui, le remplace (dernier lien suivi). Le draft est vidé à la
+    # création du séjour : la demande suivante repart sans apporteur.
+    def capture_referral
+      key = Stay.referral_key(params[:ref])
+      return if key.nil? || key == @draft.referral
+
+      @draft.referral = key
+      session[DRAFT_SESSION_KEY] = @draft.to_h
+    end
 
     # Statistiques du site (2026-10-03) : chaque étape franchie compte dans
     # l'entonnoir, avec la même empreinte du jour que les pages vues du site —

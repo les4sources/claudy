@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_16_210000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_18_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -2449,6 +2449,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_210000) do
     t.string "legacy_origin"
     t.string "payment_status", default: "pending", null: false
     t.integer "price_override_cents"
+    t.string "referral"
     t.string "source", default: "reservation", null: false
     t.string "status"
     t.string "token"
@@ -2458,6 +2459,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_210000) do
     t.index ["customer_id"], name: "index_stays_on_customer_id"
     t.index ["invoice_status"], name: "index_stays_on_invoice_status_present", where: "(invoice_status IS NOT NULL)"
     t.index ["legacy_origin"], name: "index_stays_on_legacy_origin_unique_live", unique: true, where: "((legacy_origin IS NOT NULL) AND (deleted_at IS NULL))"
+    t.index ["referral"], name: "index_stays_on_referral", where: "(referral IS NOT NULL)"
     t.index ["source"], name: "index_stays_on_source"
     t.index ["token"], name: "index_stays_on_token", unique: true
   end

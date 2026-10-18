@@ -543,6 +543,43 @@ class StayDecorator < ApplicationDecorator
                   title: "Facture #{object.invoice_status_label.downcase}")
   end
 
+  # Apporteur du séjour (Michael, 2026-10-18) : « Via Semisto » dans l'en-tête
+  # de la fiche et dans la ligne de l'index. nil sans apporteur — rien ne
+  # s'affiche pour l'immense majorité des séjours.
+  def referral_badge
+    return if object.referral_label.blank?
+
+    h.content_tag(:span, "Via #{object.referral_label}",
+                  class: "inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200",
+                  title: "Séjour apporté par #{object.referral_label} (lien de réservation partenaire)")
+  end
+
+  # Commission due à l'apporteur (Michael, 2026-10-18) — cf.
+  # `Stays::ReferralCommission`. nil sans apporteur.
+  def referral_commission
+    return nil if object.referral.blank?
+
+    @referral_commission ||= Stays::ReferralCommission.new(object)
+  end
+
+  # « Commission 10 % : 41,50 € » à côté de la pastille, avec ce qui manque
+  # encore quand elle n'est pas due. Affichage seul — rien n'est versé ni émis.
+  def referral_commission_tag
+    commission = referral_commission
+    return if commission.nil?
+
+    montant = h.humanized_money_with_symbol(Money.new(commission.amount_cents))
+    if commission.due?
+      h.content_tag(:span, "Commission #{commission.rate_label} : #{montant} — due",
+                    class: "text-xs font-medium text-emerald-800",
+                    title: "#{commission.rate_label} de l'hébergement (#{h.humanized_money_with_symbol(Money.new(commission.lodging_cents))} TVAC) — séjour confirmé et payé")
+    else
+      h.content_tag(:span, "Commission #{commission.rate_label} : #{montant} — pas encore due (#{commission.pending_reasons.join(', ')})",
+                    class: "text-xs text-gray-600",
+                    title: "Due quand le séjour est confirmé ET entièrement payé. Assiette : hébergement #{h.humanized_money_with_symbol(Money.new(commission.lodging_cents))} TVAC")
+    end
+  end
+
   # --- Données d'en-tête de la modale (Michael 2026-07-26) ------------------
 
   # Nombre de NUITS. nil si le séjour n'est pas daté (journée sèche, import).

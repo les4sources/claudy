@@ -65,6 +65,15 @@ RSpec.describe Mcp::Server, "séjours" do
       end.not_to change(Stay, :count)
     end
 
+    it "donne l'apporteur et sa commission, sans rien écrire" do
+      sejour.update_columns(referral: "semisto")
+      lodging_cents = Stays::ReferralCommission.new(sejour.reload).lodging_cents
+      fiche = texte(outil("fiche_sejour", { "sejour" => "##{sejour.id}" }))
+      expect(fiche).to include("Apporteur : Semisto · commission 10 % de l'hébergement")
+      expect(fiche).to include(format("%.2f €", (lodging_cents * 0.10).round / 100.0).tr(".", ","))
+      expect(fiche).to include("pas encore due (séjour pas encore confirmé, séjour pas entièrement payé)")
+    end
+
     it "cherche un client par son téléphone" do
       expect(texte(outil("chercher_clients", { "recherche" => "470 11 22 33" }))).to include("##{client.id} Camille Martin")
     end
