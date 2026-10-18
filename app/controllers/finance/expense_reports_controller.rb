@@ -1,11 +1,14 @@
 module Finance
   # Comptabilité > Notes de frais (epic #241, phase 1).
   #
-  # La compta encode depuis le papier (décision de Michael du 2026-09-07) : la
-  # saisie par la personne elle-même viendra plus tard. L'écran est donc conçu
-  # pour ÇA — une feuille à plusieurs lignes qu'on recopie d'une traite, les
-  # photos des tickets déposées au passage, puis deux clics pour la passer en
-  # traitement.
+  # Une feuille à plusieurs lignes qu'on remplit d'une traite, les photos des
+  # tickets déposées au passage (ou la mention « fourni sur papier »), puis le
+  # passage en traitement.
+  #
+  # Qui saisit ne choisit PAS le compte de charge (Michael, 2026-10-18) : un
+  # membre du collectif sait ce qu'il a acheté et pour quel pôle, pas où ça va
+  # dans le plan comptable. La compta l'attribue au traitement, ligne par
+  # ligne, depuis la fiche de la note (`start_processing`).
   #
   # L'action de passage en traitement ne s'appelle pas `process` : c'est déjà le
   # point d'entrée de toute action Rails (`AbstractController#process`), et
@@ -27,6 +30,7 @@ module Finance
                  finance_expense_report_path(@report), match: :exact
       @lines = @report.expense_lines.chronological.includes(:general_account, :team)
       @entry = @report.journal_entry
+      @accounts = ExpenseLine.assignable_accounts if @report.recorded?
     end
 
     def new
@@ -37,11 +41,7 @@ module Finance
         legal_entity: default_entity,
         submitted_on: Date.current
       )
-      # Le compte de charge par défaut d'une note de mission : « Déplacements ».
-      # Une indemnité kilométrique n'achète rien, elle rembourse un trajet — et
-      # c'est cette ligne-là que le conseil regarde (epic #241, phase 2).
-      @report.expense_lines.build(spent_on: Date.current,
-                                  general_account: default_line_account(@report))
+      @report.expense_lines.build(spent_on: Date.current)
       load_form_collections
     end
 
@@ -61,10 +61,7 @@ module Finance
     def edit
       return refuse_edit unless @report.editable?
 
-      if @report.expense_lines.empty?
-        @report.expense_lines.build(spent_on: Date.current,
-                                    general_account: default_line_account(@report))
-      end
+      @report.expense_lines.build(spent_on: Date.current) if @report.expense_lines.empty?
       load_form_collections
     end
 
@@ -91,13 +88,15 @@ module Finance
       end
     end
 
+    # Les comptes choisis ligne par ligne arrivent avec la date (`accounts[id]`) :
+    # attribuer et traiter, c'est le même geste.
     def start_processing
       ExpenseReports::Process.new(expense_report: @report, processed_on: params[:processed_on],
-                                  whodunnit: current_user&.email).run!
+                                  accounts: chosen_accounts, whodunnit: current_user&.email).run!
       redirect_to finance_expense_report_path(@report),
                   notice: "Note #{@report.reload.reference} passée en traitement — l'écriture est au grand livre."
     rescue ExpenseReports::Process::BadStatus, ExpenseReports::Process::NoLines,
-           ExpenseReports::Process::MissingFiscalYear,
+           ExpenseReports::Process::MissingFiscalYear, ExpenseReports::Process::MissingAccount,
            Accounting::PostExpenseReport::MissingAccount,
            Accounting::PostExpenseReport::NoLines,
            Accounting::PostDocument::MissingFiscalYear, Date::Error => e
@@ -142,10 +141,10 @@ module Finance
 
     def get_report = @report = ExpenseReport.includes(:expense_lines).find(params[:id])
 
-    def default_line_account(report)
-      return nil unless report.mileage?
+    def chosen_accounts
+      return {} if params[:accounts].blank?
 
-      GeneralAccount.find_by(code: GeneralAccount::TRAVEL_CODE)
+      params.require(:accounts).permit(@report.expense_lines.map { |line| line.id.to_s }).to_h
     end
 
     def refuse_edit
@@ -179,10 +178,6 @@ module Finance
     def load_form_collections
       @humans = Human.ordered_all
       @entities = LegalEntity.actives.ordered
-      # Les charges (classe 6) d'abord, les immobilisations (classe 2) ensuite :
-      # une note de frais paie surtout des achats, mais parfois un outil qui
-      # s'immobilise. Le reste du plan n'a rien à faire dans une note.
-      @accounts = GeneralAccount.actives.where(klass: [6, 2]).ordered
       @teams = Team.ordered
     end
 
@@ -199,9 +194,11 @@ module Finance
     def report_params
       params.require(:expense_report).permit(
         :kind, :human_id, :legal_entity_id, :submitted_on, :notes,
+        # Pas de `general_account_id` : le compte s'attribue au traitement, pas
+        # à la saisie — même en forgeant la requête.
         expense_lines_attributes: %i[id spent_on label supplier_name doc_kind amount_in_euros
-                                     general_account_id team_id analytic_account_id
-                                     distance_km distance_in_km position receipt _destroy]
+                                     team_id analytic_account_id distance_km distance_in_km
+                                     position receipt receipt_on_paper _destroy]
       )
     end
 

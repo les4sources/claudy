@@ -2,9 +2,13 @@
   une fois de plus dans un <template> avec l'index NEW_RECORD pour servir de
   gabarit au bouton « Ajouter une ligne » (contrôleur `expense_lines`).
 
-  Les `data-expense-field` nomment les trois champs dont la ligne suivante
-  hérite : sur une feuille papier, six dépenses tombent presque toujours dans le
-  même pôle et le même compte.
+  Les `data-expense-field` nomment les champs dont la ligne suivante hérite :
+  sur une feuille papier, six dépenses tombent presque toujours dans le même
+  pôle.
+
+  Pas de compte de charge ici (Michael, 2026-10-18) : celui qui saisit ne le
+  choisit pas, la compta l'attribue au traitement, depuis la fiche de la note.
+  Le justificatif, lui, se dépose en fichier OU s'annonce sur papier.
 .rounded-lg.border.border-gray-200.bg-white.p-4(data-expense-lines-target="row")
   .grid.grid-cols-1.gap-3(class="md:grid-cols-12")
     .md:col-span-2
@@ -26,14 +30,7 @@
         | Retirer
 
   .mt-3.grid.grid-cols-1.gap-3(class="md:grid-cols-12")
-    .md:col-span-4(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" class="relative")
-      = line_form.label :general_account_id, "Compte de charge *", class: "mb-1 block text-sm font-medium text-gray-700"
-      = line_form.collection_select :general_account_id, accounts, :id, :to_s,
-                                    { include_blank: "Choisir un compte…" },
-                                    class: "block w-full rounded-md border-gray-300 shadow-sm text-sm",
-                                    data: { expense_field: "general_account_id", searchable_select_target: "select" }
-      = render "shared/searchable_select_search", label: "Chercher un compte de charge"
-    .md:col-span-3(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucun pôle" data-searchable-select-clearable-value="true" class="relative")
+    .md:col-span-4(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucun pôle" data-searchable-select-clearable-value="true" class="relative")
       = line_form.label :team_id, "Pôle", class: "mb-1 block text-sm font-medium text-gray-700"
       = line_form.collection_select :team_id, teams, :id, :name,
                                     { include_blank: "Aucun" },
@@ -48,13 +45,26 @@
                          class: "block w-full rounded-md border-gray-300 shadow-sm text-sm",
                          data: { searchable_select_target: "select" }
       = render "shared/searchable_select_search", label: "Chercher un type de pièce"
-    .md:col-span-3
-      = line_form.label :receipt, "Ticket ou facture", class: "mb-1 block text-sm font-medium text-gray-700"
-      = line_form.file_field :receipt, label: false, accept: "image/*,application/pdf", class: "block w-full text-xs text-gray-600"
-      - if line_form.object&.receipt&.attached?
+    .md:col-span-6
+      span.mb-1.block.text-sm.font-medium.text-gray-700 Justificatif *
+      .flex.flex-wrap.items-center.gap-x-4.gap-y-2
+        .min-w-0.flex-1
+          = line_form.file_field :receipt, label: false, accept: "image/*,application/pdf", class: "block w-full text-xs text-gray-600", aria: { label: "Déposer le ticket ou la facture" }
+        span.text-xs.text-gray-400 ou
+        label.inline-flex.items-center.gap-2.text-sm.text-gray-700
+          = line_form.check_box :receipt_on_paper, class: "h-4 w-4 rounded border-gray-300 text-4s-main"
+          | Fourni sur papier
+      / Un formulaire refusé revient avec le fichier choisi mais JAMAIS
+        enregistré : son blob n'existe pas encore, et lui fabriquer un lien
+        faisait tomber la page en erreur 500 (Sentry CLAUDY-86). Le navigateur ne
+        sait pas non plus re-remplir un champ fichier : on dit de le redéposer.
+      - receipt = line_form.object&.receipt
+      - if receipt&.attached? && receipt.blob&.persisted?
         p.mt-1.text-xs.text-gray-500
-          = link_to line_form.object.receipt.filename.to_s, rails_blob_path(line_form.object.receipt, disposition: "inline"), target: "_blank", rel: "noopener", class: "text-4s-main hover:underline"
+          = link_to receipt.filename.to_s, rails_blob_path(receipt, disposition: "inline"), target: "_blank", rel: "noopener", class: "text-4s-main hover:underline"
           |  — déposer un fichier le remplace.
+      - elsif receipt&.attached?
+        p.mt-1.text-xs.text-amber-700 = "« #{receipt.filename} » n'a pas été enregistré avec la note refusée : redépose-le."
 
   - if line_form.object&.persisted?
     = line_form.hidden_field :_destroy, value: "0"

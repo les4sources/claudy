@@ -22,7 +22,7 @@ RSpec.describe "Comptabilité — Notes de frais", type: :request do
     report = ExpenseReport.create!(kind: kind, human: person, legal_entity: entity,
                                    status: status, submitted_on: Date.current)
     report.expense_lines.create!(spent_on: Date.current, label: "Visserie",
-                                 amount_cents: amount_cents, general_account: expense_account)
+                                 amount_cents: amount_cents, general_account: expense_account, receipt_on_paper: true)
     report.reload
   end
 
@@ -105,11 +105,12 @@ RSpec.describe "Comptabilité — Notes de frais", type: :request do
             submitted_on: Date.current.to_s,
             expense_lines_attributes: {
               "0" => { spent_on: Date.current.to_s, label: "Visserie", supplier_name: "Brico Yvoir",
-                       amount_in_euros: "24,90", general_account_id: expense_account.id, doc_kind: "ticket" },
+                       amount_in_euros: "24,90", doc_kind: "ticket",
+                       receipt: fixture_file_upload(Rails.root.join("spec/fixtures/files/ticket.pdf"), "application/pdf") },
               "1" => { spent_on: Date.current.to_s, label: "Terreau",
-                       amount_in_euros: "62,50", general_account_id: expense_account.id },
+                       amount_in_euros: "62,50", receipt_on_paper: "1" },
               "2" => { spent_on: Date.current.to_s, label: "Essence",
-                       amount_in_euros: "35,00", general_account_id: expense_account.id }
+                       amount_in_euros: "35,00", receipt_on_paper: "1" }
             }
           }
         }
@@ -119,20 +120,58 @@ RSpec.describe "Comptabilité — Notes de frais", type: :request do
       expect(report.expense_lines.count).to eq(3)
       expect(report.total_cents).to eq(12_240)
       expect(report.created_by).to eq(user)
+      expect(report.expense_lines.map(&:general_account_id)).to all(be_nil)
+      expect(report.expense_lines.find_by(label: "Visserie").receipt).to be_attached
       expect(response).to redirect_to(finance_expense_report_path(report))
     end
 
-    it "refuse une ligne sans compte de charge et réaffiche le formulaire" do
+    # Michael, 2026-10-18 : celui qui saisit ne choisit pas le compte.
+    it "ne propose pas de compte de charge, et ignore un compte forgé" do
+      get new_finance_expense_report_path(kind: "expenses")
+      expect(response.body).not_to include("general_account_id")
+      expect(response.body).to include("Fourni sur papier")
+
       post finance_expense_reports_path, params: {
         expense_report: {
           human_id: human.id, legal_entity_id: entity.id,
-          expense_lines_attributes: { "0" => { spent_on: Date.current.to_s, label: "Sans compte",
-                                               amount_in_euros: "10,00" } }
+          expense_lines_attributes: { "0" => { spent_on: Date.current.to_s, label: "Forgé", amount_in_euros: "10,00",
+                                               general_account_id: expense_account.id, receipt_on_paper: "1" } }
+        }
+      }
+
+      expect(ExpenseReport.order(:id).last.expense_lines.sole.general_account_id).to be_nil
+    end
+
+    it "refuse une dépense sans justificatif ni mention papier" do
+      expect {
+        post finance_expense_reports_path, params: {
+          expense_report: {
+            human_id: human.id, legal_entity_id: entity.id,
+            expense_lines_attributes: { "0" => { spent_on: Date.current.to_s, label: "Sans ticket",
+                                                 amount_in_euros: "10,00" } }
+          }
+        }
+      }.not_to change(ExpenseReport, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(CGI.unescapeHTML(response.body)).to include("Fourni sur papier")
+    end
+
+    # Sentry CLAUDY-86 : un formulaire refusé avec un ticket joint tombait en
+    # 500 — le lien vers un fichier jamais enregistré n'existe pas.
+    it "réaffiche un formulaire refusé qui portait un ticket, sans erreur" do
+      post finance_expense_reports_path, params: {
+        expense_report: {
+          human_id: "", legal_entity_id: entity.id,
+          expense_lines_attributes: {
+            "0" => { spent_on: Date.current.to_s, label: "Visserie", amount_in_euros: "10,00",
+                     receipt: fixture_file_upload(Rails.root.join("spec/fixtures/files/ticket.pdf"), "application/pdf") }
+          }
         }
       }
 
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.body).to include("obligatoire")
+      expect(CGI.unescapeHTML(response.body)).to include("« ticket.pdf » n'a pas été enregistré")
     end
 
     it "refuse de modifier une note passée en traitement" do
@@ -157,6 +196,59 @@ RSpec.describe "Comptabilité — Notes de frais", type: :request do
       expect(report.reference).to eq("NF-#{Date.current.year}-001")
       expect(report.journal_entry).to be_present
       expect(flash[:notice]).to include(report.reference)
+    end
+
+    describe "l'attribution des comptes au traitement" do
+      let!(:fournitures) { build_general_account(code: "604000", name: "Fournitures", klass: 6, nature: "expense") }
+
+      def sans_compte
+        report = build_report
+        report.expense_lines.update_all(general_account_id: nil)
+        report.reload
+      end
+
+      it "propose un compte par ligne sur la fiche d'une note enregistrée" do
+        report = sans_compte
+        line = report.expense_lines.sole
+
+        get finance_expense_report_path(report)
+
+        expect(response.body).to include(%(name="accounts[#{line.id}]"), 'form="traitement-note"')
+        expect(CGI.unescapeHTML(response.body)).to include("1 à attribuer")
+      end
+
+      it "enregistre le compte choisi et passe la note en traitement" do
+        report = sans_compte
+        line = report.expense_lines.sole
+
+        post start_processing_finance_expense_report_path(report),
+             params: { processed_on: Date.current.to_s, accounts: { line.id.to_s => fournitures.id.to_s } }
+
+        expect(report.reload.status).to eq("processing")
+        expect(line.reload.general_account).to eq(fournitures)
+        expect(report.journal_entry.journal_lines.map { |l| l.general_account.code }).to include("604000")
+      end
+
+      it "refuse de traiter une ligne sans compte, et le dit" do
+        report = sans_compte
+
+        post start_processing_finance_expense_report_path(report), params: { processed_on: Date.current.to_s }
+
+        expect(report.reload.status).to eq("recorded")
+        expect(flash[:alert]).to include("Attribue un compte de charge", "Visserie")
+      end
+
+      it "refuse un compte qui n'est ni une charge ni une immobilisation" do
+        report = sans_compte
+        line = report.expense_lines.sole
+
+        post start_processing_finance_expense_report_path(report),
+             params: { accounts: { line.id.to_s => supplier_account.id.to_s } }
+
+        expect(report.reload.status).to eq("recorded")
+        expect(line.reload.general_account_id).to be_nil
+        expect(flash[:alert]).to include("compte de charge")
+      end
     end
 
     it "rejette la note avec son motif" do

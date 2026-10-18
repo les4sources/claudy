@@ -100,7 +100,7 @@ RSpec.describe Teams::Accounts do
       report = ExpenseReport.create!(human: Human.create!(name: "Steph"), legal_entity: entity,
                                      submitted_on: Date.new(2026, 6, 2))
       report.expense_lines.create!(spent_on: Date.new(2026, 6, 2), label: "Farine", amount_cents: 2_500,
-                                   general_account: supplies, team: team)
+                                   general_account: supplies, team: team, receipt_on_paper: true)
       expense(10_000, on: Date.new(2026, 2, 1))
 
       expect(accounts.upcoming_invoices_cents).to eq(15_000)

@@ -35,7 +35,7 @@ RSpec.describe "accounting:verify_expense_reports" do
   def build_report(amount_cents: 8_740)
     report = ExpenseReport.create!(human: human, legal_entity: entity, submitted_on: Date.current)
     report.expense_lines.create!(spent_on: Date.current, label: "Visserie",
-                                 amount_cents: amount_cents, general_account: charge)
+                                 amount_cents: amount_cents, general_account: charge, receipt_on_paper: true)
     report.reload
   end
 

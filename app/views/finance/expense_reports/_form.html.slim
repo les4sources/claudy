@@ -43,7 +43,7 @@
           - if report.mileage?
             | Une ligne par trajet. Le montant est calculé : kilomètres × indemnité du jour de la ligne, figée à l'enregistrement.
           - else
-            | Une ligne par ticket. La ligne suivante hérite de la date, du compte et du pôle de la précédente.
+            | Une ligne par ticket, avec sa photo ou la mention « fourni sur papier ». La ligne suivante hérite de la date et du pôle de la précédente. Le compte de charge, c'est la comptabilité qui l'attribue au traitement.
       .text-right
         .text-xs.uppercase.tracking-wide.text-gray-400 Total de la note
         .text-2xl.font-semibold.tabular-nums.text-gray-900(data-expense-lines-target="total") 0,00 €
@@ -52,13 +52,13 @@
     - line_partial = report.mileage? ? "finance/expense_reports/mileage_line_fields" : "finance/expense_reports/line_fields"
     .space-y-3(data-expense-lines-target="rows")
       = f.fields_for :expense_lines do |line_form|
-        = render line_partial, line_form: line_form, accounts: accounts, teams: teams
+        = render line_partial, line_form: line_form, teams: teams
 
     / Gabarit d'une ligne vierge : `child_index: "NEW_RECORD"` produit des noms
       de champs que le contrôleur Stimulus réindexe à chaque insertion.
     template data-expense-lines-target="template"
       = f.fields_for :expense_lines, ExpenseLine.new(spent_on: Date.current), child_index: "NEW_RECORD" do |line_form|
-        = render line_partial, line_form: line_form, accounts: accounts, teams: teams
+        = render line_partial, line_form: line_form, teams: teams
 
     button.mt-4.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(type="button" class="hover:bg-gray-50" data-action="expense-lines#add")
       | ➕ Ajouter une ligne

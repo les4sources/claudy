@@ -216,13 +216,21 @@ RSpec.describe Mcp::Server, "finances" do
 
   it "encode une note de frais, la traite et la rembourse en caisse" do
     confirme("enregistrer_note_de_frais", { "membre" => "moi", "lignes" => [
-                                              { "date" => jour.iso8601, "libelle" => "Visserie", "montant" => "87,40", "compte" => "604000" }
+                                              { "date" => jour.iso8601, "libelle" => "Visserie", "montant" => "87,40" }
                                             ] })
     note = ExpenseReport.last
     expect(note).to have_attributes(human: chloe, status: "recorded", total_cents: 8_740)
+    ligne = note.expense_lines.sole
+    expect(ligne).to have_attributes(general_account_id: nil, receipt_on_paper: true)
 
-    confirme("geste_note_de_frais", { "note" => note.id, "geste" => "traiter" })
+    # Le compte s'attribue au traitement, pas à la saisie (Michael, 2026-10-18).
+    refus = outil("geste_note_de_frais", { "note" => note.id, "geste" => "traiter" })
+    expect(texte(refus)).to include("Attribue un compte de charge", "Visserie")
+
+    confirme("geste_note_de_frais", { "note" => note.id, "geste" => "traiter",
+                                      "comptes" => [{ "ligne" => ligne.id, "compte" => "604000" }] })
     expect(note.reload).to be_processing
+    expect(ligne.reload.general_account.code).to eq("604000")
     expect(texte(outil("a_payer", {}))).to include(note.payable_label, "87,40 €")
 
     expect do

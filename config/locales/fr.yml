@@ -5,6 +5,10 @@ fr:
     # validation s'affiche « Name doit être rempli(e) » — un mot anglais au
     # milieu d'une phrase française, sur un écran destiné à la comptabilité.
     attributes:
+      expense_line:
+        receipt: Justificatif
+      expense_report/expense_lines:
+        receipt: Justificatif
       liability:
         label: Libellé
         kind: Nature

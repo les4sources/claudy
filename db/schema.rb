@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_18_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_18_210000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1036,6 +1036,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_190000) do
     t.string "label", null: false
     t.integer "position", default: 0, null: false
     t.integer "rate_cents_per_km"
+    t.boolean "receipt_on_paper", default: false, null: false
     t.date "spent_on", null: false
     t.string "supplier_name"
     t.bigint "team_id"

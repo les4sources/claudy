@@ -36,7 +36,7 @@ RSpec.describe "Comptabilité — paiement d'une note de frais (epic #241, phase
     report = ExpenseReport.create!(kind: "expenses", human: human, legal_entity: entity,
                                    submitted_on: Date.new(2026, 6, 1))
     report.expense_lines.create!(spent_on: Date.new(2026, 5, 28), label: "Visserie",
-                                 amount_cents: amount_cents, general_account: charges)
+                                 amount_cents: amount_cents, general_account: charges, receipt_on_paper: true)
     report.reload
   end
 

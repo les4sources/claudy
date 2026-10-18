@@ -16,10 +16,12 @@ module Mcp
             libelle: { type: "string" },
             montant: MONTANT.merge(description: "Note de frais : le montant payé. Ignoré pour une note de mission."),
             km: { type: %w[number string], description: "Note de mission : les kilomètres (le montant suit le barème du jour)." },
-            compte: COMPTE_GENERAL.merge(description: "Compte de charge. Défaut d'une note de mission : déplacements (617000)."),
             pole: POLE,
             fournisseur: { type: "string", description: "Le commerce ou le fournisseur." },
-            piece: { type: "string", enum: ExpenseLine::DOC_KINDS, description: "ticket ou invoice." }
+            piece: { type: "string", enum: ExpenseLine::DOC_KINDS, description: "ticket ou invoice." },
+            papier: { type: "boolean",
+                      description: "Note de frais : le justificatif est remis sur papier. Défaut : oui, puisque le fichier " \
+                                   "ne peut pas passer par ici ; il se dépose ensuite dans Claudy. Faux refuse la ligne." }
           },
           required: %w[date libelle]
         }.freeze
@@ -28,7 +30,8 @@ module Mcp
              title: "Encoder ou corriger une note de frais",
              description: "Crée une note de frais (achats avancés par un membre) ou de mission (kilomètres), ou corrige " \
                           "une note encore « enregistrée ». Les lignes données en correction REMPLACENT toutes les " \
-                          "lignes. Les justificatifs (photos, PDF) se déposent dans Claudy. Ensuite : geste_note_de_frais traiter.",
+                          "lignes. Pas de compte de charge ici : la compta l'attribue au traitement " \
+                          "(geste_note_de_frais traiter, comptes). Les justificatifs (photos, PDF) se déposent dans Claudy.",
              schema: {
                properties: {
                  note: NOTE.merge(description: "Pour corriger : la note. Absente : nouvelle note."),
@@ -72,7 +75,7 @@ module Mcp
           note = ExpenseReport.find(note.id)
           lignes = note.expense_lines.map do |l|
             "\n  #{l.spent_on} #{l.label} : #{euros(l.amount_cents)}#{" (#{format('%g', l.distance_km)} km)" if l.distance_km} → " \
-              "#{l.general_account&.code}#{" · pôle #{l.team.name}" if l.team}"
+              "#{l.general_account&.code || 'compte à attribuer au traitement'}#{" · pôle #{l.team.name}" if l.team}"
           end
           "#{ligne_note(note)}#{lignes.join}"
         end
@@ -107,18 +110,12 @@ module Mcp
           Array(lignes).each_with_index.map do |ligne, index|
             ligne = ligne.to_h
             quoi = "ligne #{index + 1}"
-            compte = if ligne["compte"].present?
-                       compte_general!(ligne["compte"])
-                     elsif mission
-                       GeneralAccount.find_by(code: GeneralAccount::TRAVEL_CODE) || raise(Error, "#{quoi} : donne le compte de charge.")
-                     else
-                       raise Error, "#{quoi} : donne le compte de charge (referentiel_comptable comptes, classe 6)."
-                     end
             attributs = {
               spent_on: date!(ligne["date"], "#{quoi} date"), label: ligne["libelle"].to_s.strip,
-              general_account_id: compte.id, team_id: ligne["pole"].present? ? pole!(ligne["pole"]).id : nil,
+              team_id: ligne["pole"].present? ? pole!(ligne["pole"]).id : nil,
               supplier_name: ligne["fournisseur"].to_s.strip.presence, doc_kind: ligne["piece"].presence
             }
+            attributs[:receipt_on_paper] = ligne.fetch("papier", true) unless mission
             if mission
               raise Error, "#{quoi} : donne les kilomètres." if ligne["km"].blank?
 

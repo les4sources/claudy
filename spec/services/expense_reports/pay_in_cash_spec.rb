@@ -19,7 +19,7 @@ RSpec.describe ExpenseReports::PayInCash do
   let(:report) do
     report = ExpenseReport.create!(human: human, legal_entity: entity, submitted_on: Date.current)
     report.expense_lines.create!(spent_on: Date.current, label: "Visserie", amount_cents: 8_740,
-                                 general_account: expense_account)
+                                 general_account: expense_account, receipt_on_paper: true)
     ExpenseReports::Process.new(expense_report: report.reload).run!
   end
 

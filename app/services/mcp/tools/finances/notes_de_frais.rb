@@ -52,8 +52,13 @@ module Mcp
           details << "Notes : #{note.notes}" if note.notes.present?
           lignes = note.expense_lines.sort_by { |l| [l.spent_on, l.position, l.id] }.map do |l|
             km = l.distance_km ? " · #{format('%g', l.distance_km)} km" : ""
-            "  #{l.spent_on} #{l.label}#{" (#{l.supplier_name})" if l.supplier_name.present?} : #{euros(l.amount_cents)}#{km} → " \
-              "#{l.general_account}#{" · pôle #{l.team.name}" if l.team}#{' · sans justificatif' unless l.receipt.attached?}"
+            justificatif = if l.receipt.attached? then ""
+                           elsif l.receipt_on_paper? then " · justificatif sur papier"
+                           elsif l.mileage? then ""
+                           else " · sans justificatif"
+                           end
+            "  ##{l.id} #{l.spent_on} #{l.label}#{" (#{l.supplier_name})" if l.supplier_name.present?} : #{euros(l.amount_cents)}#{km} → " \
+              "#{l.general_account || 'compte à attribuer'}#{" · pôle #{l.team.name}" if l.team}#{justificatif}"
           end
           details << "Lignes :\n#{lignes.presence&.join("\n") || '  aucune'}"
           paiements = note.cash_allocations.includes(:cash_entry).map do |a|

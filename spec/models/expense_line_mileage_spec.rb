@@ -115,7 +115,7 @@ RSpec.describe ExpenseLine, "kilomètres" do
 
   it "laisse les notes de FRAIS ordinaires intouchées" do
     report = mission(kind: "expenses")
-    line = ligne(report, amount_cents: 2_490, distance_km: nil)
+    line = ligne(report, amount_cents: 2_490, distance_km: nil, receipt_on_paper: true)
 
     expect(line.amount_cents).to eq(2_490)
     expect(line.rate_cents_per_km).to be_nil

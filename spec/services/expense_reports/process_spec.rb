@@ -29,9 +29,9 @@ RSpec.describe ExpenseReports::Process do
     else
       report.expense_lines.create!(spent_on: Date.new(2026, 5, 28), label: "Visserie",
                                    supplier_name: "Brico Yvoir", amount_cents: 2_490,
-                                   general_account: expense_account, team: team)
+                                   general_account: expense_account, team: team, receipt_on_paper: true)
       report.expense_lines.create!(spent_on: Date.new(2026, 5, 30), label: "Terreau",
-                                   amount_cents: 6_250, general_account: expense_account)
+                                   amount_cents: 6_250, general_account: expense_account, receipt_on_paper: true)
     end
     report.reload
   end
@@ -123,5 +123,48 @@ RSpec.describe ExpenseReports::Process do
 
     expect([premiere.reload.reference, seconde.reload.reference].uniq.size).to eq(2)
     expect(ExpenseReport.where.not(sequence_number: nil).pluck(:sequence_number).sort).to eq([1, 2])
+  end
+
+  # Le compte de charge s'attribue AU TRAITEMENT, pas à la saisie (Michael,
+  # 2026-10-18).
+  describe "l'attribution des comptes" do
+    let!(:fournitures) { build_general_account(code: "604000", name: "Fournitures", klass: 6, nature: "expense") }
+
+    def sans_compte
+      report = build_report
+      report.expense_lines.update_all(general_account_id: nil)
+      report.reload
+    end
+
+    it "refuse de traiter une ligne sans compte, en la nommant, sans rien écrire" do
+      report = sans_compte
+
+      expect { described_class.new(expense_report: report).run! }
+        .to raise_error(described_class::MissingAccount, /Visserie.*Terreau/)
+      expect(report.reload).to be_recorded
+      expect(report.reference).to be_nil
+    end
+
+    it "pose les comptes choisis ligne par ligne, puis passe la note" do
+      report = sans_compte
+      ids = report.expense_lines.map(&:id)
+
+      described_class.new(expense_report: report,
+                          accounts: ids.to_h { |id| [id.to_s, fournitures.id.to_s] }).run!
+
+      expect(report.reload).to be_processing
+      debits = report.journal_entry.journal_lines.select { |line| line.debit_cents.positive? }
+      expect(debits.map { |line| line.general_account.code }.uniq).to eq(["604000"])
+    end
+
+    it "garde les comptes déjà choisis quand le passage échoue sur l'exercice" do
+      report = sans_compte
+      choix = report.expense_lines.to_h { |line| [line.id, fournitures.id] }
+
+      expect do
+        described_class.new(expense_report: report, processed_on: Date.new(2031, 1, 1), accounts: choix).run!
+      end.to raise_error(described_class::MissingFiscalYear)
+      expect(report.expense_lines.map { |line| line.reload.general_account }).to all(eq(fournitures))
+    end
   end
 end
