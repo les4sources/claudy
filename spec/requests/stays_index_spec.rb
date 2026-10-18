@@ -25,7 +25,7 @@ RSpec.describe "Index Séjours (/stays)", type: :request do
   describe "garde Devise" do
     it "redirige un visiteur non authentifié vers sign_in" do
       sign_out user
-      get stays_path
+      get stays_path(status: "all")
       expect(response).to redirect_to("/users/sign_in")
     end
   end
@@ -38,7 +38,7 @@ RSpec.describe "Index Séjours (/stays)", type: :request do
     end
 
     it "répond 200 et affiche client et total" do
-      get stays_path
+      get stays_path(status: "all")
       expect(response).to have_http_status(:ok)
       # Client (nom + email)
       expect(response.body).to include("Alice Durand")
@@ -52,7 +52,7 @@ RSpec.describe "Index Séjours (/stays)", type: :request do
     end
 
     it "affiche les boutons vers les anciennes vues (transition)" do
-      get stays_path
+      get stays_path(status: "all")
       expect(response.body).to include("Hébergements (ancienne vue)")
       expect(response.body).to include("Espaces (ancienne vue)")
       expect(response.body).to include(%(href="#{bookings_path}"))
@@ -76,19 +76,19 @@ RSpec.describe "Index Séjours (/stays)", type: :request do
     end
 
     it "affiche TOUT le trimestre sur une seule page" do
-      get stays_path
+      get stays_path(status: "all")
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("31 séjours sur ce trimestre")
     end
 
     it "n'affiche pas les séjours d'un autre trimestre" do
-      get stays_path
+      get stays_path(status: "all")
       expect(response.body).not_to include("Trimestre Suivant")
     end
 
     it "navigue vers un trimestre donné" do
       suivant = trimestre + 3.months
-      get stays_path(year: suivant.year, quarter: ((suivant.month - 1) / 3) + 1)
+      get stays_path(status: "all", year: suivant.year, quarter: ((suivant.month - 1) / 3) + 1)
       expect(response.body).to include("Trimestre Suivant")
     end
   end
@@ -97,20 +97,20 @@ RSpec.describe "Index Séjours (/stays)", type: :request do
     let(:trimestre) { Date.today.beginning_of_quarter }
 
     it "ouvre sur le trimestre courant" do
-      get stays_path
+      get stays_path(status: "all")
       # L'année et le trimestre sont deux éléments distincts du sélecteur.
       expect(response.body).to include(">#{trimestre.year}</span>")
       expect(response.body).to include(%(aria-current="page"))
     end
 
     it "ne propose plus les anciennes pastilles de période" do
-      get stays_path
+      get stays_path(status: "all")
       expect(response.body).not_to include(">À venir<")
       expect(response.body).not_to include(">Passés<")
     end
 
     it "retombe sur le trimestre courant pour des paramètres fantaisistes" do
-      get stays_path(year: "abc", quarter: "9")
+      get stays_path(status: "all", year: "abc", quarter: "9")
       expect(response).to have_http_status(:ok)
       # L'année et le trimestre sont deux éléments distincts du sélecteur.
       expect(response.body).to include(">#{trimestre.year}</span>")

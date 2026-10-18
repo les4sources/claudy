@@ -26,7 +26,7 @@ RSpec.describe "Séjours — apporteur", type: :request do
   let!(:direct)  { create_stay(last: "Direct") }
 
   it "affiche la pastille dans l'index et propose le filtre" do
-    get stays_path
+    get stays_path(status: "all")
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Client Apporte", "Client Direct")
     expect(response.body.scan("Séjour apporté par Semisto").size).to eq(1)
@@ -34,13 +34,13 @@ RSpec.describe "Séjours — apporteur", type: :request do
   end
 
   it "filtre les séjours apportés par Semisto" do
-    get stays_path(apporteur: "semisto")
+    get stays_path(status: "all", apporteur: "semisto")
     expect(response.body).to include("Client Apporte")
     expect(response.body).not_to include("Client Direct")
   end
 
   it "ignore un apporteur inconnu dans le filtre" do
-    get stays_path(apporteur: "inconnu")
+    get stays_path(status: "all", apporteur: "inconnu")
     expect(response.body).to include("Client Apporte", "Client Direct")
   end
 
@@ -59,7 +59,7 @@ RSpec.describe "Séjours — apporteur", type: :request do
     let!(:direct_paye) { create_stay(last: "DirectPaye", status: "confirmed", paid_cents: 50_000) }
 
     it "totalise sur l'index filtré ce qui est dû, et compte le reste" do
-      get stays_path(apporteur: "semisto")
+      get stays_path(status: "all", apporteur: "semisto")
       resume = response.body[/data-testid="referral-summary".*?<\/div>/m]
       expect(resume).to be_present
       # 10 % de 400 € + 10 % de 250 € = 65 € ; « Partiel » et « Apporte » ne comptent pas.
@@ -68,7 +68,7 @@ RSpec.describe "Séjours — apporteur", type: :request do
     end
 
     it "n'affiche pas de total sans le filtre" do
-      get stays_path
+      get stays_path(status: "all")
       expect(response.body).not_to include("referral-summary")
     end
 
