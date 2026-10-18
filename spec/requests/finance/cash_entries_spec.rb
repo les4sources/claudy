@@ -214,8 +214,12 @@ RSpec.describe "Finances > Trésorerie", type: :request do
 
       expect(response.body).to include("Non affecté")
       expect(response.body).to include("Choisir…")
-      expect(response.body).not_to include(%(<option selected="selected" value="#{accueil.id}">))
-      expect(response.body).not_to include(%(<option selected="selected" value="#{revenue.id}">))
+      # Lu dans les deux listes elles-mêmes : l'entité présélectionnée peut
+      # porter le même id que le pôle ou le compte (tables différentes).
+      page = Nokogiri::HTML(response.body)
+      expect(page.css('select[name$="[team_id]"]')).to be_present
+      expect(page.css('select[name$="[team_id]"] option[selected]')).to be_empty
+      expect(page.css('select[name$="[general_account_id]"] option[selected]')).to be_empty
     end
 
     # Le builder Tailwind posait son propre libellé sous le nôtre, et faute de
