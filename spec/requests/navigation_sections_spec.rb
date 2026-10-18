@@ -73,7 +73,7 @@ RSpec.describe "Appartenance des contrôleurs Finance::", type: :model do
   # La comptabilité générale, écran par écran. Ajouter un contrôleur ici est
   # une décision : « la trésorière, pas les habitants ».
   COMPTABILITE = %w[
-    accounting allocation_rules allocation_suggestions analytic_balance
+    accounting allocation_rules allocation_suggestions analytic_balance budgets
     carrier_statements
     cash_allocations cash_counts cash_entries cash_motifs cash_sheet coda_imports
     collection_cost compliance_deadlines compliance_obligations

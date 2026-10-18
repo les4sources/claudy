@@ -349,6 +349,13 @@ module Finance
         ["Regarde la part « non affecté » : plus elle est grande, moins les chiffres des pôles sont fiables."],
         %w[analytique]
       ),
+      "finance/budgets" => Page.new(
+        "Le budget d'une année, entité par entité : une ligne par pôle et par compte, face au réel de référence.",
+        ["Tant que rien n'est enregistré, chaque case propose le réel des 12 derniers mois : corrige ce qui va changer, puis enregistre.",
+         "Vide une case pour retirer la ligne ; « Ajouter une ligne » pour un compte qui n'a pas bougé.",
+         "Le résultat prévu se recalcule pendant la saisie. S'il est négatif, le budget prévoit un déficit."],
+        %w[analytique compte entite]
+      ),
       "finance/cross_check" => Page.new(
         "Le contrôle croisé du mois : l'argent encaissé en regard de ce que les séjours ont facturé.",
         ["Un écart n'est pas une erreur : c'est ce qui reste à encaisser plus ce qui reste à affecter."],

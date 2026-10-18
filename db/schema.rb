@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_18_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_18_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -378,6 +378,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_180000) do
     t.datetime "updated_at", null: false
     t.boolean "wifi", default: false
     t.index ["lodging_id"], name: "index_bookings_on_lodging_id"
+  end
+
+  create_table "budget_lines", force: :cascade do |t|
+    t.bigint "amount_cents", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.bigint "general_account_id", null: false
+    t.bigint "legal_entity_id", null: false
+    t.bigint "team_id"
+    t.datetime "updated_at", null: false
+    t.integer "year", null: false
+    t.index "year, legal_entity_id, COALESCE(team_id, (0)::bigint), general_account_id", name: "index_budget_lines_unique_cell", unique: true
+    t.index ["general_account_id"], name: "index_budget_lines_on_general_account_id"
+    t.index ["legal_entity_id"], name: "index_budget_lines_on_legal_entity_id"
+    t.index ["team_id"], name: "index_budget_lines_on_team_id"
   end
 
   create_table "bundles", force: :cascade do |t|
@@ -2755,6 +2769,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_180000) do
   add_foreign_key "batch_cooking_sessions", "users", column: "created_by_id"
   add_foreign_key "booking_page_views", "bookings"
   add_foreign_key "bookings", "lodgings"
+  add_foreign_key "budget_lines", "general_accounts"
+  add_foreign_key "budget_lines", "legal_entities"
+  add_foreign_key "budget_lines", "teams"
   add_foreign_key "bundles", "projects"
   add_foreign_key "bundles", "teams"
   add_foreign_key "carrier_statement_lines", "carrier_statements"

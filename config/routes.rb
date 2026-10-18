@@ -268,6 +268,10 @@ Rails.application.routes.draw do
     get "guide", to: "guide#show", as: :guide
     # La trésorerie (lecture seule) : le solde, ce qui doit rentrer et sortir.
     get "treasury", to: "treasury#show"
+    # Le budget détaillé (étape 4 du redressement, 2026-10-18) : une année,
+    # une entité, une ligne par pôle et par compte.
+    get "budget", to: "budgets#show", as: :budget
+    patch "budget", to: "budgets#update"
     get "ledger", to: "ledger#index"
     get "trial_balance", to: "trial_balance#index"
     # Journal de trésorerie (issue #179). `unallocated` est nommée AVANT la

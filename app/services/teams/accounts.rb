@@ -23,7 +23,7 @@ module Teams
       def any? = revenue_cents != 0 || expense_cents != 0
     end
 
-    Budget = Struct.new(:revenue_cents, :expense_cents, :notes, keyword_init: true) do
+    Budget = Struct.new(:revenue_cents, :expense_cents, :notes, :detailed, keyword_init: true) do
       def net_cents = revenue_cents - expense_cents
     end
 
@@ -51,7 +51,7 @@ module Teams
                         .group(:team_id, "general_accounts.klass")
                         .pluck(Arel.sql("team_id, general_accounts.klass, SUM(debit_cents), SUM(credit_cents)"))
                         .group_by(&:first)
-      budgets = TeamBudget.where(team_id: teams.map(&:id), year: year).index_by(&:team_id)
+      budgets = budgets_by_team(teams.map(&:id), year)
       to_validate = PurchaseInvoice.where(status: "to_validate", validation_team_id: teams.map(&:id))
                                    .group(:validation_team_id).count
 
@@ -160,20 +160,40 @@ module Teams
 
     def invoices_to_validate_cents = invoices_to_validate.sum(&:total_cents)
 
+    # Le budget de chaque pôle pour une année : ses lignes du budget détaillé
+    # quand l'année en a (étape 4 du redressement), sinon ses deux montants
+    # (`TeamBudget`). { team_id => Budget }, sans les pôles sans budget.
+    def self.budgets_by_team(team_ids, year)
+      simple = TeamBudget.where(team_id: team_ids, year: year).index_by(&:team_id)
+      detailed = BudgetLine.team_totals(team_ids, year)
+      team_ids.each_with_object({}) do |id, result|
+        if detailed.key?(id)
+          revenue, expense = detailed[id]
+          result[id] = Budget.new(revenue_cents: revenue, expense_cents: expense, notes: simple[id]&.notes, detailed: true)
+        elsif simple[id]
+          result[id] = Budget.new(revenue_cents: simple[id].revenue_cents, expense_cents: simple[id].expense_cents,
+                                  notes: simple[id].notes, detailed: false)
+        end
+      end
+    end
+
     # Le budget de l'année, celui du pôle et de ceux qu'il regroupe. `nil`
     # quand personne n'en a fixé : on ne juge alors que le résultat.
     def budget
       return @budget if defined?(@budget)
 
-      budgets = TeamBudget.where(team_id: team_ids, year: year).to_a
+      budgets = budgets_by_team.values
       @budget = if budgets.empty?
                   nil
                 else
                   Budget.new(revenue_cents: budgets.sum(&:revenue_cents),
                              expense_cents: budgets.sum(&:expense_cents),
-                             notes: budgets.find { |b| b.team_id == team.id }&.notes)
+                             notes: budgets_by_team[team.id]&.notes,
+                             detailed: budgets.any?(&:detailed))
                 end
     end
+
+    def budgets_by_team = @budgets_by_team ||= self.class.budgets_by_team(team_ids, year)
 
     def own_budget = TeamBudget.find_by(team_id: team.id, year: year)
 
@@ -224,7 +244,7 @@ module Teams
     def sub_team_rows
       return [] if sub_teams.empty?
 
-      budgets = TeamBudget.where(team_id: team_ids, year: year).index_by(&:team_id)
+      budgets = budgets_by_team
       ([team] + sub_teams).map do |t|
         SubTeam.new(team: t, totals: totals_for([t.id], period), budget_cents: budgets[t.id]&.expense_cents)
       end

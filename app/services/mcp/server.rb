@@ -121,6 +121,8 @@ module Mcp
       Tools::Finances::EnregistrerTiers,
       Tools::Finances::ChargesFixes,
       Tools::Finances::ChargeFixe,
+      Tools::Finances::Budget,
+      Tools::Finances::ModifierBudget,
       Tools::Finances::FacturesVente,
       Tools::Finances::FactureVente,
       Tools::Finances::RelevesPorteurs,
