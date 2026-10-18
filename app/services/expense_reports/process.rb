@@ -9,14 +9,21 @@ module ExpenseReports
   # Le verrou est sur l'EXERCICE et il précède le calcul du numéro, exactement
   # comme dans `Accounting::PostDocument` : sans lui, deux passages simultanés
   # prennent le même numéro et l'index unique en fait échouer un au hasard.
+  #
+  # C'est aussi ici que la compta attribue le compte de charge de chaque ligne
+  # (Michael, 2026-10-18) : `accounts` = { id de ligne => id de compte }. Les
+  # comptes s'enregistrent AVANT le passage, hors de sa transaction : si
+  # l'exercice manque, le choix fait ligne par ligne n'est pas perdu.
   class Process < ServiceBase
     class BadStatus < StandardError; end
     class NoLines < StandardError; end
     class MissingFiscalYear < StandardError; end
+    class MissingAccount < StandardError; end
 
-    def initialize(expense_report:, processed_on: nil, whodunnit: nil)
+    def initialize(expense_report:, processed_on: nil, accounts: nil, whodunnit: nil)
       @report = expense_report
       @processed_on = processed_on.presence
+      @accounts = (accounts || {}).to_h.transform_keys(&:to_s)
       @whodunnit = whodunnit
     end
 
@@ -37,6 +44,8 @@ module ExpenseReports
       raise NoLines, "Ajoute au moins une ligne avant de passer la note en traitement." if @report.expense_lines.empty?
 
       date = parsed_date
+      assign_accounts
+      ensure_accounts
 
       # Une note déjà numérotée garde SON numéro et SON exercice — une note
       # contre-passée puis corrigée repasse ici, et réattribuer un numéro
@@ -72,6 +81,34 @@ module ExpenseReports
       end
 
       @report.reload
+    end
+
+    def assign_accounts
+      return if @accounts.empty?
+
+      allowed = ExpenseLine.assignable_accounts.where(id: @accounts.values.compact_blank).index_by { |a| a.id.to_s }
+      PaperTrail.request(whodunnit: @whodunnit || "expense_reports") do
+        @report.expense_lines.each do |line|
+          next unless @accounts.key?(line.id.to_s)
+
+          chosen = @accounts[line.id.to_s].to_s
+          account = allowed[chosen]
+          if chosen.present? && account.nil?
+            raise MissingAccount, "Le compte choisi pour « #{line.label} » n'est pas un compte de charge ou d'immobilisation actif."
+          end
+
+          line.update!(general_account: account) unless line.general_account_id == account&.id
+        end
+      end
+    end
+
+    def ensure_accounts
+      missing = @report.expense_lines.reject(&:general_account_id)
+      return if missing.empty?
+
+      raise MissingAccount,
+            "Attribue un compte de charge à chaque ligne avant de traiter la note — il manque : " \
+            "#{missing.map { |line| "« #{line.label} »" }.join(', ')}."
     end
 
     def parsed_date

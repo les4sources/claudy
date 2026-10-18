@@ -59,16 +59,35 @@
                 - if line.supplier_name.present?
                   .text-xs.text-gray-400 = line.supplier_name
               td.py-3.px-4.align-top.text-xs.text-gray-500
-                = line.general_account&.to_s
+                / Le compte s'attribue ICI, au traitement (Michael, 2026-10-18) :
+                  chaque liste appartient au formulaire « Passer en traitement »
+                  de la colonne de droite par l'attribut `form`.
+                - if @accounts
+                  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Choisir un compte…" data-searchable-select-clearable-value="true" class="relative min-w-[14rem]")
+                    = label_tag "accounts_#{line.id}", "Compte de charge pour « #{line.label} »", class: "sr-only"
+                    = select_tag "accounts[#{line.id}]",
+                                 options_from_collection_for_select(@accounts, :id, :to_s, line.general_account_id),
+                                 include_blank: "Compte à attribuer…",
+                                 id: "accounts_#{line.id}",
+                                 form: "traitement-note",
+                                 class: "block w-full rounded-md border-gray-300 text-xs shadow-sm",
+                                 data: { searchable_select_target: "select" }
+                    = render "shared/searchable_select_search", label: "Chercher un compte de charge"
+                - elsif line.general_account
+                  = line.general_account.to_s
+                - else
+                  span.text-amber-600 Compte à attribuer
                 - if line.team
-                  .text-gray-400 = line.team.name
+                  .mt-1.text-gray-400 = line.team.name
               td.py-3.px-4.align-top.text-xs
                 - if line.receipt.attached?
                   = link_to (line.doc_kind_label || "Pièce"), rails_blob_path(line.receipt, disposition: "inline"), target: "_blank", rel: "noopener", class: "text-4s-main hover:underline"
-                - elsif line.doc_kind.present?
-                  span.text-amber-600 = "#{line.doc_kind_label} — non déposé"
-                - else
+                - elsif line.receipt_on_paper?
+                  span.text-gray-700 = "#{line.doc_kind_label || "Pièce"} sur papier"
+                - elsif line.mileage?
                   span.text-gray-300 —
+                - else
+                  span.text-amber-600 = "#{line.doc_kind_label || "Justificatif"} manquant"
               td.py-3.px-4.align-top.text-right.font-medium.tabular-nums.text-gray-900 = expense_amount(line.amount_cents)
         tfoot
           tr.bg-gray-50
@@ -81,13 +100,19 @@
         h3.text-sm.font-semibold.text-gray-900 Ce qu'on peut faire
       .space-y-4.px-4.py-4
         - if @report.recorded?
-          = form_with url: start_processing_finance_expense_report_path(@report), method: :post, class: "space-y-2" do
+          = form_with url: start_processing_finance_expense_report_path(@report), method: :post, id: "traitement-note", class: "space-y-2" do
+            - sans_compte = @lines.count { |line| line.general_account_id.nil? }
+            p.text-xs.text-gray-600
+              - if sans_compte.positive?
+                | Choisis le compte de charge de chaque ligne, dans le tableau des dépenses (#{sans_compte} à attribuer).
+              - else
+                | Vérifie le compte de charge de chaque ligne, dans le tableau des dépenses.
             label.block.text-xs.text-gray-500
               | Date de la pièce
               = date_field_tag :processed_on, Date.current, class: "mt-1 block w-full rounded-md border-gray-300 text-sm"
             = submit_tag "Passer en traitement", class: "w-full rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white hover:opacity-90"
             p.text-xs.text-gray-500
-              | Attribue le numéro de pièce et génère l'écriture d'achat. Après ça, la note ne se modifie plus.
+              | Enregistre les comptes, attribue le numéro de pièce et génère l'écriture d'achat. Après ça, la note ne se modifie plus.
 
           hr.border-gray-100
 

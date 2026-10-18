@@ -8,7 +8,7 @@ module Mcp
         include Commun
 
         GESTES = {
-          "traiter" => "passer en traitement : numérotée, écriture passée, à rembourser",
+          "traiter" => "attribuer le compte de charge de chaque ligne (comptes) et passer en traitement : numérotée, écriture passée, à rembourser",
           "rejeter" => "rejeter avec un motif (motif obligatoire) ; seule une note enregistrée se rejette",
           "payer_en_especes" => "rembourser en caisse : sortie de caisse affectée et comptabilisée, le membre reçoit l'email « note payée »",
           "annuler_traitement" => "contre-passer l'écriture : la note redevient modifiable (motif obligatoire)",
@@ -24,6 +24,22 @@ module Mcp
                  note: NOTE,
                  geste: { type: "string", enum: GESTES.keys },
                  date: DATE.merge(description: "Pour traiter ou payer_en_especes : la date. Défaut : aujourd'hui."),
+                 comptes: {
+                   type: "array",
+                   description: "Pour traiter : le compte de charge de chaque ligne (celui qui saisit la note ne le choisit pas, " \
+                                "c'est la compta qui l'attribue ici). Obligatoire pour chaque ligne qui n'en a pas encore " \
+                                "(notes_de_frais montre les lignes avec leur #id). Les trajets d'une note de mission ont " \
+                                "« Déplacements » d'office.",
+                   items: {
+                     type: "object",
+                     additionalProperties: false,
+                     properties: {
+                       ligne: { type: %w[integer string], description: "La ligne de la note (#id)." },
+                       compte: COMPTE_GENERAL.merge(description: "Compte de charge (classe 6) ou d'immobilisation (classe 2).")
+                     },
+                     required: %w[ligne compte]
+                   }
+                 },
                  caisse: { type: "string", description: "Pour payer_en_especes : la caisse, s'il y en a plusieurs." }
                },
                required: %w[note geste]
@@ -47,7 +63,8 @@ module Mcp
           metier! do
             case d[:geste]
             when "traiter"
-              ::ExpenseReports::Process.new(expense_report: note, processed_on: d[:date], whodunnit: whodunnit).run!
+              ::ExpenseReports::Process.new(expense_report: note, processed_on: d[:date], accounts: d[:comptes],
+                                            whodunnit: whodunnit).run!
             when "rejeter"
               ::ExpenseReports::Reject.new(expense_report: note, reason: @motif, whodunnit: whodunnit).run!
             when "payer_en_especes"
@@ -68,12 +85,47 @@ module Mcp
           raise Error, "Ajoute au moins une ligne avant de la passer en traitement." if note.expense_lines.empty?
 
           date = date_ou_nil(arguments["date"], "date") || Date.current
-          sans_piece = note.expense_lines.count { |l| !l.receipt.attached? }
+          comptes = comptes_des_lignes!(note, arguments["comptes"])
+          sans_compte = note.expense_lines.reject { |l| l.general_account_id || comptes.key?(l.id.to_s) }
+          if sans_compte.any?
+            raise Error, "Attribue un compte de charge (comptes) à : " \
+                         "#{sans_compte.map { |l| "##{l.id} « #{l.label} »" }.join(', ')}."
+          end
+
+          attribues = note.expense_lines.filter_map do |l|
+            next unless comptes.key?(l.id.to_s)
+
+            "  ##{l.id} #{l.label} → #{comptes_choisis[comptes[l.id.to_s]]}"
+          end
+          sans_piece = note.expense_lines.count(&:receipt_missing?)
           ["→ EN TRAITEMENT le #{date} : numéro attribué, écriture de #{euros(note.total_cents)} au journal des achats." \
-           "#{"\n⚠ #{sans_piece} ligne(s) sans justificatif." if sans_piece.positive?}" \
+           "#{"\nComptes attribués :\n#{attribues.join("\n")}" if attribues.any?}" \
+           "#{"\n⚠ #{sans_piece} ligne(s) sans justificatif (ni fichier, ni papier)." if sans_piece.positive?}" \
            "#{"\n⚠ #{note.human&.name} n'a pas d'IBAN : le virement ne pourra pas partir." if note.human&.iban.blank?}",
-           { date: date.iso8601 }]
+           { date: date.iso8601, comptes: comptes }]
         end
+
+        # { "id de ligne" => id de compte }. Seuls les comptes qu'une note de
+        # frais peut porter (classes 6 et 2) sont acceptés.
+        def comptes_des_lignes!(note, comptes)
+          @comptes_choisis = {}
+          Array(comptes).each_with_object({}) do |choix, acc|
+            choix = choix.to_h
+            id = choix["ligne"].to_s.delete("#")
+            ligne = note.expense_lines.find { |l| l.id.to_s == id }
+            raise Error, "La ligne ##{id} n'appartient pas à cette note." if ligne.nil?
+
+            compte = compte_general!(choix["compte"])
+            unless ExpenseLine::ACCOUNT_CLASSES.include?(compte.klass)
+              raise Error, "#{compte} n'est ni un compte de charge (classe 6) ni d'immobilisation (classe 2)."
+            end
+
+            @comptes_choisis[compte.id] = compte.to_s
+            acc[id] = compte.id
+          end
+        end
+
+        def comptes_choisis = @comptes_choisis || {}
 
         def plan_rejeter(note, _arguments)
           motif!({ "motif" => @motif })

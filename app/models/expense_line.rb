@@ -1,8 +1,14 @@
 # Une ligne d'une note de frais (epic #241).
 #
 # Une ligne, c'est une dépense : une date, un fournisseur, un libellé, un
-# montant, le compte de charge et le pôle qui la porte. Le ticket ou la facture
-# se dépose ici — en photo depuis un téléphone, ou en PDF.
+# montant et le pôle qui la porte. Le ticket ou la facture se dépose ici — en
+# photo depuis un téléphone, ou en PDF — ou se remet sur papier, et la ligne le
+# dit (`receipt_on_paper`).
+#
+# Le compte de charge n'est PAS choisi par celui qui saisit (Michael,
+# 2026-10-18) : c'est la comptabilité qui l'attribue au passage en traitement.
+# Une ligne enregistrée peut donc ne pas en avoir ; une ligne au grand livre en
+# a toujours un (`ExpenseReports::Process` le vérifie avant d'écrire).
 #
 # Les colonnes kilométriques (`distance_km`, `rate_cents_per_km`) existent dès
 # maintenant, mais c'est la phase 2 qui les remplit : le taux est FIGÉ sur la
@@ -20,6 +26,7 @@
 #  label               :string           not null
 #  position            :integer          default(0), not null
 #  rate_cents_per_km   :integer
+#  receipt_on_paper    :boolean          default(FALSE), not null
 #  spent_on            :date             not null
 #  supplier_name       :string
 #  created_at          :datetime         not null
@@ -51,6 +58,12 @@ class ExpenseLine < ApplicationRecord
     "invoice" => "Facture"
   }.freeze
 
+  # Les comptes qu'une dépense peut porter : les charges (classe 6) d'abord,
+  # les immobilisations (classe 2) ensuite — une note de frais paie surtout des
+  # achats, mais parfois un outil qui s'immobilise. Le reste du plan n'a rien à
+  # faire dans une note.
+  ACCOUNT_CLASSES = [6, 2].freeze
+
   has_paper_trail
   has_soft_deletion default_scope: true
 
@@ -66,10 +79,14 @@ class ExpenseLine < ApplicationRecord
   validates :spent_on, :label, presence: true
   validates :amount_cents, numericality: { only_integer: true, greater_than: 0 }
   validates :doc_kind, inclusion: { in: DOC_KINDS }, allow_blank: true
-  validates :general_account, presence: { message: "est obligatoire — c'est lui qui porte la charge" }
   validates :distance_km, numericality: { greater_than: 0 }, allow_nil: true
   validate :report_still_editable
   validate :mileage_needs_distance
+  validate :receipt_or_paper, on: :create
+
+  # Une note de mission rembourse des trajets : son compte va de soi
+  # (« Déplacements »). La compta peut encore le changer au traitement.
+  before_validation :default_travel_account
 
   # Le montant d'une ligne kilométrique est DÉRIVÉ, jamais tapé : kilomètres ×
   # taux du jour de la ligne. Le taux est figé ici même, pour qu'un changement
@@ -81,9 +98,15 @@ class ExpenseLine < ApplicationRecord
   scope :ordered, -> { order(:position, :spent_on, :id) }
   scope :chronological, -> { order(:spent_on, :id) }
 
+  def self.assignable_accounts = GeneralAccount.actives.where(klass: ACCOUNT_CLASSES).ordered
+
   def doc_kind_label = DOC_KIND_LABELS[doc_kind]
 
   def mileage? = expense_report&.mileage?
+
+  # Le justificatif que la compta attend encore : ni fichier, ni papier annoncé.
+  # Une ligne kilométrique n'a pas de ticket.
+  def receipt_missing? = !mileage? && !receipt.attached? && !receipt_on_paper?
 
   # Les kilomètres tels qu'ils se tapent, virgule décimale comprise.
   def distance_in_km
@@ -136,6 +159,23 @@ class ExpenseLine < ApplicationRecord
 
   def refresh_rate?
     rate_cents_per_km.blank? || new_record? || will_save_change_to_spent_on?
+  end
+
+  def default_travel_account
+    return unless mileage?
+    return if general_account_id.present?
+
+    self.general_account = GeneralAccount.find_by(code: GeneralAccount::TRAVEL_CODE)
+  end
+
+  # À la saisie, chaque dépense dit où est son justificatif : déposé ici, ou
+  # remis sur papier. Seulement à la création : les lignes saisies avant cette
+  # règle ne deviennent pas invalides pour autant.
+  def receipt_or_paper
+    return if mileage?
+    return if receipt.attached? || receipt_on_paper?
+
+    errors.add(:receipt, "manquant pour « #{label} » — dépose le fichier ou coche « Fourni sur papier »")
   end
 
   # Une ligne de note de mission SANS kilomètres n'a pas de montant : elle

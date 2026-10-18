@@ -33,7 +33,7 @@ RSpec.describe "Comptabilité — commentaires et notifications", type: :request
     report = ExpenseReport.create!({ kind: "expenses", human: beneficiaire, legal_entity: entity,
                                      submitted_on: Date.new(2026, 6, 1) }.merge(attrs))
     report.expense_lines.create!(spent_on: Date.new(2026, 5, 28), label: "Visserie",
-                                 amount_cents: 2_490, general_account: charges)
+                                 amount_cents: 2_490, general_account: charges, receipt_on_paper: true)
     report.reload
   end
 
@@ -103,7 +103,7 @@ RSpec.describe "Comptabilité — commentaires et notifications", type: :request
       report = ExpenseReport.create!(kind: "expenses", human: orphelin, legal_entity: entity,
                                      submitted_on: Date.new(2026, 6, 1))
       report.expense_lines.create!(spent_on: Date.new(2026, 5, 28), label: "Visserie",
-                                   amount_cents: 2_490, general_account: charges)
+                                   amount_cents: 2_490, general_account: charges, receipt_on_paper: true)
 
       get finance_expense_report_path(report.reload)
 

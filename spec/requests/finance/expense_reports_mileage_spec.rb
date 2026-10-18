@@ -28,15 +28,13 @@ RSpec.describe "Comptabilité > Notes de mission", type: :request do
   end
 
   describe "le formulaire dédié" do
-    it "propose des kilomètres, pas des euros, et prérempli le compte Déplacements" do
+    it "propose des kilomètres, pas des euros, ni de compte à choisir" do
       get new_finance_expense_report_path(kind: "mileage")
 
       body = CGI.unescapeHTML(response.body)
       expect(response).to have_http_status(:ok)
       expect(body).to include("Les trajets", "Trajet ou motif", "Kilomètres")
-      expect(body).not_to include("Montant € *")
-      # Le compte « Déplacements » est sélectionné d'office.
-      expect(body).to match(/<option selected="selected" value="#{travel.id}"/)
+      expect(body).not_to include("Montant € *", "general_account_id")
     end
 
     it "garde le formulaire des frais pour une note de frais" do
@@ -55,7 +53,7 @@ RSpec.describe "Comptabilité > Notes de mission", type: :request do
             submitted_on: "2026-06-01",
             expense_lines_attributes: {
               "0" => { spent_on: "2026-05-28", label: "Yvoir → Gembloux", supplier_name: "CRA-W",
-                       distance_in_km: "84", general_account_id: travel.id, team_id: team.id }
+                       distance_in_km: "84", team_id: team.id }
             }
           }
         }
@@ -64,6 +62,8 @@ RSpec.describe "Comptabilité > Notes de mission", type: :request do
       report = ExpenseReport.order(:id).last
       line = report.expense_lines.sole
       expect(report.kind).to eq("mileage")
+      # Un trajet va d'office en « Déplacements », sans justificatif à fournir.
+      expect(line.general_account).to eq(travel)
       expect(line.distance_km).to eq(84)
       expect(line.rate_cents_per_km).to eq(47)
       expect(report.total_cents).to eq(3_948)
@@ -115,7 +115,7 @@ RSpec.describe "Comptabilité > Notes de mission", type: :request do
       frais = ExpenseReport.create!(kind: "expenses", human: human, legal_entity: entity,
                                     submitted_on: Date.new(2026, 6, 2))
       frais.expense_lines.create!(spent_on: Date.new(2026, 5, 30), label: "Visserie",
-                                  amount_cents: 2_490, general_account: other_account)
+                                  amount_cents: 2_490, general_account: other_account, receipt_on_paper: true)
 
       get finance_expense_reports_path(kind: "mileage")
       body = CGI.unescapeHTML(response.body)

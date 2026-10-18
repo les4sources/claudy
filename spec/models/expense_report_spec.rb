@@ -60,7 +60,7 @@ RSpec.describe ExpenseReport, type: :model do
 
   def add_line(report, amount_cents: 2_490, spent_on: Date.new(2026, 5, 30), label: "Visserie")
     report.expense_lines.create!(spent_on: spent_on, label: label, amount_cents: amount_cents,
-                                 general_account: account)
+                                 general_account: account, receipt_on_paper: true)
   end
 
   describe "#total_cents" do
@@ -79,12 +79,36 @@ RSpec.describe ExpenseReport, type: :model do
   end
 
   describe "les lignes" do
-    it "refuse une ligne sans compte de charge" do
+    # Celui qui saisit ne choisit pas le compte : la compta l'attribue au
+    # traitement (Michael, 2026-10-18).
+    it "accepte une ligne sans compte de charge" do
       report = build_report
-      line = report.expense_lines.build(spent_on: Date.current, label: "Sans compte", amount_cents: 100)
+      line = report.expense_lines.build(spent_on: Date.current, label: "Sans compte", amount_cents: 100,
+                                        receipt_on_paper: true)
+
+      expect(line).to be_valid
+    end
+
+    it "demande le justificatif : un fichier, ou la mention papier" do
+      report = build_report
+      line = report.expense_lines.build(spent_on: Date.current, label: "Visserie", amount_cents: 100)
 
       expect(line).not_to be_valid
-      expect(line.errors[:general_account].join).to include("obligatoire")
+      expect(line.errors[:receipt].join).to include("Fourni sur papier")
+
+      line.receipt_on_paper = true
+      expect(line).to be_valid
+
+      line.receipt_on_paper = false
+      line.receipt.attach(io: StringIO.new("%PDF-1.4"), filename: "ticket.pdf", content_type: "application/pdf")
+      expect(line).to be_valid
+    end
+
+    it "n'invalide pas une ligne saisie avant la règle du justificatif" do
+      line = add_line(build_report)
+      line.update_columns(receipt_on_paper: false)
+
+      expect(line.reload).to be_valid
     end
 
     it "refuse un montant nul ou négatif" do
