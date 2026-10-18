@@ -1,0 +1,21 @@
+/ « MES ACTIONS DE RASSEMBLEMENT » (Michael 2026-10-18) — ce que le membre a
+  pris en charge en réunion et n'a pas encore fait, puis les points qu'il porte
+  aux prochains rassemblements. La case se coche ici comme sur la page du
+  rassemblement : c'est le même enregistrement.
+  Locals : actions, agenda_items.
+= render layout: "pages/dashboard/section",
+         locals: { title: "Mes actions de rassemblement", count: actions.size + agenda_items.size,
+                   empty_label: "Aucune action de rassemblement en cours." } do
+  .px-5.py-2
+    - if actions.any?
+      ul.divide-y.divide-gray-100
+        - actions.each do |action|
+          = render "gathering_actions/member_action", action: action
+    - if agenda_items.any?
+      h3.mt-3.text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Points que je porte
+      ul.mt-2.mb-2.space-y-2
+        - agenda_items.each do |item|
+          li.flex.items-start.justify-between.gap-3
+            span.text-sm.text-gray-800.break-words = item.title
+            = link_to GatheringDecorator.new(item.gathering).display_name, gathering_path(item.gathering),
+                      class: "shrink-0 text-xs text-blue-500 hover:text-blue-700"

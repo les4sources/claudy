@@ -4,6 +4,9 @@ class PagesController < BaseController
   # Les dix dernières notifications suffisent à la colonne du tableau de bord ;
   # au-delà, « Tout voir ».
   DASHBOARD_NOTIFICATIONS = 10
+  # Les prochains rôles du jour d'un membre : de quoi voir les semaines qui
+  # viennent, pas tout le planning.
+  DASHBOARD_ROLES = 6
 
   def calendar
     set_dates
@@ -159,6 +162,7 @@ class PagesController < BaseController
     @kitchen_upcoming    = kitchen_upcoming_orders
     @kitchen_unconfirmed = kitchen_unconfirmed_orders
     @tasks = TaskDecorator.decorate_collection(@human.tasks)
+    load_collective_work if section_readable?(:full)
   end
 
   # « Qui d'autre est sur place pendant cette réservation ? » — vue d'OCCUPATION
@@ -227,6 +231,29 @@ class PagesController < BaseController
     return Human.find_by(id: requested) if requested
 
     current_user&.human
+  end
+
+  # Le travail du membre dans le collectif (Michael 2026-10-18) : ses actions du
+  # cycle, ses actions de rassemblement, ses prochains rôles du jour. Ces écrans
+  # sont réservés aux Sourciers ; le tableau de bord ne les montre donc qu'à eux.
+  def load_collective_work
+    @cycle = Cycle.reference_for
+    if @cycle
+      @cycle_actions = @human.cycle_actions.for_cycle(@cycle).live.active.ordered.to_a
+      # Ce que d'autres membres ont confié à celui-ci, dans le même cycle.
+      @delegated_actions = CycleAction.for_cycle(@cycle).live.active
+                                      .where(delegate_to_human_id: @human.id)
+                                      .includes(:human).ordered.to_a
+    end
+    @gathering_actions = @human.gathering_actions.active.includes(:gathering)
+                               .order(created_at: :desc).to_a
+    # Les points qu'il porte aux prochains rassemblements, dans l'ordre des dates.
+    @carried_agenda_items = @human.carried_agenda_items.pending
+                                  .joins(:gathering).merge(Gathering.upcoming)
+                                  .includes(:gathering).to_a
+    @upcoming_roles = HumanRole.where(human_id: @human.id, date: Date.current..)
+                               .includes(:role).order(:date, :role_id)
+                               .limit(DASHBOARD_ROLES).to_a
   end
 
   # Toutes les demandes de cuisine dont CE membre est le responsable. Les séjours

@@ -5,9 +5,8 @@
   concerne aujourd'hui » — les notifications y sont à leur place, ouvertes,
   lisibles sans un clic.
   Locals : notifications (les 10 dernières), unread_count.
-/ `mt-6` sous `lg` : hors grille, les deux colonnes s'empilent sans gouttière —
-  le `gap-6` du parent ne s'applique qu'en mode grille.
-aside.space-y-3.mt-6(class="lg:mt-0")
+/ La marge sous `lg` est portée par la colonne qui l'entoure (`dashboard.html.slim`).
+aside.space-y-3
   .flex.items-center.justify-between.gap-3
     h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-700
       | Notifications

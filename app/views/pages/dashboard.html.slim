@@ -50,8 +50,21 @@
       = render "pages/dashboard/kitchen_pending", orders: @kitchen_pending, human: @human
       = render "pages/dashboard/kitchen_upcoming", orders: @kitchen_upcoming, human: @human
       = render "pages/dashboard/kitchen_unconfirmed", orders: @kitchen_unconfirmed, human: @human
+      / Le travail dans le collectif (Michael 2026-10-18), réservé aux Sourciers
+        comme les écrans d'où il vient : `@upcoming_roles` n'est chargé que pour eux.
+      - unless @upcoming_roles.nil?
+        = render "pages/dashboard/cycle_actions",
+                 cycle: @cycle, actions: @cycle_actions.to_a,
+                 delegated: @delegated_actions.to_a, human: @human
+        = render "pages/dashboard/gathering_actions",
+                 actions: @gathering_actions, agenda_items: @carried_agenda_items
       = render "pages/dashboard/tasks", tasks: @tasks
 
-  = render "pages/dashboard/notifications",
-           notifications: @notifications,
-           unread_count: @notifications_unread_count
+  / `mt-6` sous `lg` : hors grille, les deux colonnes s'empilent sans gouttière —
+    le `gap-6` du parent ne s'applique qu'en mode grille.
+  .space-y-6.mt-6(class="lg:mt-0")
+    - unless @upcoming_roles.nil?
+      = render "pages/dashboard/roles", roles: @upcoming_roles
+    = render "pages/dashboard/notifications",
+             notifications: @notifications,
+             unread_count: @notifications_unread_count
