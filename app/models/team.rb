@@ -48,6 +48,8 @@ class Team < ApplicationRecord
   # Les actions de cycle qui relèvent du pôle (epic #330, phase 5). Pas de
   # `dependent:` : un pôle se soft-delete, ses actions gardent leur lien.
   has_many :cycle_actions
+  # Le budget annuel du pôle (Michael, 2026-10-18), un par année civile.
+  has_many :team_budgets, dependent: :destroy
 
   belongs_to :parent, class_name: "Team", optional: true
 

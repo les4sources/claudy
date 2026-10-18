@@ -1,0 +1,37 @@
+/ D'où viennent les chiffres : les dernières affectations de trésorerie du
+  pôle sur l'année. Au-delà, on va au grand livre ou à la balance analytique.
+section.rounded-2xl.bg-white.ring-1.ring-gray-200.overflow-hidden
+  .px-6.py-4.border-b.border-gray-100(class="bg-gray-50/60")
+    .flex.flex-wrap.items-center.justify-between.gap-2
+      div
+        h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 = "Derniers mouvements #{accounts.year}"
+        p.mt-1.text-xs.text-gray-500 = "Les #{Teams::Accounts::RECENT_LIMIT} dernières affectations de trésorerie du pôle, la plus récente d'abord."
+      = link_to "Balance analytique #{accounts.year} →",
+                finance_analytic_balance_path(from: accounts.period.begin, to: accounts.period.end),
+                class: "text-xs font-medium text-4s-main hover:underline"
+
+  - if accounts.recent_allocations.empty?
+    .px-6.py-8.text-center.text-sm.text-gray-500
+      = "Aucune affectation de trésorerie sur ce pôle en #{accounts.year}."
+  - else
+    .overflow-x-auto
+      table.w-full.text-sm
+        thead.text-xs.uppercase.tracking-wide.text-gray-500(class="bg-gray-50/60")
+          tr
+            th.px-6.py-2.text-left Date
+            th.px-6.py-2.text-left Libellé
+            th.px-6.py-2.text-left Compte
+            th.px-6.py-2.text-right Montant
+        tbody
+          - accounts.recent_allocations.each do |allocation|
+            tr.border-t.border-gray-100
+              td.px-6.py-2.whitespace-nowrap.text-gray-600 = l(allocation.cash_entry.entry_date)
+              td.px-6.py-2.text-gray-900
+                = allocation.label.presence || allocation.cash_entry.label
+                - if allocation.team_id != accounts.team.id && allocation.team
+                  span.ml-1.text-xs.text-gray-400 = "· #{allocation.team.name}"
+              td.px-6.py-2.whitespace-nowrap.text-xs.text-gray-500
+                span.font-mono = allocation.general_account.code
+                =< allocation.general_account.name
+              td.px-6.py-2.text-right.whitespace-nowrap.font-medium.text-gray-900
+                = number_to_currency(allocation.amount_cents / 100.0, unit: "€")

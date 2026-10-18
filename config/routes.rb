@@ -212,6 +212,8 @@ Rails.application.routes.draw do
   # sans lui, et l'écran d'édition est leur seul point d'entrée.
   resources :teams do
     resources :memberships, only: %i[create update destroy], controller: "team_memberships"
+    # Le budget de l'année d'un pôle, désigné par l'année : /teams/3/budgets/2026/edit.
+    resources :budgets, only: %i[edit update], controller: "team_budgets"
   end
   resources :watchman_notes
 

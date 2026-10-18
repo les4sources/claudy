@@ -3,7 +3,7 @@
 
 .max-w-5xl.space-y-6
   p.text-sm.text-gray-500
-    | Les pôles sont l'unité d'organisation des 4 Sources. Cliquez sur un pôle pour lire ce qu'il fait, qui en est, et ce qu'il produit.
+    | Les pôles sont l'unité d'organisation des 4 Sources. Cliquez sur un pôle pour voir ses comptes (santé, budget, dépenses à valider), qui en est et ce qu'il décide.
 
   - if @rows.empty?
     .rounded-2xl.bg-white.px-6.py-10.text-center.text-sm.text-gray-500.ring-1.ring-gray-200
@@ -26,6 +26,24 @@
               =< referents.map(&:name).join(", ")
             - else
               span.text-gray-400 Pas de référent·e
+
+          - snapshot = @snapshots[team.id]
+          - if snapshot
+            .mt-3.rounded-lg.bg-gray-50.px-3.py-2
+              .flex.items-baseline.justify-between.gap-2
+                span.text-xs.text-gray-500 = "Résultat #{@year}"
+                span.text-sm.font-semibold(class="#{snapshot.net_cents.negative? ? 'text-rose-700' : 'text-gray-900'}")
+                  = team_euros(snapshot.net_cents, sign: true)
+              - if snapshot.budget_percent
+                .mt-1.flex.items-center.gap-2
+                  .h-1.5.flex-1.rounded-full.bg-gray-200
+                    .h-1.5.rounded-full(class="#{snapshot.budget_percent > 100 ? 'bg-rose-500' : 'bg-teal-500'}" style="width: #{[snapshot.budget_percent, 100].min}%")
+                  span.text-xs.text-gray-500 = "#{snapshot.budget_percent} % des charges prévues"
+              - else
+                .mt-1.text-xs.text-gray-400 = "Pas de budget #{@year}"
+              - if snapshot.to_validate_count.positive?
+                .mt-1.text-xs.font-medium.text-amber-800
+                  = "#{pluralize(snapshot.to_validate_count, 'facture', plural: 'factures')} à valider"
 
           .mt-3.flex.items-center.gap-2.text-xs.text-gray-500
             span.font-medium.text-gray-900 = team.team_memberships.size

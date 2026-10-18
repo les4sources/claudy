@@ -1,0 +1,32 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Budget #{@budget.year} · #{@team.name}"
+
+/ Deux montants pour l'année, toutes entités confondues : c'est à eux que la
+  page du pôle compare le réel.
+- money = ->(value) { format("%.2f", value).sub(/\.00\z/, "").tr(".", ",") }
+- input_class = "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+.max-w-2xl.space-y-6
+  = form_with model: @budget, url: team_budget_path(@team, @budget.year), method: :patch, class: "space-y-6" do |f|
+    = render "finance/shared/form_errors", record: @budget
+
+    .rounded-lg.border.border-gray-100.bg-white.p-4
+      - if @reference
+        p.mb-4.rounded-md.bg-gray-50.px-3.py-2.text-sm.text-gray-600
+          - if @reference.any?
+            = "Prérempli avec le réel #{@budget.year - 1} du pôle (#{team_euros(@reference.revenue_cents)} de produits, #{team_euros(@reference.expense_cents)} de charges). Corrige ce qui changera cette année."
+          - else
+            = "Aucune écriture pour ce pôle en #{@budget.year - 1} : pars de ce que le pôle prévoit."
+      .grid.gap-4(class="md:grid-cols-2")
+        div
+          = f.text_field :revenue, label: "Produits attendus sur l'année (€)", inputmode: "decimal", placeholder: "0", value: money.(@budget.revenue), class: input_class
+          p.mt-1.text-xs.text-gray-500 Ventes, séjours, subsides… Zéro pour un service support.
+        div
+          = f.text_field :expense, label: "Charges prévues sur l'année (€)", inputmode: "decimal", placeholder: "0", value: money.(@budget.expense), class: input_class
+          p.mt-1.text-xs.text-gray-500 Achats, services, salaires… tout ce que le pôle dépense.
+        div(class="md:col-span-2")
+          = f.label :notes, "Notes", class: "block text-sm font-medium text-gray-700"
+          = f.text_area :notes, rows: 3, placeholder: "Hypothèses, décision du rassemblement du…, ce qui est incertain", class: input_class
+
+    .flex.items-center.gap-3
+      = f.submit "Enregistrer le budget", class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+      = link_to "Annuler", team_path(@team, year: @budget.year, anchor: "comptes"), class: "text-sm text-gray-500 hover:text-gray-700"
