@@ -26,12 +26,17 @@ class StripeFeeInvoice < ApplicationRecord
   scope :antichronological, -> { order(period_month: :desc, account_key: :asc) }
 
   before_validation :normalise_period_month
+  before_save :forget_fetch_on_manual_amount
 
   def self.find_for(account_key, month)
     for_account(account_key).for_month(month).first
   end
 
   def account_label = StripeService.label_for(account_key)
+
+  # Le montant vient de Stripe (`Stripe::PrefillFeeInvoices`), pas du PDF : à
+  # vérifier sur la facture en la déposant.
+  def fetched_from_stripe? = declared_fee_fetched_at.present?
 
   def month_label = I18n.l(period_month, format: "%B %Y")
 
@@ -44,6 +49,14 @@ class StripeFeeInvoice < ApplicationRecord
   end
 
   private
+
+  # Un montant tapé à la main (écran ou connecteur) remplace le relevé : il ne
+  # doit plus se dire « relevé chez Stripe ».
+  def forget_fetch_on_manual_amount
+    return unless will_save_change_to_declared_fee_cents? && !will_save_change_to_declared_fee_fetched_at?
+
+    self.declared_fee_fetched_at = nil
+  end
 
   def normalise_period_month
     self.period_month = period_month.beginning_of_month if period_month.present?
