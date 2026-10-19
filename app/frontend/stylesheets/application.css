@@ -42,6 +42,8 @@
 @import 'night_cells.css';
 /* Mêmes grilles sur téléphone : une colonne à la fois, sans défilement de côté. */
 @import 'day_pager.css';
+/* Le Guide des 4 Sources : page lue et éditeur Markdown. */
+@import 'guide.css';
 
 /* --- Averia Serif Libre ---------------------------------------------------
    PLACÉ APRÈS LES @import : en CSS, `@import` doit précéder toute autre règle.

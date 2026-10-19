@@ -15,9 +15,9 @@ module Access
     "communication" => { label: "Communication", description: "Événements et activités, calendrier en lecture" },
     "kid" => { label: "Kid", description: "Calendrier et carte, en lecture seule" },
     "administratif" => { label: "Administratif", description: "Comptes et comptabilité, calendrier en lecture" },
-    # Michael, 2026-10-13 : n'ouvre encore rien ; une prochaine fonctionnalité
-    # lui donnera sa propre section.
-    "anier" => { label: "Ânier·ère", description: "Aucun accès pour l'instant (section à venir)" }
+    # Michael, 2026-10-13 : n'ouvrait rien ; le Guide (2026-10-19) est sa
+    # première section, en attendant la sienne.
+    "anier" => { label: "Ânier·ère", description: "Le Guide, en lecture (section à venir)" }
   }.freeze
 
   ROLE_NAMES = ROLES.keys.freeze
@@ -30,24 +30,27 @@ module Access
     events: "Événements et activités",
     accounts: "Comptes",
     accounting: "Comptabilité",
-    map: "Carte du domaine"
+    map: "Carte du domaine",
+    # Le Guide des 4 Sources (Michael, 2026-10-19) : lu par TOUS les rôles,
+    # écrit par les Sourciers. Donner `:write` à un rôle lui ouvre l'admin.
+    guide: "Le Guide des 4 Sources"
   }.freeze
 
   # Ce que chaque rôle ouvre : `:write` (consulter et modifier) ou `:read`
   # (consulter seulement). Le Sourcier a tout, il n'est pas listé.
   GRANTS = {
-    "communication" => { calendar: :read, events: :write },
-    "kid" => { calendar: :read, map: :read },
-    "administratif" => { calendar: :read, accounts: :write, accounting: :write },
-    "anier" => {}
+    "communication" => { calendar: :read, events: :write, guide: :read },
+    "kid" => { calendar: :read, map: :read, guide: :read },
+    "administratif" => { calendar: :read, accounts: :write, accounting: :write, guide: :read },
+    "anier" => { guide: :read }
   }.freeze
 
   LEVELS = { read: 1, write: 2 }.freeze
 
   # Le niveau d'accès que des rôles donnent sur une section : `:write`, `:read`
   # ou `nil`. `:everyone` s'ouvre à tout compte dont un rôle ouvre au moins une
-  # section : un rôle qui n'ouvre encore rien (Ânier·ère) ne donne pas non plus
-  # l'espace personnel.
+  # section : un rôle qui n'ouvrirait rien ne donnerait pas non plus l'espace
+  # personnel.
   def self.level(roles, section)
     roles = Array(roles).map(&:to_s) & ROLE_NAMES
     return nil if roles.empty?

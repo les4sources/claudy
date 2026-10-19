@@ -65,6 +65,7 @@ module AccessControl
     return finance_accounts_path if section_readable?(:accounts)
     return finance_accounting_path if section_readable?(:accounting)
     return map_path if section_readable?(:map)
+    return guide_root_path if section_readable?(:guide)
     return dashboard_path if section_readable?(:everyone)
 
     nil

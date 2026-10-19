@@ -1,0 +1,31 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Historique de « #{@page.title} »"
+
+p.-mt-4.mb-6.max-w-3xl.text-sm.text-stone-600
+  | Chaque enregistrement garde la page entière telle qu'elle était. Revenir à une version en crée une nouvelle : rien n'est jamais effacé.
+
+ol.max-w-3xl.divide-y.divide-stone-100.rounded-xl.border.border-stone-200.bg-white.shadow-sm
+  - @revisions.each_with_index do |revision, index|
+    li.flex.items-start.gap-4.px-5.py-4
+      = guide_avatar(revision.user, size: :md)
+      .min-w-0.flex-1
+        .flex.flex-wrap.items-baseline.gap-x-2
+          = link_to "Version #{@revisions.size - index}", guide_page_revision_path(@page, revision), class: "font-semibold text-stone-900 hover:text-emerald-700"
+          - if index.zero?
+            span.rounded-full.bg-emerald-100.px-2.py-0.5.text-xs.font-medium.text-emerald-800 actuelle
+          - if revision.via_claude?
+            span.rounded-full.bg-amber-100.px-2.py-0.5.text-xs.font-medium.text-amber-800 via Claude
+        .text-sm.text-stone-600
+          span.font-medium = revision.author_name
+          span.text-stone-500 =< "le #{guide_date(revision.created_at)}"
+        - if revision.summary.present?
+          p.mt-1.text-sm.text-stone-700 = revision.summary
+        - if revision.title != @page.title
+          p.mt-1.text-xs.text-stone-500 = "Titre : « #{revision.title} »"
+      - if guide_writer? && !index.zero?
+        = button_to "Revenir à cette version", restore_guide_page_revision_path(@page, revision),
+                    class: "shrink-0 text-xs font-medium text-emerald-700 hover:underline",
+                    form: { data: { turbo_confirm: "Remettre la page dans l'état de cette version ? La version actuelle reste dans l'historique." } }
+
+.mt-6
+  = link_to "← Retour à la page", guide_page_path(@page), class: "text-sm font-medium text-stone-600 hover:text-emerald-700"
