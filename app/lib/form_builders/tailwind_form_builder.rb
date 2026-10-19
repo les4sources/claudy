@@ -14,10 +14,10 @@ module FormBuilders
       render Button::Component.new(type: :submit, title: title, options: opts)
     end
 
-    def check_box(method, opts={})
+    def check_box(method, opts={}, checked_value = "1", unchecked_value = "0")
       default_opts = { class: "w-4 h-4 bg-gray-50 rounded border border-gr-300 focus:ring-3 focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600 dark:ring-offset-gray-800" }
       merged_opts = default_opts.merge(opts)
-      super(method, merged_opts)
+      super(method, merged_opts, checked_value, unchecked_value)
     end
 
     def check_input(name, *args, &block)

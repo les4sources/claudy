@@ -43,14 +43,30 @@ class TasksController < BaseController
         task: Task.find(params[:id])
       )
       if service.run(params)
-        redirect_to task_path(service.task),
-                    notice: "L'action a été mise à jour."
+        respond_to do |format|
+          format.html {
+            redirect_to task_path(service.task),
+                        notice: "L'action a été mise à jour."
+          }
+          # Case « terminée » de la page projet : on redessine la ligne.
+          format.turbo_stream {
+            render turbo_stream: turbo_stream.replace(service.task, partial: "tasks/task", locals: { task: service.task })
+          }
+        end
       else
         @task = service.task
-        set_error_flash(service.task, service.error_message)
-        render :edit,
-               status: :unprocessable_entity,
-               alert: service.error_message
+        respond_to do |format|
+          format.html {
+            set_error_flash(service.task, service.error_message)
+            render :edit,
+                   status: :unprocessable_entity,
+                   alert: service.error_message
+          }
+          format.turbo_stream {
+            render turbo_stream: turbo_stream.replace(@task, partial: "tasks/task", locals: { task: @task.reload }),
+                   status: :unprocessable_entity
+          }
+        end
       end
     end
   
