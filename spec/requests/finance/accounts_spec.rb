@@ -275,8 +275,8 @@ RSpec.describe "Finances > Comptes", type: :request do
 
       get poste_finance_account_path(account, flow: "bar")
 
-      mois = Nokogiri::HTML(response.body).css("th[scope=rowgroup]").map { |th| th.parent.text.squish }
-      expect(mois).to eq(["Avril 2026 8,00 €", "Mai 2026 4,32 €"])
+      mois = Nokogiri::HTML(response.body).css("th[scope=rowgroup]").map { |th| th.parent.css("th, td").map { |cell| cell.text.squish } }
+      expect(mois).to eq([["Avril 2026", "8,00 €"], ["Mai 2026", "4,32 €"]])
     end
 
     it "renvoie sur la fiche quand le poste demandé n'a plus rien à régler" do
