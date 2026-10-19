@@ -189,11 +189,13 @@ module Finance
       ),
       "finance/cash_entries#show" => Page.new(
         "La fiche d'une ligne de trésorerie : d'où elle vient, à quoi elle est affectée, et son écriture.",
-        ["Complète l'affectation jusqu'à couvrir tout le montant.",
+        ["Une recette de séjour ? Choisis le séjour dans « Rapprocher d'un séjour » : la ligne est ventilée et " \
+         "comptabilisée d'un coup.",
+         "Sinon, complète l'affectation jusqu'à couvrir tout le montant.",
          "Clique alors « Comptabiliser cette ligne ». Pour corriger après, clique « Modifier la ventilation » : " \
          "l'écriture est contre-passée, pas effacée.",
          "Si la ligne n'a rien à faire là, exclus-la avec un motif."],
-        %w[affecter comptabiliser contre-passer exclure]
+        %w[affecter rapprocher ventiler comptabiliser contre-passer exclure]
       ),
       "finance/cash_reallocations" => Page.new(
         "Corriger la ventilation d'une ligne déjà affectée, même comptabilisée : ses comptes, ses pôles, ses " \
