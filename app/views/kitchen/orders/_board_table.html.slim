@@ -1,0 +1,27 @@
+/ Une section de la page Cuisine : une table, ses colonnes choisies par
+  `KitchenHelper#board_columns`. Dans la vue Cuisine, « Prévu » se lit jour par
+  jour, avec les convives cumulés du jour en intertitre — c'est ce que
+  Stéphanie met dans son agenda (epic #321, phase 3).
+.overflow-x-auto.rounded-xl.bg-white.ring-1.ring-gray-200
+  table.w-full.text-sm(class="min-w-[960px]")
+    thead
+      tr.bg-gray-50.text-left.text-xs.font-semibold.uppercase.tracking-wide.text-gray-600
+        - columns.each do |column|
+          th(class="px-3 py-2 first:pl-4 #{'text-right' if %i[people price].include?(column)}") = KitchenHelper::BOARD_COLUMN_TITLES[column]
+    tbody.divide-y.divide-gray-100
+      - if by_day
+        - orders.group_by { |order| order.object.date }.each do |day, orders_of_day|
+          tr.bg-gray-50
+            td.px-4.py-2(colspan=columns.size)
+              .flex.flex-wrap.items-baseline.gap-3
+                /  `capitalize` en Ruby, pas en CSS : `text-transform: capitalize`
+                   mettrait une majuscule à CHAQUE mot (« Samedi 26 Septembre »),
+                   ce que le français n'écrit pas.
+                span.text-sm.font-semibold.text-gray-900 = day ? l(day, format: (day.year == Date.current.year ? "%A %-d %B" : "%A %-d %B %Y")).capitalize : "Sans date"
+                span.text-xs.font-medium.text-gray-600 = "#{orders_of_day.sum { |o| o.object.people.to_i }} convives"
+                span.text-xs.text-gray-500 = "#{orders_of_day.size} service#{'s' if orders_of_day.size > 1}"
+          - orders_of_day.each do |order|
+            = render "kitchen/orders/board_row", order: order, status: status, columns: columns
+      - else
+        - orders.each do |order|
+          = render "kitchen/orders/board_row", order: order, status: status, columns: columns

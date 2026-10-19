@@ -1,0 +1,65 @@
+/ Le « ⋯ » : ce qui ne se fait pas tous les jours.
+- item        = "block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+- back_params = request.query_parameters.slice(*Kitchen::OrdersController::INDEX_PARAMS.map(&:to_s))
+button.rounded.px-2.py-1.text-gray-400(type="button" aria-label="Plus d'actions" aria-haspopup="menu" class="hover:bg-gray-100 hover:text-gray-700" data=pop.call("#{dom}-menu", "bottom-end")) ⋯
+.w-60.py-1(id="#{dom}-menu" role="menu" class=panel)
+  = link_to "Modifier la demande", edit_kitchen_order_path(order), class: item
+  - if order.stay
+    = link_to "Ouvrir le séjour", stay_path(order.stay), class: item
+  / Une demande née avant son séjour (issue #315) : on la rattache ici, avec
+    la même recherche que le formulaire de création. Sens unique — une
+    demande déjà rattachée ne propose plus rien.
+  - elsif order.orphan?
+    .my-1.border-t.border-gray-100
+    .px-3.py-2(data-controller="stay-search" data-stay-search-url-value=stay_search_kitchen_orders_path)
+      p.mb-1.text-xs.font-medium.text-gray-500 Rattacher à un séjour
+      = form_with url: attach_kitchen_order_path(order), method: :patch, class: "space-y-2" do
+        = select_tag :stay_id,
+                     options_from_collection_for_select(@stays || [], :id, ->(s) { stay_choice_label(s) }),
+                     include_blank: "— Choisir un séjour —", id: nil,
+                     class: "block w-full rounded-md border-gray-300 text-sm",
+                     data: { "stay-search-target": "select" }
+        .relative.space-y-1.hidden(data-stay-search-target="searchWrap")
+          = text_field_tag :stay_query, nil, placeholder: "Nom, groupe, email ou téléphone…", autocomplete: "off", id: nil, autocorrect: "off", autocapitalize: "off", spellcheck: "false",
+                           data: { "stay-search-target": "searchInput",
+                                   action: "input->stay-search#search keydown.enter->stay-search#pickFirst" },
+                           class: "block w-full rounded-md border-gray-300 text-sm"
+          .border.border-gray-100.rounded-md.divide-y.divide-gray-50.bg-white.shadow-sm.max-h-48.overflow-y-auto(data-stay-search-target="results")
+        .flex.items-center.justify-between.gap-2.text-sm.hidden(data-stay-search-target="chosen")
+          .min-w-0
+            span.block.truncate.font-medium.text-gray-900(data-stay-search-target="chosenLabel")
+            span.block.truncate.text-xs.text-gray-500(data-stay-search-target="chosenContact")
+          button.shrink-0.text-indigo-600(type="button" data-action="stay-search#clear" class="hover:underline") Changer
+        = submit_tag "Rattacher", class: "rounded-md bg-4s-main px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+  / Le statut CLIENT (tenu par l'accueil), pour les cas que les boutons de la
+    section ne couvrent pas : revenir en arrière, confirmer depuis la cuisine.
+  - unless order.cancelled? || past
+    .my-1.border-t.border-gray-100
+    p.px-3.pt-1.text-xs.font-medium.text-gray-500 Côté client
+    - %w[inquiry requested confirmed].each do |status|
+      - next if status == order.status
+      = button_to MealOrder::STATUS_LABELS[status], status_kitchen_order_path(order), method: :patch, params: { status: status }, class: item
+    = form_with url: status_kitchen_order_path(order), method: :patch, class: "space-y-2 px-3 py-2" do
+      = hidden_field_tag :status, "cancelled", id: nil
+      = text_field_tag :cancellation_reason, nil, required: true, id: nil, placeholder: "Motif de l'annulation", class: "block w-full rounded-md border-gray-300 text-sm"
+      = submit_tag "Annuler la demande", class: "rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+  - if %w[buffet apero].include?(order.family)
+    = link_to "Liste de courses", shopping_list_kitchen_order_path(order), target: "_blank", rel: "noopener", class: item
+  - unless order.cancelled? || past
+    .my-1.border-t.border-gray-100
+    .px-3.py-2
+      p.mb-1.text-xs.font-medium.text-gray-500 = order.responsible_missing? ? "Je m'en charge" : "Confier à quelqu'un d'autre"
+      = form_with url: assign_kitchen_order_path(order), method: :patch, class: "space-y-2" do
+        .relative(data-controller="searchable-select")
+          = select_tag :human_id, options_from_collection_for_select(@humans, :id, :name, order.responsible_human_id), include_blank: "— Choisir —", id: nil, class: "block w-full rounded-md border-gray-300 text-sm", data: { "searchable-select-target": "select" }
+          = render "shared/searchable_select_search", label: "Qui s'en charge"
+        = submit_tag "Confier", class: "rounded-md bg-4s-main px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+  - if order.accepted? && !past
+    .my-1.border-t.border-gray-100
+    = link_to "Se désister…", new_refusal_kitchen_order_path(order), class: "#{item} text-red-700"
+  / Supprimer : la saisie en double, l'erreur. Un `button_to` (DELETE), pas un
+    lien : la confirmation est le `turbo_confirm` du formulaire, comme
+    partout ailleurs dans Claudy.
+  .my-1.border-t.border-gray-100
+  = button_to "Supprimer la demande…", kitchen_order_path(order, back_params), method: :delete, class: "#{item} text-red-700",
+              form: { data: { turbo_confirm: order.delete_confirmation } }

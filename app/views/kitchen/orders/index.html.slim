@@ -4,90 +4,70 @@
            links: [link_to("Reporting", kitchen_reporting_path, class: "btn-page-header-with-icon"),
                    link_to("Nouvelle demande", new_kitchen_order_path, class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90")]
 
-/ Une table, UNE LIGNE PAR SERVICE, triée par date de service (epic #321,
-  phase 1). Le groupement par séjour a disparu : le client est devenu une
-  colonne. On lit la page dans l'ordre où le travail arrive, au lieu de la
-  parcourir entière pour savoir ce qu'on cuisine demain.
-  Les onglets restent des FILTRES sur la même table : « Cuisine » et « Accueil »
-  ne montrent que les lignes où ce métier a la main.
-- columns = @show_money ? 10 : 9
-.space-y-4
-  nav.flex.gap-1.overflow-x-auto.border-b.border-gray-200.text-sm(aria-label="Vues")
-    - Kitchen::OrdersController::VIEWS.each do |view|
+/ DEUX VUES, Cuisine et Accueil (2026-10-19), au lieu de sept onglets qui se
+  recoupaient. Chaque vue montre toutes les demandes à venir, UNE fois, rangées
+  par statut (`MealOrder#board_status`) ; l'ordre des sections et les gestes
+  changent selon qui regarde. Le passé et les annulés sont en pied de page.
+- chip_on  = "rounded-full bg-4s-main px-3 py-1.5 text-sm font-medium text-white"
+- chip_off = "rounded-full border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:border-gray-400"
+.space-y-8
+  .flex.flex-wrap.items-center.gap-4
+    nav.inline-flex.gap-1.rounded-xl.bg-gray-200.p-1(aria-label="Vue")
+      - Kitchen::OrdersController::VIEWS.each do |view|
+        - active = view[:key] == @view
+        - todo = @counts[view[:key]]
+        = link_to kitchen_orders_path(view: view[:key]),
+                  "aria-current": (active ? "page" : nil),
+                  class: "inline-flex min-h-[40px] items-center gap-2 rounded-lg px-4 text-[15px] #{active ? 'bg-white font-semibold text-gray-900 shadow-sm' : 'font-medium text-gray-600 hover:text-gray-900'}" do
+          = view[:title]
+          - if todo.positive?
+            - if view[:key] == :kitchen
+              = board_status_badge("to_validate", "#{todo} à valider")
+            - else
+              = board_status_badge("to_cover", "#{todo} à traiter")
+
+    - if @view.in?(%i[kitchen reception])
+      .flex.flex-wrap.items-center.gap-2.text-sm.text-gray-600
+        span = "À partir d'aujourd'hui, #{l(Date.current, format: '%A %-d %B')}"
+        span.text-gray-300 ·
+        - if @view == :kitchen
+          /  La famille dans la vue Cuisine : qui cuisine quoi.
+          - [[nil, "Tout"], ["repas", "Repas"], ["buffet", "Buffets"], ["apero", "Apéros"]].each do |value, label|
+            = link_to label, kitchen_orders_path(view: @view, family: value, responsible_human_id: @responsible), class: (@family == value ? chip_on : chip_off)
+        - else
+          /  L'origine dans la vue Accueil (epic #321, phase 2) : qui relancer.
+          - [[nil, "Toutes origines"]].concat(MealOrder::ORIGINS.map { |o| [o, MealOrder::ORIGIN_LABELS[o]] }).each do |value, label|
+            = link_to label, kitchen_orders_path(view: @view, origin: value, responsible_human_id: @responsible), class: (@origin == value ? chip_on : chip_off)
+    - else
+      = link_to "← Retour aux demandes à venir", kitchen_orders_path, class: "text-sm font-medium text-4s-main hover:underline"
+
+  - if @sections
+    - @sections.each do |status, orders|
+      section.space-y-3(id="section-#{status}")
+        .flex.flex-wrap.items-baseline.gap-3
+          h2 = board_status_badge(status, "#{MealOrder::BOARD_STATUS_LABELS[status]} · #{orders.size}")
+          p(class="text-[15px] text-gray-700") = board_section_hint(@view, status)
+        - if orders.any?
+          = render "kitchen/orders/board_table", orders: orders, status: status, columns: board_columns(@view, status),
+                   by_day: (@view == :kitchen && status == "planned")
+          - if @show_money && status == "planned"
+            p.text-right.text-sm.text-gray-600
+              | Total facturable :
+              strong.ml-1.text-gray-900 = humanized_money_with_symbol(Money.new(@total_cents))
+  - else
+    section.space-y-3
+      h2.text-lg.font-semibold.text-gray-900 = Kitchen::OrdersController::ARCHIVE_VIEWS.find { |v| v[:key] == @view }[:title]
+      - if @rows.empty?
+        p.text-sm.text-gray-500 Rien ici.
+      - else
+        = render "kitchen/orders/board_table", orders: @rows, status: nil, columns: board_columns(@view, nil), by_day: false
+      - if @view == :past && !@old_archives
+        = link_to "Voir les archives de plus de 12 mois", kitchen_orders_path(view: :past, old_archives: 1), class: "text-xs text-gray-500 hover:underline"
+
+  .flex.flex-wrap.gap-3.border-t.border-gray-200.pt-5
+    - Kitchen::OrdersController::ARCHIVE_VIEWS.each do |view|
       - active = view[:key] == @view
       = link_to kitchen_orders_path(view: view[:key]),
-                class: "-mb-px inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 font-medium #{active ? 'border-4s-main text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700'}" do
-        - if view[:key] == :kitchen
-          span.h-2.w-2.rounded-full.bg-4s-main
-        - elsif view[:key] == :reception
-          span.h-2.w-2.rounded-full.bg-indigo-400
+                class: "inline-flex min-h-[40px] items-center gap-2 rounded-lg border px-3.5 text-sm #{active ? 'border-4s-main text-4s-main' : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'}" do
         = view[:title]
-        span.rounded-full.px-2.text-xs.font-semibold(class="py-0.5 #{active ? 'bg-teal-50 text-4s-main' : 'bg-gray-100 text-gray-600'}")
-          = @counts[view[:key]]
-
-  /  FILTRE PAR ORIGINE (epic #321, phase 2, décision 3) — seulement dans les
-     vues de travail : c'est là qu'on se demande qui relancer. Les archives, les
-     annulés et le plan de charge n'ont pas cette question.
-  - if Kitchen::OrdersController::ORIGIN_FILTER_VIEWS.include?(@view)
-    .flex.flex-wrap.items-center.gap-2.text-sm
-      span.text-xs.font-medium.uppercase.tracking-wide.text-gray-500 Origine
-      - [[nil, "Toutes"]].concat(MealOrder::ORIGINS.map { |o| [o, MealOrder::ORIGIN_LABELS[o]] }).each do |value, label|
-        - active = @origin == value
-        = link_to label,
-                  kitchen_orders_path(view: @view, origin: value, family: @family, responsible_human_id: @responsible),
-                  class: "rounded-full border px-3 py-1 text-xs font-medium #{active ? 'border-4s-main bg-4s-main text-white' : 'border-gray-300 text-gray-600 hover:border-gray-400'}"
-
-  .overflow-x-auto.rounded-xl.bg-white.ring-1.ring-gray-200
-    table.w-full.text-sm(class="min-w-[1080px]")
-      thead
-        / L'ORDRE DES COLONNES est celui que Malau a décrit : demandée le · date
-          du service · client · type. On lit de gauche à droite la question
-          qu'elle se pose, dans l'ordre où elle se la pose.
-        tr.bg-gray-50.text-left.text-xs.font-semibold.uppercase.tracking-wide.text-gray-500
-          th.px-3.py-2.pl-4 Demandée le
-          th.px-3.py-2 Date
-          th.px-3.py-2 Client
-          th.px-3.py-2 Type
-          th.px-3.py-2.text-right Conv.
-          - if @show_money
-            th.px-3.py-2.text-right Prix
-          th.px-3.py-2 S'en charge
-          th.px-3.py-2.text-4s-main Cuisine
-          th.px-3.py-2.text-indigo-800 Client
-          th.px-3.py-2
-      tbody.divide-y.divide-gray-100
-        - if @rows.empty?
-          tr
-            td.px-4.py-6.text-center.text-gray-500(colspan=columns) Rien ici.
-        - elsif @view == :upcoming
-          /  PLAN DE CHARGE (epic #321, phase 3) : un intertitre par JOUR, avec
-             les convives cumulés du jour. C'est ce que Stéphanie met dans son
-             agenda — « jeudi 26 : 42 convives », pas quatre lignes à additionner
-             de tête.
-          - @rows.group_by { |order| order.object.date }.each do |day, orders_of_day|
-            tr.bg-gray-50
-              td.px-4.py-2(colspan=columns)
-                .flex.flex-wrap.items-baseline.gap-3
-                  /  `capitalize` en Ruby, pas en CSS : `text-transform: capitalize`
-                     mettrait une majuscule à CHAQUE mot (« Samedi 26 Septembre »),
-                     ce que le français n'écrit pas.
-                  span.text-sm.font-semibold.text-gray-900
-                    = l(day, format: "%A %-d %B").capitalize
-                  span.text-xs.font-medium.text-gray-500
-                    = "#{orders_of_day.sum { |o| o.object.people.to_i }} convives"
-                  span.text-xs.text-gray-400
-                    = "#{orders_of_day.size} service#{'s' if orders_of_day.size > 1}"
-            - orders_of_day.each do |order|
-              = render "kitchen/orders/row", order: order
-        - else
-          - @rows.each do |order|
-            = render "kitchen/orders/row", order: order
-
-  .flex.items-center.justify-between.text-xs.text-gray-500
-    div
-      - if @view == :past && !@old_archives
-        = link_to "Voir les archives de plus de 12 mois", kitchen_orders_path(view: :past, old_archives: 1), class: "hover:underline"
-    - if @show_money
-      div
-        | Total facturable :
-        strong.ml-1.text-gray-900 = humanized_money_with_symbol(Money.new(@total_cents))
+        span.text-gray-500 = @counts[view[:key]]

@@ -67,7 +67,7 @@ RSpec.describe "Cuisine — une demande sans séjour", type: :request do
     it "montre le texte libre et la pastille « sans séjour » dans la liste" do
       orphan
 
-      get kitchen_orders_path(view: :all)
+      get kitchen_orders_path(view: :kitchen)
 
       body = CGI.unescapeHTML(response.body)
       expect(response).to have_http_status(:ok)
@@ -78,7 +78,7 @@ RSpec.describe "Cuisine — une demande sans séjour", type: :request do
     it "ne propose pas « Ouvrir le séjour » sur une demande orpheline" do
       order = orphan
 
-      get kitchen_orders_path(view: :all)
+      get kitchen_orders_path(view: :kitchen)
 
       row = Nokogiri::HTML(response.body).css("tr#order-#{order.id}").to_html
       expect(row).not_to include("Ouvrir le séjour")
@@ -89,7 +89,7 @@ RSpec.describe "Cuisine — une demande sans séjour", type: :request do
       orphan(contact_label: "École de Godinne")
       orphan(contact_label: "Anniversaire Dupont")
 
-      get kitchen_orders_path(view: :all)
+      get kitchen_orders_path(view: :kitchen)
 
       body = CGI.unescapeHTML(response.body)
       expect(body).to include("École de Godinne", "Anniversaire Dupont")
