@@ -1,0 +1,34 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Comptes de trésorerie"
+
+.overflow-x-auto.relative
+  table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
+    thead.text-xs.text-gray-700.uppercase.bg-gray-50
+      tr
+        th.py-3.px-6[scope="col"] Compte
+        th.py-3.px-6[scope="col"] Entité
+        th.py-3.px-6[scope="col"] Nature
+        th.py-3.px-6[scope="col"] Compte général
+        th.py-3.px-6[scope="col"] IBAN
+        th.py-3.px-6[scope="col"]
+    tbody
+      - @accounts.each do |account|
+        tr.border-b.bg-white
+          td.py-4.px-6.font-medium.text-gray-900
+            = account.name
+            - unless account.active?
+              span.ml-2.px-2.py-0.5.rounded-full.text-xs.bg-gray-100.text-gray-500 Inactif
+          td.py-4.px-6= account.legal_entity&.name
+          td.py-4.px-6= account.kind_label
+          td.py-4.px-6= account.general_account
+          td.py-4.px-6
+            - if !account.bank?
+              span.text-gray-400 —
+            - elsif account.iban.present?
+              span.font-mono.text-gray-900= account.iban
+            - else
+              span.px-2.py-0.5.rounded-full.text-xs.bg-amber-100.text-amber-700 Pas d'IBAN
+          td.py-4.px-6.text-right
+            - if account.bank?
+              = link_to (account.iban.present? ? "Modifier l'IBAN" : "Ajouter l'IBAN"), edit_finance_cash_account_path(account),
+                        class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
