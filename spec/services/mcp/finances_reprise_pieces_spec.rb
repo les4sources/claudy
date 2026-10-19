@@ -99,6 +99,21 @@ RSpec.describe Mcp::Server, "reprise de pièces Winbooks" do
     expect(ecriture.journal_lines.find_by!(general_account: attente).credit_cents).to eq(7_000)
   end
 
+  it "laisse une opération diverse corriger la caisse doublée par l'à-nouveau" do
+    attente = build_general_account(code: "499000", name: "Compte d'attente", klass: 4, nature: "liability")
+    caisse = build_general_account(code: "570000", name: "Caisse", klass: 5, nature: "asset")
+    correction = { "ref" => "2022:DIVERS:2", "journal" => "divers", "date" => "2022-01-01",
+                   "libelle" => "Caisse comptée deux fois",
+                   "lignes" => [{ "compte" => "499000", "debit" => "150" },
+                                { "compte" => "570000", "credit" => "150" }] }
+
+    confirme("reprendre_pieces", arguments(correction))
+
+    lignes = JournalEntry.sole.journal_lines
+    expect(lignes.find_by!(general_account: caisse).credit_cents).to eq(15_000)
+    expect(lignes.find_by!(general_account: attente).debit_cents).to eq(15_000)
+  end
+
   it "refuse tout le lot et liste chaque problème avant d'écrire" do
     inconnue = achat("2022:ACHATS:3").deep_dup.tap { |p| p["lignes"][0]["tiers"] = "INCONNU" }
     bancale = achat("2022:ACHATS:4").deep_dup.tap { |p| p["lignes"][1]["debit"] = "120" }
