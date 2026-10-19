@@ -229,6 +229,13 @@
       = turbo_frame_tag dom_id(entry, :suggestion), src: suggestion_finance_cash_entry_path(entry), loading: :lazy, target: "_top"
         p.mb-3.text-xs.text-gray-400 Jev cherche une proposition…
 
+    / Choisir le séjour à la main (Michael, 2026-10-19) quand la proposition
+      du dessus manque ou se trompe. Sur une ligne entrante encore vierge,
+      chargé seulement à l'ouverture de la ligne.
+    - if entry.incoming? && entry.cash_allocations.empty?
+      = turbo_frame_tag dom_id(entry, :stays), src: stays_finance_cash_entry_path(entry), loading: :lazy, target: "_top"
+        p.mb-3.text-xs.text-gray-400 Chargement des séjours…
+
     / Ce qui est déjà posé sur la ligne (epic #288, phase 6) : on complète
       un découpage en voyant ses parts, pas à l'aveugle. Les aides du dessus
       (séjour, règle) ne se proposent plus dès la première part — elles

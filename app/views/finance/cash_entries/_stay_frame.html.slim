@@ -1,0 +1,6 @@
+/ Le cadre du choix d'un séjour dans la file, chargé à l'ouverture de la
+  ligne. Il sort vers la page entière (`_top`), comme la suggestion de Jev :
+  la réponse au geste redessine la ligne dans la file.
+= turbo_frame_tag dom_id(entry, :stays), target: "_top"
+  - if stay_choices
+    = render "finance/cash_entries/stay_choice", entry: entry, stay_choices: stay_choices, proposed_stay_id: proposed_stay_id

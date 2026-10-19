@@ -36,10 +36,15 @@ module Finance
 
     def ventilate
       poids = weights
+      # Un devis vide n'est pas une raison de bloquer (Michael, 2026-10-19 :
+      # séjour #732, un hébergement sans logement ni chambre que le moteur ne
+      # sait pas coter). Les prix ENREGISTRÉS sur la composition donnent les
+      # mêmes proportions ; on ne refuse que s'ils sont vides eux aussi.
+      poids = recorded_weights if poids.values.sum <= 0
       if poids.values.sum <= 0
         raise EmptyQuote,
-              "Le devis reconstruit du séjour ##{@stay.id} est vide : impossible d'en tirer une " \
-              "ventilation. Affecte la ligne à la main."
+              "Le devis reconstruit du séjour ##{@stay.id} est vide, et sa composition ne porte aucun prix : " \
+              "impossible d'en tirer une ventilation. Affecte la ligne à la main."
       end
 
       categories = poids.keys
@@ -82,6 +87,26 @@ module Finance
         "hamac" => quote.hamac_cents.to_i,
         "experiences" => quote.experiences_cents.to_i
       }.reject { |_category, poids| poids.to_i <= 0 }
+    end
+
+    # Le repli : les prix posés sur chaque élément du séjour, rangés dans les
+    # mêmes catégories que le devis. Ce sont des montants de vente réels, donc
+    # des proportions honnêtes ; la base reste l'argent reçu.
+    def recorded_weights
+      poids = Hash.new(0)
+      @stay.stay_items.filter_map(&:bookable).each do |bookable|
+        categorie = case bookable
+                    when Booking then "lodging"
+                    when SpaceBooking then "spaces"
+                    when CampingBooking then bookable.kind == "terrasse" ? "terrace" : "camping"
+                    when VanBooking then "van"
+                    when HamacBooking then "hamac"
+                    end
+        poids[categorie] += bookable.try(:price_cents).to_i if categorie
+      end
+      poids["meals"] += @stay.meal_orders.active.sum(:price_cents).to_i
+      poids["experiences"] += @stay.experience_bookings.active.sum { |activite| activite.price_cents.to_i }
+      poids.reject { |_category, montant| montant <= 0 }
     end
 
     def mappings

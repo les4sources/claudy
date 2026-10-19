@@ -22,5 +22,10 @@ export default class extends Controller {
     this.targetEl.classList.toggle("hidden")
     const expanded = !this.targetEl.classList.contains("hidden")
     this.element.setAttribute("aria-expanded", expanded ? "true" : "false")
+    // Un second bouton peut refermer la même cible (« Annuler » dans la file
+    // « À affecter ») : celui qui la contrôle doit le savoir aussi.
+    document.querySelectorAll(`[aria-controls="${this.toggleValue}"]`).forEach((bouton) => {
+      bouton.setAttribute("aria-expanded", expanded ? "true" : "false")
+    })
   }
 }

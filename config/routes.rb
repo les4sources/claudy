@@ -444,6 +444,9 @@ Rails.application.routes.draw do
         # La proposition de Jev d'une ligne sans règle, chargée à la volée dans
         # la file « À affecter » pour ne jamais retenir l'écran.
         get :suggestion
+        # Le choix d'un séjour à la main, chargé à l'ouverture d'une ligne de
+        # la file (Michael, 2026-10-19).
+        get :stays
         # Le détail d'une ligne en modale, depuis la file « À affecter » (epic
         # #288, phase 5) : on le consulte sans quitter sa page ni son rythme.
         get :detail
