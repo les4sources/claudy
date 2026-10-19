@@ -189,10 +189,20 @@ module Finance
       "finance/cash_entries#show" => Page.new(
         "La fiche d'une ligne de trésorerie : d'où elle vient, à quoi elle est affectée, et son écriture.",
         ["Complète l'affectation jusqu'à couvrir tout le montant.",
-         "Clique alors « Comptabiliser cette ligne ». Pour corriger après, annule la passation : l'écriture est " \
-         "contre-passée, pas effacée.",
+         "Clique alors « Comptabiliser cette ligne ». Pour corriger après, clique « Modifier la ventilation » : " \
+         "l'écriture est contre-passée, pas effacée.",
          "Si la ligne n'a rien à faire là, exclus-la avec un motif."],
         %w[affecter comptabiliser contre-passer exclure]
+      ),
+      "finance/cash_reallocations" => Page.new(
+        "Corriger la ventilation d'une ligne déjà affectée, même comptabilisée : ses comptes, ses pôles, ses " \
+        "entités et ses montants, en un seul geste.",
+        ["Change ce qui doit l'être, ajoute ou retire une part, puis enregistre : tout passe ensemble, ou rien.",
+         "Si la ligne était comptabilisée, son écriture est contre-passée et la nouvelle ventilation se " \
+         "comptabilise dès qu'elle couvre tout le montant.",
+         "Une part qui rapproche une pièce (facture, séjour, note de frais) la garde. La retirer défait ce " \
+         "rapprochement."],
+        %w[ventiler contre-passer rapprocher]
       ),
       "finance/monthly_close" => Page.new(
         "La liste de contrôle du mois : tout ce qui doit être fait pour que le mois soit fini, calculé depuis les " \

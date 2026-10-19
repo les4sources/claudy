@@ -1,0 +1,31 @@
+/ Une part de la ligne : `key` est son id si elle existe déjà, `__INDEX__` dans
+  le gabarit d'une part ajoutée (le contrôleur `allocation-parts` le remplace).
+- allocation = local_assigns[:allocation]
+- prefixe = "parts_#{key}"
+.flex.flex-wrap.items-end.gap-3.border-b.border-dashed.border-gray-200.py-3(data-allocation-parts-target="part")
+  - if allocation&.persisted?
+    = hidden_field_tag "parts[#{key}][id]", allocation.id, id: "#{prefixe}_id"
+  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" class="relative")
+    = label_tag "#{prefixe}_general_account_id", "Compte", class: "block text-xs font-medium text-gray-500"
+    = select_tag "parts[#{key}][general_account_id]", options_from_collection_for_select(general_accounts, :id, :to_s, allocation&.general_account_id), include_blank: "Choisir…", id: "#{prefixe}_general_account_id", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+    .hidden.mt-1(data-searchable-select-target="wrap")
+      input.w-64.rounded-md.border-gray-300.text-sm.shadow-sm(type="text" role="combobox" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-expanded="false" aria-label="Chercher un compte" data-searchable-select-target="input" data-action="input->searchable-select#filter focus->searchable-select#open keydown->searchable-select#navigate")
+      ul.hidden.absolute.z-20.mt-1.max-h-64.w-64.overflow-auto.rounded-md.border.border-gray-200.bg-white.py-1.shadow-lg(role="listbox" data-searchable-select-target="list")
+  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un pôle…" data-searchable-select-clearable-value="true" class="relative w-48")
+    = label_tag "#{prefixe}_team_id", "Pôle", class: "block text-xs font-medium text-gray-500"
+    = select_tag "parts[#{key}][team_id]", options_from_collection_for_select(teams, :id, :name, allocation&.team_id), include_blank: "Non affecté", id: "#{prefixe}_team_id", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher un pôle"
+  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une entité…" class="relative w-48")
+    = label_tag "#{prefixe}_legal_entity_id", "Entité", class: "block text-xs font-medium text-gray-500"
+    = select_tag "parts[#{key}][legal_entity_id]", options_from_collection_for_select(entities, :id, :name, allocation&.legal_entity_id || entry.cash_account.legal_entity_id), id: "#{prefixe}_legal_entity_id", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher une entité"
+  div
+    = label_tag "#{prefixe}_amount", "Montant (€)", class: "block text-xs font-medium text-gray-500"
+    - montant = allocation&.amount_cents
+    = text_field_tag "parts[#{key}][amount]", (montant.nil? ? nil : number_with_precision(montant / 100.0, precision: 2, separator: ",")), id: "#{prefixe}_amount", class: "mt-1 w-28 rounded-md border-gray-300 text-sm shadow-sm", data: { allocation_parts_target: "amount", action: "input->allocation-parts#recompute" }
+  button.pb-2.text-sm.text-gray-500(type="button" class="hover:text-red-600" data-action="allocation-parts#remove") Retirer
+  / Une part qui rapproche une pièce la garde : seuls son compte, son pôle,
+    son entité et son montant changent ici.
+  - if (piece = allocation && CashAllocationDecorator.new(allocation).document_label)
+    p.basis-full.text-xs.text-gray-500
+      | Rapproche #{piece}. La retirer défait ce rapprochement.

@@ -449,6 +449,9 @@ Rails.application.routes.draw do
         get :detail
       end
       resources :allocations, only: [:create, :destroy], controller: "cash_allocations"
+      # Modifier la ventilation d'une ligne déjà affectée, comptabilisée ou non
+      # (Michael, 2026-10-19) : toutes ses parts sur un écran, en un geste.
+      resource :reallocation, only: [:edit, :update], controller: "cash_reallocations"
     end
 
     # Comptabilité > Ventes (epic #240, phase 6). `new` et `create` prennent
