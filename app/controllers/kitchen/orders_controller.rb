@@ -8,7 +8,7 @@ module Kitchen
     breadcrumb "Cuisine", :kitchen_orders_path, match: :exact
 
     before_action :set_order,
-                  only: [:edit, :update, :status, :assign, :accept, :new_refusal, :refuse,
+                  only: [:edit, :update, :destroy, :status, :assign, :accept, :new_refusal, :refuse,
                          :shopping_list, :attach]
 
     # Les vues de la page, en onglets. Une table unique, une ligne par service ;
@@ -28,6 +28,10 @@ module Kitchen
       { key: :out,       title: "Annulés" }
     ].freeze
     VIEW_KEYS = VIEWS.map { |v| v[:key] }.freeze
+
+    # Ce qui fait l'état de la page (onglet, filtres) : la suppression le renvoie
+    # pour qu'on retombe là où l'on était.
+    INDEX_PARAMS = %i[view family origin responsible_human_id old_archives].freeze
 
     ARCHIVE_LIMIT   = 100
     CANCELLED_LIMIT = 50
@@ -126,6 +130,15 @@ module Kitchen
         flash.now[:alert] = @order.errors.full_messages.to_sentence
         render :edit, status: :unprocessable_entity
       end
+    end
+
+    # Supprimer une demande : la saisie en double, l'erreur de séjour. Soft-delete
+    # (la ligne garde son historique PaperTrail), et AUCUN email : supprimer n'est
+    # pas annuler — un client qui renonce passe par « Annuler la demande », qui
+    # prévient la cuisine. On revient sur l'onglet et les filtres d'où l'on vient.
+    def destroy
+      @order.soft_delete!(validate: false)
+      redirect_to kitchen_orders_path(params.permit(*INDEX_PARAMS)), notice: "Demande supprimée."
     end
 
     # Statut CLIENT depuis la ligne : ferme, confirmé, annulé (motif obligatoire).

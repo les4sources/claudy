@@ -335,6 +335,48 @@ RSpec.describe "Cuisine — page et actions", type: :request do
     end
   end
 
+  describe "DELETE /kitchen/orders/:id" do
+    it "supprime la demande sans l'effacer, et revient sur l'onglet d'où l'on vient" do
+      order = line(validation: "accepted", responsible_human: steph)
+
+      delete kitchen_order_path(order, view: "reception", family: "repas")
+
+      expect(response).to redirect_to(kitchen_orders_path(view: "reception", family: "repas"))
+      expect(flash[:notice]).to eq("Demande supprimée.")
+      expect(MealOrder.find_by(id: order.id)).to be_nil
+      expect(MealOrder.with_deleted { MealOrder.find(order.id) }.deleted_at).to be_present
+    end
+
+    it "ne prévient pas la cuisine : supprimer n'est pas annuler" do
+      order = line(validation: "accepted", responsible_human: steph)
+      ActionMailer::Base.deliveries.clear
+
+      expect { delete kitchen_order_path(order) }.not_to(change { ActionMailer::Base.deliveries.size })
+    end
+
+    it "sort la ligne du total du séjour" do
+      order = line(status: "confirmed", validation: "accepted", responsible_human: steph, unit_price_cents: 1500)
+      expect(stay.meal_orders.billable.sum(:price_cents)).to eq(15_000)
+
+      delete kitchen_order_path(order)
+
+      expect(stay.reload.meal_orders.billable.sum(:price_cents)).to eq(0)
+    end
+
+    it "propose la suppression, avec confirmation, dans le menu de la ligne et sur la fiche" do
+      order = line
+
+      get kitchen_orders_path(view: :kitchen)
+      form = Nokogiri::HTML(response.body).css("tr#order-#{order.id} form[action^='#{kitchen_order_path(order)}']")
+                     .find { |f| f.at_css("input[name=_method][value=delete]") }
+      expect(form["action"]).to eq(kitchen_order_path(order, view: "kitchen"))
+      expect(form["data-turbo-confirm"]).to include("Supprimer la demande", "Groupe Test", "annulez-la plutôt")
+
+      get edit_kitchen_order_path(order)
+      expect(Nokogiri::HTML(response.body).at_css("form[action='#{kitchen_order_path(order)}'][data-turbo-confirm]")).to be_present
+    end
+  end
+
   describe "GET /kitchen/orders/new et /:id/edit" do
     # Le type était préréglé sur le premier type activé, et le responsable sur le
     # défaut de CE type. Basculer le type sans toucher au responsable laissait un

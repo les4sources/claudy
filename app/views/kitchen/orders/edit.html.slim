@@ -1,5 +1,11 @@
 - content_for :page_header do
-  = render "layouts/components/page_header", title: "Modifier la demande"
+  = render "layouts/components/page_header",
+           title: "Modifier la demande",
+           links: [ \
+             button_to("Supprimer la demande", kitchen_order_path(@order), method: :delete,
+                       form: { data: { turbo_confirm: @order.decorate.delete_confirmation } },
+                       class: "inline-flex items-center rounded-md border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50") \
+           ]
 
 .max-w-3xl.space-y-6
   = render "kitchen/orders/form", order: @order, url: kitchen_order_path(@order), method: :patch, submit_label: "Enregistrer"

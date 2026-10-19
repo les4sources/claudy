@@ -13,6 +13,7 @@
 - btn_alt = "rounded-md bg-white px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
 - item    = "block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-50"
 - panel   = "absolute left-0 top-0 z-40 invisible opacity-0 transition-opacity rounded-lg bg-white shadow-lg ring-1 ring-gray-200 text-left font-normal"
+- back_params = request.query_parameters.slice(*Kitchen::OrdersController::INDEX_PARAMS.map(&:to_s))
 - pop     = ->(target, placement) { { "controller" => "popover", "action" => "click->popover#toggle click@window->popover#hideOnClickOutside", "popover-target-value" => target, "popover-strategy-value" => "fixed", "popover-placement-value" => placement } }
 
 tr(id=dom class="#{order.row_tone_class} #{muted ? 'text-gray-500' : 'text-gray-800'}")
@@ -163,3 +164,9 @@ tr(id=dom class="#{order.row_tone_class} #{muted ? 'text-gray-500' : 'text-gray-
       - if order.accepted? && !past
         .my-1.border-t.border-gray-100
         = link_to "Se désister…", new_refusal_kitchen_order_path(order), class: "#{item} text-red-700"
+      / Supprimer : la saisie en double, l'erreur. Un `button_to` (DELETE), pas un
+        lien : la confirmation est le `turbo_confirm` du formulaire, comme
+        partout ailleurs dans Claudy.
+      .my-1.border-t.border-gray-100
+      = button_to "Supprimer la demande…", kitchen_order_path(order, back_params), method: :delete, class: "#{item} text-red-700",
+                  form: { data: { turbo_confirm: order.delete_confirmation } }
