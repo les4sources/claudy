@@ -10,8 +10,8 @@ ce qu'il reste à régler, et les informations pratiques pour venir :
 <%= @stay_url %>
 <% lines = @stay.item_lines %><% if @stay.any_public_composition? %>
 Votre réservation :
-<% lines.each do |line| %>- <%= line[:name] %><%= " (#{line[:date_range]})" if line[:date_range].present? %> — <%= line[:amount] %>
-<% end %><% @stay.activity_lines.each do |activity| %>- <%= activity[:name] %><%= " (à confirmer)" if activity[:pending] %><%= " — #{activity[:date_range]}" if activity[:date_range].present? %> — <%= activity[:amount] %>
+<% lines.each do |line| %>- <%= line[:name] %><%= " (#{line[:date_range]})" if line[:date_range].present? %><%= " — #{line[:amount]}" if line[:amount] %>
+<% end %><% @stay.activity_lines.each do |activity| %>- <%= activity[:name] %><%= " (à confirmer)" if activity[:pending] %><%= " — #{activity[:date_range]}" if activity[:date_range].present? %><%= " — #{activity[:amount]}" if activity[:amount] %>
 <% end %>Total TVAC : <%= @stay.formatted_total %>
 Tous les prix sont TVAC — pas de TVA en plus.
 <% end %>

@@ -20,4 +20,6 @@ section.funnel-card.mt-6.p-5.md:p-6(data-stay-activities="true")
             - if line[:date_range].present?
               p.text-sm(class="text-moss") = line[:date_range]
             p.text-sm(class="text-moss") = t("public.stays.show.participants", count: line[:participants])
-        p.text-base.font-semibold.text-ink.whitespace-nowrap = line[:amount]
+        / Montant vide : activité couverte par un prix imposé (`StayDecorator#activity_lines`).
+        - if line[:amount]
+          p.text-base.font-semibold.text-ink.whitespace-nowrap = line[:amount]

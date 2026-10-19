@@ -48,6 +48,7 @@ nl:
         hamac: "Hangmat"
         meal: "Maaltijd"
         other: "Dienst"
+        agreed_price: "Afgesproken prijs voor het geheel"
       payment_status:
         pending: "In afwachting van betaling"
         partially_paid: "Gedeeltelijk betaald"
