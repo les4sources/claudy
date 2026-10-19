@@ -88,6 +88,16 @@ RSpec.describe Finance::MatchStay do
     expect(match).to be_nil
   end
 
+  # Séjour vide (Michael, 2026-10-19) : rien à payer, il ne fait pas d'ombre au vrai.
+  it "ignore le séjour encore vide du même client" do
+    Stay.create!(customer: customer, arrival_date: Date.new(2026, 9, 1), departure_date: Date.new(2026, 9, 2),
+                 total_amount_cents: 0, payment_status: "pending")
+
+    match = described_class.new(cash_entry: entry_with(counterparty_name: "JEANNE DUPONT")).run!
+
+    expect(match&.stay).to eq(stay)
+  end
+
   it "ne propose rien quand la communication nomme DEUX séjours" do
     autre = Stay.create!(customer: customer, arrival_date: Date.new(2026, 9, 1),
                          departure_date: Date.new(2026, 9, 3), total_amount_cents: 20_000,

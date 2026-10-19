@@ -83,6 +83,9 @@ module Stays
           dogs_count:           @draft.dogs_count.to_i,
           price_override_cents: @requested_price_override_cents.presence
         )
+        # Séjour vide : rien dont dériver les dates, `recompute_aggregates!` les
+        # préserve — on pose donc celles du formulaire.
+        @stay.update!(arrival_date: @draft.arrival_date, departure_date: @draft.departure_date) if empty_composition?
         reconcile_lodging!
         reconcile_spaces!
         reconcile_camping!
@@ -106,20 +109,28 @@ module Stays
 
     private
 
+    def empty_composition?
+      !(@draft.lodging.present? || draft_has_spaces?(@draft) ||
+        draft_has_camping?(@draft) || draft_has_van?(@draft) ||
+        @draft.bookable_experiences? || draft_has_meals?(@draft) ||
+        draft_has_terrace?(@draft) || draft_has_hamacs?(@draft))
+    end
+
+    def empty_stay_dates?
+      @draft.arrival_date.present? && @draft.departure_date.present? &&
+        @draft.departure_date >= @draft.arrival_date
+    end
+
     def validate!
       # Nuits requises UNIQUEMENT pour les réservables à la nuit (hébergement,
       # camping, van). Les compositions sans nuitée — espace en journée sèche
       # (0 nuit), activités seules, repas seuls — sont légitimes (issue #80).
       raise_invalid("Veuillez choisir des dates valides.") if requires_nights? && @draft.nights < 1
-      # La contrainte de composition s'élargit (issue #80) : un séjour est valide
-      # dès qu'il porte AU MOINS un hébergement, un espace, du camping/van, une
-      # activité OU un repas. Les activités seules et repas seuls sont désormais
-      # des compositions légitimes (validé par Michael).
-      unless @draft.lodging.present? || draft_has_spaces?(@draft) ||
-             draft_has_camping?(@draft) || draft_has_van?(@draft) ||
-             @draft.bookable_experiences? || draft_has_meals?(@draft) ||
-             draft_has_terrace?(@draft) || draft_has_hamacs?(@draft)
-        raise_invalid("Veuillez sélectionner un hébergement, un espace, un emplacement camping/van, une activité ou un repas.")
+      # Activités seules et repas seuls sont des compositions légitimes (issue
+      # #80). Le séjour VIDE aussi (Michael, 2026-10-19), à condition d'être
+      # daté : ce sont alors les dates du formulaire qui le situent (cf. `run!`).
+      if empty_composition? && !empty_stay_dates?
+        raise_invalid("Veuillez choisir les dates du séjour.")
       end
       # Email facultatif en admin (issue #232) — mais une adresse SAISIE et mal
       # formée reste refusée : une coquille ne doit pas devenir un client muet.

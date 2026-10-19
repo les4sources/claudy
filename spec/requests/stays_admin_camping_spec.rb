@@ -114,12 +114,22 @@ RSpec.describe "Stays — camping / van / repas (epic #66, Phase 3)", type: :req
       expect(stay.total_amount_cents).to eq(7_500) # 5 × 2 × 7,50 €
     end
 
-    it "retire le camping (0 pers) sans autre composant → refusé (séjour vide)" do
+    it "retire le camping (0 pers) sans autre composant → séjour vide (Michael 2026-10-19)" do
       stay = create_camping_only_stay
       patch stay_path(stay), params: update_params(stay, camping: { people: 0 })
+      expect(response).to redirect_to(recent_stays_path)
+
+      stay.reload
+      expect(stay.stay_items).to be_empty
+      expect(stay.total_amount_cents).to eq(0)
+      expect([stay.arrival_date, stay.departure_date]).to eq([arrival, departure])
+    end
+
+    it "refuse un séjour vide sans dates" do
+      stay = create_camping_only_stay
+      patch stay_path(stay), params: update_params(stay, camping: { people: 0 }, arrival_date: "", departure_date: "")
       expect(response).to have_http_status(:unprocessable_entity)
-      # Issue #80 : la contrainte de composition s'élargit aux activités/repas.
-      expect(response.body).to include("un emplacement camping/van, une activité ou un repas")
+      expect(response.body).to include("Veuillez choisir les dates du séjour.")
     end
   end
 

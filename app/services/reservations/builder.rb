@@ -225,8 +225,8 @@ module Reservations
 
     private
 
-    # Un séjour doit porter des dates valides et AU MOINS un élément réservé —
-    # mais plus forcément un hébergement (epic #26, Phase 2) : un séjour camping
+    # Un séjour doit porter des dates valides et AU MOINS un élément réservé
+    # (sauf le séjour vide de l'admin, cf. plus bas) — mais plus forcément un hébergement (epic #26, Phase 2) : un séjour camping
     # ou espaces seuls est légitime, et c'est justement lui qui ne doit plus
     # produire de Booking fantôme.
     def validate_draft!
@@ -235,7 +235,14 @@ module Reservations
       # journée sèche (0 nuit), activités seules, repas seuls — sont légitimes
       # (issue #80) : elles portent leurs propres dates (espace/activité/repas).
       raise_invalid("Veuillez choisir des dates valides.") if requires_nights? && draft.nights < 1
-      raise_invalid("Veuillez choisir un hébergement, un espace, une activité ou un repas.") unless bookable_content?
+      # Séjour VIDE (Michael, 2026-10-19) : en admin, l'équipe ouvre le séjour
+      # dès le premier contact, avant d'en connaître la composition. Il ne lui
+      # faut alors que des dates (le séjour n'a rien d'autre pour se situer).
+      # Le funnel public, lui, exige toujours quelque chose à réserver.
+      unless bookable_content?
+        raise_invalid("Veuillez choisir un hébergement, un espace, une activité ou un repas.") unless @admin
+        raise_invalid("Veuillez choisir les dates du séjour.") unless empty_stay_dates?(draft)
+      end
       raise_invalid("Veuillez indiquer si vous venez avec un animal (champ obligatoire).") if draft.dogs_count.nil?
       # Identité du contact. Au funnel PUBLIC, le prénom reste obligatoire : c'est
       # ainsi qu'on s'adresse au client, et le formulaire ne connaît que des
@@ -392,6 +399,13 @@ module Reservations
         draft.bookable_experiences? ||
         draft_has_meals?(draft) ||
         (terrace_enabled? && draft_has_terrace?(draft))
+    end
+
+    # Dates d'un séjour vide : arrivée et départ, le départ pas avant l'arrivée
+    # (une journée sèche = même jour).
+    def empty_stay_dates?(draft)
+      draft.arrival_date.present? && draft.departure_date.present? &&
+        draft.departure_date >= draft.arrival_date
     end
 
     # Terrasse activée : ADMIN uniquement (jamais le funnel public, même sur param

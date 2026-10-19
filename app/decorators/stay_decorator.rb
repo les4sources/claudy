@@ -873,7 +873,8 @@ class StayDecorator < ApplicationDecorator
 
   # Nom/prénom + nom de groupe issus du booking sous-jacent.
   def contact_line
-    return "—" if primary_bookable.nil?
+    # Sans réservable (séjour vide, activité seule, repas seuls) : le client.
+    return display_name.presence || "—" if primary_bookable.nil?
     person = [primary_bookable.try(:firstname), primary_bookable.try(:lastname)].compact_blank.join(" ")
     group = primary_bookable.try(:group_name).presence
     [person.presence, group].compact.join(" · ").presence || "—"

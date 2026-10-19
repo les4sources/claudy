@@ -104,6 +104,15 @@ RSpec.describe Mcp::Server, "séjours" do
       expect(Stay.count).to eq(2)
     end
 
+    it "crée un séjour vide (rien que le client et les dates)" do
+      arguments = { "client" => client.id.to_s, "arrivee" => (arrivee + 20).iso8601, "depart" => (arrivee + 22).iso8601 }
+      expect { confirme("creer_sejour", arguments) }.to change(Stay, :count).by(1)
+      vide = Stay.order(:id).last
+      expect(vide.bookables).to be_empty
+      expect([vide.arrival_date, vide.departure_date]).to eq([arrivee + 20, arrivee + 22])
+      expect(vide.total_amount_cents).to eq(0)
+    end
+
     it "confirme un séjour et l'annonce au client" do
       apercu = outil("changer_statut_sejour", { "sejour" => sejour.id, "statut" => "confirmed" })
       expect(texte(apercu)).to include("partira à camille@example.com")

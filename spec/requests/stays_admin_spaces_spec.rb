@@ -118,12 +118,15 @@ RSpec.describe "Stays — espaces (epic #66, Phase 2)", type: :request do
       expect(stay.total_amount_cents).to eq(35_000)
     end
 
-    it "retire l'espace en vidant les lignes → refusé (séjour deviendrait vide)" do
+    it "retire l'espace en vidant les lignes → séjour vide, daté par le formulaire (Michael 2026-10-19)" do
       stay = create_spaces_only_stay
-      patch stay_path(stay), params: update_params(stay) # ni lodging ni halls
-      expect(response).to have_http_status(:unprocessable_entity)
-      # Issue #80 : la contrainte de composition s'élargit aux activités/repas.
-      expect(response.body).to include("un emplacement camping/van, une activité ou un repas")
+      patch stay_path(stay), params: update_params(stay, departure_date: (departure + 1).iso8601) # ni lodging ni halls
+      expect(response).to redirect_to(recent_stays_path)
+
+      stay.reload
+      expect(stay.stay_items).to be_empty
+      expect(stay.total_amount_cents).to eq(0)
+      expect([stay.arrival_date, stay.departure_date]).to eq([arrival, departure + 1])
     end
   end
 
