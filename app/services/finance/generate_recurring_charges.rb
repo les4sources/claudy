@@ -21,10 +21,19 @@ module Finance
       def any? = created.any? || existing.any? || skipped.any?
     end
 
-    def initialize(month:, dry_run: false, whodunnit: nil)
+    # La ligne « Charges habitants » posée à la main englobe charges, cagnotte et
+    # balançoire — rien d'autre. Une pension d'animal ou un forfait dôme reste
+    # à facturer à côté, même un mois facturé à la main.
+    LUMP_FLOWS = [nil, "", "charges", "pot"].freeze
+
+    # `only` restreint la génération à UNE règle : rattraper l'historique d'une
+    # charge posée après coup (la pension de Balthazar, active depuis 2022) sans
+    # rejouer toutes les autres règles sur des mois déjà soldés.
+    def initialize(month:, dry_run: false, whodunnit: nil, only: nil)
       @month = month.is_a?(String) ? Date.parse("#{month}-01") : month.to_date.beginning_of_month
       @dry_run = dry_run
       @whodunnit = whodunnit
+      @only = only
     end
 
     def run
@@ -41,7 +50,9 @@ module Finance
       report = Report.new(created: [], existing: [], skipped: [])
 
       PaperTrail.request(whodunnit: @whodunnit || "recurring") do
-        RecurringCharge.active_on(@month).each do |charge|
+        charges = RecurringCharge.active_on(@month)
+        charges = charges.where(id: @only) if @only
+        charges.each do |charge|
           # Une règle de périmètre se déplie ici, au moment de la génération :
           # la liste des ménages est celle du jour, pas celle du jour où la
           # règle a été écrite.
@@ -55,8 +66,9 @@ module Finance
     def process(charge, account, report)
       # Un foyer déjà facturé à la main ce mois-là (reprise, rattrapage) n'est
       # pas un foyer oublié : sa ligne couvre déjà la charge, et générer
-      # par-dessus doublerait la facture.
-      if by_hand?(account)
+      # par-dessus doublerait la facture. Seulement pour ce que cette ligne
+      # couvre (`LUMP_FLOWS`) : elle n'a jamais contenu la pension d'un animal.
+      if LUMP_FLOWS.include?(charge.flow) && by_hand?(account)
         return report.skipped << { charge: charge, account: account, cause: :by_hand,
                                    reason: "#{account.name} : déjà facturé à la main ce mois-là" }
       end
