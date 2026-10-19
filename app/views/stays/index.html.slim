@@ -129,7 +129,7 @@
             th class="#{sticky_th} text-left" Catégorie
             th class="#{sticky_th} text-center" Composition
             th class="#{sticky_th} text-right" Montant
-            th class="#{sticky_th} text-right" Actions
+            th class="#{sticky_th} text-left" Facturation
         tbody.divide-y.divide-gray-200
           /  Groupement par mois d'ARRIVÉE (Michael 2026-07-26). La liste est déjà
              triée par date, donc un simple suivi du mois précédent suffit —
@@ -200,16 +200,18 @@
                     svg.w-4.h-4.text-green-600(fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true" title="Intégralement payé")
                       path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"
                     span.sr-only Intégralement payé
-                - if stay.price_overridden?
-                  .text-xs.text-amber-700(title="Prix total imposé par l'admin") imposé
                 - if amount.balance_due_cents.positive?
                   .text-xs.text-red-600.whitespace-nowrap
                     | Solde dû #{humanized_money_with_symbol(Money.new(amount.balance_due_cents))}
               /  Pas de colonne « Paiement » (Michael 2026-07-26) : l'état de
                  paiement se lit déjà dans la colonne Montant — solde dû en rouge
                  ou check vert. Le badge faisait doublon et coûtait 150 px.
-              td.px-3.py-2.text-sm.text-right.whitespace-nowrap
-                = link_to "Éditer", edit_stay_path(stay), class: "text-indigo-600 hover:text-indigo-800 hover:underline"
+              /  Statut de facturation (Michael, 2026-10-19), à la place de la
+                 colonne « Actions » et de son lien « Éditer » : l'édition passe
+                 par la modale, ouverte d'un clic sur la ligne. Facture non
+                 requise : cellule vide, le badge ne marque que ce qui attend ou
+                 est parti (`invoice_badge` rend nil sinon).
+              td.px-3.py-2.text-sm.whitespace-nowrap = stay.invoice_badge
           - if @stays.empty?
             tr.bg-white
               td.px-4.py-6.text-center.text-sm.text-gray-400 colspan="6"

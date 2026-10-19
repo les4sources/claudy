@@ -117,4 +117,36 @@ RSpec.describe "Index Séjours (/stays)", type: :request do
       expect(response.body).to include(%(aria-current="page"))
     end
   end
+
+  # Colonne « Facturation » (Michael, 2026-10-19) : elle remplace la colonne
+  # « Actions » et son lien « Éditer » ; la mention « imposé » sous le montant
+  # disparaît aussi.
+  describe "colonne Facturation" do
+    let(:debut) { Date.today.beginning_of_quarter }
+
+    it "affiche le statut de facturation, rien quand la facture n'est pas requise" do
+      create_stay(email: "a-fournir@example.com", arrival: debut + 2, departure: debut + 4).update!(invoice_status: "requested")
+      create_stay(email: "facturee@example.com", arrival: debut + 5, departure: debut + 7).update!(invoice_status: "sent")
+      create_stay(email: "sans-facture@example.com", arrival: debut + 8, departure: debut + 9)
+
+      get stays_path(status: "all")
+
+      expect(response.body).to include(">Facturation</th>")
+      expect(response.body).to include(">À fournir</span>")
+      expect(response.body).to include(">Facturée</span>")
+      # Facture non requise : rien dans la cellule (Michael, 2026-10-19).
+      expect(response.body).not_to include("Non requise")
+    end
+
+    it "n'a plus de colonne Actions, de lien Éditer ni de mention « imposé »" do
+      stay = create_stay(email: "impose@example.com", arrival: debut + 2, departure: debut + 4, total_cents: 50_000)
+      stay.update!(price_override_cents: 40_000)
+
+      get stays_path(status: "all")
+
+      expect(response.body).not_to include(">Actions</th>")
+      expect(response.body).not_to include(%(href="#{edit_stay_path(stay)}"))
+      expect(response.body).not_to include("imposé")
+    end
+  end
 end
