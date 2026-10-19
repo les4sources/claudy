@@ -76,6 +76,18 @@ RSpec.describe "Comptabilité > Achats", type: :request do
     end
   end
 
+  describe "GET /finance/purchases/new" do
+    # La fenêtre « Nouveau fournisseur » vit dans le formulaire de la facture :
+    # un champ obligatoire vide, même fenêtre fermée, bloquait l'enregistrement.
+    it "n'a aucun champ obligatoire dans la fenêtre du nouveau fournisseur" do
+      get new_finance_purchase_invoice_path
+
+      dialog = response.body[%r{<dialog.*?</dialog>}m]
+      expect(dialog).to include("nouveau-fournisseur-nom")
+      expect(dialog).not_to match(/\srequired[\s=>]/)
+    end
+  end
+
   describe "POST /finance/purchases" do
     it "enregistre une facture et sa ventilation" do
       expect {
