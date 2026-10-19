@@ -19,10 +19,12 @@ class TeamsController < BaseController
     #
     # Les comptes passent en tête (Michael, 2026-10-18) : la santé du pôle, son
     # budget de l'année et les dépenses qui attendent son oui. C'est ce que les
-    # membres du collectif viennent d'abord y chercher.
+    # membres du collectif viennent d'abord y chercher. Viennent ensuite ses
+    # projets et leurs actions (Michael, 2026-10-19).
     def show
       @year = requested_year
       @accounts = Teams::Accounts.new(team: @team, year: @year)
+      @project_board = Teams::ProjectBoard.new(team: @team)
       @memberships = @team.team_memberships.includes(:human).sort_by { |m| [m.role == "referent" ? 0 : 1, m.human.name.to_s] }
       upcoming = @team.gatherings.upcoming.includes(:gathering_category).limit(5).to_a
       past = @team.gatherings.where("ends_at < ?", Time.current)

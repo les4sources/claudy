@@ -8,18 +8,43 @@
                    required: true,
                    class: "md:w-1/2 lg:w-2/3"
 
-    = f.label :description, 
-              "Descriptif du projet"
-    = f.rich_text_area :description
+    / Chaque projet appartient à un pôle (Michael, 2026-10-19) : c'est depuis
+      la page du pôle qu'on suit ses projets.
+    div(class="relative md:w-1/2 lg:w-2/3" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un pôle…")
+      = f.label :team_id, "Pôle *", class: "block text-sm font-medium text-gray-700"
+      = f.select :team_id,
+                 grouped_options_for_select(TeamDecorator.grouped_options, f.object.team_id),
+                 { include_blank: "— Choisir un pôle —" },
+                 required: true,
+                 class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm",
+                 data: { "searchable-select-target": "select" }
+      = render "shared/searchable_select_search", label: "Pôle"
 
-    = f.label :human_id, "Porteur.euse de projet"
-    = f.collection_radio_buttons :human_id, Human.all.order(:name), :id, :name do |radio_button|
-      .flex.items-center
-        = radio_button.radio_button
-        = radio_button.label(class: "ml-3 block text-sm font-medium text-gray-700")
+    div(class="relative md:w-1/2 lg:w-2/3" data-controller="searchable-select")
+      = f.label :status, "Statut", class: "block text-sm font-medium text-gray-700"
+      = f.select :status,
+                 Project::STATUS_LABELS.map(&:reverse),
+                 {},
+                 class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm",
+                 data: { "searchable-select-target": "select" }
+      = render "shared/searchable_select_search", label: "Statut"
+
+    div(class="relative md:w-1/2 lg:w-2/3" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une personne…")
+      = f.label :human_id, "Porteur·euse de projet *", class: "block text-sm font-medium text-gray-700"
+      = f.select :human_id,
+                 options_from_collection_for_select(Human.all.order(:name), :id, :name, f.object.human_id),
+                 { include_blank: "— Choisir une personne —" },
+                 required: true,
+                 class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm",
+                 data: { "searchable-select-target": "select" }
+      = render "shared/searchable_select_search", label: "Porteur·euse de projet"
 
     = f.date_field :due_date,
                     html5: true,
                     label: "Échéance"
+
+    = f.label :description,
+              "Descriptif du projet"
+    = f.rich_text_area :description
 
 hr
