@@ -16,6 +16,12 @@ module Finance
 
     OPEN_STATUSES = %w[pending partially_paid].freeze
 
+    # Un séjour encore VIDE (Michael, 2026-10-19) ou à 0 € n'attend aucun
+    # paiement : candidat, il rendrait ambigu le vrai séjour du même client.
+    def self.open_stays_scope
+      Stay.where(payment_status: OPEN_STATUSES).where("stays.total_amount_cents > 0")
+    end
+
     # La communication que la page client demande de mettre sur un virement
     # (Michael, 2026-10-19). Elle vit ICI, à côté de `by_communication` qui la
     # lit : changer l'une sans l'autre casserait l'affectation automatique.
@@ -171,7 +177,7 @@ module Finance
           # ligne garde la sienne, filtrée en mémoire.
           @stays_precharges.select { |stay| fenetre.cover?(stay.departure_date) }
         else
-          Stay.where(payment_status: OPEN_STATUSES).where(departure_date: fenetre)
+          self.class.open_stays_scope.where(departure_date: fenetre)
               .includes(:customer).to_a
         end
       end
@@ -183,7 +189,7 @@ module Finance
       dates = cash_entries.map(&:entry_date)
       return [[], {}] if dates.empty?
 
-      stays = Stay.where(payment_status: OPEN_STATUSES)
+      stays = open_stays_scope
                   .where(departure_date: (dates.min - 1.year)..(dates.max + 6.months))
                   .includes(:customer).to_a
       # Le cache des soldes part VIDE : il se remplit à la demande, et seulement

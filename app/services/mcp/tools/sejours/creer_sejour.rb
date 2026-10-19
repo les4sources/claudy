@@ -21,7 +21,8 @@ module Mcp
              description: "Crée un séjour comme le formulaire « Nouveau séjour » : client existant ou nouveau, gîte " \
                           "ou chambres, dates, espaces, camping, repas, activités, draps, statut. Créé « confirmed », " \
                           "il ENVOIE AU CLIENT l'email de confirmation ; « pending » (défaut) n'envoie rien. Des repas " \
-                          "préviennent la cuisine. Calcule d'abord le prix avec devis_sejour si besoin.",
+                          "préviennent la cuisine. Sans rien de tout ça, le séjour naît vide (client + dates), à " \
+                          "composer ensuite avec modifier_sejour. Calcule d'abord le prix avec devis_sejour si besoin.",
              schema: {
                properties: { client: CLIENT, nouveau_client: NOUVEAU_CLIENT }
                  .merge(Composition::PROPRIETES)

@@ -252,6 +252,19 @@ RSpec.describe Reservations::Builder do
       expect(builder.error_message).to include("disponibles")
       expect(Stay.count).to eq(0)
     end
+
+    # Le séjour vide (Michael, 2026-10-19) est réservé à l'équipe.
+    it "refuse un séjour vide au funnel public, l'accepte en admin" do
+      vide = draft(lodging_id: nil)
+      public_builder = described_class.new(draft: vide)
+      expect(public_builder.run).to be(false)
+      expect(public_builder.error_message).to include("un hébergement, un espace")
+
+      admin_builder = described_class.new(draft: vide, admin: true)
+      expect(admin_builder.run).to be(true), admin_builder.error_message
+      expect(admin_builder.stay.bookables).to be_empty
+      expect(admin_builder.stay.arrival_date).to eq(arrival)
+    end
   end
 
   # ------------------------------------------------------------------------
