@@ -69,6 +69,23 @@ Rails.application.routes.draw do
     resources :coworking_reservations, only: [:create, :destroy]
   end
   resources :decisions
+  # Le Guide des 4 Sources (Michael, 2026-10-19) : le manuel interne, lu par
+  # tous les rôles. Écrire (chapitres, pages, retour à une version) demande
+  # `section_writable?(:guide)`, cf. `Guide::BaseController`.
+  namespace :guide do
+    root to: "pages#index"
+    resources :chapters, only: %i[new create edit update destroy] do
+      collection { patch :reorder }
+      member { patch :reorder_pages }
+    end
+    resources :pages, except: :index do
+      resources :revisions, only: %i[index show] do
+        member { post :restore }
+      end
+    end
+    # « Voir la procédure » : l'écran qui renvoie à une page.
+    resources :screen_links, only: %i[new create destroy]
+  end
   get "organisation/decisions", to: "decisions#index", as: :organisation_decisions
   resources :experiences do
     member do

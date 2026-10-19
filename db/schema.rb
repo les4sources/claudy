@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_19_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_19_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1221,6 +1221,57 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_140000) do
     t.index ["code"], name: "index_general_accounts_on_code", unique: true
     t.index ["deleted_at"], name: "index_general_accounts_on_deleted_at"
     t.index ["klass"], name: "index_general_accounts_on_klass"
+  end
+
+  create_table "guide_chapters", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.text "description"
+    t.integer "position", default: 0, null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_guide_chapters_on_deleted_at"
+    t.index ["position"], name: "index_guide_chapters_on_position"
+  end
+
+  create_table "guide_page_revisions", force: :cascade do |t|
+    t.text "body", default: "", null: false
+    t.datetime "created_at", null: false
+    t.bigint "guide_page_id", null: false
+    t.string "source", default: "web", null: false
+    t.string "summary"
+    t.string "title", null: false
+    t.bigint "user_id"
+    t.index ["guide_page_id", "created_at"], name: "index_guide_page_revisions_on_guide_page_id_and_created_at"
+    t.index ["user_id"], name: "index_guide_page_revisions_on_user_id"
+  end
+
+  create_table "guide_pages", force: :cascade do |t|
+    t.text "body", default: "", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "guide_chapter_id", null: false
+    t.datetime "last_edited_at"
+    t.bigint "last_editor_id"
+    t.integer "position", default: 0, null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_guide_pages_on_deleted_at"
+    t.index ["guide_chapter_id", "position"], name: "index_guide_pages_on_guide_chapter_id_and_position"
+    t.index ["last_editor_id"], name: "index_guide_pages_on_last_editor_id"
+  end
+
+  create_table "guide_screen_links", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "guide_page_id", null: false
+    t.string "label"
+    t.string "path"
+    t.string "screen", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id"
+    t.index ["guide_page_id"], name: "index_guide_screen_links_on_guide_page_id"
+    t.index ["screen"], name: "index_guide_screen_links_on_screen", unique: true
+    t.index ["user_id"], name: "index_guide_screen_links_on_user_id"
   end
 
   create_table "hamac_bookings", force: :cascade do |t|
@@ -2870,6 +2921,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_140000) do
   add_foreign_key "gathering_teams", "gatherings"
   add_foreign_key "gathering_teams", "teams"
   add_foreign_key "gatherings", "gathering_categories"
+  add_foreign_key "guide_page_revisions", "guide_pages"
+  add_foreign_key "guide_page_revisions", "users"
+  add_foreign_key "guide_pages", "guide_chapters"
+  add_foreign_key "guide_pages", "users", column: "last_editor_id"
+  add_foreign_key "guide_screen_links", "guide_pages"
+  add_foreign_key "guide_screen_links", "users"
   add_foreign_key "household_members", "households"
   add_foreign_key "household_members", "humans"
   add_foreign_key "human_roles", "humans"

@@ -67,6 +67,9 @@ gem "dotenv-rails", groups: [:development, :test]
 # Sorties des default gems (csv : bundled dès Ruby 3.4 ; ostruct : annoncé pour Ruby 4).
 # csv est requis par lib/tasks (imports/exports), ostruct par service_base et neuf specs.
 gem "csv"
+# Le Guide des 4 Sources (2026-10-19) : ses pages sont en Markdown, rendues
+# côté serveur (CommonMark + tableaux, sans HTML brut).
+gem "commonmarker", "~> 2.0"
 gem "ostruct"
 
 gem "awesome_print"

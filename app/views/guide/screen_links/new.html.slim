@@ -1,0 +1,28 @@
+/ Le formulaire du lien écran → page du Guide, chargé dans le cadre ouvert
+  par l'en-tête de l'écran (`_header`).
+= turbo_frame_tag "guide_screen_link" do
+  - if @pages.empty?
+    p.text-sm.text-stone-600
+      | Le Guide n'a encore aucune page.
+      =< link_to "En écrire une", new_guide_page_path, class: "font-medium text-emerald-700 hover:underline", data: { turbo_frame: "_top" }
+  - else
+    = form_with url: guide_screen_links_path, data: { turbo_frame: "_top" } do |f|
+      = hidden_field_tag :screen, @link.screen
+      = hidden_field_tag :path, @link.path
+      = hidden_field_tag :label, @link.label
+      .text-sm.font-medium.text-stone-800 La procédure de cet écran
+      p.mt-0.5.text-xs.text-stone-500 Tout le monde verra « Voir la procédure » à côté du titre.
+      .relative.mt-3(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une page…")
+        = select_tag :guide_page_id,
+                     options_for_select(@pages.map { |page| ["#{page.chapter.title} › #{page.title}", page.id] }, @link.guide_page_id),
+                     class: "w-full rounded-md border-gray-300 text-sm shadow-sm",
+                     aria: { label: "Page du Guide" },
+                     data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher une page du Guide"
+      .mt-4.flex.items-center.justify-between.gap-3
+        button.inline-flex.items-center.rounded-lg.bg-emerald-600.px-3.py-1.5.text-sm.font-medium.text-white.shadow-sm.hover:bg-emerald-700(type="submit")
+          = @link.persisted? ? "Changer" : "Lier"
+        - if @link.persisted?
+          = link_to "Retirer le lien", guide_screen_link_path(@link),
+                    class: "text-xs font-medium text-red-600 hover:underline",
+                    data: { turbo_method: :delete, turbo_frame: "_top" }

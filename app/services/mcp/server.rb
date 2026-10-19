@@ -160,7 +160,14 @@ module Mcp
       Tools::Carte::NoteCarte,
       Tools::Carte::FilCarte,
       Tools::Carte::ReleveBiodiversite,
-      Tools::Carte::ElementCarte
+      Tools::Carte::ElementCarte,
+      Tools::Guide::Sommaire,
+      Tools::Guide::PageGuide,
+      Tools::Guide::EnregistrerPageGuide,
+      Tools::Guide::RemplacerTexteGuide,
+      Tools::Guide::AjouterImageGuide,
+      Tools::Guide::GestePageGuide,
+      Tools::Guide::EnregistrerChapitreGuide
     ].freeze
 
     INSTRUCTIONS = <<~TEXT.freeze
@@ -241,6 +248,18 @@ module Mcp
       Ce qui se dessine (zones, tracés, aménagements, croquis) et ce qui
       demande une photo (identification Pl@ntNet, bio-indicatrices) se fait
       dans Claudy.
+
+      LE GUIDE DES 4 SOURCES. Le manuel interne du collectif : procédures (ex.
+      « Soumettre une note de frais »), arrivée et départ des membres,
+      coordonnées administratives… En chapitres et pages Markdown. Quand on te
+      demande comment faire quelque chose aux 4 Sources, cherche d'abord dans
+      le Guide (guide avec recherche, puis page_guide). Pour écrire : lis la
+      page, puis enregistrer_page_guide (texte complet) ou remplacer_texte_guide
+      (un passage) ; chaque modification devient une version signée de ton
+      compte, qu'on peut restaurer (geste_page_guide). Une page en cite une
+      autre par « [[Titre]] » (renommer une page met ces liens à jour). Les
+      écrans de Claudy renvoient à leur procédure (« Voir la procédure ») : ce
+      lien se pose depuis l'écran, pas depuis ici.
 
       COMPTES COURANTS des familles et des personnes (SRC-0001…). Le grand
       livre : chaque ligne a un montant SIGNÉ (positif = dû par le compte,
