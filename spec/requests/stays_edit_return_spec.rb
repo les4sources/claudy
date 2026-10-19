@@ -1,8 +1,9 @@
 require "rails_helper"
 
-# Retour après l'édition d'un séjour (Michael, 2026-10-18) : enregistrer ou
-# annuler ramène TOUJOURS à la vue d'où le formulaire a été ouvert — agenda
-# (modale rouverte via `open_stay`), liste des séjours, paiements… Le chemin
+# Retour après l'édition d'un séjour (Michael, 2026-10-18) : enregistrer,
+# annuler ou supprimer (2026-10-19) ramène TOUJOURS à la vue d'où le formulaire
+# a été ouvert — agenda (modale rouverte via `open_stay`, sauf après
+# suppression), liste des séjours, paiements… Le chemin
 # vient du `return_to` du lien, sinon du Referer, et reste borné à l'application.
 RSpec.describe "Stays — retour à la vue d'origine après édition", type: :request do
   include Devise::Test::IntegrationHelpers
@@ -116,6 +117,44 @@ RSpec.describe "Stays — retour à la vue d'origine après édition", type: :re
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(hidden_return_to).to eq("/payments")
+    end
+  end
+
+  describe "DELETE /stays/:id" do
+    def delete_button_return_to
+      Nokogiri::HTML(response.body).css("form").find { |f| f.at_css("button")&.text&.strip == "Supprimer le séjour" }
+              &.at_css("input[name=return_to]")&.[]("value")
+    end
+
+    it "le bouton « Supprimer » du formulaire emporte la vue d'origine" do
+      get edit_stay_path(stay), headers: { "Referer" => "http://www.example.com/payments" }
+
+      expect(delete_button_return_to).to eq("/payments")
+    end
+
+    it "revient à la vue d'origine après suppression" do
+      delete stay_path(stay), params: { return_to: "/stays?q=Martin" }
+
+      expect(response).to redirect_to("/stays?q=Martin")
+      expect(flash[:notice]).to eq("Séjour supprimé.")
+    end
+
+    it "ne rouvre pas la modale du séjour supprimé sur l'agenda" do
+      delete stay_path(stay), params: { return_to: "/?date=2026-10-12&open_stay=#{stay.id}" }
+
+      expect(response).to redirect_to("/?date=2026-10-12")
+    end
+
+    it "ne revient pas sur la fiche du séjour supprimé" do
+      delete stay_path(stay), params: { return_to: "/stays/#{stay.id}" }
+
+      expect(response).to redirect_to(recent_stays_path)
+    end
+
+    it "sans origine connue, garde le repli historique" do
+      delete stay_path(stay)
+
+      expect(response).to redirect_to(recent_stays_path)
     end
   end
 end

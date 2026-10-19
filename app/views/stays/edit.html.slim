@@ -7,5 +7,6 @@
       / Duplication (epic #81, Phase 7) : form NEW prérempli depuis ce séjour,
       / dates/paiement/prix imposé exclus.
       = link_to "Dupliquer", new_stay_path(duplicate_from: @stay.id), title: "Dupliquer ce séjour (nouvelles dates à choisir)", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-      = button_to "Supprimer le séjour", stay_path(@stay), method: :delete, data: { turbo_confirm: "Supprimer ce séjour ? Cette action est réversible (soft-delete)." }, class: "inline-flex items-center rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+      / Après suppression, retour à la vue d'où l'édition a été ouverte (`@return_to`).
+      = button_to "Supprimer le séjour", stay_path(@stay), method: :delete, params: { return_to: @return_to }.compact, data: { turbo_confirm: "Supprimer ce séjour ? Cette action est réversible (soft-delete)." }, class: "inline-flex items-center rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
   = render "form", url: stay_path(@stay), method: :patch, submit_label: "Enregistrer les modifications"
