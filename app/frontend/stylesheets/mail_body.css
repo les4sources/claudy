@@ -1,0 +1,27 @@
+/* Corps d'un mail dans la Boite de réception (Comptabilité).
+   Le HTML arrive assaini par MailIntake::Body : balises de texte seulement,
+   aucun style ni classe de l'expéditeur. On lui rend ici une typographie
+   sobre — paragraphes serrés comme dans une messagerie (Outlook met chaque
+   ligne dans un <p>), listes, liens et tableaux lisibles sans déborder. */
+.mail-body {
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  color: rgb(55 65 81); /* gray-700 */
+  overflow-wrap: anywhere;
+}
+.mail-body p,
+.mail-body div { margin: 0; }
+.mail-body a { color: rgb(37 99 235); text-decoration: underline; text-underline-offset: 2px; }
+.mail-body a:hover { color: rgb(29 78 216); }
+.mail-body ul { list-style: disc; padding-left: 1.25rem; margin: 0.25rem 0; }
+.mail-body ol { list-style: decimal; padding-left: 1.25rem; margin: 0.25rem 0; }
+.mail-body b, .mail-body strong { font-weight: 600; }
+.mail-body i, .mail-body em { font-style: italic; }
+.mail-body u { text-decoration: underline; }
+.mail-body h1, .mail-body h2, .mail-body h3,
+.mail-body h4, .mail-body h5, .mail-body h6 { font-weight: 600; margin: 0.5rem 0 0.25rem; }
+.mail-body hr { margin: 0.75rem 0; border-color: rgb(229 231 235); }
+.mail-body blockquote { border-left: 2px solid rgb(229 231 235); padding-left: 0.75rem; margin: 0.5rem 0; color: rgb(107 114 128); }
+.mail-body pre { white-space: pre-wrap; font-size: 0.8125rem; }
+.mail-body table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; margin: 0.25rem 0; }
+.mail-body td, .mail-body th { padding: 0.125rem 0.5rem 0.125rem 0; vertical-align: top; text-align: left; }

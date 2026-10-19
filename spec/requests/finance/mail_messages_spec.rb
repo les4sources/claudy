@@ -50,6 +50,27 @@ RSpec.describe "Comptabilité > Boite de réception", type: :request do
     expect(response.body).to include("2026-77812", "reconnu", "à vérifier", "Créer la facture", "<iframe")
   end
 
+  it "affiche un mail HTML lisible, la réponse citée repliée" do
+    mail = Mail.new
+    mail.from = "Gaëlle <gaelle@example.be>"
+    mail.to = "compta@les4sources.be"
+    mail.subject = "Re: Rappel"
+    mail.message_id = "html@example.be"
+    mail.html_part = Mail::Part.new do
+      content_type "text/html; charset=UTF-8"
+      body "<div>Coucou,</div><div>C'est payé&nbsp;!</div><blockquote type=\"cite\">Salut Gaëlle, petit rappel.</blockquote>"
+    end
+    imap = MailIntakeHelpers::FakeImap.new({ 2 => mail.to_s })
+    html_message = MailIntake::Sync.new(mail_account: account, imap: imap).run!.first
+
+    get finance_mail_message_path(html_message)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("<div>Coucou,</div>", "Afficher le message cité", "Salut Gaëlle, petit rappel.")
+    expect(response.body).not_to include("&amp;nbsp;")
+    expect(html_message.body_text).to eq("Coucou,\nC'est payé !\nSalut Gaëlle, petit rappel.")
+  end
+
   it "préremplit la facture depuis la pièce, PDF compris" do
     get new_finance_purchase_invoice_path(mail_attachment_id: attachment.id)
 
