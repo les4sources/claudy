@@ -1,0 +1,4 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Modifier « #{@page.title_was} »"
+
+= render "form", page: @page

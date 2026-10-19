@@ -32,6 +32,7 @@ module AccountingNavHelper
     [
       ["Banque & caisse", "banque", [
         ["CODA", finance_coda_imports_path, %w[finance/coda_imports]],
+        ["Comptes de trésorerie", finance_cash_accounts_path, %w[finance/cash_accounts]],
         ["Règles d'affectation", finance_allocation_rules_path, %w[finance/allocation_rules]],
         ["Caisse", finance_cash_sheet_path, %w[finance/cash_sheet finance/cash_motifs finance/cash_counts]],
         ["Stripe", finance_stripe_path, %w[finance/stripe finance/stripe_category_mappings]],
@@ -81,6 +82,7 @@ module AccountingNavHelper
     "Arrêté du mois" => "Vérifier puis fermer le mois",
     "Échéancier" => "Les dates légales à tenir",
     "CODA" => "Déposer les relevés de la banque",
+    "Comptes de trésorerie" => "Les comptes en banque et leur IBAN",
     "Règles d'affectation" => "Les propositions automatiques d'affectation",
     "Caisse" => "La feuille d'espèces et les comptages",
     "Stripe" => "Les paiements par carte et leurs catégories",

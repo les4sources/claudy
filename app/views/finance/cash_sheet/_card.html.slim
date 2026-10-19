@@ -16,4 +16,4 @@
         | solde #{number_to_currency(row.balance_cents / 100.0)}
   - unless sheet.closed?
     .mt-2
-      = render "finance/cash_sheet/actions", entry: row.entry, sheet: sheet, motifs: motifs
+      = render "finance/cash_sheet/actions", entry: row.entry, sheet: sheet

@@ -21,6 +21,8 @@ fr:
         paid_cents: Déjà payé
         expected_on: Date probable
         installments: Nombre de mensualités
+      cash_account:
+        iban: IBAN
       sales_invoice:
         number: Numéro
         issued_on: Date d'émission

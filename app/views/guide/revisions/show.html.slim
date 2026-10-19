@@ -1,0 +1,25 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Version #{@revision.number} de « #{@page.title} »"
+
+.mb-6.flex.max-w-3xl.flex-wrap.items-center.justify-between.gap-4.rounded-xl.border.border-amber-200.bg-amber-50.px-4.py-3
+  .flex.items-center.gap-3
+    = guide_avatar(@revision.user, size: :md)
+    .text-sm.text-stone-700
+      span.font-semibold = @revision.author_name
+      =< "le #{guide_date(@revision.created_at)}"
+      - if @revision.via_claude?
+        |  (via Claude)
+      - if @revision.summary.present?
+        .text-stone-600 = @revision.summary
+  .flex.items-center.gap-4
+    - if @current
+      span.text-sm.font-medium.text-emerald-800 C'est la version actuelle.
+    - elsif guide_writer?
+      = button_to "Revenir à cette version", restore_guide_page_revision_path(@page, @revision),
+                  class: "rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700",
+                  form: { data: { turbo_confirm: "Remettre la page dans l'état de cette version ? La version actuelle reste dans l'historique." } }
+    = link_to "Tout l'historique", guide_page_revisions_path(@page), class: "text-sm font-medium text-stone-600 hover:text-emerald-700"
+
+h1.font-averia.text-3xl.font-bold.text-stone-900 = @revision.title
+.guide-content.prose.prose-stone.mt-6.max-w-3xl.prose-a:text-emerald-700.prose-img:rounded-lg
+  = @markdown.to_html

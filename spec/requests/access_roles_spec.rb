@@ -80,15 +80,16 @@ RSpec.describe "Rôles d'accès", type: :request do
     end
   end
 
-  context "Ânier·ère (rôle sans section pour l'instant)" do
+  context "Ânier·ère (le Guide seulement, en attendant sa section)" do
     before { sign_in account("anier@les4sources.be", %w[anier]) }
 
-    it "n'ouvre rien, pas même le tableau de bord, et le dit" do
-      [root_path, dashboard_path, map_path].each do |path|
+    it "est renvoyé vers le Guide depuis les autres sections" do
+      [root_path, map_path].each do |path|
         get path
-        expect(response).to have_http_status(:forbidden)
-        expect(response.body).to include("Pas encore d'accès", "Ânier·ère")
+        expect(response).to redirect_to(guide_root_path)
       end
+      get guide_root_path
+      expect(response).to have_http_status(:ok)
     end
   end
 

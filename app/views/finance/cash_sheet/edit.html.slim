@@ -1,0 +1,68 @@
+/ Corriger ou retirer une ligne de la feuille de caisse, en modale (cadre
+  `modal`). Les deux gestes dé-passent l'écriture, la corrigent et la
+  repassent : la contre-passation reste au grand livre.
+  Chaque formulaire répond par la feuille redessinée ; un refus s'écrit dans
+  le bandeau rouge et la modale reste ouverte.
+- entry = @entry
+- month = @month.strftime("%Y-%m")
+- field = "mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm"
+- label_class = "block text-xs font-medium text-gray-600"
+= render TurboModal::Component.new(title: "Corriger la ligne", width: :md) do
+  p.text-sm.text-gray-500(class="-mt-2")
+    = l(entry.entry_date, format: :long)
+    = " · #{entry.cash_motif&.label || 'sans motif'} · "
+    span.font-medium(class=(entry.amount_cents.positive? ? "text-emerald-700" : "text-orange-700"))
+      = "#{entry.amount_cents.positive? ? '+' : '−'} #{number_to_currency(entry.amount_cents.abs / 100.0)}"
+
+  .mt-4.rounded-md.border.border-red-200.bg-red-50.px-3.py-2.text-sm.text-red-800(id=dom_id(entry, :correction_error) role="alert" class="empty:hidden")
+
+  - if @closed
+    .mt-4.rounded-lg.border.border-amber-200.bg-amber-50.px-4.py-3.text-sm.text-amber-900
+      strong Mois arrêté.
+      |  Cette ligne est en lecture seule. Une correction s'y fait par écriture, pas en réécrivant la feuille.
+  - else
+    = form_with url: finance_cash_sheet_line_path(entry), method: :patch, class: "mt-4 space-y-4" do
+      = hidden_field_tag :month, month
+      = hidden_field_tag :cash_account_id, entry.cash_account_id
+
+      .grid.grid-cols-2.gap-3
+        div
+          = label_tag "cash_line_entry_date", "Date", class: label_class
+          = date_field_tag "cash_line[entry_date]", entry.entry_date, id: "cash_line_entry_date", required: true, class: field
+        div
+          = label_tag "cash_line_amount", "Montant (€)", class: label_class
+          = number_field_tag "cash_line[amount]", format("%.2f", entry.amount_cents.abs / 100.0), id: "cash_line_amount", step: 0.01, min: 0, required: true, inputmode: "decimal", class: field
+
+      div(class="relative" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un motif…")
+        = label_tag "cash_line_cash_motif_id", "Motif", class: label_class
+        = select_tag "cash_line[cash_motif_id]", options_from_collection_for_select(@motifs, :id, ->(m) { "#{m.label} · #{m.direction_label}" }, entry.cash_motif_id), id: "cash_line_cash_motif_id", required: true, class: field, data: { searchable_select_target: "select" }
+        = render "shared/searchable_select_search", label: "Chercher un motif"
+        p.mt-1.text-xs.text-gray-400 Le sens vient du motif : pas de signe à taper.
+
+      div
+        = label_tag "cash_line_label", "Libellé", class: label_class
+        = text_field_tag "cash_line[label]", entry.label, id: "cash_line_label", required: true, class: field
+
+      div
+        = label_tag "cash_line_notes", "Note", class: label_class
+        = text_field_tag "cash_line[notes]", entry.notes, id: "cash_line_notes", placeholder: "Ce qu'on écrirait dans la marge", class: field
+
+      p.text-xs.text-gray-400
+        | L'écriture est contre-passée puis repassée : les deux restent lisibles au grand livre.
+
+      .flex.items-center.justify-end.gap-3.border-t.border-gray-100.pt-4
+        button.text-sm.text-gray-500(type="button" class="hover:underline" data-action="turbo-modal--component#closeDialog") Annuler
+        button.inline-flex.items-center.rounded-md.bg-4s-main.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(type="submit" class="hover:opacity-90") Enregistrer la correction
+
+    / Retirer plutôt que supprimer (règle B2) : la ligne quitte la feuille avec
+      son motif, et reste listée sous le tableau.
+    = form_with url: finance_exclude_cash_sheet_line_path(entry), method: :post, class: "mt-6 rounded-lg border border-red-100 bg-red-50/40 px-4 py-3" do
+      = hidden_field_tag :month, month
+      = hidden_field_tag :cash_account_id, entry.cash_account_id
+      h2.text-sm.font-semibold.text-gray-900 Retirer la ligne
+      p.mt-0.5.text-xs.text-gray-500 Une saisie en double, une erreur de caisse : la ligne sort de la feuille avec son motif, sans être détruite.
+      .mt-3.flex.flex-col.gap-2(class="sm:flex-row sm:items-end")
+        .grow
+          = label_tag "cash_line_reason", "Motif du retrait", class: label_class
+          = text_field_tag :reason, nil, id: "cash_line_reason", required: true, placeholder: "Saisie en double…", class: field
+        button.shrink-0.rounded-md.border.border-red-200.bg-white.px-3.py-2.text-sm.font-medium.text-red-600(type="submit" class="hover:bg-red-50") Retirer la ligne

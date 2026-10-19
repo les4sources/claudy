@@ -10,11 +10,18 @@
     button.inline-flex.items-center.rounded-md.border.border-transparent.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90" type="submit")
       | Importer
 
-- if @accounts.any? { |a| a.iban.blank? }
+/  Seuls les comptes en banque reçoivent un relevé : une caisse ou un compte
+   Stripe sans IBAN est normal, et l'avertissement ne doit pas les compter.
+- sans_iban = @accounts.select { |a| a.bank? && a.iban.blank? }
+- if sans_iban.any?
   .mb-4.p-4.rounded-lg.border.border-amber-100(class="bg-amber-50/60")
     p.text-sm.text-gray-700
-      | Certains comptes de trésorerie n'ont pas d'IBAN : l'import ne pourra pas les reconnaître.
-      = link_to "Compléter", finance_legal_entities_path, class: "ml-1 text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+      | Ces comptes en banque n'ont pas d'IBAN : l'import ne pourra pas reconnaître leurs relevés.
+    ul.mt-2.space-y-1.text-sm
+      - sans_iban.each do |account|
+        li
+          = account.name
+          = link_to "Ajouter l'IBAN", edit_finance_cash_account_path(account), class: "ml-2 text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
 
 - if @imports.blank?
   .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100

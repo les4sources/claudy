@@ -163,7 +163,8 @@ module Finance
       ),
       "finance/legal_entities" => Page.new(
         "Les structures juridiques qui tiennent chacune leur comptabilité, et leurs comptes en banque.",
-        ["Vérifie que chaque compte en banque a son IBAN : sans lui, l'import des relevés ne le reconnaît pas."],
+        ["Vérifie que chaque compte en banque a son IBAN (Banque & caisse › Comptes de trésorerie) : sans lui, " \
+         "l'import des relevés ne le reconnaît pas."],
         %w[entite]
       ),
       "finance/fiscal_years" => Page.new(
@@ -233,6 +234,12 @@ module Finance
          "Dépose-le ici. Redéposer un fichier déjà importé ne crée rien : pas de doublon à craindre.",
          "Les nouvelles lignes attendent ensuite dans « À affecter »."],
         %w[coda tresorerie a-affecter]
+      ),
+      "finance/cash_accounts" => Page.new(
+        "Les comptes où l'argent se pose (banque, caisse, Stripe), et l'IBAN de chaque compte en banque.",
+        ["Un compte en banque sans IBAN ? Clique « Ajouter l'IBAN » et recopie-le depuis la banque en ligne.",
+         "Dépose ensuite son relevé dans Banque & caisse › CODA : il sera reconnu."],
+        %w[coda tresorerie]
       ),
       "finance/allocation_rules" => Page.new(
         "Les règles qui proposent une affectation quand une ligne revient souvent (Voo, l'assurance, le bar…).",

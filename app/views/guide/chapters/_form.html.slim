@@ -1,0 +1,24 @@
+= form_with model: chapter, url: (chapter.persisted? ? guide_chapter_path(chapter) : guide_chapters_path), class: "max-w-2xl" do |f|
+  - if chapter.errors.any?
+    .mb-6.rounded-lg.border.border-red-200.bg-red-50.px-4.py-3.text-sm.text-red-800
+      = chapter.errors.full_messages.to_sentence
+
+  .space-y-6
+    = f.text_field :title, label: "Titre", required: true, autofocus: true,
+                   placeholder: "Ex. Procédures"
+    = f.text_field :description, label: "Introduction (facultatif)",
+                   placeholder: "Ex. Les gestes administratifs du quotidien, pas à pas.",
+                   hint: "Une phrase sous le titre, dans le sommaire."
+
+  .mt-8.flex.flex-wrap.items-center.justify-between.gap-4.border-t.border-stone-200.pt-6
+    .flex.items-center.gap-3
+      button.inline-flex.items-center.rounded-lg.bg-emerald-600.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.hover:bg-emerald-700(type="submit")
+        = chapter.persisted? ? "Enregistrer" : "Créer le chapitre"
+      = link_to "Annuler", guide_root_path, class: "text-sm font-medium text-stone-600 hover:underline"
+    - if chapter.persisted?
+      - if chapter.removable?
+        = link_to "Supprimer le chapitre", guide_chapter_path(chapter),
+                  class: "text-sm font-medium text-red-600 hover:underline",
+                  data: { turbo_method: :delete, turbo_confirm: "Supprimer le chapitre « #{chapter.title} » ?" }
+      - else
+        span.text-xs.text-stone-500 Pour supprimer ce chapitre, déplace ou retire d'abord ses pages.

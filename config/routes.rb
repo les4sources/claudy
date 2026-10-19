@@ -69,6 +69,23 @@ Rails.application.routes.draw do
     resources :coworking_reservations, only: [:create, :destroy]
   end
   resources :decisions
+  # Le Guide des 4 Sources (Michael, 2026-10-19) : le manuel interne, lu par
+  # tous les rôles. Écrire (chapitres, pages, retour à une version) demande
+  # `section_writable?(:guide)`, cf. `Guide::BaseController`.
+  namespace :guide do
+    root to: "pages#index"
+    resources :chapters, only: %i[new create edit update destroy] do
+      collection { patch :reorder }
+      member { patch :reorder_pages }
+    end
+    resources :pages, except: :index do
+      resources :revisions, only: %i[index show] do
+        member { post :restore }
+      end
+    end
+    # « Voir la procédure » : l'écran qui renvoie à une page.
+    resources :screen_links, only: %i[new create destroy]
+  end
   get "organisation/decisions", to: "decisions#index", as: :organisation_decisions
   resources :experiences do
     member do
@@ -335,6 +352,7 @@ Rails.application.routes.draw do
     # pour que `/finance/cash/motifs` reste lisible à côté de `/finance/cash`.
     get "cash", to: "cash_sheet#show", as: :cash_sheet
     post "cash/lines", to: "cash_sheet#create", as: :cash_sheet_lines
+    get "cash/lines/:id/edit", to: "cash_sheet#edit", as: :edit_cash_sheet_line
     patch "cash/lines/:id", to: "cash_sheet#update", as: :cash_sheet_line
     post "cash/lines/:id/exclude", to: "cash_sheet#exclude", as: :exclude_cash_sheet_line
     # Comptages de caisse (epic #243, phase 3). Pas de `show` : un comptage se
@@ -466,6 +484,10 @@ Rails.application.routes.draw do
 
     resources :general_accounts, path: "chart_of_accounts", except: [:show]
     resources :legal_entities, path: "entities", except: [:show]
+    # Les comptes de trésorerie à l'écran (Michael, 2026-10-19) : l'IBAN seul s'y
+    # corrige. La création, l'entité et le compte général restent à l'API et au
+    # connecteur (`compte_tresorerie`), qui gardent leurs garde-fous.
+    resources :cash_accounts, only: [:index, :edit, :update]
     resources :fiscal_years, except: [:show] do
       member { post :close }
     end
