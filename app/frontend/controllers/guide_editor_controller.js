@@ -7,6 +7,7 @@ import { TableKit } from "@tiptap/extension-table"
 import { TaskList, TaskItem } from "@tiptap/extension-list"
 import { Markdown } from "@tiptap/markdown"
 import { DirectUpload } from "@rails/activestorage"
+import { GuideLink, normalizeTitle } from "~/utils/guide_link"
 
 // L'éditeur visuel du Guide des 4 Sources (2026-10-19). Il écrit du
 // MARKDOWN dans le <textarea> du formulaire, qui reste la source de vérité :
@@ -16,6 +17,9 @@ import { DirectUpload } from "@rails/activestorage"
 // insérées par leur adresse permanente
 // `/rails/active_storage/blobs/redirect/<signed_id>/<nom>` ; à
 // l'enregistrement, `Guide::SavePage` les rattache à la page.
+//
+// `[[` ouvre la liste des pages du Guide (`pagesValue`) : le choix devient un
+// lien `[[Titre]]` (cf. `utils/guide_link.js`).
 //
 // Le <textarea> n'est réécrit qu'après une vraie modification : ouvrir une
 // page et l'enregistrer sans y toucher ne crée pas de version fantôme, même si
@@ -59,7 +63,7 @@ const ACTIVE = {
 
 export default class extends Controller {
   static targets = ["editor", "source", "toolbar", "visualTools", "tableTools", "sourceToggle", "file", "status"]
-  static values = { uploadUrl: String }
+  static values = { uploadUrl: String, pages: Array }
 
   connect() {
     this.sourceMode = false
@@ -80,12 +84,14 @@ export default class extends Controller {
         TableKit.configure({ table: { resizable: false } }),
         TaskList,
         TaskItem.configure({ nested: true }),
+        GuideLink,
         Markdown,
       ],
       content: this.sourceTarget.value || "",
       contentType: "markdown",
       editorProps: {
         attributes: { class: "prose prose-stone max-w-none focus:outline-none prose-a:text-emerald-700" },
+        handleKeyDown: (_view, event) => this.linkMenuKey(event),
         handlePaste: (_view, event) => this.handleFiles(event.clipboardData?.files),
         handleDrop: (view, event, _slice, moved) => {
           if (moved) return false
@@ -97,12 +103,17 @@ export default class extends Controller {
       onUpdate: () => {
         if (!this.loading) this.sourceTarget.value = this.editor.getMarkdown()
       },
-      onTransaction: () => this.refreshToolbar(),
+      onTransaction: () => {
+        this.refreshToolbar()
+        this.updateLinkMenu()
+      },
+      onBlur: () => this.hideLinkMenu(),
     })
     this.refreshToolbar()
   }
 
   disconnect() {
+    this.hideLinkMenu()
     this.editor?.destroy()
     this.editor = null
   }
@@ -123,10 +134,118 @@ export default class extends Controller {
     else chain.setLink({ href: url.trim() }).run()
   }
 
+  // Le bouton « Page du Guide » : tape `[[`, ce qui ouvre la liste.
+  pageLink() {
+    if (this.sourceMode) return
+    this.editor.chain().focus().insertContent("[[").run()
+  }
+
+  // La liste des pages, sous le curseur, tant que le texte qui le précède
+  // est un `[[` pas encore refermé.
+  updateLinkMenu() {
+    if (!this.editor || this.sourceMode) return this.hideLinkMenu()
+    const { $from, empty } = this.editor.state.selection
+    const before = empty ? $from.parent.textBetween(Math.max(0, $from.parentOffset - 80), $from.parentOffset, null, "\ufffc") : ""
+    const match = /\[\[([^[\]|\n\ufffc]{0,60})$/.exec(before)
+    const from = match ? $from.pos - match[0].length : null
+    if (!match || from === this.dismissedAt) return this.hideLinkMenu()
+
+    const query = normalizeTitle(match[1])
+    const items = this.pagesValue
+      .filter((page) => normalizeTitle(page.title).includes(query))
+      .slice(0, 8)
+      .map((page) => ({ title: page.title, hint: page.chapter }))
+    const typed = match[1].trim()
+    if (typed && !this.pagesValue.some((page) => normalizeTitle(page.title) === query)) {
+      items.push({ title: typed, hint: "Page pas encore écrite : le lien l'attendra" })
+    }
+    if (items.length === 0) return this.hideLinkMenu()
+
+    this.linkRange = { from, to: $from.pos }
+    this.linkItems = items
+    this.linkIndex = Math.min(this.linkIndex || 0, items.length - 1)
+    this.renderLinkMenu(this.editor.view.coordsAtPos($from.pos))
+  }
+
+  renderLinkMenu(coords) {
+    if (!this.linkMenu) {
+      this.linkMenu = document.createElement("div")
+      this.linkMenu.className = "guide-link-menu"
+      this.linkMenu.setAttribute("role", "listbox")
+      this.linkMenu.addEventListener("mousedown", (event) => {
+        event.preventDefault()
+        const button = event.target.closest("button[data-index]")
+        if (button) this.chooseLink(Number(button.dataset.index))
+      })
+      document.body.appendChild(this.linkMenu)
+    }
+    this.linkMenu.replaceChildren(
+      ...this.linkItems.map((item, index) => {
+        const button = document.createElement("button")
+        button.type = "button"
+        button.dataset.index = index
+        button.setAttribute("role", "option")
+        button.setAttribute("aria-selected", String(index === this.linkIndex))
+        button.textContent = item.title
+        const hint = document.createElement("small")
+        hint.textContent = item.hint
+        button.appendChild(hint)
+        return button
+      })
+    )
+    const left = Math.min(coords.left, window.innerWidth - 336)
+    this.linkMenu.style.left = `${Math.max(8, left)}px`
+    this.linkMenu.style.top = `${coords.bottom + 6}px`
+  }
+
+  hideLinkMenu() {
+    this.linkMenu?.remove()
+    this.linkMenu = null
+    this.linkItems = null
+    this.linkIndex = 0
+  }
+
+  // Flèches, Entrée ou Tab pour choisir, Échap pour écrire `[[` tel quel.
+  linkMenuKey(event) {
+    if (!this.linkMenu) return false
+    const count = this.linkItems.length
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      this.linkIndex = (this.linkIndex + (event.key === "ArrowDown" ? 1 : count - 1)) % count
+      this.updateLinkMenu()
+      return true
+    }
+    if (event.key === "Enter" || event.key === "Tab") {
+      this.chooseLink(this.linkIndex)
+      return true
+    }
+    if (event.key === "Escape") {
+      this.dismissedAt = this.linkRange.from
+      this.hideLinkMenu()
+      return true
+    }
+    return false
+  }
+
+  chooseLink(index) {
+    const item = this.linkItems?.[index]
+    if (!item) return
+    const range = this.linkRange
+    this.hideLinkMenu()
+    this.editor
+      .chain()
+      .focus()
+      .insertContentAt(range, [
+        { type: "guideLink", attrs: { title: item.title } },
+        { type: "text", text: " " },
+      ])
+      .run()
+  }
+
   // Bascule entre l'éditeur visuel et le Markdown brut.
   toggleSource() {
     this.sourceMode = !this.sourceMode
     if (this.sourceMode) {
+      this.hideLinkMenu()
       this.sourceTarget.hidden = false
       this.editorTarget.hidden = true
       this.sourceTarget.style.minHeight = `${Math.max(this.editorTarget.offsetHeight, 384)}px`

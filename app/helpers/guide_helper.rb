@@ -26,4 +26,11 @@ module GuideHelper
   def guide_date(time)
     l(time, format: "%-d %B %Y à %H:%M")
   end
+
+  # Les pages qu'on peut lier depuis l'éditeur (`[[`), dans l'ordre du
+  # sommaire, sans la page en cours.
+  def guide_link_targets(except: nil)
+    GuidePage.joins(:chapter).merge(GuideChapter.ordered).order(:position, :id).includes(:chapter)
+             .where.not(id: except&.id).map { |page| { title: page.title, chapter: page.chapter.title } }
+  end
 end

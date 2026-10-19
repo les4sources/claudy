@@ -83,6 +83,8 @@ Rails.application.routes.draw do
         member { post :restore }
       end
     end
+    # « Voir la procédure » : l'écran qui renvoie à une page.
+    resources :screen_links, only: %i[new create destroy]
   end
   get "organisation/decisions", to: "decisions#index", as: :organisation_decisions
   resources :experiences do

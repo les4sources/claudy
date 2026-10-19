@@ -51,6 +51,23 @@ RSpec.describe Mcp::Server, "Guide des 4 Sources" do
     expect(page.revisions.count).to eq(3)
   end
 
+  it "montre les liens vers une page et les met à jour quand elle est renommée" do
+    note = GuidePage.new.tap { |p| Guide::SavePage.new(p, user: michael).call(guide_chapter_id: procedures.id, title: "Note de frais") }
+    accueil = GuidePage.new.tap do |p|
+      Guide::SavePage.new(p, user: michael).call(guide_chapter_id: procedures.id, title: "Accueil", body: "Voir [[Note de frais]].")
+    end
+    GuideScreenLink.create!(screen: "finance/expense_reports#new", label: "Nouvelle note de frais", page: note)
+
+    expect(texte(outil("page_guide", { "page" => note.id })))
+      .to include("Pages qui renvoient ici : ##{accueil.id} « Accueil »", "Écrans qui l'ouvrent (« Voir la procédure ») : Nouvelle note de frais")
+
+    apercu = texte(outil("enregistrer_page_guide", { "page" => note.id, "titre" => "Rembourser une dépense" }))
+    expect(apercu).to include("Liens [[…]] mis à jour dans 1 autre(s) page(s) : « Accueil »")
+    confirme("enregistrer_page_guide", { "page" => note.id, "titre" => "Rembourser une dépense" })
+    expect(accueil.reload.body).to eq("Voir [[Rembourser une dépense]].")
+    expect(accueil.revisions.first.source).to eq("mcp")
+  end
+
   it "trouve les pages par le sommaire et la recherche" do
     Guide::SavePage.new(GuidePage.new, user: michael).call(guide_chapter_id: procedures.id, title: "Fermer le gîte", body: "Couper le gaz.")
 

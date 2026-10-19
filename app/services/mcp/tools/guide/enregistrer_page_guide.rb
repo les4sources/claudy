@@ -71,7 +71,13 @@ module Mcp
 
         def resume_modification(page, chapitre, titre, contenu, position)
           lignes = ["MODIFIER #{ligne_page(page)}"]
-          lignes << "Titre : « #{page.title} » → « #{titre} »" if titre && titre != page.title
+          if titre && titre != page.title
+            lignes << "Titre : « #{page.title} » → « #{titre} »"
+            citee = ::Guide::Links.backlinks(page)
+            if citee.any? && ::Guide::Links.key(titre) != ::Guide::Links.key(page.title)
+              lignes << "Liens [[…]] mis à jour dans #{citee.size} autre(s) page(s) : #{citee.map { |other| "« #{other.title} »" }.join(', ')}"
+            end
+          end
           lignes << "Chapitre : « #{page.chapter.title} » → « #{chapitre.title} »" if chapitre != page.chapter
           lignes << "Position dans le chapitre : #{position}" if position
           if contenu && contenu != page.body

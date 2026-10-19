@@ -9,7 +9,8 @@ module Mcp
         tool "page_guide",
              title: "Lire une page du Guide",
              description: "Rend une page du Guide des 4 Sources en entier (Markdown), avec son chapitre, son dernier " \
-                          "éditeur et ses contributeur·rices. Avec `historique` : la liste de ses versions. Avec " \
+                          "éditeur, ses contributeur·rices, les pages qui y renvoient et les écrans de Claudy qui l'ouvrent " \
+                          "(« Voir la procédure »). Avec `historique` : la liste de ses versions. Avec " \
                           "`version` : le contenu de cette version passée. Lis toujours la page avant de la modifier.",
              schema: {
                properties: {
@@ -26,10 +27,14 @@ module Mcp
           return version(page, arguments["version"].to_i) if arguments["version"].present?
 
           contributeurs = page.contributors.map(&:display_name)
+          renvois = page.backlinks.map { |other| "##{other.id} « #{other.title} »" }
+          ecrans = page.screen_links.map { |link| link.label.presence || link.screen }
           [
             "#{ligne_page(page)}",
             "Chapitre ##{page.chapter.id} « #{page.chapter.title} » · #{page.revisions.size} version(s)",
             ("Contributeur·rices : #{contributeurs.join(', ')}" if contributeurs.any?),
+            ("Pages qui renvoient ici : #{renvois.join(', ')}" if renvois.any?),
+            ("Écrans qui l'ouvrent (« Voir la procédure ») : #{ecrans.join(', ')}" if ecrans.any?),
             "Adresse : #{lien_page(page)}",
             "",
             "--- Contenu (Markdown) ---",

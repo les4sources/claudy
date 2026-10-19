@@ -12,13 +12,15 @@ module Guide
     end
 
     def show
-      @markdown = Guide::Markdown.render(@page.body)
+      @markdown = Guide::Markdown.render(@page.body, new_page_links: guide_writer?)
       @chapters = GuideChapter.ordered.includes(:pages)
       siblings = @chapters.flat_map(&:pages)
       index = siblings.index(@page)
       @previous_page = siblings[index - 1] if index&.positive?
       @next_page = siblings[index + 1] if index
       @contributors = @page.contributors
+      @backlinks = @page.backlinks
+      @screen_links = @page.screen_links.to_a
       breadcrumb @page.chapter.title, guide_root_path(anchor: "chapitre-#{@page.chapter.id}")
       breadcrumb @page.title, guide_page_path(@page)
     end
@@ -27,7 +29,8 @@ module Guide
       chapter = GuideChapter.find_by(id: params[:chapter_id]) || GuideChapter.ordered.first
       return redirect_to(new_guide_chapter_path, alert: "Crée d'abord un chapitre.") if chapter.nil?
 
-      @page = GuidePage.new(chapter: chapter)
+      # `title` : depuis un lien `[[Titre]]` vers une page qui n'existe pas encore.
+      @page = GuidePage.new(chapter: chapter, title: params[:title].to_s.squish.first(160).presence)
       breadcrumb "Nouvelle page", new_guide_page_path
     end
 

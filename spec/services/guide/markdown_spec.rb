@@ -30,4 +30,41 @@ RSpec.describe Guide::Markdown do
   it "donne un texte brut pour les extraits" do
     expect(described_class.plain_text("## Titre\n\nUn **mot** et [un lien](https://x.be).")).to eq("Titre Un mot et un lien.")
   end
+
+  describe "liens entre pages" do
+    let!(:chapitre) { GuideChapter.create!(title: "Procédures") }
+    let!(:note) { GuidePage.create!(chapter: chapitre, title: "Soumettre une note de frais") }
+
+    it "retrouve un titre à apostrophe malgré la typographie (’)" do
+      depart = GuidePage.create!(chapter: chapitre, title: "Départ d'un membre")
+
+      expect(described_class.render("[[depart d'un membre]]").to_html).to include(%(href="/guide/pages/#{depart.to_param}"))
+    end
+
+    it "lie `[[Titre]]` à la page, sans tenir compte des majuscules ni des accents" do
+      html = described_class.render("Voir [[soumettre une NOTE de frais]] et [[Soumettre une note de frais|la procédure]].").to_html
+
+      expect(html).to include(%(<a href="/guide/pages/#{note.to_param}" class="guide-wikilink">soumettre une NOTE de frais</a>))
+      expect(html).to include(%(class="guide-wikilink">la procédure</a>))
+    end
+
+    it "laisse visible un titre sans page, et propose de la créer aux rédacteurs" do
+      lecture = described_class.render("Voir [[Départ d'un membre]].").to_html
+      expect(lecture).to include(%(<span class="guide-wikilink guide-wikilink-missing"), "Départ d’un membre")
+      expect(lecture).not_to include("<a ")
+
+      redaction = described_class.render("Voir [[Départ]].", new_page_links: true).to_html
+      expect(redaction).to include(%(href="/guide/pages/new?title=D%C3%A9part"), "guide-wikilink-missing")
+    end
+
+    it "ne touche pas au code" do
+      html = described_class.render("`[[Soumettre une note de frais]]`").to_html
+
+      expect(html).to include("<code>[[Soumettre une note de frais]]</code>")
+    end
+
+    it "donne le texte affiché dans les extraits, sans chercher les pages" do
+      expect(described_class.plain_text("Voir [[Une page|celle-ci]] et [[Autre]].")).to eq("Voir celle-ci et Autre.")
+    end
+  end
 end

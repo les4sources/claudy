@@ -256,7 +256,10 @@ module Mcp
       le Guide (guide avec recherche, puis page_guide). Pour écrire : lis la
       page, puis enregistrer_page_guide (texte complet) ou remplacer_texte_guide
       (un passage) ; chaque modification devient une version signée de ton
-      compte, qu'on peut restaurer (geste_page_guide).
+      compte, qu'on peut restaurer (geste_page_guide). Une page en cite une
+      autre par « [[Titre]] » (renommer une page met ces liens à jour). Les
+      écrans de Claudy renvoient à leur procédure (« Voir la procédure ») : ce
+      lien se pose depuis l'écran, pas depuis ici.
 
       COMPTES COURANTS des familles et des personnes (SRC-0001…). Le grand
       livre : chaque ligne a un montant SIGNÉ (positif = dû par le compte,

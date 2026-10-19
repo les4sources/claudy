@@ -62,3 +62,39 @@
 /* Dans l'éditeur, chaque élément de liste porte un <p> : sans ce resserrage,
    les listes y paraissent deux fois plus aérées qu'à la lecture. */
 .guide-editor li > p { margin-top: 0.25em; margin-bottom: 0.25em; }
+
+/* Liens entre pages (`[[Titre]]`) : un lien du Guide se distingue d'un lien
+   vers le web par son soulignement plein ; une page qui n'existe pas encore
+   reste lisible, soulignée de tirets. */
+.guide-content a.guide-wikilink {
+  text-decoration-color: rgb(16 185 129 / 0.5); text-underline-offset: 3px;
+}
+.guide-content .guide-wikilink-missing,
+.guide-content a.guide-wikilink-missing {
+  color: rgb(120 113 108); text-decoration: underline dashed rgb(168 162 158); text-underline-offset: 3px;
+}
+.guide-content span.guide-wikilink-missing { cursor: help; }
+
+/* Dans l'éditeur, le lien est une étiquette : il se déplace et s'efface d'un
+   bloc. */
+.guide-editor .guide-wikilink-node {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0 0.4rem; border-radius: 0.375rem;
+  background: rgb(236 253 245); color: rgb(4 120 87); font-weight: 500;
+  box-shadow: inset 0 0 0 1px rgb(167 243 208);
+}
+.guide-editor .guide-wikilink-node::before { content: "↗"; font-size: 0.75em; opacity: 0.7; }
+.guide-editor .guide-wikilink-node.ProseMirror-selectednode { box-shadow: inset 0 0 0 2px rgb(16 185 129); }
+
+/* La liste des pages proposée après « [[ ». */
+.guide-link-menu {
+  position: fixed; z-index: 50; width: 20rem; max-height: 16rem; overflow-y: auto;
+  border-radius: 0.5rem; border: 1px solid rgb(231 229 228); background: white;
+  padding: 0.25rem 0; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  font-size: 0.875rem;
+}
+.guide-link-menu button {
+  display: block; width: 100%; padding: 0.375rem 0.75rem; text-align: left; color: rgb(41 37 36);
+}
+.guide-link-menu button[aria-selected="true"] { background: rgb(236 253 245); color: rgb(4 120 87); }
+.guide-link-menu small { display: block; color: rgb(120 113 108); font-size: 0.75rem; }

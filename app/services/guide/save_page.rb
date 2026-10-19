@@ -27,6 +27,7 @@ module Guide
       page.body = page.body.to_s.gsub("\r\n", "\n").rstrip
       move_to_end_of_chapter if page.persisted? && page.guide_chapter_id_changed?
       content_changed = page.new_record? || page.title_changed? || page.body_changed?
+      renamed_from = page.title_was if page.persisted? && Links.key(page.title_was) != Links.key(page.title)
 
       ApplicationRecord.transaction do
         if content_changed
@@ -39,6 +40,7 @@ module Guide
                                  summary: attributes[:summary].to_s.strip.first(250).presence)
         end
         attach_images
+        retarget_links(renamed_from) if renamed_from
       end
       true
     rescue ActiveRecord::RecordInvalid
@@ -52,6 +54,17 @@ module Guide
     end
 
     private
+
+    # Une page renommée : les `[[Ancien titre]]` des autres pages la suivent,
+    # chacune avec sa révision, au nom de la même personne.
+    def retarget_links(old_title)
+      Links.linking_to(old_title, except: page).each do |other|
+        SavePage.new(other, user: @user, source: @source).call(
+          body: Links.retarget(other.body, old_title, page.title),
+          summary: "Lien mis à jour : « #{old_title} » s'appelle désormais « #{page.title} »"
+        ) || raise(ActiveRecord::RecordInvalid, other)
+      end
+    end
 
     def move_to_end_of_chapter
       page.position = (GuidePage.where(guide_chapter_id: page.guide_chapter_id).maximum(:position) || 0) + 1

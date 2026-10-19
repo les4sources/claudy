@@ -111,4 +111,77 @@ RSpec.describe "Le Guide des 4 Sources", type: :request do
       expect(GuideChapter.exists?(chapitre.id)).to be(false)
     end
   end
+
+  describe "« Voir la procédure » depuis un écran" do
+    let(:communication) { User.create!(email: "com@les4sources.be", password: "password123", access_roles: %w[communication]) }
+
+    it "un rédacteur lie l'écran à une page ; tout le monde voit alors le lien" do
+      sign_in sourcier
+      get events_path
+      expect(response.body).to include("Lier une page du Guide à cet écran")
+      expect(response.body).not_to include("Voir la procédure")
+
+      get new_guide_screen_link_path(screen: "events#index", path: "/events", label: "Activités")
+      expect(response.body).to include("Procédures › Soumettre une note de frais")
+
+      post guide_screen_links_path, params: { screen: "events#index", path: "/events", label: "Activités", guide_page_id: page.id }
+      expect(response).to redirect_to("/events")
+      expect(GuideScreenLink.sole).to have_attributes(screen: "events#index", page: page, user: sourcier)
+
+      sign_in communication
+      get events_path
+      expect(response.body).to include("Voir la procédure", guide_page_path(page))
+      expect(response.body).not_to include("Lier une page du Guide", "Changer la procédure")
+
+      get guide_page_path(page)
+      expect(response.body).to include("S'ouvre depuis les écrans", %(href="/events">Activités</a>))
+    end
+
+    it "le formulaire en erreur (create) garde la procédure de son écran (new)" do
+      expect(GuideScreenLink.screen_key("events", "create")).to eq("events#new")
+      expect(GuideScreenLink.screen_key("finance/expense_reports", "update")).to eq("finance/expense_reports#edit")
+    end
+
+    it "est refusé à qui lit seulement le Guide, et ne renvoie jamais hors de Claudy" do
+      sign_in communication
+      post guide_screen_links_path, params: { screen: "events#index", path: "/events", guide_page_id: page.id }
+      expect(GuideScreenLink.count).to eq(0)
+
+      sign_in sourcier
+      post guide_screen_links_path, params: { screen: "events#index", path: "//evil.example", guide_page_id: page.id }
+      expect(response).to redirect_to(guide_root_path)
+    end
+
+    it "se tait quand la page est retirée du Guide, et se retire" do
+      link = GuideScreenLink.create!(screen: "events#index", page: page, path: "/events")
+      sign_in sourcier
+      page.soft_delete!(validate: false)
+      get events_path
+      expect(response.body).not_to include("Voir la procédure")
+
+      delete guide_screen_link_path(link)
+      expect(GuideScreenLink.count).to eq(0)
+    end
+  end
+
+  describe "liens [[Titre]]" do
+    before { sign_in sourcier }
+
+    it "montre les pages qui renvoient ici, et ouvre la création d'une page manquante" do
+      accueil = GuidePage.new.tap do |p|
+        Guide::SavePage.new(p, user: sourcier).call(guide_chapter_id: chapitre.id, title: "Accueil",
+                                                    body: "Voir [[Soumettre une note de frais]] et [[Clés du gîte]].")
+      end
+
+      get guide_page_path(page)
+      expect(response.body).to include("Pages qui renvoient ici", guide_page_path(accueil))
+
+      get guide_page_path(accueil)
+      expect(response.body).to include(%(class="guide-wikilink">Soumettre une note de frais</a>),
+                                       new_guide_page_path(title: "Clés du gîte"))
+
+      get new_guide_page_path(title: "Clés du gîte")
+      expect(response.body).to include(%(value="Clés du gîte"))
+    end
+  end
 end

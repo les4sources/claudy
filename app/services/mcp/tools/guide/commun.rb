@@ -10,7 +10,8 @@ module Mcp
         CHAPITRE = { type: %w[integer string], description: "Chapitre : identifiant (#3, rendu par guide) ou titre exact." }.freeze
         POSITION = { type: "integer", minimum: 1, description: "Place dans la liste (1 = en premier). Défaut : à la fin." }.freeze
         MARKDOWN = "Markdown (CommonMark + tableaux et cases à cocher « - [ ] »). La page a déjà son titre : " \
-                   "les intertitres commencent à « ## ». Pas de HTML brut (il n'est pas rendu)."
+                   "les intertitres commencent à « ## ». Pas de HTML brut (il n'est pas rendu). Lien vers une autre " \
+                   "page du Guide : « [[Titre de la page]] » ou « [[Titre de la page|texte affiché]] »."
 
         # Les outils qui écrivent : refusés à qui ne peut pas écrire dans le
         # Guide à l'écran.

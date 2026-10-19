@@ -74,4 +74,31 @@ RSpec.describe GuidePage do
     enregistrer(GuidePage.new, chloe, guide_chapter_id: chapitre.id, title: "Une page")
     expect(chapitre).not_to be_removable
   end
+
+  describe "liens [[Titre]]" do
+    let!(:note) { enregistrer(GuidePage.new, chloe, guide_chapter_id: chapitre.id, title: "Note de frais", body: "Le ticket.") }
+    let!(:accueil) do
+      enregistrer(GuidePage.new, chloe, guide_chapter_id: chapitre.id, title: "Accueil des membres",
+                                        body: "Voir [[note de frais]], puis [[Note de frais|la procédure]]. `[[Note de frais]]`")
+    end
+
+    it "sait quelles pages renvoient à une page" do
+      expect(note.backlinks).to eq([accueil])
+      expect(accueil.backlinks).to be_empty
+    end
+
+    it "suit une page renommée : les liens des autres pages sont réécrits, avec leur version" do
+      enregistrer(note, seb, title: "Rembourser une dépense")
+
+      expect(accueil.reload.body).to eq("Voir [[Rembourser une dépense]], puis [[Rembourser une dépense|la procédure]]. " \
+                                        "`[[Rembourser une dépense]]`")
+      expect(accueil.revisions.first).to have_attributes(user: seb, summary: include("« Note de frais » s'appelle désormais"))
+      expect(accueil.last_editor).to eq(seb)
+      expect(note.reload.backlinks).to eq([accueil])
+    end
+
+    it "ne réécrit rien quand seule la casse du titre change" do
+      expect { enregistrer(note, seb, title: "Note de Frais") }.not_to(change { accueil.reload.revisions.count })
+    end
+  end
 end

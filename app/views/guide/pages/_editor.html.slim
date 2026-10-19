@@ -7,6 +7,7 @@
 label.mb-1.block.text-sm.font-medium.text-gray-700(for="guide_page_body") Contenu
 .guide-editor.rounded-lg.border.border-stone-300.bg-white.shadow-sm.focus-within:border-emerald-500(data-controller="guide-editor"
                                                                                                   data-guide-editor-upload-url-value=rails_direct_uploads_path
+                                                                                                  data-guide-editor-pages-value=guide_link_targets(except: f.object).to_json
                                                                                                   data-action="dragover->guide-editor#dragOver dragleave->guide-editor#dragLeave drop->guide-editor#drop")
   .sticky.top-0.z-10.flex.flex-wrap.items-center.gap-0.5.rounded-t-lg.border-b.border-stone-200.bg-stone-50.px-2.py-1.5(data-guide-editor-target="toolbar")
     .flex.flex-wrap.items-center.gap-0.5(data-guide-editor-target="visualTools")
@@ -38,6 +39,8 @@ label.mb-1.block.text-sm.font-medium.text-gray-700(for="guide_page_body") Conten
         svg.h-4.w-4(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round")
           path(d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7")
           path(d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7")
+      button(type="button" class=tb data-action="guide-editor#pageLink" title="Lien vers une page du Guide (ou tape [[)")
+        = render "guide/screen_links/book_icon"
       button(type="button" class=tb data-action="guide-editor#pickImage" title="Image (ou glisse-la, ou colle-la)")
         svg.h-4.w-4(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round")
           rect(x="3" y="3" width="18" height="18" rx="2")
@@ -76,4 +79,4 @@ label.mb-1.block.text-sm.font-medium.text-gray-700(for="guide_page_body") Conten
 
   .flex.items-center.justify-between.gap-4.rounded-b-lg.border-t.border-stone-100.bg-stone-50.px-4.py-2.text-xs.text-stone-500
     span(data-guide-editor-target="status") Glisse ou colle une image directement dans le texte.
-    span.hidden.sm:inline Mise en forme Markdown : **gras**, # titre, - liste…
+    span.hidden.sm:inline Tape [[ pour lier une autre page du Guide.

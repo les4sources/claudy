@@ -1,0 +1,31 @@
+/ « Voir la procédure » (Michael, 2026-10-19), à côté du titre de chaque
+  écran (`layouts/components/_page_header`) : la page du Guide rattachée à
+  cet écran, et pour les rédacteurs le moyen d'en rattacher une. Rien hors
+  d'une session connectée, ni dans le Guide lui-même.
+- if section_readable?(:guide) && !controller_path.start_with?("guide/", "public/")
+  - link = GuideScreenLink.for_screen(GuideScreenLink.screen_key(controller_path, action_name))
+  - editable = section_writable?(:guide) && request.get? && request.headers["Turbo-Frame"].blank?
+  - if link || editable
+    .flex.shrink-0.items-center.gap-1
+      - if link
+        = link_to guide_page_path(link.page),
+                  class: "inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100",
+                  title: "Le Guide : #{link.page.title}",
+                  data: { turbo_frame: "_top" } do
+          = render "guide/screen_links/book_icon"
+          | Voir la procédure
+      - if editable
+        details.group.relative
+          summary.flex.h-7.w-7.cursor-pointer.list-none.items-center.justify-center.rounded-full.text-stone-400.hover:bg-stone-100.hover:text-emerald-700(title=(link ? "Changer la procédure de cet écran" : "Lier une page du Guide à cet écran") aria-label=(link ? "Changer la procédure de cet écran" : "Lier une page du Guide à cet écran"))
+            - if link
+              svg.h-4.w-4(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true")
+                path(d="M12 20h9")
+                path(d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z")
+            - else
+              = render "guide/screen_links/book_icon"
+          .absolute.left-0.z-30.mt-2.w-80.rounded-lg.border.border-stone-200.bg-white.p-4.text-left.font-sans.shadow-lg
+            = turbo_frame_tag "guide_screen_link",
+                              src: new_guide_screen_link_path(screen: GuideScreenLink.screen_key(controller_path, action_name),
+                                                              path: request.fullpath, label: strip_tags(local_assigns[:title].to_s).squish),
+                              loading: :lazy do
+              p.text-xs.text-stone-500 Chargement…

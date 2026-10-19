@@ -41,6 +41,9 @@ class GuidePage < ApplicationRecord
   # Storage) : les rattacher à la page les tient à l'abri d'un nettoyage des
   # fichiers orphelins. Le Markdown, lui, pointe leur adresse permanente.
   has_many_attached :images
+  # Les écrans de Claudy qui renvoient à cette page (« Voir la procédure »).
+  has_many :screen_links, -> { order(:label, :screen) }, class_name: "GuideScreenLink",
+                                                        inverse_of: :page, dependent: :destroy
 
   # « Ce qui change » : la note du formulaire, inscrite dans la révision.
   attr_accessor :summary
@@ -71,6 +74,9 @@ class GuidePage < ApplicationRecord
     users = User.where(id: ids).index_by(&:id)
     ids.filter_map { |id| users[id] }
   end
+
+  # Les pages du Guide qui renvoient à celle-ci par `[[Titre]]`.
+  def backlinks = Guide::Links.backlinks(self)
 
   # Un extrait lisible du contenu (sommaire, résultats de recherche) : le
   # Markdown débarrassé de sa syntaxe.
