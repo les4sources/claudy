@@ -74,6 +74,25 @@ RSpec.describe "Finances > Trésorerie", type: :request do
   end
 
 
+  describe "la fiche d'une ligne" do
+    let!(:entry) { build_cash_entry(cash_account, entry_date: Date.new(2026, 6, 15)) }
+
+    it "montre la date du mouvement" do
+      get finance_cash_entry_path(entry)
+
+      expect(response.body).to include("15/06/2026")
+      expect(response.body).not_to include("valeur le")
+    end
+
+    it "ajoute la date de valeur quand elle diffère" do
+      entry.update!(value_date: Date.new(2026, 6, 17))
+
+      get finance_cash_entry_path(entry)
+
+      expect(response.body).to include("valeur le 17/06/2026")
+    end
+  end
+
   describe "l'écran à affecter" do
     let!(:entry) { build_cash_entry(cash_account, amount_cents: 130_000) }
 
