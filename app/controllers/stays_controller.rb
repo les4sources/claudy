@@ -39,8 +39,14 @@ class StaysController < BaseController
     @searching = @query.present?
     @quarter   = requested_quarter
 
+    # Un NUMÉRO de séjour (« 718 ») ramène ce séjour seul, quels que soient le
+    # statut, le solde ou l'apporteur filtrés (Michael, 2026-10-19) : on sait
+    # quel séjour on veut, les filtres le cacheraient pour rien.
+    @stay_id_match = Stays::Search.stay_id(@query) if @searching
+
     scope  = @searching ? Stay.all : quarter_scope
-    @stays = @filter.apply_scopes(Stays::Search.new(scope, @query).call)
+    found  = @stay_id_match ? Stay.where(id: @stay_id_match) : @filter.apply_scopes(Stays::Search.new(scope, @query).call)
+    @stays = found
              .includes(
                :customer,
                :meal_orders,
@@ -58,11 +64,11 @@ class StaysController < BaseController
     @quarter_counts = quarter_counts_for(@quarter.year)
 
     @amounts = Stays::IndexAmounts.new(@stays).call
-    @stays   = @stays.select { |stay| @filter.keep?(stay, @amounts[stay.id]) } if @filter.balance_due?
+    @stays   = @stays.select { |stay| @filter.keep?(stay, @amounts[stay.id]) } if @filter.balance_due? && !@stay_id_match
     # Commissions de l'apporteur filtré (Michael, 2026-10-18) : total de ce qui
     # est DÛ sur la liste affichée, et combien de séjours n'y sont pas encore.
     # Lecture seule — rien n'est versé ni émis d'ici.
-    if @filter.referral
+    if @filter.referral && !@stay_id_match
       commissions = @stays.map { |stay| Stays::ReferralCommission.new(stay, paid_cents: @amounts[stay.id]&.paid_cents.to_i) }
       due = commissions.select(&:due?)
       @referral_summary = {
