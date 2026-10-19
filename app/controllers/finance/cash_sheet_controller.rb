@@ -11,7 +11,7 @@ module Finance
   # seconde, vide. Une feuille qui viserait un nom écrirait dans la mauvaise.
   class CashSheetController < Finance::AccountingBaseController
     before_action :get_account
-    before_action :get_entry, only: %i[update exclude]
+    before_action :get_entry, only: %i[edit update exclude]
 
     breadcrumb "Caisse", :finance_cash_sheet_path, match: :exact
 
@@ -39,6 +39,21 @@ module Finance
       redraw(alert: e.message)
     end
 
+    # La correction s'ouvre en modale (cadre `modal`), comme le détail d'une
+    # ligne de trésorerie : posée dans la cellule du tableau, elle débordait de
+    # l'écran.
+    def edit
+      @month = parsed_month
+      @motifs = CashMotif.actives.ordered.to_a
+      # Un motif retiré depuis reste choisi : la ligne ne change pas de motif
+      # sans qu'on le demande.
+      @motifs.unshift(@entry.cash_motif) if @entry.cash_motif && @motifs.exclude?(@entry.cash_motif)
+      @closed = MonthClosing.closed?(@entry.entry_date)
+      # Même raison que `Finance::CashEntriesController#detail` : le layout de
+      # l'application porte déjà un cadre « modal » vide, que Turbo prendrait.
+      render layout: "modal"
+    end
+
     def update
       motif = CashMotif.find_by(id: params.dig(:cash_line, :cash_motif_id))
       Finance::UpdateCashLine.new(cash_entry: @entry, whodunnit: current_user&.email).update!(
@@ -52,7 +67,7 @@ module Finance
       redraw(notice: "Ligne corrigée.")
     rescue Finance::UpdateCashLine::MonthClosed, Accounting::UnpostCashEntry::ClosedFiscalYear,
            ArgumentError, Date::Error, ActiveRecord::RecordInvalid => e
-      redraw(alert: e.message)
+      refuse_in_modal(e.message)
     end
 
     # « Supprimer » n'existe pas : une ligne s'exclut avec un motif (règle B2).
@@ -63,7 +78,7 @@ module Finance
       redraw(notice: "Ligne retirée de la feuille, avec son motif.")
     rescue Finance::UpdateCashLine::MonthClosed, Accounting::UnpostCashEntry::ClosedFiscalYear,
            ArgumentError, ActiveRecord::RecordInvalid => e
-      redraw(alert: e.message)
+      refuse_in_modal(e.message)
     end
 
     private
@@ -90,6 +105,19 @@ module Finance
                                               cash_account_id: @account&.id,
                                               last_date: @last_date)
         end
+      end
+    end
+
+    # Un refus se lit DANS la modale, qui reste ouverte avec ce qu'on a tapé :
+    # le 422 empêche `turbo-modal` de la fermer. Sans Turbo, la feuille porte
+    # le message comme avant.
+    def refuse_in_modal(message)
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.update(helpers.dom_id(@entry, :correction_error), message),
+                 status: :unprocessable_entity
+        end
+        format.html { redraw(alert: message) }
       end
     end
 

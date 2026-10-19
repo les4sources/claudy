@@ -87,7 +87,7 @@
               td.py-3.px-4.text-right.whitespace-nowrap.align-top.font-medium.text-gray-900= number_to_currency(row.balance_cents / 100.0)
               td.py-3.px-4.text-right.whitespace-nowrap.align-top
                 - unless sheet.closed?
-                  = render "finance/cash_sheet/actions", entry: row.entry, sheet: sheet, motifs: motifs
+                  = render "finance/cash_sheet/actions", entry: row.entry, sheet: sheet
         tfoot
           tr.bg-gray-50
             td.py-3.px-4.font-semibold.text-gray-900(colspan="5") Solde de clôture
