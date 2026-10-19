@@ -138,6 +138,38 @@ RSpec.describe "Comptabilité > Caisse — la feuille du mois", type: :request d
   describe "corriger et retirer une ligne" do
     let!(:entry) { record(motif: motif_bar, amount_cents: 13_000, day: 11, label: "Recette du bar") }
 
+    it "ouvre la correction en modale, champs étiquetés et motif cherchable" do
+      get finance_edit_cash_sheet_line_path(entry, month: "2026-06", cash_account_id: caisse.id),
+          headers: { "Turbo-Frame" => "modal" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('turbo-frame id="modal"', "Corriger la ligne")
+      expect(response.body).to include("Montant (€)", "Motif du retrait", "Enregistrer la correction")
+      expect(response.body).to include('data-controller="searchable-select"')
+      expect(response.body).to include('value="130.00"')
+      # Sans le gabarit de l'application : son cadre « modal » vide passerait
+      # avant celui de la réponse, et Turbo ouvrirait une modale vide.
+      expect(response.body).not_to include("subnav-accounting")
+    end
+
+    it "le lien « Corriger » de la feuille vise la modale" do
+      get finance_cash_sheet_path(month: "2026-06")
+
+      expect(response.body).to include(finance_edit_cash_sheet_line_path(entry))
+      expect(response.body).to include('data-turbo-frame="modal"')
+    end
+
+    it "garde la modale ouverte et y écrit le refus" do
+      post finance_exclude_cash_sheet_line_path(entry),
+           params: { month: "2026-06", cash_account_id: caisse.id, reason: "" },
+           headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include(%(target="correction_error_cash_entry_#{entry.id}"))
+      expect(response.body).to include("Un motif est nécessaire")
+      expect(entry.reload.status).not_to eq("excluded")
+    end
+
     it "corrige la ligne et repasse son écriture" do
       patch finance_cash_sheet_line_path(entry),
             params: { month: "2026-06", cash_account_id: caisse.id,

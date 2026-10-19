@@ -352,6 +352,7 @@ Rails.application.routes.draw do
     # pour que `/finance/cash/motifs` reste lisible à côté de `/finance/cash`.
     get "cash", to: "cash_sheet#show", as: :cash_sheet
     post "cash/lines", to: "cash_sheet#create", as: :cash_sheet_lines
+    get "cash/lines/:id/edit", to: "cash_sheet#edit", as: :edit_cash_sheet_line
     patch "cash/lines/:id", to: "cash_sheet#update", as: :cash_sheet_line
     post "cash/lines/:id/exclude", to: "cash_sheet#exclude", as: :exclude_cash_sheet_line
     # Comptages de caisse (epic #243, phase 3). Pas de `show` : un comptage se
