@@ -408,6 +408,24 @@ RSpec.describe "Cuisine — page et actions", type: :request do
       expect(order.validation).to eq("pending")
     end
 
+    # Le formulaire de modification avait sa propre copie des champs, qui avait
+    # dérivé de la saisie. Les deux rendent maintenant `_prestation_fields`.
+    it "reprend dans la modification les champs de la saisie" do
+      fields = ->(section) { section.css("[name]").map { |el| el["name"][/\[(\w+)\]\z/, 1] }.uniq }
+
+      get new_kitchen_order_path
+      created = Nokogiri::HTML(response.body).at_css("[data-meal-prestations-target=list] section")
+
+      get edit_kitchen_order_path(line(responsible_human: steph))
+      page = Nokogiri::HTML(response.body)
+      edited = page.at_css("section[data-controller=meal-price-hint]")
+
+      expect(fields.(edited)).to include(*fields.(created))
+      expect(edited.css("[data-controller=searchable-select]").size).to eq(created.css("[data-controller=searchable-select]").size)
+      expect(page.css("input[name='meal_order[origin]']")).to be_present
+      expect(edited.at_css("select[name='meal_order[responsible_human_id]'] option[selected]").text).to eq("Stéphanie")
+    end
+
     it "affiche l'historique de la ligne" do
       order = line
       order.update!(people: 14)

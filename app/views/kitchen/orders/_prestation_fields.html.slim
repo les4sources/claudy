@@ -1,0 +1,70 @@
+/ Les champs d'UNE prestation, communs à la saisie (`_prestation`, un bloc par
+  prestation) et à la modification d'une ligne (`_form`). Le formulaire de
+  modification avait sa propre copie, qui a dérivé : un seul gabarit, et les
+  deux restent alignés.
+
+  Locals :
+  - name_prefix, id_prefix : `prestations[0]` / `prestation_0` à la saisie,
+    `meal_order` / `meal_order` à la modification ;
+  - values : les valeurs du bloc (Hash à clés symboles) ;
+  - grid_days : les jours de la grille, vide pour un service unique — toujours
+    vide à la modification, qui corrige une ligne sans en créer d'autres ;
+  - checked_cells : les cases cochées de la grille ;
+  - statuses : les choix « Où en est le client » (`status_choices`).
+.grid.grid-cols-1.gap-4.sm:grid-cols-6
+  / Cinq types de longueur inégale : en puces sur la ligne entière, on les lit
+    tous d'un coup et rien n'est tronqué. Aucun n'est coché au départ — le
+    type conditionne le responsable et le tarif, il se choisit sciemment.
+  .sm:col-span-6
+    fieldset
+      legend.block.text-sm.font-medium.text-gray-700 Type
+      .mt-2.flex.flex-wrap.gap-2
+        - @kinds.each do |kind_label, kind|
+          label.cursor-pointer
+            = radio_button_tag "#{name_prefix}[kind]", kind, values[:kind].to_s == kind, id: "#{id_prefix}_kind_#{kind}", required: true, class: "peer sr-only", data: { action: "change->meal-price-hint#refresh" }
+            span.inline-block.rounded-full.border.border-gray-300.px-3.text-sm.text-gray-700(class="py-1.5 peer-checked:border-4s-main peer-checked:bg-4s-main peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-4s-main peer-focus-visible:ring-offset-1 hover:border-gray-400")
+              = kind_label
+
+  / Issue #238 : dès que le séjour porte ses deux dates, la grille remplace
+    Moment et Date. Sans dates, pas de colonnes — on retombe sur la saisie
+    d'un service unique.
+  - if grid_days.present?
+    = render "kitchen/orders/grid", days: grid_days, name_prefix: name_prefix, id_prefix: id_prefix, checked_cells: checked_cells
+  - else
+    .sm:col-span-3.relative(data-controller="searchable-select")
+      = label_tag "#{id_prefix}_moment", "Moment", class: "block text-sm font-medium text-gray-700"
+      = select_tag "#{name_prefix}[moment]", options_for_select(MealOrder::MOMENT_LABELS.map(&:reverse), values[:moment]), include_blank: "—", id: "#{id_prefix}_moment", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm", data: { "searchable-select-target": "select" }
+      = render "shared/searchable_select_search", label: "Moment"
+    .sm:col-span-2
+      = label_tag "#{id_prefix}_date", "Date", class: "block text-sm font-medium text-gray-700"
+      = date_field_tag "#{name_prefix}[date]", values[:date], id: "#{id_prefix}_date", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+  .sm:col-span-2
+    = label_tag "#{id_prefix}_people", "Convives", class: "block text-sm font-medium text-gray-700"
+    = number_field_tag "#{name_prefix}[people]", values[:people] || 1, min: 1, id: "#{id_prefix}_people", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+  .sm:col-span-2
+    = label_tag "#{id_prefix}_unit_price", "Prix par personne", class: "block text-sm font-medium text-gray-700"
+    .mt-1.flex.items-center.gap-2
+      / Pas de placeholder chiffré : il affichait le tarif du type sélectionné à
+        l'ouverture et ne bougeait plus, si bien qu'après un changement de type
+        il annonçait un prix qui n'était plus le bon.
+      = number_field_tag "#{name_prefix}[unit_price]", values[:unit_price_cents] && (values[:unit_price_cents] / 100.0), step: 0.01, min: 0, id: "#{id_prefix}_unit_price", class: "w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      span.text-sm.text-gray-500 €
+    p.mt-1.text-xs.text-gray-400(data-meal-price-hint-target="hint") Laisser vide pour appliquer le tarif du barème.
+  .sm:col-span-2.relative(data-controller="searchable-select" data-searchable-select-clearable-value="true")
+    = label_tag "#{id_prefix}_responsible", "S'en charge", class: "block text-sm font-medium text-gray-700"
+    = select_tag "#{name_prefix}[responsible_human_id]", options_from_collection_for_select(@humans, :id, :name, values[:responsible_human_id]), include_blank: "— Personne —", id: "#{id_prefix}_responsible", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm", data: { "searchable-select-target": "select" }
+    = render "shared/searchable_select_search", label: "S'en charge"
+
+div
+  = label_tag "#{id_prefix}_notes", "Précisions", class: "block text-sm font-medium text-gray-700"
+  = text_area_tag "#{name_prefix}[notes]", values[:notes], rows: 2, id: "#{id_prefix}_notes", placeholder: "Intolérances, menu souhaité, précisions…", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+
+fieldset
+  legend.block.text-sm.font-medium.text-gray-700 Où en est le client
+  .mt-2.flex.flex-wrap.gap-2
+    - statuses.each do |status_label, status|
+      label.cursor-pointer
+        = radio_button_tag "#{name_prefix}[status]", status, (values[:status] || "requested").to_s == status, id: "#{id_prefix}_status_#{status}", class: "peer sr-only"
+        span.inline-block.rounded-full.border.border-gray-300.px-3.text-sm.text-gray-700(class="py-1.5 peer-checked:border-4s-main peer-checked:bg-4s-main peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-4s-main peer-focus-visible:ring-offset-1 hover:border-gray-400")
+          = status_label
