@@ -38,6 +38,14 @@ module Invoicing
       # Année de rangement de l'historique des envois : celle de l'arrivée.
       # nil pour une ligne sans date (réservable historique incomplet).
       def year = from_date&.year
+
+      # Séjour TERMINÉ : le départ est derrière nous (Michael 2026-10-19). Un
+      # séjour en cours reste « à venir » : sa facture n'est pas encore en
+      # retard. Une ligne sans date est un historique incomplet, donc passée.
+      def past?(today = Date.current)
+        last_day = to_date || from_date
+        last_day.nil? || last_day < today
+      end
     end
 
     # Réservables historiques. Leur `tier` est la colonne du bloc « tarif non
@@ -62,6 +70,17 @@ module Invoicing
     def requested
       @requested ||= lines_where({ invoice_status: REQUESTED }, exclude_canceled: true)
                      .sort_by { |l| l.from_date || Date.new(0) }
+    end
+
+    # La file « à fournir » coupée en deux (Michael 2026-10-19) : les séjours
+    # passés, dont la facture est en retard, et ceux à venir (en cours compris),
+    # qu'on peut préparer. Même tri que `requested` : les plus anciens d'abord.
+    def requested_past
+      requested.select(&:past?)
+    end
+
+    def requested_upcoming
+      requested.reject(&:past?)
     end
 
     # Historique COMPLET des factures envoyées, rangé par année d'arrivée

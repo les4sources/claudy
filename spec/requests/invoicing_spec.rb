@@ -98,6 +98,37 @@ RSpec.describe "Facturation (/invoicing)", type: :request do
   # Historique complet des envois, par année (Michael 2026-09-06) : la
   # facturation existe depuis 2023 sur les réservables importés, l'ancienne
   # « mémoire courte » de 15 lignes la rendait invisible.
+  # Séjours passés et à venir séparés (Michael 2026-10-19) : les factures en
+  # retard d'abord, celles qu'on peut préparer ensuite. Un séjour en cours
+  # n'est pas encore en retard, il reste dans « à venir ».
+  describe "séjours passés et à venir" do
+    it "range chaque facture dans son bloc, les passés en premier" do
+      booking(invoice_status: "requested", group: "Chorale passée", from_date: Date.today - 10)
+      booking(invoice_status: "requested", group: "Scouts en cours", from_date: Date.today - 1)
+      space_booking(invoice_status: "requested", group: "Fanfare à venir", from_date: Date.today + 7)
+
+      get invoicing_path
+      doc = Nokogiri::HTML(response.body)
+      past = doc.at_css("#a-fournir-passes")
+      upcoming = doc.at_css("#a-fournir-a-venir")
+
+      expect(past.text).to include("Séjours passés", "Chorale passée")
+      expect(past.text).not_to include("Scouts en cours", "Fanfare à venir")
+      expect(upcoming.text).to include("Séjours à venir", "Scouts en cours", "Fanfare à venir")
+      expect(upcoming.text).not_to include("Chorale passée")
+      expect(response.body.index("a-fournir-passes")).to be < response.body.index("a-fournir-a-venir")
+      expect(response.body).to include("1 pour des séjours passés, 2 pour des séjours à venir.")
+    end
+
+    it "n'affiche pas un bloc vide" do
+      booking(invoice_status: "requested", group: "Seulement à venir")
+
+      get invoicing_path
+      expect(response.body).to include("a-fournir-a-venir")
+      expect(response.body).not_to include("a-fournir-passes")
+    end
+  end
+
   describe "factures envoyées" do
     it "liste les factures déjà envoyées, à part de la file" do
       space_booking(invoice_status: "sent", group: "Déjà facturé")

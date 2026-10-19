@@ -20,7 +20,8 @@
         span.text-3xl.font-semibold.text-amber-900 = requested.size
         .text-sm.text-amber-900
           p.font-medium facture#{'s' if requested.size > 1} à fournir
-          p.text-amber-700 Les plus anciennes d'abord — ce sont les plus en retard.
+          p.text-amber-700
+            | #{@queue.requested_past.size} pour des séjours passés, #{@queue.requested_upcoming.size} pour des séjours à venir.
       - else
         svg.w-8.h-8.text-green-600 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
           path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
@@ -46,10 +47,25 @@
               span.text-red-600 &nbsp;— #{l(line.from_date, format: :long)}
 
   / --- File de travail ----------------------------------------------------
-  - if requested.any?
-    section.space-y-3
-      h2.text-base.font-semibold.text-gray-900 À fournir
-      = render "invoicing/table", lines: requested, action_label: "Marquer envoyée", action_status: Invoicing::Queue::SENT, tone: :requested
+  /  Coupée en deux (Michael 2026-10-19) : les séjours PASSÉS d'abord, leur
+     facture est en retard ; puis les séjours À VENIR (en cours compris), qu'on
+     peut préparer. Chaque bloc n'apparaît que s'il a des lignes.
+  - past = @queue.requested_past
+  - upcoming = @queue.requested_upcoming
+  - if past.any?
+    section.space-y-3(id="a-fournir-passes")
+      .flex.items-baseline.gap-2
+        h2.text-base.font-semibold.text-amber-900 Séjours passés
+        span.inline-flex.items-center.rounded-full.bg-amber-100.px-2.py-0.5.text-xs.font-medium.text-amber-800 = past.size
+        span.text-sm.text-gray-500 en retard, les plus anciens d'abord
+      = render "invoicing/table", lines: past, action_label: "Marquer envoyée", action_status: Invoicing::Queue::SENT, tone: :requested
+  - if upcoming.any?
+    section.space-y-3(id="a-fournir-a-venir")
+      .flex.items-baseline.gap-2
+        h2.text-base.font-semibold.text-gray-900 Séjours à venir
+        span.inline-flex.items-center.rounded-full.bg-gray-100.px-2.py-0.5.text-xs.font-medium.text-gray-700 = upcoming.size
+        span.text-sm.text-gray-500 en cours compris, les plus proches d'abord
+      = render "invoicing/table", lines: upcoming, action_label: "Marquer envoyée", action_status: Invoicing::Queue::SENT, tone: :upcoming
 
   / --- Historique des envois, par année -----------------------------------
   /  Toute la facturation depuis 2023 vit ici (Michael 2026-09-06) — l'ancienne
