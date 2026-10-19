@@ -17,6 +17,19 @@ RSpec.describe Finance::GenerateRecurringCharges do
     rate
   end
 
+  describe "une seule règle" do
+    it "ne génère que la règle demandée" do
+      dome = RecurringCharge.create!(member_account: account, label: "Forfait dôme", basis: "flat",
+                                     amount_cents: 5000, flow: "dome", starts_on: Date.new(2023, 1, 1))
+      RecurringCharge.create!(member_account: account, label: "Pension", basis: "flat",
+                              amount_cents: 3000, flow: "pet", starts_on: Date.new(2023, 1, 1))
+
+      report = described_class.new(month: "2026-08", only: dome.id).run!
+
+      expect(report.created.map { |l| l[:charge] }).to eq([dome])
+    end
+  end
+
   describe "idempotence" do
     let!(:charge) do
       RecurringCharge.create!(member_account: account, label: "Forfait dôme", basis: "flat",
@@ -294,6 +307,14 @@ RSpec.describe Finance::GenerateRecurringCharges do
       bill_by_hand(Date.new(2026, 8, 1))
 
       expect { described_class.new(month: "2026-09").run! }.to change(AccountEntry, :count).by(1)
+    end
+
+    # La ligne manuelle ne contient pas la pension de l'animal (Balthazar).
+    it "génère quand même une charge que la ligne manuelle ne couvre pas" do
+      charge.update!(flow: "pet")
+      bill_by_hand(Date.new(2026, 8, 1))
+
+      expect { described_class.new(month: "2026-08").run! }.to change(AccountEntry, :count).by(1)
     end
   end
 end
