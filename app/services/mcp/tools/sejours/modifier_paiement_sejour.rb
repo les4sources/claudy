@@ -16,7 +16,7 @@ module Mcp
                  paiement: { type: %w[integer string], description: "Identifiant du paiement (#812)." },
                  statut: { type: "string", enum: %w[paid pending refunded] },
                  montant: { type: %w[number string], description: "Nouveau montant en euros." },
-                 methode: { type: "string", enum: %w[bank_transfer cash card stripe airbnb] },
+                 methode: { type: "string", enum: %w[bank_transfer cash card stripe ota] },
                  date: DATE.merge(description: "Date de paiement (AAAA-MM-JJ).")
                },
                required: %w[sejour paiement]

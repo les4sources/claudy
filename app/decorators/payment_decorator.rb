@@ -110,6 +110,8 @@ class PaymentDecorator < ApplicationDecorator
   # ce que le paragraphe vide empêchait — il était « présent » sans rien dire.
   def line
     line_content = case object.payment_method
+      when Payment::OTA_METHOD
+        "Payé #{amount} via Airbnb ou Booking"
       when "airbnb"
         "Payé #{amount} via Airbnb"
       when "bookingdotcom"
@@ -130,7 +132,9 @@ class PaymentDecorator < ApplicationDecorator
 
   def payment_method
     case object.payment_method
-    when Payment::AIRBNB_METHOD
+    when Payment::OTA_METHOD
+      "Via Airbnb ou Booking"
+    when "airbnb"
       "Via Airbnb"
     when "bookingdotcom"
       "Booking.com"
@@ -155,6 +159,8 @@ class PaymentDecorator < ApplicationDecorator
       h.content_tag(:div, "💳", class: "ml-1")
     when Payment::TRANCHESDEVIE_METHOD
       h.content_tag(:div, "🍕", class: "ml-1")
+    when Payment::OTA_METHOD
+      h.content_tag(:div, "🏨", class: "ml-1")
     when "airbnb"
       h.render("shared/airbnb_icon")
     when "bookingdotcom"

@@ -7,15 +7,15 @@ module Mcp
 
         tool "enregistrer_paiement_sejour",
              title: "Enregistrer un paiement de séjour",
-             description: "Ajoute un paiement à un séjour (virement reçu, espèces, carte, via Airbnb) et recalcule son " \
+             description: "Ajoute un paiement à un séjour (virement reçu, espèces, carte, via Airbnb ou Booking) et recalcule son " \
                           "statut de paiement. Aucun email. Pour les comptes courants des habitants, c'est encoder_reglement.",
              schema: {
                properties: {
                  sejour: SEJOUR,
                  montant: { type: %w[number string], description: "Montant en euros, positif." },
-                 methode: { type: "string", enum: %w[bank_transfer cash card stripe airbnb],
-                            description: "airbnb pour un séjour Airbnb (la plateforme encaisse) : c'est le défaut sur un " \
-                                         "séjour Airbnb, bank_transfer ailleurs." },
+                 methode: { type: "string", enum: %w[bank_transfer cash card stripe ota],
+                            description: "ota = via Airbnb ou Booking (la plateforme encaisse) : c'est le défaut sur un " \
+                                         "séjour venu d'une de ces plateformes, bank_transfer ailleurs." },
                  statut: { type: "string", enum: %w[paid pending], description: "paid (reçu, défaut) ou pending (attendu)." },
                  date: DATE.merge(description: "Date de réception (AAAA-MM-JJ), aujourd'hui par défaut.")
                },
@@ -27,7 +27,7 @@ module Mcp
         def planifier(arguments)
           stay = sejour!(arguments["sejour"])
           cents = cents!(arguments["montant"], "montant").abs
-          methode = arguments["methode"].presence || (stay.airbnb? ? Payment::AIRBNB_METHOD : "bank_transfer")
+          methode = arguments["methode"].presence || (stay.ota? ? Payment::OTA_METHOD : "bank_transfer")
           statut_paiement = arguments["statut"].presence || "paid"
           paye_le = date_ou_nil(arguments["date"], "date") || Date.current
           if stay.direct_payments.where(amount_cents: cents, payment_method: methode, paid_on: paye_le)

@@ -43,25 +43,25 @@ RSpec.describe "Stays#show — section Paiements (epic #26 / #55)", type: :reque
     expect(response.body).to include("En attente")
   end
 
-  # « Via Airbnb » (Michael 2026-10-18) : choisissable sur toute fiche, et
-  # proposé d'office sur un séjour Airbnb.
-  it "propose « Via Airbnb » parmi les moyens, sans le présélectionner hors Airbnb" do
-    expect(response.body).to include('<option value="airbnb">Via Airbnb</option>')
+  # « Via Airbnb ou Booking » (Michael 2026-10-19) : choisissable sur toute
+  # fiche, et proposé d'office sur un séjour venu d'une de ces plateformes.
+  it "propose « Via Airbnb ou Booking » parmi les moyens, sans le présélectionner ailleurs" do
+    expect(response.body).to include('<option value="ota">Via Airbnb ou Booking</option>')
     expect(response.body).to include('<option selected="selected" value="bank_transfer">Virement</option>')
   end
 
-  context "séjour Airbnb" do
+  context "séjour Booking.com" do
     before do
-      booking = Booking.create!(firstname: "Roel", adults: 2, from_date: from, to_date: to, platform: "airbnb")
+      booking = Booking.create!(firstname: "Roel", adults: 2, from_date: from, to_date: to, platform: "bookingdotcom")
       StayItem.create!(stay: stay, bookable: booking)
-      Payment.create!(stay: stay, amount_cents: 1_000, payment_method: "airbnb", status: "paid")
+      Payment.create!(stay: stay, amount_cents: 1_000, payment_method: "ota", status: "paid")
       get stay_path(stay)
     end
 
-    it "présélectionne « Via Airbnb » et l'affiche sur la ligne de paiement" do
-      # Deux fois : l'ajout d'un paiement, et la correction du paiement Airbnb.
-      expect(response.body.scan('<option selected="selected" value="airbnb">Via Airbnb</option>').size).to eq(2)
-      expect(response.body).to include(">Via Airbnb</span>")
+    it "présélectionne « Via Airbnb ou Booking » et l'affiche sur la ligne de paiement" do
+      # Deux fois : l'ajout d'un paiement, et la correction du paiement de plateforme.
+      expect(response.body.scan('<option selected="selected" value="ota">Via Airbnb ou Booking</option>').size).to eq(2)
+      expect(response.body).to include(">Via Airbnb ou Booking</span>")
     end
   end
 

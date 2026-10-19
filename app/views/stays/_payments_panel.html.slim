@@ -70,12 +70,12 @@
         label.block.text-xs.text-gray-600
           | Montant (€)
           = number_field_tag "payment[amount]", nil, step: "0.01", min: "0.01", required: true, class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
-        /  « Via Airbnb » (Michael 2026-10-18) : un séjour Airbnb n'est payé ni
-           par virement, ni en liquide, ni en ligne — c'est la plateforme qui
-           encaisse. Il est proposé d'office sur un séjour Airbnb.
+        /  « Via Airbnb ou Booking » (Michael 2026-10-19) : un séjour venu d'une
+           de ces plateformes n'est payé ni par virement, ni en liquide, ni en
+           ligne — c'est la plateforme qui encaisse. Proposé d'office sur ces séjours.
         div.relative.text-xs.text-gray-600(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un moyen…")
           span.block Moyen
-          = select_tag "payment[payment_method]", options_for_select(Payment::STAY_METHOD_OPTIONS, @stay.airbnb? ? Payment::AIRBNB_METHOD : "bank_transfer"), class: "mt-1 block w-full rounded border-gray-300 text-sm py-1", data: { searchable_select_target: "select" }
+          = select_tag "payment[payment_method]", options_for_select(Payment::STAY_METHOD_OPTIONS, @stay.ota? ? Payment::OTA_METHOD : "bank_transfer"), class: "mt-1 block w-full rounded border-gray-300 text-sm py-1", data: { searchable_select_target: "select" }
           = render "shared/searchable_select_search", label: "Chercher un moyen de paiement"
         div.relative.text-xs.text-gray-600(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un statut…")
           span.block Statut

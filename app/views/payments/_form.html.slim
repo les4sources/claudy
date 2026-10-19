@@ -15,8 +15,7 @@
                                    ["Stripe (paiement en ligne)", "stripe"], 
                                    ["Reçu en liquide", "cash"], 
                                    ["Par virement bancaire", "bank_transfer"],
-                                   ["Via Airbnb", "airbnb"],
-                                   ["Via Booking.com", "bookingdotcom"] \
+                                   ["Via Airbnb ou Booking", Payment::OTA_METHOD] \
                                  ], 
                                  :last, :first, 
                                  required: true do |radio_button|
