@@ -41,4 +41,15 @@ module MailMessagesHelper
     parts << number_to_currency(attachment.proposed(:total_cents) / 100.0) if attachment.proposed(:total_cents)
     parts.join(" · ")
   end
+
+  # Le corps d'un mail en texte brut : échappé, liens cliquables.
+  def mail_text_with_links(text)
+    parts = text.to_s.split(%r{(https?://[^\s<>"]+)})
+    safe_join(parts.map.with_index do |part, i|
+      next part if i.even?
+
+      url = part.sub(/[.,;:!?)\]]+\z/, "")
+      safe_join([link_to(url, url, target: "_blank", rel: "noopener noreferrer nofollow"), part.delete_prefix(url)])
+    end)
+  end
 end

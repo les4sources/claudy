@@ -1,0 +1,19 @@
+/ Le corps du mail (MailIntake::Body) : HTML déjà assaini, ou texte brut.
+  La réponse citée est repliée : on la déplie si on a besoin du contexte.
+- if reading.main.blank? && !reading.quoted?
+  p.text-sm.text-gray-400 (corps vide)
+- elsif reading.html?
+  .mail-body= sanitize(reading.main, tags: MailIntake::Body::TAGS, attributes: MailIntake::Body::ATTRIBUTES + %w[target rel])
+- else
+  .mail-body.whitespace-pre-line= mail_text_with_links(reading.main)
+
+- if reading.quoted?
+  details.mt-3.group(data-mail-quote)
+    summary.inline-flex.cursor-pointer.select-none.items-center.gap-1.rounded-full.bg-gray-100.px-2.py-0.5.text-xs.text-gray-500(class="hover:bg-gray-200 hover:text-gray-700")
+      span(class="group-open:hidden") Afficher le message cité
+      span.hidden(class="group-open:inline") Masquer le message cité
+    .mt-2.border-l-2.border-gray-200.pl-3.text-gray-500
+      - if reading.html?
+        .mail-body= sanitize(reading.quoted, tags: MailIntake::Body::TAGS, attributes: MailIntake::Body::ATTRIBUTES + %w[target rel])
+      - else
+        .mail-body.whitespace-pre-line= mail_text_with_links(reading.quoted)

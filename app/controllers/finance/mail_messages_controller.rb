@@ -23,6 +23,7 @@ module Finance
       breadcrumb(@message.subject.presence || "Mail ##{@message.id}", finance_mail_message_path(@message), match: :exact)
       @third_parties = ThirdParty.where(id: @message.mail_attachments.filter_map { |a| a.proposed(:third_party_id) }).index_by(&:id)
       @entities = LegalEntity.all.index_by(&:id)
+      @reading = MailIntake::Body.for(@message)
     end
 
     def ignore
