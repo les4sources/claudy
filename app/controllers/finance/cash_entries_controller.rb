@@ -365,7 +365,7 @@ module Finance
       Accounting::UnpostCashEntry.new(cash_entry: @entry, whodunnit: current_user&.email).run!
       redirect_to finance_cash_entry_path(@entry),
                   notice: "Passation annulée — l'écriture a été contre-passée, la ligne est réaffectable."
-    rescue Accounting::UnpostCashEntry::NotPosted => e
+    rescue Accounting::UnpostCashEntry::NotPosted, Accounting::UnpostCashEntry::ClosedFiscalYear => e
       redirect_to finance_cash_entry_path(@entry), alert: e.message
     end
 

@@ -1,0 +1,47 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Modifier la ventilation",
+           links: [link_to("← Retour à la ligne", finance_cash_entry_path(@entry), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+.mb-6.p-4.bg-white.rounded-lg.border.border-gray-100.flex.flex-wrap.items-center.justify-between.gap-4
+  div.min-w-0
+    p.font-semibold.text-gray-900= @entry.label
+    p.text-sm.text-gray-500
+      = l(@entry.entry_date, format: :long)
+      - if @entry.counterparty_name.present?
+        |  · #{@entry.counterparty_name}
+      |  · #{@entry.cash_account.name}
+    - if @entry.communication.present?
+      p.mt-1.text-sm.text-gray-500= @entry.communication
+  p.text-xl.font-semibold class="#{@entry.incoming? ? 'text-green-700' : 'text-gray-900'}"
+    = humanized_money_with_symbol(@entry.amount)
+
+- if @entry.posted?
+  .mb-6.p-4.rounded-lg.border.border-amber-100.text-sm.text-gray-700(class="bg-amber-50/60")
+    p
+      | Cette ligne est comptabilisée (
+      strong= @entry.journal_entry.reference
+      | ). En enregistrant, son écriture sera contre-passée, pas effacée, puis la ligne se recomptabilisera
+      |  avec la nouvelle ventilation si elle couvre tout le montant.
+
+.p-4.bg-white.rounded-lg.border.border-gray-100
+  h3.mb-1.text-sm.font-semibold.text-gray-900 Les parts de la ligne
+  p.mb-3.text-xs.text-gray-500
+    | Le total des parts ne peut pas dépasser #{humanized_money_with_symbol(@entry.amount)}. Tout s'enregistre ensemble, ou rien.
+
+  div(data-controller="allocation-parts" data-allocation-parts-remaining-value=@entry.amount_cents)
+    = form_with url: finance_cash_entry_reallocation_path(@entry), method: :patch, class: "space-y-3" do
+      div(data-allocation-parts-target="list")
+        - @allocations.each_with_index do |allocation, index|
+          = render "part", key: (allocation.persisted? ? allocation.id : "saisie#{index}"), allocation: allocation, entry: @entry, general_accounts: @general_accounts, teams: @teams, entities: @entities
+      template(data-allocation-parts-target="template")
+        = render "part", key: "__INDEX__", allocation: nil, entry: @entry, general_accounts: @general_accounts, teams: @teams, entities: @entities
+
+      .flex.flex-wrap.items-center.justify-between.gap-3.pt-1
+        button.text-sm.font-medium.text-blue-500(type="button" class="hover:text-blue-700" data-action="allocation-parts#add") + Ajouter une part
+        .flex.items-center.gap-3
+          p.hidden.text-sm.tabular-nums(data-allocation-parts-target="summary")
+            span(data-allocation-parts-target="reste")
+          = link_to "Annuler", finance_cash_entry_path(@entry), class: "text-sm text-gray-500 hover:text-gray-700"
+          button.inline-flex.items-center.rounded-md.border.border-transparent.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50" type="submit" data-allocation-parts-target="submit")
+            | Enregistrer la ventilation
