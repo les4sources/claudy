@@ -112,7 +112,10 @@
                   - if line.label.present?
                     .text-xs.text-gray-400= line.label
                 td.py-2.px-3.text-xs.text-gray-500= line.team&.name || "sans pôle"
-                td.py-2.pl-3.text-right.font-medium.text-gray-900= number_to_currency(line.amount_cents / 100.0)
+                td.py-2.pl-3.text-right.font-medium.text-gray-900
+                  = number_to_currency(line.amount_cents / 100.0)
+                  - if line.vat_cents.nonzero?
+                    .text-xs.font-normal.text-gray-400= "#{number_to_currency(line.net_amount_cents / 100.0)} HTVA + TVA #{line.vat_rate} %"
           tfoot
             tr
               td.py-2.pr-3.font-semibold.text-gray-900(colspan="2") Total ventilé

@@ -254,4 +254,84 @@ namespace :rattrapage do
 
   desc "Les quatre rattrapages, dans l'ordre. APPLY=1 pour écrire."
   task tout: %i[charges reglements dome forfait]
+
+  # La pension de Balthazar (2026-10-19). Béné la paie 30 € par mois depuis
+  # février 2022 par virement Triodos, mais la charge n'a été posée sur son
+  # compte qu'en octobre 2026 : rien de cette histoire n'y figure. Les virements
+  # de 2022 à 2025 sont déjà passés en 702001, ceux de 2026 attendent dans « À
+  # affecter ». Le détail est dans `Finance::BackfillRecurringCharge`.
+  #
+  # La règle démarre au 1er mars 2022 et le barème au 1er janvier 2023 (origine
+  # des barèmes repris) : les virements disent pourtant 30 € dès février 2022
+  # (« Balthazar - fev-mars », 60 € le 16 mars). La tâche avance donc les deux
+  # au premier mois payé — c'est écrit dans l'aperçu, rien n'est deviné.
+  #
+  # L'aperçu joue TOUT dans une transaction annulée à la fin : ce qu'il affiche
+  # est ce que APPLY=1 écrira, contrôles compris.
+  #
+  # Les deux lignes de CAISSE qui citent Balthazar ne sont pas reprises : le
+  # « Maréchal Balthazar » du 30/09/2022 (en 499000) et les 35 € « Béné à MF »
+  # du 04/10/2023 ne sont pas la pension mensuelle.
+  desc "Pension de Balthazar : charges et paiements depuis 2022 sur le compte de Béné. APPLY=1 pour écrire."
+  task pension_balthazar: :environment do
+    apply = ENV["APPLY"] == "1"
+    compte = MemberAccount.find_by!(code: ENV.fetch("COMPTE", "SRC-0005"))
+    charge = RecurringCharge.find_by(member_account: compte, rate_key: "pet.balthazar_monthly") ||
+             abort("Aucune charge « pet.balthazar_monthly » sur #{compte.code}.")
+    virements = CashEntry.joins(:cash_account).where(cash_accounts: { kind: "bank" })
+                         .where("cash_entries.counterparty_name ILIKE ?", "%grignard%")
+                         .where("cash_entries.communication ILIKE :t OR cash_entries.label ILIKE :t", t: "%balthazar%")
+    euros = ->(cents) { format("%8.2f €", cents / 100.0) }
+    mois = ->(m) { I18n.l(m, format: "%b %Y") }
+    etat = ->(ligne) { ligne[:status] == :new ? "+" : "=" }
+
+    ActiveRecord::Base.transaction do
+      PaperTrail.request(whodunnit: "rattrapage-balthazar") do
+        # Le premier mois payé : un virement de 60 € paie aussi le mois d'avant.
+        unit = charge.unit_amount_cents_on(Date.current)
+        premier = virements.incoming.order(:entry_date, :id).first
+        debut = premier && (premier.entry_date.beginning_of_month << ((premier.amount_cents / unit) - 1))
+
+        if debut && debut < charge.starts_on
+          puts "~ Règle ##{charge.id} : début avancé du #{I18n.l(charge.starts_on)} au #{I18n.l(debut)}"
+          charge.update!(starts_on: debut)
+        end
+        version = Rate.find_by!(key: charge.rate_key).rate_versions.chronological.first
+        if debut && version.active_from > debut
+          puts "~ Barème « #{charge.rate_key} » (#{euros[version.amount_cents].strip}) : " \
+               "en vigueur depuis le #{I18n.l(debut)} au lieu du #{I18n.l(version.active_from)}"
+          version.update!(active_from: debut)
+        end
+        Pricing::Rates.reset!
+      end
+
+      report = Finance::BackfillRecurringCharge.new(charge: charge, cash_entries: virements, apply: true,
+                                                    whodunnit: "rattrapage-balthazar").run!
+
+      puts "#{compte.code} #{compte.name} — #{charge.label} (règle ##{charge.id})"
+      puts "\nCharges (une par mois) :"
+      report.charges.each { |c| puts "  #{etat[c]} #{mois[c[:month]].ljust(10)} #{euros[c[:amount_cents]]}" }
+      puts "\nVirements déjà comptabilisés (2022-2025) → règlement sur le compte, la ligne n'est pas touchée :"
+      report.settlements.each do |s|
+        puts "  #{etat[s]} #{s[:entry].entry_date}  ligne ##{s[:entry].id.to_s.ljust(6)} paie #{mois[s[:month]].ljust(10)} #{euros[s[:amount_cents]]}"
+      end
+      puts "\nVirements à affecter (2026) → règlement + affectation en 400000 :"
+      report.links.each do |l|
+        puts "  #{etat[l]} #{l[:entry].entry_date}  ligne ##{l[:entry].id.to_s.ljust(6)} #{euros[l[:amount_cents]]}"
+      end
+      report.skipped.each { |s| puts "  ! #{s[:entry] ? "ligne ##{s[:entry].id}" : mois[s[:month]]} : #{s[:reason]}" }
+
+      reste = MemberAccounts::Outstanding.new(compte.reload).postes.find { |p| p.flow == charge.flow }
+      puts "\nFacturé #{euros[report.billed_cents]} · payé #{euros[report.paid_cents]} · " \
+           "encore dû sur le poste #{euros[reste&.amount_cents.to_i]}"
+      puts "! Payé sans charge en face : #{report.paid_unbilled.map(&mois).join(', ')}" if report.paid_unbilled.any?
+      puts "! Facturé sans paiement retrouvé : #{report.billed_unpaid.map(&mois).join(', ')}" if report.billed_unpaid.any?
+
+      unless apply
+        puts "[rattrapage:pension_balthazar] Rien n'a été écrit — relance avec APPLY=1."
+        raise ActiveRecord::Rollback
+      end
+    end
+    Pricing::Rates.reset!
+  end
 end

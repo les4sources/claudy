@@ -114,6 +114,7 @@ class PurchaseInvoice < ApplicationRecord
   accepts_nested_attributes_for :purchase_invoice_lines, allow_destroy: true
 
   before_validation :flag_quality
+  before_validation :compute_vat
   before_validation :normalize_payment_reference
   validate :structured_payment_reference_is_valid
   validate :lines_cover_total_when_leaving_to_process
@@ -141,6 +142,7 @@ class PurchaseInvoice < ApplicationRecord
 
   def status_label = STATUS_LABELS.fetch(status, status)
   def lines_total_cents = purchase_invoice_lines.sum(&:amount_cents)
+  def lines_vat_cents = purchase_invoice_lines.sum(&:vat_cents)
   def balanced? = lines_total_cents == total_cents
   def posted? = posted_at.present?
   def frozen_content? = FROZEN_STATUSES.include?(status)
@@ -251,6 +253,20 @@ class PurchaseInvoice < ApplicationRecord
     return if purchase_invoice_lines.reject(&:marked_for_destruction?).sum { |l| l.amount_cents.to_i } == total_cents
 
     errors.add(:base, "Les lignes doivent couvrir exactement le total avant de quitter « À traiter ».")
+  end
+
+  # La TVA des lignes tapées HTVA, taux par taux, comme sur la pièce : « TVA 21 %
+  # sur 1 189,11 » s'arrondit une fois sur la base du taux, pas ligne par ligne.
+  # L'arrondi se répartit ensuite sur les lignes, l'écart d'un cent allant à la
+  # plus grosse, pour que la somme des lignes retombe sur le TVAC de la facture.
+  def compute_vat
+    typed = purchase_invoice_lines.reject(&:marked_for_destruction?).select { |line| line.net_cents }
+    typed.group_by { |line| line.vat_rate.to_i }.each do |rate, lines|
+      expected = (lines.sum(&:net_cents) * rate).quo(100).round
+      lines.each { |line| line.vat_cents = (line.net_cents * rate).quo(100).round }
+      lines.max_by { |line| line.net_cents.abs }.vat_cents += expected - lines.sum(&:vat_cents)
+      lines.each { |line| line.amount_cents = line.net_cents + line.vat_cents }
+    end
   end
 
   # Une facture dont l'écriture est passée ne se retouche pas : on contre-passe.

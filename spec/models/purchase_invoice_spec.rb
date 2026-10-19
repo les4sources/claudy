@@ -41,6 +41,40 @@ RSpec.describe PurchaseInvoice do
     expect(invoice.reload.tap { |i| i.status = "to_pay" }).to be_valid
   end
 
+  describe "TVA des lignes tapées HTVA" do
+    it "ajoute la TVA au HTVA pour couvrir le total TVAC (facture 2026-014 du Domaine)" do
+      invoice = build_invoice(total_cents: 143_882)
+      invoice.purchase_invoice_lines.build(general_account: charges, net_cents: 118_911, vat_rate: 21)
+      invoice.save!
+
+      line = invoice.purchase_invoice_lines.first
+      expect([line.vat_cents, line.amount_cents, line.net_amount_cents]).to eq([24_971, 143_882, 118_911])
+      expect(invoice).to be_balanced
+    end
+
+    it "calcule la TVA taux par taux sur la somme des bases, comme la pièce" do
+      invoice = build_invoice(total_cents: 0)
+      # 2 × 0,07 € à 21 % : ligne à ligne 0,01 + 0,01 ; sur la base de
+      # 0,14 €, 0,03 €. C'est la seconde qui figure sur la pièce.
+      2.times { invoice.purchase_invoice_lines.build(general_account: charges, net_cents: 7, vat_rate: 21) }
+      invoice.purchase_invoice_lines.build(general_account: charges, net_cents: 10_000, vat_rate: 6)
+      invoice.total_cents = 14 + 3 + 10_000 + 600
+      invoice.save!
+
+      expect(invoice.lines_vat_cents).to eq(603)
+      expect(invoice).to be_balanced
+    end
+
+    it "laisse tel quel un montant donné sans HTVA (outil MCP, pièce lue d'un mail)" do
+      invoice = build_invoice
+      invoice.purchase_invoice_lines.build(general_account: charges, amount_cents: 12_000)
+      invoice.save!
+
+      expect(invoice.purchase_invoice_lines.first.attributes.slice("amount_cents", "vat_cents"))
+        .to eq("amount_cents" => 12_000, "vat_cents" => 0)
+    end
+  end
+
   it "refuse un même numéro chez le même fournisseur" do
     build_invoice.save!
 

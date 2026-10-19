@@ -76,6 +76,18 @@ RSpec.describe "Comptabilité > Achats", type: :request do
     end
   end
 
+  describe "GET /finance/purchases/new" do
+    # La fenêtre « Nouveau fournisseur » vit dans le formulaire de la facture :
+    # un champ obligatoire vide, même fenêtre fermée, bloquait l'enregistrement.
+    it "n'a aucun champ obligatoire dans la fenêtre du nouveau fournisseur" do
+      get new_finance_purchase_invoice_path
+
+      dialog = response.body[%r{<dialog.*?</dialog>}m]
+      expect(dialog).to include("nouveau-fournisseur-nom")
+      expect(dialog).not_to match(/\srequired[\s=>]/)
+    end
+  end
+
   describe "POST /finance/purchases" do
     it "enregistre une facture et sa ventilation" do
       expect {
@@ -95,6 +107,21 @@ RSpec.describe "Comptabilité > Achats", type: :request do
       expect(facture.total_cents).to eq(12_000)
       expect(facture.purchase_invoice_lines.sum(&:amount_cents)).to eq(12_000)
       expect(facture.status).to eq("to_process")
+    end
+
+    it "ajoute la TVA aux lignes tapées HTVA pour couvrir le total TVAC" do
+      post finance_purchase_invoices_path,
+           params: { purchase_invoice: {
+             legal_entity_id: entity.id, third_party_id: antargaz.id, number: "2026-014",
+             issued_on: "2026-10-15", total_euros: "1438,82",
+             purchase_invoice_lines_attributes: {
+               "0" => { general_account_id: charges.id, net_euros: "1189,11", vat_rate: "21", label: "Pains" }
+             }
+           } }
+
+      facture = PurchaseInvoice.last
+      expect(facture.purchase_invoice_lines.first.vat_cents).to eq(24_971)
+      expect(facture).to be_balanced
     end
 
     it "refuse un numéro déjà vu chez le même fournisseur, en montrant l'existante" do
