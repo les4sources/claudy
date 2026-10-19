@@ -6,6 +6,18 @@ module AccessHelper
 
   def section_writable?(section) = access_user&.can_write?(section) || false
 
+  # Le Guide : un compte restreint à ses activités l'ouvre dès qu'un chapitre
+  # est ouvert aux porteurs (`User#guide_roles`) ; il n'y écrit jamais.
+  def guide_readable?
+    user = access_user
+    return false if user.nil?
+    return GuideChapter.readable_by(user).exists? if user.restricted_to_experiences?
+
+    user.can_read?(:guide)
+  end
+
+  def guide_writable? = access_user&.guide_writer? || false
+
   # La carte en lecture seule (Kid) : `map_editable?` garde les gestes qui
   # écrivent, `map_edit_guard` désactive un formulaire entier (champs grisés,
   # boutons masqués par `.map-read-only` dans `map.css`). Le serveur refuse de

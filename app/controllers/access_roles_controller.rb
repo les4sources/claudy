@@ -7,6 +7,23 @@ class AccessRolesController < BaseController
 
   def index
     @users = User.includes(:human).order(:email)
+    @guide_chapters = GuideChapter.ordered
+  end
+
+  # Le tableau « Le Guide, par rôle » : pour chaque chapitre, les rôles qui le
+  # lisent. Les Sourciers lisent tout, ils n'y ont pas de colonne.
+  def update_guide_chapters
+    roles_by_chapter = params.fetch(:chapters, {}).permit!.to_h
+
+    GuideChapter.transaction do
+      GuideChapter.where(id: roles_by_chapter.keys).find_each do |chapter|
+        chapter.update!(access_roles: Array(roles_by_chapter[chapter.id.to_s]))
+      end
+    end
+
+    redirect_to access_roles_path(anchor: "guide"), notice: "Les chapitres du Guide ont été enregistrés."
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to access_roles_path(anchor: "guide"), alert: e.record.errors.full_messages.to_sentence
   end
 
   def update

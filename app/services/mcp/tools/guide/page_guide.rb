@@ -27,7 +27,7 @@ module Mcp
           return version(page, arguments["version"].to_i) if arguments["version"].present?
 
           contributeurs = page.contributors.map(&:display_name)
-          renvois = page.backlinks.map { |other| "##{other.id} « #{other.title} »" }
+          renvois = page.backlinks.select { |other| other.chapter.readable_by?(user) }.map { |other| "##{other.id} « #{other.title} »" }
           ecrans = page.screen_links.map { |link| link.label.presence || link.screen }
           [
             "#{ligne_page(page)}",

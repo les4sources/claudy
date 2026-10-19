@@ -3,8 +3,8 @@ module Mcp
     module Guide
       # Ce que partagent les outils du Guide des 4 Sources (Michael,
       # 2026-10-19) : le manuel interne du collectif, en chapitres et pages
-      # Markdown. Lire est ouvert à tous ; écrire demande le droit d'écrire
-      # dans le Guide (`Access`, section :guide), comme à l'écran.
+      # Markdown. Chacun lit les chapitres ouverts à ses rôles ; écrire demande le
+      # droit d'écrire dans le Guide (`Access`, section :guide), comme à l'écran.
       module Commun
         PAGE = { type: %w[integer string], description: "Page du Guide : identifiant (#12, rendu par guide) ou titre exact." }.freeze
         CHAPITRE = { type: %w[integer string], description: "Chapitre : identifiant (#3, rendu par guide) ou titre exact." }.freeze
@@ -17,7 +17,7 @@ module Mcp
         # Guide à l'écran.
         module Redacteur
           def call(arguments)
-            raise Base::Error, "Seuls les Sourciers modifient le Guide, comme dans Claudy." unless user.can_write?(:guide)
+            raise Base::Error, "Seuls les Sourciers modifient le Guide, comme dans Claudy." unless user.guide_writer?
 
             super
           end
@@ -29,6 +29,12 @@ module Mcp
 
         private
 
+        # Ce que ce compte lit : les chapitres ouverts à ses rôles (tout, pour un
+        # Sourcier), comme à l'écran.
+        def chapitres_lisibles = GuideChapter.readable_by(user)
+
+        def pages_lisibles = GuidePage.readable_by(user)
+
         def id_ou_nil(reference)
           texte = reference.to_s.strip.delete_prefix("#")
           texte.match?(/\A\d+\z/) ? texte.to_i : nil
@@ -38,9 +44,9 @@ module Mcp
           raise Base::Error, "Précise la page (identifiant ou titre)." if reference.blank?
 
           id = id_ou_nil(reference)
-          return GuidePage.includes(:chapter).find_by(id: id) || raise(Base::Error, "Aucune page ##{id} dans le Guide.") if id
+          return pages_lisibles.includes(:chapter).find_by(id: id) || raise(Base::Error, "Aucune page ##{id} dans le Guide.") if id
 
-          trouvees = GuidePage.includes(:chapter).where("title ILIKE ?", "%#{GuidePage.sanitize_sql_like(reference.to_s.strip)}%").to_a
+          trouvees = pages_lisibles.includes(:chapter).where("guide_pages.title ILIKE ?", "%#{GuidePage.sanitize_sql_like(reference.to_s.strip)}%").to_a
           exacte = trouvees.select { |page| page.title.casecmp?(reference.to_s.strip) }
           trouvees = exacte if exacte.one?
           return trouvees.first if trouvees.one?
@@ -54,9 +60,9 @@ module Mcp
           raise Base::Error, "Précise le chapitre (identifiant ou titre)." if reference.blank?
 
           id = id_ou_nil(reference)
-          return GuideChapter.find_by(id: id) || raise(Base::Error, "Aucun chapitre ##{id} dans le Guide.") if id
+          return chapitres_lisibles.find_by(id: id) || raise(Base::Error, "Aucun chapitre ##{id} dans le Guide.") if id
 
-          trouves = GuideChapter.where("title ILIKE ?", "%#{GuideChapter.sanitize_sql_like(reference.to_s.strip)}%").to_a
+          trouves = chapitres_lisibles.where("title ILIKE ?", "%#{GuideChapter.sanitize_sql_like(reference.to_s.strip)}%").to_a
           exact = trouves.select { |chapitre| chapitre.title.casecmp?(reference.to_s.strip) }
           trouves = exact if exact.one?
           return trouves.first if trouves.one?

@@ -61,7 +61,7 @@ module Guide
     end
 
     def chapter_params
-      params.require(:guide_chapter).permit(:title, :description)
+      params.require(:guide_chapter).permit(:title, :description, access_roles: [])
     end
   end
 end

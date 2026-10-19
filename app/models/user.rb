@@ -60,6 +60,18 @@ class User < ApplicationRecord
 
   def can_write?(section) = access_level(section) == :write
 
+  # Les rôles qui ouvrent des chapitres du Guide (`GuideChapter#access_roles`).
+  # Un compte restreint à ses activités y est porteur·euse et rien d'autre :
+  # ses autres rôles (souvent Sourcier, hérité de la migration des rôles) ne lui
+  # ouvrent rien ailleurs, ils ne lui ouvrent pas davantage le Guide.
+  def guide_roles = restricted_to_experiences? ? %w[porteur] : access_roles
+
+  # Lit tous les chapitres, y compris ceux qui ne sont ouverts à aucun rôle.
+  def reads_whole_guide? = !restricted_to_experiences? && sourcier?
+
+  # Écrit dans le Guide : jamais un compte restreint, même Sourcier sur le papier.
+  def guide_writer? = !restricted_to_experiences? && can_write?(:guide)
+
   # Cloisonnement des ACTIVITÉS (validation, édition, retrait, ajout sur un
   # séjour — `ExperienceBooking.for_user`, `ExperienceAvailability.for_user`).
   # Deux populations :

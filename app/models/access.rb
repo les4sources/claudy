@@ -17,7 +17,11 @@ module Access
     "administratif" => { label: "Administratif", description: "Comptes et comptabilité, calendrier en lecture" },
     # Michael, 2026-10-13 : n'ouvrait rien ; le Guide (2026-10-19) est sa
     # première section, en attendant la sienne.
-    "anier" => { label: "Ânier·ère", description: "Le Guide, en lecture (section à venir)" }
+    "anier" => { label: "Ânier·ère", description: "Le Guide, en lecture (section à venir)" },
+    # Un compte « Restreint à ses activités » l'est d'office dans le Guide
+    # (`User#guide_roles`) ; le cocher ouvre les mêmes chapitres à un compte
+    # qui n'est pas restreint.
+    "porteur" => { label: "Porteur·euse", description: "Les chapitres du Guide ouverts aux porteurs d'activité" }
   }.freeze
 
   ROLE_NAMES = ROLES.keys.freeze
@@ -42,7 +46,8 @@ module Access
     "communication" => { calendar: :read, events: :write, guide: :read },
     "kid" => { calendar: :read, map: :read, guide: :read },
     "administratif" => { calendar: :read, accounts: :write, accounting: :write, guide: :read },
-    "anier" => { guide: :read }
+    "anier" => { guide: :read },
+    "porteur" => { guide: :read }
   }.freeze
 
   LEVELS = { read: 1, write: 2 }.freeze
