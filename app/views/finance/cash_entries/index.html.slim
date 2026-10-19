@@ -14,6 +14,11 @@
   div
     = f.label :q, "Rechercher", class: "block text-sm font-medium text-gray-700"
     = f.search_field :q, value: @query, placeholder: "nom, communication…", autocomplete: "off", autocorrect: "off", autocapitalize: "off", spellcheck: "false", class: "mt-1 w-64 rounded-md border-gray-300 text-sm shadow-sm"
+  /  Le montant à part, et pas dans la recherche : un nombre tapé là
+     trouverait aussi chaque communication structurée qui le contient.
+  div
+    = f.label :amount, "Montant", class: "block text-sm font-medium text-gray-700"
+    = text_field_tag :amount, @amount, placeholder: "0,00", inputmode: "decimal", autocomplete: "off", class: "mt-1 w-28 rounded-md border-gray-300 text-sm shadow-sm"
   div(data-controller="searchable-select" data-searchable-select-placeholder-value="Tous les comptes" data-searchable-select-clearable-value="true" class="relative w-56")
     = f.label :cash_account_id, "Compte", class: "block text-sm font-medium text-gray-700"
     = f.collection_select :cash_account_id, @accounts, :id, :name, { include_blank: "Tous", selected: @account&.id }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
@@ -24,11 +29,11 @@
     = render "shared/searchable_select_search", label: "Chercher un statut"
   div
     = f.label :from, "Du", class: "block text-sm font-medium text-gray-700"
-    = f.date_field :from, value: @from, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+    = f.date_field :from, value: @from, label: false, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
   div
     = f.label :to, "Au", class: "block text-sm font-medium text-gray-700"
-    = f.date_field :to, value: @to, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
-  = f.submit "Afficher", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+    = f.date_field :to, value: @to, label: false, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  = submit_tag "Afficher", name: nil, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
 
 / Le compteur qui doit tomber à zéro. C'est le seul indicateur qui dit, en un
   coup d'œil, si la comptabilité du mois est à jour.
@@ -40,10 +45,13 @@
     - else
       = "#{@pending_count} ligne(s) — #{humanized_money_with_symbol(Money.new(@pending_cents, 'EUR'))}"
 
+- searched = [("« #{@query} »" if @query.present?), (number_to_currency(@amount_cents / 100.0) if @amount_cents)].compact
+- if @amount.present? && @amount_cents.nil?
+  p.mb-4.text-sm.text-amber-700 « #{@amount} » n'est pas un montant : la recherche l'ignore. Tapez par exemple 45,90.
 - if @entries.blank?
   .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
-    - if @query.present?
-      p.font-medium.text-gray-700 Aucune ligne ne correspond à « #{@query} » sur cette période.
+    - if searched.any?
+      p.font-medium.text-gray-700 Aucune ligne ne correspond à #{searched.to_sentence(last_word_connector: " et ", two_words_connector: " et ")} sur cette période.
       p.mt-1
         = link_to "Effacer la recherche", finance_cash_entries_path(cash_account_id: params[:cash_account_id], status: params[:status], from: params[:from], to: params[:to]), class: "font-medium text-blue-500 hover:text-blue-700"
     - else
@@ -51,8 +59,8 @@
 - else
   p.mb-4.text-sm.text-gray-500
     = "#{@total} ligne#{'s' if @total > 1}"
-    - if @query.present?
-      |  pour « #{@query} »
+    - if searched.any?
+      |  pour #{searched.to_sentence(last_word_connector: " et ", two_words_connector: " et ")}
     - if @entries.total_pages > 1
       |  — page #{@entries.current_page} sur #{@entries.total_pages}
   /  Le même langage que « À affecter » (Michael, 2026-09-20) : une pastille de

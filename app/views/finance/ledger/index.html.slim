@@ -12,11 +12,11 @@
     = render "shared/searchable_select_search", label: "Chercher une entité"
   div
     = f.label :from, "Du", class: "block text-sm font-medium text-gray-700"
-    = f.date_field :from, value: @from, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+    = f.date_field :from, value: @from, label: false, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
   div
     = f.label :to, "Au", class: "block text-sm font-medium text-gray-700"
-    = f.date_field :to, value: @to, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-  = f.submit "Afficher", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+    = f.date_field :to, value: @to, label: false, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+  = submit_tag "Afficher", name: nil, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
 
 - if @account.blank?
   .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100

@@ -116,6 +116,26 @@ RSpec.describe CashEntry do
     expect(entry.journal).to eq("bank")
     expect(build_cash_entry(caisse).journal).to eq("cash")
   end
+  # Le montant tapé dans la recherche du journal (Michael, 2026-10-19).
+  describe ".searched_amount_cents" do
+    it "lit les écritures courantes d'un montant, sans signe" do
+      expect(described_class.searched_amount_cents("150")).to eq(15_000)
+      expect(described_class.searched_amount_cents("12,5")).to eq(1_250)
+      expect(described_class.searched_amount_cents("-45.90")).to eq(4_590)
+      expect(described_class.searched_amount_cents(" 1 234,56 € ")).to eq(123_456)
+      expect(described_class.searched_amount_cents("1.234,56")).to eq(123_456)
+      expect(described_class.searched_amount_cents("1,234.56")).to eq(123_456)
+      expect(described_class.searched_amount_cents("1.234")).to eq(123_400)
+      expect(described_class.searched_amount_cents("80 EUR")).to eq(8_000)
+    end
+
+    it "ne devine rien d'autre" do
+      ["", "abc", "1,23,4", "1.2.3", "0", "0,00", "12,5,6"].each do |saisie|
+        expect(described_class.searched_amount_cents(saisie)).to be_nil, saisie
+      end
+    end
+  end
+
   # La recherche du journal : on cherche une ligne par ce qu'on en retient, et
   # ce qu'on retient n'est pas toujours dans la même colonne.
   describe ".matching" do

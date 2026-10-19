@@ -27,11 +27,18 @@ module Finance
       @to = parsed_date(params[:to]) || Date.current.end_of_year
 
       @query = params[:q].to_s.strip
+      # La recherche par montant (Michael, 2026-10-19) : on retrouve souvent
+      # une ligne par la somme qu'on a sous les yeux — un relevé, une facture.
+      # Elle se lit en valeur absolue, comme la fourchette de la file : 45,90
+      # trouve l'entrée comme la sortie.
+      @amount = params[:amount].to_s.strip
+      @amount_cents = CashEntry.searched_amount_cents(@amount)
 
       scope = CashEntry.ordered.in_period(@from, @to).includes(:cash_account, :cash_allocations)
       scope = scope.where(cash_account_id: @account.id) if @account
       scope = scope.where(status: @status) if @status
       scope = scope.matching(@query) if @query.present?
+      scope = scope.amount_between(@amount_cents, @amount_cents) if @amount_cents
 
       # Le journal se PAGINE (Michael, 2026-09-20). Il rendait l'année entière
       # d'un coup : 2 445 lignes et 2,7 Mo de HTML sur 2026, et ça grossit de

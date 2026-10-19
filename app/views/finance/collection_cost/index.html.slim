@@ -4,11 +4,11 @@
 = form_with url: finance_collection_cost_path, method: :get, class: "mb-6 p-4 bg-white rounded-lg border border-gray-100 flex flex-wrap items-end gap-4" do |f|
   div
     = f.label :from, "Du", class: "block text-sm font-medium text-gray-700"
-    = f.date_field :from, value: @from, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+    = f.date_field :from, value: @from, label: false, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
   div
     = f.label :to, "Au", class: "block text-sm font-medium text-gray-700"
-    = f.date_field :to, value: @to, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
-  = f.submit "Afficher", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+    = f.date_field :to, value: @to, label: false, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  = submit_tag "Afficher", name: nil, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
 
 .grid.gap-4.mb-6(class="md:grid-cols-3")
   .p-5.bg-white.rounded-lg.border.border-gray-100

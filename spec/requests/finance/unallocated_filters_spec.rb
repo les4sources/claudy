@@ -69,6 +69,32 @@ RSpec.describe "Comptabilité — À affecter, filtré", type: :request do
       expect(response.body).to include("Effacer la recherche")
     end
 
+    # Michael, 2026-10-19 : « je dois pouvoir faire une recherche par montant ».
+    it "cherche par montant, en valeur absolue" do
+      ligne_banque.update!(amount_cents: -4_590)
+
+      get finance_cash_entries_path(amount: "45,90", from: "2026-01-01", to: "2026-12-31")
+
+      expect(response.body).to include("Virement Triodos")
+      expect(response.body).not_to include("Vente pain Stripe")
+      expect(response.body).to include("1 ligne")
+      expect(response.body).to include("pour 45,90")
+    end
+
+    it "le dit quand le montant ne se lit pas, sans rien filtrer" do
+      get finance_cash_entries_path(amount: "beaucoup", from: "2026-01-01", to: "2026-12-31")
+
+      expect(response.body).to include("n'est pas un montant")
+      expect(response.body).to include("2 lignes")
+    end
+
+    it "n'affiche que « Du » et « Au » au-dessus des dates" do
+      get finance_cash_entries_path
+
+      expect(response.body).not_to match(/>\s*From\s*</)
+      expect(response.body).not_to match(/>\s*To\s*</)
+    end
+
     it "pagine sans toucher au compteur « à affecter », qui reste global" do
       get finance_cash_entries_path(from: "2026-01-01", to: "2026-12-31")
 
