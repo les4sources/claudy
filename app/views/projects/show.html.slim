@@ -56,6 +56,18 @@
         dl
           .px-4.py-5.sm:grid.sm:grid-cols-3.sm:gap-4.sm:px-6
             dt.text-sm.font-medium.text-gray-500
+              | Pôle
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              - if @project.team
+                = link_to @project.team.name, team_path(@project.team, anchor: "projets"), class: "font-medium text-blue-600 hover:underline"
+              - else
+                span.text-amber-700 Aucun pôle :
+                =< link_to "en choisir un", edit_project_path(@project), class: "font-medium text-amber-800 underline"
+            dt.text-sm.font-medium.text-gray-500
+              | Statut
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @project.status_badge
+            dt.text-sm.font-medium.text-gray-500
               | Échéance
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @project.due_date

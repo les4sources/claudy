@@ -1988,8 +1988,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_140000) do
     t.date "due_date"
     t.bigint "human_id", null: false
     t.string "name"
+    t.string "status", default: "active", null: false
+    t.bigint "team_id"
     t.datetime "updated_at", null: false
     t.index ["human_id"], name: "index_projects_on_human_id"
+    t.index ["team_id"], name: "index_projects_on_team_id"
   end
 
   create_table "purchase_invoice_lines", force: :cascade do |t|
@@ -2930,6 +2933,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_140000) do
   add_foreign_key "plants", "plant_varieties"
   add_foreign_key "plants", "users", column: "created_by_id"
   add_foreign_key "projects", "humans"
+  add_foreign_key "projects", "teams"
   add_foreign_key "purchase_invoice_lines", "analytic_accounts"
   add_foreign_key "purchase_invoice_lines", "general_accounts"
   add_foreign_key "purchase_invoice_lines", "purchase_invoices"

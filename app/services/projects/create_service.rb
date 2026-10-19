@@ -33,7 +33,9 @@ module Projects
           :name,
           :description,
           :due_date,
-          :human_id
+          :human_id,
+          :team_id,
+          :status
         )
     end
   end
