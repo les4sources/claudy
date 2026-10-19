@@ -139,13 +139,13 @@ RSpec.describe Mcp::Server, "séjours" do
       expect(sejour.payments.count).to eq(1)
     end
 
-    it "propose « via Airbnb » d'office sur un séjour Airbnb" do
-      sejour.bookables.grep(Booking).first.update!(platform: "airbnb")
+    it "propose « via Airbnb ou Booking » d'office sur un séjour Booking.com" do
+      sejour.bookables.grep(Booking).first.update!(platform: "bookingdotcom")
       apercu = outil("enregistrer_paiement_sejour", { "sejour" => sejour.id, "montant" => 50 })
-      expect(texte(apercu)).to include("via Airbnb")
+      expect(texte(apercu)).to include("via Airbnb ou Booking")
 
       outil("enregistrer_paiement_sejour", { "sejour" => sejour.id, "montant" => 50, "confirmation" => code_de(apercu) })
-      expect(sejour.payments.last.payment_method).to eq("airbnb")
+      expect(sejour.payments.last.payment_method).to eq("ota")
     end
 
     it "complète la note interne sans écraser l'existante" do

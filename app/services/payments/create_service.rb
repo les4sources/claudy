@@ -48,7 +48,7 @@ module Payments
 
     def set_status
       case @payment.payment_method
-      when "airbnb"
+      when Payment::OTA_METHOD, "airbnb"
         @payment.status = "paid"
       when "bookingdotcom"
         @payment.status = "paid"

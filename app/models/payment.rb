@@ -84,15 +84,19 @@ class Payment < ApplicationRecord
   # ne se supprime depuis la fiche séjour — on détache la party à la place.
   TRANCHESDEVIE_METHOD = "tranchesdevie".freeze
 
-  # Payé VIA AIRBNB (Michael 2026-10-18) : la plateforme encaisse le client et
-  # reverse aux 4 Sources par versements groupés. Ni virement du client, ni
-  # liquide, ni paiement en ligne Stripe — le dire autrement faussait la fiche.
-  AIRBNB_METHOD = "airbnb".freeze
+  # Payé VIA AIRBNB OU BOOKING (Michael 2026-10-18/19) : la plateforme encaisse
+  # le client et reverse aux 4 Sources par versements groupés. Ni virement du
+  # client, ni liquide, ni paiement en ligne Stripe. Un seul moyen pour les
+  # deux plateformes ; les anciennes valeurs `airbnb` / `bookingdotcom` du
+  # canal booking historique se lisent encore, et `payments:via_plateforme`
+  # les ramène sur celui-ci.
+  OTA_METHOD = "ota".freeze
+  LEGACY_OTA_METHODS = %w[airbnb bookingdotcom].freeze
 
   # Moyens proposés à la main sur la fiche séjour (ajout d'un paiement). La
   # carte n'y figure pas : elle est posée par le paiement en ligne du funnel.
   STAY_METHOD_OPTIONS = [
-    ["Virement", "bank_transfer"], ["Liquide", "cash"], ["En ligne", "stripe"], ["Via Airbnb", AIRBNB_METHOD]
+    ["Virement", "bank_transfer"], ["Liquide", "cash"], ["En ligne", "stripe"], ["Via Airbnb ou Booking", OTA_METHOD]
   ].freeze
   # À la correction, la carte reste choisissable : c'est le moyen d'un paiement
   # du funnel qu'on modifie.

@@ -319,24 +319,14 @@ class Stay < ApplicationRecord
            bookables.any? { |b| b.is_a?(Booking) && OTA_PLATFORMS.include?(b.platform) }
   end
 
-  # Séjour réservé via AIRBNB précisément (Booking.com à part) : un Booking
-  # rattaché porte la plateforme `airbnb`, ou le client est le fourre-tout
-  # Airbnb. Le canal `ota` seul ne suffit pas : il ne dit pas laquelle des deux
-  # plateformes. Sert à proposer « Via Airbnb » d'office sur ses paiements.
-  def airbnb?
-    return @airbnb if defined?(@airbnb)
-
-    @airbnb = customer&.email == Customer::OTA_CATCH_ALL_EMAILS["airbnb"] ||
-              bookables.any? { |b| b.is_a?(Booking) && b.platform == "airbnb" }
-  end
-
-  # Même règle en SQL, pour les traitements en masse (`payments:via_airbnb`).
-  scope :airbnb, lambda {
+  # Même règle que `ota?`, en SQL, pour les traitements en masse
+  # (`payments:via_plateforme`).
+  scope :ota, lambda {
     via_booking = StayItem.joins("INNER JOIN bookings ON bookings.id = stay_items.bookable_id")
-                          .where(bookable_type: "Booking", bookings: { platform: "airbnb", deleted_at: nil })
+                          .where(bookable_type: "Booking", bookings: { platform: OTA_PLATFORMS, deleted_at: nil })
                           .select(:stay_id)
-    via_client = Customer.where(email: Customer::OTA_CATCH_ALL_EMAILS["airbnb"]).select(:id)
-    where(id: via_booking).or(where(customer_id: via_client))
+    via_client = Customer.where(email: Customer::OTA_CATCH_ALL_EMAILS.values).select(:id)
+    where(source: "ota").or(where(id: via_booking)).or(where(customer_id: via_client))
   }
 
   # The concrete reservable objects attached to this stay (Booking, SpaceBooking, …).
