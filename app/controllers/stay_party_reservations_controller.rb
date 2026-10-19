@@ -36,10 +36,23 @@ class StayPartyReservationsController < BaseController
   def create
     service = TranchesDeVie::AttachPartyReservation.new(stay: @stay)
 
-    if service.run(params.require(:external_id))
+    if service.run(params.require(:external_id), paid_with_stay: paid_with_stay_param)
       respond_with_panels(notice: "Pizza Party rattachée au séjour.")
     else
       respond_with_panels(alert: service.error_message(default: "Rattachement impossible."))
+    end
+  end
+
+  # Réglée avec le séjour ou à part : le seul réglage d'une party rattachée.
+  def update
+    reservation = @stay.party_reservations.find(params[:id])
+    service = TranchesDeVie::SetPartyPaidWithStay.new(party_reservation: reservation)
+
+    if service.run(paid_with_stay_param)
+      notice = paid_with_stay_param ? "Pizza Party réglée avec le séjour : son paiement Tranches de Vie sort de l'encaissé." : "Pizza Party réglée à part, sur Tranches de Vie."
+      respond_with_panels(notice: notice)
+    else
+      respond_with_panels(alert: service.error_message(default: "Modification impossible."))
     end
   end
 
@@ -69,6 +82,10 @@ class StayPartyReservationsController < BaseController
   private
 
   NOT_CONFIGURED = "Connexion à Tranches de Vie non configurée".freeze
+
+  def paid_with_stay_param
+    ActiveModel::Type::Boolean.new.cast(params[:paid_with_stay]).present?
+  end
 
   def set_stay
     @stay = Stay.find(params[:stay_id])

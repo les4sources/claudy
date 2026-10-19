@@ -66,9 +66,10 @@ module TranchesDeVie
       return if reservation.status == previous_status && !newly_paid && !newly_unpaid && reservation.price_cents == previous_price
 
       @changed += 1
-      if newly_paid && reservation.active? && reservation.payment.nil? && reservation.price_cents.positive?
+      if newly_paid && reservation.payment.nil? && AttachPartyReservation.mirror_payment_due?(reservation)
         # Rattachée avant d'être payée (réglée sur place) : l'argent est arrivé
-        # là-bas, il entre dans l'encaissé ici.
+        # là-bas, il entre dans l'encaissé ici. Pas pour une party réglée avec
+        # le séjour : cet argent-là est déjà dans l'encaissé.
         reservation.update!(payment: AttachPartyReservation.build_payment!(reservation))
       elsif newly_unpaid && reservation.active? && reservation.payment.present?
         # Pointage annulé là-bas (mauvais bouton, caisse pas encore faite) :

@@ -82,6 +82,21 @@ RSpec.describe TranchesDeVie::AttachPartyReservation do
     expect(Payment.where(payment_method: Payment::TRANCHESDEVIE_METHOD)).to be_empty
   end
 
+  # Séjour #1546 (Michael, 2026-10-19) : un seul virement du client couvrait
+  # séjour et party. Le paiement miroir compterait deux fois le même argent.
+  it "rattache une party réglée avec le séjour : le total bouge, pas l'encaissé" do
+    stub_tdv_order(tdv_order(id: 1234))
+    service = described_class.new(stay: stay)
+
+    expect { service.run(1234, paid_with_stay: true) }
+      .to change { stay.reload.total_amount_cents }.by(27_000)
+      .and change { stay.amount_paid_cents }.by(0)
+
+    expect(service.party_reservation.paid_with_stay).to be(true)
+    expect(service.party_reservation.payment).to be_nil
+    expect(Payment.where(payment_method: Payment::TRANCHESDEVIE_METHOD)).to be_empty
+  end
+
   it "refuse de rattacher deux fois la même party" do
     stub_tdv_order(tdv_order(id: 1234))
     described_class.new(stay: stay).run(1234)

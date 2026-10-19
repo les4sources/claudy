@@ -43,4 +43,11 @@
                 button.cursor-not-allowed.rounded.bg-gray-200.px-2.py-0.5.text-xs.text-gray-500 disabled="disabled"
                   | Rattacher
               - else
-                = button_to "Rattacher", stay_party_reservations_path(stay), method: :post, params: { external_id: candidate.external_id }, class: "rounded bg-indigo-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-indigo-700"
+                / Payée en même temps que le séjour (un seul virement aux 4 Sources) :
+                  pas de paiement « Tranches de Vie », l'argent est déjà dans l'encaissé.
+                = form_with url: stay_party_reservations_path(stay), method: :post, class: "flex flex-wrap items-center gap-2" do |f|
+                  = f.hidden_field :external_id, value: candidate.external_id
+                  = f.button "Rattacher", type: "submit", class: "rounded bg-indigo-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-indigo-700"
+                  label.inline-flex.items-center.gap-1.text-xs.text-gray-600
+                    = check_box_tag :paid_with_stay, "1", false, id: "paid_with_stay_#{candidate.external_id}", class: "h-3.5 w-3.5 rounded border-gray-300 text-indigo-600"
+                    | Réglée avec le séjour (déjà dans un paiement)

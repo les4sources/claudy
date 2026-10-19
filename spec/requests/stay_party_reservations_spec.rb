@@ -137,6 +137,52 @@ RSpec.describe "Fiche séjour — Pizza Party de Tranches de Vie", type: :reques
     end
   end
 
+  describe "réglée avec le séjour" do
+    it "se coche au rattachement : le total bouge, pas l'encaissé" do
+      stub_tdv_order(tdv_order(id: 1234))
+
+      post stay_party_reservations_path(stay), params: { external_id: 1234, paid_with_stay: "1" }
+
+      expect(stay.reload.total_amount_cents).to eq(77_000)
+      expect(stay.amount_paid_cents).to eq(0)
+      expect(stay.party_reservations.first.paid_with_stay).to be(true)
+
+      get stay_path(stay)
+      expect(response.body).to include("Réglée avec le séjour")
+      expect(response.body).not_to include("Pizza Party · Tranches de Vie")
+    end
+
+    it "se règle après coup : le paiement Tranches de Vie sort de l'encaissé, puis revient" do
+      stub_tdv_order(tdv_order(id: 1234))
+      TranchesDeVie::AttachPartyReservation.new(stay: stay).run(1234)
+      reservation = stay.reload.party_reservations.first
+      expect(stay.amount_paid_cents).to eq(27_000)
+
+      patch stay_party_reservation_path(stay, reservation), params: { paid_with_stay: "1" }
+
+      expect(reservation.reload.paid_with_stay).to be(true)
+      expect(reservation.payment).to be_nil
+      expect(stay.reload.total_amount_cents).to eq(77_000)
+      expect(stay.amount_paid_cents).to eq(0)
+      follow_redirect!
+      expect(response.body).to include("réglée avec le séjour")
+
+      patch stay_party_reservation_path(stay, reservation), params: { paid_with_stay: "0" }
+
+      expect(reservation.reload.paid_with_stay).to be(false)
+      expect(reservation.payment.amount_cents).to eq(27_000)
+      expect(stay.reload.amount_paid_cents).to eq(27_000)
+      expect(Payment.where(payment_method: Payment::TRANCHESDEVIE_METHOD).count).to eq(1)
+    end
+
+    it "se propose sur chaque candidate" do
+      stub_tdv_index([tdv_order])
+      get stay_party_reservations_path(stay)
+
+      expect(response.body).to include("Réglée avec le séjour (déjà dans un paiement)")
+    end
+  end
+
   describe "le détachement" do
     it "ramène le total et l'encaissé à leur valeur d'avant" do
       stub_tdv_order(tdv_order(id: 1234))

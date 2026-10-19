@@ -7,6 +7,10 @@ module TranchesDeVie
   # bougent du même montant (un séjour soldé le reste) ; pas encore payée (une
   # party saisie en admin se règle sur place), seul le total bouge, et la
   # synchronisation ajoute le paiement le jour où Tranches de Vie le voit.
+  #
+  # Réglée AVEC le séjour (`paid_with_stay`) : le client a tout payé aux
+  # 4 Sources en un seul virement, déjà dans l'encaissé. Seul le total bouge,
+  # et aucun paiement miroir n'est jamais créé.
   class AttachPartyReservation < ServiceBase
     attr_reader :stay, :party_reservation
 
@@ -19,23 +23,30 @@ module TranchesDeVie
       @report_errors = false
     end
 
-    def run(external_id)
-      catch_error(context: { stay_id: stay.id, external_id: external_id }) { run!(external_id) }
+    def run(external_id, paid_with_stay: false)
+      catch_error(context: { stay_id: stay.id, external_id: external_id }) { run!(external_id, paid_with_stay: paid_with_stay) }
     end
 
-    def run!(external_id)
+    def run!(external_id, paid_with_stay: false)
       mapper = OrderMapper.new(@client.order(external_id))
       raise ServiceError, ALREADY_ATTACHED if already_attached?(mapper.external_id)
       raise ServiceError, NOT_ACTIVE unless mapper.status == "active"
 
       PartyReservation.transaction do
-        @party_reservation = stay.party_reservations.create!(mapper.attributes)
-        @party_reservation.update!(payment: self.class.build_payment!(@party_reservation)) if @party_reservation.paid? && @party_reservation.price_cents.positive?
+        @party_reservation = stay.party_reservations.create!(mapper.attributes.merge(paid_with_stay: paid_with_stay))
+        @party_reservation.update!(payment: self.class.build_payment!(@party_reservation)) if self.class.mirror_payment_due?(@party_reservation)
       end
 
       stay.recompute_aggregates!
       stay.set_payment_status
       true
+    end
+
+    # L'argent est-il arrivé chez Tranches de Vie, et seulement là ? Partagé avec
+    # la synchronisation et le réglage « réglée avec le séjour ».
+    def self.mirror_payment_due?(party_reservation)
+      party_reservation.active? && party_reservation.paid? && !party_reservation.paid_with_stay? &&
+        party_reservation.price_cents.positive?
     end
 
     # Le paiement miroir. `Payments::CreateService` n'est pas utilisable ici :

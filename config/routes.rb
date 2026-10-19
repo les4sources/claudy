@@ -777,7 +777,7 @@ Rails.application.routes.draw do
     resources :payments, only: [:create, :update, :destroy], controller: "stay_payments"
     # Pizza Party privées payées sur Tranches de Vie (issue #339) : rattachement
     # manuel depuis la fiche séjour, lecture seule de l'API de l'autre app.
-    resources :party_reservations, only: [:index, :create, :destroy], controller: "stay_party_reservations" do
+    resources :party_reservations, only: [:index, :create, :update, :destroy], controller: "stay_party_reservations" do
       collection do
         post :sync
       end

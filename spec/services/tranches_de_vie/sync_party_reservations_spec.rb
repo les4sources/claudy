@@ -133,6 +133,22 @@ RSpec.describe TranchesDeVie::SyncPartyReservations do
     expect(Payment.where(payment_method: Payment::TRANCHESDEVIE_METHOD).count).to eq(1)
   end
 
+  it "ne crée jamais de paiement pour une party réglée avec le séjour" do
+    LinenOrder.create!(stay: stay, kind: "double_bed", quantity: 1, price_cents: 50_000)
+    stub_tdv_order(tdv_unpaid_order(id: 1234))
+    TranchesDeVie::AttachPartyReservation.new(stay: stay).run(1234, paid_with_stay: true)
+    reservation = stay.reload.party_reservations.first
+
+    # La boulangerie pointe la party payée : l'argent était dans le virement du séjour.
+    stub_tdv_order(tdv_order(id: 1234, payment_method: "transfer", paid_at: "2026-10-19T08:00:00Z"))
+    described_class.new.run
+
+    expect(reservation.reload.paid).to be(true)
+    expect(reservation.payment).to be_nil
+    expect(stay.reload.total_amount_cents).to eq(77_000)
+    expect(stay.amount_paid_cents).to eq(0)
+  end
+
   it "suit le prix revu là-bas, paiement miroir compris" do
     reservation = attach!
     stub_tdv_order(tdv_order(id: 1234, total_cents: 30_000))
