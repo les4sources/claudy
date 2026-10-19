@@ -67,6 +67,10 @@ module MemberAccounts
       def label = AccountEntry::FLOW_LABELS.fetch(flow, "Divers")
       def any? = amount_cents.positive?
       def oldest_on = lignes.first&.entry_date
+
+      # Les lignes rangées par mois de leur date, dans l'ordre : le bar se lit
+      # mois par mois, comme la feuille de bar qui l'a produit (Michael, 2026-10-19).
+      def par_mois = lignes.group_by { |ligne| ligne.entry_date.beginning_of_month }
     end
 
     def initialize(member_account)

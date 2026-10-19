@@ -264,6 +264,21 @@ RSpec.describe "Finances > Comptes", type: :request do
       expect(response.body).to include("Conso bar").and include("Bar — 50,00")
     end
 
+    it "range les lignes du poste par mois, chacun avec son sous-total" do
+      account = create_account(name: "Béné", kind: "household", household: household)
+      account.account_entries.create!(entry_date: Date.new(2026, 4, 30), amount_cents: 800,
+                                    label: "Pizza Party", flow: "bar")
+      account.account_entries.create!(entry_date: Date.new(2026, 5, 31), amount_cents: 212,
+                                    label: "Moinette", flow: "bar")
+      account.account_entries.create!(entry_date: Date.new(2026, 5, 31), amount_cents: 220,
+                                    label: "Holy IPA", flow: "bar")
+
+      get poste_finance_account_path(account, flow: "bar")
+
+      mois = Nokogiri::HTML(response.body).css("th[scope=rowgroup]").map { |th| th.parent.css("th, td").map { |cell| cell.text.squish } }
+      expect(mois).to eq([["Avril 2026", "8,00 €"], ["Mai 2026", "4,32 €"]])
+    end
+
     it "renvoie sur la fiche quand le poste demandé n'a plus rien à régler" do
       account = create_account(name: "Béné", kind: "household", household: household)
 
