@@ -190,8 +190,9 @@ RSpec.describe ReservationMailer, type: :mailer do
 
       [html, text].each do |body|
         expect(body).to include("tranchesdevie.les4sources.be")
+        # Même titre que la page client (Michael, 2026-10-19).
+        expect(body).to include("Pains et Pizza Party au four à bois")
       end
-      expect(html).to include("Pizza Party")
     end
 
     it "annonce le solde restant dû quand il y en a un" do
