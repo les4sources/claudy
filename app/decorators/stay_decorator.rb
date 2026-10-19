@@ -439,6 +439,22 @@ class StayDecorator < ApplicationDecorator
       }
     end
 
+    # Pizza Party rattachée (Michael, 2026-10-19) : elle compte dans le total
+    # (`Stay#recompute_aggregates!`), la page doit donc la montrer. Sans elle,
+    # le client du séjour #1518 lisait un total de 1 980 € sans pouvoir
+    # retrouver les 140 € de sa party. Remboursée ou annulée : hors du total,
+    # hors de la page.
+    lines += object.party_reservations.active.ordered.map do |party|
+      when_parts = [party.held_on.present? ? h.l(party.held_on, format: :long) : nil, party.slot.presence].compact
+      {
+        kind: "PartyReservation",
+        icon: :flame,
+        name: party.persons.to_i.positive? ? "Pizza Party · #{party.persons} pers." : "Pizza Party",
+        date_range: when_parts.join(" · ").presence,
+        amount: h.humanized_money_with_symbol(party.price)
+      }
+    end
+
     # Bar (Michael, 2026-10-13) : une seule ligne pour toute la feuille. Le
     # détail article par article reste à l'équipe ; le client y lit ce qui
     # s'ajoute à son total.
@@ -824,8 +840,16 @@ class StayDecorator < ApplicationDecorator
     money(object.amount_paid_cents)
   end
 
+  # La Pizza Party a sa propre ligne dans la ventilation : on la sort de
+  # « Hébergement & espaces », où elle tombait faute d'autre case.
   def formatted_lodging_and_spaces
-    money(object.lodging_and_spaces_amount_cents)
+    money(object.lodging_and_spaces_amount_cents - object.party_reservations_amount_cents)
+  end
+
+  def has_party_reservations? = object.party_reservations_amount_cents.positive?
+
+  def formatted_party_reservations
+    money(object.party_reservations_amount_cents)
   end
 
   def formatted_experiences_confirmed

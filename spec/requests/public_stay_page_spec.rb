@@ -115,6 +115,26 @@ RSpec.describe "Public /sejour/:token — page client enrichie", type: :request 
     expect(response.body).to include(I18n.t("public.stays.show.activity_pending"))
   end
 
+  # Le séjour #1518 (Michael, 2026-10-19) : la Pizza Party rattachée comptait
+  # dans le total sans apparaître nulle part sur la page.
+  it "montre la Pizza Party rattachée dans la composition et dans la ventilation" do
+    stay = build_stay
+    PartyReservation.create!(stay: stay, source: "tranchesdevie", external_id: 18, held_on: Date.today + 10,
+                             slot: "soir", persons: 20, price_cents: 14_000, status: "active")
+    PartyReservation.create!(stay: stay, source: "tranchesdevie", external_id: 19, persons: 8,
+                             price_cents: 9_000, status: "refunded")
+    stay.recompute_aggregates!
+
+    get "/sejour/#{stay.token}"
+
+    items = response.body[/data-stay-items="true".*?<\/ul>/m]
+    expect(items).to include("Pizza Party · 20 pers.", "soir", "140")
+    expect(items).not_to include("8 pers.")
+    expect(response.body).to include('data-balance-party="true"')
+    lodging_line = response.body[/#{I18n.t("public.stays.balance.lodging_and_spaces").gsub("&", "&amp;")}.*?<\/dd>/m]
+    expect(lodging_line).to include("485")
+  end
+
   it "renvoie vers Tranches de Vie pour le pain et la Pizza Party" do
     get "/sejour/#{build_stay.token}"
 

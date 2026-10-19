@@ -68,6 +68,22 @@ RSpec.describe Mcp::Server, "activités" do
     expect(resa.reload).to have_attributes(performed_by: nil, carrier_fee_cents: nil)
   end
 
+  it "retire une activité puis la rétablit, sans prévenir personne" do
+    resa = ExperienceBooking.create!(experience_availability: creneau, stay: sejour, participants: 3, status: "confirmed")
+    sejour.recompute_aggregates!
+    confirme("annuler_reservation_activite", { "reservation" => resa.id })
+    expect(sejour.reload.total_amount_cents).to eq(0)
+
+    apercu = outil("retablir_reservation_activite", { "reservation" => resa.id })
+    expect(texte(apercu)).to include("statut « Confirmée »", "0,00 € → 85,00 €", "Personne n'est prévenu")
+    confirme("retablir_reservation_activite", { "reservation" => resa.id })
+
+    expect(resa.reload).to be_confirmed
+    expect(sejour.reload.total_amount_cents).to eq(8_500)
+    expect(ActionMailer::Base.deliveries).to be_empty
+    expect(outil("retablir_reservation_activite", { "reservation" => resa.id })[:isError]).to be(true)
+  end
+
   it "refuse une réservation avec son motif" do
     resa = ExperienceBooking.create!(experience_availability: creneau, stay: sejour, participants: 2)
     confirme("refuser_reservation_activite", { "reservation" => resa.id, "raison_client" => "Les ânes sont malades" })

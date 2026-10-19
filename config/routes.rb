@@ -798,6 +798,7 @@ Rails.application.routes.draw do
     end
     member do
       patch :confirm         # validation par le porteur (canal admin)
+      patch :restore         # rétablir une activité retirée par erreur
       get   :new_refusal     # formulaire de refus (raison obligatoire)
       patch :refuse          # application du refus avec raison
       patch :record_outcome  # « a eu lieu » / « n'a pas eu lieu »

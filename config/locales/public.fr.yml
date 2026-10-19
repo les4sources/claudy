@@ -73,6 +73,7 @@ fr:
       balance:
         heading: "Solde de votre séjour"
         lodging_and_spaces: "Hébergement & espaces"
+        pizza_party: "Pizza Party"
         experiences_confirmed: "Activités validées"
         experiences_pending: "Activités en attente de validation"
         experiences_pending_note: "(non exigible tant que non validée)"
