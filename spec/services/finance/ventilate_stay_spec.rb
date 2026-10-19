@@ -107,6 +107,29 @@ RSpec.describe Finance::VentilateStay do
     }.to raise_error(described_class::EmptyQuote, /vide/)
   end
 
+  # Un séjour relève de l'Accueil (Michael, 2026-10-19), repas compris, même
+  # quand la correspondance de recette désigne un autre pôle.
+  it "range toutes les lignes sur le pôle Accueil" do
+    accueil = Team.create!(name: "Pôle Accueil")
+    cuisine = Team.create!(name: "Pôle Cuisine")
+    RevenueMapping.find_by(category: "meals").update!(team: cuisine)
+    stub_quote(lodging: 100_000, spaces: 50_000, meals: 20_000)
+
+    lignes = described_class.new(stay: stay, amount_cents: 170_000).run!
+
+    expect(lignes.map(&:team).uniq).to eq([accueil])
+  end
+
+  it "retombe sur le pôle de la correspondance quand il n'y a pas de pôle Accueil" do
+    cuisine = Team.create!(name: "Pôle Cuisine")
+    RevenueMapping.find_by(category: "meals").update!(team: cuisine)
+    stub_quote(lodging: 100_000, meals: 20_000)
+
+    lignes = described_class.new(stay: stay, amount_cents: 120_000).run!
+
+    expect(lignes.to_h { |l| [l.category, l.team] }).to eq("lodging" => nil, "meals" => cuisine)
+  end
+
   # L'anti-critère du lot, vérifié en spec : la couche Finances ne calcule
   # jamais un prix, et ce fichier est le seul autorisé à toucher PricingModel.
   it "est le seul service Finances à consommer un moteur de prix" do

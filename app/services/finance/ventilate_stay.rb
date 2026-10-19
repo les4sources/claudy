@@ -62,7 +62,7 @@ module Finance
           label: "#{RevenueMapping::CATEGORY_LABELS.fetch(category, category)} — séjour ##{@stay.id}",
           amount_cents: @amount_cents.negative? ? -montant : montant,
           general_account: mapping.general_account,
-          team: mapping.team
+          team: accueil || mapping.team
         )
       end
     end
@@ -111,6 +111,17 @@ module Finance
 
     def mappings
       @mappings ||= RevenueMapping.includes(:general_account, :team).index_by(&:category)
+    end
+
+    # Un séjour est une affaire de l'Accueil (Michael, 2026-10-19) : c'est lui
+    # qui loue les salles et les hébergements, donc TOUTES les lignes d'un
+    # séjour vont sur son pôle, repas et activités compris. Le compte, lui,
+    # garde la nature de la recette. Le pôle de `RevenueMapping` ne sert plus
+    # que de repli, si aucun pôle Accueil n'existe.
+    def accueil
+      return @accueil if defined?(@accueil)
+
+      @accueil = Team.accueil
     end
   end
 end

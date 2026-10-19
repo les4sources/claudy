@@ -124,14 +124,22 @@ module Finance
         end
 
         [Line.new(label: "Commission Stripe", amount_cents: -frais, general_account: fee_account,
-                  team: nil, document: nil)]
+                  team: stay.present? ? accueil : nil, document: nil)]
       end
     end
 
     def fallback_revenue_line(transaction, brut)
       Line.new(label: transaction.description.presence || "Encaissement Stripe",
-               amount_cents: brut, general_account: default_revenue_account, team: nil,
-               document: transaction.payment)
+               amount_cents: brut, general_account: default_revenue_account,
+               team: transaction.stay.present? ? accueil : nil, document: transaction.payment)
+    end
+
+    # Même quand sa ventilation échoue, l'encaissement d'un séjour reste une
+    # recette de l'Accueil (Michael, 2026-10-19) ; voir `VentilateStay`.
+    def accueil
+      return @accueil if defined?(@accueil)
+
+      @accueil = Team.accueil
     end
 
     def fee_account

@@ -70,6 +70,14 @@ class Team < ApplicationRecord
   scope :roots, -> { where(parent_id: nil) }
   scope :analytics, -> { where(kind: "analytic") }
 
+  # Le pôle qui loue les salles et les hébergements (Michael, 2026-10-19) :
+  # toute recette d'un séjour lui revient. Retrouvé par son nom (« Pôle
+  # Accueil » en prod, « Pole Accueil » dans les seeds) ; nil s'il n'existe
+  # pas, et la recette reste alors visible comme non ventilée.
+  def self.accueil
+    where("name ILIKE ?", "%accueil%").order(:id).first
+  end
+
   def kind_label = kind.present? ? KIND_LABELS.fetch(kind, kind) : nil
   def referents = team_memberships.referents.includes(:human).map(&:human)
 
