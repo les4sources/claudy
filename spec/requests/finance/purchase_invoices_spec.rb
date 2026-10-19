@@ -97,6 +97,21 @@ RSpec.describe "Comptabilité > Achats", type: :request do
       expect(facture.status).to eq("to_process")
     end
 
+    it "ajoute la TVA aux lignes tapées HTVA pour couvrir le total TVAC" do
+      post finance_purchase_invoices_path,
+           params: { purchase_invoice: {
+             legal_entity_id: entity.id, third_party_id: antargaz.id, number: "2026-014",
+             issued_on: "2026-10-15", total_euros: "1438,82",
+             purchase_invoice_lines_attributes: {
+               "0" => { general_account_id: charges.id, net_euros: "1189,11", vat_rate: "21", label: "Pains" }
+             }
+           } }
+
+      facture = PurchaseInvoice.last
+      expect(facture.purchase_invoice_lines.first.vat_cents).to eq(24_971)
+      expect(facture).to be_balanced
+    end
+
     it "refuse un numéro déjà vu chez le même fournisseur, en montrant l'existante" do
       existante = cree_facture
 

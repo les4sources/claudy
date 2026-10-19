@@ -7,6 +7,11 @@ module Accounting
   # avec le tiers. Le tiers est sur la LIGNE et non sur l'écriture : c'est cette
   # ligne 440000 qu'on lettrera contre son paiement.
   #
+  # La TVA des lignes (epic #240, 2026-10-19) : pour une entité assujettie qui a
+  # ouvert le `411000`, elle part en TVA à récupérer et la charge reste HTVA.
+  # Sinon (fondation exemptée, franchise, ou 411000 encore désactivé) la TVA
+  # ne se récupère pas : elle fait partie de la charge, TVAC.
+  #
   # Idempotent : `PostDocument` rend l'écriture existante si le même document a
   # déjà été passé dans le même journal.
   class PostPurchaseInvoice < ServiceBase
@@ -14,6 +19,7 @@ module Accounting
     class MissingSupplierAccount < StandardError; end
 
     SUPPLIER_CODE = "440000".freeze
+    VAT_RECOVERABLE_CODE = "411000".freeze
 
     def initialize(purchase_invoice:, whodunnit: nil)
       @invoice = purchase_invoice
@@ -43,7 +49,7 @@ module Accounting
         label: [@invoice.third_party.name, @invoice.number].compact_blank.join(" · "),
         source: @invoice,
         whodunnit: @whodunnit,
-        lines: charge_lines(lines) + [supplier_line]
+        lines: charge_lines(lines) + vat_lines(lines) + [supplier_line]
       ).run!
 
       @invoice.update_column(:posted_at, Time.current) if @invoice.posted_at.blank?
@@ -57,9 +63,23 @@ module Accounting
           team: line.team,
           analytic_account: line.analytic_account,
           label: line.display_label,
-          debit_cents: line.amount_cents
+          debit_cents: recoverable_vat_account ? line.net_amount_cents : line.amount_cents
         }
       end
+    end
+
+    def vat_lines(lines)
+      vat = lines.sum(&:vat_cents)
+      return [] if recoverable_vat_account.nil? || vat.zero?
+
+      [{ account: recoverable_vat_account, label: "TVA à récupérer", debit_cents: vat }]
+    end
+
+    def recoverable_vat_account
+      return @recoverable_vat_account if defined?(@recoverable_vat_account)
+
+      @recoverable_vat_account =
+        (GeneralAccount.find_by(code: VAT_RECOVERABLE_CODE, active: true) if @invoice.legal_entity.vat_regime == "subject")
     end
 
     def supplier_line

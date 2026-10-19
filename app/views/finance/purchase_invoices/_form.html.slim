@@ -64,9 +64,14 @@
             = render "finance/purchase_invoices/line", lf: lf, general_accounts: general_accounts, teams: teams
 
         .mt-4.border-t.border-gray-100.pt-3.space-y-1
+          / Le reste à ventiler compare le TOTAL TVAC aux lignes TVA comprise :
+            les lignes se tapent HTVA, la TVA de chaque taux s'y ajoute.
           .flex.items-center.justify-between.text-sm
-            span.text-gray-500 Ventilé
+            span.text-gray-500 Ventilé HTVA
             span.font-medium.text-gray-900(data-purchase-invoice-form-target="allocated") —
+          .flex.items-center.justify-between.text-sm
+            span.text-gray-500 TVA
+            span.font-medium.text-gray-900(data-purchase-invoice-form-target="vat") —
           .flex.items-center.justify-between.text-sm
             span.text-gray-500 Reste à ventiler
             span.font-semibold.text-gray-900(data-purchase-invoice-form-target="remaining") —
