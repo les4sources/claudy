@@ -102,6 +102,7 @@ module Finance
       @entities = LegalEntity.actives.ordered
       @events = recent_events
       charger_artisans
+      charger_sejours
     end
 
     # Le détail d'une ligne, ouvert en modale depuis la file « À affecter »
@@ -320,7 +321,11 @@ module Finance
     # mémorisé pour ce client — c'est ce qui fera que le prochain virement se
     # rapprochera tout seul.
     def ventilate
-      stay = Stay.find(params[:stay_id])
+      # Depuis la fiche, le séjour se choisit dans une liste (Michael,
+      # 2026-10-19) : un envoi sans choix se refuse en mots, pas en 404.
+      stay = Stay.find_by(id: params[:stay_id])
+      return apres_affectation(@entry, finance_cash_entry_path(@entry), alert: "Choisis d'abord un séjour.") unless stay
+
       entite = @entry.cash_account.legal_entity
       lignes = []
 
@@ -390,6 +395,17 @@ module Finance
     private
 
     def get_entry = @entry = CashEntry.find(params[:id])
+
+    # Le choix d'un séjour à la main (Michael, 2026-10-19). Seulement sur une
+    # ligne entrante encore vierge : « Ventiler ce séjour » répartit le montant
+    # ENTIER de la ligne, il n'a pas de sens sur une ligne déjà entamée.
+    def charger_sejours
+      return unless @entry.incoming? && @entry.status == "pending" && @allocations.empty?
+
+      choix = Finance::StayChoices.new(cash_entry: @entry)
+      @stay_choices = choix.choices
+      @proposed_stay_id = choix.proposed_stay_id
+    end
 
     def entry_params
       permitted = params.require(:cash_entry).permit(:cash_account_id, :entry_date, :value_date, :label,
