@@ -466,6 +466,10 @@ Rails.application.routes.draw do
 
     resources :general_accounts, path: "chart_of_accounts", except: [:show]
     resources :legal_entities, path: "entities", except: [:show]
+    # Les comptes de trésorerie à l'écran (Michael, 2026-10-19) : l'IBAN seul s'y
+    # corrige. La création, l'entité et le compte général restent à l'API et au
+    # connecteur (`compte_tresorerie`), qui gardent leurs garde-fous.
+    resources :cash_accounts, only: [:index, :edit, :update]
     resources :fiscal_years, except: [:show] do
       member { post :close }
     end

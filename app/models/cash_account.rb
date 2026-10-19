@@ -68,6 +68,20 @@ class CashAccount < ApplicationRecord
   validates :kind, inclusion: { in: KINDS }
   validates :stripe_mode, inclusion: { in: STRIPE_MODES }
 
+  # Les règles de saisie d'un IBAN à l'écran (Comptabilité › Comptes de
+  # trésorerie), dans leur propre contexte : `save(context: :iban_entry)`. Elles
+  # ne tiennent pas en permanence — des comptes posés par l'API portent un
+  # simple numéro de compte, que l'import CODA sait relire.
+  validates :iban, iban: true, allow_blank: true, on: :iban_entry
+  validate :iban_unique, on: :iban_entry
+
+  # Rangé par groupes de quatre, comme la banque l'imprime : l'import compare
+  # les chiffres, la forme ne compte que pour qui le lit.
+  def self.format_iban(value)
+    brut = value.to_s.gsub(/[^A-Za-z0-9]/, "").upcase
+    brut.empty? ? nil : brut.scan(/.{1,4}/).join(" ")
+  end
+
   scope :ordered, -> { order(:name) }
   scope :actives, -> { where(active: true) }
   scope :stripe, -> { where(kind: "stripe") }
@@ -81,4 +95,17 @@ class CashAccount < ApplicationRecord
   def stripe? = kind == "stripe"
   def ledger? = stripe? && stripe_mode == "ledger"
   def per_payout? = stripe? && stripe_mode == "per_payout"
+  def bank? = kind == "bank"
+
+  private
+
+  # Un IBAN porté par deux comptes, et l'import refuse les deux.
+  def iban_unique
+    return if iban.blank?
+
+    chiffres = iban.gsub(/\D/, "")
+    doublon = CashAccount.with_deleted { CashAccount.where.not(id: id).to_a }
+                         .find { |c| c.iban.to_s.gsub(/\D/, "") == chiffres }
+    errors.add(:iban, "est déjà porté par « #{doublon.name} »") if doublon
+  end
 end
