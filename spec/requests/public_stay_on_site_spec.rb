@@ -51,10 +51,13 @@ RSpec.describe "Public /sejour/:token — pendant votre séjour (epic #348, phas
       expect(page_body).not_to include("data-stay-events", "Brouillon", "La veille", "Le lendemain")
     end
 
-    it "se place après les activités et avant le total" do
+    # Michael, 2026-10-19 : information non essentielle, elle vient après le
+    # total et le paiement.
+    it "se place après le total et le paiement" do
       event("Balade", arrival.in_time_zone.change(hour: 18))
       body = page_body
-      expect(position(body, "data-stay-events")).to be < position(body, "data-stay-total")
+      expect(position(body, "data-stay-total")).to be < position(body, "data-stay-events")
+      expect(body.index('id="paiement"')).to be < position(body, "data-stay-events")
     end
   end
 
