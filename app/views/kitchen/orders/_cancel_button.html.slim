@@ -1,0 +1,8 @@
+/ Annuler une demande côté client : le motif est obligatoire. La cuisine en
+  est prévenue (`Kitchen::Notifier`), jamais le client.
+button(type="button" class=btn data=pop.call("#{dom}-cancel", "bottom-end")) Annuler
+.w-72.p-3(id="#{dom}-cancel" class=panel)
+  = form_with url: status_kitchen_order_path(order), method: :patch, class: "space-y-2" do
+    = hidden_field_tag :status, "cancelled", id: nil
+    = text_field_tag :cancellation_reason, nil, required: true, id: nil, placeholder: "Motif de l'annulation", class: "block w-full rounded-md border-gray-300 text-sm"
+    = submit_tag "Annuler la demande", class: "rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"

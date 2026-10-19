@@ -51,6 +51,10 @@ module Kitchen
       return :refused   if changed_to("validation", "refused")
       # Plus rien ne part d'une ligne annulée : elle est sortie du jeu.
       return nil if order.cancelled?
+      # Une demande refusée, confiée à quelqu'un d'autre par l'accueil (« À
+      # couvrir » → « Confier à… ») : pour la nouvelle personne, c'est une
+      # demande neuve.
+      return :new_request if reopened_after_refusal?
       return :confirmed if changed_to("status", "confirmed")
       return revalidation_mailer if reopened_by_change?
 
@@ -62,6 +66,11 @@ module Kitchen
     def reopened_by_change?
       before, after = changes["validation"]
       before.to_s == "accepted" && after.to_s == "pending"
+    end
+
+    def reopened_after_refusal?
+      before, after = changes["validation"]
+      before.to_s == "refused" && after.present? && after.to_s != "refused"
     end
 
     # Pour un repas, il faut un nouvel accord de Stéphanie. Pour un buffet ou un

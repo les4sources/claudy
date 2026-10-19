@@ -1,0 +1,8 @@
+/ « Je m'en charge » / « Confier à… » : la personne est TOUJOURS choisie
+  dans la liste — les postes sont partagés sous un compte commun.
+.w-72.p-3(id="#{dom}-assign" class=panel)
+  = form_with url: assign_kitchen_order_path(order), method: :patch, class: "space-y-2" do
+    .relative(data-controller="searchable-select")
+      = select_tag :human_id, options_from_collection_for_select(@humans, :id, :name), include_blank: "— Choisir —", id: nil, class: "block w-full rounded-md border-gray-300 text-sm", data: { "searchable-select-target": "select" }
+      = render "shared/searchable_select_search", label: "Qui s'en charge"
+    = submit_tag "Confier", class: "rounded-md bg-4s-main px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
