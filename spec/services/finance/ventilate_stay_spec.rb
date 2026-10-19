@@ -80,7 +80,26 @@ RSpec.describe Finance::VentilateStay do
     expect(lignes.map(&:amount_cents)).to eq([50_000, 50_000])
   end
 
-  it "refuse un devis vide plutôt que de tout mettre sur une ligne muette" do
+  # Séjour #732 (Michael, 2026-10-19) : un hébergement sans logement ni chambre,
+  # que le moteur ne sait pas coter. Les prix posés sur la composition
+  # donnent les proportions à la place du devis.
+  it "retombe sur les prix de la composition quand le devis est vide" do
+    stub_quote(lodging: 0)
+    booking = Booking.create!(firstname: "Joeffrey", adults: 1, from_date: Date.new(2026, 8, 12),
+                              to_date: Date.new(2026, 8, 13))
+    booking.update_column(:price_cents, 500)
+    StayItem.create!(stay: stay, bookable: booking)
+    repas = MealOrder.create!(stay: stay, kind: "repas", moment: "midi", date: Date.new(2026, 8, 12), people: 1,
+                              status: "confirmed", skip_notifications: true)
+    repas.update_column(:price_cents, 500)
+
+    lignes = described_class.new(stay: stay, amount_cents: 1_000).run!
+
+    expect(lignes.map(&:category)).to contain_exactly("lodging", "meals")
+    expect(lignes.map(&:amount_cents)).to eq([500, 500])
+  end
+
+  it "refuse un devis vide quand la composition ne porte aucun prix non plus" do
     stub_quote(lodging: 0)
 
     expect {
