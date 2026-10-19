@@ -52,6 +52,62 @@ class PaymentDecorator < ApplicationDecorator
     StayDecorator.new(object.stay).date_range if object.stay
   end
 
+  # --- Email « Paiement reçu » à la compta (AdminMailer#payment_received) ---
+  # Michael 2026-10-19 : l'email ne disait que « on a reçu un paiement » et
+  # obligeait à ouvrir Claudy pour savoir qui avait payé quoi. Ces trois
+  # libellés en texte brut (l'objet d'un email n'accepte pas de HTML) disent
+  # le client, les dates et la nature du paiement.
+
+  # Le séjour d'abord (nom du client, ou de la réservation d'origine sur un
+  # séjour fourre-tout), puis le booking historique ou le pack de coworking.
+  def admin_client_label
+    label = object.stay ? StayDecorator.new(object.stay).display_name : linked_name
+    h.strip_tags(label.to_s).squish.presence || "Client inconnu"
+  end
+
+  # nil quand le paiement n'a pas de dates (pack de coworking).
+  def admin_dates_label
+    return nil if linked_to_coworking? && object.stay.nil?
+
+    dates = object.stay ? StayDecorator.new(object.stay).date_range : linked_date_range
+    h.strip_tags(dates.to_s).squish.presence
+  end
+
+  # Acompte, solde ou paiement intermédiaire, lu APRÈS l'encaissement (le
+  # paiement est déjà `paid` quand l'email part).
+  def admin_nature_label
+    return "Pack de coworking" if linked_to_coworking? && object.stay.nil?
+
+    stay = object.stay
+    return nil if stay.nil?
+
+    total = stay.total_amount_cents.to_i
+    if total.positive? && object.amount_cents >= total
+      "Montant total du séjour"
+    elsif !stay.payments.paid.where.not(id: object.id).exists?
+      "Acompte"
+    elsif stay.balance_due_cents <= 0
+      "Solde"
+    else
+      "Paiement partiel"
+    end
+  end
+
+  # Ce qui reste à encaisser sur le séjour après ce paiement (exigible).
+  def admin_balance_due
+    stay = object.stay
+    return nil if stay.nil?
+
+    h.number_to_currency([stay.balance_due_cents, 0].max / 100.0)
+  end
+
+  def admin_stay_total
+    stay = object.stay
+    return nil if stay.nil? || !stay.total_amount_cents.to_i.positive?
+
+    h.number_to_currency(stay.total_amount_cents / 100.0)
+  end
+
   def booking_date_range
     booking.date_range
   rescue

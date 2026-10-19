@@ -21,12 +21,16 @@ class AdminMailer < ApplicationMailer
     )
   end
 
+  # Paiement en ligne (Stripe) encaissé : la compta d'abord, l'accueil en copie
+  # (Michael 2026-10-19). L'objet dit montant, client et dates.
   def payment_received(payment)
     @payment = PaymentDecorator.new(payment)
+    @stay = payment.stay
     mail(
       from: "sejours@les4sources.be",
-      to: "sejours@les4sources.be",
-      subject: "💳 Paiement reçu",
+      to: "compta@les4sources.be",
+      cc: "sejours@les4sources.be",
+      subject: payment_received_subject,
       tag: "admin_payment_received",
       bcc: nil
     )
@@ -41,5 +45,12 @@ class AdminMailer < ApplicationMailer
       tag: "admin_space_booking_canceled",
       bcc: nil
     )
+  end
+
+  private
+
+  def payment_received_subject
+    details = [@payment.admin_client_label, @payment.admin_dates_label].compact.join(" · ")
+    "💳 Paiement reçu : #{@payment.amount} — #{details}"
   end
 end
