@@ -6,9 +6,9 @@
 / « c'est bien confirmé ? » → « qu'est-ce que j'ai réservé ? » → « qu'est-ce que
 / j'ai prévu de faire ? » → « qu'est-ce que je dois encore payer ? » → « je peux
 / préparer quoi ? » → « et mes autres séjours ? » → « comment je vous joins ? ».
-/ Epic #348, phase 5 : hero, composition, activités, pendant votre séjour,
-/ total / solde / paiements, carte, boulangerie, épicerie, disc-golf, autres
-/ séjours, contact.
+/ Epic #348, phase 5 : hero, composition, activités, total / solde /
+/ paiements, puis le non essentiel : pendant votre séjour, carte,
+/ boulangerie, épicerie, disc-golf ; enfin autres séjours, contact.
 - content_for :meta_title, t(".meta_title")
 
 = render "public/stays/hero"
@@ -17,11 +17,6 @@
 
 - if @stay.activity_lines.any?
   = render "public/stays/activities"
-
-/ Ce qui se passe au domaine pendant le séjour (epic #348, phase 5). Rien dans
-/ la fenêtre : pas de bloc du tout.
-- if @stay_events.any?
-  = render "public/stays/events", events: @stay_events
 
 / Le total suit la composition ET les activités — il additionne les deux.
 / Séjour Airbnb / Booking.com : le client a payé son tarif sur la plateforme,
@@ -49,6 +44,14 @@
     - else
       = render "public/stays/balance"
       = render "public/stays/payments"
+
+/ Ce qui se passe au domaine pendant le séjour (epic #348, phase 5). Rien dans
+/ la fenêtre : pas de bloc du tout. APRÈS le paiement (Michael, 2026-10-19) :
+/ comme la carte, le pain, l'épicerie et le disc-golf qui suivent, c'est une
+/ information utile mais pas essentielle — l'essentiel (réservé, total, payé)
+/ vient d'abord.
+- if @stay_events.any?
+  = render "public/stays/events", events: @stay_events
 
 / La carte du domaine (epic #348, phase 4), avant la boulangerie : « où est
 / quoi » vient avant « qu'est-ce qu'on mange ». Seulement si un fond de carte

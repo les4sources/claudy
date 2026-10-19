@@ -81,7 +81,7 @@ fr:
         balance_due: "Reste dû"
         pay_balance_cta: "Payer le solde de %{amount}"
       bakery:
-        heading: "Pain, épicerie & Pizza Party"
+        heading: "Pains et Pizza Party au four à bois"
         body: "Tranches de Vie, notre boulangerie-épicerie, prépare votre arrivée : pain au levain et produits du coin à pré-commander pour le jour où vous posez vos sacs."
         pizza: "Envie d'une soirée mémorable ? Réservez une Pizza Party privée au four à bois."
         cta: "Commander sur Tranches de Vie"
