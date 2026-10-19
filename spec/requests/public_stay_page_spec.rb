@@ -171,4 +171,13 @@ RSpec.describe "Public /sejour/:token — page client enrichie", type: :request 
     expect(contact).to include("contact@frw.be")
     expect(contact).to include("+3281261882")
   end
+
+  # Michael, 2026-10-19 : le numéro à donner aux clients est celui du Pôle
+  # Accueil, pas l'ancien +32 455 13 61 42.
+  it "donne le numéro du Pôle Accueil pour les questions" do
+    get "/sejour/#{build_stay.token}"
+
+    expect(response.body).to include('href="tel:+32490467710"')
+    expect(response.body).not_to include("455136142")
+  end
 end
