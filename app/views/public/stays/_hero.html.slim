@@ -60,7 +60,13 @@ section.funnel-card.p-5.md:p-7(data-stay-hero="true")
   dl.mt-5.grid.grid-cols-1.gap-x-6.gap-y-4.sm:grid-cols-2
     .sm:col-span-1
       dt.text-sm.font-semibold(class="text-moss") = t("public.stays.show.contact_heading")
-      dd.mt-0.5.text-base.text-ink = @stay.contact_line
+      - contact = @stay.public_contact
+      dd.mt-0.5.text-base.text-ink(data-stay-contact="true")
+        div = contact[:name]
+        - if contact[:email].present?
+          div.text-sm.break-all(class="text-moss") = contact[:email]
+        - if contact[:phone].present?
+          div.text-sm(class="text-moss") = contact[:phone]
     - occupants = @stay.occupants
     - if occupants[:adults].positive? || occupants[:children].positive?
       .sm:col-span-1

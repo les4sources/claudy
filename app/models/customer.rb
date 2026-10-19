@@ -196,10 +196,9 @@ class Customer < ApplicationRecord
     name
   end
 
-  private
-
   # Nom RÉELLEMENT porté par la fiche, sans repli. Sert à `#name` comme à la
   # validation d'identité minimale : les deux doivent parler du même « nom ».
+  # Public : la page client l'affiche sans le repli sur l'email (déjà montré).
   def explicit_name
     if organization? && organization_name.present?
       organization_name
@@ -207,6 +206,8 @@ class Customer < ApplicationRecord
       [first_name, last_name].compact_blank.join(" ").presence
     end
   end
+
+  private
 
   def fallback_name
     email.presence || (persisted? ? "Client ##{id}" : "Nouveau client")
