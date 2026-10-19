@@ -16,6 +16,15 @@ module Finance
 
     OPEN_STATUSES = %w[pending partially_paid].freeze
 
+    # La communication que la page client demande de mettre sur un virement
+    # (Michael, 2026-10-19). Elle vit ICI, à côté de `by_communication` qui la
+    # lit : changer l'une sans l'autre casserait l'affectation automatique.
+    # « Sejour » sans accent : bien des applications bancaires refusent les
+    # caractères hors de l'alphabet SEPA ; la lecture accepte les deux.
+    def self.communication_for(stay)
+      "Sejour ##{stay.id}"
+    end
+
     # `open_stays` et `soldes` sont injectables : l'écran « à affecter » traite
     # vingt-cinq lignes d'un coup, et chaque instance recalculait sinon le solde
     # des 351 séjours ouverts — une seconde par ligne, vingt-sept par page. Le

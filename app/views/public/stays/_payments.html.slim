@@ -26,6 +26,11 @@
                       target: "_blank",
                       class: "inline-flex items-center rounded-xl bg-forest px-5 py-2.5 text-sm font-semibold text-sand shadow-sm hover:bg-forest-soft"
 
+/ Le virement, à côté du paiement en ligne (Michael, 2026-10-19) : même montant,
+/ autre chemin.
+- if @stay.show_transfer?
+  = render "public/stays/transfer"
+
 - if paid_payments.any?
   .mt-6(data-stay-payments="paid")
     h3.text-sm.font-semibold.text-ink.mb-2 = t("public.stays.payments.received_heading")

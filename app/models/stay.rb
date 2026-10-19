@@ -23,6 +23,8 @@
 #  status                     :string
 #  token                      :string
 #  total_amount_cents         :integer          default(0), not null
+#  transfer_notified_at       :datetime
+#  transfer_notified_cents    :integer
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
 #  customer_id                :bigint           not null

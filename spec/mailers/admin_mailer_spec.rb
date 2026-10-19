@@ -72,4 +72,33 @@ RSpec.describe AdminMailer, type: :mailer do
       expect(body_of(mail)).not_to include("Reste à payer")
     end
   end
+
+  # Michael 2026-10-19 — le client signale son virement depuis la page séjour.
+  describe "#transfer_announced" do
+    let(:customer) { Customer.create!(first_name: "Léa", last_name: "Dupont", email: "lea@example.com") }
+    let(:stay) do
+      Stay.create!(customer: customer, source: "reservation", status: "confirmed",
+                   arrival_date: Date.new(2026, 11, 12), departure_date: Date.new(2026, 11, 14),
+                   total_amount_cents: 80_000, transfer_notified_at: Time.current,
+                   transfer_notified_cents: 24_000)
+    end
+
+    it "écrit à la compta, l'accueil en copie, et la réponse va au client" do
+      mail = described_class.transfer_announced(stay)
+
+      expect(mail.to).to eq(["compta@les4sources.be"])
+      expect(mail.cc).to eq(["sejours@les4sources.be"])
+      expect(mail.reply_to).to eq(["lea@example.com"])
+      expect(mail.subject).to include("Virement annoncé")
+      expect(mail.subject).to include("240,00")
+      expect(mail.subject).to include("Dupont")
+    end
+
+    it "donne la communication attendue et le lien du séjour" do
+      body = described_class.transfer_announced(stay).body.decoded
+
+      expect(body).to include("Sejour ##{stay.id}")
+      expect(body).to include("/stays/#{stay.id}")
+    end
+  end
 end

@@ -36,6 +36,25 @@ class AdminMailer < ApplicationMailer
     )
   end
 
+  # Le client a cliqué « J'ai envoyé le virement » sur la page de son séjour
+  # (Michael, 2026-10-19). Même destinataires que le paiement Stripe ; la
+  # réponse va au client, pour lui écrire si le virement n'arrive pas.
+  def transfer_announced(stay)
+    @stay = StayDecorator.new(stay)
+    @amount = ActiveSupport::NumberHelper.number_to_currency(stay.transfer_notified_cents.to_i / 100.0)
+    @client = ActionView::Base.full_sanitizer.sanitize(@stay.display_name.to_s).squish.presence || "Client inconnu"
+    @dates = ActionView::Base.full_sanitizer.sanitize(@stay.date_range.to_s).squish.presence
+    mail(
+      from: "sejours@les4sources.be",
+      to: "compta@les4sources.be",
+      cc: "sejours@les4sources.be",
+      reply_to: stay.customer&.email.presence,
+      subject: "🏦 Virement annoncé : #{@amount} — #{[@client, @dates].compact.join(" · ")}",
+      tag: "admin_transfer_announced",
+      bcc: nil
+    )
+  end
+
   def space_booking_canceled(space_booking)
     @space_booking = SpaceBookingDecorator.new(space_booking)
     mail(

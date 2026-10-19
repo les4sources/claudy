@@ -926,6 +926,9 @@ Rails.application.routes.draw do
   # même jeton que la page client ; crée/rafraîchit le paiement puis part sur
   # Stripe Checkout.
   post "sejour/:token/payer-le-solde", to: "public/stay_balance_payments#create", as: :public_stay_balance_payment
+  # Le client signale qu'il a payé par virement (Michael, 2026-10-19) : un email
+  # part à la compta, la page affiche « virement signalé ».
+  post "sejour/:token/virement-envoye", to: "public/stay_transfer_notices#create", as: :public_stay_transfer_notice
 
   # Demande de modification de séjour par le client (issue #133) — canal jeton.
   # C'est une DEMANDE : rien n'est appliqué avant validation par l'équipe.
