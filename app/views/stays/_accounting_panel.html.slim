@@ -1,0 +1,13 @@
+/ Section COMPTABILITÉ de la modale séjour (Michael, 2026-10-19). Une seule
+/ information pour l'instant : le statut de facturation (« À fournir » = la
+/ file de Facturation). Même mécanique que le type de groupe : le choix EST la
+/ validation, le formulaire part au changement.
+/ « Non requise » porte la valeur `none` et non "" : la liste cherchable masque
+/ l'option vide, on ne pourrait ni la lire ni la choisir.
+.border-t.border-gray-200.pt-4
+  .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Comptabilité
+  = form_with url: update_invoice_status_stay_path(@stay), method: :patch, data: { controller: "auto-submit", action: "change->auto-submit#submit" }, class: "mt-2" do
+    label.block.text-sm.text-gray-600 for="stay_#{@stay.id}_invoice_status" Statut de facturation
+    .relative.mt-1(data-controller="searchable-select")
+      = select_tag "stay[invoice_status]", options_for_select([["Non requise", "none"]] + Stay::INVOICE_STATUSES.map { |v, l| [l, v] }, @stay.invoice_status.presence || "none"), id: "stay_#{@stay.id}_invoice_status", class: "block w-full rounded-md border-gray-300 text-sm py-1.5", data: { searchable_select_target: "select" }
+      = render "shared/searchable_select_search", label: "Statut de facturation"
