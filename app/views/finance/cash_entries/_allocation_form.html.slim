@@ -90,5 +90,9 @@ div(data-controller="allocation-parts" data-allocation-parts-remaining-value=ent
      .flex.items-center.gap-3
        p.hidden.text-sm.tabular-nums(data-allocation-parts-target="summary")
          span(data-allocation-parts-target="reste")
+       / « Annuler » referme la ligne dans la file (Michael, 2026-10-19) :
+         sans lui, il fallait remonter jusqu'au bouton « Affecter » de l'en-tête.
+       - if from_unallocated
+         button.text-sm.font-medium.text-gray-500(type="button" class="hover:text-gray-700" data-controller="collapse" data-action="click->collapse#toggle" data-collapse-toggle-value="entry-#{entry.id}-detail") Annuler
        button.inline-flex.items-center.rounded-md.border.border-transparent.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50" type="submit" data-allocation-parts-target="submit")
-         | Affecter
+         | Confirmer l'affectation

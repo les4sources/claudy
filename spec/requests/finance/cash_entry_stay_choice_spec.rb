@@ -86,6 +86,35 @@ RSpec.describe "Comptabilité — rapprocher une ligne d'un séjour choisi", typ
     end
   end
 
+  # La même liste dans la file « À affecter », chargée à l'ouverture de la
+  # ligne (Michael, 2026-10-19).
+  describe "la file « À affecter »" do
+    it "charge le choix d'un séjour à la demande pour une ligne entrante vierge" do
+      entry
+
+      get finance_unallocated_cash_entries_path
+
+      expect(response.body).to include(stays_finance_cash_entry_path(entry))
+      expect(response.body).to include("Confirmer l'affectation")
+      expect(response.body).to include(">Annuler</button>")
+    end
+
+    it "rend la liste des séjours dans son cadre" do
+      get stays_finance_cash_entry_path(entry)
+
+      expect(response.body).to include("turbo-frame id=\"#{ActionView::RecordIdentifier.dom_id(entry, :stays)}\"")
+      expect(response.body).to include("##{stay.id} · Camille Renard")
+    end
+
+    it "rend un cadre vide pour une ligne sortante" do
+      sortie = build_cash_entry(compte_bancaire, amount_cents: -130_000)
+
+      get stays_finance_cash_entry_path(sortie)
+
+      expect(response.body).not_to include("name=\"stay_id\"")
+    end
+  end
+
   describe "le geste" do
     it "ventile la ligne sur un séjour soldé, que la file n'aurait pas proposé" do
       stay.update_column(:payment_status, "paid")

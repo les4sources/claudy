@@ -11,7 +11,7 @@ module Finance
     before_action :get_entry,
                   only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate, :payout,
                          :pay_invoice, :pay_expense_report, :pay_carrier_statement, :reconcile_payout, :collect_sales_invoice,
-                         :settle, :suggestion, :detail]
+                         :settle, :suggestion, :stays, :detail]
     breadcrumb "Trésorerie", :finance_cash_entries_path, match: :exact
 
     # Le journal se lit, il ne se travaille pas ligne à ligne. Ses pages étaient
@@ -90,6 +90,16 @@ module Finance
                                       jev: Jev::Client.new).run!
       charger_artisans
       render partial: "suggestion", locals: { entry: @entry, suggestion: @entry.allocation_suggestions.pending.ordered.first }
+    end
+
+    # Le choix d'un séjour à la main, chargé à l'ouverture d'une ligne de la
+    # file « À affecter » (Michael, 2026-10-19) : la liste des séjours pèse,
+    # elle ne se calcule que pour la ligne qu'on ouvre.
+    def stays
+      @allocations = @entry.cash_allocations.to_a
+      charger_sejours
+      render partial: "stay_frame", locals: { entry: @entry, stay_choices: @stay_choices,
+                                              proposed_stay_id: @proposed_stay_id }
     end
 
     def show
