@@ -3,7 +3,17 @@
            title: @entry.label,
            links: [link_to("← Toutes les lignes", finance_cash_entries_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
 
-.grid.gap-4.mb-6(class="md:grid-cols-4")
+/ La date du mouvement en premier (Michael, 2026-10-19) : la fiche la taisait,
+  il fallait rouvrir la modale de la file pour savoir quand l'argent a bougé.
+  La date de valeur ne s'affiche que si elle diffère.
+.grid.gap-4.mb-6(class="sm:grid-cols-2 lg:grid-cols-5")
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    p.text-xs.uppercase.text-gray-400 Date
+    p.mt-1.text-xl.font-semibold.text-gray-900.tabular-nums= l(@entry.entry_date, format: :ddmmyyyy)
+    p.mt-1.text-xs.text-gray-500
+      = @entry.cash_account.name
+      - if @entry.value_date && @entry.value_date != @entry.entry_date
+        = " · valeur le #{l(@entry.value_date, format: :ddmmyyyy)}"
   .p-4.bg-white.rounded-lg.border.border-gray-100
     p.text-xs.uppercase.text-gray-400 Montant
     p.mt-1.text-xl.font-semibold class="#{@entry.incoming? ? 'text-green-700' : 'text-gray-900'}"
