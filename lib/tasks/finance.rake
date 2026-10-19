@@ -293,6 +293,34 @@ namespace :finance do
     puts "[finance:backfill_settlement_flows] Rien n'a été écrit — relance avec APPLY=1." unless apply
   end
 
+  desc "Range sur le pôle Accueil les affectations de séjour qui n'y sont pas. Dry-run par défaut, APPLY=1 pour écrire."
+  task sejours_pole_accueil: :environment do
+    apply = ENV["APPLY"] == "1"
+    euros = ->(cents) { format("%.2f €", cents / 100.0) }
+    report = Finance::MoveStayAllocationsToAccueil.new(dry_run: !apply).run!
+    parts = report.allocations
+
+    puts "=== Affectations de séjour → #{report.accueil.name} (#{apply ? 'APPLY' : 'DRY-RUN'}) ==="
+    puts "Parts hors Accueil : #{parts.size} (#{euros.(parts.sum(&:amount_cents))}), " \
+         "sur #{report.moved.size + report.refused.size} ligne(s) de trésorerie"
+    parts.group_by { |part| part.team&.name || "sans pôle" }.sort.each do |pole, lot|
+      puts "  dont #{pole} : #{lot.size} part(s), #{euros.(lot.sum(&:amount_cents))}"
+    end
+    comptabilisees = report.moved.count { |item| item.cash_entry.journal_entries.any? }
+    puts "#{apply ? 'Déplacées' : 'À déplacer'} : #{report.moved.size} ligne(s), " \
+         "dont #{comptabilisees} #{apply ? 'recomptabilisée(s)' : 'comptabilisée(s) (contre-passée puis repassée)'}"
+    report.moved.each do |item|
+      entry = item.cash_entry
+      puts "  ##{entry.id} #{entry.entry_date} · #{euros.(item.amount_cents)} · " \
+           "#{entry.counterparty_name.presence || entry.communication.to_s[0, 40]}"
+    end
+    puts "Refusées : #{report.refused.size}"
+    report.refused.each do |item|
+      puts "  ##{item.cash_entry.id} #{item.cash_entry.entry_date} · #{euros.(item.amount_cents)} · #{item.error}"
+    end
+    puts "Rien n'est écrit. Relancer avec APPLY=1 pour appliquer." unless apply
+  end
+
   desc "Génère les charges récurrentes d'un mois — MONTH=2026-08, dry-run par défaut, APPLY=1 pour écrire"
   task generate_recurring: :environment do
     month = ENV["MONTH"].presence || Date.current.strftime("%Y-%m")

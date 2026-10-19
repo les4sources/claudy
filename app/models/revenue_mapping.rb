@@ -5,6 +5,10 @@
 # collectif, pas une évidence technique. La colonne reste donc vide tant que
 # personne ne l'a tranchée, et une recette sans pôle apparaît comme non affectée
 # plutôt que rangée au hasard.
+#
+# Tranché depuis (Michael, 2026-10-19) : un séjour relève du pôle Accueil, et
+# `Finance::VentilateStay` y range toutes ses lignes. Ce pôle-ci n'est plus
+# qu'un repli, si aucun pôle Accueil n'existe.
 # == Schema Information
 #
 # Table name: revenue_mappings
