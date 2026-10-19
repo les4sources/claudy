@@ -3,9 +3,14 @@ class ProjectsController < BaseController
   
     breadcrumb "Projets", :projects_path, match: :exact
   
+    # Rangés par pôle (Michael, 2026-10-19) ; les projets d'avant, sans pôle,
+    # viennent en dernier pour qu'on les rattache.
     def index
-      @projects = ProjectDecorator
-        .decorate_collection(Project.all.order(name: :asc))
+      projects = Project.includes(:human, :team).order(name: :asc).to_a
+      @projects_by_team = projects
+        .group_by(&:team)
+        .sort_by { |team, _| team ? [0, team.name.to_s.downcase] : [1, ""] }
+        .map { |team, list| [team, ProjectDecorator.decorate_collection(list)] }
     end
   
     def show
@@ -13,8 +18,10 @@ class ProjectsController < BaseController
       set_tasks_view
     end
   
+    # Depuis la page d'un pôle, le projet naît dans ce pôle, porté par la
+    # personne qui le crée ; les deux restent modifiables.
     def new
-      @project = Project.new
+      @project = Project.new(team_id: params[:team_id], human: current_user&.human)
     end
   
     def create
