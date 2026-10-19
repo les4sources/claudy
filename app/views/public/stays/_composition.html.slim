@@ -18,7 +18,9 @@ section.funnel-card.mt-6.p-5.md:p-6
               - if line[:date_range].present?
                 p.text-sm(class="text-moss") = line[:date_range]
           / Séjour Airbnb / Booking.com : pas de tarif d'hébergement affiché.
-          - unless @stay.ota?
+          / Montant vide : ligne couverte par un prix imposé porté par la ligne
+          / « Prix convenu » (`StayDecorator#item_lines`).
+          - if !@stay.ota? && line[:amount]
             p.text-base.font-semibold.text-ink.whitespace-nowrap = line[:amount]
 
   / Brouette de bûches incluse (epic #260, décision 6) : information, jamais une

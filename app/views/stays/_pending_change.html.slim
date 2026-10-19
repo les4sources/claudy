@@ -23,7 +23,7 @@
       .font-semibold.text-gray-500.uppercase.mb-1 Actuel
       ul.space-y-0.5
         - @stay.item_lines.each do |line|
-          li.text-gray-700 = "#{line[:name]} — #{line[:amount]}"
+          li.text-gray-700 = [line[:name], line[:amount]].compact.join(" — ")
     div
       .font-semibold.text-amber-800.uppercase.mb-1 Proposé
       ul.space-y-0.5

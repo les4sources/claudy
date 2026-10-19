@@ -399,7 +399,45 @@ class StayDecorator < ApplicationDecorator
 
   # Lignes du séjour-composite : un réservable (Booking / SpaceBooking) par ligne,
   # avec ses dates et son montant. Alimente la page client /sejour/:token.
+  #
+  # Prix imposé (Michael, 2026-10-19) : il remplace le prix calculé de tout ce
+  # qui compose le séjour, bar excepté (`Stay#recompute_aggregates!`). Le client
+  # du Grand-Duc lisait « 2 000 € » sur sa ligne puis « Total 1 850 € », sans
+  # rien pour relier les deux. Les lignes montrent donc le prix demandé, jamais
+  # le prix calculé — cf. `price_override_placement`.
   def item_lines
+    lines = composition_lines
+    case price_override_placement
+    when :item
+      lines = [lines.first.merge(amount: formatted_price_override)]
+    when :agreed_line
+      lines = lines.map { |line| line.merge(amount: nil) } + [agreed_price_line]
+    end
+
+    bar = bar_line
+    bar ? lines + [bar] : lines
+  end
+
+  # Où le prix imposé s'affiche, quand il y en a un :
+  #   :item / :activity — une seule ligne le porte : elle prend le prix demandé ;
+  #   :agreed_line      — plusieurs lignes : aucune ne garde de montant (le prix
+  #                       imposé ne se ventile pas), une ligne « Prix convenu »
+  #                       porte le tout.
+  # nil sans prix imposé : chaque ligne garde son prix calculé.
+  def price_override_placement
+    return nil unless object.price_overridden?
+
+    covered = composition_lines.size + raw_activity_lines.size
+    return :agreed_line unless covered == 1
+
+    composition_lines.any? ? :item : :activity
+  end
+
+  def composition_lines
+    @composition_lines ||= build_composition_lines
+  end
+
+  def build_composition_lines
     lines = object.stay_items.map do |item|
       bookable = item.bookable
       next if bookable.nil?
@@ -455,19 +493,37 @@ class StayDecorator < ApplicationDecorator
       }
     end
 
-    # Bar (Michael, 2026-10-13) : une seule ligne pour toute la feuille. Le
-    # détail article par article reste à l'équipe ; le client y lit ce qui
-    # s'ajoute à son total.
-    bar_cents = object.bar_amount_cents
-    return lines unless bar_cents.positive?
+    lines
+  end
 
-    lines + [{
+  # Bar (Michael, 2026-10-13) : une seule ligne pour toute la feuille. Le
+  # détail article par article reste à l'équipe ; le client y lit ce qui
+  # s'ajoute à son total. Hors prix imposé : elle garde toujours son montant.
+  def bar_line
+    bar_cents = object.bar_amount_cents
+    return nil unless bar_cents.positive?
+
+    {
       kind: "BarConsumption",
       icon: :utensils,
       name: "Consommations au bar",
       date_range: nil,
       amount: h.humanized_money_with_symbol(Money.new(bar_cents))
-    }]
+    }
+  end
+
+  def agreed_price_line
+    {
+      kind: "PriceOverride",
+      icon: :check,
+      name: h.t("public.stays.items.agreed_price"),
+      date_range: nil,
+      amount: formatted_price_override
+    }
+  end
+
+  def formatted_price_override
+    h.humanized_money_with_symbol(Money.new(object.price_override_cents.to_i))
   end
 
   # Brouette de bûches incluse (epic #260, décision 6) : information portée par
@@ -492,6 +548,19 @@ class StayDecorator < ApplicationDecorator
   # pas exigibles (cf. `Stay#payable_amount_cents`), et la page ne doit pas
   # laisser croire qu'un créneau est acquis tant que le porteur ne l'a pas validé.
   def activity_lines
+    lines = raw_activity_lines
+    case price_override_placement
+    when :activity    then [lines.first.merge(amount: formatted_price_override)]
+    when :agreed_line then lines.map { |line| line.merge(amount: nil) }
+    else lines
+    end
+  end
+
+  def raw_activity_lines
+    @raw_activity_lines ||= build_activity_lines
+  end
+
+  def build_activity_lines
     object.experience_bookings.active
           .includes(experience_availability: :experience)
           .sort_by { |b| [b.experience_availability&.available_on || Date.new(9999), b.experience_availability&.starts_at.to_s] }

@@ -48,6 +48,7 @@ en:
         hamac: "Hammock"
         meal: "Meal"
         other: "Service"
+        agreed_price: "Agreed price for everything"
       payment_status:
         pending: "Awaiting payment"
         partially_paid: "Partially paid"
