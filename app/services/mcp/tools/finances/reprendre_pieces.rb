@@ -18,7 +18,8 @@ module Mcp
       # Le journal « divers » porte les corrections de la reprise elle-même :
       # l'à-nouveau 2025 recopiait le bilan Winbooks alors que 2022-2024 étaient
       # déjà au grand livre (Michael, 2026-10-15). On corrige par une opération
-      # diverse, jamais en réécrivant l'à-nouveau.
+      # diverse, jamais en réécrivant l'à-nouveau. Elle seule peut toucher la
+      # trésorerie : l'à-nouveau doublait aussi la caisse (Michael, 2026-10-19).
       class ReprendrePieces < Ecriture
         include Commun
 
@@ -34,7 +35,7 @@ module Mcp
                           "équilibrées (compte du plan par son CODE EXACT, archivé accepté ; tiers par son code sur la " \
                           "ligne 440000 ou 400000, ou son nom exact). Le journal « divers » porte une correction de la reprise " \
                           "(ex. un à-nouveau qui double des soldes déjà repris). Une pièce déjà reprise est ignorée. Refus d'ensemble si un compte, " \
-                          "un tiers ou un exercice ouvert manque, ou si une pièce touche la trésorerie (classe 5).",
+                          "un tiers ou un exercice ouvert manque, ou si une facture touche la trésorerie (classe 5) : seul le journal « divers » le peut.",
              schema: {
                properties: {
                  source: { type: "string", description: "Logiciel d'origine. Défaut : winbooks." },
@@ -163,7 +164,7 @@ module Mcp
             erreurs << "#{p[:ref]} : l'exercice #{exercice.label} est clôturé" if exercice && exercice.status != "open"
             p[:lignes].each do |l|
               erreurs << "#{p[:ref]} : compte #{l[:account_code]} absent du plan" unless comptes[l[:account_code]]
-              erreurs << "#{p[:ref]} : compte de trésorerie #{l[:account_code]}, déjà au grand livre" if l[:account_code].match?(TRESORERIE)
+              erreurs << "#{p[:ref]} : compte de trésorerie #{l[:account_code]}, déjà au grand livre" if p[:journal] != "misc" && l[:account_code].match?(TRESORERIE)
               erreurs << "#{p[:ref]} : tiers #{l[:third_party_code]} inconnu" if l[:third_party_code] && !tiers.include?(l[:third_party_code])
             end
           end
