@@ -28,6 +28,16 @@ module Stays
     # entière pour un coût de scan inutile.
     MIN_LENGTH = 2
 
+    # Numéro de séjour tapé tel quel (« 718 », « #718 ») : renvoie l'id si ce
+    # séjour existe, nil sinon (Michael, 2026-10-19). Un numéro sans séjour
+    # retombe sur la recherche texte, qui couvre aussi les téléphones.
+    ID_PATTERN = /\A#?\s*(\d{1,9})\z/
+
+    def self.stay_id(query)
+      id = query.to_s.strip[ID_PATTERN, 1]&.to_i
+      id if id && Stay.exists?(id)
+    end
+
     def initialize(relation, query)
       @relation = relation
       @query    = query.to_s.strip

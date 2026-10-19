@@ -106,4 +106,30 @@ RSpec.describe "Index Séjours — filtres statut et solde", type: :request do
     get stays_path(status: "pre_confirmed", solde: "1", year: trimestre.year - 5, quarter: 1)
     expect(response.body).to include("Aucun séjour ne correspond à ces filtres.")
   end
+
+  # Recherche par NUMÉRO de séjour (Michael, 2026-10-19) : « 718 » ramène le
+  # séjour 718 seul, même hors des filtres affichés et d'un autre trimestre.
+  describe "recherche par numéro de séjour" do
+    it "ramène ce séjour seul, quels que soient le statut et le solde filtrés" do
+      ancien = create_stay(last: "Ancien", status: "canceled", total_cents: 9_000,
+                           arrival: trimestre.prev_year)
+
+      get stays_path(q: ancien.id.to_s, status: "confirmed", solde: "1")
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Client Ancien")
+      expect(noms_affiches).to eq([])
+      expect(response.body).to include("##{ancien.id}")
+    end
+
+    it "accepte le numéro précédé de #" do
+      get stays_path(q: "##{paye.id}", status: "pending")
+      expect(noms_affiches).to eq(%w[Paye])
+    end
+
+    it "retombe sur la recherche texte quand aucun séjour ne porte ce numéro" do
+      get stays_path(q: (Stay.maximum(:id) + 1000).to_s, status: "all")
+      expect(response.body).to include("Aucun séjour ne correspond à cette recherche.")
+    end
+  end
 end
