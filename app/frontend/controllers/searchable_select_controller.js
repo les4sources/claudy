@@ -63,11 +63,18 @@ export default class extends Controller {
       this.refleterLaSelection()
     }
     this.selectTarget.addEventListener("change", this.suivreLeSelect)
+
+    // La liste suit son champ quand la page (ou un bloc qui défile) bouge
+    // pendant qu'elle est ouverte. Un défilement DANS la liste ne la déplace pas.
+    this.suivreLeChamp = (event) => {
+      if (event.target !== this.listTarget) this.placer()
+    }
   }
 
   disconnect() {
     document.removeEventListener("click", this.fermerAuClicDehors)
     this.selectTarget.removeEventListener("change", this.suivreLeSelect)
+    this.cesserDeSuivre()
   }
 
   // Relue à chaque recherche : la liste peut grandir pendant qu'on est sur
@@ -95,6 +102,7 @@ export default class extends Controller {
 
   close() {
     this.listTarget.classList.add("hidden")
+    this.cesserDeSuivre()
     this.inputTarget.setAttribute("aria-expanded", "false")
     this.actif = -1
     if (this.clearableValue && this.inputTarget.value.trim() === "" && this.selectTarget.value !== "") {
@@ -139,7 +147,66 @@ export default class extends Controller {
     }
     this.listTarget.classList.remove("hidden")
     this.inputTarget.setAttribute("aria-expanded", "true")
+    this.placer()
+    if (!this.suivi) {
+      window.addEventListener("scroll", this.suivreLeChamp, { capture: true, passive: true })
+      window.addEventListener("resize", this.suivreLeChamp)
+      this.suivi = true
+    }
     this.marquerActif()
+  }
+
+  // La liste est posée en `position: fixed` sous son champ (Michael,
+  // 2026-10-19). En `absolute`, elle restait prisonnière du premier bloc
+  // `overflow-hidden` (les cartes arrondies de la file « À affecter ») et se
+  // faisait couper au bas de la carte. Fixée sur l'écran, elle passe
+  // par-dessus, et s'ouvre vers le haut quand la place manque en dessous.
+  //
+  // La largeur reste celle que la vue lui donne (`w-full` du champ, `w-64`…) :
+  // elle est mesurée en `absolute`, avant de passer en `fixed`.
+  placer() {
+    const liste = this.listTarget
+    if (liste.classList.contains("hidden")) return
+
+    liste.style.position = ""
+    liste.style.top = ""
+    liste.style.left = ""
+    liste.style.width = ""
+    liste.style.maxHeight = ""
+    liste.style.marginTop = ""
+    const largeur = liste.offsetWidth
+    const hauteurMax = parseFloat(getComputedStyle(liste).maxHeight) || 256
+
+    const champ = this.inputTarget.getBoundingClientRect()
+    const marge = 8
+    const ecart = 4
+    const dessous = window.innerHeight - champ.bottom - ecart - marge
+    const dessus = champ.top - ecart - marge
+    const voulue = Math.min(liste.scrollHeight, hauteurMax)
+    const versLeHaut = dessous < voulue && dessus > dessous
+
+    liste.style.position = "fixed"
+    liste.style.marginTop = "0"
+    liste.style.width = `${largeur}px`
+    liste.style.maxHeight = `${Math.max(Math.min(hauteurMax, versLeHaut ? dessus : dessous), 96)}px`
+
+    const gauche = Math.max(marge, Math.min(champ.left, window.innerWidth - marge - largeur))
+    const haut = versLeHaut ? champ.top - ecart - liste.offsetHeight : champ.bottom + ecart
+    liste.style.left = `${gauche}px`
+    liste.style.top = `${haut}px`
+
+    // Un ancêtre transformé (une modale animée) sert de repère au `fixed` à la
+    // place de l'écran : on corrige du décalage constaté.
+    const pose = liste.getBoundingClientRect()
+    if (Math.abs(pose.left - gauche) > 0.5) liste.style.left = `${2 * gauche - pose.left}px`
+    if (Math.abs(pose.top - haut) > 0.5) liste.style.top = `${2 * haut - pose.top}px`
+  }
+
+  cesserDeSuivre() {
+    if (!this.suivi) return
+    window.removeEventListener("scroll", this.suivreLeChamp, { capture: true })
+    window.removeEventListener("resize", this.suivreLeChamp)
+    this.suivi = false
   }
 
   navigate(event) {
@@ -180,10 +247,20 @@ export default class extends Controller {
       li.classList.toggle("bg-gray-100", actif)
       li.classList.toggle("text-gray-900", actif)
       li.classList.toggle("text-gray-700", !actif)
-      if (actif) li.scrollIntoView({ block: "nearest" })
+      if (actif) this.montrerDansLaListe(li)
     })
     const courant = this.actif >= 0 ? this.identifiant(this.actif) : ""
     this.inputTarget.setAttribute("aria-activedescendant", courant)
+  }
+
+  // Défile la liste seule : `scrollIntoView` faisait aussi défiler la page, ou
+  // le bloc qui contient le champ.
+  montrerDansLaListe(li) {
+    const liste = this.listTarget
+    const haut = li.offsetTop
+    const bas = haut + li.offsetHeight
+    if (haut < liste.scrollTop) liste.scrollTop = haut
+    else if (bas > liste.scrollTop + liste.clientHeight) liste.scrollTop = bas - liste.clientHeight
   }
 
   identifiant(rang) {
