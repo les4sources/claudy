@@ -8,7 +8,7 @@ module Mcp
         include Commun
 
         GESTES = {
-          "traiter" => "attribuer le compte de charge de chaque ligne (comptes) et passer en traitement : numérotée, écriture passée, à rembourser",
+          "traiter" => "attribuer le compte de charge et le pôle de chaque ligne (comptes) et passer en traitement : numérotée, écriture passée, à rembourser",
           "rejeter" => "rejeter avec un motif (motif obligatoire) ; seule une note enregistrée se rejette",
           "payer_en_especes" => "rembourser en caisse : sortie de caisse affectée et comptabilisée, le membre reçoit l'email « note payée »",
           "annuler_traitement" => "contre-passer l'écriture : la note redevient modifiable (motif obligatoire)",
@@ -27,17 +27,19 @@ module Mcp
                  comptes: {
                    type: "array",
                    description: "Pour traiter : le compte de charge de chaque ligne (celui qui saisit la note ne le choisit pas, " \
-                                "c'est la compta qui l'attribue ici). Obligatoire pour chaque ligne qui n'en a pas encore " \
-                                "(notes_de_frais montre les lignes avec leur #id). Les trajets d'une note de mission ont " \
-                                "« Déplacements » d'office.",
+                                "c'est la compta qui l'attribue ici), et au besoin son pôle. Un compte est obligatoire pour " \
+                                "chaque ligne qui n'en a pas encore (notes_de_frais montre les lignes avec leur #id). Les " \
+                                "trajets d'une note de mission ont « Déplacements » d'office.",
                    items: {
                      type: "object",
                      additionalProperties: false,
                      properties: {
                        ligne: { type: %w[integer string], description: "La ligne de la note (#id)." },
-                       compte: COMPTE_GENERAL.merge(description: "Compte de charge (classe 6) ou d'immobilisation (classe 2).")
+                       compte: COMPTE_GENERAL.merge(description: "Compte de charge (classe 6) ou d'immobilisation (classe 2)."),
+                       pole: POLE.merge(description: "Pôle de la dépense (nom ou partie du nom), ou « aucun » pour le retirer. " \
+                                                     "Absent : le pôle saisi reste.")
                      },
-                     required: %w[ligne compte]
+                     required: %w[ligne]
                    }
                  },
                  caisse: { type: "string", description: "Pour payer_en_especes : la caisse, s'il y en a plusieurs." }
@@ -64,7 +66,7 @@ module Mcp
             case d[:geste]
             when "traiter"
               ::ExpenseReports::Process.new(expense_report: note, processed_on: d[:date], accounts: d[:comptes],
-                                            whodunnit: whodunnit).run!
+                                            teams: d[:poles], whodunnit: whodunnit).run!
             when "rejeter"
               ::ExpenseReports::Reject.new(expense_report: note, reason: @motif, whodunnit: whodunnit).run!
             when "payer_en_especes"
@@ -85,7 +87,7 @@ module Mcp
           raise Error, "Ajoute au moins une ligne avant de la passer en traitement." if note.expense_lines.empty?
 
           date = date_ou_nil(arguments["date"], "date") || Date.current
-          comptes = comptes_des_lignes!(note, arguments["comptes"])
+          comptes, poles = choix_des_lignes!(note, arguments["comptes"])
           sans_compte = note.expense_lines.reject { |l| l.general_account_id || comptes.key?(l.id.to_s) }
           if sans_compte.any?
             raise Error, "Attribue un compte de charge (comptes) à : " \
@@ -93,39 +95,54 @@ module Mcp
           end
 
           attribues = note.expense_lines.filter_map do |l|
-            next unless comptes.key?(l.id.to_s)
+            id = l.id.to_s
+            next unless comptes.key?(id) || poles.key?(id)
 
-            "  ##{l.id} #{l.label} → #{comptes_choisis[comptes[l.id.to_s]]}"
+            quoi = [(comptes_choisis[comptes[id]] if comptes.key?(id)),
+                    ("pôle #{poles_choisis[poles[id]] || 'aucun'}" if poles.key?(id))].compact
+            "  ##{l.id} #{l.label} → #{quoi.join(' · ')}"
           end
           sans_piece = note.expense_lines.count(&:receipt_missing?)
           ["→ EN TRAITEMENT le #{date} : numéro attribué, écriture de #{euros(note.total_cents)} au journal des achats." \
-           "#{"\nComptes attribués :\n#{attribues.join("\n")}" if attribues.any?}" \
+           "#{"\nAttribué :\n#{attribues.join("\n")}" if attribues.any?}" \
            "#{"\n⚠ #{sans_piece} ligne(s) sans justificatif (ni fichier, ni papier)." if sans_piece.positive?}" \
            "#{"\n⚠ #{note.human&.name} n'a pas d'IBAN : le virement ne pourra pas partir." if note.human&.iban.blank?}",
-           { date: date.iso8601, comptes: comptes }]
+           { date: date.iso8601, comptes: comptes, poles: poles }]
         end
 
-        # { "id de ligne" => id de compte }. Seuls les comptes qu'une note de
-        # frais peut porter (classes 6 et 2) sont acceptés.
-        def comptes_des_lignes!(note, comptes)
+        # Deux tables { "id de ligne" => id } : les comptes (seuls ceux qu'une
+        # note de frais peut porter, classes 6 et 2) et les pôles (nil = aucun).
+        def choix_des_lignes!(note, choix_lignes)
           @comptes_choisis = {}
-          Array(comptes).each_with_object({}) do |choix, acc|
+          @poles_choisis = {}
+          comptes = {}
+          poles = {}
+          Array(choix_lignes).each do |choix|
             choix = choix.to_h
             id = choix["ligne"].to_s.delete("#")
             ligne = note.expense_lines.find { |l| l.id.to_s == id }
             raise Error, "La ligne ##{id} n'appartient pas à cette note." if ligne.nil?
 
-            compte = compte_general!(choix["compte"])
-            unless ExpenseLine::ACCOUNT_CLASSES.include?(compte.klass)
-              raise Error, "#{compte} n'est ni un compte de charge (classe 6) ni d'immobilisation (classe 2)."
-            end
+            if choix["compte"].present?
+              compte = compte_general!(choix["compte"])
+              unless ExpenseLine::ACCOUNT_CLASSES.include?(compte.klass)
+                raise Error, "#{compte} n'est ni un compte de charge (classe 6) ni d'immobilisation (classe 2)."
+              end
 
-            @comptes_choisis[compte.id] = compte.to_s
-            acc[id] = compte.id
+              @comptes_choisis[compte.id] = compte.to_s
+              comptes[id] = compte.id
+            end
+            next unless choix.key?("pole")
+
+            pole = choix["pole"].to_s.strip.casecmp?("aucun") || choix["pole"].blank? ? nil : pole!(choix["pole"])
+            @poles_choisis[pole.id] = pole.name if pole
+            poles[id] = pole&.id
           end
+          [comptes, poles]
         end
 
         def comptes_choisis = @comptes_choisis || {}
+        def poles_choisis = @poles_choisis || {}
 
         def plan_rejeter(note, _arguments)
           motif!({ "motif" => @motif })

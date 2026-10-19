@@ -228,9 +228,9 @@ RSpec.describe Mcp::Server, "finances" do
     expect(texte(refus)).to include("Attribue un compte de charge", "Visserie")
 
     confirme("geste_note_de_frais", { "note" => note.id, "geste" => "traiter",
-                                      "comptes" => [{ "ligne" => ligne.id, "compte" => "604000" }] })
+                                      "comptes" => [{ "ligne" => ligne.id, "compte" => "604000", "pole" => "technique" }] })
     expect(note.reload).to be_processing
-    expect(ligne.reload.general_account.code).to eq("604000")
+    expect(ligne.reload).to have_attributes(general_account: GeneralAccount.find_by(code: "604000"), team: technique)
     expect(texte(outil("a_payer", {}))).to include(note.payable_label, "87,40 €")
 
     expect do

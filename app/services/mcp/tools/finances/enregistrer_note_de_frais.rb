@@ -75,9 +75,14 @@ module Mcp
           note = ExpenseReport.find(note.id)
           lignes = note.expense_lines.map do |l|
             "\n  #{l.spent_on} #{l.label} : #{euros(l.amount_cents)}#{" (#{format('%g', l.distance_km)} km)" if l.distance_km} → " \
-              "#{l.general_account&.code || 'compte à attribuer au traitement'}#{" · pôle #{l.team.name}" if l.team}"
+              "#{l.general_account&.code || 'compte à attribuer au traitement'}#{" · pôle #{l.team.name}" if l.team}" \
+              "#{" · ticket papier n° #{l.paper_receipt_label}" if l.paper_receipt_label}"
           end
-          "#{ligne_note(note)}#{lignes.join}"
+          consigne = if note.expense_lines.any?(&:paper_receipt_label)
+                       "\nTickets papier : écrire le numéro sur chaque ticket, puis les déposer dans le bac « Admin », " \
+                         "attachés ensemble, dans la farde plastique au nom du membre."
+                     end
+          "#{ligne_note(note)}#{lignes.join}#{consigne}"
         end
 
         def attributs!(arguments, note)

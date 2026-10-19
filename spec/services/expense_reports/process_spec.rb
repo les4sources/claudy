@@ -167,4 +167,38 @@ RSpec.describe ExpenseReports::Process do
       expect(report.expense_lines.map { |line| line.reload.general_account }).to all(eq(fournitures))
     end
   end
+
+  # Le pôle se corrige au traitement, comme le compte (Michael, 2026-10-19).
+  describe "le pôle au traitement" do
+    let(:nature) { Team.create!(name: "Pôle Nature") }
+
+    it "pose le pôle choisi, ou le retire, et l'écriture le porte" do
+      report = build_report
+      visserie, terreau = report.expense_lines.sort_by(&:spent_on)
+
+      described_class.new(expense_report: report,
+                          teams: { visserie.id.to_s => "", terreau.id.to_s => nature.id.to_s }).run!
+
+      expect(visserie.reload.team).to be_nil
+      expect(terreau.reload.team).to eq(nature)
+      debits = report.reload.journal_entry.journal_lines.select { |line| line.debit_cents.positive? }
+      expect(debits.map { |line| line.team&.name }).to contain_exactly(nil, "Pôle Nature")
+    end
+
+    it "laisse le pôle saisi quand rien n'est choisi pour la ligne" do
+      report = build_report
+      described_class.new(expense_report: report).run!
+
+      expect(report.reload.expense_lines.map { |line| line.team&.name }).to contain_exactly("Pôle Technique", nil)
+    end
+
+    it "refuse un pôle inconnu" do
+      report = build_report
+      line = report.expense_lines.first
+
+      expect { described_class.new(expense_report: report, teams: { line.id => 0 }).run! }
+        .to raise_error(described_class::UnknownTeam)
+      expect(report.reload).to be_recorded
+    end
+  end
 end
