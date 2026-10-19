@@ -438,9 +438,12 @@
               = number_field_tag "stay[initial_payment_amount]", initial_payment_prefill, id: "stay_initial_payment_amount", step: "0.01", min: 0, placeholder: "—", class: "block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               p.text-xs.text-gray-500 Prérempli avec l'acompte du devis. Ignoré si la case n'est pas cochée.
 
-      / « Annuler » : retour à la FICHE du séjour en édition (elle existe en pleine
-      / page depuis stays#show), sinon à la liste en création (demande Michael).
-      - cancel_path = @stay&.persisted? ? stay_path(@stay) : stays_path
+      / « Annuler » : retour à la vue d'où l'édition a été ouverte (`@return_to`,
+      / Michael 2026-10-18) ; à défaut, la FICHE du séjour en édition, ou la
+      / liste en création. Le même chemin part avec le formulaire : l'enregistrement
+      / y revient aussi.
+      - cancel_path = @return_to || (@stay&.persisted? ? stay_path(@stay) : stays_path)
+      = hidden_field_tag :return_to, @return_to, id: nil if @return_to
       .space-y-2
         = submit_tag submit_label, class: "w-full inline-flex items-center justify-center rounded-xl border border-transparent bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
         = link_to "Annuler", cancel_path, class: "w-full inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"

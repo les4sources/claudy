@@ -152,6 +152,7 @@ class StaysController < BaseController
 
   def edit
     @draft = Stays::DraftReconstructor.new(@stay).to_draft
+    @return_to = stay_return_path(params[:return_to]) || stay_return_path(request.referer)
     prepare_form
   end
 
@@ -193,6 +194,7 @@ class StaysController < BaseController
     # vers `confirmed`, jamais sur un simple ré-enregistrement du formulaire
     # d'un séjour déjà confirmé (cf. `Stays::ConfirmationNotifier`).
     was_confirmed = @stay.status == "confirmed"
+    @return_to = stay_return_path(params[:return_to])
     @draft  = build_draft
     updater = Stays::AdminUpdater.new(
       stay:                 @stay,
@@ -214,7 +216,7 @@ class StaysController < BaseController
       flash[:notice] = "Séjour mis à jour."
       flash[:alert]  = combined_warning(updater)
       flash[:info]   = kitchen_warnings(@stay)
-      redirect_to recent_stays_path
+      redirect_to @return_to || recent_stays_path
     else
       @quote = safe_quote(@draft)
       flash.now[:alert] = updater.error_message(default: "Le séjour n'a pas pu être mis à jour.")
@@ -771,6 +773,32 @@ class StaysController < BaseController
     uri.to_s
   rescue URI::InvalidURIError
     default
+  end
+
+  # Retour après l'édition (Michael, 2026-10-18) : on revient TOUJOURS à la vue
+  # d'où le formulaire a été ouvert (agenda, liste des séjours, paiements, fiche
+  # client…). Le chemin vient du `return_to` du lien — la modale séjour l'ajoute
+  # avec `open_stay` pour se rouvrir au retour, cf. stay_details_controller.js —
+  # sinon du Referer. Même garde que `merge_redirect_url` : chemin interne
+  # seulement (pas d'open-redirect). Le formulaire lui-même est écarté (sinon on
+  # y reviendrait en boucle), et `modal` est retiré : le fragment de modale n'est
+  # pas une page.
+  def stay_return_path(raw)
+    raw = raw.to_s
+    return if raw.blank? || raw.include?("\\")
+
+    uri = URI.parse(raw)
+    return if uri.host.present? && uri.host != request.host
+    return if uri.scheme.present? && uri.host.blank?
+
+    path = uri.path.to_s
+    return unless path.start_with?("/") && !path.start_with?("//")
+    return if path.match?(%r{\A/(stays|bookings|space_bookings)/(new|\d+/edit)/?\z})
+
+    query = Rack::Utils.parse_nested_query(uri.query).except("modal")
+    query.empty? ? path : "#{path}?#{query.to_query}"
+  rescue URI::InvalidURIError
+    nil
   end
 
   def merge_success_message(target, sources)
