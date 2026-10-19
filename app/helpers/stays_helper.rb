@@ -47,6 +47,8 @@ module StaysHelper
   # Aucune requête : on lit `stay_items`, `experience_bookings` et `meal_orders`,
   # tous préchargés par le contrôleur.
   def stay_timeline(stay)
+    return stay_day_timeline(stay) if stay_single_day?(stay)
+
     jalons = []
 
     if stay.arrival_date
@@ -83,6 +85,76 @@ module StaysHelper
     end
 
     jalons.sort_by { |j| j[:date] }
+  end
+
+  # --- Séjour sur une seule journée (Michael, 2026-10-18) --------------------
+  # Arrivée et départ le même jour : deux lignes qui répètent la date ne disent
+  # rien de plus qu'une seule. La journée tient donc en un jalon, « 1 octobre
+  # 2026 · 9h30 → 14h », et ce qui se passe entre les deux (activités, repas)
+  # suit en dessous, avec son heure seule — la date est déjà dite.
+  def stay_single_day?(stay)
+    stay.arrival_date.present? && stay.arrival_date == stay.departure_date
+  end
+
+  # Ordre d'un repas dans la journée, faute d'heure : le moment suffit.
+  MOMENT_MINUTES = { "midi" => 12 * 60, "gouter" => 16 * 60, "soir" => 19 * 60 }.freeze
+
+  def stay_day_timeline(stay)
+    jour = stay.arrival_date
+    heure, annonce = arrival_hour_and_note(stay)
+    plage = [heure, stay.departure_time.presence]
+    horaire = if plage.all?
+                "#{plage[0]} → #{plage[1]}"
+              elsif plage[0]
+                plage[0]
+              elsif plage[1]
+                "jusqu'à #{plage[1]}"
+              end
+
+    # Un séjour d'une journée occupe plus souvent une salle qu'un gîte : le
+    # lieu, c'est l'un comme l'autre.
+    lieux = stay.lodging_bookings.filter_map { |b| b.lodging&.name } +
+            stay.space_bookings.flat_map { |b| b.spaces.map(&:name) }
+
+    etapes = []
+
+    stay.experience_bookings.reject { |eb| eb.cancelled? || eb.refused? }.each do |eb|
+      creneau = eb.experience_availability
+      next unless creneau&.available_on == jour
+
+      debut = creneau.starts_at_minutes
+      etapes << { date: jour, minutes: debut,
+                  title: [stay_timeline_hour(debut), creneau.experience&.name].compact.join(" — "),
+                  detail: "#{eb.participants} participant(s)" }
+    end
+
+    stay.meals.each do |repas|
+      next unless repas.date == jour
+
+      # « Repas (midi ou soir) » : la parenthèse sert au formulaire ; ici le
+      # moment est connu, c'est lui qu'on dit.
+      nom = repas.label.sub(/\s*\(.*\)\z/, "")
+      moment = repas.moment_label
+      etapes << { date: jour, minutes: MOMENT_MINUTES[repas.moment.to_s],
+                  title: moment && moment != nom ? "#{nom} (#{moment.downcase})" : nom,
+                  detail: "#{repas.people} personne(s)" }
+    end
+
+    journee = { date: jour,
+                title: [l(jour, format: :long).capitalize, horaire].compact.join(" · "),
+                detail: lieux.uniq.join(", ").presence,
+                note: annonce }
+
+    [journee] + etapes.sort_by { |e| e[:minutes] || 24 * 60 }
+  end
+
+  # « 09:30 » → « 9h30 », « 14:00 » → « 14h » : comme on écrit l'heure
+  # d'arrivée.
+  def stay_timeline_hour(minutes)
+    return if minutes.nil?
+
+    heures, reste = minutes.divmod(60)
+    reste.zero? ? "#{heures}h" : format("%dh%02d", heures, reste)
   end
 
   # L'heure d'arrivée vient de DEUX endroits, et les deux comptent pour qui
