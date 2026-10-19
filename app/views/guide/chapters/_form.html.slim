@@ -10,6 +10,18 @@
                    placeholder: "Ex. Les gestes administratifs du quotidien, pas à pas.",
                    hint: "Une phrase sous le titre, dans le sommaire."
 
+    fieldset
+      legend.text-sm.font-medium.text-gray-700 Qui lit ce chapitre
+      p.mt-1.text-xs.text-gray-500 Les Sourciers lisent tous les chapitres. Porteur·euse : les comptes restreints à leurs activités, et ceux qui ont ce rôle.
+      = hidden_field_tag "guide_chapter[access_roles][]", "", id: nil
+      .mt-3.grid.gap-2.sm:grid-cols-2
+        - GuideChapter::READER_ROLES.each do |role|
+          label.flex.items-center.gap-2.text-sm.text-stone-700(for="guide_chapter_access_roles_#{role}")
+            = check_box_tag "guide_chapter[access_roles][]", role, chapter.access_roles.include?(role),
+                            id: "guide_chapter_access_roles_#{role}",
+                            class: "h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+            = Access.label(role)
+
   .mt-8.flex.flex-wrap.items-center.justify-between.gap-4.border-t.border-stone-200.pt-6
     .flex.items-center.gap-3
       button.inline-flex.items-center.rounded-lg.bg-emerald-600.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.hover:bg-emerald-700(type="submit")

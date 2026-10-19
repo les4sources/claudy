@@ -47,3 +47,38 @@
                                   class: "h-4 w-4 rounded border-gray-300 text-4s-main focus:ring-4s-main"
     .mt-4
       = f.submit "Enregistrer", class: "px-4 py-2 text-sm rounded-lg bg-4s-main text-white hover:opacity-90 transition-opacity cursor-pointer"
+
+  / Le Guide, par rôle (Michael, 2026-10-19) : les chapitres que lit chaque
+    rôle. Même tableau que les comptes, une ligne par chapitre.
+  section#guide.pt-4
+    .bg-white.rounded-xl.border.border-gray-100.p-5
+      h2.text-sm.font-semibold.text-gray-900 Le Guide, par rôle
+      p.text-xs.text-gray-500.mt-1
+        | Les chapitres du Guide que lit chaque rôle. Les Sourciers lisent tout et sont les seuls à écrire.
+        |  Un compte restreint à ses activités lit les chapitres cochés pour Porteur·euse.
+    - if @guide_chapters.empty?
+      p.mt-4.text-sm.text-gray-500 Le Guide n'a encore aucun chapitre.
+    - else
+      = form_with url: access_guide_chapters_path, method: :patch, class: "mt-4" do |f|
+        .overflow-x-auto.bg-white.rounded-xl.border.border-gray-100
+          table.w-full.text-sm.text-left.text-gray-600
+            thead.text-xs.text-gray-700.uppercase.bg-gray-50
+              tr
+                th.py-3.px-4[scope="col"] Chapitre
+                - GuideChapter::READER_ROLES.each do |role|
+                  th.py-3.px-4.text-center[scope="col"] = Access.label(role)
+            tbody
+              - @guide_chapters.each do |chapter|
+                tr.border-t.border-gray-100
+                  td.py-3.px-4.font-medium.text-gray-900
+                    = chapter.title
+                    / Le champ vide fait partir la ligne même toute décochée.
+                    = hidden_field_tag "chapters[#{chapter.id}][]", "", id: nil
+                  - GuideChapter::READER_ROLES.each do |role|
+                    td.py-3.px-4.text-center
+                      = check_box_tag "chapters[#{chapter.id}][]", role, chapter.access_roles.include?(role),
+                                      id: "chapter_#{chapter.id}_#{role}",
+                                      "aria-label": "#{Access.label(role)} lit « #{chapter.title} »",
+                                      class: "h-4 w-4 rounded border-gray-300 text-4s-main focus:ring-4s-main"
+        .mt-4
+          = f.submit "Enregistrer les chapitres", class: "px-4 py-2 text-sm rounded-lg bg-4s-main text-white hover:opacity-90 transition-opacity cursor-pointer"

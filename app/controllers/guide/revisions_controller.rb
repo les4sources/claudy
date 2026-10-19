@@ -29,7 +29,11 @@ module Guide
     private
 
     def set_page
-      @page = GuidePage.find(params[:page_id].to_i)
+      @page = readable_pages.find_by(id: params[:page_id].to_i)
+      return if @page
+      raise ActiveRecord::RecordNotFound unless GuidePage.exists?(params[:page_id].to_i)
+
+      redirect_to guide_root_path, alert: "Cette page n'est pas ouverte à ton rôle."
     end
   end
 end

@@ -112,6 +112,30 @@ RSpec.describe Mcp::Server, "Guide des 4 Sources" do
       .to include("encore 1 page")
   end
 
+  it "règle qui lit un chapitre, et ne montre à un rôle que ses chapitres" do
+    apercu = texte(outil("enregistrer_chapitre_guide", { "titre" => "Porter une activité" }))
+    expect(apercu).to include("lu par les Sourciers, Communication, Kid, Administratif, Ânier·ère")
+    confirme("enregistrer_chapitre_guide", { "titre" => "Porter une activité" })
+    activites = GuideChapter.find_by!(title: "Porter une activité")
+
+    expect(texte(outil("enregistrer_chapitre_guide", { "chapitre" => activites.id, "lecteurs" => %w[pirate] })))
+      .to include("Rôle inconnu : pirate")
+    confirme("enregistrer_chapitre_guide", { "chapitre" => activites.id, "lecteurs" => %w[porteur kid] })
+    expect(activites.reload.access_roles).to eq(%w[kid porteur])
+    expect(texte(outil("guide", {}))).to include("Lu par : Sourciers, Kid, Porteur·euse")
+
+    procedures.update!(access_roles: %w[administratif])
+    Guide::SavePage.new(GuidePage.new, user: michael).call(guide_chapter_id: procedures.id, title: "Les clés", body: "Le trousseau")
+    kid = User.create!(email: "kid@les4sources.be", password: "secret123456", access_roles: %w[kid])
+    serveur = described_class.new(user: kid)
+
+    sommaire = texte(outil("guide", {}, serveur: serveur))
+    expect(sommaire).to include("Porter une activité")
+    expect(sommaire).not_to include("Procédures", "Lu par")
+    expect(texte(outil("guide", { "recherche" => "trousseau" }, serveur: serveur))).to include("Aucune page")
+    expect(texte(outil("page_guide", { "page" => "Les clés" }, serveur: serveur))).to include("Aucune page du Guide")
+  end
+
   it "laisse lire, mais pas écrire, un compte qui n'écrit pas dans le Guide" do
     kid = User.create!(email: "kid@les4sources.be", password: "secret123456", access_roles: %w[kid])
     serveur = described_class.new(user: kid)

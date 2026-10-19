@@ -5,21 +5,21 @@ module Guide
 
     def index
       @query = params[:q].to_s.strip
-      @chapters = GuideChapter.ordered.includes(pages: { last_editor: :human })
-      @results = GuidePage.search(@query).includes(:chapter, last_editor: :human).order(:title) if @query.present?
-      @recent_pages = GuidePage.where.not(last_edited_at: nil).includes(:chapter, last_editor: :human)
+      @chapters = readable_chapters.ordered.includes(pages: { last_editor: :human })
+      @results = readable_pages.search(@query).includes(:chapter, last_editor: :human).order(:title) if @query.present?
+      @recent_pages = readable_pages.where.not(last_edited_at: nil).includes(:chapter, last_editor: :human)
                                .order(last_edited_at: :desc).limit(5)
     end
 
     def show
-      @markdown = Guide::Markdown.render(@page.body, new_page_links: guide_writer?)
-      @chapters = GuideChapter.ordered.includes(:pages)
+      @markdown = Guide::Markdown.render(@page.body, new_page_links: guide_writer?, pages: readable_pages)
+      @chapters = readable_chapters.ordered.includes(:pages)
       siblings = @chapters.flat_map(&:pages)
       index = siblings.index(@page)
       @previous_page = siblings[index - 1] if index&.positive?
       @next_page = siblings[index + 1] if index
       @contributors = @page.contributors
-      @backlinks = @page.backlinks
+      @backlinks = @page.backlinks.select { |other| other.chapter.readable_by?(current_user) }
       @screen_links = @page.screen_links.to_a
       breadcrumb @page.chapter.title, guide_root_path(anchor: "chapitre-#{@page.chapter.id}")
       breadcrumb @page.title, guide_page_path(@page)
@@ -65,8 +65,13 @@ module Guide
 
     private
 
+    # Une page d'un chapitre fermé à ce compte : retour au sommaire.
     def set_page
-      @page = GuidePage.find(params[:id].to_i)
+      @page = readable_pages.find_by(id: params[:id].to_i)
+      return if @page
+      raise ActiveRecord::RecordNotFound unless GuidePage.exists?(params[:id].to_i)
+
+      redirect_to guide_root_path, alert: "Cette page n'est pas ouverte à ton rôle."
     end
 
     def page_params

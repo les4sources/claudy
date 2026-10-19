@@ -25,10 +25,13 @@ module Guide
       new(markdown, resolve_links: false).document.text.squish
     end
 
-    def initialize(markdown, resolve_links: true, new_page_links: false)
+    # `pages` : celles qu'un lien peut viser (le lecteur ne voit pas les pages
+    # d'un chapitre qui ne lui est pas ouvert).
+    def initialize(markdown, resolve_links: true, new_page_links: false, pages: GuidePage.all)
       @markdown = markdown.to_s.dup.force_encoding(Encoding::UTF_8).scrub
       @resolve_links = resolve_links
       @new_page_links = new_page_links
+      @pages = pages
     end
 
     def to_html
@@ -104,7 +107,7 @@ module Guide
     end
 
     def pages_by_key
-      @pages_by_key ||= GuidePage.select(:id, :title).index_by { |page| Links.key(page.title) }
+      @pages_by_key ||= @pages.select(:id, :title).index_by { |page| Links.key(page.title) }
     end
   end
 end

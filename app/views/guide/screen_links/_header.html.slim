@@ -2,9 +2,11 @@
   écran (`layouts/components/_page_header`) : la page du Guide rattachée à
   cet écran, et pour les rédacteurs le moyen d'en rattacher une. Rien hors
   d'une session connectée, ni dans le Guide lui-même.
-- if section_readable?(:guide) && !controller_path.start_with?("guide/", "public/")
+  La page d'un chapitre fermé au rôle du compte ne s'y montre pas.
+- if guide_readable? && !controller_path.start_with?("guide/", "public/")
   - link = GuideScreenLink.for_screen(GuideScreenLink.screen_key(controller_path, action_name))
-  - editable = section_writable?(:guide) && request.get? && request.headers["Turbo-Frame"].blank?
+  - link = nil unless link&.page&.chapter&.readable_by?(current_user)
+  - editable = guide_writable? && request.get? && request.headers["Turbo-Frame"].blank?
   - if link || editable
     .flex.shrink-0.items-center.gap-1
       - if link
