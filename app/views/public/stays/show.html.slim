@@ -42,7 +42,7 @@
 / l'acompte et son lien de paiement (issue #215). Le TOTAL du séjour, lui, reste
 / affiché plus haut : le client a le droit de savoir ce qu'il a demandé.
 - unless @stay.ota?
-  section.funnel-card.mt-6.p-5.md:p-6
+  section#paiement.funnel-card.mt-6.p-5.md:p-6
     h2.funnel-section-title.mb-4 = t("public.stays.payments.heading")
     - if @stay.awaiting_review?
       p.text-base(class="text-moss" data-stay-awaiting-review="true") = t("public.stays.payments.awaiting_review")

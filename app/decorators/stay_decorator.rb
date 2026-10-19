@@ -866,6 +866,55 @@ class StayDecorator < ApplicationDecorator
     !object.canceled? && object.payable_now? && object.payments.pending.none?
   end
 
+  # --- Paiement par virement (Michael, 2026-10-19) ---
+  # Le compte qui reçoit les séjours, déjà affiché sur l'ancienne page booking.
+  BANK_TRANSFER = { holder: "Les 4 Sources", iban: "BE72 5230 8060 1116", bic: "TRIOBEBB" }.freeze
+
+  # La communication que l'affectation automatique reconnaît (`Finance::MatchStay`).
+  def transfer_communication
+    Finance::MatchStay.communication_for(object)
+  end
+
+  # Le montant à virer : celui du paiement en attente (l'acompte demandé à la
+  # pré-confirmation), sinon le solde exigible. Les mêmes cas que les boutons
+  # de paiement en ligne : rien sur une demande en attente, un séjour annulé ou
+  # un séjour payé sur une plateforme.
+  def transfer_amount_cents
+    return 0 if awaiting_review? || object.canceled? || object.ota?
+
+    pending = object.payments.pending.sum(:amount_cents)
+    return pending if pending.positive?
+
+    object.payable_now? ? object.balance_due_cents : 0
+  end
+
+  # Au centime près, comme sur un formulaire de virement (« 186,00 € »).
+  def formatted_transfer_amount
+    h.number_to_currency(transfer_amount_cents / 100.0)
+  end
+
+  def show_transfer?
+    transfer_amount_cents.positive?
+  end
+
+  # Le client a signalé un virement que nous n'avons pas encore vu arriver :
+  # aucun paiement encaissé depuis son signalement. Dès qu'un paiement l'est, le
+  # bouton revient pour le virement suivant (le solde après l'acompte).
+  def transfer_notice_pending?
+    notified_at = object.transfer_notified_at
+    return false if notified_at.nil?
+
+    object.payments.paid.where("updated_at > ?", notified_at).none?
+  end
+
+  def formatted_transfer_notified_amount
+    h.number_to_currency(object.transfer_notified_cents.to_i / 100.0)
+  end
+
+  def formatted_transfer_notified_on
+    h.l(object.transfer_notified_at.to_date, format: :long)
+  end
+
   private
 
   def money(cents)

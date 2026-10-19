@@ -1,0 +1,45 @@
+/ Payer par virement (Michael, 2026-10-19). La communication est celle que
+/ l'affectation automatique reconnaît (`Finance::MatchStay.communication_for`) :
+/ avec elle, le virement se rattache tout seul au séjour dans la file « À affecter ».
+/ Le bouton « J'ai envoyé le virement » prévient la compta par email ; une fois
+/ cliqué, il laisse place à « virement signalé » jusqu'au prochain encaissement.
+- bank = StayDecorator::BANK_TRANSFER
+- copy_button_classes = "rounded-md bg-white px-2 py-0.5 text-xs font-medium text-ink ring-1 ring-bark hover:bg-sand"
+.mt-4.rounded-xl.border.p-4.md:p-5(class="bg-forest-tint border-bark" data-stay-transfer="true")
+  h3.text-base.font-semibold.text-ink = t("public.stays.transfer.heading")
+  p.mt-1.max-w-xl.text-sm.text-ink = t("public.stays.transfer.intro", amount: @stay.formatted_transfer_amount)
+
+  dl.mt-4.grid.grid-cols-1.gap-3.text-sm.sm:grid-cols-2
+    div
+      dt(class="text-moss") = t("public.stays.transfer.holder")
+      dd.font-medium.text-ink = bank[:holder]
+    div
+      dt(class="text-moss") = t("public.stays.transfer.amount")
+      dd.font-medium.text-ink = @stay.formatted_transfer_amount
+    div
+      dt(class="text-moss") = t("public.stays.transfer.iban")
+      dd.flex.flex-wrap.items-center.gap-2
+        span.font-mono.font-medium.text-ink = bank[:iban]
+        button(type="button" class=copy_button_classes data-controller="copy" data-copy-value-value=bank[:iban].delete(" ") data-copy-label-value=t("public.stays.transfer.copied") data-action="copy#copy") = t("public.stays.transfer.copy")
+    div
+      dt(class="text-moss") = t("public.stays.transfer.bic")
+      dd.font-mono.font-medium.text-ink = bank[:bic]
+    .sm:col-span-2
+      dt(class="text-moss") = t("public.stays.transfer.communication")
+      dd.flex.flex-wrap.items-center.gap-2
+        span.rounded-md.bg-white.px-2.py-1.font-mono.text-base.font-semibold.text-forest.ring-1.ring-bark(data-stay-transfer-communication="true") = @stay.transfer_communication
+        button(type="button" class=copy_button_classes data-controller="copy" data-copy-value-value=@stay.transfer_communication data-copy-label-value=t("public.stays.transfer.copied") data-action="copy#copy") = t("public.stays.transfer.copy")
+      p.mt-1.text-xs(class="text-moss") = t("public.stays.transfer.communication_hint")
+
+  .mt-5.border-t.pt-4(class="border-bark")
+    - if @stay.transfer_notice_pending?
+      p.text-sm.text-green-800(data-stay-transfer-notified="true")
+        = t("public.stays.transfer.notified", amount: @stay.formatted_transfer_notified_amount, date: @stay.formatted_transfer_notified_on)
+    - else
+      .sm:flex.sm:items-center.sm:gap-4
+        = button_to t("public.stays.transfer.notify_cta"),
+                    public_stay_transfer_notice_path(@stay.token),
+                    method: :post,
+                    form: { class: "sm:flex-shrink-0", data: { turbo: false } },
+                    class: "inline-flex items-center rounded-xl border border-forest bg-white px-5 py-2.5 text-sm font-semibold text-forest shadow-sm hover:bg-sand"
+        p.mt-2.text-xs.sm:mt-0(class="text-moss") = t("public.stays.transfer.notify_hint")

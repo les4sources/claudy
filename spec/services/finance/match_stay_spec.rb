@@ -29,6 +29,18 @@ RSpec.describe Finance::MatchStay do
     expect(match.confidence).to eq(95)
   end
 
+  # La communication que la page client demande (Michael, 2026-10-19) : si on
+  # change l'une sans l'autre, l'affectation automatique cesse de marcher.
+  it "reconnaît la communication affichée sur la page client, même retouchée par la banque" do
+    communication = described_class.communication_for(stay)
+
+    [communication, communication.upcase, "#{communication} Jeanne Dupont"].each do |texte|
+      match = described_class.new(cash_entry: entry_with(communication: texte)).run!
+      expect(match&.stay).to eq(stay), "« #{texte} » n'est pas reconnu"
+      expect(match.confidence).to eq(95)
+    end
+  end
+
   # Le faux positif constaté sur les vraies données : une communication
   # parfaitement banale se lisait comme une référence de séjour.
   it "ne prend pas « SEJOUR 12 AU 15 AOUT » pour une référence de séjour" do

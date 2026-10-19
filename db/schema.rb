@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_19_060000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_19_080000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -2470,6 +2470,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_060000) do
     t.string "status"
     t.string "token"
     t.integer "total_amount_cents", default: 0, null: false
+    t.datetime "transfer_notified_at"
+    t.integer "transfer_notified_cents"
     t.datetime "updated_at", null: false
     t.index ["activity_selection_token"], name: "index_stays_on_activity_selection_token"
     t.index ["customer_id"], name: "index_stays_on_customer_id"
