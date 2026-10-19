@@ -28,7 +28,8 @@
           span.ml-1.inline-flex.rounded-full.bg-gray-100.px-2.text-gray-700= nature
       - if @message.triage["error"].present?
         p.mt-2.text-xs.text-amber-700= "Pas de proposition : #{@message.triage['error']}"
-      .mt-3.border-t.border-gray-100.pt-3.text-sm.text-gray-700.whitespace-pre-line.break-words= @message.body_text.presence || "(corps vide)"
+      .mt-3.border-t.border-gray-100.pt-3
+        = render "finance/mail_messages/body", reading: @reading
 
   .space-y-4(class="lg:col-span-3")
     - if @message.mail_attachments.empty?

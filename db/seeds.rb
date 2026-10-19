@@ -69,9 +69,9 @@ User.find_or_create_by!(email: "miranda@claudy.test") { |u| u.password = "secret
 
 Team.find_or_create_by!(name: "Pole Technique")
 Team.find_or_create_by!(name: "Pole Accueil")
-Team.find_or_create_by!(name: "Pole Espaces verts")
+espaces_verts = Team.find_or_create_by!(name: "Pole Espaces verts")
 
-project = Project.create(name: "Poulailler mobile", due_date: Date.today + 4.months, human: jeanclaude)
+project = Project.create(name: "Poulailler mobile", due_date: Date.today + 4.months, human: jeanclaude, team: espaces_verts)
 
 Task.create(
   name: "Faire les plans détaillés du poulailler", 
