@@ -36,5 +36,15 @@ module Finance
       # la personne qui démarre sache par où commencer.
       @todo = Finance::AccountingTodo.new
     end
+
+    # Le détail d'un montant de « Peut-on dépenser ? » (Michael, 2026-10-19) :
+    # la liste qui fait la somme, lue dans le même verdict que l'encart. Le
+    # layout `modal`, comme le poste d'un compte : celui de l'application porte
+    # déjà un cadre « modal » vide, que Turbo prendrait à la place du nôtre.
+    def verdict_detail
+      @part = params[:part]
+      @verdict = Finance::SpendingVerdict.new(legal_entity: LegalEntity.actives.find(params[:legal_entity_id]))
+      render layout: "modal"
+    end
   end
 end

@@ -147,7 +147,15 @@ module Finance
     end
 
     def liabilities_retained_cents = liabilities.sum(&:remaining_cents)
-    def liabilities_beyond_horizon_cents = liability_outflows.sum { |o| o.due_on > horizon_end ? o.amount_cents : 0 }
+    def liabilities_beyond_horizon_cents = liability_outflows_beyond_horizon.sum(&:amount_cents)
+
+    def liability_outflows_beyond_horizon = liability_outflows.select { |o| o.due_on > horizon_end }
+
+    # Ce qui pèse vraiment dans l'horizon : les sommes « à encaisser » et « à
+    # payer » de « Peut-on dépenser ? » sont faites de ces listes-ci, et la
+    # fenêtre de leur détail les relit telles quelles.
+    def receivables_in_horizon = upcoming_receivables.select { |r| r.due_on <= horizon_end }
+    def outflows_in_horizon = outflows.select { |o| o.due_on <= horizon_end }
 
     # Chaque occurrence d'une charge fixe entre aujourd'hui et la fin de
     # l'horizon — sauf celles qu'une vraie facture du même tiers couvre déjà :
@@ -311,10 +319,8 @@ module Finance
     def projected_movements
       @projected_movements ||=
         late_receivables.map { |r| Movement.new(date: @today, label: receivable_label(r), amount_cents: r.amount_cents) } +
-        upcoming_receivables.select { |r| r.due_on <= horizon_end }
-                            .map { |r| Movement.new(date: r.due_on, label: receivable_label(r), amount_cents: r.amount_cents) } +
-        outflows.select { |o| o.due_on <= horizon_end }
-                .map { |o| Movement.new(date: o.due_on, label: outflow_label(o), amount_cents: -o.amount_cents) }
+        receivables_in_horizon.map { |r| Movement.new(date: r.due_on, label: receivable_label(r), amount_cents: r.amount_cents) } +
+        outflows_in_horizon.map { |o| Movement.new(date: o.due_on, label: outflow_label(o), amount_cents: -o.amount_cents) }
     end
 
     def receivable_label(receivable)

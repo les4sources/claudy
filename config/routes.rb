@@ -280,6 +280,11 @@ Rails.application.routes.draw do
     # lectures — grand livre et balance. Aucune route ne permet de SAISIR une
     # écriture : elles se génèrent, elles ne se saisissent jamais.
     get "accounting", to: "accounting#index"
+    # Le détail d'un montant de « Peut-on dépenser ? » (2026-10-19), ouvert en
+    # fenêtre au clic : les séjours à encaisser, ce qui est à payer, les dettes
+    # au-delà de l'horizon, les prêts à rendre.
+    get "accounting/verdict/:legal_entity_id/:part", to: "accounting#verdict_detail", as: :accounting_verdict_detail,
+                                                     constraints: { part: /incoming|outgoing|liabilities_later|loans/ }
     # Le guide de la personne qui démarre (2026-10-17) : circuit, routine,
     # lexique. L'aide posée sous le titre de chaque écran y renvoie.
     get "guide", to: "guide#show", as: :guide
