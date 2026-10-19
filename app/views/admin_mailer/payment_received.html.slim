@@ -1,14 +1,34 @@
 p Salut la team,
 
-p 
-  |
-    Ici Claudy. J'ai une bonne nouvelle, on a reçu un paiement !
-
 p
   |
-    Les détails de ce paiement sont disponibles à l'adresse suivante:
+    Ici Claudy. J'ai une bonne nouvelle, on a reçu un paiement en ligne !
+
+p
+  | Montant : #{@payment.amount}
+  - if @payment.admin_nature_label
+    br
+    | Nature : #{@payment.admin_nature_label}
+    - if @payment.admin_stay_total
+      |  (séjour de #{@payment.admin_stay_total})
+  br
+  | Client : #{@payment.admin_client_label}
+  - if @payment.admin_dates_label
+    br
+    | Dates : #{@payment.admin_dates_label}
+  - if @payment.admin_balance_due
+    br
+    | Reste à payer : #{@payment.admin_balance_due}
+
+p
+  | Le paiement :
   br
   = link_to payment_url(@payment), payment_url(@payment)
+  - if @stay
+    br
+    | Le séjour :
+    br
+    = link_to stay_url(@stay), stay_url(@stay)
 
 p
   |
