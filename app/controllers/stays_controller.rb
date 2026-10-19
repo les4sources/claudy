@@ -522,9 +522,15 @@ class StaysController < BaseController
   # ses bookables (Booking/SpaceBooking/Camping/Van) — le service les soft-delete
   # explicitement pour qu'AUCUNE occupation (chambres, espaces) ne survive au
   # calendrier ni au veto de dispo (issue #99). Les paiements sont conservés.
+  #
+  # Retour (Michael, 2026-10-19) : la vue d'où l'édition a été ouverte, comme
+  # après enregistrement, sans ce qui pointe vers le séjour supprimé — sa modale
+  # (`open_stay`) et ses propres pages n'existent plus.
   def destroy
     Stays::DestroyService.new(stay: @stay).run
-    redirect_to recent_stays_path, notice: "Séjour supprimé."
+    back = stay_return_path(params[:return_to], drop: %w[open_stay])
+    back = nil if back&.match?(%r{\A/stays/#{@stay.id}(/|\?|\z)})
+    redirect_to back || recent_stays_path, notice: "Séjour supprimé."
   end
 
   # --- Fusion de séjours depuis le calendrier (epic #81, Phase 2) -----------
@@ -782,8 +788,8 @@ class StaysController < BaseController
   # sinon du Referer. Même garde que `merge_redirect_url` : chemin interne
   # seulement (pas d'open-redirect). Le formulaire lui-même est écarté (sinon on
   # y reviendrait en boucle), et `modal` est retiré : le fragment de modale n'est
-  # pas une page.
-  def stay_return_path(raw)
+  # pas une page. `drop` retire d'autres paramètres (cf. `destroy`).
+  def stay_return_path(raw, drop: [])
     raw = raw.to_s
     return if raw.blank? || raw.include?("\\")
 
@@ -795,7 +801,7 @@ class StaysController < BaseController
     return unless path.start_with?("/") && !path.start_with?("//")
     return if path.match?(%r{\A/(stays|bookings|space_bookings)/(new|\d+/edit)/?\z})
 
-    query = Rack::Utils.parse_nested_query(uri.query).except("modal")
+    query = Rack::Utils.parse_nested_query(uri.query).except("modal", *drop)
     query.empty? ? path : "#{path}?#{query.to_query}"
   rescue URI::InvalidURIError
     nil
