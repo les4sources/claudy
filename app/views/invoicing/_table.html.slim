@@ -1,20 +1,25 @@
 / Tableau d'une file de facturation. Locals : lines, action_label,
-  action_status, tone (:requested | :sent).
+  action_status, tone (:requested | :upcoming | :sent).
+  :requested = séjours passés (facture en retard, lignes ambrées), :upcoming =
+  séjours à venir (même action, lignes blanches), :sent = historique.
   UN seul partial pour les deux files — c'est tout l'intérêt d'avoir normalisé
   Booking et SpaceBooking en `Invoicing::Queue::Line`.
 - muted = (tone == :sent)
+- row_class = (tone == :requested ? "bg-amber-50/50 hover:bg-amber-50" : "bg-white hover:bg-gray-50")
 .overflow-x-auto.shadow.ring-1.ring-black.ring-opacity-5.rounded-lg
-  table.min-w-full.divide-y.divide-gray-300
+  /  Largeurs fixes : les blocs passés, à venir et envoyés s'alignent colonne
+     sur colonne quand ils s'empilent.
+  table.min-w-full.table-fixed.divide-y.divide-gray-300(class="min-w-[48rem]")
     thead.bg-gray-50
       tr
-        th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Réservation
-        th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Dates
-        th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Type
-        th.px-3.py-2.text-right.text-xs.font-medium.text-gray-500.uppercase Montant
-        th.px-3.py-2.text-right.text-xs.font-medium.text-gray-500.uppercase Action
+        th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase(class="w-[30%]") Réservation
+        th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase(class="w-[30%]") Dates
+        th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase(class="w-[12%]") Type
+        th.px-3.py-2.text-right.text-xs.font-medium.text-gray-500.uppercase(class="w-[12%]") Montant
+        th.px-3.py-2.text-right.text-xs.font-medium.text-gray-500.uppercase(class="w-[16%]") Action
     tbody.divide-y.divide-gray-200.bg-white
       - lines.each do |line|
-        tr class="#{muted ? 'bg-white hover:bg-gray-50' : 'bg-amber-50/50 hover:bg-amber-50'} transition-colors"
+        tr class="#{row_class} transition-colors"
           td.px-3.py-2.text-sm
             /  Le lien pointe vers le SÉJOUR quand il existe : c'est le point
                d'entrée unique de l'app. À défaut (réservable orphelin), on
