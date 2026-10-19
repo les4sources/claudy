@@ -29,7 +29,9 @@ div id="stay-details-#{@stay.id}"
       /  Facture attendue : l'en-tête le dit, sinon l'info ne vit que dans le
          formulaire d'édition et dans la file de facturation.
       = @stay.invoice_badge
-    .flex.flex-wrap.items-center.gap-2
+    /  `grow` : passée sous le titre, la rangée prend toute la largeur, et le
+       groupe Dupliquer · Modifier · croix se cale à droite (Michael, 2026-10-19).
+    .flex.grow.flex-wrap.items-center.gap-2
       /  Trois états, trois jeux de boutons. Un séjour ANNULÉ ne se confirme pas
          d'un clic : on le réactive en attente, puis on confirme — le second clic
          est l'occasion de revérifier les dates (le veto n'est pas rejoué ici).
@@ -91,17 +93,18 @@ div id="stay-details-#{@stay.id}"
         = link_to "Refuser la demande", refuse_stay_path(@stay), class: "rounded-md border border-transparent bg-red-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-red-700"
       - if @stay.can_resend_confirmation_email?
         = button_to @stay.confirmation_email_button_label, send_confirmation_email_stay_path(@stay), method: :post, title: @stay.confirmation_email_hint, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Envoyer l'email de confirmation au client ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-      = link_to "Dupliquer", new_stay_path(duplicate_from: @stay.id), title: "Dupliquer ce séjour (nouvelles dates à choisir)", class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-      /  « Modifier » est l'ISSUE DE SECOURS de cette modale : tout ce qui touche
-         à la composition (dates, gîtes, espaces, activités payantes) se règle
-         dans le formulaire, qui porte les vérifications de disponibilité.
-      = link_to "Modifier", edit_stay_path(@stay), class: "rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-      /  Fermeture logée DANS l'en-tête, au bout des actions. `stay-modal-close`
-         la masque hors <dialog> (règle contextuelle dans application.css) : ce
-         même partial sert la page pleine /stays/:id, où il n'y a rien à fermer.
-      button.stay-modal-close.hidden.ml-1.items-center.justify-center.rounded-md.p-1(class="text-gray-500 hover:bg-white/70 hover:text-gray-900" type="button" data-action="stay-details#close" aria-label="Fermer")
-        svg.h-5.w-5(xmlns="http://www.w3.org/2000/svg" fill="none" viewbox="0 0 24 24" stroke-width="1.75" stroke="currentColor")
-          path(stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12")
+      .ml-auto.flex.items-center.gap-2
+        = link_to "Dupliquer", new_stay_path(duplicate_from: @stay.id), title: "Dupliquer ce séjour (nouvelles dates à choisir)", class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        /  « Modifier » est l'ISSUE DE SECOURS de cette modale : tout ce qui touche
+           à la composition (dates, gîtes, espaces, activités payantes) se règle
+           dans le formulaire, qui porte les vérifications de disponibilité.
+        = link_to "Modifier", edit_stay_path(@stay), class: "rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+        /  Fermeture logée DANS l'en-tête, au bout des actions. `stay-modal-close`
+           la masque hors <dialog> (règle contextuelle dans application.css) : ce
+           même partial sert la page pleine /stays/:id, où il n'y a rien à fermer.
+        button.stay-modal-close.hidden.ml-1.items-center.justify-center.rounded-md.p-1(class="text-gray-500 hover:bg-white/70 hover:text-gray-900" type="button" data-action="stay-details#close" aria-label="Fermer")
+          svg.h-5.w-5(xmlns="http://www.w3.org/2000/svg" fill="none" viewbox="0 0 24 24" stroke-width="1.75" stroke="currentColor")
+            path(stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12")
 
   /  Demande de modification client en attente (issue #133) : elle passe AVANT
      les deux colonnes — c'est une décision à prendre, pas une information.
