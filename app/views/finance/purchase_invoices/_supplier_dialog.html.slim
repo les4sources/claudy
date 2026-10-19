@@ -1,6 +1,10 @@
 / Créer un fournisseur sans quitter la facture. Pré-remplie avec ce que Claudy
   a lu dans la pièce reçue par mail (`draft`), à relire avant d'enregistrer.
   Aucun champ n'a de `name` : ils ne partent pas avec la facture.
+  Et aucun n'est `required` : la fenêtre vit DANS le formulaire de la facture,
+  et un champ obligatoire vide, même fermé, bloquait « Enregistrer la facture »
+  (« An invalid form control is not focusable »). Le nom manquant est refusé
+  par le serveur, dont l'erreur s'affiche dans la fenêtre.
 dialog.w-full.max-w-md.rounded-2xl.p-0.shadow-xl(data-supplier-quick-create-target="dialog" aria-labelledby="nouveau-fournisseur-titre" class="backdrop:bg-gray-900/40")
   .space-y-3.px-5.py-5(data-action="keydown->supplier-quick-create#submitOnEnter")
     h2#nouveau-fournisseur-titre.text-base.font-semibold.text-gray-900 Nouveau fournisseur
@@ -8,7 +12,7 @@ dialog.w-full.max-w-md.rounded-2xl.p-0.shadow-xl(data-supplier-quick-create-targ
       p.text-xs.text-gray-500 Pré-rempli depuis la pièce reçue : relisez avant d'enregistrer.
     div
       label.block.text-xs.font-medium.text-gray-500(for="nouveau-fournisseur-nom") Nom
-      input#nouveau-fournisseur-nom.mt-1.w-full.rounded-md.border-gray-300.text-sm.shadow-sm(type="text" value=draft[:name] required=true autocomplete="off" data-supplier-quick-create-target="name")
+      input#nouveau-fournisseur-nom.mt-1.w-full.rounded-md.border-gray-300.text-sm.shadow-sm(type="text" value=draft[:name] aria-required="true" autocomplete="off" data-supplier-quick-create-target="name")
     .grid.gap-3(class="sm:grid-cols-2")
       div
         label.block.text-xs.font-medium.text-gray-500(for="nouveau-fournisseur-tva") N° de TVA
